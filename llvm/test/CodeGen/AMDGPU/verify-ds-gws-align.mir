@@ -1,65 +1,101 @@
 # RUN: not --crash llc -mtriple=amdgpu9.0a-mesa-mesa3d -run-pass=machineverifier -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
 # RUN: not --crash llc -mtriple=amdgpu9.0a-mesa-mesa3d --passes='machine-function(verify)' -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A-ERR %s
 
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-# GFX90A-ERR: DS_GWS_INIT killed %0.sub1:areg_128_align2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-# GFX90A-ERR: DS_GWS_INIT killed %0.sub3:areg_128_align2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-# GFX90A-ERR: DS_GWS_SEMA_BR killed %1.sub1:vreg_64_align2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-# GFX90A-ERR: DS_GWS_BARRIER killed %2.sub0:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
-# GFX90A-ERR: DS_GWS_INIT killed %3:vgpr_32, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
-# GFX90A-ERR: DS_GWS_INIT $vgpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
-# GFX90A-ERR: DS_GWS_INIT $agpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
-# GFX90A-ERR: DS_GWS_INIT %4:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
-# GFX90A-ERR: DS_GWS_INIT %4:vreg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
-# GFX90A-ERR: DS_GWS_INIT %5:areg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
-# GFX90A-ERR: DS_GWS_INIT %5:areg_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
-# GFX90A-ERR: DS_GWS_INIT %6:av_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
-# GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
-# GFX90A-ERR: DS_GWS_INIT %6:av_64, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+# DS_GWS data0 has the AV_64_Align2 operand register class, which carries the
+# even-alignment requirement; a misaligned or wrong-class/size data0 is rejected.
 
 ---
 name:            gws_odd_vgpr
 body:             |
   bb.0:
+    ; A 32-bit sub-register does not fit the 64-bit AV_64_Align2 data0 operand.
     %0:areg_128_align2 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub1:areg_128_align2
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub1:areg_128_align2
+    ; GFX90A-ERR: AReg_128_Align2.sub1 cannot be used for AV_64_Align2 operands.
     DS_GWS_INIT killed %0.sub1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     %0:areg_128_align2 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub3:areg_128_align2
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %0.sub3:areg_128_align2
+    ; GFX90A-ERR: AReg_128_Align2.sub3 cannot be used for AV_64_Align2 operands.
     DS_GWS_INIT killed %0.sub3, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     %1:vreg_64_align2 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+    ; GFX90A-ERR: - instruction: DS_GWS_SEMA_BR killed %1.sub1:vreg_64_align2
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: - instruction: DS_GWS_SEMA_BR killed %1.sub1:vreg_64_align2
+    ; GFX90A-ERR: VReg_64_Align2.sub1 cannot be used for AV_64_Align2 operands.
     DS_GWS_SEMA_BR killed %1.sub1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     %2:vreg_64 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+    ; GFX90A-ERR: - instruction: DS_GWS_BARRIER killed %2.sub0:vreg_64
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: - instruction: DS_GWS_BARRIER killed %2.sub0:vreg_64
+    ; GFX90A-ERR: VReg_64.sub0 cannot be used for AV_64_Align2 operands.
     DS_GWS_BARRIER killed %2.sub0, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    ; A whole 32-bit register is the wrong size for the 64-bit operand.
     %3:vgpr_32 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers for DS_GWS instructions ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %3:vgpr_32
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT killed %3:vgpr_32
+    ; GFX90A-ERR: Expected a AV_64_Align2 register, but got a VGPR_32 register
     DS_GWS_INIT killed %3, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
+
+    ; Physical single 32-bit registers are the wrong class for the operand.
     $vgpr1 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Operand has incorrect register class. ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT $vgpr1,
+    ; GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
+    ; GFX90A-ERR: $vgpr1 is not a AV_64_Align2 register.
     DS_GWS_INIT $vgpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
     $agpr1 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Operand has incorrect register class. ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT $agpr1,
+    ; GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
+    ; GFX90A-ERR: $agpr1 is not a AV_64_Align2 register.
     DS_GWS_INIT $agpr1, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 
+    ; Odd-aligned physical 64-bit tuples are a genuine alignment error.
     $vgpr3_vgpr4 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT $vgpr1_vgpr2
+    ; GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
+    ; GFX90A-ERR: $vgpr1_vgpr2 is not a AV_64_Align2 register.
     DS_GWS_INIT $vgpr1_vgpr2, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 
     $agpr3_agpr4 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT $agpr3_agpr4
+    ; GFX90A-ERR: *** Bad machine code: Illegal physical register for instruction ***
+    ; GFX90A-ERR: $agpr3_agpr4 is not a AV_64_Align2 register.
     DS_GWS_INIT $agpr3_agpr4, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 
+    ; Unaligned virtual 64-bit tuples are a genuine alignment error.
     %4:vreg_64 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT %4:vreg_64
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: Expected a AV_64_Align2 register, but got a VReg_64 register
     DS_GWS_INIT %4, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 
     %5:areg_64 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT %5:areg_64
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: Expected a AV_64_Align2 register, but got a AReg_64 register
     DS_GWS_INIT %5, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 
     %6:av_64 = IMPLICIT_DEF
+    ; GFX90A-ERR: *** Bad machine code: Subtarget requires even aligned vector registers ***
+    ; GFX90A-ERR: - instruction: DS_GWS_INIT %6:av_64
+    ; GFX90A-ERR: *** Bad machine code: Illegal virtual register for instruction ***
+    ; GFX90A-ERR: Expected a AV_64_Align2 register, but got a AV_64 register
     DS_GWS_INIT %6, 0, implicit $m0, implicit $exec :: (store (s32) into custom "GWSResource")
 
     S_ENDPGM 0

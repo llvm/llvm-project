@@ -41,6 +41,14 @@
 using namespace mlir;
 using namespace mlir::vector;
 
+static Operation *createWithProperties(OpBuilder &builder, Operation *op,
+                                       ValueRange operands, TypeRange types) {
+  OperationState state(op->getLoc(), op->getName(), operands, types,
+                       op->getDiscardableAttrDictionary().getValue());
+  state.propertiesAttr = op->getPropertiesAsAttribute();
+  return builder.create(state);
+}
+
 template <typename IntType>
 static SmallVector<IntType> extractVector(ArrayAttr arrayAttr) {
   return llvm::to_vector<4>(llvm::map_range(
@@ -476,8 +484,7 @@ struct ReorderCastOpsOnBroadcast
     if (auto vecTy = dyn_cast<VectorType>(bcastOp.getSourceType()))
       castResTy = vecTy.clone(castResTy);
     auto *castOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(),
-                        bcastOp.getSource(), castResTy, op->getAttrs());
+        createWithProperties(rewriter, op, bcastOp.getSource(), castResTy);
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
         op, op->getResult(0).getType(), castOp->getResult(0));
     return success();
@@ -556,8 +563,7 @@ struct ReorderElementwiseOpsOnTranspose final
     auto vectorType = srcType.clone(
         cast<VectorType>(op->getResultTypes()[0]).getElementType());
     Operation *elementwiseOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        vectorType, op->getAttrs());
+        createWithProperties(rewriter, op, srcValues, vectorType);
     rewriter.replaceOpWithNewOp<vector::TransposeOp>(
         op, op->getResultTypes()[0], elementwiseOp->getResult(0),
         transposeMaps.front());
@@ -1043,39 +1049,59 @@ struct ReorderElementwiseOpsOnBroadcast final
           op, "Op doesn't have ElementwiseMappableTraits");
     if (op->getNumOperands() == 0)
       return failure();
-    if (isa<vector::FMAOp>(op)) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "Op only accepts vector types - not supported as broadcast source "
-          "might be a scalar");
-    }
 
     Type resultElemType = resultType.getElementType();
 
-    // Get the type of the first non-constant operand
+    // Select the source shape for the reordered computation. Prefer the first
+    // non-constant vector source so that scalar sources can be broadcast to its
+    // shape. The compatibility check below ensures that all vector sources have
+    // the same shape and scalable dimensions.
     Value broadcastSource;
+    Value firstBroadcastSource;
     for (Value operand : op->getOperands()) {
       Operation *definingOp = operand.getDefiningOp();
       if (!definingOp)
         return failure();
       if (definingOp->hasTrait<OpTrait::ConstantLike>())
         continue;
-      broadcastSource = getBroadcastLikeSource(operand);
-      break;
+      Value source = getBroadcastLikeSource(operand);
+      if (!source)
+        return failure();
+      if (!firstBroadcastSource)
+        firstBroadcastSource = source;
+      if (isa<VectorType>(source.getType())) {
+        broadcastSource = source;
+        break;
+      }
     }
+    // If all non-constant operands are scalar, choose the first source.
+    if (!broadcastSource)
+      broadcastSource = firstBroadcastSource;
     if (!broadcastSource)
       return failure();
     Type unbroadcastResultType =
         cloneOrReplace(broadcastSource.getType(), resultElemType);
 
-    // Make sure that all operands are broadcast from identically-shaped types:
-    //  * scalar (`vector.broadcast`), or
-    //  * vector (`vector.broadcast`).
-    // Otherwise the re-ordering wouldn't be safe.
+    // Some ops, e.g. `vector.fma`, only accept vector types. For such ops, a
+    // vector broadcast source is needed to determine the type of the reordered
+    // op. Scalar sources can then be promoted to that vector type.
+    // TODO: Support the case where all broadcast sources are scalars by
+    // promoting them to single element vectors.
+    if (isa<vector::FMAOp>(op) && !isa<VectorType>(unbroadcastResultType)) {
+      return rewriter.notifyMatchFailure(
+          op, "Op only accepts vector types, but the broadcast source is a "
+              "scalar");
+    }
+
+    // Make sure that all operands are broadcasts from compatible source types.
+    // Scalar sources are allowed when a vector source is available and are
+    // promoted to the vector source type selected above.
     if (!llvm::all_of(op->getOperands(), [broadcastSource](Value val) {
           if (auto source = getBroadcastLikeSource(val))
             return haveSameShapeAndScaling(source.getType(),
-                                           broadcastSource.getType());
+                                           broadcastSource.getType()) ||
+                   (isa<VectorType>(broadcastSource.getType()) &&
+                    !isa<VectorType>(source.getType()));
           SplatElementsAttr splatConst;
           return matchPattern(val, m_Constant(&splatConst));
         })) {
@@ -1103,14 +1129,20 @@ struct ReorderElementwiseOpsOnBroadcast final
                 rewriter, newConst, newType, operand.getLoc());
         srcValues.push_back(newConstOp->getResult(0));
       } else {
-        srcValues.push_back(operand.getDefiningOp()->getOperand(0));
+        Value source = operand.getDefiningOp()->getOperand(0);
+        if (isa<VectorType>(broadcastSource.getType()) &&
+            !isa<VectorType>(source.getType()))
+          source = vector::BroadcastOp::create(
+              rewriter, operand.getLoc(),
+              cloneOrReplace(broadcastSource.getType(), source.getType()),
+              source);
+        srcValues.push_back(source);
       }
     }
 
     // Create the "elementwise" Op
     Operation *elementwiseOp =
-        rewriter.create(op->getLoc(), op->getName().getIdentifier(), srcValues,
-                        unbroadcastResultType, op->getAttrs());
+        createWithProperties(rewriter, op, srcValues, unbroadcastResultType);
 
     // Replace the original Op with the elementwise Op
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(
@@ -2031,8 +2063,7 @@ struct DropUnitDimFromElementwiseOps final
         dropNonScalableUnitDimFromType(resultVectorType);
     // Create an updated elementwise Op without unit dim.
     Operation *elementwiseOp =
-        rewriter.create(loc, op->getName().getIdentifier(), newOperands,
-                        newResultVectorType, op->getAttrs());
+        createWithProperties(rewriter, op, newOperands, newResultVectorType);
 
     // Restore the unit dim by applying vector.shape_cast to the result.
     rewriter.replaceOpWithNewOp<ShapeCastOp>(op, resultVectorType,

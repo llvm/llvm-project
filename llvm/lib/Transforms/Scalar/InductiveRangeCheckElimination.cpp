@@ -52,6 +52,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
@@ -84,6 +85,7 @@
 #include "llvm/Transforms/Utils/LoopConstrainer.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -926,6 +928,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
 
     if (CFGChanged && !SkipProfitabilityChecks) {
       PreservedAnalyses PA = PreservedAnalyses::all();
+      PA.abandon<CycleAnalysis>();
       PA.abandon<BlockFrequencyAnalysis>();
       AM.invalidate(F, PA);
     }
@@ -944,6 +947,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
       Changed = true;
       if (!SkipProfitabilityChecks) {
         PreservedAnalyses PA = PreservedAnalyses::all();
+        PA.abandon<CycleAnalysis>();
         PA.abandon<BlockFrequencyAnalysis>();
         AM.invalidate(F, PA);
       }
@@ -1033,8 +1037,11 @@ bool InductiveRangeCheckElimination::run(
     PrintRecognizedRangeChecks(errs());
 
   const char *FailureReason = nullptr;
+  SCEVExpander LoopStructureExpander(SE, "loop-constrainer");
+  SCEVExpanderCleaner LoopStructureExpanderCleaner(LoopStructureExpander);
   std::optional<LoopStructure> MaybeLoopStructure =
-      LoopStructure::parseLoopStructure(SE, *L, AllowUnsignedLatchCondition,
+      LoopStructure::parseLoopStructure(LoopStructureExpander, *L,
+                                        AllowUnsignedLatchCondition,
                                         FailureReason);
   if (!MaybeLoopStructure) {
     LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
@@ -1076,13 +1083,15 @@ bool InductiveRangeCheckElimination::run(
       calculateSubRanges(SE, *L, *SafeIterRange, LS);
   if (!MaybeSR) {
     LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
-    return false;
+    return Changed;
   }
 
   LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
                      SafeIterRange->getBegin()->getType(), *MaybeSR);
 
   if (LC.run()) {
+    LoopStructureExpanderCleaner.markResultUsed();
+    LS.IndVarStart->setName("indvar.start");
     Changed = true;
 
     auto PrintConstrainedLoopInfo = [L]() {

@@ -1,9 +1,9 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
-// RUN: %clang_cc1 -target-cpu gfx900 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
-// RUN: %clang_cc1 -target-cpu gfx900 -fopenmp -x c++ -std=c++11 -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -dwarf-version=5 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgpu-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgpu9.00-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple amdgpu9.00-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -dwarf-version=5 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=AMD
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple nvptx64 -fopenmp-targets=nvptx64 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=NVIDIA
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple nvptx64 -fopenmp-targets=nvptx64 -emit-llvm %s -fopenmp-is-target-device -dwarf-version=5 -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=NVIDIA
 // RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple spirv64 -fopenmp-targets=spirv64 -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s --check-prefix=SPIRV
@@ -35,17 +35,17 @@ void func() {
 }
 
 // SPIRV: attributes #0
-// SPIRV-SAME: "nvvm.maxntid"="20"
-// SPIRV-SAME: "omp_target_thread_limit"="20" 
+// SPIRV-SAME: "nvvm.maxntid"="84"
+// SPIRV-SAME: "omp_target_thread_limit"="84" 
 // SPIRV: attributes #4
 // SPIRV-SAME: "amdgpu-waves-per-eu"="3,7"
 // SPIRV-SAME: "nvvm.maxntid"="17"
 // SPIRV-SAME: "omp_target_thread_limit"="17"
 
 // AMD: attributes #0
-// AMD-SAME: "amdgpu-flat-work-group-size"="10,20"
-// AMD-SAME: "omp_target_thread_limit"="20"
-// AMD: "omp_target_thread_limit"="45"
+// AMD-SAME: "amdgpu-flat-work-group-size"="10,84"
+// AMD-SAME: "omp_target_thread_limit"="84"
+// AMD: "omp_target_thread_limit"="109"
 // AMD: attributes #4
 // AMD-SAME: "amdgpu-flat-work-group-size"="3,17"
 // AMD-SAME: "amdgpu-waves-per-eu"="3,7"
@@ -53,11 +53,11 @@ void func() {
 
 // It is unclear if we should use the AMD annotations for other targets, we do for now.
 // NVIDIA: attributes #[[ATTR0]]
-// NVIDIA-SAME: "nvvm.maxntid"="20"
-// NVIDIA-SAME: "omp_target_thread_limit"="20"
+// NVIDIA-SAME: "nvvm.maxntid"="84"
+// NVIDIA-SAME: "omp_target_thread_limit"="84"
 // NVIDIA: attributes #[[ATTR1]]
-// NVIDIA-SAME: "nvvm.maxntid"="45"
-// NVIDIA-SAME: "omp_target_thread_limit"="45"
+// NVIDIA-SAME: "nvvm.maxntid"="109"
+// NVIDIA-SAME: "omp_target_thread_limit"="109"
 // NVIDIA: attributes #[[ATTR2]]
 // NVIDIA-SAME: "nvvm.maxntid"="17"
 // NVIDIA-SAME: "omp_target_thread_limit"="17"

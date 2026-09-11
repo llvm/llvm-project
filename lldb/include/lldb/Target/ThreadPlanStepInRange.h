@@ -22,7 +22,7 @@ class ThreadPlanStepInRange : public ThreadPlanStepRange,
 public:
   ThreadPlanStepInRange(Thread &thread, const AddressRange &range,
                         const SymbolContext &addr_context,
-                        const char *step_into_target, lldb::RunMode stop_others,
+                        std::string step_into_target, lldb::RunMode stop_others,
                         LazyBool step_in_avoids_code_without_debug_info,
                         LazyBool step_out_avoids_code_without_debug_info);
 
@@ -82,7 +82,7 @@ private:
                              // demand for that.
   LazyBool m_virtual_step;   // true if we've just done a "virtual step", i.e.
                              // just moved the inline stack depth.
-  ConstString m_step_into_target;
+  std::string m_step_into_target;
   ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
   const ThreadPlanStepInRange &
   operator=(const ThreadPlanStepInRange &) = delete;

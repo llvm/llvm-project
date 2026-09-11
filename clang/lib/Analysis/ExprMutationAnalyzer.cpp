@@ -127,6 +127,10 @@ class ExprPointeeResolve {
     if (const auto *BO = dyn_cast<BinaryOperator>(E)) {
       if (BO->isAdditiveOp())
         return (resolveExpr(BO->getLHS()) || resolveExpr(BO->getRHS()));
+      if (BO->getOpcode() == BO_AddAssign || BO->getOpcode() == BO_SubAssign)
+        return resolveExpr(BO->getLHS());
+      if (BO->getOpcode() == BO_Assign)
+        return (resolveExpr(BO->getLHS()) || resolveExpr(BO->getRHS()));
       if (BO->isCommaOp())
         return resolveExpr(BO->getRHS());
       return false;
@@ -136,7 +140,7 @@ class ExprPointeeResolve {
       return resolveExpr(PE->getSubExpr());
 
     if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
-      if (UO->getOpcode() == UO_AddrOf)
+      if (UO->getOpcode() == UO_AddrOf || UO->isIncrementDecrementOp())
         return resolveExpr(UO->getSubExpr());
     }
 

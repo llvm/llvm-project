@@ -29,7 +29,7 @@ add_entrypoint_object(
     .${LIBC_TARGET_ARCHITECTURE}.longjmp
 )
 
-if (TARGET libc.src.setjmp.sigsetjmp_epilogue)
+if(TARGET libc.src.setjmp.sigsetjmp_epilogue)
   add_entrypoint_object(
     siglongjmp
     SRCS

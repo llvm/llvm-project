@@ -31,6 +31,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
 
@@ -107,6 +108,13 @@ bool Variable::NameMatches(const RegularExpression &regex) const {
 Type *Variable::GetType() {
   if (m_symfile_type_sp)
     return m_symfile_type_sp->GetType();
+  return nullptr;
+}
+
+lldb::TypeSP Variable::GetEnclosingType() {
+  Type *type = GetType();
+  if (type)
+    return type->GetSymbolFile()->GetTypeEnclosingVariableUID(GetID());
   return nullptr;
 }
 
@@ -279,6 +287,10 @@ bool Variable::LocationIsValidForAddress(const Address &address) {
 }
 
 bool Variable::IsInScope(StackFrame *frame) {
+  // Synthetic values are always in scope.
+  if (IsSyntheticValueType(m_scope))
+    return true;
+
   switch (m_scope) {
   case eValueTypeRegister:
   case eValueTypeRegisterSet:

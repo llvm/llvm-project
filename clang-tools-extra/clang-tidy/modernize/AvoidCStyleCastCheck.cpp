@@ -79,7 +79,7 @@ static bool needsLeadingSpace(CharSourceRange Range, StringRef ReplacementText,
   if (Begin.isInvalid() || Begin.isMacroID())
     return false;
 
-  auto BeginInfo = SM.getDecomposedLoc(Begin);
+  const auto BeginInfo = SM.getDecomposedLoc(Begin);
   bool Invalid = false;
   StringRef Buffer = SM.getBufferData(BeginInfo.first, &Invalid);
   if (Invalid || BeginInfo.second == 0)
@@ -115,7 +115,7 @@ static bool sameTypeAsWritten(QualType X, QualType Y) {
   if (X.getCanonicalType() != Y.getCanonicalType())
     return false;
 
-  auto TC = X->getTypeClass();
+  const auto TC = X->getTypeClass();
   if (TC != Y->getTypeClass())
     return false;
 
@@ -147,7 +147,7 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
   if (CastExpr->getCastKind() == CK_ToVoid)
     return;
 
-  auto IsFunction = [](QualType T) {
+  const auto IsFunction = [](QualType T) {
     T = T.getCanonicalType().getNonReferenceType();
     return T->isFunctionType() || T->isFunctionPointerType() ||
            T->isMemberFunctionPointerType();
@@ -169,16 +169,15 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
                                DestTypeAsWritten->isRecordType() &&
                                !DestTypeAsWritten->isElaboratedTypeSpecifier();
 
-  if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast) {
-    // Function pointer/reference casts may be needed to resolve ambiguities in
-    // case of overloaded functions, so detection of redundant casts is trickier
-    // in this case. Don't emit "redundant cast" warnings for function
-    // pointer/reference types.
-    if (sameTypeAsWritten(SourceTypeAsWritten, DestTypeAsWritten)) {
-      diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
-          << FixItHint::CreateRemoval(ReplaceRange);
-      return;
-    }
+  // Function pointer/reference casts may be needed to resolve ambiguities in
+  // case of overloaded functions, so detection of redundant casts is trickier
+  // in this case. Don't emit "redundant cast" warnings for function
+  // pointer/reference types.
+  if (CastExpr->getCastKind() == CK_NoOp && !FnToFnCast &&
+      sameTypeAsWritten(SourceTypeAsWritten, DestTypeAsWritten)) {
+    diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
+        << FixItHint::CreateRemoval(ReplaceRange);
+    return;
   }
 
   // The rest of this check is only relevant to C++.
@@ -222,11 +221,11 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
       CastText.insert(CastText.begin(), ' ');
     Diag << FixItHint::CreateReplacement(ReplaceRange, CastText);
   };
-  auto ReplaceWithNamedCast = [&](StringRef CastType) {
+  const auto ReplaceWithNamedCast = [&](StringRef CastType) {
     Diag << CastType;
     ReplaceWithCast((CastType + "<" + DestTypeString + ">").str());
   };
-  auto ReplaceWithConstructorCall = [&]() {
+  const auto ReplaceWithConstructorCall = [&]() {
     Diag << "constructor call syntax";
     // FIXME: Validate DestTypeString, maybe.
     ReplaceWithCast(DestTypeString.str());

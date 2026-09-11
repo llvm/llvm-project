@@ -19,15 +19,16 @@
 
 #if SANITIZER_LIBBACKTRACE
 # include "backtrace-supported.h"
-# if SANITIZER_POSIX && BACKTRACE_SUPPORTED && !BACKTRACE_USES_MALLOC
-#  include "backtrace.h"
-#  if SANITIZER_CP_DEMANGLE
-#   undef ARRAY_SIZE
-#   include "demangle.h"
+#  if (SANITIZER_POSIX || SANITIZER_WINDOWS) && BACKTRACE_SUPPORTED && \
+      !BACKTRACE_USES_MALLOC
+#    include "backtrace.h"
+#    if SANITIZER_CP_DEMANGLE
+#      undef ARRAY_SIZE
+#      include "demangle.h"
+#    endif
+#  else
+#    define SANITIZER_LIBBACKTRACE 0
 #  endif
-# else
-#  define SANITIZER_LIBBACKTRACE 0
-# endif
 #endif
 
 namespace __sanitizer {

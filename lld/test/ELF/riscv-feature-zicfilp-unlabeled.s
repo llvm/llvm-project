@@ -61,8 +61,8 @@
 
 ## An invalid -z zicfilp-unlabeled-report option should give an error
 # RUN: not ld.lld f2-s.o -z zicfilp=x -z zicfilp-unlabeled-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
-# INVALID: error: unknown -z zicfilp= value: x
-# INVALID: error: unknown -z zicfilp-unlabeled-report= value: x
+# INVALID: error: unknown -z zicfilp= value 'x'
+# INVALID: error: unknown -z zicfilp-unlabeled-report= value 'x'
 
 ## ZICFILP-unlabeled and ZICFILP-func-sig should conflict with each other
 # RUN: not ld.lld f1-c.o 2>&1 | FileCheck --check-prefix=CONFLICT %s

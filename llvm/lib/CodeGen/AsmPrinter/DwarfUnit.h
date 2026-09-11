@@ -73,6 +73,7 @@ protected:
   /// DW_AT_containing_type attribute. This attribute points to a DIE that
   /// corresponds to the MDNode mapped with the subprogram DIE.
   DenseMap<DIE *, const DINode *> ContainingTypeMap;
+  DenseMap<DIE *, const DINode *> PropertyForwardMap;
 
   DwarfUnit(dwarf::Tag, const DICompileUnit *Node, AsmPrinter *A,
             DwarfDebug *DW, DwarfFile *DWU, unsigned UniqueID = 0);
@@ -228,6 +229,7 @@ public:
   void addSourceLine(DIE &Die, const DILabel *L);
   void addSourceLine(DIE &Die, const DIType *Ty);
   void addSourceLine(DIE &Die, const DIObjCProperty *Ty);
+  void addSourceLine(DIE &Die, const DIProperty *P);
 
   /// Add constant value entry in variable DIE.
   void addConstantValue(DIE &Die, const ConstantInt *CI, const DIType *Ty);
@@ -279,6 +281,8 @@ public:
   /// Construct DIEs for types that contain vtables.
   void constructContainingTypeDIEs();
 
+  void constructPropertyForwardDIEs();
+
   /// Construct function argument DIEs.
   ///
   /// \returns The index of the object parameter in \c Args if one exists.
@@ -317,11 +321,8 @@ public:
 
   void constructTypeDIE(DIE &Buffer, const DICompositeType *CTy);
 
-  /// addSectionDelta - Add a label delta attribute data and value.
-  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
-                       const MCSymbol *Lo);
-
-  /// Add a Dwarf section label attribute data and value.
+  /// Add a Dwarf section label attribute data and value. If the current unit
+  /// is a DWO, this function will instead emit a section delta.
   void addSectionLabel(DIE &Die, dwarf::Attribute Attribute,
                        const MCSymbol *Label, const MCSymbol *Sec);
 
@@ -389,6 +390,7 @@ private:
   void constructArrayTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   void constructEnumTypeDIE(DIE &Buffer, const DICompositeType *CTy);
   DIE &constructMemberDIE(DIE &Buffer, const DIDerivedType *DT);
+  void constructPropertyDIE(DIE &Buffer, const DIProperty *P);
   void constructTemplateTypeParameterDIE(DIE &Buffer,
                                          const DITemplateTypeParameter *TP);
   void constructTemplateValueParameterDIE(DIE &Buffer,
@@ -413,6 +415,10 @@ private:
   /// Returns 'true' if the current DwarfVersion is compatible
   /// with the specified \p Version.
   bool isCompatibleWithVersion(uint16_t Version) const;
+
+  /// addSectionDelta - Add a label delta attribute data and value.
+  void addSectionDelta(DIE &Die, dwarf::Attribute Attribute, const MCSymbol *Hi,
+                       const MCSymbol *Lo);
 };
 
 class DwarfTypeUnit final : public DwarfUnit {

@@ -13,7 +13,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SPIRVLegalizeImplicitBinding.h"
 #include "SPIRV.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -24,7 +23,6 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
-#include <algorithm>
 #include <vector>
 
 using namespace llvm;
@@ -95,9 +93,9 @@ struct BindingInfoCollector : public InstVisitor<BindingInfoCollector> {
     } else if (CI.getIntrinsicID() ==
                Intrinsic::spv_resource_counterhandlefrombinding) {
       const uint32_t DescSet =
-          cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
-      const uint32_t Binding =
           cast<ConstantInt>(CI.getArgOperand(1))->getZExtValue();
+      const uint32_t Binding =
+          cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
       addBinding(DescSet, Binding);
     } else if (CI.getIntrinsicID() ==
                Intrinsic::spv_resource_counterhandlefromimplicitbinding) {
@@ -124,12 +122,14 @@ static uint32_t getOrderId(const CallInst *CI) {
 static uint32_t getDescSet(const CallInst *CI) {
   uint32_t DescSetArgIdx;
   switch (CI->getIntrinsicID()) {
-  case Intrinsic::spv_resource_handlefromimplicitbinding:
   case Intrinsic::spv_resource_handlefrombinding:
+    DescSetArgIdx = 0;
+    break;
+  case Intrinsic::spv_resource_handlefromimplicitbinding:
+  case Intrinsic::spv_resource_counterhandlefrombinding:
     DescSetArgIdx = 1;
     break;
   case Intrinsic::spv_resource_counterhandlefromimplicitbinding:
-  case Intrinsic::spv_resource_counterhandlefrombinding:
     DescSetArgIdx = 2;
     break;
   default:
@@ -222,8 +222,8 @@ bool SPIRVLegalizeImplicitBindingImpl::runOnModule(Module &M) {
 }
 } // namespace
 
-PreservedAnalyses SPIRVLegalizeImplicitBinding::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
+PreservedAnalyses
+SPIRVLegalizeImplicitBindingPass::run(Module &M, ModuleAnalysisManager &AM) {
   return SPIRVLegalizeImplicitBindingImpl().runOnModule(M)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
@@ -271,8 +271,8 @@ void SPIRVLegalizeImplicitBindingImpl::replaceCounterHandleCall(
 
   SmallVector<Value *, 8> Args;
   Args.push_back(OldCI->getArgOperand(0));
-  Args.push_back(Builder.getInt32(NewBinding));
   Args.push_back(Builder.getInt32(DescSet));
+  Args.push_back(Builder.getInt32(NewBinding));
 
   Type *Tys[] = {OldCI->getType(), OldCI->getArgOperand(0)->getType()};
   Function *NewFunc = Intrinsic::getOrInsertDeclaration(

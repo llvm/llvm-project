@@ -407,6 +407,13 @@ public:
   LLVM_ABI ConstantRange binaryOp(Instruction::BinaryOps BinOp,
                                   const ConstantRange &Other) const;
 
+  /// Return a new range representing the possible values resulting from an
+  /// application of the specified binary operation \p BO (including
+  /// poison-generating flags) to a left hand side of this range and a right
+  /// hand side of \p Other.
+  LLVM_ABI ConstantRange binaryOp(const BinaryOperator &BO,
+                                  const ConstantRange &Other) const;
+
   /// Return a new range representing the possible values resulting
   /// from an application of the specified overflowing binary operator to a
   /// left hand side of this range and a right hand side of \p Other given
@@ -502,7 +509,8 @@ public:
 
   /// Return a new range representing the possible values resulting
   /// from a binary-or of a value in this range by a value in \p Other.
-  LLVM_ABI ConstantRange binaryOr(const ConstantRange &Other) const;
+  LLVM_ABI ConstantRange binaryOr(const ConstantRange &Other,
+                                  bool IsDisjoint = false) const;
 
   /// Return a new range representing the possible values resulting
   /// from a binary-xor of a value in this range by a value in \p Other.
@@ -574,6 +582,9 @@ public:
 
   /// Calculate ctpop range.
   LLVM_ABI ConstantRange ctpop() const;
+
+  /// Calculate sqrtFloor range.  See APInt::sqrtFloor().
+  LLVM_ABI ConstantRange sqrtFloor() const;
 
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.

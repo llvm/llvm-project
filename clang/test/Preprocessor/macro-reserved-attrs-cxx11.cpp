@@ -11,8 +11,9 @@
 #define noreturn // expected-warning {{noreturn is a reserved attribute identifier}}
 #undef noreturn  // expected-warning {{noreturn is a reserved attribute identifier}}
 
-#define carries_dependency // expected-warning {{carries_dependency is a reserved attribute identifier}}
-#undef carries_dependency  // expected-warning {{carries_dependency is a reserved attribute identifier}}
+// carries_dependency was removed from the standard by P3475R2.
+#define carries_dependency
+#undef carries_dependency
 
 #define deprecated // expected-warning {{deprecated is a reserved attribute identifier}}
 #undef deprecated  // expected-warning {{deprecated is a reserved attribute identifier}}
@@ -43,8 +44,8 @@
 #define noreturn "test" // expected-warning {{noreturn is a reserved attribute identifier}}
 #undef noreturn         // expected-warning {{noreturn is a reserved attribute identifier}}
 
-#define carries_dependency "test" // expected-warning {{carries_dependency is a reserved attribute identifier}}
-#undef carries_dependency         // expected-warning {{carries_dependency is a reserved attribute identifier}}
+#define carries_dependency "test"
+#undef carries_dependency
 
 #define deprecated "test" // expected-warning {{deprecated is a reserved attribute identifier}}
 #undef deprecated         // expected-warning {{deprecated is a reserved attribute identifier}}

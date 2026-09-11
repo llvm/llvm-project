@@ -18,6 +18,7 @@
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 #define DEBUG_TYPE "perf-reader"
@@ -466,7 +467,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   if (!PerfExecutable) {
     exitWithError("Perf not found.");
   }
-  std::string PerfPath = *PerfExecutable;
+  std::string PerfExecutablePath = *PerfExecutable;
   SmallString<128> PerfTraceFile;
   sys::fs::createUniquePath("perf-script-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%.tmp",
                             PerfTraceFile, /*MakeAbsolute=*/true);
@@ -477,12 +478,53 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   PerfScriptReader::TempFileCleanups.emplace_back(PerfTraceFile);
   PerfScriptReader::TempFileCleanups.emplace_back(ErrorFile);
 
+  auto RunPerfScript = [&](ArrayRef<StringRef> Args) {
+    // ExecuteAndWait does not truncate redirected output files on Unix. Remove
+    // both files so a shorter invocation cannot retain output from the
+    // previous perf script invocation.
+    for (StringRef Path : {StringRef(PerfTraceFile), StringRef(ErrorFile)}) {
+      if (std::error_code EC = sys::fs::remove(Path))
+        exitWithError(EC, Path);
+    }
+
+    std::string ExecutionError;
+    bool ExecutionFailed = false;
+    int ExitCode =
+        sys::ExecuteAndWait(PerfExecutablePath, Args, std::nullopt, Redirects,
+                            /*SecondsToWait=*/0, /*MemoryLimit=*/0,
+                            &ExecutionError, &ExecutionFailed);
+    if (!ExecutionFailed && ExitCode == 0)
+      return;
+
+    std::string Message;
+    raw_string_ostream OS(Message);
+    if (ExecutionFailed || ExitCode == -1)
+      OS << "Failed to execute perf script";
+    else if (ExitCode == -2)
+      OS << "Perf script terminated abnormally";
+    else
+      OS << "Perf script failed with exit code " << ExitCode;
+    if (!ExecutionError.empty())
+      OS << ": " << ExecutionError;
+
+    if (auto ErrorBuffer = MemoryBuffer::getFile(ErrorFile)) {
+      StringRef Stderr = ErrorBuffer.get()->getBuffer().trim();
+      if (!Stderr.empty())
+        OS << "\n" << Stderr;
+    }
+    exitWithError(OS.str());
+  };
+
   std::string PIDs;
   if (!SkipPID) {
-    StringRef ScriptMMapArgs[] = {PerfPath, "script",   "--show-mmap-events",
-                                  "-F",     "comm,pid", "-i",
+    StringRef ScriptMMapArgs[] = {PerfExecutablePath,
+                                  "script",
+                                  "--show-mmap-events",
+                                  "-F",
+                                  "comm,pid",
+                                  "-i",
                                   PerfData};
-    sys::ExecuteAndWait(PerfPath, ScriptMMapArgs, std::nullopt, Redirects);
+    RunPerfScript(ScriptMMapArgs);
 
     // Collect the PIDs
     TraceStream TraceIt(PerfTraceFile);
@@ -509,7 +551,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
 
   // Run perf script again to retrieve events for PIDs collected above
   SmallVector<StringRef, 8> ScriptSampleArgs;
-  ScriptSampleArgs.push_back(PerfPath);
+  ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
@@ -520,7 +562,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
     ScriptSampleArgs.push_back("--pid");
     ScriptSampleArgs.push_back(PIDs);
   }
-  sys::ExecuteAndWait(PerfPath, ScriptSampleArgs, std::nullopt, Redirects);
+  RunPerfScript(ScriptSampleArgs);
 
   return {std::string(PerfTraceFile), InputFormat::PerfScript,
           PerfContent::UnknownContent};
@@ -552,30 +594,48 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
-  // Drop the event if its image is loaded at the same address
-  if (Event.Address == Binary->getBaseAddress()) {
-    Binary->setIsLoadedByMMap(true);
-    return;
-  }
+  Binary->addMMapRange(Event.Address, Event.Size);
 
-  if (IsKernel || Event.Offset == Binary->getTextSegmentOffset()) {
+  // Check if the FileOffset falls within the [Event.Offset, Event.Offset +
+  // Event.Size) range.
+  auto MMapContainsFileOffset = [&](uint64_t FileOffset) {
+    return Event.Offset <= FileOffset &&
+           (FileOffset - Event.Offset) < Event.Size;
+  };
+
+  if (IsKernel || MMapContainsFileOffset(Binary->getTextSegmentOffset())) {
+    // For ELF, subtract the file offset to get the runtime address
+    // corresponding to file offset zero. Kernel mmap events report the text
+    // address as Event.Offset, so use the text segment offset from the ELF
+    // instead.
+    const uint64_t RuntimeBaseAddress =
+        Binary->isCOFF()
+            ? Event.Address
+            : Event.Address -
+                  (IsKernel ? Binary->getTextSegmentOffset() : Event.Offset);
     // A binary image could be unloaded and then reloaded at different
     // place, so update binary load address.
     // Only update for the first executable segment and assume all other
     // segments are loaded at consecutive memory addresses, which is the case on
     // X64.
-    Binary->setBaseAddress(Event.Address);
+    Binary->setBaseAddress(RuntimeBaseAddress);
     Binary->setIsLoadedByMMap(true);
   } else {
     // Verify segments are loaded consecutively.
     const auto &Offsets = Binary->getTextSegmentOffsets();
-    auto It = llvm::lower_bound(Offsets, Event.Offset);
-    if (It != Offsets.end() && *It == Event.Offset) {
-      // The event is for loading a separate executable segment.
-      auto I = std::distance(Offsets.begin(), It);
+    auto IsContiguousMMapForSegment = [&](auto SegmentIt, uint64_t FileOffset,
+                                          uint64_t RuntimeAddress) {
+      auto I = std::distance(Offsets.begin(), SegmentIt);
       const auto &PreferredAddrs = Binary->getPreferredTextSegmentAddresses();
-      if (PreferredAddrs[I] - Binary->getPreferredBaseAddress() !=
-          Event.Address - Binary->getBaseAddress())
+      return PreferredAddrs[I] + (FileOffset - *SegmentIt) ==
+             Binary->canonicalizeVirtualAddress(RuntimeAddress);
+    };
+
+    auto It = llvm::lower_bound(Offsets, Event.Offset);
+    if (It != Offsets.end() && MMapContainsFileOffset(*It)) {
+      // The event is for loading a separate executable segment.
+      uint64_t RuntimeSegmentAddress = Event.Address + (*It - Event.Offset);
+      if (!IsContiguousMMapForSegment(It, *It, RuntimeSegmentAddress))
         exitWithError("Executable segments not loaded consecutively");
     } else {
       if (It == Offsets.begin())
@@ -585,7 +645,7 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
         // via multiple mmap calls with consecutive memory addresses.
         --It;
         assert(*It < Event.Offset);
-        if (Event.Offset - *It != Event.Address - Binary->getBaseAddress())
+        if (!IsContiguousMMapForSegment(It, Event.Offset, Event.Address))
           exitWithError("Segment not loaded by consecutive mmaps");
       }
     }
@@ -1179,11 +1239,12 @@ bool PerfScriptReader::isLBRSample(StringRef Line, bool CheckLineStart) {
   SmallVector<StringRef, 32> Records;
   if (!CheckLineStart)
     Line = Line.trim();
+  // Line might start with IP or only contain brstack. Check first two records
+  // and fail if no record exists.
   Line.split(Records, " ", 2, CheckLineStart);
-  if (Records.size() < 2)
-    return false;
-  if (Records[1].starts_with("0x") && Records[1].contains('/'))
-    return true;
+  for (StringRef Record : Records)
+    if (Record.starts_with("0x") && Record.contains('/'))
+      return true;
   return false;
 }
 

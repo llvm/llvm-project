@@ -12,6 +12,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "llvm/ADT/APInt.h"
 
 namespace fir {
 
@@ -146,6 +147,12 @@ static constexpr llvm::StringRef getAccessGroupsAttrName() {
   return "access_groups";
 }
 
+/// Attribute holding the unique name of the Fortran entity an allocation
+/// belongs to. It is an inherent attribute of the FIR allocation operations,
+/// and may also be carried by allocation operations of other dialects that
+/// FIR allocations were rewritten into.
+static constexpr llvm::StringRef getUniqNameAttrName() { return "uniq_name"; }
+
 /// Attribute to mark coarray Fortran entities with the CORANK attribute.
 constexpr llvm::StringRef getCorankAttrName() { return "fir.corank"; }
 
@@ -188,8 +195,8 @@ bool valueMayHaveFirAttributes(mlir::Value value,
 /// function has any host associations, for example.
 bool anyFuncArgsHaveAttr(mlir::func::FuncOp func, llvm::StringRef attr);
 
-/// Unwrap integer constant from an mlir::Value.
-std::optional<std::int64_t> getIntIfConstant(mlir::Value value);
+/// Unwrap an integer constant from an mlir::Value as an APInt.
+std::optional<llvm::APInt> getIntIfConstant(mlir::Value value);
 
 static constexpr llvm::StringRef getAdaptToByRefAttrName() {
   return "adapt.valuebyref";

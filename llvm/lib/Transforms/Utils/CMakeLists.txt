@@ -24,6 +24,7 @@ add_llvm_component_library(LLVMTransformUtils
   DebugSSAUpdater.cpp
   DeclareRuntimeLibcalls.cpp
   DemoteRegToStack.cpp
+  DynamicDebugging.cpp
   DXILUpgrade.cpp
   EntryExitInstrumenter.cpp
   EscapeEnumerator.cpp
@@ -92,7 +93,6 @@ add_llvm_component_library(LLVMTransformUtils
   SplitModuleByCategory.cpp
   StripNonLineTableDebugInfo.cpp
   SymbolRewriter.cpp
-  TriggerCrashPass.cpp
   UnifyLoopExits.cpp
   Utils.cpp
   ValueMapper.cpp

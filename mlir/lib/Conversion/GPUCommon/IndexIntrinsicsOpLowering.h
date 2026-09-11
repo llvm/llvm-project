@@ -87,7 +87,7 @@ public:
       opBound = static_cast<uint32_t>(bound->getZExtValue());
     if (auto range = getIndexOpRange(op, op.getDimension(), opBound, indexKind,
                                      intrType, /*bitWidth=*/32))
-      newOp->setAttr("range", range);
+      newOp->setInherentAttr(rewriter.getStringAttr("range"), range);
 
     if (indexBitwidth > 32) {
       newOp = LLVM::SExtOp::create(rewriter, loc,

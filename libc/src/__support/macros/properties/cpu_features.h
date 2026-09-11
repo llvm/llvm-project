@@ -26,6 +26,16 @@
 #define LIBC_TARGET_CPU_HAS_SVE2
 #endif
 
+// __ARM_FEATURE_MVE is a bitfield
+#if defined(__ARM_FEATURE_MVE)
+#if (__ARM_FEATURE_MVE & 0x1)
+#define LIBC_TARGET_CPU_HAS_MVE
+#endif // LIBC_TARGET_CPU_HAS_MVE
+#if (__ARM_FEATURE_MVE & 0x2)
+#define LIBC_TARGET_CPU_HAS_MVE_FP
+#endif // LIBC_TARGET_CPU_HAS_MVE_FP
+#endif // __ARM_FEATURE_MVE
+
 #if defined(__ARM_FEATURE_MOPS)
 #define LIBC_TARGET_CPU_HAS_MOPS
 #endif

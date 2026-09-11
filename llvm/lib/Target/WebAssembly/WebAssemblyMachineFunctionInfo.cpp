@@ -73,7 +73,7 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return
-    // values with a poitner parameter.
+    // values with a pointer parameter.
     Results.clear();
     Params.push_back(PtrVT);
   }

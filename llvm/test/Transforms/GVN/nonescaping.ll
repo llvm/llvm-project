@@ -6,7 +6,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 declare noalias ptr @malloc(i64) nounwind allockind("alloc,uninitialized") allocsize(0) inaccessiblememonly
 declare noalias ptr @calloc(i64, i64) allockind("alloc,zeroed") allocsize(0,1) inaccessiblememonly
-declare noalias ptr @_Znwm(i64)
+declare noalias ptr @_Znwm(i64) memory(inaccessiblemem: readwrite)
 declare void @escape(ptr)
 
 define i8 @test_malloc(ptr %p) {

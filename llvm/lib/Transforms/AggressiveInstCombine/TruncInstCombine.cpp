@@ -43,9 +43,8 @@ STATISTIC(NumExprsReduced, "Number of truncations eliminated by reducing bit "
 STATISTIC(NumInstrsReduced,
           "Number of instructions whose bit width was reduced");
 
-/// Given an instruction and a container, it fills all the relevant operands of
-/// that instruction, with respect to the Trunc expression graph optimizaton.
-static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
+/// Return whether operand \p OpNo of \p I is reducible.
+static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
   unsigned Opc = I->getOpcode();
   switch (Opc) {
   case Instruction::Trunc:
@@ -53,7 +52,7 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::SExt:
     // These CastInst are considered leaves of the evaluated expression, thus,
     // their operands are not relevent.
-    break;
+    return false;
   case Instruction::Add:
   case Instruction::Sub:
   case Instruction::Mul:
@@ -65,23 +64,28 @@ static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
   case Instruction::AShr:
   case Instruction::UDiv:
   case Instruction::URem:
+    return true;
   case Instruction::InsertElement:
-    Ops.push_back(I->getOperand(0));
-    Ops.push_back(I->getOperand(1));
-    break;
+    return OpNo < 2;
   case Instruction::ExtractElement:
-    Ops.push_back(I->getOperand(0));
-    break;
+    return OpNo == 0;
   case Instruction::Select:
-    Ops.push_back(I->getOperand(1));
-    Ops.push_back(I->getOperand(2));
-    break;
+    return OpNo != 0;
   case Instruction::PHI:
-    llvm::append_range(Ops, cast<PHINode>(I)->incoming_values());
-    break;
+    return true;
+  case Instruction::ShuffleVector:
+    return true;
   default:
     llvm_unreachable("Unreachable!");
   }
+}
+
+/// Given an instruction and a container, it fills all the relevant operands of
+/// that instruction, with respect to the Trunc expression graph optimizaton.
+static void getRelevantOperands(Instruction *I, SmallVectorImpl<Value *> &Ops) {
+  for (Use &Op : I->operands())
+    if (isRelevantOperand(I, Op.getOperandNo()))
+      Ops.push_back(Op.get());
 }
 
 bool TruncInstCombine::buildTruncExpressionGraph() {
@@ -145,7 +149,8 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     case Instruction::URem:
     case Instruction::InsertElement:
     case Instruction::ExtractElement:
-    case Instruction::Select: {
+    case Instruction::Select:
+    case Instruction::ShuffleVector: {
       SmallVector<Value *, 2> Operands;
       getRelevantOperands(I, Operands);
       append_range(Worklist, Operands);
@@ -162,8 +167,7 @@ bool TruncInstCombine::buildTruncExpressionGraph() {
     }
     default:
       // TODO: Can handle more cases here:
-      // 1. shufflevector
-      // 2. sdiv, srem
+      // 1. sdiv, srem
       // ...
       return false;
     }
@@ -267,18 +271,20 @@ Type *TruncInstCombine::getBestTruncatedType() {
     return nullptr;
 
   // We don't want to duplicate instructions, which isn't profitable. Thus, we
-  // can't shrink something that has multiple users, unless all users are
-  // post-dominated by the trunc instruction, i.e., were visited during the
-  // expression evaluation.
+  // can't shrink something that has multiple uses, unless all uses can be
+  // reduced and all users are post-dominated by the trunc instruction,
+  // i.e., were visited during the expression evaluation.
   unsigned DesiredBitWidth = 0;
   for (auto Itr : InstInfoMap) {
     Instruction *I = Itr.first;
     if (I->hasOneUse())
       continue;
     bool IsExtInst = (isa<ZExtInst>(I) || isa<SExtInst>(I));
-    for (auto *U : I->users())
-      if (auto *UI = dyn_cast<Instruction>(U))
-        if (UI != CurrentTruncInst && !InstInfoMap.count(UI)) {
+    for (Use &U : I->uses())
+      if (auto *UI = dyn_cast<Instruction>(U.getUser()))
+        if (UI != CurrentTruncInst &&
+            (!InstInfoMap.count(UI) ||
+             !isRelevantOperand(UI, U.getOperandNo()))) {
           if (!IsExtInst)
             return nullptr;
           // If this is an extension from the dest type, we can eliminate it,
@@ -348,7 +354,6 @@ Type *TruncInstCombine::getBestTruncatedType() {
   if (MinBitWidth >= OrigBitWidth ||
       (DesiredBitWidth && DesiredBitWidth != MinBitWidth))
     return nullptr;
-
   return IntegerType::get(CurrentTruncInst->getContext(), MinBitWidth);
 }
 
@@ -460,6 +465,13 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       Value *LHS = getReducedOperand(I->getOperand(1), SclTy);
       Value *RHS = getReducedOperand(I->getOperand(2), SclTy);
       Res = Builder.CreateSelect(Op0, LHS, RHS, "", I);
+      break;
+    }
+    case Instruction::ShuffleVector: {
+      Value *LHS = getReducedOperand(I->getOperand(0), SclTy);
+      Value *RHS = getReducedOperand(I->getOperand(1), SclTy);
+      auto *SI = cast<ShuffleVectorInst>(I);
+      Res = Builder.CreateShuffleVector(LHS, RHS, SI->getShuffleMask());
       break;
     }
     case Instruction::PHI: {

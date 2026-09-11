@@ -41,7 +41,6 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/BitmaskEnum.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -66,6 +65,10 @@ class MapInfoFinalizationPass
     mlir::omp::MapInfoOp parent;
     size_t index;
   };
+
+  using MapperPath =
+      std::pair<mlir::Operation *, llvm::SmallVector<int64_t, 4>>;
+  using MapperPathStack = llvm::SmallVector<MapperPath, 8>;
 
   /// Tracks any intermediate function/subroutine local allocations we
   /// generate for the descriptors of box type dummy arguments, so that
@@ -138,6 +141,92 @@ class MapInfoFinalizationPass
     return findMemberByIndexPath(op, indexPath) != nullptr;
   }
 
+  static bool mapperCoversIndexPath(mlir::Operation *symbolTableAnchor,
+                                    mlir::FlatSymbolRefAttr mapperId,
+                                    llvm::ArrayRef<int64_t> indexPath,
+                                    MapperPathStack &activeMapperPaths) {
+    mlir::omp::DeclareMapperOp symbol =
+        mlir::SymbolTable::lookupNearestSymbolFrom<mlir::omp::DeclareMapperOp>(
+            symbolTableAnchor, mapperId);
+    if (!symbol)
+      return false;
+
+    mlir::Operation *symbolOp = symbol.getOperation();
+    if (llvm::any_of(activeMapperPaths, [&](const MapperPath &entry) {
+          return entry.first == symbolOp &&
+                 entry.second.size() == indexPath.size() &&
+                 std::equal(entry.second.begin(), entry.second.end(),
+                            indexPath.begin());
+        }))
+      return false;
+    activeMapperPaths.emplace_back(
+        symbolOp,
+        llvm::SmallVector<int64_t, 4>(indexPath.begin(), indexPath.end()));
+
+    mlir::omp::DeclareMapperInfoOp mapperInfo = symbol.getDeclareMapperInfo();
+    if (!mapperInfo) {
+      activeMapperPaths.pop_back();
+      return false;
+    }
+
+    bool covers = llvm::any_of(mapperInfo.getMapVars(), [&](mlir::Value v) {
+      mlir::omp::MapInfoOp map =
+          mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(v.getDefiningOp());
+      return map && !map.getMembers().empty() && map.getMembersIndexAttr() &&
+             mapInfoCoversIndexPath(map, indexPath, activeMapperPaths);
+    });
+    activeMapperPaths.pop_back();
+    return covers;
+  }
+
+  static bool mapInfoCoversIndexPath(mlir::omp::MapInfoOp map,
+                                     llvm::ArrayRef<int64_t> indexPath,
+                                     MapperPathStack &activeMapperPaths) {
+    if (mappedIndexPathExists(map, indexPath))
+      return true;
+
+    mlir::ArrayAttr memberIndices = map.getMembersIndexAttr();
+    if (!memberIndices)
+      return false;
+
+    // Match a mapped member whose index path is a prefix of the requested
+    // path, then continue the lookup through that member with the suffix.
+    for (auto [memberIdx, memberIndexAttr] : llvm::enumerate(memberIndices)) {
+      auto memberIndexPath = mlir::cast<mlir::ArrayAttr>(memberIndexAttr);
+      if (memberIndexPath.size() >= indexPath.size())
+        continue;
+
+      bool isPrefix = true;
+      for (auto [idx, attr] : llvm::enumerate(memberIndexPath)) {
+        if (mlir::cast<mlir::IntegerAttr>(attr).getInt() != indexPath[idx]) {
+          isPrefix = false;
+          break;
+        }
+      }
+      if (!isPrefix)
+        continue;
+
+      mlir::omp::MapInfoOp memberMap =
+          mlir::dyn_cast_if_present<mlir::omp::MapInfoOp>(
+              map.getMembers()[memberIdx].getDefiningOp());
+      if (!memberMap)
+        continue;
+
+      llvm::ArrayRef<int64_t> nestedIndexPath =
+          indexPath.drop_front(memberIndexPath.size());
+      if (!memberMap.getMembers().empty() &&
+          mapInfoCoversIndexPath(memberMap, nestedIndexPath, activeMapperPaths))
+        return true;
+
+      if (memberMap.getMapperIdAttr() &&
+          mapperCoversIndexPath(memberMap, memberMap.getMapperIdAttr(),
+                                nestedIndexPath, activeMapperPaths))
+        return true;
+    }
+
+    return false;
+  }
+
   /// Get the map type of the nearest explicitly mapped parent for a member.
   /// "Explicitly mapped" means the map type does NOT have the implicit flag.
   ///
@@ -177,17 +266,6 @@ class MapInfoFinalizationPass
     }
   }
 
-  /// Return true if the module has an OpenMP requires clause that includes
-  /// unified_shared_memory.
-  static bool moduleRequiresUSM(mlir::ModuleOp module) {
-    assert(module && "invalid module");
-    if (auto req = module->getAttrOfType<mlir::omp::ClauseRequiresAttr>(
-            "omp.requires"))
-      return mlir::omp::bitEnumContainsAll(
-          req.getValue(), mlir::omp::ClauseRequires::unified_shared_memory);
-    return false;
-  }
-
   /// Create the member map for coordRef and append it (and its index
   /// path) to the provided new* vectors, if it is not already present.
   void appendMemberMapIfNew(
@@ -205,20 +283,10 @@ class MapInfoFinalizationPass
       return;
 
     if (op.getMapperId()) {
-      mlir::omp::DeclareMapperOp symbol =
-          mlir::SymbolTable::lookupNearestSymbolFrom<
-              mlir::omp::DeclareMapperOp>(op, op.getMapperIdAttr());
-      assert(symbol && "missing symbol for declare mapper identifier");
-      mlir::omp::DeclareMapperInfoOp mapperInfo = symbol.getDeclareMapperInfo();
-      // TODO: Probably a way to cache these keys in someway so we don't
-      // constantly go through the process of rebuilding them on every check, to
-      // save some cycles, but it can wait for a subsequent patch.
-      for (auto v : mapperInfo.getMapVars()) {
-        mlir::omp::MapInfoOp map =
-            mlir::cast<mlir::omp::MapInfoOp>(v.getDefiningOp());
-        if (!map.getMembers().empty() && mappedIndexPathExists(map, indexPath))
-          return;
-      }
+      MapperPathStack activeMapperPaths;
+      if (mapperCoversIndexPath(op, op.getMapperIdAttr(), indexPath,
+                                activeMapperPaths))
+        return;
     }
 
     builder.setInsertionPoint(op);
@@ -340,14 +408,23 @@ class MapInfoFinalizationPass
   /// base address can be utilised.
   mlir::Value getDescriptorFromBoxMap(mlir::omp::MapInfoOp boxMap,
                                       fir::FirOpBuilder &builder,
-                                      bool &canDescBeDeferred) {
+                                      bool &canDescBeDeferred,
+                                      bool &canOptimizeDescViaPrivatization) {
     mlir::Value descriptor = boxMap.getVarPtr();
     if (!fir::isTypeWithDescriptor(boxMap.getVarPtrType()))
       if (auto addrOp = mlir::dyn_cast_if_present<fir::BoxAddrOp>(
               boxMap.getVarPtr().getDefiningOp()))
         descriptor = addrOp.getVal();
 
+    // We defer descriptor mapping until target or target data regions for
+    // non-allocatable, non-pointer type dummy arguments with assumed type or
+    // shape. We choose to optimize via privatization a subset of these cases
+    // for target regions, which can not be deferred. We can extend the
+    // privatization to allocatables pointers and other descriptor types as
+    // needed in the future.
     canDescBeDeferred = canDeferDescriptorMapping(descriptor);
+    canOptimizeDescViaPrivatization = isDummyArgument(descriptor) &&
+                                      fir::isAssumedShape(descriptor.getType());
 
     if (!mlir::isa<fir::BaseBoxType>(descriptor.getType()) &&
         !fir::factory::isOptionalArgument(descriptor.getDefiningOp()))
@@ -752,17 +829,36 @@ class MapInfoFinalizationPass
   /// issues.
   mlir::omp::ClauseMapFlags
   getDescriptorMapType(mlir::omp::ClauseMapFlags mapTypeFlag,
-                       mlir::Operation *target) {
+                       mlir::Operation *target, bool privatizeDescriptor) {
     using MapFlags = mlir::omp::ClauseMapFlags;
     MapFlags flags = MapFlags::none;
+
+    // Special runtime case for descriptor privatization requires the
+    // following map types in synergy:
+    //
+    //  PRIVATE | ATTACH | TARGET_PARAM
+    //
+    // This map type triggers the runtime to perform firstprivatization
+    // on the descriptor, treating the descriptor as a privatized entity
+    // for the duration of the device kernel, initialized with the same
+    // data as the host descriptor. The transferred data is then attached
+    // to the descriptor. The effects of this, other than the descriptor
+    // being privatized, are that the descriptors contents gets transferred
+    // across to the device with the initial kernel payload, packaged
+    // alongside the initial kernel argument list, reducing the number of
+    // host to device transfers required alongside runtime overhead as we
+    // batch as much of our required data together as we can.
+    if (privatizeDescriptor) {
+      return MapFlags::priv | MapFlags::attach | MapFlags::target_param |
+             (mapTypeFlag & MapFlags::implicit);
+    }
 
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target)) {
       return mapTypeFlag;
     }
 
-    flags |=
-        MapFlags::to | (mapTypeFlag & (MapFlags::implicit | MapFlags::present));
+    flags |= MapFlags::to | (mapTypeFlag & MapFlags::implicit);
 
     // Descriptors for objects will always be copied. This is because the
     // descriptor can be rematerialized by the compiler, and so the address
@@ -777,11 +873,6 @@ class MapInfoFinalizationPass
                  ? MapFlags::close
                  : MapFlags::always;
 
-    // For unified_shared_memory, we additionally add `CLOSE` on the descriptor
-    // to ensure device-local placement where required by tests relying on USM +
-    // close semantics.
-    if (moduleRequiresUSM(target->getParentOfType<mlir::ModuleOp>()))
-      flags |= MapFlags::close;
     return flags;
   }
 
@@ -817,6 +908,18 @@ class MapInfoFinalizationPass
     return false;
   }
 
+  /// Gets the underlying type of a pointer type, effectively unwrapping
+  /// fir.ref, and fir.array to get the underlying scalar type.
+  mlir::Type getUnderlyingVarType(mlir::Type baseAddrType) {
+    baseAddrType =
+        llvm::cast<mlir::omp::PointerLikeType>(fir::unwrapRefType(baseAddrType))
+            .getElementType();
+    if (auto seqType = llvm::dyn_cast<fir::SequenceType>(baseAddrType))
+      if (seqType.hasDynamicExtents())
+        baseAddrType = seqType.getEleTy();
+    return baseAddrType;
+  }
+
   /// This function generates an attach map, which is an type of OpenMP map that
   /// binds a pointer to its data. In the case of Fortran, this binding is
   /// primarily for binding the pointer inside of descriptors to the underlying
@@ -838,12 +941,8 @@ class MapInfoFinalizationPass
             ? reuseBaseAddr
             : fir::BoxOffsetOp::create(builder, descMapOp->getLoc(), descriptor,
                                        fir::BoxFieldAttr::base_addr);
-    mlir::Type underlyingVarType = llvm::cast<mlir::omp::PointerLikeType>(
-                                       fir::unwrapRefType(baseAddr.getType()))
-                                       .getElementType();
-    if (auto seqType = llvm::dyn_cast<fir::SequenceType>(underlyingVarType))
-      if (seqType.hasDynamicExtents())
-        underlyingVarType = seqType.getEleTy();
+
+    mlir::Type underlyingVarType = getUnderlyingVarType(baseAddr.getType());
 
     auto implicitAttachMap = mlir::omp::MapInfoOp::create(
         builder, descMapOp->getLoc(), descMapOp.getResult().getType(),
@@ -866,72 +965,6 @@ class MapInfoFinalizationPass
     addAttachMemberToTarget(descMapOp, implicitAttachMap, mapMemberUsers,
                             builder, target);
     return implicitAttachMap;
-  }
-
-  // Expand mappings of type(C_PTR) to map their `__address` field explicitly
-  // as a single pointer-sized member (USM-gated at callsite). This helps in
-  // USM scenarios to ensure the pointer-sized mapping is used.
-  mlir::omp::MapInfoOp genCptrMemberMap(mlir::omp::MapInfoOp op,
-                                        fir::FirOpBuilder &builder) {
-    if (!op.getMembers().empty())
-      return op;
-
-    mlir::Type varTy = fir::unwrapRefType(op.getVarPtr().getType());
-    if (!mlir::isa<fir::RecordType>(varTy))
-      return op;
-    auto recTy = mlir::cast<fir::RecordType>(varTy);
-    // If not a builtin C_PTR record, skip.
-    if (!recTy.getName().ends_with("__builtin_c_ptr"))
-      return op;
-
-    // Find the index of the c_ptr address component named "__address".
-    int32_t fieldIdx = recTy.getFieldIndex("__address");
-    if (fieldIdx < 0)
-      return op;
-
-    mlir::Location loc = op.getVarPtr().getLoc();
-    mlir::Type memTy = recTy.getType(fieldIdx);
-    fir::IntOrValue idxConst =
-        mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
-    mlir::Value coord = fir::CoordinateOp::create(
-        builder, loc, builder.getRefType(memTy), op.getVarPtr(),
-        llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
-
-    // Child for the `__address` member.
-    llvm::SmallVector<llvm::SmallVector<int64_t>> memberIdx = {{0}};
-    mlir::ArrayAttr newMembersAttr = builder.create2DI64ArrayAttr(memberIdx);
-    // Force CLOSE in USM paths so the pointer gets device-local placement
-    // when required by tests relying on USM + close semantics.
-    mlir::omp::ClauseMapFlagsAttr mapTypeAttr =
-        builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(
-            op.getMapType() | mlir::omp::ClauseMapFlags::close);
-
-    mlir::omp::MapInfoOp memberMap = mlir::omp::MapInfoOp::create(
-        builder, loc, coord.getType(), coord,
-        mlir::TypeAttr::get(fir::unwrapRefType(coord.getType())), mapTypeAttr,
-        builder.getAttr<mlir::omp::VariableCaptureKindAttr>(
-            mlir::omp::VariableCaptureKind::ByRef),
-        /*varPtrPtr=*/mlir::Value{}, /*varPtrPtrType=*/mlir::TypeAttr{},
-        /*members=*/llvm::SmallVector<mlir::Value>{},
-        /*member_index=*/mlir::ArrayAttr{},
-        /*bounds=*/op.getBounds(),
-        /*mapperId=*/mlir::FlatSymbolRefAttr(),
-        /*name=*/op.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
-
-    // Rebuild the parent as a container with the `__address` member.
-    mlir::omp::MapInfoOp newParent = mlir::omp::MapInfoOp::create(
-        builder, op.getLoc(), op.getResult().getType(), op.getVarPtr(),
-        op.getVarPtrTypeAttr(), mapTypeAttr, op.getMapCaptureTypeAttr(),
-        /*varPtrPtr=*/mlir::Value{}, mlir::TypeAttr{},
-        /*members=*/llvm::SmallVector<mlir::Value>{memberMap},
-        /*member_index=*/newMembersAttr,
-        /*bounds=*/llvm::SmallVector<mlir::Value>{},
-        /*mapperId=*/mlir::FlatSymbolRefAttr(), op.getNameAttr(),
-        /*partial_map=*/builder.getBoolAttr(false));
-    op.replaceAllUsesWith(newParent.getResult());
-    op->erase();
-    return newParent;
   }
 
   // If the operation that we are expanding with a descriptor has a user
@@ -1068,7 +1101,8 @@ class MapInfoFinalizationPass
       mlir::Operation *target, mlir::Value descriptor,
       llvm::SmallVectorImpl<ParentAndPlacement> &mapMemberUsers,
       bool isAttachNever, bool isAttachAlways, bool isHasDeviceAddrFlag,
-      bool descCanBeDeferred, mlir::FlatSymbolRefAttr mapperId) {
+      bool descCanBeDeferred, bool canOptimizeDescViaPrivatization,
+      mlir::FlatSymbolRefAttr mapperId) {
     bool isRefPtrPtee =
         bitEnumContainsAll(op.getMapType(),
                            mlir::omp::ClauseMapFlags::ref_ptr) &&
@@ -1095,19 +1129,30 @@ class MapInfoFinalizationPass
                               newMembersAttr, newMembers, memberIndices);
     }
 
+    bool optDescMap = canOptimizeDescViaPrivatization &&
+                      llvm::isa<mlir::omp::TargetOp>(target);
+
     // If we have been provided RefPtrPtee, utilise the user specified map
     // types, otherwise, use the default descriptor map types.
     auto mapType = isRefPtrPtee ? op.getMapType()
-                                : getDescriptorMapType(op.getMapType(), target);
+                                : getDescriptorMapType(op.getMapType(), target,
+                                                       optDescMap);
 
     mapType = removeAttachModifiers(mapType);
+    mlir::Type underlyingVarType = mlir::Type{};
+    bool baseAddrInsert = optDescMap && baseAddr;
+    if (baseAddrInsert)
+      underlyingVarType = getUnderlyingVarType(baseAddr.getType());
 
     auto newMapInfoOp = mlir::omp::MapInfoOp::create(
         builder, op->getLoc(), op.getResult().getType(), descriptor,
         mlir::TypeAttr::get(fir::unwrapRefType(descriptor.getType())),
         builder.getAttr<mlir::omp::ClauseMapFlagsAttr>(mapType),
-        op.getMapCaptureTypeAttr(), /*varPtrPtr=*/mlir::Value{},
-        /*varPtrPtTyper=*/mlir::TypeAttr{}, newMembers, newMembersAttr,
+        op.getMapCaptureTypeAttr(),
+        baseAddrInsert ? baseAddr.getVarPtrPtr() : mlir::Value{},
+        baseAddrInsert ? mlir::TypeAttr::get(underlyingVarType)
+                       : mlir::TypeAttr{},
+        newMembers, newMembersAttr,
         /*bounds=*/mlir::SmallVector<mlir::Value>{},
         /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getNameAttr(),
         /*partial_map=*/builder.getBoolAttr(false));
@@ -1143,6 +1188,7 @@ class MapInfoFinalizationPass
   void genDescriptorMaps(mlir::omp::MapInfoOp op, fir::FirOpBuilder &builder,
                          mlir::Operation *target) {
     bool descCanBeDeferred = false;
+    bool canOptimizeDescViaPrivatization = false;
     llvm::SmallVector<ParentAndPlacement> mapMemberUsers;
     getMemberUserList(op, mapMemberUsers);
 
@@ -1162,9 +1208,15 @@ class MapInfoFinalizationPass
                      !bitEnumContainsAll(op.getMapType(),
                                          mlir::omp::ClauseMapFlags::ref_ptr);
 
-    mlir::Value descriptor =
-        getDescriptorFromBoxMap(op, builder, descCanBeDeferred);
+    mlir::Value descriptor = getDescriptorFromBoxMap(
+        op, builder, descCanBeDeferred, canOptimizeDescViaPrivatization);
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
+
+    // Exclude irregular maps from optimization via privatization; at least for
+    // the moment.
+    if (isHasDeviceAddrFlag || isUseDeviceAddr(op, *target) ||
+        isUseDevicePtr(op, *target))
+      canOptimizeDescViaPrivatization = false;
 
     // If we're a derived type descriptor, that's been flagged as ref_ptr,
     // but, in the same mapping, we also have members with their own
@@ -1189,9 +1241,10 @@ class MapInfoFinalizationPass
       genRefPteeMap(op, builder, target, descriptor, mapMemberUsers,
                     isAttachNever, isAttachAlways, mapperId);
     } else {
-      genRefPtrPteeOrDefaultMap(
-          op, builder, target, descriptor, mapMemberUsers, isAttachNever,
-          isAttachAlways, isHasDeviceAddrFlag, descCanBeDeferred, mapperId);
+      genRefPtrPteeOrDefaultMap(op, builder, target, descriptor, mapMemberUsers,
+                                isAttachNever, isAttachAlways,
+                                isHasDeviceAddrFlag, descCanBeDeferred,
+                                canOptimizeDescViaPrivatization, mapperId);
     }
   }
 
@@ -1391,208 +1444,6 @@ class MapInfoFinalizationPass
         mlir::Operation *targetUser = getFirstTargetUser(op);
         assert(targetUser && "expected user of map operation was not found");
         addImplicitMembersToTarget(op, builder, targetUser);
-      });
-
-      // Next, walk `omp.map.info` ops to see if any record members should be
-      // implicitly mapped.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        mlir::Type underlyingType =
-            fir::unwrapRefType(op.getVarPtr().getType());
-
-        // TODO Test with and support more complicated cases; like arrays for
-        // records, for example.
-        if (!fir::isRecordWithAllocatableMember(underlyingType))
-          return mlir::WalkResult::advance();
-
-        // TODO For now, only consider `omp.target` ops. Other ops that support
-        // `map` clauses will follow later.
-        mlir::omp::TargetOp target =
-            mlir::dyn_cast_if_present<mlir::omp::TargetOp>(
-                getFirstTargetUser(op));
-
-        if (!target)
-          return mlir::WalkResult::advance();
-
-        auto mapClauseOwner =
-            llvm::dyn_cast<mlir::omp::MapClauseOwningOpInterface>(*target);
-
-        int64_t mapVarIdx = mapClauseOwner.getOperandIndexForMap(op);
-        assert(mapVarIdx >= 0 &&
-               mapVarIdx <
-                   static_cast<int64_t>(mapClauseOwner.getMapVars().size()));
-
-        auto argIface =
-            llvm::dyn_cast<mlir::omp::BlockArgOpenMPOpInterface>(*target);
-        // TODO How should `map` block argument that correspond to: `private`,
-        // `use_device_addr`, `use_device_ptr`, be handled?
-        mlir::BlockArgument opBlockArg = argIface.getMapBlockArgs()[mapVarIdx];
-        llvm::SetVector<mlir::Operation *> mapVarForwardSlice;
-        mlir::getForwardSlice(opBlockArg, &mapVarForwardSlice);
-
-        mapVarForwardSlice.remove_if([&](mlir::Operation *sliceOp) {
-          // TODO Support coordinate_of ops.
-          //
-          // TODO Support call ops by recursively examining the forward slice of
-          // the corresponding parameter to the field in the called function.
-          return !mlir::isa<hlfir::DesignateOp>(sliceOp);
-        });
-
-        auto recordType = mlir::cast<fir::RecordType>(underlyingType);
-        llvm::SmallVector<mlir::Value> newMapOpsForFields;
-        llvm::SmallVector<llvm::SmallVector<int64_t>> newMemberIndexPaths;
-
-        // 1) Handle direct top-level allocatable fields.
-        for (auto fieldMemTyPair : recordType.getTypeList()) {
-          auto &field = fieldMemTyPair.first;
-          auto memTy = fieldMemTyPair.second;
-
-          if (!fir::isAllocatableType(memTy))
-            continue;
-
-          bool referenced = llvm::any_of(mapVarForwardSlice, [&](auto *opv) {
-            auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(opv);
-            return designateOp && designateOp.getComponent() &&
-                   designateOp.getComponent()->strref() == field;
-          });
-          if (!referenced)
-            continue;
-
-          int32_t fieldIdx = recordType.getFieldIndex(field);
-          builder.setInsertionPoint(op);
-          fir::IntOrValue idxConst =
-              mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
-          auto fieldCoord = fir::CoordinateOp::create(
-              builder, op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
-              llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
-          int64_t fieldIdx64 = static_cast<int64_t>(fieldIdx);
-          llvm::SmallVector<int64_t, 1> idxPath{fieldIdx64};
-          appendMemberMapIfNew(op, builder, op.getLoc(), fieldCoord, idxPath,
-                               field, newMapOpsForFields, newMemberIndexPaths);
-        }
-
-        // Handle nested allocatable fields along any component chain
-        // referenced in the region via HLFIR designates.
-        llvm::SmallVector<llvm::SmallVector<int64_t>> seenIndexPaths;
-        for (mlir::Operation *sliceOp : mapVarForwardSlice) {
-          auto designateOp = mlir::dyn_cast<hlfir::DesignateOp>(sliceOp);
-          if (!designateOp || !designateOp.getComponent())
-            continue;
-          llvm::SmallVector<llvm::StringRef> compPathReversed;
-          compPathReversed.push_back(designateOp.getComponent()->strref());
-          mlir::Value curBase = designateOp.getMemref();
-          bool rootedAtMapArg = false;
-          while (true) {
-            if (auto parentDes = curBase.getDefiningOp<hlfir::DesignateOp>()) {
-              if (!parentDes.getComponent())
-                break;
-              compPathReversed.push_back(parentDes.getComponent()->strref());
-              curBase = parentDes.getMemref();
-              continue;
-            }
-            if (auto decl = curBase.getDefiningOp<hlfir::DeclareOp>()) {
-              if (auto barg =
-                      mlir::dyn_cast<mlir::BlockArgument>(decl.getMemref()))
-                rootedAtMapArg = (barg == opBlockArg);
-            } else if (auto blockArg =
-                           mlir::dyn_cast_or_null<mlir::BlockArgument>(
-                               curBase)) {
-              rootedAtMapArg = (blockArg == opBlockArg);
-            }
-            break;
-          }
-          // Only process nested paths (2+ components). Single-component paths
-          // for direct fields are handled above.
-          if (!rootedAtMapArg || compPathReversed.size() < 2)
-            continue;
-          builder.setInsertionPoint(op);
-          llvm::SmallVector<int64_t> indexPath;
-          mlir::Type curTy = underlyingType;
-          mlir::Value coordRef = op.getVarPtr();
-          bool validPath = true;
-          for (llvm::StringRef compName : llvm::reverse(compPathReversed)) {
-            auto recTy = mlir::dyn_cast<fir::RecordType>(curTy);
-            if (!recTy) {
-              validPath = false;
-              break;
-            }
-            int32_t idx = recTy.getFieldIndex(compName);
-            if (idx < 0) {
-              validPath = false;
-              break;
-            }
-            indexPath.push_back(idx);
-            mlir::Type memTy = recTy.getType(idx);
-            fir::IntOrValue idxConst =
-                mlir::IntegerAttr::get(builder.getI32Type(), idx);
-            coordRef = fir::CoordinateOp::create(
-                builder, op.getLoc(), builder.getRefType(memTy), coordRef,
-                llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
-            curTy = memTy;
-          }
-          if (!validPath)
-            continue;
-          if (auto finalRefTy =
-                  mlir::dyn_cast<fir::ReferenceType>(coordRef.getType())) {
-            mlir::Type eleTy = finalRefTy.getElementType();
-            if (fir::isAllocatableType(eleTy)) {
-              if (!containsPath(seenIndexPaths, indexPath)) {
-                seenIndexPaths.emplace_back(indexPath.begin(), indexPath.end());
-                appendMemberMapIfNew(op, builder, op.getLoc(), coordRef,
-                                     indexPath, compPathReversed.front(),
-                                     newMapOpsForFields, newMemberIndexPaths);
-              }
-            }
-          }
-        }
-
-        if (newMapOpsForFields.empty())
-          return mlir::WalkResult::advance();
-
-        // Deduplicate by index path to avoid emitting duplicate members for
-        // the same component. Use a set-based key to keep this near O(n).
-        llvm::SmallVector<mlir::Value> dedupMapOps;
-        llvm::SmallVector<llvm::SmallVector<int64_t>> dedupIndexPaths;
-        llvm::StringSet<> seenKeys;
-        for (auto [i, mapOp] : llvm::enumerate(newMapOpsForFields)) {
-          const auto &path = newMemberIndexPaths[i];
-          llvm::SmallString<64> key;
-          buildPathKey(path, key);
-          if (seenKeys.contains(key))
-            continue;
-          seenKeys.insert(key);
-          dedupMapOps.push_back(mapOp);
-          dedupIndexPaths.emplace_back(path.begin(), path.end());
-        }
-        op.getMembersMutable().append(dedupMapOps);
-        llvm::SmallVector<llvm::SmallVector<int64_t>> newMemberIndices;
-        if (mlir::ArrayAttr oldAttr = op.getMembersIndexAttr())
-          for (mlir::Attribute indexList : oldAttr) {
-            llvm::SmallVector<int64_t> listVec;
-
-            for (mlir::Attribute index : mlir::cast<mlir::ArrayAttr>(indexList))
-              listVec.push_back(mlir::cast<mlir::IntegerAttr>(index).getInt());
-
-            newMemberIndices.emplace_back(std::move(listVec));
-          }
-        for (auto &path : dedupIndexPaths)
-          newMemberIndices.emplace_back(path);
-
-        op.setMembersIndexAttr(builder.create2DI64ArrayAttr(newMemberIndices));
-        // Set to partial map only if there is no user-defined mapper.
-        op.setPartialMap(op.getMapperIdAttr() == nullptr);
-
-        return mlir::WalkResult::advance();
-      });
-
-      // Expand type(C_PTR) only when unified_shared_memory is required,
-      // to ensure device-visible pointer size/behavior in USM scenarios
-      // without changing default expectations elsewhere.
-      func->walk([&](mlir::omp::MapInfoOp op) {
-        // Only expand C_PTR members when unified_shared_memory is required.
-        if (!moduleRequiresUSM(func->getParentOfType<mlir::ModuleOp>()))
-          return;
-        builder.setInsertionPoint(op);
-        genCptrMemberMap(op, builder);
       });
 
       func->walk([&](mlir::omp::MapInfoOp op) {

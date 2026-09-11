@@ -533,6 +533,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (BC.HasRelocations)
     Manager.registerPass(std::make_unique<PatchEntries>());
 
+  // Assign each function an output section.
+  Manager.registerPass(std::make_unique<AssignSections>());
+
   if (BC.isAArch64()) {
     Manager.registerPass(
         std::make_unique<AArch64RelaxationPass>(PrintAArch64Relaxation));

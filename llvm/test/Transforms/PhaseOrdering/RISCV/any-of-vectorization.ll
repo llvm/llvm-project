@@ -3,7 +3,7 @@
 
 ; Make sure we widen the vp.merge from LoopVectorizer to i8 in RISCVCodeGenPrepare
 
-define i32 @f(ptr %p, i32 %n) {
+define i32 @f(ptr %p, i32 %n) vscale_range(2, 1024) {
 ; CHECK-LABEL: define range(i32 0, 2) i32 @f(
 ; CHECK-SAME: ptr nofree readonly captures(none) [[P:%.*]], i32 [[N:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:

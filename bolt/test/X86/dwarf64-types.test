@@ -1,0 +1,137 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
+# RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
+# RUN: llvm-dwarfdump --debug-types %t.exe | FileCheck --check-prefix=INPUT %s
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --debug-types %t.bolt | FileCheck --check-prefix=BOLT %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+## BOLT must preserve DWARF64 type unit headers when rewriting .debug_types.
+
+# INPUT-LABEL: .debug_types contents:
+# INPUT: Type Unit: length = 0x{{[0-9a-f]+}}, format = DWARF64, version = 0x0004
+# INPUT-SAME: name = 'Foo'
+# INPUT: DW_TAG_type_unit
+# INPUT: DW_TAG_structure_type
+# INPUT: DW_AT_name{{.*}}"Foo"
+
+# BOLT-LABEL: .debug_types contents:
+# BOLT: Type Unit: length = 0x{{[0-9a-f]+}}, format = DWARF64, version = 0x0004
+# BOLT-SAME: name = 'Foo'
+# BOLT: DW_TAG_type_unit
+# BOLT: DW_TAG_structure_type
+# BOLT: DW_AT_name{{.*}}"Foo"
+
+	.text
+	.file	"dwarf64-types.s"
+	.file	1 "/" "dwarf64-types.s"
+	.globl	main
+	.type	main,@function
+main:
+	.loc	1 1 0
+	pushq	%rbp
+	movq	%rsp, %rbp
+	xorl	%eax, %eax
+	popq	%rbp
+	retq
+.Lfunc_end0:
+	.size	main, .Lfunc_end0-main
+
+	.section	.debug_info,"",@progbits
+.Lcu_begin0:
+	.long	.Lcu_end0-.Lcu_start0
+.Lcu_start0:
+	.short	4
+	.long	.debug_abbrev
+	.byte	8
+	.byte	1
+	.long	.Lstr_producer-.Ldebug_str
+	.short	12
+	.long	.Lstr_cu_name-.Ldebug_str
+	.quad	main
+	.long	.Lfunc_end0-main
+	.long	0
+	.byte	2
+	.quad	main
+	.long	.Lfunc_end0-main
+	.long	.Lstr_main-.Ldebug_str
+	.byte	0
+.Lcu_end0:
+
+	.section	.debug_types,"",@progbits
+.Ltypes_begin0:
+	.long	0xffffffff
+	.quad	.Ltypes_end0-.Ltypes_start0
+.Ltypes_start0:
+	.short	4
+	.quad	0
+	.byte	8
+	.quad	0x123456789abcdef0
+	.quad	.Ltype_die0-.Ltypes_begin0
+	.byte	3
+	.short	12
+.Ltype_die0:
+	.byte	4
+	.quad	.Lstr_foo-.Ldebug_str
+	.byte	8
+	.byte	0
+.Ltypes_end0:
+
+	.section	.debug_abbrev,"",@progbits
+	.byte	1
+	.byte	17
+	.byte	1
+	.byte	37
+	.byte	14
+	.byte	19
+	.byte	5
+	.byte	3
+	.byte	14
+	.byte	17
+	.byte	1
+	.byte	18
+	.byte	6
+	.byte	16
+	.byte	23
+	.byte	0
+	.byte	0
+	.byte	2
+	.byte	46
+	.byte	0
+	.byte	17
+	.byte	1
+	.byte	18
+	.byte	6
+	.byte	3
+	.byte	14
+	.byte	0
+	.byte	0
+	.byte	3
+	.byte	65
+	.byte	1
+	.byte	19
+	.byte	5
+	.byte	0
+	.byte	0
+	.byte	4
+	.byte	19
+	.byte	0
+	.byte	3
+	.byte	14
+	.byte	11
+	.byte	11
+	.byte	0
+	.byte	0
+	.byte	0
+
+	.section	.debug_str,"MS",@progbits,1
+.Ldebug_str:
+.Lstr_producer:
+	.asciz	"hand-written DWARF64 type test"
+.Lstr_cu_name:
+	.asciz	"dwarf64-types.s"
+.Lstr_main:
+	.asciz	"main"
+.Lstr_foo:
+	.asciz	"Foo"

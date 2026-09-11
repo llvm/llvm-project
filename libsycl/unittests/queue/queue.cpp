@@ -20,7 +20,7 @@ using namespace ::testing;
 TEST(Queue, CommonQueriesAndLifetime) {
   mock::MockWrapper Mock;
 
-  EXPECT_CALL(Mock.get(), olCreateQueue(_, _)).Times(1);
+  EXPECT_CALL(Mock.get(), olCreateQueue(_, _, _)).Times(1);
   EXPECT_CALL(Mock.get(), olDestroyQueue(_)).Times(1);
   {
     queue Q;

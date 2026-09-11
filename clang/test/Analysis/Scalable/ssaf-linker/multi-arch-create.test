@@ -1,0 +1,296 @@
+// Tests for `clang-ssaf-linker multi-arch create`.
+//
+// These tests exercise the CLI shape (subcommand dispatch, verb positional,
+// flag surface) and the happy / error paths of MultiArchStaticLibrary and
+// MultiArchSharedLibrary construction, mirroring `lipo -create`'s handling
+// of single- and multi-arch inputs.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// ============================================================================
+// Happy path (static family): two bare StaticLibrary inputs; the bundle's
+// identity is inferred from the inputs' own namespace
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-x86_64.json -o %t/libmulti-2arch.json
+// RUN: diff %S/Outputs/libmulti-2arch.json %t/libmulti-2arch.json
+
+// ============================================================================
+// Happy path (static family): a single bare StaticLibrary input, producing a
+// one-slice MultiArchStaticLibrary
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json -o %t/libmulti-1arch.json
+// RUN: diff %S/Outputs/libmulti-1arch.json %t/libmulti-1arch.json
+
+// ============================================================================
+// Happy path (static family): flatten an existing multi-arch bundle + a bare
+// input of a new triple, re-bundling into a 3-member MultiArchStaticLibrary
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %t/libmulti-2arch.json %S/Inputs/lib-ios.json -o %t/libmulti-3arch.json
+// RUN: diff %S/Outputs/libmulti-3arch.json %t/libmulti-3arch.json
+
+// ============================================================================
+// Happy path (static family): three bare inputs in one invocation, producing
+// the same bundle as building it up two at a time
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-x86_64.json %S/Inputs/lib-ios.json -o %t/libmulti-3bare.json
+// RUN: diff %S/Outputs/libmulti-3arch.json %t/libmulti-3bare.json
+
+// ============================================================================
+// Happy path: a wrapper that contributes no slices of its own still fixes the
+// bundle's identity, so a later bare input joins the namespace the wrapper
+// named rather than one of its own
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/libmulti-empty-wrapper.json %S/Inputs/lib-arm64.json -o %t/libmulti-from-wrapper.json
+// RUN: diff %S/Outputs/libmulti-1arch.json %t/libmulti-from-wrapper.json
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/libshared-empty-wrapper.json %S/Inputs/lu-arm64.json -o %t/libshared-from-wrapper.json
+// RUN: diff %S/Outputs/libshared-1arch.json %t/libshared-from-wrapper.json
+
+// An identity established by an empty wrapper is enforced on later inputs just
+// as one established by a member is.
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/libmulti-empty-wrapper.json %S/Inputs/lib-otherns.json -o %t/nsmismatch-from-wrapper.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NS-MISMATCH-FROM-WRAPPER
+// NS-MISMATCH-FROM-WRAPPER: namespace BuildNamespace(StaticLibrary, otherlib) from '{{.*}}lib-otherns.json' does not match expected namespace BuildNamespace(StaticLibrary, libmulti)
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/libshared-empty-wrapper.json %S/Inputs/lu-otherns.json -o %t/nsmismatch-from-shared-wrapper.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NS-MISMATCH-FROM-SHARED-WRAPPER
+// NS-MISMATCH-FROM-SHARED-WRAPPER: namespace NestedBuildNamespace([BuildNamespace(LinkUnit, othershared)]) from '{{.*}}lu-otherns.json' does not match expected namespace NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)])
+
+// ============================================================================
+// Happy path (shared family): two bare LUSummaryEncoding inputs
+// ============================================================================
+
+// Like the static family, a shared-family bundle's identity is inferred from
+// its members' own namespace.
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json %S/Inputs/lu-x86_64.json -o %t/libshared-2arch.json
+// RUN: diff %S/Outputs/libshared-2arch.json %t/libshared-2arch.json
+
+// ============================================================================
+// Happy path (shared family): a single bare LUSummaryEncoding input, producing
+// a one-slice MultiArchSharedLibrary
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json -o %t/libshared-1arch.json
+// RUN: diff %S/Outputs/libshared-1arch.json %t/libshared-1arch.json
+
+// ============================================================================
+// Happy path (shared family): flatten an existing multi-arch bundle + a bare
+// input of a new triple, re-bundling into a 3-member MultiArchSharedLibrary
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/libfoo-2arch.json %S/Inputs/lu-ios-libfoo.json -o %t/libfoo-3arch.json
+// RUN: diff %S/Outputs/libfoo-3arch.json %t/libfoo-3arch.json
+
+// ============================================================================
+// Mixed-family rejection
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lu-arm64.json -o %t/mix1.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MIXED-STATIC-THEN-SHARED
+// MIXED-STATIC-THEN-SHARED: input '{{.*}}lu-arm64.json' is a shared-library artifact, but a preceding input established this bundle as static-library
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json %S/Inputs/lib-arm64.json -o %t/mix2.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MIXED-SHARED-THEN-STATIC
+// MIXED-SHARED-THEN-STATIC: input '{{.*}}lib-arm64.json' is a static-library artifact, but a preceding input established this bundle as shared-library
+
+// ============================================================================
+// Raw TUSummaryEncoding rejection
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/tu-empty.json -o %t/tu-reject.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=INVALID-KIND
+// INVALID-KIND: '{{.*}}tu-empty.json' is a raw TU summary, not a valid input to multi-arch create: run static-library create or an entity-linking step first
+
+// A TU summary is rejected wherever it appears, not just in first position
+// (the first input having already established the family).
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/tu-empty.json -o %t/tu-reject-static.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=INVALID-KIND-STATIC
+// INVALID-KIND-STATIC: '{{.*}}tu-empty.json' is a raw TU summary, not a valid input to multi-arch create
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json %S/Inputs/tu-empty.json -o %t/tu-reject-shared.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=INVALID-KIND-SHARED
+// INVALID-KIND-SHARED: '{{.*}}tu-empty.json' is a raw TU summary, not a valid input to multi-arch create
+
+// ============================================================================
+// Malformed artifact: a read/decode failure is reported with the reading
+// context, not swallowed or misclassified
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/bad-artifact.json -o %t/bad.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-ARTIFACT
+// BAD-ARTIFACT: Reading artifact '{{.*}}bad-artifact.json'
+// BAD-ARTIFACT: unknown value 'BogusKind' for field 'type'
+
+// ============================================================================
+// Duplicate architecture slice
+// ============================================================================
+
+// Across two bare inputs (the same file passed twice).
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-arm64.json -o %t/dup-bare.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-BARE
+// DUP-BARE: duplicate architecture slice 'arm64-apple-macosx' contributed by both '{{.*}}lib-arm64.json' and '{{.*}}lib-arm64.json'
+
+// Straddling a flattened multi-arch input and a separate bare input.
+// RUN: not clang-ssaf-linker multi-arch create %t/libmulti-2arch.json %S/Inputs/lib-arm64.json -o %t/dup-flattened.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-FLATTENED
+// DUP-FLATTENED: duplicate architecture slice 'arm64-apple-macosx' contributed by both '{{.*}}libmulti-2arch.json' and '{{.*}}lib-arm64.json'
+
+// Slices collide on the triple's canonical components, not on its spelling:
+// "arm64" and "aarch64" name the same architecture, so the second input is a
+// duplicate even though the two triple strings differ. The diagnostic names
+// the retained slice's spelling and both contributing files.
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-aarch64.json -o %t/dup-alias.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-ALIAS
+// DUP-ALIAS: duplicate architecture slice 'arm64-apple-macosx' contributed by both '{{.*}}lib-arm64.json' and '{{.*}}lib-aarch64.json'
+
+// Likewise, an OS version does not distinguish a slice: arm64-apple-ios and
+// arm64-apple-ios17.0 are the same slice.
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-ios.json %S/Inputs/lib-ios-versioned.json -o %t/dup-osversion.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-OSVERSION
+// DUP-OSVERSION: duplicate architecture slice 'arm64-apple-ios' contributed by both '{{.*}}lib-ios.json' and '{{.*}}lib-ios-versioned.json'
+
+// The same rejection applies to the shared family, bare and flattened.
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json %S/Inputs/lu-arm64.json -o %t/dup-shared-bare.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-SHARED-BARE
+// DUP-SHARED-BARE: duplicate architecture slice 'arm64-apple-macosx' contributed by both '{{.*}}lu-arm64.json' and '{{.*}}lu-arm64.json'
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/libfoo-2arch.json %S/Inputs/lu-macosx-libfoo.json -o %t/dup-shared-flattened.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=DUP-SHARED-FLATTENED
+// DUP-SHARED-FLATTENED: duplicate architecture slice 'arm64-apple-macosx' contributed by both '{{.*}}libfoo-2arch.json' and '{{.*}}lu-macosx-libfoo.json'
+
+// ============================================================================
+// Error ordering: inputs are folded into the bundle as they are read, so the
+// first input that cannot be accepted is the one reported — whichever kind of
+// problem it has. These two runs share the same three inputs in different
+// orders and must report different errors.
+// ============================================================================
+
+// The duplicate at input 2 is reported; input 3's namespace is never reached.
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-arm64.json %S/Inputs/lib-otherns.json -o %t/order-dup-first.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ORDER-DUP-FIRST --implicit-check-not="does not match expected namespace"
+// ORDER-DUP-FIRST: duplicate architecture slice 'arm64-apple-macosx' contributed by both '{{.*}}lib-arm64.json' and '{{.*}}lib-arm64.json'
+
+// The namespace mismatch at input 2 is reported; input 3's duplicate slice is
+// never reached.
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-otherns.json %S/Inputs/lib-arm64.json -o %t/order-ns-first.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ORDER-NS-FIRST --implicit-check-not="duplicate architecture slice"
+// ORDER-NS-FIRST: namespace BuildNamespace(StaticLibrary, otherlib) from '{{.*}}lib-otherns.json' does not match expected namespace BuildNamespace(StaticLibrary, libmulti)
+
+// ============================================================================
+// Namespace mismatch
+// ============================================================================
+
+// A bare StaticLibrary member's own namespace disagrees with the target
+// (inferred from the first input).
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/lib-otherns.json -o %t/nsmismatch-bare.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NS-MISMATCH-BARE
+// NS-MISMATCH-BARE: namespace BuildNamespace(StaticLibrary, otherlib) from '{{.*}}lib-otherns.json' does not match expected namespace BuildNamespace(StaticLibrary, libmulti)
+
+// A MultiArchStaticLibrary wrapper's own namespace disagrees with the target
+// (inferred from the first input).
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json %S/Inputs/libmulti-multiarch-wrongns.json -o %t/nsmismatch-wrapper.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NS-MISMATCH-WRAPPER
+// NS-MISMATCH-WRAPPER: namespace BuildNamespace(MultiArchStaticLibrary, otherlib) from '{{.*}}libmulti-multiarch-wrongns.json' does not match expected namespace BuildNamespace(MultiArchStaticLibrary, libmulti)
+
+// A bare LUSummaryEncoding member's own namespace disagrees with the target
+// (inferred from the first input).
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json %S/Inputs/lu-otherns.json -o %t/nsmismatch-shared.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NS-MISMATCH-SHARED
+// NS-MISMATCH-SHARED: namespace NestedBuildNamespace([BuildNamespace(LinkUnit, othershared)]) from '{{.*}}lu-otherns.json' does not match expected namespace NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)])
+
+// A MultiArchSharedLibrary wrapper's own namespace disagrees with the target
+// (inferred from the first input).
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lu-arm64.json %S/Inputs/libshared-multiarch-wrongns.json -o %t/nsmismatch-shared-wrapper.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NS-MISMATCH-SHARED-WRAPPER
+// NS-MISMATCH-SHARED-WRAPPER: namespace NestedBuildNamespace([BuildNamespace(LinkUnit, othershared)]) from '{{.*}}libshared-multiarch-wrongns.json' does not match expected namespace NestedBuildNamespace([BuildNamespace(LinkUnit, libshared)])
+
+// ============================================================================
+// Zero candidates after flattening (every input is an empty multi-arch bundle)
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/libmulti-empty-wrapper.json -o %t/zerocand.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-CANDIDATES
+// NO-CANDIDATES: no candidate members could be derived from the given inputs: at least one member is required
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/libshared-empty-wrapper.json -o %t/zerocand-shared.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-CANDIDATES-SHARED
+// NO-CANDIDATES-SHARED: no candidate members could be derived from the given inputs: at least one member is required
+
+// ============================================================================
+// Empty input list
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create -o %t/no-inputs.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-INPUTS
+// NO-INPUTS: no input artifacts: at least one input is required
+
+// ============================================================================
+// Missing output flag
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-OUTPUT
+// NO-OUTPUT: for the -o option: must be specified at least once!
+
+// ============================================================================
+// Unusable input paths
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/tu-badext.txt -o %t/badext.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-EXTENSION
+// BAD-EXTENSION: clang-ssaf-linker: error: failed to validate path '{{.*}}tu-badext.txt': No format registered for extension 'txt'
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/does-not-exist.json -o %t/missing.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MISSING-INPUT
+// MISSING-INPUT: clang-ssaf-linker: error: failed to validate path '{{.*}}does-not-exist.json': Path does not exist
+
+// ============================================================================
+// Output already exists
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch create %S/Inputs/lib-arm64.json -o %t/libmulti-2arch.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=OUTPUT-EXISTS
+// OUTPUT-EXISTS: clang-ssaf-linker: error: failed to validate path '{{.*}}libmulti-2arch.json': File already exists
+
+// ============================================================================
+// Unknown verb
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch extract %S/Inputs/lib-arm64.json -o %t/unknown.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=UNKNOWN-VERB
+// UNKNOWN-VERB: unknown multi-arch verb 'extract': expected 'create'
+
+// ============================================================================
+// Missing verb
+// ============================================================================
+
+// RUN: not clang-ssaf-linker multi-arch -o %t/no-verb.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NO-VERB
+// NO-VERB: Not enough positional command line arguments specified!
+
+// ============================================================================
+// Order independence: members are keyed by target triple, so the bundle is
+// byte-identical however the inputs are ordered on the command line
+// ============================================================================
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lib-x86_64.json %S/Inputs/lib-arm64.json -o %t/libmulti-reversed.json
+// RUN: diff %S/Outputs/libmulti-2arch.json %t/libmulti-reversed.json
+
+// RUN: clang-ssaf-linker multi-arch create %S/Inputs/lu-x86_64.json %S/Inputs/lu-arm64.json -o %t/libshared-reversed.json
+// RUN: diff %S/Outputs/libshared-2arch.json %t/libshared-reversed.json
+
+// ============================================================================
+// Round-trip: produced bundles parse cleanly with clang-ssaf-format
+// ============================================================================
+
+// RUN: clang-ssaf-format --type multi-arch-static-library %t/libmulti-3arch.json -o %t/libmulti-3arch-roundtrip.json
+// RUN: diff %t/libmulti-3arch.json %t/libmulti-3arch-roundtrip.json
+
+// RUN: clang-ssaf-format --type multi-arch-shared-library %t/libfoo-3arch.json -o %t/libfoo-3arch-roundtrip.json
+// RUN: diff %t/libfoo-3arch.json %t/libfoo-3arch-roundtrip.json

@@ -156,7 +156,8 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
   {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     auto ctorOp = mlir::acc::GlobalConstructorOp::create(
-        builder, exprLoc, (varName + "_acc_ctor").str());
+        builder, exprLoc, (varName + "_acc_ctor").str(),
+        /*sym_visibility=*/nullptr);
     getModule().push_back(ctorOp);
     mlir::Block *block = builder.createBlock(&ctorOp.getRegion(),
                                              ctorOp.getRegion().end(), {}, {});
@@ -191,7 +192,8 @@ void CIRGenModule::emitGlobalOpenACCDeclareDataOperands(
   if (requiresDtor) {
     mlir::OpBuilder::InsertionGuard guardCase(builder);
     auto ctorOp = mlir::acc::GlobalDestructorOp::create(
-        builder, exprLoc, (varName + "_acc_dtor").str());
+        builder, exprLoc, (varName + "_acc_dtor").str(),
+        /*sym_visibility=*/nullptr);
     getModule().push_back(ctorOp);
     mlir::Block *block = builder.createBlock(&ctorOp.getRegion(),
                                              ctorOp.getRegion().end(), {}, {});

@@ -116,6 +116,13 @@ functions:
     return_type: char *
     arguments:
       - type: const char *
+  - name: getloadavg
+    standards:
+      - bsd
+    return_type: int
+    arguments:
+      - type: double[]
+      - type: int
   - name: labs
     standards:
       - stdc
@@ -171,6 +178,12 @@ functions:
     return_type: size_t
     arguments:
       - type: const void *
+  - name: mkdtemp
+    standards:
+      - posix
+    return_type: char *
+    arguments:
+      - type: char *
   - name: mkstemp
     standards:
       - posix
@@ -185,6 +198,12 @@ functions:
       - type: void **
       - type: size_t
       - type: size_t
+  - name: putenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: char *
   - name: qsort
     standards:
       - stdc

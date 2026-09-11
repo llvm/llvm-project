@@ -61,7 +61,7 @@ module {
       acc.loop control(%i : index) = (%c1 : index) to (%c10 : index) step (%c1 : index) {
         func.call @loop_callee() : () -> ()
         acc.yield
-      } attributes {independent = [#acc.device_type<none>]}
+      } independent
       acc.yield
     }
     return

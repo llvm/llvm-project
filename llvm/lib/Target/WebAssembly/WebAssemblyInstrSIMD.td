@@ -413,7 +413,7 @@ defm STORE_V128_A64 :
 
 // Def store patterns from WebAssemblyInstrMemory.td for vector types
 foreach vec = AllVecs in {
-defm : StorePat<vec.vt, store, "STORE_V128">;
+defm : StorePat<vec.vt, V128, store, "STORE_V128">;
 }
 
 // Store lane
@@ -442,16 +442,18 @@ defm "" : SIMDStoreLane<I16x8, 0x59>;
 defm "" : SIMDStoreLane<I32x4, 0x5a>;
 defm "" : SIMDStoreLane<I64x2, 0x5b>;
 
-multiclass StoreLanePat<Vec vec, SDPatternOperator kind> {
+multiclass StoreLanePat<Vec vec, Vec instVec, SDPatternOperator kind> {
   def : Pat<(kind (AddrOps32 offset32_op:$offset, I32:$addr),
                   (vec.vt V128:$vec),
                   (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A32") 0, $offset, imm:$idx, $addr, $vec)>,
+            (!cast<NI>("STORE_LANE_"#instVec#"_A32") 0, $offset, imm:$idx,
+                                                       $addr, $vec)>,
         Requires<[HasAddr32]>;
   def : Pat<(kind (AddrOps64 offset64_op:$offset, I64:$addr),
                   (vec.vt V128:$vec),
                   (i32 vec.lane_idx:$idx)),
-            (!cast<NI>("STORE_LANE_"#vec#"_A64") 0, $offset, imm:$idx, $addr, $vec)>,
+            (!cast<NI>("STORE_LANE_"#instVec#"_A64") 0, $offset, imm:$idx,
+                                                       $addr, $vec)>,
         Requires<[HasAddr64]>;
 }
 
@@ -462,18 +464,23 @@ def store16_lane :
   PatFrag<(ops node:$ptr, node:$vec, node:$idx),
           (truncstorei16 (i32 (vector_extract $vec, $idx)), $ptr)>;
 def store32_lane :
-  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
-          (store (i32 (vector_extract $vec, $idx)), $ptr)>;
+  PatFrags<(ops node:$ptr, node:$vec, node:$idx), [
+           (store (i32 (vector_extract $vec, $idx)), $ptr),
+           (store (f32 (vector_extract $vec, $idx)), $ptr)
+]>;
 def store64_lane :
-  PatFrag<(ops node:$ptr, node:$vec, node:$idx),
-          (store (i64 (vector_extract $vec, $idx)), $ptr)>;
-// TODO: floating point lanes as well
+  PatFrags<(ops node:$ptr, node:$vec, node:$idx), [
+           (store (i64 (vector_extract $vec, $idx)), $ptr),
+           (store (f64 (vector_extract $vec, $idx)), $ptr)
+]>;
 
 let AddedComplexity = 1 in {
-defm : StoreLanePat<I8x16, store8_lane>;
-defm : StoreLanePat<I16x8, store16_lane>;
-defm : StoreLanePat<I32x4, store32_lane>;
-defm : StoreLanePat<I64x2, store64_lane>;
+defm : StoreLanePat<I8x16, I8x16, store8_lane>;
+defm : StoreLanePat<I16x8, I16x8, store16_lane>;
+defm : StoreLanePat<I32x4, I32x4, store32_lane>;
+defm : StoreLanePat<I64x2, I64x2, store64_lane>;
+defm : StoreLanePat<F32x4, I32x4, store32_lane>;
+defm : StoreLanePat<F64x2, I64x2, store64_lane>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -596,7 +603,7 @@ def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             imm:$m4, imm:$m5, imm:$m6, imm:$m7,
             imm:$m8, imm:$m9, imm:$mA, imm:$mB,
             imm:$mC, imm:$mD, imm:$mE, imm:$mF)>;
-// Normal shufflevector instructions may have normal constant arguemnts.
+// Normal shufflevector instructions may have normal constant arguments.
 def : Pat<(vec.vt (wasm_shuffle (vec.vt V128:$x), (vec.vt V128:$y),
             (i32 LaneIdx32:$m0), (i32 LaneIdx32:$m1),
             (i32 LaneIdx32:$m2), (i32 LaneIdx32:$m3),
@@ -903,7 +910,7 @@ defm BITSELECT :
   SIMD_I<(outs V128:$dst), (ins V128:$v1, V128:$v2, V128:$c), (outs), (ins), [],
          "v128.bitselect\t$dst, $v1, $v2, $c", "v128.bitselect", 82>;
 
-foreach vec = StdVecs in
+foreach vec = AllVecs in
 def : Pat<(vec.vt (int_wasm_bitselect
             (vec.vt V128:$v1), (vec.vt V128:$v2), (vec.vt V128:$c))),
           (BITSELECT $v1, $v2, $c)>;
@@ -938,7 +945,7 @@ def : Pat<(vec.vt (vselect
           (ANDNOT $c, $x)>;
 
 // Also implement vselect in terms of bitselect
-foreach vec = StdVecs in
+foreach vec = AllVecs in
 def : Pat<(vec.vt (vselect
             (vec.int_vt V128:$c), (vec.vt V128:$v1), (vec.vt V128:$v2))),
           (BITSELECT $v1, $v2, $c)>;
@@ -948,7 +955,7 @@ defm SELECT_V128 :
   I<(outs V128:$dst), (ins V128:$lhs, V128:$rhs, I32:$cond), (outs), (ins), [],
     "v128.select\t$dst, $lhs, $rhs, $cond", "v128.select", 0x1b>;
 
-foreach vec = StdVecs in {
+foreach vec = AllVecs in {
 def : Pat<(select I32:$cond, (vec.vt V128:$lhs), (vec.vt V128:$rhs)),
           (SELECT_V128 $lhs, $rhs, $cond)>;
 
@@ -1338,9 +1345,11 @@ defm MUL : SIMDBinaryFP<fmul, "mul", 230>;
 defm DIV : SIMDBinaryFP<fdiv, "div", 231>;
 
 // NaN-propagating minimum: min
+let isCommutable = 1 in
 defm MIN : SIMDBinaryFP<fminimum, "min", 232>;
 
 // NaN-propagating maximum: max
+let isCommutable = 1 in
 defm MAX : SIMDBinaryFP<fmaximum, "max", 233>;
 
 // Pseudo-minimum: pmin
@@ -1667,13 +1676,15 @@ defm "" : HalfPrecisionConvert<F32x4, I16x8, promote_low, "promote_low_f16x8",
 def extloadv2f32 : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
   let MemoryVT = v2f32;
 }
-// Adapted from the body of LoadPatNoOffset
-// TODO: other addressing patterns
-def : Pat<(v2f64 (extloadv2f32 (i32 I32:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_64_A32 0, 0, I32:$addr))>,
+def : Pat<(v2f64 (extloadv2f32
+                   (AddrOps32 offset32_op:$offset, I32:$addr))),
+          (promote_low_F64x2
+            (LOAD_ZERO_64_A32 0, offset32_op:$offset, I32:$addr))>,
       Requires<[HasAddr32]>;
-def : Pat<(v2f64 (extloadv2f32 (i64 I64:$addr))),
-          (promote_low_F64x2 (LOAD_ZERO_64_A64 0, 0, I64:$addr))>,
+def : Pat<(v2f64 (extloadv2f32
+                   (AddrOps64 offset64_op:$offset, I64:$addr))),
+          (promote_low_F64x2
+            (LOAD_ZERO_64_A64 0, offset64_op:$offset, I64:$addr))>,
       Requires<[HasAddr64]>;
 
 //===----------------------------------------------------------------------===//

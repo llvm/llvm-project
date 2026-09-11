@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++20 \
 // RUN:   -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple amdgcn -fcuda-is-device -std=c++20 \
+// RUN: %clang_cc1 -triple amdgpu -fcuda-is-device -std=c++20 \
 // RUN:   -fsyntax-only -verify %s
 // expected-no-diagnostics
 

@@ -95,13 +95,13 @@ void ConvertVectorToLLVMPass::runOnOperation() {
       if (armNeon)
         arm_neon::populateLowerContractionToNeonI8MMPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEI8MMPatterns(patterns);
+        arm_sve::populateLowerContractionToSVEI8MMPatterns(patterns);
     }
     if (armBF16) {
       if (armNeon)
         arm_neon::populateLowerContractionToNeonBFMMLAPatterns(patterns);
       if (armSVE)
-        populateLowerContractionToSVEBFMMLAPatterns(patterns);
+        arm_sve::populateLowerContractionToSVEBFMMLAPatterns(patterns);
     }
     (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   }

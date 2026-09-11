@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mattr=+v8.2a,+fullfp16 -fp-contract=fast  | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -mattr=+v8.2a,+fullfp16 | FileCheck %s
 
 define half @test_FMULADDH_OP1(half %a, half %b, half %c) {
 ; CHECK-LABEL: test_FMULADDH_OP1:

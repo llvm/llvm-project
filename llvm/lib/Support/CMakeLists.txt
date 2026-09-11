@@ -407,7 +407,7 @@ target_include_directories(LLVMSupport
   ${LLVM_SOURCE_DIR}/../libc
 )
 
-if(NOT MSVC)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   target_compile_options(LLVMSupport PRIVATE "-Wno-c99-extensions") # _Complex warnings.
 endif()
 

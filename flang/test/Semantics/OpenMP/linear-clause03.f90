@@ -23,4 +23,13 @@ subroutine g
   end do
 end
 
+subroutine h
+  integer :: x, i
+  !ERROR: 'linear-step' modifier cannot occur multiple times
+  !$omp do linear(x : 2, 2)
+  do i = 1, 10
+    x = x + 2
+  end do
+end
+
 end module

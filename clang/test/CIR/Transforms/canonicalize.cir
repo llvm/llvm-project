@@ -212,6 +212,15 @@ module {
   // CHECK-NEXT:   cir.return %[[P]] : !s64i
   // CHECK-NEXT: }
 
+  cir.func @cast_undef() -> !s64i {
+    %0 = cir.const #cir.undef : !s32i
+    %1 = cir.cast integral %0 : !s32i -> !s64i
+    cir.return %1 : !s64i
+  }
+  // CHECK:      @cast_undef
+  // CHECK-NEXT:   %[[U:.+]] = cir.const #cir.undef : !s64i
+  // CHECK-NEXT:   cir.return %[[U]] : !s64i
+
   cir.func @cast_s32_s64() -> !s64i {
     %0 = cir.const #cir.int<2> : !s32i
     %1 = cir.cast integral %0 : !s32i -> !s64i
