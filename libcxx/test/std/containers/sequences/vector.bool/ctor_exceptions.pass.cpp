@@ -11,6 +11,7 @@
 // (bug report: https://llvm.org/PR58392)
 // Check that vector<bool> constructors don't leak memory when an operation inside the constructor throws an exception
 
+#include <cassert>
 #include <cstddef>
 #include <memory>
 #include <type_traits>
@@ -26,24 +27,27 @@ int main(int, char**) {
   try { // Throw in vector() from allocator
     AllocVec vec;
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
 #if TEST_STD_VER >= 14
   try { // Throw in vector(size_type, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
-    AllocVec get_alloc(0, alloc);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
+    AllocVec get_alloc(1, alloc);
     (void)get_alloc;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 #endif // TEST_STD_VER >= 14
 
   try { // Throw in vector(size_type, const value_type&, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
-    AllocVec get_alloc(0, true, alloc);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
+    AllocVec get_alloc(1, true, alloc);
     (void)get_alloc;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -52,6 +56,7 @@ int main(int, char**) {
     std::vector<bool> vec(
         throwing_iterator<bool, std::input_iterator_tag>(), throwing_iterator<bool, std::input_iterator_tag>(2));
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -60,6 +65,7 @@ int main(int, char**) {
     std::vector<bool> vec(
         throwing_iterator<bool, std::forward_iterator_tag>(), throwing_iterator<bool, std::forward_iterator_tag>(2));
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -68,6 +74,7 @@ int main(int, char**) {
     bool a[] = {true, true};
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2));
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -77,6 +84,7 @@ int main(int, char**) {
     std::vector<bool> vec(
         throwing_iterator<bool, std::input_iterator_tag>(), throwing_iterator<bool, std::input_iterator_tag>(2), alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
@@ -87,55 +95,62 @@ int main(int, char**) {
                           throwing_iterator<bool, std::forward_iterator_tag>(2),
                           alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     bool a[] = {true, false};
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec(cpp17_input_iterator<bool*>(a), cpp17_input_iterator<bool*>(a + 2), alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(InputIterator, InputIterator, const allocator_type&) from allocator
     bool a[] = {true, false};
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec(forward_iterator<bool*>(a), forward_iterator<bool*>(a + 2), alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
 #if TEST_STD_VER >= 11
   try { // Throw in vector(const vector&, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ false);
+    throwing_allocator<bool> alloc((permitting_allocation_tag()));
     AllocVec vec(alloc);
     vec.push_back(true);
-    alloc.throw_on_copy_ = true;
+    alloc.throw_on_allocation_ = true;
     AllocVec vec2(vec, alloc);
     (void)vec2;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(vector&&, const allocator_type&) from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ false);
+    throwing_allocator<bool> alloc((permitting_allocation_tag()));
     AllocVec vec(alloc);
     vec.push_back(true);
-    alloc.throw_on_copy_ = true;
+    alloc.throw_on_allocation_ = true;
+    alloc.payload_             = 42; // makes allocators not equal and enforces reallocation
     AllocVec vec2(std::move(vec), alloc);
     (void)vec2;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
 
   try { // Throw in vector(initializer_list<value_type>, const allocator_type&) constructor from allocator
-    throwing_allocator<bool> alloc(/*throw_on_ctor = */ false, /*throw_on_copy = */ true);
+    throwing_allocator<bool> alloc((throwing_on_allocation_tag()));
     AllocVec vec({true, true}, alloc);
     (void)vec;
+    assert(false);
   } catch (int) {
   }
   check_new_delete_called();
