@@ -457,7 +457,8 @@ getFirstNonPrologue(MachineBasicBlock *MBB, const TargetInstrInfo *TII) {
 // This is intended to combine M0 initializations, but can work with any
 // SGPR. A VGPR cannot be processed since we cannot guarantee vector
 // executioon.
-static bool hoistAndMergeSGPRInits(unsigned Reg, ArrayRef<MachineInstr *> Calls,
+static bool hoistAndMergeSGPRInits(unsigned Reg,
+                                   ArrayRef<MachineInstr *> RegMaskInstrs,
                                    const MachineRegisterInfo &MRI,
                                    const TargetRegisterInfo *TRI,
                                    MachineDominatorTree &MDT,
@@ -472,9 +473,9 @@ static bool hoistAndMergeSGPRInits(unsigned Reg, ArrayRef<MachineInstr *> Calls,
 
   bool Changed = false;
 
-  for (MachineInstr &MI : MRI.def_instructions(Reg)) {
+  for (auto &MI : MRI.def_instructions(Reg)) {
     MachineOperand *Imm = nullptr;
-    for (MachineOperand &MO : MI.operands()) {
+    for (auto &MO : MI.operands()) {
       if ((MO.isReg() && ((MO.isDef() && MO.getReg() != Reg) || !MO.isDef())) ||
           (!MO.isImm() && !MO.isReg()) || (MO.isImm() && Imm)) {
         Imm = nullptr;
@@ -489,9 +490,9 @@ static bool hoistAndMergeSGPRInits(unsigned Reg, ArrayRef<MachineInstr *> Calls,
       Clobbers.push_back(&MI);
   }
 
-  // Calls clobber Reg with a regmask operand instead of an explicit def, so
-  // they are not on the def list of Reg.
-  for (MachineInstr *MI : Calls)
+  // A regmask clobbers Reg instead of explicitly defining it, so these are not
+  // on the def list of Reg.
+  for (MachineInstr *MI : RegMaskInstrs)
     if (MI->modifiesRegister(Reg, TRI))
       Clobbers.push_back(MI);
 
@@ -643,17 +644,18 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
 
   // Instructions to re-legalize after changing register classes
   SmallVector<MachineInstr *, 8> Relegalize;
-  SmallVector<MachineInstr *, 4> Calls;
+  SmallVector<MachineInstr *, 4> RegMaskInstrs;
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
          ++I) {
       MachineInstr &MI = *I;
 
-      // Record calls while walking the function so that hoistAndMergeSGPRInits
-      // can find the registers they clobber through their regmask operand.
-      if (MI.isCall())
-        Calls.push_back(&MI);
+      // Regmask operands clobber registers without an explicit def, so record
+      // their instructions for hoistAndMergeSGPRInits.
+      if (llvm::any_of(MI.operands(),
+                       [](const MachineOperand &MO) { return MO.isRegMask(); }))
+        RegMaskInstrs.push_back(&MI);
 
       switch (MI.getOpcode()) {
       default:
@@ -823,7 +825,7 @@ bool SIFixSGPRCopies::run(MachineFunction &MF) {
     TII->legalizeOperands(*Relegalize.pop_back_val(), MDT);
 
   if (MF.getTarget().getOptLevel() > CodeGenOptLevel::None && EnableM0Merge)
-    hoistAndMergeSGPRInits(AMDGPU::M0, Calls, *MRI, TRI, *MDT, TII);
+    hoistAndMergeSGPRInits(AMDGPU::M0, RegMaskInstrs, *MRI, TRI, *MDT, TII);
 
   SiblingPenalty.clear();
   V2SCopies.clear();
