@@ -7,7 +7,7 @@ own hand-rolled form of RTTI which is much more efficient and flexible,
 although it requires a bit more work from you as a class author.
 
 A description of how to use LLVM-style RTTI from a client's perspective is
-given in the [Programmer's Manual](ProgrammersManual.html#isa). This
+given in the {ref}`Programmer's Manual <isa>`. This
 document, in contrast, discusses the steps you need to take as a class
 hierarchy author to make LLVM-style RTTI available to your clients.
 
@@ -588,4 +588,3 @@ if `someVal` was also `std::nullopt`.
 
 [curiously recurring template idiom]: https://en.wikipedia.org/wiki/Curiously_recurring_template_pattern
 [is-a]: http://en.wikipedia.org/wiki/Is-a
-

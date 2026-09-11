@@ -43,7 +43,7 @@ relevant for deciding the correctness of generic program transforms and
 convergence-related analyses such as {ref}`uniformity analysis
 <convergence-and-uniformity>`.
 
-(convergent-operations)=
+(convergent_operations)=
 
 ## Convergent Operations
 
@@ -108,9 +108,11 @@ an undefined value.
 That is, the `textureSample` operation fits our definition of a convergent
 operation:
 
-> 1. It communicates with a set of threads that implicitly depends on control
->    flow.
-> 2. Correctness depends on this set of threads.
+```{eval-rst}
+ 1. It communicates with a set of threads that implicitly depends on control
+    flow.
+ 2. Correctness depends on this set of threads.
+```
 
 The compiler frontend can emit IR that expresses the convergence constraints as
 follows:
@@ -148,7 +150,7 @@ e.g. by leaning on target-specific callbacks that can analyze the program with
 additional knowledge, that `%condition` is always uniform across the threads
 referenced by the *convergence token* `%entry`.)
 
-(convergence-example-reductions)=
+(convergence_example_reductions)=
 
 ### Reductions inside divergent control flow
 
@@ -319,7 +321,7 @@ the `@subgroupControlBarrier` call communicates with the subset of S that
 actually reaches the call site. This set of threads doesn't change after
 jump-threading, so the answer to the question posed above remains the same.
 
-(opportunistic-convergence)=
+(opportunistic_convergence)=
 
 ### Opportunistic convergent operations
 
@@ -405,7 +407,7 @@ that certain transforms which are usually forbidden by the presence of
 convergent operations are in fact allowed, as long as they don't break up the
 region of code that is controlled by the anchor.
 
-(convergence-high-level-break)=
+(convergence_high-level_break)=
 
 ### Extended Cycles: Divergent Exit from a Loop
 
@@ -491,7 +493,7 @@ call to the {ref}`llvm.experimental.convergence.loop
 effectively extended to include all uses of this token that lie outside the
 cycle.
 
-(dynamic-instances-and-convergence-tokens)=
+(dynamic_instances_and_convergence_tokens)=
 
 ## Dynamic Instances and Convergence Tokens
 
@@ -551,7 +553,7 @@ that case is the purpose of {ref}`llvm.experimental.convergence.loop
 <llvm.experimental.convergence.loop>`.
 :::
 
-(convergence-control-intrinsics)=
+(convergence_control_intrinsics)=
 
 ## Convergence Control Intrinsics
 
@@ -561,7 +563,7 @@ produce convergence tokens.
 Behaviour is undefined if a convergence control intrinsic is called
 indirectly.
 
-(llvm-experimental-convergence-entry)=
+(llvm.experimental.convergence.entry)=
 
 ### `llvm.experimental.convergence.entry`
 
@@ -572,22 +574,23 @@ token @llvm.experimental.convergence.entry() convergent readnone
 This intrinsic is used to tie the dynamic instances inside a function to
 those in the caller.
 
+```{eval-rst}
 1. If the function is called from outside the scope of LLVM, the convergence of
    dynamic instances of this intrinsic is environment-defined. For example:
 
-   1. In an OpenCL *kernel launch*, the maximal set of threads that
+   a. In an OpenCL *kernel launch*, the maximal set of threads that
       can communicate outside the memory model is a *workgroup*.
       Hence, a suitable choice is to specify that all the threads from
       a single workgroup in OpenCL execute converged dynamic instances
       of this intrinsic.
-   2. In a C/C++ program, threads are launched independently and can
+   b. In a C/C++ program, threads are launched independently and can
       communicate only through the memory model. Hence the dynamic instances of
       this intrinsic in a C/C++ program are never converged.
-
 2. If the function is called from a call-site in LLVM IR, then two
    threads execute converged dynamic instances of this intrinsic if and
    only if both threads entered the function by executing converged
    dynamic instances of the call-site.
+```
 
 This intrinsic can occur at most once in a function, and only in the entry
 block of the function. If this intrinsic occurs in a basic block, then it must
@@ -628,7 +631,7 @@ void main() {
 }
 ```
 
-(llvm-experimental-convergence-loop)=
+(llvm.experimental.convergence.loop)=
 
 ### `llvm.experimental.convergence.loop`
 
@@ -654,7 +657,7 @@ call to this intrinsic.
 If this intrinsic occurs in a basic block, then it must precede any other
 convergent operation in the same basic block.
 
-(convergence-cycle-heart)=
+(convergence_cycle_heart)=
 
 **Heart of a Cycle:**
 
@@ -673,7 +676,7 @@ convergent operation in the same basic block.
 > this situation since its practical application is very rare.
 > :::
 
-(llvm-experimental-convergence-anchor)=
+(llvm.experimental.convergence.anchor)=
 
 ### `llvm.experimental.convergence.anchor`
 
@@ -695,7 +698,7 @@ can detect the maximal set of threads that can communicate efficiently within
 some local region of the program.
 :::
 
-(convergence-uncontrolled)=
+(convergence_uncontrolled)=
 
 ## Uncontrolled Convergent Operations
 
@@ -766,7 +769,7 @@ mentioned property:
    <llvm.experimental.convergence.entry>`; otherwise `D` is the heart of the
    parent cycle of `X`.
 
-(convergence-static-rules)=
+(convergence_static_rules)=
 
 ## Static Rules
 
@@ -803,7 +806,7 @@ for cycles instead of closed paths. Briefly, any closed path that violates
 one or more of the above static rules is contained in a cycle that also
 violates the same rule(s).
 
-(convergence-region)=
+(convergence_region)=
 
 ### Convergence Regions
 
@@ -824,7 +827,7 @@ definition `D`" to actually refer to the convergence region of the token
 `T` defined by `D`.
 :::
 
-(inferring-noconvergent)=
+(inferring_noconvergent)=
 
 ## Inferring non-convergence
 
@@ -890,47 +893,48 @@ All this affects the {ref}`maximal converged-with relation
 property <uniformity-analysis>` of static instances in the convergence region of
 `D`.
 
-(controlled-maximal-converged-with)=
+(controlled_maximal_converged_with)=
 
-> **Controlled Maximal converged-with Relation**
->
-> 1. Dynamic instances of a *convergent operation* are related in the controlled
->    maximal converged-with relation according to the semantics of the convergence
->    control tokens.
->
-> 2. Dynamic instances `X1` and `X2` produced by different threads for the
->    same *non-convergent operation* `X` are related in the controlled maximal
->    converged-with relation if and only if:
->
->    1. Both threads executed converged dynamic instances of every token
->       definition `D` such that `X` is in the convergence region of `D`,
->       and,
->
->    2. Either `X` is not contained in any cycle, or, for every cycle `C`
->       with header `H` that contains `X`:
->
->       - every dynamic instance `H1` of `H` that precedes `X1` in the
->         respective thread is convergence-before `X2`, and,
->       - every dynamic instance `H2` of `H` that precedes `X2` in the
->         respective thread is convergence-before `X1`,
->       - without assuming that `X1` is converged with `X2`.
+```{eval-rst}
+  **Controlled Maximal converged-with Relation**
 
-(controlled-m-converged)=
+  1. Dynamic instances of a *convergent operation* are related in the controlled
+     maximal converged-with relation according to the semantics of the convergence
+     control tokens.
+  2. Dynamic instances ``X1`` and ``X2`` produced by different threads for the
+     same *non-convergent operation* ``X`` are related in the controlled maximal
+     converged-with relation if and only if:
 
-> **Controlled m-converged Static Instances**
->
-> A node `X` in a given CFG is reported to be m-converged if and only if:
->
-> 1. For any token definition `D` such that `X` is inside the convergence region
->    of `D`, `D` itself is m-converged, and,
->
-> 2. Every cycle that contains `X` satisfies the following necessary
->    conditions:
->
->    1. Every divergent branch inside the cycle satisfies the {ref}`diverged
->       entry criterion<convergence-diverged-entry>`, and,
->    2. There are no {ref}`diverged paths reaching the
->       cycle<convergence-diverged-outside>` from a divergent branch outside it.
+     1. Both threads executed converged dynamic instances of every token
+        definition ``D`` such that ``X`` is in the convergence region of ``D``,
+        and,
+     2. Either ``X`` is not contained in any cycle, or, for every cycle ``C``
+        with header ``H`` that contains ``X``:
+
+        - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in the
+          respective thread is convergence-before ``X2``, and,
+        - every dynamic instance ``H2`` of ``H`` that precedes ``X2`` in the
+          respective thread is convergence-before ``X1``,
+        - without assuming that ``X1`` is converged with ``X2``.
+```
+
+(controlled_m_converged)=
+
+```{eval-rst}
+  **Controlled m-converged Static Instances**
+
+  A node ``X`` in a given CFG is reported to be m-converged if and only if:
+
+  1. For any token definition ``D`` such that ``X`` is inside the convergence region
+     of ``D``, ``D`` itself is m-converged, and,
+  2. Every cycle that contains ``X`` satisfies the following necessary
+     conditions:
+
+     a. Every divergent branch inside the cycle satisfies the :ref:`diverged
+        entry criterion<convergence-diverged-entry>`, and,
+     b. There are no :ref:`diverged paths reaching the
+        cycle<convergence-diverged-outside>` from a divergent branch outside it.
+```
 
 ### Temporal Divergence at Cycle Exit
 
@@ -1567,4 +1571,3 @@ if (condition) {
   use(%a, %b)
 }
 ```
-

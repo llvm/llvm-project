@@ -1,8 +1,9 @@
 ---
-substitutions:
-  LLVM IR fuzzer: '{ref}`structured LLVM IR fuzzer <fuzzing-llvm-ir>`'
-  generic fuzzer: '{ref}`generic fuzzer <fuzzing-llvm-generic>`'
-  protobuf fuzzer: '{ref}`libprotobuf-mutator based fuzzer <fuzzing-llvm-protobuf>`'
+myst:
+  substitutions:
+    llvm_ir_fuzzer: '{ref}`structured LLVM IR fuzzer <fuzzing-llvm-ir>`'
+    generic_fuzzer: '{ref}`generic fuzzer <fuzzing-llvm-generic>`'
+    protobuf_fuzzer: '{ref}`libprotobuf-mutator based fuzzer <fuzzing-llvm-protobuf>`'
 ---
 
 # Fuzzing LLVM libraries and tools
@@ -17,13 +18,13 @@ fuzzers, see {ref}`building-fuzzers`.
 
 ### clang-fuzzer
 
-A {{ generic fuzzer }} that tries to compile textual input as C++ code. Some of the
+A {{ generic_fuzzer }} that tries to compile textual input as C++ code. Some of the
 bugs this fuzzer has reported are [on bugzilla](https://llvm.org/pr23057) and [on OSS Fuzz's
 tracker](https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+clang-fuzzer).
 
 ### clang-proto-fuzzer
 
-A {{ protobuf fuzzer }} that compiles valid C++ programs generated from a protobuf
+A {{ protobuf_fuzzer }} that compiles valid C++ programs generated from a protobuf
 class that describes a subset of the C++ language.
 
 This fuzzer accepts clang command-line options after `ignore_remaining_args=1`.
@@ -36,30 +37,30 @@ level:
 
 ### clang-format-fuzzer
 
-A {{ generic fuzzer }} that runs [clang-format][clang-format] on C++ text fragments. Some of the
+A {{ generic_fuzzer }} that runs [clang-format][clang-format] on C++ text fragments. Some of the
 bugs this fuzzer has reported are [on bugzilla](https://llvm.org/pr23052)
 and [on OSS Fuzz's tracker](https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+clang-format-fuzzer).
 
 ### llvm-as-fuzzer
 
-A {{ generic fuzzer }} that tries to parse text as {doc}`LLVM assembly <LangRef>`.
+A {{ generic_fuzzer }} that tries to parse text as {doc}`LLVM assembly <LangRef>`.
 Some of the bugs this fuzzer has reported are [on bugzilla](https://llvm.org/pr24639).
 
 ### llvm-dwarfdump-fuzzer
 
-A {{ generic fuzzer }} that interprets inputs as object files and runs
+A {{ generic_fuzzer }} that interprets inputs as object files and runs
 {doc}`llvm-dwarfdump <CommandGuide/llvm-dwarfdump>` on them. Some of the bugs
 this fuzzer has reported are [on OSS Fuzz's tracker](https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+llvm-dwarfdump-fuzzer)
 
 ### llvm-demangle-fuzzer
 
-A {{ generic fuzzer }} for the Itanium demangler used in various LLVM tools. We've
+A {{ generic_fuzzer }} for the Itanium demangler used in various LLVM tools. We've
 fuzzed \_\_cxa_demangle to death, why not fuzz LLVM's implementation of the same
 function!
 
 ### llvm-isel-fuzzer
 
-A {{ LLVM IR fuzzer }} aimed at finding bugs in instruction selection.
+A {{ llvm_ir_fuzzer }} aimed at finding bugs in instruction selection.
 
 This fuzzer accepts flags after `ignore_remaining_args=1`. The flags match
 those of {doc}`llc <CommandGuide/llc>` and the triple is required. For example,
@@ -83,7 +84,7 @@ mode, the same example could be run like so:
 
 ### llvm-opt-fuzzer
 
-A {{ LLVM IR fuzzer }} aimed at finding bugs in optimization passes.
+A {{ llvm_ir_fuzzer }} aimed at finding bugs in optimization passes.
 
 It receives an optimization pipeline and runs it for each fuzzer input.
 
@@ -105,7 +106,7 @@ might be embedded directly into the binary file name:
 
 ### llvm-mc-assemble-fuzzer
 
-A {{ generic fuzzer }} that fuzzes the MC layer's assemblers by treating inputs as
+A {{ generic_fuzzer }} that fuzzes the MC layer's assemblers by treating inputs as
 target-specific assembly.
 
 Note that this fuzzer has an unusual command line interface which is not fully
@@ -121,7 +122,7 @@ This scheme will likely change in the future.
 
 ### llvm-mc-disassemble-fuzzer
 
-A {{ generic fuzzer }} that fuzzes the MC layer's disassemblers by treating inputs
+A {{ generic_fuzzer }} that fuzzes the MC layer's disassemblers by treating inputs
 as assembled binary data.
 
 Note that this fuzzer has an unusual command line interface which is not fully
@@ -130,7 +131,7 @@ compatible with all of libFuzzer's features. See the notes above about
 
 ### lldb-target-fuzzer
 
-A {{ generic fuzzer }} that interprets inputs as object files and uses them to
+A {{ generic_fuzzer }} that interprets inputs as object files and uses them to
 create a target in lldb.
 
 ## Mutators and Input Generators
@@ -149,9 +150,9 @@ mutations. This type of fuzzer is good for stressing the surface layers of a
 program, and is good at testing things like lexers, parsers, or binary
 protocols.
 
-Some of the in-tree fuzzers that use this type of mutator are [clang-fuzzer],
-[clang-format-fuzzer], [llvm-as-fuzzer], [llvm-dwarfdump-fuzzer],
-[llvm-mc-assemble-fuzzer], and [llvm-mc-disassemble-fuzzer].
+Some of the in-tree fuzzers that use this type of mutator are [clang-fuzzer](#clang-fuzzer),
+[clang-format-fuzzer](#clang-format-fuzzer), [llvm-as-fuzzer](#llvm-as-fuzzer), [llvm-dwarfdump-fuzzer](#llvm-dwarfdump-fuzzer),
+[llvm-mc-assemble-fuzzer](#llvm-mc-assemble-fuzzer), and [llvm-mc-disassemble-fuzzer](#llvm-mc-disassemble-fuzzer).
 
 (fuzzing-llvm-protobuf)=
 
@@ -166,12 +167,12 @@ interesting than parser error handling.
 
 To build this kind of fuzzer you need [protobuf][protobuf] and its dependencies
 installed, and you need to specify some extra flags when configuring the build
-with {doc}`CMake <CMake>`. For example, [clang-proto-fuzzer] can be enabled by
+with {doc}`CMake <CMake>`. For example, [clang-proto-fuzzer](#clang-proto-fuzzer) can be enabled by
 adding `-DCLANG_ENABLE_PROTO_FUZZER=ON` to the flags described in
 {ref}`building-fuzzers`.
 
 The only in-tree fuzzer that uses `libprotobuf-mutator` today is
-[clang-proto-fuzzer].
+[clang-proto-fuzzer](#clang-proto-fuzzer).
 
 (fuzzing-llvm-ir)=
 
@@ -182,7 +183,7 @@ We also use a more direct form of structured fuzzing for fuzzers that take
 library, which was [discussed at EuroLLVM 2017][discussed at eurollvm 2017].
 
 The `FuzzMutate` library is used to structurally fuzz backends in
-[llvm-isel-fuzzer].
+[llvm-isel-fuzzer](#llvm-isel-fuzzer).
 
 ## Building and Running
 
@@ -242,4 +243,3 @@ enable standalone testing.
 [llvm-bugs mailing list]: http://lists.llvm.org/cgi-bin/mailman/listinfo/llvm-bugs
 [oss fuzz]: https://github.com/google/oss-fuzz
 [protobuf]: https://github.com/google/protobuf
-

@@ -1,9 +1,5 @@
 # LLVM GitHub Actions Runners
 
-```{contents}
-:local: true
-```
-
 ## Overview
 
 LLVM's GitHub Actions workflows run on two kinds of runners:
@@ -93,4 +89,3 @@ For example:
 
 Version-specific formulae (for example `python@3.12`) can be used when a job
 needs a particular version of a tool.
-

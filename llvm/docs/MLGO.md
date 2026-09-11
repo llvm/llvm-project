@@ -31,9 +31,8 @@ a bitcode file and command line flags file for each extracted module. The
 corpus structure is designed to contain sufficient information to fully
 compile the bitcode to bit-identical object files.
 
-```{eval-rst}
-.. program:: extract_ir.py
-```
+:::{program} extract_ir.py
+:::
 
 ### Synopsis
 
@@ -157,9 +156,8 @@ does not capture all object files in the build however, only the ones that
 are involved in the link for the binary passed to the `bazel aquery`
 invocation.
 
-```{eval-rst}
-.. program:: make_corpus.py
-```
+:::{program} make_corpus.py
+:::
 
 ### Synopsis
 
@@ -180,9 +178,8 @@ A list of space separated flags that are put into the corpus description.
 These are used by some tooling when compiling the modules within the corpus.
 :::
 
-```{eval-rst}
-.. program:: combine_training_corpus.py
-```
+:::{program} combine_training_corpus.py
+:::
 
 ### Synopsis
 
@@ -437,6 +434,7 @@ point vectors. These embeddings can be computed at multiple granularity levels
 (instruction, basic block, and function) and used for ML-guided compiler
 optimizations.
 
+(ir2vec-embeddings)=
 ### IR2Vec
 
 IR2Vec is a program embedding approach designed specifically for LLVM IR. It
@@ -577,8 +575,8 @@ The core components are:
 #### Using MIR2Vec
 
 :::{note}
-This section describes how to use MIR2Vec within LLVM passes. `llvm-ir2vec`
-tool \` {doc}`CommandGuide/llvm-ir2vec` can be used for generating MIR2Vec
+This section describes how to use MIR2Vec within LLVM passes. The
+{doc}`llvm-ir2vec tool <CommandGuide/llvm-ir2vec>` can be used for generating MIR2Vec
 embeddings from Machine IR files (.mir), which can be useful for generating
 embeddings outside of compiler passes.
 :::
@@ -667,7 +665,7 @@ pass `-DPython3_ROOT_DIR` to `cmake`).
 Once you install the pip package, find where it was installed:
 
 ```console
-TF_PIP=$(sudo -u buildbot python3 -c "import tensorflow as tf; import os; print(os.path.dirname(tf.__file__))")``
+TF_PIP=$(sudo -u buildbot python3 -c "import tensorflow as tf; import os; print(os.path.dirname(tf.__file__))")
 ```
 
 Then build LLVM:
@@ -711,4 +709,3 @@ optimizations that are currently MLGO-enabled, it may be used as follows:
 where the `name` is a path fragment. We will expect to find 2 files,
 `<name>.in` (readable, data incoming from the managing process) and
 `<name>.out` (writable, the model runner sends data to the managing process)
-

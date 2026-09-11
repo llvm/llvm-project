@@ -48,9 +48,9 @@ FunctionInfo[NumFunctions] {
 FailtKind describes the reason of expected fault. Currently three kind
 of faults are supported:
 
-> 1. `FaultMaps::FaultingLoad` - fault due to load from memory.
-> 2. `FaultMaps::FaultingLoadStore` - fault due to instruction load and store.
-> 3. `FaultMaps::FaultingStore` - fault due to store to memory.
+1. `FaultMaps::FaultingLoad` - fault due to load from memory.
+2. `FaultMaps::FaultingLoadStore` - fault due to instruction load and store.
+3. `FaultMaps::FaultingStore` - fault due to store to memory.
 
 ## The `ImplicitNullChecks` pass
 
@@ -106,11 +106,12 @@ null checks via code patching or recompilation. It follows that there
 are two requirements an explicit null check needs to satisfy for it to
 be profitable to convert it to an implicit null check:
 
-> 1. The case where the pointer is actually null (i.e. the "failing"
->    case) is extremely rare.
-> 2. The failing path heals the implicit null check into an explicit
->    null check so that the application does not repeatedly page
->    fault.
+1. The case where the pointer is actually null (i.e. the "failing"
+   case) is extremely rare.
+
+2. The failing path heals the implicit null check into an explicit
+   null check so that the application does not repeatedly page
+   fault.
 
 The frontend is expected to mark branches that satisfy (1) and (2)
 using a `!make.implicit` metadata node (the actual content of the
@@ -120,4 +121,3 @@ conversion into implicit null checks.
 
 (Note that while we could deal with (1) using profiling data, dealing
 with (2) requires some information not present in branch profiles.)
-

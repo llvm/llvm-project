@@ -1,16 +1,21 @@
+---
+myst:
+  footnote_transition: false
+---
+
 # Dependence Graphs in LLVM
 
 ## Introduction
 
 Dependence graphs are useful tools in compilers for analyzing relationships
 between various program elements to help guide optimizations. The ideas
-behind these graphs are described in papers [^footnote-1] and [^footnote-2].
+behind these graphs are described in papers [^id6] and [^id7].
 
 The implementation of these ideas in LLVM may be slightly different than
 what is mentioned in the papers. These differences are documented in
-the [implementation details][implementation-details].
+the [implementation details](#implementation-details).
 
-(datadependencegraph)=
+(DataDependenceGraph)=
 
 ## Data Dependence Graph
 
@@ -21,7 +26,7 @@ It is also possible to combine some atomic nodes that have a simple
 def-use dependency between them into larger nodes that contain multiple-
 instructions.
 
-As described in [^footnote-1] the DDG uses graph abstraction to group nodes
+As described in [^id6] the DDG uses graph abstraction to group nodes
 that are part of a strongly connected component of the graph
 into special nodes called pi-blocks. pi-blocks represent cycles of data
 dependency that prevent reordering transformations. Since any strongly
@@ -43,14 +48,12 @@ itself creating a cycle in the DDG. The figure below illustrates
 how the cycle of dependency is carried through multiple def-use relations
 and a memory access dependency.
 
-```{image} cycle.png
-```
+![](cycle.png)
 
 The DDG corresponding to this example would have a pi-block that contains
 all the nodes participating in the cycle, as shown below:
 
-```{image} cycle_pi.png
-```
+![](cycle_pi.png)
 
 ## Program Dependence Graph
 
@@ -67,8 +70,7 @@ The DDG and the PDG are both directed graphs and they extend the
 node and edge types resulting in the inheritance relationship depicted
 in the UML diagram below:
 
-```{image} uml_nodes_and_edges.png
-```
+![](uml_nodes_and_edges.png)
 
 ### Graph Construction
 
@@ -87,8 +89,7 @@ from its concrete representation.
 The following UML diagram depicts the overall structure of the design
 pattern as it applies to the dependence graph implementation.
 
-```{image} uml_builder_pattern.png
-```
+![](uml_builder_pattern.png)
 
 Notice that the common code for building the two types of graphs are
 provided in the `DependenceGraphBuilder` class, while the `DDGBuilder`
@@ -103,32 +104,30 @@ implementation.
 
 #### Advantages:
 
-> - Builder allows graph construction code to be reused for DDG and PDG.
-> - Builder allows us to create DDG and PDG as separate graphs.
-> - DDG nodes and edges are completely disjoint from PDG nodes and edges allowing them to change easily and independently.
+- Builder allows graph construction code to be reused for DDG and PDG.
+- Builder allows us to create DDG and PDG as separate graphs.
+- DDG nodes and edges are completely disjoint from PDG nodes and edges allowing them to change easily and independently.
 
 #### Disadvantages:
 
-> - Builder may be perceived as over-engineering at first.
->
-> - There are some similarities between DDG nodes and edges compared to PDG nodes and edges, but there is little reuse of the class definitions.
->
->   - This is tolerable given that the node and edge types are fairly simple and there is little code reuse opportunity anyway.
+- Builder may be perceived as over-engineering at first.
+- There are some similarities between DDG nodes and edges compared to PDG nodes and edges, but there is little reuse of the class definitions.
+
+  - This is tolerable given that the node and edge types are fairly simple and there is little code reuse opportunity anyway.
 
 (implementation-details)=
 
 ## Implementation Details
 
 The current implementation of DDG differs slightly from the dependence
-graph described in [^footnote-1] in the following ways:
+graph described in [^id6] in the following ways:
 
-> 1. The graph nodes in the paper represent three main program components, namely *assignment statements*, *for loop headers* and *while loop headers*. In this implementation, DDG nodes naturally represent LLVM IR instructions. An assignment statement in this implementation typically involves a node representing the `store` instruction along with a number of individual nodes computing the right-hand-side of the assignment that connect to the `store` node via a def-use edge. The loop header instructions are not represented as special nodes in this implementation because they have limited uses and can be easily identified, for example, through `LoopAnalysis`.
-> 2. The paper describes five types of dependency edges between nodes namely *loop dependency*, *flow-*, *anti-*, *output-*, and *input-* dependencies. In this implementation *memory* edges represent the *flow-*, *anti-*, *output-*, and *input-* dependencies. However, *loop dependencies* are not made explicit, because they mainly represent association between a loop structure and the program elements inside the loop and this association is fairly obvious in LLVM IR itself.
-> 3. The paper describes two types of pi-blocks; *recurrences* whose bodies are SCCs and *IN* nodes whose bodies are not part of any SCC. In this implementation, pi-blocks are only created for *recurrences*. *IN* nodes remain as simple DDG nodes in the graph.
+1. The graph nodes in the paper represent three main program components, namely *assignment statements*, *for loop headers* and *while loop headers*. In this implementation, DDG nodes naturally represent LLVM IR instructions. An assignment statement in this implementation typically involves a node representing the `store` instruction along with a number of individual nodes computing the right-hand-side of the assignment that connect to the `store` node via a def-use edge. The loop header instructions are not represented as special nodes in this implementation because they have limited uses and can be easily identified, for example, through `LoopAnalysis`.
+2. The paper describes five types of dependency edges between nodes namely *loop dependency*, *flow-*, *anti-*, *output-*, and *input-* dependencies. In this implementation *memory* edges represent the *flow-*, *anti-*, *output-*, and *input-* dependencies. However, *loop dependencies* are not made explicit, because they mainly represent association between a loop structure and the program elements inside the loop and this association is fairly obvious in LLVM IR itself.
+3. The paper describes two types of pi-blocks; *recurrences* whose bodies are SCCs and *IN* nodes whose bodies are not part of any SCC. In this implementation, pi-blocks are only created for *recurrences*. *IN* nodes remain as simple DDG nodes in the graph.
 
 ### References
 
-[^footnote-1]: "D. J. Kuck, R. H. Kuhn, D. A. Padua, B. Leasure, and M. Wolfe (1981). DEPENDENCE GRAPHS AND COMPILER OPTIMIZATIONS."
+[^id6]: "D. J. Kuck, R. H. Kuhn, D. A. Padua, B. Leasure, and M. Wolfe (1981). DEPENDENCE GRAPHS AND COMPILER OPTIMIZATIONS."
 
-[^footnote-2]: "J. FERRANTE (IBM), K. J. OTTENSTEIN (Michigan Technological University) and JOE D. WARREN (Rice University), 1987. The Program Dependence Graph and Its Use in Optimization."
-
+[^id7]: "J. FERRANTE (IBM), K. J. OTTENSTEIN (Michigan Technological University) and JOE D. WARREN (Rice University), 1987. The Program Dependence Graph and Its Use in Optimization."

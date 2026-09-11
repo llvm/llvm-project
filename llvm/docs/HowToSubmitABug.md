@@ -9,7 +9,8 @@ getting it fixed quickly.
 🔒 If you believe that the bug is security related, please follow {ref}`report-security-issue`. 🔒
 
 Basically, you have to do two things at a minimum. First, decide whether the
-bug [crashes the compiler] or if the compiler is [miscompiling] the program
+bug {ref}`crashes the compiler <crashes the compiler>` or if the compiler is
+{ref}`miscompiling <miscompiling>` the program
 (i.e., the compiler successfully produces an executable, but it doesn't run
 right). Based on what type of bug it is, follow the instructions in the
 linked section to narrow down the bug so that the person who fixes it will be
@@ -26,7 +27,7 @@ not sure). The bug description should contain the following information:
 
 Thanks for helping us make LLVM better!
 
-(crashes-the-compiler)=
+(crashes the compiler)=
 
 ## Crashing Bugs
 
@@ -109,7 +110,8 @@ potentially be much faster.
 
 :::{TIP}
 Reduction is fastest and most effective the simpler the
-reproduction script is. Ideally, this will be running `opt` with a
+reproduction script is. Ideally, this will be running
+{title-reference}`opt` with a
 single pass. The most effective way to extract the IR before a
 specific point is a two step process. First, run the testcase with
 the `-print-pass-numbers` flag. This will print the name of a
@@ -145,12 +147,13 @@ If none of these crash, please follow the instructions for a
 should be able to reduce this with {doc}`llvm-reduce
 <CommandGuide/llvm-reduce>`, similar to middle end bugs. In this
 case, your test script should use {doc}`llc <CommandGuide/llc>`
-instead of `opt`.
+instead of {title-reference}`opt`.
 
 Please run this, then file a bug with the instructions and reduced
-`.bc` file that `llvm-reduce` emits. If something goes wrong with
-`llvm-reduce`, please submit the `foo.bc` file and the option that
-`llc` crashes with.
+`.bc` file that {title-reference}`llvm-reduce` emits. If something goes wrong
+with {title-reference}`llvm-reduce`, please submit the `foo.bc` file and the
+option that
+{title-reference}`llc` crashes with.
 
 ### LTO bugs
 
@@ -225,4 +228,3 @@ reducing the inputs required to reproduce the miscompilation. The
 {doc}`OptBisect <OptBisect>` page shows how to find the optimization pass
 causing the miscompile. You can use {doc}`llvm-reduce <CommandGuide/llvm-reduce>`
 to minimize the bitcode necessary to reproduce the miscompilation.
-

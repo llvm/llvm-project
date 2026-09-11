@@ -9,7 +9,7 @@ The first operand is always an `MDString` node with the string
 "branch_weights". The number of operands depends on the terminator type.
 
 Branch weights might be fetched from the profiling file or generated based on
-[\_\_builtin_expect][__builtin_expect] and [\_\_builtin_expect_with_probability][__builtin_expect_with_probability] instructions.
+{ref}`__builtin_expect <__builtin_expect>` and {ref}`__builtin_expect_with_probability <__builtin_expect_with_probability>` instructions.
 
 All weights are represented as unsigned 32-bit values, where a higher value
 indicates a greater chance of being taken.
@@ -97,7 +97,7 @@ is used.
 
 Other terminator instructions are not allowed to contain Branch Weight Metadata.
 
-(builtin-expect)=
+(__builtin_expect)=
 
 ## Built-in `expect` Instructions
 
@@ -134,7 +134,7 @@ case 5:  // This case is likely to be taken.
 }
 ```
 
-(builtin-expect-with-probability)=
+(__builtin_expect_with_probability)=
 
 ## Built-in `expect.with.probability` Instruction
 
@@ -209,4 +209,3 @@ annotation. The reason why we cannot annotate this on the callsite is that it
 can only go down 1 level in the call chain. For the cases where
 `foo_in_a_cc()->bar_in_b_cc()->baz_in_c_cc()`, we will need to go down 2 levels
 in the call chain to import both `bar_in_b_cc` and `baz_in_c_cc`.
-

@@ -126,7 +126,7 @@ def ADD_Pf : ALU32_rr<(outs IntRegs:$dst),
 ```
 
 In this step, we modify these instructions to include the information
-required by the relationship model, \<tt>getPredOpcode\</tt>, so that they can
+required by the relationship model, `getPredOpcode`, so that they can
 be related.
 
 ```text
@@ -165,4 +165,3 @@ to have the same value for all 3 instructions in order to be related. Next,
 with `KeyCol` and `ValueCols`. If an instruction sets its `PredSense`
 value to something not used in the relation model, it will not be assigned
 a column in the relation table.
-

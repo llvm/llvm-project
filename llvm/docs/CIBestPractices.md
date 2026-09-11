@@ -191,4 +191,3 @@ This prevents images from getting updated when the tag changes, which can
 introduce security issues and unwanted behavior differences. This incurs
 some additional burden for updates, but most of these are automatically handled
 by Renovate.
-

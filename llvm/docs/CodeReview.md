@@ -1,4 +1,4 @@
-(code-review-policy)=
+(code_review_policy)=
 
 # LLVM Code-Review Policy and Practices
 
@@ -33,7 +33,7 @@ Please note that the developer responsible for a patch is also
 responsible for making all necessary review-related changes, including
 those requested during any post-commit review.
 
-(post-commit-review)=
+(post_commit_review)=
 
 ### Can Code Be Reviewed After It Is Committed?
 
@@ -134,7 +134,7 @@ from specific performance tests), please explain as many of these up front as
 possible. This allows the patch author and reviewers to make the most efficient
 use of their time.
 
-(lgtm-how-a-patch-is-accepted)=
+(lgtm_how_a_patch_is_accepted)=
 
 ### LGTM - How a Patch Is Accepted
 
@@ -275,4 +275,3 @@ When upstreaming changes originally written by someone else:
 - Invite the original author(s) to review the changes, and also include
   additional reviewers. Specifically, an LGTM from a (co-)author should not be
   taken as approval to land a change.
-

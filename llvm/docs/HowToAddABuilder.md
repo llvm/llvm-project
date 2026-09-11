@@ -87,12 +87,12 @@ Here are the steps you can follow to do so:
     Creating a worker](http://docs.buildbot.net/current/tutorial/firstrun.html#creating-a-worker)
     for more details) by running the following command:
 
-    > ```bash
-    > $ buildbot-worker create-worker <buildbot-worker-root-directory> \
-    >              lab.llvm.org:9994 \
-    >              <buildbot-worker-access-name> \
-    >              <buildbot-worker-access-password>
-    > ```
+    ```bash
+    $ buildbot-worker create-worker <buildbot-worker-root-directory> \
+                 lab.llvm.org:9994 \
+                 <buildbot-worker-access-name> \
+                 <buildbot-worker-access-password>
+    ```
 
     Only once a new worker is stable, and
     approval from Galina has been received (see last step) should it
@@ -100,9 +100,9 @@ Here are the steps you can follow to do so:
 
     Now start the worker:
 
-    > ```bash
-    > $ buildbot-worker start <buildbot-worker-root-directory>
-    > ```
+    ```bash
+    $ buildbot-worker start <buildbot-worker-root-directory>
+    ```
 
     This will cause your new worker to connect to the staging buildmaster
     which is silent by default.
@@ -131,7 +131,7 @@ Here are the steps you can follow to do so:
 
 08. Send a patch which adds your build worker and your builder to
     [zorg](https://github.com/llvm/llvm-zorg). Use the typical LLVM
-    [workflow](https://llvm.org/docs/Contributing.html#how-to-submit-a-patch).
+    {ref}`workflow <submit_patch>`.
 
     - workers are added to `buildbot/osuosl/master/config/workers.py`
     - builders are added to `buildbot/osuosl/master/config/builders.py`
@@ -198,43 +198,43 @@ In order to use this "local testing" mode:
 - Create and activate a Python [venv](https://docs.python.org/3/library/venv.html) and install the necessary
   dependencies. This step can be run from any directory.
 
-  > ```bash
-  > python -m venv bbenv
-  > source bbenv/bin/activate
-  > pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
-  > ```
+  ```bash
+  python -m venv bbenv
+  source bbenv/bin/activate
+  pip install buildbot{,-console-view,-grid-view,-waterfall-view,-worker,-www}==3.11.7 urllib3
+  ```
 
 - If your system has Python 3.13 or newer you will need to additionally
   install `legacy-cgi` and make a minor patch to the installed buildbot
   package. This step does not need to be followed for earlier Python versions.
 
-  > ```bash
-  > pip install legacy-cgi
-  > sed -i \
-  >   -e 's/import pipes/import shlex/' \
-  >   -e 's/pipes\.quote/shlex.quote/' \
-  >   bbenv/lib/python3.13/site-packages/buildbot_worker/runprocess.py
-  > ```
+  ```bash
+  pip install legacy-cgi
+  sed -i \
+    -e 's/import pipes/import shlex/' \
+    -e 's/pipes\.quote/shlex.quote/' \
+    bbenv/lib/python3.13/site-packages/buildbot_worker/runprocess.py
+  ```
 
 - Initialise the necessary buildmaster files, link to the configuration in a
   local checkout out of [llvm-zorg](https://github.com/llvm/llvm-zorg), and
   ask `buildbot` to check the configuration. This step can be run from any
   directory.
 
-  > ```bash
-  > buildbot create-master llvm-testbbmaster
-  > cd llvm-testbbmaster
-  > ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/master.cfg .
-  > ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/config/ .
-  > ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
-  > BUILDBOT_TEST=1 buildbot checkconfig
-  > ```
+  ```bash
+  buildbot create-master llvm-testbbmaster
+  cd llvm-testbbmaster
+  ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/master.cfg .
+  ln -s /path/to/checkout/of/llvm-zorg/buildbot/osuosl/master/config/ .
+  ln -s /path/to/checkout/of/llvm-zorg/zorg/ .
+  BUILDBOT_TEST=1 buildbot checkconfig
+  ```
 
 - Start the buildmaster.
 
-  > ```bash
-  > BUILDBOT_TEST=1 buildbot start --nodaemon .
-  > ```
+  ```bash
+  BUILDBOT_TEST=1 buildbot start --nodaemon .
+  ```
 
 - After waiting a few seconds for startup to complete, you should be able to
   open the web UI at `http://localhost:8011`. If there are any errors or
@@ -245,13 +245,13 @@ In order to use this "local testing" mode:
   name for the worker associated with the build configuration you want to test
   in `buildbot/osuosl/master/config/builders.py`.
 
-  > ```bash
-  > buildbot-worker create-worker <buildbot-worker-root-directory> \
-  >                 localhost:9990 \
-  >                 <buildbot-worker-name> \
-  >                 test
-  > buildbot-worker start --nodaemon <buildbot-worker-root-directory>
-  > ```
+  ```bash
+  buildbot-worker create-worker <buildbot-worker-root-directory> \
+                  localhost:9990 \
+                  <buildbot-worker-name> \
+                  test
+  buildbot-worker start --nodaemon <buildbot-worker-root-directory>
+  ```
 
 - Either wait until the poller sets off a build, or alternatively force a
   build to start in the web UI.
@@ -268,9 +268,9 @@ server the following command will suffice to make the web UI accessible via
 `http://localhost:8011` and make it possible for a local worker to connect
 to the remote buildmaster by connecting to `localhost:9900`:
 
-> ```bash
-> ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@buildmaster_server_address
-> ```
+```bash
+ssh -N -L 8011:localhost:8011 -L 9990:localhost:9990 username@buildmaster_server_address
+```
 
 Be aware that some build configurations may checkout the current upstream
 `llvm-zorg` repository in order to retrieve additional scripts used during
@@ -413,4 +413,3 @@ Some tasks don't give immediate feedback, so if nothing happens within a short
 time, try again with the browser's web console open. Sometimes you will see
 403 errors and other messages that might indicate you don't have the correct
 details set up.
-

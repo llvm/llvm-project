@@ -15,17 +15,17 @@ reports.
 
 The main parts of the life cycle documented here are:
 
-1. [Reporting]
-2. [Triaging]
-3. [Actively working on fixing]
-4. [Closing]
+1. {ref}`Reporting <Reporting>`
+2. {ref}`Triaging <Triaging>`
+3. {ref}`Actively working on fixing <Actively working on fixing>`
+4. {ref}`Closing <Closing>`
 
 Furthermore, some of the metadata in the bug tracker, such as what labels we
 use, needs to be maintained. See the following for details:
 
-1. [Maintenance of metadata]
+1. {ref}`Maintenance of metadata <Maintenance of metadata>`
 
-(reporting)=
+(Reporting)=
 
 ## Reporting bugs
 
@@ -35,7 +35,7 @@ You can apply [labels](https://docs.github.com/en/issues/using-labels-and-milest
 to the bug to provide extra information to make the bug easier to discover, such
 as a label for the part of the project the bug pertains to.
 
-(triaging)=
+(Triaging)=
 
 ## Triaging bugs
 
@@ -81,7 +81,7 @@ good, actionable state. Try to answer the following questions while triaging:
 - If you are unsure of what a label is intended to be used for, please see the
   [documentation for our labels](https://github.com/llvm/llvm-project/labels).
 
-(actively-working-on-fixing)=
+(Actively working on fixing)=
 
 ## Actively working on fixing bugs
 
@@ -89,35 +89,40 @@ Please remember to assign the bug to yourself if you're actively working on
 fixing it and to unassign it when you're no longer actively working on it. You
 unassign a bug by removing the person from the `Assignees` field.
 
-(closing)=
+(Closing)=
+(resolving-closing-bugs)=
 
 ## Resolving/Closing bugs
 
 Resolving bugs is good! Make sure to properly record the reason for resolving.
 Examples of reasons for resolving are:
 
-> - If the issue has been resolved by a particular commit, close the issue with
->   a brief comment mentioning which commit(s) fixed it. If you are authoring
->   the fix yourself, your git commit message may include the phrase
->   `Fixes #<issue number>` on a line by itself. GitHub recognizes such commit
->   messages and will automatically close the specified issue with a reference
->   to your commit.
-> - If the reported behavior is not a bug, it is appropriate to close the issue
->   with a comment explaining why you believe it is not a bug, and adding the
->   `invalid` tag.
-> - If the bug duplicates another issue, close it as a duplicate by adding the
->   `duplicate` label with a comment pointing to the issue it duplicates.
-> - If there is a sound reason for not fixing the issue (difficulty, ABI, open
->   research questions, etc.), add the `wontfix` label and a comment explaining
->   why no changes are expected.
-> - If there is a specific and plausible reason to think that a given bug is
->   otherwise inapplicable or obsolete. One example is an open bug that doesn't
->   contain enough information to clearly understand the problem being reported
->   (e.g., not reproducible). It is fine to close such a bug, adding the
->   `worksforme` label and leaving a comment to encourage the reporter to
->   reopen the bug with more information if it's still reproducible for them.
+- If the issue has been resolved by a particular commit, close the issue with
+  a brief comment mentioning which commit(s) fixed it. If you are authoring
+  the fix yourself, your git commit message may include the phrase
+  `Fixes #<issue number>` on a line by itself. GitHub recognizes such commit
+  messages and will automatically close the specified issue with a reference
+  to your commit.
 
-(maintenance-of-metadata)=
+- If the reported behavior is not a bug, it is appropriate to close the issue
+  with a comment explaining why you believe it is not a bug, and adding the
+  `invalid` tag.
+
+- If the bug duplicates another issue, close it as a duplicate by adding the
+  `duplicate` label with a comment pointing to the issue it duplicates.
+
+- If there is a sound reason for not fixing the issue (difficulty, ABI, open
+  research questions, etc.), add the `wontfix` label and a comment explaining
+  why no changes are expected.
+
+- If there is a specific and plausible reason to think that a given bug is
+  otherwise inapplicable or obsolete. One example is an open bug that doesn't
+  contain enough information to clearly understand the problem being reported
+  (e.g., not reproducible). It is fine to close such a bug, adding the
+  `worksforme` label and leaving a comment to encourage the reporter to
+  reopen the bug with more information if it's still reproducible for them.
+
+(Maintenance of metadata)=
 
 ## Maintenance of metadata
 
@@ -128,4 +133,3 @@ open an issue asking to create an issue label and add the `infrastructure`
 label to the issue. The request should include a description of what the label
 is for. Alternatively, you can ask for the label to be created on the
 `#infrastructure` channel on the LLVM Discord.
-

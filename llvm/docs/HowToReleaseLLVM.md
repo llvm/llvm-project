@@ -211,17 +211,19 @@ release, all reported bugs will be deferred to the next stable release.
 
 The official release managers are:
 
-- Even releases: Tom Stellard (<mailto:tstellar@redhat.com>)
-- Odd releases: Tobias Hieta (<mailto:tobias@hieta.se>)
+- Even releases: Tom Stellard ([tstellar@redhat.com](mailto:tstellar@redhat.com))
+- Odd releases: Tobias Hieta ([tobias@hieta.se](mailto:tobias@hieta.se))
 
 The official release testers are volunteers from the community who have
 consistently validated and released binaries for their targets/OSs. To contact
 them, you should post on the [Discourse forums (Project
 Infrastructure - Release Testers).](https://discourse.llvm.org/c/infrastructure/release-testers/66)
 
-The official testers list is in the file `RELEASE_TESTERS.TXT`
-\<<https://github.com/llvm/llvm-project/blob/main/llvm/RELEASE_TESTERS.TXT>>\`\_, in
+The official testers list is in the file [`RELEASE_TESTERS.TXT`][release testers], in
 the LLVM repository.
+
+[release testers]: https://github.com/llvm/llvm-project/blob/main/llvm/RELEASE_TESTERS.TXT
+[release milestone query]: https://github.com/llvm/llvm-project/issues?q=is%3Aissue+milestone%3A%22LLVM+14.0.5+Release%22+no%3Aproject+
 
 ### Community Testing
 
@@ -282,7 +284,7 @@ This section describes how to triage bug reports:
 1. Search for bugs with a Release Milestone that have not been added to the
    "Release Status" github project:
 
-   <https://github.com/llvm/llvm-project/issues?q=is%3Aissue+milestone%3A%22LLVM+14.0.5+Release%22+no%3Aproject+>
+   [https://github.com/llvm/llvm-project/issues?q=is%3Aissue+milestone%3A%22LLVM+14.0.5+Release%22+no%3Aproject+][release milestone query]
 
    Replace 14.0.5 in this query with the version from the Release Milestone being
    targeted.
@@ -392,4 +394,3 @@ $ git log --format="- %aN: [%s (%h)](https://github.com/llvm/llvm-project/commit
 
 Once the release has been announced, add a link to the announcement on the llvm
 homepage (from the `llvm-www` repo) in the "Release Emails" section.
-

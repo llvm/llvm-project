@@ -36,12 +36,12 @@ parallel environment. To eliminate this assumption:
 
 This document describes a static analysis for determining convergence at each
 instruction in a function. The analysis extends previous work on divergence
-analysis [^cite_divergencespmd] to cover irreducible control-flow. The described
+analysis [^DivergenceSPMD] to cover irreducible control-flow. The described
 analysis is used in LLVM to implement a UniformityAnalysis that determines the
 uniformity of value(s) computed at each instruction in an LLVM IR or MIR
 function.
 
-[^cite_divergencespmd]: Julian Rosemann, Simon Moll, and Sebastian
+[^DivergenceSPMD]: Julian Rosemann, Simon Moll, and Sebastian
     Hack. 2021. An Abstract Interpretation for SPMD Divergence on
     Reducible Control Flow Graphs. Proc. ACM Program. Lang. 5, POPL,
     Article 31 (January 2021), 35 pages.
@@ -224,21 +224,22 @@ a cycle if they both previously executed the cycle header the same number of
 times after they entered that cycle. In general, this needs to account for the
 iterations of parent cycles as well.
 
-> **Maximal converged-with:**
->
-> Dynamic instances `X1` and `X2` produced by different threads
-> for the same static instance `X` are converged in the maximal
-> converged-with relation if and only if:
->
-> - `X` is not contained in any cycle, or,
->
-> - For every cycle `C` with header `H` that contains `X`:
->
->   - every dynamic instance `H1` of `H` that precedes `X1` in
->     the respective thread is convergence-before `X2`, and,
->   - every dynamic instance `H2` of `H` that precedes `X2` in
->     the respective thread is convergence-before `X1`,
->   - without assuming that `X1` is converged with `X2`.
+```{eval-rst}
+   **Maximal converged-with:**
+
+   Dynamic instances ``X1`` and ``X2`` produced by different threads
+   for the same static instance ``X`` are converged in the maximal
+   converged-with relation if and only if:
+
+   - ``X`` is not contained in any cycle, or,
+   - For every cycle ``C`` with header ``H`` that contains ``X``:
+
+     - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in
+       the respective thread is convergence-before ``X2``, and,
+     - every dynamic instance ``H2`` of ``H`` that precedes ``X2`` in
+       the respective thread is convergence-before ``X1``,
+     - without assuming that ``X1`` is converged with ``X2``.
+```
 
 :::{note}
 Cycle headers may not be unique to a given CFG if it is irreducible. Each
@@ -466,11 +467,13 @@ Each node `X` in a given CFG is reported to be m-converged if and
 only if every cycle that contains `X` satisfies the following necessary
 conditions:
 
-> 1. Every divergent branch inside the cycle satisfies the
->    {ref}`diverged entry criterion<convergence-diverged-entry>`, and,
-> 2. There are no {ref}`diverged paths reaching the
->    cycle<convergence-diverged-outside>` from a divergent branch
->    outside it.
+```{eval-rst}
+  1. Every divergent branch inside the cycle satisfies the
+     :ref:`diverged entry criterion<convergence-diverged-entry>`, and,
+  2. There are no :ref:`diverged paths reaching the
+     cycle<convergence-diverged-outside>` from a divergent branch
+     outside it.
+```
 
 :::{note}
 A reducible cycle {ref}`trivially satisfies
@@ -618,14 +621,16 @@ an outer cycle that contains `C`.
 Thus, the diverged entry criterion can be conservatively simplified
 as follows:
 
-> For a divergent branch `B` and its join node `J`, the nodes in a
-> cycle `C` that contains both `B` and `J` are m-converged only
-> if:
->
-> - `B` strictly dominates `J`, or,
-> - The header `H` of `C` strictly dominates `J`, or,
-> - Recursively, there is cycle `C'` inside `C` that satisfies the
->   same condition.
+```{eval-rst}
+  For a divergent branch ``B`` and its join node ``J``, the nodes in a
+  cycle ``C`` that contains both ``B`` and ``J`` are m-converged only
+  if:
+
+  - ``B`` strictly dominates ``J``, or,
+  - The header ``H`` of ``C`` strictly dominates ``J``, or,
+  - Recursively, there is cycle ``C'`` inside ``C`` that satisfies the
+    same condition.
+```
 
 When `J` is the same as `H` or `B`, the trivial dominance is
 insufficient to make any statement about entries to diverged paths.
@@ -709,4 +714,3 @@ relation over dynamic instances and a {ref}`controlled m-converged
 <controlled_m_converged>` property of static instances. The {ref}`uniformity
 analysis <uniformity-analysis>` implemented in LLVM includes this for targets
 that support convergence control tokens.
-

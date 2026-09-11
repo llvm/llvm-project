@@ -3,7 +3,7 @@
 ## Introduction
 
 This document seeks to dispel the mystery and confusion surrounding LLVM's
-[GetElementPtr](LangRef.html#getelementptr-instruction) (GEP) instruction.
+[GetElementPtr](LangRef.md#getelementptr-instruction) (GEP) instruction.
 Questions about the wily GEP instruction are probably the most frequent
 questions once a developer gets down to coding with LLVM. Here we lay
 out the sources of confusion and show that the GEP instruction is really quite
@@ -45,7 +45,7 @@ X = &Foo[0].F;
 
 Sometimes this question gets rephrased as:
 
-(gep-index-through-first-pointer)=
+(GEP index through first pointer)=
 
 > *Why is it okay to index through the first pointer, but subsequent pointers
 > won't be dereferenced?*
@@ -255,7 +255,7 @@ Also, GEP carries additional pointer aliasing rules. It's invalid to take a GEP
 from one object, address into a different separately allocated object, and
 dereference it. IR producers (front-ends) must follow this rule, and consumers
 (optimizers, specifically alias analysis) benefit from being able to rely on
-it. See the [Rules] section for more information.
+it. See the {ref}`Rules <Rules>` section for more information.
 
 And, GEP is more concise in common cases.
 
@@ -291,7 +291,7 @@ you want to support VLAs, your code will have to be prepared to reverse-engineer
 the linearization. One way to solve this problem is to use the ScalarEvolution
 library, which always presents VLA and non-VLA indexing in the same manner.
 
-(rules)=
+(Rules)=
 
 ## Rules
 
@@ -389,7 +389,7 @@ because LLVM has no restrictions on mixing types in addressing, loads or stores.
 LLVM's type-based alias analysis pass uses metadata to describe a different type
 system (such as the C type system), and performs type-based aliasing on top of
 that. Further details are in the
-[language reference](LangRef.html#tbaa-metadata).
+[language reference](LangRef.md#tbaa-metadata).
 
 ### What happens if a GEP computation overflows?
 
@@ -433,8 +433,8 @@ priority:
 - Support C, C-like languages, and languages which can be conceptually lowered
   into C (this covers a lot).
 - Support optimizations such as those that are common in C compilers. In
-  particular, GEP is a cornerstone of LLVM's [pointer aliasing
-  model](LangRef.html#pointeraliasing).
+  particular, GEP is a cornerstone of LLVM's {ref}`pointer aliasing
+  model <pointeraliasing>`.
 - Provide a consistent method for computing addresses so that address
   computations don't need to be a part of load and store instructions in the IR.
 - Support non-C-like languages, to the extent that it doesn't interfere with
@@ -478,4 +478,3 @@ instruction:
    types of the pointers.
 5. Leading zero indices are not superfluous for pointer aliasing nor the types
    of the pointers.
-
