@@ -738,8 +738,7 @@ public:
       return {};
     }
 
-    CIRGenFunction::SourceLocRAIIObject sourceloc{
-        cgf, cgf.getLoc(e->getSourceRange())};
+    CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
 
     // Store the updated result through the lvalue
     if (lv.isBitField())
@@ -1288,13 +1287,11 @@ public:
       // 'An assignment expression has the value of the left operand after the
       // assignment...'.
       if (lhs.isBitField()) {
-        CIRGenFunction::SourceLocRAIIObject loc{
-            cgf, cgf.getLoc(e->getSourceRange())};
+        CIRGenFunction::SourceLocRAIIObject loc{cgf, e->getSourceRange()};
         rhs = cgf.emitStoreThroughBitfieldLValue(RValue::get(rhs), lhs);
       } else {
         cgf.emitNullabilityCheck(lhs, rhs, e->getExprLoc());
-        CIRGenFunction::SourceLocRAIIObject loc{
-            cgf, cgf.getLoc(e->getSourceRange())};
+        CIRGenFunction::SourceLocRAIIObject loc{cgf, e->getSourceRange()};
         cgf.emitStoreThroughLValue(RValue::get(rhs), lhs);
       }
     }
@@ -1600,8 +1597,7 @@ LValue ScalarExprEmitter::emitCompoundAssignLValue(
 
   opInfo.lhs = emitLoadOfLValue(lhsLV, e->getExprLoc());
 
-  CIRGenFunction::SourceLocRAIIObject sourceloc{
-      cgf, cgf.getLoc(e->getSourceRange())};
+  CIRGenFunction::SourceLocRAIIObject sourceloc{cgf, e->getSourceRange()};
   SourceLocation loc = e->getExprLoc();
   if (!promotionTypeLHS.isNull())
     opInfo.lhs = emitScalarConversion(opInfo.lhs, lhsTy, promotionTypeLHS, loc);
