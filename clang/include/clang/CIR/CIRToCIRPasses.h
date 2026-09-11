@@ -44,7 +44,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirCtx,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
                   bool enableVerifier, bool enableIdiomRecognizer,
                   bool enableCIRSimplify, bool enableLibOpt,
-                  llvm::StringRef libOptOptions, bool enableCallConvLowering);
+                  llvm::StringRef libOptOptions, bool enableCallConvLowering,
+                  bool stopBeforeLowering = false);
 
 } // namespace cir
 

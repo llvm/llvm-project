@@ -80,7 +80,8 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
                   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs,
                   bool enableVerifier, bool enableIdiomRecognizer,
                   bool enableCIRSimplify, bool enableLibOpt,
-                  llvm::StringRef libOptOptions, bool enableCallConvLowering) {
+                  llvm::StringRef libOptOptions, bool enableCallConvLowering,
+                  bool stopBeforeLowering) {
 
   llvm::TimeTraceScope scope("CIR To CIR Passes");
 
@@ -103,6 +104,13 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
       return mlir::failure();
 
     pm.addPass(std::move(libOptPass));
+  }
+
+  // Stop at the ABI-free boundary, before target/ABI lowering.
+  if (stopBeforeLowering) {
+    pm.enableVerifier(enableVerifier);
+    (void)mlir::applyPassManagerCLOptions(pm);
+    return pm.run(theModule);
   }
 
   pm.addPass(mlir::createTargetLoweringPass());
