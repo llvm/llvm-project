@@ -26,10 +26,11 @@ enum class CarriedLatency { Off, Fence, All };
 
 static cl::opt<CarriedLatency> BlockCarriedLatency(
     "amdgpu-block-carried-latency", cl::Hidden, cl::init(CarriedLatency::Off),
-    cl::desc("Prioritize HardwareUnits with non-zero exposed cycles in the "
-             "coexec scheduler's critical-resource sort."),
+    cl::desc("Estimate block-carried latency and include it in the effective "
+             "candidate stall cost."),
     cl::values(
-        clEnumValN(CarriedLatency::Off, "off", "Disabled- do not pad latency."),
+        clEnumValN(CarriedLatency::Off, "off",
+                   "Disabled - do not pad latency."),
         clEnumValN(CarriedLatency::Fence, "fence",
                    "Only pad latency for memory fence (e.g. those surrounding "
                    "barrier_signal/wait)."),
@@ -562,7 +563,7 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
 
 unsigned CandidateHeuristics::getMaxBlockingCycles(const MCSchedClassDesc *SC,
                                                    const MachineInstr *MI) {
-  // Loads and stores are not pipelined
+  // Loads and stores are not pipelined.
   if (MI->mayLoadOrStore())
     return SchedModel->computeInstrLatency(MI, false);
 
@@ -630,11 +631,12 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
     return 0;
 
   MachineInstr *MI = SU->getInstr();
+  unsigned CarriedLatency = 0;
   const InstructionFlavor Flavor = classifyFlavor(*MI, *SII);
   if (Flavor == InstructionFlavor::Fence) {
     MachineBasicBlock *MBB = MI->getParent();
-    // Check if we have DS instruciton after a fence in any of the predecessor
-    // blocks, if so, this fence instruction has carried latency.
+    // Scan each direct predecessor back to its nearest Fence or block start for
+    // DS instructions.
     for (auto PredMBB : MBB->predecessors()) {
       auto I = PredMBB->rbegin();
       auto E = PredMBB->rend();
@@ -645,15 +647,14 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
 
         // Found carried latency.
         if (ItFlavor == InstructionFlavor::DS)
-          return getHWUICyclesForMI(&*I);
+          CarriedLatency = std::max(CarriedLatency, getHWUICyclesForMI(&*I));
       }
     }
   }
 
   if (BlockCarriedLatency == CarriedLatency::Fence)
-    return 0;
+    return CarriedLatency;
 
-  unsigned CarriedLatency = 0;
   for (MachineOperand &Op : MI->all_uses()) {
     auto Reg = Op.getReg();
     if (!Reg.isVirtual())
@@ -668,7 +669,7 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
 
       unsigned Latency = getHWUICyclesForMI(&Def);
 
-      // Load is carried across block
+      // Load is carried across block.
       if (Def.getParent() != MI->getParent()) {
         bool FoundUseInDefBlock = false;
         for (MachineInstr &Use : DAG->MRI.use_nodbg_instructions(Reg)) {
@@ -692,7 +693,7 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
       }
 
       assert(Def.getParent() == MI->getParent());
-      // Load is in the same block
+      // Load is in the same block.
       SlotIndex LoadIdx = DAG->getLIS()->getInstructionIndex(Def);
       SlotIndex UseIdx = DAG->getLIS()->getInstructionIndex(*MI);
       // The load occurs after this use -- the latency is carried across loop
@@ -705,6 +706,7 @@ unsigned CandidateHeuristics::getCarriedLatency(SUnit *SU) {
 }
 
 void CandidateHeuristics::collectRegionSummary() {
+  CarriedLatencies.clear();
   if (!SchedModel || !SchedModel->hasInstrSchedModel())
     return;
 

@@ -210,15 +210,15 @@ protected:
   void collectRegionSummary();
 
   /// \returns the maximum blocking cycles according to the SchedModel for a
-  /// given MCSchedClassDesc \p SC
+  /// given MCSchedClassDesc \p SC.
   unsigned getMaxBlockingCycles(const MCSchedClassDesc *SC,
                                 const MachineInstr *MI);
 
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// SU
+  /// SU.
   unsigned getHWUICyclesForSU(SUnit *SU);
   /// Compute the blocking cycles for the appropriate HardwareUnit given an \p
-  /// MI
+  /// MI.
   unsigned getHWUICyclesForMI(MachineInstr *MI);
 
   /// Estimate the block carried latency from loads for a given \p SU. This is
@@ -248,8 +248,8 @@ public:
 
   unsigned getStructuralStallCycles(SchedBoundary &Zone, SUnit *SU);
 
-  bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &TryCand,
-                         GenericSchedulerBase::SchedCandidate &Cand,
+  bool tryEffectiveStall(GenericSchedulerBase::SchedCandidate &Cand,
+                         GenericSchedulerBase::SchedCandidate &TryCand,
                          SchedBoundary &Zone);
 
   /// Check for critical resource consumption. Prefer the candidate that uses
