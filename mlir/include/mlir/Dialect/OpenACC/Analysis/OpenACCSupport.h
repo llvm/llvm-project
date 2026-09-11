@@ -88,8 +88,7 @@ struct OpenACCSupportTraits {
     virtual ~Concept() = default;
 
     /// Get the variable name for a given MLIR value.
-    virtual std::string getVariableName(Value v,
-                                        VariableNameConfig config) = 0;
+    virtual std::string getVariableName(Value v, VariableNameConfig config) = 0;
 
     /// Get the recipe name for a given kind, type and value.
     virtual std::string getRecipeName(RecipeKind kind, Type type,
