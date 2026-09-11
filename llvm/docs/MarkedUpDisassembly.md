@@ -29,7 +29,7 @@ with the marked up annotations.
 
 ## Instruction Annotations
 
-(contextual-markups)=
+(contextual markups)=
 
 ### Contextual markups
 
@@ -74,4 +74,3 @@ The intended consumers of this information use the C API, therefore the new C
 API function for the disassembler will be added to provide an option to produce
 disassembled instructions with annotations, `LLVMSetDisasmOptions()` and the
 `LLVMDisassembler_Option_UseMarkup` option (see above).
-

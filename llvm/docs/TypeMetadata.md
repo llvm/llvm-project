@@ -56,15 +56,14 @@ struct D : A, C {
 
 The virtual table objects for A, B, C and D look like this (under the Itanium ABI):
 
-```{eval-rst}
-.. csv-table:: Virtual Table Layout for A, B, C, D
-  :header: Class, 0, 1, 2, 3, 4, 5, 6
+:::{csv-table} Virtual Table Layout for A, B, C, D
+:header: Class, 0, 1, 2, 3, 4, 5, 6
 
-  A, A::offset-to-top, &A::rtti, &A::f
-  B, B::offset-to-top, &B::rtti, &B::f, &B::g
-  C, C::offset-to-top, &C::rtti, &C::h
-  D, D::offset-to-top, &D::rtti, &D::f, &D::h, D::offset-to-top, &D::rtti, thunk for &D::h
-```
+A, A::offset-to-top, &A::rtti, &A::f
+B, B::offset-to-top, &B::rtti, &B::f, &B::g
+C, C::offset-to-top, &C::rtti, &C::h
+D, D::offset-to-top, &D::rtti, &D::f, &D::h, D::offset-to-top, &D::rtti, thunk for &D::h
+:::
 
 When an object of type A is constructed, the address of `&A::f` in A's
 virtual table object is stored in the object's vtable pointer. In ABI parlance
@@ -84,18 +83,17 @@ shown below. The following table shows the name of a class, the offset of an
 address point within that class's vtable and the name of one of the classes
 with which that address point is compatible.
 
-```{eval-rst}
-.. csv-table:: Type Offsets for A, B, C, D
-  :header: VTable for, Offset, Compatible Class
+:::{csv-table} Type Offsets for A, B, C, D
+:header: VTable for, Offset, Compatible Class
 
-  A, 16, A
-  B, 16, A
-   ,   , B
-  C, 16, C
-  D, 16, A
-   ,   , D
-   , 48, C
-```
+A, 16, A
+B, 16, A
+ ,   , B
+C, 16, C
+D, 16, A
+ ,   , D
+ , 48, C
+:::
 
 The next step is to encode this compatibility information into the IR. The way
 this is done is to create type metadata named after each of the compatible
@@ -155,6 +153,8 @@ as the former will be the jump table entry if a jump table is necessary.
 
 The [GlobalLayoutBuilder][globallayoutbuilder] class is responsible for laying out the globals
 efficiently to minimize the sizes of the underlying bitsets.
+
+**Example:**
 
 ```
 target datalayout = "e-p:32:32"
@@ -284,4 +284,3 @@ normal loads.
 [control flow integrity]: https://clang.llvm.org/docs/ControlFlowIntegrity.html
 [control flow integrity design document]: https://clang.llvm.org/docs/ControlFlowIntegrityDesign.html
 [globallayoutbuilder]: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/Transforms/IPO/LowerTypeTests.h
-

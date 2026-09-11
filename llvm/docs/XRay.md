@@ -1,8 +1,8 @@
----
-Version: 1 as of 2016-11-08
----
-
 # XRay Instrumentation
+
+```{eval-rst}
+:Version: 1 as of 2016-11-08
+```
 
 ## Introduction
 
@@ -80,10 +80,10 @@ void alt_never_instrumented() __attribute__((xray_never_instrument));
 ```
 
 When linking a binary, you can either manually link in the [XRay Runtime
-Library][xray runtime library] or use `clang` to link it in automatically with the
+Library](#xray-runtime-library) or use `clang` to link it in automatically with the
 `-fxray-instrument` flag. Alternatively, you can statically link-in the XRay
 runtime library from compiler-rt -- those archive files will take the name of
-`libclang_rt.xray-{arch}` where `{arch}` is the mnemonic supported by clang
+{title-reference}`libclang_rt.xray-{arch}` where {title-reference}`{arch}` is the mnemonic supported by clang
 (x86_64, arm7, etc.).
 
 ### LLVM Function Attribute
@@ -240,7 +240,7 @@ variable. Programmatic configuration can be done by calling
 selected/installed.
 
 When the buffers are flushed to disk, the result is a binary trace format
-described by [XRay FDR format](XRayFDRFormat.html)
+described by {doc}`XRay FDR format <XRayFDRFormat>`
 
 When FDR mode is on, it will keep writing and recycling memory buffers until
 the logging implementation is finalized -- at which point it can be flushed and
@@ -292,7 +292,7 @@ supports the following subcommands:
 - `convert`: Converts an XRay log file from one format to another. We can
   convert from binary XRay traces (both basic and FDR mode) to YAML,
   [flame-graph](https://github.com/brendangregg/FlameGraph) friendly text
-  formats, as well as `Chrome Trace Viewer (catapult)
+  formats, as well as {title-reference}`Chrome Trace Viewer (catapult)
   <https://github.com/catapult-project/catapult>` formats.
 - `graph`: Generates a DOT graph of the function call relationships between
   functions found in an XRay trace.
@@ -360,7 +360,6 @@ the XRay instrumentation system.
 We're looking forward to contributions to port XRay to more architectures and
 operating systems.
 
-% References...
+<!-- References... -->
 
 [xray whitepaper]: http://research.google.com/pubs/pub45287.html
-

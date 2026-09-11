@@ -1,3 +1,8 @@
+---
+myst:
+  footnote_transition: false
+---
+
 # Vector Predication Roadmap
 
 ## Motivation
@@ -7,12 +12,12 @@ specifically for vector instructions with a mask and/or an explicit vector
 length. LLVM currently has no target-independent means to model predicated
 vector instructions for modern SIMD ISAs such as AVX512, ARM SVE, the RISC-V V
 extension and NEC SX-Aurora. Only some predicated vector operations, such as
-masked loads and stores, are available through intrinsics [^cite_maskedir].
+masked loads and stores, are available through intrinsics [^maskedir].
 
 The Vector Predication (VP) extensions is a concrete RFC and prototype
 implementation to achieve native vector predication in LLVM. The VP prototype
 and all related discussions can be found in the VP patch on Phabricator
-[^cite_vprfc].
+[^vprfc].
 
 ## Roadmap
 
@@ -67,9 +72,8 @@ Result: Native vector predication in IR.
 
 ## References
 
-[^cite_maskedir]: `llvm.masked.*` intrinsics,
+[^maskedir]: `llvm.masked.*` intrinsics,
     <https://llvm.org/docs/LangRef.html#masked-vector-load-and-store-intrinsics>
 
-[^cite_vprfc]: RFC: Prototype & Roadmap for vector predication in LLVM,
+[^vprfc]: RFC: Prototype & Roadmap for vector predication in LLVM,
     <https://reviews.llvm.org/D57504>
-

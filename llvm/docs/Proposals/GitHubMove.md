@@ -1,3 +1,8 @@
+---
+myst:
+  footnote_transition: false
+---
+
 # Moving LLVM Projects to GitHub
 
 ## Current Status
@@ -98,14 +103,14 @@ past discussions about Git:
 
 - "The 'branch' I most care about is mainline, and losing the ability to say
   'fixed in r1234' (with some sort of monotonically increasing number) would
-  be a tragic loss." [^cite_lattnerrevnum]
+  be a tragic loss." [^lattnerrevnum]
 - "I like those results sorted by time and the chronology should be obvious, but
   timestamps are incredibly cumbersome and make it difficult to verify that a
-  given checkout matches a given set of results." [^cite_trickrevnum]
+  given checkout matches a given set of results." [^trickrevnum]
 - "There is still the major regression with unreadable version numbers.
   Given the amount of Bugzilla traffic with 'Fixed in...', that's a
-  non-trivial issue." [^cite_jsonnrevnum]
-- "Sequential IDs are important for LNT and llvmlab bisection tool." [^cite_matthewsrevnum].
+  non-trivial issue." [^jsonnrevnum]
+- "Sequential IDs are important for LNT and llvmlab bisection tool." [^matthewsrevnum].
 
 However, Git can emulate this increasing revision number:
 `git rev-list --count <commit-hash>`. This identifier is unique only
@@ -128,7 +133,7 @@ policy. We must rely on the community to avoid pushing merge commits.
 GitHub offers a feature called `Status Checks`: a branch protected by
 `status checks` requires commits to be explicitly allowed before the push can happen.
 We could supply a pre-push hook on the client side that would run and check the
-history, before allowing the commit being pushed [^cite_statuschecks].
+history, before allowing the commit being pushed [^statuschecks].
 However this solution would be somewhat fragile (how do you update a script
 installed on every developer machine?) and prevents SVN access to the
 repository.
@@ -156,7 +161,7 @@ email format unchanged besides the commit URL.
    provide infrastructure testing.
 5. Update Phabricator to pick up commits from the GitHub repository.
 6. LNT and llvmlab have to be updated: they rely on unique monotonically
-   increasing integer across branch [^cite_matthewsrevnum].
+   increasing integer across branch [^matthewsrevnum].
 7. Instruct downstream integrators to pick up commits from the GitHub
    repository.
 8. Review and prepare an update for the LLVM documentation.
@@ -194,24 +199,24 @@ For example, www/ and test-suite/ are not part of the monorepo.
 Putting all sub-projects in a single checkout makes cross-project refactoring
 naturally simple:
 
-> - New sub-projects can be trivially split out for better reuse and/or layering
->   (e.g., to allow libSupport and/or LIT to be used by runtimes without adding a
->   dependency on LLVM).
-> - Changing an API in LLVM and upgrading the sub-projects will always be done in
->   a single commit, designing away a common source of temporary build breakage.
-> - Moving code across sub-project (during refactoring for instance) in a single
->   commit enables accurate `git blame` when tracking code change history.
-> - Tooling based on `git grep` works natively across sub-projects, allowing to
->   easier find refactoring opportunities across projects (for example reusing a
->   datastructure initially in LLDB by moving it into libSupport).
-> - Having all the sources present encourages maintaining the other sub-projects
->   when changing API.
+- New sub-projects can be trivially split out for better reuse and/or layering
+  (e.g., to allow libSupport and/or LIT to be used by runtimes without adding a
+  dependency on LLVM).
+- Changing an API in LLVM and upgrading the sub-projects will always be done in
+  a single commit, designing away a common source of temporary build breakage.
+- Moving code across sub-project (during refactoring for instance) in a single
+  commit enables accurate `git blame` when tracking code change history.
+- Tooling based on `git grep` works natively across sub-projects, allowing to
+  easier find refactoring opportunities across projects (for example reusing a
+  datastructure initially in LLDB by moving it into libSupport).
+- Having all the sources present encourages maintaining the other sub-projects
+  when changing API.
 
 Finally, the monorepo maintains the property of the existing SVN repository that
 the sub-projects move synchronously, and a single revision number (or commit
 hash) identifies the state of the development across all projects.
 
-(build-single-project)=
+(build_single_project)=
 
 #### Building a single sub-project
 
@@ -249,28 +254,28 @@ so it's not clear if this is something that will be supported going forward.
 
 ### Monorepo Drawbacks
 
-> - Using the monolithic repository may add overhead for those contributing to a
->   standalone sub-project, particularly on runtimes like libcxx and compiler-rt
->   that don't rely on LLVM; currently, a fresh clone of libcxx is only 15MB (vs.
->   1GB for the monorepo), and the commit rate of LLVM may cause more frequent
->   `git push` collisions when upstreaming. Affected contributors may be able to
->   use the SVN bridge or the single-subproject Git mirrors. However, it's
->   undecided if these projects will continue to be maintained.
-> - Using the monolithic repository may add overhead for those *integrating* a
->   standalone sub-project, even if they aren't contributing to it, due to the
->   same disk space concern as the point above. The availability of the
->   sub-project Git mirrors would addresses this.
-> - Preservation of the existing read/write SVN-based workflows relies on the
->   GitHub SVN bridge, which is an extra dependency. Maintaining this locks us
->   into GitHub and could restrict future workflow changes.
+- Using the monolithic repository may add overhead for those contributing to a
+  standalone sub-project, particularly on runtimes like libcxx and compiler-rt
+  that don't rely on LLVM; currently, a fresh clone of libcxx is only 15MB (vs.
+  1GB for the monorepo), and the commit rate of LLVM may cause more frequent
+  `git push` collisions when upstreaming. Affected contributors may be able to
+  use the SVN bridge or the single-subproject Git mirrors. However, it's
+  undecided if these projects will continue to be maintained.
+- Using the monolithic repository may add overhead for those *integrating* a
+  standalone sub-project, even if they aren't contributing to it, due to the
+  same disk space concern as the point above. The availability of the
+  sub-project Git mirrors would addresses this.
+- Preservation of the existing read/write SVN-based workflows relies on the
+  GitHub SVN bridge, which is an extra dependency. Maintaining this locks us
+  into GitHub and could restrict future workflow changes.
 
 #### Workflows
 
-> - {ref}`Checkout/Clone a Single Project, without Commit Access <workflow-checkout-commit>`.
-> - {ref}`Checkout/Clone Multiple Projects, with Commit Access <workflow-monocheckout-multicommit>`.
-> - {ref}`Commit an API Change in LLVM and Update the Sub-projects <workflow-cross-repo-commit>`.
-> - {ref}`Branching/Stashing/Updating for Local Development or Experiments <workflow-mono-branching>`.
-> - {ref}`Bisecting <workflow-mono-bisecting>`.
+- {ref}`Checkout/Clone a Single Project, without Commit Access <workflow-checkout-commit>`.
+- {ref}`Checkout/Clone Multiple Projects, with Commit Access <workflow-monocheckout-multicommit>`.
+- {ref}`Commit an API Change in LLVM and Update the Sub-projects <workflow-cross-repo-commit>`.
+- {ref}`Branching/Stashing/Updating for Local Development or Experiments <workflow-mono-branching>`.
+- {ref}`Bisecting <workflow-mono-bisecting>`.
 
 ## Workflow Before/After
 
@@ -1074,13 +1079,12 @@ happy hacking!
 
 ## References
 
-[^cite_lattnerrevnum]: Chris Lattner, <http://lists.llvm.org/pipermail/llvm-dev/2011-July/041739.html>
+[^lattnerrevnum]: Chris Lattner, <http://lists.llvm.org/pipermail/llvm-dev/2011-July/041739.html>
 
-[^cite_trickrevnum]: Andrew Trick, <http://lists.llvm.org/pipermail/llvm-dev/2011-July/041721.html>
+[^trickrevnum]: Andrew Trick, <http://lists.llvm.org/pipermail/llvm-dev/2011-July/041721.html>
 
-[^cite_jsonnrevnum]: Joerg Sonnenberger, <http://lists.llvm.org/pipermail/llvm-dev/2011-July/041688.html>
+[^jsonnrevnum]: Joerg Sonnenberger, <http://lists.llvm.org/pipermail/llvm-dev/2011-July/041688.html>
 
-[^cite_matthewsrevnum]: Chris Matthews, <http://lists.llvm.org/pipermail/cfe-dev/2016-July/049886.html>
+[^matthewsrevnum]: Chris Matthews, <http://lists.llvm.org/pipermail/cfe-dev/2016-July/049886.html>
 
-[^cite_statuschecks]: GitHub status-checks, <https://help.github.com/articles/about-required-status-checks/>
-
+[^statuschecks]: GitHub status-checks, <https://help.github.com/articles/about-required-status-checks/>

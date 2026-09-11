@@ -169,11 +169,13 @@ burden on maintaining other components (core or peripheral).
 There are multiple types of issues that might trigger a request for deprecation,
 including (but not limited to):
 
-> - Changes in a component consistently break other areas of the project.
-> - Components go broken for long periods of time (weeks or more).
-> - Clearly superior alternatives are in use and maintenance is painful.
-> - Builds and tests are harder / take longer, increasing the cost of
->   maintenance, overtaking the perceived benefits.
+```{eval-rst}
+ * Changes in a component consistently break other areas of the project.
+ * Components go broken for long periods of time (weeks or more).
+ * Clearly superior alternatives are in use and maintenance is painful.
+ * Builds and tests are harder / take longer, increasing the cost of
+   maintenance, overtaking the perceived benefits.
+```
 
 If the maintenance cost is higher than it is acceptable by the majority of
 developers, it means that either the sub-community is too small (and the extra
@@ -229,4 +231,3 @@ overall maintenance costs to a minimum and will need to show steps to mitigate
 all of the issues that were listed as reasons for its original removal.
 
 Failing on those again, will lead to become a candidate for removal yet again.
-

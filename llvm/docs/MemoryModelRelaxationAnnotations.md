@@ -47,13 +47,13 @@ tag
   `prefix:suffix` notation.
   For example:
 
-  ```{code-block}
+  :::{code-block}
   :caption: 'Example: Tags in Metadata'
 
   !0 = !{!"scope", !"workgroup"}  # scope:workgroup
   !1 = !{!"scope", !"device"}     # scope:device
   !2 = !{!"scope", !"system"}     # scope:system
-  ```
+  :::
 
   :::{note}
   The only semantics relevant to the optimizer is the
@@ -65,13 +65,13 @@ tag
   to specify all of the tags they belong to. Such a list
   is referred to as a "set of tags".
 
-  ```{code-block}
+  :::{code-block}
   :caption: 'Example: Set of Tags in Metadata'
 
   !0 = !{!"scope", !"workgroup"}
   !1 = !{!"sync-as", !"private"}
   !2 = !{!0, !2}
-  ```
+  :::
 
   :::{note}
   If an operation does not have MMRA metadata, it's treated as if
@@ -88,12 +88,12 @@ tag
   For the sake of readability in examples below,
   we use a (non-functional) short syntax to represent MMMRA metadata:
 
-  ```{code-block}
+  :::{code-block}
   :caption: Short Syntax Example
 
   store %ptr1 # foo:bar
   store %ptr1 !mmra !{!"foo", !"bar"}
-  ```
+  :::
 
   These two notations can be used in this document and are strictly
   equivalent. However, only the second version is functional.
@@ -112,7 +112,7 @@ compatibility
   correctness. In other words, the memory model cannot be relaxed further
   by deleting metadata from instructions.
 
-(happensbefore)=
+(HappensBefore)=
 
 ## The *happens-before* Relation
 
@@ -477,4 +477,3 @@ B: store release %ptr2  # foo:x, bar:y
 # No tags with "foo" or "bar" in A, so no tags added.
 U: store release %ptr3
 ```
-

@@ -124,18 +124,18 @@ Membership in the LLVM Qualification Group is intended for individuals with rele
 
 **Individual Contributors**
 
-> - Experience in software/tool qualification (e.g., reliability, quality, safety, security); OR
-> - Active involvement in LLVM-related qualification efforts; OR
-> - Significant LLVM contributions related to qualification in the past year (code, discussion, resolving related challenges).
+- Experience in software/tool qualification (e.g., reliability, quality, safety, security); OR
+- Active involvement in LLVM-related qualification efforts; OR
+- Significant LLVM contributions related to qualification in the past year (code, discussion, resolving related challenges).
 
 **Researchers**
 
-> - Active research, publication, or development of methodologies, frameworks, or tools aimed at improving LLVM quality and reliability.
+- Active research, publication, or development of methodologies, frameworks, or tools aimed at improving LLVM quality and reliability.
 
 **Vendor Contacts**
 
-> - Represent organizations building or using LLVM-based tools in safety-critical environments; OR
-> - Require involvement due to organizational role in qualification or compliance.
+- Represent organizations building or using LLVM-based tools in safety-critical environments; OR
+- Require involvement due to organizational role in qualification or compliance.
 
 ### Nomination Process
 
@@ -342,4 +342,3 @@ For more information or to get involved:
 
 - Refer to our initial [RFC: Proposal to Establish a Safety Group in LLVM](https://discourse.llvm.org/t/rfc-proposal-to-establish-a-safety-group-in-llvm/86916) on the LLVM Discourse forum.
 - Join the conversation on the LLVM Community Discord in the [#fusa-qual-wg](https://discord.com/channels/636084430946959380/1389362444169773117) channel.
-

@@ -44,10 +44,10 @@ releases is not guaranteed.
 
 The stack map functionality described in this document is separate
 from the functionality described in
-{ref}`stack-map`. `GCFunctionMetadata` provides the location of
-pointers into a collected heap captured by the `GCRoot` intrinsic,
+{ref}`stack-map`. *GCFunctionMetadata* provides the location of
+pointers into a collected heap captured by the *GCRoot* intrinsic,
 which can also be considered a "stack map". Unlike the stack maps
-defined above, the `GCFunctionMetadata` stack map interface does not
+defined above, the *GCFunctionMetadata* stack map interface does not
 provide a way to associate live register values of arbitrary type with
 an instruction address, nor does it specify a format for the resulting
 stack map. The stack maps described here could potentially provide
@@ -341,17 +341,13 @@ StkMapRecord[NumRecords] {
 The first byte of each location encodes a type that indicates how to
 interpret the `RegNum` and `Offset` fields as follows:
 
-```{eval-rst}
-======== ========== =================== ===========================
-Encoding Type       Value               Description
--------- ---------- ------------------- ---------------------------
-0x1      Register   Reg                 Value in a register
-0x2      Direct     Reg + Offset        Frame index value
-0x3      Indirect   [Reg + Offset]      Spilled value
-0x4      Constant   Offset              Small constant
-0x5      ConstIndex Constants[Offset]   Large constant
-======== ========== =================== ===========================
-```
+| Encoding | Type       | Value             | Description         |
+| -------- | ---------- | ----------------- | ------------------- |
+| 0x1      | Register   | Reg               | Value in a register |
+| 0x2      | Direct     | Reg + Offset      | Frame index value   |
+| 0x3      | Indirect   | [Reg + Offset]    | Spilled value       |
+| 0x4      | Constant   | Offset            | Small constant      |
+| 0x5      | ConstIndex | Constants[Offset] | Large constant      |
 
 In the common case, a value is available in a register, and the
 `Offset` field will be zero. Values spilled to the stack are encoded
@@ -492,4 +488,3 @@ Support for StackMap generation and the related intrinsics requires
 some code for each backend. Today, only a subset of LLVM's backends
 are supported. The currently supported architectures are X86_64,
 PowerPC, AArch64 and SystemZ.
-

@@ -1,9 +1,7 @@
 # TableGen Backend Developer's Guide
 
-```{eval-rst}
-.. sectnum::
-
-```
+:::{sectnum}
+:::
 
 ## Introduction
 
@@ -46,7 +44,7 @@ is usually abbreviated `RK`.
 
 There are two maps in the recordkeeper, one for classes and one for records
 (the latter often referred to as *defs*). Each map maps the class or record
-name to an instance of the `Record` class (see [Record]), which contains
+name to an instance of the `Record` class (see [Record](#record)), which contains
 all the information about that class or record.
 
 In addition to the two maps, the `RecordKeeper` instance contains:
@@ -73,10 +71,10 @@ classes and one for the records. The primary data members of a record are
 the record name, the vector of field names and their values, and the vector of
 superclasses of the record.
 
-The record name is stored as a pointer to an `Init` (see [Init]), which
+The record name is stored as a pointer to an `Init` (see [Init](#init)), which
 is a class whose instances hold TableGen values (sometimes referred to as
 *initializers*). The field names and values are stored in a vector of
-`RecordVal` instances (see [RecordVal]), each of which contains both the
+`RecordVal` instances (see [RecordVal](#recordval)), each of which contains both the
 field name and its value. The superclass vector contains a sequence of
 pairs, with each pair including the superclass record and its source
 file location.
@@ -86,7 +84,7 @@ In addition to those members, a `Record` instance contains:
 - A vector of source file locations that includes the record definition
   itself, plus the locations of any multiclasses involved in its definition.
 - For a class record, a vector of the class's template arguments.
-- An instance of `DefInit` (see [DefInit]) corresponding to this record.
+- An instance of `DefInit` (see [DefInit](#definit)) corresponding to this record.
 - A unique record ID.
 - A boolean that specifies whether this is a class definition.
 - A boolean that specifies whether this is an anonymous record.
@@ -99,7 +97,7 @@ The `Record` class provides many useful functions.
   superclasses.
 - Functions to get a particular field value by specifying its name in various
   forms and returning its value in various forms
-  (see [Getting Record Names and Fields]).
+  (see [Getting Record Names and Fields](#getting-record-names-and-fields)).
 - Boolean functions to check the various attributes of the record.
 
 A `Record` instance can be printed to an output stream with the `<<`
@@ -117,7 +115,7 @@ In addition to those primary members, the `RecordVal` has other data members.
 
 - The source file location of the field definition.
 - The type of the field, stored as an instance
-  of the `RecTy` class (see [RecTy]).
+  of the `RecTy` class (see [RecTy](#recty)).
 
 The `RecordVal` class provides some useful functions.
 
@@ -127,7 +125,7 @@ The `RecordVal` class provides some useful functions.
 - A function to get the source file location.
 
 Note that field values are more easily obtained directly from the `Record`
-instance (see [Record]).
+instance (see [Record](#record)).
 
 A `RecordVal` instance can be printed to an output stream with the `<<`
 operator.
@@ -480,7 +478,7 @@ for (Record *AttrRec : AttrRecords) {
 
 ## Getting Record Names and Fields
 
-As described above (see [Record]), there are multiple functions that
+As described above (see [Record](#record)), there are multiple functions that
 return the name of a record. One particularly useful one is
 `getNameInitAsString()`, which returns the name as a `std::string`.
 
@@ -610,10 +608,10 @@ Each of these five functions is overloaded four times.
   source file locations is typically taken from a `Record` instance.
 - `PrintError(const Record *Rec, const Twine &Msg)`:
   Prints the message followed by the source line associated with the
-  specified record (see [Record]).
+  specified record (see [Record](#record)).
 - `PrintError(const RecordVal *RecVal, const Twine &Msg)`:
   Prints the message followed by the source line associated with the
-  specified record field (see [RecordVal]).
+  specified record field (see [RecordVal](#recordval)).
 
 Using these functions, the goal is to produce the most specific error report
 possible.
@@ -760,4 +758,3 @@ The backend has been divided into four phases and timed separately.
 
 If you want to instrument a backend, refer to the backend `DAGISelEmitter.cpp`
 and search for `Records.startTimer`.
-

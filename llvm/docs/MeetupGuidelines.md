@@ -15,7 +15,7 @@ best for your specific situation.
 - We highly recommend that you join the official LLVM meetup organization. In
   addition to covering the cost of the meetup, all LLVM meetups are advertised
   together and easily found by potential attendees. Please contact
-  <mailto:tanyalattner@llvm.org> for more details.
+  [tanyalattner@llvm.org](mailto:tanyalattner@llvm.org) for more details.
 - Beware of cultural differences: what works well in one region may not work in
   other part of the world.
 - Do not be alone to organize the meetup. Try to work with a couple other
@@ -72,4 +72,3 @@ best for your specific situation.
   but the people who live in the city may not attend.
 - Make a poll, but beware that not every responder will join (we had ~20 votes
   on the poll, while only ~8 people attended).
-
