@@ -375,3 +375,8 @@ let Attributes = [NoThrow, Const], Features = "vector-enhancements-3" in {
   def vclzq : SystemZTargetBuiltin<"__uint128_t(__uint128_t)">;
   def vctzq : SystemZTargetBuiltin<"__uint128_t(__uint128_t)">;
 }
+
+// String/General memory intrinsics
+let Attributes = [NoThrow] in {
+  def tr : SystemZTargetBuiltin<"void(void *, int, int, void *, int)">;
+}
