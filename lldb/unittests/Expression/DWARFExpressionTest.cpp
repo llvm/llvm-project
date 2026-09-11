@@ -428,12 +428,12 @@ TEST(DWARFExpression, DW_OP_const) {
       0x80,         0x80, 0x80, 0x80, 0x02, DW_OP_stack_value};
   DataExtractor extractor(oversized_sconst, sizeof(oversized_sconst),
                           lldb::eByteOrderLittle, /*addr_size=*/4);
-  EXPECT_THAT_EXPECTED(
-      DWARFExpression::Evaluate(
-          /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
-          /*unit=*/nullptr, lldb::eRegisterKindLLDB,
-          /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
-      ExpectScalar(32, UINT32_MAX, true));
+  auto result = DWARFExpression::Evaluate(
+      /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+      /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+      /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr);
+  EXPECT_THAT_EXPECTED(result, ExpectScalar(32, -1, true));
+  ASSERT_TRUE(result->GetScalar().IsSigned());
 }
 
 TEST(DWARFExpression, DW_OP_skip) {
