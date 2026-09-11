@@ -1788,9 +1788,9 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   if (ProfileRecord.UniformityBits.empty())
     return;
 
-  // Annotate each uniform instrumented IR basic block so later codegen passes
-  // (MachineFunction) can consume it without relying on fragile block numbering
-  // heuristics.
+  // Mark the function as having uniformity profile, then annotate each uniform
+  // instrumented IR basic block so later codegen passes (MachineFunction) can
+  // consume it without relying on fragile block numbering heuristics.
   // Metadata presence on a terminator means uniform; divergent blocks have no
   // terminator metadata.
 
@@ -1799,13 +1799,28 @@ void PGOUseFunc::setBlockUniformityAttribute() {
 
   LLVMContext &Ctx = F.getContext();
   MDNode *UniformMD = MDNode::get(Ctx, {});
+  F.setMetadata(LLVMContext::MD_uniformity_profile, UniformMD);
+  DenseMap<CondBrInst *, bool> BranchUniformity;
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
     if (!BB || !BB->getTerminator())
       continue;
     bool IsUniform = ProfileRecord.isBlockUniform(I);
+    // A counter placed in a block with a single conditional predecessor also
+    // measures the active lanes on that outgoing edge. Record the branch as
+    // uniform only when every instrumented outgoing edge is uniform.
+    if (BasicBlock *Pred = BB->getSinglePredecessor()) {
+      if (auto *Branch = dyn_cast<CondBrInst>(Pred->getTerminator())) {
+        auto It = BranchUniformity.try_emplace(Branch, true).first;
+        It->second &= IsUniform;
+      }
+    }
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
                                      IsUniform ? UniformMD : nullptr);
+  }
+  for (auto [Branch, IsUniform] : BranchUniformity) {
+    Branch->setMetadata(LLVMContext::MD_branch_uniformity_profile,
+                        IsUniform ? UniformMD : nullptr);
   }
 
   LLVM_DEBUG({
