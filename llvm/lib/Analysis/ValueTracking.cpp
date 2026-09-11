@@ -10875,6 +10875,21 @@ void llvm::findValuesAffectedByCondition(
         AddAffected(A);
         if (IsAssume)
           AddAffected(B);
+
+        // If the remainder is zero, then the division is exact.
+        auto AddRemainderOperands = [&AddAffected](Value *Remainder,
+                                                   Value *Other) {
+          auto *Rem = dyn_cast<BinaryOperator>(Remainder);
+          if (!Rem || !match(Other, m_Zero()) ||
+              !(Rem->getOpcode() == Instruction::SRem ||
+                Rem->getOpcode() == Instruction::URem))
+            return;
+          AddAffected(Rem->getOperand(0));
+          AddAffected(Rem->getOperand(1));
+        };
+        AddRemainderOperands(A, B);
+        AddRemainderOperands(B, A);
+
         if (HasRHSC) {
           Value *Y;
           // (X << C) or (X >>_s C) or (X >>_u C).
