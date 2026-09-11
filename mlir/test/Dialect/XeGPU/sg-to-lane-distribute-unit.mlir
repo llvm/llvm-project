@@ -958,9 +958,9 @@ gpu.func @vector_insert_strided_slice_inner_distributed() {
 // CHECK-LABEL: gpu.func @vector_insert_strided_slice_inner_partial_lanes
 // CHECK: %[[ISS:.*]] = vector.insert_strided_slice %{{.*}}, %{{.*}} offsets = [3, 0], strides = [1, 1] : vector<1x1xf32> into vector<16x1xf32>
 gpu.func @vector_insert_strided_slice_inner_partial_lanes() {
-  %0 = "some_op"()
+  %0 = "test.some_op"()
     : () -> vector<1x2xf32>
-  %1 = "some_op"()
+  %1 = "test.some_op"()
     : () -> vector<16x2xf32>
   %2 = vector.insert_strided_slice %0, %1 offsets = [3, 0], strides = [1, 1]
     : vector<1x2xf32> into vector<16x2xf32>
