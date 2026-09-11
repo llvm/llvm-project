@@ -12,14 +12,14 @@ func.func @fc_relu_operands_00(
 
   // Elementwise addition.
   // expected-remark @below {{add # 0}}
-  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %biased = linalg.elementwise <add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
   // expected-remark @below {{max # 0}}
-  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+  %relued = linalg.elementwise <max_signed>
     ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -37,14 +37,14 @@ func.func @fc_relu_operands_01(
 
   // Elementwise addition.
   // expected-remark @below {{add # 1}}
-  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %biased = linalg.elementwise <add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
   // expected-remark @below {{max # 1}}
-  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+  %relued = linalg.elementwise <max_signed>
     ins(%c0f, %biased : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
