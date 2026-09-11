@@ -79,6 +79,7 @@
 #  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
 #  define _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE
 #  define _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
+#  define _LIBCPP_ABI_COMPACT_LOCALE_ID
 
 #elif _LIBCPP_ABI_VERSION == 1
 // Feature macros for disabling pre ABI v1 features. All of these options
