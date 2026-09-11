@@ -862,7 +862,7 @@ def SW : Store_rri<0b010, "sw">, Sched<[WriteSTW, ReadStoreData, ReadMemBase]>;
 
 // ADDI isn't always rematerializable, but isReMaterializable will be used as
 // a hint which is verified in isReMaterializableImpl.
-let canFoldAsLoad = 1, isReMaterializable = 1, isAsCheapAsAMove = 1 in
+let isReMaterializable = 1, isAsCheapAsAMove = 1 in
 def ADDI  : ALU_ri<0b000, "addi">;
 
 let IsSignExtendingOpW = 1 in {
@@ -1957,6 +1957,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
     isReMaterializable = 1 in
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
+
+// Test-only source for exercising LiveRangeEdit::foldAsLoad().
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    canFoldAsLoad = 1, isReMaterializable = 1 in
+def PseudoTestFoldableADDI : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
+                             Sched<[WriteIALU]>;
 
 // Materializes "$base + (imm << 12)" as a single pseudo so that
 // MachineLateInstrsCleanup can CSE identical upper-immediate additions.

@@ -1,4 +1,5 @@
 ; RUN: llc -O3 -mtriple=riscv64 -riscv-use-rematerializable-movimm \
+; RUN:   -riscv-enable-test-foldasload \
 ; RUN:   < %s -o /dev/null
 
 ; This keeps a rematerializable immediate and a COPY alive through register

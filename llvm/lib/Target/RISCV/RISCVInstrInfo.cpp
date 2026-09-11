@@ -970,11 +970,10 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     VirtRegMap *VRM) const {
   MachineBasicBlock::iterator InsertPt = MI;
 
-  if (MI.isCopy() && Ops.size() == 1 && Ops[0] == 1 &&
-      LoadMI.getOpcode() == RISCV::ADDI &&
-      LoadMI.getOperand(1).getReg() == RISCV::X0 &&
-      LoadMI.getOperand(2).isImm()) {
-    int64_t Imm = LoadMI.getOperand(2).getImm();
+    if (MI.isCopy() && Ops.size() == 1 && Ops[0] == 1 &&
+      LoadMI.getOpcode() == RISCV::PseudoTestFoldableADDI &&
+        LoadMI.getOperand(1).isImm()) {
+      int64_t Imm = LoadMI.getOperand(1).getImm();
     if (!isInt<32>(Imm))
       return nullptr;
     return BuildMI(*MI.getParent(), InsertPt, MI.getDebugLoc(),
