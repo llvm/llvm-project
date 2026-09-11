@@ -87,8 +87,8 @@ define amdgpu_kernel void @test_loop_with_if( ptr %ptr, i1 %cond) #0 {
 ; GFX900:       ; %bb.0: ; %entry
 ; GFX900-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GFX900-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
-; GFX900-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX900-NEXT:    s_mov_b64 s[0:1], 0
+; GFX900-NEXT:    v_mov_b32_e32 v5, 0
 ; GFX900-NEXT:    s_movk_i32 s10, 0xfe
 ; GFX900-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT:    s_bitcmp1_b32 s2, 0
