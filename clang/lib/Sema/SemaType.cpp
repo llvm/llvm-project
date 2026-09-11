@@ -9777,10 +9777,7 @@ bool Sema::RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
             Context.getTypeSizeInChars(CAT->getElementType());
         llvm::APInt SizeInBytes = CAT->getSize().zext(128) *
                                   llvm::APInt(128, ElementSize.getQuantity());
-        uint64_t MaxSizeInBytes = uint64_t(1)
-                                  << ConstantArrayType::getMaxSizeBits(Context);
-        Diag(Loc, diag::err_array_size_too_large)
-            << SizeInBytes << llvm::APInt(64, MaxSizeInBytes);
+        Diag(Loc, diag::err_array_size_too_large) << SizeInBytes;
       }
       return true;
     }

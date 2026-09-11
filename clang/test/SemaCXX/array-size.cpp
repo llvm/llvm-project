@@ -1,14 +1,14 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple x86_64-linux-gnu %s
 
 // An array whose element type is incomplete when the array type is formed can
-// only have its size checked once the element type is completed.
+// only have its size checked once the element type is completed (#GH213855).
 
 namespace GH213855 {
 template <unsigned Size> struct S : public CBdVfsImpl { // expected-error {{expected class name}}
   double A[Size];
 };
 template <unsigned Size> struct SS {
-  S<Size> A[Size]; // expected-error {{array is too large (147'573'944'137'180'895'432 bytes), which exceeds maximum allowed size of 2'305'843'009'213'693'952 bytes}}
+  S<Size> A[Size]; // expected-error {{array is too large (147'573'944'137'180'895'432 bytes)}}
 void foo() { SS<-123> ss; } // expected-error {{non-type template argument evaluates to -123, which cannot be narrowed to type 'unsigned int'}} \
                             // expected-note {{in instantiation of template class 'GH213855::SS<4294967173>' requested here}}
 };

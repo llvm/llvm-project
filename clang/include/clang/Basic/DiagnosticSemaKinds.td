@@ -6728,8 +6728,7 @@ def err_vm_func_decl : Error<
 def err_array_too_large : Error<
   "array is too large (%0 elements)">;
 def err_array_size_too_large : Error<
-  "array is too large (%0 bytes), which exceeds maximum allowed size of "
-  "%1 bytes">;
+  "array is too large (%0 bytes)">;
 
 def err_type_too_large_for_address_space : Error<
   "%0 is too large for the address space (maximum allowed size of %1 bytes)">;
