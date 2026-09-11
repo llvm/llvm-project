@@ -2328,6 +2328,24 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
           Fn(MUD->getMemoryInst());
 }
 
+/// Returns whether \p I is a memory access that may be a candidate for
+/// promotion out of the loop \p L.
+static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
+  if (const auto *SI = dyn_cast<StoreInst>(I)) {
+    const Value *PtrOp = SI->getPointerOperand();
+    if (isStrongerThanMonotonic(SI->getOrdering()))
+      return false;
+    return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+  }
+  if (const auto *LI = dyn_cast<LoadInst>(I)) {
+    const Value *PtrOp = LI->getPointerOperand();
+    if (isStrongerThanMonotonic(LI->getOrdering()))
+      return false;
+    return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+  }
+  return false;
+}
+
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
@@ -2337,26 +2355,10 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
-  auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I)) {
-      const Value *PtrOp = SI->getPointerOperand();
-      if (isStrongerThanMonotonic(SI->getOrdering()))
-        return false;
-      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
-    }
-    if (const auto *LI = dyn_cast<LoadInst>(I)) {
-      const Value *PtrOp = LI->getPointerOperand();
-      if (isStrongerThanMonotonic(LI->getOrdering()))
-        return false;
-      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
-    }
-    return false;
-  };
-
   // Populate AST with potentially promotable accesses.
   SmallPtrSet<Value *, 16> AttemptingPromotion;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
-    if (IsPotentiallyPromotable(I)) {
+    if (isPotentiallyPromotable(I, L)) {
       AttemptingPromotion.insert(I);
       if (StoreInst *SI = dyn_cast<StoreInst>(I);
           SI && !SafetyInfo->isGuaranteedToExecute(*SI, DT)) {
