@@ -1,6 +1,12 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | grep 'declare i32 @printf' | count 1
 // RUN: %clang_cc1 -triple i386-unknown-unknown -O2 -emit-llvm %s -o - | grep 'declare noundef i32 @puts' | count 1
 // RUN: %clang_cc1 -triple i386-unknown-unknown -ffreestanding -O2 -emit-llvm %s -o - | not grep 'declare noundef i32 @puts'
+// RUN: %clang_cc1 -round-trip-args -triple i386-unknown-unknown -ffreestanding -fbuiltin -O2 -emit-llvm %s -o - | grep 'declare noundef i32 @puts' | count 1
+// RUN: %clang_cc1 -round-trip-args -triple i386-unknown-unknown -fbuiltin -ffreestanding -O2 -emit-llvm %s -o - | not grep 'declare noundef i32 @puts'
+// RUN: %clang -target i386-unknown-unknown -ffreestanding -fbuiltin -O2 -emit-llvm -S %s -o - | grep 'declare noundef i32 @puts' | count 1
+// RUN: %clang -target i386-unknown-unknown -fbuiltin -ffreestanding -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
+// RUN: %clang -target i386-unknown-unknown -ffreestanding -fbuiltin -ffreestanding -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
+// RUN: %clang -target i386-unknown-unknown -ffreestanding -fbuiltin -fno-builtin -O2 -emit-llvm -S %s -o - | not grep 'declare noundef i32 @puts'
 
 int printf(const char *, ...);
 

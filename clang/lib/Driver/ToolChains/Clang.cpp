@@ -61,6 +61,7 @@
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 #include <iterator>
+#include <optional>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -4021,16 +4022,48 @@ static void RenderOpenACCOptions(const Driver &D, const ArgList &Args,
 
 static void RenderBuiltinOptions(const ToolChain &TC, const llvm::Triple &T,
                                  const ArgList &Args, ArgStringList &CmdArgs) {
-  // -fbuiltin is default unless -mkernel is used.
-  bool UseBuiltins =
-      Args.hasFlag(options::OPT_fbuiltin, options::OPT_fno_builtin,
-                   !Args.hasArg(options::OPT_mkernel));
+  bool KernelOrKext = false;
+  bool Freestanding = false;
+  bool UseBuiltins = true;
+  std::optional<bool> ExplicitUseBuiltins;
+  for (const Arg *A : Args) {
+    switch (A->getOption().getID()) {
+    case options::OPT_fbuiltin:
+      A->claim();
+      ExplicitUseBuiltins = true;
+      UseBuiltins = true;
+      break;
+    case options::OPT_fno_builtin:
+      A->claim();
+      ExplicitUseBuiltins = false;
+      UseBuiltins = false;
+      break;
+    case options::OPT_ffreestanding:
+      A->claim();
+      Freestanding = true;
+      UseBuiltins = false;
+      break;
+    case options::OPT_fhosted:
+      A->claim();
+      Freestanding = KernelOrKext;
+      UseBuiltins = ExplicitUseBuiltins.value_or(!Freestanding);
+      break;
+    case options::OPT_mkernel:
+    case options::OPT_fapple_kext:
+      A->claim();
+      KernelOrKext = true;
+      Freestanding = true;
+      UseBuiltins = false;
+      break;
+    default:
+      break;
+    }
+  }
+
   if (!UseBuiltins)
     CmdArgs.push_back("-fno-builtin");
-
-  // -ffreestanding implies -fno-builtin.
-  if (Args.hasArg(options::OPT_ffreestanding))
-    UseBuiltins = false;
+  else if (Freestanding)
+    CmdArgs.push_back("-fbuiltin");
 
   // Process the -fno-builtin-* options.
   for (const Arg *A : Args.filtered(options::OPT_fno_builtin_)) {

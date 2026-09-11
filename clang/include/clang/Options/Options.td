@@ -2177,7 +2177,8 @@ defm borland_extensions : BoolFOption<"borland-extensions",
           "Accept non-standard constructs supported by the Borland compiler">,
   NegFlag<SetFalse>>;
 def fbuiltin : Flag<["-"], "fbuiltin">, Group<f_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption, FlangOption, FC1Option]>;
+  Visibility<[ClangOption, CC1Option, CLOption, DXCOption, FlangOption,
+              FC1Option]>;
 def fbuiltin_module_map : Flag <["-"], "fbuiltin-module-map">, Group<f_Group>,
   Flags<[]>, HelpText<"Load the clang builtins module map file.">;
 defm caret_diagnostics : BoolFOption<"caret-diagnostics",

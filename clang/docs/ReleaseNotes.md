@@ -261,6 +261,10 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
+- `-fbuiltin` can now explicitly enable builtin function optimizations in
+  freestanding compilations. `-ffreestanding` continues to disable builtin
+  functions by default. (#GH20418)
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
