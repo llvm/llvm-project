@@ -9,7 +9,10 @@ define double @PR120093() {
 ; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    cmpnltpd %xmm1, %xmm0
 ; CHECK-NEXT:    movmskpd %xmm0, %eax
-; CHECK-NEXT:    cmpl $3, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    shrb %cl
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    cmpb $1, %cl
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb2
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
