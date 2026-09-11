@@ -122,7 +122,8 @@ LLVM_ABI MachineFunctionPass *createPrintMIRPass(raw_ostream &OS);
 /// DiagnosticInfoISelFallback for every MachineFunction it resets.
 /// If AbortOnFailedISel is true, abort compilation instead of resetting.
 LLVM_ABI MachineFunctionPass *
-createResetMachineFunctionPass(bool EmitFallbackDiag, bool AbortOnFailedISel);
+createResetMachineFunctionLegacyPass(bool EmitFallbackDiag,
+                                     bool AbortOnFailedISel);
 
 /// createCodeGenPrepareLegacyPass - Transform the code to expose more pattern
 /// matching during instruction selection.
