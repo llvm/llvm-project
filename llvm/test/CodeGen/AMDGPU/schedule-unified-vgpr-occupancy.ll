@@ -1,10 +1,12 @@
 ; NOTE: Do not autogenerate. This test intentionally checks only resource usage.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs < %s | FileCheck %s
 
 ; Regression test for https://github.com/llvm/llvm-project/issues/219377#issuecomment-5510810499.
 ; The loop's original pressure is 45 VGPRs. With an 8-register allocation
 ; granule, alignTo(45 + 16 + 3, 8) equals the 64-register occupancy boundary.
-; Reserving that final granule stops pending nodes from extending live ranges.
+; In this case, selecting pending MFMAs for resource demand lengthens live ranges
+; and worsens final allocation. Restrict those resource preferences near the
+; boundary; other pending selections can lower pressure and remain eligible.
 
 ; CHECK-LABEL: avoid_unified_vgpr_occupancy_cliff:
 ; CHECK:      ; NumVgprs: 64{{$}}
@@ -39,8 +41,8 @@ loop:                                             ; preds = %loop, %entry
   %chain1.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(<8 x bfloat> %matrix2, <8 x bfloat> zeroinitializer, <4 x float> %chain1.0, i32 0, i32 0, i32 0)
   %chain2.0 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(<8 x bfloat> <bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 0.000000e+00, bfloat 1.000000e+00, bfloat 1.000000e+00, bfloat 1.000000e+00, bfloat 1.000000e+00>, <8 x bfloat> zeroinitializer, <4 x float> %acc2.seed, i32 0, i32 0, i32 0)
   %chain2.1 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(<8 x bfloat> splat (bfloat 1.000000e+00), <8 x bfloat> zeroinitializer, <4 x float> %chain2.0, i32 0, i32 0, i32 0)
-  ; Preserve the scheduling-region boundary and reserve low VGPRs so the
-  ; allocation difference straddles the 64-register occupancy boundary.
+  ; Clobber low VGPRs so the allocation difference straddles the 64-register
+  ; occupancy boundary.
   tail call void asm sideeffect "", "~{v[0:15]},~{v[16:23]}"()
   %chain0.2 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <4 x float> %chain0.1, i32 0, i32 0, i32 0)
   %chain0.3 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <4 x float> %chain0.2, i32 0, i32 0, i32 0)
