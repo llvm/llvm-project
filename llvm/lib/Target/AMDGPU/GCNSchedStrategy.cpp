@@ -1576,6 +1576,13 @@ bool PreRARematStage::initGCNSchedStage() {
   // compared to the rematerializer.
   SmallVector<ScoredRemat, 8> Candidates;
   SmallVector<unsigned> CandidateOrder;
+
+  const SIRegisterInfo &TRI = *ST.getRegisterInfo();
+  const RegisterBankInfo &RBI = *ST.getRegBankInfo();
+  auto IsConvergentMI = [](const MachineInstr *MI) {
+    return MI->isConvergent();
+  };
+
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
     const Rematerializer::Reg &CandReg = Remater.getReg(RegIdx);
 
@@ -1589,18 +1596,24 @@ bool PreRARematStage::initGCNSchedStage() {
     // change of EXEC). Convergent operations must not be made control-dependent
     // on additional values, so they cannot be safely relocated this way. This
     // mirrors the check MachineSink performs before sinking an instruction.
-    if (any_of(CandReg.Defs,
-               [](const MachineInstr *DefMI) { return DefMI->isConvergent(); }))
+    if (any_of(CandReg.Defs, IsConvergentMI))
       continue;
 
-    // A convergent user (e.g., V_READLANE*) may observe the definition's lanes
-    // whose contents depend on the EXEC mask in effect at the def. Moving the
-    // def into the use's region can change EXEC across the def and thus alter
-    // those lanes, so prevent rematerialization in that case.
-    if (any_of(Users, [](const MachineInstr *UserMI) {
-          return UserMI->isConvergent();
-        }))
-      continue;
+    // A convergent user (e.g., V_READLANE*) of a vector register may observe
+    // lanes of the definition that are active in the definition's region but
+    // inactive at the user's region. Rematerialization could therefore change
+    // what the user reads, which is invalid.
+    Register DefReg = CandReg.getDefReg();
+    if (!TRI.isUniformReg(DAG.MRI, RBI, DefReg)) {
+      // EXEC doesn't change within a block so a rematerialization across
+      // regions belonging to the same block is safe.
+      const MachineBasicBlock *DefMBB =
+          DAG.Regions[CandReg.DefRegion].first->getParent();
+      const MachineBasicBlock *UserMBB =
+          DAG.Regions[UseRegion].first->getParent();
+      if (DefMBB != UserMBB && any_of(Users, IsConvergentMI))
+        continue;
+    }
 
     // We further filter the registers that we can rematerialize based on our
     // current tracking capabilities in the stage. Users cannot themselves be
