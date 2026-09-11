@@ -133,12 +133,22 @@ AllocationPolicy getCommandLineAllocationPolicy(bool stackArrays);
 /// any policy already recorded there.
 void setAllocationPolicy(mlir::ModuleOp mod, const AllocationPolicy &policy);
 
+/// Record \p policy on \p op, which is meant to be a function that needs a
+/// policy of its own, narrower than the module one.
+void setAllocationPolicy(mlir::Operation *op, const AllocationPolicy &policy);
+
 /// Get the policy recorded on \p mod, or the defaults if none was recorded.
 AllocationPolicy getAllocationPolicy(mlir::ModuleOp mod);
 
-/// Get the policy in effect for \p op, which is the one recorded on its
-/// enclosing ModuleOp. Returns the defaults if \p op is not inside a module or
-/// if no policy was recorded.
+/// Get the policy recorded directly on \p op, without looking at its parents.
+/// Use this to tell "this operation opted out" from "nothing was recorded
+/// anywhere", which the defaults cannot express.
+std::optional<AllocationPolicy> getLocalAllocationPolicy(mlir::Operation *op);
+
+/// Get the policy in effect for \p op: the one recorded on the innermost
+/// enclosing operation that carries one, usually the enclosing function if it
+/// has its own policy, otherwise the ModuleOp. Returns the defaults if no
+/// policy was recorded.
 AllocationPolicy getAllocationPolicy(mlir::Operation *op);
 
 } // namespace fir

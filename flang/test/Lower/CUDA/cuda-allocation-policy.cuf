@@ -1,0 +1,50 @@
+! Test that -fstack-arrays is not applied to device code. The device stack is
+! far smaller than the host one, so lowering records a policy of its own on
+! device and global procedures to keep their automatic arrays on the heap.
+
+! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefix=DEFAULT
+! RUN: %flang_fc1 -emit-fir -fstack-arrays %s -o - | FileCheck %s
+
+module m
+contains
+  attributes(global) subroutine kernel(a, n)
+    integer, device :: a(*)
+    integer, value :: n
+    integer :: auto(n)
+    do i = 1, n
+      auto(i) = i
+    end do
+    a(1) = sum(auto(1:n))
+  end subroutine
+
+  attributes(device) subroutine devsub(a, n)
+    integer, device :: a(*)
+    integer, value :: n
+    integer :: auto(n)
+    do i = 1, n
+      auto(i) = i
+    end do
+    a(1) = sum(auto(1:n))
+  end subroutine
+
+  attributes(host) subroutine hostsub(a, n)
+    integer :: a(*)
+    integer :: n
+    integer :: auto(n)
+    do i = 1, n
+      auto(i) = i
+    end do
+    a(1) = sum(auto(1:n))
+  end subroutine
+end module
+
+! Without -fstack-arrays the module policy already keeps automatic arrays on the
+! heap, so no procedure needs a policy of its own.
+! DEFAULT-NOT: func.func{{.*}}fir.allocation_policy
+
+! CHECK: func.func @_QMmPkernel({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>, fir.allocation_policy = #fir.allocation_policy<stack_arrays = false,
+! CHECK: func.func @_QMmPdevsub({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.allocation_policy = #fir.allocation_policy<stack_arrays = false,
+
+! The host procedure keeps the module policy, so -fstack-arrays still applies
+! to it.
+! CHECK: func.func @_QMmPhostsub({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<host>}

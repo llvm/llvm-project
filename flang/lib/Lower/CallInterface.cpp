@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Semantics/symbol.h"
@@ -695,10 +696,22 @@ setCUDAAttributes(mlir::func::FuncOp func,
                   std::optional<Fortran::evaluate::characteristics::Procedure>
                       characteristic) {
   if (characteristic && characteristic->cudaSubprogramAttrs) {
-    func.getOperation()->setAttr(
-        cuf::getProcAttrName(),
-        cuf::getProcAttribute(func.getContext(),
-                              *characteristic->cudaSubprogramAttrs));
+    auto procAttr = cuf::getProcAttribute(func.getContext(),
+                                          *characteristic->cudaSubprogramAttrs);
+    func.getOperation()->setAttr(cuf::getProcAttrName(), procAttr);
+    // -fstack-arrays cannot be honored in device code: the device stack is
+    // orders of magnitude smaller, and an automatic array that fits the host
+    // stack easily overflows it. host_device is the host copy of the routine.
+    cuf::ProcAttribute proc = procAttr.getValue();
+    if (proc != cuf::ProcAttribute::Host &&
+        proc != cuf::ProcAttribute::HostDevice) {
+      fir::AllocationPolicy policy =
+          fir::getAllocationPolicy(func.getOperation());
+      if (policy.stackArrays) {
+        policy.stackArrays = false;
+        fir::setAllocationPolicy(func.getOperation(), policy);
+      }
+    }
   }
 
   if (sym) {
