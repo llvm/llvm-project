@@ -19,14 +19,18 @@ add_flang_library(FIRTestOpenACCInterfaces
   MLIR_DEPS
   MLIRDLTIDialect
   MLIRIR
+  MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIRPass
   MLIRSupport
 
   MLIR_LIBS
   MLIRDLTIDialect
   MLIRIR
+  MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCUtils
   MLIRPass
   MLIRSupport
 )
