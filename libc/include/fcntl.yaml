@@ -73,7 +73,7 @@ functions:
       - type: off_t
       - type: off_t
       - type: int
-  - name: fallocare
+  - name: fallocate
     standards:
       - linux
     return_type: int

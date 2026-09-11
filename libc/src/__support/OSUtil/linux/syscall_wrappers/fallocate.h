@@ -17,6 +17,8 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/types/off_t.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/linux/syscall.h" // For syscall_checked
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
@@ -27,14 +29,18 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> fallocate(int fd, int mode, off_t offset, off_t size) {
-#ifdef SYS_fallocate
-#if !__SIZEOF__POINTER == 8 // 64 bit machines
-  /* TODO: Add support for 32 bits */
-  return Error(ENOSYS);
-#else
-  return syscall_checked<int>(SYS_fallocate, fd, mode, offset, size);
-#endif
-#endif
+  if constexpr (sizeof(long) == sizeof(uint32_t) &&
+                sizeof(off_t) == sizeof(uint64_t)) {
+    uint64_t offset_bits = cpp::bit_cast<uint64_t>(offset);
+    long offset_low = static_cast<long>(offset_bits & UINT32_MAX);
+    long offset_high = static_cast<long>(offset_bits >> 32);
+    uint64_t len_bits = cpp::bit_cast<uint64_t>(size);
+    long len_low = static_cast<long>(len_bits & UINT32_MAX);
+    long len_high = static_cast<long>(len_bits >> 32);
+    return syscall_checked<int>(SYS_fallocate, fd, mode, offset_low,
+                                offset_high, len_low, len_high);
+  } else
+    return syscall_checked<int>(SYS_fallocate, fd, mode, offset, size);
 }
 
 } // namespace linux_syscalls

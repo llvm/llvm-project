@@ -1287,5 +1287,7 @@ add_header_library(
     libc.include.sys_syscall
     libc.hdr.types.off_t
     libc.hdr.errno_macros
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.bit
     libc.src.__support.error_or
 )
