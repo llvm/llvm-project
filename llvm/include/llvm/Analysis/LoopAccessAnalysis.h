@@ -568,13 +568,16 @@ public:
     const SCEV *Expr;
     /// True if the pointer expressions needs to be frozen after expansion.
     bool NeedsFreeze;
+    /// True if this entry represents one arm of a forked pointer.
+    bool IsForked;
 
     PointerInfo(Value *PointerValue, const SCEV *Start, const SCEV *End,
                 bool IsWritePtr, unsigned DependencySetId, unsigned AliasSetId,
-                const SCEV *Expr, bool NeedsFreeze)
+                const SCEV *Expr, bool NeedsFreeze, bool IsForked)
         : PointerValue(PointerValue), Start(Start), End(End),
           IsWritePtr(IsWritePtr), DependencySetId(DependencySetId),
-          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze) {}
+          AliasSetId(AliasSetId), Expr(Expr), NeedsFreeze(NeedsFreeze),
+          IsForked(IsForked) {}
   };
 
   RuntimePointerChecking(MemoryDepChecker &DC, ScalarEvolution *SE,
@@ -600,7 +603,7 @@ public:
   LLVM_ABI bool insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
                        Type *AccessTy, bool WritePtr, unsigned DepSetId,
                        unsigned ASId, PredicatedScalarEvolution &PSE,
-                       bool NeedsFreeze);
+                       bool NeedsFreeze, bool IsForked);
 
   /// No run-time memory checking is necessary.
   bool empty() const { return Pointers.empty(); }
