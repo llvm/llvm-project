@@ -64,8 +64,8 @@ ret
 ...
 ```
 
-This code segment may be used as a gadget. A speculative execution of
-this segment can happen as follows:
+This code fragment may be used as a gadget. A speculative execution of
+this fragment can happen as follows:
 
 - If the Link Register (LR) has the right PAC code, `autiasp` will
   succeed and strip the PAC code out of it. The processor's instruction

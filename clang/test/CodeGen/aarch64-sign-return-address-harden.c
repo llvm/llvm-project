@@ -14,6 +14,8 @@
 // RUN: | FileCheck %s --check-prefixes=CHECK-HARDEN
 // RUN: %clang -target aarch64-linux-pauthtest -S -emit-llvm -o - %s -fptrauth-returns -mharden-pac-ret=load-return-address \
 // RUN: | FileCheck %s --check-prefixes=CHECK-HARDEN
+// RUN: %clang -target aarch64-linux-pauthtest -S -emit-llvm -o - %s -mharden-pac-ret=load-return-address \
+// RUN: | FileCheck %s --check-prefixes=CHECK-HARDEN
 // RUN: %clang -target aarch64-openbsd -S -emit-llvm -o - %s -mharden-pac-ret=load-return-address \
 // RUN: | FileCheck %s --check-prefixes=CHECK-HARDEN
 // RUN: %clang -target aarch64-android -S -emit-llvm -o - %s -mharden-pac-ret=load-return-address \
