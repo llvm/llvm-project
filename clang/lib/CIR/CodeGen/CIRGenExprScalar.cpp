@@ -639,7 +639,7 @@ public:
         assert(isInc);
         // Atomic operations require an integer type; reinterpret the bool
         // pointer as a pointer to its underlying storage integer type.
-        cir::IntType intTy = builder.getUInt8Ty();
+        cir::IntType intTy = builder.getBoolMemoryTy();
         mlir::Value one = builder.getConstInt(loc, intTy, 1);
         Address intAddr = lv.getAddress().withElementType(builder, intTy);
 
@@ -663,7 +663,7 @@ public:
       // Special case for atomic increment / decrement on integers, emit
       // atomicrmw instructions.  We skip this if we want to be doing overflow
       // checking, and fall into the slow path with the atomic cmpxchg loop.
-      if (!valType->isBooleanType() && valType->isIntegerType() &&
+      if (valType->isIntegerType() &&
           !(valType->isUnsignedIntegerType() &&
             cgf.sanOpts.has(SanitizerKind::UnsignedIntegerOverflow)) &&
           cgf.getLangOpts().getSignedOverflowBehavior() !=
@@ -684,11 +684,11 @@ public:
       // Special case for atomic increment/decrement on floats.
       // Bail out non-power-of-2-sized floating point types (e.g., x86_fp80).
       if (valType->isFloatingType()) {
-        CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
         mlir::Type fpTy = cgf.convertType(valType);
         auto fpType = mlir::cast<cir::FPTypeInterface>(fpTy);
         // Bail on non-power-of-2 types (e.g., x86_fp80 is 80 bits).
         if (llvm::has_single_bit(fpType.getWidth())) {
+          CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, e);
           mlir::Value amt = builder.getConstFP(
               loc, fpTy, llvm::APFloat(fpType.getFloatSemantics(), 1));
           cir::AtomicFetchKind kind =
