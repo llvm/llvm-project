@@ -32298,8 +32298,44 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
     return DAG.getZExtOrTrunc(Res, DL, VT);
   }
 
-  if (VT == MVT::i8 || ExpandFunnel)
+  // If expanding the funnel shift is required OR the value type is unsupported
+  if (VT == MVT::i8 || ExpandFunnel) {
+    // Proceed if one operand is the result of an ISD::SHL or the node is
+    // MVT::i8
+    if (Op1.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Amt.getNode())) {
+
+      ConstantSDNode *C = dyn_cast<ConstantSDNode>(Amt.getNode());
+      SDValue SHLOperandShiftAmount = Op1->getOperand(1);
+      APInt InvMaskWidth = C->getAPIntValue();
+
+      if (ConstantSDNode *EC =
+              dyn_cast<ConstantSDNode>(SHLOperandShiftAmount.getNode())) {
+        APInt ExpectedShiftAmount = EC->getAPIntValue();
+
+        // Check if the shift amounts match.
+        if (ExpectedShiftAmount != InvMaskWidth)
+          return SDValue();
+      }
+
+      APInt MaskWidth = EltSizeInBits - InvMaskWidth;
+      uint64_t ShiftAmount = MaskWidth.getZExtValue();
+      SDValue SHLOperand = Op1.getOperand(0);
+
+      APInt Mask = APInt::getLowBitsSet(EltSizeInBits, ShiftAmount);
+
+      SDValue MaskBitNum = DAG.getShiftAmountConstant(
+          ShiftAmount, SHLOperand.getValueType(), DL);
+      SDValue MaskNode = DAG.getConstant(Mask, DL, VT);
+      SDValue AndMask = DAG.getNode(ISD::AND, DL, SHLOperand.getValueType(),
+                                    SHLOperand, MaskNode);
+      SDValue SHL =
+          DAG.getNode(ISD::SHL, DL, Op0.getValueType(), Op0, MaskBitNum);
+      SDValue ORVal = DAG.getNode(ISD::OR, DL, VT, AndMask, SHL);
+
+      return ORVal;
+    }
     return SDValue();
+  }
 
   // i16 needs to modulo the shift amount, but i32/i64 have implicit modulo.
   if (VT == MVT::i16) {
