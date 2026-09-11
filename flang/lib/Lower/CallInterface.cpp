@@ -8,6 +8,7 @@
 
 #include "flang/Lower/CallInterface.h"
 #include "flang/Evaluate/fold.h"
+#include "flang/Evaluate/shape.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/Mangler.h"
@@ -426,12 +427,12 @@ static Fortran::evaluate::ExtentExpr
 getExtentExpr(const Fortran::semantics::ShapeSpec &shapeSpec) {
   if (shapeSpec.ubound().isStar())
     // F'2023 18.5.3 point 5.
-    return Fortran::evaluate::ExtentExpr{-1};
+    return Fortran::evaluate::MakeExtentExpr(-1);
   const auto &ubound = shapeSpec.ubound().GetExplicit();
   const auto &lbound = shapeSpec.lbound().GetExplicit();
   assert(lbound && ubound && "shape must be explicit");
   return Fortran::common::Clone(*ubound) - Fortran::common::Clone(*lbound) +
-         Fortran::evaluate::ExtentExpr{1};
+         Fortran::evaluate::MakeExtentExpr(1);
 }
 
 static void

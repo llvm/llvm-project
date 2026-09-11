@@ -35,7 +35,7 @@ add_flang_library(FortranEvaluate
   characteristics.cpp
   check-expression.cpp
   common.cpp
-  complex.cpp
+  complex-value.cpp
   complex-value.cpp
   constant.cpp
   expression.cpp
@@ -55,7 +55,7 @@ add_flang_library(FortranEvaluate
   integer-value-impl.cpp
   intrinsics.cpp
   intrinsics-library.cpp
-  logical.cpp
+  logical-value.cpp
   logical-value.cpp
   real.cpp
   real-value.cpp
@@ -82,9 +82,12 @@ add_flang_library(FortranEvaluate
   [["flang/Evaluate/shape.h"]]
   [["flang/Evaluate/characteristics.h"]]
   [["flang/Evaluate/variable.h"]]
-  [["flang/Evaluate/real.h"]]
+  [["flang/Evaluate/character-value.h"]]
+  [["flang/Evaluate/complex-value.h"]]
+  [["flang/Evaluate/integer-value.h"]]
+  [["flang/Evaluate/logical-value.h"]]
+  [["flang/Evaluate/real-value.h"]]
   [["flang/Evaluate/type.h"]]
-  [["flang/Evaluate/integer.h"]]
   [["flang/Evaluate/expression.h"]]
   [["flang/Evaluate/tools.h"]]
 

@@ -52,7 +52,7 @@ TYPED_TEST_SUITE(IntegerValueTypedKind, IntegerTypedKinds, KindName);
 
 class IntegerValueKind : public testing::TestWithParam<int> {};
 INSTANTIATE_TEST_SUITE_P(IntegerValueKind, IntegerValueKind,
-    testing::ValuesIn(IntegerKinds),
+    testing::ValuesIn(KindsByType<TypeCategory::Integer>::kinds),
     [](const testing::TestParamInfo<int> &info) {
       return "INTEGER_" + std::to_string(info.param);
     });

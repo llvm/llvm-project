@@ -18,9 +18,10 @@ template <typename T>
 static Expr<T> FoldDotProduct(
     FoldingContext &context, FunctionRef<T> &&funcRef) {
   using Element = typename Constant<T>::Element;
+  const int kind{funcRef.kind()};
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
-  Folder<T> folder{context};
+  Folder<T> folder{kind, context};
   Constant<T> *va{folder.Folding(args[0])};
   Constant<T> *vb{folder.Folding(args[1])};
   if (va && vb) {
@@ -31,7 +32,7 @@ static Expr<T> FoldDotProduct(
           va->size(), vb->size());
       return MakeInvalidIntrinsic(std::move(funcRef));
     }
-    Element sum{};
+    Element sum{Element::Zero(kind)};
     bool overflow{false};
     if constexpr (T::category == TypeCategory::Complex) {
       std::vector<Element> conjugates;
@@ -39,11 +40,11 @@ static Expr<T> FoldDotProduct(
         conjugates.emplace_back(x.CONJG());
       }
       Constant<T> conjgA{
-          std::move(conjugates), ConstantSubscripts{va->shape()}};
+          kind, std::move(conjugates), ConstantSubscripts{va->shape()}};
       Expr<T> products{Fold(
           context, Expr<T>{std::move(conjgA)} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      [[maybe_unused]] Element correction{};
+      [[maybe_unused]] Element correction{Element::Zero(kind)};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
@@ -58,12 +59,12 @@ static Expr<T> FoldDotProduct(
       }
     } else if constexpr (T::category == TypeCategory::Logical) {
       Expr<T> conjunctions{Fold(context,
-          Expr<T>{LogicalOperation<T::kind>{LogicalOperator::And,
+          Expr<T>{LogicalOperation{LogicalOperator::And,
               Expr<T>{Constant<T>{*va}}, Expr<T>{Constant<T>{*vb}}}})};
       Constant<T> &cConjunctions{DEREF(UnwrapConstantValue<T>(conjunctions))};
       for (const Element &x : cConjunctions.values()) {
         if (x.IsTrue()) {
-          sum = Element{true};
+          sum = Element{kind, true};
           break;
         }
       }
@@ -88,7 +89,7 @@ static Expr<T> FoldDotProduct(
       Expr<T> products{
           Fold(context, Expr<T>{Constant<T>{*va}} * Expr<T>{Constant<T>{*vb}})};
       Constant<T> &cProducts{DEREF(UnwrapConstantValue<T>(products))};
-      [[maybe_unused]] Element correction{};
+      [[maybe_unused]] Element correction{Element::Zero(kind)};
       const auto &rounding{context.targetCharacteristics().roundingMode()};
       for (const Element &x : cProducts.values()) {
         if constexpr (useKahanSummation) {
@@ -105,9 +106,9 @@ static Expr<T> FoldDotProduct(
     if (overflow) {
       context.Warn(common::UsageWarning::FoldingException,
           "DOT_PRODUCT of %s data overflowed during computation"_warn_en_US,
-          T::AsFortran());
+          T{kind}.AsFortran());
     }
-    return Expr<T>{Constant<T>{std::move(sum)}};
+    return MakeConstantExpr<T>(kind, std::move(sum));
   }
   return Expr<T>{std::move(funcRef)};
 }
@@ -132,14 +133,14 @@ template <typename T> struct ArrayAndMask {
   Constant<LogicalResult> mask;
 };
 template <typename T>
-static std::optional<ArrayAndMask<T>> ProcessReductionArgs(
+static std::optional<ArrayAndMask<T>> ProcessReductionArgs(int kind,
     FoldingContext &context, ActualArguments &arg, std::optional<int> &dim,
     int arrayIndex, std::optional<int> dimIndex = std::nullopt,
     std::optional<int> maskIndex = std::nullopt) {
   if (arg.empty()) {
     return std::nullopt;
   }
-  Constant<T> *folded{Folder<T>{context}.Folding(arg[arrayIndex])};
+  Constant<T> *folded{Folder<T>{kind, context}.Folding(arg[arrayIndex])};
   if (!folded || folded->Rank() < 1) {
     return std::nullopt;
   }
@@ -153,8 +154,8 @@ static std::optional<ArrayAndMask<T>> ProcessReductionArgs(
     if (const Constant<LogicalResult> *origMask{
             GetReductionMASK(arg[*maskIndex], folded->shape(), context)}) {
       if (auto scalarMask{origMask->GetScalarValue()}) {
-        maskElement =
-            std::vector<Scalar<LogicalResult>>(n, scalarMask->IsTrue());
+        maskElement = std::vector<Scalar<LogicalResult>>(
+            n, Scalar<LogicalResult>{LogicalResultKind, scalarMask->IsTrue()});
       } else {
         maskElement = origMask->values();
       }
@@ -162,11 +163,12 @@ static std::optional<ArrayAndMask<T>> ProcessReductionArgs(
       return std::nullopt;
     }
   } else {
-    maskElement = std::vector<Scalar<LogicalResult>>(n, true);
+    maskElement = std::vector<Scalar<LogicalResult>>(
+        n, Scalar<LogicalResult>{LogicalResultKind, true});
   }
   return ArrayAndMask<T>{Constant<T>(*folded),
-      Constant<LogicalResult>{
-          std::move(maskElement), ConstantSubscripts{folded->shape()}}};
+      Constant<LogicalResult>{LogicalResultKind, std::move(maskElement),
+          ConstantSubscripts{folded->shape()}}};
 }
 
 // Generalized reduction to an array of one dimension fewer (w/ DIM=)
@@ -174,7 +176,7 @@ static std::optional<ArrayAndMask<T>> ProcessReductionArgs(
 // operator()(Scalar<T> &, const ConstantSubscripts &, bool first)
 // and Done(Scalar<T> &).
 template <typename T, typename ACCUMULATOR, typename ARRAY>
-static Constant<T> DoReduction(const Constant<ARRAY> &array,
+static Constant<T> DoReduction(int kind, const Constant<ARRAY> &array,
     const Constant<LogicalResult> &mask, std::optional<int> &dim,
     const Scalar<T> &identity, ACCUMULATOR &accumulator) {
   ConstantSubscripts at{array.lbounds()};
@@ -220,19 +222,21 @@ static Constant<T> DoReduction(const Constant<ARRAY> &array,
     accumulator.Done(elements.back());
   }
   if constexpr (T::category == TypeCategory::Character) {
-    return {static_cast<ConstantSubscript>(identity.size()),
+    return {kind, static_cast<ConstantSubscript>(identity.size()),
         std::move(elements), std::move(resultShape)};
   } else {
-    return {std::move(elements), std::move(resultShape)};
+    return {kind, std::move(elements), std::move(resultShape)};
   }
 }
 
 // MAXVAL & MINVAL
 template <typename T, bool ABS = false> class MaxvalMinvalAccumulator {
 public:
-  MaxvalMinvalAccumulator(
-      RelationalOperator opr, FoldingContext &context, const Constant<T> &array)
-      : opr_{opr}, context_{context}, array_{array} {};
+  constexpr int kind() const { return kind_; }
+
+  MaxvalMinvalAccumulator(int kind, RelationalOperator opr,
+      FoldingContext &context, const Constant<T> &array)
+      : kind_{kind}, opr_{opr}, context_{context}, array_{array} {};
   void operator()(Scalar<T> &element, const ConstantSubscripts &at,
       [[maybe_unused]] bool firstUnmasked) const {
     auto aAt{array_.At(at)};
@@ -247,8 +251,9 @@ public:
         return;
       }
     }
-    Expr<LogicalResult> test{PackageRelation(
-        opr_, Expr<T>{Constant<T>{aAt}}, Expr<T>{Constant<T>{element}})};
+    Expr<LogicalResult> test{
+        PackageRelation(opr_, MakeConstantExpr<T>(kind(), aAt),
+            MakeConstantExpr<T>(kind(), element))};
     auto folded{GetScalarConstantValue<LogicalResult>(
         test.Rewrite(context_, std::move(test)))};
     CHECK(folded.has_value());
@@ -259,25 +264,27 @@ public:
   void Done(Scalar<T> &) const {}
 
 private:
+  int kind_;
   RelationalOperator opr_;
   FoldingContext &context_;
   const Constant<T> &array_;
 };
 
 template <typename T>
-static Expr<T> FoldMaxvalMinval(FoldingContext &context, FunctionRef<T> &&ref,
-    RelationalOperator opr, const Scalar<T> &identity) {
+static Expr<T> FoldMaxvalMinval(int kind, FoldingContext &context,
+    FunctionRef<T> &&ref, RelationalOperator opr, const Scalar<T> &identity) {
   static_assert(T::category == TypeCategory::Integer ||
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Character);
   std::optional<int> dim;
-  if (std::optional<ArrayAndMask<T>> arrayAndMask{
-          ProcessReductionArgs<T>(context, ref.arguments(), dim,
-              /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
-    MaxvalMinvalAccumulator<T> accumulator{opr, context, arrayAndMask->array};
-    return Expr<T>{DoReduction<T>(
-        arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)};
+  if (std::optional<ArrayAndMask<T>> arrayAndMask{ProcessReductionArgs<T>(kind,
+          context, ref.arguments(), dim, /*ARRAY=*/0, /*DIM=*/1,
+          /*MASK=*/2)}) {
+    MaxvalMinvalAccumulator<T> accumulator{
+        kind, opr, context, arrayAndMask->array};
+    return Expr<T>{DoReduction<T>(kind, arrayAndMask->array, arrayAndMask->mask,
+        dim, identity, accumulator)};
   }
   return Expr<T>{std::move(ref)};
 }
@@ -315,16 +322,17 @@ static Expr<T> FoldProduct(
       T::category == TypeCategory::Unsigned ||
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
+  const int kind{ref.kind()};
   std::optional<int> dim;
   if (std::optional<ArrayAndMask<T>> arrayAndMask{
-          ProcessReductionArgs<T>(context, ref.arguments(), dim,
+          ProcessReductionArgs<T>(kind, context, ref.arguments(), dim,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
     ProductAccumulator accumulator{arrayAndMask->array};
-    auto result{Expr<T>{DoReduction<T>(
-        arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
+    auto result{Expr<T>{DoReduction<T>(kind, arrayAndMask->array,
+        arrayAndMask->mask, dim, identity, accumulator)}};
     if (accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
-          "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
+          "PRODUCT() of %s data overflowed"_warn_en_US, T{kind}.AsFortran());
     }
     return result;
   }
@@ -337,7 +345,8 @@ template <typename T> class SumAccumulator {
 
 public:
   SumAccumulator(const Constant<T> &array, Rounding rounding)
-      : array_{array}, rounding_{rounding} {}
+      : kind_{array.kind()}, array_{array}, rounding_{rounding},
+        correction_{Element::Zero(array.kind())} {}
   void operator()(
       Element &element, const ConstantSubscripts &at, bool /*first*/) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -358,16 +367,17 @@ public:
         T::category != TypeCategory::Unsigned) {
       auto corrected{element.Add(correction_, rounding_)};
       overflow_ |= corrected.flags.test(RealFlag::Overflow);
-      correction_ = Scalar<T>{};
+      correction_ = Element::Zero(kind_);
       element = corrected.value;
     }
   }
 
 private:
+  int kind_;
   const Constant<T> &array_;
   Rounding rounding_;
   bool overflow_{false};
-  Element correction_{};
+  Element correction_;
 };
 
 template <typename T>
@@ -377,18 +387,19 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
       T::category == TypeCategory::Real ||
       T::category == TypeCategory::Complex);
   using Element = typename Constant<T>::Element;
+  const int kind{ref.kind()};
   std::optional<int> dim;
-  Element identity{};
+  Element identity{Element::Zero(kind)};
   if (std::optional<ArrayAndMask<T>> arrayAndMask{
-          ProcessReductionArgs<T>(context, ref.arguments(), dim,
+          ProcessReductionArgs<T>(kind, context, ref.arguments(), dim,
               /*ARRAY=*/0, /*DIM=*/1, /*MASK=*/2)}) {
     SumAccumulator accumulator{
         arrayAndMask->array, context.targetCharacteristics().roundingMode()};
-    auto result{Expr<T>{DoReduction<T>(
-        arrayAndMask->array, arrayAndMask->mask, dim, identity, accumulator)}};
+    auto result{Expr<T>{DoReduction<T>(kind, arrayAndMask->array,
+        arrayAndMask->mask, dim, identity, accumulator)}};
     if (accumulator.overflow()) {
       context.Warn(common::UsageWarning::FoldingException,
-          "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
+          "SUM() of %s data overflowed"_warn_en_US, T{kind}.AsFortran());
     }
     return result;
   }
