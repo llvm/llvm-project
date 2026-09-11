@@ -379,12 +379,21 @@ void FileSpec::ClearDirectory() {
 // directory and path are stored in separate string values.
 size_t FileSpec::GetPath(char *path, size_t path_max_len,
                          bool denormalize) const {
-  if (!path)
-    return 0;
-
   std::string result = GetPath(denormalize);
-  ::snprintf(path, path_max_len, "%s", result.c_str());
-  return std::min(path_max_len - 1, result.length());
+  if (result.empty()) {
+    if (path && path_max_len != 0)
+      *path = '\0';
+    return 0;
+  }
+
+  const size_t needed_len = result.size() + 1; // for the NULL byte.
+  if (path && path_max_len != 0) {
+    const size_t min_len = std::min(needed_len, path_max_len);
+    const size_t copy_len = min_len - 1; // exclude space for NULL byte.
+    std::memcpy(path, result.data(), copy_len);
+    path[copy_len] = '\0';
+  }
+  return needed_len;
 }
 
 std::string FileSpec::GetPath(bool denormalize) const {
