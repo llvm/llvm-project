@@ -2798,11 +2798,6 @@ def : GCNPat <(i1 imm:$imm),
 /********** ================== **********/
 
 def : GCNPat <
-  (f32 (fpow (VOP3Mods f32:$src0, i32:$src0_mods), (VOP3Mods f32:$src1, i32:$src1_mods))),
-  (V_EXP_F32_e64 SRCMODS.NONE, (V_MUL_LEGACY_F32_e64 $src1_mods, $src1, SRCMODS.NONE, (V_LOG_F32_e64 $src0_mods, $src0), 0, 0))
->;
-
-def : GCNPat <
   (i32 (sext i1:$src0)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), i1:$src0)
