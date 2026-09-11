@@ -3023,7 +3023,8 @@ ExprResult Parser::ParseUnevaluatedStringLiteralExpression() {
 }
 
 ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
-                                                bool Unevaluated) {
+                                                bool Unevaluated,
+                                                ConversionAction CA) {
   assert(tokenIsLikeStringLiteral(Tok, getLangOpts()) &&
          "Not a string-literal-like token!");
 
@@ -3043,9 +3044,8 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
   }
 
   // Pass the set of string tokens, ready for concatenation, to the actions.
-  return Actions.ActOnStringLiteral(StringToks,
-                                    AllowUserDefinedLiteral ? getCurScope()
-                                                            : nullptr);
+  return Actions.ActOnStringLiteral(
+      StringToks, AllowUserDefinedLiteral ? getCurScope() : nullptr, CA);
 }
 
 ExprResult Parser::ParseGenericSelectionExpression() {
