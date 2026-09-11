@@ -665,7 +665,7 @@ void Writer::treatSpecialUndefineds() {
 // Give a symbol its single non-lazy pointer slot. A GOT reference and a TLV
 // reference to a thread-local both want the same value -- the address of its
 // TLV descriptor -- so one __got entry serves both, and the result no longer
-// depends on which reference the relocation scan reaches first. 
+// depends on which reference the relocation scan reaches first.
 static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
