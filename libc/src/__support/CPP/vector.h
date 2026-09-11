@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_VECTOR_H
 
 #include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
 #include "hdr/func/realloc.h"
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/new.h"
@@ -74,6 +75,30 @@ private:
     }
   }
 
+  [[nodiscard]] LIBC_INLINE bool reallocate(size_t new_cap) {
+    if constexpr (is_trivially_copyable_v<T>) {
+      void *new_data = ::realloc(data_, new_cap * sizeof(T));
+      if (!new_data)
+        return false;
+      data_ = static_cast<T *>(new_data);
+      capacity_ = new_cap;
+      return true;
+    } else {
+      void *new_raw = ::malloc(new_cap * sizeof(T));
+      if (!new_raw)
+        return false;
+      T *new_data = static_cast<T *>(new_raw);
+      for (size_t i = 0; i < size_; ++i) {
+        new (new_data + i) T(cpp::move(data_[i]));
+        data_[i].~T();
+      }
+      ::free(data_);
+      data_ = new_data;
+      capacity_ = new_cap;
+      return true;
+    }
+  }
+
 public:
   LIBC_INLINE constexpr vector() = default;
 
@@ -106,51 +131,53 @@ public:
   vector &operator=(const vector &) = delete;
 
   // Element access
-  LIBC_INLINE reference operator[](size_t i) {
+  [[nodiscard]] LIBC_INLINE reference operator[](size_t i) {
     LIBC_ASSERT(i < size_);
     return data_[i];
   }
 
-  LIBC_INLINE const_reference operator[](size_t i) const {
+  [[nodiscard]] LIBC_INLINE const_reference operator[](size_t i) const {
     LIBC_ASSERT(i < size_);
     return data_[i];
   }
 
-  LIBC_INLINE pointer data() { return data_; }
-  LIBC_INLINE const_pointer data() const { return data_; }
+  [[nodiscard]] LIBC_INLINE pointer data() { return data_; }
+  [[nodiscard]] LIBC_INLINE const_pointer data() const { return data_; }
 
-  LIBC_INLINE reference front() {
+  [[nodiscard]] LIBC_INLINE reference front() {
     LIBC_ASSERT(size_ > 0);
     return data_[0];
   }
 
-  LIBC_INLINE const_reference front() const {
+  [[nodiscard]] LIBC_INLINE const_reference front() const {
     LIBC_ASSERT(size_ > 0);
     return data_[0];
   }
 
-  LIBC_INLINE reference back() {
+  [[nodiscard]] LIBC_INLINE reference back() {
     LIBC_ASSERT(size_ > 0);
     return data_[size_ - 1];
   }
 
-  LIBC_INLINE const_reference back() const {
+  [[nodiscard]] LIBC_INLINE const_reference back() const {
     LIBC_ASSERT(size_ > 0);
     return data_[size_ - 1];
   }
 
   // Iterators
-  LIBC_INLINE iterator begin() { return data_; }
-  LIBC_INLINE const_iterator begin() const { return data_; }
-  LIBC_INLINE const_iterator cbegin() const { return data_; }
-  LIBC_INLINE iterator end() { return data_ + size_; }
-  LIBC_INLINE const_iterator end() const { return data_ + size_; }
-  LIBC_INLINE const_iterator cend() const { return data_ + size_; }
+  [[nodiscard]] LIBC_INLINE iterator begin() { return data_; }
+  [[nodiscard]] LIBC_INLINE const_iterator begin() const { return data_; }
+  [[nodiscard]] LIBC_INLINE const_iterator cbegin() const { return data_; }
+  [[nodiscard]] LIBC_INLINE iterator end() { return data_ + size_; }
+  [[nodiscard]] LIBC_INLINE const_iterator end() const { return data_ + size_; }
+  [[nodiscard]] LIBC_INLINE const_iterator cend() const {
+    return data_ + size_;
+  }
 
   // Capacity
   [[nodiscard]] LIBC_INLINE bool empty() const { return size_ == 0; }
-  LIBC_INLINE size_t size() const { return size_; }
-  LIBC_INLINE size_t capacity() const { return capacity_; }
+  [[nodiscard]] LIBC_INLINE size_t size() const { return size_; }
+  [[nodiscard]] LIBC_INLINE size_t capacity() const { return capacity_; }
 
   // Reserves at least new_cap elements. Returns true on success, false on OOM.
   [[nodiscard]] LIBC_INLINE bool reserve(size_t new_cap) {
@@ -158,28 +185,7 @@ public:
       return true;
     if (new_cap > max_size())
       return false;
-
-    if constexpr (is_trivially_copyable_v<T>) {
-      void *new_data = ::realloc(data_, new_cap * sizeof(T));
-      if (!new_data)
-        return false;
-      data_ = static_cast<T *>(new_data);
-      capacity_ = new_cap;
-      return true;
-    } else {
-      void *new_raw = ::realloc(nullptr, new_cap * sizeof(T));
-      if (!new_raw)
-        return false;
-      T *new_data = static_cast<T *>(new_raw);
-      for (size_t i = 0; i < size_; ++i) {
-        new (new_data + i) T(cpp::move(data_[i]));
-        data_[i].~T();
-      }
-      ::free(data_);
-      data_ = new_data;
-      capacity_ = new_cap;
-      return true;
-    }
+    return reallocate(new_cap);
   }
 
   LIBC_INLINE void shrink_to_fit() {
@@ -189,25 +195,7 @@ public:
       reset();
       return;
     }
-    if constexpr (is_trivially_copyable_v<T>) {
-      void *new_data = ::realloc(data_, size_ * sizeof(T));
-      if (new_data) {
-        data_ = static_cast<T *>(new_data);
-        capacity_ = size_;
-      }
-    } else {
-      void *new_raw = ::realloc(nullptr, size_ * sizeof(T));
-      if (!new_raw)
-        return;
-      T *new_data = static_cast<T *>(new_raw);
-      for (size_t i = 0; i < size_; ++i) {
-        new (new_data + i) T(cpp::move(data_[i]));
-        data_[i].~T();
-      }
-      ::free(data_);
-      data_ = new_data;
-      capacity_ = size_;
-    }
+    static_cast<void>(reallocate(size_));
   }
 
   // Modifiers
@@ -226,7 +214,7 @@ public:
       new_cap = capacity_ * 2;
     }
 
-    void *new_raw = ::realloc(nullptr, new_cap * sizeof(T));
+    void *new_raw = ::malloc(new_cap * sizeof(T));
     if (!new_raw)
       return false;
     T *new_data = static_cast<T *>(new_raw);

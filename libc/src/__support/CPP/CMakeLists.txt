@@ -263,6 +263,7 @@ add_header_library(
     .type_traits
     .utility
     libc.hdr.func.free
+    libc.hdr.func.malloc
     libc.hdr.func.realloc
     libc.hdr.types.size_t
     libc.src.__support.common
