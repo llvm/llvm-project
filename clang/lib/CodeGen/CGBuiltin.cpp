@@ -4146,11 +4146,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_verbose_trap: {
-    llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+    llvm::DebugLoc CallLocation = Builder.getCurrentDebugLocation();
+    llvm::DILocation *TrapLocation = CallLocation;
     if (getDebugInfo()) {
       TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
           TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()),
           *E->getArg(1)->tryEvaluateString(getContext()));
+      // Keep the trap on the builtin's source line. A line-zero location would
+      // leave the trap attributed to the preceding line in the line table.
+      TrapLocation = llvm::DILocation::get(
+          getLLVMContext(), CallLocation.getLine(), CallLocation.getCol(),
+          TrapLocation->getScope(), TrapLocation->getInlinedAt());
     }
     ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
     // Currently no attempt is made to prevent traps from being merged.
@@ -4404,11 +4410,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
-          Op1, nullptr, "elt.max");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smax
+                                               : Intrinsic::umax,
+          Op0, Op1, nullptr, "elt.max");
     } else
       Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
@@ -4419,11 +4424,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
-          Op1, nullptr, "elt.min");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smin
+                                               : Intrinsic::umin,
+          Op0, Op1, nullptr, "elt.min");
     } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);

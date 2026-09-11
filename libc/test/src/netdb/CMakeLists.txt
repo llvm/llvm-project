@@ -1,14 +1,26 @@
 add_custom_target(libc-netdb-tests)
 
 add_libc_test(
-  netdb_test
+  gai_strerror_test
   SUITE
     libc-netdb-tests
   SRCS
-    netdb_test.cpp
+    gai_strerror_test.cpp
+  DEPENDS
+    libc.hdr.netdb_macros
+    libc.src.netdb.gai_strerror
+)
+
+add_libc_test(
+  getaddrinfo_test
+  SUITE
+    libc-netdb-tests
+  SRCS
+    getaddrinfo_test.cpp
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.netdb_macros
+    libc.hdr.sys_socket_macros
     libc.hdr.types.struct_addrinfo
     libc.src.errno.errno
     libc.src.netdb.freeaddrinfo

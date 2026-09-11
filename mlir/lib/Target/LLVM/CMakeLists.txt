@@ -19,6 +19,7 @@ add_mlir_library(MLIRTargetLLVM
   Target
   LINK_LIBS PUBLIC
   MLIRExecutionEngineUtils
+  MLIRRemarkStreamer
   MLIRTargetLLVMIRExport
 )
 
