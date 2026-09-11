@@ -159,7 +159,7 @@ static Error bundleImages() {
   } else {
     Buffer = OffloadBinary::write(AllImages);
   }
-  if (!Compress && Buffer.size() % OffloadBinary::getAlignment() != 0)
+  if (Buffer.size() % OffloadBinary::getAlignment() != 0)
     return createStringError(inconvertibleErrorCode(),
                              "Offload binary has invalid size alignment");
 
