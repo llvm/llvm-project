@@ -164,14 +164,17 @@ TEST(ProtocolTypesTest, SourceBreakpoint) {
 }
 
 TEST(ProtocolTypesTest, SourceBreakpointOptionalLogMessage) {
-  for (StringRef json : {R"({"line": 0, "logMessage": null})", R"({"line": 0})",
-                         R"({"line": 0, "logMessage": ""})"}) {
+  for (StringRef json :
+       {R"({"line": 0})", R"({"line": 0, "logMessage": ""})"}) {
     Expected<SourceBreakpoint> source_breakpoint =
         parse<SourceBreakpoint>(json);
     ASSERT_THAT_EXPECTED(source_breakpoint, Succeeded());
     EXPECT_EQ(source_breakpoint->line, 0u);
     EXPECT_TRUE(source_breakpoint->logMessage.empty());
   }
+
+  EXPECT_THAT_EXPECTED(
+      parse<SourceBreakpoint>(R"({"line": 0, "logMessage": null})"), Failed());
 }
 
 TEST(ProtocolTypesTest, FunctionBreakpoint) {
