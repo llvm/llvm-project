@@ -7216,22 +7216,23 @@ X86TTIImpl::getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
   EVT VT = TLI->getValueType(DL, SrcVTy);
   if (!VT.isSimple())
     return std::nullopt;
-  // An encoding whose data and index operands are both sub-512-bit requires
-  // AVX512VL. A v8i32 operation with i64 indices still uses a full zmm index
-  // and therefore does not. Without VLX there is no narrow encoding to fall
-  // back to: CodeGen widens the operation to the 512-bit form and masks off
-  // the lanes it does not want, so charge the body of the instruction it
-  // really emits rather than leaving the shape unpriced.
-  //
-  // Callers recovering the calibrated premium ask for the shape as calibrated,
-  // where VLX was present. The premium is a property of the measurement, not
-  // of the encoding this subtarget happens to have available.
+  // An encoding with both operands sub-512-bit requires AVX512VL; a v8i32
+  // operation with i64 indices fills a zmm with indices and does not. Without
+  // VLX there is no narrow encoding, so charge the 512-bit form CodeGen emits
+  // rather than leaving the shape unpriced. Callers recovering the calibrated
+  // premium pass WidenWithoutVLX=false: the premium belongs to the
+  // measurement, not to this subtarget's encodings.
   unsigned IndexVectorBits = IndexSize * VT.getVectorNumElements();
   MVT ShapeVT = VT.getSimpleVT();
   if (WidenWithoutVLX && ShapeVT.getSizeInBits() < 512 &&
       IndexVectorBits < 512 && !ST->hasVLX()) {
+    // The widened form holds as many lanes as the wider of its data and index
+    // element allows, so a dword gather indexed by qwords widens to eight
+    // lanes and not sixteen. Widening on the data element alone would name a
+    // shape with no encoding: 16 x i32 indexed by 16 x i64 needs two zmm.
     MVT EltVT = ShapeVT.getVectorElementType();
-    ShapeVT = MVT::getVectorVT(EltVT, 512 / EltVT.getSizeInBits());
+    unsigned EltBits = EltVT.getSizeInBits();
+    ShapeVT = MVT::getVectorVT(EltVT, 512 / std::max(EltBits, IndexSize));
   }
   unsigned Opc = getAVX512GSRepresentativeOpcode(IsLoad, ShapeVT, IndexSize);
   if (!Opc)
@@ -7239,46 +7240,26 @@ X86TTIImpl::getModeledGSInstrCost(bool IsLoad, Type *SrcVTy, unsigned IndexSize,
   return getSchedModelGSBody(Opc, ST);
 }
 
-// Per-shape vectorize-vs-scalarize break-even TOTAL for AMD znver4+
-// gather/scatter (TuningPreferGSCostTable): the cost at which the
-// LoopVectorizer stops preferring the vectorised operation, as measured. The
-// profitability premium is what remains once the schedule-model body from
-// getModeledGSInstrCost is taken out, so the hardware half keeps its single
-// source of truth in X86ScheduleZnver4.td while the calibrated total stays
-// where the measurement put it.
+// Per-shape break-even TOTAL for znver4+ gather/scatter: the cost at which
+// the LoopVectorizer stops preferring the vectorised operation, measured on a
+// Zen5 9950X. Subtracting the getModeledGSInstrCost body leaves the premium,
+// so X86ScheduleZnver4.td stays the only source for the hardware half and a
+// retune needs no edit here.
 //
-// Storing the total rather than the premium is what makes that true: a
-// schedule-model retune moves the body and the derived premium together and
-// needs no edit here, whatever it does to the modeled throughputs.
-//
-// A row prices one native-width operation. Totals were calibrated on a Zen5
-// 9950X against a body term now measured on Znver4 (Ryzen 5 8645HS).
-//
-// The rows are keyed on the data shape alone, while the body varies with the
-// index width, so a total can be exact for only one index form. It is exact
-// for the dword form: the calibration loop loaded a 32-bit index and
-// sign-extended it, which is what the vectoriser sees in the idiom these rows
-// exist to arbitrate. A gather's qword form has a larger body of its own and
-// lands at or above the calibrated total -- the safe direction, since a wider
-// index is the more expensive lowering. Four scatter rows land below it
-// instead (v16i32 and v16f32 at 29 against 31, v4i32 and v4f32 at 18 against
-// 19), because Znver4Model prices the two half-width qword scatters CodeGen
-// emits below the single full-width dword one; that is a question for the
-// schedule model rather than a calibration error.
-//
-// Keyed by native shape (VF <= 16 for 32-bit, <= 8 for 64-bit).
+// A row is keyed on the data shape while the body varies with the index
+// width, so a total is exact only for the dword form it was calibrated
+// against. Keyed by native shape: VF <= 16 for 32-bit, <= 8 for 64-bit.
 std::optional<unsigned>
 X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
   if (!ST->hasPreferGSCostTable() || !ST->hasAVX512() || !SrcVTy)
     return std::nullopt;
   // Each value sits on the intended side of the measured flip: above it where
   // the scalarised lowering wins (all i64 shapes, and v4i32/v4f32 scatter),
-  // below it where the masked operation does.
-  //
-  // i64 sits far above f64 (32 vs 25 at VF 8) by design: the scalarised i64
-  // alternative runs on the integer pipes, a much faster baseline than f64 on
-  // the FP pipes, so those rows are set above their flip to keep the
-  // vectoriser scalar (cf. llvm/llvm-project#198850).
+  // below it where the masked operation does. The four-lane scatter rows hold
+  // 20 against a break-even of 19, so the qword spelling prices at 19 and not
+  // under it. i64 sits above f64 by design -- its scalarised alternative runs
+  // on the integer pipes, a much faster baseline than f64 on the FP pipes
+  // (cf. llvm/llvm-project#198850).
   static const CostTblEntry ZenGatherTotalTable[] = {
       {ISD::LOAD, MVT::v4i32, 12},  {ISD::LOAD, MVT::v8i32, 25},
       {ISD::LOAD, MVT::v16i32, 35}, {ISD::LOAD, MVT::v4f32, 11},
@@ -7287,14 +7268,15 @@ X86TTIImpl::getZenGSCalibratedTotal(bool IsLoad, Type *SrcVTy) const {
       {ISD::LOAD, MVT::v4i64, 15},  {ISD::LOAD, MVT::v8i64, 32},
   };
   static const CostTblEntry ZenScatterTotalTable[] = {
-      {ISD::STORE, MVT::v4i32, 19},  {ISD::STORE, MVT::v8i32, 25},
-      {ISD::STORE, MVT::v16i32, 31}, {ISD::STORE, MVT::v4f32, 19},
-      {ISD::STORE, MVT::v8f32, 25},  {ISD::STORE, MVT::v16f32, 31},
+      {ISD::STORE, MVT::v4i32, 20},  {ISD::STORE, MVT::v8i32, 25},
+      {ISD::STORE, MVT::v16i32, 47}, {ISD::STORE, MVT::v4f32, 20},
+      {ISD::STORE, MVT::v8f32, 25},  {ISD::STORE, MVT::v16f32, 47},
       {ISD::STORE, MVT::v4f64, 10},  {ISD::STORE, MVT::v8f64, 20},
       {ISD::STORE, MVT::v4i64, 15},  {ISD::STORE, MVT::v8i64, 32},
   };
-  // Any shape not in the table (e.g. the VF<4 forms the auto-vectoriser
-  // force-scalarises) returns nullopt for the flat-overhead path, not an error.
+  // A shape with no row of its own returns nullopt rather than asserting. The
+  // caller rounds up to the next row where one exists, and takes the
+  // flat-overhead path where none does.
   EVT VT = TLI->getValueType(DL, SrcVTy);
   if (!VT.isSimple())
     return std::nullopt;
@@ -7359,16 +7341,39 @@ static unsigned getGSIndexSizeInBits(const Value *Ptr, unsigned PtrSizeInBits) {
   return (unsigned)32;
 }
 
+// How many GroupSize-lane groups a compile-time mask leaves live. CodeGen
+// folds away a group with no active lane, so a v24i32 gather masked to its
+// first eight lanes emits one instruction and not three. Returns nullopt
+// where the mask is not a readable constant and every group must be assumed
+// live. VP operations do not reach this -- getMemIntrinsicInstrCost
+// dispatches only masked_*.
+static std::optional<unsigned> getActiveGSGroups(const Value *Mask, unsigned VF,
+                                                 unsigned GroupSize) {
+  const auto *CMask = dyn_cast_or_null<Constant>(Mask);
+  if (!CMask || !GroupSize)
+    return std::nullopt;
+  unsigned Active = 0;
+  for (unsigned Base = 0; Base < VF; Base += GroupSize) {
+    for (unsigned I = Base, E = std::min(Base + GroupSize, VF); I != E; ++I) {
+      const Constant *Elt = CMask->getAggregateElement(I);
+      if (!Elt || !Elt->isNullValue()) {
+        ++Active;
+        break;
+      }
+    }
+  }
+  return Active;
+}
+
 // Price a gather or scatter on a subtarget carrying TuningPreferGSCostTable
 // (AMD znver4+) from the per-shape rows and the schedule model. Reached only
 // through the feature test in getGSVectorCost, so nothing here can move the
 // cost of any other target.
-InstructionCost X86TTIImpl::getZenGSVectorCost(unsigned Opcode,
-                                               TTI::TargetCostKind CostKind,
-                                               Type *SrcVTy, const Value *Ptr,
-                                               bool VariableMask,
-                                               Align Alignment,
-                                               unsigned AddressSpace) const {
+InstructionCost
+X86TTIImpl::getZenGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
+                               Type *SrcVTy, const Value *Ptr,
+                               bool VariableMask, Align Alignment,
+                               unsigned AddressSpace, const Value *Mask) const {
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
 
   // The index starts out as wide as the pointers being gathered, which is a
@@ -7400,19 +7405,13 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(unsigned Opcode,
   EVT SrcEVT = TLI->getValueType(DL, SrcVTy);
   unsigned EltBits = SrcEVT.isVector() ? SrcEVT.getScalarSizeInBits() : 0;
 
-  // How CodeGen decomposes the operation. Each part is as wide as the widest
-  // register CodeGen will really use, and holds as many lanes as the wider of
-  // the data and index element allows. The register width is not simply the
-  // largest the subtarget has: a function compiled with
-  // -mprefer-vector-width=256 carries prefer-vector-width=256 together with
-  // min-legal-vector-width=0, and CodeGen then uses no zmm at all, emitting a
-  // v16i32 gather as two ymm gathers rather than one zmm gather.
+  // Each part is as wide as the widest register CodeGen will really use,
+  // which is not always the subtarget's widest: -mprefer-vector-width=256
+  // leaves no zmm, so a v16i32 gather becomes two ymm gathers.
   //
-  // A trailing part with no live lanes then survives only for a scatter under
-  // a variable mask, where it becomes a store under a zeroed mask: a v24i32
-  // scatter emits four instructions. A gather's trailing part is dead and is
-  // folded away, and so is a scatter's once the mask is known all-true, both
-  // leaving three.
+  // A trailing part with no live lanes survives only for a scatter under a
+  // variable mask, as a store under a zeroed mask: a v24i32 scatter emits
+  // four instructions there and three otherwise.
   unsigned PartVF = 0;
   const unsigned MaxRegBits = ST->useAVX512Regs() ? 512 : 256;
   InstructionCost::CostType EmittedParts = SplitFactor;
@@ -7422,7 +7421,14 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(unsigned Opcode,
                               MaxRegBits / std::max(EltBits, IndexSize)));
     unsigned Parts = divideCeil(VF, PartVF);
     EmittedParts = IsLoad || !VariableMask ? Parts : PowerOf2Ceil(Parts);
+    if (std::optional<unsigned> Active = getActiveGSGroups(Mask, VF, PartVF))
+      EmittedParts = std::min<InstructionCost::CostType>(EmittedParts, *Active);
   }
+
+  // A mask with no live lane leaves nothing to gather, and CodeGen folds the
+  // whole operation away rather than emitting a part of it.
+  if (EmittedParts == 0)
+    return 0;
 
   if (CostKind == TTI::TCK_CodeSize)
     return EmittedParts;
@@ -7437,36 +7443,86 @@ InstructionCost X86TTIImpl::getZenGSVectorCost(unsigned Opcode,
     std::optional<unsigned> Body =
         getModeledGSInstrCost(IsLoad, PartVTy, IndexSize, CostKind);
 
-    // The body is a hardware term and follows the instructions CodeGen emits.
-    // The premium does not: it is the margin against scalarising the lanes, so
-    // it follows the lanes. Both scale, but on different counts.
+    // The body follows the instructions CodeGen emits; the premium is the
+    // margin against scalarising, so it follows the lanes.
     //
-    // Lanes beyond one register's worth pay it again, because the scalar
-    // alternative they are measured against grew too, and because the parts do
-    // not overlap -- Znver4 holds the per-operation cost of a 512-bit qword
-    // gather flat at 9.6 to 9.9 cycles with two to five in flight, the
-    // serialisation Zn4UcodeGS models. Lanes that split only because the index
-    // is wider do not: the same sixteen lanes are gathered either way, and the
-    // measured bodies of the two index forms sit within two points of each
-    // other, so charging the premium per instruction would invent a 19-point
-    // gap between two spellings of one operation.
-    unsigned NativeVF = std::max<unsigned>(
-        1, std::min<unsigned>(PowerOf2Ceil(VF), MaxRegBits / EltBits));
-    auto *NativeVTy = FixedVectorType::get(EltTy, NativeVF);
-    InstructionCost::CostType LaneGroups = divideCeil(VF, NativeVF);
-    std::optional<unsigned> Total = getZenGSCalibratedTotal(IsLoad, NativeVTy);
+    // Lanes beyond one register's worth pay it again: the scalar alternative
+    // grew too and the parts do not overlap, the serialisation Zn4UcodeGS
+    // models. Lanes that split only because the index is wider do not, since
+    // the same lanes are gathered either way. A lane a constant mask turns off
+    // has no scalar load to measure against and pays nothing.
+    unsigned ActiveLanes = VF;
+    if (std::optional<unsigned> Live = getActiveGSGroups(Mask, VF, 1))
+      ActiveLanes = *Live;
 
-    // The row pins the total for one native-width operation indexed by a
-    // dword, the form it was calibrated against. Recovering the premium from
-    // that same form is what keeps a schedule-model retune out of this table:
-    // the body moves, the premium absorbs it, and the calibrated total holds.
-    std::optional<unsigned> NativeBody =
-        getModeledGSInstrCost(IsLoad, NativeVTy, /*IndexSize=*/32, CostKind,
-                              /*WidenWithoutVLX=*/false);
-    if (Body && Total && NativeBody) {
-      InstructionCost::CostType Premium =
-          *Total > *NativeBody ? *Total - *NativeBody : 0;
-      return LaneGroups * Premium + EmittedParts * *Body;
+    // Price a given number of live lanes spread over a given number of emitted
+    // instructions. Both counts are magnitudes: where in the vector the mask
+    // happens to place its live lanes changes neither the row this is measured
+    // against nor the instructions CodeGen emits.
+    auto priceLanes = [&](unsigned Lanes, InstructionCost::CostType Parts)
+        -> std::optional<InstructionCost::CostType> {
+      // The rows run from the narrowest that holds the live lanes to the one
+      // the shape itself would use. The narrowest calibrated row is four lanes,
+      // so a VF3 gather emits what a VF4 one does and is charged the VF4 row.
+      // Only a shape rounding below four -- the VF2 form the vectoriser force-
+      // scalarises -- has no row and takes the flat path below.
+      unsigned MaxNativeVF = std::max<unsigned>(1, MaxRegBits / EltBits);
+      unsigned ShapeVF = std::min<unsigned>(PowerOf2Ceil(VF), MaxNativeVF);
+      unsigned RowLanes = std::max(Lanes, std::min(VF, 4u));
+      unsigned FitVF = std::min<unsigned>(PowerOf2Ceil(RowLanes), ShapeVF);
+
+      std::optional<InstructionCost::CostType> Margin;
+      for (unsigned NativeVF = std::max(FitVF, 1u); NativeVF <= ShapeVF;
+           NativeVF *= 2) {
+        auto *NativeVTy = FixedVectorType::get(EltTy, NativeVF);
+        std::optional<unsigned> Total =
+            getZenGSCalibratedTotal(IsLoad, NativeVTy);
+
+        // The row pins the total for the dword-indexed form it was calibrated
+        // against, so the premium is recovered from that same form: a retune
+        // moves the body, the premium absorbs it, and the total holds. A
+        // qword-indexed shape keeps that premium over a larger body and prices
+        // above its row -- v8i64 scatter at 35 against 32, the gap between
+        // VPSCATTERQQZ and VPSCATTERDQZ.
+        std::optional<unsigned> NativeBody =
+            getModeledGSInstrCost(IsLoad, NativeVTy, /*IndexSize=*/32, CostKind,
+                                  /*WidenWithoutVLX=*/false);
+        if (!Total || !NativeBody)
+          continue;
+        // Every row is calibrated above the body it prices, which is what lets
+        // a retune move the two together. The margin is not generous -- the
+        // smallest is 4, for the v4f64 scatter at 10 against 6 -- so a retune
+        // could cross one, and a crossed row would price the shape at its body
+        // alone and go on answering queries. Assert where it happens.
+        assert(*Total > *NativeBody &&
+               "calibrated total must exceed the body it is measured against; "
+               "the row needs recalibrating against the retuned schedule");
+        InstructionCost::CostType Premium =
+            *Total > *NativeBody ? *Total - *NativeBody : 0;
+        // The premium is charged once per register's worth of live lanes, and
+        // counts how many there are rather than how far apart the mask spreads
+        // them: per occupied register would price four isolated lanes above
+        // the sixteen that compile to one instruction.
+        //
+        // The narrowest row holding the live lanes is also the cheapest, so
+        // the first match wins: premiums grow with the row, 11 at v4i32, 13 at
+        // v8i32 and 21 at v16i32.
+        Margin = divideCeil(Lanes, NativeVF) * Premium;
+        break;
+      }
+
+      if (!Margin)
+        return std::nullopt;
+      return *Margin + Parts * *Body;
+    };
+
+    if (Body) {
+      // Turning lanes off cannot make the hardware do more work. The margin
+      // only grows with the live lane count, and the parts the mask empties are
+      // not emitted, so this never exceeds the same shape with every lane live.
+      if (std::optional<InstructionCost::CostType> Priced =
+              priceLanes(ActiveLanes, EmittedParts))
+        return *Priced;
     }
   }
 
@@ -7484,13 +7540,14 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
                                             TTI::TargetCostKind CostKind,
                                             Type *SrcVTy, const Value *Ptr,
                                             bool VariableMask, Align Alignment,
-                                            unsigned AddressSpace) const {
+                                            unsigned AddressSpace,
+                                            const Value *Mask) const {
 
   assert(isa<VectorType>(SrcVTy) && "Unexpected type in getGSVectorCost");
 
   if (ST->hasPreferGSCostTable() && ST->hasAVX512())
     return getZenGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, VariableMask,
-                              Alignment, AddressSpace);
+                              Alignment, AddressSpace, Mask);
 
   unsigned VF = cast<FixedVectorType>(SrcVTy)->getNumElements();
 
@@ -7512,7 +7569,8 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode,
     auto *SplitSrcTy =
         FixedVectorType::get(SrcVTy->getScalarType(), VF / SplitFactor);
     return SplitFactor * getGSVectorCost(Opcode, CostKind, SplitSrcTy, Ptr,
-                                         VariableMask, Alignment, AddressSpace);
+                                         VariableMask, Alignment, AddressSpace,
+                                         Mask);
   }
 
   // If we didn't split, this will be a single gather/scatter instruction.
@@ -7549,8 +7607,18 @@ X86TTIImpl::getGatherScatterOpCost(const MemIntrinsicCostAttributes &MICA,
 
   assert(SrcVTy->isVectorTy() && "Unexpected data type for Gather/Scatter");
   unsigned AddressSpace = MICA.getAddressSpace();
+
+  // A mask known at compile time tells the cost path which legalized parts
+  // CodeGen keeps. Read it only from a real gather/scatter call: the context
+  // instruction can also be a plain load or store being considered for the
+  // transform, whose operands mean something else entirely.
+  const Value *Mask = nullptr;
+  if (const auto *II = dyn_cast_or_null<IntrinsicInst>(MICA.getInst()))
+    if (II->getIntrinsicID() == MICA.getID())
+      Mask = II->getArgOperand(IsLoad ? 1 : 2);
+
   return getGSVectorCost(Opcode, CostKind, SrcVTy, Ptr, MICA.getVariableMask(),
-                         Alignment, AddressSpace);
+                         Alignment, AddressSpace, Mask);
 }
 
 bool X86TTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,

@@ -9,7 +9,7 @@
 ; flat overhead). Where the two disagree the decision is table-driven, and the
 ; SKX run is what stops the znver5 CHECK-NOTs from passing vacuously.
 ;
-; The five cases below:
+; The six cases below:
 ;   1. f64 indirect-load reduction -- gather IS chosen, on both.
 ;   2. i64 indirect-load reduction -- gather is NOT chosen on znver5, but IS on
 ;      SKX (the i64 entry is set above the break-even to suppress vpgatherqq
@@ -18,6 +18,10 @@
 ;      Regression guard for issue llvm#91370.
 ;   4. f64 indirect store -- scatter IS chosen, on both.
 ;   5. i64 indirect store -- scatter is NOT chosen on znver5, but IS on SKX.
+;   6. f32 indirect store -- scatter is chosen on both, but the per-shape rows
+;      carry it to sixteen lanes where the flat overhead stops at eight. This
+;      is the only case reaching the 32-bit scatter rows, which price a whole
+;      zmm scatter rather than the half-width form the other cases use.
 ;
 ; RUN: opt < %s -S -passes=loop-vectorize -mtriple=x86_64-unknown-linux-gnu \
 ; RUN:   -mcpu=znver5 | FileCheck %s --check-prefixes=CHECK,ZNVER5
@@ -155,6 +159,36 @@ loop:
   %src.val = load i64, ptr %src.gep, align 8
   %data.gep = getelementptr inbounds i64, ptr %data, i64 %idx.val
   store i64 %src.val, ptr %data.gep, align 8
+  %inc = add nuw nsw i32 %i, 1
+  %done = icmp eq i32 %inc, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; --- Case 6: f32 indirect store scatters wider under the tables ----------
+; Both targets scatter, so the contrast is the width rather than the choice:
+; the per-shape row for a sixteen-lane f32 scatter keeps a full zmm worth of
+; lanes profitable, where the flat overhead stops at eight. Nothing else in
+; this file reaches the 32-bit scatter rows.
+; CHECK-LABEL: define void @f32_indirect_scatter_wide
+; ZNVER5:      call void @llvm.masked.scatter.v16f32
+; SKX:         call void @llvm.masked.scatter.v8f32
+define void @f32_indirect_scatter_wide(ptr noalias noundef writeonly %data, ptr noalias noundef readonly %idx, ptr noalias noundef readonly %src, i32 noundef %n) {
+entry:
+  %cmp = icmp ugt i32 %n, 0
+  br i1 %cmp, label %loop, label %exit
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %idx.gep = getelementptr inbounds i32, ptr %idx, i32 %i
+  %idx.val = load i32, ptr %idx.gep, align 4
+  %idx.sext = sext i32 %idx.val to i64
+  %src.gep = getelementptr inbounds float, ptr %src, i32 %i
+  %src.val = load float, ptr %src.gep, align 4
+  %data.gep = getelementptr inbounds float, ptr %data, i64 %idx.sext
+  store float %src.val, ptr %data.gep, align 4
   %inc = add nuw nsw i32 %i, 1
   %done = icmp eq i32 %inc, %n
   br i1 %done, label %exit, label %loop

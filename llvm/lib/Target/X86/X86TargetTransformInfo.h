@@ -272,12 +272,13 @@ private:
   InstructionCost getGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                   Type *DataTy, const Value *Ptr,
                                   bool VariableMask, Align Alignment,
-                                  unsigned AddressSpace) const;
+                                  unsigned AddressSpace,
+                                  const Value *Mask = nullptr) const;
   InstructionCost getZenGSVectorCost(unsigned Opcode,
                                      TTI::TargetCostKind CostKind, Type *DataTy,
                                      const Value *Ptr, bool VariableMask,
-                                     Align Alignment,
-                                     unsigned AddressSpace) const;
+                                     Align Alignment, unsigned AddressSpace,
+                                     const Value *Mask = nullptr) const;
 
   int getGatherOverhead() const;
   int getScatterOverhead() const;
