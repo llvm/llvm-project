@@ -1,7 +1,10 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s
+; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugDeclare
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Collect DILocalVariable from a #dbg_value record. No retainedNodes.
+;
+; The record is a plain #dbg_value, so it lowers to a direct DBG_VALUE and gets
+; no DebugDeclare.
 
 ; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
 ; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
@@ -16,7 +19,7 @@
 ; CHECK-DAG: [[DS:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugSource [[PATH]]
 ; CHECK-DAG: [[INT:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugTypeBasic [[INTNAME]] {{.*}} [[C0]]
 ; CHECK-DAG: [[DF:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugFunction {{.*}}
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[XNAME]] [[INT]] [[DS]] [[C8]] [[C0]] [[DF]] [[C0]] [[C1]]
+; CHECK: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[XNAME]] [[INT]] [[DS]] [[C8]] [[C0]] [[DF]] [[C0]] [[C1]]
 
 target triple = "spirv64-unknown-unknown"
 
