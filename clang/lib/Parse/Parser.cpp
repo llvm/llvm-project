@@ -394,16 +394,22 @@ bool Parser::SkipUntil(ArrayRef<tok::TokenKind> Toks, SkipUntilFlags Flags) {
     case tok::r_paren:
       if (ParenCount && !isFirstTokenSkipped)
         return false;  // Matches something.
+      if (HasFlagsSet(Flags, StopAtUnbalanced))
+        return false;
       ConsumeParen();
       break;
     case tok::r_square:
       if (BracketCount && !isFirstTokenSkipped)
         return false;  // Matches something.
+      if (HasFlagsSet(Flags, StopAtUnbalanced))
+        return false;
       ConsumeBracket();
       break;
     case tok::r_brace:
       if (BraceCount && !isFirstTokenSkipped)
         return false;  // Matches something.
+      if (HasFlagsSet(Flags, StopAtUnbalanced))
+        return false;
       ConsumeBrace();
       break;
 
