@@ -1821,6 +1821,10 @@ let Command = "target modules show unwind" in {
 }
 
 let Command = "target modules replace" in {
+  def target_modules_replace_all
+      : Option<"all", "a">,
+        Desc<"Replace the module in every target that contains it. This option "
+             "is required when more than one target contains the module.">;
   def target_modules_replace_old_path
       : Option<"old-path", "o">,
         Arg<"Path">,

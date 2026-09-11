@@ -54,21 +54,19 @@ class TargetModulesReplaceTestCase(TestBase):
         # No --old-path: the copy shares v1's UUID, so the module to replace is
         # worked out from the file alone. --force because both are real modules
         # rather than placeholders.
-        self.runCmd(
-            "target modules replace --allow-uuid-mismatch --force '%s'" % v1_copy
-        )
+        self.runCmd("target modules replace --force '%s'" % v1_copy)
 
         self.assertEqual(target.GetNumModules(), num_modules)
         self.assertFalse(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1_copy)).IsValid())
 
     def test_mismatched_uuid_is_an_error(self):
-        """A file that is not the same build is refused unless forced."""
+        """A file from another build is refused unless explicitly allowed."""
         target, v1, v2, v1_copy = self.static_target_with_v1()
         num_modules = target.GetNumModules()
 
         self.expect(
-            "target modules replace '%s'" % v2,
+            "target modules replace --force '%s'" % v2,
             error=True,
             substrs=["does not match UUID", "--allow-uuid-mismatch"],
         )
@@ -78,7 +76,7 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
         self.assertFalse(target.FindModule(lldb.SBFileSpec(v2)).IsValid())
 
-        # And --force goes through.
+        # Both independent safety overrides go through.
         self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v2)).IsValid())
 
@@ -110,6 +108,170 @@ class TargetModulesReplaceTestCase(TestBase):
 
         self.runCmd("target modules replace --force '%s'" % v1_copy)
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1_copy)).IsValid())
+
+    def test_loaded_module_cannot_replace_itself(self):
+        """Rejecting self-replacement preserves the module's load address."""
+        target, v1, v2, v1_copy = self.static_target_with_v1()
+        self.runCmd("target modules load --file '%s' --slide 0x100000" % v1)
+        old_module = target.FindModule(lldb.SBFileSpec(v1))
+        module_count = target.GetNumModules()
+        base = self.base_load_address(old_module, target)
+        self.assertNotEqual(base, lldb.LLDB_INVALID_ADDRESS)
+
+        self.expect(
+            "target modules replace --force '%s'" % v1,
+            error=True,
+            substrs=["is already the module being replaced"],
+        )
+
+        self.assertEqual(target.GetNumModules(), module_count)
+        self.assertEqual(target.FindModule(lldb.SBFileSpec(v1)), old_module)
+        self.assertEqual(self.base_load_address(old_module, target), base)
+
+    def test_multiple_targets_need_all(self):
+        """A module shared by targets requires --all, which replaces it in each."""
+        target1, v1, v2, v1_copy = self.static_target_with_v1()
+        target2 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target2, VALID_TARGET)
+        old_module = target1.FindModule(lldb.SBFileSpec(v1))
+        self.assertTrue(target2.AddModule(old_module))
+        self.assertEqual(target2.FindModule(lldb.SBFileSpec(v1)), old_module)
+        del old_module
+        unrelated_target = self.dbg.CreateTarget(self.getBuildArtifact("other.out"))
+        self.assertTrue(unrelated_target, VALID_TARGET)
+        self.dbg.SetSelectedTarget(target1)
+        module_counts = (target1.GetNumModules(), target2.GetNumModules())
+
+        self.expect(
+            "target modules replace --allow-uuid-mismatch --force '%s'" % v2,
+            error=True,
+            substrs=["present in 2 targets", "--all"],
+        )
+        for target, module_count in zip((target1, target2), module_counts):
+            self.assertEqual(target.GetNumModules(), module_count)
+            self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
+            self.assertFalse(target.FindModule(lldb.SBFileSpec(v2)).IsValid())
+
+        self.runCmd(
+            "target modules replace --all --allow-uuid-mismatch --force '%s'" % v2
+        )
+        replacements = []
+        for target, module_count in zip((target1, target2), module_counts):
+            self.assertEqual(target.GetNumModules(), module_count)
+            self.assertFalse(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
+            replacement = target.FindModule(lldb.SBFileSpec(v2))
+            self.assertTrue(replacement.IsValid())
+            replacements.append(replacement)
+        self.assertEqual(replacements[0], replacements[1])
+        self.assertFalse(unrelated_target.FindModule(lldb.SBFileSpec(v2)).IsValid())
+
+    def test_unrelated_target_does_not_need_all(self):
+        """An unrelated target does not make --all necessary."""
+        target, v1, v2, v1_copy = self.static_target_with_v1()
+        unrelated_target = self.dbg.CreateTarget(self.getBuildArtifact("other.out"))
+        self.assertTrue(unrelated_target, VALID_TARGET)
+        self.dbg.SetSelectedTarget(target)
+
+        self.runCmd("target modules replace --force '%s'" % v1_copy)
+        self.assertFalse(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
+        self.assertTrue(target.FindModule(lldb.SBFileSpec(v1_copy)).IsValid())
+        self.assertFalse(
+            unrelated_target.FindModule(lldb.SBFileSpec(v1_copy)).IsValid()
+        )
+
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_all_rolls_back_earlier_targets_on_failure(self):
+        """A later --all failure restores targets already changed."""
+        target1, v1, v2, v1_copy = self.static_target_with_v1()
+        target2 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target2, VALID_TARGET)
+        old_module = target1.FindModule(lldb.SBFileSpec(v1))
+        self.assertTrue(target2.AddModule(old_module))
+
+        # Loading only the second copy makes the unplaceable file fail there.
+        self.dbg.SetSelectedTarget(target2)
+        self.runCmd("target modules load --file '%s' --slide 0x100000" % v1)
+        self.assertNotEqual(
+            self.base_load_address(old_module, target2), lldb.LLDB_INVALID_ADDRESS
+        )
+        self.dbg.SetSelectedTarget(target1)
+        unplaceable = self.getBuildArtifact("unplaceable.o")
+        self.yaml2obj("unplaceable.yaml", unplaceable)
+
+        self.expect(
+            "target modules replace --all --old-path '%s' "
+            "--allow-uuid-mismatch --force '%s'" % (v1, unplaceable),
+            error=True,
+            substrs=[
+                "affected target 2 of 2",
+                "could not be loaded at",
+                "rolled back the earlier replacement",
+            ],
+        )
+
+        for target in (target1, target2):
+            self.assertEqual(target.FindModule(lldb.SBFileSpec(v1)), old_module)
+            self.assertFalse(target.FindModule(lldb.SBFileSpec(unplaceable)).IsValid())
+
+    def test_all_rejects_a_preexisting_replacement(self):
+        """--all changes nothing if a target already contains the replacement."""
+        target1, v1, v2, v1_copy = self.static_target_with_v1()
+        target2 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target2, VALID_TARGET)
+        old_module = target1.FindModule(lldb.SBFileSpec(v1))
+        self.assertTrue(target2.AddModule(old_module))
+        self.runCmd("target modules add '%s'" % v2)
+        replacement_module = target2.FindModule(lldb.SBFileSpec(v2))
+        self.assertTrue(replacement_module.IsValid())
+        module_counts = (target1.GetNumModules(), target2.GetNumModules())
+        self.dbg.SetSelectedTarget(target1)
+
+        self.expect(
+            "target modules replace --all --old-path '%s' "
+            "--allow-uuid-mismatch --force '%s'" % (v1, v2),
+            error=True,
+            substrs=[
+                "affected target 2 of 2 already contains the replacement module",
+                "no modules were replaced",
+            ],
+        )
+
+        self.assertEqual(target1.GetNumModules(), module_counts[0])
+        self.assertEqual(target1.FindModule(lldb.SBFileSpec(v1)), old_module)
+        self.assertFalse(target1.FindModule(lldb.SBFileSpec(v2)).IsValid())
+        self.assertEqual(target2.GetNumModules(), module_counts[1])
+        self.assertEqual(target2.FindModule(lldb.SBFileSpec(v1)), old_module)
+        self.assertEqual(target2.FindModule(lldb.SBFileSpec(v2)), replacement_module)
+
+    def test_all_rejects_a_selected_preexisting_replacement(self):
+        """--all preserves a replacement already in the selected target."""
+        target1, v1, v2, v1_copy = self.static_target_with_v1()
+        old_module = target1.FindModule(lldb.SBFileSpec(v1))
+        self.runCmd("target modules add '%s'" % v2)
+        replacement_module = target1.FindModule(lldb.SBFileSpec(v2))
+        self.assertTrue(replacement_module.IsValid())
+        target2 = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(target2, VALID_TARGET)
+        self.assertTrue(target2.AddModule(old_module))
+        module_counts = (target1.GetNumModules(), target2.GetNumModules())
+        self.dbg.SetSelectedTarget(target1)
+
+        self.expect(
+            "target modules replace --all --old-path '%s' "
+            "--allow-uuid-mismatch --force '%s'" % (v1, v2),
+            error=True,
+            substrs=[
+                "affected target 1 of 2 already contains the replacement module",
+                "no modules were replaced",
+            ],
+        )
+
+        self.assertEqual(target1.GetNumModules(), module_counts[0])
+        self.assertEqual(target1.FindModule(lldb.SBFileSpec(v1)), old_module)
+        self.assertEqual(target1.FindModule(lldb.SBFileSpec(v2)), replacement_module)
+        self.assertEqual(target2.GetNumModules(), module_counts[1])
+        self.assertEqual(target2.FindModule(lldb.SBFileSpec(v1)), old_module)
+        self.assertFalse(target2.FindModule(lldb.SBFileSpec(v2)).IsValid())
 
     def test_no_matching_module(self):
         """A file that matches nothing points the user at --old-path."""
@@ -259,7 +421,7 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertTrue(target.FindModule(lldb.SBFileSpec(v1)).IsValid())
 
     def test_placeholder_without_uuid(self):
-        """A placeholder with no UUID needs no --force, nothing can be compared."""
+        """A placeholder with no UUID needs neither safety override."""
         core = self.getBuildArtifact("no-uuid.dmp")
         self.yaml2obj("placeholder-no-uuid.yaml", core)
         # The dump is x86_64, so the replacement comes from a yaml too rather
@@ -336,7 +498,10 @@ class TargetModulesReplaceTestCase(TestBase):
         self.assertTrue(old_module.IsValid())
         base = self.base_load_address(old_module, target)
 
-        self.runCmd("target modules replace --allow-uuid-mismatch --force '%s'" % v2)
+        # Both targets share the old module.
+        self.runCmd(
+            "target modules replace --all --allow-uuid-mismatch --force '%s'" % v2
+        )
 
         new_module = target.FindModule(lldb.SBFileSpec(v2))
         self.assertTrue(new_module.IsValid())

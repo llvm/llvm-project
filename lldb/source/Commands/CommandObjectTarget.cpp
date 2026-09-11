@@ -3158,8 +3158,10 @@ public:
             "The module to replace is found by the new file's UUID, or by its "
             "basename if it has no UUID. Use --old-path when neither picks a "
             "single module. Only placeholder modules, which core files create "
-            "for files they could not find, are replaced by default.",
-            "target modules replace [--old-path <path>] "
+            "for files they could not find, are replaced by default. If more "
+            "than one target contains the module, use --all to replace it in "
+            "every target that contains it.",
+            "target modules replace [--all] [--old-path <path>] "
             "[--allow-uuid-mismatch] "
             "[--force] <path>",
             eCommandRequiresTarget | eCommandTryTargetAPILock |
@@ -3182,6 +3184,9 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
+      case 'a':
+        m_all = true;
+        break;
       case 'o':
         m_old_path.assign(std::string(option_arg));
         break;
@@ -3198,6 +3203,7 @@ public:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
+      m_all = false;
       m_old_path.clear();
       m_force = false;
       m_allow_uuid_mismatch = false;
@@ -3207,6 +3213,7 @@ public:
       return llvm::ArrayRef(g_target_modules_replace_options);
     }
 
+    bool m_all = false;
     std::string m_old_path;
     bool m_force = false;
     bool m_allow_uuid_mismatch = false;
@@ -3286,9 +3293,7 @@ protected:
     }
     llvm::StringRef new_module_path = args.GetArgumentAtIndex(0);
 
-    // Nothing below may change the target until Target::ReplaceModule() is
-    // called, so a failure can never leave the target half way through a
-    // replacement.
+    // Validate first because creating the replacement changes the target.
     FileSpec new_file_spec(new_module_path);
     FileSystem::Instance().Resolve(new_file_spec);
     if (!FileSystem::Instance().Exists(new_file_spec)) {
@@ -3326,6 +3331,70 @@ protected:
     // FindModuleToReplace() has already put the error into result.
     if (!old_module_sp)
       return;
+
+    // Find every owner up front so their image lists remain consistent.
+    TargetList &target_list = GetDebugger().GetTargetList();
+    std::vector<TargetSP> targets_with_module;
+    TargetSP selected_target_sp = target_list.GetTargetSP(target);
+    assert(selected_target_sp && "selected target must be in the target list");
+    targets_with_module.push_back(std::move(selected_target_sp));
+    for (TargetSP target_sp : target_list.Targets()) {
+      if (target_sp.get() != target &&
+          target_sp->GetImages().FindModule(old_module_sp.get()))
+        targets_with_module.push_back(std::move(target_sp));
+    }
+
+    if (!m_options.m_all && targets_with_module.size() > 1) {
+      result.AppendErrorWithFormatv(
+          "'{0}' is present in {1} targets; use the --all option to replace "
+          "it in every target that contains it",
+          old_module_sp->GetFileSpec(), targets_with_module.size());
+      return;
+    }
+
+    // Lock every other owner before changing any target. Non-blocking
+    // acquisition avoids lock-order deadlocks with other clients.
+    std::vector<std::unique_lock<std::recursive_mutex>> target_api_locks;
+    target_api_locks.reserve(targets_with_module.size() - 1);
+    for (size_t i = 1; i < targets_with_module.size(); ++i) {
+      target_api_locks.emplace_back(targets_with_module[i]->GetAPIMutex(),
+                                    std::try_to_lock);
+      if (!target_api_locks.back().owns_lock()) {
+        result.AppendErrorWithFormatv(
+            "another target containing '{0}' is busy; retry the command when "
+            "it is available",
+            old_module_sp->GetFileSpec());
+        return;
+      }
+    }
+
+    // Ownership may change between discovery and locking, so verify it again.
+    for (size_t i = 1; i < targets_with_module.size(); ++i) {
+      if (!targets_with_module[i]->GetImages().FindModule(
+              old_module_sp.get())) {
+        result.AppendErrorWithFormatv(
+            "a target stopped containing '{0}' while the command was "
+            "preparing; retry the replacement",
+            old_module_sp->GetFileSpec());
+        return;
+      }
+    }
+
+    // Every affected process must remain stopped, not just the selected one.
+    std::vector<Process::StopLocker> stop_locks;
+    stop_locks.reserve(targets_with_module.size());
+    for (const TargetSP &target_sp : targets_with_module) {
+      if (ProcessSP process_sp = target_sp->GetProcessSP()) {
+        stop_locks.emplace_back();
+        if (!stop_locks.back().TryLock(&process_sp->GetRunLock())) {
+          result.AppendErrorWithFormatv(
+              "a process in a target containing '{0}' is running; interrupt "
+              "it before replacing the module in all targets",
+              old_module_sp->GetFileSpec());
+          return;
+        }
+      }
+    }
 
     // Different UUIDs mean the new file is not the binary that ran, so the
     // symbols would not describe the memory the target has.
@@ -3370,6 +3439,17 @@ protected:
     // the module already in the target, which is the one being replaced.
     new_module_spec.GetUUID().Clear();
 
+    // Snapshot ownership so new additions are distinguishable during rollback.
+    std::vector<std::vector<ModuleWP>> images_before;
+    images_before.reserve(targets_with_module.size());
+    for (const TargetSP &target_sp : targets_with_module) {
+      std::vector<ModuleWP> &target_images = images_before.emplace_back();
+      const size_t image_count = target_sp->GetImages().GetSize();
+      target_images.reserve(image_count);
+      for (size_t i = 0; i < image_count; ++i)
+        target_images.emplace_back(target_sp->GetImages().GetModuleAtIndex(i));
+    }
+
     Status error;
     ModuleSP new_module_sp =
         target->GetOrCreateModule(new_module_spec, /*notify=*/false, &error);
@@ -3382,16 +3462,122 @@ protected:
       return;
     }
 
-    const std::string old_module_desc = old_module_sp->GetFileSpec().GetPath();
-    Status replace_error =
-        target->ReplaceModule(std::move(old_module_sp), new_module_sp);
-    if (replace_error.Fail()) {
-      result.SetError(replace_error.takeError());
+    if (old_module_sp == new_module_sp) {
+      result.AppendErrorWithFormatv(
+          "'{0}' is already the module being replaced",
+          new_module_sp->GetFileSpec());
       return;
     }
 
-    result.AppendMessageWithFormatv("replaced '{0}' with '{1}'",
-                                    old_module_desc, new_file_spec.GetPath());
+    auto contained_replacement_before = [&](size_t target_index) {
+      for (const ModuleWP &module_wp : images_before[target_index]) {
+        if (module_wp.lock() == new_module_sp)
+          return true;
+      }
+      return false;
+    };
+
+    const bool selected_target_had_replacement =
+        contained_replacement_before(0);
+    std::weak_ptr<Module> new_module_wp = new_module_sp;
+    for (size_t i = 0; i < targets_with_module.size(); ++i) {
+      if (!contained_replacement_before(i))
+        continue;
+
+      // Rollback cannot reconstruct a pre-existing replacement's mappings or
+      // loader state. Reject it and remove only the newly added copy.
+      if (!selected_target_had_replacement)
+        target->GetImages().Remove(new_module_sp, /*notify=*/false);
+      new_module_sp.reset();
+      ModuleList::RemoveSharedModuleIfOrphaned(new_module_wp);
+      result.AppendErrorWithFormatv(
+          "affected target {0} of {1} already contains the replacement module "
+          "'{2}'; no modules were replaced",
+          i + 1, targets_with_module.size(), new_file_spec);
+      return;
+    }
+
+    const std::string old_module_desc = old_module_sp->GetFileSpec().GetPath();
+    std::weak_ptr<Module> old_module_wp = old_module_sp;
+    for (size_t i = 0; i < targets_with_module.size(); ++i) {
+      // Keep the old module alive until its final owner drops it so cache
+      // eviction can happen after the last replacement.
+      ModuleSP module_to_replace = i + 1 == targets_with_module.size()
+                                       ? std::move(old_module_sp)
+                                       : old_module_sp;
+      Status replace_error = targets_with_module[i]->ReplaceModule(
+          std::move(module_to_replace), new_module_sp);
+      if (replace_error.Fail()) {
+        if (i == 0) {
+          result.AppendErrorWithFormatv(
+              "{0}; the original module remains present but unloaded",
+              replace_error.AsCString());
+          new_module_sp.reset();
+          ModuleList::RemoveSharedModuleIfOrphaned(new_module_wp);
+          return;
+        }
+
+        const std::string replace_error_message = replace_error.AsCString();
+        ModuleSP rollback_old_module_sp = old_module_wp.lock();
+        if (!rollback_old_module_sp) {
+          result.AppendErrorWithFormatv(
+              "replacement failed in affected target {0} of {1} after "
+              "updating {2} target(s): {3}; rollback could not start because "
+              "the original module no longer exists, so the targets may now "
+              "disagree",
+              i + 1, targets_with_module.size(), i, replace_error_message);
+          new_module_sp.reset();
+          ModuleList::RemoveSharedModuleIfOrphaned(new_module_wp);
+          return;
+        }
+
+        size_t rollback_failures = 0;
+        size_t first_rollback_failure = 0;
+        std::string first_rollback_error;
+        for (size_t j = i; j > 0; --j) {
+          const size_t rollback_index = j - 1;
+          Status rollback_error =
+              targets_with_module[rollback_index]->ReplaceModule(
+                  new_module_sp, rollback_old_module_sp);
+          if (rollback_error.Fail()) {
+            if (rollback_failures == 0) {
+              first_rollback_failure = rollback_index;
+              first_rollback_error = rollback_error.AsCString();
+            }
+            ++rollback_failures;
+          }
+        }
+
+        if (rollback_failures == 0) {
+          result.AppendErrorWithFormatv(
+              "replacement failed in affected target {0} of {1} after "
+              "updating {2} target(s): {3}; rolled back the earlier "
+              "replacement(s); the original module remains present but "
+              "unloaded in affected target {0}",
+              i + 1, targets_with_module.size(), i, replace_error_message);
+        } else {
+          result.AppendErrorWithFormatv(
+              "replacement failed in affected target {0} of {1} after "
+              "updating {2} target(s): {3}; rollback failed in {4} target(s), "
+              "starting with affected target {5}: {6}; the targets may now "
+              "disagree",
+              i + 1, targets_with_module.size(), i, replace_error_message,
+              rollback_failures, first_rollback_failure + 1,
+              first_rollback_error);
+        }
+        new_module_sp.reset();
+        ModuleList::RemoveSharedModuleIfOrphaned(new_module_wp);
+        return;
+      }
+    }
+
+    if (targets_with_module.size() == 1)
+      result.AppendMessageWithFormatv("replaced '{0}' with '{1}'",
+                                      old_module_desc, new_file_spec.GetPath());
+    else
+      result.AppendMessageWithFormatv(
+          "replaced '{0}' with '{1}' in {2} targets", old_module_desc,
+          new_file_spec.GetPath(), targets_with_module.size());
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 };
