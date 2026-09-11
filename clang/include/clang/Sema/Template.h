@@ -540,6 +540,8 @@ enum class TemplateSubstitutionKind : char {
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     getInstantiationOfIfExists(const Decl *D);
 
+    LocalInstantiationScope *getOuterScope() const { return Outer; }
+
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);

@@ -1,3 +1,4 @@
+
 //===-- AMDGPU.td - AMDGPU Tablegen files --------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -18,6 +19,7 @@ def p3 : PtrValueType<i32, 3>;
 def p4 : PtrValueType<i64, 4>;
 def p5 : PtrValueType<i32, 5>;
 def p6 : PtrValueType<i32, 6>;
+def p15 : PtrValueType<i32, 15>;
 
 //===-----------------------------------------------------------------------===//
 // AMDGPU Subtarget Feature (device properties)
@@ -194,8 +196,9 @@ defm FmaLegacy32Insts : AMDGPUSubtargetFeature<"fma-legacy32-insts",
 >;
 
 defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-insts",
-  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and"
-  "v_pk_minimum/maximum_f16 instructions"
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32,"
+  "v_pk_minmax/maxmin_num_f16, v_min/max_num_f16/f32/f64 and"
+  "v_pk_min/max_num_f16 instructions"
 >;
 
 defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
@@ -229,21 +232,6 @@ defm XNACKOnOffModes : AMDGPUSubtargetFeature<"xnack-on-off-modes",
   "Target supports XNACK on/off modes",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/0,
-  [FeatureSupportsXNACK],
-  InlineIgnore
->;
-
-// XNACK is disabled if SH_MEM_CONFIG.ADDRESS_MODE = GPUVM on chips that support
-// XNACK. The current default kernel driver setting is:
-// - graphics ring: XNACK disabled
-// - compute ring: XNACK enabled
-//
-// If XNACK is enabled, the VMEM latency can be worse.
-// If XNACK is disabled, the 2 SGPRs can be used for general purposes.
-def FeatureXNACK : SubtargetFeature<"xnack",
-  "EnableXNACK",
-  "true",
-  "Enable XNACK support",
   [FeatureSupportsXNACK],
   InlineIgnore
 >;
@@ -534,6 +522,14 @@ defm F32ToFP6BF6ConversionScaleInsts : AMDGPUSubtargetFeature<"f32-to-fp6bf6-cvt
 
 defm F32ToF16BF16ConversionSRInsts : AMDGPUSubtargetFeature<"f32-to-f16bf16-cvt-sr-insts",
   "Has f32 to f16bf16 conversion scale instructions"
+>;
+
+defm FP6BF6ToF16BF16F32ConversionScaleInsts : AMDGPUSubtargetFeature<"fp6bf6-to-f16bf16f32-cvt-scale-insts",
+  "Has fp6bf6 to f16bf16f32 conversion scale instructions"
+>;
+
+defm Block16ConversionScaleInsts : AMDGPUSubtargetFeature<"block16-cvt-scale-insts",
+  "Has block16 conversion scale instructions"
 >;
 
 defm AshrPkInsts : AMDGPUSubtargetFeature<"ashr-pk-insts",
@@ -973,6 +969,10 @@ defm WMMAN16Insts : AMDGPUSubtargetFeature<"wmma-n16-insts",
   "Has WMMA instructions with N = 16"
 >;
 
+defm WMMAF4Insts : AMDGPUSubtargetFeature<"wmma-f4-insts",
+  "Has WMMA_*_F4 instructions"
+>;
+
 defm SWMMACGfx1200Insts : AMDGPUSubtargetFeature<"swmmac-gfx1200-insts",
   "Has GFX1200 SWMMAC instructions"
 >;
@@ -987,6 +987,10 @@ defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
 
 defm CubeInsts : AMDGPUSubtargetFeature<"cube-insts",
   "Has v_cube* instructions"
+>;
+
+defm IndexedResources : AMDGPUSubtargetFeature<"indexed-resources",
+  "Has indexed resources"
 >;
 
 defm LerpInst : AMDGPUSubtargetFeature<"lerp-inst",
@@ -1170,12 +1174,6 @@ def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   [], InlineIgnore
 >;
 
-def FeatureSRAMECC : SubtargetFeature<"sramecc",
-  "EnableSRAMECC",
-  "true",
-  "Enable SRAMECC"
->;
-
 defm NoSdstCMPX : AMDGPUSubtargetFeature<"no-sdst-cmpx",
   "V_CMPX does not write VCC/SGPR in addition to EXEC"
 >;
@@ -1266,8 +1264,7 @@ defm PseudoScalarTrans : AMDGPUSubtargetFeature<"pseudo-scalar-trans",
 >;
 
 defm NoF16PseudoScalarTransInlineConstants : AMDGPUSubtargetFeature<"no-f16-pseudo-scalar-trans-inline-constants",
-  "Inline constants are not supported for F16 pseudo scalar transcendentals",
-  /*GenPredicate=*/0
+  "Inline constants are not supported for F16 pseudo scalar transcendentals"
 >;
 
 defm RestrictedSOffset : AMDGPUSubtargetFeature<"restricted-soffset",
@@ -1344,6 +1341,11 @@ defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
 
 defm RequiresInitialUnclausedVmem : AMDGPUSubtargetFeature<"requires-initial-unclause-vmem",
   "Hardware entrypoints require first VMEM instruction to be unclaused",
+  GenPredicate=false
+>;
+
+defm SlowMaxMinMulI64Insts : AMDGPUSubtargetFeature<"slow-max-min-mul-i64-insts",
+  "64-bit integer max/min/mul VALU instructions are slower than expanding to an equivalent code sequence",
   GenPredicate=false
 >;
 
@@ -2370,7 +2372,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureCuMode,
    Feature1024AddressableVGPRs,
    Feature64BitLiterals,
-   FeatureLDSBankCount64,
    FeatureDLInsts,
    FeatureFmacF64Inst,
    FeaturePackedFP32SingleSGPROps,
@@ -2442,7 +2443,7 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureXNACK,
+   FeatureSupportsXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
@@ -2459,6 +2460,8 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureGFX1250_STRICT,
    FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
+   FeatureWMMAN16Insts,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureSetregVGPRMSBFixup,
    FeatureCubeInsts,
@@ -2480,12 +2483,15 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
    FeatureWMMAN16Insts,
+   FeatureWMMAF4Insts,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureSetregVGPRMSBFixup,
    FeatureCubeInsts,
@@ -2498,6 +2504,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
@@ -2506,12 +2513,15 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
+   FeatureSlowMaxMinMulI64Insts,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
    FeatureWMMAN16Insts,
+   FeatureWMMAF4Insts,
    FeatureFullRate64Ops,
    FeatureVOP3PX2IncrementsVaVdstTwice,
    FeatureDPALU_DPP,
@@ -2529,6 +2539,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureUseAddPC64Inst,
@@ -2546,9 +2557,10 @@ def FeatureISAVersion12_Generic: FeatureSet<
 def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
+   FeatureLDSBankCount64,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
-   FeatureSupportsXNACK,
    FeatureGFX125xLowestRateWMMA,
    FeatureTransCoexecutionHazard,
    FeatureWMMACoexecutionHazards,
@@ -2596,7 +2608,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
-   Feature1536VGPRs,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2612,6 +2623,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtSrPkBF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToFP6BF6ConversionScaleInsts,
+   FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeatureSWakeupBarrier,
    FeatureClusters,
@@ -2625,8 +2637,10 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
+   FeatureIndexedResources
 ]>;
 
 def FeatureISAVersion13_Generic: FeatureSet<
@@ -3006,7 +3020,7 @@ def HasUnrestrictedSOffset : Predicate<"!Subtarget->hasRestrictedSOffset()">,
 
 def D16PreservesUnusedBits :
   Predicate<"Subtarget->d16PreservesUnusedBits()">,
-  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSRAMECC))>;
+  AssemblerPredicate<(all_of FeatureGFX9Insts, (not FeatureSupportsSRAMECC))>;
 
 def LDSRequiresM0Init : Predicate<"Subtarget->ldsRequiresM0Init()">;
 def NotLDSRequiresM0Init : Predicate<"!Subtarget->ldsRequiresM0Init()">;
@@ -3224,7 +3238,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureDot9Insts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
-  FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
   FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,
@@ -3239,12 +3253,13 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSadInsts, FeatureSetPrioIncWgInst, FeatureSmemPrefetchInsts,
   FeatureTanhInsts, FeatureTensorCvtLutInsts, FeatureTransposeLoadF4F6Insts,
   FeatureVMemToLDSLoad, FeatureVmemPrefInsts, FeatureWMMA128bInsts,
-  FeatureWMMA256bInsts, FeatureWMMAN16Insts, FeatureXF32Insts,
+  FeatureWMMA256bInsts, FeatureWMMAN16Insts, FeatureWMMAF4Insts, FeatureXF32Insts,
   FeatureWavefrontSize32, FeatureWavefrontSize64, FeatureSupportsWGP,
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
-  FeatureAGPRAlloc, Feature1536VGPRs,
+  FeatureAGPRAlloc, Feature1536VGPRs, Feature1024AddressableVGPRs,
+  FeatureHalfAddressablePhysicalLocalMemory,
   ];
 }
 

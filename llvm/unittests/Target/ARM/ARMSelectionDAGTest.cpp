@@ -7,7 +7,6 @@
 
 #include "ARMSelectionDAGInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
-#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -65,10 +64,9 @@ protected:
     if (!DAG)
       report_fatal_error("SelectionDAG allocation failed");
 
-    OptimizationRemarkEmitter ORE(F);
-    DAG->init(*MF, ORE, /*LibInfo=*/nullptr, /*LibcallsInfo=*/nullptr,
+    DAG->init(*MF, /*LibInfo=*/nullptr, /*LibcallsInfo=*/nullptr,
               /*AA=*/nullptr,
-              /*AC=*/nullptr, /*MDT=*/nullptr, /*MSDT=*/nullptr, MMI, nullptr);
+              /*AC=*/nullptr, /*MDT=*/nullptr, /*MSDT=*/nullptr);
   }
 
   TargetLoweringBase::LegalizeTypeAction getTypeAction(EVT VT) {
