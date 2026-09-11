@@ -266,6 +266,8 @@ features cannot lower the translation-unit ABI level;
 ### Attribute Changes in Clang
 
 - Clang now properly propagates attributes on class and variable templates to their redeclarations, which will result in redeclarations not interfering with diagnostics. (#GH209812)
+- Added the `amdgpu_kernarg_preload` attribute for AMDGPU kernels to select an
+  inclusive range of explicit kernel arguments to preload.
 
 - Clang now recognizes the `[[gnu::flag_enum]]` attribute and treats it equivalent to `[[clang::flag_enum]]`
 

@@ -183,7 +183,7 @@ void AMDGPUPreloadKernArgProlog::addBackCompatLoads(
     MachineBasicBlock *BackCompatMBB, Register KernArgSegmentPtr,
     unsigned NumKernArgPreloadSGPRs) {
   Register KernArgPreloadSGPR = MFI.getArgInfo().FirstKernArgPreloadReg;
-  unsigned Offset = ST.getExplicitKernelArgOffset();
+  unsigned Offset = MFI.getKernargPreloadOffset() * 4;
   // Fill all user SGPRs used for kernarg preloading with sequential data from
   // the kernarg segment
   while (NumKernArgPreloadSGPRs > 0) {

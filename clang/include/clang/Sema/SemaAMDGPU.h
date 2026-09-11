@@ -66,6 +66,13 @@ public:
   void addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
                                Expr *Min, Expr *Max);
 
+  AMDGPUKernargPreloadAttr *
+  CreateAMDGPUKernargPreloadAttr(Decl *D, const AttributeCommonInfo &CI,
+                                 Expr *FirstArgExpr, Expr *LastArgExpr);
+
+  void addAMDGPUKernargPreloadAttr(Decl *D, const AttributeCommonInfo &CI,
+                                   Expr *FirstArgExpr, Expr *LastArgExpr);
+
   /// Create an AMDGPUMaxNumWorkGroupsAttr attribute.
   AMDGPUMaxNumWorkGroupsAttr *
   CreateAMDGPUMaxNumWorkGroupsAttr(const AttributeCommonInfo &CI, Expr *XExpr,
@@ -79,6 +86,7 @@ public:
   void handleAMDGPUWavesPerEUAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUNumSGPRAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL);
+  void handleAMDGPUKernargPreloadAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUMaxNumWorkGroupsAttr(Decl *D, const ParsedAttr &AL);
   void handleAMDGPUFlatWorkGroupSizeAttr(Decl *D, const ParsedAttr &AL);
 
