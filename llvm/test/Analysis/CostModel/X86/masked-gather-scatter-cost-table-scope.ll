@@ -1,11 +1,17 @@
-; The prefer-gs-cost-table tuning feature supplies reciprocal-throughput numbers
-; only, and only for AVX-512 shapes it has a row for. Enabling it must therefore
-; not move any other cost kind, and must not affect a target the table does not
-; cover at all.
+; The prefer-gs-cost-table tuning feature must be inert wherever it has nothing
+; to say: on a target with no AVX-512, which can never reach the table, and on
+; the cost kinds it supplies no numbers for.
 ;
 ; Each prefix below is checked by a pair of RUN lines that differ only in the
 ; feature bit, so if enabling it ever moves one of these costs, the pair
 ; disagrees and the test fails.
+;
+; The shapes here are indexed through vectors of pointers, whose index width is
+; not open to question. Where the index comes from a GEP the feature does move
+; the part count, and with it the cost kinds derived from that count, because it
+; takes the real index width at every VF instead of only at VF 16 and above.
+; That difference is deliberate and is pinned in
+; masked-gather-scatter-cost-table-index-width.ll.
 
 ; RUN: opt < %s -S -mtriple=x86_64-unknown-linux-gnu -passes="print<cost-model>" \
 ; RUN:   -disable-output -cost-kind=latency -mcpu=znver4 2>&1 \

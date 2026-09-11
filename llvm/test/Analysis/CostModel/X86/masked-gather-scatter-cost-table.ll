@@ -503,15 +503,15 @@ define void @scatter_v8i32(<8 x i32> %src, <8 x ptr> %ptrs, <8 x i1> %mask) {
 
 define void @scatter_v16i32(<16 x i32> %src, <16 x ptr> %ptrs, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v16i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER5-LABEL: 'scatter_v16i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER6-LABEL: 'scatter_v16i32'
-; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER3-LABEL: 'scatter_v16i32'
@@ -656,15 +656,15 @@ define void @scatter_v8f32(<8 x float> %src, <8 x ptr> %ptrs, <8 x i1> %mask) {
 
 define void @scatter_v16f32(<16 x float> %src, <16 x ptr> %ptrs, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v16f32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER5-LABEL: 'scatter_v16f32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER6-LABEL: 'scatter_v16f32'
-; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 45 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER3-LABEL: 'scatter_v16f32'
@@ -955,17 +955,17 @@ define <16 x float> @gather_v16f32_gep(ptr %base, <16 x i32> %idx, <16 x i1> %ma
 define void @scatter_v16i32_gep(<16 x i32> %src, ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v16i32_gep'
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <16 x i32> %idx
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER5-LABEL: 'scatter_v16i32_gep'
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <16 x i32> %idx
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER6-LABEL: 'scatter_v16i32_gep'
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds i32, ptr %base, <16 x i32> %idx
-; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.scatter.v16i32.v16p0(<16 x i32> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER3-LABEL: 'scatter_v16i32_gep'
@@ -991,17 +991,17 @@ define void @scatter_v16i32_gep(<16 x i32> %src, ptr %base, <16 x i32> %idx, <16
 define void @scatter_v16f32_gep(<16 x float> %src, ptr %base, <16 x i32> %idx, <16 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v16f32_gep'
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds float, ptr %base, <16 x i32> %idx
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER5-LABEL: 'scatter_v16f32_gep'
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds float, ptr %base, <16 x i32> %idx
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER6-LABEL: 'scatter_v16f32_gep'
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: %ptrs = getelementptr inbounds float, ptr %base, <16 x i32> %idx
-; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 31 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
+; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 47 for instruction: call void @llvm.masked.scatter.v16f32.v16p0(<16 x float> %src, <16 x ptr> align 4 %ptrs, <16 x i1> %mask)
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER3-LABEL: 'scatter_v16f32_gep'
@@ -1088,15 +1088,15 @@ define <64 x i32> @gather_v64i32(<64 x ptr> %ptrs, <64 x i1> %mask) {
 
 define void @scatter_v32i32(<32 x i32> %src, <32 x ptr> %ptrs, <32 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v32i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: call void @llvm.masked.scatter.v32i32.v32p0(<32 x i32> %src, <32 x ptr> align 4 %ptrs, <32 x i1> %mask)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: call void @llvm.masked.scatter.v32i32.v32p0(<32 x i32> %src, <32 x ptr> align 4 %ptrs, <32 x i1> %mask)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER5-LABEL: 'scatter_v32i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: call void @llvm.masked.scatter.v32i32.v32p0(<32 x i32> %src, <32 x ptr> align 4 %ptrs, <32 x i1> %mask)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: call void @llvm.masked.scatter.v32i32.v32p0(<32 x i32> %src, <32 x ptr> align 4 %ptrs, <32 x i1> %mask)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER6-LABEL: 'scatter_v32i32'
-; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: call void @llvm.masked.scatter.v32i32.v32p0(<32 x i32> %src, <32 x ptr> align 4 %ptrs, <32 x i1> %mask)
+; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 90 for instruction: call void @llvm.masked.scatter.v32i32.v32p0(<32 x i32> %src, <32 x ptr> align 4 %ptrs, <32 x i1> %mask)
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER3-LABEL: 'scatter_v32i32'
@@ -1117,15 +1117,15 @@ define void @scatter_v32i32(<32 x i32> %src, <32 x ptr> %ptrs, <32 x i1> %mask) 
 
 define void @scatter_v64i32(<64 x i32> %src, <64 x ptr> %ptrs, <64 x i1> %mask) {
 ; ZNVER4-LABEL: 'scatter_v64i32'
-; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: call void @llvm.masked.scatter.v64i32.v64p0(<64 x i32> %src, <64 x ptr> align 4 %ptrs, <64 x i1> %mask)
+; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: call void @llvm.masked.scatter.v64i32.v64p0(<64 x i32> %src, <64 x ptr> align 4 %ptrs, <64 x i1> %mask)
 ; ZNVER4-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER5-LABEL: 'scatter_v64i32'
-; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: call void @llvm.masked.scatter.v64i32.v64p0(<64 x i32> %src, <64 x ptr> align 4 %ptrs, <64 x i1> %mask)
+; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: call void @llvm.masked.scatter.v64i32.v64p0(<64 x i32> %src, <64 x ptr> align 4 %ptrs, <64 x i1> %mask)
 ; ZNVER5-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER6-LABEL: 'scatter_v64i32'
-; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 116 for instruction: call void @llvm.masked.scatter.v64i32.v64p0(<64 x i32> %src, <64 x ptr> align 4 %ptrs, <64 x i1> %mask)
+; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 180 for instruction: call void @llvm.masked.scatter.v64i32.v64p0(<64 x i32> %src, <64 x ptr> align 4 %ptrs, <64 x i1> %mask)
 ; ZNVER6-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; ZNVER3-LABEL: 'scatter_v64i32'
