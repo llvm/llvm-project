@@ -754,9 +754,19 @@ bool needCUDAAlloc(const Fortran::semantics::Symbol &sym) {
     const Fortran::semantics::DeclTypeSpec *type{details->type()};
     const Fortran::semantics::DerivedTypeSpec *derived{type ? type->AsDerived()
                                                             : nullptr};
-    if (derived)
-      if (FindCUDADeviceAllocatableUltimateComponent(*derived))
+    if (derived) {
+      if (auto comp{FindCUDADeviceAllocatableUltimateComponent(*derived)}) {
+        llvm::errs() << ">>>> needCUDAAlloc  object='" << sym.name().ToString()
+                     << "'  objectAttr=<none>"
+                     << "  type='" << derived->name().ToString() << "'"
+                     << "  ==> true, because component '"
+                     << comp->name().ToString()
+                     << "' is device-allocatable."
+                     << "  The WHOLE object goes to cuf.alloc, including its"
+                     << " non-allocatable components.\n";
         return true;
+      }
+    }
   }
   return false;
 }

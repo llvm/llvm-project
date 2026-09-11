@@ -7601,6 +7601,35 @@ void DeclarationVisitor::Post(const parser::ComponentDecl &x) {
   if (OkToAddComponent(name)) {
     auto &symbol{DeclareObjectEntity(name, attrs)};
     SetCUDADataAttr(name.source, symbol, cudaDataAttr());
+    // EXPERIMENT (PR #223087 review): apply the same implicit managed
+    // attribution to ALLOCATABLE/POINTER components that
+    // FinishSpecificationPart applies to allocatables and pointers declared in
+    // an ordinary scope. Components live in the derived type's own scope, so
+    // that sweep never reaches them.
+    if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      const bool isAlloc{IsAllocatable(symbol)};
+      const bool isPtr{IsPointer(symbol)};
+      const bool hasAttr{object->cudaDataAttr().has_value()};
+      const bool cudaOn{context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CUDA)};
+      const bool managedOn{context().languageFeatures().IsEnabled(
+          common::LanguageFeature::CudaManaged)};
+      const bool willAttribute{
+          (isAlloc || isPtr) && !hasAttr && cudaOn && managedOn};
+      llvm::errs() << ">>>> ComponentDecl  type='"
+                   << currScope().symbol()->name().ToString() << "'  comp='"
+                   << symbol.name().ToString() << "'"
+                   << "  allocatable=" << isAlloc << "  pointer=" << isPtr
+                   << "  existingAttr="
+                   << (hasAttr
+                              ? common::EnumToString(*object->cudaDataAttr())
+                              : std::string{"<none>"})
+                   << "  CUDA=" << cudaOn << "  CudaManaged=" << managedOn
+                   << "  ==> " << (willAttribute ? "SET Managed" : "left alone")
+                   << "\n";
+      if (willAttribute)
+        object->set_cudaDataAttr(common::CUDADataAttr::Managed);
+    }
     if (symbol.has<ObjectEntityDetails>()) {
       if (auto &init{std::get<std::optional<parser::Initialization>>(x.t)}) {
         Initialization(name, *init, /*inComponentDecl=*/true);
