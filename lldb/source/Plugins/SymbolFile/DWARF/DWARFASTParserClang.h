@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 
 #include "DWARFASTParser.h"
 #include "DWARFDIE.h"
@@ -137,6 +138,8 @@ protected:
   class DelayedAddObjCClassProperty;
   typedef std::vector<DelayedAddObjCClassProperty> DelayedPropertyList;
 
+  typedef llvm::StringMap<llvm::StringRef> PropertyBackingStorageNames;
+
   typedef llvm::DenseMap<
       const lldb_private::plugin::dwarf::DWARFDebugInfoEntry *,
       clang::DeclContext *>
@@ -203,6 +206,9 @@ protected:
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &contained_type_dies,
       DelayedPropertyList &delayed_properties,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
+
+  PropertyBackingStorageNames ParsePropertyBackingStorageNames(
+      const lldb_private::plugin::dwarf::DWARFDIE &parent_die);
 
   void ParseChildParameters(
       clang::DeclContext *containing_decl_ctx,
@@ -399,12 +405,15 @@ private:
   /// \param parent_die The parent DIE.
   /// \param class_clang_type The Objective-C class that will contain the
   /// created property.
+  /// \param property_backing_names Map from property name to backing member
+  /// name, as produced by ParsePropertyBackingStorageNames.
   /// \param delayed_properties The list of delayed properties that the result
   /// will be appended to.
   void
   ParseObjCProperty(const lldb_private::plugin::dwarf::DWARFDIE &die,
                     const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
+                    const PropertyBackingStorageNames &property_backing_names,
                     DelayedPropertyList &delayed_properties);
 
   void

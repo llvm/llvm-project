@@ -7939,21 +7939,16 @@ bool TypeSystemClang::AddObjCClassProperty(
   if (!class_interface_decl || !property_clang_type_to_access.IsValid())
     return false;
 
-  clang::TypeSourceInfo *prop_type_source;
-  if (ivar_decl)
-    prop_type_source = clang_ast.getTrivialTypeSourceInfo(ivar_decl->getType());
-  else
-    prop_type_source = clang_ast.getTrivialTypeSourceInfo(
-        ClangUtil::GetQualType(property_clang_type));
+  clang::QualType property_qual_type =
+      ClangUtil::GetQualType(property_clang_type_to_access);
+  clang::TypeSourceInfo *prop_type_source =
+      clang_ast.getTrivialTypeSourceInfo(property_qual_type);
 
   clang::ObjCPropertyDecl *property_decl =
       clang::ObjCPropertyDecl::CreateDeserialized(clang_ast, GlobalDeclID());
   property_decl->setDeclContext(class_interface_decl);
   property_decl->setDeclName(&clang_ast.Idents.get(property_name));
-  property_decl->setType(ivar_decl
-                             ? ivar_decl->getType()
-                             : ClangUtil::GetQualType(property_clang_type),
-                         prop_type_source);
+  property_decl->setType(property_qual_type, prop_type_source);
   SetMemberOwningModule(property_decl, class_interface_decl);
 
   if (!property_decl)
