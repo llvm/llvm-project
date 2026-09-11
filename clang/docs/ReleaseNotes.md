@@ -130,6 +130,8 @@ features cannot lower the translation-unit ABI level;
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
@@ -486,6 +488,11 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
 
+- `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
+  no longer warn when the selected deallocation function is a destroying
+  `operator delete`, since such a delete expression never invokes the
+  destructor. (#GH65524)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
@@ -582,6 +589,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
 
+- Fixed concept evaluation bugs where some declarations were not added to
+  the current instantiation scope. (#GH198052), (#GH209632)
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
@@ -677,6 +687,9 @@ features cannot lower the translation-unit ABI level;
 
 - `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
   location of a trailing return type. (#GH162649)
+
+- Added missed information to the AST node representing the member function
+  when calling a explicit object member function. (#GH218829)
 
 #### Miscellaneous Bug Fixes
 
