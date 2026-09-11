@@ -810,11 +810,11 @@ void CIRGenFunction::emitStaticVarDecl(const VarDecl &d,
   assert(!cir::MissingFeatures::generateDebugInfo());
 }
 
-void CIRGenFunction::emitScalarInit(const Expr *init, SourceRange loc,
-                                    LValue lvalue, bool capturedByInit) {
+void CIRGenFunction::emitScalarInit(const Expr *init, LValue lvalue,
+                                    bool capturedByInit) {
   assert(!cir::MissingFeatures::objCLifetime());
 
-  SourceLocRAIIObject locRAII{*this, loc};
+  SourceLocRAIIObject locRAII{*this, init->getSourceRange()};
   mlir::Value value = emitScalarExpr(init);
   if (capturedByInit) {
     cgm.errorNYI(init->getSourceRange(), "emitScalarInit: captured by init");
@@ -843,7 +843,7 @@ void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
   }
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
-    emitScalarInit(init, d->getSourceRange(), lvalue);
+    emitScalarInit(init, lvalue);
     return;
   case cir::TEK_Complex: {
     mlir::Value complex = emitComplexExpr(init);

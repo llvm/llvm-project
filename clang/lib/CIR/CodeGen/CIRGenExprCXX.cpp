@@ -1006,8 +1006,7 @@ static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
   // FIXME: Refactor with emitExprAsInit.
   switch (cgf.getEvaluationKind(allocType)) {
   case cir::TEK_Scalar:
-    cgf.emitScalarInit(init, init->getSourceRange(),
-                       cgf.makeAddrLValue(newPtr, allocType), false);
+    cgf.emitScalarInit(init, cgf.makeAddrLValue(newPtr, allocType), false);
     return;
   case cir::TEK_Complex:
     cgf.emitComplexExprIntoLValue(init, cgf.makeAddrLValue(newPtr, allocType),

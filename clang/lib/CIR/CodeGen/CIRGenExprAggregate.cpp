@@ -1026,7 +1026,7 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
     return;
   case cir::TEK_Scalar:
     if (lv.isSimple())
-      cgf.emitScalarInit(e, e->getSourceRange(), lv);
+      cgf.emitScalarInit(e, lv);
     else
       cgf.emitStoreThroughLValue(RValue::get(cgf.emitScalarExpr(e)), lv);
     return;

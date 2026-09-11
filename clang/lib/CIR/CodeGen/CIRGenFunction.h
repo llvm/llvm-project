@@ -2296,7 +2296,7 @@ public:
                                    clang::QualType dstType,
                                    clang::SourceLocation loc);
 
-  void emitScalarInit(const clang::Expr *init, SourceRange loc, LValue lvalue,
+  void emitScalarInit(const clang::Expr *init, LValue lvalue,
                       bool capturedByInit = false);
 
   mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,

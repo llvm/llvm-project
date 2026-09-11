@@ -80,7 +80,7 @@ static void emitDeclInit(CIRGenFunction &cgf, const VarDecl *varDecl,
   switch (CIRGenFunction::getEvaluationKind(type)) {
   case cir::TEK_Scalar:
     assert(!cir::MissingFeatures::objCGC());
-    cgf.emitScalarInit(init, varDecl->getLocation(), lv, false);
+    cgf.emitScalarInit(init, lv, false);
     break;
   case cir::TEK_Complex:
     cgf.emitComplexExprIntoLValue(init, lv, /*isInit=*/true);
