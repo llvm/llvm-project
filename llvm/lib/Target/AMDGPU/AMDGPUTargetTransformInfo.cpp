@@ -307,6 +307,13 @@ unsigned GCNTTIImpl::getNumberOfRegisters(unsigned RCID) const {
   return 4;
 }
 
+std::optional<unsigned> GCNTTIImpl::getRegisterBudget(const Function &F) const {
+  // Report the VGPR budget implied by the occupancy F is compiled for. Callers
+  // comparing a single lumped pressure number against this should be
+  // conservative on the SGPR side, which is intentional.
+  return ST->getMaxNumVGPRs(F);
+}
+
 TypeSize
 GCNTTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   switch (K) {
