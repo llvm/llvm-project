@@ -207,6 +207,20 @@ def LibOpt : Pass<"cir-lib-opt"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def LoopDistribution : Pass<"cir-loop-distribution"> {
+  let summary = "Distribute buried reductions for profitable interchange";
+  let description = [{
+    Distribute structured CIR nests where a reduction is buried behind
+    statements in an enclosing loop, then interchange the exposed reduction
+    nest when doing so makes its innermost memory accesses contiguous while
+    preserving the reduction order.
+  }];
+  let constructor = "mlir::createLoopDistributionPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+  let statistics = [Statistic<"numCandidates", "num-candidates",
+                              "Number of loop distribution candidates">];
+}
+
 def CallConvLowering : Pass<"cir-call-conv-lowering", "mlir::ModuleOp"> {
   let summary = "Lower CIR function signatures and call sites to match target ABI";
   let description = [{
