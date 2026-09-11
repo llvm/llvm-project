@@ -876,6 +876,53 @@ void SwingSchedulerDAG::setMAX_II() {
     MAX_II = MII + SwpIISearchRange;
 }
 
+/// Return the Phi register value that comes from the incoming block \p LoopBB.
+static Register getLoopPhiReg(const MachineInstr &Phi,
+                              const MachineBasicBlock *LoopBB) {
+  for (unsigned i = 1, e = Phi.getNumOperands(); i != e; i += 2)
+    if (Phi.getOperand(i + 1).getMBB() == LoopBB)
+      return Phi.getOperand(i).getReg();
+  return Register();
+}
+
+/// Return true if the loop header contains a chained loop-carried PHI
+/// recurrence that ModuloScheduleExpander cannot rotate correctly through the
+/// epilog. The unsafe shape is a loop-carried PHI \p A whose loop-carried
+/// operand is defined by another loop-carried PHI \p B in the same header (a
+/// PHI-to-PHI "delay line"), where A is scheduled in a later stage than B and
+/// B's own loop value is produced in a still-later stage ("swapped"). For such
+/// recurrences the expander's epilog cannot materialize the required rotation,
+/// so the last iteration reads a stale value. The PeelingModuloScheduleExpander
+/// builds a correct steady-state kernel and peels, preserving the rotation.
+/// This predicate is target independent: it inspects only PHI structure and the
+/// computed schedule stages.
+static bool
+hasStaleEpilogPHIRecurrence(MachineBasicBlock &LoopHeader,
+                            const MachineRegisterInfo &MRI,
+                            function_ref<int(MachineInstr *)> GetStage) {
+  for (MachineInstr &A : LoopHeader.phis()) {
+    Register AVal = getLoopPhiReg(A, &LoopHeader);
+    if (!AVal.isVirtual())
+      continue;
+    MachineInstr *B = MRI.getVRegDef(AVal);
+    if (!B || !B->isPHI() || B->getParent() != &LoopHeader)
+      continue;
+    int AStage = GetStage(&A);
+    int BStage = GetStage(B);
+    if (AStage <= BStage)
+      continue;
+    // Is B "swapped": is its loop value produced in a later stage than B?
+    Register BVal = getLoopPhiReg(*B, &LoopHeader);
+    if (!BVal.isVirtual())
+      continue;
+    MachineInstr *BDef = MRI.getVRegDef(BVal);
+    if (BDef && BDef->getParent() == &LoopHeader && !BDef->isPHI() &&
+        GetStage(BDef) > BStage)
+      return true;
+  }
+  return false;
+}
+
 SwingSchedulerDAG::SwingSchedulerDAG(MachineFunction &MF,
                                      const MachineLoopInfo *MLI,
                                      MachineOptimizationRemarkEmitter *ORE,
@@ -1068,8 +1115,31 @@ void SwingSchedulerDAG::schedule() {
     MSTI.annotate();
     return;
   }
+  // ModuloScheduleExpander cannot rotate a chained loop-carried PHI recurrence
+  // through the epilog and would emit a stale value on the last iteration.
+  // The PeelingModuloScheduleExpander handles such loops correctly, but it
+  // cannot run when there are InstrChanges. If the unsafe shape is present and
+  // we cannot use the peeling expander, abort pipelining rather than let
+  // ModuloScheduleExpander emit a stale epilog value.
+  bool HasStaleEpilog = hasStaleEpilogPHIRecurrence(
+      *Loop.getHeader(), MF.getRegInfo(), [&](MachineInstr *MI) {
+        // getSUnit() may return null for an instruction that has no
+        // SUnit; treat that as "not scheduled" explicitly rather than
+        // relying on stageScheduled(nullptr) returning -1.
+        SUnit *SU = getSUnit(MI);
+        return SU ? Schedule.stageScheduled(SU) : -1;
+      });
+  if (HasStaleEpilog && !NewInstrChanges.empty()) {
+    LLVM_DEBUG(dbgs() << "Cannot safely expand chained loop-carried PHIs with "
+                         "InstrChanges, abort pipelining\n");
+    return;
+  }
+  bool PreferPeeling = HasStaleEpilog;
+  LLVM_DEBUG(if (PreferPeeling) dbgs()
+             << "Using peeling expander for chained loop-carried PHIs\n");
+
   // The experimental code generator can't work if there are InstChanges.
-  if (ExperimentalCodeGen && NewInstrChanges.empty()) {
+  if ((ExperimentalCodeGen || PreferPeeling) && NewInstrChanges.empty()) {
     PeelingModuloScheduleExpander MSE(MF, MS, &LIS, MDT);
     MSE.expand();
   } else if (MVECodeGen && NewInstrChanges.empty() &&
@@ -1110,15 +1180,6 @@ static void getPhiRegs(const MachineInstr &Phi, const MachineBasicBlock *Loop,
       LoopVal = Phi.getOperand(i).getReg();
 
   assert(InitVal && LoopVal && "Unexpected Phi structure.");
-}
-
-/// Return the Phi register value that comes the loop block.
-static Register getLoopPhiReg(const MachineInstr &Phi,
-                              const MachineBasicBlock *LoopBB) {
-  for (unsigned i = 1, e = Phi.getNumOperands(); i != e; i += 2)
-    if (Phi.getOperand(i + 1).getMBB() == LoopBB)
-      return Phi.getOperand(i).getReg();
-  return Register();
 }
 
 /// Return true if SUb can be reached from SUa following the chain edges.
