@@ -9946,10 +9946,14 @@ static SDValue stripTruncAndExt(SDValue Value) {
 SDValue DAGCombiner::mergeTruncStores(StoreSDNode *N) {
   // The matching looks for "store (trunc x)" patterns that appear early but are
   // likely to be replaced by truncating store nodes during combining.
+  // This must be restricted to the combine rounds that run before type
+  // legalization: the fold creates a truncate to the wide type plus an optional
+  // bswap/rotate of it, and those are only allowed to have an illegal type
+  // while types have not been legalized yet.
   // TODO: If there is evidence that running this later would help, this
   //       limitation could be removed. Legality checks may need to be added
   //       for the created store and optional bswap/rotate.
-  if (LegalOperations || OptLevel == CodeGenOptLevel::None)
+  if (LegalTypes || OptLevel == CodeGenOptLevel::None)
     return SDValue();
 
   // We only handle merging simple stores of 1-4 bytes.
