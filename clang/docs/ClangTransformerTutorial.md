@@ -367,7 +367,7 @@ introductions on clang's site:
 
 - {doc}`Introduction to the Clang AST <IntroductionToTheClangAST>`
 - {doc}`Matching the Clang AST <LibASTMatchers>`
-- [AST Matcher Reference](LibASTMatchersReference.html)
+- [AST Matcher Reference](LibASTMatchersReference.html){.external}
 
 :::{rubric} Footnotes
 :::

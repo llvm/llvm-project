@@ -598,7 +598,7 @@ By default, the following summaries are assumed:
   including the implicit `this` parameter.
 
 These summaries can be overriden with the following
-{doc}`attributes <../../AttributeReference>`:
+{ref}`attributes <os-retained-attr-family>`:
 
 #### Attribute 'os_returns_retained'
 
