@@ -401,9 +401,9 @@ define void @struct_i32x3_memcpy_into_alloca(ptr %c) {
 ; CHECK-LABEL: define void @struct_i32x3_memcpy_into_alloca(
 ; CHECK-SAME: ptr [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[E_SROA_0:%.*]] = alloca <3 x i32>, align 16
+; CHECK-NEXT:    [[E_SROA_0:%.*]] = alloca <3 x i32>, align 4
 ; CHECK-NEXT:    [[E_SROA_0_0_COPYLOAD:%.*]] = load volatile <3 x i32>, ptr [[C]], align 4
-; CHECK-NEXT:    store volatile <3 x i32> [[E_SROA_0_0_COPYLOAD]], ptr [[E_SROA_0]], align 16
+; CHECK-NEXT:    store volatile <3 x i32> [[E_SROA_0_0_COPYLOAD]], ptr [[E_SROA_0]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

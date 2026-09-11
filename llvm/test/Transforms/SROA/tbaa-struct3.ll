@@ -151,21 +151,21 @@ define void @memset(ptr %dst, ptr align 8 %src) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr align 8 [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [7 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i16, align 2
+; CHECK-NEXT:    [[A_SROA_3:%.*]] = alloca i16, align 1
 ; CHECK-NEXT:    [[A_SROA_4:%.*]] = alloca [10 x i8], align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_0]], ptr align 8 [[SRC]], i32 7, i1 false)
 ; CHECK-NEXT:    [[A_SROA_3_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 7
 ; CHECK-NEXT:    [[A_SROA_3_0_COPYLOAD:%.*]] = load i16, ptr [[A_SROA_3_0_SRC_SROA_IDX]], align 1
-; CHECK-NEXT:    store i16 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3]], align 2
+; CHECK-NEXT:    store i16 [[A_SROA_3_0_COPYLOAD]], ptr [[A_SROA_3]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 9
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 1 [[A_SROA_4_0_SRC_SROA_IDX]], i32 10, i1 false)
-; CHECK-NEXT:    store i16 1, ptr [[A_SROA_3]], align 2
+; CHECK-NEXT:    store i16 1, ptr [[A_SROA_3]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_1_A_1_SROA_IDX2:%.*]] = getelementptr inbounds i8, ptr [[A_SROA_0]], i64 1
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[A_SROA_0_1_A_1_SROA_IDX2]], i8 42, i32 6, i1 false)
-; CHECK-NEXT:    store i16 10794, ptr [[A_SROA_3]], align 2, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    store i16 10794, ptr [[A_SROA_3]], align 1, !tbaa [[FLOAT_TBAA0]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 7, i1 true)
 ; CHECK-NEXT:    [[A_SROA_3_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 7
-; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_0_COPYLOAD1:%.*]] = load volatile i16, ptr [[A_SROA_3]], align 2
+; CHECK-NEXT:    [[A_SROA_3_0_A_SROA_3_0_COPYLOAD1:%.*]] = load volatile i16, ptr [[A_SROA_3]], align 1
 ; CHECK-NEXT:    store volatile i16 [[A_SROA_3_0_A_SROA_3_0_COPYLOAD1]], ptr [[A_SROA_3_0_DST_SROA_IDX]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 9
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4_0_DST_SROA_IDX]], ptr align 1 [[A_SROA_4]], i32 10, i1 true)
@@ -235,17 +235,17 @@ define void @slice_store_v2i8_1(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca [6 x i8], align 1
-; CHECK-NEXT:    [[A_SROA_2_SROA_0:%.*]] = alloca <2 x i8>, align 4
+; CHECK-NEXT:    [[A_SROA_2_SROA_0:%.*]] = alloca <2 x i8>, align 1
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_0]], ptr align 8 [[SRC]], i32 6, i1 false)
 ; CHECK-NEXT:    [[A_SROA_2_0_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 6
 ; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_COPYLOAD:%.*]] = load <2 x i8>, ptr [[A_SROA_2_0_SRC_SROA_IDX]], align 2
-; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_SROA_0]], align 4
-; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> splat (i16 123) to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 4
+; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_COPYLOAD]], ptr [[A_SROA_2_SROA_0]], align 1
+; CHECK-NEXT:    store <2 x i8> bitcast (<1 x i16> splat (i16 123) to <2 x i8>), ptr [[A_SROA_2_SROA_0]], align 1
+; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 1
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_A_SROA_2_6_V_4]], ptr [[DST_2]], align 2
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 1 [[A_SROA_0]], i32 6, i1 true)
 ; CHECK-NEXT:    [[A_SROA_2_0_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 6
-; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_COPYLOAD1:%.*]] = load volatile <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_COPYLOAD1:%.*]] = load volatile <2 x i8>, ptr [[A_SROA_2_SROA_0]], align 1
 ; CHECK-NEXT:    store volatile <2 x i8> [[A_SROA_2_SROA_0_0_A_SROA_2_SROA_0_0_COPYLOAD1]], ptr [[A_SROA_2_0_DST_SROA_IDX]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -269,21 +269,21 @@ define void @slice_store_v2i8_2(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-LABEL: define void @slice_store_v2i8_2(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A_SROA_0_SROA_1:%.*]] = alloca <2 x i8>, align 2
+; CHECK-NEXT:    [[A_SROA_0_SROA_1:%.*]] = alloca <2 x i8>, align 1
 ; CHECK-NEXT:    [[A_SROA_0_SROA_4:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[A_SROA_4:%.*]] = alloca [5 x i8], align 1
 ; CHECK-NEXT:    [[A_SROA_0_SROA_1_1_COPYLOAD:%.*]] = load <2 x i8>, ptr [[SRC]], align 8
-; CHECK-NEXT:    store <2 x i8> [[A_SROA_0_SROA_1_1_COPYLOAD]], ptr [[A_SROA_0_SROA_1]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A_SROA_0_SROA_1_1_COPYLOAD]], ptr [[A_SROA_0_SROA_1]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_SROA_4_1_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 2
 ; CHECK-NEXT:    [[A_SROA_0_SROA_4_1_COPYLOAD:%.*]] = load i8, ptr [[A_SROA_0_SROA_4_1_SRC_SROA_IDX]], align 2
 ; CHECK-NEXT:    store i8 [[A_SROA_0_SROA_4_1_COPYLOAD]], ptr [[A_SROA_0_SROA_4]], align 1
 ; CHECK-NEXT:    [[A_SROA_4_1_SRC_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 3
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[A_SROA_4]], ptr align 1 [[A_SROA_4_1_SRC_SROA_IDX]], i32 5, i1 false)
-; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[A_SROA_0_SROA_1]], align 2
+; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[A_SROA_0_SROA_1]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[A_SROA_0_SROA_4]], align 1
-; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 2
+; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4:%.*]] = load <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 1
 ; CHECK-NEXT:    store <2 x i8> [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_A_SROA_0_1_V_4]], ptr [[DST_2]], align 2
-; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_COPYLOAD3:%.*]] = load volatile <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 2
+; CHECK-NEXT:    [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_COPYLOAD3:%.*]] = load volatile <2 x i8>, ptr [[A_SROA_0_SROA_1]], align 1
 ; CHECK-NEXT:    store volatile <2 x i8> [[A_SROA_0_SROA_1_0_A_SROA_0_SROA_1_1_COPYLOAD3]], ptr [[DST]], align 1
 ; CHECK-NEXT:    [[A_SROA_0_SROA_4_1_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 2
 ; CHECK-NEXT:    [[A_SROA_0_SROA_4_0_A_SROA_0_SROA_4_1_COPYLOAD4:%.*]] = load volatile i8, ptr [[A_SROA_0_SROA_4]], align 1
@@ -336,10 +336,10 @@ define i32 @shorten_integer_store_single_field(ptr %dst, ptr %dst.2, ptr %src) {
 ; CHECK-LABEL: define i32 @shorten_integer_store_single_field(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 4, !tbaa [[FLOAT_TBAA0]]
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i32, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 2
+; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 2, !tbaa [[FLOAT_TBAA0]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i32, ptr [[A_SROA_0]], align 2
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 2
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD]], ptr [[DST]], align 1
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_A_SROA_0_0_L]]
 ;
@@ -355,10 +355,10 @@ define i32 @shorten_integer_store_multiple_fields(ptr %dst, ptr %dst.2, ptr %src
 ; CHECK-LABEL: define i32 @shorten_integer_store_multiple_fields(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 4, !tbaa [[V2F32_TBAA5]]
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i32, ptr [[A_SROA_0]], align 4
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 4
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 2
+; CHECK-NEXT:    store i32 123, ptr [[A_SROA_0]], align 2, !tbaa [[V2F32_TBAA5]]
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load i32, ptr [[A_SROA_0]], align 2
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_COPYLOAD:%.*]] = load volatile i32, ptr [[A_SROA_0]], align 2
 ; CHECK-NEXT:    store volatile i32 [[A_SROA_0_0_A_SROA_0_0_COPYLOAD]], ptr [[DST]], align 1
 ; CHECK-NEXT:    ret i32 [[A_SROA_0_0_A_SROA_0_0_L]]
 ;
@@ -374,10 +374,10 @@ define <2 x i16> @shorten_vector_store_multiple_fields(ptr %dst, ptr %dst.2, ptr
 ; CHECK-LABEL: define <2 x i16> @shorten_vector_store_multiple_fields(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[DST_2:%.*]], ptr [[SRC:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x i32>, align 8
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 8
-; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load <2 x i16>, ptr [[A_SROA_0]], align 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 8 [[A_SROA_0]], i32 4, i1 true)
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca <2 x i32>, align 2
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[A_SROA_0]], align 2
+; CHECK-NEXT:    [[A_SROA_0_0_A_SROA_0_0_L:%.*]] = load <2 x i16>, ptr [[A_SROA_0]], align 2
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[DST]], ptr align 2 [[A_SROA_0]], i32 4, i1 true)
 ; CHECK-NEXT:    ret <2 x i16> [[A_SROA_0_0_A_SROA_0_0_L]]
 ;
 entry:
