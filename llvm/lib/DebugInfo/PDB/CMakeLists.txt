@@ -69,7 +69,8 @@ add_pdb_impl_folder(Native
   Native/NativeTypeEnum.cpp
   Native/NativeTypeFunctionSig.cpp
   Native/NativeTypePointer.cpp
-  Native/NativeTypeTypedef.cpp
+  Native/NativeTypeTypedefAlias.cpp
+  Native/NativeTypeTypedefUDT.cpp
   Native/NativeTypeUDT.cpp
   Native/NativeTypeVTShape.cpp
   Native/NamedStreamMap.cpp

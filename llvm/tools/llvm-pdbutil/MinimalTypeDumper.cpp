@@ -535,6 +535,11 @@ Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR,
   return Error::success();
 }
 
+Error MinimalTypeDumpVisitor::visitKnownRecord(CVType &CVR, AliasRecord &AR) {
+  P.formatLine("underlying type = {0}, name = {1}", AR.UnderlyingType, AR.Name);
+  return Error::success();
+}
+
 Error MinimalTypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
                                                NestedTypeRecord &Nested) {
   P.format(" [name = `{0}`, parent = {1}]", Nested.Name, Nested.Type);

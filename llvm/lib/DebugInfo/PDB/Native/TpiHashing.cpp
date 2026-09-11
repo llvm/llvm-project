@@ -85,6 +85,15 @@ static Expected<uint32_t> getSourceLineHash(const CVType &Rec) {
   return hashStringV1(StringRef(Buf, 4));
 }
 
+// LF_ALIAS is considered a UDT, so only the name is hashed.
+static Expected<uint32_t> getHashForAlias(const CVType &Rec) {
+  AliasRecord Deserialized;
+  if (auto E = TypeDeserializer::deserializeAs(const_cast<CVType &>(Rec),
+                                               Deserialized))
+    return std::move(E);
+  return hashStringV1(Deserialized.Name);
+}
+
 Expected<TagRecordHash> llvm::pdb::hashTagRecord(const codeview::CVType &Type) {
   switch (Type.kind()) {
   case LF_CLASS:
@@ -112,7 +121,8 @@ Expected<uint32_t> llvm::pdb::hashTypeRecord(const CVType &Rec) {
     return getHashForUdt<UnionRecord>(Rec);
   case LF_ENUM:
     return getHashForUdt<EnumRecord>(Rec);
-
+  case LF_ALIAS:
+    return getHashForAlias(Rec);
   case LF_UDT_SRC_LINE:
     return getSourceLineHash<UdtSourceLineRecord>(Rec);
   case LF_UDT_MOD_SRC_LINE:
