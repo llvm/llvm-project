@@ -834,6 +834,10 @@ public:
   /// the body.
   StmtResult SkipLambdaBody(LambdaExpr *E, Stmt *Body);
 
+  /// Whether a lambda-expression is dependent regardless of the context it is
+  /// rebuilt in.
+  bool IsLambdaAlwaysDependent() { return false; }
+
   CXXRecordDecl::LambdaDependencyKind
   ComputeLambdaDependency(LambdaScopeInfo *LSI) {
     return static_cast<CXXRecordDecl::LambdaDependencyKind>(
@@ -16304,11 +16308,13 @@ TreeTransform<Derived>::TransformLambdaExpr(LambdaExpr *E) {
   // (A ClassTemplateSpecializationDecl is always a dependent context.)
   while (DC->isRequiresExprBody() || isa<CXXExpansionStmtDecl>(DC))
     DC = DC->getParent();
-  if ((getSema().isUnevaluatedContext() ||
-       getSema().isConstantEvaluatedContext()) &&
-      !(dyn_cast_or_null<CXXRecordDecl>(DC->getParent()) &&
-        cast<CXXRecordDecl>(DC->getParent())->isGenericLambda()) &&
-      (DC->isFileContext() || !DC->getParent()->isDependentContext()))
+  if (getDerived().IsLambdaAlwaysDependent())
+    DependencyKind = CXXRecordDecl::LDK_AlwaysDependent;
+  else if ((getSema().isUnevaluatedContext() ||
+            getSema().isConstantEvaluatedContext()) &&
+           !(dyn_cast_or_null<CXXRecordDecl>(DC->getParent()) &&
+             cast<CXXRecordDecl>(DC->getParent())->isGenericLambda()) &&
+           (DC->isFileContext() || !DC->getParent()->isDependentContext()))
     DependencyKind = CXXRecordDecl::LDK_NeverDependent;
 
   CXXRecordDecl *OldClass = E->getLambdaClass();

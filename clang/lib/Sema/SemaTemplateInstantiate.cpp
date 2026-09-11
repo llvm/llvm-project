@@ -1765,14 +1765,16 @@ namespace {
     TransformSubstBuiltinTemplatePackType(TypeLocBuilder &TLB,
                                           SubstBuiltinTemplatePackTypeLoc TL);
 
+    // A lambda in the default argument of a template parameter is dependent
+    // when parsed (it is within a template parameter list) and remains so
+    // while that parameter list is instantiated without being substituted
+    // itself, e.g. for a member template of a class being instantiated.
+    bool IsLambdaAlwaysDependent() {
+      return InTemplateParameterDefaultArgument;
+    }
+
     CXXRecordDecl::LambdaDependencyKind
     ComputeLambdaDependency(LambdaScopeInfo *LSI) {
-      // A lambda in the default argument of a template parameter is dependent
-      // when parsed (it is within a template parameter list) and remains so
-      // while that parameter list is instantiated without being substituted
-      // itself, e.g. for a member template of a class being instantiated.
-      if (InTemplateParameterDefaultArgument)
-        return CXXRecordDecl::LambdaDependencyKind::LDK_AlwaysDependent;
       if (auto TypeAlias =
               TemplateInstArgsHelpers::getEnclosingTypeAliasTemplateDecl(
                   getSema());

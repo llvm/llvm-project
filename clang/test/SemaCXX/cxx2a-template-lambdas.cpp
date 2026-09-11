@@ -122,6 +122,11 @@ template <int N> struct S {
   static constexpr auto var = V;
   template <auto V = []<typename... U>(U...) { return sizeof...(U) + N; }()>
   using alias = A<V>;
+  template <auto V = [] {
+    struct Local { static constexpr int get() { return N; } };
+    return Local::get();
+  }()>
+  struct F { static constexpr auto value = V; };
 };
 static_assert(S<1>::A<>::value == 1);
 static_assert(S<1>::A<5>::value == 5);
@@ -132,6 +137,7 @@ static_assert(__is_same(S<1>::E<>::type, int));
 static_assert(S<1>::f() == 1);
 static_assert(S<1>::var<> == 1);
 static_assert(S<1>::alias<>::value == 1);
+static_assert(S<1>::F<>::value == 1);
 
 template <int N> struct Outer {
   template <int M> struct Inner {
