@@ -44,7 +44,8 @@ static LogicalResult generalizeNamedOpPrecondition(LinalgOp linalgOp) {
 }
 
 FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
-                                                     LinalgOp linalgOp) {
+                                                     LinalgOp linalgOp,
+                                                     bool emitCategoryOps) {
   if (failed(generalizeNamedOpPrecondition(linalgOp)))
     return rewriter.notifyMatchFailure(linalgOp, "preconditions not met");
 

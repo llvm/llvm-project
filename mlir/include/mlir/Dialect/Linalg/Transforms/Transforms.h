@@ -917,21 +917,17 @@ FailureOr<GenericOp> interchangeGenericOp(RewriterBase &rewriter,
                                           GenericOp genericOp,
                                           ArrayRef<unsigned> interchangeVector);
 
-/// Create a GenericOp from the given named operation `linalgOp` and replace
-/// the given `linalgOp`.
-/// Return failure if `linalgOp` is a GenericOp or misses a region builder.
+/// Create a GenericOp or CategoryOp from the given named operation `linalgOp`
+/// and replace the given `linalgOp`. Return failure if `linalgOp` is a
+/// GenericOp or misses a region builder.
 FailureOr<GenericOp> generalizeNamedOp(RewriterBase &rewriter,
-                                       LinalgOp linalgOp);
-
-struct GenericOpSpecializationOptions {
-  // Specialize generics to category ops (default: named ops).
-  bool emitCategoryOps = false;
-};
+                                       LinalgOp linalgOp,
+                                       bool emitCategoryOps = false);
 
 /// Replace the given GenericOp with a namedOp or categoryOp.
-FailureOr<LinalgOp>
-specializeGenericOp(RewriterBase &rewriter, GenericOp genericOp,
-                    const GenericOpSpecializationOptions &options = {});
+FailureOr<LinalgOp> specializeGenericOp(RewriterBase &rewriter,
+                                        GenericOp genericOp,
+                                        bool emitCategoryOps = false);
 
 /// Create a new buffer using the `allocationFn` provided. The size of this
 /// buffer is either the original subview size when 'useOriginalSubviewSize' is
@@ -1689,13 +1685,13 @@ struct LinalgGeneralizationPattern
 struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
 
   LinalgSpecializationPattern(
-      MLIRContext *context, const GenericOpSpecializationOptions &options = {},
+      MLIRContext *context, bool emitCategoryOps = false,
       PatternBenefit benefit = 1)
-      : OpRewritePattern<GenericOp>(context, benefit), options(options) {}
+      : OpRewritePattern<GenericOp>(context, benefit), emitCategoryOps(emitCategoryOps) {}
 
   FailureOr<GenericOp>
   returningMatchAndRewrite(GenericOp op, PatternRewriter &rewriter) const {
-    return specializeGenericOp(rewriter, op, options);
+    return specializeGenericOp(rewriter, op, emitCategoryOps);
   }
 
   LogicalResult matchAndRewrite(GenericOp op,
@@ -1704,7 +1700,26 @@ struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
   }
 
 private:
-  GenericOpSpecializationOptions options;
+  bool emitCategoryOps;
+};
+
+struct LinalgCategorizationPattern : public OpInterfaceRewritePattern<LinalgOp> {
+
+  LinalgCategorizationPattern(
+      MLIRContext *context, PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit) {}
+
+  FailureOr<LinalgOp>
+  returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const {
+    if (GenericOp generic = dyn_cast<GenericOp>(*op))
+      return specializeGenericOp(rewriter, generic, true);
+    return generalizeNamedOp(rewriter, op);
+  }
+
+  LogicalResult matchAndRewrite(LinalgOp op,
+                                PatternRewriter &rewriter) const override {
+    return returningMatchAndRewrite(op, rewriter);
+  }
 };
 
 /// Vectorization pattern for memref::CopyOp.
@@ -1919,9 +1934,8 @@ void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
 /// e.g. linalg.generic that takes a tensor and computes a polynomial such as:
 ///     p(x) = an*x^n + ... + a1x + a0
 /// There is no equivalent named op to convert to. Many such cases exist.
-void populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns,
-    const GenericOpSpecializationOptions &options = {});
+void populateLinalgGenericOpsSpecializationPatterns(RewritePatternSet &patterns,
+                                                    bool emitCategoryOps = false);
 
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.

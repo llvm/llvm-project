@@ -699,7 +699,7 @@ static FailureOr<LinalgOp> specializeLinalgConvolutions(RewriterBase &rewriter,
 //===----------------------------------------------------------------------===//
 FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
     RewriterBase &rewriter, GenericOp genericOp,
-    const GenericOpSpecializationOptions &options) {
+    bool emitCategoryOps) {
   // Elementwise - e.g. exp, add
   if (isaElemwiseSingleUnaryOpInterface(genericOp) ||
       isaElemwiseSingleBinaryOpInterface(genericOp)) {
@@ -709,13 +709,13 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(
   // Contraction - e.g. matmul
   if (isaContractionOpInterface(genericOp)) {
     return specializeLinalgContractions(rewriter, genericOp,
-                                        options.emitCategoryOps);
+                                        emitCategoryOps);
   }
 
   // Early exit in case of category specialization.
   // TODO: Remove when matches for other ops account for both named and
   // category.
-  if (options.emitCategoryOps)
+  if (emitCategoryOps)
     return rewriter.notifyMatchFailure(
         genericOp, "no matching category op specialization");
 
@@ -785,7 +785,6 @@ void LinalgSpecializeGenericOpsPass::runOnOperation() {
 }
 
 void mlir::linalg::populateLinalgGenericOpsSpecializationPatterns(
-    RewritePatternSet &patterns,
-    const GenericOpSpecializationOptions &options) {
-  patterns.add<LinalgSpecializationPattern>(patterns.getContext(), options);
+    RewritePatternSet &patterns, bool emitCategoryOps) {
+  patterns.add<LinalgSpecializationPattern>(patterns.getContext(), emitCategoryOps);
 }
