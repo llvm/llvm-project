@@ -40,6 +40,8 @@
 #include "llvm/ExecutionEngine/Orc/SectCreate.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMapSPS.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteMemoryMapper.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderPerf.h"
@@ -761,38 +763,28 @@ static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
-  SimpleRemoteMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::SimpleExecutorMemoryManagerDeinitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName}}))
-    return std::move(Err);
+  auto &ES = EPC.getExecutionSession();
+  auto B = sps::createSimpleMemoryMapBindings(ES);
+  if (!B)
+    return B.takeError();
 #ifdef _WIN32
   size_t SlabSize = 1024 * 1024;
 #else
   size_t SlabSize = 1024 * 1024 * 1024;
 #endif
   return MapperJITLinkMemoryManager::CreateWithMapper<SimpleRemoteMemoryMapper>(
-      SlabSize, EPC, SAs);
+      SlabSize, ES, std::move(*B));
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::ExecutorSharedMemoryMapperServiceInstanceName},
-           {SAs.Reserve,
-            rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
-           {SAs.Initialize,
-            rt::ExecutorSharedMemoryMapperServiceInitializeWrapperName},
-           {SAs.Deinitialize,
-            rt::ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
-           {SAs.Release,
-            rt::ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+          {{SAs.Instance, rt::sps_ci::SharedMemoryMapperInstanceName},
+           {SAs.Reserve, rt::sps_ci::SharedMemoryMapperReserve::Name},
+           {SAs.Initialize, rt::sps_ci::SharedMemoryMapperInitialize::Name},
+           {SAs.Deinitialize, rt::sps_ci::SharedMemoryMapperDeinitialize::Name},
+           {SAs.Release, rt::sps_ci::SharedMemoryMapperRelease::Name}}))
     return std::move(Err);
 
 #ifdef _WIN32
@@ -1277,13 +1269,8 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
   }
 
   if (DebuggerSupport && TT.isOSBinFormatMachO()) {
-    if (!ProcessSymsJD) {
-      Err = make_error<StringError>("MachO debugging requires process symbols",
-                                    inconvertibleErrorCode());
-      return;
-    }
     ObjLayer->addPlugin(ExitOnErr(GDBJITDebugInfoRegistrationPlugin::Create(
-        this->ES, *ProcessSymsJD, TT)));
+        this->ES, this->ES.getBootstrapJITDylib())));
   }
 
   if (PerfSupport && TT.isOSBinFormatELF()) {

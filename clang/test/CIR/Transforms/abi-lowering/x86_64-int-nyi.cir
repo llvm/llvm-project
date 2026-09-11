@@ -3,7 +3,7 @@
 !b129i = !cir.int<s, 129, bitint>
 !b200i = !cir.int<s, 200, bitint>
 !i96 = !cir.int<s, 96>
-!rec_D = !cir.struct<"D" {!b200i}>
+!rec_D = !cir.struct<"D" {data !b200i}>
 
 module attributes {
   dlti.dl_spec = #dlti.dl_spec<

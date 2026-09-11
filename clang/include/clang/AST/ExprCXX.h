@@ -15,6 +15,7 @@
 #define LLVM_CLANG_AST_EXPRCXX_H
 
 #include "clang/AST/ASTConcept.h"
+#include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/ComputeDependence.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclBase.h"
@@ -2905,7 +2906,7 @@ class TypeTraitExpr final
 
   TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
                 ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
-                std::variant<bool, APValue> Value);
+                std::variant<bool, APValue, ComparisonCategoryResult> Value);
 
   TypeTraitExpr(EmptyShell Empty, bool IsStoredAsBool);
 
@@ -2934,6 +2935,12 @@ public:
                                ArrayRef<TypeSourceInfo *> Args,
                                SourceLocation RParenLoc, APValue Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc,
+                               ComparisonCategoryResult Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
                                            bool IsStoredAsBool,
                                            unsigned NumArgs);
@@ -2945,6 +2952,10 @@ public:
 
   bool isStoredAsBoolean() const {
     return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool isStoredAsComparisonResult() const {
+    return TypeTraitExprBits.IsComparisonResult;
   }
 
   bool getBoolValue() const {
@@ -3287,37 +3298,9 @@ public:
            getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
-  bool isConceptReference() const {
-    return getNumDecls() == 1 && [&]() {
-      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
-              getTrailingResults()->getDecl()))
-        return TTP->templateParameterKind() == TNK_Concept_template;
-      if (isa<ConceptDecl>(getTrailingResults()->getDecl()))
-        return true;
-      return false;
-    }();
-  }
-
-  bool isVarDeclReference() const {
-    return getNumDecls() == 1 && [&]() {
-      if (auto *TTP = dyn_cast_or_null<TemplateTemplateParmDecl>(
-              getTrailingResults()->getDecl()))
-        return TTP->templateParameterKind() == TNK_Var_template;
-      if (isa<VarTemplateDecl>(getTrailingResults()->getDecl()))
-        return true;
-      return false;
-    }();
-  }
-
   TemplateDecl *getTemplateDecl() const {
     assert(getNumDecls() == 1);
     return dyn_cast_or_null<TemplateDecl>(getTrailingResults()->getDecl());
-  }
-
-  TemplateTemplateParmDecl *getTemplateTemplateDecl() const {
-    assert(getNumDecls() == 1);
-    return dyn_cast_or_null<TemplateTemplateParmDecl>(
-        getTrailingResults()->getDecl());
   }
 
   TemplateArgumentLoc const *getTemplateArgs() const {
@@ -3485,6 +3468,77 @@ public:
 
   static bool classof(const Stmt *T) {
     return T->getStmtClass() == UnresolvedLookupExprClass;
+  }
+};
+
+/// A template-id naming a variable template or a concept through a template
+/// template parameter.
+class DependentTemplateIdExpr final
+    : public Expr,
+      private llvm::TrailingObjects<DependentTemplateIdExpr,
+                                    TemplateArgumentLoc> {
+  friend class ASTStmtReader;
+  friend class ASTStmtWriter;
+  friend TrailingObjects;
+
+  DeclarationNameInfo NameInfo;
+  TemplateName Name;
+  ASTTemplateKWAndArgsInfo KWAndArgs;
+
+  DependentTemplateIdExpr(const ASTContext &Context,
+                          const DeclarationNameInfo &NameInfo,
+                          TemplateName Name,
+                          const TemplateArgumentListInfo &TemplateArgs);
+
+  DependentTemplateIdExpr(EmptyShell Empty, unsigned NumTemplateArgs);
+
+public:
+  static DependentTemplateIdExpr *
+  Create(const ASTContext &Context, const DeclarationNameInfo &NameInfo,
+         TemplateName Name, const TemplateArgumentListInfo &TemplateArgs);
+
+  static DependentTemplateIdExpr *CreateEmpty(const ASTContext &Context,
+                                              unsigned NumTemplateArgs);
+
+  const DeclarationNameInfo &getNameInfo() const { return NameInfo; }
+  DeclarationName getName() const { return NameInfo.getName(); }
+  SourceLocation getNameLoc() const { return NameInfo.getLoc(); }
+
+  TemplateName getTemplateName() const { return Name; }
+
+  TemplateTemplateParmDecl *getParameter() const {
+    TemplateTemplateParmDecl *P = Name.getAsTemplateTemplateParmDecl();
+    assert(
+        P &&
+        "A dependent template-id always names a template template parameter");
+    return P;
+  }
+
+  bool isConceptReference() const { return Name.isConceptName(); }
+
+  SourceLocation getLAngleLoc() const { return KWAndArgs.LAngleLoc; }
+  SourceLocation getRAngleLoc() const { return KWAndArgs.RAngleLoc; }
+
+  unsigned getNumTemplateArgs() const { return KWAndArgs.NumTemplateArgs; }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return getTrailingObjects(getNumTemplateArgs());
+  }
+
+  SourceLocation getBeginLoc() const { return getNameLoc(); }
+
+  SourceLocation getEndLoc() const { return getRAngleLoc(); }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == DependentTemplateIdExprClass;
   }
 };
 

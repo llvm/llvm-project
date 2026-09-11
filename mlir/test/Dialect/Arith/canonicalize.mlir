@@ -451,6 +451,33 @@ func.func @extUIOfExtUI(%arg0: i1) -> i64 {
   return %ext2 : i64
 }
 
+// CHECK-LABEL: @extUIOfExtUI_outer_nneg
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 : i1 to i64
+//       CHECK:   return %[[res]]
+func.func @extUIOfExtUI_outer_nneg(%arg0: i1) -> i64 {
+  %ext1 = arith.extui %arg0 : i1 to i8
+  %ext2 = arith.extui %ext1 nneg : i8 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extUIOfExtUI_inner_nneg
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 nneg : i8 to i64
+//       CHECK:   return %[[res]]
+func.func @extUIOfExtUI_inner_nneg(%arg0: i8) -> i64 {
+  %ext1 = arith.extui %arg0 nneg : i8 to i32
+  %ext2 = arith.extui %ext1 : i32 to i64
+  return %ext2 : i64
+}
+
+// CHECK-LABEL: @extUIOfExtUI_both_nneg
+//       CHECK:   %[[res:.+]] = arith.extui %arg0 nneg : i8 to i64
+//       CHECK:   return %[[res]]
+func.func @extUIOfExtUI_both_nneg(%arg0: i8) -> i64 {
+  %ext1 = arith.extui %arg0 nneg : i8 to i32
+  %ext2 = arith.extui %ext1 nneg : i32 to i64
+  return %ext2 : i64
+}
+
 // CHECK-LABEL: @extSIOfExtSI
 //       CHECK:   %[[res:.+]] = arith.extsi %arg0 : i1 to i64
 //       CHECK:   return %[[res]]
@@ -1139,6 +1166,79 @@ func.func @extFPVectorConstantE8M0NaN() -> vector<2xf32> {
   return %0 : vector<2xf32>
 }
 
+// A f8E8M0FNU scale stands for 2^scale, so this is 1.5 * 2^2.
+// CHECK-LABEL: @scalingExtFConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 6.000000e+00 : f32
+//       CHECK:   return %[[cres]]
+func.func @scalingExtFConstant() -> f32 {
+  %in = arith.constant 1.500000e+00 : f4E2M1FN
+  %scale = arith.constant 4.000000e+00 : f8E8M0FNU
+  %0 = arith.scaling_extf %in, %scale : f4E2M1FN, f8E8M0FNU to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: @scalingExtFVectorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[2.000000e+00, 8.000000e+00]> : vector<2xf32>
+//       CHECK:   return %[[cres]]
+func.func @scalingExtFVectorConstant() -> vector<2xf32> {
+  %in = arith.constant dense<[1.000000e+00, 2.000000e+00]> : vector<2xf4E2M1FN>
+  %scale = arith.constant dense<[2.000000e+00, 4.000000e+00]> : vector<2xf8E8M0FNU>
+  %0 = arith.scaling_extf %in, %scale : vector<2xf4E2M1FN>, vector<2xf8E8M0FNU> to vector<2xf32>
+  return %0 : vector<2xf32>
+}
+
+// CHECK-LABEL: @scalingExtFSplatConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<3.000000e+00> : vector<4xf32>
+//       CHECK:   return %[[cres]]
+func.func @scalingExtFSplatConstant() -> vector<4xf32> {
+  %in = arith.constant dense<1.500000e+00> : vector<4xf4E2M1FN>
+  %scale = arith.constant dense<2.000000e+00> : vector<4xf8E8M0FNU>
+  %0 = arith.scaling_extf %in, %scale : vector<4xf4E2M1FN>, vector<4xf8E8M0FNU> to vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// The op propagates NaN from either operand. 0xFF is the only f8E8M0FNU NaN.
+// CHECK-LABEL: @scalingExtFNaNScaleConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 0x7FC00000 : f32
+//       CHECK:   return %[[cres]]
+func.func @scalingExtFNaNScaleConstant() -> f32 {
+  %in = arith.constant 1.500000e+00 : f4E2M1FN
+  %scale = arith.constant 0xFF : f8E8M0FNU
+  %0 = arith.scaling_extf %in, %scale : f4E2M1FN, f8E8M0FNU to f32
+  return %0 : f32
+}
+
+// Test that scales which are not already f8E8M0FNU are NOT folded: what such a
+// scale means is unsettled (https://github.com/llvm/llvm-project/issues/215295).
+// CHECK-LABEL: @scalingExtFNonE8M0ScaleConstant
+//       CHECK:   arith.scaling_extf
+func.func @scalingExtFNonE8M0ScaleConstant() -> f32 {
+  %in = arith.constant 1.500000e+00 : f4E2M1FN
+  %scale = arith.constant 1.000000e+00 : f16
+  %0 = arith.scaling_extf %in, %scale : f4E2M1FN, f16 to f32
+  return %0 : f32
+}
+
+// Test that cases where widening the scale is lossy are NOT folded: 0xFE is
+// 2^127, which overflows f16.
+// CHECK-LABEL: @scalingExtFOverflowingScaleConstant
+//       CHECK:   arith.scaling_extf
+func.func @scalingExtFOverflowingScaleConstant() -> f16 {
+  %in = arith.constant 1.500000e+00 : f4E2M1FN
+  %scale = arith.constant 0xFE : f8E8M0FNU
+  %0 = arith.scaling_extf %in, %scale : f4E2M1FN, f8E8M0FNU to f16
+  return %0 : f16
+}
+
+// CHECK-LABEL: @scalingExtFPoisonScale
+//       CHECK:   %[[cres:.+]] = ub.poison : f32
+//       CHECK:   return %[[cres]]
+func.func @scalingExtFPoisonScale(%in: f4E2M1FN) -> f32 {
+  %scale = ub.poison : f8E8M0FNU
+  %0 = arith.scaling_extf %in, %scale : f4E2M1FN, f8E8M0FNU to f32
+  return %0 : f32
+}
+
 // CHECK-LABEL: @truncExtf
 //       CHECK:  %[[EXT:.*]] = arith.extf %arg0 : f32 to f64
 //       CHECK:  %[[TRUNC:.*]] = arith.truncf %[[EXT]] : f64 to f32
@@ -1639,6 +1739,102 @@ func.func @truncFPConstantRounding() -> bf16 {
   %cst = arith.constant 1.444000e+25 : f32
   %0 = arith.truncf %cst : f32 to bf16
   return %0 : bf16
+}
+
+// f8E8M0FNU has no encoding for a negative value, so this conversion is not
+// lossless and is NOT folded. It used to fold, and printing the result of the
+// fold asserted in APFloat.
+// CHECK-LABEL: @truncFPConstantE8M0Negative
+//       CHECK:   arith.constant -2.000000e+00 : f32
+//       CHECK:   truncf
+func.func @truncFPConstantE8M0Negative() -> f8E8M0FNU {
+  %cst = arith.constant -2.000000e+00 : f32
+  %0 = arith.truncf %cst : f32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// It has no encoding for zero either: the 0x00 pattern is 2^-127. Folding used
+// to produce that value silently, while the expansion in ExpandOps.cpp reads
+// the same pattern back as 0.0.
+// CHECK-LABEL: @truncFPConstantE8M0Zero
+//       CHECK:   arith.constant 0.000000e+00 : f32
+//       CHECK:   truncf
+func.func @truncFPConstantE8M0Zero() -> f8E8M0FNU {
+  %cst = arith.constant 0.000000e+00 : f32
+  %0 = arith.truncf %cst : f32 to f8E8M0FNU
+  return %0 : f8E8M0FNU
+}
+
+// Unlike arith.scaling_extf, this divides by 2^scale: 6.0 / 2^1.
+// CHECK-LABEL: @scalingTruncFConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 3.000000e+00 : f4E2M1FN
+//       CHECK:   return %[[cres]]
+func.func @scalingTruncFConstant() -> f4E2M1FN {
+  %in = arith.constant 6.000000e+00 : f32
+  %scale = arith.constant 2.000000e+00 : f8E8M0FNU
+  %0 = arith.scaling_truncf %in, %scale : f32, f8E8M0FNU to f4E2M1FN
+  return %0 : f4E2M1FN
+}
+
+// CHECK-LABEL: @scalingTruncFVectorConstant
+//       CHECK:   %[[cres:.+]] = arith.constant dense<[3.000000e+00, 4.000000e+00]> : vector<2xf4E2M1FN>
+//       CHECK:   return %[[cres]]
+func.func @scalingTruncFVectorConstant() -> vector<2xf4E2M1FN> {
+  %in = arith.constant dense<[6.000000e+00, 8.000000e+00]> : vector<2xf32>
+  %scale = arith.constant dense<2.000000e+00> : vector<2xf8E8M0FNU>
+  %0 = arith.scaling_truncf %in, %scale : vector<2xf32>, vector<2xf8E8M0FNU> to vector<2xf4E2M1FN>
+  return %0 : vector<2xf4E2M1FN>
+}
+
+// CHECK-LABEL: @scalingTruncFDownwardConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 3.000000e+00 : f4E2M1FN
+//       CHECK:   return %[[cres]]
+func.func @scalingTruncFDownwardConstant() -> f4E2M1FN {
+  %in = arith.constant 6.000000e+00 : f32
+  %scale = arith.constant 2.000000e+00 : f8E8M0FNU
+  %0 = arith.scaling_truncf %in, %scale downward : f32, f8E8M0FNU to f4E2M1FN
+  return %0 : f4E2M1FN
+}
+
+// Test that cases with rounding are NOT propagated: 5.0 is not representable
+// in f4E2M1FN, whose values step 0, 0.5, 1, 1.5, 2, 3, 4, 6.
+// CHECK-LABEL: @scalingTruncFConstantRounding
+//       CHECK:   arith.scaling_truncf
+func.func @scalingTruncFConstantRounding() -> f4E2M1FN {
+  %in = arith.constant 5.000000e+00 : f32
+  %scale = arith.constant 1.000000e+00 : f8E8M0FNU
+  %0 = arith.scaling_truncf %in, %scale : f32, f8E8M0FNU to f4E2M1FN
+  return %0 : f4E2M1FN
+}
+
+// CHECK-LABEL: @scalingTruncFNaNScaleConstant
+//       CHECK:   %[[cres:.+]] = arith.constant 0x7E00 : f16
+//       CHECK:   return %[[cres]]
+func.func @scalingTruncFNaNScaleConstant() -> f16 {
+  %in = arith.constant 6.000000e+00 : f32
+  %scale = arith.constant 0xFF : f8E8M0FNU
+  %0 = arith.scaling_truncf %in, %scale : f32, f8E8M0FNU to f16
+  return %0 : f16
+}
+
+// Test that a NaN scale is NOT folded when the result type cannot hold a NaN:
+// f4E2M1FN is finite-only.
+// CHECK-LABEL: @scalingTruncFNaNScaleFiniteOnlyResult
+//       CHECK:   arith.scaling_truncf
+func.func @scalingTruncFNaNScaleFiniteOnlyResult() -> f4E2M1FN {
+  %in = arith.constant 6.000000e+00 : f32
+  %scale = arith.constant 0xFF : f8E8M0FNU
+  %0 = arith.scaling_truncf %in, %scale : f32, f8E8M0FNU to f4E2M1FN
+  return %0 : f4E2M1FN
+}
+
+// CHECK-LABEL: @scalingTruncFPoisonInput
+//       CHECK:   %[[cres:.+]] = ub.poison : f4E2M1FN
+//       CHECK:   return %[[cres]]
+func.func @scalingTruncFPoisonInput(%scale: f8E8M0FNU) -> f4E2M1FN {
+  %in = ub.poison : f32
+  %0 = arith.scaling_truncf %in, %scale : f32, f8E8M0FNU to f4E2M1FN
+  return %0 : f4E2M1FN
 }
 
 // CHECK-LABEL: @tripleAddAdd
@@ -3076,11 +3272,11 @@ func.func @test_maxnumf(%arg0 : f32) -> (f32, f32, f32, f32) {
 // -----
 
 // CHECK-LABEL: @test_addf(
-func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
+func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32, f32) {
   // CHECK-DAG:   %[[C2:.+]] = arith.constant 2.0
   // CHECK-DAG:   %[[C0:.+]] = arith.constant 0.0
   // CHECK-NEXT:  %[[X:.+]] = arith.addf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]]
+  // CHECK-NEXT:   return %[[X]], %arg0, %arg0, %[[C2]], %arg0
   %c0 = arith.constant 0.0 : f32
   %c-0 = arith.constant -0.0 : f32
   %c1 = arith.constant 1.0 : f32
@@ -3088,24 +3284,26 @@ func.func @test_addf(%arg0 : f32) -> (f32, f32, f32, f32) {
   %1 = arith.addf %arg0, %c-0 : f32
   %2 = arith.addf %c-0, %arg0 : f32
   %3 = arith.addf %c1, %c1 : f32
-  return %0, %1, %2, %3 : f32, f32, f32, f32
+  %4 = arith.addf %c0, %arg0 fastmath<nsz> : f32
+  return %0, %1, %2, %3, %4 : f32, f32, f32, f32, f32
 }
 
 // -----
 
 // CHECK-LABEL: @test_subf(
-func.func @test_subf(%arg0 : f16) -> (f16, f16, f16) {
+func.func @test_subf(%arg0 : f16) -> (f16, f16, f16, f16) {
   // CHECK-DAG:   %[[C1:.+]] = arith.constant -1.0
   // CHECK-DAG:   %[[C0:.+]] = arith.constant -0.0
   // CHECK-NEXT:  %[[X:.+]] = arith.subf %arg0, %[[C0]]
-  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]]
+  // CHECK-NEXT:   return %arg0, %[[X]], %[[C1]], %arg0
   %c0 = arith.constant 0.0 : f16
   %c-0 = arith.constant -0.0 : f16
   %c1 = arith.constant 1.0 : f16
   %0 = arith.subf %arg0, %c0 : f16
   %1 = arith.subf %arg0, %c-0 : f16
   %2 = arith.subf %c0, %c1 : f16
-  return %0, %1, %2 : f16, f16, f16
+  %3 = arith.subf %arg0, %c-0 fastmath<nsz> : f16
+  return %0, %1, %2, %3 : f16, f16, f16, f16
 }
 
 // CHECK-LABEL: @test_subf_negzero(

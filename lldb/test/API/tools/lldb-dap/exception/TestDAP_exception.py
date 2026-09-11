@@ -2,8 +2,8 @@
 Test exception behavior in DAP with signal.
 """
 
+from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.decorators import requireSignals
 from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
@@ -19,7 +19,9 @@ class TestDAP_exception(DAPTestCaseBase):
         process_event = session.launch(LaunchArgs(program=program))
 
         stopped_event = session.verify_stopped_on_exception(
-            expected_description="signal SIGABRT", after=process_event
+            expected_description="signal SIGABRT",
+            expected_text=r"^SIGABRT$",
+            after=process_event,
         )
         thread_id = self.expect_not_none(stopped_event.body.threadId)
         exception_info = session.get_exception_info(thread_id)

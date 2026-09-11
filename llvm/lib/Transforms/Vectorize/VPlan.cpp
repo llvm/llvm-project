@@ -55,6 +55,8 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -65,10 +67,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
@@ -818,17 +816,23 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
-    // Neglect the cost of canonical IV, matching the legacy cost model.
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
-    InstructionCost BackedgeCost =
-        ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost)
-            : Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
-    LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
-                      << ": vector loop backedge\n");
-    Cost += BackedgeCost;
+    // Add the costs of the loop's backedge and canonical IV increment
+    auto AddCost = [&](InstructionCost C, const char *Name) {
+      if (ForceTargetInstructionCost.getNumOccurrences())
+        C = InstructionCost(ForceTargetInstructionCost);
+      LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
+                        << "\n");
+      Cost += C;
+    };
+    AddCost(Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind),
+            "vector loop backedge");
+    if (!VPCostContext::executesAtMostOnce(*getPlan(), VF))
+      AddCost(Ctx.TTI.getArithmeticInstrCost(
+                  Instruction::Add, getCanonicalIVType(), Ctx.CostKind),
+              "canonical IV increment");
     return Cost;
   }
 
@@ -1485,8 +1489,8 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
   if (isa<VPRegionValue>(VPV))
     return true;
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
-  return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
-                  DefR->getParent()->getEnclosingLoopRegion());
+  return DefR && (DefR->getParent()->getEnclosingLoopRegion() ||
+                  !DefR->getParent()->getPlan()->getVectorLoopRegion());
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {
@@ -1993,4 +1997,19 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                        Intrinsic::pseudoprobe,
                        Intrinsic::experimental_noalias_scope_decl},
                       ID);
+}
+
+uint64_t VPCostContext::getReplicateRegionCostDivisor(
+    const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  std::optional<VPExecutionFrequency> Freq =
+      Region->getEntryBranchOnMask()->getExecutionFrequency();
+  if (!Freq)
+    return 1;
+  // A recorded frequency is neither zero nor always-executing, so the
+  // probability is non-zero and the division below is safe.
+  return divideNearest(
+      BranchProbability::getDenominator(),
+      vputils::getExecutionProbability(Freq->Freq).getNumerator());
 }

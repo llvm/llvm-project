@@ -9,9 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/GenericMemoryManagerProxySpecs.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 
 #include <limits>
 
@@ -81,38 +78,6 @@ private:
   ExecutorAddr AllocAddr;
   SegInfoMap Segs;
 };
-
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(
-    JITDylib &JD, rt::SimpleExecutorMemoryManagerSymbolNames SNs) {
-  namespace sps = rt::sps;
-  auto &ES = JD.getExecutionSession();
-  Bindings B;
-  // The allocator instance is a data symbol passed as the first argument to
-  // each call, not a wrapper to proxy.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(SNs.AllocatorName), &B.Instance}}))
-    return Err;
-  if (auto Err = rt::buildProxies(
-          JD,
-          rt::proxyInit<sps::MemMgrReserveProxySpec>(&B.Reserve,
-                                                     SNs.ReserveName),
-          rt::proxyInit<sps::MemMgrInitializeProxySpec>(&B.Initialize,
-                                                        SNs.InitializeName),
-          rt::proxyInit<sps::MemMgrDeinitializeProxySpec>(&B.Deinitialize,
-                                                          SNs.DeinitializeName),
-          rt::proxyInit<sps::MemMgrReleaseProxySpec>(&B.Release,
-                                                     SNs.ReleaseName)))
-    return Err;
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(ES, std::move(B));
-}
-
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(
-    ExecutionSession &ES, rt::SimpleExecutorMemoryManagerSymbolNames SNs) {
-  return Create(ES.getBootstrapJITDylib(), std::move(SNs));
-}
 
 void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,
                                               LinkGraph &G,

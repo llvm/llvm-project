@@ -1,15 +1,11 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports _Complex types.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 struct Struk {
   ~Struk();
 };
 
-// CHECK: !rec_Struk = !cir.struct<"Struk" padded {!u8i}>
-
-// CHECK: cir.func{{.*}} @_ZN5StrukD1Ev(!cir.ptr<!rec_Struk> {{.*}})
+// CHECK: !rec_Struk = !cir.struct<"Struk" {pad !u8i}>
 
 void test_cleanup() {
   Struk s;
@@ -19,6 +15,8 @@ void test_cleanup() {
 // CHECK:   %[[S_ADDR:.*]] = cir.alloca "s" {{.*}} : !cir.ptr<!rec_Struk>
 // CHECK:   cir.call @_ZN5StrukD1Ev(%[[S_ADDR]]) nothrow : (!cir.ptr<!rec_Struk> {{.*}}) -> ()
 // CHECK:   cir.return
+
+// CHECK: cir.func{{.*}} @_ZN5StrukD1Ev(!cir.ptr<!rec_Struk> {{.*}})
 
 void test_cleanup_ifelse(bool b) {
   if (b) {
@@ -114,7 +112,10 @@ void complex_expr_with_cleanup() {
 // CHECK:   %[[ARG_COMPLEX:.*]] = cir.complex.create %[[CONST_10]], %[[CONST_0]] : !s32i -> !cir.complex<!s32i>
 // CHECK:   cir.store {{.*}} %[[ARG_COMPLEX]], %[[ARG_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[TMP_ARG:.*]] = cir.load {{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CHECK:   cir.call @_ZN16ComplexContainerC1ECi(%[[CONTAINER_ADDR]], %[[TMP_ARG]]) : (!cir.ptr<!rec_ComplexContainer> {{.*}}, !cir.complex<!s32i> {{.*}}) -> ()
+// CHECK:   cir.store %[[TMP_ARG]], %[[ARG_SLOT:.*]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[ARG_PTR:.*]] = cir.cast bitcast %[[ARG_SLOT]] : !cir.ptr<!cir.complex<!s32i>> -> !cir.ptr<!u64i>
+// CHECK:   %[[ARG_COERCED:.*]] = cir.load %[[ARG_PTR]] : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.call @_ZN16ComplexContainerC1ECi(%[[CONTAINER_ADDR]], %[[ARG_COERCED]]) : (!cir.ptr<!rec_ComplexContainer> {{.*}}, !u64i {{.*}}) -> ()
 // CHECK:   %[[ELEM_0:.*]] = cir.get_member %[[CONTAINER_ADDR]][0] {name = "value"} : !cir.ptr<!rec_ComplexContainer> -> !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[TMP_ELEM_0:.*]] = cir.load {{.*}} %[[ELEM_0]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CHECK:   cir.store {{.*}} %[[TMP_ELEM_0]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
@@ -139,7 +140,10 @@ void complex_expr_with_cleanup_inside_cleanupscope() {
 // CHECK:   %[[ARG_COMPLEX:.*]] = cir.complex.create %[[CONST_10]], %[[CONST_0]] : !s32i -> !cir.complex<!s32i>
 // CHECK:   cir.store {{.*}} %[[ARG_COMPLEX]], %[[ARG_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[TMP_ARG:.*]] = cir.load {{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
-// CHECK:   cir.call @_ZN24ComplexContainerWithDtorC1ECi(%[[CONTAINER_ADDR]], %[[TMP_ARG]]) : (!cir.ptr<!rec_ComplexContainerWithDtor> {{.*}}, !cir.complex<!s32i> {{.*}}) -> ()
+// CHECK:   cir.store %[[TMP_ARG]], %[[ARG_SLOT:.*]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+// CHECK:   %[[ARG_PTR:.*]] = cir.cast bitcast %[[ARG_SLOT]] : !cir.ptr<!cir.complex<!s32i>> -> !cir.ptr<!u64i>
+// CHECK:   %[[ARG_COERCED:.*]] = cir.load %[[ARG_PTR]] : !cir.ptr<!u64i>, !u64i
+// CHECK:   cir.call @_ZN24ComplexContainerWithDtorC1ECi(%[[CONTAINER_ADDR]], %[[ARG_COERCED]]) : (!cir.ptr<!rec_ComplexContainerWithDtor> {{.*}}, !u64i {{.*}}) -> ()
 // CHECK:   cir.cleanup.scope {
 // CHECK:     %[[ELEM_0:.*]] = cir.get_member %[[CONTAINER_ADDR]][0] {name = "value"} : !cir.ptr<!rec_ComplexContainerWithDtor> -> !cir.ptr<!cir.complex<!s32i>>
 // CHECK:     %[[TMP_ELEM_0:.*]] = cir.load {{.*}} %[[ELEM_0]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>

@@ -87,6 +87,7 @@ protected:
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFEXPF64(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFPOW(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 
@@ -95,6 +96,7 @@ protected:
   SDValue LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG, EVT FP16Ty) const;
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
+  SDValue lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
@@ -193,8 +195,6 @@ protected:
 public:
   AMDGPUTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI,
                        const AMDGPUSubtarget &AMDGPUSTI);
-
-  bool mayIgnoreSignedZero(SDValue Op) const;
 
   static inline SDValue stripBitcast(SDValue Val) {
     return Val.getOpcode() == ISD::BITCAST ? Val.getOperand(0) : Val;
@@ -298,11 +298,15 @@ public:
 
   SDValue combineFMinMaxLegacyImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                    SDValue RHS, SDValue True, SDValue False,
-                                   SDValue CC, DAGCombinerInfo &DCI) const;
+                                   SDValue CC, SDNodeFlags Flags,
+                                   DAGCombinerInfo &DCI) const;
 
+  /// \p Flags must be the select flags, not the compare (SELECT_CC
+  /// flags come from the fcmp and say nothing about the selected value).
   SDValue combineFMinMaxLegacy(const SDLoc &DL, EVT VT, SDValue LHS,
                                SDValue RHS, SDValue True, SDValue False,
-                               SDValue CC, DAGCombinerInfo &DCI) const;
+                               SDValue CC, SDNodeFlags Flags,
+                               DAGCombinerInfo &DCI) const;
 
   // FIXME: Turn off MergeConsecutiveStores() before Instruction Selection for
   // AMDGPU.  Commit r319036,
@@ -425,6 +429,15 @@ public:
     return true;
   }
 };
+
+/// Strip fabs/fneg/fcopysign from a value to get the underlying source.
+/// Useful for comparing values where sign doesn't matter (e.g., frexp).
+inline SDValue peekFPSignOps(SDValue Val) {
+  while (Val.getOpcode() == ISD::FNEG || Val.getOpcode() == ISD::FABS ||
+         Val.getOpcode() == ISD::FCOPYSIGN)
+    Val = Val.getOperand(0);
+  return Val;
+}
 
 } // End namespace llvm
 

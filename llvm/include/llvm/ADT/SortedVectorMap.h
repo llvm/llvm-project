@@ -35,6 +35,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include <functional>
+#include <tuple>
 #include <utility>
 
 namespace llvm {
@@ -53,6 +54,8 @@ public:
 
   using iterator = typename VectorType::iterator;
   using const_iterator = typename VectorType::const_iterator;
+  using reverse_iterator = typename VectorType::reverse_iterator;
+  using const_reverse_iterator = typename VectorType::const_reverse_iterator;
 
 private:
   VectorType Vector;
@@ -85,6 +88,18 @@ private:
     return {Vector.begin() + (ConstIt - Vector.begin()), Found};
   }
 
+  template <typename KeyArgT, typename... Ts>
+  std::pair<iterator, bool> try_emplace_impl(KeyArgT &&Key, Ts &&...Args) {
+    auto [It, Found] = find_or_insert_location(Key);
+    if (Found)
+      return {It, false};
+    It = Vector.insert(
+        It, value_type(std::piecewise_construct,
+                       std::forward_as_tuple(std::forward<KeyArgT>(Key)),
+                       std::forward_as_tuple(std::forward<Ts>(Args)...)));
+    return {It, true};
+  }
+
 public:
   SortedVectorMap() = default;
 
@@ -93,6 +108,15 @@ public:
   iterator end() { return Vector.end(); }
   const_iterator begin() const { return Vector.begin(); }
   const_iterator end() const { return Vector.end(); }
+  const_iterator cbegin() const { return Vector.begin(); }
+  const_iterator cend() const { return Vector.end(); }
+
+  reverse_iterator rbegin() { return Vector.rbegin(); }
+  reverse_iterator rend() { return Vector.rend(); }
+  const_reverse_iterator rbegin() const { return Vector.rbegin(); }
+  const_reverse_iterator rend() const { return Vector.rend(); }
+  const_reverse_iterator crbegin() const { return Vector.rbegin(); }
+  const_reverse_iterator crend() const { return Vector.rend(); }
 
   // Capacity
   [[nodiscard]] bool empty() const { return Vector.empty(); }
@@ -112,18 +136,30 @@ public:
     return Found ? It : Vector.end();
   }
 
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(const KeyT &Key, Ts &&...Args) {
+    return try_emplace_impl(Key, std::forward<Ts>(Args)...);
+  }
+
+  template <typename... Ts>
+  std::pair<iterator, bool> try_emplace(KeyT &&Key, Ts &&...Args) {
+    return try_emplace_impl(std::move(Key), std::forward<Ts>(Args)...);
+  }
+
+  std::pair<iterator, bool> insert(const value_type &KV) {
+    return try_emplace_impl(KV.first, KV.second);
+  }
+
+  std::pair<iterator, bool> insert(value_type &&KV) {
+    return try_emplace_impl(std::move(KV.first), std::move(KV.second));
+  }
+
   ValueT &operator[](const KeyT &Key) {
-    auto [It, Found] = find_or_insert_location(Key);
-    if (Found)
-      return It->second;
-    return Vector.insert(It, value_type(Key, ValueT()))->second;
+    return try_emplace_impl(Key).first->second;
   }
 
   ValueT &operator[](KeyT &&Key) {
-    auto [It, Found] = find_or_insert_location(Key);
-    if (Found)
-      return It->second;
-    return Vector.insert(It, value_type(std::move(Key), ValueT()))->second;
+    return try_emplace_impl(std::move(Key)).first->second;
   }
 
   iterator erase(iterator Pos) { return Vector.erase(Pos); }

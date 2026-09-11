@@ -1,3 +1,5 @@
+// REQUIRES: arm-emulator
+
 // RUN: mlir-opt %s \
 // RUN:   -transform-interpreter -test-transform-dialect-erase-schedule  \
 // RUN:   -one-shot-bufferize="bufferize-function-boundaries" -canonicalize \
@@ -88,7 +90,7 @@ module attributes {transform.with_named_sequence} {
     // lowering's requirement that the tile memref have unit stride on its
     // most minor dimension.
     %bufferize = transform.bufferization.one_shot_bufferize layout{IdentityLayoutMap} %module
-      {bufferize_function_boundaries=true} : (!transform.any_op) -> !transform.any_op
+      <bufferize_function_boundaries = true> : (!transform.any_op) -> !transform.any_op
 
     %func = transform.structured.match ops{["func.func"]} in %bufferize
       : (!transform.any_op) -> !transform.any_op

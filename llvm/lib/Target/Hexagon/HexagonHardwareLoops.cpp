@@ -700,7 +700,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
 
   if (InitialValue->isReg()) {
     Register R = InitialValue->getReg();
-    MachineBasicBlock *DefBB = MRI->getVRegDef(R)->getParent();
+    MachineBasicBlock *DefBB = MRI->getDefBlock(R);
     if (!MDT->properlyDominates(DefBB, Header)) {
       int64_t V;
       if (!checkForImmediate(*InitialValue, V))
@@ -710,7 +710,7 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
   }
   if (EndValue->isReg()) {
     Register R = EndValue->getReg();
-    MachineBasicBlock *DefBB = MRI->getVRegDef(R)->getParent();
+    MachineBasicBlock *DefBB = MRI->getDefBlock(R);
     if (!MDT->properlyDominates(DefBB, Header)) {
       int64_t V;
       if (!checkForImmediate(*EndValue, V))

@@ -512,6 +512,17 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SRL);
   setTargetDAGCombine(ISD::SETCC);
 
+  // On targets with the 32S feature, `select` is expanded into
+  // maskeqz + masknez + or (3 instructions), which is more expensive than
+  // on most other architectures where a single cmov-like instruction
+  // suffices. Enable a combine that can turn
+  //   select cond, binop(X, Y), X   ->  binop X, (select cond, Y, 0)
+  //   select cond, X, binop(X, Y)   ->  binop X, (select cond, 0, Y)
+  // for binop in {add, or, xor, sub}, replacing the 3-insn select (plus
+  // the original binop) with a single mask instruction plus the binop.
+  if (Subtarget.has32S())
+    setTargetDAGCombine(ISD::SELECT);
+
   // Set DAG combine for 'LSX' feature.
 
   if (Subtarget.hasExtLSX()) {
@@ -7212,6 +7223,130 @@ static SDValue performSETCCCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue(N, 0);
 }
 
+// Strip a single outer ISD::SIGN_EXTEND_INREG from \p V, if present, and
+// return the inner value together with the narrow VT it was extending
+// from. If no such node is present, returns \p V unchanged and an invalid
+// EVT.
+//
+// i32 (and other sub-GRLen) arithmetic is legalized to operate on the full
+// GRLen-width register, with a `sign_extend_inreg` re-normalizing the
+// result back into the narrow type's range afterwards (see e.g. the
+// `add i32` -> `add` + `sign_extend_inreg ..., i32` legalization). Any
+// combine that reassociates such a binop must track and reapply this
+// extension, otherwise the transformed code can produce a value whose
+// high bits no longer match the narrow-type semantics.
+static std::pair<SDValue, EVT> stripSignExtendInReg(SDValue V) {
+  if (V.getOpcode() == ISD::SIGN_EXTEND_INREG)
+    return {V.getOperand(0), cast<VTSDNode>(V.getOperand(1))->getVT()};
+  return {V, EVT()};
+}
+
+// Try to match \p BinV (after optionally stripping an outer
+// sign_extend_inreg) as a supported binary operation that has \p X as one
+// of its operands, returning the matched opcode, the other operand (the
+// "delta"), and the narrow VT of the sign_extend_inreg that was stripped
+// (invalid EVT if none was present).
+//
+// For commutative ops (add/or/xor), \p X may be either operand, since
+// `binop(X, Y) == binop(Y, X)` and the identity element (0) works on
+// either side.
+//
+// For `sub`, the operation is NOT commutative: `sub(X, Y) != sub(Y, X)`.
+// Only `sub(X, Y)` (i.e. \p X is the *minuend*, the first operand) can be
+// rewritten using the identity `X - 0 == X`. If \p X were the *subtrahend*
+// (second operand, i.e. the pattern is actually `sub(Y, X)`), there is no
+// way to express `cond ? (Y - X) : X` (or the symmetric case) as
+// `X op (select ...)` without introducing an extra negation, so that case
+// must be rejected instead of "optimized" into worse code.
+static std::tuple<unsigned, SDValue, EVT>
+matchBinOpWithSharedOperand(SDValue BinV, SDValue X) {
+  auto [Inner, ExtVT] = stripSignExtendInReg(BinV);
+
+  unsigned Opc = Inner.getOpcode();
+  switch (Opc) {
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+    if (Inner.getOperand(0) == X)
+      return {Opc, Inner.getOperand(1), ExtVT};
+    if (Inner.getOperand(1) == X)
+      return {Opc, Inner.getOperand(0), ExtVT};
+    return {0, SDValue(), EVT()};
+  case ISD::SUB:
+    // Only accept X as the minuend (first operand); see comment above.
+    if (Inner.getOperand(0) == X)
+      return {Opc, Inner.getOperand(1), ExtVT};
+    return {0, SDValue(), EVT()};
+  default:
+    return {0, SDValue(), EVT()};
+  }
+}
+
+// Try to combine:
+//   select cond, binop(X, Y), X  -> binop X, (select cond, Y, 0)
+//   select cond, X, binop(X, Y)  -> binop X, (select cond, 0, Y)
+// for binop in {add, or, xor, sub}, where 0 is the identity element of the
+// respective operation, additionally handling the common legalized form
+// where the binop result is wrapped in a `sign_extend_inreg` (as happens
+// for sub-GRLen types such as i32 on a 64-bit GRLen target). See
+// matchBinOpWithSharedOperand() for the restrictions applied to
+// non-commutative operations (currently only `sub`).
+static SDValue performSELECTCombine(SDNode *N, SelectionDAG &DAG,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const LoongArchSubtarget &Subtarget) {
+  if (DCI.isBeforeLegalizeOps())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  // Restrict to the scalar GRLen integer type that maskeqz/masknez operate
+  // on; this also naturally excludes float and vector selects.
+  if (VT != Subtarget.getGRLenVT())
+    return SDValue();
+
+  SDValue Cond = N->getOperand(0);
+  SDValue TrueV = N->getOperand(1);
+  SDValue FalseV = N->getOperand(2);
+  SDLoc DL(N);
+
+  auto TryFold = [&](SDValue BinV, SDValue SharedV,
+                     bool BinIsTrueArm) -> SDValue {
+    auto [Opc, Delta, ExtVT] = matchBinOpWithSharedOperand(BinV, SharedV);
+    if (!Opc)
+      return SDValue();
+
+    // Avoid infinite combine loops: bail out if Delta is trivially the
+    // same node we would otherwise be selecting on (shouldn't normally
+    // happen, but guards against degenerate/self-referential IR).
+    if (Delta.getNode() == N)
+      return SDValue();
+
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue NewSel = BinIsTrueArm ? DAG.getSelect(DL, VT, Cond, Delta, Zero)
+                                  : DAG.getSelect(DL, VT, Cond, Zero, Delta);
+    SDValue NewBin = DAG.getNode(Opc, DL, VT, SharedV, NewSel);
+
+    // If the original binop result was normalized back into a narrower
+    // type via sign_extend_inreg (e.g. i32 arithmetic on a 64-bit GRLen
+    // target), the new binop must be re-normalized the same way: SharedV
+    // is already known-sign-extended for that narrow type, but NewSel
+    // (Delta or 0, selected) combined with SharedV via Opc can still
+    // produce a 64-bit result whose high bits don't match the narrow
+    // type's sign-extended representation.
+    if (ExtVT != EVT())
+      NewBin = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, NewBin,
+                           DAG.getValueType(ExtVT));
+
+    return NewBin;
+  };
+
+  if (SDValue R = TryFold(TrueV, FalseV, /*BinIsTrueArm=*/true))
+    return R;
+  if (SDValue R = TryFold(FalseV, TrueV, /*BinIsTrueArm=*/false))
+    return R;
+
+  return SDValue();
+}
+
 // Combine (loongarch_bitrev_w (loongarch_revb_2w X)) to loongarch_bitrev_4b.
 static SDValue performBITREV_WCombine(SDNode *N, SelectionDAG &DAG,
                                       TargetLowering::DAGCombinerInfo &DCI,
@@ -7311,6 +7446,20 @@ static bool combine_CC(SDValue &LHS, SDValue &RHS, SDValue &CC, const SDLoc &DL,
         LHS = Ext;
         return true;
       }
+    }
+  }
+
+  // Fold (C1, C2, cond) -> (0, 0, seteq/setne)
+  if (isa<ConstantSDNode>(LHS) && isa<ConstantSDNode>(RHS)) {
+    const LoongArchTargetLowering *TLI = Subtarget.getTargetLowering();
+    EVT VT = LHS.getValueType();
+    EVT SetCCResVT =
+        TLI->getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    if (SDValue Folded = DAG.FoldSetCC(SetCCResVT, LHS, RHS, CCVal, DL)) {
+      LHS = DAG.getConstant(0, DL, VT);
+      RHS = DAG.getConstant(0, DL, VT);
+      CC = DAG.getCondCode(!isNullConstant(Folded) ? ISD::SETEQ : ISD::SETNE);
+      return true;
     }
   }
 
@@ -8694,6 +8843,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performORCombine(N, DAG, DCI, Subtarget);
   case ISD::SETCC:
     return performSETCCCombine(N, DAG, DCI, Subtarget);
+  case ISD::SELECT:
+    return performSELECTCombine(N, DAG, DCI, Subtarget);
   case ISD::SHL:
     return performSHLCombine(N, DAG, DCI, Subtarget);
   case ISD::SRL:
@@ -11154,12 +11305,12 @@ bool LoongArchTargetLowering::isFMAFasterThanFMulAndFAdd(
 }
 
 Register LoongArchTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return LoongArch::R4;
 }
 
 Register LoongArchTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return LoongArch::R5;
 }
 

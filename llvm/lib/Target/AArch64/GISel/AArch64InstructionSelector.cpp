@@ -223,6 +223,10 @@ private:
   bool selectIntrinsic(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectTLSGlobalValueELF(MachineInstr &I, MachineRegisterInfo &MRI);
+  bool selectTLSLocalExecELF(const GlobalValue *GV, MachineInstr &I,
+                             MachineRegisterInfo &MRI);
+  bool selectTLSGlobalValueMachO(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectTLSGlobalValue(MachineInstr &I, MachineRegisterInfo &MRI);
   bool selectPtrAuthGlobalValue(MachineInstr &I,
                                 MachineRegisterInfo &MRI) const;
@@ -481,19 +485,23 @@ private:
   ComplexRendererFns selectArithExtendedRegister(MachineOperand &Root) const;
 
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
-
+  template <unsigned Width>
+  ComplexRendererFns selectCVTFixedPoint(MachineOperand &Root) const;
+  ComplexRendererFns selectCVTFixedPointBase(const MachineOperand &Root,
+                                             unsigned width,
+                                             bool isReciprocal = false) const;
   ComplexRendererFns selectCVTFixedPointVec(MachineOperand &Root) const;
   ComplexRendererFns
   selectCVTFixedPosRecipOperandVec(MachineOperand &Root) const;
-  ComplexRendererFns
-  selectCVTFixedPointVecBase(const MachineOperand &Root,
-                             bool isReciprocal = false) const;
   void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
                                    const MachineInstr &MI, int OpIdx) const;
+  unsigned getFixedPointWidthFromOperand(const MachineOperand &Root) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
+  void renderFixedPointImm(MachineInstrBuilder &MIB, const MachineOperand &Root,
+                           unsigned Width, bool isReciprocal) const;
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -876,38 +884,6 @@ static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
-/// Helper function to get the source and destination register classes for a
-/// copy. Returns a std::pair containing the source register class for the
-/// copy, and the destination register class for the copy. If a register class
-/// cannot be determined, then it will be nullptr.
-static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
-getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
-                     MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-                     const RegisterBankInfo &RBI) {
-  Register DstReg = I.getOperand(0).getReg();
-  Register SrcReg = I.getOperand(1).getReg();
-  const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
-  const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
-
-  TypeSize DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  TypeSize SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
-
-  // Special casing for cross-bank copies of s1s. We can technically represent
-  // a 1-bit value with any size of register. The minimum size for a GPR is 32
-  // bits. So, we need to put the FPR on 32 bits as well.
-  //
-  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
-  // then we can pull it into the helpers that get the appropriate class for a
-  // register bank. Or make a new helper that carries along some constraint
-  // information.
-  if (SrcRegBank != DstRegBank &&
-      (DstSize == TypeSize::getFixed(1) && SrcSize == TypeSize::getFixed(1)))
-    SrcSize = DstSize = TypeSize::getFixed(32);
-
-  return {getMinClassForRegBank(SrcRegBank, SrcSize, true),
-          getMinClassForRegBank(DstRegBank, DstSize, true)};
-}
-
 // FIXME: We need some sort of API in RBI/TRI to allow generic code to
 // constrain operands of simple instructions given a TargetRegisterClass
 // and LLT
@@ -948,15 +924,73 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
+  TypeSize DstRegSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  TypeSize SrcRegSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+
+  // Special casing for cross-bank copies of s1s. We can technically represent
+  // a 1-bit value with any size of register. The minimum size for a GPR is 32
+  // bits. So, we need to put the FPR on 32 bits as well.
+  //
+  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
+  // then we can pull it into the helpers that get the appropriate class for a
+  // register bank. Or make a new helper that carries along some constraint
+  // information.
+  if (SrcRegBank != DstRegBank && (DstRegSize == TypeSize::getFixed(1) &&
+                                   SrcRegSize == TypeSize::getFixed(1)))
+    SrcRegSize = DstRegSize = TypeSize::getFixed(32);
+
   // Find the correct register classes for the source and destination registers.
-  const TargetRegisterClass *SrcRC;
-  const TargetRegisterClass *DstRC;
-  std::tie(SrcRC, DstRC) = getRegClassesForCopy(I, TII, MRI, TRI, RBI);
+  const TargetRegisterClass *SrcRC =
+      getMinClassForRegBank(SrcRegBank, SrcRegSize, true);
+  const TargetRegisterClass *DstRC =
+      getMinClassForRegBank(DstRegBank, DstRegSize, true);
 
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Unexpected dest size "
                       << RBI.getSizeInBits(DstReg, MRI, TRI) << '\n');
     return false;
+  }
+
+  if (I.getOpcode() == TargetOpcode::G_BITCAST &&
+      RBI.getSizeInBits(DstReg, MRI, TRI) == TypeSize::getFixed(16)) {
+    if (DstRegBank.getID() == AArch64::FPRRegBankID &&
+        SrcRegBank.getID() == AArch64::GPRRegBankID) {
+      if (!SrcReg.isPhysical() &&
+          !RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI))
+        return false;
+      if (!DstReg.isPhysical() &&
+          !RBI.constrainGenericRegister(DstReg, AArch64::FPR16RegClass, MRI))
+        return false;
+
+      Register FPR32 = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::FMOVWSr))
+          .addDef(FPR32)
+          .addUse(SrcReg);
+      I.setDesc(TII.get(TargetOpcode::COPY));
+      I.getOperand(1).setReg(FPR32);
+      I.getOperand(1).setSubReg(AArch64::hsub);
+      return true;
+    }
+
+    if (DstRegBank.getID() == AArch64::GPRRegBankID &&
+        SrcRegBank.getID() == AArch64::FPRRegBankID) {
+      if (!SrcReg.isPhysical() &&
+          !RBI.constrainGenericRegister(SrcReg, AArch64::FPR16RegClass, MRI))
+        return false;
+      if (!DstReg.isPhysical() &&
+          !RBI.constrainGenericRegister(DstReg, AArch64::GPR32RegClass, MRI))
+        return false;
+
+      Register FPR32 = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(TargetOpcode::SUBREG_TO_REG))
+          .addDef(FPR32)
+          .addUse(SrcReg)
+          .addImm(AArch64::hsub);
+      I.setDesc(TII.get(AArch64::FMOVSWr));
+      I.getOperand(1).setReg(FPR32);
+      return true;
+    }
   }
 
   // Is this a copy? If so, then we may need to insert a subregister copy.
@@ -2120,6 +2154,33 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
     MRI.setType(DstReg, LLT::scalar(64));
     return true;
   }
+  case TargetOpcode::G_VECREDUCE_ADD:
+  case TargetOpcode::G_VECREDUCE_SMAX:
+  case TargetOpcode::G_VECREDUCE_SMIN:
+  case TargetOpcode::G_VECREDUCE_UMAX:
+  case TargetOpcode::G_VECREDUCE_UMIN: {
+    // Imported patterns require an FPR result. For a GPR, use a temporary FPR
+    // and insert a cross-bank copy.
+    Register DstReg = I.getOperand(0).getReg();
+    const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+    if (DstRB.getID() != AArch64::GPRRegBankID)
+      return false;
+
+    LLT DstTy = MRI.getType(DstReg);
+    const TargetRegisterClass *DstRC =
+        getRegClassForTypeOnBank(DstTy, DstRB, /*GetAllRegSet=*/true);
+    if (!DstRC || !RBI.constrainGenericRegister(DstReg, *DstRC, MRI))
+      return false;
+
+    Register FPRDst = MRI.createGenericVirtualRegister(DstTy);
+    MRI.setRegBank(FPRDst, RBI.getRegBank(AArch64::FPRRegBankID));
+    I.getOperand(0).setReg(FPRDst);
+
+    BuildMI(MBB, std::next(I.getIterator()), MIMetadata(I),
+            TII.get(TargetOpcode::COPY), DstReg)
+        .addReg(FPRDst);
+    return true;
+  }
   case AArch64::G_DUP: {
     // Convert the type from p0 to s64 to help selection.
     LLT DstTy = MRI.getType(I.getOperand(0).getReg());
@@ -2848,12 +2909,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
       assert(OpFlags == AArch64II::MO_GOT);
     } else {
       GV = I.getOperand(1).getGlobal();
-      if (GV->isThreadLocal()) {
-        // We don't support instructions with emulated TLS variables yet
-        if (TM.useEmulatedTLS())
-          return false;
+      if (GV->isThreadLocal())
         return selectTLSGlobalValue(I, MRI);
-      }
+
       OpFlags = STI.ClassifyGlobalReference(GV, TM);
     }
 
@@ -3681,18 +3739,165 @@ bool AArch64InstructionSelector::selectJumpTable(MachineInstr &I,
   return true;
 }
 
-bool AArch64InstructionSelector::selectTLSGlobalValue(
-    MachineInstr &I, MachineRegisterInfo &MRI) {
-  if (!STI.isTargetMachO())
-    return false;
-  MachineFunction &MF = *I.getParent()->getParent();
-  MF.getFrameInfo().setAdjustsStack(true);
+bool AArch64InstructionSelector::selectTLSLocalExecELF(
+    const GlobalValue *GV, MachineInstr &I, MachineRegisterInfo &MRI) {
+  auto ConstrainRegOps = [&](MachineInstrBuilder MIB) {
+    constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
+  };
+  Register ThreadBase = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
+  ConstrainRegOps(MIB.buildInstr(AArch64::MOVbaseTLS, {ThreadBase}, {}));
 
+  switch (MF->getTarget().Options.TLSSize) {
+  default:
+    llvm_unreachable("Unexpected TLS size");
+  case 12: {
+    // add x0, x0, :tprel_lo12:a
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::ADDXri, {I.getOperand(0).getReg()},
+                       {ThreadBase})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_PAGEOFF)
+            .addImm(0));
+    break;
+  }
+  case 24: {
+    // add x0, x0, :tprel_hi12:a
+    // add x0, x0, :tprel_lo12_nc:a
+    Register Addr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::ADDXri, {Addr}, {ThreadBase})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_HI12)
+            .addImm(0));
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::ADDXri, {I.getOperand(0).getReg()}, {Addr})
+            .addGlobalAddress(GV, 0,
+                              AArch64II::MO_TLS | AArch64II::MO_PAGEOFF |
+                                  AArch64II::MO_NC)
+            .addImm(0));
+    break;
+  }
+  case 32: {
+    // movz x0, #:tprel_g1:a
+    // movk x0, #:tprel_g0_nc:a
+    // add x0, x1, x0
+    Register Addr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::MOVZXi, {Addr}, {})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_G1)
+            .addImm(16));
+    Register Addr2 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(MIB.buildInstr(AArch64::MOVKXi, {Addr2}, {Addr})
+                        .addGlobalAddress(GV, 0,
+                                          AArch64II::MO_TLS | AArch64II::MO_G0 |
+                                              AArch64II::MO_NC)
+                        .addImm(0));
+    ConstrainRegOps(MIB.buildInstr(AArch64::ADDXrr, {I.getOperand(0).getReg()},
+                                   {ThreadBase, Addr2}));
+    break;
+  }
+  case 48: {
+    // movz x0, #:tprel_g2:a
+    // movk x0, #:tprel_g1_nc:a
+    // movk x0, #:tprel_g0_nc:a
+    // add x0, x1, x0
+    Register Addr = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(
+        MIB.buildInstr(AArch64::MOVZXi, {Addr}, {})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_G2)
+            .addImm(32));
+    Register Addr2 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(MIB.buildInstr(AArch64::MOVKXi, {Addr2}, {Addr})
+                        .addGlobalAddress(GV, 0,
+                                          AArch64II::MO_TLS | AArch64II::MO_G1 |
+                                              AArch64II::MO_NC)
+                        .addImm(16));
+    Register Addr3 = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+    ConstrainRegOps(MIB.buildInstr(AArch64::MOVKXi, {Addr3}, {Addr2})
+                        .addGlobalAddress(GV, 0,
+                                          AArch64II::MO_TLS | AArch64II::MO_G0 |
+                                              AArch64II::MO_NC)
+                        .addImm(0));
+    ConstrainRegOps(MIB.buildInstr(AArch64::ADDXrr, {I.getOperand(0).getReg()},
+                                   {ThreadBase, Addr3}));
+    break;
+  }
+  }
+  I.eraseFromParent();
+  return true;
+}
+
+// TLS lowering below mirrors the corresponding DAGISel implementation.
+// See LowerELFTLSModel() for details.
+bool AArch64InstructionSelector::selectTLSGlobalValueELF(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  const GlobalValue *GV = I.getOperand(1).getGlobal();
+  auto *FuncInfo = MF->getInfo<AArch64FunctionInfo>();
+  TLSModel::Model Model =
+      AArch64::getELFTLSModel(GV, TM, FuncInfo->hasELFSignedGOT());
+
+  Register TPOff = MRI.createVirtualRegister(&AArch64::GPR64commonRegClass);
+  switch (Model) {
+  case TLSModel::LocalExec:
+    return selectTLSLocalExecELF(GV, I, MRI);
+  case TLSModel::InitialExec:
+    MIB.buildInstr(AArch64::LOADgot, {TPOff}, {})
+        .addGlobalAddress(GV, 0, AArch64II::MO_TLS);
+    break;
+  case TLSModel::LocalDynamic:
+  case TLSModel::GeneralDynamic: {
+#ifndef NDEBUG
+    SMEAttrs Attrs = MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
+    assert(!Attrs.hasZAState() && !Attrs.hasStreamingInterfaceOrBody() &&
+           !Attrs.hasStreamingCompatibleInterface() &&
+           "unsupported SME features reached GlobalISel TLS lowering");
+#endif
+    unsigned Opcode = FuncInfo->hasELFSignedGOT()
+                          ? AArch64::TLSDESC_AUTH_CALLSEQ
+                          : AArch64::TLSDESC_CALLSEQ;
+
+    if (TLSModel::GeneralDynamic == Model) {
+      MIB.buildInstr(Opcode, {}, {}).addGlobalAddress(GV, 0, AArch64II::MO_TLS);
+      MIB.buildCopy(TPOff, Register(AArch64::X0));
+      break;
+    }
+    assert(TLSModel::LocalDynamic == Model);
+    // These accesses will need deduplicating if there's more than one.
+    FuncInfo->incNumLocalDynamicTLSAccesses();
+
+    MIB.buildInstr(Opcode, {}, {})
+        .addExternalSymbol("_TLS_MODULE_BASE_", AArch64II::MO_TLS);
+    auto Copy = MIB.buildCopy(LLT::scalar(64), Register(AArch64::X0));
+    auto Add1 =
+        MIB.buildInstr(AArch64::ADDXri, {LLT::scalar(64)}, {Copy.getReg(0)})
+            .addGlobalAddress(GV, 0, AArch64II::MO_TLS | AArch64II::MO_HI12)
+            .addImm(0);
+    auto Add2 =
+        MIB.buildInstr(AArch64::ADDXri, {TPOff}, {Add1.getReg(0)})
+            .addGlobalAddress(GV, 0,
+                              AArch64II::MO_TLS | AArch64II::MO_PAGEOFF |
+                                  AArch64II::MO_NC)
+            .addImm(0);
+    constrainSelectedInstRegOperands(*Add1, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Add2, TII, TRI, RBI);
+  }
+  }
+  Register ThreadBase = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
+  MIB.buildInstr(AArch64::MOVbaseTLS, {ThreadBase}, {});
+  auto Add = MIB.buildInstr(AArch64::ADDXrr, {I.getOperand(0).getReg()},
+                            {ThreadBase, TPOff});
+  constrainSelectedInstRegOperands(*Add, TII, TRI, RBI);
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::selectTLSGlobalValueMachO(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
   const auto &GlobalOp = I.getOperand(1);
   assert(GlobalOp.getOffset() == 0 &&
          "Shouldn't have an offset on TLS globals!");
-  const GlobalValue &GV = *GlobalOp.getGlobal();
 
+  const GlobalValue &GV = *GlobalOp.getGlobal();
+  MF->getFrameInfo().setAdjustsStack(true);
   auto LoadGOT =
       MIB.buildInstr(AArch64::LOADgot, {&AArch64::GPR64commonRegClass}, {})
           .addGlobalAddress(&GV, 0, AArch64II::MO_TLS);
@@ -3705,10 +3910,10 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: X0 (it takes an argument), LR (it's a call) and NZCV (let's not be
   // silly).
-  unsigned Opcode = getBLRCallOpcode(MF);
+  unsigned Opcode = getBLRCallOpcode(*MF);
 
   // With ptrauth-calls, the tlv access thunk pointer is authenticated (IA, 0).
-  if (MF.getFunction().hasFnAttribute("ptrauth-calls")) {
+  if (MF->getFunction().hasFnAttribute("ptrauth-calls")) {
     assert(Opcode == AArch64::BLR);
     Opcode = AArch64::BLRAAZ;
   }
@@ -3723,6 +3928,21 @@ bool AArch64InstructionSelector::selectTLSGlobalValue(
                                MRI);
   I.eraseFromParent();
   return true;
+}
+
+bool AArch64InstructionSelector::selectTLSGlobalValue(
+    MachineInstr &I, MachineRegisterInfo &MRI) {
+  // We don't support instructions with emulated TLS variables yet.
+  if (TM.useEmulatedTLS())
+    return false;
+
+  if (STI.isTargetELF())
+    return selectTLSGlobalValueELF(I, MRI);
+
+  if (STI.isTargetMachO())
+    return selectTLSGlobalValueMachO(I, MRI);
+
+  return false;
 }
 
 MachineInstr *AArch64InstructionSelector::emitScalarToVector(
@@ -4029,22 +4249,44 @@ bool AArch64InstructionSelector::selectUnmergeValues(MachineInstr &I,
   assert(I.getOpcode() == TargetOpcode::G_UNMERGE_VALUES &&
          "unexpected opcode");
 
-  // TODO: Handle unmerging into GPRs and from scalars to scalars.
-  if (RBI.getRegBank(I.getOperand(0).getReg(), MRI, TRI)->getID() !=
-          AArch64::FPRRegBankID ||
-      RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI)->getID() !=
-          AArch64::FPRRegBankID) {
-    LLVM_DEBUG(dbgs() << "Unmerging vector-to-gpr and scalar-to-scalar "
-                         "currently unsupported.\n");
-    return false;
-  }
-
   // The last operand is the vector source register, and every other operand is
   // a register to unpack into.
   unsigned NumElts = I.getNumOperands() - 1;
   Register SrcReg = I.getOperand(NumElts).getReg();
-  const LLT NarrowTy = MRI.getType(I.getOperand(0).getReg());
+  Register LoReg = I.getOperand(0).getReg();
+  Register HiReg = I.getOperand(1).getReg();
+  const LLT NarrowTy = MRI.getType(LoReg);
   const LLT WideTy = MRI.getType(SrcReg);
+  const RegisterBank &LoRB = *RBI.getRegBank(LoReg, MRI, TRI);
+  const RegisterBank &HiRB = *RBI.getRegBank(HiReg, MRI, TRI);
+  const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+
+  // Handle unmerging a 128-bit FPR value into two 64-bit GPR values.
+  if (NarrowTy == LLT::scalar(64) && WideTy == LLT::scalar(128) &&
+      LoRB.getID() == AArch64::GPRRegBankID &&
+      HiRB.getID() == AArch64::GPRRegBankID &&
+      SrcRB.getID() == AArch64::FPRRegBankID) {
+    MachineInstr &Lo = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(AArch64::UMOVvi64), LoReg)
+                            .addUse(SrcReg)
+                            .addImm(0);
+    MachineInstr &Hi = *BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                TII.get(AArch64::UMOVvi64), HiReg)
+                            .addUse(SrcReg)
+                            .addImm(1);
+    constrainSelectedInstRegOperands(Lo, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(Hi, TII, TRI, RBI);
+    I.eraseFromParent();
+    return true;
+  }
+
+  // TODO: Handle other unmerges into GPRs and from scalars to scalars.
+  if (LoRB.getID() != AArch64::FPRRegBankID ||
+      HiRB.getID() != AArch64::FPRRegBankID) {
+    LLVM_DEBUG(dbgs() << "Unmerging vector-to-gpr and scalar-to-scalar "
+                         "currently unsupported.\n");
+    return false;
+  }
 
   assert(WideTy.getSizeInBits() > NarrowTy.getSizeInBits() &&
          "source register size too small!");
@@ -4477,8 +4719,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
 
   // If this is a compare against +0.0, then we don't have
   // to explicitly materialize a constant.
-  const ConstantFP *FPImm = getConstantFPVRegVal(RHS, MRI);
-  bool ShouldUseImm = FPImm && (FPImm->isZero() && !FPImm->isNegative());
+  bool ShouldUseImm = mi_match(RHS, MRI, m_PosZeroFP());
 
   auto IsEqualityPred = [](CmpInst::Predicate P) {
     return P == CmpInst::FCMP_OEQ || P == CmpInst::FCMP_ONE ||
@@ -4486,8 +4727,7 @@ MachineInstr *AArch64InstructionSelector::emitFPCompare(
   };
   if (!ShouldUseImm && Pred && IsEqualityPred(*Pred)) {
     // Try commuting the operands.
-    const ConstantFP *LHSImm = getConstantFPVRegVal(LHS, MRI);
-    if (LHSImm && (LHSImm->isZero() && !LHSImm->isNegative())) {
+    if (mi_match(LHS, MRI, m_PosZeroFP())) {
       ShouldUseImm = true;
       std::swap(LHS, RHS);
     }
@@ -7369,23 +7609,19 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
 
   // We need a GEP.
-  MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
-  if (Gep->getOpcode() != TargetOpcode::G_PTR_ADD)
+  Register Base, Offset;
+  if (!mi_match(Root.getReg(), MRI, m_GPtrAdd(m_Reg(Base), m_Reg(Offset))))
     return std::nullopt;
 
   // If this is used more than once, let's not bother folding.
   // TODO: Check if they are memory ops. If they are, then we can still fold
   // without having to recompute anything.
-  if (!MRI.hasOneNonDBGUse(Gep->getOperand(0).getReg()))
+  if (!MRI.hasOneNonDBGUse(Root.getReg()))
     return std::nullopt;
 
   // Base is the GEP's LHS, offset is its RHS.
-  return {{[=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(1).getReg());
-           },
-           [=](MachineInstrBuilder &MIB) {
-             MIB.addUse(Gep->getOperand(2).getReg());
-           },
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addUse(Base); },
+           [=](MachineInstrBuilder &MIB) { MIB.addUse(Offset); },
            [=](MachineInstrBuilder &MIB) {
              // Need to add both immediates here to make sure that they are both
              // added to the instruction.
@@ -7918,24 +8154,29 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
-AArch64InstructionSelector::selectCVTFixedPointVecBase(
-    const MachineOperand &Root, bool isReciprocal) const {
+AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
+                                                    unsigned DstElemWidth,
+                                                    bool isReciprocal) const {
   if (!Root.isReg())
     return std::nullopt;
   const MachineRegisterInfo &MRI =
       Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  MachineInstr *Dup = getDefIgnoringCopies(Root.getReg(), MRI);
-  if (Dup->getOpcode() != AArch64::G_DUP)
-    return std::nullopt;
+  Register Reg = Root.getReg();
+  MachineInstr *Dup = getDefIgnoringCopies(Reg, MRI);
+
+  if (Dup && Dup->getOpcode() == AArch64::G_DUP)
+    Reg = Dup->getOperand(1).getReg();
+
   std::optional<ValueAndVReg> CstVal =
-      getAnyConstantVRegValWithLookThrough(Dup->getOperand(1).getReg(), MRI);
+      getAnyConstantVRegValWithLookThrough(Reg, MRI);
+
   if (!CstVal)
     return std::nullopt;
 
-  unsigned RegWidth = MRI.getType(Root.getReg()).getScalarSizeInBits();
+  unsigned CstElemWidth = MRI.getType(Reg).getScalarSizeInBits();
   APFloat FVal(0.0);
-  switch (RegWidth) {
+  switch (CstElemWidth) {
   case 16:
     FVal = APFloat(APFloat::IEEEhalf(), CstVal->Value);
     break;
@@ -7949,21 +8190,38 @@ AArch64InstructionSelector::selectCVTFixedPointVecBase(
     return std::nullopt;
   };
   if (unsigned FBits =
-          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal))
+          CheckFixedPointOperandConstant(FVal, DstElemWidth, isReciprocal))
     return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
 
   return std::nullopt;
 }
 
+unsigned AArch64InstructionSelector::getFixedPointWidthFromOperand(
+    const MachineOperand &Root) const {
+  return Root.getParent()
+      ->getMF()
+      ->getRegInfo()
+      .getType(Root.getReg())
+      .getScalarSizeInBits();
+}
+
+template <unsigned Width>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPoint(MachineOperand &Root) const {
+  return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ false);
+}
+
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointVec(MachineOperand &Root) const {
-  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ false);
+  return selectCVTFixedPointBase(Root, getFixedPointWidthFromOperand(Root),
+                                 /*isReciprocal*/ false);
 }
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
-  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+  return selectCVTFixedPointBase(Root, getFixedPointWidthFromOperand(Root),
+                                 /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderFixedPointScalarXForm(
@@ -7973,26 +8231,33 @@ void AArch64InstructionSelector::renderFixedPointScalarXForm(
   MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
+void AArch64InstructionSelector::renderFixedPointImm(MachineInstrBuilder &MIB,
+                                                     const MachineOperand &Root,
+                                                     unsigned Width,
+                                                     bool isReciprocal) const {
+  // FIXME: This is only needed to satisfy the type checking in tablegen, and
+  // should be able to reuse the Renderers already calculated by
+  // selectCVTFixedPointBase.
+  InstructionSelector::ComplexRendererFns Renderer =
+      selectCVTFixedPointBase(Root, Width, isReciprocal);
+  assert((Renderer && Renderer->size() == 1) &&
+         "Expected selectCVTFixedPointBase to provide a function\n");
+  (Renderer->front())(MIB);
+}
+
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
                                                        const MachineInstr &MI,
                                                        int OpIdx) const {
-  // FIXME: This is only needed to satisfy the type checking in tablegen, and
-  // should be able to reuse the Renderers already calculated by
-  // selectCVTFixedPointVecBase.
-  InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ false);
-  assert((Renderer && Renderer->size() == 1) &&
-         "Expected selectCVTFixedPointVec to provide a function\n");
-  (Renderer->front())(MIB);
+  const MachineOperand &Root = MI.getOperand(OpIdx);
+  renderFixedPointImm(MIB, Root, getFixedPointWidthFromOperand(Root),
+                      /*isReciprocal*/ false);
 }
 
 void AArch64InstructionSelector::renderFixedPointRecipXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ true);
-  assert((Renderer && Renderer->size() == 1) &&
-         "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
-  (Renderer->front())(MIB);
+  const MachineOperand &Root = MI.getOperand(OpIdx);
+  renderFixedPointImm(MIB, Root, getFixedPointWidthFromOperand(Root),
+                      /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,

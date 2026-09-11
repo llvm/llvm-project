@@ -894,7 +894,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
                            ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
-        EVT LoadVT = TLI.getRegisterType(SrcVT.getSimpleVT());
+        EVT LoadVT =
+            TLI.getRegisterType(*DAG.getContext(), SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
              TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
@@ -921,7 +922,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
         if (SVT == MVT::f16 || SVT == MVT::bf16) {
           EVT ISrcVT = SrcVT.changeTypeToInteger();
           EVT IDestVT = DestVT.changeTypeToInteger();
-          EVT ILoadVT = TLI.getRegisterType(IDestVT.getSimpleVT());
+          EVT ILoadVT =
+              TLI.getRegisterType(*DAG.getContext(), IDestVT.getSimpleVT());
 
           SDValue Result = DAG.getExtLoad(ISD::ZEXTLOAD, dl, ILoadVT, Chain,
                                           Ptr, ISrcVT, LD->getMemOperand());
@@ -1065,15 +1067,14 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::STRICT_FSETCCS:
   case ISD::SETCC:
   case ISD::SETCCCARRY:
-  case ISD::VP_SETCC:
   case ISD::BR_CC: {
     unsigned Opc = Node->getOpcode();
-    unsigned CCOperand = Opc == ISD::SELECT_CC                         ? 4
-                         : Opc == ISD::STRICT_FSETCC                   ? 3
-                         : Opc == ISD::STRICT_FSETCCS                  ? 3
-                         : Opc == ISD::SETCCCARRY                      ? 3
-                         : (Opc == ISD::SETCC || Opc == ISD::VP_SETCC) ? 2
-                                                                       : 1;
+    unsigned CCOperand = Opc == ISD::SELECT_CC        ? 4
+                         : Opc == ISD::STRICT_FSETCC  ? 3
+                         : Opc == ISD::STRICT_FSETCCS ? 3
+                         : Opc == ISD::SETCCCARRY     ? 3
+                         : Opc == ISD::SETCC          ? 2
+                                                      : 1;
     unsigned CompareOperand = Opc == ISD::BR_CC            ? 2
                               : Opc == ISD::STRICT_FSETCC  ? 1
                               : Opc == ISD::STRICT_FSETCCS ? 1
@@ -1236,6 +1237,8 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
   case ISD::IS_FPCLASS:
     Action = TLI.getOperationAction(
         Node->getOpcode(), Node->getOperand(0).getValueType());
@@ -1268,6 +1271,11 @@ void SelectionDAGLegalize::LegalizeOp(SDNode *Node) {
   case ISD::VP_CTTZ_ELTS_ZERO_POISON:
     Action = TLI.getOperationAction(Node->getOpcode(),
                                     Node->getOperand(0).getValueType());
+    break;
+  case ISD::VECTOR_INTERLEAVE:
+  case ISD::VECTOR_DEINTERLEAVE:
+    Action = TLI.getVectorInterleaveAction(
+        Node->getOpcode(), Node->getNumOperands(), Node->getValueType(0));
     break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Action = TLI.getOperationAction(
@@ -1646,7 +1654,7 @@ void SelectionDAGLegalize::getSignAsIntValue(FloatSignAsInt &State,
 
   auto &DataLayout = DAG.getDataLayout();
   // Store the float to memory, then load the sign part out as an integer.
-  MVT LoadTy = TLI.getRegisterType(MVT::i8);
+  MVT LoadTy = TLI.getRegisterType(*DAG.getContext(), MVT::i8);
   // First create a temporary that is aligned for both the load and store.
   SDValue StackPtr = DAG.CreateStackTemporary(FloatVT, LoadTy);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
@@ -1839,10 +1847,6 @@ void SelectionDAGLegalize::ExpandDYNAMIC_STACKALLOC(SDNode* Node,
   Results.push_back(Tmp2);
 }
 
-/// Emit a store/load combination to the stack.  This stores
-/// SrcOp to a stack slot of type SlotVT, truncating it if needed.  It then does
-/// a load from the stack slot to DestVT, extending it if needed.
-/// The resultant code need not be legal.
 SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                                EVT DestVT, const SDLoc &dl) {
   return EmitStackConvert(SrcOp, SlotVT, DestVT, dl, DAG.getEntryNode());
@@ -1854,10 +1858,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   EVT SrcVT = SrcOp.getValueType();
   Type *DestType = DestVT.getTypeForEVT(*DAG.getContext());
   Align DestAlign = DAG.getDataLayout().getPrefTypeAlign(DestType);
-
   // Don't convert with stack if the load/store is expensive.
   if ((SrcVT.bitsGT(SlotVT) && !TLI.isTruncStoreLegalOrCustom(
-                                   SrcOp.getValueType(), SlotVT, DestAlign,
+                                   SrcVT, SlotVT, DestAlign,
                                    DAG.getDataLayout().getAllocaAddrSpace())) ||
       (SlotVT.bitsLT(DestVT) &&
        !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
@@ -1865,35 +1868,7 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
                                 ISD::EXTLOAD, false)))
     return SDValue();
 
-  // Create the stack frame object.
-  Align SrcAlign = DAG.getDataLayout().getPrefTypeAlign(
-      SrcOp.getValueType().getTypeForEVT(*DAG.getContext()));
-  SDValue FIPtr = DAG.CreateStackTemporary(SlotVT.getStoreSize(), SrcAlign);
-
-  FrameIndexSDNode *StackPtrFI = cast<FrameIndexSDNode>(FIPtr);
-  int SPFI = StackPtrFI->getIndex();
-  MachinePointerInfo PtrInfo =
-      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), SPFI);
-
-  // Emit a store to the stack slot.  Use a truncstore if the input value is
-  // later than DestVT.
-  SDValue Store;
-
-  if (SrcVT.bitsGT(SlotVT))
-    Store = DAG.getTruncStore(Chain, dl, SrcOp, FIPtr, PtrInfo,
-                              SlotVT, SrcAlign);
-  else {
-    assert(SrcVT.bitsEq(SlotVT) && "Invalid store");
-    Store = DAG.getStore(Chain, dl, SrcOp, FIPtr, PtrInfo, SrcAlign);
-  }
-
-  // Result is a load from the stack slot.
-  if (SlotVT.bitsEq(DestVT))
-    return DAG.getLoad(DestVT, dl, Store, FIPtr, PtrInfo, DestAlign);
-
-  assert(SlotVT.bitsLT(DestVT) && "Unknown extension!");
-  return DAG.getExtLoad(ISD::EXTLOAD, dl, DestVT, Store, FIPtr, PtrInfo, SlotVT,
-                        DestAlign);
+  return DAG.emitStackConvert(SrcOp, SlotVT, DestVT, dl, Chain);
 }
 
 SDValue SelectionDAGLegalize::ExpandSCALAR_TO_VECTOR(SDNode *Node) {
@@ -3416,6 +3391,18 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Res.getValue(1));
     break;
   }
+  case ISD::ATOMIC_LOAD_FSUB: {
+    SDLoc DL(Node);
+    EVT VT = Node->getValueType(0);
+    AtomicSDNode *AN = cast<AtomicSDNode>(Node);
+    SDValue NewRHS = DAG.getNode(ISD::FNEG, DL, VT, Node->getOperand(2));
+    SDValue Res = DAG.getAtomic(ISD::ATOMIC_LOAD_FADD, DL, AN->getMemoryVT(),
+                                Node->getOperand(0), Node->getOperand(1),
+                                NewRHS, AN->getMemOperand());
+    Results.push_back(Res);
+    Results.push_back(Res.getValue(1));
+    break;
+  }
   case ISD::DYNAMIC_STACKALLOC:
     ExpandDYNAMIC_STACKALLOC(Node, Results);
     break;
@@ -4418,10 +4405,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   case ISD::SETCC:
-  case ISD::VP_SETCC:
   case ISD::STRICT_FSETCC:
   case ISD::STRICT_FSETCCS: {
-    bool IsVP = Node->getOpcode() == ISD::VP_SETCC;
     bool IsStrict = Node->getOpcode() == ISD::STRICT_FSETCC ||
                     Node->getOpcode() == ISD::STRICT_FSETCCS;
     bool IsSignaling = Node->getOpcode() == ISD::STRICT_FSETCCS;
@@ -4430,14 +4415,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp1 = Node->getOperand(0 + Offset);
     Tmp2 = Node->getOperand(1 + Offset);
     Tmp3 = Node->getOperand(2 + Offset);
-    SDValue Mask, EVL;
-    if (IsVP) {
-      Mask = Node->getOperand(3 + Offset);
-      EVL = Node->getOperand(4 + Offset);
-    }
-    bool Legalized = TLI.LegalizeSetCCCondCode(
-        DAG, Node->getValueType(0), Tmp1, Tmp2, Tmp3, Mask, EVL, NeedInvert, dl,
-        Chain, IsSignaling);
+    bool Legalized =
+        TLI.LegalizeSetCCCondCode(DAG, Node->getValueType(0), Tmp1, Tmp2, Tmp3,
+                                  NeedInvert, dl, Chain, IsSignaling);
 
     if (Legalized) {
       // If we expanded the SETCC by swapping LHS and RHS, or by inverting the
@@ -4447,9 +4427,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
           Tmp1 = DAG.getNode(Node->getOpcode(), dl, Node->getVTList(),
                              {Chain, Tmp1, Tmp2, Tmp3}, Node->getFlags());
           Chain = Tmp1.getValue(1);
-        } else if (IsVP) {
-          Tmp1 = DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0),
-                             {Tmp1, Tmp2, Tmp3, Mask, EVL}, Node->getFlags());
         } else {
           Tmp1 = DAG.getNode(Node->getOpcode(), dl, Node->getValueType(0), Tmp1,
                              Tmp2, Tmp3, Node->getFlags());
@@ -4459,11 +4436,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
       // If we expanded the SETCC by inverting the condition code, then wrap
       // the existing SETCC in a NOT to restore the intended condition.
       if (NeedInvert) {
-        if (!IsVP)
-          Tmp1 = DAG.getLogicalNOT(dl, Tmp1, Tmp1->getValueType(0));
-        else
-          Tmp1 =
-              DAG.getVPLogicalNOT(dl, Tmp1, Mask, EVL, Tmp1->getValueType(0));
+        Tmp1 = DAG.getLogicalNOT(dl, Tmp1, Tmp1->getValueType(0));
       }
 
       Results.push_back(Tmp1);
@@ -4479,7 +4452,6 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
 
     // Otherwise, SETCC for the given comparison type must be completely
     // illegal; expand it into a SELECT_CC.
-    // FIXME: This drops the mask/evl for VP_SETCC.
     EVT VT = Node->getValueType(0);
     EVT Tmp1VT = Tmp1.getValueType();
     Tmp1 = DAG.getNode(ISD::SELECT_CC, dl, VT, Tmp1, Tmp2,
@@ -4541,7 +4513,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     if (!Legalized) {
       Legalized = TLI.LegalizeSetCCCondCode(
           DAG, getSetCCResultType(Tmp1.getValueType()), Tmp1, Tmp2, CC,
-          /*Mask*/ SDValue(), /*EVL*/ SDValue(), NeedInvert, dl, Chain);
+          NeedInvert, dl, Chain);
 
       assert(Legalized && "Can't legalize SELECT_CC with legal condition!");
 
@@ -4573,9 +4545,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Tmp3 = Node->getOperand(3);              // RHS
     Tmp4 = Node->getOperand(1);              // CC
 
-    bool Legalized = TLI.LegalizeSetCCCondCode(
-        DAG, getSetCCResultType(Tmp2.getValueType()), Tmp2, Tmp3, Tmp4,
-        /*Mask*/ SDValue(), /*EVL*/ SDValue(), NeedInvert, dl, Chain);
+    bool Legalized =
+        TLI.LegalizeSetCCCondCode(DAG, getSetCCResultType(Tmp2.getValueType()),
+                                  Tmp2, Tmp3, Tmp4, NeedInvert, dl, Chain);
     (void)Legalized;
     assert(Legalized && "Can't legalize BR_CC with legal condition!");
 
@@ -4641,6 +4613,8 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
     Results.push_back(TLI.expandVecReduce(Node, DAG));
     break;
   case ISD::VP_CTTZ_ELTS:
@@ -5456,14 +5430,15 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   SmallVector<SDValue, 8> Results;
   MVT OVT = Node->getSimpleValueType(0);
   if (Node->getOpcode() == ISD::UINT_TO_FP ||
-      Node->getOpcode() == ISD::SINT_TO_FP ||
-      Node->getOpcode() == ISD::SETCC ||
+      Node->getOpcode() == ISD::SINT_TO_FP || Node->getOpcode() == ISD::SETCC ||
       Node->getOpcode() == ISD::EXTRACT_VECTOR_ELT ||
       Node->getOpcode() == ISD::INSERT_VECTOR_ELT ||
       Node->getOpcode() == ISD::VECREDUCE_FMAX ||
       Node->getOpcode() == ISD::VECREDUCE_FMIN ||
       Node->getOpcode() == ISD::VECREDUCE_FMAXIMUM ||
-      Node->getOpcode() == ISD::VECREDUCE_FMINIMUM) {
+      Node->getOpcode() == ISD::VECREDUCE_FMINIMUM ||
+      Node->getOpcode() == ISD::VECREDUCE_FMAXIMUMNUM ||
+      Node->getOpcode() == ISD::VECREDUCE_FMINIMUMNUM) {
     OVT = Node->getOperand(0).getSimpleValueType();
   }
   if (Node->getOpcode() == ISD::ATOMIC_STORE ||
@@ -5893,6 +5868,18 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(Tmp1.getValue(1));
     break;
   case ISD::FMA:
+    // Promote scalar operations to vector using SCALAR_TO_VECTOR
+    if (!OVT.isVector() && NVT.isVector() &&
+        NVT.getVectorElementType() == OVT) {
+      Tmp1 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(0));
+      Tmp2 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(1));
+      Tmp3 = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, NVT, Node->getOperand(2));
+      SDValue Result = DAG.getNode(Node->getOpcode(), dl, NVT, Tmp1, Tmp2, Tmp3,
+                                   Node->getFlags());
+      Results.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, OVT, Result,
+                                    DAG.getConstant(0, dl, MVT::i32)));
+      break;
+    }
     Tmp1 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(0));
     Tmp2 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ISD::FP_EXTEND, dl, NVT, Node->getOperand(2));
@@ -6288,6 +6275,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   case ISD::VECREDUCE_FMIN:
   case ISD::VECREDUCE_FMAXIMUM:
   case ISD::VECREDUCE_FMINIMUM:
+  case ISD::VECREDUCE_FMAXIMUMNUM:
+  case ISD::VECREDUCE_FMINIMUMNUM:
   case ISD::VP_REDUCE_FMAX:
   case ISD::VP_REDUCE_FMIN:
   case ISD::VP_REDUCE_FMAXIMUM:
