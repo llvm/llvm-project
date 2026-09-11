@@ -4147,11 +4147,14 @@ class SPCompress :
      llvm_any_vector_int_ty], // cdata
     [llvm_any_vector_int_ty,  // data
      llvm_i32_ty],            // spdesc
-    [llvm_i32_ty],            // idx_size
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
     !listconcat([IntrNoMem, IntrSpeculatable],
-                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop)>;
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [4]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
 
-def int_nvvm_spcompress_sp2to4 : SPCompress;
+def int_nvvm_spcompress : SPCompress;
 
 //
 // spdecompress intrinsics
@@ -4162,13 +4165,13 @@ class SPDecompress :
     [llvm_any_vector_int_ty], // data
     [llvm_anyint_ty,  // mdata
      llvm_any_vector_int_ty], // cdata
-    [llvm_i32_ty],            // idx_size
+    [llvm_i32_ty,             // idx_size
+     llvm_i32_ty],            // num_tgt
     !listconcat([IntrNoMem, IntrSpeculatable],
-                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop)>;
+                NVVM_SP_IDX_ARGPROPS<ArgIndex<2>>.Prop,
+                [RangeList<ArgIndex<3>, [2, 4, 8, 16]>,
+                 ArgInfo<ArgIndex<3>, [ArgName<"num_tgt">]>])>;
 
-foreach num_src = [1, 2, 4] in
-  foreach num_tgt = [2, 4, 8, 16] in
-    if !lt(num_src, num_tgt) then
-      def int_nvvm_spdecompress_sp # num_src # to # num_tgt : SPDecompress;
+def int_nvvm_spdecompress : SPDecompress;
 
 } // let TargetPrefix = "nvvm"

@@ -139,7 +139,7 @@ private:
   void SelectTcgen05Ld(SDNode *N, bool hasOffset = false);
   void SelectTcgen05St(SDNode *N, bool hasOffset = false);
   void selectSPCompress(SDNode *N);
-  void selectSPDecompress(SDNode *N, unsigned NumSrc, unsigned NumTgt);
+  void selectSPDecompress(SDNode *N);
   void selectAtomicSwap128(SDNode *N);
 
   inline SDValue getI32Imm(unsigned Imm, const SDLoc &DL) {
@@ -487,13 +487,18 @@ static std::optional<unsigned> getSPDataElemSize(EVT VT) {
   CASE_MACRO(128)
 
 void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
-  constexpr unsigned NumFlags = 1;
+  constexpr unsigned NumFlags = 2;
   if (N->getNumOperands() < NumFlags + 3)
     report_fatal_error("Malformed spcompress intrinsic");
 
   unsigned FlagOp = N->getNumOperands() - NumFlags;
   unsigned IdxSize =
       cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
+  unsigned NumTgt =
+      cast<ConstantSDNode>(N->getOperand(FlagOp + 1))->getZExtValue();
+  if (NumTgt != 4)
+    report_fatal_error(Twine("Invalid spcompress flags: num_tgt=") +
+                       Twine(NumTgt));
 
   // The data bundle contains two registers per repetition.
   unsigned DataSize = FlagOp - 2;
@@ -556,15 +561,20 @@ void NVPTXDAGToDAGISel::selectSPCompress(SDNode *N) {
 #undef REPLACE_SPCOMPRESS_NODE
 }
 
-void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N, unsigned NumSrc,
-                                           unsigned NumTgt) {
-  constexpr unsigned NumFlags = 1;
+void NVPTXDAGToDAGISel::selectSPDecompress(SDNode *N) {
+  // NumSrc is inferred from the logical vector lengths before register
+  // padding and appended as an internal operand by lowerSPDecompress.
+  constexpr unsigned NumFlags = 3;
   if (N->getNumOperands() < NumFlags + 3)
     report_fatal_error("Malformed spdecompress intrinsic");
 
   unsigned FlagOp = N->getNumOperands() - NumFlags;
   unsigned IdxSize =
       cast<ConstantSDNode>(N->getOperand(FlagOp))->getZExtValue();
+  unsigned NumTgt =
+      cast<ConstantSDNode>(N->getOperand(FlagOp + 1))->getZExtValue();
+  unsigned NumSrc =
+      cast<ConstantSDNode>(N->getOperand(FlagOp + 2))->getZExtValue();
   EVT DataRegVT = N->getValueType(0);
   auto ElemSize = getSPDataElemSize(DataRegVT);
   if (!ElemSize)
@@ -641,35 +651,11 @@ bool NVPTXDAGToDAGISel::tryIntrinsicNoChain(SDNode *N) {
   switch (IID) {
   default:
     return false;
-  case Intrinsic::nvvm_spcompress_sp2to4:
+  case Intrinsic::nvvm_spcompress:
     selectSPCompress(N);
     return true;
-  case Intrinsic::nvvm_spdecompress_sp1to2:
-    selectSPDecompress(N, /*NumSrc=*/1, /*NumTgt=*/2);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp1to4:
-    selectSPDecompress(N, /*NumSrc=*/1, /*NumTgt=*/4);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp1to8:
-    selectSPDecompress(N, /*NumSrc=*/1, /*NumTgt=*/8);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp1to16:
-    selectSPDecompress(N, /*NumSrc=*/1, /*NumTgt=*/16);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp2to4:
-    selectSPDecompress(N, /*NumSrc=*/2, /*NumTgt=*/4);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp2to8:
-    selectSPDecompress(N, /*NumSrc=*/2, /*NumTgt=*/8);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp2to16:
-    selectSPDecompress(N, /*NumSrc=*/2, /*NumTgt=*/16);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp4to8:
-    selectSPDecompress(N, /*NumSrc=*/4, /*NumTgt=*/8);
-    return true;
-  case Intrinsic::nvvm_spdecompress_sp4to16:
-    selectSPDecompress(N, /*NumSrc=*/4, /*NumTgt=*/16);
+  case Intrinsic::nvvm_spdecompress:
+    selectSPDecompress(N);
     return true;
   }
 }

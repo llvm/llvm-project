@@ -65,6 +65,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -3210,10 +3211,7 @@ static EVT getSPVectorPartType(EVT VT) {
 static unsigned getSPVectorNumParts(EVT VT) {
   EVT PartVT = getSPVectorPartType(VT);
   unsigned PartElts = PartVT.isVector() ? PartVT.getVectorNumElements() : 1;
-  if (VT.getVectorNumElements() % PartElts != 0)
-    report_fatal_error(
-        "SP intrinsic vector types must occupy whole 32-bit registers");
-  return VT.getVectorNumElements() / PartElts;
+  return divideCeil(VT.getVectorNumElements(), PartElts);
 }
 
 static bool needsSPVectorLowering(SDNode *N) {
@@ -3238,6 +3236,14 @@ static void splitSPVector(SDValue Vector, SmallVectorImpl<SDValue> &Parts,
 
   unsigned NumParts = getSPVectorNumParts(VT);
   unsigned PartElts = PartVT.getVectorNumElements();
+  unsigned PaddedElts = NumParts * PartElts;
+  if (PaddedElts != VT.getVectorNumElements()) {
+    EVT PaddedVT = EVT::getVectorVT(*DAG.getContext(),
+                                    VT.getVectorElementType(), PaddedElts);
+    Vector = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(Vector), PaddedVT,
+                         DAG.getUNDEF(PaddedVT), Vector,
+                         DAG.getVectorIdxConstant(0, SDLoc(Vector)));
+  }
   for (unsigned I = 0; I != NumParts; ++I)
     Parts.push_back(
         DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Vector), PartVT, Vector,
@@ -3250,8 +3256,19 @@ static SDValue joinSPVector(EVT VT, ArrayRef<SDValue> Parts, const SDLoc &DL,
          "incorrect number of SP vector parts");
   if (Parts.size() == 1 && Parts.front().getValueType() == VT)
     return Parts.front();
-  if (Parts.front().getValueType().isVector())
-    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Parts);
+  if (Parts.front().getValueType().isVector()) {
+    EVT PartVT = Parts.front().getValueType();
+    EVT JoinedVT =
+        EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                         Parts.size() * PartVT.getVectorNumElements());
+    SDValue Joined = Parts.size() == 1 ? Parts.front()
+                                       : DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                                                     JoinedVT, Parts);
+    if (JoinedVT == VT)
+      return Joined;
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Joined,
+                       DAG.getVectorIdxConstant(0, DL));
+  }
   return DAG.getBuildVector(VT, DL, Parts);
 }
 
@@ -3299,9 +3316,28 @@ static SDValue lowerSPCompress(SDValue Op, SelectionDAG &DAG) {
 static SDValue lowerSPDecompress(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
   SDLoc DL(N);
-  EVT ResVT0 = N->getValueType(0);
-  if (!needsSPVectorLowering(N))
+  // A lowered node has the inferred num_src operand appended and may have more
+  // than one operand for each register bundle.
+  if (N->getNumOperands() != 5)
     return Op;
+
+  EVT ResVT0 = N->getValueType(0);
+  EVT CDataVT = N->getOperand(2).getValueType();
+  if (!ResVT0.isVector() || !CDataVT.isVector())
+    report_fatal_error("spdecompress operand/result types do not match "
+                       "the SP intrinsic flags");
+
+  unsigned NumTgt = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+  unsigned DataElts = ResVT0.getVectorNumElements();
+  if (NumTgt == 0 || DataElts % NumTgt != 0)
+    report_fatal_error("spdecompress operand/result types do not match "
+                       "the SP intrinsic flags");
+  unsigned RepeatFactor = DataElts / NumTgt;
+  unsigned CDataElts = CDataVT.getVectorNumElements();
+  if (RepeatFactor == 0 || CDataElts % RepeatFactor != 0)
+    report_fatal_error("spdecompress operand/result types do not match "
+                       "the SP intrinsic flags");
+  unsigned NumSrc = CDataElts / RepeatFactor;
 
   unsigned NumParts = getSPVectorNumParts(ResVT0);
   EVT PartVT = getSPVectorPartType(ResVT0);
@@ -3318,6 +3354,7 @@ static SDValue lowerSPDecompress(SDValue Op, SelectionDAG &DAG) {
     else
       Ops.push_back(Operand);
   }
+  Ops.push_back(DAG.getConstant(NumSrc, DL, MVT::i32));
 
   SDValue NewNode = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, ResVTs, Ops);
 
@@ -3356,18 +3393,10 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
     return lowerCvtRSIntrinsics(Op, DAG);
 
-  case Intrinsic::nvvm_spcompress_sp2to4:
+  case Intrinsic::nvvm_spcompress:
     return lowerSPCompress(Op, DAG);
 
-  case Intrinsic::nvvm_spdecompress_sp1to2:
-  case Intrinsic::nvvm_spdecompress_sp1to4:
-  case Intrinsic::nvvm_spdecompress_sp1to8:
-  case Intrinsic::nvvm_spdecompress_sp1to16:
-  case Intrinsic::nvvm_spdecompress_sp2to4:
-  case Intrinsic::nvvm_spdecompress_sp2to8:
-  case Intrinsic::nvvm_spdecompress_sp2to16:
-  case Intrinsic::nvvm_spdecompress_sp4to8:
-  case Intrinsic::nvvm_spdecompress_sp4to16:
+  case Intrinsic::nvvm_spdecompress:
     return lowerSPDecompress(Op, DAG);
   }
 }
@@ -7463,20 +7492,14 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
       return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
-  case Intrinsic::nvvm_spcompress_sp2to4:
+  case Intrinsic::nvvm_spcompress:
     if (needsSPVectorLowering(N))
       return lowerSPCompress(SDValue(N, 0), DCI.DAG);
     break;
-  case Intrinsic::nvvm_spdecompress_sp1to2:
-  case Intrinsic::nvvm_spdecompress_sp1to4:
-  case Intrinsic::nvvm_spdecompress_sp1to8:
-  case Intrinsic::nvvm_spdecompress_sp1to16:
-  case Intrinsic::nvvm_spdecompress_sp2to4:
-  case Intrinsic::nvvm_spdecompress_sp2to8:
-  case Intrinsic::nvvm_spdecompress_sp2to16:
-  case Intrinsic::nvvm_spdecompress_sp4to8:
-  case Intrinsic::nvvm_spdecompress_sp4to16: {
-    if (needsSPVectorLowering(N))
+  case Intrinsic::nvvm_spdecompress: {
+    // The IR intrinsic has the ID plus four arguments; lowered nodes also have
+    // an inferred num_src operand, so do not lower them again.
+    if (N->getNumOperands() == 5)
       return lowerSPDecompress(SDValue(N, 0), DCI.DAG);
     break;
   }
