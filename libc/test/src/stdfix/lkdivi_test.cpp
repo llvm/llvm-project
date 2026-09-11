@@ -1,4 +1,4 @@
-//===-- Unittests for rdivi -----------------------------------------------===//
+//===-- Unittests for lkdivi ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,6 @@
 #include "FxDiviTest.h"
 
 #include "llvm-libc-macros/stdfix-macros.h"
-#include "src/stdfix/rdivi.h"
+#include "src/stdfix/lkdivi.h"
 
-LIST_FXDIVI_TESTS(r, fract, int, LIBC_NAMESPACE::rdivi);
+LIST_FXDIVI_TESTS(lk, long accum, long int, LIBC_NAMESPACE::lkdivi);
