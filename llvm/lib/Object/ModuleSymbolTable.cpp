@@ -234,7 +234,7 @@ uint32_t ModuleSymbolTable::getSymbolFlags(Symbol S) const {
   if (isa<GlobalAlias>(GV))
     Res |= BasicSymbolRef::SF_Indirect;
   if (GV->hasPrivateLinkage())
-    Res |= BasicSymbolRef::SF_FormatSpecific;
+    Res |= BasicSymbolRef::SF_FormatSpecific | BasicSymbolRef::SF_Private;
   if (!GV->hasLocalLinkage())
     Res |= BasicSymbolRef::SF_Global;
   if (GV->hasCommonLinkage())
