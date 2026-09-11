@@ -16,3 +16,15 @@ int *[[ns::transient(a, b)]] p;
 // type attribute after the declarator, so the exact written position is not
 // preserved (harmless for an ignored attribute; the content round-trips).
 // PRINT: int *p {{\[\[}}ns::transient(a, b){{\]\]}};
+
+// The wrapper survives template instantiation: TreeTransform rebuilds the
+// AttributedType, so the specialization's member keeps the attribute with the
+// substituted underlying type. This is the same path [[clang::annotate_type]]
+// takes, so no special support is needed.
+template <class T> struct S {
+  T *[[ns::transient(a, b)]] q;
+};
+template struct S<int>;
+
+// CHECK: ClassTemplateSpecializationDecl {{.*}} struct S definition
+// CHECK: FieldDecl {{.*}} q 'int * {{\[\[}}ns::transient(a, b){{\]\]}}':'int *'
