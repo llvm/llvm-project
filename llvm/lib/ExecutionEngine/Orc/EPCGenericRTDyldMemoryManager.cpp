@@ -187,18 +187,30 @@ void EPCGenericRTDyldMemoryManager::deregisterEHFrames() {
 
 void EPCGenericRTDyldMemoryManager::notifyObjectLoaded(
     RuntimeDyld &Dyld, const object::ObjectFile &Obj) {
-  std::lock_guard<std::mutex> Lock(M);
+  // Do not hold M while calling Dyld.mapSectionAddress: loadObjectImpl holds
+  // the RuntimeDyld lock across MemMgr.reserveAllocationSpace (which takes M),
+  // so M -> RuntimeDyld lock here would invert that order (TSan deadlock).
+  std::vector<SectionAllocGroup> ObjAllocGroups;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    ObjAllocGroups.swap(Unmapped);
+  }
+
   LLVM_DEBUG(dbgs() << "Allocator " << (void *)this << " applied mappings:\n");
-  for (auto &ObjAllocs : Unmapped) {
+  for (auto &ObjAllocs : ObjAllocGroups) {
     mapAllocsToRemoteAddrs(Dyld, ObjAllocs.CodeAllocs,
                            ObjAllocs.RemoteCode.Start);
     mapAllocsToRemoteAddrs(Dyld, ObjAllocs.RODataAllocs,
                            ObjAllocs.RemoteROData.Start);
     mapAllocsToRemoteAddrs(Dyld, ObjAllocs.RWDataAllocs,
                            ObjAllocs.RemoteRWData.Start);
-    Unfinalized.push_back(std::move(ObjAllocs));
   }
-  Unmapped.clear();
+
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    for (auto &ObjAllocs : ObjAllocGroups)
+      Unfinalized.push_back(std::move(ObjAllocs));
+  }
 }
 
 bool EPCGenericRTDyldMemoryManager::finalizeMemory(std::string *ErrMsg) {
