@@ -161,6 +161,7 @@ struct D {
 };
 
 template <typename T> void dtor(T) { (void)D{1}; }
+template <typename T> void dtor2(T) { (void)D{1}; (void)D{2}; }
 template <typename T> void braces(T) { (void)S{1}; }
 template <typename T> void parens(T) { (void)S(1, 2); }
 template <typename T> void empty_braces(T) { (void)S{}; }
@@ -170,20 +171,41 @@ template <typename T> struct C {
 };
 template <typename T> void member(T) { C<T>{}.m(); }
 
+struct M {
+  consteval int m() const { f(); return 1; }
+};
+constexpr M gm{};
+template <typename T> int memcall(T) { return gm.m(); }
+
+template int memcall<int>(int);
 template void dtor<int>(int);
+template void dtor2<int>(int);
 template void braces<int>(int);
 template void parens<int>(int);
 template void empty_braces<int>(int);
 template void lambda<int>(int);
 template void member<int>(int);
 
+// A consteval member call on a non-dependent object is reused as well.
+// CHECK: define {{.*}} @_ZN8GH2192727memcallIiEEiT_(
+// CHECK-NOT: call
+// CHECK: ret i32 1
+
 // The temporary is constant-evaluated, but its destructor still runs.
 // CHECK: define {{.*}} @_ZN8GH2192724dtorIiEEvT_(
+// CHECK-NOT: call {{.*}}GH2192721DC
+// CHECK: call void @_ZN8GH2192721DD1Ev(
+
+// Same with two immediate invocations in one body (Sema rewrites them then).
+// CHECK: define {{.*}} @_ZN8GH2192725dtor2IiEEvT_(
+// CHECK-NOT: call {{.*}}GH2192721DC
+// CHECK: call void @_ZN8GH2192721DD1Ev(
 // CHECK-NOT: call {{.*}}GH2192721DC
 // CHECK: call void @_ZN8GH2192721DD1Ev(
 
 // Make sure the consteval constructors are neither called nor emitted.
 // CHECK-NOT: call {{.*}}GH2192721{{S|D}}C
 // CHECK-NOT: define {{.*}}GH2192721{{S|D}}C
+// CHECK-NOT: define {{.*}}GH2192721M1m
 
 } // namespace GH219272

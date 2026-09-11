@@ -18617,6 +18617,12 @@ static void RemoveNestedImmediateInvocation(
     /// Base::TransformUserDefinedLiteral doesn't preserve the
     /// UserDefinedLiteral node.
     ExprResult TransformUserDefinedLiteral(UserDefinedLiteral *E) { return E; }
+    /// Keep skipping immediate invocations under implicit casts: they stay
+    /// separate candidates and are evaluated and diagnosed on their own, which
+    /// existing diagnostics depend on.
+    Expr *getCastOperandToTransform(CastExpr *E) {
+      return E->getSubExprAsWritten();
+    }
     /// Base::TransformInitializer skips ConstantExpr so we need to visit them
     /// here.
     ExprResult TransformInitializer(Expr *Init, bool NotCopyInit) {
@@ -18684,6 +18690,28 @@ static void RemoveNestedImmediateInvocation(
   }
 }
 
+/// Erase the DeclRefExprs within \p S, a subexpression of an immediate
+/// invocation, from the set of references to consteval functions.
+static void
+EraseReferencesToConsteval(llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet,
+                           Stmt *S) {
+  struct SimpleRemove : DynamicRecursiveASTVisitor {
+    llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet;
+    SimpleRemove(llvm::SmallPtrSetImpl<DeclRefExpr *> &S) : DRSet(S) {}
+    bool VisitDeclRefExpr(DeclRefExpr *E) override {
+      DRSet.erase(E);
+      return DRSet.size();
+    }
+  } Visitor(DRSet);
+  Visitor.TraverseStmt(S);
+}
+
+void Sema::RemoveReferencesToConsteval(Expr *E) {
+  auto &DRSet = currentEvaluationContext().ReferenceToConsteval;
+  if (!DRSet.empty())
+    EraseReferencesToConsteval(DRSet, E);
+}
+
 static void
 HandleImmediateInvocations(Sema &SemaRef,
                            Sema::ExpressionEvaluationContextRecord &Rec) {
@@ -18733,15 +18761,8 @@ HandleImmediateInvocations(Sema &SemaRef,
         RemoveNestedImmediateInvocation(SemaRef, Rec, It);
   } else if (Rec.ImmediateInvocationCandidates.size() == 1 &&
              Rec.ReferenceToConsteval.size()) {
-    struct SimpleRemove : DynamicRecursiveASTVisitor {
-      llvm::SmallPtrSetImpl<DeclRefExpr *> &DRSet;
-      SimpleRemove(llvm::SmallPtrSetImpl<DeclRefExpr *> &S) : DRSet(S) {}
-      bool VisitDeclRefExpr(DeclRefExpr *E) override {
-        DRSet.erase(E);
-        return DRSet.size();
-      }
-    } Visitor(Rec.ReferenceToConsteval);
-    Visitor.TraverseStmt(
+    EraseReferencesToConsteval(
+        Rec.ReferenceToConsteval,
         Rec.ImmediateInvocationCandidates.front().getPointer()->getSubExpr());
   }
   for (auto CE : Rec.ImmediateInvocationCandidates)

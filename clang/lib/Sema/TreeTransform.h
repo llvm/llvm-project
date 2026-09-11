@@ -23,6 +23,7 @@
 #include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/ExprOpenMP.h"
+#include "clang/AST/IgnoreExpr.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
@@ -486,6 +487,10 @@ public:
   ///
   /// \returns the transformed initializer.
   ExprResult TransformInitializer(Expr *Init, bool NotCopyInit);
+
+  /// Get the operand of a cast to transform: the operand as written, unless
+  /// that skips an immediate invocation, which TransformConstantExpr can keep.
+  Expr *getCastOperandToTransform(CastExpr *E);
 
   /// Transform the given list of expressions.
   ///
@@ -4487,8 +4492,15 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   if (!Init)
     return Init;
 
-  if (auto *FE = dyn_cast<FullExpr>(Init))
+  // Remember an immediate invocation; TransformConstantExpr can keep it if the
+  // expression underneath is reused.
+  ConstantExpr *ImmediateInvocation = nullptr;
+  if (auto *FE = dyn_cast<FullExpr>(Init)) {
+    if (auto *CE = dyn_cast<ConstantExpr>(FE);
+        CE && CE->isImmediateInvocation())
+      ImmediateInvocation = CE;
     Init = FE->getSubExpr();
+  }
 
   if (auto *AIL = dyn_cast<ArrayInitLoopExpr>(Init)) {
     OpaqueValueExpr *OVE = AIL->getCommonExpr();
@@ -4502,18 +4514,27 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
     Init = Binder->getSubExpr();
 
   if (ImplicitCastExpr *ICE = dyn_cast<ImplicitCastExpr>(Init))
-    Init = ICE->getSubExprAsWritten();
+    Init = getDerived().getCastOperandToTransform(ICE);
 
   if (CXXStdInitializerListExpr *ILE =
           dyn_cast<CXXStdInitializerListExpr>(Init))
     return TransformInitializer(ILE->getSubExpr(), NotCopyInit);
+
+  // Where the initializer is transformed as is, transform the immediate
+  // invocation instead if it directly wraps the initializer, so that a reused
+  // initializer keeps it.
+  auto TransformAsIs = [&](Expr *E) {
+    if (ImmediateInvocation && ImmediateInvocation->getSubExpr() == E)
+      E = ImmediateInvocation;
+    return getDerived().TransformExpr(E);
+  };
 
   // If this is copy-initialization, we only need to reconstruct
   // InitListExprs. Other forms of copy-initialization will be a no-op if
   // the initializer is already the right type.
   CXXConstructExpr *Construct = dyn_cast<CXXConstructExpr>(Init);
   if (!NotCopyInit && !(Construct && Construct->isListInitialization()))
-    return getDerived().TransformExpr(Init);
+    return TransformAsIs(Init);
 
   // Revert value-initialization back to empty parens.
   if (CXXScalarValueInitExpr *VIE = dyn_cast<CXXScalarValueInitExpr>(Init)) {
@@ -4530,7 +4551,7 @@ ExprResult TreeTransform<Derived>::TransformInitializer(Expr *Init,
   // Revert initialization by constructor back to a parenthesized or braced list
   // of expressions. Any other form of initializer can just be reused directly.
   if (!Construct || isa<CXXTemporaryObjectExpr>(Construct))
-    return getDerived().TransformExpr(Init);
+    return TransformAsIs(Init);
 
   // If the initialization implicitly converted an initializer list to a
   // std::initializer_list object, unwrap the std::initializer_list too.
@@ -13547,7 +13568,45 @@ ExprResult TreeTransform<Derived>::TransformOpenACCAsteriskSizeExpr(
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformConstantExpr(ConstantExpr *E) {
-  return TransformExpr(E->getSubExpr());
+  if (!E->isImmediateInvocation())
+    return TransformExpr(E->getSubExpr());
+
+  // Sema wraps a rebuilt immediate invocation again, but the reuse shortcuts
+  // return the old node bare (at most bound to a fresh temporary), so keep this
+  // node, and its cached result, for a reused subexpression.
+  ExprResult SubExpr = getDerived().TransformExpr(E->getSubExpr());
+  if (SubExpr.isInvalid())
+    return ExprError();
+  if (getDerived().AlwaysRebuild())
+    return SubExpr;
+  Expr *Old = E->getSubExpr();
+  auto *Bind = dyn_cast<CXXBindTemporaryExpr>(SubExpr.get());
+  if (SubExpr.get() != Old &&
+      !(Bind && Bind->getSubExpr() == Old->IgnoreImplicit()))
+    return SubExpr;
+  // The reused subexpression was not rebuilt through Sema, so its references
+  // to consteval functions were recorded as if outside an immediate invocation.
+  SemaRef.RemoveReferencesToConsteval(E);
+  if (!Bind)
+    return E;
+  // Keep the fresh binding outside the immediate invocation, where CodeGen
+  // sees it; a binding underneath is not emitted once the value is cached.
+  return CXXBindTemporaryExpr::Create(SemaRef.Context, Bind->getTemporary(), E);
+}
+
+template <typename Derived>
+Expr *TreeTransform<Derived>::getCastOperandToTransform(CastExpr *E) {
+  Expr *Written = E->getSubExprAsWritten();
+  for (Expr *Sub = E->getSubExpr(); Sub != Written;) {
+    if (auto *CE = dyn_cast<ConstantExpr>(Sub);
+        CE && CE->isImmediateInvocation() && CE->IgnoreImplicit() == Written)
+      return CE;
+    Expr *Next = IgnoreImplicitSingleStep(Sub);
+    if (Next == Sub)
+      break;
+    Sub = Next;
+  }
+  return Written;
 }
 
 template <typename Derived>
@@ -14444,7 +14503,7 @@ ExprResult
 TreeTransform<Derived>::TransformImplicitCastExpr(ImplicitCastExpr *E) {
   // Implicit casts are eliminated during transformation, since they
   // will be recomputed by semantic analysis after transformation.
-  return getDerived().TransformExpr(E->getSubExprAsWritten());
+  return getDerived().TransformExpr(getDerived().getCastOperandToTransform(E));
 }
 
 template<typename Derived>
@@ -14454,8 +14513,8 @@ TreeTransform<Derived>::TransformCStyleCastExpr(CStyleCastExpr *E) {
   if (!Type)
     return ExprError();
 
-  ExprResult SubExpr
-    = getDerived().TransformExpr(E->getSubExprAsWritten());
+  ExprResult SubExpr =
+      getDerived().TransformExpr(getDerived().getCastOperandToTransform(E));
   if (SubExpr.isInvalid())
     return ExprError();
 
@@ -14971,8 +15030,8 @@ TreeTransform<Derived>::TransformCXXNamedCastExpr(CXXNamedCastExpr *E) {
   if (!Type)
     return ExprError();
 
-  ExprResult SubExpr
-    = getDerived().TransformExpr(E->getSubExprAsWritten());
+  ExprResult SubExpr =
+      getDerived().TransformExpr(getDerived().getCastOperandToTransform(E));
   if (SubExpr.isInvalid())
     return ExprError();
 
@@ -15043,8 +15102,8 @@ TreeTransform<Derived>::TransformCXXFunctionalCastExpr(
   if (!Type)
     return ExprError();
 
-  ExprResult SubExpr
-    = getDerived().TransformExpr(E->getSubExprAsWritten());
+  ExprResult SubExpr =
+      getDerived().TransformExpr(getDerived().getCastOperandToTransform(E));
   if (SubExpr.isInvalid())
     return ExprError();
 
@@ -16183,12 +16242,7 @@ TreeTransform<Derived>::TransformCXXTemporaryObjectExpr(
       !ArgumentChanged) {
     // FIXME: Instantiation-specific
     SemaRef.MarkFunctionReferenced(E->getBeginLoc(), Constructor);
-    // The immediate-invocation wrapper was stripped by TransformConstantExpr;
-    // put it back before binding the temporary, as SemaInit does.
-    ExprResult Res = SemaRef.CheckForImmediateInvocation(E, Constructor);
-    if (Res.isInvalid())
-      return ExprError();
-    return SemaRef.MaybeBindToTemporary(Res.get());
+    return SemaRef.MaybeBindToTemporary(E);
   }
 
   SourceLocation LParenLoc = T->getTypeLoc().getEndLoc();
