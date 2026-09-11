@@ -6,10 +6,10 @@
 
 ; SPIR-V (without sub-byte int extensions) widens sub-pow2 scalars to the next
 ; legal width by relabeling the LLT only, without inserting any sign-extension.
-; Sign-sensitive ops (icmp slt/sle/sgt/sge, ashr, sdiv, srem) on such operands
-; would then read the sign bit at the wrong position. The pre-legalizer must
-; emit a sign-extend-in-register before the widening so the wide-width signed
-; op observes the correct sign bit.
+; Sign-sensitive ops (icmp slt/sle/sgt/sge, ashr, sdiv, srem, sitofp) on such
+; operands would then read the sign bit at the wrong position. The pre-legalizer
+; must emit a sign-extend-in-register before the widening so the wide-width
+; signed op observes the correct sign bit.
 
 ; CHECK-DAG: %[[#I8:]] = OpTypeInt 8 0
 ; CHECK-DAG: %[[#I32:]] = OpTypeInt 32 0
@@ -267,6 +267,31 @@ define spir_kernel void @sdiv_i24_from_globals() {
   %b = load i24, ptr @gb
   %r = sdiv i24 %a, %b
   store i24 %r, ptr @out24
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; sitofp has a single value operand, so the def must not be mistaken for one.
+; CHECK: OpFunction
+; CHECK: %[[#XF:]] = OpFunctionParameter
+; CHECK: OpFunctionParameter
+; CHECK: %[[#SHLF:]] = OpShiftLeftLogical %[[#I8]] %[[#XF]] %[[#K4]]
+; CHECK: %[[#SXF:]] = OpShiftRightArithmetic %[[#I8]] %[[#SHLF]] %[[#K4]]
+; CHECK: OpConvertSToF {{%[0-9]+}} %[[#SXF]]
+define spir_kernel void @sitofp_i4(i4 %x, ptr addrspace(1) %out) {
+  %r = sitofp i4 %x to float
+  store float %r, ptr addrspace(1) %out
+  ret void
+}
+
+; ----------------------------------------------------------------------------
+; Negative test: uitofp must NOT emit sign-extension shifts.
+; CHECK: OpFunction
+; CHECK-NOT: OpShiftRightArithmetic
+; CHECK: OpConvertUToF
+define spir_kernel void @uitofp_i4(i4 %x, ptr addrspace(1) %out) {
+  %r = uitofp i4 %x to float
+  store float %r, ptr addrspace(1) %out
   ret void
 }
 
