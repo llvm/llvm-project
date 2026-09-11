@@ -9,9 +9,9 @@
 /// \file
 /// This is an opcode based type promotion pass for small types that would
 /// otherwise be promoted during legalisation. This works around the limitations
-/// of selection dag for cyclic regions. The search begins from icmp
-/// instructions operands where a tree, consisting of non-wrapping or safe
-/// wrapping instructions, is built, checked and promoted if possible.
+/// of selection dag for cyclic regions. The search begins from operands of icmp
+/// and scalar trunc-to-i1 instructions. A tree consisting of non-wrapping or
+/// safe wrapping instructions is then built, checked and promoted if possible.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -156,6 +156,8 @@ class TypePromotionImpl {
   bool isSource(Value *V);
   // Should V be a root in the promotion tree?
   bool isSink(Value *V);
+  // Is V a supported truncation to i1?
+  bool isSupportedTruncToI1(Value *V);
   // Should we change the result type of V? It will result in the users of V
   // being visited.
   bool shouldPromote(Value *V);
@@ -201,6 +203,11 @@ static bool GenerateSignBits(Instruction *I) {
   unsigned Opc = I->getOpcode();
   return Opc == Instruction::AShr || Opc == Instruction::SDiv ||
          Opc == Instruction::SRem || Opc == Instruction::SExt;
+}
+
+static bool isTruncToI1(Value *V) {
+  auto *Trunc = dyn_cast<TruncInst>(V);
+  return Trunc && Trunc->getType()->isIntegerTy(1);
 }
 
 bool TypePromotionImpl::EqualTypeSize(Value *V) {
@@ -268,6 +275,10 @@ bool TypePromotionImpl::isSink(Value *V) {
     return ICmp->isSigned() || LessThanTypeSize(ICmp->getOperand(0));
 
   return isa<CallInst>(V);
+}
+
+bool TypePromotionImpl::isSupportedTruncToI1(Value *V) {
+  return isTruncToI1(V) && EqualTypeSize(cast<TruncInst>(V)->getOperand(0));
 }
 
 /// Return whether this instruction can safely wrap.
@@ -389,7 +400,7 @@ bool TypePromotionImpl::shouldPromote(Value *V) {
   if (!I)
     return false;
 
-  if (isa<ICmpInst>(I))
+  if (isa<ICmpInst>(I) || isSupportedTruncToI1(I))
     return false;
 
   return true;
@@ -523,8 +534,8 @@ void IRPromoter::PromoteTree() {
       }
     }
 
-    // Mutate the result type, unless this is an icmp or switch.
-    if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
+    // Mutate the result type, unless this is an icmp, switch, or trunc to i1.
+    if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I) && !isTruncToI1(I)) {
       I->mutateType(ExtTy);
       Promoted.insert(I);
     }
@@ -642,7 +653,7 @@ void IRPromoter::ConvertTruncs() {
   IRBuilder<> Builder{Ctx};
 
   for (auto *V : Visited) {
-    if (!isa<TruncInst>(V) || Sources.count(V))
+    if (!isa<TruncInst>(V) || isTruncToI1(V) || Sources.count(V))
       continue;
 
     auto *Trunc = cast<TruncInst>(V);
@@ -681,7 +692,7 @@ void IRPromoter::Mutate() {
     }
   }
   for (auto *V : Visited) {
-    if (!isa<TruncInst>(V) || Sources.count(V))
+    if (!isa<TruncInst>(V) || isTruncToI1(V) || Sources.count(V))
       continue;
     auto *Trunc = cast<TruncInst>(V);
     TruncTysMap[Trunc].push_back(Trunc->getDestTy());
@@ -742,8 +753,9 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
     case Instruction::Select:
     case Instruction::Ret:
     case Instruction::Load:
-    case Instruction::Trunc:
       return isSupportedType(I);
+    case Instruction::Trunc:
+      return isSupportedTruncToI1(I) || isSupportedType(I);
     case Instruction::BitCast:
       return I->getOperand(0)->getType() == I->getType();
     case Instruction::ZExt:
@@ -1010,6 +1022,16 @@ bool TypePromotionImpl::run(Function &F, const TargetMachine *TM,
               break;
             }
           }
+        }
+      } else if (isTruncToI1(&I)) {
+        // Like an unsigned icmp, a scalar trunc to i1 is a boolean boundary.
+        auto *Trunc = cast<TruncInst>(&I);
+        LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *Trunc
+                          << "\n");
+
+        if (auto *OpI = dyn_cast<Instruction>(Trunc->getOperand(0))) {
+          if (auto PromotedWidth = GetPromoteWidth(OpI))
+            MadeChange |= TryToPromote(OpI, PromotedWidth, LI);
         }
       }
     }

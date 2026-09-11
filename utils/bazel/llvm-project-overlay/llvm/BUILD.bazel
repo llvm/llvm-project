@@ -53,6 +53,7 @@ exports_files([
     "include/llvm/Option/OptParser.td",
     # Needed to run TargetParser regression lit tests in downstream sandboxed builds.
     "include/llvm/TargetParser/TripleName.def",
+    "utils/extract_symbols.py",  # Needed for test/tools/extract_symbols tests
     "utils/get_triple_system_name.py",
     # This one is needed for building and vendoring out lldb from off tree.
     "utils/lldbDataFormatters.py",
@@ -1991,6 +1992,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -4526,6 +4528,7 @@ cc_library(
         ":Passes",
         ":Support",
         ":Target",
+        ":TargetParser",
         ":config",
         ":orc_headers",
     ],
@@ -4987,14 +4990,16 @@ llvm_driver_cc_binary(
     deps = [":dsymutil-lib"],
 )
 
-cc_binary(
-    name = "llc",
-    srcs = glob([
-        "tools/llc/*.cpp",
+cc_library(
+    name = "llc-driver",
+    srcs = [
+        "tools/llc/NewPMDriver.cpp",
+        "tools/llc/llcdriver.cpp",
+    ],
+    hdrs = glob([
         "tools/llc/*.h",
     ]),
     copts = llvm_copts,
-    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -5015,6 +5020,17 @@ cc_binary(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
+    ],
+)
+
+cc_binary(
+    name = "llc",
+    srcs = ["tools/llc/llc.cpp"],
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Support",
+        ":llc-driver",
     ],
 )
 

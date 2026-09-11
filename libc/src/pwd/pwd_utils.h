@@ -24,9 +24,9 @@
 #include "src/__support/error_or.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/pwd/field_tokenizer.h"
+#include "src/__support/pwd/flat_file_db.h"
 #include "src/__support/str_to_integer.h"
-#include "src/pwd/field_tokenizer.h"
-#include "src/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -106,6 +106,14 @@ ErrorOr<void> close();
 
 // Reads the next entry from the password database.
 ErrorOr<struct passwd *> read_next();
+
+// Searches for a password entry matching the given username using the
+// static process-global buffer.
+ErrorOr<struct passwd *> find_by_name(cpp::string_view name);
+
+// Searches for a password entry matching the given user ID using the
+// static process-global buffer.
+ErrorOr<struct passwd *> find_by_uid(uid_t uid);
 
 // Searches for a password entry matching the given username.
 // The optional path parameter allows unit tests to direct lookups to hermetic

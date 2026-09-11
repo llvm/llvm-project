@@ -70,6 +70,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Diagnostics
 
+- Query-based custom clang-tidy checks can now be enabled with the
+  `Diagnostics.ClangTidy.ExperimentalCustomChecks` clangd configuration option.
+  Custom checks are subject to `FastCheckFilter`, and therefore require
+  `FastCheckFilter: Loose` or `None` to run.
+
 #### Semantic Highlighting
 
 #### Compile flags
@@ -82,6 +87,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
+- The `Extract to function` tweak is now offered for selections consisting of
+  a single expression-statement (e.g. a lone function call or an overloaded
+  operator call such as `stream << 42;`), which it previously refused to
+  extract.
+
 #### Signature help
 
 #### Cross-references
@@ -89,6 +99,10 @@ infrastructure are described first, followed by tool-specific sections.
 #### Objective-C
 
 #### Miscellaneous
+
+- Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
+  C++20 concepts.
+  ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
 ### Improvements to clang-doc
 
@@ -99,6 +113,11 @@ infrastructure are described first, followed by tool-specific sections.
 - Improved {program}`check_clang_tidy.py` by adding support of
   `-std=cXX-or-earlier` values, mirroring the existing `-std=cXX-or-later`.
   New construct expands to the given standard and every earlier one.
+
+- On Windows, {program}`clang-tidy` will now better match mixes of forwards and
+  backwards slashes when using the `--line-filter` option. This also improves
+  piping from {program}`git` to {program}`clang-tidy-diff.py`, where slashes
+  will now be automatically normalized.
 
 #### New checks
 
@@ -140,6 +159,10 @@ infrastructure are described first, followed by tool-specific sections.
   by suggesting a wider type of the same signedness as the original operands,
   instead of forcing a signed type, when a multiplication of two unsigned
   operands narrower than `int` is only signed due to integer promotion.
+
+- Improved {doc}`bugprone-macro-parentheses
+  <clang-tidy/checks/bugprone/macro-parentheses>` by fixing invalid fixes for
+  macro arguments used as names in alias declarations.
 
 - Fixed a crash in {doc}`bugprone-misplaced-operator-in-strlen-in-alloc
   <clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc>` when
@@ -216,6 +239,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Fixed {option}`DefaultHungarianPrefix` being incorrectly diagnosed as an
     invalid option.
 
+  - Fixed invalid fixes when renaming parameter packs used in `sizeof...`
+    expressions.
+
   - Added the {option}`TypedefInheritAnonTagConfig`, which checks a
     typedef or type alias that provides the only name of an otherwise unnamed
     tag, such as `typedef enum {} MyEnum;`, against the style configured for
@@ -225,6 +251,9 @@ infrastructure are described first, followed by tool-specific sections.
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
 
+  - Added the {option}`AllowTrailingUnderscore`, which permits a
+    single trailing underscore on any identifier.
+
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring
   standard tag types (e.g. `std::in_place_t`, `std::allocator_arg_t`,
@@ -233,10 +262,14 @@ infrastructure are described first, followed by tool-specific sections.
   option to allow customizing the set of ignored types.
 
 - Improved {doc}`readability-trailing-comma
-  <clang-tidy/checks/readability/trailing-comma>` check by fixing false
-  positives on designated initializers, where initializer lists synthesized
-  for intermediate subobjects caused the trailing comma of the enclosing
-  list to be incorrectly rewritten.
+  <clang-tidy/checks/readability/trailing-comma>` check:
+
+  - Fixed false positives on designated initializers, where initializer lists
+    synthesized for intermediate subobjects caused the trailing comma of the
+    enclosing list to be incorrectly rewritten.
+
+  - Fixed a false positive on empty brace initializers of types with default
+    member initializers.
 
 - Improved {doc}`readability-use-std-min-max
   <clang-tidy/checks/readability/use-std-min-max>` check by fixing spurious
