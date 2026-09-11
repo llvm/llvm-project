@@ -39,7 +39,7 @@ the performance improvement.
 The 3.9 release of clang includes ThinLTO support. However, ThinLTO
 is under active development, and new features, improvements and bugfixes
 are being added for the next release. For the latest ThinLTO support,
-[build a recent version of clang and LLVM](https://llvm.org/docs/CMake.html).
+[build a recent version of clang and LLVM](inv:llvm:std:doc#CMake).
 
 ### Linkers
 
@@ -51,7 +51,7 @@ ThinLTO is currently supported for the following linkers:
 
 - **gold (via the gold-plugin)**:
   Similar to monolithic LTO, this requires using
-  a [gold linker configured with plugins enabled](https://llvm.org/docs/GoldPlugin.html).
+  a [gold linker configured with plugins enabled](inv:llvm:std:doc#GoldPlugin).
 - **ld64**:
   Starting with [Xcode 8](https://developer.apple.com/xcode/).
 - **lld**:
@@ -197,8 +197,8 @@ with ThinLTO, follow these steps:
 
 1. The host [compiler](#compiler) must be a version of clang that supports ThinLTO.
 2. The host [linker](#linker) must support ThinLTO (and in the case of gold, must be
-   [configured with plugins enabled](https://llvm.org/docs/GoldPlugin.html)).
-3. Use the following additional [CMake variables](https://llvm.org/docs/CMake.html#options-and-variables)
+   [configured with plugins enabled](inv:llvm:std:doc#GoldPlugin)).
+3. Use the following additional [CMake variables](<inv:llvm:std:label#options and variables>)
    when configuring the bootstrap compiler build:
 
 > - `-DLLVM_ENABLE_LTO=Thin`
@@ -233,7 +233,7 @@ Integrated Distributed ThinLTO (DTLTO) enables the distribution of backend
 ThinLTO compilations via external distribution systems, such as Incredibuild,
 during the traditional link step.
 
-The implementation is documented here: <https://llvm.org/docs/DTLTO.html>.
+The implementation is [documented here](inv:llvm:std:doc#DTLTO).
 
 #### Command-Line Options
 
@@ -269,7 +269,7 @@ When using lld-link:
 
 Note that currently, DTLTO is only supported in some LLD flavors. Support can
 be added to other LLD flavours in the future.
-See [DTLTO](https://lld.llvm.org/DTLTO.html) for more information.
+See [DTLTO](inv:lld:std:doc#DTLTO) for more information.
 
 ## More Information
 
