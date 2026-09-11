@@ -544,7 +544,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
-    if (STI.isRV32()) {
+    if (!STI.is64Bit()) {
       if (STI.hasStdExtZdinx()) {
         // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
         // registers, in one instruction.
