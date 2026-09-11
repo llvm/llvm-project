@@ -88,3 +88,15 @@ func.func @empty_vector_mask_with_return(%a : vector<8xf32>, %mask : vector<8xi1
   return %0 : vector<8xf32>
 }
 
+
+// -----
+
+// CHECK-LABEL:   func.func @vector_gather_alignment(
+//  CHECK-SAME:     %[[BASE:.*]]: memref<64xf32>, %[[IDX:.*]]: vector<4xindex>, %[[MASK:.*]]: vector<4xi1>,
+//       CHECK:     vector.gather %[[BASE]][%{{.*}}] [%[[IDX]]], %[[MASK]], %{{.*}} alignment = 8 : memref<64xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+func.func @vector_gather_alignment(%base: memref<64xf32>, %idx: vector<4xindex>, %mask: vector<4xi1>, %pass_thru: vector<4xf32>) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %all_true = arith.constant dense<true> : vector<4xi1>
+  %0 = vector.mask %mask { vector.gather %base[%c0] [%idx], %all_true, %pass_thru alignment = 8 : memref<64xf32>, vector<4xindex>, vector<4xi1>, vector<4xf32> into vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+  return %0 : vector<4xf32>
+}
