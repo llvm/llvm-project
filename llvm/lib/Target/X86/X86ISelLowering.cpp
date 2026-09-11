@@ -25794,7 +25794,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op1.getSimpleValueType();
   SDValue CC;
 
-  // Select bf16 vectors as integers; there are no bf16 CMOV pseudos.
+  // Select bf16/fp16 vectors as integers; there are no bf16/fp16 CMOV pseudos.
   if (isBF16orSoftF16(VT, Subtarget)) {
     MVT NVT = VT.changeTypeToInteger();
     return DAG.getBitcast(VT, DAG.getNode(ISD::SELECT, DL, NVT, Cond,
