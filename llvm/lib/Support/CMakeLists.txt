@@ -220,9 +220,9 @@ add_llvm_component_library(LLVMSupport
   KnownFPClass.cpp
   LEB128.cpp
   LineIterator.cpp
+  LLVMToolSession.cpp
   Locale.cpp
   LockFileManager.cpp
-  LLVMToolSession.cpp
   ManagedStatic.cpp
   MathExtras.cpp
   MemAlloc.cpp
