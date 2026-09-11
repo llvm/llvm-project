@@ -1,13 +1,11 @@
-# Test that symbol contexts for trap handler frames are set correctly even when
-# the pc is at the start of the function.
+# Test that signal-frame CFI is found at the raw pc even when the pc is at the
+# start of the function and the function is not in the trap-handler name list.
 
 # UNSUPPORTED: system-windows
 # REQUIRES: target-x86_64, native
 
 # RUN: %clang_host %p/Inputs/call-asm.c %p/Inputs/trap_frame_sym_ctx.s -o %t
 # RUN: %lldb %t -s %s -o exit | FileCheck %s
-
-settings append target.trap-handler-names tramp
 
 breakpoint set -n bar
 # CHECK: Breakpoint 1: where = {{.*}}`bar
