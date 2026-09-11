@@ -57,6 +57,99 @@ func.func @categorize_matmul_tensor(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>,
 
 // -----
 
+// Transpose A: A is accessed as (k, m) instead of (m, k).
+func.func @categorize_matmul_transpose_a(%A: tensor<8x16xf32>, %B: tensor<8x32xf32>,
+                                         %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.matmul
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2, d0)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B: tensor<8x16xf32>, tensor<8x32xf32>)
+      outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
+}
+
+// CHECK-DAG: #[[TA_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// CHECK-DAG: #[[B_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[C_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK: func @categorize_matmul_transpose_a
+// CHECK-NOT: linalg.matmul
+// CHECK: linalg.contract
+// CHECK-SAME: indexing_maps = [#[[TA_MAP]], #[[B_MAP]], #[[C_MAP]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<8x16xf32>, tensor<8x32xf32>)
+// CHECK-SAME: outs(%{{.+}} : tensor<16x32xf32>)
+
+// NAMED-LABEL: func @categorize_matmul_transpose_a
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_matmul_transpose_a
+// GENERIC-NOT: linalg.contract
+
+// -----
+
+// Broadcast B: B is accessed as (k) only, broadcasting over n.
+func.func @categorize_matmul_broadcast_b(%A: tensor<16x8xf32>, %B: tensor<8xf32>,
+                                         %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.matmul
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B: tensor<16x8xf32>, tensor<8xf32>)
+      outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
+}
+
+// CHECK-DAG: #[[A_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
+// CHECK-DAG: #[[BB_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK-DAG: #[[C_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK: func @categorize_matmul_broadcast_b
+// CHECK-NOT: linalg.matmul
+// CHECK: linalg.contract
+// CHECK-SAME: indexing_maps = [#[[A_MAP]], #[[BB_MAP]], #[[C_MAP]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<16x8xf32>, tensor<8xf32>)
+// CHECK-SAME: outs(%{{.+}} : tensor<16x32xf32>)
+
+// NAMED-LABEL: func @categorize_matmul_broadcast_b
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_matmul_broadcast_b
+// GENERIC-NOT: linalg.contract
+
+// -----
+
+// Transpose and broadcast A: A is accessed as (k) only, broadcasting over m.
+func.func @categorize_matmul_transpose_broadcast_a(%A: tensor<8xf32>, %B: tensor<8x32xf32>,
+                                                   %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
+  %0 = linalg.matmul
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%A, %B: tensor<8xf32>, tensor<8x32xf32>)
+      outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
+  return %0: tensor<16x32xf32>
+}
+
+// CHECK-DAG: #[[TBA_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2)>
+// CHECK-DAG: #[[B_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[C_MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK: func @categorize_matmul_transpose_broadcast_a
+// CHECK-NOT: linalg.matmul
+// CHECK: linalg.contract
+// CHECK-SAME: indexing_maps = [#[[TBA_MAP]], #[[B_MAP]], #[[C_MAP]]]
+// CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<8xf32>, tensor<8x32xf32>)
+// CHECK-SAME: outs(%{{.+}} : tensor<16x32xf32>)
+
+// NAMED-LABEL: func @categorize_matmul_transpose_broadcast_a
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_matmul_transpose_broadcast_a
+// GENERIC-NOT: linalg.contract
+
+// -----
+
 // Unsigned cast is preserved on the category op.
 func.func @categorize_matmul_unsigned_cast(%A: tensor<16x8xi16>, %B: tensor<8x32xi16>,
                                            %C: tensor<16x32xi32>) -> tensor<16x32xi32> {

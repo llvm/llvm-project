@@ -48,6 +48,9 @@ static LogicalResult generalizeNamedOpPrecondition(LinalgOp linalgOp) {
 // operand indexing maps and cast semantics. Returns failure for other ops.
 static FailureOr<LinalgOp> generalizeToContractOp(RewriterBase &rewriter,
                                                   LinalgOp namedOp) {
+  // These are the ODS-defined matmul-like operations.
+  // For OpDSL declared contractions, please move them to ODS first,
+  // then add them to the isa<> check below + tests.
   if (!isa<MatmulOp, BatchMatmulOp, BatchReduceMatmulOp>(
           namedOp.getOperation()))
     return failure();
