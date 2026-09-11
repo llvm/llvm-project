@@ -31279,8 +31279,78 @@ static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
   return llvm::all_of(Users, [](SDNode *User) { return User != nullptr; });
 }
 
+static SDValue performLegalizedVectorDeinterleaveCombine(
+    SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  // Type legalization splits a wide load into consecutive legal loads. Combine
+  // each group used by a legal VECTOR_DEINTERLEAVE into a structured load.
+  if (DCI.getDAGCombineLevel() < AfterLegalizeTypes ||
+      !DAG.getSubtarget<AArch64Subtarget>().isNeonAvailable())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::VECTOR_DEINTERLEAVE)
+    return SDValue();
+
+  unsigned NumParts = N->getNumOperands();
+  if (NumParts < 2 || NumParts > 4)
+    return SDValue();
+
+  EVT SubVecTy = N->getValueType(0);
+  if (!SubVecTy.is64BitVector() && !SubVecTy.is128BitVector())
+    return SDValue();
+
+  SmallVector<LoadSDNode *, 4> Loads;
+  for (const SDValue &Operand : N->op_values()) {
+    auto *Load = dyn_cast<LoadSDNode>(Operand);
+    if (!Load || !Operand.hasOneUse())
+      return SDValue();
+    Loads.push_back(Load);
+  }
+
+  LoadSDNode *BaseLoad = Loads[0];
+  unsigned Bytes = SubVecTy.getStoreSize().getFixedValue();
+  for (auto [Idx, Load] : enumerate(Loads)) {
+    if (!DAG.areNonVolatileConsecutiveLoads(Load, BaseLoad, Bytes, Idx))
+      return SDValue();
+  }
+
+  static constexpr Intrinsic::ID NEONLoads[] = {Intrinsic::aarch64_neon_ld2,
+                                                Intrinsic::aarch64_neon_ld3,
+                                                Intrinsic::aarch64_neon_ld4};
+  SDLoc DL(N);
+  EVT MemVT =
+      EVT::getVectorVT(*DAG.getContext(), SubVecTy.getVectorElementType(),
+                       SubVecTy.getVectorElementCount() * NumParts);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(BaseLoad->getMemOperand(), 0, NumParts * Bytes);
+
+  SmallVector<EVT, 5> ResVTs(NumParts, SubVecTy);
+  ResVTs.push_back(MVT::Other);
+
+  SDValue NewLoad = DAG.getMemIntrinsicNode(
+      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(ResVTs),
+      {BaseLoad->getChain(),
+       DAG.getTargetConstant(NEONLoads[NumParts - 2], DL, MVT::i64),
+       BaseLoad->getBasePtr()},
+      MemVT, MMO);
+
+  // We can now generate a structured load!
+  SmallVector<SDValue, 4> ResOps;
+  for (unsigned I = 0; I != NumParts; ++I)
+    ResOps.push_back(NewLoad.getValue(I));
+
+  // Replace uses of the original chain result with the new chain result.
+  for (LoadSDNode *Load : Loads)
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), NewLoad.getValue(NumParts));
+
+  return DCI.CombineTo(N, ResOps, false);
+}
+
 static SDValue performVectorDeinterleaveCombine(
     SDNode *N, TargetLowering::DAGCombinerInfo &DCI, SelectionDAG &DAG) {
+  if (SDValue Res = performLegalizedVectorDeinterleaveCombine(N, DCI, DAG))
+    return Res;
+
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
