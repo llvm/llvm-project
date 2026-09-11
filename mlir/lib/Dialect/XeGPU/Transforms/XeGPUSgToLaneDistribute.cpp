@@ -1528,9 +1528,8 @@ struct SgToLaneVectorInsertStridedSlice
         return rewriter.notifyMatchFailure(
             op, "expecting unit lane data along the distributed dimension");
 
-      // The distributed dimension is spread over lane_layout[destDistDim]
-      // lanes, not necessarily the full subgroup. Use that lane count as the
-      // divisor for the distributed size and offset.
+      // The distributed dimension may span only a subset of the subgroup, so
+      // divide its size and offset by the lanes that actually cover it.
       auto destLaneLayout = destLayout.getEffectiveLaneLayoutAsInt();
       int64_t numLanesAlongDim =
           destDistDim < static_cast<int64_t>(destLaneLayout.size())
