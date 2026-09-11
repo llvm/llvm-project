@@ -67,6 +67,7 @@
 #include "SIPostRABundler.h"
 #include "SIPreAllocateWWMRegs.h"
 #include "SIShrinkInstructions.h"
+#include "SISinkAsyncDMA.h"
 #include "SIWholeQuadMode.h"
 #include "TargetInfo/AMDGPUTargetInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -738,6 +739,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
+  initializeSISinkAsyncDMALegacyPass(*PR);
   initializeSIPreEmitPeepholeLegacyPass(*PR);
   initializeSILateBranchLoweringLegacyPass(*PR);
   initializeSIMemoryLegalizerLegacyPass(*PR);
@@ -1727,6 +1729,8 @@ bool GCNPassConfig::addPreISel() {
 
   addPass(createAMDGPUAnnotateUniformValuesLegacy());
   addPass(createSIAnnotateControlFlowLegacyPass());
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(&SISinkAsyncDMALegacyID);
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
   // control flow modifications.
@@ -2490,6 +2494,8 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   addFunctionPass(AMDGPUAnnotateUniformValuesPass(), PMW);
 
   addFunctionPass(SIAnnotateControlFlowPass(getTM()), PMW);
+  if (TM.getOptLevel() != CodeGenOptLevel::None)
+    addFunctionPass(SISinkAsyncDMAPass(getTM()), PMW);
 
   // TODO: Move this right after structurizeCFG to avoid extra divergence
   // analysis. This depends on stopping SIAnnotateControlFlow from making
