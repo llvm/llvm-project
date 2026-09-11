@@ -44,103 +44,131 @@ TEST(LlvmLibcFileModeTest, FirstCharacterMustBeAValidMode) {
   EXPECT_FALSE(exclusive_create.is_exclusive_create());
 }
 
-// TEST(LlvmLibcFileModeTest, OnlyOneMainModeAllowed) {
-//   struct TestCase {
-//     const char *test_description;
-//     const char *mode;
-//     bool expects;
-//     const char *message = "";
-//   };
+TEST(LlvmLibcFileModeTest, OnlyOneMainModeAllowed) {
+  // This tracks all possible valid combinations for a file mode with a main
+  // mode both the ones that are allowed and the ones not allowed. The list
+  // is exhaustive
+  //
+  // These are the valid main mode combinations
+  //  read(r) = [update(+), binary(b)]
+  //  write(w) = [update(+), binary(b), exclusive(x)]
+  //  append(a) = [update(+), binary(b)]
+  //
+  // Invalid main mode combinations are
+  //  read(r) = [write(w), append(a)]
+  //  apppend(a) = [read(r), write(w)]
 
-//   // This tracks all possible valid combinations for a file mode with a main
-//   // mode both the ones that are allowed and the ones not allowed. The list
-//   is
-//   // exhaustive
-//   //
-//   // These are the valid main mode combinations
-//   //  read(r) = [update(+), binary(b)]
-//   //  write(w) = [update(+), binary(b), exclusive(x)]
-//   //  append(a) = [update(+), binary(b)]
-//   //
-//   // Invalid main mode combinations are
-//   //  read(r) = [write(w), append(a)]
-//   //  apppend(a) = [read(r), write(w)]
-//   constexpr TestCase modes_combination[] = {
-//       // read(r) = [update(+), binary(b)]
-//       {.test_description = "read only", .mode = "r", .expects = true},
-//       {.test_description = "read and update", .mode = "r+", .expects = true},
-//       {.test_description = "read binary", .mode = "rb", .expects = true},
+  // 1. Read: possible valid read combination modes
 
-//       // write(w) = [update(+), binary(b), exclusive(x)]
-//       {.test_description = "write only", .mode = "w", .expects = true},
-//       {.test_description = "write and update", .mode = "w+", .expects =
-//       true},
-//       {.test_description = "write binary", .mode = "wb", .expects = true},
-//       {.test_description = "write exclusive", .mode = "wx", .expects = true},
+  // a. Read only
+  constexpr FileMode readonly("r");
+  EXPECT_TRUE(readonly.is_valid());
+  EXPECT_TRUE(readonly.is_read());
+  EXPECT_TRUE(readonly.read_allowed());
 
-//       // append(a) = [update(+), binary(b)]
-//       {.test_description = "append and update", .mode = "a+", .expects =
-//       true},
-//       {.test_description = "append binary", .mode = "ab", .expects = true},
+  // b. Read and Update mode
+  constexpr FileMode read_and_update("r+");
+  EXPECT_TRUE(read_and_update.is_valid());
+  EXPECT_TRUE(read_and_update.is_read());
+  EXPECT_TRUE(read_and_update.is_update());
+  EXPECT_TRUE(read_and_update.read_allowed());
 
-//       // invalid main mode = read
-//       {
-//           .test_description = "read and write",
-//           .mode = "rw",
-//           .expects = false,
-//           .message = "read and write are both main modes and there can be
-//           only "
-//                      "one main mode",
-//       },
-//       {
-//           .test_description = "read and append",
-//           .mode = "ra",
-//           .expects = false,
-//           .message =
-//               "read and append are both main modes and there can be only "
-//               "one main mode",
-//       },
+  // c. Read Binary
+  constexpr FileMode read_binary("rb");
+  EXPECT_TRUE(read_binary.is_valid());
+  EXPECT_TRUE(read_binary.is_read());
+  EXPECT_TRUE(read_binary.is_binary_format());
+  EXPECT_TRUE(read_binary.read_allowed());
 
-//       // invalid main mode = write
-//       {
-//           .test_description = "write and read",
-//           .mode = "wr",
-//           .expects = false,
-//           .message = "write and read are all main modes and there can be only
-//           "
-//                      "one main mode",
-//       },
-//       {
-//           .test_description = "write and append",
-//           .mode = "wr",
-//           .expects = false,
-//           .message = "write and read are all main modes and there can be only
-//           "
-//                      "one main mode",
-//       },
-//       {
-//           .test_description = "append and read",
-//           .mode = "wr",
-//           .expects = false,
-//           .message = "append and read are all main modes and there can be
-//           only "
-//                      "one main mode",
-//       },
-//       {
-//           .test_description = "read,write and append",
-//           .mode = "rwa",
-//           .expects = false,
-//           .message =
-//               "read, write and append are all main modes and there can be
-//               only " "one main mode",
-//       },
-//   };
+  // 2. Write: possible valid write combinations
 
-//   for (const TestCase &tc : modes_combination) {
-//     const FileMode mode(tc.mode);
-//     EXPECT_EQ(mode.is_valid(), tc.expects) << tc.message;
-//   };
-// }
+  // a. Write only
+  constexpr FileMode writeonly("w");
+  EXPECT_TRUE(writeonly.is_valid());
+  EXPECT_TRUE(writeonly.is_write());
+  EXPECT_TRUE(writeonly.write_allowed());
+
+  // b. Write and Update mode
+  constexpr FileMode write_and_update("w+");
+  EXPECT_TRUE(write_and_update.is_valid());
+  EXPECT_TRUE(write_and_update.is_write());
+  EXPECT_TRUE(write_and_update.is_update());
+  EXPECT_TRUE(write_and_update.write_allowed());
+
+  // c. Write Binary
+  constexpr FileMode write_binary("wb");
+  EXPECT_TRUE(write_binary.is_valid());
+  EXPECT_TRUE(write_binary.is_write());
+  EXPECT_TRUE(write_binary.is_binary_format());
+  EXPECT_TRUE(write_binary.write_allowed());
+
+  // d. Write Exclusive
+  constexpr FileMode write_exclusive("wx");
+  EXPECT_TRUE(write_exclusive.is_valid());
+  EXPECT_TRUE(write_exclusive.is_write());
+  EXPECT_TRUE(write_exclusive.is_exclusive_create());
+  EXPECT_TRUE(write_exclusive.write_allowed());
+
+  // 3. Append: possible valid append mode combinations
+
+  // a. Append only
+  constexpr FileMode appendonly("a");
+  EXPECT_TRUE(appendonly.is_valid());
+  EXPECT_TRUE(appendonly.is_append());
+  EXPECT_TRUE(appendonly.write_allowed());
+
+  // b. Append and Update
+  constexpr FileMode append_and_update("a+");
+  EXPECT_TRUE(append_and_update.is_valid());
+  EXPECT_TRUE(append_and_update.is_append());
+  EXPECT_TRUE(append_and_update.is_update());
+  EXPECT_TRUE(append_and_update.write_allowed());
+
+  // c. Append Binary
+  constexpr FileMode append_binary("ab");
+  EXPECT_TRUE(append_binary.is_valid());
+  EXPECT_TRUE(append_binary.is_append());
+  EXPECT_TRUE(append_binary.is_binary_format());
+  EXPECT_TRUE(append_binary.write_allowed());
+
+  // Invalid mode combinations
+
+  // 1. Read and Write as main modes
+  constexpr FileMode read_and_write("rw");
+  EXPECT_FALSE(read_and_write.is_valid())
+      << "read and write are both main modes and there can be only "
+         "one main mode";
+
+  // 2. Read and Append as main modes
+  constexpr FileMode read_and_append("ra");
+  EXPECT_FALSE(read_and_append.is_valid())
+      << "read and append are both main modes and there can be only "
+         "one main mode";
+
+  // 3. Write and Append as main modes
+  constexpr FileMode write_and_read("wr");
+  EXPECT_FALSE(write_and_read.is_valid())
+      << "write and read are both main modes and there can be only "
+         "one main mode";
+
+  // 4. Write and Append as main modes
+  constexpr FileMode write_and_append("wa");
+  EXPECT_FALSE(write_and_append.is_valid())
+      << "write and append are both main modes and there can be only "
+         "one main mode";
+
+  // 5. Append and Read as main modes
+  constexpr FileMode append_and_read("ar");
+  EXPECT_FALSE(append_and_read.is_valid())
+      << "append and read are both main modes and there can be only "
+         "one main mode";
+
+  // 6. Read, Write and Append as main modes
+  constexpr FileMode read_write_append("rwa");
+  EXPECT_FALSE(read_write_append.is_valid())
+      << "read, write and append are both main modes and there can be only "
+         "one main mode";
+}
 
 // TEST(LlvmLibcFileModeTest, AllValidModes) {
 //   struct TestCase {
