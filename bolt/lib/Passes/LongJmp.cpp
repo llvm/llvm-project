@@ -44,6 +44,11 @@ static cl::opt<unsigned long long> MaxClusterSize(
     "max-cluster-size",
     cl::desc("maximum estimated size of a function fragment cluster in bytes"),
     cl::init(124 * 1024 * 1024), cl::cat(BoltOptCategory));
+
+static cl::opt<unsigned> MaxThunkChainLength(
+    "max-thunk-chain-length",
+    cl::desc("maximum number of B-only thunks to use for call relaxation"),
+    cl::init(1), cl::Hidden, cl::cat(BoltOptCategory));
 }
 
 namespace llvm {
@@ -1055,7 +1060,7 @@ static uint64_t estimateFragmentSize(const BinaryFunction &BF,
   return Size;
 }
 
-LongJmpPass::FragmentClusterLayout
+LongJmpPass::ClusterLayout
 LongJmpPass::buildClusterLayout(BinaryContext &BC,
                                 const BinaryFunctionListType &OutputFunctions) {
   struct OutputFragment {
@@ -1070,7 +1075,7 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
     size_t End;
   };
 
-  FragmentClusterLayout Layout;
+  ClusterLayout Layout;
   SmallVector<SmallVector<OutputFragment>, 4> FragmentsBySection;
   StringMap<size_t> SectionToBucket;
   auto addOrderedFragment = [&](OutputFragment &&Fragment) {
@@ -1213,27 +1218,16 @@ LongJmpPass::buildClusterLayout(BinaryContext &BC,
   return Layout;
 }
 
-LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
+LongJmpPass::ClusterRelaxationWorklist
+LongJmpPass::collectClusterRelaxationWorklist(
     BinaryContext &BC, const BinaryFunctionListType &OutputFunctions,
-    const FragmentClusterLayout &Layout) {
+    const ClusterLayout &Layout) {
   auto &Clusters = Layout.Clusters;
   auto &BBLayout = Layout.BBLayout;
   auto &SymLayout = Layout.SymLayout;
 
-  auto canUseShortThunk = [&](const CrossClusterReference &Call) {
-    if (Call.TargetCluster == -1u)
-      return false;
-
-    const bool IsForward = Call.SourceCluster < Call.TargetCluster;
-    const FragmentCluster &Source = Clusters[Call.SourceCluster];
-    const uint64_t ThunkOffset =
-        IsForward ? Source.getEndOffset() : Source.StartOffset;
-    return isWithinClusterRange(Call.SourceOffset, ThunkOffset) &&
-           isWithinClusterRange(ThunkOffset, Call.TargetOffset);
-  };
-
-  ClusteredReferences References;
-  References.LongThunkCallsByDistance.resize(Clusters.size());
+  ClusterRelaxationWorklist Worklist;
+  Worklist.CallsByDistance.resize(Clusters.size());
   auto isPrimaryEntryTarget = [&](const MCSymbol *TargetSymbol) {
     uint64_t EntryID = 0;
     const BinaryFunction *BF = BC.getFunctionForSymbol(TargetSymbol, &EntryID);
@@ -1248,7 +1242,7 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
       auto SourceIt = BBLayout.find(&BB);
       if (SourceIt == BBLayout.end())
         continue;
-      const FragmentClusterLayout::Position Source = SourceIt->second;
+      const ClusterLayout::Position Source = SourceIt->second;
       uint64_t InstOffset = Source.Offset;
 
       for (MCInst &Inst : BB) {
@@ -1269,12 +1263,11 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
         auto TargetIt = SymLayout.find(TargetSymbol);
         const bool Found = TargetIt != SymLayout.end();
         // Unmapped targets use maximum offset and are treated as out of range.
-        const FragmentClusterLayout::Position Target =
-            Found ? TargetIt->second
-                  : FragmentClusterLayout::Position{-1u, -1ULL};
-        const CrossClusterReference Reference{&Inst,          TargetSymbol,
-                                              SourceOffset,   Target.Offset,
-                                              Source.Cluster, Target.Cluster};
+        const ClusterLayout::Position Target =
+            Found ? TargetIt->second : ClusterLayout::Position{-1u, -1ULL};
+        const ClusterReference Reference{&Inst,          TargetSymbol,
+                                         SourceOffset,   Target.Offset,
+                                         Source.Cluster, Target.Cluster};
         const bool UseBranchChain =
             Found && (IsUncondBranch ||
                       (IsTailCall && !isPrimaryEntryTarget(TargetSymbol)));
@@ -1289,7 +1282,7 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
           if (isWithinClusterRange(SourceOffset, Target.Offset))
             continue;
 
-          References.CrossClusterBranches.push_back(Reference);
+          Worklist.Branches.push_back(Reference);
           continue;
         }
 
@@ -1301,168 +1294,37 @@ LongJmpPass::ClusteredReferences LongJmpPass::collectClusteredReferences(
         if (isWithinClusterRange(SourceOffset, Target.Offset))
           continue;
 
-        if (canUseShortThunk(Reference)) {
-          References.ShortThunkCalls.push_back(Reference);
-        } else if (Reference.TargetCluster == -1u) {
-          References.OutOfLayoutLongThunkCalls.push_back(Reference);
+        if (Reference.TargetCluster == -1u) {
+          Worklist.OutOfLayoutCalls.push_back(Reference);
         } else {
           const unsigned Distance = getClusterDistance(Reference.SourceCluster,
                                                        Reference.TargetCluster);
-          References.LongThunkCallsByDistance[Distance].push_back(Reference);
+          Worklist.CallsByDistance[Distance].push_back(Reference);
         }
       }
     }
   }
 
-  return References;
+  return Worklist;
 }
 
-void LongJmpPass::relaxCalls(BinaryContext &BC, FragmentClusterLayout &Layout,
-                             ClusteredReferences &References) {
+const MCSymbol *LongJmpPass::getOrCreateBranchThunkChain(
+    BinaryContext &BC, ClusterLayout &Layout, ClusterRelaxationStats &Stats,
+    const ClusterReference &Ref, unsigned MaxThunks) {
   auto &Clusters = Layout.Clusters;
-  auto &ShortThunkCalls = References.ShortThunkCalls;
-  auto &OutOfLayoutLongThunkCalls = References.OutOfLayoutLongThunkCalls;
-  auto &LongThunkCallsByDistance = References.LongThunkCallsByDistance;
+  const unsigned SourceCluster = Ref.SourceCluster;
+  const unsigned TargetCluster = Ref.TargetCluster;
+  const bool IsForward = SourceCluster < TargetCluster;
+  const bool IsCall = BC.MIB->isCall(*Ref.Inst);
+  const unsigned NumHops = getClusterDistance(SourceCluster, TargetCluster);
 
-  size_t NumShortThunks = 0;
-  size_t NumLongThunks = 0;
-  size_t NumShortThunksReused = 0;
-  size_t NumLongThunksReused = 0;
-  auto createCallThunk = [&](const MCSymbol *TargetSymbol, bool IsShort,
-                             bool IsForward) {
-    BinaryFunction *Thunk = nullptr;
-    const size_t ThunkNumber = IsShort ? NumShortThunks++ : NumLongThunks++;
+  auto createBranchThunk = [&](const MCSymbol *TargetSymbol) {
+    const size_t ThunkNumber =
+        IsCall ? Stats.NumShortThunks++ : Stats.NumBranchThunks++;
     std::string ThunkName =
         (Twine("__AArch64_") + (IsForward ? "forward_" : "backward_") +
-         (IsShort ? "short_call_" : "long_call_") + TargetSymbol->getName() +
-         "_" + Twine(ThunkNumber))
-            .str();
-    if (IsShort) {
-      Thunk = BC.createThunkBinaryFunction(ThunkName);
-      MCInst Inst;
-      BC.MIB->createTailCall(Inst, TargetSymbol, BC.Ctx.get());
-      Thunk->addBasicBlock()->addInstruction(Inst);
-    } else {
-      Thunk = BC.createThunkBinaryFunction(ThunkName);
-      InstructionListType Instructions;
-      BC.MIB->createLongTailCall(Instructions, TargetSymbol, BC.Ctx.get());
-      Thunk->addBasicBlock()->addInstructions(Instructions);
-    }
-    return Thunk;
-  };
-
-  auto registerCallThunk = [&](FragmentCluster &FC, const MCSymbol *Callee,
-                               BinaryFunction *Thunk) {
-    uint64_t EntryID = 0;
-    const BinaryFunction *BF = BC.getFunctionForSymbol(Callee, &EntryID);
-    const bool IsPrimaryEntry = EntryID == 0;
-    if (BF && IsPrimaryEntry)
-      for (const MCSymbol *Symbol : BF->getSymbols())
-        FC.CallThunks[Symbol] = Thunk;
-    else
-      FC.CallThunks[Callee] = Thunk;
-  };
-
-  auto getOrCreateCallThunk = [&](const MCSymbol *TargetSymbol,
-                                  unsigned SourceCluster, bool IsShort,
-                                  bool IsForward) {
-    FragmentCluster &FC = Clusters[SourceCluster];
-    if (auto It = FC.CallThunks.find(TargetSymbol); It != FC.CallThunks.end()) {
-      if (IsShort)
-        ++NumShortThunksReused;
-      else
-        ++NumLongThunksReused;
-      return It->second;
-    }
-
-    // Reuse long thunks hosted at the adjacent cluster boundary.
-    if (!IsShort) {
-      FragmentCluster *ReuseCluster = nullptr;
-      if (IsForward && SourceCluster > 0)
-        ReuseCluster = &Clusters[SourceCluster - 1];
-      else if (!IsForward && SourceCluster + 1 < Clusters.size())
-        ReuseCluster = &Clusters[SourceCluster + 1];
-
-      if (ReuseCluster) {
-        auto It = ReuseCluster->CallThunks.find(TargetSymbol);
-        if (It != ReuseCluster->CallThunks.end()) {
-          BinaryFunction *Thunk = It->second;
-          ++NumLongThunksReused;
-          return Thunk;
-        }
-      }
-    }
-
-    BinaryFunction *Thunk = createCallThunk(TargetSymbol, IsShort, IsForward);
-
-    Thunk->setCodeSectionName(FC.getThunkSectionName(IsForward));
-    BinaryFunctionListType &ThunkList =
-        IsForward ? FC.ForwardThunkList : FC.BackwardThunkList;
-    ThunkList.push_back(Thunk);
-
-    // Register thunks for all symbols associated with the function.
-    registerCallThunk(FC, TargetSymbol, Thunk);
-    return Thunk;
-  };
-
-  auto relaxCall = [&](CrossClusterReference &Call, bool IsShort) {
-    const bool IsForward = Call.SourceCluster < Call.TargetCluster;
-    BinaryFunction *Thunk = getOrCreateCallThunk(
-        Call.TargetSymbol, Call.SourceCluster, IsShort, IsForward);
-    BC.MIB->replaceBranchTarget(*Call.Inst, Thunk->getSymbol(), BC.Ctx.get());
-  };
-
-  for (CrossClusterReference &Call : ShortThunkCalls)
-    relaxCall(Call, /*IsShort=*/true);
-
-  // Process out-of-layout targets first, then known targets from farthest to
-  // nearest, so closer calls can reuse long thunks at cluster boundaries.
-  for (CrossClusterReference &Call : OutOfLayoutLongThunkCalls)
-    relaxCall(Call, /*IsShort=*/false);
-
-  size_t NumLongThunkCalls = OutOfLayoutLongThunkCalls.size();
-  for (auto &Calls : llvm::reverse(LongThunkCallsByDistance)) {
-    NumLongThunkCalls += Calls.size();
-    for (CrossClusterReference &Call : Calls)
-      relaxCall(Call, /*IsShort=*/false);
-  }
-
-  if (!ShortThunkCalls.empty())
-    BC.outs() << "BOLT-INFO: relaxed " << ShortThunkCalls.size()
-              << " short cluster calls with thunks\n";
-
-  if (NumLongThunkCalls)
-    BC.outs() << "BOLT-INFO: relaxed " << NumLongThunkCalls
-              << " long cluster calls with thunks\n";
-
-  if (NumShortThunks)
-    BC.outs() << "BOLT-INFO: " << NumShortThunks << " short thunks created\n";
-
-  if (NumLongThunks)
-    BC.outs() << "BOLT-INFO: " << NumLongThunks << " long thunks created\n";
-
-  if (NumShortThunksReused)
-    BC.outs() << "BOLT-INFO: " << NumShortThunksReused
-              << " short thunks reused\n";
-
-  if (NumLongThunksReused)
-    BC.outs() << "BOLT-INFO: " << NumLongThunksReused
-              << " long thunks reused\n";
-}
-
-void LongJmpPass::relaxUnconditionalBranches(BinaryContext &BC,
-                                             FragmentClusterLayout &Layout,
-                                             ClusteredReferences &References) {
-  auto &Clusters = Layout.Clusters;
-  auto &CrossClusterBranches = References.CrossClusterBranches;
-
-  size_t NumBranchThunks = 0;
-  size_t NumBranchThunksReused = 0;
-  auto createBranchThunk = [&](const MCSymbol *TargetSymbol,
-                               const bool IsForward) {
-    std::string ThunkName =
-        (Twine("__AArch64_") + (IsForward ? "forward_" : "backward_") +
-         "branch_chain_" + Twine(NumBranchThunks++))
+         "Thunk_" + (IsCall ? Twine(Ref.TargetSymbol->getName()) + "_" : "") +
+         Twine(ThunkNumber))
             .str();
 
     BinaryFunction *ThunkBF = BC.createThunkBinaryFunction(ThunkName);
@@ -1472,93 +1334,230 @@ void LongJmpPass::relaxUnconditionalBranches(BinaryContext &BC,
     return ThunkBF;
   };
 
-  auto getOrCreateBranchThunk =
-      [&](FragmentCluster &Cluster, const MCSymbol *TargetSymbol,
-          const MCSymbol *NextTarget, const bool IsForward) {
-        auto &Thunks = IsForward ? Cluster.ForwardBranchThunks
-                                 : Cluster.BackwardBranchThunks;
-        auto It = Thunks.find(TargetSymbol);
-        if (It != Thunks.end()) {
-          ++NumBranchThunksReused;
-          return It->second;
-        }
-
-        BinaryFunction *Thunk = createBranchThunk(NextTarget, IsForward);
-        Thunk->setCodeSectionName(Cluster.getThunkSectionName(IsForward));
-        auto &ThunkList =
-            IsForward ? Cluster.ForwardThunkList : Cluster.BackwardThunkList;
-        ThunkList.push_back(Thunk);
-        Thunks[TargetSymbol] = Thunk;
-        return Thunk;
-      };
-
-  auto getOrCreateBranchThunkChain =
-      [&](const CrossClusterReference &Branch) -> const MCSymbol * {
-    const unsigned SourceCluster = Branch.SourceCluster;
-    const unsigned TargetCluster = Branch.TargetCluster;
-    const bool IsForward = SourceCluster < TargetCluster;
-    const unsigned NumHops = IsForward ? TargetCluster - SourceCluster
-                                       : SourceCluster - TargetCluster;
-
-    auto getClusterAtHop = [&](const unsigned Hop) {
-      return IsForward ? SourceCluster + Hop : SourceCluster - Hop;
-    };
-
-    auto getThunkOffset = [&](const unsigned Cluster) {
-      const FragmentCluster &FC = Clusters[Cluster];
-      return IsForward ? FC.getEndOffset() : FC.StartOffset;
-    };
-
-    SmallVector<unsigned> ThunkClusters;
-    uint64_t CurrentOffset = Branch.SourceOffset;
-    unsigned NextHop = 0;
-    while (!isWithinClusterRange(CurrentOffset, Branch.TargetOffset)) {
-      unsigned BestHop = -1u;
-      for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
-        const unsigned Cluster = getClusterAtHop(Hop);
-        if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
-          break;
-        BestHop = Hop;
-      }
-
-      assert(BestHop != -1u && "expected reachable branch thunk");
-      const unsigned BestCluster = getClusterAtHop(BestHop);
-      ThunkClusters.push_back(BestCluster);
-      CurrentOffset = getThunkOffset(BestCluster);
-      NextHop = BestHop + 1;
-    }
-
-    BinaryFunction *FirstThunk = nullptr;
-    const MCSymbol *NextTarget = Branch.TargetSymbol;
-    for (const unsigned Cluster : llvm::reverse(ThunkClusters)) {
-      FirstThunk = getOrCreateBranchThunk(
-          Clusters[Cluster], Branch.TargetSymbol, NextTarget, IsForward);
-      NextTarget = FirstThunk->getSymbol();
-    }
-
-    assert(FirstThunk && "expected branch thunk chain");
-    return FirstThunk->getSymbol();
+  auto registerBranchThunk = [&](FragmentCluster &Cluster,
+                                 BinaryFunction *Thunk) {
+    uint64_t EntryID = 0;
+    const BinaryFunction *BF =
+        IsCall ? BC.getFunctionForSymbol(Ref.TargetSymbol, &EntryID) : nullptr;
+    if (BF && EntryID == 0)
+      for (const MCSymbol *Symbol : BF->getSymbols())
+        Cluster.BranchThunks[Symbol] = Thunk;
+    else
+      Cluster.BranchThunks[Ref.TargetSymbol] = Thunk;
   };
 
-  for (const CrossClusterReference &Branch : CrossClusterBranches) {
-    const MCSymbol *Target = getOrCreateBranchThunkChain(Branch);
+  auto getOrCreateBranchThunk = [&](FragmentCluster &Cluster,
+                                    const MCSymbol *NextTarget) {
+    auto It = Cluster.BranchThunks.find(Ref.TargetSymbol);
+    if (It != Cluster.BranchThunks.end()) {
+      if (IsCall)
+        ++Stats.NumShortThunksReused;
+      else
+        ++Stats.NumBranchThunksReused;
+      return It->second;
+    }
+
+    BinaryFunction *Thunk = createBranchThunk(NextTarget);
+    Thunk->setCodeSectionName(Cluster.getThunkSectionName(IsForward));
+    auto &ThunkList =
+        IsForward ? Cluster.ForwardThunkList : Cluster.BackwardThunkList;
+    ThunkList.push_back(Thunk);
+    registerBranchThunk(Cluster, Thunk);
+    return Thunk;
+  };
+
+  auto getClusterAtHop = [&](const unsigned Hop) {
+    return IsForward ? SourceCluster + Hop : SourceCluster - Hop;
+  };
+
+  auto getThunkOffset = [&](const unsigned Cluster) {
+    const FragmentCluster &FC = Clusters[Cluster];
+    return IsForward ? FC.getEndOffset() : FC.StartOffset;
+  };
+
+  SmallVector<unsigned> ThunkClusters;
+  uint64_t CurrentOffset = Ref.SourceOffset;
+  unsigned NextHop = 0;
+  while (!isWithinClusterRange(CurrentOffset, Ref.TargetOffset)) {
+    if (ThunkClusters.size() == MaxThunks)
+      return nullptr;
+
+    unsigned BestHop = -1u;
+    for (unsigned Hop = NextHop; Hop < NumHops; ++Hop) {
+      const unsigned Cluster = getClusterAtHop(Hop);
+      if (!isWithinClusterRange(CurrentOffset, getThunkOffset(Cluster)))
+        break;
+      BestHop = Hop;
+    }
+
+    if (BestHop == -1u)
+      return nullptr;
+
+    const unsigned BestCluster = getClusterAtHop(BestHop);
+    ThunkClusters.push_back(BestCluster);
+    CurrentOffset = getThunkOffset(BestCluster);
+    NextHop = BestHop + 1;
+  }
+
+  BinaryFunction *FirstThunk = nullptr;
+  const MCSymbol *NextTarget = Ref.TargetSymbol;
+  for (const unsigned Cluster : llvm::reverse(ThunkClusters)) {
+    FirstThunk = getOrCreateBranchThunk(Clusters[Cluster], NextTarget);
+    NextTarget = FirstThunk->getSymbol();
+  }
+
+  return FirstThunk ? FirstThunk->getSymbol() : Ref.TargetSymbol;
+}
+
+void LongJmpPass::relaxCalls(BinaryContext &BC, ClusterLayout &Layout,
+                             ClusterRelaxationWorklist &Worklist,
+                             ClusterRelaxationStats &Stats) {
+  auto &Clusters = Layout.Clusters;
+  auto &OutOfLayoutCalls = Worklist.OutOfLayoutCalls;
+  auto &CallsByDistance = Worklist.CallsByDistance;
+
+  auto createLongThunk = [&](const MCSymbol *TargetSymbol, bool IsForward) {
+    BinaryFunction *Thunk = nullptr;
+    const size_t ThunkNumber = Stats.NumLongThunks++;
+    std::string ThunkName =
+        (Twine("__AArch64_") + (IsForward ? "forward_" : "backward_") +
+         "ADRPThunk_" + TargetSymbol->getName() + "_" + Twine(ThunkNumber))
+            .str();
+    Thunk = BC.createThunkBinaryFunction(ThunkName);
+    InstructionListType Instructions;
+    BC.MIB->createLongTailCall(Instructions, TargetSymbol, BC.Ctx.get());
+    Thunk->addBasicBlock()->addInstructions(Instructions);
+    return Thunk;
+  };
+
+  auto registerLongThunk = [&](FragmentCluster &FC, const MCSymbol *Callee,
+                               BinaryFunction *Thunk) {
+    uint64_t EntryID = 0;
+    const BinaryFunction *BF = BC.getFunctionForSymbol(Callee, &EntryID);
+    const bool IsPrimaryEntry = EntryID == 0;
+    if (BF && IsPrimaryEntry)
+      for (const MCSymbol *Symbol : BF->getSymbols())
+        FC.LongThunks[Symbol] = Thunk;
+    else
+      FC.LongThunks[Callee] = Thunk;
+  };
+
+  auto getOrCreateLongThunk = [&](const ClusterReference &Call) {
+    const MCSymbol *TargetSymbol = Call.TargetSymbol;
+    const unsigned SourceCluster = Call.SourceCluster;
+    const bool IsForward = SourceCluster < Call.TargetCluster;
+    FragmentCluster &FC = Clusters[SourceCluster];
+    if (auto It = FC.LongThunks.find(TargetSymbol); It != FC.LongThunks.end()) {
+      ++Stats.NumLongThunksReused;
+      return It->second;
+    }
+
+    // Reuse long thunks hosted at the adjacent cluster boundary.
+    FragmentCluster *ReuseCluster = nullptr;
+    if (IsForward && SourceCluster > 0)
+      ReuseCluster = &Clusters[SourceCluster - 1];
+    else if (!IsForward && SourceCluster + 1 < Clusters.size())
+      ReuseCluster = &Clusters[SourceCluster + 1];
+
+    if (ReuseCluster) {
+      auto It = ReuseCluster->LongThunks.find(TargetSymbol);
+      if (It != ReuseCluster->LongThunks.end()) {
+        BinaryFunction *Thunk = It->second;
+        ++Stats.NumLongThunksReused;
+        return Thunk;
+      }
+    }
+
+    BinaryFunction *Thunk = createLongThunk(TargetSymbol, IsForward);
+
+    Thunk->setCodeSectionName(FC.getThunkSectionName(IsForward));
+    BinaryFunctionListType &ThunkList =
+        IsForward ? FC.ForwardThunkList : FC.BackwardThunkList;
+    ThunkList.push_back(Thunk);
+
+    // Register thunks for all symbols associated with the function.
+    registerLongThunk(FC, TargetSymbol, Thunk);
+    return Thunk;
+  };
+
+  auto relaxCallWithLongThunk = [&](ClusterReference &Call) {
+    BinaryFunction *Thunk = getOrCreateLongThunk(Call);
+    BC.MIB->replaceBranchTarget(*Call.Inst, Thunk->getSymbol(), BC.Ctx.get());
+  };
+
+  // Process out-of-layout targets first.
+  for (ClusterReference &Call : OutOfLayoutCalls)
+    relaxCallWithLongThunk(Call);
+
+  Stats.NumLongThunkCalls += OutOfLayoutCalls.size();
+  // Process known targets from farthest to nearest for maximizing thunk reuse.
+  for (auto &Calls : llvm::reverse(CallsByDistance)) {
+    for (ClusterReference &Call : Calls) {
+      // Attempt a branch thunk chain if length is below threshold.
+      if (const MCSymbol *Target = getOrCreateBranchThunkChain(
+              BC, Layout, Stats, Call, opts::MaxThunkChainLength)) {
+        BC.MIB->replaceBranchTarget(*Call.Inst, Target, BC.Ctx.get());
+        ++Stats.NumShortThunkCalls;
+        continue;
+      }
+      // Otherwise fall back to a long thunk.
+      ++Stats.NumLongThunkCalls;
+      relaxCallWithLongThunk(Call);
+    }
+  }
+
+  if (Stats.NumShortThunkCalls)
+    BC.outs() << "BOLT-INFO: relaxed " << Stats.NumShortThunkCalls
+              << " calls with short thunks\n";
+
+  if (Stats.NumLongThunkCalls)
+    BC.outs() << "BOLT-INFO: relaxed " << Stats.NumLongThunkCalls
+              << " calls with long thunks\n";
+
+  if (Stats.NumShortThunks)
+    BC.outs() << "BOLT-INFO: " << Stats.NumShortThunks
+              << " short thunks created\n";
+
+  if (Stats.NumLongThunks)
+    BC.outs() << "BOLT-INFO: " << Stats.NumLongThunks
+              << " long thunks created\n";
+
+  if (Stats.NumShortThunksReused)
+    BC.outs() << "BOLT-INFO: " << Stats.NumShortThunksReused
+              << " short thunks reused\n";
+
+  if (Stats.NumLongThunksReused)
+    BC.outs() << "BOLT-INFO: " << Stats.NumLongThunksReused
+              << " long thunks reused\n";
+}
+
+void LongJmpPass::relaxUnconditionalBranches(
+    BinaryContext &BC, ClusterLayout &Layout,
+    ClusterRelaxationWorklist &Worklist, ClusterRelaxationStats &Stats) {
+  auto &Branches = Worklist.Branches;
+
+  for (const ClusterReference &Branch : Branches) {
+    const MCSymbol *Target = getOrCreateBranchThunkChain(
+        BC, Layout, Stats, Branch, /*MaxThunks=*/-1u);
+    assert(Target && "expected branch thunk chain");
     BC.MIB->replaceBranchTarget(*Branch.Inst, Target, BC.Ctx.get());
   }
 
-  if (!CrossClusterBranches.empty())
-    BC.outs() << "BOLT-INFO: relaxed " << CrossClusterBranches.size()
-              << " cross-cluster branches\n";
+  if (!Branches.empty())
+    BC.outs() << "BOLT-INFO: relaxed " << Branches.size()
+              << " unconditional branches\n";
 
-  if (NumBranchThunks)
-    BC.outs() << "BOLT-INFO: " << NumBranchThunks << " branch thunks created\n";
+  if (Stats.NumBranchThunks)
+    BC.outs() << "BOLT-INFO: " << Stats.NumBranchThunks
+              << " branch thunks created\n";
 
-  if (NumBranchThunksReused)
-    BC.outs() << "BOLT-INFO: " << NumBranchThunksReused
+  if (Stats.NumBranchThunksReused)
+    BC.outs() << "BOLT-INFO: " << Stats.NumBranchThunksReused
               << " branch thunks reused\n";
 }
 
 void LongJmpPass::insertClusterThunks(BinaryFunctionListType &OutputFunctions,
-                                      FragmentClusterLayout &Layout) {
+                                      ClusterLayout &Layout) {
   struct ThunkInsertion {
     size_t Position;
     bool IsForward;
@@ -1594,15 +1593,16 @@ void LongJmpPass::insertClusterThunks(BinaryFunctionListType &OutputFunctions,
 
 void LongJmpPass::relaxWithClusters(BinaryContext &BC) {
   BinaryFunctionListType OutputFunctions = BC.getOutputBinaryFunctions();
-  FragmentClusterLayout Layout = buildClusterLayout(BC, OutputFunctions);
+  ClusterLayout Layout = buildClusterLayout(BC, OutputFunctions);
 
   if (Layout.Clusters.empty())
     return;
 
-  ClusteredReferences References =
-      collectClusteredReferences(BC, OutputFunctions, Layout);
-  relaxCalls(BC, Layout, References);
-  relaxUnconditionalBranches(BC, Layout, References);
+  ClusterRelaxationWorklist Worklist =
+      collectClusterRelaxationWorklist(BC, OutputFunctions, Layout);
+  ClusterRelaxationStats Stats;
+  relaxCalls(BC, Layout, Worklist, Stats);
+  relaxUnconditionalBranches(BC, Layout, Worklist, Stats);
   insertClusterThunks(OutputFunctions, Layout);
 
   LLVM_DEBUG(dbgs() << "\nFunction layout with thunks:\n";
