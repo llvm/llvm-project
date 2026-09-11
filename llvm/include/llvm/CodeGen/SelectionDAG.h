@@ -79,9 +79,7 @@ struct KnownBits;
 class LLVMContext;
 class MachineBasicBlock;
 class MachineConstantPoolValue;
-class MachineModuleInfo;
 class MCSymbol;
-class OptimizationRemarkEmitter;
 class ProfileSummaryInfo;
 class SDDbgValue;
 class SDDbgOperand;
@@ -231,26 +229,19 @@ class SelectionDAG {
   const SelectionDAGTargetInfo *TSI = nullptr;
   const TargetLowering *TLI = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
-  const RTLIB::RuntimeLibcallsInfo *RuntimeLibcallInfo = nullptr;
   const LibcallLoweringInfo *Libcalls = nullptr;
 
   const FunctionVarLocs *FnVarLocs = nullptr;
   MachineFunction *MF;
   MachineFunctionAnalysisManager *MFAM = nullptr;
-  Pass *SDAGISelPass = nullptr;
   LLVMContext *Context;
   CodeGenOptLevel OptLevel;
 
   UniformityInfo *UA = nullptr;
   FunctionLoweringInfo * FLI = nullptr;
 
-  /// The function-level optimization remark emitter.  Used to emit remarks
-  /// whenever manipulating the DAG.
-  OptimizationRemarkEmitter *ORE;
-
   ProfileSummaryInfo *PSI = nullptr;
   BlockFrequencyInfo *BFI = nullptr;
-  MachineModuleInfo *MMI = nullptr;
 
   /// Uniquing of VT lists.  Each key aliases the EVT array that the returned
   /// SDVTList points at, allocated from \p Allocator.
@@ -488,21 +479,19 @@ public:
   LLVM_ABI ~SelectionDAG();
 
   /// Prepare this SelectionDAG to process code in the given MachineFunction.
-  LLVM_ABI void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
-                     Pass *PassPtr, const TargetLibraryInfo *LibraryInfo,
+  LLVM_ABI void init(MachineFunction &NewMF,
+                     const TargetLibraryInfo *LibraryInfo,
                      const LibcallLoweringInfo *LibcallsInfo,
                      UniformityInfo *UA, ProfileSummaryInfo *PSIin,
-                     BlockFrequencyInfo *BFIin, MachineModuleInfo &MMI,
+                     BlockFrequencyInfo *BFIin,
                      FunctionVarLocs const *FnVarLocs);
 
-  void init(MachineFunction &NewMF, OptimizationRemarkEmitter &NewORE,
-            MachineFunctionAnalysisManager &AM,
+  void init(MachineFunction &NewMF, MachineFunctionAnalysisManager &AM,
             const TargetLibraryInfo *LibraryInfo,
             const LibcallLoweringInfo *LibcallsInfo, UniformityInfo *UA,
             ProfileSummaryInfo *PSIin, BlockFrequencyInfo *BFIin,
-            MachineModuleInfo &MMI, FunctionVarLocs const *FnVarLocs) {
-    init(NewMF, NewORE, nullptr, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin,
-         MMI, FnVarLocs);
+            FunctionVarLocs const *FnVarLocs) {
+    init(NewMF, LibraryInfo, LibcallsInfo, UA, PSIin, BFIin, FnVarLocs);
     MFAM = &AM;
   }
 
@@ -515,7 +504,6 @@ public:
   LLVM_ABI void clear();
 
   MachineFunction &getMachineFunction() const { return *MF; }
-  const Pass *getPass() const { return SDAGISelPass; }
   MachineFunctionAnalysisManager *getMFAM() { return MFAM; }
 
   bool hasSwiftErrorArg() const;
@@ -532,20 +520,14 @@ public:
 
   const LibcallLoweringInfo &getLibcalls() const { return *Libcalls; }
 
-  const RTLIB::RuntimeLibcallsInfo &getRuntimeLibcallInfo() const {
-    return *RuntimeLibcallInfo;
-  }
-
   const SelectionDAGTargetInfo &getSelectionDAGInfo() const { return *TSI; }
   const UniformityInfo *getUniformityInfo() const { return UA; }
   /// Returns the result of the AssignmentTrackingAnalysis pass if it's
   /// available, otherwise return nullptr.
   const FunctionVarLocs *getFunctionVarLocs() const { return FnVarLocs; }
   LLVMContext *getContext() const { return Context; }
-  OptimizationRemarkEmitter &getORE() const { return *ORE; }
   ProfileSummaryInfo *getPSI() const { return PSI; }
   BlockFrequencyInfo *getBFI() const { return BFI; }
-  MachineModuleInfo *getMMI() const { return MMI; }
 
   FlagInserter *getFlagInserter() { return Inserter; }
   void setFlagInserter(FlagInserter *FI) { Inserter = FI; }

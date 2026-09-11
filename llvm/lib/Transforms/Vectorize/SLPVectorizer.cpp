@@ -29844,6 +29844,12 @@ public:
            I->hasAllowReassoc() && I->hasNoSignedZeros();
   }
 
+  /// A group of loads or non-instructions rarely amortizes on its own the
+  /// cost of the reduction operation, charged to the first vectorized group.
+  static bool isCheapReductionGroup(ArrayRef<Value *> P) {
+    return !isa<Instruction>(P.front()) || isa<LoadInst>(P.front());
+  }
+
   /// Try to find a reduction tree. If \p FlattenNegations is false, the
   /// reassociable fsub/fneg links of an fadd chain are not flattened (they are
   /// leaves of the reduction).
@@ -30250,11 +30256,8 @@ public:
           return P1.size() > P2.size();
         if (NegatedReducedVals.empty())
           return false;
-        auto IsCheapGroup = [](ArrayRef<Value *> P) {
-          return !isa<Instruction>(P.front()) || isa<LoadInst>(P.front());
-        };
-        bool Cheap1 = IsCheapGroup(P1);
-        bool Cheap2 = IsCheapGroup(P2);
+        bool Cheap1 = isCheapReductionGroup(P1);
+        bool Cheap2 = isCheapReductionGroup(P2);
         if (Cheap1 != Cheap2)
           return Cheap2;
         return NegatedReducedVals.contains(P1.front()) <
@@ -30303,9 +30306,11 @@ public:
   }
 
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
+  /// \p IsSeedRoot allows vectorizing the groups at the minimum vector
+  /// factor. Set for single-use seed-level roots only.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI, AssumptionCache *AC,
-                     DominatorTree &DT) {
+                     DominatorTree &DT, bool IsSeedRoot = false) {
     constexpr unsigned RegMaxNumber = 4;
     const unsigned RedValsMaxNumber =
         (RK == ReductionOrdering::Ordered &&
@@ -30552,6 +30557,40 @@ public:
       States.push_back(getSameOpcode(RV, TLI));
     }
     ReducedVals.swap(LocalReducedVals);
+    FastMathFlags GroupRdxFMF = RdxFMF;
+    // The minimum vector factor pays off only when it covers the whole
+    // reduction: every group must be either a pair of distinct values or
+    // large enough for the regular vector factor.
+    const bool NoScalarLeftovers =
+        all_of(ReducedVals, [this](ArrayRef<Value *> Vals) {
+          return Vals.size() >= ReductionLimit ||
+                 (Vals.size() == 2 && Vals.front() != Vals.back());
+        });
+    // Same-size groups of the seed-level reduction get the profitability
+    // ordering (cheap groups go last) when the minimum vector factor covers
+    // the whole reduction.
+    if (IsSeedRoot && NegatedReducedVals.empty() && NoScalarLeftovers &&
+        any_of(ReducedVals,
+               [](ArrayRef<Value *> Vals) { return Vals.size() == 2; })) {
+      SmallVector<unsigned> GroupOrder(ReducedVals.size());
+      std::iota(GroupOrder.begin(), GroupOrder.end(), 0);
+      stable_sort(GroupOrder, [&](unsigned L, unsigned R) {
+        ArrayRef<Value *> P1 = ReducedVals[L], P2 = ReducedVals[R];
+        if (P1.size() != P2.size())
+          return P1.size() > P2.size();
+        return !isCheapReductionGroup(P1) && isCheapReductionGroup(P2);
+      });
+      SmallVector<SmallVector<Value *>> SortedVals;
+      SmallVector<InstructionsState> SortedStates;
+      SortedVals.reserve(ReducedVals.size());
+      SortedStates.reserve(States.size());
+      for (unsigned Idx : GroupOrder) {
+        SortedVals.emplace_back(std::move(ReducedVals[Idx]));
+        SortedStates.push_back(States[Idx]);
+      }
+      ReducedVals = std::move(SortedVals);
+      States = std::move(SortedStates);
+    }
     for (unsigned I = 0, E = ReducedVals.size(); I < E; ++I) {
       ArrayRef<Value *> OrigReducedVals = ReducedVals[I];
       InstructionsState S = States[I];
@@ -30644,11 +30683,24 @@ public:
       }
 
       unsigned NumReducedVals = Candidates.size();
+      auto UsedByReductionOnly = [&](Value *V) {
+        if (!V->hasUseList())
+          return true;
+        // Bail out if we have too many uses to save compilation time.
+        if (V->hasNUsesOrMore(UsesLimit))
+          return false;
+        return all_of(V->users(),
+                      [&](User *U) { return IgnoreList.contains(U); });
+      };
       // Sign-aware reductions pair small positive/negative groups: allow
-      // non-splat groups down to 2 elements.
+      // non-splat groups down to 2 elements. Seed-level reductions get the
+      // same for groups whose values are used by the reduction operations
+      // only, if the minimum vector factor covers the whole reduction.
+      const bool MinVFAllowed = IsSeedRoot && NoScalarLeftovers &&
+                                all_of(Candidates, UsedByReductionOnly);
       if (NumReducedVals < ReductionLimit &&
-          (NumReducedVals < 2 ||
-           (!isSplat(Candidates) && NegatedReducedVals.empty())))
+          (NumReducedVals < 2 || (!isSplat(Candidates) &&
+                                  NegatedReducedVals.empty() && !MinVFAllowed)))
         continue;
 
       // Check if we support repeated scalar values processing (optimization of
@@ -30723,6 +30775,12 @@ public:
         }
       }
 
+      GroupRdxFMF = RdxFMF;
+      // No need to check for associativity, if 2 reduced values.
+      if (NumReducedVals == 2 &&
+          (RdxKind == RecurKind::FAdd || RdxKind == RecurKind::FMul))
+        GroupRdxFMF.setAllowReassoc(true);
+
       unsigned MaxVecRegSize = V.getMaxVecRegSize();
       unsigned EltSize = V.getVectorElementSize(Candidates[0]);
       const unsigned MaxElts = std::clamp<unsigned>(
@@ -30782,9 +30840,12 @@ public:
       };
       bool AnyVectorized = false;
       SmallDenseSet<std::pair<unsigned, unsigned>, 8> IgnoredCandidates;
-      // Same small-group allowance for the vector width.
+      // Same small-group allowance for the vector width, if it covers the
+      // whole group.
       const unsigned MinReduxWidth =
-          NegatedReducedVals.empty() ? ReductionLimit : 2;
+          !NegatedReducedVals.empty() || (MinVFAllowed && NumReducedVals == 2)
+              ? 2
+              : ReductionLimit;
       while (Pos < NumReducedVals - ReduxWidth + 1 &&
              ReduxWidth >= MinReduxWidth) {
         // Dependency in tree of the reduction ops - drop this attempt, try
@@ -30831,7 +30892,7 @@ public:
         }
         V.reorderTopToBottom();
         // No need to reorder the root node at all for reassociative reduction.
-        V.reorderBottomToTop(/*IgnoreReorder=*/RdxFMF.allowReassoc() ||
+        V.reorderBottomToTop(/*IgnoreReorder=*/GroupRdxFMF.allowReassoc() ||
                              VL.front()->getType()->isIntOrIntVectorTy() ||
                              ReductionLimit > 2 ||
                              RK == ReductionOrdering::Ordered);
@@ -30904,7 +30965,7 @@ public:
         else
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               RdxFMF, V, DT, DL, TLI);
+                               GroupRdxFMF, V, DT, DL, TLI);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31092,8 +31153,10 @@ public:
     }
 
     if (!VectorValuesAndScales.empty()) {
+      Builder.setFastMathFlags(GroupRdxFMF);
       auto [Res, ResNegated] =
           emitReduction(Builder, *TTI, ReductionRoot->getType());
+      Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
       // final combine.
       AddReducedPart(/*OrigV=*/nullptr, Res, ResNegated);
@@ -32568,7 +32631,8 @@ bool SLPVectorizerPass::vectorizeHorReduction(
   Stack.emplace(SelectRoot(), 0);
   SmallPtrSet<Value *, 8> VisitedInstrs;
   bool Res = false;
-  auto TryToReduce = [this, &R, TTI = TTI](Instruction *Inst) -> Value * {
+  auto TryToReduce = [this, &R, TTI = TTI](Instruction *Inst,
+                                           bool IsSeedRoot) -> Value * {
     if (R.isAnalyzedReductionRoot(Inst))
       return nullptr;
     if (!isReductionCandidate(Inst))
@@ -32576,7 +32640,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     Value *Res = nullptr;
     if (HorRdx.matchAssociativeReduction(R, Inst, *SE, *DT, *DL, *TTI, *TLI)) {
-      Value *Red = HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
+      Value *Red = HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, IsSeedRoot);
       // The chain with the flattened fsub/fneg links produced no vector part:
       // retry with the fsub/fneg links as leaves, they may be vectorizable on
       // their own.
@@ -32584,7 +32648,8 @@ bool SLPVectorizerPass::vectorizeHorReduction(
         HorizontalReduction UnflattenedHorRdx;
         if (UnflattenedHorRdx.matchAssociativeReduction(
                 R, Inst, *SE, *DT, *DL, *TTI, *TLI, /*FlattenNegations=*/false))
-          Red = UnflattenedHorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT);
+          Red = UnflattenedHorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT,
+                                              IsSeedRoot);
       }
       if (Red) {
         if (Red != Inst)
@@ -32629,7 +32694,10 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     // iteration while stack was populated before that happened.
     if (R.isDeleted(Inst))
       continue;
-    if (Value *VectorizedV = TryToReduce(Inst)) {
+    // The minimum-vector-factor allowance applies to single-use seed-level
+    // roots only.
+    if (Value *VectorizedV =
+            TryToReduce(Inst, /*IsSeedRoot=*/Level == 0 && Inst->hasOneUse())) {
       Res = true;
       if (auto *I = dyn_cast<Instruction>(VectorizedV); I && I != Inst) {
         // Try to find another reduction.
@@ -32720,6 +32788,19 @@ bool SLPVectorizerPass::tryToVectorize(
                                              ArrayRef<Value *> Ops) {
     if (!isReductionCandidate(Inst))
       return false;
+    // A 2-element reduction that is just a link in a larger reduction chain
+    // or feeds a buildvector is better handled by the whole-chain reduction
+    // or buildvector analysis.
+    RecurKind Kind = getRdxKind(Inst);
+    auto *FPMO = dyn_cast<FPMathOperator>(Inst);
+    if (FPMO && !FPMO->hasAllowReassoc() &&
+        (any_of(Inst->users(),
+                [Kind](User *U) {
+                  return getRdxKind(U) == Kind || isa<InsertElementInst>(U);
+                }) ||
+         any_of(Inst->operands(),
+                [Kind](Value *Op) { return getRdxKind(Op) == Kind; })))
+      return false;
     Type *Ty = Inst->getType();
     if (!isValidElementType(Ty, SLPReVec) || Ty->isPointerTy())
       return false;
@@ -32744,8 +32825,12 @@ bool SLPVectorizerPass::tryToVectorize(
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       FastMathFlags FMF;
-      if (auto *FPCI = dyn_cast<FPMathOperator>(Inst))
+      if (auto *FPCI = dyn_cast<FPMathOperator>(Inst)) {
         FMF = FPCI->getFastMathFlags();
+        // No need to check for associativity, if 2 reduced values.
+        if (Ops.size() == 2)
+          FMF.setAllowReassoc(true);
+      }
       RedCost = TTI.getArithmeticReductionCost(Inst->getOpcode(), VecTy, FMF,
                                                CostKind);
       break;
@@ -33362,10 +33447,15 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   }
   if (Operands.size() <= 1)
     return Changed;
+  constexpr unsigned Limit = 32;
   Changed |= tryToVectorizeSequence<Value>(
       Operands, OperandSorter, AreCompatibleOperands,
       [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
-        return tryToVectorizeList(Candidates, R, MaxVFOnly);
+        // Limit to StandaloneSeeds if !MaxVFOnly to avoid quadratic scan for
+        // large set of candidates.
+        return tryToVectorizeList(Candidates, R, MaxVFOnly,
+                                  /*StandaloneSeeds=*/!MaxVFOnly &&
+                                      Candidates.size() >= Limit);
       },
       /*MaxVFOnly=*/true, R);
   return Changed;
