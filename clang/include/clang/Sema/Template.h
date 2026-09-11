@@ -634,6 +634,7 @@ enum class TemplateSubstitutionKind : char {
 #define FILESCOPEASM(DERIVED, BASE)
 #define TOPLEVELSTMT(DERIVED, BASE)
 #define IMPORT(DERIVED, BASE)
+#define PRIVATEMODULEFRAGMENT(DERIVED, BASE)
 #define EXPORT(DERIVED, BASE)
 #define LINKAGESPEC(DERIVED, BASE)
 #define OBJCCOMPATIBLEALIAS(DERIVED, BASE)
@@ -645,10 +646,10 @@ enum class TemplateSubstitutionKind : char {
 #define EMPTY(DERIVED, BASE)
 #define LIFETIMEEXTENDEDTEMPORARY(DERIVED, BASE)
 
-// Decls which never appear inside a template.
+    // Decls which never appear inside a template.
 #define OUTLINEDFUNCTION(DERIVED, BASE)
 
-// Decls which use special-case instantiation code.
+    // Decls which use special-case instantiation code.
 #define BLOCK(DERIVED, BASE)
 #define CAPTURED(DERIVED, BASE)
 #define IMPLICITPARAM(DERIVED, BASE)

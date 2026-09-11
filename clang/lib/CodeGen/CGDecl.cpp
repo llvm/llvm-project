@@ -128,6 +128,7 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   case Decl::ExplicitInstantiation:
   case Decl::Label:        // __label__ x;
   case Decl::Import:
+  case Decl::PrivateModuleFragment:
   case Decl::MSGuid:    // __declspec(uuid("..."))
   case Decl::UnnamedGlobalConstant:
   case Decl::TemplateParamObject:

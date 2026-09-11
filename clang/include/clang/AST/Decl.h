@@ -5309,6 +5309,49 @@ public:
   }
 };
 
+/// Represents the private module fragment of a module unit.
+///
+/// For example:
+/// \code
+///   export module A;
+///   ...
+///   module :private;   // <- this fragment
+///   int internal_only();
+/// \endcode
+class PrivateModuleFragmentDecl final : public Decl {
+  Module *Fragment;
+  SourceLocation PrivateLoc;
+
+  PrivateModuleFragmentDecl(DeclContext *DC, SourceLocation ModuleLoc,
+                            SourceLocation PrivateLoc, Module *Fragment)
+      : Decl(PrivateModuleFragment, DC, ModuleLoc), Fragment(Fragment),
+        PrivateLoc(PrivateLoc) {}
+  PrivateModuleFragmentDecl(EmptyShell Empty)
+      : Decl(PrivateModuleFragment, Empty) {}
+
+public:
+  static PrivateModuleFragmentDecl *Create(ASTContext &C, DeclContext *DC,
+                                           SourceLocation ModuleLoc,
+                                           SourceLocation PrivateLoc,
+                                           Module *Fragment) {
+    return new (C, DC)
+        PrivateModuleFragmentDecl(DC, ModuleLoc, PrivateLoc, Fragment);
+  }
+  static PrivateModuleFragmentDecl *CreateDeserialized(ASTContext &C,
+                                                       GlobalDeclID ID);
+
+  Module *getFragment() const { return Fragment; }
+  SourceLocation getPrivateLoc() const { return PrivateLoc; }
+  void setPrivateLoc(SourceLocation Loc) { PrivateLoc = Loc; }
+  void setFragment(Module *Frag) { Fragment = Frag; }
+  SourceRange getSourceRange() const override LLVM_READONLY {
+    return SourceRange(getLocation(), PrivateLoc);
+  }
+  static bool classof(const Decl *D) {
+    return D->getKind() == Decl::PrivateModuleFragment;
+  }
+};
+
 /// Represents an empty-declaration.
 class EmptyDecl : public Decl {
   EmptyDecl(DeclContext *DC, SourceLocation L) : Decl(Empty, DC, L) {}

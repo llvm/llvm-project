@@ -7299,6 +7299,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::Label: // FIXME: Is this right??
   case Decl::CXXDeductionGuide:
   case Decl::Import:
+  case Decl::PrivateModuleFragment:
   case Decl::OMPThreadPrivate:
   case Decl::OMPGroupPrivate:
   case Decl::OMPAllocate:

@@ -107,6 +107,7 @@ def Block : DeclNode<Decl, "blocks">, DeclContext;
 def OutlinedFunction : DeclNode<Decl>, DeclContext;
 def Captured : DeclNode<Decl>, DeclContext;
 def Import : DeclNode<Decl>;
+def PrivateModuleFragment : DeclNode<Decl>;
 def OMPThreadPrivate : DeclNode<Decl>;
 def OMPGroupPrivate : DeclNode<Decl>;
 def OMPAllocate : DeclNode<Decl>;

@@ -986,6 +986,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case Friend:
     case FriendTemplate:
     case AccessSpec:
+    case PrivateModuleFragment:
     case LinkageSpec:
     case Export:
     case FileScopeAsm:

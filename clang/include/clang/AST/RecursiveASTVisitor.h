@@ -1723,6 +1723,7 @@ DEF_TRAVERSE_DECL(FileScopeAsmDecl,
 DEF_TRAVERSE_DECL(TopLevelStmtDecl, { TRY_TO(TraverseStmt(D->getStmt())); })
 
 DEF_TRAVERSE_DECL(ImportDecl, {})
+DEF_TRAVERSE_DECL(PrivateModuleFragmentDecl, {})
 
 DEF_TRAVERSE_DECL(FriendDecl, {
   // Friend is either decl or a type.

@@ -2643,6 +2643,11 @@ void TextNodeDumper::VisitImportDecl(const ImportDecl *D) {
     dumpDeclRef(InitD, "initializer");
 }
 
+void TextNodeDumper::VisitPrivateModuleFragmentDecl(
+    const PrivateModuleFragmentDecl *D) {
+  OS << ' ' << D->getFragment()->getFullModuleName();
+}
+
 void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
   OS << ' ';
   switch (D->getCommentKind()) {

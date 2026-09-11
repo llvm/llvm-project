@@ -6192,3 +6192,12 @@ bool clang::hasArmZT0State(const FunctionDecl *FD) {
                    FunctionType::ARM_None) ||
          (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
 }
+
+//===----------------------------------------------------------------------===//
+// PrivateModuleFragmentDecl Implementation
+//===----------------------------------------------------------------------===//
+
+PrivateModuleFragmentDecl *
+PrivateModuleFragmentDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID) {
+  return new (C, ID) PrivateModuleFragmentDecl(EmptyShell());
+}

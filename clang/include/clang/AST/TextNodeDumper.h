@@ -373,6 +373,7 @@ public:
   void VisitBindingDecl(const BindingDecl *D);
   void VisitCapturedDecl(const CapturedDecl *D);
   void VisitImportDecl(const ImportDecl *D);
+  void VisitPrivateModuleFragmentDecl(const PrivateModuleFragmentDecl *D);
   void VisitPragmaCommentDecl(const PragmaCommentDecl *D);
   void VisitPragmaDetectMismatchDecl(const PragmaDetectMismatchDecl *D);
   void VisitOMPExecutableDirective(const OMPExecutableDirective *D);

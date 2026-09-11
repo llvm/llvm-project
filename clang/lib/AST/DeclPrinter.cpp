@@ -78,6 +78,7 @@ namespace {
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *D);
     void VisitTopLevelStmtDecl(TopLevelStmtDecl *D);
     void VisitImportDecl(ImportDecl *D);
+    void VisitPrivateModuleFragmentDecl(PrivateModuleFragmentDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
     void VisitNamespaceDecl(NamespaceDecl *D);
     void VisitUsingDirectiveDecl(UsingDirectiveDecl *D);
@@ -1063,6 +1064,10 @@ void DeclPrinter::VisitTopLevelStmtDecl(TopLevelStmtDecl *D) {
 void DeclPrinter::VisitImportDecl(ImportDecl *D) {
   Out << "@import " << D->getImportedModule()->getFullModuleName()
       << ";\n";
+}
+
+void DeclPrinter::VisitPrivateModuleFragmentDecl(PrivateModuleFragmentDecl *D) {
+  Out << "module :private;\n";
 }
 
 void DeclPrinter::VisitStaticAssertDecl(StaticAssertDecl *D) {

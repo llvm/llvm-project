@@ -402,6 +402,7 @@ public:
   void VisitTopLevelStmtDecl(TopLevelStmtDecl *D);
   void VisitImportDecl(ImportDecl *D);
   void VisitAccessSpecDecl(AccessSpecDecl *D);
+  void VisitPrivateModuleFragmentDecl(PrivateModuleFragmentDecl *D);
   void VisitFriendDecl(FriendDecl *D);
   void VisitFriendTemplateDecl(FriendTemplateDecl *D);
   void VisitStaticAssertDecl(StaticAssertDecl *D);
@@ -2397,6 +2398,13 @@ void ASTDeclReader::VisitImportDecl(ImportDecl *D) {
   Record.skipInts(1); // The number of stored source locations.
 }
 
+void ASTDeclReader::VisitPrivateModuleFragmentDecl(
+    PrivateModuleFragmentDecl *D) {
+  VisitDecl(D);
+  D->setFragment(readModule());
+  D->setPrivateLoc(readSourceLocation());
+}
+
 void ASTDeclReader::VisitAccessSpecDecl(AccessSpecDecl *D) {
   VisitDecl(D);
   D->setColonLoc(readSourceLocation());
@@ -4277,6 +4285,9 @@ Decl *ASTReader::ReadDeclRecord(GlobalDeclID ID) {
     // Note: last entry of the ImportDecl record is the number of stored source
     // locations.
     D = ImportDecl::CreateDeserialized(Context, ID, Record.back());
+    break;
+  case DECL_PRIVATE_MODULE_FRAGMENT:
+    D = PrivateModuleFragmentDecl::CreateDeserialized(Context, ID);
     break;
   case DECL_OMP_THREADPRIVATE: {
     Record.skipInts(1);
