@@ -15,7 +15,7 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasStdExtZvzip] in {
+let Predicates = [HasStdExtZvzip], ElementsDependOn = EltDepsNone in {
   let Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV in
   def VZIP_VV : VALUVV<0b111110, OPMVV, "vzip.vv">;
 
@@ -26,6 +26,7 @@ let Predicates = [HasStdExtZvzip] in {
 
   let Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vrgather in {
     def VPAIRE_VV : VALUVV<0b001111, OPIVV, "vpaire.vv">;
+    let ElementsDependOn = EltDepsVL in
     def VPAIRO_VV : VALUVV<0b001111, OPMVV, "vpairo.vv">;
   }
 } // Predicates = [HasStdExtZvzip]

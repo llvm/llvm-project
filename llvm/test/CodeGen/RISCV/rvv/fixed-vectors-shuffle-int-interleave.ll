@@ -594,34 +594,32 @@ define <64 x i32> @interleave_v32i32(<32 x i32> %x, <32 x i32> %y) {
 ; ZVZIP-NEXT:    slli a0, a0, 4
 ; ZVZIP-NEXT:    sub sp, sp, a0
 ; ZVZIP-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
+; ZVZIP-NEXT:    addi a0, sp, 16
+; ZVZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; ZVZIP-NEXT:    vslidedown.vi v24, v16, 16
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    slli a0, a0, 3
 ; ZVZIP-NEXT:    add a0, sp, a0
 ; ZVZIP-NEXT:    addi a0, a0, 16
-; ZVZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
-; ZVZIP-NEXT:    vslidedown.vi v0, v16, 16
-; ZVZIP-NEXT:    vslidedown.vi v24, v8, 16
+; ZVZIP-NEXT:    vs8r.v v24, (a0) # vscale x 64-byte Folded Spill
+; ZVZIP-NEXT:    vslidedown.vi v0, v8, 16
 ; ZVZIP-NEXT:    li a0, 32
-; ZVZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
-; ZVZIP-NEXT:    vzip.vv v16, v12, v0
-; ZVZIP-NEXT:    addi a0, sp, 16
-; ZVZIP-NEXT:    vs8r.v v16, (a0) # vscale x 64-byte Folded Spill
-; ZVZIP-NEXT:    vzip.vv v16, v24, v12
+; ZVZIP-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; ZVZIP-NEXT:    vzip.vv v16, v0, v12
 ; ZVZIP-NEXT:    lui a0, 699051
 ; ZVZIP-NEXT:    addi a0, a0, -1366
 ; ZVZIP-NEXT:    vmv.s.x v0, a0
-; ZVZIP-NEXT:    addi a0, sp, 16
-; ZVZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
-; ZVZIP-NEXT:    vmerge.vvm v24, v16, v24, v0
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    slli a0, a0, 3
 ; ZVZIP-NEXT:    add a0, sp, a0
 ; ZVZIP-NEXT:    addi a0, a0, 16
-; ZVZIP-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; ZVZIP-NEXT:    vzip.vv v0, v8, v16
+; ZVZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vzip.vv v16, v12, v24, v0.t
+; ZVZIP-NEXT:    addi a0, sp, 16
+; ZVZIP-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; ZVZIP-NEXT:    vzip.vv v0, v8, v24
 ; ZVZIP-NEXT:    vmv.v.v v8, v0
-; ZVZIP-NEXT:    vmv.v.v v16, v24
 ; ZVZIP-NEXT:    csrr a0, vlenb
 ; ZVZIP-NEXT:    slli a0, a0, 4
 ; ZVZIP-NEXT:    add sp, sp, a0
