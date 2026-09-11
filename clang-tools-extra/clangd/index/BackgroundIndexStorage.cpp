@@ -19,6 +19,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <functional>
 #include <optional>
+#include <system_error>
 
 namespace clang {
 namespace clangd {
@@ -81,6 +82,17 @@ public:
       return llvm::Error::success();
     });
   }
+
+  llvm::Error removeShard(llvm::StringRef ShardIdentifier) const override {
+    auto ShardPath = getShardPathFromFilePath(DiskShardRoot, ShardIdentifier);
+    std::error_code EC = llvm::sys::fs::remove(ShardPath);
+    if (EC == std::errc::no_such_file_or_directory)
+      return llvm::Error::success();
+    if (EC)
+      return error("failed to remove index shard {0}: {1}", ShardPath,
+                   EC.message());
+    return llvm::Error::success();
+  }
 };
 
 // Doesn't persist index shards anywhere (used when the CDB dir is unknown).
@@ -96,6 +108,10 @@ public:
                          IndexFileOut Shard) const override {
     vlog("Couldn't find project for {0}, indexing in-memory only",
          ShardIdentifier);
+    return llvm::Error::success();
+  }
+
+  llvm::Error removeShard(llvm::StringRef) const override {
     return llvm::Error::success();
   }
 };

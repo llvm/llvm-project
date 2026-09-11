@@ -12,6 +12,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <deque>
@@ -63,6 +64,12 @@ public:
     std::lock_guard<std::mutex> Lock(StorageMu);
     AccessedPaths.insert(ShardIdentifier);
     Storage[ShardIdentifier] = llvm::to_string(Shard);
+    return llvm::Error::success();
+  }
+  llvm::Error removeShard(llvm::StringRef ShardIdentifier) const override {
+    std::lock_guard<std::mutex> Lock(StorageMu);
+    AccessedPaths.insert(ShardIdentifier);
+    Storage.erase(ShardIdentifier);
     return llvm::Error::success();
   }
   std::unique_ptr<IndexFileIn>
@@ -191,8 +198,7 @@ TEST_F(BackgroundIndexTest, IndexTwoFiles) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(
-      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -258,7 +264,8 @@ TEST_F(BackgroundIndexTest, ConstructorForwarding) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(
+      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   FS.Files[testPath("root/header.hpp")] = Header.code();
   FS.Files[testPath("root/test.cpp")] = Main.code();
@@ -318,7 +325,8 @@ TEST_F(BackgroundIndexTest, ConstructorForwardingMultiFile) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(
+      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   FS.Files[testPath("root/header.hpp")] = Header.code();
   FS.Files[testPath("root/first.cpp")] = First.code();
@@ -366,8 +374,7 @@ TEST_F(BackgroundIndexTest, MainFileRefs) {
   MemoryShardStorage MSS(Storage, CacheHits);
   OverlayCDB CDB(/*Base=*/nullptr);
   BackgroundIndex::Options Opts;
-  BackgroundIndex Idx(
-      FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; }, Opts);
 
   tooling::CompileCommand Cmd;
   Cmd.Filename = testPath("root/A.cc");
@@ -502,6 +509,78 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
             FileDigest{{0}});
   EXPECT_THAT(ShardHeader->Sources->lookup("unittest:///root/B.h"),
               emptyIncludeNode());
+}
+
+TEST_F(BackgroundIndexTest, FileRenameInvalidatesAndReindexes) {
+  MockFS FS;
+  const Path Main = testPath("root/main.cpp");
+  const Path Middle = testPath("root/middle.h");
+  const Path Old = testPath("root/old.h");
+  const Path New = testPath("root/new.h");
+  FS.Files[Main] = "#include \"middle.h\"\n";
+  FS.Files[Middle] = "#include \"old.h\"\n";
+  FS.Files[Old] = "inline int value() { return 1; }\n";
+
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = Main;
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", Main};
+  CDB.setCompileCommand(Main, Cmd);
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  auto Before = Idx.includeGraphSnapshot();
+  ASSERT_THAT_EXPECTED(Before, llvm::Succeeded());
+  ASSERT_TRUE(llvm::any_of(*Before, [&](const auto &File) {
+    return pathEqual(File.File, Middle) &&
+           llvm::any_of(File.DirectIncludes, [&](PathRef Include) {
+             return pathEqual(Include, Old);
+           });
+  }));
+
+  FS.Files[New] = FS.Files[Old];
+  FS.Files.erase(Old);
+  FS.Files[Middle] = "#include \"new.h\"\n";
+  ASSERT_THAT_ERROR(Idx.invalidateAfterFileRenames({{Old, New}}),
+                    llvm::Succeeded());
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  auto After = Idx.includeGraphSnapshot();
+  ASSERT_THAT_EXPECTED(After, llvm::Succeeded());
+  EXPECT_TRUE(llvm::any_of(*After, [&](const auto &File) {
+    return pathEqual(File.File, Middle) &&
+           llvm::any_of(File.DirectIncludes, [&](PathRef Include) {
+             return pathEqual(Include, New);
+           });
+  }));
+  EXPECT_FALSE(Storage.contains(Old));
+  EXPECT_TRUE(Storage.contains(New));
+}
+
+TEST_F(BackgroundIndexTest, IncludeGraphRejectsMissingTranslationUnit) {
+  MockFS FS;
+  const Path Missing = testPath("root/missing.cpp");
+  llvm::StringMap<std::string> Storage;
+  size_t CacheHits = 0;
+  MemoryShardStorage MSS(Storage, CacheHits);
+  OverlayCDB CDB(/*Base=*/nullptr);
+  BackgroundIndex Idx(FS, CDB, [&](llvm::StringRef) { return &MSS; },
+                      /*Opts=*/{});
+  tooling::CompileCommand Cmd;
+  Cmd.Filename = Missing;
+  Cmd.Directory = testPath("root");
+  Cmd.CommandLine = {"clang++", Missing};
+  CDB.setCompileCommand(Missing, Cmd);
+  ASSERT_TRUE(Idx.blockUntilIdleForTest());
+
+  EXPECT_THAT_EXPECTED(
+      Idx.includeGraphSnapshot(),
+      llvm::FailedWithMessage(testing::HasSubstr("no translation unit")));
 }
 
 TEST_F(BackgroundIndexTest, ShardStorageLoad) {

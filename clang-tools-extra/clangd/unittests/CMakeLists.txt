@@ -38,6 +38,7 @@ add_unittest(ClangdUnitTests ClangdTests
   CallHierarchyTests.cpp
   CanonicalIncludesTests.cpp
   ClangdTests.cpp
+  ClangdServerFileRenameTests.cpp
   ClangdLSPServerTests.cpp
   CodeCompleteTests.cpp
   CodeCompletionStringsTests.cpp
@@ -56,6 +57,7 @@ add_unittest(ClangdUnitTests ClangdTests
   FeatureModulesTests.cpp
   FeatureModulesRegistryTests.cpp
   FileDistanceTests.cpp
+  FileRenameTests.cpp
   FileIndexTests.cpp
   FindSymbolsTests.cpp
   FindTargetTests.cpp

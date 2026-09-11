@@ -66,6 +66,7 @@ add_clang_library(clangDaemon STATIC
   ASTSignals.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
+  ClangdServerFileRename.cpp
   CodeComplete.cpp
   CodeCompletionStrings.cpp
   CollectMacros.cpp
@@ -82,6 +83,7 @@ add_clang_library(clangDaemon STATIC
   ExpectedTypes.cpp
   FeatureModule.cpp
   Feature.cpp
+  FileRename.cpp
   FindSymbols.cpp
   FindTarget.cpp
   FileDistance.cpp

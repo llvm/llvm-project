@@ -362,6 +362,13 @@ public:
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
               const RenameOptions &Opts, Callback<RenameResult> CB);
 
+  /// Calculates include edits required before files or directories are moved.
+  void prepareFileRename(llvm::ArrayRef<std::pair<Path, Path>> Renames,
+                         Callback<WorkspaceEdit> CB);
+
+  /// Invalidates state affected by file or directory moves that were applied.
+  void didRenameFiles(llvm::ArrayRef<std::pair<Path, Path>> Renames);
+
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.
     std::string Title; /// A single-line message to show in the UI.

@@ -8,6 +8,7 @@
 
 #include "TestFS.h"
 #include "support/Path.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -31,6 +32,25 @@ TEST(PathTests, IsAncestor) {
   EXPECT_FALSE(pathStartsWith(testPath("fOo"), testPath("foo/bar")));
   EXPECT_FALSE(pathStartsWith(testPath("foo"), testPath("fOo/bar")));
 #endif
+}
+
+TEST(PathTests, MapPathAfterRenames) {
+  EXPECT_THAT_EXPECTED(
+      mapPathAfterRenames(testPath("old/nested/file.cc"),
+                          {{testPath("old"), testPath("new")}}),
+      llvm::HasValue(testPath("new/nested/file.cc")));
+  EXPECT_THAT_EXPECTED(
+      mapPathAfterRenames("relative.cc", {{testPath("old"), testPath("new")}}),
+      llvm::HasValue("relative.cc"));
+  EXPECT_THAT_EXPECTED(
+      mapPathAfterRenames(testPath("old/file.cc"),
+                          {{testPath("old/"), testPath("new/./")}}),
+      llvm::HasValue(testPath("new/file.cc")));
+  EXPECT_THAT_EXPECTED(
+      mapPathAfterRenames(testPath("a/file.cc"),
+                          {{testPath("a"), testPath("b")},
+                           {testPath("a/file.cc"), testPath("c.cc")}}),
+      llvm::Failed());
 }
 } // namespace
 } // namespace clangd

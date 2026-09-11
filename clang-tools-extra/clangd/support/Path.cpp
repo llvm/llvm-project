@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "support/Path.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 namespace clang {
 namespace clangd {
 
@@ -48,6 +51,40 @@ bool pathStartsWith(PathRef Ancestor, PathRef Path,
   // Then make sure either two paths are equal or Path has a separator
   // afterwards.
   return Path.empty() || llvm::sys::path::is_separator(Path.front(), Style);
+}
+
+llvm::Expected<Path>
+mapPathAfterRenames(PathRef Original,
+                    llvm::ArrayRef<std::pair<Path, Path>> Renames) {
+  llvm::SmallString<256> NormalizedOriginal(Original);
+  llvm::sys::path::remove_dots(NormalizedOriginal, /*remove_dot_dot=*/true);
+  std::optional<Path> Result;
+  for (const auto &[Old, New] : Renames) {
+    llvm::SmallString<256> NormalizedOld(Old);
+    llvm::sys::path::remove_dots(NormalizedOld, /*remove_dot_dot=*/true);
+    llvm::SmallString<256> NormalizedNew(New);
+    llvm::sys::path::remove_dots(NormalizedNew, /*remove_dot_dot=*/true);
+    bool IsDescendant = llvm::sys::path::is_absolute(NormalizedOld) &&
+                        llvm::sys::path::is_absolute(NormalizedOriginal) &&
+                        pathStartsWith(NormalizedOld, NormalizedOriginal);
+    if (!pathEqual(NormalizedOriginal, NormalizedOld) && !IsDescendant)
+      continue;
+    llvm::SmallString<256> Rewritten(NormalizedNew);
+    llvm::StringRef Suffix =
+        llvm::StringRef(NormalizedOriginal).drop_front(NormalizedOld.size());
+    if (!Suffix.empty())
+      llvm::sys::path::append(Rewritten,
+                              llvm::sys::path::relative_path(Suffix));
+    llvm::sys::path::remove_dots(Rewritten, /*remove_dot_dot=*/true);
+    Path Candidate = Rewritten.str().str();
+    if (Result && !pathEqual(*Result, Candidate))
+      return llvm::createStringError(
+          llvm::formatv("overlapping file renames map {0} to both {1} and {2}",
+                        Original, *Result, Candidate)
+              .str());
+    Result = std::move(Candidate);
+  }
+  return Result.value_or(Original.str());
 }
 } // namespace clangd
 } // namespace clang
