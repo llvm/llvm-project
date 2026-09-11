@@ -4195,15 +4195,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   // check if the builtin has CustomTypeChecking or not, if it dose we get the
   // already parsed type string of the builtin and compare that with the
-  // caller's passed args and give error for too much args
+  // caller's passed args and give error for too many args
   if (Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
     ASTContext::GetBuiltinTypeError Error;
     QualType BuiltinFTy = Context.GetBuiltinType(BuiltinID, Error);
     if (!BuiltinFTy.isNull() && !Error) {
       if (const FunctionProtoType *FPT =
               dyn_cast<FunctionProtoType>(BuiltinFTy.getTypePtr()))
-        if (!FPT->isVariadic() &&
-            checkArgCountAtMost(TheCall, FPT->getNumParams()))
+        if (!FPT->isVariadic() && checkArgCount(TheCall, FPT->getNumParams()))
           return ExprError();
     }
   }
