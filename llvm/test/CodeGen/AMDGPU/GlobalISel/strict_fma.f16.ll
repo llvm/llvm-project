@@ -798,12 +798,8 @@ define void @v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni(<2 x half> inr
 ; GFX8-LABEL: v_constained_fma_v2f16_fpexcept_strict_fneg_fneg_uni:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mov_b32_e32 v2, s16
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX8-NEXT:    v_mov_b32_e32 v2, s17
-; GFX8-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
-; GFX8-NEXT:    v_readfirstlane_b32 s5, v2
+; GFX8-NEXT:    s_xor_b32 s5, s17, 0x80008000
+; GFX8-NEXT:    s_xor_b32 s4, s16, 0x80008000
 ; GFX8-NEXT:    v_mov_b32_e32 v2, s5
 ; GFX8-NEXT:    v_mov_b32_e32 v3, s18
 ; GFX8-NEXT:    s_lshr_b32 s7, s5, 16

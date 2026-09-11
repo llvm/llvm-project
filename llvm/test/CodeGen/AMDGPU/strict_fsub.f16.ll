@@ -803,9 +803,7 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX8-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX8-GISEL-NEXT:    v_add_f16_e32 v0, s2, v0
