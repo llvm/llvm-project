@@ -280,6 +280,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
 
+    # sys/file.h entrypoints
+    libc.src.sys.file.flock
+
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
 
@@ -345,10 +348,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
     # sys/statfs.h entrypoints
@@ -463,6 +468,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.write
 
     # wchar.h entrypoints
+    libc.src.wchar.wcscasecmp
+    libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
     libc.src.wchar.wctob
 
@@ -1112,11 +1119,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
     libc.src.pthread.pthread_attr_getguardsize
+    libc.src.pthread.pthread_attr_getschedpolicy
     libc.src.pthread.pthread_attr_getstack
     libc.src.pthread.pthread_attr_getstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_setdetachstate
     libc.src.pthread.pthread_attr_setguardsize
+    libc.src.pthread.pthread_attr_setschedpolicy
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_condattr_destroy
@@ -1238,6 +1247,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
+    libc.src.stdio.fmemopen
     libc.src.stdio.fopen
     libc.src.stdio.freopen
     libc.src.stdio.fopencookie

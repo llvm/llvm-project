@@ -11,32 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// FIXME: These duplicate real SubtargetFeatures and should be unified
-// (e.g. R600_FEATURE_FMA mirrors FeatureFMA).
-class AMDGPUArchFeature<string spelling> {
-  string Spelling = spelling;
-}
-
-// R600-only.
-def R600_FEATURE_FMA : AMDGPUArchFeature<"R600_FEATURE_FMA">;
-
-// AMDGCN.
-def FEATURE_FAST_FMA_F32       : AMDGPUArchFeature<"FEATURE_FAST_FMA_F32">;
-def FEATURE_FAST_DENORMAL_F32  : AMDGPUArchFeature<"FEATURE_FAST_DENORMAL_F32">;
-def FEATURE_WAVE32             : AMDGPUArchFeature<"FEATURE_WAVE32">;
-def FEATURE_XNACK              : AMDGPUArchFeature<"FEATURE_XNACK">;
-def FEATURE_SRAMECC            : AMDGPUArchFeature<"FEATURE_SRAMECC">;
-def FEATURE_WGP                : AMDGPUArchFeature<"FEATURE_WGP">;
-def FEATURE_XNACK_ON_OFF_MODES : AMDGPUArchFeature<"FEATURE_XNACK_ON_OFF_MODES">;
-def FEATURE_SGPR_INIT_BUG      : AMDGPUArchFeature<"FEATURE_SGPR_INIT_BUG">;
-
 // Marks a Processor/ProcessorModel record as a canonical GPU.
 //
 // \p isa is the ISA version [major, minor, stepping]. Empty for R600 (no AMDGCN
 // ISA version); required for AMDGCN GPUs. Not derivable from the name.
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
-
   list<int> IsaVersion = isa;
 
   // List of targets which are compatible with this target. This

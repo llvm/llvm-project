@@ -55,6 +55,8 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -65,10 +67,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
