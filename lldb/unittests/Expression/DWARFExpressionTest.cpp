@@ -420,6 +420,20 @@ TEST(DWARFExpression, DW_OP_const) {
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_consts, 0x81, 0x82, 0x84, 0x88, 0x90, 0xa0, 0x40}),
       ExpectScalar(32, 0x01010101, true));
+
+  // A value wider than the 32-bit generic type is truncated before its
+  // signedness is applied.
+  const uint8_t oversized_sconst[] = {
+      DW_OP_consts, 0xff, 0xff, 0xff, 0xff, 0x8f,
+      0x80,         0x80, 0x80, 0x80, 0x02, DW_OP_stack_value};
+  DataExtractor extractor(oversized_sconst, sizeof(oversized_sconst),
+                          lldb::eByteOrderLittle, /*addr_size=*/4);
+  EXPECT_THAT_EXPECTED(
+      DWARFExpression::Evaluate(
+          /*exe_ctx=*/nullptr, /*reg_ctx=*/nullptr, /*module_sp=*/{}, extractor,
+          /*unit=*/nullptr, lldb::eRegisterKindLLDB,
+          /*initial_value_ptr=*/nullptr, /*object_address_ptr=*/nullptr),
+      ExpectScalar(32, UINT32_MAX, true));
 }
 
 TEST(DWARFExpression, DW_OP_skip) {
