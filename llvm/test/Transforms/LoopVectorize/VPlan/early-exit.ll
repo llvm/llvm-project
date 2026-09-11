@@ -26,10 +26,10 @@ define i64 @single_exit_in_conditional_block(ptr dereferenceable(64) %a, ptr der
 ; CHECK-NEXT:    EMIT ir<%gep.B> = getelementptr inbounds ir<%b>, ir<%iv>
 ; CHECK-NEXT:    EMIT-SCALAR ir<%l.B> = load ir<%gep.B>
 ; CHECK-NEXT:    EMIT ir<%cmp> = icmp eq ir<%l.A>, ir<%l.B>
-; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = masked-cond ir<%cmp>
 ; CHECK-NEXT:  Successor(s): loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  loop.latch:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP2:%[0-9]+]]> = phi [ ir<%cmp>, block.a ], [ ir<false>, loop.header ]
 ; CHECK-NEXT:    EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:    EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<64>
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = any-of vp<[[VP2]]>
