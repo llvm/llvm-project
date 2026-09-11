@@ -243,6 +243,32 @@ gpu.module @test_module_5 {
   // CHECK: llvm.mlir.global internal constant @[[$NB1]](2 : i32) {addr_space = 0 : i32} : i32
 }
 
+gpu.module @test_module_rotate {
+  // CHECK-LABEL: func @gpu_rotate(
+  // CHECK: nvvm.read.ptx.sreg.laneid
+  // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : f32 -> !llvm.struct<(f32, i1)>
+  // CHECK-COUNT-4: nvvm.shfl.sync idx {{.*}} {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i1)>
+  // CHECK: llvm.zext
+  // CHECK: llvm.shl
+  // CHECK: llvm.or
+  // CHECK: llvm.bitcast
+  func.func @gpu_rotate(%v32 : i32, %vf : f32, %v64 : i64, %vd : f64) -> (i32, f32, i64, f64, i1, i1, i1, i1) {
+    %r32, %p32 = gpu.rotate %v32, 3, 16 : i32
+    %rf, %pf = gpu.rotate %vf, 3, 16 : f32
+    %r64, %p64 = gpu.rotate %v64, 3, 16 : i64
+    %rd, %pd = gpu.rotate %vd, 3, 16 : f64
+    func.return %r32, %rf, %r64, %rd, %p32, %pf, %p64, %pd : i32, f32, i64, f64, i1, i1, i1, i1
+  }
+
+  // CHECK-LABEL: func @gpu_rotate_unused_pred(
+  // CHECK: nvvm.shfl.sync idx {{.*}} : f32 -> f32
+  func.func @gpu_rotate_unused_pred(%v : f32) -> f32 {
+    %r, %p = gpu.rotate %v, 1, 8 : f32
+    func.return %r : f32
+  }
+}
+
 
 
 gpu.module @test_module_6 {
