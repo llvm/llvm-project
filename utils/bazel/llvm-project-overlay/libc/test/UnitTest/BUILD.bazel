@@ -40,6 +40,7 @@ libc_test_library(
         "LibcTestMain.cpp",
     ],
     hdrs = [
+        "CharLiteralUtils.h",
         "ErrnoCheckingTest.h",
         "ErrnoSetterMatcher.h",
         "ExecuteFunction.h",
