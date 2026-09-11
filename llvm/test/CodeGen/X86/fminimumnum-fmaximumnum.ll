@@ -2647,7 +2647,7 @@ define <4 x half> @test_fmaximumnum_v4f16(<4 x half> %x, <4 x half> %y) nounwind
   ret <4 x half> %r
 }
 
-define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
+define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind denormal_fpenv(preservesign) {
 ; SSE2-LABEL: test_fmaximumnum_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
@@ -2767,7 +2767,7 @@ define bfloat @test_fmaximumnum_bf16(bfloat %x, bfloat %y) nounwind {
   ret bfloat %z
 }
 
-define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) nounwind {
+define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) nounwind denormal_fpenv(preservesign) {
 ; SSE2-LABEL: test_fmaximumnum_v4bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    subq $120, %rsp
@@ -3364,7 +3364,7 @@ define <4 x bfloat> @test_fmaximumnum_v4bf16(<4 x bfloat> %x, <4 x bfloat> %y) n
   ret <4 x bfloat> %r
 }
 
-define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind {
+define bfloat @test_fminimumnum_bf16(bfloat %x, bfloat %y) nounwind denormal_fpenv(preservesign) {
 ; SSE2-LABEL: test_fminimumnum_bf16:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pushq %rax
