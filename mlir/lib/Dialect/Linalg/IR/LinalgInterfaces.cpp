@@ -227,9 +227,9 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 //===----------------------------------------------------------------------===//
 // Elementwise Single Unary/Binary-OpInterface implementation
 //===----------------------------------------------------------------------===//
-static bool
-isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
-                                          unsigned arity) {
+
+static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
+                                                      unsigned arity) {
   // Check all loops are parallel.
   if (!op.isAllParallelLoops() || op.getNumLoops() < 1)
     return false;

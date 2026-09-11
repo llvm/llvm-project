@@ -200,7 +200,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
                     op->getOperand(scalarOprIdx));
       auto scalarBroadcastMap =
           AffineMap::get(genericOp.getNumParallelLoops(), /*symbolCount=*/0,
-                          rewriter.getContext());
+                         rewriter.getContext());
       indexingMaps.insert(indexingMaps.begin() + scalarOprIdx,
                           scalarBroadcastMap);
     }
@@ -218,7 +218,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
             divOp.getLhs().getDefiningOp()))
       if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
         return replaceOp(ElementwiseKind::reciprocal,
-                          /*mayHoistScalarOperand=*/false);
+                         /*mayHoistScalarOperand=*/false);
   }
 
   // Square
@@ -227,9 +227,9 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
       return replaceOp(ElementwiseKind::square);
 
   // Boolean-typed `add` and `mul`.
-  if (isBinary && llvm::all_of(
-        op->getOperands(), [](Value v) {
-    return v.getType().isInteger(1); })) {
+  if (isBinary && llvm::all_of(op->getOperands(), [](Value v) {
+        return v.getType().isInteger(1);
+      })) {
     if (isa<arith::OrIOp>(op))
       return replaceOp(ElementwiseKind::add);
     if (isa<arith::AndIOp>(op))
@@ -246,8 +246,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   }
 
   return rewriter.notifyMatchFailure(
-      genericOp,
-      "elementwise operation cannot be specialized to category op");
+      genericOp, "elementwise operation cannot be specialized to category op");
 }
 
 //===----------------------------------------------------------------------===//

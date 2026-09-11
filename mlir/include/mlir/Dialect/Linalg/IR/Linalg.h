@@ -161,7 +161,6 @@ struct ArityGroupAndKind {
 };
 ArityGroupAndKind getArityGroupAndKind(ElementwiseKind kind);
 
-
 /// Specialization of `linalg.matmul` op that has a transpose map on A
 class MatmulTransposeAOp : public MatmulOp {
   /// Create an affine map for a transpose-A matmul. Used only in the builders.
