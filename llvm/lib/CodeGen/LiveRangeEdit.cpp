@@ -24,12 +24,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "regalloc"
 
-STATISTIC(NumDCEDeleted, "Number of instructions deleted by DCE");
-STATISTIC(NumDCEFoldedLoads, "Number of single use loads folded after DCE");
-STATISTIC(NumFracRanges, "Number of live ranges fractured by DCE");
+STATISTIC(NumDCEDeleted,        "Number of instructions deleted by DCE");
+STATISTIC(NumDCEFoldedLoads,    "Number of single use loads folded after DCE");
+STATISTIC(NumFracRanges,        "Number of live ranges fractured by DCE");
 STATISTIC(NumReMaterialization, "Number of instructions rematerialized");
 
-void LiveRangeEdit::Delegate::anchor() {}
+void LiveRangeEdit::Delegate::anchor() { }
 
 LiveInterval &LiveRangeEdit::createEmptyIntervalFrom(Register OldReg,
                                                      bool createSubRanges) {
@@ -108,7 +108,7 @@ void LiveRangeEdit::eraseVirtReg(Register Reg) {
 }
 
 bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
-                               SmallVectorImpl<MachineInstr *> &Dead) {
+                               SmallVectorImpl<MachineInstr*> &Dead) {
   MachineInstr *DefMI = nullptr, *UseMI = nullptr;
 
   // Check that there is a single def and a single use.
@@ -341,10 +341,10 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     MI->setDesc(TII.get(TargetOpcode::KILL));
     // Remove all operands that aren't physregs.
     for (unsigned i = MI->getNumOperands(); i; --i) {
-      const MachineOperand &MO = MI->getOperand(i - 1);
+      const MachineOperand &MO = MI->getOperand(i-1);
       if (MO.isReg() && MO.getReg().isPhysical())
         continue;
-      MI->removeOperand(i - 1);
+      MI->removeOperand(i-1);
     }
     MI->dropMemRefs(*MI->getMF());
     LLVM_DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
@@ -397,7 +397,7 @@ void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
 
     // LI may have been separated, create new intervals.
     LI->RenumberValues();
-    SmallVector<LiveInterval *, 8> SplitLIs;
+    SmallVector<LiveInterval*, 8> SplitLIs;
     LIS.splitSeparateComponents(*LI, SplitLIs);
     if (!SplitLIs.empty())
       ++NumFracRanges;
