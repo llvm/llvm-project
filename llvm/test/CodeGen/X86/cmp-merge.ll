@@ -151,4 +151,266 @@ cond.end:
   ret void
 }
 
+
+;Check that a dead-result comparison (SUB) can be preserved
+; and reused to eliminate a redundant recomputation in a successor block.
+
+define i32 @fold_add_i32(i32 %x) {
+; X86-LABEL: fold_add_i32:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    subl $5, %ecx
+; X86-NEXT:    jl .LBB4_2
+; X86-NEXT:  # %bb.1: # %bb.nph
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB4_2: # %ret
+; X86-NEXT:    retl
+;
+; X64-LABEL: fold_add_i32:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    subl $5, %edi
+; X64-NEXT:    jl .LBB4_2
+; X64-NEXT:  # %bb.1: # %bb.nph
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:  .LBB4_2: # %ret
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp sgt i32 %x, 4
+  br i1 %cmp, label %bb.nph, label %ret
+
+bb.nph:
+  %t = add i32 %x, -5
+  br label %ret
+
+ret:
+  %r = phi i32 [ %t, %bb.nph ], [ 0, %entry ]
+  ret i32 %r
+}
+
+
+define i8 @fold_sub_i8(i8 %x)  {
+; X86-LABEL: fold_sub_i8:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    subb $5, %al
+; X86-NEXT:    jge .LBB5_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:  .LBB5_2: # %ret
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: fold_sub_i8:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    subb $5, %al
+; X64-NEXT:    jge .LBB5_2
+; X64-NEXT:  # %bb.1:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:  .LBB5_2: # %ret
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+entry:
+  %cmp = icmp sgt i8 %x, 4
+  br i1 %cmp, label %bb.nph, label %ret
+
+bb.nph:
+  %t = sub i8 %x, 5
+  br label %ret
+
+ret:
+  %r = phi i8 [ %t, %bb.nph ], [ 0, %entry ]
+  ret i8 %r
+}
+
+
+
+;from issue report 195589 .
+define internal void @example.emit(ptr %0, i64 %1, ptr  %2, i64 %3)  {
+; X86-LABEL: example.emit:
+; X86:       # %bb.0: # %Entry
+; X86-NEXT:    pushl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 20
+; X86-NEXT:    subl $36, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 56
+; X86-NEXT:    .cfi_offset %esi, -20
+; X86-NEXT:    .cfi_offset %edi, -16
+; X86-NEXT:    .cfi_offset %ebx, -12
+; X86-NEXT:    .cfi_offset %ebp, -8
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    .p2align 4
+; X86-NEXT:  .LBB6_1: # %Loop
+; X86-NEXT:    # =>This Inner Loop Header: Depth=1
+; X86-NEXT:    movl 12(%esi), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl (%esi), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 4(%esi), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 8(%esi), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 16(%esi), %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 20(%esi), %edi
+; X86-NEXT:    movl 24(%esi), %ecx
+; X86-NEXT:    movl 28(%esi), %eax
+; X86-NEXT:    movl 32(%esi), %ebx
+; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 36(%esi), %ebx
+; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl 40(%esi), %ebp
+; X86-NEXT:    movl 44(%esi), %ebx
+; X86-NEXT:    movl %eax, 28(%edx)
+; X86-NEXT:    movl %ecx, 24(%edx)
+; X86-NEXT:    movl %edi, 20(%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, 16(%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, 8(%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, 4(%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, (%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, 12(%edx)
+; X86-NEXT:    movl %ebx, 44(%edx)
+; X86-NEXT:    movl %ebp, 40(%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, 36(%edx)
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; X86-NEXT:    movl %eax, 32(%edx)
+; X86-NEXT:    movl (%esp), %edi # 4-byte Reload
+; X86-NEXT:    movl $64, %eax
+; X86-NEXT:    cmpl %edi, %eax
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    sbbl %ecx, %eax
+; X86-NEXT:    jae .LBB6_2
+; X86-NEXT:  # %bb.3: # %Else
+; X86-NEXT:    # in Loop: Header=BB6_1 Depth=1
+; X86-NEXT:    addl $-64, %edi
+; X86-NEXT:    movl %edi, (%esp) # 4-byte Spill
+; X86-NEXT:    adcl $-1, %ecx
+; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    addl $64, %esi
+; X86-NEXT:    addl $48, %edx
+; X86-NEXT:    jmp .LBB6_1
+; X86-NEXT:  .LBB6_2: # %Then
+; X86-NEXT:    addl $36, %esp
+; X86-NEXT:    .cfi_def_cfa_offset 20
+; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 16
+; X86-NEXT:    popl %edi
+; X86-NEXT:    .cfi_def_cfa_offset 12
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    popl %ebp
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+;
+; X64-LABEL: example.emit:
+; X64:       # %bb.0: # %Entry
+; X64-NEXT:    .p2align 4
+; X64-NEXT:  .LBB6_1: # %Loop
+; X64-NEXT:    # =>This Inner Loop Header: Depth=1
+; X64-NEXT:    movups (%rdi), %xmm0
+; X64-NEXT:    movups 16(%rdi), %xmm1
+; X64-NEXT:    movups 32(%rdi), %xmm2
+; X64-NEXT:    movups %xmm0, (%rdx)
+; X64-NEXT:    movups %xmm1, 16(%rdx)
+; X64-NEXT:    movups %xmm2, 32(%rdx)
+; X64-NEXT:    subq $64, %rsi
+; X64-NEXT:    jbe .LBB6_2
+; X64-NEXT:  # %bb.3: # %Else
+; X64-NEXT:    # in Loop: Header=BB6_1 Depth=1
+; X64-NEXT:    addq $64, %rdi
+; X64-NEXT:    addq $48, %rdx
+; X64-NEXT:    jmp .LBB6_1
+; X64-NEXT:  .LBB6_2: # %Then
+; X64-NEXT:    retq
+Entry:
+  br label %Loop
+
+Loop:
+  %.sroa.4.0 = phi i64 [ %1, %Entry ], [ %8, %Else ]
+  %.sroa.0.0 = phi ptr [ %0, %Entry ], [ %7, %Else ]
+  %.sroa.032.0 = phi ptr [ %2, %Entry ], [ %9, %Else ]
+  %.sroa.33.0..sroa_idx = getelementptr i8, ptr %.sroa.0.0, i64 32
+  %4 = load <32 x i8>, ptr %.sroa.0.0, align 1
+  %.sroa.3369.0..sroa_idx = getelementptr i8, ptr %.sroa.032.0, i64 32
+  %5 = load <16 x i8>, ptr %.sroa.33.0..sroa_idx, align 1
+  store <32 x i8> %4, ptr %.sroa.032.0, align 1
+  store <16 x i8> %5, ptr %.sroa.3369.0..sroa_idx, align 1
+  %6 = icmp ult i64 %.sroa.4.0, 65
+  br i1 %6, label %Then, label %Else
+
+Then:
+  ret void
+
+Else:
+  %7 = getelementptr i8, ptr %.sroa.0.0, i64 64
+  %8 = add i64 %.sroa.4.0, -64
+  %9 = getelementptr i8, ptr %.sroa.032.0, i64 48
+  br label %Loop
+}
+
+
+;negative case
+define i32 @no_fold_when_srcreg_reused(i32 %x_offs) nounwind readnone {
+; X86-LABEL: no_fold_when_srcreg_reused:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    cmpl $7, %eax
+; X86-NEXT:    jl .LBB7_2
+; X86-NEXT:  # %bb.1: # %bb.nph
+; X86-NEXT:    leal -5(%eax), %ecx
+; X86-NEXT:    andl $-4, %ecx
+; X86-NEXT:    negl %ecx
+; X86-NEXT:    leal -4(%eax,%ecx), %eax
+; X86-NEXT:  .LBB7_2: # %bb2
+; X86-NEXT:    retl
+;
+; X64-LABEL: no_fold_when_srcreg_reused:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-NEXT:    cmpl $7, %edi
+; X64-NEXT:    jl .LBB7_2
+; X64-NEXT:  # %bb.1: # %bb.nph
+; X64-NEXT:    leal -5(%rdi), %eax
+; X64-NEXT:    andl $-4, %eax
+; X64-NEXT:    negl %eax
+; X64-NEXT:    leal -4(%rdi,%rax), %eax
+; X64-NEXT:    retq
+; X64-NEXT:  .LBB7_2: # %bb2
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    retq
+entry:
+  %t0 = icmp sgt i32 %x_offs, 6
+  br i1 %t0, label %bb.nph, label %bb2
+
+bb.nph:
+  %tmp = add i32 %x_offs, -5
+  %tmp6 = lshr i32 %tmp, 2
+  %tmp7 = mul i32 %tmp6, -4
+  %tmp8 = add i32 %tmp7, %x_offs
+  %tmp9 = add i32 %tmp8, -4
+  ret i32 %tmp9
+
+bb2:
+  ret i32 %x_offs
+}
+
 declare void @use(i32)
