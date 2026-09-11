@@ -27,7 +27,7 @@ llvm::SmallVector<std::string, 8> getCandidateBinPaths(llvm::StringRef ExeDir);
 int printGPUsByKFD(llvm::StringRef NodePath);
 
 // Defined in LevelZeroArch.cpp.
-llvm::StringRef getIntelGPUArchName(uint32_t IPVersion);
+std::string getIntelGPUArchName(uint32_t IPVersion);
 
 using namespace llvm;
 
@@ -242,15 +242,14 @@ TEST(IntelGPUArchName, RevisionDoesNotAffectTheName) {
   EXPECT_EQ(getIntelGPUArchName(gmdid(12, 60, 63)), "xe-pvc");
 }
 
-// An architecture that is not in the table has no name at all.  Naming it after
-// its GMDID would print something that --offload-arch cannot accept, so the
-// utility reports it as an error instead.
-TEST(IntelGPUArchName, UnknownArchitecturesHaveNoName) {
-  EXPECT_TRUE(getIntelGPUArchName(gmdid(40, 11, 0)).empty());
-  EXPECT_TRUE(getIntelGPUArchName(gmdid(12, 99, 3)).empty());
+// An architecture that is not in the table still has to be named, so that a
+// newer device is usable with a compiler that predates it.
+TEST(IntelGPUArchName, UnknownArchitecturesGetANumericName) {
+  EXPECT_EQ(getIntelGPUArchName(gmdid(40, 11, 0)), "xe_40.11.0");
+  EXPECT_EQ(getIntelGPUArchName(gmdid(12, 99, 3)), "xe_12.99.3");
 }
 
 // Pre-Xe devices report a GMDID too, and none of them are in the table.
 TEST(IntelGPUArchName, LegacyArchitecture) {
-  EXPECT_TRUE(getIntelGPUArchName(gmdid(9, 0, 9)).empty());
+  EXPECT_EQ(getIntelGPUArchName(gmdid(9, 0, 9)), "xe_9.0.9");
 }
