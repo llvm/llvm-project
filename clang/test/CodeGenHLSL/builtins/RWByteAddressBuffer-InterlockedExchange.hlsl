@@ -38,3 +38,19 @@ export void test_bab_uint_3arg(uint off, uint v, out uint orig) {
 export void test_bab_uint64_3arg(uint off, uint64_t v, out uint64_t orig) {
   BAB.InterlockedExchange64(off, v, orig);
 }
+
+// ByteAddressBuffer holds no element type, so the float method carries the
+// type in its name. The value keeps the float type here; DXIL converts it to
+// an i32 exchange later.
+// CHECK-LABEL: define {{.*}}void @{{.*}}test_bab_float_3arg
+// DXCHECK:  %[[HANDLE:.*]] = load target("dx.RawBuffer", i8, 1, 0), ptr {{.*}}
+// DXCHECK:  %[[PTR:.*]] = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) %[[HANDLE]], i32 %{{.*}})
+// DXCHECK:  %[[R:.*]] = atomicrmw xchg ptr %[[PTR]], float %{{.*}} syncscope("device") monotonic
+// DXCHECK:  store float %[[R]], ptr {{.*}}
+// SPVCHECK: %[[HANDLE:.*]] = load target("spirv.VulkanBuffer", [0 x i8], 12, 1), ptr {{.*}}
+// SPVCHECK: %[[PTR:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i8_12_1t.i32(target("spirv.VulkanBuffer", [0 x i8], 12, 1) %[[HANDLE]], i32 %{{.*}})
+// SPVCHECK: %[[R:.*]] = atomicrmw xchg ptr addrspace(11) %[[PTR]], float %{{.*}} syncscope("device") monotonic
+// SPVCHECK: store float %[[R]], ptr {{.*}}
+export void test_bab_float_3arg(uint off, float v, out float orig) {
+  BAB.InterlockedExchangeFloat(off, v, orig);
+}

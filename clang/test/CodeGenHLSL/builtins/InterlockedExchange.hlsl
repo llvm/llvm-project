@@ -14,6 +14,7 @@ groupshared int  gs_i32;
 groupshared uint gs_u32;
 groupshared int64_t  gs_i64;
 groupshared uint64_t gs_u64;
+groupshared float gs_f32;
 
 // CHECK-LABEL: define {{.*}}void @{{.*}}test_int_3arg
 // DXCHECK:  %[[R:.*]] = atomicrmw xchg ptr addrspace(3) {{.*}}@gs_i32{{.*}}, i32 %{{.*}} syncscope("workgroup") monotonic
@@ -45,4 +46,14 @@ export void test_int64_3arg(int64_t v, out int64_t orig) {
 // CHECK:    store i64 %[[R]], ptr {{.*}}
 export void test_uint64_3arg(uint64_t v, out uint64_t orig) {
   InterlockedExchange(gs_u64, v, orig);
+}
+
+// The float overload keeps the float type in the IR. DXIL converts it to an
+// i32 exchange later, and SPIR-V selects OpAtomicExchange directly.
+// CHECK-LABEL: define {{.*}}void @{{.*}}test_float_3arg
+// DXCHECK:  %[[R:.*]] = atomicrmw xchg ptr addrspace(3) {{.*}}@gs_f32{{.*}}, float %{{.*}} syncscope("workgroup") monotonic
+// SPVCHECK: %[[R:.*]] = atomicrmw xchg ptr addrspace(3) {{.*}}@gs_f32{{.*}}, float %{{.*}} syncscope("workgroup") monotonic
+// CHECK:    store float %[[R]], ptr {{.*}}
+export void test_float_3arg(float v, out float orig) {
+  InterlockedExchange(gs_f32, v, orig);
 }
