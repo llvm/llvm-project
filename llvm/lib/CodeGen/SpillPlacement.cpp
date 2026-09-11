@@ -28,11 +28,14 @@
 
 #include "llvm/CodeGen/SpillPlacement.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/CodeGen/BlockUniformityProfile.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <algorithm>
@@ -193,7 +196,9 @@ bool SpillPlacementWrapperLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *Bundles = &getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
   auto *MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
 
-  Impl.run(MF, Bundles, MBFI);
+  BlockUniformityProfile Profile;
+  Profile.compute(MF);
+  Impl.run(MF, Bundles, MBFI, &Profile);
   return false;
 }
 
@@ -204,8 +209,9 @@ SpillPlacementAnalysis::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
   auto *Bundles = &MFAM.getResult<EdgeBundlesAnalysis>(MF);
   auto *MBFI = &MFAM.getResult<MachineBlockFrequencyAnalysis>(MF);
+  auto &Profile = MFAM.getResult<BlockUniformityProfileProxy>(MF);
   SpillPlacement Impl;
-  Impl.run(MF, Bundles, MBFI);
+  Impl.run(MF, Bundles, MBFI, &Profile);
   return Impl;
 }
 
@@ -217,7 +223,8 @@ bool SpillPlacementAnalysis::Result::invalidate(
     return true;
   // Check dependencies.
   return Inv.invalidate<EdgeBundlesAnalysis>(MF, PA) ||
-         Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA);
+         Inv.invalidate<MachineBlockFrequencyAnalysis>(MF, PA) ||
+         Inv.invalidate<BlockUniformityProfileProxy>(MF, PA);
 }
 
 SpillPlacement::SpillPlacement() = default;
@@ -230,7 +237,8 @@ void SpillPlacement::releaseMemory() {
 }
 
 void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
-                         MachineBlockFrequencyInfo *MBFI) {
+                         MachineBlockFrequencyInfo *MBFI,
+                         const BlockUniformityProfile *Profile) {
   MF = &mf;
   this->bundles = Bundles;
   this->MBFI = MBFI;
@@ -240,12 +248,18 @@ void SpillPlacement::run(MachineFunction &mf, EdgeBundles *Bundles,
   TodoList.clear();
   TodoList.setUniverse(bundles->getNumBundles());
 
+  const bool HasProfile = Profile && Profile->hasProfile();
+
   // Compute total ingoing and outgoing block frequencies for all bundles.
   BlockFrequencies.resize(mf.getNumBlockIDs());
   setThreshold(MBFI->getEntryFreq());
   for (auto &I : mf) {
     unsigned Num = I.getNumber();
-    BlockFrequencies[Num] = MBFI->getBlockFreq(&I);
+    if (HasProfile && Profile->isDivergent(I)) {
+      BlockFrequencies[Num] = MBFI->getEntryFreq();
+    } else {
+      BlockFrequencies[Num] = MBFI->getBlockFreq(&I);
+    }
   }
 }
 
