@@ -10,7 +10,7 @@
 ; CHECK-LABEL: foo:
 ; CHECK-NEXT:  .Lfunc_begin0:
 ; CHECK:       # %bb.0
-; CHECK:         addi    a2, sp, 48
+; CHECK:         addi    a2, sp, 56
 ; CHECK-NEXT:    #DEBUG_VALUE: foo:i <- [DW_OP_deref] $x11
 ; CHECK-NEXT:    #DEBUG_VALUE: foo:j <- [DW_OP_deref] $x11
 ; CHECK:         vsse32.v
