@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugProgramInstruction.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include <cassert>
 
@@ -327,6 +329,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   UniqueDebugLocations.clear();
   GlobalVariableDebugInfoMap.clear();
   LocalVariables.clear();
+  DebugLocalVariableRegs.clear();
+  DebugExpressionRegs.clear();
   LexicalBlocks.clear();
   DebugScopeRegs.clear();
   DebugInlinedAtRegs.clear();
@@ -335,6 +339,8 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   OpStringContentCache.clear();
   I32ConstantCache.clear();
   DebugTypeFunctionCache.clear();
+  DebugOperationCache.clear();
+  DebugExpressionCache.clear();
   GlobalDIEmitted = false;
   GlobalNSDIEnabled = false;
   CurrentMAI = nullptr;
@@ -849,10 +855,102 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
   return lookupOptReg(DebugScopeRegs, Ty);
 }
 
-// Unimplemented no-op; see emitDebugExpression declaration.
+// NonSemantic.Shader.DebugInfo.100 debug operation encodings
+// (section 4.5, "Debug Operations").
+enum class NonSemanticDebugOp : uint32_t {
+  Deref = 0,
+  Plus = 1,
+  Minus = 2,
+  PlusUconst = 3,
+  BitPiece = 4,
+  Swap = 5,
+  Xderef = 6,
+  StackValue = 7,
+  Constu = 8,
+  Fragment = 9
+};
+
+static std::optional<NonSemanticDebugOp>
+mapDwarfOpToNonSemanticOp(uint64_t DwarfOp) {
+  switch (DwarfOp) {
+  case dwarf::DW_OP_deref:
+    return NonSemanticDebugOp::Deref;
+  case dwarf::DW_OP_plus:
+    return NonSemanticDebugOp::Plus;
+  case dwarf::DW_OP_minus:
+    return NonSemanticDebugOp::Minus;
+  case dwarf::DW_OP_plus_uconst:
+    return NonSemanticDebugOp::PlusUconst;
+  case dwarf::DW_OP_bit_piece:
+    return NonSemanticDebugOp::BitPiece;
+  case dwarf::DW_OP_swap:
+    return NonSemanticDebugOp::Swap;
+  case dwarf::DW_OP_xderef:
+    return NonSemanticDebugOp::Xderef;
+  case dwarf::DW_OP_stack_value:
+    return NonSemanticDebugOp::StackValue;
+  case dwarf::DW_OP_constu:
+    return NonSemanticDebugOp::Constu;
+  case dwarf::DW_OP_LLVM_fragment:
+    return NonSemanticDebugOp::Fragment;
+  default:
+    return std::nullopt;
+  }
+}
+
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
+    const DIExpression::ExprOperand &Op, MCRegister VoidTypeReg,
+    MCRegister I32TypeReg, MCRegister ExtInstSetReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  std::optional<NonSemanticDebugOp> NSOp =
+      mapDwarfOpToNonSemanticOp(Op.getOp());
+  if (!NSOp)
+    return std::nullopt;
+
+  SmallVector<uint32_t, 3> Key{static_cast<uint32_t>(*NSOp)};
+  for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I) {
+    uint64_t Arg = Op.getArg(I);
+    if (!isUInt<32>(Arg))
+      return std::nullopt;
+    Key.push_back(static_cast<uint32_t>(Arg));
+  }
+
+  auto [It, Inserted] = DebugOperationCache.try_emplace(std::move(Key));
+  if (!Inserted)
+    return It->second;
+
+  SmallVector<MCRegister, 3> Operands;
+  for (uint32_t V : It->first)
+    Operands.push_back(emitOpConstantI32(V, I32TypeReg, MAI));
+  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugOperation,
+                               VoidTypeReg, ExtInstSetReg, Operands, MAI);
+  It->second = Reg;
+  return Reg;
+}
+
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
-    const DIExpression *, MCRegister, MCRegister, SPIRV::ModuleAnalysisInfo &) {
-  return std::nullopt;
+    const DIExpression *Expr, MCRegister VoidTypeReg, MCRegister I32TypeReg,
+    MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  assert(Expr && "Expr must not be null in emitDebugExpression");
+
+  SmallVector<MCRegister> OperationRegs;
+  for (const DIExpression::ExprOperand &Op : Expr->expr_ops()) {
+    std::optional<MCRegister> OpReg =
+        emitDebugOperation(Op, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+    if (!OpReg)
+      return std::nullopt;
+    OperationRegs.push_back(*OpReg);
+  }
+
+  auto [It, Inserted] =
+      DebugExpressionCache.try_emplace(std::move(OperationRegs));
+  if (!Inserted)
+    return It->second;
+
+  MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugExpression,
+                               VoidTypeReg, ExtInstSetReg, It->first, MAI);
+  It->second = Reg;
+  return Reg;
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
@@ -901,15 +999,18 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugGlobalVariable(
   MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
 
   // Variable: @g OpVariable id when !dbg matches; else a DebugExpression for
-  // the GVE init value when no @g exists; else DebugInfoNone.
+  // the GVE init value when no @g exists and the expression is non-empty; else
+  // DebugInfoNone. As per spec, the DebugExpression must contain the constant
+  // value of the variable that was optimized out. An empty expression contains
+  // no value, so we emit DebugInfoNone instead.
   MCRegister VariableReg = CachedDebugInfoNoneReg;
   if (const GlobalVariable *LLVMGV = Info.LLVMGV) {
     MCRegister GVReg = MAI.getGlobalObjReg(LLVMGV);
     if (GVReg.isValid())
       VariableReg = GVReg;
-  } else if (Info.Expr) {
-    if (auto ExprReg =
-            emitDebugExpression(Info.Expr, VoidTypeReg, ExtInstSetReg, MAI))
+  } else if (Info.Expr && Info.Expr->getNumElements() != 0) {
+    if (auto ExprReg = emitDebugExpression(Info.Expr, VoidTypeReg, I32TypeReg,
+                                           ExtInstSetReg, MAI))
       VariableReg = *ExprReg;
   }
 
@@ -1307,6 +1408,72 @@ void SPIRVNonSemanticDebugHandler::beginInstruction(const MachineInstr *MI) {
 
   emitDebugScopeForInstruction(*Target);
   emitDebugLineForInstruction(*Target);
+
+  emitDebugDeclare(MI);
+}
+
+// The register that holds the variable's address in \p MI, or std::nullopt
+// when \p MI is not a declare this backend can describe.
+//
+// The spec requires DebugDeclare's Variable operand to be "the <id> of an
+// OpVariable instruction that defines the local variable". MIR has no
+// DBG_DECLARE, so what this looks for is an indirect DBG_VALUE whose location
+// register an OpVariable defines.
+static std::optional<Register>
+getDebugDeclareStorageReg(const MachineInstr &MI) {
+  // #dbg_declare is an indirect DBG_VALUE in MIR; #dbg_value is normally a
+  // direct one except for the variadic case.
+  if (!MI.isIndirectDebugValue())
+    return std::nullopt;
+
+  // A variadic #dbg_value becomes DBG_VALUE $noreg, 0, ... which is indirect
+  // too, and $noreg is not virtual.
+  Register LocReg = MI.getDebugOperand(0).getReg();
+  if (!LocReg.isVirtual())
+    return std::nullopt;
+
+  // DebugDeclare can only encode the address of an OpVariable.
+  // Other legitimate #dbg_declare cannot be encoded.
+  // Examples: an access chain for a field, an OpFunctionParameter for a byval
+  // argument, or a module-scope constant for a null or fixed address.
+
+  // LocReg may also have no def at all: erasing dead storage leaves the
+  // DBG_VALUE pointing at an undefined register. MachineVerifier permits that
+  // because LiveDebugVariables normally clears it, but this pipeline has no
+  // register allocation, so LiveDebugVariables never runs.
+  const MachineInstr *Def = MI.getMF()->getRegInfo().getUniqueVRegDef(LocReg);
+  if (!Def || Def->getOpcode() != SPIRV::OpVariable)
+    return std::nullopt;
+
+  return LocReg;
+}
+
+void SPIRVNonSemanticDebugHandler::emitDebugDeclare(const MachineInstr *MI) {
+  assert(DebugFunctionDefinitionEmitted &&
+         "DebugFunctionDefinition must be emitted");
+  assert(CurrentMAI && "CurrentMAI must be set");
+
+  std::optional<Register> LocReg = getDebugDeclareStorageReg(*MI);
+  if (!LocReg)
+    return;
+
+  auto VarRegOpt = lookupOptReg(DebugLocalVariableRegs, MI->getDebugVariable());
+  if (!VarRegOpt)
+    return;
+
+  auto ExprRegOpt = lookupOptReg(DebugExpressionRegs, MI->getDebugExpression());
+  if (!ExprRegOpt)
+    return;
+
+  SPIRV::ModuleAnalysisInfo &MAI = *CurrentMAI;
+  MCRegister StorageReg = MAI.getRegisterAlias(MI->getMF(), *LocReg);
+  if (!StorageReg.isValid())
+    return;
+
+  MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
+  MCRegister ExtInstSetReg = MAI.getExtInstSetReg(NSSet);
+  emitExtInst(SPIRV::NonSemanticExtInst::DebugDeclare, VoidTypeReg,
+              ExtInstSetReg, {*VarRegOpt, StorageReg, *ExprRegOpt}, MAI);
 }
 
 static bool isMergeInstruction(unsigned Opcode) {
@@ -1526,6 +1693,22 @@ void SPIRVNonSemanticDebugHandler::notifyEntryLabelEmitted(
   tryEmitDebugFunctionDefinition(*CurrentMAI);
 }
 
+void SPIRVNonSemanticDebugHandler::collectDebugExpressions(
+    SetVector<const DIExpression *> &Out) const {
+  MachineModuleInfo *ModuleInfo = Asm->MMI;
+  assert(ModuleInfo && "MachineModuleInfo must be set during module output");
+
+  for (const Function &F : *ModuleInfo->getModule()) {
+    const MachineFunction *MF = ModuleInfo->getMachineFunction(F);
+    if (!MF)
+      continue;
+    for (const MachineBasicBlock &MBB : *MF)
+      for (const MachineInstr &MI : MBB)
+        if (MI.isDebugValueLike())
+          Out.insert(MI.getDebugExpression());
+  }
+}
+
 void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
     SPIRV::ModuleAnalysisInfo &MAI) {
   if (GlobalDIEmitted)
@@ -1736,9 +1919,22 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   }
 
   // Emit DebugLocalVariable after DebugFunction and their lexical blocks so the
-  // Parent operand can resolve.
+  // Parent operand can resolve. Record the ids for DebugDeclare.
   for (const DILocalVariable *LV : LocalVariables)
-    emitDebugLocalVariable(LV, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+    if (auto LVReg = emitDebugLocalVariable(LV, VoidTypeReg, I32TypeReg,
+                                            ExtInstSetReg, MAI))
+      DebugLocalVariableRegs[LV] = *LVReg;
+
+  // Opcodes like DebugDeclare are part of the function body, but
+  // DebugExpression is not. For such opcodes, we collect the expressions
+  // directly from the MIR to avoid inconsistencies with those in the LLVM IR
+  // module.
+  SetVector<const DIExpression *> Expressions;
+  collectDebugExpressions(Expressions);
+  for (const DIExpression *Expr : Expressions)
+    if (auto ExprReg = emitDebugExpression(Expr, VoidTypeReg, I32TypeReg,
+                                           ExtInstSetReg, MAI))
+      DebugExpressionRegs[Expr] = *ExprReg;
 
   // Emit DebugGlobalVariable for each collected DIGlobalVariable.
   for (const auto &[GV, Info] : GlobalVariableDebugInfoMap)

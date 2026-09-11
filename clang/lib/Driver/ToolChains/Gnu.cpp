@@ -548,8 +548,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      options::OPT_fstack_protector_all,
                                      options::OPT_fstack_protector_strong))
           WantsSSP = !A->getOption().matches(options::OPT_fno_stack_protector);
-        if (WantsSSP &&
-            ToolChain.GetFilePath("libssp_nonshared.a") != "libssp_nonshared.a")
+        if (WantsSSP && ToolChain.GetFilePathIfExists("libssp_nonshared.a"))
           CmdArgs.push_back("-lssp_nonshared");
       }
 
