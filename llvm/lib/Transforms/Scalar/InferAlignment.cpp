@@ -80,10 +80,12 @@ static bool tryToImproveAlign(
     if (!Arg->getType()->isPointerTy())
       continue;
 
-    // The align attribute is not proof of an access (e.g. a zero-length
-    // memset), so it must not seed the base pointer alignment.
+    // The align attribute only proves the alignment if passing poison is UB
+    // (e.g. noundef): otherwise a zero-length memset may pass an unaligned,
+    // poison pointer, so it must not seed the base pointer alignment.
     Align OldAlign = II->getParamAlign(ArgNo).valueOrOne();
-    Align NewAlign = Fn(Arg, Align(1), Align(1));
+    Align KnownAlign = II->isPassingUndefUB(ArgNo) ? OldAlign : Align(1);
+    Align NewAlign = Fn(Arg, KnownAlign, Align(1));
     if (NewAlign <= OldAlign)
       continue;
 

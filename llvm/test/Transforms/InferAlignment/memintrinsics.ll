@@ -100,6 +100,34 @@ exit:
   ret void
 }
 
+; With noundef (or dereferenceable) the pointer cannot be poison, so the
+; align attribute is a real guarantee and may be used.
+define void @memset_noundef_attr_seeds_store(ptr %p, i64 %len) {
+; CHECK-LABEL: define void @memset_noundef_attr_seeds_store(
+; CHECK-SAME: ptr [[P:%.*]], i64 [[LEN:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef align 16 [[P]], i8 0, i64 [[LEN]], i1 false)
+; CHECK-NEXT:    store i32 0, ptr [[P]], align 16
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr noundef align 16 %p, i8 0, i64 %len, i1 false)
+  store i32 0, ptr %p
+  ret void
+}
+
+define i32 @memcpy_dereferenceable_attr_seeds_load_store(ptr %dst, ptr %src, i64 %len) {
+; CHECK-LABEL: define i32 @memcpy_dereferenceable_attr_seeds_load_store(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i64 [[LEN:%.*]]) {
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 dereferenceable(16) [[DST]], ptr noundef align 32 [[SRC]], i64 [[LEN]], i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[SRC]], align 32
+; CHECK-NEXT:    store i32 [[V]], ptr [[DST]], align 16
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 dereferenceable(16) %dst, ptr noundef align 32 %src, i64 %len, i1 false)
+  %v = load i32, ptr %src
+  store i32 %v, ptr %dst
+  ret i32 %v
+}
+
 ; A real store does prove the alignment, so the memset may still use it.
 define void @store_seeds_memset(ptr %p, i64 %len) {
 ; CHECK-LABEL: define void @store_seeds_memset(
