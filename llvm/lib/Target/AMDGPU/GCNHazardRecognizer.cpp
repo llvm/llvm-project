@@ -679,12 +679,12 @@ void GCNHazardRecognizer::processBundle() {
     unsigned WaitStates = PreEmitNoopsCommon(CurrCycleInstr);
 
     if (isHazardRecognizerMode()) {
+      // fixHazards can reset CurrCycleInstr to null, so use MI from here on.
       fixHazards(CurrCycleInstr);
 
-      insertNoopsInBundle(CurrCycleInstr, TII, WaitStates);
+      insertNoopsInBundle(&*MI, TII, WaitStates);
     }
 
-    // Use MI, not CurrCycleInstr, which fixHazards may have reset to null.
     if (WaitStates)
       resetClause();
     updateSoftClause(*MI);
@@ -695,7 +695,7 @@ void GCNHazardRecognizer::processBundle() {
     for (unsigned i = 0, e = std::min(WaitStates, MaxLookAhead - 1); i < e; ++i)
       EmittedInstrs.push_front(nullptr);
 
-    EmittedInstrs.push_front(CurrCycleInstr);
+    EmittedInstrs.push_front(&*MI);
     EmittedInstrs.resize(MaxLookAhead);
   }
   CurrCycleInstr = nullptr;
@@ -825,10 +825,10 @@ void GCNHazardRecognizer::AdvanceCycle() {
   // When the scheduler detects a stall, it will call AdvanceCycle() without
   // emitting any instructions.
   if (!CurrCycleInstr) {
+    assert(isSchedulerMode() && "stall cycles only occur in scheduler mode");
     EmittedInstrs.push_front(nullptr);
-    // Only reached in scheduler mode, where clause hazards are a heuristic
-    // and stalling cannot break one; reset here or it stalls forever.
-    assert(isSchedulerMode());
+    // A stall does not really break a clause, but model it as one or the
+    // scheduler stalls on the same hazard forever.
     resetClause();
 
     if (HasPendingWMMACoexecHazard)
@@ -1138,6 +1138,13 @@ static void addRegsToSet(const SIRegisterInfo &TRI,
   }
 }
 
+static bool anyRegUnitSet(const SIRegisterInfo &TRI, const BitVector &Units,
+                          MCRegister Reg) {
+  return any_of(TRI.regunits(Reg), [&Units](MCRegUnit Unit) {
+    return Units.test(static_cast<unsigned>(Unit));
+  });
+}
+
 GCNHazardRecognizer::SoftClauseKind
 GCNHazardRecognizer::getSoftClauseKind(const MachineInstr &MI) {
   if (SIInstrInfo::isSMRD(MI))
@@ -1148,10 +1155,11 @@ GCNHazardRecognizer::getSoftClauseKind(const MachineInstr &MI) {
 }
 
 void GCNHazardRecognizer::updateSoftClause(const MachineInstr &MI) {
-  if (!ST.isXNACKEnabled())
+  // checkSoftClauseHazards is only reached when hasPhysRegs().
+  if (!hasPhysRegs() || !ST.isXNACKEnabled())
     return;
 
-  // Meta instructions have no encoding, so they neither extend nor break a
+  // Meta instructions have no encoding, so they cannot break or extend a
   // clause.
   if (MI.isMetaInstruction())
     return;
@@ -1194,10 +1202,23 @@ int GCNHazardRecognizer::checkSoftClauseHazards(MachineInstr *MEM) const {
     return 1;
 
   // If the set of defs and uses intersect then we cannot add this instruction
-  // to the clause, so we have a hazard.
-  BitVector Defs = ClauseDefs, Uses = ClauseUses;
-  addRegsToSet(TRI, MEM->operands(), Defs, Uses);
-  return Defs.anyCommon(Uses) ? 1 : 0;
+  // to the clause, so we have a hazard. Test MEM in place to avoid copying a
+  // reg-unit-sized BitVector per query.
+  if (ClauseDefs.anyCommon(ClauseUses))
+    return 1;
+
+  for (const MachineOperand &Op : MEM->operands()) {
+    if (!Op.isReg() || !Op.getReg().isPhysical())
+      continue;
+    MCRegister Reg = Op.getReg().asMCReg();
+    if (anyRegUnitSet(TRI, Op.isDef() ? ClauseUses : ClauseDefs, Reg))
+      return 1;
+    // MEM can also conflict with itself.
+    if (Op.isDef() && MEM->readsRegister(Reg, &TRI))
+      return 1;
+  }
+
+  return 0;
 }
 
 int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) const {

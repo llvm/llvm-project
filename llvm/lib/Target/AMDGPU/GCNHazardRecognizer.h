@@ -151,18 +151,21 @@ private:
   /// Scheduler-mode part of Reset().
   void schedulerReset();
 
-  /// Tracked in emission order because a clause can exceed getMaxLookAhead()
-  /// and so cannot be reconstructed from EmittedInstrs.
   enum class SoftClauseKind { None, SMEM, VMEM };
+
+  /// The current soft memory clause, as reg units. It cannot be rebuilt from
+  /// EmittedInstrs: getMaxLookAhead() bounds wait states, not clause length.
   SoftClauseKind ClauseKind = SoftClauseKind::None;
-
-  /// RegUnits of uses in the current soft memory clause.
   BitVector ClauseUses;
-
-  /// RegUnits of defs in the current soft memory clause.
   BitVector ClauseDefs;
 
   void resetClause() {
+    // EmitNoops() calls this once per nop, and clearing is not free.
+    if (ClauseKind == SoftClauseKind::None) {
+      assert(ClauseUses.none() && ClauseDefs.none() &&
+             "no clause kind implies no tracked reg units");
+      return;
+    }
     ClauseKind = SoftClauseKind::None;
     ClauseUses.reset();
     ClauseDefs.reset();
