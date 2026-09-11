@@ -13,6 +13,8 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Utility/RegularExpression.h"
 
+#include "llvm/ADT/SmallPtrSet.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -90,9 +92,16 @@ VariableSP VariableList::FindVariable(ConstString name,
 
 size_t VariableList::AppendVariablesIfUnique(VariableList &var_list) {
   const size_t initial_size = var_list.GetSize();
-  iterator pos, end = m_variables.end();
-  for (pos = m_variables.begin(); pos != end; ++pos)
-    var_list.AddVariableIfUnique(*pos);
+  // Collect the variables already in `var_list` once, instead of rescanning it
+  // for every insertion.  AddVariableIfUnique() searches linearly, which makes
+  // this loop quadratic, and this function is called with entire compile unit
+  // variable lists -- see SBFrame::FindValue().
+  llvm::SmallPtrSet<Variable *, 32> seen;
+  for (const lldb::VariableSP &var_sp : var_list.m_variables)
+    seen.insert(var_sp.get());
+  for (const lldb::VariableSP &var_sp : m_variables)
+    if (seen.insert(var_sp.get()).second)
+      var_list.m_variables.push_back(var_sp);
   return var_list.GetSize() - initial_size;
 }
 
