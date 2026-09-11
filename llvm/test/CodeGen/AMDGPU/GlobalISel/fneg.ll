@@ -172,31 +172,49 @@ define amdgpu_ps void @v_fneg_v2f16(<2 x half> %in, ptr addrspace(1) %out) {
 }
 
 define amdgpu_ps void @s_fneg_v2f16(<2 x half> inreg %in) {
-; GCN-LABEL: s_fneg_v2f16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; use s0
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_endpgm
+; GFX11-LABEL: s_fneg_v2f16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s0
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: s_fneg_v2f16:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX12-NEXT:    ;;#ASMSTART
+; GFX12-NEXT:    ; use s0
+; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_endpgm
   %fneg = fneg <2 x half> %in
   call void asm sideeffect "; use $0", "s"(<2 x half> %fneg)
   ret void
 }
 define amdgpu_ps void @s_fneg_v2f16_salu_use(<2 x half> inreg %in, i32 inreg %val) {
-; GCN-LABEL: s_fneg_v2f16_salu_use:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
-; GCN-NEXT:    s_cmp_eq_u32 s1, 0
-; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GCN-NEXT:    v_readfirstlane_b32 s0, v0
-; GCN-NEXT:    s_cselect_b32 s0, s0, 0
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; use s0
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_endpgm
+; GFX11-LABEL: s_fneg_v2f16_salu_use:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
+; GFX11-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX11-NEXT:    ;;#ASMSTART
+; GFX11-NEXT:    ; use s0
+; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_endpgm
+;
+; GFX12-LABEL: s_fneg_v2f16_salu_use:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX12-NEXT:    s_cmp_eq_u32 s1, 0
+; GFX12-NEXT:    s_cselect_b32 s0, s0, 0
+; GFX12-NEXT:    ;;#ASMSTART
+; GFX12-NEXT:    ; use s0
+; GFX12-NEXT:    ;;#ASMEND
+; GFX12-NEXT:    s_endpgm
   %fneg = fneg <2 x half> %in
   %cond = icmp eq i32 %val, 0
   %sel = select i1 %cond, <2 x half> %fneg, <2 x half> <half 0.0, half 0.0>
