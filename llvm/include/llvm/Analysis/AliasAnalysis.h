@@ -192,6 +192,14 @@ class LLVM_ABI EarliestEscapeAnalysis final : public CaptureAnalysis {
   /// This is used for cache invalidation purposes.
   DenseMap<Instruction *, TinyPtrVector<const Value *>> Inst2Obj;
 
+  /// Whether the function contains a call to a function that may return
+  /// twice (e.g. setjmp). Lazily computed and cached, since a `longjmp` may
+  /// re-enter the function at any such call, which this analysis needs to
+  /// account for conservatively.
+  std::optional<bool> ContainsReturnsTwiceCall;
+
+  bool containsReturnsTwiceCall();
+
 public:
   EarliestEscapeAnalysis(DominatorTree &DT, const LoopInfo *LI = nullptr,
                          const CycleInfo *CI = nullptr)
