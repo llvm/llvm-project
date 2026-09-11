@@ -41,6 +41,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
+#include "clang/AST/TypeLoc.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Module.h"
 #include "clang/Basic/SourceLocation.h"
@@ -1038,6 +1039,77 @@ tokensSpelledInRange(const syntax::TokenBuffer &TB, const SourceManager &SM,
   return Locs;
 }
 
+/// If this occurrence is spelled as (part of) an "operator"-shaped name --
+/// `operator+`, `operator[]`, a literal operator like `operator""_x`, or a
+/// conversion operator like `operator int()` -- returns the location of the
+/// `operator` keyword followed by the locations of the tokens that make up
+/// the rest of the name, so callers can highlight (or otherwise report) the
+/// whole name instead of just the keyword. Returns an empty list otherwise,
+/// including when \p Loc is some other occurrence of \p D (e.g. an implicit
+/// operator call like `a + b`, which has no `operator` token to extend).
+llvm::SmallVector<SourceLocation, 4>
+operatorNameTokens(const Decl *D,
+                   const index::IndexDataConsumer::ASTNodeInfo &ASTNode,
+                   SourceLocation Loc, const syntax::TokenBuffer &TB,
+                   const SourceManager &SM) {
+  std::optional<DeclarationNameInfo> NameInfo;
+  if (auto *ME = llvm::dyn_cast_or_null<MemberExpr>(ASTNode.OrigE))
+    NameInfo = ME->getMemberNameInfo();
+  else if (auto *DRE = llvm::dyn_cast_or_null<DeclRefExpr>(ASTNode.OrigE))
+    NameInfo = DRE->getNameInfo();
+  else if (auto *DSME = llvm::dyn_cast_or_null<CXXDependentScopeMemberExpr>(
+               ASTNode.OrigE))
+    NameInfo = DSME->getMemberNameInfo();
+  else if (auto *DSDRE =
+               llvm::dyn_cast_or_null<DependentScopeDeclRefExpr>(ASTNode.OrigE))
+    NameInfo = DSDRE->getNameInfo();
+  else if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D))
+    NameInfo = FD->getNameInfo();
+  // Not every occurrence carries its own name info. Most ways of invoking an
+  // operator without writing the `operator` keyword (e.g. `a + b`) still
+  // reference it through a real, if implicit, MemberExpr/DeclRefExpr callee
+  // that's handled by the cases above (and later filtered out below, since
+  // that implicit callee has no `operator` text to report). A `new T(...)`
+  // or `delete p;` *expression* is the odd one out: unlike a call, it has no
+  // callee sub-expression at all -- CXXNewExpr/CXXDeleteExpr just store the
+  // resolved FunctionDecl directly -- so indexing it passes no RefE, and we
+  // fall through to D's info above. There, NameInfo does not actually
+  // describe how the name is spelled at *this* occurrence -- it may belong
+  // to a distant reference, or even a declaration in another file entirely
+  // -- so its location won't match Loc.
+  if (!NameInfo || NameInfo->getLoc() != Loc)
+    return {};
+
+  SourceRange ExtraRange;
+  switch (NameInfo->getName().getNameKind()) {
+  case DeclarationName::CXXOperatorName:
+    ExtraRange = NameInfo->getCXXOperatorNameRange();
+    break;
+  case DeclarationName::CXXLiteralOperatorName: {
+    // The suffix (e.g. `_test` in `operator""_test`) is lexed as part of a
+    // single string-literal-with-suffix token, so its location isn't a
+    // token's own start; look up the (whole) token that contains it.
+    SourceLocation SuffixLoc = NameInfo->getCXXLiteralOperatorNameLoc();
+    if (SuffixLoc.isValid())
+      if (const auto *Tok = TB.spelledTokenContaining(SM.getFileLoc(SuffixLoc)))
+        ExtraRange = SourceRange(Tok->location(), Tok->location());
+    break;
+  }
+  case DeclarationName::CXXConversionFunctionName:
+    if (TypeSourceInfo *TInfo = NameInfo->getNamedTypeInfo())
+      ExtraRange = TInfo->getTypeLoc().getSourceRange();
+    break;
+  default:
+    break;
+  }
+  if (ExtraRange.getBegin().isInvalid())
+    return {};
+
+  llvm::SmallVector<SourceLocation, 4> Result{Loc};
+  llvm::append_range(Result, tokensSpelledInRange(TB, SM, ExtraRange));
+  return Result;
+}
+
 /// Collects references to symbols within the main file.
 class ReferenceFinder : public index::IndexDataConsumer {
 public:
@@ -1115,19 +1187,13 @@ public:
       } else if (auto *OMD =
                      llvm::dyn_cast_or_null<ObjCMethodDecl>(ASTNode.OrigD)) {
         OMD->getSelectorLocs(Locs);
-      } else if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D);
-                 FD && FD->isOverloadedOperator() &&
-                 isInsideMainFile(FD->getNameInfo().getLoc(), SM)) {
-        // The operator name (e.g. `new`, `[]`, `<<`) is a separate token (or
-        // tokens) from the `operator` keyword itself; report both so the
-        // whole name gets highlighted, not just the keyword. Only do this
-        // when the declaration itself is in the main file: TB only has
-        // spelled tokens for the main file, and this is only useful anyway
-        // when we're looking at the occurrence at the declaration itself
-        // (checked below).
-        Locs.push_back(FD->getNameInfo().getLoc());
-        auto OpNameRange = FD->getNameInfo().getCXXOperatorNameRange();
-        llvm::append_range(Locs, tokensSpelledInRange(TB, SM, OpNameRange));
+      } else {
+        // An "operator"-shaped name (operator+, operator""_x, operator
+        // int()) has a name that's a separate token (or tokens) from the
+        // `operator` keyword itself; report both so the whole name gets
+        // highlighted, not just the keyword. This covers both the
+        // declaration and explicit references to it, e.g. `a.operator+(b)`.
+        Locs = operatorNameTokens(D, ASTNode, Loc, TB, SM);
       }
       // Sanity check: we expect the *first* token to match the reported loc.
       // Otherwise, maybe it was e.g. some other kind of reference to a Decl.

@@ -161,6 +161,25 @@ TEST(HighlightsTest, All) {
           void [[operator]] [[^(]][[)]](int);
         };
       )cpp",
+      R"cpp(// Explicit operator-call syntax also highlights the whole name.
+        struct S {
+          S [[operator]] [[+]](S);
+        };
+        void f(S a) {
+          a.[[operator]] [[^+]](a);
+        }
+      )cpp",
+      R"cpp(// Literal operator: the suffix is lexed together with the preceding
+        // `""` as a single token, so the whole thing is highlighted.
+        long double [[operator]] [[""_te^st]](long double);
+      )cpp",
+      R"cpp(// Conversion operator: the target type name is highlighted too.
+        // (Clicking on `int` itself doesn't resolve to the declaration at
+        // all, a separate limitation.)
+        struct S {
+          [[^operator]] [[int]]();
+        };
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
