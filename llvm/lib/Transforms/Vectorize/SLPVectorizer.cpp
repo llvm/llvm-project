@@ -6129,7 +6129,7 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
   // post-branch check use the same VecTy/CommonAlignment, and the underlying
   // TTI calls are virtual.
   std::optional<bool> MaskedGatherLegal;
-  auto IsMaskedGatherLegal = [&] {
+  auto IsMaskedGatherLegal = [&, TTI = TTI] {
     if (!MaskedGatherLegal)
       MaskedGatherLegal =
           TTI->isLegalMaskedGather(VecTy, CommonAlignment) &&
@@ -6196,11 +6196,10 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
             },
             SLPReVec))
       return LoadsState::CompressVectorize;
-    Align Alignment =
-        cast<LoadInst>(Order.empty() ? VL.front() : VL[Order.front()])
-            ->getAlign();
-    if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, Alignment, Order,
-                                       Diff, Ptr0, SPtrInfo))
+    // Widened strided loads must be legal for every group, not just the first
+    // pointer, which may have a stronger alignment than the remaining loads.
+    if (analyzeConstantStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
+                                       Order, Diff, Ptr0, SPtrInfo))
       return LoadsState::StridedVectorize;
   }
   if (!IsMaskedGatherLegal())
@@ -13964,7 +13963,7 @@ void BoUpSLP::transformNodes() {
             if (VF == 2) {
               // Cache the cost check lazily - both branches below may need it.
               std::optional<bool> MainOpIsCheap;
-              auto IsMainOpCheap = [&] {
+              auto IsMainOpCheap = [&, TTI = TTI] {
                 if (!MainOpIsCheap)
                   MainOpIsCheap =
                       TTI->getInstructionCost(S.getMainOp(), CostKind) <
@@ -33450,7 +33449,7 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   constexpr unsigned Limit = 32;
   Changed |= tryToVectorizeSequence<Value>(
       Operands, OperandSorter, AreCompatibleOperands,
-      [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+      [this, &R, Limit](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
         // Limit to StandaloneSeeds if !MaxVFOnly to avoid quadratic scan for
         // large set of candidates.
         return tryToVectorizeList(Candidates, R, MaxVFOnly,
