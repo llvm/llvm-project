@@ -1869,9 +1869,14 @@ struct SgToLaneConvertLayout
   }
 };
 
-/// Check if layout distributes a rank-2 value with unit lane_data
-/// in row major or default order
-static bool assignsElementsToLanes(xegpu::DistributeLayoutAttr layout) {
+/// Returns true if `layout` has rank 2, the default (row major) effective order
+/// [1, 0] and effective lane_data [1, 1], i.e. it maps the elements of the value
+/// to lanes one by one, without packing several of them into a lane. An unset
+/// lane_data is not accepted: `getEffectiveLaneDataAsInt` returns an empty
+/// vector for it, so layouts that are not lane level are rejected here. The
+/// effective lane_layout is deliberately left unconstrained: it is what the
+/// conversions below redistribute.
+static bool hasDefaultOrderAndUnitLaneData(xegpu::DistributeLayoutAttr layout) {
   if (layout.getRank() != 2)
     return false;
   return layout.getEffectiveLaneDataAsInt() == SmallVector<int64_t>{1, 1} &&
@@ -1896,16 +1901,16 @@ struct ElementLaneRedistribution {
 /// Recognizes an `xegpu.convert_layout` that redistributes individual elements
 /// between the lanes of a subgroup, which is the common condition the three
 /// slice-attributed lowerings below have.
-/// Both input and target layouts must satisfy `assignsElementsToLanes` and must
-/// be able to distribute the value, the two can only differ in which lane
-/// owns which element.
+/// Both input and target layouts must satisfy `hasDefaultOrderAndUnitLaneData`
+/// and must be able to distribute the value, the two can only differ in which
+/// lane owns which element.
 static FailureOr<ElementLaneRedistribution>
 matchElementLaneRedistribution(xegpu::ConvertLayoutOp op,
                                ConversionPatternRewriter &rewriter) {
   xegpu::DistributeLayoutAttr inputLayout = op.getEffectiveInputLayout();
   xegpu::DistributeLayoutAttr targetLayout = op.getTargetLayoutAttr();
-  if (!assignsElementsToLanes(inputLayout) ||
-      !assignsElementsToLanes(targetLayout))
+  if (!hasDefaultOrderAndUnitLaneData(inputLayout) ||
+      !hasDefaultOrderAndUnitLaneData(targetLayout))
     return rewriter.notifyMatchFailure(
         op, "both layouts must be rank 2 with effective lane_data [1, 1] and "
             "effective order [1, 0]");
