@@ -163,15 +163,6 @@ Type *TypeMapTy::get(Type *Ty) {
   // These are types that LLVM itself will unique.
   bool IsUniqued = !isa<StructType>(Ty) || cast<StructType>(Ty)->isLiteral();
 
-  if (!IsUniqued) {
-#ifndef NDEBUG
-    for (auto &Pair : MappedTypes) {
-      assert(!(Pair.first != Ty && Pair.second == Ty) &&
-             "mapping to a source type");
-    }
-#endif
-  }
-
   // If this is not a recursive type, then just map all of the elements and
   // then rebuild the type from inside out.
   SmallVector<Type *, 4> ElementTypes;
