@@ -166,6 +166,6 @@ option to avoid data structures being printed as a big block of text.
 [Bear]: https://github.com/rizsotto/Bear
 [PrintPasses.cpp]: https://github.com/llvm/llvm-project/blob/main/llvm/lib/IR/PrintPasses.cpp
 [rr]: https://rr-project.org
-[LLDB data formatters]: https://lldb.llvm.org/resources/dataformatters.html
+[LLDB data formatters]: inv:lldb:std:doc#resources/dataformatters
 [GDB pretty printers]: https://sourceware.org/gdb/onlinedocs/gdb/Pretty-Printing.html
 [print pretty]: https://sourceware.org/gdb/current/onlinedocs/gdb.html/Print-Settings.html
