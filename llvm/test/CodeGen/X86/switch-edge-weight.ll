@@ -214,13 +214,13 @@ sw.epilog:
 ; statement.
 ;
 ; CHECK: bb.0{{[0-9a-zA-Z.]*}}:
-; %bb.0 to %bb.6: [0, 110] + [116, UINT32_MAX] (20)
-; %bb.0 to %bb.7: [111, 115] (bit test) (50)
-; CHECK: successors: %bb.6(0x24924925), %bb.7(0x5b6db6db)
+; %bb.0 to %bb.8: [0, 110] + [116, UINT32_MAX] (20)
+; %bb.0 to %bb.6: [111, 115] (bit test) (50)
+; CHECK: successors: %bb.8(0x24924925), %bb.6(0x5b6db6db)
 ;
-; CHECK: bb.7{{[0-9a-zA-Z.]*}}:
-; %bb.7 to %bb.2: {111, 114, 115} (30)
-; %bb.7 to %bb.3: {112, 113} (20)
+; CHECK: bb.6{{[0-9a-zA-Z.]*}}:
+; %bb.6 to %bb.2: {111, 114, 115} (30)
+; %bb.6 to %bb.3: {112, 113} (20)
 ; CHECK: successors: %bb.2(0x4ccccccd), %bb.3(0x33333333)
 }
 
