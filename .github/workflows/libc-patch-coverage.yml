@@ -83,10 +83,9 @@ jobs:
           -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
           -DLLVM_USE_LINKER=lld-23
           -DLLVM_ENABLE_RUNTIMES=libc
-          -DLLVM_LIBC_FULL_BUILD=OFF
+          -DLLVM_LIBC_FULL_BUILD=ON
           -DLIBC_ENABLE_COVERAGE=ON
-          -DLIBC_ENABLE_MCDC=${{ matrix.enable_mcdc }}
-          -DLIBC_TEST_UNIT_TEST_ONLY=ON
+          -DLIBC_ENABLE_COVERAGE_MCDC=${{ matrix.enable_mcdc }}
           -DLIBC_TEST_SKIP_DEATH_TESTS=ON
           -DLIBC_TEST_SKIP_SHARED_TESTS=ON
         "

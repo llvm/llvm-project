@@ -94,18 +94,20 @@ set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all 
 # Enable source-based code coverage using Clang's continuous profiling mode.
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LLVM_LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+option(LIBC_ENABLE_COVERAGE_MCDC
+       "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
 option(LIBC_ENABLE_MCDC "Build libc with MC/DC coverage instrumentation" OFF)
 if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
-         "-fprofile-instr-generate=libc_cov_%c%p.profraw"
+         "-fprofile-instr-generate=libc_cov_%p.profraw"
          "-fcoverage-mapping"
          "-fprofile-continuous")
     list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
-         "-fprofile-instr-generate=libc_cov_%c%p.profraw"
+         "-fprofile-instr-generate=libc_cov_%p.profraw"
          "-fprofile-continuous")
 
-    if(LIBC_ENABLE_MCDC)
+    if(LIBC_ENABLE_COVERAGE_MCDC OR LIBC_ENABLE_MCDC)
       list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
       list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
       list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fcoverage-mcdc")
