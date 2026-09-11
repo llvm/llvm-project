@@ -10,7 +10,7 @@ define fastcc void @rephase(ptr %phases_in, ptr %157, i64 %158) {
 ; CHECK-NEXT:    [[IMAG_247:%.*]] = getelementptr i8, ptr [[IND_END11]], i64 408
 ; CHECK-NEXT:    [[IMAG_1_251:%.*]] = getelementptr i8, ptr [[IND_END11]], i64 424
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[IMAG_1_251]], align 8
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> poison, double [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP4]], <4 x double> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x double> <double 0.000000e+00, double 0.000000e+00, double poison, double poison>, <4 x double> [[TMP8]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>

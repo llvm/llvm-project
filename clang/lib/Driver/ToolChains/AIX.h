@@ -85,8 +85,7 @@ public:
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
-      llvm::StringRef BoundArch,
-      Action::OffloadKind DeviceOffloadingKind) const override;
+      BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const override;
 
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;

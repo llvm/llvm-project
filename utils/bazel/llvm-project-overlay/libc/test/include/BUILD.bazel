@@ -68,7 +68,7 @@ libc_test(
 libc_test(
     name = "fpclassify_c_test",
     srcs = ["fpclassify_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
@@ -114,7 +114,7 @@ libc_test(
 libc_test(
     name = "isfinite_c_test",
     srcs = ["isfinite_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
@@ -160,7 +160,7 @@ libc_test(
 libc_test(
     name = "isinf_c_test",
     srcs = ["isinf_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
@@ -206,7 +206,7 @@ libc_test(
 libc_test(
     name = "isnan_c_test",
     srcs = ["isnan_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
@@ -252,14 +252,14 @@ libc_test(
 libc_test(
     name = "isnormal_c_test",
     srcs = ["isnormal_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
 libc_test(
     name = "issubnormal_c_test",
     srcs = ["issubnormal_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
@@ -305,7 +305,7 @@ libc_test(
 libc_test(
     name = "iszero_c_test",
     srcs = ["iszero_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 
@@ -361,7 +361,7 @@ libc_test(
 libc_test(
     name = "signbit_c_test",
     srcs = ["signbit_test.c"],
-    use_test_framework = False,
+    c_test = True,
     deps = ["//libc:public_headers_deps"],
 )
 

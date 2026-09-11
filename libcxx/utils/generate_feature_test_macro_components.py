@@ -191,7 +191,6 @@ feature_test_macros = [
             "name": "__cpp_lib_atomic_min_max",
             "values": {"c++26": 202403}, # P0493R5: Atomic minimum/maximum
             "headers": ["atomic"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_atomic_ref",
@@ -247,7 +246,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_bitops",
-            "values": {"c++20": 201907},
+            "values": {
+                "c++20": 201907,
+                # "c++29": 202606,  # P3793R2 Better shifting
+                # "c++29": 202607,  # P3104R6 Bit permutations
+            },
             "headers": ["bit"],
         },
         {
@@ -337,7 +340,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_constant_wrapper",
             "values": {
-                "c++26": 202603,
+                "c++26": 202606,
             },
             "headers": ["utility"],
         },
@@ -431,6 +434,11 @@ feature_test_macros = [
             "name": "__cpp_lib_constexpr_queue",
             "values": {"c++26": 202502},
             "headers": ["queue"],
+        },
+        {
+            "name": "__cpp_lib_constexpr_set",
+            "values": {"c++26": 202502},
+            "headers": ["set"],
         },
         {
             "name": "__cpp_lib_constexpr_string",
@@ -557,7 +565,10 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_expected",
-            "values": {"c++23": 202211},
+            "values": {
+                "c++23": 202211,
+                "c++29": 202606,
+            },
             "headers": ["expected"],
         },
         {
@@ -703,10 +714,9 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_function_ref",
             "values": {
-                "c++26": 202306  # P0792R14 function_ref: a type-erased callable reference
+                "c++26": 202603  # P3948R1 constant_wrapper is the only tool needed for passing constant expressions via function arguments
             },
             "headers": ["functional"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_gcd_lcm",
@@ -741,10 +751,11 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_hazard_pointer",
-            "values": {"c++26": 202306},  # P2530R3 Hazard Pointers for C++26
-            "headers": [
-                "hazard_pointer"  # TODO verify this entry since the paper was underspecified.
-            ],
+            "values": {
+                "c++26": 202306,  # P2530R3 Hazard Pointers for C++26
+                # "c++29": 202606,  # P3428R4 Hazard Pointer Batches
+            },
+            "headers": ["hazard_pointer"],
             "unimplemented": True,
         },
         {
@@ -756,6 +767,11 @@ feature_test_macros = [
             "name": "__cpp_lib_incomplete_container_elements",
             "values": {"c++17": 201505},
             "headers": ["forward_list", "list", "vector"],
+        },
+        {
+            "name": "__cpp_lib_initializer_list",
+            "values": {"c++14": 202511},
+            "headers": ["initializer_list"],
         },
         {
             "name": "__cpp_lib_inplace_vector",
@@ -943,6 +959,14 @@ feature_test_macros = [
             "headers": ["memory"],
         },
         {
+            "name": "__cpp_lib_map_lookup",
+            "values": {
+                "c++29": 202606
+            },  # P3091R6 Better Lookups for map, unordered_map, and flat_map
+            "headers": ["flat_map", "map", "unordered_map"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_map_try_emplace",
             "values": {"c++17": 201411},
             "headers": ["map"],
@@ -965,6 +989,12 @@ feature_test_macros = [
                 "c++26": 202406,
             },
             "headers": ["mdspan"],
+        },
+        {
+            "name": "__cpp_lib_mdspan_copy",
+            "values": {"c++29": 202606},  # P3242R4 Copy and fill for mdspan
+            "headers": ["mdspan"],
+            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_memory_resource",
@@ -1063,6 +1093,12 @@ feature_test_macros = [
             },  # P2075R6 Philox as an extension of the C++ RNG engines
             # Note the paper mentions 202310L as value, which differs from the typical procedure.
             "headers": ["random"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_pointer_tag_pair",
+            "values": {"c++29": 202606},  # P3125R6 constexpr pointer tagging
+            "headers": ["memory"],
             "unimplemented": True,
         },
         {
@@ -1301,6 +1337,37 @@ feature_test_macros = [
             "headers": ["algorithm"],
         },
         {
+            "name": "__cpp_lib_simd",
+            "values": {
+                "c++26": 202606
+            },  # P3319R6 Add an iota object for simd (and more)
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_bitops",
+            "values": {
+                # "c++29": 202606 # P3793R2 Better shifting
+                "c++29": 202607  # P3772R2 std::simd overloads for bit permutations
+            },
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_complex",
+            "values": {"c++29": 202502},  # P3793R2 Better shifting
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
+            "name": "__cpp_lib_simd_permutations",
+            "values": {
+                "c++26": 202606
+            },  # P3319R6 Add an iota object for simd (and more)
+            "headers": ["simd"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_smart_ptr_for_overwrite",
             "values": {"c++20": 202002},
             "headers": ["memory"],
@@ -1311,7 +1378,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1901R2 Enabling the Use of weak_ptr as Keys in Unordered Associative Containers
             },
             "headers": ["memory"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_source_location",
@@ -1417,6 +1483,11 @@ feature_test_macros = [
                 "c++26": 202306  # P1885R12 Naming Text Encodings to Demystify Them
             },
             "headers": ["text_encoding"],
+        },
+        {
+            "name": "__cpp_lib_thread_attributes",
+            "values": {"c++29": 202606},  # P2019R9 Thread attributes
+            "headers": ["thread"],
             "unimplemented": True,
         },
         {
@@ -1439,6 +1510,7 @@ feature_test_macros = [
             "values": {
                 "c++17": 201611,
                 "c++26": 202306,  # P2497R0 Testing for success or failure of <charconv> functions
+                # "c++29": 202606   # P3505R4 Fix the default floating-point representation in std::format
             },
             "headers": ["charconv"],
             "unimplemented": True,
@@ -1489,6 +1561,13 @@ feature_test_macros = [
             "headers": ["type_traits"],
         },
         {
+            "name": "__cpp_lib_type_order",
+            "values": {"c++26": 202506},
+            "headers": ["compare"],
+            "test_suite_guard": "__has_builtin(__builtin_type_order)",
+            "libcxx_guard": "__has_builtin(__builtin_type_order)",
+        },
+        {
             "name": "__cpp_lib_type_trait_variable_templates",
             "values": {"c++17": 201510},
             "headers": ["type_traits"],
@@ -1514,6 +1593,11 @@ feature_test_macros = [
             "headers": ["functional"],
         },
         {
+            "name": "__cpp_lib_valarray",
+            "values": {"c++14": 202511},
+            "headers": ["valarray"],
+        },
+        {
             "name": "__cpp_lib_variant",
             "values": {
                 "c++17": 202102,  # std::visit for classes derived from std::variant
@@ -1521,6 +1605,13 @@ feature_test_macros = [
                 "c++26": 202306,  # P2637R3 Member visit
             },
             "headers": ["variant"],
+        },
+        {
+            "name": "__cpp_lib_view_interface",
+            "values": {
+                "c++29": 202606,  # P3052R2 view_interface::at()
+            },
+            "headers": ["ranges"],
         },
         {
             "name": "__cpp_lib_void_t",
@@ -1568,7 +1659,7 @@ lit_markup = {
 
 
 def get_std_dialects():
-    std_dialects = ["c++14", "c++17", "c++20", "c++23", "c++26"]
+    std_dialects = ["c++14", "c++17", "c++20", "c++23", "c++26", "c++29"]
     return list(std_dialects)
 
 

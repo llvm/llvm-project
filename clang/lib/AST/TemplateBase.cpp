@@ -258,6 +258,32 @@ TemplateArgument::CreatePackCopy(ASTContext &Context,
   return TemplateArgument(Args.copy(Context));
 }
 
+StringRef TemplateArgument::getKindName() const {
+  switch (getKind()) {
+  case TemplateArgument::Null:
+    return "null";
+  case TemplateArgument::Type:
+    return "type";
+  case TemplateArgument::Declaration:
+    return "decl";
+  case TemplateArgument::NullPtr:
+    return "nullptr";
+  case TemplateArgument::Integral:
+    return "integral";
+  case TemplateArgument::Template:
+    return "template";
+  case TemplateArgument::TemplateExpansion:
+    return "template expansion";
+  case TemplateArgument::Expression:
+    return "expression";
+  case TemplateArgument::Pack:
+    return "pack";
+  case TemplateArgument::StructuralValue:
+    return "structural value";
+  }
+  llvm_unreachable("unhandled ArgKind");
+}
+
 TemplateArgumentDependence TemplateArgument::getDependence() const {
   auto Deps = TemplateArgumentDependence::None;
   switch (getKind()) {
@@ -340,15 +366,8 @@ bool TemplateArgument::isPackExpansion() const {
 }
 
 bool TemplateArgument::isConceptOrConceptTemplateParameter() const {
-  if (getKind() != TemplateArgument::Template)
-    return false;
-
-  if (isa_and_nonnull<ConceptDecl>(getAsTemplate().getAsTemplateDecl()))
-    return true;
-  if (auto *TTP = llvm::dyn_cast_or_null<TemplateTemplateParmDecl>(
-          getAsTemplate().getAsTemplateDecl()))
-    return TTP->templateParameterKind() == TNK_Concept_template;
-  return false;
+  return getKind() == TemplateArgument::Template &&
+         getAsTemplate().isConceptName();
 }
 
 bool TemplateArgument::containsUnexpandedParameterPack() const {
@@ -764,17 +783,6 @@ ASTTemplateArgumentListInfo::Create(const ASTContext &C,
   return new (Mem) ASTTemplateArgumentListInfo(List);
 }
 
-const ASTTemplateArgumentListInfo *
-ASTTemplateArgumentListInfo::Create(const ASTContext &C,
-                                    const ASTTemplateArgumentListInfo *List) {
-  if (!List)
-    return nullptr;
-  std::size_t size =
-      totalSizeToAlloc<TemplateArgumentLoc>(List->getNumTemplateArgs());
-  void *Mem = C.Allocate(size, alignof(ASTTemplateArgumentListInfo));
-  return new (Mem) ASTTemplateArgumentListInfo(List);
-}
-
 ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
     const TemplateArgumentListInfo &Info) {
   LAngleLoc = Info.getLAngleLoc();
@@ -784,17 +792,6 @@ ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
   TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
   for (unsigned i = 0; i != NumTemplateArgs; ++i)
     new (&ArgBuffer[i]) TemplateArgumentLoc(Info[i]);
-}
-
-ASTTemplateArgumentListInfo::ASTTemplateArgumentListInfo(
-    const ASTTemplateArgumentListInfo *Info) {
-  LAngleLoc = Info->getLAngleLoc();
-  RAngleLoc = Info->getRAngleLoc();
-  NumTemplateArgs = Info->getNumTemplateArgs();
-
-  TemplateArgumentLoc *ArgBuffer = getTrailingObjects();
-  for (unsigned i = 0; i != NumTemplateArgs; ++i)
-    new (&ArgBuffer[i]) TemplateArgumentLoc((*Info)[i]);
 }
 
 void ASTTemplateKWAndArgsInfo::initializeFrom(

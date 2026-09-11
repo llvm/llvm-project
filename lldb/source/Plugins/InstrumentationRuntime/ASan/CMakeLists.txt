@@ -4,7 +4,9 @@ add_lldb_library(lldbPluginInstrumentationRuntimeASan PLUGIN
   LINK_LIBS
     lldbBreakpoint
     lldbCore
+    lldbExpression
     lldbSymbol
     lldbTarget
+    lldbValueObject
     lldbPluginInstrumentationRuntimeUtility
   )

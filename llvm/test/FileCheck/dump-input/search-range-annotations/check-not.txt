@@ -1,0 +1,112 @@
+; Because -dump-input-filter=error includes a failed directive's search range,
+; input lines 1 and 62 below are revealed, and -dump-input-context=2 reveals the
+; surrounding lines.  Even with only line 1, it looks like the host list
+; includes a GPU triple.  Line 62 and its context reveals we have an
+; accidentally nested list.  Often the key to understanding a CHECK-NOT failure
+; is where the directives before and after it matched because those establish
+; the search range.
+
+RUN: rm -rf %t
+RUN: split-file %s %t
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input-context=2 -v %t/check.txt < %t/input.txt \
+RUN:               -dump-input-filter=error 2>&1 | \
+RUN:   FileCheck %s -match-full-lines -check-prefix=DMP
+
+     DMP:<<<<<<
+DMP-NEXT:         1: <triples kind="host"> 
+DMP-NEXT:check:1     ^~~~~~~~~~~~~~~~~~~~~
+DMP-NEXT:not:2'0                         {   search range start (exclusive)
+DMP-NEXT:         2:  x86_64-linux-gnu 
+DMP-NEXT:         3:  x86_64-unknown-linux-gnu 
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:        42:  x86_64-amazon-linux 
+DMP-NEXT:        43:  x86_64-linux-android 
+DMP-NEXT:        44:  nvptx64-nvidia-cuda 
+DMP-NEXT:not:2'1      !~~~~~~~~~~~~~~~~~~   error: no match expected
+DMP-NEXT:        45:  i686-linux-gnu 
+DMP-NEXT:        46:  i686-pc-linux-gnu 
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:         .
+DMP-NEXT:        59:  i486-gnu 
+DMP-NEXT:        60:  i586-gnu 
+DMP-NEXT:        61:  i686-gnu 
+DMP-NEXT:not:2'2               } search range end (exclusive)
+DMP-NEXT:        62: </triples> 
+DMP-NEXT:check:3     ^~~~~~~~~~
+DMP-NEXT:        63: </triples> 
+DMP-NEXT:>>>>>>
+
+;--- check.txt
+CHECK: <triples kind="host">
+CHECK-NOT: nvptx64-nvidia-cuda
+CHECK: </triples>
+
+;--- input.txt
+<triples kind="host">
+  x86_64-linux-gnu
+  x86_64-unknown-linux-gnu
+  x86_64-pc-linux-gnu
+  x86_64-redhat-linux6E
+  x86_64-redhat-linux
+  x86_64-suse-linux
+  x86_64-manbo-linux-gnu
+  x86_64-linux-gnu
+  x86_64-slackware-linux
+  x86_64-unknown-linux
+  x86_64-amazon-linux
+  x86_64-linux-android
+  i686-linux-gnu
+  i686-pc-linux-gnu
+  i486-linux-gnu
+  i386-linux-gnu
+  i386-redhat-linux6E
+  i686-redhat-linux
+  i586-redhat-linux
+  i386-redhat-linux
+  i586-suse-linux
+  i486-slackware-linux
+  i686-montavista-linux
+  i586-linux-gnu
+  i686-linux-android
+  i386-gnu
+  i486-gnu
+  i586-gnu
+  i686-gnu
+<triples kind="offload">
+  x86_64-linux-gnu
+  x86_64-unknown-linux-gnu
+  x86_64-pc-linux-gnu
+  x86_64-redhat-linux6E
+  x86_64-redhat-linux
+  x86_64-suse-linux
+  x86_64-manbo-linux-gnu
+  x86_64-linux-gnu
+  x86_64-slackware-linux
+  x86_64-unknown-linux
+  x86_64-amazon-linux
+  x86_64-linux-android
+  nvptx64-nvidia-cuda
+  i686-linux-gnu
+  i686-pc-linux-gnu
+  i486-linux-gnu
+  i386-linux-gnu
+  i386-redhat-linux6E
+  i686-redhat-linux
+  i586-redhat-linux
+  i386-redhat-linux
+  i586-suse-linux
+  i486-slackware-linux
+  i686-montavista-linux
+  i586-linux-gnu
+  i686-linux-android
+  i386-gnu
+  i486-gnu
+  i586-gnu
+  i686-gnu
+</triples>
+</triples>

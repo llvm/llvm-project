@@ -52,13 +52,13 @@ class TestFrameVarDILMemberOf(TestBase):
 
         # Check that '.' is allowed in both simple and legacy modes
         frame = thread.GetFrameAtIndex(0)
-        simple = frame.GetValueForVariablePath("s.x", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("s.x", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("s.x", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("s.x", lldb.eDILModeLegacy)
         self.assertSuccess(simple.GetError())
         self.assertSuccess(legacy.GetError())
 
         # Check that '->' is not allowed in simple mode, but allowed in legacy mode
-        simple = frame.GetValueForVariablePath("sp->x", lldb.eDILModeSimple)
-        legacy = frame.GetValueForVariablePath("sp->x", lldb.eDILModeLegacy)
+        simple = frame.GetValueForVariablePathWithMode("sp->x", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePathWithMode("sp->x", lldb.eDILModeLegacy)
         self.assertFailure(simple.GetError())
         self.assertSuccess(legacy.GetError())

@@ -14,11 +14,11 @@ const char*
 
 "\N{AAA}" // expected-error {{'AAA' is not a valid Unicode character name}} \
           // expected-note 5{{did you mean}}
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-2]]:5-[[@LINE-2]]:8}:"ANT"
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-3]]:5-[[@LINE-3]]:8}:"ARC"
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-4]]:5-[[@LINE-4]]:8}:"AXE"
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-5]]:5-[[@LINE-5]]:8}:"BAT"
-// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-6]]:5-[[@LINE-6]]:8}:"CAT"
+// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-2]]:5-[[@LINE-2]]:8}:"ACK"
+// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-3]]:5-[[@LINE-3]]:8}:"ALM"
+// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-4]]:5-[[@LINE-4]]:8}:"ANT"
+// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-5]]:5-[[@LINE-5]]:8}:"APC"
+// CHECK-MACHINE: fix-it:"{{.*}}":{[[@LINE-6]]:5-[[@LINE-6]]:8}:"ARC"
 
 "\N{BLACKCHESSBISHOP}" // expected-error {{'BLACKCHESSBISHOP' is not a valid Unicode character name}} \
                        // expected-note {{sensitive to case and whitespaces}}

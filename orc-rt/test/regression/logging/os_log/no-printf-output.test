@@ -1,0 +1,6 @@
+# Verify that the os_log backend does not generate stderr/stdout messages.
+#
+# REQUIRES: orc-rt-log-level-error
+# RUN: orc-rt-log-check 2>&1 | FileCheck %s --allow-empty
+
+# CHECK-NOT: [orc-rt:General:

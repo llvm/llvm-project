@@ -16,6 +16,9 @@
 # to be one monolitic test. Since the test doesn't take very long it's
 # not a huge issue.
 
+# FIXME: Re-enable this test when we fix the clang-tidy plugin that implements it
+# UNSUPPORTED: true
+
 # RUN: %{python} %s %{libcxx-dir}/utils
 
 import sys

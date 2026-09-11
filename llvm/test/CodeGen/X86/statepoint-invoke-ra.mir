@@ -34,7 +34,7 @@
 # CHECK:     dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
 # CHECK:     $ecx = COPY %7
 # CHECK:     $r8d = MOV32r0 implicit-def dead $eflags
-# CHECK:     %37:gr64 = COPY %38
+# CHECK:     %37:gr64 = lr-split COPY %38
 # CHECK:     %17:gr64, %16:gr64, %13:gr64, %37:gr64 = STATEPOINT 1, 16, 5, undef %23:gr64, $edi, $rsi, undef $edx, $ecx, $r8d, 2, 0, 2, 0, 2, 11, 1, 4, %stack.0, 0, %13, 1, 4, %stack.1, 0, 1, 4, %stack.2, 0, 1, 4, %stack.3, 0, 1, 4, %stack.4, 0, 1, 4, %stack.2, 0, %37, 1, 4, %stack.5, 0, %16, %17, 2, 4, %17(tied-def 0), %16(tied-def 1), %13(tied-def 2), %37(tied-def 3), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def dead $eax :: (volatile load store (s32) on %stack.0), (volatile load store (s32) on %stack.1), (volatile load store (s32) on %stack.2), (volatile load store (s32) on %stack.3), (volatile load store (s32) on %stack.4), (volatile load store (s32) on %stack.5)
 # CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 # CHECK:     EH_LABEL <mcsymbol .Ltmp1>

@@ -8,26 +8,25 @@
 
 #include "src/stdio/remove.h"
 
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
+#include "src/__support/OSUtil/linux/syscall_wrappers/unlinkat.h"
 #include "src/__support/common.h"
 
+#include "hdr/errno_macros.h" // For EISDIR.
 #include "hdr/fcntl_macros.h" // For AT_* macros.
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include <sys/syscall.h> // For syscall numbers.
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, remove, (const char *path)) {
   // We first try unlinking it as a file. If it is ia file, it will succeed. If
   // it fails with EISDIR, we will try unlinking it as a directory.
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path, 0);
-  if (ret == -EISDIR)
-    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_unlinkat, AT_FDCWD, path,
-                                            AT_REMOVEDIR);
-  if (ret >= 0)
+  auto ret = linux_syscalls::unlinkat(AT_FDCWD, path, 0);
+  if (!ret && ret.error() == EISDIR)
+    ret = linux_syscalls::unlinkat(AT_FDCWD, path, AT_REMOVEDIR);
+  if (ret)
     return 0;
-  libc_errno = -ret;
+  libc_errno = ret.error();
   return -1;
 }
 

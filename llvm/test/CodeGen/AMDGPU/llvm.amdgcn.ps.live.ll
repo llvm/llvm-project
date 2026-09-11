@@ -1,5 +1,5 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=CHECK,CHECK-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefixes=CHECK,CHECK-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=CHECK,CHECK-SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=CHECK,CHECK-GISEL %s
 
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK: s_mov_b64 s[0:1], exec

@@ -12,7 +12,7 @@ vcvta.s32.f32 s1, s2
 vcvtp.u32.f32 s1, d2
 @ CHECK: error: operand must be a register in range [d0, d31]
 vcvtp.f32.u32 d1, q2
-@ CHECK: error: invalid instruction
+@ CHECK: error: invalid operand for instruction
 vcvtplo.f32.u32 s1, s2
 @ CHECK: error: instruction 'vcvtp' is not predicable, but condition code specified
 
@@ -50,7 +50,7 @@ sha1heq.32  q0, q1
 @ CHECK: error: instruction 'sha1h' is not predicable, but condition code specified
 
 sha1c.32  s0, d1, q2
-@ CHECK: error: invalid instruction
+@ CHECK: error: operand must be a register in range [q0, q15]
 sha1m.32  q0, s1, q2
 @ CHECK: error: operand must be a register in range [q0, q15]
 sha1p.32  s0, q1, q2
@@ -62,7 +62,7 @@ sha256h.32  q0, s1, q2
 sha256h2.32  q0, q1, s2
 @ CHECK: error: operand must be a register in range [q0, q15]
 sha256su1.32  s0, d1, q2
-@ CHECK: error: invalid instruction
+@ CHECK: error: operand must be a register in range [q0, q15]
 sha256su1lt.32  q0, d1, q2
 @ CHECK: error: instruction 'sha256su1' is not predicable, but condition code specified
 

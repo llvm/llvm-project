@@ -22,9 +22,12 @@
 #include "WebAssembly.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -32,10 +35,10 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-replace-phys-regs"
 
 namespace {
-class WebAssemblyReplacePhysRegs final : public MachineFunctionPass {
+class WebAssemblyReplacePhysRegsLegacy final : public MachineFunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyReplacePhysRegs() : MachineFunctionPass(ID) {}
+  WebAssemblyReplacePhysRegsLegacy() : MachineFunctionPass(ID) {}
 
 private:
   StringRef getPassName() const override {
@@ -51,16 +54,16 @@ private:
 };
 } // end anonymous namespace
 
-char WebAssemblyReplacePhysRegs::ID = 0;
-INITIALIZE_PASS(WebAssemblyReplacePhysRegs, DEBUG_TYPE,
+char WebAssemblyReplacePhysRegsLegacy::ID = 0;
+INITIALIZE_PASS(WebAssemblyReplacePhysRegsLegacy, DEBUG_TYPE,
                 "Replace physical registers with virtual registers", false,
                 false)
 
-FunctionPass *llvm::createWebAssemblyReplacePhysRegs() {
-  return new WebAssemblyReplacePhysRegs();
+FunctionPass *llvm::createWebAssemblyReplacePhysRegsLegacyPass() {
+  return new WebAssemblyReplacePhysRegsLegacy();
 }
 
-bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
+static bool replacePhysRegs(MachineFunction &MF) {
   LLVM_DEBUG({
     dbgs() << "********** Replace Physical Registers **********\n"
            << "********** Function: " << MF.getName() << '\n';
@@ -69,9 +72,6 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   auto &TRI = *MF.getSubtarget<WebAssemblySubtarget>().getRegisterInfo();
   bool Changed = false;
-
-  assert(!mustPreserveAnalysisID(LiveIntervalsID) &&
-         "LiveIntervals shouldn't be active yet!");
 
   for (unsigned PReg = WebAssembly::NoRegister + 1;
        PReg < WebAssembly::NUM_TARGET_REGS; ++PReg) {
@@ -104,4 +104,20 @@ bool WebAssemblyReplacePhysRegs::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return Changed;
+}
+
+bool WebAssemblyReplacePhysRegsLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  assert(!mustPreserveAnalysisID(LiveIntervalsID) &&
+         "LiveIntervals shouldn't be active yet!");
+
+  return replacePhysRegs(MF);
+}
+
+PreservedAnalyses
+WebAssemblyReplacePhysRegsPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  return replacePhysRegs(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                   .preserveSet<CFGAnalyses>()
+                             : PreservedAnalyses::all();
 }

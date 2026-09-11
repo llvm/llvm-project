@@ -384,7 +384,7 @@ struct X86Operand final : public MCParsedAsmOperand {
     if (!isMem512())
       return false;
     if (getMemBaseReg() &&
-        !X86MCRegisterClasses[X86::GR16RegClassID].contains(getMemBaseReg()))
+        !getX86MCRegisterClass(X86::GR16RegClassID).contains(getMemBaseReg()))
       return false;
     return true;
   }
@@ -392,11 +392,12 @@ struct X86Operand final : public MCParsedAsmOperand {
     if (!isMem512())
       return false;
     if (getMemBaseReg() &&
-        !X86MCRegisterClasses[X86::GR32RegClassID].contains(getMemBaseReg()) &&
+        !getX86MCRegisterClass(X86::GR32RegClassID).contains(getMemBaseReg()) &&
         getMemBaseReg() != X86::EIP)
       return false;
     if (getMemIndexReg() &&
-        !X86MCRegisterClasses[X86::GR32RegClassID].contains(getMemIndexReg()) &&
+        !getX86MCRegisterClass(X86::GR32RegClassID)
+             .contains(getMemIndexReg()) &&
         getMemIndexReg() != X86::EIZ)
       return false;
     return true;
@@ -405,11 +406,12 @@ struct X86Operand final : public MCParsedAsmOperand {
     if (!isMem512())
       return false;
     if (getMemBaseReg() &&
-        !X86MCRegisterClasses[X86::GR64RegClassID].contains(getMemBaseReg()) &&
+        !getX86MCRegisterClass(X86::GR64RegClassID).contains(getMemBaseReg()) &&
         getMemBaseReg() != X86::RIP)
       return false;
     if (getMemIndexReg() &&
-        !X86MCRegisterClasses[X86::GR64RegClassID].contains(getMemIndexReg()) &&
+        !getX86MCRegisterClass(X86::GR64RegClassID)
+             .contains(getMemIndexReg()) &&
         getMemIndexReg() != X86::RIZ)
       return false;
     return true;
@@ -533,48 +535,48 @@ struct X86Operand final : public MCParsedAsmOperand {
 
   bool isGR32orGR64() const {
     return Kind == Register &&
-      (X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
-       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
+           (getX86MCRegisterClass(X86::GR32RegClassID).contains(getReg()) ||
+            getX86MCRegisterClass(X86::GR64RegClassID).contains(getReg()));
   }
 
   bool isGR16orGR32orGR64() const {
     return Kind == Register &&
-      (X86MCRegisterClasses[X86::GR16RegClassID].contains(getReg()) ||
-       X86MCRegisterClasses[X86::GR32RegClassID].contains(getReg()) ||
-       X86MCRegisterClasses[X86::GR64RegClassID].contains(getReg()));
+           (getX86MCRegisterClass(X86::GR16RegClassID).contains(getReg()) ||
+            getX86MCRegisterClass(X86::GR32RegClassID).contains(getReg()) ||
+            getX86MCRegisterClass(X86::GR64RegClassID).contains(getReg()));
   }
 
   bool isVectorReg() const {
     return Kind == Register &&
-           (X86MCRegisterClasses[X86::VR64RegClassID].contains(getReg()) ||
-            X86MCRegisterClasses[X86::VR128XRegClassID].contains(getReg()) ||
-            X86MCRegisterClasses[X86::VR256XRegClassID].contains(getReg()) ||
-            X86MCRegisterClasses[X86::VR512RegClassID].contains(getReg()));
+           (getX86MCRegisterClass(X86::VR64RegClassID).contains(getReg()) ||
+            getX86MCRegisterClass(X86::VR128XRegClassID).contains(getReg()) ||
+            getX86MCRegisterClass(X86::VR256XRegClassID).contains(getReg()) ||
+            getX86MCRegisterClass(X86::VR512RegClassID).contains(getReg()));
   }
 
   bool isVK1Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK1RegClassID].contains(getReg());
+           getX86MCRegisterClass(X86::VK1RegClassID).contains(getReg());
   }
 
   bool isVK2Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK2RegClassID].contains(getReg());
+           getX86MCRegisterClass(X86::VK2RegClassID).contains(getReg());
   }
 
   bool isVK4Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK4RegClassID].contains(getReg());
+           getX86MCRegisterClass(X86::VK4RegClassID).contains(getReg());
   }
 
   bool isVK8Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK8RegClassID].contains(getReg());
+           getX86MCRegisterClass(X86::VK8RegClassID).contains(getReg());
   }
 
   bool isVK16Pair() const {
     return Kind == Register &&
-      X86MCRegisterClasses[X86::VK16RegClassID].contains(getReg());
+           getX86MCRegisterClass(X86::VK16RegClassID).contains(getReg());
   }
 
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
@@ -593,7 +595,7 @@ struct X86Operand final : public MCParsedAsmOperand {
   void addGR32orGR64Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     MCRegister RegNo = getReg();
-    if (X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
+    if (getX86MCRegisterClass(X86::GR64RegClassID).contains(RegNo))
       RegNo = getX86SubSuperRegister(RegNo, 32);
     Inst.addOperand(MCOperand::createReg(RegNo));
   }
@@ -601,8 +603,8 @@ struct X86Operand final : public MCParsedAsmOperand {
   void addGR16orGR32orGR64Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     MCRegister RegNo = getReg();
-    if (X86MCRegisterClasses[X86::GR32RegClassID].contains(RegNo) ||
-        X86MCRegisterClasses[X86::GR64RegClassID].contains(RegNo))
+    if (getX86MCRegisterClass(X86::GR32RegClassID).contains(RegNo) ||
+        getX86MCRegisterClass(X86::GR64RegClassID).contains(RegNo))
       RegNo = getX86SubSuperRegister(RegNo, 16);
     Inst.addOperand(MCOperand::createReg(RegNo));
   }

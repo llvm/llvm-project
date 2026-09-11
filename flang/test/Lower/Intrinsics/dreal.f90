@@ -6,7 +6,7 @@ subroutine test_dreal(r, c)
 
 ! CHECK-LABEL: func.func @_QPtest_dreal(
 ! CHECK-SAME: %[[ARG_0:.*]]: !fir.ref<f64> {fir.bindc_name = "r"},
-! CHECK-SAME: %[[ARG_1:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "c"}) {
+! CHECK-SAME: %[[ARG_1:.*]]: !fir.ref<complex<f64>> {fir.bindc_name = "c", fir.read_only}) {
 ! CHECK:   %[[DS:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK:   %[[C:.*]]:2 = hlfir.declare %[[ARG_1]] dummy_scope %[[DS]]
 ! CHECK:   %[[R:.*]]:2 = hlfir.declare %[[ARG_0]] dummy_scope %[[DS]]

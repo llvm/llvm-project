@@ -13,6 +13,8 @@
 // RUN:                               | FileCheck %s --check-prefix=CHECK
 // RUN: %clang_cc1 -triple aarch64 -emit-llvm  -target-cpu generic -target-feature +v8.5a -mguarded-control-stack -mbranch-target-enforce -mbranch-protection-pauth-lr -msign-return-address=all -msign-return-address-key=a_key %s -o - \
 // RUN:                               | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple aarch64-windows-msvc -emit-llvm -target-cpu generic -target-feature +v8.5a %s -o - \
+// RUN:                               | FileCheck %s --check-prefix=WIN
 
 __attribute__ ((target("branch-protection=none")))
 void none() {}
@@ -21,6 +23,7 @@ void none() {}
   __attribute__ ((target("branch-protection=standard")))
 void std() {}
 // CHECK: define{{.*}} void @std() #[[#STD:]]
+// WIN: define{{.*}} void @std() #[[#WINSTD:]]
 
 __attribute__ ((target("branch-protection=bti")))
 void btionly() {}
@@ -29,6 +32,7 @@ void btionly() {}
 __attribute__ ((target("branch-protection=pac-ret")))
 void paconly() {}
 // CHECK: define{{.*}} void @paconly() #[[#PAC:]]
+// WIN: define{{.*}} void @paconly() #[[#WINPAC:]]
 
 __attribute__ ((target("branch-protection=pac-ret+bti")))
 void pacbti0() {}
@@ -82,10 +86,12 @@ void gcs() {}
 // CHECK-DAG: attributes #[[#NONE]] = { {{.*}}
 
 // CHECK-DAG: attributes #[[#STD]] = { {{.*}} "branch-target-enforcement" "guarded-control-stack" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// WIN-DAG: attributes #[[#WINSTD]] = { {{.*}} "branch-target-enforcement" "guarded-control-stack" {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
 // CHECK-DAG: attributes #[[#BTI]] = { {{.*}} "branch-target-enforcement"
 
 // CHECK-DAG: attributes #[[#PAC]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="a_key"
+// WIN-DAG: attributes #[[#WINPAC]] = { {{.*}} "sign-return-address"="non-leaf" "sign-return-address-key"="b_key"
 
 // CHECK-DAG: attributes #[[#PACLEAF]] = { {{.*}} "sign-return-address"="all" "sign-return-address-key"="a_key"
 

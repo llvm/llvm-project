@@ -29,7 +29,7 @@ class LLVM_LIBRARY_VISIBILITY CSKYAsmPrinter : public AsmPrinter {
 
   void expandTLSLA(const MachineInstr *MI);
   void emitCustomConstantPool(const MachineInstr *MI);
-  void emitAttributes();
+  void emitAttributes(Module &M);
 
 public:
   explicit CSKYAsmPrinter(TargetMachine &TM,

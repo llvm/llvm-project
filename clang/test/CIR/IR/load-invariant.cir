@@ -1,0 +1,20 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // CHECK-LABEL: cir.func @invariant_load
+  // CHECK: %{{.*}} = cir.load invariant %arg0 : !cir.ptr<!s32i>, !s32i
+  cir.func @invariant_load(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    %0 = cir.load invariant %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.return %0 : !s32i
+  }
+
+  // A plain load must not print the invariant keyword.
+  // CHECK-LABEL: cir.func @plain_load
+  // CHECK: %{{.*}} = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+  cir.func @plain_load(%arg0: !cir.ptr<!s32i>) -> !s32i {
+    %0 = cir.load %arg0 : !cir.ptr<!s32i>, !s32i
+    cir.return %0 : !s32i
+  }
+}

@@ -1476,7 +1476,7 @@ define float @test_fabs_nsz_used_by_maxnum(float %x, float %y) {
 
 define i1 @test_fabs_used_is_fpclass_pnorm_or_nan(float %x) {
 ; CHECK-LABEL: @test_fabs_used_is_fpclass_pnorm_or_nan(
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 267)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], /* (nan norm) */ i32 267)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1488,7 +1488,7 @@ define i1 @test_fabs_used_is_fpclass_pnorm_or_nan(float %x) {
 
 define i1 @test_fabs_used_is_fpclass_zero_or_pinf(float %x) {
 ; CHECK-LABEL: @test_fabs_used_is_fpclass_zero_or_pinf(
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 612)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], /* (inf zero) */ i32 612)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00
@@ -1682,8 +1682,7 @@ define i32 @test_fabs_nsz_used_by_fptoui_sat(float %x) {
 
 define <2 x i1> @test_fabs_used_vp_is_fpclass_zero_or_pinf(<2 x float> %x, <2 x i1> %mask, i32 %evl) {
 ; CHECK-LABEL: @test_fabs_used_vp_is_fpclass_zero_or_pinf(
-; CHECK-NEXT:    [[SEL:%.*]] = call <2 x float> @llvm.fabs.v2f32(<2 x float> [[X:%.*]])
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call <2 x i1> @llvm.vp.is.fpclass.v2f32(<2 x float> [[SEL]], i32 608, <2 x i1> [[MASK:%.*]], i32 [[EVL:%.*]])
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[X:%.*]], /* (inf zero) */ i32 612)
 ; CHECK-NEXT:    ret <2 x i1> [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge <2 x float> %x, zeroinitializer
@@ -1817,7 +1816,7 @@ define i1 @test_fabs_used_is_fpclass_pzero(float %x) {
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oge float [[X:%.*]], 0.000000e+00
 ; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[X]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], float [[X]], float [[NEG]]
-; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[SEL]], i32 64)
+; CHECK-NEXT:    [[IS_FPCLASS:%.*]] = call i1 @llvm.is.fpclass.f32(float [[SEL]], /* (pzero) */ i32 64)
 ; CHECK-NEXT:    ret i1 [[IS_FPCLASS]]
 ;
   %cmp = fcmp oge float %x, 0.000000e+00

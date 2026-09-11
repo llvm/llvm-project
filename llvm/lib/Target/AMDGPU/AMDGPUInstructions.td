@@ -19,6 +19,7 @@ def AddrSpaces {
   int Constant = 4;
   int Private = 5;
   int Constant32Bit = 6;
+  int VGPR = 13;
 }
 
 
@@ -92,9 +93,13 @@ def IEEEModeDisabled : Predicate<"!MF->getInfo<SIMachineFunctionInfo>()->getMode
 
 def FMA : Predicate<"Subtarget->hasFMA()">;
 
-def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))>;
+def InstFlag : OperandWithDefaultOps <i32, (ops (i32 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
-def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))>;
+def i1imm_0 : OperandWithDefaultOps<i1, (ops (i1 0))> {
+  let OperandType = "OPERAND_IMMEDIATE";
+}
 
 class CustomOperandClass<string name, bit optional, string predicateMethod,
                          string parserMethod, string defaultMethod>
@@ -204,6 +209,13 @@ class is_canonicalized_2<SDPatternOperator op> : PatFrag<
     const SITargetLowering &Lowering =
               *static_cast<const SITargetLowering *>(getTargetLowering());
 
+    // A poison operand is trivially canonical, but packing it is
+    // pointless. Leave those to the cheaper build_vector-with-undef
+    // patterns rather than materializing a v_pack for a don't-care
+    // lane.
+    if (N->getOperand(0).isUndef() || N->getOperand(1).isUndef())
+      return false;
+
     return Lowering.isCanonicalized(*CurDAG, N->getOperand(0)) &&
       Lowering.isCanonicalized(*CurDAG, N->getOperand(1));
    }]> {
@@ -249,6 +261,8 @@ def umin_oneuse : HasOneUseBinOp<umin>;
 
 def fminnum_oneuse : HasOneUseBinOp<fminnum>;
 def fmaxnum_oneuse : HasOneUseBinOp<fmaxnum>;
+def fminimumnum_oneuse : HasOneUseBinOp<fminimumnum>;
+def fmaximumnum_oneuse : HasOneUseBinOp<fmaximumnum>;
 def fminimum_oneuse : HasOneUseBinOp<fminimum>;
 def fmaximum_oneuse : HasOneUseBinOp<fmaximum>;
 
@@ -766,7 +780,7 @@ int BF16_NEG_ONE = 0xBF80;
 def CONST : Constants;
 
 def fpimm_zero : FPImmLeaf<fAny, [{ return Imm.isZero(); }]> ;
-def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+1.0); }]> ;
+def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isOne(); }]> ;
 def fpimm_half : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.5); }]> ;
 
 /* Generic helper patterns for intrinsics */
@@ -847,13 +861,15 @@ class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
 // Instructions which select to the same v_min_f*
 def fminnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
-   (fminnum node:$src0, node:$src1)]
+   (fminnum node:$src0, node:$src1),
+   (fminimumnum node:$src0, node:$src1)]
 >;
 
 // Instructions which select to the same v_max_f*
 def fmaxnum_like : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee node:$src0, node:$src1),
-   (fmaxnum node:$src0, node:$src1)]
+   (fmaxnum node:$src0, node:$src1),
+   (fmaximumnum node:$src0, node:$src1)]
 >;
 
 class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
@@ -867,22 +883,26 @@ class NeverNaNPats<dag ops, list<dag> frags> : PatFrags<ops, frags> {
 
 def fminnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
   [(fminnum_ieee node:$src0, node:$src1),
-   (fminnum node:$src0, node:$src1)]
+   (fminnum node:$src0, node:$src1),
+   (fminimumnum node:$src0, node:$src1)]
 >;
 
 def fmaxnum_like_nnan : NeverNaNPats<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee node:$src0, node:$src1),
-   (fmaxnum node:$src0, node:$src1)]
+   (fmaxnum node:$src0, node:$src1),
+   (fmaximumnum node:$src0, node:$src1)]
 >;
 
 def fminnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fminnum_ieee_oneuse node:$src0, node:$src1),
-   (fminnum_oneuse node:$src0, node:$src1)]
+   (fminnum_oneuse node:$src0, node:$src1),
+   (fminimumnum_oneuse node:$src0, node:$src1)]
 >;
 
 def fmaxnum_like_oneuse : PatFrags<(ops node:$src0, node:$src1),
   [(fmaxnum_ieee_oneuse node:$src0, node:$src1),
-   (fmaxnum_oneuse node:$src0, node:$src1)]
+   (fmaxnum_oneuse node:$src0, node:$src1),
+   (fmaximumnum_oneuse node:$src0, node:$src1)]
 >;
 
 def any_fmad : PatFrags<(ops node:$src0, node:$src1, node:$src2),

@@ -345,6 +345,13 @@ typedef struct _st_size128 {
   int d;
 } st_size128;
 
+typedef union _un_size96 {
+  int a[3];
+  char b[12];
+} un_size96;
+
+typedef int int4 __attribute__((ext_vector_type(4)));
+
 void test19(long long x)
 {
   st_size64 a;
@@ -352,7 +359,12 @@ void test19(long long x)
   st_size16 c;
   st_size32 d;
   st_size128 e;
-  asm ("" : "=rm" (a): "0" (1)); // no-error
+  char f[16];
+  char g[8];
+  un_size96 h;
+  _Complex float i;
+  int4 j;
+  asm ("" : "=rm" (a): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
   asm ("" : "=rm" (d): "0" (1)); // no-error
   asm ("" : "=rm" (c): "0" (x)); // no-error
   // FIXME: This case is actually supported by codegen.
@@ -360,10 +372,16 @@ void test19(long long x)
   // FIXME: This case is actually supported by codegen.
   asm ("" : "=rm" (a): "0" (d)); // expected-error {{unsupported inline asm: input with type 'st_size32' (aka 'struct _st_size32') matching output with type 'st_size64' (aka 'struct _st_size64')}}
   asm ("" : "=rm" (b): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
-  // FIXME: This case should be supported by codegen, but it fails now.
-  asm ("" : "=rm" (e): "0" (1)); // no-error
+  // No general-purpose register can hold a 128-bit aggregate output.
+  asm ("" : "=rm" (e): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
   // FIXME: This case should be supported by codegen, but it fails now.
   asm ("" : "=rm" (x): "0" (e)); // expected-error {{unsupported inline asm: input with type 'st_size128' (aka 'struct _st_size128') matching output with type 'long long'}}
+  // Likewise for larger array, union, complex, and vector outputs.
+  asm ("" : "=r" (f): "0" (f)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (g): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (h): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (i): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
+  asm ("" : "=rm" (j): "0" (1)); // expected-error {{impossible constraint in asm: cannot store value into a register}}
 }
 
 typedef int int2 __attribute__((ext_vector_type(2)));

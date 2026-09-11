@@ -20,13 +20,13 @@ S vs_main() {
   return s;
 };
 
-// CHECK: %[[#alloca:]] = alloca %struct.S, align 8
-// CHECK-DX:              call void @_Z7vs_mainv(ptr %[[#alloca]])
-// CHECK-VK:              call spir_func void @_Z7vs_mainv(ptr %[[#alloca]])
-// CHECK: %[[#a:]] = load %struct.S, ptr %[[#alloca]], align 4
-// CHECK: %[[#b:]] = extractvalue %struct.S %[[#a]], 0
-// CHECK-DX:         call void @llvm.dx.store.output.f32(i32 4, i32 0, i32 0, i8 0, i32 poison, float %[[#b]])
-// CHECK-VK:         store float %3, ptr addrspace(8) @A4, align 4
+// CHECK: %[[ALLOCA:.*]] = alloca %struct.S, align 8
+// CHECK-DX:              call void @_Z7vs_mainv(ptr %[[ALLOCA]])
+// CHECK-VK:              call spir_func void @_Z7vs_mainv(ptr %[[ALLOCA]])
+// CHECK: %[[S:.*]] = load %struct.S, ptr %[[ALLOCA]], align 4
+// CHECK: %[[A:.*]] = extractvalue %struct.S %[[S]], 0
+// CHECK-DX:         call void @llvm.dx.store.output.f32(i32 0, i32 0, i8 0, float %[[A]])
+// CHECK-VK:         store float %[[A]], ptr addrspace(8) @A4, align 4
 // CHECK:            ret void
 
 // CHECK-VK: ![[#ATTR0]] = !{![[#ATTR1:]]}

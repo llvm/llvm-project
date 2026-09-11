@@ -1,5 +1,5 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx900 < %s 2>&1 | FileCheck -check-prefixes=GCN %s
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx906 < %s 2>&1 | FileCheck -check-prefixes=GCN %s
+; RUN: not llc -mtriple=amdgpu9.00 < %s 2>&1 | FileCheck -check-prefixes=GCN %s
+; RUN: not llc -mtriple=amdgpu9.06 < %s 2>&1 | FileCheck -check-prefixes=GCN %s
 
 ; GCN:     could not allocate input reg for constraint 'a'
 

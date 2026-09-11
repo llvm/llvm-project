@@ -17,6 +17,53 @@
 
 using namespace mlir;
 
+void mlir::omp::setOffloadModuleInterfaceAttributes(
+    ModuleOp module, const OffloadModuleOpts &opts) {
+  if (auto offloadMod = llvm::dyn_cast<OffloadModuleInterface>(*module)) {
+    offloadMod.setIsTargetDevice(opts.isTargetDevice);
+    offloadMod.setIsGPU(opts.isGPU);
+    if (opts.forceUSM)
+      offloadMod.setRequires(offloadMod.getRequires() |
+                             ClauseRequires::unified_shared_memory);
+    offloadMod.setFlags(opts.targetDebugKind, opts.assumeTeamsOversubscription,
+                        opts.assumeThreadsOversubscription,
+                        opts.assumeNoThreadState,
+                        opts.assumeNoNestedParallelism,
+                        opts.openMPDeviceVersion, opts.noGPULib);
+    if (opts.isTargetDevice && !opts.hostIRFile.empty())
+      offloadMod.setHostIRFilePath(opts.hostIRFile);
+
+    auto strTriples = llvm::to_vector(
+        llvm::map_range(opts.targetTriples, [](const llvm::Triple &triple) {
+          return triple.normalize();
+        }));
+    offloadMod.setTargetTriples(strTriples);
+  }
+}
+
+void mlir::omp::setOpenMPVersionAttribute(ModuleOp module, int64_t version) {
+  module->setDiscardableAttr(
+      StringAttr::get(module.getContext(), llvm::Twine{"omp.version"}),
+      VersionAttr::get(module.getContext(), version));
+}
+
+void mlir::omp::setOpenMPIntegerWrapAround(ModuleOp module, bool value) {
+  module->setAttr(StringAttr::get(module.getContext(),
+                                  llvm::Twine{"omp.integer_wrap_around"}),
+                  IntegerWrapAroundAttr::get(module.getContext(), value));
+}
+
+int64_t mlir::omp::getOpenMPVersionAttribute(ModuleOp module,
+                                             int64_t fallback) {
+  if (Attribute verAttr = module->getDiscardableAttr("omp.version"))
+    return llvm::cast<VersionAttr>(verAttr).getVersion();
+  return fallback;
+}
+
+bool mlir::omp::isOpenMPModule(ModuleOp module) {
+  return module->hasDiscardableAttr("omp.version");
+}
+
 static bool allocaUseRequiresSharedMem(const OpOperand &use) {
   Operation *owner = use.getOwner();
   if (auto parallelOp = dyn_cast<omp::ParallelOp>(owner)) {
@@ -34,7 +81,7 @@ static bool allocaUseRequiresSharedMem(const OpOperand &use) {
       OperandRange privateVars = argIface.getPrivateVars();
       auto it = llvm::find(privateVars, use.get());
       if (it != privateVars.end()) {
-        auto privateSyms = owner->getAttrOfType<ArrayAttr>("private_syms");
+        ArrayAttr privateSyms = *argIface.getPrivateSyms();
         size_t idx = std::distance(privateVars.begin(), it);
         auto privateOp =
             SymbolTable::lookupNearestSymbolFrom<omp::PrivateClauseOp>(
@@ -87,8 +134,7 @@ bool mlir::omp::opInSharedDeviceContext(Operation &op) {
     targetOp = dyn_cast<omp::TargetOp>(op);
 
   if (targetOp) {
-    if (targetOp.getKernelExecFlags(targetOp.getInnermostCapturedOmpOp()) !=
-        omp::TargetExecMode::generic)
+    if (targetOp.getKernelType() != omp::TargetExecMode::generic)
       return false;
   } else {
     auto declTargetIface = op.getParentOfType<omp::DeclareTargetInterface>();

@@ -1,0 +1,54 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=x86_64 | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!rec_Incomplete = !cir.struct<"Incomplete" incomplete>
+!rec_Wraps = !cir.struct<"Wraps" {data !rec_Incomplete}>
+!rec_Pair = !cir.struct<"Pair" {data !s32i, data !s32i}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // Only a declaration can name an incomplete-by-value parameter: a call or
+  // a definition requires the type to be complete.  No layout means no
+  // eightbyte classification, but nothing here ever completes Incomplete
+  // either, so no call or definition of this exact signature can arise
+  // anywhere.  Left unclassified and unrewritten.
+  cir.func private @take_incomplete(!rec_Incomplete)
+
+  // CHECK: cir.func private @take_incomplete(!rec_Incomplete)
+
+  // Same reasoning for an incomplete-by-value return type.
+  cir.func private @make_incomplete() -> !rec_Incomplete
+
+  // CHECK: cir.func private @make_incomplete() -> !rec_Incomplete
+
+  // The reject propagates through an enclosing struct and through an array
+  // element, the same as any other unsupported member.
+  cir.func private @take_wrapped(!rec_Wraps)
+
+  // CHECK: cir.func private @take_wrapped(!rec_Wraps)
+
+  cir.func private @take_incomplete_array(!cir.array<!rec_Incomplete x 4>)
+
+  // CHECK: cir.func private @take_incomplete_array(!cir.array<!rec_Incomplete x 4>)
+
+  // A classifiable function sharing the module with an unclassifiable
+  // declaration is still rewritten: skipping one function must not abort
+  // the whole pass the way a hard NYI error would.
+  cir.func @take_pair(%arg0: !rec_Pair) {
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @take_pair(%arg0: !u64i)
+
+  cir.func @call_pair(%arg0: !rec_Pair) {
+    cir.call @take_pair(%arg0) : (!rec_Pair) -> ()
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @call_pair(%arg0: !u64i)
+  // CHECK:   cir.call @take_pair(%{{.*}}) : (!u64i) -> ()
+}

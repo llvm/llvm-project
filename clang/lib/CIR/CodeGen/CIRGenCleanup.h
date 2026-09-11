@@ -157,6 +157,7 @@ public:
   void setActive(bool isActive) { cleanupBits.isActive = isActive; }
 
   bool isLifetimeMarker() const { return cleanupBits.isLifetimeMarker; }
+  void setLifetimeMarker() { cleanupBits.isLifetimeMarker = true; }
 
   bool hasActiveFlag() const { return activeFlag.isValid(); }
   Address getActiveFlag() const { return activeFlag; }

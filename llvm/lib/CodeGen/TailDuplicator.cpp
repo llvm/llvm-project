@@ -204,12 +204,9 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
       // If the original definition is still around, add it as an available
       // value.
-      MachineInstr *DefMI = MRI->getVRegDef(VReg);
-      MachineBasicBlock *DefBB = nullptr;
-      if (DefMI) {
-        DefBB = DefMI->getParent();
+      MachineBasicBlock *DefBB = MRI->getDefBlock(VReg);
+      if (DefBB)
         SSAUpdate.AddAvailableValue(DefBB, VReg);
-      }
 
       // Add the new vregs as available values.
       auto LI = SSAUpdateVals.find(VReg);

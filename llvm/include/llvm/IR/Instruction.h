@@ -54,9 +54,6 @@ class InsertPosition {
 
 public:
   InsertPosition(std::nullptr_t) : InsertAt() {}
-  LLVM_ABI LLVM_DEPRECATED("Use BasicBlock::iterators for insertion instead",
-                           "BasicBlock::iterator")
-      InsertPosition(Instruction *InsertBefore);
   LLVM_ABI InsertPosition(BasicBlock *InsertAtEnd);
   InsertPosition(InstListType::iterator InsertAt) : InsertAt(InsertAt) {}
   operator InstListType::iterator() const { return InsertAt; }
@@ -200,8 +197,43 @@ public:
 
   /// Specialize the methods defined in Value, as we know that an instruction
   /// can only be used by other instructions.
-  Instruction       *user_back()       { return cast<Instruction>(*user_begin());}
-  const Instruction *user_back() const { return cast<Instruction>(*user_begin());}
+  using user_iterator = user_iterator_impl<Instruction>;
+  using const_user_iterator = user_iterator_impl<const Instruction>;
+  user_iterator materialized_user_begin() {
+    assert(hasUseList());
+    return user_iterator(UseList);
+  }
+  const_user_iterator materialized_user_begin() const {
+    assert(hasUseList());
+    return const_user_iterator(UseList);
+  }
+  user_iterator user_begin() {
+    assertModuleIsMaterialized();
+    return materialized_user_begin();
+  }
+  const_user_iterator user_begin() const {
+    assertModuleIsMaterialized();
+    return materialized_user_begin();
+  }
+  user_iterator user_end() { return user_iterator(); }
+  const_user_iterator user_end() const { return const_user_iterator(); }
+
+  iterator_range<user_iterator> materialized_users() {
+    return make_range(materialized_user_begin(), user_end());
+  }
+  iterator_range<const_user_iterator> materialized_users() const {
+    return make_range(materialized_user_begin(), user_end());
+  }
+  iterator_range<user_iterator> users() {
+    assertModuleIsMaterialized();
+    return materialized_users();
+  }
+  iterator_range<const_user_iterator> users() const {
+    assertModuleIsMaterialized();
+    return materialized_users();
+  }
+  Instruction *user_back() { return *user_begin(); }
+  const Instruction *user_back() const { return *user_begin(); }
 
   /// Return the module owning the function this instruction belongs to
   /// or nullptr it the function does not have a module.
@@ -239,16 +271,6 @@ public:
   LLVM_ABI InstListType::iterator eraseFromParent();
 
   /// Insert an unlinked instruction into a basic block immediately before
-  /// the specified instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// insertBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void insertBefore(Instruction *InsertPos);
-
-  /// Insert an unlinked instruction into a basic block immediately before
   /// the specified position.
   LLVM_ABI void insertBefore(InstListType::iterator InsertPos);
 
@@ -269,16 +291,6 @@ public:
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
-  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
-  /// moveBefore without unwrapping/rewrapping. For all other positions, call
-  /// getIterator to fetch the instruction iterator.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBefore(Instruction *MovePos);
-
-  /// Unlink this instruction from its current basic block and insert it into
-  /// the basic block that MovePos lives in, right before MovePos.
   LLVM_ABI void moveBefore(InstListType::iterator InsertPos);
 
   /// Perform a \ref moveBefore operation, while signalling that the caller
@@ -290,15 +302,6 @@ public:
   /// intends to preserve the original ordering of instructions. This implicitly
   /// means that any adjacent debug-info should move with this instruction.
   LLVM_ABI void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
-
-  /// Perform a \ref moveBefore operation, while signalling that the caller
-  /// intends to preserve the original ordering of instructions. This implicitly
-  /// means that any adjacent debug-info should move with this instruction.
-  ///
-  /// Deprecated in favour of the iterator-accepting flavour of
-  /// moveBeforePreserving, as all insertions should be at iterator positions.
-  LLVM_ABI LLVM_DEPRECATED("Use iterators as instruction positions",
-                           "") void moveBeforePreserving(Instruction *MovePos);
 
 private:
   /// RemoveDIs project: all other moves implemented with this method,
@@ -498,6 +501,11 @@ public:
   /// empty, all meta data will be copied.
   LLVM_ABI void copyMetadata(const Instruction &SrcInst,
                              ArrayRef<unsigned> WL = ArrayRef<unsigned>());
+
+  /// Copy debug, profile, and memprof metadata from \p SrcInst to this
+  /// instruction without copying alias-analysis or type-dependent metadata.
+  /// TODO: Include additional metadata in the future if appropriate.
+  LLVM_ABI void copyProfileAndDebugMetadata(const Instruction &SrcInst);
 
   /// Erase all metadata that matches the predicate.
   LLVM_ABI void eraseMetadataIf(function_ref<bool(unsigned, MDNode *)> Pred);
@@ -978,6 +986,8 @@ public:
     CompareUsingScalarTypes = 1 << 1,
     /// Check for equivalence with intersected callbase attrs.
     CompareUsingIntersectedAttrs = 1 << 2,
+    /// Check for equivalence by comparing call targets.
+    CompareCallTargets = 1 << 3,
   };
 
   /// This function determines if the specified instruction executes the same

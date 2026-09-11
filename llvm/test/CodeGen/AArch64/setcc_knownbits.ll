@@ -78,11 +78,13 @@ define i1 @lshr_ctlz_undef_cmpeq_one_i64(i64 %in) {
 define i32 @PR17487(i1 %tobool) {
 ; CHECK-SD-LABEL: PR17487:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    dup v0.2s, w0
+; CHECK-SD-NEXT:    movi v0.2s, #1
+; CHECK-SD-NEXT:    dup v1.2s, w0
 ; CHECK-SD-NEXT:    mov w8, #1 // =0x1
+; CHECK-SD-NEXT:    and v0.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    dup v1.2d, x8
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    bic v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov x8, v0.d[1]
 ; CHECK-SD-NEXT:    cmp x8, #1
 ; CHECK-SD-NEXT:    cset w0, ne

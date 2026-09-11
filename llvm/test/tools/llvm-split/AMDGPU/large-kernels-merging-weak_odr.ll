@@ -1,8 +1,8 @@
-; RUN: llvm-split -o %t %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-max-depth=0 -amdgpu-module-splitting-large-threshold=1.2 -amdgpu-module-splitting-merge-threshold=0.5
+; RUN: llvm-split -o %t %s -j 3 -mtriple amdgpu-amd-amdhsa -amdgpu-module-splitting-max-depth=0 -amdgpu-module-splitting-large-threshold=1.2 -amdgpu-module-splitting-merge-threshold=0.5
 ; RUN: llvm-dis -o - %t0 | FileCheck --check-prefix=CHECK0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t1 | FileCheck --check-prefix=CHECK1 --implicit-check-not=define %s
 
-; RUN: llvm-split -o %t.nolarge %s -j 3 -mtriple amdgcn-amd-amdhsa -amdgpu-module-splitting-large-threshold=0 -amdgpu-module-splitting-max-depth=0
+; RUN: llvm-split -o %t.nolarge %s -j 3 -mtriple amdgpu-amd-amdhsa -amdgpu-module-splitting-large-threshold=0 -amdgpu-module-splitting-max-depth=0
 ; RUN: llvm-dis -o - %t.nolarge0 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK0 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t.nolarge1 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK1 --implicit-check-not=define %s
 ; RUN: llvm-dis -o - %t.nolarge2 | FileCheck --check-prefix=NOLARGEKERNELS-CHECK2 --implicit-check-not=define %s

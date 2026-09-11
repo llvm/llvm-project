@@ -32,6 +32,12 @@ Tags:
   SwiftEscapable: false
 - Name: EscapableType
   SwiftEscapable: true
+- Name: EscapableAnnotatedInHeader
+  SwiftEscapable: true
+- Name: NoncopyableAnnotatedInHeader
+  SwiftCopyable: false
+- Name: EscapabilityConflict
+  SwiftEscapable: false
 - Name: NoncopyableWithDestroyType
   SwiftCopyable: false
   SwiftDestroyOp: NCDDestroy

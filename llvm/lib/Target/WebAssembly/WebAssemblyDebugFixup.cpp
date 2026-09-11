@@ -21,8 +21,11 @@
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -30,7 +33,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-debug-fixup"
 
 namespace {
-class WebAssemblyDebugFixup final : public MachineFunctionPass {
+class WebAssemblyDebugFixupLegacy final : public MachineFunctionPass {
   StringRef getPassName() const override { return "WebAssembly Debug Fixup"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -42,23 +45,23 @@ class WebAssemblyDebugFixup final : public MachineFunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WebAssemblyDebugFixup() : MachineFunctionPass(ID) {}
+  WebAssemblyDebugFixupLegacy() : MachineFunctionPass(ID) {}
 };
 } // end anonymous namespace
 
-char WebAssemblyDebugFixup::ID = 0;
+char WebAssemblyDebugFixupLegacy::ID = 0;
 INITIALIZE_PASS(
-    WebAssemblyDebugFixup, DEBUG_TYPE,
+    WebAssemblyDebugFixupLegacy, DEBUG_TYPE,
     "Ensures debug_value's that have been stackified become stack relative",
     false, false)
 
-FunctionPass *llvm::createWebAssemblyDebugFixup() {
-  return new WebAssemblyDebugFixup();
+FunctionPass *llvm::createWebAssemblyDebugFixupLegacyPass() {
+  return new WebAssemblyDebugFixupLegacy();
 }
 
 // At this very end of the compilation pipeline, if any DBG_VALUEs with
 // registers remain, it means they are dangling info which we failed to update
-// when their corresponding def instruction was transformed/moved/splitted etc.
+// when their corresponding def instruction was transformed/moved/split etc.
 // Because Wasm cannot access values in LLVM virtual registers in the debugger,
 // these dangling DBG_VALUEs in effect kill the effect of any previous DBG_VALUE
 // associated with the variable, which will appear as "optimized out".
@@ -74,7 +77,7 @@ static void setDanglingDebugValuesUndef(MachineBasicBlock &MBB,
   }
 }
 
-bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
+static bool debugFixup(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** Debug Fixup **********\n"
                        "********** Function: "
                     << MF.getName() << '\n');
@@ -155,4 +158,16 @@ bool WebAssemblyDebugFixup::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+bool WebAssemblyDebugFixupLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return debugFixup(MF);
+}
+
+PreservedAnalyses
+WebAssemblyDebugFixupPass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  return debugFixup(MF) ? getMachineFunctionPassPreservedAnalyses()
+                              .preserveSet<CFGAnalyses>()
+                        : PreservedAnalyses::all();
 }

@@ -37,7 +37,7 @@ std::optional<T> getConfiguration(CheckerManager &Mgr, Checker *Chk,
                   .getFileManager()
                   .getVirtualFileSystem();
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-      VFS.getBufferForFile(ConfigFile.str());
+      VFS.getBufferForFile(ConfigFile);
 
   if (Buffer.getError()) {
     Mgr.reportInvalidCheckerOptionValue(Chk, Option,

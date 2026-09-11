@@ -1,23 +1,23 @@
 # RUN: llvm-mc %s -triple=riscv64 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+c,+d | FileCheck %s --check-prefixes=RV64Y-CD
+# RUN:   -mattr=+experimental-y,+d,+c | FileCheck %s --check-prefix=RV64YDC
 # RUN: llvm-mc %s -triple=riscv32 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+c,+f | FileCheck %s --check-prefixes=RV32Y-CF
+# RUN:   -mattr=+experimental-y,+f,+c | FileCheck %s --check-prefix=RV32YFC
 # RUN: llvm-mc %s -triple=riscv32 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+zca,+f | FileCheck %s --check-prefixes=RV32Y-ZCA-F
+# RUN:   -mattr=+experimental-y,+zca,+f | FileCheck %s --check-prefix=RV32Y-ZCA-F
 # RUN: llvm-mc %s -triple=riscv64 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+zca,+d | FileCheck %s --check-prefixes=RV64Y-ZCA-D
+# RUN:   -mattr=+experimental-y,+zca,+d | FileCheck %s --check-prefix=RV64Y-ZCA-D
 # RUN: llvm-mc %s -triple=riscv64 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+zca,+zcb | FileCheck %s --check-prefixes=RV64Y-ZCA-ZCB
+# RUN:   -mattr=+experimental-y,+zca,+zcb | FileCheck %s --check-prefix=RV64Y-ZCA-ZCB
 # RUN: llvm-mc %s -triple=riscv32 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+zce | FileCheck %s --check-prefixes=RV32Y-ZCE
+# RUN:   -mattr=+experimental-y,+zce | FileCheck %s --check-prefix=RV32Y-ZCE
 # RUN: llvm-mc %s -triple=riscv32 -filetype=asm -riscv-add-build-attributes \
-# RUN:   -mattr=+experimental-y,+zce,+f | FileCheck %s --check-prefixes=RV32Y-ZCE-F
+# RUN:   -mattr=+experimental-y,+zce,+f | FileCheck %s --check-prefix=RV32Y-ZCE-F
 
-## RV64Y + C + D: y is enabled, so zcd is not implied.
-# RV64Y-CD: .attribute 5, "rv64i2p1_f2p2_d2p2_c2p0_y0p98_zicsr2p0_zca1p0"
+## RV64Y + D + C: y is enabled, so zcd is not implied.
+# RV64YDC: .attribute 5, "rv64i2p1_f2p2_d2p2_c2p0_y0p98_zicsr2p0_zca1p0"
 
-## RV32Y + C + F: y is enabled, so zcf is not implied.
-# RV32Y-CF: .attribute 5, "rv32i2p1_f2p2_c2p0_y0p98_zicsr2p0_zca1p0"
+## RV32Y + F + C: y is enabled, so zcf is not implied.
+# RV32YFC: .attribute 5, "rv32i2p1_f2p2_c2p0_y0p98_zicsr2p0_zca1p0"
 
 ## RV32Y + ZCA + F: zca + y implies c on RV32 (y replaces zcf in the implication).
 # RV32Y-ZCA-F: .attribute 5, "rv32i2p1_f2p2_c2p0_y0p98_zicsr2p0_zca1p0"

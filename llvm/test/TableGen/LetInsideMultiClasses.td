@@ -1,5 +1,4 @@
 // RUN: llvm-tblgen %s | FileCheck %s
-// XFAIL: vg_leak
 
 // CHECK: bit IsDouble = 1;
 // CHECK: bit IsDouble = 1;

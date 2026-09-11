@@ -4,17 +4,16 @@
 __fp16 g = 2.0f;
 
 //.
-// CHECK: @g = global i16 16384, align 2
+// CHECK: @g = global half 2.000000e+00, align 2
 //.
 // CHECK-LABEL: define float @test_memory_fp16_to_float(
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8:![0-9]+]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP2]] to float
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9:![0-9]+]]
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    ret float [[CONV]]
 //
 float test_memory_fp16_to_float(__fp16 *ptr) {
@@ -26,13 +25,12 @@ float test_memory_fp16_to_float(__fp16 *ptr) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[VAL_ADDR:%.*]] = alloca float, align 4
-// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    store float [[VAL]], ptr [[VAL_ADDR]], align 4, !tbaa [[FLOAT_TBAA10:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[VAL_ADDR]], align 4, !tbaa [[FLOAT_TBAA10]]
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    store float [[VAL]], ptr [[VAL_ADDR]], align 4, !tbaa [[FLOAT_TBAA11:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[VAL_ADDR]], align 4, !tbaa [[FLOAT_TBAA11]]
 // CHECK-NEXT:    [[CONV:%.*]] = fptrunc float [[TMP0]] to half
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast half [[CONV]] to i16
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    store i16 [[TMP1]], ptr [[TMP2]], align 2, !tbaa [[__FP16_TBAA8]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    store half [[CONV]], ptr [[TMP1]], align 2, !tbaa [[__FP16_TBAA9]]
 // CHECK-NEXT:    ret void
 //
 void test_memory_float_from_fp16(__fp16* ptr, float val) {
@@ -43,17 +41,14 @@ void test_memory_float_from_fp16(__fp16* ptr, float val) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP2]] to float
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[INC:%.*]] = fadd float [[INCDEC_CONV]], 1.000000e+00
 // CHECK-NEXT:    [[INCDEC_CONV1:%.*]] = fptrunc float [[INC]] to half
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[INCDEC_CONV1]] to i16
-// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP3]] to half
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP4]] to float
+// CHECK-NEXT:    store half [[INCDEC_CONV1]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[INCDEC_CONV1]] to float
 // CHECK-NEXT:    ret float [[CONV]]
 //
 float test_memory_fp16_preinc(__fp16 *ptr) {
@@ -64,17 +59,14 @@ float test_memory_fp16_preinc(__fp16 *ptr) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP2]] to float
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[INC:%.*]] = fadd float [[INCDEC_CONV]], 1.000000e+00
 // CHECK-NEXT:    [[INCDEC_CONV1:%.*]] = fptrunc float [[INC]] to half
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[INCDEC_CONV1]] to i16
-// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP4]] to float
+// CHECK-NEXT:    store half [[INCDEC_CONV1]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    ret float [[CONV]]
 //
 float test_memory_fp16_postinc(__fp16 *ptr) {
@@ -85,17 +77,14 @@ float test_memory_fp16_postinc(__fp16 *ptr) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP2]] to float
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[DEC:%.*]] = fadd float [[INCDEC_CONV]], -1.000000e+00
 // CHECK-NEXT:    [[INCDEC_CONV1:%.*]] = fptrunc float [[DEC]] to half
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[INCDEC_CONV1]] to i16
-// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP3]] to half
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP4]] to float
+// CHECK-NEXT:    store half [[INCDEC_CONV1]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[INCDEC_CONV1]] to float
 // CHECK-NEXT:    ret float [[CONV]]
 //
 float test_memory_fp16_predec(__fp16 *ptr) {
@@ -106,38 +95,32 @@ float test_memory_fp16_predec(__fp16 *ptr) {
 // CHECK-SAME: ptr noundef [[PTR:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[PTR_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA5]]
-// CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP2]] to float
+// CHECK-NEXT:    store ptr [[PTR]], ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR_ADDR]], align 8, !tbaa [[__FP16PTR_TBAA6]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[INCDEC_CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[DEC:%.*]] = fadd float [[INCDEC_CONV]], -1.000000e+00
 // CHECK-NEXT:    [[INCDEC_CONV1:%.*]] = fptrunc float [[DEC]] to half
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast half [[INCDEC_CONV1]] to i16
-// CHECK-NEXT:    store i16 [[TMP3]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast i16 [[TMP1]] to half
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP4]] to float
+// CHECK-NEXT:    store half [[INCDEC_CONV1]], ptr [[TMP0]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    ret float [[CONV]]
 //
 float test_memory_fp16_postdec(__fp16 *ptr) {
   return (*ptr)--;
 }
 
-// CHECK-LABEL: define i16 @test_arg_return(
-// CHECK-SAME: i16 noundef [[X:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define half @test_arg_return(
+// CHECK-SAME: half noundef [[X:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i16, align 2
-// CHECK-NEXT:    store i16 [[X]], ptr [[X_ADDR]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[X_ADDR]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast i16 [[TMP0]] to half
-// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP1]] to float
-// CHECK-NEXT:    [[TMP2:%.*]] = load i16, ptr [[X_ADDR]], align 2, !tbaa [[__FP16_TBAA8]]
-// CHECK-NEXT:    [[TMP3:%.*]] = bitcast i16 [[TMP2]] to half
-// CHECK-NEXT:    [[CONV1:%.*]] = fpext half [[TMP3]] to float
+// CHECK-NEXT:    [[X_ADDR:%.*]] = alloca half, align 2
+// CHECK-NEXT:    store half [[X]], ptr [[X_ADDR]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[X_ADDR]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[CONV:%.*]] = fpext half [[TMP0]] to float
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[X_ADDR]], align 2, !tbaa [[__FP16_TBAA9]]
+// CHECK-NEXT:    [[CONV1:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[ADD:%.*]] = fadd float [[CONV]], [[CONV1]]
 // CHECK-NEXT:    [[CONV2:%.*]] = fptrunc float [[ADD]] to half
-// CHECK-NEXT:    [[TMP4:%.*]] = bitcast half [[CONV2]] to i16
-// CHECK-NEXT:    ret i16 [[TMP4]]
+// CHECK-NEXT:    ret half [[CONV2]]
 //
 __fp16 test_arg_return(__fp16 x) {
     return x + x;
@@ -146,15 +129,16 @@ __fp16 test_arg_return(__fp16 x) {
 // CHECK: attributes #[[ATTR0]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 //.
 // CHECK: [[META0:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
-// CHECK: [[META1:![0-9]+]] = !{[[META2:![0-9]+]], [[META2]], i64 0}
-// CHECK: [[META2]] = !{!"int", [[META3:![0-9]+]], i64 0}
-// CHECK: [[META3]] = !{!"omnipotent char", [[META4:![0-9]+]], i64 0}
-// CHECK: [[META4]] = !{!"Simple C/C++ TBAA"}
-// CHECK: [[__FP16PTR_TBAA5]] = !{[[META6:![0-9]+]], [[META6]], i64 0}
-// CHECK: [[META6]] = !{!"p1 __fp16", [[META7:![0-9]+]], i64 0}
-// CHECK: [[META7]] = !{!"any pointer", [[META3]], i64 0}
-// CHECK: [[__FP16_TBAA8]] = !{[[META9:![0-9]+]], [[META9]], i64 0}
-// CHECK: [[META9]] = !{!"__fp16", [[META3]], i64 0}
-// CHECK: [[FLOAT_TBAA10]] = !{[[META11:![0-9]+]], [[META11]], i64 0}
-// CHECK: [[META11]] = !{!"float", [[META3]], i64 0}
+// CHECK: [[META1:![0-9]+]] = !{[[META2:![0-9]+]], [[META3:![0-9]+]], i64 0}
+// CHECK: [[META2]] = !{!"__libc_errno", [[META3]], i64 0}
+// CHECK: [[META3]] = !{!"int", [[META4:![0-9]+]], i64 0}
+// CHECK: [[META4]] = !{!"omnipotent char", [[META5:![0-9]+]], i64 0}
+// CHECK: [[META5]] = !{!"Simple C/C++ TBAA"}
+// CHECK: [[__FP16PTR_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// CHECK: [[META7]] = !{!"p1 __fp16", [[META8:![0-9]+]], i64 0}
+// CHECK: [[META8]] = !{!"any pointer", [[META4]], i64 0}
+// CHECK: [[__FP16_TBAA9]] = !{[[META10:![0-9]+]], [[META10]], i64 0}
+// CHECK: [[META10]] = !{!"__fp16", [[META4]], i64 0}
+// CHECK: [[FLOAT_TBAA11]] = !{[[META12:![0-9]+]], [[META12]], i64 0}
+// CHECK: [[META12]] = !{!"float", [[META4]], i64 0}
 //.

@@ -1,5 +1,7 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 < %s | FileCheck --check-prefixes=GCN,GFX1250 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.50 < %s | FileCheck --check-prefixes=GCN,GFX1250 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu12.51 < %s | FileCheck --check-prefixes=GCN,GFX1251 %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu12.51 < %s | FileCheck --check-prefixes=GCN,GFX1251 %s
 
 declare void @llvm.amdgcn.s.monitor.sleep(i16)
 
@@ -13,7 +15,8 @@ define amdgpu_ps void @test_monitor_sleep_1() {
 ; FIXME: 0x8000 would look better
 
 ; GCN-LABEL: {{^}}test_monitor_sleep_forever:
-; GCN: s_monitor_sleep 0xffff8000
+; GFX1250: s_monitor_sleep 0x2000
+; GFX1251: s_monitor_sleep 0xffff8000
 define amdgpu_ps void @test_monitor_sleep_forever() {
   call void @llvm.amdgcn.s.monitor.sleep(i16 32768)
   ret void

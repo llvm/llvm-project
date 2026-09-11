@@ -8,11 +8,11 @@
 // RUN: not llvm-mc --triple=riscv64 --mattr=+c,+zcb,+xllvmrvyipm --defsym=RV64=1 < %s 2>&1 \
 // RUN:   | FileCheck --check-prefixes=CHECK,CHECK-COMPAT,CHECK-64 --implicit-check-not=error: %s
 
-/// Note: Invalid operand currently has priority over missing features, so we
-/// get a bad diagnostic for the *d instruction with RVY32.
-/// The generated matcher code does not ignore instructions with bad requirements
-/// and then ultimately ends up conflicting checks (MCK_GPRPairNoX0RV32 vs.
-/// MCK_GPRNoX0) and then falls back to the generic error.
+/// Note: For c.ldsp/c.sdsp, an invalid register and an invalid immediate can
+/// both be independently plausible fixes, so the matcher cannot choose a
+/// single "best" diagnostic and instead reports an ambiguous "invalid
+/// instruction, any one of the following would fix this" error with a note
+/// per candidate fix.
 
 ///
 /// Invalid base register:
@@ -31,11 +31,11 @@ c.lhu a0, 0(s5)
 c.lw a0, 0(s5)
 // CHECK: :[[#@LINE+1]]:12: error: register must be a GPR from x8 to x15
 c.sw a0, 0(s5)
-// CHECK-RVY32: :[[#@LINE+3]]:12: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:6: error: register must be a GPR from x8 to x15
 // CHECK-COMPAT32: :[[#@LINE+2]]:12: error: register must be a GPR from x8 to x15
 // CHECK-64: :[[#@LINE+1]]:12: error: register must be a GPR from x8 to x15
 c.ld a0, 0(s5)
-// CHECK-RVY32: :[[#@LINE+3]]:12: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:6: error: register must be a GPR from x8 to x15
 // CHECK-COMPAT32: :[[#@LINE+2]]:12: error: register must be a GPR from x8 to x15
 // CHECK-64: :[[#@LINE+1]]:12: error: register must be a GPR from x8 to x15
 c.sd a0, 0(s5)
@@ -56,11 +56,11 @@ c.lhu a0, 8(a0)
 c.sw a0, 7(a0)
 // CHECK: :[[#@LINE+1]]:10: error: immediate must be a multiple of 4 bytes in the range [0, 124]
 c.lw a0, 7(a0)
-// CHECK-RVY32: :[[#@LINE+3]]:10: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:6: error: register must be a GPR from x8 to x15
 // CHECK-COMPAT32: :[[#@LINE+2]]:10: error: immediate must be a multiple of 8 bytes in the range [0, 248]
 // CHECK-64: :[[#@LINE+1]]:10: error: immediate must be a multiple of 8 bytes in the range [0, 248]
 c.sd a0, 7(a0)
-// CHECK-RVY32: :[[#@LINE+3]]:10: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:6: error: register must be a GPR from x8 to x15
 // CHECK-COMPAT32: :[[#@LINE+2]]:10: error: immediate must be a multiple of 8 bytes in the range [0, 248]
 // CHECK-64: :[[#@LINE+1]]:10: error: immediate must be a multiple of 8 bytes in the range [0, 248]
 c.ld a0, 7(a0)
@@ -79,66 +79,80 @@ c.swsp a0, 16(a0)
 c.swsp a0, 15(a0)
 // CHECK-RVY32: :[[#@LINE+1]]:1: error: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions)
 c.ldsp a0, 16(sp) # valid only in compatibility mode
-// CHECK-RVY32: :[[#@LINE+3]]:15: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:8: error: register must be a GPR excluding zero (x0)
 // CHECK-COMPAT32: :[[#@LINE+2]]:15: error: register must be sp (x2)
 // CHECK-64: :[[#@LINE+1]]:15: error: register must be sp (x2)
 c.ldsp a0, 16(a0)
-// CHECK-RVY32: :[[#@LINE+3]]:8: error: invalid operand for instruction
-// CHECK-COMPAT32: :[[#@LINE+2]]:8: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:1: error: invalid instruction
+// CHECK-COMPAT32: :[[#@LINE+2]]:8: error: register pair must start with an even GPR other than x0
 // CHECK-64: :[[#@LINE+1]]:8: error: register must be a GPR excluding zero (x0)
 c.ldsp x0, 16(sp)
-// CHECK-RVY32: :[[#@LINE+3]]:12: error: invalid operand for instruction
-// CHECK-COMPAT32: :[[#@LINE+2]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
-// CHECK-64: :[[#@LINE+1]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-RVY32: :[[#@LINE+9]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK-RVY32-DAG: :[[#@LINE+8]]:8: note: register must be a GPR excluding zero (x0)
+// CHECK-RVY32-DAG: :[[#@LINE+7]]:12: note: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-COMPAT32: :[[#@LINE+6]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK-COMPAT32-DAG: :[[#@LINE+5]]:12: note: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-COMPAT32-DAG: :[[#@LINE+4]]:8: note: register must be a GPR excluding zero (x0)
+// CHECK-64: :[[#@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK-64-DAG: :[[#@LINE+2]]:12: note: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-64-DAG: :[[#@LINE+1]]:8: note: register pair must start with an even GPR other than x0
 c.ldsp a0, 15(a0)
-// CHECK-RVY32: :[[#@LINE+3]]:15: error: invalid operand for instruction
+// CHECK-RVY32: :[[#@LINE+3]]:8: error: register must be a GPR
 // CHECK-COMPAT32: :[[#@LINE+2]]:15: error: register must be sp (x2)
 // CHECK-64: :[[#@LINE+1]]:15: error: register must be sp (x2)
 c.sdsp a0, 16(a0)
-// CHECK-RVY32: :[[#@LINE+3]]:12: error: invalid operand for instruction
-// CHECK-COMPAT32: :[[#@LINE+2]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
-// CHECK-64: :[[#@LINE+1]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-RVY32: :[[#@LINE+9]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK-RVY32-DAG: :[[#@LINE+8]]:8: note: register must be a GPR
+// CHECK-RVY32-DAG: :[[#@LINE+7]]:12: note: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-COMPAT32: :[[#@LINE+6]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK-COMPAT32-DAG: :[[#@LINE+5]]:12: note: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-COMPAT32-DAG: :[[#@LINE+4]]:8: note: register must be a GPR
+// CHECK-64: :[[#@LINE+3]]:1: error: invalid instruction, any one of the following would fix this:
+// CHECK-64-DAG: :[[#@LINE+2]]:12: note: immediate must be a multiple of 8 bytes in the range [0, 504]
+// CHECK-64-DAG: :[[#@LINE+1]]:8: note: invalid operand for instruction
 c.sdsp a0, 15(a0)
 
 ///
 /// Test the new RVY instructions (illegal in compatibility mode)
-/// Note: Invalid operand currently has priority over missing features, so we
-/// get a bad diagnostic for compatibility mode.
+/// Note: In compatibility mode the new RVY-only compressed mnemonics
+/// (c.ly/c.sy/c.lysp/c.sysp) are not predicated in at all, so any use of
+/// them is reported as a plain "invalid instruction" rather than an
+/// operand-specific diagnostic.
 ///
-// CHECK-COMPAT: :[[#@LINE+2]]:13: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:13: error: register must be a GPR from x8 to x15
 c.ly a0, 16(s5)
-// CHECK-COMPAT: :[[#@LINE+2]]:6: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:6: error: register must be a GPR from x8 to x15
 c.ly s5, 16(a0)
-// CHECK-COMPAT: :[[#@LINE+3]]:10: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+3]]:1: error: invalid instruction
 // CHECK-RVY32: :[[#@LINE+2]]:10: error: immediate must be a multiple of 8 bytes in the range [0, 248]
 // CHECK-RVY64: :[[#@LINE+1]]:10: error: immediate must be a multiple of 16 bytes in the range [0, 496]
 c.ly a0, 15(a0)
-// CHECK-COMPAT: :[[#@LINE+2]]:13: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:13: error: register must be a GPR from x8 to x15
 c.sy a0, 16(s5)
-// CHECK-COMPAT: :[[#@LINE+2]]:6: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:6: error: register must be a GPR from x8 to x15
 c.sy s5, 16(a0)
-// CHECK-COMPAT: :[[#@LINE+3]]:10: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+3]]:1: error: invalid instruction
 // CHECK-RVY32: :[[#@LINE+2]]:10: error: immediate must be a multiple of 8 bytes in the range [0, 248]
 // CHECK-RVY64: :[[#@LINE+1]]:10: error: immediate must be a multiple of 16 bytes in the range [0, 496]
 c.sy a0, 15(a0)
-// CHECK-COMPAT: :[[#@LINE+2]]:15: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:15: error: register must be sp (x2)
 c.lysp a0, 16(a0)
-// CHECK-COMPAT: :[[#@LINE+2]]:8: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:8: error: register must be a GPR excluding zero (x0)
 c.lysp x0, 16(sp)
-// CHECK-COMPAT: :[[#@LINE+3]]:12: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+3]]:1: error: invalid instruction
 // CHECK-RVY32: :[[#@LINE+2]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
 // CHECK-RVY64: :[[#@LINE+1]]:12: error: immediate must be a multiple of 16 bytes in the range [0, 1008]
 c.lysp a0, 15(sp)
-// CHECK-COMPAT: :[[#@LINE+2]]:15: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+2]]:1: error: invalid instruction
 // CHECK-RVY: :[[#@LINE+1]]:15: error: register must be sp (x2)
 c.sysp a0, 16(a0)
-// CHECK-COMPAT: :[[#@LINE+3]]:12: error: invalid operand for instruction
+// CHECK-COMPAT: :[[#@LINE+3]]:1: error: invalid instruction
 // CHECK-RVY32: :[[#@LINE+2]]:12: error: immediate must be a multiple of 8 bytes in the range [0, 504]
 // CHECK-RVY64: :[[#@LINE+1]]:12: error: immediate must be a multiple of 16 bytes in the range [0, 1008]
 c.sysp a0, 15(sp)

@@ -33,11 +33,15 @@ add_public_tablegen_target(RISCVCommonTableGen)
 add_llvm_target(RISCVCodeGen
   RISCVAsmPrinter.cpp
   RISCVCallingConv.cpp
+  RISCVCodeGenPassBuilder.cpp
   RISCVCodeGenPrepare.cpp
   RISCVConstantPoolValue.cpp
   RISCVDeadRegisterDefinitions.cpp
-  RISCVExpandAtomicPseudoInsts.cpp
-  RISCVExpandPseudoInsts.cpp
+  RISCVExpandPseudoAtomics.cpp
+  RISCVExpandPseudoBase.cpp
+  RISCVExpandPseudoPostRA.cpp
+  RISCVExpandPseudoPreEmit.cpp
+  RISCVExpandPseudoPreRA.cpp
   RISCVFoldMemOffset.cpp
   RISCVFrameLowering.cpp
   RISCVGatherScatterLowering.cpp
@@ -58,9 +62,9 @@ add_llvm_target(RISCVCodeGen
   RISCVMergeBaseOffset.cpp
   RISCVMoveMerger.cpp
   RISCVOptWInstrs.cpp
-  RISCVPostRAExpandPseudoInsts.cpp
   RISCVPromoteConstant.cpp
   RISCVPushPopOptimizer.cpp
+  RISCVQCRelaxMarking.cpp
   RISCVRedundantCopyElimination.cpp
   RISCVRegisterInfo.cpp
   RISCVSelectionDAGInfo.cpp

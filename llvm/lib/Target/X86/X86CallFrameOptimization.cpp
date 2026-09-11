@@ -34,6 +34,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
@@ -123,6 +124,11 @@ public:
   X86CallFrameOptimizationLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
   static char ID;
 
@@ -533,6 +539,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
 
       // If storing a 32-bit vreg on 64-bit targets, extend to a 64-bit vreg
       // in preparation for the PUSH64. The upper 32 bits can be undef.
+      bool RegIsUndef = PushOp.isUndef();
       if (Is64Bit && Store->getOpcode() == X86::MOV32mr) {
         Register UndefReg = MRI->createVirtualRegister(&X86::GR64RegClass);
         Reg = MRI->createVirtualRegister(&X86::GR64RegClass);
@@ -541,6 +548,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
             .addReg(UndefReg)
             .add(PushOp)
             .addImm(X86::sub_32bit);
+        RegIsUndef = false;
       }
 
       // If PUSHrmm is not slow on this target, try to fold the source of the
@@ -562,7 +570,7 @@ void X86CallFrameOptimizationImpl::adjustCallSequence(
       } else {
         PushOpcode = Is64Bit ? X86::PUSH64r : X86::PUSH32r;
         Push = BuildMI(MBB, Context.Call, DL, TII->get(PushOpcode))
-                   .addReg(Reg)
+                   .addReg(Reg, getUndefRegState(RegIsUndef))
                    .getInstr();
         Push->cloneMemRefs(MF, *Store);
       }
@@ -611,22 +619,24 @@ MachineInstr *X86CallFrameOptimizationImpl::canFoldIntoRegPush(
   if (!MRI->hasOneNonDBGUse(Reg))
     return nullptr;
 
-  MachineInstr &DefMI = *MRI->getVRegDef(Reg);
+  MachineInstr *DefMI = MRI->getVRegDef(Reg);
+  if (!DefMI)
+    return nullptr;
 
   // Make sure the def is a MOV from memory.
   // If the def is in another block, give up.
-  if ((DefMI.getOpcode() != X86::MOV32rm &&
-       DefMI.getOpcode() != X86::MOV64rm) ||
-      DefMI.getParent() != FrameSetup->getParent())
+  if ((DefMI->getOpcode() != X86::MOV32rm &&
+       DefMI->getOpcode() != X86::MOV64rm) ||
+      DefMI->getParent() != FrameSetup->getParent())
     return nullptr;
 
   // Make sure we don't have any instructions between DefMI and the
   // push that make folding the load illegal.
-  for (MachineBasicBlock::iterator I = DefMI; I != FrameSetup; ++I)
+  for (MachineBasicBlock::iterator I = *DefMI; I != FrameSetup; ++I)
     if (I->isLoadFoldBarrier())
       return nullptr;
 
-  return &DefMI;
+  return DefMI;
 }
 
 FunctionPass *llvm::createX86CallFrameOptimizationLegacyPass() {

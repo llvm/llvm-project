@@ -244,6 +244,7 @@ void tools::gnutools::StaticLibTool::ConstructJob(
   ArgStringList CmdArgs;
   // Create and insert file members with a deterministic index.
   CmdArgs.push_back("rcsD");
+  Args.AddAllArgValues(CmdArgs, options::OPT_Xstatic_lib_tool);
   CmdArgs.push_back(Output.getFilename());
 
   for (const auto &II : Inputs) {
@@ -510,6 +511,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         // FIXME: Does this really make sense for all GNU toolchains?
         WantPthread = true;
 
+      addLLVMOffloadingRuntime(C, CmdArgs, ToolChain, Args);
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
       // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
@@ -532,6 +534,24 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
+
+      // musl does not provide __stack_chk_fail_local, but GCC emits calls
+      // to it in PIC/PIE code on some targets (32-bit x86, PowerPC). musl
+      // distributions ship the symbol in libssp_nonshared.a and make GCC
+      // link it when stack protection is on; match that if the library
+      // exists.
+      if (ToolChain.getTriple().isMusl()) {
+        bool WantsSSP = ToolChain.GetDefaultStackProtectorLevel(
+                            /*KernelOrKext=*/false) != LangOptions::SSPOff;
+        if (Arg *A = Args.getLastArg(options::OPT_fno_stack_protector,
+                                     options::OPT_fstack_protector,
+                                     options::OPT_fstack_protector_all,
+                                     options::OPT_fstack_protector_strong))
+          WantsSSP = !A->getOption().matches(options::OPT_fno_stack_protector);
+        if (WantsSSP &&
+            ToolChain.GetFilePath("libssp_nonshared.a") != "libssp_nonshared.a")
+          CmdArgs.push_back("-lssp_nonshared");
+      }
 
       // Add IAMCU specific libs, if needed.
       if (IsIAMCU)
@@ -3067,7 +3087,7 @@ Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   switch (getArch()) {
   case llvm::Triple::aarch64:
   case llvm::Triple::aarch64_be:
-  case llvm::Triple::amdgcn:
+  case llvm::Triple::amdgpu:
   case llvm::Triple::ppc:
   case llvm::Triple::ppcle:
   case llvm::Triple::ppc64:
@@ -3454,8 +3474,7 @@ Generic_GCC::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 }
 
 llvm::opt::DerivedArgList *
-Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
-                           StringRef BoundArch,
+Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
                            Action::OffloadKind DeviceOffloadKind) const {
   if (DeviceOffloadKind == Action::OFK_None ||
       DeviceOffloadKind == Action::OFK_Host)
@@ -3483,13 +3502,13 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
   }
 
   // Add the bound architecture to the arguments list if present.
-  if (!BoundArch.empty()) {
+  if (!BA.empty()) {
     options::ID Opt = getTriple().isARM() || getTriple().isPPC() ||
                               getTriple().isAArch64() || getTriple().isAMDGPU()
                           ? options::OPT_mcpu_EQ
                           : options::OPT_march_EQ;
     DAL->eraseArg(Opt);
-    DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BoundArch);
+    DAL->AddJoinedArg(nullptr, Opts.getOption(Opt), BA.ArchName);
   }
 
   return DAL;
@@ -3498,8 +3517,7 @@ Generic_GCC::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 void Generic_ELF::anchor() {}
 
 void Generic_ELF::addClangTargetOptions(const ArgList &DriverArgs,
-                                        ArgStringList &CC1Args,
-                                        StringRef BoundArch,
+                                        ArgStringList &CC1Args, BoundArch BA,
                                         Action::OffloadKind) const {
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array, true))

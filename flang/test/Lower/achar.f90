@@ -12,7 +12,7 @@ subroutine achar_test1(a)
 end subroutine achar_test1
 
 ! CHECK-LABEL: func.func @_QPachar_test1(
-! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32> {fir.bindc_name = "a"}) {
+! CHECK-SAME: %[[ARG:.*]]: !fir.ref<i32> {fir.bindc_name = "a", fir.read_only}) {
 ! CHECK: %[[TMP:.*]] = fir.alloca !fir.char<1>
 ! CHECK: %[[DSCOPE:.*]] = fir.dummy_scope : !fir.dscope
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %[[DSCOPE]] arg 1 {fortran_attrs = #fir.var_attrs<intent_in>, uniq_name = "_QFachar_test1Ea"}

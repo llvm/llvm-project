@@ -1,5 +1,7 @@
-; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -homogeneous-prolog-epilog| FileCheck %s
-; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu  -homogeneous-prolog-epilog | FileCheck %s --check-prefixes=CHECK-LINUX
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -homogeneous-prolog-epilog | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu -homogeneous-prolog-epilog | FileCheck %s --check-prefix=CHECK-LINUX
+
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0 -homogeneous-prolog-epilog -stop-after=aarch64-lower-homogeneous-prolog-epilog | FileCheck %s --check-prefix=MIR
 
 ; CHECK-LABEL: __Z3hooii:
 ; CHECK:      stp     x29, x30, [sp, #-16]!
@@ -77,3 +79,14 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 define void @swift_async(ptr swiftasync %ctx) minsize "frame-pointer"="all" {
   ret void
 }
+
+; MIR-LABEL: name: OUTLINED_FUNCTION_PROLOG_x30x29x19x20x21x22
+; MIR-DAG:   tracksRegLiveness: false
+; MIR-DAG:   isSSA: false
+; MIR-DAG:   noVRegs: true
+; MIR-DAG:   noPhis: true
+; MIR-LABEL: name: OUTLINED_FUNCTION_EPILOG_x30x29x19x20x21x22
+; MIR-DAG:   tracksRegLiveness: false
+; MIR-DAG:   isSSA: false
+; MIR-DAG:   noVRegs: true
+; MIR-DAG:   noPhis: true

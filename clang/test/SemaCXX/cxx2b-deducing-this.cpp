@@ -1170,6 +1170,19 @@ struct S {
 };
 }
 
+namespace GH136472 {
+template<class T>
+struct S {
+  struct Nested {
+      void f(this auto);
+  };
+};
+
+// Test that out-of-line member definition of dependent nested class works
+template<class T>
+void S<T>::Nested::f(this auto) {}
+}
+
 namespace tpl_address {
 
 struct A {

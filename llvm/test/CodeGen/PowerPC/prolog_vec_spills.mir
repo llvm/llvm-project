@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -run-pass=prologepilog -ppc-enable-pe-vector-spills %s -o - | FileCheck %s
+# RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -run-pass=prolog-epilog -ppc-enable-pe-vector-spills %s -o - | FileCheck %s
 
 ---
 name:            test1BB

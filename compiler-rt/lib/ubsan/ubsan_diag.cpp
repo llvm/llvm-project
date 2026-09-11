@@ -438,6 +438,9 @@ bool __ubsan::IsVptrCheckSuppressed(const char *TypeName) {
 bool __ubsan::IsPCSuppressed(ErrorType ET, uptr PC, const char *Filename) {
   InitAsStandaloneIfNecessary();
   CHECK(suppression_ctx);
+  // PC is the return address from the UBSan handler call. Symbolize the
+  // instruction that caused the call.
+  PC = StackTrace::GetPreviousInstructionPc(PC);
   const char *SuppType = ConvertTypeToFlagName(ET);
   // Fast path: don't symbolize PC if there is no suppressions for given UB
   // type.
@@ -453,6 +456,9 @@ bool __ubsan::IsPCSuppressed(ErrorType ET, uptr PC, const char *Filename) {
       return true;
   }
   // Suppress by function or source file name from debug info.
+  // The first frame is the innermost logical inline frame, if inline debug
+  // information is available. Do not search the rest of the chain: a
+  // suppression for an inline wrapper must not suppress an inlined callee.
   SymbolizedStackHolder Stack(Symbolizer::GetOrInit()->SymbolizePC(PC));
   const AddressInfo &AI = Stack.get()->info;
   return suppression_ctx->Match(AI.function, SuppType, &s) ||

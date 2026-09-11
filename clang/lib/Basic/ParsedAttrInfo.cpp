@@ -12,13 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/ParsedAttrInfo.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/Support/ManagedStatic.h"
 #include <list>
 #include <memory>
 
 using namespace clang;
 
-LLVM_INSTANTIATE_REGISTRY(ParsedAttrInfoRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, ParsedAttrInfoRegistry)
 
 static std::list<std::unique_ptr<ParsedAttrInfo>> instantiateEntries() {
   std::list<std::unique_ptr<ParsedAttrInfo>> Instances;

@@ -72,6 +72,19 @@ def int_aarch64_break : Intrinsic<[], [llvm_i32_ty],
 def int_aarch64_hlt : Intrinsic<[], [llvm_i32_ty],
     [IntrNoMem, IntrHasSideEffects, IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>]>;
 
+// The first operand is the 16-bit instruction immediate.  The remaining four
+// operands are the values passed in X0-X3 following the Microsoft __hvc calling
+// convention (this is a Microsoft software convention, not an architectural
+// requirement); an unused argument is passed as poison.  The result is the
+// value left in X0.
+def int_aarch64_hvc : Intrinsic<[llvm_i64_ty],
+    [llvm_i32_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+    [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
+def int_aarch64_svc : Intrinsic<[llvm_i64_ty],
+    [llvm_i32_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty, llvm_i64_ty],
+    [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+
 def int_aarch64_prefetch : Intrinsic<[],
     [llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
     [IntrInaccessibleMemOrArgMemOnly, IntrWillReturn, ReadOnly<ArgIndex<0>>,
@@ -732,6 +745,12 @@ def int_aarch64_neon_tbx2 : AdvSIMD_Tbx2_Intrinsic;
 def int_aarch64_neon_tbx3 : AdvSIMD_Tbx3_Intrinsic;
 def int_aarch64_neon_tbx4 : AdvSIMD_Tbx4_Intrinsic;
 
+// Maps Memory locations to registers.
+defvar FFR = InaccessibleMem;
+defvar FPMR = InaccessibleMem;
+defvar ZT0 = TargetMem0;
+defvar ZA = TargetMem1;
+
 let TargetPrefix = "aarch64" in {
   class FPENV_Get_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty], [], [IntrNoMem, IntrHasSideEffects]>;
@@ -740,7 +759,7 @@ let TargetPrefix = "aarch64" in {
   class RNDR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_i64_ty, llvm_i1_ty], [], [IntrNoMem, IntrHasSideEffects]>;
   class FPMR_Set_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWriteMem, IntrInaccessibleMemOnly]>;
+    : DefaultAttrsIntrinsic<[], [llvm_i64_ty], [IntrWrite<[FPMR]>, IntrWriteOnly]>;
 }
 
 // FP environment registers.
@@ -965,7 +984,8 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
 
   // Conversions
   class AdvSIMD_FP8_1VectorArg_Long_Intrinsic
-    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_anyvector_ty],
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   def int_aarch64_neon_fp8_cvtl1   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
   def int_aarch64_neon_fp8_cvtl2   : AdvSIMD_FP8_1VectorArg_Long_Intrinsic;
@@ -974,13 +994,13 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [llvm_anyvector_ty,
                              LLVMMatchType<1>],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
   def int_aarch64_neon_fp8_fcvtn2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>,
                              llvm_anyvector_ty,
                              LLVMMatchType<1>],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   // Dot-product
   class AdvSIMD_FP8_DOT_Intrinsic
@@ -988,14 +1008,14 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
                             [LLVMMatchType<0>,
                              llvm_anyvector_ty,
                              LLVMMatchType<1>],
-                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
   class AdvSIMD_FP8_DOT_LANE_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>,
                              llvm_anyvector_ty,
                              llvm_v16i8_ty,
                              llvm_i32_ty],
-                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+                             [IntrRead<[FPMR]>, IntrReadOnly, ImmArg<ArgIndex<3>>]>;
 
   def int_aarch64_neon_fp8_fdot2 : AdvSIMD_FP8_DOT_Intrinsic;
   def int_aarch64_neon_fp8_fdot2_lane : AdvSIMD_FP8_DOT_LANE_Intrinsic;
@@ -1010,7 +1030,7 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
                             [LLVMMatchType<0>,
                              llvm_v16i8_ty,
                              llvm_v16i8_ty],
-                             [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   class AdvSIMD_FP8_FMLA_LANE_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1018,7 +1038,7 @@ def int_aarch64_st64bv0: Intrinsic<[llvm_i64_ty], !listconcat([llvm_ptr_ty], dat
                              llvm_v16i8_ty,
                              llvm_v16i8_ty,
                              llvm_i32_ty],
-                             [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+                             [IntrRead<[FPMR]>, IntrReadOnly, ImmArg<ArgIndex<3>>]>;
 
   def int_aarch64_neon_fp8_fmlalb : AdvSIMD_FP8_FMLA_Intrinsic;
   def int_aarch64_neon_fp8_fmlalt : AdvSIMD_FP8_FMLA_Intrinsic;
@@ -1077,7 +1097,7 @@ let TargetPrefix = "aarch64" in {  // All intrinsics start with "llvm.aarch64.".
   class AdvSIMD_1Vec_PredLoad_WriteFFR_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                 [LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>, llvm_anyptr_ty],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
   class AdvSIMD_1Vec_PredStore_Intrinsic
     : DefaultAttrsIntrinsic<[],
@@ -1584,7 +1604,7 @@ class AdvSIMD_GatherLoad_SV_64b_Offsets_WriteFFR_Intrinsic
                   llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i64_ty>
                 ],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
 class AdvSIMD_GatherLoad_SV_32b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1602,7 +1622,7 @@ class AdvSIMD_GatherLoad_SV_32b_Offsets_WriteFFR_Intrinsic
                   llvm_anyptr_ty,
                   LLVMScalarOrSameVectorWidth<0, llvm_i32_ty>
                 ],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
 class AdvSIMD_GatherLoad_VS_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
@@ -1638,7 +1658,7 @@ class AdvSIMD_GatherLoad_VS_WriteFFR_Intrinsic
                   llvm_anyvector_ty,
                   llvm_i64_ty
                 ],
-                [IntrInaccessibleMemOrArgMemOnly]>;
+                [IntrRead<[ArgMem, FFR]>, IntrWrite<[FFR]>]>;
 
 class AdvSIMD_ScatterStore_SV_64b_Offsets_Intrinsic
     : DefaultAttrsIntrinsic<[],
@@ -1949,10 +1969,10 @@ def int_aarch64_sve_lastp  : AdvSIMD_SVE_CNTP_Intrinsic<[IntrSpeculatable]>;
 // FFR manipulation
 //
 
-def int_aarch64_sve_rdffr   : ClangBuiltin<"__builtin_sve_svrdffr">,   DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [], [IntrReadMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_rdffr_z : ClangBuiltin<"__builtin_sve_svrdffr_z">, DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [llvm_nxv16i1_ty], [IntrReadMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_setffr  : ClangBuiltin<"__builtin_sve_svsetffr">,  DefaultAttrsIntrinsic<[], [], [IntrWriteMem, IntrInaccessibleMemOnly]>;
-def int_aarch64_sve_wrffr   : ClangBuiltin<"__builtin_sve_svwrffr">,   DefaultAttrsIntrinsic<[], [llvm_nxv16i1_ty], [IntrWriteMem, IntrInaccessibleMemOnly]>;
+def int_aarch64_sve_rdffr   : ClangBuiltin<"__builtin_sve_svrdffr">,   DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [], [IntrRead<[FFR]>, IntrReadOnly]>;
+def int_aarch64_sve_rdffr_z : ClangBuiltin<"__builtin_sve_svrdffr_z">, DefaultAttrsIntrinsic<[llvm_nxv16i1_ty], [llvm_nxv16i1_ty], [IntrRead<[FFR]>, IntrReadOnly]>;
+def int_aarch64_sve_setffr  : ClangBuiltin<"__builtin_sve_svsetffr">,  DefaultAttrsIntrinsic<[], [], [IntrWrite<[FFR]>, IntrWriteOnly]>;
+def int_aarch64_sve_wrffr   : ClangBuiltin<"__builtin_sve_svwrffr">,   DefaultAttrsIntrinsic<[], [llvm_nxv16i1_ty], [IntrWrite<[FFR]>, IntrWriteOnly]>;
 
 //
 // Saturating scalar arithmetic
@@ -2319,13 +2339,17 @@ def int_aarch64_sve_ptest_last  : AdvSIMD_SVE_PTEST_Intrinsic<[IntrSpeculatable]
 // Reinterpreting data
 //
 
-def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<[llvm_any_ty],
-                                                    [llvm_nxv16i1_ty],
-                                                    [IntrNoMem, IntrSpeculatable]>;
+def int_aarch64_sve_convert_from_svbool : DefaultAttrsIntrinsic<
+    [llvm_anyvector_ty], [llvm_nxv16i1_ty], [IntrNoMem, IntrSpeculatable]>;
 
-def int_aarch64_sve_convert_to_svbool : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                                                  [llvm_any_ty],
-                                                  [IntrNoMem, IntrSpeculatable]>;
+def int_aarch64_sve_convert_to_svbool : DefaultAttrsIntrinsic<
+    [llvm_nxv16i1_ty], [llvm_anyvector_ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_aarch64_sve_convert_from_svcount : DefaultAttrsIntrinsic<
+    [llvm_nxv16i1_ty], [llvm_aarch64_svcount_ty], [IntrNoMem, IntrSpeculatable]>;
+
+def int_aarch64_sve_convert_to_svcount : DefaultAttrsIntrinsic<
+    [llvm_aarch64_svcount_ty], [llvm_nxv16i1_ty], [IntrNoMem, IntrSpeculatable]>;
 
 //
 // Gather loads: scalar base + vector offsets
@@ -2860,7 +2884,7 @@ def int_aarch64_sve_fmmla
 def int_aarch64_sve_fp8_fmmla
   : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                           [LLVMMatchType<0>, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                          [IntrReadMem, IntrInaccessibleMemOnly]>;
+                          [IntrRead<[FPMR]>, IntrReadOnly]>;
 
 //
 // SVE ACLE: 7.2. BFloat16 extensions
@@ -2961,48 +2985,60 @@ def int_aarch64_sve_whilewr_d : SVE2_CONFLICT_DETECT_Intrinsic<[IntrSpeculatable
 
 // Scalable Matrix Extension (SME) Intrinsics
 let TargetPrefix = "aarch64" in {
-  class SME_Load_Store_Intrinsic<LLVMType pred_ty>
+  class SME_Load_Intrinsic<LLVMType pred_ty>
     : DefaultAttrsIntrinsic<[],
-        [pred_ty, llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly, ImmArg<ArgIndex<2>>]>;
+        [pred_ty, llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty],
+        [IntrRead<[ArgMem, ZA]>, IntrWrite<[ZA]>,
+         ImmArg<ArgIndex<2>>]>;
+  class SME_Store_Intrinsic<LLVMType pred_ty>
+    : DefaultAttrsIntrinsic<[],
+        [pred_ty, llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty],
+        [IntrRead<[ZA]>, IntrWrite<[ArgMem, ZA]>,
+         ImmArg<ArgIndex<2>>]>;
 
   // Loads
-  def int_aarch64_sme_ld1b_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1h_horiz : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
-  def int_aarch64_sme_ld1w_horiz : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
-  def int_aarch64_sme_ld1d_horiz : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
-  def int_aarch64_sme_ld1q_horiz : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
-  def int_aarch64_sme_ld1b_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_ld1h_vert  : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
-  def int_aarch64_sme_ld1w_vert  : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
-  def int_aarch64_sme_ld1d_vert  : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
-  def int_aarch64_sme_ld1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
+  def int_aarch64_sme_ld1b_horiz : SME_Load_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_ld1h_horiz : SME_Load_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_ld1w_horiz : SME_Load_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_ld1d_horiz : SME_Load_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_ld1q_horiz : SME_Load_Intrinsic<llvm_nxv1i1_ty>;
+  def int_aarch64_sme_ld1b_vert  : SME_Load_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_ld1h_vert  : SME_Load_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_ld1w_vert  : SME_Load_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_ld1d_vert  : SME_Load_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_ld1q_vert  : SME_Load_Intrinsic<llvm_nxv1i1_ty>;
 
   // Stores
-  def int_aarch64_sme_st1b_horiz : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1h_horiz : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
-  def int_aarch64_sme_st1w_horiz : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
-  def int_aarch64_sme_st1d_horiz : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
-  def int_aarch64_sme_st1q_horiz : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
-  def int_aarch64_sme_st1b_vert  : SME_Load_Store_Intrinsic<llvm_nxv16i1_ty>;
-  def int_aarch64_sme_st1h_vert  : SME_Load_Store_Intrinsic<llvm_nxv8i1_ty>;
-  def int_aarch64_sme_st1w_vert  : SME_Load_Store_Intrinsic<llvm_nxv4i1_ty>;
-  def int_aarch64_sme_st1d_vert  : SME_Load_Store_Intrinsic<llvm_nxv2i1_ty>;
-  def int_aarch64_sme_st1q_vert  : SME_Load_Store_Intrinsic<llvm_nxv1i1_ty>;
+  def int_aarch64_sme_st1b_horiz : SME_Store_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_st1h_horiz : SME_Store_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_st1w_horiz : SME_Store_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_st1d_horiz : SME_Store_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_st1q_horiz : SME_Store_Intrinsic<llvm_nxv1i1_ty>;
+  def int_aarch64_sme_st1b_vert  : SME_Store_Intrinsic<llvm_nxv16i1_ty>;
+  def int_aarch64_sme_st1h_vert  : SME_Store_Intrinsic<llvm_nxv8i1_ty>;
+  def int_aarch64_sme_st1w_vert  : SME_Store_Intrinsic<llvm_nxv4i1_ty>;
+  def int_aarch64_sme_st1d_vert  : SME_Store_Intrinsic<llvm_nxv2i1_ty>;
+  def int_aarch64_sme_st1q_vert  : SME_Store_Intrinsic<llvm_nxv1i1_ty>;
 
   // Spill + fill
-  class SME_LDR_STR_ZA_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty, llvm_i32_ty], [IntrInaccessibleMemOrArgMemOnly]>;
-  def int_aarch64_sme_ldr : SME_LDR_STR_ZA_Intrinsic;
-  def int_aarch64_sme_str : SME_LDR_STR_ZA_Intrinsic;
+  def int_aarch64_sme_ldr
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty, llvm_i32_ty],
+                            [IntrRead<[ArgMem, ZA]>, IntrWrite<[ZA]>]>;
+  def int_aarch64_sme_str
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty, llvm_i32_ty],
+                            [IntrRead<[ZA]>, IntrWrite<[ArgMem, ZA]>]>;
+
 
   class SME_TileToVector_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
           [LLVMMatchType<0>, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-           llvm_i32_ty, llvm_i32_ty], [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<2>>]>;
+           llvm_i32_ty, llvm_i32_ty], [IntrRead<[ZA]>, IntrReadOnly,
+                                        ImmArg<ArgIndex<2>>]>;
   class SME_VectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty, llvm_i32_ty, LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-           llvm_anyvector_ty], [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+           llvm_anyvector_ty], [IntrRead<[ZA]>, IntrWrite<[ZA]>,
+                                ImmArg<ArgIndex<0>>]>;
 
   def int_aarch64_sme_read_horiz  : SME_TileToVector_Intrinsic;
   def int_aarch64_sme_read_vert   : SME_TileToVector_Intrinsic;
@@ -3017,13 +3053,13 @@ let TargetPrefix = "aarch64" in {
   class SME_MOVAZ_TileToVector_X2_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
           [llvm_i32_ty, llvm_i32_ty],
-          [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+          [IntrWrite<[ZA]>, IntrRead<[ZA]>, ImmArg<ArgIndex<0>>]>;
 
   class SME_MOVAZ_TileToVector_X4_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
            LLVMMatchType<0>,LLVMMatchType<0>],
           [llvm_i32_ty, llvm_i32_ty],
-          [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+          [IntrWrite<[ZA]>, IntrRead<[ZA]>, ImmArg<ArgIndex<0>>]>;
 
   def int_aarch64_sme_readz_horiz_x2 : SME_MOVAZ_TileToVector_X2_Intrinsic;
   def int_aarch64_sme_readz_vert_x2  : SME_MOVAZ_TileToVector_X2_Intrinsic;
@@ -3034,7 +3070,7 @@ let TargetPrefix = "aarch64" in {
   class SME_MOVAZ_TileToVector_Intrinsic
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
           [llvm_i32_ty, llvm_i32_ty],
-          [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+          [IntrWrite<[ZA]>, IntrRead<[ZA]>, ImmArg<ArgIndex<0>>]>;
 
   def int_aarch64_sme_readz_horiz : SME_MOVAZ_TileToVector_Intrinsic;
   def int_aarch64_sme_readz_vert  : SME_MOVAZ_TileToVector_Intrinsic;
@@ -3045,23 +3081,24 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_readz_x2
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
           [llvm_i32_ty],
-          [IntrInaccessibleMemOnly]>;
+          [IntrWrite<[ZA]>, IntrRead<[ZA]>]>;
 
   def int_aarch64_sme_readz_x4
       : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
           [llvm_i32_ty],
-          [IntrInaccessibleMemOnly]>;
+          [IntrWrite<[ZA]>, IntrRead<[ZA]>]>;
 
   def int_aarch64_sme_write_lane_zt
        :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty, llvm_i32_ty],
-            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly]>;
+            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>,
+             IntrWrite<[ZT0]>]>;
 
   def int_aarch64_sme_write_zt
        :  DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyvector_ty],
-            [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrWriteMem]>;
+            [ImmArg<ArgIndex<0>>, IntrWrite<[ZT0]>, IntrWriteOnly]>;
 
 
-  def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [IntrWriteMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+  def int_aarch64_sme_zero : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [IntrWrite<[ZA]>, IntrWriteOnly, ImmArg<ArgIndex<0>>]>;
   def int_aarch64_sme_in_streaming_mode : DefaultAttrsIntrinsic<[llvm_i1_ty], [], [IntrNoMem]>, ClangBuiltin<"__builtin_arm_in_streaming_mode">;
 
   class SME_OuterProduct_Intrinsic
@@ -3070,7 +3107,8 @@ let TargetPrefix = "aarch64" in {
            LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
            LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
            LLVMMatchType<0>,
-           llvm_anyvector_ty], [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+           llvm_anyvector_ty], [IntrRead<[ZA]>, IntrWrite<[ZA]>,
+                                ImmArg<ArgIndex<0>>]>;
 
   def int_aarch64_sme_mopa : SME_OuterProduct_Intrinsic;
   def int_aarch64_sme_mops : SME_OuterProduct_Intrinsic;
@@ -3090,15 +3128,30 @@ let TargetPrefix = "aarch64" in {
   class SME_OuterProduct_QuarterTile_Single_Single
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
+           llvm_anyvector_ty,
+           LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrRead<[ZA]>,
+                               IntrWrite<[ZA]>, IntrHasSideEffects]>;
+
+ class SME_FP8_OuterProduct_QuarterTile_Single_Single
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
           llvm_anyvector_ty,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>, IntrHasSideEffects]>;
 
   class SME_OuterProduct_QuarterTile_Single_Multi
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
           llvm_anyvector_ty,
           LLVMMatchType<0>,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrRead<[ZA]>,
+                              IntrWrite<[ZA]>, IntrHasSideEffects]>;
+
+  class SME_FP8_OuterProduct_QuarterTile_Single_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>, IntrHasSideEffects]>;
 
   class SME_OuterProduct_QuarterTile_Multi_Multi
       : DefaultAttrsIntrinsic<[],
@@ -3106,7 +3159,16 @@ let TargetPrefix = "aarch64" in {
           llvm_anyvector_ty,
           LLVMMatchType<0>,
           LLVMMatchType<0>,
-          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrRead<[ZA]>,
+                              IntrWrite<[ZA]>, IntrHasSideEffects]>;
+
+  class SME_FP8_OuterProduct_QuarterTile_Multi_Multi
+      : DefaultAttrsIntrinsic<[],
+          [llvm_i32_ty,
+          llvm_anyvector_ty,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>,
+          LLVMMatchType<0>], [ImmArg<ArgIndex<0>>, IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>, IntrHasSideEffects]>;
 
   // 2-way and 4-way multi-vector signed/unsigned Quarter Tile Quarter Product A/S
   foreach mode = ["s", "a"] in {
@@ -3138,8 +3200,8 @@ let TargetPrefix = "aarch64" in {
           LLVMMatchType<0>,
           llvm_nxv16i8_ty,
           llvm_i32_ty],
-         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
-          IntrInaccessibleMemOnly]>;
+         [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>, IntrRead<[ZA]>,
+          IntrWrite<[ZA]>]>;
 
   def int_aarch64_sme_ftmopa_za16 : SME_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_ftmopa_za32 : SME_OuterProduct_TMOP_Intrinsic;
@@ -3157,17 +3219,17 @@ let TargetPrefix = "aarch64" in {
           llvm_nxv16i8_ty,
           llvm_i32_ty],
          [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<5>>,
-          IntrInaccessibleMemOnly]>;
+          IntrRead<[ZA, FPMR]>, IntrWrite<[ZA]>]>;
 
   def int_aarch64_sme_fp8_ftmopa_za16 : SME_FP8_OuterProduct_TMOP_Intrinsic;
   def int_aarch64_sme_fp8_ftmopa_za32 : SME_FP8_OuterProduct_TMOP_Intrinsic;
 
   // 16 and 32 bit multi-vector floating point 8 Quarter Tile Quarter Product
   foreach za = ["za16", "za32"] in {
-    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x1" : SME_OuterProduct_QuarterTile_Single_Single;
-    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x2" : SME_OuterProduct_QuarterTile_Single_Multi;
-    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x1" : SME_OuterProduct_QuarterTile_Single_Multi;
-    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x2" : SME_OuterProduct_QuarterTile_Multi_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x1" : SME_FP8_OuterProduct_QuarterTile_Single_Single;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x2" : SME_FP8_OuterProduct_QuarterTile_Single_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x1" : SME_FP8_OuterProduct_QuarterTile_Single_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x2" : SME_FP8_OuterProduct_QuarterTile_Multi_Multi;
   }
 
   class SME_AddVectorToTile_Intrinsic
@@ -3175,7 +3237,8 @@ let TargetPrefix = "aarch64" in {
           [llvm_i32_ty,
            LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
            LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>,
-           llvm_anyvector_ty], [IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+           llvm_anyvector_ty], [IntrRead<[ZA]>, IntrWrite<[ZA]>,
+                                ImmArg<ArgIndex<0>>]>;
 
   def int_aarch64_sme_addha : SME_AddVectorToTile_Intrinsic;
   def int_aarch64_sme_addva : SME_AddVectorToTile_Intrinsic;
@@ -3199,9 +3262,9 @@ let TargetPrefix = "aarch64" in {
                               [IntrNoMem, IntrHasSideEffects]>;
 
   def int_aarch64_sme_za_enable
-      : DefaultAttrsIntrinsic<[], [], [IntrWriteMem, IntrInaccessibleMemOnly]>;
+      : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
   def int_aarch64_sme_za_disable
-      : DefaultAttrsIntrinsic<[], [], [IntrWriteMem, IntrInaccessibleMemOnly]>;
+      : DefaultAttrsIntrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
 
   // Clamp
   //
@@ -3222,8 +3285,8 @@ let TargetPrefix = "aarch64" in {
   //
 
   def int_aarch64_sve_psel
-      : DefaultAttrsIntrinsic<[llvm_nxv16i1_ty],
-                              [llvm_nxv16i1_ty,
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [LLVMMatchType<0>,
                                llvm_anyvector_ty, llvm_i32_ty],
                               [IntrNoMem]>;
 
@@ -3290,56 +3353,59 @@ let TargetPrefix = "aarch64" in {
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>],
-                [IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SME2_Matrix_ArrayVector_VG2_Multi_Single_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>],
-                [IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SME2_Matrix_ArrayVector_VG4_Multi_Single_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>],
-                [IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SME2_Matrix_ArrayVector_VG2_Multi_Multi_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>],
-                [IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SME2_Matrix_ArrayVector_VG4_Multi_Multi_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
-                [IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SME2_Matrix_ArrayVector_Single_Index_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                 llvm_anyvector_ty,
                 LLVMMatchType<0>, llvm_i32_ty],
-                [IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>,
+                 ImmArg<ArgIndex<3>>]>;
 
   class SME2_Matrix_ArrayVector_VG2_Multi_Index_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>,
                  LLVMMatchType<0>, llvm_i32_ty],
-                [IntrInaccessibleMemOnly, ImmArg<ArgIndex<4>>]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>,
+                 ImmArg<ArgIndex<4>>]>;
 
   class SME2_Matrix_ArrayVector_VG4_Multi_Index_Intrinsic
     : DefaultAttrsIntrinsic<[],
                 [llvm_i32_ty,
                  llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
                  LLVMMatchType<0>, llvm_i32_ty],
-                [IntrInaccessibleMemOnly, ImmArg<ArgIndex<6>>]>;
+                [IntrRead<[ZA]>, IntrWrite<[ZA]>,
+                 ImmArg<ArgIndex<6>>]>;
 
   class SVE2_VG2_Multi_Imm_Intrinsic
     : DefaultAttrsIntrinsic<[LLVMSubdivide2VectorType<0>],
@@ -3358,14 +3424,14 @@ let TargetPrefix = "aarch64" in {
    : DefaultAttrsIntrinsic<[],
                [llvm_i32_ty,
                 llvm_anyvector_ty, LLVMMatchType<0>],
-               [IntrInaccessibleMemOnly]>;
+               [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SME2_ZA_Write_VG4_Intrinsic
    : DefaultAttrsIntrinsic<[],
                [llvm_i32_ty,
                 llvm_anyvector_ty, LLVMMatchType<0>,
                 LLVMMatchType<0>,  LLVMMatchType<0>],
-               [IntrInaccessibleMemOnly]>;
+               [IntrRead<[ZA]>, IntrWrite<[ZA]>]>;
 
   class SVE2_VG2_Multi_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
@@ -3483,50 +3549,50 @@ let TargetPrefix = "aarch64" in {
   class SME2_ZA_ArrayVector_Read_VG2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [llvm_i32_ty],
-                [IntrReadMem, IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrReadOnly]>;
 
   class SME2_ZA_ArrayVector_Read_VG4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                              LLVMMatchType<0>,  LLVMMatchType<0>],
                 [llvm_i32_ty],
-                [IntrReadMem, IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrReadOnly]>;
 
   class SME2_Matrix_TileVector_Read_VG2_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                 [llvm_i32_ty, llvm_i32_ty],
-                [IntrReadMem, IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrReadOnly]>;
 
   class SME2_Matrix_TileVector_Read_VG4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>,
                              LLVMMatchType<0>,  LLVMMatchType<0>],
                 [llvm_i32_ty, llvm_i32_ty],
-                [IntrReadMem, IntrInaccessibleMemOnly]>;
+                [IntrRead<[ZA]>, IntrReadOnly]>;
 
   class SME2_ZA_ArrayVector_Write_VG2_Intrinsic
    : DefaultAttrsIntrinsic<[],
                [llvm_i32_ty,
                 llvm_anyvector_ty, LLVMMatchType<0>],
-               [IntrWriteMem, IntrInaccessibleMemOnly]>;
+               [IntrWrite<[ZA]>, IntrWriteOnly]>;
 
   class SME2_ZA_ArrayVector_Write_VG4_Intrinsic
    : DefaultAttrsIntrinsic<[],
                [llvm_i32_ty,
                 llvm_anyvector_ty, LLVMMatchType<0>,
                 LLVMMatchType<0>,  LLVMMatchType<0>],
-               [IntrWriteMem, IntrInaccessibleMemOnly]>;
+               [IntrWrite<[ZA]>, IntrWriteOnly]>;
 
   class SME2_Matrix_TileVector_Write_VG2_Intrinsic
    : DefaultAttrsIntrinsic<[],
                [llvm_i32_ty, llvm_i32_ty,
                 llvm_anyvector_ty, LLVMMatchType<0>],
-               [IntrWriteMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+               [IntrWrite<[ZA]>, IntrWriteOnly, ImmArg<ArgIndex<0>>]>;
 
   class SME2_Matrix_TileVector_Write_VG4_Intrinsic
    : DefaultAttrsIntrinsic<[],
                [llvm_i32_ty, llvm_i32_ty,
                 llvm_anyvector_ty, LLVMMatchType<0>,
                 LLVMMatchType<0>,  LLVMMatchType<0>],
-               [IntrWriteMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<0>>]>;
+               [IntrWrite<[ZA]>, IntrWriteOnly, ImmArg<ArgIndex<0>>]>;
 
   class SVE2_VG2_Multi_Single_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
@@ -3692,7 +3758,7 @@ let TargetPrefix = "aarch64" in {
   // Multi-vector zeroing
 
   foreach vg = ["vg1x2", "vg1x4", "vg2x1", "vg2x2", "vg2x4", "vg4x1", "vg4x2", "vg4x4"] in {
-    def int_aarch64_sme_zero_za64_ # vg : DefaultAttrsIntrinsic<[], [llvm_i32_ty],  [IntrWriteMem, IntrInaccessibleMemOnly]>;
+    def int_aarch64_sme_zero_za64_ # vg : DefaultAttrsIntrinsic<[], [llvm_i32_ty],  [IntrWrite<[ZA]>, IntrWriteOnly]>;
   }
   // Multi-vector signed saturating doubling multiply high
   def int_aarch64_sve_sqdmulh_single_vgx2 : SVE2_VG2_Multi_Single_Intrinsic;
@@ -3830,14 +3896,14 @@ let TargetPrefix = "aarch64" in {
           [llvm_i32_ty,
           llvm_anyvector_ty, LLVMMatchType<0>,
           LLVMMatchType<0>],
-          [IntrInaccessibleMemOnly, IntrWriteMem]>;
+          [IntrWrite<[ZA]>, IntrWriteOnly]>;
 
   class SME2_Add_Sub_Write_VG4_Multi_Single_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
           llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
           LLVMMatchType<0>],
-        [IntrInaccessibleMemOnly, IntrWriteMem]>;
+        [IntrWrite<[ZA]>, IntrWriteOnly]>;
 
   def int_aarch64_sme_add_write_single_za_vg1x2 : SME2_Add_Sub_Write_VG2_Multi_Single_Intrinsic;
   def int_aarch64_sme_sub_write_single_za_vg1x2 : SME2_Add_Sub_Write_VG2_Multi_Single_Intrinsic;
@@ -3852,7 +3918,7 @@ let TargetPrefix = "aarch64" in {
           [llvm_i32_ty,
           llvm_anyvector_ty, LLVMMatchType<0>,
           LLVMMatchType<0>, LLVMMatchType<0>],
-          [IntrInaccessibleMemOnly, IntrWriteMem]>;
+          [IntrWrite<[ZA]>, IntrWriteOnly]>;
 
   class SME2_Add_Sub_Write_VG4_Multi_Multi_Intrinsic
       : DefaultAttrsIntrinsic<[],
@@ -3860,7 +3926,7 @@ let TargetPrefix = "aarch64" in {
           llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>,
           LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>,
           LLVMMatchType<0>, LLVMMatchType<0>],
-          [IntrInaccessibleMemOnly, IntrWriteMem]>;
+          [IntrWrite<[ZA]>, IntrWriteOnly]>;
 
   def int_aarch64_sme_add_write_za_vg1x2 : SME2_Add_Sub_Write_VG2_Multi_Multi_Intrinsic;
   def int_aarch64_sme_sub_write_za_vg1x2 : SME2_Add_Sub_Write_VG2_Multi_Multi_Intrinsic;
@@ -3981,37 +4047,40 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_sel_x2  : SVE2_VG2_Sel_Intrinsic;
   def int_aarch64_sve_sel_x4  : SVE2_VG4_Sel_Intrinsic;
 
-  class SME_LDR_STR_ZT_Intrinsic
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty], [IntrInaccessibleMemOrArgMemOnly]>;
-  def int_aarch64_sme_ldr_zt : SME_LDR_STR_ZT_Intrinsic;
-  def int_aarch64_sme_str_zt : SME_LDR_STR_ZT_Intrinsic;
+
+  def int_aarch64_sme_ldr_zt
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty],
+                            [IntrRead<[ArgMem, ZT0]>, IntrWrite<[ZT0]>]>;
+  def int_aarch64_sme_str_zt
+    : DefaultAttrsIntrinsic<[], [llvm_i32_ty, llvm_anyptr_ty],
+                            [IntrRead<[ZT0]>, IntrWrite<[ArgMem, ZT0]>]>;
 
   //
   //  Zero ZT0
   //
-  def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrWriteMem]>;
+  def int_aarch64_sme_zero_zt : DefaultAttrsIntrinsic<[], [llvm_i32_ty], [ImmArg<ArgIndex<0>>, IntrWrite<[ZT0]>, IntrWriteOnly]>;
 
   //
   // Lookup table expand one register
   //
   def int_aarch64_sme_luti2_lane_zt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti4_lane_zt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti6_zt
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty], [llvm_i32_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadOnly]>;
 
   // Lookup table expand two registers
   //
   def int_aarch64_sme_luti2_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti4_lane_zt_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>], [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
 
   //
   // Lookup table expand four registers
@@ -4019,11 +4088,11 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti2_lane_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti4_lane_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti6_lane_x4_x2
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [LLVMMatchType<0>, LLVMMatchType<0>, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
@@ -4036,12 +4105,12 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sme_luti4_zt_x4
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadOnly]>;
   def int_aarch64_sme_luti6_zt_x4
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                              llvm_nxv16i8_ty, llvm_nxv16i8_ty],
                             [llvm_i32_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrReadMem]>;
+                            [ImmArg<ArgIndex<0>>, IntrRead<[ZT0]>, IntrReadOnly]>;
 
 
   //
@@ -4127,7 +4196,7 @@ let TargetPrefix = "aarch64" in {
   class SVE2_FP8_Cvt
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [llvm_nxv16i8_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   def int_aarch64_sve_fp8_cvt1   : SVE2_FP8_Cvt;
   def int_aarch64_sve_fp8_cvt2   : SVE2_FP8_Cvt;
@@ -4138,29 +4207,26 @@ let TargetPrefix = "aarch64" in {
   class SVE2_FP8_Narrow_Cvt
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
                             [llvm_anyvector_ty, LLVMMatchType<0>],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
-
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
   def int_aarch64_sve_fp8_cvtn  : SVE2_FP8_Narrow_Cvt;
   def int_aarch64_sve_fp8_cvtnb : SVE2_FP8_Narrow_Cvt;
 
   def int_aarch64_sve_fp8_cvtnt
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
                             [llvm_nxv16i8_ty, llvm_anyvector_ty, LLVMMatchType<0>],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   // Dot product
   class SVE2_FP8_FMLA_FDOT
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>,
                              llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
-
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
   class SVE2_FP8_FMLA_FDOT_Lane
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                             [LLVMMatchType<0>,
                              llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_i32_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
-
+                            [IntrRead<[FPMR]>, IntrReadOnly, ImmArg<ArgIndex<3>>]>;
   def int_aarch64_sve_fp8_fdot      : SVE2_FP8_FMLA_FDOT;
   def int_aarch64_sve_fp8_fdot_lane : SVE2_FP8_FMLA_FDOT_Lane;
 
@@ -4186,69 +4252,70 @@ let TargetPrefix = "aarch64" in {
   class SVE2_FP8_CVT_X2_Single_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_anyvector_ty, LLVMMatchType<0>],
                             [llvm_nxv16i8_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   class SVE2_FP8_CVT_Single_X4_Intrinsic
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
                             [llvm_nxv4f32_ty, llvm_nxv4f32_ty, llvm_nxv4f32_ty, llvm_nxv4f32_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   class SME_FP8_OuterProduct_Intrinsic
       : DefaultAttrsIntrinsic<[],
           [llvm_i32_ty,
           llvm_nxv16i1_ty, llvm_nxv16i1_ty,
           llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-          [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly]>;
+          [ImmArg<ArgIndex<0>>, IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>]>;
 
   class SME_FP8_ZA_LANE_VGx1_Intrinsic
    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                llvm_nxv16i8_ty,
                                llvm_nxv16i8_ty,
                                llvm_i32_ty],
-                          [IntrInaccessibleMemOnly, ImmArg<ArgIndex<3>>]>;
+                          [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>, ImmArg<ArgIndex<3>>]>;
 
   class SME_FP8_ZA_LANE_VGx2_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty,
                                 llvm_i32_ty],
-                            [IntrInaccessibleMemOnly, ImmArg<ArgIndex<4>>]>;
+                            [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>, ImmArg<ArgIndex<4>>]>;
 
   class SME_FP8_ZA_LANE_VGx4_Intrinsic
    : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty,
                                 llvm_i32_ty],
-                            [IntrInaccessibleMemOnly, ImmArg<ArgIndex<6>>]>;
+                            [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>, ImmArg<ArgIndex<6>>]>;
+
   class SME_FP8_ZA_VGx1_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty],
-                            [IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>]>;
 
   class SME_FP8_ZA_SINGLE_VGx2_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty],
-                            [IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>]>;
 
   class SME_FP8_ZA_SINGLE_VGx4_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                 llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                 llvm_nxv16i8_ty],
-                              [IntrInaccessibleMemOnly]>;
+                              [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>]>;
 
   class SME_FP8_ZA_MULTI_VGx2_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                  llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                  llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>]>;
 
   class SME_FP8_ZA_MULTI_VGx4_Intrinsic
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty,
                                  llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty,
                                  llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty, llvm_nxv16i8_ty],
-                            [IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR, ZA]>, IntrWrite<[ZA]>]>;
   //
   // CVT from FP8 to half-precision/BFloat16 multi-vector
   //
@@ -4267,7 +4334,7 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_fp8_cvt_x2
     : DefaultAttrsIntrinsic<[llvm_nxv16i8_ty],
                             [llvm_anyvector_ty, LLVMMatchType<0>],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrRead<[FPMR]>, IntrReadOnly]>;
 
   def int_aarch64_sve_fp8_cvt_x4  : SVE2_FP8_CVT_Single_X4_Intrinsic;
   def int_aarch64_sve_fp8_cvtn_x4 : SVE2_FP8_CVT_Single_X4_Intrinsic;

@@ -13,12 +13,17 @@
 # The GCC compiler flags are not always compatible with clang-tidy.
 # UNSUPPORTED: gcc
 
+# FIXME: Enable this again in C++03
+# UNSUPPORTED: c++03
+
 # RUN: %{python} %s %{libcxx-dir}/utils
 # END.
 
 import sys
 sys.path.append(sys.argv[1])
 from libcxx.header_information import lit_header_undeprecations, public_headers
+
+# FIXME: Enable -Wweak-vtables again
 
 for header in public_headers:
   print(f"""\
@@ -30,7 +35,7 @@ for header in public_headers:
 // RUN:                    -header-filter=.*                                                \\
 // RUN:                    --config-file=%{{libcxx-dir}}/.clang-tidy                        \\
 // RUN:                    --load=%{{test-tools-dir}}/clang_tidy_checks/libcxx-tidy.plugin  \\
-// RUN:                    -- -Wweak-vtables %{{flags}} %{{compile_flags}} -fno-modules
+// RUN:                    -- %{{flags}} %{{compile_flags}} -fno-modules
 
 #include <{header}>
 """)

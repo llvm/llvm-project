@@ -7,9 +7,31 @@
 //===----------------------------------------------------------------------===//
 
 #include "RuntimeLibcalls.h"
+#include "PredicateExpanderDag.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 
 using namespace llvm;
+
+std::string AvailabilityPredicate::lowerCondDag(const Record *Owner,
+                                                const Init *Val,
+                                                bool ParenIfBinOp) {
+  // Leaf: a LibcallPredicate whose Cond is a C++ boolean over `TT`.
+  auto EmitLeaf = [&](const Init &Leaf, raw_ostream &OS) -> bool {
+    const auto *DI = dyn_cast<DefInit>(&Leaf);
+    if (!DI || !DI->getDef()->isSubClassOf("LibcallPredicate"))
+      PrintFatalError(Owner, "predicate dag leaf '" + Leaf.getAsString() +
+                                 "' is not a LibcallPredicate");
+    OS << DI->getDef()->getValueAsString("Cond");
+    return false;
+  };
+
+  std::string Result;
+  raw_string_ostream OS(Result);
+  emitPredicateDag(Owner, *Val, ParenIfBinOp, OS, EmitLeaf);
+  return Result;
+}
 
 RuntimeLibcalls::RuntimeLibcalls(const RecordKeeper &Records) {
   ArrayRef<const Record *> AllRuntimeLibcalls =

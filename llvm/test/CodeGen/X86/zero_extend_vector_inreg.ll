@@ -2079,9 +2079,9 @@ define void @vec256_v16i16_to_v2i128_factor8(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,3,4,5,6,7,17,9,10,11,12,13,14,15]
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,3,4,5,6,7,17,9,10,11,12,13,14,15]
+; AVX512BW-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; AVX512BW-NEXT:    vpaddb (%rdx), %zmm2, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
 ; AVX512BW-NEXT:    vzeroupper
@@ -3977,11 +3977,10 @@ define void @vec384_v24i16_to_v8i48_factor3(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512BW-SLOW:       # %bb.0:
 ; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,17,4,5,18,7,8,19,10,11,20,13,14,21]
-; AVX512BW-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-SLOW-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512BW-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,17,4,5,18,7,8,19,10,11,20,13,14,21]
+; AVX512BW-SLOW-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
+; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; AVX512BW-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4],xmm0[5],xmm1[6,7]
 ; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
@@ -3993,9 +3992,9 @@ define void @vec384_v24i16_to_v8i48_factor3(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512BW-FAST:       # %bb.0:
 ; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,17,4,5,18,7,8,19,10,11,20,13,14,21]
-; AVX512BW-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-FAST-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
+; AVX512BW-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,17,4,5,18,7,8,19,10,11,20,13,14,21]
+; AVX512BW-FAST-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[12,13],zero,zero,zero,zero,xmm0[14,15],zero,zero,zero,zero
 ; AVX512BW-FAST-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
@@ -4291,11 +4290,10 @@ define void @vec384_v24i16_to_v4i96_factor6(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512BW-SLOW:       # %bb.0:
 ; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,3,4,5,17,7,8,9,10,11,18,13,14,15]
-; AVX512BW-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-SLOW-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
-; AVX512BW-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX512BW-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,3,4,5,17,7,8,9,10,11,18,13,14,15]
+; AVX512BW-SLOW-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
+; AVX512BW-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX512BW-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4,5,6,7]
 ; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
@@ -4307,9 +4305,9 @@ define void @vec384_v24i16_to_v4i96_factor6(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512BW-FAST:       # %bb.0:
 ; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,3,4,5,17,7,8,9,10,11,18,13,14,15]
-; AVX512BW-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-FAST-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
+; AVX512BW-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,3,4,5,17,7,8,9,10,11,18,13,14,15]
+; AVX512BW-FAST-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = zero,zero,zero,zero,xmm0[6,7],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-FAST-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
@@ -4443,7 +4441,6 @@ define void @vec384_v24i16_to_v3i128_factor8(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512F-SLOW-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3,4,5,6,7]
 ; AVX512F-SLOW-NEXT:    vpmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
 ; AVX512F-SLOW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,1,3]
-; AVX512F-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; AVX512F-SLOW-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1,2,3,4,5,6,7],ymm0[8],ymm2[9,10,11,12,13,14,15]
 ; AVX512F-SLOW-NEXT:    vpaddb (%rdx), %ymm0, %ymm0
 ; AVX512F-SLOW-NEXT:    vpaddb 32(%rdx), %ymm1, %ymm1
@@ -4472,11 +4469,10 @@ define void @vec384_v24i16_to_v3i128_factor8(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW-SLOW:       # %bb.0:
 ; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,3,4,5,6,7,17,9,10,11,12,13,14,15]
-; AVX512BW-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-SLOW-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
-; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX512BW-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-SLOW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,3,4,5,6,7,17,9,10,11,12,13,14,15]
+; AVX512BW-SLOW-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
+; AVX512BW-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; AVX512BW-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3,4,5,6,7]
 ; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
@@ -4488,9 +4484,9 @@ define void @vec384_v24i16_to_v3i128_factor8(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW-FAST:       # %bb.0:
 ; AVX512BW-FAST-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,3,4,5,6,7,17,9,10,11,12,13,14,15]
-; AVX512BW-FAST-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-FAST-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
+; AVX512BW-FAST-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-FAST-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,3,4,5,6,7,17,9,10,11,12,13,14,15]
+; AVX512BW-FAST-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-FAST-NEXT:    vinserti32x4 $2, %xmm0, %zmm2, %zmm0
 ; AVX512BW-FAST-NEXT:    vpaddb (%rdx), %zmm0, %zmm0
@@ -4595,9 +4591,9 @@ define void @vec384_v24i16_to_v2i192_factor12(ptr %in.vec.base.ptr, ptr %in.vec.
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512BW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm1 = [16,1,2,3,4,5,6,7,8,9,10,11,17,13,14,15]
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpermt2w %ymm0, %ymm1, %ymm2
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} ymm2 = [16,1,2,3,4,5,6,7,8,9,10,11,17,13,14,15]
+; AVX512BW-NEXT:    vpermi2w %ymm0, %ymm1, %ymm2
 ; AVX512BW-NEXT:    vpaddb (%rdx), %zmm2, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
 ; AVX512BW-NEXT:    vzeroupper
@@ -4916,12 +4912,11 @@ define void @vec384_v12i32_to_v4i96_factor3(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX2-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX2-SLOW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[0,0,2,1]
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm1 = ymm2[0],ymm1[1,2],ymm2[3],ymm1[4,5],ymm2[6],ymm1[7]
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm2 = ymm2[0],ymm1[1,2],ymm2[3],ymm1[4,5],ymm2[6],ymm1[7]
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3]
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX2-SLOW-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vpaddb (%rdx), %ymm1, %ymm1
+; AVX2-SLOW-NEXT:    vpaddb (%rdx), %ymm2, %ymm1
 ; AVX2-SLOW-NEXT:    vmovdqa %ymm1, (%rcx)
 ; AVX2-SLOW-NEXT:    vmovdqa %ymm0, 32(%rcx)
 ; AVX2-SLOW-NEXT:    vzeroupper
@@ -4961,9 +4956,9 @@ define void @vec384_v12i32_to_v4i96_factor3(ptr %in.vec.base.ptr, ptr %in.vec.bi
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [16,1,2,17,4,5,18,7,8,19,10,11,0,0,0,0]
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpermt2d %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [16,1,2,17,4,5,18,7,8,19,10,11,0,0,0,0]
+; AVX512F-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
 ; AVX512F-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpaddb (%rdx), %ymm2, %ymm1
@@ -5078,8 +5073,7 @@ define void @vec384_v12i32_to_v3i128_factor4(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX2-SLOW-NEXT:    vmovdqa (%rdi), %xmm1
 ; AVX2-SLOW-NEXT:    vpaddb (%rsi), %xmm1, %xmm1
 ; AVX2-SLOW-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
-; AVX2-SLOW-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0],xmm3[1,2,3]
+; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} xmm2 = xmm2[0],xmm0[1,2,3]
 ; AVX2-SLOW-NEXT:    vpmovzxdq {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero
 ; AVX2-SLOW-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,1,1,3]
 ; AVX2-SLOW-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0],ymm0[1,2,3],ymm1[4],ymm0[5,6,7]
@@ -5126,9 +5120,9 @@ define void @vec384_v12i32_to_v3i128_factor4(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovdqa (%rdi), %ymm0
 ; AVX512F-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm1 = [16,1,2,3,17,5,6,7,18,9,10,11,0,0,0,0]
-; AVX512F-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vpermt2d %zmm0, %zmm1, %zmm2
+; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512F-NEXT:    vpmovsxbd {{.*#+}} zmm2 = [16,1,2,3,17,5,6,7,18,9,10,11,0,0,0,0]
+; AVX512F-NEXT:    vpermi2d %zmm0, %zmm1, %zmm2
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm2, %ymm0
 ; AVX512F-NEXT:    vpaddb 32(%rdx), %ymm0, %ymm0
 ; AVX512F-NEXT:    vpaddb (%rdx), %ymm2, %ymm1
@@ -6872,9 +6866,9 @@ define void @vec512_v32i16_to_v4i128_factor8(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovdqa64 (%rdi), %zmm0
 ; AVX512BW-NEXT:    vpaddb (%rsi), %zmm0, %zmm0
-; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm1 = [32,1,2,3,4,5,6,7,33,9,10,11,12,13,14,15,34,1,2,3,4,5,6,7,35,9,10,11,12,13,14,15]
-; AVX512BW-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX512BW-NEXT:    vpermt2w %zmm0, %zmm1, %zmm2
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpmovsxbw {{.*#+}} zmm2 = [32,1,2,3,4,5,6,7,33,9,10,11,12,13,14,15,34,1,2,3,4,5,6,7,35,9,10,11,12,13,14,15]
+; AVX512BW-NEXT:    vpermi2w %zmm0, %zmm1, %zmm2
 ; AVX512BW-NEXT:    vpaddb (%rdx), %zmm2, %zmm0
 ; AVX512BW-NEXT:    vmovdqa64 %zmm0, (%rcx)
 ; AVX512BW-NEXT:    vzeroupper
@@ -8216,6 +8210,3 @@ define void @vec512_v2i256_to_v1i512_factor2(ptr %in.vec.base.ptr, ptr %in.vec.b
   store <64 x i8> %out.vec, ptr %out.vec.ptr, align 64
   ret void
 }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX-FAST: {{.*}}
-; AVX-SLOW: {{.*}}

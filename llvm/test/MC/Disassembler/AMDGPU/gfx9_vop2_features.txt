@@ -1,7 +1,7 @@
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx908 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx90a -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx942 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
-# RUN: llvm-mc -triple=amdgcn -mcpu=gfx950 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgpu9.08 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgpu9.0a -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgpu9.42 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
+# RUN: llvm-mc -triple=amdgpu9.50 -disassemble -show-encoding < %s | FileCheck -check-prefix=CHECK-MI %s
 
 # CHECK-MI: v_pk_fmac_f16_e32 v5, v1, v2
 0x01,0x05,0x0a,0x78

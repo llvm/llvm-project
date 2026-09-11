@@ -1,16 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/function-specifiers.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
-
-static void myFunction() {}
-
-void noExceptFunction() noexcept {}
-
-inline void inlineFunction() {}
-
-extern void externFunction() {}
-
-constexpr void constexprFunction() {}
 
 // CHECK:          "Functions": [
 // CHECK-NEXT:       {

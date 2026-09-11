@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // C includes
+#include <cctype>
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
@@ -49,6 +50,7 @@
 #include "lldb/Host/ProcessLauncher.h"
 #include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Host/posix/ConnectionFileDescriptorPosix.h"
+#include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -56,9 +58,11 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-private-forward.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Program.h"
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/ConnectionGenericFileWindows.h"
@@ -606,13 +610,59 @@ void Host::Kill(lldb::pid_t pid, int signo) { ::kill(pid, signo); }
 #if !defined(__APPLE__)
 llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
                                            const FileSpec &file_spec,
-                                           uint32_t line_no) {
+                                           uint32_t line_no, bool foreground) {
   return llvm::errorCodeToError(
       std::error_code(ENOTSUP, std::system_category()));
 }
 
 bool Host::IsInteractiveGraphicSession() { return false; }
+
+llvm::Error Host::OpenURL(llvm::StringRef url) {
+  if (url.empty())
+    return llvm::createStringError("cannot open empty URL");
+
+  LLDB_LOG(GetLog(LLDBLog::Host), "Opening URL: {0}", url);
+
+#if defined(_WIN32)
+  // TODO: open the URL with ShellExecuteW (needs a shell32 link dependency).
+  return llvm::errorCodeToError(
+      std::error_code(ENOTSUP, std::system_category()));
+#else
+  // Resolve xdg-open and run it directly (run_in_shell=false) so the URL is a
+  // literal argument the shell never parses; this keeps query-string
+  // metacharacters from being interpreted regardless of the user's shell.
+  llvm::ErrorOr<std::string> xdg_open =
+      llvm::sys::findProgramByName("xdg-open");
+  if (!xdg_open)
+    return llvm::createStringError("could not find xdg-open to open the URL");
+
+  Args args;
+  args.AppendArgument(*xdg_open);
+  args.AppendArgument(url);
+
+  int status = 0;
+  int signo = 0;
+  std::string output;
+  Status error = RunShellCommand(
+      args, /*working_dir=*/FileSpec(), &status, &signo, &output,
+      /*separated_error_output=*/nullptr, std::chrono::seconds(10),
+      /*run_in_shell=*/false);
+  if (error.Fail())
+    return error.takeError();
+  if (status != 0)
+    return llvm::createStringError(
+        llvm::formatv("xdg-open exited with status {0}", status));
+  return llvm::Error::success();
 #endif
+}
+#endif
+
+std::string Host::URLEncode(llvm::StringRef str) {
+  std::string out;
+  llvm::raw_string_ostream os(out);
+  llvm::printPercentEncoded(str, os);
+  return out;
+}
 
 std::unique_ptr<Connection> Host::CreateDefaultConnection(llvm::StringRef url) {
 #if defined(_WIN32)

@@ -12,4 +12,11 @@ define void @test(i64 %a, ptr addrspace(1) %b) {
   ret void
 }
 
+define void @test_aligned(i64 %a, ptr addrspace(1) %b) {
+; CHECK: %[[#]] = OpExtInst %[[#V2FLOAT]] %[[#IMPORT]] vloada_halfn %[[#]] %[[#]] 2
+  %c = call spir_func <2 x float> @_Z12vloada_half2mPU3AS1KDh(i64 %a, ptr addrspace(1) %b)
+  ret void
+}
+
 declare <2 x float> @_Z11vload_half2mPU3AS1KDh(i64, ptr addrspace(1))
+declare <2 x float> @_Z12vloada_half2mPU3AS1KDh(i64, ptr addrspace(1))

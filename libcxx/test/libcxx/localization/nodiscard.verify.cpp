@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT
 
 // Check that functions are marked [[nodiscard]]
 
+#include <codecvt>
 #include <cwchar>
 #include <locale>
 #include <string>
@@ -29,8 +32,9 @@ void test() {
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     l.combine<std::messages<char> >(l);
     l.name(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-#if TEST_STD_VER >= 26
-    // l.encoding(); // TODO: Verify this once P1885R12 (https://llvm.org/PR105373) is implemented.
+#if TEST_STD_VER >= 26 && _LIBCPP_AVAILABILITY_HAS_TEXT_ENCODING_ENVIRONMENT
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    l.encoding();
 #endif
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     l(std::string(), std::string());
@@ -242,4 +246,42 @@ void test() {
     f.get(0, 0, 0, std::wstring());
   }
 #endif
+
+  // C++23 [depr.conversions.string]
+  {
+    typedef std::wstring_convert<std::codecvt_utf8<char16_t>, char16_t> converter_type;
+
+    converter_type myconv;
+    converter_type::byte_string bs;
+    converter_type::wide_string ws;
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.from_bytes('*');
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.from_bytes("");
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.from_bytes(bs);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.from_bytes(bs.data(), bs.data());
+
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.to_bytes(char16_t());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.to_bytes(ws.data());
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.to_bytes(ws);
+    // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.to_bytes(ws.data(), ws.data());
+
+    myconv.converted(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.state();     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
+
+  // C++23 [depr.conversions.buffer]
+  {
+    std::wbuffer_convert<std::codecvt_utf8<char16_t>, char16_t> myconv;
+
+    myconv.rdbuf(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+    myconv.state(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  }
 }

@@ -84,3 +84,41 @@ int test_scoped() {
 // OGCG:   %[[Y_REF:.*]] = load ptr, ptr %[[Y_ADDR]]
 // OGCG:   %[[Y_VALUE:.*]] = load i32, ptr %[[Y_REF]]
 // OGCG:   store i32 %[[Y_VALUE]], ptr %[[X]]
+
+int test_rvalue_reference(int&& ri) {
+  return static_cast<int&&>(ri + 1);
+}
+
+//      CIR: cir.func {{.*}} @_Z21test_rvalue_referenceOi({{.*}})
+//      CIR:   %[[RI:.*]] = cir.alloca "ri" {{.*}} init const : !cir.ptr<!cir.ptr<!s32i>>
+// CIR-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[TEMP_SLOT:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!s32i>
+// CIR-NEXT:   cir.store{{.*}} {{.*}}, %[[RI]]
+// CIR-NEXT:   %[[RI_REF:.*]] = cir.load %[[RI]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RI_VALUE:.*]] = cir.load{{.*}} %[[RI_REF]] : !cir.ptr<!s32i>, !s32i
+// CIR-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-NEXT:   %[[ADD:.*]] = cir.add nsw %[[RI_VALUE]], %[[ONE]] : !s32i
+// CIR-NEXT:   cir.store{{.*}} %[[ADD]], %[[TEMP_SLOT]] : !s32i, !cir.ptr<!s32i>
+// CIR-NEXT:   %[[TEMP_VALUE:.*]] = cir.load{{.*}} %[[TEMP_SLOT]] : !cir.ptr<!s32i>, !s32i
+
+// LLVM: define {{.*}} i32 @_Z21test_rvalue_referenceOi({{.*}})
+// LLVM:   %[[RI:.*]] = alloca ptr
+// LLVM:   %[[RETVAL:.*]] = alloca i32
+// LLVM:   %[[TEMP_SLOT:.*]] = alloca i32
+// LLVM:   store ptr {{.*}}, ptr %[[RI]]
+// LLVM:   %[[RI_REF:.*]] = load ptr, ptr %[[RI]]
+// LLVM:   %[[RI_VALUE:.*]] = load i32, ptr %[[RI_REF]]
+// LLVM:   %[[ADD:.*]] = add nsw i32 %[[RI_VALUE]], 1
+// LLVM:   store i32 %[[ADD]], ptr %[[TEMP_SLOT]]
+// LLVM:   %[[TEMP_VALUE:.*]] = load i32, ptr %[[TEMP_SLOT]]
+
+// OGCG: define {{.*}} i32 @_Z21test_rvalue_referenceOi({{.*}})
+// OGCG:   %[[RI:.*]] = alloca ptr
+// OGCG:   %[[TEMP_SLOT:.*]] = alloca i32
+// OGCG:   store ptr {{.*}}, ptr %[[RI]]
+// OGCG:   %[[RI_REF:.*]] = load ptr, ptr %[[RI]]
+// OGCG:   %[[RI_VALUE:.*]] = load i32, ptr %[[RI_REF]]
+// OGCG:   %[[ADD:.*]] = add nsw i32 %[[RI_VALUE]], 1
+// OGCG:   store i32 %[[ADD]], ptr %[[TEMP_SLOT]]
+// OGCG:   %[[TEMP_VALUE:.*]] = load i32, ptr %[[TEMP_SLOT]]
+

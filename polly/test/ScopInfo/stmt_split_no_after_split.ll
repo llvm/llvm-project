@@ -9,7 +9,7 @@
 ; CHECK-NEXT:       MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:           { Stmt_Stmt[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:       Instructions {
-; CHECK-NEXT:             store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !0
+; CHECK-NEXT:             store i32 %i.0, ptr %arrayidx, align 4, !polly_split_after !1
 ; CHECK-NEXT:       }
 ; CHECK-NEXT:   }
 ;

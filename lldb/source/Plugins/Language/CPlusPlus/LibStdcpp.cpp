@@ -11,10 +11,10 @@
 
 #include "Plugins/Language/CPlusPlus/CxxStringTypes.h"
 #include "Plugins/Language/CPlusPlus/Generic.h"
+#include "Plugins/Language/CPlusPlus/VectorIterator.h"
 
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/StringPrinter.h"
-#include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Endian.h"
@@ -184,57 +184,6 @@ lldb_private::formatters::LibStdcppVectorIteratorSyntheticFrontEndCreator(
   return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(
                           valobj_sp, {ConstString("_M_current")})
                     : nullptr);
-}
-
-lldb_private::formatters::VectorIteratorSyntheticFrontEnd::
-    VectorIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp,
-                                    llvm::ArrayRef<ConstString> item_names)
-    : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(),
-      m_item_names(item_names), m_item_sp() {
-  if (valobj_sp)
-    Update();
-}
-
-lldb::ChildCacheState VectorIteratorSyntheticFrontEnd::Update() {
-  m_item_sp.reset();
-
-  ValueObjectSP valobj_sp = m_backend.GetSP();
-  if (!valobj_sp)
-    return lldb::ChildCacheState::eRefetch;
-
-  ValueObjectSP item_ptr =
-      formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
-  if (!item_ptr)
-    return lldb::ChildCacheState::eRefetch;
-  if (item_ptr->GetValueAsUnsigned(0) == 0)
-    return lldb::ChildCacheState::eRefetch;
-  Status err;
-  m_exe_ctx_ref = valobj_sp->GetExecutionContextRef();
-  m_item_sp = CreateChildValueObjectFromAddress(
-      "item", item_ptr->GetValueAsUnsigned(0), m_exe_ctx_ref,
-      item_ptr->GetCompilerType().GetPointeeType());
-  if (err.Fail())
-    m_item_sp.reset();
-  return lldb::ChildCacheState::eRefetch;
-}
-
-llvm::Expected<uint32_t>
-VectorIteratorSyntheticFrontEnd::CalculateNumChildren() {
-  return 1;
-}
-
-lldb::ValueObjectSP
-VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
-  if (idx == 0)
-    return m_item_sp;
-  return lldb::ValueObjectSP();
-}
-
-llvm::Expected<size_t>
-VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
-  if (name == "item")
-    return 0;
-  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 bool lldb_private::formatters::LibStdcppStringSummaryProvider(
@@ -574,5 +523,38 @@ bool lldb_private::formatters::LibStdcppStrongOrderingSummaryProvider(
   default:
     return false;
   }
+  return true;
+}
+
+bool lldb_private::formatters::LibStdcppSourceLocationSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  ValueObjectSP impl_sp = valobj.GetChildMemberWithName("_M_impl");
+  if (!impl_sp)
+    return false;
+
+  ValueObjectSP file_sp = impl_sp->GetChildMemberWithName("_M_file_name");
+  ValueObjectSP function_sp =
+      impl_sp->GetChildMemberWithName("_M_function_name");
+  ValueObjectSP line_sp = impl_sp->GetChildMemberWithName("_M_line");
+  ValueObjectSP column_sp = impl_sp->GetChildMemberWithName("_M_column");
+
+  if (!file_sp || !function_sp || !line_sp || !column_sp)
+    return false;
+
+  bool success = false;
+  uint64_t line = line_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  uint64_t column = column_sp->GetValueAsUnsigned(0, &success);
+  if (!success)
+    return false;
+
+  const char *file = file_sp->GetSummaryAsCString();
+  stream.Format("{0}:{1}:{2}", file ? file : "<unknown>", line, column);
+
+  if (const char *function = function_sp->GetSummaryAsCString())
+    stream.Printf(" (%s)", function);
+
   return true;
 }

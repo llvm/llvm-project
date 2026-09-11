@@ -95,7 +95,13 @@ public:
   /// bytes belonging to the same storage (stack, heap allocation,
   /// global variable) are considered.
   std::optional<uint64_t> tryEvaluateObjectSize(State &Parent, const Expr *E,
-                                                unsigned Kind);
+                                                unsigned Kind, bool IsDynamic);
+
+  std::optional<bool> evaluateWithSubstitution(State &Parent,
+                                               const FunctionDecl *Callee,
+                                               ArrayRef<const Expr *> Args,
+                                               const Expr *This,
+                                               const Expr *Condition);
 
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
@@ -125,7 +131,8 @@ public:
     if (const auto *BT = dyn_cast<BuiltinType>(T)) {
       if (BT->isInteger() || BT->isFloatingPoint())
         return true;
-      if (BT->getKind() == BuiltinType::Bool)
+      if (BT->getKind() == BuiltinType::NullPtr ||
+          BT->getKind() == BuiltinType::BoundMember)
         return true;
     }
     if (T->isPointerOrReferenceType())
@@ -135,8 +142,8 @@ public:
         T->isVectorType())
       return false;
 
-    if (const auto *D = T->getAsEnumDecl())
-      return D->isComplete();
+    if (T->isEnumeralType())
+      return true;
 
     return classify(T) != std::nullopt;
   }

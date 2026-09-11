@@ -61,10 +61,9 @@ static void encodeDwarfRegisterLocation(int DwarfReg, raw_ostream &OS) {
   }
 }
 
-static MCCFIInstruction
-createScaledCFAInPrivateWave(const GCNSubtarget &ST,
-                             MCRegister DwarfStackPtrReg) {
-  assert(ST.enableFlatScratch());
+static MCCFIInstruction createScaledCFAInPrivateWave(const GCNSubtarget &ST,
+                                                     int64_t DwarfStackPtrReg) {
+  assert(ST.hasFlatScratchEnabled());
 
   // When flat scratch is enabled, the stack pointer is an address in the
   // private_lane DWARF address space (i.e. swizzled), but in order to
@@ -104,9 +103,9 @@ void SIFrameLowering::emitDefCFA(MachineBasicBlock &MBB,
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
-  MCRegister DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
+  int64_t DwarfStackPtrReg = TRI->getDwarfRegNum(StackPtrReg, false);
   MCCFIInstruction CFIInst =
-      ST.enableFlatScratch()
+      ST.hasFlatScratchEnabled()
           ? createScaledCFAInPrivateWave(ST, DwarfStackPtrReg)
           : (AspaceAlreadyDefined
                  ? MCCFIInstruction::createLLVMDefAspaceCfa(
@@ -411,14 +410,14 @@ class PrologEpilogSGPRSpillBuilder {
       ArrayRef<int16_t> DstSplitParts = TRI.getRegSplitParts(RC, EltSize);
       assert(NumSubRegs == (DstSplitParts.empty() ? 1 : DstSplitParts.size()));
       MCRegister CFISuperReg = getCFISuperReg();
-      if (NumSubRegs == 1) {
-        TFI->buildCFI(
-            MBB, MI, DL,
-            MCCFIInstruction::createRegister(
-                nullptr,
-                MCRI->getDwarfRegNum(
-                    CFISuperReg ? CFISuperReg : SuperReg.asMCReg(), false),
-                MCRI->getDwarfRegNum(DstReg, false)));
+      if (!CFISuperReg)
+        CFISuperReg = SuperReg;
+      int64_t DwarfCFISuperReg = MCRI->getDwarfRegNum(CFISuperReg, false);
+      int64_t DwarfDstSuperReg = MCRI->getDwarfRegNum(DstReg, false);
+      if (DwarfCFISuperReg >= 0 && DwarfDstSuperReg >= 0) {
+        TFI->buildCFI(MBB, MI, DL,
+                      MCCFIInstruction::createRegister(
+                          nullptr, DwarfCFISuperReg, DwarfDstSuperReg));
       } else if (isExec(CFISuperReg)) {
         assert(NumSubRegs == 2 && "EXEC larger than 64-bit");
         TFI->buildCFIForRegToSGPRPairSpill(MBB, MI, DL, CFISuperReg, DstReg);
@@ -937,17 +936,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                          PreloadedScratchRsrcReg,
                                          ScratchRsrcReg, ScratchWaveOffsetReg);
   }
-
-  if (ST.hasWaitXcnt()) {
-    // Set REPLAY_MODE (bit 25) in MODE register to enable multi-group XNACK
-    // replay. This aligns hardware behavior with the compiler's s_wait_xcnt
-    // insertion logic, which assumes multi-group mode by default.
-    unsigned RegEncoding =
-        AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 25, 1);
-    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
-        .addImm(1)
-        .addImm(RegEncoding);
-  }
 }
 
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
@@ -1101,8 +1089,9 @@ bool SIFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {
   case TargetStackID::SGPRSpill:
     return true;
   case TargetStackID::ScalableVector:
-  case TargetStackID::ScalablePredicateVector:
   case TargetStackID::WasmLocal:
+  case TargetStackID::ScalablePredicateVector:
+  case TargetStackID::AvrAlign:
     return false;
   }
   llvm_unreachable("Invalid TargetStackID::Value");
@@ -1136,7 +1125,7 @@ void SIFrameLowering::emitPrologueEntryCFI(MachineBasicBlock &MBB,
       return;
     if (IsCalleeSaved.test(Reg) || !MRI.isPhysRegModified(Reg))
       return;
-    MCRegister DwarfReg = MCRI->getDwarfRegNum(Reg, false);
+    unsigned DwarfReg = MCRI->getDwarfRegNum(Reg, false);
     buildCFI(MBB, MBBI, DL,
              MCCFIInstruction::createUndefined(nullptr, DwarfReg));
   };
@@ -1268,10 +1257,11 @@ void SIFrameLowering::emitCSRSpillStores(
   StoreWWMRegisters(WWMCalleeSavedRegs);
   if (FuncInfo->isWholeWaveFunction()) {
     // If we have already saved some WWM CSR registers, then the EXEC is already
-    // -1 and we don't need to do anything else. Otherwise, set EXEC to -1 here.
+    // -1 and we don't need to do anything else. Otherwise, save the original
+    // EXEC into the setup register and set EXEC to -1 here.
     if (!ScratchExecCopy)
       buildScratchExecCopy(LiveUnits, MF, MBB, MBBI, DL, /*IsProlog*/ true,
-                           /*EnableInactiveLanes*/ true);
+                           /*EnableInactiveLanes*/ false);
     else if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
   } else if (ScratchExecCopy) {
@@ -1793,10 +1783,16 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     // Add an emergency spill slot
     RS->addScavengingFrameIndex(FuncInfo->getScavengeFI(MFI, *TRI));
 
-    // If we are spilling SGPRs to memory with a large frame, we may need a
-    // second VGPR emergency frame index.
-    if (HaveSGPRToVMemSpill &&
-        allocateScavengingFrameIndexesNearIncomingSP(MF)) {
+    if (HaveSGPRToVMemSpill && FuncInfo->hasNoWWMPoolSGPRSpillFallback()) {
+      // The no-WWM-pool fallback can reach SGPR-to-memory lowering while an
+      // ordinary frame-index scavenge is live. It may then need one slot for
+      // its temporary VGPR and another for recursive address materialization.
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
+      RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
+    } else if (HaveSGPRToVMemSpill &&
+               allocateScavengingFrameIndexesNearIncomingSP(MF)) {
+      // Existing large-frame SGPR-to-memory spills need one additional VGPR
+      // emergency frame index.
       RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(4, Align(4)));
     }
   }
@@ -2486,8 +2482,7 @@ bool SIFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return frameTriviallyRequiresSP(MFI) || MFI.isFrameAddressTaken() ||
          MF.getSubtarget<GCNSubtarget>().getRegisterInfo()->hasStackRealignment(
              MF) ||
-         mayReserveScratchForCWSR(MF) ||
-         MF.getTarget().Options.DisableFramePointerElim(MF);
+         mayReserveScratchForCWSR(MF) || MF.disableFramePointerElim();
 }
 
 bool SIFrameLowering::mayReserveScratchForCWSR(
@@ -2540,7 +2535,7 @@ MachineInstr *SIFrameLowering::buildCFIForVRegToVRegSpill(
   const MCRegisterInfo &MCRI = *MF.getContext().getRegisterInfo();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
 
-  MCRegister MaskReg = MCRI.getDwarfRegNum(
+  unsigned MaskReg = MCRI.getDwarfRegNum(
       ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
   auto CFIInst = MCCFIInstruction::createLLVMVectorRegisterMask(
       nullptr, MCRI.getDwarfRegNum(Reg, false),
@@ -2620,7 +2615,7 @@ MachineInstr *SIFrameLowering::buildCFIForVGPRToVMEMSpill(
   int DwarfVGPR = MCRI.getDwarfRegNum(VGPR, false);
   assert(DwarfVGPR != -1);
 
-  MCRegister MaskReg = MCRI.getDwarfRegNum(
+  unsigned MaskReg = MCRI.getDwarfRegNum(
       ST.isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC, false);
   auto CFIInst = MCCFIInstruction::createLLVMVectorOffset(
       nullptr, DwarfVGPR, VGPRLaneBitSize, MaskReg, ST.getWavefrontSize(),

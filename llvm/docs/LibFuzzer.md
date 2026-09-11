@@ -1,8 +1,4 @@
 # libFuzzer – a library for coverage-guided fuzz testing.
-```{contents}
-:local:
-:depth: 1
-```
 
 ## Introduction
 
@@ -32,10 +28,6 @@ LibFuzzer requires a matching version of Clang.
 
 ## Getting Started
 
-```{contents}
-:local:
-:depth: 1
-```
 
 ### Fuzz Target
 
@@ -194,8 +186,10 @@ Related flags:
 `-ignore_ooms`
 : True by default. If an OOM happens during fuzzing in one of the child processes,
   the reproducer is saved on disk, and fuzzing continues.
+
 `-ignore_timeouts`
 : True by default, same as `-ignore_ooms`, but for timeouts.
+
 `-ignore_crashes`
 : False by default, same as `-ignore_ooms`, but for all other crashes.
 
@@ -248,88 +242,117 @@ The most important command line options are:
 
 `-help`
 : Print help message (`-help=1`).
+
 `-seed`
 : Random seed. If 0 (the default), the seed is generated.
+
 `-runs`
 : Number of individual test runs, -1 (the default) to run indefinitely.
+
 `-max_len`
 : Maximum length of a test input. If 0 (the default), libFuzzer tries to guess
   a good value based on the corpus (and reports it).
+
 `-len_control`
 : Try generating small inputs first, then try larger inputs over time.
   Specifies the rate at which the length limit is increased (smaller == faster).
   Default is 100. If 0, immediately try inputs with size up to max_len.
+
 `-timeout`
 : Timeout in seconds, default 1200. If an input takes longer than this timeout,
   the process is treated as a failure case.
+
 `-rss_limit_mb`
-: Memory usage limit in Mb, default 2048. Use 0 to disable the limit.
+: Memory usage limit in MB, default 2048. Use 0 to disable the limit.
   If an input requires more than this amount of RSS memory to execute,
   the process is treated as a failure case.
   The limit is checked in a separate thread every second.
   If running w/o ASAN/MSAN, you may use 'ulimit -v' instead.
+
 `-malloc_limit_mb`
 : If non-zero, the fuzzer will exit if the target tries to allocate this
-  number of Mb with one malloc call.
-  If zero (default) same limit as rss_limit_mb is applied.
+  number of MB with one malloc call.
+  If zero (default) the same limit as rss_limit_mb is applied.
+
 `-timeout_exitcode`
-: Exit code (default 77) used if libFuzzer reports a timeout.
+: Exit code (default 70) used if libFuzzer reports a timeout.
+
 `-error_exitcode`
-: Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a bug (leak, OOM, etc).
+: Exit code (default 77) used if libFuzzer itself (not a sanitizer) reports a
+  bug (leak, crash, etc). Out-of-memory uses a fixed exit code of 71 that is
+  not configurable.
+
 `-max_total_time`
 : If positive, indicates the maximum total time in seconds to run the fuzzer.
   If 0 (the default), run indefinitely.
+
 `-merge`
 : If set to 1, any corpus inputs from the 2nd, 3rd etc. corpus directories
   that trigger new code coverage will be merged into the first corpus
   directory.  Defaults to 0. This flag can be used to minimize a corpus.
+
 `-merge_control_file`
 : Specify a control file used for the merge process.
   If a merge process gets killed it tries to leave this file in a state
   suitable for resuming the merge. By default a temporary file will be used.
+
 `-minimize_crash`
 : If 1, minimizes the provided crash input.
   Use with -runs=N or -max_total_time=N to limit the number of attempts.
+
 `-reload`
 : If set to 1 (the default), the corpus directory is re-read periodically to
   check for new inputs; this allows detection of new inputs that were discovered
   by other fuzzing processes.
+
 `-jobs`
 : Number of fuzzing jobs to run to completion. Default value is 0, which runs a
   single fuzzing process until completion.  If the value is >= 1, then this
   number of jobs performing fuzzing are run, in a collection of parallel
   separate worker processes; each such worker process has its
   `stdout`/`stderr` redirected to `fuzz-<JOB>.log`.
+
 `-workers`
 : Number of simultaneous worker processes to run the fuzzing jobs to completion
   in. If 0 (the default), `min(jobs, NumberOfCpuCores()/2)` is used.
+
 `-dict`
 : Provide a dictionary of input keywords; see [Dictionaries](#dictionaries).
+
 `-use_counters`
 : Use [coverage counters] to generate approximate counts of how often code
   blocks are hit; defaults to 1.
+
 `-reduce_inputs`
 : Try to reduce the size of inputs while preserving their full feature sets;
   defaults to 1.
+
 `-use_value_profile`
 : Use [value profile] to guide corpus expansion; defaults to 0.
+
 `-only_ascii`
 : If 1, generate only ASCII (`isprint`+`isspace`) inputs. Defaults to 0.
+
 `-artifact_prefix`
 : Provide a prefix to use when saving fuzzing artifacts (crash, timeout, or
   slow inputs) as `$(artifact_prefix)file`.  Defaults to empty.
+
 `-exact_artifact_path`
 : Ignored if empty (the default).  If non-empty, write the single artifact on
   failure (crash, timeout) as `$(exact_artifact_path)`. This overrides
   `-artifact_prefix` and will not use checksum in the file name. Do not use
   the same path for several parallel processes.
+
 `-print_pcs`
 : If 1, print out newly covered PCs. Defaults to 0.
+
 `-print_final_stats`
 : If 1, print statistics at exit.  Defaults to 0.
+
 `-detect_leaks`
 : If 1 (default) and if LeakSanitizer is enabled
   try to detect memory leaks during fuzzing (i.e. not only at shut down).
+
 `-close_fd_mask`
 : Indicate output streams to close at startup. Be careful, this will
   remove diagnostic output from target code (e.g. messages on assert failure).
@@ -352,12 +375,12 @@ INFO: Loaded 1 modules   (8 inline 8-bit counters): 8 [0x5f03d189be90, 0x5f03d18
 INFO: Loaded 1 PC tables (8 PCs): 8 [0x5f03d189be98,0x5f03d189bf18),
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
 INFO: A corpus is not provided, starting from an empty corpus
-#2      INITED cov: 2 ft: 2 corp: 1/1b exec/s: 0 rss: 31Mb
-#144    NEW    cov: 3 ft: 3 corp: 2/2b lim: 4 exec/s: 0 rss: 31Mb L: 1/1 MS: 2 ChangeByte-ChangeByte-
-#157    NEW    cov: 4 ft: 4 corp: 3/4b lim: 4 exec/s: 0 rss: 31Mb L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
-#1345   NEW    cov: 5 ft: 5 corp: 4/8b lim: 14 exec/s: 0 rss: 32Mb L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
-#1696   NEW    cov: 6 ft: 6 corp: 5/10b lim: 17 exec/s: 0 rss: 32Mb L: 2/4 MS: 1 EraseBytes-
-#1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
+#2      INITED cov: 2 ft: 2 corp: 1/1B exec/s: 0 rss: 31MB
+#144    NEW    cov: 3 ft: 3 corp: 2/2B lim: 4 exec/s: 0 rss: 31MB L: 1/1 MS: 2 ChangeByte-ChangeByte-
+#157    NEW    cov: 4 ft: 4 corp: 3/4B lim: 4 exec/s: 0 rss: 31MB L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
+#1345   NEW    cov: 5 ft: 5 corp: 4/8B lim: 14 exec/s: 0 rss: 32MB L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
+#1696   NEW    cov: 6 ft: 6 corp: 5/10B lim: 17 exec/s: 0 rss: 32MB L: 2/4 MS: 1 EraseBytes-
+#1832   REDUCE cov: 6 ft: 6 corp: 5/9B lim: 17 exec/s: 0 rss: 32MB L: 3/3 MS: 1 EraseBytes-
 ...
 ```
 
@@ -371,21 +394,27 @@ possible event codes are:
 `READ`
 : The fuzzer has read in all of the provided input samples from the corpus
   directories.
+
 `INITED`
 : The fuzzer has completed initialization, which includes running each of
   the initial input samples through the code under test.
+
 `NEW`
 : The fuzzer has created a test input that covers new areas of the code
   under test.  This input will be saved to the primary corpus directory.
+
 `REDUCE`
 : The fuzzer has found a better (smaller) input that triggers previously
   discovered features (set `-reduce_inputs=0` to disable).
+
 `pulse`
 : The fuzzer has generated 2{sup}`n` inputs (generated periodically to reassure
   the user that the fuzzer is still working).
+
 `DONE`
 : The fuzzer has completed operation because it has reached the specified
   iteration limit (`-runs`) or time limit (`-max_total_time`).
+
 `RELOAD`
 : The fuzzer is performing a periodic reload of inputs from the corpus
   directory; this allows it to discover any inputs discovered by other
@@ -395,17 +424,22 @@ Each output line also reports the following statistics (when non-zero):
 
 `cov:`
 : Total number of code blocks or edges covered by executing the current corpus.
+
 `ft:`
 : libFuzzer uses different signals to evaluate the code coverage:
   edge coverage, edge counters, value profiles, indirect caller/callee pairs, etc.
   These signals combined are called *features* (`ft:`).
+
 `corp:`
 : Number of entries in the current in-memory test corpus and its size in bytes.
+
 `lim:`
 : Current limit on the length of new entries in the corpus. Increases over time
   until the max length (`-max_len`) is reached.
+
 `exec/s:`
 : Number of fuzzer iterations per second.
+
 `rss:`
 : Current memory consumption.
 
@@ -415,15 +449,12 @@ about the mutation operation that produced the new input:
 `L:`
 : Size of the new/reduced input in bytes and the size of the largest input
   in current in-memory test corpus.
+
 `MS: <n> <operations>`
 : Count and list of the mutation operations used to generate the input.
 
 
 ## Examples
-```{contents}
-:local:
-:depth: 1
-```
 
 ### Toy example
 
@@ -457,12 +488,12 @@ INFO: Loaded 1 modules   (8 inline 8-bit counters): 8 [0x5f03d189be90, 0x5f03d18
 INFO: Loaded 1 PC tables (8 PCs): 8 [0x5f03d189be98,0x5f03d189bf18),
 INFO: -max_len is not provided; libFuzzer will not generate inputs larger than 4096 bytes
 INFO: A corpus is not provided, starting from an empty corpus
-#2      INITED cov: 2 ft: 2 corp: 1/1b exec/s: 0 rss: 31Mb
-#144    NEW    cov: 3 ft: 3 corp: 2/2b lim: 4 exec/s: 0 rss: 31Mb L: 1/1 MS: 2 ChangeByte-ChangeByte-
-#157    NEW    cov: 4 ft: 4 corp: 3/4b lim: 4 exec/s: 0 rss: 31Mb L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
-#1345   NEW    cov: 5 ft: 5 corp: 4/8b lim: 14 exec/s: 0 rss: 32Mb L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
-#1696   NEW    cov: 6 ft: 6 corp: 5/10b lim: 17 exec/s: 0 rss: 32Mb L: 2/4 MS: 1 EraseBytes-
-#1832   REDUCE cov: 6 ft: 6 corp: 5/9b lim: 17 exec/s: 0 rss: 32Mb L: 3/3 MS: 1 EraseBytes-
+#2      INITED cov: 2 ft: 2 corp: 1/1B exec/s: 0 rss: 31MB
+#144    NEW    cov: 3 ft: 3 corp: 2/2B lim: 4 exec/s: 0 rss: 31MB L: 1/1 MS: 2 ChangeByte-ChangeByte-
+#157    NEW    cov: 4 ft: 4 corp: 3/4B lim: 4 exec/s: 0 rss: 31MB L: 2/2 MS: 3 CrossOver-ChangeBit-CrossOver-
+#1345   NEW    cov: 5 ft: 5 corp: 4/8B lim: 14 exec/s: 0 rss: 32MB L: 4/4 MS: 3 InsertByte-ChangeBit-CrossOver-
+#1696   NEW    cov: 6 ft: 6 corp: 5/10B lim: 17 exec/s: 0 rss: 32MB L: 2/4 MS: 1 EraseBytes-
+#1832   REDUCE cov: 6 ft: 6 corp: 5/9B lim: 17 exec/s: 0 rss: 32MB L: 3/3 MS: 1 EraseBytes-
 ==840148== ERROR: libFuzzer: deadly signal
 ...
 SUMMARY: libFuzzer: deadly signal
@@ -481,10 +512,6 @@ to detect [Heartbleed] in one second.
 
 
 ## Advanced features
-```{contents}
-:local:
-:depth: 1
-```
 
 ### Dictionaries
 LibFuzzer supports user-supplied dictionaries with input language keywords
@@ -677,9 +704,11 @@ is expensive.
 By default (`-detect_leaks=1`) libFuzzer will count the number of
 `malloc` and `free` calls when executing every mutation.
 If the numbers don't match (which by itself doesn't mean there is a leak)
-libFuzzer will invoke the more expensive [LeakSanitizer]
+libFuzzer will re-execute the input to verify the mismatch and then invoke
+the more expensive [LeakSanitizer]
 pass and if the actual leak is found, it will be reported with the reproducer
-and the process will exit.
+and the process will exit. The verification re-executions are not fuzzing
+runs and do not count towards `-runs`.
 
 If your target has massive leaks and the leak detection is disabled
 you will eventually run out of RAM (see the `-rss_limit_mb` flag).

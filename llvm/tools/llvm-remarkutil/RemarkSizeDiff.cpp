@@ -265,7 +265,7 @@ static Error processRemark(const remarks::Remark &Remark,
     ++NumInstCountRemarksParsed;
   }
   // Collect remarks which contain the stack size of a function.
-  else if (PassName == "prologepilog" && RemarkName == "StackSize") {
+  else if (PassName == "prolog-epilog" && RemarkName == "StackSize") {
     // Expecting the 0-th argument to have the key "NumStackBytes" and an
     // integer value.
     auto MaybeStackSize =

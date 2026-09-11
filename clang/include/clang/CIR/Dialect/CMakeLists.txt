@@ -6,7 +6,7 @@ add_custom_target(clang-cir-doc)
 function(add_clang_mlir_doc doc_filename output_file output_directory command)
   set(LLVM_TARGET_DEFINITIONS ${doc_filename}.td)
   tablegen(MLIR ${output_file}.md ${command} ${ARGN}
-           "-I${MLIR_MAIN_SRC_DIR}" "-I${MLIR_INCLUDE_DIR}")
+           EXTRA_INCLUDES ${MLIR_MAIN_SRC_DIR} ${MLIR_INCLUDE_DIR})
   set(GEN_DOC_FILE ${CLANG_BINARY_DIR}/docs/CIR/_raw/${output_directory}${output_file}.md)
   add_custom_command(
           OUTPUT ${GEN_DOC_FILE}

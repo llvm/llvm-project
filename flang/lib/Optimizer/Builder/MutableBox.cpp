@@ -753,6 +753,9 @@ static mlir::Value allocateAndInitNewStorage(fir::FirOpBuilder &builder,
   auto lengths = getNewLengths(builder, loc, box, lenParams);
   auto newStorage = fir::AllocMemOp::create(builder, loc, box.getBaseTy(),
                                             allocName, lengths, extents);
+
+  if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
+    newStorage.setAlignment(fir::defaultArrayGlobalAlignment);
   if (mlir::isa<fir::RecordType>(box.getEleTy())) {
     // TODO: skip runtime initialization if this is not required. Currently,
     // there is no way to know here if a derived type needs it or not. But the
@@ -776,6 +779,9 @@ void fir::factory::genInlinedAllocation(
     safeExtents.push_back(fir::factory::genMaxWithZero(builder, loc, extent));
   auto heap = fir::AllocMemOp::create(builder, loc, box.getBaseTy(), allocName,
                                       lengths, safeExtents);
+
+  if (mlir::isa<fir::SequenceType>(box.getBaseTy()))
+    heap.setAlignment(fir::defaultArrayGlobalAlignment);
   MutablePropertyWriter{builder, loc, box}.updateMutableBox(
       heap, lbounds, safeExtents, lengths);
   if (mlir::isa<fir::RecordType>(box.getEleTy())) {

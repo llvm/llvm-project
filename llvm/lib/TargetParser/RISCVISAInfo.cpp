@@ -820,13 +820,13 @@ Error RISCVISAInfo::checkDependency() {
   // until the final syntax has been defined), they use RVE/RVI instructions.
   if (Exts.count("y") != 0 && Exts.count("xllvmrvyipm") == 0) {
     if (XLen == 32) {
-      // On RVY32 systems the zclsd/zcf encodings are used for y load/stores.
+      // On RV32Y systems the zclsd/zcf encodings are used for y load/stores.
       if (Exts.count("zclsd") != 0)
         return getBaseIncompatibleError("zclsd", "rv32y");
       if (Exts.count("zcf") != 0)
         return getBaseIncompatibleError("zcf", "rv32y");
     } else {
-      // On RVY64 systems the zcd encodings are used for y load/stores.
+      // On RV64Y systems the zcd encodings are used for y load/stores.
       if (Exts.count("zcd") != 0)
         return getBaseIncompatibleError("zcd", "rv64y");
       for (auto Ext : ZcdOverlaps)
@@ -952,6 +952,7 @@ void RISCVISAInfo::updateImplication() {
       if (XLen == 32) {
         ShouldAddZce = !Exts.count("f") || Exts.count("zcf") || Exts.count("y");
       } else if (XLen == 64) {
+        // Zcmp/Zcmt are incompatible with RV64Y, so Y can't be set here.
         ShouldAddZce = true;
       }
     }
@@ -1085,22 +1086,27 @@ RISCVISAInfo::postProcessAndChecking(std::unique_ptr<RISCVISAInfo> &&ISAInfo) {
 }
 
 StringRef RISCVISAInfo::computeDefaultABI() const {
+  bool HasY = Exts.count("y") != 0 && Exts.count("xllvmrvyipm") == 0;
   if (XLen == 32) {
+    if (Exts.count("xcheriot"))
+      return "cheriot";
     if (Exts.count("e"))
-      return "ilp32e";
+      return HasY ? "il32pc64e" : "ilp32e";
     if (Exts.count("d"))
-      return "ilp32d";
+      return HasY ? "il32pc64d" : "ilp32d";
     if (Exts.count("f"))
-      return "ilp32f";
-    return "ilp32";
+      return HasY ? "il32pc64f" : "ilp32f";
+    return HasY ? "il32pc64" : "ilp32";
   } else if (XLen == 64) {
+    // There is no l64pc128e ABI, so RV64E still uses the integer ABI even
+    // when the Y extension is enabled.
     if (Exts.count("e"))
       return "lp64e";
     if (Exts.count("d"))
-      return "lp64d";
+      return HasY ? "l64pc128d" : "lp64d";
     if (Exts.count("f"))
-      return "lp64f";
-    return "lp64";
+      return HasY ? "l64pc128f" : "lp64f";
+    return HasY ? "l64pc128" : "lp64";
   }
   llvm_unreachable("Invalid XLEN");
 }

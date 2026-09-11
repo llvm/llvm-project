@@ -115,7 +115,7 @@ struct format_xray_record : public FormatAdapter<XRayRecord> {
   explicit format_xray_record(XRayRecord record,
                               const FuncIdConversionHelper &conv)
       : FormatAdapter<XRayRecord>(std::move(record)), Converter(&conv) {}
-  void format(raw_ostream &Stream, StringRef Style) override {
+  void format(raw_ostream &Stream, StringRef Style) {
     Stream << formatv(
         "{FuncId: \"{0}\", ThreadId: \"{1}\", RecordType: \"{2}\"}",
         Converter->SymbolOrNumber(Item.FuncId), Item.TId,

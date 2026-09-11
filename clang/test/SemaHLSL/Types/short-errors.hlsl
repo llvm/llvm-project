@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -verify %s
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.8-compute -verify %s
+// RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-library -verify %s
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.8-library -verify %s
 
 void asArg(inout short F) { F + 1;}
 // expected-error@-1 {{unknown type name short}}

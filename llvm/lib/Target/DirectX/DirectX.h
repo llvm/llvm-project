@@ -30,6 +30,12 @@ void initializeDXILPrepareModulePass(PassRegistry &);
 /// Pass to convert modules into DXIL-compatable modules
 ModulePass *createDXILPrepareModulePass();
 
+/// Initializer for DXIL debug info lowering.
+void initializeDXILDebugInfoLegacyPass(PassRegistry &);
+
+/// Pass to downgrade debug information to forms supported by DXIL.
+ModulePass *createDXILDebugInfoLegacyPass();
+
 /// Initializer for DXIL Intrinsic Expansion
 void initializeDXILIntrinsicExpansionLegacyPass(PassRegistry &);
 
@@ -78,6 +84,12 @@ void initializeDXILOpLoweringLegacyPass(PassRegistry &);
 
 /// Pass to lowering LLVM intrinsic call to DXIL op function call.
 ModulePass *createDXILOpLoweringLegacyPass();
+
+/// Initializer for DXILRemoveUnusedResources
+void initializeDXILRemoveUnusedResourcesLegacyPass(PassRegistry &);
+
+/// Pass to update remove unsused resources.
+FunctionPass *createDXILRemoveUnusedResourcesLegacyPass();
 
 /// Initializer for DXILResourceAccess
 void initializeDXILResourceAccessLegacyPass(PassRegistry &);

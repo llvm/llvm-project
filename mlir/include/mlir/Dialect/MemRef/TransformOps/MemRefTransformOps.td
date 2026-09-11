@@ -31,10 +31,10 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       machine word.
     - `use_generic_functions`: Use generic allocation and deallocation functions
       instead of the classic "malloc", "aligned_alloc" and "free" functions.
-    // TODO: the following two options don't really make sense for 
+    // TODO: the following two options don't really make sense for
     // memref_to_llvm_type_converter specifically.
     // We should have a single to_llvm_type_converter.
-    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare 
+    - `use_bare_ptr_call_conv`: Replace FuncOp's MemRef arguments with bare
       pointers to the MemRef element types.
     - `data-layout`: String description (LLVM format) of the data layout that is
       expected on the produced module.
@@ -46,7 +46,14 @@ def MemrefToLLVMTypeConverterOp : Op<Transform_Dialect,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_generic_functions,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$use_bare_ptr_call_conv,
       OptionalAttr<StrAttr>:$data_layout);
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = [{
+    custom<LLVMTypeConverterOptions>(
+      $use_aligned_alloc,
+      $index_bitwidth,
+      $use_generic_functions,
+      $use_bare_ptr_call_conv,
+      $data_layout) attr-dict
+  }];
 }
 
 def ApplyAllocToAllocaOp : Op<Transform_Dialect,
@@ -193,7 +200,11 @@ def MemRefAllocaToGlobalOp :
 
     #### Return modes
 
-    Succeeds always. The returned handles refer to the `memref.get_global` and
+    Succeeds if all payload operations are statically shaped allocations with static
+    layouts (no dynamic offsets, strides, or symbol operands).
+    Fails with a silenceable error if any allocation has a dynamic shape, dynamic
+    offset/stride, or symbol operands.
+    The returned handles refer to the `memref.get_global` and
     `memref.global` ops that were inserted by the transformation.
   }];
 
@@ -203,6 +214,81 @@ def MemRefAllocaToGlobalOp :
 
   let assemblyFormat = [{
     $alloca attr-dict `:` functional-type(operands, results)
+  }];
+}
+
+def MemRefAllocToGlobalOp :
+  Op<Transform_Dialect, "memref.alloc_to_global",
+     [TransformOpInterface,
+      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+      DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let description = [{
+    Inserts a new `memref.global` for each provided `memref.alloc` into the
+    nearest symbol table (e.g., a `builtin.module`) and replaces it with a
+    `memref.get_global`. Any direct `memref.dealloc` operations referencing the
+    allocation are also removed, since the memory is no longer dynamically
+    allocated.
+
+    This transformation assumes that the allocation does not escape the current
+    container (e.g., it is not returned from the function or passed to another
+    function that deallocates it) and is not passed through control-flow or
+    alias operations (e.g., `scf.if`, `cf.cond_br`, `select`, `memref.subview`).
+    Only direct `memref.dealloc` users of the allocation operation are removed;
+    indirect deallocations referencing block arguments, region results, or aliased
+    views will not be removed.
+
+    #### Example
+
+    Consider the following transform op:
+
+    ```mlir
+    %get_global, %global =
+        transform.memref.alloc_to_global %alloc
+          : (!transform.op<"memref.alloc">)
+            -> (!transform.any_op, !transform.any_op)
+    ```
+
+    and the following input payload:
+
+    ```mlir
+    module {
+      func.func @func() {
+        %alloc = memref.alloc() : memref<2x32xf32>
+        // usages of %alloc...
+        memref.dealloc %alloc : memref<2x32xf32>
+      }
+    }
+    ```
+
+    then applying the transform op to the payload would result in the following
+    output IR:
+
+    ```mlir
+    module {
+      memref.global "private" @alloc : memref<2x32xf32>
+      func.func @func() {
+        %alloc = memref.get_global @alloc : memref<2x32xf32>
+        // usages of %alloc...
+      }
+    }
+    ```
+
+    #### Return modes
+
+    Succeeds if all payload operations are statically shaped allocations with static
+    layouts (no dynamic offsets, strides, or symbol operands).
+    Fails with a silenceable error if any allocation has a dynamic shape, dynamic
+    offset/stride, or symbol operands.
+    The returned handles refer to the `memref.get_global` and
+    `memref.global` ops that were inserted by the transformation.
+  }];
+
+  let arguments = (ins Transform_MemRefAllocOp:$alloc);
+  let results = (outs TransformHandleTypeInterface:$getGlobal,
+                  TransformHandleTypeInterface:$global);
+
+  let assemblyFormat = [{
+    $alloc attr-dict `:` functional-type(operands, results)
   }];
 }
 
@@ -234,7 +320,7 @@ def MemRefMultiBufferOp : Op<Transform_Dialect, "memref.multibuffer",
   let results = (outs TransformHandleTypeInterface:$transformed);
 
   let assemblyFormat =
-    "$target attr-dict `:` functional-type(operands, results)";
+    "$target prop-dict attr-dict `:` functional-type(operands, results)";
 }
 
 def MemRefEraseDeadAllocAndStoresOp
@@ -306,7 +392,7 @@ def MemRefMakeLoopIndependentOp
   let arguments = (ins TransformHandleTypeInterface:$target, I64Attr:$num_loops);
   let results = (outs TransformHandleTypeInterface:$transformed);
   let assemblyFormat =
-      "$target attr-dict `:` functional-type($target, $transformed)";
+      "$target `num_loops` `=` $num_loops attr-dict `:` functional-type($target, $transformed)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

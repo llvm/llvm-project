@@ -13,13 +13,13 @@ define void @foo(i64 %a, ptr %p0, ptr %p1) {
 ; CHECK-NEXT:    add.s64 %rd2, %rd1, 7;
 ; CHECK-NEXT:    and.b64 %rd3, %rd2, -8;
 ; CHECK-NEXT:    alloca.u64 %rd4, %rd3, 16;
-; CHECK-NEXT:    cvta.local.u64 %rd5, %rd4;
-; CHECK-NEXT:    ld.param.b64 %rd6, [foo_param_1];
-; CHECK-NEXT:    alloca.u64 %rd7, %rd3, 16;
-; CHECK-NEXT:    cvta.local.u64 %rd8, %rd7;
-; CHECK-NEXT:    ld.param.b64 %rd9, [foo_param_2];
-; CHECK-NEXT:    st.b64 [%rd6], %rd5;
-; CHECK-NEXT:    st.b64 [%rd9], %rd8;
+; CHECK-NEXT:    ld.param.b64 %rd5, [foo_param_1];
+; CHECK-NEXT:    cvta.local.u64 %rd6, %rd4;
+; CHECK-NEXT:    ld.param.b64 %rd7, [foo_param_2];
+; CHECK-NEXT:    alloca.u64 %rd8, %rd3, 16;
+; CHECK-NEXT:    cvta.local.u64 %rd9, %rd8;
+; CHECK-NEXT:    st.b64 [%rd5], %rd6;
+; CHECK-NEXT:    st.b64 [%rd7], %rd9;
 ; CHECK-NEXT:    ret;
   %b = alloca i8, i64 %a, align 16
   %c = alloca i8, i64 %a, align 16

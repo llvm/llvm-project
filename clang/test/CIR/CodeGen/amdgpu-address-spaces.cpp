@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-cir \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fclangir -emit-cir \
 // RUN:   -mmlir -mlir-print-ir-before=cir-target-lowering %s -o %t.cir 2> %t-pre.cir
 // RUN: FileCheck --check-prefix=CIR-PRE --input-file=%t-pre.cir %s
 
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 // Test address space handling for AMDGPU target in C++ mode (non-OpenCL/HIP).

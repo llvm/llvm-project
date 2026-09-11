@@ -27,7 +27,7 @@ class TestTBIHonored(TestBase):
     # This test is valid on AArch64 systems with TBI mode enabled,
     # and an address mask that clears the top byte before reading
     # from memory.
-    @skipUnlessDarwin
+    @requireDarwin
     @skipIf(archs=no_match(["arm64", "arm64e"]))
     @skipIfRemote
     def test(self):

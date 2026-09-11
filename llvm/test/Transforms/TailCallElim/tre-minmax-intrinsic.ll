@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=tailcallelim -verify-dom-info -S | FileCheck %s
 
 %struct.ListNode = type { i32, ptr }
+%struct.VecListNode = type { <4 x i32>, ptr }
 
 define i32 @umin(ptr readonly %a) {
 ; CHECK-LABEL: define i32 @umin
@@ -303,3 +304,83 @@ declare i32 @llvm.umin.i32(i32, i32)
 declare i32 @llvm.umax.i32(i32, i32)
 declare i32 @llvm.smin.i32(i32, i32)
 declare i32 @llvm.smax.i32(i32, i32)
+
+; The identity for a vector min/max accumulator is a splat of the scalar
+; identity.
+
+define <4 x i32> @smax_vector(ptr readonly %a) {
+; CHECK-LABEL: define <4 x i32> @smax_vector
+; CHECK-SAME: (ptr readonly [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), [[ENTRY:%.*]] ], [ [[MAX:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[A_TR:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[TMP1:%.*]], [[IF_END]] ]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A_TR]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET:%.*]], label [[IF_END]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> zeroinitializer, <4 x i32> [[ACCUMULATOR_TR]])
+; CHECK-NEXT:    ret <4 x i32> [[ACCUMULATOR_RET_TR]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_TR]], align 16
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_VECLISTNODE:%.*]], ptr [[A_TR]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[MAX]] = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[ACCUMULATOR_TR]])
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret, label %if.end
+
+common.ret:                                       ; preds = %entry, %if.end
+  %common.ret.op = phi <4 x i32> [ %max, %if.end ], [ zeroinitializer, %entry ]
+  ret <4 x i32> %common.ret.op
+
+if.end:                                           ; preds = %entry
+  %0 = load <4 x i32>, ptr %a
+  %next = getelementptr inbounds %struct.VecListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call <4 x i32> @smax_vector(ptr %1)
+  %max = tail call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %call)
+  br label %common.ret
+}
+
+define <4 x i32> @smin_vector(ptr readonly %a) {
+; CHECK-LABEL: define <4 x i32> @smin_vector
+; CHECK-SAME: (ptr readonly [[A:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[TAILRECURSE:%.*]]
+; CHECK:       tailrecurse:
+; CHECK-NEXT:    [[ACCUMULATOR_TR:%.*]] = phi <4 x i32> [ splat (i32 2147483647), [[ENTRY:%.*]] ], [ [[MIN:%.*]], [[IF_END:%.*]] ]
+; CHECK-NEXT:    [[A_TR:%.*]] = phi ptr [ [[A]], [[ENTRY]] ], [ [[TMP1:%.*]], [[IF_END]] ]
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq ptr [[A_TR]], null
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[COMMON_RET:%.*]], label [[IF_END]]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[ACCUMULATOR_RET_TR:%.*]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> zeroinitializer, <4 x i32> [[ACCUMULATOR_TR]])
+; CHECK-NEXT:    ret <4 x i32> [[ACCUMULATOR_RET_TR]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A_TR]], align 16
+; CHECK-NEXT:    [[NEXT:%.*]] = getelementptr inbounds [[STRUCT_VECLISTNODE:%.*]], ptr [[A_TR]], i64 0, i32 1
+; CHECK-NEXT:    [[TMP1]] = load ptr, ptr [[NEXT]], align 8
+; CHECK-NEXT:    [[MIN]] = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[ACCUMULATOR_TR]])
+; CHECK-NEXT:    br label [[TAILRECURSE]]
+;
+entry:
+  %tobool.not = icmp eq ptr %a, null
+  br i1 %tobool.not, label %common.ret, label %if.end
+
+common.ret:                                       ; preds = %entry, %if.end
+  %common.ret.op = phi <4 x i32> [ %min, %if.end ], [ zeroinitializer, %entry ]
+  ret <4 x i32> %common.ret.op
+
+if.end:                                           ; preds = %entry
+  %0 = load <4 x i32>, ptr %a
+  %next = getelementptr inbounds %struct.VecListNode, ptr %a, i64 0, i32 1
+  %1 = load ptr, ptr %next
+  %call = tail call <4 x i32> @smin_vector(ptr %1)
+  %min = tail call <4 x i32> @llvm.smin.v4i32(<4 x i32> %0, <4 x i32> %call)
+  br label %common.ret
+}
+
+declare <4 x i32> @llvm.smax.v4i32(<4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.smin.v4i32(<4 x i32>, <4 x i32>)

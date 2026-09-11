@@ -1,0 +1,1 @@
+RUN: ogre %s %s

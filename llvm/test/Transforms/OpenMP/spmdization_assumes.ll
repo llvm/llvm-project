@@ -55,7 +55,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, pt
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP2]])
 ; CHECK-NEXT:    br label %[[REGION_EXIT:.*]]
 ; CHECK:       [[REGION_EXIT]]:
-; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0, i32 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr null, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0, i32 0) #[[ATTR3]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit() #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ;

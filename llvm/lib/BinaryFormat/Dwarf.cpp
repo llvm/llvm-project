@@ -192,7 +192,8 @@ static StringRef LlvmUserOperationEncodingString(unsigned Encoding) {
 static unsigned
 getLlvmUserOperationEncoding(StringRef LlvmUserOperationEncodingString) {
   unsigned E = StringSwitch<unsigned>(LlvmUserOperationEncodingString)
-#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME) .Case(#NAME, DW_OP_LLVM_##NAME)
+#define HANDLE_DW_OP_LLVM_USEROP(ID, NAME)                                     \
+  .Case("DW_OP_LLVM_" #NAME, DW_OP_LLVM_##NAME)
 #include "llvm/BinaryFormat/Dwarf.def"
                    .Default(0);
   assert(E && "unhandled DWARF operation string with LLVM user op");
@@ -507,6 +508,8 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
       return "Fortran 2008";
     if (Version <= 2018)
       return "Fortran 2018";
+    if (Version <= 2023)
+      return "Fortran 2023";
   } break;
 
   // YYYYMM
@@ -521,6 +524,8 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
       return "C11";
     if (Version <= 201710)
       return "C17";
+    if (Version <= 202311)
+      return "C23";
   } break;
 
   case DW_LNAME_C_plus_plus: {
@@ -538,6 +543,8 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
       return "C++17";
     if (Version <= 202002)
       return "C++20";
+    if (Version <= 202302)
+      return "C++23";
   } break;
 
   case DW_LNAME_ObjC_plus_plus:
@@ -577,6 +584,14 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   case DW_LNAME_Ruby:
   case DW_LNAME_Hylo:
   case DW_LNAME_Metal:
+  case DW_LNAME_Odin:
+  case DW_LNAME_P4:
+  case DW_LNAME_V:
+  case DW_LNAME_Algol68:
+  case DW_LNAME_Nim:
+  case DW_LNAME_Erlang:
+  case DW_LNAME_Elixir:
+  case DW_LNAME_Gleam:
     break;
   }
 

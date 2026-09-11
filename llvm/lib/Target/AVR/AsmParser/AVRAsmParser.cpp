@@ -79,7 +79,7 @@ class AVRAsmParser : public MCTargetAsmParser {
                                       unsigned Kind) override;
 
   MCRegister toDREG(MCRegister Reg, unsigned From = AVR::sub_lo) {
-    MCRegisterClass const *Class = &AVRMCRegisterClasses[AVR::DREGSRegClassID];
+    MCRegisterClass const *Class = &getAVRMCRegisterClass(AVR::DREGSRegClassID);
     return MRI->getMatchingSuperReg(Reg, From, Class);
   }
 

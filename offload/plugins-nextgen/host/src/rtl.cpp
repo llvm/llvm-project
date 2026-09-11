@@ -56,7 +56,7 @@ using namespace error;
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
   /// Construct the kernel with a name and an execution mode.
-  GenELF64KernelTy(const char *Name) : GenericKernelTy(Name), Func(nullptr) {}
+  GenELF64KernelTy(StringRef Name) : GenericKernelTy(Name), Func(nullptr) {}
 
   /// Initialize the kernel.
   Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
@@ -88,18 +88,18 @@ struct GenELF64KernelTy : public GenericKernelTy {
   /// Launch the kernel using the arguments.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
                    uint32_t NumBlocks[3], uint32_t DynBlockMemSize,
-                   KernelArgsTy &KernelArgs, KernelLaunchParamsTy LaunchParams,
+                   KernelLaunchArgsTy &LaunchArgs,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override {
-    if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
+    if (LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "Incompatible kernel argument version for plugin");
     // Cooperative kernel launch is not supported for host
-    if (KernelArgs.Flags.Cooperative)
+    if (LaunchArgs.Flags.Cooperative)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Data);
+    Func(LaunchArgs.Args);
     return Plugin::success();
   }
 
@@ -112,8 +112,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
-  /// Host kernel arguments are defined as a single, contiguous buffer.
-  using KernelTy = void(void *);
+  /// Host kernel arguments are defined as an array of pointers, one per
+  /// argument, each pointing to that argument's storage.
+  using KernelTy = void(void **);
   /// The kernel function to execute.
   KernelTy *Func;
 };
@@ -164,7 +165,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   std::string getComputeUnitKind() const override { return "generic-64bit"; }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy &> constructKernel(const char *Name) override {
+  Expected<GenericKernelTy &> constructKernel(StringRef Name) override {
     // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel = Plugin.allocate<GenELF64KernelTy>();
     if (!GenELF64Kernel)
@@ -181,8 +182,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// Load the binary image into the device and allocate an image object.
   Expected<DeviceImageTy *>
-  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage,
-                 int32_t ImageId) override {
+  loadBinaryImpl(std::unique_ptr<MemoryBuffer> &&TgtImage, int32_t ImageId,
+                 PluginContextTy * /*Context*/) override {
     // Allocate and initialize the image object.
     GenELF64DeviceImageTy *Image = Plugin.allocate<GenELF64DeviceImageTy>();
     new (Image) GenELF64DeviceImageTy(ImageId, *this, std::move(TgtImage));
@@ -224,7 +225,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
@@ -276,6 +278,12 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
 
+  Error dataMemcpyImpl(void *DstPtr, const void *SrcPtr, int64_t Size,
+                       AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    std::memcpy(DstPtr, SrcPtr, Size);
+    return Plugin::success();
+  }
+
   /// Exchange data between two devices within the plugin. This function is not
   /// supported in this plugin.
   Error dataExchangeImpl(const void *SrcPtr, GenericDeviceTy &DstGenericDevice,
@@ -320,11 +328,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
                        bool *IsQueueWorkCompleted) override {
     if (IsQueueWorkCompleted)
       *IsQueueWorkCompleted = true;
-    return Plugin::success();
-  }
-
-  /// This plugin does not support interoperability
-  Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     return Plugin::success();
   }
 
@@ -388,6 +391,7 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     Info.add("Max Memory Allocation Size (bytes)", 1, "",
              DeviceInfo::MAX_MEM_ALLOC_SIZE);
     Info.add("Max Group size", 1, "", DeviceInfo::MAX_WORK_GROUP_SIZE);
+    Info.add("Number of Lanes", 1, "", DeviceInfo::NUM_LANES);
     auto &MaxGroupSize =
         *Info.add("Workgroup Max Size per Dimension", std::monostate{}, "",
                   DeviceInfo::MAX_WORK_GROUP_SIZE_PER_DIMENSION);
@@ -478,6 +482,14 @@ public:
   }
 };
 
+struct GenELF64PluginContextTy final : public PluginContextTy {
+  using PluginContextTy::PluginContextTy;
+
+  Error initAsyncInfoImpl(GenericDeviceTy &, AsyncInfoWrapperTy &) override {
+    return Plugin::success();
+  }
+};
+
 /// Class implementing the plugin functionalities for GenELF64.
 struct GenELF64PluginTy final : public GenericPluginTy {
   /// Create the GenELF64 plugin.
@@ -501,6 +513,11 @@ struct GenELF64PluginTy final : public GenericPluginTy {
   GenericDeviceTy *createDevice(GenericPluginTy &Plugin, int32_t DeviceId,
                                 int32_t NumDevices) override {
     return new GenELF64DeviceTy(Plugin, DeviceId, NumDevices);
+  }
+
+  Expected<std::unique_ptr<PluginContextTy>>
+  createPluginContext(llvm::ArrayRef<GenericDeviceTy *> Devices) override {
+    return std::make_unique<GenELF64PluginContextTy>(*this, Devices);
   }
 
   /// Creates a generic global handler.
@@ -556,7 +573,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 };
 
 template <typename... ArgsTy>
-static Error Plugin::check(int32_t Code, const char *ErrMsg, ArgsTy... Args) {
+[[maybe_unused]] static Error Plugin::check(int32_t Code, const char *ErrMsg,
+                                            ArgsTy... Args) {
   if (Code == 0)
     return Plugin::success();
 

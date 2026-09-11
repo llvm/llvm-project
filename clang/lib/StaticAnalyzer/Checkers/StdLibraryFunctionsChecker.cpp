@@ -41,6 +41,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ErrnoModeling.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -304,11 +305,7 @@ class StdLibraryFunctionsChecker
 
   protected:
     bool checkSpecificValidity(const FunctionDecl *FD) const override {
-      const bool ValidArg =
-          getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
-      assert(ValidArg &&
-             "This constraint should be applied on an integral type");
-      return ValidArg;
+      return getArgType(FD, ArgN)->isIntegralType(FD->getASTContext());
     }
 
   private:
@@ -2149,8 +2146,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   ErrnoIrrelevant)
             .ArgConstraint(NotNull(ArgNo(0))));
   } else {
-    const auto ReturnsZeroOrMinusOne =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, 0))};
     const auto ReturnsZero =
         ConstraintSet{ReturnValueCondition(WithinRange, SingleValue(0))};
     const auto ReturnsMinusOne =
@@ -2161,8 +2156,6 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         ConstraintSet{ReturnValueCondition(WithinRange, Range(0, IntMax))};
     const auto ReturnsNonZero =
         ConstraintSet{ReturnValueCondition(OutOfRange, SingleValue(0))};
-    const auto ReturnsFileDescriptor =
-        ConstraintSet{ReturnValueCondition(WithinRange, Range(-1, IntMax))};
     const auto &ReturnsValidFileDescriptor = ReturnsNonnegative;
 
     auto ValidFileDescriptorOrAtFdcwd = [&](ArgNo ArgN) {
@@ -2958,15 +2951,28 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     // void *mmap(void *addr, size_t length, int prot, int flags, int fd,
     // off_t offset);
     // FIXME: Improve for errno modeling.
-    addToFunctionSummaryMap(
-        "mmap",
-        Signature(
-            ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
-            RetType{VoidPtrTy}),
+    auto MmapSignature = Signature(
+        ArgTypes{VoidPtrTy, SizeTyCanonTy, IntTy, IntTy, IntTy, Off_tTy},
+        RetType{VoidPtrTy});
+    auto MmapSummaryWithLengthConstraint =
         Summary(NoEvalCall)
-            .ArgConstraint(ArgumentCondition(1, WithinRange, Range(1, SizeMax)))
             .ArgConstraint(
-                ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
+                ArgumentCondition(1, WithinRange, Range(1, SizeMax)));
+
+    if (ACtx.getTargetInfo().getTriple().isOSDarwin()) {
+      // On Darwin, MAP_ANON + VM_MAKE_TAG(tag) uses argument 4 (len) for
+      // the tag, which looks like a large negative signed integer.
+      // The valid range for fd is not expressible as a simple union of
+      // ranges so we only constrain the length parameter.
+      addToFunctionSummaryMap("mmap", MmapSignature,
+                              MmapSummaryWithLengthConstraint);
+    } else {
+      // On other platforms, we also constrain the fd parameter (-1 <= fd).
+      addToFunctionSummaryMap(
+          "mmap", MmapSignature,
+          MmapSummaryWithLengthConstraint.ArgConstraint(
+              ArgumentCondition(4, WithinRange, Range(-1, IntMax))));
+    }
 
     std::optional<QualType> Off64_tTy = lookupTy("off64_t");
     // void *mmap64(void *addr, size_t length, int prot, int flags, int fd,

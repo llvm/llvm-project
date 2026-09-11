@@ -3,7 +3,7 @@ void done() {}
 int main() {
   puts("in main");
   done(); // Set breakpoint here
-  done();
+  done(); // Second call to done
   puts("leaving main");
   return 0;
 }

@@ -611,7 +611,7 @@ void LTOModule::parseSymbols() {
       continue;
     }
 
-    if (getTargetTriple().isOSBinFormatXCOFF() && isa<GlobalIFunc>(GV)) {
+    if (isa<GlobalIFunc>(GV)) {
       addDefinedFunctionSymbol(Sym);
       continue;
     }

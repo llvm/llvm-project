@@ -371,12 +371,12 @@ public:
         } else {
           Loc->addChild(*Field, &Env.createStorageLocation(FieldType));
         }
+      }
 
-        for (const auto &Entry :
-             Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
-          Loc->addSyntheticField(Entry.getKey(),
-                                 Env.createStorageLocation(Entry.getValue()));
-        }
+      for (const auto &Entry :
+           Env.getDataflowAnalysisContext().getSyntheticFields(Derived)) {
+        Loc->addSyntheticField(Entry.getKey(),
+                               Env.createStorageLocation(Entry.getValue()));
       }
       Env.initializeFieldsWithValues(*Loc, Derived);
 
@@ -484,7 +484,7 @@ public:
   }
 
   void VisitCXXThisExpr(const CXXThisExpr *S) {
-    auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation();
+    auto *ThisPointeeLoc = Env.getThisPointeeStorageLocation(*S);
     if (ThisPointeeLoc == nullptr)
       // Unions are not supported yet, and will not have a location for the
       // `this` expression's pointee.

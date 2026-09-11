@@ -1,0 +1,21 @@
+{
+  "members": [
+    {
+      "data": [],
+      "id_table": [],
+      "linkage_table": [],
+      "target_triple": "arm64-apple-macosx",
+      "tu_namespace": {
+        "kind": "CompilationUnit",
+        "name": "empty.cpp"
+      },
+      "type": "TUSummary"
+    }
+  ],
+  "namespace": {
+    "kind": "StaticLibrary",
+    "name": "lib-explicit-triple"
+  },
+  "target_triple": "arm64-apple-macosx",
+  "type": "StaticLibrary"
+}

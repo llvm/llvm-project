@@ -2,7 +2,7 @@
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -o - | FileCheck %s -DTARGET=dx
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -fnative-half-type -fnative-int16-type \
+// RUN:   spirv-unknown-vulkan-library %s -fnative-half-type -fnative-int16-type \
 // RUN: -emit-llvm -disable-llvm-passes \
 // RUN:   -o - | FileCheck %s -DTARGET=spv
 
@@ -77,6 +77,12 @@ uint3 test_firstbitlow_uint3(uint3 p0) {
 // CHECK-LABEL: test_firstbitlow_uint4
 // CHECK: call <4 x i32> @llvm.[[TARGET]].firstbitlow.v4i32
 uint4 test_firstbitlow_uint4(uint4 p0) {
+  return firstbitlow(p0);
+}
+
+// CHECK-LABEL: test_firstbitlow_uint5
+// CHECK: call <5 x i32> @llvm.[[TARGET]].firstbitlow.v5i32
+vector<uint, 5> test_firstbitlow_uint5(vector<uint, 5> p0) {
   return firstbitlow(p0);
 }
 

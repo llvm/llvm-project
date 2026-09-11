@@ -113,7 +113,7 @@ void yamlize(IO &IO, ClangTidyOptions::OptionMap &Val, bool,
   } else {
     // We need custom logic here to support the old method of specifying check
     // options using a list of maps containing key and value keys.
-    auto &I = reinterpret_cast<Input &>(IO);
+    const auto &I = reinterpret_cast<Input &>(IO);
     if (isa<SequenceNode>(I.getCurrentNode())) {
       MappingNormalization<NOptionMap, ClangTidyOptions::OptionMap> NOpts(IO,
                                                                           Val);
@@ -194,7 +194,7 @@ void yamlize(IO &IO, GlobListVariant &Val, bool, EmptyContext &Ctx) {
   if (!IO.outputting()) {
     // Special case for reading from YAML
     // Must support reading from both a string or a list
-    auto &I = reinterpret_cast<Input &>(IO);
+    const auto &I = reinterpret_cast<Input &>(IO);
     if (isa<ScalarNode, BlockScalarNode>(I.getCurrentNode())) {
       Val.AsString = std::string();
       yamlize(IO, *Val.AsString, true, Ctx);
@@ -327,7 +327,7 @@ ClangTidyOptions ClangTidyOptions::merge(const ClangTidyOptions &Other,
 ClangTidyOptions ClangTidyOptionsProvider::getOptions(StringRef FileName) {
   ClangTidyOptions Result;
   unsigned Priority = 0;
-  for (auto &Source : getRawOptions(FileName))
+  for (const auto &Source : getRawOptions(FileName))
     Result.mergeWith(Source.first, ++Priority);
   return Result;
 }
@@ -402,11 +402,11 @@ FileOptionsBaseProvider::getNormalizedAbsolutePath(StringRef Path) {
 
 void FileOptionsBaseProvider::addRawFileOptions(
     StringRef AbsolutePath, std::vector<OptionsSource> &CurOptions) {
-  auto CurSize = CurOptions.size();
+  const auto CurSize = CurOptions.size();
   // Look for a suitable configuration file in all parent directories of the
   // file. Start with the immediate parent directory and move up.
   StringRef RootPath = llvm::sys::path::parent_path(AbsolutePath);
-  auto MemorizedConfigFile =
+  const auto MemorizedConfigFile =
       [this, &RootPath](StringRef CurrentPath) -> std::optional<OptionsSource> {
     const auto Iter = CachedOptions.Memorized.find(CurrentPath);
     if (Iter != CachedOptions.Memorized.end())
@@ -531,7 +531,12 @@ std::error_code parseLineFilter(StringRef LineFilter,
                                 clang::tidy::ClangTidyGlobalOptions &Options) {
   llvm::yaml::Input Input(LineFilter);
   Input >> Options.LineFilter;
-  return Input.error();
+  if (const std::error_code &Error = Input.error())
+    return Error;
+
+  for (FileFilter &Filter : Options.LineFilter)
+    Filter.Name = llvm::sys::path::convert_to_slash(Filter.Name);
+  return {};
 }
 
 llvm::ErrorOr<ClangTidyOptions>

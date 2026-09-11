@@ -32,7 +32,7 @@
 ; CODEGEN:  store double {{%.*}}, ptr %scevgep34, align 8, !alias.scope !12, !noalias !13
 ;
 ; CODEGEN: !0 = distinct !{!0, !1}
-; CODEGEN: !1 = !{!"llvm.loop.vectorize.enable", i32 0}
+; CODEGEN: !1 = !{!"llvm.loop.vectorize.disable"}
 ; CODEGEN: !2 = distinct !{!2, !1}
 ; CODEGEN: !3 = distinct !{!3, !1}
 ; CODEGEN: !4 = !{!5}

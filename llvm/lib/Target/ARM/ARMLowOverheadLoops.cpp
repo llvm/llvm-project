@@ -685,10 +685,11 @@ bool LowOverheadLoop::ValidateTailPredicate() {
     // before entering the loop.
     auto CannotProvideElements = [this](MachineBasicBlock *MBB,
                                         MCRegister NumElements) {
-      if (MBB->empty())
+      auto Back = MBB->getLastNonDebugInstr();
+      if (Back == MBB->end())
         return false;
       // NumElements is redefined in this block.
-      if (RDI.hasLocalDefBefore(&MBB->back(), NumElements))
+      if (RDI.hasLocalDefBefore(&*Back, NumElements))
         return true;
 
       // Don't continue searching up through multiple predecessors.

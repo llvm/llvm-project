@@ -11,12 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/Lex/Pragma.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Rewrite/Frontend/Rewriters.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -122,13 +123,13 @@ void InclusionRewriter::WriteLineInfo(StringRef Filename, int Line,
     return;
   if (UseLineDirectives) {
     OS << "#line" << ' ' << Line << ' ' << '"';
-    OS.write_escaped(Filename);
+    OS << Filename;
     OS << '"';
   } else {
     // Use GNU linemarkers as described here:
     // http://gcc.gnu.org/onlinedocs/cpp/Preprocessor-Output.html
     OS << '#' << ' ' << Line << ' ' << '"';
-    OS.write_escaped(Filename);
+    OS << Filename;
     OS << '"';
     if (!Extra.empty())
       OS << Extra;

@@ -146,24 +146,14 @@ def : Pat<(v2i64 immAllZerosV), (V_SET0)>;
 def : Pat<(v2f64 immAllZerosV), (V_SET0)>;
 }
 
-
-// The same as done above but for AVX.  The 256-bit AVX1 ISA doesn't support PI,
-// and doesn't need it because on sandy bridge the register is set to zero
-// at the rename stage without using any execution unit, so SET0PSY
-// and SET0PDY can be used for vector int instructions without penalty
-let isReMaterializable = 1, isAsCheapAsAMove = 1, canFoldAsLoad = 1,
-    isPseudo = 1, Predicates = [NoAVX512], SchedRW = [WriteZero] in {
-def AVX_SET0 : I<0, Pseudo, (outs VR256:$dst), (ins), "",
-                 [(set VR256:$dst, (v8i32 immAllZerosV))]>;
-}
-
 let Predicates = [NoAVX512] in {
-def : Pat<(v32i8 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v16i16 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v16f16 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v4i64 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v8f32 immAllZerosV), (AVX_SET0)>;
-def : Pat<(v4f64 immAllZerosV), (AVX_SET0)>;
+def : Pat<(v32i8 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v16i16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v16f16 immAllZerosV), (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v8i32 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v8f32 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v4i64 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
+def : Pat<(v4f64 immAllZerosV),  (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm)>;
 }
 
 // We set canFoldAsLoad because this can be converted to a constant-pool
@@ -1155,6 +1145,53 @@ def : InstAlias<"cvtsi2ss\t{$src, $dst|$dst, $src}",
                 (CVTSI2SSrm_Int VR128:$dst, i32mem:$src), 0, "att">;
 def : InstAlias<"cvtsi2sd\t{$src, $dst|$dst, $src}",
                 (CVTSI2SDrm_Int VR128:$dst, i32mem:$src), 0, "att">;
+
+let Predicates = [UseSSE1] in {
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
+          (CVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
+          (CVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseSSE2] in {
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
+          (CVTSI2SDrr_Int (v2f64 (V_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
+          (CVTSI642SDrr_Int (v2f64 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseAVX] in {
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR32:$src)))))),
+          (VCVTSI2SDrr_Int (v2f64 (V_SET0)), GR32:$src)>;
+def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (f64 (any_sint_to_fp GR64:$src)))))),
+          (VCVTSI642SDrr_Int (v2f64 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseSSE41] in {
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))),
+                            (i8 1))),
+          (CVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))),
+                            (i8 1))),
+          (CVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+}
+
+let Predicates = [UseAVX] in {
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR32:$src)))),
+                            (i8 1))),
+          (VCVTSI2SSrr_Int (v4f32 (V_SET0)), GR32:$src)>;
+def : Pat<(v4f32 (X86Blendi (v4f32 immAllZerosV),
+                            (v4f32 (scalar_to_vector (f32 (any_sint_to_fp GR64:$src)))),
+                            (i8 1))),
+          (VCVTSI642SSrr_Int (v4f32 (V_SET0)), GR64:$src)>;
+}
 
 /// SSE 1 Only
 
@@ -4250,6 +4287,19 @@ def MOVPQIto64mr : RS2I<0x7E, MRMDestMem, (outs), (ins i64mem:$dst, VR128:$src),
 } // ExeDomain = SSEPackedInt
 
 //===---------------------------------------------------------------------===//
+// If the upper 32 bits of v2i64 elements are zero, we can use (v)movd instead.
+let AddedComplexity = 10 in {
+  let Predicates = [UseAVX] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (VMOVPDI2DIrr VR128:$src), sub_32bit)>;
+  }
+  let Predicates = [UseSSE2] in {
+    def : Pat<(i64 (extractelt (X86upperzero<v2i64, VR128>:$src), (iPTR 0))),
+              (SUBREG_TO_REG (MOVPDI2DIrr VR128:$src), sub_32bit)>;
+  }
+}
+
+//===---------------------------------------------------------------------===//
 // Bitcast FR64 <-> GR64
 //
 let ExeDomain = SSEPackedInt, isCodeGenOnly = 1 in {
@@ -7265,6 +7315,7 @@ let Predicates = [HasAVX1Only] in {
   defm : vperm2x128_lowering<"VPERM2F128", v8i32,  loadv8i32>;
   defm : vperm2x128_lowering<"VPERM2F128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2F128", v16f16, loadv16f16>;
+  defm : vperm2x128_lowering<"VPERM2F128", v16bf16, loadv16bf16>;
   defm : vperm2x128_lowering<"VPERM2F128", v32i8,  loadv32i8>;
 }
 
@@ -7287,7 +7338,8 @@ def VINSERTF128rmi : AVXAIi8<0x18, MRMSrcMem, (outs VR256:$dst),
 // with YMM register containing zero.
 // FIXME: Avoid producing vxorps to clear the fake inputs.
 let Predicates = [HasAVX1Only] in {
-def : Pat<(v8i32 immAllOnesV), (VCMPPSYrri (AVX_SET0), (AVX_SET0), 0xf)>;
+def : Pat<(v8i32 immAllOnesV), (VCMPPSYrri (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm),
+                                           (SUBREG_TO_REG (v4f32 (V_SET0)), sub_xmm), 0xf)>;
 }
 
 multiclass vinsert_lowering<string InstrStr, string PermStr,
@@ -7321,7 +7373,6 @@ let Predicates = [HasAVX1Only] in {
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v4i32, v8i32,  loadv4i32, loadv8i32>;
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v8i16, v16i16, loadv8i16, loadv16i16>;
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v8f16, v16f16, loadv8f16, loadv16f16>;
-  defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v16i8, v32i8,  loadv16i8, loadv32i8>;
   defm : vinsert_lowering<"VINSERTF128", "VPERM2F128", v16i8, v32i8,  loadv16i8, loadv32i8>;
 }
 
@@ -7944,7 +7995,7 @@ let Predicates = [HasAVX2] in {
   defm : vperm2x128_lowering<"VPERM2I128", v8i32,  loadv8i32>;
   defm : vperm2x128_lowering<"VPERM2I128", v16i16, loadv16i16>;
   defm : vperm2x128_lowering<"VPERM2I128", v16f16, loadv16f16>;
-  defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
+  defm : vperm2x128_lowering<"VPERM2I128", v16bf16, loadv16bf16>;
   defm : vperm2x128_lowering<"VPERM2I128", v32i8,  loadv32i8>;
 }
 
@@ -7968,7 +8019,6 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v4i32, v8i32,  loadv4i32,  loadv8i32>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8i16, v16i16, loadv8i16,  loadv16i16>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v8f16, v16f16, loadv8f16,  loadv16f16>;
-  defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
   defm : vinsert_lowering<"VINSERTI128", "VPERM2I128", v16i8, v32i8,  loadv16i8,  loadv32i8>;
 }
 

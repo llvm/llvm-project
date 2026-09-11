@@ -196,12 +196,19 @@ define <2 x float> @test_intrinsic_fmax_v2f32(<2 x float> %x, <2 x float> %y) {
 ; SSE4-NEXT:    movaps %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test_intrinsic_fmax_v2f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_intrinsic_fmax_v2f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_intrinsic_fmax_v2f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
+; AVX512-NEXT:    vcmpordps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    retq
   %z = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %x, <2 x float> %y) readnone
   ret <2 x float> %z
 }
@@ -226,12 +233,19 @@ define <4 x float> @test_intrinsic_fmax_v4f32(<4 x float> %x, <4 x float> %y) {
 ; SSE4-NEXT:    movaps %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test_intrinsic_fmax_v4f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_intrinsic_fmax_v4f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_intrinsic_fmax_v4f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmaxps %xmm0, %xmm1, %xmm2
+; AVX512-NEXT:    vcmpordps %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vblendvps %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    retq
   %z = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y) readnone
   ret <4 x float> %z
 }
@@ -268,12 +282,19 @@ define <8 x float> @test_intrinsic_fmax_v8f32(<8 x float> %x, <8 x float> %y) {
 ; SSE4-NEXT:    movaps %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test_intrinsic_fmax_v8f32:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxps %ymm0, %ymm1, %ymm2
-; AVX-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
-; AVX-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_intrinsic_fmax_v8f32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmaxps %ymm0, %ymm1, %ymm2
+; AVX1-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vblendvps %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_intrinsic_fmax_v8f32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmaxps %ymm0, %ymm1, %ymm2
+; AVX512-NEXT:    vcmpordps %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vblendvps %ymm0, %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    retq
   %z = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %x, <8 x float> %y) readnone
   ret <8 x float> %z
 }
@@ -346,10 +367,9 @@ define <16 x float> @test_intrinsic_fmax_v16f32(<16 x float> %x, <16 x float> %y
 ;
 ; AVX512-LABEL: test_intrinsic_fmax_v16f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxps %zmm0, %zmm1, %zmm2
-; AVX512-NEXT:    vcmpunordps %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovaps %zmm1, %zmm2 {%k1}
-; AVX512-NEXT:    vmovaps %zmm2, %zmm0
+; AVX512-NEXT:    vcmpordps %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vmaxps %zmm0, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vmovaps %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %z = call <16 x float> @llvm.maxnum.v16f32(<16 x float> %x, <16 x float> %y) readnone
   ret <16 x float> %z
@@ -375,12 +395,19 @@ define <2 x double> @test_intrinsic_fmax_v2f64(<2 x double> %x, <2 x double> %y)
 ; SSE4-NEXT:    movapd %xmm2, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test_intrinsic_fmax_v2f64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxpd %xmm0, %xmm1, %xmm2
-; AVX-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_intrinsic_fmax_v2f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmaxpd %xmm0, %xmm1, %xmm2
+; AVX1-NEXT:    vcmpunordpd %xmm0, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_intrinsic_fmax_v2f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmaxpd %xmm0, %xmm1, %xmm2
+; AVX512-NEXT:    vcmpordpd %xmm0, %xmm0, %xmm0
+; AVX512-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
+; AVX512-NEXT:    retq
   %z = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> %y) readnone
   ret <2 x double> %z
 }
@@ -417,12 +444,19 @@ define <4 x double> @test_intrinsic_fmax_v4f64(<4 x double> %x, <4 x double> %y)
 ; SSE4-NEXT:    movapd %xmm4, %xmm0
 ; SSE4-NEXT:    retq
 ;
-; AVX-LABEL: test_intrinsic_fmax_v4f64:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmaxpd %ymm0, %ymm1, %ymm2
-; AVX-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm0
-; AVX-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: test_intrinsic_fmax_v4f64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmaxpd %ymm0, %ymm1, %ymm2
+; AVX1-NEXT:    vcmpunordpd %ymm0, %ymm0, %ymm0
+; AVX1-NEXT:    vblendvpd %ymm0, %ymm1, %ymm2, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX512-LABEL: test_intrinsic_fmax_v4f64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmaxpd %ymm0, %ymm1, %ymm2
+; AVX512-NEXT:    vcmpordpd %ymm0, %ymm0, %ymm0
+; AVX512-NEXT:    vblendvpd %ymm0, %ymm2, %ymm1, %ymm0
+; AVX512-NEXT:    retq
   %z = call <4 x double> @llvm.maxnum.v4f64(<4 x double> %x, <4 x double> %y) readnone
   ret <4 x double> %z
 }
@@ -495,10 +529,9 @@ define <8 x double> @test_intrinsic_fmax_v8f64(<8 x double> %x, <8 x double> %y)
 ;
 ; AVX512-LABEL: test_intrinsic_fmax_v8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxpd %zmm0, %zmm1, %zmm2
-; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
-; AVX512-NEXT:    vmovapd %zmm1, %zmm2 {%k1}
-; AVX512-NEXT:    vmovapd %zmm2, %zmm0
+; AVX512-NEXT:    vcmpordpd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vmaxpd %zmm0, %zmm1, %zmm1 {%k1}
+; AVX512-NEXT:    vmovapd %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %z = call <8 x double> @llvm.maxnum.v8f64(<8 x double> %x, <8 x double> %y) readnone
   ret <8 x double> %z
@@ -621,7 +654,7 @@ define float @test_maxnum_neg_inf_nnan(float %x, float %y) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
-  %r = call nnan float @llvm.maxnum.f32(float %y, float 0xfff0000000000000)
+  %r = call nnan float @llvm.maxnum.f32(float %y, float -inf)
   ret float %r
 }
 

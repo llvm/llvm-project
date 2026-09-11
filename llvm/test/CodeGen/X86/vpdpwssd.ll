@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver4 | FileCheck %s --check-prefixes=CHECK,AVX512VL-VNNI
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver5 | FileCheck %s --check-prefixes=CHECK,AVX-VNNI
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=znver6 | FileCheck %s --check-prefixes=CHECK,AVX-VNNI
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+fast-dpwssd | FileCheck %s --check-prefixes=CHECK,AVX512-VNNI
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+avx512vl,+fast-dpwssd | FileCheck %s --check-prefixes=CHECK,AVX512VL-VNNI
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+avx512bw,+fast-dpwssd | FileCheck %s --check-prefixes=CHECK,AVX512-VNNI
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vnni,+avx512bw,+avx512vl,+fast-dpwssd | FileCheck %s --check-prefixes=CHECK,AVX512VL-VNNI
 
 define <16 x i32> @vpdpwssd_test(<16 x i32> %0, <16 x i32> %1, <16 x i32> %2) {
 ; CHECK-LABEL: vpdpwssd_test:

@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr64 = COPY [[COPY1]]
     ; CHECK-NEXT: [[REV64v2i32_:%[0-9]+]]:fpr64 = REV64v2i32 [[COPY2]]
     ; CHECK-NEXT: $x0 = COPY [[REV64v2i32_]]
-    %0:fpr(<2 x s32>) = COPY $x0
-    %1:fpr(s64) = G_BITCAST %0
-    $x0 = COPY %1(s64)
+    %0:fpr(<2 x i32>) = COPY $x0
+    %1:fpr(i64) = G_BITCAST %0
+    $x0 = COPY %1(i64)
 ...

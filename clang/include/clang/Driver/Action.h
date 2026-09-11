@@ -10,6 +10,7 @@
 #define LLVM_CLANG_DRIVER_ACTION_H
 
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Driver/Types.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -70,7 +71,6 @@ public:
     VerifyDebugInfoJobClass,
     VerifyPCHJobClass,
     OffloadBundlingJobClass,
-    OffloadUnbundlingJobClass,
     OffloadPackagerJobClass,
     LinkerWrapperJobClass,
     StaticLibJobClass,
@@ -131,7 +131,7 @@ protected:
   OffloadKind OffloadingDeviceKind = OFK_None;
 
   /// The Offloading architecture associated with this action.
-  const char *OffloadingArch = nullptr;
+  BoundArch OffloadingArch;
 
   /// The Offloading toolchain associated with this device action.
   const ToolChain *OffloadingToolChain = nullptr;
@@ -192,14 +192,14 @@ public:
 
   /// Set the device offload info of this action and propagate it to its
   /// dependences.
-  void propagateDeviceOffloadInfo(OffloadKind OKind, const char *OArch,
+  void propagateDeviceOffloadInfo(OffloadKind OKind, BoundArch OArch,
                                   const ToolChain *OToolChain);
 
   /// Append the host offload info of this action and propagate it to its
   /// dependences.
-  void propagateHostOffloadInfo(unsigned OKinds, const char *OArch);
+  void propagateHostOffloadInfo(unsigned OKinds, BoundArch OArch);
 
-  void setHostOffloadInfo(unsigned OKinds, const char *OArch) {
+  void setHostOffloadInfo(unsigned OKinds, BoundArch OArch) {
     ActiveOffloadKindMask |= OKinds;
     OffloadingArch = OArch;
   }
@@ -213,7 +213,7 @@ public:
   }
 
   OffloadKind getOffloadingDeviceKind() const { return OffloadingDeviceKind; }
-  const char *getOffloadingArch() const { return OffloadingArch; }
+  BoundArch getOffloadingArch() const { return OffloadingArch; }
   const ToolChain *getOffloadingToolChain() const {
     return OffloadingToolChain;
   }
@@ -253,14 +253,14 @@ public:
 class BindArchAction : public Action {
   virtual void anchor();
 
-  /// The architecture to bind, or 0 if the default architecture
+  /// The architecture to bind, or empty if the default architecture
   /// should be bound.
-  StringRef ArchName;
+  BoundArch ArchName;
 
 public:
-  BindArchAction(Action *Input, StringRef ArchName);
+  BindArchAction(Action *Input, BoundArch ArchName);
 
-  StringRef getArchName() const { return ArchName; }
+  BoundArch getArch() const { return ArchName; }
 
   static bool classof(const Action *A) {
     return A->getKind() == BindArchClass;
@@ -279,7 +279,7 @@ public:
   class DeviceDependences final {
   public:
     using ToolChainList = SmallVector<const ToolChain *, 3>;
-    using BoundArchList = SmallVector<const char *, 3>;
+    using BoundArchList = SmallVector<BoundArch, 3>;
     using OffloadKindList = SmallVector<OffloadKind, 3>;
 
   private:
@@ -303,12 +303,11 @@ public:
   public:
     /// Add an action along with the associated toolchain, bound arch, and
     /// offload kind.
-    void add(Action &A, const ToolChain &TC, const char *BoundArch,
-             OffloadKind OKind);
+    void add(Action &A, const ToolChain &TC, BoundArch BA, OffloadKind OKind);
 
     /// Add an action along with the associated toolchain, bound arch, and
     /// offload kinds.
-    void add(Action &A, const ToolChain &TC, const char *BoundArch,
+    void add(Action &A, const ToolChain &TC, BoundArch BA,
              unsigned OffloadKindMask);
 
     /// Get each of the individual arrays.
@@ -330,29 +329,29 @@ public:
     const ToolChain &HostToolChain;
 
     /// The architectures that should be used with this action.
-    const char *HostBoundArch = nullptr;
+    BoundArch HostBoundArch;
 
     /// The offload kind of each dependence.
     unsigned HostOffloadKinds = 0u;
 
   public:
-    HostDependence(Action &A, const ToolChain &TC, const char *BoundArch,
+    HostDependence(Action &A, const ToolChain &TC, BoundArch BA,
                    const unsigned OffloadKinds)
-        : HostAction(A), HostToolChain(TC), HostBoundArch(BoundArch),
+        : HostAction(A), HostToolChain(TC), HostBoundArch(BA),
           HostOffloadKinds(OffloadKinds) {}
 
     /// Constructor version that obtains the offload kinds from the device
     /// dependencies.
-    HostDependence(Action &A, const ToolChain &TC, const char *BoundArch,
+    HostDependence(Action &A, const ToolChain &TC, BoundArch BoundArch,
                    const DeviceDependences &DDeps);
     Action *getAction() const { return &HostAction; }
     const ToolChain *getToolChain() const { return &HostToolChain; }
-    const char *getBoundArch() const { return HostBoundArch; }
+    BoundArch getBoundArch() const { return HostBoundArch; }
     unsigned getOffloadKinds() const { return HostOffloadKinds; }
   };
 
   using OffloadActionWorkTy =
-      llvm::function_ref<void(Action *, const ToolChain *, const char *)>;
+      llvm::function_ref<void(Action *, const ToolChain *, BoundArch)>;
 
 private:
   /// The host offloading toolchain that should be used with the action.
@@ -587,55 +586,6 @@ public:
   }
 };
 
-class OffloadUnbundlingJobAction final : public JobAction {
-  void anchor() override;
-
-public:
-  /// Type that provides information about the actions that depend on this
-  /// unbundling action.
-  struct DependentActionInfo final {
-    /// The tool chain of the dependent action.
-    const ToolChain *DependentToolChain = nullptr;
-
-    /// The bound architecture of the dependent action.
-    StringRef DependentBoundArch;
-
-    /// The offload kind of the dependent action.
-    const OffloadKind DependentOffloadKind = OFK_None;
-
-    DependentActionInfo(const ToolChain *DependentToolChain,
-                        StringRef DependentBoundArch,
-                        const OffloadKind DependentOffloadKind)
-        : DependentToolChain(DependentToolChain),
-          DependentBoundArch(DependentBoundArch),
-          DependentOffloadKind(DependentOffloadKind) {}
-  };
-
-private:
-  /// Container that keeps information about each dependence of this unbundling
-  /// action.
-  SmallVector<DependentActionInfo, 6> DependentActionInfoArray;
-
-public:
-  // Offloading unbundling doesn't change the type of output.
-  OffloadUnbundlingJobAction(Action *Input);
-
-  /// Register information about a dependent action.
-  void registerDependentActionInfo(const ToolChain *TC, StringRef BoundArch,
-                                   OffloadKind Kind) {
-    DependentActionInfoArray.push_back({TC, BoundArch, Kind});
-  }
-
-  /// Return the information about all depending actions.
-  ArrayRef<DependentActionInfo> getDependentActionsInfo() const {
-    return DependentActionInfoArray;
-  }
-
-  static bool classof(const Action *A) {
-    return A->getKind() == OffloadUnbundlingJobClass;
-  }
-};
-
 class OffloadPackagerJobAction : public JobAction {
   void anchor() override;
 
@@ -695,7 +645,7 @@ class ObjcopyJobAction : public JobAction {
   void anchor() override;
 
 public:
-  ObjcopyJobAction(Action *Input, types::ID Type);
+  ObjcopyJobAction(ActionList &Inputs, types::ID Type);
 
   static bool classof(const Action *A) {
     return A->getKind() == ObjcopyJobClass;

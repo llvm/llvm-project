@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=gfx1010 -stop-after finalize-isel -o %t.mir %s
+; RUN: llc -mtriple=amdgpu10.10-mesa-mesa3d -stop-after finalize-isel -o %t.mir %s
 ; RUN: llc -run-pass=none -verify-machineinstrs %t.mir -o - | FileCheck %s
 
 ; Test that custom pseudo source values can be round trip serialized through MIR.

@@ -164,7 +164,7 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK-NEXT:    [[ARRAYIDX2_1:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], i32 [[INC]]
 ; CHECK-NEXT:    store i32 [[MUL_1]], ptr [[ARRAYIDX2_1]], align 4
 ; CHECK-NEXT:    [[INC_1]] = add nuw i32 [[I_09]], 2
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
+; CHECK-NEXT:    [[NITER_NEXT_1]] = add nuw i32 [[NITER]], 2
 ; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY]]
 ;
