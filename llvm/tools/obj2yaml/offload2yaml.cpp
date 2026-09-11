@@ -23,7 +23,7 @@ namespace {
 
 void populateYAML(OffloadYAML::Binary &YAMLBinary,
                   ArrayRef<std::unique_ptr<object::OffloadBinary>> OBinaries,
-                  UniqueStringSaver Saver) {
+                  UniqueStringSaver &Saver) {
   for (const auto &OBinaryPtr : OBinaries) {
     object::OffloadBinary &OB = *OBinaryPtr;
 
@@ -40,12 +40,12 @@ void populateYAML(OffloadYAML::Binary &YAMLBinary,
     }
 
     if (!OB.getImage().empty())
-      Member.Content = arrayRefFromStringRef(OB.getImage());
+      Member.Content = arrayRefFromStringRef(Saver.save(OB.getImage()));
   }
 }
 
 Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
-                                     UniqueStringSaver Saver) {
+                                     UniqueStringSaver &Saver) {
   std::unique_ptr<OffloadYAML::Binary> YAMLBinary =
       std::make_unique<OffloadYAML::Binary>();
 
@@ -67,6 +67,11 @@ Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
       return HeaderOrErr.takeError();
     const object::OffloadBinary::Header *TheHeader = *HeaderOrErr;
     uint64_t Size = TheHeader->Size;
+
+    auto BinariesOrErr = object::OffloadBinary::create(Buffer);
+    if (!BinariesOrErr)
+      return BinariesOrErr.takeError();
+
     if (TheHeader->Version >= 3 && TheHeader->InflatedSize != 0) {
       StringRef Payload = Buffer.getBuffer().take_front(Size).drop_front(
           TheHeader->EntriesOffset);
@@ -81,13 +86,8 @@ Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
         return createStringError("unknown compression format");
       }
     }
-    auto BinariesOrErr = object::OffloadBinary::create(Buffer);
-    if (!BinariesOrErr)
-      return BinariesOrErr.takeError();
 
-    SmallVector<std::unique_ptr<object::OffloadBinary>> &Binaries =
-        *BinariesOrErr;
-    populateYAML(*YAMLBinary, Binaries, Saver);
+    populateYAML(*YAMLBinary, *BinariesOrErr, Saver);
 
     Offset =
         alignTo(Offset + Size, Align(object::OffloadBinary::getAlignment()));
