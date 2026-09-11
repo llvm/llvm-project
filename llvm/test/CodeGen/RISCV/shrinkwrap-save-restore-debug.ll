@@ -44,11 +44,11 @@ if.end:
 define void @with_debug(i32 %n) nounwind !dbg !4 {
 ; CHECK-LABEL: with_debug:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    call t0, __riscv_save_2
-; CHECK-NEXT:    addi s0, sp, 16
 ; CHECK-NEXT:    li a1, 32
 ; CHECK-NEXT:    bltu a1, a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
+; CHECK-NEXT:    call t0, __riscv_save_2
+; CHECK-NEXT:    addi s0, sp, 16
 ; CHECK-NEXT:    mv s1, sp
 ; CHECK-NEXT:    addi a0, a0, 15
 ; CHECK-NEXT:    andi a0, a0, -16
@@ -56,10 +56,11 @@ define void @with_debug(i32 %n) nounwind !dbg !4 {
 ; CHECK-NEXT:    mv sp, a0
 ; CHECK-NEXT:    call notdead
 ; CHECK-NEXT:    mv sp, s1
-; CHECK-NEXT:  .LBB1_2: # %if.end
-; CHECK-NEXT:    #DEBUG_VALUE: with_debug:ghost <- 0
 ; CHECK-NEXT:    addi sp, s0, -16
 ; CHECK-NEXT:    tail __riscv_restore_2
+; CHECK-NEXT:  .LBB1_2: # %if.end
+; CHECK-NEXT:    #DEBUG_VALUE: with_debug:ghost <- 0
+; CHECK-NEXT:    ret
 entry:
   %cmp = icmp ult i32 %n, 33
   br i1 %cmp, label %if.then, label %if.end
