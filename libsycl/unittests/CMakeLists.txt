@@ -14,6 +14,7 @@ add_subdirectory(handler)
 add_subdirectory(platform)
 add_subdirectory(program_manager)
 add_subdirectory(queue)
+add_subdirectory(usm)
 
 # The unit test executables are GoogleTest binaries that are discovered and run
 # by lit, mirroring how liboffload runs its unit tests.

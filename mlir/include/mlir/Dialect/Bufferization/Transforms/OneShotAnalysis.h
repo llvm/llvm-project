@@ -272,6 +272,12 @@ private:
   DenseMap<TypeID, std::unique_ptr<Extension>> extensions;
 };
 
+/// Perform various checks on the input IR to see if it contains IR constructs
+/// that are unsupported by One-Shot Bufferize.
+LogicalResult checkPreBufferizationAssumptions(Operation *op,
+                                               const DominanceInfo &domInfo,
+                                               OneShotAnalysisState &state);
+
 /// Analyze `op` and its nested ops. Bufferization decisions are stored in
 /// `state`.
 LogicalResult analyzeOp(Operation *op, OneShotAnalysisState &state,

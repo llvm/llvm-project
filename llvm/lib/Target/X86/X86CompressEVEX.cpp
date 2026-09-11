@@ -124,16 +124,8 @@ static bool usesExtendedRegister(const MachineInstr &MI) {
 // a compressed disp8*N (1 byte) while the VEX/legacy twin would be forced to
 // spend a full disp32 (4 bytes). In that window the EVEX encoding is strictly
 // shorter overall, despite its 1-2 byte larger prefix, so compressing it to
-// VEX would grow code size. Mirrors isDispOrCDisp8 in X86MCCodeEmitter.cpp.
+// VEX would grow code size.
 static bool hasShorterEVEXViaCDisp8(const MachineInstr &MI) {
-  uint64_t TSFlags = MI.getDesc().TSFlags;
-  unsigned CD8_Scale =
-      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
-  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
-  // Without a CD8 scale > 1 there is no displacement advantage over VEX.
-  if (CD8_Scale <= 1)
-    return false;
-
   int MemOpIdx = X86::getFirstAddrOperandIdx(MI);
   if (MemOpIdx < 0)
     return false;
@@ -145,14 +137,7 @@ static bool hasShorterEVEXViaCDisp8(const MachineInstr &MI) {
     return false;
 
   int64_t Val = Disp.getImm();
-  // VEX can already use a disp8 in this range, so EVEX offers no saving.
-  if (isInt<8>(Val))
-    return false;
-  // EVEX can use disp8*N only when the value is a multiple of N and the scaled
-  // value fits in a signed byte.
-  if (Val % static_cast<int64_t>(CD8_Scale) != 0)
-    return false;
-  return isInt<8>(Val / static_cast<int64_t>(CD8_Scale));
+  return !isInt<8>(Val) && X86II::isDispOrCDisp8(MI.getDesc().TSFlags, Val);
 }
 
 // Do any custom cleanup needed to finalize the conversion.
