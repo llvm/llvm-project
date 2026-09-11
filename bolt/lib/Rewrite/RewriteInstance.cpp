@@ -531,27 +531,6 @@ static bool shouldDisassemble(const BinaryFunction &BF) {
   return !BF.isIgnored();
 }
 
-static void createRISCVIFuncResolverFunctions(BinaryContext &BC) {
-  assert(BC.isRISCV() && "expected RISC-V target");
-
-  for (const BinarySection &Section : BC.allocatableSections()) {
-    for (const Relocation &Rel : Section.dynamicRelocations()) {
-      if (!Rel.isIRelative() || !Rel.Addend ||
-          BC.getBinaryFunctionAtAddress(Rel.Addend))
-        continue;
-
-      ErrorOr<BinarySection &> ResolverSection =
-          BC.getSectionForAddress(Rel.Addend);
-      assert(ResolverSection &&
-             "cannot get section for address from IFUNC resolver");
-
-      const std::string FunctionName =
-          "__BOLT_IFUNC_RESOLVERat" + Twine::utohexstr(Rel.Addend).str();
-      BC.createBinaryFunction(FunctionName, *ResolverSection, Rel.Addend, 0);
-    }
-  }
-}
-
 // Return if a section stored in the image falls into a segment address space.
 // If not, Set \p Overlap to true if there's a partial overlap.
 template <class ELFT>
@@ -1374,13 +1353,6 @@ void RewriteInstance::discoverFileObjects() {
   // that is a subject to dynamic relocation processing.
   processDynamicRelocations();
 
-  // LLD may canonicalize the only RISC-V IFUNC symbol to its IPLT entry,
-  // leaving the resolver identifiable only by an R_RISCV_IRELATIVE addend.
-  // Register every such resolver before PLT disassembly so .iplt can use the
-  // normal PLT processing path.
-  if (BC->isRISCV())
-    createRISCVIFuncResolverFunctions(*BC);
-
   // Process PLT section.
   disassemblePLT();
 
@@ -1929,37 +1901,21 @@ void RewriteInstance::createPLTBinaryFunction(uint64_t TargetAddress,
     Symbol = TargetBF->getSymbol();
   }
 
+  // Distinct PLT/GOT entries must not reuse an MCSymbol, even when their
+  // IRELATIVE addends identify the same resolver.
+  std::string Name = Symbol->getName().str();
+  if (const BinaryData *BD = BC->getBinaryDataByName(Name + "@PLT"))
+    if (BD->getAddress() != EntryAddress)
+      Name += ".0x" + Twine::utohexstr(EntryAddress).str();
+
   ErrorOr<BinarySection &> Section = BC->getSectionForAddress(EntryAddress);
   assert(Section && "cannot get section for address");
   if (!BF)
-    BF = BC->createBinaryFunction(Symbol->getName().str() + "@PLT", *Section,
-                                  EntryAddress, 0, EntrySize,
-                                  Section->getAlignment());
+    BF = BC->createBinaryFunction(Name + "@PLT", *Section, EntryAddress, 0,
+                                  EntrySize, Section->getAlignment());
   else
-    BF->addAlternativeName(Symbol->getName().str() + "@PLT");
-  setPLTSymbol(BF, Symbol->getName());
-
-  // R_RISCV_IRELATIVE has no symbol, so the IPLT entry above is named after
-  // one BinaryFunction at the resolver address. Multiple STT_GNU_IFUNC
-  // symbols can alias that resolver, and R_RISCV_CALL_PLT relocations may use
-  // any of their names. Register every such name for the same IPLT entry so
-  // getPLTBinaryDataByName() can resolve those call sites.
-  if (BC->isRISCV() && Rel->isIRelative()) {
-    auto ResolverSyms = FileSymRefs.equal_range(Rel->Addend);
-    for (const SymbolRef &AliasSymbol : llvm::make_second_range(
-             llvm::make_range(ResolverSyms.first, ResolverSyms.second))) {
-      if (ELFSymbolRef(AliasSymbol).getELFType() != ELF::STT_GNU_IFUNC)
-        continue;
-      StringRef AliasName = cantFail(AliasSymbol.getName());
-      const std::string PLTName = AliasName.str() + "@PLT";
-      if (!BC->getBinaryDataByName(PLTName)) {
-        BF->addAlternativeName(PLTName);
-        BC->registerNameAtAddress(PLTName, EntryAddress, EntrySize,
-                                  Section->getAlignment());
-      }
-      setPLTSymbol(BF, AliasName);
-    }
-  }
+    BF->addAlternativeName(Name + "@PLT");
+  setPLTSymbol(BF, Name);
 }
 
 void RewriteInstance::disassemblePLTInstruction(const BinarySection &Section,
@@ -2860,15 +2816,18 @@ bool RewriteInstance::analyzeRelocation(
     SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
     // Section symbols are marked as ST_Debug.
     IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
-    // Check for PLT entry registered with symbol name
-    // LLD may give a defined RISC-V IFUNC symbol the .iplt entry address.
-    // R_RISCV_CALL_PLT must still resolve it through the registered @PLT
-    // BinaryData instead of treating that symbol value as a normal function.
-    const bool IsRISCVIFuncPLT =
-        IsRISCV && RType == ELF::R_RISCV_CALL_PLT &&
+    // An IFUNC symbol can name its resolver rather than the IPLT entry.
+    // Decode the linked call target: aliases sharing a resolver can have
+    // different IPLT entries, so the symbol name cannot identify the entry.
+    const bool IsRISCVIFuncCall =
+        IsRISCV &&
+        (RType == ELF::R_RISCV_CALL || RType == ELF::R_RISCV_CALL_PLT) &&
         ELFSymbolRef(Symbol).getELFType() == ELF::STT_GNU_IFUNC;
-    if ((!SymbolAddress || IsRISCVIFuncPLT) && !IsWeakReference(Symbol) &&
-        (IsAArch64 || IsRISCV)) {
+    if (IsRISCVIFuncCall) {
+      SymbolAddress = truncateToSize(ExtractedValue - Addend + Rel.getOffset(),
+                                     BC->AsmInfo->getCodePointerSize());
+    } else if (!SymbolAddress && !IsWeakReference(Symbol) &&
+               (IsAArch64 || IsRISCV)) {
       const BinaryData *BD = BC->getPLTBinaryDataByName(SymbolName);
       SymbolAddress = BD ? BD->getAddress() : 0;
     }
