@@ -819,24 +819,42 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
   }
 }
 
+// Shapes of the synthesized atomic overloads. The read-modify-write operations
+// can report the previous value through a trailing reference. Every argument
+// of compare-store is an input.
+enum class AtomicOverloadShape {
+  Binary,             // (dest, value)
+  BinaryWithOriginal, // (dest, value, original_value)
+  CompareStore,       // (dest, compare_value, value)
+};
+
 // Build a single overload of an HLSL atomic intrinsic in the hlsl namespace.
 // `dest` is an address-space-qualified reference; `original_value` (when
 // present) is a plain reference. The synthesized FunctionDecl aliases the
 // underlying clang builtin via BuiltinAliasAttr.
 static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
                                 StringRef BuiltinName, QualType ElemTy,
-                                LangAS DestAS, bool ThreeArg) {
+                                LangAS DestAS, AtomicOverloadShape Shape) {
   ASTContext &AST = S.getASTContext();
 
   QualType DestTy =
       AST.getLValueReferenceType(AST.getAddrSpaceQualType(ElemTy, DestAS));
   QualType OrigRefTy = AST.getLValueReferenceType(ElemTy);
 
-  SmallVector<QualType, 3> ParamTypes;
-  ParamTypes.push_back(DestTy);
-  ParamTypes.push_back(ElemTy);
-  if (ThreeArg)
+  SmallVector<QualType, 3> ParamTypes = {DestTy, ElemTy};
+  if (Shape == AtomicOverloadShape::BinaryWithOriginal)
     ParamTypes.push_back(OrigRefTy);
+  else if (Shape == AtomicOverloadShape::CompareStore)
+    ParamTypes.push_back(ElemTy);
+
+  // The loop below stops at the end of ParamTypes, so a two-argument overload
+  // ignores the trailing name.
+  constexpr const char *BinaryNames[] = {"dest", "value", "original_value"};
+  constexpr const char *CompareStoreNames[] = {"dest", "compare_value",
+                                               "value"};
+  ArrayRef<const char *> ParamNames = Shape == AtomicOverloadShape::CompareStore
+                                          ? CompareStoreNames
+                                          : BinaryNames;
 
   FunctionProtoType::ExtProtoInfo EPI;
   QualType FuncTy = AST.getFunctionType(AST.VoidTy, ParamTypes, EPI);
@@ -850,7 +868,6 @@ static void buildAtomicOverload(Sema &S, NamespaceDecl *NS, StringRef FuncName,
       SC_Extern, /*UsesFPIntrin=*/false, /*isInlineSpecified=*/false,
       /*hasWrittenPrototype=*/true);
 
-  constexpr const char *ParamNames[] = {"dest", "value", "original_value"};
   SmallVector<ParmVarDecl *, 3> ParmDecls;
   unsigned I = 0;
   for (auto [ParamType, ParamName] : llvm::zip(ParamTypes, ParamNames)) {
@@ -893,8 +910,26 @@ static void defineHLSLInterlockedFunc(Sema &S, NamespaceDecl *NS,
       for (bool ThreeArg : {false, true}) {
         if (RequiresOriginalValue && !ThreeArg)
           continue;
-        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS, ThreeArg);
+        buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                            ThreeArg ? AtomicOverloadShape::BinaryWithOriginal
+                                     : AtomicOverloadShape::Binary);
       }
+}
+
+// Synthesize the InterlockedCompareStore overload set: {int, uint, int64_t,
+// uint64_t} x {groupshared, device}. The operation reports nothing, so it has
+// a single arity.
+static void defineHLSLInterlockedCompareStoreFunc(Sema &S, NamespaceDecl *NS,
+                                                  StringRef FuncName,
+                                                  StringRef BuiltinName) {
+  ASTContext &AST = S.getASTContext();
+  QualType Elems[] = {AST.IntTy, AST.UnsignedIntTy, AST.LongTy,
+                      AST.UnsignedLongTy};
+
+  for (QualType ElemTy : Elems)
+    for (LangAS AS : {LangAS::hlsl_groupshared, LangAS::hlsl_device})
+      buildAtomicOverload(S, NS, FuncName, BuiltinName, ElemTy, AS,
+                          AtomicOverloadShape::CompareStore);
 }
 
 void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
@@ -902,6 +937,9 @@ void HLSLExternalSemaSource::defineHLSLAtomicIntrinsics() {
                             "__builtin_hlsl_interlocked_add");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedAnd",
                             "__builtin_hlsl_interlocked_and");
+  defineHLSLInterlockedCompareStoreFunc(
+      *SemaPtr, HLSLNamespace, "InterlockedCompareStore",
+      "__builtin_hlsl_interlocked_compare_store");
   defineHLSLInterlockedFunc(*SemaPtr, HLSLNamespace, "InterlockedExchange",
                             "__builtin_hlsl_interlocked_exchange",
                             /*RequiresOriginalValue=*/true,

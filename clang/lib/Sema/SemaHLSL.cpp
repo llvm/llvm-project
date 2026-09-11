@@ -4643,6 +4643,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
   case Builtin::BI__builtin_hlsl_interlocked_and:
+  case Builtin::BI__builtin_hlsl_interlocked_compare_store:
   case Builtin::BI__builtin_hlsl_interlocked_exchange:
   case Builtin::BI__builtin_hlsl_interlocked_max:
   case Builtin::BI__builtin_hlsl_interlocked_min:
@@ -4655,9 +4656,14 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
     // builtin by its mangled name and would otherwise reach CodeGen unchecked.
+    // InterlockedCompareStore takes `compare_value` and `value`, so its third
+    // argument is an input rather than an output.
+    const bool IsCompareStore =
+        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_compare_store;
     // InterlockedExchange always reports the previous value, so it requires
     // `original_value` instead of accepting it as an optional argument.
-    if (BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
+    if (IsCompareStore ||
+        BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
       if (SemaRef.checkArgCount(TheCall, 3))
         return true;
     } else {
@@ -4714,7 +4720,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (TheCall->getNumArgs() == 3) {
       if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), DestTy))
         return true;
-      if (CheckModifiableLValue(&SemaRef, TheCall, 2))
+      // Only the read-modify-write operations write the previous value back
+      // through the third argument. For compare-store it is the new value.
+      if (!IsCompareStore && CheckModifiableLValue(&SemaRef, TheCall, 2))
         return true;
     }
 
