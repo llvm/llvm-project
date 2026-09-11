@@ -783,8 +783,10 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // rounding which is 512-bit only.
   bool IsStrictFP =
       CxtI && CxtI->getFunction()->hasFnAttribute(Attribute::StrictFP);
-  bool VarDivToFP =
-      !Op2Info.isConstant() && (!IsStrictFP || ST->useAVX512Regs());
+  bool IsDivRem = ISD == ISD::UDIV || ISD == ISD::SDIV || ISD == ISD::UREM ||
+                  ISD == ISD::SREM;
+  bool VarDivToFP = IsDivRem && !Op2Info.isConstant() &&
+                    (!IsStrictFP || ST->useAVX512Regs());
 
   // i64 needs the qq converts, which are AVX512DQ only. Two tables because the
   // lowering picks by operand value and not by type.
@@ -818,26 +820,34 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i64,  {  18 } },
   };
 
-  if (VarDivToFP && ST->hasDQI() && ST->useAVX512Regs() &&
-      LT.second.getScalarType() == MVT::i64) {
-    // The DAG combine picks between the two sequences with these same two
-    // queries, so the cost cannot disagree with what codegen emits.
-    unsigned Mantissa = APFloat::semanticsPrecision(APFloat::IEEEdouble());
+  // The DAG combine picks between the two sequences with these same two
+  // queries, so the cost cannot disagree with what codegen emits.
+  bool IsSignedDiv = ISD == ISD::SDIV || ISD == ISD::SREM;
+  auto OperandsFit = [&](unsigned Mantissa) {
+    if (Args.size() != 2 || !CxtI)
+      return false;
     unsigned EltBits = LT.second.getScalarSizeInBits();
-    bool IsSignedDiv = ISD == ISD::SDIV || ISD == ISD::SREM;
-
-    auto FitsMantissa = [&](const Value *V) {
-      const DataLayout &DL = CxtI->getDataLayout();
+    const DataLayout &DL = CxtI->getDataLayout();
+    auto Fits = [&](const Value *V) {
       if (IsSignedDiv)
         return ComputeNumSignBits(V, DL, /*AC=*/nullptr, CxtI) + Mantissa >
                EltBits;
       return computeKnownBits(V, DL, /*AC=*/nullptr, CxtI)
                  .countMaxActiveBits() <= Mantissa;
     };
+    return Fits(Args[0]) && Fits(Args[1]);
+  };
 
-    bool HaveOperands = Args.size() == 2 && CxtI;
+  // An i32 divide goes through f32 when both operands fit in 24 bits, and
+  // through f64 at twice the vector width when they do not.
+  bool ExactI32 =
+      VarDivToFP && LT.second.getScalarType() == MVT::i32 &&
+      OperandsFit(APFloat::semanticsPrecision(APFloat::IEEEsingle()));
+
+  if (VarDivToFP && ST->hasDQI() && ST->useAVX512Regs() &&
+      LT.second.getScalarType() == MVT::i64) {
     bool ExactFPDiv =
-        HaveOperands && FitsMantissa(Args[0]) && FitsMantissa(Args[1]);
+        OperandsFit(APFloat::semanticsPrecision(APFloat::IEEEdouble()));
 
     // Only the reciprocal chain multiplies, so only it is vpmullq gated.
     bool SlowMultiply =
@@ -891,11 +901,29 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, {  32 } },
   };
 
-  if (VarDivToFP && ST->hasBWI())
-    if (const auto *Entry =
-            CostTableLookup(AVX512BWVarDivCostTable, ISD, LT.second))
+  static const CostKindTblEntry AVX512BWExactVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v4i32,  {   3 } }, // cvt+divps sequence
+    { ISD::SDIV, MVT::v4i32,  {   3 } },
+    { ISD::UREM, MVT::v4i32,  {   3 } },
+    { ISD::SREM, MVT::v4i32,  {   3 } },
+    { ISD::UDIV, MVT::v8i32,  {   5 } },
+    { ISD::SDIV, MVT::v8i32,  {   5 } },
+    { ISD::UREM, MVT::v8i32,  {   5 } },
+    { ISD::SREM, MVT::v8i32,  {   5 } },
+    { ISD::UDIV, MVT::v16i32, {  10 } },
+    { ISD::SDIV, MVT::v16i32, {  10 } },
+    { ISD::UREM, MVT::v16i32, {  10 } },
+    { ISD::SREM, MVT::v16i32, {  10 } },
+  };
+
+  if (VarDivToFP && ST->hasBWI()) {
+    ArrayRef<CostKindTblEntry> Tbl = AVX512BWVarDivCostTable;
+    if (ExactI32)
+      Tbl = AVX512BWExactVarDivCostTable;
+    if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
+  }
 
   static const CostKindTblEntry AVX512VarDivCostTable[] = {
     { ISD::UDIV, MVT::v16i8,  {  14 } }, // unpack+cvt+divps sequence
@@ -936,11 +964,29 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v16i32, {  56 } },
   };
 
-  if (VarDivToFP && ST->hasAVX512())
-    if (const auto *Entry =
-            CostTableLookup(AVX512VarDivCostTable, ISD, LT.second))
+  static const CostKindTblEntry AVX512ExactVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v4i32,  {   7 } }, // cvt+divps sequence
+    { ISD::SDIV, MVT::v4i32,  {   7 } },
+    { ISD::UREM, MVT::v4i32,  {   7 } },
+    { ISD::SREM, MVT::v4i32,  {   7 } },
+    { ISD::UDIV, MVT::v8i32,  {  14 } },
+    { ISD::SDIV, MVT::v8i32,  {  14 } },
+    { ISD::UREM, MVT::v8i32,  {  14 } },
+    { ISD::SREM, MVT::v8i32,  {  14 } },
+    { ISD::UDIV, MVT::v16i32, {  14 } },
+    { ISD::SDIV, MVT::v16i32, {  14 } },
+    { ISD::UREM, MVT::v16i32, {  14 } },
+    { ISD::SREM, MVT::v16i32, {  14 } },
+  };
+
+  if (VarDivToFP && ST->hasAVX512()) {
+    ArrayRef<CostKindTblEntry> Tbl = AVX512VarDivCostTable;
+    if (ExactI32)
+      Tbl = AVX512ExactVarDivCostTable;
+    if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
+  }
 
   static const CostKindTblEntry AVX2VarDivCostTable[] = {
     { ISD::UDIV, MVT::v16i8,  {  28 } }, // unpack+cvt+divps sequence
@@ -969,11 +1015,25 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32,  {  56 } },
   };
 
-  if (VarDivToFP && ST->hasAVX2())
-    if (const auto *Entry =
-            CostTableLookup(AVX2VarDivCostTable, ISD, LT.second))
+  static const CostKindTblEntry AVX2ExactVarDivCostTable[] = {
+    { ISD::UDIV, MVT::v4i32,  {   9 } }, // cvt+divps sequence
+    { ISD::SDIV, MVT::v4i32,  {   8 } },
+    { ISD::UREM, MVT::v4i32,  {   9 } },
+    { ISD::SREM, MVT::v4i32,  {   8 } },
+    { ISD::UDIV, MVT::v8i32,  {  14 } },
+    { ISD::SDIV, MVT::v8i32,  {  14 } },
+    { ISD::UREM, MVT::v8i32,  {  14 } },
+    { ISD::SREM, MVT::v8i32,  {  14 } },
+  };
+
+  if (VarDivToFP && ST->hasAVX2()) {
+    ArrayRef<CostKindTblEntry> Tbl = AVX2VarDivCostTable;
+    if (ExactI32)
+      Tbl = AVX2ExactVarDivCostTable;
+    if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
+  }
 
   // No unsigned i32 entries below AVX2, where the u32 to f64 converts are
   // emulated and the fold stays off.
@@ -1000,11 +1060,21 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v8i32,  {  88 } },
   };
 
-  if (VarDivToFP && ST->hasAVX())
-    if (const auto *Entry =
-            CostTableLookup(AVX1VarDivCostTable, ISD, LT.second))
+  static const CostKindTblEntry AVX1ExactVarDivCostTable[] = {
+    { ISD::SDIV, MVT::v4i32,  {  14 } }, // cvt+divps sequence
+    { ISD::SREM, MVT::v4i32,  {  14 } },
+    { ISD::SDIV, MVT::v8i32,  {  28 } },
+    { ISD::SREM, MVT::v8i32,  {  28 } },
+  };
+
+  if (VarDivToFP && ST->hasAVX()) {
+    ArrayRef<CostKindTblEntry> Tbl = AVX1VarDivCostTable;
+    if (ExactI32)
+      Tbl = AVX1ExactVarDivCostTable;
+    if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
+  }
 
   static const CostKindTblEntry SSE2VarDivCostTable[] = {
     { ISD::UDIV, MVT::v16i8,  {  56 } }, // unpack+cvt+divps sequence
@@ -1019,11 +1089,19 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     { ISD::SREM, MVT::v4i32,  {  44 } },
   };
 
-  if (VarDivToFP && ST->hasSSE2())
-    if (const auto *Entry =
-            CostTableLookup(SSE2VarDivCostTable, ISD, LT.second))
+  static const CostKindTblEntry SSE2ExactVarDivCostTable[] = {
+    { ISD::SDIV, MVT::v4i32,  {  14 } }, // cvt+divps sequence
+    { ISD::SREM, MVT::v4i32,  {  14 } },
+  };
+
+  if (VarDivToFP && ST->hasSSE2()) {
+    ArrayRef<CostKindTblEntry> Tbl = SSE2VarDivCostTable;
+    if (ExactI32)
+      Tbl = SSE2ExactVarDivCostTable;
+    if (const auto *Entry = CostTableLookup(Tbl, ISD, LT.second))
       if (auto KindCost = Entry->Cost[CostKind])
         return LT.first * *KindCost;
+  }
 
   static const CostKindTblEntry AVX512BWUniformCostTable[] = {
     { ISD::SHL,  MVT::v16i8,  { 3, 5, 5, 7 } }, // psllw + pand.
