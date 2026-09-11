@@ -33449,11 +33449,7 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   constexpr unsigned Limit = 32;
   Changed |= tryToVectorizeSequence<Value>(
       Operands, OperandSorter, AreCompatibleOperands,
-      [this, &R, Limit](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
-        // We are required to capture Limit for MSVC, but clang will warn that
-        // it is an unused lambda capture. We cannot mark it [[maybe_unused]],
-        // so we are forced to cast to void;
-        (void)Limit;
+      [this, &R, Limit=Limit](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
         // Limit to StandaloneSeeds if !MaxVFOnly to avoid quadratic scan for
         // large set of candidates.
         return tryToVectorizeList(Candidates, R, MaxVFOnly,
