@@ -585,6 +585,12 @@ bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
       PAddOpcode = RISCV::PADD_H;
       MinZeroBits = (IsRV32 ? 16 : 48);
       break;
+    case ((1ll << 32) - 1):
+      if (IsRV32)
+        return false;
+      PAddOpcode = RISCV::PADD_W;
+      MinZeroBits = 32;
+      break;
     default:
       return false;
     }
