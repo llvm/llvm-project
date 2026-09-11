@@ -3689,12 +3689,30 @@ SDValue AMDGPUTargetLowering::lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG,
 
 SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
+  if (SDValue Result = lowerUCharToF32(Op, DAG))
+    return Result;
   return lowerINT_TO_FPImpl(Op, DAG, false);
 }
 
 SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
                                               SelectionDAG &DAG) const {
   return lowerINT_TO_FPImpl(Op, DAG, true);
+}
+
+SDValue AMDGPUTargetLowering::lowerUCharToF32(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDValue Src = Op.getOperand(0);
+
+  if (Op.getValueType() != MVT::f32 || Src.getValueType() != MVT::i64)
+    return SDValue();
+
+  APInt HighBits = APInt::getHighBitsSet(64, 56);
+  if (!DAG.MaskedValueIsZero(Src, HighBits))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Src32 = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
+  return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, MVT::f32, Src32);
 }
 
 SDValue AMDGPUTargetLowering::LowerFP_TO_INT64(SDValue Op, SelectionDAG &DAG,
