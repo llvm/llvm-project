@@ -988,12 +988,9 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_bitop3_b32:
-  case AMDGPU::BI__builtin_amdgcn_bitop3_b16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_bitop3_b16:
+    return emitBuiltinWithOneOverloadedType<4>(expr, "amdgcn.bitop3")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_make_buffer_rsrc: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
