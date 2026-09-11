@@ -424,18 +424,58 @@ ErrorOr<int> File::seek(off_t offset, int whence) {
   return 0;
 }
 
-ErrorOr<off_t> File::tell() {
-  FileLock lock(this);
-  auto seek_target = eof ? SEEK_END : SEEK_CUR;
+ErrorOr<off_t> File::tell_unlocked() {
+  bool is_append = (mode & static_cast<ModeFlags>(OpenMode::APPEND)) != 0;
+  int seek_target =
+      (eof || (is_append && prev_op == FileOp::WRITE)) ? SEEK_END : SEEK_CUR;
   auto result = platform_seek(this, 0, seek_target);
-  if (!result.has_value() || result.value() < 0)
+  if (!result.has_value())
     return Error(result.error());
-  off_t platform_offset = result.value();
-  if (prev_op == FileOp::READ)
+  if (result.value() < 0)
+    return Error(EOVERFLOW);
+  const off_t platform_offset = result.value();
+  if (prev_op == FileOp::READ || read_limit > pos)
     return platform_offset - (read_limit - pos);
   if (prev_op == FileOp::WRITE)
     return platform_offset + pos;
   return platform_offset;
+}
+
+ErrorOr<File::Position> File::get_pos_unlocked() {
+  auto pos_result = tell_unlocked();
+  if (!pos_result.has_value())
+    return Error(pos_result.error());
+
+  Position fpos;
+  fpos.offset = pos_result.value();
+  if (orientation == Orientation::WIDE)
+    fpos.state = mbstate;
+  else
+    fpos.state = internal::mbstate();
+
+  return fpos;
+}
+
+ErrorOr<int> File::set_pos_unlocked(const Position &fpos) {
+  if (prev_op == FileOp::WRITE && pos > 0) {
+    FileIOResult buf_result = platform_write(this, buf, pos);
+    if (buf_result.has_error() || buf_result.value < pos) {
+      err = true;
+      return Error(buf_result.error ? buf_result.error : EIO);
+    }
+    pos = 0;
+  }
+
+  auto result = platform_seek(this, fpos.offset, SEEK_SET);
+  if (!result.has_value())
+    return Error(result.error());
+
+  pos = read_limit = 0;
+  prev_op = FileOp::SEEK;
+  eof = false;
+  mbstate = fpos.state;
+
+  return 0;
 }
 
 int File::flush_unlocked() {

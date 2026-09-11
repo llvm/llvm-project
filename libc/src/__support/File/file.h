@@ -219,7 +219,32 @@ public:
 
   ErrorOr<int> seek(off_t offset, int whence);
 
-  ErrorOr<off_t> tell();
+  ErrorOr<off_t> tell_unlocked();
+
+  ErrorOr<off_t> tell() {
+    FileLock lock(this);
+    return tell_unlocked();
+  }
+
+  // An internal representation of the stream's position and parse state.
+  struct Position {
+    off_t offset;
+    internal::mbstate state;
+  };
+
+  ErrorOr<Position> get_pos_unlocked();
+
+  ErrorOr<Position> get_pos() {
+    FileLock lock(this);
+    return get_pos_unlocked();
+  }
+
+  ErrorOr<int> set_pos_unlocked(const Position &fpos);
+
+  ErrorOr<int> set_pos(const Position &fpos) {
+    FileLock lock(this);
+    return set_pos_unlocked(fpos);
+  }
 
   // If buffer has data written to it, flush it out. Does nothing if the
   // buffer is currently being used as a read buffer.

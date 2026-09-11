@@ -124,6 +124,41 @@ add_generic_entrypoint_object(
 )
 
 add_generic_entrypoint_object(
+  fgetpos
+  SRCS
+    fgetpos.cpp
+  HDRS
+    ../fgetpos.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.src.__support.File.file
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.memory_utils.inline_memset
+)
+
+add_generic_entrypoint_object(
+  fsetpos
+  SRCS
+    fsetpos.cpp
+  HDRS
+    ../fsetpos.h
+  DEPENDS
+    libc.hdr.types.FILE
+    libc.hdr.types.fpos_t
+    libc.src.__support.File.file
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.src.__support.wchar.mbstate
+    libc.src.string.memory_utils.inline_memcpy
+)
+
+add_generic_entrypoint_object(
   rewind
   SRCS
     rewind.cpp

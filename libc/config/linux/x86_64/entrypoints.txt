@@ -1453,6 +1453,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fflush
     libc.src.stdio.fgetc
     libc.src.stdio.fgetc_unlocked
+    libc.src.stdio.fgetpos
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
@@ -1466,6 +1467,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fread_unlocked
     libc.src.stdio.fseek
     libc.src.stdio.fseeko
+    libc.src.stdio.fsetpos
     libc.src.stdio.ftell
     libc.src.stdio.ftello
     libc.src.stdio.funlockfile
