@@ -73,7 +73,7 @@ Error extractOffloadFiles(MemoryBufferRef Contents,
       Binaries.emplace_back(std::move(Binary), std::move(View));
     }
 
-    Offset += Header->Size;
+    Offset = alignTo(Offset + Header->Size, OffloadBinary::getAlignment());
   }
 
   return Error::success();
@@ -439,12 +439,13 @@ OffloadBinary::write(ArrayRef<OffloadingImage> OffloadingData,
   Header.Size = Header.EntriesOffset + CompressedBuffer.size();
 
   SmallString<0> Data;
-  Data.reserve(Header.Size);
+  Data.reserve(alignTo(Header.Size, getAlignment()));
   raw_svector_ostream OS(Data);
   OS << StringRef(reinterpret_cast<const char *>(&Header),
                   Header.EntriesOffset);
   OS << toStringRef(CompressedBuffer);
   assert(Header.Size == OS.tell() && "Size mismatch");
+  OS.write_zeros(alignTo(Header.Size, getAlignment()) - Header.Size);
   return Data;
 }
 
