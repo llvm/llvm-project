@@ -26,12 +26,12 @@ namespace printf_core {
 template <typename CharT, char ascii_value> struct CharConstant {};
 
 template <char ascii_value> struct CharConstant<char, ascii_value> {
-  LIBC_INLINE static constexpr char value = ascii_value;
+  LIBC_INLINE_VAR static constexpr char value = ascii_value;
 };
 
 #if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 template <char ascii_value> struct CharConstant<wchar_t, ascii_value> {
-  LIBC_INLINE static constexpr wchar_t value = ascii_value;
+  LIBC_INLINE_VAR static constexpr wchar_t value = ascii_value;
 };
 #endif // LIBC_TYPES_WCHAR_T_IS_UTF32
 
