@@ -1267,6 +1267,7 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
       // Expect immediate expression.
       if (Parser.parseExpression(Expr))
         return Error(StartLoc, "unexpected token in directive");
+
       SMLoc EndLoc =
         SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
