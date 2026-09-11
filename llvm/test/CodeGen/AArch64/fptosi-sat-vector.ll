@@ -3238,36 +3238,84 @@ define <4 x i100> @test_signed_v4f16_v4i100(<4 x half> %f) {
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-CVT-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-CVT-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x3, xzr
-; CHECK-GI-CVT-NEXT:    mov x5, xzr
-; CHECK-GI-CVT-NEXT:    mov x7, xzr
+; CHECK-GI-CVT-NEXT:    fcvt s2, h0
+; CHECK-GI-CVT-NEXT:    mov h3, v0.h[2]
+; CHECK-GI-CVT-NEXT:    mov h0, v0.h[3]
 ; CHECK-GI-CVT-NEXT:    fcvt s1, h1
-; CHECK-GI-CVT-NEXT:    fcvt s2, h2
-; CHECK-GI-CVT-NEXT:    fcvt s3, h3
-; CHECK-GI-CVT-NEXT:    fcvtzs x0, s0
-; CHECK-GI-CVT-NEXT:    fcvtzs x2, s1
-; CHECK-GI-CVT-NEXT:    fcvtzs x4, s2
-; CHECK-GI-CVT-NEXT:    fcvtzs x6, s3
+; CHECK-GI-CVT-NEXT:    fcvtzs x8, s2
+; CHECK-GI-CVT-NEXT:    fcvt s2, h3
+; CHECK-GI-CVT-NEXT:    fcvt s0, h0
+; CHECK-GI-CVT-NEXT:    fcvtzs x9, s1
+; CHECK-GI-CVT-NEXT:    ror x8, x8, #63
+; CHECK-GI-CVT-NEXT:    fcvtzs x10, s2
+; CHECK-GI-CVT-NEXT:    fcvtzs x11, s0
+; CHECK-GI-CVT-NEXT:    asr x12, x8, #63
+; CHECK-GI-CVT-NEXT:    lsl x13, x8, #1
+; CHECK-GI-CVT-NEXT:    ror x9, x9, #63
+; CHECK-GI-CVT-NEXT:    and x12, x12, #0xfffffffff
+; CHECK-GI-CVT-NEXT:    lsl x13, x13, #34
+; CHECK-GI-CVT-NEXT:    ror x10, x10, #63
+; CHECK-GI-CVT-NEXT:    ror x11, x11, #63
+; CHECK-GI-CVT-NEXT:    extr x0, x12, x8, #1
+; CHECK-GI-CVT-NEXT:    lsl x14, x9, #1
+; CHECK-GI-CVT-NEXT:    asr x8, x9, #63
+; CHECK-GI-CVT-NEXT:    orr x1, x13, x12, lsr #1
+; CHECK-GI-CVT-NEXT:    lsl x13, x10, #1
+; CHECK-GI-CVT-NEXT:    lsl x16, x11, #1
+; CHECK-GI-CVT-NEXT:    asr x12, x10, #63
+; CHECK-GI-CVT-NEXT:    lsl x14, x14, #34
+; CHECK-GI-CVT-NEXT:    asr x15, x11, #63
+; CHECK-GI-CVT-NEXT:    and x8, x8, #0xfffffffff
+; CHECK-GI-CVT-NEXT:    extr x2, x8, x9, #1
+; CHECK-GI-CVT-NEXT:    and x9, x12, #0xfffffffff
+; CHECK-GI-CVT-NEXT:    orr x3, x14, x8, lsr #1
+; CHECK-GI-CVT-NEXT:    lsl x8, x13, #34
+; CHECK-GI-CVT-NEXT:    lsl x13, x16, #34
+; CHECK-GI-CVT-NEXT:    and x12, x15, #0xfffffffff
+; CHECK-GI-CVT-NEXT:    extr x4, x9, x10, #1
+; CHECK-GI-CVT-NEXT:    orr x5, x8, x9, lsr #1
+; CHECK-GI-CVT-NEXT:    extr x6, x12, x11, #1
+; CHECK-GI-CVT-NEXT:    orr x7, x13, x12, lsr #1
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_v4f16_v4i100:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    fcvtzs x8, h0
 ; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
-; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
-; CHECK-GI-FP16-NEXT:    mov x3, xzr
-; CHECK-GI-FP16-NEXT:    mov x5, xzr
-; CHECK-GI-FP16-NEXT:    mov x7, xzr
-; CHECK-GI-FP16-NEXT:    fcvtzs x2, h1
-; CHECK-GI-FP16-NEXT:    fcvtzs x4, h2
-; CHECK-GI-FP16-NEXT:    fcvtzs x6, h3
+; CHECK-GI-FP16-NEXT:    mov h0, v0.h[3]
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h1
+; CHECK-GI-FP16-NEXT:    ror x8, x8, #63
+; CHECK-GI-FP16-NEXT:    fcvtzs x10, h2
+; CHECK-GI-FP16-NEXT:    fcvtzs x11, h0
+; CHECK-GI-FP16-NEXT:    asr x12, x8, #63
+; CHECK-GI-FP16-NEXT:    lsl x13, x8, #1
+; CHECK-GI-FP16-NEXT:    ror x9, x9, #63
+; CHECK-GI-FP16-NEXT:    and x12, x12, #0xfffffffff
+; CHECK-GI-FP16-NEXT:    lsl x13, x13, #34
+; CHECK-GI-FP16-NEXT:    ror x10, x10, #63
+; CHECK-GI-FP16-NEXT:    ror x11, x11, #63
+; CHECK-GI-FP16-NEXT:    extr x0, x12, x8, #1
+; CHECK-GI-FP16-NEXT:    lsl x14, x9, #1
+; CHECK-GI-FP16-NEXT:    asr x8, x9, #63
+; CHECK-GI-FP16-NEXT:    orr x1, x13, x12, lsr #1
+; CHECK-GI-FP16-NEXT:    lsl x13, x10, #1
+; CHECK-GI-FP16-NEXT:    lsl x16, x11, #1
+; CHECK-GI-FP16-NEXT:    asr x12, x10, #63
+; CHECK-GI-FP16-NEXT:    lsl x14, x14, #34
+; CHECK-GI-FP16-NEXT:    asr x15, x11, #63
+; CHECK-GI-FP16-NEXT:    and x8, x8, #0xfffffffff
+; CHECK-GI-FP16-NEXT:    extr x2, x8, x9, #1
+; CHECK-GI-FP16-NEXT:    and x9, x12, #0xfffffffff
+; CHECK-GI-FP16-NEXT:    orr x3, x14, x8, lsr #1
+; CHECK-GI-FP16-NEXT:    lsl x8, x13, #34
+; CHECK-GI-FP16-NEXT:    lsl x13, x16, #34
+; CHECK-GI-FP16-NEXT:    and x12, x15, #0xfffffffff
+; CHECK-GI-FP16-NEXT:    extr x4, x9, x10, #1
+; CHECK-GI-FP16-NEXT:    orr x5, x8, x9, lsr #1
+; CHECK-GI-FP16-NEXT:    extr x6, x12, x11, #1
+; CHECK-GI-FP16-NEXT:    orr x7, x13, x12, lsr #1
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call <4 x i100> @llvm.fptosi.sat.v4f16.v4i100(<4 x half> %f)
     ret <4 x i100> %x
@@ -3379,19 +3427,31 @@ define <4 x i128> @test_signed_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-GI-CVT-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-CVT-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-CVT-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
 ; CHECK-GI-CVT-NEXT:    mov h3, v0.h[3]
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x3, xzr
-; CHECK-GI-CVT-NEXT:    mov x5, xzr
-; CHECK-GI-CVT-NEXT:    mov x7, xzr
 ; CHECK-GI-CVT-NEXT:    fcvt s1, h1
 ; CHECK-GI-CVT-NEXT:    fcvt s2, h2
 ; CHECK-GI-CVT-NEXT:    fcvt s3, h3
-; CHECK-GI-CVT-NEXT:    fcvtzs x0, s0
-; CHECK-GI-CVT-NEXT:    fcvtzs x2, s1
-; CHECK-GI-CVT-NEXT:    fcvtzs x4, s2
-; CHECK-GI-CVT-NEXT:    fcvtzs x6, s3
+; CHECK-GI-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-GI-CVT-NEXT:    fcvtzs x9, s1
+; CHECK-GI-CVT-NEXT:    fcvtzs x10, s2
+; CHECK-GI-CVT-NEXT:    fcvtzs x11, s3
+; CHECK-GI-CVT-NEXT:    ror x8, x8, #63
+; CHECK-GI-CVT-NEXT:    asr x12, x8, #63
+; CHECK-GI-CVT-NEXT:    ror x9, x9, #63
+; CHECK-GI-CVT-NEXT:    ror x10, x10, #63
+; CHECK-GI-CVT-NEXT:    ror x11, x11, #63
+; CHECK-GI-CVT-NEXT:    extr x0, x12, x8, #1
+; CHECK-GI-CVT-NEXT:    extr x1, x8, x12, #1
+; CHECK-GI-CVT-NEXT:    asr x13, x9, #63
+; CHECK-GI-CVT-NEXT:    asr x14, x10, #63
+; CHECK-GI-CVT-NEXT:    asr x15, x11, #63
+; CHECK-GI-CVT-NEXT:    extr x2, x13, x9, #1
+; CHECK-GI-CVT-NEXT:    extr x3, x9, x13, #1
+; CHECK-GI-CVT-NEXT:    extr x4, x14, x10, #1
+; CHECK-GI-CVT-NEXT:    extr x5, x10, x14, #1
+; CHECK-GI-CVT-NEXT:    extr x6, x15, x11, #1
+; CHECK-GI-CVT-NEXT:    extr x7, x11, x15, #1
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_v4f16_v4i128:
@@ -3399,15 +3459,27 @@ define <4 x i128> @test_signed_v4f16_v4i128(<4 x half> %f) {
 ; CHECK-GI-FP16-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
 ; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
 ; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
-; CHECK-GI-FP16-NEXT:    mov x3, xzr
-; CHECK-GI-FP16-NEXT:    mov x5, xzr
-; CHECK-GI-FP16-NEXT:    mov x7, xzr
-; CHECK-GI-FP16-NEXT:    fcvtzs x2, h1
-; CHECK-GI-FP16-NEXT:    fcvtzs x4, h2
-; CHECK-GI-FP16-NEXT:    fcvtzs x6, h3
+; CHECK-GI-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h1
+; CHECK-GI-FP16-NEXT:    fcvtzs x10, h2
+; CHECK-GI-FP16-NEXT:    fcvtzs x11, h3
+; CHECK-GI-FP16-NEXT:    ror x8, x8, #63
+; CHECK-GI-FP16-NEXT:    asr x12, x8, #63
+; CHECK-GI-FP16-NEXT:    ror x9, x9, #63
+; CHECK-GI-FP16-NEXT:    ror x10, x10, #63
+; CHECK-GI-FP16-NEXT:    ror x11, x11, #63
+; CHECK-GI-FP16-NEXT:    extr x0, x12, x8, #1
+; CHECK-GI-FP16-NEXT:    extr x1, x8, x12, #1
+; CHECK-GI-FP16-NEXT:    asr x13, x9, #63
+; CHECK-GI-FP16-NEXT:    asr x14, x10, #63
+; CHECK-GI-FP16-NEXT:    asr x15, x11, #63
+; CHECK-GI-FP16-NEXT:    extr x2, x13, x9, #1
+; CHECK-GI-FP16-NEXT:    extr x3, x9, x13, #1
+; CHECK-GI-FP16-NEXT:    extr x4, x14, x10, #1
+; CHECK-GI-FP16-NEXT:    extr x5, x10, x14, #1
+; CHECK-GI-FP16-NEXT:    extr x6, x15, x11, #1
+; CHECK-GI-FP16-NEXT:    extr x7, x11, x15, #1
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call <4 x i128> @llvm.fptosi.sat.v4f16.v4i128(<4 x half> %f)
     ret <4 x i128> %x
@@ -4209,87 +4281,151 @@ define <8 x i128> @test_signed_v8f16_v8i128(<8 x half> %f) {
 ;
 ; CHECK-GI-CVT-LABEL: test_signed_v8f16_v8i128:
 ; CHECK-GI-CVT:       // %bb.0:
-; CHECK-GI-CVT-NEXT:    mov h1, v0.h[1]
-; CHECK-GI-CVT-NEXT:    mov h2, v0.h[2]
-; CHECK-GI-CVT-NEXT:    mov h3, v0.h[3]
-; CHECK-GI-CVT-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-CVT-NEXT:    fcvt s5, h0
+; CHECK-GI-CVT-NEXT:    fcvt s1, h0
+; CHECK-GI-CVT-NEXT:    mov h2, v0.h[1]
+; CHECK-GI-CVT-NEXT:    mov h3, v0.h[2]
+; CHECK-GI-CVT-NEXT:    mov h4, v0.h[3]
+; CHECK-GI-CVT-NEXT:    mov h5, v0.h[4]
 ; CHECK-GI-CVT-NEXT:    mov h6, v0.h[5]
 ; CHECK-GI-CVT-NEXT:    mov h7, v0.h[6]
 ; CHECK-GI-CVT-NEXT:    mov h0, v0.h[7]
-; CHECK-GI-CVT-NEXT:    fcvt s1, h1
-; CHECK-GI-CVT-NEXT:    fcvt s2, h2
-; CHECK-GI-CVT-NEXT:    fcvt s3, h3
-; CHECK-GI-CVT-NEXT:    fcvtzs x9, s5
-; CHECK-GI-CVT-NEXT:    fcvt s4, h4
+; CHECK-GI-CVT-NEXT:    fcvtzs x9, s1
+; CHECK-GI-CVT-NEXT:    fcvt s1, h2
+; CHECK-GI-CVT-NEXT:    fcvt s2, h3
+; CHECK-GI-CVT-NEXT:    fcvt s3, h4
+; CHECK-GI-CVT-NEXT:    fcvt s4, h5
 ; CHECK-GI-CVT-NEXT:    fcvt s5, h6
+; CHECK-GI-CVT-NEXT:    fcvt s6, h7
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
 ; CHECK-GI-CVT-NEXT:    fcvtzs x10, s1
-; CHECK-GI-CVT-NEXT:    fcvt s1, h7
+; CHECK-GI-CVT-NEXT:    ror x9, x9, #63
 ; CHECK-GI-CVT-NEXT:    fcvtzs x11, s2
 ; CHECK-GI-CVT-NEXT:    fcvtzs x12, s3
-; CHECK-GI-CVT-NEXT:    mov v2.d[0], x9
-; CHECK-GI-CVT-NEXT:    fcvtzs x9, s4
-; CHECK-GI-CVT-NEXT:    mov v3.d[0], x10
-; CHECK-GI-CVT-NEXT:    fcvtzs x10, s5
-; CHECK-GI-CVT-NEXT:    mov v4.d[0], x11
-; CHECK-GI-CVT-NEXT:    fcvtzs x11, s1
-; CHECK-GI-CVT-NEXT:    mov v1.d[0], x12
-; CHECK-GI-CVT-NEXT:    fcvtzs x12, s0
-; CHECK-GI-CVT-NEXT:    mov v0.d[0], x9
-; CHECK-GI-CVT-NEXT:    mov v2.d[1], xzr
-; CHECK-GI-CVT-NEXT:    mov v5.d[0], x10
-; CHECK-GI-CVT-NEXT:    mov v3.d[1], xzr
-; CHECK-GI-CVT-NEXT:    mov v4.d[1], xzr
-; CHECK-GI-CVT-NEXT:    mov v6.d[0], x11
-; CHECK-GI-CVT-NEXT:    mov v7.d[0], x12
-; CHECK-GI-CVT-NEXT:    mov v1.d[1], xzr
-; CHECK-GI-CVT-NEXT:    mov v0.d[1], xzr
-; CHECK-GI-CVT-NEXT:    mov v5.d[1], xzr
-; CHECK-GI-CVT-NEXT:    stp q2, q3, [x8]
-; CHECK-GI-CVT-NEXT:    mov v6.d[1], xzr
-; CHECK-GI-CVT-NEXT:    mov v7.d[1], xzr
-; CHECK-GI-CVT-NEXT:    stp q4, q1, [x8, #32]
-; CHECK-GI-CVT-NEXT:    stp q0, q5, [x8, #64]
+; CHECK-GI-CVT-NEXT:    fcvtzs x13, s4
+; CHECK-GI-CVT-NEXT:    fcvtzs x14, s5
+; CHECK-GI-CVT-NEXT:    fcvtzs x16, s6
+; CHECK-GI-CVT-NEXT:    asr x15, x9, #63
+; CHECK-GI-CVT-NEXT:    fcvtzs x17, s0
+; CHECK-GI-CVT-NEXT:    ror x10, x10, #63
+; CHECK-GI-CVT-NEXT:    extr x18, x15, x9, #1
+; CHECK-GI-CVT-NEXT:    extr x9, x9, x15, #1
+; CHECK-GI-CVT-NEXT:    ror x11, x11, #63
+; CHECK-GI-CVT-NEXT:    ror x12, x12, #63
+; CHECK-GI-CVT-NEXT:    ror x13, x13, #63
+; CHECK-GI-CVT-NEXT:    ror x15, x16, #63
+; CHECK-GI-CVT-NEXT:    ror x16, x17, #63
+; CHECK-GI-CVT-NEXT:    asr x17, x10, #63
+; CHECK-GI-CVT-NEXT:    mov v0.d[0], x18
+; CHECK-GI-CVT-NEXT:    asr x18, x11, #63
+; CHECK-GI-CVT-NEXT:    ror x14, x14, #63
+; CHECK-GI-CVT-NEXT:    extr x3, x17, x10, #1
+; CHECK-GI-CVT-NEXT:    asr x0, x12, #63
+; CHECK-GI-CVT-NEXT:    extr x10, x10, x17, #1
+; CHECK-GI-CVT-NEXT:    extr x17, x18, x11, #1
+; CHECK-GI-CVT-NEXT:    asr x1, x13, #63
+; CHECK-GI-CVT-NEXT:    asr x2, x14, #63
+; CHECK-GI-CVT-NEXT:    mov v1.d[0], x3
+; CHECK-GI-CVT-NEXT:    extr x11, x11, x18, #1
+; CHECK-GI-CVT-NEXT:    asr x18, x15, #63
+; CHECK-GI-CVT-NEXT:    extr x3, x0, x12, #1
+; CHECK-GI-CVT-NEXT:    mov v2.d[0], x17
+; CHECK-GI-CVT-NEXT:    asr x17, x16, #63
+; CHECK-GI-CVT-NEXT:    extr x12, x12, x0, #1
+; CHECK-GI-CVT-NEXT:    extr x0, x1, x13, #1
+; CHECK-GI-CVT-NEXT:    mov v0.d[1], x9
+; CHECK-GI-CVT-NEXT:    mov v3.d[0], x3
+; CHECK-GI-CVT-NEXT:    extr x3, x2, x14, #1
+; CHECK-GI-CVT-NEXT:    extr x9, x18, x15, #1
+; CHECK-GI-CVT-NEXT:    mov v1.d[1], x10
+; CHECK-GI-CVT-NEXT:    extr x10, x17, x16, #1
+; CHECK-GI-CVT-NEXT:    mov v4.d[0], x0
+; CHECK-GI-CVT-NEXT:    mov v5.d[0], x3
+; CHECK-GI-CVT-NEXT:    mov v6.d[0], x9
+; CHECK-GI-CVT-NEXT:    extr x13, x13, x1, #1
+; CHECK-GI-CVT-NEXT:    mov v7.d[0], x10
+; CHECK-GI-CVT-NEXT:    mov v2.d[1], x11
+; CHECK-GI-CVT-NEXT:    extr x9, x14, x2, #1
+; CHECK-GI-CVT-NEXT:    extr x10, x15, x18, #1
+; CHECK-GI-CVT-NEXT:    extr x11, x16, x17, #1
+; CHECK-GI-CVT-NEXT:    mov v3.d[1], x12
+; CHECK-GI-CVT-NEXT:    mov v4.d[1], x13
+; CHECK-GI-CVT-NEXT:    stp q0, q1, [x8]
+; CHECK-GI-CVT-NEXT:    mov v5.d[1], x9
+; CHECK-GI-CVT-NEXT:    mov v6.d[1], x10
+; CHECK-GI-CVT-NEXT:    mov v7.d[1], x11
+; CHECK-GI-CVT-NEXT:    stp q2, q3, [x8, #32]
+; CHECK-GI-CVT-NEXT:    stp q4, q5, [x8, #64]
 ; CHECK-GI-CVT-NEXT:    stp q6, q7, [x8, #96]
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_v8f16_v8i128:
 ; CHECK-GI-FP16:       // %bb.0:
 ; CHECK-GI-FP16-NEXT:    mov h1, v0.h[1]
+; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
 ; CHECK-GI-FP16-NEXT:    mov h2, v0.h[2]
 ; CHECK-GI-FP16-NEXT:    mov h3, v0.h[3]
 ; CHECK-GI-FP16-NEXT:    mov h4, v0.h[4]
-; CHECK-GI-FP16-NEXT:    fcvtzs x9, h0
 ; CHECK-GI-FP16-NEXT:    mov h5, v0.h[5]
-; CHECK-GI-FP16-NEXT:    fcvtzs x10, h1
-; CHECK-GI-FP16-NEXT:    mov h1, v0.h[6]
-; CHECK-GI-FP16-NEXT:    fcvtzs x11, h2
+; CHECK-GI-FP16-NEXT:    mov h6, v0.h[6]
 ; CHECK-GI-FP16-NEXT:    mov h0, v0.h[7]
+; CHECK-GI-FP16-NEXT:    fcvtzs x10, h1
+; CHECK-GI-FP16-NEXT:    ror x9, x9, #63
+; CHECK-GI-FP16-NEXT:    fcvtzs x11, h2
 ; CHECK-GI-FP16-NEXT:    fcvtzs x12, h3
-; CHECK-GI-FP16-NEXT:    mov v2.d[0], x9
-; CHECK-GI-FP16-NEXT:    fcvtzs x9, h4
-; CHECK-GI-FP16-NEXT:    mov v3.d[0], x10
-; CHECK-GI-FP16-NEXT:    fcvtzs x10, h5
-; CHECK-GI-FP16-NEXT:    mov v4.d[0], x11
-; CHECK-GI-FP16-NEXT:    fcvtzs x11, h1
-; CHECK-GI-FP16-NEXT:    mov v1.d[0], x12
-; CHECK-GI-FP16-NEXT:    fcvtzs x12, h0
-; CHECK-GI-FP16-NEXT:    mov v0.d[0], x9
-; CHECK-GI-FP16-NEXT:    mov v2.d[1], xzr
-; CHECK-GI-FP16-NEXT:    mov v5.d[0], x10
-; CHECK-GI-FP16-NEXT:    mov v3.d[1], xzr
-; CHECK-GI-FP16-NEXT:    mov v4.d[1], xzr
-; CHECK-GI-FP16-NEXT:    mov v6.d[0], x11
-; CHECK-GI-FP16-NEXT:    mov v7.d[0], x12
-; CHECK-GI-FP16-NEXT:    mov v1.d[1], xzr
-; CHECK-GI-FP16-NEXT:    mov v0.d[1], xzr
-; CHECK-GI-FP16-NEXT:    mov v5.d[1], xzr
-; CHECK-GI-FP16-NEXT:    stp q2, q3, [x8]
-; CHECK-GI-FP16-NEXT:    mov v6.d[1], xzr
-; CHECK-GI-FP16-NEXT:    mov v7.d[1], xzr
-; CHECK-GI-FP16-NEXT:    stp q4, q1, [x8, #32]
-; CHECK-GI-FP16-NEXT:    stp q0, q5, [x8, #64]
+; CHECK-GI-FP16-NEXT:    fcvtzs x13, h4
+; CHECK-GI-FP16-NEXT:    fcvtzs x14, h5
+; CHECK-GI-FP16-NEXT:    fcvtzs x16, h6
+; CHECK-GI-FP16-NEXT:    asr x15, x9, #63
+; CHECK-GI-FP16-NEXT:    fcvtzs x17, h0
+; CHECK-GI-FP16-NEXT:    ror x10, x10, #63
+; CHECK-GI-FP16-NEXT:    extr x18, x15, x9, #1
+; CHECK-GI-FP16-NEXT:    extr x9, x9, x15, #1
+; CHECK-GI-FP16-NEXT:    ror x11, x11, #63
+; CHECK-GI-FP16-NEXT:    ror x12, x12, #63
+; CHECK-GI-FP16-NEXT:    ror x13, x13, #63
+; CHECK-GI-FP16-NEXT:    ror x15, x16, #63
+; CHECK-GI-FP16-NEXT:    ror x16, x17, #63
+; CHECK-GI-FP16-NEXT:    asr x17, x10, #63
+; CHECK-GI-FP16-NEXT:    mov v0.d[0], x18
+; CHECK-GI-FP16-NEXT:    asr x18, x11, #63
+; CHECK-GI-FP16-NEXT:    ror x14, x14, #63
+; CHECK-GI-FP16-NEXT:    extr x3, x17, x10, #1
+; CHECK-GI-FP16-NEXT:    asr x0, x12, #63
+; CHECK-GI-FP16-NEXT:    extr x10, x10, x17, #1
+; CHECK-GI-FP16-NEXT:    extr x17, x18, x11, #1
+; CHECK-GI-FP16-NEXT:    asr x1, x13, #63
+; CHECK-GI-FP16-NEXT:    asr x2, x14, #63
+; CHECK-GI-FP16-NEXT:    mov v1.d[0], x3
+; CHECK-GI-FP16-NEXT:    extr x11, x11, x18, #1
+; CHECK-GI-FP16-NEXT:    asr x18, x15, #63
+; CHECK-GI-FP16-NEXT:    extr x3, x0, x12, #1
+; CHECK-GI-FP16-NEXT:    mov v2.d[0], x17
+; CHECK-GI-FP16-NEXT:    asr x17, x16, #63
+; CHECK-GI-FP16-NEXT:    extr x12, x12, x0, #1
+; CHECK-GI-FP16-NEXT:    extr x0, x1, x13, #1
+; CHECK-GI-FP16-NEXT:    mov v0.d[1], x9
+; CHECK-GI-FP16-NEXT:    mov v3.d[0], x3
+; CHECK-GI-FP16-NEXT:    extr x3, x2, x14, #1
+; CHECK-GI-FP16-NEXT:    extr x9, x18, x15, #1
+; CHECK-GI-FP16-NEXT:    mov v1.d[1], x10
+; CHECK-GI-FP16-NEXT:    extr x10, x17, x16, #1
+; CHECK-GI-FP16-NEXT:    mov v4.d[0], x0
+; CHECK-GI-FP16-NEXT:    mov v5.d[0], x3
+; CHECK-GI-FP16-NEXT:    mov v6.d[0], x9
+; CHECK-GI-FP16-NEXT:    extr x13, x13, x1, #1
+; CHECK-GI-FP16-NEXT:    mov v7.d[0], x10
+; CHECK-GI-FP16-NEXT:    mov v2.d[1], x11
+; CHECK-GI-FP16-NEXT:    extr x9, x14, x2, #1
+; CHECK-GI-FP16-NEXT:    extr x10, x15, x18, #1
+; CHECK-GI-FP16-NEXT:    extr x11, x16, x17, #1
+; CHECK-GI-FP16-NEXT:    mov v3.d[1], x12
+; CHECK-GI-FP16-NEXT:    mov v4.d[1], x13
+; CHECK-GI-FP16-NEXT:    stp q0, q1, [x8]
+; CHECK-GI-FP16-NEXT:    mov v5.d[1], x9
+; CHECK-GI-FP16-NEXT:    mov v6.d[1], x10
+; CHECK-GI-FP16-NEXT:    mov v7.d[1], x11
+; CHECK-GI-FP16-NEXT:    stp q2, q3, [x8, #32]
+; CHECK-GI-FP16-NEXT:    stp q4, q5, [x8, #64]
 ; CHECK-GI-FP16-NEXT:    stp q6, q7, [x8, #96]
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call <8 x i128> @llvm.fptosi.sat.v8f16.v8i128(<8 x half> %f)

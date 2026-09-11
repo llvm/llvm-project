@@ -877,14 +877,26 @@ define i100 @test_signed_i100_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_signed_i100_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-GI-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-GI-CVT-NEXT:    ror x8, x8, #63
+; CHECK-GI-CVT-NEXT:    lsl x9, x8, #1
+; CHECK-GI-CVT-NEXT:    asr x10, x8, #63
+; CHECK-GI-CVT-NEXT:    lsl x9, x9, #34
+; CHECK-GI-CVT-NEXT:    and x10, x10, #0xfffffffff
+; CHECK-GI-CVT-NEXT:    extr x0, x10, x8, #1
+; CHECK-GI-CVT-NEXT:    orr x1, x9, x10, lsr #1
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i100_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-GI-FP16-NEXT:    ror x8, x8, #63
+; CHECK-GI-FP16-NEXT:    lsl x9, x8, #1
+; CHECK-GI-FP16-NEXT:    asr x10, x8, #63
+; CHECK-GI-FP16-NEXT:    lsl x9, x9, #34
+; CHECK-GI-FP16-NEXT:    and x10, x10, #0xfffffffff
+; CHECK-GI-FP16-NEXT:    extr x0, x10, x8, #1
+; CHECK-GI-FP16-NEXT:    orr x1, x9, x10, lsr #1
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i100 @llvm.fptosi.sat.i100.f16(half %f)
     ret i100 %x
@@ -919,14 +931,20 @@ define i128 @test_signed_i128_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_signed_i128_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov x1, xzr
-; CHECK-GI-CVT-NEXT:    fcvtzs x0, s0
+; CHECK-GI-CVT-NEXT:    fcvtzs x8, s0
+; CHECK-GI-CVT-NEXT:    ror x8, x8, #63
+; CHECK-GI-CVT-NEXT:    asr x9, x8, #63
+; CHECK-GI-CVT-NEXT:    extr x0, x9, x8, #1
+; CHECK-GI-CVT-NEXT:    extr x1, x8, x9, #1
 ; CHECK-GI-CVT-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i128_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs x0, h0
-; CHECK-GI-FP16-NEXT:    mov x1, xzr
+; CHECK-GI-FP16-NEXT:    fcvtzs x8, h0
+; CHECK-GI-FP16-NEXT:    ror x8, x8, #63
+; CHECK-GI-FP16-NEXT:    asr x9, x8, #63
+; CHECK-GI-FP16-NEXT:    extr x0, x9, x8, #1
+; CHECK-GI-FP16-NEXT:    extr x1, x8, x9, #1
 ; CHECK-GI-FP16-NEXT:    ret
     %x = call i128 @llvm.fptosi.sat.i128.f16(half %f)
     ret i128 %x
