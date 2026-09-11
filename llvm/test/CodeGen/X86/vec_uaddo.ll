@@ -26,8 +26,8 @@ declare {<2 x i128>, <2 x i1>} @llvm.uadd.with.overflow.v2i128(<2 x i128>, <2 x 
 define <1 x i32> @uaddo_v1i32(<1 x i32> %a0, <1 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: uaddo_v1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    movl %edi, (%rdx)
 ; CHECK-NEXT:    retq
@@ -1119,9 +1119,9 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE2-LABEL: uaddo_v2i128:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE2-NEXT:    xorl %r10d, %r10d
 ; SSE2-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSE2-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSE2-NEXT:    movl $0, %r10d
 ; SSE2-NEXT:    movl $0, %r11d
 ; SSE2-NEXT:    sbbl %r11d, %r11d
 ; SSE2-NEXT:    addq %r8, %rdi
@@ -1139,9 +1139,9 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSSE3-LABEL: uaddo_v2i128:
 ; SSSE3:       # %bb.0:
 ; SSSE3-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSSE3-NEXT:    xorl %r10d, %r10d
 ; SSSE3-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSSE3-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSSE3-NEXT:    movl $0, %r10d
 ; SSSE3-NEXT:    movl $0, %r11d
 ; SSSE3-NEXT:    sbbl %r11d, %r11d
 ; SSSE3-NEXT:    addq %r8, %rdi
@@ -1159,9 +1159,9 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; SSE41-LABEL: uaddo_v2i128:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; SSE41-NEXT:    xorl %r10d, %r10d
 ; SSE41-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; SSE41-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; SSE41-NEXT:    movl $0, %r10d
 ; SSE41-NEXT:    movl $0, %r11d
 ; SSE41-NEXT:    sbbl %r11d, %r11d
 ; SSE41-NEXT:    addq %r8, %rdi
@@ -1178,9 +1178,9 @@ define <2 x i32> @uaddo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; AVX-LABEL: uaddo_v2i128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; AVX-NEXT:    xorl %r10d, %r10d
 ; AVX-NEXT:    addq {{[0-9]+}}(%rsp), %rdx
 ; AVX-NEXT:    adcq {{[0-9]+}}(%rsp), %rcx
+; AVX-NEXT:    movl $0, %r10d
 ; AVX-NEXT:    movl $0, %r11d
 ; AVX-NEXT:    sbbl %r11d, %r11d
 ; AVX-NEXT:    addq %r8, %rdi

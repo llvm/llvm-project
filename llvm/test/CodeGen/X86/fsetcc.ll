@@ -4,8 +4,8 @@
 define i8 @PR43088(double, double) nounwind {
 ; CHECK-LABEL: PR43088:
 ; CHECK:       # %bb.0: # %start
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcb $1, %al
 ; CHECK-NEXT:    ucomisd %xmm1, %xmm0

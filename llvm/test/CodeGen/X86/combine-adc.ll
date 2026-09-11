@@ -17,9 +17,9 @@ define i32 @PR40483_add1(ptr, i32) nounwind {
 ;
 ; X64-LABEL: PR40483_add1:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    addl (%rdi), %esi
 ; X64-NEXT:    movl %esi, (%rdi)
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovael %esi, %eax
 ; X64-NEXT:    retq
   %3 = load i32, ptr %0, align 8
@@ -37,11 +37,11 @@ define i32 @PR40483_add1(ptr, i32) nounwind {
 define i32 @PR40483_add2(ptr, i32) nounwind {
 ; X86-LABEL: PR40483_add2:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl (%edx), %ecx
-; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl (%eax), %ecx
 ; X86-NEXT:    addl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl %ecx, (%edx)
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    jae .LBB1_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl %ecx, %eax
@@ -50,9 +50,9 @@ define i32 @PR40483_add2(ptr, i32) nounwind {
 ;
 ; X64-LABEL: PR40483_add2:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    addl (%rdi), %esi
 ; X64-NEXT:    movl %esi, (%rdi)
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovbl %esi, %eax
 ; X64-NEXT:    retq
   %3 = load i32, ptr %0, align 8
@@ -70,15 +70,15 @@ define i32 @PR40483_add2(ptr, i32) nounwind {
 define i32 @adc_merge_constants(i32 %a0) nounwind {
 ; X86-LABEL: adc_merge_constants:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    btl $11, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    adcl $54, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: adc_merge_constants:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    btl $11, %edi
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    adcl $54, %eax
 ; X64-NEXT:    retq
   %bit = lshr i32 %a0, 11

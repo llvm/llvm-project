@@ -430,21 +430,21 @@ define void @v1i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzbl (%rdi), %eax
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    subb (%rsi), %al
 ; SSE-NEXT:    movzbl %al, %eax
-; SSE-NEXT:    cmovbl %ecx, %eax
-; SSE-NEXT:    movb %al, (%rdx)
+; SSE-NEXT:    movl $0, %ecx
+; SSE-NEXT:    cmovael %eax, %ecx
+; SSE-NEXT:    movb %cl, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v1i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzbl (%rdi), %eax
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    subb (%rsi), %al
 ; AVX-NEXT:    movzbl %al, %eax
-; AVX-NEXT:    cmovbl %ecx, %eax
-; AVX-NEXT:    movb %al, (%rdx)
+; AVX-NEXT:    movl $0, %ecx
+; AVX-NEXT:    cmovael %eax, %ecx
+; AVX-NEXT:    movb %cl, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i8>, ptr %px
   %y = load <1 x i8>, ptr %py
@@ -457,19 +457,19 @@ define void @v1i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; SSE-LABEL: v1i16:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movzwl (%rdi), %eax
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    subw (%rsi), %ax
-; SSE-NEXT:    cmovbl %ecx, %eax
-; SSE-NEXT:    movw %ax, (%rdx)
+; SSE-NEXT:    movl $0, %ecx
+; SSE-NEXT:    cmovael %eax, %ecx
+; SSE-NEXT:    movw %cx, (%rdx)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v1i16:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    subw (%rsi), %ax
-; AVX-NEXT:    cmovbl %ecx, %eax
-; AVX-NEXT:    movw %ax, (%rdx)
+; AVX-NEXT:    movl $0, %ecx
+; AVX-NEXT:    cmovael %eax, %ecx
+; AVX-NEXT:    movw %cx, (%rdx)
 ; AVX-NEXT:    retq
   %x = load <1 x i16>, ptr %px
   %y = load <1 x i16>, ptr %py
@@ -1056,9 +1056,9 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; SSE-LABEL: v2i128:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
-; SSE-NEXT:    xorl %edi, %edi
 ; SSE-NEXT:    subq %r9, %rsi
 ; SSE-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
+; SSE-NEXT:    movl $0, %edi
 ; SSE-NEXT:    cmovbq %rdi, %rsi
 ; SSE-NEXT:    cmovbq %rdi, %rdx
 ; SSE-NEXT:    subq {{[0-9]+}}(%rsp), %rcx
@@ -1074,9 +1074,9 @@ define <2 x i128> @v2i128(<2 x i128> %x, <2 x i128> %y) nounwind {
 ; AVX-LABEL: v2i128:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq %rdi, %rax
-; AVX-NEXT:    xorl %edi, %edi
 ; AVX-NEXT:    subq %r9, %rsi
 ; AVX-NEXT:    sbbq {{[0-9]+}}(%rsp), %rdx
+; AVX-NEXT:    movl $0, %edi
 ; AVX-NEXT:    cmovbq %rdi, %rsi
 ; AVX-NEXT:    cmovbq %rdi, %rdx
 ; AVX-NEXT:    subq {{[0-9]+}}(%rsp), %rcx

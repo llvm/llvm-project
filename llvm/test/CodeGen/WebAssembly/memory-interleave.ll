@@ -1798,7 +1798,6 @@ bb86:                                             ; preds = %bb4, %bb
 ; CHECK: i8x16.shuffle	0, 1, 2, 3, 20, 21, 22, 23, 0, 0, 0, 0, 0, 0, 0, 0
 ; CHECK: i16x8.extend_low_i8x16_u
 ; CHECK: i16x8.add
-; CHECK: v128.const	2, 2, 2, 2, 2, 2, 2, 2
 ; CHECK: i16x8.add
 ; CHECK: i16x8.shr_u
 ; CHECK: i16x8.mul
@@ -2247,7 +2246,6 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK: f32x4.mul
 ; CHECK: i32x4.trunc_sat_f32x4_s
-; CHECK: v128.const	255, 255, 255, 255
 ; CHECK: v128.and
 ; CHECK: i16x8.narrow_i32x4_u
 ; CHECK: i8x16.narrow_i16x8_u
@@ -2301,7 +2299,6 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK: f32x4.add
 ; CHECK: i32x4.trunc_sat_f32x4_s
-; CHECK: v128.const	255, 255, 255, 255
 ; CHECK: v128.and
 ; CHECK: i16x8.narrow_i32x4_u
 ; CHECK: i8x16.narrow_i16x8_u
@@ -2465,7 +2462,6 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: i8x16.shuffle	0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK: f32x4.mul
 ; CHECK: i32x4.trunc_sat_f32x4_s
-; CHECK: v128.const	65535, 65535, 65535, 65535
 ; CHECK: v128.and
 ; CHECK: i16x8.narrow_i32x4_u
 ; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
@@ -2517,7 +2513,6 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: i8x16.shuffle  0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
 ; CHECK: f32x4.add
 ; CHECK: i32x4.trunc_sat_f32x4_s
-; CHECK: v128.const	65535, 65535, 65535, 65535
 ; CHECK: v128.and
 ; CHECK: i16x8.narrow_i32x4_u
 ; CHECK: i8x16.shuffle	4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31

@@ -24,8 +24,8 @@ define void @test_select(ptr %p, ptr %q, i1 zeroext %c) nounwind {
 ;
 ; NOSSE-LABEL: test_select:
 ; NOSSE:       # %bb.0:
-; NOSSE-NEXT:    xorl %eax, %eax
 ; NOSSE-NEXT:    testl %edx, %edx
+; NOSSE-NEXT:    movl $0, %eax
 ; NOSSE-NEXT:    cmovneq (%rdi), %rax
 ; NOSSE-NEXT:    movabsq $9223231299366420480, %rcx # imm = 0x7FFF800000000000
 ; NOSSE-NEXT:    cmovneq 8(%rdi), %rcx
@@ -88,9 +88,8 @@ define fp128 @test_select_cc(fp128, fp128) nounwind {
 ; NOSSE-NEXT:    movq %r12, %rdx
 ; NOSSE-NEXT:    movq %r15, %rcx
 ; NOSSE-NEXT:    callq __eqtf2@PLT
-; NOSSE-NEXT:    movl %eax, %ecx
-; NOSSE-NEXT:    xorl %eax, %eax
-; NOSSE-NEXT:    testl %ecx, %ecx
+; NOSSE-NEXT:    testl %eax, %eax
+; NOSSE-NEXT:    movl $0, %eax
 ; NOSSE-NEXT:    movabsq $4611404543450677248, %rdx # imm = 0x3FFF000000000000
 ; NOSSE-NEXT:    cmovneq %rax, %rdx
 ; NOSSE-NEXT:    testl %ebp, %ebp

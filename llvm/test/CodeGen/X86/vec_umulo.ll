@@ -2470,8 +2470,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    movq %xmm2, %rsi
 ; SSE2-NEXT:    movq %xmm0, %rax
 ; SSE2-NEXT:    movq %xmm1, %rdx
-; SSE2-NEXT:    xorl %r8d, %r8d
 ; SSE2-NEXT:    mulq %rdx
+; SSE2-NEXT:    movl $0, %r8d
 ; SSE2-NEXT:    movq $-1, %r9
 ; SSE2-NEXT:    movl $0, %r10d
 ; SSE2-NEXT:    cmovoq %r9, %r10
@@ -2496,8 +2496,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    movq %xmm2, %rsi
 ; SSSE3-NEXT:    movq %xmm0, %rax
 ; SSSE3-NEXT:    movq %xmm1, %rdx
-; SSSE3-NEXT:    xorl %r8d, %r8d
 ; SSSE3-NEXT:    mulq %rdx
+; SSSE3-NEXT:    movl $0, %r8d
 ; SSSE3-NEXT:    movq $-1, %r9
 ; SSSE3-NEXT:    movl $0, %r10d
 ; SSSE3-NEXT:    cmovoq %r9, %r10
@@ -2520,8 +2520,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movq %xmm1, %rsi
 ; SSE41-NEXT:    pextrq $1, %xmm0, %rax
 ; SSE41-NEXT:    pextrq $1, %xmm1, %rdx
-; SSE41-NEXT:    xorl %r8d, %r8d
 ; SSE41-NEXT:    mulq %rdx
+; SSE41-NEXT:    movl $0, %r8d
 ; SSE41-NEXT:    movq $-1, %r9
 ; SSE41-NEXT:    movl $0, %r10d
 ; SSE41-NEXT:    cmovoq %r9, %r10
@@ -2544,8 +2544,8 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    vmovq %xmm1, %rsi
 ; AVX-NEXT:    vpextrq $1, %xmm0, %rax
 ; AVX-NEXT:    vpextrq $1, %xmm1, %rdx
-; AVX-NEXT:    xorl %r8d, %r8d
 ; AVX-NEXT:    mulq %rdx
+; AVX-NEXT:    movl $0, %r8d
 ; AVX-NEXT:    movq $-1, %r9
 ; AVX-NEXT:    movl $0, %r10d
 ; AVX-NEXT:    cmovoq %r9, %r10

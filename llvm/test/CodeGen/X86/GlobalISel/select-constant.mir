@@ -103,7 +103,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32_0
-    ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+    ; CHECK: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0
     ; CHECK-NEXT: $eax = COPY [[MOV32r0_]]
     ; CHECK-NEXT: RET 0, implicit $eax
     %0(s32) = G_CONSTANT i32 0

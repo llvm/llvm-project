@@ -753,33 +753,34 @@ define i32 @select_n_or_minus1(i1 signext %cond) {
 define i64 @select_2_or_inc(i64 %x) {
 ; X86-LABEL: select_2_or_inc:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %edi
-; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    pushl %esi
-; X86-NEXT:    .cfi_def_cfa_offset 12
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    .cfi_offset %edi, -8
+; X86-NEXT:    .cfi_def_cfa_offset 8
+; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %ecx, %edi
-; X86-NEXT:    xorl $2, %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    xorl $2, %esi
 ; X86-NEXT:    addl $1, %ecx
-; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    adcl $0, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    orl %esi, %edi
-; X86-NEXT:    je .LBB36_2
-; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:  .LBB36_2:
+; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    jne .LBB36_1
+; X86-NEXT:  # %bb.2:
 ; X86-NEXT:    movl $2, %eax
-; X86-NEXT:    je .LBB36_4
-; X86-NEXT:  # %bb.3:
-; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    jne .LBB36_3
 ; X86-NEXT:  .LBB36_4:
 ; X86-NEXT:    popl %esi
+; X86-NEXT:    .cfi_def_cfa_offset 4
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB36_1:
 ; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    popl %edi
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    movl $2, %eax
+; X86-NEXT:    je .LBB36_4
+; X86-NEXT:  .LBB36_3:
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 4
 ; X86-NEXT:    retl
 ;
@@ -953,15 +954,15 @@ define float @select_undef_fp(float %x) {
 define i32 @select_eq0_3_2(i32 %X) {
 ; X86-LABEL: select_eq0_3_2:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    adcl $2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select_eq0_3_2:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $1, %edi
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    adcl $2, %eax
 ; X64-NEXT:    retq
   %cmp = icmp eq i32 %X, 0
@@ -972,15 +973,15 @@ define i32 @select_eq0_3_2(i32 %X) {
 define i32 @select_ugt3_2_3(i32 %X) {
 ; X86-LABEL: select_ugt3_2_3:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $4, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    adcl $2, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select_ugt3_2_3:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $4, %edi
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    adcl $2, %eax
 ; X64-NEXT:    retq
   %cmp = icmp ugt i32 %X, 3
@@ -991,15 +992,15 @@ define i32 @select_ugt3_2_3(i32 %X) {
 define i32 @select_ult9_7_6(i32 %X) {
 ; X86-LABEL: select_ult9_7_6:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
 ; X86-NEXT:    cmpl $9, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    adcl $6, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: select_ult9_7_6:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpl $9, %edi
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    adcl $6, %eax
 ; X64-NEXT:    retq
   %cmp = icmp ult i32 %X, 9

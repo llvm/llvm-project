@@ -8,9 +8,9 @@ define i64 @main(i1 %tobool1) nounwind {
 ; CHECK-NEXT:    andl $1, %eax
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    orl $-12, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    addl $-1, %edx
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    addl $-1, %ecx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    movl $0, %edx
 ; CHECK-NEXT:    adcl $-2, %edx
 ; CHECK-NEXT:    cmovsl %ecx, %eax

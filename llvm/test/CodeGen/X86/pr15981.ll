@@ -42,8 +42,8 @@ define void @fn2() {
 ;
 ; X64-LABEL: fn2:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    decl a(%rip)
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    je .LBB1_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    movl b(%rip), %eax

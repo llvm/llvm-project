@@ -1782,29 +1782,29 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixdfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    cmpq %rsi, %rax
-; SSE-NEXT:    movq %rdx, %rdi
-; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rdx
-; SSE-NEXT:    cmovgeq %rsi, %rax
-; SSE-NEXT:    cmpq %rsi, %rbx
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmpq %rcx, %rax
+; SSE-NEXT:    movq %rdx, %rsi
+; SSE-NEXT:    sbbq $0, %rsi
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgeq %rsi, %rdx
+; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    cmpq %rcx, %rbx
 ; SSE-NEXT:    movq %r14, %rdi
 ; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovlq %r14, %rcx
-; SSE-NEXT:    cmovlq %rbx, %rsi
+; SSE-NEXT:    cmovlq %r14, %rsi
+; SSE-NEXT:    cmovlq %rbx, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; SSE-NEXT:    cmpq %rsi, %rdi
+; SSE-NEXT:    cmpq %rcx, %rdi
 ; SSE-NEXT:    movq $-1, %r8
 ; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
-; SSE-NEXT:    cmovgeq %rdi, %rsi
+; SSE-NEXT:    sbbq %rsi, %r9
+; SSE-NEXT:    cmovgeq %rdi, %rcx
 ; SSE-NEXT:    cmpq %rax, %rdi
 ; SSE-NEXT:    sbbq %rdx, %r8
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movq %rsi, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    addq $24, %rsp
 ; SSE-NEXT:    popq %rbx
@@ -1823,29 +1823,29 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) nounwind {
 ; AVX2-NEXT:    movq %rdx, %r14
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __fixdfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmpq %rsi, %rax
-; AVX2-NEXT:    movq %rdx, %rdi
-; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovgeq %rcx, %rdx
-; AVX2-NEXT:    cmovgeq %rsi, %rax
-; AVX2-NEXT:    cmpq %rsi, %rbx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    sbbq $0, %rsi
+; AVX2-NEXT:    movl $0, %esi
+; AVX2-NEXT:    cmovgeq %rsi, %rdx
+; AVX2-NEXT:    cmovgeq %rcx, %rax
+; AVX2-NEXT:    cmpq %rcx, %rbx
 ; AVX2-NEXT:    movq %r14, %rdi
 ; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovlq %r14, %rcx
-; AVX2-NEXT:    cmovlq %rbx, %rsi
+; AVX2-NEXT:    cmovlq %r14, %rsi
+; AVX2-NEXT:    cmovlq %rbx, %rcx
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX2-NEXT:    cmpq %rsi, %rdi
+; AVX2-NEXT:    cmpq %rcx, %rdi
 ; AVX2-NEXT:    movq $-1, %r8
-; AVX2-NEXT:    sbbq %rcx, %r8
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovgeq %rdi, %rsi
+; AVX2-NEXT:    sbbq %rsi, %r8
+; AVX2-NEXT:    movq $-1, %rsi
+; AVX2-NEXT:    cmovgeq %rdi, %rcx
 ; AVX2-NEXT:    cmpq %rax, %rdi
-; AVX2-NEXT:    sbbq %rdx, %rcx
+; AVX2-NEXT:    sbbq %rdx, %rsi
 ; AVX2-NEXT:    cmovgeq %rdi, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    addq $24, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -1864,29 +1864,29 @@ define <2 x i64> @stest_f64i64(<2 x double> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __fixdfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX512-NEXT:    cmpq %rsi, %rax
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovgeq %rcx, %rdx
-; AVX512-NEXT:    cmovgeq %rsi, %rax
-; AVX512-NEXT:    cmpq %rsi, %rbx
+; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    sbbq $0, %rsi
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovgeq %rsi, %rdx
+; AVX512-NEXT:    cmovgeq %rcx, %rax
+; AVX512-NEXT:    cmpq %rcx, %rbx
 ; AVX512-NEXT:    movq %r14, %rdi
 ; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovlq %r14, %rcx
-; AVX512-NEXT:    cmovlq %rbx, %rsi
+; AVX512-NEXT:    cmovlq %r14, %rsi
+; AVX512-NEXT:    cmovlq %rbx, %rcx
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX512-NEXT:    cmpq %rsi, %rdi
+; AVX512-NEXT:    cmpq %rcx, %rdi
 ; AVX512-NEXT:    movq $-1, %r8
 ; AVX512-NEXT:    movq $-1, %r9
-; AVX512-NEXT:    sbbq %rcx, %r9
-; AVX512-NEXT:    cmovgeq %rdi, %rsi
+; AVX512-NEXT:    sbbq %rsi, %r9
+; AVX512-NEXT:    cmovgeq %rdi, %rcx
 ; AVX512-NEXT:    cmpq %rax, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %r8
 ; AVX512-NEXT:    cmovgeq %rdi, %rax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
@@ -1915,8 +1915,8 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    callq __fixunsdfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    testq %r14, %r14
 ; SSE-NEXT:    cmovneq %rcx, %rbx
@@ -1940,8 +1940,8 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) nounwind {
 ; AVX-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    # xmm0 = mem[1,0]
 ; AVX-NEXT:    callq __fixunsdfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovneq %rcx, %rax
 ; AVX-NEXT:    testq %r14, %r14
 ; AVX-NEXT:    cmovneq %rcx, %rbx
@@ -1973,24 +1973,24 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixdfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
-; SSE-NEXT:    movl $1, %esi
-; SSE-NEXT:    cmovgq %rsi, %rdx
-; SSE-NEXT:    cmovgq %rcx, %rax
+; SSE-NEXT:    movl $1, %ecx
+; SSE-NEXT:    cmovgq %rcx, %rdx
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgq %rsi, %rax
 ; SSE-NEXT:    testq %r14, %r14
-; SSE-NEXT:    cmovleq %r14, %rsi
-; SSE-NEXT:    cmovgq %rcx, %rbx
+; SSE-NEXT:    cmovleq %r14, %rcx
+; SSE-NEXT:    cmovgq %rsi, %rbx
 ; SSE-NEXT:    movq %rbx, %rdi
 ; SSE-NEXT:    negq %rdi
 ; SSE-NEXT:    movl $0, %edi
-; SSE-NEXT:    sbbq %rsi, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rbx
-; SSE-NEXT:    movq %rax, %rsi
-; SSE-NEXT:    negq %rsi
-; SSE-NEXT:    movl $0, %esi
-; SSE-NEXT:    sbbq %rdx, %rsi
-; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    sbbq %rcx, %rdi
+; SSE-NEXT:    cmovgeq %rsi, %rbx
+; SSE-NEXT:    movq %rax, %rcx
+; SSE-NEXT:    negq %rcx
+; SSE-NEXT:    movl $0, %ecx
+; SSE-NEXT:    sbbq %rdx, %rcx
+; SSE-NEXT:    cmovgeq %rsi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rbx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2011,24 +2011,24 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) nounwind {
 ; AVX-NEXT:    movq %rdx, %r14
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixdfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
-; AVX-NEXT:    movl $1, %esi
-; AVX-NEXT:    cmovgq %rsi, %rdx
-; AVX-NEXT:    cmovgq %rcx, %rax
+; AVX-NEXT:    movl $1, %ecx
+; AVX-NEXT:    cmovgq %rcx, %rdx
+; AVX-NEXT:    movl $0, %esi
+; AVX-NEXT:    cmovgq %rsi, %rax
 ; AVX-NEXT:    testq %r14, %r14
-; AVX-NEXT:    cmovleq %r14, %rsi
-; AVX-NEXT:    cmovgq %rcx, %rbx
+; AVX-NEXT:    cmovleq %r14, %rcx
+; AVX-NEXT:    cmovgq %rsi, %rbx
 ; AVX-NEXT:    movq %rbx, %rdi
 ; AVX-NEXT:    negq %rdi
 ; AVX-NEXT:    movl $0, %edi
-; AVX-NEXT:    sbbq %rsi, %rdi
-; AVX-NEXT:    cmovgeq %rcx, %rbx
-; AVX-NEXT:    movq %rax, %rsi
-; AVX-NEXT:    negq %rsi
-; AVX-NEXT:    movl $0, %esi
-; AVX-NEXT:    sbbq %rdx, %rsi
-; AVX-NEXT:    cmovgeq %rcx, %rax
+; AVX-NEXT:    sbbq %rcx, %rdi
+; AVX-NEXT:    cmovgeq %rsi, %rbx
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    negq %rcx
+; AVX-NEXT:    movl $0, %ecx
+; AVX-NEXT:    sbbq %rdx, %rcx
+; AVX-NEXT:    cmovgeq %rsi, %rax
 ; AVX-NEXT:    vmovq %rax, %xmm0
 ; AVX-NEXT:    vmovq %rbx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2059,29 +2059,29 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixsfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    cmpq %rsi, %rax
-; SSE-NEXT:    movq %rdx, %rdi
-; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rdx
-; SSE-NEXT:    cmovgeq %rsi, %rax
-; SSE-NEXT:    cmpq %rsi, %rbx
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmpq %rcx, %rax
+; SSE-NEXT:    movq %rdx, %rsi
+; SSE-NEXT:    sbbq $0, %rsi
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgeq %rsi, %rdx
+; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    cmpq %rcx, %rbx
 ; SSE-NEXT:    movq %r14, %rdi
 ; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovlq %r14, %rcx
-; SSE-NEXT:    cmovlq %rbx, %rsi
+; SSE-NEXT:    cmovlq %r14, %rsi
+; SSE-NEXT:    cmovlq %rbx, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; SSE-NEXT:    cmpq %rsi, %rdi
+; SSE-NEXT:    cmpq %rcx, %rdi
 ; SSE-NEXT:    movq $-1, %r8
 ; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
-; SSE-NEXT:    cmovgeq %rdi, %rsi
+; SSE-NEXT:    sbbq %rsi, %r9
+; SSE-NEXT:    cmovgeq %rdi, %rcx
 ; SSE-NEXT:    cmpq %rax, %rdi
 ; SSE-NEXT:    sbbq %rdx, %r8
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movq %rsi, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    addq $24, %rsp
 ; SSE-NEXT:    popq %rbx
@@ -2100,29 +2100,29 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) nounwind {
 ; AVX2-NEXT:    movq %rdx, %r14
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __fixsfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmpq %rsi, %rax
-; AVX2-NEXT:    movq %rdx, %rdi
-; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovgeq %rcx, %rdx
-; AVX2-NEXT:    cmovgeq %rsi, %rax
-; AVX2-NEXT:    cmpq %rsi, %rbx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    sbbq $0, %rsi
+; AVX2-NEXT:    movl $0, %esi
+; AVX2-NEXT:    cmovgeq %rsi, %rdx
+; AVX2-NEXT:    cmovgeq %rcx, %rax
+; AVX2-NEXT:    cmpq %rcx, %rbx
 ; AVX2-NEXT:    movq %r14, %rdi
 ; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovlq %r14, %rcx
-; AVX2-NEXT:    cmovlq %rbx, %rsi
+; AVX2-NEXT:    cmovlq %r14, %rsi
+; AVX2-NEXT:    cmovlq %rbx, %rcx
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX2-NEXT:    cmpq %rsi, %rdi
+; AVX2-NEXT:    cmpq %rcx, %rdi
 ; AVX2-NEXT:    movq $-1, %r8
-; AVX2-NEXT:    sbbq %rcx, %r8
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovgeq %rdi, %rsi
+; AVX2-NEXT:    sbbq %rsi, %r8
+; AVX2-NEXT:    movq $-1, %rsi
+; AVX2-NEXT:    cmovgeq %rdi, %rcx
 ; AVX2-NEXT:    cmpq %rax, %rdi
-; AVX2-NEXT:    sbbq %rdx, %rcx
+; AVX2-NEXT:    sbbq %rdx, %rsi
 ; AVX2-NEXT:    cmovgeq %rdi, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    addq $24, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -2141,29 +2141,29 @@ define <2 x i64> @stest_f32i64(<2 x float> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __fixsfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX512-NEXT:    cmpq %rsi, %rax
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovgeq %rcx, %rdx
-; AVX512-NEXT:    cmovgeq %rsi, %rax
-; AVX512-NEXT:    cmpq %rsi, %rbx
+; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    sbbq $0, %rsi
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovgeq %rsi, %rdx
+; AVX512-NEXT:    cmovgeq %rcx, %rax
+; AVX512-NEXT:    cmpq %rcx, %rbx
 ; AVX512-NEXT:    movq %r14, %rdi
 ; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovlq %r14, %rcx
-; AVX512-NEXT:    cmovlq %rbx, %rsi
+; AVX512-NEXT:    cmovlq %r14, %rsi
+; AVX512-NEXT:    cmovlq %rbx, %rcx
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX512-NEXT:    cmpq %rsi, %rdi
+; AVX512-NEXT:    cmpq %rcx, %rdi
 ; AVX512-NEXT:    movq $-1, %r8
 ; AVX512-NEXT:    movq $-1, %r9
-; AVX512-NEXT:    sbbq %rcx, %r9
-; AVX512-NEXT:    cmovgeq %rdi, %rsi
+; AVX512-NEXT:    sbbq %rsi, %r9
+; AVX512-NEXT:    cmovgeq %rdi, %rcx
 ; AVX512-NEXT:    cmpq %rax, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %r8
 ; AVX512-NEXT:    cmovgeq %rdi, %rax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
@@ -2192,8 +2192,8 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE-NEXT:    callq __fixunssfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    testq %r14, %r14
 ; SSE-NEXT:    cmovneq %rcx, %rbx
@@ -2217,8 +2217,8 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) nounwind {
 ; AVX-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    # xmm0 = mem[1,1,3,3]
 ; AVX-NEXT:    callq __fixunssfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovneq %rcx, %rax
 ; AVX-NEXT:    testq %r14, %r14
 ; AVX-NEXT:    cmovneq %rcx, %rbx
@@ -2250,24 +2250,24 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixsfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
-; SSE-NEXT:    movl $1, %esi
-; SSE-NEXT:    cmovgq %rsi, %rdx
-; SSE-NEXT:    cmovgq %rcx, %rax
+; SSE-NEXT:    movl $1, %ecx
+; SSE-NEXT:    cmovgq %rcx, %rdx
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgq %rsi, %rax
 ; SSE-NEXT:    testq %r14, %r14
-; SSE-NEXT:    cmovleq %r14, %rsi
-; SSE-NEXT:    cmovgq %rcx, %rbx
+; SSE-NEXT:    cmovleq %r14, %rcx
+; SSE-NEXT:    cmovgq %rsi, %rbx
 ; SSE-NEXT:    movq %rbx, %rdi
 ; SSE-NEXT:    negq %rdi
 ; SSE-NEXT:    movl $0, %edi
-; SSE-NEXT:    sbbq %rsi, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rbx
-; SSE-NEXT:    movq %rax, %rsi
-; SSE-NEXT:    negq %rsi
-; SSE-NEXT:    movl $0, %esi
-; SSE-NEXT:    sbbq %rdx, %rsi
-; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    sbbq %rcx, %rdi
+; SSE-NEXT:    cmovgeq %rsi, %rbx
+; SSE-NEXT:    movq %rax, %rcx
+; SSE-NEXT:    negq %rcx
+; SSE-NEXT:    movl $0, %ecx
+; SSE-NEXT:    sbbq %rdx, %rcx
+; SSE-NEXT:    cmovgeq %rsi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rbx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2288,24 +2288,24 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) nounwind {
 ; AVX-NEXT:    movq %rdx, %r14
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixsfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
-; AVX-NEXT:    movl $1, %esi
-; AVX-NEXT:    cmovgq %rsi, %rdx
-; AVX-NEXT:    cmovgq %rcx, %rax
+; AVX-NEXT:    movl $1, %ecx
+; AVX-NEXT:    cmovgq %rcx, %rdx
+; AVX-NEXT:    movl $0, %esi
+; AVX-NEXT:    cmovgq %rsi, %rax
 ; AVX-NEXT:    testq %r14, %r14
-; AVX-NEXT:    cmovleq %r14, %rsi
-; AVX-NEXT:    cmovgq %rcx, %rbx
+; AVX-NEXT:    cmovleq %r14, %rcx
+; AVX-NEXT:    cmovgq %rsi, %rbx
 ; AVX-NEXT:    movq %rbx, %rdi
 ; AVX-NEXT:    negq %rdi
 ; AVX-NEXT:    movl $0, %edi
-; AVX-NEXT:    sbbq %rsi, %rdi
-; AVX-NEXT:    cmovgeq %rcx, %rbx
-; AVX-NEXT:    movq %rax, %rsi
-; AVX-NEXT:    negq %rsi
-; AVX-NEXT:    movl $0, %esi
-; AVX-NEXT:    sbbq %rdx, %rsi
-; AVX-NEXT:    cmovgeq %rcx, %rax
+; AVX-NEXT:    sbbq %rcx, %rdi
+; AVX-NEXT:    cmovgeq %rsi, %rbx
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    negq %rcx
+; AVX-NEXT:    movl $0, %ecx
+; AVX-NEXT:    sbbq %rdx, %rcx
+; AVX-NEXT:    cmovgeq %rsi, %rax
 ; AVX-NEXT:    vmovq %rax, %xmm0
 ; AVX-NEXT:    vmovq %rbx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2336,29 +2336,29 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixhfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    cmpq %rsi, %rax
-; SSE-NEXT:    movq %rdx, %rdi
-; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rdx
-; SSE-NEXT:    cmovgeq %rsi, %rax
-; SSE-NEXT:    cmpq %rsi, %rbx
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmpq %rcx, %rax
+; SSE-NEXT:    movq %rdx, %rsi
+; SSE-NEXT:    sbbq $0, %rsi
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgeq %rsi, %rdx
+; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    cmpq %rcx, %rbx
 ; SSE-NEXT:    movq %r14, %rdi
 ; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovlq %r14, %rcx
-; SSE-NEXT:    cmovlq %rbx, %rsi
+; SSE-NEXT:    cmovlq %r14, %rsi
+; SSE-NEXT:    cmovlq %rbx, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; SSE-NEXT:    cmpq %rsi, %rdi
+; SSE-NEXT:    cmpq %rcx, %rdi
 ; SSE-NEXT:    movq $-1, %r8
 ; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
-; SSE-NEXT:    cmovgeq %rdi, %rsi
+; SSE-NEXT:    sbbq %rsi, %r9
+; SSE-NEXT:    cmovgeq %rdi, %rcx
 ; SSE-NEXT:    cmpq %rax, %rdi
 ; SSE-NEXT:    sbbq %rdx, %r8
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movq %rsi, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    addq $24, %rsp
 ; SSE-NEXT:    popq %rbx
@@ -2377,29 +2377,29 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) nounwind {
 ; AVX2-NEXT:    movq %rdx, %r14
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __fixhfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmpq %rsi, %rax
-; AVX2-NEXT:    movq %rdx, %rdi
-; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovgeq %rcx, %rdx
-; AVX2-NEXT:    cmovgeq %rsi, %rax
-; AVX2-NEXT:    cmpq %rsi, %rbx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    sbbq $0, %rsi
+; AVX2-NEXT:    movl $0, %esi
+; AVX2-NEXT:    cmovgeq %rsi, %rdx
+; AVX2-NEXT:    cmovgeq %rcx, %rax
+; AVX2-NEXT:    cmpq %rcx, %rbx
 ; AVX2-NEXT:    movq %r14, %rdi
 ; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovlq %r14, %rcx
-; AVX2-NEXT:    cmovlq %rbx, %rsi
+; AVX2-NEXT:    cmovlq %r14, %rsi
+; AVX2-NEXT:    cmovlq %rbx, %rcx
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX2-NEXT:    cmpq %rsi, %rdi
+; AVX2-NEXT:    cmpq %rcx, %rdi
 ; AVX2-NEXT:    movq $-1, %r8
-; AVX2-NEXT:    sbbq %rcx, %r8
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovgeq %rdi, %rsi
+; AVX2-NEXT:    sbbq %rsi, %r8
+; AVX2-NEXT:    movq $-1, %rsi
+; AVX2-NEXT:    cmovgeq %rdi, %rcx
 ; AVX2-NEXT:    cmpq %rax, %rdi
-; AVX2-NEXT:    sbbq %rdx, %rcx
+; AVX2-NEXT:    sbbq %rdx, %rsi
 ; AVX2-NEXT:    cmovgeq %rdi, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    addq $24, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -2418,29 +2418,29 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __fixhfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX512-NEXT:    cmpq %rsi, %rax
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovgeq %rcx, %rdx
-; AVX512-NEXT:    cmovgeq %rsi, %rax
-; AVX512-NEXT:    cmpq %rsi, %rbx
+; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    sbbq $0, %rsi
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovgeq %rsi, %rdx
+; AVX512-NEXT:    cmovgeq %rcx, %rax
+; AVX512-NEXT:    cmpq %rcx, %rbx
 ; AVX512-NEXT:    movq %r14, %rdi
 ; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovlq %r14, %rcx
-; AVX512-NEXT:    cmovlq %rbx, %rsi
+; AVX512-NEXT:    cmovlq %r14, %rsi
+; AVX512-NEXT:    cmovlq %rbx, %rcx
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX512-NEXT:    cmpq %rsi, %rdi
+; AVX512-NEXT:    cmpq %rcx, %rdi
 ; AVX512-NEXT:    movq $-1, %r8
 ; AVX512-NEXT:    movq $-1, %r9
-; AVX512-NEXT:    sbbq %rcx, %r9
-; AVX512-NEXT:    cmovgeq %rdi, %rsi
+; AVX512-NEXT:    sbbq %rsi, %r9
+; AVX512-NEXT:    cmovgeq %rdi, %rcx
 ; AVX512-NEXT:    cmpq %rax, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %r8
 ; AVX512-NEXT:    cmovgeq %rdi, %rax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
@@ -2470,8 +2470,8 @@ define <2 x i64> @utest_f16i64(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixunshfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    testq %r14, %r14
 ; SSE-NEXT:    cmovneq %rcx, %rbx
@@ -2495,8 +2495,8 @@ define <2 x i64> @utest_f16i64(<2 x half> %x) nounwind {
 ; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __fixunshfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testq %rdx, %rdx
+; AVX2-NEXT:    movl $0, %ecx
 ; AVX2-NEXT:    cmovneq %rcx, %rax
 ; AVX2-NEXT:    testq %r14, %r14
 ; AVX2-NEXT:    cmovneq %rcx, %rbx
@@ -2519,8 +2519,8 @@ define <2 x i64> @utest_f16i64(<2 x half> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vpsrld $16, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX512-NEXT:    callq __fixunshfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    testq %rdx, %rdx
+; AVX512-NEXT:    movl $0, %ecx
 ; AVX512-NEXT:    cmovneq %rcx, %rax
 ; AVX512-NEXT:    testq %r14, %r14
 ; AVX512-NEXT:    cmovneq %rcx, %rbx
@@ -2552,24 +2552,24 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixhfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
-; SSE-NEXT:    movl $1, %esi
-; SSE-NEXT:    cmovgq %rsi, %rdx
-; SSE-NEXT:    cmovgq %rcx, %rax
+; SSE-NEXT:    movl $1, %ecx
+; SSE-NEXT:    cmovgq %rcx, %rdx
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgq %rsi, %rax
 ; SSE-NEXT:    testq %r14, %r14
-; SSE-NEXT:    cmovleq %r14, %rsi
-; SSE-NEXT:    cmovgq %rcx, %rbx
+; SSE-NEXT:    cmovleq %r14, %rcx
+; SSE-NEXT:    cmovgq %rsi, %rbx
 ; SSE-NEXT:    movq %rbx, %rdi
 ; SSE-NEXT:    negq %rdi
 ; SSE-NEXT:    movl $0, %edi
-; SSE-NEXT:    sbbq %rsi, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rbx
-; SSE-NEXT:    movq %rax, %rsi
-; SSE-NEXT:    negq %rsi
-; SSE-NEXT:    movl $0, %esi
-; SSE-NEXT:    sbbq %rdx, %rsi
-; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    sbbq %rcx, %rdi
+; SSE-NEXT:    cmovgeq %rsi, %rbx
+; SSE-NEXT:    movq %rax, %rcx
+; SSE-NEXT:    negq %rcx
+; SSE-NEXT:    movl $0, %ecx
+; SSE-NEXT:    sbbq %rdx, %rcx
+; SSE-NEXT:    cmovgeq %rsi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
 ; SSE-NEXT:    movq %rbx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -2590,24 +2590,24 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) nounwind {
 ; AVX-NEXT:    movq %rdx, %r14
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixhfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
-; AVX-NEXT:    movl $1, %esi
-; AVX-NEXT:    cmovgq %rsi, %rdx
-; AVX-NEXT:    cmovgq %rcx, %rax
+; AVX-NEXT:    movl $1, %ecx
+; AVX-NEXT:    cmovgq %rcx, %rdx
+; AVX-NEXT:    movl $0, %esi
+; AVX-NEXT:    cmovgq %rsi, %rax
 ; AVX-NEXT:    testq %r14, %r14
-; AVX-NEXT:    cmovleq %r14, %rsi
-; AVX-NEXT:    cmovgq %rcx, %rbx
+; AVX-NEXT:    cmovleq %r14, %rcx
+; AVX-NEXT:    cmovgq %rsi, %rbx
 ; AVX-NEXT:    movq %rbx, %rdi
 ; AVX-NEXT:    negq %rdi
 ; AVX-NEXT:    movl $0, %edi
-; AVX-NEXT:    sbbq %rsi, %rdi
-; AVX-NEXT:    cmovgeq %rcx, %rbx
-; AVX-NEXT:    movq %rax, %rsi
-; AVX-NEXT:    negq %rsi
-; AVX-NEXT:    movl $0, %esi
-; AVX-NEXT:    sbbq %rdx, %rsi
-; AVX-NEXT:    cmovgeq %rcx, %rax
+; AVX-NEXT:    sbbq %rcx, %rdi
+; AVX-NEXT:    cmovgeq %rsi, %rbx
+; AVX-NEXT:    movq %rax, %rcx
+; AVX-NEXT:    negq %rcx
+; AVX-NEXT:    movl $0, %ecx
+; AVX-NEXT:    sbbq %rdx, %rcx
+; AVX-NEXT:    cmovgeq %rsi, %rax
 ; AVX-NEXT:    vmovq %rax, %xmm0
 ; AVX-NEXT:    vmovq %rbx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
@@ -4182,29 +4182,29 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixdfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    cmpq %rsi, %rax
-; SSE-NEXT:    movq %rdx, %rdi
-; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rdx
-; SSE-NEXT:    cmovgeq %rsi, %rax
-; SSE-NEXT:    cmpq %rsi, %rbx
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmpq %rcx, %rax
+; SSE-NEXT:    movq %rdx, %rsi
+; SSE-NEXT:    sbbq $0, %rsi
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgeq %rsi, %rdx
+; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    cmpq %rcx, %rbx
 ; SSE-NEXT:    movq %r14, %rdi
 ; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovlq %r14, %rcx
-; SSE-NEXT:    cmovlq %rbx, %rsi
+; SSE-NEXT:    cmovlq %r14, %rsi
+; SSE-NEXT:    cmovlq %rbx, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; SSE-NEXT:    cmpq %rsi, %rdi
+; SSE-NEXT:    cmpq %rcx, %rdi
 ; SSE-NEXT:    movq $-1, %r8
 ; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
-; SSE-NEXT:    cmovgeq %rdi, %rsi
+; SSE-NEXT:    sbbq %rsi, %r9
+; SSE-NEXT:    cmovgeq %rdi, %rcx
 ; SSE-NEXT:    cmpq %rax, %rdi
 ; SSE-NEXT:    sbbq %rdx, %r8
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movq %rsi, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    addq $24, %rsp
 ; SSE-NEXT:    popq %rbx
@@ -4223,29 +4223,29 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) nounwind {
 ; AVX2-NEXT:    movq %rdx, %r14
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __fixdfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmpq %rsi, %rax
-; AVX2-NEXT:    movq %rdx, %rdi
-; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovgeq %rcx, %rdx
-; AVX2-NEXT:    cmovgeq %rsi, %rax
-; AVX2-NEXT:    cmpq %rsi, %rbx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    sbbq $0, %rsi
+; AVX2-NEXT:    movl $0, %esi
+; AVX2-NEXT:    cmovgeq %rsi, %rdx
+; AVX2-NEXT:    cmovgeq %rcx, %rax
+; AVX2-NEXT:    cmpq %rcx, %rbx
 ; AVX2-NEXT:    movq %r14, %rdi
 ; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovlq %r14, %rcx
-; AVX2-NEXT:    cmovlq %rbx, %rsi
+; AVX2-NEXT:    cmovlq %r14, %rsi
+; AVX2-NEXT:    cmovlq %rbx, %rcx
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX2-NEXT:    cmpq %rsi, %rdi
+; AVX2-NEXT:    cmpq %rcx, %rdi
 ; AVX2-NEXT:    movq $-1, %r8
-; AVX2-NEXT:    sbbq %rcx, %r8
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovgeq %rdi, %rsi
+; AVX2-NEXT:    sbbq %rsi, %r8
+; AVX2-NEXT:    movq $-1, %rsi
+; AVX2-NEXT:    cmovgeq %rdi, %rcx
 ; AVX2-NEXT:    cmpq %rax, %rdi
-; AVX2-NEXT:    sbbq %rdx, %rcx
+; AVX2-NEXT:    sbbq %rdx, %rsi
 ; AVX2-NEXT:    cmovgeq %rdi, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    addq $24, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -4264,29 +4264,29 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __fixdfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX512-NEXT:    cmpq %rsi, %rax
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovgeq %rcx, %rdx
-; AVX512-NEXT:    cmovgeq %rsi, %rax
-; AVX512-NEXT:    cmpq %rsi, %rbx
+; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    sbbq $0, %rsi
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovgeq %rsi, %rdx
+; AVX512-NEXT:    cmovgeq %rcx, %rax
+; AVX512-NEXT:    cmpq %rcx, %rbx
 ; AVX512-NEXT:    movq %r14, %rdi
 ; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovlq %r14, %rcx
-; AVX512-NEXT:    cmovlq %rbx, %rsi
+; AVX512-NEXT:    cmovlq %r14, %rsi
+; AVX512-NEXT:    cmovlq %rbx, %rcx
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX512-NEXT:    cmpq %rsi, %rdi
+; AVX512-NEXT:    cmpq %rcx, %rdi
 ; AVX512-NEXT:    movq $-1, %r8
 ; AVX512-NEXT:    movq $-1, %r9
-; AVX512-NEXT:    sbbq %rcx, %r9
-; AVX512-NEXT:    cmovgeq %rdi, %rsi
+; AVX512-NEXT:    sbbq %rsi, %r9
+; AVX512-NEXT:    cmovgeq %rdi, %rcx
 ; AVX512-NEXT:    cmpq %rax, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %r8
 ; AVX512-NEXT:    cmovgeq %rdi, %rax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
@@ -4313,8 +4313,8 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; SSE-NEXT:    callq __fixunsdfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    testq %r14, %r14
 ; SSE-NEXT:    cmovneq %rcx, %rbx
@@ -4338,8 +4338,8 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) nounwind {
 ; AVX-NEXT:    vpermilpd $1, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    # xmm0 = mem[1,0]
 ; AVX-NEXT:    callq __fixunsdfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovneq %rcx, %rax
 ; AVX-NEXT:    testq %r14, %r14
 ; AVX-NEXT:    cmovneq %rcx, %rbx
@@ -4370,8 +4370,8 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixdfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovgq %rcx, %rax
 ; SSE-NEXT:    movl $1, %esi
 ; SSE-NEXT:    cmovgq %rsi, %rdx
@@ -4402,8 +4402,8 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) nounwind {
 ; AVX-NEXT:    movq %rdx, %r14
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixdfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovgq %rcx, %rax
 ; AVX-NEXT:    movl $1, %esi
 ; AVX-NEXT:    cmovgq %rsi, %rdx
@@ -4442,29 +4442,29 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixsfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    cmpq %rsi, %rax
-; SSE-NEXT:    movq %rdx, %rdi
-; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rdx
-; SSE-NEXT:    cmovgeq %rsi, %rax
-; SSE-NEXT:    cmpq %rsi, %rbx
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmpq %rcx, %rax
+; SSE-NEXT:    movq %rdx, %rsi
+; SSE-NEXT:    sbbq $0, %rsi
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgeq %rsi, %rdx
+; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    cmpq %rcx, %rbx
 ; SSE-NEXT:    movq %r14, %rdi
 ; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovlq %r14, %rcx
-; SSE-NEXT:    cmovlq %rbx, %rsi
+; SSE-NEXT:    cmovlq %r14, %rsi
+; SSE-NEXT:    cmovlq %rbx, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; SSE-NEXT:    cmpq %rsi, %rdi
+; SSE-NEXT:    cmpq %rcx, %rdi
 ; SSE-NEXT:    movq $-1, %r8
 ; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
-; SSE-NEXT:    cmovgeq %rdi, %rsi
+; SSE-NEXT:    sbbq %rsi, %r9
+; SSE-NEXT:    cmovgeq %rdi, %rcx
 ; SSE-NEXT:    cmpq %rax, %rdi
 ; SSE-NEXT:    sbbq %rdx, %r8
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movq %rsi, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    addq $24, %rsp
 ; SSE-NEXT:    popq %rbx
@@ -4483,29 +4483,29 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) nounwind {
 ; AVX2-NEXT:    movq %rdx, %r14
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __fixsfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmpq %rsi, %rax
-; AVX2-NEXT:    movq %rdx, %rdi
-; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovgeq %rcx, %rdx
-; AVX2-NEXT:    cmovgeq %rsi, %rax
-; AVX2-NEXT:    cmpq %rsi, %rbx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    sbbq $0, %rsi
+; AVX2-NEXT:    movl $0, %esi
+; AVX2-NEXT:    cmovgeq %rsi, %rdx
+; AVX2-NEXT:    cmovgeq %rcx, %rax
+; AVX2-NEXT:    cmpq %rcx, %rbx
 ; AVX2-NEXT:    movq %r14, %rdi
 ; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovlq %r14, %rcx
-; AVX2-NEXT:    cmovlq %rbx, %rsi
+; AVX2-NEXT:    cmovlq %r14, %rsi
+; AVX2-NEXT:    cmovlq %rbx, %rcx
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX2-NEXT:    cmpq %rsi, %rdi
+; AVX2-NEXT:    cmpq %rcx, %rdi
 ; AVX2-NEXT:    movq $-1, %r8
-; AVX2-NEXT:    sbbq %rcx, %r8
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovgeq %rdi, %rsi
+; AVX2-NEXT:    sbbq %rsi, %r8
+; AVX2-NEXT:    movq $-1, %rsi
+; AVX2-NEXT:    cmovgeq %rdi, %rcx
 ; AVX2-NEXT:    cmpq %rax, %rdi
-; AVX2-NEXT:    sbbq %rdx, %rcx
+; AVX2-NEXT:    sbbq %rdx, %rsi
 ; AVX2-NEXT:    cmovgeq %rdi, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    addq $24, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -4524,29 +4524,29 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __fixsfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX512-NEXT:    cmpq %rsi, %rax
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovgeq %rcx, %rdx
-; AVX512-NEXT:    cmovgeq %rsi, %rax
-; AVX512-NEXT:    cmpq %rsi, %rbx
+; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    sbbq $0, %rsi
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovgeq %rsi, %rdx
+; AVX512-NEXT:    cmovgeq %rcx, %rax
+; AVX512-NEXT:    cmpq %rcx, %rbx
 ; AVX512-NEXT:    movq %r14, %rdi
 ; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovlq %r14, %rcx
-; AVX512-NEXT:    cmovlq %rbx, %rsi
+; AVX512-NEXT:    cmovlq %r14, %rsi
+; AVX512-NEXT:    cmovlq %rbx, %rcx
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX512-NEXT:    cmpq %rsi, %rdi
+; AVX512-NEXT:    cmpq %rcx, %rdi
 ; AVX512-NEXT:    movq $-1, %r8
 ; AVX512-NEXT:    movq $-1, %r9
-; AVX512-NEXT:    sbbq %rcx, %r9
-; AVX512-NEXT:    cmovgeq %rdi, %rsi
+; AVX512-NEXT:    sbbq %rsi, %r9
+; AVX512-NEXT:    cmovgeq %rdi, %rcx
 ; AVX512-NEXT:    cmpq %rax, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %r8
 ; AVX512-NEXT:    cmovgeq %rdi, %rax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
@@ -4573,8 +4573,8 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1,1,1]
 ; SSE-NEXT:    callq __fixunssfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    testq %r14, %r14
 ; SSE-NEXT:    cmovneq %rcx, %rbx
@@ -4598,8 +4598,8 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) nounwind {
 ; AVX-NEXT:    vmovshdup (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX-NEXT:    # xmm0 = mem[1,1,3,3]
 ; AVX-NEXT:    callq __fixunssfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovneq %rcx, %rax
 ; AVX-NEXT:    testq %r14, %r14
 ; AVX-NEXT:    cmovneq %rcx, %rbx
@@ -4630,8 +4630,8 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixsfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovgq %rcx, %rax
 ; SSE-NEXT:    movl $1, %esi
 ; SSE-NEXT:    cmovgq %rsi, %rdx
@@ -4662,8 +4662,8 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) nounwind {
 ; AVX-NEXT:    movq %rdx, %r14
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixsfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovgq %rcx, %rax
 ; AVX-NEXT:    movl $1, %esi
 ; AVX-NEXT:    cmovgq %rsi, %rdx
@@ -4702,29 +4702,29 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixhfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
-; SSE-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; SSE-NEXT:    cmpq %rsi, %rax
-; SSE-NEXT:    movq %rdx, %rdi
-; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovgeq %rcx, %rdx
-; SSE-NEXT:    cmovgeq %rsi, %rax
-; SSE-NEXT:    cmpq %rsi, %rbx
+; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; SSE-NEXT:    cmpq %rcx, %rax
+; SSE-NEXT:    movq %rdx, %rsi
+; SSE-NEXT:    sbbq $0, %rsi
+; SSE-NEXT:    movl $0, %esi
+; SSE-NEXT:    cmovgeq %rsi, %rdx
+; SSE-NEXT:    cmovgeq %rcx, %rax
+; SSE-NEXT:    cmpq %rcx, %rbx
 ; SSE-NEXT:    movq %r14, %rdi
 ; SSE-NEXT:    sbbq $0, %rdi
-; SSE-NEXT:    cmovlq %r14, %rcx
-; SSE-NEXT:    cmovlq %rbx, %rsi
+; SSE-NEXT:    cmovlq %r14, %rsi
+; SSE-NEXT:    cmovlq %rbx, %rcx
 ; SSE-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; SSE-NEXT:    cmpq %rsi, %rdi
+; SSE-NEXT:    cmpq %rcx, %rdi
 ; SSE-NEXT:    movq $-1, %r8
 ; SSE-NEXT:    movq $-1, %r9
-; SSE-NEXT:    sbbq %rcx, %r9
-; SSE-NEXT:    cmovgeq %rdi, %rsi
+; SSE-NEXT:    sbbq %rsi, %r9
+; SSE-NEXT:    cmovgeq %rdi, %rcx
 ; SSE-NEXT:    cmpq %rax, %rdi
 ; SSE-NEXT:    sbbq %rdx, %r8
 ; SSE-NEXT:    cmovgeq %rdi, %rax
 ; SSE-NEXT:    movq %rax, %xmm0
-; SSE-NEXT:    movq %rsi, %xmm1
+; SSE-NEXT:    movq %rcx, %xmm1
 ; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE-NEXT:    addq $24, %rsp
 ; SSE-NEXT:    popq %rbx
@@ -4743,29 +4743,29 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) nounwind {
 ; AVX2-NEXT:    movq %rdx, %r14
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    callq __fixhfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
-; AVX2-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmpq %rsi, %rax
-; AVX2-NEXT:    movq %rdx, %rdi
-; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovgeq %rcx, %rdx
-; AVX2-NEXT:    cmovgeq %rsi, %rax
-; AVX2-NEXT:    cmpq %rsi, %rbx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmpq %rcx, %rax
+; AVX2-NEXT:    movq %rdx, %rsi
+; AVX2-NEXT:    sbbq $0, %rsi
+; AVX2-NEXT:    movl $0, %esi
+; AVX2-NEXT:    cmovgeq %rsi, %rdx
+; AVX2-NEXT:    cmovgeq %rcx, %rax
+; AVX2-NEXT:    cmpq %rcx, %rbx
 ; AVX2-NEXT:    movq %r14, %rdi
 ; AVX2-NEXT:    sbbq $0, %rdi
-; AVX2-NEXT:    cmovlq %r14, %rcx
-; AVX2-NEXT:    cmovlq %rbx, %rsi
+; AVX2-NEXT:    cmovlq %r14, %rsi
+; AVX2-NEXT:    cmovlq %rbx, %rcx
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX2-NEXT:    cmpq %rsi, %rdi
+; AVX2-NEXT:    cmpq %rcx, %rdi
 ; AVX2-NEXT:    movq $-1, %r8
-; AVX2-NEXT:    sbbq %rcx, %r8
-; AVX2-NEXT:    movq $-1, %rcx
-; AVX2-NEXT:    cmovgeq %rdi, %rsi
+; AVX2-NEXT:    sbbq %rsi, %r8
+; AVX2-NEXT:    movq $-1, %rsi
+; AVX2-NEXT:    cmovgeq %rdi, %rcx
 ; AVX2-NEXT:    cmpq %rax, %rdi
-; AVX2-NEXT:    sbbq %rdx, %rcx
+; AVX2-NEXT:    sbbq %rdx, %rsi
 ; AVX2-NEXT:    cmovgeq %rdi, %rax
 ; AVX2-NEXT:    vmovq %rax, %xmm0
-; AVX2-NEXT:    vmovq %rsi, %xmm1
+; AVX2-NEXT:    vmovq %rcx, %xmm1
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-NEXT:    addq $24, %rsp
 ; AVX2-NEXT:    popq %rbx
@@ -4784,29 +4784,29 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __fixhfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
-; AVX512-NEXT:    movabsq $9223372036854775807, %rsi # imm = 0x7FFFFFFFFFFFFFFF
-; AVX512-NEXT:    cmpq %rsi, %rax
-; AVX512-NEXT:    movq %rdx, %rdi
-; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovgeq %rcx, %rdx
-; AVX512-NEXT:    cmovgeq %rsi, %rax
-; AVX512-NEXT:    cmpq %rsi, %rbx
+; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX512-NEXT:    cmpq %rcx, %rax
+; AVX512-NEXT:    movq %rdx, %rsi
+; AVX512-NEXT:    sbbq $0, %rsi
+; AVX512-NEXT:    movl $0, %esi
+; AVX512-NEXT:    cmovgeq %rsi, %rdx
+; AVX512-NEXT:    cmovgeq %rcx, %rax
+; AVX512-NEXT:    cmpq %rcx, %rbx
 ; AVX512-NEXT:    movq %r14, %rdi
 ; AVX512-NEXT:    sbbq $0, %rdi
-; AVX512-NEXT:    cmovlq %r14, %rcx
-; AVX512-NEXT:    cmovlq %rbx, %rsi
+; AVX512-NEXT:    cmovlq %r14, %rsi
+; AVX512-NEXT:    cmovlq %rbx, %rcx
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rdi # imm = 0x8000000000000000
-; AVX512-NEXT:    cmpq %rsi, %rdi
+; AVX512-NEXT:    cmpq %rcx, %rdi
 ; AVX512-NEXT:    movq $-1, %r8
 ; AVX512-NEXT:    movq $-1, %r9
-; AVX512-NEXT:    sbbq %rcx, %r9
-; AVX512-NEXT:    cmovgeq %rdi, %rsi
+; AVX512-NEXT:    sbbq %rsi, %r9
+; AVX512-NEXT:    cmovgeq %rdi, %rcx
 ; AVX512-NEXT:    cmpq %rax, %rdi
 ; AVX512-NEXT:    sbbq %rdx, %r8
 ; AVX512-NEXT:    cmovgeq %rdi, %rax
 ; AVX512-NEXT:    vmovq %rax, %xmm0
-; AVX512-NEXT:    vmovq %rsi, %xmm1
+; AVX512-NEXT:    vmovq %rcx, %xmm1
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    popq %rbx
@@ -4834,8 +4834,8 @@ define <2 x i64> @utest_f16i64_mm(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixunshfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovneq %rcx, %rax
 ; SSE-NEXT:    testq %r14, %r14
 ; SSE-NEXT:    cmovneq %rcx, %rbx
@@ -4859,8 +4859,8 @@ define <2 x i64> @utest_f16i64_mm(<2 x half> %x) nounwind {
 ; AVX2-NEXT:    vmovdqa (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
 ; AVX2-NEXT:    callq __fixunshfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    testq %rdx, %rdx
+; AVX2-NEXT:    movl $0, %ecx
 ; AVX2-NEXT:    cmovneq %rcx, %rax
 ; AVX2-NEXT:    testq %r14, %r14
 ; AVX2-NEXT:    cmovneq %rcx, %rbx
@@ -4883,8 +4883,8 @@ define <2 x i64> @utest_f16i64_mm(<2 x half> %x) nounwind {
 ; AVX512-NEXT:    movq %rdx, %r14
 ; AVX512-NEXT:    vpsrld $16, (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX512-NEXT:    callq __fixunshfti@PLT
-; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    testq %rdx, %rdx
+; AVX512-NEXT:    movl $0, %ecx
 ; AVX512-NEXT:    cmovneq %rcx, %rax
 ; AVX512-NEXT:    testq %r14, %r14
 ; AVX512-NEXT:    cmovneq %rcx, %rbx
@@ -4915,8 +4915,8 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) nounwind {
 ; SSE-NEXT:    movq %rdx, %r14
 ; SSE-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
 ; SSE-NEXT:    callq __fixhfti@PLT
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    testq %rdx, %rdx
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovgq %rcx, %rax
 ; SSE-NEXT:    movl $1, %esi
 ; SSE-NEXT:    cmovgq %rsi, %rdx
@@ -4947,8 +4947,8 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) nounwind {
 ; AVX-NEXT:    movq %rdx, %r14
 ; AVX-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX-NEXT:    callq __fixhfti@PLT
-; AVX-NEXT:    xorl %ecx, %ecx
 ; AVX-NEXT:    testq %rdx, %rdx
+; AVX-NEXT:    movl $0, %ecx
 ; AVX-NEXT:    cmovgq %rcx, %rax
 ; AVX-NEXT:    movl $1, %esi
 ; AVX-NEXT:    cmovgq %rsi, %rdx

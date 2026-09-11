@@ -11,8 +11,8 @@ define i32 @test(i32 %arg, i8 %arg1, ptr %arg2, ptr %arg3) nounwind {
 ; CHECK-NEXT:    movb %sil, (%rcx)
 ; CHECK-NEXT:    notb %sil
 ; CHECK-NEXT:    movb %sil, (%rdx)
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %sil, %sil
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
 bb:

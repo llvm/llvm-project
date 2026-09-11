@@ -50,7 +50,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32_1_optsize
-    ; CHECK: [[MOV32r1_:%[0-9]+]]:gr32 = MOV32r1 implicit-def dead $eflags
+    ; CHECK: [[MOV32r1_:%[0-9]+]]:gr32 = MOV32r1
     ; CHECK-NEXT: $eax = COPY [[MOV32r1_]]
     ; CHECK-NEXT: RET 0, implicit $eax
     %0(s32) = G_CONSTANT i32 1
@@ -84,7 +84,7 @@ registers:
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: const_i32_1_optsizeb
-    ; CHECK: [[MOV32r1_:%[0-9]+]]:gr32 = MOV32r1 implicit-def dead $eflags
+    ; CHECK: [[MOV32r1_:%[0-9]+]]:gr32 = MOV32r1
     ; CHECK-NEXT: $eax = COPY [[MOV32r1_]]
     ; CHECK-NEXT: RET 0, implicit $eax
     %0(s32) = G_CONSTANT i32 1

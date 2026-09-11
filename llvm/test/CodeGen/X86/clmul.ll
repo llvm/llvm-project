@@ -10,8 +10,8 @@ define i8 @clmul_i8(i8 %a, i8 %b) nounwind {
 ; SCALAR-LABEL: clmul_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
-; SCALAR-NEXT:    xorl %ecx, %ecx
 ; SCALAR-NEXT:    testb $1, %sil
+; SCALAR-NEXT:    movl $0, %ecx
 ; SCALAR-NEXT:    movl %edi, %eax
 ; SCALAR-NEXT:    cmovel %ecx, %eax
 ; SCALAR-NEXT:    leal (%rdi,%rdi), %edx
@@ -416,8 +416,8 @@ define i96 @clmul_i96(i96 %x, i96 %y) {
 ; SCALAR-NEXT:    movq %rdi, %rax
 ; SCALAR-NEXT:    shlq $31, %rax
 ; SCALAR-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; SCALAR-NEXT:    xorl %ecx, %ecx
 ; SCALAR-NEXT:    testl %r11d, %r11d
+; SCALAR-NEXT:    movl $0, %ecx
 ; SCALAR-NEXT:    cmovsq %rax, %rcx
 ; SCALAR-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; SCALAR-NEXT:    movq %rsi, %rax
@@ -3135,8 +3135,8 @@ define i8 @clmul_i8_noimplicitfloat(i8 %a, i8 %b) nounwind noimplicitfloat {
 ; CHECK-LABEL: clmul_i8_noimplicitfloat:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    cmovel %ecx, %eax
 ; CHECK-NEXT:    leal (%rdi,%rdi), %edx
@@ -3189,8 +3189,8 @@ define void @commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwind {
 ; SCALAR-LABEL: commutative_clmul_i8:
 ; SCALAR:       # %bb.0:
 ; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
-; SCALAR-NEXT:    xorl %eax, %eax
 ; SCALAR-NEXT:    testb $1, %sil
+; SCALAR-NEXT:    movl $0, %eax
 ; SCALAR-NEXT:    movl %edi, %r8d
 ; SCALAR-NEXT:    cmovel %eax, %r8d
 ; SCALAR-NEXT:    leal (%rdi,%rdi), %r9d
@@ -3533,8 +3533,8 @@ define void @mul_use_commutative_clmul_i8(i8 %x, i8 %y, ptr %p0, ptr %p1) nounwi
 ; SCALAR-NEXT:    pushq %rax
 ; SCALAR-NEXT:    movq %rcx, %rbx
 ; SCALAR-NEXT:    # kill: def $edi killed $edi def $rdi
-; SCALAR-NEXT:    xorl %eax, %eax
 ; SCALAR-NEXT:    testb $1, %sil
+; SCALAR-NEXT:    movl $0, %eax
 ; SCALAR-NEXT:    movl %edi, %ebp
 ; SCALAR-NEXT:    cmovel %eax, %ebp
 ; SCALAR-NEXT:    leal (%rdi,%rdi), %ecx

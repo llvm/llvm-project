@@ -489,9 +489,8 @@ namespace {
       MVT VT = N->getSimpleValueType(0);
 
       // Create zero.
-      SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
       SDValue Zero =
-          SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, {}), 0);
+          SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, MVT::i32), 0);
       if (VT == MVT::i64) {
         Zero = SDValue(
             CurDAG->getMachineNode(
@@ -513,7 +512,7 @@ namespace {
       // 32-bit version.
       unsigned Opc = VT == MVT::i64 ? X86::SBB64rr : X86::SBB32rr;
       MVT SBBVT = VT == MVT::i64 ? MVT::i64 : MVT::i32;
-      VTs = CurDAG->getVTList(SBBVT, MVT::i32);
+      SDVTList VTs = CurDAG->getVTList(SBBVT, MVT::i32);
       return SDValue(
           CurDAG->getMachineNode(Opc, dl, VTs,
                                  {Zero, Zero, EFLAGS, EFLAGS.getValue(1)}),
@@ -6190,9 +6189,8 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
           SDValue(CurDAG->getMachineNode(SExtOpcode, dl, MVT::Glue, InGlue),0);
       } else {
         // Zero out the high part, effectively zero extending the input.
-        SDVTList VTs = CurDAG->getVTList(MVT::i32, MVT::i32);
         SDValue ClrNode =
-            SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, VTs, {}), 0);
+            SDValue(CurDAG->getMachineNode(X86::MOV32r0, dl, MVT::i32), 0);
         switch (NVT.SimpleTy) {
         case MVT::i16:
           ClrNode =

@@ -86,7 +86,7 @@ body:             |
     ; GISEL-I686-NEXT: [[LEA32r2:%[0-9]+]]:gr32 = LEA32r %stack.1, 1, $noreg, 0, $noreg
     ; GISEL-I686-NEXT: ADJCALLSTACKDOWN32 16, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
     ; GISEL-I686-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $esp
-    ; GISEL-I686-NEXT: [[MOV32r0_:%[0-9]+]]:gr32_nosp = MOV32r0 implicit-def dead $eflags
+    ; GISEL-I686-NEXT: [[MOV32r0_:%[0-9]+]]:gr32_nosp = MOV32r0
     ; GISEL-I686-NEXT: [[LEA32r3:%[0-9]+]]:gr32 = LEA32r [[COPY]], 1, [[MOV32r0_]], 0, $noreg
     ; GISEL-I686-NEXT: MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into stack, align 1)
     ; GISEL-I686-NEXT: MOV32mr [[LEA32r3]], 1, $noreg, 4, $noreg, [[MOV32rm1]] :: (store (s32) into stack + 4, align 1)

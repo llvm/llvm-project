@@ -12,7 +12,7 @@ define fastcc void @misscompile_early_taildup(i32 %Value415, ptr %Ptr) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rsi
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edi
-  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0
   ; CHECK-NEXT:   MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[COPY1]] :: (volatile store (s32) into %ir.Ptr)
   ; CHECK-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.Ptr)
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[MOV32rm]], %subreg.sub_32bit
@@ -31,7 +31,7 @@ define fastcc void @misscompile_early_taildup(i32 %Value415, ptr %Ptr) {
   ; CHECK-NEXT: bb.2.Block308:
   ; CHECK-NEXT:   successors: %bb.5(0x2a3677d4), %bb.1(0x2a3677d4), %bb.7(0x00000000), %bb.3(0x2a3677d4), %bb.6(0x015c9883)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0
   ; CHECK-NEXT:   MOV32mr [[COPY]], 1, $noreg, 0, $noreg, [[MOV32r0_1]] :: (volatile store (s32) into %ir.Ptr)
   ; CHECK-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[COPY]], 1, $noreg, 0, $noreg :: (volatile load (s32) from %ir.Ptr)
   ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG [[MOV32rm1]], %subreg.sub_32bit

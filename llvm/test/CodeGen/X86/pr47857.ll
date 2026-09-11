@@ -7,30 +7,30 @@ define void @PR47857(ptr noalias nocapture writeonly sret(%"struct.std::array") 
 ; CHECK-LABEL: PR47857:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq (%rdx), %r9
+; CHECK-NEXT:    movq (%rdx), %r8
 ; CHECK-NEXT:    movq 8(%rdx), %rcx
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    addq (%rsi), %r9
+; CHECK-NEXT:    addq (%rsi), %r8
 ; CHECK-NEXT:    adcq 8(%rsi), %rcx
-; CHECK-NEXT:    movq 16(%rdx), %r8
-; CHECK-NEXT:    adcq 16(%rsi), %r8
+; CHECK-NEXT:    movq 16(%rdx), %rdi
+; CHECK-NEXT:    adcq 16(%rsi), %rdi
 ; CHECK-NEXT:    movq 24(%rdx), %rdx
 ; CHECK-NEXT:    adcq 24(%rsi), %rdx
-; CHECK-NEXT:    sbbq %rdi, %rdi
-; CHECK-NEXT:    andl $38, %edi
-; CHECK-NEXT:    addq %rdi, %r9
+; CHECK-NEXT:    movl $0, %esi
+; CHECK-NEXT:    sbbq %rsi, %rsi
+; CHECK-NEXT:    andl $38, %esi
+; CHECK-NEXT:    addq %rsi, %r8
 ; CHECK-NEXT:    adcq $0, %rcx
-; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    adcq $0, %rdi
 ; CHECK-NEXT:    adcq $0, %rdx
-; CHECK-NEXT:    sbbq %rdi, %rdi
-; CHECK-NEXT:    andl $38, %edi
-; CHECK-NEXT:    addq %r9, %rdi
+; CHECK-NEXT:    sbbq %rsi, %rsi
+; CHECK-NEXT:    andl $38, %esi
+; CHECK-NEXT:    addq %r8, %rsi
 ; CHECK-NEXT:    adcq $0, %rcx
-; CHECK-NEXT:    adcq $0, %r8
+; CHECK-NEXT:    adcq $0, %rdi
 ; CHECK-NEXT:    adcq $0, %rdx
-; CHECK-NEXT:    movq %rdi, (%rax)
+; CHECK-NEXT:    movq %rsi, (%rax)
 ; CHECK-NEXT:    movq %rcx, 8(%rax)
-; CHECK-NEXT:    movq %r8, 16(%rax)
+; CHECK-NEXT:    movq %rdi, 16(%rax)
 ; CHECK-NEXT:    movq %rdx, 24(%rax)
 ; CHECK-NEXT:    retq
   %4 = load i64, ptr %1, align 8

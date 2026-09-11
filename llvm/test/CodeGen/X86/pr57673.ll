@@ -22,7 +22,7 @@ define void @foo() {
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT:   [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
   ; NORMAL-NEXT:   [[DEF1:%[0-9]+]]:gr8 = IMPLICIT_DEF
-  ; NORMAL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; NORMAL-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0
   ; NORMAL-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.1.i, 1, $noreg, 0, $noreg
   ; NORMAL-NEXT:   [[DEF2:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; NORMAL-NEXT: {{  $}}
@@ -62,7 +62,7 @@ define void @foo() {
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT:   [[DEF:%[0-9]+]]:gr8 = IMPLICIT_DEF
   ; INSTRREF-NEXT:   [[DEF1:%[0-9]+]]:gr8 = IMPLICIT_DEF
-  ; INSTRREF-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; INSTRREF-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0
   ; INSTRREF-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.1.i, 1, $noreg, 0, $noreg
   ; INSTRREF-NEXT:   [[DEF2:%[0-9]+]]:gr64 = IMPLICIT_DEF
   ; INSTRREF-NEXT: {{  $}}

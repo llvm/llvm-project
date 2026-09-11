@@ -1792,8 +1792,8 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512F-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512F-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX512F-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512F-NEXT:    xorl %r8d, %r8d
 ; AVX512F-NEXT:    vucomiss %xmm2, %xmm3
+; AVX512F-NEXT:    movl $0, %r8d
 ; AVX512F-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; AVX512F-NEXT:    movl $65535, %eax # imm = 0xFFFF
 ; AVX512F-NEXT:    cmovnel %r8d, %eax
@@ -1940,8 +1940,8 @@ define <4 x half> @test_fmaximum_v4f16(<4 x half> %x, <4 x half> %y) nounwind {
 ; AVX512DQ-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; AVX512DQ-NEXT:    vpshufd {{.*#+}} xmm3 = xmm0[3,3,3,3]
 ; AVX512DQ-NEXT:    vcvtph2ps %xmm3, %xmm3
-; AVX512DQ-NEXT:    xorl %r8d, %r8d
 ; AVX512DQ-NEXT:    vucomiss %xmm2, %xmm3
+; AVX512DQ-NEXT:    movl $0, %r8d
 ; AVX512DQ-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; AVX512DQ-NEXT:    movl $65535, %eax # imm = 0xFFFF
 ; AVX512DQ-NEXT:    cmovnel %r8d, %eax

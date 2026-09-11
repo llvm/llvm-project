@@ -87,11 +87,10 @@ define i128 @cmpxchg_zext(ptr %addr, i128 %desired, i128 %new) {
 ; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rcx, %rbx
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    movq %r8, %rcx
 ; CHECK-NEXT:    lock cmpxchg16b (%rdi)
-; CHECK-NEXT:    sete %sil
-; CHECK-NEXT:    movq %rsi, %rax
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

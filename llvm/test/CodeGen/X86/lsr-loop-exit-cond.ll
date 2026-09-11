@@ -331,8 +331,8 @@ define i32 @f(i32 %i, ptr nocapture %a) nounwind uwtable readonly ssp {
 ;
 ; ATOM-LABEL: f:
 ; ATOM:       ## %bb.0: ## %entry
-; ATOM-NEXT:    xorl %eax, %eax
 ; ATOM-NEXT:    cmpl $1, %edi
+; ATOM-NEXT:    movl $0, %eax
 ; ATOM-NEXT:    je LBB1_3
 ; ATOM-NEXT:  ## %bb.1: ## %for.body.lr.ph
 ; ATOM-NEXT:    movslq %edi, %rax

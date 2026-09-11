@@ -346,11 +346,11 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    sarq $63, %rcx
 ; X64-NEXT:    andq %rbp, %rcx
 ; X64-NEXT:    testq %rbp, %rbp
-; X64-NEXT:    movq $-1, %rdx
-; X64-NEXT:    cmovgq %rdx, %r13
-; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    movq $-1, %rax
+; X64-NEXT:    cmovgq %rax, %r13
 ; X64-NEXT:    cmpq $-1, %rcx
-; X64-NEXT:    cmovlq %rdx, %rcx
+; X64-NEXT:    cmovlq %rax, %rcx
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovgeq %r13, %rax
 ; X64-NEXT:    shrdq $1, %rcx, %rax
 ; X64-NEXT:    addq $24, %rsp
@@ -417,12 +417,11 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    subl $1, %edi
 ; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    sbbl $0, %eax
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %ebx
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    sbbl $0, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-NEXT:    movl %ebx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    sbbl $0, %ebx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    sets %al
@@ -439,24 +438,26 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    orl %eax, %ecx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    testb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Reload
-; X86-NEXT:    cmovel %esi, %ebx
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
-; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Folded Reload
+; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
-; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
+; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X86-NEXT:    cmpl $-1, %edi
-; X86-NEXT:    sbbl $2147483647, %ecx # imm = 0x7FFFFFFF
-; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    sbbl $0, %ecx
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    sbbl $0, %ecx
+; X86-NEXT:    movl %edx, %eax
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sbbl $2147483647, %eax # imm = 0x7FFFFFFF
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    sbbl $0, %eax
+; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    sbbl $0, %eax
 ; X86-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
-; X86-NEXT:    cmovll {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
-; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    cmovgel %ecx, %ebx
-; X86-NEXT:    cmovgel %ecx, %eax
+; X86-NEXT:    cmovll %esi, %edx
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    cmovgel %eax, %ebx
+; X86-NEXT:    cmovgel %eax, %ecx
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    movl $-1, %ecx
 ; X86-NEXT:    cmovgel %ecx, %edi
 ; X86-NEXT:    movl %edi, %esi
@@ -605,13 +606,13 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    testb %r14b, %al
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Folded Reload
 ; X64-NEXT:    cmoveq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Folded Reload
-; X64-NEXT:    xorl %ecx, %ecx
-; X64-NEXT:    movl $4294967295, %edx # imm = 0xFFFFFFFF
-; X64-NEXT:    cmpq %rdx, %r13
+; X64-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; X64-NEXT:    cmpq %rcx, %r13
 ; X64-NEXT:    movq %rbp, %rax
 ; X64-NEXT:    sbbq $0, %rax
-; X64-NEXT:    cmovgeq %rcx, %rbp
-; X64-NEXT:    cmovgeq %rdx, %r13
+; X64-NEXT:    movl $0, %eax
+; X64-NEXT:    cmovgeq %rax, %rbp
+; X64-NEXT:    cmovgeq %rcx, %r13
 ; X64-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
 ; X64-NEXT:    cmpq %r13, %rcx
 ; X64-NEXT:    movq $-1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Folded Spill
@@ -965,16 +966,17 @@ define <4 x i32> @vec(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
 ; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
-; X86-NEXT:    xorl %ebx, %ebx
-; X86-NEXT:    cmpl $-1, %edi
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    cmovel {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; X86-NEXT:    cmpl $-1, %esi
+; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    sbbl $0, %esi
 ; X86-NEXT:    movl %ecx, %esi
 ; X86-NEXT:    sbbl $0, %esi
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    sbbl $0, %esi
+; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    cmovgel %ebx, %edx
 ; X86-NEXT:    cmovgel %ebx, %ecx
 ; X86-NEXT:    cmovgel %ebx, %eax

@@ -214,15 +214,15 @@ define void @test10() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movl (%rax), %eax
 ; CHECK-NEXT:    movzwl (%rax), %ecx
+; CHECK-NEXT:    leal (%rcx,%rcx), %edx
 ; CHECK-NEXT:    leal (%rcx,%rcx,2), %esi
-; CHECK-NEXT:    movl %ecx, %edi
-; CHECK-NEXT:    subl %ecx, %edi
-; CHECK-NEXT:    subl %ecx, %edi
+; CHECK-NEXT:    # kill: def $ecx killed $ecx killed $rcx
+; CHECK-NEXT:    subl %edx, %ecx
 ; CHECK-NEXT:    negl %esi
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl $4, %eax
-; CHECK-NEXT:    movl %edi, (%rax)
+; CHECK-NEXT:    movl %ecx, (%rax)
 ; CHECK-NEXT:    movl %esi, (%rax)
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovnel %eax, %ecx
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    sarl %cl, %esi

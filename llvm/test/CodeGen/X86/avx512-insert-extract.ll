@@ -236,8 +236,8 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) nounwind {
 define i16 @test13(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: test13:
 ; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcl $65532, %eax ## imm = 0xFFFC
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq

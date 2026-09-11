@@ -765,9 +765,9 @@ define i64 @blsi64(i64 %x)   {
 ; X86-NEXT:    .cfi_offset %esi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    andl %ecx, %eax
@@ -795,9 +795,9 @@ define i64 @blsi64_z(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    andl %ecx, %eax
@@ -835,13 +835,13 @@ define i64 @blsi64_z2(i64 %a, i64 %b, i64 %c) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    negl %esi
-; X86-NEXT:    sbbl %ecx, %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    andl %eax, %esi
-; X86-NEXT:    orl %edx, %esi
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    movl $0, %esi
+; X86-NEXT:    sbbl %ecx, %esi
+; X86-NEXT:    andl %ecx, %esi
+; X86-NEXT:    andl %eax, %edx
+; X86-NEXT:    orl %esi, %edx
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovel %eax, %ecx
@@ -876,14 +876,14 @@ define i64 @blsi64_sle(i64 %a, i64 %b, i64 %c) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    negl %esi
-; X86-NEXT:    sbbl %ecx, %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    andl %eax, %esi
-; X86-NEXT:    cmpl $1, %esi
-; X86-NEXT:    sbbl $0, %edx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    movl $0, %esi
+; X86-NEXT:    sbbl %ecx, %esi
+; X86-NEXT:    andl %ecx, %esi
+; X86-NEXT:    andl %eax, %edx
+; X86-NEXT:    cmpl $1, %edx
+; X86-NEXT:    sbbl $0, %esi
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmovll %eax, %ecx
@@ -1771,20 +1771,20 @@ define i64 @blsi64_branch(i64 %x) {
 ; X86-NEXT:    .cfi_offset %edi, -8
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    negl %edi
-; X86-NEXT:    sbbl %ecx, %esi
-; X86-NEXT:    andl %ecx, %esi
-; X86-NEXT:    andl %eax, %edi
-; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    orl %esi, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    negl %esi
+; X86-NEXT:    movl $0, %edi
+; X86-NEXT:    sbbl %ecx, %edi
+; X86-NEXT:    andl %ecx, %edi
+; X86-NEXT:    andl %eax, %esi
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    orl %edi, %eax
 ; X86-NEXT:    jne .LBB56_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    calll bar
 ; X86-NEXT:  .LBB56_2:
-; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    .cfi_def_cfa_offset 8
 ; X86-NEXT:    popl %edi
@@ -1958,9 +1958,9 @@ define i64 @blsi_cflag_64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    movl %ecx, %edi
 ; X86-NEXT:    orl %esi, %edi
@@ -2001,9 +2001,9 @@ define i64 @blsi64_not(i64 %x) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    andl %esi, %edx
 ; X86-NEXT:    andl %ecx, %eax

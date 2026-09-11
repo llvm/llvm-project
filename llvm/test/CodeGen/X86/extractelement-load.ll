@@ -278,9 +278,9 @@ define i32 @PR85419(ptr %p0) {
 ; X86-SSE2-LABEL: PR85419:
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    movl (%ecx), %edx
-; X86-SSE2-NEXT:    xorl %eax, %eax
-; X86-SSE2-NEXT:    orl 4(%ecx), %edx
+; X86-SSE2-NEXT:    movl (%ecx), %eax
+; X86-SSE2-NEXT:    orl 4(%ecx), %eax
+; X86-SSE2-NEXT:    movl $0, %eax
 ; X86-SSE2-NEXT:    je .LBB8_2
 ; X86-SSE2-NEXT:  # %bb.1:
 ; X86-SSE2-NEXT:    movl 8(%ecx), %eax
@@ -289,8 +289,8 @@ define i32 @PR85419(ptr %p0) {
 ;
 ; X64-LABEL: PR85419:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    cmpq $0, (%rdi)
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    je .LBB8_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    movl 8(%rdi), %eax

@@ -23,7 +23,6 @@ define zeroext i8 @_ZN4llvm9InlineAsm14ConstraintInfo5ParseENS_9StringRefERSt6ve
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne LBB0_6
 ; CHECK-NEXT:  ## %bb.1: ## %bb27.outer.preheader
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movb $1, %cl
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_3: ## %bb27.outer108

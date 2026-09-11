@@ -8,8 +8,8 @@
 define i32 @setcc_carry_i32_lt(i32 %a, i32 %b) {
 ; CHECK-LABEL: setcc_carry_i32_lt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i32 %a, %b
@@ -21,8 +21,8 @@ define i32 @setcc_carry_i32_lt(i32 %a, i32 %b) {
 define i32 @setcc_carry_i32_ge(i32 %a, i32 %b) {
 ; CHECK-LABEL: setcc_carry_i32_ge:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp uge i32 %a, %b
@@ -47,8 +47,8 @@ define i32 @setcc_carry_i32_lt_zext(i32 %a, i32 %b) {
 define i64 @setcc_carry_i64_lt(i64 %a, i64 %b) {
 ; CHECK-LABEL: setcc_carry_i64_lt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i64 %a, %b
@@ -60,8 +60,8 @@ define i64 @setcc_carry_i64_lt(i64 %a, i64 %b) {
 define i8 @setcc_carry_i8_lt(i8 %a, i8 %b) {
 ; CHECK-LABEL: setcc_carry_i8_lt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpb %sil, %dil
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq
@@ -101,8 +101,8 @@ define i32 @setcc_carry_clamp_max(i32 %x) {
 define i32 @setcc_carry_with_freeze(i32 %a, i32 %b) {
 ; CHECK-LABEL: setcc_carry_with_freeze:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i32 %a, %b

@@ -25,7 +25,6 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  # %bb.6: # %bb2
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:  .LBB0_7: # %bb3
 ; CHECK-NEXT:    xorl %eax, %eax

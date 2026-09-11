@@ -91,11 +91,11 @@ define i1 @test4() nounwind {
 ; CHECK-NEXT:    movzbl g_100(%rip), %ecx
 ; CHECK-NEXT:  .LBB3_2: # %func_4.exit.i
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    setne %bl
-; CHECK-NEXT:    movzbl %al, %ecx
-; CHECK-NEXT:    cmovnel %esi, %ecx
+; CHECK-NEXT:    movzbl %al, %edx
+; CHECK-NEXT:    movl $0, %ecx
+; CHECK-NEXT:    cmovel %edx, %ecx
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    je .LBB3_5
 ; CHECK-NEXT:  # %bb.3: # %func_4.exit.i

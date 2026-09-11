@@ -31,8 +31,8 @@ define <4 x i32> @combine_vec_urem_by_one(<4 x i32> %x) {
 define i32 @combine_urem_by_negone(i32 %x) {
 ; CHECK-LABEL: combine_urem_by_negone:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $-1, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnel %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = urem i32 %x, -1
@@ -197,7 +197,7 @@ define <4 x i32> @combine_vec_urem_by_pow2c(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_urem_by_pow2c:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $23, %xmm1
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
 ; SSE-NEXT:    paddd %xmm1, %xmm2
@@ -207,7 +207,7 @@ define <4 x i32> @combine_vec_urem_by_pow2c(<4 x i32> %x, <4 x i32> %y) {
 ; AVX1-LABEL: combine_vec_urem_by_pow2c:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX1-NEXT:    vpaddd %xmm2, %xmm1, %xmm1
@@ -289,7 +289,7 @@ define <4 x i32> @combine_vec_urem_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_urem_by_shl_pow2a:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $23, %xmm1
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE-NEXT:    pslld $2, %xmm1
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -300,7 +300,7 @@ define <4 x i32> @combine_vec_urem_by_shl_pow2a(<4 x i32> %x, <4 x i32> %y) {
 ; AVX1-LABEL: combine_vec_urem_by_shl_pow2a:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; AVX1-NEXT:    vpslld $2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
@@ -325,7 +325,7 @@ define <4 x i32> @combine_vec_urem_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
 ; SSE-LABEL: combine_vec_urem_by_shl_pow2b:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pslld $23, %xmm1
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; SSE-NEXT:    cvttps2dq %xmm1, %xmm1
 ; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,4,8,16]
 ; SSE-NEXT:    pcmpeqd %xmm2, %xmm2
@@ -336,7 +336,7 @@ define <4 x i32> @combine_vec_urem_by_shl_pow2b(<4 x i32> %x, <4 x i32> %y) {
 ; AVX1-LABEL: combine_vec_urem_by_shl_pow2b:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpslld $23, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vcvttps2dq %xmm1, %xmm1
 ; AVX1-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [1,4,8,16]
 ; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2

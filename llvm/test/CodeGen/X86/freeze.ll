@@ -147,11 +147,11 @@ entry:
 define i64 @pr155345(ptr %p1, i1 %cond, ptr %p2, ptr %p3) {
 ; X86ASM-LABEL: pr155345:
 ; X86ASM:       # %bb.0: # %entry
-; X86ASM-NEXT:    movzbl (%rdi), %edi
-; X86ASM-NEXT:    xorl %eax, %eax
-; X86ASM-NEXT:    orb $1, %dil
-; X86ASM-NEXT:    movb %dil, (%rdx)
-; X86ASM-NEXT:    movzbl %dil, %edx
+; X86ASM-NEXT:    movzbl (%rdi), %eax
+; X86ASM-NEXT:    orb $1, %al
+; X86ASM-NEXT:    movb %al, (%rdx)
+; X86ASM-NEXT:    movzbl %al, %edx
+; X86ASM-NEXT:    movl $0, %eax
 ; X86ASM-NEXT:    cmovel %edx, %eax
 ; X86ASM-NEXT:    sete %dil
 ; X86ASM-NEXT:    testb $1, %sil

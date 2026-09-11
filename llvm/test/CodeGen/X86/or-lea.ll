@@ -524,9 +524,9 @@ define i32 @or_sext1(i32 %x) {
 define i64 @or_sext1_64(i64 %x) {
 ; X86-LABEL: or_sext1_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl $42, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %edx
@@ -573,9 +573,9 @@ define i32 @or_sext2(i32 %x) {
 define i64 @or_sext2_64(i64 %x) {
 ; X86-LABEL: or_sext2_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl $42, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %edx
@@ -622,9 +622,9 @@ define i32 @or_sext3(i32 %x) {
 define i64 @or_sext3_64(i64 %x) {
 ; X86-LABEL: or_sext3_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl $42, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %edx
@@ -671,9 +671,9 @@ define i32 @or_sext4(i32 %x) {
 define i64 @or_sext4_64(i64 %x) {
 ; X86-LABEL: or_sext4_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl $42, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %edx
@@ -720,9 +720,9 @@ define i32 @or_sext7(i32 %x) {
 define i64 @or_sext7_64(i64 %x) {
 ; X86-LABEL: or_sext7_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl $42, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %edx
@@ -769,9 +769,9 @@ define i32 @or_sext8(i32 %x) {
 define i64 @or_sext8_64(i64 %x) {
 ; X86-LABEL: or_sext8_64:
 ; X86:       # %bb.0:
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    movl $42, %ecx
-; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl $42, %eax
+; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al
 ; X86-NEXT:    movzbl %al, %edx
@@ -796,9 +796,9 @@ define i64 @or_sext8_64(i64 %x) {
 define i64 @or_large_constant(i64 %x) {
 ; X86-LABEL: or_large_constant:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl $1, %eax
 ; X86-NEXT:    cmpl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    movl $0, %eax
 ; X86-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    setl %al

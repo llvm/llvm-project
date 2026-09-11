@@ -69,17 +69,26 @@ define i64 @t4(i64 %t, i64 %val) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrl %cl, %edx
-; X86-NEXT:    shrdl %cl, %esi, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    shrl %cl, %esi
+; X86-NEXT:    shrdl %cl, %eax, %edx
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB3_2
-; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    je .LBB3_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    je .LBB3_3
+; X86-NEXT:  .LBB3_4:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB3_1:
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:  .LBB3_2:
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    jne .LBB3_4
+; X86-NEXT:  .LBB3_3:
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -100,17 +109,26 @@ define i64 @t5(i64 %t, i64 %val) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrl %cl, %edx
-; X86-NEXT:    shrdl %cl, %esi, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    shrl %cl, %esi
+; X86-NEXT:    shrdl %cl, %eax, %edx
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB4_2
-; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    je .LBB4_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    je .LBB4_3
+; X86-NEXT:  .LBB4_4:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB4_1:
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:  .LBB4_2:
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    jne .LBB4_4
+; X86-NEXT:  .LBB4_3:
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -133,18 +151,23 @@ define void @t5ptr(i64 %t, ptr %ptr) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl (%eax), %edx
+; X86-NEXT:    movl (%eax), %esi
 ; X86-NEXT:    movl 4(%eax), %edi
-; X86-NEXT:    movl %edi, %esi
-; X86-NEXT:    shrl %cl, %esi
-; X86-NEXT:    shrdl %cl, %edi, %edx
+; X86-NEXT:    movl %edi, %edx
+; X86-NEXT:    shrl %cl, %edx
+; X86-NEXT:    shrdl %cl, %edi, %esi
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB5_2
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    jne .LBB5_2
 ; X86-NEXT:  # %bb.1:
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    xorl %esi, %esi
+; X86-NEXT:    movl %esi, %ecx
 ; X86-NEXT:  .LBB5_2:
-; X86-NEXT:    movl %edx, (%eax)
+; X86-NEXT:    movl $0, %esi
+; X86-NEXT:    jne .LBB5_4
+; X86-NEXT:  # %bb.3:
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:  .LBB5_4:
+; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl %esi, 4(%eax)
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

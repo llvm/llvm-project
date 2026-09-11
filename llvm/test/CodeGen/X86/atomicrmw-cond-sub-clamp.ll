@@ -276,9 +276,9 @@ define i16 @atomicrmw_usub_sat_i16(ptr %ptr, i16 %val) {
 ; CHECK-32-NEXT:    je .LBB5_4
 ; CHECK-32-NEXT:  .LBB5_1: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-32-NEXT:    xorl %esi, %esi
 ; CHECK-32-NEXT:    movl %eax, %edi
 ; CHECK-32-NEXT:    subw %cx, %di
+; CHECK-32-NEXT:    movl $0, %esi
 ; CHECK-32-NEXT:    jb .LBB5_3
 ; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB5_1 Depth=1
@@ -329,9 +329,9 @@ define i32 @atomicrmw_usub_sat_i32(ptr %ptr, i32 %val) {
 ; CHECK-32-NEXT:    je .LBB6_4
 ; CHECK-32-NEXT:  .LBB6_1: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-32-NEXT:    xorl %esi, %esi
 ; CHECK-32-NEXT:    movl %eax, %edi
 ; CHECK-32-NEXT:    subl %ecx, %edi
+; CHECK-32-NEXT:    movl $0, %esi
 ; CHECK-32-NEXT:    jb .LBB6_3
 ; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start
 ; CHECK-32-NEXT:    # in Loop: Header=BB6_1 Depth=1
@@ -392,11 +392,11 @@ define i64 @atomicrmw_usub_sat_i64(ptr %ptr, i64 %val) {
 ; CHECK-32-NEXT:    je .LBB7_4
 ; CHECK-32-NEXT:  .LBB7_1: # %atomicrmw.start
 ; CHECK-32-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-32-NEXT:    xorl %ecx, %ecx
 ; CHECK-32-NEXT:    movl %esi, %eax
 ; CHECK-32-NEXT:    subl {{[0-9]+}}(%esp), %eax
 ; CHECK-32-NEXT:    movl %edi, %edx
 ; CHECK-32-NEXT:    sbbl {{[0-9]+}}(%esp), %edx
+; CHECK-32-NEXT:    movl $0, %ecx
 ; CHECK-32-NEXT:    movl $0, %ebx
 ; CHECK-32-NEXT:    jb .LBB7_3
 ; CHECK-32-NEXT:  # %bb.2: # %atomicrmw.start

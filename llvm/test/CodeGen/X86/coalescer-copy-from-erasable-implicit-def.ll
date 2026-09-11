@@ -13,7 +13,6 @@ define <16 x i32> @f1() {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    movl $0, 0
 ; CHECK-NEXT:    xorps %xmm0, %xmm0

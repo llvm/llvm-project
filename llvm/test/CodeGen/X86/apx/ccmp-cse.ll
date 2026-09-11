@@ -11,9 +11,9 @@
 define i64 @test_or_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; CHECK-LABEL: test_or_sub_on_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subq %rcx, %rdx
 ; CHECK-NEXT:    ccmpbeq {dfv=cf} %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovaeq %rdx, %rax
 ; CHECK-NEXT:    retq
   %cmp.match = icmp ugt i64 %c, %d
@@ -28,9 +28,9 @@ define i64 @test_or_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @test_and_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; CHECK-LABEL: test_and_sub_on_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subq %rcx, %rdx
 ; CHECK-NEXT:    ccmpaq {dfv=} %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovaeq %rdx, %rax
 ; CHECK-NEXT:    retq
   %cmp.match = icmp ugt i64 %c, %d
@@ -46,11 +46,11 @@ define i64 @test_and_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 define i64 @test_two_ors_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) nounwind {
 ; CHECK-LABEL: test_two_ors_sub_on_lhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    subq %r8, %rcx
 ; CHECK-NEXT:    ccmpbeq {dfv=cf} %rdx, %rsi
 ; CHECK-NEXT:    ccmpaeq {dfv=cf} %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovaeq %rcx, %rax
 ; CHECK-NEXT:    retq
   %cmp.match = icmp ugt i64 %c, %e
@@ -68,9 +68,9 @@ define i64 @test_two_ors_sub_on_lhs(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e) noun
 define i64 @test_or_sub_on_rhs(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; CHECK-LABEL: test_or_sub_on_rhs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subq %rcx, %rdx
 ; CHECK-NEXT:    ccmpbeq {dfv=cf} %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovaeq %rdx, %rax
 ; CHECK-NEXT:    retq
   %cmp.other = icmp ult i64 %a, %b

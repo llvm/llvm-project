@@ -104,8 +104,8 @@ define i64 @mulmin4096_64(i64 %A) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    shldl $12, %eax, %ecx
 ; X86-NEXT:    shll $12, %eax
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %ecx, %edx
 ; X86-NEXT:    retl
     %mul = mul i64 %A, -4096

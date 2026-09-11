@@ -51,9 +51,9 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    shldl %cl, %esi, %edx
-; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    cmovnel %eax, %edx
+; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    cmovnel %ebx, %eax
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %edx, %eax
@@ -125,7 +125,7 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pshuflw {{.*#+}} xmm3 = xmm1[2,3,3,3,4,5,6,7]
 ; X64-NEXT:    pshuflw {{.*#+}} xmm4 = xmm1[0,1,1,1,4,5,6,7]
 ; X64-NEXT:    pslld $23, %xmm1
-; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; X64-NEXT:    cvttps2dq %xmm1, %xmm1
 ; X64-NEXT:    movdqa %xmm0, %xmm5
 ; X64-NEXT:    pmuludq %xmm1, %xmm5

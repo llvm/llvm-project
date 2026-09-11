@@ -59,9 +59,9 @@ define void @test_lshr_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; x86_64-NEXT:    movq %rdx, %rcx
 ; x86_64-NEXT:    shrdq %cl, %rsi, %rdi
 ; x86_64-NEXT:    shrq %cl, %rsi
-; x86_64-NEXT:    xorl %eax, %eax
 ; x86_64-NEXT:    testb $64, %cl
 ; x86_64-NEXT:    cmovneq %rsi, %rdi
+; x86_64-NEXT:    movl $0, %eax
 ; x86_64-NEXT:    cmoveq %rsi, %rax
 ; x86_64-NEXT:    movq %rax, 8(%r8)
 ; x86_64-NEXT:    movq %rdi, (%r8)
@@ -195,9 +195,9 @@ define void @test_shl_i128(i128 %x, i128 %a, ptr nocapture %r) nounwind {
 ; x86_64-NEXT:    movq %rdx, %rcx
 ; x86_64-NEXT:    shldq %cl, %rdi, %rsi
 ; x86_64-NEXT:    shlq %cl, %rdi
-; x86_64-NEXT:    xorl %eax, %eax
 ; x86_64-NEXT:    testb $64, %cl
 ; x86_64-NEXT:    cmovneq %rdi, %rsi
+; x86_64-NEXT:    movl $0, %eax
 ; x86_64-NEXT:    cmoveq %rdi, %rax
 ; x86_64-NEXT:    movq %rsi, 8(%r8)
 ; x86_64-NEXT:    movq %rax, (%r8)
@@ -376,15 +376,15 @@ define void @test_lshr_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) no
 ; x86_64-NEXT:    movl %r8d, %ecx
 ; x86_64-NEXT:    shrdq %cl, %rsi, %rdi
 ; x86_64-NEXT:    shrq %cl, %rsi
-; x86_64-NEXT:    xorl %r11d, %r11d
 ; x86_64-NEXT:    testb $64, %r8b
 ; x86_64-NEXT:    cmovneq %rsi, %rdi
-; x86_64-NEXT:    cmovneq %r11, %rsi
+; x86_64-NEXT:    movl $0, %r8d
+; x86_64-NEXT:    cmovneq %r8, %rsi
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shrq %cl, %rax
 ; x86_64-NEXT:    testb $64, %r9b
 ; x86_64-NEXT:    cmovneq %rax, %rdx
-; x86_64-NEXT:    cmovneq %r11, %rax
+; x86_64-NEXT:    cmovneq %r8, %rax
 ; x86_64-NEXT:    movq %rax, 24(%r10)
 ; x86_64-NEXT:    movq %rdx, 16(%r10)
 ; x86_64-NEXT:    movq %rsi, 8(%r10)
@@ -648,15 +648,15 @@ define void @test_shl_v2i128(<2 x i128> %x, <2 x i128> %a, ptr nocapture %r) nou
 ; x86_64-NEXT:    movl %r8d, %ecx
 ; x86_64-NEXT:    shldq %cl, %rdi, %rsi
 ; x86_64-NEXT:    shlq %cl, %rdi
-; x86_64-NEXT:    xorl %r11d, %r11d
 ; x86_64-NEXT:    testb $64, %r8b
 ; x86_64-NEXT:    cmovneq %rdi, %rsi
-; x86_64-NEXT:    cmovneq %r11, %rdi
+; x86_64-NEXT:    movl $0, %r8d
+; x86_64-NEXT:    cmovneq %r8, %rdi
 ; x86_64-NEXT:    movl %r9d, %ecx
 ; x86_64-NEXT:    shlq %cl, %rdx
 ; x86_64-NEXT:    testb $64, %r9b
 ; x86_64-NEXT:    cmovneq %rdx, %rax
-; x86_64-NEXT:    cmovneq %r11, %rdx
+; x86_64-NEXT:    cmovneq %r8, %rdx
 ; x86_64-NEXT:    movq %rax, 24(%r10)
 ; x86_64-NEXT:    movq %rdx, 16(%r10)
 ; x86_64-NEXT:    movq %rsi, 8(%r10)
@@ -1054,9 +1054,9 @@ define i128 @shift_i128_limited_shamt_no_nuw(i128 noundef %a, i32 noundef %b) no
 ; x86_64-NEXT:    subb %dl, %cl
 ; x86_64-NEXT:    shldq %cl, %rdi, %rsi
 ; x86_64-NEXT:    shlq %cl, %rdi
-; x86_64-NEXT:    xorl %eax, %eax
 ; x86_64-NEXT:    testb $64, %cl
 ; x86_64-NEXT:    cmovneq %rdi, %rsi
+; x86_64-NEXT:    movl $0, %eax
 ; x86_64-NEXT:    cmoveq %rdi, %rax
 ; x86_64-NEXT:    movq %rsi, %rdx
 ; x86_64-NEXT:    retq
@@ -1125,9 +1125,9 @@ define i128 @shift_i128_limited_shamt_unknown_lhs(i128 noundef %a, i32 noundef %
 ; x86_64-NEXT:    subl %edx, %ecx
 ; x86_64-NEXT:    shldq %cl, %rdi, %rsi
 ; x86_64-NEXT:    shlq %cl, %rdi
-; x86_64-NEXT:    xorl %eax, %eax
 ; x86_64-NEXT:    testb $64, %cl
 ; x86_64-NEXT:    cmovneq %rdi, %rsi
+; x86_64-NEXT:    movl $0, %eax
 ; x86_64-NEXT:    cmoveq %rdi, %rax
 ; x86_64-NEXT:    movq %rsi, %rdx
 ; x86_64-NEXT:    retq

@@ -82,7 +82,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ;CHECK:     STATEPOINT 2882400000, 0, 0, target-flags(x86-plt) @blam, 2, 9, 2, 0, 2, 59, 2, 0, 2, 1, 2, 0, 2, 0, 2, 0, 2, 26, 2, 0, 2, 0, 1, 8, %stack.0, 0, 2, 4, %68, 2, 7, 2, 0, 2, 4, %64, 2, 7, 2, 0, 2, 4, %6, 2, 7, 2, 0, 2, 4, %59, 2, 7, 2, 0, 2, 4, %52, 2, 7, 2, 0, 2, 4, %45, 2, 7, 2, 0, 2, 4, %10, 2, 7, 2, 0, 2, 4, %55, 2, 7, 2, 0, 2, 4, %77, 2, 7, 2, 0, 2, 4, %72, 2, 7, 2, 0, 2, 4, %14, 2, 7, 2, 0, 2, 4, %82, 2, 7, 2, 0, 2, 7, 2, 0, 2, 1, 1, 8, %stack.0, 0, 2, 0, 2, 1, 0, 0, csr_64_mostregs, implicit-def $rsp, implicit-def $ssp :: (volatile load store (s64) on %stack.0)
 ;CHECK:     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-;CHECK:     %17:gr32 = MOV32r0 implicit-def dead $eflags
+;CHECK:     %17:gr32 = MOV32r0
 ;CHECK:     TEST8rr %17.sub_8bit, %17.sub_8bit, implicit-def $eflags
 ;CHECK:     MOVSDmr %stack.1, 1, $noreg, 0, $noreg, %45 :: (store (s64) into %stack.1)
 ;CHECK:     MOVSDmr %stack.2, 1, $noreg, 0, $noreg, %52 :: (store (s64) into %stack.2)
@@ -100,7 +100,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     successors: %bb.3(0x80000000)
 ;CHECK:     ADJCALLSTACKDOWN64 8, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ;CHECK:     MOVSDmr $rsp, 1, $noreg, 0, $noreg, %14 :: (store (s64) into stack)
-;CHECK:     dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+;CHECK:     dead $edi = MOV32r0 implicit-def $rdi
 ;CHECK:     $xmm0 = COPY %68
 ;CHECK:     $xmm1 = COPY %64
 ;CHECK:     $xmm2 = COPY %6
@@ -116,7 +116,7 @@ declare token @llvm.experimental.gc.statepoint.p0(i64 , i32 , ptr, i32 , i32 , .
 ;CHECK:     ADJCALLSTACKUP64 8, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 ;CHECK:   bb.3.bb15:
 ;CHECK:     successors: %bb.7(0x7ffff800), %bb.4(0x00000800)
-;CHECK:     %24:gr32 = MOV32r0 implicit-def dead $eflags
+;CHECK:     %24:gr32 = MOV32r0
 ;CHECK:     TEST8rr %24.sub_8bit, %24.sub_8bit, implicit-def $eflags
 ;CHECK:     JCC_1 %bb.7, 5, implicit killed $eflags
 ;CHECK:     JMP_1 %bb.4

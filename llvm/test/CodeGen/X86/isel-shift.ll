@@ -140,33 +140,53 @@ define i64 @shl_i64(i64 %a, i64 %b) nounwind {
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    pushl %esi
 ; SDAG-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; SDAG-X86-NEXT:    movl %esi, %eax
-; SDAG-X86-NEXT:    shll %cl, %eax
-; SDAG-X86-NEXT:    shldl %cl, %esi, %edx
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SDAG-X86-NEXT:    movl %edx, %esi
+; SDAG-X86-NEXT:    shll %cl, %esi
+; SDAG-X86-NEXT:    shldl %cl, %edx, %eax
 ; SDAG-X86-NEXT:    testb $32, %cl
-; SDAG-X86-NEXT:    je LBB3_2
-; SDAG-X86-NEXT:  ## %bb.1:
+; SDAG-X86-NEXT:    movl %esi, %edx
+; SDAG-X86-NEXT:    je LBB3_1
+; SDAG-X86-NEXT:  ## %bb.2:
+; SDAG-X86-NEXT:    movl $0, %eax
+; SDAG-X86-NEXT:    je LBB3_3
+; SDAG-X86-NEXT:  LBB3_4:
+; SDAG-X86-NEXT:    popl %esi
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB3_1:
 ; SDAG-X86-NEXT:    movl %eax, %edx
-; SDAG-X86-NEXT:    xorl %eax, %eax
-; SDAG-X86-NEXT:  LBB3_2:
+; SDAG-X86-NEXT:    movl $0, %eax
+; SDAG-X86-NEXT:    jne LBB3_4
+; SDAG-X86-NEXT:  LBB3_3:
+; SDAG-X86-NEXT:    movl %esi, %eax
 ; SDAG-X86-NEXT:    popl %esi
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: shl_i64:
 ; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    pushl %esi
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FASTISEL-X86-NEXT:    shldl %cl, %eax, %edx
-; FASTISEL-X86-NEXT:    shll %cl, %eax
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; FASTISEL-X86-NEXT:    shldl %cl, %esi, %eax
+; FASTISEL-X86-NEXT:    shll %cl, %esi
 ; FASTISEL-X86-NEXT:    testb $32, %cl
-; FASTISEL-X86-NEXT:    je LBB3_2
-; FASTISEL-X86-NEXT:  ## %bb.1:
+; FASTISEL-X86-NEXT:    movl %esi, %edx
+; FASTISEL-X86-NEXT:    je LBB3_1
+; FASTISEL-X86-NEXT:  ## %bb.2:
+; FASTISEL-X86-NEXT:    movl $0, %eax
+; FASTISEL-X86-NEXT:    je LBB3_3
+; FASTISEL-X86-NEXT:  LBB3_4:
+; FASTISEL-X86-NEXT:    popl %esi
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB3_1:
 ; FASTISEL-X86-NEXT:    movl %eax, %edx
-; FASTISEL-X86-NEXT:    xorl %eax, %eax
-; FASTISEL-X86-NEXT:  LBB3_2:
+; FASTISEL-X86-NEXT:    movl $0, %eax
+; FASTISEL-X86-NEXT:    jne LBB3_4
+; FASTISEL-X86-NEXT:  LBB3_3:
+; FASTISEL-X86-NEXT:    movl %esi, %eax
+; FASTISEL-X86-NEXT:    popl %esi
 ; FASTISEL-X86-NEXT:    retl
 ;
 ; SDAG-X64-LABEL: shl_i64:
@@ -330,33 +350,53 @@ define i64 @lshr_i64(i64 %a, i64 %b) nounwind {
 ; SDAG-X86:       ## %bb.0:
 ; SDAG-X86-NEXT:    pushl %esi
 ; SDAG-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SDAG-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; SDAG-X86-NEXT:    movl %esi, %edx
-; SDAG-X86-NEXT:    shrl %cl, %edx
-; SDAG-X86-NEXT:    shrdl %cl, %esi, %eax
+; SDAG-X86-NEXT:    movl %eax, %esi
+; SDAG-X86-NEXT:    shrl %cl, %esi
+; SDAG-X86-NEXT:    shrdl %cl, %eax, %edx
 ; SDAG-X86-NEXT:    testb $32, %cl
-; SDAG-X86-NEXT:    je LBB7_2
-; SDAG-X86-NEXT:  ## %bb.1:
+; SDAG-X86-NEXT:    movl %esi, %eax
+; SDAG-X86-NEXT:    je LBB7_1
+; SDAG-X86-NEXT:  ## %bb.2:
+; SDAG-X86-NEXT:    movl $0, %edx
+; SDAG-X86-NEXT:    je LBB7_3
+; SDAG-X86-NEXT:  LBB7_4:
+; SDAG-X86-NEXT:    popl %esi
+; SDAG-X86-NEXT:    retl
+; SDAG-X86-NEXT:  LBB7_1:
 ; SDAG-X86-NEXT:    movl %edx, %eax
-; SDAG-X86-NEXT:    xorl %edx, %edx
-; SDAG-X86-NEXT:  LBB7_2:
+; SDAG-X86-NEXT:    movl $0, %edx
+; SDAG-X86-NEXT:    jne LBB7_4
+; SDAG-X86-NEXT:  LBB7_3:
+; SDAG-X86-NEXT:    movl %esi, %edx
 ; SDAG-X86-NEXT:    popl %esi
 ; SDAG-X86-NEXT:    retl
 ;
 ; FASTISEL-X86-LABEL: lshr_i64:
 ; FASTISEL-X86:       ## %bb.0:
+; FASTISEL-X86-NEXT:    pushl %esi
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; FASTISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; FASTISEL-X86-NEXT:    shrdl %cl, %edx, %eax
-; FASTISEL-X86-NEXT:    shrl %cl, %edx
+; FASTISEL-X86-NEXT:    shrdl %cl, %esi, %edx
+; FASTISEL-X86-NEXT:    shrl %cl, %esi
 ; FASTISEL-X86-NEXT:    testb $32, %cl
-; FASTISEL-X86-NEXT:    je LBB7_2
-; FASTISEL-X86-NEXT:  ## %bb.1:
+; FASTISEL-X86-NEXT:    movl %esi, %eax
+; FASTISEL-X86-NEXT:    je LBB7_1
+; FASTISEL-X86-NEXT:  ## %bb.2:
+; FASTISEL-X86-NEXT:    movl $0, %edx
+; FASTISEL-X86-NEXT:    je LBB7_3
+; FASTISEL-X86-NEXT:  LBB7_4:
+; FASTISEL-X86-NEXT:    popl %esi
+; FASTISEL-X86-NEXT:    retl
+; FASTISEL-X86-NEXT:  LBB7_1:
 ; FASTISEL-X86-NEXT:    movl %edx, %eax
-; FASTISEL-X86-NEXT:    xorl %edx, %edx
-; FASTISEL-X86-NEXT:  LBB7_2:
+; FASTISEL-X86-NEXT:    movl $0, %edx
+; FASTISEL-X86-NEXT:    jne LBB7_4
+; FASTISEL-X86-NEXT:  LBB7_3:
+; FASTISEL-X86-NEXT:    movl %esi, %edx
+; FASTISEL-X86-NEXT:    popl %esi
 ; FASTISEL-X86-NEXT:    retl
 ;
 ; SDAG-X64-LABEL: lshr_i64:

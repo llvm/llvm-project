@@ -25,7 +25,7 @@
 ; X86:           calll   setjmp
 ; X86-NEXT:      endbr32
 ; X86:           calll   setzx
-; X86-NEXT:      xorl
+; X86-NEXT:      movl
 ; X86:           calll   sigsetjmp
 ; X86-NEXT:      endbr32
 ; X86:           calll   savectx

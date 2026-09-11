@@ -241,8 +241,8 @@ define i64 @smax_allones_sext_i32(i32 %x) {
 define i32 @smax_zero_i32(i32 %x) {
 ; CHECK-LABEL: smax_zero_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %edi, %eax
 ; CHECK-NEXT:    retq
   %r = call i32 @llvm.smax.i32(i32 %x, i32 0)

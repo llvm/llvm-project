@@ -172,7 +172,7 @@ static bool tileConfig(MachineFunction &MF,
                    "Cannot initialize with different shapes");
             continue;
           }
-          if (DefMI.getOperand(1).isImm()) {
+          if (DefMI.getNumOperands() > 1 && DefMI.getOperand(1).isImm()) {
             Imm = DefMI.getOperand(1).getImm();
           } else {
             assert(DefMI.getOpcode() == X86::MOV32r0 &&

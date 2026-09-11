@@ -201,9 +201,9 @@ define i64 @func5(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    movl %esi, %edi
 ; X86-NEXT:    shll %cl, %edi
 ; X86-NEXT:    shldl %cl, %esi, %edx
-; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    cmovnel %edi, %edx
+; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    cmovnel %ebx, %edi
 ; X86-NEXT:    movl %edx, %ebp
 ; X86-NEXT:    shrl %cl, %ebp

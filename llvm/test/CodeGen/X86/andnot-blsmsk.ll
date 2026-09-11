@@ -152,9 +152,9 @@ define i64 @fold_and_xor_neg_v1_64(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    xorl %esi, %edx
 ; X86-NEXT:    xorl %ecx, %eax

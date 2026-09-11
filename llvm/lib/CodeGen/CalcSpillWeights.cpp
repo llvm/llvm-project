@@ -30,12 +30,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "calcspillweights"
 
-cl::opt<bool> AllowRematerializePhysReg(
-    "allow-rematerialize-phys-reg",
-    cl::desc("Allow rematerialize instructions with physical register "
-             "definition, like POPCNT on x86 can write EFLAGS register."),
-    cl::init(false), cl::Hidden);
-
 void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
   LLVM_DEBUG(dbgs() << "********** Compute Spill Weights **********\n"
                     << "********** Function: " << MF.getName() << '\n');
@@ -176,15 +170,14 @@ bool VirtRegAuxInfo::allUsesAvailableAt(const MachineInstr *OrigMI,
       continue;
 
     if (!MO.readsReg()) {
-      if (MO.getReg().isVirtual() || !AllowRematerializePhysReg)
+      if (MO.getReg().isVirtual())
         continue;
       // A physical register is defined here, and we allow rematerialization of
       // an instruction with physical register definition, it must be dead at
       // this position.
       const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
-      if ((MBB->computeRegisterLiveness(TRI, MO.getReg(), UseIt) ==
-           MachineBasicBlock::LQR_Dead) ||
-          TII.canRematerializeIgnorePhysRegDef(*OrigMI, MO))
+      if (MBB->computeRegisterLiveness(TRI, MO.getReg(), UseIt) ==
+          MachineBasicBlock::LQR_Dead)
         continue;
       else
         return false;

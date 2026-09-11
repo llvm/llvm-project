@@ -142,8 +142,8 @@ define i32 @and_multiuse_freeze_extload_no_narrow(ptr %p) {
 ; CHECK-LABEL: and_multiuse_freeze_extload_no_narrow:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzbl (%rdi), %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $42, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovel %ecx, %eax
 ; CHECK-NEXT:    retq
   %load = load i8, ptr %p

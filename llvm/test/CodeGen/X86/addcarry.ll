@@ -807,8 +807,8 @@ define i128 @addcarry1_not(i128 %n) nounwind {
 ; X64-LABEL: addcarry1_not:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    negq %rax
+; X64-NEXT:    movl $0, %edx
 ; X64-NEXT:    sbbq %rsi, %rdx
 ; X64-NEXT:    retq
 ;
@@ -846,8 +846,8 @@ define { i128, i1 } @saddo_not_1(i128 %x) nounwind {
 ; X64-LABEL: saddo_not_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    negq %rax
+; X64-NEXT:    movl $0, %edx
 ; X64-NEXT:    sbbq %rsi, %rdx
 ; X64-NEXT:    seto %cl
 ; X64-NEXT:    retq
@@ -3158,9 +3158,9 @@ define i1 @pr84831(i64 %arg) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    testq %rdi, %rdi
 ; X64-NEXT:    setne %al
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    addb $-1, %al
-; X64-NEXT:    adcq $1, %rcx
+; X64-NEXT:    movl $0, %eax
+; X64-NEXT:    adcq $1, %rax
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    retq
 ;

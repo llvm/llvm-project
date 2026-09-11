@@ -128,8 +128,8 @@ define i8 @i8_select_neg1_or_0_commuted_as_math(i8 %x) {
 define i32 @ult_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ult_select_neg1_or_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i32 %x, %y
@@ -143,8 +143,8 @@ define i32 @ult_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 define i32 @ugt_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ugt_select_neg1_or_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ugt i32 %y, %x
@@ -158,8 +158,8 @@ define i32 @ugt_select_neg1_or_0(i32 %x, i32 %y) nounwind {
 define i32 @uge_select_0_or_neg1(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: uge_select_0_or_neg1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp uge i32 %x, %y
@@ -174,8 +174,8 @@ define i32 @uge_select_0_or_neg1(i32 %x, i32 %y) nounwind {
 define i32 @ule_select_0_or_neg1(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: ule_select_0_or_neg1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ule i32 %y, %x
@@ -190,8 +190,8 @@ define i32 @ule_select_0_or_neg1(i32 %x, i32 %y) nounwind {
 define i32 @uge_select_0_or_neg1_sub(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: uge_select_0_or_neg1_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp uge i32 %x, %y
@@ -206,8 +206,8 @@ define i32 @uge_select_0_or_neg1_sub(i32 %x, i32 %y) nounwind {
 define i64 @ugt_select_neg1_or_0_sub(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: ugt_select_neg1_or_0_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %cmp = icmp ugt i64 %x, %y
@@ -222,8 +222,8 @@ define i64 @ugt_select_neg1_or_0_sub(i64 %x, i64 %y) nounwind {
 define i16 @ult_select_neg1_or_0_sub(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: ult_select_neg1_or_0_sub:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpw %di, %si
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq

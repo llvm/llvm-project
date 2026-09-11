@@ -6,25 +6,25 @@ define void @_test_func(<16 x half> %0) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpsrlq $48, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtph2ps %xmm1, %xmm1
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm1
-; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
+; CHECK-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    movl $0, %edx
-; CHECK-NEXT:    cmovnpl %ecx, %edx
+; CHECK-NEXT:    cmovnpl %eax, %edx
 ; CHECK-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
 ; CHECK-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm1
 ; CHECK-NEXT:    movl $0, %esi
-; CHECK-NEXT:    cmovnpl %ecx, %esi
+; CHECK-NEXT:    cmovnpl %eax, %esi
 ; CHECK-NEXT:    vpsrld $16, %xmm0, %xmm1
 ; CHECK-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm1
 ; CHECK-NEXT:    movl $0, %edi
-; CHECK-NEXT:    cmovnpl %ecx, %edi
+; CHECK-NEXT:    cmovnpl %eax, %edi
 ; CHECK-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; CHECK-NEXT:    vucomiss %xmm0, %xmm0
-; CHECK-NEXT:    cmovnpl %ecx, %eax
-; CHECK-NEXT:    vmovd %eax, %xmm0
+; CHECK-NEXT:    cmovnpl %eax, %ecx
+; CHECK-NEXT:    vmovd %ecx, %xmm0
 ; CHECK-NEXT:    vpinsrw $1, %edi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $2, %esi, %xmm0, %xmm0
 ; CHECK-NEXT:    vpinsrw $3, %edx, %xmm0, %xmm0

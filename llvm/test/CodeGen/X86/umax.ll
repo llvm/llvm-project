@@ -300,24 +300,25 @@ define i128 @test_i128_1(i128 %a) nounwind {
 ; X86-NEXT:    movl $1, %esi
 ; X86-NEXT:    cmovnel %eax, %esi
 ; X86-NEXT:    cmovel %ecx, %esi
-; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    movl %edx, %ecx
 ; X86-NEXT:    negl %ecx
-; X86-NEXT:    movl 36(%ebp), %ecx
-; X86-NEXT:    movl $0, %ebx
-; X86-NEXT:    sbbl %ecx, %ebx
-; X86-NEXT:    movl $1, %ebx
-; X86-NEXT:    cmovbl %eax, %ebx
-; X86-NEXT:    cmovbl 28(%ebp), %edi
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    orl %ecx, %eax
-; X86-NEXT:    movl 8(%ebp), %eax
-; X86-NEXT:    movl %ecx, 12(%eax)
-; X86-NEXT:    movl %edx, 8(%eax)
-; X86-NEXT:    cmovel %esi, %ebx
-; X86-NEXT:    cmovel 28(%ebp), %edi
-; X86-NEXT:    movl %edi, 4(%eax)
-; X86-NEXT:    movl %ebx, (%eax)
+; X86-NEXT:    movl 36(%ebp), %ebx
+; X86-NEXT:    movl $0, %ecx
+; X86-NEXT:    sbbl %ebx, %ecx
+; X86-NEXT:    movl $1, %edi
+; X86-NEXT:    cmovbl %eax, %edi
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    cmovbl 28(%ebp), %eax
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    orl %ebx, %ecx
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    movl %ebx, 12(%ecx)
+; X86-NEXT:    movl %edx, 8(%ecx)
+; X86-NEXT:    cmovel %esi, %edi
+; X86-NEXT:    cmovel 28(%ebp), %eax
+; X86-NEXT:    movl %eax, 4(%ecx)
+; X86-NEXT:    movl %edi, (%ecx)
+; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    leal -12(%ebp), %esp
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %edi

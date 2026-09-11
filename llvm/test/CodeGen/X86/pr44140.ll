@@ -46,9 +46,9 @@ define i32 @main() {
 ; CHECK-NEXT:    testb %sil, %sil
 ; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %exit
-; CHECK-NEXT:    movabsq $1010101010101010101, %rcx # imm = 0xE04998456557EB5
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq %rcx, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $1010101010101010101, %rax # imm = 0xE04998456557EB5
+; CHECK-NEXT:    cmpq %rax, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    addq $584, %rsp # imm = 0x248

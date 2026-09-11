@@ -325,9 +325,9 @@ def MORESTACK_RET_RESTORE_R10 : I<0, Pseudo, (outs), (ins), "", []>;
 
 // Alias instruction mapping movr0 to xor.
 // FIXME: remove when we can teach regalloc that xor reg, reg is ok.
-let Defs = [EFLAGS], isReMaterializable = 1, isAsCheapAsAMove = 1,
+let isReMaterializable = 1, isAsCheapAsAMove = 1,
     isPseudo = 1, isMoveImm = 1, AddedComplexity = 10 in
-def MOV32r0  : I<0, Pseudo, (outs GR32:$dst), (ins), "",
+def MOV32r0 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
                  [(set GR32:$dst, 0)]>, Sched<[WriteZero]>;
 
 // Other widths can also make use of the 32-bit xor, which may have a smaller
@@ -343,7 +343,7 @@ let Predicates = [OptForSize, Not64BitMode],
   let SchedRW = [WriteALU] in {
   // Pseudo instructions for materializing 1 and -1 using XOR+INC/DEC,
   // which only require 3 bytes compared to MOV32ri which requires 5.
-  let Defs = [EFLAGS], isReMaterializable = 1, isPseudo = 1 in {
+  let isReMaterializable = 1, isPseudo = 1 in {
     def MOV32r1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",
                         [(set GR32:$dst, 1)]>;
     def MOV32r_1 : I<0, Pseudo, (outs GR32:$dst), (ins), "",

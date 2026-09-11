@@ -11,10 +11,10 @@ define void @test_61038(ptr %tmp_buffer) {
 ; CHECK-BMI2-NEXT:    movabsq $8589934591, %rcx # imm = 0x1FFFFFFFF
 ; CHECK-BMI2-NEXT:    movq %rcx, %rdx
 ; CHECK-BMI2-NEXT:    btcq %rax, %rdx
-; CHECK-BMI2-NEXT:    xorl %eax, %eax
 ; CHECK-BMI2-NEXT:    cmpq $64, %rdx
-; CHECK-BMI2-NEXT:    shrxq %rdx, %rcx, %rcx
-; CHECK-BMI2-NEXT:    cmovael %eax, %ecx
+; CHECK-BMI2-NEXT:    shrxq %rdx, %rcx, %rax
+; CHECK-BMI2-NEXT:    movl $0, %ecx
+; CHECK-BMI2-NEXT:    cmovbl %eax, %ecx
 ; CHECK-BMI2-NEXT:    movl %ecx, (%rdi)
 ; CHECK-BMI2-NEXT:    retq
 ;
@@ -25,10 +25,10 @@ define void @test_61038(ptr %tmp_buffer) {
 ; CHECK-BMI-NEXT:    movq %rdx, %rcx
 ; CHECK-BMI-NEXT:    btcq %rax, %rcx
 ; CHECK-BMI-NEXT:    shrq %cl, %rdx
-; CHECK-BMI-NEXT:    xorl %eax, %eax
 ; CHECK-BMI-NEXT:    cmpq $64, %rcx
-; CHECK-BMI-NEXT:    cmovael %eax, %edx
-; CHECK-BMI-NEXT:    movl %edx, (%rdi)
+; CHECK-BMI-NEXT:    movl $0, %eax
+; CHECK-BMI-NEXT:    cmovbl %edx, %eax
+; CHECK-BMI-NEXT:    movl %eax, (%rdi)
 ; CHECK-BMI-NEXT:    retq
 entry:
   %0 = tail call i32 @llvm.cttz.i32(i32 poison, i1 false)

@@ -48,9 +48,9 @@ define void @foo() {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movzbl c(%rip), %eax
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    testl %eax, %eax
 ; X64-NEXT:    setne -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    setne %cl
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    cmpl %eax, %ecx
@@ -88,9 +88,9 @@ define void @foo() {
 ; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 12
 ; X86-NEXT:    movzbl c, %eax
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setne {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    setne %cl
 ; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    cmpl %eax, %ecx
@@ -166,19 +166,6 @@ define void @foo() {
 ; X64-SETZUCC-NEXT:    setzule %al
 ; X64-SETZUCC-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
 ; X64-SETZUCC-NEXT:    retq
-;
-; X64-NO-SETZUCC-LABEL: foo:
-; X64-NO-SETZUCC:       # %bb.0: # %entry
-; X64-NO-SETZUCC-NEXT:    movzbl c(%rip), %eax
-; X64-NO-SETZUCC-NEXT:    xorl %ecx, %ecx
-; X64-NO-SETZUCC-NEXT:    testl %eax, %eax
-; X64-NO-SETZUCC-DAG:     setne -{{[0-9]+}}(%rsp)
-; X64-NO-SETZUCC-DAG:     setne %cl
-; X64-NO-SETZUCC-NEXT:    xorl %edx, %edx
-; X64-NO-SETZUCC-NEXT:    cmpl %eax, %ecx
-; X64-NO-SETZUCC-NEXT:    setle %dl
-; X64-NO-SETZUCC-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
-; X64-NO-SETZUCC-NEXT:    retq
 entry:
   %a = alloca i8, align 1
   %b = alloca i32, align 4

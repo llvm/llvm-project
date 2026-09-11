@@ -1620,7 +1620,7 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-O0-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    ## implicit-def: $rax
-; CHECK-O0-NEXT:    xorl %eax, %eax
+; CHECK-O0-NEXT:    movl $0, %eax
 ; CHECK-O0-NEXT:    movl %eax, %r12d
 ; CHECK-O0-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-O0-NEXT:    movl $1, %edi

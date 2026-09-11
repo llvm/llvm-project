@@ -327,9 +327,9 @@ define i256 @test2(i256 %a) nounwind {
 ; SRC-LABEL: test2:
 ; SRC:       # %bb.0:
 ; SRC-NEXT:    movq %rdi, %rax
-; SRC-NEXT:    xorl %edi, %edi
 ; SRC-NEXT:    movq %rsi, %r11
 ; SRC-NEXT:    negq %r11
+; SRC-NEXT:    movl $0, %edi
 ; SRC-NEXT:    movl $0, %r10d
 ; SRC-NEXT:    sbbq %rdx, %r10
 ; SRC-NEXT:    movl $0, %r9d
@@ -375,7 +375,7 @@ define i256 @test2(i256 %a) nounwind {
 ; LIN-NEXT:    bsrq %r9, %rdi
 ; LIN-NEXT:    xorq $63, %rdi
 ; LIN-NEXT:    addq $64, %rdi
-; LIN-NEXT:    xorl %esi, %esi
+; LIN-NEXT:    movl $0, %esi
 ; LIN-NEXT:    movl $0, %r9d
 ; LIN-NEXT:    sbbq %rdx, %r9
 ; LIN-NEXT:    andq %rdx, %r9
@@ -546,8 +546,8 @@ define i256 @test3(i256 %n) nounwind {
 ; SRC-NEXT:    movq %rdi, %rax
 ; SRC-NEXT:    movq %rsi, %rdi
 ; SRC-NEXT:    notq %rdi
-; SRC-NEXT:    xorl %r9d, %r9d
 ; SRC-NEXT:    negq %rsi
+; SRC-NEXT:    movl $0, %r9d
 ; SRC-NEXT:    movl $0, %r10d
 ; SRC-NEXT:    sbbq %rdx, %r10
 ; SRC-NEXT:    notq %rdx
@@ -597,7 +597,7 @@ define i256 @test3(i256 %n) nounwind {
 ; LIN-NEXT:    bsrq %rsi, %r9
 ; LIN-NEXT:    xorq $63, %r9
 ; LIN-NEXT:    addq $64, %r9
-; LIN-NEXT:    xorl %edi, %edi
+; LIN-NEXT:    movl $0, %edi
 ; LIN-NEXT:    movl $0, %esi
 ; LIN-NEXT:    sbbq %rdx, %rsi
 ; LIN-NEXT:    notq %rdx
@@ -683,12 +683,12 @@ define i64 @test4(i64 %a, i64 %b) nounwind {
 ;
 ; SRC-LABEL: test4:
 ; SRC:       # %bb.0:
-; SRC-NEXT:    xorl %ecx, %ecx
-; SRC-NEXT:    incq %rsi
-; SRC-NEXT:    sete %cl
 ; SRC-NEXT:    xorl %eax, %eax
+; SRC-NEXT:    incq %rsi
+; SRC-NEXT:    sete %al
 ; SRC-NEXT:    cmpq %rdi, %rsi
-; SRC-NEXT:    sbbq $0, %rcx
+; SRC-NEXT:    sbbq $0, %rax
+; SRC-NEXT:    movl $0, %eax
 ; SRC-NEXT:    movl $0, %ecx
 ; SRC-NEXT:    sbbq %rcx, %rcx
 ; SRC-NEXT:    movl $0, %ecx
@@ -853,9 +853,9 @@ define i256 @PR25498(i256 %a) nounwind {
 ; SRC-LABEL: PR25498:
 ; SRC:       # %bb.0:
 ; SRC-NEXT:    movq %rdi, %rax
-; SRC-NEXT:    xorl %edi, %edi
 ; SRC-NEXT:    movq %rsi, %r11
 ; SRC-NEXT:    negq %r11
+; SRC-NEXT:    movl $0, %edi
 ; SRC-NEXT:    movl $0, %r10d
 ; SRC-NEXT:    sbbq %rdx, %r10
 ; SRC-NEXT:    movl $0, %r9d
@@ -898,7 +898,7 @@ define i256 @PR25498(i256 %a) nounwind {
 ; LIN-NEXT:    movq %rdi, %rax
 ; LIN-NEXT:    movq %rsi, %r11
 ; LIN-NEXT:    negq %r11
-; LIN-NEXT:    xorl %edi, %edi
+; LIN-NEXT:    movl $0, %edi
 ; LIN-NEXT:    movl $0, %r10d
 ; LIN-NEXT:    sbbq %rdx, %r10
 ; LIN-NEXT:    movl $0, %r9d

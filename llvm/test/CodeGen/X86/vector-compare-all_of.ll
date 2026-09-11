@@ -98,8 +98,8 @@ define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm0, %xmm1
 ; AVX1OR2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1OR2-NEXT:    xorl %eax, %eax
 ; AVX1OR2-NEXT:    vtestps %xmm1, %xmm0
+; AVX1OR2-NEXT:    movl $0, %eax
 ; AVX1OR2-NEXT:    sbbq %rax, %rax
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
@@ -109,8 +109,8 @@ define i64 @test_v4f64_legal_sext(<4 x double> %a0, <4 x double> %a1) {
 ; AVX512-NEXT:    vcmpltpd %ymm0, %ymm1, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vtestps %xmm0, %xmm1
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    sbbq %rax, %rax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -414,8 +414,8 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX1-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpackssdw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX1-NEXT:    xorl %eax, %eax
 ; AVX1-NEXT:    vtestps %xmm1, %xmm0
+; AVX1-NEXT:    movl $0, %eax
 ; AVX1-NEXT:    sbbq %rax, %rax
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -426,8 +426,8 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
 ; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vtestps %xmm1, %xmm0
+; AVX2-NEXT:    movl $0, %eax
 ; AVX2-NEXT:    sbbq %rax, %rax
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -437,8 +437,8 @@ define i64 @test_v4i64_legal_sext(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX512-NEXT:    vpcmpgtq %ymm1, %ymm0, %k1
 ; AVX512-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovdqa32 %xmm0, %xmm1 {%k1} {z}
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vtestps %xmm0, %xmm1
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    sbbq %rax, %rax
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq

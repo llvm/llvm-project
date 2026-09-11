@@ -103,8 +103,8 @@ define ptr @ubyte_divmod(ptr %a, ptr %b) {
 ; CHECK-NEXT:    callq _feraiseexcept
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %edx
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    xorl %r15d, %r15d
 ; CHECK-NEXT:    testb %sil, %sil
+; CHECK-NEXT:    movl $0, %r15d
 ; CHECK-NEXT:    je LBB0_14
 ; CHECK-NEXT:  LBB0_12: ## %cond_false.i
 ; CHECK-NEXT:    testb %dl, %dl

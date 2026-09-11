@@ -107,8 +107,8 @@ define i32 @load_crash(ptr nocapture readonly %a, ptr nocapture readonly %b, ptr
 ; CHECK-LABEL: load_crash:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq (%rdi), %rcx ## encoding: [0x48,0x8b,0x0f]
-; CHECK-NEXT:    xorl %eax, %eax ## encoding: [0x31,0xc0]
 ; CHECK-NEXT:    addq (%rsi), %rcx ## encoding: [0x48,0x03,0x0e]
+; CHECK-NEXT:    movl $0, %eax ## encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; CHECK-NEXT:    setb %al ## encoding: [0x0f,0x92,0xc0]
 ; CHECK-NEXT:    movq %rcx, (%rdx) ## encoding: [0x48,0x89,0x0a]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]

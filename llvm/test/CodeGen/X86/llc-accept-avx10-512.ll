@@ -33,8 +33,8 @@ define <8 x i32> @foo_avx10.2(<8 x double> %f) {
 ; CHECK-AVX10_1-NEXT:    vmovsd {{.*#+}} xmm5 = [2.147483647E+9,0.0E+0]
 ; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm4, %xmm4
 ; CHECK-AVX10_1-NEXT:    vcvttsd2si %xmm4, %ecx
-; CHECK-AVX10_1-NEXT:    xorl %eax, %eax
 ; CHECK-AVX10_1-NEXT:    vucomisd %xmm2, %xmm2
+; CHECK-AVX10_1-NEXT:    movl $0, %eax
 ; CHECK-AVX10_1-NEXT:    cmovpl %eax, %ecx
 ; CHECK-AVX10_1-NEXT:    vmaxsd %xmm3, %xmm1, %xmm2
 ; CHECK-AVX10_1-NEXT:    vminsd %xmm5, %xmm2, %xmm2

@@ -5,10 +5,10 @@
 define i32 @pass_bool(i1 zeroext %b) {
 ; CHECK-LABEL: pass_bool:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    movl $66, %eax
-; CHECK-NEXT:    cmovel %edx, %eax
+; CHECK-NEXT:    movl $66, %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %cond = select i1 %b, i32 66, i32 0

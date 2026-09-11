@@ -2800,18 +2800,18 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE2-NEXT:    movq %xmm2, %rcx
 ; SSE2-NEXT:    movq %xmm1, %rdx
 ; SSE2-NEXT:    movq %xmm0, %rsi
-; SSE2-NEXT:    xorl %r8d, %r8d
 ; SSE2-NEXT:    imulq %rdx, %rsi
-; SSE2-NEXT:    movq $-1, %rdx
+; SSE2-NEXT:    movl $0, %edx
+; SSE2-NEXT:    movq $-1, %r8
 ; SSE2-NEXT:    movl $0, %r9d
-; SSE2-NEXT:    cmovoq %rdx, %r9
+; SSE2-NEXT:    cmovoq %r8, %r9
 ; SSE2-NEXT:    movq %rsi, %xmm1
 ; SSE2-NEXT:    imulq %rax, %rcx
 ; SSE2-NEXT:    movq %rcx, %xmm0
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-NEXT:    movq %r9, %xmm0
-; SSE2-NEXT:    cmovoq %rdx, %r8
-; SSE2-NEXT:    movq %r8, %xmm2
+; SSE2-NEXT:    cmovoq %r8, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm2
 ; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSE2-NEXT:    movdqa %xmm1, (%rdi)
@@ -2825,18 +2825,18 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSSE3-NEXT:    movq %xmm2, %rcx
 ; SSSE3-NEXT:    movq %xmm1, %rdx
 ; SSSE3-NEXT:    movq %xmm0, %rsi
-; SSSE3-NEXT:    xorl %r8d, %r8d
 ; SSSE3-NEXT:    imulq %rdx, %rsi
-; SSSE3-NEXT:    movq $-1, %rdx
+; SSSE3-NEXT:    movl $0, %edx
+; SSSE3-NEXT:    movq $-1, %r8
 ; SSSE3-NEXT:    movl $0, %r9d
-; SSSE3-NEXT:    cmovoq %rdx, %r9
+; SSSE3-NEXT:    cmovoq %r8, %r9
 ; SSSE3-NEXT:    movq %rsi, %xmm1
 ; SSSE3-NEXT:    imulq %rax, %rcx
 ; SSSE3-NEXT:    movq %rcx, %xmm0
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSSE3-NEXT:    movq %r9, %xmm0
-; SSSE3-NEXT:    cmovoq %rdx, %r8
-; SSSE3-NEXT:    movq %r8, %xmm2
+; SSSE3-NEXT:    cmovoq %r8, %rdx
+; SSSE3-NEXT:    movq %rdx, %xmm2
 ; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; SSSE3-NEXT:    movdqa %xmm1, (%rdi)
@@ -2848,18 +2848,18 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; SSE41-NEXT:    movq %xmm0, %rcx
 ; SSE41-NEXT:    pextrq $1, %xmm1, %rdx
 ; SSE41-NEXT:    pextrq $1, %xmm0, %rsi
-; SSE41-NEXT:    xorl %r8d, %r8d
 ; SSE41-NEXT:    imulq %rdx, %rsi
-; SSE41-NEXT:    movq $-1, %rdx
+; SSE41-NEXT:    movl $0, %edx
+; SSE41-NEXT:    movq $-1, %r8
 ; SSE41-NEXT:    movl $0, %r9d
-; SSE41-NEXT:    cmovoq %rdx, %r9
+; SSE41-NEXT:    cmovoq %r8, %r9
 ; SSE41-NEXT:    movq %rsi, %xmm0
 ; SSE41-NEXT:    imulq %rax, %rcx
 ; SSE41-NEXT:    movq %rcx, %xmm1
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE41-NEXT:    movq %r9, %xmm0
-; SSE41-NEXT:    cmovoq %rdx, %r8
-; SSE41-NEXT:    movq %r8, %xmm2
+; SSE41-NEXT:    cmovoq %r8, %rdx
+; SSE41-NEXT:    movq %rdx, %xmm2
 ; SSE41-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,2,2,3]
 ; SSE41-NEXT:    movdqa %xmm1, (%rdi)
@@ -2871,18 +2871,18 @@ define <2 x i32> @smulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; AVX-NEXT:    vmovq %xmm0, %rcx
 ; AVX-NEXT:    vpextrq $1, %xmm1, %rdx
 ; AVX-NEXT:    vpextrq $1, %xmm0, %rsi
-; AVX-NEXT:    xorl %r8d, %r8d
 ; AVX-NEXT:    imulq %rdx, %rsi
-; AVX-NEXT:    movq $-1, %rdx
+; AVX-NEXT:    movl $0, %edx
+; AVX-NEXT:    movq $-1, %r8
 ; AVX-NEXT:    movl $0, %r9d
-; AVX-NEXT:    cmovoq %rdx, %r9
+; AVX-NEXT:    cmovoq %r8, %r9
 ; AVX-NEXT:    vmovq %rsi, %xmm0
 ; AVX-NEXT:    imulq %rax, %rcx
 ; AVX-NEXT:    vmovq %rcx, %xmm1
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; AVX-NEXT:    vmovq %r9, %xmm0
-; AVX-NEXT:    cmovoq %rdx, %r8
-; AVX-NEXT:    vmovq %r8, %xmm2
+; AVX-NEXT:    cmovoq %r8, %rdx
+; AVX-NEXT:    vmovq %rdx, %xmm2
 ; AVX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX-NEXT:    vmovdqa %xmm1, (%rdi)

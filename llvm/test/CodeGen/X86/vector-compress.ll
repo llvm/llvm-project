@@ -5136,10 +5136,10 @@ define <4 x i32> @test_compress_v4i32_zero_passthru(<4 x i32> %vec, <4 x i1> %ma
 ; AVX2-NEXT:    # kill: def $eax killed $eax killed $rax def $rax
 ; AVX2-NEXT:    andl $3, %eax
 ; AVX2-NEXT:    vextractps $3, %xmm0, -24(%rsp,%rax,4)
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    cmpq $3, %rcx
-; AVX2-NEXT:    vextractps $3, %xmm0, %edx
-; AVX2-NEXT:    cmovbel %eax, %edx
+; AVX2-NEXT:    vextractps $3, %xmm0, %eax
+; AVX2-NEXT:    movl $0, %edx
+; AVX2-NEXT:    cmoval %eax, %edx
 ; AVX2-NEXT:    movl $3, %eax
 ; AVX2-NEXT:    cmovbq %rcx, %rax
 ; AVX2-NEXT:    movl %edx, -24(%rsp,%rax,4)

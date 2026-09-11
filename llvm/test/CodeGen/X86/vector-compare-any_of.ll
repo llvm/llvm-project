@@ -612,9 +612,9 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; SSE-NEXT:    pcmpgtw %xmm3, %xmm1
 ; SSE-NEXT:    pcmpgtw %xmm2, %xmm0
 ; SSE-NEXT:    packsswb %xmm1, %xmm0
-; SSE-NEXT:    pmovmskb %xmm0, %ecx
-; SSE-NEXT:    xorl %eax, %eax
-; SSE-NEXT:    negl %ecx
+; SSE-NEXT:    pmovmskb %xmm0, %eax
+; SSE-NEXT:    negl %eax
+; SSE-NEXT:    movl $0, %eax
 ; SSE-NEXT:    sbbl %eax, %eax
 ; SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE-NEXT:    retq
@@ -626,9 +626,9 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX1-NEXT:    vpcmpgtw %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vpacksswb %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    negl %ecx
+; AVX1-NEXT:    vpmovmskb %xmm0, %eax
+; AVX1-NEXT:    negl %eax
+; AVX1-NEXT:    movl $0, %eax
 ; AVX1-NEXT:    sbbl %eax, %eax
 ; AVX1-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX1-NEXT:    vzeroupper
@@ -637,9 +637,9 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX2-LABEL: test_v16i16_legal_sext:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vpcmpgtw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpmovmskb %ymm0, %ecx
-; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    negl %ecx
+; AVX2-NEXT:    vpmovmskb %ymm0, %eax
+; AVX2-NEXT:    negl %eax
+; AVX2-NEXT:    movl $0, %eax
 ; AVX2-NEXT:    sbbl %eax, %eax
 ; AVX2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX2-NEXT:    vzeroupper
@@ -649,9 +649,9 @@ define i16 @test_v16i16_legal_sext(<16 x i16> %a0, <16 x i16> %a1) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0
 ; AVX512-NEXT:    vpmovm2b %k0, %xmm0
-; AVX512-NEXT:    vpmovmskb %xmm0, %ecx
-; AVX512-NEXT:    xorl %eax, %eax
-; AVX512-NEXT:    negl %ecx
+; AVX512-NEXT:    vpmovmskb %xmm0, %eax
+; AVX512-NEXT:    negl %eax
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    sbbl %eax, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
 ; AVX512-NEXT:    vzeroupper

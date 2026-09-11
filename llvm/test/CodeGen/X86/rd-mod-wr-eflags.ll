@@ -256,8 +256,8 @@ declare dso_local void @baz()
 define dso_local void @test4() nounwind uwtable ssp {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    decl y(%rip)
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    je .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %entry
 ; CHECK-NEXT:    movl x(%rip), %eax

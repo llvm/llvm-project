@@ -19,9 +19,8 @@ define void @pr32610(i32 %a0, i32 %a1) #0 {
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
 ; CHECK-NEXT:    sete %cl
-; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    incl %esi
 ; CHECK-NEXT:    cmpl $0, 12(%ebp)
+; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovel %esi, %ecx
 ; CHECK-NEXT:    cmpl %eax, %edx
 ; CHECK-NEXT:    cmovnel %esi, %ecx

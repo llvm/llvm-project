@@ -6,11 +6,11 @@
 define i32 @stest_f64i32(double %x) nounwind {
 ; CHECK-LABEL: stest_f64i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
 ; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -49,14 +49,13 @@ entry:
 define i32 @ustest_f64i32(double %x) nounwind {
 ; CHECK-LABEL: ustest_f64i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si %xmm0, %rcx
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovlq %rcx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    cvttsd2si %xmm0, %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rax, %rcx
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi double %x to i64
@@ -75,8 +74,8 @@ define i32 @stest_f32i32(float %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -115,14 +114,13 @@ entry:
 define i32 @ustest_f32i32(float %x) nounwind {
 ; CHECK-LABEL: ustest_f32i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttss2si %xmm0, %rcx
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovlq %rcx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rax, %rcx
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi float %x to i64
@@ -146,8 +144,8 @@ define i32 @stest_f16i32(half %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmovbel %ecx, %edx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %edx, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -192,14 +190,13 @@ define i32 @ustest_f16i32(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %rcx
-; CHECK-NEXT:    movl $4294967295, %eax # imm = 0xFFFFFFFF
-; CHECK-NEXT:    cmpq %rax, %rcx
-; CHECK-NEXT:    cmovlq %rcx, %rax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testq %rax, %rax
-; CHECK-NEXT:    cmovlel %ecx, %eax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
+; CHECK-NEXT:    cvttss2si %xmm0, %rax
+; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
+; CHECK-NEXT:    cmpq %rcx, %rax
+; CHECK-NEXT:    cmovlq %rax, %rcx
+; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -258,8 +255,8 @@ define i16 @ustest_f64i16(double %x) nounwind {
 ; CHECK-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; CHECK-NEXT:    cmovll %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -317,8 +314,8 @@ define i16 @ustest_f32i16(float %x) nounwind {
 ; CHECK-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; CHECK-NEXT:    cmovll %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -337,11 +334,11 @@ define i16 @stest_f16i16(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
@@ -385,8 +382,8 @@ define i16 @ustest_f16i16(half %x) nounwind {
 ; CHECK-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; CHECK-NEXT:    cmovll %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
@@ -410,8 +407,8 @@ define i64 @stest_f64i64(double %x) nounwind {
 ; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -429,8 +426,8 @@ define i64 @utest_f64i64(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunsdfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -447,16 +444,16 @@ define i64 @ustest_f64i64(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixdfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovleq %rdx, %rsi
-; CHECK-NEXT:    cmovgq %rcx, %rax
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    movl $1, %ecx
+; CHECK-NEXT:    cmovleq %rdx, %rcx
 ; CHECK-NEXT:    movl $0, %edx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rcx, %rax
+; CHECK-NEXT:    cmovgq %rdx, %rax
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    negq %rsi
+; CHECK-NEXT:    movl $0, %esi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -476,8 +473,8 @@ define i64 @stest_f32i64(float %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -495,8 +492,8 @@ define i64 @utest_f32i64(float %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunssfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -513,16 +510,16 @@ define i64 @ustest_f32i64(float %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixsfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovleq %rdx, %rsi
-; CHECK-NEXT:    cmovgq %rcx, %rax
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    movl $1, %ecx
+; CHECK-NEXT:    cmovleq %rdx, %rcx
 ; CHECK-NEXT:    movl $0, %edx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rcx, %rax
+; CHECK-NEXT:    cmovgq %rdx, %rax
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    negq %rsi
+; CHECK-NEXT:    movl $0, %esi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -547,8 +544,8 @@ define i64 @stest_f16i64(half %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rcx, %rdx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -567,8 +564,8 @@ define i64 @utest_f16i64(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunshfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -585,16 +582,16 @@ define i64 @ustest_f16i64(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixhfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
-; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    cmovleq %rdx, %rsi
-; CHECK-NEXT:    cmovgq %rcx, %rax
-; CHECK-NEXT:    movq %rax, %rdx
-; CHECK-NEXT:    negq %rdx
+; CHECK-NEXT:    movl $1, %ecx
+; CHECK-NEXT:    cmovleq %rdx, %rcx
 ; CHECK-NEXT:    movl $0, %edx
-; CHECK-NEXT:    sbbq %rsi, %rdx
-; CHECK-NEXT:    cmovgeq %rcx, %rax
+; CHECK-NEXT:    cmovgq %rdx, %rax
+; CHECK-NEXT:    movq %rax, %rsi
+; CHECK-NEXT:    negq %rsi
+; CHECK-NEXT:    movl $0, %esi
+; CHECK-NEXT:    sbbq %rcx, %rsi
+; CHECK-NEXT:    cmovgeq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
 entry:
@@ -615,11 +612,11 @@ entry:
 define i32 @stest_f64i32_mm(double %x) nounwind {
 ; CHECK-LABEL: stest_f64i32_mm:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
 ; CHECK-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttsd2si %xmm0, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -659,8 +656,8 @@ define i32 @ustest_f64i32_mm(double %x) nounwind {
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    cmovlq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -679,8 +676,8 @@ define i32 @stest_f32i32_mm(float %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmovbel %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
@@ -720,8 +717,8 @@ define i32 @ustest_f32i32_mm(float %x) nounwind {
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    cmovlq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    retq
@@ -745,8 +742,8 @@ define i32 @stest_f16i32_mm(half %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmovbel %ecx, %edx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %edx, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -792,8 +789,8 @@ define i32 @ustest_f16i32_mm(half %x) nounwind {
 ; CHECK-NEXT:    movl $4294967295, %ecx # imm = 0xFFFFFFFF
 ; CHECK-NEXT:    cmpq %rcx, %rax
 ; CHECK-NEXT:    cmovlq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testq %rcx, %rcx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
 ; CHECK-NEXT:    popq %rcx
@@ -849,8 +846,8 @@ define i16 @ustest_f64i16_mm(double %x) nounwind {
 ; CHECK-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; CHECK-NEXT:    cmovll %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -903,8 +900,8 @@ define i16 @ustest_f32i16_mm(float %x) nounwind {
 ; CHECK-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; CHECK-NEXT:    cmovll %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
@@ -921,11 +918,11 @@ define i16 @stest_f16i16_mm(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
 ; CHECK-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cvttss2si %xmm0, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
@@ -966,8 +963,8 @@ define i16 @ustest_f16i16_mm(half %x) nounwind {
 ; CHECK-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; CHECK-NEXT:    movl $65535, %ecx # imm = 0xFFFF
 ; CHECK-NEXT:    cmovll %eax, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %ecx, %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    popq %rcx
@@ -989,8 +986,8 @@ define i64 @stest_f64i64_mm(double %x) nounwind {
 ; CHECK-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -1006,8 +1003,8 @@ define i64 @utest_f64i64_mm(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunsdfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -1023,8 +1020,8 @@ define i64 @ustest_f64i64_mm(double %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixdfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovleq %rdx, %rsi
@@ -1047,8 +1044,8 @@ define i64 @stest_f32i64_mm(float %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rax, %rcx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpq %rcx, %rax
 ; CHECK-NEXT:    retq
 entry:
@@ -1064,8 +1061,8 @@ define i64 @utest_f32i64_mm(float %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunssfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -1081,8 +1078,8 @@ define i64 @ustest_f32i64_mm(float %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixsfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovleq %rdx, %rsi
@@ -1110,8 +1107,8 @@ define i64 @stest_f16i64_mm(half %x) nounwind {
 ; CHECK-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rcx, %rdx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    ucomiss %xmm0, %xmm0
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnpq %rdx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -1128,8 +1125,8 @@ define i64 @utest_f16i64_mm(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixunshfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
@@ -1145,8 +1142,8 @@ define i64 @ustest_f16i64_mm(half %x) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __fixhfti@PLT
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testq %rdx, %rdx
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    movl $1, %esi
 ; CHECK-NEXT:    cmovleq %rdx, %rsi
@@ -1169,12 +1166,12 @@ define i32 @ustest_f16i32_nsat(half %x) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq __extendhfsf2@PLT
-; CHECK-NEXT:    cvttss2si %xmm0, %ecx
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    sarl $31, %eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    andl %ecx, %eax
-; CHECK-NEXT:    cmovlel %edx, %eax
+; CHECK-NEXT:    cvttss2si %xmm0, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    sarl $31, %ecx
+; CHECK-NEXT:    andl %eax, %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
   %conv = fptosi half %x to i32

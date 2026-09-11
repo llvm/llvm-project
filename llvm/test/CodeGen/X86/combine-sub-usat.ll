@@ -116,8 +116,8 @@ define <8 x i16> @combine_zero_v8i16(<8 x i16> %a0) {
 define i32 @combine_dec_i32(i32 %a0) {
 ; CHECK-LABEL: combine_dec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subl $1, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovael %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = call i32 @llvm.usub.sat.i32(i32 %a0, i32 1)
@@ -205,8 +205,8 @@ define i32 @combine_no_overflow_i32(i32 %a0, i32 %a1) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    shrl $16, %edi
 ; CHECK-NEXT:    shrl $16, %esi
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    subl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovael %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = lshr i32 %a0, 16
@@ -239,10 +239,10 @@ define <8 x i16> @combine_no_overflow_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 define i16 @combine_trunc_i32_i16(i16 %a0, i32 %a1) {
 ; CHECK-LABEL: combine_trunc_i32_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl %esi, %eax
-; CHECK-NEXT:    cmovbl %ecx, %eax
+; CHECK-NEXT:    movzwl %di, %ecx
+; CHECK-NEXT:    subl %esi, %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovael %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
   %1 = zext i16 %a0 to i32

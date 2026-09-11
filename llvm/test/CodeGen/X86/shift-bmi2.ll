@@ -102,9 +102,9 @@ define i64 @shl64(i64 %x, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; BMI2-NEXT:    shldl %cl, %eax, %edx
 ; BMI2-NEXT:    shlxl %ecx, %eax, %esi
-; BMI2-NEXT:    xorl %eax, %eax
 ; BMI2-NEXT:    testb $32, %cl
 ; BMI2-NEXT:    cmovnel %esi, %edx
+; BMI2-NEXT:    movl $0, %eax
 ; BMI2-NEXT:    cmovel %esi, %eax
 ; BMI2-NEXT:    popl %esi
 ; BMI2-NEXT:    .cfi_def_cfa_offset 4
@@ -159,9 +159,9 @@ define i64 @shl64p(ptr %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-NEXT:    movl 4(%eax), %edx
 ; BMI2-NEXT:    shldl %cl, %esi, %edx
 ; BMI2-NEXT:    shlxl %ecx, %esi, %esi
-; BMI2-NEXT:    xorl %eax, %eax
 ; BMI2-NEXT:    testb $32, %cl
 ; BMI2-NEXT:    cmovnel %esi, %edx
+; BMI2-NEXT:    movl $0, %eax
 ; BMI2-NEXT:    cmovel %esi, %eax
 ; BMI2-NEXT:    popl %esi
 ; BMI2-NEXT:    .cfi_def_cfa_offset 4
@@ -260,9 +260,9 @@ define i64 @lshr64(i64 %x, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; BMI2-NEXT:    shrdl %cl, %edx, %eax
 ; BMI2-NEXT:    shrxl %ecx, %edx, %esi
-; BMI2-NEXT:    xorl %edx, %edx
 ; BMI2-NEXT:    testb $32, %cl
 ; BMI2-NEXT:    cmovnel %esi, %eax
+; BMI2-NEXT:    movl $0, %edx
 ; BMI2-NEXT:    cmovel %esi, %edx
 ; BMI2-NEXT:    popl %esi
 ; BMI2-NEXT:    .cfi_def_cfa_offset 4
@@ -293,9 +293,9 @@ define i64 @lshr64p(ptr %p, i64 %shamt) nounwind uwtable readnone {
 ; BMI2-NEXT:    movl 4(%edx), %edx
 ; BMI2-NEXT:    shrdl %cl, %edx, %eax
 ; BMI2-NEXT:    shrxl %ecx, %edx, %esi
-; BMI2-NEXT:    xorl %edx, %edx
 ; BMI2-NEXT:    testb $32, %cl
 ; BMI2-NEXT:    cmovnel %esi, %eax
+; BMI2-NEXT:    movl $0, %edx
 ; BMI2-NEXT:    cmovel %esi, %edx
 ; BMI2-NEXT:    popl %esi
 ; BMI2-NEXT:    .cfi_def_cfa_offset 4
@@ -453,9 +453,9 @@ define i64 @shl64and(i64 %t, i64 %val) nounwind {
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; BMI2-NEXT:    shldl %cl, %eax, %edx
 ; BMI2-NEXT:    shlxl %ecx, %eax, %esi
-; BMI2-NEXT:    xorl %eax, %eax
 ; BMI2-NEXT:    testb $32, %cl
 ; BMI2-NEXT:    cmovnel %esi, %edx
+; BMI2-NEXT:    movl $0, %eax
 ; BMI2-NEXT:    cmovel %esi, %eax
 ; BMI2-NEXT:    popl %esi
 ; BMI2-NEXT:    retl
@@ -504,9 +504,9 @@ define i64 @lshr64and(i64 %t, i64 %val) nounwind {
 ; BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; BMI2-NEXT:    shrdl %cl, %edx, %eax
 ; BMI2-NEXT:    shrxl %ecx, %edx, %esi
-; BMI2-NEXT:    xorl %edx, %edx
 ; BMI2-NEXT:    testb $32, %cl
 ; BMI2-NEXT:    cmovnel %esi, %eax
+; BMI2-NEXT:    movl $0, %edx
 ; BMI2-NEXT:    cmovel %esi, %edx
 ; BMI2-NEXT:    popl %esi
 ; BMI2-NEXT:    retl

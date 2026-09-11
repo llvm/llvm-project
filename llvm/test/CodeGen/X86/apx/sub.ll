@@ -586,10 +586,10 @@ declare i64 @llvm.usub.sat.i64(i64, i64)
 define i8 @subflag8rr(i8 noundef %a, i8 noundef %b) {
 ; CHECK-LABEL: subflag8rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subb %sil, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x28,0xf7]
-; CHECK-NEXT:    movzbl %cl, %ecx # encoding: [0x0f,0xb6,0xc9]
-; CHECK-NEXT:    cmovael %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    subb %sil, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x28,0xf7]
+; CHECK-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -600,9 +600,9 @@ entry:
 define i16 @subflag16rr(i16 noundef %a, i16 noundef %b) {
 ; CHECK-LABEL: subflag16rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subw %si, %di # EVEX TO LEGACY Compression encoding: [0x66,0x29,0xf7]
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    subw %si, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x29,0xf7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -613,9 +613,9 @@ entry:
 define i32 @subflag32rr(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: subflag32rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subl %esi, %edi # EVEX TO LEGACY Compression encoding: [0x29,0xf7]
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    subl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x29,0xf7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
@@ -625,9 +625,9 @@ entry:
 define i64 @subflag64rr(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: subflag64rr:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subq %rsi, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x29,0xf7]
-; CHECK-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
+; CHECK-NEXT:    subq %rsi, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x29,0xf7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 %b)
@@ -637,28 +637,28 @@ entry:
 define i8 @subflag8rm(i8 noundef %a, ptr %b) {
 ; NDD-LABEL: subflag8rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    subb (%rsi), %dil # encoding: [0x40,0x2a,0x3e]
-; NDD-NEXT:    movzbl %dil, %ecx # encoding: [0x40,0x0f,0xb6,0xcf]
-; NDD-NEXT:    cmovael %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc1]
+; NDD-NEXT:    movzbl %dil, %eax # encoding: [0x40,0x0f,0xb6,0xc7]
+; NDD-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; NDD-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; NDD-NEXT:    # kill: def $al killed $al killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: subflag8rm:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; MEM-NEXT:    subb (%rsi), %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x2a,0x3e]
-; MEM-NEXT:    movzbl %cl, %ecx # encoding: [0x0f,0xb6,0xc9]
-; MEM-NEXT:    cmovael %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc1]
+; MEM-NEXT:    subb (%rsi), %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x2a,0x3e]
+; MEM-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; MEM-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; MEM-NEXT:    # kill: def $al killed $al killed $eax
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: subflag8rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    subb (%rsi), %dil # encoding: [0x40,0x2a,0x3e]
-; NF-NEXT:    movzbl %dil, %ecx # encoding: [0x40,0x0f,0xb6,0xcf]
-; NF-NEXT:    cmovael %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc1]
+; NF-NEXT:    movzbl %dil, %eax # encoding: [0x40,0x0f,0xb6,0xc7]
+; NF-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; NF-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; NF-NEXT:    # kill: def $al killed $al killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -670,24 +670,24 @@ entry:
 define i16 @subflag16rm(i16 noundef %a, ptr %b) {
 ; NDD-LABEL: subflag16rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    subw (%rsi), %di # encoding: [0x66,0x2b,0x3e]
+; NDD-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NDD-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NDD-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: subflag16rm:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; MEM-NEXT:    subw (%rsi), %di # EVEX TO LEGACY Compression encoding: [0x66,0x2b,0x3e]
-; MEM-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; MEM-NEXT:    subw (%rsi), %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x2b,0x3e]
+; MEM-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; MEM-NEXT:    # kill: def $ax killed $ax killed $eax
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: subflag16rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    subw (%rsi), %di # encoding: [0x66,0x2b,0x3e]
+; NF-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NF-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NF-NEXT:    # kill: def $ax killed $ax killed $eax
 ; NF-NEXT:    retq # encoding: [0xc3]
@@ -700,22 +700,22 @@ entry:
 define i32 @subflag32rm(i32 noundef %a, ptr %b) {
 ; NDD-LABEL: subflag32rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    subl (%rsi), %edi # encoding: [0x2b,0x3e]
+; NDD-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NDD-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: subflag32rm:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; MEM-NEXT:    subl (%rsi), %edi # EVEX TO LEGACY Compression encoding: [0x2b,0x3e]
-; MEM-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; MEM-NEXT:    subl (%rsi), %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x2b,0x3e]
+; MEM-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: subflag32rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    subl (%rsi), %edi # encoding: [0x2b,0x3e]
+; NF-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NF-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -727,22 +727,22 @@ entry:
 define i64 @subflag64rm(i64 noundef %a, ptr %b) {
 ; NDD-LABEL: subflag64rm:
 ; NDD:       # %bb.0: # %entry
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    subq (%rsi), %rdi # encoding: [0x48,0x2b,0x3e]
+; NDD-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NDD-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; MEM-LABEL: subflag64rm:
 ; MEM:       # %bb.0: # %entry
-; MEM-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; MEM-NEXT:    subq (%rsi), %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x2b,0x3e]
-; MEM-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
+; MEM-NEXT:    subq (%rsi), %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x2b,0x3e]
+; MEM-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; MEM-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; MEM-NEXT:    retq # encoding: [0xc3]
 ;
 ; NF-LABEL: subflag64rm:
 ; NF:       # %bb.0: # %entry
-; NF-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NF-NEXT:    subq (%rsi), %rdi # encoding: [0x48,0x2b,0x3e]
+; NF-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NF-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
 ; NF-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -754,9 +754,9 @@ entry:
 define i16 @subflag16ri8(i16 noundef %a) {
 ; CHECK-LABEL: subflag16ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subw $123, %di # EVEX TO LEGACY Compression encoding: [0x66,0x83,0xef,0x7b]
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    subw $123, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x83,0xef,0x7b]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -767,9 +767,9 @@ entry:
 define i32 @subflag32ri8(i32 noundef %a) {
 ; CHECK-LABEL: subflag32ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xef,0x7b]
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    subl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xef,0x7b]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 123)
@@ -779,9 +779,9 @@ entry:
 define i64 @subflag64ri8(i64 noundef %a) {
 ; CHECK-LABEL: subflag64ri8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subq $123, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x83,0xef,0x7b]
-; CHECK-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
+; CHECK-NEXT:    subq $123, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x83,0xef,0x7b]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 123)
@@ -791,10 +791,10 @@ entry:
 define i8 @subflag8ri(i8 noundef %a) {
 ; CHECK-LABEL: subflag8ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subb $123, %dil, %cl # encoding: [0x62,0xf4,0x74,0x18,0x80,0xef,0x7b]
-; CHECK-NEXT:    movzbl %cl, %ecx # encoding: [0x0f,0xb6,0xc9]
-; CHECK-NEXT:    cmovael %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc1]
+; CHECK-NEXT:    subb $123, %dil, %al # encoding: [0x62,0xf4,0x7c,0x18,0x80,0xef,0x7b]
+; CHECK-NEXT:    movzbl %al, %eax # encoding: [0x0f,0xb6,0xc0]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -805,10 +805,10 @@ entry:
 define i16 @subflag16ri(i16 noundef %a) {
 ; CHECK-LABEL: subflag16ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subw $1234, %di # EVEX TO LEGACY Compression encoding: [0x66,0x81,0xef,0xd2,0x04]
+; CHECK-NEXT:    subw $1234, %di, %ax # encoding: [0x62,0xf4,0x7d,0x18,0x81,0xef,0xd2,0x04]
 ; CHECK-NEXT:    # imm = 0x4D2
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
@@ -819,10 +819,10 @@ entry:
 define i32 @subflag32ri(i32 noundef %a) {
 ; CHECK-LABEL: subflag32ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subl $123456, %edi # EVEX TO LEGACY Compression encoding: [0x81,0xef,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    subl $123456, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x81,0xef,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 123456)
@@ -832,10 +832,10 @@ entry:
 define i64 @subflag64ri(i64 noundef %a) {
 ; CHECK-LABEL: subflag64ri:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subq $123456, %rdi # EVEX TO LEGACY Compression encoding: [0x48,0x81,0xef,0x40,0xe2,0x01,0x00]
+; CHECK-NEXT:    subq $123456, %rdi, %rax # encoding: [0x62,0xf4,0xfc,0x18,0x81,0xef,0x40,0xe2,0x01,0x00]
 ; CHECK-NEXT:    # imm = 0x1E240
-; CHECK-NEXT:    cmovaeq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x43,0xc7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbq %rcx, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i64 @llvm.usub.sat.i64(i64 %a, i64 123456)
@@ -1187,9 +1187,9 @@ entry:
 define i32 @usubsat32_var(i32 noundef %a, i32 noundef %b) {
 ; CHECK-LABEL: usubsat32_var:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subl %esi, %edi # EVEX TO LEGACY Compression encoding: [0x29,0xf7]
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    subl %esi, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x29,0xf7]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 %b)
@@ -1199,9 +1199,9 @@ entry:
 define i32 @usubsat32_const123(i32 noundef %a) {
 ; CHECK-LABEL: usubsat32_const123:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
-; CHECK-NEXT:    subl $123, %edi # EVEX TO LEGACY Compression encoding: [0x83,0xef,0x7b]
-; CHECK-NEXT:    cmovael %edi, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x43,0xc7]
+; CHECK-NEXT:    subl $123, %edi, %eax # encoding: [0x62,0xf4,0x7c,0x18,0x83,0xef,0x7b]
+; CHECK-NEXT:    movl $0, %ecx # encoding: [0xb9,0x00,0x00,0x00,0x00]
+; CHECK-NEXT:    cmovbl %ecx, %eax # EVEX TO LEGACY Compression encoding: [0x0f,0x42,0xc1]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
 entry:
     %sub = call i32 @llvm.usub.sat.i32(i32 %a, i32 123)

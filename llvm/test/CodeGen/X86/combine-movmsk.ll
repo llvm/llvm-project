@@ -532,8 +532,8 @@ define i32 @movmskps_ptest_numelts_mismatch(<16 x i8> %a0) {
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestps %xmm1, %xmm0
+; AVX-NEXT:    movl $0, %eax
 ; AVX-NEXT:    sbbl %eax, %eax
 ; AVX-NEXT:    retq
 ;

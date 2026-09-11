@@ -3328,8 +3328,8 @@ define i32 @stack_fold_ucomisd(double %a0, double %a1) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomisd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    leal -1(%rax,%rax), %eax
 ; CHECK-NEXT:    retq
@@ -3365,8 +3365,8 @@ define i32 @stack_fold_ucomiss(float %a0, float %a1) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomiss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    leal -1(%rax,%rax), %eax
 ; CHECK-NEXT:    retq

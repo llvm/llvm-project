@@ -109,9 +109,9 @@ define dso_local { i64, i64 } @shl128(i64 %x.coerce0, i64 %x.coerce1, i8 signext
 ; CHECK-WIN-NEXT:    movl %r8d, %ecx
 ; CHECK-WIN-NEXT:    shldq %cl, %r9, %rdx
 ; CHECK-WIN-NEXT:    shlq %cl, %r9
-; CHECK-WIN-NEXT:    xorl %eax, %eax
 ; CHECK-WIN-NEXT:    testb $64, %r8b
 ; CHECK-WIN-NEXT:    cmovneq %r9, %rdx
+; CHECK-WIN-NEXT:    movl $0, %eax
 ; CHECK-WIN-NEXT:    cmoveq %r9, %rax
 ; CHECK-WIN-NEXT:    retq
 entry:
@@ -186,9 +186,9 @@ define dso_local { i64, i64 } @lshr128(i64 %x.coerce0, i64 %x.coerce1, i8 signex
 ; CHECK-WIN-NEXT:    movl %r8d, %ecx
 ; CHECK-WIN-NEXT:    shrdq %cl, %rdx, %rax
 ; CHECK-WIN-NEXT:    shrq %cl, %rdx
-; CHECK-WIN-NEXT:    xorl %ecx, %ecx
 ; CHECK-WIN-NEXT:    testb $64, %r8b
 ; CHECK-WIN-NEXT:    cmovneq %rdx, %rax
+; CHECK-WIN-NEXT:    movl $0, %ecx
 ; CHECK-WIN-NEXT:    cmovneq %rcx, %rdx
 ; CHECK-WIN-NEXT:    retq
 entry:

@@ -832,8 +832,8 @@ define i32 @or_neg_ult_no_zero(i32 %x, i32 %y) {
 define i32 @or_neg_no_smin_but_zero(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_neg_no_smin_but_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovgl %edi, %ecx
 ; CHECK-NEXT:    negl %ecx
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -962,8 +962,8 @@ define i32 @or_neg_ult_no_zero_alt(i32 %x, i32 %y) {
 define i32 @or_neg_no_smin_but_zero_sle(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_neg_no_smin_but_zero_sle:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovgl %edi, %ecx
 ; CHECK-NEXT:    negl %ecx
 ; CHECK-NEXT:    xorl %eax, %eax

@@ -44,8 +44,8 @@ define i48 @test_signed_i48_f32(float %f) nounwind {
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vcvttps2qq %xmm1, %xmm1
 ; X86-NEXT:    vmovd %xmm1, %esi
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    cmovbl %ecx, %esi
 ; X86-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86-NEXT:    movl $-32768, %edi # imm = 0x8000
@@ -102,8 +102,8 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    vcvttps2qq %xmm1, %xmm1
 ; X86-NEXT:    vmovd %xmm1, %esi
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    cmovbl %ecx, %esi
 ; X86-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86-NEXT:    movl $-2147483648, %edi # imm = 0x80000000
@@ -169,8 +169,8 @@ define i48 @test_signed_i48_f64(double %f) nounwind {
 ; X86-NEXT:    vminmaxsd $20, {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-NEXT:    vcvttpd2qq %xmm1, %xmm1
 ; X86-NEXT:    vmovd %xmm1, %eax
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    vucomisd %xmm0, %xmm0
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    cmovpl %ecx, %eax
 ; X86-NEXT:    vpextrd $1, %xmm1, %edx
 ; X86-NEXT:    cmovpl %ecx, %edx
@@ -215,8 +215,8 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; X86-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-NEXT:    vcvttpd2qq %xmm0, %xmm1
 ; X86-NEXT:    vmovd %xmm1, %esi
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    cmovbl %ecx, %esi
 ; X86-NEXT:    vpextrd $1, %xmm1, %eax
 ; X86-NEXT:    movl $-2147483648, %edi # imm = 0x80000000

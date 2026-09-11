@@ -444,8 +444,8 @@ define i32 @test12(i32 %a1, i32 %a2, i32 %b1) {
 ; ALL_X64-NEXT:    movl %ebx, %esi
 ; ALL_X64-NEXT:    movl %r14d, %edx
 ; ALL_X64-NEXT:    callq _test10
-; ALL_X64-NEXT:    xorl %ecx, %ecx
 ; ALL_X64-NEXT:    testb $1, %r14b
+; ALL_X64-NEXT:    movl $0, %ecx
 ; ALL_X64-NEXT:    cmovel %ecx, %eax
 ; ALL_X64-NEXT:    popq %rbx
 ; ALL_X64-NEXT:    popq %r14
@@ -477,8 +477,8 @@ define i32 @test12(i32 %a1, i32 %a2, i32 %b1) {
 ; KNL_X32-NEXT:    movl %esi, 4(%esp)
 ; KNL_X32-NEXT:    movl %edi, (%esp)
 ; KNL_X32-NEXT:    calll _test10
-; KNL_X32-NEXT:    xorl %ecx, %ecx
 ; KNL_X32-NEXT:    testb $1, %bl
+; KNL_X32-NEXT:    movl $0, %ecx
 ; KNL_X32-NEXT:    cmovel %ecx, %eax
 ; KNL_X32-NEXT:    addl $16, %esp
 ; KNL_X32-NEXT:    popl %esi

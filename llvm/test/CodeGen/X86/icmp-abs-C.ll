@@ -11,7 +11,6 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X86-LABEL: eq_or_with_dom_abs:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %ebx
-; X86-NEXT:    pushl %edi
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl %edx, %eax
@@ -27,9 +26,9 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    orl %edx, %esi
 ; X86-NEXT:    sete %bl
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    movl $2344, %edi # imm = 0x928
-; X86-NEXT:    cmpl %eax, %edi
+; X86-NEXT:    movl $2344, %esi # imm = 0x928
+; X86-NEXT:    cmpl %eax, %esi
+; X86-NEXT:    movl $0, %esi
 ; X86-NEXT:    sbbl %edx, %esi
 ; X86-NEXT:    jb .LBB0_2
 ; X86-NEXT:  # %bb.1:
@@ -38,7 +37,6 @@ define i64 @eq_or_with_dom_abs(i64 %x) nounwind {
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:  .LBB0_2:
 ; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
 ;

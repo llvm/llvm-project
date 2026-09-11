@@ -883,18 +883,18 @@ define i1 @shifted_mask32_extra_use_and(i64 %a) {
 define { i64, i64 } @pr39968(i64, i64, i32) {
 ; NO-NDD-LABEL: pr39968:
 ; NO-NDD:       # %bb.0:
-; NO-NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NO-NDD-NEXT:    testb $64, %dl # encoding: [0xf6,0xc2,0x40]
 ; NO-NDD-NEXT:    cmovneq %rdi, %rsi # encoding: [0x48,0x0f,0x45,0xf7]
+; NO-NDD-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NO-NDD-NEXT:    cmovneq %rdi, %rax # encoding: [0x48,0x0f,0x45,0xc7]
 ; NO-NDD-NEXT:    movq %rsi, %rdx # encoding: [0x48,0x89,0xf2]
 ; NO-NDD-NEXT:    retq # encoding: [0xc3]
 ;
 ; NDD-LABEL: pr39968:
 ; NDD:       # %bb.0:
-; NDD-NEXT:    xorl %eax, %eax # encoding: [0x31,0xc0]
 ; NDD-NEXT:    testb $64, %dl # encoding: [0xf6,0xc2,0x40]
 ; NDD-NEXT:    cmovneq %rdi, %rsi, %rdx # encoding: [0x62,0xf4,0xec,0x18,0x45,0xf7]
+; NDD-NEXT:    movl $0, %eax # encoding: [0xb8,0x00,0x00,0x00,0x00]
 ; NDD-NEXT:    cmovneq %rdi, %rax # EVEX TO LEGACY Compression encoding: [0x48,0x0f,0x45,0xc7]
 ; NDD-NEXT:    retq # encoding: [0xc3]
   %4 = and i32 %2, 64

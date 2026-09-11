@@ -82,7 +82,7 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LV-NEXT: {{  $}}
   ; CHECK-LV-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY killed $rcx
   ; CHECK-LV-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY killed $rdx
-  ; CHECK-LV-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-LV-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0
   ; CHECK-LV-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY killed [[COPY1]]
   ; CHECK-LV-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY killed [[COPY]]
   ; CHECK-LV-NEXT: {{  $}}
@@ -148,7 +148,7 @@ define void @test2(ptr addrspace(1) %this, i32 %0, ptr addrspace(1) %p0, ptr add
   ; CHECK-LIS-NEXT: {{  $}}
   ; CHECK-LIS-NEXT:   [[COPY:%[0-9]+]]:gr64 = COPY $rcx
   ; CHECK-LIS-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdx
-  ; CHECK-LIS-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+  ; CHECK-LIS-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0
   ; CHECK-LIS-NEXT:   [[COPY2:%[0-9]+]]:gr64 = COPY [[COPY1]]
   ; CHECK-LIS-NEXT:   [[COPY3:%[0-9]+]]:gr64 = COPY [[COPY]]
   ; CHECK-LIS-NEXT: {{  $}}

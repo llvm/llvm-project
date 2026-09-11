@@ -407,8 +407,8 @@ define <8 x i32> @test_signed_v8i32_v8f32(<8 x float> %f) nounwind {
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm3
 ; CHECK-NEXT:    movl $2147483647, %eax # imm = 0x7FFFFFFF
 ; CHECK-NEXT:    cmoval %eax, %edx
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    vucomiss %xmm3, %xmm3
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    cmovpl %ecx, %edx
 ; CHECK-NEXT:    vcvttss2si %xmm2, %esi
 ; CHECK-NEXT:    vucomiss %xmm1, %xmm2
@@ -473,8 +473,8 @@ define <8 x i64> @test_signed_v8i64_v8f32(<8 x float> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm1, %xmm2
 ; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX2-NEXT:    cmovaq %rcx, %rsi
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm2
+; AVX2-NEXT:    movl $0, %eax
 ; AVX2-NEXT:    cmovpq %rax, %rsi
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm0[1,0]
 ; AVX2-NEXT:    vcvttss2si %xmm2, %rdi
@@ -542,8 +542,8 @@ define <8 x i64> @test_signed_v8i64_v8f32(<8 x float> %f) nounwind {
 ; AVX512-NEXT:    vucomiss %xmm1, %xmm3
 ; AVX512-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX512-NEXT:    cmovaq %rax, %rdx
-; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm3
+; AVX512-NEXT:    movl $0, %ecx
 ; AVX512-NEXT:    cmovpq %rcx, %rdx
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm2[1,0]
 ; AVX512-NEXT:    vcvttss2si %xmm3, %rsi
@@ -621,9 +621,9 @@ define <8 x i128> @test_signed_v8i128_v8f32(<8 x float> %f) nounwind {
 ; CHECK-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq __fixsfti@PLT
-; CHECK-NEXT:    xorl %r12d, %r12d
 ; CHECK-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; CHECK-NEXT:    movl $0, %r12d
 ; CHECK-NEXT:    cmovbq %r12, %rax
 ; CHECK-NEXT:    movabsq $-9223372036854775808, %rbp # imm = 0x8000000000000000
 ; CHECK-NEXT:    cmovbq %rbp, %rdx
@@ -817,8 +817,8 @@ define <4 x i1> @test_signed_v4i1_v4f64(<4 x double> %f) nounwind {
 ; AVX2-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
 ; AVX2-NEXT:    vminsd %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    vcvttsd2si %xmm3, %eax
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vucomisd %xmm1, %xmm1
+; AVX2-NEXT:    movl $0, %ecx
 ; AVX2-NEXT:    cmovpl %ecx, %eax
 ; AVX2-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
 ; AVX2-NEXT:    vminsd %xmm4, %xmm1, %xmm1
@@ -945,8 +945,8 @@ define <4 x i32> @test_signed_v4i32_v4f64(<4 x double> %f) nounwind {
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm4 = [2.147483647E+9,0.0E+0]
 ; AVX2-NEXT:    vminsd %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    vcvttsd2si %xmm3, %eax
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vucomisd %xmm1, %xmm1
+; AVX2-NEXT:    movl $0, %ecx
 ; AVX2-NEXT:    cmovpl %ecx, %eax
 ; AVX2-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
 ; AVX2-NEXT:    vminsd %xmm4, %xmm1, %xmm1
@@ -980,8 +980,8 @@ define <4 x i32> @test_signed_v4i32_v4f64(<4 x double> %f) nounwind {
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm4 = [2.147483647E+9,0.0E+0]
 ; AVX512-NEXT:    vminsd %xmm4, %xmm3, %xmm3
 ; AVX512-NEXT:    vcvttsd2si %xmm3, %eax
-; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    vucomisd %xmm1, %xmm1
+; AVX512-NEXT:    movl $0, %ecx
 ; AVX512-NEXT:    vmaxsd %xmm2, %xmm0, %xmm1
 ; AVX512-NEXT:    vminsd %xmm4, %xmm1, %xmm1
 ; AVX512-NEXT:    vcvttsd2si %xmm1, %edx
@@ -1017,31 +1017,31 @@ define <4 x i64> @test_signed_v4i64_v4f64(<4 x double> %f) nounwind {
 ; AVX2-NEXT:    vcvttsd2si %xmm2, %rdx
 ; AVX2-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547748E+18,0.0E+0]
 ; AVX2-NEXT:    vucomisd %xmm1, %xmm2
-; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmovaq %rcx, %rdx
-; AVX2-NEXT:    xorl %eax, %eax
+; AVX2-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmovaq %rax, %rdx
 ; AVX2-NEXT:    vucomisd %xmm2, %xmm2
-; AVX2-NEXT:    cmovpq %rax, %rdx
+; AVX2-NEXT:    movl $0, %ecx
+; AVX2-NEXT:    cmovpq %rcx, %rdx
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm2 = xmm2[1,0]
 ; AVX2-NEXT:    vcvttsd2si %xmm2, %rsi
 ; AVX2-NEXT:    vucomisd %xmm1, %xmm2
-; AVX2-NEXT:    cmovaq %rcx, %rsi
+; AVX2-NEXT:    cmovaq %rax, %rsi
 ; AVX2-NEXT:    vucomisd %xmm2, %xmm2
-; AVX2-NEXT:    cmovpq %rax, %rsi
+; AVX2-NEXT:    cmovpq %rcx, %rsi
 ; AVX2-NEXT:    vcvttsd2si %xmm0, %rdi
 ; AVX2-NEXT:    vucomisd %xmm1, %xmm0
-; AVX2-NEXT:    cmovaq %rcx, %rdi
+; AVX2-NEXT:    cmovaq %rax, %rdi
 ; AVX2-NEXT:    vmovq %rdx, %xmm2
 ; AVX2-NEXT:    vucomisd %xmm0, %xmm0
-; AVX2-NEXT:    cmovpq %rax, %rdi
+; AVX2-NEXT:    cmovpq %rcx, %rdi
 ; AVX2-NEXT:    vmovq %rsi, %xmm3
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX2-NEXT:    vcvttsd2si %xmm0, %rdx
 ; AVX2-NEXT:    vucomisd %xmm1, %xmm0
-; AVX2-NEXT:    cmovaq %rcx, %rdx
+; AVX2-NEXT:    cmovaq %rax, %rdx
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm3[0]
 ; AVX2-NEXT:    vucomisd %xmm0, %xmm0
-; AVX2-NEXT:    cmovpq %rax, %rdx
+; AVX2-NEXT:    cmovpq %rcx, %rdx
 ; AVX2-NEXT:    vmovq %rdi, %xmm0
 ; AVX2-NEXT:    vmovq %rdx, %xmm2
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
@@ -1056,8 +1056,8 @@ define <4 x i64> @test_signed_v4i64_v4f64(<4 x double> %f) nounwind {
 ; AVX512-NEXT:    vucomisd %xmm2, %xmm1
 ; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vucomisd %xmm1, %xmm1
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    cmovpq %rax, %rdx
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX512-NEXT:    vcvttsd2si %xmm1, %rsi
@@ -1104,9 +1104,9 @@ define <4 x i128> @test_signed_v4i128_v4f64(<4 x double> %f) nounwind {
 ; AVX2-NEXT:    vmovapd %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __fixdfti@PLT
-; AVX2-NEXT:    xorl %ecx, %ecx
 ; AVX2-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX2-NEXT:    movl $0, %ecx
 ; AVX2-NEXT:    cmovbq %rcx, %rax
 ; AVX2-NEXT:    movq %rdx, %r15
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
@@ -1216,9 +1216,9 @@ define <4 x i128> @test_signed_v4i128_v4f64(<4 x double> %f) nounwind {
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __fixdfti@PLT
 ; AVX512-NEXT:    movq %rdx, %r15
-; AVX512-NEXT:    xorl %r14d, %r14d
 ; AVX512-NEXT:    vmovapd (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512-NEXT:    movl $0, %r14d
 ; AVX512-NEXT:    cmovbq %r14, %rax
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
 ; AVX512-NEXT:    cmovbq %rcx, %r15
@@ -1326,8 +1326,8 @@ define <16 x i1> @test_signed_v16i1_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX2-NEXT:    vminss %xmm4, %xmm2, %xmm4
 ; AVX2-NEXT:    vcvttss2si %xmm4, %ecx
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm3
+; AVX2-NEXT:    movl $0, %eax
 ; AVX2-NEXT:    cmovpl %eax, %ecx
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm3
 ; AVX2-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
@@ -1461,8 +1461,8 @@ define <16 x i1> @test_signed_v16i1_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vminss %xmm4, %xmm2, %xmm4
 ; AVX512-NEXT:    vcvttss2si %xmm4, %ecx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm3
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    cmovpl %eax, %ecx
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm3
 ; AVX512-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
@@ -1602,8 +1602,8 @@ define <16 x i8> @test_signed_v16i8_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm2 = [1.27E+2,0.0E+0,0.0E+0,0.0E+0]
 ; AVX2-NEXT:    vminss %xmm2, %xmm4, %xmm4
 ; AVX2-NEXT:    vcvttss2si %xmm4, %ecx
-; AVX2-NEXT:    xorl %eax, %eax
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm3
+; AVX2-NEXT:    movl $0, %eax
 ; AVX2-NEXT:    cmovpl %eax, %ecx
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm3
 ; AVX2-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
@@ -1737,8 +1737,8 @@ define <16 x i8> @test_signed_v16i8_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
 ; AVX512-NEXT:    vminss %xmm2, %xmm4, %xmm4
 ; AVX512-NEXT:    vcvttss2si %xmm4, %ecx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm3
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm3
 ; AVX512-NEXT:    vmaxss %xmm1, %xmm3, %xmm4
 ; AVX512-NEXT:    vminss %xmm2, %xmm4, %xmm4
@@ -1877,8 +1877,8 @@ define <16 x i16> @test_signed_v16i16_v16f16(<16 x half> %f) nounwind {
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm2 = [3.2767E+4,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-NEXT:    vminss %xmm2, %xmm5, %xmm5
 ; CHECK-NEXT:    vcvttss2si %xmm5, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    vucomiss %xmm4, %xmm4
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovpl %eax, %ecx
 ; CHECK-NEXT:    vcvtph2ps %xmm3, %xmm4
 ; CHECK-NEXT:    vmaxss %xmm1, %xmm4, %xmm5
@@ -2019,8 +2019,8 @@ define <16 x i32> @test_signed_v16i32_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX2-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; AVX2-NEXT:    cmoval %ecx, %esi
-; AVX2-NEXT:    xorl %edx, %edx
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm3
+; AVX2-NEXT:    movl $0, %edx
 ; AVX2-NEXT:    cmovpl %edx, %esi
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm3 = xmm0[1,0]
 ; AVX2-NEXT:    vcvtph2ps %xmm3, %xmm3
@@ -2190,8 +2190,8 @@ define <16 x i32> @test_signed_v16i32_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX512-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; AVX512-NEXT:    cmoval %ecx, %esi
-; AVX512-NEXT:    xorl %edx, %edx
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm3
+; AVX512-NEXT:    movl $0, %edx
 ; AVX512-NEXT:    vshufpd {{.*#+}} xmm3 = xmm4[1,0]
 ; AVX512-NEXT:    vcvtph2ps %xmm3, %xmm3
 ; AVX512-NEXT:    vcvttss2si %xmm3, %edi
@@ -2363,30 +2363,30 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vmovss {{.*#+}} xmm3 = [9.22337149E+18,0.0E+0,0.0E+0,0.0E+0]
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    movabsq $9223372036854775807, %rdx # imm = 0x7FFFFFFFFFFFFFFF
-; AVX2-NEXT:    cmovaq %rdx, %rsi
-; AVX2-NEXT:    xorl %ecx, %ecx
+; AVX2-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm0
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    movl $0, %edx
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm1[1,1,3,3]
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rdi
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm0
 ; AVX2-NEXT:    cmovbq %rax, %rdi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    cmovaq %rdx, %rdi
+; AVX2-NEXT:    cmovaq %rcx, %rdi
 ; AVX2-NEXT:    vmovq %rsi, %xmm4
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm0
-; AVX2-NEXT:    cmovpq %rcx, %rdi
+; AVX2-NEXT:    cmovpq %rdx, %rdi
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm0
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rsi
 ; AVX2-NEXT:    vmovq %rdi, %xmm5
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm0
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    cmovaq %rdx, %rsi
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm0
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vpsrld $16, %xmm1, %xmm0
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX2-NEXT:    vcvttss2si %xmm0, %rdi
@@ -2394,10 +2394,10 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm0
 ; AVX2-NEXT:    cmovbq %rax, %rdi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm0
-; AVX2-NEXT:    cmovaq %rdx, %rdi
+; AVX2-NEXT:    cmovaq %rcx, %rdi
 ; AVX2-NEXT:    vmovq %rsi, %xmm5
 ; AVX2-NEXT:    vucomiss %xmm0, %xmm0
-; AVX2-NEXT:    cmovpq %rcx, %rdi
+; AVX2-NEXT:    cmovpq %rdx, %rdi
 ; AVX2-NEXT:    vmovq %rdi, %xmm0
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm5[0],xmm0[0]
 ; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
@@ -2407,9 +2407,9 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm4
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm4
-; AVX2-NEXT:    cmovaq %rdx, %rsi
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vucomiss %xmm4, %xmm4
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vmovq %rsi, %xmm4
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm5 = xmm1[3,3,3,3]
 ; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
@@ -2417,9 +2417,9 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm5
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm5
-; AVX2-NEXT:    cmovaq %rdx, %rsi
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vucomiss %xmm5, %xmm5
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vmovq %rsi, %xmm5
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm1[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
@@ -2428,18 +2428,18 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm6
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm6
-; AVX2-NEXT:    cmovaq %rdx, %rsi
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vucomiss %xmm6, %xmm6
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm1[1,0]
 ; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
 ; AVX2-NEXT:    vcvttss2si %xmm4, %rdi
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm4
 ; AVX2-NEXT:    cmovbq %rax, %rdi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm4
-; AVX2-NEXT:    cmovaq %rdx, %rdi
+; AVX2-NEXT:    cmovaq %rcx, %rdi
 ; AVX2-NEXT:    vucomiss %xmm4, %xmm4
-; AVX2-NEXT:    cmovpq %rcx, %rdi
+; AVX2-NEXT:    cmovpq %rdx, %rdi
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm4
 ; AVX2-NEXT:    vpsrlq $48, %xmm4, %xmm1
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
@@ -2448,9 +2448,9 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm1
 ; AVX2-NEXT:    cmovbq %rax, %r9
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm1
-; AVX2-NEXT:    cmovaq %rdx, %r9
+; AVX2-NEXT:    cmovaq %rcx, %r9
 ; AVX2-NEXT:    vucomiss %xmm1, %xmm1
-; AVX2-NEXT:    cmovpq %rcx, %r9
+; AVX2-NEXT:    cmovpq %rdx, %r9
 ; AVX2-NEXT:    vmovshdup {{.*#+}} xmm1 = xmm4[1,1,3,3]
 ; AVX2-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttss2si %xmm1, %r8
@@ -2458,19 +2458,19 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm1
 ; AVX2-NEXT:    cmovbq %rax, %r8
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm1
-; AVX2-NEXT:    cmovaq %rdx, %r8
+; AVX2-NEXT:    cmovaq %rcx, %r8
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm6 = xmm7[0],xmm6[0]
 ; AVX2-NEXT:    vucomiss %xmm1, %xmm1
-; AVX2-NEXT:    cmovpq %rcx, %r8
+; AVX2-NEXT:    cmovpq %rdx, %r8
 ; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm7
 ; AVX2-NEXT:    vcvttss2si %xmm7, %rsi
 ; AVX2-NEXT:    vinserti128 $1, %xmm5, %ymm6, %ymm1
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm7
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm7
-; AVX2-NEXT:    cmovaq %rdx, %rsi
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vucomiss %xmm7, %xmm7
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vpsrld $16, %xmm4, %xmm5
 ; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX2-NEXT:    vcvttss2si %xmm5, %rdi
@@ -2478,9 +2478,9 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm5
 ; AVX2-NEXT:    cmovbq %rax, %rdi
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm5
-; AVX2-NEXT:    cmovaq %rdx, %rdi
+; AVX2-NEXT:    cmovaq %rcx, %rdi
 ; AVX2-NEXT:    vucomiss %xmm5, %xmm5
-; AVX2-NEXT:    cmovpq %rcx, %rdi
+; AVX2-NEXT:    cmovpq %rdx, %rdi
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm4[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm5
 ; AVX2-NEXT:    vcvttss2si %xmm5, %r9
@@ -2488,9 +2488,9 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm5
 ; AVX2-NEXT:    cmovbq %rax, %r9
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm5
-; AVX2-NEXT:    cmovaq %rdx, %r9
+; AVX2-NEXT:    cmovaq %rcx, %r9
 ; AVX2-NEXT:    vucomiss %xmm5, %xmm5
-; AVX2-NEXT:    cmovpq %rcx, %r9
+; AVX2-NEXT:    cmovpq %rdx, %r9
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm5 = xmm4[3,3,3,3]
 ; AVX2-NEXT:    vcvtph2ps %xmm5, %xmm8
 ; AVX2-NEXT:    vcvttss2si %xmm8, %r8
@@ -2498,9 +2498,9 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm8
 ; AVX2-NEXT:    cmovbq %rax, %r8
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm8
-; AVX2-NEXT:    cmovaq %rdx, %r8
+; AVX2-NEXT:    cmovaq %rcx, %r8
 ; AVX2-NEXT:    vucomiss %xmm8, %xmm8
-; AVX2-NEXT:    cmovpq %rcx, %r8
+; AVX2-NEXT:    cmovpq %rdx, %r8
 ; AVX2-NEXT:    vpsrldq {{.*#+}} xmm6 = xmm4[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vcvtph2ps %xmm6, %xmm6
 ; AVX2-NEXT:    vcvttss2si %xmm6, %r10
@@ -2508,10 +2508,10 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vucomiss %xmm2, %xmm6
 ; AVX2-NEXT:    cmovbq %rax, %r10
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm6
-; AVX2-NEXT:    cmovaq %rdx, %r10
+; AVX2-NEXT:    cmovaq %rcx, %r10
 ; AVX2-NEXT:    vucomiss %xmm6, %xmm6
 ; AVX2-NEXT:    vmovq %rdi, %xmm6
-; AVX2-NEXT:    cmovpq %rcx, %r10
+; AVX2-NEXT:    cmovpq %rdx, %r10
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm6 = xmm7[0],xmm6[0]
 ; AVX2-NEXT:    vshufpd {{.*#+}} xmm4 = xmm4[1,0]
 ; AVX2-NEXT:    vcvtph2ps %xmm4, %xmm4
@@ -2522,10 +2522,10 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    cmovbq %rax, %rsi
 ; AVX2-NEXT:    vinserti128 $1, %xmm5, %ymm6, %ymm2
 ; AVX2-NEXT:    vucomiss %xmm3, %xmm4
-; AVX2-NEXT:    cmovaq %rdx, %rsi
+; AVX2-NEXT:    cmovaq %rcx, %rsi
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm8[0],xmm7[0]
 ; AVX2-NEXT:    vucomiss %xmm4, %xmm4
-; AVX2-NEXT:    cmovpq %rcx, %rsi
+; AVX2-NEXT:    cmovpq %rdx, %rsi
 ; AVX2-NEXT:    vmovq %r10, %xmm4
 ; AVX2-NEXT:    vmovq %rsi, %xmm5
 ; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm4 = xmm5[0],xmm4[0]
@@ -2545,8 +2545,8 @@ define <16 x i64> @test_signed_v16i64_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
 ; AVX512-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; AVX512-NEXT:    cmovaq %rcx, %rsi
-; AVX512-NEXT:    xorl %edx, %edx
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm3
+; AVX512-NEXT:    movl $0, %edx
 ; AVX512-NEXT:    cmovpq %rdx, %rsi
 ; AVX512-NEXT:    vmovq %rsi, %xmm3
 ; AVX512-NEXT:    vshufps {{.*#+}} xmm4 = xmm0[3,3,3,3]
@@ -2734,9 +2734,9 @@ define <16 x i128> @test_signed_v16i128_v16f16(<16 x half> %f) nounwind {
 ; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __fixsfti@PLT
-; AVX2-NEXT:    xorl %r13d, %r13d
 ; AVX2-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX2-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX2-NEXT:    movl $0, %r13d
 ; AVX2-NEXT:    cmovbq %r13, %rax
 ; AVX2-NEXT:    movabsq $-9223372036854775808, %rbp # imm = 0x8000000000000000
 ; AVX2-NEXT:    cmovbq %rbp, %rdx
@@ -3112,9 +3112,9 @@ define <16 x i128> @test_signed_v16i128_v16f16(<16 x half> %f) nounwind {
 ; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __fixsfti@PLT
-; AVX512-NEXT:    xorl %r13d, %r13d
 ; AVX512-NEXT:    vmovaps (%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; AVX512-NEXT:    movl $0, %r13d
 ; AVX512-NEXT:    cmovbq %r13, %rax
 ; AVX512-NEXT:    movabsq $-9223372036854775808, %rbp # imm = 0x8000000000000000
 ; AVX512-NEXT:    cmovbq %rbp, %rdx

@@ -119,37 +119,36 @@ define %S @negate(ptr nocapture readonly %this) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl 36(%esp), %eax
-; X86-NEXT:    movl $0, (%esp) # 4-byte Folded Spill
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    subl (%eax), %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sbbl 4(%eax), %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl $0, %edi
-; X86-NEXT:    sbbl 8(%eax), %edi
-; X86-NEXT:    movl $0, %ebx
-; X86-NEXT:    sbbl 12(%eax), %ebx
-; X86-NEXT:    movl $0, %ebp
-; X86-NEXT:    sbbl 16(%eax), %ebp
-; X86-NEXT:    movl $0, %edx
-; X86-NEXT:    sbbl 20(%eax), %edx
 ; X86-NEXT:    movl $0, %ecx
-; X86-NEXT:    sbbl 24(%eax), %ecx
-; X86-NEXT:    movl (%esp), %esi # 4-byte Reload
-; X86-NEXT:    sbbl 28(%eax), %esi
-; X86-NEXT:    movl %esi, (%esp) # 4-byte Spill
+; X86-NEXT:    sbbl 8(%eax), %ecx
+; X86-NEXT:    movl %ecx, (%esp) # 4-byte Spill
+; X86-NEXT:    movl $0, %edi
+; X86-NEXT:    sbbl 12(%eax), %edi
+; X86-NEXT:    movl $0, %ebx
+; X86-NEXT:    sbbl 16(%eax), %ebx
+; X86-NEXT:    movl $0, %ebp
+; X86-NEXT:    sbbl 20(%eax), %ebp
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    sbbl 24(%eax), %edx
+; X86-NEXT:    movl $0, %ecx
+; X86-NEXT:    sbbl 28(%eax), %ecx
 ; X86-NEXT:    movl 32(%esp), %eax
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    movl %esi, (%eax)
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    movl %esi, 4(%eax)
-; X86-NEXT:    movl %edi, 8(%eax)
-; X86-NEXT:    movl %ebx, 12(%eax)
-; X86-NEXT:    movl %ebp, 16(%eax)
-; X86-NEXT:    movl %edx, 20(%eax)
-; X86-NEXT:    movl %ecx, 24(%eax)
-; X86-NEXT:    movl (%esp), %ecx # 4-byte Reload
+; X86-NEXT:    movl (%esp), %esi # 4-byte Reload
+; X86-NEXT:    movl %esi, 8(%eax)
+; X86-NEXT:    movl %edi, 12(%eax)
+; X86-NEXT:    movl %ebx, 16(%eax)
+; X86-NEXT:    movl %ebp, 20(%eax)
+; X86-NEXT:    movl %edx, 24(%eax)
 ; X86-NEXT:    movl %ecx, 28(%eax)
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    popl %esi
@@ -377,8 +376,8 @@ define i64 @sub_from_carry(i64 %x, i64 %y, ptr %valout, i64 %z) nounwind {
 ; X86-NEXT:    movl %ecx, (%eax)
 ; X86-NEXT:    movl %edx, 4(%eax)
 ; X86-NEXT:    movzbl %bl, %eax
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    subl 28(%esp), %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl 32(%esp), %edx
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl

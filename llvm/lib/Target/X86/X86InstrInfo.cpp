@@ -761,26 +761,6 @@ static bool regIsPICBase(Register BaseReg, const MachineRegisterInfo &MRI) {
   return isPICBase;
 }
 
-/// Return true if an instruction can be rematerialized as a different
-/// instruction without clobbering eflags register, or the definition of the
-/// physical register really doesn't matter.
-bool X86InstrInfo::canRematerializeIgnorePhysRegDef(
-    const MachineInstr &MI, const MachineOperand &MO) const {
-  assert(MO.isReg() && MO.getReg() && MO.getReg().isPhysical());
-
-  switch (MI.getOpcode()) {
-  case X86::MOV32r0:
-  case X86::MOV32r1:
-  case X86::MOV32r_1:
-    if (MO.getReg() == X86::EFLAGS)
-      return true;
-    else
-      return false;
-  }
-
-  return false;
-}
-
 bool X86InstrInfo::isReMaterializableImpl(
     const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
@@ -6182,6 +6162,18 @@ static bool Expand2AddrKreg(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
 static bool expandMOV32r1(MachineInstrBuilder &MIB, const TargetInstrInfo &TII,
                           bool MinusOne) {
   MachineBasicBlock &MBB = *MIB->getParent();
+  if (MBB.computeRegisterLiveness(&TII.getRegisterInfo(),
+                                  X86::EFLAGS,
+                                  MIB.getInstr()) !=
+      MachineBasicBlock::LQR_Dead) {
+    MIB->setDesc(TII.get(X86::MOV32ri));
+    if (MinusOne)
+      MIB.addImm(-1);
+    else
+      MIB.addImm(1);
+    return true;
+  }
+
   const DebugLoc &DL = MIB->getDebugLoc();
   Register Reg = MIB.getReg(0);
 
@@ -6193,6 +6185,7 @@ static bool expandMOV32r1(MachineInstrBuilder &MIB, const TargetInstrInfo &TII,
   // Turn the pseudo into an INC or DEC.
   MIB->setDesc(TII.get(MinusOne ? X86::DEC32r : X86::INC32r));
   MIB.addReg(Reg);
+  MIB.addDef(X86::EFLAGS, RegState::Implicit | RegState::Dead);
 
   return true;
 }
@@ -6373,11 +6366,20 @@ static bool expandMOVSHP(MachineInstrBuilder &MIB, MachineInstr &MI,
 }
 
 bool X86InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  MachineBasicBlock &MBB = *MI.getParent();
   bool HasAVX = Subtarget.hasAVX();
   MachineInstrBuilder MIB(*MI.getParent()->getParent(), MI);
   switch (MI.getOpcode()) {
-  case X86::MOV32r0:
-    return Expand2AddrUndef(MIB, get(X86::XOR32rr));
+  case X86::MOV32r0: {
+    if (MBB.computeRegisterLiveness(&TRI, X86::EFLAGS, MI) !=
+        MachineBasicBlock::LQR_Dead) {
+      MIB->setDesc(get(X86::MOV32ri));
+      MIB.addImm(0);
+      return true;
+    } else
+      MIB.addDef(X86::EFLAGS, RegState::Implicit | RegState::Dead);
+      return Expand2AddrUndef(MIB, get(X86::XOR32rr));
+  }
   case X86::MOV32r1:
     return expandMOV32r1(MIB, *this, /*MinusOne=*/false);
   case X86::MOV32r_1:

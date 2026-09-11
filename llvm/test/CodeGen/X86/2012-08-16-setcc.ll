@@ -30,8 +30,8 @@ define zeroext i1 @and_2(i8 zeroext %a, i8 zeroext %b) {
 define i32 @xor_1(i8 zeroext %a, i8 zeroext %b, i32 %x) {
 ; CHECK-LABEL: xor_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovnel %edx, %eax
 ; CHECK-NEXT:    retq
   %1 = xor i8 %b, %a

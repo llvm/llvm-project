@@ -73,9 +73,9 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X86-NEXT:    movl %edx, %eax
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    shldl %cl, %edx, %edi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    testb $32, %cl
 ; X86-NEXT:    cmovnel %eax, %edi
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    cmovnel %edx, %eax
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %edi, %ebx
@@ -158,7 +158,7 @@ define <4 x i32> @vec_v4i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; X64-NEXT:    pshuflw {{.*#+}} xmm4 = xmm1[2,3,3,3,4,5,6,7]
 ; X64-NEXT:    pshuflw {{.*#+}} xmm5 = xmm1[0,1,1,1,4,5,6,7]
 ; X64-NEXT:    pslld $23, %xmm1
-; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1065353216,1065353216,1065353216,1065353216]
 ; X64-NEXT:    cvttps2dq %xmm1, %xmm6
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    pmuludq %xmm6, %xmm1
@@ -421,8 +421,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    shll %cl, %edx
 ; X86-NEXT:    movswl %dx, %eax
 ; X86-NEXT:    sarl %cl, %eax
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testw %si, %si
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $32767, %ecx # imm = 0x7FFF
 ; X86-NEXT:    cmpw %ax, %si
@@ -434,8 +434,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    movswl %ax, %esi
 ; X86-NEXT:    sarl %cl, %esi
-; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    testw %dx, %dx
+; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    sets %bl
 ; X86-NEXT:    addl $32767, %ebx # imm = 0x7FFF
 ; X86-NEXT:    cmpw %si, %dx
@@ -446,8 +446,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    movswl %ax, %edi
 ; X86-NEXT:    sarl %cl, %edi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    testw %si, %si
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sets %dl
 ; X86-NEXT:    addl $32767, %edx # imm = 0x7FFF
 ; X86-NEXT:    cmpw %di, %si
@@ -458,8 +458,8 @@ define <8 x i16> @vec_v8i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; X86-NEXT:    shll %cl, %eax
 ; X86-NEXT:    movswl %ax, %edi
 ; X86-NEXT:    sarl %cl, %edi
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testw %si, %si
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $32767, %ecx # imm = 0x7FFF
 ; X86-NEXT:    cmpw %di, %si
@@ -689,8 +689,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -702,8 +702,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -715,8 +715,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -728,8 +728,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -741,8 +741,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -754,8 +754,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -767,8 +767,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -780,8 +780,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -793,8 +793,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %dl, %al
@@ -806,8 +806,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %dl
 ; X86-NEXT:    movzbl %dl, %esi
 ; X86-NEXT:    sarb %cl, %dl
-; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ebx
 ; X86-NEXT:    sets %bl
 ; X86-NEXT:    addl $127, %ebx
 ; X86-NEXT:    cmpb %dl, %al
@@ -818,8 +818,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %ah
 ; X86-NEXT:    movzbl %ah, %esi
 ; X86-NEXT:    sarb %cl, %ah
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sets %dl
 ; X86-NEXT:    addl $127, %edx
 ; X86-NEXT:    cmpb %ah, %al
@@ -830,8 +830,8 @@ define <16 x i8> @vec_v16i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; X86-NEXT:    shlb %cl, %ah
 ; X86-NEXT:    movzbl %ah, %esi
 ; X86-NEXT:    sarb %cl, %ah
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb %al, %al
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    sets %cl
 ; X86-NEXT:    addl $127, %ecx
 ; X86-NEXT:    cmpb %ah, %al

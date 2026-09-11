@@ -222,9 +222,9 @@ define i64 @blsi_through1(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -273,9 +273,9 @@ define i64 @blsi_through3(i64 %a, i64 %b, i64 %c) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax
@@ -338,9 +338,9 @@ define i64 @blsi_through1_used2(i64 %a, i64 %b) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edi, %edi
 ; X86-NEXT:    movl %ecx, %edx
 ; X86-NEXT:    negl %edx
+; X86-NEXT:    movl $0, %edi
 ; X86-NEXT:    sbbl %esi, %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    andl %edi, %ebx
@@ -458,9 +458,9 @@ define i64 @blsr_through3(i64 %a, i64 %b, i64 %c, i64 %d) nounwind {
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    xorl %edx, %edx
 ; X86-NEXT:    movl %ecx, %eax
 ; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $0, %edx
 ; X86-NEXT:    sbbl %esi, %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    andl {{[0-9]+}}(%esp), %eax

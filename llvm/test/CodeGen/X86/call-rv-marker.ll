@@ -64,10 +64,9 @@ define void @rv_marker_2_select(i32 %c) {
 ; CHECK-LABEL: rv_marker_2_select:
 ; CHECK:         pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $1, %edi
-; CHECK-NEXT:    adcl $1, %eax
-; CHECK-NEXT:    movl %eax, %edi
+; CHECK-NEXT:    movl $0, %edi
+; CHECK-NEXT:    adcl $1, %edi
 ; CHECK-NEXT:    callq _foo0
 ; CHECK-NEXT:    movq %rax, %rdi
 ; CHECK-NEXT:    callq _objc_retainAutoreleasedReturnValue

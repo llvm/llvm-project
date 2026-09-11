@@ -726,9 +726,9 @@ define <16 x i32> @test_unsigned_v16i32_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX512F-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vucomiss %xmm1, %xmm4
+; AVX512F-NEXT:    movl $0, %eax
 ; AVX512F-NEXT:    cmovbl %eax, %edx
 ; AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512F-NEXT:    vucomiss %xmm2, %xmm4
@@ -848,9 +848,9 @@ define <16 x i32> @test_unsigned_v16i32_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
 ; AVX512-NEXT:    vmovshdup {{.*#+}} xmm4 = xmm3[1,1,3,3]
 ; AVX512-NEXT:    vcvttss2si %xmm4, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vucomiss %xmm1, %xmm4
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    cmovbl %eax, %edx
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm4
@@ -974,9 +974,9 @@ define <16 x i64> @test_unsigned_v16i64_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vextractf128 $1, %ymm0, %xmm3
 ; AVX512F-NEXT:    vshufps {{.*#+}} xmm4 = xmm3[3,3,3,3]
 ; AVX512F-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vucomiss %xmm1, %xmm4
+; AVX512F-NEXT:    movl $0, %eax
 ; AVX512F-NEXT:    cmovbq %rax, %rdx
 ; AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512F-NEXT:    vucomiss %xmm2, %xmm4
@@ -1107,9 +1107,9 @@ define <16 x i64> @test_unsigned_v16i64_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX512-NEXT:    vshufps {{.*#+}} xmm4 = xmm2[3,3,3,3]
 ; AVX512-NEXT:    vcvttss2usi %xmm4, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vucomiss %xmm1, %xmm4
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm3 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    cmovbq %rax, %rdx
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm4
@@ -1254,10 +1254,10 @@ define <16 x i128> @test_unsigned_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; AVX512F-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512F-NEXT:    callq __fixunssfti@PLT
-; AVX512F-NEXT:    xorl %r13d, %r13d
 ; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512F-NEXT:    movl $0, %r13d
 ; AVX512F-NEXT:    cmovbq %r13, %rdx
 ; AVX512F-NEXT:    cmovbq %r13, %rax
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -1560,10 +1560,10 @@ define <16 x i128> @test_unsigned_v16i128_v16f32(<16 x float> %f) nounwind {
 ; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __fixunssfti@PLT
-; AVX512-NEXT:    xorl %r13d, %r13d
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-NEXT:    movl $0, %r13d
 ; AVX512-NEXT:    cmovbq %r13, %rdx
 ; AVX512-NEXT:    cmovbq %r13, %rax
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -2259,9 +2259,9 @@ define <8 x i64> @test_unsigned_v8i64_v8f64(<8 x double> %f) nounwind {
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
 ; AVX512F-NEXT:    vcvttsd2usi %xmm3, %rdx
-; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vucomisd %xmm1, %xmm3
+; AVX512F-NEXT:    movl $0, %eax
 ; AVX512F-NEXT:    cmovbq %rax, %rdx
 ; AVX512F-NEXT:    vmovsd {{.*#+}} xmm2 = [1.844674407370955E+19,0.0E+0]
 ; AVX512F-NEXT:    vucomisd %xmm2, %xmm3
@@ -2329,9 +2329,9 @@ define <8 x i64> @test_unsigned_v8i64_v8f64(<8 x double> %f) nounwind {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm3
 ; AVX512-NEXT:    vcvttsd2usi %xmm3, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vucomisd %xmm1, %xmm3
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    cmovbq %rax, %rdx
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm2 = [1.844674407370955E+19,0.0E+0]
 ; AVX512-NEXT:    vucomisd %xmm2, %xmm3
@@ -2413,10 +2413,10 @@ define <8 x i128> @test_unsigned_v8i128_v8f64(<8 x double> %f) nounwind {
 ; AVX512F-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
 ; AVX512F-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512F-NEXT:    callq __fixunsdfti@PLT
-; AVX512F-NEXT:    xorl %r12d, %r12d
 ; AVX512F-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512F-NEXT:    vucomisd %xmm0, %xmm1
+; AVX512F-NEXT:    movl $0, %r12d
 ; AVX512F-NEXT:    cmovbq %r12, %rdx
 ; AVX512F-NEXT:    cmovbq %r12, %rax
 ; AVX512F-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -2575,10 +2575,10 @@ define <8 x i128> @test_unsigned_v8i128_v8f64(<8 x double> %f) nounwind {
 ; AVX512-NEXT:    vmovapd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __fixunsdfti@PLT
-; AVX512-NEXT:    xorl %r12d, %r12d
 ; AVX512-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovapd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512-NEXT:    vucomisd %xmm0, %xmm1
+; AVX512-NEXT:    movl $0, %r12d
 ; AVX512-NEXT:    cmovbq %r12, %rdx
 ; AVX512-NEXT:    cmovbq %r12, %rax
 ; AVX512-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -3758,9 +3758,9 @@ define <32 x i32> @test_unsigned_v32i32_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm4[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm3
 ; AVX512F-NEXT:    vcvttss2usi %xmm3, %edx
-; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vucomiss %xmm1, %xmm3
+; AVX512F-NEXT:    movl $0, %eax
 ; AVX512F-NEXT:    cmovbl %eax, %edx
 ; AVX512F-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512F-NEXT:    vucomiss %xmm2, %xmm3
@@ -4027,9 +4027,9 @@ define <32 x i32> @test_unsigned_v32i32_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vpsrldq {{.*#+}} xmm1 = xmm4[10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm1, %xmm3
 ; AVX512-NEXT:    vcvttss2usi %xmm3, %edx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX512-NEXT:    vucomiss %xmm1, %xmm3
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm2 = [4.29496704E+9,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    cmovbl %eax, %edx
 ; AVX512-NEXT:    vucomiss %xmm2, %xmm3
@@ -4300,9 +4300,9 @@ define <32 x i64> @test_unsigned_v32i64_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvttss2usi %xmm0, %rdx
-; AVX512F-NEXT:    xorl %eax, %eax
 ; AVX512F-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX512F-NEXT:    vucomiss %xmm3, %xmm0
+; AVX512F-NEXT:    movl $0, %eax
 ; AVX512F-NEXT:    cmovbq %rax, %rdx
 ; AVX512F-NEXT:    vmovss {{.*#+}} xmm4 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512F-NEXT:    vucomiss %xmm4, %xmm0
@@ -4592,9 +4592,9 @@ define <32 x i64> @test_unsigned_v32i64_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm2[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; AVX512-NEXT:    vcvttss2usi %xmm0, %rdx
-; AVX512-NEXT:    xorl %eax, %eax
 ; AVX512-NEXT:    vxorps %xmm3, %xmm3, %xmm3
 ; AVX512-NEXT:    vucomiss %xmm3, %xmm0
+; AVX512-NEXT:    movl $0, %eax
 ; AVX512-NEXT:    cmovbq %rax, %rdx
 ; AVX512-NEXT:    vmovss {{.*#+}} xmm4 = [1.8446743E+19,0.0E+0,0.0E+0,0.0E+0]
 ; AVX512-NEXT:    vucomiss %xmm4, %xmm0
@@ -4897,10 +4897,10 @@ define <32 x i128> @test_unsigned_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512F-NEXT:    vcvtph2ps %xmm1, %xmm0
 ; AVX512F-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512F-NEXT:    callq __fixunssfti@PLT
-; AVX512F-NEXT:    xorl %r14d, %r14d
 ; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512F-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512F-NEXT:    movl $0, %r14d
 ; AVX512F-NEXT:    cmovbq %r14, %rdx
 ; AVX512F-NEXT:    cmovbq %r14, %rax
 ; AVX512F-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -5521,10 +5521,10 @@ define <32 x i128> @test_unsigned_v32i128_v32f16(<32 x half> %f) nounwind {
 ; AVX512-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    callq __fixunssfti@PLT
-; AVX512-NEXT:    xorl %r14d, %r14d
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
 ; AVX512-NEXT:    vucomiss %xmm0, %xmm1
+; AVX512-NEXT:    movl $0, %r14d
 ; AVX512-NEXT:    cmovbq %r14, %rdx
 ; AVX512-NEXT:    cmovbq %r14, %rax
 ; AVX512-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1

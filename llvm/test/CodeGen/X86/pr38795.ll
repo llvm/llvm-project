@@ -136,8 +136,8 @@ define dso_local void @fn() {
 ; CHECK-NEXT:  .LBB0_12: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    movb %al, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %dl, %dl
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    je .LBB0_15
 ; CHECK-NEXT:  # %bb.13: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
@@ -145,7 +145,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    jne .LBB0_15
 ; CHECK-NEXT:  # %bb.14: # %if.then31
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    jmp .LBB0_15
 entry:
@@ -287,8 +286,7 @@ define void @verifier_error_reduced_issue38788(i1 %cmp11) {
 ; CHECK-NEXT:    je .LBB1_4
 ; CHECK-NEXT:  # %bb.9: # %if.then13
 ; CHECK-NEXT:    # in Loop: Header=BB1_1 Depth=1
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl $0, %edx
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    movl $0, %ebx
 ; CHECK-NEXT:    jne .LBB1_8

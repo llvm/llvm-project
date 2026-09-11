@@ -1057,8 +1057,8 @@ define i32 @reset_multiload_i128(ptr %word, i32 %position, ptr %p) nounwind {
 ; X64-NEXT:    andl $96, %ecx
 ; X64-NEXT:    shrl $3, %ecx
 ; X64-NEXT:    movl (%rdi,%rcx), %r8d
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    btrl %esi, %r8d
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    jb .LBB23_2
 ; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    movl (%rdx), %eax
@@ -1347,21 +1347,21 @@ define i1 @sequence_i128(ptr %word, i32 %pos0, i32 %pos1, i32 %pos2) nounwind {
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movl %ecx, %eax
 ; AVX2-NEXT:    movl %esi, %ecx
-; AVX2-NEXT:    xorl %r9d, %r9d
-; AVX2-NEXT:    movl $1, %r10d
+; AVX2-NEXT:    movl $1, %r9d
 ; AVX2-NEXT:    xorl %esi, %esi
-; AVX2-NEXT:    shldq %cl, %r10, %rsi
-; AVX2-NEXT:    shlxq %rcx, %r10, %r8
+; AVX2-NEXT:    shldq %cl, %r9, %rsi
+; AVX2-NEXT:    shlxq %rcx, %r9, %r8
 ; AVX2-NEXT:    testb $64, %cl
 ; AVX2-NEXT:    cmovneq %r8, %rsi
-; AVX2-NEXT:    cmovneq %r9, %r8
+; AVX2-NEXT:    movl $0, %r10d
+; AVX2-NEXT:    cmovneq %r10, %r8
 ; AVX2-NEXT:    xorl %r11d, %r11d
 ; AVX2-NEXT:    movl %eax, %ecx
-; AVX2-NEXT:    shldq %cl, %r10, %r11
-; AVX2-NEXT:    shlxq %rax, %r10, %rcx
+; AVX2-NEXT:    shldq %cl, %r9, %r11
+; AVX2-NEXT:    shlxq %rax, %r9, %rcx
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    cmovneq %rcx, %r11
-; AVX2-NEXT:    cmovneq %r9, %rcx
+; AVX2-NEXT:    cmovneq %r10, %rcx
 ; AVX2-NEXT:    xorq 8(%rdi), %rsi
 ; AVX2-NEXT:    xorq (%rdi), %r8
 ; AVX2-NEXT:    movl %edx, %eax

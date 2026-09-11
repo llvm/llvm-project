@@ -59,8 +59,8 @@ define i16 @select_consts_i16(i16 %offset, i1 %b) {
 define i8 @select_consts_i8(i8 %offset, i1 %b) {
 ; CHECK-LABEL: select_consts_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    movl $45, %eax
 ; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    addb %dil, %al
@@ -74,8 +74,8 @@ define i8 @select_consts_i8(i8 %offset, i1 %b) {
 define i32 @select_consts_use_i32(i32 %offset, i64 %x, ptr %p) {
 ; CHECK-LABEL: select_consts_use_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    cmpq $42, %rsi
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    movl $43, %eax
 ; CHECK-NEXT:    cmovgel %ecx, %eax
 ; CHECK-NEXT:    movl %eax, (%rdx)

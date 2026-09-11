@@ -561,8 +561,8 @@ define i64 @cmp_ugt_not(i64 %a, i64 %b) {
 ; CHECK-LABEL: cmp_ugt_not:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notq %rdi
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -575,8 +575,8 @@ define i64 @cmp_ugt_not(i64 %a, i64 %b) {
 define i64 @cmp_ugt_not_with_constant(i64 %a) {
 ; CHECK-LABEL: cmp_ugt_not_with_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -664,8 +664,8 @@ define <4 x i32> @cmp_sge_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 define i64 @cmp_uge_not(i64 %a, i64 %b) {
 ; CHECK-LABEL: cmp_uge_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rdi, %rsi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcq $-1, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -678,8 +678,8 @@ define i64 @cmp_uge_not(i64 %a, i64 %b) {
 define i64 @cmp_uge_not_with_constant(i64 %a) {
 ; CHECK-LABEL: cmp_uge_not_with_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $-42, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -800,8 +800,8 @@ define i64 @cmp_ult_not(i64 %a, i64 %b) {
 ; CHECK-LABEL: cmp_ult_not:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    notq %rsi
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq %rdi, %rsi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -814,8 +814,8 @@ define i64 @cmp_ult_not(i64 %a, i64 %b) {
 define i64 @cmp_ult_not_with_constant(i64 %a) {
 ; CHECK-LABEL: cmp_ult_not_with_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $42, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbq %rax, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -850,8 +850,8 @@ define <4 x i32> @cmp_ult_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 define i64 @cmp_ule_not(i64 %a, i64 %b) {
 ; CHECK-LABEL: cmp_ule_not:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcq $-1, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -864,8 +864,8 @@ define i64 @cmp_ule_not(i64 %a, i64 %b) {
 define i64 @cmp_ule_not_with_constant(i64 %a) {
 ; CHECK-LABEL: cmp_ule_not_with_constant:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $-43, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcq $-1, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -983,8 +983,8 @@ define <4 x i32> @cmp_ne_not_with_vec(<4 x i32> %a, <4 x i32> %b) {
 define i64 @cmp_uge_not_commute(i64 %b, i64 %a) {
 ; CHECK-LABEL: cmp_uge_not_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq %rsi, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcq $-1, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1
@@ -997,8 +997,8 @@ define i64 @cmp_uge_not_commute(i64 %b, i64 %a) {
 define i64 @cmp_ult_not_with_constant_commute(i64 %a) {
 ; CHECK-LABEL: cmp_ult_not_with_constant_commute:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpq $43, %rdi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    adcq $-1, %rax
 ; CHECK-NEXT:    retq
   %na = xor i64 %a, -1

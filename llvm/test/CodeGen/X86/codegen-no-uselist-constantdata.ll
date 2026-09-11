@@ -8,8 +8,8 @@
 define <2 x i32> @no_uselist_null_isDereferenceableAndAlignedPointer(i1 %arg0, ptr align(4) %arg) {
 ; CHECK-LABEL: no_uselist_null_isDereferenceableAndAlignedPointer:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb $1, %dil
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmoveq %rsi, %rax
 ; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    retq

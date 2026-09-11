@@ -448,11 +448,11 @@ define void @test_sched(float %0, i32 %1, ptr addrspace(1) %2) gc "statepoint-ex
 ; CHECK-NEXT:    movsd %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    nopl 8(%rax,%rax)
 ; CHECK-NEXT:  .Ltmp16:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    ucomisd %xmm0, %xmm1
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    movabsq $9223372036854775807, %rdi # imm = 0x7FFFFFFFFFFFFFFF
 ; CHECK-NEXT:    cmovbeq %rax, %rdi
 ; CHECK-NEXT:    movsd %xmm1, {{[0-9]+}}(%rsp)

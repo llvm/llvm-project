@@ -18,8 +18,8 @@ declare i128 @llvm.smin.i128(i128, i128)
 define i8 @test_i8_smax(i8 %a) nounwind {
 ; X64-LABEL: test_i8_smax:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %dil, %dil
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovgl %edi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -27,8 +27,8 @@ define i8 @test_i8_smax(i8 %a) nounwind {
 ; X86-BMI-LABEL: test_i8_smax:
 ; X86-BMI:       # %bb.0:
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
 ; X86-BMI-NEXT:    testb %cl, %cl
+; X86-BMI-NEXT:    movl $0, %eax
 ; X86-BMI-NEXT:    cmovgl %ecx, %eax
 ; X86-BMI-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-BMI-NEXT:    retl
@@ -69,8 +69,8 @@ define i8 @test_i8_smin(i8 %a) nounwind {
 define i16 @test_i16_smax(i16 %a) nounwind {
 ; X64-LABEL: test_i16_smax:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testw %di, %di
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovgl %edi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -78,8 +78,8 @@ define i16 @test_i16_smax(i16 %a) nounwind {
 ; X86-BMI-LABEL: test_i16_smax:
 ; X86-BMI:       # %bb.0:
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %eax, %eax
 ; X86-BMI-NEXT:    testw %cx, %cx
+; X86-BMI-NEXT:    movl $0, %eax
 ; X86-BMI-NEXT:    cmovgl %ecx, %eax
 ; X86-BMI-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-BMI-NEXT:    retl
@@ -129,8 +129,8 @@ define i32 @test_i32_smax(i32 %a) nounwind {
 ;
 ; X64-NOBMI-LABEL: test_i32_smax:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    xorl %eax, %eax
 ; X64-NOBMI-NEXT:    testl %edi, %edi
+; X64-NOBMI-NEXT:    movl $0, %eax
 ; X64-NOBMI-NEXT:    cmovgl %edi, %eax
 ; X64-NOBMI-NEXT:    retq
 ;
@@ -184,16 +184,16 @@ define i64 @test_i64_smax(i64 %a) nounwind {
 ;
 ; X64-NOBMI-LABEL: test_i64_smax:
 ; X64-NOBMI:       # %bb.0:
-; X64-NOBMI-NEXT:    xorl %eax, %eax
 ; X64-NOBMI-NEXT:    testq %rdi, %rdi
+; X64-NOBMI-NEXT:    movl $0, %eax
 ; X64-NOBMI-NEXT:    cmovgq %rdi, %rax
 ; X64-NOBMI-NEXT:    retq
 ;
 ; X86-BMI-LABEL: test_i64_smax:
 ; X86-BMI:       # %bb.0:
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-BMI-NEXT:    xorl %eax, %eax
 ; X86-BMI-NEXT:    testl %edx, %edx
+; X86-BMI-NEXT:    movl $0, %eax
 ; X86-BMI-NEXT:    cmovlel %eax, %edx
 ; X86-BMI-NEXT:    cmovnsl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    retl
@@ -242,8 +242,8 @@ define i128 @test_i128_smax(i128 %a) nounwind {
 ; X64-LABEL: test_i128_smax:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    testq %rsi, %rsi
+; X64-NEXT:    movl $0, %edx
 ; X64-NEXT:    cmovsq %rdx, %rax
 ; X64-NEXT:    cmovgq %rsi, %rdx
 ; X64-NEXT:    retq
@@ -255,8 +255,8 @@ define i128 @test_i128_smax(i128 %a) nounwind {
 ; X86-BMI-NEXT:    pushl %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-BMI-NEXT:    xorl %edx, %edx
 ; X86-BMI-NEXT:    testl %ecx, %ecx
+; X86-BMI-NEXT:    movl $0, %edx
 ; X86-BMI-NEXT:    cmovlel %edx, %ecx
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-BMI-NEXT:    cmovsl %edx, %esi

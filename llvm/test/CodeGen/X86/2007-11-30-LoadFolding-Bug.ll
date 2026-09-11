@@ -33,7 +33,6 @@ define fastcc void @mp_sqrt(i32 %n, i32 %radix, ptr %in, ptr %out, ptr %tmp1, pt
 ; CHECK-NEXT:    movzbl %cl, %ebp
 ; CHECK-NEXT:    andl $1, %ebp
 ; CHECK-NEXT:    xorpd %xmm0, %xmm0
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorpd %xmm1, %xmm1
 ; CHECK-NEXT:    .p2align 4

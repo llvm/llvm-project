@@ -894,26 +894,26 @@ define half @PR40273(half) #0 {
 ; CHECK-LIBCALL:       # %bb.0:
 ; CHECK-LIBCALL-NEXT:    pushq %rax
 ; CHECK-LIBCALL-NEXT:    callq __extendhfsf2@PLT
-; CHECK-LIBCALL-NEXT:    xorl %eax, %eax
 ; CHECK-LIBCALL-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-LIBCALL-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-LIBCALL-NEXT:    movl $15360, %ecx # imm = 0x3C00
-; CHECK-LIBCALL-NEXT:    cmovnel %ecx, %eax
-; CHECK-LIBCALL-NEXT:    cmovpl %ecx, %eax
-; CHECK-LIBCALL-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-LIBCALL-NEXT:    movl $15360, %eax # imm = 0x3C00
+; CHECK-LIBCALL-NEXT:    movl $0, %ecx
+; CHECK-LIBCALL-NEXT:    cmovnel %eax, %ecx
+; CHECK-LIBCALL-NEXT:    cmovpl %eax, %ecx
+; CHECK-LIBCALL-NEXT:    pinsrw $0, %ecx, %xmm0
 ; CHECK-LIBCALL-NEXT:    popq %rax
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: PR40273:
 ; BWON-F16C:       # %bb.0:
 ; BWON-F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; BWON-F16C-NEXT:    xorl %eax, %eax
 ; BWON-F16C-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; BWON-F16C-NEXT:    vucomiss %xmm1, %xmm0
-; BWON-F16C-NEXT:    movl $15360, %ecx # imm = 0x3C00
-; BWON-F16C-NEXT:    cmovnel %ecx, %eax
-; BWON-F16C-NEXT:    cmovpl %ecx, %eax
-; BWON-F16C-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; BWON-F16C-NEXT:    movl $15360, %eax # imm = 0x3C00
+; BWON-F16C-NEXT:    movl $0, %ecx
+; BWON-F16C-NEXT:    cmovnel %eax, %ecx
+; BWON-F16C-NEXT:    cmovpl %eax, %ecx
+; BWON-F16C-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: PR40273:
@@ -925,13 +925,13 @@ define half @PR40273(half) #0 {
 ; CHECK-I686-NEXT:    calll __extendhfsf2
 ; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
 ; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; CHECK-I686-NEXT:    xorl %eax, %eax
 ; CHECK-I686-NEXT:    xorps %xmm1, %xmm1
 ; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
-; CHECK-I686-NEXT:    movl $15360, %ecx # imm = 0x3C00
-; CHECK-I686-NEXT:    cmovnel %ecx, %eax
-; CHECK-I686-NEXT:    cmovpl %ecx, %eax
-; CHECK-I686-NEXT:    pinsrw $0, %eax, %xmm0
+; CHECK-I686-NEXT:    movl $15360, %eax # imm = 0x3C00
+; CHECK-I686-NEXT:    movl $0, %ecx
+; CHECK-I686-NEXT:    cmovnel %eax, %ecx
+; CHECK-I686-NEXT:    cmovpl %eax, %ecx
+; CHECK-I686-NEXT:    pinsrw $0, %ecx, %xmm0
 ; CHECK-I686-NEXT:    addl $12, %esp
 ; CHECK-I686-NEXT:    retl
   %2 = fcmp une half %0, 0xH0000

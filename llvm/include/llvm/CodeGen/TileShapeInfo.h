@@ -70,10 +70,10 @@ public:
       for (const MachineOperand &DefMO : MRI->def_operands(Reg)) {
         const auto *MI = DefMO.getParent();
         if (MI->isMoveImmediate()) {
-          if (MI->getOperand(1).isImm()) {
+          if ((MI->getNumOperands() > 1) && MI->getOperand(1).isImm()) {
             Imm = MI->getOperand(1).getImm();
           } else {
-            assert(MI->getOperand(1).isImplicit() &&
+            assert((MI->getNumOperands() <= 1 || MI->getOperand(1).isImplicit()) &&
                    "Operand 1 is assumed to be implicit.");
             // The implicit immediate can vary (MOV32r0, MOV32r1, MOV32r_1,
             // ...) but in any case, is not a valid shape.

@@ -22,7 +22,7 @@ define void @func(ptr %a, ptr %b, ptr %c, ptr %d) nounwind {
 ; CHECK-NEXT:    movslq %eax, %rdx
 ; CHECK-NEXT:    movq %rdx, %rsi
 ; CHECK-NEXT:    subq %rax, %rsi
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmpl $-8608074, %edx # imm = 0xFF7CA6B6
 ; CHECK-NEXT:    cmovlq %rsi, %rdi
 ; CHECK-NEXT:    cmpl $2138875574, %edx # imm = 0x7F7CA6B6

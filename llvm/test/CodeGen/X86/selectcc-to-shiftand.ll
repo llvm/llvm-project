@@ -95,8 +95,8 @@ define i32 @pos_sel_special_constant(i32 %a) {
 define i32 @pos_sel_variable_and_zero(i32 %a, i32 %b) {
 ; CHECK-NOBMI-LABEL: pos_sel_variable_and_zero:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %eax, %eax
 ; CHECK-NOBMI-NEXT:    testl %edi, %edi
+; CHECK-NOBMI-NEXT:    movl $0, %eax
 ; CHECK-NOBMI-NEXT:    cmovnsl %esi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
@@ -115,8 +115,8 @@ define i32 @pos_sel_variable_and_zero(i32 %a, i32 %b) {
 define i32 @not_neg_sel_same_variable(i32 %a) {
 ; CHECK-NOBMI-LABEL: not_neg_sel_same_variable:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %eax, %eax
 ; CHECK-NOBMI-NEXT:    testl %edi, %edi
+; CHECK-NOBMI-NEXT:    movl $0, %eax
 ; CHECK-NOBMI-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;
@@ -137,8 +137,8 @@ define i32 @not_neg_sel_same_variable(i32 %a) {
 define i32 @PR31175(i32 %x, i32 %y) {
 ; CHECK-NOBMI-LABEL: PR31175:
 ; CHECK-NOBMI:       # %bb.0:
-; CHECK-NOBMI-NEXT:    xorl %eax, %eax
 ; CHECK-NOBMI-NEXT:    subl %esi, %edi
+; CHECK-NOBMI-NEXT:    movl $0, %eax
 ; CHECK-NOBMI-NEXT:    cmovnsl %edi, %eax
 ; CHECK-NOBMI-NEXT:    retq
 ;

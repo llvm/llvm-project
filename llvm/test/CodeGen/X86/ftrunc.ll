@@ -658,9 +658,9 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; SSE-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttss2si %xmm0, %rax
-; SSE-NEXT:    xorl %ecx, %ecx
 ; SSE-NEXT:    xorps %xmm1, %xmm1
 ; SSE-NEXT:    ucomiss %xmm1, %xmm0
+; SSE-NEXT:    movl $0, %ecx
 ; SSE-NEXT:    cmovael %eax, %ecx
 ; SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    movl $-1, %eax
@@ -672,9 +672,9 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; X64-AVX1-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vcvttss2si %xmm0, %rax
-; X64-AVX1-NEXT:    xorl %ecx, %ecx
 ; X64-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X64-AVX1-NEXT:    vucomiss %xmm1, %xmm0
+; X64-AVX1-NEXT:    movl $0, %ecx
 ; X64-AVX1-NEXT:    cmovael %eax, %ecx
 ; X64-AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-AVX1-NEXT:    movl $-1, %eax
@@ -693,9 +693,9 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; X86-AVX1-NEXT:    vcvttss2si %xmm1, %edx
 ; X86-AVX1-NEXT:    andl %ecx, %edx
 ; X86-AVX1-NEXT:    orl %eax, %edx
-; X86-AVX1-NEXT:    xorl %eax, %eax
 ; X86-AVX1-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; X86-AVX1-NEXT:    vucomiss %xmm1, %xmm0
+; X86-AVX1-NEXT:    movl $0, %eax
 ; X86-AVX1-NEXT:    cmovael %edx, %eax
 ; X86-AVX1-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $-1, %ecx
@@ -720,8 +720,8 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; SSE-NEXT:    cmovbeq %rax, %rcx
-; SSE-NEXT:    xorl %eax, %eax
 ; SSE-NEXT:    ucomisd %xmm0, %xmm0
+; SSE-NEXT:    movl $0, %eax
 ; SSE-NEXT:    cmovnpq %rcx, %rax
 ; SSE-NEXT:    xorps %xmm0, %xmm0
 ; SSE-NEXT:    cvtsi2sd %rax, %xmm0
@@ -733,8 +733,8 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; X64-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-AVX1-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-AVX1-NEXT:    cmovbeq %rax, %rcx
-; X64-AVX1-NEXT:    xorl %eax, %eax
 ; X64-AVX1-NEXT:    vucomisd %xmm0, %xmm0
+; X64-AVX1-NEXT:    movl $0, %eax
 ; X64-AVX1-NEXT:    cmovnpq %rcx, %rax
 ; X64-AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; X64-AVX1-NEXT:    retq
@@ -750,15 +750,12 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; X86-AVX1-NEXT:    vmovsd %xmm0, (%esp)
 ; X86-AVX1-NEXT:    fldl (%esp)
 ; X86-AVX1-NEXT:    fisttpll (%esp)
-; X86-AVX1-NEXT:    xorl %eax, %eax
 ; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
-; X86-AVX1-NEXT:    movl $0, %edx
-; X86-AVX1-NEXT:    jb .LBB19_2
-; X86-AVX1-NEXT:  # %bb.1:
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-AVX1-NEXT:    cmovael {{[0-9]+}}(%esp), %ecx
+; X86-AVX1-NEXT:    movl $0, %eax
 ; X86-AVX1-NEXT:    movl (%esp), %edx
-; X86-AVX1-NEXT:  .LBB19_2:
+; X86-AVX1-NEXT:    cmovbl %eax, %edx
 ; X86-AVX1-NEXT:    vucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-AVX1-NEXT:    movl $-1, %esi
 ; X86-AVX1-NEXT:    cmovbel %edx, %esi

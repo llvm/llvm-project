@@ -9,17 +9,26 @@ define i64 @test1(i64 %X, i8 %C) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    shldl %cl, %esi, %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    shll %cl, %esi
+; X86-NEXT:    shldl %cl, %edx, %eax
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB0_2
-; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %esi, %edx
+; X86-NEXT:    je .LBB0_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    je .LBB0_3
+; X86-NEXT:  .LBB0_4:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB0_1:
 ; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:  .LBB0_2:
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    jne .LBB0_4
+; X86-NEXT:  .LBB0_3:
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
@@ -72,17 +81,26 @@ define i64 @test3(i64 %X, i8 %C) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl %esi, %edx
-; X86-NEXT:    shrl %cl, %edx
-; X86-NEXT:    shrdl %cl, %esi, %eax
+; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    shrl %cl, %esi
+; X86-NEXT:    shrdl %cl, %eax, %edx
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    je .LBB2_2
-; X86-NEXT:  # %bb.1:
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    je .LBB2_1
+; X86-NEXT:  # %bb.2:
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    je .LBB2_3
+; X86-NEXT:  .LBB2_4:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+; X86-NEXT:  .LBB2_1:
 ; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:  .LBB2_2:
+; X86-NEXT:    movl $0, %edx
+; X86-NEXT:    jne .LBB2_4
+; X86-NEXT:  .LBB2_3:
+; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;

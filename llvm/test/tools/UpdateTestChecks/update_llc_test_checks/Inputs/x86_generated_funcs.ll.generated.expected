@@ -83,11 +83,11 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    movl $1, -4(%rbp)
 ; CHECK-NEXT:    jmp .LBB0_6
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
 ; CHECK-NEXT:    cmpl $0, -8(%rbp)
 ; CHECK-NEXT:    jne .LBB0_5
 ; CHECK-NEXT:  .LBB0_4:
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $20, %rsp
@@ -104,11 +104,11 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
 ; CHECK-NEXT:    subq $20, %rsp
 ; CHECK-NEXT:    movl $0, -20(%rbp)
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    movl $1, x(%rip)
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    callq OUTLINED_FUNCTION_1
+; CHECK-NEXT:    callq OUTLINED_FUNCTION_0
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    addq $20, %rsp
 ; CHECK-NEXT:    popq %rbp
@@ -117,16 +117,16 @@ attributes #0 = { noredzone nounwind ssp uwtable "frame-pointer"="all" }
 ;
 ; CHECK-LABEL: OUTLINED_FUNCTION_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $1, -8(%rbp)
-; CHECK-NEXT:    movl $2, -16(%rbp)
-; CHECK-NEXT:    movl $3, -4(%rbp)
-; CHECK-NEXT:    movl $4, -12(%rbp)
-; CHECK-NEXT:    retq
-;
-; CHECK-LABEL: OUTLINED_FUNCTION_1:
-; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl $1, -16(%rbp)
 ; CHECK-NEXT:    movl $2, -12(%rbp)
 ; CHECK-NEXT:    movl $3, -8(%rbp)
 ; CHECK-NEXT:    movl $4, -4(%rbp)
+; CHECK-NEXT:    retq
+;
+; CHECK-LABEL: OUTLINED_FUNCTION_1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $1, -8(%rbp)
+; CHECK-NEXT:    movl $2, -16(%rbp)
+; CHECK-NEXT:    movl $3, -4(%rbp)
+; CHECK-NEXT:    movl $4, -12(%rbp)
 ; CHECK-NEXT:    retq

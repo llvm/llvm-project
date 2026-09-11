@@ -49,7 +49,7 @@ define void @test_mixed(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(
 ; CHECK-VREG:    %1:gr64 = COPY $rsi
 ; CHECK-VREG:    %0:gr64 = COPY $rdi
 ; CHECK-VREG:    %3:gr64, %4:gr64, %5:gr64 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, %2(tied-def 0), 2, 0, %1(tied-def 1), %0(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
-; CHECK-VREG:    %6:gr32 = MOV32r0 implicit-def dead $eflags
+; CHECK-VREG:    %6:gr32 = MOV32r0
 ; CHECK-VREG:    %7:gr64 = SUBREG_TO_REG killed %6, %subreg.sub_32bit
 ; CHECK-VREG:    $rdi = COPY %5
 ; CHECK-VREG:    $rsi = COPY %7
@@ -64,9 +64,9 @@ define void @test_mixed(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(
 ; CHECK-PREG:    renamable $r15 = COPY $rdi
 ; CHECK-PREG:    renamable $rbx, renamable $r14, renamable $r15 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, killed renamable $rbx(tied-def 0), 2, 0, killed renamable $r14(tied-def 1), killed renamable $r15(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
 ; CHECK-PREG:    $rdi = COPY killed renamable $r15
-; CHECK-PREG:    dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
+; CHECK-PREG:    dead $esi = MOV32r0 implicit-def $rsi
 ; CHECK-PREG:    $rdx = COPY killed renamable $r14
-; CHECK-PREG:    dead $ecx = MOV32r0 implicit-def dead $eflags, implicit-def $rcx
+; CHECK-PREG:    dead $ecx = MOV32r0 implicit-def $rcx
 ; CHECK-PREG:    $r8 = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit killed $rcx, implicit killed $r8, implicit-def $rsp, implicit-def $ssp
 
@@ -251,7 +251,7 @@ right:
 ; CHECK-VREG:    %1:gr32 = COPY $edi
 ; CHECK-VREG:    %4:gr8 = COPY %1.sub_8bit
 ; CHECK-VREG:    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-; CHECK-VREG:    %5:gr32 = MOV32r0 implicit-def dead $eflags
+; CHECK-VREG:    %5:gr32 = MOV32r0
 ; CHECK-VREG:    $edi = COPY %5
 ; CHECK-VREG:    %6:gr64 = IMPLICIT_DEF
 ; CHECK-VREG:    %0:gr64 = STATEPOINT 2, 5, 1, killed %6, $edi, 2, 0, 2, 0, 2, 0, 2, 1, %2(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
@@ -360,7 +360,7 @@ define ptr addrspace(1) @test_isel_sched(ptr addrspace(1) %0, ptr addrspace(1) %
 ;CHECK-VREG:        %0:gr64 = COPY $rdi
 ;CHECK-VREG:        TEST32rr %2, %2, implicit-def $eflags
 ;CHECK-VREG:        %3:gr64 = CMOV64rr %1, %0, 4, implicit $eflags
-;CHECK-VREG:        %4:gr32 = MOV32r0 implicit-def dead $eflags
+;CHECK-VREG:        %4:gr32 = MOV32r0
 ;CHECK-VREG:        %5:gr64 = SUBREG_TO_REG killed %4, %subreg.sub_32bit
 ;CHECK-VREG:        $rdi = COPY %5
 ;CHECK-VREG:        $rsi = COPY %3

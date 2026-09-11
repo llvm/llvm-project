@@ -49,9 +49,9 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %ebx
 ; X86-X87-NEXT:    ja .LBB0_4
 ; X86-X87-NEXT:  # %bb.3:
@@ -202,14 +202,14 @@ define i13 @test_signed_i13_f32(float %f) nounwind {
 ; X86-X87-NEXT:  .LBB2_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB2_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB2_6:
-; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -274,14 +274,14 @@ define i16 @test_signed_i16_f32(float %f) nounwind {
 ; X86-X87-NEXT:  .LBB3_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB3_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB3_6:
-; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -346,35 +346,34 @@ define i19 @test_signed_i19_f32(float %f) nounwind {
 ; X86-X87-NEXT:  .LBB4_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB4_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB4_6:
-; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: test_signed_i19_f32:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttss2si %xmm0, %ecx
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_signed_i19_f32:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
 ; X64-NEXT:    maxss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    minss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttss2si %xmm0, %ecx
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %ecx, %eax
 ; X64-NEXT:    retq
     %x = call i19 @llvm.fptosi.sat.i19.f32(float %f)
@@ -419,14 +418,13 @@ define i32 @test_signed_i32_f32(float %f) nounwind {
 ; X86-X87-NEXT:  .LBB5_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB5_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB5_6:
-; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -437,8 +435,8 @@ define i32 @test_signed_i32_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X86-SSE-NEXT:    cmovbel %eax, %ecx
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
@@ -448,8 +446,8 @@ define i32 @test_signed_i32_f32(float %f) nounwind {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X64-NEXT:    cmovbel %eax, %ecx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %ecx, %eax
 ; X64-NEXT:    retq
     %x = call i32 @llvm.fptosi.sat.i32.f32(float %f)
@@ -476,9 +474,9 @@ define i50 @test_signed_i50_f32(float %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    jb .LBB6_2
 ; X86-X87-NEXT:  # %bb.1:
@@ -536,8 +534,8 @@ define i50 @test_signed_i50_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-131072, %eax # imm = 0xFFFE0000
@@ -563,8 +561,8 @@ define i50 @test_signed_i50_f32(float %f) nounwind {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movabsq $562949953421311, %rdx # imm = 0x1FFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rcx, %rdx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpq %rdx, %rax
 ; X64-NEXT:    retq
     %x = call i50 @llvm.fptosi.sat.i50.f32(float %f)
@@ -591,9 +589,9 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    jb .LBB7_2
 ; X86-X87-NEXT:  # %bb.1:
@@ -651,8 +649,8 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
@@ -675,8 +673,8 @@ define i64 @test_signed_i64_f32(float %f) nounwind {
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rax, %rcx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpq %rcx, %rax
 ; X64-NEXT:    retq
     %x = call i64 @llvm.fptosi.sat.i64.f32(float %f)
@@ -703,7 +701,6 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movl %eax, %ebx
 ; X86-X87-NEXT:    calll __fixsfti
 ; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    xorl %edx, %edx
 ; X86-X87-NEXT:    movb %bh, %ah
 ; X86-X87-NEXT:    sahf
 ; X86-X87-NEXT:    movl $-8, %ebx
@@ -711,6 +708,7 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-X87-NEXT:  .LBB8_2:
+; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %ebp
 ; X86-X87-NEXT:    jb .LBB8_4
@@ -788,36 +786,33 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    calll __fixsfti
 ; X86-SSE-NEXT:    subl $4, %esp
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    xorl %ebp, %ebp
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $-8, %ebx
-; X86-SSE-NEXT:    movl $0, %ecx
-; X86-SSE-NEXT:    movl $0, %edx
-; X86-SSE-NEXT:    movl $0, %edi
-; X86-SSE-NEXT:    jb .LBB8_2
-; X86-SSE-NEXT:  # %bb.1:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl $-8, %edi
+; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl $0, %ebp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cmovbl %ebp, %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:  .LBB8_2:
+; X86-SSE-NEXT:    cmovbl %ebp, %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE-NEXT:    cmovbl %ebp, %ebx
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $-1, %eax
-; X86-SSE-NEXT:    cmoval %eax, %edi
-; X86-SSE-NEXT:    cmoval %eax, %edx
-; X86-SSE-NEXT:    cmoval %eax, %ecx
-; X86-SSE-NEXT:    movl $7, %eax
-; X86-SSE-NEXT:    cmovbel %ebx, %eax
+; X86-SSE-NEXT:    movl $-1, %ecx
+; X86-SSE-NEXT:    cmoval %ecx, %ebx
+; X86-SSE-NEXT:    cmoval %ecx, %edx
+; X86-SSE-NEXT:    cmoval %ecx, %eax
+; X86-SSE-NEXT:    movl $7, %ecx
+; X86-SSE-NEXT:    cmovbel %edi, %ecx
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm0
-; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %ecx
+; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %edx
-; X86-SSE-NEXT:    cmovpl %ebp, %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    cmovpl %ebp, %ebx
+; X86-SSE-NEXT:    movl %ebx, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
-; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
-; X86-SSE-NEXT:    movb %al, 12(%esi)
+; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    andl $15, %ecx
+; X86-SSE-NEXT:    movb %cl, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp
 ; X86-SSE-NEXT:    popl %esi
@@ -831,10 +826,10 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    callq __fixsfti@PLT
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    movabsq $-34359738368, %rsi # imm = 0xFFFFFFF800000000
 ; X64-NEXT:    cmovbq %rsi, %rdx
@@ -872,9 +867,9 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X86-X87-NEXT:    movl %eax, %ebx
 ; X86-X87-NEXT:    calll __fixsfti
 ; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movb %bh, %ah
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    movl $0, %ebx
 ; X86-X87-NEXT:    jae .LBB9_1
@@ -962,9 +957,9 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll __fixsfti
 ; X86-SSE-NEXT:    subl $4, %esp
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    cmovbl %ecx, %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -1002,10 +997,10 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
 ; X64-NEXT:    callq __fixsfti@PLT
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 4-byte Reload
 ; X64-NEXT:    # xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
 ; X64-NEXT:    cmovbq %rsi, %rdx
@@ -1069,9 +1064,9 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %ebx
 ; X86-X87-NEXT:    ja .LBB10_4
 ; X86-X87-NEXT:  # %bb.3:
@@ -1222,14 +1217,14 @@ define i13 @test_signed_i13_f64(double %f) nounwind {
 ; X86-X87-NEXT:  .LBB12_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB12_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB12_6:
-; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -1294,14 +1289,14 @@ define i16 @test_signed_i16_f64(double %f) nounwind {
 ; X86-X87-NEXT:  .LBB13_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB13_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB13_6:
-; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -1366,35 +1361,34 @@ define i19 @test_signed_i19_f64(double %f) nounwind {
 ; X86-X87-NEXT:  .LBB14_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB14_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB14_6:
-; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: test_signed_i19_f64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %ecx
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_signed_i19_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomisd %xmm0, %xmm0
 ; X64-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %ecx
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %ecx, %eax
 ; X64-NEXT:    retq
     %x = call i19 @llvm.fptosi.sat.i19.f64(double %f)
@@ -1439,35 +1433,34 @@ define i32 @test_signed_i32_f64(double %f) nounwind {
 ; X86-X87-NEXT:  .LBB15_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB15_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB15_6:
-; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
 ; X86-SSE-LABEL: test_signed_i32_f64:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm0
 ; X86-SSE-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    cvttsd2si %xmm0, %ecx
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
 ; X86-SSE-NEXT:    retl
 ;
 ; X64-LABEL: test_signed_i32_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomisd %xmm0, %xmm0
 ; X64-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %ecx
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %ecx, %eax
 ; X64-NEXT:    retq
     %x = call i32 @llvm.fptosi.sat.i32.f64(double %f)
@@ -1494,9 +1487,9 @@ define i50 @test_signed_i50_f64(double %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    jb .LBB16_2
 ; X86-X87-NEXT:  # %bb.1:
@@ -1556,8 +1549,8 @@ define i50 @test_signed_i50_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm0
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    jp .LBB16_2
 ; X86-SSE-NEXT:  # %bb.1:
@@ -1569,11 +1562,11 @@ define i50 @test_signed_i50_f64(double %f) nounwind {
 ;
 ; X64-LABEL: test_signed_i50_f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomisd %xmm0, %xmm0
 ; X64-NEXT:    maxsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    minsd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    cvttsd2si %xmm0, %rcx
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpq %rcx, %rax
 ; X64-NEXT:    retq
     %x = call i50 @llvm.fptosi.sat.i50.f64(double %f)
@@ -1600,9 +1593,9 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    jb .LBB17_2
 ; X86-X87-NEXT:  # %bb.1:
@@ -1660,8 +1653,8 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
@@ -1684,8 +1677,8 @@ define i64 @test_signed_i64_f64(double %f) nounwind {
 ; X64-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rax, %rcx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ucomisd %xmm0, %xmm0
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpq %rcx, %rax
 ; X64-NEXT:    retq
     %x = call i64 @llvm.fptosi.sat.i64.f64(double %f)
@@ -1712,7 +1705,6 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; X86-X87-NEXT:    movl %eax, %ebx
 ; X86-X87-NEXT:    calll __fixdfti
 ; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    xorl %edx, %edx
 ; X86-X87-NEXT:    movb %bh, %ah
 ; X86-X87-NEXT:    sahf
 ; X86-X87-NEXT:    movl $-8, %ebx
@@ -1720,6 +1712,7 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-X87-NEXT:  .LBB18_2:
+; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %ebp
 ; X86-X87-NEXT:    jb .LBB18_4
@@ -1797,36 +1790,33 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    calll __fixdfti
 ; X86-SSE-NEXT:    subl $4, %esp
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; X86-SSE-NEXT:    xorl %ebp, %ebp
 ; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $-8, %ebx
-; X86-SSE-NEXT:    movl $0, %ecx
-; X86-SSE-NEXT:    movl $0, %edx
-; X86-SSE-NEXT:    movl $0, %edi
-; X86-SSE-NEXT:    jb .LBB18_2
-; X86-SSE-NEXT:  # %bb.1:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl $-8, %edi
+; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl $0, %ebp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cmovbl %ebp, %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:  .LBB18_2:
+; X86-SSE-NEXT:    cmovbl %ebp, %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE-NEXT:    cmovbl %ebp, %ebx
 ; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-SSE-NEXT:    movl $-1, %eax
-; X86-SSE-NEXT:    cmoval %eax, %edi
-; X86-SSE-NEXT:    cmoval %eax, %edx
-; X86-SSE-NEXT:    cmoval %eax, %ecx
-; X86-SSE-NEXT:    movl $7, %eax
-; X86-SSE-NEXT:    cmovbel %ebx, %eax
+; X86-SSE-NEXT:    movl $-1, %ecx
+; X86-SSE-NEXT:    cmoval %ecx, %ebx
+; X86-SSE-NEXT:    cmoval %ecx, %edx
+; X86-SSE-NEXT:    cmoval %ecx, %eax
+; X86-SSE-NEXT:    movl $7, %ecx
+; X86-SSE-NEXT:    cmovbel %edi, %ecx
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm0
-; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %ecx
+; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %edx
-; X86-SSE-NEXT:    cmovpl %ebp, %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    cmovpl %ebp, %ebx
+; X86-SSE-NEXT:    movl %ebx, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
-; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
-; X86-SSE-NEXT:    movb %al, 12(%esi)
+; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    andl $15, %ecx
+; X86-SSE-NEXT:    movb %cl, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp
 ; X86-SSE-NEXT:    popl %esi
@@ -1840,10 +1830,10 @@ define i100 @test_signed_i100_f64(double %f) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; X64-NEXT:    callq __fixdfti@PLT
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
 ; X64-NEXT:    # xmm0 = mem[0],zero
 ; X64-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    movabsq $-34359738368, %rsi # imm = 0xFFFFFFF800000000
 ; X64-NEXT:    cmovbq %rsi, %rdx
@@ -1881,9 +1871,9 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; X86-X87-NEXT:    movl %eax, %ebx
 ; X86-X87-NEXT:    calll __fixdfti
 ; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movb %bh, %ah
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    movl $0, %ebx
 ; X86-X87-NEXT:    jae .LBB19_1
@@ -1971,9 +1961,9 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll __fixdfti
 ; X86-SSE-NEXT:    subl $4, %esp
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    cmovbl %ecx, %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -2011,10 +2001,10 @@ define i128 @test_signed_i128_f64(double %f) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; X64-NEXT:    callq __fixdfti@PLT
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
 ; X64-NEXT:    # xmm0 = mem[0],zero
 ; X64-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
 ; X64-NEXT:    cmovbq %rsi, %rdx
@@ -2078,9 +2068,9 @@ define i1 @test_signed_i1_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %ebx
 ; X86-X87-NEXT:    ja .LBB20_4
 ; X86-X87-NEXT:  # %bb.3:
@@ -2118,11 +2108,11 @@ define i1 @test_signed_i1_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl $255, %eax
 ; X86-SSE-NEXT:    cmovael %ecx, %eax
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    fldz
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    cmoval %ecx, %eax
 ; X86-SSE-NEXT:    fucompi %st(0), %st
 ; X86-SSE-NEXT:    cmovpl %ecx, %eax
@@ -2148,11 +2138,11 @@ define i1 @test_signed_i1_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movl $255, %eax
 ; X64-NEXT:    cmovael %ecx, %eax
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    fldz
 ; X64-NEXT:    fxch %st(1)
 ; X64-NEXT:    fucomi %st(1), %st
 ; X64-NEXT:    fstp %st(1)
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmoval %ecx, %eax
 ; X64-NEXT:    fucompi %st(0), %st
 ; X64-NEXT:    cmovpl %ecx, %eax
@@ -2234,8 +2224,8 @@ define i8 @test_signed_i8_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl $127, %edx
 ; X86-SSE-NEXT:    cmovbel %ecx, %edx
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    fucompi %st(0), %st
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-SSE-NEXT:    addl $8, %esp
@@ -2264,8 +2254,8 @@ define i8 @test_signed_i8_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movl $127, %edx
 ; X64-NEXT:    cmovbel %ecx, %edx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -2311,14 +2301,14 @@ define i13 @test_signed_i13_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:  .LBB22_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB22_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB22_6:
-; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -2346,8 +2336,8 @@ define i13 @test_signed_i13_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl $4095, %edx # imm = 0xFFF
 ; X86-SSE-NEXT:    cmovbel %ecx, %edx
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    fucompi %st(0), %st
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-SSE-NEXT:    addl $8, %esp
@@ -2376,8 +2366,8 @@ define i13 @test_signed_i13_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movl $4095, %edx # imm = 0xFFF
 ; X64-NEXT:    cmovbel %ecx, %edx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -2423,14 +2413,14 @@ define i16 @test_signed_i16_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:  .LBB23_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB23_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB23_6:
-; X86-X87-NEXT:    movl %ecx, %eax
+; X86-X87-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -2458,8 +2448,8 @@ define i16 @test_signed_i16_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl $32767, %edx # imm = 0x7FFF
 ; X86-SSE-NEXT:    cmovbel %ecx, %edx
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    fucompi %st(0), %st
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %edx, %eax
 ; X86-SSE-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-SSE-NEXT:    addl $8, %esp
@@ -2488,8 +2478,8 @@ define i16 @test_signed_i16_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movl $32767, %edx # imm = 0x7FFF
 ; X64-NEXT:    cmovbel %ecx, %edx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %edx, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -2535,14 +2525,13 @@ define i19 @test_signed_i19_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:  .LBB24_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB24_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB24_6:
-; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -2572,8 +2561,8 @@ define i19 @test_signed_i19_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl $262143, %ecx # imm = 0x3FFFF
 ; X86-SSE-NEXT:    cmovbel %eax, %ecx
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    fucompi %st(0), %st
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
 ; X86-SSE-NEXT:    addl $8, %esp
 ; X86-SSE-NEXT:    retl
@@ -2603,8 +2592,8 @@ define i19 @test_signed_i19_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movl $262143, %ecx # imm = 0x3FFFF
 ; X64-NEXT:    cmovbel %eax, %ecx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %ecx, %eax
 ; X64-NEXT:    retq
     %x = call i19 @llvm.fptosi.sat.i19.f80(x86_fp80 %f)
@@ -2649,14 +2638,13 @@ define i32 @test_signed_i32_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:  .LBB25_4:
 ; X86-X87-NEXT:    fucomp %st(0)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    jp .LBB25_6
 ; X86-X87-NEXT:  # %bb.5:
-; X86-X87-NEXT:    movl %edx, %ecx
+; X86-X87-NEXT:    movl %edx, %eax
 ; X86-X87-NEXT:  .LBB25_6:
-; X86-X87-NEXT:    movl %ecx, %eax
 ; X86-X87-NEXT:    addl $8, %esp
 ; X86-X87-NEXT:    retl
 ;
@@ -2686,8 +2674,8 @@ define i32 @test_signed_i32_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fstp %st(1)
 ; X86-SSE-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X86-SSE-NEXT:    cmovbel %eax, %ecx
-; X86-SSE-NEXT:    xorl %eax, %eax
 ; X86-SSE-NEXT:    fucompi %st(0), %st
+; X86-SSE-NEXT:    movl $0, %eax
 ; X86-SSE-NEXT:    cmovnpl %ecx, %eax
 ; X86-SSE-NEXT:    addl $8, %esp
 ; X86-SSE-NEXT:    retl
@@ -2717,8 +2705,8 @@ define i32 @test_signed_i32_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movl $2147483647, %ecx # imm = 0x7FFFFFFF
 ; X64-NEXT:    cmovbel %eax, %ecx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpl %ecx, %eax
 ; X64-NEXT:    retq
     %x = call i32 @llvm.fptosi.sat.i32.f80(x86_fp80 %f)
@@ -2745,9 +2733,9 @@ define i50 @test_signed_i50_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    jb .LBB26_2
 ; X86-X87-NEXT:  # %bb.1:
@@ -2804,11 +2792,11 @@ define i50 @test_signed_i50_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fld %st(0)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-131072, %eax # imm = 0xFFFE0000
@@ -2856,8 +2844,8 @@ define i50 @test_signed_i50_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movabsq $562949953421311, %rcx # imm = 0x1FFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rax, %rcx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpq %rcx, %rax
 ; X64-NEXT:    retq
     %x = call i50 @llvm.fptosi.sat.i50.f80(x86_fp80 %f)
@@ -2884,9 +2872,9 @@ define i64 @test_signed_i64_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    fucom %st(1)
 ; X86-X87-NEXT:    fstp %st(1)
 ; X86-X87-NEXT:    fnstsw %ax
-; X86-X87-NEXT:    xorl %ecx, %ecx
 ; X86-X87-NEXT:    # kill: def $ah killed $ah killed $ax
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    jb .LBB27_2
 ; X86-X87-NEXT:  # %bb.1:
@@ -2943,11 +2931,11 @@ define i64 @test_signed_i64_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    fld %st(0)
 ; X86-SSE-NEXT:    fistpll {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    fldcw {{[0-9]+}}(%esp)
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    cmovbl %ecx, %esi
 ; X86-SSE-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
@@ -2995,8 +2983,8 @@ define i64 @test_signed_i64_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstp %st(1)
 ; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
 ; X64-NEXT:    cmovbeq %rax, %rcx
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    fucompi %st(0), %st
+; X64-NEXT:    movl $0, %eax
 ; X64-NEXT:    cmovnpq %rcx, %rax
 ; X64-NEXT:    retq
     %x = call i64 @llvm.fptosi.sat.i64.f80(x86_fp80 %f)
@@ -3025,7 +3013,6 @@ define i100 @test_signed_i100_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    movl %eax, %ebx
 ; X86-X87-NEXT:    calll __fixxfti
 ; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    xorl %edx, %edx
 ; X86-X87-NEXT:    movb %bh, %ah
 ; X86-X87-NEXT:    sahf
 ; X86-X87-NEXT:    movl $-8, %ebx
@@ -3033,6 +3020,7 @@ define i100 @test_signed_i100_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:  # %bb.1:
 ; X86-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
 ; X86-X87-NEXT:  .LBB28_2:
+; X86-X87-NEXT:    movl $0, %edx
 ; X86-X87-NEXT:    movl $0, %ecx
 ; X86-X87-NEXT:    movl $0, %ebp
 ; X86-X87-NEXT:    jb .LBB28_4
@@ -3111,43 +3099,39 @@ define i100 @test_signed_i100_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll __fixxfti
 ; X86-SSE-NEXT:    subl $4, %esp
-; X86-SSE-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
-; X86-SSE-NEXT:    xorl %ebp, %ebp
 ; X86-SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; X86-SSE-NEXT:    fxch %st(1)
+; X86-SSE-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
-; X86-SSE-NEXT:    movl $-8, %ebx
-; X86-SSE-NEXT:    movl $0, %ecx
-; X86-SSE-NEXT:    movl $0, %edx
-; X86-SSE-NEXT:    movl $0, %edi
-; X86-SSE-NEXT:    jb .LBB28_2
-; X86-SSE-NEXT:  # %bb.1:
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movl $-8, %edi
+; X86-SSE-NEXT:    cmovael {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl $0, %ebp
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    cmovbl %ebp, %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X86-SSE-NEXT:  .LBB28_2:
+; X86-SSE-NEXT:    cmovbl %ebp, %edx
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X86-SSE-NEXT:    cmovbl %ebp, %ebx
 ; X86-SSE-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fxch %st(1)
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
-; X86-SSE-NEXT:    movl $-1, %eax
-; X86-SSE-NEXT:    cmoval %eax, %edi
-; X86-SSE-NEXT:    cmoval %eax, %edx
-; X86-SSE-NEXT:    cmoval %eax, %ecx
-; X86-SSE-NEXT:    movl $7, %eax
-; X86-SSE-NEXT:    cmovbel %ebx, %eax
+; X86-SSE-NEXT:    movl $-1, %ecx
+; X86-SSE-NEXT:    cmoval %ecx, %ebx
+; X86-SSE-NEXT:    cmoval %ecx, %edx
+; X86-SSE-NEXT:    cmoval %ecx, %eax
+; X86-SSE-NEXT:    movl $7, %ecx
+; X86-SSE-NEXT:    cmovbel %edi, %ecx
 ; X86-SSE-NEXT:    fucompi %st(0), %st
-; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %ecx
+; X86-SSE-NEXT:    cmovpl %ebp, %eax
 ; X86-SSE-NEXT:    cmovpl %ebp, %edx
-; X86-SSE-NEXT:    cmovpl %ebp, %edi
-; X86-SSE-NEXT:    movl %edi, 8(%esi)
+; X86-SSE-NEXT:    cmovpl %ebp, %ebx
+; X86-SSE-NEXT:    movl %ebx, 8(%esi)
 ; X86-SSE-NEXT:    movl %edx, 4(%esi)
-; X86-SSE-NEXT:    movl %ecx, (%esi)
-; X86-SSE-NEXT:    andl $15, %eax
-; X86-SSE-NEXT:    movb %al, 12(%esi)
+; X86-SSE-NEXT:    movl %eax, (%esi)
+; X86-SSE-NEXT:    andl $15, %ecx
+; X86-SSE-NEXT:    movb %cl, 12(%esi)
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $44, %esp
 ; X86-SSE-NEXT:    popl %esi
@@ -3164,11 +3148,11 @@ define i100 @test_signed_i100_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    callq __fixxfti@PLT
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; X64-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; X64-NEXT:    fucomi %st(1), %st
 ; X64-NEXT:    fstp %st(1)
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    movabsq $-34359738368, %rsi # imm = 0xFFFFFFF800000000
 ; X64-NEXT:    cmovbq %rsi, %rdx
@@ -3211,9 +3195,9 @@ define i128 @test_signed_i128_f80(x86_fp80 %f) nounwind {
 ; X86-X87-NEXT:    movl %eax, %ebx
 ; X86-X87-NEXT:    calll __fixxfti
 ; X86-X87-NEXT:    subl $4, %esp
-; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movb %bh, %ah
 ; X86-X87-NEXT:    sahf
+; X86-X87-NEXT:    movl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-X87-NEXT:    movl $0, %eax
 ; X86-X87-NEXT:    movl $0, %ebx
 ; X86-X87-NEXT:    jae .LBB29_1
@@ -3303,11 +3287,11 @@ define i128 @test_signed_i128_f80(x86_fp80 %f) nounwind {
 ; X86-SSE-NEXT:    movl %eax, (%esp)
 ; X86-SSE-NEXT:    calll __fixxfti
 ; X86-SSE-NEXT:    subl $4, %esp
-; X86-SSE-NEXT:    xorl %ecx, %ecx
 ; X86-SSE-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
 ; X86-SSE-NEXT:    fldt {{[-0-9]+}}(%e{{[sb]}}p) # 10-byte Folded Reload
 ; X86-SSE-NEXT:    fucomi %st(1), %st
 ; X86-SSE-NEXT:    fstp %st(1)
+; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    cmovbl %ecx, %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
@@ -3351,11 +3335,11 @@ define i128 @test_signed_i128_f80(x86_fp80 %f) nounwind {
 ; X64-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Spill
 ; X64-NEXT:    fstpt (%rsp)
 ; X64-NEXT:    callq __fixxfti@PLT
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
 ; X64-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) # 10-byte Folded Reload
 ; X64-NEXT:    fucomi %st(1), %st
 ; X64-NEXT:    fstp %st(1)
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovbq %rcx, %rax
 ; X64-NEXT:    movabsq $-9223372036854775808, %rsi # imm = 0x8000000000000000
 ; X64-NEXT:    cmovbq %rsi, %rdx

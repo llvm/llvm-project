@@ -99,8 +99,8 @@ define i32 @select_maybe_zero(i1 %c, i32 %x) {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    orl $1, %eax
-; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, %ecx
 ; X86-NEXT:    cmovnel %eax, %ecx
 ; X86-NEXT:    bsfl %ecx, %ecx
 ; X86-NEXT:    movl $32, %eax
@@ -110,8 +110,8 @@ define i32 @select_maybe_zero(i1 %c, i32 %x) {
 ; X64-LABEL: select_maybe_zero:
 ; X64:       # %bb.0:
 ; X64-NEXT:    orl $1, %esi
-; X64-NEXT:    xorl %ecx, %ecx
 ; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $0, %ecx
 ; X64-NEXT:    cmovnel %esi, %ecx
 ; X64-NEXT:    movl $32, %eax
 ; X64-NEXT:    rep bsfl %ecx, %eax

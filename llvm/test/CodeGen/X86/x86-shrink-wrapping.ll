@@ -1172,8 +1172,8 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; ENABLE:       ## %bb.0: ## %entry
 ; ENABLE-NEXT:    pushq %rbx
 ; ENABLE-NEXT:    subq $16, %rsp
-; ENABLE-NEXT:    xorl %eax, %eax
 ; ENABLE-NEXT:    cmpb $0, _b(%rip)
+; ENABLE-NEXT:    movl $0, %eax
 ; ENABLE-NEXT:    movl $48, %ecx
 ; ENABLE-NEXT:    cmovnel %eax, %ecx
 ; ENABLE-NEXT:    movb %cl, _c(%rip)
@@ -1207,8 +1207,8 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE:       ## %bb.0: ## %entry
 ; DISABLE-NEXT:    pushq %rbx
 ; DISABLE-NEXT:    subq $16, %rsp
-; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    cmpb $0, _b(%rip)
+; DISABLE-NEXT:    movl $0, %eax
 ; DISABLE-NEXT:    movl $48, %ecx
 ; DISABLE-NEXT:    cmovnel %eax, %ecx
 ; DISABLE-NEXT:    movb %cl, _c(%rip)

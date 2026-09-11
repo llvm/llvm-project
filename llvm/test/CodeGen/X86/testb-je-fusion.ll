@@ -14,27 +14,82 @@
 ; testb should be scheduled right before je to enable macro-fusion.
 
 define i32 @macrofuse_test_je(i32 %flags, ptr %p) nounwind {
-; NOFUSION-LABEL: macrofuse_test_je:
-; NOFUSION:       # %bb.0: # %entry
-; NOFUSION-NEXT:    xorl %eax, %eax
-; NOFUSION-NEXT:    testl $512, %edi # imm = 0x200
-; NOFUSION-NEXT:    movb $1, (%rsi)
-; NOFUSION-NEXT:    je .LBB0_2
-; NOFUSION-NEXT:  # %bb.1: # %if.then
-; NOFUSION-NEXT:    movl $1, %eax
-; NOFUSION-NEXT:  .LBB0_2: # %if.end
-; NOFUSION-NEXT:    retq
+; NOFUSION_NOPOSTRA-LABEL: macrofuse_test_je:
+; NOFUSION_NOPOSTRA:       # %bb.0: # %entry
+; NOFUSION_NOPOSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; NOFUSION_NOPOSTRA-NEXT:    movb $1, (%rsi)
+; NOFUSION_NOPOSTRA-NEXT:    movl $0, %eax
+; NOFUSION_NOPOSTRA-NEXT:    je .LBB0_2
+; NOFUSION_NOPOSTRA-NEXT:  # %bb.1: # %if.then
+; NOFUSION_NOPOSTRA-NEXT:    movl $1, %eax
+; NOFUSION_NOPOSTRA-NEXT:  .LBB0_2: # %if.end
+; NOFUSION_NOPOSTRA-NEXT:    retq
 ;
-; FUSION-LABEL: macrofuse_test_je:
-; FUSION:       # %bb.0: # %entry
-; FUSION-NEXT:    xorl %eax, %eax
-; FUSION-NEXT:    movb $1, (%rsi)
-; FUSION-NEXT:    testl $512, %edi # imm = 0x200
-; FUSION-NEXT:    je .LBB0_2
-; FUSION-NEXT:  # %bb.1: # %if.then
-; FUSION-NEXT:    movl $1, %eax
-; FUSION-NEXT:  .LBB0_2: # %if.end
-; FUSION-NEXT:    retq
+; BRANCHFUSIONONLY_NOPOSTRA-LABEL: macrofuse_test_je:
+; BRANCHFUSIONONLY_NOPOSTRA:       # %bb.0: # %entry
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:    movb $1, (%rsi)
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:    xorl %eax, %eax
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:    je .LBB0_2
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:  # %bb.1: # %if.then
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:    movl $1, %eax
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:  .LBB0_2: # %if.end
+; BRANCHFUSIONONLY_NOPOSTRA-NEXT:    retq
+;
+; MACROFUSION_NOPOSTRA-LABEL: macrofuse_test_je:
+; MACROFUSION_NOPOSTRA:       # %bb.0: # %entry
+; MACROFUSION_NOPOSTRA-NEXT:    movb $1, (%rsi)
+; MACROFUSION_NOPOSTRA-NEXT:    xorl %eax, %eax
+; MACROFUSION_NOPOSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; MACROFUSION_NOPOSTRA-NEXT:    je .LBB0_2
+; MACROFUSION_NOPOSTRA-NEXT:  # %bb.1: # %if.then
+; MACROFUSION_NOPOSTRA-NEXT:    movl $1, %eax
+; MACROFUSION_NOPOSTRA-NEXT:  .LBB0_2: # %if.end
+; MACROFUSION_NOPOSTRA-NEXT:    retq
+;
+; NOFUSION_POSTRA-LABEL: macrofuse_test_je:
+; NOFUSION_POSTRA:       # %bb.0: # %entry
+; NOFUSION_POSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; NOFUSION_POSTRA-NEXT:    movl $0, %eax
+; NOFUSION_POSTRA-NEXT:    movb $1, (%rsi)
+; NOFUSION_POSTRA-NEXT:    je .LBB0_2
+; NOFUSION_POSTRA-NEXT:  # %bb.1: # %if.then
+; NOFUSION_POSTRA-NEXT:    movl $1, %eax
+; NOFUSION_POSTRA-NEXT:  .LBB0_2: # %if.end
+; NOFUSION_POSTRA-NEXT:    retq
+;
+; BRANCHFUSION_POSTRA-LABEL: macrofuse_test_je:
+; BRANCHFUSION_POSTRA:       # %bb.0: # %entry
+; BRANCHFUSION_POSTRA-NEXT:    xorl %eax, %eax
+; BRANCHFUSION_POSTRA-NEXT:    movb $1, (%rsi)
+; BRANCHFUSION_POSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; BRANCHFUSION_POSTRA-NEXT:    je .LBB0_2
+; BRANCHFUSION_POSTRA-NEXT:  # %bb.1: # %if.then
+; BRANCHFUSION_POSTRA-NEXT:    movl $1, %eax
+; BRANCHFUSION_POSTRA-NEXT:  .LBB0_2: # %if.end
+; BRANCHFUSION_POSTRA-NEXT:    retq
+;
+; NOFUSION_MISCHEDPOSTRA-LABEL: macrofuse_test_je:
+; NOFUSION_MISCHEDPOSTRA:       # %bb.0: # %entry
+; NOFUSION_MISCHEDPOSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; NOFUSION_MISCHEDPOSTRA-NEXT:    movl $0, %eax
+; NOFUSION_MISCHEDPOSTRA-NEXT:    movb $1, (%rsi)
+; NOFUSION_MISCHEDPOSTRA-NEXT:    je .LBB0_2
+; NOFUSION_MISCHEDPOSTRA-NEXT:  # %bb.1: # %if.then
+; NOFUSION_MISCHEDPOSTRA-NEXT:    movl $1, %eax
+; NOFUSION_MISCHEDPOSTRA-NEXT:  .LBB0_2: # %if.end
+; NOFUSION_MISCHEDPOSTRA-NEXT:    retq
+;
+; BRANCHFUSION_MISCHEDPOSTRA-LABEL: macrofuse_test_je:
+; BRANCHFUSION_MISCHEDPOSTRA:       # %bb.0: # %entry
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:    movl $0, %eax
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:    movb $1, (%rsi)
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:    testl $512, %edi # imm = 0x200
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:    je .LBB0_2
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:  # %bb.1: # %if.then
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:    movl $1, %eax
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:  .LBB0_2: # %if.end
+; BRANCHFUSION_MISCHEDPOSTRA-NEXT:    retq
 entry:
   %and = and i32 %flags, 512
   %tobool = icmp eq i32 %and, 0

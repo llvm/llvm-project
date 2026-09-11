@@ -62,8 +62,8 @@ define i32 @setcc_ult_freeze(i32 %a, i32 %b) {
 define i32 @setcc_carry_freeze(i32 %a, i32 %b) {
 ; CHECK-LABEL: setcc_carry_freeze:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ult i32 %a, %b

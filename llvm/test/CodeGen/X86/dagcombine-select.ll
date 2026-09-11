@@ -5,8 +5,8 @@
 define i32 @select_and1(i32 %x, i32 %y) {
 ; CHECK-LABEL: select_and1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgel %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
@@ -18,8 +18,8 @@ define i32 @select_and1(i32 %x, i32 %y) {
 define i32 @select_and2(i32 %x, i32 %y) {
 ; CHECK-LABEL: select_and2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovgel %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11
@@ -31,8 +31,8 @@ define i32 @select_and2(i32 %x, i32 %y) {
 define i32 @select_and3(i32 %x, i32 %y) {
 ; CHECK-LABEL: select_and3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $11, %edi
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovll %esi, %eax
 ; CHECK-NEXT:    retq
   %c = icmp slt i32 %x, 11

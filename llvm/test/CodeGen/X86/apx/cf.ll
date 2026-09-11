@@ -198,8 +198,8 @@ entry:
 define void @sink_gep(ptr %p, i1 %cond) {
 ; CHECK-LABEL: sink_gep:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cfcmovnel %eax, 112(%rdi)
 ; CHECK-NEXT:    cfcmovnel 112(%rdi), %eax
 ; CHECK-NEXT:    movl %eax, (%rdi)
@@ -219,8 +219,8 @@ next:
 define void @xor_cond(ptr %p, i1 %cond) {
 ; CHECK-LABEL: xor_cond:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb $1, %sil
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cfcmovel %eax, (%rdi)
 ; CHECK-NEXT:    retq
 entry:
@@ -236,9 +236,9 @@ define void @and_cond(i32 %a, i1 %b) {
 ; CHECK-NEXT:    testl %edi, %edi
 ; CHECK-NEXT:    setg %al
 ; CHECK-NEXT:    notb %sil
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    testb %al, %sil
-; CHECK-NEXT:    cfcmovnel %ecx, 0
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cfcmovnel %eax, 0
 ; CHECK-NEXT:    retq
   %is_pos = icmp sgt i32 %a, 0
   %not_b = xor i1 %b, true

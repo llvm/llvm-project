@@ -51,8 +51,8 @@ define i32 @bax(<2 x i64> %c) {
 define i16 @rnd16(i16 %arg) nounwind {
 ; CHECK-LABEL: rnd16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandw %cx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -69,8 +69,8 @@ define i16 @rnd16(i16 %arg) nounwind {
 define i32 @rnd32(i32 %arg) nounwind {
 ; CHECK-LABEL: rnd32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandl %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retq
@@ -86,8 +86,8 @@ define i32 @rnd32(i32 %arg) nounwind {
 define i64 @rnd64(i64 %arg) nounwind {
 ; CHECK-LABEL: rnd64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdrandq %rcx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq
@@ -103,8 +103,8 @@ define i64 @rnd64(i64 %arg) nounwind {
 define i16 @seed16(i16 %arg) nounwind {
 ; CHECK-LABEL: seed16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedw %cx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -121,8 +121,8 @@ define i16 @seed16(i16 %arg) nounwind {
 define i32 @seed32(i32 %arg) nounwind {
 ; CHECK-LABEL: seed32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedl %ecx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbl %edi, %eax
 ; CHECK-NEXT:    addl %ecx, %eax
 ; CHECK-NEXT:    retq
@@ -138,8 +138,8 @@ define i32 @seed32(i32 %arg) nounwind {
 define i64 @seed64(i64 %arg) nounwind {
 ; CHECK-LABEL: seed64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    rdseedq %rcx
+; CHECK-NEXT:    movl $0, %eax
 ; CHECK-NEXT:    cmovbq %rdi, %rax
 ; CHECK-NEXT:    addq %rcx, %rax
 ; CHECK-NEXT:    retq

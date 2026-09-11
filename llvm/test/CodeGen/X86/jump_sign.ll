@@ -32,10 +32,10 @@ declare i32 @baz(...)
 define i32 @func_g(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_g:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovnsl %ecx, %eax
 ; CHECK-NEXT:    retl
   %sub = sub nsw i32 %a, %b
   %cmp = icmp sgt i32 %sub, 0
@@ -47,10 +47,10 @@ define i32 @func_g(i32 %a, i32 %b) nounwind {
 define i32 @func_h(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_h:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovlel %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp slt i32 %b, %a
   %sub = sub nsw i32 %a, %b
@@ -61,10 +61,10 @@ define i32 @func_h(i32 %a, i32 %b) nounwind {
 define i32 @func_i(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_i:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovlel %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgl %ecx, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp sgt i32 %a, %b
   %sub = sub nsw i32 %a, %b
@@ -75,10 +75,10 @@ define i32 @func_i(i32 %a, i32 %b) nounwind {
 define i32 @func_j(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_j:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovbel %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmoval %ecx, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp ugt i32 %a, %b
   %sub = sub i32 %a, %b
@@ -89,10 +89,10 @@ define i32 @func_j(i32 %a, i32 %b) nounwind {
 define i32 @func_k(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_k:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovbel %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmoval %ecx, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp ult i32 %b, %a
   %sub = sub i32 %a, %b
@@ -185,10 +185,10 @@ if.else:
 define i32 @func_l4(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_l4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovll %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovgel %ecx, %eax
 ; CHECK-NEXT:    retl
   %cmp = icmp sgt i32 %b, %a
   %sub = sub i32 %a, %b
@@ -285,10 +285,10 @@ if.else.i104:                                     ; preds = %if.then44
 define i32 @func_p(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: func_p:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    addl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovnsl %ecx, %eax
 ; CHECK-NEXT:    retl
   %add = add nsw i32 %b, %a
   %cmp = icmp sgt i32 %add, 0
@@ -303,8 +303,8 @@ define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: func_q:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    movl $0, %ecx
 ; CHECK-NEXT:    sbbl %ecx, %ecx
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    xorl %ecx, %eax
@@ -351,10 +351,10 @@ return:
 define i32 @func_dec(i32 %a) nounwind {
 ; CHECK-LABEL: func_dec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    decl %eax
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    decl %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovnsl %ecx, %eax
 ; CHECK-NEXT:    retl
   %sub = sub nsw i32 %a, 1
   %cmp = icmp sgt i32 %sub, 0
@@ -365,10 +365,10 @@ define i32 @func_dec(i32 %a) nounwind {
 define i32 @func_inc(i32 %a) nounwind {
 ; CHECK-LABEL: func_inc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    incl %eax
-; CHECK-NEXT:    cmovsl %ecx, %eax
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; CHECK-NEXT:    incl %ecx
+; CHECK-NEXT:    movl $0, %eax
+; CHECK-NEXT:    cmovnsl %ecx, %eax
 ; CHECK-NEXT:    retl
   %add = add nsw i32 %a, 1
   %cmp = icmp sgt i32 %add, 0
