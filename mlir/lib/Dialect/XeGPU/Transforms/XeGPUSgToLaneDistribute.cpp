@@ -1870,11 +1870,11 @@ struct SgToLaneConvertLayout
 };
 
 /// Returns true if `layout` has rank 2, the default (row major) effective order
-/// [1, 0] and effective lane_data [1, 1], i.e. it maps the elements of the value
-/// to lanes one by one, without packing several of them into a lane. An unset
-/// lane_data is not accepted: `getEffectiveLaneDataAsInt` returns an empty
-/// vector for it, so layouts that are not lane level are rejected here. The
-/// effective lane_layout is deliberately left unconstrained: it is what the
+/// [1, 0] and effective lane_data [1, 1], i.e. it maps the elements of the
+/// value to lanes one by one, without packing several of them into a lane. An
+/// unset lane_data is not accepted: `getEffectiveLaneDataAsInt` returns an
+/// empty vector for it, so layouts that are not lane level are rejected here.
+/// The effective lane_layout is deliberately left unconstrained: it is what the
 /// conversions below redistribute.
 static bool hasDefaultOrderAndUnitLaneData(xegpu::DistributeLayoutAttr layout) {
   if (layout.getRank() != 2)
