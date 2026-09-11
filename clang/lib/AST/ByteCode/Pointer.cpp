@@ -1301,10 +1301,14 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
 }
 
 const VarDecl *Pointer::getRootVarDecl() const {
+  return dyn_cast_if_present<VarDecl>(getRootValueDecl());
+}
+
+const ValueDecl *Pointer::getRootValueDecl() const {
   if (isBlockPointer())
-    return getDeclDesc()->asVarDecl();
+    return getDeclDesc()->asValueDecl();
   if (isOpaquePointer())
-    return dyn_cast<VarDecl>(Opaque.Base);
+    return Opaque.Base;
   return nullptr;
 }
 

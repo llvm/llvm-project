@@ -729,6 +729,7 @@ public:
   }
 
   const VarDecl *getRootVarDecl() const;
+  const ValueDecl *getRootValueDecl() const;
   const Expr *getRootExpr() const;
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
