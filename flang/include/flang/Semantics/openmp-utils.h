@@ -243,6 +243,7 @@ private:
 };
 
 /// Add the construct traits implied by an OpenMP directive to \p vmi.
+/// Combined and composite directives contribute each of their leaf traits.
 void AppendConstructTraitsForDirective(
     llvm::omp::Directive, llvm::omp::VariantMatchInfo &vmi);
 
@@ -302,7 +303,7 @@ llvm::SmallVector<unsigned, 4> GetMetadirectiveElsePathCandidates(
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);
 
 /// Return every replacement that can be selected, retaining lower-ranked
-/// candidates after a dynamic condition. Null represents NOTHING.
+/// candidates after a dynamic condition. Null represents clause-free NOTHING.
 llvm::SmallVector<const parser::OmpDirectiveSpecification *, 4>
 GetReachableMetadirectiveVariants(const MetadirectiveCandidateSet &candidateSet,
     const OmpVariantMatchContext &matchContext, SemanticsContext &context);

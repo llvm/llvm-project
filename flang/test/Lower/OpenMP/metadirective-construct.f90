@@ -2,8 +2,7 @@
 
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - | FileCheck %s
 
-! A bare SIMD selector is not an empty selector since it needs an enclosing
-! SIMD.
+! A SIMD selector without properties requires an enclosing SIMD construct.
 ! CHECK-LABEL: func.func @_QPtest_construct_simd_absent()
 ! CHECK-NOT:     omp.barrier
 ! CHECK:         omp.taskyield

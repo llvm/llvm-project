@@ -2428,10 +2428,6 @@ UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
   return UnsupportedSelectorFeature::None;
 }
 
-// Add the construct trait properties implied by an OpenMP directive (e.g.
-// `target` adds `construct_target_target`, `target teams` adds both
-// `construct_target_target` and `construct_teams_teams`) to \p vmi. This
-// decomposes combined/composite construct selectors into their leaf traits.
 void AppendConstructTraitsForDirective(
     llvm::omp::Directive dir, llvm::omp::VariantMatchInfo &vmi) {
   auto add = [&](llvm::omp::TraitProperty prop) {
@@ -2556,8 +2552,8 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
   };
 
   auto getVariant = [](const parser::OmpDirectiveSpecification &spec) {
-    // NOTHING with APPLY is a loop transformation, not a no-op. Preserve its
-    // specification so semantic checks can visit the reachable APPLY items.
+    // Preserve NOTHING with APPLY so semantic checks can validate its loop
+    // transformations and lowering can diagnose unsupported APPLY clauses.
     return spec.DirId() == llvm::omp::Directive::OMPD_nothing &&
             spec.Clauses().v.empty()
         ? nullptr

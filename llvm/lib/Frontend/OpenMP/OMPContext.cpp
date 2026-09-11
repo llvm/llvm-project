@@ -199,11 +199,9 @@ isVariantApplicableInContextHelper(const VariantMatchInfo &VMI,
 
   bool AnyTraitMatched = false;
 
-  // Handle a single property that was (not) found in the OpenMP context based
-  // on the match kind selected by the user via
-  // `implementation={extensions(match_[all,any,none])}'. Keep inspecting
-  // traits after match_any succeeds so construct match positions needed for
-  // scoring are still recorded.
+  // Apply the match kind selected by implementation={extension(...)} to
+  // each property. Continue after match_any succeeds to record all construct
+  // match positions needed for scoring.
   auto HandleTrait = [MK, &AnyTraitMatched](TraitProperty Property,
                                             bool WasFound) -> bool {
     AnyTraitMatched |= WasFound;
@@ -365,8 +363,8 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
       // TODO: Handling separately.
       break;
     case TraitSet::invalid:
-      // An unknown property can be applicable under match_any or match_none,
-      // but contributes no score of its own.
+      // Unknown properties can be applicable under match_any or match_none.
+      // They contribute no score unless an explicit score was handled above.
       continue;
     }
 
