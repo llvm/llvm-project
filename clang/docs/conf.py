@@ -19,7 +19,7 @@ from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
 
 globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 
-myst_enable_extensions += ["deflist"]
+myst_enable_extensions += ["attrs_inline", "deflist"]
 
 # -- General configuration -----------------------------------------------------
 
