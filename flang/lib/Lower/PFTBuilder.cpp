@@ -559,6 +559,7 @@ private:
     };
 
     rewriteIfGotos();
+    rewriteTrailingCycle();
     auto *eval = constructAndDirectiveStack.back();
     if (eval->isExecutableDirective() && !isOpenMPLoopConstruct(eval)) {
       // A construct at the end of an (unstructured) OpenACC or OpenMP
@@ -675,6 +676,72 @@ private:
     assert(!evaluationListStack.empty() &&
            "trying to pop an empty evaluationListStack");
     evaluationListStack.pop_back();
+  }
+
+  /// Delete a CycleStmt that is the last statement of the body of its own
+  /// DoConstruct, where it is a no-op. The pre-branch-analysis code:
+  ///
+  ///       <<DoConstruct>>
+  ///         1 NonLabelDoStmt: do n = 1, nb
+  ///         2 Statement: ...
+  ///         3 CycleStmt: cycle
+  ///         4 EndDoStmt
+  ///       <<End DoConstruct>>
+  ///
+  /// becomes:
+  ///
+  ///       <<DoConstruct>>
+  ///         1 NonLabelDoStmt: do n = 1, nb
+  ///         2 Statement: ...
+  ///         4 EndDoStmt
+  ///       <<End DoConstruct>>
+  ///
+  /// Branching to the EndDoStmt and falling through to it are the same thing,
+  /// so the CycleStmt has no effect. Deleting it matters because branch
+  /// analysis otherwise marks the DoConstruct unstructured, which costs the
+  /// structured form of the loop -- and with it the induction variable
+  /// semantics that later passes rely on.
+  ///
+  /// The CycleStmt must be unlabeled, so that it is not itself a branch
+  /// target, and it must name this DoConstruct, either implicitly by naming
+  /// no construct at all, or explicitly by matching its name.
+  ///
+  /// This is independent of rewriteIfGotos. Where both could apply, as in a
+  /// trailing CycleStmt preceded by an `if (cond) cycle`, either order leaves
+  /// the DoConstruct structured; only the classification of the intervening
+  /// IfConstruct differs.
+  void rewriteTrailingCycle() {
+    auto &evaluationList = *evaluationListStack.back();
+    if (evaluationList.size() < 3)
+      return;
+    const auto *doStmt =
+        evaluationList.begin()->getIf<parser::NonLabelDoStmt>();
+    if (!doStmt)
+      return;
+    lower::pft::EvaluationList::iterator endDoStmtIt =
+        std::prev(evaluationList.end());
+    if (!endDoStmtIt->isA<parser::EndDoStmt>())
+      return;
+    lower::pft::EvaluationList::iterator cycleStmtIt = std::prev(endDoStmtIt);
+    const auto *cycleStmt = cycleStmtIt->getIf<parser::CycleStmt>();
+    if (!cycleStmt || cycleStmtIt->label)
+      return;
+    std::string cycleName = getConstructName(*cycleStmt);
+    if (!cycleName.empty() && cycleName != getConstructName(*doStmt))
+      return; // cycle for an outer construct
+    // Relink the lexical predecessor of the CycleStmt to the EndDoStmt. That
+    // predecessor is the last statement reachable from the preceding
+    // evaluation, so descend through nested evaluation lists to find it. Most
+    // constructs end with an End<construct>Stmt and need a single step, but an
+    // OpenMP loop construct's list ends with the associated DoConstruct, since
+    // exitConstructOrDirective skips appending a ContinueStmt exit target for
+    // it. Stopping early would leave a deleted CycleStmt as some statement's
+    // lexicalSuccessor.
+    lower::pft::Evaluation *predecessor = &*std::prev(cycleStmtIt);
+    while (predecessor->evaluationList && !predecessor->evaluationList->empty())
+      predecessor = &predecessor->evaluationList->back();
+    predecessor->lexicalSuccessor = cycleStmtIt->lexicalSuccessor;
+    evaluationList.erase(cycleStmtIt);
   }
 
   /// Rewrite IfConstructs containing a GotoStmt or CycleStmt to eliminate an
