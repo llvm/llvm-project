@@ -16,6 +16,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/TargetParser/IntelGPUTargetParser.h"
 #include <cstdio>
+#include <string>
 
 #define ZE_MAX_DEVICE_NAME 256
 #define ZE_MAX_DEVICE_UUID_SIZE 16
@@ -158,10 +159,14 @@ static bool loadLevelZero() {
   } while (0)
 
 // Translate a GMDID into an architecture name that is a legal --offload-arch
-// parameter, or "" if this build does not know the device.
-StringRef getIntelGPUArchName(uint32_t IPVersion) {
-  return IntelGPU::getArchName(
-      IntelGPU::getKindForGMDID(IntelGPU::decodeGMDID(IPVersion)));
+// parameter. A device this build knows no name for is named after its GMDID, so
+// that it is reported like any other one.
+std::string getIntelGPUArchName(uint32_t IPVersion) {
+  IntelGPU::GMDID ID = IntelGPU::decodeGMDID(IPVersion);
+  StringRef Name = IntelGPU::getArchName(IntelGPU::getKindForGMDID(ID));
+  if (!Name.empty())
+    return Name.str();
+  return IntelGPU::getNumericArchName(ID);
 }
 
 int printGPUsByLevelZero() {
@@ -210,21 +215,7 @@ int printGPUsByLevelZero() {
       if (Verbose)
         llvm::errs() << "Found device '" << DeviceProperties.name << "'\n";
 
-      // Naming an unknown device after its GMDID would print something that
-      // --offload-arch cannot accept, because this build knows no IGCA level to
-      // compile for.  Report it instead, spelling out the GMDID so that the
-      // device can be identified.
-      StringRef Arch = getIntelGPUArchName(IPVersion.ipVersion);
-      if (Arch.empty()) {
-        llvm::errs() << "Unknown Intel GPU '" << DeviceProperties.name
-                     << "', which reports the architecture "
-                     << IntelGPU::getNumericArchName(
-                            IntelGPU::decodeGMDID(IPVersion.ipVersion))
-                     << "\n";
-        return 1;
-      }
-
-      llvm::outs() << Arch << '\n';
+      llvm::outs() << getIntelGPUArchName(IPVersion.ipVersion) << '\n';
     }
   }
 
