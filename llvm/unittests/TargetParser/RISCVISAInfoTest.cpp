@@ -1525,6 +1525,7 @@ R"(All available -march extensions for RISC-V
     smepmp               1.0
     smmpm                1.0
     smnpm                1.0
+    smpmpdeleg           1.0
     smrnmi               1.0
     smstateen            1.0
     ssaia                1.0
@@ -1537,6 +1538,8 @@ R"(All available -march extensions for RISC-V
     ssdbltrp             1.0
     ssnpm                1.0
     sspm                 1.0
+    sspmp                1.0
+    sspmpen              1.0
     ssqosid              1.0
     ssstateen            1.0
     ssstrict             1.0

@@ -348,8 +348,6 @@ TEST(ParsedASTTest, CollectsMainFileMacroExpansions) {
               testing::UnorderedElementsAreArray(TestCase.points()));
 }
 
-MATCHER_P(withFileName, Inc, "") { return arg.FileName == Inc; }
-
 TEST(ParsedASTTest, PatchesAdditionalIncludes) {
   llvm::StringLiteral ModifiedContents = R"cpp(
     #include "baz.h"

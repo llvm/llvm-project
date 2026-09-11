@@ -133,8 +133,7 @@ define <8 x bfloat> @vselect_vf_v8bf16(bfloat %a, <8 x bfloat> %vb, <8 x i1> %cc
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFBFMIN-NEXT:    vmv.v.x v9, a0
-; ZVFBFMIN-NEXT:    vmerge.vvm v8, v8, v9, v0
+; ZVFBFMIN-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vselect_vf_v8bf16:
@@ -153,8 +152,7 @@ define <16 x bfloat> @vselect_vf_v16bf16(bfloat %a, <16 x bfloat> %vb, <16 x i1>
 ; ZVFBFMIN:       # %bb.0:
 ; ZVFBFMIN-NEXT:    fmv.x.h a0, fa0
 ; ZVFBFMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFBFMIN-NEXT:    vmv.v.x v10, a0
-; ZVFBFMIN-NEXT:    vmerge.vvm v8, v8, v10, v0
+; ZVFBFMIN-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; ZVFBFMIN-NEXT:    ret
 ;
 ; ZVFBFA-LABEL: vselect_vf_v16bf16:
@@ -169,18 +167,11 @@ define <16 x bfloat> @vselect_vf_v16bf16(bfloat %a, <16 x bfloat> %vb, <16 x i1>
 }
 
 define <8 x bfloat> @vselect_vfpzero_v8bf16(<8 x bfloat> %vb, <8 x i1> %cc) {
-; ZVFBFMIN-LABEL: vselect_vfpzero_v8bf16:
-; ZVFBFMIN:       # %bb.0:
-; ZVFBFMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFBFMIN-NEXT:    vmv.v.i v9, 0
-; ZVFBFMIN-NEXT:    vmerge.vvm v8, v8, v9, v0
-; ZVFBFMIN-NEXT:    ret
-;
-; ZVFBFA-LABEL: vselect_vfpzero_v8bf16:
-; ZVFBFA:       # %bb.0:
-; ZVFBFA-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFBFA-NEXT:    vmerge.vim v8, v8, 0, v0
-; ZVFBFA-NEXT:    ret
+; CHECK-LABEL: vselect_vfpzero_v8bf16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vmerge.vim v8, v8, 0, v0
+; CHECK-NEXT:    ret
   %vsel = select <8 x i1> %cc, <8 x bfloat> splat (bfloat 0.0), <8 x bfloat> %vb
   ret <8 x bfloat> %vsel
 }

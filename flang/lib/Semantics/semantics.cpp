@@ -264,6 +264,14 @@ static bool PerformStatementSemantics(
     pass2.CompileDataInitializationsIntoInitializers();
     WarnUnusedOrUndefinedLocal(context, context.globalScope());
   }
+  // Unlike the other checks above, this one is not skipped when an
+  // unrelated fatal error has already occurred elsewhere in the file: it
+  // only reads symbol initializer values (falling back to conservatively
+  // treating an appearance as conflicting, rather than duplicate, if those
+  // are not available because DATA statement compilation above was
+  // skipped), so it can still usefully report on COMMON blocks that are
+  // unaffected by the unrelated error.
+  context.CheckCommonBlockInitializationConflicts();
   return !context.AnyFatalError();
 }
 
@@ -303,18 +311,33 @@ public:
       if (isInitialized) {
         if (info.initialization.has_value() &&
             &**info.initialization != &common) {
-          // Use the location of the initialization in the error message because
-          // common block symbols may have no location if they are blank
-          // commons.
-          const Symbol &previousInit{
-              DEREF(CommonBlockIsInitialized(**info.initialization))};
-          context
-              .Say(isInitialized->name(),
-                  "Multiple initialization of COMMON block /%s/"_err_en_US,
-                  common.name())
-              .Attach(previousInit.name(),
-                  "Previous initialization of COMMON block /%s/"_en_US,
-                  common.name());
+          if (!context.IsEnabled(
+                  common::LanguageFeature::MultipleCommonBlockInit)) {
+            // Use the location of the initialization in the error message
+            // because common block symbols may have no location if they are
+            // blank commons.
+            const Symbol &previousInit{
+                DEREF(CommonBlockIsInitialized(**info.initialization))};
+            context
+                .Say(isInitialized->name(),
+                    "Multiple initialization of COMMON block /%s/"_err_en_US,
+                    common.name())
+                .Attach(previousInit.name(),
+                    "Previous initialization of COMMON block /%s/"_en_US,
+                    (*info.initialization)->name());
+          } else {
+            // Some compilers accept initialization (via DATA statements or
+            // declaration initializers) of the same named COMMON block
+            // appearing in more than one program unit as a nonstandard
+            // extension, so long as the values agree everywhere the block
+            // is initialized -- a duplicate, redundant initialization is
+            // accepted, but a genuine conflict is still a hard error. DATA
+            // statement values are not yet known at this point in
+            // compilation, so the decision is deferred; see
+            // CheckDeferredConflicts(), which runs after DATA statement
+            // compilation.
+            pendingInitConflicts_.emplace_back(common, **info.initialization);
+          }
         } else {
           info.initialization = common;
         }
@@ -346,7 +369,116 @@ public:
     return result;
   }
 
+  // Resolves the multiple-initialization conflicts that were deferred by
+  // MapCommonBlockAndCheckConflicts() because the DATA statement values
+  // were not yet known. Must be called after DATA statement initializations
+  // have been compiled into symbol initializer values.
+  void CheckDeferredConflicts(SemanticsContext &context) const {
+    for (const auto &[common, previous] : pendingInitConflicts_) {
+      // Use the location of the initialization in the error message because
+      // common block symbols may have no location if they are blank
+      // commons.
+      const Symbol &isInitialized{DEREF(CommonBlockIsInitialized(common))};
+      const Symbol &previousInit{DEREF(CommonBlockIsInitialized(previous))};
+      if (AreCommonBlockInitializationsDuplicate(common, previous)) {
+        if (auto *msg{context.Warn(
+                common::LanguageFeature::MultipleCommonBlockInit,
+                isInitialized.name(),
+                "Multiple initialization of COMMON block /%s/ is not standard; this appearance duplicates the previous initialization"_port_en_US,
+                common->name())}) {
+          msg->Attach(previousInit.name(),
+              "Previous initialization of COMMON block /%s/"_en_US,
+              previous->name());
+        }
+      } else {
+        context
+            .Say(isInitialized.name(),
+                "Multiple initialization of COMMON block /%s/"_err_en_US,
+                common->name())
+            .Attach(previousInit.name(),
+                "Previous initialization of COMMON block /%s/"_en_US,
+                previous->name());
+      }
+    }
+  }
+
 private:
+  // True if some other object in an equivalence set containing "member" is
+  // initialized. This covers the case of a COMMON block member that is
+  // itself never directly initialized (no DATA statement, no declaration
+  // initializer) but is nonetheless indirectly initialized because it is
+  // equivalenced with an object that is.
+  static bool IsIndirectlyInitializedViaEquivalence(const Symbol &member) {
+    if (const Symbol *common{FindCommonBlockContaining(member)}) {
+      for (const Fortran::semantics::EquivalenceSet &set :
+          common->owner().equivalenceSets()) {
+        bool containsMember{false};
+        for (const Fortran::semantics::EquivalenceObject &obj : set) {
+          if (&obj.symbol == &member) {
+            containsMember = true;
+            break;
+          }
+        }
+        if (containsMember) {
+          for (const Fortran::semantics::EquivalenceObject &obj : set) {
+            if (&obj.symbol != &member && IsInitialized(obj.symbol)) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  // True if every member position that is initialized in either common
+  // block appearance is also initialized, with an identical value, in the
+  // other appearance -- i.e., the two appearances are a duplicate,
+  // redundant initialization of the block rather than a genuine conflict.
+  // Positions initialized in neither appearance are not compared. Members
+  // whose initial value cannot be directly compared (e.g., procedure
+  // pointers, indirect initialization via an equivalenced object, or
+  // default component initialization of a derived type without an
+  // explicit initializer) are conservatively treated as non-duplicate.
+  static bool AreCommonBlockInitializationsDuplicate(
+      const Symbol &common1, const Symbol &common2) {
+    const auto &objects1{
+        common1.get<Fortran::semantics::CommonBlockDetails>().objects()};
+    const auto &objects2{
+        common2.get<Fortran::semantics::CommonBlockDetails>().objects()};
+    if (objects1.size() != objects2.size()) {
+      return false;
+    }
+    auto iter2{objects2.begin()};
+    for (auto iter1{objects1.begin()}; iter1 != objects1.end();
+        ++iter1, ++iter2) {
+      const Symbol &member1{**iter1};
+      const Symbol &member2{**iter2};
+      bool initialized1{IsInitialized(member1) ||
+          IsIndirectlyInitializedViaEquivalence(member1)};
+      bool initialized2{IsInitialized(member2) ||
+          IsIndirectlyInitializedViaEquivalence(member2)};
+      if (initialized1 != initialized2) {
+        return false;
+      }
+      if (initialized1) {
+        if (IsIndirectlyInitializedViaEquivalence(member1) ||
+            IsIndirectlyInitializedViaEquivalence(member2)) {
+          return false;
+        }
+        const auto *object1{member1.detailsIf<ObjectEntityDetails>()};
+        const auto *object2{member2.detailsIf<ObjectEntityDetails>()};
+        if (!object1 || !object2 || !object1->init() || !object2->init()) {
+          return false;
+        }
+        if (!(*object1->init() == *object2->init())) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   /// Return the symbol of an initialized member if a COMMON block
   /// is initalized. Otherwise, return nullptr.
   static Symbol *CommonBlockIsInitialized(const Symbol &common) {
@@ -375,6 +507,7 @@ private:
   }
 
   std::map<std::string, CommonBlockInfo> commonBlocks_;
+  std::vector<std::pair<SymbolRef, SymbolRef>> pendingInitConflicts_;
 };
 
 SemanticsContext::SemanticsContext(
@@ -834,6 +967,12 @@ CommonBlockList SemanticsContext::GetCommonBlocks() const {
     return commonBlockMap_->GetCommonBlocks();
   }
   return {};
+}
+
+void SemanticsContext::CheckCommonBlockInitializationConflicts() {
+  if (commonBlockMap_) {
+    commonBlockMap_->CheckDeferredConflicts(*this);
+  }
 }
 
 void SemanticsContext::NoteDefinedSymbol(const Symbol &symbol) {

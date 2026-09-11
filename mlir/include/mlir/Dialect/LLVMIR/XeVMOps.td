@@ -130,7 +130,6 @@ def XeVM_LoadCacheControl
 def XeVM_LoadCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_LoadCacheControl, "load_cache_control"> {
   let summary = [{Describe the cache settings for load operators}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 //===----------------------------------------------------------------------===//
@@ -195,7 +194,6 @@ def XeVM_StoreCacheControl
 def XeVM_StoreCacheControlAttr
     : EnumAttr<XeVM_Dialect, XeVM_StoreCacheControl, "store_cache_control"> {
   let summary = [{Describe the cache settings for store operators}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def XeVM_BlockLoadOp
@@ -409,7 +407,6 @@ def XeVM_MemScope
 }
 def XeVM_MemScopeAttr : EnumAttr<XeVM_Dialect, XeVM_MemScope, "mem_scope"> {
   let summary = [{Describe memory scopes}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def AddrSpacePrivate : I32EnumAttrCase<"PRIVATE", 0, "private">;
@@ -427,7 +424,6 @@ def XeVM_AddrSpace
 }
 def XeVM_AddrSpaceAttr : EnumAttr<XeVM_Dialect, XeVM_AddrSpace, "addr_space"> {
   let summary = [{Describe address spaces}];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def XeVM_MemfenceOp

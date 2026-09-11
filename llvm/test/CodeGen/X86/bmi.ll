@@ -375,7 +375,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
   ret i1 %cmp
 }
 
-; Use a 'test' (not an 'and') because 'andn' only works for i32/i64.
+; Keep the byte test idiom when the AND result feeds a SETCC.
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
@@ -2146,6 +2146,140 @@ define i16 @blsi16_trunc(i32 %x) {
   %neg = sub i16 0, %t
   %and = and i16 %t, %neg
   ret i16 %and
+}
+
+define i8 @andn8(i8 %x, i8 %y) {
+; X86-LABEL: andn8:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8:
+; X64:       # %bb.0:
+; X64-NEXT:    andnl %esi, %edi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    andnl %esi, %edi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x40,0xf2,0xc6]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not = xor i8 %x, 255
+  %and = and i8 %not, %y
+  ret i8 %and
+}
+
+define i8 @andn8_v8i1(<8 x i1> %x, i8 %y) nounwind {
+; X86-LABEL: andn8_v8i1:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    shlb $3, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    orb %al, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb $1, %al
+; X86-NEXT:    orb %dl, %al
+; X86-NEXT:    andb $3, %al
+; X86-NEXT:    orb %cl, %al
+; X86-NEXT:    shlb $4, %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    shlb $3, %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andb $1, %cl
+; X86-NEXT:    shlb $2, %cl
+; X86-NEXT:    orb %dl, %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    addb %dl, %dl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ah
+; X86-NEXT:    andb $1, %ah
+; X86-NEXT:    orb %dl, %ah
+; X86-NEXT:    andb $3, %ah
+; X86-NEXT:    orb %cl, %ah
+; X86-NEXT:    andb $15, %ah
+; X86-NEXT:    orb %al, %ah
+; X86-NEXT:    movzbl %ah, %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8_v8i1:
+; X64:       # %bb.0:
+; X64-NEXT:    psllw $15, %xmm0
+; X64-NEXT:    packsswb %xmm0, %xmm0
+; X64-NEXT:    pmovmskb %xmm0, %eax
+; X64-NEXT:    andnl %edi, %eax, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8_v8i1:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    psllw $15, %xmm0 # encoding: [0x66,0x0f,0x71,0xf0,0x0f]
+; EGPR-NEXT:    packsswb %xmm0, %xmm0 # encoding: [0x66,0x0f,0x63,0xc0]
+; EGPR-NEXT:    pmovmskb %xmm0, %eax # encoding: [0x66,0x0f,0xd7,0xc0]
+; EGPR-NEXT:    andnl %edi, %eax, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x78,0xf2,0xc7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not.mask = xor <8 x i1> %x,
+      <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>
+  %not = bitcast <8 x i1> %not.mask to i8
+  %and = and i8 %not, %y
+  ret i8 %and
+}
+
+define i8 @andn8_commuted(i8 %x, i8 %y) {
+; X86-LABEL: andn8_commuted:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andnl {{[0-9]+}}(%esp), %eax, %eax
+; X86-NEXT:    # kill: def $al killed $al killed $eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: andn8_commuted:
+; X64:       # %bb.0:
+; X64-NEXT:    andnl %edi, %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: andn8_commuted:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    andnl %edi, %esi, %eax # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x48,0xf2,0xc7]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %not = xor i8 %y, 255
+  %and = and i8 %x, %not
+  ret i8 %and
+}
+
+; Make sure a regular i8 AND is not promoted by the ANDN combine.
+define i8 @and8(i8 %x, i8 %y) {
+; X86-LABEL: and8:
+; X86:       # %bb.0:
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: and8:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %esi, %eax
+; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    retq
+;
+; EGPR-LABEL: and8:
+; EGPR:       # %bb.0:
+; EGPR-NEXT:    movl %edi, %eax # encoding: [0x89,0xf8]
+; EGPR-NEXT:    andl %esi, %eax # encoding: [0x21,0xf0]
+; EGPR-NEXT:    # kill: def $al killed $al killed $eax
+; EGPR-NEXT:    retq # encoding: [0xc3]
+  %and = and i8 %x, %y
+  ret i8 %and
 }
 
 define i8 @blsmsk8(i8 %x) nounwind {

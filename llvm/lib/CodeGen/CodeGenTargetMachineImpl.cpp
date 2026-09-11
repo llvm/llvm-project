@@ -69,10 +69,7 @@ void CodeGenTargetMachineImpl::initAsmInfo() {
                        "Make sure you include the correct TargetSelect.h"
                        "and that InitializeAllTargetMCs() is being invoked!");
 
-  if (Options.BinutilsVersion.first > 0)
-    TmpAsmInfo->setBinutilsVersion(Options.BinutilsVersion);
-
-  if (Options.DisableIntegratedAS) {
+  if (Options.MCOptions.DisableIntegratedAS) {
     TmpAsmInfo->setUseIntegratedAssembler(false);
     // If there is explict option disable integratedAS, we can't use it for
     // inlineasm either.

@@ -4289,10 +4289,16 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
         }
       }
 
-      CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
-                           /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
-                           /*WarnOnNonAbstractTypes=*/!ArrayForm,
-                           SourceLocation());
+      // C++20 [expr.delete]p3: deleting through a static type whose
+      // destructor is not virtual is only undefined behavior when the
+      // selected deallocation function is not a destroying operator delete.
+      // A destroying operator delete takes over destruction of the object,
+      // so the delete expression never calls the destructor itself.
+      if (!OperatorDelete || !OperatorDelete->isDestroyingOperatorDelete())
+        CheckVirtualDtorCall(PointeeRD->getDestructor(), StartLoc,
+                             /*IsDelete=*/true, /*CallCanBeVirtual=*/true,
+                             /*WarnOnNonAbstractTypes=*/!ArrayForm,
+                             SourceLocation());
     }
 
     if (!OperatorDelete) {

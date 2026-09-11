@@ -132,6 +132,12 @@ namespace strcmp {
   static_assert(__builtin_strncmp("abaa", "abba", 0) == 0);
   static_assert(__builtin_strncmp(0, 0, 0) == 0);
   static_assert(__builtin_strncmp("abab\0banana", "abab\0canada", 100) == 0);
+
+
+  constexpr char missingInit[] = bar__; // both-error {{use of undeclared identifier 'bar__'}} \
+                                        // ref-note {{declared here}}
+  static_assert(__builtin_strcmp(missingInit, "bar") == 0, ""); // both-error {{not an integral constant expression}} \
+                                                                // ref-note {{initializer of 'missingInit' is unknown}}
 }
 
 namespace WcsCmp {

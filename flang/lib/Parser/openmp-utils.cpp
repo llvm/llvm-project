@@ -117,12 +117,12 @@ const OmpDirectiveSpecification &GetOmpDirectiveSpecification(
       x.u);
 }
 
-std::string GetUpperName(llvm::omp::Clause id, unsigned version) {
+std::string GetUpperName(llvm::omp::Clause id, llvm::omp::Version version) {
   llvm::StringRef name{llvm::omp::getOpenMPClauseName(id, version)};
   return parser::ToUpperCaseLetters(name);
 }
 
-std::string GetUpperName(llvm::omp::Directive id, unsigned version) {
+std::string GetUpperName(llvm::omp::Directive id, llvm::omp::Version version) {
   llvm::StringRef name{llvm::omp::getOpenMPDirectiveName(id, version)};
   return parser::ToUpperCaseLetters(name);
 }

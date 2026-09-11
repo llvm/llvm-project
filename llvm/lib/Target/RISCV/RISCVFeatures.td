@@ -1147,6 +1147,17 @@ def FeatureStdExtSsccfg
 def FeatureStdExtSsccptr
     : RISCVExtension<1, 0, "Main memory supports page table reads">;
 
+def FeatureStdExtSspmp
+    : RISCVExtension<1, 0, "S-level Physical Memory Protection (SPMP)",
+                     [FeatureStdExtSscsrind]>;
+def FeatureStdExtSspmpen
+    : RISCVExtension<1, 0, "Optimizing Context Switching of SPMP Entries",
+                     [FeatureStdExtSspmp]>;
+
+def FeatureStdExtSmpmpdeleg
+    : RISCVExtension<1, 0, "Sharing Hardware Resources between PMP and SPMP",
+                     [FeatureStdExtSmcsrind, FeatureStdExtSspmp]>;
+
 def FeatureStdExtSscofpmf
     : RISCVExtension<1, 0, "Count Overflow and Mode-Based Filtering">;
 
