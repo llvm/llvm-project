@@ -4,6 +4,10 @@
 // For an operand that is reduced, a zero pad value would corrupt the result,
 // so the neutral element of the reduction combiner must be inferred instead.
 
+///--------------------------------------------------------------------------------------
+/// Tests for linalg.reduce
+///--------------------------------------------------------------------------------------
+
 // CHECK-LABEL: @pad_reduce_maximumf
 func.func @pad_reduce_maximumf(%input: tensor<8x30xf32>, %init: tensor<8xf32>)
     -> tensor<8xf32> {
@@ -35,33 +39,29 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// An operand reduced along several dimensions is padded with the neutral on all
-// of them (here d1 and d2); one neutral suffices since the combiner is the same.
-
-#in3  = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-#out3 = affine_map<(d0, d1, d2) -> (d0)>
-// CHECK-LABEL: @pad_reduce_two_reduction_dims
-func.func @pad_reduce_two_reduction_dims(%in: tensor<8x6x10xf32>, %init: tensor<8xf32>)
+// CHECK-LABEL: @pad_reduce_minimumf
+func.func @pad_reduce_minimumf(%input: tensor<8x30xf32>, %init: tensor<8xf32>)
     -> tensor<8xf32> {
-  // CHECK-DAG:   %[[NINF:.*]] = arith.constant 0xFF800000 : f32
-  // CHECK:       tensor.pad %{{.*}} low[0, 0, 0] high[0, 2, 6]
-  // CHECK:         tensor.yield %[[NINF]] : f32
-  // CHECK:       } : tensor<8x6x10xf32> to tensor<8x8x16xf32>
-  %0 = linalg.generic {indexing_maps = [#in3, #out3],
-                       iterator_types = ["parallel", "reduction", "reduction"]}
-      ins(%in : tensor<8x6x10xf32>) outs(%init : tensor<8xf32>) {
-  ^bb0(%a: f32, %o: f32):
-    %m = arith.maximumf %a, %o : f32
-    linalg.yield %m : f32
-  } -> tensor<8xf32>
+  // minimumf neutral element is +inf.
+  // CHECK-DAG:   %[[NEUTRAL:.*]] = arith.constant 0x7F800000 : f32
+  // CHECK:       %[[PAD:.*]] = tensor.pad %{{.*}} low[0, 0] high[0, 2]
+  // CHECK:         tensor.yield %[[NEUTRAL]] : f32
+  // CHECK:       } : tensor<8x30xf32> to tensor<8x32xf32>
+  // CHECK:       linalg.reduce ins(%[[PAD]] : tensor<8x32xf32>)
+  %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
+      dimensions = [1]
+    (%in: f32, %out: f32) {
+      %m = arith.minimumf %in, %out : f32
+      linalg.yield %m : f32
+    }
   return %0 : tensor<8xf32>
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %gen = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %gen to padding_sizes [8, 8, 16]
+    %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -82,36 +82,6 @@ func.func @pad_reduce_mulf(%input: tensor<8x30xf32>, %init: tensor<8xf32>)
       dimensions = [1]
     (%in: f32, %out: f32) {
       %m = arith.mulf %in, %out : f32
-      linalg.yield %m : f32
-    }
-  return %0 : tensor<8xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.yield
-  }
-}
-
-// -----
-
-// CHECK-LABEL: @pad_reduce_minimumf
-func.func @pad_reduce_minimumf(%input: tensor<8x30xf32>, %init: tensor<8xf32>)
-    -> tensor<8xf32> {
-  // minimumf neutral element is +inf.
-  // CHECK-DAG:   %[[NEUTRAL:.*]] = arith.constant 0x7F800000 : f32
-  // CHECK:       %[[PAD:.*]] = tensor.pad %{{.*}} low[0, 0] high[0, 2]
-  // CHECK:         tensor.yield %[[NEUTRAL]] : f32
-  // CHECK:       } : tensor<8x30xf32> to tensor<8x32xf32>
-  // CHECK:       linalg.reduce ins(%[[PAD]] : tensor<8x32xf32>)
-  %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
-      dimensions = [1]
-    (%in: f32, %out: f32) {
-      %m = arith.minimumf %in, %out : f32
       linalg.yield %m : f32
     }
   return %0 : tensor<8xf32>
@@ -158,67 +128,6 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Negative: `nnan` declares that NaN operands do not occur, so the NaN neutral
-// element of maxnumf is not a usable pad value and inference fails instead.
-
-func.func @negative_pad_reduce_maxnumf_nnan(%input: tensor<8x30xf32>,
-    %init: tensor<8xf32>) -> tensor<8xf32> {
-  // expected-note @below {{target op}}
-  %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
-      dimensions = [1]
-    (%in: f32, %out: f32) {
-      %m = arith.maxnumf %in, %out fastmath<nnan> : f32
-      linalg.yield %m : f32
-    }
-  return %0 : tensor<8xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    // expected-error @below {{failed to pad op}}
-    %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.yield
-  }
-}
-
-// -----
-
-// A contraction is padded with zero: its reduced operands feed the multiply and
-// zero annihilates it (0 * x = 0), so the add-reduction stays correct. The
-// combiner (arith.addf) must NOT be mistaken for the operands' direct combiner
-// (arith.mulf, whose neutral 1 would corrupt the result).
-
-// CHECK-LABEL: @pad_matmul_uses_zero
-func.func @pad_matmul_uses_zero(%A: tensor<8x10xf32>, %B: tensor<10x8xf32>,
-                                %C: tensor<8x8xf32>) -> tensor<8x8xf32> {
-  // CHECK-DAG:   %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
-  // CHECK:       tensor.pad %{{.*}} low[0, 0] high[0, 6]
-  // CHECK:         tensor.yield %[[ZERO]] : f32
-  // CHECK:       } : tensor<8x10xf32> to tensor<8x16xf32>
-  // CHECK:       tensor.pad %{{.*}} low[0, 0] high[6, 0]
-  // CHECK:         tensor.yield %[[ZERO]] : f32
-  // CHECK:       } : tensor<10x8xf32> to tensor<16x8xf32>
-  // CHECK-NOT:   arith.constant 1.000000e+00
-  %0 = linalg.matmul ins(%A, %B : tensor<8x10xf32>, tensor<10x8xf32>)
-                     outs(%C : tensor<8x8xf32>) -> tensor<8x8xf32>
-  return %0 : tensor<8x8xf32>
-}
-
-module attributes {transform.with_named_sequence} {
-  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
-    %mm = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      : (!transform.any_op) -> !transform.any_op
-    %padded, %pad = transform.structured.pad_tiling_interface %mm to padding_sizes [8, 8, 16]
-      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
-    transform.yield
-  }
-}
-
-// -----
-
 // Only the reduced input takes the neutral (-inf); the non-reduced init operand
 // keeps zero. Both dims are padded so the init is padded along the parallel dim.
 
@@ -249,6 +158,34 @@ module attributes {transform.with_named_sequence} {
     %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
       : (!transform.any_op) -> !transform.any_op
     %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [16, 32]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Negative: `nnan` declares that NaN operands do not occur, so the NaN neutral
+// element of maxnumf is not a usable pad value and inference fails instead.
+
+func.func @negative_pad_reduce_maxnumf_nnan(%input: tensor<8x30xf32>,
+    %init: tensor<8xf32>) -> tensor<8xf32> {
+  // expected-note @below {{target op}}
+  %0 = linalg.reduce ins(%input : tensor<8x30xf32>) outs(%init : tensor<8xf32>)
+      dimensions = [1]
+    (%in: f32, %out: f32) {
+      %m = arith.maxnumf %in, %out fastmath<nnan> : f32
+      linalg.yield %m : f32
+    }
+  return %0 : tensor<8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %red = transform.structured.match ops{["linalg.reduce"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{failed to pad op}}
+    %padded, %pad = transform.structured.pad_tiling_interface %red to padding_sizes [8, 32]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
@@ -287,13 +224,88 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+///--------------------------------------------------------------------------------------
+/// Tests for linalg.matmul
+///--------------------------------------------------------------------------------------
+
+// A contraction is padded with zero: its reduced operands feed the multiply and
+// zero annihilates it (0 * x = 0), so the add-reduction stays correct. The
+// combiner (arith.addf) must NOT be mistaken for the operands' direct combiner
+// (arith.mulf, whose neutral 1 would corrupt the result).
+
+// CHECK-LABEL: @pad_matmul_uses_zero
+func.func @pad_matmul_uses_zero(%A: tensor<8x10xf32>, %B: tensor<10x8xf32>,
+                                %C: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  // CHECK-DAG:   %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK:       tensor.pad %{{.*}} low[0, 0] high[0, 6]
+  // CHECK:         tensor.yield %[[ZERO]] : f32
+  // CHECK:       } : tensor<8x10xf32> to tensor<8x16xf32>
+  // CHECK:       tensor.pad %{{.*}} low[0, 0] high[6, 0]
+  // CHECK:         tensor.yield %[[ZERO]] : f32
+  // CHECK:       } : tensor<10x8xf32> to tensor<16x8xf32>
+  // CHECK-NOT:   arith.constant 1.000000e+00
+  %0 = linalg.matmul ins(%A, %B : tensor<8x10xf32>, tensor<10x8xf32>)
+                     outs(%C : tensor<8x8xf32>) -> tensor<8x8xf32>
+  return %0 : tensor<8x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %mm = transform.structured.match ops{["linalg.matmul"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %padded, %pad = transform.structured.pad_tiling_interface %mm to padding_sizes [8, 8, 16]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+///--------------------------------------------------------------------------------------
+/// Tests for linalg.generic
+///--------------------------------------------------------------------------------------
+
+// An operand reduced along several dimensions is padded with the neutral on all
+// of them (here d1 and d2); one neutral suffices since the combiner is the same.
+
+#in3  = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#out3 = affine_map<(d0, d1, d2) -> (d0)>
+// CHECK-LABEL: @pad_generic_two_reduction_dims
+func.func @pad_generic_two_reduction_dims(%in: tensor<8x6x10xf32>, %init: tensor<8xf32>)
+    -> tensor<8xf32> {
+  // CHECK-DAG:   %[[NINF:.*]] = arith.constant 0xFF800000 : f32
+  // CHECK:       tensor.pad %{{.*}} low[0, 0, 0] high[0, 2, 6]
+  // CHECK:         tensor.yield %[[NINF]] : f32
+  // CHECK:       } : tensor<8x6x10xf32> to tensor<8x8x16xf32>
+  %0 = linalg.generic {indexing_maps = [#in3, #out3],
+                       iterator_types = ["parallel", "reduction", "reduction"]}
+      ins(%in : tensor<8x6x10xf32>) outs(%init : tensor<8xf32>) {
+  ^bb0(%a: f32, %o: f32):
+    %m = arith.maximumf %a, %o : f32
+    linalg.yield %m : f32
+  } -> tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %gen = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %padded, %pad = transform.structured.pad_tiling_interface %gen to padding_sizes [8, 8, 16]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
 // Negative: a fused op with two reductions (max and sum) over the same input
 // has no single correct neutral for that input (-inf breaks the sum, 0 breaks
 // the max), so inference fails instead of padding with a wrong value.
 
 #map  = affine_map<(d0, d1) -> (d0, d1)>
 #mapr = affine_map<(d0, d1) -> (d0)>
-func.func @negative_pad_multi_reduction(%in: tensor<8x30xf32>, %m0: tensor<8xf32>,
+func.func @negative_pad_generic_multi_reduction(%in: tensor<8x30xf32>, %m0: tensor<8xf32>,
                                      %s0: tensor<8xf32>)
     -> (tensor<8xf32>, tensor<8xf32>) {
   // expected-note @below {{target op}}
@@ -314,6 +326,41 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op) -> !transform.any_op
     // expected-error @below {{failed to pad op}}
     %padded, %pad = transform.structured.pad_tiling_interface %gen to padding_sizes [8, 32]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// Negative: the body is contraction-like but accumulates with `maximumf`, for
+// which no padding value of the inputs maps to the neutral element of the
+// accumulate, so inference fails rather than zero-padding a max reduction.
+
+#mapA = affine_map<(d0, d1, d2) -> (d0, d2)>
+#mapB = affine_map<(d0, d1, d2) -> (d2, d1)>
+#mapC = affine_map<(d0, d1, d2) -> (d0, d1)>
+func.func @negative_pad_generic_max_accumulate(%A: tensor<8x10xf32>,
+    %B: tensor<10x8xf32>, %C: tensor<8x8xf32>) -> tensor<8x8xf32> {
+  // expected-note @below {{target op}}
+  %0 = linalg.generic {indexing_maps = [#mapA, #mapB, #mapC],
+                       iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%A, %B : tensor<8x10xf32>, tensor<10x8xf32>)
+      outs(%C : tensor<8x8xf32>) {
+  ^bb0(%a: f32, %b: f32, %acc: f32):
+    %m = arith.mulf %a, %b : f32
+    %r = arith.maximumf %m, %acc : f32
+    linalg.yield %r : f32
+  } -> tensor<8x8xf32>
+  return %0 : tensor<8x8xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %gen = transform.structured.match ops{["linalg.generic"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    // expected-error @below {{failed to pad op}}
+    %padded, %pad = transform.structured.pad_tiling_interface %gen to padding_sizes [8, 8, 16]
       : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
     transform.yield
   }
