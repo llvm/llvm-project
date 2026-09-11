@@ -326,11 +326,8 @@ define amdgpu_ps half @bitop3_b16_sss(i16 inreg %a, i16 inreg %b, i16 inreg %c) 
 ; GFX1250-GISEL-TRUE16-NEXT:    v_nop
 ; GFX1250-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
-; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, s0, s1, v0.l bitop3:0x12
-; GFX1250-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, s0, s1, v0.l bitop3:0x12
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
   %ret = call i16 @llvm.amdgcn.bitop3.i16(i16 %a, i16 %b, i16 %c, i32 18)
   %ret_cast = bitcast i16 %ret to half
@@ -393,9 +390,9 @@ define amdgpu_ps half @bitop3_b16_vii(i16 %a) {
 ; GFX1250-SDG-TRUE16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDG-TRUE16-NEXT:    v_nop
 ; GFX1250-SDG-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDG-TRUE16-NEXT:    v_mov_b16_e32 v1.l, 0x7d0
+; GFX1250-SDG-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0x7d0
 ; GFX1250-SDG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v1.l, 0x3e8 bitop3:0x14
+; GFX1250-SDG-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v0.h, 0x3e8 bitop3:0x14
 ; GFX1250-SDG-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-SDG-FAKE16-LABEL: bitop3_b16_vii:
@@ -485,11 +482,8 @@ define amdgpu_ps half @bitop3_b16_iii() {
 ; GFX1250-GISEL-TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, 0x7d0
 ; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.h, 0x3e8
-; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, 0xbb8, v0.l, v0.h bitop3:0x15
-; GFX1250-GISEL-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX1250-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-GISEL-TRUE16-NEXT:    v_bitop3_b16 v0.l, 0xbb8, v0.l, v0.h bitop3:0x15
 ; GFX1250-GISEL-TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; GFX1250-GISEL-FAKE16-LABEL: bitop3_b16_iii:

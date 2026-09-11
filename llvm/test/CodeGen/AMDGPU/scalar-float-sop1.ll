@@ -150,21 +150,21 @@ define amdgpu_vs half @fptrunc_f32_to_f16(float inreg %val) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_cvt_f16_f32 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: fptrunc_f32_to_f16:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_cvt_f16_f32 s0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: fptrunc_f32_to_f16:
 ; GISEL-GFX12:       ; %bb.0:
 ; GISEL-GFX12-NEXT:    s_cvt_f16_f32 s0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = fptrunc float %val to half
   ret half %res
@@ -229,21 +229,21 @@ define amdgpu_vs half @fceil_f16(half inreg %val) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_ceil_f16 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: fceil_f16:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_ceil_f16 s0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: fceil_f16:
 ; GISEL-GFX12:       ; %bb.0:
 ; GISEL-GFX12-NEXT:    s_ceil_f16 s0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.ceil.f16(half %val)
   ret half %res
@@ -254,21 +254,21 @@ define amdgpu_vs half @ffloor_f16(half inreg %val) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_floor_f16 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: ffloor_f16:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_floor_f16 s0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: ffloor_f16:
 ; GISEL-GFX12:       ; %bb.0:
 ; GISEL-GFX12-NEXT:    s_floor_f16 s0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.floor.f16(half %val)
   ret half %res
@@ -279,21 +279,21 @@ define amdgpu_vs half @ftrunc_f16(half inreg %val) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_trunc_f16 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: ftrunc_f16:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_trunc_f16 s0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: ftrunc_f16:
 ; GISEL-GFX12:       ; %bb.0:
 ; GISEL-GFX12-NEXT:    s_trunc_f16 s0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.trunc.f16(half %val)
   ret half %res
@@ -304,7 +304,7 @@ define amdgpu_vs half @frint_f16(half inreg %val) {
 ; SDAG:       ; %bb.0:
 ; SDAG-NEXT:    s_rndne_f16 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: frint_f16:
@@ -348,7 +348,7 @@ define amdgpu_vs half @sitofp_i32_to_f16(i32 inreg %x) {
 ; SDAG-NEXT:    s_cvt_f32_i32 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: sitofp_i32_to_f16:
@@ -356,7 +356,7 @@ define amdgpu_vs half @sitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX11-NEXT:    s_cvt_f32_i32 s0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GISEL-GFX11-NEXT:    s_cvt_f16_f32 s0, s0
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: sitofp_i32_to_f16:
@@ -364,7 +364,7 @@ define amdgpu_vs half @sitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX12-NEXT:    s_cvt_f32_i32 s0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GISEL-GFX12-NEXT:    s_cvt_f16_f32 s0, s0
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = sitofp i32 %x to half
   ret half %res
@@ -376,7 +376,7 @@ define amdgpu_vs half @uitofp_i32_to_f16(i32 inreg %x) {
 ; SDAG-NEXT:    s_cvt_f32_u32 s0, s0
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; SDAG-NEXT:    s_cvt_f16_f32 s0, s0
-; SDAG-NEXT:    v_mov_b16_e32 v0.l, s0
+; SDAG-NEXT:    v_mov_b32_e32 v0, s0
 ; SDAG-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX11-LABEL: uitofp_i32_to_f16:
@@ -384,7 +384,7 @@ define amdgpu_vs half @uitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX11-NEXT:    s_cvt_f32_u32 s0, s0
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GISEL-GFX11-NEXT:    s_cvt_f16_f32 s0, s0
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: uitofp_i32_to_f16:
@@ -392,7 +392,7 @@ define amdgpu_vs half @uitofp_i32_to_f16(i32 inreg %x) {
 ; GISEL-GFX12-NEXT:    s_cvt_f32_u32 s0, s0
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_3)
 ; GISEL-GFX12-NEXT:    s_cvt_f16_f32 s0, s0
-; GISEL-GFX12-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX12-NEXT:    v_mov_b16_e32 v0.l, s0
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = uitofp i32 %x to half
   ret half %res

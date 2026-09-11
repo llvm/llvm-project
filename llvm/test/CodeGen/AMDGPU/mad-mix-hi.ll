@@ -174,20 +174,13 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 }
 
 define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src1, half %src2, half %lo) #0 {
-; SDAG-GFX11-TRUE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
-; SDAG-GFX11-TRUE16:       ; %bb.0:
-; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v3.l
-; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; SDAG-GFX11-FAKE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
-; SDAG-GFX11-FAKE16:       ; %bb.0:
-; SDAG-GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-FAKE16-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
-; SDAG-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, v3
-; SDAG-GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mov_b32_e32 v0, v3
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
 ; GFX9:       ; %bb.0:
@@ -219,14 +212,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; SDAG-CI-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; SDAG-CI-NEXT:    v_or_b32_e32 v0, v1, v0
 ; SDAG-CI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
-; GISEL-GFX11:       ; %bb.0:
-; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, v3
-; GISEL-GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-VI-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
 ; GISEL-VI:       ; %bb.0:
@@ -611,11 +596,10 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
 ; SDAG-GFX11-TRUE16-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
 ; SDAG-GFX11-TRUE16:       ; %bb.0:
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, v0.l
+; SDAG-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v1, v0, v1, v2 op_sel_hi:[1,1,1]
 ; SDAG-GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; SDAG-GFX11-TRUE16-NEXT:    v_fma_mixlo_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1]
-; SDAG-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v3, v1, v2 op_sel_hi:[1,1,1] clamp
-; SDAG-GFX11-TRUE16-NEXT:    global_store_b16 v[0:1], v0, off dlc
+; SDAG-GFX11-TRUE16-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
+; SDAG-GFX11-TRUE16-NEXT:    global_store_d16_hi_b16 v[0:1], v1, off dlc
 ; SDAG-GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
