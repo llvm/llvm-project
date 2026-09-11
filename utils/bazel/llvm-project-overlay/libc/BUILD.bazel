@@ -3147,6 +3147,7 @@ libc_support_library(
         ":hdr_fenv_macros",
         ":hdr_math_macros",
         ":hdr_stdint_proxy",
+        ":string_memory_utils",
         ":types_fenv_t",
     ],
 )
