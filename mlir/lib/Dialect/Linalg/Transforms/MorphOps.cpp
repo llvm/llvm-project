@@ -46,12 +46,18 @@ void LinalgMorphOpsPass::runOnOperation() {
 
   // Lowering paths (named -> category -> generic)
   if (namedToGeneric || categoryToGeneric)
-    populateLinalgNamedOpsGeneralizationPatterns(patterns);
+    populateLinalgNamedOpsGeneralizationPatterns(patterns, false);
 
   // Lifting paths (named <- category <- generic)
-  if (genericToNamed || genericToCategory) {
-    populateLinalgGenericOpsSpecializationPatterns(patterns, genericToCategory);
-  }
+  if (genericToNamed || categoryToNamed)
+    populateLinalgGenericOpsSpecializationPatterns(patterns, false);
+
+  // Category paths (named -> category <- generic)
+  if (genericToCategory)
+    populateLinalgGenericOpsSpecializationPatterns(patterns, true);
+  if (namedToCategory)
+    populateLinalgNamedOpsGeneralizationPatterns(patterns, true);
+    
 
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();

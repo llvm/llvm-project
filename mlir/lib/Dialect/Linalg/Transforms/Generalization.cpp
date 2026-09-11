@@ -135,6 +135,6 @@ void LinalgGeneralizeNamedOpsPass::runOnOperation() {
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
-    RewritePatternSet &patterns) {
-  patterns.add<LinalgGeneralizationPattern>(patterns.getContext());
+    RewritePatternSet &patterns, bool emitCategoryOps) {
+  patterns.add<LinalgGeneralizationPattern>(patterns.getContext(), emitCategoryOps);
 }

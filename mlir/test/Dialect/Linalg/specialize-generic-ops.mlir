@@ -1,8 +1,6 @@
-// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-named \
-// RUN: | FileCheck %s --check-prefix=NAMED,ALL
-
-// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-category \
-// RUN: | FileCheck %s --check-prefix=CATEGORY,ALL
+// RUN: mlir-opt %s -split-input-file -linalg-specialize-generic-ops | FileCheck %s --check-prefix=ALL
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-named | FileCheck %s --check-prefix=NAMED,ALL
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-category | FileCheck %s --check-prefix=CATEGORY,ALL
 
 #umap = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {

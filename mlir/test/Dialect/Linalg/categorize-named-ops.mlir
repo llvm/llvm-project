@@ -1,4 +1,6 @@
 // RUN: mlir-opt %s -split-input-file -linalg-categorize-ops | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=named-to-category | FileCheck %s -check-prefix=NAMED
+// RUN: mlir-opt %s -split-input-file -linalg-morph-ops=generic-to-category | FileCheck %s -check-prefix=GENERIC
 
 func.func @categorize_matmul_buffer(%A : memref<16x8xf32>, %B: memref<8x32xf32>, %C: memref<16x32xf32>) {
   linalg.matmul ins(%A, %B: memref<16x8xf32>, memref<8x32xf32>)
@@ -21,6 +23,12 @@ func.func @categorize_matmul_buffer(%A : memref<16x8xf32>, %B: memref<8x32xf32>,
 // CHECK-SAME: ins(%[[A]], %[[B]] : memref<16x8xf32>, memref<8x32xf32>)
 // CHECK-SAME: outs(%[[C]] : memref<16x32xf32>)
 
+// NAMED-LABEL: func @categorize_matmul_buffer
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_matmul_buffer
+// GENERIC-NOT: linalg.contract
+
 // -----
 
 func.func @categorize_matmul_tensor(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>, %C: tensor<16x32xf32>) -> tensor<16x32xf32> {
@@ -41,6 +49,12 @@ func.func @categorize_matmul_tensor(%A : tensor<16x8xf32>, %B: tensor<8x32xf32>,
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<16x8xf32>, tensor<8x32xf32>)
 // CHECK-SAME: outs(%{{.+}} : tensor<16x32xf32>)
 
+// NAMED-LABEL: func @categorize_matmul_tensor
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_matmul_tensor
+// GENERIC-NOT: linalg.contract
+
 // -----
 
 // Unsigned cast is preserved on the category op.
@@ -56,6 +70,12 @@ func.func @categorize_matmul_unsigned_cast(%A: tensor<16x8xi16>, %B: tensor<8x32
 // CHECK-NOT: linalg.matmul
 // CHECK: linalg.contract
 // CHECK-SAME: {cast = #linalg.type_fn<cast_unsigned>}
+
+// NAMED-LABEL: func @categorize_matmul_unsigned_cast
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_matmul_unsigned_cast
+// GENERIC-NOT: linalg.contract
 
 // -----
 
@@ -77,6 +97,12 @@ func.func @categorize_batch_matmul(%A: tensor<2x3x5xf32>, %B: tensor<2x5x7xf32>,
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<2x3x5xf32>, tensor<2x5x7xf32>)
 // CHECK-SAME: outs(%{{.+}} : tensor<2x3x7xf32>)
 
+// NAMED-LABEL: func @categorize_batch_matmul
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_batch_matmul
+// GENERIC-NOT: linalg.contract
+
 // -----
 
 func.func @categorize_batch_reduce_matmul(%A: memref<7x8x9xf32>, %B: memref<7x9x8xf32>, %C: memref<8x8xf32>) {
@@ -96,6 +122,12 @@ func.func @categorize_batch_reduce_matmul(%A: memref<7x8x9xf32>, %B: memref<7x9x
 // CHECK-SAME: indexing_maps = [#[[A_MAP]], #[[B_MAP]], #[[C_MAP]]]
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : memref<7x8x9xf32>, memref<7x9x8xf32>)
 // CHECK-SAME: outs(%{{.+}} : memref<8x8xf32>)
+
+// NAMED-LABEL: func @categorize_batch_reduce_matmul
+// NAMED: linalg.contract
+
+// GENERIC-LABEL: func @categorize_batch_reduce_matmul
+// GENERIC-NOT: linalg.contract
 
 // -----
 
@@ -133,6 +165,12 @@ func.func @op_matmul(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%{{.+}} : tensor<?x?xf32>)
 
+// GENERIC-LABEL: func @op_matmul
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_matmul
+// NAMED-NOT: linalg.contract
+
 // -----
 
 // Matmul transpose A: A is accessed as (k, m) instead of (m, k)
@@ -163,6 +201,12 @@ func.func @op_matmul_transpose_a(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-SAME: indexing_maps = [#[[$MAP_TA]], #[[$MAP_B]], #[[$MAP_C]]]
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%{{.+}} : tensor<?x?xf32>)
+
+// GENERIC-LABEL: func @op_matmul_transpose_a
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_matmul_transpose_a
+// NAMED-NOT: linalg.contract
 
 // -----
 
@@ -196,6 +240,12 @@ func.func @op_matmul_transpose_b(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<?x?xf32>, tensor<?x?xf32>)
 // CHECK-SAME: outs(%{{.+}} : tensor<?x?xf32>)
 
+// GENERIC-LABEL: func @op_matmul_transpose_b
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_matmul_transpose_b
+// NAMED-NOT: linalg.contract
+
 // -----
 
 #mapbA = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
@@ -227,6 +277,12 @@ func.func @op_batch_matmul(%A: tensor<2x16x8xf32>, %B: tensor<2x8x16xf32>,
 // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<2x16x8xf32>, tensor<2x8x16xf32>)
 // CHECK-SAME: outs(%{{.+}} : tensor<2x16x16xf32>)
 
+// GENERIC-LABEL: func @op_batch_matmul
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_batch_matmul
+// NAMED-NOT: linalg.contract
+
 // -----
 
 // A multi-reduction contraction (not a named-op matmul, still categorizes).
@@ -253,6 +309,12 @@ func.func @op_multi_reduction(%A: tensor<10x20x30xf32>,
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.contract
 
+// GENERIC-LABEL: func @op_multi_reduction
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_multi_reduction
+// NAMED-NOT: linalg.contract
+
 // -----
 
 // TODO: named matvec.
@@ -276,6 +338,12 @@ func.func @op_matvec(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %Out: tensor<?xf32>
 // CHECK-LABEL: func @op_matvec
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.contract
+
+// GENERIC-LABEL: func @op_matvec
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_matvec
+// NAMED-NOT: linalg.contract
 
 // -----
 
@@ -301,3 +369,9 @@ func.func @op_mmt4d(%A: tensor<?x?x?x?xf32>, %B: tensor<?x?x?x?xf32>,
 // CHECK-LABEL: func @op_mmt4d
 // CHECK-NOT: linalg.generic
 // CHECK: linalg.contract
+
+// GENERIC-LABEL: func @op_mmt4d
+// GENERIC: linalg.contract
+
+// NAMED-LABEL: func @op_mmt4d
+// NAMED-NOT: linalg.contract

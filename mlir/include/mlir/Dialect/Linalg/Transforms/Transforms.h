@@ -1667,19 +1667,26 @@ FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
 // returning FailureOr<GenericOp>.
 struct LinalgGeneralizationPattern
     : public OpInterfaceRewritePattern<LinalgOp> {
-  using OpInterfaceRewritePattern<LinalgOp>::OpInterfaceRewritePattern;
+
+  LinalgGeneralizationPattern(
+      MLIRContext *context, bool emitCategoryOps = false,
+      PatternBenefit benefit = 1)
+      : OpInterfaceRewritePattern<LinalgOp>(context, benefit), emitCategoryOps(emitCategoryOps) {}
 
   /// `matchAndRewrite` implementation that returns the significant
   /// transformed pieces of IR.
   FailureOr<LinalgOp>
   returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const {
-    return generalizeNamedOp(rewriter, op);
+    return generalizeNamedOp(rewriter, op, emitCategoryOps);
   }
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(op, rewriter);
   }
+
+private:
+  bool emitCategoryOps;
 };
 
 struct LinalgSpecializationPattern : public OpRewritePattern<GenericOp> {
@@ -1927,7 +1934,8 @@ void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
 /// Populates `patterns` with patterns to convert spec-generated named ops to
 /// linalg.generic ops.
-void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns);
+void populateLinalgNamedOpsGeneralizationPatterns(RewritePatternSet &patterns,
+                                                  bool emitCategoryOps = false);
 
 /// Populates `patterns` with patterns to convert linalg.generic ops to named
 /// or category ops where possible. A linalg.generic can represent wide range
