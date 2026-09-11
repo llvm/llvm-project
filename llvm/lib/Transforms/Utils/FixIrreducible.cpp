@@ -272,7 +272,7 @@ static void updateLoopInfo(CycleInfo &CI, LoopInfo &LI, CycleRef C,
 // natural loop. Also insert this new loop at its appropriate place in the
 // hierarchy of loops.
 static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
-                           LoopInfo *LI) {
+                           LoopInfo *LI, bool SwitchGuards) {
   if (CI.isReducible(C))
     return false;
   LLVM_DEBUG(dbgs() << "Processing cycle:\n" << CI.print(C) << "\n";);
@@ -395,7 +395,7 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
   SetVector<BasicBlock *> Entries;
   Entries.insert(CI.getEntries(C).rbegin(), CI.getEntries(C).rend());
 
-  CHub.finalize(&DTU, GuardBlocks, "irr");
+  CHub.finalize(&DTU, GuardBlocks, "irr", std::nullopt, SwitchGuards);
 #if defined(EXPENSIVE_CHECKS)
   assert(DT.verify(DominatorTree::VerificationLevel::Full));
 #else
@@ -423,13 +423,13 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
 }
 
 static bool FixIrreducibleImpl(Function &F, CycleInfo &CI, DominatorTree &DT,
-                               LoopInfo *LI) {
+                               LoopInfo *LI, bool SwitchGuards) {
   LLVM_DEBUG(dbgs() << "===== Fix irreducible control-flow in function: "
                     << F.getName() << "\n");
 
   bool Changed = false;
   for (auto C : CI.cycles())
-    Changed |= fixIrreducible(C, CI, DT, LI);
+    Changed |= fixIrreducible(C, CI, DT, LI, SwitchGuards);
 
   if (!Changed)
     return false;
@@ -448,7 +448,7 @@ bool FixIrreducible::runOnFunction(Function &F) {
   LoopInfo *LI = LIWP ? &LIWP->getLoopInfo() : nullptr;
   auto &CI = getAnalysis<CycleInfoWrapperPass>().getResult();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  return FixIrreducibleImpl(F, CI, DT, LI);
+  return FixIrreducibleImpl(F, CI, DT, LI, false);
 }
 
 PreservedAnalyses FixIrreduciblePass::run(Function &F,
@@ -457,7 +457,7 @@ PreservedAnalyses FixIrreduciblePass::run(Function &F,
   auto &CI = AM.getResult<CycleAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (!FixIrreducibleImpl(F, CI, DT, LI))
+  if (!FixIrreducibleImpl(F, CI, DT, LI, SwitchGuards))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
@@ -465,4 +465,12 @@ PreservedAnalyses FixIrreduciblePass::run(Function &F,
   PA.preserve<CycleAnalysis>();
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
+}
+
+void FixIrreduciblePass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<FixIrreduciblePass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  if (SwitchGuards)
+    OS << "<switch-guards>";
 }

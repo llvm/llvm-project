@@ -445,7 +445,6 @@ FUNCTION_PASS("expand-memcmp", ExpandMemCmpPass())
 FUNCTION_PASS("expand-reductions", ExpandReductionsPass())
 FUNCTION_PASS("extra-vector-passes",
               ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
-FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
 FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
@@ -558,7 +557,6 @@ FUNCTION_PASS("trigger-crash-function", TriggerCrashFunctionPass())
 FUNCTION_PASS("trigger-verifier-error", TriggerVerifierErrorPass())
 FUNCTION_PASS("tsan", ThreadSanitizerPass())
 FUNCTION_PASS("typepromotion", TypePromotionPass(*TM))
-FUNCTION_PASS("unify-loop-exits", UnifyLoopExitsPass())
 FUNCTION_PASS("unreachableblockelim", UnreachableBlockElimPass())
 FUNCTION_PASS("vector-combine", VectorCombinePass())
 FUNCTION_PASS("verify", VerifierPass())
@@ -593,6 +591,10 @@ FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
+FUNCTION_PASS_WITH_PARAMS(
+    "fix-irreducible", "FixIrreduciblePass",
+    [](bool SwitchGuards) { return FixIrreduciblePass(SwitchGuards); },
+    parseFixIrreduciblePassOptions, "switch-guards")
 FUNCTION_PASS_WITH_PARAMS(
     "func-properties-stats", "FunctionPropertiesStatisticsPass",
     [](bool IsPreOptimizations) {
@@ -730,6 +732,10 @@ FUNCTION_PASS_WITH_PARAMS(
       return StructurizeCFGPass(SkipUniformRegions);
     },
     parseStructurizeCFGPassOptions, "skip-uniform-regions")
+FUNCTION_PASS_WITH_PARAMS(
+    "unify-loop-exits", "UnifyLoopExitsPass",
+    [](bool SwitchGuards) { return UnifyLoopExitsPass(SwitchGuards); },
+    parseUnifyLoopExitsPassOptions, "switch-guards")
 FUNCTION_PASS_WITH_PARAMS(
     "win-eh-prepare", "WinEHPreparePass",
     [](bool DemoteCatchSwitchPHIOnly) {
