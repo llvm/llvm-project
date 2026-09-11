@@ -185,6 +185,7 @@ int main(int, char**) {
   ASSERT_NOT_CONSTEXPR_CXX23(std::fdimf(1.0f, 0.0f) == 1.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fdiml(1.0L, 0.0L) == 1.0L);
 
+#if __has_constexpr_builtin(__builtin_fmax)
   ASSERT_CONSTEXPR_CXX23(std::fmax(1.0f, 0.0f) == 1.0f);
   ASSERT_CONSTEXPR_CXX23(std::fmax(1.0, 0.0) == 1.0);
   ASSERT_CONSTEXPR_CXX23(std::fmax(1.0L, 0.0L) == 1.0L);
@@ -196,6 +197,19 @@ int main(int, char**) {
   ASSERT_CONSTEXPR_CXX23(std::fmin(1.0L, 0.0L) == 0.0L);
   ASSERT_CONSTEXPR_CXX23(std::fminf(1.0f, 0.0f) == 0.0f);
   ASSERT_CONSTEXPR_CXX23(std::fminl(1.0L, 0.0L) == 0.0L);
+#else
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmax(1.0f, 0.0f) == 1.0f);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmax(1.0, 0.0) == 1.0);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmax(1.0L, 0.0L) == 1.0L);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmaxf(1.0f, 0.0f) == 1.0f);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmaxl(1.0L, 0.0L) == 1.0L);
+
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmin(1.0f, 0.0f) == 0.0f);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmin(1.0, 0.0) == 0.0);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fmin(1.0L, 0.0L) == 0.0L);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fminf(1.0f, 0.0f) == 0.0f);
+  ASSERT_NOT_CONSTEXPR_CXX23(std::fminl(1.0L, 0.0L) == 0.0L);
+#endif
 
   ASSERT_NOT_CONSTEXPR_CXX23(std::fma(1.0f, 1.0f, 1.0f) == 2.0f);
   ASSERT_NOT_CONSTEXPR_CXX23(std::fma(1.0, 1.0, 1.0) == 2.0);
