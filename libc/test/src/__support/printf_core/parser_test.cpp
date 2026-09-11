@@ -13,29 +13,32 @@
 
 #include <stdarg.h>
 
+#include "test/UnitTest/CharLiteralUtils.h"
 #include "test/UnitTest/PrintfMatcher.h"
 #include "test/UnitTest/Test.h"
 
 using LIBC_NAMESPACE::cpp::string_view;
 using LIBC_NAMESPACE::internal::ArgList;
 
-void init(const char *__restrict str, ...) {
+template <typename CharT> void init(const CharT *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
   ArgList v(vlist);
   va_end(vlist);
 
-  LIBC_NAMESPACE::printf_core::Parser<ArgList> parser(str, v);
+  LIBC_NAMESPACE::printf_core::Parser<ArgList, CharT> parser(str, v);
 }
 
-void evaluate(LIBC_NAMESPACE::printf_core::FormatSection *format_arr,
-              const char *__restrict str, ...) {
+template <typename CharT>
+void evaluate(
+    LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> *format_arr,
+    const CharT *__restrict str, ...) {
   va_list vlist;
   va_start(vlist, str);
   ArgList v(vlist);
   va_end(vlist);
 
-  LIBC_NAMESPACE::printf_core::Parser<ArgList> parser(str, v);
+  LIBC_NAMESPACE::printf_core::Parser<ArgList, CharT> parser(str, v);
 
   for (auto cur_section = parser.get_next_section();
        !cur_section.raw_string.empty();
@@ -45,14 +48,20 @@ void evaluate(LIBC_NAMESPACE::printf_core::FormatSection *format_arr,
   }
 }
 
-TEST(LlvmLibcPrintfParserTest, Constructor) { init("test", 1, 2); }
+using TestCharTypes = LIBC_NAMESPACE::testing::TypeList<char, wchar_t>;
 
-TEST(LlvmLibcPrintfParserTest, EvalRaw) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "test";
+TYPED_TEST(LlvmLibcPrintfParserTest, Constructor, TestCharTypes) {
+  using CharT = ParamType;
+  init(ENCODED(CharT, "test"), 1, 2);
+}
+
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalRaw, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "test");
   evaluate(format_arr, str);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = false;
 
   expected.raw_string = {str, 4};
@@ -61,12 +70,14 @@ TEST(LlvmLibcPrintfParserTest, EvalRaw) {
   // TODO: add checks that the format_arr after the last one has length 0
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalSimple) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "test %% test";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalSimple, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "test %% test");
   evaluate(format_arr, str);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1,
+      expected2;
   expected0.has_conv = false;
 
   expected0.raw_string = {str, 5};
@@ -76,7 +87,7 @@ TEST(LlvmLibcPrintfParserTest, EvalSimple) {
   expected1.has_conv = true;
 
   expected1.raw_string = {str + 5, 2};
-  expected1.conv_name = '%';
+  expected1.conv_name = ENCODED(CharT, '%');
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
@@ -87,43 +98,46 @@ TEST(LlvmLibcPrintfParserTest, EvalSimple) {
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArg) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArg, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 2};
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalBadArg) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%\0abc";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalBadArg, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%\0abc");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = false;
   expected.raw_string = {str, 1};
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%+-0 #d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%+-0 #d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 7};
@@ -135,109 +149,119 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFlags) {
       LIBC_NAMESPACE::printf_core::FormatFlags::ALTERNATE_FORM);
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%12d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithWidth, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%12d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
   expected.min_width = 12;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%.34d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithPrecision, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%.34d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 5};
   expected.precision = 34;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%.d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithTrivialPrecision,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%.d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 3};
   expected.precision = 0;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%hd";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithShortLengthModifier,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%hd");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 3};
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::h;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%lld";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithLongLengthModifier,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%lld");
   long long arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::ll;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%w32d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%w32d");
   long long arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 5};
@@ -245,18 +269,20 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithBitWidthLengthModifier) {
   expected.bit_width = 32;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%wf32d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%wf32d");
   long long arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 6};
@@ -264,19 +290,20 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithFastBitWidthLengthModifier) {
   expected.bit_width = 32;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 #endif // LIBC_COPT_PRINTF_DISABLE_BITINT
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "% -056.78jd";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "% -056.78jd");
   intmax_t arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 11};
@@ -289,26 +316,28 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithAllOptions) {
   expected.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::j;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%d%f%s";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalThreeArgs, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%d%f%s");
   int arg1 = 12345;
   double arg2 = 123.45;
-  const char *arg3 = "12345";
+  const CharT *arg3 = ENCODED(CharT, "12345");
   evaluate(format_arr, str, arg1, arg2, arg3);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1,
+      expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 2};
   expected0.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected0.conv_name = 'd';
+  expected0.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
@@ -316,26 +345,28 @@ TEST(LlvmLibcPrintfParserTest, EvalThreeArgs) {
 
   expected1.raw_string = {str + 2, 2};
   expected1.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
-  expected1.conv_name = 'f';
+  expected1.conv_name = ENCODED(CharT, 'f');
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
 
   expected2.raw_string = {str + 4, 2};
-  expected2.conv_val_ptr = const_cast<char *>(arg3);
-  expected2.conv_name = 's';
+  expected2.conv_val_ptr = const_cast<CharT *>(arg3);
+  expected2.conv_name = ENCODED(CharT, 's');
 
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%-999999999999.999999999999d";
+TYPED_TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%-999999999999.999999999999d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 28};
@@ -344,21 +375,22 @@ TEST(LlvmLibcPrintfParserTest, EvalOneArgWithOverflowingWidthAndPrecision) {
   expected.precision = INT_MAX;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest,
-     EvalOneArgWithOverflowingWidthAndPrecisionAsArgs) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%*.*d";
+TYPED_TEST(LlvmLibcPrintfParserTest,
+           EvalOneArgWithOverflowingWidthAndPrecisionAsArgs, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%*.*d");
   int arg1 = INT_MIN; // INT_MIN = -2147483648 if int is 32 bits.
   int arg2 = INT_MIN;
   int arg3 = 12345;
   evaluate(format_arr, str, arg1, arg2, arg3);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 5};
@@ -367,45 +399,49 @@ TEST(LlvmLibcPrintfParserTest,
   expected.precision = arg2;
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg3);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 
-TEST(LlvmLibcPrintfParserTest, IndexModeOneArg) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%1$d";
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeOneArg, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%1$d");
   int arg1 = 12345;
   evaluate(format_arr, str, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
   expected.has_conv = true;
 
   expected.raw_string = {str, 4};
   expected.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected.conv_name = 'd';
+  expected.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected, format_arr[0]);
 }
 
-TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%1$d%2$f%3$s";
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%1$d%2$f%3$s");
   int arg1 = 12345;
   double arg2 = 123.45;
-  const char *arg3 = "12345";
+  const CharT *arg3 = ENCODED(CharT, "12345");
   evaluate(format_arr, str, arg1, arg2, arg3);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1,
+      expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
   expected0.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected0.conv_name = 'd';
+  expected0.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
@@ -413,34 +449,36 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsSequential) {
 
   expected1.raw_string = {str + 4, 4};
   expected1.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
-  expected1.conv_name = 'f';
+  expected1.conv_name = ENCODED(CharT, 'f');
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
 
   expected2.raw_string = {str + 8, 4};
-  expected2.conv_val_ptr = const_cast<char *>(arg3);
-  expected2.conv_name = 's';
+  expected2.conv_val_ptr = const_cast<CharT *>(arg3);
+  expected2.conv_name = ENCODED(CharT, 's');
 
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%3$d%2$f%1$s";
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%3$d%2$f%1$s");
   int arg1 = 12345;
   double arg2 = 123.45;
-  const char *arg3 = "12345";
+  const CharT *arg3 = ENCODED(CharT, "12345");
   evaluate(format_arr, str, arg3, arg2, arg1);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1,
+      expected2;
   expected0.has_conv = true;
 
   expected0.raw_string = {str, 4};
   expected0.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected0.conv_name = 'd';
+  expected0.conv_name = ENCODED(CharT, 'd');
 
   ASSERT_PFORMAT_EQ(expected0, format_arr[0]);
 
@@ -448,50 +486,54 @@ TEST(LlvmLibcPrintfParserTest, IndexModeThreeArgsReverse) {
 
   expected1.raw_string = {str + 4, 4};
   expected1.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
-  expected1.conv_name = 'f';
+  expected1.conv_name = ENCODED(CharT, 'f');
 
   ASSERT_PFORMAT_EQ(expected1, format_arr[1]);
 
   expected2.has_conv = true;
 
   expected2.raw_string = {str + 8, 4};
-  expected2.conv_val_ptr = const_cast<char *>(arg3);
-  expected2.conv_name = 's';
+  expected2.conv_val_ptr = const_cast<CharT *>(arg3);
+  expected2.conv_name = ENCODED(CharT, 's');
 
   ASSERT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%6$d%3$d%7$d%2$d%8$d%1$d%4$d%9$d%5$d%10$d";
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTenArgsRandom, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str =
+      ENCODED(CharT, "%6$d%3$d%7$d%2$d%8$d%1$d%4$d%9$d%5$d%10$d");
   int args[10] = {6, 4, 2, 7, 9, 1, 3, 5, 8, 10};
   evaluate(format_arr, str, args[0], args[1], args[2], args[3], args[4],
            args[5], args[6], args[7], args[8], args[9]);
 
   for (size_t i = 0; i < 10; ++i) {
-    LIBC_NAMESPACE::printf_core::FormatSection expected;
+    LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected;
     expected.has_conv = true;
 
     expected.raw_string = {str + (4 * i),
                            static_cast<size_t>(4 + (i >= 9 ? 1 : 0))};
     expected.conv_val_raw = i + 1;
-    expected.conv_name = 'd';
+    expected.conv_name = ENCODED(CharT, 'd');
     EXPECT_PFORMAT_EQ(expected, format_arr[i]);
   }
 }
 
-TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "normal text %3$llu %% %2$ *4$f %2$ .*4$f %1$1.1c";
-  char arg1 = '1';
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str =
+      ENCODED(CharT, "normal text %3$llu %% %2$ *4$f %2$ .*4$f %1$1.1c");
+  CharT arg1 = ENCODED(CharT, '1');
   double arg2 = 123.45;
   unsigned long long arg3 = 12345;
   int arg4 = 10;
   evaluate(format_arr, str, arg1, arg2, arg3, arg4);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2,
-      expected3, expected4, expected5, expected6, expected7, expected8,
-      expected9;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1,
+      expected2, expected3, expected4, expected5, expected6, expected7,
+      expected8, expected9;
 
   expected0.has_conv = false;
 
@@ -505,7 +547,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected1.length_modifier = LIBC_NAMESPACE::printf_core::LengthModifier::ll;
   expected1.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg3);
-  expected1.conv_name = 'u';
+  expected1.conv_name = ENCODED(CharT, 'u');
 
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
 
@@ -518,7 +560,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected3.has_conv = true;
 
   expected3.raw_string = {str + 19, 2};
-  expected3.conv_name = '%';
+  expected3.conv_name = ENCODED(CharT, '%');
 
   EXPECT_PFORMAT_EQ(expected3, format_arr[3]);
 
@@ -534,7 +576,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected5.flags = LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX;
   expected5.min_width = arg4;
   expected5.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
-  expected5.conv_name = 'f';
+  expected5.conv_name = ENCODED(CharT, 'f');
 
   EXPECT_PFORMAT_EQ(expected5, format_arr[5]);
 
@@ -550,7 +592,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected7.flags = LIBC_NAMESPACE::printf_core::FormatFlags::SPACE_PREFIX;
   expected7.precision = arg4;
   expected7.conv_val_raw = LIBC_NAMESPACE::cpp::bit_cast<uint64_t>(arg2);
-  expected7.conv_name = 'f';
+  expected7.conv_name = ENCODED(CharT, 'f');
 
   EXPECT_PFORMAT_EQ(expected7, format_arr[7]);
 
@@ -567,14 +609,15 @@ TEST(LlvmLibcPrintfParserTest, IndexModeComplexParsing) {
   expected9.precision = 1;
   expected9.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected9.conv_name = 'c';
+  expected9.conv_name = ENCODED(CharT, 'c');
 
   EXPECT_PFORMAT_EQ(expected9, format_arr[9]);
 }
 
-TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%1$d%2$d%4$d";
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck, TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%1$d%2$d%4$d");
   int arg1 = 1;
   int arg2 = 2;
   int arg3 = 3;
@@ -582,13 +625,14 @@ TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
 
   evaluate(format_arr, str, arg1, arg2, arg3, arg4);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1, expected2;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1,
+      expected2;
 
   expected0.has_conv = true;
   expected0.raw_string = {str, 4};
   expected0.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg1);
-  expected0.conv_name = 'd';
+  expected0.conv_name = ENCODED(CharT, 'd');
 
   EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
 
@@ -596,7 +640,7 @@ TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
   expected1.raw_string = {str + 4, 4};
   expected1.conv_val_raw =
       static_cast<LIBC_NAMESPACE::fputil::FPBits<double>::StorageType>(arg2);
-  expected1.conv_name = 'd';
+  expected1.conv_name = ENCODED(CharT, 'd');
 
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
 
@@ -606,12 +650,14 @@ TEST(LlvmLibcPrintfParserTest, IndexModeGapCheck) {
   EXPECT_PFORMAT_EQ(expected2, format_arr[2]);
 }
 
-TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
-  const char *str = "%2$d%";
+TYPED_TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
+  const CharT *str = ENCODED(CharT, "%2$d%");
   evaluate(format_arr, str, 1, 2);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0, expected1;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0, expected1;
   expected0.has_conv = false;
 
   expected0.raw_string = {str, 4};
@@ -623,8 +669,10 @@ TEST(LlvmLibcPrintfParserTest, IndexModeTrailingPercentCrash) {
   EXPECT_PFORMAT_EQ(expected1, format_arr[1]);
 }
 
-TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
-  LIBC_NAMESPACE::printf_core::FormatSection format_arr[10];
+TYPED_TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex,
+           TestCharTypes) {
+  using CharT = ParamType;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> format_arr[10];
 
   // Normally this conversion specifier would be raw (due to having a width
   // defined as an invalid argument) but since it's a % conversion it's allowed
@@ -636,15 +684,15 @@ TEST(LlvmLibcPrintfParserTest, DoublePercentIsAllowedInvalidIndex) {
   // Finally, "%*%" traditionally is displayed as "%" but also traditionally
   // consumes an argument, since the * consumes an integer. Therefore, having
   // "%*2$%" display as "%" is consistent with other printf behavior.
-  const char *str = "%*2$%";
+  const CharT *str = ENCODED(CharT, "%*2$%");
 
   evaluate(format_arr, str, 1, 2);
 
-  LIBC_NAMESPACE::printf_core::FormatSection expected0;
+  LIBC_NAMESPACE::printf_core::BasicFormatSection<CharT> expected0;
   expected0.has_conv = true;
 
   expected0.raw_string = str;
-  expected0.conv_name = '%';
+  expected0.conv_name = ENCODED(CharT, '%');
   EXPECT_PFORMAT_EQ(expected0, format_arr[0]);
 }
 
