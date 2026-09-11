@@ -2036,8 +2036,9 @@ def : Pat<(prefetch xoaddr:$dst, (i32 0), timm, (i32 1)),
           (DCBT 0, xoaddr:$dst)>;   // data prefetch for loads
 def : Pat<(prefetch xoaddr:$dst, (i32 1), timm, (i32 1)),
           (DCBTST 0, xoaddr:$dst)>; // data prefetch for stores
-def : Pat<(prefetch xoaddr:$dst, (i32 0), timm, (i32 0)),
-          (ICBT 0, xoaddr:$dst)>, Requires<[HasICBT]>; // inst prefetch (for read)
+// icbt has no read/write variants, so accept any rw value.
+def : Pat<(prefetch xoaddr:$dst, timm, timm, (i32 0)),
+          (ICBT 0, xoaddr:$dst)>, Requires<[HasICBT]>; // inst prefetch
 
 def : Pat<(int_ppc_dcbt_with_hint xoaddr:$dst, i32:$TH),
           (DCBT i32:$TH, xoaddr:$dst)>;
