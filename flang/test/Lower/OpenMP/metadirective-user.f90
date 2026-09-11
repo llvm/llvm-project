@@ -510,7 +510,7 @@ subroutine test_dynamic_user_match_any_static_score(flag)
 end subroutine
 
 ! The vendor-only selector is a strict subset of the implicit NOTHING's
-! selector. Retaining the user condition makes this a runtime choice, not a tie.
+! selector. The user condition determines which replacement is selected.
 ! CHECK-LABEL: func.func @_QPtest_dynamic_implicit_nothing_more_specific(
 ! CHECK:         fir.if
 ! CHECK-NEXT:    } else {

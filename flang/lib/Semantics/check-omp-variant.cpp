@@ -47,6 +47,7 @@ using namespace Fortran::semantics::omp;
 
 namespace {
 
+/// Collect construct selectors used to distinguish enclosing directive paths.
 class MetadirectiveConstructSelectorCollector {
 public:
   using ConstructTraitSequence = llvm::SmallVector<llvm::omp::TraitProperty, 8>;
@@ -865,8 +866,8 @@ OmpStructureChecker::GetReachableMetadirectiveReplacements(
       continue;
     }
 
-    // Unsupported selectors are diagnosed elsewhere. Retain every explicit
-    // replacement on each path so recovery cannot miss a loop constraint.
+    // If matching cannot model a selector, retain all replacements on each
+    // path so loop constraints are still checked.
     bool hasFallback{false};
     for (const parser::OmpClause &clause : clauses.v) {
       const parser::OmpDirectiveSpecification *spec{nullptr};
@@ -1038,10 +1039,8 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   bool isStrictlyStructuredBlock{
       parser::Unwrap<parser::BlockConstruct>(x) != nullptr};
 
-  // A standalone metadirective's replacement applies to its following
-  // associated construct. Keep block-associated replacements active across a
-  // Fortran BLOCK, just as loop-associated replacements are active across
-  // their DO construct, so nested construct selectors see the selected path.
+  // Keep standalone replacements active throughout their associated DO or
+  // BLOCK construct so nested construct selectors see the selected path.
   if (rootLoop || isStrictlyStructuredBlock) {
     for (const PendingLoopDirectiveGroup &group : pendingLoopDirectiveGroups_) {
       if (!group.isStandaloneMetadirective) {

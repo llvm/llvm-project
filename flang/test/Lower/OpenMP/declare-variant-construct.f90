@@ -232,4 +232,21 @@ contains
       call base_do_simd()
     end do
   end subroutine test_inside_do_simd
+
+  ! TARGET hides the outer PARALLEL during callee selection as well.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_target_boundary(
+  ! CHECK: omp.parallel
+  ! CHECK: omp.target
+  ! CHECK: fir.call @_QMmPbase_tp2()
+  ! CHECK-NEXT: fir.call @_QMmPbase_rank()
+  ! CHECK: return
+  subroutine test_target_boundary
+    !$omp parallel
+      !$omp target
+        call base_tp2()
+        call base_rank()
+      !$omp end target
+    !$omp end parallel
+  end subroutine test_target_boundary
 end module m

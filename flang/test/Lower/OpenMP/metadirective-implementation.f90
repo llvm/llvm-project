@@ -5,7 +5,7 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=51 %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck %s
 
-! An unknown vendor matches MATCH_NONE and can win a ranking tie.
+! MATCH_NONE accepts an unknown vendor; clause order breaks the scoring tie.
 ! CHECK-LABEL: func.func @_QPtest_unknown_vendor_match_none()
 ! CHECK-NOT: omp.barrier
 ! CHECK: omp.taskyield
