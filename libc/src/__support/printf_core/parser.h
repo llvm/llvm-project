@@ -152,11 +152,11 @@ public:
 
       // handle precision
       section.precision = -1; // negative precisions are ignored.
-      if (str[cur_pos] == '.') {
+      if (str[cur_pos] == char_constant_v<CharT, '.'>) {
         ++cur_pos;
         section.precision = 0; // if there's a . but no specified precision, the
                                // precision is implicitly 0.
-        if (str[cur_pos] == '*') {
+        if (str[cur_pos] == char_constant_v<CharT, '*'>) {
           ++cur_pos;
 
           WRITE_ARG_VAL_SIMPLEST(section.precision, int, parse_index(&cur_pos));
@@ -574,7 +574,7 @@ private:
         parse_flags(&local_pos);
 
         // handle width
-        if (str[local_pos] == '*') {
+        if (str[local_pos] == char_constant_v<CharT, '*'>) {
           ++local_pos;
 
           size_t width_index = parse_index(&local_pos);
@@ -588,9 +588,9 @@ private:
         }
 
         // handle precision
-        if (str[local_pos] == '.') {
+        if (str[local_pos] == char_constant_v<CharT, '.'>) {
           ++local_pos;
-          if (str[local_pos] == '*') {
+          if (str[local_pos] == char_constant_v<CharT, '*'>) {
             ++local_pos;
 
             size_t precision_index = parse_index(&local_pos);
