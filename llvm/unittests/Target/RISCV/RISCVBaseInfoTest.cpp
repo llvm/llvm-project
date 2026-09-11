@@ -117,6 +117,9 @@ TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {
       "32-bit ABIs are not supported for 64-bit targets");
   EXPECT_EQ(computeTargetABIError("riscv64", "+f,+d", "l64pc128d"),
             "'l64pc128d' ABI is only supported for RVY targets");
+  EXPECT_EQ(computeTargetABIError(
+                "riscv64", "+experimental-y,+f,+d,+xllvmrvyipm", "l64pc128d"),
+            "'l64pc128d' ABI is only supported for RVY targets");
 }
 
 } // namespace

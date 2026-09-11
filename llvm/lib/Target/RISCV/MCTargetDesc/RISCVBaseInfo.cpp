@@ -84,7 +84,10 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
         "support the D instruction set extension");
   }
   if ((ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128")) &&
-      !FeatureBits[RISCV::FeatureStdExtY]) {
+      (!FeatureBits[RISCV::FeatureStdExtY] ||
+       FeatureBits[RISCV::FeatureVendorXLLVMRVYIPM])) {
+    // RVY ABIs are rejected without RVY base ISA or when targetting the
+    // integral pointer (RVI compatibility) mode of RVY.
     return createStringError(Twine('\'') + ABIName +
                              "' ABI is only supported for RVY targets");
   }

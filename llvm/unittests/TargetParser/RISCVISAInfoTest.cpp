@@ -1273,6 +1273,10 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
   EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f"}), "l64pc128f");
   EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+f", "+d"}),
             "l64pc128d");
+
+  // Integral pointer mode defaults to the base RVI ABI.
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+xllvmrvyipm"}), "lp64");
+
   // There is no l64pc128e ABI, so RV64E+Y still defaults to the integer ABI.
   EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
 
@@ -1589,6 +1593,7 @@ R"(All available -march extensions for RISC-V
     xcvmac               1.0
     xcvmem               1.0
     xcvsimd              1.0
+    xllvmrvyipm          1.0
     xmipscbop            1.0
     xmipscmov            1.0
     xmipsexectl          1.0
@@ -1755,4 +1760,32 @@ ISA String: rv64i2p1_zicfilp1p0_zicsr2p0
   std::string CapturedOutput = testing::internal::GetCapturedStdout();
 
   EXPECT_EQ(CapturedOutput, ExpectedOutput);
+}
+
+TEST(ParseFeatures, AllowZcfZclsdWithRVYIfXLLVMRVYIPM) {
+  // rv32y + zcf/zclsd and rv64y + zcd is incompatible.
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseFeatures(32, {"+experimental-y", "+zcf"})
+                   .takeError()),
+      "'zcf' is incompatible with rv32y base");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseFeatures(32, {"+experimental-y", "+zclsd"})
+                   .takeError()),
+      "'zclsd' is incompatible with rv32y base");
+  EXPECT_EQ(
+      toString(RISCVISAInfo::parseFeatures(64, {"+experimental-y", "+zcd"})
+                   .takeError()),
+      "'zcd' is incompatible with rv64y base");
+
+  // However, when running in RVI/RVE compatibility mode they can be enabled
+  // since the underlying opcodes are no longer used for capability load/store.
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseFeatures(
+                           32, {"+experimental-y", "+zcf", "+xllvmrvyipm"}),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseFeatures(
+                           32, {"+experimental-y", "+zclsd", "+xllvmrvyipm"}),
+                       Succeeded());
+  ASSERT_THAT_EXPECTED(RISCVISAInfo::parseFeatures(
+                           64, {"+experimental-y", "+zcd", "+xllvmrvyipm"}),
+                       Succeeded());
 }
