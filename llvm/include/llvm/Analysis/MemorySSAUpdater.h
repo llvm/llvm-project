@@ -217,6 +217,12 @@ public:
   /// on the MemoryAccess for that store/load.
   LLVM_ABI void removeMemoryAccess(MemoryAccess *, bool OptimizePhis = false);
 
+  /// Remove the MemoryPhis in \p Phis that have become trivial, recursing into
+  /// any phis that become trivial as a result. Handles that have been
+  /// invalidated since they were collected are skipped, so callers may hold
+  /// them across unrelated MemorySSA updates.
+  LLVM_ABI void tryRemoveTrivialPhis(ArrayRef<WeakVH> Phis);
+
   /// Remove MemoryAccess for a given instruction, if a MemoryAccess exists.
   /// This should be called when an instruction (load/store) is deleted from
   /// the program.
@@ -261,7 +267,6 @@ private:
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
-  void tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs);
   void fixupDefs(const SmallVectorImpl<WeakVH> &);
   /// Clone all uses and defs from BB to NewBB given a 1:1 map of all
   /// instructions and blocks cloned, and a map of MemoryPhi : Definition
