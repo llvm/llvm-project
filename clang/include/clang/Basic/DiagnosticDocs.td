@@ -53,10 +53,6 @@ table.docutils tr + tr {
 
 # Diagnostic flags in Clang
 
-:::{contents}
-:local:
-:::
-
 ## Introduction
 
 This page lists the diagnostic flags currently supported by Clang.

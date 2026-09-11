@@ -2724,30 +2724,32 @@ TEST(TargetParserTest, testAMDGPUparseArchR600) {
   struct CanonicalGPU {
     StringRef Name;
     AMDGPU::GPUKind Kind;
-    AMDGPU::R600FeatureKind Features;
+    bool HasFMA;
   };
   static const CanonicalGPU Canonicals[] = {
-      {"r600", AMDGPU::GK_R600, AMDGPU::R600_FEATURE_NONE},
-      {"r630", AMDGPU::GK_R630, AMDGPU::R600_FEATURE_NONE},
-      {"rs880", AMDGPU::GK_RS880, AMDGPU::R600_FEATURE_NONE},
-      {"rv670", AMDGPU::GK_RV670, AMDGPU::R600_FEATURE_NONE},
-      {"rv710", AMDGPU::GK_RV710, AMDGPU::R600_FEATURE_NONE},
-      {"rv730", AMDGPU::GK_RV730, AMDGPU::R600_FEATURE_NONE},
-      {"rv770", AMDGPU::GK_RV770, AMDGPU::R600_FEATURE_NONE},
-      {"cedar", AMDGPU::GK_CEDAR, AMDGPU::R600_FEATURE_NONE},
-      {"cypress", AMDGPU::GK_CYPRESS, AMDGPU::R600_FEATURE_FMA},
-      {"juniper", AMDGPU::GK_JUNIPER, AMDGPU::R600_FEATURE_NONE},
-      {"redwood", AMDGPU::GK_REDWOOD, AMDGPU::R600_FEATURE_NONE},
-      {"sumo", AMDGPU::GK_SUMO, AMDGPU::R600_FEATURE_NONE},
-      {"barts", AMDGPU::GK_BARTS, AMDGPU::R600_FEATURE_NONE},
-      {"caicos", AMDGPU::GK_CAICOS, AMDGPU::R600_FEATURE_NONE},
-      {"cayman", AMDGPU::GK_CAYMAN, AMDGPU::R600_FEATURE_FMA},
-      {"turks", AMDGPU::GK_TURKS, AMDGPU::R600_FEATURE_NONE},
+      {"r600", AMDGPU::GK_R600, false},
+      {"r630", AMDGPU::GK_R630, false},
+      {"rs880", AMDGPU::GK_RS880, false},
+      {"rv670", AMDGPU::GK_RV670, false},
+      {"rv710", AMDGPU::GK_RV710, false},
+      {"rv730", AMDGPU::GK_RV730, false},
+      {"rv770", AMDGPU::GK_RV770, false},
+      {"cedar", AMDGPU::GK_CEDAR, false},
+      {"cypress", AMDGPU::GK_CYPRESS, true},
+      {"juniper", AMDGPU::GK_JUNIPER, false},
+      {"redwood", AMDGPU::GK_REDWOOD, false},
+      {"sumo", AMDGPU::GK_SUMO, false},
+      {"barts", AMDGPU::GK_BARTS, false},
+      {"caicos", AMDGPU::GK_CAICOS, false},
+      {"cayman", AMDGPU::GK_CAYMAN, true},
+      {"turks", AMDGPU::GK_TURKS, false},
   };
   for (const CanonicalGPU &G : Canonicals) {
     EXPECT_EQ(AMDGPU::parseArchR600(G.Name), G.Kind) << G.Name;
     EXPECT_EQ(AMDGPU::getArchNameR600(G.Kind), G.Name) << G.Name;
-    EXPECT_EQ(AMDGPU::getArchAttrR600(G.Kind), G.Features) << G.Name;
+    EXPECT_EQ(AMDGPU::getFeatureBitsetR600(G.Kind).test(AMDGPU::R600_FEAT_FMAF),
+              G.HasFMA)
+        << G.Name;
   }
 
   // Aliases resolve to the canonical GPUKind but are not returned by
@@ -3307,8 +3309,8 @@ TEST(TargetParserTest, testAMDGPUParseTargetIDString) {
       "amdgcn-amd-amdhsa-unknown-gfx900:sramecc+"));
 
   // xnack is only a valid modifier when the processor supports on/off modes.
-  // gfx1250 has xnack permanently enabled (FEATURE_XNACK without
-  // FEATURE_XNACK_ON_OFF_MODES), so an xnack modifier is rejected.
+  // gfx1250 has xnack permanently enabled (xnack supported but without
+  // on/off modes), so an xnack modifier is rejected.
   EXPECT_FALSE(TargetID::parseTargetIDString(
       "amdgcn-amd-amdhsa-unknown-gfx1250:xnack+"));
   EXPECT_FALSE(TargetID::parseTargetIDString(
