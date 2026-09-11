@@ -19,3 +19,32 @@ TEST_F(RuntimeCallTest, genDerivedTypeAssign) {
   fir::runtime::genAssign(*firBuilder, loc, dest, source);
   checkCallOpFromResultBox(dest, "_FortranAAssign", 2);
 }
+
+TEST_F(RuntimeCallTest, genCopyOutReadOnlyModeTest) {
+  auto loc = firBuilder->getUnknownLoc();
+  mlir::Value mode = fir::runtime::genCopyOutReadOnlyMode(*firBuilder, loc);
+  checkCallOp(mode.getDefiningOp(), "_FortranACopyOutReadOnlyMode", 0,
+      /*addLocArgs=*/false);
+}
+
+TEST_F(RuntimeCallTest, genCopyOutReadOnlyCandidateTest) {
+  auto loc = firBuilder->getUnknownLoc();
+  mlir::Type seqTy =
+      fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
+  mlir::Value box =
+      fir::UndefOp::create(*firBuilder, loc, fir::BoxType::get(seqTy));
+  fir::runtime::genCopyOutReadOnlyCandidate(*firBuilder, loc, box);
+  checkCallOpFromResultBox(
+      box, "_FortranACopyOutReadOnlyCandidate", 1, /*addLocArgs=*/false);
+}
+
+TEST_F(RuntimeCallTest, genCopyOutReadOnlyConfirmTest) {
+  auto loc = firBuilder->getUnknownLoc();
+  mlir::Type seqTy =
+      fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
+  mlir::Value box =
+      fir::UndefOp::create(*firBuilder, loc, fir::BoxType::get(seqTy));
+  fir::runtime::genCopyOutReadOnlyConfirm(*firBuilder, loc, box);
+  checkCallOpFromResultBox(
+      box, "_FortranACopyOutReadOnlyConfirm", 1, /*addLocArgs=*/false);
+}
