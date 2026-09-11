@@ -72,6 +72,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -984,6 +985,11 @@ struct DSEState {
   SmallVector<MemoryDef *, 64> MemDefs;
   // Any that should be skipped as they are already deleted
   SmallPtrSet<MemoryAccess *, 4> SkipStores;
+  // MemoryPhis that used an access removed by deleteDeadInstruction and may
+  // therefore have become trivial. They are cleaned up once all worklists are
+  // dead, because removing a phi eagerly can free an access that is still
+  // queued in eliminateDeadDefs.
+  SmallVector<WeakVH, 8> MaybeTrivialPhis;
   // Keep track whether a given object is captured before return or not.
   DenseMap<const Value *, bool> CapturedBeforeReturn;
   // Keep track of all of the objects that are invisible to the caller after
@@ -2057,6 +2063,13 @@ void DSEState::deleteDeadInstruction(Instruction *SI,
         }
       }
 
+      // Removing MA can leave a user phi with identical operands. Record
+      // those phis rather than letting the updater drop them here; see
+      // MaybeTrivialPhis.
+      for (User *U : MA->users())
+        if (auto *MP = dyn_cast<MemoryPhi>(U))
+          MaybeTrivialPhis.push_back(MP);
+
       Updater.removeMemoryAccess(MA);
     }
 
@@ -2814,6 +2827,14 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
   while (!State.ToRemove.empty()) {
     Instruction *DeadInst = State.ToRemove.pop_back_val();
     DeadInst->eraseFromParent();
+  }
+
+  // DSE reports MemorySSA as preserved, so any phi left trivial by a deleted
+  // def would be handed to the next pass and block its walker. Nothing holds
+  // raw MemoryAccess pointers at this point, so the phis are safe to remove.
+  if (!State.MaybeTrivialPhis.empty()) {
+    MemorySSAUpdater Updater(&MSSA);
+    Updater.tryRemoveTrivialPhis(State.MaybeTrivialPhis);
   }
 
   return MadeChange;

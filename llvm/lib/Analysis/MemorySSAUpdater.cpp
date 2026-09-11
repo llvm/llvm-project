@@ -1495,8 +1495,8 @@ void MemorySSAUpdater::removeBlocks(
   }
 }
 
-void MemorySSAUpdater::tryRemoveTrivialPhis(ArrayRef<WeakVH> UpdatedPHIs) {
-  for (const auto &VH : UpdatedPHIs)
+void MemorySSAUpdater::tryRemoveTrivialPhis(ArrayRef<WeakVH> Phis) {
+  for (const auto &VH : Phis)
     if (auto *MPhi = cast_or_null<MemoryPhi>(VH))
       tryRemoveTrivialPhi(MPhi);
 }
