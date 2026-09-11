@@ -1,0 +1,82 @@
+# RUN: llc -mtriple=aarch64 -run-pass=machine-outliner -verify-machineinstrs -o - %s | FileCheck %s
+
+# Make sure "killed" operand flags would be correct if OUTLINED_FUNCTION is
+# virtually re-inserted at its call site. This is important for correct emission
+# of PAuth-related pseudo instructions by AArch64AsmPrinter.
+# Current implementation ensures this property by simply clearing all "killed"
+# flags on the operands of the instructions contained in `OUTLINED_FUNCTION`s.
+
+--- |
+  define void @test_pac_disc(ptr %p) #0 { ret void }
+  define void @test_not_exactly_cloned_flags(i64 %a, i64 %b) #0 { ret void }
+  attributes #0 = { noredzone optsize minsize }
+...
+---
+# Test PAC pseudo that may actually result in incorrect codegen if `killed` flag
+# is passed to AsmPrinter where it should not.
+
+name: test_pac_disc
+tracksRegLiveness: true
+body:             |
+    bb.0:
+        ; CHECK-LABEL: name: test_pac_disc
+        ; CHECK:         $x1 = ORRXrs $xzr, $x0, 0
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_0
+        ; CHECK-NEXT:    $x1 = ORRXrs $xzr, $x0, 0
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_0
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_0
+        ; CHECK-NEXT:    RET undef $lr
+
+        liveins: $x0
+        $x1 = ORRXrs $xzr, $x0, 0
+        $x2 = LDRXui $x1, 0
+        $x2 = PAC $x2, 2, 12345, killed $x1, implicit-def dead $x16, implicit-def dead $x17
+        STRXui $x2, $x0, 0
+        $x1 = ORRXrs $xzr, $x0, 0
+        $x2 = LDRXui $x1, 0
+        $x2 = PAC $x2, 2, 12345, $x1, implicit-def dead $x16, implicit-def dead $x17
+        STRXui $x2, $x0, 0
+        $x2 = LDRXui $x1, 0
+        $x2 = PAC $x2, 2, 12345, killed $x1, implicit-def dead $x16, implicit-def dead $x17
+        STRXui $x2, $x0, 0
+        RET undef $lr
+...
+---
+# Make sure `killed` flags are intentionally reset: in the original function, there
+# is no such ADDXrs instruction that could have been cloned as-is (without clearing
+# the `killed` flags) to OUTLINED_FUNCTION_1.
+
+name: test_not_exactly_cloned_flags
+tracksRegLiveness: true
+body:             |
+    bb.0:
+        ; CHECK-LABEL: name: test_not_exactly_cloned_flags
+        ; CHECK:         BL @OUTLINED_FUNCTION_1,
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1,
+        ; CHECK-NEXT:    BL @OUTLINED_FUNCTION_1,
+        ; CHECK-NEXT:    RET undef $lr
+
+        liveins: $x0, $x1
+        $x2 = ORRXrs $xzr, $x0, 0
+        $x3 = ORRXrs $xzr, $x1, 0
+        $x4 = ADDXrs killed $x2, killed $x3, 0
+        $x2 = ORRXrs $xzr, $x0, 0
+        $x3 = ORRXrs $xzr, $x1, 0
+        $x4 = ADDXrs killed $x2, $x3, 0
+        $x2 = ORRXrs $xzr, $x0, 0
+        $x3 = ORRXrs $xzr, $x1, 0
+        $x4 = ADDXrs $x2, killed $x3, 0
+        RET undef $lr
+...
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK:         $x2 = LDRXui $x1, 0
+# CHECK-NEXT:    $x2 = PAC $x2, 2, 12345, $x1, implicit-def dead $x16, implicit-def dead $x17
+# CHECK-NEXT:    STRXui $x2, $x0, 0
+# CHECK-NEXT:    RET $lr
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_1
+# CHECK:         $x2 = ORRXrs $xzr, $x0, 0
+# CHECK-NEXT:    $x3 = ORRXrs $xzr, $x1, 0
+# CHECK-NEXT:    $x4 = ADDXrs $x2, $x3, 0
+# CHECK-NEXT:    RET $lr
