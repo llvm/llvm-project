@@ -11796,29 +11796,6 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
 }
 
-TLSModel::Model AArch64::getELFTLSModel(const GlobalValue *GV,
-                                        const TargetMachine &TM,
-                                        bool HasELFSignedGOT) {
-  TLSModel::Model Model =
-      HasELFSignedGOT ? TLSModel::GeneralDynamic : TM.getTLSModel(GV);
-
-  if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
-      Model == TLSModel::LocalDynamic)
-    Model = TLSModel::GeneralDynamic;
-
-  if (TM.getCodeModel() == CodeModel::Large && Model != TLSModel::LocalExec)
-    report_fatal_error("ELF TLS only supported in small memory model or "
-                       "in local exec TLS model");
-  // Different choices can be made for the maximum size of the TLS area for a
-  // module. For the small address model, the default TLS size is 16MiB and the
-  // maximum TLS size is 4GiB.
-  // FIXME: add tiny and large code model support for TLS access models other
-  // than local exec. We currently generate the same code as small for tiny,
-  // which may be larger than needed.
-
-  return Model;
-}
-
 SDValue
 AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -11827,8 +11804,26 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
   AArch64FunctionInfo *MFI =
       DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
-  TLSModel::Model Model = AArch64::getELFTLSModel(
-      GA->getGlobal(), getTargetMachine(), MFI->hasELFSignedGOT());
+
+  TLSModel::Model Model = MFI->hasELFSignedGOT()
+                              ? TLSModel::GeneralDynamic
+                              : getTargetMachine().getTLSModel(GA->getGlobal());
+
+  if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
+    if (Model == TLSModel::LocalDynamic)
+      Model = TLSModel::GeneralDynamic;
+  }
+
+  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
+      Model != TLSModel::LocalExec)
+    report_fatal_error("ELF TLS only supported in small memory model or "
+                       "in local exec TLS model");
+  // Different choices can be made for the maximum size of the TLS area for a
+  // module. For the small address model, the default TLS size is 16MiB and the
+  // maximum TLS size is 4GiB.
+  // FIXME: add tiny and large code model support for TLS access models other
+  // than local exec. We currently generate the same code as small for tiny,
+  // which may be larger than needed.
 
   SDValue TPOff;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());

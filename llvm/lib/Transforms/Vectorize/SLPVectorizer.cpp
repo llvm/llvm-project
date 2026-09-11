@@ -30557,6 +30557,7 @@ public:
       States.push_back(getSameOpcode(RV, TLI));
     }
     ReducedVals.swap(LocalReducedVals);
+    FastMathFlags GroupRdxFMF = RdxFMF;
     // The minimum vector factor pays off only when it covers the whole
     // reduction: every group must be either a pair of distinct values or
     // large enough for the regular vector factor.
@@ -30774,6 +30775,12 @@ public:
         }
       }
 
+      GroupRdxFMF = RdxFMF;
+      // No need to check for associativity, if 2 reduced values.
+      if (NumReducedVals == 2 &&
+          (RdxKind == RecurKind::FAdd || RdxKind == RecurKind::FMul))
+        GroupRdxFMF.setAllowReassoc(true);
+
       unsigned MaxVecRegSize = V.getMaxVecRegSize();
       unsigned EltSize = V.getVectorElementSize(Candidates[0]);
       const unsigned MaxElts = std::clamp<unsigned>(
@@ -30885,7 +30892,7 @@ public:
         }
         V.reorderTopToBottom();
         // No need to reorder the root node at all for reassociative reduction.
-        V.reorderBottomToTop(/*IgnoreReorder=*/RdxFMF.allowReassoc() ||
+        V.reorderBottomToTop(/*IgnoreReorder=*/GroupRdxFMF.allowReassoc() ||
                              VL.front()->getType()->isIntOrIntVectorTy() ||
                              ReductionLimit > 2 ||
                              RK == ReductionOrdering::Ordered);
@@ -30958,7 +30965,7 @@ public:
         else
           ReductionCost =
               getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               RdxFMF, V, DT, DL, TLI);
+                               GroupRdxFMF, V, DT, DL, TLI);
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31146,8 +31153,10 @@ public:
     }
 
     if (!VectorValuesAndScales.empty()) {
+      Builder.setFastMathFlags(GroupRdxFMF);
       auto [Res, ResNegated] =
           emitReduction(Builder, *TTI, ReductionRoot->getType());
+      Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
       // final combine.
       AddReducedPart(/*OrigV=*/nullptr, Res, ResNegated);
@@ -32779,6 +32788,19 @@ bool SLPVectorizerPass::tryToVectorize(
                                              ArrayRef<Value *> Ops) {
     if (!isReductionCandidate(Inst))
       return false;
+    // A 2-element reduction that is just a link in a larger reduction chain
+    // or feeds a buildvector is better handled by the whole-chain reduction
+    // or buildvector analysis.
+    RecurKind Kind = getRdxKind(Inst);
+    auto *FPMO = dyn_cast<FPMathOperator>(Inst);
+    if (FPMO && !FPMO->hasAllowReassoc() &&
+        (any_of(Inst->users(),
+                [Kind](User *U) {
+                  return getRdxKind(U) == Kind || isa<InsertElementInst>(U);
+                }) ||
+         any_of(Inst->operands(),
+                [Kind](Value *Op) { return getRdxKind(Op) == Kind; })))
+      return false;
     Type *Ty = Inst->getType();
     if (!isValidElementType(Ty, SLPReVec) || Ty->isPointerTy())
       return false;
@@ -32803,8 +32825,12 @@ bool SLPVectorizerPass::tryToVectorize(
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       FastMathFlags FMF;
-      if (auto *FPCI = dyn_cast<FPMathOperator>(Inst))
+      if (auto *FPCI = dyn_cast<FPMathOperator>(Inst)) {
         FMF = FPCI->getFastMathFlags();
+        // No need to check for associativity, if 2 reduced values.
+        if (Ops.size() == 2)
+          FMF.setAllowReassoc(true);
+      }
       RedCost = TTI.getArithmeticReductionCost(Inst->getOpcode(), VecTy, FMF,
                                                CostKind);
       break;
