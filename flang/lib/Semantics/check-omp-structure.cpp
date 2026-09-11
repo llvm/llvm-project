@@ -65,7 +65,7 @@ using namespace Fortran::semantics::omp;
 using namespace Fortran::parser::omp;
 
 template <>
-void IterateOverMembers(const llvm::omp::ClauseSet &set,
+void IterateOverMembers(const llvm::omp::Clauses &set,
     std::function<void(llvm::omp::Clause)> visitor) {
   for (llvm::omp::Clause c : set) {
     visitor(c);
@@ -651,7 +651,7 @@ void OmpStructureChecker::ClearLabels() {
 }
 
 bool OmpStructureChecker::IsCloselyNestedRegion(
-    const llvm::omp::DirectiveSet &set) {
+    const llvm::omp::Directives &set) {
   // Definition of close nesting:
   //
   // `A region nested inside another region with no parallel region nested
@@ -958,34 +958,71 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
-void OmpStructureChecker::CheckDirectiveInPureProcedure(
-    parser::CharBlock source, llvm::omp::Directive id) {
-  const Scope &scope{context_.FindScope(source)};
-  if (!FindPureProcedureContaining(scope)) {
-    return;
-  }
+void OmpStructureChecker::CheckDirectivePureSince(parser::CharBlock source,
+    llvm::omp::Directive id, const char *where,
+    const parser::OmpDirectiveSpecification &spec) {
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // A directive's "pure" property is version-specific: pureSince is the
   // OpenMP version at which the directive gained that property.
   llvm::omp::Version pureSince{llvm::omp::getDirectivePureSince(id)};
+  if (id == llvm::omp::Directive::OMPD_error &&
+      GetErrorDirectiveArgs(spec).at !=
+          parser::OmpAtClause::ActionTime::Compilation) {
+    // ERROR is only "pure" when its action-time is compilation.
+    pureSince = llvm::omp::Version{0x7FFFFFFF};
+  }
   if (version >= pureSince) {
     return;
   }
   if (pureSince != 0x7FFFFFFF) {
     context_.Say(source,
-        "The OpenMP directive '%s' is not allowed in a PURE procedure in %s, %s"_err_en_US,
-        parser::omp::GetUpperName(id, version), ThisVersion(version),
+        "The OpenMP directive '%s' is not allowed in %s in %s, %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), where, ThisVersion(version),
         TryVersion(pureSince));
   } else {
     context_.Say(source,
-        "The OpenMP directive '%s' is not allowed in a PURE procedure"_err_en_US,
-        parser::omp::GetUpperName(id, version));
+        "The OpenMP directive '%s' is not allowed in %s"_err_en_US,
+        parser::omp::GetUpperName(id, version), where);
+  }
+}
+
+void OmpStructureChecker::CheckDirectiveInPureProcedure(
+    parser::CharBlock source, llvm::omp::Directive id,
+    const parser::OmpDirectiveSpecification &spec) {
+  const Scope &scope{context_.FindScope(source)};
+  if (!FindPureProcedureContaining(scope)) {
+    return;
+  }
+  CheckDirectivePureSince(source, id, "a PURE procedure", spec);
+}
+
+void OmpStructureChecker::CheckDirectiveInDoConcurrent(parser::CharBlock source,
+    llvm::omp::Directive id, const parser::OmpDirectiveSpecification &spec) {
+  // Look for any enclosing DO CONCURRENT, not just the nearest DO, since a
+  // plain DO nested inside DO CONCURRENT is still part of its body.
+  for (const LoopOrConstruct &c : llvm::reverse(constructStack_)) {
+    auto *doConstruct{std::get_if<const parser::DoConstruct *>(&c)};
+    if (!doConstruct || !(*doConstruct)->IsDoConcurrent()) {
+      continue;
+    }
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+    if (!IsDoConcurrentLegal(version)) {
+      // Prior to OpenMP 6.0, no OpenMP directive, regardless of its "pure"
+      // property, was allowed inside a DO CONCURRENT construct.
+      context_.Say(source,
+          "The OpenMP directive '%s' is not allowed in a DO CONCURRENT construct"_err_en_US,
+          parser::omp::GetUpperName(id, version));
+    } else {
+      // Starting with OpenMP 6.0, directives that have the "pure" property
+      // are permitted inside a DO CONCURRENT construct.
+      CheckDirectivePureSince(source, id, "a DO CONCURRENT construct", spec);
+    }
+    return;
   }
 }
 
 std::pair<const parser::OmpClause *, const parser::OmpClause *>
-OmpStructureChecker::FindMutuallyExclusiveClauses(
-    llvm::omp::ClauseSet exclusive,
+OmpStructureChecker::FindMutuallyExclusiveClauses(llvm::omp::Clauses exclusive,
     const std::vector<const parser::OmpClause *> &clauses) {
   const parser::OmpClause *first{nullptr};
   for (const parser::OmpClause *clause : clauses) {
@@ -1036,7 +1073,7 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
     }
   }
 
-  llvm::omp::ClauseSet notAllowed;
+  llvm::omp::Clauses notAllowed;
 
   for (const parser::OmpClause *clause : allClauses) {
     llvm::omp::Clause clauseId{clause->Id()};
@@ -1061,7 +1098,7 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
   // Exclusive clauses aren't necessarily unique, but there is no way
   // to specify a clause in both sets right now, and all clauses currently
   // listed as exclusive also happen to be unique.
-  llvm::omp::ClauseSet uniqueSet{//
+  llvm::omp::Clauses uniqueSet{//
       directiveClausesMap_[dirId].allowedOnce |
       directiveClausesMap_[dirId].allowedExclusive};
 
@@ -1089,7 +1126,7 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
 
   bool requiredPresent{false};
   // Prepare the requiredSet relevant to the current OpenMP version.
-  llvm::omp::ClauseSet requiredSet;
+  llvm::omp::Clauses requiredSet;
   for (llvm::omp::Clause id : directiveClausesMap_[dirId].requiredOneOf) {
     if (IsAllowedClause(id)) {
       requiredSet.set(id);
@@ -1214,7 +1251,7 @@ bool OmpStructureChecker::IsCombinedParallelWorksharing(
 }
 
 bool OmpStructureChecker::HasInvalidWorksharingNesting(
-    const parser::OmpDirectiveName &name, const llvm::omp::DirectiveSet &set) {
+    const parser::OmpDirectiveName &name, const llvm::omp::Directives &set) {
   // set contains all the invalid closely nested directives
   // for the given directive (`source` here)
   if (IsCombinedParallelWorksharing(name.v)) {
@@ -1325,7 +1362,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   PushContextAndClauseSets(dirName.source, dirName.v);
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
-  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v, *dirStack_.back());
+  CheckDirectiveInDoConcurrent(dirName.source, dirName.v, *dirStack_.back());
 
   // Verify clauses
   common::visit(
@@ -1382,7 +1420,8 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
   CheckClauses(dirName, llvm::iterator_range(dirStack_.back()->Clauses().v),
       llvm::iterator_range(std::list<parser::OmpClause>{}));
 
-  CheckDirectiveInPureProcedure(dirName.source, dirName.v);
+  CheckDirectiveInPureProcedure(dirName.source, dirName.v, *dirStack_.back());
+  CheckDirectiveInDoConcurrent(dirName.source, dirName.v, *dirStack_.back());
   EnterDirectiveNest(DeclarativeNest);
 }
 
@@ -3825,7 +3864,7 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
   };
 
   // [5.1] 2.21.2 Threadprivate Directive Restriction
-  llvm::omp::ClauseSet threadprivateAllowedSet{llvm::omp::Clause::OMPC_copyin,
+  llvm::omp::Clauses threadprivateAllowedSet{llvm::omp::Clause::OMPC_copyin,
       llvm::omp::Clause::OMPC_copyprivate, llvm::omp::Clause::OMPC_schedule,
       llvm::omp::Clause::OMPC_num_threads, llvm::omp::Clause::OMPC_thread_limit,
       llvm::omp::Clause::OMPC_if};
@@ -4520,10 +4559,10 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Firstprivate &x) {
   // Check firstprivate variables in task and taskloop constructs
   dirClauseTriple.emplace(llvm::omp::Directive::OMPD_task,
       std::make_pair(llvm::omp::Directive::OMPD_parallel,
-          llvm::omp::ClauseSet{llvm::omp::Clause::OMPC_reduction}));
+          llvm::omp::Clauses{llvm::omp::Clause::OMPC_reduction}));
   dirClauseTriple.emplace(llvm::omp::Directive::OMPD_taskloop,
       std::make_pair(llvm::omp::Directive::OMPD_parallel,
-          llvm::omp::ClauseSet{llvm::omp::Clause::OMPC_reduction}));
+          llvm::omp::Clauses{llvm::omp::Clause::OMPC_reduction}));
 
   CheckPrivateSymbolsInOuterCxt(
       currSymbols, dirClauseTriple, llvm::omp::Clause::OMPC_firstprivate);
@@ -4645,7 +4684,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
           "%s is not a constituent of the %s directive"_err_en_US, subName,
           dirName);
     } else {
-      static llvm::omp::DirectiveSet valid45{
+      static llvm::omp::Directives valid45{
           llvm::omp::Directive::OMPD_cancel, //
           llvm::omp::Directive::OMPD_parallel, //
           llvm::omp::Directive::OMPD_target, //
@@ -4656,13 +4695,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
           llvm::omp::Directive::OMPD_task, //
           llvm::omp::Directive::OMPD_taskloop, //
       };
-      static llvm::omp::DirectiveSet valid50{
-          valid45 | llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_simd}};
+      static llvm::omp::Directives valid50{
+          valid45 | llvm::omp::Directives{llvm::omp::Directive::OMPD_simd}};
       // 5.1 is the same as 5.0.
-      static llvm::omp::DirectiveSet valid52{
-          valid50 | llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_teams}};
-      static llvm::omp::DirectiveSet valid60{valid52 |
-          llvm::omp::DirectiveSet{llvm::omp::Directive::OMPD_taskgraph,
+      static llvm::omp::Directives valid52{
+          valid50 | llvm::omp::Directives{llvm::omp::Directive::OMPD_teams}};
+      static llvm::omp::Directives valid60{valid52 |
+          llvm::omp::Directives{llvm::omp::Directive::OMPD_taskgraph,
               /*TODO llvm::omp::Directive::OMPD_task_iteration*/}};
 
       static auto minVersion{[&](llvm::omp::Directive d) {

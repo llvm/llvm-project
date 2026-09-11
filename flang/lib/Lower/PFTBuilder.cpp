@@ -2575,6 +2575,36 @@ static bool isAssociatedLoop(const DoConstructChain &chain,
   return std::distance(chain.begin(), it) < n;
 }
 
+/// True if \p eval is a DoConstruct sitting directly in the body of an
+/// `!$acc kernels` region, i.e. attached to the directive itself rather than
+/// nested inside another loop.
+///
+/// Such a loop is the one the directive parallelizes, so it must keep its
+/// Fortran loop structure: wrapping its CFG in an scf.execute_region would
+/// leave the kernels region with nothing to partition. Loops nested deeper in
+/// the region are unaffected — hiding an inner loop's CFG still leaves the
+/// enclosing loop available to the directive.
+static bool isAccKernelsBody(const Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.isA<parser::DoConstruct>())
+    return false;
+
+  const Fortran::lower::pft::Evaluation *p = eval.parentConstruct;
+  if (!p)
+    return false;
+
+  const auto *acc = p->getIf<parser::OpenACCConstruct>();
+  if (!acc)
+    return false;
+
+  const auto *block = std::get_if<parser::OpenACCBlockConstruct>(&acc->u);
+  if (!block)
+    return false;
+
+  const auto &beginDir = std::get<parser::AccBeginBlockDirective>(block->t);
+  return std::get<parser::AccBlockDirective>(beginDir.t).v ==
+         llvm::acc::Directive::ACCD_kernels;
+}
+
 /// True if \p eval is a DoConstruct attached to an enclosing OpenACC loop.
 static bool isAccLoopBody(const Fortran::lower::pft::Evaluation &eval) {
   DoConstructChain chain;
@@ -2654,8 +2684,11 @@ bool Fortran::lower::pft::isWrappableConstruct(
   //
   // Note: Loops attached to OpenACC/OpenMP constructs are not wrappable since
   // the directive lowering (e.g. genOpenACCLoopFromDoConstruct) takes over
-  // code-gen when a DoConstruct is attached to such a directive. We might
-  // extend wrapping to such unstructured loops later on if needed.
+  // code-gen when a DoConstruct is attached to such a directive. The same
+  // applies to a loop directly in an `!$acc kernels` body: it is the loop the
+  // directive parallelizes. We might extend wrapping to such unstructured
+  // loops later on if needed.
   return !hasUnwrappableInternals(eval) && !hasIncomingBranch(eval) &&
-         !isAccLoopBody(eval) && !isOmpLoopBody(eval, semaCtx);
+         !isAccLoopBody(eval) && !isAccKernelsBody(eval) &&
+         !isOmpLoopBody(eval, semaCtx);
 }

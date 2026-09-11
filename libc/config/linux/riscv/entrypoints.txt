@@ -243,6 +243,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.llabs
     libc.src.stdlib.lldiv
     libc.src.stdlib.memalignment
+    libc.src.stdlib.mkdtemp
     libc.src.stdlib.mkstemp
     libc.src.stdlib.qsort
     libc.src.stdlib.qsort_r
@@ -301,6 +302,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # TODO: Need to check if pwait2 is available before providing.
     # https://github.com/llvm/llvm-project/issues/80060
     # libc.src.sys.epoll.epoll_pwait2
+
+    # sys/file.h entrypoints
+    libc.src.sys.file.flock
 
     # sys/ioctl.h entrypoints
     libc.src.sys.ioctl.ioctl
@@ -375,10 +379,12 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
     libc.src.sys.stat.stat
+    libc.src.sys.stat.umask
     libc.src.sys.stat.utimensat
 
     # sys/statfs.h entrypoints
@@ -1231,6 +1237,13 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.lrdivi
+    libc.src.stdfix.kdivi
+    libc.src.stdfix.lkdivi
+    libc.src.stdfix.urdivi
+    libc.src.stdfix.ulrdivi
+    libc.src.stdfix.ukdivi
+    libc.src.stdfix.ulkdivi
     libc.src.stdfix.divir
     libc.src.stdfix.divilr
     libc.src.stdfix.divik
@@ -1299,11 +1312,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_getdetachstate
     libc.src.pthread.pthread_attr_getguardsize
+    libc.src.pthread.pthread_attr_getschedpolicy
     libc.src.pthread.pthread_attr_getstack
     libc.src.pthread.pthread_attr_getstacksize
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_setdetachstate
     libc.src.pthread.pthread_attr_setguardsize
+    libc.src.pthread.pthread_attr_setschedpolicy
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_setstacksize
     libc.src.pthread.pthread_condattr_destroy
@@ -1424,6 +1439,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdio.fgets
     libc.src.stdio.fileno
     libc.src.stdio.flockfile
+    libc.src.stdio.fmemopen
     libc.src.stdio.fopen
     libc.src.stdio.freopen
     libc.src.stdio.fopencookie
@@ -1474,6 +1490,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # signal.h entrypoints
     libc.src.signal.kill
+    libc.src.signal.pthread_kill
     libc.src.signal.pthread_sigmask
     libc.src.signal.raise
     libc.src.signal.sigaction
@@ -1622,6 +1639,10 @@ if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
     list(APPEND TARGET_LIBC_ENTRYPOINTS
       # fnmatch.h entrypoints
       libc.src.fnmatch.fnmatch
+
+      # glob.h entrypoints
+      libc.src.glob.glob
+      libc.src.glob.globfree
 
       # net/if.h entrypoints
       libc.src.net.if_freenameindex
