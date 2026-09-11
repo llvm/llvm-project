@@ -25,27 +25,25 @@ struct Frac256 : public UInt<256> {
 
   // Convert Frac256 number to Frac128 with round-to-nearest
   // (using bit 127 as the rounding bit).
-  LIBC_INLINE constexpr explicit operator Frac128() const {
+  LIBC_INLINE constexpr Frac128 to_frac128() const {
     uint64_t round = val[1] >> 63;
     uint64_t lo = val[2] + round;
     uint64_t hi = val[3] + (lo < round ? 1 : 0);
     return Frac128({lo, hi});
   }
 
-  LIBC_INLINE constexpr Frac128 to_frac128() const {
-    return static_cast<Frac128>(*this);
+  LIBC_INLINE constexpr explicit operator Frac128() const {
+    return to_frac128();
   }
 
   // Convert Frac256 number to Frac64 with round-to-nearest
   // (using bit 191 as the rounding bit, i.e., bit 63 of limb 2).
-  LIBC_INLINE constexpr explicit operator Frac64() const {
+  LIBC_INLINE constexpr Frac64 to_frac64() const {
     uint64_t round = val[2] >> 63;
     return Frac64(val[3] + round);
   }
 
-  LIBC_INLINE constexpr Frac64 to_frac64() const {
-    return static_cast<Frac64>(*this);
-  }
+  LIBC_INLINE constexpr explicit operator Frac64() const { return to_frac64(); }
 
   LIBC_INLINE constexpr Frac256 operator~() const {
     Frac256 r{};
