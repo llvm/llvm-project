@@ -4,10 +4,8 @@
 ! use KindMapping::getLogicalBitsize() / getCharacterBitsize() rather than
 ! getFKind() * 8 or getFKind() directly.
 !
-! Reproducer: --kind-mapping=l4:8 maps LOGICAL(4) to 8 bits (1 byte).
-! Before the fix, the synthesized init emitted a 4-byte i32 constant stored
-! via a bitcasted i32* into a 1-byte alloca -- a 3-byte out-of-bounds write.
-! After the fix the constant and store are both i8.
+! With --kind-mapping=l4:8, LOGICAL(4) maps to 8 bits (1 byte).  The
+! synthesized init must use an i8 constant and store, not a 4-byte i32.
 !
 ! RUN: bbc -emit-hlfir --kind-mapping=l4:8 -finit-local=0xAA %s -o - | \
 ! RUN:     FileCheck --check-prefix=HEX %s
@@ -38,7 +36,7 @@ end subroutine
 ! use the allocation stride (4 bytes) rather than the store size (3 bytes).
 ! The record byte loop must therefore run 4 * 4 = 16 iterations (bound 15).
 ! Previously, using the store size gave 4 * 3 = 12 iterations, leaving the
-! 4th byte of each code unit's allocation uninitialised.
+! fourth code unit's 4-byte allocation entirely uninitialised.
 !
 ! RUN: bbc -emit-hlfir --kind-mapping=a1:24 -finit-local=0xAA %s -o - | \
 ! RUN:     FileCheck --check-prefix=RECHEX %s
