@@ -431,13 +431,16 @@ private:
   void collectDebugExpressions(SetVector<const DIExpression *> &Out) const;
 
   /// Emit one \c DebugOperation for \p Op, reusing a cached result id when the
-  /// same opcode and arguments were already emitted. \p Op must already have
-  /// been checked: it maps to a NonSemantic operation, and every argument fits
-  /// in 32 bits.
-  MCRegister emitDebugOperation(const DIExpression::ExprOperand &Op,
-                                MCRegister VoidTypeReg, MCRegister I32TypeReg,
-                                MCRegister ExtInstSetReg,
-                                SPIRV::ModuleAnalysisInfo &MAI);
+  /// same opcode and arguments were already emitted.
+  ///
+  /// \returns The result id register on success. Returns \c std::nullopt and
+  /// emits nothing if \p Op has no NonSemantic counterpart, or carries an
+  /// argument too large for the 32-bit \c OpConstant operands this set
+  /// requires.
+  std::optional<MCRegister>
+  emitDebugOperation(const DIExpression::ExprOperand &Op,
+                     MCRegister VoidTypeReg, MCRegister I32TypeReg,
+                     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit one \c DebugOperation per element of \p Expr followed by the
   /// \c DebugExpression that lists them. Reuses a cached \c DebugExpression
@@ -450,9 +453,9 @@ private:
   /// inside a function, and forward references were removed in Rev 2.
   ///
   /// \returns The result id register on success. Returns \c std::nullopt and
-  /// emits nothing if any element has no NonSemantic counterpart, or carries an
-  /// argument too large for the 32-bit \c OpConstant operands this set
-  /// requires.
+  /// does not emit the \c DebugExpression if any element has no NonSemantic
+  /// counterpart, or carries an argument too large for the 32-bit \c OpConstant
+  /// operands this set requires.
   std::optional<MCRegister> emitDebugExpression(const DIExpression *Expr,
                                                 MCRegister VoidTypeReg,
                                                 MCRegister I32TypeReg,

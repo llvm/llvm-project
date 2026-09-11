@@ -899,18 +899,21 @@ static std::optional<uint32_t> mapDwarfOpToNonSemanticOp(uint64_t DwarfOp) {
   }
 }
 
-MCRegister SPIRVNonSemanticDebugHandler::emitDebugOperation(
+std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
     const DIExpression::ExprOperand &Op, MCRegister VoidTypeReg,
     MCRegister I32TypeReg, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
   std::optional<uint32_t> NSOp = mapDwarfOpToNonSemanticOp(Op.getOp());
-  assert(NSOp && "unsupported DWARF op");
+  if (!NSOp)
+    return std::nullopt;
 
   SmallVector<uint32_t, 3> Key{*NSOp};
-  for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I)
-    // Operands are truncated to 32 bits but we already checked that they are
-    // in range.
-    Key.push_back(static_cast<uint32_t>(Op.getArg(I)));
+  for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I) {
+    uint64_t Arg = Op.getArg(I);
+    if (!isUInt<32>(Arg))
+      return std::nullopt;
+    Key.push_back(static_cast<uint32_t>(Arg));
+  }
 
   auto [It, Inserted] = DebugOperationCache.try_emplace(std::move(Key));
   if (!Inserted)
@@ -930,21 +933,14 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugExpression(
     MCRegister ExtInstSetReg, SPIRV::ModuleAnalysisInfo &MAI) {
   assert(Expr && "Expr must not be null in emitDebugExpression");
 
-  // Check the whole expression before emitting anything, and bail out if
-  // unsupported. Verify that the operation is supported, and that each argument
-  // is a 32-bit constant (as per spec).
-  for (const DIExpression::ExprOperand &Op : Expr->expr_ops()) {
-    if (!mapDwarfOpToNonSemanticOp(Op.getOp()))
-      return std::nullopt;
-    for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I)
-      if (!isUInt<32>(Op.getArg(I)))
-        return std::nullopt;
-  }
-
   SmallVector<MCRegister> OperationRegs;
-  for (const DIExpression::ExprOperand &Op : Expr->expr_ops())
-    OperationRegs.push_back(
-        emitDebugOperation(Op, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI));
+  for (const DIExpression::ExprOperand &Op : Expr->expr_ops()) {
+    std::optional<MCRegister> OpReg =
+        emitDebugOperation(Op, VoidTypeReg, I32TypeReg, ExtInstSetReg, MAI);
+    if (!OpReg)
+      return std::nullopt;
+    OperationRegs.push_back(*OpReg);
+  }
 
   auto [It, Inserted] =
       DebugExpressionCache.try_emplace(std::move(OperationRegs));
