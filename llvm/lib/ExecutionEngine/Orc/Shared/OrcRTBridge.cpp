@@ -23,36 +23,18 @@ const char *SimpleExecutorMemoryManagerDeinitializeWrapperName =
 const char *SimpleExecutorMemoryManagerReleaseWrapperName =
     "__llvm_orc_SimpleExecutorMemoryManager_release_wrapper";
 
-const char *ExecutorSharedMemoryMapperServiceInstanceName =
-    "__llvm_orc_ExecutorSharedMemoryMapperService_Instance";
-const char *ExecutorSharedMemoryMapperServiceReserveWrapperName =
-    "__llvm_orc_ExecutorSharedMemoryMapperService_Reserve";
-const char *ExecutorSharedMemoryMapperServiceInitializeWrapperName =
-    "__llvm_orc_ExecutorSharedMemoryMapperService_Initialize";
-const char *ExecutorSharedMemoryMapperServiceDeinitializeWrapperName =
-    "__llvm_orc_ExecutorSharedMemoryMapperService_Deinitialize";
-const char *ExecutorSharedMemoryMapperServiceReleaseWrapperName =
-    "__llvm_orc_ExecutorSharedMemoryMapperService_Release";
-
 const char *RegisterEHFrameSectionAllocActionName =
     "llvm_orc_registerEHFrameAllocAction";
 const char *DeregisterEHFrameSectionAllocActionName =
     "llvm_orc_deregisterEHFrameAllocAction";
 
 const char *RegisterJITLoaderGDBAllocActionName =
-    "llvm_orc_registerJITLoaderGDBAllocAction";
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_register";
+const char *DeregisterJITLoaderGDBAllocActionName =
+    "orc_rt_ci_aa_sps_GDBJITRegistrar_deregister";
 
 const char *const DispatchName = "__orc_rt_jit_dispatch";
 const char *const DispatchCtxName = "__orc_rt_jit_dispatch_ctx";
-
-const SimpleExecutorMemoryManagerSymbolNames
-    orc_rt_SimpleNativeMemoryMapSPSSymbols = {
-        "orc_rt_ci_SimpleNativeMemoryMap_Instance",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_reserve",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_initialize",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_deinitializeMultiple",
-        "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
-};
 
 const MachOUnwindInfoRegistrarSymbolNames
     orc_rt_MachOUnwindInfoRegistrarSPSSymbols = {

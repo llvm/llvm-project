@@ -178,6 +178,34 @@ static BinaryOperator *isReassociableOp(Value *V, unsigned Opcode1,
   return nullptr;
 }
 
+/// Return the fmul operand if V is a one-use fadd with a single one-use fmul
+/// operand, both allowing contraction. Such pairs can be fused into a single
+/// fma, so they are kept together as leaves of the enclosing expression tree
+/// instead of being linearized into it.
+///
+/// Do not keep the pair together if the other operand is itself a reassociable
+/// fadd. Treating the outer fadd as a leaf would hide the nested addition from
+/// reassociation and prevent the complete expression from being optimized.
+static BinaryOperator *isFMulAddCandidate(Value *V) {
+  BinaryOperator *FAdd = isReassociableOp(V, Instruction::FAdd);
+  if (!FAdd || !FAdd->hasAllowContract())
+    return nullptr;
+  auto ContractableFMul = [](BinaryOperator *&FMul) {
+    return m_CombineAnd(m_AllowContract(m_OneUse(m_FMul(m_Value(), m_Value()))),
+                        m_BinOp(FMul));
+  };
+  BinaryOperator *Mul = nullptr;
+  Value *OtherOp = nullptr;
+  // Keep constants, nested additions and other contractible multiplies visible
+  // to the enclosing expression so they can participate in folding,
+  // reassociation and factorization.
+  if (!match(FAdd, m_c_FAdd(ContractableFMul(Mul), m_Value(OtherOp))) ||
+      isa<Constant>(OtherOp) || isReassociableOp(OtherOp, Instruction::FAdd) ||
+      match(OtherOp, m_AllowContract(m_FMul(m_Value(), m_Value()))))
+    return nullptr;
+  return Mul;
+}
+
 void ReassociatePass::BuildRankMap(Function &F,
                                    ReversePostOrderTraversal<Function*> &RPOT) {
   unsigned Rank = 2;
@@ -467,7 +495,8 @@ static bool LinearizeExprTree(Instruction *I,
 
       // If this is a binary operation of the right kind with only one use then
       // add its operands to the expression.
-      if (BinaryOperator *BO = isReassociableOp(Op, Opcode)) {
+      if (BinaryOperator *BO = isReassociableOp(Op, Opcode);
+          BO && (Opcode != Instruction::FAdd || !isFMulAddCandidate(BO))) {
         assert(Visited.insert(Op).second && "Not first visit!");
         LLVM_DEBUG(dbgs() << "DIRECT ADD: " << *Op << " (" << Weight << ")\n");
         Worklist.push_back(std::make_pair(BO, Weight));
@@ -513,9 +542,10 @@ static bool LinearizeExprTree(Instruction *I,
       // expression.  This means that it can safely be modified.  See if we
       // can usefully morph it into an expression of the right kind.
       assert((!isa<Instruction>(Op) ||
-              cast<Instruction>(Op)->getOpcode() != Opcode
-              || (isa<FPMathOperator>(Op) &&
-                  !hasFPAssociativeFlags(cast<Instruction>(Op)))) &&
+              cast<Instruction>(Op)->getOpcode() != Opcode ||
+              (isa<FPMathOperator>(Op) &&
+               !hasFPAssociativeFlags(cast<Instruction>(Op))) ||
+              isFMulAddCandidate(Op)) &&
              "Should have been handled above!");
       assert(Op->hasOneUse() && "Has uses outside the expression tree!");
 
@@ -545,7 +575,8 @@ static bool LinearizeExprTree(Instruction *I,
       // Failed to morph into an expression of the right type.  This really is
       // a leaf.
       LLVM_DEBUG(dbgs() << "ADD LEAF: " << *Op << " (" << Weight << ")\n");
-      assert(!isReassociableOp(Op, Opcode) && "Value was morphed?");
+      assert((!isReassociableOp(Op, Opcode) || isFMulAddCandidate(Op)) &&
+             "Value was morphed?");
       LeafOrder.push_back(Op);
       Leaves[Op] = Weight;
     }
@@ -558,7 +589,8 @@ static bool LinearizeExprTree(Instruction *I,
     if (It == Leaves.end())
       // Node initially thought to be a leaf wasn't.
       continue;
-    assert(!isReassociableOp(V, Opcode) && "Shouldn't be a leaf!");
+    assert((!isReassociableOp(V, Opcode) || isFMulAddCandidate(V)) &&
+           "Shouldn't be a leaf!");
     uint64_t Weight = It->second;
     // Ensure the leaf is only output once.
     It->second = 0;
@@ -1678,12 +1710,7 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
             (isa<Instruction>(Factor) || isa<Argument>(Factor)) &&
             isa<Constant>(MaxOccVal) && !isa<UndefValue>(MaxOccVal));
   };
-  for (const ValueEntry &Op : Ops) {
-    BinaryOperator *BOp =
-        isReassociableOp(Op.Op, Instruction::Mul, Instruction::FMul);
-    if (!BOp)
-      continue;
-
+  auto CountFactors = [&](BinaryOperator *BOp) {
     // Compute all of the factors of this added value.
     SmallVector<Value*, 8> Factors;
     FindSingleUseMultiplyFactors(BOp, Factors);
@@ -1729,6 +1756,31 @@ Value *ReassociatePass::OptimizeAdd(Instruction *I,
           }
         }
       }
+    }
+  };
+
+  // fmul/fadd pairs kept together for fma hide their muls; count the factors
+  // of the reassociable ones as well and break those pairs up if a repeated
+  // factor exists, so that factorization still applies.
+  SmallVector<Value *> FMulAddCands;
+  for (const ValueEntry &Entry : Ops) {
+    if (BinaryOperator *BOp =
+            isReassociableOp(Entry.Op, Instruction::Mul, Instruction::FMul)) {
+      CountFactors(BOp);
+      continue;
+    }
+    if (BinaryOperator *BOp = isFMulAddCandidate(Entry.Op);
+        BOp && hasFPAssociativeFlags(BOp)) {
+      FMulAddCands.push_back(Entry.Op);
+      CountFactors(BOp);
+    }
+  }
+
+  if (MaxOcc > 1) {
+    for (Value *V : FMulAddCands) {
+      erase_if(Ops, [V](const ValueEntry &E) { return E.Op == V; });
+      for (Value *Op : cast<BinaryOperator>(V)->operands())
+        Ops.emplace_back(getRank(Op), Op);
     }
   }
 

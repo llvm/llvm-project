@@ -43,7 +43,13 @@
 #define STRINGIFY_(A) #A
 #define STRINGIFY(A) STRINGIFY_(A)
 
-#if !SANITIZER_GO
+#  if !defined(__GNUC__) || defined(__clang__)
+#    define IN_SECTION(n) __declspec(allocate(n))
+#  else
+#    define IN_SECTION(n) __attribute__((section(n)))
+#  endif
+
+#  if !SANITIZER_GO
 
 // ----------------- A workaround for the absence of weak symbols --------------
 // We don't have a direct equivalent of weak symbols when using MSVC, but we can
@@ -161,14 +167,14 @@
 //   }
 //
 
-#else // SANITIZER_GO
+#  else  // SANITIZER_GO
 
 // Go neither needs nor wants weak references.
 // The shenanigans above don't work for gcc.
-# define WIN_WEAK_EXPORT_DEF(ReturnType, Name, ...)                            \
-  extern "C" ReturnType Name(__VA_ARGS__)
+#    define WIN_WEAK_EXPORT_DEF(ReturnType, Name, ...) \
+      extern "C" ReturnType Name(__VA_ARGS__)
 
-#endif // SANITIZER_GO
+#  endif  // SANITIZER_GO
 
 #endif // SANITIZER_WINDOWS
 #endif // SANITIZER_WIN_DEFS_H

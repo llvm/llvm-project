@@ -318,6 +318,7 @@ if( MSVC )
     -wd4068 # Suppress 'warning C4068: unknown pragma'
     -wd4150 # Suppress 'warning C4150: deletion of pointer to incomplete type'
     -wd4201 # Suppress 'warning C4201: nonstandard extension used: nameless struct/union'
+    -wd4250 # Suppress 'warning C4250: 'class1' : inherits 'class2::member' via dominance
     -wd4251 # Suppress 'warning C4251: T must have dll-interface to be used by clients of class U.'
     -wd4521 # Suppress 'warning C4521: 'type' : multiple copy constructors specified'
     -wd4530 # Suppress 'warning C4530: C++ exception handler used, but unwind semantics are not enabled.'
@@ -415,32 +416,6 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     set(LLDB_CAN_USE_DEBUGSERVER ON)
 else()
     set(LLDB_CAN_USE_DEBUGSERVER OFF)
-endif()
-
-# In a cross-compile build, we need to skip building the generated
-# lldb-rpc sources in the first phase of host build so that they can
-# get built using the just-built Clang toolchain in the second phase.
-if (NOT DEFINED LLDB_CAN_USE_LLDB_RPC_SERVER)
-  set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-else()
-  if ((CMAKE_CROSSCOMPILING OR LLVM_HOST_TRIPLE MATCHES "${LLVM_DEFAULT_TARGET_TRIPLE}") AND
-      CMAKE_SYSTEM_NAME MATCHES "AIX|Android|Darwin|FreeBSD|Linux|NetBSD|OpenBSD|Windows")
-    set(LLDB_CAN_USE_LLDB_RPC_SERVER ON)
-  else()
-    set(LLDB_CAN_USE_LLDB_RPC_SERVER OFF)
-  endif()
-endif()
-
-
-if (NOT DEFINED LLDB_BUILD_LLDBRPC)
-  set(LLDB_BUILD_LLDBRPC OFF)
-else()
-  if (CMAKE_CROSSCOMPILING)
-    set(LLDB_BUILD_LLDBRPC OFF CACHE BOOL "")
-    get_host_tool_path(lldb-rpc-gen LLDB_RPC_GEN_EXE lldb_rpc_gen_exe lldb_rpc_gen_target)
-  else()
-    set(LLDB_BUILD_LLDBRPC ON CACHE BOOL "")
-  endif()
 endif()
 
 include(LLDBGenerateConfig)

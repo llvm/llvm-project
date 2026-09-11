@@ -29,14 +29,30 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   return CallConvTarget::None;
 }
 
+/// The AVX level the classifier uses to size a native vector, read from the
+/// target ABI name.
+static llvm::abi::X86AVXABILevel getX86AVXABILevel(llvm::StringRef abi) {
+  if (abi == "avx512")
+    return llvm::abi::X86AVXABILevel::AVX512;
+  if (abi == "avx")
+    return llvm::abi::X86AVXABILevel::AVX;
+  return llvm::abi::X86AVXABILevel::None;
+}
+
+/// Whether `__attribute__((target(...)))` on a function may raise its AVX ABI
+/// level above the command line's.  A target that opts out, and any ABI older
+/// than the rule, stay at the module level.
+static bool allowsX86TargetAttrAvx(const clang::ASTContext &astContext) {
+  return !astContext.getTargetInfo().getTriple().isPS() &&
+         astContext.getLangOpts().getClangABICompat() >
+             clang::LangOptions::ClangABI::Ver23;
+}
+
 /// The x86_64 ABI-compatibility flags, derived from the target and the
 /// requested compatibility version.  Every flag defaults to true in the ABI
 /// library, which is not what any target computes: Clang11Compat is false for a
 /// modern Linux target, so leaving it at the default classifies a union larger
-/// than an eightbyte as though every member spanned its size.  Mirrors the
-/// predicates in clang/lib/CodeGen/Targets/X86.cpp and the derivation in
-/// CodeGenModule::getLLVMABITargetInfo, which computes the same five flags for
-/// the classic path.
+/// than an eightbyte as though every member spanned its size.
 static llvm::abi::ABICompatInfo
 getX86ABICompatInfo(const clang::ASTContext &astContext) {
   const llvm::Triple &triple = astContext.getTargetInfo().getTriple();
@@ -90,20 +106,24 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
 
+  // LoweringPrepare synthesizes calls to runtime helpers such as __divsc3, and
+  // outlines dynamic global initializers into functions.  It must run before
+  // CallConvLowering so the classifier sees them, otherwise their signatures
+  // go unclassified and caller and callee disagree on the ABI.
+  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
     // records the classifier can handle.  Only the x86_64 System V classifier
     // is implemented; other targets are left unchanged.
-    CallConvTarget target =
-        getCallConvTarget(astContext.getTargetInfo().getTriple());
+    const clang::TargetInfo &targetInfo = astContext.getTargetInfo();
+    CallConvTarget target = getCallConvTarget(targetInfo.getTriple());
     if (target != CallConvTarget::None)
       pm.addPass(mlir::createCallConvLoweringPass(
-          target, llvm::abi::X86AVXABILevel::None,
-          getX86ABICompatInfo(astContext)));
+          target, getX86AVXABILevel(targetInfo.getABI()),
+          allowsX86TargetAttrAvx(astContext), getX86ABICompatInfo(astContext)));
   }
-
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);

@@ -499,8 +499,6 @@ void SelectionDAGISel::initializeAnalysisResults(
     FnVarLocs = &FAM.getResult<DebugAssignmentTrackingAnalysis>(Fn);
 
   auto *UA = FAM.getCachedResult<UniformityInfoAnalysis>(Fn);
-  MachineModuleInfo &MMI =
-      MAMP.getCachedResult<MachineModuleAnalysis>(*Fn.getParent())->getMMI();
 
   const ModuleLibcallLoweringInfo *LibcallResult =
       MAMP.getCachedResult<LibcallLoweringModuleAnalysis>(*Fn.getParent());
@@ -509,9 +507,8 @@ void SelectionDAGISel::initializeAnalysisResults(
                           "' analysis required");
   }
 
-  LibcallLowering = &LibcallResult->getLibcallLowering(Subtarget);
-  CurDAG->init(*MF, *ORE, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
-               FnVarLocs);
+  LibcallLowering = &getLibcallLowering(*LibcallResult, Subtarget);
+  CurDAG->init(*MF, MFAM, LibInfo, LibcallLowering, UA, PSI, BFI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -569,15 +566,11 @@ void SelectionDAGISel::initializeAnalysisResults(MachineFunctionPass &MFP) {
   if (auto *UAPass = MFP.getAnalysisIfAvailable<UniformityInfoWrapperPass>())
     UA = &UAPass->getUniformityInfo();
 
-  MachineModuleInfo &MMI =
-      MFP.getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-
   LibcallLowering =
       &MFP.getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
           *Fn.getParent(), Subtarget);
 
-  CurDAG->init(*MF, *ORE, &MFP, LibInfo, LibcallLowering, UA, PSI, BFI, MMI,
-               FnVarLocs);
+  CurDAG->init(*MF, LibInfo, LibcallLowering, UA, PSI, BFI, FnVarLocs);
 
   // Now get the optional analyzes if we want to.
   // This is based on the possibly changed OptLevel (after optnone is taken
@@ -1455,7 +1448,8 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
       if (hasExceptionPointerOrCodeUser(CPI)) {
         // Get or create the virtual register to hold the pointer or code.  Mark
         // the live in physreg and copy into the vreg.
-        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(PersonalityFn);
+        MCRegister EHPhysReg = TLI->getExceptionPointerRegister(
+            TLI->getTargetMachine().getExceptionModel(), PersonalityFn);
         assert(EHPhysReg && "target lacks exception pointer register");
         MBB->addLiveIn(EHPhysReg);
         Register VReg = FuncInfo->getCatchPadExceptionPointerVReg(CPI, PtrRC);
@@ -1488,10 +1482,12 @@ bool SelectionDAGISel::PrepareEHLandingPad() {
     // Assign the call site to the landing pad's begin label.
     MF->setCallSiteLandingPad(Label, SDB->LPadToCallSiteMap[MBB]);
     // Mark exception register as live in.
-    if (MCRegister Reg = TLI->getExceptionPointerRegister(PersonalityFn))
+    if (MCRegister Reg = TLI->getExceptionPointerRegister(
+            TLI->getTargetMachine().getExceptionModel(), PersonalityFn))
       FuncInfo->ExceptionPointerVirtReg = MBB->addLiveIn(Reg, PtrRC);
     // Mark exception selector register as live in.
-    if (MCRegister Reg = TLI->getExceptionSelectorRegister(PersonalityFn))
+    if (MCRegister Reg = TLI->getExceptionSelectorRegister(
+            TLI->getTargetMachine().getExceptionModel(), PersonalityFn))
       FuncInfo->ExceptionSelectorVirtReg = MBB->addLiveIn(Reg, PtrRC);
   }
 

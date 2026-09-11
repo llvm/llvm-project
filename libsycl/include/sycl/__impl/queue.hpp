@@ -16,13 +16,17 @@
 #define _LIBSYCL___IMPL_QUEUE_HPP
 
 #include <sycl/__impl/async_handler.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
+#include <sycl/__impl/handler.hpp>
+#include <sycl/__impl/platform.hpp>
 #include <sycl/__impl/property_list.hpp>
 
 #include <sycl/__impl/detail/config.hpp>
 #include <sycl/__impl/detail/get_device_kernel_info.hpp>
 #include <sycl/__impl/detail/kernel_arg_helpers.hpp>
+#include <sycl/__impl/detail/kernel_submission.hpp>
 #include <sycl/__impl/detail/obj_utils.hpp>
 #include <sycl/__impl/detail/unified_range_view.hpp>
 #include <sycl/__impl/exception.hpp>
@@ -58,8 +62,41 @@ public:
 };
 } // namespace detail
 
+class TypelessCGF {
+public:
+  template <class T>
+  TypelessCGF(T &&F)
+      // NOTE: Even if `F` is a pointer to a function, `&F` is a pointer to a
+      // pointer to a function and as such can be cast to `void *` (pointer to
+      // a function cannot be cast).
+      : Object(static_cast<const void *>(&F)),
+        InvokerF(&Invoker<std::remove_reference_t<T>>::call) {}
+  ~TypelessCGF() = default;
+
+  TypelessCGF(const TypelessCGF &) = delete;
+  TypelessCGF(TypelessCGF &&) = delete;
+  TypelessCGF &operator=(const TypelessCGF &) = delete;
+  TypelessCGF &operator=(TypelessCGF &&) = delete;
+
+  void operator()(handler &CGH) const { InvokerF(Object, CGH); }
+
+private:
+  // SYCL 2020 command group function object is a type that is callable with
+  // operator(), takes a reference to a command group handler, and defines
+  // a command group that can be submitted by a queue. The function object can
+  // be a named type, lambda expression or std::function.
+  template <typename T> struct Invoker {
+    static void call(const void *Object, handler &CGH) {
+      (*const_cast<T *>(static_cast<const T *>(Object)))(CGH);
+    }
+  };
+  const void *Object;
+  using InvokerTy = void (*)(const void *, handler &);
+  const InvokerTy InvokerF;
+};
+
 // SYCL 2020 4.6.5. Queue class.
-class _LIBSYCL_EXPORT queue {
+class _LIBSYCL_EXPORT queue : private detail::KernelSubmissionBase<queue> {
 public:
   queue(const queue &rhs) = default;
   queue(queue &&rhs) = default;
@@ -134,6 +171,72 @@ public:
   /// \param asyncHandler is a SYCL asynchronous exception handler.
   /// \param propList is a list of properties for queue construction.
   explicit queue(const device &syclDevice, const async_handler &asyncHandler,
+                 const property_list &propList = {})
+      : queue(syclDevice.get_platform().khr_get_default_context(), syclDevice,
+              asyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance that is associated with syclContext,
+  /// using the device identified by the device selector provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain the selected device.
+  template <
+      typename DeviceSelector,
+      typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
+  explicit queue(const context &syclContext,
+                 const DeviceSelector &deviceSelector,
+                 const property_list &propList = {})
+      : queue(syclContext, detail::SelectDevice(deviceSelector),
+              detail::defaultAsyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance with an async_handler that is associated
+  /// with syclContext, using the device identified by the device selector
+  /// provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param deviceSelector is a SYCL 2020 Device Selector, a simple callable
+  /// that takes a device and returns an int
+  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain the selected device.
+  template <
+      typename DeviceSelector,
+      typename = detail::EnableIfDeviceSelectorIsInvocable<DeviceSelector>>
+  explicit queue(const context &syclContext,
+                 const DeviceSelector &deviceSelector,
+                 const async_handler &asyncHandler,
+                 const property_list &propList = {})
+      : queue(syclContext, detail::SelectDevice(deviceSelector), asyncHandler,
+              propList) {}
+
+  /// Constructs a SYCL queue instance that is associated with syclContext,
+  /// using the device provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param syclDevice is an instance of SYCL device.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain syclDevice.
+  explicit queue(const context &syclContext, const device &syclDevice,
+                 const property_list &propList = {})
+      : queue(syclContext, syclDevice, detail::defaultAsyncHandler, propList) {}
+
+  /// Constructs a SYCL queue instance with an async_handler that is associated
+  /// with syclContext, using the device provided.
+  ///
+  /// \param syclContext is the context to associate the queue with.
+  /// \param syclDevice is an instance of SYCL device.
+  /// \param asyncHandler is a SYCL asynchronous exception handler.
+  /// \param propList is a list of properties for queue construction.
+  /// \throw sycl::exception with sycl::errc::invalid if syclContext does not
+  /// contain syclDevice.
+  explicit queue(const context &syclContext, const device &syclDevice,
+                 const async_handler &asyncHandler,
                  const property_list &propList = {});
 
   /// \return the SYCL backend associated with this queue.
@@ -215,7 +318,7 @@ public:
                                           void()>::value,
         "Invalid kernel function signature.");
 
-    setKernelParameters(depEvents);
+    setKernelLaunchParams(depEvents);
     using NameT =
         typename detail::get_kernel_name_t<KernelName, KernelType>::name;
     submitSingleTask<NameT, KernelType>(kernelFunc);
@@ -365,13 +468,7 @@ public:
   template <typename KernelName = detail::AutoName, int Dims, typename... Rest>
   event parallel_for(nd_range<Dims> executionRange,
                      const std::vector<event> &depEvents, Rest &&...rest) {
-    if (executionRange.get_global_range() != range<Dims>{} &&
-        (executionRange.get_local_range().size() == 0 ||
-         executionRange.get_global_range() % executionRange.get_local_range() !=
-             range<Dims>{}))
-      throw sycl::exception(sycl::make_error_code(sycl::errc::nd_range),
-                            "Invalid nd_range submission: global size must be "
-                            "evenly divisible by local size.");
+    detail::checkNDRangeAndThrow(executionRange);
     return parallelForImpl<KernelName>(executionRange, depEvents,
                                        std::forward<Rest>(rest)...);
   }
@@ -413,109 +510,90 @@ public:
   event memcpy(void *dest, const void *src, std::size_t numBytes,
                const std::vector<event> &depEvents);
 
+  /// Immediately calls the command group function object.
+  ///
+  /// The command group may submit no more than one command to this queue for
+  /// execution on the associated device.
+  ///
+  /// \param cgf command group function object.
+  /// \return an event that represents the status of the submitted command.
+  template <typename T>
+  std::enable_if_t<std::is_invocable_r_v<void, T, handler &>, event>
+  submit(T cgf) {
+    return submitWithHandler(cgf);
+  }
+
+  /// Immediately calls the command group function object.
+  ///
+  /// The command group may submit no more than one command to this queue for
+  /// execution on the associated device. On a kernel error, this command group
+  /// may be scheduled for execution on \p secondaryQueue.
+  ///
+  /// \param cgf command group function object.
+  /// \param secondaryQueue queue used as a fallback for kernel errors. Unused
+  /// (See SYCL 2020 3.9.10. Fallback mechanism).
+  /// \return an event that represents the status of the submitted command.
+  template <typename T>
+  std::enable_if_t<std::is_invocable_r_v<void, T, handler &>, event>
+  submit(T cgf, [[maybe_unused]] queue &secondaryQueue) {
+    return submitWithHandler(cgf);
+  }
+
+  /// Provides hints to the runtime library that data can be made available
+  /// on a device earlier than Unified Shared Memory would normally require it
+  /// to be available.
+  ///
+  /// \param ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param numBytes is a number of bytes to be prefetched.
+  /// \return an event representing prefetch operation.
+  event prefetch(void *ptr, std::size_t numBytes) {
+    return prefetch(ptr, numBytes, std::vector<event>{});
+  }
+
+  /// Provides hints to the runtime library that data can be made available
+  /// on a device earlier than Unified Shared Memory would normally require it
+  /// to be available.
+  ///
+  /// \param ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param numBytes is a number of bytes to be prefetched.
+  /// \param depEvent is an event that specifies the kernel dependencies.
+  /// \return an event representing prefetch operation.
+  event prefetch(void *ptr, std::size_t numBytes, event depEvent) {
+    return prefetch(ptr, numBytes, std::vector<event>{depEvent});
+  }
+
+  /// Provides hints to the runtime library that data can be made available
+  /// on a device earlier than Unified Shared Memory would normally require it
+  /// to be available.
+  ///
+  /// \param ptr is a USM pointer to the memory to be prefetched to the device.
+  /// \param numBytes is a number of bytes to be prefetched.
+  /// \param depEvents is a vector of events that specify the kernel
+  /// dependencies.
+  /// \return an event representing prefetch operation.
+  event prefetch(void *ptr, std::size_t numBytes,
+                 const std::vector<event> &depEvents);
+
 private:
   template <typename KernelName, int Dims, template <int> class Range,
             typename... Rest>
   event parallelForImpl(Range<Dims> numWorkItems,
                         const std::vector<event> &depEvents, Rest &&...rest) {
-    if constexpr (sizeof...(Rest) != 1)
-      throw sycl::exception(errc::feature_not_supported,
-                            "Reductions are not supported");
-    setKernelParameters(depEvents, numWorkItems);
+    setKernelLaunchParams(depEvents, numWorkItems);
 
-    using KernelType =
-        std::decay_t<detail::nth_type_t<sizeof...(Rest) - 1, Rest...>>;
-    constexpr bool IsNdRangeSubmission =
-        std::is_same_v<Range<Dims>, nd_range<Dims>>;
-    using SuggestedArgType =
-        std::conditional_t<IsNdRangeSubmission, nd_item<Dims>, item<Dims>>;
-    using LambdaArgType =
-        sycl::detail::lambda_arg_type<KernelType, SuggestedArgType>;
-
-    if constexpr (IsNdRangeSubmission) {
-      static_assert(
-          std::is_convertible_v<sycl::nd_item<Dims>, LambdaArgType>,
-          "Kernel argument of a sycl::parallel_for with sycl::nd_range "
-          "must be sycl::nd_item or be convertible from sycl::nd_item");
-    } else {
-      static_assert(
-          std::is_convertible_v<sycl::item<Dims>, LambdaArgType> ||
-              std::is_convertible_v<sycl::item<Dims, false>, LambdaArgType>,
-          "Kernel argument of a sycl::parallel_for with sycl::range "
-          "must be sycl::item or be convertible from sycl::item");
-    }
-
-    using TransformedLambdaArgType = std::conditional_t<
-        IsNdRangeSubmission, nd_item<Dims>,
-        std::conditional_t<
-            std::is_convertible_v<sycl::item<Dims>, LambdaArgType>, item<Dims>,
-            std::conditional_t<
-                std::is_convertible_v<sycl::item<Dims, false>, LambdaArgType>,
-                item<Dims, false>, LambdaArgType>>>;
-
-    using NameT =
-        typename detail::get_kernel_name_t<KernelName, KernelType>::name;
-    submitParallelFor<NameT, TransformedLambdaArgType, KernelType>(rest...);
+    detail::KernelSubmissionBase<queue>::template parallelForImpl<KernelName>(
+        numWorkItems, std::forward<Rest>(rest)...);
     return getLastEvent();
   }
 
-  /// Name of this function is defined by compiler. It generates a call to this
-  /// function in the host implementation of KernelFunc in submitSingleTask or
-  /// submitParallelFor.
-  /// \param KernelName the name of the kernel being invoked.
-  /// \param args the kernel arguments for the kernel invocation.
-  template <typename KN, typename... Args>
-  void sycl_kernel_launch(const char *KernelName, Args &&...args) {
-    static_assert(
-        sizeof...(args) == 1,
-        "sycl_kernel_launch expects only 2 arguments now: name of kernel and "
-        "callable object passed to kernel invocation by the user.");
-
-    auto FirstArg = std::get<0>(std::tie(args...));
-    submitKernelImpl(detail::getDeviceKernelInfo<KN>(KernelName), &FirstArg,
-                     sizeof(FirstArg));
-  }
-
-  /// The sycl_kernel_entry_point attribute facilitates the generation of an
-  /// offload kernel entry point function with parameters corresponding to the
-  /// (potentially decomposed) kernel arguments and a body that executes the
-  /// kernel (after reconstructing the arguments if required).
-#ifdef SYCL_LANGUAGE_VERSION
-#  define _LIBSYCL_ENTRY_POINT_ATTR__(KernelName)                              \
-    [[clang::sycl_kernel_entry_point(KernelName)]]
-#else
-#  define _LIBSYCL_ENTRY_POINT_ATTR__(KernelName)
-#endif // SYCL_LANGUAGE_VERSION
-
-  /// Specifies the parameters and body of the generated offload kernel entry
-  /// point for single_task invocations. On host, the compiler generates a call
-  /// to sycl_kernel_launch instead of the KernelFunc invocation.
-  template <typename KernelName, typename KernelType>
-  _LIBSYCL_ENTRY_POINT_ATTR__(KernelName)
-  void submitSingleTask(const KernelType &KernelFunc) {
-    KernelFunc();
-  }
-
-  /// Specifies the parameters and body of the generated offload kernel entry
-  /// point for parallel_for invocations. On host, the compiler generates a call
-  /// to sycl_kernel_launch instead of the KernelFunc invocation.
-  template <typename KernelName, typename ElementType, typename KernelType>
-  _LIBSYCL_ENTRY_POINT_ATTR__(KernelName)
-  void submitParallelFor(const KernelType &KernelFunc) {
-    KernelFunc(detail::Builder::getElement(detail::declptr<ElementType>()));
-  }
-#undef _LIBSYCL_ENTRY_POINT_ATTR__
-
-  /// Passes kernel parameters to the runtime.
+  /// Passes kernel dependencies and execution range to the runtime.
   /// \param Events a collection of events representing dependencies of the
   /// kernel to submit.
   /// \param Range a unified view of the kernel execution range.
-  void setKernelParameters(const std::vector<event> &Events,
-                           const detail::UnifiedRangeView &Range = {});
+  void setKernelLaunchParams(const std::vector<event> &Events,
+                             const detail::UnifiedRangeView &Range = {});
 
   /// Passes kernel arguments to runtime.
-  /// If all the dependencies can be handled by the backend, the kernel is
-  /// submitted to it directly in this call.
   /// \param KernelInfo the information for the kernel being invoked.
   /// \param ArgData a pointer to the kernel argument.
   /// \param ArgSize the size of the kernel argument.
@@ -525,11 +603,14 @@ private:
   /// \return an event representing last kernel invocation.
   event getLastEvent();
 
+  event submitWithHandler(const TypelessCGF &CGF);
+
   queue(const std::shared_ptr<detail::QueueImpl> &Impl) : impl(Impl) {}
   std::shared_ptr<detail::QueueImpl> impl;
 
   friend sycl::detail::ImplUtils;
   friend sycl::detail::MockQueue;
+  friend class detail::KernelSubmissionBase<queue>;
 }; // class queue
 
 _LIBSYCL_END_NAMESPACE_SYCL

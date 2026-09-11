@@ -1154,7 +1154,9 @@ MCSection *TargetLoweringObjectFileELF::getSectionForMachineBasicBlock(
     UniqueID = NextUniqueID++;
   }
 
-  unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_EXECINSTR;
+  unsigned Flags =
+      static_cast<const MCSectionELF *>(MBB.getParent()->getSection())
+          ->getFlags();
   std::string GroupName;
   if (F.hasComdat()) {
     Flags |= ELF::SHF_GROUP;
@@ -2856,6 +2858,12 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
 bool TargetLoweringObjectFileGOFF::shouldPutJumpTableInFunctionSection(
     bool UsesLabelDifference, const Function &F) const {
   return true;
+}
+
+MCSection *TargetLoweringObjectFileGOFF::getSectionForConstant(
+    const DataLayout &DL, SectionKind Kind, const Constant *C, Align &Alignment,
+    const Function *F) const {
+  return TextSection;
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
