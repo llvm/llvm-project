@@ -745,9 +745,8 @@ void CIRGenFunction::emitCallAndReturnForThunk(cir::FuncOp callee,
   // Now emit our call.
   CIRGenCallee cirCallee = CIRGenCallee::forDirect(callee, curGD);
   mlir::Location loc = builder.getUnknownLoc();
-  RValue rv =
-      emitCall(*curFnInfo, cirCallee, slot, callArgs,
-               /*callOrTryCall=*/nullptr, /*isMustTail=*/false, fnLoc);
+  RValue rv = emitCall(*curFnInfo, cirCallee, slot, callArgs,
+                       /*callOrTryCall=*/nullptr, /*isMustTail=*/false, fnLoc);
 
   // Consider return adjustment if we have ThunkInfo.
   if (thunk && !thunk->Return.isEmpty())
@@ -806,8 +805,7 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
   finishThunk();
 }
 
-void CIRGenFunction::generateThunk(cir::FuncOp fn,
-                                   SourceRange fnLoc,
+void CIRGenFunction::generateThunk(cir::FuncOp fn, SourceRange fnLoc,
                                    const CIRGenFunctionInfo &fnInfo,
                                    GlobalDecl gd, const ThunkInfo &thunk,
                                    bool isUnprototyped) {
