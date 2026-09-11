@@ -13752,7 +13752,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -13761,7 +13761,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-   
+
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -13770,7 +13770,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-   
+
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -13786,14 +13786,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-   
+
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-   
+
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
@@ -27083,42 +27083,60 @@ declare void @llvm.pseudoprobe(i64 <guid>, i64 <index>, i32 <attributes>, i64 <f
 
 ##### Overview:
 
-The `llvm.pseudoprobe` intrinsic is a placeholder for the block that
-contains it. It is emitted for sample-based profile-guided optimization, so
-that samples collected from an optimized binary can be attributed back to a
-point in the original program. It performs no operation.
+The `llvm.pseudoprobe` intrinsic identifies a basic block of the function's
+pre-optimized CFG, so that samples collected from an optimized binary can be
+attributed back to the program as it was before optimization ran. It is emitted
+for sample-based profile-guided optimization.
 
-Like `llvm.sideeffect`, optimizers treat it as having opaque side effects, so
-that it is neither deleted nor moved out of the block it probes. A probe that
-disappears or moves breaks the correspondence between the collected profile
-and the code it describes.
+Probes are inserted in the first pass of the pipeline and indexed by walking
+the function rather than by source location, so a probe keeps naming the same
+original block however that block is later inlined, cloned or rearranged. It is
+a pseudo intrinsic: it performs no operation and lowers to no machine
+instruction, only to a label recorded in the `.pseudo_probe` section.
 
 ##### Arguments:
 
-The first argument is the GUID of the function containing the probe. It
-identifies an entry in the module-level `!llvm.pseudo_probe_desc` metadata,
-which records the same GUID together with the function's CFG hash and name.
+The first argument is the GUID of the function containing the probe, naming an
+entry in the module-level `!llvm.pseudo_probe_desc` metadata that pairs it with
+the function's name and a hash of its pre-optimized CFG. The second argument is
+the index of the probe, unique within its function.
 
-The second argument is the index of the probe, unique within its function.
+The third argument is a bit mask of probe attributes, at most three bits wide,
+shared with the encoding of probe records in the object file:
 
-The third argument is a bit mask of probe attributes.
+| Value | Name | Meaning |
+| --- | --- | --- |
+| `0x1` | reserved | Not currently used. |
+| `0x2` | sentinel | Not a block probe; anchors the records of a function placed in a separate section, carrying its GUID and an absolute address. |
+| `0x4` | discriminator | The record carries a DWARF discriminator, used by flow-sensitive sample profiling. |
+
+Neither is set on the intrinsic; both are attached when the records are written
+to the object file, so LLVM emits zero here.
 
 The fourth argument is a distribution factor, expressed as a fraction of
-`UINT64_MAX`, where `UINT64_MAX` means 100%. A pass that duplicates the block
-containing a probe, such as loop unrolling or jump threading, scales the
-factor on each copy so that the copies sum to the original, leaving the total
-sample attribution of that probe unchanged.
-
-All four arguments must be constant integers.
+`UINT64_MAX`, recording the share of the original block's executions that this
+copy of the probe accounts for. All four arguments must be constant integers.
 
 ##### Semantics:
 
-This intrinsic does nothing, but optimizers must assume that it has
-externally observable side effects.
+This intrinsic does nothing, but optimizers must assume that it has memory
+side effects. Without them nothing would stop a pass from deleting the probe or
+sinking it out of its block, and a probe that disappears silently loses the
+correspondence to the original block.
+
+These memory side effects are a default, not a hard rule. A pass should not
+give up a useful optimization just to keep a probe: passes that know about
+probes may update or remove them instead, and the sample profile loader can
+infer a count for a probe that is gone. A pass duplicating a probed block
+should scale the distribution factor of each copy so that the copies sum to
+the original, and may drop a probe when keeping it would misattribute samples.
+Merging blocks with different probes is where the two goals conflict;
+machine-level tail merging currently declines such merges. Otherwise a probe
+should not affect generated code, so cost models and legality checks should
+see through probes rather than account for them.
 
 Only block probes are represented by this intrinsic. A probe for a call site
-is encoded in the DWARF discriminator of the call instruction instead, so a
-call probe never appears as a call to `llvm.pseudoprobe`.
+is encoded in the DWARF discriminator of the call instruction instead.
 
 #### '`llvm.is.constant.*`' Intrinsic
 
