@@ -132,6 +132,18 @@ struct ExtractSliceOpInterface
         ++ctr;
       if (ctr == dim) {
         cstr.bound(value)[dim] == extractSliceOp.getMixedSizes()[i];
+        int64_t staticStride = extractSliceOp.getStaticStrides()[i];
+        if (staticStride > 0) {
+          // Encode in-bounds slice constraint:
+          OpFoldResult offset = extractSliceOp.getMixedOffsets()[i];
+          AffineExpr offsetExpr = cstr.getExpr(offset);
+          AffineExpr sourceDimExpr =
+              cstr.getExpr(extractSliceOp.getSource(), i);
+          cstr.bound(value)[dim] <=
+              (sourceDimExpr - offsetExpr).ceilDiv(staticStride);
+          cstr.bound(value)[dim] <= sourceDimExpr - offsetExpr;
+          cstr.bound(value)[dim] <= sourceDimExpr;
+        }
         return;
       }
     }
