@@ -91,6 +91,28 @@ endif()
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
+# Enable source-based code coverage using Clang's continuous profiling mode.
+option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+option(LIBC_ENABLE_COVERAGE_MCDC
+       "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
+if(LIBC_ENABLE_COVERAGE)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fcoverage-mapping"
+         "-fprofile-continuous")
+    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%p.profraw"
+         "-fprofile-continuous")
+    if(LIBC_ENABLE_COVERAGE_MCDC)
+      list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+    endif()
+  else()
+    message(FATAL_ERROR
+            "Coverage instrumentation is currently only supported with Clang")
+  endif()
+endif()
+
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
@@ -156,6 +178,40 @@ if(LLVM_LIBC_FULL_BUILD)
   set(LLVM_LIBC_OVERLAY OFF)
 else()
   set(LLVM_LIBC_OVERLAY ON)
+endif()
+
+if(LIBC_ENABLE_COVERAGE)
+  if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_BAREMETAL)
+    message(FATAL_ERROR
+      "LIBC_ENABLE_COVERAGE is not supported on GPU or baremetal targets.")
+  endif()
+  if(LLVM_LIBC_FULL_BUILD)
+    set(target_arg "")
+    if(LIBC_TARGET_TRIPLE)
+      set(target_arg "--target=${LIBC_TARGET_TRIPLE}")
+    endif()
+    execute_process(
+      COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
+              --print-file-name=libclang_rt.profile.a
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      OUTPUT_VARIABLE libc_profile_lib
+    )
+    if(NOT EXISTS "${libc_profile_lib}")
+      set(profile_arch_lib
+          "libclang_rt.profile-${LIBC_TARGET_ARCHITECTURE}.a")
+      execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} ${target_arg}
+                --print-file-name=${profile_arch_lib}
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        OUTPUT_VARIABLE libc_profile_lib
+      )
+    endif()
+    if(NOT EXISTS "${libc_profile_lib}")
+      message(FATAL_ERROR "Coverage enabled but profile runtime not found.")
+    endif()
+    set(LIBC_CLANG_PROFILE_LIB "${libc_profile_lib}"
+        CACHE INTERNAL "Clang profile runtime")
+  endif()
 endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)

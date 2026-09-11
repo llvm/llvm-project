@@ -305,23 +305,6 @@ void LoopBase<BlockT, LoopT>::addBasicBlockToLoop(
   }
 }
 
-/// replaceChildLoopWith - This is used when splitting loops up.  It replaces
-/// the OldChild entry in our children list with NewChild, and updates the
-/// parent pointer of OldChild to be null and the NewChild to be this loop.
-/// This updates the loop depth of the new child.
-template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::replaceChildLoopWith(LoopT *OldChild,
-                                                   LoopT *NewChild) {
-  assert(!isInvalid() && "Loop not in a valid state!");
-  assert(OldChild->ParentLoop == this && "This loop is already broken!");
-  assert(!NewChild->ParentLoop && "NewChild already has a parent!");
-  typename std::vector<LoopT *>::iterator I = find(SubLoops, OldChild);
-  assert(I != SubLoops.end() && "OldChild not in loop!");
-  *I = NewChild;
-  OldChild->ParentLoop = nullptr;
-  NewChild->ParentLoop = static_cast<LoopT *>(this);
-}
-
 /// verifyLoop - Verify loop structure
 template <class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::verifyLoop() const {
