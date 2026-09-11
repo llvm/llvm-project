@@ -54,7 +54,7 @@ It's easy to start profiling, you only have 2 prerequisites.
 Build with `-fno-omit-frame-pointer` and debug info (`-g`).
 You can use release builds, but probably the easiest is to set the `CMAKE_BUILD_TYPE=RelWithDebInfo`
 along with `CMAKE_CXX_FLAGS="-fno-omit-frame-pointer"` when configuring `llvm`.
-Here is how to [get started](https://llvm.org/docs/CMake.html#quick-start) if you are in trouble.
+Here is how to {external+llvm:ref}`get started <quick start>` if you are in trouble.
 
 ```{code-block} bash
 :caption: Running the Clang Static Analyzer through ``perf`` to gather samples of the
@@ -135,4 +135,3 @@ cat trace.json | grep -Po '"name":"(.+)"' | sort | uniq -c | sort -nr | head -n 
 ```
 
 `uftrace` can also dump the report as a Flame graph using `uftrace dump --flame-graph`.
-

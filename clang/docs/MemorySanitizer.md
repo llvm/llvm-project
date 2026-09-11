@@ -17,7 +17,7 @@ Here is a not comprehensive of list cases when MemorySanitizer will report an er
 
 ## How to build
 
-Build LLVM/Clang with [CMake](https://llvm.org/docs/CMake.html).
+Build LLVM/Clang with {external+llvm:doc}`CMake <CMake>`.
 
 ## Usage
 

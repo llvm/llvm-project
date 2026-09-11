@@ -17,7 +17,7 @@ Clang and then executed using the `libomptarget` runtime and the associated
 plugin for the target architecture, e.g. `libomptarget.rtl.cuda`. This section
 describes the steps necessary to create a functioning device image that can be
 loaded by the OpenMP runtime. More information on the OpenMP runtimes can be
-found at the [OpenMP documentation page](https://openmp.llvm.org).
+found at the {external+openmp:doc}`OpenMP documentation page <index>`.
 
 (offloading-overview)=
 

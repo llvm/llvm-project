@@ -8,7 +8,7 @@ feature is not available yet. In the mean time, the preview implementation is
 available
 [here](https://github.com/swiftlang/llvm-project/tree/stable/20240723) in a
 fork of `llvm-project`. Please follow
-[Building LLVM with CMake](https://llvm.org/docs/CMake.html) to build the
+{external+llvm:doc}`Building LLVM with CMake <CMake>` to build the
 compiler.
 
 ## Feature flag
@@ -76,4 +76,3 @@ run time.
 
 Once you've done with adopting a single C file, please repeat the same process
 for each remaining C file that you want to adopt.
-

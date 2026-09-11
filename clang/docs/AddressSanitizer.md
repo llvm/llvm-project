@@ -20,7 +20,7 @@ Typical slowdown introduced by AddressSanitizer is **2x**.
 
 ## How to build
 
-Build LLVM/Clang with [CMake](https://llvm.org/docs/CMake.html) and enable
+Build LLVM/Clang with {external+llvm:doc}`CMake <CMake>` and enable
 the `compiler-rt` runtime. An example CMake configuration that will allow
 for the use/testing of AddressSanitizer:
 

@@ -82,19 +82,19 @@ provide its own user-focused documentation.
 
 ### `Clang-Doc`
 
-[Clang-Doc](https://clang.llvm.org/extra/clang-doc.html) is a tool for
+{external+clang-tools-extra:doc}`Clang-Doc <clang-doc>` is a tool for
 generating C and C++ documentation from source code and comments.
 
 ### `Clang-Include-Fixer`
 
-[Clang-Include-Fixer](https://clang.llvm.org/extra/clang-include-fixer.html)
+{external+clang-tools-extra:doc}`Clang-Include-Fixer <clang-include-fixer>`
 is a tool to automate the addition of missing `#include` directives in a C++
 file. It adds missing namespace qualifiers to unidentified symbols when
 necessary and also removes unused headers.
 
 ### `Clang-Tidy`
 
-[Clang-Tidy](https://clang.llvm.org/extra/clang-tidy/) is a Clang-based C++
+{external+clang-tools-extra:doc}`Clang-Tidy <clang-tidy/index>` is a Clang-based C++
 linter tool. It provides an extensible framework for building compiler-based
 static analyses detecting and fixing bug-prone patterns, performance,
 portability and maintainability issues. It also has checks for modernizing code
@@ -109,13 +109,13 @@ more.
 
 ### `Modularize`
 
-[Modularize](https://clang.llvm.org/extra/modularize.html) is a standalone
+{external+clang-tools-extra:doc}`Modularize <modularize>` is a standalone
 tool that checks whether a set of headers provides the consistent definitions
 required to use modules.
 
 ### `pp-trace`
 
-[pp-trace](https://clang.llvm.org/extra/pp-trace.html) is a standalone tool
+{external+clang-tools-extra:doc}`pp-trace` is a standalone tool
 that traces preprocessor activity. It’s also used as a test of Clang’s
 `PPCallbacks` interface.
 
@@ -172,4 +172,3 @@ that traces preprocessor activity. It’s also used as a test of Clang’s
   ```c++
   sort(v.begin(), v.end(), greater<>());
   ```
-

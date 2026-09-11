@@ -11,7 +11,7 @@ However, this document is *not* a "how to" and won't help you setting your
 build system or Makefiles, nor choosing the right CMake options, etc.
 Also, it does not cover all the possible options, nor does it contain
 specific examples for specific architectures. For a concrete example, the
-[instructions for cross-compiling LLVM itself](https://llvm.org/docs/HowToCrossCompileLLVM.html) may be of interest.
+{external+llvm:doc}`instructions for cross-compiling LLVM itself <HowToCrossCompileLLVM>` may be of interest.
 
 After reading this document, you should be familiar with the main issues
 related to cross-compilation, and what main compiler options Clang provides
@@ -190,4 +190,3 @@ uses hard-float), Clang will pick the `armv7l-linux-gnueabi-ld`
 The same is true if you're compiling for different environments, like
 `gnueabi` and `androideabi`, and might even link and run, but produce
 run-time errors, which are much harder to track down and fix.
-

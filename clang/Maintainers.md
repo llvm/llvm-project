@@ -1,7 +1,7 @@
 # Clang Maintainers
 
 This file is a list of the
-[maintainers](https://llvm.org/docs/DeveloperPolicy.html#maintainers)
+{external+llvm:ref}`maintainers <maintainers>`
 for Clang. The list of current Clang Area Team members can be found
 [here](https://github.com/llvm/llvm-project/blob/main/clang/AreaTeamMembers.txt).
 

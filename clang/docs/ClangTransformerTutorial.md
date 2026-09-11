@@ -338,7 +338,7 @@ For additional documentation on these functions, see the header file
 ## Using a RewriteRule as a clang-tidy check
 
 Transformer supports executing a rewrite rule as a
-[clang-tidy](https://clang.llvm.org/extra/clang-tidy/) check, with the class
+{external+clang-tools-extra:doc}`clang-tidy <clang-tidy/index>` check, with the class
 `clang::tidy::utils::TransformerClangTidyCheck`. It is designed to require
 minimal code in the definition. For example, given a rule
 `MyCheckAsRewriteRule`, one can define a tidy check as follows:
