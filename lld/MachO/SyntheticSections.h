@@ -106,8 +106,8 @@ public:
   void writeTo(uint8_t *buf) const override {}
 };
 
-// The __DATA_CONST,__got section, populated by dyld with addresses to
-// non-lazily-loaded dylib symbols, including TLV descriptors.
+// The __got section, populated by dyld with addresses to non-lazily-loaded
+// dylib symbols, including TLV descriptors.
 class GotSection final : public SyntheticSection {
 public:
   GotSection();

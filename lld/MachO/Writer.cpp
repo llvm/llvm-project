@@ -662,12 +662,10 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
-// Give a symbol its single non-lazy pointer slot. For a thread-local,
-// __thread_ptrs and __got would hold the same value: the address of its TLV
-// descriptor. ld-prime canonicalizes both GOT and TLV references to one
-// __got entry, which also makes the choice independent of which reference is
-// scanned first. This is especially important for dynamic-lookup symbols,
-// whose thread-locality is unknowable until dyld binds the slot.
+// Give a symbol its single non-lazy pointer slot. A GOT reference and a TLV
+// reference to a thread-local both want the same value -- the address of its
+// TLV descriptor -- so one __got entry serves both, and the result no longer
+// depends on which reference the relocation scan reaches first. 
 static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
 
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,

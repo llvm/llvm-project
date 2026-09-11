@@ -71,10 +71,10 @@
 # REEXPORT:     _readTlv
 # REEXPORT-NOT: _tlv{{$}}
 
-## The remaining cases each reach NonLazyPointerSectionBase::addEntry by a route
-## that does not pass through prepareSymbolRelocation. None may abort the
-## linker: the symbol already has a __got slot by the time the TLV reference
-## asks for one, so addEntry must coalesce rather than allocate a second.
+## The remaining cases each reach GotSection::addEntry by a route that does not
+## pass through prepareSymbolRelocation. None may abort the linker: the symbol
+## already has a __got slot by the time the TLV reference asks for one, so
+## addEntry must coalesce rather than allocate a second.
 
 ## StubsSection::addEntry -> in.got->addEntry under chained fixups, which is the
 ## default at iOS 16 / macOS 13.
@@ -106,7 +106,8 @@
 # RUN: llvm-objdump --macho --bind %t/binder.dylib | FileCheck %s --check-prefix=BINDER
 # BINDER: __DATA_CONST __got 0x{{[0-9a-f]+}} pointer 0 flat-namespace dyld_stub_binder
 
-## InitOffsetsSection::setUp.
+## InitOffsetsSection::setUp -> in.stubs->addEntry -> in.got->addEntry, i.e. a
+## GOT entry reached two levels deep from a section that scans its own relocs.
 # RUN: %no-arg-lld -arch arm64 -platform_version macos 13.0 13.0 \
 # RUN:   -syslibroot %S/Inputs/MacOSX.sdk -lSystem -dylib -undefined dynamic_lookup \
 # RUN:   -init_offsets -o %t/initoff.dylib %t/initoff.o
@@ -129,11 +130,10 @@
 # EP:     lib_ordinal = -2 (flat-namespace)
 # EP:     _ep
 
-## JUDGMENT CALL. A data pointer and a TLV reference to one dynamic-lookup
-## symbol cannot both describe whatever dyld finds, but neither can lld tell
-## which is wrong, and the UNSIGNED path allocates no slot for a conflict check
-## to inspect. Accepting both binds matches how every other unverifiable
-## dynamic-lookup mismatch is already treated.
+## An unsigned relocation binds the pointer in place rather than allocating a
+## slot, so a data pointer and a TLV reference to one symbol produce two
+## independent binds. Both name the descriptor, so neither is wrong, and
+## ld-prime emits the same pair.
 # RUN: %lld -arch arm64 -dylib -undefined dynamic_lookup -o %t/unsmix.dylib %t/unsmix.o
 # RUN: llvm-objdump --macho --bind %t/unsmix.dylib | FileCheck %s --check-prefix=UNS
 # UNS-DAG: __DATA __data 0x{{[0-9a-f]+}} pointer 0 flat-namespace _tlv
