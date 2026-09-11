@@ -130,4 +130,18 @@ subroutine defaultmap_func_and_procedure_pointer()
         i = test_procedure()
     !$omp end target
 end subroutine defaultmap_func_and_procedure_pointer
+
+! Verify we do not crash on a derived-type name in a structure constructor,
+! which has no declared type of its own, in defaultmap(none)
+subroutine defaultmap_structure_constructor_none
+    implicit none
+    type t
+    end type
+    type(t) :: x
+
+    !$omp target defaultmap(none: aggregate)
+!ERROR: The DEFAULTMAP(NONE) clause requires that 'x' must be listed in a data-sharing attribute, data-mapping attribute, or is_device_ptr clause
+        x = t()
+    !$omp end target
+end subroutine defaultmap_structure_constructor_none
 end module
