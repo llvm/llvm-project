@@ -1016,7 +1016,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
       if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) &&
-          !TII->isVALU(*Inst, /*AllowLDSDMA=*/true)) {
+          !TII->isVALU(*Inst)) {
         for (auto &U : MRI->use_instructions(Reg))
           Users.push_back(&U);
       }
