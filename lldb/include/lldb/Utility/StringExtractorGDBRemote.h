@@ -108,6 +108,7 @@ public:
     eServerPacketType_QThreadSuffixSupported,
 
     eServerPacketType_jThreadsInfo,
+    eServerPacketType_jAddressSpacesInfo,
     eServerPacketType_qsThreadInfo,
     eServerPacketType_qfThreadInfo,
     eServerPacketType_qGetPid,
@@ -176,6 +177,7 @@ public:
     eServerPacketType_jMultiBreakpoint,
     eServerPacketType_jAcceleratorPluginInitialize,
     eServerPacketType_jAcceleratorPluginBreakpointHit,
+    eServerPacketType_jAcceleratorPluginGetDynamicLoaderLibraryInfo,
 
     eServerPacketType_qMemTags, // read memory tags
     eServerPacketType_QMemTags, // write memory tags

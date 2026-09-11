@@ -1756,8 +1756,8 @@ llvm.func @_QPomp_atomic_update_complex() {
       %9 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
       %10 = llvm.extractvalue %7[0] : !llvm.struct<(f32, f32)>
       %11 = llvm.extractvalue %7[1] : !llvm.struct<(f32, f32)>
-      %12 = llvm.fadd %8, %10  {fastmathFlags = #llvm.fastmath<contract>} : f32
-      %13 = llvm.fadd %9, %11  {fastmathFlags = #llvm.fastmath<contract>} : f32
+      %12 = llvm.fadd %8, %10 fastmath<contract> : f32
+      %13 = llvm.fadd %9, %11 fastmath<contract> : f32
       %14 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
       %15 = llvm.insertvalue %12, %14[0] : !llvm.struct<(f32, f32)>
       %16 = llvm.insertvalue %13, %15[1] : !llvm.struct<(f32, f32)>
@@ -1816,8 +1816,8 @@ llvm.func @_QPomp_atomic_capture_complex() {
         %13 = llvm.extractvalue %arg0[1] : !llvm.struct<(f32, f32)>
         %14 = llvm.extractvalue %11[0] : !llvm.struct<(f32, f32)>
         %15 = llvm.extractvalue %11[1] : !llvm.struct<(f32, f32)>
-        %16 = llvm.fadd %12, %14  {fastmathFlags = #llvm.fastmath<contract>} : f32
-        %17 = llvm.fadd %13, %15  {fastmathFlags = #llvm.fastmath<contract>} : f32
+        %16 = llvm.fadd %12, %14 fastmath<contract> : f32
+        %17 = llvm.fadd %13, %15 fastmath<contract> : f32
         %18 = llvm.mlir.undef : !llvm.struct<(f32, f32)>
         %19 = llvm.insertvalue %16, %18[0] : !llvm.struct<(f32, f32)>
         %20 = llvm.insertvalue %17, %19[1] : !llvm.struct<(f32, f32)>
@@ -3898,7 +3898,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
@@ -3907,7 +3907,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -3920,7 +3920,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+          #omp.declaretarget<device_type = nohost, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3929,7 +3929,7 @@ module attributes {omp.is_target_device = false} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+          #omp.declaretarget<device_type = host, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3942,7 +3942,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
+          #omp.declaretarget<device_type = nohost, capture_clause = to>
       } {
     llvm.return
   }
@@ -3951,7 +3951,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (to)>
+          #omp.declaretarget<device_type = host, capture_clause = to>
       } {
     llvm.return
   }
@@ -3964,7 +3964,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (nohost), capture_clause = (enter)>
+          #omp.declaretarget<device_type = nohost, capture_clause = enter>
       } {
     llvm.return
   }
@@ -3973,7 +3973,7 @@ module attributes {omp.is_target_device = true} {
   llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
-          #omp.declaretarget<device_type = (host), capture_clause = (enter)>
+          #omp.declaretarget<device_type = host, capture_clause = enter>
       } {
     llvm.return
   }
@@ -4079,7 +4079,7 @@ llvm.func @omp_task_if(%boolexpr: i1) {
 
 // -----
 
-module attributes {omp.requires = #omp<clause_requires reverse_offload|unified_shared_memory>} {}
+module attributes {omp.requires = #omp.clause_requires<reverse_offload|unified_shared_memory>} {}
 
 // -----
 
@@ -4251,7 +4251,7 @@ llvm.mlir.global internal @any() : i32
 llvm.mlir.global internal @host() : i32
 llvm.mlir.global internal @nohost() : i32
 llvm.func @omp_groupprivate_device() attributes {
-    omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} {
+    omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = to>} {
   %0 = llvm.mlir.constant(1 : i32) : i32
   %2 = omp.groupprivate @any device_type(any) : !llvm.ptr
   llvm.store %0, %2 : i32, !llvm.ptr

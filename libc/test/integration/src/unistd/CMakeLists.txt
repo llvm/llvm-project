@@ -86,6 +86,18 @@ set_target_properties(
 )
 
 add_executable(
+  libc_execl_test_normal_exit
+  EXCLUDE_FROM_ALL
+  execl_test_normal_exit.cpp
+)
+set_target_properties(
+  libc_execl_test_normal_exit
+  PROPERTIES
+    OUTPUT_NAME libc_execl_test_normal_exit
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_executable(
   libc_execle_test_normal_exit
   EXCLUDE_FROM_ALL
   execle_test_normal_exit.cpp
@@ -95,6 +107,26 @@ set_target_properties(
   PROPERTIES
     OUTPUT_NAME libc_execle_test_normal_exit
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+)
+
+add_integration_test(
+  execl_test
+  SUITE
+    unistd-integration-tests
+  SRCS
+    execl_test.cpp
+  DEPENDS
+    libc_execl_test_normal_exit
+    libc_exec_test_signal_exit
+    libc.hdr.signal_macros
+    libc.hdr.sys_wait_macros
+    libc.src.errno.errno
+    libc.src.sys.wait.waitpid
+    libc.src.unistd.environ
+    libc.src.unistd.execl
+    libc.src.unistd.fork
+  ENV
+    EXECL_TEST=PASS
 )
 
 add_integration_test(
