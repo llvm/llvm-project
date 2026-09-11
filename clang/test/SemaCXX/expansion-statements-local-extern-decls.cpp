@@ -80,6 +80,8 @@ void foo7() {
   }
 }
 
+// FIXME: This test currently asserts due to a bug not related to expansion statements: https://github.com/llvm/llvm-project/issues/223003.
+/*
 int foo8_decl; // #foo8_decl
 void foo8() {
   template for (constexpr auto x : {true, false}) { // #foo8_instantiation
@@ -87,9 +89,11 @@ void foo8() {
       extern int foo8_decl;
     } else {
       extern thread_local int foo8_decl; // #mismatched_foo8_decl
-      // expected-error@#mismatched_foo8_decl {{thread-local declaration of 'foo8_decl' follows non-thread-local declaration}}
-      // expected-note@#foo8_instantiation {{in instantiation of expansion statement requested here}}
-      // expected-note@#foo8_decl {{previous definition is here}}
+      // FIXME: Remove 'DISABLE-' once the bug mentioned above is fixed and this test case is reenabled.
+      // DISABLE-expected-error@#mismatched_foo8_decl {{thread-local declaration of 'foo8_decl' follows non-thread-local declaration}}
+      // DISABLE-expected-note@#foo8_instantiation {{in instantiation of expansion statement requested here}}
+      // DISABLE-expected-note@#foo8_decl {{previous definition is here}}
     }
   }
 }
+*/
