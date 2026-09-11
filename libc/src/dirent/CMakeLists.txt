@@ -63,6 +63,7 @@ add_entrypoint_object(
     libc.src.dirent.opendir
     libc.src.dirent.readdir
     libc.src.errno.errno
+    libc.src.stdlib.qsort_util
 )
 
 add_entrypoint_object(
