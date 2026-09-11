@@ -52,14 +52,6 @@ void addMemoryAllocationOpt(mlir::PassManager &pm) {
   });
 }
 
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays) {
-  fir::AllocationPlacementOptions options;
-  options.stackArrays = stackArrays;
-  options.smallArrayThresholdBytes = allocationPlacementSmallArraySize;
-  options.totalStackLimitBytes = allocationPlacementStackLimit;
-  pm.addPass(fir::createAllocationPlacement(options));
-}
-
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare) {
   fir::CodeGenRewriteOptions options;
   options.preserveDeclare = preserveDeclare;
@@ -205,7 +197,7 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
       fir::CudaHeapAllocPromotionOptions{pc.StackArrays}));
 
   if (enableAllocationPlacement)
-    fir::addAllocationPlacement(pm, pc.StackArrays);
+    pm.addPass(fir::createAllocationPlacement());
   else if (pc.StackArrays)
     pm.addPass(fir::createStackArrays());
   else
@@ -328,6 +320,14 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
     // once per element.
     addNestedPassToAllTopLevelOperations(pm, [&]() {
       return hlfir::createInlineHLFIRAssign({/*onlyScalarRHS=*/true});
+    });
+  } else if (config.EnableCUDA) {
+    // Same at O0 for CUDA Fortran device code, where the runtime call also
+    // inflates the stack frame the device linker reserves for the kernel.
+    // The module holds host code too, hence onlyCUDADeviceContext.
+    addNestedPassToAllTopLevelOperations(pm, [&]() {
+      return hlfir::createInlineHLFIRAssign(
+          {/*onlyScalarRHS=*/true, /*onlyCUDADeviceContext=*/true});
     });
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments(

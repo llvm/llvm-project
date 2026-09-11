@@ -1,10 +1,10 @@
 ; RUN: llc -mtriple=amdgpu9.00 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX900
 ; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
-; RUN: llc -mtriple=amdgpu10.11 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
-; RUN: llc -mtriple=amdgpu10.12 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -mtriple=amdgpu10.11 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10
+; RUN: llc -mtriple=amdgpu10.12 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10
 ; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX906
-; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
-; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=ieee < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
+; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM
+; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math=ieee < %s | FileCheck %s  -check-prefixes=GCN,GFX906-IEEE
 ; RUN: llc -mtriple=amdgpu9.06 -denormal-fp-math-f32=preserve-sign -mattr="+dot7-insts,-dot10-insts" < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DOT10-DISABLED
 ; RUN: llc -mtriple=amdgpu9.0a -denormal-fp-math-f32=preserve-sign < %s | FileCheck %s  -check-prefixes=GCN,GFX90A-PS
 ; RUN: llc -mtriple=amdgpu9.0a -denormal-fp-math-f32=ieee < %s | FileCheck %s  -check-prefixes=GCN,GFX90A-IEEE
@@ -19,10 +19,10 @@
 ; GFX900: v_fma_f16
 
 ; GFX906-DL-UNSAFE:  v_fma_f16
-; GFX10-CONTRACT: v_fmac_f16
+; GFX10: v_fmac_f16
 
-; GFX906-CONTRACT: v_mac_f16_e32
-; GFX906-DENORM-CONTRACT: v_fma_f16
+; GFX906-DENORM: v_mac_f16_e32
+; GFX906-IEEE: v_fma_f16
 ; GFX906-DOT10-DISABLED: v_fma_f16
 
 define amdgpu_kernel void @dotproduct_f16_contract(ptr addrspace(1) %src1,
@@ -84,9 +84,9 @@ entry:
 ; GFX906-DL-UNSAFE: v_fma_mix_f32
 ; GFX10-DL-UNSAFE: v_fma_mix_f32
 
-; GFX906-CONTRACT: v_fma_mix_f32
+; GFX906-DENORM: v_fma_mix_f32
 
-; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-IEEE: v_dot2_f32_f16
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 ; GFX90A-PS:   v_dot2c_f32_f16
 ; GFX90A-IEEE: v_fma_mix_f32
@@ -158,8 +158,8 @@ entry:
 ; GFX906-DL-UNSAFE: v_fma_mix_f32
 ; GFX10-DL-UNSAFE: v_fma_mix_f32
 
-; GFX906-CONTRACT: v_fma_mix_f32
-; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-DENORM: v_fma_mix_f32
+; GFX906-IEEE: v_dot2_f32_f16
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 ; GFX90A-PS:   v_dot2c_f32_f16
 ; GFX90A-IEEE: v_fma_mix_f32
@@ -227,8 +227,8 @@ entry:
 
 ; GCN-DL-UNSAFE: v_fma_mix_f32
 
-; GFX906-CONTRACT: v_fma_mix_f32
-; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-DENORM: v_fma_mix_f32
+; GFX906-IEEE: v_fma_mix_f32
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @dotproduct_v4f16_contract(ptr addrspace(1) %src1,
                                                      ptr addrspace(1) %src2,
@@ -292,8 +292,8 @@ entry:
 
 ; GCN-DL-UNSAFE: v_fma_mix_f32
 
-; GFX906-CONTRACT: v_fma_mix_f32
-; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-DENORM: v_fma_mix_f32
+; GFX906-IEEE: v_fma_mix_f32
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @NotAdotproductContract(ptr addrspace(1) %src1,
                                                   ptr addrspace(1) %src2,
@@ -358,8 +358,8 @@ entry:
 
 ; GCN-DL-UNSAFE: v_fma_mix_f32
 
-; GFX906-CONTRACT: v_fma_mix_f32
-; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-DENORM: v_fma_mix_f32
+; GFX906-IEEE: v_fma_mix_f32
 ; GFX906-DOT10-DISABLED: v_fma_mix_f32
 define amdgpu_kernel void @Diff_Idx_NotAdotproductContract(ptr addrspace(1) %src1,
                                                            ptr addrspace(1) %src2,
@@ -470,8 +470,8 @@ define amdgpu_kernel void @dotproduct_f16_f32_contract_dynamic_denorm(<2 x half>
 ; afn on both FMAs overrides the denormal gating: the caller accepts approximate
 ; results, so dot2's subnormal flushing is acceptable regardless of mode or GPU.
 ; GCN-LABEL: {{^}}dotproduct_f16_f32_afn
-; GFX906-CONTRACT:      v_dot2_f32_f16
-; GFX906-DENORM-CONTRACT: v_dot2_f32_f16
+; GFX906-DENORM:      v_dot2_f32_f16
+; GFX906-IEEE: v_dot2_f32_f16
 ; GFX90A-PS:            v_dot2c_f32_f16
 ; GFX90A-IEEE:          v_dot2c_f32_f16
 ; GFX950-DENORM:        v_dot2c_f32_f16
@@ -495,8 +495,8 @@ define amdgpu_kernel void @dotproduct_f16_f32_afn(<2 x half> %a, <2 x half> %b, 
 
 ; fdot2 hardwires lanes 0/1, so it must not fold when %i == %j at runtime.
 ; GCN-LABEL: {{^}}Var_Idx_NotAdotproductContract
-; GFX906-DENORM-CONTRACT-NOT: v_dot2
-; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-IEEE-NOT: v_dot2
+; GFX906-IEEE: v_fma_mix_f32
 ; GFX90A-PS-NOT: v_dot2
 ; GFX90A-PS: v_fma_mix_f32
 define float @Var_Idx_NotAdotproductContract(<2 x half> %src1, <2 x half> %src2, float %acc, i32 %i, i32 %j) {
@@ -519,8 +519,8 @@ define float @Var_Idx_NotAdotproductContract(<2 x half> %src1, <2 x half> %src2,
 
 ; A mix of a constant and a variable index must not fold either.
 ; GCN-LABEL: {{^}}Mixed_Idx_NotAdotproductContract
-; GFX906-DENORM-CONTRACT-NOT: v_dot2
-; GFX906-DENORM-CONTRACT: v_fma_mix_f32
+; GFX906-IEEE-NOT: v_dot2
+; GFX906-IEEE: v_fma_mix_f32
 ; GFX90A-PS-NOT: v_dot2
 ; GFX90A-PS: v_fma_mix_f32
 define float @Mixed_Idx_NotAdotproductContract(<2 x half> %src1, <2 x half> %src2, float %acc, i32 %j) {
