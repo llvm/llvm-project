@@ -57,7 +57,6 @@ void LinalgMorphOpsPass::runOnOperation() {
     populateLinalgGenericOpsSpecializationPatterns(patterns, true);
   if (namedToCategory)
     populateLinalgNamedOpsGeneralizationPatterns(patterns, true);
-    
 
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();
