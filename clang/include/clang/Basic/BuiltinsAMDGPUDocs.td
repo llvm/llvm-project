@@ -877,6 +877,66 @@ integers.
 }];
 }
 
+def DocCvtScalePk32BF16BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts a packed 32-component BF6 input ``src`` to packed 32-component BF16
+values, then scales the results using the scale factor ``scale``. ``scale_sel``
+must be a compile-time constant in the range [0, 15]. Only available in
+wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32BF16FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts a packed 32-component FP6 input ``src`` to packed 32-component BF16
+values, then scales the results using the scale factor ``scale``. ``scale_sel``
+must be a compile-time constant in the range [0, 15]. Only available in
+wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F16BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts a packed 32-component BF6 input ``src`` to packed 32-component
+half-precision floating-point values, then scales the results using the scale
+factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
+[0, 15]. Only available in wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F16FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts a packed 32-component FP6 input ``src`` to packed 32-component
+half-precision floating-point values, then scales the results using the scale
+factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
+[0, 15]. Only available in wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F32BF6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts a packed 32-component BF6 input ``src`` to packed 32-component
+single-precision floating-point values, then scales the results using the scale
+factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
+[0, 15]. Only available in wavefront size 32.
+}];
+}
+
+def DocCvtScalePk32F32FP6 : Documentation {
+  let Category = DocCatAMDGPUConversion;
+  let Content = [{
+Converts a packed 32-component FP6 input ``src`` to packed 32-component
+single-precision floating-point values, then scales the results using the scale
+factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
+[0, 15]. Only available in wavefront size 32.
+}];
+}
+
 //===----------------------------------------------------------------------===//
 // Prefetch Builtins
 //===----------------------------------------------------------------------===//
