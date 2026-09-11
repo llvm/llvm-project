@@ -1,0 +1,24 @@
+# RUN: llc -mtriple=sparc -run-pass=finalize-isel -verify-machineinstrs -o - %s | FileCheck %s
+
+--- |
+  define void @pair() { ret void }
+...
+---
+name: pair
+# CHECK-LABEL: name: pair
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: intpair }
+liveins:
+  - { reg: '$i0_i1', virtual-reg: '%0' }
+# CHECK: bb.0:
+# CHECK-NEXT: liveins: $o0_o1
+# CHECK: %0:intpair = COPY $o0_o1
+# CHECK-NOT: $i0_i1
+body: |
+  bb.0:
+    liveins: $i0_i1
+    %0:intpair = COPY $i0_i1
+    $o0_o1 = COPY %0
+    RETL 8, implicit $o0, implicit $o1
+...
