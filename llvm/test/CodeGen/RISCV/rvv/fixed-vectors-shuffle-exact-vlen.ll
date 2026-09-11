@@ -229,9 +229,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v16, 0
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; RV32-NEXT:    vmv.v.i v0, 1
-; RV32-NEXT:    vslidedown.vi v18, v15, 1, v0.t
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
+; RV32-NEXT:    vslidedown.vi v18, v15, 1
 ; RV32-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v16, a0
 ; RV32-NEXT:    li a0, 32
@@ -255,9 +254,8 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 ; RV64-NEXT:    andi sp, sp, -128
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.v.i v16, 0
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; RV64-NEXT:    vmv.v.i v0, 1
-; RV64-NEXT:    vslidedown.vi v18, v15, 1, v0.t
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
+; RV64-NEXT:    vslidedown.vi v18, v15, 1
 ; RV64-NEXT:    mv s1, sp
 ; RV64-NEXT:    vs8r.v v16, (s1)
 ; RV64-NEXT:    andi a0, a0, 15
@@ -285,12 +283,13 @@ define i64 @extract_any_extend_vector_inreg_v16i64(<16 x i64> %a0, i32 %a1) vsca
 define <4 x double> @shuffles_add(<4 x double> %0, <4 x double> %1) vscale_range(2,2) {
 ; CHECK-LABEL: shuffles_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
-; CHECK-NEXT:    vmv.v.i v0, 1
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv1r.v v13, v10
 ; CHECK-NEXT:    vslideup.vi v13, v11, 1
-; CHECK-NEXT:    vslidedown.vi v11, v10, 1, v0.t
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, tu, ma
+; CHECK-NEXT:    vslidedown.vi v11, v10, 1
 ; CHECK-NEXT:    vmv1r.v v10, v9
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vrgather.vi v12, v9, 0
 ; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v12, v10
