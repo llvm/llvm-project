@@ -5092,6 +5092,9 @@ public:
   }
 
   bool hasVF(ElementCount VF) const { return VFs.count(VF); }
+
+  /// Returns true if the plan contains at least one VF.
+  bool hasAnyVF() const { return !VFs.empty(); }
   bool hasScalableVF() const {
     return any_of(VFs, [](ElementCount VF) { return VF.isScalable(); });
   }

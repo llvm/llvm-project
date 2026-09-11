@@ -622,6 +622,9 @@ struct VPlanTransforms {
   static void makeCallWideningDecisions(VPlan &Plan, VFRange &Range,
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
+
+  /// Trim the VFs in \p Plan that will generate vectors requiring splitting.
+  static void trimVFsCausingSplits(VPlan &Plan, VPCostContext &CostCtx);
 };
 
 } // namespace llvm

@@ -676,3 +676,35 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   LatchBr->setOperand(
       0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
 }
+
+void VPlanTransforms::trimVFsCausingSplits(VPlan &Plan,
+                                           VPCostContext &CostCtx) {
+  if (!Plan.hasScalableVF())
+    return;
+
+  // Get the widest type in the vector region.
+  unsigned WidestType = 8;
+  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(VectorLoop->getEntry())))
+    for (VPRecipeBase &BaseR : make_range(VPBB->getFirstNonPhi(), VPBB->end()))
+      if (auto *R = dyn_cast<VPSingleDefRecipe>(&BaseR);
+          R && !vputils::onlyScalarValuesUsed(R)) {
+        // Skip the partial reduction since its VF is scaled down and can
+        // be calculated by its operands.
+        if (isa<VPExpressionRecipe>(R))
+          continue;
+        WidestType =
+            std::max(WidestType, R->getScalarType()->getScalarSizeInBits());
+      }
+
+  // Trim the VF that will generate vectors need to split.
+  SmallVector<ElementCount, 4> VFs = to_vector(Plan.vectorFactors());
+  for (auto VF : reverse(VFs)) {
+    if (CostCtx.TTI.getRegUsageForType(VectorType::get(
+            Type::getIntNTy(Plan.getContext(), WidestType), VF)) <= 8)
+      break;
+    Plan.removeVF(VF);
+  }
+  return;
+}
