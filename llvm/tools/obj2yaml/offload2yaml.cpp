@@ -70,9 +70,16 @@ Expected<OffloadYAML::Binary *> dump(MemoryBufferRef Source,
     if (TheHeader->Version >= 3 && TheHeader->InflatedSize != 0) {
       StringRef Payload = Buffer.getBuffer().take_front(Size).drop_front(
           TheHeader->EntriesOffset);
-      YAMLBinary->Compression = identify_magic(Payload) == file_magic::zstd
-                                    ? compression::Format::Zstd
-                                    : compression::Format::Zlib;
+      switch (identify_magic(Payload)) {
+      case file_magic::zstd:
+        YAMLBinary->Compression = compression::Format::Zstd;
+        break;
+      case file_magic::zlib:
+        YAMLBinary->Compression = compression::Format::Zlib;
+        break;
+      default:
+        return createStringError("unknown compression format");
+      }
     }
     auto BinariesOrErr = object::OffloadBinary::create(Buffer);
     if (!BinariesOrErr)

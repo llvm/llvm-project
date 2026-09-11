@@ -315,6 +315,11 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
   EXPECT_EQ(Compressed.size(),
             alignTo((*HeaderOrErr)->Size, OffloadBinary::getAlignment()));
   EXPECT_EQ((*HeaderOrErr)->InflatedSize, Uncompressed.size());
+  StringRef Payload = StringRef(Compressed.data(), (*HeaderOrErr)->Size)
+                          .drop_front((*HeaderOrErr)->EntriesOffset);
+  EXPECT_EQ(identify_magic(Payload), Params->format == compression::Format::Zstd
+                                         ? file_magic::zstd
+                                         : file_magic::zlib);
 
   auto BinaryBuffer = MemoryBuffer::getMemBufferCopy(Compressed);
   auto BinariesOrErr = OffloadBinary::create(*BinaryBuffer);
