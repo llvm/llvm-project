@@ -43,7 +43,11 @@
 #define STRINGIFY_(A) #A
 #define STRINGIFY(A) STRINGIFY_(A)
 
-#  define IN_SECTION(n) __declspec(allocate(n))
+#  if !defined(__GNUC__) || defined(__clang__)
+#    define IN_SECTION(n) __declspec(allocate(n))
+#  else
+#    define IN_SECTION(n) __attribute__((section(n)))
+#  endif
 
 #  if !SANITIZER_GO
 

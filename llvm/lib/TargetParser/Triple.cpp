@@ -18,7 +18,6 @@
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/TargetParser.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -192,6 +191,8 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
       return "arm64ec";
     if (SubArch == AArch64SubArch_arm64e)
       return "arm64e";
+    if (SubArch == AArch64SubArch_arm64e_x1)
+      return "arm64e.x1";
     if (SubArch == AArch64SubArch_lfi)
       return "aarch64_lfi";
     break;
@@ -613,6 +614,7 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
           .Case("arm64", Triple::aarch64)
           .Case("arm64_32", Triple::aarch64_32)
           .Case("arm64e", Triple::aarch64)
+          .Case("arm64e.x1", Triple::aarch64)
           .Case("arm64ec", Triple::aarch64)
           .Case("arm", Triple::arm)
           .Case("armeb", Triple::armeb)
@@ -740,6 +742,8 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
 
   if (SubArchName == "arm64e")
     return Triple::AArch64SubArch_arm64e;
+  if (SubArchName == "arm64e.x1")
+    return Triple::AArch64SubArch_arm64e_x1;
 
   if (SubArchName == "arm64ec")
     return Triple::AArch64SubArch_arm64ec;

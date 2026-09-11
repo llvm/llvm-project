@@ -14,7 +14,6 @@
 
 #if _LIBCPP_HAS_LOCALIZATION
 
-#  include <__format/concepts.h>
 #  include <__format/format_error.h>
 #  include <__format/format_parse_context.h>
 #  include <__format/formatter_string.h>

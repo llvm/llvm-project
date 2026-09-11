@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/DWP/DWP.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"

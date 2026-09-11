@@ -731,8 +731,10 @@ bool RISCVVectorPeepholeImpl::foldVMergeToMask(MachineInstr &MI) const {
   else
     return false;
 
-  unsigned RVVTSFlags =
-      TII->get(RISCV::getRVVMCOpcode(True.getOpcode())).TSFlags;
+  unsigned RVVOpc = RISCV::getRVVMCOpcode(True.getOpcode());
+  unsigned RVVTSFlags = TII->get(RVVOpc).TSFlags;
+  if (RVVOpc == RISCV::VZIP_VV)
+    return false;
   if (RISCVII::elementsDependOnVL(RVVTSFlags) && !TrueVL.isIdenticalTo(MinVL))
     return false;
   if (RISCVII::elementsDependOnMask(RVVTSFlags) && !isAllOnesMask(Mask))

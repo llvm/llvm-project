@@ -128,8 +128,9 @@ struct SgToLaneCreateNdDesc
       return failure();
 
     auto newOp = xegpu::CreateNdDescOp::create(
-        rewriter, op.getLoc(), resultType.dropLayouts(), op.getOperands(),
-        op->getAttrs());
+        rewriter, op.getLoc(), TypeRange{resultType.dropLayouts()},
+        op.getOperands(), op.getProperties(),
+        op->getDiscardableAttrDictionary().getValue());
     rewriter.replaceOp(op, newOp.getResult());
     return success();
   }
@@ -345,10 +346,11 @@ struct SgToLaneElementWise : public ConversionPattern {
     state.addOperands(operands);
     state.addTypes(newResultType);
     // Copy all attributes except for DistributeLayoutAttr.
-    for (auto attr : op->getAttrs()) {
+    for (auto attr : op->getDiscardableAttrDictionary().getValue()) {
       if (!isa<xegpu::DistributeLayoutAttr>(attr.getValue()))
         state.addAttribute(attr.getName(), attr.getValue());
     }
+    state.propertiesAttr = op->getPropertiesAsAttribute();
     Operation *newOp = rewriter.create(state);
 
     rewriter.replaceOp(op, newOp->getResult(0));
