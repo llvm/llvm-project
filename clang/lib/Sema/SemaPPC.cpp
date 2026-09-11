@@ -139,7 +139,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
     }
   }
 
-   // Common BCD type-validation helpers
+  // Common BCD type-validation helpers
   // Emit error diagnostics and return true on success
   //  - IsTypeVecUChar: enforces vector unsigned char
   //  - IsIntType: enforces any integer type
@@ -172,7 +172,7 @@ bool SemaPPC::CheckPPCBuiltinFunctionCall(const TargetInfo &TI,
   switch (BuiltinID) {
   default:
     return false;
-   case PPC::BI__builtin_ppc_bcdsetsign: {
+  case PPC::BI__builtin_ppc_bcdsetsign: {
     // Arg0 must be vector unsigned char
     if (!IsTypeVecUChar(TheCall->getArg(0)->getType(), 0))
       return false;
