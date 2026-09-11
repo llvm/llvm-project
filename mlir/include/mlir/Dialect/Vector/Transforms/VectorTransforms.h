@@ -132,6 +132,22 @@ struct VscaleRange {
 void eliminateVectorMasks(IRRewriter &rewriter, FunctionOpInterface function,
                           std::optional<VscaleRange> vscaleRange = {});
 
+/// Hoist vector.transfer_read / vector.transfer_write pairs with loop-invariant
+/// indices out of loops by rewriting the loop with iter_args so the accumulated
+/// vector stays in a register across loop iterations rather than being
+/// round-tripped through memory.
+///
+/// The function runs loop-invariant code motion first so that subviews and
+/// padding constants become loop-invariant before the hoisting check.  View-
+/// like bases (e.g., memref.subview) are accepted provided the view's source
+/// memref has no other uses inside the loop.
+///
+/// When `verifyNonZeroTrip` is true, hoisting is skipped for loops that cannot
+/// be proven to have a non-zero trip count, avoiding speculative memory
+/// accesses.
+void hoistRedundantVectorTransfers(Operation *root,
+                                   bool verifyNonZeroTrip = false);
+
 } // namespace vector
 } // namespace mlir
 
