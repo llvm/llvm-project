@@ -1,8 +1,5 @@
 # Frequently Asked Questions (FAQ)
 
-```{contents}
-:local:
-```
 
 
 ## License

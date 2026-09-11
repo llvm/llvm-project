@@ -97,15 +97,41 @@ def SeparateAllocatableAssign : Pass<"separate-allocatable-assign"> {
 def InlineHLFIRAssign : Pass<"inline-hlfir-assign"> {
   let summary = "Inline hlfir.assign operations";
   let options = [Option<
-      "onlyScalarRHS", "only-scalar-rhs", "bool", /*default=*/"false",
-      "Only inline assignments where RHS is a numeric or logical scalar "
-      "broadcast "
-      "to an array LHS. Used at O0 to avoid runtime calls in "
-      "device code without inlining all array assignments.">];
+                     "onlyScalarRHS", "only-scalar-rhs", "bool",
+                     /*default=*/"false",
+                     "Only inline assignments where RHS is a numeric or "
+                     "logical scalar broadcast "
+                     "to an array LHS. Used at O0 to avoid runtime calls in "
+                     "device code without inlining all array assignments.">,
+                 Option<"onlyCUDADeviceContext", "only-cuda-device-context",
+                        "bool", /*default=*/"false",
+                        "Only inline assignments in CUDA Fortran device "
+                        "code. Used at O0, where a module holds both host "
+                        "and device subprograms, to leave host code alone.">];
 }
 
 def InlineHLFIRCopy : Pass<"inline-hlfir-copy"> {
   let summary = "Inline hlfir.copy_in and hlfir.copy_out operations";
+  let description = [{
+    Replaces eligible `hlfir.copy_in` and `hlfir.copy_out` operations with an
+    explicit temporary and element-wise copy. The temporary allocation uses the
+    small-array threshold from the module's `fir.allocation_policy` attribute.
+  }];
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::DLTIDialect", "mlir::LLVM::LLVMDialect",
+    "mlir::arith::ArithDialect"
+  ];
+  // Normally taken from the fir.allocation_policy module attribute; this
+  // option overrides it, and only when set explicitly.
+  let options = [
+    Option<"smallArrayThresholdBytes", "small-array-threshold", "uint64_t",
+           /*default=*/"fir::AllocationPolicy::smallArrayThresholdBytesDefault",
+           "When provided, override the small array threshold from the "
+           "fir.allocation_policy module attribute. "
+           "Copy-in buffers whose size is a compile-time constant of at most "
+           "this many bytes are allocated on the stack. Bigger buffers, and "
+           "buffers with a runtime size, are allocated on the heap.">
+  ];
 }
 
 def PropagateFortranVariableAttributes : Pass<"propagate-fortran-attrs"> {

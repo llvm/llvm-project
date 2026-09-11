@@ -13,19 +13,19 @@ body:             |
     ; CHECK-LABEL: name: concat_to_build_vector
     ; CHECK: liveins: $x0, $x1, $x2, $x3
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[COPY2]](s64), [[COPY3]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = COPY $x1
-    %2:_(s64) = COPY $x2
-    %3:_(s64) = COPY $x3
-    %4:_(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1
-    %5:_(<2 x s64>) = G_BUILD_VECTOR %2(s64), %3
-    %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $x2
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i64) = COPY $x3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i64>) = G_BUILD_VECTOR [[COPY]](i64), [[COPY1]](i64), [[COPY2]](i64), [[COPY3]](i64)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x i64>)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = COPY $x1
+    %2:_(i64) = COPY $x2
+    %3:_(i64) = COPY $x3
+    %4:_(<2 x i64>) = G_BUILD_VECTOR %0(i64), %1
+    %5:_(<2 x i64>) = G_BUILD_VECTOR %2(i64), %3
+    %6:_(<4 x i64>) = G_CONCAT_VECTORS %4(<2 x i64>), %5
     RET_ReallyLR implicit %6
 ...
 # Same test as concat_to_build_vector but with pointer types.
@@ -61,11 +61,11 @@ tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: concat_to_undef
-    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: RET_ReallyLR implicit [[DEF]](<4 x s64>)
-    %4:_(<2 x s64>) = G_IMPLICIT_DEF
-    %5:_(<2 x s64>) = G_IMPLICIT_DEF
-    %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5
+    ; CHECK: [[DEF:%[0-9]+]]:_(<4 x i64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: RET_ReallyLR implicit [[DEF]](<4 x i64>)
+    %4:_(<2 x i64>) = G_IMPLICIT_DEF
+    %5:_(<2 x i64>) = G_IMPLICIT_DEF
+    %6:_(<4 x i64>) = G_CONCAT_VECTORS %4(<2 x i64>), %5
     RET_ReallyLR implicit %6
 ...
 # Check that when combining concat_vectors(build_vector, undef) into
@@ -81,16 +81,16 @@ body:             |
     ; CHECK-LABEL: name: concat_to_build_vector_with_undef
     ; CHECK: liveins: $x0, $x1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[COPY]](s64), [[COPY1]](s64), [[DEF]](s64), [[DEF]](s64)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x s64>)
-    %0:_(s64) = COPY $x0
-    %1:_(s64) = COPY $x1
-    %4:_(<2 x s64>) = G_BUILD_VECTOR %0(s64), %1
-    %5:_(<2 x s64>) = G_IMPLICIT_DEF
-    %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(i64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i64>) = G_BUILD_VECTOR [[COPY]](i64), [[COPY1]](i64), [[DEF]](i64), [[DEF]](i64)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[BUILD_VECTOR]](<4 x i64>)
+    %0:_(i64) = COPY $x0
+    %1:_(i64) = COPY $x1
+    %4:_(<2 x i64>) = G_BUILD_VECTOR %0(i64), %1
+    %5:_(<2 x i64>) = G_IMPLICIT_DEF
+    %6:_(<4 x i64>) = G_CONCAT_VECTORS %4(<2 x i64>), %5
     RET_ReallyLR implicit %6
 ...
 # Same as concat_to_build_vector_with_undef but with pointer types.
@@ -128,12 +128,12 @@ body:             |
     ; CHECK-LABEL: name: concat_to_build_vector_negative_test
     ; CHECK: liveins: $q0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[DEF]](<2 x s64>)
-    ; CHECK-NEXT: RET_ReallyLR implicit [[CONCAT_VECTORS]](<4 x s64>)
-    %4:_(<2 x s64>) = COPY $q0
-    %5:_(<2 x s64>) = G_IMPLICIT_DEF
-    %6:_(<4 x s64>) = G_CONCAT_VECTORS %4(<2 x s64>), %5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $q0
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x i64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i64>) = G_CONCAT_VECTORS [[COPY]](<2 x i64>), [[DEF]](<2 x i64>)
+    ; CHECK-NEXT: RET_ReallyLR implicit [[CONCAT_VECTORS]](<4 x i64>)
+    %4:_(<2 x i64>) = COPY $q0
+    %5:_(<2 x i64>) = G_IMPLICIT_DEF
+    %6:_(<4 x i64>) = G_CONCAT_VECTORS %4(<2 x i64>), %5
     RET_ReallyLR implicit %6
 ...

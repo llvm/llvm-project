@@ -35,9 +35,10 @@ struct TestPrintNestingPass
                   << op->getNumOperands() << " operands and "
                   << op->getNumResults() << " results\n";
     // Print the operation attributes
-    if (!op->getAttrs().empty()) {
-      printIndent() << op->getAttrs().size() << " attributes:\n";
-      for (NamedAttribute attr : op->getAttrs())
+    if (!op->getDiscardableAttrDictionary().getValue().empty()) {
+      printIndent() << op->getDiscardableAttrDictionary().getValue().size()
+                    << " attributes:\n";
+      for (NamedAttribute attr : op->getDiscardableAttrDictionary().getValue())
         printIndent() << " - '" << attr.getName().getValue() << "' : '"
                       << attr.getValue() << "'\n";
     }

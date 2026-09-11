@@ -424,7 +424,6 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureAggressiveFMA,
                                     FeatureAlignCmpCSelPairs,
                                     FeatureFastLD1Single,
-                                    FeatureFuseAddress,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCmpCSel,
                                     FeatureFuseLiterals,
@@ -1278,12 +1277,6 @@ def ProcessorFeatures {
   list<SubtargetFeature> Generic = [FeatureFPARMv8, FeatureNEON, FeatureETE];
 }
 
-// Define an alternative name for a given Processor.
-class ProcessorAlias<string n, string alias> {
-  string Name = n;
-  string Alias = alias;
-}
-
 // A note on scheduling models - we do not have exact models for each core and
 // attempt to use the "best equivalent" that we have for those that are
 // missing. -mcpu=generic uses a cortex-a510 model to get good scheduling
@@ -1427,8 +1420,7 @@ def : ProcessorModel<"thunderx3t110", ThunderX3T110Model,
 // HiSilicon Processors.
 def : ProcessorModel<"tsv110", TSV110Model, ProcessorFeatures.TSV110,
                      [TuneTSV110]>;
-// TODO: Support hip12 model.
-def : ProcessorModel<"hip12", NeoverseV2Model, ProcessorFeatures.HIP12,
+def : ProcessorModel<"hip12", HIP12Model, ProcessorFeatures.HIP12,
                      [TuneHIP12]>;
 
 // Apple CPUs

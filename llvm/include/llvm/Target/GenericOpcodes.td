@@ -1478,18 +1478,24 @@ def G_ATOMICRMW_MAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_MIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMIN : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FADD : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMAXIMUMNUM : G_ATOMICRMW_OP;
-def G_ATOMICRMW_FMINIMUMNUM : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_COND : G_ATOMICRMW_OP;
 def G_ATOMICRMW_USUB_SAT : G_ATOMICRMW_OP;
+
+// FP atomicrmw: match exact FP type, not generic sN, f16 and bf16 are both s16.
+class G_ATOMICRMW_FP_OP : G_ATOMICRMW_OP {
+  let GISelMatchGenericTypes = 0;
+}
+
+def G_ATOMICRMW_FADD : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FSUB : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMAX : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMIN : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMAXIMUM : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMINIMUM : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMAXIMUMNUM : G_ATOMICRMW_FP_OP;
+def G_ATOMICRMW_FMINIMUMNUM : G_ATOMICRMW_FP_OP;
 
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
@@ -1500,7 +1506,7 @@ def G_FENCE : GenericInstruction {
 // Generic opcode equivalent to the llvm.prefetch intrinsic.
 def G_PREFETCH : GenericInstruction {
   let OutOperandList = (outs);
-  let InOperandList = (ins ptype0:$address, i32imm:$rw, i32imm:$locality, i32imm:$cachetype);
+  let InOperandList = (ins ptype0:$address, untyped_imm_0:$rw, untyped_imm_1:$locality, untyped_imm_2:$cachetype);
   let hasSideEffects = true;
   let mayLoad = true;
   let mayStore = true;
@@ -1795,6 +1801,8 @@ def G_VECREDUCE_FMAX : VectorReduction;
 def G_VECREDUCE_FMIN : VectorReduction;
 def G_VECREDUCE_FMAXIMUM : VectorReduction;
 def G_VECREDUCE_FMINIMUM : VectorReduction;
+def G_VECREDUCE_FMAXIMUMNUM : VectorReduction;
+def G_VECREDUCE_FMINIMUMNUM : VectorReduction;
 
 def G_VECREDUCE_ADD : VectorReduction;
 def G_VECREDUCE_MUL : VectorReduction;

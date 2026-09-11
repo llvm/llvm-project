@@ -10,7 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfTargetDoesNotSupportThreads()
+@requireThreadSupport
 class ProcessSaveCoreMinidump64bTestCase(TestBase):
     def verify_minidump(
         self,

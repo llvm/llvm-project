@@ -13,7 +13,11 @@
     "host_enabled": true,
     "host_enabled.description": "Instrument non-GPU targets",
     "gpu_enabled": true,
-    "gpu_enabled.description": "Instrument GPU targets"
+    "gpu_enabled.description": "Instrument GPU targets",
+    "runtime_bitcode": "",
+    "runtime_bitcode.description": "Link runtime bitcode",
+    "inline_runtime": true,
+    "inline_runtime.description": "Inline runtime function calls eagerly"
   },
   "module_pre": {
     "module": {

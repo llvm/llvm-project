@@ -31,13 +31,19 @@ end
 
 program main
   integer, allocatable, device :: a(:)
+  integer, device, pointer :: p(:)
   return
 end
 
+! The descriptor of a device pointer lives in managed memory and is freed at
+! scope exit, under the same device-active guard as the other cleanup.
+
 ! CHECK-LABEL: func.func @_QQmain() attributes {fir.bindc_name = "MAIN"}
 ! CHECK: cuf.alloc !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "a", data_attr = #cuf.cuda<device>, uniq_name = "_QFEa"} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+! CHECK: %[[PTR:.*]]:2 = hlfir.declare %{{.*}} {data_attr = #cuf.cuda<device>, fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFEp"}
 ! CHECK: %[[ACTIVE:.*]] = fir.call @_FortranACUFDeviceIsActive() {{.*}} : () -> i1
 ! CHECK-NEXT: fir.if %[[ACTIVE]] {
+! CHECK-NEXT: cuf.free %[[PTR]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>{{.*}}
 ! CHECK: cuf.deallocate
 ! CHECK: cuf.free{{.*}}
 ! CHECK-NEXT: }

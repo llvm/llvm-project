@@ -261,11 +261,11 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
     if (getLhs() == sub.getRhs())
       return sub.getLhs();
 
-  // complex.add(a, complex.constant<0.0, 0.0>) -> a
+  // complex.add(a, complex.constant<-0.0, -0.0>) -> a
   if (auto constantOp = getRhs().getDefiningOp<ConstantOp>()) {
     auto arrayAttr = constantOp.getValue();
-    if (llvm::cast<FloatAttr>(arrayAttr[0]).getValue().isZero() &&
-        llvm::cast<FloatAttr>(arrayAttr[1]).getValue().isZero()) {
+    if (llvm::cast<FloatAttr>(arrayAttr[0]).getValue().isNegZero() &&
+        llvm::cast<FloatAttr>(arrayAttr[1]).getValue().isNegZero()) {
       return getLhs();
     }
   }
@@ -303,18 +303,6 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
   // complex.neg(complex.neg(a)) -> a
   if (auto negOp = getOperand().getDefiningOp<NegOp>())
     return negOp.getOperand();
-
-  return {};
-}
-
-//===----------------------------------------------------------------------===//
-// LogOp
-//===----------------------------------------------------------------------===//
-
-OpFoldResult LogOp::fold(FoldAdaptor adaptor) {
-  // complex.log(complex.exp(a)) -> a
-  if (auto expOp = getOperand().getDefiningOp<ExpOp>())
-    return expOp.getOperand();
 
   return {};
 }

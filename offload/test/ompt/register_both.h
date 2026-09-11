@@ -4,7 +4,9 @@
 #define register_ompt_callback_t(name, type)                                   \
   do {                                                                         \
     type f_##name = &on_##name;                                                \
-    if (ompt_set_callback(name, (ompt_callback_t)f_##name) == ompt_set_never)  \
+    ompt_set_result_t result =                                                 \
+        ompt_set_callback(name, (ompt_callback_t)f_##name);                    \
+    if (result == ompt_set_never || result == ompt_set_error)                  \
       printf("0: Could not register callback '" #name "'\n");                  \
   } while (0)
 

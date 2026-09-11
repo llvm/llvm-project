@@ -23,7 +23,7 @@ define hidden void @f() {
 ; CHECK-NOT: DILocation
 ; CHECK: [[LID]] = distinct !{[[LID]], [[VE:![0-9]+]], [[VF:![0-9]+]]}
 ; CHECK-NOT: DILocation
-; CHECK: [[VE]] = !{!"llvm.loop.vectorize.enable", i1 true}
+; CHECK: [[VE]] = !{!"llvm.loop.vectorize.enable"}
 ; CHECK: [[VF]] = !{!"llvm.loop.vectorize.followup_all", [[FU:![0-9]+]]}
 ; CHECK: [[FU]] = distinct !{[[FU]], [[VD:![0-9]+]], [[UC:![0-9]+]]}
 ; CHECK: [[VD]] = !{!"llvm.loop.isvectorized"}
@@ -40,7 +40,7 @@ define hidden void @f() {
 !8 = !{}
 !9 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !5, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 !10 = !DILocation(line: 6, column: 1, scope: !4)
-!11 = !{!"llvm.loop.vectorize.enable", i1 true}
+!11 = !{!"llvm.loop.vectorize.enable"}
 !12 = !{!"llvm.loop.vectorize.followup_all", !13}
 !13 = distinct !{!13, !3, !10, !14, !15}
 !14 = !{!"llvm.loop.isvectorized"}

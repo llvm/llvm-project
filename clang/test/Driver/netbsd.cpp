@@ -191,6 +191,14 @@
 // DRIVER-PASS-INCLUDES:      "-internal-isystem" "[[RESOURCE]]{{/|\\\\}}include"
 // DRIVER-PASS-INCLUDES:      "-internal-externc-isystem" "{{.*}}/usr/include"
 
+// Test that NetBSD prefers install tree libc++ headers over system ones.
+// RUN: %clang -### %s --target=x86_64-unknown-netbsd -r 2>&1 \
+// RUN:     -ccc-install-dir %S/Inputs/install_tree_with_libcxx/bin \
+// RUN:     --sysroot=%S/Inputs/basic_netbsd_tree \
+// RUN:   | FileCheck %s --check-prefix=DRIVER-INSTALL-INCLUDES
+// DRIVER-INSTALL-INCLUDES:      "-internal-isystem" "{{.*}}bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]c++[[SEP]]v1"
+// DRIVER-INSTALL-INCLUDES-NOT:  "-internal-isystem" "{{.*}}usr[[SEP]]include[[SEP]]c++[[SEP]]v1"
+
 // Test NetBSD with libstdc++ when the sysroot path ends with `/`.
 // RUN: %clangxx -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-netbsd \

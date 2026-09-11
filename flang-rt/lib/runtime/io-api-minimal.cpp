@@ -11,11 +11,11 @@
 
 #include "edit-output.h"
 #include "io-api-common.h"
-#include "unit.h"
 #include "flang-rt/runtime/format.h"
 #include "flang-rt/runtime/io-stmt.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/tools.h"
+#include "flang-rt/runtime/unit.h"
 #include "flang/Runtime/io-api.h"
 
 namespace Fortran::runtime::io {
