@@ -83,6 +83,38 @@ inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) {
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 //
+// ctype masks
+//
+
+#if !(defined(__BIONIC__) || _LIBCPP_HAS_MUSL_LIBC)
+struct __ctype_base {
+  using mask = unsigned short;
+  _LIBCPP_DIAGNOSTIC_PUSH
+  _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wmodules-ambiguous-internal-linkage")
+  static const mask space  = _ISspace;
+  static const mask print  = _ISprint;
+  static const mask cntrl  = _IScntrl;
+  static const mask upper  = _ISupper;
+  static const mask lower  = _ISlower;
+  static const mask alpha  = _ISalpha;
+  static const mask digit  = _ISdigit;
+  static const mask punct  = _ISpunct;
+  static const mask xdigit = _ISxdigit;
+  static const mask blank  = _ISblank;
+  _LIBCPP_DIAGNOSTIC_POP
+#  if defined(__mips__) || defined(_LIBCPP_BIG_ENDIAN)
+  static const mask __regex_word = static_cast<mask>(_ISbit(15));
+#  else
+  static const mask __regex_word = 0x80;
+#  endif
+};
+
+__locale_t __get_c_locale();
+
+inline const __ctype_base::mask* __classic_table() noexcept { return __get_c_locale()->__ctype_b; }
+#endif
+
+//
 // Strtonum functions
 //
 inline _LIBCPP_HIDE_FROM_ABI float __strtof(const char* __nptr, char** __endptr, __locale_t __loc) {
@@ -253,9 +285,7 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
 _LIBCPP_END_NAMESPACE_STD
 
 #if defined(__BIONIC__) || _LIBCPP_HAS_MUSL_LIBC
-#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
-#else
-#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
+#  include <__locale_dir/support/default/rune_table.h>
 #endif
 
 #include <__locale_dir/support/default/get_c_locale.h>

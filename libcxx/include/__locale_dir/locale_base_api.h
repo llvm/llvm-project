@@ -50,6 +50,29 @@
 // #define _LIBCPP_ALL_MASK       /* implementation-defined */
 // #define _LIBCPP_LC_ALL         /* implementation-defined */
 //
+//
+// ctype masks
+// -----------
+//
+// // required by the headers
+// struct __ctype_base { // may be an alias instead
+//   using mask = /* implementation-defined */
+//
+//   static const mask space         = /* implementation-defined */
+//   static const mask print         = /* implementation-defined */
+//   static const mask cntrl         = /* implementation-defined */
+//   static const mask upper         = /* implementation-defined */
+//   static const mask lower         = /* implementation-defined */
+//   static const mask alpha         = /* implementation-defined */
+//   static const mask digit         = /* implementation-defined */
+//   static const mask punct         = /* implementation-defined */
+//   static const mask xdigit        = /* implementation-defined */
+//   static const mask blank         = /* implementation-defined */
+//   static const mask __regex_word  = /* implementation-defined */
+// };
+//
+// const mask* __classic_table() noexcept;
+//
 // Strtonum functions
 // ------------------
 // namespace __locale {
@@ -104,8 +127,6 @@
 //  int     __asprintf(char**, __locale_t, const char*, ...);        // required by the headers
 //
 //  const char* __get_locale_encoding(__locale_t);
-//
-// #define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE /* 0 or 1 depending on whether a rune table has to be provided */
 //
 // }
 
@@ -181,6 +202,51 @@ inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { freelocale(__
 
 inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t& __loc) { return __libcpp_localeconv_l(__loc); }
 #    endif // _LIBCPP_BUILDING_LIBRARY
+
+//
+// ctype masks
+//
+
+struct __ctype_base {
+#    if defined(__NATIVE_ASCII_F)
+  using mask = unsigned int;
+
+  static const mask space  = _ISSPACE_A;
+  static const mask print  = _ISPRINT_A;
+  static const mask cntrl  = _ISCNTRL_A;
+  static const mask upper  = _ISUPPER_A;
+  static const mask lower  = _ISLOWER_A;
+  static const mask alpha  = _ISALPHA_A;
+  static const mask digit  = _ISDIGIT_A;
+  static const mask punct  = _ISPUNCT_A;
+  static const mask xdigit = _ISXDIGIT_A;
+  static const mask blank  = _ISBLANK_A;
+#    else
+  using mask = unsigned short;
+
+  static const mask space  = __ISSPACE;
+  static const mask print  = __ISPRINT;
+  static const mask cntrl  = __ISCNTRL;
+  static const mask upper  = __ISUPPER;
+  static const mask lower  = __ISLOWER;
+  static const mask alpha  = __ISALPHA;
+  static const mask digit  = __ISDIGIT;
+  static const mask punct  = __ISPUNCT;
+  static const mask xdigit = __ISXDIGIT;
+  static const mask blank  = __ISBLANK;
+#    endif
+  static const mask __regex_word = 0x8000;
+};
+
+#    ifdef _LIBCPP_BUILDING_LIBRARY
+inline const __ctype_base::mask* __classic_table() noexcept {
+#      if defined(__NATIVE_ASCII_F)
+  return const_cast<const ctype<char>::mask*>(__OBJ_DATA(__lc_ctype_a)->mask);
+#      else
+  return const_cast<const ctype<char>::mask*>(__ctypec);
+#      endif
+}
+#    endif
 
 //
 // Strtonum functions
