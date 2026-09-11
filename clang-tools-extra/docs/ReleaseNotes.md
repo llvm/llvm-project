@@ -129,6 +129,13 @@ infrastructure are described first, followed by tool-specific sections.
   Finds calls to `value_or` (and alternative spellings `valueOr`,
   `ValueOr`) on optional types where the return type is expensive to copy.
 
+- New {doc}`performance-inefficient-container-assignment
+  <clang-tidy/checks/performance/inefficient-container-assignment>` check.
+
+  Finds assignments of a freshly constructed temporary container to a container
+  of the same type, such as `v = std::vector<int>(n, 0);`, and suggests
+  `assign` or an equivalent in-place rewrite that reuses the existing storage.
+
 - New {doc}`portability-avoid-pragma-comment
   <clang-tidy/checks/portability/avoid-pragma-comment>` check.
 
