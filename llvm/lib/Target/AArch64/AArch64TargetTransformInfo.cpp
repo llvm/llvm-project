@@ -2032,9 +2032,7 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
                      m_Value(NarrowOp1))) &&
       match(Op2, m_Intrinsic<Intrinsic::aarch64_sve_convert_to_svbool>(
                      m_Value(NarrowOp2))) &&
-      NarrowOp1->getType() == NarrowOp2->getType() &&
-      NarrowOp1->getType()->isScalableTy() &&
-      NarrowOp1->getType()->isIntOrIntVectorTy(1)) {
+      NarrowOp1->getType() == NarrowOp2->getType()) {
     Value *SimpleNarrow = simplifyBinOp(Opc, NarrowOp1, NarrowOp2, DL);
     if (SimpleNarrow && !isa<UndefValue>(SimpleNarrow)) {
       if (match(SimpleNarrow, m_ZeroInt()))
@@ -2044,9 +2042,9 @@ simplifySVEIntrinsicBinOp(InstCombiner &IC, IntrinsicInst &II,
       else if (SimpleNarrow == NarrowOp2)
         SimpleII = Op2;
       else
-        SimpleII = IC.Builder.CreateIntrinsic(
-            Intrinsic::aarch64_sve_convert_to_svbool, {SimpleNarrow->getType()},
-            {SimpleNarrow});
+        SimpleII =
+            IC.Builder.CreateIntrinsic(Intrinsic::aarch64_sve_convert_to_svbool,
+                                       SimpleNarrow->getType(), SimpleNarrow);
     }
   }
 
