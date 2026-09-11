@@ -32769,7 +32769,8 @@ bool SLPVectorizerPass::tryToVectorize(
       if (auto *FPCI = dyn_cast<FPMathOperator>(Inst)) {
         FMF = FPCI->getFastMathFlags();
         // No need to check for associativity, if 2 reduced values.
-        FMF.setAllowReassoc(Ops.size() == 2);
+        if (Ops.size() == 2)
+          FMF.setAllowReassoc(true);
       }
       RedCost = TTI.getArithmeticReductionCost(Inst->getOpcode(), VecTy, FMF,
                                                CostKind);
@@ -33387,10 +33388,15 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   }
   if (Operands.size() <= 1)
     return Changed;
+  constexpr unsigned Limit = 32;
   Changed |= tryToVectorizeSequence<Value>(
       Operands, OperandSorter, AreCompatibleOperands,
       [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
-        return tryToVectorizeList(Candidates, R, MaxVFOnly);
+        // Limit to StandaloneSeeds if !MaxVFOnly to avoid quadratic scan for
+        // large set of candidates.
+        return tryToVectorizeList(Candidates, R, MaxVFOnly,
+                                  /*StandaloneSeeds=*/!MaxVFOnly &&
+                                      Candidates.size() >= Limit);
       },
       /*MaxVFOnly=*/true, R);
   return Changed;

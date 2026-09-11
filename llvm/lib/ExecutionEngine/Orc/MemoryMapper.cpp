@@ -10,6 +10,7 @@
 
 #include "llvm/Config/llvm-config.h" // for LLVM_ON_UNIX
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
 #include "llvm/Support/WindowsError.h"
 
@@ -223,8 +224,7 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
   int SharedMemoryId = -1;
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceReserveSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::SharedMemoryMapperReserve::SPSSig>(
       SAs.Reserve,
       [this, NumBytes, OnReserved = std::move(OnReserved), SharedMemoryId](
           Error SerializationErr,
@@ -355,8 +355,7 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     FR.Segments.push_back(SegReq);
   }
 
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceInitializeSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::SharedMemoryMapperInitialize::SPSSig>(
       SAs.Initialize,
       [OnInitialized = std::move(OnInitialized)](
           Error SerializationErr, Expected<ExecutorAddr> Result) mutable {
@@ -373,8 +372,7 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 void SharedMemoryMapper::deinitialize(
     ArrayRef<ExecutorAddr> Allocations,
     MemoryMapper::OnDeinitializedFunction OnDeinitialized) {
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceDeinitializeSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::SharedMemoryMapperDeinitialize::SPSSig>(
       SAs.Deinitialize,
       [OnDeinitialized = std::move(OnDeinitialized)](Error SerializationErr,
                                                      Error Result) mutable {
@@ -421,8 +419,7 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
     }
   }
 
-  EPC.callSPSWrapperAsync<
-      rt::SPSExecutorSharedMemoryMapperServiceReleaseSignature>(
+  EPC.callSPSWrapperAsync<rt::sps_ci::SharedMemoryMapperRelease::SPSSig>(
       SAs.Release,
       [OnReleased = std::move(OnReleased),
        Err = std::move(Err)](Error SerializationErr, Error Result) mutable {
