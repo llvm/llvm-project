@@ -113,6 +113,36 @@ class D {
 // expected-error@+1{{'clang::sycl_external' cannot be applied to an explicitly deleted function}}
 [[clang::sycl_external]] void del() = delete;
 
+// SYCL device code does not support variadic functions.
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void var(int, ...) {}
+
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void vardecl(int, ...);
+
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void varredecl(int, ...);
+// expected-warning@+1{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+[[clang::sycl_external]] void varredecl(int, ...) {}
+
+// expected-warning@+2{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+class E {
+  [[clang::sycl_external]] void mvar(int, ...) {}
+};
+
+template<typename... Ts>
+[[clang::sycl_external]] void pack(Ts...) {}
+template void pack(int);
+
+// expected-warning@+2{{'clang::sycl_external' attribute ignored; a variadic function cannot be called from device code}}
+template<typename T>
+[[clang::sycl_external]] void tvar(T, ...) {}
+template void tvar(int, ...);
+using TVarFP = void (*)(char, ...);
+[[clang::sycl_external]] TVarFP tvar_implicit_instantiation() {
+  return &tvar<char>;
+}
+
 struct NonCopyable {
   ~NonCopyable() = delete;
   [[clang::sycl_external]] NonCopyable(const NonCopyable&) = default;
