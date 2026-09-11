@@ -47,8 +47,18 @@ struct TestParallelLoopUnrollingPass
   }
 
   void runOnOperation() override {
-    if (unrollFactors.empty() || llvm::is_contained(unrollFactors, 0))
+    if (unrollFactors.empty()) {
+      emitError(UnknownLoc::get(&getContext()),
+                "missing `unroll-factors` pass option");
+      signalPassFailure();
       return;
+    }
+    if (llvm::is_contained(unrollFactors, 0)) {
+      emitError(UnknownLoc::get(&getContext()),
+                "unroll factors must be non-zero");
+      signalPassFailure();
+      return;
+    }
 
     SmallVector<scf::ParallelOp, 4> loops;
     getOperation()->walk([&](scf::ParallelOp parLoop) {
