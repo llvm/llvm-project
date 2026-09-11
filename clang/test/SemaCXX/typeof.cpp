@@ -8,7 +8,7 @@ namespace GH97646 {
   template<bool B>
   void f() {
     __typeof__(B) x = false;
-    !x;
+    !x; // expected-warning {{expression result unused}}
   }
 }
 
