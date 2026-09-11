@@ -359,8 +359,8 @@ define void @foo(ptr noalias %ptr0, ptr noalias %ptr1) {
     Ctx.save();
     sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
                                sandboxir::SchedDirection::TopDown);
-    EXPECT_TRUE(Sched.trySchedule({L1}));
     EXPECT_TRUE(Sched.trySchedule({L0}));
+    EXPECT_TRUE(Sched.trySchedule({L1}));
     EXPECT_TRUE(Sched.trySchedule({S0, S1}));
     EXPECT_TRUE(Sched.trySchedule({Ret}));
     Ctx.revert();
@@ -892,8 +892,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
   DAG.extend({L0});
   auto *L0N = DAG.getNode(L0);
-  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
-  EXPECT_EQ(L0N->getNumUnscheduledPreds(), 0u);
+  EXPECT_EQ(L0N->getNumUnscheduledDeps(), 0u);
   // We should have DAG nodes for all instructions at this point
 
   // Now create a new instruction below S0.
@@ -904,12 +903,11 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *NewS1N = DAG.getNode(NewS1);
   EXPECT_TRUE(NewS1N->scheduled());
 #ifndef NDEBUG
-  // NewS1N is scheduled so unscheduled preds/succs are irrelevant.
-  EXPECT_FALSE(NewS1N->validUnscheduledPreds());
-  EXPECT_FALSE(NewS1N->validUnscheduledSuccs());
+  // NewS1N is scheduled so unscheduled deps are irrelevant.
+  EXPECT_FALSE(NewS1N->validUnscheduledDeps());
 #endif
-  // Check that L0's UnscheduledSuccs are still == 0 since NewS1 is "scheduled".
-  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 0u);
+  // Check that L0's UnscheduledDeps are still == 0 since NewS1 is "scheduled".
+  EXPECT_EQ(L0N->getNumUnscheduledDeps(), 0u);
 
   // Now create a new instruction above S0.
   sandboxir::StoreInst *NewS2 =
@@ -919,8 +917,7 @@ define void @foo(ptr noalias %ptr, ptr noalias %ptr1, ptr noalias %ptr2) {
   auto *NewS2N = DAG.getNode(NewS2);
   EXPECT_FALSE(NewS2N->scheduled());
   // Check that L0's UnscheduledSuccs got updated because of NewS2.
-  EXPECT_EQ(L0N->getNumUnscheduledSuccs(), 1u);
-  EXPECT_EQ(NewS2N->getNumUnscheduledPreds(), 0u);
+  EXPECT_EQ(L0N->getNumUnscheduledDeps(), 1u);
 
   sandboxir::ReadyListContainer ReadyList;
   // Check empty().
@@ -1057,6 +1054,44 @@ bb1:
   EXPECT_EQ(ReadyList.pop(), RetN);
 }
 
+TEST_F(SchedulerTest, ReadyListStateAfterTryScheduleFailure) {
+  parseIR(C, R"IR(
+define void @foo(i8 %v0, i8 %v1) {
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %add0, 1
+  %add2 = add i8 %add0, 2
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *Add0 = &*It++;
+  auto *Add1 = &*It++;
+  auto *Add2 = &*It++;
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
+  auto &DAG = sandboxir::SchedulerInternalsAttorney::getDAG(Sched);
+  EXPECT_TRUE(Sched.trySchedule(Add2));
+  // After a failing trySchedule({Add0, Add1}) we should have Add1 in the ready
+  // list.
+  EXPECT_FALSE(Sched.trySchedule({Add0, Add1}));
+  auto &ReadyList = sandboxir::SchedulerInternalsAttorney::getReadyList(Sched);
+  EXPECT_TRUE(ReadyList.contains(DAG.getNode(Add1)));
+  EXPECT_FALSE(ReadyList.contains(DAG.getNode(Add0)));
+
+  // After the failed trySchedule() the DAG should contain all nodes from Add0
+  // to Add2.
+  EXPECT_NE(DAG.getNode(Add1), nullptr);
+  EXPECT_NE(DAG.getNode(Add0), nullptr);
+  // Scheduling Add1 should succeed and should make Add0 ready.
+  EXPECT_TRUE(Sched.trySchedule({Add1}));
+  EXPECT_TRUE(ReadyList.contains(DAG.getNode(Add0)));
+}
+
 TEST_F(SchedulerTest, SchedulingPoint) {
   parseIR(C, R"IR(
 define void @foo(ptr %ptr, i8 %v0) {
@@ -1142,5 +1177,45 @@ define void @foo(ptr %ptr, i8 %v0) {
 
   // Check assertion before begin.
   EXPECT_DEATH(BeforeBegin.getIterator(), ".*Expected.*");
+
+  // Check comesBefore().
+  auto SPS0 = sandboxir::SchedulingPoint::createAt(S0->getIterator());
+  auto SPRet = sandboxir::SchedulingPoint::createAt(Ret->getIterator());
+  EXPECT_FALSE(SPS0.comesBefore(*S0));
+  EXPECT_TRUE(SPS0.comesBefore(*Ret));
+  EXPECT_FALSE(SPRet.comesBefore(*S0));
+  EXPECT_FALSE(SPRet.comesBefore(*SPRet));
+
+  EXPECT_TRUE(BeforeBegin.comesBefore(*BB->begin()));
+  EXPECT_TRUE(!AtEnd.comesBefore(BB->back()));
+#endif
+}
+
+// When we initialize the scheduler to operate towards one direction we should
+// detect an attempt to schedule towards the reverse direction and cause an a
+// assertion failure with a descriptive comment.
+TEST_F(SchedulerTest, DetectSchedulingInWrongDirection) {
+  parseIR(C, R"IR(
+define void @foo(ptr %ptr, i8 %v0, i8 %v1) {
+  store i8 %v0, ptr %ptr
+  store i8 %v1, ptr %ptr
+  ret void
+}
+)IR");
+  llvm::Function *LLVMF = &*M->getFunction("foo");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(LLVMF);
+  auto *BB = &*F->begin();
+  auto It = BB->begin();
+  auto *S0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *S1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::ReturnInst>(&*It++);
+
+  sandboxir::Scheduler Sched(getAA(*LLVMF), Ctx,
+                             sandboxir::SchedDirection::BottomUp);
+  Sched.trySchedule(S1);
+  Sched.trySchedule(S0);
+#ifndef NDEBUG
+  EXPECT_DEATH(Sched.trySchedule(Ret), ".*Wrong scheduling direction.*");
 #endif
 }

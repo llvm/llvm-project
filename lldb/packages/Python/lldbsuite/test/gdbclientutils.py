@@ -95,6 +95,33 @@ def parse_memory_read_packet(packet):
     return addr, length
 
 
+def parse_memory_read_ranges(packet: str) -> List[Tuple[int, int]]:
+    """
+    Parse every (addr, length) a memory-read packet asks the stub for, and return
+    an empty list if the packet isn't a memory read.  Unlike
+    parse_memory_read_packet this also covers "MultiMemRead", which carries
+    several ranges in one packet.
+    """
+    single = parse_memory_read_packet(packet)
+    if single is not None:
+        return [single]
+
+    prefix = "MultiMemRead:ranges:"
+    if not packet or not packet.startswith(prefix):
+        return []
+    body = packet[len(prefix) :]
+    end = body.find(";")
+    if end < 0:
+        return []
+    try:
+        numbers = [int(n, 16) for n in body[:end].split(",")]
+    except ValueError:
+        return []
+    if len(numbers) % 2:
+        return []
+    return list(zip(numbers[0::2], numbers[1::2]))
+
+
 class PacketDirection(Enum):
     RECV = "recv"
     SEND = "send"
@@ -265,6 +292,8 @@ class MockGDBServerResponder:
             return self.vAttach(int(pid, 16))
         if packet[0] == "Z":
             return self.setBreakpoint(packet)
+        if packet[0] == "z":
+            return self.clearBreakpoint(packet)
         if packet.startswith("qThreadStopInfo"):
             threadnum = int(packet[15:], 16)
             return self.threadStopInfo(threadnum)
@@ -272,6 +301,8 @@ class MockGDBServerResponder:
             return self.QThreadSuffixSupported()
         if packet == "QListThreadsInStopReply":
             return self.QListThreadsInStopReply()
+        if packet == "jThreadsInfo":
+            return self.jThreadsInfo()
         if packet.startswith("qMemoryRegionInfo:"):
             return self.qMemoryRegionInfo(int(packet.split(":")[1], 16))
         if packet == "qQueryGDBServer":
@@ -328,6 +359,9 @@ class MockGDBServerResponder:
         return "2f"
 
     def qOffsets(self) -> str:
+        return ""
+
+    def jThreadsInfo(self) -> str:
         return ""
 
     def qProcessInfo(self) -> str:
@@ -415,6 +449,9 @@ class MockGDBServerResponder:
         return "OK"
 
     def setBreakpoint(self, packet) -> str:
+        raise self.UnexpectedPacketException()
+
+    def clearBreakpoint(self, packet) -> str:
         raise self.UnexpectedPacketException()
 
     def threadStopInfo(self, threadnum) -> str:

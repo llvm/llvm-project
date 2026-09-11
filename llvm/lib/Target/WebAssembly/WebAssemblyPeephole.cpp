@@ -1,4 +1,4 @@
-//===-- WebAssemblyPeephole.cpp - WebAssembly Peephole Optimiztions -------===//
+//===-- WebAssemblyPeephole.cpp - WebAssembly Peephole Optimizations ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -152,8 +152,7 @@ static bool peephole(MachineFunction &MF, TargetLibraryInfo &LibInfo,
         if (Op1.isSymbol()) {
           StringRef Name(Op1.getSymbolName());
           if (Name == MemcpyName || Name == MemmoveName || Name == MemsetName) {
-            LibFunc Func;
-            if (LibInfo.getLibFunc(Name, Func)) {
+            if (LibInfo.getLibFunc(Name) != NotLibFunc) {
               const auto &Op2 = MI.getOperand(2);
               if (!Op2.isReg())
                 report_fatal_error("Peephole: call to builtin function with "
@@ -200,11 +199,11 @@ WebAssemblyPeepholePass::run(MachineFunction &MF,
           .getResult<TargetLibraryAnalysis>(MF.getFunction());
   const WebAssemblySubtarget &Subtarget =
       MF.getSubtarget<WebAssemblySubtarget>();
-  const LibcallLoweringInfo &LibcallLowering =
-      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-          .getCachedResult<LibcallLoweringModuleAnalysis>(
-              *MF.getFunction().getParent())
-          ->getLibcallLowering(Subtarget);
+  const LibcallLoweringInfo &LibcallLowering = getLibcallLowering(
+      *MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+           .getCachedResult<LibcallLoweringModuleAnalysis>(
+               *MF.getFunction().getParent()),
+      Subtarget);
   return peephole(MF, LibInfo, LibcallLowering)
              ? getMachineFunctionPassPreservedAnalyses()
                    .preserveSet<CFGAnalyses>()

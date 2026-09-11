@@ -302,7 +302,7 @@ define double @fadd_undef_op0_constant_nan(double %x) {
 ; CHECK-LABEL: @fadd_undef_op0_constant_nan(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fadd double undef, 0x7FF8000000000000
+  %r = fadd double undef, +qnan
   ret double %r
 }
 
@@ -384,7 +384,7 @@ define double @fadd_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fadd_undef_op0_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fadd double undef, 0x7FF0000000000000
+  %r = fadd double undef, +inf
   ret double %r
 }
 
@@ -392,7 +392,7 @@ define double @fadd_undef_op1_fast_constant_inf(double %x) {
 ; CHECK-LABEL: @fadd_undef_op1_fast_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fadd fast double 0xFFF0000000000000, undef
+  %r = fadd fast double -inf, undef
   ret double %r
 }
 
@@ -400,7 +400,7 @@ define double @fsub_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fsub_undef_op0_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fsub double undef, 0xFFF0000000000000
+  %r = fsub double undef, -inf
   ret double %r
 }
 
@@ -408,7 +408,7 @@ define double @fsub_undef_op1_ninf_constant_inf(double %x) {
 ; CHECK-LABEL: @fsub_undef_op1_ninf_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fsub ninf double 0x7FF0000000000000, undef
+  %r = fsub ninf double +inf, undef
   ret double %r
 }
 
@@ -416,7 +416,7 @@ define double @fmul_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fmul_undef_op0_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fmul double undef, 0x7FF0000000000000
+  %r = fmul double undef, +inf
   ret double %r
 }
 
@@ -424,7 +424,7 @@ define double @fmul_undef_op1_fast_constant_inf(double %x) {
 ; CHECK-LABEL: @fmul_undef_op1_fast_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fmul fast double 0xFFF0000000000000, undef
+  %r = fmul fast double -inf, undef
   ret double %r
 }
 
@@ -432,7 +432,7 @@ define double @fdiv_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @fdiv_undef_op0_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fdiv double undef, 0xFFF0000000000000
+  %r = fdiv double undef, -inf
   ret double %r
 }
 
@@ -440,7 +440,7 @@ define double @fdiv_undef_op1_ninf_constant_inf(double %x) {
 ; CHECK-LABEL: @fdiv_undef_op1_ninf_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fdiv ninf double 0x7FF0000000000000, undef
+  %r = fdiv ninf double +inf, undef
   ret double %r
 }
 
@@ -448,7 +448,7 @@ define double @frem_undef_op0_constant_inf(double %x) {
 ; CHECK-LABEL: @frem_undef_op0_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = frem double undef, 0x7FF0000000000000
+  %r = frem double undef, +inf
   ret double %r
 }
 
@@ -456,7 +456,7 @@ define double @frem_undef_op1_fast_constant_inf(double %x) {
 ; CHECK-LABEL: @frem_undef_op1_fast_constant_inf(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = frem fast double 0xFFF0000000000000, undef
+  %r = frem fast double -inf, undef
   ret double %r
 }
 
@@ -544,7 +544,7 @@ define <2 x double> @maximumnum_nan_op0_vec_partial_poison_op1_poison(<2 x doubl
 ; CHECK-LABEL: @maximumnum_nan_op0_vec_partial_poison_op1_poison(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double poison>
 ;
-  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> poison)
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double +qnan, double poison>, <2 x double> poison)
   ret <2 x double> %r
 }
 
@@ -552,7 +552,7 @@ define <2 x double> @maximumnum_nan_op1_vec_partial_poison_op0_poison(<2 x doubl
 ; CHECK-LABEL: @maximumnum_nan_op1_vec_partial_poison_op0_poison(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double poison>
 ;
-  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> poison, <2 x double> <double 0x7ff8000000000000, double poison>)
+  %r = call <2 x double> @llvm.maximumnum.v2f64(<2 x double> poison, <2 x double> <double +qnan, double poison>)
   ret <2 x double> %r
 }
 
@@ -560,7 +560,7 @@ define <2 x double> @minimumnum_nan_op0_vec_partial_poison_op1_poison(<2 x doubl
 ; CHECK-LABEL: @minimumnum_nan_op0_vec_partial_poison_op1_poison(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double poison>
 ;
-  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double 0x7ff8000000000000, double poison>, <2 x double> poison)
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double +qnan, double poison>, <2 x double> poison)
   ret <2 x double> %r
 }
 
@@ -568,7 +568,7 @@ define <2 x double> @minimumnum_nan_op1_vec_partial_poison_op0_poison(<2 x doubl
 ; CHECK-LABEL: @minimumnum_nan_op1_vec_partial_poison_op0_poison(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double poison>
 ;
-  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> <double 0x7ff8000000000000, double poison>)
+  %r = call <2 x double> @llvm.minimumnum.v2f64(<2 x double> poison, <2 x double> <double +qnan, double poison>)
   ret <2 x double> %r
 }
 
@@ -576,7 +576,7 @@ define <2 x double> @maximum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x
 ; CHECK-LABEL: @maximum_nan_op0_vec_partial_undef_op1_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> <double +qnan, double undef>, <2 x double> undef)
   ret <2 x double> %r
 }
 
@@ -584,7 +584,7 @@ define <2 x double> @maximum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x
 ; CHECK-LABEL: @maximum_nan_op1_vec_partial_undef_op0_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> undef, <2 x double> <double 0x7ff8000000000000, double undef>)
+  %r = call <2 x double> @llvm.maximum.v2f64(<2 x double> undef, <2 x double> <double +qnan, double undef>)
   ret <2 x double> %r
 }
 
@@ -592,7 +592,7 @@ define <2 x double> @minimum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x
 ; CHECK-LABEL: @minimum_nan_op0_vec_partial_undef_op1_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> <double +qnan, double undef>, <2 x double> undef)
   ret <2 x double> %r
 }
 
@@ -600,7 +600,7 @@ define <2 x double> @minimum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x
 ; CHECK-LABEL: @minimum_nan_op1_vec_partial_undef_op0_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> undef, <2 x double> <double 0x7ff8000000000000, double undef>)
+  %r = call <2 x double> @llvm.minimum.v2f64(<2 x double> undef, <2 x double> <double +qnan, double undef>)
   ret <2 x double> %r
 }
 
@@ -608,7 +608,7 @@ define <2 x double> @maxnum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x)
 ; CHECK-LABEL: @maxnum_nan_op0_vec_partial_undef_op1_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> <double +qnan, double undef>, <2 x double> undef)
   ret <2 x double> %r
 }
 
@@ -616,7 +616,7 @@ define <2 x double> @maxnum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x)
 ; CHECK-LABEL: @maxnum_nan_op1_vec_partial_undef_op0_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> <double 0x7ff8000000000000, double undef>)
+  %r = call <2 x double> @llvm.maxnum.v2f64(<2 x double> undef, <2 x double> <double +qnan, double undef>)
   ret <2 x double> %r
 }
 
@@ -624,7 +624,7 @@ define <2 x double> @minnum_nan_op0_vec_partial_undef_op1_undef(<2 x double> %x)
 ; CHECK-LABEL: @minnum_nan_op0_vec_partial_undef_op1_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double 0x7ff8000000000000, double undef>, <2 x double> undef)
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> <double +qnan, double undef>, <2 x double> undef)
   ret <2 x double> %r
 }
 
@@ -632,6 +632,6 @@ define <2 x double> @minnum_nan_op1_vec_partial_undef_op0_undef(<2 x double> %x)
 ; CHECK-LABEL: @minnum_nan_op1_vec_partial_undef_op0_undef(
 ; CHECK-NEXT:    ret <2 x double> <double +qnan, double undef>
 ;
-  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> <double 0x7ff8000000000000, double undef>)
+  %r = call <2 x double> @llvm.minnum.v2f64(<2 x double> undef, <2 x double> <double +qnan, double undef>)
   ret <2 x double> %r
 }

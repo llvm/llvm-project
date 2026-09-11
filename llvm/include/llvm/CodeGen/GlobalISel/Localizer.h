@@ -21,17 +21,14 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 #define LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 
-#include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 // Forward declarations.
 class AnalysisUsage;
-class MachineBasicBlock;
-class MachineInstr;
-class MachineOperand;
-class MachineRegisterInfo;
-class TargetTransformInfo;
 
 /// This pass implements the localization mechanism described at the
 /// top of this file. One specificity of the implementation is that
@@ -40,47 +37,11 @@ class TargetTransformInfo;
 /// Moreover, it only materializes constants in blocks where they
 /// are used. PHI uses are considered happening at the end of the
 /// related predecessor.
-class LLVM_ABI Localizer : public MachineFunctionPass {
+class LLVM_ABI LocalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-private:
-  /// An input function to decide if the pass should run or not
-  /// on the given MachineFunction.
-  std::function<bool(const MachineFunction &)> DoNotRunPass;
-
-  /// MRI contains all the register class/bank information that this
-  /// pass uses and updates.
-  MachineRegisterInfo *MRI = nullptr;
-  /// TTI used for getting remat costs for instructions.
-  TargetTransformInfo *TTI = nullptr;
-
-  /// Check if \p MOUse is used in the same basic block as \p Def.
-  /// If the use is in the same block, we say it is local.
-  /// When the use is not local, \p InsertMBB will contain the basic
-  /// block when to insert \p Def to have a local use.
-  static bool isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
-                         MachineBasicBlock *&InsertMBB);
-
-  /// Initialize the field members using \p MF.
-  void init(MachineFunction &MF);
-
-  typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
-
-  /// If \p Op is a reg operand of a PHI, return the number of total
-  /// operands in the PHI that are the same as \p Op, including itself.
-  unsigned getNumPhiUses(MachineOperand &Op) const;
-
-  /// Do inter-block localization from the entry block.
-  bool localizeInterBlock(MachineFunction &MF,
-                          LocalizedSetVecT &LocalizedInstrs);
-
-  /// Do intra-block localization of already localized instructions.
-  bool localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs);
-
-public:
-  Localizer();
-  Localizer(std::function<bool(const MachineFunction &)>);
+  LocalizerLegacy();
 
   StringRef getPassName() const override { return "Localizer"; }
 
@@ -91,6 +52,16 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+};
+
+class LocalizerPass : public RequiredPassInfoMixin<LocalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
 };
 
 } // End namespace llvm.

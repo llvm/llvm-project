@@ -4,7 +4,7 @@
 // CHECK-DAG: #[[TRANSPOSED:.+]] = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 //
 // CHECK:  func.func @unary_transpose(%[[A:.+]]: tensor<16x8x32xf32>, %[[B:.+]]: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <exp>
 // CHECK-SAME:       indexing_maps = [#[[TRANSPOSED]], #[[IDENTITY]]]
 // CHECK-SAME:       ins(%[[A]] : tensor<16x8x32xf32>) outs(%[[B]] : tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
 // CHECK-NEXT:    return %[[RES]] : tensor<8x16x32xf32>
@@ -12,7 +12,7 @@
 func.func @unary_transpose(%A: tensor<16x8x32xf32>, %B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
   %empty = tensor.empty() : tensor<8x16x32xf32>
   %transposed_A = linalg.transpose ins(%A : tensor<16x8x32xf32>) outs(%empty : tensor<8x16x32xf32>) permutation = [1, 0, 2]
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  %result = linalg.elementwise <exp>
                           ins(%transposed_A : tensor<8x16x32xf32>) outs(%B : tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %result : tensor<8x16x32xf32>
 }
@@ -23,7 +23,7 @@ func.func @unary_transpose(%A: tensor<16x8x32xf32>, %B: tensor<8x16x32xf32>) -> 
 // CHECK-DAG: #[[TRANSPOSED:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //
 // CHECK:  func.func @binary_transposed(%[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[C:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <add>
 // CHECK-SAME:              indexing_maps = [#[[IDENTITY]], #[[TRANSPOSED]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?xf32>) outs(%[[C]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<?x?xf32>
@@ -36,7 +36,7 @@ func.func @binary_transposed(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tenso
 
   %empty = tensor.empty(%dim1, %dim0) : tensor<?x?xf32>
   %transposed_B = linalg.transpose ins(%B : tensor<?x?xf32>) outs(%empty : tensor<?x?xf32>) permutation = [1, 0]
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %result = linalg.elementwise <add>
                           ins(%A, %transposed_B : tensor<?x?xf32>, tensor<?x?xf32>)
                           outs(%C : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %result : tensor<?x?xf32>
@@ -48,7 +48,7 @@ func.func @binary_transposed(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tenso
 // CHECK-DAG: #[[BROADCASTED:.+]] = affine_map<(d0, d1, d2) -> (d0, d2)>
 //
 // CHECK:  func.func @unary_broadcasted(%[[A:.+]]: tensor<8x32xf32>, %[[B:.+]]: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <exp>
 // CHECK-SAME:       indexing_maps = [#[[BROADCASTED]], #[[IDENTITY]]]
 // CHECK-SAME:       ins(%[[A]] : tensor<8x32xf32>) outs(%[[B]] : tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
 // CHECK-NEXT:    return %[[RES]] : tensor<8x16x32xf32>
@@ -56,7 +56,7 @@ func.func @binary_transposed(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tenso
 func.func @unary_broadcasted(%A: tensor<8x32xf32>, %B: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
   %empty = tensor.empty() : tensor<8x16x32xf32>
   %broadcasted_A = linalg.broadcast ins(%A : tensor<8x32xf32>) outs(%empty : tensor<8x16x32xf32>) dimensions = [1]
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  %result = linalg.elementwise <exp>
                           ins(%broadcasted_A : tensor<8x16x32xf32>) outs(%B : tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %result : tensor<8x16x32xf32>
 }
@@ -67,7 +67,7 @@ func.func @unary_broadcasted(%A: tensor<8x32xf32>, %B: tensor<8x16x32xf32>) -> t
 // CHECK-DAG: #[[BROADCASTED:.+]] = affine_map<(d0, d1) -> (d0)>
 //
 // CHECK:  func.func @binary_broadcasted(%[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?xf32>, %[[C:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <add>
 // CHECK-SAME:              indexing_maps = [#[[IDENTITY]], #[[BROADCASTED]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?xf32>) outs(%[[C]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<?x?xf32>
@@ -80,7 +80,7 @@ func.func @binary_broadcasted(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %C: tensor
 
   %empty = tensor.empty(%dim1, %dim0) : tensor<?x?xf32>
   %broadcasted_B = linalg.broadcast ins(%B : tensor<?xf32>) outs(%empty : tensor<?x?xf32>) dimensions = [1]
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %result = linalg.elementwise <add>
                           ins(%A, %broadcasted_B : tensor<?x?xf32>, tensor<?x?xf32>)
                           outs(%C : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %result : tensor<?x?xf32>
@@ -92,7 +92,7 @@ func.func @binary_broadcasted(%A: tensor<?x?xf32>, %B: tensor<?xf32>, %C: tensor
 // CHECK-DAG: #[[COMPOSED_MAP:.+]] = affine_map<(d0, d1) -> (d0)>
 //
 // CHECK:  func.func @fold_broadcast_after_transpose_fold(%[[A:.+]]: tensor<16xf32>, %[[B:.+]]: tensor<16x32xf32>) -> tensor<16x32xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <exp>
 // CHECK-SAME:              indexing_maps = [#[[COMPOSED_MAP]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]] : tensor<16xf32>) outs(%[[B]] : tensor<16x32xf32>) -> tensor<16x32xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<16x32xf32>
@@ -105,7 +105,7 @@ func.func @fold_broadcast_after_transpose_fold(%A: tensor<16xf32>, %B: tensor<16
 
   %broadcasted_A = linalg.broadcast ins(%A : tensor<16xf32>) outs(%empty_b : tensor<32x16xf32>) dimensions = [0]
 
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  %result = linalg.elementwise <exp>
                           indexing_maps = [#transpose, #identity]
                           ins(%broadcasted_A : tensor<32x16xf32>) outs(%B : tensor<16x32xf32>) -> tensor<16x32xf32>
   return %result : tensor<16x32xf32>
@@ -117,7 +117,7 @@ func.func @fold_broadcast_after_transpose_fold(%A: tensor<16xf32>, %B: tensor<16
 // CHECK-DAG: #[[COMPOSED_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
 //
 // CHECK:  func.func @fold_transpose_after_broadcast_fold(%[[A:.+]]: tensor<32x16xf32>, %[[B:.+]]: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <exp>
 // CHECK-SAME:              indexing_maps = [#[[COMPOSED_MAP]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]] : tensor<32x16xf32>) outs(%[[B]] : tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<8x16x32xf32>
@@ -129,7 +129,7 @@ func.func @fold_transpose_after_broadcast_fold(%A: tensor<32x16xf32>, %B: tensor
   %empty_t = tensor.empty() : tensor<16x32xf32>
   %transposed_A = linalg.transpose ins(%A : tensor<32x16xf32>) outs(%empty_t : tensor<16x32xf32>) permutation = [1, 0]
 
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<exp>
+  %result = linalg.elementwise <exp>
                           indexing_maps = [#broadcast, #identity]
                           ins(%transposed_A : tensor<16x32xf32>) outs(%B : tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %result : tensor<8x16x32xf32>
@@ -141,7 +141,7 @@ func.func @fold_transpose_after_broadcast_fold(%A: tensor<32x16xf32>, %B: tensor
 // CHECK-DAG: #[[COMPOSED_MAP:.+]] = affine_map<(d0, d1) -> (d0)>
 //
 // CHECK:  func.func @fold_broadcast_after_transpose_fold_binary(%[[A:.+]]: tensor<?xf32>, %[[B:.+]]: tensor<?x?xf32>, %[[C:.+]]: tensor<?x?xf32>) -> tensor<?x?xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <add>
 // CHECK-SAME:              indexing_maps = [#[[COMPOSED_MAP]], #[[IDENTITY]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]], %[[B]] : tensor<?xf32>, tensor<?x?xf32>) outs(%[[C]] : tensor<?x?xf32>) -> tensor<?x?xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<?x?xf32>
@@ -158,7 +158,7 @@ func.func @fold_broadcast_after_transpose_fold_binary(%A: tensor<?xf32>, %B: ten
   %empty_b = tensor.empty(%dim1, %dim0) : tensor<?x?xf32>
   %broadcasted_A = linalg.broadcast ins(%A : tensor<?xf32>) outs(%empty_b : tensor<?x?xf32>) dimensions = [0]
 
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %result = linalg.elementwise <add>
                           indexing_maps = [#transpose, #identity, #identity]
                           ins(%broadcasted_A, %B : tensor<?x?xf32>, tensor<?x?xf32>) outs(%C : tensor<?x?xf32>) -> tensor<?x?xf32>
 
@@ -171,7 +171,7 @@ func.func @fold_broadcast_after_transpose_fold_binary(%A: tensor<?xf32>, %B: ten
 // CHECK-DAG: #[[COMPOSED_MAP:.+]] = affine_map<(d0, d1, d2) -> (d2, d1)>
 //
 // CHECK:  func.func @fold_transpose_after_broadcast_fold_binary(%[[A:.+]]: tensor<?x?xf32>, %[[B:.+]]: tensor<?x?x?xf32>, %[[C:.+]]: tensor<?x?x?xf32>) -> tensor<?x?x?xf32> {
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <add>
 // CHECK-SAME:              indexing_maps = [#[[COMPOSED_MAP]], #[[IDENTITY]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]], %[[B]] : tensor<?x?xf32>, tensor<?x?x?xf32>) outs(%[[C]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<?x?x?xf32>
@@ -190,7 +190,7 @@ func.func @fold_transpose_after_broadcast_fold_binary(%A: tensor<?x?xf32>, %B: t
   %empty_t = tensor.empty(%dim1, %dim2) : tensor<?x?xf32>
   %transposed_A = linalg.transpose ins(%A : tensor<?x?xf32>) outs(%empty_t : tensor<?x?xf32>) permutation = [1, 0]
 
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %result = linalg.elementwise <add>
                           indexing_maps = [#broadcast, #identity, #identity]
                           ins(%transposed_A, %B : tensor<?x?xf32>, tensor<?x?x?xf32>) outs(%C : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
   return %result : tensor<?x?x?xf32>
@@ -204,7 +204,7 @@ func.func @fold_transpose_after_broadcast_fold_binary(%A: tensor<?x?xf32>, %B: t
 // CHECK:  func.func @fold_failed_diagonal_map(%[[A:.+]]: tensor<16xf32>, %[[B:.+]]: tensor<16xf32>, %[[C:.+]]: tensor<16xf32>) -> tensor<16xf32> {
 // CHECK-NEXT:  %[[EMPTY:.+]] = tensor.empty() : tensor<16x16xf32>
 // CHECK-NEXT:  %[[BROADCASTED_B:.+]] = linalg.broadcast ins(%[[B]] : tensor<16xf32>) outs(%[[EMPTY]] : tensor<16x16xf32>) dimensions = [0]
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <add>
 // CHECK-SAME:              indexing_maps = [#[[IDENTITY]], #[[DIAGONAL]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]], %[[BROADCASTED_B]] : tensor<16xf32>, tensor<16x16xf32>) outs(%[[C]] : tensor<16xf32>) -> tensor<16xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<16xf32>
@@ -215,7 +215,7 @@ func.func @fold_transpose_after_broadcast_fold_binary(%A: tensor<?x?xf32>, %B: t
 func.func @fold_failed_diagonal_map(%A: tensor<16xf32>, %B: tensor<16xf32>, %C: tensor<16xf32>) -> tensor<16xf32> {
   %empty = tensor.empty() : tensor<16x16xf32>
   %broadcasted_B = linalg.broadcast ins(%B : tensor<16xf32>) outs(%empty : tensor<16x16xf32>) dimensions = [0]
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %result = linalg.elementwise <add>
                           indexing_maps = [#identity, #diagonal, #identity]
                           ins(%A, %broadcasted_B : tensor<16xf32>, tensor<16x16xf32>) outs(%C : tensor<16xf32>) -> tensor<16xf32>
   return %result : tensor<16xf32>
@@ -229,7 +229,7 @@ func.func @fold_failed_diagonal_map(%A: tensor<16xf32>, %B: tensor<16xf32>, %C: 
 // CHECK:  func.func @fold_failed_constant_map(%[[A:.+]]: tensor<16xf32>, %[[B:.+]]: tensor<16x32xf32>, %[[C:.+]]: tensor<16xf32>) -> tensor<16xf32> {
 // CHECK-NEXT:  %[[EMPTY:.+]] = tensor.empty() : tensor<32x16xf32>
 // CHECK-NEXT:  %[[TRANSPOSED_B:.+]] = linalg.transpose ins(%[[B]] : tensor<16x32xf32>) outs(%[[EMPTY]] : tensor<32x16xf32>) permutation = [1, 0]
-// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CHECK-NEXT:  %[[RES:.+]] = linalg.elementwise <add>
 // CHECK-SAME:              indexing_maps = [#[[IDENTITY]], #[[CONSTANT]], #[[IDENTITY]]]
 // CHECK-SAME:              ins(%[[A]], %[[TRANSPOSED_B]] : tensor<16xf32>, tensor<32x16xf32>) outs(%[[C]] : tensor<16xf32>) -> tensor<16xf32>
 // CHECK-NEXT:  return %[[RES]] : tensor<16xf32>
@@ -240,7 +240,7 @@ func.func @fold_failed_diagonal_map(%A: tensor<16xf32>, %B: tensor<16xf32>, %C: 
 func.func @fold_failed_constant_map(%A: tensor<16xf32>, %B: tensor<16x32xf32>, %C: tensor<16xf32>) -> tensor<16xf32> {
   %empty = tensor.empty() : tensor<32x16xf32>
   %transposed_B = linalg.transpose ins(%B : tensor<16x32xf32>) outs(%empty : tensor<32x16xf32>) permutation = [1, 0]
-  %result = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %result = linalg.elementwise <add>
                           indexing_maps = [#identity, #constant, #identity]
                           ins(%A, %transposed_B : tensor<16xf32>, tensor<32x16xf32>) outs(%C : tensor<16xf32>) -> tensor<16xf32>
   return %result : tensor<16xf32>
