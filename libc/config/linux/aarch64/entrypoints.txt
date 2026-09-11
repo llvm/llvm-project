@@ -42,6 +42,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.fcntl.open
     libc.src.fcntl.openat
     libc.src.fcntl.posix_fadvise
+    libc.src.fcntl.fallocate
 
     # poll.h entrypoints
     libc.src.poll.poll

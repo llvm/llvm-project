@@ -1275,3 +1275,17 @@ add_header_library(
     libc.src.__support.macros.config
     libc.src.__support.OSUtil.osutil
 )
+
+add_header_library(
+  fallocate
+  HDRS
+    fallocate.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.common
+    libc.src.__support.OSUtil.osutil
+    libc.include.sys_syscall
+    libc.hdr.types.off_t
+    libc.hdr.errno_macros
+    libc.src.__support.error_or
+)
