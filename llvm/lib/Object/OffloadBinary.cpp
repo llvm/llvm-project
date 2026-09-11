@@ -195,9 +195,17 @@ decompressOffloadBinary(MemoryBufferRef Buf) {
                              .drop_front(Header->EntriesOffset);
   uint64_t BodySize = Header->InflatedSize - Header->EntriesOffset;
 
-  compression::Format Format = identify_magic(Compressed) == file_magic::zstd
-                                   ? compression::Format::Zstd
-                                   : compression::Format::Zlib;
+  compression::Format Format;
+  switch (identify_magic(Compressed)) {
+  case file_magic::zstd:
+    Format = compression::Format::Zstd;
+    break;
+  case file_magic::zlib:
+    Format = compression::Format::Zlib;
+    break;
+  default:
+    return createStringError("unknown compression format");
+  }
   if (const char *Reason = compression::getReasonIfUnsupported(Format))
     return createStringError(Reason);
 
