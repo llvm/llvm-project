@@ -31,10 +31,10 @@ define void @fc(ptr nocapture %p, i32 %n, i32 %size) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP9]], align 2
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i16> [[REVERSE]] to <4 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <4 x i32> [[TMP10]], [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP15:%.*]] = icmp uge <4 x i32> [[TMP10]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub <4 x i32> [[TMP10]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[TMP12]] to <4 x i16>
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP11]], <4 x i16> zeroinitializer, <4 x i16> [[TMP13]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP15]], <4 x i16> [[TMP13]], <4 x i16> zeroinitializer
 ; CHECK-NEXT:    [[REVERSE1:%.*]] = shufflevector <4 x i16> [[PREDPHI]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    store <4 x i16> [[REVERSE1]], ptr [[TMP9]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

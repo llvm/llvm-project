@@ -143,10 +143,10 @@ define void @predicated_assume(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i64> [[VEC_IND]], splat (i64 2)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i64> [[VEC_IND]], splat (i64 495616)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[STEP_ADD]], splat (i64 495616)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP1]], <2 x float> splat (float 2.300000e+01), <2 x float> splat (float 4.200000e+01)
-; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP2]], <2 x float> splat (float 2.300000e+01), <2 x float> splat (float 4.200000e+01)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp uge <2 x i64> [[VEC_IND]], splat (i64 495616)
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp uge <2 x i64> [[STEP_ADD]], splat (i64 495616)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP2]], <2 x float> splat (float 4.200000e+01), <2 x float> splat (float 2.300000e+01)
+; CHECK-NEXT:    [[PREDPHI1:%.*]] = select <2 x i1> [[TMP10]], <2 x float> splat (float 4.200000e+01), <2 x float> splat (float 2.300000e+01)
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP3]], i64 2
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP3]], align 4
