@@ -1722,3 +1722,27 @@ func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
   %4:2 = "hlfir.declare"(%3) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64, uniq_name = "a"}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
   "func.return"() : () -> ()
 }) : () -> ()
+
+// -----
+
+func.func @bad_pack_result_rank(%arg0: !hlfir.expr<?x?xi32>, %arg1: !fir.logical<4>) {
+  // expected-error@+1 {{'hlfir.pack' op result must be of rank 1}}
+  %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<?x?xi32>, !fir.logical<4>) -> !hlfir.expr<?x?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_pack_mask_rank(%arg0: !hlfir.expr<?x?xi32>, %arg1: !hlfir.expr<?x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.pack' op MASK must be conformable to ARRAY}}
+  %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<?x?xi32>, !hlfir.expr<?x!fir.logical<4>>) -> !hlfir.expr<?xi32>
+  return
+}
+
+// -----
+
+func.func @bad_pack_mask_shape(%arg0: !hlfir.expr<2x3xi32>, %arg1: !hlfir.expr<2x4x!fir.logical<4>>) {
+  // expected-error@+1 {{'hlfir.pack' op MASK must be conformable to ARRAY}}
+  %0 = hlfir.pack %arg0 %arg1 : (!hlfir.expr<2x3xi32>, !hlfir.expr<2x4x!fir.logical<4>>) -> !hlfir.expr<?xi32>
+  return
+}

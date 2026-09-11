@@ -13,6 +13,18 @@ func.func @reshape1(%arg0: !hlfir.expr<42xi32>, %arg1: !hlfir.expr<1xi32>) -> !h
 // CHECK:           return %[[VAL_2]] : !hlfir.expr<?xi32>
 // CHECK:         }
 
+// SHAPE expression with index element type
+func.func @reshape_index_shape(%arg0: !hlfir.expr<42xi32>, %arg1: !hlfir.expr<1xindex>) -> !hlfir.expr<?xi32> {
+  %0 = hlfir.reshape %arg0 %arg1 : (!hlfir.expr<42xi32>, !hlfir.expr<1xindex>) -> !hlfir.expr<?xi32>
+  return %0 : !hlfir.expr<?xi32>
+}
+// CHECK-LABEL:   func.func @reshape_index_shape(
+// CHECK-SAME:                                   %[[VAL_0:.*]]: !hlfir.expr<42xi32>,
+// CHECK-SAME:                                   %[[VAL_1:.*]]: !hlfir.expr<1xindex>) -> !hlfir.expr<?xi32> {
+// CHECK:           %[[VAL_2:.*]] = hlfir.reshape %[[VAL_0]] %[[VAL_1]] : (!hlfir.expr<42xi32>, !hlfir.expr<1xindex>) -> !hlfir.expr<?xi32>
+// CHECK:           return %[[VAL_2]] : !hlfir.expr<?xi32>
+// CHECK:         }
+
 // Operands are expressions of assumed shape
 func.func @reshape2(%arg0: !hlfir.expr<?xi32>, %arg1: !hlfir.expr<1xi32>) -> !hlfir.expr<4xi32> {
   %0 = hlfir.reshape %arg0 %arg1 pad %arg0 order %arg0 : (!hlfir.expr<?xi32>, !hlfir.expr<1xi32>, !hlfir.expr<?xi32>, !hlfir.expr<?xi32>) -> !hlfir.expr<4xi32>
