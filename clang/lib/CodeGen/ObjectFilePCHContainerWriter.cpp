@@ -297,25 +297,29 @@ public:
       auto *NameAndContent = llvm::MDTuple::get(*VMContext, Ops);
       MD->addOperand(NameAndContent);
     } else {
-      auto Int8Ty = llvm::Type::getInt8Ty(*VMContext);
-      auto *Ty = llvm::ArrayType::get(Int8Ty, Size);
-      auto *Data = llvm::ConstantDataArray::getString(
-          *VMContext, StringRef(SerializedAST.data(), Size),
-          /*AddNull=*/false);
-      auto *ASTSym = new llvm::GlobalVariable(
-          *M, Ty, /*constant*/ true, llvm::GlobalVariable::InternalLinkage,
-          Data, "__clang_ast");
-      // The on-disk hashtable needs to be aligned.
-      ASTSym->setAlignment(llvm::Align(8));
+      // Emit the serialized AST into a named section via llvm.raw.sections
+      // metadata, which the AsmPrinter emits directly at the MC layer.
+      // This avoids IR-level size constraints from the target's address space.
+      llvm::NamedMDNode *RawSections =
+          M->getOrInsertNamedMetadata("llvm.raw.sections");
 
-      // Mach-O also needs a segment name.
+      StringRef SectionName;
       if (Triple.isOSBinFormatMachO())
-        ASTSym->setSection("__CLANG,__clangast");
-      // COFF has an eight character length limit.
+        SectionName = "__CLANG,__clangast";
       else if (Triple.isOSBinFormatCOFF())
-        ASTSym->setSection("clangast");
+        SectionName = "clangast";
       else
-        ASTSym->setSection("__clangast");
+        SectionName = "__clangast";
+
+      auto *Int32Ty = llvm::Type::getInt32Ty(*VMContext);
+      llvm::Metadata *Ops[] = {
+          llvm::MDString::get(*VMContext, SectionName),
+          llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(Int32Ty, 8)),
+          llvm::ConstantAsMetadata::get(
+              llvm::ConstantInt::get(Int32Ty, llvm::Module::RawSectionAlloc)),
+          llvm::MDString::get(*VMContext,
+                              StringRef(SerializedAST.data(), Size))};
+      RawSections->addOperand(llvm::MDTuple::get(*VMContext, Ops));
     }
 
     LLVM_DEBUG({

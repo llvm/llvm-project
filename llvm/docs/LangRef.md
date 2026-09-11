@@ -9684,6 +9684,62 @@ for an integer access:
 Multiple TBAA operands are allowed to support merging of modules that may use
 different TBAA hierarchies (e.g., when mixing C and C++).
 
+## '`llvm.raw.sections`' Named Metadata
+
+The module-level `!llvm.raw.sections` metadata allows embedding arbitrary
+binary data into named sections of the output object file. A
+`!llvm.raw.sections` metadata node is a list of metadata nodes with the
+following fields:
+
+```
+!0 = !{!"section_name", i32 alignment, i32 flags, !"raw data"}
+```
+
+- **section_name**: The name of the output section.
+- **alignment**: The byte alignment of the section data.
+- **flags**: A bitmask describing the properties of the section. Each target
+  maps this onto format-appropriate section flags. The supported bits are
+  listed below.
+- **raw data**: The binary contents of the section.
+
+```{list-table}
+:header-rows: 1
+
+* - Value
+  - Name
+  - Description
+
+* - `0x1`
+  - Alloc
+  - The section occupies memory at load time.
+
+* - `0x2`
+  - Write
+  - The section is writable. Requires `Alloc`.
+
+* - `0x4`
+  - Exec
+  - The section is executable. Requires `Alloc`.
+
+* - `0x8`
+  - Exclude
+  - The section is dropped from the final link. Must not be combined with any
+    other bit.
+```
+
+A flags value of `0` describes a section that is present in the object file
+but is not loaded into memory. `Write` and `Exec` must not be combined.
+
+Example:
+```
+!llvm.raw.sections = !{!0}
+!0 = !{!"__mydata", i32 8, i32 1, !"\DE\AD\BE\EF"}
+```
+
+Each of the nodes inside a `!llvm.raw.sections` metadata node gets lowered to
+a target-specific named data section. Targets that do not support arbitrary
+named sections silently skip `!llvm.raw.sections` metadata nodes.
+
 (summary)=
 
 ## ThinLTO Summary
