@@ -643,12 +643,6 @@ unsigned SampleProfileWriterExtBinaryBase::findUnwrittenEntry(SecType Type) {
 
 std::error_code SampleProfileWriterExtBinaryBase::writeOneSection(
     SecType Type, const SampleProfileMap &ProfileMap) {
-  // Composite sections require the file version that defines their encoding.
-  if ((Type == SecCompositeProfile || Type == SecCompositeFuncOffsetTable) &&
-      FormatVersion < CompositeProfileVersion) {
-    return sampleprof_error::unsupported_version;
-  }
-
   unsigned LayoutIdx = findUnwrittenEntry(Type);
   SecHdrTableEntry &Entry = SectionHdrLayout[LayoutIdx];
 
@@ -773,7 +767,6 @@ std::error_code SampleProfileWriterExtBinary::writeCtxSplitLayout(
 }
 
 void SampleProfileWriterExtBinary::configureCompositeProfile() {
-  WriteCompositeProf = ExtBinaryCompositeProf;
   ProfSection = WriteCompositeProf ? SecCompositeProfile : SecLBRProfile;
   FuncOffsetSection =
       WriteCompositeProf ? SecCompositeFuncOffsetTable : SecFuncOffsetTable;
@@ -1063,6 +1056,11 @@ std::error_code SampleProfileWriterExtBinaryBase::writeSecHdrTable() {
 
 std::error_code SampleProfileWriterExtBinaryBase::writeHeader(
     const SampleProfileMap &ProfileMap) {
+  // Reject a version that cannot describe the selected profile encoding before
+  // emitting any part of the header.
+  if (WriteCompositeProf && FormatVersion < CompositeProfileVersion)
+    return sampleprof_error::unsupported_version;
+
   auto &OS = *OutputStream;
   FileStart = OS.tell();
   writeMagicIdent(Format);
@@ -1326,9 +1324,12 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
     return EC;
 
   Writer->Format = Format;
-  if (Format != SPF_Ext_Binary)
+  if (Format != SPF_Ext_Binary) {
     Writer->setFormatVersion(DefaultVersion);
-  else if (formatVersionIsSupported(RequestedVersion)) {
+  } else {
+    if (!formatVersionIsSupported(RequestedVersion))
+      return sampleprof_error::unsupported_version;
+
     // Composite output defaults to its first compatible format version.
     // Preserve a compatible version explicitly selected by the user.
     if (ExtBinaryCompositeProf) {
@@ -1339,11 +1340,13 @@ SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
           return sampleprof_error::unsupported_version;
         Writer->setFormatVersion(RequestedVersion);
       }
+      // Keep subsequent writes independent of the global command-line option.
+      Writer->setUseCompositeProfile(true);
     } else {
       Writer->setFormatVersion(RequestedVersion);
     }
-  } else
-    return sampleprof_error::unsupported_version;
+  }
+
   return std::move(Writer);
 }
 

@@ -133,6 +133,7 @@ public:
   virtual void setUseCtxSplitLayout() {}
   virtual void setUseMD5ProfileSymbolList() {}
   virtual void setUseMD5IndexedTables() {}
+  virtual void setUseCompositeProfile(bool /*Enable*/) {}
 
   void setFormatVersion(uint64_t V) {
     assert(sampleprof::formatVersionIsSupported(V) &&
@@ -340,6 +341,12 @@ public:
 
   void setUseMD5IndexedTables() override { UseMD5IndexedTables = true; }
 
+  /// Select composite encoding for subsequent writes. Composite output
+  /// requires CompositeProfileVersion or newer when write() is called.
+  void setUseCompositeProfile(bool Enable) override {
+    WriteCompositeProf = Enable;
+  }
+
   void resetSecLayout(SectionLayout SL) {
     verifySecLayout(SL);
 #ifndef NDEBUG
@@ -474,7 +481,7 @@ private:
 
   std::error_code writeSections(const SampleProfileMap &ProfileMap) override;
 
-  /// Select the profile representation and update its section layout as needed.
+  /// Apply the selected profile representation to the section layout.
   void configureCompositeProfile();
 
   std::error_code writeCustomSection(SecType Type) override {

@@ -17,8 +17,6 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ProfileData/SampleProfWriter.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LEB128.h"
@@ -45,45 +43,6 @@ static ::testing::AssertionResult NoError(std::error_code EC) {
 }
 
 namespace {
-
-/// Temporarily control composite ExtBinary writing and restore the previous
-/// command-line option value when the test scope ends.
-class ScopedCompositeProfile {
-  /// Option value that was in effect when this scope was entered.
-  bool Previous = false;
-
-  /// Return the registered composite-output option.
-  static cl::opt<bool> &option() {
-    constexpr StringLiteral OptionName = "extbinary-composite-prof";
-    auto &Options = cl::getRegisteredOptions();
-    auto OptionIt = Options.find(OptionName);
-    if (OptionIt == Options.end())
-      report_fatal_error("composite profile option is not registered");
-    return *static_cast<cl::opt<bool> *>(OptionIt->second);
-  }
-
-  /// Select the option through the same type-checked parser used by the tool.
-  static void apply(bool Enabled) {
-    constexpr StringLiteral OptionName = "extbinary-composite-prof";
-    cl::opt<bool> &Option = option();
-    Option.reset();
-    if (Option.addOccurrence(0, OptionName, Enabled ? "true" : "false"))
-      report_fatal_error("failed to set composite profile option");
-  }
-
-public:
-  /// Select the requested option value for the lifetime of this scope.
-  explicit ScopedCompositeProfile(bool Enabled) : Previous(option()) {
-    apply(Enabled);
-  }
-
-  /// Restore the option value that was in effect before this scope.
-  ~ScopedCompositeProfile() { apply(Previous); }
-
-  /// Change the option for the remainder of this scope without updating the
-  /// value restored on destruction.
-  void set(bool Enabled) { apply(Enabled); }
-};
 
 struct SampleProfTest : ::testing::Test {
   LLVMContext Context;
@@ -186,7 +145,8 @@ struct SampleProfTest : ::testing::Test {
   // version, to an in-memory buffer.
   ErrorOr<SmallVector<char, 128>>
   writeProfileToBuffer(const SampleProfileMap &Profiles,
-                       std::optional<uint64_t> Version = std::nullopt) {
+                       std::optional<uint64_t> Version = std::nullopt,
+                       bool UseComposite = false) {
     SmallVector<char, 128> Buffer;
     std::unique_ptr<raw_ostream> OS =
         std::make_unique<raw_svector_ostream>(Buffer);
@@ -197,6 +157,9 @@ struct SampleProfTest : ::testing::Test {
     auto Writer = std::move(WriterOrErr.get());
     if (Version)
       Writer->setFormatVersion(*Version);
+    else if (UseComposite)
+      Writer->setFormatVersion(CompositeProfileVersion);
+    Writer->setUseCompositeProfile(UseComposite);
 
     if (std::error_code EC = Writer->write(Profiles))
       return EC;
@@ -208,7 +171,8 @@ struct SampleProfTest : ::testing::Test {
   // Write a minimal profile, optionally requesting a specific format version,
   // to an in-memory buffer.
   ErrorOr<SmallVector<char, 128>>
-  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt) {
+  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt,
+                       bool UseComposite = false) {
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
     FooSamples.setFunction(FunctionId(FooName));
@@ -216,7 +180,7 @@ struct SampleProfTest : ::testing::Test {
 
     SampleProfileMap Profiles;
     Profiles[FooName] = std::move(FooSamples);
-    return writeProfileToBuffer(Profiles, Version);
+    return writeProfileToBuffer(Profiles, Version, UseComposite);
   }
 
   // Write a raw profile header (Magic + Version) directly to a buffer.
@@ -251,24 +215,10 @@ struct SampleProfTest : ::testing::Test {
     return Reader->getFormatVersion();
   }
 
-  /// Create an ExtBinary reader over a complete in-memory profile.
-  ErrorOr<std::unique_ptr<SampleProfileReader>>
-  createReaderFromBuffer(ArrayRef<char> Buffer) {
-    std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
-        StringRef(Buffer.data(), Buffer.size()), "profile");
-    auto FS = vfs::getRealFileSystem();
-    return SampleProfileReader::create(MemBuffer, Context, *FS);
-  }
-
-  /// Write the default one-function profile using composite ExtBinary sections.
-  ErrorOr<SmallVector<char, 128>> writeCompositeProfileToBuffer() {
-    ScopedCompositeProfile Composite(true);
-    return writeProfileToBuffer();
-  }
-
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
                      bool UseMD5ProfSymList = false,
-                     bool UseMD5IndexedTables = false) {
+                     bool UseMD5IndexedTables = false,
+                     bool UseComposite = false) {
     TempFile ProfileFile("profile", "", "", /*Unique*/ true);
     createWriter(Format, ProfileFile.path());
     if (Format == SampleProfileFormat::SPF_Ext_Binary) {
@@ -278,6 +228,9 @@ struct SampleProfTest : ::testing::Test {
         Writer->setUseMD5ProfileSymbolList();
       if (UseMD5IndexedTables)
         Writer->setUseMD5IndexedTables();
+      if (UseComposite)
+        Writer->setFormatVersion(CompositeProfileVersion);
+      Writer->setUseCompositeProfile(UseComposite);
     }
 
     StringRef FooName("_Z3fooi");
@@ -373,6 +326,7 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(NoError(EC));
 
     if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      EXPECT_EQ(UseComposite, Reader->hasCompositeProfileSection());
       std::unique_ptr<ProfileSymbolList> ReaderList =
           Reader->getProfileSymbolList();
       ReaderList->contains("zoo");
@@ -560,13 +514,13 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
 
 // Verify the full ExtBinary round trip through composite profile sections.
 TEST_F(SampleProfTest, roundtrip_composite_ext_binary_profile) {
-  [[maybe_unused]] ScopedCompositeProfile Composite(true);
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false,
+                /*UseMD5ProfSymList=*/false,
+                /*UseMD5IndexedTables=*/false, /*UseComposite=*/true);
 }
 
 // Verify that the writer and reader handle a multi-byte ULEB128 payload size.
 TEST_F(SampleProfTest, roundtrip_large_composite_ext_binary_profile) {
-  [[maybe_unused]] ScopedCompositeProfile Composite(true);
   constexpr uint32_t BodyRecordCount = 128;
   StringRef FunctionName("_Z5largev");
 
@@ -583,7 +537,8 @@ TEST_F(SampleProfTest, roundtrip_large_composite_ext_binary_profile) {
 
   SampleProfileMap Profiles;
   Profiles[FunctionName] = std::move(LargeSamples);
-  auto BufferOrErr = writeProfileToBuffer(Profiles);
+  auto BufferOrErr =
+      writeProfileToBuffer(Profiles, std::nullopt, /*UseComposite=*/true);
   ASSERT_TRUE(NoError(BufferOrErr.getError()));
 
   // Inspect the decoded block structure to verify that the writer emitted a
@@ -619,12 +574,9 @@ TEST_F(SampleProfTest, roundtrip_large_composite_ext_binary_profile) {
   EXPECT_EQ(LastSample.get(), 1u);
 }
 
-// Verify that reusing one ExtBinary writer for a composite profile and then a
-// legacy profile restores the legacy section types. The already-selected v105
-// remains a valid version for the subsequent legacy representation.
-TEST_F(SampleProfTest, ext_binary_writer_composite_to_legacy) {
-  ScopedCompositeProfile Composite(true);
-
+// Verify that reconfiguring one ExtBinary writer in both directions updates the
+// profile and offset section types. Version 105 supports both representations.
+TEST_F(SampleProfTest, ext_binary_writer_toggles_composite_layout) {
   SmallVector<char, 128> Buffer;
   std::unique_ptr<raw_ostream> OS =
       std::make_unique<raw_svector_ostream>(Buffer);
@@ -632,6 +584,8 @@ TEST_F(SampleProfTest, ext_binary_writer_composite_to_legacy) {
       SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
   ASSERT_TRUE(NoError(WriterOrErr.getError()));
   auto ProfileWriter = std::move(WriterOrErr.get());
+  ProfileWriter->setFormatVersion(CompositeProfileVersion);
+  ProfileWriter->setUseCompositeProfile(true);
 
   StringRef FooName("_Z3fooi");
   FunctionSamples FooSamples;
@@ -657,10 +611,16 @@ TEST_F(SampleProfTest, ext_binary_writer_composite_to_legacy) {
   VerifyFormat(true, CompositeProfileVersion);
 
   Buffer.clear();
-  Composite.set(false);
+  ProfileWriter->setUseCompositeProfile(false);
   ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
   ProfileWriter->getOutputStream().flush();
   VerifyFormat(false, CompositeProfileVersion);
+
+  Buffer.clear();
+  ProfileWriter->setUseCompositeProfile(true);
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(true, CompositeProfileVersion);
 }
 
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
@@ -679,8 +639,9 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
 
 // Verify composite ExtBinary round trips when the name table uses MD5 hashes.
 TEST_F(SampleProfTest, roundtrip_composite_md5_ext_binary_profile) {
-  [[maybe_unused]] ScopedCompositeProfile Composite(true);
-  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
+                /*UseMD5ProfSymList=*/false,
+                /*UseMD5IndexedTables=*/false, /*UseComposite=*/true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
@@ -834,25 +795,9 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion106) {
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
 
-// Verify that a nested composite-writing helper restores the outer option
-// instead of forcing composite output back off.
-TEST_F(SampleProfTest, CompositeWriterScopeRestoresPreviousValue) {
-  ScopedCompositeProfile Outer(true);
-  auto InnerOrErr = writeCompositeProfileToBuffer();
-  ASSERT_TRUE(NoError(InnerOrErr.getError()));
-
-  auto OuterOrErr = writeProfileToBuffer();
-  ASSERT_TRUE(NoError(OuterOrErr.getError()));
-  auto ReaderOrErr = createReaderFromBuffer(*OuterOrErr);
-  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
-  EXPECT_TRUE(ReaderOrErr.get()->hasCompositeProfileSection());
-}
-
-// Verify that the default composite writer selects the first compatible
-// ExtBinary version.
-TEST_F(SampleProfTest, CompositeProfileUsesVersion105) {
-  [[maybe_unused]] ScopedCompositeProfile Composite(true);
-  auto BufferOrErr = writeProfileToBuffer();
+// Verify composite output with the first compatible ExtBinary version.
+TEST_F(SampleProfTest, CompositeProfileSupportsVersion105) {
+  auto BufferOrErr = writeProfileToBuffer(std::nullopt, /*UseComposite=*/true);
   ASSERT_TRUE(NoError(BufferOrErr.getError()));
 
   auto ReadVersionOrErr = readVersionFromBuffer(*BufferOrErr);
@@ -863,10 +808,8 @@ TEST_F(SampleProfTest, CompositeProfileUsesVersion105) {
 // Verify that the writer rejects a programmatic legacy version instead of
 // silently overriding it when composite output is required.
 TEST_F(SampleProfTest, CompositeProfileRejectsProgrammaticLegacyVersions) {
-  [[maybe_unused]] ScopedCompositeProfile Composite(true);
-
   for (uint64_t Version : {103u, 104u}) {
-    auto BufferOrErr = writeProfileToBuffer(Version);
+    auto BufferOrErr = writeProfileToBuffer(Version, /*UseComposite=*/true);
     EXPECT_EQ(BufferOrErr.getError(), sampleprof_error::unsupported_version);
   }
 }
