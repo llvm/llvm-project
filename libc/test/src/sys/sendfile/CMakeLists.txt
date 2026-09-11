@@ -9,6 +9,7 @@ add_libc_test(
   SRCS
     sendfile_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.fcntl_macros
     libc.hdr.sys_stat_macros
     libc.src.errno.errno
