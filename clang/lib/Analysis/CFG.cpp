@@ -3432,8 +3432,9 @@ CFGBlock *CFGBuilder::VisitReturnStmt(Stmt *S) {
 
   CoreturnStmt *CRS = cast<CoreturnStmt>(S);
   auto *B = Block;
-  if (CFGBlock *R = Visit(CRS->getPromiseCall()))
-    B = R;
+  if (Expr *PromiseCall = CRS->getPromiseCall())
+    if (CFGBlock *R = Visit(PromiseCall))
+      B = R;
 
   if (Expr *RV = CRS->getOperand())
     if (RV->getType()->isVoidType() && !isa<InitListExpr>(RV))

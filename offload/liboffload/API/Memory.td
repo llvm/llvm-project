@@ -208,7 +208,7 @@ def olMemcpy : Function {
 def olMemFill : Function {
   let desc = "Fill memory with copies of the given pattern";
   let details = [
-    "Filling with patterns of a different size than 1, 2 or 4 bytes may be less performant",
+    "Filling with patterns of a different size than 1, 2 or 4 bytes may be less performant and may synchronize the queue",
     "The destination pointer and queue must be associated with the same device",
     "The fill size must be a multiple of the pattern size",
   ];

@@ -16,6 +16,7 @@
 #include "X86Subtarget.h"
 #include "X86TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Config/llvm-config.h"
@@ -933,22 +934,31 @@ static bool isCalleeLoad(SDValue Callee, SDValue &Chain, bool HasCallSeq) {
   }
 }
 
-static bool isEndbrImm64(uint64_t Imm) {
-// There may be some other prefix bytes between 0xF3 and 0x0F1EFA.
-// i.g: 0xF3660F1EFA, 0xF3670F1EFA
-  if ((Imm & 0x00FFFFFF) != 0x0F1EFA)
+static bool isEndbrImm(uint64_t Imm, unsigned BitWidth) {
+  if (BitWidth > 64 || BitWidth % 8 != 0)
     return false;
 
-  uint8_t OptionalPrefixBytes [] = {0x26, 0x2e, 0x36, 0x3e, 0x64,
-                                    0x65, 0x66, 0x67, 0xf0, 0xf2};
-  int i = 24; // 24bit 0x0F1EFA has matched
-  while (i < 64) {
-    uint8_t Byte = (Imm >> i) & 0xFF;
-    if (Byte == 0xF3)
+  const unsigned NumBytes = BitWidth / 8;
+  if (NumBytes < 4)
+    return false;
+
+  const uint8_t OptionalPrefixBytes[] = {0x26, 0x2e, 0x36, 0x3e, 0x64,
+                                         0x65, 0x66, 0x67, 0xf0, 0xf2};
+  uint8_t Bytes[8];
+  for (unsigned I = 0; I != NumBytes; ++I)
+    Bytes[I] = (Imm >> (I * 8)) & 0xFF;
+
+  for (unsigned I = 0; I + 3 < NumBytes; ++I) {
+    if (Bytes[I] != 0xf3)
+      continue;
+
+    unsigned J = I + 1;
+    while (J < NumBytes && llvm::is_contained(OptionalPrefixBytes, Bytes[J]))
+      ++J;
+
+    if (J + 2 < NumBytes && Bytes[J] == 0x0f && Bytes[J + 1] == 0x1e &&
+        (Bytes[J + 2] == 0xfa || Bytes[J + 2] == 0xfb))
       return true;
-    if (!llvm::is_contained(OptionalPrefixBytes, Byte))
-      return false;
-    i += 8;
   }
 
   return false;
@@ -969,28 +979,34 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     // ENDBR32 and ENDBR64 have specific opcodes:
     // ENDBR32: F3 0F 1E FB
     // ENDBR64: F3 0F 1E FA
-    // And we want that attackers won’t find unintended ENDBR32/64
-    // opcode matches in the binary
-    // Here’s an example:
+    // We want to prevent attackers from finding unintended ENDBR32/64 opcode
+    // matches in executable code. Here's an example:
     // If the compiler had to generate asm for the following code:
-    // a = 0xF30F1EFA
+    // a = 0xFA1E0FF3
     // it could, for example, generate:
-    // mov 0xF30F1EFA, dword ptr[a]
-    // In such a case, the binary would include a gadget that starts
-    // with a fake ENDBR64 opcode. Therefore, we split such generation
-    // into multiple operations, let it not shows in the binary
+    // mov 0xFA1E0FF3, dword ptr[a]
+    // In such a case, the binary would include a gadget that starts with a
+    // fake ENDBR64 opcode. Split such constants into multiple operations so
+    // the byte sequence does not appear in executable code.
     if (N->getOpcode() == ISD::Constant) {
       MVT VT = N->getSimpleValueType(0);
-      int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
-      int32_t EndbrImm = Subtarget->is64Bit() ? 0xF30F1EFA : 0xF30F1EFB;
-      if (Imm == EndbrImm || isEndbrImm64(Imm)) {
+      assert(VT.isScalarInteger() &&
+             "ISD::Constant must have a scalar integer type");
+      if (!VT.isScalarInteger() || VT.getSizeInBits() > 64)
+        continue;
+
+      uint64_t Imm = cast<ConstantSDNode>(N)->getZExtValue();
+      if (isEndbrImm(Imm, VT.getSizeInBits())) {
         // Check that the cf-protection-branch is enabled.
         Metadata *CFProtectionBranch =
             MF->getFunction().getParent()->getModuleFlag(
                 "cf-protection-branch");
         if (CFProtectionBranch || IndirectBranchTracking) {
           SDLoc dl(N);
-          SDValue Complement = CurDAG->getConstant(~Imm, dl, VT, false, true);
+          uint64_t ComplementImm =
+              (~Imm) & maskTrailingOnes<uint64_t>(VT.getSizeInBits());
+          SDValue Complement =
+              CurDAG->getConstant(ComplementImm, dl, VT, false, true);
           Complement = CurDAG->getNOT(dl, Complement, VT);
           --I;
           CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Complement);
@@ -3667,7 +3683,40 @@ static bool mayUseCarryFlag(X86::CondCode CC) {
   return true;
 }
 
+/// Return true if \p Addr may be matched with a non-fixed frame index as base.
+static bool addrMayUseNonFixedFrameIndex(SDValue Addr,
+                                         const MachineFrameInfo &MFI,
+                                         unsigned Depth = 0) {
+  if (auto *FI = dyn_cast<FrameIndexSDNode>(Addr))
+    return !MFI.isFixedObjectIndex(FI->getIndex());
+  // Assume the worst if we can't see the whole address expression.
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
+    return true;
+  switch (Addr.getOpcode()) {
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+    return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1) ||
+           addrMayUseNonFixedFrameIndex(Addr.getOperand(1), MFI, Depth + 1);
+  case ISD::SUB:
+    return addrMayUseNonFixedFrameIndex(Addr.getOperand(0), MFI, Depth + 1);
+  default:
+    // Only add-like nodes and the LHS of a SUB can fold a frame index into the
+    // base; anything else is matched as a register or symbol base.
+    return false;
+  }
+}
+
 bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
+  assert(N->getOpcode() == X86ISD::TC_RETURN);
+  // X86tcret args: (*chain, ptr, imm, regs..., glue)
+  const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
+
+  // The tail call executes after the epilogue, where only fixed stack objects
+  // can still be addressed (the stack may end up realigned).
+  if (addrMayUseNonFixedFrameIndex(BasePtr, MF->getFrameInfo()))
+    return false;
+
   // Check that there is enough volatile registers to load the callee address.
 
   const X86RegisterInfo *RI = Subtarget->getRegisterInfo();
@@ -3696,13 +3745,9 @@ bool X86DAGToDAGISel::checkTCRetEnoughRegs(SDNode *N) const {
   // The load's base and index need up to two registers.
   unsigned LoadGPRs = 2;
 
-  assert(N->getOpcode() == X86ISD::TC_RETURN);
-  // X86tcret args: (*chain, ptr, imm, regs..., glue)
-
   if (Subtarget->is32Bit()) {
     // FIXME: This was carried from X86tcret_1reg which was used for 32-bit,
     // but it could apply to 64-bit too.
-    const SDValue &BasePtr = cast<LoadSDNode>(N->getOperand(1))->getBasePtr();
     if (isa<FrameIndexSDNode>(BasePtr)) {
       LoadGPRs -= 2; // Base is fixed index off ESP; no regs needed.
     } else if (BasePtr.getOpcode() == X86ISD::Wrapper &&
@@ -6462,7 +6507,21 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         } else if (TrailingZeros == 0 && SavesBytes) {
           // If the mask covers the least significant bit, then we can replace
           // TEST+AND with a SHL and check eflags.
-          // This emits a redundant TEST which is subsequently eliminated.
+          // This emits a redundant TEST which is subsequently eliminated,
+          // except for shift amounts 1 to 3: isDefConvertible() rejects those
+          // SHLs to keep them convertible to LEA, so the TEST would survive.
+          if (LeadingZeros == 1) {
+            // Shift out the top bit by doubling with ADD reg,reg instead: it
+            // is the same length and sets ZF identically, but the peephole
+            // does fold the TEST into it, and it runs on more ports.
+            MachineSDNode *Add = CurDAG->getMachineNode(
+                GET_ND_IF_ENABLED(X86::ADD64rr), dl, MVT::i64, MVT::i32,
+                N0.getOperand(0), N0.getOperand(0));
+            MachineSDNode *Test = CurDAG->getMachineNode(
+                X86::TEST64rr, dl, MVT::i32, SDValue(Add, 0), SDValue(Add, 0));
+            ReplaceNode(Node, Test);
+            return;
+          }
           ShiftOpcode = GET_ND_IF_ENABLED(X86::SHL64ri);
           ShiftAmt = LeadingZeros;
           SubRegIdx = 0;

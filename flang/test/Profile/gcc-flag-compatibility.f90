@@ -5,7 +5,10 @@
 ! -fprofile-use=<dir>/file   Uses the profile file <dir>/file
 
 ! On AIX, -flto used to be required with -fprofile-generate. gcc-flag-compatibility-aix.c is used to do the testing on AIX with -flto
-! RUN: %flang %s -c -S -o - -emit-llvm -fprofile-generate | FileCheck -check-prefix=PROFILE-GEN %s
+! RUN: %flang %s -S -emit-llvm -o - -fprofile-generate | FileCheck -check-prefix=PROFILE-GEN %s
+! RUN: rm -rf %t.gendir
+! RUN: mkdir -p %t.gendir
+! RUN: %flang %s -S -emit-llvm -fprofile-generate=%t.gendir -o - | FileCheck -check-prefix=PROFILE-GEN %s
 ! PROFILE-GEN: @__profc_{{_?}}main = {{(private|internal)}} global [1 x i64] zeroinitializer, section
 ! PROFILE-GEN: @__profd_{{_?}}main =
 
@@ -14,9 +17,9 @@
 ! RUN: rm -rf %t.dir
 ! RUN: mkdir -p %t.dir/some/path
 ! RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility_IR.proftext -o %t.dir/some/path/file.prof
-! RUN: %flang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-IR1 %s
+! RUN: %flang %s -S -emit-llvm -fprofile-use=%t.dir/some/path/file.prof -o - | FileCheck -check-prefix=PROFILE-USE-IR1 %s
 ! RUN: llvm-profdata merge %S/Inputs/gcc-flag-compatibility_IR_entry.proftext -o %t.dir/some/path/file.prof
-! RUN: %flang %s -o - -emit-llvm -S -fprofile-use=%t.dir/some/path/file.prof | FileCheck -check-prefix=PROFILE-USE-IR2 %s
+! RUN: %flang %s -S -emit-llvm -fprofile-use=%t.dir/some/path/file.prof -o - | FileCheck -check-prefix=PROFILE-USE-IR2 %s
 ! PROFILE-USE-IR1: = !{!"branch_weights", i32 100, i32 1}
 ! PROFILE-USE-IR2: = !{!"branch_weights", i32 1, i32 100}
 

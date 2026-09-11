@@ -31,23 +31,18 @@ add_llvm_target(MSP430CodeGen
   MSP430MCInstLower.cpp
 
   LINK_COMPONENTS
-  Analysis
   AsmPrinter
   CodeGen
   CodeGenTypes
   Core
-  IRPrinter
   MC
   MSP430Desc
   MSP430Info
-  ObjCARC
   Passes
-  Scalar
   SelectionDAG
   Support
   Target
   TargetParser
-  TransformUtils
 
   ADD_TO_COMPONENT
   MSP430

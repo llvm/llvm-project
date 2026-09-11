@@ -13,26 +13,28 @@ define void @invariant_entry_over_call(ptr %out, ptr %in, ptr %sink, double %a, 
 ; CHECK-LABEL: define void @invariant_entry_over_call(
 ; CHECK-SAME: ptr [[OUT:%.*]], ptr [[IN:%.*]], ptr [[SINK:%.*]], double [[A:%.*]], double [[B:%.*]], double [[C:%.*]], double [[D:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[A]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[B]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[C]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP2]], double [[D]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call <2 x double> @llvm.sqrt.v2f64(<2 x double> [[TMP4]])
+; CHECK-NEXT:    [[DIV0:%.*]] = fdiv double [[A]], [[C]]
+; CHECK-NEXT:    [[DIV1:%.*]] = fdiv double [[B]], [[D]]
+; CHECK-NEXT:    [[SQ0:%.*]] = call double @llvm.sqrt.f64(double [[DIV0]])
+; CHECK-NEXT:    [[SQ1:%.*]] = call double @llvm.sqrt.f64(double [[DIV1]])
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds double, ptr [[IN]], i64 [[I]]
+; CHECK-NEXT:    [[V0:%.*]] = load double, ptr [[P0]], align 8
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds double, ptr [[P0]], i64 1
+; CHECK-NEXT:    [[V1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[M0:%.*]] = fmul double [[V0]], [[SQ0]]
+; CHECK-NEXT:    [[M1:%.*]] = fmul double [[V1]], [[SQ1]]
 ; CHECK-NEXT:    [[O0:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 [[I]]
-; CHECK-NEXT:    [[TMP6:%.*]] = load <2 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[O0]], align 8
+; CHECK-NEXT:    store double [[M0]], ptr [[O0]], align 8
+; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds double, ptr [[O0]], i64 1
+; CHECK-NEXT:    store double [[M1]], ptr [[O1]], align 8
 ; CHECK-NEXT:    call void @g()
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I]], 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[M1:%.*]] = extractelement <2 x double> [[TMP7]], i64 1
 ; CHECK-NEXT:    store double [[M1]], ptr [[SINK]], align 8
 ; CHECK-NEXT:    ret void
 ;

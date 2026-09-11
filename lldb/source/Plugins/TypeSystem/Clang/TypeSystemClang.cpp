@@ -243,8 +243,13 @@ static lldb::addr_t GetVTableAddress(Process &process,
 
     vbtable_ptr_addr += vbtable_ptr_offset;
 
-    Status err;
-    return process.ReadPointerFromMemory(vbtable_ptr_addr, err);
+    llvm::Expected<lldb::addr_t> vbtable_ptr_addr_or_err =
+        process.ReadPointerFromMemory(vbtable_ptr_addr);
+    if (!vbtable_ptr_addr_or_err) {
+      llvm::consumeError(vbtable_ptr_addr_or_err.takeError());
+      return LLDB_INVALID_ADDRESS;
+    }
+    return *vbtable_ptr_addr_or_err;
   }
 
   // We have an object already read from process memory,
@@ -313,6 +318,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;
@@ -1450,7 +1457,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
       func_decl->getASTContext(), infos.GetArgs());
 
   func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
-                                               template_args_ptr, nullptr);
+                                               template_args_ptr, {});
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1673,11 +1680,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
-  void *insert_pos = nullptr;
-  if (class_template_decl->findSpecialization(args, insert_pos))
+  llvm::FoldingSetInsertToken insert_token;
+  if (class_template_decl->findSpecialization(args, insert_token))
     return nullptr;
   class_template_decl->AddSpecialization(class_template_specialization_decl,
-                                         insert_pos);
+                                         insert_token);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 

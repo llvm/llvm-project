@@ -34,7 +34,6 @@ def AMDGPU_AddressSpaceAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_AddressSpace,
     structured indexing that is primarily seen in graphics applications. This
     is also incompatible with the simple indexing model supported by memref.
   }];
-  let assemblyFormat = "`<` $value `>`";
 }
 
 def AMDGPU_DPPPermAttr : EnumAttr<AMDGPU_Dialect, AMDGPU_DPPPerm,

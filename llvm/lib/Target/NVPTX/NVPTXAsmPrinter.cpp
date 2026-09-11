@@ -607,6 +607,8 @@ MCOperand NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO) {
         MCSymbolRefExpr::create(MO.getMBB()->getSymbol(), OutContext));
   case MachineOperand::MO_ExternalSymbol:
     return GetSymbolRef(GetExternalSymbolSymbol(MO.getSymbolName()));
+  case MachineOperand::MO_MCSymbol:
+    return GetSymbolRef(MO.getMCSymbol());
   case MachineOperand::MO_JumpTableIndex:
     // The jump table index names the .branchtargets list emitted for a brx.idx
     // (see emitJumpTable); reference it by that label.
@@ -773,7 +775,7 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
   auto MakeArg = [&](const unsigned I) {
     Type *Ty = CB.getArgOperand(I)->getType();
 
-    if (CB.paramHasAttr(I, Attribute::ByVal)) {
+    if (CB.isByValArgument(I)) {
       Type *ETy = CB.getParamByValType(I);
       Align ParamByValAlign = getDeviceByValParamAlign(
           &CB, ETy, I + AttributeList::FirstArgIndex, DL);
@@ -1918,7 +1920,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
 
   for (const auto &[ParamIndex, Arg] : enumerate(NonEmptyArgs)) {
     Type *Ty = Arg.getType();
-    const std::string ParamSym = TLI->getParamName(F, ParamIndex);
+    MCSymbol *const ParamSym = TLI->getParamSymbol(OutContext, F, ParamIndex);
 
     if (!IsFirst)
       O << ",\n";
@@ -1947,7 +1949,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         case PTXOpaqueType::None:
           llvm_unreachable("handled above");
         }
-        O << ParamSym;
+        O << *ParamSym;
         continue;
       }
     }
@@ -1966,7 +1968,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
           IsKernelFunc ? getPTXParamAlign(F, ETy, ParamIdx, DL)
                        : getDeviceByValParamAlign(F, ETy, ParamIdx, DL);
 
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
+      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << *ParamSym
         << "[" << DL.getTypeAllocSize(ETy) << "]";
       continue;
     }
@@ -1979,7 +1981,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       Align OptimalAlign = getPTXParamAlign(
           F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
-      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << ParamSym
+      O << "\t.param .align " << OptimalAlign.value() << " .b8 " << *ParamSym
         << "[" << DL.getTypeAllocSize(Ty) << "]";
 
       continue;
@@ -2015,7 +2017,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         }
 
         O << " .align " << Arg.getParamAlign().valueOrOne().value() << " "
-          << ParamSym;
+          << *ParamSym;
         continue;
       }
 
@@ -2026,7 +2028,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
         O << "u8";
       else
         O << getPTXFundamentalTypeStr(Ty);
-      O << " " << ParamSym;
+      O << " " << *ParamSym;
       continue;
     }
     // Non-kernel function, just print .param .b<size> for ABI
@@ -2039,14 +2041,14 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       Size = PTySizeInBits;
     } else
       Size = Ty->getPrimitiveSizeInBits();
-    O << "\t.param .b" << Size << " " << ParamSym;
+    O << "\t.param .b" << Size << " " << *ParamSym;
   }
 
   if (F->isVarArg()) {
     if (!IsFirst)
       O << ",\n";
     O << "\t.param .align " << STI.getMaxRequiredAlignment() << " .b8 "
-      << TLI->getParamName(F, /* vararg */ -1) << "[]";
+      << *TLI->getParamSymbol(OutContext, F, /* vararg */ -1) << "[]";
   }
 
   O << "\n)";
@@ -2612,6 +2614,10 @@ void NVPTXAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNum,
 
   case MachineOperand::MO_GlobalAddress:
     PrintSymbolOperand(MO, O);
+    break;
+
+  case MachineOperand::MO_MCSymbol:
+    MO.getMCSymbol()->print(O, MAI);
     break;
 
   case MachineOperand::MO_MachineBasicBlock:

@@ -123,7 +123,8 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         RK = llvm::dxil::ResourceKind::Texture3D;
         break;
       case llvm::dxil::ResourceDimension::Cube:
-        RK = llvm::dxil::ResourceKind::TextureCube;
+        RK = ResAttrs.IsArray ? llvm::dxil::ResourceKind::TextureCubeArray
+                              : llvm::dxil::ResourceKind::TextureCube;
         break;
       default:
         llvm_unreachable("Unsupported resource dimension for texture.");

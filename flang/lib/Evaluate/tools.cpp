@@ -693,24 +693,19 @@ Expr<LogicalResult> PromoteAndRelate(
 }
 
 std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
-  if (auto type{expr.GetType()}) {
-    if (const auto *derived{GetDerivedTypeSpec(*type)}) {
-      if (derived->IsEnumerationType()) {
-        if (const auto *scope{derived->GetScope()}) {
-          auto iter{scope->find(semantics::SourceName{
-              semantics::DerivedTypeDetails::ordinalComponentName,
-              sizeof(semantics::DerivedTypeDetails::ordinalComponentName) -
-                  1})};
-          if (iter != scope->end()) {
-            const semantics::Symbol &ordSym{*iter->second};
-            if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
-              if (auto sc{constant->GetScalarValue()}) {
-                return sc->Find(ordSym);
-              }
-            } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
-              return sc->Find(ordSym);
-            }
+  if (const auto *derived{GetEnumerationTypeSpec(expr.GetType())}) {
+    if (const auto *scope{derived->GetScope()}) {
+      auto iter{scope->find(semantics::SourceName{
+          semantics::DerivedTypeDetails::ordinalComponentName,
+          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
+      if (iter != scope->end()) {
+        const semantics::Symbol &ordSym{*iter->second};
+        if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
+          if (auto sc{constant->GetScalarValue()}) {
+            return sc->Find(ordSym);
           }
+        } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
+          return sc->Find(ordSym);
         }
       }
     }
@@ -1004,7 +999,21 @@ bool IsProcedurePointer(const Expr<SomeType> &expr) {
 }
 
 bool IsProcedure(const Expr<SomeType> &expr) {
-  return IsProcedureDesignator(expr) || IsProcedurePointer(expr);
+  if (IsProcedureDesignator(expr) || IsProcedurePointer(expr)) {
+    return true;
+  }
+  // Also look through a reference to a function whose result is a
+  // procedure, mirroring the function-reference handling in
+  // IsProcedurePointer() above. (Matters for expressions produced
+  // during error recovery.)
+  if (const auto *funcRef{UnwrapProcedureRef(expr)}) {
+    if (const Symbol *proc{funcRef->proc().GetSymbol()}) {
+      if (const Symbol *result{FindFunctionResult(*proc)}) {
+        return IsProcedure(*result);
+      }
+    }
+  }
+  return false;
 }
 
 bool IsProcedurePointerTarget(const Expr<SomeType> &expr) {
@@ -1402,6 +1411,10 @@ struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
   using Base = AnyTraverse<HasConversionHelper>;
   HasConversionHelper() : Base{*this} {}
   using Base::operator();
+  // Subscript conversions belong to the array designator and are preserved
+  // when reassociating the surrounding numeric expression. In particular,
+  // implicit conversions to SubscriptInteger must not inhibit reassociation.
+  bool operator()(const Subscript &) const { return false; }
   template <typename TO, common::TypeCategory FROM>
   bool operator()(const Convert<TO, FROM> &) const {
     return true;

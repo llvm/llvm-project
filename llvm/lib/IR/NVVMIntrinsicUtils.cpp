@@ -16,6 +16,16 @@
 using namespace llvm;
 using namespace nvvm;
 
+void nvvm::printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI ||
+      CI->getZExtValue() > static_cast<uint64_t>(EvictPolicyType::EVICT_LAST)) {
+    OS << "Unsupported evict policy";
+    return;
+  }
+  OS << getEvictPolicyName(static_cast<EvictPolicyType>(CI->getZExtValue()));
+}
+
 void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
   const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
   if (!CI || CI->getZExtValue() > static_cast<uint64_t>(TMAReductionOp::XOR))
@@ -24,6 +34,32 @@ void nvvm::printTMAReductionOp(raw_ostream &OS, const Constant *ImmArgVal) {
 
   OS << getTMATensorReductionOpName(
       static_cast<TMAReductionOp>(CI->getZExtValue()));
+}
+
+void nvvm::printTMAValidateDataPattern(raw_ostream &OS,
+                                       const Constant *ImmArgVal) {
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI || CI->getZExtValue() > static_cast<uint64_t>(
+                                      TMAValidateDataPattern::PER_ELEMENT_FF)) {
+    OS << "Unknown validate data pattern";
+    return;
+  }
+
+  OS << getTMAValidateDataPatternName(
+      static_cast<TMAValidateDataPattern>(CI->getZExtValue()));
+}
+
+void nvvm::printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
+    switch (static_cast<MBarrierLayout>(CI->getZExtValue())) {
+    case MBarrierLayout::V0:
+      OS << "v0";
+      return;
+    case MBarrierLayout::V1:
+      OS << "v1";
+      return;
+    }
+  }
 }
 
 void nvvm::printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal) {
@@ -149,6 +185,11 @@ void nvvm::printTensormapSwizzleAtomicity(raw_ostream &OS,
       return;
     }
   }
+}
+
+void nvvm::printFPRoundingMode(raw_ostream &OS, const Constant *ImmArgVal) {
+  if (isa<ConstantInt>(ImmArgVal))
+    OS << nvvm::GetRoundingModeName(nvvm::GetRoundingModeFromImmArg(ImmArgVal));
 }
 
 void nvvm::printTensormapFillMode(raw_ostream &OS, const Constant *ImmArgVal) {

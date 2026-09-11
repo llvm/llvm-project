@@ -105,7 +105,7 @@ func.func @privatize_inside_compute_region(%data : memref<64xf32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   acc.delete accPtr(%copy : memref<64xf32>)
   return
@@ -115,7 +115,7 @@ func.func @privatize_inside_compute_region(%data : memref<64xf32>) {
 // CHECK: acc.privatize par_dims(#acc<par_dims[thread_x]>) : () -> !acc.private_type<memref<f32>>
 // CHECK: acc.private_local
 // CHECK: memref.load %{{.*}}[%{{.*}}] : memref<64xf32>
-// CHECK: } {origin = "acc.parallel"}
+// CHECK: } <{origin = "acc.parallel"}>
 
 // -----
 

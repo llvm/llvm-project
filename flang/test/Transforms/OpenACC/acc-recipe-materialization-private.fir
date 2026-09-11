@@ -45,3 +45,38 @@ func.func @par_private_i64(%arg0 : !fir.ref<i64>) {
   }
   return
 }
+
+acc.private.recipe @privatization_pointer : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> init {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>):
+  %c4 = arith.constant 4 : index
+  %alloc = fir.allocmem !fir.array<?xf32>, %c4
+  %shape = fir.shape %c4 : (index) -> !fir.shape<1>
+  %box = fir.embox %alloc(%shape) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  %desc = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  fir.store %box to %desc : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  acc.yield %desc, %alloc : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.heap<!fir.array<?xf32>>
+} destroy {
+^bb0(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>,
+     %arg1: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>,
+     %owned: !fir.heap<!fir.array<?xf32>>):
+  fir.freemem %owned : !fir.heap<!fir.array<?xf32>>
+  acc.terminator
+}
+
+// CHECK-LABEL: func.func @private_pointer
+// CHECK: %[[ALLOC:.*]] = fir.allocmem !fir.array<?xf32>
+// CHECK: %[[DESC:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xf32>>>
+// CHECK: fir.store %arg1 to %[[DESC]]
+// CHECK-NOT: fir.box_addr
+// CHECK: fir.freemem %[[ALLOC]] : !fir.heap<!fir.array<?xf32>>
+
+func.func @private_pointer(
+    %arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>,
+    %arg1: !fir.box<!fir.ptr<!fir.array<?xf32>>>) {
+  %priv = acc.private varPtr(%arg0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) recipe(@privatization_pointer) name("p") -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  acc.parallel private(%priv : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>) {
+    fir.store %arg1 to %priv : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+    acc.yield
+  }
+  return
+}

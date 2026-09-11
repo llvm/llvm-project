@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/BitVector.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -944,6 +943,7 @@ void TargetLoweringBase::initActions() {
          ISD::VECREDUCE_XOR, ISD::VECREDUCE_SMAX, ISD::VECREDUCE_SMIN,
          ISD::VECREDUCE_UMAX, ISD::VECREDUCE_UMIN, ISD::VECREDUCE_FMAX,
          ISD::VECREDUCE_FMIN, ISD::VECREDUCE_FMAXIMUM, ISD::VECREDUCE_FMINIMUM,
+         ISD::VECREDUCE_FMAXIMUMNUM, ISD::VECREDUCE_FMINIMUMNUM,
          ISD::VECREDUCE_SEQ_FADD, ISD::VECREDUCE_SEQ_FMUL},
         VT, Expand);
 
@@ -2523,11 +2523,8 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
   if (OptLevel != CodeGenOptLevel::None &&
       isDereferenceableAndAlignedPointer(
           LI.getPointerOperand(), LI.getType(), LI.getAlign(),
-          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI)))
     Flags |= MachineMemOperand::MODereferenceable;
-  } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
-    Flags |= MachineMemOperand::MODereferenceable;
-  }
 
   Flags |= getTargetMMOFlags(LI);
   return Flags;

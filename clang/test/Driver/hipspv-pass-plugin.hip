@@ -1,25 +1,6 @@
 // REQUIRES: spirv-registered-target
 // UNSUPPORTED: system-windows
 
-// RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
-// RUN: --no-offload-new-driver --hip-path=%S/Inputs/hipspv -nogpuinc %s \
-// RUN: 2>&1 | FileCheck --check-prefixes=ALL,FROM-HIP-PATH %s
-
-// RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
-// RUN: --no-offload-new-driver -nogpuinc -nogpulib --hipspv-pass-plugin=%S/Inputs/pass-plugin.so %s \
-// RUN: 2>&1 | FileCheck --check-prefixes=ALL,FROM-OPTION %s
-
-// RUN: not %clang -### --target=x86_64-linux-gnu --offload=spirv64 \
-// RUN: --no-offload-new-driver -nogpuinc -nogpulib --hipspv-pass-plugin=foo.so %s \
-// RUN: 2>&1 | FileCheck --check-prefixes=ALL,FROM-OPTION-INVALID %s
-
-// RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
-// RUN: --no-offload-new-driver -nogpuinc -nogpulib %s \
-// RUN: 2>&1 | FileCheck --check-prefixes=ALL,NO-PLUGIN %s
-
-// Run commands for the new offload driver (chipStar uses in-tree SPIR-V
-// backend instead of llvm-spirv):
-
 // RUN: touch %t.dummy.o
 // RUN: env "PATH=" %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
 // RUN:   %t.dummy.o --hip-path=%S/Inputs/hipspv \
@@ -43,6 +24,5 @@
 // FROM-OPTION-INVALID: error: no such file or directory: 'foo.so'
 // NO-PLUGIN-NOT: {{".*opt"}} {{".*.bc"}} "-load-pass-plugin"
 // NO-PLUGIN-NOT: {{".*/Inputs/hipspv/lib/libLLVMHipSpvPasses.so"}}
-// ALL: {{".*llvm-spirv[^ ]*"}}
 // CHIPSTAR: {{".*clang.*"}} "-cc1"
 // CHIPSTAR-SAME: "-emit-obj"

@@ -213,6 +213,8 @@ def OpTypeCooperativeMatrixNV: Op<5358, (outs TYPE:$res),
 def OpTypeCooperativeMatrixKHR: Op<4456, (outs TYPE:$res),
                   (ins TYPE:$compType, ID:$scope, ID:$rows, ID:$cols, ID:$use),
                   "$res = OpTypeCooperativeMatrixKHR $compType $scope $rows $cols $use">;
+def OpTypeVectorIdEXT: Op<5288, (outs TYPE:$type), (ins TYPE:$compType, ID:$compCount),
+                  "$type = OpTypeVectorIdEXT $compType $compCount">;
 
 // 3.42.7 Constant-Creation Instructions
 

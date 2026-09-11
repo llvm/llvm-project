@@ -22,7 +22,6 @@
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsMips.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
@@ -1098,6 +1097,12 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
+    // Token has no mangling (see getMangledTypeStr), so it cannot be an
+    // overload type; reject it with a signature error. Label is already
+    // excluded from function signatures, so it never reaches here.
+    if (Ty->isTokenTy())
+      return PrintMsg(false, "any manglable type", OIdx);
+
     IITDescriptor::AnyKindVectorConstraint VC;
     IITDescriptor::AnyKindElementConstraint EC;
     std::tie(VC, EC) = D.getOverloadConstraints();
@@ -1477,6 +1482,9 @@ LLVM_ABI void Intrinsic::printFPClassMask(raw_ostream &OS,
   uint64_t Val = cast<ConstantInt>(ImmArgVal)->getZExtValue();
   OS << static_cast<FPClassTest>(Val);
 }
+
+#define GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS
+#include "llvm/IR/IntrinsicImpl.inc"
 
 #define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
 #include "llvm/IR/IntrinsicImpl.inc"

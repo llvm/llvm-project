@@ -2,12 +2,12 @@
 
 // CHECK-LABEL: @test_enum_attr_roundtrip
 func.func @test_enum_attr_roundtrip() -> () {
-  // CHECK: value = #test<enum first>
-  "test.op"() {value = #test<enum first>} : () -> ()
-  // CHECK: value = #test<enum second>
-  "test.op"() {value = #test<enum second>} : () -> ()
-  // CHECK: value = #test<enum third>
-  "test.op"() {value = #test<enum third>} : () -> ()
+  // CHECK: value = #test.enum<first>
+  "test.op"() {value = #test.enum<first>} : () -> ()
+  // CHECK: value = #test.enum<second>
+  "test.op"() {value = #test.enum<second>} : () -> ()
+  // CHECK: value = #test.enum<third>
+  "test.op"() {value = #test.enum<third>} : () -> ()
   return
 }
 
@@ -15,6 +15,15 @@ func.func @test_enum_attr_roundtrip() -> () {
 func.func @test_op_with_enum() -> () {
   // CHECK: test.op_with_enum third
   test.op_with_enum third
+  return
+}
+
+// CHECK-LABEL: @test_op_with_enum_directive
+func.func @test_op_with_enum_directive() -> () {
+  // CHECK: test.op_with_enum_directive third
+  test.op_with_enum_directive third
+  // CHECK: test.op_with_enum_directive "non-keyword"
+  test.op_with_enum_directive "non-keyword"
   return
 }
 
@@ -36,6 +45,19 @@ func.func @test_match_op_with_bit_enum() -> () {
   return
 }
 
+// CHECK-LABEL: @test_op_with_bit_enum_directive
+func.func @test_op_with_bit_enum_directive() -> () {
+  // CHECK: test.op_with_bit_enum_directive none
+  test.op_with_bit_enum_directive none
+  // CHECK: test.op_with_bit_enum_directive read, execute
+  test.op_with_bit_enum_directive read, execute
+  // CHECK: test.op_with_bit_enum_vbar_directive none
+  test.op_with_bit_enum_vbar_directive none
+  // CHECK: test.op_with_bit_enum_vbar_directive user | other
+  test.op_with_bit_enum_vbar_directive user | other
+  return
+}
+
 // CHECK-LABEL: @test_enum_prop
 func.func @test_enum_prop() -> () {
   // CHECK: test.op_with_enum_prop first
@@ -44,15 +66,15 @@ func.func @test_enum_prop() -> () {
   // CHECK: test.op_with_enum_prop first
   "test.op_with_enum_prop"() <{value = 0 : i32}> {} : () -> ()
 
-  // CHECK: test.op_with_enum_prop_attr_form <{value = 0 : i32}>
+  // CHECK: test.op_with_enum_prop_attr_form <value = first>
   test.op_with_enum_prop_attr_form <{value = 0 : i32}>
-  // CHECK: test.op_with_enum_prop_attr_form <{value = 1 : i32}>
-  test.op_with_enum_prop_attr_form <{value = #test<enum second>}>
+  // CHECK: test.op_with_enum_prop_attr_form <value = second>
+  test.op_with_enum_prop_attr_form <{value = #test.enum<second>}>
 
-  // CHECK: test.op_with_enum_prop_attr_form_always <{value = #test<enum first>}>
-  test.op_with_enum_prop_attr_form_always <{value = #test<enum first>}>
-  // CHECK: test.op_with_enum_prop_attr_form_always  <{value = #test<enum second>}
-  test.op_with_enum_prop_attr_form_always <{value = #test<enum second>}>
+  // CHECK: test.op_with_enum_prop_attr_form_always <value = first>
+  test.op_with_enum_prop_attr_form_always <{value = #test.enum<first>}>
+  // CHECK: test.op_with_enum_prop_attr_form_always <value = second>
+  test.op_with_enum_prop_attr_form_always <{value = #test.enum<second>}>
 
   return
 }

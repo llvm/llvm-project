@@ -22,11 +22,8 @@
 #include "SIPeepholeSDWA.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/RegisterClassInfo.h"
 #include <optional>
 
 using namespace llvm;
@@ -1057,6 +1054,8 @@ void SIPeepholeSDWA::pseudoOpConvertToVOP2(MachineInstr &MI,
     return;
   // Make sure VCC or its subregs are dead before MI.
   MachineBasicBlock &MBB = *MI.getParent();
+  if (MISucc.getParent() != &MBB)
+    return; // Loop depends on MI and MISucc in same MBB.
   MachineBasicBlock::LivenessQueryResult Liveness =
       MBB.computeRegisterLiveness(TRI, AMDGPU::VCC, MI, 25);
   if (Liveness != MachineBasicBlock::LQR_Dead)
@@ -1179,7 +1178,8 @@ bool isConvertibleToSDWA(MachineInstr &MI,
     return false;
 
   // Check if target supports this SDWA opcode
-  if (TII->pseudoToMCOpcode(Opc) == -1)
+  if (TII->pseudoToMCOpcode(Opc) == -1 ||
+      TII->pseudoToMCOpcode(AMDGPU::getSDWAOp(Opc)) == -1)
     return false;
 
   if (MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)) {

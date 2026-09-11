@@ -403,8 +403,8 @@ struct ConvertGlobal final : public OpConversionPattern<memref::GlobalOp> {
       initialValue = {};
 
     rewriter.replaceOpWithNewOp<emitc::GlobalOp>(
-        op, operands.getSymName(), resultTy, initialValue, externSpecifier,
-        staticSpecifier, operands.getConstant());
+        op, operands.getSymName(), /*sym_visibility=*/nullptr, resultTy,
+        initialValue, externSpecifier, staticSpecifier, operands.getConstant());
     return success();
   }
 };

@@ -43,6 +43,7 @@ class InstructionSelector;
 class LegalizerInfo;
 class LibcallLoweringInfo;
 class MachineInstr;
+struct MachinePipelinerPolicy;
 struct MachineSchedPolicy;
 struct MCReadAdvanceEntry;
 struct MCSchedModel;
@@ -276,6 +277,9 @@ public:
   /// in post-ra scheduling.
   virtual void overridePostRASchedPolicy(MachineSchedPolicy &Policy,
                                          const SchedRegion &Region) const {}
+
+  /// Override generic software pipelining policy.
+  virtual void overridePipelinerPolicy(MachinePipelinerPolicy &Policy) const {}
 
   // Perform target-specific adjustments to the latency of a schedule
   // dependency.

@@ -18,6 +18,7 @@ include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 def ROCDL_Dialect : Dialect {
   let name = "rocdl";
   let cppNamespace = "::mlir::ROCDL";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let dependentDialects = ["LLVM::LLVMDialect"];
   let summary = "Dialect for wrapping LLVM AMDGPU backend intrinsics and attributes";
   let hasOperationAttrVerify = 1;
@@ -142,6 +143,8 @@ def ROCDL_Dialect : Dialect {
     static constexpr unsigned kConstantMemoryAddressSpace = 4;
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 5;
+    /// The address space value that represents barriers.
+    static constexpr unsigned kBarrierAddressSpace = 15;
   }];
 
   let discardableAttrs = (ins

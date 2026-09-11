@@ -191,8 +191,7 @@ bool mlir::tosa::getConstShapeValues(Operation *op,
     return false;
   }
   if (auto constOp = mlir::dyn_cast<tosa::ConstShapeOp>(op)) {
-    Attribute constOpAttr = constOp->getAttr("values");
-    DenseElementsAttr elementsAttr = cast<DenseElementsAttr>(constOpAttr);
+    DenseElementsAttr elementsAttr = constOp.getValuesAttr();
     for (int i = 0; i < elementsAttr.size(); i++) {
       int64_t val = elementsAttr.getValues<int64_t>()[i];
       resultShape.push_back(val);

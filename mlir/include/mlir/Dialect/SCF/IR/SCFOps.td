@@ -42,7 +42,9 @@ def SCF_Dialect : Dialect {
     and then lowered to some final target like LLVM or SPIR-V.
   }];
 
-  let dependentDialects = ["arith::ArithDialect"];
+  // The canonicalization of a multi-block `scf.execute_region` materializes
+  // `cf.br` operations, so the ControlFlow dialect must always be loaded.
+  let dependentDialects = ["arith::ArithDialect", "cf::ControlFlowDialect"];
 }
 
 // Base class for SCF dialect ops.

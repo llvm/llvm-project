@@ -41,7 +41,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 
   llvm.func internal @firstprivate_test(%arg0: !llvm.ptr {fir.bindc_name = "ptr0"}, %arg1: !llvm.ptr {fir.bindc_name = "ptr1"}) {
     %0 = llvm.mlir.constant(1 : i32) : i32
-    %1 = llvm.mlir.constant(0 : index) : i64
+    %1 = llvm.mlir.constant(0 : i64) : i64
     %5 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
     %19 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "local"} : (i32) -> !llvm.ptr
     %20 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {bindc_name = "glocal"} : (i32) -> !llvm.ptr
@@ -95,7 +95,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK-SAME:      %[[ARG0:.*]]: !llvm.ptr {fir.bindc_name = "ptr0"},
 // CHECK-SAME:      %[[ARG1:.*]]: !llvm.ptr {fir.bindc_name = "ptr1"}) {
 // CHECK: %[[VAL_0:.*]] = llvm.mlir.constant(1 : i32) : i32
-// CHECK: %[[VAL_1:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK: %[[VAL_1:.*]] = llvm.mlir.constant(0 : i64) : i64
 // CHECK: %[[VAL_2:.*]] = llvm.alloca %[[VAL_0]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK: %[[VAL_3:.*]] = llvm.mlir.constant(48 : i64) : i64
 // CHECK: %[[HEAP0:.*]] = llvm.call @malloc(%[[VAL_3]]) : (i64) -> !llvm.ptr

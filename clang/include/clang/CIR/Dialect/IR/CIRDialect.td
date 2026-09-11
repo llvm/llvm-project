@@ -26,6 +26,8 @@ def CIR_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
 
+  let hasOperationAttrVerify = 1;
+
   // Enable constant materialization for the CIR dialect. This generates a
   // declaration for the cir::CIRDialect::materializeConstant function. This
   // hook is necessary for canonicalization to properly handle attributes
@@ -36,6 +38,8 @@ def CIR_Dialect : Dialect {
   let extraClassDeclaration = [{
     static llvm::StringRef getSourceLanguageAttrName() { return "cir.lang"; }
     static llvm::StringRef getTripleAttrName() { return "cir.triple"; }
+    static llvm::StringRef getSizeTypeWidthAttrName() { return "cir.size_type_width"; }
+    static llvm::StringRef getIntTypeWidthAttrName() { return "cir.int_type_width"; }
     static llvm::StringRef getOptInfoAttrName() { return "cir.opt_info"; }
     static llvm::StringRef getCalleeAttrName() { return "callee"; }
     static llvm::StringRef getNoThrowAttrName() { return "nothrow"; }
@@ -51,6 +55,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }
+    static llvm::StringRef getOffloadKindAttrName() { return "cir.offload.kind"; }
     static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
     static llvm::StringRef getNoCallerSavedRegsAttrName() { return "no_caller_saved_registers"; }
     static llvm::StringRef getNoCallbackAttrName() { return "nocallback"; }
@@ -74,6 +80,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
@@ -81,6 +88,9 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }
     static llvm::StringRef getTargetFeaturesAttrName() { return "cir.target-features"; }
     static llvm::StringRef getCUDABinaryHandleAttrName() { return "cir.cu.binary_handle"; }
+    // Mangled symbol name of the C++20 named-module initializer function,
+    // precomputed by CIRGen so later passes don't need a live ASTContext.
+    static llvm::StringRef getCXXModuleInitFnNameAttrName() { return "cir.cxx_module_init_fn_name"; }
     static llvm::StringRef getMustTailAttrName() { return "musttail"; }
     static llvm::StringRef getCatchCopyThunkAttrName() { return "cir.eh.catch_copy_thunk"; }
 

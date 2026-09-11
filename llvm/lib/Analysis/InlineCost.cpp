@@ -1588,10 +1588,9 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
       // being too pessimistic and prevent inlining non-problematic code. This
       // could result in unintended perf regressions. A better overall strategy
       // is needed to track stack usage during inlining.
-      Type *Ty = I.getAllocatedType();
       AllocatedSize = SaturatingMultiplyAdd(
           AllocSize->getLimitedValue(),
-          DL.getTypeAllocSize(Ty).getKnownMinValue(), AllocatedSize);
+          I.getAllocationBaseSize(DL).getKnownMinValue(), AllocatedSize);
       if (AllocatedSize > InlineConstants::MaxSimplifiedDynamicAllocaToInline)
         HasDynamicAlloca = true;
       return false;

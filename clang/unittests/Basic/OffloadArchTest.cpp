@@ -25,13 +25,13 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_TRUE(parse("gfx12-generic").isAMDGPU());
   EXPECT_FALSE(parse("gfx600").isNVPTX());
 
-  OffloadArch SPIRV = parse("amdgcnspirv");
-  EXPECT_FALSE(SPIRV.isAMDGPU());
-  EXPECT_TRUE(SPIRV.isSPIRV());
+  OffloadArch AMDGCNSPIRV = parse("amdgcnspirv");
+  EXPECT_FALSE(AMDGCNSPIRV.isAMDGPU());
+  EXPECT_TRUE(AMDGCNSPIRV.isAMDGCNSPIRV());
 
   OffloadArch IntelCPU = parse("graniterapids");
   EXPECT_FALSE(IntelCPU.isAMDGPU());
-  EXPECT_FALSE(IntelCPU.isSPIRV());
+  EXPECT_FALSE(IntelCPU.isAMDGCNSPIRV());
   EXPECT_TRUE(IntelCPU.isIntel());
   EXPECT_TRUE(IntelCPU.isIntelCPU());
   EXPECT_FALSE(IntelCPU.isIntelGPU());
@@ -44,7 +44,7 @@ TEST(OffloadArchTest, TargetArchClassification) {
   OffloadArch Generic = parse("generic");
   EXPECT_FALSE(Generic.isNVPTX());
   EXPECT_FALSE(Generic.isAMDGPU());
-  EXPECT_FALSE(Generic.isSPIRV());
+  EXPECT_FALSE(Generic.isAMDGCNSPIRV());
   EXPECT_FALSE(Generic.isIntel());
 }
 
@@ -89,6 +89,6 @@ TEST(OffloadArchTest, AMDGPUSubArchRoundTrip) {
         << "subarch round-trip failed for " << OffloadArchToString(Arch);
   }
 
-  EXPECT_EQ(getOffloadArchSubArch(OffloadArch::getSPIRV()),
+  EXPECT_EQ(getOffloadArchSubArch(OffloadArch::getAMDGCNSPIRV()),
             llvm::Triple::NoSubArch);
 }

@@ -104,8 +104,8 @@
 // HOSTSANCOMBINATION: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address,fuzzer,fuzzer-no-link".* "--offload-targets=amdgpu-amd-amdhsa".* "-x" "c".*}}
 // HOSTSANCOMBINATION2: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address,fuzzer,fuzzer-no-link,leak".* "--offload-targets=amdgpu-amd-amdhsa".* "-x" "c".*}}
 
-// GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgpu.+-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc" "-flto=full" "-flto-unit".* "-mlink-bitcode-file" "[^"]*asanrtl.bc".* "-mlink-builtin-bitcode" "[^"]*ockl.bc".* "-target-cpu" "(gfx908|gfx900|gfx1250|gfx1251)".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
-// NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgpu.+-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc" "-flto=full" "-flto-unit".* "-target-cpu" "(gfx908|gfx900)".* "-fopenmp".* "-x" "c".*}}
+// GPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgpu.+-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc" "-flto=full" "-flto-unit".* "-mlink-bitcode-file" "[^"]*asanrtl.bc".* "-mlink-builtin-bitcode" "[^"]*ockl.bc".* "-fopenmp".* "-fsanitize=address".* "-x" "c".*}}
+// NOGPUSAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "amdgpu.+-amd-amdhsa" "-aux-triple" "x86_64-unknown-linux-gnu".* "-emit-llvm-bc" "-flto=full" "-flto-unit".* "-fopenmp".* "-x" "c".*}}
 
 // SAN: {{"[^"]*llvm-offload-binary[^"]*" "-o".* "--image=file=.*.o,triple=amdgpu.*-amd-amdhsa,arch=(gfx908|gfx1250|gfx1251)(:xnack\-|:xnack\+)?,kind=openmp(,feature=(\-xnack|\+xnack))?"}}
 // SAN: {{"[^"]*clang[^"]*" "-cc1" "-triple" "x86_64-unknown-linux-gnu".* "-fopenmp".* "-fsanitize=address".* "--offload-targets=amdgpu-amd-amdhsa".* "-x" "ir".*}}

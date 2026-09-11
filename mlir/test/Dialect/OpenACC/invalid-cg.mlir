@@ -26,7 +26,15 @@ scf.parallel (%iv) = (%c0_2) to (%c4_2) step (%c1_2) {
 // expected-error@+1 {{'acc.compute_region' op launch arguments must be results of acc.par_width operations}}
 acc.compute_region launch(%arg0 = %c32) {
   acc.yield
-} {origin = "acc.parallel"}
+} <{origin = "acc.parallel"}>
+
+// -----
+
+func.func @compute_region_inherent_attr_in_attr_dict() {
+  // expected-error@+1 {{inherent attribute 'origin' cannot be parsed from attr-dict when strict properties in assembly format is enabled}}
+  acc.compute_region {} <{origin = "acc.parallel"}> {origin = "acc.parallel"}
+  return
+}
 
 // -----
 
@@ -100,7 +108,7 @@ func.func @predicate_region_empty() {
     acc.predicate_region {
     }
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 
@@ -114,7 +122,7 @@ func.func @predicate_region_with_args() {
       %c0 = arith.constant 0 : index
     }
     acc.yield
-  } {origin = "acc.parallel"}
+  } <{origin = "acc.parallel"}>
   return
 }
 

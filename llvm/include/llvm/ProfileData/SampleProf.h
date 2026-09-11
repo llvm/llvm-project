@@ -122,11 +122,15 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
 static constexpr uint64_t MinSupportedVersion = 103;
 
 // The default version of the extensible binary profile format written by the
-// compiler.  We default to v103 as v104 is work in progress.
+// compiler. We default to v103 as v104 is reserved for the in-progress on-disk
+// hash table.
 static constexpr uint64_t DefaultVersion = 103;
 
+// The first version that permits composite profile sections.
+static constexpr uint64_t CompositeProfileVersion = 105;
+
 // The latest supported version of the extensible binary profile format.
-static constexpr uint64_t LatestVersion = 104;
+static constexpr uint64_t LatestVersion = CompositeProfileVersion;
 
 // Query if a given format version is supported by this compiler.
 static inline bool formatVersionIsSupported(uint64_t Version) {
@@ -148,9 +152,13 @@ enum SecType {
   SecFuncOffsetTable = 4,
   SecFuncMetadata = 5,
   SecCSNameTable = 6,
+  // Function offset table used by the composite profile representation.
+  SecCompositeFuncOffsetTable = 7,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
-  SecLBRProfile = SecFuncProfileFirst
+  SecLBRProfile = SecFuncProfileFirst,
+  // Function profile section used by the composite profile representation.
+  SecCompositeProfile = 33
 };
 
 static inline std::string getSecName(SecType Type) {
@@ -169,10 +177,28 @@ static inline std::string getSecName(SecType Type) {
     return "FunctionMetadata";
   case SecCSNameTable:
     return "CSNameTableSection";
+  case SecCompositeFuncOffsetTable:
+    return "CompositeFuncOffsetTableSection";
   case SecLBRProfile:
     return "LBRProfileSection";
+  case SecCompositeProfile:
+    return "CompositeProfileSection";
   default:
     return "UnknownSection";
+  }
+}
+
+// Types of sample profiles that can be placed in SecCompositeProfile. These
+// values are persisted on disk; never change existing values, only append new
+// profile type IDs.
+enum ProfTypes { ProfTypeLBR = 0 };
+
+static inline StringRef getProfTypeName(uint64_t Type) {
+  switch (Type) {
+  case ProfTypeLBR:
+    return "LBR";
+  default:
+    return "unknown";
   }
 }
 
@@ -279,6 +305,7 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
     break;
   default:
@@ -372,7 +399,7 @@ namespace sampleprof {
 /// represents its counter.
 /// TODO: The class name FunctionId should be renamed to SymbolId in a refactor
 /// change.
-using TypeCountMap = std::map<FunctionId, uint64_t>;
+using TypeCountMap = SortedVectorMap<FunctionId, uint64_t, 0>;
 
 /// Write \p Map to the output stream. Keys are linearized using \p NameTable
 /// and written as ULEB128. Values are written as ULEB128 as well.
@@ -460,7 +487,12 @@ public:
   bool hasCalls() const { return !CallTargets.empty(); }
 
   uint64_t getSamples() const { return NumSamples; }
-  const CallTargetMap &getCallTargets() const { return CallTargets; }
+  /// Return the call targets collected in this sample record.
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this SampleRecord.
+  const CallTargetMap &getCallTargets() const LLVM_LIFETIME_BOUND {
+    return CallTargets;
+  }
   SortedCallTargetSet getSortedCallTargets() const {
     return sortCallTargets(CallTargets);
   }
@@ -805,12 +837,12 @@ inline raw_ostream &operator<<(raw_ostream &OS, const SampleContext &Context) {
 class FunctionSamples;
 class SampleProfileReaderItaniumRemapper;
 
-using BodySampleMap = std::map<LineLocation, SampleRecord>;
+using BodySampleMap = SortedVectorMap<LineLocation, SampleRecord, 0>;
 // NOTE: Using a StringMap here makes parsed profiles consume around 17% more
 // memory, which is *very* significant for large profiles.
 using FunctionSamplesMap = std::map<FunctionId, FunctionSamples>;
 using CallsiteSampleMap = std::map<LineLocation, FunctionSamplesMap>;
-using CallsiteTypeMap = std::map<LineLocation, TypeCountMap>;
+using CallsiteTypeMap = SortedVectorMap<LineLocation, TypeCountMap, 0>;
 using LocToLocMap = DenseMap<LineLocation, LineLocation>;
 
 /// Representation of the samples collected for a function.
@@ -870,6 +902,14 @@ public:
                                    const SampleRecord &SampleRecord,
                                    uint64_t Weight = 1) {
     return BodySamples[Location].merge(SampleRecord, Weight);
+  }
+
+  void reserveBodySamples(size_t NumEntries) {
+    BodySamples.reserve(NumEntries);
+  }
+
+  void reserveCallsiteTypeCounts(size_t NumEntries) {
+    VirtualCallsiteTypeCounts.reserve(NumEntries);
   }
 
   // Remove a call target and decrease the body sample correspondingly. Return
@@ -967,8 +1007,11 @@ public:
   /// Returns the call target map collected at a given location.
   /// Each location is specified by \p LineOffset and \p Discriminator.
   /// If the location is not found in profile, return error.
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
   ErrorOr<const SampleRecord::CallTargetMap &>
-  findCallTargetMapAt(uint32_t LineOffset, uint32_t Discriminator) const {
+  findCallTargetMapAt(uint32_t LineOffset,
+                      uint32_t Discriminator) const LLVM_LIFETIME_BOUND {
     const auto &Ret = BodySamples.find(
         mapIRLocToProfileLoc(LineLocation(LineOffset, Discriminator)));
     if (Ret == BodySamples.end())
@@ -978,8 +1021,10 @@ public:
 
   /// Returns the call target map collected at a given location specified by \p
   /// CallSite. If the location is not found in profile, return error.
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
   ErrorOr<const SampleRecord::CallTargetMap &>
-  findCallTargetMapAt(const LineLocation &CallSite) const {
+  findCallTargetMapAt(const LineLocation &CallSite) const LLVM_LIFETIME_BOUND {
     const auto &Ret = BodySamples.find(mapIRLocToProfileLoc(CallSite));
     if (Ret == BodySamples.end())
       return std::error_code();
@@ -987,13 +1032,14 @@ public:
   }
 
   /// Return the function samples at the given callsite location.
-  FunctionSamplesMap &functionSamplesAt(const LineLocation &Loc) {
+  FunctionSamplesMap &
+  functionSamplesAt(const LineLocation &Loc) LLVM_LIFETIME_BOUND {
     return CallsiteSamples[mapIRLocToProfileLoc(Loc)];
   }
 
   /// Returns the FunctionSamplesMap at the given \p Loc.
   const FunctionSamplesMap *
-  findFunctionSamplesMapAt(const LineLocation &Loc) const {
+  findFunctionSamplesMapAt(const LineLocation &Loc) const LLVM_LIFETIME_BOUND {
     auto Iter = CallsiteSamples.find(mapIRLocToProfileLoc(Loc));
     if (Iter == CallsiteSamples.end())
       return nullptr;
@@ -1001,7 +1047,10 @@ public:
   }
 
   /// Returns the TypeCountMap for inlined callsites at the given \p Loc.
-  const TypeCountMap *findCallsiteTypeSamplesAt(const LineLocation &Loc) const {
+  /// The returned pointer may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  const TypeCountMap *
+  findCallsiteTypeSamplesAt(const LineLocation &Loc) const LLVM_LIFETIME_BOUND {
     auto Iter = VirtualCallsiteTypeCounts.find(mapIRLocToProfileLoc(Loc));
     if (Iter == VirtualCallsiteTypeCounts.end())
       return nullptr;
@@ -1014,11 +1063,11 @@ public:
   /// \p Loc with the maximum total sample count. If \p Remapper or \p
   /// FuncNameToProfNameMap is not nullptr, use them to find FunctionSamples
   /// with equivalent name as \p CalleeName.
-  LLVM_ABI const FunctionSamples *
-  findFunctionSamplesAt(const LineLocation &Loc, StringRef CalleeName,
-                        SampleProfileReaderItaniumRemapper *Remapper,
-                        const HashKeyMap<DenseMap, FunctionId, FunctionId>
-                            *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *findFunctionSamplesAt(
+      const LineLocation &Loc, StringRef CalleeName,
+      SampleProfileReaderItaniumRemapper *Remapper,
+      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
 
   bool empty() const { return TotalSamples == 0; }
 
@@ -1062,10 +1111,14 @@ public:
   }
 
   /// Return all the samples collected in the body of the function.
-  const BodySampleMap &getBodySamples() const { return BodySamples; }
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  const BodySampleMap &getBodySamples() const LLVM_LIFETIME_BOUND {
+    return BodySamples;
+  }
 
   /// Return all the callsite samples collected in the body of the function.
-  const CallsiteSampleMap &getCallsiteSamples() const {
+  const CallsiteSampleMap &getCallsiteSamples() const LLVM_LIFETIME_BOUND {
     return CallsiteSamples;
   }
 
@@ -1074,14 +1127,18 @@ public:
 
   /// Returns vtable access samples for the C++ types collected in this
   /// function.
-  const CallsiteTypeMap &getCallsiteTypeCounts() const {
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  const CallsiteTypeMap &getCallsiteTypeCounts() const LLVM_LIFETIME_BOUND {
     return VirtualCallsiteTypeCounts;
   }
 
   /// Returns the vtable access samples for the C++ types for \p Loc.
   /// Under the hood, the caller-specified \p Loc will be un-drifted before the
   /// type sample lookup if possible.
-  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) {
+  /// The returned reference may be invalidated by subsequent modifications to
+  /// this FunctionSamples.
+  TypeCountMap &getTypeSamplesAt(const LineLocation &Loc) LLVM_LIFETIME_BOUND {
     return VirtualCallsiteTypeCounts[mapIRLocToProfileLoc(Loc)];
   }
 
@@ -1114,6 +1171,7 @@ public:
                   "T must be a map with StringRef or FunctionId as key and "
                   "uint64_t as value");
     TypeCountMap &TypeCounts = getTypeSamplesAt(Loc);
+    TypeCounts.reserve(TypeCounts.size() + Other.size());
     bool Overflowed = false;
 
     for (const auto &[Type, Count] : Other) {
@@ -1169,6 +1227,7 @@ public:
                           addTotalSamples(Other.getTotalSamples(), Weight));
     mergeSampleProfErrors(Result,
                           addHeadSamples(Other.getHeadSamples(), Weight));
+    BodySamples.reserve(BodySamples.size() + Other.getBodySamples().size());
     for (const auto &I : Other.getBodySamples()) {
       const LineLocation &Loc = I.first;
       const SampleRecord &Rec = I.second;
@@ -1181,6 +1240,8 @@ public:
         mergeSampleProfErrors(Result,
                               FSMap[Rec.first].merge(Rec.second, Weight));
     }
+    VirtualCallsiteTypeCounts.reserve(VirtualCallsiteTypeCounts.size() +
+                                      Other.getCallsiteTypeCounts().size());
     for (const auto &[Loc, OtherTypeMap] : Other.getCallsiteTypeCounts())
       mergeSampleProfErrors(
           Result, addCallsiteVTableTypeProfAt(Loc, OtherTypeMap, Weight));
@@ -1252,14 +1313,18 @@ public:
   static constexpr const char *LLVMSuffix = ".llvm.";
   static constexpr const char *PartSuffix = ".part.";
   static constexpr const char *UniqSuffix = ".__uniq.";
+  // Appended by LowerTypeTests to the body of a CFI jump table member, whose
+  // original name then refers to the jump table entry.
+  static constexpr const char *CfiSuffix = ".cfi";
 
   static StringRef getCanonicalFnName(StringRef FnName,
                                       StringRef Attr = "selected") {
     // Note the sequence of the suffixes in the knownSuffixes array matters.
     // If suffix "A" is appended after the suffix "B", "A" should be in front
-    // of "B" in knownSuffixes.
-    const SmallVector<StringRef> KnownSuffixes{LLVMSuffix, PartSuffix,
-                                               UniqSuffix};
+    // of "B" in knownSuffixes. The CFI suffix is appended in the ThinLTO
+    // backend, after all the others.
+    const SmallVector<StringRef> KnownSuffixes{CfiSuffix, LLVMSuffix,
+                                               PartSuffix, UniqSuffix};
     return getCanonicalFnName(FnName, KnownSuffixes, Attr);
   }
 
@@ -1286,11 +1351,15 @@ public:
         // suffix for names in the IR.
         if (Suffix == UniqSuffix && FunctionSamples::HasUniqSuffix)
           continue;
+        if (!Suffix.ends_with(".")) {
+          Cand.consume_back(Suffix);
+          continue;
+        }
         auto It = Cand.rfind(Suffix);
         if (It == StringRef::npos)
           continue;
         auto Dit = Cand.rfind('.');
-        if (Dit == It || Dit == It + Suffix.size() - 1)
+        if (Dit == It + Suffix.size() - 1)
           Cand = Cand.substr(0, It);
       }
       return Cand;
@@ -1349,13 +1418,13 @@ public:
   /// If \p Remapper or \p FuncNameToProfNameMap is not nullptr, it will be used
   /// to find matching FunctionSamples with not exactly the same but equivalent
   /// name.
-  LLVM_ABI const FunctionSamples *
-  findFunctionSamples(const DILocation *DIL,
-                      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
-                      const HashKeyMap<DenseMap, FunctionId, FunctionId>
-                          *FuncNameToProfNameMap = nullptr) const;
+  LLVM_ABI const FunctionSamples *findFunctionSamples(
+      const DILocation *DIL,
+      SampleProfileReaderItaniumRemapper *Remapper = nullptr,
+      const HashKeyMap<DenseMap, FunctionId, FunctionId>
+          *FuncNameToProfNameMap = nullptr) const LLVM_LIFETIME_BOUND;
 
-  SampleContext &getContext() const { return Context; }
+  SampleContext &getContext() const LLVM_LIFETIME_BOUND { return Context; }
 
   void setContext(const SampleContext &FContext) { Context = FContext; }
 
@@ -1626,6 +1695,7 @@ private:
       // We recompute TotalSamples later, so here set to zero.
       Profile.setTotalSamples(0);
     } else {
+      Profile.reserveBodySamples(FS.getBodySamples().size());
       for (const auto &[LineLocation, SampleRecord] : FS.getBodySamples()) {
         Profile.addSampleRecord(LineLocation, SampleRecord);
       }

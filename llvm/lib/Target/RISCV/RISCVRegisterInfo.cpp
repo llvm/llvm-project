@@ -120,14 +120,13 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
 }
 
-const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForOperand(
-    const MachineOperand &MO, const MachineRegisterInfo &MRI) const {
+const TargetRegisterClass *RISCVRegisterInfo::getConstrainedRegClassForReg(
+    Register Reg, const MachineRegisterInfo &MRI) const {
   const RISCVSubtarget &STI = MRI.getMF().getSubtarget<RISCVSubtarget>();
 
-  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(MO.getReg());
+  const RegClassOrRegBank &RCOrRB = MRI.getRegClassOrRegBank(Reg);
   if (const RegisterBank *RB = dyn_cast<const RegisterBank *>(RCOrRB))
-    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB,
-                                    STI.is64Bit());
+    return getRegClassForTypeOnBank(MRI.getType(Reg), *RB, STI.is64Bit());
 
   if (const auto *RC = dyn_cast<const TargetRegisterClass *>(RCOrRB)) {
     return getAllocatableClass(RC);

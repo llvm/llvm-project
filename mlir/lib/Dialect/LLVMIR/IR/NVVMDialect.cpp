@@ -16,6 +16,8 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "IR/NVVMOps.h"
+
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -37,10 +39,12 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/raw_ostream.h"
+#include <array>
 #include <cassert>
 #include <cmath>
 #include <optional>
 #include <string>
+#include <utility>
 
 using namespace mlir;
 using namespace NVVM;
@@ -91,8 +95,8 @@ getNVVMCtaGroupKind(NVVM::CTAGroupKind ctaGroup) {
   llvm_unreachable("unsupported cta_group value");
 }
 
-static ParseResult parseCTAGroup(OpAsmParser &parser,
-                                 NVVM::CTAGroupKindAttr &groupAttr) {
+ParseResult mlir::NVVM::parseCTAGroup(OpAsmParser &parser,
+                                      NVVM::CTAGroupKindAttr &groupAttr) {
   StringRef keyword;
   if (parser.parseKeyword(&keyword))
     return failure();
@@ -104,8 +108,8 @@ static ParseResult parseCTAGroup(OpAsmParser &parser,
   return success();
 }
 
-static void printCTAGroup(OpAsmPrinter &printer, Operation *,
-                          NVVM::CTAGroupKindAttr groupAttr) {
+void mlir::NVVM::printCTAGroup(OpAsmPrinter &printer, Operation *,
+                               NVVM::CTAGroupKindAttr groupAttr) {
   printer << NVVM::stringifyCTAGroupKind(groupAttr.getValue());
 }
 
@@ -154,6 +158,41 @@ static LogicalResult cpAsyncBulkTensorCommonVerifier(size_t tensorDims,
   return success();
 }
 
+LogicalResult CpAsyncBulkTensorOverrideAddrCommonVerifier(
+    OperandRange coordinates, OperandRange tensorSize, OperandRange lowerStride,
+    Value upperStride, bool isTile, Location loc) {
+  LogicalResult res = success();
+  if (!tensorSize.empty() && coordinates.size() != tensorSize.size()) {
+    res =
+        emitError(loc, "Expected coordinates size to be equal to tensor size");
+  }
+
+  if (!lowerStride.empty() && tensorSize.empty()) {
+    res = emitError(
+        loc,
+        "Expected tensor_size to be present when lower_stride is provided");
+  } else if (!lowerStride.empty() &&
+             lowerStride.size() != tensorSize.size() - 1) {
+    res = emitError(
+        loc,
+        "Expected lower_stride size to be equal to one less than tensor size");
+  }
+
+  if (!lowerStride.empty() != static_cast<bool>(upperStride)) {
+    res = emitError(loc,
+                    "Expected lower_stride and upper_stride to be either both "
+                    "present or both absent");
+  }
+
+  bool isDimStride = tensorSize.size() > 0;
+  if (!isTile && isDimStride) {
+    res = emitError(
+        loc, "Only tile mode supports override address with dim and stride");
+  }
+
+  return res;
+}
+
 LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
   TMAStoreMode mode = getMode();
   // We lower through inline-ptx when getPredicate() is true.
@@ -178,6 +217,25 @@ LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOp::verify() {
       return emitError("Scatter4 mode expects 5 coordinates");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp::verify() {
+  TMAStoreMode mode = getMode();
+  bool isIm2Col =
+      mode == TMAStoreMode::IM2COL || mode == TMAStoreMode::IM2COL_W;
+  bool isTile = mode == TMAStoreMode::TILE;
+
+  LogicalResult commonRes = cpAsyncBulkTensorCommonVerifier(
+      getCoordinates().size(), isIm2Col, 0, getLoc());
+
+  LogicalResult overrideAddrRes = CpAsyncBulkTensorOverrideAddrCommonVerifier(
+      getCoordinates(), getTensorSize(), getLowerStride(), getUpperStride(),
+      isTile, getLoc());
+
+  if (mode == TMAStoreMode::TILE_SCATTER4 && getCoordinates().size() != 5)
+    overrideAddrRes = emitError("Mode tile scatter4 expects 5 coordinates");
+
+  return failed(commonRes) || failed(overrideAddrRes) ? failure() : success();
 }
 
 LogicalResult CpAsyncOp::verify() {
@@ -277,6 +335,25 @@ LogicalResult CpAsyncBulkTensorReduceOp::verify() {
     return emitError("Scatter mode unsupported for CpAsyncBulkTensorReduceOp");
   }
   return success();
+}
+
+LogicalResult CpAsyncBulkTensorReduceOverrideAddrOp::verify() {
+  bool isIm2Col =
+      getMode() == TMAStoreMode::IM2COL || getMode() == TMAStoreMode::IM2COL_W;
+  bool isTile = getMode() == TMAStoreMode::TILE;
+
+  LogicalResult commonRes = cpAsyncBulkTensorCommonVerifier(
+      getCoordinates().size(), isIm2Col, 0, getLoc());
+
+  LogicalResult overrideAddrRes = CpAsyncBulkTensorOverrideAddrCommonVerifier(
+      getCoordinates(), getTensorSize(), getLowerStride(), getUpperStride(),
+      isTile, getLoc());
+
+  if (getMode() == TMAStoreMode::TILE_SCATTER4)
+    overrideAddrRes = emitError(
+        "Scatter mode unsupported for CpAsyncBulkTensorReduceOverrideAddrOp");
+
+  return failed(commonRes) || failed(overrideAddrRes) ? failure() : success();
 }
 
 LogicalResult CpAsyncBulkGlobalToSharedClusterOp::verify() {
@@ -1009,7 +1086,8 @@ void MmaOp::print(OpAsmPrinter &p) {
                                          getLayoutBAttrName(),
                                          getMultiplicandAPtxTypeAttrName(),
                                          getMultiplicandBPtxTypeAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print the types of the operands and result.
   p << " : " << "(";
@@ -1325,7 +1403,9 @@ LogicalResult MmaOp::verify() {
   // Verify the operand types for segments of A, B, and C operands.
   std::array<StringRef, 3> operandNames{"A", "B", "C"};
   for (const auto &iter : llvm::enumerate(
-           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+           std::array<AllowedTypes, 3>{std::move(expectedA),
+                                       std::move(expectedB),
+                                       std::move(expectedC)})) {
     auto spec = this->getODSOperandIndexAndLength(iter.index());
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
@@ -1502,7 +1582,8 @@ void MmaSpOp::print(OpAsmPrinter &p) {
                           getMultiplicandAPtxTypeAttrName(),
                           getMultiplicandBPtxTypeAttrName(),
                           getOrderedMetadataAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict((*this)->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
   p << " : ";
   p << "(";
   for (int i = 0; i < 3; ++i) {
@@ -1843,7 +1924,9 @@ LogicalResult MmaSpOp::verify() {
   // Verify the operand types for segments of A, B, and C operands.
   std::array<StringRef, 3> operandNames{"A", "B", "C"};
   for (const auto &iter : llvm::enumerate(
-           SmallVector<AllowedTypes, 3>{expectedA, expectedB, expectedC})) {
+           std::array<AllowedTypes, 3>{std::move(expectedA),
+                                       std::move(expectedB),
+                                       std::move(expectedC)})) {
     auto spec = this->getODSOperandIndexAndLength(iter.index());
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
@@ -2092,7 +2175,8 @@ void MmaBlockScaleOp::print(OpAsmPrinter &p) {
                           getMultiplicandBPtxTypeAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -2350,7 +2434,8 @@ void MmaSpBlockScaleOp::print(OpAsmPrinter &p) {
                           getOrderedMetadataAttrName(),
                           getScaleVecSizeAttrName(),
                           getBlockScaleFormatAttrName(), getKindAttrName()});
-  p.printOptionalAttrDict(this->getOperation()->getAttrs(), ignoreAttrNames);
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue(),
+                          ignoreAttrNames);
 
   // Print type signature
   p << " : (";
@@ -2941,8 +3026,7 @@ static LogicalResult isAllowedWGMMADataType(NVVM::WGMMATypes typeD,
       return success();
     break;
   case NVVM::WGMMATypes::bf16:
-    if ((typeD == NVVM::WGMMATypes::f32 || typeD == NVVM::WGMMATypes::f16) &&
-        typeB == NVVM::WGMMATypes::bf16)
+    if (typeD == NVVM::WGMMATypes::f32 && typeB == NVVM::WGMMATypes::bf16)
       return success();
     break;
   case NVVM::WGMMATypes::e4m3:
@@ -3532,14 +3616,6 @@ static LogicalResult verifyAddSubFOp(OpType op) {
                             "vector<2xbf16> additions/subtractions");
   }
 
-  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
-  // PTX instructions since the corresponding LLVM intrinsic is missing. This
-  // should be removed once the intrinsics for f16 addition (with FTZ only) are
-  // available.
-  if (opBaseType.isF16() && isFTZ && satMode == NVVM::SaturationMode::NONE)
-    return op.emitOpError("FTZ with no saturation is not supported for f16 and "
-                          "vector<2xf16> additions/subtractions");
-
   return success();
 }
 
@@ -3681,9 +3757,13 @@ void Tcgen05MmaSmemDescOp::createSmemDescriptor(Operation &op,
 //===----------------------------------------------------------------------===//
 
 std::string NVVM::MBarrierInitOp::getPtx() {
-  bool isShared = isPtrInSharedCTASpace(getAddr());
-  return isShared ? std::string("mbarrier.init.shared.b64 [%0], %1;")
-                  : std::string("mbarrier.init.b64 [%0], %1;");
+  std::string space = isPtrInSharedCTASpace(getAddr()) ? ".shared" : "";
+  // Layout v0 is the default, so it is emitted as a plain mbarrier.init.
+  std::string layout =
+      getLayout() == 1 ? std::string(".layout::v1") : std::string();
+
+  return llvm::formatv("mbarrier.init{0}{1}.b64 [%0], %1;", layout, space)
+      .str();
 }
 
 std::string NVVM::MBarrierArriveExpectTxOp::getPtx() {
@@ -4007,19 +4087,28 @@ PMEventOp::getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
   return {llvm::Intrinsic::nvvm_pm_event_mask, {maskVal}};
 }
 
+bool MBarrierInitOp::getAsmValues(
+    RewriterBase &rewriter,
+    llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
+        &asmValues) {
+  // Add all the operands but not the attrs to the asmValues list.
+  // The layout attr is already baked into the PTX string by getPtx(), so
+  // passing it along here too would shift the operand numbering.
+  for (auto val : getOperands())
+    asmValues.push_back({val, mlir::NVVM::PTXRegisterMod::Read});
+
+  return false;
+}
+
 mlir::NVVM::IDArgPair MBarrierInitOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::MBarrierInitOp>(op);
-  bool isShared = isPtrInSharedCTASpace(thisOp.getAddr());
-  llvm::Intrinsic::ID id = isShared ? llvm::Intrinsic::nvvm_mbarrier_init_shared
-                                    : llvm::Intrinsic::nvvm_mbarrier_init;
 
-  // Fill the Intrinsic Args
-  llvm::SmallVector<llvm::Value *> args;
-  args.push_back(mt.lookupValue(thisOp.getAddr()));
-  args.push_back(mt.lookupValue(thisOp.getCount()));
-
-  return {id, std::move(args)};
+  // The intrinsic is overloaded on the mbarrier pointer, so the address space
+  // selects the generic or shared::cta form on its own.
+  return {llvm::Intrinsic::nvvm_mbarrier_init,
+          {mt.lookupValue(thisOp.getAddr()), mt.lookupValue(thisOp.getCount()),
+           builder.getInt32(thisOp.getLayout())}};
 }
 
 mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
@@ -4031,6 +4120,15 @@ mlir::NVVM::IDArgPair MBarrierInvalOp::getIntrinsicIDAndArgs(
                                : llvm::Intrinsic::nvvm_mbarrier_inval;
 
   return {id, {mt.lookupValue(thisOp.getAddr())}};
+}
+
+mlir::NVVM::IDArgPair MBarrierCheckLayoutOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::MBarrierCheckLayoutOp>(op);
+
+  return {
+      llvm::Intrinsic::nvvm_mbarrier_check_layout,
+      {mt.lookupValue(thisOp.getAddr()), builder.getInt32(thisOp.getLayout())}};
 }
 
 mlir::NVVM::IDArgPair MBarrierExpectTxOp::getIntrinsicIDAndArgs(
@@ -4563,6 +4661,9 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
   llvm::Value *cg =
       llvm::ConstantInt::get(llvm::Type::getInt32Ty(mt.getLLVMContext()), val);
 
+  // validate_pattern = disabled
+  llvm::Value *validatePattern = builder.getInt32(0);
+
   if (!isCTAOnly) {
     // For shared::cluster, all the arguments that we build are applicable.
     args.push_back(hasMC ? mt.lookupValue(mcMask) : i16Zero);
@@ -4570,10 +4671,12 @@ CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt1(hasMC));
     args.push_back(builder.getInt1(hasCacheHint));
     args.push_back(cg);
+    args.push_back(validatePattern);
   } else {
     // For shared::cta, only cache-hint is applicable.
     args.push_back(hasCacheHint ? mt.lookupValue(cacheHint) : i64Zero);
     args.push_back(builder.getInt1(hasCacheHint));
+    args.push_back(validatePattern);
   }
 
   constexpr size_t numDims = 5;  // 1D to 5D
@@ -4737,6 +4840,76 @@ CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
   return {id, std::move(args)};
 }
 
+NVVM::IDArgPair
+CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp =
+      cast<NVVM::CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+  args.push_back(mt.lookupValue(thisOp.getOverrideAddr()));
+  for (Value v : thisOp.getTensorSize())
+    args.push_back(mt.lookupValue(v));
+  for (Value v : thisOp.getLowerStride())
+    args.push_back(mt.lookupValue(v));
+  if (thisOp.getUpperStride())
+    args.push_back(mt.lookupValue(thisOp.getUpperStride()));
+  for (Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint)
+                              : builder.getInt64(0));
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  // clang-format off
+  // override_addr variants, indexed [mode][dim].
+  static constexpr ID IDTable[][6] = {
+      {NI, nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_1d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_2d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_3d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_4d,
+       nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_5d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_override_addr_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_override_addr_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_override_addr_5d},
+      {NI, NI, NI, NI, NI,
+       nvvm_cp_async_bulk_tensor_s2g_tile_scatter4_override_addr_2d},
+      {NI, NI, NI, nvvm_cp_async_bulk_tensor_s2g_im2col_w_override_addr_3d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_override_addr_4d,
+       nvvm_cp_async_bulk_tensor_s2g_im2col_w_override_addr_5d}};
+
+  // Tile-only override_addr_dim (1D) / override_addr_dim_stride (2D-5D)
+  // variants, indexed [dim].
+  static constexpr ID dimStrideIDTable[] = {
+      NI, nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_1d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_2d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_3d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_4d,
+      nvvm_cp_async_bulk_tensor_s2g_tile_override_addr_dim_stride_5d};
+  // clang-format on
+
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  bool isDimStride = !thisOp.getTensorSize().empty();
+
+  assert(mode < std::size(IDTable) &&
+         "Invalid mode for CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp");
+  assert(dim < std::size(IDTable[mode]) && dim < std::size(dimStrideIDTable) &&
+         "Invalid dim for CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp");
+
+  ID intrinsicID = isDimStride ? dimStrideIDTable[dim] : IDTable[mode][dim];
+  assert(
+      intrinsicID != NI &&
+      "Invalid intrinsic for CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp");
+  return {intrinsicID, std::move(args)};
+}
+
 NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
     Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOp>(op);
@@ -4780,6 +4953,74 @@ NVVM::IDArgPair CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
   ID intrinsicID = IDTable[mode][dim];
   assert(intrinsicID != NI &&
          "Invalid intrinsic for CpAsyncBulkTensorReduceOp");
+  return {intrinsicID, std::move(args)};
+}
+
+NVVM::IDArgPair CpAsyncBulkTensorReduceOverrideAddrOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::CpAsyncBulkTensorReduceOverrideAddrOp>(op);
+
+  llvm::SmallVector<llvm::Value *> args;
+  args.push_back(mt.lookupValue(thisOp.getSrcMem()));
+  args.push_back(mt.lookupValue(thisOp.getTmaDescriptor()));
+  args.push_back(mt.lookupValue(thisOp.getOverrideAddr()));
+
+  for (Value v : thisOp.getTensorSize())
+    args.push_back(mt.lookupValue(v));
+  for (Value v : thisOp.getLowerStride())
+    args.push_back(mt.lookupValue(v));
+  if (thisOp.getUpperStride())
+    args.push_back(mt.lookupValue(thisOp.getUpperStride()));
+  for (Value v : thisOp.getCoordinates())
+    args.push_back(mt.lookupValue(v));
+
+  mlir::Value cacheHint = thisOp.getL2CacheHint();
+  const bool hasCacheHint = static_cast<bool>(cacheHint);
+  args.push_back(hasCacheHint ? mt.lookupValue(cacheHint)
+                              : builder.getInt64(0));
+  args.push_back(builder.getInt32(static_cast<uint32_t>(thisOp.getRedKind())));
+  args.push_back(builder.getInt1(hasCacheHint));
+
+  using namespace llvm::Intrinsic;
+  const unsigned NI = not_intrinsic;
+  // clang-format off
+// override_addr variants, indexed [mode][dim].
+static constexpr ID IDTable[][6] = {
+    {NI, nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_1d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_2d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_3d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_4d,
+     nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_5d},
+    {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_override_addr_3d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_override_addr_4d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_override_addr_5d},
+    {NI, NI, NI, NI, NI, NI}, // scatter4 not supported for reduce
+    {NI, NI, NI, nvvm_cp_async_bulk_tensor_reduce_im2col_w_override_addr_3d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_w_override_addr_4d,
+     nvvm_cp_async_bulk_tensor_reduce_im2col_w_override_addr_5d}};
+
+// Tile-only override_addr_dim (1D) / override_addr_dim_stride (2D-5D)
+// variants, indexed [dim].
+static constexpr ID dimStrideIDTable[] = {
+    NI, nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_1d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_2d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_3d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_4d,
+    nvvm_cp_async_bulk_tensor_reduce_tile_override_addr_dim_stride_5d};
+  // clang-format on
+
+  size_t mode = static_cast<size_t>(thisOp.getMode());
+  size_t dim = thisOp.getCoordinates().size();
+  bool isDimStride = !thisOp.getTensorSize().empty();
+
+  assert(mode < std::size(IDTable) &&
+         "Invalid mode for CpAsyncBulkTensorReduceOverrideAddrOp");
+  assert(dim < std::size(IDTable[mode]) && dim < std::size(dimStrideIDTable) &&
+         "Invalid dim for CpAsyncBulkTensorReduceOverrideAddrOp");
+
+  ID intrinsicID = isDimStride ? dimStrideIDTable[dim] : IDTable[mode][dim];
+  assert(intrinsicID != NI &&
+         "Invalid intrinsic for CpAsyncBulkTensorReduceOverrideAddrOp");
   return {intrinsicID, std::move(args)};
 }
 
@@ -5293,38 +5534,29 @@ NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
   return {ids[idx], std::move(args)};
 }
 
-llvm::Intrinsic::ID
-Tcgen05AllocOp::getIntrinsicIDAndArgs(Operation &op,
-                                      LLVM::ModuleTranslation &mt,
-                                      llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05AllocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05AllocOp>(op);
   bool is2CTAMode = curOp.getGroup() == CTAGroupKind::CTA_2;
 
   llvm::Intrinsic::ID id = is2CTAMode ? llvm::Intrinsic::nvvm_tcgen05_alloc_cg2
                                       : llvm::Intrinsic::nvvm_tcgen05_alloc_cg1;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getAddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getAddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
-llvm::Intrinsic::ID Tcgen05DeallocOp::getIntrinsicIDAndArgs(
-    Operation &op, LLVM::ModuleTranslation &mt,
-    llvm::SmallVector<llvm::Value *> &args) {
+mlir::NVVM::IDArgPair Tcgen05DeallocOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto curOp = cast<NVVM::Tcgen05DeallocOp>(op);
-  auto id = (curOp.getGroup() == CTAGroupKind::CTA_1)
-                ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
-                : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
+  llvm::Intrinsic::ID id = (curOp.getGroup() == CTAGroupKind::CTA_1)
+                               ? llvm::Intrinsic::nvvm_tcgen05_dealloc_cg1
+                               : llvm::Intrinsic::nvvm_tcgen05_dealloc_cg2;
 
-  // Fill the Intrinsic Args
-  args.push_back(mt.lookupValue(curOp.getTaddr()));
-  args.push_back(mt.lookupValue(curOp.getNCols()));
-  args.push_back(llvm::ConstantInt::getFalse(mt.getLLVMContext()));
-
-  return id;
+  return {id,
+          {mt.lookupValue(curOp.getTaddr()), mt.lookupValue(curOp.getNCols()),
+           builder.getInt1(curOp.getIsExclusive())}};
 }
 
 llvm::Intrinsic::ID
@@ -5414,6 +5646,9 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF16x2Op &op,
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
 
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
+
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
     return {rndRNIds[idx], std::move(args)};
@@ -5461,6 +5696,9 @@ ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToBF16x2Op &op,
   args.push_back(mt.lookupValue(op.getSrcLo()));
   if (op.getRandomBits())
     args.push_back(mt.lookupValue(op.getRandomBits()));
+
+  // TODO: Add support for PZO modifier
+  args.push_back(builder.getInt1(false));
 
   switch (op.getRnd()) {
   case FPRoundingMode::RN:
@@ -5600,12 +5838,13 @@ LogicalResult Tcgen05StOp::verify() {
 
 /// Infer the result ranges for the NVVM SpecialRangeableRegisterOp that might
 /// have ConstantRangeAttr.
-static void nvvmInferResultRanges(Operation *op, Value result,
-                                  ArrayRef<::mlir::ConstantIntRanges> argRanges,
-                                  SetIntRangeFn setResultRanges) {
-  if (auto rangeAttr = op->getAttrOfType<LLVM::ConstantRangeAttr>("range")) {
-    setResultRanges(result, {rangeAttr.getLower(), rangeAttr.getUpper(),
-                             rangeAttr.getLower(), rangeAttr.getUpper()});
+void mlir::NVVM::nvvmInferResultRanges(
+    std::optional<LLVM::ConstantRangeAttr> range, Value result,
+    ArrayRef<::mlir::ConstantIntRanges> argRanges,
+    SetIntRangeFn setResultRanges) {
+  if (range) {
+    setResultRanges(result, {range->getLower(), range->getUpper(),
+                             range->getLower(), range->getUpper()});
   } else {
     setResultRanges(result, IntegerValueRange::getMaxRange(result).getValue());
   }
@@ -5613,9 +5852,8 @@ static void nvvmInferResultRanges(Operation *op, Value result,
 
 /// Verify the range attribute satisfies LLVM ConstantRange constructor
 /// requirements for NVVM SpecialRangeableRegisterOp.
-static LogicalResult
-verifyConstantRangeAttr(Operation *op,
-                        std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
+LogicalResult mlir::NVVM::verifyConstantRangeAttr(
+    Operation *op, std::optional<LLVM::ConstantRangeAttr> rangeAttr) {
   if (!rangeAttr)
     return success();
 
@@ -6514,6 +6752,129 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.decompress_b functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMADecompressBOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<Tcgen05MMADecompressBOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getDecompressBMetadata()));
+
+  llvm::Value *DisableOutputLane =
+      mt.lookupValue(thisOp.getDisableOutputLane());
+  bool hasDisableOutputLane = DisableOutputLane != nullptr;
+
+  NVVM::CTAGroupKind ctaGroup = thisOp.getCtaGroup();
+
+  using namespace llvm::Intrinsic;
+  ID intrinsicID = not_intrinsic;
+
+  if (hasDisableOutputLane) {
+    if (ctaGroup == NVVM::CTAGroupKind::CTA_1) {
+      intrinsicID =
+          isATensor
+              ? nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg1_decompress_b
+              : nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg1_decompress_b;
+    } else if (ctaGroup == NVVM::CTAGroupKind::CTA_2) {
+      intrinsicID =
+          isATensor
+              ? nvvm_tcgen05_mma_tensor_f8f6f4_disable_output_lane_cg2_decompress_b
+              : nvvm_tcgen05_mma_shared_f8f6f4_disable_output_lane_cg2_decompress_b;
+    } else {
+      llvm_unreachable("Unknown ctaGroup for tcgen05.mma.decompress_b");
+    }
+  } else {
+    intrinsicID = isATensor ? nvvm_tcgen05_mma_tensor_f8f6f4_decompress_b
+                            : nvvm_tcgen05_mma_shared_f8f6f4_decompress_b;
+  }
+
+  assert(intrinsicID != not_intrinsic &&
+         "Invalid intrinsic for Tcgen05MMADecompressBOp.");
+
+  if (hasDisableOutputLane)
+    args.push_back(DisableOutputLane);
+  else
+    args.push_back(
+        builder.getInt32(static_cast<unsigned>(getNVVMCtaGroupKind(ctaGroup))));
+
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpA())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
+  return {intrinsicID, args};
+}
+
+LogicalResult Tcgen05MMADecompressBOp::verify() {
+  mlir::Value disableOutputLane = getDisableOutputLane();
+
+  if (disableOutputLane) {
+    NVVM::CTAGroupKind ctaGroup = getCtaGroup();
+
+    mlir::VectorType disableOutputLaneType =
+        cast<mlir::VectorType>(disableOutputLane.getType());
+    if ((ctaGroup == NVVM::CTAGroupKind::CTA_1 &&
+         disableOutputLaneType.getNumElements() != 4) ||
+        (ctaGroup == NVVM::CTAGroupKind::CTA_2 &&
+         disableOutputLaneType.getNumElements() != 8))
+      return emitOpError() << "Disable Output Lane of length "
+                           << disableOutputLaneType.getNumElements()
+                           << " is incompatible with CtaGroupAttr";
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.mma.block_scale.decompress_b functions
+//===----------------------------------------------------------------------===//
+
+mlir::NVVM::IDArgPair Tcgen05MMABlockScaleDecompressBOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<Tcgen05MMABlockScaleDecompressBOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixD()));
+
+  llvm::Value *A = mt.lookupValue(thisOp.getMatrixA());
+  const bool isATensor = isa<llvm::PointerType>(A->getType());
+  args.push_back(A);
+
+  args.push_back(mt.lookupValue(thisOp.getMatrixB()));
+  args.push_back(mt.lookupValue(thisOp.getIdesc()));
+  args.push_back(mt.lookupValue(thisOp.getEnableInputD()));
+  args.push_back(mt.lookupValue(thisOp.getScaleA()));
+  args.push_back(mt.lookupValue(thisOp.getScaleB()));
+  args.push_back(mt.lookupValue(thisOp.getDecompressBMetadata()));
+  args.push_back(builder.getInt32(
+      static_cast<unsigned>(getNVVMCtaGroupKind(thisOp.getCtaGroup()))));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpA())));
+  args.push_back(
+      builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOpB())));
+
+  llvm::Intrinsic::ID intrinsicID =
+      isATensor
+          ? llvm::Intrinsic::
+                nvvm_tcgen05_mma_tensor_mxf8f6f4_block_scale_block32_decompress_b
+          : llvm::Intrinsic::
+                nvvm_tcgen05_mma_shared_mxf8f6f4_block_scale_block32_decompress_b;
+
+  return {intrinsicID, args};
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.ld.red functions
 //===----------------------------------------------------------------------===//
 
@@ -6615,10 +6976,7 @@ struct NVVMInlinerInterface final : DialectInlinerInterface {
 
 // TODO: This should be the llvm.nvvm dialect once this is supported.
 void NVVMDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
-      >();
+  registerNVVMDialectOperations(this);
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
@@ -6666,8 +7024,8 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
   }
   // blocksareclusters must be used along with reqntid and cluster_dim
   if (attrName == NVVMDialect::getBlocksAreClustersAttrName()) {
-    if (!op->hasAttr(NVVMDialect::getReqntidAttrName()) ||
-        !op->hasAttr(NVVMDialect::getClusterDimAttrName())) {
+    if (!op->hasDiscardableAttr(NVVMDialect::getReqntidAttrName()) ||
+        !op->hasDiscardableAttr(NVVMDialect::getClusterDimAttrName())) {
       return op->emitError()
              << "'" << attrName << "' attribute must be used along with " << "'"
              << NVVMDialect::getReqntidAttrName() << "' and " << "'"
@@ -6686,7 +7044,7 @@ LogicalResult NVVMDialect::verifyRegionArgAttribute(Operation *op,
   if (!funcOp)
     return success();
 
-  bool isKernel = op->hasAttr(NVVMDialect::getKernelFuncAttrName());
+  bool isKernel = op->hasDiscardableAttr(NVVMDialect::getKernelFuncAttrName());
   StringAttr attrName = argAttr.getName();
   if (attrName == NVVM::NVVMDialect::getGridConstantAttrName()) {
     if (!isKernel) {
@@ -6806,9 +7164,14 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
                      "NVVM target attribute must be attached to a GPU module");
   }
 
-  const unsigned targetFullSmVersion =
+  std::optional<unsigned> targetFullSmVersion =
       NVVMCheckSMVersion::getTargetFullSmVersionFromStr(getChip());
-  if (!NVVMCheckSMVersion::isMinimumSMVersion(targetFullSmVersion)) {
+  if (!targetFullSmVersion)
+    return emitError(gpuModule->getLoc())
+           << "invalid NVVM target chip \"" << getChip()
+           << "\", expected sm_<version>[a|f]";
+
+  if (!NVVMCheckSMVersion::isMinimumSMVersion(*targetFullSmVersion)) {
     return emitError(gpuModule->getLoc(),
                      "Minimum NVVM target SM version is sm_20");
   }
@@ -6818,7 +7181,7 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
             if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
               const NVVMCheckSMVersion requirement =
                   reqOp.getRequiredMinSMVersion();
-              if (!requirement.isCompatibleWith(targetFullSmVersion)) {
+              if (!requirement.isCompatibleWith(*targetFullSmVersion)) {
                 op->emitOpError() << "is not supported on " << getChip();
                 return WalkResult::interrupt();
               }
@@ -6830,9 +7193,6 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
   return success();
 }
-
-#define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOps.cpp.inc"
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
