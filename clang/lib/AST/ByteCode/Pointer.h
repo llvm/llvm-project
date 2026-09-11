@@ -567,37 +567,7 @@ public:
   Pointer &operator=(const Pointer &P);
   Pointer &operator=(Pointer &&P);
 
-  /// Equality operators are just for tests.
-  bool operator==(const Pointer &P) const {
-    if (StorageKind != P.StorageKind)
-      return false;
-
-    switch (StorageKind) {
-    case Storage::Int:
-      return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty &&
-             P.Offset == Offset;
-    case Storage::Block:
-      return P.view() == view();
-    case Storage::Fn:
-      return P.Fn.Func == Fn.Func && P.Offset == Offset;
-    case Storage::Typeid:
-      llvm_unreachable("typeid in operator==?");
-    case Storage::String:
-      return Str.Base == P.Str.Base && Offset == P.Offset;
-    case Storage::Opaque:
-      if (!(P.Opaque.Base == Opaque.Base &&
-            P.Opaque.PathLength == Opaque.PathLength))
-        return false;
-      if (P.Offset != Offset)
-        return false;
-      if (Opaque.PathLength == 0)
-        return true;
-      return std::memcmp(P.Opaque.Path, Opaque.Path,
-                         sizeof(PointerPathEntry) * Opaque.PathLength) == 0;
-    }
-    llvm_unreachable("Unhandled storage kind");
-  }
-
+  bool operator==(const Pointer &P) const;
   bool operator!=(const Pointer &P) const { return !(P == *this); }
 
   /// Converts the pointer to an APValue.

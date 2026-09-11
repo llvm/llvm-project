@@ -204,6 +204,49 @@ Pointer &Pointer::operator=(Pointer &&P) {
   return *this;
 }
 
+bool Pointer::operator==(const Pointer &P) const {
+  if (StorageKind != P.StorageKind)
+    return false;
+
+  switch (StorageKind) {
+  case Storage::Int:
+    return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty && P.Offset == Offset;
+  case Storage::Block:
+    return P.view() == view();
+  case Storage::Fn:
+    return P.Fn.Func == Fn.Func && P.Offset == Offset;
+  case Storage::Typeid:
+    llvm_unreachable("typeid in operator==?");
+  case Storage::String:
+    return Str.Base == P.Str.Base && Offset == P.Offset;
+  case Storage::Opaque:
+    if (P.Opaque.Base != Opaque.Base ||
+        P.Opaque.PathLength != Opaque.PathLength || P.Offset != Offset)
+      return false;
+
+    for (unsigned I = 0; I != Opaque.PathLength; ++I) {
+      if (Opaque.Path[I].Kind != P.Opaque.Path[I].Kind)
+        return false;
+      switch (Opaque.Path[I].Kind) {
+      case PointerPathEntry::Base:
+        if (Opaque.Path[I].RD != P.Opaque.Path[I].RD)
+          return false;
+        break;
+      case PointerPathEntry::Array:
+      case PointerPathEntry::NegativeArray:
+        if (Opaque.Path[I].Index != P.Opaque.Path[I].Index)
+          return false;
+        break;
+      case PointerPathEntry::Field:
+        if (Opaque.Path[I].FD != P.Opaque.Path[I].FD)
+          return false;
+        break;
+      }
+    }
+  }
+  return true;
+}
+
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
