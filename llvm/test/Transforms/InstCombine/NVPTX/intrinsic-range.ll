@@ -6,9 +6,7 @@ declare i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
 
 define i1 @ctarank_is_nonnegative() {
 ; CHECK-LABEL: define i1 @ctarank_is_nonnegative() {
-; CHECK-NEXT:    [[RANK:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[RANK]], -1
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %rank = call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
   %cmp = icmp sge i32 %rank, 0
@@ -17,9 +15,7 @@ define i1 @ctarank_is_nonnegative() {
 
 define i1 @nctarank_is_positive() {
 ; CHECK-LABEL: define i1 @nctarank_is_positive() {
-; CHECK-NEXT:    [[RANK:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[RANK]], 0
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %rank = call i32 @llvm.nvvm.read.ptx.sreg.cluster.nctarank()
   %cmp = icmp sgt i32 %rank, 0
@@ -29,7 +25,7 @@ define i1 @nctarank_is_positive() {
 define i32 @ctarank_sdiv_16() {
 ; CHECK-LABEL: define i32 @ctarank_sdiv_16() {
 ; CHECK-NEXT:    [[RANK:%.*]] = call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[RANK]], 16
+; CHECK-NEXT:    [[DIV:%.*]] = lshr i32 [[RANK]], 4
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
   %rank = call i32 @llvm.nvvm.read.ptx.sreg.cluster.ctarank()
