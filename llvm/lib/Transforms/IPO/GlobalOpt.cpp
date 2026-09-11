@@ -1333,7 +1333,8 @@ deleteIfDead(GlobalValue &GV,
 
   if (auto *C = GV.getComdat()) {
     auto IsComdatLeaderWithUses =
-        C->getName() == GV.getName() && C->getUsers().size() > 1;
+        GV.getParent()->getComdatSymbolTable().contains(GV.getName()) &&
+        C->getUsers().size() > 1;
     if (IsComdatLeaderWithUses ||
         (!GV.hasInternalLinkage() && NotDiscardableComdats.count(C)))
       return false;
