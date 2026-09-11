@@ -99,7 +99,7 @@ class APFloat;
 /// create a new virtual register in the correct class.
 ///
 /// \return The virtual register constrained to the right register class.
-LLVM_ABI Register constrainRegToClass(MachineRegisterInfo &MRI,
+LLVM_ABI_NOT_EXPORTED Register constrainRegToClass(MachineRegisterInfo &MRI,
                                       const TargetInstrInfo &TII,
                                       const RegisterBankInfo &RBI, Register Reg,
                                       const TargetRegisterClass &RegClass);
@@ -112,7 +112,7 @@ LLVM_ABI Register constrainRegToClass(MachineRegisterInfo &MRI,
 /// location of \p InsertPt is used for the new copy.
 ///
 /// \return The virtual register constrained to the right register class.
-LLVM_ABI Register constrainOperandRegClass(
+LLVM_ABI_NOT_EXPORTED Register constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt,
@@ -128,7 +128,7 @@ LLVM_ABI Register constrainOperandRegClass(
 /// InsertPt is used for the new copy.
 ///
 /// \return The virtual register constrained to the right register class.
-LLVM_ABI Register constrainOperandRegClass(
+LLVM_ABI_NOT_EXPORTED Register constrainOperandRegClass(
     const MachineFunction &MF, const TargetRegisterInfo &TRI,
     MachineRegisterInfo &MRI, const TargetInstrInfo &TII,
     const RegisterBankInfo &RBI, MachineInstr &InsertPt, const MCInstrDesc &II,
@@ -141,52 +141,52 @@ LLVM_ABI Register constrainOperandRegClass(
 // FIXME: Not all instructions have the same number of operands. We should
 // probably expose a constrain helper per operand and let the target selector
 // constrain individual registers, like fast-isel.
-LLVM_ABI void constrainSelectedInstRegOperands(MachineInstr &I,
+LLVM_ABI_NOT_EXPORTED void constrainSelectedInstRegOperands(MachineInstr &I,
                                                const TargetInstrInfo &TII,
                                                const TargetRegisterInfo &TRI,
                                                const RegisterBankInfo &RBI);
 
 /// Check if DstReg can be replaced with SrcReg depending on the register
 /// constraints.
-LLVM_ABI bool canReplaceReg(Register DstReg, Register SrcReg,
+LLVM_ABI_NOT_EXPORTED bool canReplaceReg(Register DstReg, Register SrcReg,
                             MachineRegisterInfo &MRI);
 
 /// Check whether an instruction \p MI is dead: it only defines dead virtual
 /// registers, and doesn't have other side effects.
-LLVM_ABI bool isTriviallyDead(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isTriviallyDead(const MachineInstr &MI,
                               const MachineRegisterInfo &MRI);
 
 /// Report an ISel error as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.  Set the FailedISel MachineFunction property.
-LLVM_ABI void reportGISelFailure(MachineFunction &MF,
+LLVM_ABI_NOT_EXPORTED void reportGISelFailure(MachineFunction &MF,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
-LLVM_ABI void reportGISelFailure(MachineFunction &MF,
+LLVM_ABI_NOT_EXPORTED void reportGISelFailure(MachineFunction &MF,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  const char *PassName, StringRef Msg,
                                  const MachineInstr &MI);
 
 /// Report an ISel warning as a missed optimization remark to the LLVMContext's
 /// diagnostic stream.
-LLVM_ABI void reportGISelWarning(MachineFunction &MF,
+LLVM_ABI_NOT_EXPORTED void reportGISelWarning(MachineFunction &MF,
                                  MachineOptimizationRemarkEmitter &MORE,
                                  MachineOptimizationRemarkMissed &R);
 
 /// Returns the inverse opcode of \p MinMaxOpc, which is a generic min/max
 /// opcode like G_SMIN.
-LLVM_ABI unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
+LLVM_ABI_NOT_EXPORTED unsigned getInverseGMinMaxOpcode(unsigned MinMaxOpc);
 
 /// If \p VReg is defined by a G_CONSTANT, return the corresponding value.
-LLVM_ABI std::optional<APInt>
+LLVM_ABI_NOT_EXPORTED std::optional<APInt>
 getIConstantVRegVal(Register VReg, const MachineRegisterInfo &MRI);
 
 /// If \p VReg is defined by a G_CONSTANT fits in int64_t returns it.
-LLVM_ABI std::optional<int64_t>
+LLVM_ABI_NOT_EXPORTED std::optional<int64_t>
 getIConstantVRegSExtVal(Register VReg, const MachineRegisterInfo &MRI);
 
 /// \p VReg is defined by a G_CONSTANT, return the corresponding value.
-LLVM_ABI const APInt &getIConstantFromReg(Register VReg,
+LLVM_ABI_NOT_EXPORTED const APInt &getIConstantFromReg(Register VReg,
                                           const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a constant integer value and a virtual
@@ -198,14 +198,14 @@ struct ValueAndVReg {
 
 /// If \p VReg is defined by a statically evaluable chain of instructions rooted
 /// on a G_CONSTANT returns its APInt value and def register.
-LLVM_ABI std::optional<ValueAndVReg>
+LLVM_ABI_NOT_EXPORTED std::optional<ValueAndVReg>
 getIConstantVRegValWithLookThrough(Register VReg,
                                    const MachineRegisterInfo &MRI,
                                    bool LookThroughInstrs = true);
 
 /// If \p VReg is defined by a statically evaluable chain of instructions rooted
 /// on a G_CONSTANT or G_FCONSTANT returns its value as APInt and def register.
-LLVM_ABI std::optional<ValueAndVReg> getAnyConstantVRegValWithLookThrough(
+LLVM_ABI_NOT_EXPORTED std::optional<ValueAndVReg> getAnyConstantVRegValWithLookThrough(
     Register VReg, const MachineRegisterInfo &MRI,
     bool LookThroughInstrs = true, bool LookThroughAnyExt = false);
 
@@ -214,7 +214,7 @@ using MemCpyFamilyLoweringInfo =
 
 /// Matcher for memcpy-like instructions. For non-zero lengths, \p MemOps
 /// contains the load/store types to emit.
-LLVM_ABI bool canLowerMemCpyFamily(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool canLowerMemCpyFamily(const MachineInstr &MI,
                                    const MachineRegisterInfo &MRI,
                                    unsigned MaxLen, Register &Dst,
                                    Register &Src, uint64_t &KnownLen,
@@ -228,18 +228,18 @@ struct FPValueAndVReg {
 
 /// If \p VReg is defined by a statically evaluable chain of instructions rooted
 /// on a G_FCONSTANT returns its APFloat value and def register.
-LLVM_ABI std::optional<FPValueAndVReg>
+LLVM_ABI_NOT_EXPORTED std::optional<FPValueAndVReg>
 getFConstantVRegValWithLookThrough(Register VReg,
                                    const MachineRegisterInfo &MRI,
                                    bool LookThroughInstrs = true);
 
-LLVM_ABI const ConstantFP *getConstantFPVRegVal(Register VReg,
+LLVM_ABI_NOT_EXPORTED const ConstantFP *getConstantFPVRegVal(Register VReg,
                                                 const MachineRegisterInfo &MRI);
 
 /// See if Reg is defined by an single def instruction that is
 /// Opcode. Also try to do trivial folding if it's a COPY with
 /// same types. Returns null otherwise.
-LLVM_ABI MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
+LLVM_ABI_NOT_EXPORTED MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
                                     const MachineRegisterInfo &MRI);
 
 /// Simple struct used to hold a Register value and the instruction which
@@ -253,14 +253,14 @@ struct DefinitionAndSourceRegister {
 /// away any copies.
 ///
 /// Also walks through hints such as G_ASSERT_ZEXT.
-LLVM_ABI std::optional<DefinitionAndSourceRegister>
+LLVM_ABI_NOT_EXPORTED std::optional<DefinitionAndSourceRegister>
 getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 
 /// Find the def instruction for \p Reg, folding away any trivial copies. May
 /// return nullptr if \p Reg is not a generic virtual register.
 ///
 /// Also walks through hints such as G_ASSERT_ZEXT.
-LLVM_ABI MachineInstr *getDefIgnoringCopies(Register Reg,
+LLVM_ABI_NOT_EXPORTED MachineInstr *getDefIgnoringCopies(Register Reg,
                                             const MachineRegisterInfo &MRI);
 
 /// Find the source register for \p Reg, folding away any trivial copies. It
@@ -269,26 +269,26 @@ LLVM_ABI MachineInstr *getDefIgnoringCopies(Register Reg,
 /// register.
 ///
 /// Also walks through hints such as G_ASSERT_ZEXT.
-LLVM_ABI Register getSrcRegIgnoringCopies(Register Reg,
+LLVM_ABI_NOT_EXPORTED Register getSrcRegIgnoringCopies(Register Reg,
                                           const MachineRegisterInfo &MRI);
 
 /// Helper function to split a wide generic register into bitwise blocks with
 /// the given Type (which implies the number of blocks needed). The generic
 /// registers created are appended to Ops, starting at bit 0 of Reg.
-LLVM_ABI void extractParts(Register Reg, LLT Ty, int NumParts,
+LLVM_ABI_NOT_EXPORTED void extractParts(Register Reg, LLT Ty, int NumParts,
                            SmallVectorImpl<Register> &VRegs,
                            MachineIRBuilder &MIRBuilder,
                            MachineRegisterInfo &MRI);
 
 /// Version which handles irregular splits.
-LLVM_ABI bool extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
+LLVM_ABI_NOT_EXPORTED bool extractParts(Register Reg, LLT RegTy, LLT MainTy, LLT &LeftoverTy,
                            SmallVectorImpl<Register> &VRegs,
                            SmallVectorImpl<Register> &LeftoverVRegs,
                            MachineIRBuilder &MIRBuilder,
                            MachineRegisterInfo &MRI);
 
 /// Version which handles irregular sub-vector splits.
-LLVM_ABI void extractVectorParts(Register Reg, unsigned NumElts,
+LLVM_ABI_NOT_EXPORTED void extractVectorParts(Register Reg, unsigned NumElts,
                                  SmallVectorImpl<Register> &VRegs,
                                  MachineIRBuilder &MIRBuilder,
                                  MachineRegisterInfo &MRI);
@@ -305,43 +305,43 @@ T *getOpcodeDef(Register Reg, const MachineRegisterInfo &MRI) {
 
 /// Modify analysis usage so it preserves passes required for the SelectionDAG
 /// fallback.
-LLVM_ABI void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
+LLVM_ABI_NOT_EXPORTED void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 
-LLVM_ABI std::optional<APInt> ConstantFoldBinOp(unsigned Opcode,
+LLVM_ABI_NOT_EXPORTED std::optional<APInt> ConstantFoldBinOp(unsigned Opcode,
                                                 const Register Op1,
                                                 const Register Op2,
                                                 const MachineRegisterInfo &MRI);
-LLVM_ABI std::optional<APFloat>
+LLVM_ABI_NOT_EXPORTED std::optional<APFloat>
 ConstantFoldFPBinOp(unsigned Opcode, const Register Op1, const Register Op2,
                     const MachineRegisterInfo &MRI);
 
 /// Tries to constant fold a vector binop with sources \p Op1 and \p Op2.
 /// Returns an empty vector on failure.
-LLVM_ABI SmallVector<APInt>
+LLVM_ABI_NOT_EXPORTED SmallVector<APInt>
 ConstantFoldVectorBinop(unsigned Opcode, const Register Op1, const Register Op2,
                         const MachineRegisterInfo &MRI);
 
-LLVM_ABI std::optional<APInt>
+LLVM_ABI_NOT_EXPORTED std::optional<APInt>
 ConstantFoldCastOp(unsigned Opcode, LLT DstTy, const Register Op0,
                    const MachineRegisterInfo &MRI);
 
-LLVM_ABI std::optional<APInt> ConstantFoldExtOp(unsigned Opcode,
+LLVM_ABI_NOT_EXPORTED std::optional<APInt> ConstantFoldExtOp(unsigned Opcode,
                                                 const Register Op1,
                                                 uint64_t Imm,
                                                 const MachineRegisterInfo &MRI);
 
-LLVM_ABI std::optional<APFloat>
+LLVM_ABI_NOT_EXPORTED std::optional<APFloat>
 ConstantFoldIntToFloat(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
 /// Tries to constant fold a unary integer operation (G_CTLZ, G_CTTZ, G_CTPOP
 /// and their _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) on \p Src.
 /// If \p Src is a vector then it tries to do an element-wise constant fold.
-LLVM_ABI SmallVector<APInt>
+LLVM_ABI_NOT_EXPORTED SmallVector<APInt>
 ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
                        const MachineRegisterInfo &MRI);
 
-LLVM_ABI std::optional<SmallVector<APInt>>
+LLVM_ABI_NOT_EXPORTED std::optional<SmallVector<APInt>>
 ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
                  unsigned DstScalarSizeInBits, unsigned ExtOp,
                  const MachineRegisterInfo &MRI);
@@ -351,12 +351,12 @@ ConstantFoldICmp(unsigned Pred, const Register Op1, const Register Op2,
 /// set. When \p OrNegative is true, the value is also considered a power of two
 /// if its negation is a power of two (i.e. its absolute value is a power of
 /// two).
-LLVM_ABI bool
+LLVM_ABI_NOT_EXPORTED bool
 isKnownToBeAPowerOfTwo(Register Val, const MachineRegisterInfo &MRI,
                        GISelValueTracking *ValueTracking = nullptr,
                        bool OrNegative = false);
 
-LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
+LLVM_ABI_NOT_EXPORTED Align inferAlignFromPtrInfo(MachineFunction &MF,
                                      const MachinePointerInfo &MPO);
 
 /// Return a virtual register corresponding to the incoming argument register \p
@@ -365,7 +365,7 @@ LLVM_ABI Align inferAlignFromPtrInfo(MachineFunction &MF,
 ///
 /// If there is an existing live-in argument register, it will be returned.
 /// This will also ensure there is a valid copy
-LLVM_ABI Register getFunctionLiveInPhysReg(
+LLVM_ABI_NOT_EXPORTED Register getFunctionLiveInPhysReg(
     MachineFunction &MF, const TargetInstrInfo &TII, MCRegister PhysReg,
     const TargetRegisterClass &RC, const DebugLoc &DL, LLT RegTy = LLT());
 
@@ -376,9 +376,9 @@ LLVM_ABI Register getFunctionLiveInPhysReg(
 /// this function where one argument is a fixed vector and the other is a
 /// scalable vector, since it is illegal to build a G_{MERGE|UNMERGE}_VALUES
 /// between fixed and scalable vectors.
-LLVM_ABI LLVM_READNONE LLT getLCMType(LLT OrigTy, LLT TargetTy);
+LLVM_ABI_NOT_EXPORTED LLVM_READNONE LLT getLCMType(LLT OrigTy, LLT TargetTy);
 
-LLVM_ABI LLVM_READNONE
+LLVM_ABI_NOT_EXPORTED LLVM_READNONE
     /// Return smallest type that covers both \p OrigTy and \p TargetTy and is
     /// multiple of TargetTy.
     LLT
@@ -400,7 +400,7 @@ LLVM_ABI LLVM_READNONE
 /// vectors.
 ///
 /// In the worst case, this returns LLT::scalar(1)
-LLVM_ABI LLVM_READNONE LLT getGCDType(LLT OrigTy, LLT TargetTy);
+LLVM_ABI_NOT_EXPORTED LLVM_READNONE LLT getGCDType(LLT OrigTy, LLT TargetTy);
 
 /// Represents a value which can be a Register or a constant.
 ///
@@ -429,68 +429,68 @@ public:
 
 /// \returns The splat index of a G_SHUFFLE_VECTOR \p MI when \p MI is a splat.
 /// If \p MI is not a splat, returns std::nullopt.
-LLVM_ABI std::optional<int> getSplatIndex(MachineInstr &MI);
+LLVM_ABI_NOT_EXPORTED std::optional<int> getSplatIndex(MachineInstr &MI);
 
 /// \returns the scalar integral splat value of \p Reg if possible.
-LLVM_ABI std::optional<APInt>
+LLVM_ABI_NOT_EXPORTED std::optional<APInt>
 getIConstantSplatVal(const Register Reg, const MachineRegisterInfo &MRI);
 
 /// \returns the scalar integral splat value defined by \p MI if possible.
-LLVM_ABI std::optional<APInt>
+LLVM_ABI_NOT_EXPORTED std::optional<APInt>
 getIConstantSplatVal(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 
 /// \returns the scalar sign extended integral splat value of \p Reg if
 /// possible.
-LLVM_ABI std::optional<int64_t>
+LLVM_ABI_NOT_EXPORTED std::optional<int64_t>
 getIConstantSplatSExtVal(const Register Reg, const MachineRegisterInfo &MRI);
 
 /// \returns the scalar sign extended integral splat value defined by \p MI if
 /// possible.
-LLVM_ABI std::optional<int64_t>
+LLVM_ABI_NOT_EXPORTED std::optional<int64_t>
 getIConstantSplatSExtVal(const MachineInstr &MI,
                          const MachineRegisterInfo &MRI);
 
 /// Returns a floating point scalar constant of a build vector splat if it
 /// exists. When \p AllowUndef == true some elements can be undef but not all.
-LLVM_ABI std::optional<FPValueAndVReg>
+LLVM_ABI_NOT_EXPORTED std::optional<FPValueAndVReg>
 getFConstantSplat(Register VReg, const MachineRegisterInfo &MRI,
                   bool AllowUndef = true);
 
 /// Return true if the specified register is defined by G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
-LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
+LLVM_ABI_NOT_EXPORTED bool isBuildVectorConstantSplat(const Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          int64_t SplatValue, bool AllowUndef);
 
 /// Return true if the specified register is defined by G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
-LLVM_ABI bool isBuildVectorConstantSplat(const Register Reg,
+LLVM_ABI_NOT_EXPORTED bool isBuildVectorConstantSplat(const Register Reg,
                                          const MachineRegisterInfo &MRI,
                                          const APInt &SplatValue,
                                          bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
-LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isBuildVectorConstantSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
                                          int64_t SplatValue, bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are \p SplatValue or undef.
-LLVM_ABI bool isBuildVectorConstantSplat(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isBuildVectorConstantSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
                                          const APInt &SplatValue,
                                          bool AllowUndef);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are 0 or undef.
-LLVM_ABI bool isBuildVectorAllZeros(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isBuildVectorAllZeros(const MachineInstr &MI,
                                     const MachineRegisterInfo &MRI,
                                     bool AllowUndef = false);
 
 /// Return true if the specified instruction is a G_BUILD_VECTOR or
 /// G_BUILD_VECTOR_TRUNC where all of the elements are ~0 or undef.
-LLVM_ABI bool isBuildVectorAllOnes(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isBuildVectorAllOnes(const MachineInstr &MI,
                                    const MachineRegisterInfo &MRI,
                                    bool AllowUndef = false);
 
@@ -500,7 +500,7 @@ LLVM_ABI bool isBuildVectorAllOnes(const MachineInstr &MI,
 /// If \p AllowFP is true, this will consider G_FCONSTANT in addition to
 /// G_CONSTANT. If \p AllowOpaqueConstants is true, constant-like instructions
 /// such as G_GLOBAL_VALUE will also be considered.
-LLVM_ABI bool isConstantOrConstantVector(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isConstantOrConstantVector(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI,
                                          bool AllowFP = true,
                                          bool AllowOpaqueConstants = true);
@@ -509,13 +509,13 @@ LLVM_ABI bool isConstantOrConstantVector(const MachineInstr &MI,
 /// constant 0 integer (with no undefs if \p AllowUndefs is false). This will
 /// handle G_BUILD_VECTOR and G_BUILD_VECTOR_TRUNC as truncation is not an issue
 /// for null values.
-LLVM_ABI bool isNullOrNullSplat(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isNullOrNullSplat(const MachineInstr &MI,
                                 const MachineRegisterInfo &MRI,
                                 bool AllowUndefs = false);
 
 /// Return true if the value is a constant -1 integer or a splatted vector of a
 /// constant -1 integer (with no undefs if \p AllowUndefs is false).
-LLVM_ABI bool isAllOnesOrAllOnesSplat(const MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isAllOnesOrAllOnesSplat(const MachineInstr &MI,
                                       const MachineRegisterInfo &MRI,
                                       bool AllowUndefs = false);
 
@@ -538,66 +538,66 @@ LLVM_ABI bool isAllOnesOrAllOnesSplat(const MachineInstr &MI,
 /// \endcode
 ///
 /// In the above case, this will return a RegOrConstant containing 4.
-LLVM_ABI std::optional<RegOrConstant>
+LLVM_ABI_NOT_EXPORTED std::optional<RegOrConstant>
 getVectorSplat(const MachineInstr &MI, const MachineRegisterInfo &MRI);
 
 /// Determines if \p MI defines a constant integer or a build vector of
 /// constant integers. Treats undef values as constants.
-LLVM_ABI bool isConstantOrConstantVector(MachineInstr &MI,
+LLVM_ABI_NOT_EXPORTED bool isConstantOrConstantVector(MachineInstr &MI,
                                          const MachineRegisterInfo &MRI);
 
 /// Determines if \p Def defines a constant integer or a splat vector of
 /// constant integers.
 /// \returns the scalar constant or std::nullopt.
-LLVM_ABI std::optional<APInt>
+LLVM_ABI_NOT_EXPORTED std::optional<APInt>
 isConstantOrConstantSplatVector(Register Def, const MachineRegisterInfo &MRI);
 
 /// Determines if \p Def defines a float constant integer or a splat vector of
 /// float constant integers.
 /// \returns the float constant or std::nullopt.
-LLVM_ABI std::optional<APFloat>
+LLVM_ABI_NOT_EXPORTED std::optional<APFloat>
 isConstantOrConstantSplatVectorFP(Register Def, const MachineRegisterInfo &MRI);
 
 /// Attempt to match a unary predicate against a scalar/splat constant or every
 /// element of a constant G_BUILD_VECTOR. If \p ConstVal is null, the source
 /// value was undef.
-LLVM_ABI bool
+LLVM_ABI_NOT_EXPORTED bool
 matchUnaryPredicate(const MachineRegisterInfo &MRI, Register Reg,
                     std::function<bool(const Constant *ConstVal)> Match,
                     bool AllowUndefs = false);
 
 /// Returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a true value.
-LLVM_ABI bool isConstTrueVal(const TargetLowering &TLI, int64_t Val,
+LLVM_ABI_NOT_EXPORTED bool isConstTrueVal(const TargetLowering &TLI, int64_t Val,
                              bool IsVector, bool IsFP);
 /// \returns true if given the TargetLowering's boolean contents information,
 /// the value \p Val contains a false value.
-LLVM_ABI bool isConstFalseVal(const TargetLowering &TLI, int64_t Val,
+LLVM_ABI_NOT_EXPORTED bool isConstFalseVal(const TargetLowering &TLI, int64_t Val,
                               bool IsVector, bool IsFP);
 
 /// Returns an integer representing true, as defined by the
 /// TargetBooleanContents.
-LLVM_ABI int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
+LLVM_ABI_NOT_EXPORTED int64_t getICmpTrueVal(const TargetLowering &TLI, bool IsVector,
                                 bool IsFP);
 
 using SmallInstListTy = GISelWorkList<4>;
-LLVM_ABI void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
+LLVM_ABI_NOT_EXPORTED void saveUsesAndErase(MachineInstr &MI, MachineRegisterInfo &MRI,
                                LostDebugLocObserver *LocObserver,
                                SmallInstListTy &DeadInstChain);
-LLVM_ABI void eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs,
+LLVM_ABI_NOT_EXPORTED void eraseInstrs(ArrayRef<MachineInstr *> DeadInstrs,
                           MachineRegisterInfo &MRI,
                           LostDebugLocObserver *LocObserver = nullptr);
-LLVM_ABI void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
+LLVM_ABI_NOT_EXPORTED void eraseInstr(MachineInstr &MI, MachineRegisterInfo &MRI,
                          LostDebugLocObserver *LocObserver = nullptr);
 
 /// Assuming the instruction \p MI is going to be deleted, attempt to salvage
 /// debug users of \p MI by writing the effect of \p MI in a DIExpression.
-LLVM_ABI void salvageDebugInfo(const MachineRegisterInfo &MRI,
+LLVM_ABI_NOT_EXPORTED void salvageDebugInfo(const MachineRegisterInfo &MRI,
                                MachineInstr &MI);
 
 /// Returns whether opcode \p Opc is a pre-isel generic floating-point opcode,
 /// having only floating-point operands.
-LLVM_ABI bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
+LLVM_ABI_NOT_EXPORTED bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
 
 /// Returns true if \p Reg can create undef or poison from non-undef &
 /// non-poison operands. \p ConsiderFlagsAndMetadata controls whether poison
@@ -605,36 +605,36 @@ LLVM_ABI bool isPreISelGenericFloatingPointOpcode(unsigned Opc);
 /// used to see if the instruction could still introduce undef or poison even
 /// without poison generating flags and metadata which might be on the
 /// instruction.
-LLVM_ABI bool canCreateUndefOrPoison(Register Reg,
+LLVM_ABI_NOT_EXPORTED bool canCreateUndefOrPoison(Register Reg,
                                      const MachineRegisterInfo &MRI,
                                      bool ConsiderFlagsAndMetadata = true);
 
 /// Returns true if \p Reg can create poison from non-poison operands.
-LLVM_ABI bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
+LLVM_ABI_NOT_EXPORTED bool canCreatePoison(Register Reg, const MachineRegisterInfo &MRI,
                               bool ConsiderFlagsAndMetadata = true);
 
 /// Returns true if \p Reg cannot be poison and undef.
-LLVM_ABI bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
+LLVM_ABI_NOT_EXPORTED bool isGuaranteedNotToBeUndefOrPoison(Register Reg,
                                                const MachineRegisterInfo &MRI,
                                                unsigned Depth = 0);
 
 /// Returns true if \p Reg cannot be poison, but may be undef.
-LLVM_ABI bool isGuaranteedNotToBePoison(Register Reg,
+LLVM_ABI_NOT_EXPORTED bool isGuaranteedNotToBePoison(Register Reg,
                                         const MachineRegisterInfo &MRI,
                                         unsigned Depth = 0);
 
 /// Returns true if \p Reg cannot be undef, but may be poison.
-LLVM_ABI bool isGuaranteedNotToBeUndef(Register Reg,
+LLVM_ABI_NOT_EXPORTED bool isGuaranteedNotToBeUndef(Register Reg,
                                        const MachineRegisterInfo &MRI,
                                        unsigned Depth = 0);
 
 /// Get the type back from LLT. It won't be 100 percent accurate but returns an
 /// estimate of the type.
-LLVM_ABI Type *getTypeForLLT(LLT Ty, LLVMContext &C);
+LLVM_ABI_NOT_EXPORTED Type *getTypeForLLT(LLT Ty, LLVMContext &C);
 
 /// Returns true if the instruction \p MI is one of the assert
 /// instructions.
-LLVM_ABI bool isAssertMI(const MachineInstr &MI);
+LLVM_ABI_NOT_EXPORTED bool isAssertMI(const MachineInstr &MI);
 
 /// An integer-like constant.
 ///
@@ -669,9 +669,9 @@ public:
   GIConstantKind getKind() const { return Kind; }
 
   /// Returns the value, if this constant is a scalar.
-  LLVM_ABI APInt getScalarValue() const;
+  LLVM_ABI_NOT_EXPORTED APInt getScalarValue() const;
 
-  LLVM_ABI static std::optional<GIConstant>
+  LLVM_ABI_NOT_EXPORTED static std::optional<GIConstant>
   getConstant(Register Const, const MachineRegisterInfo &MRI);
 };
 
@@ -728,9 +728,9 @@ public:
   }
 
   /// Returns the value, if this constant is a scalar.
-  LLVM_ABI APFloat getScalarValue() const;
+  LLVM_ABI_NOT_EXPORTED APFloat getScalarValue() const;
 
-  LLVM_ABI static std::optional<GFConstant>
+  LLVM_ABI_NOT_EXPORTED static std::optional<GFConstant>
   getConstant(Register Const, const MachineRegisterInfo &MRI);
 };
 

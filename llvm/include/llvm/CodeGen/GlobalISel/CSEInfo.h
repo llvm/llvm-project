@@ -35,18 +35,18 @@ class UniqueMachineInstr : public FoldingSetNode {
   explicit UniqueMachineInstr(const MachineInstr *MI) : MI(MI) {}
 
 public:
-  LLVM_ABI void Profile(FoldingSetNodeID &ID);
+  LLVM_ABI_NOT_EXPORTED void Profile(FoldingSetNodeID &ID);
 };
 
 // A CSE config for fully optimized builds.
-class LLVM_ABI CSEConfigFull : public CSEConfigBase {
+class LLVM_ABI_NOT_EXPORTED CSEConfigFull : public CSEConfigBase {
 public:
   ~CSEConfigFull() override = default;
   bool shouldCSEOpc(unsigned Opc) override;
 };
 
 // Commonly used for O0 config.
-class LLVM_ABI CSEConfigConstantOnly : public CSEConfigBase {
+class LLVM_ABI_NOT_EXPORTED CSEConfigConstantOnly : public CSEConfigBase {
 public:
   ~CSEConfigConstantOnly() override = default;
   bool shouldCSEOpc(unsigned Opc) override;
@@ -56,7 +56,7 @@ public:
 // We have this logic here so targets can make use of it from their derived
 // TargetPassConfig, but can't put this logic into TargetPassConfig directly
 // because the CodeGen library can't depend on GlobalISel.
-LLVM_ABI std::unique_ptr<CSEConfigBase>
+LLVM_ABI_NOT_EXPORTED std::unique_ptr<CSEConfigBase>
 getStandardCSEConfigForOpt(CodeGenOptLevel Level);
 
 /// The CSE Analysis object.
@@ -69,7 +69,7 @@ getStandardCSEConfigForOpt(CodeGenOptLevel Level);
 /// CSEInfo should assert when trying to enter an incomplete instruction into
 /// the CSEMap. There is Opcode level granularity on which instructions can be
 /// CSE'd and for now, only Generic instructions are CSEable.
-class LLVM_ABI GISelCSEInfo : public GISelChangeObserver {
+class LLVM_ABI_NOT_EXPORTED GISelCSEInfo : public GISelChangeObserver {
   // Make it accessible only to CSEMIRBuilder.
   friend class CSEMIRBuilder;
 
@@ -179,31 +179,31 @@ public:
   GISelInstProfileBuilder(FoldingSetNodeID &ID, const MachineRegisterInfo &MRI)
       : ID(ID), MRI(MRI) {}
   // Profiling methods.
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDOpcode(unsigned Opc) const;
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDRegType(const LLT Ty) const;
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &addNodeIDOpcode(unsigned Opc) const;
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &addNodeIDRegType(const LLT Ty) const;
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
   addNodeIDRegType(const Register) const;
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
       addNodeIDRegType(MachineRegisterInfo::VRegAttrs) const;
 
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
   addNodeIDRegType(const TargetRegisterClass *RC) const;
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
   addNodeIDRegType(const RegisterBank *RB) const;
 
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDRegNum(Register Reg) const;
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &addNodeIDRegNum(Register Reg) const;
 
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDReg(Register Reg) const;
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &addNodeIDReg(Register Reg) const;
 
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDImmediate(int64_t Imm) const;
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &addNodeIDImmediate(int64_t Imm) const;
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
   addNodeIDMBB(const MachineBasicBlock *MBB) const;
 
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
   addNodeIDMachineOperand(const MachineOperand &MO) const;
 
-  LLVM_ABI const GISelInstProfileBuilder &addNodeIDFlag(unsigned Flag) const;
-  LLVM_ABI const GISelInstProfileBuilder &
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &addNodeIDFlag(unsigned Flag) const;
+  LLVM_ABI_NOT_EXPORTED const GISelInstProfileBuilder &
   addNodeID(const MachineInstr *MI) const;
 };
 
@@ -221,7 +221,7 @@ public:
   /// If CSEConfig is already set, and the CSE Analysis has been preserved,
   /// it will not use the new CSEOpt(use Recompute to force using the new
   /// CSEOpt).
-  LLVM_ABI GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt);
+  LLVM_ABI_NOT_EXPORTED GISelCSEInfo &get(std::unique_ptr<CSEConfigBase> CSEOpt);
   void setMF(MachineFunction &MFunc) { MF = &MFunc; }
   void setComputed(bool Computed) { AlreadyComputed = Computed; }
   void releaseMemory() { Info.releaseMemory(); }
@@ -229,19 +229,19 @@ public:
 
 class GISelCSEAnalysis : public AnalysisInfoMixin<GISelCSEAnalysis> {
   friend AnalysisInfoMixin<GISelCSEAnalysis>;
-  LLVM_ABI static AnalysisKey Key;
+  LLVM_ABI_NOT_EXPORTED static AnalysisKey Key;
   TargetMachine *TM;
 
 public:
   using Result = std::unique_ptr<GISelCSEInfo>;
   GISelCSEAnalysis(TargetMachine *TM) : TM(TM) {};
 
-  LLVM_ABI Result run(MachineFunction &MF,
+  LLVM_ABI_NOT_EXPORTED Result run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM);
 };
 
 /// The actual analysis pass wrapper.
-class LLVM_ABI GISelCSEAnalysisWrapperPass : public MachineFunctionPass {
+class LLVM_ABI_NOT_EXPORTED GISelCSEAnalysisWrapperPass : public MachineFunctionPass {
   GISelCSEAnalysisWrapper Wrapper;
 
 public:

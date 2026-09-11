@@ -52,12 +52,12 @@ public:
 };
 
 /// Returns a BaseIndexOffset which describes the pointer in \p Ptr.
-LLVM_ABI BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
+LLVM_ABI_NOT_EXPORTED BaseIndexOffset getPointerInfo(Register Ptr, MachineRegisterInfo &MRI);
 
 /// Compute whether or not a memory access at \p MI1 aliases with an access at
 /// \p MI2 \returns true if either alias/no-alias is known. Sets \p IsAlias
 /// accordingly.
-LLVM_ABI bool aliasIsKnownForLoadStore(const MachineInstr &MI1,
+LLVM_ABI_NOT_EXPORTED bool aliasIsKnownForLoadStore(const MachineInstr &MI1,
                                        const MachineInstr &MI2, bool &IsAlias,
                                        MachineRegisterInfo &MRI);
 
@@ -65,11 +65,11 @@ LLVM_ABI bool aliasIsKnownForLoadStore(const MachineInstr &MI1,
 /// This function uses multiple strategies to detect aliasing, whereas
 /// aliasIsKnownForLoadStore just looks at the addresses of load/stores and is
 /// tries to reason about base/index/offsets.
-LLVM_ABI bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
+LLVM_ABI_NOT_EXPORTED bool instMayAlias(const MachineInstr &MI, const MachineInstr &Other,
                            MachineRegisterInfo &MRI, AliasAnalysis *AA);
 } // namespace GISelAddressing
 
-class LLVM_ABI LoadStoreOptLegacy : public MachineFunctionPass {
+class LLVM_ABI_NOT_EXPORTED LoadStoreOptLegacy : public MachineFunctionPass {
 public:
   static char ID;
 

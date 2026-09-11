@@ -37,7 +37,7 @@ class IRTranslatorImpl;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class LLVM_ABI IRTranslatorLegacy : public MachineFunctionPass {
+class LLVM_ABI_NOT_EXPORTED IRTranslatorLegacy : public MachineFunctionPass {
 public:
   static char ID;
   IRTranslatorLegacy(CodeGenOptLevel OptLevel = CodeGenOptLevel::None);

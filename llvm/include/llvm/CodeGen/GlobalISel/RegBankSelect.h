@@ -85,7 +85,7 @@ enum RegBankSelectMode {
 
 /// This pass implements the reg bank selector pass used in the GlobalISel
 /// pipeline. At the end of this pass, all register operands have been assigned
-class LLVM_ABI RegBankSelectLegacy : public MachineFunctionPass {
+class LLVM_ABI_NOT_EXPORTED RegBankSelectLegacy : public MachineFunctionPass {
   RegBankSelectMode OptMode;
 
 public:

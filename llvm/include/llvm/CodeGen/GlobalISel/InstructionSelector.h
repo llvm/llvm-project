@@ -21,7 +21,7 @@
 namespace llvm {
 class GISelObserverWrapper;
 
-class LLVM_ABI InstructionSelector : public GIMatchTableExecutor {
+class LLVM_ABI_NOT_EXPORTED InstructionSelector : public GIMatchTableExecutor {
 public:
   ~InstructionSelector() override;
 
