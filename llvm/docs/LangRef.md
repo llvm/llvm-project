@@ -12219,8 +12219,9 @@ equal, it tries to store a new value into the memory.
 There are three arguments to the '`cmpxchg`' instruction: an address
 to operate on, a value to compare to the value currently be at that
 address, and a new value to place at that address if the compared values
-are equal. The type of `<cmp>` must be an integer or pointer type whose
-bit width is a power of two greater than or equal to eight.
+are equal. The type of `<cmp>` must be an integer type, floating-point type,
+pointer type, or fixed vector of any of these types, whose bit width is a power
+of two greater than or equal to eight.
 `<cmp>` and `<new>` must
 have the same type, and the type of `<pointer>` must be a pointer to
 that type. If the `cmpxchg` is marked as `volatile`, then the
