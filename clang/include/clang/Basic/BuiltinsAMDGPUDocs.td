@@ -880,60 +880,162 @@ integers.
 def DocCvtScalePk32BF16BF6 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{
-Converts a packed 32-component BF6 input ``src`` to packed 32-component BF16
-values, then scales the results using the scale factor ``scale``. ``scale_sel``
-must be a compile-time constant in the range [0, 15]. Only available in
-wavefront size 32.
+Converts 32 packed 6-bit brain-float values in ``src`` to brain-float16, then
+multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously (192 bits total).
+
+``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
+in E8M0 (bias 127) format, shared across a group of 32 values. Use
+``scale_sel`` to select which one to apply.
+
+``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
+that selects which 16-bit half of the ``scale`` register and which set of lanes
+(even or odd) provides the block-scale byte for this lane:
+
+  - 0: even lanes, bits [15:0]
+  - 1: even lanes, bits [31:16]
+  - 2: odd lanes,  bits [15:0]
+  - 3: odd lanes,  bits [31:16]
+
+``src`` must be a VGPR. Destination registers must not overlap any source
+registers. Only available in wavefront size 32.
 }];
 }
 
 def DocCvtScalePk32BF16FP6 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{
-Converts a packed 32-component FP6 input ``src`` to packed 32-component BF16
-values, then scales the results using the scale factor ``scale``. ``scale_sel``
-must be a compile-time constant in the range [0, 15]. Only available in
-wavefront size 32.
+Converts 32 packed 6-bit float values in ``src`` to brain-float16, then
+multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously (192 bits total).
+
+``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
+in E8M0 (bias 127) format, shared across a group of 32 values. Use
+``scale_sel`` to select which one to apply.
+
+``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
+that selects which 16-bit half of the ``scale`` register and which set of lanes
+(even or odd) provides the block-scale byte for this lane:
+
+  - 0: even lanes, bits [15:0]
+  - 1: even lanes, bits [31:16]
+  - 2: odd lanes,  bits [15:0]
+  - 3: odd lanes,  bits [31:16]
+
+``src`` must be a VGPR. Destination registers must not overlap any source
+registers. Only available in wavefront size 32.
 }];
 }
 
 def DocCvtScalePk32F16BF6 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{
-Converts a packed 32-component BF6 input ``src`` to packed 32-component
-half-precision floating-point values, then scales the results using the scale
-factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
-[0, 15]. Only available in wavefront size 32.
+Converts 32 packed 6-bit brain-float values in ``src`` to half-precision
+float16, then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously (192 bits total).
+
+``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
+in E8M0 (bias 127) format, shared across a group of 32 values. Use
+``scale_sel`` to select which one to apply.
+
+``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
+that selects which 16-bit half of the ``scale`` register and which set of lanes
+(even or odd) provides the block-scale byte for this lane:
+
+  - 0: even lanes, bits [15:0]
+  - 1: even lanes, bits [31:16]
+  - 2: odd lanes,  bits [15:0]
+  - 3: odd lanes,  bits [31:16]
+
+``src`` must be a VGPR. Destination registers must not overlap any source
+registers. Only available in wavefront size 32.
 }];
 }
 
 def DocCvtScalePk32F16FP6 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{
-Converts a packed 32-component FP6 input ``src`` to packed 32-component
-half-precision floating-point values, then scales the results using the scale
-factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
-[0, 15]. Only available in wavefront size 32.
+Converts 32 packed 6-bit float values in ``src`` to half-precision float16,
+then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously (192 bits total).
+
+``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
+in E8M0 (bias 127) format, shared across a group of 32 values. Use
+``scale_sel`` to select which one to apply.
+
+``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
+that selects which 16-bit half of the ``scale`` register and which set of lanes
+(even or odd) provides the block-scale byte for this lane:
+
+  - 0: even lanes, bits [15:0]
+  - 1: even lanes, bits [31:16]
+  - 2: odd lanes,  bits [15:0]
+  - 3: odd lanes,  bits [31:16]
+
+``src`` must be a VGPR. Destination registers must not overlap any source
+registers. Only available in wavefront size 32.
 }];
 }
 
 def DocCvtScalePk32F32BF6 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{
-Converts a packed 32-component BF6 input ``src`` to packed 32-component
-single-precision floating-point values, then scales the results using the scale
-factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
-[0, 15]. Only available in wavefront size 32.
+Converts 32 packed 6-bit brain-float values in ``src`` to single-precision
+float32, then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously (192 bits total).
+
+``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
+in E8M0 (bias 127) format, shared across a group of 32 values. Use
+``scale_sel`` to select which one to apply.
+
+``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
+that selects which 16-bit half of the ``scale`` register and which set of lanes
+(even or odd) provides the block-scale byte for this lane:
+
+  - 0: even lanes, bits [15:0]
+  - 1: even lanes, bits [31:16]
+  - 2: odd lanes,  bits [15:0]
+  - 3: odd lanes,  bits [31:16]
+
+``src`` must be a VGPR. Destination registers must not overlap any source
+registers. Only available in wavefront size 32.
 }];
 }
 
 def DocCvtScalePk32F32FP6 : Documentation {
   let Category = DocCatAMDGPUConversion;
   let Content = [{
-Converts a packed 32-component FP6 input ``src`` to packed 32-component
-single-precision floating-point values, then scales the results using the scale
-factor ``scale``. ``scale_sel`` must be a compile-time constant in the range
-[0, 15]. Only available in wavefront size 32.
+Converts 32 packed 6-bit float values in ``src`` to single-precision float32,
+then multiplies each result by a shared block-scale factor.
+
+``src`` is a 6-element ``uint`` vector holding 32 six-bit values packed
+contiguously (192 bits total).
+
+``scale`` is a 32-bit integer holding four packed 8-bit block-scale factors
+in E8M0 (bias 127) format, shared across a group of 32 values. Use
+``scale_sel`` to select which one to apply.
+
+``scale_sel`` is a compile-time constant in [0, 3] (values 4–15 are reserved)
+that selects which 16-bit half of the ``scale`` register and which set of lanes
+(even or odd) provides the block-scale byte for this lane:
+
+  - 0: even lanes, bits [15:0]
+  - 1: even lanes, bits [31:16]
+  - 2: odd lanes,  bits [15:0]
+  - 3: odd lanes,  bits [31:16]
+
+``src`` must be a VGPR. Destination registers must not overlap any source
+registers. Only available in wavefront size 32.
 }];
 }
 
