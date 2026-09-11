@@ -398,15 +398,12 @@ body:             |
 # ADD's MBB and used to dereference the block sentinel. The pair must stay e64.
 # GFX9-LABEL: name:            test13_add_co_addc_different_mbb
 # GFX9: V_ADD_CO_U32_e64
+# GFX9-NEXT: S_BRANCH
 # GFX9: V_ADDC_U32_e64
-# GFX9-NOT: V_ADD_CO_U32_sdwa
-# GFX9-NOT: V_ADDC_U32_e32
+# GFX9-NEXT: REG_SEQUENCE
 ---
 name:            test13_add_co_addc_different_mbb
 tracksRegLiveness: true
-liveins:
-  - { reg: '$vgpr0', virtual-reg: '%0' }
-  - { reg: '$sgpr0_sgpr1', virtual-reg: '%1' }
 body:             |
   bb.0:
     successors: %bb.1

@@ -3278,10 +3278,10 @@ bool isArgPassedInSGPR(const CallBase *CB, unsigned ArgNo) {
   case CallingConv::AMDGPU_CS_ChainPreserve:
     // For non-compute shaders, SGPR inputs are marked with either inreg or
     // byval. Everything else is in VGPRs.
-    return CB->hasABIParamAttr(ArgNo, Attribute::InReg) ||
+    return CB->paramHasAttr(ArgNo, Attribute::InReg) ||
            CB->isByValArgument(ArgNo);
   default:
-    return CB->hasABIParamAttr(ArgNo, Attribute::InReg);
+    return CB->paramHasAttr(ArgNo, Attribute::InReg);
   }
 }
 
@@ -3688,24 +3688,17 @@ bool isPackedSingleSGPRFP32Inst(unsigned Opc) {
   }
 }
 
+// NOTE: This function is currently only used before pseudo-expansion.
 bool isPackedSingleSGPR64BitInst(unsigned Opc) {
   switch (Opc) {
   case AMDGPU::V_PK_ADD_F64:
-  case AMDGPU::V_PK_ADD_F64_gfx1250:
   case AMDGPU::V_PK_MUL_F64:
-  case AMDGPU::V_PK_MUL_F64_gfx1250:
   case AMDGPU::V_PK_FMA_F64:
-  case AMDGPU::V_PK_FMA_F64_gfx1250:
   case AMDGPU::V_PK_MAX_NUM_F64:
-  case AMDGPU::V_PK_MAX_NUM_F64_gfx1250:
   case AMDGPU::V_PK_MIN_NUM_F64:
-  case AMDGPU::V_PK_MIN_NUM_F64_gfx1250:
   case AMDGPU::V_PK_ADD_NC_U64:
-  case AMDGPU::V_PK_ADD_NC_U64_gfx1250:
   case AMDGPU::V_PK_SUB_NC_U64:
-  case AMDGPU::V_PK_SUB_NC_U64_gfx1250:
   case AMDGPU::V_PK_LSHL_ADD_U64:
-  case AMDGPU::V_PK_LSHL_ADD_U64_gfx1250:
     return true;
   default:
     return false;

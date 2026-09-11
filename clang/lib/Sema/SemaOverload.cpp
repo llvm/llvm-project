@@ -14612,13 +14612,14 @@ static bool canBeDeclaredInNamespace(const DeclarationName &Name) {
 
 /// Attempt to recover from an ill-formed use of a non-dependent name in a
 /// template, where the non-dependent name was declared after the template
-/// was defined. This is common in code written for a compilers which do not
+/// was defined. This is common in code written for compilers which do not
 /// correctly implement two-stage name lookup.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
 static bool DiagnoseTwoPhaseLookup(
     Sema &SemaRef, SourceLocation FnLoc, const CXXScopeSpec &SS,
     LookupResult &R, OverloadCandidateSet::CandidateSetKind CSK,
+    const OverloadCandidateSet &ResolvedCandidates,
     TemplateArgumentListInfo *ExplicitTemplateArgs, ArrayRef<Expr *> Args,
     CXXRecordDecl **FoundInClass = nullptr) {
   if (!SemaRef.inTemplateInstantiation() || !SS.isEmpty())
@@ -14634,6 +14635,14 @@ static bool DiagnoseTwoPhaseLookup(
       R.suppressDiagnostics();
 
       OverloadCandidateSet Candidates(FnLoc, CSK);
+      // We have performed a BestViableFunction over these candidates, so
+      // exclude them.
+      for (auto &Cand : ResolvedCandidates) {
+        if (Cand.Function)
+          Candidates.exclude(Cand.Function);
+        else if (Cand.IsSurrogate)
+          Candidates.exclude(Cand.Surrogate);
+      }
       SemaRef.AddOverloadedCallCandidates(R, ExplicitTemplateArgs, Args,
                                           Candidates);
 
@@ -14724,16 +14733,16 @@ static bool DiagnoseTwoPhaseLookup(
 /// was defined.
 ///
 /// Returns true if a viable candidate was found and a diagnostic was issued.
-static bool
-DiagnoseTwoPhaseOperatorLookup(Sema &SemaRef, OverloadedOperatorKind Op,
-                               SourceLocation OpLoc,
-                               ArrayRef<Expr *> Args) {
+static bool DiagnoseTwoPhaseOperatorLookup(
+    Sema &SemaRef, OverloadedOperatorKind Op, SourceLocation OpLoc,
+    ArrayRef<Expr *> Args, const OverloadCandidateSet &ResolvedCandidateSet) {
   DeclarationName OpName =
-    SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
+      SemaRef.Context.DeclarationNames.getCXXOperatorName(Op);
   LookupResult R(SemaRef, OpName, OpLoc, Sema::LookupOperatorName);
-  return DiagnoseTwoPhaseLookup(SemaRef, OpLoc, CXXScopeSpec(), R,
-                                OverloadCandidateSet::CSK_Operator,
-                                /*ExplicitTemplateArgs=*/nullptr, Args);
+  return DiagnoseTwoPhaseLookup(
+      SemaRef, OpLoc, CXXScopeSpec(), R, OverloadCandidateSet::CSK_Operator,
+      ResolvedCandidateSet,
+      /*ExplicitTemplateArgs=*/nullptr, Args, /*FoundInClass=*/nullptr);
 }
 
 namespace {
@@ -14760,11 +14769,10 @@ public:
 ///    expected to diagnose as appropriate.
 static ExprResult
 BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
-                      UnresolvedLookupExpr *ULE,
-                      SourceLocation LParenLoc,
-                      MutableArrayRef<Expr *> Args,
-                      SourceLocation RParenLoc,
-                      bool EmptyLookup, bool AllowTypoCorrection) {
+                      UnresolvedLookupExpr *ULE, SourceLocation LParenLoc,
+                      MutableArrayRef<Expr *> Args, SourceLocation RParenLoc,
+                      const OverloadCandidateSet &ResolvedCandidateSet,
+                      bool AllowTypoCorrection) {
   // Do not try to recover if it is already building a recovery call.
   // This stops infinite loops for template instantiations like
   //
@@ -14788,11 +14796,11 @@ BuildRecoveryCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
   LookupResult R(SemaRef, ULE->getName(), ULE->getNameLoc(),
                  Sema::LookupOrdinaryName);
   CXXRecordDecl *FoundInClass = nullptr;
-  if (DiagnoseTwoPhaseLookup(SemaRef, Fn->getExprLoc(), SS, R,
-                             OverloadCandidateSet::CSK_Normal,
-                             ExplicitTemplateArgs, Args, &FoundInClass)) {
+  if (DiagnoseTwoPhaseLookup(
+          SemaRef, Fn->getExprLoc(), SS, R, OverloadCandidateSet::CSK_Normal,
+          ResolvedCandidateSet, ExplicitTemplateArgs, Args, &FoundInClass)) {
     // OK, diagnosed a two-phase lookup issue.
-  } else if (EmptyLookup) {
+  } else if (ResolvedCandidateSet.empty()) {
     // Try to recover from an empty lookup with typo correction.
     R.clear();
     NoTypoCorrectionCCC NoTypoValidator{};
@@ -15005,10 +15013,9 @@ static ExprResult FinishOverloadedCallExpr(Sema &SemaRef, Scope *S, Expr *Fn,
 
     // Try to recover by looking for viable functions which the user might
     // have meant to call.
-    ExprResult Recovery = BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc,
-                                                Args, RParenLoc,
-                                                CandidateSet->empty(),
-                                                AllowTypoCorrection);
+    ExprResult Recovery =
+        BuildRecoveryCallExpr(SemaRef, S, Fn, ULE, LParenLoc, Args, RParenLoc,
+                              *CandidateSet, AllowTypoCorrection);
     if (Recovery.isInvalid() || Recovery.isUsable())
       return Recovery;
 
@@ -15410,7 +15417,8 @@ Sema::CreateOverloadedUnaryOp(SourceLocation OpLoc, UnaryOperatorKind Opc,
     // This is an erroneous use of an operator which can be overloaded by
     // a non-member function. Check for non-member operators which were
     // defined too late to be candidates.
-    if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, ArgsArray))
+    if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, ArgsArray,
+                                       CandidateSet))
       // FIXME: Recover by calling the found function.
       return ExprError();
 
@@ -15932,7 +15940,8 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         // This is an erroneous use of an operator which can be overloaded by
         // a non-member function. Check for non-member operators which were
         // defined too late to be candidates.
-        if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args))
+        if (DiagnoseTwoPhaseOperatorLookup(*this, Op, OpLoc, Args,
+                                           CandidateSet))
           // FIXME: Recover by calling the found function.
           return ExprError();
 

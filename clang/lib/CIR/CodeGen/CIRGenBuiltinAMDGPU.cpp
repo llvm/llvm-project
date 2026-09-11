@@ -334,30 +334,18 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_fract:
   case AMDGPU::BI__builtin_amdgcn_fractf:
-  case AMDGPU::BI__builtin_amdgcn_fracth: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_fracth:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.fract").getValue();
   case AMDGPU::BI__builtin_amdgcn_lerp: {
     cgm.errorNYI(expr->getSourceRange(),
                  std::string("unimplemented AMDGPU builtin call: ") +
                      getContext().BuiltinInfo.getName(builtinId));
     return mlir::Value{};
   }
-  case AMDGPU::BI__builtin_amdgcn_ubfe: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
-  case AMDGPU::BI__builtin_amdgcn_sbfe: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_ubfe:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.ubfe").getValue();
+  case AMDGPU::BI__builtin_amdgcn_sbfe:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.sbfe").getValue();
   case AMDGPU::BI__builtin_amdgcn_ballot_w32:
   case AMDGPU::BI__builtin_amdgcn_ballot_w64:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ballot",
@@ -454,45 +442,66 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   }
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b64_v2i32:
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr.b64", convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v4bf16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8f16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr_b128_v8bf16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr8_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8f16:
-  case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8bf16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr16_b128_v8bf16:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr.b128", convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr4_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr4.b64", convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_global_load_tr6_b96_v3i32:
+    return emitBuiltinWithOneOverloadedType<1>(
+               expr, "amdgcn.global.load.tr6.b96", convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr4_b64_v2i32:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr4.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr6_b96_v3i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr6.b96",
+                                               convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr8.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8i16:
   case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8f16:
-  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_ds_load_tr16_b128_v8bf16:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.load.tr16.b128",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr4_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr4.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr8_b64_v2i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr8.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr6_b96_v3i32:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr6.b96",
+                                               convertType(expr->getType()))
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4f16:
   case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4bf16:
-  case AMDGPU::BI__builtin_amdgcn_ds_read_tr16_b64_v4i16: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.ds.read.tr16.b64",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b32:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b64:
   case AMDGPU::BI__builtin_amdgcn_global_load_monitor_b128:
