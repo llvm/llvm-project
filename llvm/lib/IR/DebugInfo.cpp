@@ -1936,6 +1936,14 @@ LLVMMetadataRef LLVMDIBuilderCreateParameterVariable(
                   map_from_llvmDIFlags(Flags)));
 }
 
+LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange2(LLVMDIBuilderRef Builder,
+                                                 LLVMMetadataRef Count,
+                                                 LLVMMetadataRef Low,
+                                                 LLVMMetadataRef High, 
+                                                 LLVMMetadataRef Stride) {
+  return wrap(unwrap(Builder)->getOrCreateSubrange(unwrap(Count), unwrap(Low), unwrap(High), unwrap(Stride)));
+}
+
 LLVMMetadataRef LLVMDIBuilderGetOrCreateSubrange(LLVMDIBuilderRef Builder,
                                                  int64_t Lo, int64_t Count) {
   return wrap(unwrap(Builder)->getOrCreateSubrange(Lo, Count));
