@@ -285,6 +285,7 @@ private:
   getZenGSVectorCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                      Type *DataTy, const Value *Ptr, bool VariableMask,
                      Align Alignment, unsigned AddressSpace,
+                     const Value *Mask = nullptr,
                      std::optional<bool> UniformBase = std::nullopt) const;
 
   int getGatherOverhead() const;
