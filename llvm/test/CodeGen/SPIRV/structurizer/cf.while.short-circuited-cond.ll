@@ -62,7 +62,9 @@
 ; CHECK:                  OpBranch %[[#bb106]]
 ; CHECK:    %[[#bb107]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb109:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb110:]] %[[#bb109]]
+; CHECK:                  OpBranchConditional %[[#]] %[[#bb110:]] %[[#unreachable:]]
+; CHECK:   %[[#unreachable]] = OpLabel
+; CHECK-NEXT:              OpUnreachable
 ; CHECK:    %[[#bb110]] = OpLabel
 ; CHECK:                  OpSelectionMerge %[[#bb111:]] None
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb112:]] %[[#bb113:]]
@@ -82,14 +84,8 @@
 ; CHECK:    %[[#bb117]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb109]]
 ; CHECK:    %[[#bb109]] = OpLabel
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb106]] %[[#bb118:]]
-; CHECK:    %[[#bb118]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb106]]
 ; CHECK:    %[[#bb106]] = OpLabel
-; CHECK:                  OpSelectionMerge %[[#bb119:]] None
-; CHECK:                  OpBranchConditional %[[#]] %[[#bb119]] %[[#bb120:]]
-; CHECK:    %[[#bb120]] = OpLabel
-; CHECK:    %[[#bb119]] = OpLabel
 ; CHECK:                  OpBranchConditional %[[#]] %[[#bb104]] %[[#bb103]]
 ; CHECK:    %[[#bb103]] = OpLabel
 ; CHECK:                  OpBranch %[[#bb121:]]
@@ -302,5 +298,4 @@ attributes #2 = { convergent nocallback nofree nosync nounwind willreturn memory
 !0 = !{i32 1, !"wchar_size", i32 4}
 !1 = !{i32 4, !"dx.disable_optimizations", i32 1}
 !2 = !{i32 7, !"frame-pointer", i32 2}
-
 
