@@ -32919,8 +32919,9 @@ SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
-  // reciprocal if there are three or more FDIVs.
-  return 3;
+  // reciprocal if there are enough FDIVs. The threshold is determined by the
+  // subtarget feature.
+  return Subtarget->useReciprocalFDivCombineThreshold2() ? 2 : 3;
 }
 
 TargetLoweringBase::LegalizeTypeAction
