@@ -39,11 +39,11 @@ struct APINotesSelectorDiagnosticName {
 /// end-of-TU diagnostics can warn about exact selectors for known names that
 /// were never matched.
 struct APINotesSelectorDiagnosticReaderState {
-  /// Exact Where.Parameters selector keys stored by API notes. The bool is
-  /// true once Sema sees a declaration matching the exact selector.
+  /// Function selector keys stored by API notes. The bool is true once
+  /// Sema sees a declaration matching the selector.
   llvm::DenseMap<api_notes::APINotesFunctionSelectorKey, bool> SelectorUsed;
 
-  /// Maps broad/name-only keys to a declaration location/name used for
+  /// Maps broad name-only keys to a declaration location/name used for
   /// diagnostics.
   llvm::DenseMap<api_notes::APINotesFunctionSelectorKey,
                  APINotesSelectorDiagnosticName>
@@ -63,7 +63,7 @@ struct APINotesSelectorDiagnosticReaderState {
 
   void noteSeenDeclaration(const api_notes::APINotesFunctionSelectorKey &Key,
                            llvm::StringRef Name, SourceLocation Loc) {
-    SeenNames.insert({Key.getWithoutParameterSelector(), {Loc, Name.str()}});
+    SeenNames.insert({Key.getNameOnlyKey(), {Loc, Name.str()}});
   }
 
   void markUsed(const api_notes::APINotesFunctionSelectorKey &Key) {
