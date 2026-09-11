@@ -1,4 +1,4 @@
-# This test checks that tentative code layout for cold blocks always runs.
+# This test checks that code layout for cold blocks always runs.
 # It commonly happens when using lite mode with split functions.
 
 # REQUIRES: system-linux, asserts
@@ -24,4 +24,4 @@ foo:
 ## Force relocation mode.
 .reloc 0, R_AARCH64_NONE
 
-# CHECK: foo{{.*}} cold tentative: {{.*}}
+# CHECK: BOLT-DEBUG: LongJmp layout: cold fragment foo{{.*}} starts at 0x
