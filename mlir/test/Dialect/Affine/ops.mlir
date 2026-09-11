@@ -513,8 +513,8 @@ func.func @parallel_minnumf_reduce() {
 
 // CHECK-LABEL: func.func @affine_load_store_alignment
 func.func @affine_load_store_alignment(%memref: memref<4xi32>) {
-  // CHECK: affine.load {{.*}} {alignment = 16 : i64}
-  %val = affine.load %memref[0] { alignment = 16 } : memref<4xi32>
+  // CHECK: affine.load {{.*}} {alignment = 16 : i64, test.marker}
+  %val = affine.load %memref[0] { alignment = 16, test.marker } : memref<4xi32>
   // CHECK: affine.store {{.*}} {alignment = 16 : i64}
   affine.store %val, %memref[0] { alignment = 16 } : memref<4xi32>
   return

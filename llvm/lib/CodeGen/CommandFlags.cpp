@@ -79,9 +79,7 @@ CGOPT(FramePointerKind, FramePointerUsage)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
-CGOPT(bool, EnableHonorSignDependentRoundingFPMath)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
-CGOPT(FPOpFusion::FPOpFusionMode, FuseFPOps)
 CGOPT(SwiftAsyncFramePointerMode, SwiftAsyncFramePointer)
 CGOPT(bool, DontPlaceZerosInBSS)
 CGOPT(bool, EnableGuaranteedTailCallOpt)
@@ -255,12 +253,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
     DenormFlagEnumOptions);
   CGBINDOPT(DenormalFP32Math);
 
-  static cl::opt<bool> EnableHonorSignDependentRoundingFPMath(
-      "enable-sign-dependent-rounding-fp-math", cl::Hidden,
-      cl::desc("Force codegen to assume rounding mode can change dynamically"),
-      cl::init(false));
-  CGBINDOPT(EnableHonorSignDependentRoundingFPMath);
-
   static cl::opt<FloatABI::ABIType> FloatABIForCalls(
       "float-abi", cl::desc("Choose float ABI type"),
       cl::init(FloatABI::Default),
@@ -271,17 +263,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                  clEnumValN(FloatABI::Hard, "hard",
                             "Hard float ABI (uses FP registers)")));
   CGBINDOPT(FloatABIForCalls);
-
-  static cl::opt<FPOpFusion::FPOpFusionMode> FuseFPOps(
-      "fp-contract", cl::desc("Enable aggressive formation of fused FP ops"),
-      cl::init(FPOpFusion::Standard),
-      cl::values(
-          clEnumValN(FPOpFusion::Fast, "fast",
-                     "Fuse FP ops whenever profitable"),
-          clEnumValN(FPOpFusion::Standard, "on", "Only fuse 'blessed' FP ops."),
-          clEnumValN(FPOpFusion::Strict, "off",
-                     "Only fuse FP ops when the result won't be affected.")));
-  CGBINDOPT(FuseFPOps);
 
   static cl::opt<SwiftAsyncFramePointerMode> SwiftAsyncFramePointer(
       "swift-async-fp",
@@ -570,10 +551,6 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
-  Options.AllowFPOpFusion = getFuseFPOps();
-
-  Options.HonorSignDependentRoundingFPMathOption =
-      getEnableHonorSignDependentRoundingFPMath();
   Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();

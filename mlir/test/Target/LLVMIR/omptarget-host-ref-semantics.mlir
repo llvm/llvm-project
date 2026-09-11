@@ -71,14 +71,14 @@ module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.require
   }
 }
 
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710661, i64 3, i64 16388, i64 288]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710661, i64 3, i64 288]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710661, i64 3, i64 16384, i64 288]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [5 x i64] [i64 32, i64 281474976710657, i64 1, i64 16384, i64 288]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [5 x i64] [i64 33, i64 281474976710661, i64 3, i64 16388, i64 288]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 33, i64 281474976710661, i64 3, i64 288]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [5 x i64] [i64 33, i64 281474976710661, i64 3, i64 16384, i64 288]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [5 x i64] [i64 33, i64 281474976710657, i64 1, i64 16384, i64 288]
 // CHECK: @.offload_sizes{{.*}} = private unnamed_addr constant [3 x i64] [i64 0, i64 24, i64 0]
 // CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 16384, i64 33, i64 288]
 // CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [3 x i64] [i64 16384, i64 33, i64 288]
-// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 32, i64 281474976710657, i64 1, i64 288]
+// CHECK: @.offload_maptypes{{.*}} = private unnamed_addr constant [4 x i64] [i64 33, i64 281474976710657, i64 1, i64 288]
 
 // CHECK: define void @attach_always_(ptr %[[ARG0:.*]], ptr %[[ARG1:.*]])
 // CHECK:  %[[VAL_0:.*]] = load ptr, ptr %[[ARG1]], align 8

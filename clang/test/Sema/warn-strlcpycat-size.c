@@ -19,12 +19,14 @@ int x;
 void f(void)
 {
   strlcpy(s1, s2, sizeof(s1)); // no warning
-  strlcpy(s1, s2, sizeof(s2)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} expected-note {{change size argument to be the size of the destination}}
+  strlcpy(s1, s2, sizeof(s2)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} expected-note {{change size argument to be the size of the destination}} \
+                               // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 100, but size argument is 200}}
   strlcpy(s1, s3, strlen(s3)+1); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} expected-note {{change size argument to be the size of the destination}}
   strlcat(s2, s3, sizeof(s3)); // expected-warning {{size argument in 'strlcat' call appears to be size of the source; expected the size of the destination}} expected-note {{change size argument to be the size of the destination}}
   strlcpy(s4.f1, s2, sizeof(s2)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} expected-note {{change size argument to be the size of the destination}}
   strlcpy((*s5)->f2[x], s2, sizeof(s2)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} expected-note {{change size argument to be the size of the destination}}
-  strlcpy(s1+3, s2, sizeof(s2)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}}
+  strlcpy(s1+3, s2, sizeof(s2)); // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \
+                                 // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 97, but size argument is 200}}
 }
 
 // Don't issue FIXIT for flexible arrays.
@@ -43,7 +45,8 @@ void size_1(void) {
   char z[1];
   char str[] = "hi";
 
-  strlcpy(z, str, sizeof(str));  // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}}
+  strlcpy(z, str, sizeof(str));  // expected-warning {{size argument in 'strlcpy' call appears to be size of the source; expected the size of the destination}} \
+                                 // expected-warning {{'strlcpy' size argument is too large; destination buffer has size 1, but size argument is 3}}
 }
 
 // Support VLAs.

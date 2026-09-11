@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRXeGPUDialect
   MLIRXeGPUAttrInterfaceIncGen
   MLIRXeGPUAttrsIncGen
   MLIRXeGPUEnumsIncGen
+  MLIRXeGPUOpInterfaceIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect

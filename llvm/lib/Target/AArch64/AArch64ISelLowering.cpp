@@ -4989,9 +4989,9 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
     if (Op0VT == MVT::bf16 && IsStrict) {
       SDValue Ext1 =
           DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {MVT::f32, MVT::Other},
-                      {Op0, Op.getOperand(0)});
+                      {Op.getOperand(0), Op0});
       return DAG.getNode(ISD::STRICT_FP_EXTEND, SDLoc(Op), {VT, MVT::Other},
-                         {Ext1, Ext1.getValue(1)});
+                         {Ext1.getValue(1), Ext1});
     }
     if (Op0VT == MVT::bf16)
       return DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), VT,
@@ -8200,6 +8200,14 @@ SDValue AArch64TargetLowering::LowerLOAD(SDValue Op,
   LoadSDNode *LoadNode = cast<LoadSDNode>(Op);
   assert(LoadNode && "Expected custom lowering of a load node");
 
+  // Extending loads of v2i8 -> v2i32/v2i64 are better lowered using SVE's
+  // extending load instructions as they otherwise require 2 or 3 instructions
+  // to promote.
+  bool OverrideNeon = !Subtarget->isNeonAvailable() ||
+                      cast<LoadSDNode>(Op)->getMemoryVT() == MVT::v2i8;
+  if (useSVEForFixedLengthVectorVT(Op.getValueType(), OverrideNeon))
+    return LowerFixedLengthVectorLoadToSVE(Op, DAG);
+
   if (SDValue Result = tryLowerSmallVectorExtLoad(LoadNode, DAG))
     return Result;
 
@@ -9007,9 +9015,6 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   case ISD::MLOAD:
     return LowerMLOAD(Op, DAG);
   case ISD::LOAD:
-    if (useSVEForFixedLengthVectorVT(Op.getValueType(),
-                                     !Subtarget->isNeonAvailable()))
-      return LowerFixedLengthVectorLoadToSVE(Op, DAG);
     return LowerLOAD(Op, DAG);
   case ISD::ADD:
   case ISD::AND:
@@ -12762,7 +12767,8 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   SmallVector<std::pair<SDValue, SDValue>, 16> WorkList;
 
   // Only handle integer compares.
-  if (N->getOpcode() != ISD::SETCC)
+  if (N->getOpcode() != ISD::SETCC || LHS.getValueType().isVector() ||
+      LHS.getValueType().getSizeInBits() > 64)
     return SDValue();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -17275,9 +17281,9 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   }
 
   // Convert BUILD_VECTOR where all elements but the lowest are undef into
-  // SCALAR_TO_VECTOR, except for when we have a single-element constant vector
+  // SCALAR_TO_VECTOR, except for when we have a constant vector
   // as SimplifyDemandedBits will just turn that back into BUILD_VECTOR.
-  if (isOnlyLowElement && !(NumElts == 1 && isIntOrFPConstant(Value))) {
+  if (isOnlyLowElement && !isIntOrFPConstant(Value)) {
     LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
                          "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Value);
@@ -18974,15 +18980,13 @@ bool AArch64TargetLowering::isProfitableToHoist(Instruction *I) const {
         User->getOpcode() == Instruction::FAdd))
     return true;
 
-  const TargetOptions &Options = getTargetMachine().Options;
   const Function *F = I->getFunction();
   const DataLayout &DL = F->getDataLayout();
   Type *Ty = User->getOperand(0)->getType();
 
   return !(isFMAFasterThanFMulAndFAdd(*F, Ty) &&
            isOperationLegalOrCustom(ISD::FMA, getValueType(DL, Ty)) &&
-           (Options.AllowFPOpFusion == FPOpFusion::Fast ||
-            I->getFastMathFlags().allowContract()));
+           I->getFastMathFlags().allowContract());
 }
 
 // All 32-bit GPR operations implicitly zero the high-half of the corresponding
@@ -20366,8 +20370,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return Subtarget->hasFPARMv8();
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasBF16() &&
-           Subtarget->isNonStreamingSVEorSME2Available();
+    return VT.isScalableVector() &&
+           (Subtarget->hasBF16() || Subtarget->hasSVEB16B16());
   default:
     break;
   }
@@ -23549,6 +23553,55 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel.getOperand(3));
 }
 
+// Reassociate adds/subs of extended values when one of the operations can
+// become an add/sub long, matching [SU](ADD|SUB)L:
+//
+//   (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+//   (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+//   ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+//
+// We don't need to reassociate expressions that can use widening add/sub
+// instead, such as (ext(A) + X) + ext(B) or (X - ext(A)) - ext(B).
+static SDValue reassociateAddSubLong(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
+    return SDValue();
+  EVT HalfEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits() / 2);
+
+  for (unsigned ExtOpc : {ISD::ZERO_EXTEND, ISD::SIGN_EXTEND}) {
+    SDValue A, B, X;
+    auto ExtOp = m_Node(ExtOpc, m_SpecificVectorElementVT(HalfEltVT));
+    auto MatchA = m_Value(A, ExtOp), MatchB = m_Value(B, ExtOp);
+    auto MatchX = m_Value(X, m_Unless(ExtOp));
+
+    auto TryReassociate = [&](unsigned Opc0, SDValue L, SDValue R,
+                              unsigned Opc1, SDValue X) {
+      // Long instructions read operands from lower/upper halves.
+      if (isEssentiallyExtractHighSubvector(L.getOperand(0)) !=
+          isEssentiallyExtractHighSubvector(R.getOperand(0)))
+        return SDValue();
+      SDLoc DL(N);
+      return DAG.getNode(Opc1, DL, VT, DAG.getNode(Opc0, DL, VT, L, R), X);
+    };
+
+    // (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+    if (sd_match(N, m_Add(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::ADD, A, B, ISD::SUB, X);
+
+    // (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+    if (sd_match(N, m_Sub(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::SUB, A, B, ISD::SUB, X);
+
+    // ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+    if (sd_match(N, m_Sub(MatchB, m_OneUse(m_Add(MatchX, MatchA)))))
+      return TryReassociate(ISD::SUB, B, A, ISD::SUB, X);
+  }
+
+  return SDValue();
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -23572,6 +23625,9 @@ static SDValue performAddSubLongCombine(SDNode *N,
       return performSetccAddFolding(N, DAG);
     return SDValue();
   }
+
+  if (SDValue R = reassociateAddSubLong(N, DAG))
+    return R;
 
   // Make sure both branches are extended in the same way.
   SDValue LHS = N->getOperand(0);
@@ -31206,12 +31262,22 @@ static SDValue
 performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              SelectionDAG &DAG) {
   SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
 
   // If a DUP(Op0) already exists, reuse it for the scalar_to_vector.
   if (DCI.isAfterLegalizeDAG()) {
     if (SDNode *LN = DCI.DAG.getNodeIfExists(AArch64ISD::DUP, N->getVTList(),
                                              N->getOperand(0)))
       return SDValue(LN, 0);
+  }
+
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() > 1 &&
+      isIntOrFPConstant(N0)) {
+    SDValue Undef = DAG.getPOISON(N0.getValueType());
+    SmallVector<SDValue> Ops(VT.getVectorNumElements(), Undef);
+    Ops[0] = N0;
+    return DAG.getBuildVector(VT, DL, Ops);
   }
 
   // Let's do below transform.
@@ -31227,15 +31293,13 @@ performScalarToVectorCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  EVT VT = N->getValueType(0);
   if (VT != MVT::v1i64)
     return SDValue();
 
-  SDValue ZEXT = N->getOperand(0);
-  if (ZEXT.getOpcode() != ISD::ZERO_EXTEND || ZEXT.getValueType() != MVT::i64)
+  if (N0.getOpcode() != ISD::ZERO_EXTEND || N0.getValueType() != MVT::i64)
     return SDValue();
 
-  SDValue EXTRACT_VEC_ELT = ZEXT.getOperand(0);
+  SDValue EXTRACT_VEC_ELT = N0.getOperand(0);
   if (EXTRACT_VEC_ELT.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
       EXTRACT_VEC_ELT.getValueType() != MVT::i32)
     return SDValue();
@@ -32908,8 +32972,9 @@ SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
-  // reciprocal if there are three or more FDIVs.
-  return 3;
+  // reciprocal if there are enough FDIVs. The threshold is determined by the
+  // subtarget feature.
+  return Subtarget->useReciprocalFDivCombineThreshold2() ? 2 : 3;
 }
 
 TargetLoweringBase::LegalizeTypeAction
