@@ -117,7 +117,6 @@ func.func @symbols(%N : index) {
 // CHECK:                  memref.store %[[lhs5]], %{{.*}}[%[[a1]], %[[lhs7]]] :
 // CHECK:                  affine.yield %[[lhs6]]
 
-
 // CHECK-LABEL:    func @non_affine(
 func.func @non_affine(%N : index) {
   %2 = memref.alloc() : memref<1024x1024xf32>
@@ -136,3 +135,62 @@ func.func @non_affine(%N : index) {
 // CHECK:                  %[[ij:.*]] = arith.muli %[[i]], %[[j]]
 // CHECK:                  %[[v:.*]] = memref.load %{{.*}}[%[[i]], %[[ij]]]
 // CHECK:                  memref.store %[[v]], %{{.*}}[%[[ij]], %[[ij]]]
+
+// CHECK-LABEL:    func @subtract_dims(
+func.func @subtract_dims(%N : index) {
+  %0 = memref.alloc() : memref<1024xf32>
+  affine.for %i = 0 to %N {
+    affine.for %j = 0 to %N {
+      %idx = arith.subi %i, %j : index
+      %v = memref.load %0[%idx] : memref<1024xf32>
+      memref.store %v, %0[%idx] : memref<1024xf32>
+    }
+  }
+  return
+}
+
+// CHECK:          affine.for %[[i:.*]] =
+// CHECK:            affine.for %[[j:.*]] =
+// CHECK:              %[[v:.*]] = affine.load %{{.*}}[%[[i]] - %[[j]]]
+// CHECK:              affine.store %[[v]], %{{.*}}[%[[i]] - %[[j]]]
+// CHECK-NOT:          memref.load
+// CHECK-NOT:          memref.store
+
+// CHECK-LABEL:    func @subtract_constant(
+func.func @subtract_constant(%N : index) {
+  %c1 = arith.constant 1 : index
+  %0 = memref.alloc() : memref<1024xf32>
+  affine.for %i = 1 to %N {
+    %idx = arith.subi %i, %c1 : index
+    %v = memref.load %0[%idx] : memref<1024xf32>
+    memref.store %v, %0[%idx] : memref<1024xf32>
+  }
+  return
+}
+
+// CHECK:          affine.for %[[i:.*]] =
+// CHECK:            %[[v:.*]] = affine.load %{{.*}}[%[[i]] - 1]
+// CHECK:            affine.store %[[v]], %{{.*}}[%[[i]] - 1]
+// CHECK-NOT:        memref.load
+
+// CHECK-LABEL:    func @subtract_from_non_affine(
+func.func @subtract_from_non_affine(%N : index) {
+  %c1 = arith.constant 1 : index
+  %0 = memref.alloc() : memref<1024xf32>
+  affine.for %i = 0 to %N {
+    affine.for %j = 0 to %N {
+      %ij = arith.muli %i, %j : index
+      %idx = arith.subi %ij, %c1 : index
+      %v = memref.load %0[%idx] : memref<1024xf32>
+      memref.store %v, %0[%idx] : memref<1024xf32>
+    }
+  }
+  return
+}
+
+// CHECK:          affine.for %[[i:.*]] =
+// CHECK:            affine.for %[[j:.*]] =
+// CHECK:              %[[ij:.*]] = arith.muli %[[i]], %[[j]]
+// CHECK:              %[[idx:.*]] = arith.subi %[[ij]]
+// CHECK:              %[[v:.*]] = memref.load %{{.*}}[%[[idx]]]
+// CHECK:              memref.store %[[v]], %{{.*}}[%[[idx]]]
