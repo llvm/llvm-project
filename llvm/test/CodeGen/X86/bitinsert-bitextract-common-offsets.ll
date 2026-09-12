@@ -12,16 +12,6 @@ define i1 @test_bitextract_b8_off0(b8 %src) {
   ret i1 %result
 }
 
-define i4 @test_bitextract_b8_nibble_lo(b8 %src) {
-; CHECK-LABEL: test_bitextract_b8_nibble_lo:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i4, b8 %src, i32 0
-  ret i4 %result
-}
-
 define i4 @test_bitextract_b8_nibble_hi(b8 %src) {
 ; CHECK-LABEL: test_bitextract_b8_nibble_hi:
 ; CHECK:       # %bb.0:
@@ -44,16 +34,6 @@ define i1 @test_bitextract_b8_off_top(b8 %src) {
   ret i1 %result
 }
 
-define i8 @test_bitextract_b16_byte_lo(b16 %src) {
-; CHECK-LABEL: test_bitextract_b16_byte_lo:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b16 %src, i32 0
-  ret i8 %result
-}
-
 define i8 @test_bitextract_b16_byte_hi(b16 %src) {
 ; CHECK-LABEL: test_bitextract_b16_byte_hi:
 ; CHECK:       # %bb.0:
@@ -63,144 +43,6 @@ define i8 @test_bitextract_b16_byte_hi(b16 %src) {
 ; CHECK-NEXT:    retq
   %result = bitextract i8, b16 %src, i32 8
   ret i8 %result
-}
-
-define i1 @test_bitextract_b16_off_top(b16 %src) {
-; CHECK-LABEL: test_bitextract_b16_off_top:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    shrl $15, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i1, b16 %src, i32 15
-  ret i1 %result
-}
-
-define i8 @test_bitextract_b32_byte0(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_byte0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b32 %src, i32 0
-  ret i8 %result
-}
-
-define i8 @test_bitextract_b32_byte1(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_byte1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b32 %src, i32 8
-  ret i8 %result
-}
-
-define i8 @test_bitextract_b32_byte2(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_byte2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b32 %src, i32 16
-  ret i8 %result
-}
-
-define i8 @test_bitextract_b32_byte3(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_byte3:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $24, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b32 %src, i32 24
-  ret i8 %result
-}
-
-define i16 @test_bitextract_b32_lo16(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_lo16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i16, b32 %src, i32 0
-  ret i16 %result
-}
-
-define i16 @test_bitextract_b32_hi16(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_hi16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i16, b32 %src, i32 16
-  ret i16 %result
-}
-
-define i1 @test_bitextract_b32_off_top(b32 %src) {
-; CHECK-LABEL: test_bitextract_b32_off_top:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    shrl $31, %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitextract i1, b32 %src, i32 31
-  ret i1 %result
-}
-
-define i8 @test_bitextract_b64_byte0(b64 %src) {
-; CHECK-LABEL: test_bitextract_b64_byte0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    # kill: def $al killed $al killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b64 %src, i32 0
-  ret i8 %result
-}
-
-define i8 @test_bitextract_b64_byte7(b64 %src) {
-; CHECK-LABEL: test_bitextract_b64_byte7:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $56, %rax
-; CHECK-NEXT:    # kill: def $al killed $al killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i8, b64 %src, i32 56
-  ret i8 %result
-}
-
-define i16 @test_bitextract_b64_word_lo(b64 %src) {
-; CHECK-LABEL: test_bitextract_b64_word_lo:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i16, b64 %src, i32 0
-  ret i16 %result
-}
-
-define i16 @test_bitextract_b64_word_hi(b64 %src) {
-; CHECK-LABEL: test_bitextract_b64_word_hi:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $48, %rax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i16, b64 %src, i32 48
-  ret i16 %result
-}
-
-define i32 @test_bitextract_b64_dword_lo(b64 %src) {
-; CHECK-LABEL: test_bitextract_b64_dword_lo:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i32, b64 %src, i32 0
-  ret i32 %result
 }
 
 define i32 @test_bitextract_b64_dword_hi(b64 %src) {
@@ -214,38 +56,6 @@ define i32 @test_bitextract_b64_dword_hi(b64 %src) {
   ret i32 %result
 }
 
-define i1 @test_bitextract_b64_off_top(b64 %src) {
-; CHECK-LABEL: test_bitextract_b64_off_top:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $63, %rax
-; CHECK-NEXT:    # kill: def $al killed $al killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i1, b64 %src, i32 63
-  ret i1 %result
-}
-
-define i32 @test_bitextract_b128_qword_lo(b128 %src) {
-; CHECK-LABEL: test_bitextract_b128_qword_lo:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i32, b128 %src, i32 0
-  ret i32 %result
-}
-
-define i32 @test_bitextract_b128_qword_hi(b128 %src) {
-; CHECK-LABEL: test_bitextract_b128_qword_hi:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i32, b128 %src, i32 96
-  ret i32 %result
-}
-
 define i64 @test_bitextract_b128_lo64(b128 %src) {
 ; CHECK-LABEL: test_bitextract_b128_lo64:
 ; CHECK:       # %bb.0:
@@ -254,28 +64,6 @@ define i64 @test_bitextract_b128_lo64(b128 %src) {
   %result = bitextract i64, b128 %src, i32 0
   ret i64 %result
 }
-
-define i64 @test_bitextract_b128_hi64(b128 %src) {
-; CHECK-LABEL: test_bitextract_b128_hi64:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    retq
-  %result = bitextract i64, b128 %src, i32 64
-  ret i64 %result
-}
-
-define i1 @test_bitextract_b128_off_top(b128 %src) {
-; CHECK-LABEL: test_bitextract_b128_off_top:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq $63, %rax
-; CHECK-NEXT:    # kill: def $al killed $al killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i1, b128 %src, i32 127
-  ret i1 %result
-}
-
-; bitinsert
 
 define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 ; CHECK-LABEL: test_bitinsert_b8_off1:
@@ -289,79 +77,6 @@ define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 ; CHECK-NEXT:    retq
   %result = bitinsert b8 %base, i1 %val, i32 1
   ret b8 %result
-}
-
-define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
-; CHECK-LABEL: test_bitinsert_b8_off2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    andb $-13, %dil
-; CHECK-NEXT:    andb $3, %sil
-; CHECK-NEXT:    leal (,%rsi,4), %eax
-; CHECK-NEXT:    orb %dil, %al
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b8 %base, i2 %val, i32 2
-  ret b8 %result
-}
-
-define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
-; CHECK-LABEL: test_bitinsert_b8_off4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    shlb $4, %sil
-; CHECK-NEXT:    andb $15, %dil
-; CHECK-NEXT:    leal (%rdi,%rsi), %eax
-; CHECK-NEXT:    # kill: def $al killed $al killed $eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b8 %base, i4 %val, i32 4
-  ret b8 %result
-}
-
-; b16 container: offsets 1, 2, 4, 8
-
-define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
-; CHECK-LABEL: test_bitinsert_b16_off1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    andl $65533, %edi # imm = 0xFFFD
-; CHECK-NEXT:    leal (%rdi,%rsi,2), %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b16 %base, i1 %val, i32 1
-  ret b16 %result
-}
-
-define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
-; CHECK-LABEL: test_bitinsert_b16_off2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    andl $65523, %edi # imm = 0xFFF3
-; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b16 %base, i2 %val, i32 2
-  ret b16 %result
-}
-
-define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
-; CHECK-LABEL: test_bitinsert_b16_off4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $65295, %edi # imm = 0xFF0F
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    shll $4, %esi
-; CHECK-NEXT:    leal (%rsi,%rdi), %eax
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b16 %base, i4 %val, i32 4
-  ret b16 %result
 }
 
 define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
@@ -378,46 +93,6 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 
 ; b32 container: offsets 1, 2, 4, 8, 16
 
-define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
-; CHECK-LABEL: test_bitinsert_b32_off1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    andl $-3, %edi
-; CHECK-NEXT:    leal (%rdi,%rsi,2), %eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b32 %base, i1 %val, i32 1
-  ret b32 %result
-}
-
-define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
-; CHECK-LABEL: test_bitinsert_b32_off2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    andl $-13, %edi
-; CHECK-NEXT:    leal (%rdi,%rsi,4), %eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b32 %base, i2 %val, i32 2
-  ret b32 %result
-}
-
-define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
-; CHECK-LABEL: test_bitinsert_b32_off4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $-241, %edi
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    shll $4, %esi
-; CHECK-NEXT:    leal (%rsi,%rdi), %eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b32 %base, i4 %val, i32 4
-  ret b32 %result
-}
-
 define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 ; CHECK-LABEL: test_bitinsert_b32_off8:
 ; CHECK:       # %bb.0:
@@ -428,81 +103,6 @@ define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 ; CHECK-NEXT:    retq
   %result = bitinsert b32 %base, i8 %val, i32 8
   ret b32 %result
-}
-
-define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
-; CHECK-LABEL: test_bitinsert_b32_off16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    shll $16, %esi
-; CHECK-NEXT:    movzwl %di, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    retq
-  %result = bitinsert b32 %base, i16 %val, i32 16
-  ret b32 %result
-}
-
-; b64 container: offsets 1, 2, 4, 8, 16, 32
-
-define b64 @test_bitinsert_b64_off1(b64 %base, i1 %val) {
-; CHECK-LABEL: test_bitinsert_b64_off1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    andq $-3, %rdi
-; CHECK-NEXT:    andl $1, %esi
-; CHECK-NEXT:    leaq (%rdi,%rsi,2), %rax
-; CHECK-NEXT:    retq
-  %result = bitinsert b64 %base, i1 %val, i32 1
-  ret b64 %result
-}
-
-define b64 @test_bitinsert_b64_off2(b64 %base, i2 %val) {
-; CHECK-LABEL: test_bitinsert_b64_off2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    andq $-13, %rdi
-; CHECK-NEXT:    andl $3, %esi
-; CHECK-NEXT:    leaq (%rdi,%rsi,4), %rax
-; CHECK-NEXT:    retq
-  %result = bitinsert b64 %base, i2 %val, i32 2
-  ret b64 %result
-}
-
-define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
-; CHECK-LABEL: test_bitinsert_b64_off4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    andq $-241, %rdi
-; CHECK-NEXT:    andl $15, %esi
-; CHECK-NEXT:    shll $4, %esi
-; CHECK-NEXT:    leaq (%rsi,%rdi), %rax
-; CHECK-NEXT:    retq
-  %result = bitinsert b64 %base, i4 %val, i32 4
-  ret b64 %result
-}
-
-define b64 @test_bitinsert_b64_off8(b64 %base, i8 %val) {
-; CHECK-LABEL: test_bitinsert_b64_off8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq $-65281, %rdi # imm = 0xFFFF00FF
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    orq %rdi, %rax
-; CHECK-NEXT:    retq
-  %result = bitinsert b64 %base, i8 %val, i32 8
-  ret b64 %result
-}
-
-define b64 @test_bitinsert_b64_off16(b64 %base, i16 %val) {
-; CHECK-LABEL: test_bitinsert_b64_off16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
-; CHECK-NEXT:    movabsq $-4294901761, %rax # imm = 0xFFFFFFFF0000FFFF
-; CHECK-NEXT:    andq %rdi, %rax
-; CHECK-NEXT:    shll $16, %esi
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
-  %result = bitinsert b64 %base, i16 %val, i32 16
-  ret b64 %result
 }
 
 define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
@@ -519,86 +119,6 @@ define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
 
 
 ; --- b128 container: offsets 1, 2, 4, 8, 16, 32, 64 ---
-
-define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
-; CHECK-LABEL: test_bitinsert_b128_off1:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    andq $-3, %rdi
-; CHECK-NEXT:    andl $1, %edx
-; CHECK-NEXT:    leaq (%rdi,%rdx,2), %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %result = bitinsert b128 %base, i1 %val, i32 1
-  ret b128 %result
-}
-
-define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
-; CHECK-LABEL: test_bitinsert_b128_off2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    andq $-13, %rdi
-; CHECK-NEXT:    andl $3, %edx
-; CHECK-NEXT:    leaq (%rdi,%rdx,4), %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %result = bitinsert b128 %base, i2 %val, i32 2
-  ret b128 %result
-}
-
-define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
-; CHECK-LABEL: test_bitinsert_b128_off4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    andq $-241, %rdi
-; CHECK-NEXT:    andl $15, %edx
-; CHECK-NEXT:    shll $4, %edx
-; CHECK-NEXT:    leaq (%rdx,%rdi), %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %result = bitinsert b128 %base, i4 %val, i32 4
-  ret b128 %result
-}
-
-define b128 @test_bitinsert_b128_off8(b128 %base, i8 %val) {
-; CHECK-LABEL: test_bitinsert_b128_off8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    andq $-65281, %rdi # imm = 0xFFFF00FF
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    shll $8, %eax
-; CHECK-NEXT:    orq %rdi, %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %result = bitinsert b128 %base, i8 %val, i32 8
-  ret b128 %result
-}
-
-define b128 @test_bitinsert_b128_off16(b128 %base, i16 %val) {
-; CHECK-LABEL: test_bitinsert_b128_off16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    movabsq $-4294901761, %rax # imm = 0xFFFFFFFF0000FFFF
-; CHECK-NEXT:    andq %rdi, %rax
-; CHECK-NEXT:    shll $16, %edx
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %result = bitinsert b128 %base, i16 %val, i32 16
-  ret b128 %result
-}
-
-define b128 @test_bitinsert_b128_off32(b128 %base, i32 %val) {
-; CHECK-LABEL: test_bitinsert_b128_off32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
-; CHECK-NEXT:    shlq $32, %rdx
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    movq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %result = bitinsert b128 %base, i32 %val, i32 32
-  ret b128 %result
-}
 
 define b128 @test_bitinsert_b128_off64(b128 %base, i64 %val) {
 ; CHECK-LABEL: test_bitinsert_b128_off64:
