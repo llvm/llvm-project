@@ -4,7 +4,7 @@
 ; CHECK-0: function(adce),function(adce)
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate)),invalidate<globals-aa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-1
-; CHECK-1: rpo-function-attrs,require<globals-aa>,function(float2int,lower-constant-intrinsics,loop(loop-rotate<header-duplication;no-prepare-for-lto;no-check-exit-count>)),invalidate<globals-aa>
+; CHECK-1: rpo-function-attrs,require<globals-aa>,function(float2int<max-integer-bw=64>,lower-constant-intrinsics,loop(loop-rotate<header-duplication;no-prepare-for-lto;no-check-exit-count>)),invalidate<globals-aa>
 
 ;; Test that we get ClassName printed when there is no ClassName to pass-name mapping (as is the case for the BitcodeWriterPass).
 ; RUN: opt -o /dev/null -disable-verify -print-pipeline-passes -passes='function(mem2reg)' < %s -disable-pipeline-verification | FileCheck %s --match-full-lines --check-prefixes=CHECK-3
@@ -123,3 +123,6 @@
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>' < %s | FileCheck %s --check-prefixes=CHECK-38
 ; CHECK-38: drop-unnecessary-assumes,drop-unnecessary-assumes<drop-deref>
+
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(float2int,float2int<max-integer-bw=32>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-39
+; CHECK-39: function(float2int<max-integer-bw=64>,float2int<max-integer-bw=32>)

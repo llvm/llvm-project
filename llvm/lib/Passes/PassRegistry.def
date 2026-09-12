@@ -447,7 +447,6 @@ FUNCTION_PASS("extra-vector-passes",
               ExtraFunctionPassManager<ShouldRunExtraVectorPasses>())
 FUNCTION_PASS("fix-irreducible", FixIrreduciblePass())
 FUNCTION_PASS("flatten-cfg", FlattenCFGPass())
-FUNCTION_PASS("float2int", Float2IntPass())
 FUNCTION_PASS("free-machine-function", FreeMachineFunctionPass())
 FUNCTION_PASS("gc-lowering", GCLoweringPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
@@ -593,6 +592,10 @@ FUNCTION_PASS_WITH_PARAMS(
     "ee-instrument", "EntryExitInstrumenterPass",
     [](bool PostInlining) { return EntryExitInstrumenterPass(PostInlining); },
     parseEntryExitInstrumenterPassOptions, "post-inline")
+FUNCTION_PASS_WITH_PARAMS(
+    "float2int", "Float2IntPass",
+    [](unsigned MaxIntegerBW) { return Float2IntPass(MaxIntegerBW); },
+    parseFloat2IntOptions, "max-integer-bw=N")
 FUNCTION_PASS_WITH_PARAMS(
     "func-properties-stats", "FunctionPropertiesStatisticsPass",
     [](bool IsPreOptimizations) {
