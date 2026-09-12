@@ -246,8 +246,11 @@ OpFoldResult DivUOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 
 /// Compute `ceildivs(n, m)` via `sdiv_ov`/`sadd_ov` so that neither operand
-/// is negated, letting `MININT` fold correctly instead of silently
-/// overflowing (mirrors `arith::CeilDivSIOp::fold`).
+/// is negated. For example, `ceildivs(INT_MIN, 2)` is representable and must
+/// fold to a negative result. Negating `INT_MIN` directly via `-(-n)` (as done
+/// previously) silently overflows back to `INT_MIN`, which incorrectly
+/// yielded a sign-flipped positive value. This mirrors
+/// `arith::CeilDivSIOp::fold`.
 static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
@@ -258,7 +261,7 @@ static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
 
   bool overflow = false;
   APInt quotient = n.sdiv_ov(m, overflow);
-  if (overflow) // MININT / -1, not representable.
+  if (overflow) // The exact quotient is not representable (e.g. INT_MIN / -1).
     return std::nullopt;
   // sdiv already rounds towards the ceiling for a negative quotient; a
   // positive, inexact quotient needs a +1 correction.
@@ -267,7 +270,7 @@ static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
 
   bool addOverflow = false;
   APInt result = quotient.sadd_ov(APInt(n.getBitWidth(), 1, /*isSigned=*/true),
-                                   addOverflow);
+                                  addOverflow);
   return addOverflow ? std::optional<APInt>() : result;
 }
 
