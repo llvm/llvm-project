@@ -453,9 +453,11 @@ LIBC_INLINE double pow(double x, double y) {
       // should only be set if the result is inexact. We check for exact
       // results:
       // 1. If x = 2^e_x (x_mant == 0), then x^y = 2^(e_x * y) is an exact
-      //    power of 2 iff e_x * y is an integer.
+      //    power of 2 iff e_x * y is an integer and >= -1074.0 (the smallest
+      //    representable power of 2 in double precision).
       if (LIBC_UNLIKELY(x_mant == 0)) {
-        if (pow_internal::is_integer(e_x * y))
+        double ex_y = e_x * y;
+        if (ex_y >= -1074.0 && pow_internal::is_integer(ex_y))
           return res;
       } else if (LIBC_UNLIKELY(y > 0.0 && y <= 35.0)) {
         // 2. If x is not a power of 2, exact results in double precision can
