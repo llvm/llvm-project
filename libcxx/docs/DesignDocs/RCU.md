@@ -147,7 +147,7 @@ the contention on the `mutex` should be low.
 
 TODO: We need to replace `mutex` as all non allocating APIs in `rcu` are designed to be `noexcept` and `mutex` can throw.
 
-`reader_states`
+`struct reader_states`
 ~~~~~~~~~~~~~~~
 
 It defines the state of each reader thread. The state is essentially a pair of `(phase, lock_nested_level)` merged into a single `uint16_t` . 
