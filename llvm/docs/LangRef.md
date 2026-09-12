@@ -11554,13 +11554,11 @@ The '`bitextract`' instruction reads a contiguous range of bits from a
 
 ##### Arguments:
 
-`<ty>` is any {ref}`single value type <t_single_value>` and specifies
-the result type. The first operand, `source`, must be a value of
-{ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving
-the bit position at which the extraction begins within `source`.
-
-{ref}`Target extension types <t_target_type>` are not permitted as the
-result type `ty`.
+`<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
+and specifies the result type. The first operand, `source`, must be a value
+of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
+position at which the extraction begins within `source`.
 
 ```{note}
 Vector types are not currently supported as the result type.
@@ -11597,20 +11595,19 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 ```
 ##### Overview:
 
-The '`bitinsert`' instruction writes a contiguous range of bits from a
-{ref}`single value type <t_single_value>` value into a {ref}`byte type <t_byte>`
-value and returns the result as a value of the same byte type.
+The '`bitinsert`' instruction writes a contiguous range of bits from an
+integer, floating-point, pointer, or {ref}`byte type <t_byte>` value into a
+{ref}`byte type <t_byte>` value and returns the result as a value of the same
+byte type.
 
 ##### Arguments:
 
-`<ty>` is any {ref}`single value type <t_single_value>` and specifies the
-type of the value to insert. The first operand, `base`, must be a value of
-{ref}`byte type <t_byte>`. The second operand, `val`, must be a value of
-type `ty`. The `offset` operand is an `i32` giving the bit position
-at which the insertion begins within `base`.
-
-{ref}`Target extension types <t_target_type>` are not permitted as the
-type `ty` of the value to insert.
+`<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
+and specifies the type of the value to insert. The first operand, `base`,
+must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
+be a value of type `ty`. The `offset` operand is an `i32` giving the bit
+position at which the insertion begins within `base`.
 
 ```{note}
 Vector types are not currently supported as the type of the value
