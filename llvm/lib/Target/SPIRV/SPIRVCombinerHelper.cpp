@@ -239,7 +239,8 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
 ///   (vXfN (g_fmul (vXfN X) (vXfN splat(180/pi)))) ->
 ///   (vXfN (g_intrinsic degrees (vXfN X)))
 /// where `fN` denotes a supported floating-point type.
-bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI, Register &MatchInfo) const {
+bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI,
+                                       Register &MatchInfo) const {
   Register NonConstReg;
   std::optional<FPValueAndVReg> ConstVal;
 
@@ -260,9 +261,10 @@ bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI, Register &MatchInfo) co
   return Expected.compare(ConstVal->Value) == APFloat::cmpEqual;
 }
 
-void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI, Register &MatchInfo) const {
+void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI,
+                                       Register &MatchInfo) const {
   Register ResultReg = MI.getOperand(0).getReg();
-  
+
   Builder.setInstrAndDebugLoc(MI);
   Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg).addUse(MatchInfo);
 
