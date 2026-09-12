@@ -1747,8 +1747,8 @@ struct PerformSEHFinally final : EHScopeStack::Cleanup {
     // Compute the two argument values.
     QualType ArgTys[2] = {Context.UnsignedCharTy, Context.VoidPtrTy};
     llvm::Value *FP = nullptr;
-    // If CFG.IsOutlinedSEHHelper is true, then we are within a finally block.
-    if (CGF.IsOutlinedSEHHelper) {
+    // If CFG.IsOutlinedSEHHelper() is true, then we are within a finally block.
+    if (CGF.IsOutlinedSEHHelper()) {
       FP = &CGF.CurFn->arg_begin()[1];
     } else {
       llvm::Function *LocalAddrFn =
@@ -2091,7 +2091,8 @@ void CodeGenFunction::startOutlinedSEHHelper(CodeGenFunction &ParentCGF,
   llvm::Function *Fn = llvm::Function::Create(
       FnTy, llvm::GlobalValue::InternalLinkage, Name.str(), &CGM.getModule());
 
-  IsOutlinedSEHHelper = true;
+  // Indicate the current function is an outlined SEH helper.
+  OutlinedSEHStmt = OutlinedStmt;
 
   StartFunction(GlobalDecl(), RetTy, Fn, FnInfo, Args,
                 OutlinedStmt->getBeginLoc(), OutlinedStmt->getBeginLoc());

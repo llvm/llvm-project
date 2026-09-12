@@ -848,12 +848,39 @@ void CodeGenFunction::EmitAttributedStmt(const AttributedStmt &S) {
   EmitStmt(S.getSubStmt(), S.getAttrs());
 }
 
+static bool StmtContainsLabelDecl(const Stmt *S, const LabelDecl *Target) {
+  if (!S)
+    return false;
+  if (const auto *LS = dyn_cast<LabelStmt>(S))
+    if (LS->getDecl() == Target)
+      return true;
+  for (const Stmt *Child : S->children())
+    if (StmtContainsLabelDecl(Child, Target))
+      return true;
+  return false;
+}
+
+bool CodeGenFunction::IsLabelWithinSEHHelper(const LabelDecl *Label) const {
+  assert(IsOutlinedSEHHelper() && "Not in an outlined SEH helper");
+  return StmtContainsLabelDecl(OutlinedSEHStmt, Label);
+}
+
 void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   // If this code is reachable then emit a stop point (if generating
   // debug info). We have to do this ourselves because we are on the
   // "simple" statement path.
   if (HaveInsertPoint())
     EmitStopPoint(&S);
+
+  // MSVC C4532: jumping out of an outlined SEH helper is UB, but jumping
+  // internally should be fine. Sema has a warn for this already.
+  // `br` should not jump out of the current function anyway, so a jump out of
+  // the outlined SEH helper will cause a compiler crash.
+  if (IsOutlinedSEHHelper() && !IsLabelWithinSEHHelper(S.getLabel())) {
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+    return;
+  }
 
   ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
@@ -1627,7 +1654,7 @@ void CodeGenFunction::EmitReturnStmt(const ReturnStmt &S) {
   }
 
   // Returning from an outlined SEH helper is UB, and we already warn on it.
-  if (IsOutlinedSEHHelper) {
+  if (IsOutlinedSEHHelper()) {
     Builder.CreateUnreachable();
     Builder.ClearInsertionPoint();
   }
@@ -1740,6 +1767,8 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
 
 auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
     -> const BreakContinue * {
+  if (BreakContinueStack.empty())
+    return nullptr;
   if (!S.hasLabelTarget())
     return &BreakContinueStack.back();
 
@@ -1749,33 +1778,49 @@ auto CodeGenFunction::GetDestForLoopControlStmt(const LoopControlStmt &S)
     if (BC.LoopOrSwitch == LoopOrSwitch)
       return &BC;
 
-  llvm_unreachable("break/continue target not found");
+  return nullptr;
 }
 
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
-  assert(!BreakContinueStack.empty() && "break stmt not in a loop or switch!");
-
   // If this code is reachable then emit a stop point (if generating
   // debug info). We have to do this ourselves because we are on the
   // "simple" statement path.
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  const BreakContinue *BC = GetDestForLoopControlStmt(S);
+  if (!BC) {
+    assert(IsOutlinedSEHHelper() &&
+           "break stmt destination not found in current function!");
+    // S was meant to break out of a loop or switch outside of the outlined SEH
+    // helper. This is UB as per MSVC C4532, so generate unreachable.
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+    return;
+  }
   ApplyAtomGroup Grp(getDebugInfo());
-  EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->BreakBlock);
+  EmitBranchThroughCleanup(BC->BreakBlock);
 }
 
 void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
-  assert(!BreakContinueStack.empty() && "continue stmt not in a loop!");
-
   // If this code is reachable then emit a stop point (if generating
   // debug info). We have to do this ourselves because we are on the
   // "simple" statement path.
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  const BreakContinue *BC = GetDestForLoopControlStmt(S);
+  if (!BC || !BC->ContinueBlock.isValid()) {
+    assert(IsOutlinedSEHHelper() &&
+           "continue stmt destination not found in current function!");
+    // S was meant to continue out of a loop outside of the outlined SEH helper.
+    // This is UB as per MSVC C4532, so generate unreachable.
+    Builder.CreateUnreachable();
+    Builder.ClearInsertionPoint();
+    return;
+  }
   ApplyAtomGroup Grp(getDebugInfo());
-  EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->ContinueBlock);
+  EmitBranchThroughCleanup(BC->ContinueBlock);
 }
 
 /// EmitCaseStmtRange - If case statement range is not too big then
