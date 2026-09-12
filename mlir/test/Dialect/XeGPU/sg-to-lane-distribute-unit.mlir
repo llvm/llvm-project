@@ -740,6 +740,29 @@ gpu.func @vector_multi_reduction_3d_leading_unit_dim_cross_lane() {
   gpu.return
 }
 
+// lane_data packs all 16 reduced elements of dim1 into a single lane and
+// lane_layout is 1 everywhere, so the reduction is lane-local and must lower to
+// a plain vector.reduction. Classifying it by result type would route it
+// through butterfly shuffles and count the data 16 times over.
+// CHECK-LABEL: gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local
+// CHECK:         %[[F0:.*]] = vector.shape_cast %{{.*}} : vector<1x16x1xf32> to vector<16xf32>
+// CHECK:         %[[A0:.*]] = vector.extract %{{.*}}[0, 0] : f32 from vector<1x1xf32>
+// CHECK:         %[[R0:.*]] = vector.reduction <add>, %[[F0]], %[[A0]] : vector<16xf32> into f32
+// CHECK:         vector.insert %[[R0]], %{{.*}} [0, 0] : f32 into vector<1x1xf32>
+// CHECK-NOT:     gpu.shuffle
+// CHECK:         gpu.return
+gpu.func @vector_multi_reduction_3d_packed_lane_data_lane_local() {
+    %src = arith.constant dense<0.0>  : vector<1x16x1xf32>
+    %acc = arith.constant dense<0.0>  : vector<1x1xf32>
+    %1 = vector.multi_reduction <add>, %src, %acc
+      [1] : vector<1x16x1xf32> to vector<1x1xf32>
+  %cl1 = xegpu.convert_layout %1
+    <{
+      target_layout = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1], lane_data = [1, 16, 1]>, dims = [1]>
+    }> : vector<1x1xf32>
+  gpu.return
+}
+
 // CHECK-LABEL: gpu.func @vector_extract_from_2d
 // CHECK: %[[EXT:.*]] = vector.extract %{{.*}}[0] : vector<1xf32> from vector<4x1xf32>
 gpu.func @vector_extract_from_2d() {
