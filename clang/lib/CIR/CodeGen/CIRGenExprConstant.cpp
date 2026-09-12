@@ -839,7 +839,9 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   // non-zero null pointer and addrspace casts that aren't trivially
   // represented in LLVM IR.
   mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
-  assert(mlir::isa<cir::PointerType>(destTy));
+  assert((mlir::isa<cir::PointerType>(destTy) ||
+          mlir::isa<cir::IntType>(destTy)) &&
+         "constant lvalue destination must be pointer or integer");
 
   // If there's no base at all, this is a null or absolute pointer,
   // possibly cast back to an integer type.
@@ -860,14 +862,15 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
 
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
-  if (mlir::isa<cir::PointerType>(destTy)) {
-    if (auto attr = mlir::dyn_cast<mlir::Attribute>(value))
+  if (auto attr = mlir::dyn_cast<mlir::Attribute>(value)) {
+    if (auto gv = mlir::dyn_cast<cir::GlobalViewAttr>(attr))
+      return cir::GlobalViewAttr::get(destTy, gv.getSymbol(), gv.getIndices());
+
+    if (mlir::isa<cir::PointerType>(destTy))
       return attr;
-    cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer");
-    return {};
   }
 
-  cgm.errorNYI("ConstantLValueEmitter: other?");
+  cgm.errorNYI("ConstantLValueEmitter: non-attribute pointer or integer");
   return {};
 }
 
@@ -902,9 +905,11 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
       // fop.getFunctionType(), so initializers stay valid when a no-prototype
       // FuncOp is later replaced by a prototyped definition with the same
       // symbol. CIR allows the view type to differ from the symbol's type.
-      mlir::Type ptrTy = cgm.getTypes().convertTypeForMem(destType);
-      assert(mlir::isa<cir::PointerType>(ptrTy) &&
-             "function address in constant must be a pointer");
+      mlir::Type destTy = cgm.getTypes().convertTypeForMem(destType);
+      cir::PointerType ptrTy =
+          mlir::isa<cir::PointerType>(destTy)
+              ? mlir::cast<cir::PointerType>(destTy)
+              : cir::PointerType::get(fop.getFunctionType());
       return cir::GlobalViewAttr::get(
           ptrTy,
           mlir::FlatSymbolRefAttr::get(mlirContext, fop.getSymNameAttr()));
