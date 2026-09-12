@@ -824,28 +824,24 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:  .LBB6_10: // %vec.epilog.ph
 ; CHECK-SD-NEXT:    mov w11, w1
 ; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    movi d3, #0x0000ff000000ff
+; CHECK-SD-NEXT:    fmov d1, x8
 ; CHECK-SD-NEXT:    sxtb x11, w11
-; CHECK-SD-NEXT:    fmov d2, x8
-; CHECK-SD-NEXT:    dup v1.2s, w11
+; CHECK-SD-NEXT:    dup v2.4s, w11
 ; CHECK-SD-NEXT:    mov x11, x10
 ; CHECK-SD-NEXT:    and x10, x9, #0xfffffffc
 ; CHECK-SD-NEXT:    sub x8, x11, x10
 ; CHECK-SD-NEXT:    add x11, x0, x11
 ; CHECK-SD-NEXT:  .LBB6_11: // %vec.epilog.vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-SD-NEXT:    ldr s4, [x11], #4
+; CHECK-SD-NEXT:    ldr s3, [x11], #4
 ; CHECK-SD-NEXT:    adds x8, x8, #4
-; CHECK-SD-NEXT:    ushll v4.8h, v4.8b, #0
-; CHECK-SD-NEXT:    ushll v4.4s, v4.4h, #0
-; CHECK-SD-NEXT:    mov d5, v4.d[1]
-; CHECK-SD-NEXT:    and v4.8b, v4.8b, v3.8b
-; CHECK-SD-NEXT:    smlal v2.2d, v1.2s, v4.2s
-; CHECK-SD-NEXT:    and v5.8b, v5.8b, v3.8b
-; CHECK-SD-NEXT:    smlal v0.2d, v1.2s, v5.2s
+; CHECK-SD-NEXT:    ushll v3.8h, v3.8b, #0
+; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-SD-NEXT:    smlal2 v0.2d, v2.4s, v3.4s
+; CHECK-SD-NEXT:    smlal v1.2d, v2.2s, v3.2s
 ; CHECK-SD-NEXT:    b.ne .LBB6_11
 ; CHECK-SD-NEXT:  // %bb.12: // %vec.epilog.middle.block
-; CHECK-SD-NEXT:    add v0.2d, v2.2d, v0.2d
+; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    cmp x10, x9
 ; CHECK-SD-NEXT:    addp d0, v0.2d
 ; CHECK-SD-NEXT:    fmov x8, d0

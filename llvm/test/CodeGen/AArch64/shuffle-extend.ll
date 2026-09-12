@@ -5,8 +5,13 @@
 define <2 x i8> @test_v16i8_v2i32_824(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-SD-LABEL: test_v16i8_v2i32_824:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov b0, v0.b[8]
-; CHECK-SD-NEXT:    mov v0.b[4], v1.b[8]
+; CHECK-SD-NEXT:    mov d1, v1.d[1]
+; CHECK-SD-NEXT:    mov d0, v0.d[1]
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -27,8 +32,11 @@ define <2 x i8> @test_v16i8_v2i32_824(<16 x i8> %a, <16 x i8> %b) {
 define <2 x i8> @test_v16i8_v2i32_016(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-SD-LABEL: test_v16i8_v2i32_016:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov b0, v0.b[0]
-; CHECK-SD-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -49,10 +57,11 @@ define <2 x i8> @test_v16i8_v2i32_016(<16 x i8> %a, <16 x i8> %b) {
 define <2 x i8> @test_v8i8_v2i32_08(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-SD-LABEL: test_v8i8_v2i32_08:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov b0, v0.b[0]
-; CHECK-SD-NEXT:    mov v0.b[4], v1.b[0]
+; CHECK-SD-NEXT:    zip1 v1.8b, v1.8b, v1.8b
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -73,8 +82,9 @@ define <2 x i8> @test_v8i8_v2i32_08(<8 x i8> %a, <8 x i8> %b) {
 define <2 x i16> @test_v8i16_v2i32_08(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-SD-LABEL: test_v8i16_v2i32_08:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov h0, v0.h[0]
-; CHECK-SD-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -95,10 +105,9 @@ define <2 x i16> @test_v8i16_v2i32_08(<8 x i16> %a, <8 x i16> %b) {
 define <2 x i16> @test_v4i16_v2i32_04(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-SD-LABEL: test_v4i16_v2i32_04:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-SD-NEXT:    mov h0, v0.h[0]
-; CHECK-SD-NEXT:    mov v0.h[2], v1.h[0]
+; CHECK-SD-NEXT:    zip1 v1.4h, v1.4h, v1.4h
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
 ; CHECK-SD-NEXT:    add v0.2s, v0.2s, v0.2s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -343,11 +352,19 @@ define i1 @test2(ptr %add.ptr, ptr %result, <2 x i64> %hi, <2 x i64> %lo) {
 ; CHECK-SD-NEXT:    dup v2.2d, x9
 ; CHECK-SD-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-SD-NEXT:    and v3.16b, v4.16b, v3.16b
-; CHECK-SD-NEXT:    mov b5, v0.b[8]
-; CHECK-SD-NEXT:    mov b0, v0.b[0]
-; CHECK-SD-NEXT:    mov v5.b[4], v3.b[8]
-; CHECK-SD-NEXT:    mov v0.b[4], v3.b[0]
-; CHECK-SD-NEXT:    add v3.2s, v5.2s, v5.2s
+; CHECK-SD-NEXT:    mov d4, v3.d[1]
+; CHECK-SD-NEXT:    mov d5, v0.d[1]
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-SD-NEXT:    zip1 v3.8b, v3.8b, v3.8b
+; CHECK-SD-NEXT:    zip1 v4.8b, v4.8b, v4.8b
+; CHECK-SD-NEXT:    zip1 v5.8b, v5.8b, v5.8b
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    zip1 v3.4h, v3.4h, v3.4h
+; CHECK-SD-NEXT:    zip1 v4.4h, v4.4h, v4.4h
+; CHECK-SD-NEXT:    zip1 v5.4h, v5.4h, v5.4h
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v3.2s
+; CHECK-SD-NEXT:    zip1 v4.2s, v5.2s, v4.2s
+; CHECK-SD-NEXT:    add v3.2s, v4.2s, v4.2s
 ; CHECK-SD-NEXT:    orr v0.8b, v3.8b, v0.8b
 ; CHECK-SD-NEXT:    mov w8, v0.s[1]
 ; CHECK-SD-NEXT:    fmov w9, s0

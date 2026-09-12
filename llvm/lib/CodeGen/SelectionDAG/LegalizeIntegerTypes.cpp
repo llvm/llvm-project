@@ -6139,11 +6139,64 @@ SDValue DAGTypeLegalizer::PromoteIntRes_EXTRACT_SUBVECTOR(SDNode *N) {
     report_fatal_error("Unable to promote scalable types using BUILD_VECTOR");
 
   SDValue InOp0 = N->getOperand(0);
-  if (getTypeAction(InOp0.getValueType()) == TargetLowering::TypePromoteInteger)
+  EVT InVT = InOp0.getValueType();
+
+  if (getTypeAction(InVT) == TargetLowering::TypePromoteInteger)
     InOp0 = GetPromotedInteger(InOp0);
 
-  EVT InVT = InOp0.getValueType();
+  InVT = InOp0.getValueType();
   EVT InSVT = InVT.getVectorElementType();
+
+  uint64_t Idx = BaseIdx->getAsZExtVal();
+  if (getTypeAction(InVT) == TargetLowering::TypeSplitVector) {
+    SDValue Lo, Hi;
+    GetSplitVector(InOp0, Lo, Hi);
+    unsigned LoNumElem = Lo.getValueType().getVectorMinNumElements();
+    if (NOutVT.getVectorNumElements() + Idx <= LoNumElem) {
+      InOp0 = Lo;
+    } else if (InVT.isFixedLengthVector() && Idx >= LoNumElem) {
+      InOp0 = Hi;
+      Idx -= LoNumElem;
+    }
+  }
+
+  // We can just extract(src).
+  if (InSVT == NOutVTElem)
+    return DAG.getExtractSubvector(dl, NOutVT, InOp0, Idx);
+
+  InVT = InOp0.getValueType();
+  EVT ExtractTy = InVT.changeVectorElementCount(*DAG.getContext(),
+                                                NOutVT.getVectorElementCount());
+  TargetLowering::LegalizeTypeAction ExtractTyAction = getTypeAction(ExtractTy);
+
+  // We can just extend(extract(src)).
+  if (ExtractTyAction == TargetLoweringBase::TypeLegal ||
+      ExtractTyAction == TargetLoweringBase::TypeSplitVector)
+    return DAG.getAnyExtOrTrunc(
+        DAG.getExtractSubvector(dl, ExtractTy, InOp0, Idx), dl, NOutVT);
+
+  // We need to promote the input before extracting.
+  if (ExtractTyAction == TargetLoweringBase::TypePromoteInteger) {
+    EVT PromotedInVecVT =
+        InVT.changeVectorElementType(*DAG.getContext(), NOutVTElem);
+    TargetLowering::LegalizeTypeAction PromotedInTyAction =
+        getTypeAction(PromotedInVecVT);
+
+    if (PromotedInTyAction == TargetLoweringBase::TypeLegal ||
+        PromotedInTyAction == TargetLoweringBase::TypePromoteInteger ||
+        PromotedInTyAction == TargetLoweringBase::TypeSplitVector) {
+      // Don't any_ext a legal type to require splitting, if the split type is
+      // the same as this extract's type. We can get into a cycle when splitting
+      // the op.
+      if (isTypeLegal(InVT) &&
+          PromotedInTyAction == TargetLoweringBase::TypeSplitVector &&
+          NOutVT == DAG.GetSplitDestVTs(PromotedInVecVT).first)
+        return SDValue();
+
+      return DAG.getExtractSubvector(
+          dl, NOutVT, DAG.getAnyExtOrTrunc(InOp0, dl, PromotedInVecVT), Idx);
+    }
+  }
 
   unsigned OutNumElems = OutVT.getVectorNumElements();
   SmallVector<SDValue, 8> Ops;

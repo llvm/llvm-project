@@ -5,12 +5,13 @@ define <16 x i4> @avir_v2i4_v16i4(<2 x i4> %arg) nounwind {
 ; CHECK-LABEL: avir_v2i4_v16i4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
-; CHECK-NEXT:    uzp1 v1.4h, v0.4h, v0.4h
-; CHECK-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-NEXT:    fmov x8, d1
-; CHECK-NEXT:    and w9, w8, #0xf
-; CHECK-NEXT:    mov v0.b[0], w9
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov v0.b[1], v0.b[4]
+; CHECK-NEXT:    zip1 v0.8b, v0.8b, v0.8b
+; CHECK-NEXT:    fmov x8, d0
+; CHECK-NEXT:    and w10, w8, #0xf
 ; CHECK-NEXT:    ubfx w9, w8, #4, #4
+; CHECK-NEXT:    fmov s0, w10
 ; CHECK-NEXT:    mov v0.b[1], w9
 ; CHECK-NEXT:    ubfx w9, w8, #8, #4
 ; CHECK-NEXT:    mov v0.b[2], w9
@@ -32,6 +33,8 @@ define <16 x i4> @avir_v2i4_v16i4(<2 x i4> %arg) nounwind {
 ; CHECK-NEXT:    mov v0.b[10], w9
 ; CHECK-NEXT:    ubfx x9, x8, #44, #4
 ; CHECK-NEXT:    mov v0.b[11], w9
+; CHECK-NEXT:    ubfx x9, x8, #48, #4
+; CHECK-NEXT:    mov v0.b[12], w9
 ; CHECK-NEXT:    ubfx x9, x8, #52, #4
 ; CHECK-NEXT:    mov v0.b[13], w9
 ; CHECK-NEXT:    ubfx x9, x8, #56, #4
