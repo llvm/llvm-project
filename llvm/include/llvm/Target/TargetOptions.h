@@ -303,9 +303,6 @@ public:
   /// passed on the command line.
   std::string StackUsageFile;
 
-  /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
-  unsigned LoopAlignment = 0;
-
   /// ThreadModel - This flag specifies the type of threading model to assume
   /// for things like atomics
   llvm::ThreadModel ThreadModel = llvm::ThreadModel::POSIX;

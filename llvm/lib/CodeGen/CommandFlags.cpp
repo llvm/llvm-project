@@ -113,7 +113,6 @@ CGOPT(bool, EnableDebugEntryValues)
 CGOPT(bool, ForceDwarfFrameSection)
 CGOPT(bool, XRayFunctionIndex)
 CGOPT(bool, DebugStrictDwarf)
-CGOPT(unsigned, AlignLoops)
 CGOPT(bool, JMCInstrument)
 CGOPT(bool, XCOFFReadOnlyPointers)
 CGOPT(codegen::SaveStatsMode, SaveStats)
@@ -483,10 +482,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       "strict-dwarf", cl::desc("use strict dwarf"), cl::init(false));
   CGBINDOPT(DebugStrictDwarf);
 
-  static cl::opt<unsigned> AlignLoops("align-loops",
-                                      cl::desc("Default alignment for loops"));
-  CGBINDOPT(AlignLoops);
-
   static cl::opt<bool> JMCInstrument(
       "enable-jmc-instrument",
       cl::desc("Instrument functions with a call to __CheckForDebuggerJustMyCode"),
@@ -584,7 +579,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   Options.ForceDwarfFrameSection = getForceDwarfFrameSection();
   Options.XRayFunctionIndex = getXRayFunctionIndex();
   Options.DebugStrictDwarf = getDebugStrictDwarf();
-  Options.LoopAlignment = getAlignLoops();
   Options.JMCInstrument = getJMCInstrument();
   Options.XCOFFReadOnlyPointers = getXCOFFReadOnlyPointers();
 

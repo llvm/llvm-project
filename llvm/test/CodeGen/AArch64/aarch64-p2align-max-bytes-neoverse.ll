@@ -1,4 +1,3 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -align-loops=32   < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-DEFAULT
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n1 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-n2 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=neoverse-v1 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
@@ -13,11 +12,9 @@
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -mcpu=cortex-a710 < %s -o -| FileCheck %s --check-prefixes=CHECK,CHECK-16
 
 define i32 @a(i32 %x, ptr nocapture readonly %y, ptr nocapture readonly %z) {
-; CHECK-DEFAULT:    .p2align 5
 ; CHECK-8:          .p2align 4, , 8
 ; CHECK-16:         .p2align 5, , 16
 ; CHECK-NEXT:       .LBB0_5: // %vector.body
-; CHECK-DEFAULT:    .p2align 5
 ; CHECK-8:          .p2align 4, , 8
 ; CHECK-16:         .p2align 5, , 16
 ; CHECK-NEXT:       .LBB0_8: // %for.body
