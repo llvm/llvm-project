@@ -200,7 +200,7 @@ template <size_t Bits> struct DyadicFloat {
     if (unbiased_exp + FPBits::EXP_BIAS >= FPBits::MAX_BIASED_EXPONENT) {
       if constexpr (ShouldSignalExceptions) {
         set_errno_if_required(ERANGE);
-        raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
+        raise_overflow_except_if_required<T>();
       }
 
 #ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
@@ -290,15 +290,15 @@ template <size_t Bits> struct DyadicFloat {
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 
     if (ShouldSignalExceptions && (round || sticky)) {
-      int excepts = FE_INEXACT;
       if (FPBits(result).is_inf()) {
         set_errno_if_required(ERANGE);
-        excepts |= FE_OVERFLOW;
+        raise_overflow_except_if_required<T>();
       } else if (underflow) {
         set_errno_if_required(ERANGE);
-        excepts |= FE_UNDERFLOW;
+        raise_underflow_except_if_required<T>();
+      } else {
+        raise_except_if_required(FE_INEXACT);
       }
-      raise_except_if_required(excepts);
     }
 
     return FPBits(result).get_val();
@@ -412,22 +412,14 @@ template <size_t Bits> struct DyadicFloat {
         // Output is denormal after rounding, clear the implicit bit for
         // 80-bit long double.
         r_bits -= IMPLICIT_MASK;
+      }
 
-        // TODO: IEEE Std 754-2019 lets implementers choose whether to check
-        // for "tininess" before or after rounding for base-2 formats, as long
-        // as the same choice is made for all operations. Our choice to check
-        // after rounding might not be the same as the hardware's.
-        // In particular, when an unrounded denormal value rounds up to
-        // min_normal ((r_bits & EXP_MASK) != 0), tininess detected after
-        // rounding on the destination format treats the result as normal,
-        // so FE_UNDERFLOW is not signaled. Detecting tininess before
-        // rounding or using an unbounded exponent range requires extra
-        // branching and bit inspection that are explicitly omitted to avoid
-        // runtime cost and complexity.
-        if (ShouldSignalExceptions && round_and_sticky) {
-          set_errno_if_required(ERANGE);
-          raise_except_if_required(FE_UNDERFLOW);
-        }
+      // Underflow exception and ERANGE are signaled when an unrounded result
+      // in the denormal range is inexact, even if destination rounding rounds
+      // it up to min_normal.
+      if (ShouldSignalExceptions && round_and_sticky) {
+        set_errno_if_required(ERANGE);
+        raise_underflow_except_if_required<T>();
       }
 
       return FPBits<T>(r_bits).get_val();

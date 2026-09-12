@@ -162,8 +162,6 @@ LIBC_INLINE DoubleDouble exp2_double_double(double x,
 
 // When output is denormal.
 LIBC_INLINE double exp2_denorm(double x) {
-  using FPBits = fputil::FPBits<double>;
-
   // Range reduction.
   int k =
       static_cast<int>(cpp::bit_cast<uint64_t>(x + 0x1.8000'0000'4p21) >> 19);
@@ -192,6 +190,8 @@ LIBC_INLINE double exp2_denorm(double x) {
   return ziv_test_denorm</*SKIP_ZIV_TEST=*/true>(hi, exp_mid.hi, lo, ERR_D)
       .value();
 #else
+  using FPBits = fputil::FPBits<double>;
+
   if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, ERR_D);
       LIBC_LIKELY(r.has_value())) {
     double res = r.value();

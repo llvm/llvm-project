@@ -181,8 +181,6 @@ LIBC_INLINE DoubleDouble exp10_double_double(double x, double kd,
 
 // When output is denormal.
 LIBC_INLINE double exp10_denorm(double x) {
-  using FPBits = fputil::FPBits<double>;
-
   // Range reduction.
   double tmp = fputil::multiply_add(x, LOG2_10, 0x1.8000'0000'4p21);
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(tmp) >> 19);
@@ -213,6 +211,8 @@ LIBC_INLINE double exp10_denorm(double x) {
                                                  EXP10_ERR_D)
       .value();
 #else
+  using FPBits = fputil::FPBits<double>;
+
   if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, EXP10_ERR_D);
       LIBC_LIKELY(r.has_value())) {
     double res = r.value();
