@@ -163,15 +163,33 @@ Exporting new symbols from the library
 When exporting new symbols from libc++, you must update the ABI lists located in ``lib/abi``.
 To test whether the lists are up-to-date, please run the target ``check-cxx-abilist``.
 To regenerate the lists, use the target ``generate-cxx-abilist``.
-The ABI lists must be updated for all supported platforms; currently Linux and
-Apple.  If you don't have access to one of these platforms, you can download an
-updated list from the failed build at
-`Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__.
-Look for the failed build and select the ``artifacts`` tab. There, download the
-abilist for the platform, e.g.:
+The ABI lists must be updated for all supported platforms. If you don't have
+access to one of these platforms, you can download an updated list from the
+failed CI build: when the ABI list check fails, the CI regenerates the list and
+uploads it together with the other build artifacts.
 
-* C++<version>.
-* macOS X86_64 and macOS arm64 for the Apple platform.
+For Linux (x86-64) and the Apple platforms, the checks run on GitHub as part of
+the ``[libc++] Conformance tests`` workflow. From your pull request, open the
+failed workflow run: the artifacts of all its jobs are listed in the
+``Artifacts`` section at the bottom of the run's summary page (you must be
+logged into GitHub to download artifacts). Each artifact is named after the
+configuration of the job that produced it (e.g.
+``generic-cxx23-clang++-23-results`` or ``macos-generic-cxx23-results``), so
+identify the failed job and download the matching artifact. It contains the
+regenerated ``.abilist`` files, which are named after the configuration they
+were generated for, e.g.:
+
+* ``x86_64-unknown-linux-gnu.libcxxabi.v1.stable.exceptions.nonew.abilist``
+  for Linux with exceptions enabled (from the ``generic-cxx<version>`` jobs).
+* ``x86_64-unknown-linux-gnu.libcxxabi.v1.stable.noexceptions.nonew.abilist``
+  for Linux with exceptions disabled (from the ``generic-no-exceptions`` job).
+* ``arm64-apple-darwin.libcxxabi.v1.stable.exceptions.nonew.abilist`` for
+  Apple silicon (from the ``macos`` jobs, which run on Apple silicon runners).
+
+For the other platforms (such as AIX, Android and FreeBSD), the checks
+run on `Buildkite <https://buildkite.com/llvm-project/libcxx-ci>`__.
+Look for the failed build and select the ``Artifacts`` tab. There, download the
+abilist for the platform.
 
 
 Pre-commit CI
