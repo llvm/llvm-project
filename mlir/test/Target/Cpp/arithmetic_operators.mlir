@@ -21,6 +21,13 @@ func.func @div_int(%arg0: i32, %arg1: i32) {
 // CHECK-LABEL: void div_int
 // CHECK-NEXT:  int32_t [[V2:[^ ]*]] = [[V0:[^ ]*]] / [[V1:[^ ]*]]
 
+func.func @div_size_t(%arg0: !emitc.size_t, %arg1: !emitc.size_t) {
+  %1 = "emitc.div" (%arg0, %arg1) : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  return
+}
+// CHECK-LABEL: void div_size_t
+// CHECK-NEXT:  size_t [[V2:[^ ]*]] = [[V0:[^ ]*]] / [[V1:[^ ]*]]
+
 func.func @mul_int(%arg0: i32, %arg1: i32) {
   %1 = "emitc.mul" (%arg0, %arg1) : (i32, i32) -> i32
   return
@@ -34,6 +41,13 @@ func.func @rem(%arg0: i32, %arg1: i32) {
 }
 // CHECK-LABEL: void rem
 // CHECK-NEXT:  int32_t [[V2:[^ ]*]] = [[V0:[^ ]*]] % [[V1:[^ ]*]]
+
+func.func @rem_size_t(%arg0: !emitc.size_t, %arg1: !emitc.size_t) {
+  %1 = "emitc.rem" (%arg0, %arg1) : (!emitc.size_t, !emitc.size_t) -> !emitc.size_t
+  return
+}
+// CHECK-LABEL: void rem_size_t
+// CHECK-NEXT:  size_t [[V2:[^ ]*]] = [[V0:[^ ]*]] % [[V1:[^ ]*]]
 
 func.func @sub_int(%arg0: i32, %arg1: i32) {
   %1 = "emitc.sub" (%arg0, %arg1) : (i32, i32) -> i32

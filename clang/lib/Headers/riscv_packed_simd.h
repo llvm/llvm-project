@@ -984,6 +984,34 @@ __packed_ternary_builtin_cast(mqracc_w00_i64, int64_t, int32x2_t, __builtin_risc
 __packed_ternary_builtin_cast(mqracc_w01_i64, int64_t, int32x2_t, __builtin_riscv_mqracc_w01_i64)
 __packed_ternary_builtin_cast(mqracc_w11_i64, int64_t, int32x2_t, __builtin_riscv_mqracc_w11_i64)
 
+/* Packed Multiply Parts Accumulate (32-bit) */
+__packed_ternary_builtin_mixed(macc_h00_i32, int32_t, int16x2_t, int16x2_t, __builtin_riscv_macc_h00_i32)
+__packed_ternary_builtin_mixed(macc_h01_i32, int32_t, int16x2_t, int16x2_t, __builtin_riscv_macc_h01_i32)
+__packed_ternary_builtin_mixed(macc_h11_i32, int32_t, int16x2_t, int16x2_t, __builtin_riscv_macc_h11_i32)
+__packed_ternary_builtin_mixed(maccu_h00_u32, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_maccu_h00_u32)
+__packed_ternary_builtin_mixed(maccu_h01_u32, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_maccu_h01_u32)
+__packed_ternary_builtin_mixed(maccu_h11_u32, uint32_t, uint16x2_t, uint16x2_t, __builtin_riscv_maccu_h11_u32)
+__packed_ternary_builtin_mixed(maccsu_h00_i32, int32_t, int16x2_t, uint16x2_t, __builtin_riscv_maccsu_h00_i32)
+__packed_ternary_builtin_mixed(maccsu_h11_i32, int32_t, int16x2_t, uint16x2_t, __builtin_riscv_maccsu_h11_i32)
+
+/* Packed Multiply Parts Accumulate (64-bit) */
+__packed_ternary_builtin_mixed(pmacc_h00_i32x2, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmacc_h00_i32x2)
+__packed_ternary_builtin_mixed(pmacc_h01_i32x2, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmacc_h01_i32x2)
+__packed_ternary_builtin_mixed(pmacc_h11_i32x2, int32x2_t, int16x4_t, int16x4_t, __builtin_riscv_pmacc_h11_i32x2)
+__packed_ternary_builtin_mixed(pmaccu_h00_u32x2, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pmaccu_h00_u32x2)
+__packed_ternary_builtin_mixed(pmaccu_h01_u32x2, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pmaccu_h01_u32x2)
+__packed_ternary_builtin_mixed(pmaccu_h11_u32x2, uint32x2_t, uint16x4_t, uint16x4_t, __builtin_riscv_pmaccu_h11_u32x2)
+__packed_ternary_builtin_mixed(pmaccsu_h00_i32x2, int32x2_t, int16x4_t, uint16x4_t, __builtin_riscv_pmaccsu_h00_i32x2)
+__packed_ternary_builtin_mixed(pmaccsu_h11_i32x2, int32x2_t, int16x4_t, uint16x4_t, __builtin_riscv_pmaccsu_h11_i32x2)
+__packed_ternary_builtin_mixed(macc_w00_i64, int64_t, int32x2_t, int32x2_t, __builtin_riscv_macc_w00_i64)
+__packed_ternary_builtin_mixed(macc_w01_i64, int64_t, int32x2_t, int32x2_t, __builtin_riscv_macc_w01_i64)
+__packed_ternary_builtin_mixed(macc_w11_i64, int64_t, int32x2_t, int32x2_t, __builtin_riscv_macc_w11_i64)
+__packed_ternary_builtin_mixed(maccu_w00_u64, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_maccu_w00_u64)
+__packed_ternary_builtin_mixed(maccu_w01_u64, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_maccu_w01_u64)
+__packed_ternary_builtin_mixed(maccu_w11_u64, uint64_t, uint32x2_t, uint32x2_t, __builtin_riscv_maccu_w11_u64)
+__packed_ternary_builtin_mixed(maccsu_w00_i64, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_maccsu_w00_i64)
+__packed_ternary_builtin_mixed(maccsu_w11_i64, int64_t, int32x2_t, uint32x2_t, __builtin_riscv_maccsu_w11_i64)
+
 /* Packed Narrowing Clip Pair (32-bit) */
 __packed_binary_builtin_cast(pnclipp_i8x4, int16x2_t, int8x4_t, __builtin_riscv_pnclipp_i8x4)
 __packed_binary_builtin_cast(pnclipup_u8x4, uint16x2_t, uint8x4_t, __builtin_riscv_pnclipup_u8x4)

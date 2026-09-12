@@ -1452,7 +1452,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BIstpncpy:
   case Builtin::BI__builtin_stpncpy:
   case Builtin::BIstrlcat:
-  case Builtin::BI__builtin_strlcat: {
+  case Builtin::BI__builtin_strlcat:
+  case Builtin::BIstrlcpy:
+  case Builtin::BI__builtin_strlcpy: {
     // Whether these functions overflow depends on the runtime strlen of the
     // string, not just the buffer size, so emitting the "always overflow"
     // diagnostic isn't quite right. We should still diagnose passing a buffer
@@ -6588,8 +6590,18 @@ ExprResult Sema::BuiltinShuffleVector(CallExpr *TheCall) {
     // with mask.  If so, verify that RHS is an integer vector type with the
     // same number of elts as lhs.
     if (NumArgs == 2) {
-      if (!RHSType->hasIntegerRepresentation() ||
-          RHSType->castAs<VectorType>()->getNumElements() != NumElements)
+      auto *RHSVecType = RHSType->castAs<VectorType>();
+      if (RHSVecType->getElementType()->isBooleanType() ||
+          !RHSVecType->getElementType()->isIntegerType()) {
+        return ExprError(
+            Diag(TheCall->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+            << /* Arg ordinal */ 2 << /*vector of*/ 4 << /*integer*/ 1
+            << /*no fp*/ 0 << RHSType
+            << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                           TheCall->getArg(1)->getEndLoc()));
+      }
+
+      if (RHSVecType->getNumElements() != NumElements)
         return ExprError(Diag(TheCall->getBeginLoc(),
                               diag::err_vec_builtin_incompatible_vector)
                          << TheCall->getDirectCallee()
@@ -13268,7 +13280,8 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
 }
 
 // Helper function to filter out cases for constant width constant conversion.
-// Don't warn on char array initialization or for non-decimal values.
+// Don't warn on unsigned char array initialization or for non-decimal
+// values.
 static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
                                           SourceLocation CC) {
   // If initializing from a constant, and the constant starts with '0',
@@ -13281,9 +13294,9 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
       return false;
   }
 
-  // If the CC location points to a '{', and the type is char, then assume
-  // assume it is an array initialization.
-  if (CC.isValid() && T->isCharType()) {
+  // If the CC location points to a '{' and the type is an unsigned char
+  // type, assume it is an array initialization.
+  if (T->isCharType() && !T->isSignedIntegerType() && CC.isValid()) {
     const char FirstContextCharacter =
         S.getSourceManager().getCharacterData(CC)[0];
     if (FirstContextCharacter == '{')

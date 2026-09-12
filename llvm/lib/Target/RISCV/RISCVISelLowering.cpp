@@ -136,21 +136,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     : TargetLowering(TM, STI), Subtarget(STI) {
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  // Note: Hard-float ABIs that don't match the F/D extensions are already
+  // rejected/ by RISCVABI::computeTargetABI() during subtarget construction.
   assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
-
-  if ((ABI == RISCVABI::ABI_ILP32F || ABI == RISCVABI::ABI_LP64F) &&
-      !Subtarget.hasStdExtF()) {
-    errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                          "target-abi)\n";
-    ABI = Subtarget.is64Bit() ? RISCVABI::ABI_LP64 : RISCVABI::ABI_ILP32;
-  } else if ((ABI == RISCVABI::ABI_ILP32D || ABI == RISCVABI::ABI_LP64D) &&
-             !Subtarget.hasStdExtD()) {
-    errs() << "Hard-float 'd' ABI can't be used for a target that "
-              "doesn't support the D instruction set extension (ignoring "
-              "target-abi)\n";
-    ABI = Subtarget.is64Bit() ? RISCVABI::ABI_LP64 : RISCVABI::ABI_ILP32;
-  }
 
   switch (ABI) {
   default:
@@ -10368,10 +10356,10 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
-    const bool HasCZero = VT.isScalarInteger() && Subtarget.hasCZEROLike();
+    const bool HasZicond = VT.isScalarInteger() && Subtarget.hasStdExtZicond();
 
     // (select c, 0, y) -> (c-1) & y
-    if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
+    if (isNullConstant(TrueV) && (!HasZicond || isSimm12Constant(FalseV))) {
       SDValue Neg =
           DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
@@ -10395,7 +10383,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
         }
       }
       // (select c, y, 0) -> -c & y
-      if (!HasCZero || isSimm12Constant(TrueV)) {
+      if (!HasZicond || isSimm12Constant(TrueV)) {
         SDValue Neg = DAG.getNegative(CondV, DL, VT);
         return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
       }
@@ -10580,11 +10568,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getBitcast(VT, ResultInt);
   }
 
-  // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
+  // When Zicond is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
-  if (Subtarget.hasCZEROLike() && VT.isScalarInteger()) {
+  if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
 
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
@@ -12548,6 +12536,79 @@ static Intrinsic::ID getRVPScalarMulPartsIntrinsic(unsigned IntNo) {
   }
 }
 
+/// Return the accumulate form of multiply-parts intrinsic \p IntNo, or
+/// Intrinsic::not_intrinsic if there is none.
+static Intrinsic::ID getRVPMulPartsAccIntrinsic(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    return Intrinsic::not_intrinsic;
+  case Intrinsic::riscv_mul_00:
+    return Intrinsic::riscv_macc_00;
+  case Intrinsic::riscv_pmul_00:
+    return Intrinsic::riscv_pmacc_00;
+  case Intrinsic::riscv_mul_01:
+    return Intrinsic::riscv_macc_01;
+  case Intrinsic::riscv_pmul_01:
+    return Intrinsic::riscv_pmacc_01;
+  case Intrinsic::riscv_mul_11:
+    return Intrinsic::riscv_macc_11;
+  case Intrinsic::riscv_pmul_11:
+    return Intrinsic::riscv_pmacc_11;
+  case Intrinsic::riscv_mulu_00:
+    return Intrinsic::riscv_maccu_00;
+  case Intrinsic::riscv_pmulu_00:
+    return Intrinsic::riscv_pmaccu_00;
+  case Intrinsic::riscv_mulu_01:
+    return Intrinsic::riscv_maccu_01;
+  case Intrinsic::riscv_pmulu_01:
+    return Intrinsic::riscv_pmaccu_01;
+  case Intrinsic::riscv_mulu_11:
+    return Intrinsic::riscv_maccu_11;
+  case Intrinsic::riscv_pmulu_11:
+    return Intrinsic::riscv_pmaccu_11;
+  case Intrinsic::riscv_mulsu_00:
+    return Intrinsic::riscv_maccsu_00;
+  case Intrinsic::riscv_pmulsu_00:
+    return Intrinsic::riscv_pmaccsu_00;
+  case Intrinsic::riscv_mulsu_11:
+    return Intrinsic::riscv_maccsu_11;
+  case Intrinsic::riscv_pmulsu_11:
+    return Intrinsic::riscv_pmaccsu_11;
+  }
+}
+
+/// Return the multiply-parts accumulate node for \p IntNo.
+static unsigned getRVPMulAccHalvesOpcode(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V multiply-parts accumulate intrinsic");
+  case Intrinsic::riscv_pmacc_00:
+  case Intrinsic::riscv_macc_00:
+    return RISCVISD::PMACC_HALVES_00;
+  case Intrinsic::riscv_pmacc_01:
+  case Intrinsic::riscv_macc_01:
+    return RISCVISD::PMACC_HALVES_01;
+  case Intrinsic::riscv_pmacc_11:
+  case Intrinsic::riscv_macc_11:
+    return RISCVISD::PMACC_HALVES_11;
+  case Intrinsic::riscv_pmaccu_00:
+  case Intrinsic::riscv_maccu_00:
+    return RISCVISD::PMACCU_HALVES_00;
+  case Intrinsic::riscv_pmaccu_01:
+  case Intrinsic::riscv_maccu_01:
+    return RISCVISD::PMACCU_HALVES_01;
+  case Intrinsic::riscv_pmaccu_11:
+  case Intrinsic::riscv_maccu_11:
+    return RISCVISD::PMACCU_HALVES_11;
+  case Intrinsic::riscv_pmaccsu_00:
+  case Intrinsic::riscv_maccsu_00:
+    return RISCVISD::PMACCSU_HALVES_00;
+  case Intrinsic::riscv_pmaccsu_11:
+  case Intrinsic::riscv_maccsu_11:
+    return RISCVISD::PMACCSU_HALVES_11;
+  }
+}
+
 /// Return {opcode, rs1 lane, rs2 lane} for the word form of \p IntNo.
 static std::tuple<unsigned, unsigned, unsigned>
 getRVPWordMulPartsOpcodeAndLanes(unsigned IntNo) {
@@ -12570,6 +12631,32 @@ getRVPWordMulPartsOpcodeAndLanes(unsigned IntNo) {
     return {RISCVISD::WMULSU, 0, 0};
   case Intrinsic::riscv_mulsu_11:
     return {RISCVISD::WMULSU, 1, 1};
+  }
+}
+
+/// Return {opcode, rs1 lane, rs2 lane} for the word form of accumulate
+/// intrinsic \p IntNo.
+static std::tuple<unsigned, unsigned, unsigned>
+getRVPWordMulPartsAccOpcodeAndLanes(unsigned IntNo) {
+  switch (IntNo) {
+  default:
+    llvm_unreachable("Unexpected RISC-V multiply-parts accumulate intrinsic");
+  case Intrinsic::riscv_macc_00:
+    return {RISCVISD::WMACC, 0, 0};
+  case Intrinsic::riscv_macc_01:
+    return {RISCVISD::WMACC, 0, 1};
+  case Intrinsic::riscv_macc_11:
+    return {RISCVISD::WMACC, 1, 1};
+  case Intrinsic::riscv_maccu_00:
+    return {RISCVISD::WMACCU, 0, 0};
+  case Intrinsic::riscv_maccu_01:
+    return {RISCVISD::WMACCU, 0, 1};
+  case Intrinsic::riscv_maccu_11:
+    return {RISCVISD::WMACCU, 1, 1};
+  case Intrinsic::riscv_maccsu_00:
+    return {RISCVISD::WMACCSU, 0, 0};
+  case Intrinsic::riscv_maccsu_11:
+    return {RISCVISD::WMACCSU, 1, 1};
   }
 }
 
@@ -12634,6 +12721,42 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Lo = DAG.getNode(Opc, DL, HalfVT, Rs1Lo, Rs2Lo);
     SDValue Hi = DAG.getNode(Opc, DL, HalfVT, Rs1Hi, Rs2Hi);
     return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Lo, Hi);
+  }
+  case Intrinsic::riscv_pmacc_00:
+  case Intrinsic::riscv_pmacc_01:
+  case Intrinsic::riscv_pmacc_11:
+  case Intrinsic::riscv_pmaccu_00:
+  case Intrinsic::riscv_pmaccu_01:
+  case Intrinsic::riscv_pmaccu_11:
+  case Intrinsic::riscv_pmaccsu_00:
+  case Intrinsic::riscv_pmaccsu_11:
+  case Intrinsic::riscv_macc_00:
+  case Intrinsic::riscv_macc_01:
+  case Intrinsic::riscv_macc_11:
+  case Intrinsic::riscv_maccu_00:
+  case Intrinsic::riscv_maccu_01:
+  case Intrinsic::riscv_maccu_11:
+  case Intrinsic::riscv_maccsu_00:
+  case Intrinsic::riscv_maccsu_11: {
+    MVT VT = Op.getSimpleValueType();
+    SDValue Rd = Op.getOperand(1);
+    SDValue Rs1 = Op.getOperand(2);
+    SDValue Rs2 = Op.getOperand(3);
+    unsigned Opc = getRVPMulAccHalvesOpcode(IntNo);
+    if (VT != MVT::v2i32 || !Subtarget.isPExtPackedDoubleType(VT))
+      return DAG.getNode(Opc, DL, VT, Rd, Rs1, Rs2);
+
+    // On RV32 a 64-bit result lives in a GPR pair; accumulate each half with
+    // the 32-bit form of the same product.
+    auto [Rs1Lo, Rs1Hi] = DAG.SplitVector(Rs1, DL);
+    auto [Rs2Lo, Rs2Hi] = DAG.SplitVector(Rs2, DL);
+    SDValue Lo =
+        DAG.getNode(Opc, DL, MVT::i32,
+                    DAG.getExtractVectorElt(DL, MVT::i32, Rd, 0), Rs1Lo, Rs2Lo);
+    SDValue Hi =
+        DAG.getNode(Opc, DL, MVT::i32,
+                    DAG.getExtractVectorElt(DL, MVT::i32, Rd, 1), Rs1Hi, Rs2Hi);
+    return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Lo, Hi);
   }
   case Intrinsic::riscv_pas:
   case Intrinsic::riscv_psa:
@@ -17263,6 +17386,51 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       reportFatalUsageError("unsupported llvm.riscv multiply-parts intrinsic");
     }
+    case Intrinsic::riscv_macc_00:
+    case Intrinsic::riscv_macc_01:
+    case Intrinsic::riscv_macc_11:
+    case Intrinsic::riscv_maccu_00:
+    case Intrinsic::riscv_maccu_01:
+    case Intrinsic::riscv_maccu_11:
+    case Intrinsic::riscv_maccsu_00:
+    case Intrinsic::riscv_maccsu_11: {
+      // macc.hXX exists only on RV32 and macc.wXX only on RV64; the other XLEN
+      // has to build the product here.
+      MVT VT = N->getSimpleValueType(0);
+      MVT SrcVT = N->getOperand(2).getSimpleValueType();
+      if (Subtarget.hasStdExtP() && Subtarget.is64Bit() && VT == MVT::i32 &&
+          SrcVT == MVT::v2i16) {
+        // Accumulate into the first element of the packed product.
+        SDValue Undef = DAG.getUNDEF(SrcVT);
+        SDValue Rd = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2i32,
+                                 N->getOperand(1));
+        SDValue Rs1 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                  N->getOperand(2), Undef);
+        SDValue Rs2 = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v4i16,
+                                  N->getOperand(3), Undef);
+        SDValue Res = DAG.getNode(getRVPMulAccHalvesOpcode(IntNo), DL,
+                                  MVT::v2i32, Rd, Rs1, Rs2);
+        Results.push_back(DAG.getExtractVectorElt(DL, MVT::i32, Res, 0));
+        return;
+      }
+      if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() && VT == MVT::i64 &&
+          SrcVT == MVT::v2i32) {
+        auto [Opc, Rs1Lane, Rs2Lane] =
+            getRVPWordMulPartsAccOpcodeAndLanes(IntNo);
+        auto [RdLo, RdHi] =
+            DAG.SplitScalar(N->getOperand(1), DL, MVT::i32, MVT::i32);
+        SDValue Rs1 =
+            DAG.getExtractVectorElt(DL, MVT::i32, N->getOperand(2), Rs1Lane);
+        SDValue Rs2 =
+            DAG.getExtractVectorElt(DL, MVT::i32, N->getOperand(3), Rs2Lane);
+        SDValue Res = DAG.getNode(Opc, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                                  RdLo, RdHi, Rs1, Rs2);
+        Results.push_back(
+            DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Res, Res.getValue(1)));
+        return;
+      }
+      reportFatalUsageError("unsupported llvm.riscv multiply-parts intrinsic");
+    }
     case Intrinsic::riscv_paadd:
     case Intrinsic::riscv_paaddu:
     case Intrinsic::riscv_pasub:
@@ -18082,7 +18250,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
 
   if (!Subtarget.hasConditionalMoveFusion()) {
     // (select cond, x, (and x, c)) has custom lowering with Zicond.
-    if (!Subtarget.hasCZEROLike() || N->getOpcode() != ISD::AND)
+    if (!Subtarget.hasStdExtZicond() || N->getOpcode() != ISD::AND)
       return SDValue();
 
     // Maybe harmful when condition code has multiple use.
@@ -18371,6 +18539,30 @@ static SDValue combineAddMulh(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::MULHSU, DL, VT, X, Mulh.getOperand(1));
 }
 
+// Fold an add of a multiply-parts product into the accumulating form.
+static SDValue combineAddMulParts(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  for (unsigned I = 0; I != 2; ++I) {
+    SDValue Mul = N->getOperand(I);
+    if (Mul.getOpcode() != ISD::INTRINSIC_WO_CHAIN || !Mul.hasOneUse())
+      continue;
+    Intrinsic::ID AccId =
+        getRVPMulPartsAccIntrinsic(Mul.getConstantOperandVal(0));
+    if (AccId == Intrinsic::not_intrinsic)
+      continue;
+
+    SDLoc DL(N);
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, N->getValueType(0),
+                       DAG.getTargetConstant(AccId, DL, Subtarget.getXLenVT()),
+                       N->getOperand(1 - I), Mul.getOperand(1),
+                       Mul.getOperand(2));
+  }
+  return SDValue();
+}
+
 static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
                                          const RISCVSubtarget &Subtarget) {
   // Recognize the RV64 decompositions listed for the 32-bit packed widening
@@ -18455,6 +18647,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfZExt(N, DAG))
+    return V;
+  if (SDValue V = combineAddMulParts(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineAddMulh(N, DAG, Subtarget))
     return V;
@@ -22432,7 +22626,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasBEXTILike() && VT.isScalarInteger() &&
-      (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
+      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -27715,14 +27909,19 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Use software guarded branch for large code model non-indirect calls
-  // Tail call to external symbol will have a null CLI.CB and we need another
-  // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
+  // Tail calls need software guarded branch (X7) when cf-protection-branch is
+  // active: PseudoTAIL expands to JALR X0, X6, 0 which lpad rejects, while
+  // PseudoTAILX7 expands to JALR X0, X7, 0 which lpad accepts.
+  // Non-tail calls only need SW_GUARDED in Large code model: in non-Large,
+  // PseudoCALL uses X1 (JALR X1, X1, 0) which lpad accepts as a return address.
+  bool NeedSWGuardedTail = false;
+  bool NeedSWGuardedCall = false;
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol)) {
+    NeedSWGuardedTail = true;
+    if (getTargetMachine().getCodeModel() == CodeModel::Large)
+      NeedSWGuardedCall = true;
+  }
 
   // Use special pseudo for returns_twice calls (e.g., setjmp) when
   // cf-protection-branch is enabled, to ensure LPAD is inserted after the call.
@@ -27733,7 +27932,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
     unsigned CallOpc =
-        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+        NeedSWGuardedTail ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
     SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -27745,7 +27944,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   unsigned CallOpc;
   // FIXME: Large Code Model + Zicfilp: SW_GUARDED_CALL takes priority over
   // LPAD_CALL for returns_twice calls, breaking LPAD alignment.
-  if (NeedSWGuarded)
+  if (NeedSWGuardedCall)
     CallOpc = RISCVISD::SW_GUARDED_CALL;
   else if (NeedLpadCall && CLI.CB->isIndirectCall())
     CallOpc = RISCVISD::LPAD_CALL_INDIRECT;
@@ -29398,7 +29597,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())
+  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXTHeadCondMov())
     return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
