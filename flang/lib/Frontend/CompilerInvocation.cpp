@@ -887,8 +887,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
     if (auto convert = parseConvertArg(argValue))
       opts.envDefaults.push_back({"FORT_CONVERT", *convert});
     else
-      diags.Report(clang::diag::err_drv_invalid_value)
-          << arg->getAsString(args) << argValue;
+      diags.Report(clang::diag::err_drv_invalid_value_with_suggestion)
+          << arg->getAsString(args) << argValue
+          << clang::getDriverOptTable().getOptionValues(
+                 clang::options::OPT_fconvert_EQ);
   }
 
   // -f{no-}implicit-none
