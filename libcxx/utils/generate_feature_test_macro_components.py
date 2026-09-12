@@ -2336,10 +2336,6 @@ def produce_docs():
 
 # Feature Test Macro Support
 
-:::{{contents}}
-:local: true
-:::
-
 ## Overview
 
 This file documents the feature test macros currently supported by libc++.

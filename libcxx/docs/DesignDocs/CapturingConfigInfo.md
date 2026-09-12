@@ -1,8 +1,5 @@
 # Capturing configuration information in the headers
 
-```{contents}
-:local: true
-```
 
 ## The Problem
 

@@ -2,9 +2,6 @@
 
 # Vendor Documentation
 
-```{contents}
-:local: true
-```
 
 The instructions on this page are aimed at vendors who ship libc++ as part of an
 operating system distribution, a toolchain or similar shipping vehicles. If you

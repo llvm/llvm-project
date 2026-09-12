@@ -2,9 +2,6 @@
 
 # Testing libc++
 
-:::{contents}
-:local: true
-:::
 
 ## Getting Started
 

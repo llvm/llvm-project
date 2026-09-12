@@ -1,8 +1,5 @@
 # Symbol Visibility Macros
 
-```{contents}
-:local: true
-```
 
 (visibility-macros)=
 

@@ -2,9 +2,6 @@
 
 # Hardening Modes
 
-:::{contents}
-:local: true
-:::
 
 (using-hardening-modes)=
 
