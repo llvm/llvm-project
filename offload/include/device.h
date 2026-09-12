@@ -39,6 +39,7 @@
 using GenericPluginTy = llvm::omp::target::plugin::GenericPluginTy;
 using DeviceInfo = llvm::omp::target::plugin::DeviceInfo;
 using InfoTreeNode = llvm::omp::target::plugin::InfoTreeNode;
+using KernelLaunchInfoTy = llvm::omp::target::plugin::KernelLaunchInfoTy;
 
 // Forward declarations.
 struct __tgt_bin_desc;
@@ -184,6 +185,20 @@ struct DeviceTy {
     return std::get<T>(Entry->Value);
   }
 
+  /// Record the launch-geometry properties for the kernel at \p KernelPtr,
+  /// read once at registration time from its "<name>_kernel_environment"
+  /// device global.
+  void setKernelLaunchInfo(void *KernelPtr, KernelLaunchInfoTy Info) {
+    (*KernelLaunchInfoMap.getExclusiveAccessor())[KernelPtr] = Info;
+  }
+
+  /// Return the launch-geometry properties recorded for the kernel at
+  /// \p KernelPtr, or a default-constructed KernelLaunchInfoTy if none were
+  /// recorded.
+  KernelLaunchInfoTy getKernelLaunchInfo(void *KernelPtr) {
+    return (*KernelLaunchInfoMap.getExclusiveAccessor())[KernelPtr];
+  }
+
 private:
   /// Deinitialize the device (and plugin).
   void deinit();
@@ -192,6 +207,10 @@ private:
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
   ProtectedObj<DeviceOffloadEntriesMapTy> DeviceOffloadEntries;
+
+  /// Launch-geometry properties for each kernel registered on this device.
+  using KernelLaunchInfoMapTy = llvm::DenseMap<void *, KernelLaunchInfoTy>;
+  ProtectedObj<KernelLaunchInfoMapTy> KernelLaunchInfoMap;
 
   /// Handler to collect and organize host-2-device mapping information.
   MappingInfoTy MappingInfo;

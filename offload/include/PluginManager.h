@@ -150,12 +150,18 @@ struct PluginManager {
     return count;
   }
 
+  /// Return the host (GenELF64) plugin, or nullptr if it wasn't built.
+  GenericPluginTy *getHostPlugin() const { return HostPlugin; }
+
 private:
   bool RTLsLoaded = false;
   llvm::SmallVector<__tgt_bin_desc *> DelayedBinDesc;
 
   // List of all plugins, in use or not.
   llvm::SmallVector<std::unique_ptr<GenericPluginTy>> Plugins;
+
+  // The host (GenELF64) plugin.
+  GenericPluginTy *HostPlugin = nullptr;
 
   // Mapping of plugins to the OpenMP device identifier.
   llvm::DenseMap<std::pair<const GenericPluginTy *, int32_t>, int32_t>
