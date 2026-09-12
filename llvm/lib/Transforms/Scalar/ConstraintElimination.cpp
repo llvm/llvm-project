@@ -1195,8 +1195,7 @@ void State::addInfoForInductions(BasicBlock &BB) {
               ContinuePred == CmpInst::ICMP_SLE) &&
              "Expected a signed less-than continuation predicate");
       MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
-      if ((Info.Signed && !Info.Decreasing) ||
-          isKnownNonNegative(Backedge, BB.getDataLayout())) {
+      if ((Info.Signed && !Info.Decreasing)) {
         CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
         WorkList.push_back(FactOrCheck::getConditionFact(
             DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
