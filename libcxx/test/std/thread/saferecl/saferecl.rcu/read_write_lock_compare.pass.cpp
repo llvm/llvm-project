@@ -38,13 +38,13 @@ struct alignas(128) MyObject : public std::rcu_obj_base<MyObject> {
   ~MyObject() {destruction_count_.fetch_add(1, std::memory_order_relaxed);}
 
   void doWork() {
-    auto spin_for = [](std::chrono::microseconds us) {
+    [[maybe_unused]]auto spin_for = [](std::chrono::microseconds us) {
       auto start = std::chrono::high_resolution_clock::now();
       while (std::chrono::high_resolution_clock::now() - start < us)
         ;
     };
     using namespace std::chrono_literals;
-    spin_for(10us);
+    //spin_for(10us);
   }
 };
 
@@ -78,7 +78,7 @@ void test_read_write_lock() {
       lock.unlock();
       delete oldObj;
       ++write_count;
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
+   //   std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
     std::println("Writer thread wrote {} times", write_count);
   };
@@ -125,7 +125,7 @@ void test_rcu() {
       auto oldObj = global_obj_rcu.exchange(newObj);
       oldObj->retire();
       ++write_count;
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
+    //  std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
     std::println("RCU Writer thread wrote {} times", write_count);
   };
