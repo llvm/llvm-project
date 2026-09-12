@@ -17,6 +17,7 @@
 #include <cassert>
 #include <limits>
 #include <type_traits>
+#include <concepts>
 
 #include "test_macros.h"
 #include "type_algorithms.h"
@@ -55,188 +56,193 @@ static_assert(!can_shl_shift<A*>);
 static_assert(!can_shl_shift<E1>);
 static_assert(!can_shl_shift<E2>);
 
-template <class T>
+template <std::signed_integral T>
 constexpr bool test() {
   using U               = std::make_unsigned_t<T>;
   constexpr int width   = std::numeric_limits<U>::digits;
   constexpr U highbit_u = U(1) << (width - 1);
 
-  if constexpr (std::is_signed_v<T>) {
-    ASSERT_SAME_TYPE(decltype(std::shl(T(), 0)), T);
-    ASSERT_NOEXCEPT(std::shl(T(), 0));
+  ASSERT_SAME_TYPE(decltype(std::shl(T(), 0)), T);
+  ASSERT_NOEXCEPT(std::shl(T(), 0));
 
-    assert(std::shl(T(1), 0) == T(1));
-    assert(std::shl(T(1), 0u) == T(1));
-    assert(std::shl(T(1), 1) == T(2));
-    assert(std::shl(T(1), 1u) == T(2));
-    assert(std::shl(T(1), 2) == T(4));
-    assert(std::shl(T(1), 2u) == T(4));
-    assert(std::shl(T(1), 3) == T(8));
-    assert(std::shl(T(1), 3u) == T(8));
-    assert(std::shl(T(1), 4) == T(16));
-    assert(std::shl(T(1), 4u) == T(16));
-    assert(std::shl(T(1), 5) == T(32));
-    assert(std::shl(T(1), 5u) == T(32));
-    assert(std::shl(T(1), 6) == T(64));
-    assert(std::shl(T(1), 6u) == T(64));
-    assert(std::shl(T(1), 7) == T(128));
-    assert(std::shl(T(1), 7u) == T(128));
+  assert(std::shl(T(1), 0) == T(1));
+  assert(std::shl(T(1), 0u) == T(1));
+  assert(std::shl(T(1), 1) == T(2));
+  assert(std::shl(T(1), 1u) == T(2));
+  assert(std::shl(T(1), 2) == T(4));
+  assert(std::shl(T(1), 2u) == T(4));
+  assert(std::shl(T(1), 3) == T(8));
+  assert(std::shl(T(1), 3u) == T(8));
+  assert(std::shl(T(1), 4) == T(16));
+  assert(std::shl(T(1), 4u) == T(16));
+  assert(std::shl(T(1), 5) == T(32));
+  assert(std::shl(T(1), 5u) == T(32));
+  assert(std::shl(T(1), 6) == T(64));
+  assert(std::shl(T(1), 6u) == T(64));
+  assert(std::shl(T(1), 7) == T(128));
+  assert(std::shl(T(1), 7u) == T(128));
 
-    // Overlong shifts return 0
-    assert(std::shl(T(1), width) == T(0));
-    assert(std::shl(T(1), static_cast<U>(width)) == T(0));
-    assert(std::shl(T(1), width + 1) == T(0));
-    assert(std::shl(T(1), static_cast<U>(width + 1)) == T(0));
-    assert(std::shl(T(1), width + 100) == T(0));
-    assert(std::shl(T(1), static_cast<U>(width + 100)) == T(0));
-    assert(std::shl(T(1), std::numeric_limits<int>::max()) == T(0));
-    assert(std::shl(T(1), static_cast<U>(std::numeric_limits<int>::max())) == T(0));
+  // Overlong shifts return 0
+  assert(std::shl(T(1), width) == T(0));
+  assert(std::shl(T(1), static_cast<U>(width)) == T(0));
+  assert(std::shl(T(1), width + 1) == T(0));
+  assert(std::shl(T(1), static_cast<U>(width + 1)) == T(0));
+  assert(std::shl(T(1), width + 100) == T(0));
+  assert(std::shl(T(1), static_cast<U>(width + 100)) == T(0));
+  assert(std::shl(T(1), std::numeric_limits<int>::max()) == T(0));
+  assert(std::shl(T(1), static_cast<U>(std::numeric_limits<int>::max())) == T(0));
 
-    assert(std::shl(T(-1), width) == T(0));
-    assert(std::shl(T(-1), static_cast<U>(width)) == T(0));
-    assert(std::shl(T(-1), width + 5) == T(0));
-    assert(std::shl(T(-1), static_cast<U>(width + 5)) == T(0));
+  assert(std::shl(T(-1), width) == T(0));
+  assert(std::shl(T(-1), static_cast<U>(width)) == T(0));
+  assert(std::shl(T(-1), width + 5) == T(0));
+  assert(std::shl(T(-1), static_cast<U>(width + 5)) == T(0));
 
-    // Negative shift amounts shift right arithmetically (bidirectional)
-    T highbit = static_cast<T>(highbit_u);
-    assert(std::shl(highbit, -1) == (highbit >> 1));
-    assert(std::shl(highbit, -2) == (highbit >> 2));
-    assert(std::shl(highbit, -3) == (highbit >> 3));
-    assert(std::shl(highbit, -4) == (highbit >> 4));
-    assert(std::shl(highbit, -5) == (highbit >> 5));
-    assert(std::shl(highbit, -6) == (highbit >> 6));
-    assert(std::shl(highbit, -7) == (highbit >> 7));
-    assert(std::shl(highbit, -(width - 1)) == (highbit >> (width - 1)));
+  // Negative shift amounts shift right arithmetically (bidirectional)
+  T highbit = static_cast<T>(highbit_u);
+  assert(std::shl(highbit, -1) == (highbit >> 1));
+  assert(std::shl(highbit, -2) == (highbit >> 2));
+  assert(std::shl(highbit, -3) == (highbit >> 3));
+  assert(std::shl(highbit, -4) == (highbit >> 4));
+  assert(std::shl(highbit, -5) == (highbit >> 5));
+  assert(std::shl(highbit, -6) == (highbit >> 6));
+  assert(std::shl(highbit, -7) == (highbit >> 7));
+  assert(std::shl(highbit, -(width - 1)) == (highbit >> (width - 1)));
 
-    // Negative overlong shifts: sign-extended for negative values, 0 otherwise
-    assert(std::shl(T(-1), -width) == T(-1));
-    assert(std::shl(T(-1), -(width + 1)) == T(-1));
-    assert(std::shl(T(-1), std::numeric_limits<int>::min()) == T(-1));
-    assert(std::shl(T(42), -width) == T(0));
-    assert(std::shl(T(42), -(width + 1)) == T(0));
+  // Negative overlong shifts: sign-extended for negative values, 0 otherwise
+  assert(std::shl(T(-1), -width) == T(-1));
+  assert(std::shl(T(-1), -(width + 1)) == T(-1));
+  assert(std::shl(T(-1), std::numeric_limits<int>::min()) == T(-1));
+  assert(std::shl(T(42), -width) == T(0));
+  assert(std::shl(T(42), -(width + 1)) == T(0));
 
-    if constexpr (width == 128) {
-      assert(std::shl(T(1), 64) == U(1) << 64);
-      assert(std::shl(T(1), 64u) == U(1) << 64);
-      assert(std::shl(T(1), 127) == U(1) << 127);
-      assert(std::shl(T(1), 127u) == U(1) << 127);
-      assert(std::shl(T(1), 128) == T(0));
-      assert(std::shl(T(1), 128u) == T(0));
-      assert(std::shl(T(1), 200) == T(0));
-      assert(std::shl(T(1), 200u) == T(0));
+  if constexpr (width == 128) {
+    assert(std::shl(T(1), 64) == U(1) << 64);
+    assert(std::shl(T(1), 64u) == U(1) << 64);
+    assert(std::shl(T(1), 127) == U(1) << 127);
+    assert(std::shl(T(1), 127u) == U(1) << 127);
+    assert(std::shl(T(1), 128) == T(0));
+    assert(std::shl(T(1), 128u) == T(0));
+    assert(std::shl(T(1), 200) == T(0));
+    assert(std::shl(T(1), 200u) == T(0));
 
-      assert(std::shl(highbit, -64) == (highbit >> 64));
-      assert(std::shl(highbit, -127) == (highbit >> 127));
-      assert(std::shl(highbit, -128) == T(-1));
-      assert(std::shl(highbit, -200) == T(-1));
-    } else if constexpr (width == 256) {
-      assert(std::shl(T(1), 64) == U(1) << 64);
-      assert(std::shl(T(1), 64u) == U(1) << 64);
-      assert(std::shl(T(1), 127) == U(1) << 127);
-      assert(std::shl(T(1), 127u) == U(1) << 127);
-      assert(std::shl(T(1), 128) == U(1) << 128);
-      assert(std::shl(T(1), 128u) == U(1) << 128);
-      assert(std::shl(T(1), 200) == U(1) << 200);
-      assert(std::shl(T(1), 200u) == U(1) << 200);
-      assert(std::shl(T(1), 255) == U(1) << 255);
-      assert(std::shl(T(1), 255u) == U(1) << 255);
-      assert(std::shl(T(1), 256) == T(0));
-      assert(std::shl(T(1), 256u) == T(0));
-      assert(std::shl(T(1), 300) == T(0));
-      assert(std::shl(T(1), 300u) == T(0));
+    assert(std::shl(highbit, -64) == (highbit >> 64));
+    assert(std::shl(highbit, -127) == (highbit >> 127));
+    assert(std::shl(highbit, -128) == T(-1));
+    assert(std::shl(highbit, -200) == T(-1));
+  } else if constexpr (width == 256) {
+    assert(std::shl(T(1), 64) == U(1) << 64);
+    assert(std::shl(T(1), 64u) == U(1) << 64);
+    assert(std::shl(T(1), 127) == U(1) << 127);
+    assert(std::shl(T(1), 127u) == U(1) << 127);
+    assert(std::shl(T(1), 128) == U(1) << 128);
+    assert(std::shl(T(1), 128u) == U(1) << 128);
+    assert(std::shl(T(1), 200) == U(1) << 200);
+    assert(std::shl(T(1), 200u) == U(1) << 200);
+    assert(std::shl(T(1), 255) == U(1) << 255);
+    assert(std::shl(T(1), 255u) == U(1) << 255);
+    assert(std::shl(T(1), 256) == T(0));
+    assert(std::shl(T(1), 256u) == T(0));
+    assert(std::shl(T(1), 300) == T(0));
+    assert(std::shl(T(1), 300u) == T(0));
 
-      assert(std::shl(highbit, -64) == (highbit >> 64));
-      assert(std::shl(highbit, -127) == (highbit >> 127));
-      assert(std::shl(highbit, -128) == (highbit >> 128));
-      assert(std::shl(highbit, -200) == (highbit >> 200));
-      assert(std::shl(highbit, -255) == T(-1));
-      assert(std::shl(highbit, -256) == T(-1));
-    }
-  } else {
-    ASSERT_SAME_TYPE(decltype(std::shl(T(), 0)), T);
-    ASSERT_NOEXCEPT(std::shl(T(), 0));
+    assert(std::shl(highbit, -64) == (highbit >> 64));
+    assert(std::shl(highbit, -127) == (highbit >> 127));
+    assert(std::shl(highbit, -128) == (highbit >> 128));
+    assert(std::shl(highbit, -200) == (highbit >> 200));
+    assert(std::shl(highbit, -255) == T(-1));
+    assert(std::shl(highbit, -256) == T(-1));
+  }
 
-    assert(std::shl(T(1), 0) == T(1));
-    assert(std::shl(T(1), 0u) == T(1));
-    assert(std::shl(T(1), 1) == T(2));
-    assert(std::shl(T(1), 1u) == T(2));
-    assert(std::shl(T(1), 2) == T(4));
-    assert(std::shl(T(1), 2u) == T(4));
-    assert(std::shl(T(1), 3) == T(8));
-    assert(std::shl(T(1), 3u) == T(8));
-    assert(std::shl(T(1), 4) == T(16));
-    assert(std::shl(T(1), 4u) == T(16));
-    assert(std::shl(T(1), 5) == T(32));
-    assert(std::shl(T(1), 5u) == T(32));
-    assert(std::shl(T(1), 6) == T(64));
-    assert(std::shl(T(1), 6u) == T(64));
-    assert(std::shl(T(1), 7) == T(128));
-    assert(std::shl(T(1), 7u) == T(128));
+  return true;
+}
 
-    // Overlong shifts return 0
-    assert(std::shl(T(1), width) == T(0));
-    assert(std::shl(T(1), static_cast<U>(width)) == T(0));
-    assert(std::shl(T(1), width + 1) == T(0));
-    assert(std::shl(T(1), static_cast<U>(width + 1)) == T(0));
-    assert(std::shl(T(1), width + 100) == T(0));
-    assert(std::shl(T(1), static_cast<U>(width + 100)) == T(0));
-    assert(std::shl(T(1), std::numeric_limits<int>::max()) == T(0));
-    assert(std::shl(T(1), static_cast<U>(std::numeric_limits<int>::max())) == T(0));
+template <std::unsigned_integral T>
+constexpr bool test() {
+  constexpr int width = std::numeric_limits<T>::digits;
+  constexpr T highbit = T(1) << (width - 1);
 
-    assert(std::shl(T(~T(0)), width) == T(0));
-    assert(std::shl(T(~T(0)), static_cast<U>(width)) == T(0));
-    assert(std::shl(T(~T(0)), width + 5) == T(0));
-    assert(std::shl(T(~T(0)), static_cast<U>(width + 5)) == T(0));
+  ASSERT_SAME_TYPE(decltype(std::shl(T(), 0)), T);
+  ASSERT_NOEXCEPT(std::shl(T(), 0));
 
-    // Negative shift amounts shift right (bidirectional)
-    T highbit = highbit_u;
-    assert(std::shl(highbit, -1) == (highbit_u >> 1));
-    assert(std::shl(highbit, -2) == (highbit_u >> 2));
-    assert(std::shl(highbit, -3) == (highbit_u >> 3));
-    assert(std::shl(highbit, -4) == (highbit_u >> 4));
-    assert(std::shl(highbit, -5) == (highbit_u >> 5));
-    assert(std::shl(highbit, -6) == (highbit_u >> 6));
-    assert(std::shl(highbit, -7) == (highbit_u >> 7));
-    assert(std::shl(highbit, -(width - 1)) == T(1));
+  assert(std::shl(T(1), 0) == T(1));
+  assert(std::shl(T(1), 0u) == T(1));
+  assert(std::shl(T(1), 1) == T(2));
+  assert(std::shl(T(1), 1u) == T(2));
+  assert(std::shl(T(1), 2) == T(4));
+  assert(std::shl(T(1), 2u) == T(4));
+  assert(std::shl(T(1), 3) == T(8));
+  assert(std::shl(T(1), 3u) == T(8));
+  assert(std::shl(T(1), 4) == T(16));
+  assert(std::shl(T(1), 4u) == T(16));
+  assert(std::shl(T(1), 5) == T(32));
+  assert(std::shl(T(1), 5u) == T(32));
+  assert(std::shl(T(1), 6) == T(64));
+  assert(std::shl(T(1), 6u) == T(64));
+  assert(std::shl(T(1), 7) == T(128));
+  assert(std::shl(T(1), 7u) == T(128));
 
-    // Negative overlong shifts: 0 for unsigned
-    assert(std::shl(T(~T(0)), -width) == T(0));
-    assert(std::shl(T(~T(0)), -(width + 1)) == T(0));
-    assert(std::shl(T(1), std::numeric_limits<int>::min()) == T(0));
+  // Overlong shifts return 0
+  assert(std::shl(T(1), width) == T(0));
+  assert(std::shl(T(1), static_cast<T>(width)) == T(0));
+  assert(std::shl(T(1), width + 1) == T(0));
+  assert(std::shl(T(1), static_cast<T>(width + 1)) == T(0));
+  assert(std::shl(T(1), width + 100) == T(0));
+  assert(std::shl(T(1), static_cast<T>(width + 100)) == T(0));
+  assert(std::shl(T(1), std::numeric_limits<int>::max()) == T(0));
+  assert(std::shl(T(1), static_cast<T>(std::numeric_limits<int>::max())) == T(0));
 
-    if constexpr (width == 128) {
-      assert(std::shl(T(1), 64) == T(1) << 64);
-      assert(std::shl(T(1), 64u) == T(1) << 64);
-      assert(std::shl(T(1), 127) == T(1) << 127);
-      assert(std::shl(T(1), 127u) == T(1) << 127);
-      assert(std::shl(T(1), 128) == T(0));
-      assert(std::shl(T(1), 128u) == T(0));
-      assert(std::shl(T(1), 200) == T(0));
-      assert(std::shl(T(1), 200u) == T(0));
+  assert(std::shl(T(~T(0)), width) == T(0));
+  assert(std::shl(T(~T(0)), static_cast<T>(width)) == T(0));
+  assert(std::shl(T(~T(0)), width + 5) == T(0));
+  assert(std::shl(T(~T(0)), static_cast<T>(width + 5)) == T(0));
 
-      assert(std::shl(T(1) << 127, -1) == T(1) << 126);
-      assert(std::shl(T(1) << 127, -127) == T(1));
-      assert(std::shl(T(1) << 127, -128) == T(0));
-      assert(std::shl(T(1) << 127, -200) == T(0));
-    } else if constexpr (width == 256) {
-      assert(std::shl(T(1), 64) == T(1) << 64);
-      assert(std::shl(T(1), 64u) == T(1) << 64);
-      assert(std::shl(T(1), 127) == T(1) << 127);
-      assert(std::shl(T(1), 127u) == T(1) << 127);
-      assert(std::shl(T(1), 128) == T(1) << 128);
-      assert(std::shl(T(1), 128u) == T(1) << 128);
-      assert(std::shl(T(1), 200) == T(1) << 200);
-      assert(std::shl(T(1), 200u) == T(1) << 200);
+  // Negative shift amounts shift right (bidirectional)
+  assert(std::shl(highbit, -1) == (highbit >> 1));
+  assert(std::shl(highbit, -2) == (highbit >> 2));
+  assert(std::shl(highbit, -3) == (highbit >> 3));
+  assert(std::shl(highbit, -4) == (highbit >> 4));
+  assert(std::shl(highbit, -5) == (highbit >> 5));
+  assert(std::shl(highbit, -6) == (highbit >> 6));
+  assert(std::shl(highbit, -7) == (highbit >> 7));
+  assert(std::shl(highbit, -(width - 1)) == T(1));
 
-      assert(std::shl(T(1) << 127, -1) == T(1) << 126);
-      assert(std::shl(T(1) << 127, -127) == T(1));
-      assert(std::shl(T(1) << 127, -128) == T(0));
-      assert(std::shl(T(1) << 127, -200) == T(0));
-      assert(std::shl(T(1), 256) == T(0));
-      assert(std::shl(T(1), 256u) == T(0));
-      assert(std::shl(T(1), 300) == T(0));
-      assert(std::shl(T(1), 300u) == T(0));
-    }
+  // Negative overlong shifts: 0 for unsigned
+  assert(std::shl(T(~T(0)), -width) == T(0));
+  assert(std::shl(T(~T(0)), -(width + 1)) == T(0));
+  assert(std::shl(T(1), std::numeric_limits<int>::min()) == T(0));
+
+  if constexpr (width == 128) {
+    assert(std::shl(T(1), 64) == T(1) << 64);
+    assert(std::shl(T(1), 64u) == T(1) << 64);
+    assert(std::shl(T(1), 127) == T(1) << 127);
+    assert(std::shl(T(1), 127u) == T(1) << 127);
+    assert(std::shl(T(1), 128) == T(0));
+    assert(std::shl(T(1), 128u) == T(0));
+    assert(std::shl(T(1), 200) == T(0));
+    assert(std::shl(T(1), 200u) == T(0));
+
+    assert(std::shl(T(1) << 127, -1) == T(1) << 126);
+    assert(std::shl(T(1) << 127, -127) == T(1));
+    assert(std::shl(T(1) << 127, -128) == T(0));
+    assert(std::shl(T(1) << 127, -200) == T(0));
+  } else if constexpr (width == 256) {
+    assert(std::shl(T(1), 64) == T(1) << 64);
+    assert(std::shl(T(1), 64u) == T(1) << 64);
+    assert(std::shl(T(1), 127) == T(1) << 127);
+    assert(std::shl(T(1), 127u) == T(1) << 127);
+    assert(std::shl(T(1), 128) == T(1) << 128);
+    assert(std::shl(T(1), 128u) == T(1) << 128);
+    assert(std::shl(T(1), 200) == T(1) << 200);
+    assert(std::shl(T(1), 200u) == T(1) << 200);
+
+    assert(std::shl(T(1) << 127, -1) == T(1) << 126);
+    assert(std::shl(T(1) << 127, -127) == T(1));
+    assert(std::shl(T(1) << 127, -128) == T(0));
+    assert(std::shl(T(1) << 127, -200) == T(0));
+    assert(std::shl(T(1), 256) == T(0));
+    assert(std::shl(T(1), 256u) == T(0));
+    assert(std::shl(T(1), 300) == T(0));
+    assert(std::shl(T(1), 300u) == T(0));
   }
 
   return true;
