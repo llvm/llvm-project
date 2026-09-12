@@ -1496,7 +1496,7 @@ ASTContext &DeclContext::getParentASTContextSlow() const {
   }
 
   ASTContext &Context = cast<TranslationUnitDecl>(DC)->getASTContext();
-  CachedASTContext.store(&Context, std::memory_order_relaxed);
+  CachedASTContext = &Context;
   return Context;
 }
 
@@ -1585,7 +1585,7 @@ DeclContext *DeclContext::getPrimaryContextSlow() {
     break;
   }
 
-  CachedPrimaryContext.store(Primary, std::memory_order_relaxed);
+  CachedPrimaryContext = Primary;
   return Primary;
 }
 

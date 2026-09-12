@@ -33,7 +33,6 @@
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/VersionTuple.h"
 #include <algorithm>
-#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -2104,14 +2103,11 @@ protected:
 
   /// A primary context whose identity cannot change. Incomplete C++ records
   /// and contexts with mutable primary identities remain uncached.
-  /// Relaxed atomics permit cache population during concurrent read-only AST
-  /// traversal; they do not synchronize mutations to the AST itself.
-  mutable std::atomic<DeclContext *> CachedPrimaryContext = nullptr;
+  mutable DeclContext *CachedPrimaryContext = nullptr;
 
   /// The owning AST context, which remains the same for this context's
-  /// lifetime. Null until first queried; relaxed access has the same contract
-  /// as above.
-  mutable std::atomic<ASTContext *> CachedASTContext = nullptr;
+  /// lifetime. Null until first queried.
+  mutable ASTContext *CachedASTContext = nullptr;
 
   /// Build up a chain of declarations.
   ///
@@ -2165,7 +2161,7 @@ public:
   }
 
   ASTContext &getParentASTContext() const {
-    if (ASTContext *Cached = CachedASTContext.load(std::memory_order_relaxed))
+    if (ASTContext *Cached = CachedASTContext)
       return *Cached;
     return getParentASTContextSlow();
   }
@@ -2303,8 +2299,7 @@ public:
   /// "primary" DeclContext structure, which will contain the
   /// information needed to perform name lookup into this context.
   DeclContext *getPrimaryContext() {
-    if (DeclContext *Cached =
-            CachedPrimaryContext.load(std::memory_order_relaxed))
+    if (DeclContext *Cached = CachedPrimaryContext)
       return Cached;
     return getPrimaryContextSlow();
   }
