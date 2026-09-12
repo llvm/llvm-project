@@ -8,7 +8,7 @@ define void @inverse_icmp(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[UGT1_NOT:%.*]] = icmp ule i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[UGT1_NOT:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[UGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -24,7 +24,7 @@ define void @inverse_fcmp(double %x,double %y) {
 ; CHECK-SAME: double [[X:%.*]], double [[Y:%.*]]) {
 ; CHECK-NEXT:    [[OGT1:%.*]] = fcmp ogt double [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[OGT1]])
-; CHECK-NEXT:    [[OGT1_NOT:%.*]] = fcmp ule double [[X]], [[Y]]
+; CHECK-NEXT:    [[OGT1_NOT:%.*]] = xor i1 [[OGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[OGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
@@ -40,7 +40,7 @@ define void @inverse_icmp_swaped(i32 %x,i32 %y) {
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])
-; CHECK-NEXT:    [[UGT1_NOT:%.*]] = icmp uge i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[UGT1_NOT:%.*]] = xor i1 [[UGT1]], true
 ; CHECK-NEXT:    call void @use(i1 [[UGT1_NOT]])
 ; CHECK-NEXT:    ret void
 ;
