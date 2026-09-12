@@ -8,6 +8,7 @@
   define void @test-fence-stall() #0 { ret void }
   define void @test-tensorcnt-stall() #0 { ret void }
   define void @test-dscnt-stall() #0 { ret void }
+  define void @test-memory-pipeline-effective-stall() #0 { ret void }
 
   attributes #0 = { "amdgpu-waves-per-eu"="1,1" }
 ...
@@ -443,4 +444,32 @@ body: |
     early-clobber %19:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     early-clobber %20:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr %5:vreg_512_align2, %6:vreg_512_align2, 8, 0, %7.sub0:vreg_128_lo256_align2, %8:vgpr_32_lo256, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
     S_ENDPGM 0, amdgpu_allvgprs
+...
+
+---
+name: test-memory-pipeline-effective-stall
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; DEFAULT-LABEL: name: test-memory-pipeline-effective-stall
+    ; DEFAULT: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; DEFAULT-NEXT: undef [[S_LOAD_DWORD_IMM:%[0-9]+]].sub0:sgpr_128 = S_LOAD_DWORD_IMM [[DEF]], 0, 0
+    ; DEFAULT-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_LOAD_DWORD_IMM]].sub0, [[S_LOAD_DWORD_IMM]].sub0, implicit-def dead $scc
+    ; DEFAULT-NEXT: [[S_SUB_I32_:%[0-9]+]]:sreg_32 = S_SUB_I32 [[S_LOAD_DWORD_IMM]].sub0, [[S_LOAD_DWORD_IMM]].sub0, implicit-def dead $scc
+    ; DEFAULT-NEXT: ATOMIC_FENCE 4, 2, implicit [[S_LOAD_DWORD_IMM]]
+    ; DEFAULT-NEXT: S_ENDPGM 0, implicit [[S_ADD_I32_]], implicit [[S_SUB_I32_]]
+    ;
+    ; COEXEC-LABEL: name: test-memory-pipeline-effective-stall
+    ; COEXEC: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+    ; COEXEC-NEXT: undef [[S_LOAD_DWORD_IMM:%[0-9]+]].sub0:sgpr_128 = S_LOAD_DWORD_IMM [[DEF]], 0, 0
+    ; COEXEC-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_LOAD_DWORD_IMM]].sub0, [[S_LOAD_DWORD_IMM]].sub0, implicit-def dead $scc
+    ; COEXEC-NEXT: ATOMIC_FENCE 4, 2, implicit [[S_LOAD_DWORD_IMM]]
+    ; COEXEC-NEXT: [[S_SUB_I32_:%[0-9]+]]:sreg_32 = S_SUB_I32 [[S_LOAD_DWORD_IMM]].sub0, [[S_LOAD_DWORD_IMM]].sub0, implicit-def dead $scc
+    ; COEXEC-NEXT: S_ENDPGM 0, implicit [[S_ADD_I32_]], implicit [[S_SUB_I32_]]
+    %0:sreg_64 = IMPLICIT_DEF
+    undef %1.sub0:sgpr_128 = S_LOAD_DWORD_IMM %0, 0, 0
+    %2:sreg_32 = S_ADD_I32 %1.sub0, %1.sub0, implicit-def dead $scc
+    %3:sreg_32 = S_SUB_I32 %1.sub0, %1.sub0, implicit-def dead $scc
+    ATOMIC_FENCE 4, 2, implicit %1
+    S_ENDPGM 0, implicit %2, implicit %3
 ...
