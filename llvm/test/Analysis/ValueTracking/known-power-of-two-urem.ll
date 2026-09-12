@@ -261,7 +261,7 @@ define i64 @known_power_of_two_urem_loop_ashr(i64 %size, i64 %a) {
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[ADD:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[PHI]], -1
 ; CHECK-NEXT:    [[UREM:%.*]] = and i64 [[SIZE:%.*]], [[TMP0]]
-; CHECK-NEXT:    [[ADD]] = add nsw i64 [[SUM]], [[UREM]]
+; CHECK-NEXT:    [[ADD]] = add nuw nsw i64 [[SUM]], [[UREM]]
 ; CHECK-NEXT:    [[I]] = lshr i64 [[PHI]], [[A:%.*]]
 ; CHECK-NEXT:    [[ICMP_NOT:%.*]] = icmp eq i64 [[I]], 0
 ; CHECK-NEXT:    br i1 [[ICMP_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
