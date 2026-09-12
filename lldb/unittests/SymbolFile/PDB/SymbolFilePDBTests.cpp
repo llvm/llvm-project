@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/DebugInfo/PDB/IPDBTable.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolData.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/Support/FileSystem.h"
@@ -39,8 +40,80 @@
 #endif
 
 #include <algorithm>
+#include <initializer_list>
+#include <utility>
+#include <vector>
 
 using namespace lldb_private;
+
+namespace {
+
+class TestableSymbolFilePDB : public SymbolFilePDB {
+public:
+  using SymbolFilePDB::CalculateAbilitiesFromPDBTables;
+};
+
+class FakePDBTable : public llvm::pdb::IPDBTable {
+public:
+  FakePDBTable(llvm::pdb::PDB_TableType type, uint32_t item_count)
+      : m_type(type), m_item_count(item_count) {}
+
+  std::string getName() const override { return {}; }
+  uint32_t getItemCount() const override { return m_item_count; }
+  llvm::pdb::PDB_TableType getTableType() const override { return m_type; }
+
+private:
+  llvm::pdb::PDB_TableType m_type;
+  uint32_t m_item_count;
+};
+
+class FakePDBEnumTables : public llvm::pdb::IPDBEnumTables {
+public:
+  using Table = std::pair<llvm::pdb::PDB_TableType, uint32_t>;
+
+  FakePDBEnumTables(std::initializer_list<Table> tables) : m_tables(tables) {}
+
+  uint32_t getChildCount() const override { return m_tables.size(); }
+
+  std::unique_ptr<llvm::pdb::IPDBTable>
+  getChildAtIndex(uint32_t index) const override {
+    if (index >= m_tables.size())
+      return nullptr;
+    return std::make_unique<FakePDBTable>(m_tables[index].first,
+                                          m_tables[index].second);
+  }
+
+  std::unique_ptr<llvm::pdb::IPDBTable> getNext() override {
+    if (m_next_index >= m_tables.size())
+      return nullptr;
+    return getChildAtIndex(m_next_index++);
+  }
+
+  void reset() override { m_next_index = 0; }
+
+private:
+  std::vector<Table> m_tables;
+  uint32_t m_next_index = 0;
+};
+
+} // namespace
+
+TEST(SymbolFilePDBAbilitiesTest, LineTablesRequireCompileUnits) {
+  FakePDBEnumTables line_tables_without_symbols(
+      {{llvm::pdb::PDB_TableType::Symbols, 0},
+       {llvm::pdb::PDB_TableType::LineNumbers, 1}});
+  EXPECT_EQ(0u, TestableSymbolFilePDB::CalculateAbilitiesFromPDBTables(
+                    line_tables_without_symbols));
+
+  // Put line tables first to verify the result does not depend on DIA's table
+  // enumeration order.
+  FakePDBEnumTables line_tables_and_symbols(
+      {{llvm::pdb::PDB_TableType::LineNumbers, 1},
+       {llvm::pdb::PDB_TableType::Symbols, 1}});
+  EXPECT_EQ(SymbolFile::kAllAbilities,
+            TestableSymbolFilePDB::CalculateAbilitiesFromPDBTables(
+                line_tables_and_symbols));
+}
 
 class SymbolFilePDBTests : public testing::Test {
 public:
