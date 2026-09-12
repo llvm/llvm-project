@@ -1607,8 +1607,8 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   // generic AVX2 table. This must be checked before the generic AVX2 lookup.
   if (ST->hasAVX2() && ST->hasFastVectorFDIV()) {
     static const CostKindTblEntry AVX2FastVectorFDIVCostTable[] = {
-      { ISD::FDIV, MVT::v8f32,   {  7, 13, 1, 3 } }, // vdivps
-      { ISD::FDIV, MVT::v4f64,   { 14, 20, 1, 3 } }, // vdivpd
+      { ISD::FDIV, MVT::v8f32,   {  7, 13, 1, 1 } }, // vdivps
+      { ISD::FDIV, MVT::v4f64,   { 14, 20, 1, 1 } }, // vdivpd
     };
     if (const auto *Entry =
             CostTableLookup(AVX2FastVectorFDIVCostTable, ISD, LT.second))
