@@ -1804,7 +1804,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2) {
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
-  // atan2 with two non-NaN inputs is non-NaN and non-Inf.
+  // atan2 with two non-negative finite inputs is non-negative and finite.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %y:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1822,8 +1822,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcFinite, Known.getKnownFPClasses());
-  EXPECT_EQ(std::nullopt, Known.getSignBit());
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 // isAbsoluteValueULEOne: x - floor(x) is in [0, 1), so multiplying a known-

@@ -1406,6 +1406,14 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     FPClassTest InterestedY = InterestedClasses;
     FPClassTest InterestedX = InterestedClasses;
 
+    // We can rule out negative values if y cannot have a negative value.
+    if ((InterestedClasses & fcNegFinite) != fcNone)
+      InterestedY |= fcNegative;
+
+    // We can rule out positive values if y cannot have a positive value.
+    if ((InterestedClasses & fcPosFinite) != fcNone)
+      InterestedY |= fcPositive | fcNegSubnormal;
+
     // We can rule out zero and subnormal if x cannot have a positive value.
     if ((InterestedClasses & (fcZero | fcSubnormal)) != fcNone)
       InterestedX |= fcPositive | fcNegSubnormal;
