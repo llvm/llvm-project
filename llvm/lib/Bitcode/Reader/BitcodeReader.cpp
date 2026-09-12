@@ -5647,6 +5647,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
                            CurBB))
         return error("Invalid bitinsert record");
+      if (!BitInsertInst::isValidOperands(Base, Val, Offset))
+        return error("Invalid bitinsert operands");
       I = BitInsertInst::Create(Base, Val, Offset);
       ResTypeID = BaseTypeID;
       InstructionList.push_back(I);
@@ -5667,6 +5669,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           getValueTypePair(Record, OpNum, NextValueNo, Offset, OffsetTypeID,
                            CurBB))
         return error("Invalid bitextract record");
+      if (!BitExtractInst::isValidOperands(ResTy, Src, Offset))
+        return error("Invalid bitextract operands");
       I = BitExtractInst::Create(ResTy, Src, Offset);
       ResTypeID = TypeID;
       InstructionList.push_back(I);
