@@ -76,6 +76,8 @@ config.substitutions.append(("%clang_tidy_headers", clang_tidy_headers))
 # Plugins (loadable modules)
 if config.has_plugins and config.llvm_plugin_ext:
     config.available_features.add("plugins")
+if config.has_clang_tidy_plugin:
+    config.available_features.add("clang-plugin")
 
 # It is not realistically possible to account for all options that could
 # possibly be present in system and user configuration files, so disable
