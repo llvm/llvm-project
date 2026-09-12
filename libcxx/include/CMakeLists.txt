@@ -232,8 +232,12 @@ set(files
   __atomic/to_gcc_order.h
   __bit/bit_cast.h
   __bit/bit_ceil.h
+  __bit/bit_compress.h
+  __bit/bit_expand.h
   __bit/bit_floor.h
   __bit/bit_log2.h
+  __bit/bit_repeat.h
+  __bit/bit_reverse.h
   __bit/bit_width.h
   __bit/blsr.h
   __bit/byteswap.h
