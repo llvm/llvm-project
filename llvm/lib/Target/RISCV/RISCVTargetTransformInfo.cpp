@@ -1925,6 +1925,12 @@ InstructionCost RISCVTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   std::pair<InstructionCost, MVT> SrcLT = getTypeLegalizationCost(Src);
   std::pair<InstructionCost, MVT> DstLT = getTypeLegalizationCost(Dst);
 
+  // Currently VLOptimizer cannot inference the VL properly when vector splits.
+  // TODO: Remove this constraint when VLOptimizer can optimize this.
+  if (isa<ScalableVectorType>(Dst) && DstLT.first > 1 &&
+      is_contained({ISD::SIGN_EXTEND, ISD::ZERO_EXTEND}, ISD))
+    return InstructionCost::getInvalid();
+
   // Handle i1 source and dest cases *before* calling logic in BasicTTI.
   // The shared implementation doesn't model vector widening during legalization
   // and instead assumes scalarization.  In order to scalarize an <N x i1>
