@@ -63,6 +63,11 @@ private:
 
   void reserveRegisterTuples(BitVector &, MCRegister Reg) const;
 
+  /// True if assigning Reg would fit in the current occupancy VGPR budget.
+  bool isRegWithinOccupancyBudget(MCPhysReg Reg, unsigned NumVGPRs,
+                                  unsigned NumAGPRs,
+                                  unsigned MaxVGPRsForCurrentOccupancy) const;
+
 public:
   SIRegisterInfo(const GCNSubtarget &ST);
 
@@ -376,7 +381,8 @@ public:
   void filterAndSortForAntiHintedRegs(
       Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
       const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-      const LiveRegMatrix *Matrix = nullptr) const override;
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const override;
 
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
