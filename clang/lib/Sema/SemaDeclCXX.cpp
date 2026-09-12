@@ -872,10 +872,14 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
              : diag::err_decomp_decl_type)
         << R;
 
-    // In most cases, there's no actual problem with an explicitly-specified
-    // type, but a function type won't work here, and ActOnVariableDeclarator
-    // shouldn't be called for such a type.
-    if (R->isFunctionType())
+    // In most cases we can recover from an explicitly-specified type and go on
+    // to diagnose the bindings. That doesn't work for a function type, for
+    // which ActOnVariableDeclarator shouldn't be called, nor for an array
+    // type: initialization of a structured binding from an array assumes the
+    // declared type was deduced from the initializer ([dcl.struct.bind]p1),
+    // which is not the case here. Mark those invalid so that no initialization
+    // is performed.
+    if (R->isFunctionType() || R->isArrayType())
       D.setInvalidType();
   }
 
