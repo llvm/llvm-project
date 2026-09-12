@@ -23,3 +23,6 @@ __global__ void kernel_scalar(int a) {}
 // CIR-NOT: cc(spir_kernel)
 // LLVM: define{{.*}} void @_Z9device_fni
 __device__ void device_fn(int a) {}
+
+// LLVM: !opencl.ocl.version = !{[[OCL:![0-9]+]]}
+// LLVM: [[OCL]] = !{i32 2, i32 0}
