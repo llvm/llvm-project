@@ -39,6 +39,7 @@ class DIExpression;
 class LiveRegMatrix;
 class MachineFunction;
 class MachineInstr;
+class RegisterClassInfo;
 class RegScavenger;
 class VirtRegMap;
 class LiveIntervals;
@@ -861,13 +862,15 @@ public:
       Register VirtReg, ArrayRef<MCPhysReg> Order,
       SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
       const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-      const LiveRegMatrix *Matrix = nullptr) const;
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
 
   /// Custom reordering of the allocation order.
   virtual void filterAndSortForAntiHintedRegs(
       Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
       const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-      const LiveRegMatrix *Matrix = nullptr) const;
+      const LiveRegMatrix *Matrix = nullptr,
+      const RegisterClassInfo *RegClassInfo = nullptr) const;
 
   /// Allow the target to reverse allocation order of local live ranges. This
   /// will generally allocate shorter local live ranges first. For targets with
