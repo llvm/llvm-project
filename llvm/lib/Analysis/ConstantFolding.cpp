@@ -1188,7 +1188,7 @@ Constant *ConstantFoldInstOperandsImpl(const Value *InstOrCE, unsigned Opcode,
   case Instruction::Call:
     if (auto *F = dyn_cast<Function>(Ops.back())) {
       const auto *Call = cast<CallBase>(InstOrCE);
-      if (canConstantFoldCallTo(Call, F))
+      if (canConstantFoldCallTo(Call, F, TLI))
         return ConstantFoldCall(Call, F, Ops.slice(0, Ops.size() - 1), TLI,
                                 AllowNonDeterministic);
     }
@@ -2090,7 +2090,8 @@ static bool anyTypeContainsFP(Type *RetTy, ArrayRef<Value *> Ops) {
          });
 }
 
-bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
+bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
+                                 const TargetLibraryInfo *TLI) {
   if (Call->isNoBuiltin())
     return false;
   if (Call->getFunctionType() != F->getFunctionType())
@@ -2109,89 +2110,106 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   if (F->getIntrinsicID() != Intrinsic::not_intrinsic)
     return canConstantFoldIntrinsic(F->getIntrinsicID(), Call->isStrictFP());
 
-  if (!F->hasName() || Call->isStrictFP())
+  if (!TLI || Call->isStrictFP())
     return false;
 
-  // In these cases, the check of the length is required.  We don't want to
-  // return true for a name like "cos\0blah" which strcmp would return equal to
-  // "cos", but has length 8.
-  StringRef Name = F->getName();
-  switch (Name[0]) {
+  LibFunc Func = TLI->getLibFunc(*F);
+  if (Func == NotLibFunc)
+    return false;
+
+  switch (Func) {
+  case LibFunc_acos:
+  case LibFunc_acosf:
+  case LibFunc_acos_finite:
+  case LibFunc_acosf_finite:
+  case LibFunc_asin:
+  case LibFunc_asinf:
+  case LibFunc_asin_finite:
+  case LibFunc_asinf_finite:
+  case LibFunc_atan:
+  case LibFunc_atanf:
+  case LibFunc_atan2:
+  case LibFunc_atan2f:
+  case LibFunc_atan2_finite:
+  case LibFunc_atan2f_finite:
+  case LibFunc_ceil:
+  case LibFunc_ceilf:
+  case LibFunc_cosh:
+  case LibFunc_coshf:
+  case LibFunc_cosh_finite:
+  case LibFunc_coshf_finite:
+  case LibFunc_cos:
+  case LibFunc_cosf:
+  case LibFunc_erf:
+  case LibFunc_erff:
+  case LibFunc_exp:
+  case LibFunc_expf:
+  case LibFunc_exp_finite:
+  case LibFunc_expf_finite:
+  case LibFunc_exp2:
+  case LibFunc_exp2f:
+  case LibFunc_exp2_finite:
+  case LibFunc_exp2f_finite:
+  case LibFunc_fabs:
+  case LibFunc_fabsf:
+  case LibFunc_floor:
+  case LibFunc_floorf:
+  case LibFunc_fmod:
+  case LibFunc_fmodf:
+  case LibFunc_ilogb:
+  case LibFunc_ilogbf:
+  case LibFunc_log:
+  case LibFunc_logf:
+  case LibFunc_log_finite:
+  case LibFunc_logf_finite:
+  case LibFunc_logb:
+  case LibFunc_logbf:
+  case LibFunc_logl:
+  case LibFunc_log2:
+  case LibFunc_log2f:
+  case LibFunc_log2_finite:
+  case LibFunc_log2f_finite:
+  case LibFunc_log10:
+  case LibFunc_log10f:
+  case LibFunc_log10_finite:
+  case LibFunc_log10f_finite:
+  case LibFunc_log1p:
+  case LibFunc_log1pf:
+  case LibFunc_nearbyint:
+  case LibFunc_nearbyintf:
+  case LibFunc_nextafter:
+  case LibFunc_nextafterf:
+  case LibFunc_nexttoward:
+  case LibFunc_nexttowardf:
+  case LibFunc_pow:
+  case LibFunc_powf:
+  case LibFunc_pow_finite:
+  case LibFunc_powf_finite:
+  case LibFunc_remainder:
+  case LibFunc_remainderf:
+  case LibFunc_rint:
+  case LibFunc_rintf:
+  case LibFunc_round:
+  case LibFunc_roundf:
+  case LibFunc_roundeven:
+  case LibFunc_roundevenf:
+  case LibFunc_sin:
+  case LibFunc_sinf:
+  case LibFunc_sinh:
+  case LibFunc_sinhf:
+  case LibFunc_sinh_finite:
+  case LibFunc_sinhf_finite:
+  case LibFunc_sqrt:
+  case LibFunc_sqrtf:
+  case LibFunc_tan:
+  case LibFunc_tanf:
+  case LibFunc_tanh:
+  case LibFunc_tanhf:
+  case LibFunc_trunc:
+  case LibFunc_truncf:
+    return true;
   default:
     return false;
-    // clang-format off
-  case 'a':
-    return Name == "acos" || Name == "acosf" ||
-           Name == "asin" || Name == "asinf" ||
-           Name == "atan" || Name == "atanf" ||
-           Name == "atan2" || Name == "atan2f";
-  case 'c':
-    return Name == "ceil" || Name == "ceilf" ||
-           Name == "cos" || Name == "cosf" ||
-           Name == "cosh" || Name == "coshf";
-  case 'e':
-    return Name == "exp" || Name == "expf" || Name == "exp2" ||
-           Name == "exp2f" || Name == "erf" || Name == "erff";
-  case 'f':
-    return Name == "fabs" || Name == "fabsf" ||
-           Name == "floor" || Name == "floorf" ||
-           Name == "fmod" || Name == "fmodf";
-  case 'i':
-    return Name == "ilogb" || Name == "ilogbf";
-  case 'l':
-    return Name == "log" || Name == "logf" || Name == "logl" ||
-           Name == "log2" || Name == "log2f" || Name == "log10" ||
-           Name == "log10f" || Name == "logb" || Name == "logbf" ||
-           Name == "log1p" || Name == "log1pf";
-  case 'n':
-    return Name == "nearbyint" || Name == "nearbyintf" || Name == "nextafter" ||
-           Name == "nextafterf" || Name == "nexttoward" ||
-           Name == "nexttowardf";
-  case 'p':
-    return Name == "pow" || Name == "powf";
-  case 'r':
-    return Name == "remainder" || Name == "remainderf" ||
-           Name == "rint" || Name == "rintf" ||
-           Name == "round" || Name == "roundf" ||
-           Name == "roundeven" || Name == "roundevenf";
-  case 's':
-    return Name == "sin" || Name == "sinf" ||
-           Name == "sinh" || Name == "sinhf" ||
-           Name == "sqrt" || Name == "sqrtf";
-  case 't':
-    return Name == "tan" || Name == "tanf" ||
-           Name == "tanh" || Name == "tanhf" ||
-           Name == "trunc" || Name == "truncf";
-  case '_':
-    // Check for various function names that get used for the math functions
-    // when the header files are preprocessed with the macro
-    // __FINITE_MATH_ONLY__ enabled.
-    // The '12' here is the length of the shortest name that can match.
-    // We need to check the size before looking at Name[1] and Name[2]
-    // so we may as well check a limit that will eliminate mismatches.
-    if (Name.size() < 12 || Name[1] != '_')
-      return false;
-    switch (Name[2]) {
-    default:
-      return false;
-    case 'a':
-      return Name == "__acos_finite" || Name == "__acosf_finite" ||
-             Name == "__asin_finite" || Name == "__asinf_finite" ||
-             Name == "__atan2_finite" || Name == "__atan2f_finite";
-    case 'c':
-      return Name == "__cosh_finite" || Name == "__coshf_finite";
-    case 'e':
-      return Name == "__exp_finite" || Name == "__expf_finite" ||
-             Name == "__exp2_finite" || Name == "__exp2f_finite";
-    case 'l':
-      return Name == "__log_finite" || Name == "__logf_finite" ||
-             Name == "__log10_finite" || Name == "__log10f_finite";
-    case 'p':
-      return Name == "__pow_finite" || Name == "__powf_finite";
-    case 's':
-      return Name == "__sinh_finite" || Name == "__sinhf_finite";
-    }
-    // clang-format on
   }
 }
 

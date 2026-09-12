@@ -10,7 +10,7 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerDivisibilityAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/DialectRegistry.h"

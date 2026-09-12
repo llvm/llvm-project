@@ -1236,18 +1236,16 @@ Instruction *InstCombinerImpl::visitTrunc(TruncInst &Trunc) {
       APInt Threshold = APInt(C->getType()->getScalarSizeInBits(), DestWidth);
       if (match(C, m_SpecificInt_ICMP(ICmpInst::ICMP_ULT, Threshold))) {
         // If neither the wide shift nor the truncate wrap, propagate the wrap
-        // flags on the new truncate.
+        // flags on the new truncate and shift.
         auto *WideShl = cast<OverflowingBinaryOperator>(Src);
         bool NUW = Trunc.hasNoUnsignedWrap() && WideShl->hasNoUnsignedWrap();
         bool NSW = Trunc.hasNoSignedWrap() && WideShl->hasNoSignedWrap();
         Value *NewTrunc = Builder.CreateTrunc(A, DestTy, A->getName() + ".tr",
                                               /*IsNUW=*/NUW, /*IsNSW=*/NSW);
-        // The original flags from the truncate can be propagated directly to
-        // the shift.
         auto *NewShl = BinaryOperator::Create(
             Instruction::Shl, NewTrunc, ConstantExpr::getTrunc(C, DestTy));
-        NewShl->setHasNoUnsignedWrap(Trunc.hasNoUnsignedWrap());
-        NewShl->setHasNoSignedWrap(Trunc.hasNoSignedWrap());
+        NewShl->setHasNoUnsignedWrap(NUW);
+        NewShl->setHasNoSignedWrap(NSW);
         return NewShl;
       }
     }

@@ -20,8 +20,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace strftime_core {
 
-template <printf_core::WriteMode write_mode>
-ErrorOr<size_t> strftime_main(printf_core::Writer<write_mode> *writer,
+template <printf_core::OverflowMode overflow_mode>
+ErrorOr<size_t> strftime_main(printf_core::Writer<overflow_mode> *writer,
                               const char *__restrict str, const tm *timeptr) {
   Parser parser(str);
   int result = 0;
