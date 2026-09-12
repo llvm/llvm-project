@@ -3,8 +3,10 @@
 // Test that the reduction recipes are correctly inlined when attached to a
 // parallel construct without loop. Verify init and combine materialize in the region.
 // CHECK-LABEL: func.func @par_reduction_clause_
-// CHECK:       acc.parallel {
-// CHECK:       [[PRIVATE:%.*]] = acc.reduction_init {{.*}} <add>
+// CHECK:       [[HOST:%.*]] = fir.declare
+// CHECK:       [[MAPPED:%.*]] = acc.copyin varPtr([[HOST]] : !fir.ref<f64>) dataClause(acc_reduction) implicit(true) name("tmp")
+// CHECK:       acc.parallel dataOperands([[MAPPED]] : !fir.ref<f64>) {
+// CHECK:       [[PRIVATE:%.*]] = acc.reduction_init [[MAPPED]] <add>
 // CHECK-NEXT:  [[ZERO:%.*]] = arith.constant 0.000000e+00 : f64
 // CHECK-NEXT:  [[ALLOCA:%.*]] = fir.alloca f64
 // CHECK-NEXT:  {{.*}} = fir.declare [[ALLOCA]] {{.*}}acc.reduction.init
@@ -13,12 +15,13 @@
 // CHECK:       } {{.*}}acc.var_name = #acc.var_name<"tmp">
 // CHECK:       fir.load [[PRIVATE]]
 // CHECK:       fir.store {{.*}} to [[PRIVATE]]
-// CHECK:       acc.reduction_combine_region [[PRIVATE]] into [[REDUCVAR:%.*]] :
-// CHECK:       [[LOADVAR:%.*]] = fir.load [[REDUCVAR]]
+// CHECK:       acc.reduction_combine_region [[PRIVATE]] into [[MAPPED]] :
+// CHECK:       [[LOADVAR:%.*]] = fir.load [[MAPPED]]
 // CHECK-NEXT:  [[LOADPRIV:%.*]] = fir.load [[PRIVATE]]
 // CHECK-NEXT:  [[COMBINE:%.*]] = arith.addf [[LOADVAR]], [[LOADPRIV]]
-// CHECK-NEXT:  fir.store [[COMBINE]] to [[REDUCVAR]]
+// CHECK-NEXT:  fir.store [[COMBINE]] to [[MAPPED]]
 // CHECK:       acc.yield
+// CHECK:       acc.copyout accPtr([[MAPPED]] : !fir.ref<f64>) to varPtr([[HOST]] : !fir.ref<f64>) dataClause(acc_reduction) implicit(true) name("tmp")
 
 acc.reduction.recipe @reduction_add_ref_f64 : !fir.ref<f64> reduction_operator <add> init {
 ^bb0(%arg0: !fir.ref<f64>):

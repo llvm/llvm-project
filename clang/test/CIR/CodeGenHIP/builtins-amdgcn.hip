@@ -348,6 +348,15 @@ __device__ void test_class_f64(bool* out, double a, int b) {
   *out = __builtin_amdgcn_class(a, b);
 }
 
+// CIR-LABEL: @_Z9test_lerpPjjjj
+// CIR: cir.call_llvm_intrinsic "amdgcn.lerp" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
+// LLVM: define{{.*}} void @_Z9test_lerpPjjjj
+// LLVM: call{{.*}} i32 @llvm.amdgcn.lerp(i32 %{{.+}}, i32 %{{.+}}, i32 %{{.+}})
+__device__ void test_lerp(unsigned int* out, unsigned int src0, unsigned int src1,
+                          unsigned int src2) {
+  *out = __builtin_amdgcn_lerp(src0, src1, src2);
+}
+
 // CIR-LABEL: @_Z9test_ubfePjjjj
 // CIR: cir.call_llvm_intrinsic "amdgcn.ubfe" {{.*}} : (!u32i, !u32i, !u32i) -> !u32i
 // LLVM: define{{.*}} void @_Z9test_ubfePjjjj
