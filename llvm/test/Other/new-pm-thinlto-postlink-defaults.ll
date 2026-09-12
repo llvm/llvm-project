@@ -26,10 +26,15 @@
 ; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager -debug-info-for-profiling \
 ; RUN:     -passes='thinlto<O2>' -S  %s 2>&1 \
 ; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O2,CHECK-O23,CHECK-POSTLINK-O,%llvmcheckext
+; RUN: opt -disable-verify -verify-analysis-invalidation=0 -eagerly-invalidate-analyses=0 -debug-pass-manager \
+; RUN:     -passes='thinlto<O1>' -S %s -passes-ep-thin-link-time-optimization-early=no-op-module \
+; RUN:     -passes-ep-thin-link-time-optimization-last=no-op-module 2>&1 \
+; RUN:     | FileCheck %s --check-prefixes=CHECK-O,CHECK-O1,CHECK-POSTLINK-O,%llvmcheckext,CHECK-EP-THINLTO-EARLY,CHECK-EP-THINLTO-LAST
 
 ; Suppress FileCheck --allow-unused-prefixes=false diagnostics.
 ; CHECK-NOEXT: {{^}}
 
+; CHECK-EP-THINLTO-EARLY: Running pass: NoOpModulePass
 ; CHECK-EP-PIPELINE-START: Running pass: NoOpModulePass
 ; CHECK-DIS: Running analysis: InnerAnalysisManagerProxy
 ; CHECK-DIS-NEXT: Running pass: AddDiscriminatorsPass
@@ -209,6 +214,7 @@
 ; CHECK-EP-OPT-EARLY-NEXT: Running pass: NoOpModulePass
 ; CHECK-EP-OPT-LAST-NEXT: Running pass: NoOpModulePass
 ; CHECK-POSTLINK-O-NEXT: Running pass: LowerCommentStringPass
+; CHECK-EP-THINLTO-LAST-NEXT: Running pass: NoOpModulePass
 ; CHECK-O-NEXT:          Running pass: AnnotationRemarksPass on foo
 ; CHECK-O-NEXT: Running pass: PrintModulePass
 

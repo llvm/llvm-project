@@ -236,11 +236,11 @@ programs:
 * OpenACC/OpenMP offload programs may behave incorrectly with regards
   to the device data environment, due to the fact that the original
   array and the temporary may have different presence status on the device.
-* ``IS_CONTIGUOUS`` intrinsic may return ``TRUE`` with the array repacking
-  enabled, whereas if would return ``FALSE`` with the repacking disabled.
-* The result of ``LOC`` intrinsic applied to an actual argument associated
+* `IS_CONTIGUOUS` intrinsic may return `TRUE` with the array repacking
+  enabled, whereas if would return `FALSE` with the repacking disabled.
+* The result of `LOC` intrinsic applied to an actual argument associated
   with a non-contiguous assumed shape dummy array, may be different
-  from the result of ``LOC`` applied to the dummy array.}]>;
+  from the result of `LOC` applied to the dummy array.}]>;
 
 def frepack_arrays_contiguity_EQ
     : Joined<["-"], "frepack-arrays-contiguity=">,
@@ -295,10 +295,10 @@ def relaxed_c_loc : Flag<["-"], "frelaxed-c-loc-checks">, Group<f_Group>,
   Visibility<[FlangOption, FC1Option]>,
   HelpText<"Allow a data object or function pointer as the C_LOC() argument">,
   DocBrief<[{
-    Allow a data object or function pointer as the C_LOC() argument
-    (not just pointers/targets). The compiler will not reason about aliases
-    created through non-target non-pointer arguments and code generated
-    using such aliases may exhibit unexpected behavior.}]>;
+Allow a data object or function pointer as the C_LOC() argument
+(not just pointers/targets). The compiler will not reason about aliases
+created through non-target non-pointer arguments and code generated
+using such aliases may exhibit unexpected behavior.}]>;
 
 def fhermetic_module_files : Flag<["-"], "fhermetic-module-files">, Group<f_Group>,
   HelpText<"Emit hermetic module files (no nested USE association)">;
@@ -326,12 +326,12 @@ defm fp_sum_reassociation
                   "Disable reassociation within individual REAL and COMPLEX "
                   "sum expressions">>,
       DocBrief<[{
-        Enable Fortran-standard compliant reassociation within individual
-        ``REAL`` and ``COMPLEX`` sum expressions. This can improve optimization
-        opportunities and may change exact floating-point results while
-        preserving standard-conforming Fortran semantics. It is enabled by
-        default at all optimization levels.
-      }]>;
+Enable Fortran-standard compliant reassociation within individual
+`REAL` and `COMPLEX` sum expressions. This can improve optimization
+opportunities and may change exact floating-point results while
+preserving standard-conforming Fortran semantics. It is enabled by
+default at all optimization levels.
+}]>;
 
 def freal_sum_reassociation : Flag<["-"], "freal-sum-reassociation">,
   Flags<[HelpHidden]>, Alias<ffp_sum_reassociation>;
@@ -340,61 +340,52 @@ def fno_real_sum_reassociation : Flag<["-"], "fno-real-sum-reassociation">,
 
 def ffpe_trap_EQ : Joined<["-"], "ffpe-trap=">, Group<f_Group>,
   HelpText<"Set the initial floating-point exception halting mode for the main program">,
-  DocBrief<[{The ``-ffpe-trap=[list]`` option sets the initial floating-point
+  DocBrief<[{The `-ffpe-trap=[list]` option sets the initial floating-point
 exception halting mode for the main program unit. This is the halting mode in
 effect when the main program begins execution; the program may subsequently
-change it (for example, with ``IEEE_SET_HALTING_MODE``). ``[list]`` is a
-(possibly empty) comma-separated list of ``none`` or the following exceptions:
-``invalid``, ``zero``, ``overflow``, ``underflow``, ``inexact``, and
-``denormal``. The first five exceptions correspond to the Fortran 2023 (17.6)
-``IEEE_FLAG_TYPE`` values ``IEEE_INVALID``, ``IEEE_DIVIDE_BY_ZERO``,
-``IEEE_OVERFLOW``, ``IEEE_UNDERFLOW``, and ``IEEE_INEXACT``, whereas
-``denormal`` is a non-standard GFortran-compatible extension that halts on the
-hardware denormal (subnormal) operand exception. The value ``none`` may appear
+change it (for example, with `IEEE_SET_HALTING_MODE`). `[list]` is a
+(possibly empty) comma-separated list of `none` or the following exceptions:
+`invalid`, `zero`, `overflow`, `underflow`, `inexact`, and
+`denormal`. The first five exceptions correspond to the Fortran 2023 (17.6)
+`IEEE_FLAG_TYPE` values `IEEE_INVALID`, `IEEE_DIVIDE_BY_ZERO`,
+`IEEE_OVERFLOW`, `IEEE_UNDERFLOW`, and `IEEE_INEXACT`, whereas
+`denormal` is a non-standard GFortran-compatible extension that halts on the
+hardware denormal (subnormal) operand exception. The value `none` may appear
 anywhere in the list; it disables halting and clears any preceding exceptions in
 the list, while exceptions following it are still effective (e.g.,
-``invalid,none,zero`` enables halting on ``zero`` only). In the absence of this
+`invalid,none,zero` enables halting on `zero` only). In the absence of this
 option, or when an empty list is passed to it, the program runs with traps
-disabled (equivalent to passing ``none``). Multiple occurrences of this option
+disabled (equivalent to passing `none`). Multiple occurrences of this option
 are allowed, in which case only the last one takes effect.
 
-Run-time halting relies on glibc's ``feenableexcept`` (exposed as
-``IEEE_SUPPORT_HALTING``). The compile-time warning is a conservative
+Run-time halting relies on glibc's `feenableexcept` (exposed as
+`IEEE_SUPPORT_HALTING`). The compile-time warning is a conservative
 approximation from the target triple; the runtime is the definitive authority on
 which exceptions can be trapped.
 
 The table below summarizes the halting behavior for different system
-configurations. The C standard library is ``glibc`` (in practice Linux) or
-``non-glibc``; "Standard Exception" covers ``invalid``, ``zero``, ``overflow``,
-``underflow``, and ``inexact``. In the Standard Exception and Denormal columns,
+configurations. The C standard library is `glibc` (in practice Linux) or
+`non-glibc`; "Standard Exception" covers `invalid`, `zero`, `overflow`,
+`underflow`, and `inexact`. In the Standard Exception and Denormal columns,
 each cell names the compiler action followed by the run-time action:
-``compiler accepts`` = the compiler forwards the request without a warning,
-``compiler warns`` = the compiler emits a warning, ``runtime halts`` = the
-exception is trapped at run time, and ``runtime ignores`` = the request is
+`compiler accepts` = the compiler forwards the request without a warning,
+`compiler warns` = the compiler emits a warning, `runtime halts` = the
+exception is trapped at run time, and `runtime ignores` = the request is
 silently ignored at run time.
 
-+--------------+--------------------+--------------------+-------------------+
-| Architecture | C Standard Library | Standard Exception | Denormal          |
-+==============+====================+====================+===================+
-| x86          | glibc              | compiler accepts,  | compiler accepts, |
-|              |                    | runtime halts      | runtime halts     |
-+--------------+--------------------+--------------------+-------------------+
-| non-x86      | glibc              | compiler accepts,  | compiler warns,   |
-|              |                    | runtime halts      | runtime ignores   |
-+--------------+--------------------+--------------------+-------------------+
-| x86          | non-glibc          | compiler accepts,  | compiler accepts, |
-|              |                    | runtime ignores    | runtime ignores   |
-+--------------+--------------------+--------------------+-------------------+
-| non-x86      | non-glibc          | compiler warns,    | compiler warns,   |
-|              |                    | runtime ignores    | runtime ignores   |
-+--------------+--------------------+--------------------+-------------------+
+| Architecture | C Standard Library | Standard Exception                       | Denormal                              |
+|--------------|--------------------|------------------------------------------|---------------------------------------|
+| x86          | glibc              | `compiler accepts`, `runtime halts`      | `compiler accepts`, `runtime halts`   |
+| non-x86      | glibc              | `compiler accepts`, `runtime halts`      | `compiler warns`, `runtime ignores`   |
+| x86          | non-glibc          | `compiler accepts`, `runtime ignores`    | `compiler accepts`, `runtime ignores` |
+| non-x86      | non-glibc          | `compiler warns`, `runtime ignores`      | `compiler warns`, `runtime ignores`   |
 
 Notes:
 
 * On non-x86 targets the standard exceptions halt only where the target's glibc
-  ``feenableexcept`` supports them; the runtime probes each at start-up (via
-  ``IEEE_SUPPORT_HALTING``) and enables only those it can.
-* ``denormal`` is honored only on x86_64; on 32-bit x86 it is silently ignored
+  `feenableexcept` supports them; the runtime probes each at start-up (via
+  `IEEE_SUPPORT_HALTING`) and enables only those it can.
+* `denormal` is honored only on x86_64; on 32-bit x86 it is silently ignored
   (no warning).}]>;
 
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",

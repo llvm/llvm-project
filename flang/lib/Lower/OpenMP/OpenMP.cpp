@@ -417,12 +417,12 @@ public:
 protected:
   /// Initializes the visitor and returns the set of initial directives of
   /// interest to be matched the beginning of the pattern.
-  virtual llvm::omp::DirectiveSet initialize() = 0;
+  virtual llvm::omp::Directives initialize() = 0;
 
   /// Visits a single directive and, based on it, returns the set of other
   /// directives of interest that would be part of the pattern if nested inside.
-  virtual llvm::omp::DirectiveSet visitDirective(lower::pft::Evaluation &eval,
-                                                 llvm::omp::Directive dir) = 0;
+  virtual llvm::omp::Directives visitDirective(lower::pft::Evaluation &eval,
+                                               llvm::omp::Directive dir) = 0;
 
   /// Obtain the list of clauses of the given OpenMP block or loop construct
   /// evaluation. If it's not an OpenMP construct, no modifications are made to
@@ -479,14 +479,14 @@ private:
       return;
 
     const auto &ompEval{eval.get<parser::OpenMPConstruct>()};
-    llvm::omp::DirectiveSet visitNested{
+    llvm::omp::Directives visitNested{
         visitDirective(eval, parser::omp::GetOmpDirectiveName(ompEval).v)};
 
     if (visitNested.none())
       return;
 
     if (lower::pft::Evaluation *nestedEval = extractOnlyOmpNestedEval(eval)) {
-      llvm::omp::DirectiveSet prevDirs{directivesOfInterest};
+      llvm::omp::Directives prevDirs{directivesOfInterest};
       directivesOfInterest = visitNested;
       visitEval(*nestedEval);
       directivesOfInterest = prevDirs;
@@ -497,7 +497,7 @@ protected:
   semantics::SemanticsContext &semaCtx;
 
 private:
-  llvm::omp::DirectiveSet directivesOfInterest;
+  llvm::omp::Directives directivesOfInterest;
 };
 
 /// Helper pattern to navigate target SPMD.
@@ -507,12 +507,12 @@ public:
   virtual ~TargetSPMDVisitor() = default;
 
 protected:
-  virtual llvm::omp::DirectiveSet initialize() override {
+  virtual llvm::omp::Directives initialize() override {
     teamsVisited = false;
     return llvm::omp::allTargetSet;
   }
 
-  virtual llvm::omp::DirectiveSet
+  virtual llvm::omp::Directives
   visitDirective(lower::pft::Evaluation &eval,
                  llvm::omp::Directive dir) override {
     using namespace llvm::omp;
@@ -586,7 +586,7 @@ public:
   virtual ~HostEvalVisitor() = default;
 
 protected:
-  virtual llvm::omp::DirectiveSet
+  virtual llvm::omp::Directives
   visitDirective(lower::pft::Evaluation &eval,
                  llvm::omp::Directive dir) override {
     using namespace llvm::omp;
@@ -712,7 +712,7 @@ public:
   }
 
 protected:
-  virtual llvm::omp::DirectiveSet
+  virtual llvm::omp::Directives
   visitDirective(lower::pft::Evaluation &eval,
                  llvm::omp::Directive dir) override {
     using namespace llvm::omp;
@@ -2746,6 +2746,7 @@ static void genTaskClauses(lower::AbstractConverter &converter,
   cp.processInReduction(loc, clauseOps, inReductionObjects);
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
+  cp.processThreadset(clauseOps);
   cp.processUntied(clauseOps);
   cp.processDetach(clauseOps);
 }
@@ -2779,6 +2780,7 @@ static void genTaskloopClauses(
   cp.processNumTasks(stmtCtx, clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processReduction(loc, clauseOps, reductionObjects);
+  cp.processThreadset(clauseOps);
   cp.processUntied(clauseOps);
 }
 
@@ -4294,19 +4296,18 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
           if (!mapperIdName.empty()) {
             bool isPointer = semantics::IsPointer(sym);
-            bool isAllocatable = semantics::IsAllocatable(sym);
             bool hasDefaultMapper =
                 converter.getModuleOp().lookupSymbol(mapperIdName);
             // Avoid attaching implicit default mappers to pointer captures.
             // For large pointer-based derived aggregates this can over-map
             // nested payloads and conflict with explicit enter/exit maps.
             //
-            // For an allocatable capture, only synthesize an implicit default
-            // mapper when the type requires one; a flat record does not.
+            // For other captures, make sure we require a declare mapper to
+            // map the underlying record type, this is primarily for cases
+            // where the record type contains an allocatable.
             if (!isPointer &&
                 (hasDefaultMapper ||
-                 (isAllocatable &&
-                  requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
+                 (requiresImplicitDefaultDeclareMapper(*typeSpec)))) {
               if (!hasDefaultMapper) {
                 if (auto recordType = mlir::dyn_cast_or_null<fir::RecordType>(
                         converter.genType(*typeSpec)))
@@ -5879,12 +5880,11 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
       // statements or directives preventing them from being combined need the
       // attribute as well. Disallow block constructs that can only be outermost
       // leafs and loop transformation constructs.
-      llvm::omp::DirectiveSet combinableDirs =
+      llvm::omp::Directives combinableDirs =
           (llvm::omp::blockConstructSet &
-           ~llvm::omp::DirectiveSet{
-               llvm::omp::Directive::OMPD_ordered_blockassoc,
-               llvm::omp::Directive::OMPD_scope,
-               llvm::omp::Directive::OMPD_taskgroup}) |
+           ~llvm::omp::Directives{llvm::omp::Directive::OMPD_ordered_blockassoc,
+                                  llvm::omp::Directive::OMPD_scope,
+                                  llvm::omp::Directive::OMPD_taskgroup}) |
           (llvm::omp::loopConstructSet & ~llvm::omp::loopTransformationSet);
       const auto &ompEval = nestedEval->get<parser::OpenMPConstruct>();
       llvm::omp::Directive nestedDir =
@@ -8196,6 +8196,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
         !std::holds_alternative<clause::Simd>(clause.u) &&
         !std::holds_alternative<clause::ThreadLimit>(clause.u) &&
         !std::holds_alternative<clause::Threads>(clause.u) &&
+        !std::holds_alternative<clause::Threadset>(clause.u) &&
         !std::holds_alternative<clause::UseDeviceAddr>(clause.u) &&
         !std::holds_alternative<clause::UseDevicePtr>(clause.u) &&
         !std::holds_alternative<clause::InReduction>(clause.u) &&
@@ -8718,7 +8719,7 @@ void Fortran::lower::genOpenMPRequires(mlir::Operation *mod,
 
   if (auto offloadMod =
           llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(mod)) {
-    llvm::omp::ClauseSet reqs;
+    llvm::omp::Clauses reqs;
     if (symbol) {
       common::visit(
           [&](const auto &details) {

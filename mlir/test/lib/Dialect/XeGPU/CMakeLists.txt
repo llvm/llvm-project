@@ -1,7 +1,10 @@
-add_mlir_dialect_library(MLIRXeGPUTestPasses
+add_mlir_library(MLIRXeGPUTestPasses
   TestXeGPUTransforms.cpp
 
   EXCLUDE_FROM_LIBMLIR
+
+  DEPENDS
+  mlir-headers
 )
 
 mlir_target_link_libraries(MLIRXeGPUTestPasses PUBLIC

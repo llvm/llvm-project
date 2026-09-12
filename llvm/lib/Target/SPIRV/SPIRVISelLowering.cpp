@@ -523,8 +523,6 @@ static void validateVec1Ops(const SPIRVSubtarget &STI, MachineRegisterInfo *MRI,
 // TODO: the logic of inserting additional bitcast's is to be moved
 // to pre-IRTranslation passes eventually
 void SPIRVTargetLowering::finalizeLowering(MachineFunction &MF) const {
-  // finalizeLowering() is called twice (see GlobalISel/InstructionSelect.cpp)
-  // We'd like to avoid the needless second processing pass.
   if (MF.getRegInfo().reservedRegsFrozen())
     return;
 

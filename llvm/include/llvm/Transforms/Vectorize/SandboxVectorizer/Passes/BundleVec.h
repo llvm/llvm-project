@@ -44,20 +44,18 @@ private:
   static constexpr StringRef BottomUpArgStr = "bottom-up";
   /// Direction for vectorization, set from the mandatory aux argument.
   SchedDirection Dir;
-  /// The original instructions that are potentially dead after vectorization.
-  DenseSet<Instruction *> DeadInstrCandidates;
   /// Maps scalars to vectors.
   std::unique_ptr<InstrMaps> IMaps;
   /// Counter used for force-stopping the vectorizer after this many
   /// invocations. Used for debugging miscompiles.
   unsigned long InvocationCnt = 0;
 
+  VecUtils::DeadInstructionMorgue DeadInstrMorgue;
+
   /// Creates and returns a vector instruction that replaces the instructions in
   /// \p Bndl. \p Operands are the already vectorized operands.
   Value *createVectorInstr(ArrayRef<Value *> Bndl, ArrayRef<Value *> Operands);
-  /// Erases all dead instructions from the dead instruction candidates
-  /// collected during vectorization.
-  void tryEraseDeadInstrs();
+
   /// Creates a shuffle instruction that shuffles \p VecOp according to \p Mask.
   /// \p UserBB is the block of the user bundle.
   Value *createShuffle(Value *VecOp, const ShuffleMask &Mask,
@@ -65,11 +63,6 @@ private:
   /// Packs all elements of \p ToPack into a vector and returns that vector. \p
   /// UserBB is the block of the user bundle.
   Value *createPack(ArrayRef<Value *> ToPack, BasicBlock *UserBB);
-  /// After we create vectors for groups of instructions, the original
-  /// instructions are potentially dead and may need to be removed. This
-  /// function helps collect these instructions (along with the pointer operands
-  /// for loads/stores) so that they can be cleaned up later.
-  void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
 
   /// Helper class describing how(if) to vectorize the code.
   class ActionsVector {

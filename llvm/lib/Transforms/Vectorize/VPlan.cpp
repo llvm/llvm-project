@@ -55,6 +55,8 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -65,10 +67,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
@@ -1999,4 +1997,19 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                        Intrinsic::pseudoprobe,
                        Intrinsic::experimental_noalias_scope_decl},
                       ID);
+}
+
+uint64_t VPCostContext::getReplicateRegionCostDivisor(
+    const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  std::optional<VPExecutionFrequency> Freq =
+      Region->getEntryBranchOnMask()->getExecutionFrequency();
+  if (!Freq)
+    return 1;
+  // A recorded frequency is neither zero nor always-executing, so the
+  // probability is non-zero and the division below is safe.
+  return divideNearest(
+      BranchProbability::getDenominator(),
+      vputils::getExecutionProbability(Freq->Freq).getNumerator());
 }

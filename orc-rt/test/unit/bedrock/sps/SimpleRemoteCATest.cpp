@@ -146,8 +146,8 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
 
   int SomeSymbol = 0;
   SimpleSymbolTable Symbols;
-  std::vector<std::pair<std::string, const void *>> SymbolDefs = {
-      {"foo", &SomeSymbol}};
+  std::vector<std::pair<SymbolNameSpec, const void *>> SymbolDefs = {
+      {SymbolNameSpec::linker("foo"), &SomeSymbol}};
   cantFail(Symbols.addUnique(SymbolDefs));
 
   BootstrapInfo BI(S, std::move(Symbols),
