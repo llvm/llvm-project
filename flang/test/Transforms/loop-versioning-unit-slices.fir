@@ -737,8 +737,8 @@ module attributes {
   // CHECK-NOT: fir.box_dims %[[BAD]],
   // CHECK: return
 
-  // Canonicalization may fold the converted i1-rooted step, but must not make
-  // that descriptor eligible. The independent ordinary unit slice still is.
+  // Canonicalization folds the explicit i1-to-i8 zero extension to positive
+  // one, making both it and the ordinary unit slice eligible.
   // CANONICALIZED-LABEL: func.func @i1_operands_rejected(
   // CANONICALIZED-SAME: %[[BAD_STEP:[^:]+]]: !fir.box
   // CANONICALIZED-SAME: %[[BAD_INDEX:[^:]+]]: !fir.box
@@ -748,18 +748,17 @@ module attributes {
   // CANONICALIZED-NOT: fir.box_dims %[[BAD_STEP]],
   // CANONICALIZED-NOT: fir.box_dims %[[BAD_INDEX]],
   // CANONICALIZED-NOT: fir.box_dims %[[BAD_LOWER]],
-  // CANONICALIZED-NOT: fir.box_dims %[[CONVERTED_STEP]],
+  // CANONICALIZED: fir.box_dims %[[CONVERTED_STEP]],
   // CANONICALIZED: fir.box_dims %[[GOOD]],
   // CANONICALIZED-NOT: fir.box_dims %[[BAD_STEP]],
   // CANONICALIZED-NOT: fir.box_dims %[[BAD_INDEX]],
   // CANONICALIZED-NOT: fir.box_dims %[[BAD_LOWER]],
-  // CANONICALIZED-NOT: fir.box_dims %[[CONVERTED_STEP]],
   // CANONICALIZED: return
 
-  // Reject raw i1 values in every consumed operand position. Also reject a
-  // conversion chain rooted at i1: canonicalization may combine it into a
-  // direct i1-to-index conversion and fold the set bit to -1. An independent
-  // descriptor with an ordinary unit step must remain eligible.
+  // Reject raw i1 values in every consumed operand position. Without
+  // canonicalization, also conservatively reject the explicit i1-to-i8-to-index
+  // chain. An independent descriptor with an ordinary unit step must remain
+  // eligible.
   func.func @i1_operands_rejected(
       %badStepArg: !fir.box<!fir.array<?xi32>>,
       %badIndexArg: !fir.box<!fir.array<?xi32>>,
@@ -863,6 +862,43 @@ module attributes {
   // CHECK-NOT: fir.box_dims %[[BAD_LOWER]],
   // CHECK-NOT: fir.box_dims %[[CONVERTED_STEP]],
   // CHECK: return
+
+  // A direct i1-to-index conversion sign-extends the set bit to -1, so it must
+  // remain ineligible even when canonicalization materializes that constant.
+  func.func @direct_i1_to_index_step_rejected(
+      %arg: !fir.box<!fir.array<?xi32>>) {
+    %true = arith.constant true
+    %c1 = arith.constant 1 : index
+    %c8 = arith.constant 8 : index
+    %step = fir.convert %true : (i1) -> index
+    %slice = fir.slice %c1, %c8, %step
+      : (index, index, index) -> !fir.slice<1>
+    fir.do_loop %i = %c1 to %c8 step %c1 {
+      %address = fir.array_coor %arg [%slice] %i
+        : (!fir.box<!fir.array<?xi32>>, !fir.slice<1>, index)
+          -> !fir.ref<i32>
+      fir.call @use_i32(%address) : (!fir.ref<i32>) -> ()
+    }
+    return
+  }
+  // CHECK-LABEL: func.func @direct_i1_to_index_step_rejected(
+  // CHECK-SAME: %[[ARG:[^:]+]]: !fir.box
+  // CHECK: %[[STEP:.*]] = fir.convert %{{.*}} : (i1) -> index
+  // CHECK: %[[SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[STEP]]
+  // CHECK-NOT: fir.box_dims %[[ARG]],
+  // CHECK: fir.do_loop
+  // CHECK: fir.array_coor %[[ARG]] [%[[SLICE]]]
+  // CHECK-NOT: fir.box_dims %[[ARG]],
+  // CHECK: return
+  // CANONICALIZED-LABEL: func.func @direct_i1_to_index_step_rejected(
+  // CANONICALIZED-SAME: %[[ARG:[^:]+]]: !fir.box
+  // CANONICALIZED: %[[STEP:.*]] = arith.constant -1 : index
+  // CANONICALIZED: %[[SLICE:.*]] = fir.slice %{{.*}}, %{{.*}}, %[[STEP]]
+  // CANONICALIZED-NOT: fir.box_dims %[[ARG]],
+  // CANONICALIZED: fir.do_loop
+  // CANONICALIZED: fir.array_coor %[[ARG]] [%[[SLICE]]]
+  // CANONICALIZED-NOT: fir.box_dims %[[ARG]],
+  // CANONICALIZED: return
 
   // A signed one-bit intermediate changes a positive one to -1 when it is
   // widened. Preserve the section-lower adjustment instead of looking through
