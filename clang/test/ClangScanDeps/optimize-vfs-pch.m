@@ -63,6 +63,8 @@
 // CHECK-NEXT:         "[[PREFIX]]/build/pch-overlay.yaml"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "{{.*}}"
 // CHECK-NEXT:         "{{.*}}"
@@ -78,6 +80,8 @@
 // CHECK-NOT:          "-ivfsoverlay"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "{{.*}}"
 // CHECK-NEXT:         "{{.*}}"

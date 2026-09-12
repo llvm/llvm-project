@@ -12,6 +12,7 @@
 #include "clang/Basic/AtomicLineLogger.h"
 #include "clang/DependencyScanning/DependencyScanningFilesystem.h"
 #include "clang/DependencyScanning/InProcessModuleCache.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
 namespace clang {
@@ -123,6 +124,15 @@ public:
   }
 
   ModuleCacheEntries &getModuleCacheEntries() { return ModCacheEntries; }
+
+  /// Atomically add directories that changed since the previous scan. This
+  /// allows cached scanning modules to be invalidated when headers are added.
+  ///
+  /// These paths need to be identical to the paths returned in
+  /// \c ModuleDeps::DirectoryDeps.
+  void addInvalidatedDirectories(llvm::ArrayRef<std::string> Dirs) {
+    ModCacheEntries.addInvalidatedDirectories(Dirs);
+  }
 
   AtomicLineLogger &getLogger() { return Logger; }
 

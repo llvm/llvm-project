@@ -19,6 +19,8 @@
 // CHECK-NOT:          "-W
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
@@ -31,6 +33,8 @@
 // CHECK-NOT:          "-W
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],
@@ -43,6 +47,8 @@
 // CHECK:              "-Wmaybe-unused
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK:            ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK:            ],
 // CHECK-NEXT:       "link-libraries": [],

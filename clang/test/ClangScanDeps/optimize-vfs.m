@@ -23,6 +23,9 @@
 // CHECK-NOT:          "build/unused-vfs.yaml"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/modules/A"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/build/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/build/A.h"
@@ -37,6 +40,9 @@
 // CHECK-NOT:          "-ivfsoverlay"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/modules/B"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules/B/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/modules/B/B.h"
@@ -56,6 +62,9 @@
 // CHECK-NOT:          "-ivfsoverlay"
 // CHECK:            ],
 // CHECK-NEXT:       "context-hash": "{{.*}}",
+// CHECK-NEXT:       "directory-deps": [
+// CHECK-NEXT:         "[[PREFIX]]/modules/C"
+// CHECK-NEXT:       ],
 // CHECK-NEXT:       "file-deps": [
 // CHECK-NEXT:         "[[PREFIX]]/modules/C/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/modules/C/C.h",

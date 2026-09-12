@@ -104,6 +104,7 @@ static ScanningOptimizations OptimizeArgs;
 static std::string ModuleFilesDir;
 static bool EagerLoadModules;
 static bool CacheNegativeStats;
+static std::vector<std::string> InvalidatedDirectories;
 static unsigned NumThreads = 0;
 static std::string CompilationDB;
 static std::optional<std::string> ModuleNames;
@@ -215,6 +216,9 @@ static void ParseArgs(int argc, char **argv) {
   EagerLoadModules = Args.hasArg(OPT_eager_load_pcm);
 
   CacheNegativeStats = Args.hasArg(OPT_cache_negative_stats);
+
+  for (const llvm::opt::Arg *A : Args.filtered(OPT_invalidated_directory_EQ))
+    InvalidatedDirectories.emplace_back(A->getValue());
 
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_j)) {
     StringRef S{A->getValue()};
@@ -517,6 +521,9 @@ public:
             JOS.attributeArray("command-line",
                                toJSONStrings(JOS, MD.getBuildArguments()));
             JOS.attribute("context-hash", StringRef(MD.ID.ContextHash));
+            if (!MD.DirectoryDeps.empty())
+              JOS.attributeArray("directory-deps",
+                                 toJSONStrings(JOS, MD.DirectoryDeps));
             JOS.attributeArray("file-deps", [&] {
               MD.forEachFileDep([&](StringRef FileDep) {
                 // Not reporting SDKSettings.json so that test checks can remain
@@ -1182,6 +1189,9 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   {
     DependencyScanningService Service(std::move(Opts));
+
+    if (!InvalidatedDirectories.empty())
+      Service.addInvalidatedDirectories(InvalidatedDirectories);
 
     if (Inputs.size() == 1) {
       ScanningTask(Service);
