@@ -297,7 +297,7 @@ bool SIInstrInfo::isSrc1DPPRevOpcode(const GCNSubtarget &ST, uint32_t Opcode) {
 
 // Returns true if the result of a VALU instruction depends on exec.
 bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
-  assert(isVALU(MI, /*AllowLDSDMA=*/true));
+  assert(isVALU(MI));
 
   // If it is convergent it depends on EXEC.
   if (MI.isConvergent())
@@ -320,8 +320,8 @@ bool SIInstrInfo::resultDependsOnExec(const MachineInstr &MI) const {
 bool SIInstrInfo::isIgnorableUse(const MachineInstr &MI, unsigned OpIdx) const {
   const MachineOperand &MO = MI.getOperand(OpIdx);
   // Any implicit use of exec by VALU is not a real register read.
-  return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() &&
-         isVALU(MI, /*AllowLDSDMA=*/true) && !resultDependsOnExec(MI);
+  return MO.getReg() == AMDGPU::EXEC && MO.isImplicit() && isVALU(MI) &&
+         !resultDependsOnExec(MI);
 }
 
 bool SIInstrInfo::isSafeToSink(MachineInstr &MI,
@@ -2953,7 +2953,7 @@ bool SIInstrInfo::isLegalToSwap(const MachineInstr &MI, unsigned OpIdx0,
   // It may move literal to position other than src0, this is not allowed
   // pre-gfx10 However, most test cases need literals in Src0 for VOP
   // FIXME: After gfx9, literal can be in place other than Src0
-  if (isVALU(MI, /*AllowLDSDMA=*/false)) {
+  if (isComputeVALU(MI)) {
     if ((int)OpIdx0 == Src0Idx && !MO0.isReg() &&
         !isInlineConstant(MO0, OpInfo1))
       return false;
@@ -5327,7 +5327,7 @@ static Register findImplicitSGPRRead(const MachineInstr &MI) {
 }
 
 static bool shouldReadExec(const MachineInstr &MI) {
-  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true)) {
+  if (SIInstrInfo::isVALU(MI)) {
     switch (MI.getOpcode()) {
     case AMDGPU::V_READLANE_B32:
     case AMDGPU::SI_RESTORE_S32_FROM_VGPR:
@@ -5701,8 +5701,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
   }
 
   // Verify VOP*. Ignore multiple sgpr operands on writelane.
-  if (isVALU(MI, /*AllowLDSDMA=*/false) &&
-      Desc.getOpcode() != AMDGPU::V_WRITELANE_B32) {
+  if (isComputeVALU(MI) && Desc.getOpcode() != AMDGPU::V_WRITELANE_B32) {
     unsigned ConstantBusCount = 0;
     bool UsesLiteral = false;
     const MachineOperand *LiteralVal = nullptr;
@@ -6700,7 +6699,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
 
   const bool IsInlineConst = !MO->isReg() && isInlineConstant(*MO, OpInfo);
 
-  if (isVALU(MI, /*AllowLDSDMA=*/false) && !IsInlineConst &&
+  if (isComputeVALU(MI) && !IsInlineConst &&
       usesConstantBus(MRI, *MO, OpInfo)) {
     const MachineOperand *UsedLiteral = nullptr;
 
@@ -6816,7 +6815,7 @@ bool SIInstrInfo::isNeverCoissue(MachineInstr &MI) const {
   if (!IsGFX950Only && !IsGFX940Only)
     return false;
 
-  if (!isVALU(MI, /*AllowLDSDMA=*/false))
+  if (!isComputeVALU(MI))
     return false;
 
   // V_COS, V_EXP, V_RCP, etc.
@@ -10236,7 +10235,7 @@ unsigned SIInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
 
   // Instructions may have a 32-bit literal encoded after them. Check
   // operands that could ever be literals.
-  if (isVALU(MI, /*AllowLDSDMA=*/false) || isSALU(MI)) {
+  if (isComputeVALU(MI) || isSALU(MI)) {
     if (isDPP(MI))
       return DescSize;
     bool HasLiteral = false;
