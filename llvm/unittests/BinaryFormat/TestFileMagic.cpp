@@ -6,9 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
@@ -92,6 +97,8 @@ const char tapi_file[] = "--- !tapi-tbd-v1\n";
 const char tapi_file_tbd_v1[] = "---\narchs: [";
 const char spirv_object_le[] = "\x03\x02\x23\x07";
 const char spirv_object_be[] = "\x07\x23\x02\x03";
+const char zstd[] = "\x28\xb5\x2f\xfd";
+const char zlib[] = "\x78\x9c\x00\x00";
 
 TEST_F(MagicTest, Magic) {
   struct type {
@@ -126,9 +133,11 @@ TEST_F(MagicTest, Magic) {
       {"macho_type_0x10001", macho_type_0x10001, sizeof(macho_type_0x10001),
        file_magic::macho_object},
       {"spirv_object_le", spirv_object_le, sizeof(spirv_object_le),
-       file_magic ::spirv_object},
+       file_magic::spirv_object},
       {"spirv_object_be", spirv_object_be, sizeof(spirv_object_be),
-       file_magic ::spirv_object},
+       file_magic::spirv_object},
+      DEFINE(zstd),
+      DEFINE(zlib),
       DEFINE(windows_resource),
       DEFINE(pdb),
       {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),
@@ -154,3 +163,47 @@ TEST_F(MagicTest, Magic) {
     ASSERT_NO_ERROR(fs::remove(Twine(file_pathname)));
   }
 }
+
+#if LLVM_ENABLE_ZSTD
+TEST_F(MagicTest, ZstdCompressedBlob) {
+  constexpr int Levels[] = {compression::zstd::NoCompression,
+                            compression::zstd::BestSpeedCompression,
+                            compression::zstd::DefaultCompression,
+                            compression::zstd::BestSizeCompression};
+
+  StringRef Input("hello, world!");
+  for (int Level : Levels) {
+    SmallVector<uint8_t, 0> Compressed;
+    compression::zstd::compress(arrayRefFromStringRef(Input), Compressed,
+                                Level);
+    EXPECT_EQ(file_magic::zstd, identify_magic(toStringRef(Compressed)))
+        << "level=" << Level;
+  }
+}
+#endif
+
+#if LLVM_ENABLE_ZLIB
+TEST_F(MagicTest, ZlibCompressedBlob) {
+  constexpr int Levels[] = {compression::zlib::NoCompression,
+                            compression::zlib::BestSpeedCompression,
+                            compression::zlib::DefaultCompression,
+                            compression::zlib::BestSizeCompression};
+
+  StringRef Input("hello, world!");
+  for (int Level : Levels) {
+    SmallVector<uint8_t, 0> Compressed;
+    compression::zlib::compress(arrayRefFromStringRef(Input), Compressed,
+                                Level);
+    EXPECT_EQ(file_magic::zlib, identify_magic(toStringRef(Compressed)))
+        << "level=" << Level;
+  }
+
+  // The four CMF/FLG pairs file(1) treats as zlib (FDICT clear, FCHECK valid).
+  EXPECT_EQ(file_magic::zlib, identify_magic(StringRef("\x78\x01\x00\x00", 4)));
+  EXPECT_EQ(file_magic::zlib, identify_magic(StringRef("\x78\x5e\x00\x00", 4)));
+  EXPECT_EQ(file_magic::zlib, identify_magic(StringRef("\x78\x9c\x00\x00", 4)));
+  EXPECT_EQ(file_magic::zlib, identify_magic(StringRef("\x78\xda\x00\x00", 4)));
+  EXPECT_EQ(file_magic::unknown,
+            identify_magic(StringRef("\x78\x00\x00\x00", 4)));
+}
+#endif

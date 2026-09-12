@@ -270,6 +270,21 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
+  case 0x28: // Zstandard compressed frame magic 0xFD2FB528, little-endian.
+    if (startswith(Magic, "\x28\xb5\x2f\xfd"))
+      return file_magic::zstd;
+    break;
+
+  case 0x78: {
+    // RFC 1950 zlib wrapper. LLVM's compress2 uses a 32K window (CMF 0x78).
+    // FCHECK makes CMF*256+FLG a multiple of 31. FDICT is unused in LLVM which
+    // exposes four identifiable two-byte headers.
+    unsigned char Flg = Magic[1];
+    if ((Flg & 0x20) == 0 && (0x7800u + Flg) % 31 == 0)
+      return file_magic::zlib;
+    break;
+  }
+
   case '_': {
     const char OBMagic[] = "__CLANG_OFFLOAD_BUNDLE__";
     if (Magic.size() >= sizeof(OBMagic) && startswith(Magic, OBMagic))
