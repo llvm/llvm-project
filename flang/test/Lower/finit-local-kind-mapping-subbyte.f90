@@ -14,11 +14,7 @@
 ! produce 0xAAA (i12), storing as AA 0A -- the high nibble unfilled.  A TODO
 ! is emitted instead.
 !
-! All CHARACTER kind widths are now handled without diagnostics:
-!   a1:1  -- i1 rounds up to i8, stride = 1 byte (fills 1 byte per code unit)
-!   a1:12 -- i12 rounds up to i16, stride = 2 bytes
-!   a1:24 -- i24 rounds up to i32, stride = 4 bytes (was the motivating case:
-!             charBits/8 = 3 missed the last byte; stride = 4 is correct)
+! All CHARACTER kind widths are now handled without diagnostics.
 !
 ! RUN: %not_todo_cmd bbc -emit-hlfir --kind-mapping=l4:1 -finit-local=0xAA %s -o - 2>&1 | \
 ! RUN:     FileCheck %s
