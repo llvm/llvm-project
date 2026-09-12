@@ -420,45 +420,66 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
+/// Whether the ABI hands the callee memory through a pointer argument: an
+/// sret slot for an indirect return, or byval / byref for an indirect
+/// argument.  Such a function reaches argument memory no matter what its
+/// source-level attributes say, so `const` and `pure` cannot lower to a
+/// memory effect that excludes it.
+static bool hasABIIndirectMemoryArg(mlir::ArrayAttr argAttrs) {
+  if (!argAttrs)
+    return false;
+  return llvm::any_of(argAttrs, [](mlir::Attribute a) {
+    auto dict = mlir::cast<mlir::DictionaryAttr>(a);
+    return dict.contains(mlir::LLVM::LLVMDialect::getStructRetAttrName()) ||
+           dict.contains(mlir::LLVM::LLVMDialect::getByValAttrName()) ||
+           dict.contains(mlir::LLVM::LLVMDialect::getByRefAttrName());
+  });
+}
+
+/// Lower a CIR `side_effect` to an LLVM memory effect, widening argument
+/// memory to ModRef when \p accessesArgMemory, since a widened slot may be
+/// either written or read.  A null result means unknown effects, which is
+/// how `All` is represented.
+static mlir::LLVM::MemoryEffectsAttr
+buildMemoryEffects(mlir::MLIRContext *ctx, cir::SideEffect sideEffect,
+                   bool accessesArgMemory) {
+  using mlir::LLVM::ModRefInfo;
+
+  ModRefInfo other;
+  switch (sideEffect) {
+  case cir::SideEffect::All:
+    return {};
+  case cir::SideEffect::Pure:
+    other = ModRefInfo::Ref;
+    break;
+  case cir::SideEffect::Const:
+    other = ModRefInfo::NoModRef;
+    break;
+  }
+
+  ModRefInfo argMem = accessesArgMemory ? ModRefInfo::ModRef : other;
+  return mlir::LLVM::MemoryEffectsAttr::get(ctx, /*other=*/other,
+                                            /*argMem=*/argMem,
+                                            /*inaccessibleMem=*/other,
+                                            /*errnoMem=*/other,
+                                            /*targetMem0=*/other,
+                                            /*targetMem1=*/other);
+}
+
 void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                               bool &noUnwind, bool &willReturn,
                               bool &noReturn) {
-  using mlir::LLVM::ModRefInfo;
+  bool accessesArgMemory =
+      hasABIIndirectMemoryArg(callOp->getAttrOfType<mlir::ArrayAttr>(
+          CIRDialect::getArgAttrsAttrName()));
+  memoryEffect =
+      buildMemoryEffects(callOp->getContext(), sideEffect, accessesArgMemory);
 
-  switch (sideEffect) {
-  case cir::SideEffect::All:
-    memoryEffect = {};
-    noUnwind = isNothrow;
-    willReturn = false;
-    break;
-
-  case cir::SideEffect::Pure:
-    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
-        callOp->getContext(), /*other=*/ModRefInfo::Ref,
-        /*argMem=*/ModRefInfo::Ref,
-        /*inaccessibleMem=*/ModRefInfo::Ref,
-        /*errnoMem=*/ModRefInfo::Ref,
-        /*targetMem0=*/ModRefInfo::Ref,
-        /*targetMem1=*/ModRefInfo::Ref);
-    noUnwind = true;
-    willReturn = true;
-    break;
-
-  case cir::SideEffect::Const:
-    memoryEffect = mlir::LLVM::MemoryEffectsAttr::get(
-        callOp->getContext(), /*other=*/ModRefInfo::NoModRef,
-        /*argMem=*/ModRefInfo::NoModRef,
-        /*inaccessibleMem=*/ModRefInfo::NoModRef,
-        /*errnoMem=*/ModRefInfo::NoModRef,
-        /*targetMem0=*/ModRefInfo::NoModRef,
-        /*targetMem1=*/ModRefInfo::NoModRef);
-    noUnwind = true;
-    willReturn = true;
-    break;
-  }
-
+  bool isConstOrPure = sideEffect != cir::SideEffect::All;
+  noUnwind = isConstOrPure || isNothrow;
+  willReturn = isConstOrPure;
   noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
 }
 
@@ -2777,35 +2798,16 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
 
-  if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect()) {
-    switch (*sideEffectKind) {
-    case cir::SideEffect::All:
-      break;
-    case cir::SideEffect::Pure:
-      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
-          fn.getContext(),
-          /*other=*/mlir::LLVM::ModRefInfo::Ref,
-          /*argMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*errnoMem=*/mlir::LLVM::ModRefInfo::Ref,
-          /*targetMem0=*/mlir::LLVM::ModRefInfo::Ref,
-          /*targetMem1=*/mlir::LLVM::ModRefInfo::Ref));
-      fn.setNoUnwind(true);
-      fn.setWillReturn(true);
-      break;
-    case cir::SideEffect::Const:
-      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
-          fn.getContext(),
-          /*other=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*argMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
-          /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef));
-      fn.setNoUnwind(true);
-      fn.setWillReturn(true);
-      break;
-    }
+  if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect();
+      sideEffectKind && *sideEffectKind != cir::SideEffect::All) {
+    // A variadic callee's declared parameters do not cover every argument, so
+    // its argument memory widens too.
+    bool accessesArgMemory = hasABIIndirectMemoryArg(op.getArgAttrsAttr()) ||
+                             op.getFunctionType().isVarArg();
+    fn.setMemoryEffectsAttr(buildMemoryEffects(fn.getContext(), *sideEffectKind,
+                                               accessesArgMemory));
+    fn.setNoUnwind(true);
+    fn.setWillReturn(true);
   }
 
   if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
