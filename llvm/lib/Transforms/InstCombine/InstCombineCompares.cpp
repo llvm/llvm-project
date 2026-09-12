@@ -5319,6 +5319,14 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return new ICmpInst(NewPred, Dividend, Divisor);
   }
 
+  // (X udiv Y) == X --> Y == 1
+  // (X udiv Y) != X --> Y != 1
+  if (I.isEquality() &&
+      match(&I, m_c_ICmp(m_UDiv(m_Value(Dividend), m_Value(Divisor)),
+                         m_Deferred(Dividend))) &&
+      isKnownNonZero(Dividend, Q))
+    return new ICmpInst(Pred, Divisor, ConstantInt::get(Divisor->getType(), 1));
+
   Value *X;
 
   // Convert add-with-unsigned-overflow comparisons into a 'not' with compare.
