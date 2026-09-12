@@ -136,7 +136,7 @@ Implementation Terminology
 Implementation Details
 ----------------------
 
-`thread_local_container`
+`class thread_local_container`
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 A helper class that manages thread local objects. It provides APIs to get the `thread_local` object for the current thread, and to iterate through all the `thread_local` objects from all threads.
