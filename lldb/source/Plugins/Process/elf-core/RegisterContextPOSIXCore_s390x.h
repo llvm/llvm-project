@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_S390X_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_s390x.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_s390x.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataExtractor.h"
 

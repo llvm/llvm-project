@@ -12,12 +12,12 @@
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/Log.h"
 
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_i386.h"
-#include "Plugins/Process/Utility/RegisterContextFreeBSD_x86_64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
+#include "Register/Common/RegisterInfoCommon_arm.h"
+#include "Register/Common/RegisterInfoCommon_arm64.h"
+#include "Register/Common/RegisterInfoCommon_ppc64le.h"
+#include "Register/Common/RegisterInfoCommon_riscv64.h"
 #include "ProcessFreeBSDKernelCore.h"
 #include "RegisterContextFreeBSDKernelCore_arm.h"
 #include "RegisterContextFreeBSDKernelCore_arm64.h"
@@ -66,34 +66,34 @@ ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
     case llvm::Triple::aarch64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_arm64>(
-              *this, std::make_unique<RegisterInfoPOSIX_arm64>(arch, 0),
+              *this, std::make_unique<RegisterInfoCommon_arm64>(arch, 0),
               m_pcb_addr);
       break;
     case llvm::Triple::arm:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_arm>(
-              *this, std::make_unique<RegisterInfoPOSIX_arm>(arch), m_pcb_addr);
+              *this, std::make_unique<RegisterInfoCommon_arm>(arch), m_pcb_addr);
       break;
     case llvm::Triple::ppc64le:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_ppc64le>(
-              *this, new RegisterInfoPOSIX_ppc64le(arch), m_pcb_addr);
+              *this, new RegisterInfoCommon_ppc64le(arch), m_pcb_addr);
       break;
     case llvm::Triple::riscv64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_riscv64>(
-              *this, std::make_unique<RegisterInfoPOSIX_riscv64>(arch, 0),
+              *this, std::make_unique<RegisterInfoCommon_riscv64>(arch, 0),
               m_pcb_addr);
       break;
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_i386>(
-              *this, new RegisterContextFreeBSD_i386(arch), m_pcb_addr);
+              *this, new RegisterInfoFreeBSD_i386(arch), m_pcb_addr);
       break;
     case llvm::Triple::x86_64:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_x86_64>(
-              *this, new RegisterContextFreeBSD_x86_64(arch), m_pcb_addr);
+              *this, new RegisterInfoFreeBSD_x86_64(arch), m_pcb_addr);
       break;
     default:
       assert(false &&

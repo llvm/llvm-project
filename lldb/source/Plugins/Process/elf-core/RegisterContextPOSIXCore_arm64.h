@@ -10,8 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTPOSIXCORE_ARM64_H
 
 #include "Plugins/Process/Utility/LinuxPTraceDefines_arm64sve.h"
-#include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
-#include "Plugins/Process/Utility/RegisterTypeDetector_arm64.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_arm64.h"
+#include "Register/Common/RegisterTypeDetector_arm64.h"
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -41,7 +41,7 @@ public:
 protected:
   RegisterContextCorePOSIX_arm64(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info,
+      std::unique_ptr<RegisterInfoCommon_arm64> register_info,
       const lldb_private::DataExtractor &gpregset,
       llvm::ArrayRef<lldb_private::CoreNote> notes);
 

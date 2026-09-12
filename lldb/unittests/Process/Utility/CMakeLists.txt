@@ -1,8 +1,8 @@
 set(FREEBSD_SOURCES
-  RegisterContextFreeBSDTest.cpp)
+  RegisterInfoFreeBSDTest.cpp)
 set(NETBSD_SOURCES
-  RegisterContextNetBSDTest_i386.cpp
-  RegisterContextNetBSDTest_x86_64.cpp)
+  RegisterInfoNetBSDTest_i386.cpp
+  RegisterInfoNetBSDTest_x86_64.cpp)
 
 if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
   list(APPEND PLATFORM_SOURCES ${FREEBSD_SOURCES})
@@ -15,12 +15,20 @@ set(LLVM_OPTIONAL_SOURCES
   ${NETBSD_SOURCES})
 
 add_lldb_unittest(ProcessUtilityTests
+  PARTIAL_SOURCES_INTENDED
   LinuxProcMapsTest.cpp
   MemoryTagManagerAArch64MTETest.cpp
-  RegisterContextTest.cpp
   CoreFileMemoryRangesTest.cpp
-  ${PLATFORM_SOURCES}
 
   LINK_LIBS
     lldbPluginProcessUtility
     LLVMTestingSupport)
+
+add_lldb_unittest(RegisterSupportTests
+  PARTIAL_SOURCES_INTENDED
+  RegisterInfo_x86Test.cpp
+  ${PLATFORM_SOURCES}
+
+  LINK_LIBS
+    lldbRegister
+    lldbProcessContextSupport)

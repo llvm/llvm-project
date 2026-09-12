@@ -1,0 +1,22 @@
+static_library("NativeCommon") {
+  output_name = "lldbNativeProcessSupport"
+  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  deps = [
+    "//lldb/source/Core",
+    "//lldb/source/Host",
+    "//lldb/source/Register",
+    "//lldb/source/Utility",
+    "//llvm/lib/Support",
+  ]
+
+  # Uses source-relative includes for own headers.
+  include_dirs = [ "//lldb/source" ]
+  sources = [
+    "NativeRegisterContextDBReg.cpp",
+    "NativeRegisterContextDBReg_arm.cpp",
+    "NativeRegisterContextDBReg_arm64.cpp",
+    "NativeRegisterContextDBReg_loongarch.cpp",
+    "NativeRegisterContextDBReg_x86.cpp",
+    "NativeRegisterContextRegisterInfo.cpp",
+  ]
+}

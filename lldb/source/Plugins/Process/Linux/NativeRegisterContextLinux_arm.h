@@ -12,9 +12,9 @@
 #define lldb_NativeRegisterContextLinux_arm_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
-#include "Plugins/Process/Utility/lldb-arm-register-enums.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextDBReg_arm.h"
+#include "Register/Common/RegisterInfoCommon_arm.h"
+#include "Register/Arch/lldb-arm-register-enums.h"
 
 namespace lldb_private {
 namespace process_linux {
@@ -72,8 +72,8 @@ protected:
 
 private:
   uint32_t m_gpr_arm[k_num_gpr_registers_arm];
-  RegisterInfoPOSIX_arm::FPU m_fpr;
-  RegisterInfoPOSIX_arm::TLS m_tls;
+  RegisterInfoCommon_arm::FPU m_fpr;
+  RegisterInfoCommon_arm::TLS m_tls;
 
   bool m_refresh_hwdebug_info;
 
@@ -92,7 +92,7 @@ private:
 
   uint32_t CalculateFprOffset(const RegisterInfo *reg_info) const;
 
-  RegisterInfoPOSIX_arm &GetRegisterInfo() const;
+  RegisterInfoCommon_arm &GetRegisterInfo() const;
 };
 
 } // namespace process_linux

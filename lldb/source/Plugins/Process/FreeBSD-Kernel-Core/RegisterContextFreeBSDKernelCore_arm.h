@@ -9,14 +9,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_arm.h"
+#include "Plugins/Process/Common/RegisterContext/POSIX/RegisterContextPOSIX_arm.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 class RegisterContextFreeBSDKernelCore_arm : public RegisterContextPOSIX_arm {
 public:
   RegisterContextFreeBSDKernelCore_arm(
       lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfoPOSIX_arm> register_info_up,
+      std::unique_ptr<RegisterInfoCommon_arm> register_info_up,
       lldb::addr_t pcb_addr);
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,

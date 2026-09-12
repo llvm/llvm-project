@@ -11,8 +11,8 @@
 
 #include "EmulateInstructionLoongArch.h"
 #include "Plugins/Process/Utility/InstructionUtils.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_loongarch64.h"
-#include "Plugins/Process/Utility/lldb-loongarch-register-enums.h"
+#include "Register/Common/RegisterInfoCommon_loongarch64.h"
+#include "Register/Arch/lldb-loongarch-register-enums.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/OptionValueArray.h"
@@ -162,9 +162,9 @@ EmulateInstructionLoongArch::GetRegisterInfo(lldb::RegisterKind reg_kind,
   }
 
   const RegisterInfo *array =
-      RegisterInfoPOSIX_loongarch64::GetRegisterInfoPtr(m_arch);
+      RegisterInfoCommon_loongarch64::GetRegisterInfoPtr(m_arch);
   const uint32_t length =
-      RegisterInfoPOSIX_loongarch64::GetRegisterInfoCount(m_arch);
+      RegisterInfoCommon_loongarch64::GetRegisterInfoCount(m_arch);
 
   if (reg_index >= length || reg_kind != eRegisterKindLLDB)
     return {};

@@ -10,7 +10,7 @@
 #ifndef liblldb_NativeRegisterContextWindows_arm_h_
 #define liblldb_NativeRegisterContextWindows_arm_h_
 
-#include "Plugins/Process/Utility/lldb-arm-register-enums.h"
+#include "Register/Arch/lldb-arm-register-enums.h"
 
 #include "NativeRegisterContextWindows.h"
 

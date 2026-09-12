@@ -15,10 +15,10 @@
 #define lldb_NativeRegisterContextLinux_ppc64le_h
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
+#include "Register/Arch/RegisterInfos_ppc64le.h"
 #undef DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
 
 namespace lldb_private {

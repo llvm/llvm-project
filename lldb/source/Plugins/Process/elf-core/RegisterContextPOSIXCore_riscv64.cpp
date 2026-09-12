@@ -16,22 +16,22 @@ std::unique_ptr<RegisterContextCorePOSIX_riscv64>
 RegisterContextCorePOSIX_riscv64::Create(Thread &thread, const ArchSpec &arch,
                                          const DataExtractor &gpregset,
                                          llvm::ArrayRef<CoreNote> notes) {
-  Flags opt_regsets = RegisterInfoPOSIX_riscv64::eRegsetMaskDefault;
+  Flags opt_regsets = RegisterInfoCommon_riscv64::eRegsetMaskDefault;
 
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
   if (fpregset.GetByteSize() >= sizeof(uint64_t)) {
-    opt_regsets.Set(RegisterInfoPOSIX_riscv64::eRegsetMaskFP);
+    opt_regsets.Set(RegisterInfoCommon_riscv64::eRegsetMaskFP);
   }
 
   return std::unique_ptr<RegisterContextCorePOSIX_riscv64>(
       new RegisterContextCorePOSIX_riscv64(
           thread,
-          std::make_unique<RegisterInfoPOSIX_riscv64>(arch, opt_regsets),
+          std::make_unique<RegisterInfoCommon_riscv64>(arch, opt_regsets),
           gpregset, notes));
 }
 
 RegisterContextCorePOSIX_riscv64::RegisterContextCorePOSIX_riscv64(
-    Thread &thread, std::unique_ptr<RegisterInfoPOSIX_riscv64> register_info,
+    Thread &thread, std::unique_ptr<RegisterInfoCommon_riscv64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_riscv64(thread, std::move(register_info)) {
 

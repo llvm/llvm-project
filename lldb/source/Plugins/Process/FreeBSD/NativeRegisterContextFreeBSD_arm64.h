@@ -18,8 +18,8 @@
 // clang-format on
 
 #include "Plugins/Process/FreeBSD/NativeRegisterContextFreeBSD.h"
-#include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
+#include "Plugins/Process/NativeCommon/NativeRegisterContextDBReg_arm64.h"
+#include "Register/Common/RegisterInfoCommon_arm64.h"
 
 #include <array>
 
@@ -69,7 +69,7 @@ private:
   llvm::Error ReadHardwareDebugInfo() override;
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
 
-  RegisterInfoPOSIX_arm64 &GetRegisterInfo() const;
+  RegisterInfoCommon_arm64 &GetRegisterInfo() const;
 };
 
 } // namespace process_freebsd

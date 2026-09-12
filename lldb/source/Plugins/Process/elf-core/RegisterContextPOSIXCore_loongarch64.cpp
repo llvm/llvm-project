@@ -20,13 +20,13 @@ RegisterContextCorePOSIX_loongarch64::Create(Thread &thread,
   return std::unique_ptr<RegisterContextCorePOSIX_loongarch64>(
       new RegisterContextCorePOSIX_loongarch64(
           thread,
-          std::make_unique<RegisterInfoPOSIX_loongarch64>(arch, Flags()),
+          std::make_unique<RegisterInfoCommon_loongarch64>(arch, Flags()),
           gpregset, notes));
 }
 
 RegisterContextCorePOSIX_loongarch64::RegisterContextCorePOSIX_loongarch64(
     Thread &thread,
-    std::unique_ptr<RegisterInfoPOSIX_loongarch64> register_info,
+    std::unique_ptr<RegisterInfoCommon_loongarch64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextPOSIX_loongarch64(thread, std::move(register_info)) {
 

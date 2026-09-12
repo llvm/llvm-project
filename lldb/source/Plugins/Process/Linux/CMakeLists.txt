@@ -23,6 +23,7 @@ add_lldb_library(lldbPluginProcessLinux
     Support
     TargetParser
   LINK_LIBS
+    lldbNativeProcessSupport
     lldbCore
     lldbHost
     lldbSymbol
