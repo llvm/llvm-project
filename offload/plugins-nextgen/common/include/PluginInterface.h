@@ -425,46 +425,6 @@ public:
   }
 };
 
-struct KernelLaunchInfoTy {
-  uint32_t MaxNumThreads = 0;
-  uint32_t PreferredNumThreads = 0;
-  uint32_t ReductionDataSize = 0;
-  /// Defaults to OMP_TGT_EXEC_MODE_BARE.
-  OMPTgtExecModeFlags Mode = OMP_TGT_EXEC_MODE_BARE;
-
-  /// Indicate if the kernel works in Bare, Generic SPMD, Generic, No-Loop
-  /// or SPMD mode.
-  bool isBareMode() const { return Mode == OMP_TGT_EXEC_MODE_BARE; }
-  bool isGenericMode() const { return Mode == OMP_TGT_EXEC_MODE_GENERIC; }
-  bool isGenericSPMDMode() const {
-    return Mode == OMP_TGT_EXEC_MODE_GENERIC_SPMD;
-  }
-  bool isSPMDMode() const { return Mode == OMP_TGT_EXEC_MODE_SPMD; }
-  bool isNoLoopMode() const { return Mode == OMP_TGT_EXEC_MODE_SPMD_NO_LOOP; }
-
-  static const char *getExecutionModeName(OMPTgtExecModeFlags Mode) {
-    switch (Mode) {
-    case OMP_TGT_EXEC_MODE_BARE:
-      return "BARE";
-    case OMP_TGT_EXEC_MODE_SPMD:
-      return "SPMD";
-    case OMP_TGT_EXEC_MODE_GENERIC:
-      return "Generic";
-    case OMP_TGT_EXEC_MODE_GENERIC_SPMD:
-      return "Generic-SPMD";
-    case OMP_TGT_EXEC_MODE_SPMD_NO_LOOP:
-      return "SPMD-No-Loop";
-    }
-    return "Unknown";
-  }
-
-  /// Return the display name of this kernel's execution mode, for
-  /// debug/info logging only.
-  const char *getExecutionModeName() const {
-    return getExecutionModeName(Mode);
-  }
-};
-
 /// The subset of KernelArgsTy fields the plugin interface needs to launch a
 /// kernel, plus the resolved argument-pointer array. Unlike KernelArgsTy,
 /// this struct is populated by libomptarget on the stack for every launch,
@@ -495,15 +455,18 @@ struct KernelLaunchArgsTy {
   uint32_t UserNumBlocks[3] = {0, 0, 0};
   /// User-requested number of threads (for x,y,z dimension).
   uint32_t UserThreadLimit[3] = {0, 0, 0};
-  KernelLaunchInfoTy KernelEnvironment;
+  struct {
+    /// Size in bytes of a single cross-team reduction buffer element for
+    /// this kernel, or 0 if the kernel does not need a reduction buffer.
+    uint32_t ReductionDataSize = 0;
+    /// Maximum number of threads per block that this kernel may use.
+    uint32_t MaxNumThreads = 0;
+  } KernelEnvironment;
   struct {
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t StrictBlocks : 1; // The user-requested number of blocks is strict.
-    uint64_t StrictThreads
-        : 1; // The user-requested number of threads is strict.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
-    uint64_t Unused : 60;
-  } Flags = {0, 0, 0, 0, 0};
+    uint64_t Unused : 61;
+  } Flags = {0, 0, 0};
   /// Set by the caller when replaying a previously recorded kernel launch, so
   /// the plugin can report the outcome back; null for a normal launch.
   KernelReplayOutcomeTy *ReplayOutcome = nullptr;
@@ -609,23 +572,6 @@ private:
   prepareBlockMemory(GenericDeviceTy &GenericDevice,
                      const KernelLaunchArgsTy &LaunchArgs,
                      uint32_t NumBlocks) const;
-
-  /// Get the effective number of threads for the kernel based on the
-  /// user-defined number of threads.
-  static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
-                                         uint32_t UserThreadLimit,
-                                         const KernelLaunchArgsTy &LaunchArgs);
-
-  /// Get the effective number of blocks for the kernel based on the
-  /// user-defined number of blocks and the loop trip count.
-  /// The number of threads \p NumThreads can be adjusted by this method.
-  /// \p IsNumThreadsFromUser is true is \p NumThreads is defined by user via
-  /// thread_limit clause.
-  static uint32_t
-  getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
-                        uint64_t LoopTripCount, uint32_t &EffectiveNumThreads,
-                        bool IsNumThreadsStrict, bool IsNumThreadsFromUser,
-                        const KernelLaunchArgsTy &LaunchArgs);
 
   /// The kernel name.
   std::string Name;
