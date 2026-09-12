@@ -4245,26 +4245,23 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
   assert(ResultVT.getSizeInBits() <= SrcVT.getSizeInBits() &&
          "bitextract result wider than source should be rejected by verifier");
 
-  // Convert offset to SrcVT
-  SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, SrcVT);
-
-  // Legalize shift amount to the target's shift amount type
+  // Legalize shift amount to the target's shift amount type.
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
-  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
+  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(Offset, dl, ShiftAmtTy);
 
   // Shift right by Offset - brings target field to bit 0
   SDValue Shifted = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalShiftAmount);
 
   SDValue Result;
-  if (ResultVT.isFloatingPoint()) {
+  if (!ResultVT.isInteger()) {
     // Drop into the integer domain to safely truncate the shifted bits
     EVT IntResultVT =
         EVT::getIntegerVT(*DAG.getContext(), ResultVT.getSizeInBits());
-    Result = DAG.getZExtOrTrunc(Shifted, dl, IntResultVT);
+    Result = DAG.getNode(ISD::TRUNCATE, dl, IntResultVT, Shifted);
     Result = DAG.getBitcast(ResultVT, Result);
   } else {
     // Normal integer path
-    Result = DAG.getZExtOrTrunc(Shifted, dl, ResultVT);
+    Result = DAG.getNode(ISD::TRUNCATE, dl, ResultVT, Shifted);
   }
 
   setValue(&I, Result);
