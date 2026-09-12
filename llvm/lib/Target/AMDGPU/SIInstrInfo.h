@@ -494,22 +494,46 @@ public:
     return SIInstrFlags::isSALU(get(Opcode));
   }
 
-  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
-    if (!AllowLDSDMA && isLDSDMA(MI))
-      return false;
-
+  /// Return true if MI uses the VALU encoding/pipeline, including LDSDMA.
+  static bool isVALU(const MachineInstr &MI) {
     return SIInstrFlags::isVALU(MI);
+  }
+
+  /// Return true if Opcode uses the VALU encoding/pipeline, including LDSDMA.
+  bool isVALU(uint32_t Opcode) const {
+    return SIInstrFlags::isVALU(get(Opcode));
+  }
+
+  /// Return true if MI is an ordinary compute VALU instruction. Excludes
+  /// LDSDMA, which is VALU-encoded but not compute/lane/exec semantics.
+  static bool isComputeVALU(const MachineInstr &MI) {
+    return isVALU(MI) && !isLDSDMA(MI);
+  }
+
+  bool isComputeVALU(uint32_t Opcode) const {
+    return isVALU(Opcode) && !isLDSDMA(Opcode);
+  }
+
+  /// Return true if MI may be a WMMA co-execution hazard victim.
+  static bool isCoexecutableVALU(const MachineInstr &MI) {
+    return isComputeVALU(MI) && !isWMMA(MI) && !isSWMMAC(MI);
+  }
+
+  bool isCoexecutableVALU(uint32_t Opcode) const {
+    return isComputeVALU(Opcode) && !isWMMA(Opcode) && !isSWMMAC(Opcode);
   }
 
   /// LDSDMA instructions act as both VALU and memory instructions, thus
   /// we also tag them as VALU. However, in many places, we do not actually want
   /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
   /// false, this will return false for LDSDMA instructions.
-  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
-    if (!AllowLDSDMA && isLDSDMA(Opcode))
-      return false;
+  /// This will be removed once call sites are migrated to the new API.
+  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
+    return AllowLDSDMA ? isVALU(MI) : isComputeVALU(MI);
+  }
 
-    return SIInstrFlags::isVALU(get(Opcode));
+  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
+    return AllowLDSDMA ? isVALU(Opcode) : isComputeVALU(Opcode);
   }
 
   static bool isImage(const MachineInstr &MI) {
@@ -886,13 +910,13 @@ public:
   static bool isVGPRSpill(const MachineInstr &MI) {
     return MI.getOpcode() != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            MI.getOpcode() != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(MI) && isVALU(MI, /*AllowLDSDMA=*/false));
+           (isSpill(MI) && isComputeVALU(MI));
   }
 
   bool isVGPRSpill(uint32_t Opcode) const {
     return Opcode != AMDGPU::SI_SPILL_S32_TO_VGPR &&
            Opcode != AMDGPU::SI_RESTORE_S32_FROM_VGPR &&
-           (isSpill(Opcode) && isVALU(Opcode, /*AllowLDSDMA=*/false));
+           (isSpill(Opcode) && isComputeVALU(Opcode));
   }
 
   static bool isSGPRSpill(const MachineInstr &MI) {

@@ -1466,7 +1466,7 @@ MCPhysReg WaitcntBrackets::determineVGPR16Dependency(const MachineInstr &MI,
   if (!Wait.hasWait())
     return Reg;
 
-  if (Context->TII.isVALU(MI, /*AllowLDSDMA=*/false))
+  if (Context->TII.isComputeVALU(MI))
     return Reg32;
 
   // If hi/lo16 mixed events
@@ -2592,7 +2592,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // waits on VA_VDST if the instruction it would precede is not a VALU
   // instruction, since hardware handles VALU->VGPR->VALU hazards in
   // expert scheduling mode.
-  if (TII.isVALU(MI, /*AllowLDSDMA=*/false)) {
+  if (TII.isComputeVALU(MI)) {
     Wait.set(AMDGPU::VA_VDST_RD, ~0u);
     Wait.set(AMDGPU::VA_VDST_WR, ~0u);
   }
