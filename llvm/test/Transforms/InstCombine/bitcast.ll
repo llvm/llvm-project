@@ -916,9 +916,90 @@ define float @copysign_idiom_sub1_positive(float %x, i32 %magx) {
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
 ;
-  %mag = add nsw i32 %magx, -1
+  %mag = add i32 %magx, -1
   %positive = icmp sgt i32 %magx, 0
   call void @llvm.assume(i1 %positive)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; Test with sub instruction instead of add with -1.
+define float @copysign_idiom_sub1_positive_sub(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_sub(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[MAGX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = sub i32 %magx, 1
+  %positive = icmp sgt i32 %magx, 0
+  call void @llvm.assume(i1 %positive)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; Test with i64 for double precision.
+define double @copysign_idiom_sub1_positive_f64(double %x, i64 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive_f64(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i64 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i64 [[MAGX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[MAG]] to double
+; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.copysign.f64(double [[TMP1]], double [[X:%.*]])
+; CHECK-NEXT:    ret double [[Y]]
+;
+  %mag = add i64 %magx, -1
+  %positive = icmp sgt i64 %magx, 0
+  call void @llvm.assume(i1 %positive)
+  %bits = bitcast double %x to i64
+  %sign = and i64 %bits, -9223372036854775808
+  %res = or i64 %mag, %sign
+  %y = bitcast i64 %res to double
+  ret double %y
+}
+
+; Negative test: %magx >= 0 (nonnegative) is not enough, need %magx > 0 (positive).
+; %magx could be 0, so %mag = %magx - 1 could be -1.
+define float @copysign_idiom_sub1_nonnegative_not_positive(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_nonnegative_not_positive(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sgt i32 [[MAGX]], -1
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = add i32 %magx, -1
+  %nonneg = icmp sgt i32 %magx, -1
+  call void @llvm.assume(i1 %nonneg)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
+
+; Negative test: no assume, so we don't know if %magx is positive.
+define float @copysign_idiom_sub1_no_assume(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_no_assume(
+; CHECK-NEXT:    [[MAG:%.*]] = add i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = add i32 %magx, -1
   %bits = bitcast float %x to i32
   %sign = and i32 %bits, -2147483648
   %res = or i32 %mag, %sign
