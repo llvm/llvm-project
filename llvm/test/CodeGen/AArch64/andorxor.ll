@@ -1477,3 +1477,346 @@ entry:
   %s = xor <4 x i128> %d, %e
   ret <4 x i128> %s
 }
+
+; The i128 vector cases above are all passed and returned by value, so AAPCS
+; already delivers them in GPR pairs and scalarizing them costs nothing. These
+; memory-to-memory cases are the ones where the values could have stayed in
+; vector registers for the whole computation.
+
+define void @and_v2i128_mem(ptr %p, ptr %q, ptr %r) {
+; CHECK-SD-LABEL: and_v2i128_mem:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp q0, q3, [x0]
+; CHECK-SD-NEXT:    ldp q1, q2, [x1]
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    and v1.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    stp q0, q1, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_v2i128_mem:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    fmov x13, d1
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x11, d2
+; CHECK-GI-NEXT:    fmov x14, d3
+; CHECK-GI-NEXT:    mov x10, v2.d[1]
+; CHECK-GI-NEXT:    mov x12, v1.d[1]
+; CHECK-GI-NEXT:    and x9, x9, x11
+; CHECK-GI-NEXT:    mov x11, v3.d[1]
+; CHECK-GI-NEXT:    and x13, x13, x14
+; CHECK-GI-NEXT:    mov v0.d[0], x9
+; CHECK-GI-NEXT:    mov v1.d[0], x13
+; CHECK-GI-NEXT:    and x8, x8, x10
+; CHECK-GI-NEXT:    and x9, x12, x11
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    stp q0, q1, [x2]
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <2 x i128>, ptr %p
+  %e = load <2 x i128>, ptr %q
+  %s = and <2 x i128> %d, %e
+  store <2 x i128> %s, ptr %r
+  ret void
+}
+
+define void @or_v2i128_mem(ptr %p, ptr %q, ptr %r) {
+; CHECK-SD-LABEL: or_v2i128_mem:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp q0, q3, [x0]
+; CHECK-SD-NEXT:    ldp q1, q2, [x1]
+; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    orr v1.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    stp q0, q1, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: or_v2i128_mem:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    fmov x13, d1
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x11, d2
+; CHECK-GI-NEXT:    fmov x14, d3
+; CHECK-GI-NEXT:    mov x10, v2.d[1]
+; CHECK-GI-NEXT:    mov x12, v1.d[1]
+; CHECK-GI-NEXT:    orr x9, x9, x11
+; CHECK-GI-NEXT:    mov x11, v3.d[1]
+; CHECK-GI-NEXT:    orr x13, x13, x14
+; CHECK-GI-NEXT:    mov v0.d[0], x9
+; CHECK-GI-NEXT:    mov v1.d[0], x13
+; CHECK-GI-NEXT:    orr x8, x8, x10
+; CHECK-GI-NEXT:    orr x9, x12, x11
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    stp q0, q1, [x2]
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <2 x i128>, ptr %p
+  %e = load <2 x i128>, ptr %q
+  %s = or <2 x i128> %d, %e
+  store <2 x i128> %s, ptr %r
+  ret void
+}
+
+define void @xor_v2i128_mem(ptr %p, ptr %q, ptr %r) {
+; CHECK-SD-LABEL: xor_v2i128_mem:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp q0, q3, [x0]
+; CHECK-SD-NEXT:    ldp q1, q2, [x1]
+; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    eor v1.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    stp q0, q1, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: xor_v2i128_mem:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    fmov x13, d1
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x11, d2
+; CHECK-GI-NEXT:    fmov x14, d3
+; CHECK-GI-NEXT:    mov x10, v2.d[1]
+; CHECK-GI-NEXT:    mov x12, v1.d[1]
+; CHECK-GI-NEXT:    eor x9, x9, x11
+; CHECK-GI-NEXT:    mov x11, v3.d[1]
+; CHECK-GI-NEXT:    eor x13, x13, x14
+; CHECK-GI-NEXT:    mov v0.d[0], x9
+; CHECK-GI-NEXT:    mov v1.d[0], x13
+; CHECK-GI-NEXT:    eor x8, x8, x10
+; CHECK-GI-NEXT:    eor x9, x12, x11
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    stp q0, q1, [x2]
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <2 x i128>, ptr %p
+  %e = load <2 x i128>, ptr %q
+  %s = xor <2 x i128> %d, %e
+  store <2 x i128> %s, ptr %r
+  ret void
+}
+
+define void @and_v4i128_mem(ptr %p, ptr %q, ptr %r) {
+; CHECK-SD-LABEL: and_v4i128_mem:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp q0, q3, [x0, #32]
+; CHECK-SD-NEXT:    ldp q1, q2, [x1, #32]
+; CHECK-SD-NEXT:    ldp q4, q6, [x0]
+; CHECK-SD-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-SD-NEXT:    ldp q1, q5, [x1]
+; CHECK-SD-NEXT:    and v2.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    and v1.16b, v4.16b, v1.16b
+; CHECK-SD-NEXT:    and v3.16b, v6.16b, v5.16b
+; CHECK-SD-NEXT:    stp q0, q2, [x2, #32]
+; CHECK-SD-NEXT:    stp q1, q3, [x2]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_v4i128_mem:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    ldp q4, q5, [x1]
+; CHECK-GI-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-GI-NEXT:    ldp q6, q7, [x1, #32]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    fmov x11, d4
+; CHECK-GI-NEXT:    fmov x13, d1
+; CHECK-GI-NEXT:    fmov x15, d5
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    mov x10, v4.d[1]
+; CHECK-GI-NEXT:    mov x12, v1.d[1]
+; CHECK-GI-NEXT:    fmov x17, d6
+; CHECK-GI-NEXT:    mov x14, v5.d[1]
+; CHECK-GI-NEXT:    mov x16, v6.d[1]
+; CHECK-GI-NEXT:    and x9, x9, x11
+; CHECK-GI-NEXT:    and x11, x13, x15
+; CHECK-GI-NEXT:    fmov x15, d2
+; CHECK-GI-NEXT:    mov v0.d[0], x9
+; CHECK-GI-NEXT:    mov x13, v2.d[1]
+; CHECK-GI-NEXT:    mov v1.d[0], x11
+; CHECK-GI-NEXT:    mov x11, v3.d[1]
+; CHECK-GI-NEXT:    mov x18, v7.d[1]
+; CHECK-GI-NEXT:    and x8, x8, x10
+; CHECK-GI-NEXT:    and x9, x15, x17
+; CHECK-GI-NEXT:    fmov x15, d3
+; CHECK-GI-NEXT:    fmov x17, d7
+; CHECK-GI-NEXT:    mov v2.d[0], x9
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    and x8, x12, x14
+; CHECK-GI-NEXT:    and x9, x15, x17
+; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    and x8, x13, x16
+; CHECK-GI-NEXT:    mov v3.d[0], x9
+; CHECK-GI-NEXT:    mov v2.d[1], x8
+; CHECK-GI-NEXT:    and x8, x11, x18
+; CHECK-GI-NEXT:    stp q0, q1, [x2]
+; CHECK-GI-NEXT:    mov v3.d[1], x8
+; CHECK-GI-NEXT:    stp q2, q3, [x2, #32]
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <4 x i128>, ptr %p
+  %e = load <4 x i128>, ptr %q
+  %s = and <4 x i128> %d, %e
+  store <4 x i128> %s, ptr %r
+  ret void
+}
+
+; A chain of bitwise ops that ends in a store stays in vector registers too.
+
+define void @and_xor_v2i128_mem(ptr %p, ptr %q, ptr %s, ptr %r) {
+; CHECK-SD-LABEL: and_xor_v2i128_mem:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp q0, q2, [x1]
+; CHECK-SD-NEXT:    ldp q1, q3, [x0]
+; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-SD-NEXT:    and v1.16b, v3.16b, v2.16b
+; CHECK-SD-NEXT:    ldp q2, q3, [x2]
+; CHECK-SD-NEXT:    eor v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    eor v1.16b, v1.16b, v3.16b
+; CHECK-SD-NEXT:    stp q0, q1, [x3]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_xor_v2i128_mem:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q2, [x0]
+; CHECK-GI-NEXT:    ldp q1, q3, [x1]
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    fmov x12, d2
+; CHECK-GI-NEXT:    mov x10, v1.d[1]
+; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    fmov x14, d3
+; CHECK-GI-NEXT:    ldp q0, q1, [x2]
+; CHECK-GI-NEXT:    mov x13, v3.d[1]
+; CHECK-GI-NEXT:    and x12, x12, x14
+; CHECK-GI-NEXT:    and x9, x9, x11
+; CHECK-GI-NEXT:    mov x11, v2.d[1]
+; CHECK-GI-NEXT:    fmov x16, d0
+; CHECK-GI-NEXT:    fmov x14, d1
+; CHECK-GI-NEXT:    mov x15, v0.d[1]
+; CHECK-GI-NEXT:    and x8, x8, x10
+; CHECK-GI-NEXT:    eor x9, x9, x16
+; CHECK-GI-NEXT:    mov x16, v1.d[1]
+; CHECK-GI-NEXT:    mov v0.d[0], x9
+; CHECK-GI-NEXT:    eor x9, x12, x14
+; CHECK-GI-NEXT:    eor x8, x8, x15
+; CHECK-GI-NEXT:    mov v1.d[0], x9
+; CHECK-GI-NEXT:    and x9, x11, x13
+; CHECK-GI-NEXT:    eor x9, x9, x16
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov v1.d[1], x9
+; CHECK-GI-NEXT:    stp q0, q1, [x3]
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <2 x i128>, ptr %p
+  %e = load <2 x i128>, ptr %q
+  %f = load <2 x i128>, ptr %s
+  %g = and <2 x i128> %d, %e
+  %h = xor <2 x i128> %g, %f
+  store <2 x i128> %h, ptr %r
+  ret void
+}
+
+; add carries between the halves of each i128, so it must stay scalarized.
+
+define void @add_v2i128_mem(ptr %p, ptr %q, ptr %r) {
+; CHECK-SD-LABEL: add_v2i128_mem:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp x9, x8, [x0]
+; CHECK-SD-NEXT:    ldp x10, x11, [x1]
+; CHECK-SD-NEXT:    ldp x12, x15, [x1, #16]
+; CHECK-SD-NEXT:    ldp x13, x14, [x0, #16]
+; CHECK-SD-NEXT:    adds x9, x9, x10
+; CHECK-SD-NEXT:    adc x8, x8, x11
+; CHECK-SD-NEXT:    adds x10, x13, x12
+; CHECK-SD-NEXT:    stp x9, x8, [x2]
+; CHECK-SD-NEXT:    adc x11, x14, x15
+; CHECK-SD-NEXT:    stp x10, x11, [x2, #16]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_v2i128_mem:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q3, [x1]
+; CHECK-GI-NEXT:    ldp q1, q2, [x0]
+; CHECK-GI-NEXT:    fmov x9, d0
+; CHECK-GI-NEXT:    mov x11, v0.d[1]
+; CHECK-GI-NEXT:    fmov x14, d3
+; CHECK-GI-NEXT:    fmov x8, d1
+; CHECK-GI-NEXT:    mov x10, v1.d[1]
+; CHECK-GI-NEXT:    mov x12, v2.d[1]
+; CHECK-GI-NEXT:    mov x13, v3.d[1]
+; CHECK-GI-NEXT:    adds x8, x8, x9
+; CHECK-GI-NEXT:    cset w9, hs
+; CHECK-GI-NEXT:    mov v0.d[0], x8
+; CHECK-GI-NEXT:    cmp w9, #1
+; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    adc x10, x10, x11
+; CHECK-GI-NEXT:    adds x8, x9, x14
+; CHECK-GI-NEXT:    mov v0.d[1], x10
+; CHECK-GI-NEXT:    mov v1.d[0], x8
+; CHECK-GI-NEXT:    cset w8, hs
+; CHECK-GI-NEXT:    cmp w8, #1
+; CHECK-GI-NEXT:    adc x8, x12, x13
+; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    stp q0, q1, [x2]
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <2 x i128>, ptr %p
+  %e = load <2 x i128>, ptr %q
+  %s = add <2 x i128> %d, %e
+  store <2 x i128> %s, ptr %r
+  ret void
+}
+
+; The result is used as a scalar, so it has to reach GPRs anyway. Vectorizing
+; here would only add cross-bank moves, so it stays scalarized.
+
+define i128 @and_v2i128_mem_scalar_use(ptr %p, ptr %q) {
+; CHECK-SD-LABEL: and_v2i128_mem_scalar_use:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldp x8, x9, [x0]
+; CHECK-SD-NEXT:    ldp x10, x14, [x1]
+; CHECK-SD-NEXT:    ldp x11, x15, [x1, #16]
+; CHECK-SD-NEXT:    ldp x12, x13, [x0, #16]
+; CHECK-SD-NEXT:    and x8, x8, x10
+; CHECK-SD-NEXT:    and x9, x9, x14
+; CHECK-SD-NEXT:    and x11, x12, x11
+; CHECK-SD-NEXT:    and x10, x13, x15
+; CHECK-SD-NEXT:    adds x0, x8, x11
+; CHECK-SD-NEXT:    adc x1, x9, x10
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: and_v2i128_mem_scalar_use:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ldp q0, q1, [x0]
+; CHECK-GI-NEXT:    ldp q2, q3, [x1]
+; CHECK-GI-NEXT:    mov x8, v0.d[1]
+; CHECK-GI-NEXT:    mov x10, v1.d[1]
+; CHECK-GI-NEXT:    fmov x12, d0
+; CHECK-GI-NEXT:    mov x9, v2.d[1]
+; CHECK-GI-NEXT:    mov x11, v3.d[1]
+; CHECK-GI-NEXT:    fmov x13, d2
+; CHECK-GI-NEXT:    fmov x14, d1
+; CHECK-GI-NEXT:    fmov x15, d3
+; CHECK-GI-NEXT:    and x12, x12, x13
+; CHECK-GI-NEXT:    and x13, x14, x15
+; CHECK-GI-NEXT:    and x8, x8, x9
+; CHECK-GI-NEXT:    and x9, x10, x11
+; CHECK-GI-NEXT:    adds x0, x12, x13
+; CHECK-GI-NEXT:    adc x1, x8, x9
+; CHECK-GI-NEXT:    ret
+entry:
+  %d = load <2 x i128>, ptr %p
+  %e = load <2 x i128>, ptr %q
+  %s = and <2 x i128> %d, %e
+  %s0 = extractelement <2 x i128> %s, i32 0
+  %s1 = extractelement <2 x i128> %s, i32 1
+  %t = add i128 %s0, %s1
+  ret i128 %t
+}
