@@ -361,6 +361,11 @@ set(files
   __debug_utils/randomize_range.h
   __debug_utils/sanitizers.h
   __debug_utils/strict_weak_ordering_check.h
+  __debugging/support.h
+  __debugging/support/aix.h
+  __debugging/support/bsd_like.h
+  __debugging/support/linux.h
+  __debugging/support/windows.h
   __exception/exception.h
   __exception/exception_ptr.h
   __exception/nested_exception.h
