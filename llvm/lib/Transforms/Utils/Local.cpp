@@ -74,6 +74,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
@@ -151,11 +152,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Dest1->removePredecessor(BI->getParent());
 
       // Replace the conditional branch with an unconditional one.
-      UncondBrInst *NewBI = Builder.CreateBr(Dest1);
-
-      // Transfer the metadata to the new branch instruction.
-      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                                LLVMContext::MD_annotation});
+      UncondBrInst *NewBI = Builder.CreateBr(Dest1, BI);
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop});
 
       Value *Cond = BI->getCondition();
       BI->eraseFromParent();
@@ -175,11 +173,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       OldDest->removePredecessor(BB);
 
       // Replace the conditional branch with an unconditional one.
-      UncondBrInst *NewBI = Builder.CreateBr(Destination);
-
-      // Transfer the metadata to the new branch instruction.
-      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop, LLVMContext::MD_dbg,
-                                LLVMContext::MD_annotation});
+      UncondBrInst *NewBI = Builder.CreateBr(Destination, BI);
+      NewBI->copyMetadata(*BI, {LLVMContext::MD_loop});
 
       BI->eraseFromParent();
       if (DTU)
@@ -273,7 +268,11 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     // now.
     if (TheOnlyDest) {
       // Insert the new branch.
-      Builder.CreateBr(TheOnlyDest);
+      UncondBrInst *NewBI = Builder.CreateBr(TheOnlyDest, SI);
+      // Preserve loop metadata when every switch destination is retained.
+      if (all_of(successors(SI),
+                 [&](const BasicBlock *Succ) { return Succ == TheOnlyDest; }))
+        NewBI->copyMetadata(*SI, {LLVMContext::MD_loop});
       BasicBlock *BB = SI->getParent();
 
       SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
@@ -315,7 +314,8 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
 
       // Insert the new branch.
       CondBrInst *NewBr = Builder.CreateCondBr(
-          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest());
+          Cond, FirstCase.getCaseSuccessor(), SI->getDefaultDest(), SI);
+      NewBr->copyMetadata(*SI, {LLVMContext::MD_loop});
       SmallVector<uint32_t> Weights;
       if (extractBranchWeights(*SI, Weights) && Weights.size() == 2) {
         uint32_t DefWeight = Weights[0];

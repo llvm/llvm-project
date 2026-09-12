@@ -579,6 +579,13 @@ TEST_F(IRBuilderTest, CreateCondBr) {
   EXPECT_EQ(TBB, TI->getSuccessor(0));
   EXPECT_EQ(FBB, TI->getSuccessor(1));
   EXPECT_EQ(Weights, TI->getMetadata(LLVMContext::MD_prof));
+
+  MDNode *Annotation = MDNode::get(Ctx, MDString::get(Ctx, "annotation"));
+  BI->setMetadata(LLVMContext::MD_annotation, Annotation);
+  Builder.SetInsertPoint(BI);
+  CondBrInst *NewBI = Builder.CreateCondBr(Builder.getTrue(), TBB, FBB, BI);
+  EXPECT_EQ(Annotation, NewBI->getMetadata(LLVMContext::MD_annotation));
+  BI->eraseFromParent();
 }
 
 TEST_F(IRBuilderTest, LandingPadName) {
