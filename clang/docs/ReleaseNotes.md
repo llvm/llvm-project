@@ -676,6 +676,12 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed an assertion when mangling an abbreviated function template whose
+  constrained `auto` parameter refers to an earlier parameter (e.g.
+  `template<typename T> auto f(T t, C<decltype(t)> auto) -> S`) and whose
+  return type has an ABI tag, such as a type declared in an `abi_tag` inline
+  namespace like `std::string` under libstdc++. (#GH204178)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
