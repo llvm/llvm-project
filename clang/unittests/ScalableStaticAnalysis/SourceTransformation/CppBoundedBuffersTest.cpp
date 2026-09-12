@@ -687,4 +687,250 @@ TEST_F(CppBoundedBuffersTest, MessageForIsUnique) {
   }
 }
 
+//===----------------------------------------------------------------------===//
+// Expression rewriting tests
+//===----------------------------------------------------------------------===//
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataDRE) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g() { int *q; f(q); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(int *p);
+    void g() { bounded_ptr<int> q; f((q).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataAddrOfDeref) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g() { int *q; f(&*q); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(int *p);
+    void g() { bounded_ptr<int> q; f((q).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataAddrOfDerefParen) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g() { int *q; f(&(*q)); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(int *p);
+    void g() { bounded_ptr<int> q; f((q).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataAddrOfSubscript) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g(int i) { int arr[4]; f(&arr[i]); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("arr", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(int *p);
+    void g(int i) { bounded_array<int, 4> arr; f(((arr + i)).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataAddrOfSubscript2) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g(int i) { int *q; f(&q[i]); }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("q", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(int *p);
+    void g(int i) { bounded_ptr<int> q; f(((q + i)).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataPtrCast) {
+  StringRef Code = R"cpp(
+    void f(char *p);
+    void g() { int *q; f((char*)q); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(char *p);
+    void g() { bounded_ptr<int> q; f(((q).as_bounded<char>()).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataPtrCastStaticCast) {
+  StringRef Code = R"cpp(
+    void f(char *p);
+    void g() { int *q; f(reinterpret_cast<char*>(q)); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(char *p);
+    void g() { bounded_ptr<int> q; f(((q).as_bounded<char>()).data()); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgAddDataPtrCastAddrOfSubscript) {
+  StringRef Code = R"cpp(
+    void f(char *p);
+    void g(int i) {
+      int *q;
+      f((char*)&q[i]);
+    }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(char *p);
+    void g(int i) {
+      bounded_ptr<int> q;
+      f((((q + i)).as_bounded<char>()).data());
+    }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, AssignPtrCastAddrOfSubscript) {
+  // The argument is a C-style cast of an address-of-subscript, '(char*)&q[i]'.
+  // 'q' is transformed but f's parameter is not.
+  StringRef Code = R"cpp(
+    void g(int i) {
+      int *q;
+      char *p = (char*)&q[i];
+    }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g(int i) {
+      bounded_ptr<int> q;
+      char *p = ((q + i)).as_bounded<char>();
+    }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgNoChangeImplicit) {
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g() { int *q; f(q); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, paramEntity("f", 0, Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(bounded_ptr<int> p);
+    void g() { int *q; f(q); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgNoChangeBothHardened) {
+  // Both the parameter and the argument are rewritten to the same bounded
+  // type, so the call site needs no adjustment.
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g() { int *q; f(q); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, paramEntity("f", 0, Ctx), {1});
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(bounded_ptr<int> p);
+    void g() { bounded_ptr<int> q; f(q); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgNoChangeVoidParamVoidArg) {
+  // 'q' is void*, so it gets rewritten to 'bounded_ptr<char>', not
+  // 'bounded_ptr<void>'.  If '.data()' were appended it would return
+  // 'char *', which could silently steal a different overload of 'f' than
+  // the original 'void *' argument would have. So bail rather than adding
+  // '.data()' when both the parameter and the argument's original type are
+  // 'void*'.
+  StringRef Code = R"cpp(
+    void f(void *p);
+    void g() { void *q; f(q); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, varEntity("q", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(void *p);
+    void g() { bounded_ptr<char> q; f(q); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, CallArgNoChangeArrayDecayMatchingType) {
+  // 'arr' is passed directly (no cast), so its element type must already
+  // match 'f's parameter pointee type pre-transformation. The implicit
+  // 'bounded_array<T, N>' -> 'bounded_ptr<T>' conversion bridges this case,
+  // so no '.as_bounded<T>()' is needed at the call site.
+  StringRef Code = R"cpp(
+    void f(int *p);
+    void g() { int arr[4]; f(arr); }
+  )cpp";
+  Captured C = runMarked(Code, [](ASTContext &Ctx, WPASuite &Suite,
+                                  UnsafeBufferReachableAnalysisResult &Result) {
+    markReachable(Suite, Result, paramEntity("f", 0, Ctx), {1});
+    markReachable(Suite, Result, varEntity("arr", Ctx), {1});
+  });
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void f(bounded_ptr<int> p);
+    void g() { bounded_array<int, 4> arr; f(arr); }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
+TEST_F(CppBoundedBuffersTest, RHSNoChangeRHSNotHardened) {
+  StringRef Code = R"cpp(
+    void g() { int arr[4]; int *p = &arr[0]; }
+  )cpp";
+  Captured C =
+      run(Code, [](ASTContext &Ctx) { return varEntity("p", Ctx); }, {1});
+  EXPECT_EQ(C.Rewritten, R"cpp(
+    void g() { int arr[4]; bounded_ptr<int> p = &arr[0]; }
+  )cpp");
+  EXPECT_TRUE(C.Reports.empty());
+}
+
 } // namespace
