@@ -1867,14 +1867,6 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         I = new ShuffleVectorInst(Ops[0], Ops[1], Ops[2], "constexpr",
                                   InsertBB);
         break;
-      case Instruction::BitExtract:
-        I = BitExtractInst::Create(BC->getType(), Ops[0], Ops[1], "constexpr",
-                                   InsertBB);
-        break;
-      case Instruction::BitInsert:
-        I = BitInsertInst::Create(Ops[0], Ops[1], Ops[2], "constexpr",
-                                  InsertBB);
-        break;
       default:
         llvm_unreachable("Unhandled bitcode constant");
       }
