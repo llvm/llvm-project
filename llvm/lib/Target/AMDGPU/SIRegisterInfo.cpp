@@ -4201,8 +4201,8 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   // Do not apply anti-hints if we are reaching close to the VGPR budget. For
   // target occupancy, the 80% cutoff is a conservative: anti-hints are disabled
   // early enough that later registers still have headroom to stay at target
-  // occupancy. For current occupancy, the 95% cutoff margin is used to apply
-  // anti-hints close to the limit of the current occupancy budget.
+  // occupancy. For current occupancy, the 95% cutoff margin is used to not
+  // apply anti-hints close to the limit of the current occupancy budget.
   unsigned MaxVGPRsCutOffForTargetOccupancy =
       (ST.getMaxNumVGPRs(TargetOccupancy, DynamicVGPRBlockSize) * 80) / 100;
   unsigned MaxVGPRsCutOffForCurrentOccupancy =
@@ -4225,22 +4225,56 @@ bool SIRegisterInfo::shouldApplyAntiHints(
   return true;
 }
 
+// Returns true if Reg fits within the current occupancy VGPR budget.
+bool SIRegisterInfo::isRegWithinOccupancyBudget(
+    MCPhysReg Reg, unsigned NumVGPRs, unsigned NumAGPRs,
+    unsigned MaxVGPRsForCurrentOccupancy) const {
+  const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+
+  // No VGPR or AGPR usage.
+  if (!RC || (!isVGPRClass(RC) && !isAGPRClass(RC)))
+    return true;
+
+  unsigned RegEndIndex =
+      getHWRegIndex(Reg) + divideCeil(getRegSizeInBits(*RC), 32);
+
+  unsigned MaxVGPR = NumVGPRs;
+  unsigned MaxAGPR = NumAGPRs;
+
+  if (isAGPRClass(RC))
+    MaxAGPR = std::max(MaxAGPR, RegEndIndex);
+  else
+    MaxVGPR = std::max(MaxVGPR, RegEndIndex);
+
+  return static_cast<unsigned>(
+             AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), MaxAGPR, MaxVGPR)) <=
+         MaxVGPRsForCurrentOccupancy;
+}
+
 void SIRegisterInfo::filterAndSortForAntiHintedRegs(
     Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
     const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-    const LiveRegMatrix *Matrix) const {
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
 
-  // Get total number of allocated VGPRs to determine the current occupancy.
-  unsigned NumVGPRs = 0;
-  unsigned NumAGPRs = 0;
+  if (none_of(CustomOrder, [&](MCPhysReg Reg) {
+        return isAntiHintedReg(Reg, AntiHintedRegUnits);
+      }))
+    return;
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  unsigned NumVGPRs = getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
+                                         /*IncludeCalls=*/false);
+  unsigned NumAGPRs = getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
+                                         /*IncludeCalls=*/false);
   if (Matrix) {
-    for (MCPhysReg Reg : AMDGPU::VGPR_32RegClass)
+    for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::VGPR_32RegClass))
       if (Matrix->isPhysRegUsed(Reg))
         NumVGPRs = std::max(NumVGPRs, getHWRegIndex(Reg) + 1);
-    for (MCPhysReg Reg : AMDGPU::AGPR_32RegClass)
+    for (MCPhysReg Reg : RegClassInfo->getOrder(&AMDGPU::AGPR_32RegClass))
       if (Matrix->isPhysRegUsed(Reg))
         NumAGPRs = std::max(NumAGPRs, getHWRegIndex(Reg) + 1);
   }
+
   unsigned NumAllocatedVGPRs =
       AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(), NumAGPRs, NumVGPRs);
 
@@ -4249,35 +4283,14 @@ void SIRegisterInfo::filterAndSortForAntiHintedRegs(
   if (!shouldApplyAntiHints(MF, NumAllocatedVGPRs, MaxVGPRsForCurrentOccupancy))
     return;
 
-  // Returns true if Reg fits within the current occupancy VGPR budget.
-  auto IsWithinBudget = [&](MCPhysReg Reg) -> bool {
-    const TargetRegisterClass *RC = getPhysRegBaseClass(Reg);
+  // Reorder all in-budget first so the anti-hinted partition covers
+  // both VGPRs and AGPRs.
+  auto *BeyondBudgetStart = std::stable_partition(
+      CustomOrder.begin(), CustomOrder.end(), [&](MCPhysReg Reg) {
+        return isRegWithinOccupancyBudget(Reg, NumVGPRs, NumAGPRs,
+                                          MaxVGPRsForCurrentOccupancy);
+      });
 
-    // No VGPR or AGPR usage.
-    if (!RC ||
-        (!isVGPRClass(RC) && !isAGPRClass(RC) && !isVectorSuperClass(RC)))
-      return true;
-
-    unsigned RegEndIndex =
-        getHWRegIndex(Reg) + divideCeil(getRegSizeInBits(*RC), 32);
-
-    unsigned MaxVGPR = NumVGPRs;
-    unsigned MaxAGPR = NumAGPRs;
-    if (isAGPRClass(RC))
-      MaxAGPR = std::max(MaxAGPR, RegEndIndex);
-    else
-      MaxVGPR = std::max(MaxVGPR, RegEndIndex);
-
-    return static_cast<unsigned>(AMDGPU::getTotalNumVGPRs(ST.hasGFX90AInsts(),
-                                                          MaxAGPR, MaxVGPR)) <=
-           MaxVGPRsForCurrentOccupancy;
-  };
-
-  // Find the cutoff point for the current occupancy VGPR budget.
-  auto *BeyondBudgetStart = llvm::find_if(
-      CustomOrder, [&](MCPhysReg Reg) { return !IsWithinBudget(Reg); });
-
-  // Only shuffle within the current occupancy VGPR budget.
   auto *PartitionPoint = std::stable_partition(
       CustomOrder.begin(), BeyondBudgetStart,
       [&](MCPhysReg Reg) { return !isAntiHintedReg(Reg, AntiHintedRegUnits); });
