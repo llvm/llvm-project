@@ -575,7 +575,9 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 ///
 /// \param [in] opts The target options instance to update
 /// \param [in] args The list of input arguments (from the compiler invocation)
-static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
+/// \param [out] diags DiagnosticsEngine to report errors with
+static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args,
+                            clang::DiagnosticsEngine &diags) {
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_triple))
     opts.triple = a->getValue();
 
@@ -604,6 +606,11 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
 
   if (args.hasArg(clang::options::OPT_fdisable_real_3))
     opts.disabledRealKinds.push_back(3);
+
+  if (args.hasArg(clang::options::OPT_fdisable_real_16)) {
+    opts.disabledRealKinds.push_back(16);
+    diags.Report(clang::diag::warn_real_kind_consistency_for_flang);
+  }
 
   if (args.hasArg(clang::options::OPT_fdisable_integer_2))
     opts.disabledIntegerKinds.push_back(2);
@@ -1452,7 +1459,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 ///
 /// \param [out] invoc Stores the processed arguments
 /// \param [in] args The compiler invocation arguments to parse
-/// \param [out] diags DiagnosticsEngine to report erros with
+/// \param [out] diags DiagnosticsEngine to report errors with
 static bool parseIntegerOverflowArgs(CompilerInvocation &invoc,
                                      llvm::opt::ArgList &args,
                                      clang::DiagnosticsEngine &diags) {
@@ -1518,7 +1525,7 @@ static void setIEEEFPModesArgs(Fortran::common::LangOptions &opts,
 ///
 /// \param [out] invoc Stores the processed arguments
 /// \param [in] args The compiler invocation arguments to parse
-/// \param [out] diags DiagnosticsEngine to report erros with
+/// \param [out] diags DiagnosticsEngine to report errors with
 static bool parseFloatingPointArgs(CompilerInvocation &invoc,
                                    llvm::opt::ArgList &args,
                                    clang::DiagnosticsEngine &diags) {
@@ -1598,7 +1605,7 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
 ///
 /// \param [out] invoc Stores the processed arguments
 /// \param [in] args The compiler invocation arguments to parse
-/// \param [out] diags DiagnosticsEngine to report erros with
+/// \param [out] diags DiagnosticsEngine to report errors with
 static bool parseVScaleArgs(CompilerInvocation &invoc, llvm::opt::ArgList &args,
                             clang::DiagnosticsEngine &diags) {
   const auto *vscaleMin = args.getLastArg(clang::options::OPT_mvscale_min_EQ);
@@ -1830,7 +1837,7 @@ bool CompilerInvocation::createFromArgs(
   }
 
   success &= parseFrontendArgs(invoc.getFrontendOpts(), args, diags);
-  parseTargetArgs(invoc.getTargetOpts(), args);
+  parseTargetArgs(invoc.getTargetOpts(), args, diags);
   parsePreprocessorArgs(invoc.getPreprocessorOpts(), args);
   parseCodeGenArgs(invoc.getCodeGenOpts(), args, diags);
   success &= parseDoConcurrentMapping(invoc.getCodeGenOpts(), args, diags);
