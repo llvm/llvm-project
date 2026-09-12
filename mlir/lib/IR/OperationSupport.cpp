@@ -227,6 +227,37 @@ void OperationState::addRegions(
 }
 
 //===----------------------------------------------------------------------===//
+// Operand mutation
+//===----------------------------------------------------------------------===//
+
+void mlir::eraseOperands(Operation *op, const BitVector &eraseIndices) {
+  assert(eraseIndices.size() == op->getNumOperands() &&
+         "expected one bit per operand");
+  if (eraseIndices.none())
+    return;
+
+  op->eraseOperands(eraseIndices);
+  if (!op->hasTrait<OpTrait::AttrSizedOperandSegments>())
+    return;
+
+  auto attrName = StringAttr::get(
+      op->getContext(),
+      OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
+  auto sizes = op->getAttrOfType<DenseI32ArrayAttr>(attrName);
+  assert(sizes && "expected operand segment sizes attribute");
+  SmallVector<int32_t> newSizes(sizes.asArrayRef());
+  unsigned offset = 0;
+  for (int32_t &size : newSizes) {
+    // The attribute and bit vector still use the original operand indices.
+    unsigned end = offset + size;
+    for (; offset < end; ++offset)
+      size -= eraseIndices.test(offset);
+  }
+  op->setInherentAttr(attrName,
+                      DenseI32ArrayAttr::get(op->getContext(), newSizes));
+}
+
+//===----------------------------------------------------------------------===//
 // OperandStorage
 //===----------------------------------------------------------------------===//
 
