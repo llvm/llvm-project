@@ -1726,11 +1726,8 @@ static void genInitLocal(Fortran::lower::AbstractConverter &converter,
       // Use the DataLayout allocation stride rather than charBits / 8.
       // charBits / 8 is the semantic byte width; LLVM pads iN types to their
       // ABI alignment, so e.g. i24 has a 4-byte stride on most targets.
-      // The formula alignTo(ceil(charBits/8), ABI) handles all widths
-      // including sub-byte ones (i1 rounds up to i8, 1-byte stride) so no
-      // diagnostic is needed here either.
-      // e.g. a1:1 (i1->i8, stride 1), a1:12 (i12->i16, stride 2),
-      //      a1:24 (i24->i32, stride 4).
+      // The formula alignTo(ceil(charBits/8), ABI) handles all widths,
+      // including sub-byte ones, so no diagnostic is needed here either.
       unsigned charBitsRt =
           builder.getKindMap().getCharacterBitsize(charTy.getFKind());
       unsigned charByteWidthRt = std::max(1u, (charBitsRt + 7) / 8);
