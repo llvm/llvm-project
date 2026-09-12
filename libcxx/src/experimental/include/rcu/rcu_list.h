@@ -14,7 +14,6 @@
 #include <__functional/function.h>
 #include <__rcu/rcu_domain.h>
 #include <atomic>
-#include <type_traits>
 
 #include "thread_local_container.h"
 
@@ -26,7 +25,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
-class rcu_atomic_list_view;
+class rcu_thread_local_list_view;
 
 class rcu_singly_list_view {
 private:
@@ -49,7 +48,7 @@ public:
     other.tail_ = nullptr;
   }
 
-  void splice_back(rcu_atomic_list_view& __other) noexcept;
+  void splice_back(rcu_thread_local_list_view& __other) noexcept;
 
   template <class Func>
   void for_each(Func&& f) noexcept {
@@ -63,32 +62,31 @@ public:
   }
 };
 
-struct alignas(2 * sizeof(void*)) rcu_atomic_list_view_entry {
-  __rcu_node* head_ = nullptr;
-  __rcu_node* tail_ = nullptr;
-};
+class rcu_thread_local_list_view {
+  struct alignas(2 * sizeof(void*)) thread_entry {
+    __rcu_node* head_ = nullptr;
+    __rcu_node* tail_ = nullptr;
+  };
 
-class rcu_atomic_list_view {
-  using entry = rcu_atomic_list_view_entry;
-
-  std::atomic<entry> entry_{};
+  using per_thread_entries = thread_local_container<thread_entry>;
 
   friend class rcu_singly_list_view;
 
 public:
   void push_front(__rcu_node* node) noexcept {
-    auto expected_entry = entry_.load(std::memory_order_relaxed);
-    auto original_next  = node->__next_;
+    atomic_ref<thread_entry> entry_ref = per_thread_entries::get_current_thread_instance();
+    auto expected_entry                = entry_ref.load(std::memory_order_relaxed);
+    auto original_next                 = node->__next_;
     while (true) {
       auto new_entry = [&] {
         if (expected_entry.head_ == nullptr) {
-          return entry{node, node};
+          return thread_entry{node, node};
         } else {
           node->__next_ = expected_entry.head_;
-          return entry{node, expected_entry.tail_};
+          return thread_entry{node, expected_entry.tail_};
         }
       }();
-      if (entry_.compare_exchange_weak(
+      if (entry_ref.compare_exchange_weak(
               expected_entry, new_entry, std::memory_order_acq_rel, std::memory_order_relaxed)) {
         break;
       } else {
@@ -98,15 +96,19 @@ public:
   }
 };
 
-void rcu_singly_list_view::splice_back(rcu_atomic_list_view& __other) noexcept {
-  if (__other.entry_.load(std::memory_order_relaxed).head_ == nullptr) {
-    return;
-  }
-  auto entry = __other.entry_.exchange(rcu_atomic_list_view::entry{nullptr, nullptr}, std::memory_order_acq_rel);
-  rcu_singly_list_view tmp;
-  tmp.head_ = entry.head_;
-  tmp.tail_ = entry.tail_;
-  this->splice_back(tmp);
+void rcu_singly_list_view::splice_back(rcu_thread_local_list_view& __other) noexcept {
+  using thread_entry             = rcu_thread_local_list_view::thread_entry;
+  const auto splice_single_entry = [this](atomic_ref<thread_entry> entry_ref) noexcept {
+    if (entry_ref.load(std::memory_order_relaxed).head_ == nullptr) {
+      return;
+    }
+    auto entry = entry_ref.exchange(thread_entry{nullptr, nullptr}, std::memory_order_acq_rel);
+    rcu_singly_list_view tmp;
+    tmp.head_ = entry.head_;
+    tmp.tail_ = entry.tail_;
+    this->splice_back(tmp);
+  };
+  rcu_thread_local_list_view::per_thread_entries::for_each(splice_single_entry);
 }
 
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
