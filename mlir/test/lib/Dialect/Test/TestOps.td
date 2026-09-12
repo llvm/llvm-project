@@ -2653,9 +2653,7 @@ def RegionYieldOp : TEST_Op<"region_yield",
   let assemblyFormat = [{
     $result `:` type($result) attr-dict
   }];
-  let builders = [OpBuilder<(ins),
-    [{ build($_builder, $_state, {}); }]>
-  ];
+  let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 }
 
 class BufferBasedOpBase<string mnemonic, list<Trait> traits>

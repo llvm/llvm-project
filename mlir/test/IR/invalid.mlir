@@ -699,3 +699,11 @@ func.func @drop_references_on_block_parse_error(){
   }) : () -> ()
   return
 }
+
+// -----
+
+// Auto-constructing a missing implicit terminator must not crash.
+func.func @cse_of_single_block_op_no_terminator() {
+  %0 = test.cse_of_single_block_op inputs() {
+  } // expected-error {{expected ':'}}
+}
