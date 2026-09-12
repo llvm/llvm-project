@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple powerpc64-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-BE %s
-# RUN: llvm-mc -triple powerpc64le-unknown-unknown --show-encoding %s | FileCheck -check-prefix=CHECK-LE %s
+# RUN: llvm-mc -triple powerpc64-unknown-unknown -mattr=+ppc6xx --show-encoding %s | FileCheck -check-prefix=CHECK-BE %s
+# RUN: llvm-mc -triple powerpc64le-unknown-unknown -mattr=+ppc6xx --show-encoding %s | FileCheck -check-prefix=CHECK-LE %s
 
 # Instructions specific to the PowerPC 6xx family:
 
