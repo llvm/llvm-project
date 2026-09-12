@@ -213,6 +213,16 @@ public:
 /// tryCandidate to decide which instruction to schedule next.
 class CandidateHeuristics {
 protected:
+  struct StallCosts {
+    unsigned Ready = 0;
+    unsigned Structural = 0;
+    unsigned Latency = 0;
+    unsigned Carried = 0;
+    unsigned Buffer = 0;
+    unsigned Fence = 0;
+    unsigned Effective = 0;
+  };
+
   ScheduleDAGMI *DAG;
   const SIInstrInfo *SII;
   const SIRegisterInfo *SRI;
@@ -242,6 +252,8 @@ protected:
   /// Thus, this method just attempts to find a reasonable upper bound for
   /// carried load latency to avoid long stalls.
   unsigned getCarriedLatency(SUnit *SU);
+
+  StallCosts getStallCosts(SUnit *SU, SchedBoundary &Zone);
 
 public:
   CandidateHeuristics() = default;
@@ -276,7 +288,8 @@ public:
   /// TODO -- add better modelling and heuristics for pipelining based
   /// scheduling.
   bool tryMemoryPipeline(GenericSchedulerBase::SchedCandidate &TryCand,
-                         GenericSchedulerBase::SchedCandidate &Cand);
+                         GenericSchedulerBase::SchedCandidate &Cand,
+                         SchedBoundary &Zone);
 
   /// Check for critical resource consumption. Prefer the candidate that uses
   /// the most prioritized HardwareUnit. If both candidates use the same
