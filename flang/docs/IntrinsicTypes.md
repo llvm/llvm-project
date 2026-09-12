@@ -8,11 +8,6 @@
 
 # Implementation of `Intrinsic` types in f18
 
-```{contents}
----
-local:
----
-```
 
 Intrinsic types are integer, real, complex, character, and logical.
 All intrinsic types have a kind type parameter called KIND,

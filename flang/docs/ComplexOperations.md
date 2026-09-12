@@ -1,10 +1,5 @@
 # Complex Operations
 
-```{contents}
----
-local:
----
-```
 
 Fortran includes support for complex number types and a set of operators and
 intrinsics that work on these types. Some of those operations are complicated

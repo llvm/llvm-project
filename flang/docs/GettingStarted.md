@@ -8,11 +8,6 @@
 
 # Getting Started
 
-```{contents}
----
-local:
----
-```
 
 ## Building flang
 There are two ways to build flang. The first method is to build it at the same
