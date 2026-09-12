@@ -37,6 +37,10 @@ static cl::opt<bool> UsePseudoMovImm(
              "constant materialization"),
     cl::init(false));
 
+static cl::opt<bool> EnableTestFoldAsLoad(
+    "riscv-enable-test-foldasload", cl::init(false), cl::Hidden,
+    cl::desc("Generate the test-only fold-as-load source pseudo."));
+
 #define GET_DAGISEL_BODY RISCVDAGToDAGISel
 #include "RISCVGenDAGISel.inc"
 
@@ -211,6 +215,12 @@ static SDValue selectImmSeq(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
 static SDValue selectImm(SelectionDAG *CurDAG, const SDLoc &DL, const MVT VT,
                          int64_t Imm, const RISCVSubtarget &Subtarget) {
   RISCVMatInt::InstSeq Seq = RISCVMatInt::generateInstSeq(Imm, Subtarget);
+
+  if (EnableTestFoldAsLoad && isInt<32>(Imm))
+    return SDValue(
+        CurDAG->getMachineNode(RISCV::PseudoTestFoldableADDI, DL, VT,
+                               CurDAG->getSignedTargetConstant(Imm, DL, VT)),
+        0);
 
   // Use a rematerializable pseudo instruction for short sequences if enabled.
   if (Seq.size() == 2 && UsePseudoMovImm)

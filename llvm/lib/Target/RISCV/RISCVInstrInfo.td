@@ -1958,6 +1958,12 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoMovImm : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
                    Sched<[WriteIALU]>;
 
+// Test-only source for exercising LiveRangeEdit::foldAsLoad().
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
+    canFoldAsLoad = 1, isReMaterializable = 1 in
+def PseudoTestFoldableADDI : Pseudo<(outs GPR:$dst), (ins i32imm:$imm), []>,
+                             Sched<[WriteIALU]>;
+
 // Materializes "$base + (imm << 12)" as a single pseudo so that
 // MachineLateInstrsCleanup can CSE identical upper-immediate additions.
 // Expanded to LUI+ADD by RISCVPostRAExpandPseudo.
