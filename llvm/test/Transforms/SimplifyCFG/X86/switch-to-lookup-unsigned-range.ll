@@ -19,6 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @switch.table.unsigned_range_straddles_sign_boundary = private unnamed_addr constant [8 x i8] c"\04\0E&L\80\C2\17u", align 4
 ; CHECK: @switch.table.unsigned_range_unreachable_default = private unnamed_addr constant [8 x i8] c"\05\0F'M\81\C3\18v", align 4
 ; CHECK: @switch.table.signed_range_is_narrower = private unnamed_addr constant [8 x i8] c"\06\10(N\82\C4\19w", align 4
+; CHECK: @switch.table.no_nsw_over_unsigned_range = private unnamed_addr constant [9 x i8] [i8 11, i8 29, i8 53, i8 poison, i8 poison, i8 poison, i8 83, i8 7, i8 41], align 4
 ;.
 define i32 @contiguous_from_zero(i4 %c) {
 ; CHECK-LABEL: @contiguous_from_zero(
@@ -189,7 +190,7 @@ return:
 define i32 @unsigned_range_unreachable_default(i8 %c) {
 ; CHECK-LABEL: @unsigned_range_unreachable_default(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nuw i8 [[C:%.*]], 124
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i8 [[C:%.*]], 124
 ; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i8 [[SWITCH_TABLEIDX]] to i64
 ; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [8 x i8], ptr @switch.table.unsigned_range_unreachable_default, i64 0, i64 [[TMP0]]
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
@@ -285,5 +286,50 @@ sw.default:
 
 return:
   %retval = phi i32 [ 6, %sw.bb0 ], [ 16, %sw.bb1 ], [ 40, %sw.bb2 ], [ 78, %sw.bb3 ], [ 130, %sw.bb4 ], [ 196, %sw.bb5 ], [ 25, %sw.bb6 ], [ 119, %sw.bb7 ], [ 42, %sw.default ]
+  ret i32 %retval
+}
+
+; nsw does not hold over the unsigned range: the case values are not
+; signed-ordered between its extremes, so a case in the middle can overflow
+; even when neither extreme does. With an offset of 1 the extremes 1 and 9
+; (i4 -7) subtract without overflow, but case 8 (i4 -8) gives -9.
+define i32 @no_nsw_over_unsigned_range(i4 %c) {
+; CHECK-LABEL: @no_nsw_over_unsigned_range(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i4 [[C:%.*]], 1
+; CHECK-NEXT:    [[TMP0:%.*]] = zext i4 [[SWITCH_TABLEIDX]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [9 x i8], ptr @switch.table.no_nsw_over_unsigned_range, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = load i8, ptr [[SWITCH_GEP]], align 1
+; CHECK-NEXT:    [[SWITCH_EXT:%.*]] = zext i8 [[SWITCH_LOAD]] to i32
+; CHECK-NEXT:    ret i32 [[SWITCH_EXT]]
+;
+entry:
+  switch i4 %c, label %sw.default [
+  i4 1, label %sw.bb0
+  i4 2, label %sw.bb1
+  i4 3, label %sw.bb2
+  i4 7, label %sw.bb3
+  i4 -8, label %sw.bb4
+  i4 -7, label %sw.bb5
+  ]
+
+sw.bb0:
+  br label %return
+sw.bb1:
+  br label %return
+sw.bb2:
+  br label %return
+sw.bb3:
+  br label %return
+sw.bb4:
+  br label %return
+sw.bb5:
+  br label %return
+
+sw.default:
+  unreachable
+
+return:
+  %retval = phi i32 [ 11, %sw.bb0 ], [ 29, %sw.bb1 ], [ 53, %sw.bb2 ], [ 83, %sw.bb3 ], [ 7, %sw.bb4 ], [ 41, %sw.bb5 ]
   ret i32 %retval
 }

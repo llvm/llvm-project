@@ -7597,10 +7597,10 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   // check we would be avoiding.
   if (UseUnsignedRange && SignedRange.isAllOnes() && HasDefaultResults &&
       !SI->defaultDestUnreachable()) {
-    // Keep the signed range only if such a table would actually be built. The
-    // size below saturates for wide types, where it never is.
-    uint64_t CoveringTableSize =
-        SignedRange.getLimitedValue(UINT64_MAX - 1) + 1;
+    // Keep the signed range only if such a table would actually be built. This
+    // wraps to 0 for a range of 2^64 or more values, which
+    // shouldBuildLookupTable rejects along with any other overflowed size.
+    uint64_t CoveringTableSize = SignedRange.getLimitedValue() + 1;
     UseUnsignedRange =
         !shouldBuildLookupTable(SI, CoveringTableSize, TTI, DL, ResultTypes);
   }
@@ -7725,23 +7725,19 @@ static bool simplifySwitchLookup(SwitchInst *SI, IRBuilder<> &Builder,
   // TableIndex is the switch condition - TableIndexOffset if we don't
   // use the condition directly
   if (!UseSwitchConditionAsTableIndex) {
-    bool HasNUW = false;
-    bool HasNSW = false;
-    if (!DefaultIsReachable) {
-      if (UseUnsignedRange) {
-        // All case values are u>= MinCaseVal, so the subtraction cannot wrap.
-        HasNUW = true;
-      } else {
-        // All case values are s>= MinCaseVal. Then we can try to attach nsw.
-        bool MayWrap = true;
-        APInt Res =
-            MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
-        (void)Res;
-        HasNSW = !MayWrap;
-      }
+    // If the default is unreachable, all case values are s>= MinCaseVal. Then
+    // we can try to attach nsw. This only works for the signed range: over the
+    // unsigned one the case values are not signed-ordered between the extremes,
+    // so a case in the middle can overflow even when neither extreme does.
+    bool MayWrap = true;
+    if (!DefaultIsReachable && !UseUnsignedRange) {
+      APInt Res =
+          MaxCaseVal->getValue().ssub_ov(MinCaseVal->getValue(), MayWrap);
+      (void)Res;
     }
     TableIndex = Builder.CreateSub(SI->getCondition(), TableIndexOffset,
-                                   "switch.tableidx", HasNUW, HasNSW);
+                                   "switch.tableidx", /*HasNUW =*/false,
+                                   /*HasNSW =*/!MayWrap);
   }
 
   std::vector<DominatorTree::UpdateType> Updates;

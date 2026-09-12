@@ -1766,7 +1766,7 @@ define i32 @signed_overflow2(i8 %n) {
 ; CHECK-LABEL: @signed_overflow2(
 ; CHECK-NEXT:  start:
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[N:%.*]] to i2
-; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub nuw i2 [[TRUNC]], 1
+; CHECK-NEXT:    [[SWITCH_TABLEIDX:%.*]] = sub i2 [[TRUNC]], 1
 ; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = zext i2 [[SWITCH_TABLEIDX]] to i32
 ; CHECK-NEXT:    [[SWITCH_IDX_MULT:%.*]] = mul nsw i32 [[SWITCH_IDX_CAST]], 1111
 ; CHECK-NEXT:    [[SWITCH_LOAD:%.*]] = add nsw i32 [[SWITCH_IDX_MULT]], 2222
