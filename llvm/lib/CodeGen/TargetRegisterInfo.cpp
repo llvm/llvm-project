@@ -454,7 +454,7 @@ void TargetRegisterInfo::applyRegAllocationAntiHints(
     Register VirtReg, ArrayRef<MCPhysReg> Order,
     SmallVectorImpl<MCPhysReg> &HintsAndCustomOrder, unsigned NumHints,
     const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-    const LiveRegMatrix *Matrix) const {
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
 
   if (AntiHintedRegUnits.none())
     return;
@@ -466,13 +466,13 @@ void TargetRegisterInfo::applyRegAllocationAntiHints(
   filterAndSortForAntiHintedRegs(
       VirtReg,
       MutableArrayRef<MCPhysReg>(HintsAndCustomOrder).drop_front(NumHints),
-      AntiHintedRegUnits, MF, Matrix);
+      AntiHintedRegUnits, MF, Matrix, RegClassInfo);
 }
 
 void TargetRegisterInfo::filterAndSortForAntiHintedRegs(
     Register VirtReg, MutableArrayRef<MCPhysReg> CustomOrder,
     const BitVector &AntiHintedRegUnits, const MachineFunction &MF,
-    const LiveRegMatrix *Matrix) const {
+    const LiveRegMatrix *Matrix, const RegisterClassInfo *RegClassInfo) const {
 
   // Partition non-anti-hinted register go first.
   auto *PartitionPoint = std::stable_partition(
