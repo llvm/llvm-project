@@ -25,17 +25,17 @@
 
 ;; Split alloca.
 ; CHECK: entry:
-; CHECK-NEXT: %To.sroa.0 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_1:[0-9]+]]
+; CHECK-NEXT: %To.sroa.0 = alloca { i32, i32, i32 }, align 4, !DIAssignID ![[ID_1:[0-9]+]]
 ; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_1]], ptr %To.sroa.0, !DIExpression(),
 
-; CHECK-NEXT: %To.sroa.4 = alloca { i32, i32, i32 }, align 8, !DIAssignID ![[ID_3:[0-9]+]]
+; CHECK-NEXT: %To.sroa.4 = alloca { i32, i32, i32 }, align 4, !DIAssignID ![[ID_3:[0-9]+]]
 ; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 128, 96), ![[ID_3]], ptr %To.sroa.4, !DIExpression(),
 
 ;; Split memcpy.
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.0, ptr align 4 @From, i64 12, i1 false),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
+; CHECK: call void @llvm.memcpy{{.*}}(ptr align 4 %To.sroa.0, ptr align 4 @From, i64 12, i1 false),{{.*}}!DIAssignID ![[ID_4:[0-9]+]]
 ;; This slice has been split and is promoted.
 ; CHECK: %To.sroa.3.0.copyload = load i32, ptr getelementptr inbounds (i8, ptr @From, i64 12)
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %To.sroa.4, ptr align 4 getelementptr inbounds (i8, ptr @From, i64 16), i64 12, i1 false){{.*}}!DIAssignID ![[ID_6:[0-9]+]]
+; CHECK: call void @llvm.memcpy{{.*}}(ptr align 4 %To.sroa.4, ptr align 4 getelementptr inbounds (i8, ptr @From, i64 16), i64 12, i1 false){{.*}}!DIAssignID ![[ID_6:[0-9]+]]
 
 ;; Intrinsics for the splits above.
 ; CHECK-NEXT: #dbg_assign({{.+}} undef, ![[TO]], !DIExpression(DW_OP_LLVM_fragment, 0, 96), ![[ID_4]], ptr %To.sroa.0, !DIExpression(),
