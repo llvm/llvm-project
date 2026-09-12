@@ -37,17 +37,21 @@ namespace bolt {
 /// Relocation class.
 class Relocation {
 public:
+  static constexpr uint64_t NoJmpRelocationIndex = uint64_t(-1);
+
   Relocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
-             uint64_t Value, bool IsRELR = false)
+             uint64_t Value, bool IsRELR = false,
+             uint64_t JmpRelocationIndex = NoJmpRelocationIndex)
       : Offset(Offset), Symbol(Symbol), Type(Type), Optional(false),
-        IsRELR(IsRELR), Addend(Addend), Value(Value) {
+        IsRELR(IsRELR), Addend(Addend), Value(Value),
+        JmpRelocationIndex(JmpRelocationIndex) {
     assert((isRelative() || !isRELR()) &&
            "Only relative relocations can be relr.");
   }
 
   Relocation()
       : Offset(0), Symbol(0), Type(0), Optional(0), IsRELR(0), Addend(0),
-        Value(0) {}
+        Value(0), JmpRelocationIndex(NoJmpRelocationIndex) {}
 
   static Triple::ArchType Arch; /// set by BinaryContext ctor.
 
@@ -78,6 +82,21 @@ public:
   /// The computed relocation value extracted from the binary file.
   /// Used to validate relocation correctness.
   uint64_t Value;
+
+private:
+  /// Original index in DT_JMPREL, or NoJmpRelocationIndex for relocations
+  /// originating from other relocation tables.
+  uint64_t JmpRelocationIndex;
+
+public:
+  bool isJmpRelocation() const {
+    return JmpRelocationIndex != NoJmpRelocationIndex;
+  }
+
+  uint64_t getJmpRelocationIndex() const {
+    assert(isJmpRelocation() && "not a DT_JMPREL relocation");
+    return JmpRelocationIndex;
+  }
 
   /// Return size in bytes of the given relocation \p Type.
   static size_t getSizeForType(uint32_t Type);
