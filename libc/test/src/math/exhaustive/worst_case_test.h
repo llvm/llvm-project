@@ -1,9 +1,14 @@
-//===-- Worst case test template for math functions -------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Worst case test template for math functions.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_TEST_SRC_MATH_EXHAUSTIVE_WORST_CASE_TEST_H
@@ -61,20 +66,6 @@ LIBC_INLINE std::string find_file(const std::string &filename) {
       return path;
   }
 #endif
-
-  const char *candidate_dirs[] = {
-      "libc/test/src/math/exhaustive",
-      "../libc/test/src/math/exhaustive",
-      "../../libc/test/src/math/exhaustive",
-      "../../../libc/test/src/math/exhaustive",
-      "test/src/math/exhaustive",
-      "../test/src/math/exhaustive",
-  };
-  for (const char *dir : candidate_dirs) {
-    std::string path = std::string(dir) + "/" + filename;
-    if (file_exists(path))
-      return path;
-  }
 
   return "";
 }
