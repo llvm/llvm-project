@@ -252,6 +252,8 @@ let Latency = 8, NumMicroOps = 3 in
 def V1Write_8c_1L_2V        : SchedWriteRes<[V1UnitL, V1UnitV, V1UnitV]>;
 let Latency = 6, NumMicroOps = 3 in
 def V1Write_6c_3L           : SchedWriteRes<[V1UnitL, V1UnitL, V1UnitL]>;
+let Latency = 1, NumMicroOps = 3 in
+def V1Write_1c_1I_1L01_1D: SchedWriteRes<[V1UnitI, V1UnitL01, V1UnitD]>;
 let Latency = 2, NumMicroOps = 3 in
 def V1Write_2c_1L01_1S_1V   : SchedWriteRes<[V1UnitL01, V1UnitS, V1UnitV]>;
 let Latency = 4, NumMicroOps = 3 in
@@ -722,6 +724,13 @@ def : SchedAlias<WriteLD, V1Write_4c_1L>;
 def : SchedAlias<WriteLDIdx, V1Write_4c_1L>;
 def : SchedAlias<WriteAdr,   V1Write_1c_1I>;
 
+// Load register, register offset, extend, scale by 2
+// Load register, register offset, extend
+def V1WriteLDRH : SchedWriteVariant<[
+  SchedVar<NeoverseScaledIdxPred, [V1Write_5c_1I_1L]>,
+  SchedVar<NoSchedPred,	  [V1Write_4c_1L]>]>;
+def : InstRW<[V1WriteLDRH, ReadAdrBase], (instregex "^LDRS?H[HWX]ro[WX]$")>;
+
 // Load pair, immed offset
 def : SchedAlias<WriteLDHi, V1Write_4c_1L>;
 def : InstRW<[V1Write_4c_1L, V1Write_0c_0Z], (instrs LDPWi, LDNPWi)>;
@@ -744,6 +753,13 @@ def : SchedAlias<WriteST, V1Write_1c_1L01_1D>;
 
 // Store register, immed offset, index
 def : SchedAlias<WriteSTIdx, V1Write_1c_1L01_1D>;
+
+// Store register, register offset, extend, scale by 2
+// Store register, register offset, extend
+def V1WriteSTRH : SchedWriteVariant<[
+  SchedVar<NeoverseScaledIdxPred, [V1Write_1c_1I_1L01_1D]>,
+  SchedVar<NoSchedPred,	  [V1Write_1c_1L01_1D]>]>;
+def : InstRW<[V1WriteSTRH], (instregex "^STRS?H[HWX]ro[WX]$")>;
 
 // Store pair, immed offset
 def : SchedAlias<WriteSTP, V1Write_1c_1L01_1D>;
