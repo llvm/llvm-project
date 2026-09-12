@@ -568,6 +568,9 @@ static Constant *foldOrCommuteConstant(Instruction::BinaryOps Opcode,
                                        const SimplifyQuery &Q) {
   if (auto *CLHS = dyn_cast<Constant>(Op0)) {
     if (auto *CRHS = dyn_cast<Constant>(Op1)) {
+      if (!Q.CanUseUndef && (isa<UndefValue>(CLHS) || isa<UndefValue>(CRHS)))
+        return nullptr;
+
       switch (Opcode) {
       default:
         break;
