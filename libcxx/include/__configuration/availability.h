@@ -296,7 +296,7 @@
 #define _LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_INTRODUCED_IN_LLVM_20_ATTRIBUTE
 
 // This controls the availability of the C++17 mathematical special functions
-// ([sf.cmath]). Their implementation lives in the built library (backed by Boost.Math).
+// ([sf.cmath]). Their implementation lives in the built library.
 #define _LIBCPP_AVAILABILITY_HAS_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_INTRODUCED_IN_LLVM_24
 #define _LIBCPP_AVAILABILITY_MATHEMATICAL_SPECIAL_FUNCTIONS _LIBCPP_INTRODUCED_IN_LLVM_24_ATTRIBUTE
 
