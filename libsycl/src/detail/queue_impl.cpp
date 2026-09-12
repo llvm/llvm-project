@@ -16,6 +16,7 @@
 #include <detail/program_manager.hpp>
 
 #include <algorithm>
+#include <cstdint>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -184,6 +185,32 @@ QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
   return createEvent();
 }
 
+EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
+                             std::size_t PatternSize, std::size_t Count,
+                             const std::vector<EventImplPtr> &DepEvents) {
+  assert(PatternSize > 0 && "Pattern size has to be greater than zero");
+  checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
+  if (Count == 0) {
+    handleEventDependencies(DepEvents);
+    return createEvent();
+  }
+
+  if (!Ptr) {
+    throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
+                          "Nullptr argument in fill/memset operation");
+  }
+  if (Count > SIZE_MAX / PatternSize) {
+    throw sycl::exception(
+        sycl::make_error_code(sycl::errc::invalid),
+        "Total number of bytes to be filled exceeds SIZE_MAX");
+  }
+
+  handleEventDependencies(DepEvents);
+  callAndThrow(olMemFill, MOffloadQueue, Ptr, PatternSize, Pattern,
+               Count * PatternSize);
+  return createEvent();
+}
+
 EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
@@ -206,7 +233,6 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemPrefetch, MOffloadQueue, Count, Mems, Sizes, Flag);
-
   return createEvent();
 }
 

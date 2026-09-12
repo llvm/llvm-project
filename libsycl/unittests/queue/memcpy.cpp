@@ -9,7 +9,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-using namespace sycl;
 using namespace ::testing;
 
 TEST(Queue, Memcpy) {
@@ -17,14 +16,14 @@ TEST(Queue, Memcpy) {
   constexpr int NMemcpies = 5;
 
   mock::MockWrapper Mock;
-  queue Q;
+  sycl::queue Q;
 
   bool IsSrcHostPtr = false;
   bool IsDstHostPtr = false;
   int *SrcPtr = reinterpret_cast<int *>(1);
   int *DstPtr = reinterpret_cast<int *>(2);
   ol_device_handle_t OLDev =
-      detail::getSyclObjImpl(Q.get_device())->getOLHandle();
+      sycl::detail::getSyclObjImpl(Q.get_device())->getOLHandle();
 
   EXPECT_CALL(Mock.get(), olGetMemInfo(_, OL_MEM_INFO_DEVICE,
                                        sizeof(ol_device_handle_t), _))
@@ -54,7 +53,7 @@ TEST(Queue, Memcpy) {
 
   EXPECT_CALL(Mock.get(), olCreateEvent(_, _, _)).Times(NMemcpies);
 
-  event Event = Q.memcpy(DstPtr, SrcPtr, NumBytes);
+  sycl::event Event = Q.memcpy(DstPtr, SrcPtr, NumBytes);
 
   EXPECT_CALL(Mock.get(), olWaitEvents(_, _, 1));
   Q.memcpy(DstPtr, SrcPtr, NumBytes, Event);
@@ -71,10 +70,10 @@ TEST(Queue, Memcpy) {
 
 TEST(Queue, MemcpyZeroBytes) {
   mock::MockWrapper Mock;
-  queue Q;
+  sycl::queue Q;
   EXPECT_CALL(Mock.get(), olWaitEvents(_, _, 1)).Times(1);
   EXPECT_CALL(Mock.get(), olGetMemInfo(_, _, _, _)).Times(0);
   EXPECT_CALL(Mock.get(), olMemcpy(_, _, _, _, _, _)).Times(0);
-  event Event = Q.memcpy(nullptr, nullptr, 0);
+  sycl::event Event = Q.memcpy(nullptr, nullptr, 0);
   Q.memcpy(nullptr, nullptr, 0, Event);
 }
