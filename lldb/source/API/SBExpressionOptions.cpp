@@ -310,7 +310,7 @@ bool SBExpressionOptions::GetTryDILFirst() {
 void SBExpressionOptions::SetTryDILFirst(bool b) {
   LLDB_INSTRUMENT_VA(this, b);
 
-  return m_opaque_up->SetTryDILFirst(b);
+  m_opaque_up->SetTryDILFirst(b);
 }
 
 EvaluateExpressionOptions *SBExpressionOptions::get() const {
