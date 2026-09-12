@@ -55,6 +55,21 @@ entry:
   ret i32 %elt.trunc
 }
 
+define i32 @countbits_vec2_i16_as_i32(<2 x i16> %a) {
+; CHECK-LABEL: define i32 @countbits_vec2_i16_as_i32(
+; CHECK: [[COUNT0:%.*]] = call i32 @dx.op.unaryBits.i16(i32 31, i16 %{{.*}})
+; CHECK: [[COUNT1:%.*]] = call i32 @dx.op.unaryBits.i16(i32 31, i16 %{{.*}})
+; CHECK: [[SHIFT:%.*]] = shl i32 [[COUNT1]], 16
+; CHECK: [[RESULT:%.*]] = or i32 [[COUNT0]], [[SHIFT]]
+; CHECK-NOT: insertelement
+; CHECK-NOT: bitcast
+; CHECK: ret i32 [[RESULT]]
+entry:
+  %count = call <2 x i16> @llvm.ctpop.v2i16(<2 x i16> %a)
+  %result = bitcast <2 x i16> %count to i32
+  ret i32 %result
+}
+
 define noundef <4 x i32> @countbits_vec4_i32(<4 x i32> noundef %a)  {
 entry:
   ; CHECK: [[ee0:%.*]] = extractelement <4 x i32> %a, i64 0
@@ -81,4 +96,5 @@ entry:
 declare i16 @llvm.ctpop.i16(i16)
 declare i32 @llvm.ctpop.i32(i32)
 declare i64 @llvm.ctpop.i64(i64)
+declare <2 x i16> @llvm.ctpop.v2i16(<2 x i16>)
 declare <4 x i32> @llvm.ctpop.v4i32(<4 x i32>)

@@ -1658,6 +1658,17 @@ bool Sema::isDeclInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
   return IdResolver.isDeclInScope(D, Ctx, S, AllowInlineNamespace);
 }
 
+bool Sema::isTagRedeclarationInScope(NamedDecl *D, DeclContext *Ctx, Scope *S,
+                                     bool AllowInlineNamespace) const {
+  if (isDeclInScope(D, Ctx, S, AllowInlineNamespace))
+    return true;
+
+  if (auto *Shadow = dyn_cast<UsingShadowDecl>(D))
+    return isDeclInScope(Shadow->getTargetDecl(), Ctx, S, AllowInlineNamespace);
+
+  return false;
+}
+
 Scope *Sema::getScopeForDeclContext(Scope *S, DeclContext *DC) {
   DeclContext *TargetDC = DC->getPrimaryContext();
   do {
@@ -2667,6 +2678,27 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       else
         New->setTypeSourceInfo(OldTD->getTypeSourceInfo());
 
+      // An anonymous enum is recognized as a redeclaration only when its
+      // typedef name gets merged, at which point the new enum and its
+      // enumerators already have a distinct canonical type. Link the enum
+      // declarations, but also retype the new enumerators because
+      // setPreviousDecl() does not update QualTypes built before the merge;
+      // otherwise the merged typedef and its enumerators disagree on the type
+      // (GH213299).
+      //
+      // FIXME: The global module restriction only limits the impact of this
+      // change; relax it if the issue shows up in other contexts.
+      if (Module *M = OldTag->getOwningModule(); M && M->isGlobalModule()) {
+        if (auto *NewEnum = dyn_cast<EnumDecl>(NewTag)) {
+          if (auto *OldEnum = dyn_cast<EnumDecl>(OldTag)) {
+            NewEnum->setPreviousDecl(OldEnum);
+            QualType EnumType = Context.getCanonicalTagType(OldEnum);
+            for (auto *ECD : NewEnum->enumerators())
+              ECD->setType(EnumType);
+          }
+        }
+      }
+
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
@@ -2990,6 +3022,8 @@ static bool mergeDeclAttribute(Sema &S, NamedDecl *D,
     NewAttr = S.Wasm().mergeImportModuleAttr(D, *IMA);
   else if (const auto *INA = dyn_cast<WebAssemblyImportNameAttr>(Attr))
     NewAttr = S.Wasm().mergeImportNameAttr(D, *INA);
+  else if (const auto *ENA = dyn_cast<WebAssemblyExportNameAttr>(Attr))
+    NewAttr = S.Wasm().mergeExportNameAttr(D, *ENA);
   else if (const auto *TCBA = dyn_cast<EnforceTCBAttr>(Attr))
     NewAttr = S.mergeEnforceTCBAttr(D, *TCBA);
   else if (const auto *TCBLA = dyn_cast<EnforceTCBLeafAttr>(Attr))
@@ -3108,6 +3142,17 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
     if (hasAttribute(Def, NewAttribute->getKind())) {
       ++I;
       continue; // regular attr merging will take care of validating this.
+    }
+
+    if (NewAttribute->getLocation().isInvalid()) {
+      // An attribute with no source location was not written by the user. API
+      // notes, in particular, are matched against whichever declaration the
+      // compiler reaches, which can be a redeclaration that follows the
+      // definition, possibly in a different module. There is nothing for the
+      // user to correct, and erasing the attribute would silently change what
+      // the annotated API means.
+      ++I;
+      continue;
     }
 
     if (isa<C11NoReturnAttr>(NewAttribute)) {
@@ -7726,6 +7771,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:
@@ -15524,14 +15571,16 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   }
 
   if (UsedAttr *Attr = VD->getAttr<UsedAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<UsedAttr>();
     }
   }
   if (RetainAttr *Attr = VD->getAttr<RetainAttr>()) {
-    if (!Attr->isInherited() && !VD->isThisDeclarationADefinition()) {
+    if (!Attr->isInherited() && !Attr->isImplicit() &&
+        !VD->isThisDeclarationADefinition()) {
       Diag(Attr->getLocation(), diag::warn_attribute_ignored_on_non_definition)
           << Attr;
       VD->dropAttr<RetainAttr>();
@@ -18626,8 +18675,9 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
       // in the same scope (so that the definition/declaration completes or
       // rementions the tag), reuse the decl.
       if (TUK == TagUseKind::Reference || TUK == TagUseKind::Friend ||
-          isDeclInScope(DirectPrevDecl, SearchDC, S,
-                        SS.isNotEmpty() || isMemberSpecialization)) {
+          isTagRedeclarationInScope(DirectPrevDecl, SearchDC, S,
+                                    SS.isNotEmpty() ||
+                                        isMemberSpecialization)) {
 
         if (auto *RD = dyn_cast<CXXRecordDecl>(PrevDecl);
             RD && RD->isInjectedClassName()) {

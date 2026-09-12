@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILPrettyPrinter.h"
+#include "DXILWriter/DXILDebugInfoMap.h"
 #include "DirectX.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -395,8 +395,7 @@ static void prettyPrint(raw_ostream &OS, Module &M, const DXILResourceMap &DRM,
 
   prettyPrintResources(FOS, DRM, DRTM);
 
-  DXILDebugInfoMap DI = DXILDebugInfoPass::run(M);
-
+  const DXILDebugInfoMap DI = collectDXILDebugInfo(M);
   SmallVector<const MDNode *> AdditionalMetadata =
       collectAdditionalMetadata(M, DI);
   DXILModuleSlotTracker MST(&M);
@@ -434,7 +433,7 @@ PreservedAnalyses DXILPrettyPrinterPass::run(Module &M,
   const DXILResourceMap &DRM = MAM.getResult<DXILResourceAnalysis>(M);
   DXILResourceTypeMap &DRTM = MAM.getResult<DXILResourceTypeAnalysis>(M);
   prettyPrint(OS, M, DRM, DRTM);
-  return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }
 
 namespace {
@@ -458,11 +457,11 @@ public:
 
 char DXILPrettyPrinterLegacy::ID = 0;
 INITIALIZE_PASS_BEGIN(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                      "DXIL Pretty Printer", true, true)
+                      "DXIL Pretty Printer", true, false)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceTypeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DXILResourceWrapperPass)
 INITIALIZE_PASS_END(DXILPrettyPrinterLegacy, "dxil-pretty-printer",
-                    "DXIL Pretty Printer", true, true)
+                    "DXIL Pretty Printer", true, false)
 
 bool DXILPrettyPrinterLegacy::runOnModule(Module &M) {
   const DXILResourceMap &DRM =

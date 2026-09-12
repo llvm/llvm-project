@@ -183,7 +183,13 @@ public:
 
     // If we have an atomic type, evaluate into the destination and then
     // do an atomic copy.
-    assert(!cir::MissingFeatures::atomicTypes());
+    if (lhs.getType()->isAtomicType() ||
+        cgf.isLValueSuitableForInlineAtomic(lhs)) {
+      ensureDest(cgf.getLoc(e->getExprLoc()), e->getRHS()->getType());
+      Visit(e->getRHS());
+      cgf.emitAtomicStore(dest.asRValue(), lhs, /*isInit=*/false);
+      return;
+    }
 
     // Codegen the RHS so that it stores directly into the LHS.
     assert(!cir::MissingFeatures::aggValueSlotGC());
@@ -296,18 +302,39 @@ public:
       // These two cases are reverses of each other; try to peephole them.
       CastKind peepholeTarget =
           (isToAtomic ? CK_AtomicToNonAtomic : CK_NonAtomicToAtomic);
+
+      // These two cases are reverses of each other; try to peephole them.
       if (Expr *op =
               findPeephole(e->getSubExpr(), peepholeTarget, cgf.getContext())) {
-        cgf.cgm.errorNYI(op->getSourceRange(),
-                         "AggExprEmitter: VisitCastExpr peephole");
+        assert(cgf.getContext().hasSameUnqualifiedType(op->getType(),
+                                                       e->getType()) &&
+               "peephole significantly changed types?");
+        return Visit(op);
       }
 
       // If we're converting an r-value of non-atomic type to an r-value
       // of atomic type, just emit directly into the relevant sub-object.
       if (isToAtomic) {
-        cgf.cgm.errorNYI(e->getSourceRange(),
-                         "AggExprEmitter: VisitCastExpr r-value of non-atomic "
-                         "type to an r-value of atomic type");
+        AggValueSlot valueDest = dest;
+        if (!valueDest.isIgnored() && cgf.cgm.isPaddedAtomicType(atomicType)) {
+          // Zero-initialize.  (Strictly speaking, we only need to initialize
+          // the padding at the end, but this is simpler.)
+          mlir::Location loc = cgf.getLoc(e->getExprLoc());
+          if (!dest.isZeroed())
+            cgf.emitNullInitialization(loc, dest.getAddress(), atomicType);
+
+          Address valueAddr = cgf.getBuilder().createGetMember(
+              loc, valueDest.getAddress(), "value_addr", 0);
+
+          assert(!cir::MissingFeatures::aggValueSlotGC());
+          valueDest = AggValueSlot::forAddr(
+              valueAddr, valueDest.getQualifiers(),
+              valueDest.isExternallyDestructed(),
+              valueDest.isPotentiallyAliased(), AggValueSlot::DoesNotOverlap,
+              AggValueSlot::IsZeroed);
+        }
+
+        cgf.emitAggExpr(e->getSubExpr(), valueDest);
         return;
       }
 

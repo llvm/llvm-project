@@ -171,6 +171,8 @@ TEST(ErrorExceptionInteropTest, ThrowErrorAndCatchAsException) {
     } catch (...) {
       ADD_FAILURE() << "Caught unexpected error type";
     }
+
+    EXPECT_TRUE(HandlerRan) << "Handler never ran";
   });
 }
 

@@ -3505,7 +3505,7 @@ define float @test_fminimumnum_inf_nnan(float %x, float %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
-  %1 = call nnan float @llvm.minimumnum.f32(float %y, float 0x7ff0000000000000)
+  %1 = call nnan float @llvm.minimumnum.f32(float %y, float +inf)
   ret float %1
 }
 
@@ -3530,7 +3530,7 @@ define float @test_fmaximumnum_neg_inf_nnan(float %x, float %y) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    flds {{[0-9]+}}(%esp)
 ; X86-NEXT:    retl
-  %1 = call nnan float @llvm.maximumnum.f32(float %y, float 0xfff0000000000000)
+  %1 = call nnan float @llvm.maximumnum.f32(float %y, float -inf)
   ret float %1
 }
 

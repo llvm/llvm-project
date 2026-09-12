@@ -15,7 +15,7 @@ define void @main() {
   %fp2ui = fptoui double 4.75 to i32
 
   %oob_ui = fptoui float -1.0 to i32
-  %nan_si = fptosi float 0x7FF8000000000000 to i32
+  %nan_si = fptosi float +qnan to i32
 
   %oob_si_half = sitofp i32 -100000 to half
   %oob_ui_half = uitofp i32 100000 to half

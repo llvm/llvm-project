@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/GenericLoopInfo.h"
@@ -304,23 +305,6 @@ void LoopBase<BlockT, LoopT>::addBasicBlockToLoop(
   }
 }
 
-/// replaceChildLoopWith - This is used when splitting loops up.  It replaces
-/// the OldChild entry in our children list with NewChild, and updates the
-/// parent pointer of OldChild to be null and the NewChild to be this loop.
-/// This updates the loop depth of the new child.
-template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::replaceChildLoopWith(LoopT *OldChild,
-                                                   LoopT *NewChild) {
-  assert(!isInvalid() && "Loop not in a valid state!");
-  assert(OldChild->ParentLoop == this && "This loop is already broken!");
-  assert(!NewChild->ParentLoop && "NewChild already has a parent!");
-  typename std::vector<LoopT *>::iterator I = find(SubLoops, OldChild);
-  assert(I != SubLoops.end() && "OldChild not in loop!");
-  *I = NewChild;
-  OldChild->ParentLoop = nullptr;
-  NewChild->ParentLoop = static_cast<LoopT *>(this);
-}
-
 /// verifyLoop - Verify loop structure
 template <class BlockT, class LoopT>
 void LoopBase<BlockT, LoopT>::verifyLoop() const {
@@ -461,8 +445,15 @@ void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, bool Verbose,
 /// program order.
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(const DomTreeBase<BlockT> &DomTree) {
-  analyze(DomTree.getRootNode()->getBlock()->getParent(),
-          [&]() -> const DomTreeBase<BlockT> & { return DomTree; });
+  analyzeImpl(DomTree, /*ReuseLoop=*/{});
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyzeImpl(
+    const DomTreeBase<BlockT> &DomTree, ReuseLoopT ReuseLoop) {
+  analyzeImpl(
+      DomTree.getRootNode()->getBlock()->getParent(),
+      [&]() -> const DomTreeBase<BlockT> & { return DomTree; }, ReuseLoop);
 }
 
 template <class BlockT, class LoopT>
@@ -477,6 +468,38 @@ void LoopInfoBase<BlockT, LoopT>::analyze(ParentT F) {
 template <class BlockT, class LoopT>
 void LoopInfoBase<BlockT, LoopT>::analyze(
     ParentT F, function_ref<const DomTreeBase<BlockT> &()> GetDomTree) {
+  analyzeImpl(F, GetDomTree, /*ReuseLoop=*/{});
+}
+
+template <class BlockT, class LoopT>
+SmallVector<std::pair<LoopT *, BlockT *>, 4>
+LoopInfoBase<BlockT, LoopT>::recompute(const DomTreeBase<BlockT> &DomTree) {
+  // Index the loops by header so the analysis can find them again, and empty
+  // them out for it to refill.
+  MapVector<BlockT *, LoopT *> ReuseByHeader;
+  for (LoopT *L : getLoopsInPreorder()) {
+    ReuseByHeader[L->getHeader()] = L;
+    L->clear();
+  }
+  BBMap.clear();
+  TopLevelLoops.clear();
+  BlockLayout.reset();
+
+  analyzeImpl(DomTree,
+              [&](BlockT *Header) { return ReuseByHeader.lookup(Header); });
+
+  // ReuseByHeader is in preorder, so the report is deterministic.
+  SmallVector<std::pair<LoopT *, BlockT *>, 4> Removed;
+  for (auto [Header, L] : ReuseByHeader)
+    if (lookupLoopFor(Header) != L)
+      Removed.emplace_back(L, Header);
+  return Removed;
+}
+
+template <class BlockT, class LoopT>
+void LoopInfoBase<BlockT, LoopT>::analyzeImpl(
+    ParentT F, function_ref<const DomTreeBase<BlockT> &()> GetDomTree,
+    ReuseLoopT ReuseLoop) {
   using BlockTraits = GraphTraits<BlockT *>;
   auto num = [](const BlockT *BB) {
     return GraphTraits<const BlockT *>::getNumber(BB);
@@ -703,7 +726,7 @@ void LoopInfoBase<BlockT, LoopT>::analyze(
     LoopT *Enclosing = H == NoBlock ? nullptr : BBMap[H];
     LoopT *L = Enclosing;
     if (Info[B].Pos == IsHeader) {
-      L = allocateLoop(BB);
+      L = allocateLoop(BB, ReuseLoop);
       L->setParentLoop(Enclosing);
     }
     BBMap[B] = L;

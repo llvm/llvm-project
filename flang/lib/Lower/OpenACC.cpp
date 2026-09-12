@@ -150,7 +150,8 @@ createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
   addOperands(operands, operandSegments, bounds);
   addOperands(operands, operandSegments, async);
 
-  Op op = Op::create(builder, loc, retTy, operands);
+  Op op = Op::create(builder, loc, mlir::TypeRange{retTy}, operands,
+                     typename Op::Properties{});
   op.setNameAttr(builder.getStringAttr(name.str()));
   op.setStructured(structured);
   op.setImplicit(implicit);
@@ -218,8 +219,8 @@ static Op
 createSimpleOp(fir::FirOpBuilder &builder, mlir::Location loc,
                const llvm::SmallVectorImpl<mlir::Value> &operands,
                const llvm::SmallVectorImpl<int32_t> &operandSegments) {
-  llvm::ArrayRef<mlir::Type> argTy;
-  Op op = Op::create(builder, loc, argTy, operands);
+  Op op = Op::create(builder, loc, mlir::TypeRange{}, operands,
+                     typename Op::Properties{});
   op->setAttr(Op::getOperandSegmentSizeAttr(),
               builder.getDenseI32ArrayAttr(operandSegments));
   return op;
@@ -258,6 +259,9 @@ static void createDeclareAllocFuncWithArg(mlir::OpBuilder &modBuilder,
   builder.restoreInsertionPoint(crtInsPt);
 }
 
+/// Actions on deallocation are split in two functions: the pre one releases
+/// the data before the host side deallocation, the post one then releases the
+/// descriptor, which is still valid storage at that point.
 template <typename ExitOp>
 static void createDeclareDeallocFuncWithArg(
     mlir::OpBuilder &modBuilder, fir::FirOpBuilder &builder, mlir::Location loc,
@@ -1301,7 +1305,7 @@ createRegionOp(fir::FirOpBuilder &builder, mlir::Location loc,
                llvm::SmallVector<mlir::Type> retTy = {},
                mlir::Value yieldValue = {}, mlir::TypeRange argsTy = {},
                llvm::SmallVector<mlir::Location> locs = {}) {
-  Op op = Op::create(builder, loc, retTy, operands);
+  Op op = Op::create(builder, loc, retTy, operands, typename Op::Properties{});
   builder.createBlock(&op.getRegion(), op.getRegion().end(), argsTy, locs);
   mlir::Block &block = op.getRegion().back();
   builder.setInsertionPointToStart(&block);
@@ -4077,10 +4081,10 @@ static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(registerFuncOp);
 }
 
-/// Action to be performed on deallocation are split in two distinct functions.
-/// - Pre deallocation function includes all the action to be performed before
-///   the actual deallocation is done on the host side.
-/// - Post deallocation function includes update to the descriptor.
+/// Generate the pre deallocation function, holding the actions to be performed
+/// before the host side deallocation. No post deallocation function is
+/// generated: a module variable's descriptor is released by the global
+/// destructor, not per deallocation.
 template <typename ExitOp>
 static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
                                      fir::FirOpBuilder &builder,
@@ -4090,26 +4094,26 @@ static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
   std::stringstream asFortran;
   asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
 
-  std::stringstream postDeallocFuncName;
-  postDeallocFuncName << globalOp.getSymName().str()
-                      << Fortran::lower::declarePostDeallocSuffix.str();
-  auto postDeallocOp =
-      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str(),
+  // No post-dealloc recipe: it would run after the host storage is freed,
+  // when the descriptor no longer holds the address the mapping is keyed on.
+  std::stringstream preDeallocFuncName;
+  preDeallocFuncName << globalOp.getSymName().str()
+                     << Fortran::lower::declarePreDeallocSuffix.str();
+  auto preDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str(),
                         /*argsTy=*/{}, /*locs=*/{}, /*linkable=*/true);
-
   fir::AddrOfOp addrOp = fir::AddrOfOp::create(
       builder, loc, fir::ReferenceType::get(globalOp.getType()),
       globalOp.getSymbol());
   llvm::SmallVector<mlir::Value> bounds;
-  // End the structured declare region using declare_exit.
   mlir::acc::GetDevicePtrOp descEntryOp =
       createDataEntryOp<mlir::acc::GetDevicePtrOp>(
           builder, loc, addrOp, asFortran, bounds,
-          /*structured=*/false, /*implicit=*/true, clause, addrOp.getType(),
+          /*structured=*/false, /*implicit=*/false, clause, addrOp.getType(),
           /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{});
   mlir::acc::DeclareExitOp::create(builder, loc, mlir::Value{},
                                    mlir::ValueRange(descEntryOp.getAccVar()));
-  modBuilder.setInsertionPointAfter(postDeallocOp);
+  modBuilder.setInsertionPointAfter(preDeallocOp);
 }
 
 static std::optional<Fortran::semantics::Symbol::Flag>
@@ -5252,7 +5256,7 @@ void Fortran::lower::declareExternalAccModuleDeclareActionRecipes(
   if (ultimate.test(Flag::AccCreate) || ultimate.test(Flag::AccCopyIn) ||
       ultimate.test(Flag::AccCopyInReadOnly) || ultimate.test(Flag::AccCopy) ||
       ultimate.test(Flag::AccCopyOut) || ultimate.test(Flag::AccDeviceResident))
-    declareExternalRecipe(declarePostDeallocSuffix);
+    declareExternalRecipe(declarePreDeallocSuffix);
 }
 
 void Fortran::lower::attachDeclarePostAllocAction(
@@ -5332,6 +5336,12 @@ void Fortran::lower::attachDeclarePostDeallocAction(
     AbstractConverter &converter, fir::FirOpBuilder &builder,
     const Fortran::semantics::Symbol &sym) {
   if (isUnifiedMemoryMode(converter))
+    return;
+
+  // A module variable has no post-dealloc recipe: it would run once the
+  // descriptor no longer holds the address the mapping is keyed on.
+  if (sym.GetUltimate().owner().kind() ==
+      Fortran::semantics::Scope::Kind::Module)
     return;
 
   if (!sym.test(Fortran::semantics::Symbol::Flag::AccCreate) &&
@@ -5535,10 +5545,16 @@ mlir::Operation *Fortran::lower::genOpenACCLoopFromDoConstruct(
   // privatizing the induction variable, the loop may not execute correctly.
   // Only do this for `acc kernels` because in `acc parallel`, scalars end
   // up as implicitly firstprivate.
+  //
+  // Unstructured constructs that are safe to wrap should not emit the TODO. A
+  // wrappable loop that reaches this condition is a loop that is NOT attached
+  // to any OpenACC directives (e.g. `kernels` ops), it is just nested inside
+  // the kernels region.
   if (eval.lowerAsUnstructured()) {
     if (mlir::isa_and_present<mlir::acc::KernelsOp>(
             mlir::acc::getEnclosingComputeOp(
-                converter.getFirOpBuilder().getRegion())))
+                converter.getFirOpBuilder().getRegion())) &&
+        !Fortran::lower::pft::isWrappableConstruct(eval, semanticsContext))
       TODO(converter.getCurrentLocation(),
            "unstructured do loop in acc kernels");
     return nullptr;

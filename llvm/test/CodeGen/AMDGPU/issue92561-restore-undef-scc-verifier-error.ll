@@ -135,7 +135,7 @@ define void @issue92561(ptr addrspace(1) %arg) {
 bb:
   %descriptor = load <8 x i32>, ptr addrspace(1) %arg, align 32
   %needs.waterfall = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 0.0, float 0.0, float 0.0, <8 x i32> %descriptor, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
-  %i2 = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 0.0, float 0x7FF8000000000000, float 0.0, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
+  %i2 = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 0.0, float +qnan, float 0.0, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
   %i3 = fadd float %needs.waterfall, %i2
   %i4 = call float @llvm.amdgcn.image.sample.c.lz.2darray.f32.f32(i32 1, float 0.0, float 1.000000e+00, float 0.0, float 0.0, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
   %i5 = fadd float %i4, %i3

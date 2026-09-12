@@ -40,9 +40,7 @@ public:
   /// Renumber module and machine metadata for canonical MIR output.
   void renumberMetadataForAssembly();
   void collectMachineMDNodes(MachineMDNodeListType &L) const;
-  bool shouldPrintDebugLocationInline(const DILocation *DL) const override {
-    return InlineDebugLocations.contains(DL);
-  }
+  bool shouldPrintDebugLocationInline(const DILocation *DL) const override;
 };
 
 } // namespace llvm

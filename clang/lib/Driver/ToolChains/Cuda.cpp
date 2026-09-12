@@ -524,9 +524,7 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
 }
 
 static bool shouldIncludePTX(const ArgList &Args, StringRef InputArch) {
-  // The new driver does not include PTX by default to avoid overhead.
-  bool includePTX = !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver, true);
+  bool includePTX = false;
   for (Arg *A : Args.filtered(options::OPT_cuda_include_ptx_EQ,
                               options::OPT_no_cuda_include_ptx_EQ)) {
     A->claim();
@@ -917,9 +915,7 @@ void CudaToolChain::addClangTargetOptions(
           DeviceOffloadingKind == Action::OFK_Cuda || UsesLLVMOffloading) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  CC1Args.append({"-fcuda-is-device", "-mllvm",
-                  "-enable-memcpyopt-without-libcalls",
-                  "-fno-threadsafe-statics"});
+  CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))
