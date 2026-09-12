@@ -1029,6 +1029,9 @@ math_test(
 math_test(
     name = "ldexpf128",
     hdrs = ["LdExpTest.h"],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1525,6 +1528,9 @@ math_test(
         "LdExpTest.h",
         "ScalbnTest.h",
     ],
+    deps = [
+        "//libc:__support_fputil_float128",
+    ],
 )
 
 math_test(
@@ -1572,6 +1578,9 @@ math_test(
     hdrs = [
         "LdExpTest.h",
         "ScalbnTest.h",
+    ],
+    deps = [
+        "//libc:__support_fputil_float128",
     ],
 )
 

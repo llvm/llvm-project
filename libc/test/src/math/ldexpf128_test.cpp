@@ -7,21 +7,17 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of the scalblnf128 function.
+/// Exhaustive tests for the ldexpf128 function.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/math/scalblnf128.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/math/scalblnf128.h"
+#include "LdExpTest.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#include "src/__support/FPUtil/float128.h"
+#include "src/math/ldexpf128.h"
 
-using LIBC_NAMESPACE::fputil::Float128;
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-LLVM_LIBC_FUNCTION(float128, scalblnf128, (float128 x, long n)) {
-  return cpp::bit_cast<float128>(
-      math::scalblnf128(cpp::bit_cast<Float128>(x), n));
-}
-
-} // namespace LIBC_NAMESPACE_DECL
+LIST_LDEXP_TESTS(float128, LIBC_NAMESPACE::ldexpf128)
