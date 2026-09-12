@@ -1537,9 +1537,12 @@ define i16 @test_inf_only_bfloat(bfloat nofpclass(nan sub norm zero) %x) {
   ret i16 %and
 }
 
+; A bitcast from ppc_fp128 to i128 is endian-dependent.
 define i128 @test_inf_only_ppc_fp128(ppc_fp128 nofpclass(nan sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_only_ppc_fp128(
-; CHECK-NEXT:    ret i128 9218868437227405312
+; CHECK-NEXT:    [[TMP1:%.*]] = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast ppc_fp128 [[TMP1]] to i128
+; CHECK-NEXT:    ret i128 [[AND]]
 ;
   %y = bitcast ppc_fp128 %x to i128
   %and = and i128 %y, 170141183460469231731687303715884105727

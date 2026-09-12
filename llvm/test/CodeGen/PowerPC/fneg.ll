@@ -145,7 +145,9 @@ entry:
 define i1 @fneg_msb(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
 ; LE-LABEL: fneg_msb:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    li 3, 1
+; LE-NEXT:    mffprd 3, 2
+; LE-NEXT:    not 3, 3
+; LE-NEXT:    rldicl 3, 3, 1, 63
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: fneg_msb:
@@ -167,8 +169,7 @@ entry:
 define i1 @fneg_bit63(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
 ; LE-LABEL: fneg_bit63:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    mffprd 3, 1
-; LE-NEXT:    rldicl 3, 3, 1, 63
+; LE-NEXT:    li 3, 1
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: fneg_bit63:
@@ -200,8 +201,7 @@ entry:
 define i1 @fneg_fneg_msb(ppc_fp128 nofpclass(nan ninf nsub nnorm nzero) %x) {
 ; LE-LABEL: fneg_fneg_msb:
 ; LE:       # %bb.0: # %entry
-; LE-NEXT:    mffprd 3, 1
-; LE-NEXT:    rldicl 3, 3, 1, 63
+; LE-NEXT:    li 3, 0
 ; LE-NEXT:    blr
 ;
 ; BE-LABEL: fneg_fneg_msb:
