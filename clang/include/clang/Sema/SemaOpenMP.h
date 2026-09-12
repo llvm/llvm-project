@@ -1595,6 +1595,11 @@ private:
     SmallVector<LoopAnalysis, 2> Loops;
     /// Additional code required before entering the transformed loop sequence.
     SmallVector<Stmt *> LoopSequencePreInits;
+    /// Finalization statements collected from inner loop transformations
+    /// encountered while analyzing this sequence. The enclosing directive
+    /// must execute these to restore loop variables to their loop-exit values
+    /// so that downstream code observes correct values.
+    SmallVector<Stmt *, 2> InnerFinals;
 
     // Convenience function used when building the LoopSequenceAnalysis.
     static bool isLoopSequenceDerivation(Stmt *S) {

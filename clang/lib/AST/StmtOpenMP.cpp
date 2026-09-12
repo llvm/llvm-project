@@ -438,6 +438,14 @@ Stmt *OMPLoopTransformationDirective::getPreInits() const {
   llvm_unreachable("unexpected object type");
 }
 
+Stmt *OMPLoopTransformationDirective::getFinals() const {
+  if (auto *D = dyn_cast<OMPCanonicalLoopNestTransformationDirective>(S))
+    return D->getFinals();
+  if (auto *D = dyn_cast<OMPCanonicalLoopSequenceTransformationDirective>(S))
+    return D->getFinals();
+  llvm_unreachable("unexpected object type");
+}
+
 Stmt *OMPCanonicalLoopNestTransformationDirective::getTransformedStmt() const {
   switch (getStmtClass()) {
 #define STMT(CLASS, PARENT)
@@ -458,6 +466,19 @@ Stmt *OMPCanonicalLoopNestTransformationDirective::getPreInits() const {
 #define OMPCANONICALLOOPNESTTRANSFORMATIONDIRECTIVE(CLASS, PARENT)             \
   case Stmt::CLASS##Class:                                                     \
     return static_cast<const CLASS *>(this)->getPreInits();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation for canonical loop nests");
+  }
+}
+
+Stmt *OMPCanonicalLoopNestTransformationDirective::getFinals() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPCANONICALLOOPNESTTRANSFORMATIONDIRECTIVE(CLASS, PARENT)             \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getFinals();
 #include "clang/AST/StmtNodes.inc"
   default:
     llvm_unreachable("Not a loop transformation for canonical loop nests");
@@ -491,6 +512,19 @@ Stmt *OMPCanonicalLoopSequenceTransformationDirective::getPreInits() const {
   }
 }
 
+Stmt *OMPCanonicalLoopSequenceTransformationDirective::getFinals() const {
+  switch (getStmtClass()) {
+#define STMT(CLASS, PARENT)
+#define ABSTRACT_STMT(CLASS)
+#define OMPCANONICALLOOPSEQUENCETRANSFORMATIONDIRECTIVE(CLASS, PARENT)         \
+  case Stmt::CLASS##Class:                                                     \
+    return static_cast<const CLASS *>(this)->getFinals();
+#include "clang/AST/StmtNodes.inc"
+  default:
+    llvm_unreachable("Not a loop transformation for canonical loop sequences");
+  }
+}
+
 OMPForDirective *OMPForDirective::CreateEmpty(const ASTContext &C,
                                               unsigned NumClauses,
                                               unsigned CollapsedNum,
@@ -504,12 +538,12 @@ OMPTileDirective *
 OMPTileDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                          SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
                          unsigned NumLoops, Stmt *AssociatedStmt,
-                         Stmt *TransformedStmt, Stmt *PreInits) {
+                         Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPTileDirective *Dir = createDirective<OMPTileDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -517,20 +551,19 @@ OMPTileDirective *OMPTileDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumClauses,
                                                 unsigned NumLoops) {
   return createEmptyDirective<OMPTileDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPStripeDirective *
-OMPStripeDirective::Create(const ASTContext &C, SourceLocation StartLoc,
-                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
-                           unsigned NumLoops, Stmt *AssociatedStmt,
-                           Stmt *TransformedStmt, Stmt *PreInits) {
+OMPStripeDirective *OMPStripeDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
+    Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPStripeDirective *Dir = createDirective<OMPStripeDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -538,7 +571,7 @@ OMPStripeDirective *OMPStripeDirective::CreateEmpty(const ASTContext &C,
                                                     unsigned NumClauses,
                                                     unsigned NumLoops) {
   return createEmptyDirective<OMPStripeDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
@@ -568,31 +601,31 @@ OMPReverseDirective *
 OMPReverseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                             SourceLocation EndLoc, Stmt *AssociatedStmt,
                             unsigned NumLoops, Stmt *TransformedStmt,
-                            Stmt *PreInits) {
+                            Stmt *PreInits, Stmt *Finals) {
   OMPReverseDirective *Dir = createDirective<OMPReverseDirective>(
-      C, {}, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, {}, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
 OMPReverseDirective *OMPReverseDirective::CreateEmpty(const ASTContext &C,
                                                       unsigned NumLoops) {
   return createEmptyDirective<OMPReverseDirective>(
-      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true,
-      TransformedStmtOffset + 1, SourceLocation(), SourceLocation(), NumLoops);
+      C, /*NumClauses=*/0, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
+      SourceLocation(), SourceLocation(), NumLoops);
 }
 
 OMPInterchangeDirective *OMPInterchangeDirective::Create(
     const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
     ArrayRef<OMPClause *> Clauses, unsigned NumLoops, Stmt *AssociatedStmt,
-    Stmt *TransformedStmt, Stmt *PreInits) {
+    Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPInterchangeDirective *Dir = createDirective<OMPInterchangeDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -600,7 +633,7 @@ OMPInterchangeDirective *
 OMPInterchangeDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
                                      unsigned NumLoops) {
   return createEmptyDirective<OMPInterchangeDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
@@ -608,12 +641,12 @@ OMPSplitDirective *
 OMPSplitDirective::Create(const ASTContext &C, SourceLocation StartLoc,
                           SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
                           unsigned NumLoops, Stmt *AssociatedStmt,
-                          Stmt *TransformedStmt, Stmt *PreInits) {
+                          Stmt *TransformedStmt, Stmt *PreInits, Stmt *Finals) {
   OMPSplitDirective *Dir = createDirective<OMPSplitDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc,
-      NumLoops);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc, NumLoops);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
   return Dir;
 }
 
@@ -621,19 +654,23 @@ OMPSplitDirective *OMPSplitDirective::CreateEmpty(const ASTContext &C,
                                                   unsigned NumClauses,
                                                   unsigned NumLoops) {
   return createEmptyDirective<OMPSplitDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation(), NumLoops);
 }
 
-OMPFuseDirective *OMPFuseDirective::Create(
-    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
-    ArrayRef<OMPClause *> Clauses, unsigned NumGeneratedTopLevelLoops,
-    Stmt *AssociatedStmt, Stmt *TransformedStmt, Stmt *PreInits) {
+OMPFuseDirective *
+OMPFuseDirective::Create(const ASTContext &C, SourceLocation StartLoc,
+                         SourceLocation EndLoc, ArrayRef<OMPClause *> Clauses,
+                         unsigned NumGeneratedTopLevelLoops,
+                         Stmt *AssociatedStmt, Stmt *TransformedStmt,
+                         Stmt *PreInits, Stmt *Finals, unsigned FusedLoopIdx) {
 
   OMPFuseDirective *Dir = createDirective<OMPFuseDirective>(
-      C, Clauses, AssociatedStmt, TransformedStmtOffset + 1, StartLoc, EndLoc);
+      C, Clauses, AssociatedStmt, FinalsOffset + 1, StartLoc, EndLoc);
   Dir->setTransformedStmt(TransformedStmt);
   Dir->setPreInits(PreInits);
+  Dir->setFinals(Finals);
+  Dir->setFusedLoopIdx(FusedLoopIdx);
   Dir->setNumGeneratedTopLevelLoops(NumGeneratedTopLevelLoops);
   return Dir;
 }
@@ -641,7 +678,7 @@ OMPFuseDirective *OMPFuseDirective::Create(
 OMPFuseDirective *OMPFuseDirective::CreateEmpty(const ASTContext &C,
                                                 unsigned NumClauses) {
   OMPFuseDirective *Dir = createEmptyDirective<OMPFuseDirective>(
-      C, NumClauses, /*HasAssociatedStmt=*/true, TransformedStmtOffset + 1,
+      C, NumClauses, /*HasAssociatedStmt=*/true, FinalsOffset + 1,
       SourceLocation(), SourceLocation());
   return Dir;
 }

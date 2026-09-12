@@ -2661,6 +2661,7 @@ void ASTStmtWriter::VisitOMPCanonicalLoopSequenceTransformationDirective(
 
 void ASTStmtWriter::VisitOMPFuseDirective(OMPFuseDirective *D) {
   VisitOMPCanonicalLoopSequenceTransformationDirective(D);
+  Record.writeUInt32(D->getFusedLoopIdx());
   Code = serialization::STMT_OMP_FUSE_DIRECTIVE;
 }
 
