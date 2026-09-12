@@ -8176,7 +8176,7 @@ Sema::BuildNestedRequirement(Expr *Constraint) {
                                   Constraint->getSourceRange(), Satisfaction))
     return nullptr;
 
-  if (!Satisfaction.IsSatisfied) {
+  if (Satisfaction.HasSubstitutionFailure()) {
     SmallString<128> Entity;
     llvm::raw_svector_ostream OS(Entity);
     Constraint->printPretty(OS, nullptr, SemaRef.getPrintingPolicy());

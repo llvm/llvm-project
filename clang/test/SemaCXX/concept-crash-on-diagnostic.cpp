@@ -83,6 +83,6 @@ concept bar = foo<T>::baz;
 static_assert(requires { requires bar<int>; });
 // expected-error@-1 {{static assertion failed}}
 // expected-note@-2 {{because 'int' does not satisfy 'bar'}}
-// expected-note@-4 {{because 'bar<int>' would be invalid}}
+// expected-note@-5 {{because 'bar<int>' would be invalid}}
 
 }
