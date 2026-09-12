@@ -59,6 +59,8 @@ std::unique_ptr<IRMutator> createISelMutator() {
   Strategies.emplace_back(
       new InjectorIRStrategy(InjectorIRStrategy::getDefaultOps()));
   Strategies.emplace_back(new InstModificationIRStrategy());
+  Strategies.emplace_back(new InsertCFGStrategy());
+  Strategies.emplace_back(new InsertPHIStrategy());
   Strategies.emplace_back(new InstDeleterIRStrategy());
 
   return std::make_unique<IRMutator>(std::move(Types), std::move(Strategies));
