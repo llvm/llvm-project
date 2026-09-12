@@ -78,25 +78,27 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-#if SANITIZER_LINUX && (defined(__aarch64__) || defined(__loongarch_lp64)) && \
-    !SANITIZER_GO
-# define INIT_LONGJMP_XOR_KEY 1
-#else
-# define INIT_LONGJMP_XOR_KEY 0
-#endif
+#  if SANITIZER_LINUX && !SANITIZER_GO
+#    define CALIBRATE_LONGJMP_SP 1
+#  else
+#    define CALIBRATE_LONGJMP_SP 0
+#  endif
 
-#if INIT_LONGJMP_XOR_KEY
-#include "interception/interception.h"
+#  if CALIBRATE_LONGJMP_SP
+#    include "interception/interception.h"
 // Must be declared outside of other namespaces.
 DECLARE_REAL(int, _setjmp, void *env)
 #endif
 
 namespace __tsan {
 
-#if INIT_LONGJMP_XOR_KEY
-static void InitializeLongjmpXorKey();
+#  if CALIBRATE_LONGJMP_SP
+static void InitializeLongjmpSpMangling();
+// libc stores rotl(sp ^ longjmp_xor_key, longjmp_rot) in jmp_buf.
+// Both values are zero when the stack pointer is stored unchanged.
 static uptr longjmp_xor_key;
-#endif
+static uptr longjmp_rot;
+#  endif
 
 // Runtime detected VMA size.
 uptr vmaSize;
@@ -427,9 +429,8 @@ void InitializePlatform() {
   // is not compiled with -pie.
 #if !SANITIZER_GO
   {
-#    if INIT_LONGJMP_XOR_KEY
-    // Initialize the xor key used in {sig}{set,long}jump.
-    InitializeLongjmpXorKey();
+#    if CALIBRATE_LONGJMP_SP
+    InitializeLongjmpSpMangling();
 #    endif
   }
 
@@ -498,57 +499,25 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
 
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
-#    if SANITIZER_ANDROID && INIT_LONGJMP_XOR_KEY
+#    if CALIBRATE_LONGJMP_SP
+#      if SANITIZER_ANDROID
   if (longjmp_xor_key == 0) {
     // bionic libc initialization process: __libc_init_globals ->
     // __libc_init_vdso (calls strcmp) -> __libc_init_setjmp_cookie. strcmp is
     // intercepted by TSan, so during TSan initialization the setjmp_cookie
     // remains uninitialized. On Android, longjmp_xor_key must be set on first
     // use.
-    InitializeLongjmpXorKey();
+    InitializeLongjmpSpMangling();
     CHECK_NE(longjmp_xor_key, 0);
   }
-#    endif
-
-#    if defined(__x86_64__)
-#      if SANITIZER_LINUX
-  // Reverse of:
-  //   xor  %fs:0x30, %rsi
-  //   rol  $0x11, %rsi
-  uptr sp;
-  asm("ror  $0x11,     %0 \n"
-      "xor  %%fs:0x30, %0 \n"
-      : "=r" (sp)
-      : "0" (mangled_sp));
-  return sp;
-# else
-  return mangled_sp;
-# endif
-#elif defined(__aarch64__)
-# if SANITIZER_LINUX
-  return mangled_sp ^ longjmp_xor_key;
-# else
-  return mangled_sp;
-# endif
-#elif defined(__loongarch_lp64)
-  return mangled_sp ^ longjmp_xor_key;
-#elif defined(__powerpc64__)
-  // Reverse of:
-  //   ld   r4, -28696(r13)
-  //   xor  r4, r3, r4
-  uptr xor_key;
-  asm("ld  %0, -28696(%%r13)" : "=r" (xor_key));
-  return mangled_sp ^ xor_key;
-#elif defined(__mips__)
-  return mangled_sp;
-#    elif SANITIZER_RISCV64
-  return mangled_sp;
-#    elif defined(__s390x__)
-  // tcbhead_t.stack_guard
-  uptr xor_key = ((uptr *)__builtin_thread_pointer())[5];
-  return mangled_sp ^ xor_key;
+#      endif
+  uptr sp = mangled_sp;
+  if (longjmp_rot)
+    sp = (sp >> longjmp_rot) | (sp << (sizeof(uptr) * 8 - longjmp_rot));
+  return sp ^ longjmp_xor_key;
 #    else
-#      error "Unknown platform"
+  // The BSDs do not mangle the stack pointer in jmp_buf.
+  return mangled_sp;
 #    endif
 }
 
@@ -597,29 +566,70 @@ uptr ExtractLongJmpSp(uptr *env) {
   return UnmangleLongJmpSp(mangled_sp);
 }
 
-#if INIT_LONGJMP_XOR_KEY
-// GLIBC mangles the function pointers in jmp_buf (used in {set,long}*jmp
-// functions) by XORing them with a random key.  For AArch64 it is a global
-// variable rather than a TCB one (as for x86_64/powerpc).  We obtain the key by
-// issuing a setjmp and XORing the SP pointer values to derive the key.
-static void InitializeLongjmpXorKey() {
-  // 1. Call REAL(setjmp), which stores the mangled SP in env.
+#    if CALIBRATE_LONGJMP_SP
+// Read the SP immediately after _setjmp returns. This is the value libc saves.
+NOINLINE static void ProbeLongJmpSp(uptr* sp, uptr* mangled_sp) {
   jmp_buf env;
   REAL(_setjmp)(env);
-
-  // 2. Retrieve vanilla/mangled SP.
-  uptr sp;
-#ifdef __loongarch__
-  asm("move  %0, $sp" : "=r" (sp));
-#else
-  asm("mov  %0, sp" : "=r" (sp));
-#endif
-  uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];
-
-  // 3. xor SPs to obtain key.
-  longjmp_xor_key = mangled_sp ^ sp;
+  uptr v;
+#      if defined(__x86_64__)
+  asm volatile("mov  %%rsp, %0" : "=r"(v));
+#      elif defined(__aarch64__)
+  asm volatile("mov  %0, sp" : "=r"(v));
+#      elif defined(__loongarch__)
+  asm volatile("move  %0, $sp" : "=r"(v));
+#      elif defined(__powerpc64__)
+  asm volatile("mr  %0, 1" : "=r"(v));
+#      elif defined(__s390x__)
+  asm volatile("lgr  %0, %%r15" : "=r"(v));
+#      elif defined(__mips__)
+  asm volatile("move  %0, $sp" : "=r"(v));
+#      elif SANITIZER_RISCV64
+  asm volatile("mv  %0, sp" : "=r"(v));
+#      else
+#        error "Unknown platform"
+#      endif
+  *sp = v;
+  *mangled_sp = ((uptr*)&env)[LONG_JMP_SP_ENV_SLOT];
 }
-#endif
+
+// Run the probe in another frame. Consuming its result after the call prevents
+// tail-call elimination.
+NOINLINE static void ProbeLongJmpSpDeep(uptr* sp, uptr* mangled_sp) {
+  ProbeLongJmpSp(sp, mangled_sp);
+  asm volatile("" : : "r"(*sp));
+}
+
+// Probe two stack depths to identify identity, XOR, or XOR-and-rotate without
+// depending on private guard locations.
+static void InitializeLongjmpSpMangling() {
+  if (!REAL(_setjmp))
+    return;
+  uptr sp1, m1, sp2, m2;
+  ProbeLongJmpSp(&sp1, &m1);
+  ProbeLongJmpSpDeep(&sp2, &m2);
+  // The rotation is coprime to the word size, so only zero and all-ones
+  // deltas are rotation-invariant.
+  const uptr d = sp1 ^ sp2;
+  CHECK_NE(d, 0);
+  CHECK_NE(d, (uptr)-1);
+  const uptr kRot = 2 * sizeof(uptr) + 1;
+  const uptr kBits = sizeof(uptr) * 8;
+  const uptr r1 = (m1 >> kRot) | (m1 << (kBits - kRot));
+  const uptr r2 = (m2 >> kRot) | (m2 << (kBits - kRot));
+  if ((m1 ^ sp1) == (m2 ^ sp2)) {
+    // This includes the identity scheme when the key is zero.
+    longjmp_xor_key = m1 ^ sp1;
+    longjmp_rot = 0;
+  } else if ((r1 ^ sp1) == (r2 ^ sp2)) {
+    longjmp_xor_key = r1 ^ sp1;
+    longjmp_rot = kRot;
+  } else {
+    Printf("ThreadSanitizer: unrecognized jmp_buf pointer mangling scheme\n");
+    CHECK(0);
+  }
+}
+#    endif
 
 extern "C" void __tsan_tls_initialization() {}
 
