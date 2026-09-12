@@ -19,6 +19,7 @@
 // call_once properly synchronizes user state, a data race that was fixed
 // in r280621.
 
+#include <atomic>
 #include <mutex>
 #include <thread>
 #include <cassert>
@@ -27,6 +28,7 @@
 #include "test_macros.h"
 
 std::once_flag flg0;
+std::atomic<bool> initialized(false);
 long global = 0;
 
 void init0()
@@ -37,13 +39,22 @@ void init0()
 void f0()
 {
     std::call_once(flg0, init0);
+    initialized.store(true, std::memory_order_relaxed);
+}
+
+void f1()
+{
+    while (!initialized.load(std::memory_order_relaxed))
+        std::this_thread::yield();
+
+    std::call_once(flg0, init0);
     assert(global == 1);
 }
 
 int main(int, char**)
 {
     std::thread t0 = support::make_test_thread(f0);
-    std::thread t1 = support::make_test_thread(f0);
+    std::thread t1 = support::make_test_thread(f1);
     t0.join();
     t1.join();
     assert(global == 1);

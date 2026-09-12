@@ -10,6 +10,7 @@
 #define _LIBCPP___MUTEX_ONCE_FLAG_H
 
 #include <__config>
+#include <__debug_utils/sanitizers.h>
 #include <__memory/addressof.h>
 #include <__tuple/tuple_size.h>
 #include <__type_traits/invoke.h>
@@ -113,6 +114,22 @@ void _LIBCPP_HIDE_FROM_ABI __call_once_proxy(void* __vp) {
   (*__p)();
 }
 
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+
+struct __call_once_tsan_param {
+  void* __arg_;
+  void (*__func_)(void*);
+  void* __flag_;
+};
+
+inline _LIBCPP_HIDE_FROM_ABI void __call_once_tsan_proxy(void* __vp) {
+  __call_once_tsan_param* __p = static_cast<__call_once_tsan_param*>(__vp);
+  __p->__func_(__p->__arg_);
+  ::__tsan_release(__p->__flag_);
+}
+
+#endif
+
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI void __call_once(volatile once_flag::_State_type&, void*, void (*)(void*));
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
@@ -134,7 +151,15 @@ inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable&& __fun
     typedef tuple<_Callable&&, _Args&&...> _Gp;
     _Gp __f(std::forward<_Callable>(__func), std::forward<_Args>(__args)...);
     __call_once_param<_Gp> __p(__f);
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+    __call_once_tsan_param __tsan_p = {
+        std::addressof(__p),
+        std::addressof(__call_once_proxy<_Gp>),
+        std::addressof(__flag.__state_)};
+    std::__call_once(__flag.__state_, std::addressof(__tsan_p), std::addressof(__call_once_tsan_proxy));
+#else
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Gp>));
+#endif
   }
 }
 
@@ -144,7 +169,15 @@ template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     __call_once_param<_Callable> __p(__func);
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+    __call_once_tsan_param __tsan_p = {
+        std::addressof(__p),
+        std::addressof(__call_once_proxy<_Callable>),
+        std::addressof(__flag.__state_)};
+    std::__call_once(__flag.__state_, std::addressof(__tsan_p), std::addressof(__call_once_tsan_proxy));
+#else
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<_Callable>));
+#endif
   }
 }
 
@@ -152,7 +185,15 @@ template <class _Callable>
 inline _LIBCPP_HIDE_FROM_ABI void call_once(once_flag& __flag, const _Callable& __func) {
   if (__libcpp_acquire_load(&__flag.__state_) != once_flag::_Complete) {
     __call_once_param<const _Callable> __p(__func);
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+    __call_once_tsan_param __tsan_p = {
+        std::addressof(__p),
+        std::addressof(__call_once_proxy<const _Callable>),
+        std::addressof(__flag.__state_)};
+    std::__call_once(__flag.__state_, std::addressof(__tsan_p), std::addressof(__call_once_tsan_proxy));
+#else
     std::__call_once(__flag.__state_, std::addressof(__p), std::addressof(__call_once_proxy<const _Callable>));
+#endif
   }
 }
 
