@@ -1627,6 +1627,7 @@ module std {
       textual header "__locale_dir/support/aix.h"
       textual header "__locale_dir/support/apple.h"
       textual header "__locale_dir/support/bsd_like.h"
+      textual header "__locale_dir/support/default.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
       textual header "__locale_dir/support/linux.h"
@@ -1638,6 +1639,7 @@ module std {
       textual header "__locale_dir/support/no_locale/characters.h"
       textual header "__locale_dir/support/no_locale/strtonum.h"
       textual header "__locale_dir/support/openbsd.h"
+      textual header "__locale_dir/support/wasi.h"
       textual header "__locale_dir/support/windows.h"
     }
 
