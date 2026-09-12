@@ -2145,7 +2145,6 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; ARM-NEXT:    movt r3, #65535
 ; ARM-NEXT:    and r1, r1, #15
 ; ARM-NEXT:    lsl r3, r3, r12
-; ARM-NEXT:    uxtb r2, r2
 ; ARM-NEXT:    and r0, r0, r3, lsr #8
 ; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
@@ -2153,11 +2152,10 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; THUMB-M-LABEL: test_bitinsert_b8_var:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    and r1, r1, #15
-; THUMB-M-NEXT:    uxtb r3, r2
-; THUMB-M-NEXT:    and r2, r2, #7
-; THUMB-M-NEXT:    lsls r1, r3
 ; THUMB-M-NEXT:    movw r3, #61680
 ; THUMB-M-NEXT:    movt r3, #65535
+; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    and r2, r2, #7
 ; THUMB-M-NEXT:    lsl.w r2, r3, r2
 ; THUMB-M-NEXT:    and.w r0, r0, r2, lsr #8
 ; THUMB-M-NEXT:    orrs r0, r1
@@ -2170,7 +2168,6 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; THUMB-A-NEXT:    movt r3, #65535
 ; THUMB-A-NEXT:    and r1, r1, #15
 ; THUMB-A-NEXT:    lsl.w r3, r3, r12
-; THUMB-A-NEXT:    uxtb r2, r2
 ; THUMB-A-NEXT:    and.w r0, r0, r3, lsr #8
 ; THUMB-A-NEXT:    lsls r1, r2
 ; THUMB-A-NEXT:    orrs r0, r1
@@ -2209,11 +2206,13 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    .save {r11, lr}
 ; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    movw r3, #49933
-; ARM-NEXT:    bfc r2, #21, #11
-; ARM-NEXT:    movt r3, #3120
+; ARM-NEXT:    movw r3, #24967
 ; ARM-NEXT:    and r1, r1, #63
+; ARM-NEXT:    movt r3, #34328
 ; ARM-NEXT:    umull r3, r12, r2, r3
+; ARM-NEXT:    sub r3, r2, r12
+; ARM-NEXT:    add r3, r12, r3, lsr #1
+; ARM-NEXT:    lsr r12, r3, #4
 ; ARM-NEXT:    mov r3, #21
 ; ARM-NEXT:    mls r12, r12, r3, r2
 ; ARM-NEXT:    movw r3, #65472
@@ -2231,13 +2230,15 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    .save {r7, lr}
 ; THUMB-M-NEXT:    push {r7, lr}
-; THUMB-M-NEXT:    movw r3, #49933
-; THUMB-M-NEXT:    bfc r2, #21, #11
-; THUMB-M-NEXT:    movt r3, #3120
+; THUMB-M-NEXT:    movw r3, #24967
 ; THUMB-M-NEXT:    and r1, r1, #63
+; THUMB-M-NEXT:    movt r3, #34328
 ; THUMB-M-NEXT:    umull r3, r12, r2, r3
-; THUMB-M-NEXT:    movs r3, #21
 ; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    sub.w r3, r2, r12
+; THUMB-M-NEXT:    add.w r3, r12, r3, lsr #1
+; THUMB-M-NEXT:    lsr.w r12, r3, #4
+; THUMB-M-NEXT:    movs r3, #21
 ; THUMB-M-NEXT:    mls r12, r12, r3, r2
 ; THUMB-M-NEXT:    movw r3, #65472
 ; THUMB-M-NEXT:    movt r3, #31
@@ -2255,13 +2256,15 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; THUMB-A:       @ %bb.0:
 ; THUMB-A-NEXT:    .save {r7, lr}
 ; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    movw r3, #49933
-; THUMB-A-NEXT:    bfc r2, #21, #11
-; THUMB-A-NEXT:    movt r3, #3120
+; THUMB-A-NEXT:    movw r3, #24967
 ; THUMB-A-NEXT:    and r1, r1, #63
+; THUMB-A-NEXT:    movt r3, #34328
 ; THUMB-A-NEXT:    umull r3, r12, r2, r3
-; THUMB-A-NEXT:    movs r3, #21
 ; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    sub.w r3, r2, r12
+; THUMB-A-NEXT:    add.w r3, r12, r3, lsr #1
+; THUMB-A-NEXT:    lsr.w r12, r3, #4
+; THUMB-A-NEXT:    movs r3, #21
 ; THUMB-A-NEXT:    mls r12, r12, r3, r2
 ; THUMB-A-NEXT:    movw r3, #65472
 ; THUMB-A-NEXT:    movt r3, #31
@@ -2900,7 +2903,6 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; ARM-NEXT:    movt r3, #65535
 ; ARM-NEXT:    and r1, r1, #1
 ; ARM-NEXT:    lsl r3, r3, r12
-; ARM-NEXT:    uxtb r2, r2
 ; ARM-NEXT:    and r0, r0, r3, lsr #8
 ; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
@@ -2908,11 +2910,10 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; THUMB-M-LABEL: test_bitinsert_val_b1_into_b8:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    and r1, r1, #1
-; THUMB-M-NEXT:    uxtb r3, r2
-; THUMB-M-NEXT:    and r2, r2, #7
-; THUMB-M-NEXT:    lsls r1, r3
 ; THUMB-M-NEXT:    movw r3, #65278
 ; THUMB-M-NEXT:    movt r3, #65535
+; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    and r2, r2, #7
 ; THUMB-M-NEXT:    lsl.w r2, r3, r2
 ; THUMB-M-NEXT:    and.w r0, r0, r2, lsr #8
 ; THUMB-M-NEXT:    orrs r0, r1
@@ -2925,7 +2926,6 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; THUMB-A-NEXT:    movt r3, #65535
 ; THUMB-A-NEXT:    and r1, r1, #1
 ; THUMB-A-NEXT:    lsl.w r3, r3, r12
-; THUMB-A-NEXT:    uxtb r2, r2
 ; THUMB-A-NEXT:    and.w r0, r0, r3, lsr #8
 ; THUMB-A-NEXT:    lsls r1, r2
 ; THUMB-A-NEXT:    orrs r0, r1

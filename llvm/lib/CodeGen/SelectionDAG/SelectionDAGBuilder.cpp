@@ -4212,11 +4212,9 @@ void SelectionDAGBuilder::visitBitInsert(const User &I) {
     Val = DAG.getBitcast(ValVT, Val);
   }
 
-  SDValue LegalOffset = DAG.getZExtOrTrunc(Offset, dl, BaseVT);
-
   // Legalize shift amount to the target's shift amount type.
   EVT ShiftAmtTy = TLI.getShiftAmountTy(BaseVT, DAG.getDataLayout());
-  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
+  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(Offset, dl, ShiftAmtTy);
 
   unsigned BaseBitWidth = BaseVT.getScalarSizeInBits();
   unsigned ValBitWidth = ValVT.getScalarSizeInBits();

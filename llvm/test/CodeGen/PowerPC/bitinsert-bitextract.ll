@@ -453,9 +453,8 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; CHECK-NEXT:    clrlwi 4, 4, 28
 ; CHECK-NEXT:    slw 6, 7, 6
 ; CHECK-NEXT:    neg 7, 5
-; CHECK-NEXT:    clrlwi 5, 5, 24
-; CHECK-NEXT:    clrlwi 7, 7, 29
 ; CHECK-NEXT:    slw 4, 4, 5
+; CHECK-NEXT:    clrlwi 7, 7, 29
 ; CHECK-NEXT:    srw 7, 8, 7
 ; CHECK-NEXT:    or 6, 6, 7
 ; CHECK-NEXT:    and 3, 3, 6
@@ -477,16 +476,17 @@ define b8 @test_bitinsert_b8_const(b8 %base, i4 %val) {
 define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_b21_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 6, 3120
-; CHECK-NEXT:    clrlwi 5, 5, 11
-; CHECK-NEXT:    lis 7, 31
+; CHECK-NEXT:    lis 7, -31208
+; CHECK-NEXT:    clrldi 6, 5, 32
 ; CHECK-NEXT:    lis 8, 15
 ; CHECK-NEXT:    clrlwi 4, 4, 26
-; CHECK-NEXT:    ori 6, 6, 49933
-; CHECK-NEXT:    ori 7, 7, 65472
+; CHECK-NEXT:    ori 7, 7, 24967
 ; CHECK-NEXT:    ori 8, 8, 65504
 ; CHECK-NEXT:    slw 4, 4, 5
-; CHECK-NEXT:    mulhwu 6, 5, 6
+; CHECK-NEXT:    rldic 7, 7, 27, 4
+; CHECK-NEXT:    mulhdu 6, 6, 7
+; CHECK-NEXT:    lis 7, 31
+; CHECK-NEXT:    ori 7, 7, 65472
 ; CHECK-NEXT:    mulli 6, 6, 21
 ; CHECK-NEXT:    sub 6, 5, 6
 ; CHECK-NEXT:    slw 7, 7, 6
@@ -637,9 +637,8 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; CHECK-NEXT:    clrlwi 4, 4, 31
 ; CHECK-NEXT:    slw 6, 7, 6
 ; CHECK-NEXT:    neg 7, 5
-; CHECK-NEXT:    clrlwi 5, 5, 24
-; CHECK-NEXT:    clrlwi 7, 7, 29
 ; CHECK-NEXT:    slw 4, 4, 5
+; CHECK-NEXT:    clrlwi 7, 7, 29
 ; CHECK-NEXT:    srw 7, 8, 7
 ; CHECK-NEXT:    or 6, 6, 7
 ; CHECK-NEXT:    and 3, 3, 6
