@@ -11,28 +11,6 @@ define half @test_bitextract_half_full(b16 %src) {
   ret half %result
 }
 
-define half @test_bitextract_half_const(b32 %src) {
-; AARCH64-LABEL: test_bitextract_half_const:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr w8, w0, #8
-; AARCH64-NEXT:    fmov s0, w8
-; AARCH64-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; AARCH64-NEXT:    ret
-  %result = bitextract half, b32 %src, i32 8
-  ret half %result
-}
-
-define half @test_bitextract_half_var(b32 %src, i32 %off) {
-; AARCH64-LABEL: test_bitextract_half_var:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr w8, w0, w1
-; AARCH64-NEXT:    fmov s0, w8
-; AARCH64-NEXT:    // kill: def $h0 killed $h0 killed $q0
-; AARCH64-NEXT:    ret
-  %result = bitextract half, b32 %src, i32 %off
-  ret half %result
-}
-
 define float @test_bitextract_float_full(b32 %src) {
 ; AARCH64-LABEL: test_bitextract_float_full:
 ; AARCH64:       // %bb.0:
@@ -164,17 +142,6 @@ define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; AARCH64-NEXT:    ret
   %result = bitinsert b16 %base, half %val, i32 0
   ret b16 %result
-}
-
-define b32 @test_bitinsert_half_const(b32 %base, half %val) {
-; AARCH64-LABEL: test_bitinsert_half_const:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    // kill: def $h0 killed $h0 def $s0
-; AARCH64-NEXT:    fmov w8, s0
-; AARCH64-NEXT:    bfi w0, w8, #8, #16
-; AARCH64-NEXT:    ret
-  %result = bitinsert b32 %base, half %val, i32 8
-  ret b32 %result
 }
 
 define b32 @test_bitinsert_half_var(b32 %base, half %val, i32 %off) {

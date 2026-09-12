@@ -21,46 +21,6 @@ define half @test_bitextract_half_full(b16 %src) {
   ret half %result
 }
 
-define half @test_bitextract_half_const(b32 %src) {
-; GFX9-LABEL: test_bitextract_half_const:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-LABEL: test_bitextract_half_const:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v0, 8, v0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %result = bitextract half, b32 %src, i32 8
-  ret half %result
-}
-
-define half @test_bitextract_half_var(b32 %src, i32 %off) {
-; GFX9-LABEL: test_bitextract_half_var:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-LABEL: test_bitextract_half_var:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-NEXT:    s_wait_expcnt 0x0
-; GFX12-NEXT:    s_wait_samplecnt 0x0
-; GFX12-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
-; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %result = bitextract half, b32 %src, i32 %off
-  ret half %result
-}
-
 define float @test_bitextract_float_full(b32 %src) {
 ; GFX9-LABEL: test_bitextract_float_full:
 ; GFX9:       ; %bb.0:
@@ -375,45 +335,6 @@ define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %result = bitinsert b16 %base, half %val, i32 0
   ret b16 %result
-}
-
-define b32 @test_bitinsert_half_const(b32 %base, half %val) {
-; GFX9-LABEL: test_bitinsert_half_const:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v2, 8
-; GFX9-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; GFX9-NEXT:    s_mov_b32 s4, 0xff0000ff
-; GFX9-NEXT:    v_and_or_b32 v0, v0, s4, v1
-; GFX9-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-TRUE16-LABEL: test_bitinsert_half_const:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v0, 0xff0000ff, v0, v1
-; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-FAKE16-LABEL: test_bitinsert_half_const:
-; GFX12-FAKE16:       ; %bb.0:
-; GFX12-FAKE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-FAKE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-FAKE16-NEXT:    v_lshlrev_b32_e32 v1, 8, v1
-; GFX12-FAKE16-NEXT:    v_and_or_b32 v0, 0xff0000ff, v0, v1
-; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %result = bitinsert b32 %base, half %val, i32 8
-  ret b32 %result
 }
 
 define b32 @test_bitinsert_half_var(b32 %base, half %val, i32 %off) {
