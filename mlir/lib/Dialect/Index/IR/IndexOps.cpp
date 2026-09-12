@@ -245,8 +245,9 @@ OpFoldResult DivUOp::fold(FoldAdaptor adaptor) {
 // CeilDivSOp
 //===----------------------------------------------------------------------===//
 
-/// Compute `ceildivs(n, m)` as `x = m > 0 ? -1 : 1` and then
-/// `n*m > 0 ? (n+x)/m + 1 : -(-n/m)`.
+/// Compute `ceildivs(n, m)` via `sdiv_ov`/`sadd_ov` so that neither operand
+/// is negated, letting `MININT` fold correctly instead of silently
+/// overflowing (mirrors `arith::CeilDivSIOp::fold`).
 static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
   // Don't fold division by zero.
   if (m.isZero())
@@ -255,17 +256,19 @@ static std::optional<APInt> calculateCeilDivS(const APInt &n, const APInt &m) {
   if (n.isZero())
     return n;
 
-  bool mGtZ = m.sgt(0);
-  if (n.sgt(0) != mGtZ) {
-    // If the operands have different signs, compute the negative result. Signed
-    // division overflow is not possible, since if `m == -1`, `n` can be at most
-    // `INT_MAX`, and `-INT_MAX != INT_MIN` in two's complement.
-    return -(-n).sdiv(m);
-  }
-  // Otherwise, compute the positive result. Signed division overflow is not
-  // possible since if `m == -1`, `x` will be `1`.
-  int64_t x = mGtZ ? -1 : 1;
-  return (n + x).sdiv(m) + 1;
+  bool overflow = false;
+  APInt quotient = n.sdiv_ov(m, overflow);
+  if (overflow) // MININT / -1, not representable.
+    return std::nullopt;
+  // sdiv already rounds towards the ceiling for a negative quotient; a
+  // positive, inexact quotient needs a +1 correction.
+  if (n.isNegative() != m.isNegative() || quotient * m == n)
+    return quotient;
+
+  bool addOverflow = false;
+  APInt result = quotient.sadd_ov(APInt(n.getBitWidth(), 1, /*isSigned=*/true),
+                                   addOverflow);
+  return addOverflow ? std::optional<APInt>() : result;
 }
 
 OpFoldResult CeilDivSOp::fold(FoldAdaptor adaptor) {
