@@ -425,7 +425,8 @@ program acc_private
 
 ! CHECK: %[[FP_C:.*]] = acc.firstprivate varPtr(%[[DECLC]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) name("c") -> !fir.ref<i32>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_C]] : !fir.ref<i32>)
-! CHECK: acc.yield
+! CHECK: %[[FP_C_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("c") -> !fir.ref<i32>
+! CHECK: acc.loop {{.*}}firstprivate(%[[FP_C_LOOP]] : !fir.ref<i32>)
 
   !$acc parallel loop firstprivate(b)
   DO i = 1, n

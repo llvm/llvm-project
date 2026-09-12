@@ -57,6 +57,18 @@ These extensions require no flag.
   this use (`-Wportability`, also enabled by `-pedantic`; suppress with
   `-Wno-portability`).
 
+### Combined `parallel loop` firstprivate
+
+`firstprivate` is a compute-construct clause, not a `loop` clause. On a
+combined `parallel loop`, Flang keeps the explicit clause on the compute
+construct and also attaches an implicit `firstprivate` on the associated
+`acc.loop` so independent iterations do not share that copy.
+
+This applies only to OpenACC scalars on an independent combined
+`parallel loop`. It is not applied for `serial loop`, `kernels loop`,
+standalone `acc loop`, `seq`/`auto`, non-scalars, nested or collapsed inner
+loops, or scalars that are only implicitly firstprivate.
+
 ## Extensions enabled by default
 
 ### `-fopenacc-multiple-names-in-routine` — `!$acc routine(<name>[, <name>]*) <clause-list>`
