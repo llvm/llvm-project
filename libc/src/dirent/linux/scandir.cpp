@@ -58,7 +58,9 @@ LLVM_LIBC_FUNCTION(int, scandir,
       break;
     }
 
-    LIBC_NAMESPACE::memcpy(new_entry, entry, sizeof(struct dirent));
+    // struct dirent contains an equivalent of flexible array memeber,
+    // which makes sizeof unreliable, hence we use d_reclen.
+    LIBC_NAMESPACE::memcpy(new_entry, entry, entry->d_reclen);
 
     if (!entries.push_back(new_entry)) {
       libc_errno = ENOMEM;
