@@ -4605,6 +4605,21 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
 
+  Value *X, *Y;
+  // select (trunc Y), (X & 1), 0 -> (X & 1) & Y
+  if (match(CondVal, m_Trunc(m_Value(Y))) && match(FalseVal, m_Zero()) &&
+      match(TrueVal, m_And(m_Value(X), m_One())) && Y->getType() == SelType) {
+    return BinaryOperator::CreateAnd(TrueVal, Y);
+  }
+
+  // select (trunc Y), 0, (X & 1) -> (X & 1) & ~Y
+  if (match(CondVal, m_OneUse(m_Trunc(m_Value(Y)))) &&
+      match(TrueVal, m_Zero()) && match(FalseVal, m_And(m_Value(X), m_One())) &&
+      Y->getType() == SelType) {
+    Value *NotY = Builder.CreateNot(Y);
+    return BinaryOperator::CreateAnd(FalseVal, NotY);
+  }
+
   // Fold: select (icmp ult X, 2), X, ctpop(X)  -->  ctpop(X)
   // ctpop(0)==0 and ctpop(1)==1, so the guard is always redundant.
   if (match(FalseVal, m_Ctpop(m_Specific(TrueVal))) &&
