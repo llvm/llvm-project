@@ -80,7 +80,7 @@ There are several key properties that an implementation of `rcu` must satisfy:
 - On the writer side, `retire`-ing an object in principle should not block at all. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `rcu_retire`).
 
 - On the collector side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
-  via `rcu_domain::unlock` . Note that this is a key difference between `rcu` and read-write locks:
+  via `rcu_domain::unlock`. Note that this is a key difference between `rcu` and read-write locks:
   In case a late reader enters the critical section after the collector thread has called `rcu_synchronize` and started waiting, the
   collector thread does not need to wait for the late reader to exit the critical section. In contrast, a collector thread trying to acquire a read-write lock would have to wait until the late reader releases the lock before it can acquire it.
 
