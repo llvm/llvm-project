@@ -288,6 +288,44 @@ overwriteDuplicateEntries(SmallVectorImpl<DataLayoutEntryInterface> &oldEntries,
   }
 }
 
+static bool
+areBuiltinDataLayoutEntriesCompatible(DataLayoutEntryListRef oldEntries,
+                                      DataLayoutEntryListRef newEntries) {
+  for (DataLayoutEntryInterface newEntry : newEntries) {
+    const auto *oldEntry =
+        llvm::find_if(oldEntries, [&](DataLayoutEntryInterface entry) {
+          return entry.getKey() == newEntry.getKey();
+        });
+    if (oldEntry == oldEntries.end())
+      continue;
+
+    Type type = cast<Type>(newEntry.getKey());
+    if (isa<IndexType>(type)) {
+      uint64_t oldBitwidth =
+          cast<IntegerAttr>(oldEntry->getValue()).getValue().getZExtValue();
+      uint64_t newBitwidth =
+          cast<IntegerAttr>(newEntry.getValue()).getValue().getZExtValue();
+      if (oldBitwidth != newBitwidth)
+        return false;
+      continue;
+    }
+
+    assert(type.isIntOrFloat() &&
+           "unexpected data layout entry for unsupported built-in type");
+    auto oldValues =
+        cast<DenseIntElementsAttr>(oldEntry->getValue()).getValues<uint64_t>();
+    auto newValues =
+        cast<DenseIntElementsAttr>(newEntry.getValue()).getValues<uint64_t>();
+    uint64_t oldAbi = *oldValues.begin();
+    uint64_t newAbi = *newValues.begin();
+    if (oldAbi == newAbi)
+      continue;
+    if (oldAbi < newAbi || newAbi == 0 || oldAbi % newAbi != 0)
+      return false;
+  }
+  return true;
+}
+
 /// Combines a data layout spec into the given lists of entries organized by
 /// type class and identifier, overwriting them if necessary. Fails to combine
 /// if the two entries with identical keys are not compatible.
@@ -333,16 +371,20 @@ static LogicalResult combineOneSpec(
     }
 
     Type typeSample = cast<Type>(kvp.second.front().getKey());
-    assert(&typeSample.getDialect() !=
-               typeSample.getContext()->getLoadedDialect<BuiltinDialect>() &&
-           "unexpected data layout entry for built-in type");
-
-    auto interface = cast<DataLayoutTypeInterface>(typeSample);
-    // TODO: Revisit this method and call once
-    // https://github.com/llvm/llvm-project/issues/130321 gets resolved.
-    if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second,
-                                 spec, entriesForID))
-      return failure();
+    if (isa<BuiltinDialect>(&typeSample.getDialect())) {
+      assert((isa<IndexType>(typeSample) || typeSample.isIntOrFloat()) &&
+             "unexpected data layout entry for unsupported built-in type");
+      if (!areBuiltinDataLayoutEntriesCompatible(
+              entriesForType.lookup(kvp.first), kvp.second))
+        return failure();
+    } else {
+      auto interface = cast<DataLayoutTypeInterface>(typeSample);
+      // TODO: Revisit this method and call once
+      // https://github.com/llvm/llvm-project/issues/130321 gets resolved.
+      if (!interface.areCompatible(entriesForType.lookup(kvp.first), kvp.second,
+                                   spec, entriesForID))
+        return failure();
+    }
 
     overwriteDuplicateEntries(entriesForType[kvp.first], kvp.second);
   }
