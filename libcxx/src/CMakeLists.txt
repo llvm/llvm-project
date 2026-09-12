@@ -172,6 +172,7 @@ split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
 include(FindLibcCommonUtils)
+include(FindBoostMath)
 
 # Build the shared library.
 if (LIBCXX_SUPPORTS_SHARED_LIBRARY)
