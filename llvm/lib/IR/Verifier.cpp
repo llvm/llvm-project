@@ -1219,22 +1219,20 @@ void Verifier::visitDISubrangeType(const DISubrangeType &N) {
   auto *BaseType = N.getRawBaseType();
   CheckDI(!BaseType || isType(BaseType), "BaseType must be a type");
   auto *LBound = N.getRawLowerBound();
-  CheckDI(!LBound || isConstantIntMetadata(LBound) ||
-              isa<DIVariable>(LBound) || isa<DIExpression>(LBound) ||
-              isa<DIDerivedType>(LBound),
+  CheckDI(!LBound || isConstantIntMetadata(LBound) || isa<DIVariable>(LBound) ||
+              isa<DIExpression>(LBound) || isa<DIDerivedType>(LBound),
           "LowerBound must be signed constant or DIVariable or DIExpression or "
           "DIDerivedType",
           &N);
   auto *UBound = N.getRawUpperBound();
-  CheckDI(!UBound || isConstantIntMetadata(UBound) ||
-              isa<DIVariable>(UBound) || isa<DIExpression>(UBound) ||
-              isa<DIDerivedType>(UBound),
+  CheckDI(!UBound || isConstantIntMetadata(UBound) || isa<DIVariable>(UBound) ||
+              isa<DIExpression>(UBound) || isa<DIDerivedType>(UBound),
           "UpperBound must be signed constant or DIVariable or DIExpression or "
           "DIDerivedType",
           &N);
   auto *Stride = N.getRawStride();
-  CheckDI(!Stride || isConstantIntMetadata(Stride) ||
-              isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
+  CheckDI(!Stride || isConstantIntMetadata(Stride) || isa<DIVariable>(Stride) ||
+              isa<DIExpression>(Stride),
           "Stride must be signed constant or DIVariable or DIExpression", &N);
   auto *Bias = N.getRawBias();
   CheckDI(!Bias || isConstantIntMetadata(Bias) || isa<DIVariable>(Bias) ||
@@ -1251,26 +1249,26 @@ void Verifier::visitDISubrange(const DISubrange &N) {
   CheckDI(!N.getRawCountNode() || !N.getRawUpperBound(),
           "Subrange can have any one of count or upperBound", &N);
   auto *CBound = N.getRawCountNode();
-  CheckDI(!CBound || isConstantIntMetadata(CBound) ||
-              isa<DIVariable>(CBound) || isa<DIExpression>(CBound),
+  CheckDI(!CBound || isConstantIntMetadata(CBound) || isa<DIVariable>(CBound) ||
+              isa<DIExpression>(CBound),
           "Count must be signed constant or DIVariable or DIExpression", &N);
   auto Count = N.getCount();
   CheckDI(!Count || !isa<ConstantInt *>(Count) ||
               cast<ConstantInt *>(Count)->getSExtValue() >= -1,
           "invalid subrange count", &N);
   auto *LBound = N.getRawLowerBound();
-  CheckDI(!LBound || isConstantIntMetadata(LBound) ||
-              isa<DIVariable>(LBound) || isa<DIExpression>(LBound),
+  CheckDI(!LBound || isConstantIntMetadata(LBound) || isa<DIVariable>(LBound) ||
+              isa<DIExpression>(LBound),
           "LowerBound must be signed constant or DIVariable or DIExpression",
           &N);
   auto *UBound = N.getRawUpperBound();
-  CheckDI(!UBound || isConstantIntMetadata(UBound) ||
-              isa<DIVariable>(UBound) || isa<DIExpression>(UBound),
+  CheckDI(!UBound || isConstantIntMetadata(UBound) || isa<DIVariable>(UBound) ||
+              isa<DIExpression>(UBound),
           "UpperBound must be signed constant or DIVariable or DIExpression",
           &N);
   auto *Stride = N.getRawStride();
-  CheckDI(!Stride || isConstantIntMetadata(Stride) ||
-              isa<DIVariable>(Stride) || isa<DIExpression>(Stride),
+  CheckDI(!Stride || isConstantIntMetadata(Stride) || isa<DIVariable>(Stride) ||
+              isa<DIExpression>(Stride),
           "Stride must be signed constant or DIVariable or DIExpression", &N);
 }
 

@@ -409,8 +409,7 @@ template <> struct MDNodeKeyImpl<DIGenericSubrange> {
     auto *MD = dyn_cast_or_null<ConstantAsMetadata>(CountNode);
     if (CountNode && MD)
       if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
-        return hash_combine(CV->getSExtValue(), LowerBound, UpperBound,
-                            Stride);
+        return hash_combine(CV->getSExtValue(), LowerBound, UpperBound, Stride);
     return hash_combine(CountNode, LowerBound, UpperBound, Stride);
   }
 };

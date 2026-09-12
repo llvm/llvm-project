@@ -301,7 +301,7 @@ TEST(VerifierTest, DISubrangeNonConstantIntBound) {
   LLVMContext C;
   Module M("M", C);
   auto *NonIntBound =
-      ConstantAsMetadata::get(UndefValue::get(Type::getInt32Ty(C)));
+      ConstantAsMetadata::get(PoisonValue::get(Type::getInt32Ty(C)));
   auto *N = DISubrange::get(C, nullptr, NonIntBound, nullptr, nullptr);
   M.getOrInsertNamedMetadata("test")->addOperand(N);
 
@@ -316,11 +316,10 @@ TEST(VerifierTest, DISubrangeNonConstantIntBound) {
 TEST(VerifierTest, DISubrangeTypeNonConstantIntBound) {
   LLVMContext C;
   Module M("M", C);
-  auto *Base =
-      DIBasicType::get(C, dwarf::DW_TAG_base_type, "int", 32, 0,
-                       dwarf::DW_ATE_signed, DINode::FlagZero);
+  auto *Base = DIBasicType::get(C, dwarf::DW_TAG_base_type, "int", 32, 0,
+                                dwarf::DW_ATE_signed, DINode::FlagZero);
   auto *NonIntBound =
-      ConstantAsMetadata::get(UndefValue::get(Type::getInt32Ty(C)));
+      ConstantAsMetadata::get(PoisonValue::get(Type::getInt32Ty(C)));
   auto *N = DISubrangeType::get(C, StringRef(), nullptr, 0, nullptr, 32, 0,
                                 DINode::FlagZero, Base, NonIntBound, nullptr,
                                 nullptr, nullptr);

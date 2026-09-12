@@ -2001,12 +2001,12 @@ TEST_F(DISubrangeTest, fortranAllocatableExpr) {
 // DISubrangeType counterpart) must not crash when a bound operand is
 // ConstantAsMetadata wrapping a non-ConstantInt Constant.
 TEST_F(DISubrangeTest, boundsCompareNonConstantIntSafely) {
-  auto *LowerUndef =
-      ConstantAsMetadata::get(UndefValue::get(Type::getInt64Ty(Context)));
+  auto *LowerPoison =
+      ConstantAsMetadata::get(PoisonValue::get(Type::getInt64Ty(Context)));
   auto *LowerInt = ConstantAsMetadata::get(
       ConstantInt::getSigned(Type::getInt64Ty(Context), -7));
 
-  auto *N1 = DISubrange::get(Context, nullptr, LowerUndef, nullptr, nullptr);
+  auto *N1 = DISubrange::get(Context, nullptr, LowerPoison, nullptr, nullptr);
   auto *N2 = DISubrange::get(Context, nullptr, LowerInt, nullptr, nullptr);
   EXPECT_NE(N1, N2);
 }
@@ -2064,19 +2064,20 @@ TEST_F(DISubrangeTypeTest, boundsEqualDistinctConstantAsMetadata) {
   auto *Lower2 =
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(64, -7, true)));
   ASSERT_NE(Lower1, Lower2);
-  auto *Upper = ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 23, true)));
+  auto *Upper =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 23, true)));
 
   auto *N1 = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
-                                 DINode::FlagZero, Base, Lower1, Upper,
-                                 nullptr, nullptr);
+                                 DINode::FlagZero, Base, Lower1, Upper, nullptr,
+                                 nullptr);
   auto *N2 = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
-                                 DINode::FlagZero, Base, Lower2, Upper,
-                                 nullptr, nullptr);
+                                 DINode::FlagZero, Base, Lower2, Upper, nullptr,
+                                 nullptr);
   EXPECT_EQ(N1, N2);
 }
 
 // Regression test: a bound operand may be ConstantAsMetadata wrapping a
-// Constant that is not a ConstantInt (e.g. UndefValue). isKeyOf() must not
+// Constant that is not a ConstantInt (e.g. PoisonValue). isKeyOf() must not
 // crash comparing such nodes -- it should safely treat them as unequal
 // instead of unconditionally casting to ConstantInt.
 TEST_F(DISubrangeTypeTest, boundsCompareNonConstantIntSafely) {
@@ -2086,17 +2087,19 @@ TEST_F(DISubrangeTypeTest, boundsCompareNonConstantIntSafely) {
   DILocalScope *Scope = getSubprogram();
   DIFile *File = getFile();
 
-  auto *Lower1 = ConstantAsMetadata::get(UndefValue::get(Type::getInt32Ty(Context)));
+  auto *Lower1 =
+      ConstantAsMetadata::get(PoisonValue::get(Type::getInt32Ty(Context)));
   auto *Lower2 =
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, -7, true)));
-  auto *Upper = ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 23, true)));
+  auto *Upper =
+      ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 23, true)));
 
   auto *N1 = DISubrangeType::get(Context, StringRef(), File, 101, Scope, 32, 0,
-                                 DINode::FlagZero, Base, Lower1, Upper,
-                                 nullptr, nullptr);
+                                 DINode::FlagZero, Base, Lower1, Upper, nullptr,
+                                 nullptr);
   auto *N2 = DISubrangeType::get(Context, StringRef(), File, 102, Scope, 32, 0,
-                                 DINode::FlagZero, Base, Lower2, Upper,
-                                 nullptr, nullptr);
+                                 DINode::FlagZero, Base, Lower2, Upper, nullptr,
+                                 nullptr);
   EXPECT_NE(N1, N2);
 }
 
