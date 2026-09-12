@@ -35,13 +35,13 @@ struct alignas(128) MyObject : public std::rcu_obj_base<MyObject> {
   MyObject() : data_(std::to_string(instance_count++) + " instance very very very long string") {}
 
   void doWork() {
-    auto spin_for = [](std::chrono::microseconds us) {
+   [[maybe_unused]] auto spin_for = [](std::chrono::microseconds us) {
       auto start = std::chrono::high_resolution_clock::now();
       while (std::chrono::high_resolution_clock::now() - start < us)
         ;
     };
     using namespace std::chrono_literals;
-    spin_for(10us);
+  //  spin_for(10us);
   }
 };
 
@@ -76,7 +76,7 @@ void test_read_write_lock() {
       lock.unlock();
       delete oldObj;
       ++write_count;
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
+   //   std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
     std::println("Writer thread wrote {} times", write_count);
   };
@@ -128,7 +128,7 @@ void test_rcu() {
       auto oldObj = global_obj_rcu.exchange(newObj);
       oldObj->retire();
       ++write_count;
-      std::this_thread::sleep_for(std::chrono::microseconds(100));
+    //  std::this_thread::sleep_for(std::chrono::microseconds(100));
     }
     std::println("RCU Writer thread wrote {} times", write_count);
   };
@@ -158,7 +158,7 @@ void test_rcu() {
     writer.request_stop();
   }
   syncer.request_stop();
-  std::rcu_synchronize(dom);
+  std::rcu_barrier(dom);
 }
 
 int main(int, char**) {
