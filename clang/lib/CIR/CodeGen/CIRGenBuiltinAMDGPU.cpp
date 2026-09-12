@@ -225,6 +225,18 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_permlane64:
     return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.permlane64")
         .getValue();
+  case AMDGPU::BI__builtin_amdgcn_permlane_bcast:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.permlane.bcast")
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_permlane_up:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.permlane.up")
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_permlane_down:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.permlane.down")
+        .getValue();
+  case AMDGPU::BI__builtin_amdgcn_permlane_xor:
+    return emitBuiltinWithOneOverloadedType<3>(expr, "amdgcn.permlane.xor")
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_readlane:
     return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.readlane")
         .getValue();
