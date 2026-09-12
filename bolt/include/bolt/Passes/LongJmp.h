@@ -10,7 +10,6 @@
 #define BOLT_PASSES_LONGJMP_H
 
 #include "bolt/Passes/BinaryPasses.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
@@ -81,121 +80,6 @@ class LongJmpPass : public BinaryFunctionPass {
   /// be relaxed.
   bool relaxLocalBranches(BinaryFunction &BF,
                           const BranchLivenessInfo *BLI = nullptr);
-
-  /// A group of function fragments that are located within the longest direct
-  /// branch/call instruction distance. Jumps within the cluster do not require
-  /// a thunk. The cluster may span output sections and include thunks for jumps
-  /// to targets outside. Backward thunks are inserted before the cluster, while
-  /// forward thunks are inserted after it.
-  struct FragmentCluster {
-    /// Output code sections containing the first and last cluster fragments.
-    SmallString<32> StartSectionName;
-    SmallString<32> EndSectionName;
-
-    /// Estimated size of the cluster in bytes.
-    uint64_t Size{0};
-
-    /// Estimated output offset of the cluster.
-    uint64_t StartOffset{0};
-
-    /// Number of function fragments in the cluster.
-    size_t NumFragments{0};
-
-    /// The indices of the first and last functions contributing fragments to
-    /// this cluster. Used as insertion points for adding thunks to the output
-    /// function list.
-    size_t FirstFunctionIndex = -1;
-    size_t LastFunctionIndex = -1;
-
-    /// Thunks located after this cluster.
-    BinaryFunctionListType ForwardThunkList;
-
-    /// Thunks located before this cluster.
-    BinaryFunctionListType BackwardThunkList;
-
-    /// Long call thunks emitted by this cluster.
-    ///
-    /// <Function Symbol> -> <Thunk Function>.
-    DenseMap<const MCSymbol *, BinaryFunction *> LongThunks;
-
-    /// B-only thunks emitted by this cluster.
-    ///
-    /// <Destination Symbol> -> <Thunk Function>.
-    DenseMap<const MCSymbol *, BinaryFunction *> BranchThunks;
-
-    StringRef getThunkSectionName(bool IsForward) const {
-      return IsForward ? EndSectionName : StartSectionName;
-    }
-
-    uint64_t getEndOffset() const { return StartOffset + Size; }
-  };
-
-  struct ClusterLayout {
-    struct Position {
-      unsigned Cluster;
-      uint64_t Offset;
-    };
-
-    SmallVector<FragmentCluster, 4> Clusters;
-    DenseMap<const BinaryBasicBlock *, Position> BBLayout;
-    DenseMap<const MCSymbol *, Position> SymLayout;
-  };
-
-  struct ClusterReference {
-    MCInst *Inst;
-    const MCSymbol *TargetSymbol;
-    uint64_t SourceOffset;
-    uint64_t TargetOffset;
-    unsigned SourceCluster;
-    unsigned TargetCluster;
-  };
-
-  struct ClusterRelaxationWorklist {
-    SmallVector<ClusterReference> OutOfLayoutCalls;
-    SmallVector<SmallVector<ClusterReference>, 4> CallsByDistance;
-    SmallVector<ClusterReference> Branches;
-  };
-
-  struct ClusterRelaxationStats {
-    size_t NumShortThunkCalls = 0;
-    size_t NumLongThunkCalls = 0;
-    size_t NumShortThunks = 0;
-    size_t NumShortThunksReused = 0;
-    size_t NumLongThunks = 0;
-    size_t NumLongThunksReused = 0;
-    size_t NumBranchThunks = 0;
-    size_t NumBranchThunksReused = 0;
-  };
-
-  ClusterLayout
-  buildClusterLayout(BinaryContext &BC,
-                     const BinaryFunctionListType &OutputFunctions);
-
-  /// Collect call and branch references that need cluster-level relaxation.
-  ClusterRelaxationWorklist collectClusterRelaxationWorklist(
-      BinaryContext &BC, const BinaryFunctionListType &OutputFunctions,
-      const ClusterLayout &Layout);
-
-  /// Return the first thunk symbol for an unconditional branch thunk chain.
-  const MCSymbol *getOrCreateBranchThunkChain(BinaryContext &BC,
-                                              ClusterLayout &Layout,
-                                              ClusterRelaxationStats &Stats,
-                                              const ClusterReference &Ref,
-                                              unsigned MaxThunks);
-
-  /// Relax calls using function fragment clusters.
-  void relaxCalls(BinaryContext &BC, ClusterLayout &Layout,
-                  ClusterRelaxationWorklist &Worklist,
-                  ClusterRelaxationStats &Stats);
-
-  /// Relax direct unconditional branches using function fragment clusters.
-  void relaxUnconditionalBranches(BinaryContext &BC, ClusterLayout &Layout,
-                                  ClusterRelaxationWorklist &Worklist,
-                                  ClusterRelaxationStats &Stats);
-
-  /// Insert all thunks owned by the fragment cluster layout.
-  void insertClusterThunks(BinaryFunctionListType &OutputFunctions,
-                           ClusterLayout &Layout);
 
   /// Relax calls and direct unconditional branches using one cluster layout.
   void relaxWithClusters(BinaryContext &BC);
