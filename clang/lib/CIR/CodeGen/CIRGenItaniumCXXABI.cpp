@@ -726,6 +726,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   case Type::Vector:
   case Type::ExtVector:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::Complex:
   case Type::Atomic:
   // FIXME: GCC treats block pointers as fundamental types?!
@@ -1199,6 +1200,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
   case Type::Vector:
   case Type::ExtVector:
   case Type::ConstantMatrix:
+  case Type::CooperativeMatrix:
   case Type::Complex:
   case Type::BlockPointer:
     // Itanium C++ ABI 2.9.5p4:
