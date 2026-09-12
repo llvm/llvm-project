@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h"
 #include "hdr/types/struct_stat.h"
@@ -64,4 +65,13 @@ TEST_F(LlvmLibcFchmodatTest, NonExistentFile) {
   ASSERT_THAT(
       LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR, 0),
       Fails(ENOENT));
+}
+
+TEST_F(LlvmLibcFchmodatTest, UnsupportedFlags) {
+  ASSERT_THAT(LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR,
+                                       AT_SYMLINK_NOFOLLOW),
+              Fails(ENOTSUP));
+  ASSERT_THAT(
+      LIBC_NAMESPACE::fchmodat(AT_FDCWD, "non-existent-file", S_IRUSR, -1),
+      Fails(ENOTSUP));
 }
