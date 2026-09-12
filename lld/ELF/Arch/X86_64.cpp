@@ -917,7 +917,40 @@ void X86_64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
     // because LEA with these registers needs 4 bytes to encode and thus
     // wouldn't fit the space.
 
-    if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
+    if (!ctx.arg.is64) {
+      // ILP32 code uses a 32-bit operand, so there is no REX.W and, for
+      // %eax-%edi, no REX prefix at all. The memory operand is RIP-relative,
+      // so REX.R is the only bit that can appear here.
+      const bool hasRex = loc[-3] == 0x40 || loc[-3] == 0x44;
+      if (loc[-2] == 0x8b) {
+        // "movl foo@gottpoff(%rip),%reg" -> "movl $foo,%reg"
+        // "movl foo@gottpoff(%rip),%r[8-15]d" -> "movl $foo,%r[8-15]d"
+        loc[-2] = 0xc7;
+        *regSlot = 0xc0 | reg;
+        // Move the R bit to the B bit.
+        if (hasRex)
+          loc[-3] = 0x41;
+      } else if (loc[-2] == 0x03 && reg == 4) {
+        // "addl foo@gottpoff(%rip),%esp" -> "addl $foo,%esp"
+        // "addl foo@gottpoff(%rip),%r12d" -> "addl $foo,%r12d"
+        loc[-2] = 0x81;
+        *regSlot = 0xc0 | reg;
+        if (hasRex)
+          loc[-3] = 0x41;
+      } else if (loc[-2] == 0x03) {
+        // "addl foo@gottpoff(%rip),%reg" -> "leal foo(%reg),%reg"
+        // "addl foo@gottpoff(%rip),%r[8-15]d" -> "leal foo(%r[8-15]),%r[8-15]d"
+        loc[-2] = 0x8d;
+        *regSlot = 0x80 | (reg << 3) | reg;
+        if (hasRex)
+          loc[-3] = 0x45;
+      } else {
+        Err(ctx)
+            << getErrorLoc(ctx, loc - 2)
+            << "R_X86_64_GOTTPOFF must be used in MOVL or ADDL instructions "
+               "only";
+      }
+    } else if (memcmp(inst, "\x48\x03\x25", 3) == 0) {
       // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
       memcpy(inst, "\x48\x81\xc4", 3);
     } else if (memcmp(inst, "\x4c\x03\x25", 3) == 0) {
