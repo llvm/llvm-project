@@ -3653,8 +3653,8 @@ bool LoopVectorizationPlanner::shouldUseCrossPartCSE() const {
   // Keep the disabled path free of policy queries and cost-map allocation.
   if (!EnableInterleaveCSE)
     return false;
-  return OrigLoop->isInnermost() && Hints.getInterleave() == 0 &&
-         !CM.maskPartialAliasing();
+  return OrigLoop->isInnermost() && Config.getHints().getInterleave() == 0 &&
+         !CM->maskPartialAliasing();
 }
 
 bool LoopVectorizationPlanner::shouldCollectCrossPartCSECosts(
