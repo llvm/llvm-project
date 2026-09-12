@@ -18,18 +18,18 @@
 
 // <vcruntime_exception.h> defines its own std::align_val_t type,
 // which we use in order to be ABI-compatible with other STLs on Windows.
-#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION && defined(_LIBCPP_ABI_VCRUNTIME)
+#if defined(_LIBCPP_ABI_VCRUNTIME)
 #  include <vcruntime_new.h>
-#endif
+#elif _LIBCPP_HAS_ALIGNED_ALLOCATION
 
 _LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
-#if _LIBCPP_HAS_LIBRARY_ALIGNED_ALLOCATION && !defined(_LIBCPP_ABI_VCRUNTIME)
 #  ifndef _LIBCPP_CXX03_LANG
 enum class align_val_t : size_t {};
 #  else
 enum align_val_t { __zero = 0, __max = (size_t)-1 };
 #  endif
-#endif
 _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
+
+#endif
 
 #endif // _LIBCPP___NEW_ALIGN_VAL_T_H
