@@ -1445,6 +1445,38 @@ private:
   };
 
 public:
+  /// Returns where a loaded module keeps the input file with path \p Path and
+  /// size \p Size, or an invalid \c FID if no loaded module has the file.
+  serialization::InputFileLoc getLoadedFileLoc(StringRef Path, off_t Size);
+
+private:
+  struct LoadedInputFile {
+    off_t Size;
+    ModuleFile *F;
+    unsigned InputID;
+  };
+
+  /// Input files of loaded modules, keyed by resolved path. Built on first use.
+  llvm::StringMap<SmallVector<LoadedInputFile, 1>> LoadedInputFiles;
+  bool LoadedInputFilesBuilt = false;
+
+  void buildLoadedInputFiles();
+  serialization::InputFileLoc getLoadedInputFileLoc(ModuleFile &F,
+                                                    unsigned InputID);
+
+  /// The offset of an SLoc entry and the input file it names. \c InputID is
+  /// zero for entries that are not files.
+  struct SLocEntryInfo {
+    SourceLocation::UIntTy Offset = 0;
+    unsigned InputID = 0;
+  };
+
+  /// Reads the offset and input file index from the SLoc entry at local index
+  /// \p Index in \p F.
+  llvm::Expected<SLocEntryInfo> readSLocFileEntry(ModuleFile *F,
+                                                  unsigned Index);
+
+public:
   /// Get the buffer for resolving paths.
   SmallString<0> &getPathBuf() { return PathBuf; }
 
