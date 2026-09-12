@@ -125,8 +125,16 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; X64-NEXT:    pslld $16, %xmm0
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
-; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    movd %xmm0, %ecx
+; X64-NEXT:    btl $16, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
+; X64-NEXT:    orl $4194304, %ecx # imm = 0x400000
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovnpl %eax, %ecx
+; X64-NEXT:    shrl $16, %ecx
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    pinsrw $0, %ecx, %xmm0
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
