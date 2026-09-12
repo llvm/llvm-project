@@ -1,4 +1,5 @@
 // RUN: mlir-opt -lower-affine %s | FileCheck %s
+// RUN: mlir-opt -lower-affine -canonicalize %s | FileCheck %s --check-prefix=FOLDED
 
 // CHECK-LABEL: func @empty() {
 func.func @empty() {
@@ -559,33 +560,45 @@ func.func @affine_apply_floordiv_dynamic_divisor(%arg0 : index, %arg1 : index) -
 // CHECK-LABEL: func @affine_apply_ceildiv
 func.func @affine_apply_ceildiv(%arg0 : index) -> (index) {
 // CHECK-NEXT:  %[[c42:.*]] = arith.constant 42 : index
-// CHECK-NEXT:  %[[c0:.*]] = arith.constant 0 : index
 // CHECK-NEXT:  %[[c1:.*]] = arith.constant 1 : index
-// CHECK-NEXT:  %[[v0:.*]] = arith.cmpi sle, %{{.*}}, %[[c0]] : index
-// CHECK-NEXT:  %[[v1:.*]] = arith.subi %[[c0]], %{{.*}} : index
-// CHECK-NEXT:  %[[v2:.*]] = arith.subi %{{.*}}, %[[c1]] : index
-// CHECK-NEXT:  %[[v3:.*]] = arith.select %[[v0]], %[[v1]], %[[v2]] : index
-// CHECK-NEXT:  %[[v4:.*]] = arith.divsi %[[v3]], %[[c42]] : index
-// CHECK-NEXT:  %[[v5:.*]] = arith.subi %[[c0]], %[[v4]] : index
-// CHECK-NEXT:  %[[v6:.*]] = arith.addi %[[v4]], %[[c1]] : index
-// CHECK-NEXT:  %[[v7:.*]] = arith.select %[[v0]], %[[v5]], %[[v6]] : index
+// CHECK-NEXT:  %[[v0:.*]] = arith.divsi %{{.*}}, %[[c42]] : index
+// CHECK-NEXT:  %[[v1:.*]] = arith.muli %[[v0]], %[[c42]] : index
+// CHECK-NEXT:  %[[v2:.*]] = arith.cmpi sgt, %{{.*}}, %[[v1]] : index
+// CHECK-NEXT:  %[[v3:.*]] = arith.addi %[[v0]], %[[c1]] : index
+// CHECK-NEXT:  %[[v4:.*]] = arith.select %[[v2]], %[[v3]], %[[v0]] : index
   %0 = affine.apply #map_ceildiv (%arg0)
   return %0 : index
 }
 #map_ceildiv_dynamic_divisor = affine_map<(i)[s] -> (i ceildiv s)>
 // CHECK-LABEL: func @affine_apply_ceildiv_dynamic_divisor
 func.func @affine_apply_ceildiv_dynamic_divisor(%arg0 : index, %arg1 : index) -> (index) {
-// CHECK-NEXT:  %[[c0:.*]] = arith.constant 0 : index
 // CHECK-NEXT:  %[[c1:.*]] = arith.constant 1 : index
-// CHECK-NEXT:  %[[v0:.*]] = arith.cmpi sle, %{{.*}}, %[[c0]] : index
-// CHECK-NEXT:  %[[v1:.*]] = arith.subi %[[c0]], %{{.*}} : index
-// CHECK-NEXT:  %[[v2:.*]] = arith.subi %{{.*}}, %[[c1]] : index
-// CHECK-NEXT:  %[[v3:.*]] = arith.select %[[v0]], %[[v1]], %[[v2]] : index
-// CHECK-NEXT:  %[[v4:.*]] = arith.divsi %[[v3]], %arg1 : index
-// CHECK-NEXT:  %[[v5:.*]] = arith.subi %[[c0]], %[[v4]] : index
-// CHECK-NEXT:  %[[v6:.*]] = arith.addi %[[v4]], %[[c1]] : index
-// CHECK-NEXT:  %[[v7:.*]] = arith.select %[[v0]], %[[v5]], %[[v6]] : index
+// CHECK-NEXT:  %[[v0:.*]] = arith.divsi %{{.*}}, %arg1 : index
+// CHECK-NEXT:  %[[v1:.*]] = arith.muli %[[v0]], %arg1 : index
+// CHECK-NEXT:  %[[v2:.*]] = arith.cmpi sgt, %{{.*}}, %[[v1]] : index
+// CHECK-NEXT:  %[[v3:.*]] = arith.addi %[[v0]], %[[c1]] : index
+// CHECK-NEXT:  %[[v4:.*]] = arith.select %[[v2]], %[[v3]], %[[v0]] : index
   %0 = affine.apply #map_ceildiv_dynamic_divisor (%arg0)[%arg1]
+  return %0 : index
+}
+
+#map_ceildiv_seven = affine_map<(i) -> (i ceildiv 7)>
+// The lowered arithmetic has to agree with the constant folder
+// (`divideCeilSigned`) and with range inference (`intrange::inferCeilDivS`),
+// both of which give the exact, negative quotient for an INT_MIN dividend.
+// Negating the dividend, which the lowering used to do, made this positive
+// (`1317624576693539401`).
+//
+// The dividend is hidden behind an `arith.addi` so that the map is lowered
+// rather than folded; the affine folder never reaches the expansion.
+// FOLDED-LABEL: func @affine_apply_ceildiv_intmin_dividend
+func.func @affine_apply_ceildiv_intmin_dividend() -> (index) {
+  %c0 = arith.constant 0 : index
+  %cmin = arith.constant -9223372036854775808 : index
+  %dividend = arith.addi %cmin, %c0 : index
+// FOLDED:      %[[c:.*]] = arith.constant -1317624576693539401 : index
+// FOLDED-NEXT: return %[[c]]
+  %0 = affine.apply #map_ceildiv_seven (%dividend)
   return %0 : index
 }
 
