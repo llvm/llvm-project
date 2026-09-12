@@ -1,4 +1,5 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -58,6 +59,25 @@ bool IsAnnotationOK(const GlobalVariable &GV) {
 }
 } // namespace memprof
 } // namespace llvm
+
+STATISTIC(NumStaticDataHotFromPGOAndDAP,
+          "Number of global variables annotated as hot because PGO and DAP "
+          "data list them as hot.");
+STATISTIC(
+    NumStaticDataHotFromPGO,
+    "Number of global variables annotated as hot only because of PGO data");
+STATISTIC(NumStaticDataHotFromDAP,
+          "Number of global variables annotated as hot only because DAP data");
+STATISTIC(NumStaticDataLukewarmOrNoneFromPGOAndDAP,
+          "Number of global variables annotated as lukewarm/unknown because "
+          "PGO and DAP data both list them as lukewarm/unknown.");
+STATISTIC(NumStaticDataLukewarmOrNoneFromPGO,
+          "Number of global variables annotated as lukewarm/unknown only "
+          "because of PGO data");
+STATISTIC(NumStaticDataLukewarmOrNoneFromDAP,
+          "Number of global variables annotated as lukewarm/unknown only "
+          "because of DAP data");
+STATISTIC(NumStaticDataCold, "Number of global variables annotated as cold");
 
 void StaticDataProfileInfo::addConstantProfileCount(
     const Constant *C, std::optional<uint64_t> Count) {
@@ -166,12 +186,30 @@ StringRef StaticDataProfileInfo::getConstantSectionPrefix(
       if (HotnessFromDataAccessProf == StaticDataHotness::Hot ||
           HotnessFromPGO == StaticDataHotness::Hot) {
         GlobalVarHotness = StaticDataHotness::Hot;
+        if (HotnessFromDataAccessProf == StaticDataHotness::Hot &&
+            HotnessFromPGO == StaticDataHotness::Hot) {
+          ++NumStaticDataHotFromPGOAndDAP;
+        } else if (HotnessFromPGO == StaticDataHotness::Hot) {
+          ++NumStaticDataHotFromPGO;
+        } else if (HotnessFromDataAccessProf == StaticDataHotness::Hot) {
+          ++NumStaticDataHotFromDAP;
+        }
       } else if (HotnessFromDataAccessProf ==
                      StaticDataHotness::LukewarmOrUnknown ||
                  HotnessFromPGO == StaticDataHotness::LukewarmOrUnknown) {
         GlobalVarHotness = StaticDataHotness::LukewarmOrUnknown;
+        if (HotnessFromDataAccessProf == StaticDataHotness::LukewarmOrUnknown &&
+            HotnessFromPGO == StaticDataHotness::LukewarmOrUnknown) {
+          ++NumStaticDataLukewarmOrNoneFromPGOAndDAP;
+        } else if (HotnessFromPGO == StaticDataHotness::LukewarmOrUnknown) {
+          ++NumStaticDataLukewarmOrNoneFromPGO;
+        } else if (HotnessFromDataAccessProf ==
+                   StaticDataHotness::LukewarmOrUnknown) {
+          ++NumStaticDataLukewarmOrNoneFromDAP;
+        }
       } else {
         GlobalVarHotness = StaticDataHotness::Cold;
+        ++NumStaticDataCold;
       }
       StringRef Prefix = hotnessToStr(GlobalVarHotness);
       LLVM_DEBUG(
