@@ -44,6 +44,7 @@ int omp_get_dynamic(void);
 ///
 ///{
 void omp_set_num_threads(int);
+void kmp_set_num_threads_8(int64_t);
 int omp_get_max_threads(void);
 ///}
 
