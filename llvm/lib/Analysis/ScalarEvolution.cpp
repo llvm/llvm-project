@@ -970,27 +970,6 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
                        SE.getTruncateOrZeroExtend(DivResult, ResultTy));
 }
 
-/// Attach \p UseFlags to \p Res as use-specific flags, but only if \p Res
-/// really is the two-operand \p ExprT over \p LHS and \p RHS - in either order,
-/// as operands get sorted by complexity.
-///
-/// Flags established for that operation say nothing about any other expression:
-/// a folded-away operand, a flattened nested expression or a distributed
-/// constant all give a different computation. They must not be attached to it,
-/// because an n-ary expression's no-wrap flags have to hold for all subsets and
-/// orders of its operands, and SCEVExpander relies on that when it stamps them
-/// on every partial sum or product it builds.
-template <typename ExprT>
-static SCEVUse withUseFlagsIfNotFolded(const SCEV *Res, SCEVUse LHS,
-                                       SCEVUse RHS,
-                                       SCEV::NoWrapFlags UseFlags) {
-  auto *E = dyn_cast<ExprT>(Res);
-  if (E && (equal(E->operands(), ArrayRef<SCEVUse>({LHS, RHS})) ||
-            equal(E->operands(), ArrayRef<SCEVUse>({RHS, LHS}))))
-    return {Res, UseFlags};
-  return Res;
-}
-
 /// Return the value of this chain of recurrences at the specified iteration
 /// number.  We can evaluate this recurrence by multiplying each element in the
 /// chain by the binomial coefficient corresponding to it.  In other words, we
@@ -1020,8 +999,7 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
       return Coeff;
 
     const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
-    Result = withUseFlagsIfNotFolded<SCEVAddExpr>(SE.getAddExpr(Result, Mul),
-                                                  Result, Mul, UseFlags);
+    Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
   }
   return Result;
 }
@@ -2320,21 +2298,18 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
 bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                       const SCEV *LHS, const SCEV *RHS,
                                       const Instruction *CtxI) {
-  const SCEV *(ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
-                                            unsigned);
-  switch (BinOp) {
-  default:
-    llvm_unreachable("Unsupported binary op");
-  case Instruction::Add:
-    Operation = &ScalarEvolution::getAddExpr;
-    break;
-  case Instruction::Sub:
-    Operation = &ScalarEvolution::getMinusSCEV;
-    break;
-  case Instruction::Mul:
-    Operation = &ScalarEvolution::getMulExpr;
-    break;
-  }
+  auto Operation = [this, BinOp](SCEVUse L, SCEVUse R) -> const SCEV * {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unsupported binary op");
+    case Instruction::Add:
+      return getAddExpr(L, R);
+    case Instruction::Sub:
+      return getMinusSCEV(L, R);
+    case Instruction::Mul:
+      return getMulExpr(L, R);
+    }
+  };
 
   const SCEV *(ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
       Signed ? &ScalarEvolution::getSignExtendExpr
@@ -2345,11 +2320,10 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   auto *WideTy =
       IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
 
-  const SCEV *A = (this->*Extension)(
-      (this->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
+  const SCEV *A = (this->*Extension)(Operation(LHS, RHS), WideTy, 0);
   const SCEV *LHSB = (this->*Extension)(LHS, WideTy, 0);
   const SCEV *RHSB = (this->*Extension)(RHS, WideTy, 0);
-  const SCEV *B = (this->*Operation)(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
+  const SCEV *B = Operation(LHSB, RHSB);
   if (A == B)
     return true;
   // Can we use context to prove the fact we need?
@@ -2539,10 +2513,13 @@ bool ScalarEvolution::isAvailableAtLoopEntry(const SCEV *S, const Loop *L) {
 }
 
 /// Get a canonical add expression, or something simpler if possible.
-const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                        SCEV::NoWrapFlags OrigFlags,
-                                        unsigned Depth) {
+SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
+                                    SCEVFlags Flags, unsigned Depth) {
+  SCEV::NoWrapFlags OrigFlags = Flags.ExprFlags;
+  SCEV::NoWrapFlags UseFlags = Flags.UseFlags;
   assert(!(OrigFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
+         "only nuw or nsw allowed");
+  assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
          "only nuw or nsw allowed");
   assert(!Ops.empty() && "Cannot get empty add!");
   if (Ops.size() == 1) return Ops[0];
@@ -2564,6 +2541,12 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   if (Folded)
     return Folded;
 
+#ifndef NDEBUG
+  // Keep track of operands after constant folding, for verification when adding
+  // use-specific flags.
+  const SmallVector<SCEVUse, 8> OrigOps(Ops.begin(), Ops.end());
+#endif
+
   unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 
   // Delay expensive flag strengthening until necessary.
@@ -2573,14 +2556,14 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Limit recursion calls depth.
   if (Depth > MaxArithDepth || hasHugeExpression(Ops))
-    return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
+    return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 
   if (SCEV *S = findExistingSCEVInCache(scAddExpr, Ops)) {
     // Don't strengthen flags if we have no new information.
     SCEVAddExpr *Add = static_cast<SCEVAddExpr *>(S);
     if (Add->getNoWrapFlags(OrigFlags) != OrigFlags)
       Add->setNoWrapFlags(ComputeFlags(Ops));
-    return S;
+    return {S, UseFlags};
   }
 
   // Okay, check to see if the same value occurs in the operand list more than
@@ -3002,7 +2985,11 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Okay, it looks like we really DO need an add expr.  Check to see if we
   // already have one, otherwise create a new one.
-  return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
+  assert((UseFlags == SCEV::FlagAnyWrap ||
+          std::is_permutation(OrigOps.begin(), OrigOps.end(), Ops.begin(),
+                              Ops.end())) &&
+         "Tried to add SCEVUse flags after operands changed");
+  return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
 
 const SCEV *ScalarEvolution::getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
@@ -3854,7 +3841,7 @@ const SCEV *ScalarEvolution::getGEPExpr(SCEVUse BaseExpr,
   bool NUW = NW.hasNoUnsignedWrap() ||
              (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
   SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
-  auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
+  const SCEV *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
          "GEP should not change type mid-flight.");
   return GEPExpr;
@@ -13727,7 +13714,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         //
         // FIXME: Should isLoopEntryGuardedByCond do this for us?
         auto CondGT = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-        auto *StartMinusOne =
+        const SCEV *StartMinusOne =
             getAddExpr(OrigStart, getMinusOne(OrigStart->getType()));
         return isLoopEntryGuardedByCond(L, CondGT, OrigRHS, StartMinusOne);
       };
