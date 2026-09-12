@@ -1587,11 +1587,11 @@ extern "C" int ALIGN_ARG_POINTER __bolt_instr_data_dump(
   // of exiting the host app. We land here with the write mutex held; release
   // it and report failure.
   if (__bolt_setjmp(__bolt_instr_longjmp_buf)) {
-    __bolt_instr_recovery_active = false;
+    __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);
     GlobalWriteProfileMutex->release();
     return 1;
   }
-  __bolt_instr_recovery_active = true;
+  __atomic_store_n(&__bolt_instr_recovery_tid, __gettid(), __ATOMIC_RELAXED);
 #endif
 
   int ret = __lseek(FD, 0, SEEK_SET);
@@ -1626,7 +1626,7 @@ extern "C" int ALIGN_ARG_POINTER __bolt_instr_data_dump(
   }
   HashAlloc.destroy();
 #if defined(ANDROID_AARCH64)
-  __bolt_instr_recovery_active = false;
+  __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);
 #endif
   GlobalWriteProfileMutex->release();
   DEBUG(report("Finished writing profile.\n"));

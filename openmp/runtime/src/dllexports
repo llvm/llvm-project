@@ -428,6 +428,7 @@ omp_set_lock                                714
 omp_set_nest_lock                           715
 omp_set_nested                              716
 omp_set_num_threads                         717
+kmp_set_num_threads_8                       824
 omp_test_lock                               718
 omp_test_nest_lock                          719
 omp_unset_lock                              720
@@ -436,6 +437,28 @@ omp_unset_nest_lock                         721
 ompc_set_dynamic                            722
 ompc_set_nested                             723
 ompc_set_num_threads                        724
+kmpc_set_num_threads_8                      825
+
+# 64-bit integer variants used by Fortran and language bindings.
+kmp_get_affinity_mask_proc_8                826
+kmp_set_affinity_mask_proc_8                827
+kmp_set_blocktime_8                         828
+kmp_set_disp_num_buffers_8                  829
+kmp_set_library_8                           830
+kmp_set_stacksize_8                         831
+kmp_unset_affinity_mask_proc_8              832
+kmp_get_ancestor_thread_num_8               833
+kmp_get_partition_place_nums_8              834
+kmp_get_place_num_procs_8                   835
+kmp_get_schedule_8                          836
+kmp_get_team_size_8                         837
+kmp_pause_resource_8                        838
+kmp_set_default_device_8                    839
+kmp_set_max_active_levels_8                 840
+kmp_set_num_teams_8                         841
+kmp_set_schedule_8                          842
+kmp_set_teams_thread_limit_8                843
+kmp_get_place_proc_ids_8                    844
 
 kmp_calloc                                  725
 kmp_free                                    726

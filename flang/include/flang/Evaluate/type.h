@@ -249,6 +249,11 @@ private:
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(const DynamicType &);
 const semantics::DerivedTypeSpec *GetDerivedTypeSpec(
     const std::optional<DynamicType> &);
+// Return the DerivedTypeSpec of a DynamicType if it is an enumeration type,
+// otherwise null.
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(const DynamicType &);
+const semantics::DerivedTypeSpec *GetEnumerationTypeSpec(
+    const std::optional<DynamicType> &);
 const semantics::DerivedTypeSpec *GetParentTypeSpec(
     const semantics::DerivedTypeSpec &);
 
