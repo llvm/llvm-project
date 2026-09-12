@@ -566,7 +566,8 @@ static RValue emitUnaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
 template <class Operation>
 static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg = cgf.emitScalarExpr(e.getArg(0));
-  auto call = Operation::create(cgf.getBuilder(), arg.getLoc(), arg);
+  auto call =
+      Operation::create(cgf.getBuilder(), arg.getLoc(), arg.getType(), arg);
   return RValue::get(call->getResult(0));
 }
 
@@ -2089,12 +2090,39 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                 cir::OverflowBehavior::Saturated);
     return RValue::get(val);
   }
-  case Builtin::BI__builtin_elementwise_max:
-  case Builtin::BI__builtin_elementwise_min:
+  case Builtin::BI__builtin_elementwise_max: {
+    if (cir::isIntOrVectorOfIntType(convertType(e->getArg(0)->getType()))) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      mlir::Value op0 = emitScalarExpr(e->getArg(0));
+      mlir::Value op1 = emitScalarExpr(e->getArg(1));
+      return RValue::get(builder.createMax(loc, op0, op1));
+    }
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(*this, *e));
+  }
+  case Builtin::BI__builtin_elementwise_min: {
+    if (cir::isIntOrVectorOfIntType(convertType(e->getArg(0)->getType()))) {
+      mlir::Location loc = getLoc(e->getExprLoc());
+      mlir::Value op0 = emitScalarExpr(e->getArg(0));
+      mlir::Value op1 = emitScalarExpr(e->getArg(1));
+      return RValue::get(builder.createMin(loc, op0, op1));
+    }
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(*this, *e));
+  }
   case Builtin::BI__builtin_elementwise_maxnum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaxNumOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_minnum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinNumOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_maximum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMaximumOp>(*this, *e));
   case Builtin::BI__builtin_elementwise_minimum:
+    return RValue::get(
+        emitBinaryMaybeConstrainedFPBuiltin<cir::FMinimumOp>(*this, *e));
+
   case Builtin::BI__builtin_elementwise_maximumnum:
   case Builtin::BI__builtin_elementwise_minimumnum:
   case Builtin::BI__builtin_reduce_max:
