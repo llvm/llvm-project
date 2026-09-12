@@ -461,7 +461,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
@@ -478,6 +478,12 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isConstexprUnknown() || !S.checkingPotentialConstantExpression())
     diagnoseNonConstVariable(S, OpPC, VD);
   return false;
+}
+
+static bool CheckExtern(InterpState &S, CodePtr OpPC, const Block *B) {
+  if (!B->isExtern())
+    return true;
+  return CheckExtern(S, OpPC, Pointer(const_cast<Block *>(B)));
 }
 
 bool CheckArray(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -874,7 +880,7 @@ static bool CheckWeak(InterpState &S, CodePtr OpPC, const Block *B) {
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (!B->isAccessible()) {
-    if (!CheckExtern(S, OpPC, Pointer(const_cast<Block *>(B))))
+    if (!CheckExtern(S, OpPC, B))
       return false;
     if (!CheckDummy(S, OpPC, B, AK_Read))
       return false;
