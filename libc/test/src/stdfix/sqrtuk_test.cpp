@@ -10,4 +10,4 @@
 
 #include "src/stdfix/sqrtuk.h"
 
-LIST_SQRT_TESTS(unsigned accum, LIBC_NAMESPACE::sqrtuk);
+LIST_SQRT_TESTS(unsigned accum, unsigned accum, LIBC_NAMESPACE::sqrtuk);
