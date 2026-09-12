@@ -666,6 +666,21 @@ add_libc_test(
     libc.src.stdio.fwrite
 )
 
+add_libc_test(
+  tmpnam_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    tmpnam_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.types.size_t
+    libc.src.stdio.tmpnam
+    libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
+    libc.src.__support.macros.config
+)
+
 # Create an output directory for any temporary test files.
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/testdata)
 
