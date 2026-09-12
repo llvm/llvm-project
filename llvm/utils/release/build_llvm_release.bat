@@ -1,7 +1,7 @@
 @echo off
 
 REM Filter out tests that are known to fail.
-set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest"
+set "LIT_FILTER_OUT=gh110231.cpp|crt_initializers.cpp|init-order-atexit.cpp|use_after_return_linkage.cpp|initialization-bug.cpp|initialization-bug-no-global.cpp|trace-malloc-unbalanced.test|trace-malloc-2.test|TraceMallocTest|TestLockFileExclusive"
 
 setlocal enabledelayedexpansion
 goto begin
@@ -10,7 +10,7 @@ goto begin
 echo Script for building the LLVM installer on Windows,
 echo used for the releases at https://github.com/llvm/llvm-project/releases
 echo.
-echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc]
+echo Usage: build_llvm_release.bat --version ^<version^> [--x86,--x64, --arm64] [--skip-checkout] [--local-python] [--force-msvc] [--fast-build]
 echo.
 echo Options:
 echo --version: [required] version to build
@@ -40,6 +40,7 @@ set arm64=
 set skip-checkout=
 set local-python=
 set force-msvc=
+set fast-build=
 call :parse_args %*
 
 if "%help%" NEQ "" goto usage
@@ -145,9 +146,9 @@ if "%skip-checkout%" == "true" (
   set llvm_src=%build_dir%\llvm-project
 )
 
-set libxml_version=2.9.12
+set libxml_version=2.15.3
 curl -O https://gitlab.gnome.org/GNOME/libxml2/-/archive/v%libxml_version%/libxml2-v%libxml_version%.tar.gz || exit /b 1
-call :verify_checksum libxml2-v%libxml_version%.tar.gz sha256 98bfa7a9a5e2a75638422050740448ee9f02bf4dc2075c9822d7747d5ff9e617 || exit /b 1
+call :verify_checksum libxml2-v%libxml_version%.tar.gz sha256 0da50c1415f4ec0364569d2119b1436ba837b31df44af28569d234272c23cf1f || exit /b 1
 REM 'test' directory excluded because of symlinks.
 tar zxf libxml2-v%libxml_version%.tar.gz --exclude "test/*" || exit /b 1
 
@@ -167,6 +168,7 @@ REM 'tests' directory excluded because of symlinks.
 tar zxf zstd-%zstd_version%.tar.gz --exclude "tests/*" || exit /b 1
 
 REM Setting CMAKE_CL_SHOWINCLUDES_PREFIX to work around PR27226.
+REM Have to add bcrypt.lib to the linker flags because of libxml2.
 REM Common flags for all builds.
 set common_compiler_flags=-DLIBXML_STATIC
 set common_cmake_flags=^
@@ -184,6 +186,8 @@ set common_cmake_flags=^
   -DLLVM_ENABLE_ZSTD=FORCE_ON ^
   -DCMAKE_C_FLAGS="%common_compiler_flags%" ^
   -DCMAKE_CXX_FLAGS="%common_compiler_flags%" ^
+  -DCMAKE_EXE_LINKER_FLAGS=bcrypt.lib ^
+  -DCMAKE_SHARED_LINKER_FLAGS=bcrypt.lib ^
   -DLLVM_ENABLE_RPMALLOC=ON ^
   -DLLVM_ENABLE_PROJECTS="clang;lld" ^
   -DLLVM_ENABLE_RUNTIMES="compiler-rt" ^
@@ -191,12 +195,11 @@ set common_cmake_flags=^
   -DCOMPILER_RT_BUILD_ORC=OFF
 
 if "%force-msvc%" == "" (
-  where /q clang-cl
-  if %errorlevel% EQU 0 (
-    where /q lld-link
-    if %errorlevel% EQU 0 (
+  clang-cl --version
+  if !errorlevel! EQU 0 (
+    lld-link --version
+    if !errorlevel! EQU 0 (
       set common_compiler_flags=%common_compiler_flags% -fuse-ld=lld
-      
       set common_cmake_flags=%common_cmake_flags%^
         -DCMAKE_C_COMPILER=clang-cl.exe ^
         -DCMAKE_CXX_COMPILER=clang-cl.exe ^
@@ -325,12 +328,15 @@ if "%arch%"=="arm64" (
 cmake -GNinja %cmake_flags% ^
   -DLLVM_TARGETS_TO_BUILD=Native ^
   %llvm_src%\llvm || exit /b 1
+ninja clang lld llvm-lib llvm-windres runtimes || exit /b 1
+if "%fast-build%" neq "true" (
 ninja || exit /b 1
 ninja check-llvm || exit /b 1
 ninja check-clang || exit /b 1
 ninja check-lld || exit /b 1
 if "%arch%"=="amd64" (
   ninja check-runtimes || exit /b 1
+)
 )
 cd..
 
@@ -351,7 +357,9 @@ set cmake_flags=%all_cmake_flags:\=/%
 
 mkdir build_%arch%
 cd build_%arch%
-call :do_generate_profile || exit /b 1
+if "%fast-build%" neq "true" (
+  call :do_generate_profile || exit /b 1
+)
 cmake -GNinja %cmake_flags% ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;lldb;flang;mlir" ^
   -DLLVM_ENABLE_RUNTIMES="compiler-rt;openmp" ^
@@ -393,19 +401,30 @@ exit /b 0
 ::==============================================================================
 :set_environment
 REM Restore original path
-set PATH=%OLDPATH%
+set "PATH=%OLDPATH%"
 
-set python_dir=%1
+set "python_dir=%1"
 
 REM Set Python environment
 if "%local-python%" == "true" (
-  FOR /F "delims=" %%i IN ('where python.exe ^| head -1') DO set python_exe=%%i
-  set PYTHONHOME=!python_exe:~0,-11!
-) else (
-  %python_dir%/python.exe --version || exit /b 1
-  set PYTHONHOME=%python_dir%
+  set "python_dir="
+  set "python_exe="
+  FOR /F "delims=" %%i IN ('where python.exe') DO (
+    if not defined python_exe (
+      set "python_exe=%%i"
+      rem Python Manager puts only the executable and a __target__ file into its bin directory.
+      rem winget installs a reparse point into WindowsApps.
+      rem But: CMake needs a full Python installation directory or find_package() will fail.
+      FOR /F "delims=" %%h IN ('!python_exe! -c "import sys; print(sys.exec_prefix)"') DO (
+        set "python_dir=%%h"
+      )
+    )
+  )
 )
-set PATH=%PYTHONHOME%;%PATH%
+if not defined python_dir exit /b 1
+"%python_dir%\python.exe" --version || exit /b 1
+set "PYTHONHOME=%python_dir%"
+set "PATH=%PYTHONHOME%;%PATH%"
 
 set "VSCMD_START_DIR=%build_dir%"
 

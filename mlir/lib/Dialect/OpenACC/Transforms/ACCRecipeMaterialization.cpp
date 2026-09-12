@@ -31,6 +31,12 @@
 // 3. Reduction: Creates acc.reduction_init (init region inlined) and
 //    acc.reduction_combine_region (combiner region inlined). Uses within
 //    the region are updated to the reduction init result.
+//    In addition, creates appropriate acc.copyin/copyout around
+//    the compute region; the reduction's initial value is taken
+//    from the copied in variable, and the final reduction value
+//    is copied out to the variable. If there are existing
+//    data operations for the reduction variable, no new data
+//    operations are added.
 //
 // Requirements:
 // -------------
@@ -57,6 +63,7 @@
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
@@ -185,11 +192,14 @@ private:
   template <typename OpTy>
   void handleInitialValueMapping(OpTy op) const;
   template <typename OpTy>
-  void removeRecipe(OpTy op, ModuleOp moduleOp) const;
+  void removeRecipe(
+      OpTy op, ModuleOp moduleOp,
+      const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) const;
   template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
   LogicalResult materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
                             acc::OpenACCSupport &accSupport,
-                            acc::ACCToGPUMappingPolicy &policy) const;
+                            acc::ACCToGPUMappingPolicy &policy,
+                            Value materializationVar = {}) const;
   template <typename OpTy>
   LogicalResult materializeForACCOp(OpTy accOp, acc::OpenACCSupport &accSupport,
                                     acc::ACCToGPUMappingPolicy &policy) const;
@@ -215,9 +225,16 @@ static bool readsVar(Region &region) {
 }
 
 template <typename OpTy>
-void ACCRecipeMaterialization::removeRecipe(OpTy op, ModuleOp moduleOp) const {
+void ACCRecipeMaterialization::removeRecipe(
+    OpTy op, ModuleOp moduleOp,
+    const std::optional<llvm::DenseSet<StringAttr>> &usedSymbols) const {
   auto recipeName = op.getNameAttr();
-  if (SymbolTable::symbolKnownUseEmpty(recipeName, moduleOp)) {
+  // Fall back to scanning the module when the symbol uses could not be
+  // gathered up front.
+  bool useEmpty = usedSymbols
+                      ? !usedSymbols->contains(recipeName)
+                      : SymbolTable::symbolKnownUseEmpty(recipeName, moduleOp);
+  if (useEmpty) {
     LLVM_DEBUG(llvm::dbgs() << "erasing recipe: " << recipeName << "\n");
     op.erase();
   } else {
@@ -238,9 +255,9 @@ void ACCRecipeMaterialization::removeRecipe(OpTy op, ModuleOp moduleOp) const {
 template <typename OpTy, typename RecipeOpTy, typename AccOpTy>
 LogicalResult ACCRecipeMaterialization::materialize(
     OpTy op, RecipeOpTy recipe, AccOpTy accOp, acc::OpenACCSupport &accSupport,
-    acc::ACCToGPUMappingPolicy &policy) const {
+    acc::ACCToGPUMappingPolicy &policy, Value materializationVar) const {
   Region &region = accOp.getRegion();
-  Value origPtr = op.getVar();
+  Value origPtr = materializationVar ? materializationVar : op.getVar();
   Value accPtr = op.getAccVar();
   assert(accPtr && "invalid op: null acc var");
 
@@ -449,6 +466,78 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
     acc::ACCToGPUMappingPolicy &policy) const {
   assert(isa<ACC_COMPUTE_CONSTRUCT_AND_LOOP_OPS>(accOp));
 
+  // Reduction recipes use the original variable both to initialize the
+  // private reduction value and to combine the result. Preserve copy semantics
+  // when materializing reductions on compute constructs, before the
+  // acc.reduction operation carrying that intent is erased. Loop reductions
+  // are excluded: their original variable can be an outer private reduction
+  // value rather than a host variable. Keep acc.reduction referring to its
+  // original host variable and pass the mapped value to materialization
+  // separately.
+  struct ReductionMapping {
+    Value originalVar;
+    Value mappedVar;
+  };
+  SmallVector<ReductionMapping> mappedReductionVars;
+  if constexpr (!std::is_same_v<OpTy, acc::LoopOp>) {
+    for (Value dataOperand : accOp.getDataClauseOperands()) {
+      Operation *dataOp = dataOperand.getDefiningOp();
+      if (dataOp && isa<ACC_DATA_ENTRY_OPS>(dataOp))
+        mappedReductionVars.push_back({acc::getVar(dataOp), dataOperand});
+    }
+  }
+
+  auto getMappedReductionVar = [&](acc::ReductionOp reductionOp) -> Value {
+    if constexpr (std::is_same_v<OpTy, acc::LoopOp>) {
+      return reductionOp.getVar();
+    } else {
+      Value originalVar = reductionOp.getVar();
+      if (isa_and_nonnull<ACC_DATA_ENTRY_OPS>(originalVar.getDefiningOp()))
+        return originalVar;
+
+      // Note that we do not require matching bounds here.
+      // Bounds may be represented by different SSA values while evaluating to
+      // the same values at runtime. Data clauses for the same variable are
+      // expected to specify matching bounds.
+      auto existing = llvm::find_if(mappedReductionVars,
+                                    [&](const ReductionMapping &mapping) {
+                                      return mapping.originalVar == originalVar;
+                                    });
+      if (existing != mappedReductionVars.end())
+        return existing->mappedVar;
+
+      OpBuilder builder(reductionOp);
+      acc::CopyinOp copyinOp;
+      if (std::optional<StringRef> name = reductionOp.getName())
+        copyinOp =
+            acc::CopyinOp::create(builder, reductionOp.getLoc(), originalVar,
+                                  /*structured=*/true, /*implicit=*/true, *name,
+                                  reductionOp.getBounds());
+      else
+        copyinOp = acc::CopyinOp::create(
+            builder, reductionOp.getLoc(), originalVar,
+            /*structured=*/true, /*implicit=*/true, reductionOp.getBounds());
+      copyinOp.setDataClause(acc::DataClause::acc_reduction);
+      accOp.getDataClauseOperandsMutable().append(copyinOp.getAccVar());
+
+      builder.setInsertionPointAfter(accOp);
+      acc::CopyoutOp copyoutOp;
+      if (std::optional<StringRef> name = reductionOp.getName())
+        copyoutOp = acc::CopyoutOp::create(
+            builder, reductionOp.getLoc(), copyinOp.getAccVar(), originalVar,
+            /*structured=*/true, /*implicit=*/true, *name,
+            reductionOp.getBounds());
+      else
+        copyoutOp = acc::CopyoutOp::create(
+            builder, reductionOp.getLoc(), copyinOp.getAccVar(), originalVar,
+            /*structured=*/true, /*implicit=*/true, reductionOp.getBounds());
+      copyoutOp.setDataClause(acc::DataClause::acc_reduction);
+
+      mappedReductionVars.push_back({originalVar, copyinOp.getAccVar()});
+      return copyinOp.getAccVar();
+    }
+  };
+
   if (!accOp.getFirstprivateOperands().empty()) {
     // Clear the firstprivate operands list so there will be no uses after
     // the recipe is materialized.
@@ -500,7 +589,9 @@ LogicalResult ACCRecipeMaterialization::materializeForACCOp(
       auto recipeOp = cast<acc::ReductionRecipeOp>(decl);
       LLVM_DEBUG(llvm::dbgs() << "materializing: " << reductionOp << "\n"
                               << symbolRef << "\n");
-      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport, policy)))
+      Value mappedVar = getMappedReductionVar(reductionOp);
+      if (failed(materialize(reductionOp, recipeOp, accOp, accSupport, policy,
+                             mappedVar)))
         return failure();
     }
   }
@@ -529,14 +620,27 @@ void ACCRecipeMaterialization::runOnOperation() {
     return;
   }
 
-  // Remove all recipes.
+  // Remove all recipes. Gather the symbol uses that are left with a single
+  // walk: asking whether each recipe is still referenced walks the whole module
+  // again for every recipe, and recipes are generated per type, so there can be
+  // many of them.
+  std::optional<llvm::DenseSet<StringAttr>> usedSymbols;
+  // The module region, not the module op, is the symbol table scope: asking
+  // for the uses on the op itself would not walk into the body.
+  if (std::optional<SymbolTable::UseRange> uses =
+          SymbolTable::getSymbolUses(&moduleOp.getBodyRegion())) {
+    usedSymbols.emplace();
+    for (const SymbolTable::SymbolUse &use : *uses)
+      usedSymbols->insert(use.getSymbolRef().getLeafReference());
+  }
+
   moduleOp.walk([&](Operation *op) {
     if (auto recipe = dyn_cast<acc::ReductionRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
     else if (auto recipe = dyn_cast<acc::PrivateRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
     else if (auto recipe = dyn_cast<acc::FirstprivateRecipeOp>(op))
-      removeRecipe(recipe, moduleOp);
+      removeRecipe(recipe, moduleOp, usedSymbols);
   });
 }
 

@@ -16,7 +16,7 @@
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/SmallVector.h"
 #include <optional>

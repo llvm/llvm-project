@@ -340,7 +340,7 @@ llvm.func @_QPsb() {
 // CHECK:    omp.yield(%[[TRUE_EXT]] : i32)
 // CHECK:  } combiner {
 // CHECK:  ^bb0(%[[ARG_1:.*]]: i32, %[[ARG_2:.*]]: i32):
-// CHECK:    %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    %[[CMP_1:.*]] = llvm.icmp "ne" %[[ARG_1]], %[[ZERO]] : i32
 // CHECK:    %[[CMP_2:.*]] = llvm.icmp "ne" %[[ARG_2]], %[[ZERO]] : i32
 // CHECK:    %[[COMBINE_VAL:.*]] = llvm.icmp "eq" %[[CMP_1]], %[[CMP_2]] : i1
@@ -366,7 +366,7 @@ omp.declare_reduction @eqv_reduction : i32 init {
   omp.yield(%1 : i32)
 } combiner {
 ^bb0(%arg0: i32, %arg1: i32):
-  %0 = llvm.mlir.constant(0 : i64) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.icmp "ne" %arg0, %0 : i32
   %2 = llvm.icmp "ne" %arg1, %0 : i32
   %3 = llvm.icmp "eq" %1, %2 : i1

@@ -26,6 +26,10 @@ def CIR_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
 
+  let hasOperationAttrVerify = 1;
+  let hasRegionArgAttrVerify = 1;
+  let hasRegionResultAttrVerify = 1;
+
   // Enable constant materialization for the CIR dialect. This generates a
   // declaration for the cir::CIRDialect::materializeConstant function. This
   // hook is necessary for canonicalization to properly handle attributes
@@ -53,6 +57,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getModuleLevelAsmAttrName() { return "cir.module_asm"; }
     static llvm::StringRef getGlobalCtorsAttrName() { return "cir.global_ctors"; }
     static llvm::StringRef getGlobalDtorsAttrName() { return "cir.global_dtors"; }
+    static llvm::StringRef getOffloadContainerAttrName() { return "cir.offload.container"; }
+    static llvm::StringRef getOffloadKindAttrName() { return "cir.offload.kind"; }
     static llvm::StringRef getOperandSegmentSizesAttrName() { return "operandSegmentSizes"; }
     static llvm::StringRef getNoCallerSavedRegsAttrName() { return "no_caller_saved_registers"; }
     static llvm::StringRef getNoCallbackAttrName() { return "nocallback"; }
@@ -76,6 +82,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getZeroCallUsedRegsAttrName() { return "zero_call_used_regs"; }
     static llvm::StringRef getSaveRegParamsAttrName() { return "save_reg_params"; }
     static llvm::StringRef getDefaultFuncAttrsAttrName() { return "default_func_attrs"; }
+    static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
@@ -94,6 +101,8 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getAMDGPUXnackAttrName() { return "cir.amdgpu_xnack"; }
     static llvm::StringRef getAMDGPUSramEccAttrName() { return "cir.amdgpu_sramecc"; }
     static llvm::StringRef getOpenCLKernelArgMetadataAttrName() { return "cir.cl.kernel_arg_metadata"; }
+    static llvm::StringRef getOpenCLVersionAttrName() { return "cir.cl.version"; }
+    static llvm::StringRef getOpenCLCXXVersionAttrName() { return "cir.cl.cxx.version"; }
     static llvm::StringRef getDefaultTlsModelAttrName() { return "cir.default_tls_model"; }
 
     void registerAttributes();

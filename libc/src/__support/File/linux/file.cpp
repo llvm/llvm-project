@@ -311,11 +311,8 @@ int get_fileno(File *f) {
 }
 
 int reopenfile(File *f, const char *path, const char *mode) {
-  f->lock();
-  int ret = reopenfile_unlocked(f, path, mode);
-  f->unlock();
-
-  return ret;
+  File::FileLock lock(f);
+  return reopenfile_unlocked(f, path, mode);
 }
 
 int reopenfile_unlocked(File *f, const char *path, const char *mode) {

@@ -83,7 +83,7 @@ void replaceOpWithUnrealizedConversion(PatternRewriter &rewriter, TOp op,
 /// `unrealized_conversion_cast`s added by this pass.
 static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
   Operation *definingOp = illegalMemref.getDefiningOp();
-  if (!definingOp || !definingOp->hasAttr(kSVELegalizerTag))
+  if (!definingOp || !definingOp->hasDiscardableAttr(kSVELegalizerTag))
     return failure();
   auto unrealizedConversion =
       llvm::cast<UnrealizedConversionCastOp>(definingOp);
@@ -464,7 +464,7 @@ struct LegalizeVectorStorage
     ConversionTarget target(getContext());
     target.addDynamicallyLegalOp<UnrealizedConversionCastOp>(
         [](UnrealizedConversionCastOp unrealizedConversion) {
-          return !unrealizedConversion->hasAttr(kSVELegalizerTag);
+          return !unrealizedConversion->hasDiscardableAttr(kSVELegalizerTag);
         });
     // This detects if we failed to completely legalize the IR.
     if (failed(applyPartialConversion(getOperation(), target, {})))

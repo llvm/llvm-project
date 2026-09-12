@@ -60,6 +60,12 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ceilbf16",
+    hdrs = ["CeilTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
+
+math_mpfr_test(
     name = "ceilf128",
     hdrs = ["CeilTest.h"],
     deps = [
@@ -150,6 +156,17 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "fabsf16",
+    hdrs = ["FAbsTest.h"],
+)
+
+math_mpfr_test(
+    name = "fabsbf16",
+    hdrs = ["FAbsTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
+
+math_mpfr_test(
     name = "fabsl",
     hdrs = ["FAbsTest.h"],
 )
@@ -226,6 +243,12 @@ math_mpfr_test(
     hdrs = ["FloorTest.h"],
 )
 
+math_mpfr_test(
+    name = "floorbf16",
+    hdrs = ["FloorTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
+
 # TODO: Add fma, fmaf, fmal, fmul, fmull tests.  Missing stdlib/rand dependency.
 
 # math_mpfr_test(name = "f16mul")
@@ -244,6 +267,17 @@ math_mpfr_test(
 math_mpfr_test(
     name = "frexpf",
     hdrs = ["FrexpTest.h"],
+)
+
+math_mpfr_test(
+    name = "frexpf16",
+    hdrs = ["FrexpTest.h"],
+)
+
+math_mpfr_test(
+    name = "frexpbf16",
+    hdrs = ["FrexpTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
 )
 
 math_mpfr_test(
@@ -451,6 +485,17 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "remquof16",
+    hdrs = ["RemQuoTest.h"],
+)
+
+math_mpfr_test(
+    name = "remquobf16",
+    hdrs = ["RemQuoTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
+
+math_mpfr_test(
     name = "remquol",
     hdrs = ["RemQuoTest.h"],
 )
@@ -496,6 +541,12 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "roundevenbf16",
+    hdrs = ["RoundEvenTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
+)
+
+math_mpfr_test(
     name = "round",
     hdrs = ["RoundTest.h"],
 )
@@ -503,6 +554,12 @@ math_mpfr_test(
 math_mpfr_test(
     name = "roundf",
     hdrs = ["RoundTest.h"],
+)
+
+math_mpfr_test(
+    name = "roundbf16",
+    hdrs = ["RoundTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
 )
 
 math_mpfr_test(
@@ -633,6 +690,12 @@ math_mpfr_test(
 math_mpfr_test(
     name = "truncf16",
     hdrs = ["TruncTest.h"],
+)
+
+math_mpfr_test(
+    name = "truncbf16",
+    hdrs = ["TruncTest.h"],
+    deps = ["//libc:__support_fputil_bfloat16"],
 )
 
 math_mpfr_test(name = "cbrtf16")

@@ -33,7 +33,6 @@
 #include <cassert>
 #include <cstdint>
 #include <cstring>
-#include <iterator>
 #include <set>
 #include <utility>
 #include <vector>

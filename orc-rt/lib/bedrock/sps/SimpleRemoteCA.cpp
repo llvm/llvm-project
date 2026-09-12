@@ -6,16 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// SimpleRemote-protocol ControllerAccess base class.
+// Transport-independent half of the SimpleRemote protocol.
 //
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/sps/SimpleRemoteCA.h"
 
 #include "orc-rt/support/Compiler.h"
+#include "orc-rt/support/iterator_range.h"
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
 #include <string>
+#include <utility>
 
 namespace orc_rt {
 
@@ -33,8 +35,7 @@ const char *SimpleRemoteCA::getOpcodeName(Opcode Op) noexcept {
   ORC_RT_UNREACHABLE("Unrecognized opcode");
 }
 
-WrapperFunctionBuffer
-SimpleRemoteCA::encodeSetupMessage(const BootstrapInfo &BI) {
+WrapperFunctionBuffer SimpleRemoteCA::encodeSetup(const BootstrapInfo &BI) {
   using SPSSetup = SPSTuple<SPSString, uint64_t,
                             SPSSequence<SPSTuple<SPSString, SPSSequence<char>>>,
                             SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
@@ -43,29 +44,57 @@ SimpleRemoteCA::encodeSetupMessage(const BootstrapInfo &BI) {
   // FIXME: Remove once we allow size_t serialization.
   uint64_t PageSize = BI.processInfo().pageSize();
   auto Symbols = iterator_range(BI.symbols());
-  auto BootstrapTuple =
+  auto Tuple =
       std::tie(BI.processInfo().targetTriple(), PageSize, BI.values(), Symbols);
+  using Serialize = SPSSerializationTraits<SPSSetup, decltype(Tuple)>;
 
-  using SetupSerialize =
-      SPSSerializationTraits<SPSSetup, decltype(BootstrapTuple)>;
-
-  auto Payload =
-      WrapperFunctionBuffer::allocate(SetupSerialize::size(BootstrapTuple));
+  auto Payload = WrapperFunctionBuffer::allocate(Serialize::size(Tuple));
   SPSOutputBuffer OB(Payload.data(), Payload.size());
-  if (!SetupSerialize::serialize(OB, BootstrapTuple))
+  if (!Serialize::serialize(OB, Tuple))
     ORC_RT_UNREACHABLE("serialization should not fail");
-
   return Payload;
 }
 
-WrapperFunctionBuffer SimpleRemoteCA::encodeHangupPayload(Error Err) {
+WrapperFunctionBuffer SimpleRemoteCA::encodeHangup(Error Err) {
   SPSSerializableError SE(std::move(Err));
-  using SPSSerialize = SPSArgList<SPSError>;
-  auto Payload = WrapperFunctionBuffer::allocate(SPSSerialize::size(SE));
+  using Serialize = SPSArgList<SPSError>;
+  auto Payload = WrapperFunctionBuffer::allocate(Serialize::size(SE));
   SPSOutputBuffer OB(Payload.data(), Payload.size());
-  if (!SPSSerialize::serialize(OB, SE))
+  if (!Serialize::serialize(OB, SE))
     ORC_RT_UNREACHABLE("serialization should not fail");
   return Payload;
+}
+
+Error SimpleRemoteCA::decodeHangup(WrapperFunctionBuffer Payload) {
+  SPSSerializableError SE;
+  SPSInputBuffer IB(Payload.data(), Payload.size());
+  if (!SPSArgList<SPSError>::deserialize(IB, SE))
+    return make_error<StringError>(
+        "Malformed hang-up message: could not deserialize reason");
+  return SE.toError();
+}
+
+uint64_t SimpleRemoteCA::registerCall(OnControllerCallReturn OnComplete) {
+  assert(OnComplete && "Registered handler must contain a value");
+  uint64_t SeqNo = NextSeqNo++;
+  PendingCalls.try_emplace(SeqNo, std::move(OnComplete));
+  return SeqNo;
+}
+
+SimpleRemoteCA::OnControllerCallReturn
+SimpleRemoteCA::takeCall(uint64_t SeqNo) {
+  auto I = PendingCalls.find(SeqNo);
+  if (I == PendingCalls.end())
+    return OnControllerCallReturn();
+  auto OnComplete = std::move(I->second);
+  PendingCalls.erase(I);
+  return OnComplete;
+}
+
+SimpleRemoteCA::PendingCallsMap SimpleRemoteCA::takeAllCalls() {
+  PendingCallsMap Taken;
+  std::swap(Taken, PendingCalls);
+  return Taken;
 }
 
 Expected<SimpleRemoteCA::Action>
@@ -77,22 +106,19 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
   switch (static_cast<Opcode>(OpC)) {
   case Opcode::Setup:
     return make_error<StringError>("Unexpected Setup message");
+
   case Opcode::Hangup: {
     // A hang-up carries no sequence number or tag, and a payload holding the
     // reason the controller is going away.
     if (SeqNo != 0 || Tag)
       return make_error<StringError>("Malformed hang-up message");
-    SPSSerializableError SE;
-    SPSInputBuffer IB(Payload.data(), Payload.size());
-    if (!SPSArgList<SPSError>::deserialize(IB, SE))
-      return make_error<StringError>(
-          "Malformed hang-up message: could not deserialize reason");
-    // An orderly hang-up ends the session; one carrying a reason ends it with
-    // that reason, which the reactor reports as the disconnection error.
-    if (Error Err = SE.toError())
+    // A reason ends the session with that reason; an orderly hang-up, or a
+    // payload that will not decode, just ends it.
+    if (Error Err = decodeHangup(std::move(Payload)))
       return std::move(Err);
     return Action::End;
   }
+
   case Opcode::Result:
     // A result is not associated with a handler tag.
     if (Tag)
@@ -101,6 +127,7 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
     if (auto Err = handleResult(SeqNo, std::move(Payload)))
       return std::move(Err);
     return Action::Continue;
+
   case Opcode::Call:
     handleWrapperCall(Tag.toPtr<orc_rt_WrapperFunction>(), std::move(Payload),
                       SeqNo);
@@ -109,36 +136,12 @@ SimpleRemoteCA::handleMessage(uint64_t OpC, uint64_t SeqNo, ExecutorAddr Tag,
   ORC_RT_UNREACHABLE("Unrecognized opcode");
 }
 
-uint64_t
-SimpleRemoteCA::registerPendingCall(OnControllerCallReturn OnComplete) {
-  std::scoped_lock<std::mutex> Lock(M);
-  PendingCalls.try_emplace(NextSeqNo, std::move(OnComplete));
-  return NextSeqNo++;
-}
-
-void SimpleRemoteCA::failAllPendingCalls() {
-  PendingCallsMap Failed;
-  {
-    std::scoped_lock<std::mutex> Lock(M);
-    std::swap(Failed, PendingCalls);
-  }
-
-  for (auto &[SeqNo, OnComplete] : Failed)
-    failPendingControllerCall(std::move(OnComplete));
-}
-
 Error SimpleRemoteCA::handleResult(uint64_t SeqNo,
                                    WrapperFunctionBuffer ResultBytes) {
-  OnControllerCallReturn OnComplete;
-  {
-    std::scoped_lock<std::mutex> Lock(M);
-    auto I = PendingCalls.find(SeqNo);
-    if (I == PendingCalls.end())
-      return make_error<StringError>("No pending call for sequence number " +
-                                     std::to_string(SeqNo));
-    OnComplete = std::move(I->second);
-    PendingCalls.erase(I);
-  }
+  auto OnComplete = takePendingCall(SeqNo);
+  if (!OnComplete)
+    return make_error<StringError>("No pending call for sequence number " +
+                                   std::to_string(SeqNo));
 
   handleControllerCallResult(std::move(OnComplete), std::move(ResultBytes));
   return Error::success();

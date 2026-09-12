@@ -89,7 +89,7 @@ TEST(SymbolOpInterface, NativeSymbolTraits) {
   EXPECT_EQ(symOp.getName(), "symbol_name");
   EXPECT_TRUE(symOp.isPublic());
 
-  symOp.setName("new_name");
+  symOp.setSymbolName("new_name");
   EXPECT_EQ(symOp.getName(), "new_name");
   EXPECT_EQ(symOp->getInherentAttr("sym_name").value_or(Attribute{}),
             symOp.getNameAttr());

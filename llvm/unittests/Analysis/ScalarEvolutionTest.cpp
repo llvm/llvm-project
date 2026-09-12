@@ -2330,4 +2330,48 @@ TEST_F(ScalarEvolutionsTest, CastsOfUsesWithNoWrapFlags) {
     CheckCast(SE.getAnyExtendExpr(NUWAdd, I64), SE.getAnyExtendExpr(Add, I64));
   });
 }
+
+TEST_F(ScalarEvolutionsTest, ExtendFoldCacheKeysUseFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %x) {
+      entry:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Type *I32 = Type::getInt32Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+
+    // Build (-2 * smax(smin(%x, 0), -50)), which is known to be in [0, 100],
+    // but cannot be proven to not wrap in an unsigned sense.
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Bounded = SE.getSMaxExpr(SE.getSMinExpr(X, SE.getZero(I32)),
+                                         SE.getConstant(I32, -50, true));
+    SCEVUse Mul = SE.getMulExpr(SE.getConstant(I32, -2, true), Bounded);
+    ASSERT_TRUE(isa<SCEVMulExpr>(Mul));
+    ASSERT_FALSE(cast<SCEVMulExpr>(Mul.getPointer())->hasNoUnsignedWrap());
+    ASSERT_TRUE(SE.isKnownNonNegative(Mul));
+
+    SCEVUse MulNUW(Mul, SCEV::FlagNUW);
+    ASSERT_TRUE(MulNUW.hasUseFlags());
+
+    // For a known non-negative operand, getSignExtendExpr folds to a zero
+    // extend of the same operand use, and the fold gets cached. Make sure flags
+    // of SCEVUse operands are handled correctly.
+    const SCEV *SExtNUW = SE.getSignExtendExpr(MulNUW, I64);
+    const SCEV *SExtPlain = SE.getSignExtendExpr(Mul, I64);
+    EXPECT_NE(SExtNUW, SExtPlain);
+    EXPECT_EQ(cast<SCEVZeroExtendExpr>(SExtNUW)->getOperand(), MulNUW);
+    EXPECT_EQ(cast<SCEVZeroExtendExpr>(SExtPlain)->getOperand(), Mul);
+  });
+}
 }  // end namespace llvm

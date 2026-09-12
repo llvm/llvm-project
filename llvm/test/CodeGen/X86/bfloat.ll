@@ -1523,7 +1523,7 @@ define <8 x bfloat> @fptrunc_v8f64(<8 x double> %a) nounwind {
 ; X86-NEXT:    vmovaps {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 # 16-byte Reload
 ; X86-NEXT:    vmovhps %xmm0, (%esp)
 ; X86-NEXT:    calll __truncdfbf2
-; X86-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
+; X86-NEXT:    vmovdqa64 {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
 ; X86-NEXT:    vmovdqa {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 16-byte Reload
 ; X86-NEXT:    vpunpcklwd {{[-0-9]+}}(%e{{[sb]}}p), %xmm1, %xmm1 # 16-byte Folded Reload

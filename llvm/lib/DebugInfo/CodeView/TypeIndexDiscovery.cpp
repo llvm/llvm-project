@@ -445,6 +445,7 @@ static bool discoverTypeIndices(ArrayRef<uint8_t> Content, SymbolKind Kind,
   case SymbolKind::S_FRAMECOOKIE:
   case SymbolKind::S_UNAMESPACE:
   case SymbolKind::S_ARMSWITCHTABLE:
+  case SymbolKind::S_ASSOCIATION:
     break;
   // Scope ending symbols.
   case SymbolKind::S_END:

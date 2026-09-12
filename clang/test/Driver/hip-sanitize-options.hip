@@ -118,41 +118,41 @@
 // XNACK: warning: ignoring 'leak' in '-fsanitize=leak' option as it is not currently supported for target 'amdgpu-amd-amdhsa'
 // XNACK: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // XNACK: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
-// XNACK-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address"}}
-// XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mno-xnack"}}
-// XNACK-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
+// XNACK-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mxnack".* "-fsanitize=address"}}
+// XNACK-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mno-xnack"}}
+// XNACK-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06}}
 // XNACK-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,leak"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address,leak"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mno-xnack".* "-fsanitize=address,leak"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address,leak"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mno-xnack".* "-fsanitize=address"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mno-xnack"}}
-// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx906"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mxnack".* "-fsanitize=address,leak"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mno-xnack".* "-fsanitize=address,leak"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06.* "-fsanitize=address,leak"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mno-xnack".* "-fsanitize=address"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06.* "-fsanitize=address"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mno-xnack"}}
+// XNACKNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06.* "-mlink-bitcode-file" ".*asanrtl.bc"}}
 // XNACKNEG-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 
-// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mxnack"}}
-// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mno-xnack"}}
-// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mxnack"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mno-xnack"}}
+// NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06}}
 // NOGPU-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,leak"}}
 // NOGPUNEG-NOT: warning: ignoring '-fsanitize=leak' option as it is not currently supported for target 'amdgpu9-amd-amdhsa'
 // NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx900:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
 // NOGPUNEG-NOT: warning: ignoring '-fsanitize=address' option for offload arch 'gfx906' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address,leak"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mno-xnack".* "-fsanitize=address,leak"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address,leak"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx900".* "-mno-xnack".* "-fsanitize=address"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx906".* "-fsanitize=address"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mxnack"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mno-xnack"}}
-// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx906"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mxnack".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mxnack".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mno-xnack".* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06.* "-fsanitize=address,leak"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mxnack".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mno-xnack".* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06.* "-fsanitize=address"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-triple" "amdgpu9.00.* "-mxnack"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mno-xnack"}}
+// NOGPUNEG-NOT: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.06.* "-mlink-bitcode-file" ".*asanrtl.bc"}}
 // NOGPUNEG-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 
 // INVALIDCOMBINATION1-DAG: warning: ignoring 'fuzzer' in '-fsanitize=address,fuzzer' option as it is not currently supported for target 'amdgpu-amd-amdhsa' [-Woption-ignored]
 // INVALIDCOMBINATION2-DAG: warning: ignoring 'fuzzer' in '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgpu-amd-amdhsa' [-Woption-ignored]
-// INVALIDCOMBINATION-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address"}}
+// INVALIDCOMBINATION-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mxnack".* "-fsanitize=address"}}
 // INVALIDCOMBINATION-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,fuzzer,fuzzer-no-link"}}
 
 // MULT1: warning: ignoring 'leak' in '-fsanitize=leak' option as it is not currently supported for target 'amdgpu-amd-amdhsa' [-Woption-ignored]
@@ -165,8 +165,8 @@
 // MULT2: warning: ignoring 'fuzzer' in '-fsanitize=fuzzer,address' option as it is not currently supported for target 'amdgpu-amd-amdhsa' [-Woption-ignored]
 // MULT2: warning: ignoring '-fsanitize=fuzzer,address' option for offload arch 'gfx908:xnack-' as it is not currently supported there. Use it with an offload arch containing 'xnack+' instead [-Woption-ignored]
 
-// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-mlink-bitcode-file" ".*asanrtl.bc".* "-target-cpu" "gfx900".* "-mxnack".* "-fsanitize=address"}}
-// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-target-cpu" "gfx908"}}
+// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.00.* "-mlink-bitcode-file" ".*asanrtl.bc".* "-mxnack".* "-fsanitize=address"}}
+// XNACK2-DAG: {{"[^"]*clang[^"]*".* "-triple" "amdgpu9.08}}
 // XNACK2-DAG: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address,fuzzer,fuzzer-no-link,leak"}}
 
 // UNSUPPORTEDERROR: error: 'leak' in '-fsanitize=leak' option is not currently supported for target 'amdgpu-amd-amdhsa'

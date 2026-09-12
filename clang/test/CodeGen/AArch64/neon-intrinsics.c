@@ -7645,77 +7645,7 @@ uint64x1_t test_vqshlu_n_s64(int64x1_t a) {
   return vqshlu_n_s64(a, 1);
 }
 
-// CHECK-LABEL: define dso_local i8 @test_vqrshrnh_n_s16(
-// CHECK-SAME: i16 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRNH_N_S16]], i64 0
-// CHECK-NEXT:    ret i8 [[TMP1]]
-//
-int8_t test_vqrshrnh_n_s16(int16_t a) {
-  return (int8_t)vqrshrnh_n_s16(a, 8);
-}
 
-// CHECK-LABEL: define dso_local i16 @test_vqrshrns_n_s32(
-// CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRNS_N_S32]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP1]]
-//
-int16_t test_vqrshrns_n_s32(int32_t a) {
-  return (int16_t)vqrshrns_n_s32(a, 16);
-}
-
-// CHECK-LABEL: define dso_local i8 @test_vqrshrnh_n_u16(
-// CHECK-SAME: i16 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRNH_N_U16:%.*]] = call <8 x i8> @llvm.aarch64.neon.uqrshrn.v8i8(<8 x i16> [[TMP0]], i32 8)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRNH_N_U16]], i64 0
-// CHECK-NEXT:    ret i8 [[TMP1]]
-//
-uint8_t test_vqrshrnh_n_u16(uint16_t a) {
-  return (uint8_t)vqrshrnh_n_u16(a, 8);
-}
-
-// CHECK-LABEL: define dso_local i16 @test_vqrshrns_n_u32(
-// CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRNS_N_U32:%.*]] = call <4 x i16> @llvm.aarch64.neon.uqrshrn.v4i16(<4 x i32> [[TMP0]], i32 16)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRNS_N_U32]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP1]]
-//
-uint16_t test_vqrshrns_n_u32(uint32_t a) {
-  return (uint16_t)vqrshrns_n_u32(a, 16);
-}
-
-// CHECK-LABEL: define dso_local i8 @test_vqrshrunh_n_s16(
-// CHECK-SAME: i16 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> poison, i16 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRUNH_N_S16:%.*]] = call <8 x i8> @llvm.aarch64.neon.sqrshrun.v8i8(<8 x i16> [[TMP0]], i32 8)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <8 x i8> [[VQRSHRUNH_N_S16]], i64 0
-// CHECK-NEXT:    ret i8 [[TMP1]]
-//
-uint8_t test_vqrshrunh_n_s16(int16_t a) {
-  return (uint8_t)vqrshrunh_n_s16(a, 8);
-}
-
-// CHECK-LABEL: define dso_local i16 @test_vqrshruns_n_s32(
-// CHECK-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
-// CHECK-NEXT:    [[VQRSHRUNS_N_S32:%.*]] = call <4 x i16> @llvm.aarch64.neon.sqrshrun.v4i16(<4 x i32> [[TMP0]], i32 16)
-// CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i16> [[VQRSHRUNS_N_S32]], i64 0
-// CHECK-NEXT:    ret i16 [[TMP1]]
-//
-uint16_t test_vqrshruns_n_s32(int32_t a) {
-  return (uint16_t)vqrshruns_n_s32(a, 16);
-}
 
 // CHECK-LABEL: define dso_local <8 x i8> @test_vreinterpret_s8_s16(
 // CHECK-SAME: <4 x i16> noundef [[A:%.*]]) #[[ATTR0]] {
