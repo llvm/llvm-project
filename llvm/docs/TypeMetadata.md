@@ -248,30 +248,26 @@ from classes with hidden visibility), then this optimisation would be valid.
 This concept is represented in IR by the `!vcall_visibility` metadata
 attached to vtable objects, with the following values:
 
-```{eval-rst}
-.. list-table::
-   :header-rows: 1
-   :widths: 10 90
+:::{list-table}
+:header-rows: 1
+:widths: 10 90
 
-   * - Value
-     - Behavior
-
-   * - 0 (or omitted)
-     - **Public**
-           Virtual function calls using this vtable could be made from external
-           code.
-
-   * - 1
-     - **Linkage Unit**
-           All virtual function calls which might use this vtable are in the
-           current LTO unit, meaning they will be in the current module once
-           LTO linking has been performed.
-
-   * - 2
-     - **Translation Unit**
-           All virtual function calls which might use this vtable are in the
-           current module.
-```
+* - Value
+  - Behavior
+* - 0 (or omitted)
+  - **Public**
+    : Virtual function calls using this vtable could be made from external
+      code.
+* - 1
+  - **Linkage Unit**
+    : All virtual function calls which might use this vtable are in the
+      current LTO unit, meaning they will be in the current module once
+      LTO linking has been performed.
+* - 2
+  - **Translation Unit**
+    : All virtual function calls which might use this vtable are in the
+      current module.
+:::
 
 In addition, all function pointer loads from a vtable marked with the
 `!vcall_visibility` metadata (with a non-zero value) must be done using the

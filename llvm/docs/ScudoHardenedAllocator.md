@@ -188,65 +188,76 @@ extern "C" const char *__scudo_default_options() {
 
 The following "string" options are available:
 
-```{eval-rst}
-+---------------------------------+----------------+-------------------------------------------------+
-| Option                          | Default        | Description                                     |
-+---------------------------------+----------------+-------------------------------------------------+
-| quarantine_size_kb              | 0              | The size (in Kb) of quarantine used to delay    |
-|                                 |                | the actual deallocation of chunks. Lower value  |
-|                                 |                | may reduce memory usage but decrease the        |
-|                                 |                | effectiveness of the mitigation; a negative     |
-|                                 |                | value will fallback to the defaults. Setting    |
-|                                 |                | *both* this and thread_local_quarantine_size_kb |
-|                                 |                | to zero will disable the quarantine entirely.   |
-+---------------------------------+----------------+-------------------------------------------------+
-| quarantine_max_chunk_size       | 0              | Size (in bytes) up to which chunks can be       |
-|                                 |                | quarantined.                                    |
-+---------------------------------+----------------+-------------------------------------------------+
-| thread_local_quarantine_size_kb | 0              | The size (in Kb) of per-thread cache use to     |
-|                                 |                | offload the global quarantine. Lower value may  |
-|                                 |                | reduce memory usage but might increase          |
-|                                 |                | contention on the global quarantine. Setting    |
-|                                 |                | *both* this and quarantine_size_kb to zero will |
-|                                 |                | disable the quarantine entirely.                |
-+---------------------------------+----------------+-------------------------------------------------+
-| dealloc_type_mismatch           | false          | Whether or not we report errors on              |
-|                                 |                | malloc/delete, new/free, new/delete[], etc.     |
-+---------------------------------+----------------+-------------------------------------------------+
-| delete_size_mismatch            | true           | Whether or not we report errors on mismatch     |
-|                                 |                | between sizes of new and delete.                |
-+---------------------------------+----------------+-------------------------------------------------+
-| zero_contents                   | false          | Whether or not we zero chunk contents on        |
-|                                 |                | allocation.                                     |
-+---------------------------------+----------------+-------------------------------------------------+
-| pattern_fill_contents           | false          | Whether or not we fill chunk contents with a    |
-|                                 |                | byte pattern on allocation.                     |
-+---------------------------------+----------------+-------------------------------------------------+
-| may_return_null                 | true           | Whether or not a non-fatal failure can return a |
-|                                 |                | NULL pointer (as opposed to terminating).       |
-+---------------------------------+----------------+-------------------------------------------------+
-| release_to_os_interval_ms       | 5000           | The minimum interval (in ms) at which a release |
-|                                 |                | can be attempted (a negative value disables     |
-|                                 |                | reclaiming).                                    |
-+---------------------------------+----------------+-------------------------------------------------+
-| allocation_ring_buffer_size     | 32768          | If stack trace collection is requested, how     |
-|                                 |                | many previous allocations to keep in the        |
-|                                 |                | allocation ring buffer.                         |
-|                                 |                |                                                 |
-|                                 |                | This buffer is used to provide allocation and   |
-|                                 |                | deallocation stack traces for MTE fault         |
-|                                 |                | reports. The larger the buffer, the more        |
-|                                 |                | unrelated allocations can happen between        |
-|                                 |                | (de)allocation and the fault.                   |
-|                                 |                | If your sync-mode MTE faults do not have        |
-|                                 |                | (de)allocation stack traces, try increasing the |
-|                                 |                | buffer size.                                    |
-|                                 |                |                                                 |
-|                                 |                | Stack trace collection can be requested using   |
-|                                 |                | the scudo_malloc_set_track_allocation_stacks    |
-|                                 |                | function.                                       |
-+---------------------------------+----------------+-------------------------------------------------+
-```
+:::{list-table}
+
+* - Option
+  - Default
+  - Description
+* - quarantine_size_kb
+  - 0
+  - The size (in Kb) of quarantine used to delay
+    the actual deallocation of chunks. Lower value
+    may reduce memory usage but decrease the
+    effectiveness of the mitigation; a negative
+    value will fallback to the defaults. Setting
+    *both* this and thread_local_quarantine_size_kb
+    to zero will disable the quarantine entirely.
+* - quarantine_max_chunk_size
+  - 0
+  - Size (in bytes) up to which chunks can be
+    quarantined.
+* - thread_local_quarantine_size_kb
+  - 0
+  - The size (in Kb) of per-thread cache use to
+    offload the global quarantine. Lower value may
+    reduce memory usage but might increase
+    contention on the global quarantine. Setting
+    *both* this and quarantine_size_kb to zero will
+    disable the quarantine entirely.
+* - dealloc_type_mismatch
+  - false
+  - Whether or not we report errors on
+    malloc/delete, new/free, new/delete[], etc.
+* - delete_size_mismatch
+  - true
+  - Whether or not we report errors on mismatch
+    between sizes of new and delete.
+* - zero_contents
+  - false
+  - Whether or not we zero chunk contents on
+    allocation.
+* - pattern_fill_contents
+  - false
+  - Whether or not we fill chunk contents with a
+    byte pattern on allocation.
+* - may_return_null
+  - true
+  - Whether or not a non-fatal failure can return a
+    NULL pointer (as opposed to terminating).
+* - release_to_os_interval_ms
+  - 5000
+  - The minimum interval (in ms) at which a release
+    can be attempted (a negative value disables
+    reclaiming).
+* - allocation_ring_buffer_size
+  - 32768
+  - If stack trace collection is requested, how
+    many previous allocations to keep in the
+    allocation ring buffer.
+
+    This buffer is used to provide allocation and
+    deallocation stack traces for MTE fault
+    reports. The larger the buffer, the more
+    unrelated allocations can happen between
+    (de)allocation and the fault.
+    If your sync-mode MTE faults do not have
+    (de)allocation stack traces, try increasing the
+    buffer size.
+
+    Stack trace collection can be requested using
+    the scudo_malloc_set_track_allocation_stacks
+    function.
+:::
 
 Additional flags can be specified, for example if Scudo if compiled with
 {doc}`GWP-ASan <GwpAsan>` support.
@@ -254,45 +265,45 @@ Additional flags can be specified, for example if Scudo if compiled with
 The following "mallopt" options are available (options are defined in
 `include/scudo/interface.h`):
 
-```{eval-rst}
-+---------------------------+-------------------------------------------------------+
-| Option                    | Description                                           |
-+---------------------------+-------------------------------------------------------+
-| M_DECAY_TIME              | Sets the release interval option to the specified     |
-|                           | value (Android only allows 0 or 1 to respectively set |
-|                           | the interval to the minimum and maximum value as      |
-|                           | specified at compile time).                           |
-+---------------------------+-------------------------------------------------------+
-| M_PURGE                   | Forces immediate memory reclaiming but does not       |
-|                           | reclaim everything. For smaller size classes, there   |
-|                           | is still some memory that is not reclaimed due to the |
-|                           | extra time it takes and the small amount of memory    |
-|                           | that can be reclaimed.                                |
-|                           | The value is ignored.                                 |
-+---------------------------+-------------------------------------------------------+
-| M_PURGE_ALL               | Same as M_PURGE but will force release all possible   |
-|                           | memory regardless of how long it takes.               |
-|                           | The value is ignored.                                 |
-+---------------------------+-------------------------------------------------------+
-| M_MEMTAG_TUNING           | Tunes the allocator's choice of memory tags to make   |
-|                           | it more likely that a certain class of memory errors  |
-|                           | will be detected. The value argument should be one of |
-|                           | the enumerators of ``scudo_memtag_tuning``.           |
-+---------------------------+-------------------------------------------------------+
-| M_THREAD_DISABLE_MEM_INIT | Tunes the per-thread memory initialization, 0 being   |
-|                           | the normal behavior, 1 disabling the automatic heap   |
-|                           | initialization.                                       |
-+---------------------------+-------------------------------------------------------+
-| M_CACHE_COUNT_MAX         | Set the maximum number of entries than can be cached  |
-|                           | in the Secondary cache.                               |
-+---------------------------+-------------------------------------------------------+
-| M_CACHE_SIZE_MAX          | Sets the maximum size of entries that can be cached   |
-|                           | in the Secondary cache.                               |
-+---------------------------+-------------------------------------------------------+
-| M_TSDS_COUNT_MAX          | Increases the maximum number of TSDs that can be used |
-|                           | up to the limit specified at compile time.            |
-+---------------------------+-------------------------------------------------------+
-```
+:::{list-table}
+
+* - Option
+  - Description
+* - M_DECAY_TIME
+  - Sets the release interval option to the specified
+    value (Android only allows 0 or 1 to respectively set
+    the interval to the minimum and maximum value as
+    specified at compile time).
+* - M_PURGE
+  - Forces immediate memory reclaiming but does not
+    reclaim everything. For smaller size classes, there
+    is still some memory that is not reclaimed due to the
+    extra time it takes and the small amount of memory
+    that can be reclaimed.
+    The value is ignored.
+* - M_PURGE_ALL
+  - Same as M_PURGE but will force release all possible
+    memory regardless of how long it takes.
+    The value is ignored.
+* - M_MEMTAG_TUNING
+  - Tunes the allocator's choice of memory tags to make
+    it more likely that a certain class of memory errors
+    will be detected. The value argument should be one of
+    the enumerators of `scudo_memtag_tuning`.
+* - M_THREAD_DISABLE_MEM_INIT
+  - Tunes the per-thread memory initialization, 0 being
+    the normal behavior, 1 disabling the automatic heap
+    initialization.
+* - M_CACHE_COUNT_MAX
+  - Set the maximum number of entries than can be cached
+    in the Secondary cache.
+* - M_CACHE_SIZE_MAX
+  - Sets the maximum size of entries that can be cached
+    in the Secondary cache.
+* - M_TSDS_COUNT_MAX
+  - Increases the maximum number of TSDs that can be used
+    up to the limit specified at compile time.
+:::
 
 ## Error Types
 

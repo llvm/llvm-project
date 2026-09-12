@@ -40,48 +40,46 @@ The members of the LLVM Qualification Group represent a diverse cross-section of
 They meet the criteria for inclusion described in the sub-sections below and are identified as [active contributors](#contribution-principles).
 Knowing their handles help us keep track of who’s who across platforms, coordinate activities, and recognize contributions.
 
-```{eval-rst}
-.. list-table::
-   :widths: 20 20 20 20 20
-   :header-rows: 1
+:::{list-table}
+:widths: 20 20 20 20 20
+:header-rows: 1
 
-   * - Name
-     - Affiliation
-     - Discourse handle
-     - Discord handle
-     - GitHub handle
-   * - Carlos Andrés Ramírez
-     - Woven by Toyota
-     - CarlosAndresRamirez
-     - carlos\_andres\_ramirez
-     - CarlosAndresRamirez
-   * - Oscar Slotosch
-     - Validas
-     - slotosch
-     - oscarslotosch_66740
-     - slotosch
-   * - Petter Berntsson
-     - Arm Limited
-     - petbernt
-     - petbernt
-     - petbernt
-   * - Wendi Urribarri
-     - Woven by Toyota
-     - uwendi
-     - uwendi
-     - uwendi
-   * - YoungJun Lee
-     - NSHC
-     - YoungJunLee
-     - YoungJunLee
-     - IamYJLee
-   * - Zaky Hermawan
-     - (No affiliation)
-     - ZakyHermawan
-     - quarkz99
-     - zakyHermawan
-
-```
+* - Name
+  - Affiliation
+  - Discourse handle
+  - Discord handle
+  - GitHub handle
+* - Carlos Andrés Ramírez
+  - Woven by Toyota
+  - CarlosAndresRamirez
+  - carlos_andres_ramirez
+  - CarlosAndresRamirez
+* - Oscar Slotosch
+  - Validas
+  - slotosch
+  - oscarslotosch_66740
+  - slotosch
+* - Petter Berntsson
+  - Arm Limited
+  - petbernt
+  - petbernt
+  - petbernt
+* - Wendi Urribarri
+  - Woven by Toyota
+  - uwendi
+  - uwendi
+  - uwendi
+* - YoungJun Lee
+  - NSHC
+  - YoungJunLee
+  - YoungJunLee
+  - IamYJLee
+* - Zaky Hermawan
+  - (No affiliation)
+  - ZakyHermawan
+  - quarkz99
+  - zakyHermawan
+:::
 
 Organizations are limited to three representatives within the group to maintain diversity.
 
