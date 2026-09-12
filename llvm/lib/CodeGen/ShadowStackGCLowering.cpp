@@ -76,7 +76,7 @@ public:
 
 private:
   bool IsNullValue(Value *V);
-  Constant *GetFrameMap(Function &F, uint64_t FrameSizeInPtrs);
+  Constant *GetFrameMap(Function &F);
   std::pair<uint64_t, Align> ComputeFrameLayout(Function &F);
   void CollectRoots(Function &F);
 };
@@ -140,8 +140,7 @@ FunctionPass *llvm::createShadowStackGCLoweringPass() { return new ShadowStackGC
 
 ShadowStackGCLowering::ShadowStackGCLowering() : FunctionPass(ID) {}
 
-Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F,
-                                                 uint64_t FrameSizeInPtrs) {
+Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F) {
   // doInitialization creates the abstract type of this value.
   Type *VoidPtr = PointerType::getUnqual(F.getContext());
 
@@ -159,7 +158,7 @@ Constant *ShadowStackGCLoweringImpl::GetFrameMap(Function &F,
   Type *Int32Ty = Type::getInt32Ty(F.getContext());
 
   Constant *BaseElts[] = {
-      ConstantInt::get(Int32Ty, FrameSizeInPtrs, false),
+      ConstantInt::get(Int32Ty, Roots.size(), false),
       ConstantInt::get(Int32Ty, NumMeta, false),
   };
 
@@ -249,7 +248,9 @@ bool ShadowStackGCLoweringImpl::doInitialization(Module &M) {
   //   void *Meta[];     // May be absent for roots without metadata.
   // };
   std::vector<Type *> EltTys;
-  // 32 bits is ok up to a 32GB stack frame. :)
+  // Number of calls to llvm.gcroot in the frame.  Note that the roots
+  // themselves are opaque blobs of arbitrary size, so this is a count of
+  // roots, not a measure of the frame's size.
   EltTys.push_back(Type::getInt32Ty(M.getContext()));
   // Specifies length of variable length array.
   EltTys.push_back(Type::getInt32Ty(M.getContext()));
@@ -326,9 +327,8 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
   // Compute frame layout using byte offsets first.
   auto [FrameSize, FrameAlign] = ComputeFrameLayout(F);
 
-  // Build the constant map with frame size in pointer-sized units.
-  uint64_t PtrSize = DL.getPointerSize();
-  Value *FrameMap = GetFrameMap(F, FrameSize / PtrSize - 2);
+  // Build the constant map describing the roots in this frame.
+  Value *FrameMap = GetFrameMap(F);
 
   // Build the shadow stack entry at the very start of the function.
   BasicBlock::iterator IP = F.getEntryBlock().begin();
@@ -346,6 +346,7 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
       AtEntry.CreateLoad(AtEntry.getPtrTy(), Head, "gc_currhead");
 
   // Map pointer is at offset PtrSize (after the Next pointer)
+  uint64_t PtrSize = DL.getPointerSize();
   Value *EntryMapPtr = AtEntry.CreatePtrAdd(
       StackEntry, AtEntry.getInt64(PtrSize), "gc_frame.map");
   AtEntry.CreateStore(FrameMap, EntryMapPtr);
@@ -385,11 +386,11 @@ bool ShadowStackGCLoweringImpl::runOnFunction(Function &F,
                          Align(1));
   }
 
-  // Move past the original stores inserted by GCStrategy::InitRoots. This isn't
-  // really necessary (the collector would never see the intermediate state at
-  // runtime), but it's nicer not to push the half-initialized entry onto the
-  // shadow stack.
-  while (isa<StoreInst>(IP))
+  // Move past the original zero-initialization inserted by
+  // GCStrategy::InitRoots. This isn't really necessary (the collector would
+  // never see the intermediate state at runtime), but it's nicer not to push
+  // the half-initialized entry onto the shadow stack.
+  while (isa<StoreInst>(IP) || isa<MemSetInst>(IP))
     ++IP;
   AtEntry.SetInsertPoint(IP->getParent(), IP);
 

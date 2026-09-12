@@ -18,10 +18,21 @@ define void @must_be_alloca() gc "test" {
   ret void
 }
 
-define void @non_ptr_alloca_null() gc "test" {
-  ; CHECK: llvm.gcroot parameter #1 must either be a pointer alloca, or argument #2 must be a non-null constant.
+define void @vla_alloca(i32 %n) gc "test" {
+  ; CHECK: llvm.gcroot parameter #1 must be a static alloca.
   ; CHECK-NEXT: call void @llvm.gcroot(ptr %alloca, ptr null)
-  %alloca = alloca i32
+  %alloca = alloca ptr, i32 %n
+  call void @llvm.gcroot(ptr %alloca, ptr null)
+  ret void
+}
+
+define void @non_entry_block_alloca() gc "test" {
+  ; CHECK: llvm.gcroot parameter #1 must be a static alloca.
+  ; CHECK-NEXT: call void @llvm.gcroot(ptr %alloca, ptr null)
+entry:
+  br label %next
+next:
+  %alloca = alloca ptr
   call void @llvm.gcroot(ptr %alloca, ptr null)
   ret void
 }
@@ -34,10 +45,33 @@ define void @non_constant_arg1(ptr %arg) gc "test" {
   ret void
 }
 
+; The root is an opaque blob of arbitrary type and size, so a non-pointer
+; alloca is fine, with or without metadata.
 define void @non_ptr_alloca_non_null() gc "test" {
 ; CHECK-NOT: llvm.gcroot parameter
   %alloca = alloca i32
   call void @llvm.gcroot(ptr %alloca, ptr inttoptr (i64 123 to ptr))
+  ret void
+}
+
+define void @non_ptr_alloca_null() gc "test" {
+; CHECK-NOT: llvm.gcroot parameter
+  %alloca = alloca i32
+  call void @llvm.gcroot(ptr %alloca, ptr null)
+  ret void
+}
+
+define void @aggregate_alloca_null() gc "test" {
+; CHECK-NOT: llvm.gcroot parameter
+  %alloca = alloca { ptr, i1 }
+  call void @llvm.gcroot(ptr %alloca, ptr null)
+  ret void
+}
+
+define void @constant_size_array_alloca() gc "test" {
+; CHECK-NOT: llvm.gcroot parameter
+  %alloca = alloca ptr, i32 7
+  call void @llvm.gcroot(ptr %alloca, ptr null)
   ret void
 }
 
