@@ -6958,6 +6958,12 @@ clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind);
 CINDEX_LINKAGE enum CXUnaryOperatorKind
 clang_getCursorUnaryOperatorKind(CXCursor cursor);
 
+CINDEX_LINKAGE enum CXBinaryOperatorKind
+clang_Function_getBinaryOperatorKind(CXCursor C);
+
+CINDEX_LINKAGE enum CXUnaryOperatorKind
+clang_Function_getUnaryOperatorKind(CXCursor C);
+
 /**
  * @}
  */

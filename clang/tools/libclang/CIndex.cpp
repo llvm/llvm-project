@@ -9665,6 +9665,20 @@ unsigned clang_EnumDecl_isScoped(CXCursor C) {
   return (Enum && Enum->isScoped()) ? 1 : 0;
 }
 
+enum CXBinaryOperatorKind clang_Function_getBinaryOperatorKind(CXCursor C) {
+  if (clang_isDeclaration(C.kind)) {
+    return clang_getCursorBinaryOperatorKind(C);
+  }
+  return CXBinaryOperator_Invalid;
+}
+
+enum CXUnaryOperatorKind clang_Function_getUnaryOperatorKind(CXCursor C) {
+  if (clang_isDeclaration(C.kind)) {
+    return clang_getCursorUnaryOperatorKind(C);
+  }
+  return CXUnaryOperator_Invalid;
+}
+
 //===----------------------------------------------------------------------===//
 // Attribute introspection.
 //===----------------------------------------------------------------------===//
