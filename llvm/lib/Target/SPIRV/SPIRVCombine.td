@@ -29,11 +29,12 @@ def vector_select_to_faceforward_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
 >;
 
+def degrees_matchdata : GIDefMatchData<"Register">;
 def degrees_lowering
-    : GICombineRule<(defs root:$root),
+    : GICombineRule<(defs root:$root, degrees_matchdata:$matchinfo),
                     (match (G_FMUL $dst, $lhs, $rhs):$root,
-                        [{ return Helper.matchDegrees(*${root}); }]),
-                    (apply [{ Helper.applyDegrees(*${root}); }])>;
+                        [{ return Helper.matchDegrees(*${root}, ${matchinfo}); }]),
+                    (apply [{ Helper.applyDegrees(*${root}, ${matchinfo}); }])>;
 
 def matrix_transpose_lowering
     : GICombineRule<

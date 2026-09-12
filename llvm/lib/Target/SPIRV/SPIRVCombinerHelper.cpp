@@ -239,7 +239,7 @@ void SPIRVCombinerHelper::applySPIRVFaceForward(MachineInstr &MI) const {
 ///   (vXfN (g_fmul (vXfN X) (vXfN splat(180/pi)))) ->
 ///   (vXfN (g_intrinsic degrees (vXfN X)))
 /// where `fN` denotes a supported floating-point type.
-bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
+bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI, Register &MatchInfo) const {
   Register NonConstReg;
   std::optional<FPValueAndVReg> ConstVal;
 
@@ -252,6 +252,7 @@ bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
   if (!ConstVal)
     return false;
 
+  MatchInfo = NonConstReg;
   APFloat Expected(180.0 / llvm::numbers::pi);
   bool LostInfo = false;
   Expected.convert(ConstVal->Value.getSemantics(), APFloat::rmNearestTiesToEven,
@@ -259,17 +260,11 @@ bool SPIRVCombinerHelper::matchDegrees(MachineInstr &MI) const {
   return Expected.compare(ConstVal->Value) == APFloat::cmpEqual;
 }
 
-void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI) const {
+void SPIRVCombinerHelper::applyDegrees(MachineInstr &MI, Register &MatchInfo) const {
   Register ResultReg = MI.getOperand(0).getReg();
-
-  Register Operand1 = MI.getOperand(1).getReg();
-  Register Operand2 = MI.getOperand(2).getReg();
-  bool Operand2IsConst = getFConstantSplat(Operand2, MRI) ||
-                         getFConstantVRegValWithLookThrough(Operand2, MRI);
-  Register NonConstReg = Operand2IsConst ? Operand1 : Operand2;
-
+  
   Builder.setInstrAndDebugLoc(MI);
-  Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg).addUse(NonConstReg);
+  Builder.buildIntrinsic(Intrinsic::spv_degrees, ResultReg).addUse(MatchInfo);
 
   MI.eraseFromParent();
 }
