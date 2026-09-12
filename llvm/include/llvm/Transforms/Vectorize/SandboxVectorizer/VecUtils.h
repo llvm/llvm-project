@@ -12,6 +12,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_VECUTILS_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/SandboxIR/Type.h"
@@ -413,7 +414,7 @@ public:
     /// For load/store bundles, also record non-first-lane pointer operands;
     /// the first lane's pointer is skipped because the vector load/store
     /// reuses it. Erased later by \c tryEraseDeadInstrs().
-    void collectPotentiallyDeadInstrs(ArrayRef<Value *> Bndl);
+    template <typename T> void collectPotentiallyDeadInstrs(ArrayRef<T *> Bndl);
 
     /// Erase candidates recorded by \c collectPotentiallyDeadInstrs() that
     /// now have no uses, then clear the candidate set.
