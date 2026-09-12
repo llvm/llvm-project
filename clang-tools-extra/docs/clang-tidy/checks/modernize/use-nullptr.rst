@@ -43,7 +43,7 @@ Options
 
   Semicolon-separated list of regular expressions to match pointer types for
   which implicit casts will be ignored. Default value:
-  `std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec`.
+  `std::_CmpUnspecifiedParam::;^std::__cmp_cat::__unspec;^std::__cmp_cat::__literal_zero`.
 
 .. option:: NullMacros
 
