@@ -63,28 +63,28 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
     return createStringError(Twine("'") + ABIName +
                              "' is not a recognized ABI for this target");
   }
-  if ((ABIName.starts_with("ilp32") || ABIName.starts_with("il32pc64")) &&
-      IsRV64) {
+  if (IsRV64 &&
+      (ABIName.starts_with("ilp32") || ABIName.starts_with("il32pc64"))) {
     return createStringError(
         "32-bit ABIs are not supported for 64-bit targets");
   }
-  if ((ABIName.starts_with("lp64") || ABIName.starts_with("l64pc128")) &&
-      !IsRV64) {
+  if (!IsRV64 &&
+      (ABIName.starts_with("lp64") || ABIName.starts_with("l64pc128"))) {
     return createStringError(
         "64-bit ABIs are not supported for 32-bit targets");
   }
-  if (ABIName.ends_with("f") && !FeatureBits[RISCV::FeatureStdExtF]) {
+  if (ABIName.ends_with('f') && !FeatureBits[RISCV::FeatureStdExtF]) {
     return createStringError(
         "hard-float 'f' ABI can't be used for a target that doesn't "
         "support the F instruction set extension");
   }
-  if (ABIName.ends_with("d") && !FeatureBits[RISCV::FeatureStdExtD]) {
+  if (ABIName.ends_with('d') && !FeatureBits[RISCV::FeatureStdExtD]) {
     return createStringError(
         "hard-float 'd' ABI can't be used for a target that doesn't "
         "support the D instruction set extension");
   }
-  if ((ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128")) &&
-      !FeatureBits[RISCV::FeatureStdExtY]) {
+  if (!FeatureBits[RISCV::FeatureStdExtY] &&
+      (ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128"))) {
     return createStringError(Twine('\'') + ABIName +
                              "' ABI is only supported for RVY targets");
   }

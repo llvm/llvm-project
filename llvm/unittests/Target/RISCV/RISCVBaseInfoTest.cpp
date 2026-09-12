@@ -115,6 +115,8 @@ TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {
   EXPECT_EQ(
       computeTargetABIError("riscv64", "+experimental-y,+f,+d", "il32pc64f"),
       "32-bit ABIs are not supported for 64-bit targets");
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "il32pc64"),
+            "'il32pc64' ABI is only supported for RVY targets");
   EXPECT_EQ(computeTargetABIError("riscv64", "+f,+d", "l64pc128d"),
             "'l64pc128d' ABI is only supported for RVY targets");
 }
