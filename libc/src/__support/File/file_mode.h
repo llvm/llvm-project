@@ -16,6 +16,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FILE_FILE_MODE_H
 
 #include "hdr/stdint_proxy.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -142,9 +143,9 @@ private:
   Mode file_mode_;
 };
 
-inline constexpr FileMode FileMode::APPEND_MODE("a");
-inline constexpr FileMode FileMode::READ_MODE("r");
-inline constexpr FileMode FileMode::WRITE_MODE("w");
+LIBC_INLINE_VAR constexpr FileMode FileMode::APPEND_MODE("a");
+LIBC_INLINE_VAR constexpr FileMode FileMode::READ_MODE("r");
+LIBC_INLINE_VAR constexpr FileMode FileMode::WRITE_MODE("w");
 
 } // namespace LIBC_NAMESPACE_DECL
 
