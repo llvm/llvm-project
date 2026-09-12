@@ -20,6 +20,7 @@
 #define LLVM_CODEGEN_LIVEINTERVALS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LiveInterval.h"
@@ -41,7 +42,6 @@ namespace llvm {
 
 LLVM_ABI extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
-class BitVector;
 class MachineBlockFrequencyInfo;
 class MachineDominatorTree;
 class MachineFunction;
@@ -93,6 +93,9 @@ class LiveIntervals {
   /// we can't just keep track of the first register mask in each basic
   /// block.
   SmallVector<std::pair<unsigned, unsigned>, 8> RegMaskBlocks;
+
+  /// The registers preserved by every register mask in the function.
+  BitVector RegMaskIntersection;
 
   /// Keeps a live range set for each register unit to track fixed physreg
   /// interference.
