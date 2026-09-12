@@ -67,8 +67,8 @@ define <2 x i1> @pext_zero_mask_known_zero_vector(<2 x i8> %x) nounwind {
 define i1 @pext_low_bits_not_known(i8 %x) nounwind {
 ; CHECK-LABEL: @pext_low_bits_not_known(
 ; CHECK-NEXT:    [[PEXT:%.*]] = call i8 @llvm.pext.i8(i8 [[X:%.*]], i8 -52)
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[PEXT]], 1
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i8 [[PEXT]] to i1
+; CHECK-NEXT:    [[R:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %pext = call i8 @llvm.pext.i8(i8 %x, i8 204)
@@ -80,8 +80,8 @@ define i1 @pext_low_bits_not_known(i8 %x) nounwind {
 define <2 x i1> @pext_low_bits_not_known_vector(<2 x i8> %x) nounwind {
 ; CHECK-LABEL: @pext_low_bits_not_known_vector(
 ; CHECK-NEXT:    [[PEXT:%.*]] = call <2 x i8> @llvm.pext.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -52))
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[PEXT]], splat (i8 1)
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <2 x i8> [[PEXT]] to <2 x i1>
+; CHECK-NEXT:    [[R:%.*]] = xor <2 x i1> [[TMP1]], splat (i1 true)
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %pext = call <2 x i8> @llvm.pext.v2i8(<2 x i8> %x, <2 x i8> splat (i8 -52))

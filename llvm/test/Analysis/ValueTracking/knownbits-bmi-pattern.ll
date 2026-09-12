@@ -660,8 +660,8 @@ define <2 x i32> @blsmsk_xor_no_eval_vec(<2 x i32> %x) {
 
 define i32 @blsmsk_xor_no_eval_assume(i32 %x) {
 ; CHECK-LABEL: @blsmsk_xor_no_eval_assume(
-; CHECK-NEXT:    [[LB:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[LB]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[X:%.*]] to i1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    [[X2:%.*]] = add i32 [[X]], -1
 ; CHECK-NEXT:    [[X3:%.*]] = xor i32 [[X]], [[X2]]
