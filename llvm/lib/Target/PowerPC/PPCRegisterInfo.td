@@ -571,6 +571,11 @@ def memrix16 : Operand<iPTR> { // memri, imm is 16-aligned, 12-bit, Inst{16:27}
   let MIOperandInfo = (ops dispRIX16:$imm, ptr_rc_nor0:$reg);
   let OperandType = "OPERAND_MEMORY";
 }
+def psqdisp : Operand<iPTR> {   // Paired-singles displacement (12-bit signed).
+  let PrintMethod = "printMemRegImm";
+  let MIOperandInfo = (ops dispPSQ:$imm, ptr_rc_nor0:$reg);
+  let OperandType = "OPERAND_MEMORY";
+}
 def spe8dis : Operand<iPTR> {   // SPE displacement where the imm is 8-aligned.
   let PrintMethod = "printMemRegImm";
   let MIOperandInfo = (ops dispSPE8:$imm, ptr_rc_nor0:$reg);
