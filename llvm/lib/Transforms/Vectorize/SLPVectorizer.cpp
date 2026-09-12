@@ -2399,6 +2399,10 @@ public:
                          SmallVectorImpl<Value *> &Op2,
                          OrdersType &ReorderIndices) const;
 
+  /// \returns Cast context for the given graph node.
+  TargetTransformInfo::CastContextHint
+  getCastContextHint(const TreeEntry &TE) const;
+
   ~BoUpSLP();
 
 private:
@@ -2460,10 +2464,6 @@ private:
   /// load/store node with the reverse order, the root instruction is the last
   /// one.
   Instruction *getRootEntryInstruction(const TreeEntry &Entry) const;
-
-  /// \returns Cast context for the given graph node.
-  TargetTransformInfo::CastContextHint
-  getCastContextHint(const TreeEntry &TE) const;
 
   /// \returns the scale of the given tree entry to the loop iteration.
   /// \p Scalar is the scalar value from the entry, if using the parent for the
@@ -31155,7 +31155,8 @@ public:
     if (!VectorValuesAndScales.empty()) {
       Builder.setFastMathFlags(GroupRdxFMF);
       auto [Res, ResNegated] =
-          emitReduction(Builder, *TTI, ReductionRoot->getType());
+          emitReduction(Builder, *TTI, V.getCastContextHint(V.getRootNode()),
+                        ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
       // final combine.
@@ -31612,9 +31613,11 @@ public:
              "Expected floating point types for ordered reduction");
       Builder.SetCurrentDebugLocation(
           cast<Instruction>(ReductionRoot)->getDebugLoc());
-      VectorizedTree = createSingleOp(Builder, *TTI, SuccessRoot, /*Scale=*/1,
-                                      /*IsSigned=*/false, DestTy,
-                                      /*ReducedInTree=*/false, VectorizedTree);
+      VectorizedTree =
+          createSingleOp(Builder, *TTI, V.getCastContextHint(V.getRootNode()),
+                         SuccessRoot, /*Scale=*/1,
+                         /*IsSigned=*/false, DestTy,
+                         /*ReducedInTree=*/false, VectorizedTree);
 
       // Fold trailing scalars [SuccessStart+SuccessWidth, N).
       for (Value *RdxVal :
@@ -31658,8 +31661,9 @@ private:
   /// Creates the reduction from the given \p Vec vector value with the given
   /// scale \p Scale and signedness \p IsSigned.
   Value *createSingleOp(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                        Value *Vec, unsigned Scale, bool IsSigned, Type *DestTy,
-                        bool ReducedInTree, Value *Start = nullptr) {
+                        TTI::CastContextHint Ctx, Value *Vec, unsigned Scale,
+                        bool IsSigned, Type *DestTy, bool ReducedInTree,
+                        Value *Start = nullptr) {
     Value *Rdx;
     if (ReducedInTree) {
       Rdx = Vec;
@@ -31698,7 +31702,7 @@ private:
           Rdx = createOp(Builder, RdxKind, Rdx, SubVec, "rdx.op", ReductionOps);
       }
     } else {
-      Rdx = emitReduction(Vec, Builder, &TTI, DestTy, Start);
+      Rdx = emitReduction(Vec, Builder, &TTI, Ctx, DestTy, Start);
     }
     if (Rdx->getType() != DestTy)
       Rdx = Builder.CreateIntCast(Rdx, DestTy, IsSigned);
@@ -31867,8 +31871,17 @@ private:
             auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
                 std::make_pair(RedTy, true));
             if (RType == RedTy) {
-              VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
-                                                           FMF, CostKind);
+              if (VectorTy->getElementType()->isIntegerTy(1) &&
+                  (RdxKind == RecurKind::And || RdxKind == RecurKind::Or ||
+                   (RdxKind == RecurKind::Add && !ScalarTy->isIntegerTy(1))))
+                VectorCost =
+                    getI1ReductionCost(RdxKind, *TTI, VectorTy, ScalarTy,
+                                       R.getCastContextHint(R.getRootNode()),
+                                       CostKind)
+                        .first;
+              else
+                VectorCost = TTI->getArithmeticReductionCost(
+                    RdxOpcode, VectorTy, FMF, CostKind);
             } else {
               VectorCost = TTI->getExtendedReductionCost(
                   RdxOpcode, !IsSigned, RedTy,
@@ -32011,6 +32024,7 @@ private:
   /// combine.
   std::pair<Value *, bool> emitReduction(IRBuilderBase &Builder,
                                          const TargetTransformInfo &TTI,
+                                         TTI::CastContextHint Ctx,
                                          Type *DestTy) {
     Value *ReducedSubTree = nullptr;
     bool ResNegated = false;
@@ -32038,8 +32052,8 @@ private:
     // the signs of the operands.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
                               bool ReducedInTree, bool Negated) {
-      Value *Rdx = createSingleOp(Builder, TTI, Vec, Scale, IsSigned, DestTy,
-                                  ReducedInTree);
+      Value *Rdx = createSingleOp(Builder, TTI, Ctx, Vec, Scale, IsSigned,
+                                  DestTy, ReducedInTree);
       if (!ReducedSubTree) {
         ReducedSubTree = Rdx;
         ResNegated = Negated;
@@ -32220,27 +32234,66 @@ private:
     return {ReducedSubTree, ResNegated};
   }
 
-  /// Emit a horizontal reduction of the vectorized value.
-  /// If \p Start is non-null, emit an ordered reduction intrinsic that
-  /// sequentially accumulates into \p Start (only valid for FAdd/FMulAdd).
-  Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
-                       const TargetTransformInfo *TTI, Type *DestTy,
-                       Value *Start = nullptr) {
-    assert(VectorizedValue && "Need to have a vectorized tree node");
-    assert(RdxKind != RecurKind::FMulAdd &&
-           "A call to the llvm.fmuladd intrinsic is not handled yet");
-
+  /// Emits an i1 reduction in the cheaper of the plain and the bitcast-based
+  /// form. Returns nullptr if not an i1 reduction handled here.
+  Value *emitI1Reduction(Value *VectorizedValue, IRBuilderBase &Builder,
+                         const TargetTransformInfo &TTI,
+                         TTI::CastContextHint Ctx, Type *DestTy, Value *Start) {
     auto *FTy = cast<FixedVectorType>(VectorizedValue->getType());
-    if (!Start && FTy->getScalarType() == Builder.getInt1Ty() &&
-        RdxKind == RecurKind::Add &&
-        DestTy->getScalarType() != FTy->getScalarType()) {
-      // Convert vector_reduce_add(ZExt(<n x i1>)) to
+    bool IsAdd = RdxKind == RecurKind::Add &&
+                 DestTy->getScalarType() != FTy->getScalarType();
+    bool IsBoolLogic =
+        (RdxKind == RecurKind::And || RdxKind == RecurKind::Or) &&
+        DestTy->getScalarType() == FTy->getScalarType();
+    if (Start || FTy->getScalarType() != Builder.getInt1Ty() ||
+        (!IsAdd && !IsBoolLogic))
+      return nullptr;
+    if (getI1ReductionCost(
+            RdxKind, TTI, FTy, DestTy->getScalarType(), Ctx,
+            getSLPCostKind(Builder.GetInsertBlock()->getParent()))
+            .second) {
+      // Convert vector_reduce_and/or(<n x i1>) to icmp eq/ne(bitcast <n x i1>
+      // to in) and vector_reduce_add(ZExt(<n x i1>)) to
       // ZExtOrTrunc(ctpop(bitcast <n x i1> to in)).
       Value *V = Builder.CreateBitCast(
           VectorizedValue, Builder.getIntNTy(FTy->getNumElements()));
       ++NumVectorInstructions;
-      return Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
+      switch (RdxKind) {
+      case RecurKind::And:
+        return Builder.CreateICmpEQ(V,
+                                    ConstantInt::getAllOnesValue(V->getType()));
+      case RecurKind::Or:
+        return Builder.CreateIsNotNull(V);
+      case RecurKind::Add:
+        return Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, V);
+      default:
+        llvm_unreachable("Unexpected reduction kind for the i1 bitcast form");
+      }
     }
+    if (IsAdd) {
+      // Keep the extended vector_reduce_add form.
+      VectorizedValue = Builder.CreateZExt(
+          VectorizedValue,
+          getWidenedType(DestTy->getScalarType(), FTy->getNumElements()));
+      ++NumVectorInstructions;
+    }
+    ++NumVectorInstructions;
+    return createSimpleReduction(Builder, VectorizedValue, RdxKind);
+  }
+
+  /// Emit a horizontal reduction of the vectorized value.
+  /// If \p Start is non-null, emit an ordered reduction intrinsic that
+  /// sequentially accumulates into \p Start (only valid for FAdd/FMulAdd).
+  Value *emitReduction(Value *VectorizedValue, IRBuilderBase &Builder,
+                       const TargetTransformInfo *TTI, TTI::CastContextHint Ctx,
+                       Type *DestTy, Value *Start = nullptr) {
+    assert(VectorizedValue && "Need to have a vectorized tree node");
+    assert(RdxKind != RecurKind::FMulAdd &&
+           "A call to the llvm.fmuladd intrinsic is not handled yet");
+
+    if (Value *Rdx =
+            emitI1Reduction(VectorizedValue, Builder, *TTI, Ctx, DestTy, Start))
+      return Rdx;
     ++NumVectorInstructions;
     if (Start)
       return createOrderedReduction(Builder, RdxKind, VectorizedValue, Start);
@@ -32815,6 +32868,20 @@ bool SLPVectorizerPass::tryToVectorize(
             VecTy, APInt::getAllOnes(getNumElements(VecTy)), /*Insert=*/false,
             /*Extract=*/true, CostKind) +
         TTI.getInstructionCost(Inst, CostKind);
+    // The reduction-only cost cannot price the compared-values tree of i1
+    // and/or reductions, so ties are left to the full analysis.
+    if (Ty->isIntegerTy(1) &&
+        (Kind == RecurKind::And || Kind == RecurKind::Or)) {
+      TTI::CastContextHint Ctx =
+          all_of(Ops, [](Value *Op) { return isa<LoadInst>(Op); })
+              ? TTI::CastContextHint::Normal
+              : TTI::CastContextHint::None;
+      if (getI1ReductionCost(Kind, TTI, cast<FixedVectorType>(VecTy), Ty, Ctx,
+                             CostKind)
+              .first > ScalarCost)
+        return false;
+      return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
+    }
     InstructionCost RedCost;
     switch (::getRdxKind(Inst)) {
     case RecurKind::Add:

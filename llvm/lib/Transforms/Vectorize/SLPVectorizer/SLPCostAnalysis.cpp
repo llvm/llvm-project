@@ -14,8 +14,11 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
@@ -238,6 +241,64 @@ InstructionCost getExtractWithExtendCost(const TargetTransformInfo &TTI,
                                 CostKind);
   }
   return TTI.getExtractWithExtendCost(Opcode, Dst, VecTy, Index, CostKind);
+}
+
+static InstructionCost
+getBoolLogicRdxBitcastCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                           FixedVectorType *VectorTy, TTI::CastContextHint Ctx,
+                           TTI::TargetCostKind CostKind) {
+  assert((Kind == RecurKind::And || Kind == RecurKind::Or) &&
+         VectorTy->getElementType()->isIntegerTy(1) &&
+         "Expected and/or reduction of i1");
+  auto *IntTy =
+      IntegerType::get(VectorTy->getContext(), getNumElements(VectorTy));
+  CmpInst::Predicate Pred =
+      Kind == RecurKind::And ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE;
+  // The compare is against the all-ones (and) or zero (or) constant.
+  Constant *CmpConst = Kind == RecurKind::And
+                           ? ConstantInt::getAllOnesValue(IntTy)
+                           : ConstantInt::getNullValue(IntTy);
+  return TTI.getCastInstrCost(Instruction::BitCast, IntTy, VectorTy, Ctx,
+                              CostKind) +
+         TTI.getCmpSelInstrCost(
+             Instruction::ICmp, IntTy, CmpInst::makeCmpResultType(IntTy), Pred,
+             CostKind, /*Op1Info=*/{}, TTI::getOperandInfo(CmpConst));
+}
+
+std::pair<InstructionCost, bool>
+getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
+                   FixedVectorType *VectorTy, Type *ScalarTy,
+                   TTI::CastContextHint Ctx, TTI::TargetCostKind CostKind) {
+  unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(Kind);
+  if (Kind == RecurKind::And || Kind == RecurKind::Or) {
+    InstructionCost RdxCost = TTI.getArithmeticReductionCost(
+        RdxOpcode, VectorTy, std::nullopt, CostKind);
+    InstructionCost BitcastCost =
+        getBoolLogicRdxBitcastCost(Kind, TTI, VectorTy, Ctx, CostKind);
+    return {std::min(RdxCost, BitcastCost), BitcastCost < RdxCost};
+  }
+  assert(Kind == RecurKind::Add && !ScalarTy->isIntegerTy(1) &&
+         "Expected add reduction of zexted i1 values");
+  // The extended reduction form.
+  InstructionCost ExtRdxCost =
+      TTI.getExtendedReductionCost(RdxOpcode, /*IsUnsigned=*/true, ScalarTy,
+                                   VectorTy, std::nullopt, CostKind);
+  // The ctpop form is estimated as the cheaper of the scalar bitcast+ctpop
+  // and the vector ctpop on the mask type; it is emitted as bitcast+ctpop.
+  // The zext/trunc of the ctpop result to the destination type is absorbed by
+  // the legalization of the ctpop itself.
+  auto *IntTy =
+      IntegerType::get(VectorTy->getContext(), getNumElements(VectorTy));
+  InstructionCost CtpopCost = std::min(
+      TTI.getCastInstrCost(Instruction::BitCast, IntTy, VectorTy, Ctx,
+                           CostKind) +
+          TTI.getIntrinsicInstrCost(
+              IntrinsicCostAttributes(Intrinsic::ctpop, IntTy, {IntTy}),
+              CostKind),
+      TTI.getIntrinsicInstrCost(
+          IntrinsicCostAttributes(Intrinsic::ctpop, VectorTy, {VectorTy}),
+          CostKind));
+  return {std::min(ExtRdxCost, CtpopCost), CtpopCost <= ExtRdxCost};
 }
 
 } // namespace llvm::slpvectorizer

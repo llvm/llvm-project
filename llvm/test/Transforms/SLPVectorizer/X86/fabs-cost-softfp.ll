@@ -15,9 +15,7 @@ define void @vectorize_fp128(fp128 %c, fp128 %d) #0 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x fp128> [[TMP0]], fp128 [[D:%.*]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x fp128> @llvm.fabs.v2f128(<2 x fp128> [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oeq <2 x fp128> [[TMP2]], splat (fp128 +inf)
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i1> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i1> [[TMP3]], i64 1
-; CHECK-NEXT:    [[OR_COND39:%.*]] = or i1 [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[OR_COND39:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[TMP3]])
 ; CHECK-NEXT:    br i1 [[OR_COND39]], label [[IF_THEN13:%.*]], label [[IF_END24:%.*]]
 ; CHECK:       if.then13:
 ; CHECK-NEXT:    unreachable

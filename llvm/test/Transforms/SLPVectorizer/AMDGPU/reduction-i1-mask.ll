@@ -13,44 +13,13 @@ define i32 @count_smaller(ptr addrspace(3) %tab, i32 %key) {
 ; CHECK-LABEL: define i32 @count_smaller(
 ; CHECK-SAME: ptr addrspace(3) [[TAB:%.*]], i32 [[KEY:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 1
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 2
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 3
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 4
-; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 5
-; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 6
-; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds i32, ptr addrspace(3) [[TAB]], i32 7
-; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr addrspace(3) [[TAB]], align 4
-; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr addrspace(3) [[P1]], align 4
-; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr addrspace(3) [[P2]], align 4
-; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr addrspace(3) [[P3]], align 4
-; CHECK-NEXT:    [[V4:%.*]] = load i32, ptr addrspace(3) [[P4]], align 4
-; CHECK-NEXT:    [[V5:%.*]] = load i32, ptr addrspace(3) [[P5]], align 4
-; CHECK-NEXT:    [[V6:%.*]] = load i32, ptr addrspace(3) [[P6]], align 4
-; CHECK-NEXT:    [[V7:%.*]] = load i32, ptr addrspace(3) [[P7]], align 4
-; CHECK-NEXT:    [[C0:%.*]] = icmp slt i32 [[V0]], [[KEY]]
-; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 [[V1]], [[KEY]]
-; CHECK-NEXT:    [[C2:%.*]] = icmp slt i32 [[V2]], [[KEY]]
-; CHECK-NEXT:    [[C3:%.*]] = icmp slt i32 [[V3]], [[KEY]]
-; CHECK-NEXT:    [[C4:%.*]] = icmp slt i32 [[V4]], [[KEY]]
-; CHECK-NEXT:    [[C5:%.*]] = icmp slt i32 [[V5]], [[KEY]]
-; CHECK-NEXT:    [[C6:%.*]] = icmp slt i32 [[V6]], [[KEY]]
-; CHECK-NEXT:    [[C7:%.*]] = icmp slt i32 [[V7]], [[KEY]]
-; CHECK-NEXT:    [[Z0:%.*]] = zext i1 [[C0]] to i32
-; CHECK-NEXT:    [[Z1:%.*]] = zext i1 [[C1]] to i32
-; CHECK-NEXT:    [[Z2:%.*]] = zext i1 [[C2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = zext i1 [[C3]] to i32
-; CHECK-NEXT:    [[Z4:%.*]] = zext i1 [[C4]] to i32
-; CHECK-NEXT:    [[Z5:%.*]] = zext i1 [[C5]] to i32
-; CHECK-NEXT:    [[Z6:%.*]] = zext i1 [[C6]] to i32
-; CHECK-NEXT:    [[Z7:%.*]] = zext i1 [[C7]] to i32
-; CHECK-NEXT:    [[S1:%.*]] = add i32 [[Z0]], [[Z1]]
-; CHECK-NEXT:    [[S2:%.*]] = add i32 [[S1]], [[Z2]]
-; CHECK-NEXT:    [[S3:%.*]] = add i32 [[S2]], [[Z3]]
-; CHECK-NEXT:    [[S4:%.*]] = add i32 [[S3]], [[Z4]]
-; CHECK-NEXT:    [[S5:%.*]] = add i32 [[S4]], [[Z5]]
-; CHECK-NEXT:    [[S6:%.*]] = add i32 [[S5]], [[Z6]]
-; CHECK-NEXT:    [[S7:%.*]] = add i32 [[S6]], [[Z7]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr addrspace(3) [[TAB]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i32> poison, i32 [[KEY]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt <8 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i1> [[TMP3]] to i8
+; CHECK-NEXT:    [[TMP5:%.*]] = call i8 @llvm.ctpop.i8(i8 [[TMP4]])
+; CHECK-NEXT:    [[S7:%.*]] = zext i8 [[TMP5]] to i32
 ; CHECK-NEXT:    ret i32 [[S7]]
 ;
 ; FORCED-LABEL: define i32 @count_smaller(

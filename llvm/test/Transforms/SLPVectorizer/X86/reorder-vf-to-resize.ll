@@ -11,7 +11,8 @@ define void @main(ptr %0) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <4 x double> @llvm.fabs.v4f64(<4 x double> [[TMP6]])
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp oeq <4 x double> [[TMP7]], zeroinitializer
-; CHECK-NEXT:    [[TMP9:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP8]])
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <4 x i1> [[TMP8]] to i4
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp ne i4 [[TMP12]], 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], double 0.000000e+00, double 0.000000e+00
 ; CHECK-NEXT:    store double [[TMP10]], ptr null, align 8
 ; CHECK-NEXT:    ret void
