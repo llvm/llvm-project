@@ -216,12 +216,8 @@ LIBC_INLINE bool is_integer(double x) {
 
 LIBC_INLINE double set_overflow(bool is_neg) {
   fputil::set_errno_if_required(ERANGE);
-#if defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
-  volatile double x = is_neg ? -0x1.0p1023 : 0x1.0p1023;
-  return x * 2.0;
-#else
+  fputil::raise_overflow_except_if_required<double>();
   using FPBits = fputil::FPBits<double>;
-  fputil::raise_except_if_required(FE_OVERFLOW | FE_INEXACT);
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   int rounding = fputil::quick_get_round();
   if (rounding == FE_TOWARDZERO)
@@ -233,16 +229,11 @@ LIBC_INLINE double set_overflow(bool is_neg) {
     return is_neg ? -FPBits::max_normal().get_val() : FPBits::inf().get_val();
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   return is_neg ? -FPBits::inf().get_val() : FPBits::inf().get_val();
-#endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 }
 
 LIBC_INLINE double set_underflow(bool is_neg) {
   fputil::set_errno_if_required(ERANGE);
-#if defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
-  volatile double x = is_neg ? -0x1.0p-1022 : 0x1.0p-1022;
-  return x * 0x1.0p-100;
-#else
-  fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
+  fputil::raise_underflow_except_if_required<double>();
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   using FPBits = fputil::FPBits<double>;
   int rounding = fputil::quick_get_round();
@@ -252,7 +243,6 @@ LIBC_INLINE double set_underflow(bool is_neg) {
     return -FPBits::min_subnormal().get_val();
 #endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   return is_neg ? -0.0 : 0.0;
-#endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
 }
 
 // Rounding tests for 2^hi * (mid + lo) when the output might be denormal.  We

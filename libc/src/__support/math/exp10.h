@@ -181,6 +181,8 @@ LIBC_INLINE DoubleDouble exp10_double_double(double x, double kd,
 
 // When output is denormal.
 LIBC_INLINE double exp10_denorm(double x) {
+  using FPBits = fputil::FPBits<double>;
+
   // Range reduction.
   double tmp = fputil::multiply_add(x, LOG2_10, 0x1.8000'0000'4p21);
   int k = static_cast<int>(cpp::bit_cast<uint64_t>(tmp) >> 19);
@@ -212,15 +214,27 @@ LIBC_INLINE double exp10_denorm(double x) {
       .value();
 #else
   if (auto r = ziv_test_denorm(hi, exp_mid.hi, lo, EXP10_ERR_D);
-      LIBC_LIKELY(r.has_value()))
-    return r.value();
+      LIBC_LIKELY(r.has_value())) {
+    double res = r.value();
+    if (LIBC_UNLIKELY(FPBits(res).is_normal()))
+      return res;
+    fputil::set_errno_if_required(ERANGE);
+    fputil::raise_underflow_except_if_required<double>();
+    return res;
+  }
 
   // Use double-double
   DoubleDouble r_dd = exp10_double_double(x, kd, exp_mid);
 
   if (auto r = ziv_test_denorm(hi, r_dd.hi, r_dd.lo, EXP10_ERR_DD);
-      LIBC_LIKELY(r.has_value()))
-    return r.value();
+      LIBC_LIKELY(r.has_value())) {
+    double res = r.value();
+    if (LIBC_UNLIKELY(FPBits(res).is_normal()))
+      return res;
+    fputil::set_errno_if_required(ERANGE);
+    fputil::raise_underflow_except_if_required<double>();
+    return res;
+  }
 
   // Use 128-bit precision
   DFloat128 r_f128 = exp10_f128(x, kd, idx1, idx2);
@@ -257,14 +271,14 @@ LIBC_INLINE double exp10_set_exceptional(double x) {
 
       // exp(nan) = nan
       if (xbits.is_nan())
-        return x;
+        return x + FPBits::inf().get_val();
 
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_underflow_except_if_required<double>();
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       if (fputil::quick_get_round() == FE_UPWARD)
         return FPBits::min_subnormal().get_val();
 #endif
-      fputil::set_errno_if_required(ERANGE);
-      fputil::raise_except_if_required(FE_UNDERFLOW);
       return 0.0;
     }
 
@@ -274,14 +288,14 @@ LIBC_INLINE double exp10_set_exceptional(double x) {
   // x >= log10(2^1024) or +inf/nan
   // x is finite
   if (x_u < 0x7ff0'0000'0000'0000ULL) {
+    fputil::set_errno_if_required(ERANGE);
+    fputil::raise_overflow_except_if_required<double>();
 #ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     int rounding = fputil::quick_get_round();
     if (rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO)
       return FPBits::max_normal().get_val();
 #endif
-
-    fputil::set_errno_if_required(ERANGE);
-    fputil::raise_except_if_required(FE_OVERFLOW);
+    return FPBits::inf().get_val();
   }
   // x is +inf or nan
   return x + FPBits::inf().get_val();

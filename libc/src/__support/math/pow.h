@@ -441,7 +441,45 @@ LIBC_INLINE double pow(double x, double y) {
   if (LIBC_UNLIKELY(is_denorm)) {
     if (auto r_denorm = ziv_test_denorm(hi, r.hi, r.lo, err_r, is_neg);
         LIBC_LIKELY(r_denorm.has_value())) {
-      return r_denorm.value();
+      double res = r_denorm.value();
+
+      // Since is_denorm is triggered when y * log2(x) <= -1021 * 2^6, the
+      // rounded result can still be a normal number (>= 2^-1022). In that
+      // case, no underflow has occurred, so return directly.
+      if (LIBC_UNLIKELY(FPBits(res).is_normal()))
+        return res;
+
+      // When the rounded result is denormal or zero, underflow and ERANGE
+      // should only be set if the result is inexact. We check for exact
+      // results:
+      // 1. If x = 2^e_x (x_mant == 0), then x^y = 2^(e_x * y) is an exact
+      //    power of 2 iff e_x * y is an integer.
+      if (LIBC_UNLIKELY(x_mant == 0)) {
+        if (pow_internal::is_integer(e_x * y))
+          return res;
+      } else if (LIBC_UNLIKELY(y > 0.0 && y <= 35.0)) {
+        // 2. If x is not a power of 2, exact results in double precision can
+        //    only occur for 0 < y <= 35 (Lauter and Lefevre). If it falls on
+        //    an exact boundary, convert via DyadicFloat to ensure that
+        //    underflow and inexact exceptions are not signaled.
+        uint64_t exact_m = 0;
+        int exact_exp = 0;
+        if (pow_internal::is_exact_rounding_boundary(x, y, exact_m,
+                                                     exact_exp)) {
+          int l = 64 - cpp::countl_zero(exact_m);
+          pow_internal::DFloat128 exact_f128(
+              is_neg ? Sign::NEG : Sign::POS, exact_exp + l - 128,
+              pow_internal::MantissaType(exact_m) << (128 - l));
+          exact_f128.normalize();
+          return static_cast<double>(exact_f128);
+        }
+      }
+
+      // Otherwise, the denormal or zero result is inexact, so we signal the
+      // underflow exception and set ERANGE if required.
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_underflow_except_if_required<double>();
+      return res;
     }
     return pow_accurate(x, y, is_neg, static_cast<int>(e_x), idx_x, dx);
   }

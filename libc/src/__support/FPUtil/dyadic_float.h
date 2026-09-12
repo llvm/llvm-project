@@ -183,7 +183,7 @@ template <size_t Bits> struct DyadicFloat {
     return DyadicFloat(result_sign, result_exponent, result_mantissa);
   }
 
-  template <typename T, bool ShouldSignalExceptions>
+  template <typename T, bool ShouldSignalExceptions = true>
   LIBC_INLINE LIBC_CONSTEXPR_DEFAULT cpp::enable_if_t<
       cpp::is_floating_point_v<T> && (FPBits<T>::FRACTION_LEN < Bits), T>
   generic_as() const {
@@ -304,7 +304,7 @@ template <size_t Bits> struct DyadicFloat {
     return FPBits(result).get_val();
   }
 
-  template <typename T, bool ShouldSignalExceptions,
+  template <typename T, bool ShouldSignalExceptions = true,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
@@ -417,6 +417,13 @@ template <size_t Bits> struct DyadicFloat {
         // for "tininess" before or after rounding for base-2 formats, as long
         // as the same choice is made for all operations. Our choice to check
         // after rounding might not be the same as the hardware's.
+        // In particular, when an unrounded denormal value rounds up to
+        // min_normal ((r_bits & EXP_MASK) != 0), tininess detected after
+        // rounding on the destination format treats the result as normal,
+        // so FE_UNDERFLOW is not signaled. Detecting tininess before
+        // rounding or using an unbounded exponent range requires extra
+        // branching and bit inspection that are explicitly omitted to avoid
+        // runtime cost and complexity.
         if (ShouldSignalExceptions && round_and_sticky) {
           set_errno_if_required(ERANGE);
           raise_except_if_required(FE_UNDERFLOW);
@@ -431,7 +438,7 @@ template <size_t Bits> struct DyadicFloat {
 
   // Assume that it is already normalized.
   // Output is rounded correctly with respect to the current rounding mode.
-  template <typename T, bool ShouldSignalExceptions,
+  template <typename T, bool ShouldSignalExceptions = true,
             typename = cpp::enable_if_t<cpp::is_floating_point_v<T> &&
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
@@ -455,7 +462,7 @@ template <size_t Bits> struct DyadicFloat {
                                             (FPBits<T>::FRACTION_LEN < Bits),
                                         void>>
   LIBC_INLINE explicit constexpr operator T() const {
-    return as<T, /*ShouldSignalExceptions=*/false>();
+    return as<T, /*ShouldSignalExceptions=*/true>();
   }
 
   LIBC_INLINE constexpr MantissaType as_mantissa_type() const {
