@@ -147,7 +147,10 @@ GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
                  .getFnAttribute("amdgpu-use-amdgpu-trackers")
                  .getValueAsBool()) {
     // Let individual functions opt in to the AMDGPU RP trackers without
-    // having to flip the flag for the whole module.
+    // having to flip the flag for the whole module. This attribute is set
+    // per-function and is not propagated across calls. If a function calls
+    // another function that was not inlined into it, the callee will only use
+    // the AMDGPU trackers if the attribute is also set on the callee itself.
     GCNTrackersOverride = true;
   }
 }
