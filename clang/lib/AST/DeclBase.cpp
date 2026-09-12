@@ -547,10 +547,6 @@ TranslationUnitDecl *Decl::getTranslationUnitDecl() {
   return cast<TranslationUnitDecl>(DC);
 }
 
-ASTContext &Decl::getASTContext() const {
-  return getTranslationUnitDecl()->getASTContext();
-}
-
 /// Helper to get the language options from the ASTContext.
 /// Defined out of line to avoid depending on ASTContext.h.
 const LangOptions &Decl::getLangOpts() const {
