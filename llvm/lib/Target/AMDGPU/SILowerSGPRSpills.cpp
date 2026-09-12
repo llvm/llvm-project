@@ -48,6 +48,12 @@ static LaneVGPRInsertPt insertPt(MachineBasicBlock *MBB,
   return {MBB, It};
 }
 
+static bool hasVolatileOrAtomicMemOperand(const MachineInstr &MI) {
+  return llvm::any_of(MI.memoperands(), [](const MachineMemOperand *MMO) {
+    return MMO->isVolatile() || MMO->isAtomic();
+  });
+}
+
 static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
     "amdgpu-num-vgprs-for-wwm-alloc",
     cl::desc("Max num VGPRs for whole-wave register allocation."),
@@ -77,6 +83,8 @@ public:
   void calculateSaveRestoreBlocks(MachineFunction &MF);
   bool spillCalleeSavedRegs(MachineFunction &MF,
                             SmallVectorImpl<int> &CalleeSavedFIs);
+  bool eliminateRedundantRestores(MachineFunction &MF,
+                                  ArrayRef<int> CalleeSavedFIs);
   void updateLaneVGPRDomInstr(
       int FI, MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertPt,
       DenseMap<Register, LaneVGPRInsertPt> &LaneVGPRDomInstr);
@@ -120,6 +128,59 @@ INITIALIZE_PASS_END(SILowerSGPRSpillsLegacy, DEBUG_TYPE,
                     "SI lower SGPR spill instructions", false, false)
 
 char &llvm::SILowerSGPRSpillsLegacyID = SILowerSGPRSpillsLegacy::ID;
+
+/// Remove a restore which immediately reads back the value just saved from the
+/// same SGPR. Keep the save, since a later restore may still need it.
+bool SILowerSGPRSpills::eliminateRedundantRestores(
+    MachineFunction &MF, ArrayRef<int> CalleeSavedFIs) {
+  bool Changed = false;
+
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &Restore : llvm::make_early_inc_range(MBB)) {
+      if (!TII->isSGPRSpill(Restore) || !Restore.mayLoad() ||
+          Restore.isBundled() || Restore.getFlag(MachineInstr::FrameSetup) ||
+          Restore.getFlag(MachineInstr::FrameDestroy))
+        continue;
+
+      auto RestoreIt = Restore.getIterator();
+      if (RestoreIt == MBB.begin())
+        continue;
+      MachineInstr &Save = *prev_nodbg(RestoreIt, MBB.instr_begin(),
+                                       /*SkipPseudoOp=*/false);
+      if (!TII->isSGPRSpill(Save) || !Save.mayStore() || Save.isBundled() ||
+          Save.getFlag(MachineInstr::FrameSetup) ||
+          Save.getFlag(MachineInstr::FrameDestroy))
+        continue;
+
+      int RestoreFI, SaveFI;
+      TypeSize RestoreSize = TypeSize::getZero();
+      TypeSize SaveSize = TypeSize::getZero();
+      Register RestoreReg =
+          TII->isLoadFromStackSlot(Restore, RestoreFI, RestoreSize);
+      Register SaveReg = TII->isStoreToStackSlot(Save, SaveFI, SaveSize);
+      const MachineOperand *SaveData =
+          TII->getNamedOperand(Save, AMDGPU::OpName::data);
+      if (!RestoreReg.isPhysical() || RestoreReg != SaveReg || !RestoreSize ||
+          RestoreSize != SaveSize || RestoreFI != SaveFI ||
+          llvm::is_contained(CalleeSavedFIs, SaveFI) ||
+          MF.getFrameInfo().getStackID(SaveFI) != TargetStackID::SGPRSpill ||
+          !SaveData || SaveData->isUndef() ||
+          hasVolatileOrAtomicMemOperand(Save) ||
+          hasVolatileOrAtomicMemOperand(Restore))
+        continue;
+
+      Save.clearRegisterKills(SaveReg, TRI);
+      if (Indexes)
+        Indexes->removeMachineInstrFromMaps(Restore);
+      Restore.eraseFromParent();
+      if (LIS)
+        LIS->removeAllRegUnitsForPhysReg(SaveReg);
+      Changed = true;
+    }
+  }
+
+  return Changed;
+}
 
 /// Insert spill code for the callee-saved registers used in the function.
 static void insertCSRSaves(const GCNSubtarget &ST, MachineBasicBlock &SaveBlock,
@@ -468,13 +529,13 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     return false;
   }
 
-  bool MadeChange = false;
+  bool MadeChange = eliminateRedundantRestores(MF, CalleeSavedFIs);
   bool SpilledToVirtVGPRLanes = false;
 
   // TODO: CSR VGPRs will never be spilled to AGPRs. These can probably be
   // handled as SpilledToReg in regular PrologEpilogInserter.
-  const bool HasSGPRSpillToVGPR = TRI->spillSGPRToVGPR() &&
-                                  (HasCSRs || FuncInfo->hasSpilledSGPRs());
+  const bool HasSGPRSpillToVGPR =
+      TRI->spillSGPRToVGPR() && (HasCSRs || FuncInfo->hasSpilledSGPRs());
   if (HasSGPRSpillToVGPR) {
     // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
     // are spilled to VGPRs, in which case we can eliminate the stack usage.
