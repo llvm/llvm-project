@@ -531,11 +531,25 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   computeKnownBits(Op0, DemandedElts, Known2, Q, Depth + 1);
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
-  if (!Add && NSW && !KnownOut.isNonNegative() &&
-      (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
-           .value_or(false) ||
-       match(Op1, m_c_SMin(m_Specific(Op0), m_Value()))))
-    KnownOut.makeNonNegative();
+  if (NSW && !KnownOut.isNonNegative()) {
+    if (!Add) {
+      // X - Y is nonnegative if Y <= X (signed).
+      if (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+              .value_or(false) ||
+          match(Op1, m_c_SMin(m_Specific(Op0), m_Value())))
+        KnownOut.makeNonNegative();
+      // X - 1 is nonnegative if X is known positive (X > 0 implies X >= 1).
+      else if (match(Op1, m_One()) && Known2.isNonNegative() &&
+               (Known2.isNonZero() || isKnownNonZero(Op0, Q, Depth + 1)))
+        KnownOut.makeNonNegative();
+    } else {
+      // X + (-1) is nonnegative if X is known positive (X > 0 implies X >= 1).
+      // This handles "add nsw X, -1" which is semantically "X - 1".
+      if (match(Op1, m_AllOnes()) && Known2.isNonNegative() &&
+          (Known2.isNonZero() || isKnownNonZero(Op0, Q, Depth + 1)))
+        KnownOut.makeNonNegative();
+    }
+  }
 
   if (Add)
     // Try to match lerp pattern and combine results

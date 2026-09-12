@@ -903,3 +903,25 @@ end:                                        ; preds = %unreachable, %entry
   %3 = extractelement <2 x i16> %2, i64 0
   ret i16 %3
 }
+
+; Issue #221943: X - 1 should be nonnegative when X > 0.
+; The assume that %magx > 0 should allow InstCombine to recognize that
+; %mag = %magx - 1 is nonnegative, enabling the copysign idiom fold.
+define float @copysign_idiom_sub1_positive(float %x, i32 %magx) {
+; CHECK-LABEL: @copysign_idiom_sub1_positive(
+; CHECK-NEXT:    [[MAG:%.*]] = add nsw i32 [[MAGX:%.*]], -1
+; CHECK-NEXT:    [[POSITIVE:%.*]] = icmp sgt i32 [[MAGX]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[POSITIVE]])
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
+; CHECK-NEXT:    ret float [[Y]]
+;
+  %mag = add nsw i32 %magx, -1
+  %positive = icmp sgt i32 %magx, 0
+  call void @llvm.assume(i1 %positive)
+  %bits = bitcast float %x to i32
+  %sign = and i32 %bits, -2147483648
+  %res = or i32 %mag, %sign
+  %y = bitcast i32 %res to float
+  ret float %y
+}
