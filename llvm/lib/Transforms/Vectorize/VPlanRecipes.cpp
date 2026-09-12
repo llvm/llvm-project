@@ -67,7 +67,8 @@ bool VPRecipeBase::mayWriteToMemory() const {
   case VPInstructionSC: {
     auto *VPI = cast<VPInstruction>(this);
     // Loads read from memory but don't write to memory.
-    if (VPI->getOpcode() == Instruction::Load)
+    if (VPI->getOpcode() == Instruction::Load ||
+        VPI->getOpcode() == VPInstruction::VFMultipleLoad)
       return false;
     return VPI->opcodeMayReadOrWriteFromMemory();
   }
@@ -126,8 +127,13 @@ bool VPRecipeBase::mayReadFromMemory() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
-  case VPInstructionSC:
-    return cast<VPInstruction>(this)->opcodeMayReadOrWriteFromMemory();
+  case VPInstructionSC: {
+    auto *VPI = cast<VPInstruction>(this);
+    // Stores write to memory but don't read from memory.
+    if (VPI->getOpcode() == VPInstruction::VFMultipleStore)
+      return false;
+    return VPI->opcodeMayReadOrWriteFromMemory();
+  }
   case VPWidenLoadEVLSC:
   case VPWidenLoadSC:
     return true;
@@ -499,6 +505,7 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     for (unsigned Idx = 1; Idx != Operands.size(); ++Idx)
       AssertOperandType(Idx, Op0Ty);
     return Type::getVoidTy(Ctx);
+  case VPInstruction::VFMultipleStore:
   case Instruction::Store:
     return Type::getVoidTy(Ctx);
   case Instruction::ICmp:
@@ -572,6 +579,9 @@ Type *llvm::computeScalarTypeForInstruction(unsigned Opcode,
     return StructTy->getTypeAtIndex(
         cast<VPConstantInt>(Operands[1])->getZExtValue());
   }
+  case VPInstruction::ExtractVectorForPart:
+    return Op0Ty;
+  case VPInstruction::VFMultipleLoad:
   case VPInstruction::FirstActiveLane:
   case VPInstruction::LastActiveLane:
   case VPInstruction::NumActiveLanes:
@@ -680,6 +690,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case Instruction::Select:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::ReductionStartVector:
+  case VPInstruction::VFMultipleLoad:
     return 3;
   case Instruction::Call:
     return getCalledFnOperandIndex(operands()) + 1;
@@ -699,6 +710,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   case VPInstruction::LastActiveLane:
   case VPInstruction::ExtractLane:
   case VPInstruction::ExtractLastActive:
+  case VPInstruction::VFMultipleStore:
     // Cannot determine the number of operands from the opcode.
     return -1u;
   }
@@ -1146,6 +1158,31 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return State.Builder.CreateIntrinsic(getScalarType(),
                                          vputils::getIntrinsicID(this), Args,
                                          /*FMFSource=*/nullptr, getName());
+  }
+  case VPInstruction::VFMultipleLoad: {
+    unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    auto *WideDataTy = VectorType::get(getScalarType(), State.VF * VFMultiple);
+
+    Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
+    Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
+    return Builder.CreateAlignedLoad(WideDataTy, Addr, Alignment,
+                                     "vf.multiple.load");
+  }
+  case VPInstruction::VFMultipleStore: {
+    unsigned VFMultiple = cast<VPConstantInt>(getOperand(0))->getZExtValue();
+    Type *ScalarStoreTy = getOperand(3)->getScalarType();
+    auto *WideDataTy = VectorType::get(ScalarStoreTy, State.VF * VFMultiple);
+
+    Value *WideData = PoisonValue::get(WideDataTy);
+    for (unsigned I = 0; I < VFMultiple; ++I) {
+      Value *Part = State.get(getOperand(I + 3));
+      WideData = Builder.CreateInsertVector(WideDataTy, WideData, Part,
+                                            I * State.VF.getKnownMinValue());
+    }
+
+    Value *Addr = State.get(getOperand(1), /*IsScalar=*/true);
+    Align Alignment = Align(cast<VPConstantInt>(getOperand(2))->getZExtValue());
+    return Builder.CreateAlignedStore(WideData, Addr, Alignment);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -1624,6 +1661,10 @@ void VPInstruction::addOperand(VPValue *Op) {
            "matching operand 1's type and i1, respectively");
     break;
   }
+  case VPInstruction::VFMultipleStore:
+    assert(Ty == getOperand(3)->getScalarType() &&
+           "appended operand must match operand 3's scalar type");
+    break;
   default:
     llvm_unreachable("opcode does not support growing the operand list "
                      "outside of construction");
@@ -1773,6 +1814,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::WidePtrAdd:
     // WidePtrAdd supports scalar and vector base addresses.
     return false;
+  case VPInstruction::VFMultipleLoad:
+  case VPInstruction::VFMultipleStore:
+    return Op == getOperand(0) || Op == getOperand(1) || Op == getOperand(2);
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
@@ -1825,6 +1869,12 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::WideActiveLaneMask:
     O << "wide active lane mask";
+    break;
+  case VPInstruction::VFMultipleLoad:
+    O << "vf-multiple load";
+    break;
+  case VPInstruction::VFMultipleStore:
+    O << "vf-multiple store";
     break;
   case VPInstruction::IncomingAliasMask:
     O << "incoming-alias-mask";

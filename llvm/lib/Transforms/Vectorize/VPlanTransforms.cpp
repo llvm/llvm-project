@@ -3989,6 +3989,78 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
+void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
+                                              unsigned UF,
+                                              const TargetTransformInfo &TTI) {
+  if (UF == 1)
+    return;
+
+  Type *IVTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      uint64_t Stride;
+      VPValue *StoredValue = nullptr;
+      auto m_ConstantStrideVecPtr =
+          m_VecPtr(m_VPValue(), m_ConstantInt(Stride));
+      if ((!match(&R, m_WidenLoad(m_ConstantStrideVecPtr)) &&
+           !match(&R, m_WidenStore(m_ConstantStrideVecPtr,
+                                   m_VPValue(StoredValue)))) ||
+          Stride != 1)
+        continue;
+
+      auto *MemOp = cast<VPWidenMemoryRecipe>(&R);
+      assert(MemOp->isConsecutive() && "Expected consecutive load/store");
+
+      // TODO: Support masked loads/stores. This requires widening the header
+      // mask to the same factor as the memory operation.
+      assert(!MemOp->isMasked() && "Masked accesses are not supported yet");
+
+      Type *AccessType = StoredValue ? StoredValue->getScalarType()
+                                     : R.getVPSingleValue()->getScalarType();
+      unsigned Opcode = isa<VPWidenLoadRecipe>(MemOp->getAsRecipe())
+                            ? Instruction::Load
+                            : Instruction::Store;
+
+      std::optional<Instruction::CastOps> CastHint;
+      VPUser *MaybeCast = Opcode == Instruction::Store
+                              ? StoredValue->getDefiningRecipe()
+                              : R.getVPSingleValue()->getSingleUser();
+      if (auto *Cast = dyn_cast_if_present<VPWidenCastRecipe>(MaybeCast))
+        CastHint = Cast->getOpcode();
+
+      unsigned VFMultiple = TTI.getPreferredVFMultipleForMemoryOp(
+          Opcode, AccessType, VF, UF, /*IsMasked=*/false, CastHint);
+      assert((VFMultiple != 0 && UF % VFMultiple == 0) &&
+             "VFMultiple must divide UF");
+
+      if (VFMultiple == 1)
+        continue;
+
+      VPValue *Ptr = MemOp->getAddr();
+      VPValue *VFMultipleVPV = Plan.getConstantInt(IVTy, VFMultiple);
+      VPValue *Align = Plan.getConstantInt(IVTy, MemOp->getAlign().value());
+
+      VPBuilder Builder(VPBB, R.getIterator());
+      if (Opcode == Instruction::Load) {
+        VPValue *OldLoad = R.getVPSingleValue();
+        VPValue *Load = Builder.createNaryOp(
+            VPInstruction::VFMultipleLoad, {VFMultipleVPV, Ptr, Align}, nullptr,
+            {}, {}, DebugLoc::getUnknown(), "", OldLoad->getScalarType());
+        OldLoad->replaceAllUsesWith(Load);
+      } else {
+        assert(Opcode == Instruction::Store);
+        Builder.createNaryOp(VPInstruction::VFMultipleStore,
+                             {VFMultipleVPV, Ptr, Align, StoredValue},
+                             R.getDebugLoc());
+      }
+
+      R.eraseFromParent();
+    }
+  }
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding

@@ -74,6 +74,9 @@ class UnrollState {
     return Plan.getConstantInt(CanIVIntTy, Part);
   }
 
+  /// Unroll a VFMultipleLoad or VFMultipleStore VPInstruction.
+  void unrollMemOpWithVFMultiple(VPInstruction *VPI);
+
 public:
   UnrollState(VPlan &Plan, unsigned UF) : Plan(Plan), UF(UF) {}
 
@@ -290,17 +293,86 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
   }
 }
 
+void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
+  assert(VPI->getOpcode() == VPInstruction::VFMultipleLoad ||
+         VPI->getOpcode() == VPInstruction::VFMultipleStore);
+
+  unsigned VFMultiple = cast<VPConstantInt>(VPI->getOperand(0))->getZExtValue();
+  assert(VFMultiple > 1 && UF % VFMultiple == 0 &&
+         "expected VFMultiple to divide UF");
+
+  SmallVector<VPInstruction *, 4> Groups(UF / VFMultiple, nullptr);
+  Groups[0] = VPI;
+
+  // A memory op with a VFMultiple is widened to VF * VFMultiple elements, so
+  // after unrolling by UF we materialize UF / VFMultiple such ops, each
+  // covering VFMultiple unroll parts.
+  VPBuilder Builder = VPBuilder::getToInsertAfter(VPI);
+  for (unsigned Group = 1; Group < Groups.size(); ++Group) {
+    auto *Copy = Builder.insert(VPI->clone());
+    remapOperands(Copy, Group * VFMultiple);
+    Groups[Group] = Copy;
+  }
+
+  if (VPI->getOpcode() == VPInstruction::VFMultipleStore) {
+    VPValue *StoredValue = VPI->getOperand(3);
+    for (unsigned Group = 0; Group < Groups.size(); ++Group) {
+      VPInstruction *Store = Groups[Group];
+      // Add the value to store for each unroll part in this group.
+      for (unsigned Part = 0; Part < VFMultiple; ++Part) {
+        VPValue *UnrollPart =
+            getValueForPart(StoredValue, Group * VFMultiple + Part);
+        if (Part == 0)
+          Store->setOperand(3, UnrollPart);
+        else
+          Store->addOperand(UnrollPart);
+      }
+    }
+    return;
+  }
+
+  assert(VPI->getOpcode() == VPInstruction::VFMultipleLoad &&
+         "Expected a VFMultipleLoad instruction");
+  // We need to extract each unroll part as a subvector.
+  auto *ExtractPart0 =
+      Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                           {Groups[0]->getVPSingleValue(), getConstantInt(0)});
+  // First VPI with an extract of the first unroll part (ExtractPart0).
+  VPI->getVPSingleValue()->replaceUsesWithIf(
+      ExtractPart0, [&](VPUser &U, unsigned) { return &U != ExtractPart0; });
+  ToSkip.insert(ExtractPart0);
+
+  // Create extracts for the remaining unroll parts and remap later uses of
+  // ExtractPart0 to the correct unrolled part.
+  for (unsigned Part = 1; Part != UF; ++Part) {
+    VPInstruction *Group = Groups[Part / VFMultiple];
+    unsigned IndexInGroup = Part % VFMultiple;
+    auto *Extract = Builder.createNaryOp(
+        VPInstruction::ExtractVectorForPart,
+        {Group->getVPSingleValue(), getConstantInt(IndexInGroup)});
+    addRecipeForPart(ExtractPart0, Extract, Part);
+    ToSkip.insert(Extract);
+  }
+}
+
 /// Handle non-header-phi recipes.
 void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
   if (match(&R, m_CombineOr(m_BranchOnCond(), m_BranchOnCount())))
     return;
 
   if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
+    if (VPI->getOpcode() == VPInstruction::VFMultipleLoad ||
+        VPI->getOpcode() == VPInstruction::VFMultipleStore) {
+      unrollMemOpWithVFMultiple(VPI);
+      return;
+    }
+
     if (vputils::onlyFirstPartUsed(VPI)) {
       addUniformForAllParts(VPI);
       return;
     }
   }
+
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
     if (isa<StoreInst>(RepR->getUnderlyingValue()) &&
         RepR->getOperand(1)->isDefinedOutsideLoopRegions()) {
