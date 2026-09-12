@@ -19,6 +19,7 @@
 #include "src/stdio/fclose.h"
 #include "src/stdlib/mkdtemp.h"
 #include "src/string/strdup.h"
+#include "src/string/strncmp.h"
 #include "src/unistd/rmdir.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
@@ -30,7 +31,7 @@ using LlvmLibcScandirTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 constexpr char TEMPLATE[] = "tmp_XXXXXX";
 
 // A dir alwasys has '.' and '..' in it.
-constexpr int MINIMUM_ENTRIES = 2;
+constexpr int ENTRIES_MIN = 2;
 
 bool create_file(char *dir, const char *name) {
   char *path = nullptr;
@@ -38,6 +39,7 @@ bool create_file(char *dir, const char *name) {
   if (LIBC_NAMESPACE::asprintf(&path, "%s%c%s", dir, LIBC_NAMESPACE::path::SEPARATOR, name) == -1) {
     return false;
   }
+  free(path);
 
   FILE *file = LIBC_NAMESPACE::fopen(path, "w");
   if (file == nullptr) {
@@ -52,26 +54,31 @@ bool create_file(char *dir, const char *name) {
 }
 
 
-TEST_F(LlvmLibcScandirTest, TestBasic) {
+TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
 
   char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
   ASSERT_NE(tmpl, nullptr);
   ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
 
-  const char *filename_a = libc_make_test_file_path("a");
-  const char *filename_b = libc_make_test_file_path("file_b");
-
-  ASSERT_TRUE(create_file(tmpl, filename_a));
-  ASSERT_TRUE(create_file(tmpl, filename_b));
-
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, NULL, NULL), Succeeds(MINIMUM_ENTRIES + 2));
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, NULL, NULL), Succeeds(ENTRIES_MIN));
+  // ASSERT_STREQ(namelist[1]->d_name, ".");
+  // Order of namelist is not guaranteed so we can't easily use ASSERT_STREQ
+  ASSERT_TRUE(
+      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".",  1) == 0 &&
+       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) ||
+      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
+       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".",  1) == 0));
 
-  // TODO: Implement file deletion!
-  /*
+  // We also test that both ordering can't be true at the same time.
+  ASSERT_FALSE(
+      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".",  1) == 0 &&
+       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) &&
+      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
+       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".",  1) == 0));
+
   ASSERT_THAT(LIBC_NAMESPACE::rmdir(tmpl), Succeeds());
   free(tmpl);
-  */
 }
 
 

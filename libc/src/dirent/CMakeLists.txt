@@ -1,3 +1,8 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
+
+
 add_entrypoint_object(
   opendir
   SRCS
@@ -50,26 +55,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  scandir
-  SRCS
-    scandir.cpp
-  HDRS
-    scandir.h
-  DEPENDS
-    libc.hdr.types.size_t
-    libc.hdr.types.struct_dirent
-    libc.src.__support.alloc_checker
-    libc.src.__support.common
-    libc.src.__support.CPP.vector
-    libc.src.__support.macros.config
-    libc.src.dirent.closedir
-    libc.src.dirent.opendir
-    libc.src.dirent.readdir
-    libc.src.errno.errno
-    libc.src.stdlib.qsort_util
-)
-
-add_entrypoint_object(
   fdopendir
   SRCS
     fdopendir.cpp
@@ -81,4 +66,11 @@ add_entrypoint_object(
     libc.hdr.types.DIR
     libc.src.__support.File.dir
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  scandir
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.scandir
 )
