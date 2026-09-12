@@ -874,3 +874,84 @@ loop.latch:
 exit:
   ret void
 }
+
+; Continuing on sgt does not imply an unsigned lower bound. For n = -2,
+; incrementing iv from -1 to 0 makes the unsigned comparison false.
+define void @signed_gt_latch_no_unsigned_fact(i64 %n) {
+; CHECK-LABEL: define void @signed_gt_latch_no_unsigned_fact(
+; CHECK-SAME: i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[PRE:%.*]] = icmp ugt i64 -1, [[N]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[PRE]])
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i64 [[IV]], [[N]]
+; CHECK-NEXT:    call void @use(i1 [[C]])
+; CHECK-NEXT:    [[STOP:%.*]] = icmp eq i64 [[IV]], 1
+; CHECK-NEXT:    br i1 [[STOP]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp sgt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %pre = icmp ugt i64 -1, %n
+  call void @llvm.assume(i1 %pre)
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ -1, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ugt i64 %iv, %n
+  call void @use(i1 %c)
+  %stop = icmp eq i64 %iv, 1
+  br i1 %stop, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 1
+  %ec = icmp sgt i64 %iv.next, %n
+  br i1 %ec, label %loop.header, label %exit
+
+exit:
+  ret void
+}
+
+; Exiting on sgt instead gives a signed <= continuation, which does imply an
+; unsigned upper bound for this non-negative induction.
+define void @signed_gt_exit_unsigned_fact(i64 %n) {
+; CHECK-LABEL: define void @signed_gt_exit_unsigned_fact(
+; CHECK-SAME: i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    [[STOP:%.*]] = icmp eq i64 [[IV]], 4
+; CHECK-NEXT:    br i1 [[STOP]], label %[[EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp sgt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %c = icmp ule i64 %iv, %n
+  call void @use(i1 %c)
+  %stop = icmp eq i64 %iv, 4
+  br i1 %stop, label %exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add nsw i64 %iv, 1
+  %ec = icmp sgt i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

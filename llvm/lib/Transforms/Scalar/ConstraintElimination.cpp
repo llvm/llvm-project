@@ -1191,6 +1191,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
     // For a non-negative backedge value, 0 s<= PN s< B implies B is
     // non-negative as well, so the same bound holds in the unsigned system.
     if (ICmpInst::isSigned(ContinuePred)) {
+      assert((ContinuePred == CmpInst::ICMP_SLT ||
+              ContinuePred == CmpInst::ICMP_SLE) &&
+             "Expected a signed less-than continuation predicate");
       MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
       if ((Info.Signed && !Info.Decreasing) ||
           isKnownNonNegative(Backedge, BB.getDataLayout())) {
