@@ -55,6 +55,11 @@ tlbip VAE1, x8, x9
 // CHECK-TLBID: error: instruction requires: d128
 // CHECK-UNKNOWN: d5488728 sysp #0, c8, c7, #1, x8, x9
 
+sysp #0, c8, c7, #1, x8, x9
+// CHECK-INST: tlbip vae1, x8, x9
+// CHECK-ENCODING: encoding: [0x28,0x87,0x48,0xd5]
+// CHECK-UNKNOWN: d5488728 sysp #0, c8, c7, #1, x8, x9
+
 tlbip VAE1NXS, x8, x9
 // CHECK-INST: tlbip vae1nxs, x8, x9
 // CHECK-ENCODING: encoding: [0x28,0x97,0x48,0xd5]
