@@ -7736,6 +7736,10 @@ public:
   /// invocation.
   ExprResult CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl);
 
+  /// Forget the references to consteval functions inside \p E, an immediate
+  /// invocation that was reused as is rather than rebuilt.
+  void RemoveReferencesToConsteval(Expr *E);
+
   void MarkExpressionAsImmediateEscalating(Expr *E);
 
   // Check that the SME attributes for PSTATE.ZA and PSTATE.SM are compatible.
