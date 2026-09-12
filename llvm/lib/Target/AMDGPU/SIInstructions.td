@@ -1916,6 +1916,46 @@ foreach Index = 0-31 in {
   >;
 }
 
+// A subvector that begins and ends on a register boundary is only a name for a
+// run of registers. Results a single register wide are not covered here: the
+// extract element patterns above take those, and keeping the element form lets
+// the combiner see what the register holds.
+class ExtractSubvector <ValueType ResVT, ValueType SrcVT, int Index,
+                        SubRegIndex SubReg> : GCNPat <
+  (ResVT (extract_subvector SrcVT:$src, (i32 Index))),
+  (ResVT (EXTRACT_SUBREG $src, SubReg))
+>;
+
+defvar AllRegVectorTypes = !filter(vt, !listconcat(
+    Reg64Types.types, Reg96Types.types, Reg128Types.types, Reg160Types.types,
+    Reg192Types.types, Reg224Types.types, Reg256Types.types, Reg288Types.types,
+    Reg320Types.types, Reg352Types.types, Reg384Types.types, Reg512Types.types,
+    Reg1024Types.types), vt.isVector);
+
+// Only the widths a sub register index exists for can be named, so drive the
+// whole thing off that list rather than off the result types.
+foreach NumRegs = SubRegTupleWidths in {
+  defvar ResTypes =
+      !filter(vt, AllRegVectorTypes, !eq(vt.Size, !mul(NumRegs, 32)));
+  foreach ResVT = ResTypes in {
+    defvar SrcTypes = !filter(vt, AllRegVectorTypes,
+                              !and(!gt(vt.Size, ResVT.Size),
+                                   !eq(vt.ElementType, ResVT.ElementType)));
+    foreach SrcVT = SrcTypes in {
+      foreach FirstReg = !range(!add(!sub(!div(SrcVT.Size, 32), NumRegs), 1)) in {
+        defvar FirstBit = !mul(FirstReg, 32);
+        defvar EltBits = ResVT.ElementType.Size;
+        // The index counts elements, so a register boundary is only reachable
+        // when a register holds a whole number of them.
+        if !eq(!mul(!div(FirstBit, EltBits), EltBits), FirstBit) then
+          def : ExtractSubvector<ResVT, SrcVT, !div(FirstBit, EltBits),
+                                 !cast<SubRegIndex>(
+                                     SubRegTupleName<FirstReg, NumRegs>.ret)>;
+      }
+    }
+  }
+}
+
 // FIXME: Why do only some of these type combinations for SReg and
 // VReg?
 // 16-bit bitcast

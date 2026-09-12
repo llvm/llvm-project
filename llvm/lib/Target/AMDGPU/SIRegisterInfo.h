@@ -76,6 +76,12 @@ public:
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
   static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
 
+  /// Same as getSubRegFromChannel, but returns AMDGPU::NoSubRegister instead of
+  /// asserting when \p NumRegs registers starting at \p Channel are not
+  /// describable by a single sub register index.
+  static unsigned getSubRegFromChannelOrNone(unsigned Channel,
+                                             unsigned NumRegs = 1);
+
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
   }

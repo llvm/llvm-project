@@ -2757,23 +2757,23 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_mov_b32 s4, s10
 ; GFX950-SDAG-NEXT:    s_mov_b32 s5, s11
 ; GFX950-SDAG-NEXT:    buffer_load_dwordx4 v[0:3], off, s[4:7], 0
-; GFX950-SDAG-NEXT:    s_mov_b32 s1, s9
 ; GFX950-SDAG-NEXT:    s_mov_b32 s0, s8
+; GFX950-SDAG-NEXT:    s_mov_b32 s1, s9
 ; GFX950-SDAG-NEXT:    s_movk_i32 s4, 0x7e00
 ; GFX950-SDAG-NEXT:    s_waitcnt vmcnt(0)
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s5, v3
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX950-SDAG-NEXT:    s_and_b32 s9, s5, 0x1ff
-; GFX950-SDAG-NEXT:    s_or_b32 s6, s9, s6
-; GFX950-SDAG-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX950-SDAG-NEXT:    s_lshr_b32 s9, s5, 8
-; GFX950-SDAG-NEXT:    s_bfe_u32 s10, s5, 0xb0014
+; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s8, v3
+; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s7, v2
+; GFX950-SDAG-NEXT:    s_and_b32 s9, s8, 0x1ff
+; GFX950-SDAG-NEXT:    s_or_b32 s7, s9, s7
+; GFX950-SDAG-NEXT:    s_cselect_b32 s7, 1, 0
+; GFX950-SDAG-NEXT:    s_lshr_b32 s9, s8, 8
+; GFX950-SDAG-NEXT:    s_bfe_u32 s10, s8, 0xb0014
 ; GFX950-SDAG-NEXT:    s_and_b32 s9, s9, 0xffe
 ; GFX950-SDAG-NEXT:    s_sub_i32 s11, 0x3f1, s10
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s8, v0
-; GFX950-SDAG-NEXT:    s_or_b32 s6, s9, s6
+; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s5, v0
+; GFX950-SDAG-NEXT:    s_or_b32 s7, s9, s7
 ; GFX950-SDAG-NEXT:    v_med3_i32 v0, s11, 0, 13
-; GFX950-SDAG-NEXT:    s_or_b32 s9, s6, 0x1000
+; GFX950-SDAG-NEXT:    s_or_b32 s9, s7, 0x1000
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s11, v0
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s12, s9, s11
 ; GFX950-SDAG-NEXT:    s_lshl_b32 s11, s12, s11
@@ -2782,7 +2782,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_addk_i32 s10, 0xfc10
 ; GFX950-SDAG-NEXT:    s_lshl_b32 s11, s10, 12
 ; GFX950-SDAG-NEXT:    s_or_b32 s9, s12, s9
-; GFX950-SDAG-NEXT:    s_or_b32 s11, s6, s11
+; GFX950-SDAG-NEXT:    s_or_b32 s11, s7, s11
 ; GFX950-SDAG-NEXT:    s_cmp_lt_i32 s10, 1
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s9, s9, s11
 ; GFX950-SDAG-NEXT:    s_and_b32 s11, s9, 7
@@ -2795,24 +2795,24 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_add_i32 s9, s9, s11
 ; GFX950-SDAG-NEXT:    s_cmp_lt_i32 s10, 31
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s9, s9, 0x7c00
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX950-SDAG-NEXT:    s_cselect_b32 s6, s4, 0x7c00
+; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s7, 0
+; GFX950-SDAG-NEXT:    s_cselect_b32 s7, s4, 0x7c00
 ; GFX950-SDAG-NEXT:    s_cmpk_eq_i32 s10, 0x40f
-; GFX950-SDAG-NEXT:    s_cselect_b32 s6, s6, s9
-; GFX950-SDAG-NEXT:    s_lshr_b32 s5, s5, 16
-; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s7, v1
-; GFX950-SDAG-NEXT:    s_and_b32 s5, s5, 0x8000
-; GFX950-SDAG-NEXT:    s_and_b32 s9, s7, 0x1ff
-; GFX950-SDAG-NEXT:    s_or_b32 s5, s5, s6
-; GFX950-SDAG-NEXT:    s_or_b32 s6, s9, s8
-; GFX950-SDAG-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX950-SDAG-NEXT:    s_lshr_b32 s8, s7, 8
-; GFX950-SDAG-NEXT:    s_bfe_u32 s9, s7, 0xb0014
+; GFX950-SDAG-NEXT:    s_cselect_b32 s7, s7, s9
+; GFX950-SDAG-NEXT:    s_lshr_b32 s8, s8, 16
+; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX950-SDAG-NEXT:    s_and_b32 s8, s8, 0x8000
+; GFX950-SDAG-NEXT:    s_and_b32 s9, s6, 0x1ff
+; GFX950-SDAG-NEXT:    s_or_b32 s7, s8, s7
+; GFX950-SDAG-NEXT:    s_or_b32 s5, s9, s5
+; GFX950-SDAG-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX950-SDAG-NEXT:    s_lshr_b32 s8, s6, 8
+; GFX950-SDAG-NEXT:    s_bfe_u32 s9, s6, 0xb0014
 ; GFX950-SDAG-NEXT:    s_and_b32 s8, s8, 0xffe
 ; GFX950-SDAG-NEXT:    s_sub_i32 s10, 0x3f1, s9
-; GFX950-SDAG-NEXT:    s_or_b32 s6, s8, s6
+; GFX950-SDAG-NEXT:    s_or_b32 s5, s8, s5
 ; GFX950-SDAG-NEXT:    v_med3_i32 v0, s10, 0, 13
-; GFX950-SDAG-NEXT:    s_or_b32 s8, s6, 0x1000
+; GFX950-SDAG-NEXT:    s_or_b32 s8, s5, 0x1000
 ; GFX950-SDAG-NEXT:    v_readfirstlane_b32 s10, v0
 ; GFX950-SDAG-NEXT:    s_lshr_b32 s11, s8, s10
 ; GFX950-SDAG-NEXT:    s_lshl_b32 s10, s11, s10
@@ -2821,7 +2821,7 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_addk_i32 s9, 0xfc10
 ; GFX950-SDAG-NEXT:    s_lshl_b32 s10, s9, 12
 ; GFX950-SDAG-NEXT:    s_or_b32 s8, s11, s8
-; GFX950-SDAG-NEXT:    s_or_b32 s10, s6, s10
+; GFX950-SDAG-NEXT:    s_or_b32 s10, s5, s10
 ; GFX950-SDAG-NEXT:    s_cmp_lt_i32 s9, 1
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s8, s8, s10
 ; GFX950-SDAG-NEXT:    s_and_b32 s10, s8, 7
@@ -2834,14 +2834,14 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f16(
 ; GFX950-SDAG-NEXT:    s_add_i32 s8, s8, s10
 ; GFX950-SDAG-NEXT:    s_cmp_lt_i32 s9, 31
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s8, s8, 0x7c00
-; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX950-SDAG-NEXT:    s_cmp_lg_u32 s5, 0
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s4, s4, 0x7c00
 ; GFX950-SDAG-NEXT:    s_cmpk_eq_i32 s9, 0x40f
 ; GFX950-SDAG-NEXT:    s_cselect_b32 s4, s4, s8
-; GFX950-SDAG-NEXT:    s_lshr_b32 s6, s7, 16
-; GFX950-SDAG-NEXT:    s_and_b32 s6, s6, 0x8000
-; GFX950-SDAG-NEXT:    s_or_b32 s4, s6, s4
-; GFX950-SDAG-NEXT:    s_pack_ll_b32_b16 s4, s4, s5
+; GFX950-SDAG-NEXT:    s_lshr_b32 s5, s6, 16
+; GFX950-SDAG-NEXT:    s_and_b32 s5, s5, 0x8000
+; GFX950-SDAG-NEXT:    s_or_b32 s4, s5, s4
+; GFX950-SDAG-NEXT:    s_pack_ll_b32_b16 s4, s4, s7
 ; GFX950-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX950-SDAG-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX950-SDAG-NEXT:    s_endpgm
