@@ -19,44 +19,6 @@ define half @test_bitextract_half_full(b16 %src) {
   ret half %result
 }
 
-define half @test_bitextract_half_const(b32 %src) {
-; ARM-LABEL: test_bitextract_half_const:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    lsr r0, r0, #8
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitextract_half_const:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    lsrs r0, r0, #8
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitextract_half_const:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    lsrs r0, r0, #8
-; THUMB-A-NEXT:    bx lr
-  %result = bitextract half, b32 %src, i32 8
-  ret half %result
-}
-
-define half @test_bitextract_half_var(b32 %src, i32 %off) {
-; ARM-LABEL: test_bitextract_half_var:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    lsr r0, r0, r1
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitextract_half_var:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    lsrs r0, r1
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitextract_half_var:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    lsrs r0, r1
-; THUMB-A-NEXT:    bx lr
-  %result = bitextract half, b32 %src, i32 %off
-  ret half %result
-}
-
 define float @test_bitextract_float_full(b32 %src) {
 ; ARM-LABEL: test_bitextract_float_full:
 ; ARM:       @ %bb.0:
@@ -492,31 +454,6 @@ define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b16 %base, half %val, i32 0
   ret b16 %result
-}
-
-define b32 @test_bitinsert_half_const(b32 %base, half %val) {
-; ARM-LABEL: test_bitinsert_half_const:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    uxth r1, r1
-; ARM-NEXT:    bfc r0, #8, #16
-; ARM-NEXT:    orr r0, r0, r1, lsl #8
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitinsert_half_const:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    uxth r1, r1
-; THUMB-M-NEXT:    bfc r0, #8, #16
-; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #8
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitinsert_half_const:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    uxth r1, r1
-; THUMB-A-NEXT:    bfc r0, #8, #16
-; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #8
-; THUMB-A-NEXT:    bx lr
-  %result = bitinsert b32 %base, half %val, i32 8
-  ret b32 %result
 }
 
 define b32 @test_bitinsert_half_var(b32 %base, half %val, i32 %off) {

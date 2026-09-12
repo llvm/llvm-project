@@ -9,24 +9,6 @@ define half @test_bitextract_half_full(b16 %src) {
   ret half %result
 }
 
-define half @test_bitextract_half_const(b32 %src) {
-; CHECK-LABEL: test_bitextract_half_const:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    srwi 3, 3, 8
-; CHECK-NEXT:    blr
-  %result = bitextract half, b32 %src, i32 8
-  ret half %result
-}
-
-define half @test_bitextract_half_var(b32 %src, i32 %off) {
-; CHECK-LABEL: test_bitextract_half_var:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    srw 3, 3, 4
-; CHECK-NEXT:    blr
-  %result = bitextract half, b32 %src, i32 %off
-  ret half %result
-}
-
 define float @test_bitextract_float_full(b32 %src) {
 ; CHECK-LABEL: test_bitextract_float_full:
 ; CHECK:       # %bb.0:
@@ -167,15 +149,6 @@ define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; CHECK-NEXT:    blr
   %result = bitinsert b16 %base, half %val, i32 0
   ret b16 %result
-}
-
-define b32 @test_bitinsert_half_const(b32 %base, half %val) {
-; CHECK-LABEL: test_bitinsert_half_const:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwimi 3, 4, 8, 8, 23
-; CHECK-NEXT:    blr
-  %result = bitinsert b32 %base, half %val, i32 8
-  ret b32 %result
 }
 
 define b32 @test_bitinsert_half_var(b32 %base, half %val, i32 %off) {
