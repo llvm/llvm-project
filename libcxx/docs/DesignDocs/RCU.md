@@ -110,7 +110,7 @@ Libc++ adopted a design that closely resembles the "General-Purpose RCU" design 
 Some key details of this design are:
 
 - There is a global state which has two phases and flips between the two.
-- Each thread stores its state: whether there is a reader in the critical section, and which phase it was when it entered the critical section.
+- Each thread stores its state: whether there is a reader in the critical section, and which phase was active when it entered the critical section.
 - When `rcu_synchronize`/`rcu_barrier` is called, it
 
   - flips the global state to the next phase
