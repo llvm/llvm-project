@@ -398,11 +398,11 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   switch (MI->getOpcode()) {
   case RISCV::PseudoTAILX7: {
     // Lower to PseudoTAILReg with X7 as the register operand.
-    MCOperand MCOp;
-    lowerOperand(MI->getOperand(0), MCOp);
+    MCOperand SymOp;
+    lowerOperand(MI->getOperand(0), SymOp);
     MCInst TmpInst;
     TmpInst.setOpcode(RISCV::PseudoTAILReg);
-    TmpInst.addOperand(MCOp);
+    TmpInst.addOperand(SymOp);
     TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
