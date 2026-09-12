@@ -13,6 +13,7 @@
 #include "flang/Lower/OpenMP.h"
 
 #include "Atomic.h"
+#include "ClauseFinder.h"
 #include "ClauseProcessor.h"
 #include "DataSharingProcessor.h"
 #include "Decomposer.h"
@@ -159,9 +160,9 @@ makeObjects(llvm::ArrayRef<const semantics::Symbol *> syms) {
   return objects;
 }
 
-static bool hasPrivatizedArrayElementReduction(
+static bool hasPrivatizedArrayReductionObject(
     llvm::ArrayRef<Object> reductionObjects,
-    const llvm::SetVector<const semantics::Symbol *> &privatizedSymbols) {
+    llvm::ArrayRef<const semantics::Symbol *> privatizedSymbols) {
   for (const Object &object : reductionObjects) {
     if (!object.sym() || !object.ref())
       continue;
@@ -170,10 +171,7 @@ static bool hasPrivatizedArrayElementReduction(
     if (!dataRef)
       continue;
     const auto *arrayRef = std::get_if<evaluate::ArrayRef>(&dataRef->u);
-    if (!arrayRef ||
-        llvm::any_of(arrayRef->subscript(), [](const auto &subscript) {
-          return std::holds_alternative<evaluate::Triplet>(subscript.u);
-        }))
+    if (!arrayRef)
       continue;
 
     const semantics::Symbol &ultimate = object.sym()->GetUltimate();
@@ -184,6 +182,28 @@ static bool hasPrivatizedArrayElementReduction(
       return true;
   }
   return false;
+}
+
+static bool
+hasPartialArrayReductionObject(llvm::ArrayRef<Object> reductionObjects,
+                               semantics::SemanticsContext &semaCtx) {
+  for (const Object &object : reductionObjects) {
+    if (!object.ref() || isWholeArraySection(object, semaCtx))
+      continue;
+    if (evaluate::IsArraySection(*object.ref()))
+      return true;
+  }
+  return false;
+}
+
+static bool isArrayElementReductionObject(const Object &object) {
+  return object.ref() && object.ref()->Rank() == 0 &&
+         evaluate::IsArrayElement(*object.ref(), /*intoSubstring=*/false);
+}
+
+static bool
+hasArrayElementReductionObject(llvm::ArrayRef<Object> reductionObjects) {
+  return llvm::any_of(reductionObjects, isArrayElementReductionObject);
 }
 
 /// Structure holding the information needed to create and bind entry block
@@ -4149,6 +4169,9 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
              "TARGET construct with IN_REDUCTION of a privatized variable");
     }
 
+  if (hasArrayElementReductionObject(inReductionObjects))
+    TODO(loc, "TARGET construct with IN_REDUCTION of an array element");
+
   // Collect symbols that have dynamic substring accesses
   llvm::SmallPtrSet<const semantics::Symbol *, 8> symbolsWithDynamicSubstring;
   collectSymbolsWithDynamicSubstring(semaCtx, eval,
@@ -4629,22 +4652,33 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
                  clauseOps, inReductionObjects);
 
-  if (!enableDelayedPrivatization)
+  if (hasPartialArrayReductionObject(inReductionObjects, semaCtx))
+    TODO(loc, "TASK construct with IN_REDUCTION of a partial array section");
+
+  if (!enableDelayedPrivatization) {
+    if (hasArrayElementReductionObject(inReductionObjects))
+      TODO(loc, "TASK construct with IN_REDUCTION of an array element when "
+                "delayed privatization is disabled");
+    if (!inReductionObjects.empty())
+      TODO(loc, "TASK construct with IN_REDUCTION when delayed "
+                "privatization is disabled");
+
     return genOpWithBody<mlir::omp::TaskOp>(
         OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                           llvm::omp::Directive::OMPD_task)
             .setClauses(&item->clauses),
         queue, item, clauseOps);
+  }
 
   DataSharingProcessor dsp(converter, semaCtx, item->clauses, eval,
                            lower::omp::isLastItemInQueue(item, queue),
                            /*useDelayedPrivatization=*/true, symTable);
   dsp.processStep1(&clauseOps);
 
-  if (hasPrivatizedArrayElementReduction(inReductionObjects,
-                                         dsp.getAllSymbolsToPrivatize()))
-    TODO(loc, "TASK construct with IN_REDUCTION of an array element whose "
-              "base array is privatized");
+  if (hasPrivatizedArrayReductionObject(inReductionObjects,
+                                        dsp.getDelayedPrivSymbols()))
+    TODO(loc, "TASK construct with IN_REDUCTION of an array element or section "
+              "whose base array is privatized");
 
   ObjectEntryBlockArgs taskArgs;
   taskArgs.priv.objects = makeObjects(dsp.getDelayedPrivSymbols());
@@ -4671,6 +4705,10 @@ genTaskgroupOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   llvm::SmallVector<Object> taskReductionObjects;
   genTaskgroupClauses(converter, semaCtx, item->clauses, loc, clauseOps,
                       taskReductionObjects);
+
+  if (hasPartialArrayReductionObject(taskReductionObjects, semaCtx))
+    TODO(loc,
+         "TASKGROUP construct with TASK_REDUCTION of a partial array section");
 
   ObjectEntryBlockArgs taskgroupArgs;
   taskgroupArgs.taskReduction.objects = taskReductionObjects;
@@ -5269,15 +5307,22 @@ static mlir::omp::TaskloopContextOp genStandaloneTaskloop(
                            enableDelayedPrivatization, symTable);
   dsp.processStep1(&taskloopClauseOps);
 
-  if (hasPrivatizedArrayElementReduction(inReductionObjects,
-                                         dsp.getAllSymbolsToPrivatize()))
-    TODO(loc, "TASKLOOP construct with IN_REDUCTION of an array element whose "
-              "base array is privatized");
-  if (hasPrivatizedArrayElementReduction(reductionObjects,
-                                         dsp.getAllSymbolsToPrivatize()))
-    TODO(loc, "TASKLOOP construct with REDUCTION of an array element whose "
-              "base array is privatized");
-
+  llvm::ArrayRef<const semantics::Symbol *> privatizedSymbols =
+      enableDelayedPrivatization ? dsp.getDelayedPrivSymbols()
+                                 : dsp.getAllSymbolsToPrivatize().getArrayRef();
+  if (hasPrivatizedArrayReductionObject(inReductionObjects, privatizedSymbols))
+    TODO(loc,
+         "TASKLOOP construct with IN_REDUCTION of an array element or section "
+         "whose base array is privatized");
+  if (hasPrivatizedArrayReductionObject(reductionObjects, privatizedSymbols))
+    TODO(loc,
+         "TASKLOOP construct with REDUCTION of an array element or section "
+         "whose base array is privatized");
+  if (hasPartialArrayReductionObject(inReductionObjects, semaCtx))
+    TODO(loc,
+         "TASKLOOP construct with IN_REDUCTION of a partial array section");
+  if (hasPartialArrayReductionObject(reductionObjects, semaCtx))
+    TODO(loc, "TASKLOOP construct with REDUCTION of a partial array section");
   mlir::omp::LoopNestOperands loopNestClauseOps;
   llvm::SmallVector<const semantics::Symbol *> iv;
   genLoopNestClauses(converter, semaCtx, eval, item->clauses, loc,
@@ -5706,6 +5751,13 @@ genOMPDispatch(lower::AbstractConverter &converter, lower::SymMap &symTable,
                const ConstructQueue &queue, ConstructQueue::const_iterator item,
                llvm::ArrayRef<const semantics::Symbol *> metadirectiveLoopIVs) {
   assert(item != queue.end());
+
+  // A reduction on an inner constituent can also create an implicit target
+  // map. Diagnose unsupported objects before mapping tries to lower them.
+  if (item->id == llvm::omp::Directive::OMPD_target)
+    for (auto it = item; it != queue.end(); ++it)
+      ClauseProcessor(converter, semaCtx, it->clauses)
+          .checkReductionObjects(loc);
 
   lower::StatementContext stmtCtx;
   mlir::Operation *newOp = nullptr;
