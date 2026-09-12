@@ -503,6 +503,12 @@ unsigned AArch64Subtarget::classifyGlobalFunctionReference(
       }
     }
 
+    // extern_weak dso_local ptr function references on Windows should not go
+    // through GOT/COFFSTUB. The linker resolves extern_weak to either the real
+    // symbol or null, so a direct call is correct.
+    if (GV->hasExternalWeakLinkage() && GV->isDSOLocal())
+      return AArch64II::MO_NO_FLAG;
+
     // Use ClassifyGlobalReference for setting MO_DLLIMPORT/MO_COFFSTUB.
     return ClassifyGlobalReference(GV, TM);
   }
