@@ -22,6 +22,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
+    libc.src.__support.libc_assert
     libc.src.__support.math_extras
     libc.src.__support.uint128
 )
