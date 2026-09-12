@@ -143,6 +143,7 @@ private:
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+  bool visitBcc(MachineInstr &MI);
 };
 
 struct AArch64MIPeepholeOptLegacy : public MachineFunctionPass {
@@ -957,6 +958,91 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+// A compare against the sign bit feeding an equality branch:
+//   %c = MOVi64imm 0x8000000000000000
+//   %d = SUBSXrr %x, %c, implicit-def $nzcv     ; %d dead
+//   Bcc EQ|NE, %bb
+// Zero minus x overflows exactly when x is INT64_MIN, so the same test is
+//   %d = SUBSXrr $xzr, %x, implicit-def $nzcv
+//   Bcc VS|VC, %bb
+// -- two instructions, no scratch register, no materialization, and still a
+// compare-and-branch that fuses on the cores that fuse CMP with B.cond. (A
+// rewrite to EOR + CBZ/CBNZ would cover any logical immediate but gives that
+// up: two issue slots against a fused pair plus a MOV that some cores resolve
+// at rename.) The MOV goes away with its last use. The W form handles
+// 0x80000000. Running after the conditional-compare pass, a compare that
+// became part of a CCMP chain has no branch consumer and is never a candidate.
+bool AArch64MIPeepholeOptImpl::visitBcc(MachineInstr &MI) {
+  auto CC = static_cast<AArch64CC::CondCode>(MI.getOperand(0).getImm());
+  if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
+    return false;
+
+  // The compare the branch reads: the nearest NZCV writer above it.
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineInstr *Cmp = nullptr;
+  for (MachineBasicBlock::iterator It = MI.getIterator(); It != MBB.begin();) {
+    --It;
+    if (It->modifiesRegister(AArch64::NZCV, TRI)) {
+      Cmp = &*It;
+      break;
+    }
+  }
+  if (!Cmp)
+    return false;
+  unsigned CmpOpc = Cmp->getOpcode();
+  if (CmpOpc != AArch64::SUBSWrr && CmpOpc != AArch64::SUBSXrr)
+    return false;
+  bool Is64 = CmpOpc == AArch64::SUBSXrr;
+  Register Dst = Cmp->getOperand(0).getReg();
+  if (Dst.isVirtual() ? !MRI->use_nodbg_empty(Dst)
+                      : (Dst != AArch64::WZR && Dst != AArch64::XZR))
+    return false;
+
+  // One operand materializes the sign bit; the other is the tested value.
+  unsigned ConstIdx = 0;
+  MachineInstr *MovMI = nullptr;
+  uint64_t SignBit = Is64 ? (1ULL << 63) : (1ULL << 31);
+  for (unsigned Idx : {1u, 2u}) {
+    Register R = Cmp->getOperand(Idx).getReg();
+    if (!R.isVirtual())
+      continue;
+    MachineInstr *Def = MRI->getUniqueVRegDef(R);
+    if (!Def ||
+        Def->getOpcode() != (Is64 ? AArch64::MOVi64imm : AArch64::MOVi32imm))
+      continue;
+    uint64_t Imm = Def->getOperand(1).getImm();
+    if (!Is64)
+      Imm &= 0xffffffffu;
+    if (Imm != SignBit)
+      continue;
+    ConstIdx = Idx;
+    MovMI = Def;
+    break;
+  }
+  if (!MovMI)
+    return false;
+  Register ConstReg = Cmp->getOperand(ConstIdx).getReg();
+  Register X = Cmp->getOperand(ConstIdx == 1 ? 2 : 1).getReg();
+  if (!X.isVirtual() || X == ConstReg)
+    return false;
+
+  // The flags must reach exactly this branch: the rewritten compare sets N,
+  // Z and C differently. examineCFlagsUse also refuses flags that are live
+  // into a successor.
+  SmallVector<MachineInstr *, 4> Users;
+  std::optional<UsedNZCV> Used = examineCFlagsUse(*Cmp, *Cmp, *TRI, &Users);
+  if (!Used || Users.size() != 1 || Users[0] != &MI)
+    return false;
+
+  Cmp->getOperand(1).ChangeToRegister(Is64 ? AArch64::XZR : AArch64::WZR,
+                                      /*isDef=*/false);
+  Cmp->getOperand(2).ChangeToRegister(X, /*isDef=*/false);
+  MI.getOperand(0).setImm(CC == AArch64CC::EQ ? AArch64CC::VS : AArch64CC::VC);
+  if (MRI->use_nodbg_empty(ConstReg))
+    MovMI->eraseFromParent();
+  return true;
+}
+
 bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
@@ -1069,6 +1155,9 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::Bcc:
+        Changed |= visitBcc(MI);
         break;
       }
     }

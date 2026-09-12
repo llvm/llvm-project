@@ -3,6 +3,7 @@
 
 ; Equality branches against constants that no CMP/CMN immediate encodes.
 ; The sign bit is the common one: rustc's enum niches and INT64_MIN sentinels.
+; x == INT_MIN is the overflow of 0 - x, so it lowers to cmp xzr, x ; b.vs.
 
 declare void @g()
 declare void @h()
@@ -10,9 +11,8 @@ declare void @h()
 define void @br_eq_int64_min(i64 %x) {
 ; CHECK-LABEL: br_eq_int64_min:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    cmp x0, x8
-; CHECK-NEXT:    b.ne .LBB0_2
+; CHECK-NEXT:    cmp xzr, x0
+; CHECK-NEXT:    b.vc .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -34,9 +34,8 @@ exit:
 define void @br_ne_int64_min(i64 %x) {
 ; CHECK-LABEL: br_ne_int64_min:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    cmp x0, x8
-; CHECK-NEXT:    b.eq .LBB1_2
+; CHECK-NEXT:    cmp xzr, x0
+; CHECK-NEXT:    b.vs .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -58,9 +57,8 @@ exit:
 define void @br_eq_i32_signbit(i32 %x) {
 ; CHECK-LABEL: br_eq_i32_signbit:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    b.ne .LBB2_2
+; CHECK-NEXT:    cmp wzr, w0
+; CHECK-NEXT:    b.vc .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -131,26 +129,26 @@ exit:
 define void @br_two_uses(i64 %x, i64 %y) {
 ; CHECK-LABEL: br_two_uses:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov x20, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    cmp xzr, x0
 ; CHECK-NEXT:    mov x19, x1
-; CHECK-NEXT:    cmp x0, x20
-; CHECK-NEXT:    b.ne .LBB5_2
-; CHECK-NEXT:  // %bb.1: // %callg
+; CHECK-NEXT:    b.vs .LBB5_3
+; CHECK-NEXT:  // %bb.1: // %second
+; CHECK-NEXT:    cmp xzr, x19
+; CHECK-NEXT:    b.vs .LBB5_4
+; CHECK-NEXT:  .LBB5_2: // %exit
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB5_3: // %callg
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:  .LBB5_2: // %second
-; CHECK-NEXT:    cmp x19, x20
-; CHECK-NEXT:    b.ne .LBB5_4
-; CHECK-NEXT:  // %bb.3: // %callh
+; CHECK-NEXT:    cmp xzr, x19
+; CHECK-NEXT:    b.vc .LBB5_2
+; CHECK-NEXT:  .LBB5_4: // %callh
 ; CHECK-NEXT:    bl h
-; CHECK-NEXT:  .LBB5_4: // %exit
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %cx = icmp eq i64 %x, -9223372036854775808
@@ -385,12 +383,12 @@ define i64 @br_shared_with_select(i64 %x, i64 %y, i64 %a, i64 %b) {
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w22, -32
 ; CHECK-NEXT:    .cfi_offset w30, -48
-; CHECK-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    mov x19, x3
 ; CHECK-NEXT:    mov x20, x2
-; CHECK-NEXT:    cmp x0, x22
 ; CHECK-NEXT:    mov x21, x1
-; CHECK-NEXT:    b.ne .LBB13_2
+; CHECK-NEXT:    cmp xzr, x0
+; CHECK-NEXT:    mov x22, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    b.vc .LBB13_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:  .LBB13_2: // %exit
@@ -420,16 +418,14 @@ define void @br_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    b.lt .LBB14_6
 ; CHECK-NEXT:  // %bb.1: // %loop.preheader
-; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov x19, x1
 ; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    mov x21, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    b .LBB14_3
 ; CHECK-NEXT:  .LBB14_2: // %latch
 ; CHECK-NEXT:    // in Loop: Header=BB14_3 Depth=1
@@ -438,15 +434,15 @@ define void @br_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:  .LBB14_3: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr x8, [x20], #8
-; CHECK-NEXT:    cmp x8, x21
-; CHECK-NEXT:    b.ne .LBB14_2
+; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    b.vc .LBB14_2
 ; CHECK-NEXT:  // %bb.4: // %call
 ; CHECK-NEXT:    // in Loop: Header=BB14_3 Depth=1
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    b .LBB14_2
 ; CHECK-NEXT:  .LBB14_5:
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB14_6: // %exit
 ; CHECK-NEXT:    ret
 entry:
@@ -474,12 +470,11 @@ define void @br_eq_int64_min_slh(i64 %x) speculative_load_hardening {
 ; CHECK-LABEL: br_eq_int64_min_slh:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    cmp sp, #0
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    csetm x16, ne
-; CHECK-NEXT:    cmp x0, x8
-; CHECK-NEXT:    b.ne .LBB15_3
+; CHECK-NEXT:    cmp xzr, x0
+; CHECK-NEXT:    b.vc .LBB15_3
 ; CHECK-NEXT:  // %bb.1:
-; CHECK-NEXT:    csel x16, x16, xzr, eq
+; CHECK-NEXT:    csel x16, x16, xzr, vs
 ; CHECK-NEXT:  // %bb.2: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -495,7 +490,7 @@ define void @br_eq_int64_min_slh(i64 %x) speculative_load_hardening {
 ; CHECK-NEXT:    csdb
 ; CHECK-NEXT:    b .LBB15_4
 ; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    csel x16, x16, xzr, ne
+; CHECK-NEXT:    csel x16, x16, xzr, vc
 ; CHECK-NEXT:  .LBB15_4: // %exit
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    and x0, x0, x16
