@@ -14,8 +14,7 @@ define void @fn9(ptr %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, 
 ; CHECK-NEXT:    stp w6, w5, [sp, #36]
 ; CHECK-NEXT:    str w7, [sp, #32]
 ; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    add x8, sp, #72
-; CHECK-NEXT:    add x8, x8, #8
+; CHECK-NEXT:    add x8, sp, #80
 ; CHECK-NEXT:    ldr w9, [sp, #72]
 ; CHECK-NEXT:    str w9, [sp, #20]
 ; CHECK-NEXT:    ldr w9, [x8], #8
@@ -146,8 +145,7 @@ define void @foo(ptr %fmt, ...) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    ldr w8, [sp, #48]
 ; CHECK-NEXT:    str w8, [sp, #28]
-; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    add x8, x8, #23
+; CHECK-NEXT:    add x8, sp, #71
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
 ; CHECK-NEXT:    add x9, x8, #16
 ; CHECK-NEXT:    stp x9, x0, [sp, #32]
@@ -207,8 +205,7 @@ define void @foo2(ptr %fmt, ...) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    ldr w8, [sp, #48]
 ; CHECK-NEXT:    str w8, [sp, #28]
-; CHECK-NEXT:    add x8, sp, #48
-; CHECK-NEXT:    add x8, x8, #23
+; CHECK-NEXT:    add x8, sp, #71
 ; CHECK-NEXT:    and x8, x8, #0xfffffffffffffff0
 ; CHECK-NEXT:    add x9, x8, #16
 ; CHECK-NEXT:    stp x9, x0, [sp, #32]
