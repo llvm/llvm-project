@@ -122,8 +122,8 @@ define void @nxv16i8_outside_range(ptr %ldptr, ptr %stptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0, #-65, mul vl]
 ; CHECK-NEXT:    ldr z1, [x0, #-64, mul vl]
-; CHECK-NEXT:    str z0, [x1, #64, mul vl]
-; CHECK-NEXT:    str z1, [x1, #65, mul vl]
+; CHECK-NEXT:    add x9, x1, #1024
+; CHECK-NEXT:    stp q0, q1, [x9]
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: nxv16i8_outside_range:
@@ -149,8 +149,8 @@ define void @nxv16i8_outside_range(ptr %ldptr, ptr %stptr) {
 ; CHECK-LDPALIGNEDONLY:       // %bb.0:
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z0, [x0, #-65, mul vl]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ldr z1, [x0, #-64, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z0, [x1, #64, mul vl]
-; CHECK-LDPALIGNEDONLY-NEXT:    str z1, [x1, #65, mul vl]
+; CHECK-LDPALIGNEDONLY-NEXT:    add x9, x1, #1024
+; CHECK-LDPALIGNEDONLY-NEXT:    stp q0, q1, [x9]
 ; CHECK-LDPALIGNEDONLY-NEXT:    ret
 ;
 ; CHECK-STPALIGNEDONLY-LABEL: nxv16i8_outside_range:

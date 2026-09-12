@@ -1,0 +1,101 @@
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-mi-peephole-opt \
+# RUN:   -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=SHARED
+# RUN: llc -mtriple=aarch64 -run-pass=aarch64-mi-peephole-opt \
+# RUN:   -aarch64-base-address-cse=0 -o - %s | FileCheck %s --check-prefix=NOBASECSE
+
+--- |
+  define void @share_sub_i32(ptr %p) { ret void }
+  define void @share_sub_i32_3sibling(ptr %p) { ret void }
+  define void @share_add_i64(ptr %p) { ret void }
+...
+---
+name: share_sub_i32
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = SUBXri %0, 400, 0
+    %2:gpr64common = SUBXri %0, 396, 0
+    %3:gpr32 = LDRWui killed %1, 0
+    %4:gpr32 = LDRWui killed %2, 0
+    $w0 = COPY %3
+    $w1 = COPY %4
+    RET_ReallyLR
+
+# SHARED-LABEL: name: share_sub_i32
+# SHARED: %1:gpr64common = SUBXri %0, 400, 0
+# SHARED-NOT: SUBXri %0, 396, 0
+# SHARED: %3:gpr32 = LDRWui %1, 0
+# SHARED: %4:gpr32 = LDRWui %1, 1
+# SHARED-NOT: SUBXri
+
+# NOBASECSE-LABEL: name: share_sub_i32
+# NOBASECSE: %1:gpr64common = SUBXri %0, 400, 0
+# NOBASECSE: %2:gpr64common = SUBXri %0, 396, 0
+# NOBASECSE: %3:gpr32 = LDRWui killed %1, 0
+# NOBASECSE: %4:gpr32 = LDRWui killed %2, 0
+
+...
+---
+name: share_sub_i32_3sibling
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = SUBXri %0, 400, 0
+    %2:gpr64common = SUBXri %0, 396, 0
+    %3:gpr64common = SUBXri %0, 392, 0
+    %4:gpr32 = LDRWui killed %1, 0
+    %5:gpr32 = LDRWui killed %2, 0
+    %6:gpr32 = LDRWui killed %3, 0
+    $w0 = COPY %4
+    $w1 = COPY %5
+    $w2 = COPY %6
+    RET_ReallyLR
+
+# SHARED-LABEL: name: share_sub_i32_3sibling
+# SHARED: %1:gpr64common = SUBXri %0, 400, 0
+# SHARED: %4:gpr32 = LDRWui %1, 0
+# SHARED: %5:gpr32 = LDRWui %1, 1
+# SHARED: %6:gpr32 = LDRWui %1, 2
+# SHARED-NOT: SUBXri %0, 396, 0
+# SHARED-NOT: SUBXri %0, 392, 0
+
+# NOBASECSE-LABEL: name: share_sub_i32_3sibling
+# NOBASECSE: %1:gpr64common = SUBXri %0, 400, 0
+# NOBASECSE: %2:gpr64common = SUBXri %0, 396, 0
+# NOBASECSE: %3:gpr64common = SUBXri %0, 392, 0
+# NOBASECSE: %4:gpr32 = LDRWui killed %1, 0
+# NOBASECSE: %5:gpr32 = LDRWui killed %2, 0
+# NOBASECSE: %6:gpr32 = LDRWui killed %3, 0
+
+...
+---
+name: share_add_i64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0
+    %0:gpr64common = COPY $x0
+    %1:gpr64common = ADDXri %0, 800, 0
+    %2:gpr64common = ADDXri %0, 808, 0
+    %3:gpr64 = LDRXui killed %1, 0
+    %4:gpr64 = LDRXui killed %2, 0
+    $x0 = COPY %3
+    $x1 = COPY %4
+    RET_ReallyLR
+
+# SHARED-LABEL: name: share_add_i64
+# SHARED: %1:gpr64common = ADDXri %0, 800, 0
+# SHARED-NOT: ADDXri %0, 808, 0
+# SHARED: %3:gpr64 = LDRXui %1, 0
+# SHARED: %4:gpr64 = LDRXui %1, 1
+# SHARED-NOT: ADDXri
+
+# NOBASECSE-LABEL: name: share_add_i64
+# NOBASECSE: %1:gpr64common = ADDXri %0, 800, 0
+# NOBASECSE: %2:gpr64common = ADDXri %0, 808, 0
+# NOBASECSE: %3:gpr64 = LDRXui killed %1, 0
+# NOBASECSE: %4:gpr64 = LDRXui killed %2, 0

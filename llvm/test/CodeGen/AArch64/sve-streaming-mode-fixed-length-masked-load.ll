@@ -2399,17 +2399,17 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:  .LBB10_3: // %cond.load1
 ; NONEON-NOSVE-NEXT:    ldr s2, [x0, #4]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #400]
+; NONEON-NOSVE-NEXT:    add x10, sp, #408
 ; NONEON-NOSVE-NEXT:    str s2, [sp, #432]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #432]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #384]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #412]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #428]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #408]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #424]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #400]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #416]
+; NONEON-NOSVE-NEXT:    ldp s0, s2, [x10]
+; NONEON-NOSVE-NEXT:    add x10, sp, #424
+; NONEON-NOSVE-NEXT:    stp s0, s2, [x10]
+; NONEON-NOSVE-NEXT:    add x10, sp, #416
+; NONEON-NOSVE-NEXT:    ldr s2, [sp, #400]
+; NONEON-NOSVE-NEXT:    stp s2, s0, [x10]
 ; NONEON-NOSVE-NEXT:    ldr s0, [sp, #384]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #420]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #416]
 ; NONEON-NOSVE-NEXT:  .LBB10_4: // %else2
 ; NONEON-NOSVE-NEXT:    tbnz w8, #2, .LBB10_12
@@ -2442,31 +2442,31 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:  .LBB10_12: // %cond.load4
 ; NONEON-NOSVE-NEXT:    ldr s2, [x0, #8]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #336]
+; NONEON-NOSVE-NEXT:    add x10, sp, #360
 ; NONEON-NOSVE-NEXT:    str s2, [sp, #368]
+; NONEON-NOSVE-NEXT:    ldr s2, [sp, #348]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #368]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #320]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #348]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #364]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #340]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #356]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #336]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #352]
+; NONEON-NOSVE-NEXT:    stp s0, s2, [x10]
+; NONEON-NOSVE-NEXT:    add x10, sp, #336
+; NONEON-NOSVE-NEXT:    ldp s0, s2, [x10]
+; NONEON-NOSVE-NEXT:    add x10, sp, #352
+; NONEON-NOSVE-NEXT:    stp s0, s2, [x10]
 ; NONEON-NOSVE-NEXT:    ldr s0, [sp, #320]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #360]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #352]
 ; NONEON-NOSVE-NEXT:    tbz w8, #3, .LBB10_6
 ; NONEON-NOSVE-NEXT:  .LBB10_13: // %cond.load7
 ; NONEON-NOSVE-NEXT:    ldr s2, [x0, #12]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #256]
-; NONEON-NOSVE-NEXT:    ldr x10, [sp, #256]
+; NONEON-NOSVE-NEXT:    add x10, sp, #296
 ; NONEON-NOSVE-NEXT:    str s2, [sp, #304]
+; NONEON-NOSVE-NEXT:    ldr s2, [sp, #264]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #304]
-; NONEON-NOSVE-NEXT:    str x10, [sp, #288]
 ; NONEON-NOSVE-NEXT:    str q0, [sp, #272]
-; NONEON-NOSVE-NEXT:    ldr s0, [sp, #264]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #296]
+; NONEON-NOSVE-NEXT:    stp s2, s0, [x10]
+; NONEON-NOSVE-NEXT:    ldr x10, [sp, #256]
 ; NONEON-NOSVE-NEXT:    ldr s0, [sp, #272]
-; NONEON-NOSVE-NEXT:    str s0, [sp, #300]
+; NONEON-NOSVE-NEXT:    str x10, [sp, #288]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #288]
 ; NONEON-NOSVE-NEXT:    tbz w8, #4, .LBB10_7
 ; NONEON-NOSVE-NEXT:  .LBB10_14: // %cond.load10
