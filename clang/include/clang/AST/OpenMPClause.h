@@ -10129,6 +10129,16 @@ public:
     return false;
   }
 
+  /// Check if this trait info contains any user conditions.
+  bool hasUserCondition() const {
+    return llvm::any_of(Sets, [](const OMPTraitSet &Set) {
+      return Set.Kind == llvm::omp::TraitSet::user &&
+             llvm::any_of(Set.Selectors, [](const OMPTraitSelector &Selector) {
+               return Selector.Kind == llvm::omp::TraitSelector::user_condition;
+             });
+    });
+  }
+
   /// Print a human readable representation into \p OS.
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
 };
