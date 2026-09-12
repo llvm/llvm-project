@@ -29,3 +29,30 @@ struct MemberExportedCtorClosureOuter {
 };
 
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FMemberExportedCtorClosureInner@MemberExportedCtorClosureOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+
+// Member-level dllexport on a class template specialization must build the
+// constructor closure default arguments after instantiation.
+template <typename T>
+struct MemberExportedCtorClosureTemplate {
+  __declspec(dllexport)
+  MemberExportedCtorClosureTemplate(const T &v = {}) {}
+};
+
+MemberExportedCtorClosureTemplate<HasImplicitDtor1>
+    MemberExportedCtorClosureTemplateInstance{{}};
+
+// CHECK-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??_F?$MemberExportedCtorClosureTemplate@UHasImplicitDtor1@@@@QAEXXZ"
+
+// Explicit instantiation builds constructor closure default arguments while
+// instantiating the constructor definition.
+struct ExplicitInstantiationOuter {
+  template <typename T>
+  struct Nested {
+    __declspec(dllexport)
+    Nested(const HasImplicitDtor1 &v = {}) {}
+  };
+};
+
+template struct ExplicitInstantiationOuter::Nested<int>;
+
+// CHECK-DAG: define weak_odr dso_local dllexport x86_thiscallcc void @"??_F?$Nested@H@ExplicitInstantiationOuter@@QAEXXZ"
