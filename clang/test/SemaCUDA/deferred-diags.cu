@@ -3,12 +3,12 @@
 #include "Inputs/cuda.h"
 
 // Error, instantiated on device.
-inline __host__ __device__ void hasInvalid() {
+inline __host__ __device__ void hasInvalid() { // expected-note {{in HD-promoted function 'hasInvalid'}}
   throw NULL;
   // expected-error@-1 {{cannot use 'throw' in __host__ __device__ function}}
 }
 
-inline __host__ __device__ void hasInvalid2() {
+inline __host__ __device__ void hasInvalid2() { // expected-note {{in HD-promoted function 'hasInvalid2'}}
   throw NULL;
   // expected-error@-1 {{cannot use 'throw' in __host__ __device__ function}}
 }
