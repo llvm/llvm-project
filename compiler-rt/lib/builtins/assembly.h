@@ -204,29 +204,10 @@
 #endif
 
 // clang-format off
-// pop {pc} can't switch Thumb mode on ARMv4T
+// ARMv4T ARM returns need BX to interwork with Thumb callers.
 #if __ARM_ARCH >= 5
 #define POP_PC() pop {pc}
 #define POP_PC_WITH_REGS(...) pop {__VA_ARGS__, pc}
-#define POP_PC_WITH_REGS_NO_CLOBBER(...) POP_PC_WITH_REGS(__VA_ARGS__)
-#elif defined(USE_THUMB_1)
-#define POP_PC()                                                               \
-  pop {r3};                                                                    \
-  JMP(r3)
-#define POP_PC_WITH_REGS(...)                                                  \
-  pop {__VA_ARGS__};                                                           \
-  pop {r3};                                                                    \
-  JMP(r3)
-// Some builtins have live values in every Thumb-1 low register. Use ip and lr
-// while transferring the stacked return address to a BX-capable high register.
-// NO_CLOBBER refers to low registers; ip and lr may be clobbered.
-#define POP_PC_WITH_REGS_NO_CLOBBER(...)                                       \
-  pop {__VA_ARGS__};                                                           \
-  mov ip, r3;                                                                  \
-  pop {r3};                                                                    \
-  mov lr, r3;                                                                  \
-  mov r3, ip;                                                                  \
-  JMP(lr)
 #else
 #define POP_PC()                                                               \
   pop {ip};                                                                    \
@@ -234,7 +215,6 @@
 #define POP_PC_WITH_REGS(...)                                                  \
   pop {__VA_ARGS__, ip};                                                       \
   JMP(ip)
-#define POP_PC_WITH_REGS_NO_CLOBBER(...) POP_PC_WITH_REGS(__VA_ARGS__)
 #endif
 // clang-format on
 

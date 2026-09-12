@@ -36,12 +36,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmpeq)
         mov r0, sp
         ldm r0, {r0-r3}
         bl __aeabi_cfcmple
-        POP_PC_WITH_REGS_NO_CLOBBER(r0-r3)
+        POP_PC_WITH_REGS(r0-r3)
 1:
         // Z = 0, C = 1
         movs r0, #0xF
         lsls r0, r0, #31
-        POP_PC_WITH_REGS_NO_CLOBBER(r0-r3)
+        POP_PC_WITH_REGS(r0-r3)
 #else
 #if defined(__ARM_FEATURE_PAC_DEFAULT)
         pop {r0-r3, r12, lr}
@@ -96,7 +96,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmple)
         // Z = 0, C = 0
         movs r0, #1
         lsls r0, r0, #1
-        POP_PC_WITH_REGS_NO_CLOBBER(r0-r3)
+        POP_PC_WITH_REGS(r0-r3)
 1:
         mov r0, sp
         ldm r0, {r0-r3}
@@ -106,12 +106,12 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfcmple)
         // Z = 1, C = 1
         movs r0, #2
         lsls r0, r0, #31
-        POP_PC_WITH_REGS_NO_CLOBBER(r0-r3)
+        POP_PC_WITH_REGS(r0-r3)
 2:
         // Z = 0, C = 1
         movs r0, #0xF
         lsls r0, r0, #31
-        POP_PC_WITH_REGS_NO_CLOBBER(r0-r3)
+        POP_PC_WITH_REGS(r0-r3)
 #else
         ITT(eq)
         moveq ip, #0
@@ -154,7 +154,7 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_cfrcmple)
 #if defined(USE_THUMB_1)
         push {r0, lr}
         bl __aeabi_cfcmple
-        POP_PC_WITH_REGS_NO_CLOBBER(r0)
+        POP_PC_WITH_REGS(r0)
 #else
         b __aeabi_cfcmple
 #endif
