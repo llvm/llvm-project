@@ -249,13 +249,13 @@ bool AArch64TargetInfo::validateGlobalRegisterVariable(
          getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
-bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
+bool AArch64TargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                                  BranchProtectionInfo &BPI,
                                                  const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple(),
-                                        HasPAuthLR))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple(), HasPAuthLR))
     return false;
 
   // GCS is currently untested with ptrauth-returns, but enabling this could be
@@ -276,10 +276,27 @@ bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
   else
     BPI.SignKey = LangOptions::SignReturnAddressKeyKind::BKey;
 
+  if (Attr.SignReturnAddrHardening.empty())
+    BPI.SignReturnAddressHardening =
+        LangOptions::SignReturnAddressHardeningKind::None;
+  else if (auto Hardening =
+               parseSignReturnAddressHardening(Attr.SignReturnAddrHardening))
+    BPI.SignReturnAddressHardening = *Hardening;
+
   BPI.BranchTargetEnforcement = PBP.BranchTargetEnforcement;
   BPI.BranchProtectionPAuthLR = PBP.BranchProtectionPAuthLR;
   BPI.GuardedControlStack = PBP.GuardedControlStack;
   return true;
+}
+
+std::optional<LangOptions::SignReturnAddressHardeningKind>
+AArch64TargetInfo::parseSignReturnAddressHardening(StringRef Spec) const {
+  return llvm::StringSwitch<
+             std::optional<LangOptions::SignReturnAddressHardeningKind>>(Spec)
+      .Case("load-return-address",
+            LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress)
+      .Case("none", LangOptions::SignReturnAddressHardeningKind::None)
+      .Default(std::nullopt);
 }
 
 bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
@@ -1409,6 +1426,11 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
 
     if (Feature.starts_with("branch-protection=")) {
       Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.starts_with("harden-pac-ret=")) {
+      Ret.SignReturnAddrHardening = Feature.split('=').second.trim();
       continue;
     }
 

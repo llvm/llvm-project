@@ -1391,16 +1391,59 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
                      ? Args.getLastArg(options::OPT_msign_return_address_EQ,
                                        options::OPT_mbranch_protection_EQ)
                      : Args.getLastArg(options::OPT_mbranch_protection_EQ);
+  const Arg *HardenPACRetArg = Args.getLastArg(options::OPT_mharden_pac_ret_EQ);
+  const Driver &D = TC.getDriver();
+
+  if (HardenPACRetArg) {
+    if (!isAArch64) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << HardenPACRetArg->getSpelling() << TC.getTriple().str();
+      return;
+    }
+    StringRef ArgValue = HardenPACRetArg->getValue();
+    if (ArgValue != "none" && ArgValue != "load-return-address") {
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << HardenPACRetArg->getSpelling() << ArgValue;
+      return;
+    }
+    if (ArgValue != "none" &&
+        Args.hasFlagNoClaim(options::OPT_mexecute_only,
+                            options::OPT_mno_execute_only, false)) {
+      D.Diag(diag::err_drv_incompatible_options)
+          << HardenPACRetArg->getAsString(Args) << "-mexecute-only";
+      return;
+    }
+  }
+
+  // Check CmdArgs because some toolchains bypass the driver args and add to
+  // the frontend args directly.
+  bool HasPtrauthReturns =
+      llvm::is_contained(CmdArgs, "-fptrauth-returns") ||
+      Args.hasFlagNoClaim(options::OPT_fptrauth_returns,
+                          options::OPT_fno_ptrauth_returns, false);
+
+  auto RenderHardenPACRet = [&](StringRef Scope) {
+    if (!HardenPACRetArg)
+      return;
+    if (Scope == "none" && !HasPtrauthReturns)
+      D.Diag(diag::warn_harden_pac_ret_requires_pac_ret);
+    else
+      CmdArgs.push_back(Args.MakeArgString(Twine("-mharden-pac-ret=") +
+                                           HardenPACRetArg->getValue()));
+  };
+
   if (!A) {
     if ((Triple.isOSOpenBSD() || Triple.isAndroid()) && isAArch64) {
       CmdArgs.push_back("-msign-return-address=non-leaf");
       CmdArgs.push_back("-msign-return-address-key=a_key");
       CmdArgs.push_back("-mbranch-target-enforce");
+      RenderHardenPACRet("non-leaf");
+    } else {
+      RenderHardenPACRet("none");
     }
     return;
   }
 
-  const Driver &D = TC.getDriver();
   if (!(isAArch64 || (Triple.isArmT32() && Triple.isArmMClass())))
     D.Diag(diag::warn_incompatible_branch_protection_option)
         << Triple.getArchName();
@@ -1454,11 +1497,6 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
     GuardedControlStack = PBP.GuardedControlStack;
   }
 
-  Arg *PtrauthReturnsArg = Args.getLastArg(options::OPT_fptrauth_returns,
-                                           options::OPT_fno_ptrauth_returns);
-  bool HasPtrauthReturns =
-      PtrauthReturnsArg &&
-      PtrauthReturnsArg->getOption().matches(options::OPT_fptrauth_returns);
   // GCS is currently untested with ptrauth-returns, but enabling this could be
   // allowed in future after testing with a suitable system.
   if (Scope != "none" || BranchProtectionPAuthLR || GuardedControlStack) {
@@ -1483,6 +1521,8 @@ static void CollectARMPACBTIOptions(const ToolChain &TC, const ArgList &Args,
 
   if (GuardedControlStack)
     CmdArgs.push_back("-mguarded-control-stack");
+
+  RenderHardenPACRet(Scope);
 }
 
 void Clang::AddARMTargetArgs(const llvm::Triple &Triple, const ArgList &Args,
