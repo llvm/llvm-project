@@ -955,8 +955,7 @@ define i32 @test_MM_GET_EXCEPTION_MASK() nounwind {
 ;
 ; X64-SSE-LABEL: test_MM_GET_EXCEPTION_MASK:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-SSE-NEXT:    stmxcsr (%rax) # encoding: [0x0f,0xae,0x18]
+; X64-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # encoding: [0x0f,0xae,0x5c,0x24,0xfc]
 ; X64-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-SSE-NEXT:    andl $8064, %eax # encoding: [0x25,0x80,0x1f,0x00,0x00]
 ; X64-SSE-NEXT:    # imm = 0x1F80
@@ -964,8 +963,7 @@ define i32 @test_MM_GET_EXCEPTION_MASK() nounwind {
 ;
 ; X64-AVX-LABEL: test_MM_GET_EXCEPTION_MASK:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-AVX-NEXT:    vstmxcsr (%rax) # encoding: [0xc5,0xf8,0xae,0x18]
+; X64-AVX-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # encoding: [0xc5,0xf8,0xae,0x5c,0x24,0xfc]
 ; X64-AVX-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-AVX-NEXT:    andl $8064, %eax # encoding: [0x25,0x80,0x1f,0x00,0x00]
 ; X64-AVX-NEXT:    # imm = 0x1F80
@@ -1002,16 +1000,14 @@ define i32 @test_MM_GET_EXCEPTION_STATE() nounwind {
 ;
 ; X64-SSE-LABEL: test_MM_GET_EXCEPTION_STATE:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-SSE-NEXT:    stmxcsr (%rax) # encoding: [0x0f,0xae,0x18]
+; X64-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # encoding: [0x0f,0xae,0x5c,0x24,0xfc]
 ; X64-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-SSE-NEXT:    andl $63, %eax # encoding: [0x83,0xe0,0x3f]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX-LABEL: test_MM_GET_EXCEPTION_STATE:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-AVX-NEXT:    vstmxcsr (%rax) # encoding: [0xc5,0xf8,0xae,0x18]
+; X64-AVX-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # encoding: [0xc5,0xf8,0xae,0x5c,0x24,0xfc]
 ; X64-AVX-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-AVX-NEXT:    andl $63, %eax # encoding: [0x83,0xe0,0x3f]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
@@ -1048,8 +1044,7 @@ define i32 @test_MM_GET_FLUSH_ZERO_MODE() nounwind {
 ;
 ; X64-SSE-LABEL: test_MM_GET_FLUSH_ZERO_MODE:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-SSE-NEXT:    stmxcsr (%rax) # encoding: [0x0f,0xae,0x18]
+; X64-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # encoding: [0x0f,0xae,0x5c,0x24,0xfc]
 ; X64-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-SSE-NEXT:    andl $32768, %eax # encoding: [0x25,0x00,0x80,0x00,0x00]
 ; X64-SSE-NEXT:    # imm = 0x8000
@@ -1057,8 +1052,7 @@ define i32 @test_MM_GET_FLUSH_ZERO_MODE() nounwind {
 ;
 ; X64-AVX-LABEL: test_MM_GET_FLUSH_ZERO_MODE:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-AVX-NEXT:    vstmxcsr (%rax) # encoding: [0xc5,0xf8,0xae,0x18]
+; X64-AVX-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # encoding: [0xc5,0xf8,0xae,0x5c,0x24,0xfc]
 ; X64-AVX-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-AVX-NEXT:    andl $32768, %eax # encoding: [0x25,0x00,0x80,0x00,0x00]
 ; X64-AVX-NEXT:    # imm = 0x8000
@@ -1096,8 +1090,7 @@ define i32 @test_MM_GET_ROUNDING_MODE() nounwind {
 ;
 ; X64-SSE-LABEL: test_MM_GET_ROUNDING_MODE:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-SSE-NEXT:    stmxcsr (%rax) # encoding: [0x0f,0xae,0x18]
+; X64-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # encoding: [0x0f,0xae,0x5c,0x24,0xfc]
 ; X64-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-SSE-NEXT:    andl $24576, %eax # encoding: [0x25,0x00,0x60,0x00,0x00]
 ; X64-SSE-NEXT:    # imm = 0x6000
@@ -1105,8 +1098,7 @@ define i32 @test_MM_GET_ROUNDING_MODE() nounwind {
 ;
 ; X64-AVX-LABEL: test_MM_GET_ROUNDING_MODE:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-AVX-NEXT:    vstmxcsr (%rax) # encoding: [0xc5,0xf8,0xae,0x18]
+; X64-AVX-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # encoding: [0xc5,0xf8,0xae,0x5c,0x24,0xfc]
 ; X64-AVX-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-AVX-NEXT:    andl $24576, %eax # encoding: [0x25,0x00,0x60,0x00,0x00]
 ; X64-AVX-NEXT:    # imm = 0x6000
@@ -1140,15 +1132,13 @@ define i32 @test_mm_getcsr() nounwind {
 ;
 ; X64-SSE-LABEL: test_mm_getcsr:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-SSE-NEXT:    stmxcsr (%rax) # encoding: [0x0f,0xae,0x18]
+; X64-SSE-NEXT:    stmxcsr -{{[0-9]+}}(%rsp) # encoding: [0x0f,0xae,0x5c,0x24,0xfc]
 ; X64-SSE-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX-LABEL: test_mm_getcsr:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-AVX-NEXT:    vstmxcsr (%rax) # encoding: [0xc5,0xf8,0xae,0x18]
+; X64-AVX-NEXT:    vstmxcsr -{{[0-9]+}}(%rsp) # encoding: [0xc5,0xf8,0xae,0x5c,0x24,0xfc]
 ; X64-AVX-NEXT:    movl -{{[0-9]+}}(%rsp), %eax # encoding: [0x8b,0x44,0x24,0xfc]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
   %1 = alloca i32, align 4
@@ -2316,15 +2306,13 @@ define void @test_mm_setcsr(i32 %a0) nounwind {
 ; X64-SSE-LABEL: test_mm_setcsr:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # encoding: [0x89,0x7c,0x24,0xfc]
-; X64-SSE-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-SSE-NEXT:    ldmxcsr (%rax) # encoding: [0x0f,0xae,0x10]
+; X64-SSE-NEXT:    ldmxcsr -{{[0-9]+}}(%rsp) # encoding: [0x0f,0xae,0x54,0x24,0xfc]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX-LABEL: test_mm_setcsr:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movl %edi, -{{[0-9]+}}(%rsp) # encoding: [0x89,0x7c,0x24,0xfc]
-; X64-AVX-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8d,0x44,0x24,0xfc]
-; X64-AVX-NEXT:    vldmxcsr (%rax) # encoding: [0xc5,0xf8,0xae,0x10]
+; X64-AVX-NEXT:    vldmxcsr -{{[0-9]+}}(%rsp) # encoding: [0xc5,0xf8,0xae,0x54,0x24,0xfc]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
   %st = alloca i32, align 4
   store i32 %a0, ptr %st, align 4
