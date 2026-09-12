@@ -1,6 +1,6 @@
 ; RUN: llvm-as < %s | llvm-dis | FileCheck %s
 
-target datalayout = "p:64:64:64:64"
+target datalayout = "p:64:64:64:64-p1:128:128:128:64"
 
 ; CHECK-DAG: bitinsert b64
 define b64 @bitinsert_val_int(b64 %base, i32 %val) {
@@ -32,6 +32,13 @@ define b64 @bitinsert_val_ptr_other_as(b64 %base, ptr addrspace(2) %val) {
   ret b64 %r
 }
 
+; CHECK-DAG: bitinsert b128
+define b128 @bitinsert_val_non_address_bits(b128 %base,
+                                              ptr addrspace(1) %val) {
+  %r = bitinsert b128 %base, ptr addrspace(1) %val, i32 0
+  ret b128 %r
+}
+
 ; CHECK-DAG: bitextract i32
 define i32 @bitextract_ty_int(b64 %src) {
   %r = bitextract i32, b64 %src, i32 0
@@ -60,4 +67,10 @@ define ptr @bitextract_ty_ptr(b64 %src) {
 define ptr addrspace(2) @bitextract_ty_ptr_other_as(b64 %src) {
   %r = bitextract ptr addrspace(2), b64 %src, i32 0
   ret ptr addrspace(2) %r
+}
+
+; CHECK-DAG: bitextract ptr addrspace(1)
+define ptr addrspace(1) @bitextract_ty_non_address_bits(b128 %src) {
+  %r = bitextract ptr addrspace(1), b128 %src, i32 0
+  ret ptr addrspace(1) %r
 }
