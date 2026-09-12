@@ -18095,7 +18095,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
            CostKind == TTI::TCK_Latency) &&
           findStoreLoadForwardingConflict(
               BaseSI,
-              E->getVectorFactor() * std::max(1u, E->getInterleaveFactor())))
+              E->Scalars.size() * std::max(1u, E->getInterleaveFactor())))
         VecStCost += TTI->getStoreLoadForwardingConflictCost(VecTy, CostKind);
       return VecStCost + CommonCost;
     };
