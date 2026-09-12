@@ -28,12 +28,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-void free_entries(LIBC_NAMESPACE::cpp::vector<struct dirent *> &entries) {
-  for (struct dirent *entry: entries) {
-    delete entry;
-  }
-}
-
 LLVM_LIBC_FUNCTION(int, scandir,
                    (const char *dir, struct dirent ***namelist,
                     __scandir_filter_t filter, __scandir_compare_t compare)) {
@@ -48,14 +42,8 @@ LLVM_LIBC_FUNCTION(int, scandir,
   while (true) {
     libc_errno = 0;
     struct dirent *entry = LIBC_NAMESPACE::readdir(dir_fd);
-    if (libc_errno != 0) {
-      free_entries(entries);
-      LIBC_NAMESPACE::closedir(dir_fd);
-      // errno set by readdir
-      return -1;
-    }
-
     if (entry == nullptr) {
+      // If the readdir call failed it set errno
       break;
     }
 
@@ -66,20 +54,32 @@ LLVM_LIBC_FUNCTION(int, scandir,
     AllocChecker ac;
     struct dirent *new_entry = new (ac) struct dirent;
     if (!ac || new_entry == NULL) {
-      free_entries(entries);
-      LIBC_NAMESPACE::closedir(dir_fd);
       libc_errno = ENOMEM;
-      return -1;
+      break;
     }
 
     LIBC_NAMESPACE::memcpy(new_entry, entry, sizeof(struct dirent));
 
     if (!entries.push_back(new_entry)) {
-      free_entries(entries);
-      LIBC_NAMESPACE::closedir(dir_fd);
       libc_errno = ENOMEM;
-      return -1;
+      break;
     }
+  }
+
+  LIBC_NAMESPACE::closedir(dir_fd);
+
+
+  AllocChecker ac;
+  struct dirent **result = new (ac) struct dirent*[entries.size()];
+  if (!ac) {
+    libc_errno = ENOMEM;
+  }
+
+  if (libc_errno != 0) {
+    for (struct dirent *entry: entries) {
+      delete entry;
+    }
+    return -1;
   }
 
   if (compare != nullptr) {
@@ -91,24 +91,12 @@ LLVM_LIBC_FUNCTION(int, scandir,
     internal::unstable_sort(entries.data(), entries.size(), sizeof(struct dirent*), cmp_fn);
   }
 
-  AllocChecker ac;
-  struct dirent **result = new (ac) struct dirent*[entries.size()];
-  if (!ac) {
-    free_entries(entries);
-    LIBC_NAMESPACE::closedir(dir_fd);
-    libc_errno = ENOMEM;
-    return -1;
-  }
-
   for (size_t i = 0; i < entries.size(); ++i) {
     result[i] = entries[i];
   }
 
   *namelist = result;
-
-  LIBC_NAMESPACE::closedir(dir_fd);
-
-  return 0;
+  return static_cast<int>(entries.size());
 }
 
 } // namespace LIBC_NAMESPACE_DECL
