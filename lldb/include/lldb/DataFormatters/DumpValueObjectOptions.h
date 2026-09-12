@@ -48,11 +48,11 @@ public:
     operator bool() { return m_element_count > 0; }
   };
 
-  typedef std::function<bool(ConstString, ConstString,
+  typedef std::function<bool(llvm::StringRef, llvm::StringRef,
                              const DumpValueObjectOptions &, Stream &)>
       DeclPrintingHelper;
 
-  typedef std::function<bool(ConstString)> ChildPrintingDecider;
+  typedef std::function<bool(llvm::StringRef)> ChildPrintingDecider;
 
   static const DumpValueObjectOptions DefaultOptions() {
     static DumpValueObjectOptions g_default_options;

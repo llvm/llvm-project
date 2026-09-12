@@ -193,13 +193,14 @@ static constexpr StringLiteral getSpecializedRoutineAttrName() {
 /// Used to check whether the current operation is marked with
 /// `acc routine`. The operation passed in should be a function.
 inline bool isAccRoutine(mlir::Operation *op) {
-  return op && op->hasAttr(mlir::acc::getRoutineInfoAttrName());
+  return op && op->hasDiscardableAttr(mlir::acc::getRoutineInfoAttrName());
 }
 
 /// Used to check whether this is a specialized accelerator version of
 /// `acc routine` function.
 inline bool isSpecializedAccRoutine(mlir::Operation *op) {
-  return op && op->hasAttr(mlir::acc::getSpecializedRoutineAttrName());
+  return op &&
+         op->hasDiscardableAttr(mlir::acc::getSpecializedRoutineAttrName());
 }
 
 static constexpr StringLiteral getFromDefaultClauseAttrName() {
@@ -239,7 +240,7 @@ struct CurrentDeviceIdResource
 };
 
 template <typename ComputeOpT>
-static bool isGangWorkerVectorAllOne(ComputeOpT op) {
+bool isGangWorkerVectorAllOne(ComputeOpT op) {
   // Strip index_cast operations from a value before checking for a constant.
   auto stripIndexCasts = [](Value val) -> Value {
     while (auto castOp = val.getDefiningOp<arith::IndexCastOp>())

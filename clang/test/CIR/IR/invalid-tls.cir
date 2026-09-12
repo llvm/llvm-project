@@ -16,8 +16,8 @@ module {
 !s32i = !cir.int<s, 32>
 
 module {
-  // expected-error@+1{{op cannot have both static local and dynamic tls references}}
-cir.global "private" internal tls_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
+  // expected-error@+1{{op cannot have both static local and tls references}}
+cir.global "private" internal tls_model = tls_dyn tls_refs = <"asdf", "asdf", "asdf"> static_local_guard<"asdf"> @_ZZ1fvE1y : !s32i
 }
 
 // -----
@@ -25,7 +25,15 @@ cir.global "private" internal tls_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> st
 !s32i = !cir.int<s, 32>
 
 module {
-  // expected-error@+1{{'dyn_tls_refs' only valid for dynamic tls}}
-cir.global "private" internal tls_local_dyn dyn_tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
+  // expected-error@+1{{'tls_refs' only valid for tls}}
+cir.global "private" internal tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
 }
 
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  // expected-error@+1{{custom op 'cir.global' expected string or keyword containing one of the following enum values for attribute 'tls_model' [tls_dyn, tls_local_dyn, tls_init_exec, tls_local_exec]}}
+cir.global "private" internal tls_model = invalid_tls_dyn tls_refs = <"asdf", "asdf", "asdf"> @_ZZ1fvE1y : !s32i
+}

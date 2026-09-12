@@ -72,14 +72,8 @@ public:
   FailureOr<StringAttr> renameToUnique(Operation *op,
                                        ArrayRef<SymbolTable *> others);
 
-  /// Return the name of the attribute used for symbol names.
-  static StringRef getSymbolAttrName() { return "sym_name"; }
-
   /// Returns the associated operation.
   Operation *getOp() const { return symbolTableOp; }
-
-  /// Return the name of the attribute used for symbol visibility.
-  static StringRef getVisibilityAttrName() { return "sym_visibility"; }
 
   //===--------------------------------------------------------------------===//
   // Symbol Utilities
@@ -124,6 +118,9 @@ public:
   /// Returns the name of the given symbol operation, aborting if no symbol is
   /// present.
   static StringAttr getSymbolName(Operation *symbol);
+  /// Compatibility alias for generated interface code that still refers to the
+  /// symbol name attribute by convention.
+  static StringRef getSymbolAttrName() { return "sym_name"; }
 
   /// Sets the name of the given symbol operation.
   static void setSymbolName(Operation *symbol, StringAttr name);
@@ -131,9 +128,11 @@ public:
     setSymbolName(symbol, StringAttr::get(symbol->getContext(), name));
   }
 
-  /// Returns the visibility of the given symbol operation.
+  /// Returns the visibility of the given symbol operation, which is required to
+  /// implement `SymbolOpInterface`.
   static Visibility getSymbolVisibility(Operation *symbol);
-  /// Sets the visibility of the given symbol operation.
+  /// Sets the visibility of the given symbol operation, which is required to
+  /// implement `SymbolOpInterface`.
   static void setSymbolVisibility(Operation *symbol, Visibility vis);
 
   /// Returns the nearest symbol table from a given operation `from`. Returns
@@ -438,16 +437,68 @@ private:
 namespace detail {
 LogicalResult verifySymbolTable(Operation *op);
 LogicalResult verifySymbol(Operation *op);
+
 } // namespace detail
 
 namespace OpTrait {
+/// A trait that provides the name accessors for symbol operations that store
+/// their name in the conventional `sym_name` inherent attribute.
+template <typename ConcreteType>
+class SymbolName : public TraitBase<ConcreteType, SymbolName> {
+public:
+  StringAttr getNameAttr() {
+    return cast<ConcreteType>(this->getOperation()).getSymNameAttr();
+  }
+
+  StringRef getName() { return getNameAttr().getValue(); }
+
+  void setName(StringAttr name) {
+    cast<ConcreteType>(this->getOperation()).setSymNameAttr(name);
+  }
+
+  void setName(StringRef name) {
+    setName(StringAttr::get(this->getOperation()->getContext(), name));
+  }
+};
+
+/// A trait that provides visibility accessors for symbol operations that store
+/// their visibility in the conventional `sym_visibility` inherent attribute.
+template <typename ConcreteType>
+class SymbolVisibility : public TraitBase<ConcreteType, SymbolVisibility> {
+public:
+  ::mlir::SymbolTable::Visibility getVisibility() {
+    auto concrete = cast<ConcreteType>(this->getOperation());
+    StringAttr visibility = concrete.getSymVisibilityAttr();
+    if (!visibility || visibility.getValue() == "public")
+      return ::mlir::SymbolTable::Visibility::Public;
+    if (visibility.getValue() == "private")
+      return ::mlir::SymbolTable::Visibility::Private;
+    assert(visibility.getValue() == "nested" && "invalid symbol visibility");
+    return ::mlir::SymbolTable::Visibility::Nested;
+  }
+
+  void setVisibility(::mlir::SymbolTable::Visibility visibility) {
+    auto concrete = cast<ConcreteType>(this->getOperation());
+    if (visibility == ::mlir::SymbolTable::Visibility::Public) {
+      concrete.setSymVisibilityAttr({});
+      return;
+    }
+    assert((visibility == ::mlir::SymbolTable::Visibility::Private ||
+            visibility == ::mlir::SymbolTable::Visibility::Nested) &&
+           "invalid symbol visibility");
+    StringRef value = visibility == ::mlir::SymbolTable::Visibility::Private
+                          ? "private"
+                          : "nested";
+    concrete.setSymVisibilityAttr(
+        StringAttr::get(this->getOperation()->getContext(), value));
+  }
+};
+
 /// A trait used to provide symbol table functionalities to a region operation.
 /// This operation must hold exactly 1 region. Once attached, all operations
 /// that are directly within the region, i.e not including those within child
-/// regions, that contain a 'SymbolTable::getSymbolAttrName()' StringAttr will
-/// be verified to ensure that the names are uniqued. These operations must also
-/// adhere to the constraints defined by the `Symbol` trait, even if they do not
-/// inherit from it.
+/// regions, and implement `SymbolOpInterface` will be verified to ensure that
+/// their names are uniqued.
 template <typename ConcreteType>
 class SymbolTable : public TraitBase<ConcreteType, SymbolTable> {
 public:
@@ -500,6 +551,5 @@ ParseResult parseOptionalVisibilityKeyword(OpAsmParser &parser,
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.h.inc"
 #include "mlir/IR/SymbolInterfacesAttrInterface.h.inc"
-#include "mlir/IR/SymbolInterfacesTypeInterface.h.inc"
 
 #endif // MLIR_IR_SYMBOLTABLE_H

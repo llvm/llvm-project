@@ -169,6 +169,8 @@
   }
 
   !12 = !{i8 0, i8 2}
+  !13 = !{i32 0, !14}
+  !14 = !{!"nvvm.l1_eviction", !"first"}
 
   %st = type { i32, i32 }
 
@@ -457,8 +459,8 @@ body: |
   bb.0.entry:
     $rax = MOV64rm $rip, 1, _, @a, _ :: (load (s64) from got)
   ; CHECK-LABEL: name: tbaa_metadata
-  ; CHECK:      $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from @a, !tbaa !2)
-  ; CHECK-NEXT: $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg :: (load (s32) from %ir.1, !tbaa !6)
+  ; CHECK:      $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg, implicit-def $rax :: (load (s32) from @a, !tbaa !{{[0-9]+}})
+  ; CHECK-NEXT: $eax = MOV32rm killed $rax, 1, $noreg, 0, $noreg :: (load (s32) from %ir.1, !tbaa !{{[0-9]+}})
     $eax = MOV32rm killed $rax, 1, _, 0, _, implicit-def $rax :: (load (s32) from @a, !tbaa !2)
     $eax = MOV32rm killed $rax, 1, _, 0, _ :: (load (s32) from %ir.1, !tbaa !6)
     RET64 $eax
@@ -473,9 +475,9 @@ body: |
   bb.0.entry:
     liveins: $rdi, $rsi
   ; CHECK-LABEL: name: aa_scope
-  ; CHECK: $xmm0 = MOVSSrm_alt $rsi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c, !alias.scope !9)
+  ; CHECK: $xmm0 = MOVSSrm_alt $rsi, 1, $noreg, 0, $noreg :: (load (s32) from %ir.c, !alias.scope ![[AA_SCOPE:[0-9]+]])
     $xmm0 = MOVSSrm_alt $rsi, 1, _, 0, _ :: (load (s32) from %ir.c, !alias.scope !9)
-  ; CHECK-NEXT: MOVSSmr $rdi, 1, $noreg, 20, $noreg, killed $xmm0 :: (store (s32) into %ir.arrayidx.i, !noalias !9)
+  ; CHECK-NEXT: MOVSSmr $rdi, 1, $noreg, 20, $noreg, killed $xmm0 :: (store (s32) into %ir.arrayidx.i, !noalias ![[AA_SCOPE]])
     MOVSSmr $rdi, 1, _, 20, _, killed $xmm0 :: (store (s32) into %ir.arrayidx.i, !noalias !9)
     $xmm0 = MOVSSrm_alt killed $rsi, 1, _, 0, _ :: (load (s32) from %ir.c)
     MOVSSmr killed $rdi, 1, _, 28, _, killed $xmm0 :: (store (s32) into %ir.arrayidx)
@@ -490,8 +492,8 @@ body: |
   bb.0.entry:
     liveins: $rdi
   ; CHECK-LABEL: name: range_metadata
-  ; CHECK: $al = MOV8rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s8) from %ir.x, !range !11)
-    $al = MOV8rm killed $rdi, 1, _, 0, _ :: (load (s8) from %ir.x, !range !11)
+  ; CHECK: $al = MOV8rm killed $rdi, 1, $noreg, 0, $noreg :: (load (s8) from %ir.x, !range !{{[0-9]+}}, !mem.cache_hint !{{[0-9]+}})
+    $al = MOV8rm killed $rdi, 1, _, 0, _ :: (load (s8) from %ir.x, !range !11, !mem.cache_hint !12)
     RET64 $al
 ...
 ---

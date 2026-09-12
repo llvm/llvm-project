@@ -25,10 +25,10 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    v_interp_p10_f32 v0, v3, v0, v3 wait_exp:0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_clause 0xf
-; GFX11-NEXT:    s_buffer_load_b64 s[16:17], s[12:15], 0x10
-; GFX11-NEXT:    s_buffer_load_b64 s[18:19], s[12:15], 0x20
-; GFX11-NEXT:    s_buffer_load_b64 s[20:21], s[12:15], 0x30
-; GFX11-NEXT:    s_buffer_load_b64 s[22:23], s[12:15], 0x40
+; GFX11-NEXT:    s_buffer_load_b64 s[22:23], s[12:15], 0x10
+; GFX11-NEXT:    s_buffer_load_b64 s[20:21], s[12:15], 0x20
+; GFX11-NEXT:    s_buffer_load_b64 s[18:19], s[12:15], 0x30
+; GFX11-NEXT:    s_buffer_load_b64 s[16:17], s[12:15], 0x40
 ; GFX11-NEXT:    s_buffer_load_b64 s[24:25], s[12:15], 0x50
 ; GFX11-NEXT:    s_buffer_load_b64 s[26:27], s[12:15], 0x60
 ; GFX11-NEXT:    s_buffer_load_b64 s[28:29], s[12:15], 0x70
@@ -45,14 +45,14 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
 ; GFX11-NEXT:    v_interp_p2_f32 v0, v3, v1, v0 wait_exp:7
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_f32_e32 v5, s17, v36
-; GFX11-NEXT:    v_add_f32_e32 v4, s16, v0
-; GFX11-NEXT:    v_add_f32_e32 v8, s18, v0
-; GFX11-NEXT:    v_add_f32_e32 v9, s19, v36
-; GFX11-NEXT:    v_add_f32_e32 v12, s20, v0
-; GFX11-NEXT:    v_add_f32_e32 v13, s21, v36
-; GFX11-NEXT:    v_add_f32_e32 v16, s22, v0
-; GFX11-NEXT:    v_add_f32_e32 v17, s23, v36
+; GFX11-NEXT:    v_add_f32_e32 v5, s23, v36
+; GFX11-NEXT:    v_add_f32_e32 v4, s22, v0
+; GFX11-NEXT:    v_add_f32_e32 v8, s20, v0
+; GFX11-NEXT:    v_add_f32_e32 v9, s21, v36
+; GFX11-NEXT:    v_add_f32_e32 v12, s18, v0
+; GFX11-NEXT:    v_add_f32_e32 v13, s19, v36
+; GFX11-NEXT:    v_add_f32_e32 v16, s16, v0
+; GFX11-NEXT:    v_add_f32_e32 v17, s17, v36
 ; GFX11-NEXT:    v_add_f32_e32 v20, s24, v0
 ; GFX11-NEXT:    v_add_f32_e32 v21, s25, v36
 ; GFX11-NEXT:    v_add_f32_e32 v24, s26, v0
@@ -166,7 +166,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %i2 = zext i32 %userdata6 to i64
   %i3 = or disjoint i64 %i1, %i2
   %i4 = inttoptr i64 %i3 to ptr addrspace(4)
-  %i5 = load <4 x i32>, ptr addrspace(4) %i4, align 16
+  %i5 = load ptr addrspace(8), ptr addrspace(4) %i4, align 16
   %i6 = zext i32 %userdata7 to i64
   %i7 = or disjoint i64 %i1, %i6
   %i8 = inttoptr i64 %i7 to ptr addrspace(4)
@@ -183,7 +183,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %i17 = call float @llvm.amdgcn.lds.param.load(i32 0, i32 0, i32 %PrimMask)
   %i18 = call float @llvm.amdgcn.interp.inreg.p10(float %i17, float %PerspInterpCenter.i0, float %i17)
   %i19 = call float @llvm.amdgcn.interp.inreg.p2(float %i17, float %PerspInterpCenter.i1, float %i18)
-  %i20 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 16, i32 0), !invariant.load !0
+  %i20 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 16, i32 0), !invariant.load !0
   %i21 = shufflevector <2 x i32> %i20, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i22 = bitcast <4 x i32> %i21 to <4 x float>
   %.i0 = extractelement <4 x float> %i22, i64 0
@@ -195,7 +195,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i113 = extractelement <4 x float> %i23, i64 1
   %.i215 = extractelement <4 x float> %i23, i64 2
   %.i317 = extractelement <4 x float> %i23, i64 3
-  %i24 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 32, i32 0), !invariant.load !0
+  %i24 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 32, i32 0), !invariant.load !0
   %i25 = shufflevector <2 x i32> %i24, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i26 = bitcast <4 x i32> %i25 to <4 x float>
   %.i05 = extractelement <4 x float> %i26, i64 0
@@ -211,7 +211,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i216 = fadd reassoc nnan nsz arcp contract afn float %.i2, %.i215
   %.i3 = extractelement <4 x float> %i27, i64 3
   %.i318 = fadd reassoc nnan nsz arcp contract afn float %.i3, %.i317
-  %i28 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 48, i32 0), !invariant.load !0
+  %i28 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 48, i32 0), !invariant.load !0
   %i29 = shufflevector <2 x i32> %i28, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i30 = bitcast <4 x i32> %i29 to <4 x float>
   %.i019 = extractelement <4 x float> %i30, i64 0
@@ -227,7 +227,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i228 = fadd reassoc nnan nsz arcp contract afn float %.i227, %.i216
   %.i329 = extractelement <4 x float> %i31, i64 3
   %.i330 = fadd reassoc nnan nsz arcp contract afn float %.i329, %.i318
-  %i32 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 64, i32 0), !invariant.load !0
+  %i32 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 64, i32 0), !invariant.load !0
   %i33 = shufflevector <2 x i32> %i32, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i34 = bitcast <4 x i32> %i33 to <4 x float>
   %.i031 = extractelement <4 x float> %i34, i64 0
@@ -243,7 +243,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i240 = fadd reassoc nnan nsz arcp contract afn float %.i239, %.i228
   %.i341 = extractelement <4 x float> %i35, i64 3
   %.i342 = fadd reassoc nnan nsz arcp contract afn float %.i341, %.i330
-  %i36 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 80, i32 0), !invariant.load !0
+  %i36 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 80, i32 0), !invariant.load !0
   %i37 = shufflevector <2 x i32> %i36, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i38 = bitcast <4 x i32> %i37 to <4 x float>
   %.i043 = extractelement <4 x float> %i38, i64 0
@@ -259,7 +259,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i252 = fadd reassoc nnan nsz arcp contract afn float %.i251, %.i240
   %.i353 = extractelement <4 x float> %i39, i64 3
   %.i354 = fadd reassoc nnan nsz arcp contract afn float %.i353, %.i342
-  %i40 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 96, i32 0), !invariant.load !0
+  %i40 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 96, i32 0), !invariant.load !0
   %i41 = shufflevector <2 x i32> %i40, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i42 = bitcast <4 x i32> %i41 to <4 x float>
   %.i055 = extractelement <4 x float> %i42, i64 0
@@ -275,7 +275,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i264 = fadd reassoc nnan nsz arcp contract afn float %.i263, %.i252
   %.i365 = extractelement <4 x float> %i43, i64 3
   %.i366 = fadd reassoc nnan nsz arcp contract afn float %.i365, %.i354
-  %i44 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 112, i32 0), !invariant.load !0
+  %i44 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 112, i32 0), !invariant.load !0
   %i45 = shufflevector <2 x i32> %i44, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i46 = bitcast <4 x i32> %i45 to <4 x float>
   %.i067 = extractelement <4 x float> %i46, i64 0
@@ -291,7 +291,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i276 = fadd reassoc nnan nsz arcp contract afn float %.i275, %.i264
   %.i377 = extractelement <4 x float> %i47, i64 3
   %.i378 = fadd reassoc nnan nsz arcp contract afn float %.i377, %.i366
-  %i48 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 128, i32 0), !invariant.load !0
+  %i48 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 128, i32 0), !invariant.load !0
   %i49 = shufflevector <2 x i32> %i48, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i50 = bitcast <4 x i32> %i49 to <4 x float>
   %.i079 = extractelement <4 x float> %i50, i64 0
@@ -307,7 +307,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i288 = fadd reassoc nnan nsz arcp contract afn float %.i287, %.i276
   %.i389 = extractelement <4 x float> %i51, i64 3
   %.i390 = fadd reassoc nnan nsz arcp contract afn float %.i389, %.i378
-  %i52 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 144, i32 0), !invariant.load !0
+  %i52 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 144, i32 0), !invariant.load !0
   %i53 = shufflevector <2 x i32> %i52, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i54 = bitcast <4 x i32> %i53 to <4 x float>
   %.i091 = extractelement <4 x float> %i54, i64 0
@@ -323,7 +323,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2100 = fadd reassoc nnan nsz arcp contract afn float %.i299, %.i288
   %.i3101 = extractelement <4 x float> %i55, i64 3
   %.i3102 = fadd reassoc nnan nsz arcp contract afn float %.i3101, %.i390
-  %i56 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 160, i32 0), !invariant.load !0
+  %i56 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 160, i32 0), !invariant.load !0
   %i57 = shufflevector <2 x i32> %i56, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i58 = bitcast <4 x i32> %i57 to <4 x float>
   %.i0103 = extractelement <4 x float> %i58, i64 0
@@ -339,7 +339,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2112 = fadd reassoc nnan nsz arcp contract afn float %.i2111, %.i2100
   %.i3113 = extractelement <4 x float> %i59, i64 3
   %.i3114 = fadd reassoc nnan nsz arcp contract afn float %.i3113, %.i3102
-  %i60 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 176, i32 0), !invariant.load !0
+  %i60 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 176, i32 0), !invariant.load !0
   %i61 = shufflevector <2 x i32> %i60, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i62 = bitcast <4 x i32> %i61 to <4 x float>
   %.i0115 = extractelement <4 x float> %i62, i64 0
@@ -355,7 +355,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2124 = fadd reassoc nnan nsz arcp contract afn float %.i2123, %.i2112
   %.i3125 = extractelement <4 x float> %i63, i64 3
   %.i3126 = fadd reassoc nnan nsz arcp contract afn float %.i3125, %.i3114
-  %i64 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 192, i32 0), !invariant.load !0
+  %i64 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 192, i32 0), !invariant.load !0
   %i65 = shufflevector <2 x i32> %i64, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i66 = bitcast <4 x i32> %i65 to <4 x float>
   %.i0127 = extractelement <4 x float> %i66, i64 0
@@ -371,7 +371,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2136 = fadd reassoc nnan nsz arcp contract afn float %.i2135, %.i2124
   %.i3137 = extractelement <4 x float> %i67, i64 3
   %.i3138 = fadd reassoc nnan nsz arcp contract afn float %.i3137, %.i3126
-  %i68 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 208, i32 0), !invariant.load !0
+  %i68 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 208, i32 0), !invariant.load !0
   %i69 = shufflevector <2 x i32> %i68, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i70 = bitcast <4 x i32> %i69 to <4 x float>
   %.i0139 = extractelement <4 x float> %i70, i64 0
@@ -387,7 +387,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2148 = fadd reassoc nnan nsz arcp contract afn float %.i2147, %.i2136
   %.i3149 = extractelement <4 x float> %i71, i64 3
   %.i3150 = fadd reassoc nnan nsz arcp contract afn float %.i3149, %.i3138
-  %i72 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 224, i32 0), !invariant.load !0
+  %i72 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 224, i32 0), !invariant.load !0
   %i73 = shufflevector <2 x i32> %i72, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i74 = bitcast <4 x i32> %i73 to <4 x float>
   %.i0151 = extractelement <4 x float> %i74, i64 0
@@ -403,7 +403,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2160 = fadd reassoc nnan nsz arcp contract afn float %.i2159, %.i2148
   %.i3161 = extractelement <4 x float> %i75, i64 3
   %.i3162 = fadd reassoc nnan nsz arcp contract afn float %.i3161, %.i3150
-  %i76 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 240, i32 0), !invariant.load !0
+  %i76 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 240, i32 0), !invariant.load !0
   %i77 = shufflevector <2 x i32> %i76, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i78 = bitcast <4 x i32> %i77 to <4 x float>
   %.i0163 = extractelement <4 x float> %i78, i64 0
@@ -419,7 +419,7 @@ define amdgpu_ps void @group_image_sample(i32 inreg noundef %globalTable, i32 in
   %.i2172 = fadd reassoc nnan nsz arcp contract afn float %.i2171, %.i2160
   %.i3173 = extractelement <4 x float> %i79, i64 3
   %.i3174 = fadd reassoc nnan nsz arcp contract afn float %.i3173, %.i3162
-  %i80 = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %i5, i32 256, i32 0), !invariant.load !0
+  %i80 = call <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8) %i5, i32 256, i32 0), !invariant.load !0
   %i81 = shufflevector <2 x i32> %i80, <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %i82 = bitcast <4 x i32> %i81 to <4 x float>
   %.i0175 = extractelement <4 x float> %i82, i64 0
@@ -450,7 +450,7 @@ declare void @llvm.amdgcn.exp.f32(i32 immarg, i32 immarg, float, float, float, f
 declare float @llvm.amdgcn.lds.param.load(i32 immarg, i32 immarg, i32) #3
 declare float @llvm.amdgcn.interp.inreg.p10(float, float, float) #3
 declare float @llvm.amdgcn.interp.inreg.p2(float, float, float) #3
-declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg) #8
+declare <2 x i32> @llvm.amdgcn.ptr.s.buffer.load.v2i32(ptr addrspace(8), i32, i32 immarg) #8
 
 attributes #2 = { alwaysinline nounwind memory(readwrite) "amdgpu-sched-strategy"="max-memory-clause" "amdgpu-max-memory-cluster-dwords"="32"}
 attributes #3 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

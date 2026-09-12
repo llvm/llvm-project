@@ -1,7 +1,7 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %clang -### -x hip -target x86_64-linux-gnu \
-// RUN:   --offload=spirv64-unknown-chipstar --offload-new-driver -fgpu-rdc -c \
+// RUN:   --offload=spirv64-unknown-chipstar -fgpu-rdc -c \
 // RUN:   --hip-path=%S/Inputs/hipspv -nohipwrapperinc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
@@ -51,7 +51,7 @@
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: touch %t/a.o %t/b.o
-// RUN: %clang -### -target x86_64-linux-gnu --offload-new-driver -fgpu-rdc \
+// RUN: %clang -### -target x86_64-linux-gnu --offload-link -fgpu-rdc \
 // RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv \
 // RUN:   -no-hip-rt %t/a.o %t/b.o \

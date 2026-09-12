@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -35,6 +36,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -604,12 +606,14 @@ inline ErrorOr<size_t> SampleProfileReaderBinary::readStringIndex(T &Table) {
 
 ErrorOr<FunctionId>
 SampleProfileReaderBinary::readStringFromTable(size_t *RetIdx) {
-  auto Idx = readStringIndex(NameTable);
+  if (!NameTable)
+    return sampleprof_error::truncated_name_table;
+  auto Idx = readStringIndex(*NameTable);
   if (std::error_code EC = Idx.getError())
     return EC;
   if (RetIdx)
     *RetIdx = *Idx;
-  return NameTable[*Idx];
+  return (*NameTable)[*Idx];
 }
 
 ErrorOr<SampleContextFrames>
@@ -658,6 +662,7 @@ SampleProfileReaderBinary::readVTableTypeCountMap(TypeCountMap &M) {
   auto NumVTableTypes = readNumber<uint32_t>();
   if (std::error_code EC = NumVTableTypes.getError())
     return EC;
+  M.reserve(*NumVTableTypes);
 
   for (uint32_t I = 0; I < *NumVTableTypes; ++I) {
     auto VTableType(readStringFromTable());
@@ -691,6 +696,7 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
   auto NumCallsites = readNumber<uint32_t>();
   if (std::error_code EC = NumCallsites.getError())
     return EC;
+  FProfile.reserveCallsiteTypeCounts(*NumCallsites);
 
   for (uint32_t I = 0; I < *NumCallsites; ++I) {
     auto LineOffset = readNumber<uint64_t>();
@@ -715,7 +721,14 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
+                                          bool IsNested) {
+  if (ProfileSecRange.IsComposite && !IsNested) {
+    auto NumHeadSamples = readNumber<uint64_t>();
+    if (std::error_code EC = NumHeadSamples.getError())
+      return EC;
+    FProfile.addHeadSamples(*NumHeadSamples);
+  }
   auto NumSamples = readNumber<uint64_t>();
   if (std::error_code EC = NumSamples.getError())
     return EC;
@@ -725,6 +738,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
   auto NumRecords = readNumber<uint32_t>();
   if (std::error_code EC = NumRecords.getError())
     return EC;
+  FProfile.reserveBodySamples(*NumRecords);
 
   for (uint32_t I = 0; I < *NumRecords; ++I) {
     auto LineOffset = readNumber<uint64_t>();
@@ -766,6 +780,96 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
   }
 
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readCompositeProfile(FunctionSamples &FProfile,
+                                                bool IsNested) {
+  // Read the number of profile types.
+  auto ProfNum = readNumber<uint64_t>();
+  if (std::error_code EC = ProfNum.getError())
+    return EC;
+  if (ProfileTypeInfoOS)
+    *ProfileTypeInfoOS << (IsNested ? "Nested function: " : "Function: ")
+                       << FProfile.getContext().toString()
+                       << "\n  Profile blocks: " << *ProfNum << "\n";
+
+  // Each type identifies one logical payload for the function. Decoding the
+  // same type twice would merge absolute counters from malformed input.
+  SmallSet<uint64_t, 4> SeenTypes;
+
+  // Read the specified number of composite profiles.
+  for (uint64_t I = 0; I < *ProfNum; ++I) {
+    auto Type = readNumber<uint64_t>();
+    if (std::error_code EC = Type.getError())
+      return EC;
+    // Report the conflicting ID so malformed profiles can be diagnosed
+    // without inspecting their binary encoding.
+    if (!SeenTypes.insert(*Type).second) {
+      reportError(0, "Duplicate profile type ID: " + Twine(*Type));
+      return sampleprof_error::malformed;
+    }
+    auto Size = readNumber<uint64_t>();
+    if (std::error_code EC = Size.getError())
+      return EC;
+    if (ProfileTypeInfoOS)
+      *ProfileTypeInfoOS << "  Type: " << *Type << " ("
+                         << getProfTypeName(*Type)
+                         << "), Payload size: " << *Size << "\n";
+    const uint64_t RemainingSize = End - Data;
+    // Diagnose a size that would let the payload cross its containing section.
+    if (*Size > RemainingSize) {
+      reportError(0, "Profile type ID " + Twine(*Type) +
+                         " declares payload size " + Twine(*Size) +
+                         ", but only " + Twine(RemainingSize) +
+                         " bytes remain");
+      return sampleprof_error::truncated;
+    }
+
+    const uint8_t *PayloadEnd = Data + *Size;
+    std::error_code EC = sampleprof_error::success;
+    // Restrict field readers to the current payload so they reject fields that
+    // extend into the following payload.
+    SaveAndRestore<const uint8_t *> RestoreEnd(End, PayloadEnd);
+    switch (*Type) {
+    case ProfTypeLBR:
+      EC = readLBRProfile(FProfile, IsNested);
+      break;
+    default:
+      // Skip unknown profile types for forward compatibility.
+      HasUnknownProfileTypes = true;
+      Data = PayloadEnd;
+      break;
+    }
+
+    if (EC)
+      return EC;
+    // Reject trailing bytes because every known decoder must consume exactly
+    // the payload declared for its type.
+    if (Data != PayloadEnd) {
+      reportError(0,
+                  "Profile type ID " + Twine(*Type) +
+                      " did not consume its complete payload; unread bytes: " +
+                      Twine(PayloadEnd - Data));
+      return sampleprof_error::malformed;
+    }
+  }
+
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile,
+                                       bool IsNested) {
+  if (ProfileSecRange.IsComposite) {
+    if (std::error_code EC = readCompositeProfile(FProfile, IsNested))
+      return EC;
+  } else {
+    if (std::error_code EC = readLBRProfile(FProfile, IsNested))
+      return EC;
+  }
+
   // Read all the samples for inlined function calls.
   auto NumCallsites = readNumber<uint32_t>();
   if (std::error_code EC = NumCallsites.getError())
@@ -790,7 +894,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
         LineLocation(*LineOffset, DiscriminatorVal))[*FName];
     CalleeProfile.setFunction(*FName);
-    if (std::error_code EC = readProfile(CalleeProfile))
+    if (std::error_code EC = readProfile(CalleeProfile, /*IsNested=*/true))
       return EC;
   }
 
@@ -804,10 +908,12 @@ std::error_code
 SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
                                            SampleProfileMap &Profiles) {
   Data = Start;
-  auto NumHeadSamples = readNumber<uint64_t>();
-  if (std::error_code EC = NumHeadSamples.getError())
-    return EC;
-
+  ErrorOr<uint64_t> NumHeadSamples = 0;
+  if (!ProfileSecRange.IsComposite) {
+    NumHeadSamples = readNumber<uint64_t>();
+    if (std::error_code EC = NumHeadSamples.getError())
+      return EC;
+  }
   auto FContextHash(readSampleContextFromTable());
   if (std::error_code EC = FContextHash.getError())
     return EC;
@@ -817,12 +923,13 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
   auto Res = Profiles.try_emplace(Hash, FContext, FunctionSamples());
   FunctionSamples &FProfile = Res.first->second;
   FProfile.setContext(FContext);
-  FProfile.addHeadSamples(*NumHeadSamples);
+  if (!ProfileSecRange.IsComposite)
+    FProfile.addHeadSamples(*NumHeadSamples);
 
   if (FContext.hasContext())
     CSProfileCount++;
 
-  if (std::error_code EC = readProfile(FProfile))
+  if (std::error_code EC = readProfile(FProfile, /*IsNested=*/false))
     return EC;
   return sampleprof_error::success;
 }
@@ -871,7 +978,9 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     ProfileIsMD5 = ProfileIsMD5 || UseMD5;
     FunctionSamples::HasUniqSuffix =
         hasSecFlag(Entry, SecNameTableFlags::SecFlagUniqSuffix);
-    if (std::error_code EC = readNameTableSec(UseMD5, FixedLengthMD5))
+    bool IsEytzinger = hasSecFlag(Entry, SecNameTableFlags::SecFlagEytzinger);
+    if (std::error_code EC =
+            readNameTableSec(UseMD5, FixedLengthMD5, IsEytzinger))
       return EC;
     break;
   }
@@ -881,20 +990,31 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecLBRProfile:
-    ProfileSecRange = std::make_pair(Data, End);
+  case SecCompositeProfile:
+    // Retain the section and its encoding for subsequent on-demand reads.
+    ProfileSecRange = {Data, End, Entry.Type == SecCompositeProfile};
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     // If module is absent, we are using LLVM tools, and need to read all
     // profiles, so skip reading the function offset table.
     if (!M) {
       Data = End;
     } else {
+      bool IsEytzinger =
+          hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger);
+      bool IsFlat = hasSecFlag(Entry, SecCommonFlags::SecFlagFlat);
+      // An unflagged function offset table inherently indexes the primary
+      // Nested symbol span.
+      bool IsNested = !IsFlat;
       assert((!ProfileIsCS ||
-              hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered)) &&
-             "func offset table should always be sorted in CS profile");
-      if (std::error_code EC = readFuncOffsetTable())
+              hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered) ||
+              IsEytzinger) &&
+             "func offset table should always be sorted or in Eytzinger BFS "
+             "order in CS profile");
+      if (std::error_code EC = readFuncOffsetTable(IsEytzinger, IsNested))
         return EC;
     }
     break;
@@ -955,8 +1075,8 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
   if (FuncsToUse.empty())
     return sampleprof_error::success;
 
-  Data = ProfileSecRange.first;
-  End = ProfileSecRange.second;
+  Data = ProfileSecRange.Start;
+  End = ProfileSecRange.End;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
@@ -981,7 +1101,36 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
   return true;
 }
 
-std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
+std::error_code
+SampleProfileReaderExtBinaryBase::readFuncOffsetTable(bool IsEytzinger,
+                                                      bool IsNested) {
+  if (IsEytzinger)
+    return readEytzingerFuncOffsetTable(IsNested);
+  return readLegacyFuncOffsetTable();
+}
+
+std::error_code
+SampleProfileReaderExtBinaryBase::readEytzingerFuncOffsetTable(bool IsNested) {
+  // If there are more than one function offset section, the profile associated
+  // with the previous section has to be done reading before next one is read.
+  FuncOffsetTable.reset();
+
+  size_t Size = End - Data;
+  size_t SpanSize = NameTable->getEytzingerSpan(IsNested).size();
+  if (Size != SpanSize * sizeof(uint32_t))
+    return sampleprof_error::malformed;
+
+  auto *Array = reinterpret_cast<const support::ulittle32_t *>(Data);
+  ArrayRef<support::ulittle32_t> Offsets(Array, SpanSize);
+
+  FuncOffsetTable.emplace(EytzingerMode, NameTable->getEytzingerSpan(IsNested),
+                          Offsets);
+
+  Data = End;
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readLegacyFuncOffsetTable() {
   // If there are more than one function offset section, the profile associated
   // with the previous section has to be done reading before next one is read.
   FuncOffsetTable.reset();
@@ -1026,6 +1175,21 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     for (auto Name : FuncsToUse) {
       Remapper->insert(Name);
     }
+  }
+
+  if (FuncOffsetTable && FuncOffsetTable->isEytzinger() &&
+      useFuncOffsetList()) {
+    ArrayRef<support::ulittle32_t> Offsets = FuncOffsetTable->getFuncOffsets();
+    if (Offsets.size() != FuncOffsetTable->getExpectedSize())
+      return sampleprof_error::malformed;
+    for (const auto &[LocalIdx, RelOffset] : llvm::enumerate(Offsets)) {
+      if (RelOffset == UINT32_MAX)
+        continue;
+      const uint8_t *FuncProfileAddr = Start + RelOffset;
+      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+        return EC;
+    }
+    return sampleprof_error::success;
   }
 
   if (ProfileIsCS) {
@@ -1265,7 +1429,7 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   // because optimization passes can only handle either type.
   bool UseMD5 = useMD5();
 
-  auto &TableVec = NameTable.setToEager();
+  std::vector<FunctionId> TableVec;
   TableVec.reserve(*Size);
   if (!ProfileIsCS) {
     MD5SampleContextTable.clear();
@@ -1291,12 +1455,66 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   }
   if (!ProfileIsCS)
     MD5SampleContextStart = MD5SampleContextTable.data();
+  if (UseMD5)
+    NameTable =
+        std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
+  else
+    NameTable =
+        std::make_unique<StringSampleProfileNameTable>(std::move(TableVec));
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readNameTableSec(
+    bool IsMD5, bool FixedLengthMD5, bool IsEytzinger) {
+  if (IsEytzinger)
+    return readNameTableSecEytzinger(IsMD5, FixedLengthMD5);
+  return readNameTableSecLegacy(IsMD5, FixedLengthMD5);
+}
+
+// Read the Eytzinger layout for SecNameTable from an ExtBinary MD5 profile.
+//
+// The section consists of three sequential ULEB128 symbol counts (Nested, Flat,
+// and Inlinees) followed by their corresponding arrays of 64-bit MD5 hash keys
+// laid out in Eytzinger order.
+std::error_code SampleProfileReaderExtBinaryBase::readNameTableSecEytzinger(
+    bool IsMD5, bool FixedLengthMD5) {
+  assert(IsMD5 && "Eytzinger name tables require MD5 representation");
+  if (!IsMD5)
+    return sampleprof_error::malformed;
+
+  // Read the table sizes for Nested, flat, and inlinee symbols.
+  std::array<uint64_t, static_cast<size_t>(EytzingerSpan::NumSpans)> Counts;
+  for (uint64_t &Count : Counts) {
+    auto ValOrErr = readNumber<uint64_t>();
+    if (std::error_code EC = ValOrErr.getError())
+      return EC;
+    Count = *ValOrErr;
+  }
+  auto [NumNested, NumFlat, NumInlinees] = Counts;
+
+  // Guard against unsigned overflow in total entry computation.
+  if (NumNested > std::numeric_limits<uint32_t>::max() ||
+      NumFlat > std::numeric_limits<uint32_t>::max() ||
+      NumInlinees > std::numeric_limits<uint32_t>::max())
+    return sampleprof_error::malformed;
+
+  uint64_t TotalEntries = NumNested + NumFlat + NumInlinees;
+  if (static_cast<size_t>(End - Data) < TotalEntries * sizeof(uint64_t))
+    return sampleprof_error::truncated;
+
+  NameTable = std::make_unique<EytzingerSampleProfileNameTable>(
+      reinterpret_cast<const support::ulittle64_t *>(Data), NumNested, NumFlat,
+      NumInlinees);
+
+  if (!ProfileIsCS)
+    MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
+  Data = Data + TotalEntries * sizeof(uint64_t);
   return sampleprof_error::success;
 }
 
 std::error_code
-SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
-                                                   bool FixedLengthMD5) {
+SampleProfileReaderExtBinaryBase::readNameTableSecLegacy(bool IsMD5,
+                                                         bool FixedLengthMD5) {
   if (FixedLengthMD5) {
     if (!IsMD5)
       errs() << "If FixedLengthMD5 is true, UseMD5 has to be true";
@@ -1311,9 +1529,9 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
       return sampleprof_error::truncated;
 
     if (LazyLoadNameTable) {
-      NameTable.setLazy(Data, *Size);
+      NameTable = std::make_unique<LazySampleProfileNameTable>(Data, *Size);
     } else {
-      auto &TableVec = NameTable.setToEager();
+      std::vector<FunctionId> TableVec;
       TableVec.reserve(*Size);
       for (size_t I = 0; I < *Size; ++I) {
         using namespace support;
@@ -1321,6 +1539,8 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
             Data + I * sizeof(uint64_t), endianness::little);
         TableVec.emplace_back(FunctionId(FID));
       }
+      NameTable =
+          std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
@@ -1334,7 +1554,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (std::error_code EC = Size.getError())
       return EC;
 
-    auto &TableVec = NameTable.setToEager();
+    std::vector<FunctionId> TableVec;
     TableVec.reserve(*Size);
     if (!ProfileIsCS)
       MD5SampleContextTable.resize(*Size);
@@ -1348,6 +1568,8 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = MD5SampleContextTable.data();
+    NameTable =
+        std::make_unique<MD5SampleProfileNameTable>(std::move(TableVec));
     return sampleprof_error::success;
   }
 
@@ -1504,6 +1726,12 @@ SampleProfileReaderExtBinaryBase::readSecHdrTableEntry(uint64_t Idx) {
     return EC;
   Entry.Type = static_cast<SecType>(*Type);
 
+  // Reject a section whose encoding is newer than the declared file version.
+  if ((Entry.Type == SecCompositeProfile ||
+       Entry.Type == SecCompositeFuncOffsetTable) &&
+      FormatVersion < CompositeProfileVersion)
+    return sampleprof_error::unsupported_version;
+
   auto Flags = readUnencodedNumber<uint64_t>();
   if (std::error_code EC = Flags.getError())
     return EC;
@@ -1585,6 +1813,8 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
 
   switch (Entry.Type) {
   case SecNameTable:
+    if (hasSecFlag(Entry, SecNameTableFlags::SecFlagEytzinger))
+      Flags.append("eytzinger,");
     if (hasSecFlag(Entry, SecNameTableFlags::SecFlagFixedLengthMD5))
       Flags.append("fixlenmd5,");
     else if (hasSecFlag(Entry, SecNameTableFlags::SecFlagMD5Name))
@@ -1603,8 +1833,11 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("fs-discriminator,");
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
       Flags.append("ordered,");
+    if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger))
+      Flags.append("eytzinger,");
     break;
   case SecFuncMetadata:
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagIsProbeBased))
@@ -1894,6 +2127,7 @@ std::error_code SampleProfileReaderGCC::readOneFunctionProfile(
         LineLocation(LineOffset, Discriminator))[FunctionId(Name)];
   }
   FProfile->setFunction(FunctionId(Name));
+  FProfile->reserveBodySamples(NumPosCounts);
 
   for (uint32_t I = 0; I < NumPosCounts; ++I) {
     uint32_t Offset;

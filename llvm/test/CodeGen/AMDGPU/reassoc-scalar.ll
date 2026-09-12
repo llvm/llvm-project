@@ -125,5 +125,118 @@ bb:
   ret void
 }
 
+; Multiply: (x * tid) * y -- backend does NOT reassociate mul to scalar.
+; Both muls use VALU even though x and y are uniform.
+; The reassociate pass groups the uniform operands (x * y) so this
+; lowers to s_mul + v_mul; see reassoc-uniform-e2e.ll.
+; GCN-LABEL: reassoc_mul_i32:
+; GCN-NOT: s_mul
+; GCN: v_mul_lo_u32
+; GCN: v_mul_lo_u32
+define void @reassoc_mul_i32(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %mul1 = mul i32 %x, %tid
+  %mul2 = mul i32 %mul1, %y
+  store i32 %mul2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; Multiply with uniforms pre-grouped: (x * y) * tid -- produces s_mul + v_mul.
+; GCN-LABEL: reassoc_mul_i32_uniform_grouped:
+; GCN: s_mul_i32 [[MUL1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GCN: v_mul_lo_u32 v{{[0-9]+}}, [[MUL1]], v{{[0-9]+}}
+define void @reassoc_mul_i32_uniform_grouped(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %mul1 = mul i32 %x, %y
+  %mul2 = mul i32 %mul1, %tid
+  store i32 %mul2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; OR: (x | tid) | y -- backend does NOT reassociate or to scalar.
+; Both ors use VALU.
+; The reassociate pass groups the uniform operands (x | y) so this
+; lowers to s_or + v_or; see reassoc-uniform-e2e.ll.
+; GCN-LABEL: reassoc_or_i32:
+; GCN-NOT: s_or
+; GCN: v_or_b32_e32
+; GCN: v_or_b32_e32
+define void @reassoc_or_i32(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %or1 = or i32 %x, %tid
+  %or2 = or i32 %or1, %y
+  store i32 %or2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; OR with uniforms pre-grouped: (x | y) | tid -- produces s_or + v_or.
+; GCN-LABEL: reassoc_or_i32_uniform_grouped:
+; GCN: s_or_b32 [[OR1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GCN: v_or_b32_e32 v{{[0-9]+}}, [[OR1]], v{{[0-9]+}}
+define void @reassoc_or_i32_uniform_grouped(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %or1 = or i32 %x, %y
+  %or2 = or i32 %or1, %tid
+  store i32 %or2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; AND: (x & tid) & y -- backend does NOT reassociate and to scalar.
+; Both ands use VALU.
+; The reassociate pass groups the uniform operands (x & y) so this
+; lowers to s_and + v_and; see reassoc-uniform-e2e.ll.
+; GCN-LABEL: reassoc_and_i32:
+; GCN-NOT: s_and
+; GCN: v_and_b32_e32
+; GCN: v_and_b32_e32
+define void @reassoc_and_i32(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %and1 = and i32 %x, %tid
+  %and2 = and i32 %and1, %y
+  store i32 %and2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; AND with uniforms pre-grouped: (x & y) & tid -- produces s_and + v_and.
+; GCN-LABEL: reassoc_and_i32_uniform_grouped:
+; GCN: s_and_b32 [[AND1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GCN: v_and_b32_e32 v{{[0-9]+}}, [[AND1]], v{{[0-9]+}}
+define void @reassoc_and_i32_uniform_grouped(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %and1 = and i32 %x, %y
+  %and2 = and i32 %and1, %tid
+  store i32 %and2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; XOR: (x ^ tid) ^ y -- backend ALREADY reassociates xor to scalar.
+; The DAG combiner handles this, producing s_xor + v_xor for both variants.
+; GCN-LABEL: reassoc_xor_i32:
+; GCN: s_xor_b32 [[XOR1:s[0-9]+]], s{{[0-9]+}}, s{{[0-9]+}}
+; GCN: v_xor_b32_e32 v{{[0-9]+}}, [[XOR1]], v{{[0-9]+}}
+define void @reassoc_xor_i32(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %xor1 = xor i32 %x, %tid
+  %xor2 = xor i32 %xor1, %y
+  store i32 %xor2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
+; Multi-use: intermediate (x * tid) is stored, blocks reassociation.
+; Both muls use VALU. The reassociate pass cannot group the uniforms here
+; because the intermediate result is used more than once.
+; GCN-LABEL: reassoc_mul_i32_multiuse:
+; GCN-NOT: s_mul
+; GCN: v_mul_lo_u32
+; GCN: v_mul_lo_u32
+define void @reassoc_mul_i32_multiuse(ptr addrspace(1) inreg %arg, i32 inreg %x, i32 inreg %y) {
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %mul1 = mul i32 %x, %tid
+  %mul2 = mul i32 %mul1, %y
+  store volatile i32 %mul1, ptr addrspace(1) %arg, align 4
+  store volatile i32 %mul2, ptr addrspace(1) %arg, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()
 declare i32 @llvm.amdgcn.workitem.id.y()

@@ -14,7 +14,7 @@ define <64 x half> @test_00(<64 x half> %v0, <64 x half> %v1, <64 x half> %v2) #
 ; CHECK-NEXT:     v0 = vmux(q0,v1,v2)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %t0 = fcmp oeq <64 x half> %v0, %v1
+  %t0 = fcmp nnan oeq <64 x half> %v0, %v1
   %t1 = select <64 x i1> %t0, <64 x half> %v1, <64 x half> %v2
   ret <64 x half> %t1
 }
@@ -110,7 +110,7 @@ define <64 x half> @test_0a(<64 x half> %v0, <64 x half> %v1, <64 x i16> %v2) #0
 ; CHECK-NEXT:     v0 = vmux(q0,v0,v1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %q0 = fcmp oeq <64 x half> %v0, %v1
+  %q0 = fcmp nnan oeq <64 x half> %v0, %v1
   %q1 = trunc <64 x i16> %v2 to <64 x i1>
   %q2 = and <64 x i1> %q0, %q1
   %t1 = select <64 x i1> %q2, <64 x half> %v0, <64 x half> %v1
@@ -133,7 +133,7 @@ define <64 x half> @test_0b(<64 x half> %v0, <64 x half> %v1, <64 x i16> %v2) #0
 ; CHECK-NEXT:     v0 = vmux(q0,v0,v1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %q0 = fcmp oeq <64 x half> %v0, %v1
+  %q0 = fcmp nnan oeq <64 x half> %v0, %v1
   %q1 = trunc <64 x i16> %v2 to <64 x i1>
   %q2 = or <64 x i1> %q0, %q1
   %t1 = select <64 x i1> %q2, <64 x half> %v0, <64 x half> %v1
@@ -156,7 +156,7 @@ define <64 x half> @test_0c(<64 x half> %v0, <64 x half> %v1, <64 x i16> %v2) #0
 ; CHECK-NEXT:     v0 = vmux(q0,v0,v1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %q0 = fcmp oeq <64 x half> %v0, %v1
+  %q0 = fcmp nnan oeq <64 x half> %v0, %v1
   %q1 = trunc <64 x i16> %v2 to <64 x i1>
   %q2 = xor <64 x i1> %q0, %q1
   %t1 = select <64 x i1> %q2, <64 x half> %v0, <64 x half> %v1
@@ -245,7 +245,7 @@ define <32 x float> @test_10(<32 x float> %v0, <32 x float> %v1, <32 x float> %v
 ; CHECK-NEXT:     v0 = vmux(q0,v1,v2)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %t0 = fcmp oeq <32 x float> %v0, %v1
+  %t0 = fcmp nnan oeq <32 x float> %v0, %v1
   %t1 = select <32 x i1> %t0, <32 x float> %v1, <32 x float> %v2
   ret <32 x float> %t1
 }
@@ -341,7 +341,7 @@ define <32 x float> @test_1a(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2)
 ; CHECK-NEXT:     v0 = vmux(q0,v0,v1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %q0 = fcmp oeq <32 x float> %v0, %v1
+  %q0 = fcmp nnan oeq <32 x float> %v0, %v1
   %q1 = trunc <32 x i32> %v2 to <32 x i1>
   %q2 = and <32 x i1> %q0, %q1
   %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
@@ -364,7 +364,7 @@ define <32 x float> @test_1b(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2)
 ; CHECK-NEXT:     v0 = vmux(q0,v0,v1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %q0 = fcmp oeq <32 x float> %v0, %v1
+  %q0 = fcmp nnan oeq <32 x float> %v0, %v1
   %q1 = trunc <32 x i32> %v2 to <32 x i1>
   %q2 = or <32 x i1> %q0, %q1
   %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1
@@ -387,7 +387,7 @@ define <32 x float> @test_1c(<32 x float> %v0, <32 x float> %v1, <32 x i32> %v2)
 ; CHECK-NEXT:     v0 = vmux(q0,v0,v1)
 ; CHECK-NEXT:     jumpr r31
 ; CHECK-NEXT:    }
-  %q0 = fcmp oeq <32 x float> %v0, %v1
+  %q0 = fcmp nnan oeq <32 x float> %v0, %v1
   %q1 = trunc <32 x i32> %v2 to <32 x i1>
   %q2 = xor <32 x i1> %q0, %q1
   %t1 = select <32 x i1> %q2, <32 x float> %v0, <32 x float> %v1

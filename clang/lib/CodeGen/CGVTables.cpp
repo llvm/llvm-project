@@ -383,10 +383,12 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::FunctionCallee Callee,
 
 #ifndef NDEBUG
   const CGFunctionInfo &CallFnInfo = CGM.getTypes().arrangeCXXMethodCall(
-      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs);
+      CallArgs, FPT, RequiredArgs::forPrototypePlus(FPT, 1), PrefixArgs, MD);
   assert(CallFnInfo.getRegParm() == CurFnInfo->getRegParm() &&
          CallFnInfo.isNoReturn() == CurFnInfo->isNoReturn() &&
-         CallFnInfo.getCallingConvention() == CurFnInfo->getCallingConvention());
+         CallFnInfo.getCallingConvention() ==
+             CurFnInfo->getCallingConvention() &&
+         CallFnInfo.getX86ABIAVXLevel() == CurFnInfo->getX86ABIAVXLevel());
   assert(isa<CXXDestructorDecl>(MD) || // ignore dtor return types
          similar(CallFnInfo.getReturnInfo(), CallFnInfo.getReturnType(),
                  CurFnInfo->getReturnInfo(), CurFnInfo->getReturnType()));
@@ -827,18 +829,30 @@ void CodeGenVTables::addVTableComponent(ConstantArrayBuilder &builder,
       if (RelativeCXXABIVTables)
         return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
 
-      // For NVPTX devices in OpenMP emit special functon as null pointers,
-      // otherwise linking ends up with unresolved references.
-      if (CGM.getLangOpts().OpenMP && CGM.getLangOpts().OpenMPIsTargetDevice &&
-          CGM.getTriple().isNVPTX())
-        return llvm::ConstantPointerNull::get(CGM.GlobalsInt8PtrTy);
       llvm::FunctionType *fnTy =
           llvm::FunctionType::get(CGM.VoidTy, /*isVarArg=*/false);
-      llvm::Constant *fn = cast<llvm::Constant>(
+      auto *F = cast<llvm::Function>(
           CGM.CreateRuntimeFunction(fnTy, name).getCallee());
-      if (auto f = dyn_cast<llvm::Function>(fn))
-        f->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
-      return fn;
+      F->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+
+      // The Microsoft ABI uses the same function name for pure and deleted
+      // virtual functions.
+      if (!F->empty())
+        return F;
+
+      // For device compilation, provide a weak definition that
+      // traps, otherwise linking ends up with unresolved references.
+      if (CGM.getLangOpts().isTargetDevice()) {
+        F->setLinkage(llvm::GlobalValue::WeakAnyLinkage);
+        CodeGenFunction CGF(CGM);
+        const CGFunctionInfo &FI = CGM.getTypes().arrangeNullaryFunction();
+        CGF.StartFunction(GlobalDecl(), CGM.getContext().VoidTy, F, FI,
+                          FunctionArgList{});
+        CGF.EmitTrapCallAndMakeUnreachable();
+        CGF.FinishFunction();
+      }
+
+      return F;
     };
 
     llvm::Constant *fnPtr;
@@ -1137,9 +1151,13 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
     switch (Kind) {
     case TSK_Undeclared:
     case TSK_ExplicitSpecialization:
+      // Under OpenMP offloading we force-emit vtable definitions for classes
+      // mapped into target regions even when the key function is defined in
+      // another TU, so the linkage may legitimately be queried here.
       assert(
           (IsInNamedModule || def || CodeGenOpts.OptimizationLevel > 0 ||
-           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo) &&
+           CodeGenOpts.getDebugInfo() != llvm::codegenoptions::NoDebugInfo ||
+           getLangOpts().OpenMP) &&
           "Shouldn't query vtable linkage without the class in module units, "
           "key function, optimizations, or debug info");
       if (IsExternalDefinition && CodeGenOpts.OptimizationLevel > 0)

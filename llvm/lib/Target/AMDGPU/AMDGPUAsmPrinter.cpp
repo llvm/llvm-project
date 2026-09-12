@@ -32,7 +32,6 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDKernelCodeTUtils.h"
 #include "Utils/SIDefinesUtils.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinterAnalysis.h"
@@ -204,30 +203,6 @@ void AMDGPUAsmPrinter::emitFunctionBodyStart() {
   // emitFunctionBodyStart?
   if (!getTargetStreamer()->getTargetID())
     initializeTargetID(*F.getParent());
-
-  const auto &FunctionTargetID = STM.getTargetID();
-  // Make sure function's xnack settings are compatible with module's
-  // xnack settings.
-  if (FunctionTargetID.isXnackSupported() &&
-      FunctionTargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Any &&
-      FunctionTargetID.getXnackSetting() !=
-          getTargetStreamer()->getTargetID()->getXnackSetting()) {
-    OutContext.reportError(
-        {}, "xnack setting of '" + Twine(MF->getName()) +
-                "' function does not match module xnack setting");
-    return;
-  }
-  // Make sure function's sramecc settings are compatible with module's
-  // sramecc settings.
-  if (FunctionTargetID.isSramEccSupported() &&
-      FunctionTargetID.getSramEccSetting() != AMDGPU::TargetIDSetting::Any &&
-      FunctionTargetID.getSramEccSetting() !=
-          getTargetStreamer()->getTargetID()->getSramEccSetting()) {
-    OutContext.reportError(
-        {}, "sramecc setting of '" + Twine(MF->getName()) +
-                "' function does not match module sramecc setting");
-    return;
-  }
 
   if (!MFI.isEntryFunction())
     return;
@@ -410,7 +385,26 @@ void AMDGPUAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 }
 
 bool AMDGPUAsmPrinter::doInitialization(Module &M) {
-  const llvm::Triple &TT = M.getTargetTriple();
+  const Triple &TT = M.getTargetTriple();
+  if (TT.getSubArch() == Triple::NoSubArch) {
+    Triple::SubArchType SubArch =
+        AMDGPU::getSubArch(AMDGPU::parseArchAMDGCN(getGlobalSTI()->getCPU()));
+    if (SubArch != Triple::NoSubArch) {
+      Triple Fixed(TT);
+      Fixed.setArch(Triple::amdgpu, SubArch);
+      M.getContext().diagnose(DiagnosticInfoGeneric(
+          "codegen with no subarch in the target triple is deprecated and will "
+          "become an error; use the target triple '" +
+              Fixed.str() + "' instead",
+          DS_Warning));
+    } else {
+      M.getContext().diagnose(DiagnosticInfoGeneric(
+          "codegen with no subarch in the target triple is deprecated and will "
+          "become an error",
+          DS_Warning));
+    }
+  }
+
   CodeObjectVersion = AMDGPU::getAMDHSACodeObjectVersion(M);
 
   if (TT.getOS() == Triple::AMDHSA) {
@@ -443,15 +437,16 @@ const AMDGPUMCExpr *createOccupancy(unsigned InitOcc, const MCExpr *NumSGPRs,
                                     const MCExpr *NumVGPRs,
                                     unsigned DynamicVGPRBlockSize,
                                     const GCNSubtarget &STM, MCContext &Ctx) {
-  unsigned MaxWaves = IsaInfo::getMaxWavesPerEU(STM);
+  unsigned MaxWaves = STM.getMaxWavesPerEU();
   unsigned Granule = IsaInfo::getVGPRAllocGranule(STM, DynamicVGPRBlockSize);
-  unsigned TargetTotalNumVGPRs = IsaInfo::getTotalNumVGPRs(STM);
+  unsigned TargetTotalNumVGPRs = STM.getTotalNumVGPRs();
 
   // Bake the per-function SGPR budget into the operands so the late-evaluated
   // MCExpr stays arithmetic. The trap reservation in particular is implicit on
   // amdhsa and lives on STM, not on the assembler's MCSubtargetInfo.
-  unsigned SGPRTotal = IsaInfo::getTotalNumSGPRs(STM);
-  unsigned SGPRGranule = IsaInfo::getSGPRAllocGranule(STM);
+  AMDGPU::GPUKind Kind = STM.getTargetID().getGPUKind();
+  unsigned SGPRTotal = AMDGPU::getTotalNumSGPRs(Kind);
+  unsigned SGPRGranule = AMDGPU::getSGPRAllocGranule(Kind);
   unsigned SGPRTrapReserve = STM.hasTrapHandler() ? IsaInfo::TRAP_NUM_SGPRS : 0;
 
   auto CreateExpr = [&Ctx](unsigned Value) {
@@ -1205,31 +1200,39 @@ void AMDGPUAsmPrinter::emitDVgprSymbol(MachineFunction &MF) {
 
 // TODO: Fold this into emitFunctionBodyStart.
 void AMDGPUAsmPrinter::initializeTargetID(const Module &M) {
-  // In the beginning all features are either 'Any' or 'NotSupported',
-  // depending on global target features. This will cover empty modules.
-  getTargetStreamer()->initializeTargetID(*getGlobalSTI(),
-                                          getGlobalSTI()->getFeatureString());
+  getTargetStreamer()->initializeTargetID(*getGlobalSTI());
 
-  // If module is empty, we are done.
-  if (M.empty())
-    return;
+  auto &TSTargetID = getTargetStreamer()->getTargetID();
 
-  // If module is not empty, need to find first 'Off' or 'On' feature
-  // setting per feature from functions in module.
-  for (auto &F : M) {
-    auto &TSTargetID = getTargetStreamer()->getTargetID();
-    if ((!TSTargetID->isXnackSupported() || TSTargetID->isXnackOnOrOff()) &&
-        (!TSTargetID->isSramEccSupported() || TSTargetID->isSramEccOnOrOff()))
-      break;
+  // Error if -mattr specified xnack or sramecc.
+  // TODO: Remove this when subtarget features removed.
+  StringRef FeatureString = getGlobalSTI()->getFeatureString();
+  if (FeatureString.contains("xnack")) {
+    M.getContext().diagnose(DiagnosticInfoGeneric(
+        "xnack/sramecc should be specified via module flags. "
+        "Use module flag 'amdgpu.xnack' instead of subtarget feature",
+        DS_Error));
+  }
+  if (FeatureString.contains("sramecc")) {
+    M.getContext().diagnose(DiagnosticInfoGeneric(
+        "xnack/sramecc should be specified via module flags. "
+        "Use module flag 'amdgpu.sramecc' instead of subtarget feature",
+        DS_Error));
+  }
 
-    const GCNSubtarget &STM = TM.getSubtarget<GCNSubtarget>(F);
-    const AMDGPU::TargetID &STMTargetID = STM.getTargetID();
-    if (TSTargetID->isXnackSupported())
-      if (TSTargetID->getXnackSetting() == AMDGPU::TargetIDSetting::Any)
-        TSTargetID->setXnackSetting(STMTargetID.getXnackSetting());
-    if (TSTargetID->isSramEccSupported())
-      if (TSTargetID->getSramEccSetting() == AMDGPU::TargetIDSetting::Any)
-        TSTargetID->setSramEccSetting(STMTargetID.getSramEccSetting());
+  // Apply xnack/sramecc settings from module flags.
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureXNACKOnOffModes)) {
+    AMDGPU::TargetIDSetting Setting =
+        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.xnack");
+    if (Setting != AMDGPU::TargetIDSetting::Any)
+      TSTargetID->setXnackSetting(Setting);
+  }
+
+  if (getGlobalSTI()->getFeatureBits().test(AMDGPU::FeatureSupportsSRAMECC)) {
+    AMDGPU::TargetIDSetting Setting =
+        GCNTargetMachine::getTargetIDSettingFromModuleFlag(M, "amdgpu.sramecc");
+    if (Setting != AMDGPU::TargetIDSetting::Any)
+      TSTargetID->setSramEccSetting(Setting);
   }
 }
 
@@ -1432,29 +1435,14 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
-
-  unsigned LDSAlignShift = 8;
-  switch (getLdsDwGranularity(STM)) {
-  case 512:
-  case 320:
-    LDSAlignShift = 11;
-    break;
-  case 128:
-    LDSAlignShift = 9;
-    break;
-  case 64:
-    LDSAlignShift = 8;
-    break;
-  default:
-    llvm_unreachable("invald LDS block size");
-  }
-
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
   ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
 
   ProgInfo.LDSSize = MFI->getLDSSize();
+
+  unsigned LDSGranularityBytes = getLdsDwGranularity(STM) * 4;
   ProgInfo.LDSBlocks =
-      alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
+      alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {
@@ -1474,7 +1462,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                               CreateExpr(STM.getWavefrontSize()), Ctx),
       CreateExpr(1ULL << ScratchAlignShift));
 
-  if (STM.supportsWGP()) {
+  if (STM.hasSupportsWGP()) {
     ProgInfo.WgpMode = STM.isCuModeEnabled() ? 0 : 1;
   }
 

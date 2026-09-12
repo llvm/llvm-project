@@ -29,6 +29,10 @@ namespace hlfir {
 #define GEN_PASS_DEF_CONVERTHLFIRTOFIR
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
+static llvm::cl::opt<bool> useFortranAssignOnly(
+    "use-fortran-assign-only",
+    llvm::cl::desc("Do not use _FortranAAssignSimple. Only _FortranAAssign"),
+    llvm::cl::init(false));
 
 using namespace mlir;
 
@@ -90,6 +94,26 @@ public:
       return fir::getBase(builder.createBox(loc, rhsExv));
     };
 
+    // Use the lightweight AssignSimple runtime for simple intrinsic type
+    // assignments (integer, real, complex, logical) with matching ranks,
+    // non-volatile, non-polymorphic, and non-CUDA. AssignSimple handles
+    // both contiguous (fast memmove) and non-contiguous (element-wise)
+    // cases at runtime, including aliasing detection and allocatable
+    // reallocation.
+    // Fall back to the full Assign runtime for derived types, polymorphic,
+    // rank mismatch (scalar-to-array broadcasting), volatile, or CUDA.
+    auto genSimpleOrAssign = [&](mlir::Value to, mlir::Value from) {
+      if (!useFortranAssignOnly && !lhs.isPolymorphic() &&
+          fir::isa_trivial(lhs.getFortranElementType()) &&
+          lhs.getRank() == rhs.getRank() &&
+          !fir::isa_volatile_type(lhs.getType()) &&
+          !cuf::getDataAttr(lhs.getDefiningOp())) {
+        fir::runtime::genAssignSimple(builder, loc, to, from);
+      } else {
+        fir::runtime::genAssign(builder, loc, to, from);
+      }
+    };
+
     if (assignOp.isAllocatableAssignment()) {
       // For trivial scalar allocatable assignments that are not polymorphic,
       // not character, not temporary, and not CUDA Fortran, inline the
@@ -145,7 +169,9 @@ public:
           // type after the assignment.
           fir::runtime::genAssignPolymorphic(builder, loc, to, from);
         } else {
-          fir::runtime::genAssign(builder, loc, to, from);
+          // For allocatables, whole-array assignments are always
+          // contiguous. Strided sections go through a different path.
+          genSimpleOrAssign(to, from);
         }
       }
     } else if (lhs.isArray() ||
@@ -169,10 +195,12 @@ public:
       // reference.
       auto toMutableBox = builder.createTemporary(loc, to.getType());
       fir::StoreOp::create(builder, loc, to, toMutableBox);
-      if (assignOp.isTemporaryLHS())
+      if (assignOp.isTemporaryLHS()) {
         fir::runtime::genAssignTemporary(builder, loc, toMutableBox, from);
-      else
-        fir::runtime::genAssign(builder, loc, toMutableBox, from);
+      } else {
+        // Non-allocatable array: contiguity is handled at runtime.
+        genSimpleOrAssign(toMutableBox, from);
+      }
     } else {
       // TODO: use the type specification to see if IsFinalizable is set,
       // or propagate IsFinalizable attribute from lowering.

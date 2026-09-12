@@ -25,4 +25,4 @@ int f2(void) {
 // CHECK: [[ELEMENTS]] = !{{{.*}}, [[LABEL_METADATA]]}
 // CHECK: [[LABEL_METADATA]] = !DILabel({{.*}}, name: "top", {{.*}}, line: 8, column: 1)
 // CHECK: [[INLINEDAT:!.*]] = distinct !DILocation(line: 18,
-// CHECK: [[LABEL_LOCATION]] = !DILocation(line: 8, {{.*}}, inlinedAt: [[INLINEDAT]])
+// CHECK: [[LABEL_LOCATION]] = distinct !DILocation(line: 8, {{.*}}, inlinedAt: [[INLINEDAT]])

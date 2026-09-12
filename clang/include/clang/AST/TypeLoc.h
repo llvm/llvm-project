@@ -1358,6 +1358,37 @@ public:
   SourceRange getLocalSourceRange() const;
 };
 
+struct LateParsedAttrLocInfo {
+  SourceLocation AttrNameLoc;
+};
+
+class LateParsedAttrTypeLoc
+    : public ConcreteTypeLoc<UnqualTypeLoc, LateParsedAttrTypeLoc,
+                             LateParsedAttrType, LateParsedAttrLocInfo> {
+public:
+  TypeLoc getInnerLoc() const { return getInnerTypeLoc(); }
+
+  SourceLocation getAttrNameLoc() const { return getLocalData()->AttrNameLoc; }
+
+  void setAttrNameLoc(SourceLocation Loc) { getLocalData()->AttrNameLoc = Loc; }
+
+  SourceRange getLocalSourceRange() const {
+    return SourceRange(getAttrNameLoc(), getAttrNameLoc());
+  }
+
+  void initializeLocal(ASTContext &Context, SourceLocation Loc) {
+    setAttrNameLoc(Loc);
+  }
+
+  unsigned getLocalDataSize() const { return sizeof(LateParsedAttrLocInfo); }
+
+  QualType getInnerType() const { return getTypePtr()->getWrappedType(); }
+
+  LateParsedTypeAttribute *getLateParsedAttribute() const {
+    return getTypePtr()->getLateParsedAttribute();
+  }
+};
+
 struct MacroQualifiedLocInfo {
   SourceLocation ExpansionLoc;
 };
@@ -2432,10 +2463,10 @@ public:
     return nullptr;
   }
 
-  TemplateDecl *getNamedConcept() const {
+  TemplateName getNamedConcept() const {
     if (const auto *CR = getConceptReference())
       return CR->getNamedConcept();
-    return nullptr;
+    return TemplateName();
   }
 
   DeclarationNameInfo getConceptNameInfo() const {

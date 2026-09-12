@@ -463,10 +463,11 @@ class Sema;
     }
 
     ImplicitConversionRank getRank() const;
-    NarrowingKind
-    getNarrowingKind(ASTContext &Context, const Expr *Converted,
-                     APValue &ConstantValue, QualType &ConstantType,
-                     bool IgnoreFloatToIntegralConversion = false) const;
+    NarrowingKind getNarrowingKind(ASTContext &Context, const Expr *Converted,
+                                   APValue &ConstantValue,
+                                   QualType &ConstantType,
+                                   bool IgnoreFloatToIntegralConversion = false,
+                                   bool AllowRelaxedEval = false) const;
     bool isPointerConversionToBool() const;
     bool isPointerConversionToVoidPointer(ASTContext& Context) const;
     void dump() const;
@@ -1374,9 +1375,13 @@ class Sema;
     void clear(CandidateSetKind CSK);
 
     using iterator = SmallVectorImpl<OverloadCandidate>::iterator;
+    using const_iterator = SmallVectorImpl<OverloadCandidate>::const_iterator;
 
     iterator begin() { return Candidates.begin(); }
     iterator end() { return Candidates.end(); }
+
+    const_iterator begin() const { return Candidates.begin(); }
+    const_iterator end() const { return Candidates.end(); }
 
     size_t size() const { return Candidates.size() + DeferredCandidatesCount; }
 

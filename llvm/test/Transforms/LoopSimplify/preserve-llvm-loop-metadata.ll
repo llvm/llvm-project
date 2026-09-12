@@ -65,6 +65,6 @@ cleanup:                                          ; preds = %cleanup.loopexit, %
 }
 
 !0 = distinct !{!0, !1}
-!1 = !{!"llvm.loop.distribute.enable", i1 true}
+!1 = !{!"llvm.loop.distribute.enable"}
 ; CHECK: !0 = distinct !{!0, !1}
-; CHECK: !1 = !{!"llvm.loop.distribute.enable", i1 true}
+; CHECK: !1 = !{!"llvm.loop.distribute.enable"}

@@ -62,8 +62,8 @@ public:
 
     m_uint_star_type = ast->GetPointerSizedIntType(false);
 
-    static ConstString g__indexes("_indexes");
-    static ConstString g__length("_length");
+    static constexpr llvm::StringLiteral g__indexes("_indexes");
+    static constexpr llvm::StringLiteral g__length("_length");
 
     ProcessSP process_sp = m_backend.GetProcessSP();
     if (!process_sp)

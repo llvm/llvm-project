@@ -107,11 +107,8 @@ libc_test(
     srcs = ["read_write_test.cpp"],
     deps = [
         "//libc:close",
-        "//libc:fsync",
-        "//libc:hdr_sys_stat_macros",
-        "//libc:open",
+        "//libc:pipe",
         "//libc:read",
-        "//libc:remove",
         "//libc:write",
     ],
 )

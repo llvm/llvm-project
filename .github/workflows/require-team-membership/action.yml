@@ -6,7 +6,7 @@ inputs:
   team-slug:
     description: >-
       The team name (in slug form) that the github actor must be a member of.
-    requried: true
+    required: true
   LLVM_TOKEN_GENERATOR_CLIENT_ID:
     description: >-
       Client ID for our GitHub App we use for generating access tokens.

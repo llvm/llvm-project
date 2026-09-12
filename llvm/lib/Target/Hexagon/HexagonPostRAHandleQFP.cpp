@@ -191,7 +191,7 @@ private:
   MapVector<MachineInstr *, unsigned> QFNonSatMIs;
 
   // Stores the qf-generating vmul/vadd/etc. nodes with mutiple reaching defs
-  std::set<NodeAddr<StmtNode *>> PossibleMultiReachDefs;
+  std::set<NodeId> PossibleMultiReachDefs;
   // Qf generating instructions to ignore. Do not insert conversion instruction
   // to sf/hf from qf, if the instr is present in this list; since that means
   // a conversion has already been inserted after the instruction.
@@ -201,8 +201,7 @@ private:
   enum class RegType { qf32, qf16, qf32_double, qf16_double, ieee, undefined };
   // Stores the copy instructions which their reaching def, along with the op
   // type
-  std::map<std::pair<NodeAddr<DefNode *>, NodeAddr<DefNode *>>, RegType>
-      QFCopys;
+  std::map<std::pair<NodeId, NodeId>, RegType> QFCopys;
 
   // Stores the reaching defs of copies whose result has to be converted to IEEE
   DenseMap<MachineInstr *, RegType> ReachDefOfCopies;
@@ -1030,7 +1029,7 @@ void HexagonPostRAHandleQFP::collectCopies(NodeAddr<StmtNode *> *StNode) {
 
       // If the reaching def is a COPY,collect it with reg type ieee
       if (ReachDefInstr->getOpcode() == TargetOpcode::COPY) {
-        auto pairKey = std::make_pair(CopyDef, RegDef);
+        auto pairKey = std::make_pair(CopyDef.Id, RegDef.Id);
         QFCopys[pairKey] = RegType::ieee;
         continue;
       }
@@ -1066,7 +1065,7 @@ void HexagonPostRAHandleQFP::collectCopies(NodeAddr<StmtNode *> *StNode) {
         else
           continue;
       }
-      auto pairKey = std::make_pair(CopyDef, RegDef);
+      auto pairKey = std::make_pair(CopyDef.Id, RegDef.Id);
       QFCopys[pairKey] = RegT;
     }
   }
@@ -1150,8 +1149,8 @@ void HexagonPostRAHandleQFP::collectQFUses(NodeAddr<DefNode *> RegDef,
 
     Register UsedReg = UA.Addr->getRegRef(*DFG).Id;
     if (QFPSatInstsMap.find(UseMI->getOpcode()) != QFPSatInstsMap.end()) {
-      if (PossibleMultiReachDefs.count(UseStmt) == 0) {
-        PossibleMultiReachDefs.insert(UseStmt);
+      if (PossibleMultiReachDefs.count(UseStmt.Id) == 0) {
+        PossibleMultiReachDefs.insert(UseStmt.Id);
         LLVM_DEBUG(dbgs() << "\n[Collect instr with possible multidef]:";
                    UseMI->dump());
       }
@@ -1172,14 +1171,15 @@ bool HexagonPostRAHandleQFP::HandleMultiReachingDefs() {
   // But it is not expected to since if any instruction has multiple
   // definitions it should already be present in it.
   for (auto It : PossibleMultiReachDefs) {
-    MachineInstr *Instr = It.Addr->getCode();
+    NodeAddr<StmtNode *> Stmt = DFG->addr<StmtNode *>(It);
+    MachineInstr *Instr = Stmt.Addr->getCode();
     // get the op type for the original instruction.
     // True is sf/hf, false is qf
     auto Pair = QFUsesMap[Instr];
 
     unsigned short UseNo = 1;
     // Iterate over the operands
-    for (NodeAddr<UseNode *> UA : It.Addr->members_if(DFG->IsUse, *DFG)) {
+    for (NodeAddr<UseNode *> UA : Stmt.Addr->members_if(DFG->IsUse, *DFG)) {
 
       // If the type is qf for the operand,
       // we skip since there is no scope for mismatch
@@ -1483,7 +1483,7 @@ bool HexagonPostRAHandleQFP::HandleCopies() {
   for (auto It : QFCopys) {
 
     // Get details of the copy node
-    NodeAddr<DefNode *> CopyNode = It.first.first;
+    NodeAddr<DefNode *> CopyNode = DFG->addr<DefNode *>(It.first.first);
     NodeAddr<StmtNode *> StNode = CopyNode.Addr->getOwner(*DFG);
     [[maybe_unused]] auto *CopyMI = StNode.Addr->getCode();
     LLVM_DEBUG(dbgs() << "\nHandling Reaching Defs of COPY: "; CopyMI->dump();
@@ -1510,7 +1510,7 @@ bool HexagonPostRAHandleQFP::HandleCopies() {
     if (RTy != RegType::ieee) {
 
       // get details of the reaching def node
-      NodeAddr<DefNode *> ReachDefNode = It.first.second;
+      NodeAddr<DefNode *> ReachDefNode = DFG->addr<DefNode *>(It.first.second);
       NodeAddr<StmtNode *> StNode = ReachDefNode.Addr->getOwner(*DFG);
       auto *ReachingDef = StNode.Addr->getCode();
 
@@ -1536,7 +1536,7 @@ bool HexagonPostRAHandleQFP::HandleCopies() {
   for (auto It : QFCopys) {
 
     // Get details of the copy node
-    NodeAddr<DefNode *> CopyNode = It.first.first;
+    NodeAddr<DefNode *> CopyNode = DFG->addr<DefNode *>(It.first.first);
     NodeAddr<StmtNode *> StNode = CopyNode.Addr->getOwner(*DFG);
     auto *CopyMI = StNode.Addr->getCode();
     LLVM_DEBUG(dbgs() << "\nHandling COPY: "; CopyMI->dump());

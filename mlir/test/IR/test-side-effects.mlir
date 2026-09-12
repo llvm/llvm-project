@@ -67,3 +67,9 @@ func.func @side_effect(%arg : index) {
 
   func.return 
 }
+
+func.func @parameterized_side_effect(%arg : memref<4xf32>) {
+  // expected-remark@+1 {{found an instance of 'read' on op operand 0, on resource '<Test>' with parameters "test parameter"}}
+  "test.op_with_parameterized_effects"(%arg) : (memref<4xf32>) -> ()
+  func.return
+}

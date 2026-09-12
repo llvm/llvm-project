@@ -35,7 +35,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
-#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
@@ -286,6 +285,9 @@ protected:
 
   LLVM_PREFERRED_TYPE(bool)
   unsigned HasUnalignedAccess : 1;
+
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasAMDGPUTypes : 1;
 
   unsigned ARMCDECoprocMask : 8;
 
@@ -696,19 +698,7 @@ public:
 
   // Different targets may support a different maximum width for the _BitInt
   // type, depending on what operations are supported.
-  virtual size_t getMaxBitIntWidth() const {
-    // Consider -fexperimental-max-bitint-width= first.
-    if (MaxBitIntWidth)
-      return std::min<size_t>(*MaxBitIntWidth, llvm::IntegerType::MAX_INT_BITS);
-
-    // FIXME: this value should be llvm::IntegerType::MAX_INT_BITS, which is
-    // maximum bit width that LLVM claims its IR can support. However, most
-    // backends currently have a bug where they only support float to int
-    // conversion (and vice versa) on types that are <= 128 bits and crash
-    // otherwise. We're setting the max supported value to 128 to be
-    // conservative.
-    return 128;
-  }
+  virtual size_t getMaxBitIntWidth() const;
 
   /// Determine whether the target has fast native support for operations
   /// on half types.
@@ -1072,6 +1062,10 @@ public:
   /// Returns whether or not the AArch64 ACLE built-in types are
   /// available on this target.
   bool hasAArch64ACLETypes() const { return HasAArch64ACLETypes; }
+
+  /// Returns whether or not the AMDGPU built-in types are
+  /// available on this target.
+  bool hasAMDGPUTypes() const { return HasAMDGPUTypes; }
 
   /// Returns whether or not the RISC-V V built-in types are
   /// available on this target.
@@ -1701,7 +1695,7 @@ public:
   unsigned getTargetAddressSpace(LangAS AS) const {
     if (isTargetAddressSpace(AS))
       return toTargetAddressSpace(AS);
-    return getAddressSpaceMap()[(unsigned)AS];
+    return getAddressSpaceMap()[AS];
   }
 
   /// Determine whether the given pointer-authentication key is valid.

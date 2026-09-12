@@ -473,4 +473,11 @@
 #  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION
 #endif
 
+// TODO(LLVM 25): Remove this escape hatch
+#ifndef _LIBCPP_DISABLE_UNUSED_STRUCT_WARNINGS
+#  define _LIBCPP_WARN_UNUSED [[__gnu__::__warn_unused__]]
+#else
+#  define _LIBCPP_WARN_UNUSED
+#endif
+
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H

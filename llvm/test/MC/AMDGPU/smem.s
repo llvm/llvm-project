@@ -1,17 +1,17 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=kaveri -show-encoding %s | FileCheck -check-prefix=SICI %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga -show-encoding %s | FileCheck --check-prefixes=VI,GFX89 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 -show-encoding %s | FileCheck --check-prefixes=GFX89,GFX9 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1012 -show-encoding %s | FileCheck --check-prefixes=GFX10,GFX1012 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=bonaire %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=kaveri %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tonga %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOVI,NOSICIVIGFX1030 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOGFX9GFX10,NOGFX9GFX1012,NOGFX9 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1012 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICIGFX10,NOGFX9GFX10,NOGFX9GFX1012,NOGFX10 --implicit-check-not=error: %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1030 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICIGFX1030,NOSICIVIGFX1030,NOSICIGFX10,NOGFX9GFX10,NOGFX1030,NOGFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu6.00 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu7.04 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu7.00 -show-encoding %s | FileCheck -check-prefix=SICI %s
+// RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck --check-prefixes=VI,GFX89 %s
+// RUN: not llvm-mc -triple=amdgpu9.00 -show-encoding %s | FileCheck --check-prefixes=GFX89,GFX9 %s
+// RUN: not llvm-mc -triple=amdgpu10.12 -show-encoding %s | FileCheck --check-prefixes=GFX10,GFX1012 %s
+// RUN: not llvm-mc -triple=amdgpu10.30 -show-encoding %s | FileCheck -check-prefix=GFX10 %s
+// RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu7.04 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu7.00 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICI,NOSICIGFX10,NOSICIGFX1030,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOVI,NOSICIVIGFX1030 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu9.00 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOGFX9GFX10,NOGFX9GFX1012,NOGFX9 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu10.12 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICIGFX10,NOGFX9GFX10,NOGFX9GFX1012,NOGFX10 --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu10.30 %s -filetype=null 2>&1 | FileCheck --check-prefixes=NOSICIGFX1030,NOSICIVIGFX1030,NOSICIGFX10,NOGFX9GFX10,NOGFX1030,NOGFX10 --implicit-check-not=error: %s
 
 s_dcache_wb
 // GFX89: s_dcache_wb  ; encoding: [0x00,0x00,0x84,0xc0,0x00,0x00,0x00,0x00]

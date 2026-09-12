@@ -8,11 +8,11 @@ define amdgpu_kernel void @kernel(ptr addrspace(4) %input, ptr addrspace(1) %out
 ; CHECK:    call float @llvm.amdgcn.permlane64.f32
 .entry:
   %element_ptr = getelementptr i8, ptr addrspace(4) %input, i64 16
-  %buffer = load <4 x i32>, ptr addrspace(4) %element_ptr, align 16
+  %buffer = load ptr addrspace(8), ptr addrspace(4) %element_ptr, align 16
   %lane_id_lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %lane_id = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lane_id_lo)
   %lane_id_idx = shl i32 %lane_id, 2
-  %vals = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %buffer, i32 %lane_id_idx, i32 0)
+  %vals = call i32 @llvm.amdgcn.ptr.s.buffer.load.i32(ptr addrspace(8) %buffer, i32 %lane_id_idx, i32 0), !invariant.load !{}
   %vals_inactive_zeroed = call i32 @llvm.amdgcn.set.inactive.i32(i32 %vals, i32 0)
   %float_vals = bitcast i32 %vals_inactive_zeroed to float
   %swapped_vals = call float @llvm.amdgcn.permlane64.f32(float %float_vals)

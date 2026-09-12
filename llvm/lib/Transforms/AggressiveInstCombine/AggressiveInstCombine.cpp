@@ -43,10 +43,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
@@ -987,37 +983,34 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
+  bool DefinedForZero = ZeroTableElem->equalsInt(InputBits);
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
   Type *XType = X1->getType();
   auto Cttz = B.CreateIntrinsic(Intrinsic::cttz, {XType}, {X1, BoolConst});
-  Value *ZExtOrTrunc = nullptr;
+  Value *Res = B.CreateZExtOrTrunc(Cttz, AccessType);
 
-  if (DefinedForZero) {
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Cttz, AccessType);
-  } else {
+  if (!DefinedForZero) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
-    // produce the value from the table.
+    // produce the value from the table. Emit the select in AccessType with elem
+    // 0 unchanged, as the table's element type may be wider than the input
+    // type (and directly truncating ZeroTableElem into the input type could
+    // incorrectly drop bits).
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+    Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Res))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
-
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
   }
 
-  LI->replaceAllUsesWith(ZExtOrTrunc);
+  LI->replaceAllUsesWith(Res);
 
   return true;
 }
@@ -1206,24 +1199,32 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
   if (Cost > TargetTransformInfo::TCC_Basic)
     return false;
 
-  Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
-
   Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
-  Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The table won't produce a sensible result for 0.
-  Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
-  Value *Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+  Value *Result;
+  if (ZeroTableElem->getZExtValue() == InputBits - 1) {
+    Value *Ctlz =
+        B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, B.getFalse()});
+    Result = B.CreateAnd(B.CreateNot(Ctlz), InputBitsM1);
+  } else {
+    Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
+    Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The true branch of select handles the log2(0) case, which is rare.
-  if (!ProfcheckDisableMetadataFixes) {
+    // The table won't produce a sensible result for 0.
+    Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
+    Value *Select =
+        B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+
+    // The true branch of select handles the log2(0) case, which is rare.
     if (Instruction *SelectI = dyn_cast<Instruction>(Select))
       SelectI->setMetadata(
           LLVMContext::MD_prof,
           MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+
+    Result = Select;
   }
 
-  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
+  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Result, AccessType);
 
   LI->replaceAllUsesWith(ZExtOrTrunc);
 
@@ -1249,7 +1250,8 @@ static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
     return false;
 
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+  if (!GVTable || !GVTable->isConstant() ||
+      !GVTable->hasDefinitiveInitializer())
     return false;
 
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
@@ -1453,9 +1455,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
-  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
-  // TTI based checks if we want to proceed with wider load
-  bool Allowed = TTI.isTypeLegal(WiderType);
+  // Allow a power of 2 number of bytes that fit in a legal integer type.
+  bool Allowed = LOps.LoadSize >= 16 && isPowerOf2_64(LOps.LoadSize) &&
+                 DL.fitsInLegalInteger(LOps.LoadSize);
   if (!Allowed)
     return false;
 
@@ -1476,6 +1478,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
@@ -1506,7 +1509,11 @@ struct PartStore {
   StoreInst *Store;
 
   bool isCompatibleWith(const PartStore &Other) const {
-    return PtrBase == Other.PtrBase && Val == Other.Val;
+    // Offset stripping looks through addrspacecasts, so an equal PtrBase does
+    // not imply an equal address space, and thus not an equal PtrOffset width.
+    return PtrBase == Other.PtrBase && Val == Other.Val &&
+           Store->getPointerAddressSpace() ==
+               Other.Store->getPointerAddressSpace();
   }
 
   bool operator<(const PartStore &Other) const {
@@ -1548,9 +1555,10 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   // FIXME: We could generate smaller stores if we can't produce a large one.
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
-  Type *NewTy = Type::getIntNTy(Ctx, Width);
   unsigned Fast = 0;
-  if (!TTI.isTypeLegal(NewTy) ||
+  bool Allowed =
+      Width >= 16 && isPowerOf2_64(Width) && DL.fitsInLegalInteger(Width);
+  if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||
@@ -1559,6 +1567,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
 
   // Generate the combined store.
   IRBuilder<> Builder(First.Store);
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
@@ -2097,9 +2106,8 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   if (!CalledFunc)
     return false;
 
-  LibFunc LF;
-  if (!TLI.getLibFunc(*CalledFunc, LF) ||
-      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+  LibFunc LF = TLI.getLibFunc(*CalledFunc);
+  if (!isLibFuncEmittable(CI->getModule(), &TLI, LF))
     return false;
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);

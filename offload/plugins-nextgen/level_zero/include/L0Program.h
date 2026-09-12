@@ -21,6 +21,8 @@ class L0DeviceTy;
 
 class L0ProgramBuilderTy {
   L0DeviceTy &Device;
+  /// L0 context that owns the built modules.
+  ze_context_handle_t ZeContext;
   std::unique_ptr<MemoryBuffer> Image;
   /// Handle multiple modules within a single target image.
   llvm::SmallVector<ze_module_handle_t> Modules;
@@ -39,11 +41,13 @@ class L0ProgramBuilderTy {
   Error linkModules();
 
 public:
-  L0ProgramBuilderTy(L0DeviceTy &Device, std::unique_ptr<MemoryBuffer> &&Image)
-      : Device(Device), Image(std::move(Image)) {}
+  L0ProgramBuilderTy(L0DeviceTy &Device, ze_context_handle_t ZeContext,
+                     std::unique_ptr<MemoryBuffer> &&Image)
+      : Device(Device), ZeContext(ZeContext), Image(std::move(Image)) {}
   ~L0ProgramBuilderTy() = default;
 
   L0DeviceTy &getL0Device() const { return Device; }
+  ze_context_handle_t getZeContext() const { return ZeContext; }
   ze_module_handle_t getGlobalModule() const { return GlobalModule; }
   llvm::SmallVector<ze_module_handle_t> &getModules() { return Modules; }
 
@@ -70,6 +74,10 @@ class L0ProgramTy : public DeviceImageTy {
   /// Module that contains global data including device RTL.
   ze_module_handle_t GlobalModule = nullptr;
 
+  /// L0 context the modules were built against. Cached programs are only
+  /// reusable for lookups that share this context.
+  ze_context_handle_t ZeContext = nullptr;
+
   L0DeviceTy &getL0Device() const;
 
 public:
@@ -78,17 +86,21 @@ public:
   L0ProgramTy(int32_t ImageId, GenericDeviceTy &Device,
               std::unique_ptr<MemoryBuffer> Image,
               ze_module_handle_t GlobalModule,
-              llvm::SmallVector<ze_module_handle_t> &&Modules)
+              llvm::SmallVector<ze_module_handle_t> &&Modules,
+              ze_context_handle_t ZeContext)
       : DeviceImageTy(ImageId, Device, std::move(Image)),
-        Modules(std::move(Modules)), GlobalModule(GlobalModule) {}
+        Modules(std::move(Modules)), GlobalModule(GlobalModule),
+        ZeContext(ZeContext) {}
   ~L0ProgramTy() = default;
 
-  L0ProgramTy(const L0ProgramTy &other) = delete;
+  L0ProgramTy(const L0ProgramTy &Other) = delete;
   L0ProgramTy(L0ProgramTy &&) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &) = delete;
   L0ProgramTy &operator=(const L0ProgramTy &&) = delete;
 
   Error deinit();
+
+  ze_context_handle_t getZeContext() const { return ZeContext; }
 
   static L0ProgramTy &makeL0Program(DeviceImageTy &Device) {
     return static_cast<L0ProgramTy &>(Device);
@@ -126,6 +138,9 @@ struct L0GlobalHandlerTy final : public GenericGlobalHandlerTy {
   Error getGlobalMetadataFromDevice(GenericDeviceTy &Device,
                                     DeviceImageTy &Image,
                                     GlobalTy &DeviceGlobal) override;
+
+protected:
+  bool isExportedSymbol(uint32_t Flags) override;
 };
 
 bool isValidOneOmpImage(StringRef Image, uint64_t &MajorVer,

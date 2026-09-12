@@ -86,22 +86,16 @@
 #include "AMDGPU.h"
 #include "AMDGPUAsanInstrumentation.h"
 #include "AMDGPUMemoryUtils.h"
-#include "AMDGPUTargetMachine.h"
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Pass.h"
@@ -587,7 +581,7 @@ void AMDGPUSwLowerLDS::updateMallocSizeForDynamicLDS(
   assert(SwLDS && SwLDSMetadata);
   StructType *MetadataStructType =
       cast<StructType>(SwLDSMetadata->getValueType());
-  unsigned MaxAlignment = SwLDS->getAlignment();
+  unsigned MaxAlignment = SwLDS->getAlign().valueOrOne().value();
   Value *MaxAlignValue = IRB.getInt32(MaxAlignment);
   Value *MaxAlignValueMinusOne = IRB.getInt32(MaxAlignment - 1);
 

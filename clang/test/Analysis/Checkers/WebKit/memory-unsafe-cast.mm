@@ -97,3 +97,50 @@ void fn_cast_01(Base* base) {
   auto* d10 = reinterpret_cast<Derived*>((void*)base);
   // expected-warning@-1{{Unsafe cast from base type 'Base' to derived type 'Derived'}}
 }
+
+void takesNSString(NSString *str);
+
+@interface IdParamReceiver
+- (void)takeString:(NSString *)str;
+@end
+
+struct StringWrapper {
+  StringWrapper(NSString *str);
+};
+
+struct String {
+  String(NSString *str);
+};
+
+void test_id_passed_to_specific_type_param(id anId, NSString *str, IdParamReceiver *receiver) {
+  takesNSString(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  [receiver takeString:anId];
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  StringWrapper wrapper1(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  StringWrapper wrapper2 { anId };
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+
+  takesNSString(str);  // no warning
+  [receiver takeString:str];  // no warning
+  StringWrapper wrapper3(str);  // no warning
+
+  NSString *fixed = checked_objc_cast<NSString>(anId);  // no warning
+  takesNSString(fixed);  // no warning
+  RetainPtr<NSString> fixedDynamic = dynamic_objc_cast<NSString>(anId);  // no warning
+
+  id array = [NSArray arrayWithObjects:0 count:0];
+  String s { array };
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+}
+
+void takesNonnullNSString(NSString * _Nonnull str);
+void takesNullableNSString(NSString * _Nullable str);
+
+void test_id_passed_with_nullability(id anId) {
+  takesNonnullNSString(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+  takesNullableNSString(anId);
+  // expected-warning@-1{{Unsafe implicit cast from 'id' to specific type 'NSString'}}
+}

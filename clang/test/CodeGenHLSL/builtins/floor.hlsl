@@ -40,3 +40,7 @@ float3 test_floor_float3(float3 p0) { return floor(p0); }
 // CHECK-LABEL: define hidden noundef nofpclass(nan inf) <4 x float> @_Z17test_floor_float4
 // CHECK: call reassoc nnan ninf nsz arcp afn <4 x float> @llvm.floor.v4f32(
 float4 test_floor_float4(float4 p0) { return floor(p0); }
+
+// CHECK-LABEL: test_floor_float5
+// CHECK: call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.floor.v5f32
+vector<float, 5> test_floor_float5(vector<float, 5> p0) { return floor(p0); }

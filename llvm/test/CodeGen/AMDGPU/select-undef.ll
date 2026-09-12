@@ -860,3 +860,26 @@ define i64 @poison_should_freeze(i1 %cond1, i32 %val, i16 %val2, i64 %a, i64 %b)
   %select = select i1 %cmp, i64 %a, i64 %b
   ret i64 %select
 }
+
+define <8 x i16> @poison_should_freeze_v8i16(i1 %cond1, i32 %val, i16 %val2, <8 x i16> %a, <8 x i16> %b) {
+; GCN-LABEL: poison_should_freeze_v8i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 1, v0
+; GCN-NEXT:    v_mov_b32_e32 v11, 0x5040100
+; GCN-NEXT:    v_perm_b32 v2, v2, s4, v11
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v1, v2, vcc
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; GCN-NEXT:    v_cndmask_b32_e32 v0, v7, v3, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v1, v8, v4, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v9, v5, vcc
+; GCN-NEXT:    v_cndmask_b32_e32 v3, v10, v6, vcc
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %poisonv = insertelement <2 x i16> poison, i16 %val2, i32 1
+  %poison = bitcast <2 x i16> %poisonv to i32
+  %cond2 = select i1 %cond1, i32 %poison, i32 %val
+  %cmp = icmp eq i32 %cond2, 0
+  %select = select i1 %cmp, <8 x i16> %a, <8 x i16> %b
+  ret <8 x i16> %select
+}

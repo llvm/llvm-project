@@ -36,9 +36,9 @@
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSizeOpts.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -126,6 +126,7 @@ public:
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
     AU.addRequired<ProfileSummaryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -372,6 +373,27 @@ static bool countsAsInstruction(const MachineInstr &MI) {
   return !(MI.isDebugInstr() || MI.isCFIInstruction());
 }
 
+static bool isPseudoProbeSensitiveInstruction(const MachineInstr &MI) {
+  if (MI.isPseudoProbe())
+    return true;
+  if (!MI.isCall())
+    return false;
+  const DILocation *DL = MI.getDebugLoc();
+  return DL && DILocation::isPseudoProbeDiscriminator(DL->getDiscriminator());
+}
+
+static bool haveSamePseudoProbeContext(const MachineInstr &MI1,
+                                       const MachineInstr &MI2) {
+  bool IsSensitive1 = isPseudoProbeSensitiveInstruction(MI1);
+  bool IsSensitive2 = isPseudoProbeSensitiveInstruction(MI2);
+  if (!IsSensitive1 && !IsSensitive2)
+    return true;
+  if (IsSensitive1 != IsSensitive2)
+    return false;
+
+  return MI1.getDebugLoc().isSameSourceLocation(MI2.getDebugLoc());
+}
+
 /// Iterate backwards from the given iterator \p I, towards the beginning of the
 /// block. If a MI satisfying 'countsAsInstruction' is found, return an iterator
 /// pointing to that MI. If no such MI is found, return the end iterator.
@@ -406,6 +428,7 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
     if (MBBI1 == MBB1->end() || MBBI2 == MBB2->end())
       break;
     if (!MBBI1->isIdenticalTo(*MBBI2) ||
+        !haveSamePseudoProbeContext(*MBBI1, *MBBI2) ||
         // FIXME: This check is dubious. It's used to get around a problem where
         // people incorrectly expect inline asm directives to remain in the same
         // relative order. This is untenable because normal compiler
@@ -1391,6 +1414,15 @@ static void salvageDebugInfoFromEmptyBlock(const TargetInstrInfo *TII,
       copyDebugInfoToPredecessor(TII, MBB, *PredBB);
 }
 
+static bool areConditionalsEqual(ArrayRef<MachineOperand> CurCond,
+                                 ArrayRef<MachineOperand> PriorCond) {
+  return !CurCond.empty() &&
+         llvm::equal(CurCond, PriorCond,
+                     [](const MachineOperand &LHS, const MachineOperand &RHS) {
+                       return LHS.isIdenticalTo(RHS);
+                     });
+}
+
 bool BranchFolder::OptimizeBlock(MachineBasicBlock *MBB) {
   bool MadeChange = false;
   MachineFunction &MF = *MBB->getParent();
@@ -1549,6 +1581,21 @@ ReoptimizeBlock:
         ++NumBranchOpts;
         goto ReoptimizeBlock;
       }
+    }
+
+    // If we have a block that consists of a single conditional branch
+    // instruction that is exactly identical to the terminator in the previous
+    // block, we can remove this block.
+    if (MBB->size() == 1 && PrevBB.canFallThrough() && CurTBB == PriorTBB &&
+        areConditionalsEqual(CurCond, PriorCond)) {
+      // We remove the branch from the previous basic block rather than this
+      // one in case there are other blocks that specifically branch to this
+      // one.
+      TII->removeBranch(PrevBB);
+      PrevBB.removeSuccessor(CurTBB);
+      MadeChange = true;
+      ++NumBranchOpts;
+      goto ReoptimizeBlock;
     }
 
     // If this block has no successors (e.g. it is a return block or ends with

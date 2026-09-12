@@ -77,8 +77,7 @@ static bool TargetBuildsComponents(const llvm::Triple &TargetTriple) {
 }
 
 static bool WantsPthread(const llvm::Triple &Triple, const ArgList &Args) {
-  bool WantsPthread =
-      Args.hasFlag(options::OPT_pthread, options::OPT_no_pthread, false);
+  bool WantsPthread = Args.hasArg(options::OPT_pthread);
 
   // If the WASI environment is "threads" then enable pthreads support
   // without requiring -pthread, in order to prevent user error
@@ -120,6 +119,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("--strip-all");
+
+  if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
+    CmdArgs.push_back("--no-demangle");
 
   // On `wasip2` the default linker is `wasm-component-ld` which wraps the
   // execution of `wasm-ld`. Find `wasm-ld` and pass it as an argument of where
@@ -164,7 +166,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // crt1-command.o. And once LLVM no longer needs to support WASI libc
     // versions before that, it can switch to using crt1-command.o.
     Crt1 = "crt1.o";
-    if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+    if (ToolChain.GetFilePathIfExists("crt1-command.o"))
       Crt1 = "crt1-command.o";
   } else {
     Crt1 = "crt1-reactor.o";

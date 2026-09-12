@@ -95,10 +95,10 @@ func.func @sparse_convert_3d_from_sparse(%arg0: tensor<8x8x8xf64, #SparseTensor>
 
 // CHECK-LABEL: func @sparse_positions(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[T:.*]] = sparse_tensor.positions %[[A]] {level = 0 : index} : tensor<128xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: %[[T:.*]] = sparse_tensor.positions %[[A]] level = 0 : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_positions(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %0 = sparse_tensor.positions %arg0 {level = 0 : index} : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.positions %arg0 level = 0 : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -121,10 +121,10 @@ func.func @sparse_indices_buffer(%arg0: tensor<?x?xf64, #COO>) -> memref<?xindex
 
 // CHECK-LABEL: func @sparse_indices(
 //  CHECK-SAME: %[[A:.*]]: tensor<128xf64, #{{.*}}>)
-//       CHECK: %[[T:.*]] = sparse_tensor.coordinates %[[A]] {level = 0 : index} : tensor<128xf64, #{{.*}}> to memref<?xindex>
+//       CHECK: %[[T:.*]] = sparse_tensor.coordinates %[[A]] level = 0 : tensor<128xf64, #{{.*}}> to memref<?xindex>
 //       CHECK: return %[[T]] : memref<?xindex>
 func.func @sparse_indices(%arg0: tensor<128xf64, #SparseVector>) -> memref<?xindex> {
-  %0 = sparse_tensor.coordinates %arg0 {level = 0 : index} : tensor<128xf64, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.coordinates %arg0 level = 0 : tensor<128xf64, #SparseVector> to memref<?xindex>
   return %0 : memref<?xindex>
 }
 
@@ -555,7 +555,7 @@ func.func @sparse_select(%arg0: f64) -> f64 {
 //  CHECK-SAME:   %[[A0:.*]]: tensor<2x4xf64
 //  CHECK-SAME:   %[[A1:.*]]: tensor<3x4xf64
 //  CHECK-SAME:   %[[A2:.*]]: tensor<4x4xf64
-//       CHECK:   %[[TMP0:.*]] = sparse_tensor.concatenate %[[A0]], %[[A1]], %[[A2]] {dimension = 0 : index} :
+//       CHECK:   %[[TMP0:.*]] = sparse_tensor.concatenate %[[A0]], %[[A1]], %[[A2]] dimension = 0 :
 //  CHECK-SAME:   tensor<2x4xf64
 //  CHECK-SAME:   tensor<3x4xf64
 //  CHECK-SAME:   tensor<4x4xf64
@@ -564,7 +564,7 @@ func.func @sparse_select(%arg0: f64) -> f64 {
 func.func @concat_sparse_sparse(%arg0: tensor<2x4xf64, #SparseMatrix>,
                                 %arg1: tensor<3x4xf64, #SparseMatrix>,
                                 %arg2: tensor<4x4xf64, #SparseMatrix>) -> tensor<9x4xf64, #SparseMatrix> {
-  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 dimension = 0
        : tensor<2x4xf64, #SparseMatrix>,
          tensor<3x4xf64, #SparseMatrix>,
          tensor<4x4xf64, #SparseMatrix> to tensor<9x4xf64, #SparseMatrix>
@@ -613,10 +613,10 @@ func.func @sparse_tensor_foreach(%arg0: tensor<2x4xf64, #DCSR>, %arg1: f32) -> (
 // CHECK-LABEL: func @sparse_sort_coo(
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xindex>)
-//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] {ny = 1 : index, perm_map = #{{.*}}} : memref<?xindex>
+//       CHECK: sparse_tensor.sort hybrid_quick_sort %[[A]], %[[B]] perm_map = #{{.*}} ny = 1 : memref<?xindex>
 //       CHECK: return %[[B]]
 func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xindex>) {
-  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 {perm_map = #ID_MAP, ny = 1 : index}: memref<?xindex>
+  sparse_tensor.sort hybrid_quick_sort %arg0, %arg1 perm_map = #ID_MAP ny = 1: memref<?xindex>
   return %arg1 : memref<?xindex>
 }
 
@@ -628,10 +628,10 @@ func.func @sparse_sort_coo(%arg0: index, %arg1: memref<?xindex>) -> (memref<?xin
 //  CHECK-SAME: %[[A:.*]]: index,
 //  CHECK-SAME: %[[B:.*]]: memref<?xi64>,
 //  CHECK-SAME: %[[C:.*]]: memref<?xf32>)
-//       CHECK: sparse_tensor.sort insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] {ny = 1 : index, perm_map = #{{.*}}}
+//       CHECK: sparse_tensor.sort insertion_sort_stable %[[A]], %[[B]] jointly %[[C]] perm_map = #{{.*}} ny = 1
 //       CHECK: return %[[B]], %[[C]]
 func.func @sparse_sort_coo_stable(%arg0: index, %arg1: memref<?xi64>, %arg2: memref<?xf32>) -> (memref<?xi64>, memref<?xf32>) {
-  sparse_tensor.sort insertion_sort_stable %arg0, %arg1 jointly %arg2 {perm_map = #ID_MAP, ny = 1 : index}: memref<?xi64> jointly memref<?xf32>
+  sparse_tensor.sort insertion_sort_stable %arg0, %arg1 jointly %arg2 perm_map = #ID_MAP ny = 1: memref<?xi64> jointly memref<?xf32>
   return %arg1, %arg2 : memref<?xi64>, memref<?xf32>
 }
 

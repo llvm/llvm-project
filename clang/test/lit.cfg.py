@@ -160,8 +160,9 @@ def have_host_out_of_process_jit_feature_support():
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             input=testcode,
+            timeout=5,
         )
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
     if clang_repl_cmd.returncode == 0:
@@ -393,7 +394,7 @@ if platform.system() not in ["Windows"]:
     config.available_features.add("can-remove-opened-file")
 
 # Features
-known_arches = ["x86_64", "mips64", "ppc64", "aarch64"]
+known_arches = ["x86_64", "mips64", "ppc64", "aarch64", "s390x"]
 if any(config.target_triple.startswith(x) for x in known_arches):
     config.available_features.add("clang-target-64-bits")
 

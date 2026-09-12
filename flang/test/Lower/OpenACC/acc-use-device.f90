@@ -11,19 +11,19 @@ subroutine test()
 ! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A0]](%[[A1]]) {uniq_name = "_QFtestEb"} : (!fir.ref<!fir.array<?xf64>>, !fir.shapeshift<1>) -> (!fir.box<!fir.array<?xf64>>, !fir.ref<!fir.array<?xf64>>)
 
   !$acc data copy(b)
-! CHECK: %[[B:.*]] = acc.copyin var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK: %[[B:.*]] = acc.copyin var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) name("b") -> !fir.box<!fir.array<?xf64>>
 ! CHECK: acc.data dataOperands(%[[B]] : !fir.box<!fir.array<?xf64>>) {
 
   !$acc host_data use_device(b)
   call vadd(b)
   !$acc end host_data
-! CHECK: %[[C:.*]] = acc.use_device var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "b"}
+! CHECK: %[[C:.*]] = acc.use_device var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) name("b") -> !fir.box<!fir.array<?xf64>>
 ! CHECK: acc.host_data dataOperands(%[[C]] : !fir.box<!fir.array<?xf64>>) {
 ! CHECK: %[[ADDR:.*]] = fir.box_addr %[[C]] 
 ! CHECK: %[[REDCLARE:.*]]:2 = hlfir.declare %[[ADDR]]
 ! CHECK: fir.call @_QPvadd(%[[REDCLARE]]#1) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>) -> ()
   !$acc end data
-! CHECK: acc.copyout accVar(%[[B]] : !fir.box<!fir.array<?xf64>>) to var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) {dataClause = #acc<data_clause acc_copy>, name = "b"}
+! CHECK: acc.copyout accVar(%[[B]] : !fir.box<!fir.array<?xf64>>) to var(%[[A]]#0 : !fir.box<!fir.array<?xf64>>) dataClause(acc_copy) name("b")
 end
 
 ! Test for allocatable, pointer and assumed-shape variables appearing in use_device clause.
@@ -46,9 +46,9 @@ subroutine test2(a, b, c)
   call vadd2(a,b,c)
   !$acc end host_data
 
-! CHECK: %[[H:.*]] = acc.use_device varPtr(%[[E]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>> {name = "a"}
-! CHECK: %[[J:.*]] = acc.use_device var(%[[F]]#0 : !fir.box<!fir.array<?xf64>>) -> !fir.box<!fir.array<?xf64>> {name = "b"}
-! CHECK: %[[L:.*]] = acc.use_device varPtr(%[[G]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>> {name = "c"}
+! CHECK: %[[H:.*]] = acc.use_device varPtr(%[[E]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>) name("a") -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
+! CHECK: %[[J:.*]] = acc.use_device var(%[[F]]#0 : !fir.box<!fir.array<?xf64>>) name("b") -> !fir.box<!fir.array<?xf64>>
+! CHECK: %[[L:.*]] = acc.use_device varPtr(%[[G]]#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) name("c") -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>
 ! CHECK: acc.host_data dataOperands(%[[H]], %[[J]], %[[L]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>, !fir.box<!fir.array<?xf64>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf64>>>>) {
 
 

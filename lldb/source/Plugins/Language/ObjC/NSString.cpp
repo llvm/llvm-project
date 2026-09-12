@@ -20,6 +20,8 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/Support/Error.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
@@ -141,9 +143,13 @@ bool lldb_private::formatters::NSStringSummaryProvider(
 
   if (is_mutable) {
     uint64_t location = 2 * ptr_size + valobj_addr;
-    location = process_sp->ReadPointerFromMemory(location, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> location_or_err =
+        process_sp->ReadPointerFromMemory(location);
+    if (!location_or_err) {
+      llvm::consumeError(location_or_err.takeError());
       return false;
+    }
+    location = *location_or_err;
     if (has_explicit_length && is_unicode) {
       options.SetLocation(Address(location));
       options.SetTargetSP(valobj.GetTargetSP());
@@ -190,9 +196,13 @@ bool lldb_private::formatters::NSStringSummaryProvider(
       } else
         location += ptr_size;
     } else {
-      location = process_sp->ReadPointerFromMemory(location, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> location_or_err =
+          process_sp->ReadPointerFromMemory(location);
+      if (!location_or_err) {
+        llvm::consumeError(location_or_err.takeError());
         return false;
+      }
+      location = *location_or_err;
     }
     options.SetLocation(Address(location));
     options.SetTargetSP(valobj.GetTargetSP());
@@ -266,9 +276,13 @@ bool lldb_private::formatters::NSStringSummaryProvider(
           StringPrinter::StringElementType::ASCII>(options);
   } else {
     uint64_t location = valobj_addr + 2 * ptr_size;
-    location = process_sp->ReadPointerFromMemory(location, error);
-    if (error.Fail())
+    llvm::Expected<lldb::addr_t> location_or_err =
+        process_sp->ReadPointerFromMemory(location);
+    if (!location_or_err) {
+      llvm::consumeError(location_or_err.takeError());
       return false;
+    }
+    location = *location_or_err;
     if (has_explicit_length && !has_null)
       explicit_length++; // account for the fact that there is no NULL and we
                          // need to have one added

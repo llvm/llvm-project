@@ -5,14 +5,14 @@
 
 # Schedule the NRK that defines the compare source low to help comparison
 # elimination.
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.0
-# CHECK:      ********** MI Scheduling **********
+# CHECK:      Current Schedule Region
 # CHECK-NEXT: fun0:%bb.1
 # CHECK:      Queue BotQ.A: 6 4
 # CHECK-NEXT:   Cand SU(6) FIRST
 # CHECK-NEXT:   Cand SU(4) WEAK
-# CHECK-NEXT: Pick Bot WEAK       [pre-RA]
+# CHECK-NEXT: Pick Bot Cand SU(4) WEAK       [pre-RA]
 # CHECK-NEXT: Scheduling SU(4) %7:gr32bit = NRK %6:gr32bit, %0:gr32bit, implicit-def dead $cc
 # CHECK:      *** Final schedule for %bb.1 ***
 # CHECK-NEXT: SU(0):   %5:gr32bit = NRK %2:gr32bit, %0:gr32bit, implicit-def dead $cc

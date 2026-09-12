@@ -34,8 +34,8 @@ class VOP <string opName> {
   string OpName = opName;
 }
 
-// First 13 insts from VOPDY are also VOPDX. DOT2ACC_F32_BF16 is omitted
-defvar VOPDX_Max_Index = 12;
+// First 13 insts from VOPDY are also VOPDX.
+defvar VOPDX_Max_Index = 13;
 defvar VOPD3X_Max_Index = 36;
 
 class VOPD_Component<bits<6> OpIn, string vOPDName> {
@@ -2105,6 +2105,13 @@ multiclass VOP3Only_ScaleSel_Real_gfx1250<bits<10> op> {
 
 multiclass VOP3Only_ScaleSel_Real_gfx1250_gfx13<bits<10> preGFX13, bits<10> op = preGFX13>
   : VOP3Only_ScaleSel_Real_gfx1250<preGFX13> {
+  defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
+  def _e64_gfx13 :
+    VOP3_Real_Gen<ps, GFX13Gen>,
+    VOP3a_ScaleSel_gfx1250_gfx13<op, ps.Pfl>;
+}
+
+multiclass VOP3Only_ScaleSel_Real_gfx13<bits<10> op> {
   defvar ps = !cast<VOP_Pseudo>(NAME#"_e64");
   def _e64_gfx13 :
     VOP3_Real_Gen<ps, GFX13Gen>,

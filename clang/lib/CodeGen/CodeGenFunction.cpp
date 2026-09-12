@@ -91,6 +91,13 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
   SetFastMathFlags(CurFPFeatures);
 }
 
+const FunctionDecl *CodeGenFunction::getCurrentFunctionDecl() const {
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  if (!FD)
+    FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
+  return FD;
+}
+
 CodeGenFunction::~CodeGenFunction() {
   assert(LifetimeExtendedCleanupStack.empty() && "failed to emit a cleanup");
   assert(DeferredDeactivationCleanupStack.empty() &&
@@ -1615,7 +1622,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     const FunctionType *FT = cast<FunctionType>(FD->getType());
     CGM.getTargetCodeGenInfo().setOCLKernelStubCallingConvention(FT);
     const CGFunctionInfo &FnInfo = CGM.getTypes().arrangeFreeFunctionCall(
-        CallArgs, FT, /*ChainCall=*/false);
+        CallArgs, FT, /*ChainCall=*/false, getCurrentFunctionDecl());
     llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FnInfo);
     llvm::Constant *GDStubFunctionPointer =
         CGM.getRawFunctionPointer(GDStub, FTy);
@@ -2666,6 +2673,7 @@ void CodeGenFunction::EmitVariablyModifiedType(QualType type) {
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
     case Type::CountAttributed:
+    case Type::LateParsedAttr:
       // Keep walking after single level desugaring.
       type = type.getSingleStepDesugaredType(getContext());
       break;
@@ -3259,11 +3267,7 @@ void CodeGenFunction::EmitRISCVMultiVersionResolver(
 
   // If no generic/default, emit an unreachable.
   Builder.SetInsertPoint(CurBlock);
-  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
-  Builder.CreateUnreachable();
-  Builder.ClearInsertionPoint();
+  EmitTrapCallAndMakeUnreachable();
 }
 
 void CodeGenFunction::EmitAArch64MultiVersionResolver(
@@ -3308,11 +3312,7 @@ void CodeGenFunction::EmitAArch64MultiVersionResolver(
 
   // If no default, emit an unreachable.
   Builder.SetInsertPoint(CurBlock);
-  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
-  Builder.CreateUnreachable();
-  Builder.ClearInsertionPoint();
+  EmitTrapCallAndMakeUnreachable();
 }
 
 void CodeGenFunction::EmitX86MultiVersionResolver(
@@ -3348,11 +3348,7 @@ void CodeGenFunction::EmitX86MultiVersionResolver(
 
   // If no generic/default, emit an unreachable.
   Builder.SetInsertPoint(CurBlock);
-  llvm::CallInst *TrapCall = EmitTrapCall(llvm::Intrinsic::trap);
-  TrapCall->setDoesNotReturn();
-  TrapCall->setDoesNotThrow();
-  Builder.CreateUnreachable();
-  Builder.ClearInsertionPoint();
+  EmitTrapCallAndMakeUnreachable();
 }
 
 // Loc - where the diagnostic will point, where in the source code this

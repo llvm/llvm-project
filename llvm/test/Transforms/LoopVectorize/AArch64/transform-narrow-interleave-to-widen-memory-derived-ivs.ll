@@ -16,15 +16,14 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 2
 ; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 1
-; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
+; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], 0
 ; VF2-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 4
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[TMP5]]
+; VF2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[INDEX]], 4
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 16, [[TMP5]]
 ; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
 ; VF2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[OFFSET_IDX]]
@@ -46,15 +45,15 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; VF2IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 2
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 1
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 4
-; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[TMP5]]
+; VF2IC2-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[INDEX]], 4
+; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 16, [[TMP5]]
 ; VF2IC2-NEXT:    [[TMP6:%.*]] = add i64 [[OFFSET_IDX]], 16
 ; VF2IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF2IC2-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP6]]
@@ -81,15 +80,15 @@ define void @derived_int_ivs(ptr noalias %a, ptr noalias %b, i64 %end) {
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; VF4-NEXT:    [[TMP3:%.*]] = shl i64 [[N_VEC]], 4
 ; VF4-NEXT:    [[TMP4:%.*]] = add i64 16, [[TMP3]]
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[TMP5:%.*]] = shl i64 [[INDEX]], 4
-; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 16, [[TMP5]]
+; VF4-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 16, [[TMP5]]
 ; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x double>, ptr [[TMP6]], align 8
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x double> [[WIDE_VEC]], <8 x double> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -131,17 +130,16 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2-LABEL: define void @derived_pointer_ivs(
 ; VF2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2-NEXT:  [[ENTRY:.*:]]
-; VF2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; VF2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -16
+; VF2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; VF2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 2
 ; VF2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2:       [[VECTOR_PH]]:
-; VF2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 1
-; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
+; VF2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], 0
 ; VF2-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
 ; VF2-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP9]]
@@ -164,16 +162,16 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF2IC2-LABEL: define void @derived_pointer_ivs(
 ; VF2IC2-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF2IC2-NEXT:  [[ENTRY:.*:]]
-; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF2IC2-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; VF2IC2-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; VF2IC2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; VF2IC2-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF2IC2-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF2IC2-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -16
+; VF2IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; VF2IC2-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF2IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; VF2IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF2IC2:       [[VECTOR_PH]]:
-; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 2
+; VF2IC2-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 1
 ; VF2IC2-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VF2IC2-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF2IC2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
@@ -202,16 +200,16 @@ define void @derived_pointer_ivs(ptr noalias %a, ptr noalias %b, ptr %end) {
 ; VF4-LABEL: define void @derived_pointer_ivs(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr [[END:%.*]]) {
 ; VF4-NEXT:  [[ENTRY:.*:]]
-; VF4-NEXT:    [[END1:%.*]] = ptrtoint ptr [[END]] to i64
-; VF4-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[A]] to i64
-; VF4-NEXT:    [[TMP5:%.*]] = sub i64 [[END1]], [[TMP4]]
-; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP5]], -16
+; VF4-NEXT:    [[END1:%.*]] = ptrtoaddr ptr [[END]] to i64
+; VF4-NEXT:    [[TMP4:%.*]] = ptrtoaddr ptr [[A]] to i64
+; VF4-NEXT:    [[TMP5:%.*]] = add i64 [[END1]], -16
+; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP5]], [[TMP4]]
 ; VF4-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 4
 ; VF4-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP3]], 4
 ; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; VF4:       [[VECTOR_PH]]:
-; VF4-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP3]], 4
+; VF4-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP3]], 3
 ; VF4-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP3]], [[N_MOD_VF]]
 ; VF4-NEXT:    [[TMP9:%.*]] = shl i64 [[N_VEC]], 4
 ; VF4-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP9]]
@@ -266,7 +264,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; VF2-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[TMP3:%.*]] = add <2 x i64> [[STRIDED_VEC1]], splat (i64 1)
@@ -287,7 +285,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2IC2:       [[VECTOR_BODY]]:
 ; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; VF2IC2-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; VF2IC2-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; VF2IC2-NEXT:    [[TMP3:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF2IC2-NEXT:    [[TMP4:%.*]] = getelementptr i64, ptr [[P]], i64 [[TMP0]]
@@ -313,7 +311,7 @@ define void @narrow_with_uniform_add_and_gep(ptr noalias %p) {
 ; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VF4-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 1
+; VF4-NEXT:    [[OFFSET_IDX:%.*]] = shl nuw i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[P]], i64 [[OFFSET_IDX]]
 ; VF4-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>

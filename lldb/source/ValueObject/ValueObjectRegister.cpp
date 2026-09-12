@@ -20,6 +20,7 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterType.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
@@ -125,28 +126,42 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
   return nullptr;
 }
 
+std::optional<std::pair<size_t, const RegisterInfo *>>
+ValueObjectRegisterSet::LookupChildWithName(llvm::StringRef name) {
+  if (!m_reg_ctx_sp || !m_reg_set)
+    return {};
+
+  // See if the register exists at all in any set.
+  const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
+  if (!reg_info)
+    return {};
+
+  // See if this register is in this register set.
+  for (size_t i = 0; i < m_reg_set->num_registers; ++i) {
+    const RegisterInfo *contained_reg_info =
+        m_reg_ctx_sp->GetRegisterInfoAtIndex(m_reg_set->registers[i]);
+    if (contained_reg_info == reg_info)
+      return std::make_pair(i, reg_info);
+  }
+
+  return {};
+}
+
 lldb::ValueObjectSP
 ValueObjectRegisterSet::GetChildMemberWithName(llvm::StringRef name,
                                                bool can_create) {
-  ValueObject *valobj = nullptr;
-  if (m_reg_ctx_sp && m_reg_set) {
-    const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
-    if (reg_info != nullptr)
-      valobj = new ValueObjectRegister(*this, m_reg_ctx_sp, reg_info);
-  }
-  if (valobj)
-    return valobj->GetSP();
-  else
-    return ValueObjectSP();
+  if (auto maybe_child = LookupChildWithName(name))
+    return (new ValueObjectRegister(*this, m_reg_ctx_sp, maybe_child->second))
+        ->GetSP();
+
+  return {};
 }
 
 llvm::Expected<size_t>
 ValueObjectRegisterSet::GetIndexOfChildWithName(llvm::StringRef name) {
-  if (m_reg_ctx_sp && m_reg_set) {
-    const RegisterInfo *reg_info = m_reg_ctx_sp->GetRegisterInfoByName(name);
-    if (reg_info != nullptr)
-      return reg_info->kinds[eRegisterKindLLDB];
-  }
+  if (auto maybe_child = LookupChildWithName(name))
+    return maybe_child->first;
+
   return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
@@ -193,22 +208,33 @@ ValueObjectRegister::ValueObjectRegister(ExecutionContextScope *exe_scope,
 ValueObjectRegister::~ValueObjectRegister() = default;
 
 CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
-  if (!m_compiler_type.IsValid()) {
-    ExecutionContext exe_ctx(GetExecutionContextRef());
-    if (auto *target = exe_ctx.GetTargetPtr()) {
-      if (auto *exe_module = target->GetExecutableModulePointer()) {
-        auto type_system_or_err =
-            exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
-        if (auto err = type_system_or_err.takeError()) {
-          LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
-                         "Unable to get CompilerType from TypeSystem: {0}");
-        } else {
-          if (auto ts = *type_system_or_err)
-            m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
-                m_reg_info.encoding, m_reg_info.byte_size * 8);
-        }
-      }
-    }
+  if (m_compiler_type.IsValid())
+    return m_compiler_type;
+
+  ExecutionContext exe_ctx(GetExecutionContextRef());
+  Target *target = exe_ctx.GetTargetPtr();
+  if (!target)
+    return {};
+
+  if (llvm::isa_and_present<RegisterTypeBuiltin, RegisterTypeVector>(
+          m_reg_info.register_type)) {
+    m_compiler_type = target->GetRegisterType(m_reg_info);
+    if (m_compiler_type.IsValid())
+      return m_compiler_type;
+  }
+
+  auto *exe_module = target->GetExecutableModulePointer();
+  if (!exe_module)
+    return {};
+  auto type_system_or_err =
+      exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
+                   "Unable to get CompilerType from TypeSystem: {0}");
+  } else {
+    if (auto ts = *type_system_or_err)
+      m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(
+          m_reg_info.encoding, m_reg_info.byte_size * 8);
   }
   return m_compiler_type;
 }
@@ -244,7 +270,17 @@ bool ValueObjectRegister::UpdateValue() {
   if (m_reg_ctx_sp) {
     RegisterValue m_old_reg_value(m_reg_value);
     if (m_reg_ctx_sp->ReadRegister(&m_reg_info, m_reg_value)) {
-      if (m_reg_value.GetData(m_data)) {
+      Target *target = exe_ctx.GetTargetPtr();
+      const bool has_vector_type =
+          llvm::isa_and_present<RegisterTypeVector>(m_reg_info.register_type);
+      // Scalar registers remain in host byte order, while CompilerType vector
+      // children need target-order bytes to interpret their layout.
+      const bool got_data =
+          has_vector_type && target
+              ? m_reg_value.GetData(m_data, m_reg_info.byte_size,
+                                    target->GetArchitecture().GetByteOrder())
+              : m_reg_value.GetData(m_data);
+      if (got_data) {
         Process *process = exe_ctx.GetProcessPtr();
         if (process)
           m_data.SetAddressByteSize(process->GetAddressByteSize());

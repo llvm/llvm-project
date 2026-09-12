@@ -31,6 +31,49 @@ libc_test(
 )
 
 libc_test(
+    name = "inet_addr_test",
+    srcs = ["inet_addr_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htonl",
+        "//libc:inet_addr",
+    ],
+)
+
+libc_test(
+    name = "inet_aton_test",
+    srcs = ["inet_aton_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:htonl",
+        "//libc:inet_aton",
+    ],
+)
+
+libc_test(
+    name = "inet_ntoa_test",
+    srcs = ["inet_ntoa_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:inet_ntoa",
+        "//libc:types_struct_in_addr",
+    ],
+)
+
+libc_test(
+    name = "inet_ntop_test",
+    srcs = ["inet_ntop_test.cpp"],
+    deps = [
+        "//libc:__support_common",
+        "//libc:hdr_errno_macros",
+        "//libc:hdr_sys_socket_macros",
+        "//libc:inet_ntop",
+        "//libc:types_struct_in6_addr",
+        "//libc:types_struct_in_addr",
+    ],
+)
+
+libc_test(
     name = "ntohl_test",
     srcs = ["ntohl_test.cpp"],
     deps = [

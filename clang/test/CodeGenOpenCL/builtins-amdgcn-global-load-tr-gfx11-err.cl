@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgcn-amd-amdhsa -target-cpu gfx1100 \
+// RUN: %clang_cc1 -O0 -cl-std=CL2.0 -triple amdgpu11.00-amd-amdhsa \
 // RUN:   -verify -S -o - %s
 
 // REQUIRES: amdgpu-registered-target

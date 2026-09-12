@@ -22,7 +22,7 @@
 
 namespace llvm {
 
-class BreakFalseDepsPass : public PassInfoMixin<BreakFalseDepsPass> {
+class BreakFalseDepsPass : public OptionalPassInfoMixin<BreakFalseDepsPass> {
 public:
   LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM);

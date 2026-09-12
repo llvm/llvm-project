@@ -14,6 +14,9 @@
 // UNSUPPORTED: target={{.*netbsd.*}}
 // UNSUPPORTED: target={{.*apple.*}}
 
+// FIXME: Loops indefinitely
+// UNSUPPORTED: target={{.*freebsd.*}} && tsan
+
 // Forking in multithread environment is unsupported. However we already have
 // some workarounds, and will add more, so this is the test.
 // The test try to check two things:

@@ -21,6 +21,11 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
+#include <cstddef>
+#include <functional>
+#include <optional>
+#include <string>
+
 using AccDirectiveSet = Fortran::common::EnumSet<llvm::acc::Directive,
     llvm::acc::Directive_enumSize>;
 
@@ -32,9 +37,13 @@ using AccClauseSet =
 
 namespace Fortran::semantics {
 
+template <>
+void IterateOverMembers(
+    const AccClauseSet &set, std::function<void(llvm::acc::Clause)> func);
+
 class AccStructureChecker
     : public DirectiveStructureChecker<llvm::acc::Directive, llvm::acc::Clause,
-          parser::AccClause, llvm::acc::Clause_enumSize> {
+          parser::AccClause, AccClauseSet> {
 public:
   AccStructureChecker(SemanticsContext &context)
       : DirectiveStructureChecker(context,
@@ -108,6 +117,8 @@ private:
   std::optional<std::int64_t> getGangDimensionSize(
       DirectiveContext &dirContext);
   void CheckNotInSameOrSubLevelLoopConstruct();
+  void CheckLoopLevelClauseValue(llvm::StringRef clauseName);
+  void CheckLoopLevelClauseKernelsConflicts();
   void CheckRoutineCallInLoop(const Symbol &);
   void CheckMultipleOccurrenceInDeclare(
       const parser::AccObjectList &, llvm::acc::Clause);

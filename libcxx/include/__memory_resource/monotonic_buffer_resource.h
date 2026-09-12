@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MONOTONIC_BUFFER_RESOURCE_H
 
+#include <__assert>
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__memory/addressof.h>
@@ -54,7 +55,10 @@ public:
       : monotonic_buffer_resource(nullptr, __default_buffer_capacity, get_default_resource()) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit monotonic_buffer_resource(size_t __initial_size)
-      : monotonic_buffer_resource(nullptr, __initial_size, get_default_resource()) {}
+      : monotonic_buffer_resource(nullptr, __initial_size, get_default_resource()) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __initial_size > 0, "monotonic_buffer_resource: initial_size must be greater than zero");
+  }
 
   _LIBCPP_HIDE_FROM_ABI monotonic_buffer_resource(void* __buffer, size_t __buffer_size)
       : monotonic_buffer_resource(__buffer, __buffer_size, get_default_resource()) {}
@@ -63,7 +67,10 @@ public:
       : monotonic_buffer_resource(nullptr, __default_buffer_capacity, __upstream) {}
 
   _LIBCPP_HIDE_FROM_ABI monotonic_buffer_resource(size_t __initial_size, memory_resource* __upstream)
-      : monotonic_buffer_resource(nullptr, __initial_size, __upstream) {}
+      : monotonic_buffer_resource(nullptr, __initial_size, __upstream) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
+        __initial_size > 0, "monotonic_buffer_resource: initial_size must be greater than zero");
+  }
 
   _LIBCPP_HIDE_FROM_ABI monotonic_buffer_resource(void* __buffer, size_t __buffer_size, memory_resource* __upstream)
       : __res_(__upstream) {

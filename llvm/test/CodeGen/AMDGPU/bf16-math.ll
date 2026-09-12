@@ -6,18 +6,20 @@
 define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; TRUE16-LABEL: llvm_sqrt_bf16_v:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_sqrt_bf16_e32 v2.l, v2.l
 ; TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; TRUE16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: llvm_sqrt_bf16_v:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_sqrt_bf16_e32 v2, v2
 ; FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; FAKE16-NEXT:    s_endpgm
@@ -29,18 +31,20 @@ define amdgpu_ps void @llvm_sqrt_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 define amdgpu_ps void @llvm_sqrt_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
 ; TRUE16-LABEL: llvm_sqrt_bf16_s:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_sqrt_bf16_e32 v2.l, s0
 ; TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; TRUE16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: llvm_sqrt_bf16_s:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_sqrt_bf16_e32 v2, s0
 ; FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; FAKE16-NEXT:    s_endpgm
@@ -52,9 +56,10 @@ define amdgpu_ps void @llvm_sqrt_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
 define amdgpu_ps void @v_test_add_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b) {
 ; GCN-LABEL: v_test_add_v2bf16_vv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, v3
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -66,9 +71,10 @@ define amdgpu_ps void @v_test_add_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_add_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_add_v2bf16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -80,9 +86,10 @@ define amdgpu_ps void @v_test_add_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_add_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_add_v2bf16_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -94,9 +101,10 @@ define amdgpu_ps void @v_test_add_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_add_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_add_v2bf16_vc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, 2.0 op_sel:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -108,9 +116,10 @@ define amdgpu_ps void @v_test_add_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_add_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_add_v2bf16_vl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, 0x42c83f80, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -122,9 +131,10 @@ define amdgpu_ps void @v_test_add_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b) {
 ; GCN-LABEL: v_test_sub_v2bf16_vv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, v3 neg_lo:[0,1] neg_hi:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -136,9 +146,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_sub_v2bf16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, s0 neg_lo:[0,1] neg_hi:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -150,9 +161,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_sub_v2bf16_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, s0, s1 neg_lo:[0,1] neg_hi:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -164,9 +176,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_sub_v2bf16_vc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, -2.0 op_sel:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -178,9 +191,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_sub_v2bf16_vl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, 0xc2c8bf80, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -192,9 +206,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_lv(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_sub_v2bf16_lv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, 0x42c83f80, v2 neg_lo:[0,1] neg_hi:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -206,9 +221,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_lv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_sub_v2bf16_iv(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_sub_v2bf16_iv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_add_bf16 v2, v2, 1.0 op_sel:[0,1] neg_lo:[1,0] neg_hi:[1,0]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -220,9 +236,10 @@ define amdgpu_ps void @v_test_sub_v2bf16_iv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_mul_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b) {
 ; GCN-LABEL: v_test_mul_v2bf16_vv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_mul_bf16 v2, v2, v3
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -234,9 +251,10 @@ define amdgpu_ps void @v_test_mul_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_mul_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_mul_v2bf16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_mul_bf16 v2, v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -248,9 +266,10 @@ define amdgpu_ps void @v_test_mul_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_mul_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_mul_v2bf16_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_mul_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -264,9 +283,10 @@ define amdgpu_ps void @v_test_mul_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_mul_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_mul_v2bf16_vc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_mul_bf16 v2, v2, 0.5 op_sel:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -278,9 +298,10 @@ define amdgpu_ps void @v_test_mul_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_mul_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_mul_v2bf16_vl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_mul_bf16 v2, 0x42c83f80, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -292,9 +313,10 @@ define amdgpu_ps void @v_test_mul_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_min_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b) {
 ; GCN-LABEL: v_test_min_v2bf16_vv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_min_num_bf16 v2, v2, v3
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -306,9 +328,10 @@ define amdgpu_ps void @v_test_min_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_min_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_min_v2bf16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_min_num_bf16 v2, v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -320,9 +343,10 @@ define amdgpu_ps void @v_test_min_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_min_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_min_v2bf16_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_min_num_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -334,9 +358,10 @@ define amdgpu_ps void @v_test_min_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_min_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_min_v2bf16_vc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_min_num_bf16 v2, v2, 0.5 op_sel:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -348,9 +373,10 @@ define amdgpu_ps void @v_test_min_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_min_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_min_v2bf16_vl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_min_num_bf16 v2, 0x42c83f80, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -362,9 +388,10 @@ define amdgpu_ps void @v_test_min_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_max_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b) {
 ; GCN-LABEL: v_test_max_v2bf16_vv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v2, v2, v3
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -376,9 +403,10 @@ define amdgpu_ps void @v_test_max_v2bf16_vv(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_max_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_max_v2bf16_vs:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v2, v2, s0
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -390,9 +418,10 @@ define amdgpu_ps void @v_test_max_v2bf16_vs(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_max_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_max_v2bf16_ss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -404,9 +433,10 @@ define amdgpu_ps void @v_test_max_v2bf16_ss(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_max_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_max_v2bf16_vc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v2, v2, 0.5 op_sel:[0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -418,9 +448,10 @@ define amdgpu_ps void @v_test_max_v2bf16_vc(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps void @v_test_max_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_max_v2bf16_vl:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v2, 0x42c83f80, v2
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -432,17 +463,19 @@ define amdgpu_ps void @v_test_max_v2bf16_vl(ptr addrspace(1) %out, <2 x bfloat> 
 define amdgpu_ps bfloat @test_clamp_bf16(bfloat %src) {
 ; TRUE16-LABEL: test_clamp_bf16:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
 ; TRUE16-NEXT:    ; return to shader part epilog
 ;
 ; FAKE16-LABEL: test_clamp_bf16:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
 ; FAKE16-NEXT:    ; return to shader part epilog
   %max = call bfloat @llvm.maxnum.bf16(bfloat %src, bfloat 0.0)
@@ -453,9 +486,10 @@ define amdgpu_ps bfloat @test_clamp_bf16(bfloat %src) {
 define amdgpu_ps bfloat @test_clamp_bf16_s(bfloat inreg %src) {
 ; TRUE16-LABEL: test_clamp_bf16_s:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
 ; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
@@ -463,9 +497,10 @@ define amdgpu_ps bfloat @test_clamp_bf16_s(bfloat inreg %src) {
 ;
 ; FAKE16-LABEL: test_clamp_bf16_s:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_pk_max_num_bf16 v0, s0, s0 clamp
 ; FAKE16-NEXT:    ; return to shader part epilog
   %max = call bfloat @llvm.maxnum.bf16(bfloat %src, bfloat 0.0)
@@ -476,10 +511,11 @@ define amdgpu_ps bfloat @test_clamp_bf16_s(bfloat inreg %src) {
 define amdgpu_ps float @test_clamp_bf16_hi16(<2 x bfloat> %src) {
 ; TRUE16-LABEL: test_clamp_bf16_hi16:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; TRUE16-NEXT:    v_mov_b16_e32 v0.l, v0.h
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; TRUE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; TRUE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 op_sel_hi:[0,0] clamp
 ; TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -487,9 +523,10 @@ define amdgpu_ps float @test_clamp_bf16_hi16(<2 x bfloat> %src) {
 ;
 ; FAKE16-LABEL: test_clamp_bf16_hi16:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
@@ -505,9 +542,10 @@ define amdgpu_ps float @test_clamp_bf16_hi16(<2 x bfloat> %src) {
 define amdgpu_ps float @test_clamp_bf16_hi16_s(<2 x bfloat> inreg %src) {
 ; TRUE16-LABEL: test_clamp_bf16_hi16_s:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
 ; TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
@@ -518,9 +556,10 @@ define amdgpu_ps float @test_clamp_bf16_hi16_s(<2 x bfloat> inreg %src) {
 ;
 ; FAKE16-LABEL: test_clamp_bf16_hi16_s:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    s_lshr_b32 s0, s0, 16
 ; FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; FAKE16-NEXT:    v_pk_max_num_bf16 v0, s0, s0 clamp
@@ -536,9 +575,10 @@ define amdgpu_ps float @test_clamp_bf16_hi16_s(<2 x bfloat> inreg %src) {
 define amdgpu_ps float @test_clamp_v2bf16(<2 x bfloat> %src) {
 ; GCN-LABEL: test_clamp_v2bf16:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v0, v0, v0 clamp
 ; GCN-NEXT:    ; return to shader part epilog
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %src, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
@@ -550,9 +590,10 @@ define amdgpu_ps float @test_clamp_v2bf16(<2 x bfloat> %src) {
 define amdgpu_ps float @test_clamp_v2bf16_s(<2 x bfloat> inreg %src) {
 ; GCN-LABEL: test_clamp_v2bf16_s:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_max_num_bf16 v0, s0, s0 clamp
 ; GCN-NEXT:    ; return to shader part epilog
   %max = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %src, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
@@ -564,9 +605,10 @@ define amdgpu_ps float @test_clamp_v2bf16_s(<2 x bfloat> inreg %src) {
 define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 ; TRUE16-LABEL: test_clamp_bf16_folding:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_exp_bf16_e32 v0.l, v0.l
 ; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
@@ -575,9 +617,10 @@ define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 ;
 ; FAKE16-LABEL: test_clamp_bf16_folding:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_exp_bf16_e64 v0, v0 clamp
 ; FAKE16-NEXT:    ; return to shader part epilog
   %exp = call bfloat @llvm.exp2.bf16(bfloat %src)
@@ -589,9 +632,10 @@ define amdgpu_ps bfloat @test_clamp_bf16_folding(bfloat %src) {
 define amdgpu_ps float @test_clamp_v2bf16_folding(<2 x bfloat> %src0, <2 x bfloat> %src1) {
 ; GCN-LABEL: test_clamp_v2bf16_folding:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_mul_bf16 v0, v0, v1 clamp
 ; GCN-NEXT:    ; return to shader part epilog
   %mul = fmul <2 x bfloat> %src0, %src1
@@ -604,9 +648,10 @@ define amdgpu_ps float @test_clamp_v2bf16_folding(<2 x bfloat> %src0, <2 x bfloa
 define amdgpu_ps void @v_test_mul_add_v2bf16_vvv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) {
 ; GCN-LABEL: v_test_mul_add_v2bf16_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, v3, v4
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -619,9 +664,10 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vvv(ptr addrspace(1) %out, <2 x bfl
 define amdgpu_ps void @v_test_mul_add_v2bf16_vss(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b, <2 x bfloat> inreg %c) {
 ; GCN-LABEL: v_test_mul_add_v2bf16_vss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -634,9 +680,10 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vss(ptr addrspace(1) %out, <2 x bfl
 define amdgpu_ps void @v_test_mul_add_v2bf16_sss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b, <2 x bfloat> inreg %c) {
 ; GCN-LABEL: v_test_mul_add_v2bf16_sss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_pk_fma_bf16 v2, s0, s1, v2
@@ -651,9 +698,10 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_sss(ptr addrspace(1) %out, <2 x bfl
 define amdgpu_ps void @v_test_mul_add_v2bf16_vsc(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_mul_add_v2bf16_vsc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, 0.5 op_sel:[0,0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -666,9 +714,10 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vsc(ptr addrspace(1) %out, <2 x bfl
 define amdgpu_ps void @v_test_mul_add_v2bf16_vll(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_mul_add_v2bf16_vll:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_mov_b32 s0, 0x43484000
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_pk_fma_bf16 v2, 0x42c83f80, v2, s0
@@ -683,9 +732,10 @@ define amdgpu_ps void @v_test_mul_add_v2bf16_vll(ptr addrspace(1) %out, <2 x bfl
 define amdgpu_ps void @v_test_fma_v2bf16_vvv(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> %b, <2 x bfloat> %c) {
 ; GCN-LABEL: v_test_fma_v2bf16_vvv:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, v3, v4
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -697,9 +747,10 @@ define amdgpu_ps void @v_test_fma_v2bf16_vvv(ptr addrspace(1) %out, <2 x bfloat>
 define amdgpu_ps void @v_test_fma_v2bf16_vss(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b, <2 x bfloat> inreg %c) {
 ; GCN-LABEL: v_test_fma_v2bf16_vss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, s1
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -711,9 +762,10 @@ define amdgpu_ps void @v_test_fma_v2bf16_vss(ptr addrspace(1) %out, <2 x bfloat>
 define amdgpu_ps void @v_test_fma_v2bf16_sss(ptr addrspace(1) %out, <2 x bfloat> inreg %a, <2 x bfloat> inreg %b, <2 x bfloat> inreg %c) {
 ; GCN-LABEL: v_test_fma_v2bf16_sss:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_mov_b32_e32 v2, s2
 ; GCN-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GCN-NEXT:    v_pk_fma_bf16 v2, s0, s1, v2
@@ -727,9 +779,10 @@ define amdgpu_ps void @v_test_fma_v2bf16_sss(ptr addrspace(1) %out, <2 x bfloat>
 define amdgpu_ps void @v_test_fma_v2bf16_vsc(ptr addrspace(1) %out, <2 x bfloat> %a, <2 x bfloat> inreg %b) {
 ; GCN-LABEL: v_test_fma_v2bf16_vsc:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, 0.5 op_sel:[0,0,1]
 ; GCN-NEXT:    global_store_b32 v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
@@ -741,9 +794,10 @@ define amdgpu_ps void @v_test_fma_v2bf16_vsc(ptr addrspace(1) %out, <2 x bfloat>
 define amdgpu_ps void @v_test_fma_v2bf16_vll(ptr addrspace(1) %out, <2 x bfloat> %a) {
 ; GCN-LABEL: v_test_fma_v2bf16_vll:
 ; GCN:       ; %bb.0:
-; GCN-NEXT:    global_wb
-; GCN-NEXT:    v_nop
 ; GCN-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GCN-NEXT:    s_mov_b64 s[64:65], 0
+; GCN-NEXT:    v_nop
+; GCN-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GCN-NEXT:    s_mov_b32 s0, 0x42c83f80
 ; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    v_pk_fma_bf16 v2, v2, s0, 0x43484000
@@ -757,18 +811,20 @@ define amdgpu_ps void @v_test_fma_v2bf16_vll(ptr addrspace(1) %out, <2 x bfloat>
 define amdgpu_ps void @llvm_log2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; TRUE16-LABEL: llvm_log2_bf16_v:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_log_bf16_e32 v2.l, v2.l
 ; TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; TRUE16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: llvm_log2_bf16_v:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_log_bf16_e32 v2, v2
 ; FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; FAKE16-NEXT:    s_endpgm
@@ -780,18 +836,20 @@ define amdgpu_ps void @llvm_log2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 define amdgpu_ps void @llvm_log2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
 ; TRUE16-LABEL: llvm_log2_bf16_s:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_log_bf16_e32 v2.l, s0
 ; TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; TRUE16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: llvm_log2_bf16_s:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_log_bf16_e32 v2, s0
 ; FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; FAKE16-NEXT:    s_endpgm
@@ -803,18 +861,20 @@ define amdgpu_ps void @llvm_log2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src
 define amdgpu_ps void @llvm_exp2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 ; TRUE16-LABEL: llvm_exp2_bf16_v:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_exp_bf16_e32 v2.l, v2.l
 ; TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; TRUE16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: llvm_exp2_bf16_v:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_exp_bf16_e32 v2, v2
 ; FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; FAKE16-NEXT:    s_endpgm
@@ -826,18 +886,20 @@ define amdgpu_ps void @llvm_exp2_bf16_v(ptr addrspace(1) %out, bfloat %src) {
 define amdgpu_ps void @llvm_exp2_bf16_s(ptr addrspace(1) %out, bfloat inreg %src) {
 ; TRUE16-LABEL: llvm_exp2_bf16_s:
 ; TRUE16:       ; %bb.0:
-; TRUE16-NEXT:    global_wb
-; TRUE16-NEXT:    v_nop
 ; TRUE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; TRUE16-NEXT:    s_mov_b64 s[64:65], 0
+; TRUE16-NEXT:    v_nop
+; TRUE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; TRUE16-NEXT:    v_exp_bf16_e32 v2.l, s0
 ; TRUE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; TRUE16-NEXT:    s_endpgm
 ;
 ; FAKE16-LABEL: llvm_exp2_bf16_s:
 ; FAKE16:       ; %bb.0:
-; FAKE16-NEXT:    global_wb
-; FAKE16-NEXT:    v_nop
 ; FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; FAKE16-NEXT:    s_mov_b64 s[64:65], 0
+; FAKE16-NEXT:    v_nop
+; FAKE16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; FAKE16-NEXT:    v_exp_bf16_e32 v2, s0
 ; FAKE16-NEXT:    global_store_b16 v[0:1], v2, off
 ; FAKE16-NEXT:    s_endpgm

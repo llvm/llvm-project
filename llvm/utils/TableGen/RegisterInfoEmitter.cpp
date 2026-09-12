@@ -24,6 +24,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/Support/Casting.h"
@@ -50,6 +51,12 @@
 
 using namespace llvm;
 
+#define DEBUG_TYPE "register-info-emitter"
+
+STATISTIC(NumExplicitRegClasses, "Number of explicit register classes");
+STATISTIC(NumSynthesizedRegClasses, "Number of synthesized register classes");
+STATISTIC(NumRegPressureSets, "Number of register pressure sets");
+
 static cl::OptionCategory RegisterInfoCat("Options for -gen-register-info");
 
 static cl::opt<bool>
@@ -70,6 +77,14 @@ public:
   RegisterInfoEmitter(const RecordKeeper &R)
       : Records(R), Target(R), RegBank(Target.getRegBank()) {
     RegBank.computeDerivedInfo();
+
+    const auto &RegClasses = RegBank.getRegClasses();
+    NumExplicitRegClasses =
+        llvm::count_if(RegClasses, [](const CodeGenRegisterClass &RC) {
+          return RC.getDef() != nullptr;
+        });
+    NumSynthesizedRegClasses = RegClasses.size() - NumExplicitRegClasses;
+    NumRegPressureSets = RegBank.getNumRegPressureSets();
   }
 
   // runEnums - Print out enum values for all of the registers.
@@ -221,22 +236,34 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
                                               StringRef ClassName) {
   unsigned NumRCs = RegBank.getRegClasses().size();
   unsigned NumSets = RegBank.getNumRegPressureSets();
+  std::vector<std::pair<const CodeGenRegisterClass *, unsigned>> PSetRegClasses(
+      NumSets);
 
   OS << "/// Get the weight in units of pressure for this register class.\n"
      << "const RegClassWeight &" << ClassName << "::\n"
      << "getRegClassWeight(const TargetRegisterClass *RC) const {\n"
      << "  static const RegClassWeight RCWeightTable[] = {\n";
-  for (const auto &RC : RegBank.getRegClasses()) {
+  for (const auto &[RCIdx, RC] : enumerate(RegBank.getRegClasses())) {
     const CodeGenRegister::Vec &Regs = RC.getMembers();
     OS << "    {" << RC.getWeight(RegBank) << ", ";
+    unsigned WeightLimit = 0;
     if (Regs.empty() || RC.Artificial)
       OS << '0';
     else {
       std::vector<unsigned> RegUnits;
       RC.buildRegUnitSet(RegBank, RegUnits);
-      OS << RegBank.getRegUnitSetWeight(RegUnits);
+      WeightLimit = RegBank.getRegUnitSetWeight(RegUnits);
+      OS << WeightLimit;
     }
     OS << "},  \t// " << RC.getName() << "\n";
+    for (unsigned PSetID : RegBank.getRCPressureSetIDs(RCIdx)) {
+      unsigned PSetIdx = RegBank.getRegPressureSet(PSetID).Order;
+      auto &[LargestRC, LargestWeightLimit] = PSetRegClasses[PSetIdx];
+      if (!LargestRC || WeightLimit > LargestWeightLimit) {
+        LargestRC = &RC;
+        LargestWeightLimit = WeightLimit;
+      }
+    }
   }
   OS << "  };\n"
      << "  return RCWeightTable[RC->getID()];\n"
@@ -304,6 +331,22 @@ void RegisterInfoEmitter::EmitRegUnitPressure(raw_ostream &OS,
   }
   OS << "  };\n"
      << "  return PressureLimitTable[Idx];\n"
+     << "}\n\n";
+
+  OS << "/// Get the register class for this pressure set with the largest\n"
+     << "/// `RegClassWeight::WeightLimit`.\n"
+     << "const TargetRegisterClass *" << ClassName << "::\n"
+     << "getLargestRegClassForRegPressureSet(unsigned Idx) const {\n"
+     << "  static const " << getMinimalTypeForRange(NumRCs - 1, 32)
+     << " PSetRegClassTable[] = {\n";
+  for (unsigned i = 0; i < NumSets; ++i) {
+    const CodeGenRegisterClass *RC = PSetRegClasses[i].first;
+    assert(RC && "register pressure set has no register class");
+    OS << "    " << RC->getQualifiedIdName() << ",  \t// " << i << ": "
+       << RegBank.getRegSetAt(i).Name << "\n";
+  }
+  OS << "  };\n"
+     << "  return getRegClass(PSetRegClassTable[Idx]);\n"
      << "}\n\n";
 
   SequenceToOffsetTable<std::vector<int>> PSetsSeqs(/*Terminator=*/-1);
@@ -1102,10 +1145,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     unsigned BitSetIdx;
     unsigned SubClassMaskIdx;
     unsigned SuperClassIdx;
+    // Not strictly an index, but to avoid recomputation: cache reg set range.
+    unsigned MinRegVal;
+    unsigned RegSetSize;
   };
   SmallVector<StartIndex> StartIndices;
   StartIndices.reserve(RegisterClasses.size() + 1);
-  StartIndices.push_back(StartIndex{0, 0, 0, 0});
+  StartIndices.push_back(StartIndex{0, 0, 0, 0, 0, 0});
 
   // For compressing the sub-reg index lists.
   using IdxList = std::vector<const CodeGenSubRegIndex *>;
@@ -1116,9 +1162,11 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     ArrayRef<const Record *> Order = RC.getOrder();
     RegClassStrings.add(RC.getName());
 
-    unsigned MaxRegVal = 0;
-    for (const Record *Reg : Order)
+    unsigned MinRegVal = UINT_MAX, MaxRegVal = 0;
+    for (const Record *Reg : Order) {
+      MinRegVal = std::min(MinRegVal, RegBank.getReg(Reg)->EnumValue);
       MaxRegVal = std::max(MaxRegVal, RegBank.getReg(Reg)->EnumValue);
+    }
 
     unsigned SubClassMaskSize = (RC.getSubClasses().size() + 31) / 32;
     IdxList &SRIList = SuperRegIdxLists[RC.EnumValue];
@@ -1132,13 +1180,18 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     }
     SuperRegIdxSeqs.add(SRIList);
 
-    const auto &Last = StartIndices.back();
+    auto &Last = StartIndices.back();
+    Last.MinRegVal = Order.empty() ? 0 : MinRegVal;
+    Last.RegSetSize = Order.empty() ? 0 : MaxRegVal - MinRegVal + 1;
     StartIndices.push_back(StartIndex{
         Last.RegIdx + unsigned(Order.size()),
         // Round to next byte size.
-        Last.BitSetIdx + (Order.empty() ? 0 : (MaxRegVal / 8) + 1),
+        Last.BitSetIdx +
+            (Order.empty() ? 0 : ((MaxRegVal - MinRegVal) / 8) + 1),
         Last.SubClassMaskIdx + SubClassMaskSize,
         Last.SuperClassIdx + unsigned(RC.getSuperClasses().size()),
+        0, // MinRegVal for next RegClass.
+        0, // RegSetSize for next RegClass.
     });
   }
 
@@ -1176,13 +1229,13 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
           .str();
     };
 
-    unsigned BitSetSize =
-        StartIndices[It.index() + 1].BitSetIdx - RCIndices.BitSetIdx;
     OS << "    {\n      " << GetOff("Regs", RCIndices.RegIdx) << ",\n      "
        << GetOff("BitSets", RCIndices.BitSetIdx) << ",\n      "
        << RegClassStrings.get(RC.getName()) << ",\n      " << RegSize
-       << ",\n      " << RC.getOrder().size() << ",\n      " << BitSetSize
-       << ",\n      " << RC.getQualifiedIdName() << ",\n      "
+       << ",\n      " << RC.getOrder().size() << ",\n      "
+       << RCIndices.MinRegVal << ", /* MinRegVal */\n      "
+       << RCIndices.RegSetSize << ", /* RegSetSize */\n      "
+       << RC.getQualifiedIdName() << ",\n      "
        << static_cast<unsigned>(RC.CopyCost) << ", /* CopyCost */\n      "
        << (RC.Allocatable ? "true" : "false") << ", /* Allocatable */\n      "
        << (RC.getBaseClassOrder() ? "true" : "false") << ",\n      "
@@ -1226,7 +1279,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
       OS << "    /* " << StartIndices[Idx].BitSetIdx << " */ ";
       BitVectorEmitter BVE;
       for (const Record *Reg : Order)
-        BVE.add(RegBank.getReg(Reg)->EnumValue);
+        BVE.add(RegBank.getReg(Reg)->EnumValue - StartIndices[Idx].MinRegVal);
       BVE.print(OS);
       OS << "\n";
     }
@@ -1386,6 +1439,8 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
      << "  const char *getRegPressureSetName(unsigned Idx) const override;\n"
      << "  unsigned getRegPressureSetLimit(const MachineFunction &MF, unsigned "
         "Idx) const override;\n"
+     << "  const TargetRegisterClass *getLargestRegClassForRegPressureSet("
+        "unsigned Idx) const override;\n"
      << "  const int *getRegClassPressureSets("
      << "const TargetRegisterClass *RC) const override;\n"
      << "  const int *getRegUnitPressureSets("

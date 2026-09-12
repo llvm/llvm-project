@@ -11,6 +11,10 @@ from lldbsuite.test.lldbtest import *
 class BuiltinDebugTrapTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    @requireNotWasm(
+        " __builtin_debugtrap lowers to the WebAssembly `unreachable` instruction, a"
+        "fatal trap that cannot be resumed as this test expects."
+    )
     def test(self):
         platform_stop_reason = lldb.eStopReasonSignal
         platform = self.getPlatform()

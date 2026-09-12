@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def MemRef_Dialect : Dialect {
   let name = "memref";
   let cppNamespace = "::mlir::memref";
+  let useStrictPropertiesInAssemblyFormat = 1;
   let description = [{
     The `memref` dialect is intended to hold core memref creation and
     manipulation ops, which are not strongly associated with any particular

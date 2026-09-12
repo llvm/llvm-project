@@ -29,6 +29,6 @@ func.func @foo() {
 // CHECK:      fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<![[TYPE]]>
 // CHECK:      %[[VAL_10:.*]] = fir.convert %[[VAL_2]] : (!fir.ref<![[TYPE]]>) -> !fir.ref<!fir.box<none>>
 // CHECK:      %[[VAL_11:.*]] = fir.convert %[[VAL_3]] : (![[TYPE]]) -> !fir.box<none>
-// CHECK:      fir.call @_FortranAAssign(%[[VAL_10]], %[[VAL_11]], %{{.*}}, %{{.*}})
+// CHECK:      fir.call @_FortranAAssignSimple(%[[VAL_10]], %[[VAL_11]], %{{.*}}, %{{.*}})
 // CHECK:      fir.yield(%[[VAL_1]] : !fir.ref<![[TYPE]]>)
 // CHECK:  }

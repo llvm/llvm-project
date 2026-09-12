@@ -165,7 +165,12 @@ spirv.module Logical GLSL450 {
     spirv.FunctionCall @f_2() : () -> ()
     // CHECK: {{%.*}} = spirv.FunctionCall @f_3({{%.*}}) : (i32) -> i32
     %1 = spirv.FunctionCall @f_3(%arg2) : (i32) -> i32
-    spirv.ReturnValue %1 : i32
+    // CHECK: {{%.*}} = spirv.FunctionCall @f_3({{%.*}}) arg_attrs = [{{.*}}] res_attrs = [{{.*}}] : (i32) -> i32
+    %2 = spirv.FunctionCall @f_3(%arg2)
+        arg_attrs = [{spirv.decoration = #spirv.decoration<RelaxedPrecision>}]
+        res_attrs = [{spirv.decoration = #spirv.decoration<RelaxedPrecision>}]
+        : (i32) -> i32
+    spirv.ReturnValue %2 : i32
   }
 
   spirv.func @f_0(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) -> (vector<4xf32>) "None" {

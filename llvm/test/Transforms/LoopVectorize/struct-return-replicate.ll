@@ -656,6 +656,196 @@ exit:
   ret void
 }
 
+define void @struct_return_predicated_extractvalue(i1 %c, ptr noalias %a, ptr noalias %p, ptr noalias %q) {
+; VF4-LABEL: define void @struct_return_predicated_extractvalue(
+; VF4-SAME: i1 [[C:%.*]], ptr noalias [[A:%.*]], ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
+; VF4-NEXT:  [[ENTRY:.*:]]
+; VF4-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF4:       [[VECTOR_PH]]:
+; VF4-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; VF4-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF4:       [[VECTOR_BODY]]:
+; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; VF4-NEXT:    [[TMP42:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
+; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP42]], align 4
+; VF4-NEXT:    [[TMP43:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i64 0
+; VF4-NEXT:    [[TMP1:%.*]] = tail call { float, float } @fn2(float [[TMP43]]) #[[ATTR3]]
+; VF4-NEXT:    [[TMP44:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i64 1
+; VF4-NEXT:    [[TMP2:%.*]] = tail call { float, float } @fn2(float [[TMP44]]) #[[ATTR3]]
+; VF4-NEXT:    [[TMP45:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i64 2
+; VF4-NEXT:    [[TMP3:%.*]] = tail call { float, float } @fn2(float [[TMP45]]) #[[ATTR3]]
+; VF4-NEXT:    [[TMP46:%.*]] = extractelement <4 x float> [[WIDE_LOAD]], i64 3
+; VF4-NEXT:    [[TMP4:%.*]] = tail call { float, float } @fn2(float [[TMP46]]) #[[ATTR3]]
+; VF4-NEXT:    [[TMP5:%.*]] = extractvalue { float, float } [[TMP1]], 0
+; VF4-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> poison, float [[TMP5]], i64 0
+; VF4-NEXT:    [[TMP7:%.*]] = insertvalue { <4 x float>, <4 x float> } poison, <4 x float> [[TMP6]], 0
+; VF4-NEXT:    [[TMP8:%.*]] = extractvalue { float, float } [[TMP1]], 1
+; VF4-NEXT:    [[TMP9:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP7]], 1
+; VF4-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP8]], i64 0
+; VF4-NEXT:    [[TMP11:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP7]], <4 x float> [[TMP10]], 1
+; VF4-NEXT:    [[TMP12:%.*]] = extractvalue { float, float } [[TMP2]], 0
+; VF4-NEXT:    [[TMP13:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP11]], 0
+; VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[TMP12]], i64 1
+; VF4-NEXT:    [[TMP15:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP11]], <4 x float> [[TMP14]], 0
+; VF4-NEXT:    [[TMP16:%.*]] = extractvalue { float, float } [[TMP2]], 1
+; VF4-NEXT:    [[TMP17:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP15]], 1
+; VF4-NEXT:    [[TMP18:%.*]] = insertelement <4 x float> [[TMP17]], float [[TMP16]], i64 1
+; VF4-NEXT:    [[TMP19:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP15]], <4 x float> [[TMP18]], 1
+; VF4-NEXT:    [[TMP20:%.*]] = extractvalue { float, float } [[TMP3]], 0
+; VF4-NEXT:    [[TMP21:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP19]], 0
+; VF4-NEXT:    [[TMP22:%.*]] = insertelement <4 x float> [[TMP21]], float [[TMP20]], i64 2
+; VF4-NEXT:    [[TMP23:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP19]], <4 x float> [[TMP22]], 0
+; VF4-NEXT:    [[TMP24:%.*]] = extractvalue { float, float } [[TMP3]], 1
+; VF4-NEXT:    [[TMP25:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP23]], 1
+; VF4-NEXT:    [[TMP26:%.*]] = insertelement <4 x float> [[TMP25]], float [[TMP24]], i64 2
+; VF4-NEXT:    [[TMP27:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP23]], <4 x float> [[TMP26]], 1
+; VF4-NEXT:    [[TMP28:%.*]] = extractvalue { float, float } [[TMP4]], 0
+; VF4-NEXT:    [[TMP29:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP27]], 0
+; VF4-NEXT:    [[TMP30:%.*]] = insertelement <4 x float> [[TMP29]], float [[TMP28]], i64 3
+; VF4-NEXT:    [[TMP31:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP27]], <4 x float> [[TMP30]], 0
+; VF4-NEXT:    [[TMP32:%.*]] = extractvalue { float, float } [[TMP4]], 1
+; VF4-NEXT:    [[TMP33:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP31]], 1
+; VF4-NEXT:    [[TMP34:%.*]] = insertelement <4 x float> [[TMP33]], float [[TMP32]], i64 3
+; VF4-NEXT:    [[TMP35:%.*]] = insertvalue { <4 x float>, <4 x float> } [[TMP31]], <4 x float> [[TMP34]], 1
+; VF4-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; VF4-NEXT:    [[TMP36:%.*]] = extractvalue { <4 x float>, <4 x float> } [[TMP35]], 1
+; VF4-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF4:       [[PRED_STORE_IF]]:
+; VF4-NEXT:    [[TMP37:%.*]] = extractelement <4 x float> [[TMP36]], i64 0
+; VF4-NEXT:    store float [[TMP37]], ptr [[Q]], align 4
+; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; VF4:       [[PRED_STORE_CONTINUE]]:
+; VF4-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; VF4:       [[PRED_STORE_IF1]]:
+; VF4-NEXT:    [[TMP38:%.*]] = extractelement <4 x float> [[TMP36]], i64 1
+; VF4-NEXT:    store float [[TMP38]], ptr [[Q]], align 4
+; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; VF4:       [[PRED_STORE_CONTINUE2]]:
+; VF4-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; VF4:       [[PRED_STORE_IF3]]:
+; VF4-NEXT:    [[TMP39:%.*]] = extractelement <4 x float> [[TMP36]], i64 2
+; VF4-NEXT:    store float [[TMP39]], ptr [[Q]], align 4
+; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; VF4:       [[PRED_STORE_CONTINUE4]]:
+; VF4-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; VF4:       [[PRED_STORE_IF5]]:
+; VF4-NEXT:    [[TMP40:%.*]] = extractelement <4 x float> [[TMP36]], i64 3
+; VF4-NEXT:    store float [[TMP40]], ptr [[Q]], align 4
+; VF4-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; VF4:       [[PRED_STORE_CONTINUE6]]:
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF4-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; VF4-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF4:       [[MIDDLE_BLOCK]]:
+;
+; VF2IC2-LABEL: define void @struct_return_predicated_extractvalue(
+; VF2IC2-SAME: i1 [[C:%.*]], ptr noalias [[A:%.*]], ptr noalias [[P:%.*]], ptr noalias [[Q:%.*]]) {
+; VF2IC2-NEXT:  [[ENTRY:.*:]]
+; VF2IC2-NEXT:    br label %[[VECTOR_PH:.*]]
+; VF2IC2:       [[VECTOR_PH]]:
+; VF2IC2-NEXT:    [[TMP0:%.*]] = xor i1 [[C]], true
+; VF2IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; VF2IC2:       [[VECTOR_BODY]]:
+; VF2IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE6:.*]] ]
+; VF2IC2-NEXT:    [[TMP42:%.*]] = getelementptr float, ptr [[A]], i64 [[INDEX]]
+; VF2IC2-NEXT:    [[TMP43:%.*]] = getelementptr float, ptr [[TMP42]], i64 2
+; VF2IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP42]], align 4
+; VF2IC2-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x float>, ptr [[TMP43]], align 4
+; VF2IC2-NEXT:    [[TMP44:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 0
+; VF2IC2-NEXT:    [[TMP1:%.*]] = tail call { float, float } @fn2(float [[TMP44]]) #[[ATTR3]]
+; VF2IC2-NEXT:    [[TMP45:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 1
+; VF2IC2-NEXT:    [[TMP2:%.*]] = tail call { float, float } @fn2(float [[TMP45]]) #[[ATTR3]]
+; VF2IC2-NEXT:    [[TMP3:%.*]] = extractvalue { float, float } [[TMP1]], 0
+; VF2IC2-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP3]], i64 0
+; VF2IC2-NEXT:    [[TMP5:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[TMP4]], 0
+; VF2IC2-NEXT:    [[TMP6:%.*]] = extractvalue { float, float } [[TMP1]], 1
+; VF2IC2-NEXT:    [[TMP7:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP5]], 1
+; VF2IC2-NEXT:    [[TMP8:%.*]] = insertelement <2 x float> [[TMP7]], float [[TMP6]], i64 0
+; VF2IC2-NEXT:    [[TMP9:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP5]], <2 x float> [[TMP8]], 1
+; VF2IC2-NEXT:    [[TMP10:%.*]] = extractvalue { float, float } [[TMP2]], 0
+; VF2IC2-NEXT:    [[TMP11:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP9]], 0
+; VF2IC2-NEXT:    [[TMP12:%.*]] = insertelement <2 x float> [[TMP11]], float [[TMP10]], i64 1
+; VF2IC2-NEXT:    [[TMP13:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP9]], <2 x float> [[TMP12]], 0
+; VF2IC2-NEXT:    [[TMP14:%.*]] = extractvalue { float, float } [[TMP2]], 1
+; VF2IC2-NEXT:    [[TMP15:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP13]], 1
+; VF2IC2-NEXT:    [[TMP16:%.*]] = insertelement <2 x float> [[TMP15]], float [[TMP14]], i64 1
+; VF2IC2-NEXT:    [[TMP17:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP13]], <2 x float> [[TMP16]], 1
+; VF2IC2-NEXT:    [[TMP46:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i64 0
+; VF2IC2-NEXT:    [[TMP18:%.*]] = tail call { float, float } @fn2(float [[TMP46]]) #[[ATTR3]]
+; VF2IC2-NEXT:    [[TMP47:%.*]] = extractelement <2 x float> [[WIDE_LOAD1]], i64 1
+; VF2IC2-NEXT:    [[TMP19:%.*]] = tail call { float, float } @fn2(float [[TMP47]]) #[[ATTR3]]
+; VF2IC2-NEXT:    [[TMP20:%.*]] = extractvalue { float, float } [[TMP18]], 0
+; VF2IC2-NEXT:    [[TMP21:%.*]] = insertelement <2 x float> poison, float [[TMP20]], i64 0
+; VF2IC2-NEXT:    [[TMP22:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[TMP21]], 0
+; VF2IC2-NEXT:    [[TMP23:%.*]] = extractvalue { float, float } [[TMP18]], 1
+; VF2IC2-NEXT:    [[TMP24:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP22]], 1
+; VF2IC2-NEXT:    [[TMP25:%.*]] = insertelement <2 x float> [[TMP24]], float [[TMP23]], i64 0
+; VF2IC2-NEXT:    [[TMP26:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP22]], <2 x float> [[TMP25]], 1
+; VF2IC2-NEXT:    [[TMP27:%.*]] = extractvalue { float, float } [[TMP19]], 0
+; VF2IC2-NEXT:    [[TMP28:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP26]], 0
+; VF2IC2-NEXT:    [[TMP29:%.*]] = insertelement <2 x float> [[TMP28]], float [[TMP27]], i64 1
+; VF2IC2-NEXT:    [[TMP30:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP26]], <2 x float> [[TMP29]], 0
+; VF2IC2-NEXT:    [[TMP31:%.*]] = extractvalue { float, float } [[TMP19]], 1
+; VF2IC2-NEXT:    [[TMP32:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP30]], 1
+; VF2IC2-NEXT:    [[TMP33:%.*]] = insertelement <2 x float> [[TMP32]], float [[TMP31]], i64 1
+; VF2IC2-NEXT:    [[TMP34:%.*]] = insertvalue { <2 x float>, <2 x float> } [[TMP30]], <2 x float> [[TMP33]], 1
+; VF2IC2-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; VF2IC2-NEXT:    [[TMP35:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP17]], 1
+; VF2IC2-NEXT:    [[TMP36:%.*]] = extractvalue { <2 x float>, <2 x float> } [[TMP34]], 1
+; VF2IC2-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; VF2IC2:       [[PRED_STORE_IF]]:
+; VF2IC2-NEXT:    [[TMP37:%.*]] = extractelement <2 x float> [[TMP35]], i64 0
+; VF2IC2-NEXT:    store float [[TMP37]], ptr [[Q]], align 4
+; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; VF2IC2:       [[PRED_STORE_CONTINUE]]:
+; VF2IC2-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; VF2IC2:       [[PRED_STORE_IF1]]:
+; VF2IC2-NEXT:    [[TMP38:%.*]] = extractelement <2 x float> [[TMP35]], i64 1
+; VF2IC2-NEXT:    store float [[TMP38]], ptr [[Q]], align 4
+; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; VF2IC2:       [[PRED_STORE_CONTINUE2]]:
+; VF2IC2-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; VF2IC2:       [[PRED_STORE_IF3]]:
+; VF2IC2-NEXT:    [[TMP39:%.*]] = extractelement <2 x float> [[TMP36]], i64 0
+; VF2IC2-NEXT:    store float [[TMP39]], ptr [[Q]], align 4
+; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; VF2IC2:       [[PRED_STORE_CONTINUE4]]:
+; VF2IC2-NEXT:    br i1 [[TMP0]], label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6]]
+; VF2IC2:       [[PRED_STORE_IF5]]:
+; VF2IC2-NEXT:    [[TMP40:%.*]] = extractelement <2 x float> [[TMP36]], i64 1
+; VF2IC2-NEXT:    store float [[TMP40]], ptr [[Q]], align 4
+; VF2IC2-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; VF2IC2:       [[PRED_STORE_CONTINUE6]]:
+; VF2IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; VF2IC2-NEXT:    [[TMP41:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; VF2IC2-NEXT:    br i1 [[TMP41]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
+; VF2IC2:       [[MIDDLE_BLOCK]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %latch ], [ 0, %entry ]
+  %gep = getelementptr float, ptr %a, i64 %iv
+  %x = load float, ptr %gep
+  %call = tail call { float, float } @fn2(float %x) #3
+  store float 0.0, ptr %p
+  br i1 %c, label %latch, label %if
+
+if:
+  %val = extractvalue { float, float } %call, 1
+  store float %val, ptr %q
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 declare { i64 } @fn1(float)
 declare { float, float } @fn2(float)
 declare { i32, i32, i32 } @fn3(i32)

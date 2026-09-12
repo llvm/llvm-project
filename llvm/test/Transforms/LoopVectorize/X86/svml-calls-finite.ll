@@ -33,7 +33,7 @@ for.end:
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 4}
-!3 = !{!"llvm.loop.vectorize.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare double @__exp_finite(double) #0
@@ -62,7 +62,7 @@ for.end:
 
 !11 = distinct !{!11, !12, !13}
 !12 = !{!"llvm.loop.vectorize.width", i32 4}
-!13 = !{!"llvm.loop.vectorize.enable", i1 true}
+!13 = !{!"llvm.loop.vectorize.enable"}
 
 
 
@@ -93,7 +93,7 @@ for.end:
 
 !21 = distinct !{!21, !22, !23}
 !22 = !{!"llvm.loop.vectorize.width", i32 4}
-!23 = !{!"llvm.loop.vectorize.enable", i1 true}
+!23 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare double @__log_finite(double) #0
@@ -122,7 +122,7 @@ for.end:
 
 !31 = distinct !{!31, !32, !33}
 !32 = !{!"llvm.loop.vectorize.width", i32 4}
-!33 = !{!"llvm.loop.vectorize.enable", i1 true}
+!33 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare float @__powf_finite(float, float) #0
@@ -153,7 +153,7 @@ for.end:
 
 !41 = distinct !{!41, !42, !43}
 !42 = !{!"llvm.loop.vectorize.width", i32 4}
-!43 = !{!"llvm.loop.vectorize.enable", i1 true}
+!43 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare double @__pow_finite(double, double) #0
@@ -184,7 +184,7 @@ for.end:
 
 !51 = distinct !{!51, !52, !53}
 !52 = !{!"llvm.loop.vectorize.width", i32 4}
-!53 = !{!"llvm.loop.vectorize.enable", i1 true}
+!53 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__exp2f_finite(float) #0
 
@@ -213,7 +213,7 @@ for.end:
 
 !61 = distinct !{!61, !62, !63}
 !62 = !{!"llvm.loop.vectorize.width", i32 4}
-!63 = !{!"llvm.loop.vectorize.enable", i1 true}
+!63 = !{!"llvm.loop.vectorize.enable"}
 
 declare double @__exp2_finite(double) #0
 
@@ -242,7 +242,7 @@ for.end:
 
 !71 = distinct !{!71, !72, !73}
 !72 = !{!"llvm.loop.vectorize.width", i32 4}
-!73 = !{!"llvm.loop.vectorize.enable", i1 true}
+!73 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__log2f_finite(float) #0
 
@@ -270,7 +270,7 @@ for.end:
 
 !81 = distinct !{!21, !22, !23}
 !82 = !{!"llvm.loop.vectorize.width", i32 4}
-!83 = !{!"llvm.loop.vectorize.enable", i1 true}
+!83 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare double @__log2_finite(double) #0
@@ -299,7 +299,7 @@ for.end:
 
 !91 = distinct !{!31, !32, !33}
 !92 = !{!"llvm.loop.vectorize.width", i32 4}
-!93 = !{!"llvm.loop.vectorize.enable", i1 true}
+!93 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__log10f_finite(float) #0
 
@@ -327,7 +327,7 @@ for.end:
 
 !101 = distinct !{!21, !22, !23}
 !102 = !{!"llvm.loop.vectorize.width", i32 4}
-!103 = !{!"llvm.loop.vectorize.enable", i1 true}
+!103 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare double @__log10_finite(double) #0
@@ -356,7 +356,7 @@ for.end:
 
 !111 = distinct !{!31, !32, !33}
 !112 = !{!"llvm.loop.vectorize.width", i32 4}
-!113 = !{!"llvm.loop.vectorize.enable", i1 true}
+!113 = !{!"llvm.loop.vectorize.enable"}
 
 declare float @__sqrtf_finite(float) #0
 
@@ -384,7 +384,7 @@ for.end:
 
 !121 = distinct !{!21, !22, !23}
 !122 = !{!"llvm.loop.vectorize.width", i32 4}
-!123 = !{!"llvm.loop.vectorize.enable", i1 true}
+!123 = !{!"llvm.loop.vectorize.enable"}
 
 
 declare double @__sqrt_finite(double) #0
@@ -413,4 +413,4 @@ for.end:
 
 !131 = distinct !{!31, !32, !33}
 !132 = !{!"llvm.loop.vectorize.width", i32 4}
-!133 = !{!"llvm.loop.vectorize.enable", i1 true}
+!133 = !{!"llvm.loop.vectorize.enable"}

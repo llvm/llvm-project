@@ -221,7 +221,7 @@ const char* emoji = "\N{🤡}";
 int x = cwg2640_a\N{abc});
 // expected-error@-1 {{'abc' is not a valid Unicode character name}}
 int y = cwg2640_a\N{LOTUS});
-// expected-error@-1 {{character <U+1FAB7> not allowed in an identifier}}
+// expected-error@-1 {{character '🪷' U+1FAB7 not allowed in an identifier}}
 // expected-error@-2 {{use of undeclared identifier 'cwg2640_a🪷'}}
 } // namespace cwg2640
 
