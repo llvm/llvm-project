@@ -570,6 +570,16 @@ end program
   rather than an allocatable, it is interpreted as `ASSOCIATED(p)` with a
   stern warning.
 
+### `SIMPLE` classification of extensions
+
+The following extensions are `SIMPLE`: `IARGC`, `INT2`, `INT8`, `INT_PTR_KIND`, `ISNAN`,
+`IZEXT`, `JZEXT`, `LNBLNK`, `LOC`, `SELECTED_UNSIGNED_KIND`, `SIZEOF`, `UINT`, `UMASKL`,
+and `UMASKR`. All specific intrinsic extensions are also `SIMPLE`.
+
+The following extensions are not classified as `SIMPLE`: `CHDIR`, `DSECNDS`, `ETIME`,
+`FSEEK`, `FTELL`, `GETCWD`, `GETGID`, `GETPID`, `GETUID`, `HOSTNM`, `IRAND`, `MALLOC`,
+`PUTENV`, `RAND`, `RENAME`, `RTC`, `SECNDS`, `SECOND`, `SYSTEM`, `TIME`, `TIMEF`, and `UNLINK`.
+
 ### Extensions supported when enabled by options
 
 * C-style backslash escape sequences in quoted CHARACTER literals
