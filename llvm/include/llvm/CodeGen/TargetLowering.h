@@ -5557,6 +5557,27 @@ public:
                                 SelectionDAG &DAG,
                                 SmallVectorImpl<SDNode *> &Created) const;
 
+  /// Describe how this target wants a vector integer divide or remainder of
+  /// \p VT expanded through a floating point divide. \p Candidates takes the
+  /// usable FP scalar types narrowest first, and stays empty to decline.
+  /// \p RequiredBits is the one width the emitted form encodes at or zero.
+  virtual void getIntDivRemFPExpansion(SmallVectorImpl<MVT> &Candidates,
+                                       unsigned &RequiredBits, EVT VT,
+                                       bool IsSigned, bool IsStrict) const {}
+
+  /// Expand the vector integer divide or remainder \p N through a floating
+  /// point divide, when getIntDivRemFPExpansion says the target wants one.
+  SDValue expandIntDivRemViaFP(SDNode *N, SelectionDAG &DAG,
+                               CombineLevel Level) const;
+
+  /// Emit the expansion body in \p FPVT. \p OperandsExact says whether both
+  /// operands were proven to fit that mantissa. The default converts, divides
+  /// with ISD::FDIV and converts back. An empty return declines.
+  virtual SDValue emitIntDivRemViaFP(SDNode *N, EVT FPVT, bool IsSigned,
+                                     bool IsRem, bool IsStrict,
+                                     bool OperandsExact,
+                                     SelectionDAG &DAG) const;
+
   /// Targets may override this function to provide custom SDIV lowering for
   /// power-of-2 denominators.  If the target returns an empty SDValue, LLVM
   /// assumes SDIV is expensive and replaces it with a series of other integer
