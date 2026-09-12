@@ -4259,7 +4259,11 @@ TypeOfExprType::TypeOfExprType(const ASTContext &Context, Expr *E,
            Kind == TypeOfKind::Unqualified && !Can.isNull()
                ? Context.getUnqualifiedArrayType(Can).getAtomicUnqualifiedType()
                : Can,
-           toTypeDependence(E->getDependence()) |
+           // __typeof(expr) is always the type of expr. Mere
+           // value-dependence of the expression doesn't make this type
+           // dependent. Only type-dependence of the expression does.
+           toTypeDependence(E->getDependence(),
+                            /*ValueDependenceImpliesTypeDependence=*/false) |
                (E->getType()->getDependence() &
                 TypeDependence::VariablyModified)),
       TOExpr(E), Context(Context) {
