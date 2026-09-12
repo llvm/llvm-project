@@ -242,12 +242,8 @@ define i1 @test_bitextract_b128_off_top(b128 %src) {
 define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 ; AARCH64-LABEL: test_bitinsert_b8_off1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0xfc
-; AARCH64-NEXT:    lsr w8, w8, #1
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #7
-; AARCH64-NEXT:    orr w8, w8, w1
-; AARCH64-NEXT:    ubfx w9, w8, #7, #1
-; AARCH64-NEXT:    orr w0, w9, w8, lsl #1
+; AARCH64-NEXT:    and w8, w0, #0xfffffffd
+; AARCH64-NEXT:    orr w0, w8, w1, lsl #1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b8 %base, i1 %val, i32 1
   ret b8 %result
@@ -256,11 +252,7 @@ define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 ; AARCH64-LABEL: test_bitinsert_b8_off2:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0xf0
-; AARCH64-NEXT:    lsr w8, w8, #2
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #6
-; AARCH64-NEXT:    bfxil w8, w1, #0, #2
-; AARCH64-NEXT:    bfi w0, w8, #2, #30
+; AARCH64-NEXT:    bfi w0, w1, #2, #2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b8 %base, i2 %val, i32 2
   ret b8 %result
@@ -269,10 +261,7 @@ define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 ; AARCH64-LABEL: test_bitinsert_b8_off4:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ubfiz w8, w1, #4, #4
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #8
-; AARCH64-NEXT:    bfxil w8, w0, #0, #4
-; AARCH64-NEXT:    mov w0, w8
+; AARCH64-NEXT:    bfi w0, w1, #4, #28
 ; AARCH64-NEXT:    ret
   %result = bitinsert b8 %base, i4 %val, i32 4
   ret b8 %result
@@ -283,11 +272,7 @@ define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 ; AARCH64-LABEL: test_bitinsert_b16_off1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0xfffc
-; AARCH64-NEXT:    lsr w8, w8, #1
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #15
-; AARCH64-NEXT:    bfxil w8, w1, #0, #1
-; AARCH64-NEXT:    bfi w0, w8, #1, #31
+; AARCH64-NEXT:    bfi w0, w1, #1, #1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b16 %base, i1 %val, i32 1
   ret b16 %result
@@ -296,11 +281,7 @@ define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 ; AARCH64-LABEL: test_bitinsert_b16_off2:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0xfff0
-; AARCH64-NEXT:    lsr w8, w8, #2
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #14
-; AARCH64-NEXT:    bfxil w8, w1, #0, #2
-; AARCH64-NEXT:    bfi w0, w8, #2, #30
+; AARCH64-NEXT:    bfi w0, w1, #2, #2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b16 %base, i2 %val, i32 2
   ret b16 %result
@@ -309,11 +290,7 @@ define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 ; AARCH64-LABEL: test_bitinsert_b16_off4:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0xff00
-; AARCH64-NEXT:    lsr w8, w8, #4
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #12
-; AARCH64-NEXT:    bfxil w8, w1, #0, #4
-; AARCH64-NEXT:    bfi w0, w8, #4, #28
+; AARCH64-NEXT:    bfi w0, w1, #4, #4
 ; AARCH64-NEXT:    ret
   %result = bitinsert b16 %base, i4 %val, i32 4
   ret b16 %result
@@ -322,10 +299,7 @@ define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; AARCH64-LABEL: test_bitinsert_b16_off8:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ubfiz w8, w1, #8, #8
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #16
-; AARCH64-NEXT:    bfxil w8, w0, #0, #8
-; AARCH64-NEXT:    mov w0, w8
+; AARCH64-NEXT:    bfi w0, w1, #8, #24
 ; AARCH64-NEXT:    ret
   %result = bitinsert b16 %base, i8 %val, i32 8
   ret b16 %result
@@ -336,9 +310,7 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
 ; AARCH64-LABEL: test_bitinsert_b32_off1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, #1
-; AARCH64-NEXT:    bfxil w8, w1, #0, #1
-; AARCH64-NEXT:    ror w0, w8, #31
+; AARCH64-NEXT:    bfi w0, w1, #1, #1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, i1 %val, i32 1
   ret b32 %result
@@ -347,9 +319,7 @@ define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
 define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
 ; AARCH64-LABEL: test_bitinsert_b32_off2:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, #2
-; AARCH64-NEXT:    bfxil w8, w1, #0, #2
-; AARCH64-NEXT:    ror w0, w8, #30
+; AARCH64-NEXT:    bfi w0, w1, #2, #2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, i2 %val, i32 2
   ret b32 %result
@@ -358,9 +328,7 @@ define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
 define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
 ; AARCH64-LABEL: test_bitinsert_b32_off4:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, #4
-; AARCH64-NEXT:    bfxil w8, w1, #0, #4
-; AARCH64-NEXT:    ror w0, w8, #28
+; AARCH64-NEXT:    bfi w0, w1, #4, #4
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, i4 %val, i32 4
   ret b32 %result
@@ -369,9 +337,7 @@ define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
 define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 ; AARCH64-LABEL: test_bitinsert_b32_off8:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, #8
-; AARCH64-NEXT:    bfxil w8, w1, #0, #8
-; AARCH64-NEXT:    ror w0, w8, #24
+; AARCH64-NEXT:    bfi w0, w1, #8, #8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, i8 %val, i32 8
   ret b32 %result
@@ -380,8 +346,7 @@ define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
 ; AARCH64-LABEL: test_bitinsert_b32_off16:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    bfi w1, w0, #16, #16
-; AARCH64-NEXT:    ror w0, w1, #16
+; AARCH64-NEXT:    bfi w0, w1, #16, #16
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, i16 %val, i32 16
   ret b32 %result
@@ -392,10 +357,8 @@ define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
 define b64 @test_bitinsert_b64_off1(b64 %base, i1 %val) {
 ; AARCH64-LABEL: test_bitinsert_b64_off1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror x8, x0, #1
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    bfxil x8, x1, #0, #1
-; AARCH64-NEXT:    ror x0, x8, #63
+; AARCH64-NEXT:    bfi x0, x1, #1, #1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, i1 %val, i32 1
   ret b64 %result
@@ -404,10 +367,8 @@ define b64 @test_bitinsert_b64_off1(b64 %base, i1 %val) {
 define b64 @test_bitinsert_b64_off2(b64 %base, i2 %val) {
 ; AARCH64-LABEL: test_bitinsert_b64_off2:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror x8, x0, #2
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    bfxil x8, x1, #0, #2
-; AARCH64-NEXT:    ror x0, x8, #62
+; AARCH64-NEXT:    bfi x0, x1, #2, #2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, i2 %val, i32 2
   ret b64 %result
@@ -416,10 +377,8 @@ define b64 @test_bitinsert_b64_off2(b64 %base, i2 %val) {
 define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
 ; AARCH64-LABEL: test_bitinsert_b64_off4:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror x8, x0, #4
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    bfxil x8, x1, #0, #4
-; AARCH64-NEXT:    ror x0, x8, #60
+; AARCH64-NEXT:    bfi x0, x1, #4, #4
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, i4 %val, i32 4
   ret b64 %result
@@ -428,10 +387,8 @@ define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
 define b64 @test_bitinsert_b64_off8(b64 %base, i8 %val) {
 ; AARCH64-LABEL: test_bitinsert_b64_off8:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror x8, x0, #8
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    bfxil x8, x1, #0, #8
-; AARCH64-NEXT:    ror x0, x8, #56
+; AARCH64-NEXT:    bfi x0, x1, #8, #8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, i8 %val, i32 8
   ret b64 %result
@@ -440,10 +397,9 @@ define b64 @test_bitinsert_b64_off8(b64 %base, i8 %val) {
 define b64 @test_bitinsert_b64_off16(b64 %base, i16 %val) {
 ; AARCH64-LABEL: test_bitinsert_b64_off16:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror x8, x0, #16
-; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    bfxil x8, x1, #0, #16
-; AARCH64-NEXT:    ror x0, x8, #48
+; AARCH64-NEXT:    lsl w8, w1, #16
+; AARCH64-NEXT:    and x9, x0, #0xffffffff0000ffff
+; AARCH64-NEXT:    orr x0, x9, x8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, i16 %val, i32 16
   ret b64 %result
@@ -452,9 +408,8 @@ define b64 @test_bitinsert_b64_off16(b64 %base, i16 %val) {
 define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
 ; AARCH64-LABEL: test_bitinsert_b64_off32:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    mov w8, w1
-; AARCH64-NEXT:    orr x8, x8, x0, lsl #32
-; AARCH64-NEXT:    ror x0, x8, #32
+; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
+; AARCH64-NEXT:    bfi x0, x1, #32, #32
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, i32 %val, i32 32
   ret b64 %result
@@ -466,12 +421,8 @@ define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
 define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 ; AARCH64-LABEL: test_bitinsert_b128_off1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x8, x0, #2
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x9, x2, #0x1
-; AARCH64-NEXT:    orr x8, x9, x8, lsl #1
-; AARCH64-NEXT:    lsl x9, x0, #63
-; AARCH64-NEXT:    extr x0, x8, x9, #63
+; AARCH64-NEXT:    bfi x0, x2, #1, #1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i1 %val, i32 1
   ret b128 %result
@@ -480,12 +431,8 @@ define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 ; AARCH64-LABEL: test_bitinsert_b128_off2:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x8, x0, #4
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x9, x2, #0x3
-; AARCH64-NEXT:    orr x8, x9, x8, lsl #2
-; AARCH64-NEXT:    lsl x9, x0, #62
-; AARCH64-NEXT:    extr x0, x8, x9, #62
+; AARCH64-NEXT:    bfi x0, x2, #2, #2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i2 %val, i32 2
   ret b128 %result
@@ -494,12 +441,8 @@ define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 ; AARCH64-LABEL: test_bitinsert_b128_off4:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x8, x0, #8
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x9, x2, #0xf
-; AARCH64-NEXT:    orr x8, x9, x8, lsl #4
-; AARCH64-NEXT:    lsl x9, x0, #60
-; AARCH64-NEXT:    extr x0, x8, x9, #60
+; AARCH64-NEXT:    bfi x0, x2, #4, #4
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i4 %val, i32 4
   ret b128 %result
@@ -508,12 +451,8 @@ define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 define b128 @test_bitinsert_b128_off8(b128 %base, i8 %val) {
 ; AARCH64-LABEL: test_bitinsert_b128_off8:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x8, x0, #16
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x9, x2, #0xff
-; AARCH64-NEXT:    orr x8, x9, x8, lsl #8
-; AARCH64-NEXT:    lsl x9, x0, #56
-; AARCH64-NEXT:    extr x0, x8, x9, #56
+; AARCH64-NEXT:    bfi x0, x2, #8, #8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i8 %val, i32 8
   ret b128 %result
@@ -522,12 +461,9 @@ define b128 @test_bitinsert_b128_off8(b128 %base, i8 %val) {
 define b128 @test_bitinsert_b128_off16(b128 %base, i16 %val) {
 ; AARCH64-LABEL: test_bitinsert_b128_off16:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x8, x0, #32
-; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x9, x2, #0xffff
-; AARCH64-NEXT:    orr x8, x9, x8, lsl #16
-; AARCH64-NEXT:    lsl x9, x0, #48
-; AARCH64-NEXT:    extr x0, x8, x9, #48
+; AARCH64-NEXT:    lsl w8, w2, #16
+; AARCH64-NEXT:    and x9, x0, #0xffffffff0000ffff
+; AARCH64-NEXT:    orr x0, x9, x8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i16 %val, i32 16
   ret b128 %result
@@ -536,9 +472,8 @@ define b128 @test_bitinsert_b128_off16(b128 %base, i16 %val) {
 define b128 @test_bitinsert_b128_off32(b128 %base, i32 %val) {
 ; AARCH64-LABEL: test_bitinsert_b128_off32:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsl x8, x0, #32
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    extr x0, x2, x8, #32
+; AARCH64-NEXT:    bfi x0, x2, #32, #32
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i32 %val, i32 32
   ret b128 %result

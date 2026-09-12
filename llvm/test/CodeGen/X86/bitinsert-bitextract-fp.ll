@@ -171,11 +171,10 @@ define b32 @test_bitinsert_half_const(b32 %base, half %val) {
 ; CHECK-LABEL: test_bitinsert_half_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    rorl $8, %edi
-; CHECK-NEXT:    andl $-65536, %edi # imm = 0xFFFF0000
+; CHECK-NEXT:    andl $-16776961, %edi # imm = 0xFF0000FF
 ; CHECK-NEXT:    movzwl %ax, %eax
+; CHECK-NEXT:    shll $8, %eax
 ; CHECK-NEXT:    orl %edi, %eax
-; CHECK-NEXT:    roll $8, %eax
 ; CHECK-NEXT:    retq
   %result = bitinsert b32 %base, half %val, i32 8
   ret b32 %result
@@ -186,12 +185,13 @@ define b32 @test_bitinsert_half_var(b32 %base, half %val, i32 %off) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
 ; CHECK-NEXT:    pextrw $0, %xmm0, %eax
-; CHECK-NEXT:    rorl %cl, %edi
-; CHECK-NEXT:    andl $-65536, %edi # imm = 0xFFFF0000
+; CHECK-NEXT:    movl $-65536, %edx # imm = 0xFFFF0000
+; CHECK-NEXT:    roll %cl, %edx
+; CHECK-NEXT:    andl %edi, %edx
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    orl %edi, %eax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    roll %cl, %eax
+; CHECK-NEXT:    shll %cl, %eax
+; CHECK-NEXT:    orl %edx, %eax
 ; CHECK-NEXT:    retq
   %result = bitinsert b32 %base, half %val, i32 %off
   ret b32 %result
@@ -209,10 +209,10 @@ define b32 @test_bitinsert_float_full(b32 %base, float %val) {
 define b64 @test_bitinsert_float_const(b64 %base, float %val) {
 ; CHECK-LABEL: test_bitinsert_float_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    shlq $32, %rdi
-; CHECK-NEXT:    orq %rdi, %rax
-; CHECK-NEXT:    rolq $32, %rax
+; CHECK-NEXT:    movd %xmm0, %ecx
+; CHECK-NEXT:    shlq $32, %rcx
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    orq %rcx, %rax
 ; CHECK-NEXT:    retq
   %result = bitinsert b64 %base, float %val, i32 32
   ret b64 %result
@@ -222,13 +222,13 @@ define b64 @test_bitinsert_float_var(b64 %base, float %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_float_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    rorq %cl, %rdi
-; CHECK-NEXT:    movabsq $-4294967296, %rdx # imm = 0xFFFFFFFF00000000
-; CHECK-NEXT:    andq %rdi, %rdx
-; CHECK-NEXT:    orq %rdx, %rax
+; CHECK-NEXT:    movd %xmm0, %edx
+; CHECK-NEXT:    shlq %cl, %rdx
+; CHECK-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    rolq %cl, %rax
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    orq %rdx, %rax
 ; CHECK-NEXT:    retq
   %result = bitinsert b64 %base, float %val, i32 %off
   ret b64 %result
@@ -237,64 +237,53 @@ define b64 @test_bitinsert_float_var(b64 %base, float %val, i32 %off) {
 define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_float_b87_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
-; CHECK-NEXT:    movd %xmm0, %r10d
-; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    andl $8388607, %eax # imm = 0x7FFFFF
-; CHECK-NEXT:    shldq $1, %rdi, %rsi
-; CHECK-NEXT:    movzbl %dl, %r8d
-; CHECK-NEXT:    imull $189, %r8d, %ecx
-; CHECK-NEXT:    shrl $14, %ecx
-; CHECK-NEXT:    imull $87, %ecx, %ecx
-; CHECK-NEXT:    subb %cl, %r8b
-; CHECK-NEXT:    movb $86, %r9b
-; CHECK-NEXT:    subb %r8b, %r9b
-; CHECK-NEXT:    leaq (%rdi,%rdi), %r11
-; CHECK-NEXT:    movl %r9d, %ecx
-; CHECK-NEXT:    shldq %cl, %r11, %rsi
-; CHECK-NEXT:    shlq %cl, %r11
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    testb $64, %r9b
-; CHECK-NEXT:    cmovneq %r11, %rsi
-; CHECK-NEXT:    cmovneq %rdx, %r11
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 24
+; CHECK-NEXT:    .cfi_offset %rbx, -24
+; CHECK-NEXT:    .cfi_offset %r14, -16
+; CHECK-NEXT:    movd %xmm0, %r9d
+; CHECK-NEXT:    movzbl %dl, %edx
+; CHECK-NEXT:    imull $189, %edx, %eax
+; CHECK-NEXT:    shrl $14, %eax
+; CHECK-NEXT:    imull $87, %eax, %eax
+; CHECK-NEXT:    movl %edx, %r8d
+; CHECK-NEXT:    subb %al, %r8b
+; CHECK-NEXT:    movb $86, %cl
+; CHECK-NEXT:    subb %r8b, %cl
+; CHECK-NEXT:    movl $4194303, %r10d # imm = 0x3FFFFF
+; CHECK-NEXT:    movq $-2147483648, %r11 # imm = 0x80000000
+; CHECK-NEXT:    shrdq %cl, %r10, %r11
+; CHECK-NEXT:    shrq %cl, %r10
+; CHECK-NEXT:    xorl %r14d, %r14d
+; CHECK-NEXT:    testb $64, %cl
+; CHECK-NEXT:    cmovneq %r10, %r11
+; CHECK-NEXT:    cmovneq %r14, %r10
+; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    shldq %cl, %r9, %rbx
+; CHECK-NEXT:    shlq %cl, %r9
+; CHECK-NEXT:    testb $64, %dl
+; CHECK-NEXT:    cmovneq %r9, %rbx
+; CHECK-NEXT:    cmovneq %r14, %r9
+; CHECK-NEXT:    movabsq $-4294967296, %rax # imm = 0xFFFFFFFF00000000
+; CHECK-NEXT:    movl $8388607, %edx # imm = 0x7FFFFF
 ; CHECK-NEXT:    movl %r8d, %ecx
-; CHECK-NEXT:    shrdq %cl, %rax, %rdi
-; CHECK-NEXT:    shrq %cl, %rax
+; CHECK-NEXT:    shldq %cl, %rax, %rdx
+; CHECK-NEXT:    shlq %cl, %rax
 ; CHECK-NEXT:    testb $64, %r8b
-; CHECK-NEXT:    cmovneq %rax, %rdi
-; CHECK-NEXT:    cmovneq %rdx, %rax
-; CHECK-NEXT:    orq %rdi, %r11
-; CHECK-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
-; CHECK-NEXT:    andq %r11, %rcx
-; CHECK-NEXT:    orq %rcx, %r10
-; CHECK-NEXT:    movq %r10, %r11
-; CHECK-NEXT:    movl %r8d, %ecx
-; CHECK-NEXT:    shlq %cl, %r11
-; CHECK-NEXT:    testb $64, %r8b
-; CHECK-NEXT:    movq %r11, %rdi
-; CHECK-NEXT:    cmovneq %rdx, %rdi
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    andl $8388607, %esi # imm = 0x7FFFFF
-; CHECK-NEXT:    movq %rsi, %rbx
-; CHECK-NEXT:    shldq %cl, %r10, %rbx
-; CHECK-NEXT:    testb $64, %r8b
-; CHECK-NEXT:    cmovneq %r11, %rbx
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    movq %rsi, %r8
-; CHECK-NEXT:    movl %r9d, %ecx
-; CHECK-NEXT:    shrq %cl, %r8
-; CHECK-NEXT:    testb $64, %r9b
-; CHECK-NEXT:    cmoveq %r8, %rdx
-; CHECK-NEXT:    shldq $63, %r10, %rax
-; CHECK-NEXT:    shrdq %cl, %rsi, %rax
-; CHECK-NEXT:    testb $64, %r9b
-; CHECK-NEXT:    cmovneq %r8, %rax
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    cmovneq %rax, %rdx
+; CHECK-NEXT:    cmovneq %r14, %rax
+; CHECK-NEXT:    orq %r11, %rax
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    orq %r9, %rax
+; CHECK-NEXT:    orq %r10, %rdx
+; CHECK-NEXT:    andq %rsi, %rdx
 ; CHECK-NEXT:    orq %rbx, %rdx
 ; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %result = bitinsert b87 %base, float %val, i32 %off
@@ -304,21 +293,13 @@ define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
 define b87 @test_bitinsert_float_b87_crossword(b87 %base, float %val) {
 ; CHECK-LABEL: test_bitinsert_float_b87_crossword:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    andq $-32, %rdx
-; CHECK-NEXT:    shlq $27, %rdx
-; CHECK-NEXT:    orq %rax, %rdx
-; CHECK-NEXT:    shrq $37, %rdi
-; CHECK-NEXT:    movq %rdx, %rcx
-; CHECK-NEXT:    shrdq $1, %rdi, %rcx
-; CHECK-NEXT:    shrdq $4, %rdi, %rdx
-; CHECK-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
-; CHECK-NEXT:    andl $8388606, %edi # imm = 0x7FFFFE
-; CHECK-NEXT:    shrl %edi
-; CHECK-NEXT:    shldq $38, %rcx, %rdi
+; CHECK-NEXT:    movd %xmm0, %edx
+; CHECK-NEXT:    movabsq $1152921504606846944, %rcx # imm = 0xFFFFFFFFFFFFFE0
+; CHECK-NEXT:    andq %rdi, %rcx
+; CHECK-NEXT:    movq %rdx, %rax
 ; CHECK-NEXT:    shlq $60, %rax
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    shrl $4, %edx
 ; CHECK-NEXT:    retq
   %result = bitinsert b87 %base, float %val, i32 60
   ret b87 %result
@@ -347,20 +328,28 @@ define b128 @test_bitinsert_double_var(b128 %base, double %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_double_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    testb $64, %cl
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    cmoveq %rdi, %rax
-; CHECK-NEXT:    cmoveq %rsi, %rdi
-; CHECK-NEXT:    shrdq %cl, %rax, %rdi
-; CHECK-NEXT:    testb $64, %cl
 ; CHECK-NEXT:    movq %xmm0, %rax
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    cmovneq %rax, %rdx
-; CHECK-NEXT:    cmoveq %rax, %rdi
-; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    movq %rax, %r8
+; CHECK-NEXT:    shlq %cl, %r8
+; CHECK-NEXT:    xorl %r9d, %r9d
+; CHECK-NEXT:    testb $64, %cl
+; CHECK-NEXT:    movq $-1, %rdx
+; CHECK-NEXT:    movl $0, %r10d
+; CHECK-NEXT:    cmovneq %rdx, %r10
+; CHECK-NEXT:    cmovneq %r9, %rdx
+; CHECK-NEXT:    movq %r8, %r11
+; CHECK-NEXT:    cmovneq %r9, %r11
+; CHECK-NEXT:    shldq %cl, %rax, %r9
+; CHECK-NEXT:    testb $64, %cl
+; CHECK-NEXT:    cmovneq %r8, %r9
+; CHECK-NEXT:    movq %r10, %rax
 ; CHECK-NEXT:    shldq %cl, %rdx, %rax
+; CHECK-NEXT:    andq %rdi, %rax
+; CHECK-NEXT:    orq %r11, %rax
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
-; CHECK-NEXT:    shldq %cl, %rdi, %rdx
+; CHECK-NEXT:    shldq %cl, %r10, %rdx
+; CHECK-NEXT:    andq %rsi, %rdx
+; CHECK-NEXT:    orq %r9, %rdx
 ; CHECK-NEXT:    retq
   %result = bitinsert b128 %base, double %val, i32 %off
   ret b128 %result
@@ -381,132 +370,127 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
-; CHECK-NEXT:    subq $136, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 192
+; CHECK-NEXT:    subq $120, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 176
 ; CHECK-NEXT:    .cfi_offset %rbx, -56
 ; CHECK-NEXT:    .cfi_offset %r12, -48
 ; CHECK-NEXT:    .cfi_offset %r13, -40
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movabsq $549755813887, %rdi # imm = 0x7FFFFFFFFF
-; CHECK-NEXT:    movq %r8, %r10
-; CHECK-NEXT:    andq %rdi, %r10
+; CHECK-NEXT:    movq %rcx, %r11
+; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movabsq $274877906943, %rcx # imm = 0x3FFFFFFFFF
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $549755813887, %rcx # imm = 0x7FFFFFFFFF
+; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    xorps %xmm1, %xmm1
-; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r10, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm1, (%rsp)
-; CHECK-NEXT:    shldq $1, %rcx, %r8
-; CHECK-NEXT:    movq %r8, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shldq $1, %rdx, %rcx
-; CHECK-NEXT:    movq %rcx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shldq $1, %rsi, %rdx
-; CHECK-NEXT:    movq %rdx, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    addq %rsi, %rsi
-; CHECK-NEXT:    movq %rsi, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %xmm0, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movzbl %r9b, %edx
-; CHECK-NEXT:    imull $71, %edx, %ecx
+; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movzbl %r9b, %edi
+; CHECK-NEXT:    imull $71, %edi, %ecx
 ; CHECK-NEXT:    shrl $14, %ecx
 ; CHECK-NEXT:    imull $-25, %ecx, %ecx
-; CHECK-NEXT:    subb %cl, %dl
-; CHECK-NEXT:    movl %edx, %ecx
+; CHECK-NEXT:    movl %edi, %r9d
+; CHECK-NEXT:    subb %cl, %r9b
+; CHECK-NEXT:    movb $-26, %r10b
+; CHECK-NEXT:    subb %r9b, %r10b
+; CHECK-NEXT:    movl %r10d, %ecx
+; CHECK-NEXT:    shrb $6, %cl
+; CHECK-NEXT:    movzbl %cl, %r15d
+; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $-1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq -56(%rsp,%r15,8), %r13
+; CHECK-NEXT:    movq -64(%rsp,%r15,8), %rbx
+; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movl %r10d, %ecx
+; CHECK-NEXT:    shrdq %cl, %r13, %rbx
+; CHECK-NEXT:    movl %r9d, %ecx
 ; CHECK-NEXT:    shrb $3, %cl
 ; CHECK-NEXT:    andb $24, %cl
-; CHECK-NEXT:    movzbl %cl, %r8d
-; CHECK-NEXT:    movq 88(%rsp,%r8), %r9
-; CHECK-NEXT:    movq 72(%rsp,%r8), %r10
-; CHECK-NEXT:    movq 80(%rsp,%r8), %r11
-; CHECK-NEXT:    movq %r11, %rbx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shrdq %cl, %r9, %rbx
-; CHECK-NEXT:    movb $-26, %sil
-; CHECK-NEXT:    subb %dl, %sil
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrb $3, %cl
-; CHECK-NEXT:    andb $24, %cl
-; CHECK-NEXT:    movzbl %cl, %r14d
 ; CHECK-NEXT:    negb %cl
-; CHECK-NEXT:    movsbq %cl, %r15
-; CHECK-NEXT:    movq 40(%rsp,%r15), %r12
-; CHECK-NEXT:    movq 48(%rsp,%r15), %r13
-; CHECK-NEXT:    movq %r13, %rbp
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shldq %cl, %r12, %rbp
-; CHECK-NEXT:    orq %rbx, %rbp
-; CHECK-NEXT:    movq 32(%rsp,%r15), %rbx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shrdq %cl, %r11, %r10
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shldq %cl, %rbx, %r12
-; CHECK-NEXT:    orq %r10, %r12
-; CHECK-NEXT:    movq %xmm0, %r10
-; CHECK-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq %r12, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movq 56(%rsp,%r15), %r11
-; CHECK-NEXT:    shldq %cl, %r13, %r11
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shrq %cl, %r9
-; CHECK-NEXT:    orq %r11, %r9
-; CHECK-NEXT:    andq %r9, %rdi
-; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shldq $63, %rbp, %r9
-; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shldq $63, %r12, %rbp
-; CHECK-NEXT:    movq %rbp, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shldq $63, %r10, %r12
-; CHECK-NEXT:    movq %r12, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shrq %rdi
-; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    negb %r8b
-; CHECK-NEXT:    movsbq %r8b, %r10
-; CHECK-NEXT:    movq -88(%rsp,%r10), %r8
-; CHECK-NEXT:    movq -80(%rsp,%r10), %r11
-; CHECK-NEXT:    movq %r11, %rbx
-; CHECK-NEXT:    shldq %cl, %r8, %rbx
-; CHECK-NEXT:    movq -40(%rsp,%r14), %rdi
-; CHECK-NEXT:    movq -48(%rsp,%r14), %r15
-; CHECK-NEXT:    movq %r15, %r9
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrdq %cl, %rdi, %r9
-; CHECK-NEXT:    orq %rbx, %r9
-; CHECK-NEXT:    movq -96(%rsp,%r10), %rbx
-; CHECK-NEXT:    movq -72(%rsp,%r10), %r10
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shldq %cl, %r11, %r10
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrq %cl, %rdi
-; CHECK-NEXT:    orq %r10, %rdi
-; CHECK-NEXT:    movq %rbx, %r10
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shlq %cl, %r10
-; CHECK-NEXT:    movq -64(%rsp,%r14), %r11
-; CHECK-NEXT:    movq -56(%rsp,%r14), %r14
-; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    shrdq %cl, %r14, %r11
-; CHECK-NEXT:    orq %r10, %r11
-; CHECK-NEXT:    shrdq %cl, %r15, %r14
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shldq %cl, %rbx, %r8
-; CHECK-NEXT:    orq %r14, %r8
-; CHECK-NEXT:    movq %r9, 16(%rax)
-; CHECK-NEXT:    movq %r8, 8(%rax)
-; CHECK-NEXT:    movq %r11, (%rax)
-; CHECK-NEXT:    movl %edi, 24(%rax)
-; CHECK-NEXT:    shrq $32, %rdi
-; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    movb %dil, 28(%rax)
-; CHECK-NEXT:    addq $136, %rsp
+; CHECK-NEXT:    movsbq %cl, %rdx
+; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $-1, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq 24(%rsp,%rdx), %r14
+; CHECK-NEXT:    movq 32(%rsp,%rdx), %rsi
+; CHECK-NEXT:    movq %rsi, %r12
+; CHECK-NEXT:    movl %r9d, %ecx
+; CHECK-NEXT:    shldq %cl, %r14, %r12
+; CHECK-NEXT:    orq %rbx, %r12
+; CHECK-NEXT:    movq 16(%rsp,%rdx), %rax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    andq %r11, %r12
+; CHECK-NEXT:    movq $0, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shrb $3, %cl
+; CHECK-NEXT:    andb $24, %cl
+; CHECK-NEXT:    negb %cl
+; CHECK-NEXT:    movsbq %cl, %rbx
+; CHECK-NEXT:    movq 88(%rsp,%rbx), %r11
+; CHECK-NEXT:    movq 96(%rsp,%rbx), %rax
+; CHECK-NEXT:    movq %rax, %rbp
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shldq %cl, %r11, %rbp
+; CHECK-NEXT:    orq %r12, %rbp
+; CHECK-NEXT:    movq 40(%rsp,%rdx), %rdx
+; CHECK-NEXT:    movl %r9d, %ecx
+; CHECK-NEXT:    shldq %cl, %rsi, %rdx
+; CHECK-NEXT:    movl %r10d, %ecx
+; CHECK-NEXT:    shrq %cl, %r13
+; CHECK-NEXT:    orq %rdx, %r13
+; CHECK-NEXT:    andq %r8, %r13
+; CHECK-NEXT:    movq 104(%rsp,%rbx), %r8
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shldq %cl, %rax, %r8
+; CHECK-NEXT:    orq %r13, %r8
+; CHECK-NEXT:    movq -80(%rsp,%r15,8), %rax
+; CHECK-NEXT:    movq -72(%rsp,%r15,8), %rdx
+; CHECK-NEXT:    movl %r10d, %ecx
+; CHECK-NEXT:    shrdq %cl, %rdx, %rax
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r15 # 8-byte Reload
+; CHECK-NEXT:    movq %r15, %rsi
+; CHECK-NEXT:    movl %r9d, %ecx
+; CHECK-NEXT:    shlq %cl, %rsi
+; CHECK-NEXT:    orq %rax, %rsi
+; CHECK-NEXT:    movq 80(%rsp,%rbx), %rax
+; CHECK-NEXT:    andq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Folded Reload
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shlq %cl, %rbx
+; CHECK-NEXT:    orq %rsi, %rbx
+; CHECK-NEXT:    movl %r10d, %ecx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
+; CHECK-NEXT:    shrdq %cl, %rsi, %rdx
+; CHECK-NEXT:    movl %r9d, %ecx
+; CHECK-NEXT:    shldq %cl, %r15, %r14
+; CHECK-NEXT:    orq %rdx, %r14
+; CHECK-NEXT:    andq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Folded Reload
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    shldq %cl, %rax, %r11
+; CHECK-NEXT:    orq %r14, %r11
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    movq %rbp, 16(%rax)
+; CHECK-NEXT:    movq %r11, 8(%rax)
+; CHECK-NEXT:    movq %rbx, (%rax)
+; CHECK-NEXT:    movl %r8d, 24(%rax)
+; CHECK-NEXT:    shrq $32, %r8
+; CHECK-NEXT:    andl $127, %r8d
+; CHECK-NEXT:    movb %r8b, 28(%rax)
+; CHECK-NEXT:    addq $120, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -530,35 +514,21 @@ define b231 @test_bitinsert_double_b231_crossword(b231 %base, double %val) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq %xmm0, %rdi
-; CHECK-NEXT:    shrdq $23, %rdx, %rsi
-; CHECK-NEXT:    movl %edx, %r8d
-; CHECK-NEXT:    shrl $23, %r8d
-; CHECK-NEXT:    shldq $63, %rsi, %r8
-; CHECK-NEXT:    shrdq $23, %rcx, %rdx
-; CHECK-NEXT:    movl %ecx, %r9d
-; CHECK-NEXT:    shrl $23, %r9d
-; CHECK-NEXT:    shldq $63, %rdx, %r9
-; CHECK-NEXT:    shrdq $40, %r9, %r8
-; CHECK-NEXT:    shrq $24, %rcx
-; CHECK-NEXT:    movabsq $274877906943, %rdx # imm = 0x3FFFFFFFFF
-; CHECK-NEXT:    andq %rcx, %rdx
-; CHECK-NEXT:    shldq $24, %r9, %rdx
+; CHECK-NEXT:    movabsq $4611686018427387903, %r8 # imm = 0x3FFFFFFFFFFFFFFF
+; CHECK-NEXT:    andq %rcx, %r8
 ; CHECK-NEXT:    movq %rdi, %rcx
 ; CHECK-NEXT:    shlq $62, %rcx
-; CHECK-NEXT:    orq %rdx, %rcx
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    shrdq $1, %rsi, %rdx
-; CHECK-NEXT:    shrq %rsi
-; CHECK-NEXT:    shldq $24, %rdx, %rsi
-; CHECK-NEXT:    movq %rdi, %rdx
-; CHECK-NEXT:    shrq $2, %rdx
-; CHECK-NEXT:    movl %edx, 24(%rax)
+; CHECK-NEXT:    orq %r8, %rcx
+; CHECK-NEXT:    andq $-8388608, %rsi # imm = 0xFF800000
+; CHECK-NEXT:    movq %rdi, %r8
+; CHECK-NEXT:    shrq $2, %r8
+; CHECK-NEXT:    movl %r8d, 24(%rax)
+; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rdx, 8(%rax)
 ; CHECK-NEXT:    movq %rsi, (%rax)
 ; CHECK-NEXT:    shrq $34, %rdi
 ; CHECK-NEXT:    andl $127, %edi
 ; CHECK-NEXT:    movb %dil, 28(%rax)
-; CHECK-NEXT:    movq %r8, 8(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
 ; CHECK-NEXT:    retq
   %result = bitinsert b231 %base, double %val, i32 190
   ret b231 %result

@@ -4347,24 +4347,21 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   // Convert Offset to BaseTy.
   Register LegalOffset = MIRBuilder.buildZExtOrTrunc(BaseTy, Offset).getReg(0);
 
-  Register RotatedBase =
-      MIRBuilder.buildRotateRight(BaseTy, Base, LegalOffset).getReg(0);
-
   // Truncate or extend Val to BaseTy so only the inserted bit range remains.
   Register ExtVal = MIRBuilder.buildZExtOrTrunc(BaseTy, Val).getReg(0);
 
-  // Clear the low ValBitWidth bits of the rotated base and insert Val there.
   unsigned BaseBitWidth = BaseTy.getSizeInBits();
   unsigned ValBitWidth = ValTy.getSizeInBits();
   APInt ClearMask =
       APInt::getHighBitsSet(BaseBitWidth, BaseBitWidth - ValBitWidth);
   Register MaskConst = MIRBuilder.buildConstant(BaseTy, ClearMask).getReg(0);
+  Register RotatedMask =
+      MIRBuilder.buildRotateLeft(BaseTy, MaskConst, LegalOffset).getReg(0);
   Register ClearedBase =
-      MIRBuilder.buildAnd(BaseTy, RotatedBase, MaskConst).getReg(0);
-  Register Inserted = MIRBuilder.buildOr(BaseTy, ClearedBase, ExtVal).getReg(0);
-
-  // Restore bit positions by rotating back by the same amount.
-  MIRBuilder.buildRotateLeft(Res, Inserted, LegalOffset);
+      MIRBuilder.buildAnd(BaseTy, Base, RotatedMask).getReg(0);
+  Register ShiftedVal =
+      MIRBuilder.buildShl(BaseTy, ExtVal, LegalOffset).getReg(0);
+  MIRBuilder.buildOr(Res, ClearedBase, ShiftedVal);
   return true;
 }
 

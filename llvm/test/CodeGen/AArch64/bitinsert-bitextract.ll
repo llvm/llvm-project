@@ -148,10 +148,13 @@ define i64 @test_bitextract_b231_constant(b231 %src) {
 define b32 @test_bitinsert_var(b32 %base, i16 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, w2
-; AARCH64-NEXT:    neg w9, w2
-; AARCH64-NEXT:    bfxil w8, w1, #0, #16
-; AARCH64-NEXT:    ror w0, w8, w9
+; AARCH64-NEXT:    neg w8, w2
+; AARCH64-NEXT:    mov w9, #-65536 // =0xffff0000
+; AARCH64-NEXT:    and w10, w1, #0xffff
+; AARCH64-NEXT:    ror w8, w9, w8
+; AARCH64-NEXT:    lsl w9, w10, w2
+; AARCH64-NEXT:    and w8, w0, w8
+; AARCH64-NEXT:    orr w0, w8, w9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, i16 %val, i32 %off
   ret b32 %result
@@ -170,26 +173,25 @@ define b37 @test_bitinsert_b37_var(b37 %base, i8 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b37_var:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    mov x9, #46053 // =0xb3e5
+; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
 ; AARCH64-NEXT:    mov w8, w2
 ; AARCH64-NEXT:    mov w10, #37 // =0x25
 ; AARCH64-NEXT:    movk x9, #12398, lsl #16
-; AARCH64-NEXT:    and x11, x0, #0x1fffffffff
+; AARCH64-NEXT:    mov x11, #68719476608 // =0xfffffff80
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; AARCH64-NEXT:    movk x9, #15941, lsl #32
 ; AARCH64-NEXT:    movk x9, #1771, lsl #48
 ; AARCH64-NEXT:    umulh x9, x8, x9
 ; AARCH64-NEXT:    umsubl x8, w9, w10, x8
 ; AARCH64-NEXT:    mov w9, #36 // =0x24
-; AARCH64-NEXT:    lsl x10, x0, #1
+; AARCH64-NEXT:    mov x10, #137438953216 // =0x1fffffff00
 ; AARCH64-NEXT:    sub x9, x9, x8
-; AARCH64-NEXT:    lsr x11, x11, x8
-; AARCH64-NEXT:    lsl x10, x10, x9
-; AARCH64-NEXT:    orr x10, x11, x10
-; AARCH64-NEXT:    and x10, x10, #0x1fffffff00
-; AARCH64-NEXT:    bfxil x10, x1, #0, #8
-; AARCH64-NEXT:    lsr x11, x10, #1
 ; AARCH64-NEXT:    lsl x8, x10, x8
+; AARCH64-NEXT:    and x10, x1, #0xff
 ; AARCH64-NEXT:    lsr x9, x11, x9
+; AARCH64-NEXT:    orr x8, x8, x9
+; AARCH64-NEXT:    lsl x9, x10, x2
+; AARCH64-NEXT:    and x8, x0, x8
 ; AARCH64-NEXT:    orr x0, x8, x9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b37 %base, i8 %val, i32 %off
@@ -199,61 +201,53 @@ define b37 @test_bitinsert_b37_var(b37 %base, i8 %val, i32 %off) {
 define b87 @test_bitinsert_b87_var(b87 %base, i16 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b87_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    mov x8, #39171 // =0x9903
-; AARCH64-NEXT:    mov w9, w3
+; AARCH64-NEXT:    mov x9, #39171 // =0x9903
+; AARCH64-NEXT:    mov w8, w3
 ; AARCH64-NEXT:    mov w10, #87 // =0x57
-; AARCH64-NEXT:    movk x8, #12052, lsl #16
-; AARCH64-NEXT:    mov w11, #86 // =0x56
-; AARCH64-NEXT:    extr x15, x1, x0, #63
-; AARCH64-NEXT:    movk x8, #18832, lsl #32
-; AARCH64-NEXT:    ubfx x16, x0, #0, #63
-; AARCH64-NEXT:    lsl x13, x0, #1
-; AARCH64-NEXT:    movk x8, #753, lsl #48
+; AARCH64-NEXT:    movk x9, #12052, lsl #16
+; AARCH64-NEXT:    mov x11, #9223372036854743040 // =0x7fffffffffff8000
+; AARCH64-NEXT:    mov w13, #8388607 // =0x7fffff
+; AARCH64-NEXT:    movk x9, #18832, lsl #32
+; AARCH64-NEXT:    mov w14, #86 // =0x56
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    umulh x8, x9, x8
-; AARCH64-NEXT:    umsubl x8, w8, w10, x9
-; AARCH64-NEXT:    and x9, x1, #0x7fffff
-; AARCH64-NEXT:    lsl x10, x9, #1
-; AARCH64-NEXT:    mvn w12, w8
-; AARCH64-NEXT:    lsr x14, x0, x8
-; AARCH64-NEXT:    sub x11, x11, x8
-; AARCH64-NEXT:    lsl x10, x10, x12
-; AARCH64-NEXT:    lsr x9, x9, x8
-; AARCH64-NEXT:    lsl x15, x15, x11
+; AARCH64-NEXT:    mvn w15, w3
+; AARCH64-NEXT:    movk x9, #753, lsl #48
+; AARCH64-NEXT:    and x16, x2, #0xffff
+; AARCH64-NEXT:    umulh x9, x8, x9
+; AARCH64-NEXT:    lsl x16, x16, x8
+; AARCH64-NEXT:    umsubl x9, w9, w10, x8
+; AARCH64-NEXT:    mov x10, #-65536 // =0xffffffffffff0000
+; AARCH64-NEXT:    mvn w12, w9
+; AARCH64-NEXT:    lsl x13, x13, x9
+; AARCH64-NEXT:    sub x14, x14, x9
+; AARCH64-NEXT:    lsr x11, x11, x12
+; AARCH64-NEXT:    mov w12, #8388606 // =0x7ffffe
+; AARCH64-NEXT:    lsl x10, x10, x9
+; AARCH64-NEXT:    tst x9, #0x40
+; AARCH64-NEXT:    mvn w9, w14
+; AARCH64-NEXT:    orr x11, x13, x11
+; AARCH64-NEXT:    mov x13, #-32768 // =0xffffffffffff8000
+; AARCH64-NEXT:    lsl x9, x12, x9
+; AARCH64-NEXT:    mov w12, #4194303 // =0x3fffff
+; AARCH64-NEXT:    lsr x13, x13, x14
+; AARCH64-NEXT:    csel x11, x10, x11, ne
+; AARCH64-NEXT:    lsr x12, x12, x14
+; AARCH64-NEXT:    csel x10, xzr, x10, ne
+; AARCH64-NEXT:    tst x14, #0x40
+; AARCH64-NEXT:    ubfx x14, x2, #1, #15
+; AARCH64-NEXT:    orr x9, x9, x13
+; AARCH64-NEXT:    csel x13, xzr, x12, ne
+; AARCH64-NEXT:    csel x9, x12, x9, ne
 ; AARCH64-NEXT:    tst x8, #0x40
-; AARCH64-NEXT:    lsl x13, x13, x11
-; AARCH64-NEXT:    orr x10, x10, x14
-; AARCH64-NEXT:    mvn w14, w11
-; AARCH64-NEXT:    lsr x16, x16, x14
-; AARCH64-NEXT:    csel x10, x9, x10, ne
-; AARCH64-NEXT:    csel x9, xzr, x9, ne
-; AARCH64-NEXT:    tst x11, #0x40
-; AARCH64-NEXT:    orr x15, x15, x16
-; AARCH64-NEXT:    csel x16, xzr, x13, ne
-; AARCH64-NEXT:    csel x13, x13, x15, ne
-; AARCH64-NEXT:    orr x10, x10, x16
-; AARCH64-NEXT:    orr w9, w9, w13
-; AARCH64-NEXT:    bfxil x10, x2, #0, #16
-; AARCH64-NEXT:    ubfx x13, x9, #1, #22
-; AARCH64-NEXT:    extr x15, x9, x10, #1
-; AARCH64-NEXT:    lsr x17, x10, #1
-; AARCH64-NEXT:    and x9, x9, #0x7fffff
-; AARCH64-NEXT:    lsl x16, x13, #1
-; AARCH64-NEXT:    lsl x9, x9, x8
-; AARCH64-NEXT:    lsl x10, x10, x8
-; AARCH64-NEXT:    lsr x15, x15, x11
-; AARCH64-NEXT:    lsr x11, x13, x11
-; AARCH64-NEXT:    lsr x12, x17, x12
-; AARCH64-NEXT:    lsl x14, x16, x14
-; AARCH64-NEXT:    orr x13, x14, x15
-; AARCH64-NEXT:    csel x13, x11, x13, ne
-; AARCH64-NEXT:    csel x11, xzr, x11, ne
-; AARCH64-NEXT:    tst x8, #0x40
-; AARCH64-NEXT:    orr x8, x9, x12
-; AARCH64-NEXT:    csel x9, xzr, x10, ne
-; AARCH64-NEXT:    csel x8, x10, x8, ne
-; AARCH64-NEXT:    orr x0, x9, x13
-; AARCH64-NEXT:    orr x1, x8, x11
+; AARCH64-NEXT:    lsr x14, x14, x15
+; AARCH64-NEXT:    orr x11, x11, x13
+; AARCH64-NEXT:    orr x8, x10, x9
+; AARCH64-NEXT:    and x9, x1, x11
+; AARCH64-NEXT:    and x8, x0, x8
+; AARCH64-NEXT:    csel x11, xzr, x16, ne
+; AARCH64-NEXT:    csel x10, x16, x14, ne
+; AARCH64-NEXT:    orr x0, x8, x11
+; AARCH64-NEXT:    orr x1, x9, x10
 ; AARCH64-NEXT:    ret
   %result = bitinsert b87 %base, i16 %val, i32 %off
   ret b87 %result
@@ -263,31 +257,29 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b128_var:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    mov w8, w3
-; AARCH64-NEXT:    mvn w12, w3
+; AARCH64-NEXT:    mov x9, #-4294967296 // =0xffffffff00000000
+; AARCH64-NEXT:    mov w10, w2
 ; AARCH64-NEXT:    tst x8, #0x40
-; AARCH64-NEXT:    csel x9, x1, x0, eq
-; AARCH64-NEXT:    csel x11, x0, x1, eq
-; AARCH64-NEXT:    lsl x10, x9, #1
-; AARCH64-NEXT:    lsl x13, x11, #1
-; AARCH64-NEXT:    lsr x11, x11, x8
-; AARCH64-NEXT:    lsr x9, x9, x8
-; AARCH64-NEXT:    lsl x10, x10, x12
-; AARCH64-NEXT:    lsl x13, x13, x12
-; AARCH64-NEXT:    orr x10, x10, x11
-; AARCH64-NEXT:    mov w11, w2
-; AARCH64-NEXT:    orr x9, x13, x9
-; AARCH64-NEXT:    and x10, x10, #0xffffffff00000000
-; AARCH64-NEXT:    orr x10, x10, x11
-; AARCH64-NEXT:    csel x11, x9, x10, ne
-; AARCH64-NEXT:    csel x9, x10, x9, ne
-; AARCH64-NEXT:    lsr x10, x9, #1
+; AARCH64-NEXT:    lsr x12, x10, #1
+; AARCH64-NEXT:    mvn w14, w3
+; AARCH64-NEXT:    csinv x11, x9, xzr, eq
+; AARCH64-NEXT:    csinv x9, x9, xzr, ne
+; AARCH64-NEXT:    lsl x10, x10, x8
 ; AARCH64-NEXT:    lsr x13, x11, #1
-; AARCH64-NEXT:    lsl x11, x11, x8
-; AARCH64-NEXT:    lsl x8, x9, x8
-; AARCH64-NEXT:    lsr x10, x10, x12
-; AARCH64-NEXT:    lsr x9, x13, x12
-; AARCH64-NEXT:    orr x0, x11, x10
-; AARCH64-NEXT:    orr x1, x8, x9
+; AARCH64-NEXT:    lsr x15, x9, #1
+; AARCH64-NEXT:    lsr x12, x12, x14
+; AARCH64-NEXT:    lsl x9, x9, x8
+; AARCH64-NEXT:    lsl x8, x11, x8
+; AARCH64-NEXT:    lsr x13, x13, x14
+; AARCH64-NEXT:    lsr x14, x15, x14
+; AARCH64-NEXT:    csel x11, x10, x12, ne
+; AARCH64-NEXT:    csel x10, xzr, x10, ne
+; AARCH64-NEXT:    orr x9, x9, x13
+; AARCH64-NEXT:    orr x8, x8, x14
+; AARCH64-NEXT:    and x9, x1, x9
+; AARCH64-NEXT:    and x8, x0, x8
+; AARCH64-NEXT:    orr x0, x8, x10
+; AARCH64-NEXT:    orr x1, x9, x11
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, i32 %val, i32 %off
   ret b128 %result
@@ -296,142 +288,133 @@ define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b231_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    sub sp, sp, #272
-; AARCH64-NEXT:    stp x29, x19, [sp, #256] // 16-byte Folded Spill
-; AARCH64-NEXT:    .cfi_def_cfa_offset 272
+; AARCH64-NEXT:    sub sp, sp, #256
+; AARCH64-NEXT:    stp x24, x23, [sp, #208] // 16-byte Folded Spill
+; AARCH64-NEXT:    stp x22, x21, [sp, #224] // 16-byte Folded Spill
+; AARCH64-NEXT:    stp x20, x19, [sp, #240] // 16-byte Folded Spill
+; AARCH64-NEXT:    .cfi_def_cfa_offset 256
 ; AARCH64-NEXT:    .cfi_offset w19, -8
-; AARCH64-NEXT:    .cfi_offset w29, -16
+; AARCH64-NEXT:    .cfi_offset w20, -16
+; AARCH64-NEXT:    .cfi_offset w21, -24
+; AARCH64-NEXT:    .cfi_offset w22, -32
+; AARCH64-NEXT:    .cfi_offset w23, -40
+; AARCH64-NEXT:    .cfi_offset w24, -48
+; AARCH64-NEXT:    .cfi_offset w25, -64
 ; AARCH64-NEXT:    mov x9, #53905 // =0xd291
-; AARCH64-NEXT:    mov w8, w5
-; AARCH64-NEXT:    and x10, x3, #0x7fffffffff
+; AARCH64-NEXT:    mov x8, #549755813887 // =0x7fffffffff
+; AARCH64-NEXT:    mov w12, #231 // =0xe7
 ; AARCH64-NEXT:    movk x9, #1134, lsl #16
-; AARCH64-NEXT:    stp x2, x10, [sp, #208]
-; AARCH64-NEXT:    mov w10, #231 // =0xe7
+; AARCH64-NEXT:    stp x8, x25, [sp, #184] // 8-byte Folded Spill
+; AARCH64-NEXT:    mov x8, #-4294967296 // =0xffffffff00000000
 ; AARCH64-NEXT:    movk x9, #46244, lsl #32
-; AARCH64-NEXT:    extr x11, x3, x2, #63
-; AARCH64-NEXT:    extr x13, x1, x0, #63
+; AARCH64-NEXT:    str x8, [sp, #160]
+; AARCH64-NEXT:    mov w8, w5
 ; AARCH64-NEXT:    movk x9, #283, lsl #48
-; AARCH64-NEXT:    movi v0.2d, #0000000000000000
-; AARCH64-NEXT:    add x12, sp, #128
+; AARCH64-NEXT:    mov x10, #-1 // =0xffffffffffffffff
+; AARCH64-NEXT:    mov x11, #274877906943 // =0x3fffffffff
 ; AARCH64-NEXT:    umulh x9, x8, x9
-; AARCH64-NEXT:    add x16, sp, #192
+; AARCH64-NEXT:    stp x10, x11, [sp, #80]
+; AARCH64-NEXT:    mov x11, #-2147483648 // =0xffffffff80000000
+; AARCH64-NEXT:    stp x10, x10, [sp, #168]
+; AARCH64-NEXT:    mov w13, #230 // =0xe6
+; AARCH64-NEXT:    movi v0.2d, #0000000000000000
+; AARCH64-NEXT:    stp x11, x10, [sp, #64]
+; AARCH64-NEXT:    mov w11, w4
+; AARCH64-NEXT:    lsr x19, x8, #3
+; AARCH64-NEXT:    stp xzr, xzr, [sp, #112]
+; AARCH64-NEXT:    mov x21, sp
+; AARCH64-NEXT:    stp xzr, xzr, [sp, #96]
+; AARCH64-NEXT:    add x21, x21, #32
+; AARCH64-NEXT:    and x19, x19, #0x18
+; AARCH64-NEXT:    umsubl x9, w9, w12, x8
+; AARCH64-NEXT:    add x12, sp, #128
+; AARCH64-NEXT:    stur q0, [sp, #40]
 ; AARCH64-NEXT:    add x12, x12, #32
-; AARCH64-NEXT:    stp x0, x1, [sp, #192]
 ; AARCH64-NEXT:    stp q0, q0, [sp]
+; AARCH64-NEXT:    sub x19, x21, x19
 ; AARCH64-NEXT:    stp q0, q0, [sp, #128]
-; AARCH64-NEXT:    umsubl x8, w9, w10, x8
-; AARCH64-NEXT:    extr x10, x2, x1, #63
-; AARCH64-NEXT:    mov w9, #230 // =0xe6
-; AARCH64-NEXT:    stp q0, q0, [sp, #224]
-; AARCH64-NEXT:    stp x10, x11, [sp, #176]
-; AARCH64-NEXT:    lsl x11, x0, #1
-; AARCH64-NEXT:    sub x9, x9, x8
-; AARCH64-NEXT:    lsr x10, x8, #3
-; AARCH64-NEXT:    stp x11, x13, [sp, #160]
-; AARCH64-NEXT:    lsr x13, x9, #3
-; AARCH64-NEXT:    mvn w11, w9
-; AARCH64-NEXT:    and x15, x10, #0x18
-; AARCH64-NEXT:    and x10, x8, #0x3f
-; AARCH64-NEXT:    and x14, x13, #0x18
-; AARCH64-NEXT:    add x16, x16, x15
-; AARCH64-NEXT:    eor x10, x10, #0x3f
-; AARCH64-NEXT:    sub x17, x12, x14
-; AARCH64-NEXT:    ldp x12, x0, [x16, #16]
-; AARCH64-NEXT:    ldp x18, x1, [x17, #8]
-; AARCH64-NEXT:    lsl x13, x0, #1
-; AARCH64-NEXT:    lsr x3, x12, x8
-; AARCH64-NEXT:    lsl x6, x12, #1
-; AARCH64-NEXT:    lsr x2, x18, #1
-; AARCH64-NEXT:    lsl x5, x1, x9
-; AARCH64-NEXT:    lsl x18, x18, x9
-; AARCH64-NEXT:    lsl x13, x13, x10
-; AARCH64-NEXT:    lsr x1, x1, #1
-; AARCH64-NEXT:    lsr x0, x0, x8
-; AARCH64-NEXT:    lsr x2, x2, x11
-; AARCH64-NEXT:    orr x13, x13, x3
-; AARCH64-NEXT:    orr x2, x5, x2
-; AARCH64-NEXT:    and x5, x9, #0x3f
-; AARCH64-NEXT:    orr x2, x13, x2
-; AARCH64-NEXT:    mvn w13, w8
-; AARCH64-NEXT:    eor x12, x5, #0x3f
-; AARCH64-NEXT:    str x2, [sp, #48]
-; AARCH64-NEXT:    lsl x5, x6, x13
-; AARCH64-NEXT:    lsr x1, x1, x12
-; AARCH64-NEXT:    ldr x3, [x17]
-; AARCH64-NEXT:    ldr x7, [x16, #8]
-; AARCH64-NEXT:    lsr x19, x3, #1
-; AARCH64-NEXT:    lsr x6, x7, x8
-; AARCH64-NEXT:    lsr x19, x19, x12
-; AARCH64-NEXT:    orr x5, x6, x5
-; AARCH64-NEXT:    orr x18, x18, x19
-; AARCH64-NEXT:    ldp x29, x19, [sp, #256] // 16-byte Folded Reload
-; AARCH64-NEXT:    orr x18, x5, x18
-; AARCH64-NEXT:    str x18, [sp, #40]
-; AARCH64-NEXT:    ldr x17, [x17, #24]
-; AARCH64-NEXT:    lsl x17, x17, x9
-; AARCH64-NEXT:    orr x17, x0, x17
-; AARCH64-NEXT:    orr x17, x17, x1
-; AARCH64-NEXT:    lsl x1, x3, x9
-; AARCH64-NEXT:    and x0, x17, #0x7fffffffff
-; AARCH64-NEXT:    str x0, [sp, #56]
-; AARCH64-NEXT:    lsl x0, x7, #1
-; AARCH64-NEXT:    ldr x16, [x16]
-; AARCH64-NEXT:    stp q0, q0, [sp, #96]
-; AARCH64-NEXT:    lsl x0, x0, x10
-; AARCH64-NEXT:    lsr x16, x16, x8
-; AARCH64-NEXT:    orr x16, x16, x1
-; AARCH64-NEXT:    extr x1, x2, x18, #1
-; AARCH64-NEXT:    orr x16, x0, x16
-; AARCH64-NEXT:    mov w0, w4
-; AARCH64-NEXT:    and x16, x16, #0xffffffff00000000
-; AARCH64-NEXT:    orr x16, x16, x0
-; AARCH64-NEXT:    ubfx x0, x17, #1, #38
-; AARCH64-NEXT:    extr x17, x17, x2, #1
-; AARCH64-NEXT:    str x16, [sp, #32]
-; AARCH64-NEXT:    extr x16, x18, x16, #1
-; AARCH64-NEXT:    add x18, sp, #64
-; AARCH64-NEXT:    stp x17, x0, [sp, #80]
-; AARCH64-NEXT:    mov x0, sp
-; AARCH64-NEXT:    add x14, x18, x14
-; AARCH64-NEXT:    add x17, x0, #32
-; AARCH64-NEXT:    stp x16, x1, [sp, #64]
-; AARCH64-NEXT:    sub x15, x17, x15
-; AARCH64-NEXT:    ldp x18, x0, [x14, #8]
-; AARCH64-NEXT:    ldp x17, x16, [x15]
-; AARCH64-NEXT:    ldr x1, [x14, #24]
-; AARCH64-NEXT:    ldp x2, x15, [x15, #16]
-; AARCH64-NEXT:    ldr x14, [x14]
-; AARCH64-NEXT:    lsr x5, x18, x9
-; AARCH64-NEXT:    lsl x6, x0, #1
-; AARCH64-NEXT:    lsr x0, x0, x9
-; AARCH64-NEXT:    lsl x3, x16, x8
-; AARCH64-NEXT:    lsr x4, x17, #1
-; AARCH64-NEXT:    lsr x16, x16, #1
-; AARCH64-NEXT:    lsr x14, x14, x9
-; AARCH64-NEXT:    lsr x9, x1, x9
-; AARCH64-NEXT:    lsl x1, x1, #1
-; AARCH64-NEXT:    lsl x7, x2, x8
-; AARCH64-NEXT:    lsr x2, x2, #1
-; AARCH64-NEXT:    lsl x18, x18, #1
-; AARCH64-NEXT:    lsl x15, x15, x8
-; AARCH64-NEXT:    lsl x8, x17, x8
-; AARCH64-NEXT:    lsr x17, x4, x10
-; AARCH64-NEXT:    lsl x11, x6, x11
-; AARCH64-NEXT:    lsr x13, x16, x13
-; AARCH64-NEXT:    lsl x16, x1, x12
-; AARCH64-NEXT:    lsr x10, x2, x10
-; AARCH64-NEXT:    lsl x12, x18, x12
-; AARCH64-NEXT:    orr x8, x8, x14
-; AARCH64-NEXT:    orr x14, x3, x17
-; AARCH64-NEXT:    orr x11, x5, x11
-; AARCH64-NEXT:    orr x13, x7, x13
-; AARCH64-NEXT:    orr x16, x16, x0
-; AARCH64-NEXT:    orr x9, x15, x9
-; AARCH64-NEXT:    orr x0, x8, x12
-; AARCH64-NEXT:    orr x1, x14, x11
-; AARCH64-NEXT:    orr x2, x13, x16
-; AARCH64-NEXT:    orr x3, x9, x10
-; AARCH64-NEXT:    add sp, sp, #272
+; AARCH64-NEXT:    lsr x10, x9, #3
+; AARCH64-NEXT:    str xzr, [sp, #56]
+; AARCH64-NEXT:    and x16, x9, #0x3f
+; AARCH64-NEXT:    str x11, [sp, #32]
+; AARCH64-NEXT:    and x10, x10, #0x18
+; AARCH64-NEXT:    sub x14, x12, x10
+; AARCH64-NEXT:    sub x10, x13, x9
+; AARCH64-NEXT:    add x13, sp, #64
+; AARCH64-NEXT:    lsr x12, x10, #3
+; AARCH64-NEXT:    ldp x11, x15, [x14]
+; AARCH64-NEXT:    mvn w7, w10
+; AARCH64-NEXT:    ldp x21, x14, [x14, #16]
+; AARCH64-NEXT:    and x12, x12, #0x18
+; AARCH64-NEXT:    and x23, x10, #0x3f
+; AARCH64-NEXT:    add x4, x13, x12
+; AARCH64-NEXT:    eor x12, x16, #0x3f
+; AARCH64-NEXT:    lsr x18, x11, #1
+; AARCH64-NEXT:    ldp x13, x16, [x4, #8]
+; AARCH64-NEXT:    lsl x17, x15, x9
+; AARCH64-NEXT:    lsr x6, x18, x12
+; AARCH64-NEXT:    ldr x18, [x4, #24]
+; AARCH64-NEXT:    lsr x15, x15, #1
+; AARCH64-NEXT:    lsl x25, x21, x9
+; AARCH64-NEXT:    ldr x4, [x4]
+; AARCH64-NEXT:    lsl x14, x14, x9
+; AARCH64-NEXT:    lsl x20, x16, #1
+; AARCH64-NEXT:    lsr x22, x13, x10
+; AARCH64-NEXT:    orr x17, x17, x6
+; AARCH64-NEXT:    lsl x24, x18, #1
+; AARCH64-NEXT:    lsr x16, x16, x10
+; AARCH64-NEXT:    lsl x13, x13, #1
+; AARCH64-NEXT:    lsl x7, x20, x7
+; AARCH64-NEXT:    lsr x18, x18, x10
+; AARCH64-NEXT:    lsr x10, x4, x10
+; AARCH64-NEXT:    orr x6, x22, x7
+; AARCH64-NEXT:    mvn w22, w9
+; AARCH64-NEXT:    lsl x9, x11, x9
+; AARCH64-NEXT:    lsr x15, x15, x22
+; AARCH64-NEXT:    eor x22, x23, #0x3f
+; AARCH64-NEXT:    orr x17, x17, x6
+; AARCH64-NEXT:    ldp x20, x7, [x19]
+; AARCH64-NEXT:    lsl x24, x24, x22
+; AARCH64-NEXT:    orr x15, x25, x15
+; AARCH64-NEXT:    and x23, x8, #0x3f
+; AARCH64-NEXT:    and x17, x1, x17
+; AARCH64-NEXT:    orr x16, x24, x16
+; AARCH64-NEXT:    eor x1, x23, #0x3f
+; AARCH64-NEXT:    lsl x13, x13, x22
+; AARCH64-NEXT:    orr x15, x15, x16
+; AARCH64-NEXT:    lsr x16, x7, #1
+; AARCH64-NEXT:    lsl x23, x7, x8
+; AARCH64-NEXT:    and x15, x2, x15
+; AARCH64-NEXT:    mvn w2, w5
+; AARCH64-NEXT:    lsr x6, x20, #1
+; AARCH64-NEXT:    lsr x16, x16, x2
+; AARCH64-NEXT:    ldp x7, x2, [x19, #16]
+; AARCH64-NEXT:    lsr x19, x21, #1
+; AARCH64-NEXT:    lsr x6, x6, x1
+; AARCH64-NEXT:    orr x14, x14, x18
+; AARCH64-NEXT:    orr x9, x9, x10
+; AARCH64-NEXT:    ldp x22, x21, [sp, #224] // 16-byte Folded Reload
+; AARCH64-NEXT:    lsr x11, x19, x12
+; AARCH64-NEXT:    lsr x12, x7, #1
+; AARCH64-NEXT:    lsl x5, x7, x8
+; AARCH64-NEXT:    lsl x18, x2, x8
+; AARCH64-NEXT:    orr x6, x23, x6
+; AARCH64-NEXT:    orr x9, x9, x13
+; AARCH64-NEXT:    lsr x10, x12, x1
+; AARCH64-NEXT:    lsl x8, x20, x8
+; AARCH64-NEXT:    orr x11, x14, x11
+; AARCH64-NEXT:    ldp x20, x19, [sp, #240] // 16-byte Folded Reload
+; AARCH64-NEXT:    orr x12, x5, x16
+; AARCH64-NEXT:    ldp x24, x23, [sp, #208] // 16-byte Folded Reload
+; AARCH64-NEXT:    and x9, x0, x9
+; AARCH64-NEXT:    and x11, x3, x11
+; AARCH64-NEXT:    orr x10, x18, x10
+; AARCH64-NEXT:    ldr x25, [sp, #192] // 8-byte Reload
+; AARCH64-NEXT:    orr x0, x9, x8
+; AARCH64-NEXT:    orr x1, x17, x6
+; AARCH64-NEXT:    orr x2, x15, x12
+; AARCH64-NEXT:    orr x3, x11, x10
+; AARCH64-NEXT:    add sp, sp, #256
 ; AARCH64-NEXT:    ret
   %result = bitinsert b231 %base, i32 %val, i32 %off
   ret b231 %result
@@ -453,17 +436,13 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b8_var:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    neg w8, w2
-; AARCH64-NEXT:    and w9, w0, #0xff
-; AARCH64-NEXT:    and x10, x2, #0x7
-; AARCH64-NEXT:    and x8, x8, #0x7
-; AARCH64-NEXT:    lsr w9, w9, w10
-; AARCH64-NEXT:    lsl w8, w0, w8
-; AARCH64-NEXT:    orr w8, w9, w8
-; AARCH64-NEXT:    bfxil w8, w1, #0, #4
-; AARCH64-NEXT:    bfi w8, w8, #8, #24
-; AARCH64-NEXT:    lsl w8, w8, w10
-; AARCH64-NEXT:    lsr w0, w8, #8
+; AARCH64-NEXT:    and x8, x2, #0x7
+; AARCH64-NEXT:    mov w9, #-3856 // =0xfffff0f0
+; AARCH64-NEXT:    lsl w8, w9, w8
+; AARCH64-NEXT:    and w9, w1, #0xf
+; AARCH64-NEXT:    lsl w9, w9, w2
+; AARCH64-NEXT:    and w8, w0, w8, lsr #8
+; AARCH64-NEXT:    orr w0, w8, w9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b8 %base, i4 %val, i32 %off
   ret b8 %result
@@ -472,11 +451,7 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 define b8 @test_bitinsert_b8_const(b8 %base, i4 %val) {
 ; AARCH64-LABEL: test_bitinsert_b8_const:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0x80
-; AARCH64-NEXT:    lsr w8, w8, #3
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #5
-; AARCH64-NEXT:    bfxil w8, w1, #0, #4
-; AARCH64-NEXT:    bfi w0, w8, #3, #29
+; AARCH64-NEXT:    bfi w0, w1, #3, #4
 ; AARCH64-NEXT:    ret
   %result = bitinsert b8 %base, i4 %val, i32 3
   ret b8 %result
@@ -490,22 +465,20 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; AARCH64-NEXT:    and x8, x2, #0x1fffff
 ; AARCH64-NEXT:    mov w10, #21 // =0x15
 ; AARCH64-NEXT:    movk x9, #12483, lsl #16
-; AARCH64-NEXT:    and w11, w0, #0x1fffff
+; AARCH64-NEXT:    mov w11, #1048544 // =0xfffe0
 ; AARCH64-NEXT:    movk x9, #49932, lsl #32
 ; AARCH64-NEXT:    movk x9, #3120, lsl #48
 ; AARCH64-NEXT:    umulh x9, x8, x9
 ; AARCH64-NEXT:    umsubl x8, w9, w10, x8
 ; AARCH64-NEXT:    mov w9, #20 // =0x14
-; AARCH64-NEXT:    lsl w10, w0, #1
+; AARCH64-NEXT:    mov w10, #2097088 // =0x1fffc0
 ; AARCH64-NEXT:    sub x9, x9, x8
-; AARCH64-NEXT:    lsr w11, w11, w8
-; AARCH64-NEXT:    lsl w10, w10, w9
-; AARCH64-NEXT:    orr w10, w11, w10
-; AARCH64-NEXT:    and w10, w10, #0x1fffc0
-; AARCH64-NEXT:    bfxil w10, w1, #0, #6
-; AARCH64-NEXT:    lsr w11, w10, #1
 ; AARCH64-NEXT:    lsl w8, w10, w8
+; AARCH64-NEXT:    and w10, w1, #0x3f
 ; AARCH64-NEXT:    lsr w9, w11, w9
+; AARCH64-NEXT:    orr w8, w8, w9
+; AARCH64-NEXT:    lsl w9, w10, w2
+; AARCH64-NEXT:    and w8, w0, w8
 ; AARCH64-NEXT:    orr w0, w8, w9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b21 %base, i6 %val, i32 %off
@@ -515,11 +488,9 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 define b21 @test_bitinsert_b21_const(b21 %base, i6 %val) {
 ; AARCH64-LABEL: test_bitinsert_b21_const:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and w8, w0, #0x100000
-; AARCH64-NEXT:    lsr w8, w8, #14
-; AARCH64-NEXT:    orr w8, w8, w0, lsl #7
-; AARCH64-NEXT:    bfxil w8, w1, #0, #6
-; AARCH64-NEXT:    bfi w0, w8, #14, #18
+; AARCH64-NEXT:    and w8, w0, #0x1fffff
+; AARCH64-NEXT:    and w0, w8, #0xfff03fff
+; AARCH64-NEXT:    bfi w0, w1, #14, #6
 ; AARCH64-NEXT:    ret
   %result = bitinsert b21 %base, i6 %val, i32 14
   ret b21 %result
@@ -528,62 +499,52 @@ define b21 @test_bitinsert_b21_const(b21 %base, i6 %val) {
 define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b123_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    mov x8, #5329 // =0x14d1
-; AARCH64-NEXT:    mov w9, w3
+; AARCH64-NEXT:    mov x9, #5329 // =0x14d1
+; AARCH64-NEXT:    mov w8, w3
 ; AARCH64-NEXT:    mov w10, #123 // =0x7b
-; AARCH64-NEXT:    movk x8, #19714, lsl #16
-; AARCH64-NEXT:    extr x12, x1, x0, #63
-; AARCH64-NEXT:    ubfx x13, x0, #0, #63
-; AARCH64-NEXT:    movk x8, #53281, lsl #32
-; AARCH64-NEXT:    lsl x11, x0, #1
-; AARCH64-NEXT:    movk x8, #532, lsl #48
-; AARCH64-NEXT:    umulh x8, x9, x8
-; AARCH64-NEXT:    umsubl x8, w8, w10, x9
-; AARCH64-NEXT:    mov w9, #122 // =0x7a
-; AARCH64-NEXT:    and x10, x1, #0x7ffffffffffffff
-; AARCH64-NEXT:    lsl x14, x10, #1
-; AARCH64-NEXT:    sub x9, x9, x8
-; AARCH64-NEXT:    mvn w15, w8
-; AARCH64-NEXT:    lsr x17, x0, x8
-; AARCH64-NEXT:    mvn w16, w9
-; AARCH64-NEXT:    lsl x12, x12, x9
-; AARCH64-NEXT:    lsl x11, x11, x9
-; AARCH64-NEXT:    lsr x13, x13, x16
-; AARCH64-NEXT:    lsl x14, x14, x15
+; AARCH64-NEXT:    movk x9, #19714, lsl #16
+; AARCH64-NEXT:    mov x11, #9223372034707292160 // =0x7fffffff80000000
+; AARCH64-NEXT:    mov x13, #576460752303423487 // =0x7ffffffffffffff
+; AARCH64-NEXT:    movk x9, #53281, lsl #32
+; AARCH64-NEXT:    mov w14, #122 // =0x7a
+; AARCH64-NEXT:    mov w15, w2
+; AARCH64-NEXT:    movk x9, #532, lsl #48
+; AARCH64-NEXT:    mvn w16, w3
+; AARCH64-NEXT:    umulh x9, x8, x9
+; AARCH64-NEXT:    umsubl x9, w9, w10, x8
+; AARCH64-NEXT:    mov x10, #-4294967296 // =0xffffffff00000000
+; AARCH64-NEXT:    mvn w12, w9
+; AARCH64-NEXT:    lsl x13, x13, x9
+; AARCH64-NEXT:    sub x14, x14, x9
+; AARCH64-NEXT:    lsr x11, x11, x12
+; AARCH64-NEXT:    mov x12, #576460752303423486 // =0x7fffffffffffffe
+; AARCH64-NEXT:    lsl x10, x10, x9
 ; AARCH64-NEXT:    tst x9, #0x40
-; AARCH64-NEXT:    lsr x10, x10, x8
-; AARCH64-NEXT:    orr x12, x12, x13
-; AARCH64-NEXT:    csel x13, xzr, x11, ne
-; AARCH64-NEXT:    orr x14, x14, x17
-; AARCH64-NEXT:    csel x11, x11, x12, ne
-; AARCH64-NEXT:    tst x8, #0x40
-; AARCH64-NEXT:    csel x12, x10, x14, ne
+; AARCH64-NEXT:    mvn w9, w14
+; AARCH64-NEXT:    orr x11, x13, x11
+; AARCH64-NEXT:    mov x13, #-2147483648 // =0xffffffff80000000
+; AARCH64-NEXT:    lsl x9, x12, x9
+; AARCH64-NEXT:    mov x12, #288230376151711743 // =0x3ffffffffffffff
+; AARCH64-NEXT:    lsr x13, x13, x14
+; AARCH64-NEXT:    csel x11, x10, x11, ne
+; AARCH64-NEXT:    lsr x12, x12, x14
 ; AARCH64-NEXT:    csel x10, xzr, x10, ne
-; AARCH64-NEXT:    orr x12, x12, x13
-; AARCH64-NEXT:    mov w13, w2
-; AARCH64-NEXT:    orr x10, x10, x11
-; AARCH64-NEXT:    and x12, x12, #0xffffffff00000000
-; AARCH64-NEXT:    orr x11, x12, x13
-; AARCH64-NEXT:    ubfx x13, x10, #1, #58
-; AARCH64-NEXT:    and x12, x10, #0x7ffffffffffffff
-; AARCH64-NEXT:    lsr x14, x11, #1
-; AARCH64-NEXT:    extr x10, x10, x11, #1
-; AARCH64-NEXT:    lsl x12, x12, x8
-; AARCH64-NEXT:    lsl x17, x13, #1
-; AARCH64-NEXT:    lsl x8, x11, x8
-; AARCH64-NEXT:    lsr x13, x13, x9
-; AARCH64-NEXT:    lsr x14, x14, x15
-; AARCH64-NEXT:    lsr x10, x10, x9
-; AARCH64-NEXT:    lsl x11, x17, x16
-; AARCH64-NEXT:    orr x12, x12, x14
-; AARCH64-NEXT:    csel x12, x8, x12, ne
-; AARCH64-NEXT:    csel x8, xzr, x8, ne
-; AARCH64-NEXT:    tst x9, #0x40
-; AARCH64-NEXT:    orr x9, x11, x10
-; AARCH64-NEXT:    csel x10, xzr, x13, ne
-; AARCH64-NEXT:    csel x9, x13, x9, ne
-; AARCH64-NEXT:    orr x1, x12, x10
-; AARCH64-NEXT:    orr x0, x8, x9
+; AARCH64-NEXT:    tst x14, #0x40
+; AARCH64-NEXT:    lsr x14, x15, #1
+; AARCH64-NEXT:    orr x9, x9, x13
+; AARCH64-NEXT:    lsl x15, x15, x8
+; AARCH64-NEXT:    csel x13, xzr, x12, ne
+; AARCH64-NEXT:    csel x9, x12, x9, ne
+; AARCH64-NEXT:    tst x8, #0x40
+; AARCH64-NEXT:    lsr x14, x14, x16
+; AARCH64-NEXT:    orr x11, x11, x13
+; AARCH64-NEXT:    orr x8, x10, x9
+; AARCH64-NEXT:    and x9, x1, x11
+; AARCH64-NEXT:    and x8, x0, x8
+; AARCH64-NEXT:    csel x11, xzr, x15, ne
+; AARCH64-NEXT:    csel x10, x15, x14, ne
+; AARCH64-NEXT:    orr x0, x8, x11
+; AARCH64-NEXT:    orr x1, x9, x10
 ; AARCH64-NEXT:    ret
   %result = bitinsert b123 %base, i32 %val, i32 %off
   ret b123 %result
@@ -592,17 +553,10 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 define b123 @test_bitinsert_b123_crossword(b123 %base, i32 %val) {
 ; AARCH64-LABEL: test_bitinsert_b123_crossword:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsl x8, x0, #63
-; AARCH64-NEXT:    ubfx x9, x0, #1, #62
-; AARCH64-NEXT:    lsr x10, x1, #28
-; AARCH64-NEXT:    ubfx x12, x0, #2, #58
-; AARCH64-NEXT:    extr x11, x9, x8, #1
-; AARCH64-NEXT:    bfi x8, x10, #32, #31
-; AARCH64-NEXT:    extr x10, x12, x11, #62
-; AARCH64-NEXT:    mov w11, w2
-; AARCH64-NEXT:    orr x8, x8, x11
-; AARCH64-NEXT:    orr x0, x10, x11, lsl #60
-; AARCH64-NEXT:    extr x1, x9, x8, #4
+; AARCH64-NEXT:    mov w8, w2
+; AARCH64-NEXT:    and x9, x1, #0x7fffffff0000000
+; AARCH64-NEXT:    bfi x0, x8, #60, #4
+; AARCH64-NEXT:    orr x1, x9, x8, lsr #4
 ; AARCH64-NEXT:    ret
   %result = bitinsert b123 %base, i32 %val, i32 60
   ret b123 %result
@@ -633,10 +587,13 @@ define b8 @test_bitinsert_val_b8_full(b8 %base, b8 %val) {
 define b32 @test_bitinsert_val_b8_into_b32_var(b32 %base, b8 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_val_b8_into_b32_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, w2
-; AARCH64-NEXT:    neg w9, w2
-; AARCH64-NEXT:    bfxil w8, w1, #0, #8
-; AARCH64-NEXT:    ror w0, w8, w9
+; AARCH64-NEXT:    neg w8, w2
+; AARCH64-NEXT:    mov w9, #-256 // =0xffffff00
+; AARCH64-NEXT:    and w10, w1, #0xff
+; AARCH64-NEXT:    ror w8, w9, w8
+; AARCH64-NEXT:    lsl w9, w10, w2
+; AARCH64-NEXT:    and w8, w0, w8
+; AARCH64-NEXT:    orr w0, w8, w9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, b8 %val, i32 %off
   ret b32 %result
@@ -645,9 +602,7 @@ define b32 @test_bitinsert_val_b8_into_b32_var(b32 %base, b8 %val, i32 %off) {
 define b32 @test_bitinsert_val_b8_into_b32_const_mid(b32 %base, b8 %val) {
 ; AARCH64-LABEL: test_bitinsert_val_b8_into_b32_const_mid:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, #12
-; AARCH64-NEXT:    bfxil w8, w1, #0, #8
-; AARCH64-NEXT:    ror w0, w8, #20
+; AARCH64-NEXT:    bfi w0, w1, #12, #8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, b8 %val, i32 12
   ret b32 %result
@@ -657,8 +612,7 @@ define b64 @test_bitinsert_val_b8_into_b64_const_top(b64 %base, b8 %val) {
 ; AARCH64-LABEL: test_bitinsert_val_b8_into_b64_const_top:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    bfi x1, x0, #8, #56
-; AARCH64-NEXT:    ror x0, x1, #8
+; AARCH64-NEXT:    bfi x0, x1, #56, #8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, b8 %val, i32 56
   ret b64 %result
@@ -668,17 +622,13 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_val_b1_into_b8:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    neg w8, w2
-; AARCH64-NEXT:    and w9, w0, #0xff
-; AARCH64-NEXT:    and x10, x2, #0x7
-; AARCH64-NEXT:    and x8, x8, #0x7
-; AARCH64-NEXT:    lsr w9, w9, w10
-; AARCH64-NEXT:    lsl w8, w0, w8
-; AARCH64-NEXT:    orr w8, w9, w8
-; AARCH64-NEXT:    bfxil w8, w1, #0, #1
-; AARCH64-NEXT:    bfi w8, w8, #8, #24
-; AARCH64-NEXT:    lsl w8, w8, w10
-; AARCH64-NEXT:    lsr w0, w8, #8
+; AARCH64-NEXT:    and x8, x2, #0x7
+; AARCH64-NEXT:    mov w9, #-258 // =0xfffffefe
+; AARCH64-NEXT:    lsl w8, w9, w8
+; AARCH64-NEXT:    and w9, w1, #0x1
+; AARCH64-NEXT:    lsl w9, w9, w2
+; AARCH64-NEXT:    and w8, w0, w8, lsr #8
+; AARCH64-NEXT:    orr w0, w8, w9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b8 %base, b1 %val, i32 %off
   ret b8 %result
@@ -687,8 +637,7 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 define b32 @test_bitinsert_val_b1_into_b32_const_top(b32 %base, b1 %val) {
 ; AARCH64-LABEL: test_bitinsert_val_b1_into_b32_const_top:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    bfi w1, w0, #1, #31
-; AARCH64-NEXT:    ror w0, w1, #1
+; AARCH64-NEXT:    bfi w0, w1, #31, #1
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, b1 %val, i32 31
   ret b32 %result
@@ -706,10 +655,13 @@ define b21 @test_bitinsert_val_b21_full(b21 %base, b21 %val) {
 define b32 @test_bitinsert_val_b21_into_b32_var(b32 %base, b21 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_val_b21_into_b32_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    ror w8, w0, w2
-; AARCH64-NEXT:    neg w9, w2
-; AARCH64-NEXT:    bfxil w8, w1, #0, #21
-; AARCH64-NEXT:    ror w0, w8, w9
+; AARCH64-NEXT:    neg w8, w2
+; AARCH64-NEXT:    mov w9, #-2097152 // =0xffe00000
+; AARCH64-NEXT:    and w10, w1, #0x1fffff
+; AARCH64-NEXT:    ror w8, w9, w8
+; AARCH64-NEXT:    lsl w9, w10, w2
+; AARCH64-NEXT:    and w8, w0, w8
+; AARCH64-NEXT:    orr w0, w8, w9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, b21 %val, i32 %off
   ret b32 %result
@@ -718,8 +670,7 @@ define b32 @test_bitinsert_val_b21_into_b32_var(b32 %base, b21 %val, i32 %off) {
 define b32 @test_bitinsert_val_b21_into_b32_const_top(b32 %base, b21 %val) {
 ; AARCH64-LABEL: test_bitinsert_val_b21_into_b32_const_top:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    bfi w1, w0, #21, #11
-; AARCH64-NEXT:    ror w0, w1, #21
+; AARCH64-NEXT:    bfi w0, w1, #11, #21
 ; AARCH64-NEXT:    ret
   %result = bitinsert b32 %base, b21 %val, i32 11
   ret b32 %result
@@ -729,11 +680,14 @@ define b64 @test_bitinsert_val_b21_into_b64_var(b64 %base, b21 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_val_b21_into_b64_var:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    ror x8, x0, x2
+; AARCH64-NEXT:    neg w8, w2
+; AARCH64-NEXT:    mov x9, #-2097152 // =0xffffffffffe00000
 ; AARCH64-NEXT:    // kill: def $w1 killed $w1 def $x1
-; AARCH64-NEXT:    neg w9, w2
-; AARCH64-NEXT:    bfxil x8, x1, #0, #21
-; AARCH64-NEXT:    ror x0, x8, x9
+; AARCH64-NEXT:    and x10, x1, #0x1fffff
+; AARCH64-NEXT:    ror x8, x9, x8
+; AARCH64-NEXT:    lsl x9, x10, x2
+; AARCH64-NEXT:    and x8, x0, x8
+; AARCH64-NEXT:    orr x0, x8, x9
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, b21 %val, i32 %off
   ret b64 %result
@@ -743,25 +697,31 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 ; AARCH64-LABEL: test_bitinsert_val_b123_into_b128_var:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    mov w8, w4
-; AARCH64-NEXT:    mvn w11, w4
+; AARCH64-NEXT:    mov x9, #-576460752303423488 // =0xf800000000000000
+; AARCH64-NEXT:    lsr x11, x2, #1
 ; AARCH64-NEXT:    tst x8, #0x40
-; AARCH64-NEXT:    csel x9, x0, x1, eq
-; AARCH64-NEXT:    csel x10, x1, x0, eq
-; AARCH64-NEXT:    lsl x9, x9, #1
-; AARCH64-NEXT:    lsr x10, x10, x8
-; AARCH64-NEXT:    lsl x9, x9, x11
-; AARCH64-NEXT:    orr x9, x9, x10
-; AARCH64-NEXT:    bfxil x9, x3, #0, #59
-; AARCH64-NEXT:    csel x10, x9, x2, ne
-; AARCH64-NEXT:    csel x9, x2, x9, ne
-; AARCH64-NEXT:    lsr x12, x9, #1
-; AARCH64-NEXT:    lsr x13, x10, #1
+; AARCH64-NEXT:    mvn w13, w4
+; AARCH64-NEXT:    and x14, x3, #0x7ffffffffffffff
+; AARCH64-NEXT:    csel x10, xzr, x9, ne
+; AARCH64-NEXT:    csel x9, x9, xzr, ne
+; AARCH64-NEXT:    lsr x11, x11, x13
+; AARCH64-NEXT:    lsr x12, x10, #1
+; AARCH64-NEXT:    lsr x15, x9, #1
+; AARCH64-NEXT:    lsl x9, x9, x8
+; AARCH64-NEXT:    lsl x14, x14, x8
 ; AARCH64-NEXT:    lsl x10, x10, x8
-; AARCH64-NEXT:    lsl x8, x9, x8
-; AARCH64-NEXT:    lsr x12, x12, x11
-; AARCH64-NEXT:    lsr x9, x13, x11
-; AARCH64-NEXT:    orr x0, x10, x12
-; AARCH64-NEXT:    orr x1, x8, x9
+; AARCH64-NEXT:    lsl x8, x2, x8
+; AARCH64-NEXT:    lsr x12, x12, x13
+; AARCH64-NEXT:    lsr x13, x15, x13
+; AARCH64-NEXT:    orr x11, x14, x11
+; AARCH64-NEXT:    orr x9, x9, x12
+; AARCH64-NEXT:    orr x10, x10, x13
+; AARCH64-NEXT:    csel x12, xzr, x8, ne
+; AARCH64-NEXT:    and x9, x0, x9
+; AARCH64-NEXT:    and x10, x1, x10
+; AARCH64-NEXT:    csel x8, x8, x11, ne
+; AARCH64-NEXT:    orr x0, x9, x12
+; AARCH64-NEXT:    orr x1, x10, x8
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, b123 %val, i32 %off
   ret b128 %result
@@ -770,9 +730,8 @@ define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %o
 define b128 @test_bitinsert_val_b123_into_b128_const_top(b128 %base, b123 %val) {
 ; AARCH64-LABEL: test_bitinsert_val_b123_into_b128_const_top:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsl x8, x0, #59
+; AARCH64-NEXT:    bfi x0, x2, #5, #59
 ; AARCH64-NEXT:    extr x1, x3, x2, #59
-; AARCH64-NEXT:    extr x0, x2, x8, #59
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, b123 %val, i32 5
   ret b128 %result
@@ -781,131 +740,132 @@ define b128 @test_bitinsert_val_b123_into_b128_const_top(b128 %base, b123 %val) 
 define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_val_b123_into_b231_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    sub sp, sp, #272
-; AARCH64-NEXT:    str x29, [sp, #256] // 8-byte Spill
-; AARCH64-NEXT:    .cfi_def_cfa_offset 272
-; AARCH64-NEXT:    .cfi_offset w29, -16
+; AARCH64-NEXT:    sub sp, sp, #256
+; AARCH64-NEXT:    stp x24, x23, [sp, #208] // 16-byte Folded Spill
+; AARCH64-NEXT:    stp x22, x21, [sp, #224] // 16-byte Folded Spill
+; AARCH64-NEXT:    stp x20, x19, [sp, #240] // 16-byte Folded Spill
+; AARCH64-NEXT:    .cfi_def_cfa_offset 256
+; AARCH64-NEXT:    .cfi_offset w19, -8
+; AARCH64-NEXT:    .cfi_offset w20, -16
+; AARCH64-NEXT:    .cfi_offset w21, -24
+; AARCH64-NEXT:    .cfi_offset w22, -32
+; AARCH64-NEXT:    .cfi_offset w23, -40
+; AARCH64-NEXT:    .cfi_offset w24, -48
+; AARCH64-NEXT:    .cfi_offset w25, -64
 ; AARCH64-NEXT:    mov x9, #53905 // =0xd291
-; AARCH64-NEXT:    mov w8, w6
-; AARCH64-NEXT:    and x10, x3, #0x7fffffffff
+; AARCH64-NEXT:    mov x8, #549755813887 // =0x7fffffffff
+; AARCH64-NEXT:    mov x10, #-1 // =0xffffffffffffffff
 ; AARCH64-NEXT:    movk x9, #1134, lsl #16
-; AARCH64-NEXT:    stp x2, x10, [sp, #208]
-; AARCH64-NEXT:    mov w10, #231 // =0xe7
+; AARCH64-NEXT:    stp x8, x25, [sp, #184] // 8-byte Folded Spill
+; AARCH64-NEXT:    mov x8, #-576460752303423488 // =0xf800000000000000
 ; AARCH64-NEXT:    movk x9, #46244, lsl #32
-; AARCH64-NEXT:    extr x11, x3, x2, #63
-; AARCH64-NEXT:    extr x12, x2, x1, #63
+; AARCH64-NEXT:    stp x8, x10, [sp, #168]
+; AARCH64-NEXT:    mov w8, w6
 ; AARCH64-NEXT:    movk x9, #283, lsl #48
-; AARCH64-NEXT:    movi v0.2d, #0000000000000000
-; AARCH64-NEXT:    add x15, sp, #192
+; AARCH64-NEXT:    mov w12, #231 // =0xe7
+; AARCH64-NEXT:    mov x11, #274877906943 // =0x3fffffffff
 ; AARCH64-NEXT:    umulh x9, x8, x9
-; AARCH64-NEXT:    stp x12, x11, [sp, #176]
-; AARCH64-NEXT:    lsl x11, x0, #1
+; AARCH64-NEXT:    stp x10, x11, [sp, #80]
+; AARCH64-NEXT:    mov w13, #230 // =0xe6
+; AARCH64-NEXT:    movi v0.2d, #0000000000000000
+; AARCH64-NEXT:    mov x11, #-288230376151711744 // =0xfc00000000000000
+; AARCH64-NEXT:    add x18, sp, #64
+; AARCH64-NEXT:    stp xzr, x11, [sp, #64]
+; AARCH64-NEXT:    and x11, x5, #0x7ffffffffffffff
+; AARCH64-NEXT:    lsr x19, x8, #3
+; AARCH64-NEXT:    str xzr, [sp, #160]
+; AARCH64-NEXT:    mov x21, sp
+; AARCH64-NEXT:    stp xzr, xzr, [sp, #112]
+; AARCH64-NEXT:    add x21, x21, #32
+; AARCH64-NEXT:    and x19, x19, #0x18
+; AARCH64-NEXT:    umsubl x9, w9, w12, x8
 ; AARCH64-NEXT:    add x12, sp, #128
-; AARCH64-NEXT:    stp x0, x1, [sp, #192]
-; AARCH64-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
-; AARCH64-NEXT:    add x12, x12, #32
-; AARCH64-NEXT:    str x4, [sp, #32]
-; AARCH64-NEXT:    stp q0, q0, [sp]
 ; AARCH64-NEXT:    stp q0, q0, [sp, #128]
-; AARCH64-NEXT:    umsubl x8, w9, w10, x8
-; AARCH64-NEXT:    extr x10, x1, x0, #63
-; AARCH64-NEXT:    mov w9, #230 // =0xe6
-; AARCH64-NEXT:    stp q0, q0, [sp, #224]
-; AARCH64-NEXT:    stp x11, x10, [sp, #160]
-; AARCH64-NEXT:    sub x9, x9, x8
-; AARCH64-NEXT:    lsr x10, x8, #3
-; AARCH64-NEXT:    lsr x11, x9, #3
-; AARCH64-NEXT:    and x13, x10, #0x18
-; AARCH64-NEXT:    and x10, x8, #0x3f
-; AARCH64-NEXT:    and x14, x11, #0x18
-; AARCH64-NEXT:    add x15, x15, x13
-; AARCH64-NEXT:    eor x10, x10, #0x3f
-; AARCH64-NEXT:    sub x16, x12, x14
-; AARCH64-NEXT:    ldp x0, x18, [x15, #16]
-; AARCH64-NEXT:    ldp x17, x11, [x16, #8]
-; AARCH64-NEXT:    mvn w12, w9
-; AARCH64-NEXT:    lsl x1, x18, #1
-; AARCH64-NEXT:    lsr x3, x0, x8
-; AARCH64-NEXT:    lsr x18, x18, x8
-; AARCH64-NEXT:    lsr x2, x17, #1
-; AARCH64-NEXT:    lsl x6, x11, x9
-; AARCH64-NEXT:    lsl x0, x0, #1
-; AARCH64-NEXT:    lsl x1, x1, x10
-; AARCH64-NEXT:    lsl x17, x17, x9
-; AARCH64-NEXT:    lsr x2, x2, x12
-; AARCH64-NEXT:    orr x1, x1, x3
-; AARCH64-NEXT:    and x3, x9, #0x3f
-; AARCH64-NEXT:    orr x2, x6, x2
-; AARCH64-NEXT:    lsr x6, x11, #1
-; AARCH64-NEXT:    eor x11, x3, #0x3f
-; AARCH64-NEXT:    orr x1, x1, x2
-; AARCH64-NEXT:    str x1, [sp, #48]
-; AARCH64-NEXT:    lsr x3, x6, x11
-; AARCH64-NEXT:    ldr x2, [x16, #24]
-; AARCH64-NEXT:    lsl x2, x2, x9
-; AARCH64-NEXT:    orr x18, x18, x2
-; AARCH64-NEXT:    orr x18, x18, x3
-; AARCH64-NEXT:    and x2, x18, #0x7fffffffff
-; AARCH64-NEXT:    str x2, [sp, #56]
-; AARCH64-NEXT:    ldr x16, [x16]
-; AARCH64-NEXT:    ldr x2, [x15, #8]
-; AARCH64-NEXT:    mvn w15, w8
-; AARCH64-NEXT:    lsl x0, x0, x15
-; AARCH64-NEXT:    stp q0, q0, [sp, #96]
-; AARCH64-NEXT:    lsr x16, x16, #1
-; AARCH64-NEXT:    lsr x2, x2, x8
-; AARCH64-NEXT:    lsr x16, x16, x11
-; AARCH64-NEXT:    orr x0, x2, x0
-; AARCH64-NEXT:    orr x16, x17, x16
-; AARCH64-NEXT:    extr x17, x5, x4, #1
-; AARCH64-NEXT:    orr x16, x0, x16
-; AARCH64-NEXT:    ubfx x0, x18, #1, #38
-; AARCH64-NEXT:    extr x18, x18, x1, #1
-; AARCH64-NEXT:    bfxil x16, x5, #0, #59
-; AARCH64-NEXT:    stp x18, x0, [sp, #80]
-; AARCH64-NEXT:    add x0, sp, #64
-; AARCH64-NEXT:    str x16, [sp, #40]
-; AARCH64-NEXT:    extr x16, x1, x16, #1
-; AARCH64-NEXT:    add x14, x0, x14
-; AARCH64-NEXT:    stp x17, x16, [sp, #64]
-; AARCH64-NEXT:    mov x17, sp
-; AARCH64-NEXT:    add x17, x17, #32
-; AARCH64-NEXT:    ldp x16, x0, [x14, #16]
-; AARCH64-NEXT:    sub x13, x17, x13
-; AARCH64-NEXT:    ldp x14, x3, [x14]
-; AARCH64-NEXT:    ldp x18, x17, [x13]
-; AARCH64-NEXT:    ldp x1, x13, [x13, #16]
-; AARCH64-NEXT:    lsl x2, x16, #1
-; AARCH64-NEXT:    lsr x16, x16, x9
-; AARCH64-NEXT:    lsr x14, x14, x9
-; AARCH64-NEXT:    lsl x4, x17, x8
-; AARCH64-NEXT:    lsr x5, x18, #1
-; AARCH64-NEXT:    lsl x12, x2, x12
-; AARCH64-NEXT:    lsr x2, x3, x9
-; AARCH64-NEXT:    lsr x17, x17, #1
-; AARCH64-NEXT:    lsr x9, x0, x9
-; AARCH64-NEXT:    lsl x0, x0, #1
-; AARCH64-NEXT:    lsl x13, x13, x8
-; AARCH64-NEXT:    lsl x18, x18, x8
-; AARCH64-NEXT:    lsl x8, x1, x8
-; AARCH64-NEXT:    lsr x1, x1, #1
-; AARCH64-NEXT:    lsl x3, x3, #1
-; AARCH64-NEXT:    lsr x5, x5, x10
-; AARCH64-NEXT:    lsr x15, x17, x15
-; AARCH64-NEXT:    lsl x17, x0, x11
-; AARCH64-NEXT:    lsr x10, x1, x10
-; AARCH64-NEXT:    lsl x11, x3, x11
-; AARCH64-NEXT:    orr x14, x18, x14
-; AARCH64-NEXT:    orr x18, x4, x5
-; AARCH64-NEXT:    orr x12, x2, x12
-; AARCH64-NEXT:    orr x8, x8, x15
-; AARCH64-NEXT:    orr x15, x17, x16
-; AARCH64-NEXT:    orr x9, x13, x9
-; AARCH64-NEXT:    orr x0, x14, x11
-; AARCH64-NEXT:    orr x1, x18, x12
-; AARCH64-NEXT:    orr x2, x8, x15
-; AARCH64-NEXT:    orr x3, x9, x10
-; AARCH64-NEXT:    add sp, sp, #272
+; AARCH64-NEXT:    add x12, x12, #32
+; AARCH64-NEXT:    stp xzr, xzr, [sp, #96]
+; AARCH64-NEXT:    sub x19, x21, x19
+; AARCH64-NEXT:    str q0, [sp, #48]
+; AARCH64-NEXT:    lsr x10, x9, #3
+; AARCH64-NEXT:    stp x4, x11, [sp, #32]
+; AARCH64-NEXT:    stp q0, q0, [sp]
+; AARCH64-NEXT:    and x10, x10, #0x18
+; AARCH64-NEXT:    sub x14, x12, x10
+; AARCH64-NEXT:    sub x10, x13, x9
+; AARCH64-NEXT:    and x13, x9, #0x3f
+; AARCH64-NEXT:    lsr x12, x10, #3
+; AARCH64-NEXT:    ldp x11, x15, [x14]
+; AARCH64-NEXT:    mvn w7, w10
+; AARCH64-NEXT:    ldp x21, x14, [x14, #16]
+; AARCH64-NEXT:    and x16, x12, #0x18
+; AARCH64-NEXT:    eor x12, x13, #0x3f
+; AARCH64-NEXT:    and x23, x10, #0x3f
+; AARCH64-NEXT:    add x18, x18, x16
+; AARCH64-NEXT:    lsr x17, x11, #1
+; AARCH64-NEXT:    lsl x4, x15, x9
+; AARCH64-NEXT:    ldp x13, x16, [x18, #8]
+; AARCH64-NEXT:    lsr x15, x15, #1
+; AARCH64-NEXT:    lsr x5, x17, x12
+; AARCH64-NEXT:    ldr x17, [x18, #24]
+; AARCH64-NEXT:    lsl x25, x21, x9
+; AARCH64-NEXT:    ldr x18, [x18]
+; AARCH64-NEXT:    lsl x14, x14, x9
+; AARCH64-NEXT:    lsl x20, x16, #1
+; AARCH64-NEXT:    lsr x22, x13, x10
+; AARCH64-NEXT:    orr x4, x4, x5
+; AARCH64-NEXT:    lsl x24, x17, #1
+; AARCH64-NEXT:    lsr x16, x16, x10
+; AARCH64-NEXT:    lsl x13, x13, #1
+; AARCH64-NEXT:    lsl x7, x20, x7
+; AARCH64-NEXT:    lsr x17, x17, x10
+; AARCH64-NEXT:    lsr x10, x18, x10
+; AARCH64-NEXT:    orr x5, x22, x7
+; AARCH64-NEXT:    mvn w22, w9
+; AARCH64-NEXT:    lsl x9, x11, x9
+; AARCH64-NEXT:    lsr x15, x15, x22
+; AARCH64-NEXT:    eor x22, x23, #0x3f
+; AARCH64-NEXT:    orr x4, x4, x5
+; AARCH64-NEXT:    ldp x20, x7, [x19]
+; AARCH64-NEXT:    lsl x24, x24, x22
+; AARCH64-NEXT:    orr x15, x25, x15
+; AARCH64-NEXT:    and x23, x8, #0x3f
+; AARCH64-NEXT:    and x1, x1, x4
+; AARCH64-NEXT:    orr x16, x24, x16
+; AARCH64-NEXT:    eor x4, x23, #0x3f
+; AARCH64-NEXT:    lsl x13, x13, x22
+; AARCH64-NEXT:    orr x15, x15, x16
+; AARCH64-NEXT:    lsr x16, x7, #1
+; AARCH64-NEXT:    lsl x23, x7, x8
+; AARCH64-NEXT:    and x15, x2, x15
+; AARCH64-NEXT:    mvn w2, w6
+; AARCH64-NEXT:    lsr x5, x20, #1
+; AARCH64-NEXT:    lsr x16, x16, x2
+; AARCH64-NEXT:    ldp x7, x2, [x19, #16]
+; AARCH64-NEXT:    lsr x19, x21, #1
+; AARCH64-NEXT:    lsr x5, x5, x4
+; AARCH64-NEXT:    orr x14, x14, x17
+; AARCH64-NEXT:    orr x9, x9, x10
+; AARCH64-NEXT:    ldp x22, x21, [sp, #224] // 16-byte Folded Reload
+; AARCH64-NEXT:    lsr x11, x19, x12
+; AARCH64-NEXT:    lsr x12, x7, #1
+; AARCH64-NEXT:    lsl x6, x7, x8
+; AARCH64-NEXT:    lsl x17, x2, x8
+; AARCH64-NEXT:    orr x5, x23, x5
+; AARCH64-NEXT:    orr x9, x9, x13
+; AARCH64-NEXT:    lsr x10, x12, x4
+; AARCH64-NEXT:    lsl x8, x20, x8
+; AARCH64-NEXT:    orr x11, x14, x11
+; AARCH64-NEXT:    ldp x20, x19, [sp, #240] // 16-byte Folded Reload
+; AARCH64-NEXT:    orr x12, x6, x16
+; AARCH64-NEXT:    ldp x24, x23, [sp, #208] // 16-byte Folded Reload
+; AARCH64-NEXT:    and x9, x0, x9
+; AARCH64-NEXT:    and x11, x3, x11
+; AARCH64-NEXT:    orr x10, x17, x10
+; AARCH64-NEXT:    ldr x25, [sp, #192] // 8-byte Reload
+; AARCH64-NEXT:    orr x0, x9, x8
+; AARCH64-NEXT:    orr x1, x1, x5
+; AARCH64-NEXT:    orr x2, x15, x12
+; AARCH64-NEXT:    orr x3, x11, x10
+; AARCH64-NEXT:    add sp, sp, #256
 ; AARCH64-NEXT:    ret
   %result = bitinsert b231 %base, b123 %val, i32 %off
   ret b231 %result
@@ -914,20 +874,10 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 define b231 @test_bitinsert_val_b123_into_b231_const_wordcross(b231 %base, b123 %val) {
 ; AARCH64-LABEL: test_bitinsert_val_b123_into_b231_const_wordcross:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsl x9, x0, #43
-; AARCH64-NEXT:    ubfx x10, x0, #21, #42
-; AARCH64-NEXT:    ubfx x11, x0, #22, #38
-; AARCH64-NEXT:    lsr x13, x2, #55
-; AARCH64-NEXT:    and x8, x5, #0x7fffffffffffff0
 ; AARCH64-NEXT:    extr x1, x5, x4, #4
-; AARCH64-NEXT:    extr x12, x10, x9, #1
-; AARCH64-NEXT:    bfi x9, x3, #4, #39
-; AARCH64-NEXT:    bfi x8, x13, #59, #5
-; AARCH64-NEXT:    extr x11, x11, x12, #42
-; AARCH64-NEXT:    lsr x12, x2, #60
-; AARCH64-NEXT:    extr x3, x10, x9, #4
-; AARCH64-NEXT:    orr x0, x11, x4, lsl #60
-; AARCH64-NEXT:    extr x2, x12, x8, #4
+; AARCH64-NEXT:    bfi x0, x4, #60, #4
+; AARCH64-NEXT:    bfxil x2, x5, #4, #55
+; AARCH64-NEXT:    and x3, x3, #0x7fffffffff
 ; AARCH64-NEXT:    ret
   %result = bitinsert b231 %base, b123 %val, i32 60
   ret b231 %result
@@ -938,8 +888,8 @@ define b231 @test_bitinsert_val_b123_into_b231_const_wordcross(b231 %base, b123 
 define b64 @test_bitinsert_ptr_var(b64 %base, ptr %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_ptr_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    neg w8, w2
-; AARCH64-NEXT:    ror x0, x1, x8
+; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
+; AARCH64-NEXT:    lsl x0, x1, x2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, ptr %val, i32 %off
   ret b64 %result
@@ -948,9 +898,8 @@ define b64 @test_bitinsert_ptr_var(b64 %base, ptr %val, i32 %off) {
 define b128 @test_bitinsert_ptr_const(b128 %base, ptr %val) {
 ; AARCH64-LABEL: test_bitinsert_ptr_const:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    extr x8, x0, x1, #32
-; AARCH64-NEXT:    extr x0, x2, x8, #32
-; AARCH64-NEXT:    extr x1, x8, x2, #32
+; AARCH64-NEXT:    bfi x0, x2, #32, #32
+; AARCH64-NEXT:    bfxil x1, x2, #32, #32
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, ptr %val, i32 32
   ret b128 %result
@@ -961,8 +910,8 @@ define b128 @test_bitinsert_ptr_const(b128 %base, ptr %val) {
 define b64 @test_bitinsert_ptr_addrspace1(b64 %base, ptr addrspace(1) %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_ptr_addrspace1:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    neg w8, w2
-; AARCH64-NEXT:    ror x0, x1, x8
+; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
+; AARCH64-NEXT:    lsl x0, x1, x2
 ; AARCH64-NEXT:    ret
   %result = bitinsert b64 %base, ptr addrspace(1) %val, i32 %off
   ret b64 %result
@@ -971,9 +920,8 @@ define b64 @test_bitinsert_ptr_addrspace1(b64 %base, ptr addrspace(1) %val, i32 
 define b128 @test_bitinsert_ptr_addrspace3_const(b128 %base, ptr addrspace(3) %val) {
 ; AARCH64-LABEL: test_bitinsert_ptr_addrspace3_const:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    extr x8, x0, x1, #16
-; AARCH64-NEXT:    extr x0, x2, x8, #48
-; AARCH64-NEXT:    extr x1, x8, x2, #48
+; AARCH64-NEXT:    bfi x0, x2, #16, #48
+; AARCH64-NEXT:    bfxil x1, x2, #48, #16
 ; AARCH64-NEXT:    ret
   %result = bitinsert b128 %base, ptr addrspace(3) %val, i32 16
   ret b128 %result

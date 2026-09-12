@@ -624,54 +624,34 @@ define i1 @test_bitextract_b128_off_top(b128 %src) {
 define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 ; RV32-LABEL: test_bitinsert_b8_off1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a2, a0, 252
-; RV32-NEXT:    slli a3, a0, 7
 ; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    srli a2, a2, 1
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -3
 ; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b8_off1:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a2, a0, 252
-; RV32ZBB-NEXT:    slli a3, a0, 7
 ; RV32ZBB-NEXT:    andi a1, a1, 1
-; RV32ZBB-NEXT:    srli a2, a2, 1
-; RV32ZBB-NEXT:    or a1, a3, a1
-; RV32ZBB-NEXT:    or a1, a2, a1
+; RV32ZBB-NEXT:    andi a0, a0, -3
 ; RV32ZBB-NEXT:    slli a1, a1, 1
-; RV32ZBB-NEXT:    andi a0, a0, 1
-; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b8_off1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, 252
-; RV64-NEXT:    slli a3, a0, 7
 ; RV64-NEXT:    andi a1, a1, 1
-; RV64-NEXT:    srli a2, a2, 1
-; RV64-NEXT:    or a1, a3, a1
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -3
 ; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b8_off1:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a2, a0, 252
-; RV64ZBB-NEXT:    slli a3, a0, 7
 ; RV64ZBB-NEXT:    andi a1, a1, 1
-; RV64ZBB-NEXT:    srli a2, a2, 1
-; RV64ZBB-NEXT:    or a1, a3, a1
-; RV64ZBB-NEXT:    or a1, a2, a1
+; RV64ZBB-NEXT:    andi a0, a0, -3
 ; RV64ZBB-NEXT:    slli a1, a1, 1
-; RV64ZBB-NEXT:    andi a0, a0, 1
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b8 %base, i1 %val, i32 1
   ret b8 %result
@@ -680,54 +660,34 @@ define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 ; RV32-LABEL: test_bitinsert_b8_off2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    andi a2, a0, 240
-; RV32-NEXT:    slli a3, a0, 6
 ; RV32-NEXT:    andi a1, a1, 3
-; RV32-NEXT:    srli a2, a2, 2
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -13
 ; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    andi a0, a0, 3
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b8_off2:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    andi a2, a0, 240
-; RV32ZBB-NEXT:    slli a3, a0, 6
 ; RV32ZBB-NEXT:    andi a1, a1, 3
-; RV32ZBB-NEXT:    srli a2, a2, 2
-; RV32ZBB-NEXT:    or a1, a3, a1
-; RV32ZBB-NEXT:    or a1, a2, a1
+; RV32ZBB-NEXT:    andi a0, a0, -13
 ; RV32ZBB-NEXT:    slli a1, a1, 2
-; RV32ZBB-NEXT:    andi a0, a0, 3
-; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b8_off2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, 240
-; RV64-NEXT:    slli a3, a0, 6
 ; RV64-NEXT:    andi a1, a1, 3
-; RV64-NEXT:    srli a2, a2, 2
-; RV64-NEXT:    or a1, a3, a1
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -13
 ; RV64-NEXT:    slli a1, a1, 2
-; RV64-NEXT:    andi a0, a0, 3
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b8_off2:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    andi a2, a0, 240
-; RV64ZBB-NEXT:    slli a3, a0, 6
 ; RV64ZBB-NEXT:    andi a1, a1, 3
-; RV64ZBB-NEXT:    srli a2, a2, 2
-; RV64ZBB-NEXT:    or a1, a3, a1
-; RV64ZBB-NEXT:    or a1, a2, a1
+; RV64ZBB-NEXT:    andi a0, a0, -13
 ; RV64ZBB-NEXT:    slli a1, a1, 2
-; RV64ZBB-NEXT:    andi a0, a0, 3
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b8 %base, i2 %val, i32 2
   ret b8 %result
@@ -736,41 +696,29 @@ define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 ; RV32-LABEL: test_bitinsert_b8_off4:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a0, 8
-; RV32-NEXT:    andi a1, a1, 15
-; RV32-NEXT:    andi a0, a0, 15
 ; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    andi a0, a0, 15
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b8_off4:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    slli a2, a0, 8
-; RV32ZBB-NEXT:    andi a1, a1, 15
-; RV32ZBB-NEXT:    andi a0, a0, 15
 ; RV32ZBB-NEXT:    slli a1, a1, 4
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    andi a0, a0, 15
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b8_off4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a0, 8
-; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    andi a0, a0, 15
 ; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    andi a0, a0, 15
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b8_off4:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a2, a0, 8
-; RV64ZBB-NEXT:    andi a1, a1, 15
-; RV64ZBB-NEXT:    andi a0, a0, 15
 ; RV64ZBB-NEXT:    slli a1, a1, 4
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    andi a0, a0, 15
 ; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b8 %base, i4 %val, i32 4
@@ -782,62 +730,34 @@ define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 ; RV32-LABEL: test_bitinsert_b16_off1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 16
-; RV32-NEXT:    addi a2, a2, -4
-; RV32-NEXT:    and a2, a0, a2
-; RV32-NEXT:    slli a3, a0, 15
 ; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    srli a2, a2, 1
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -3
 ; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b16_off1:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lui a2, 16
-; RV32ZBB-NEXT:    addi a2, a2, -4
-; RV32ZBB-NEXT:    and a2, a0, a2
-; RV32ZBB-NEXT:    slli a3, a0, 15
 ; RV32ZBB-NEXT:    andi a1, a1, 1
-; RV32ZBB-NEXT:    srli a2, a2, 1
-; RV32ZBB-NEXT:    or a1, a3, a1
-; RV32ZBB-NEXT:    or a1, a2, a1
+; RV32ZBB-NEXT:    andi a0, a0, -3
 ; RV32ZBB-NEXT:    slli a1, a1, 1
-; RV32ZBB-NEXT:    andi a0, a0, 1
-; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b16_off1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, 16
-; RV64-NEXT:    addi a2, a2, -4
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    slli a3, a0, 15
 ; RV64-NEXT:    andi a1, a1, 1
-; RV64-NEXT:    srli a2, a2, 1
-; RV64-NEXT:    or a1, a3, a1
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -3
 ; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b16_off1:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a2, 16
-; RV64ZBB-NEXT:    addi a2, a2, -4
-; RV64ZBB-NEXT:    and a2, a0, a2
-; RV64ZBB-NEXT:    slli a3, a0, 15
 ; RV64ZBB-NEXT:    andi a1, a1, 1
-; RV64ZBB-NEXT:    srli a2, a2, 1
-; RV64ZBB-NEXT:    or a1, a3, a1
-; RV64ZBB-NEXT:    or a1, a2, a1
+; RV64ZBB-NEXT:    andi a0, a0, -3
 ; RV64ZBB-NEXT:    slli a1, a1, 1
-; RV64ZBB-NEXT:    andi a0, a0, 1
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b16 %base, i1 %val, i32 1
   ret b16 %result
@@ -846,62 +766,34 @@ define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 ; RV32-LABEL: test_bitinsert_b16_off2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 16
-; RV32-NEXT:    addi a2, a2, -16
-; RV32-NEXT:    and a2, a0, a2
-; RV32-NEXT:    slli a3, a0, 14
 ; RV32-NEXT:    andi a1, a1, 3
-; RV32-NEXT:    srli a2, a2, 2
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -13
 ; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    andi a0, a0, 3
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b16_off2:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lui a2, 16
-; RV32ZBB-NEXT:    addi a2, a2, -16
-; RV32ZBB-NEXT:    and a2, a0, a2
-; RV32ZBB-NEXT:    slli a3, a0, 14
 ; RV32ZBB-NEXT:    andi a1, a1, 3
-; RV32ZBB-NEXT:    srli a2, a2, 2
-; RV32ZBB-NEXT:    or a1, a3, a1
-; RV32ZBB-NEXT:    or a1, a2, a1
+; RV32ZBB-NEXT:    andi a0, a0, -13
 ; RV32ZBB-NEXT:    slli a1, a1, 2
-; RV32ZBB-NEXT:    andi a0, a0, 3
-; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b16_off2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, 16
-; RV64-NEXT:    addi a2, a2, -16
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    slli a3, a0, 14
 ; RV64-NEXT:    andi a1, a1, 3
-; RV64-NEXT:    srli a2, a2, 2
-; RV64-NEXT:    or a1, a3, a1
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -13
 ; RV64-NEXT:    slli a1, a1, 2
-; RV64-NEXT:    andi a0, a0, 3
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b16_off2:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a2, 16
-; RV64ZBB-NEXT:    addi a2, a2, -16
-; RV64ZBB-NEXT:    and a2, a0, a2
-; RV64ZBB-NEXT:    slli a3, a0, 14
 ; RV64ZBB-NEXT:    andi a1, a1, 3
-; RV64ZBB-NEXT:    srli a2, a2, 2
-; RV64ZBB-NEXT:    or a1, a3, a1
-; RV64ZBB-NEXT:    or a1, a2, a1
+; RV64ZBB-NEXT:    andi a0, a0, -13
 ; RV64ZBB-NEXT:    slli a1, a1, 2
-; RV64ZBB-NEXT:    andi a0, a0, 3
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b16 %base, i2 %val, i32 2
   ret b16 %result
@@ -910,62 +802,34 @@ define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 ; RV32-LABEL: test_bitinsert_b16_off4:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lui a2, 16
-; RV32-NEXT:    addi a2, a2, -256
-; RV32-NEXT:    and a2, a0, a2
-; RV32-NEXT:    slli a3, a0, 12
 ; RV32-NEXT:    andi a1, a1, 15
-; RV32-NEXT:    srli a2, a2, 4
-; RV32-NEXT:    or a1, a3, a1
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -241
 ; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    andi a0, a0, 15
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b16_off4:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    lui a2, 16
-; RV32ZBB-NEXT:    addi a2, a2, -256
-; RV32ZBB-NEXT:    and a2, a0, a2
-; RV32ZBB-NEXT:    slli a3, a0, 12
 ; RV32ZBB-NEXT:    andi a1, a1, 15
-; RV32ZBB-NEXT:    srli a2, a2, 4
-; RV32ZBB-NEXT:    or a1, a3, a1
-; RV32ZBB-NEXT:    or a1, a2, a1
+; RV32ZBB-NEXT:    andi a0, a0, -241
 ; RV32ZBB-NEXT:    slli a1, a1, 4
-; RV32ZBB-NEXT:    andi a0, a0, 15
-; RV32ZBB-NEXT:    or a0, a1, a0
+; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b16_off4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, 16
-; RV64-NEXT:    addi a2, a2, -256
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    slli a3, a0, 12
 ; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    srli a2, a2, 4
-; RV64-NEXT:    or a1, a3, a1
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -241
 ; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    andi a0, a0, 15
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b16_off4:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lui a2, 16
-; RV64ZBB-NEXT:    addi a2, a2, -256
-; RV64ZBB-NEXT:    and a2, a0, a2
-; RV64ZBB-NEXT:    slli a3, a0, 12
 ; RV64ZBB-NEXT:    andi a1, a1, 15
-; RV64ZBB-NEXT:    srli a2, a2, 4
-; RV64ZBB-NEXT:    or a1, a3, a1
-; RV64ZBB-NEXT:    or a1, a2, a1
+; RV64ZBB-NEXT:    andi a0, a0, -241
 ; RV64ZBB-NEXT:    slli a1, a1, 4
-; RV64ZBB-NEXT:    andi a0, a0, 15
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b16 %base, i4 %val, i32 4
   ret b16 %result
@@ -974,41 +838,29 @@ define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; RV32-LABEL: test_bitinsert_b16_off8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    slli a2, a0, 16
-; RV32-NEXT:    zext.b a1, a1
-; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    slli a1, a1, 8
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    zext.b a0, a0
 ; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b16_off8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    slli a2, a0, 16
-; RV32ZBB-NEXT:    zext.b a1, a1
-; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    slli a1, a1, 8
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    zext.b a0, a0
 ; RV32ZBB-NEXT:    or a0, a0, a1
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b16_off8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    slli a2, a0, 16
-; RV64-NEXT:    zext.b a1, a1
-; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    slli a1, a1, 8
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    zext.b a0, a0
 ; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b16_off8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a2, a0, 16
-; RV64ZBB-NEXT:    zext.b a1, a1
-; RV64ZBB-NEXT:    zext.b a0, a0
 ; RV64ZBB-NEXT:    slli a1, a1, 8
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    zext.b a0, a0
 ; RV64ZBB-NEXT:    or a0, a0, a1
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b16 %base, i8 %val, i32 8
@@ -1020,42 +872,34 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
 ; RV32-LABEL: test_bitinsert_b32_off1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 1
 ; RV32-NEXT:    andi a1, a1, 1
-; RV32-NEXT:    andi a2, a2, -2
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -3
 ; RV32-NEXT:    slli a1, a1, 1
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b32_off1:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rori a0, a0, 1
 ; RV32ZBB-NEXT:    andi a1, a1, 1
-; RV32ZBB-NEXT:    andi a0, a0, -2
+; RV32ZBB-NEXT:    andi a0, a0, -3
+; RV32ZBB-NEXT:    slli a1, a1, 1
 ; RV32ZBB-NEXT:    or a0, a0, a1
-; RV32ZBB-NEXT:    rori a0, a0, 31
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b32_off1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, -4
 ; RV64-NEXT:    andi a1, a1, 1
-; RV64-NEXT:    srli a2, a2, 1
-; RV64-NEXT:    or a1, a2, a1
-; RV64-NEXT:    slliw a1, a1, 1
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    andi a0, a0, -3
+; RV64-NEXT:    slli a1, a1, 1
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b32_off1:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    roriw a0, a0, 1
 ; RV64ZBB-NEXT:    andi a1, a1, 1
-; RV64ZBB-NEXT:    andi a0, a0, -2
+; RV64ZBB-NEXT:    andi a0, a0, -3
+; RV64ZBB-NEXT:    slli a1, a1, 1
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    roriw a0, a0, 31
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b32 %base, i1 %val, i32 1
   ret b32 %result
@@ -1064,42 +908,34 @@ define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
 define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
 ; RV32-LABEL: test_bitinsert_b32_off2:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 2
 ; RV32-NEXT:    andi a1, a1, 3
-; RV32-NEXT:    andi a2, a2, -4
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -13
 ; RV32-NEXT:    slli a1, a1, 2
-; RV32-NEXT:    andi a0, a0, 3
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b32_off2:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rori a0, a0, 2
 ; RV32ZBB-NEXT:    andi a1, a1, 3
-; RV32ZBB-NEXT:    andi a0, a0, -4
+; RV32ZBB-NEXT:    andi a0, a0, -13
+; RV32ZBB-NEXT:    slli a1, a1, 2
 ; RV32ZBB-NEXT:    or a0, a0, a1
-; RV32ZBB-NEXT:    rori a0, a0, 30
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b32_off2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, -16
 ; RV64-NEXT:    andi a1, a1, 3
-; RV64-NEXT:    srli a2, a2, 2
-; RV64-NEXT:    or a1, a2, a1
-; RV64-NEXT:    slliw a1, a1, 2
-; RV64-NEXT:    andi a0, a0, 3
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    andi a0, a0, -13
+; RV64-NEXT:    slli a1, a1, 2
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b32_off2:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    roriw a0, a0, 2
 ; RV64ZBB-NEXT:    andi a1, a1, 3
-; RV64ZBB-NEXT:    andi a0, a0, -4
+; RV64ZBB-NEXT:    andi a0, a0, -13
+; RV64ZBB-NEXT:    slli a1, a1, 2
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    roriw a0, a0, 30
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b32 %base, i2 %val, i32 2
   ret b32 %result
@@ -1108,42 +944,34 @@ define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
 define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
 ; RV32-LABEL: test_bitinsert_b32_off4:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 4
 ; RV32-NEXT:    andi a1, a1, 15
-; RV32-NEXT:    andi a2, a2, -16
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    andi a0, a0, -241
 ; RV32-NEXT:    slli a1, a1, 4
-; RV32-NEXT:    andi a0, a0, 15
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b32_off4:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rori a0, a0, 4
 ; RV32ZBB-NEXT:    andi a1, a1, 15
-; RV32ZBB-NEXT:    andi a0, a0, -16
+; RV32ZBB-NEXT:    andi a0, a0, -241
+; RV32ZBB-NEXT:    slli a1, a1, 4
 ; RV32ZBB-NEXT:    or a0, a0, a1
-; RV32ZBB-NEXT:    rori a0, a0, 28
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b32_off4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    andi a2, a0, -256
 ; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    srli a2, a2, 4
-; RV64-NEXT:    or a1, a2, a1
-; RV64-NEXT:    slliw a1, a1, 4
-; RV64-NEXT:    andi a0, a0, 15
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    andi a0, a0, -241
+; RV64-NEXT:    slli a1, a1, 4
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b32_off4:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    roriw a0, a0, 4
 ; RV64ZBB-NEXT:    andi a1, a1, 15
-; RV64ZBB-NEXT:    andi a0, a0, -16
+; RV64ZBB-NEXT:    andi a0, a0, -241
+; RV64ZBB-NEXT:    slli a1, a1, 4
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    roriw a0, a0, 28
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b32 %base, i4 %val, i32 4
   ret b32 %result
@@ -1152,43 +980,42 @@ define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
 define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 ; RV32-LABEL: test_bitinsert_b32_off8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    srli a2, a0, 16
+; RV32-NEXT:    lui a2, 1048560
+; RV32-NEXT:    addi a2, a2, 255
 ; RV32-NEXT:    zext.b a1, a1
-; RV32-NEXT:    slli a2, a2, 8
-; RV32-NEXT:    or a1, a2, a1
+; RV32-NEXT:    and a0, a0, a2
 ; RV32-NEXT:    slli a1, a1, 8
-; RV32-NEXT:    zext.b a0, a0
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b32_off8:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    rori a0, a0, 8
+; RV32ZBB-NEXT:    lui a2, 1048560
+; RV32ZBB-NEXT:    addi a2, a2, 255
 ; RV32ZBB-NEXT:    zext.b a1, a1
-; RV32ZBB-NEXT:    andi a0, a0, -256
+; RV32ZBB-NEXT:    and a0, a0, a2
+; RV32ZBB-NEXT:    slli a1, a1, 8
 ; RV32ZBB-NEXT:    or a0, a0, a1
-; RV32ZBB-NEXT:    rori a0, a0, 24
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b32_off8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a2, 1048560
-; RV64-NEXT:    and a2, a0, a2
-; RV64-NEXT:    srli a2, a2, 8
+; RV64-NEXT:    addi a2, a2, 255
 ; RV64-NEXT:    zext.b a1, a1
-; RV64-NEXT:    or a1, a2, a1
-; RV64-NEXT:    slliw a1, a1, 8
-; RV64-NEXT:    zext.b a0, a0
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    and a0, a0, a2
+; RV64-NEXT:    slli a1, a1, 8
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b32_off8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    roriw a0, a0, 8
+; RV64ZBB-NEXT:    lui a2, 1048560
+; RV64ZBB-NEXT:    addi a2, a2, 255
 ; RV64ZBB-NEXT:    zext.b a1, a1
-; RV64ZBB-NEXT:    andi a0, a0, -256
+; RV64ZBB-NEXT:    and a0, a0, a2
+; RV64ZBB-NEXT:    slli a1, a1, 8
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    roriw a0, a0, 24
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b32 %base, i8 %val, i32 8
   ret b32 %result
@@ -1200,15 +1027,14 @@ define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    slli a1, a1, 16
 ; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    or a0, a1, a0
+; RV32-NEXT:    or a0, a0, a1
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b32_off16:
 ; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    zext.h a1, a1
-; RV32ZBB-NEXT:    slli a0, a0, 16
+; RV32ZBB-NEXT:    slli a1, a1, 16
+; RV32ZBB-NEXT:    zext.h a0, a0
 ; RV32ZBB-NEXT:    or a0, a0, a1
-; RV32ZBB-NEXT:    rori a0, a0, 16
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b32_off16:
@@ -1216,15 +1042,14 @@ define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
 ; RV64-NEXT:    slli a0, a0, 48
 ; RV64-NEXT:    slliw a1, a1, 16
 ; RV64-NEXT:    srli a0, a0, 48
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b32_off16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a1, a1
-; RV64ZBB-NEXT:    slli a0, a0, 16
+; RV64ZBB-NEXT:    slliw a1, a1, 16
+; RV64ZBB-NEXT:    zext.h a0, a0
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    roriw a0, a0, 16
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b32 %base, i16 %val, i32 16
   ret b32 %result
@@ -1236,43 +1061,33 @@ define b64 @test_bitinsert_b64_off1(b64 %base, i1 %val) {
 ; RV32-LABEL: test_bitinsert_b64_off1:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    srli a3, a0, 1
-; RV32-NEXT:    andi a3, a3, -2
-; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    andi a0, a0, -3
 ; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    andi a0, a0, 1
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b64_off1:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    andi a2, a2, 1
-; RV32ZBB-NEXT:    srli a3, a0, 1
-; RV32ZBB-NEXT:    andi a3, a3, -2
-; RV32ZBB-NEXT:    or a2, a3, a2
+; RV32ZBB-NEXT:    andi a0, a0, -3
 ; RV32ZBB-NEXT:    slli a2, a2, 1
-; RV32ZBB-NEXT:    andi a0, a0, 1
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    or a0, a0, a2
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b64_off1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a0, 1
 ; RV64-NEXT:    andi a1, a1, 1
-; RV64-NEXT:    andi a2, a2, -2
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -3
 ; RV64-NEXT:    slli a1, a1, 1
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b64_off1:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rori a0, a0, 1
 ; RV64ZBB-NEXT:    andi a1, a1, 1
-; RV64ZBB-NEXT:    andi a0, a0, -2
+; RV64ZBB-NEXT:    andi a0, a0, -3
+; RV64ZBB-NEXT:    slli a1, a1, 1
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    rori a0, a0, 63
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b64 %base, i1 %val, i32 1
   ret b64 %result
@@ -1282,43 +1097,33 @@ define b64 @test_bitinsert_b64_off2(b64 %base, i2 %val) {
 ; RV32-LABEL: test_bitinsert_b64_off2:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a2, 3
-; RV32-NEXT:    srli a3, a0, 2
-; RV32-NEXT:    andi a3, a3, -4
-; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    andi a0, a0, -13
 ; RV32-NEXT:    slli a2, a2, 2
-; RV32-NEXT:    andi a0, a0, 3
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b64_off2:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    andi a2, a2, 3
-; RV32ZBB-NEXT:    srli a3, a0, 2
-; RV32ZBB-NEXT:    andi a3, a3, -4
-; RV32ZBB-NEXT:    or a2, a3, a2
+; RV32ZBB-NEXT:    andi a0, a0, -13
 ; RV32ZBB-NEXT:    slli a2, a2, 2
-; RV32ZBB-NEXT:    andi a0, a0, 3
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    or a0, a0, a2
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b64_off2:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a0, 2
 ; RV64-NEXT:    andi a1, a1, 3
-; RV64-NEXT:    andi a2, a2, -4
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -13
 ; RV64-NEXT:    slli a1, a1, 2
-; RV64-NEXT:    andi a0, a0, 3
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b64_off2:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rori a0, a0, 2
 ; RV64ZBB-NEXT:    andi a1, a1, 3
-; RV64ZBB-NEXT:    andi a0, a0, -4
+; RV64ZBB-NEXT:    andi a0, a0, -13
+; RV64ZBB-NEXT:    slli a1, a1, 2
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    rori a0, a0, 62
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b64 %base, i2 %val, i32 2
   ret b64 %result
@@ -1328,43 +1133,33 @@ define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
 ; RV32-LABEL: test_bitinsert_b64_off4:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    andi a2, a2, 15
-; RV32-NEXT:    srli a3, a0, 4
-; RV32-NEXT:    andi a3, a3, -16
-; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    andi a0, a0, -241
 ; RV32-NEXT:    slli a2, a2, 4
-; RV32-NEXT:    andi a0, a0, 15
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b64_off4:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    andi a2, a2, 15
-; RV32ZBB-NEXT:    srli a3, a0, 4
-; RV32ZBB-NEXT:    andi a3, a3, -16
-; RV32ZBB-NEXT:    or a2, a3, a2
+; RV32ZBB-NEXT:    andi a0, a0, -241
 ; RV32ZBB-NEXT:    slli a2, a2, 4
-; RV32ZBB-NEXT:    andi a0, a0, 15
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    or a0, a0, a2
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b64_off4:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a0, 4
 ; RV64-NEXT:    andi a1, a1, 15
-; RV64-NEXT:    andi a2, a2, -16
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    andi a0, a0, -241
 ; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    andi a0, a0, 15
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b64_off4:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rori a0, a0, 4
 ; RV64ZBB-NEXT:    andi a1, a1, 15
-; RV64ZBB-NEXT:    andi a0, a0, -16
+; RV64ZBB-NEXT:    andi a0, a0, -241
+; RV64ZBB-NEXT:    slli a1, a1, 4
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    rori a0, a0, 60
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b64 %base, i4 %val, i32 4
   ret b64 %result
@@ -1373,44 +1168,42 @@ define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
 define b64 @test_bitinsert_b64_off8(b64 %base, i8 %val) {
 ; RV32-LABEL: test_bitinsert_b64_off8:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    lui a3, 1048560
+; RV32-NEXT:    addi a3, a3, 255
 ; RV32-NEXT:    zext.b a2, a2
-; RV32-NEXT:    srli a3, a0, 16
-; RV32-NEXT:    slli a3, a3, 8
-; RV32-NEXT:    or a2, a3, a2
+; RV32-NEXT:    and a0, a0, a3
 ; RV32-NEXT:    slli a2, a2, 8
-; RV32-NEXT:    zext.b a0, a0
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b64_off8:
 ; RV32ZBB:       # %bb.0:
+; RV32ZBB-NEXT:    lui a3, 1048560
+; RV32ZBB-NEXT:    addi a3, a3, 255
 ; RV32ZBB-NEXT:    zext.b a2, a2
-; RV32ZBB-NEXT:    srli a3, a0, 16
-; RV32ZBB-NEXT:    slli a3, a3, 8
-; RV32ZBB-NEXT:    or a2, a3, a2
+; RV32ZBB-NEXT:    and a0, a0, a3
 ; RV32ZBB-NEXT:    slli a2, a2, 8
-; RV32ZBB-NEXT:    zext.b a0, a0
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    or a0, a0, a2
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b64_off8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    srli a2, a0, 16
+; RV64-NEXT:    lui a2, 1048560
+; RV64-NEXT:    addi a2, a2, 255
 ; RV64-NEXT:    zext.b a1, a1
-; RV64-NEXT:    slli a2, a2, 8
-; RV64-NEXT:    or a1, a2, a1
+; RV64-NEXT:    and a0, a0, a2
 ; RV64-NEXT:    slli a1, a1, 8
-; RV64-NEXT:    zext.b a0, a0
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b64_off8:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rori a0, a0, 8
+; RV64ZBB-NEXT:    lui a2, 1048560
+; RV64ZBB-NEXT:    addi a2, a2, 255
 ; RV64ZBB-NEXT:    zext.b a1, a1
-; RV64ZBB-NEXT:    andi a0, a0, -256
+; RV64ZBB-NEXT:    and a0, a0, a2
+; RV64ZBB-NEXT:    slli a1, a1, 8
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    rori a0, a0, 56
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b64 %base, i8 %val, i32 8
   ret b64 %result
@@ -1422,37 +1215,35 @@ define b64 @test_bitinsert_b64_off16(b64 %base, i16 %val) {
 ; RV32-NEXT:    slli a2, a2, 16
 ; RV32-NEXT:    slli a0, a0, 16
 ; RV32-NEXT:    srli a0, a0, 16
-; RV32-NEXT:    or a0, a2, a0
+; RV32-NEXT:    or a0, a0, a2
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b64_off16:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    slli a2, a2, 16
 ; RV32ZBB-NEXT:    zext.h a0, a0
-; RV32ZBB-NEXT:    or a0, a2, a0
+; RV32ZBB-NEXT:    or a0, a0, a2
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b64_off16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a2, 16
+; RV64-NEXT:    lui a2, 983041
+; RV64-NEXT:    slli a2, a2, 4
 ; RV64-NEXT:    addi a2, a2, -1
-; RV64-NEXT:    srli a3, a0, 32
-; RV64-NEXT:    and a1, a1, a2
-; RV64-NEXT:    slli a3, a3, 16
-; RV64-NEXT:    or a1, a3, a1
+; RV64-NEXT:    slli a1, a1, 48
 ; RV64-NEXT:    and a0, a0, a2
-; RV64-NEXT:    slli a1, a1, 16
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    srli a1, a1, 32
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b64_off16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    rori a0, a0, 16
-; RV64ZBB-NEXT:    lui a2, 1048560
-; RV64ZBB-NEXT:    and a0, a0, a2
-; RV64ZBB-NEXT:    zext.h a1, a1
+; RV64ZBB-NEXT:    lui a2, 65535
+; RV64ZBB-NEXT:    slli a2, a2, 4
+; RV64ZBB-NEXT:    slli a1, a1, 48
+; RV64ZBB-NEXT:    andn a0, a0, a2
+; RV64ZBB-NEXT:    srli a1, a1, 32
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    rori a0, a0, 48
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b64 %base, i16 %val, i32 16
   ret b64 %result
@@ -1474,16 +1265,15 @@ define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    slli a1, a1, 32
 ; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or a0, a1, a0
+; RV64-NEXT:    or a0, a0, a1
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b64_off32:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    slli a1, a1, 32
 ; RV64ZBB-NEXT:    slli a0, a0, 32
-; RV64ZBB-NEXT:    srli a1, a1, 32
+; RV64ZBB-NEXT:    slli a1, a1, 32
+; RV64ZBB-NEXT:    srli a0, a0, 32
 ; RV64ZBB-NEXT:    or a0, a0, a1
-; RV64ZBB-NEXT:    rori a0, a0, 32
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b64 %base, i32 %val, i32 32
   ret b64 %result
@@ -1499,13 +1289,10 @@ define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 ; RV32-NEXT:    lw a4, 4(a1)
 ; RV32-NEXT:    lw a5, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    srli a6, a3, 1
 ; RV32-NEXT:    andi a2, a2, 1
-; RV32-NEXT:    andi a6, a6, -2
-; RV32-NEXT:    or a2, a6, a2
-; RV32-NEXT:    andi a3, a3, 1
 ; RV32-NEXT:    slli a2, a2, 1
-; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    andi a3, a3, -3
+; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
@@ -1518,13 +1305,10 @@ define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 ; RV32ZBB-NEXT:    lw a4, 4(a1)
 ; RV32ZBB-NEXT:    lw a5, 8(a1)
 ; RV32ZBB-NEXT:    lw a1, 12(a1)
-; RV32ZBB-NEXT:    srli a6, a3, 1
 ; RV32ZBB-NEXT:    andi a2, a2, 1
-; RV32ZBB-NEXT:    andi a6, a6, -2
-; RV32ZBB-NEXT:    or a2, a6, a2
-; RV32ZBB-NEXT:    andi a3, a3, 1
 ; RV32ZBB-NEXT:    slli a2, a2, 1
-; RV32ZBB-NEXT:    or a2, a2, a3
+; RV32ZBB-NEXT:    andi a3, a3, -3
+; RV32ZBB-NEXT:    or a2, a3, a2
 ; RV32ZBB-NEXT:    sw a2, 0(a0)
 ; RV32ZBB-NEXT:    sw a4, 4(a0)
 ; RV32ZBB-NEXT:    sw a5, 8(a0)
@@ -1534,23 +1318,17 @@ define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 ; RV64-LABEL: test_bitinsert_b128_off1:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a2, a2, 1
-; RV64-NEXT:    srli a3, a0, 1
-; RV64-NEXT:    andi a3, a3, -2
-; RV64-NEXT:    or a2, a3, a2
+; RV64-NEXT:    andi a0, a0, -3
 ; RV64-NEXT:    slli a2, a2, 1
-; RV64-NEXT:    andi a0, a0, 1
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b128_off1:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    andi a2, a2, 1
-; RV64ZBB-NEXT:    srli a3, a0, 1
-; RV64ZBB-NEXT:    andi a3, a3, -2
-; RV64ZBB-NEXT:    or a2, a3, a2
+; RV64ZBB-NEXT:    andi a0, a0, -3
 ; RV64ZBB-NEXT:    slli a2, a2, 1
-; RV64ZBB-NEXT:    andi a0, a0, 1
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b128 %base, i1 %val, i32 1
   ret b128 %result
@@ -1563,13 +1341,10 @@ define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 ; RV32-NEXT:    lw a4, 4(a1)
 ; RV32-NEXT:    lw a5, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    srli a6, a3, 2
 ; RV32-NEXT:    andi a2, a2, 3
-; RV32-NEXT:    andi a6, a6, -4
-; RV32-NEXT:    or a2, a6, a2
-; RV32-NEXT:    andi a3, a3, 3
 ; RV32-NEXT:    slli a2, a2, 2
-; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    andi a3, a3, -13
+; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
@@ -1582,13 +1357,10 @@ define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 ; RV32ZBB-NEXT:    lw a4, 4(a1)
 ; RV32ZBB-NEXT:    lw a5, 8(a1)
 ; RV32ZBB-NEXT:    lw a1, 12(a1)
-; RV32ZBB-NEXT:    srli a6, a3, 2
 ; RV32ZBB-NEXT:    andi a2, a2, 3
-; RV32ZBB-NEXT:    andi a6, a6, -4
-; RV32ZBB-NEXT:    or a2, a6, a2
-; RV32ZBB-NEXT:    andi a3, a3, 3
 ; RV32ZBB-NEXT:    slli a2, a2, 2
-; RV32ZBB-NEXT:    or a2, a2, a3
+; RV32ZBB-NEXT:    andi a3, a3, -13
+; RV32ZBB-NEXT:    or a2, a3, a2
 ; RV32ZBB-NEXT:    sw a2, 0(a0)
 ; RV32ZBB-NEXT:    sw a4, 4(a0)
 ; RV32ZBB-NEXT:    sw a5, 8(a0)
@@ -1598,23 +1370,17 @@ define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 ; RV64-LABEL: test_bitinsert_b128_off2:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a2, a2, 3
-; RV64-NEXT:    srli a3, a0, 2
-; RV64-NEXT:    andi a3, a3, -4
-; RV64-NEXT:    or a2, a3, a2
+; RV64-NEXT:    andi a0, a0, -13
 ; RV64-NEXT:    slli a2, a2, 2
-; RV64-NEXT:    andi a0, a0, 3
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b128_off2:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    andi a2, a2, 3
-; RV64ZBB-NEXT:    srli a3, a0, 2
-; RV64ZBB-NEXT:    andi a3, a3, -4
-; RV64ZBB-NEXT:    or a2, a3, a2
+; RV64ZBB-NEXT:    andi a0, a0, -13
 ; RV64ZBB-NEXT:    slli a2, a2, 2
-; RV64ZBB-NEXT:    andi a0, a0, 3
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b128 %base, i2 %val, i32 2
   ret b128 %result
@@ -1627,13 +1393,10 @@ define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 ; RV32-NEXT:    lw a4, 4(a1)
 ; RV32-NEXT:    lw a5, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    srli a6, a3, 4
 ; RV32-NEXT:    andi a2, a2, 15
-; RV32-NEXT:    andi a6, a6, -16
-; RV32-NEXT:    or a2, a6, a2
-; RV32-NEXT:    andi a3, a3, 15
 ; RV32-NEXT:    slli a2, a2, 4
-; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    andi a3, a3, -241
+; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
@@ -1646,13 +1409,10 @@ define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 ; RV32ZBB-NEXT:    lw a4, 4(a1)
 ; RV32ZBB-NEXT:    lw a5, 8(a1)
 ; RV32ZBB-NEXT:    lw a1, 12(a1)
-; RV32ZBB-NEXT:    srli a6, a3, 4
 ; RV32ZBB-NEXT:    andi a2, a2, 15
-; RV32ZBB-NEXT:    andi a6, a6, -16
-; RV32ZBB-NEXT:    or a2, a6, a2
-; RV32ZBB-NEXT:    andi a3, a3, 15
 ; RV32ZBB-NEXT:    slli a2, a2, 4
-; RV32ZBB-NEXT:    or a2, a2, a3
+; RV32ZBB-NEXT:    andi a3, a3, -241
+; RV32ZBB-NEXT:    or a2, a3, a2
 ; RV32ZBB-NEXT:    sw a2, 0(a0)
 ; RV32ZBB-NEXT:    sw a4, 4(a0)
 ; RV32ZBB-NEXT:    sw a5, 8(a0)
@@ -1662,23 +1422,17 @@ define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 ; RV64-LABEL: test_bitinsert_b128_off4:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    andi a2, a2, 15
-; RV64-NEXT:    srli a3, a0, 4
-; RV64-NEXT:    andi a3, a3, -16
-; RV64-NEXT:    or a2, a3, a2
+; RV64-NEXT:    andi a0, a0, -241
 ; RV64-NEXT:    slli a2, a2, 4
-; RV64-NEXT:    andi a0, a0, 15
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b128_off4:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    andi a2, a2, 15
-; RV64ZBB-NEXT:    srli a3, a0, 4
-; RV64ZBB-NEXT:    andi a3, a3, -16
-; RV64ZBB-NEXT:    or a2, a3, a2
+; RV64ZBB-NEXT:    andi a0, a0, -241
 ; RV64ZBB-NEXT:    slli a2, a2, 4
-; RV64ZBB-NEXT:    andi a0, a0, 15
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b128 %base, i4 %val, i32 4
   ret b128 %result
@@ -1688,61 +1442,57 @@ define b128 @test_bitinsert_b128_off8(b128 %base, i8 %val) {
 ; RV32-LABEL: test_bitinsert_b128_off8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lw a3, 0(a1)
-; RV32-NEXT:    lw a4, 4(a1)
-; RV32-NEXT:    lw a5, 8(a1)
+; RV32-NEXT:    lui a4, 1048560
+; RV32-NEXT:    lw a5, 4(a1)
+; RV32-NEXT:    lw a6, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
-; RV32-NEXT:    srli a6, a3, 16
+; RV32-NEXT:    addi a4, a4, 255
 ; RV32-NEXT:    zext.b a2, a2
-; RV32-NEXT:    slli a6, a6, 8
-; RV32-NEXT:    or a2, a6, a2
-; RV32-NEXT:    zext.b a3, a3
 ; RV32-NEXT:    slli a2, a2, 8
-; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    and a3, a3, a4
+; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    sw a2, 0(a0)
-; RV32-NEXT:    sw a4, 4(a0)
-; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sw a5, 4(a0)
+; RV32-NEXT:    sw a6, 8(a0)
 ; RV32-NEXT:    sw a1, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: test_bitinsert_b128_off8:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    lw a3, 0(a1)
-; RV32ZBB-NEXT:    lw a4, 4(a1)
-; RV32ZBB-NEXT:    lw a5, 8(a1)
+; RV32ZBB-NEXT:    lui a4, 1048560
+; RV32ZBB-NEXT:    lw a5, 4(a1)
+; RV32ZBB-NEXT:    lw a6, 8(a1)
 ; RV32ZBB-NEXT:    lw a1, 12(a1)
-; RV32ZBB-NEXT:    srli a6, a3, 16
+; RV32ZBB-NEXT:    addi a4, a4, 255
 ; RV32ZBB-NEXT:    zext.b a2, a2
-; RV32ZBB-NEXT:    slli a6, a6, 8
-; RV32ZBB-NEXT:    or a2, a6, a2
-; RV32ZBB-NEXT:    zext.b a3, a3
 ; RV32ZBB-NEXT:    slli a2, a2, 8
-; RV32ZBB-NEXT:    or a2, a2, a3
+; RV32ZBB-NEXT:    and a3, a3, a4
+; RV32ZBB-NEXT:    or a2, a3, a2
 ; RV32ZBB-NEXT:    sw a2, 0(a0)
-; RV32ZBB-NEXT:    sw a4, 4(a0)
-; RV32ZBB-NEXT:    sw a5, 8(a0)
+; RV32ZBB-NEXT:    sw a5, 4(a0)
+; RV32ZBB-NEXT:    sw a6, 8(a0)
 ; RV32ZBB-NEXT:    sw a1, 12(a0)
 ; RV32ZBB-NEXT:    ret
 ;
 ; RV64-LABEL: test_bitinsert_b128_off8:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    lui a3, 1048560
+; RV64-NEXT:    addi a3, a3, 255
 ; RV64-NEXT:    zext.b a2, a2
-; RV64-NEXT:    srli a3, a0, 16
-; RV64-NEXT:    slli a3, a3, 8
-; RV64-NEXT:    or a2, a3, a2
+; RV64-NEXT:    and a0, a0, a3
 ; RV64-NEXT:    slli a2, a2, 8
-; RV64-NEXT:    zext.b a0, a0
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b128_off8:
 ; RV64ZBB:       # %bb.0:
+; RV64ZBB-NEXT:    lui a3, 1048560
+; RV64ZBB-NEXT:    addi a3, a3, 255
 ; RV64ZBB-NEXT:    zext.b a2, a2
-; RV64ZBB-NEXT:    srli a3, a0, 16
-; RV64ZBB-NEXT:    slli a3, a3, 8
-; RV64ZBB-NEXT:    or a2, a3, a2
+; RV64ZBB-NEXT:    and a0, a0, a3
 ; RV64ZBB-NEXT:    slli a2, a2, 8
-; RV64ZBB-NEXT:    zext.b a0, a0
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b128 %base, i8 %val, i32 8
   ret b128 %result
@@ -1756,7 +1506,7 @@ define b128 @test_bitinsert_b128_off16(b128 %base, i16 %val) {
 ; RV32-NEXT:    lw a5, 8(a1)
 ; RV32-NEXT:    lw a1, 12(a1)
 ; RV32-NEXT:    slli a2, a2, 16
-; RV32-NEXT:    or a2, a2, a3
+; RV32-NEXT:    or a2, a3, a2
 ; RV32-NEXT:    sw a2, 0(a0)
 ; RV32-NEXT:    sw a4, 4(a0)
 ; RV32-NEXT:    sw a5, 8(a0)
@@ -1770,7 +1520,7 @@ define b128 @test_bitinsert_b128_off16(b128 %base, i16 %val) {
 ; RV32ZBB-NEXT:    lw a5, 8(a1)
 ; RV32ZBB-NEXT:    lw a1, 12(a1)
 ; RV32ZBB-NEXT:    slli a2, a2, 16
-; RV32ZBB-NEXT:    or a2, a2, a3
+; RV32ZBB-NEXT:    or a2, a3, a2
 ; RV32ZBB-NEXT:    sw a2, 0(a0)
 ; RV32ZBB-NEXT:    sw a4, 4(a0)
 ; RV32ZBB-NEXT:    sw a5, 8(a0)
@@ -1779,26 +1529,23 @@ define b128 @test_bitinsert_b128_off16(b128 %base, i16 %val) {
 ;
 ; RV64-LABEL: test_bitinsert_b128_off16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    lui a3, 16
+; RV64-NEXT:    lui a3, 983041
+; RV64-NEXT:    slli a3, a3, 4
 ; RV64-NEXT:    addi a3, a3, -1
-; RV64-NEXT:    srli a4, a0, 32
-; RV64-NEXT:    and a2, a2, a3
-; RV64-NEXT:    slli a4, a4, 16
-; RV64-NEXT:    or a2, a4, a2
+; RV64-NEXT:    slli a2, a2, 48
 ; RV64-NEXT:    and a0, a0, a3
-; RV64-NEXT:    slli a2, a2, 16
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    srli a2, a2, 32
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b128_off16:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    zext.h a2, a2
-; RV64ZBB-NEXT:    srli a3, a0, 32
-; RV64ZBB-NEXT:    slli a3, a3, 16
-; RV64ZBB-NEXT:    or a2, a3, a2
-; RV64ZBB-NEXT:    slli a2, a2, 16
-; RV64ZBB-NEXT:    zext.h a0, a0
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    lui a3, 65535
+; RV64ZBB-NEXT:    slli a3, a3, 4
+; RV64ZBB-NEXT:    slli a2, a2, 48
+; RV64ZBB-NEXT:    andn a0, a0, a3
+; RV64ZBB-NEXT:    srli a2, a2, 32
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b128 %base, i16 %val, i32 16
   ret b128 %result
@@ -1832,7 +1579,7 @@ define b128 @test_bitinsert_b128_off32(b128 %base, i32 %val) {
 ; RV64-NEXT:    slli a2, a2, 32
 ; RV64-NEXT:    slli a0, a0, 32
 ; RV64-NEXT:    srli a0, a0, 32
-; RV64-NEXT:    or a0, a2, a0
+; RV64-NEXT:    or a0, a0, a2
 ; RV64-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test_bitinsert_b128_off32:
@@ -1840,7 +1587,7 @@ define b128 @test_bitinsert_b128_off32(b128 %base, i32 %val) {
 ; RV64ZBB-NEXT:    slli a2, a2, 32
 ; RV64ZBB-NEXT:    slli a0, a0, 32
 ; RV64ZBB-NEXT:    srli a0, a0, 32
-; RV64ZBB-NEXT:    or a0, a2, a0
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
   %result = bitinsert b128 %base, i32 %val, i32 32
   ret b128 %result

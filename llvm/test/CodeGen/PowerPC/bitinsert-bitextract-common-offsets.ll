@@ -232,10 +232,7 @@ define i1 @test_bitextract_b128_off_top(b128 %src) {
 define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 ; CHECK-LABEL: test_bitinsert_b8_off1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 3, 253
-; CHECK-NEXT:    rlwimi 5, 4, 1, 30, 30
-; CHECK-NEXT:    rlwimi 5, 3, 8, 0, 23
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 1, 30, 30
 ; CHECK-NEXT:    blr
   %result = bitinsert b8 %base, i1 %val, i32 1
   ret b8 %result
@@ -244,10 +241,7 @@ define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 ; CHECK-LABEL: test_bitinsert_b8_off2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 3, 243
-; CHECK-NEXT:    rlwimi 5, 4, 2, 28, 29
-; CHECK-NEXT:    rlwimi 5, 3, 8, 0, 23
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 2, 28, 29
 ; CHECK-NEXT:    blr
   %result = bitinsert b8 %base, i2 %val, i32 2
   ret b8 %result
@@ -256,10 +250,7 @@ define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 ; CHECK-LABEL: test_bitinsert_b8_off4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rlwimi 5, 4, 4, 24, 27
-; CHECK-NEXT:    rlwimi 5, 3, 8, 0, 23
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 4, 0, 27
 ; CHECK-NEXT:    blr
   %result = bitinsert b8 %base, i4 %val, i32 4
   ret b8 %result
@@ -270,10 +261,7 @@ define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 ; CHECK-LABEL: test_bitinsert_b16_off1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 3, 65533
-; CHECK-NEXT:    rlwimi 5, 4, 1, 30, 30
-; CHECK-NEXT:    rlwimi 5, 3, 16, 0, 15
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 1, 30, 30
 ; CHECK-NEXT:    blr
   %result = bitinsert b16 %base, i1 %val, i32 1
   ret b16 %result
@@ -282,10 +270,7 @@ define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 ; CHECK-LABEL: test_bitinsert_b16_off2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 3, 65523
-; CHECK-NEXT:    rlwimi 5, 4, 2, 28, 29
-; CHECK-NEXT:    rlwimi 5, 3, 16, 0, 15
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 2, 28, 29
 ; CHECK-NEXT:    blr
   %result = bitinsert b16 %base, i2 %val, i32 2
   ret b16 %result
@@ -294,10 +279,7 @@ define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 ; CHECK-LABEL: test_bitinsert_b16_off4:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 5, 3, 65295
-; CHECK-NEXT:    rlwimi 5, 4, 4, 24, 27
-; CHECK-NEXT:    rlwimi 5, 3, 16, 0, 15
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 4, 24, 27
 ; CHECK-NEXT:    blr
   %result = bitinsert b16 %base, i4 %val, i32 4
   ret b16 %result
@@ -306,10 +288,7 @@ define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; CHECK-LABEL: test_bitinsert_b16_off8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    rlwimi 5, 4, 8, 16, 23
-; CHECK-NEXT:    rlwimi 5, 3, 16, 0, 15
-; CHECK-NEXT:    mr 3, 5
+; CHECK-NEXT:    rlwimi 3, 4, 8, 0, 23
 ; CHECK-NEXT:    blr
   %result = bitinsert b16 %base, i8 %val, i32 8
   ret b16 %result
