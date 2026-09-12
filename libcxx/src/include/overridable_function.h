@@ -92,16 +92,22 @@ struct __impl_ref<_Func> {
   [[gnu::visibility("hidden")]] static _Ret __impl_(_Args...);
 };
 
+#    if defined(__hexagon__)
+#      define _LIBCPP_ASM_SYMBOL_ASSIGNMENT(__dst, __src) ".set " __dst ", " __src
+#    else
+#      define _LIBCPP_ASM_SYMBOL_ASSIGNMENT(__dst, __src) __dst " = " __src
+#    endif
+
 // This takes a function type template argument first so that the second non-type template
 // argument (pointer to the public function) gets the benefit of type-aware overload
 // resolution, rather than having to use a static_cast.
 template <typename T, T* _Func>
 _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
-#  if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
-  __asm__("%cc0 = %cc1" : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
-#  else
-  __asm__("%c0 = %c1" : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
-#  endif
+#    if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
+  __asm__(_LIBCPP_ASM_SYMBOL_ASSIGNMENT("%cc0", "%cc1") : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
+#    else
+  __asm__(_LIBCPP_ASM_SYMBOL_ASSIGNMENT("%c0", "%c1") : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
+#    endif
   // This just has the compiler compare the two symbols. For PIC mode, this will do a
   // direct PC-relative materialization for __impl_ref<...>::__impl_ and a GOT load for
   // the _Func symbol. The compiler thinks __impl_ref<...>::__impl_ is defined elsewhere
@@ -109,6 +115,8 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
   // the assembler to define it as a local symbol.
   return __launder_function_pointer(_Func) != __impl_ref<_Func>::__impl_;
 }
+
+#    undef _LIBCPP_ASM_SYMBOL_ASSIGNMENT
 
 _LIBCPP_END_NAMESPACE_STD
 
