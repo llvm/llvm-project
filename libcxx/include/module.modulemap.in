@@ -1245,14 +1245,14 @@ module std {
 
   module debugging {
     module support_impl {
-      textual header "debugging/support/aix.h"
-      textual header "debugging/support/bsd_like.h"
-      textual header "debugging/support/linux.h"
-      textual header "debugging/support/windows.h"
+      textual header "__debugging/support/aix.h"
+      textual header "__debugging/support/bsd_like.h"
+      textual header "__debugging/support/linux.h"
+      textual header "__debugging/support/windows.h"
     }
 
     module support {
-      header "debugging/support.h"
+      header "__debugging/support.h"
       export *
     }
 
