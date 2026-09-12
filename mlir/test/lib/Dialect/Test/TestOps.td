@@ -2797,6 +2797,32 @@ def CompareOp : TEST_Op<"compare"> {
 // Test RegionBranchOpInterface
 //===----------------------------------------------------------------------===//
 
+def SegmentedRegionBranchOp : TEST_Op<"segmented_region_branch", [
+    AttrSizedOperandSegments,
+    DeclareOpInterfaceMethods<RegionBranchOpInterface,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>]> {
+  let description = [{
+    Select one of two regions and pass the corresponding operand segment to
+    its block arguments. Each region can branch to either region or exit.
+    The control operands are not successor operands.
+  }];
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+  let regions = (region SizedRegion<1>:$firstRegion,
+                        SizedRegion<1>:$secondRegion);
+  let hasCanonicalizer = 1;
+}
+
+def SegmentedRegionBranchTerminatorOp
+    : TEST_Op<"segmented_region_branch_terminator", [
+        AttrSizedOperandSegments, Terminator,
+        HasParent<"SegmentedRegionBranchOp">,
+        DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface,
+            ["getMutableSuccessorOperands"]>]> {
+  let arguments = (ins I1:$condition, Variadic<AnyType>:$first,
+                       Variadic<AnyType>:$second, Optional<I1>:$exitCondition);
+}
+
 def RegionIfYieldOp : TEST_Op<"region_if_yield",
       [NoMemoryEffect, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>:$results);

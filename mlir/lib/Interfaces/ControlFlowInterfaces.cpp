@@ -919,11 +919,41 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
       }
     }
 
+    StringAttr attrName;
     // Erase operands.
     for (auto &pair : operandsToRemove) {
       Operation *op = pair.first;
       BitVector &operands = pair.second;
-      rewriter.modifyOpInPlace(op, [&]() { op->eraseOperands(operands); });
+      rewriter.modifyOpInPlace(op, [&]() {
+        if (!op->hasTrait<OpTrait::AttrSizedOperandSegments>()) {
+          op->eraseOperands(operands);
+          return;
+        }
+        if (!attrName)
+          attrName = rewriter.getStringAttr(OpTrait::AttrSizedOperandSegments<
+                                            void>::getOperandSegmentSizeAttr());
+        auto sizes = op->getAttrOfType<DenseI32ArrayAttr>(attrName);
+        assert(sizes && "expected operand segment sizes attribute");
+        unsigned offset = op->getNumOperands();
+        // Erase from the last segment first to preserve the original indices.
+        for (unsigned segment :
+             llvm::reverse(llvm::seq<unsigned>(sizes.size()))) {
+          unsigned size = sizes.asArrayRef()[segment];
+          offset -= size;
+          SmallVector<Value> retained;
+          for (unsigned i : llvm::seq(size))
+            if (!operands.test(offset + i))
+              retained.push_back(op->getOperand(offset + i));
+          if (retained.size() == size)
+            continue;
+          // Use getAttr to keep changes to later segments.
+          MutableOperandRange range(
+              op, offset, size,
+              MutableOperandRange::OperandSegment(
+                  segment, {attrName, op->getAttr(attrName)}));
+          range.assign(retained);
+        }
+      });
     }
 
     // Erase block arguments.
