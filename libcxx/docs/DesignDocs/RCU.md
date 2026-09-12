@@ -86,7 +86,7 @@ There are several key properties that an implementation of `rcu` must satisfy:
 
 - On the collector side, `rcu_barrier` should block until all the objects `retired` before the `rcu_barrier` call have been reclaimed.
 
-- The threads that are using `rcu` must be known by the `rcu` implementation states.
+- The threads that are participating in `rcu` must be known by the `rcu` implementation.
 
 
 Adopted Design
