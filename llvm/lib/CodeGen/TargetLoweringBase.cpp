@@ -952,7 +952,9 @@ void TargetLoweringBase::initActions() {
                        Expand);
 
     // Only some target support these vector operations. Default them to Expand.
-    setOperationAction({ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH}, VT, Expand);
+    setOperationAction(
+        {ISD::VECTOR_COMPRESS, ISD::VECTOR_MATCH, ISD::VECTOR_SHUFFLE_VAR}, VT,
+        Expand);
 
     // cttz.elts defaults to expand.
     setOperationAction({ISD::CTTZ_ELTS, ISD::CTTZ_ELTS_ZERO_POISON}, VT,
