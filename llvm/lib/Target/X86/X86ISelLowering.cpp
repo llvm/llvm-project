@@ -2905,7 +2905,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   MaxLoadsPerMemcmp = 2;
   MaxLoadsPerMemcmpOptSize = 2;
 
-  // Default loop alignment, which can be overridden by -align-loops.
+  // Default loop alignment, which can be overridden by llvm.loop.align
+  // metadata.
   setPrefLoopAlignment(Align(16));
 
   // An out-of-order CPU can speculatively execute past a predictable branch,
