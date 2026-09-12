@@ -10,9 +10,7 @@
 #ifndef _LIBCPP___DEBUGGING_SUPPORT_LINUX_H
 #define _LIBCPP___DEBUGGING_SUPPORT_LINUX_H
 
-#include <__algorithm/ranges_find_if.h>
 #include <__config>
-#include <__ranges/split_view.h>
 #include <array>
 #include <fcntl.h>
 #include <string>
@@ -40,38 +38,44 @@ _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
     return false;
   }
 
-  const std::string_view __view(__buffer.data(), __result);
+  // skip process name block
+  std::string_view __view(__buffer.data() + 64, __result - 64);
+  auto __tracerpid = __view.find(__tracer_key);
 
-  auto __split           = std::ranges::views::split(__view, '\n');
-  auto __tracer_pid_line = std::ranges::find_if(__split, [&](const auto __line) {
-    return std::string_view(__line).starts_with(__tracer_key);
-  });
-
-  if (__tracer_pid_line == __split.end()) {
+  if (__tracerpid == std::string_view::npos) {
     return false;
   }
 
-  std::string_view __pid(*__tracer_pid_line);
-  __pid.remove_prefix(__tracer_key.size()); // remove "TracerPid:\t"
+  __view.remove_prefix(__tracerpid);         // Remove everything upto TracerPid:\t
+  __view.remove_prefix(__tracer_key.size()); // remove TracerPid:\t
+
+  const auto __pidn = __view.find('\n');
+  if (__pidn == std::string_view::npos) {
+    return false;
+  }
+
+  const std::string_view __pid = __view.substr(0, __pidn); // remove '\n'
 
   if (__pid[0] == '0') {
     return false;
   }
 
-  // https://elixir.bootlin.com/linux/latest/source/include/linux/sched.h#L325
-  std::array<char, 16> __name_buffer{};
+  auto __copied = std::string_view("/proc/").copy(__buffer.data(), __buffer.size());
+  __copied += __pid.copy(__buffer.data() + __copied, __buffer.size() - __copied);
+  __copied += std::string_view("/comm").copy(__buffer.data() + __copied, __buffer.size() - __copied);
+  __buffer[__copied] = '\0';
 
-  const std::string __to_open = "/proc/"s + __pid + "/comm"sv;
-  int __tracer_read           = ::open(__to_open.c_str(), O_RDONLY | O_CLOEXEC); // Linux >= 2.6.33
-  const auto __tracer_result  = ::read(__tracer_read, __name_buffer.data(), __name_buffer.size());
+  const int __tracer_read = ::open(__buffer.data(), O_RDONLY | O_CLOEXEC); // Linux >= 2.6.33
+  // https://elixir.bootlin.com/linux/latest/source/include/linux/sched.h#L325
+  const auto __tracer_result = ::read(__tracer_read, __buffer.data(), 16 + 1);
   ::close(__tracer_read);
 
-  if (__tracer_result < 0) {
+  if (__tracer_result <= 0) {
     return false;
   }
 
-  __name_buffer[__tracer_result - 1] = '\0'; // remove newline
-  const std::string_view __tracer_name(__name_buffer.data());
+  __buffer[__tracer_result - 1] = '\0'; // remove newline from /proc/xyz/comm content
+  const std::string_view __tracer_name(__buffer.data());
 
   // Sniff for known debuggers
   for (auto __i : {"gdb", "gdbserver", "lldb-server"}) {
