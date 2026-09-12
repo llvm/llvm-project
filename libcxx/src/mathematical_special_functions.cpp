@@ -43,7 +43,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-#if _LIBCPP_STD_VER >= 17
 
 namespace __cmath {
 
@@ -79,9 +78,9 @@ using __policy =
 template <class _Ret>
 _Ret __report_domain_error() {
   errno = EDOM;
-#  ifdef FE_INVALID
+#ifdef FE_INVALID
   std::feraiseexcept(FE_INVALID);
-#  endif
+#endif
   return std::numeric_limits<_Ret>::quiet_NaN();
 }
 
@@ -94,9 +93,9 @@ _Ret __report_domain_error() {
 template <class _Ret>
 _Ret __report_overflow(_Ret __value) {
   errno = ERANGE;
-#  ifdef FE_OVERFLOW
+#ifdef FE_OVERFLOW
   std::feraiseexcept(FE_OVERFLOW);
-#  endif
+#endif
   return __value;
 }
 } // namespace
@@ -156,6 +155,5 @@ long double __assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexce
 
 } // namespace __cmath
 
-#endif
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
