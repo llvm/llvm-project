@@ -1608,7 +1608,6 @@ module std {
   module locale {
     header "locale"
     module check_grouping  { header "__locale_dir/check_grouping.h" }
-    module get_c_locale    { header "__locale_dir/get_c_locale.h" }
     module messages        { header "__locale_dir/messages.h" }
     module money           { header "__locale_dir/money.h" }
     module num             { header "__locale_dir/num.h" }
@@ -1629,6 +1628,7 @@ module std {
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
+      textual header "__locale_dir/support/get_c_locale.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/llvm_libc.h"
       textual header "__locale_dir/support/netbsd.h"

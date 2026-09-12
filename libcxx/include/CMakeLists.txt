@@ -544,7 +544,6 @@ set(files
   __locale_dir/collate.h
   __locale_dir/ctype.h
   __locale_dir/ctype_base.h
-  __locale_dir/get_c_locale.h
   __locale_dir/locale.h
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
@@ -559,6 +558,7 @@ set(files
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
+  __locale_dir/support/get_c_locale.h
   __locale_dir/support/linux.h
   __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
