@@ -2473,6 +2473,7 @@ public:
   void visitIntToFPInst(Instruction &I, bool IsSigned) {
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -2488,13 +2489,8 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
-      if (I.hasNoInfs())
-        return AnyValue::poison();
-
-      if (I.hasNoSignedZeros() && IOperand.isZero() && Ctx.getRandomBool())
-        Res.changeSign();
-
-      return AnyValue(Res);
+      // We need IsInput=true here because the nsz flag applies to the output.
+      return handleFMFFlags(Res, FMF, /*IsInput=*/true);
     });
   }
 
