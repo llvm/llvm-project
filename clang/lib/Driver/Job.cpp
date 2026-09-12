@@ -22,6 +22,7 @@
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Program.h"
@@ -205,6 +206,9 @@ rewriteIncludes(const llvm::ArrayRef<const char *> &Args, size_t Idx,
 
 void Command::Print(raw_ostream &OS, const char *Terminator, bool Quote,
                     CrashReportInfo *CrashInfo) const {
+  if (InProcessToolContext)
+    OS << " (in-process)\n";
+
   // Always quote the exe.
   OS << ' ';
   llvm::sys::printArg(OS, Executable, /*Quote=*/true);
@@ -366,6 +370,13 @@ int Command::Execute(ArrayRef<std::optional<StringRef>> Redirects,
   }
 
   auto Args = llvm::toStringRefArray(Argv.data());
+
+  if (InProcessToolContext) {
+    if (ExecutionFailed)
+      *ExecutionFailed = false;
+    return InProcessToolContext->callTool(
+        ArrayRef<const char *>(Argv).drop_back());
+  }
 
   // Use Job-specific redirect files if they are present.
   if (!RedirectFiles.empty()) {
