@@ -1244,6 +1244,18 @@ module std {
   }
 
   module debugging {
+    module support_impl {
+      textual header "debugging/support/aix.h"
+      textual header "debugging/support/bsd_like.h"
+      textual header "debugging/support/linux.h"
+      textual header "debugging/support/windows.h"
+    }
+
+    module support {
+      header "debugging/support.h"
+      export *
+    }
+
     header "debugging"
     export *
   }
