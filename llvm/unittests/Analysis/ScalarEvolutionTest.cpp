@@ -2374,4 +2374,110 @@ TEST_F(ScalarEvolutionsTest, ExtendFoldCacheKeysUseFlags) {
     EXPECT_EQ(cast<SCEVZeroExtendExpr>(SExtPlain)->getOperand(), Mul);
   });
 }
+
+TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b, i32 %c) {
+      entry:
+        br label %loop.1
+
+      loop.1:
+        %iv.1 = phi i32 [ 0, %entry ], [ %iv.1.next, %loop.1 ]
+        %iv.1.next = add i32 %iv.1, 1
+        %cond.1 = icmp ult i32 %iv.1.next, 10
+        br i1 %cond.1, label %loop.1, label %loop.2
+
+      loop.2:
+        %iv.2 = phi i32 [ 0, %loop.1 ], [ %iv.2.next, %loop.2 ]
+        %iv.2.next = add i32 %iv.2, 1
+        %cond.2 = icmp ult i32 %iv.2.next, 10
+        br i1 %cond.2, label %loop.2, label %exit
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Cc = SE.getSCEV(getArgByName(F, "c"));
+    Type *I32 = A->getType();
+    const Loop *L1 =
+        LI.getLoopFor(getInstructionByName(F, "iv.1")->getParent());
+    const Loop *L2 =
+        LI.getLoopFor(getInstructionByName(F, "iv.2")->getParent());
+    ASSERT_NE(L1, nullptr);
+    ASSERT_NE(L2, nullptr);
+
+    // The recurrence is built without simplifications and carries the
+    // use-specific flags.
+    SCEVUse AR = SE.getAddRecExpr(A, B, L1, SCEV::FlagAnyWrap, SCEV::FlagNUW);
+    EXPECT_TRUE(AR.hasUseFlags());
+    EXPECT_EQ(AR.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+
+    const SCEV *BareAR = SE.getAddRecExpr(A, B, L1, SCEV::FlagAnyWrap);
+    EXPECT_EQ(AR.getPointer(), BareAR);
+    EXPECT_EQ(cast<SCEVAddRecExpr>(BareAR)->getNoWrapFlags(SCEV::FlagNUW),
+              SCEV::FlagAnyWrap);
+    EXPECT_EQ(AR.getCanonical(), BareAR);
+
+    // Operands are ordered, swapping them describes a different AddRec, with
+    // different flags.
+    SCEVUse Swapped =
+        SE.getAddRecExpr(B, A, L1, SCEV::FlagAnyWrap, SCEV::FlagNSW);
+    EXPECT_NE(Swapped.getPointer(), AR.getPointer());
+    EXPECT_TRUE(Swapped.hasUseFlags());
+    EXPECT_EQ(Swapped.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+
+    // The same holds for recurrences with more than two operands.
+    SmallVector<SCEVUse, 3> Ops = {A, B, Cc};
+    SCEVUse AR3 = SE.getAddRecExpr(Ops, L1, SCEV::FlagAnyWrap, SCEV::FlagNSW);
+    EXPECT_EQ(AR3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(AR3.getCanonical(), SE.getAddRecExpr(Ops, L1, SCEV::FlagAnyWrap));
+
+    // Flags the expression already carries add nothing to the use.
+    SCEVUse NUWAR = SE.getAddRecExpr(A, Cc, L1, SCEV::FlagNUW, SCEV::FlagNUW);
+    ASSERT_TRUE(cast<SCEVAddRecExpr>(NUWAR.getPointer())->hasNoUnsignedWrap());
+    EXPECT_FALSE(NUWAR.hasUseFlags());
+
+    auto CheckNoUseFlags = [](SCEVUse U) {
+      EXPECT_FALSE(U.hasUseFlags());
+      EXPECT_EQ(U.getUseNoWrapFlags(), SCEV::FlagAnyWrap);
+    };
+
+    // A zero step folds the recurrence away to its start value.
+    CheckNoUseFlags(SE.getAddRecExpr(A, SE.getZero(I32), L1, SCEV::FlagAnyWrap,
+                                     SCEV::FlagNUW));
+
+    // A zero trailing operand shortens the recurrence.
+    SmallVector<SCEVUse, 3> OpsWithZeroStep = {A, B, SE.getZero(I32)};
+    CheckNoUseFlags(SE.getAddRecExpr(OpsWithZeroStep, L1, SCEV::FlagAnyWrap,
+                                     SCEV::FlagNUW));
+
+    // A step that is itself a recurrence in the same loop gets inlined.
+    const SCEV *StepAR = SE.getAddRecExpr(B, Cc, L1, SCEV::FlagAnyWrap);
+    CheckNoUseFlags(
+        SE.getAddRecExpr(A, StepAR, L1, SCEV::FlagAnyWrap, SCEV::FlagNUW));
+
+    // A recurrence with a zero step can be folded to a different AddRec.
+    ASSERT_EQ(cast<SCEVAddRecExpr>(BareAR)->getLoop(), L1);
+    CheckNoUseFlags(SE.getAddRecExpr(BareAR, SE.getZero(I32), L2,
+                                     SCEV::FlagAnyWrap, SCEV::FlagNUW));
+
+#ifndef NDEBUG
+    EXPECT_DEATH(
+        (void)SE.getAddRecExpr(A, B, L1, SCEV::FlagAnyWrap, SCEV::FlagNW),
+        "only nuw or nsw allowed");
+#endif
+  });
+}
 }  // end namespace llvm

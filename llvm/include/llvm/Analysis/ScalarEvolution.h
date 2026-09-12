@@ -782,14 +782,17 @@ public:
   LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
-  LLVM_ABI const SCEV *getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
-                                     SCEV::NoWrapFlags Flags);
-  LLVM_ABI const SCEV *getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
-                                     const Loop *L, SCEV::NoWrapFlags Flags);
-  const SCEV *getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands,
-                            const Loop *L, SCEV::NoWrapFlags Flags) {
+  LLVM_ABI SCEVUse getAddRecExpr(
+      SCEVUse Start, SCEVUse Step, const Loop *L, SCEV::NoWrapFlags Flags,
+      SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
+  LLVM_ABI SCEVUse getAddRecExpr(
+      SmallVectorImpl<SCEVUse> &Operands, const Loop *L,
+      SCEV::NoWrapFlags Flags, SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap);
+  SCEVUse getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands, const Loop *L,
+                        SCEV::NoWrapFlags Flags,
+                        SCEV::NoWrapFlags UseFlags = SCEV::FlagAnyWrap) {
     SmallVector<SCEVUse, 4> NewOp(Operands.begin(), Operands.end());
-    return getAddRecExpr(NewOp, L, Flags);
+    return getAddRecExpr(NewOp, L, Flags, UseFlags);
   }
 
   /// Checks if \p SymbolicPHI can be rewritten as an AddRecExpr under some
