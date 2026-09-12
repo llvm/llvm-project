@@ -1759,11 +1759,39 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
   return nullptr;
 }
 
+/// Returns the lane_data a 2D block load can deliver for `elemTy`. lane_data
+/// counts the elements a lane holds in one register, so it follows the packing
+/// granularity of the block variant:
+///
+///   * regular:   packs along the innermost dim, to the load's packed format
+///                size.
+///   * transform: packs along the second-innermost dim, to the uArch's general
+///                packed format size. This is VNNI.
+///   * transpose: packs along the innermost dim, to the general packed format
+///                size.
+///
+/// An element at least as wide as its packing size gets unit lane_data, so f32
+/// is always [1, 1]. Leading dims are unit.
+static SmallVector<int64_t> get2DBlockLoadLaneData(
+    Type elemTy, int rank, bool hasTransform, bool hasTranspose,
+    const xegpu::uArch::Subgroup2DBlockLoadInstruction *uArchInstruction,
+    const xegpu::uArch::uArch *uArch) {
+  SmallVector<int64_t> laneData(rank, 1);
+  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
+  unsigned packingSize = hasTransform || hasTranspose
+                             ? uArch->getGeneralPackedFormatBitSize()
+                             : uArchInstruction->getPackedFormatBitSize();
+  laneData[hasTransform ? rank - 2 : rank - 1] =
+      llvm::divideCeil(packingSize, bitwidth);
+  return laneData;
+}
+
 /// Sets up the anchor layout for a load_nd operation. LoadNd takes a
 /// consumer layout (from its result's downstream uses) and validates it
 /// against uArch constraints; if valid, the consumer's `inst_data` /
 /// `sg_layout` are honored. Otherwise the helper falls back to defaults
-/// derived from uArch block parameters.
+/// derived from uArch block parameters. `lane_data` never comes from the
+/// consumer; see get2DBlockLoadLaneData.
 xegpu::DistributeLayoutAttr
 xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                VectorType resVecTy,
@@ -1795,7 +1823,6 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       consumerLayout.getEffectiveLaneLayoutAsInt();
   SmallVector<int64_t> consumerLaneData =
       consumerLayout.getEffectiveLaneDataAsInt();
-  auto consumerOrderAttr = consumerLayout.getOrder();
 
   assert(!consumerLaneLayout.empty() && !consumerLaneData.empty() &&
          "Expected consumer layout to have lane_layout and lane_data");
@@ -1830,6 +1857,22 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
         laneLayout.push_back(1);
     }
 
+    // A consumer may ask for more elements per lane than the block load can
+    // pack, e.g. an f32 multi_reduction wanting 16. A downstream convert_layout
+    // reconciles the difference.
+    SmallVector<int64_t> laneData = get2DBlockLoadLaneData(
+        elemTy, rank, hasTransform, hasTranspose, uArchInstruction, uArch);
+
+    // Only a transposed block departs from the default of innermost-fastest.
+    DenseI32ArrayAttr orderAttr = nullptr;
+    if (hasTranspose) {
+      SmallVector<int32_t> order(rank);
+      for (int i = 0; i < rank; i++)
+        order[i] = rank - 1 - i;
+      std::swap(order[0], order[1]);
+      orderAttr = DenseI32ArrayAttr::get(context, order);
+    }
+
     // See whether the consumer's inst_data satisfies the block constraints.
     int64_t height = consumerInstData[rank - 2];
     int64_t width = consumerInstData[rank - 1];
@@ -1838,23 +1881,36 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
     if (llvm::is_contained(bWidths, static_cast<int>(width)) ||
         (width % maxWidth == 0 && width / maxWidth < maxBlockCount)) {
       if (llvm::is_contained(bHeights, static_cast<int>(height))) {
-        return buildInstDataLayoutWithLane(context, consumerInstData,
-                                           laneLayout, consumerLaneData,
-                                           consumerOrderAttr);
+        assert(isValidLaneLayout(consumerInstData, laneLayout, laneData) &&
+               "Expected the load layout to satisfy uArch block constraints");
+        return buildInstDataLayoutWithLane(context, consumerInstData, laneLayout,
+                                           laneData, orderAttr);
       }
     }
 
-    // if consumer instData size too small, try the larger one. like DPAS_MX's
-    // scale is smaller than block load
+    // The consumer's inst_data is not a usable block, so take the uArch's.
+    // DPAS_MX scales land here. A scale whose innermost dim is too narrow to
+    // spread packed lanes over (width 16 for an 8-bit scale needing 16 lanes of
+    // 2 elements) cannot be loaded regularly; transformed, it packs down the
+    // column instead, which fits. A vertical lane_layout is already a transpose.
+    if (!hasTranspose && !hasTransform &&
+        consumerInstData[rank - 1] %
+                (laneLayout[rank - 1] * laneData[rank - 1]) !=
+            0) {
+      hasTransform = true;
+      laneData = get2DBlockLoadLaneData(elemTy, rank, hasTransform, hasTranspose,
+                                        uArchInstruction, uArch);
+    }
+
     auto instData = get2DBlockIOInstDataLayout(
         dataShape, elemTy, uArchInstruction, hasTransform, hasTranspose);
     // Shape not realizable as a 2D-block instruction; let the caller report it.
     if (!instData)
       return nullptr;
-    assert(isValidLaneLayout(*instData, laneLayout, consumerLaneData) &&
+    assert(isValidLaneLayout(*instData, laneLayout, laneData) &&
            "Expected the load layout to satisfy uArch block constraints");
-    return buildInstDataLayoutWithLane(context, *instData, laneLayout,
-                                       consumerLaneData, consumerOrderAttr);
+    return buildInstDataLayoutWithLane(context, *instData, laneLayout, laneData,
+                                       orderAttr);
   }
   if (layoutKind == xegpu::LayoutKind::Lane) {
     assert(isValidLaneLayout(dataShape, consumerLaneLayout, consumerLaneData) &&
