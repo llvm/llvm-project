@@ -2,9 +2,9 @@
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24  -fclangir \
 // RUN:  -emit-llvm  %s -o %t.ll
-// RUN: FileCheck  --check-prefix=LLVM --input-file=%t.ll %s
+// RUN: FileCheck  --check-prefix=LLVM,LLVMCIR --input-file=%t.ll %s
 // RUN: %clang_cc1 -triple aarch64-none-linux-android24 -emit-llvm %s -o %t-ogcg.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t-ogcg.ll %s
+// RUN: FileCheck --check-prefix=LLVM,OGCG --input-file=%t-ogcg.ll %s
 
 typedef int vint4 __attribute__((ext_vector_type(4)));
 typedef unsigned int vuint4 __attribute__((ext_vector_type(4)));
@@ -849,7 +849,8 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CIR-NEXT: cir.min %[[I2_LOAD]], %[[NEG_11]] : !s64i
 
   // LLVM:      [[I2:%.+]] = load i64, ptr %[[ADDR_I2]], align 8
-  // LLVM-NEXT: call i64 @llvm.smin.i64(i64 -11, i64 [[I2]])
+  // LLVMCIR-NEXT: call i64 @llvm.smin.i64(i64 [[I2]], i64 -11)
+  // OGCG-NEXT: call i64 @llvm.smin.i64(i64 -11, i64 [[I2]])
   i1 = __builtin_elementwise_min(-11ll, i2);
 
   // CIR:      %[[I1_LOAD:.*]] = cir.load align(8) %[[I1]] : !cir.ptr<!s64i>, !s64i
