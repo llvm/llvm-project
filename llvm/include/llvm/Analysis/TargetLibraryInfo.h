@@ -122,12 +122,25 @@ class TargetLibraryInfoImpl {
   /// on VectorFnName rather than ScalarFnName.
   std::vector<VecDesc> ScalarDescs;
 
+  /// Mapping from a standard math function name to its AMD fast math library
+  /// fast-call equivalent (e.g. "tan" -> "amd_fasttan"). Populated when an AMD
+  /// fast math library is selected.
+  DenseMap<StringRef, StringRef> LibFastFunctions;
+
   /// Return true if the function type FTy is valid for the library function
   /// F, regardless of whether the function is available.
   LLVM_ABI bool isValidProtoForLibFunc(const FunctionType &FTy, LibFunc F,
                                        const Module &M) const;
 
 public:
+  /// Fast math library selection used for lowering standard math calls to
+  /// faster, library-specific entry points.
+  enum FastLibrary {
+    NoFastLibrary, // Use default library.
+    AMDLIBM        // AMD fast math library.
+  };
+  FastLibrary FastMathLib = NoFastLibrary;
+
   TargetLibraryInfoImpl() = delete;
   LLVM_ABI explicit TargetLibraryInfoImpl(
       const Triple &T, VectorLibrary VecLib = VectorLibrary::NoLibrary);
@@ -196,6 +209,20 @@ public:
   LLVM_ABI void
   addVectorizableFunctionsFromVecLib(enum VectorLibrary VecLib,
                                      const llvm::Triple &TargetTriple);
+
+  /// Populate the fast math function mappings for the given fast math library
+  /// and record it as the selected fast math library.
+  LLVM_ABI void addFastFunctionsFromMathLib(enum FastLibrary FastLib);
+
+  /// Return the library-specific fast function name for \p F, or an empty
+  /// StringRef if no mapping exists.
+  LLVM_ABI StringRef getFastFunctionFromMathLib(StringRef F) const;
+
+  /// Return the currently selected fast math library.
+  LLVM_ABI FastLibrary getFastMathLib() const;
+
+  /// Set the selected fast math library.
+  LLVM_ABI void setFastMathLib(enum FastLibrary FastLib);
 
   /// Return true if the function F has a vector equivalent with vectorization
   /// factor VF.
@@ -405,6 +432,12 @@ public:
   const VecDesc *getVectorMappingInfo(StringRef F, const ElementCount &VF,
                                       bool Masked) const {
     return Impl->getVectorMappingInfo(F, VF, Masked);
+  }
+  StringRef getFastFunctionFromMathLib(StringRef F) const {
+    return Impl->getFastFunctionFromMathLib(F);
+  }
+  TargetLibraryInfoImpl::FastLibrary getFastMathLib() const {
+    return Impl->getFastMathLib();
   }
 
   /// Tests if the function is both available and a candidate for optimized code
