@@ -89,6 +89,9 @@ __riscv_restore_0:
   lw      s0,  8(sp)
   lw      ra,  12(sp)
   addi    sp, sp, 16
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 
 #else
@@ -112,6 +115,9 @@ __riscv_restore_1:
 __riscv_restore_0:
   lw      ra, 0(sp)
   addi    sp, sp, 4
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 
 #endif
@@ -191,6 +197,9 @@ __riscv_restore_0:
   ld      s0,  0(sp)
   ld      ra,  8(sp)
   addi    sp, sp, 16
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 
 #else
@@ -214,6 +223,9 @@ __riscv_restore_1:
 __riscv_restore_0:
   ld      ra, 0(sp)
   addi    sp, sp, 8
+#if defined(__riscv_shadow_stack)
+  sspopchk ra
+#endif
   ret
 
 #endif
