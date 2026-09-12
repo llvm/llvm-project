@@ -844,21 +844,6 @@ def CIR_LoadOp : CIR_Op<"load", [
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
-  let builders = [
-    OpBuilder<(ins "mlir::Value":$addr), [{
-      build($_builder, $_state, addr, /*isDeref=*/false,
-            /*is_volatile=*/false, /*is_nontemporal=*/false,
-            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
-            cir::MemOrderAttr{}, /*invariant=*/false);
-    }]>,
-    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$addr), [{
-      build($_builder, $_state, result, addr, /*isDeref=*/false,
-            /*is_volatile=*/false, /*is_nontemporal=*/false,
-            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
-            cir::MemOrderAttr{}, /*invariant=*/false);
-    }]>
-  ];
-
   // FIXME: add verifier.
 }
 
@@ -7704,8 +7689,7 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let arguments = (ins
     CIR_AnyFloatOrVecOfFloatType:$lhs,
     CIR_AnyFloatOrVecOfFloatType:$rhs,
-    OptionalAttr<CIR_FenvAttr>:$fenv,
-    OptionalAttr<CIR_FastMathAttr>:$fastmath
+    OptionalAttr<CIR_FenvAttr>:$fenv
   );
 
   let results = (outs  CIR_AnyFloatOrVecOfFloatType:$result);
@@ -7717,8 +7701,7 @@ class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   let builders = [
     OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
-      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{},
-            cir::FastMathFlagsAttr{});
+      build($_builder, $_state, result, lhs, rhs, cir::FenvAttr{});
     }]>
   ];
 
@@ -7742,6 +7725,7 @@ def CIR_FMaxNumOp : CIR_BinaryFPToFPBuiltinOp<"fmaxnum", "MaxNumOp"> {
     `cir.fmaxnum` returns the larger of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
   let llvmOp = "";
 }
 
@@ -7762,6 +7746,7 @@ def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
     `cir.fminnum` returns the smaller of its two operands. If one operand is
     NaN, the other operand is returned.
   }];
+  // Needs custom lowering for FastmathFlags::nsz.
   let llvmOp = "";
 }
 

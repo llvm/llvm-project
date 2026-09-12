@@ -15,7 +15,8 @@ typedef long double ldouble2 __attribute__((ext_vector_type(2)));
 // CIR:          cir.fminnum %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>
 //
 // LLVM-LABEL: @_Z7pfmin16Dv8_DF16_S_(
-// LLVM:         call <8 x half> @llvm.minnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
+// FIXME(cir): Classic codegen doesn't emit a nsz for all of these.
+// LLVM:         call {{.*}}<8 x half> @llvm.minnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
 //
 half8 pfmin16(half8 a, half8 b) {
 	return __builtin_elementwise_minnum(a, b);
@@ -24,7 +25,7 @@ half8 pfmin16(half8 a, half8 b) {
 // CIR:          cir.fminnum %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.bf16>
 //
 // LLVM-LABEL: @_Z8pfmin16bDv8_DF16bS_(
-// LLVM:         call <8 x bfloat> @llvm.minnum.v8bf16(<8 x bfloat> %{{.*}}, <8 x bfloat> %{{.*}})
+// LLVM:         call {{.*}}<8 x bfloat> @llvm.minnum.v8bf16(<8 x bfloat> %{{.*}}, <8 x bfloat> %{{.*}})
 //
 bf16x8 pfmin16b(bf16x8 a, bf16x8 b) {
 	return __builtin_elementwise_minnum(a, b);
@@ -33,7 +34,7 @@ bf16x8 pfmin16b(bf16x8 a, bf16x8 b) {
 // CIR:          cir.fminnum %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
 //
 // LLVM-LABEL: @_Z7pfmin32Dv4_fS_(
-// LLVM:         call <4 x float> @llvm.minnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// LLVM:         call {{.*}}<4 x float> @llvm.minnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 //
 float4 pfmin32(float4 a, float4 b) {
 	return __builtin_elementwise_minnum(a, b);
@@ -42,7 +43,7 @@ float4 pfmin32(float4 a, float4 b) {
 // CIR:          cir.fminnum %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>
 //
 // LLVM-LABEL: @_Z7pfmin64Dv2_dS_(
-// LLVM:         call <2 x double> @llvm.minnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+// LLVM:         call {{.*}}<2 x double> @llvm.minnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 //
 double2 pfmin64(double2 a, double2 b) {
 	return __builtin_elementwise_minnum(a, b);
@@ -51,7 +52,7 @@ double2 pfmin64(double2 a, double2 b) {
 // CIR:          cir.fminnum %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.long_double<!cir.f80>>
 //
 // LLVM-LABEL: @_Z7pfmin80v(
-// LLVM:         call <2 x x86_fp80> @llvm.minnum.v2f80(<2 x x86_fp80> %{{.*}}, <2 x x86_fp80> %{{.*}})
+// LLVM:         call {{.*}}<2 x x86_fp80> @llvm.minnum.v2f80(<2 x x86_fp80> %{{.*}}, <2 x x86_fp80> %{{.*}})
 //
 void pfmin80() {
   ldouble2 a, b;
@@ -62,7 +63,7 @@ void pfmin80() {
 // CIR:          cir.fmaxnum %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.f16>
 //
 // LLVM-LABEL: @_Z7pfmax16Dv8_DF16_S_(
-// LLVM:         call <8 x half> @llvm.maxnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
+// LLVM:         call {{.*}}<8 x half> @llvm.maxnum.v8f16(<8 x half> %{{.*}}, <8 x half> %{{.*}})
 //
 half8 pfmax16(half8 a, half8 b) {
 	return __builtin_elementwise_maxnum(a, b);
@@ -71,7 +72,7 @@ half8 pfmax16(half8 a, half8 b) {
 // CIR:          cir.fmaxnum %{{.*}}, %{{.*}} : !cir.vector<8 x !cir.bf16>
 //
 // LLVM-LABEL: @_Z8pfmax16bDv8_DF16bS_(
-// LLVM:         call <8 x bfloat> @llvm.maxnum.v8bf16(<8 x bfloat> %{{.*}}, <8 x bfloat> %{{.*}})
+// LLVM:         call {{.*}}<8 x bfloat> @llvm.maxnum.v8bf16(<8 x bfloat> %{{.*}}, <8 x bfloat> %{{.*}})
 //
 bf16x8 pfmax16b(bf16x8 a, bf16x8 b) {
 	return __builtin_elementwise_maxnum(a, b);
@@ -80,7 +81,7 @@ bf16x8 pfmax16b(bf16x8 a, bf16x8 b) {
 // CIR:          cir.fmaxnum %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>
 //
 // LLVM-LABEL: @_Z7pfmax32Dv4_fS_(
-// LLVM:         call <4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
+// LLVM:         call {{.*}}<4 x float> @llvm.maxnum.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}})
 //
 float4 pfmax32(float4 a, float4 b) {
 	return __builtin_elementwise_maxnum(a, b);
@@ -89,7 +90,7 @@ float4 pfmax32(float4 a, float4 b) {
 // CIR:          cir.fmaxnum %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.double>
 //
 // LLVM-LABEL: @_Z7pfmax64Dv2_dS_(
-// LLVM:         call <2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
+// LLVM:         call {{.*}}<2 x double> @llvm.maxnum.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}})
 //
 double2 pfmax64(double2 a, double2 b) {
 	return __builtin_elementwise_maxnum(a, b);
@@ -99,7 +100,7 @@ double2 pfmax64(double2 a, double2 b) {
 // CIR:          cir.fminnum %{{.*}}, %{{.*}} : !cir.vector<2 x !cir.long_double<!cir.f80>>
 //
 // LLVM-LABEL: @_Z7pfmax80v(
-// LLVM:         call <2 x x86_fp80> @llvm.minnum.v2f80(<2 x x86_fp80> %{{.*}}, <2 x x86_fp80> %{{.*}})
+// LLVM:         call {{.*}}<2 x x86_fp80> @llvm.minnum.v2f80(<2 x x86_fp80> %{{.*}}, <2 x x86_fp80> %{{.*}})
 //
 void pfmax80() {
   ldouble2 a, b;

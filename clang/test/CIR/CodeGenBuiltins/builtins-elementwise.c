@@ -806,7 +806,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[F1:%.+]] = load float, ptr %[[ADDR_F1]], align 4
   // LLVM-NEXT: [[F2:%.+]] = load float, ptr %[[ADDR_F2]], align 4
-  // LLVM-NEXT:  call float @llvm.minnum.f32(float [[F1]], float [[F2]])
+  // LLVM-NEXT:  call {{.*}}float @llvm.minnum.f32(float [[F1]], float [[F2]])
   f1 = __builtin_elementwise_min(f1, f2);
 
   // CIR:      %[[D1_LOAD:.*]] = cir.load align(8) %[[D1]] : !cir.ptr<!cir.double>, !cir.double
@@ -815,7 +815,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[D1:%.+]] = load double, ptr %[[ADDR_D1]], align 8
   // LLVM-NEXT: [[D2:%.+]] = load double, ptr %[[ADDR_D2]], align 8
-  // LLVM-NEXT: call double @llvm.minnum.f64(double [[D1]], double [[D2]])
+  // LLVM-NEXT: call {{.*}}double @llvm.minnum.f64(double [[D1]], double [[D2]])
   d1 = __builtin_elementwise_min(d1, d2);
 
   // CIR:      %[[D1_LOAD:.*]] = cir.load align(8) %[[D1]] : !cir.ptr<!cir.double>, !cir.double
@@ -823,7 +823,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CIR-NEXT: cir.fminnum %[[D1_LOAD]], %[[TWO]] : !cir.double
  
   // LLVM:      [[D1:%.+]] = load double, ptr %[[ADDR_D1]], align 8
-  // LLVM-NEXT: call double @llvm.minnum.f64(double [[D1]], double 2.000000e+00)
+  // LLVM-NEXT: call {{.*}}double @llvm.minnum.f64(double [[D1]], double 2.000000e+00)
   d1 = __builtin_elementwise_min(d1, 2.0);
 
   // CIR:      %[[VF1_LOAD:.*]] = cir.load align(16) %[[VF1]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
@@ -832,12 +832,12 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[VF1:%.+]] = load <4 x float>, ptr %[[ADDR_VF1]], align 16
   // LLVM-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %[[ADDR_VF2]], align 16
-  // LLVM-NEXT: call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
+  // LLVM-NEXT: call {{.*}}<4 x float> @llvm.minnum.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
   vf1 = __builtin_elementwise_min(vf1, vf2);
 
   // CIR:      %[[I1_LOAD:.*]] = cir.load align(8) %[[I1]] : !cir.ptr<!s64i>, !s64i
   // CIR-NEXT: %[[I2_LOAD:.*]] = cir.load align(8) %[[I2]] : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[I1_LOAD]], %[[I2_LOAD]] : (!s64i, !s64i) -> !s64i
+  // CIR-NEXT: cir.min %[[I1_LOAD]], %[[I2_LOAD]] : !s64i
 
   // LLVM:      [[I1:%.+]] = load i64, ptr %[[ADDR_I1]], align 8
   // LLVM-NEXT: [[I2:%.+]] = load i64, ptr %[[ADDR_I2]], align 8
@@ -846,7 +846,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[NEG_11:.*]] = cir.const #cir.int<-11> : !s64i
   // CIR-NEXT: %[[I2_LOAD:.*]] = cir.load align(8) %[[I2]] : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[NEG_11]], %[[I2_LOAD]] : (!s64i, !s64i) -> !s64i
+  // CIR-NEXT: cir.min %[[I2_LOAD]], %[[NEG_11]] : !s64i
 
   // LLVM:      [[I2:%.+]] = load i64, ptr %[[ADDR_I2]], align 8
   // LLVM-NEXT: call i64 @llvm.smin.i64(i64 -11, i64 [[I2]])
@@ -856,7 +856,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
   // CIR-NEXT: %[[I1_TRUNC:.*]] = cir.cast integral %[[I1_LOAD]] : !s64i -> !s16i
   // CIR-NEXT: %[[I2_LOAD:.*]] = cir.load align(8) %[[I2]] : !cir.ptr<!s64i>, !s64i
   // CIR-NEXT: %[[I2_TRUNC:.*]] = cir.cast integral %[[I2_LOAD]] : !s64i -> !s16i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[I1_TRUNC]], %[[I2_TRUNC]] : (!s16i, !s16i) -> !s16i
+  // CIR-NEXT: cir.min %[[I1_TRUNC]], %[[I2_TRUNC]] : !s16i
 
   // LLVM:      [[I1:%.+]] = load i64, ptr %[[ADDR_I1]], align 8
   // LLVM:      [[S1:%.+]] = trunc i64 [[I1]] to i16
@@ -867,7 +867,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[VI1_LOAD:.*]] = cir.load align(16) %[[VI1]] : !cir.ptr<!cir.vector<8 x !s16i>>, !cir.vector<8 x !s16i>
   // CIR-NEXT: %[[VI2_LOAD:.*]] = cir.load align(16) %[[VI2]] : !cir.ptr<!cir.vector<8 x !s16i>>, !cir.vector<8 x !s16i>
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[VI1_LOAD]], %[[VI2_LOAD]] : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR-NEXT: cir.min %[[VI1_LOAD]], %[[VI2_LOAD]] : !cir.vector<8 x !s16i>
   // LLVM:      [[VI1:%.+]] = load <8 x i16>, ptr %[[ADDR_VI1]], align 16
   // LLVM-NEXT: [[VI2:%.+]] = load <8 x i16>, ptr %[[ADDR_VI2]], align 16
   // LLVM-NEXT: call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[VI1]], <8 x i16> [[VI2]])
@@ -875,7 +875,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[U1_LOAD:.*]] = cir.load align(4) %[[U1]] : !cir.ptr<!u32i>, !u32i
   // CIR-NEXT: %[[U2_LOAD:.*]] = cir.load align(4) %[[U2]] : !cir.ptr<!u32i>, !u32i
-  // CIR-NEXT: cir.call_llvm_intrinsic "umin" %[[U1_LOAD]], %[[U2_LOAD]] : (!u32i, !u32i) -> !u32i
+  // CIR-NEXT: cir.min %[[U1_LOAD]], %[[U2_LOAD]] : !u32i
 
   // LLVM:      [[U1:%.+]] = load i32, ptr %[[ADDR_U1]], align 4
   // LLVM-NEXT: [[U2:%.+]] = load i32, ptr %[[ADDR_U2]], align 4
@@ -884,7 +884,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[VU1_LOAD:.*]] = cir.load align(16) %[[VU1]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
   // CIR-NEXT: %[[VU2_LOAD:.*]] = cir.load align(16) %[[VU2]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
-  // CIR-NEXT: cir.call_llvm_intrinsic "umin" %[[VU1_LOAD]], %[[VU2_LOAD]] : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i>
+  // CIR-NEXT: cir.min %[[VU1_LOAD]], %[[VU2_LOAD]] : !cir.vector<4 x !u32i>
 
   // LLVM:      [[VU1:%.+]] = load <4 x i32>, ptr %[[ADDR_VU1]], align 16
   // LLVM-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %[[ADDR_VU2]], align 16
@@ -893,7 +893,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[BI1_LOAD:.*]] = cir.load align(4) %[[BI1]] : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
   // CIR-NEXT: %[[BI2_LOAD:.*]] = cir.load align(4) %[[BI2]] : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[BI1_LOAD]], %[[BI2_LOAD]] : (!cir.int<s, 31, bitint>, !cir.int<s, 31, bitint>) -> !cir.int<s, 31, bitint>
+  // CIR-NEXT: cir.min %[[BI1_LOAD]], %[[BI2_LOAD]] : !cir.int<s, 31, bitint>
 
   // LLVM:      [[BI1:%.+]] = load i32, ptr %[[ADDR_BI1]], align 4
   // LLVM-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
@@ -904,7 +904,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[BU1_LOAD:.*]] = cir.load align(8) %[[BU1]] : !cir.ptr<!cir.int<u, 55, bitint>>, !cir.int<u, 55, bitint>
   // CIR-NEXT: %[[BU2_LOAD:.*]] = cir.load align(8) %[[BU2]] : !cir.ptr<!cir.int<u, 55, bitint>>, !cir.int<u, 55, bitint>
-  // CIR-NEXT: cir.call_llvm_intrinsic "umin" %[[BU1_LOAD]], %[[BU2_LOAD]] : (!cir.int<u, 55, bitint>, !cir.int<u, 55, bitint>) -> !cir.int<u, 55, bitint>
+  // CIR-NEXT: cir.min %[[BU1_LOAD]], %[[BU2_LOAD]] : !cir.int<u, 55, bitint>
 
   // LLVM:      [[BU1:%.+]] = load i64, ptr %[[ADDR_BU1]], align 8
   // LLVM-NEXT: [[LOADEDV2:%.+]] = trunc i64 [[BU1]] to i55
@@ -919,7 +919,7 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[CVF1:%.+]] = load <4 x float>, ptr %[[ADDR_CVF1]], align 16
   // LLVM-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %[[ADDR_VF2]], align 16
-  // LLVM-NEXT: call <4 x float> @llvm.minnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
+  // LLVM-NEXT: call {{.*}}<4 x float> @llvm.minnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
   const float4 cvf1 = vf1;
   vf1 = __builtin_elementwise_min(cvf1, vf2);
 
@@ -929,14 +929,14 @@ void test_builtin_elementwise_min(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[VF2:%.+]] = load <4 x float>, ptr %[[ADDR_VF2]], align 16
   // LLVM-NEXT: [[CVF1:%.+]] = load <4 x float>, ptr %[[ADDR_CVF1]], align 16
-  // LLVM-NEXT: call <4 x float> @llvm.minnum.v4f32(<4 x float> [[VF2]], <4 x float> [[CVF1]])
+  // LLVM-NEXT: call {{.*}}<4 x float> @llvm.minnum.v4f32(<4 x float> [[VF2]], <4 x float> [[CVF1]])
   vf1 = __builtin_elementwise_min(vf2, cvf1);
 
   // CIR:      %[[IAONE:.*]] = cir.get_global @int_as_one : !cir.ptr<!s32i, target_address_space(1)>
   // CIR-NEXT: %[[IAO_LOAD:.*]] = cir.load align(4) %[[IAONE]] : !cir.ptr<!s32i, target_address_space(1)>, !s32i
   // CIR-NEXT: %[[B:.*]] = cir.get_global @b : !cir.ptr<!s32i>
   // CIR-NEXT: %[[B_LOAD:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smin" %[[IAO_LOAD]], %[[B_LOAD]] : (!s32i, !s32i) -> !s32i
+  // CIR-NEXT: cir.min %[[IAO_LOAD]], %[[B_LOAD]] : !s32i
 
   // LLVM:      [[IAS1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
   // LLVM-NEXT: [[B:%.+]] = load i32, ptr @b, align 4
@@ -1109,7 +1109,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   
   // LLVM:      [[F1:%.+]] = load float, ptr %[[ADDR_F1]], align 4
   // LLVM-NEXT: [[F2:%.+]] = load float, ptr %[[ADDR_F2]], align 4
-  // LLVM-NEXT:  call float @llvm.maxnum.f32(float [[F1]], float [[F2]])
+  // LLVM-NEXT:  call {{.*}}float @llvm.maxnum.f32(float [[F1]], float [[F2]])
   f1 = __builtin_elementwise_max(f1, f2);
 
   // CIR:      %[[D1_LOAD:.*]] = cir.load align(8) %[[D1]] : !cir.ptr<!cir.double>, !cir.double
@@ -1118,7 +1118,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[D1:%.+]] = load double, ptr %[[ADDR_D1]], align 8
   // LLVM-NEXT: [[D2:%.+]] = load double, ptr %[[ADDR_D2]], align 8
-  // LLVM-NEXT: call double @llvm.maxnum.f64(double [[D1]], double [[D2]])
+  // LLVM-NEXT: call {{.*}}double @llvm.maxnum.f64(double [[D1]], double [[D2]])
   d1 = __builtin_elementwise_max(d1, d2);
 
   // CIR:      %[[TWENTY:.*]] = cir.const #cir.fp<2.000000e+01> : !cir.double
@@ -1126,7 +1126,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
   // CIR-NEXT: cir.fmaxnum %[[TWENTY]], %[[D2_LOAD]] : !cir.double
 
   // LLVM:      [[D2:%.+]] = load double, ptr %[[ADDR_D2]], align 8
-  // LLVM-NEXT: call double @llvm.maxnum.f64(double 2.000000e+01, double [[D2]])
+  // LLVM-NEXT: call {{.*}}double @llvm.maxnum.f64(double 2.000000e+01, double [[D2]])
   d1 = __builtin_elementwise_max(20.0, d2);
 
   // CIR:      %[[VF1_LOAD:.*]] = cir.load align(16) %[[VF1]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
@@ -1135,12 +1135,12 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[VF1:%.+]] = load <4 x float>, ptr %[[ADDR_VF1]], align 16
   // LLVM-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %[[ADDR_VF2]], align 16
-  // LLVM-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
+  // LLVM-NEXT: call {{.*}}<4 x float> @llvm.maxnum.v4f32(<4 x float> [[VF1]], <4 x float> [[VF2]])
   vf1 = __builtin_elementwise_max(vf1, vf2);
 
   // CIR:      %[[I1_LOAD:.*]] = cir.load align(8) %[[I1]] : !cir.ptr<!s64i>, !s64i
   // CIR-NEXT: %[[I2_LOAD:.*]] = cir.load align(8) %[[I2]] : !cir.ptr<!s64i>, !s64i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smax" %31, %32 : (!s64i, !s64i) -> !s64i
+  // CIR-NEXT: cir.max %[[I1_LOAD]], %[[I2_LOAD]] : !s64i
 
   // LLVM:      [[I1:%.+]] = load i64, ptr %[[ADDR_I1]], align 8
   // LLVM-NEXT: [[I2:%.+]] = load i64, ptr %[[ADDR_I2]], align 8
@@ -1149,7 +1149,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[I1_LOAD:.*]] = cir.load align(8) %[[I1]] : !cir.ptr<!s64i>, !s64i
   // CIR-NEXT: %[[TEN:.*]] = cir.const #cir.int<10> : !s64i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smax" %[[I1_LOAD]], %[[TEN]] : (!s64i, !s64i) -> !s64i
+  // CIR-NEXT: cir.max %[[I1_LOAD]], %[[TEN]] : !s64i
 
   // LLVM:      [[I1:%.+]] = load i64, ptr %[[ADDR_I1]], align 8
   // LLVM-NEXT: call i64 @llvm.smax.i64(i64 [[I1]], i64 10)
@@ -1157,7 +1157,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[VI1_LOAD:.*]] = cir.load align(16) %[[VI1]] : !cir.ptr<!cir.vector<8 x !s16i>>, !cir.vector<8 x !s16i>
   // CIR-NEXT: %[[VI2_LOAD:.*]] = cir.load align(16) %[[VI2]] : !cir.ptr<!cir.vector<8 x !s16i>>, !cir.vector<8 x !s16i>
-  // CIR-NEXT: cir.call_llvm_intrinsic "smax" %[[VI1_LOAD]], %[[VI2_LOAD]] : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR-NEXT: cir.max %[[VI1_LOAD]], %[[VI2_LOAD]] : !cir.vector<8 x !s16i>
 
   // LLVM:      [[VI1:%.+]] = load <8 x i16>, ptr %[[ADDR_VI1]], align 16
   // LLVM-NEXT: [[VI2:%.+]] = load <8 x i16>, ptr %[[ADDR_VI2]], align 16
@@ -1166,7 +1166,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[U1_LOAD:.*]] = cir.load align(4) %[[U1]] : !cir.ptr<!u32i>, !u32i
   // CIR-NEXT: %[[U2_LOAD:.*]] = cir.load align(4) %[[U2]] : !cir.ptr<!u32i>, !u32i
-  // CIR-NEXT: cir.call_llvm_intrinsic "umax" %[[U1_LOAD]], %[[U2_LOAD]] : (!u32i, !u32i) -> !u32i
+  // CIR-NEXT: cir.max %[[U1_LOAD]], %[[U2_LOAD]] : !u32i
 
   // LLVM:      [[U1:%.+]] = load i32, ptr %[[ADDR_U1]], align 4
   // LLVM-NEXT: [[U2:%.+]] = load i32, ptr %[[ADDR_U2]], align 4
@@ -1175,7 +1175,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[VU1_LOAD:.*]] = cir.load align(16) %[[VU1]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
   // CIR-NEXT: %[[VU2_LOAD:.*]] = cir.load align(16) %[[VU2]] : !cir.ptr<!cir.vector<4 x !u32i>>, !cir.vector<4 x !u32i>
-  // CIR-NEXT: cir.call_llvm_intrinsic "umax" %[[VU1_LOAD]], %[[VU2_LOAD]] : (!cir.vector<4 x !u32i>, !cir.vector<4 x !u32i>) -> !cir.vector<4 x !u32i>
+  // CIR-NEXT: cir.max %[[VU1_LOAD]], %[[VU2_LOAD]] : !cir.vector<4 x !u32i>
 
   // LLVM:      [[VU1:%.+]] = load <4 x i32>, ptr %[[ADDR_VU1]], align 16
   // LLVM-NEXT: [[VU2:%.+]] = load <4 x i32>, ptr %[[ADDR_VU2]], align 16
@@ -1184,7 +1184,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[BI1_LOAD:.*]] = cir.load align(4) %[[BI1]] : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
   // CIR-NEXT: %[[BI2_LOAD:.*]] = cir.load align(4) %[[BI2]] : !cir.ptr<!cir.int<s, 31, bitint>>, !cir.int<s, 31, bitint>
-  // CIR-NEXT: cir.call_llvm_intrinsic "smax" %[[BI1_LOAD]], %[[BI2_LOAD]] : (!cir.int<s, 31, bitint>, !cir.int<s, 31, bitint>) -> !cir.int<s, 31, bitint>
+  // CIR-NEXT: cir.max %[[BI1_LOAD]], %[[BI2_LOAD]] : !cir.int<s, 31, bitint>
 
   // LLVM:      [[BI1:%.+]] = load i32, ptr %[[ADDR_BI1]], align 4
   // LLVM-NEXT: [[LOADEDV:%.+]] = trunc i32 [[BI1]] to i31
@@ -1195,7 +1195,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // CIR:      %[[BU1_LOAD:.*]] = cir.load align(8) %[[BU1]] : !cir.ptr<!cir.int<u, 55, bitint>>, !cir.int<u, 55, bitint>
   // CIR-NEXT: %[[BU2_LOAD:.*]] = cir.load align(8) %[[BU2]] : !cir.ptr<!cir.int<u, 55, bitint>>, !cir.int<u, 55, bitint>
-  // CIR-NEXT: cir.call_llvm_intrinsic "umax" %[[BU1_LOAD]], %[[BU2_LOAD]] : (!cir.int<u, 55, bitint>, !cir.int<u, 55, bitint>) -> !cir.int<u, 55, bitint>
+  // CIR-NEXT: cir.max %[[BU1_LOAD]], %[[BU2_LOAD]] : !cir.int<u, 55, bitint>
 
   // LLVM:      [[BU1:%.+]] = load i64, ptr %[[ADDR_BU1]], align 8
   // LLVM-NEXT: [[LOADEDV2:%.+]] = trunc i64 [[BU1]] to i55
@@ -1210,7 +1210,7 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[CVF1:%.+]] = load <4 x float>, ptr %[[ADDR_CVF1]], align 16
   // LLVM-NEXT: [[VF2:%.+]] = load <4 x float>, ptr %[[ADDR_VF2]], align 16
-  // LLVM-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
+  // LLVM-NEXT: call {{.*}}<4 x float> @llvm.maxnum.v4f32(<4 x float> [[CVF1]], <4 x float> [[VF2]])
   const float4 cvf1 = vf1;
   vf1 = __builtin_elementwise_max(cvf1, vf2);
 
@@ -1220,14 +1220,14 @@ void test_builtin_elementwise_max(float f1, float f2, double d1, double d2,
 
   // LLVM:      [[VF2:%.+]] = load <4 x float>, ptr %[[ADDR_VF2]], align 16
   // LLVM-NEXT: [[CVF1:%.+]] = load <4 x float>, ptr %[[ADDR_CVF1]], align 16
-  // LLVM-NEXT: call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VF2]], <4 x float> [[CVF1]])
+  // LLVM-NEXT: call {{.*}}<4 x float> @llvm.maxnum.v4f32(<4 x float> [[VF2]], <4 x float> [[CVF1]])
   vf1 = __builtin_elementwise_max(vf2, cvf1);
 
   // CIR:      %[[IAONE:.*]] = cir.get_global @int_as_one : !cir.ptr<!s32i, target_address_space(1)>
   // CIR-NEXT: %[[IAO_LOAD:.*]] = cir.load align(4) %[[IAONE]] : !cir.ptr<!s32i, target_address_space(1)>, !s32i
   // CIR-NEXT: %[[B:.*]] = cir.get_global @b : !cir.ptr<!s32i>
   // CIR-NEXT: %[[B_LOAD:.*]] = cir.load align(4) %[[B]] : !cir.ptr<!s32i>, !s32i
-  // CIR-NEXT: cir.call_llvm_intrinsic "smax" %[[IAO_LOAD]], %[[B_LOAD]] : (!s32i, !s32i) -> !s32i
+  // CIR-NEXT: cir.max %[[IAO_LOAD]], %[[B_LOAD]] : !s32i
 
   // LLVM:      [[IAS1:%.+]] = load i32, ptr addrspace(1) @int_as_one, align 4
   // LLVM-NEXT: [[B:%.+]] = load i32, ptr @b, align 4

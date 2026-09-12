@@ -1944,7 +1944,7 @@ long double call_copysignl(long double x, long double y) {
 float my_fmaxf(float x, float y) {
   return __builtin_fmaxf(x, y);
   // CIR: cir.func no_inline dso_local @my_fmaxf
-  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @my_fmaxf
   // LLVM:   call nsz float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
@@ -1957,7 +1957,7 @@ float my_fmaxf(float x, float y) {
 double my_fmax(double x, double y) {
   return __builtin_fmax(x, y);
   // CIR: cir.func no_inline dso_local @my_fmax
-  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @my_fmax
   // LLVM:   call nsz double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
@@ -1970,8 +1970,8 @@ double my_fmax(double x, double y) {
 long double my_fmaxl(long double x, long double y) {
   return __builtin_fmaxl(x, y);
   // CIR: cir.func no_inline dso_local @my_fmaxl
-  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80> {fastmath = #cir.fastmath<nsz>}
-  // AARCH64: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double> {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fmaxl
   // LLVM:   call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
@@ -1988,7 +1988,7 @@ long double fmaxl(long double, long double);
 float call_fmaxf(float x, float y) {
   return fmaxf(x, y);
   // CIR: cir.func no_inline dso_local @call_fmaxf
-  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @call_fmaxf
   // LLVM:   call nsz float @llvm.maxnum.f32(float %{{.+}}, float %{{.+}})
@@ -2001,7 +2001,7 @@ float call_fmaxf(float x, float y) {
 double call_fmax(double x, double y) {
   return fmax(x, y);
   // CIR: cir.func no_inline dso_local @call_fmax
-  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @call_fmax
   // LLVM:   call nsz double @llvm.maxnum.f64(double %{{.+}}, double %{{.+}})
@@ -2014,8 +2014,8 @@ double call_fmax(double x, double y) {
 long double call_fmaxl(long double x, long double y) {
   return fmaxl(x, y);
   // CIR: cir.func no_inline dso_local @call_fmaxl
-  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80> {fastmath = #cir.fastmath<nsz>}
-  // AARCH64: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double> {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: cir.fmaxnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fmaxl
   // LLVM:   call nsz x86_fp80 @llvm.maxnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
@@ -2030,7 +2030,7 @@ long double call_fmaxl(long double x, long double y) {
 float my_fminf(float x, float y) {
   return __builtin_fminf(x, y);
   // CIR: cir.func no_inline dso_local @my_fminf
-  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.float {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @my_fminf
   // LLVM:   call nsz float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
@@ -2043,7 +2043,7 @@ float my_fminf(float x, float y) {
 double my_fmin(double x, double y) {
   return __builtin_fmin(x, y);
   // CIR: cir.func no_inline dso_local @my_fmin
-  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.double {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @my_fmin
   // LLVM:   call nsz double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
@@ -2056,8 +2056,8 @@ double my_fmin(double x, double y) {
 long double my_fminl(long double x, long double y) {
   return __builtin_fminl(x, y);
   // CIR: cir.func no_inline dso_local @my_fminl
-  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80> {fastmath = #cir.fastmath<nsz>}
-  // AARCH64: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double> {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @my_fminl
   // LLVM:   call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
@@ -2074,7 +2074,7 @@ long double fminl(long double, long double);
 float call_fminf(float x, float y) {
   return fminf(x, y);
   // CIR: cir.func no_inline dso_local @call_fminf
-  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.float {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.float
 
   // LLVM: define dso_local float @call_fminf
   // LLVM:   call nsz float @llvm.minnum.f32(float %{{.+}}, float %{{.+}})
@@ -2087,7 +2087,7 @@ float call_fminf(float x, float y) {
 double call_fmin(double x, double y) {
   return fmin(x, y);
   // CIR: cir.func no_inline dso_local @call_fmin
-  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.double {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.double
 
   // LLVM: define dso_local double @call_fmin
   // LLVM:   call nsz double @llvm.minnum.f64(double %{{.+}}, double %{{.+}})
@@ -2100,8 +2100,8 @@ double call_fmin(double x, double y) {
 long double call_fminl(long double x, long double y) {
   return fminl(x, y);
   // CIR: cir.func no_inline dso_local @call_fminl
-  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80> {fastmath = #cir.fastmath<nsz>}
-  // AARCH64: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double> {fastmath = #cir.fastmath<nsz>}
+  // CIR: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.f80>
+  // AARCH64: cir.fminnum %{{.+}}, %{{.+}} : !cir.long_double<!cir.double>
 
   // LLVM: define dso_local x86_fp80 @call_fminl
   // LLVM:   call nsz x86_fp80 @llvm.minnum.f80(x86_fp80 %{{.+}}, x86_fp80 %{{.+}})
