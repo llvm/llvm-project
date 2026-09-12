@@ -234,8 +234,8 @@ define <8 x i16> @add_avgceilu_mismatch1(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i16> @add_avgceilu_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: add_avgceilu_mismatch2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #1
 ; CHECK-NEXT:    ret
   %add0 = add nuw <8 x i16> %a1, %a0
@@ -247,8 +247,8 @@ define <8 x i16> @add_avgceilu_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i16> @add_avgceilu_mismatch3(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: add_avgceilu_mismatch3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ushr v0.8h, v0.8h, #1
 ; CHECK-NEXT:    ret
   %add0 = add nuw <8 x i16> %a1, %a0
@@ -355,8 +355,8 @@ define <8 x i16> @add_avgceils_mismatch1(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i16> @add_avgceils_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: add_avgceils_mismatch2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    sshr v0.8h, v0.8h, #1
 ; CHECK-NEXT:    ret
   %add0 = add nsw <8 x i16> %a1, %a0
@@ -368,8 +368,8 @@ define <8 x i16> @add_avgceils_mismatch2(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i16> @add_avgceils_mismatch3(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: add_avgceils_mismatch3:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v1.16b, v1.16b
-; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    sshr v0.8h, v0.8h, #1
 ; CHECK-NEXT:    ret
   %add0 = add nsw <8 x i16> %a1, %a0
@@ -381,8 +381,8 @@ define <8 x i16> @add_avgceils_mismatch3(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i16> @add_avgceils_mismatch4(<8 x i16> %a0, <8 x i16> %a1) {
 ; CHECK-LABEL: add_avgceils_mismatch4:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    mvn v1.16b, v1.16b
+; CHECK-NEXT:    sub v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    sshr v0.8h, v0.8h, #2
 ; CHECK-NEXT:    ret
   %add0 = add nsw <8 x i16> %a0, splat(i16 1)

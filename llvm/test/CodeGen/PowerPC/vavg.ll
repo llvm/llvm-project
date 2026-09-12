@@ -197,25 +197,25 @@ entry:
 define <4 x i32> @test_v4i32_negative(<4 x i32> %m, <4 x i32> %n) {
 ; CHECK-P9-LABEL: test_v4i32_negative:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    xxlnor 34, 34, 34
-; CHECK-P9-NEXT:    vsubuwm 2, 3, 2
+; CHECK-P9-NEXT:    xxlnor 35, 35, 35
+; CHECK-P9-NEXT:    vsubuwm 2, 2, 3
 ; CHECK-P9-NEXT:    vspltisw 3, 2
 ; CHECK-P9-NEXT:    vsrw 2, 2, 3
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_v4i32_negative:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxlnor 34, 34, 34
+; CHECK-P8-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P8-NEXT:    vspltisw 4, 2
-; CHECK-P8-NEXT:    vsubuwm 2, 3, 2
+; CHECK-P8-NEXT:    vsubuwm 2, 2, 3
 ; CHECK-P8-NEXT:    vsrw 2, 2, 4
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_v4i32_negative:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    xxlnor 34, 34, 34
+; CHECK-P7-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P7-NEXT:    vspltisw 4, 2
-; CHECK-P7-NEXT:    vsubuwm 2, 3, 2
+; CHECK-P7-NEXT:    vsubuwm 2, 2, 3
 ; CHECK-P7-NEXT:    vsrw 2, 2, 4
 ; CHECK-P7-NEXT:    blr
 entry:
@@ -262,25 +262,25 @@ entry:
 define <8 x i16> @test_v8i16_overflow(<8 x i16> %m, <8 x i16> %n) {
 ; CHECK-P9-LABEL: test_v8i16_overflow:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    xxlnor 34, 34, 34
+; CHECK-P9-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P9-NEXT:    vspltish 4, 1
-; CHECK-P9-NEXT:    vsubuhm 2, 3, 2
+; CHECK-P9-NEXT:    vsubuhm 2, 2, 3
 ; CHECK-P9-NEXT:    vsrh 2, 2, 4
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_v8i16_overflow:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxlnor 34, 34, 34
+; CHECK-P8-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P8-NEXT:    vspltish 4, 1
-; CHECK-P8-NEXT:    vsubuhm 2, 3, 2
+; CHECK-P8-NEXT:    vsubuhm 2, 2, 3
 ; CHECK-P8-NEXT:    vsrh 2, 2, 4
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_v8i16_overflow:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    xxlnor 34, 34, 34
+; CHECK-P7-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P7-NEXT:    vspltish 4, 1
-; CHECK-P7-NEXT:    vsubuhm 2, 3, 2
+; CHECK-P7-NEXT:    vsubuhm 2, 2, 3
 ; CHECK-P7-NEXT:    vsrh 2, 2, 4
 ; CHECK-P7-NEXT:    blr
 entry:
@@ -293,25 +293,25 @@ entry:
 define <4 x i32> @test_v4i32_overflow(<4 x i32> %m, <4 x i32> %n) {
 ; CHECK-P9-LABEL: test_v4i32_overflow:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    xxlnor 34, 34, 34
+; CHECK-P9-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P9-NEXT:    vspltisw 4, 1
-; CHECK-P9-NEXT:    vsubuwm 2, 3, 2
+; CHECK-P9-NEXT:    vsubuwm 2, 2, 3
 ; CHECK-P9-NEXT:    vsrw 2, 2, 4
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_v4i32_overflow:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxlnor 34, 34, 34
+; CHECK-P8-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P8-NEXT:    vspltisw 4, 1
-; CHECK-P8-NEXT:    vsubuwm 2, 3, 2
+; CHECK-P8-NEXT:    vsubuwm 2, 2, 3
 ; CHECK-P8-NEXT:    vsrw 2, 2, 4
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_v4i32_overflow:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    xxlnor 34, 34, 34
+; CHECK-P7-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P7-NEXT:    vspltisw 4, 1
-; CHECK-P7-NEXT:    vsubuwm 2, 3, 2
+; CHECK-P7-NEXT:    vsubuwm 2, 2, 3
 ; CHECK-P7-NEXT:    vsrw 2, 2, 4
 ; CHECK-P7-NEXT:    blr
 entry:
@@ -324,25 +324,25 @@ entry:
 define <16 x i8> @test_v16i8_overflow(<16 x i8> %m, <16 x i8> %n) {
 ; CHECK-P9-LABEL: test_v16i8_overflow:
 ; CHECK-P9:       # %bb.0: # %entry
-; CHECK-P9-NEXT:    xxlnor 34, 34, 34
+; CHECK-P9-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P9-NEXT:    xxspltib 36, 1
-; CHECK-P9-NEXT:    vsububm 2, 3, 2
+; CHECK-P9-NEXT:    vsububm 2, 2, 3
 ; CHECK-P9-NEXT:    vsrb 2, 2, 4
 ; CHECK-P9-NEXT:    blr
 ;
 ; CHECK-P8-LABEL: test_v16i8_overflow:
 ; CHECK-P8:       # %bb.0: # %entry
-; CHECK-P8-NEXT:    xxlnor 34, 34, 34
+; CHECK-P8-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P8-NEXT:    vspltisb 4, 1
-; CHECK-P8-NEXT:    vsububm 2, 3, 2
+; CHECK-P8-NEXT:    vsububm 2, 2, 3
 ; CHECK-P8-NEXT:    vsrb 2, 2, 4
 ; CHECK-P8-NEXT:    blr
 ;
 ; CHECK-P7-LABEL: test_v16i8_overflow:
 ; CHECK-P7:       # %bb.0: # %entry
-; CHECK-P7-NEXT:    xxlnor 34, 34, 34
+; CHECK-P7-NEXT:    xxlnor 35, 35, 35
 ; CHECK-P7-NEXT:    vspltisb 4, 1
-; CHECK-P7-NEXT:    vsububm 2, 3, 2
+; CHECK-P7-NEXT:    vsububm 2, 2, 3
 ; CHECK-P7-NEXT:    vsrb 2, 2, 4
 ; CHECK-P7-NEXT:    blr
 entry:
