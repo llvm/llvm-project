@@ -26,6 +26,7 @@ public:
   bool
   GetNonCallSiteUnwindPlanFromAssembly(lldb_private::AddressRange &func,
                                        uint8_t *opcode_data, size_t opcode_size,
+                                       lldb_private::Target *target,
                                        lldb_private::UnwindPlan &unwind_plan);
 
   bool
@@ -97,13 +98,6 @@ private:
                 const lldb_private::RegisterInfo *reg_info,
                 const lldb_private::RegisterValue &reg_value);
 
-  //    size_t
-  //    ReadMemory (lldb_private::EmulateInstruction *instruction,
-  //                const lldb_private::EmulateInstruction::Context &context,
-  //                lldb::addr_t addr,
-  //                void *dst,
-  //                size_t length);
-
   size_t WriteMemory(lldb_private::EmulateInstruction *instruction,
                      const lldb_private::EmulateInstruction::Context &context,
                      lldb::addr_t addr, const void *dst, size_t length);
@@ -134,6 +128,13 @@ private:
     RegisterValueMap register_values = {};
   };
 
+  /// Follow a call into a compiler-outlined helper and emulate its body in the
+  /// caller's state. Outlined functions don't respect ABI, which is why this
+  /// unwinder must follow outlined function calls.  A prime target for
+  /// outlining is function prologues. This function supports emulating
+  /// straightline code with no branches, which is the case for prologues.
+  bool EmulateOutlinedFunction(lldb_private::Address func_addr);
+
   std::unique_ptr<lldb_private::EmulateInstruction> m_inst_emulator_up;
   lldb_private::AddressRange *m_range_ptr;
   lldb_private::UnwindPlan *m_unwind_plan_ptr;
@@ -153,6 +154,12 @@ private:
   // The instruction is branching forward with the given offset. 0 value means
   // no branching.
   int64_t m_branch_offset = 0;
+  // The instruction is a non-tail function call.
+  bool m_branch_is_call = false;
+  // Borrowed for the duration of a scan, to resolve and read a callee that the
+  // outliner may have moved instructions into. Null when the plan is built
+  // from a raw buffer with no target behind it.
+  lldb_private::Target *m_target = nullptr;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_UNWINDASSEMBLY_INSTEMULATION_UNWINDASSEMBLYINSTEMULATION_H

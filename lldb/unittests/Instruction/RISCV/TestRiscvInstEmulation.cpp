@@ -112,7 +112,7 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   sample_range = AddressRange(0x1000, sizeof(data));
 
   EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
-      sample_range, data, sizeof(data), unwind_plan));
+      sample_range, data, sizeof(data), /*target=*/nullptr, unwind_plan));
 
   // CFA=sp+0 => fp=<same> ra=<same>.
   row = unwind_plan.GetRowForFunctionOffset(0);
