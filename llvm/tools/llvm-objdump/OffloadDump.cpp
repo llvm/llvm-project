@@ -160,13 +160,14 @@ void llvm::dumpOffloadBundleFatBinary(const ObjectFile &O, StringRef ArchName) {
   }
 }
 
-/// Print the contents of an offload binary file \p OB. This may contain
-/// multiple binaries stored in the same buffer.
-void llvm::dumpOffloadSections(const OffloadBinary &OB) {
+/// Print the contents of an offload binary file. This may contain multiple
+/// binaries stored in the same buffer.
+void llvm::dumpOffloadSections(MemoryBufferRef Buffer) {
   SmallVector<OffloadFile> Binaries;
-  if (Error Err = extractOffloadBinaries(OB.getMemoryBufferRef(), Binaries))
-    reportError(OB.getFileName(), "while extracting offloading files: " +
-                                      toString(std::move(Err)));
+  if (Error Err = extractOffloadBinaries(Buffer, Binaries))
+    reportError(Buffer.getBufferIdentifier(),
+                "while extracting offloading files: " +
+                    toString(std::move(Err)));
 
   // Print out all the binaries that are contained in this buffer.
   for (uint64_t I = 0, E = Binaries.size(); I != E; ++I)

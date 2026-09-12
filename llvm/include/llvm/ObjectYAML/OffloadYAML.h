@@ -41,6 +41,7 @@ struct Binary {
   std::optional<uint64_t> Size;
   std::optional<uint64_t> EntriesOffset;
   std::optional<uint64_t> EntriesCount;
+  std::optional<compression::Format> Compression;
   std::vector<Member> Members;
 };
 
@@ -59,6 +60,10 @@ template <> struct ScalarEnumerationTraits<object::ImageKind> {
 
 template <> struct ScalarEnumerationTraits<object::OffloadKind> {
   LLVM_ABI static void enumeration(IO &IO, object::OffloadKind &Value);
+};
+
+template <> struct ScalarEnumerationTraits<compression::Format> {
+  LLVM_ABI static void enumeration(IO &IO, compression::Format &Value);
 };
 
 template <> struct MappingTraits<OffloadYAML::Binary> {
