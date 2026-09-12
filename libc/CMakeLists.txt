@@ -93,9 +93,11 @@ set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all 
 
 # Enable source-based code coverage using Clang's continuous profiling mode.
 option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+option(LLVM_LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
 option(LIBC_ENABLE_COVERAGE_MCDC
        "Enable Modified Condition / Decision Coverage (MC/DC)" OFF)
-if(LIBC_ENABLE_COVERAGE)
+option(LIBC_ENABLE_MCDC "Build libc with MC/DC coverage instrumentation" OFF)
+if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
   if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
          "-fprofile-instr-generate=libc_cov_%p.profraw"
@@ -104,8 +106,11 @@ if(LIBC_ENABLE_COVERAGE)
     list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
          "-fprofile-instr-generate=libc_cov_%p.profraw"
          "-fprofile-continuous")
-    if(LIBC_ENABLE_COVERAGE_MCDC)
+
+    if(LIBC_ENABLE_COVERAGE_MCDC OR LIBC_ENABLE_MCDC)
       list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+      list(APPEND LIBC_TEST_COMPILE_OPTIONS_DEFAULT "-fcoverage-mcdc")
+      list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT "-fcoverage-mcdc")
     endif()
   else()
     message(FATAL_ERROR
@@ -180,7 +185,7 @@ else()
   set(LLVM_LIBC_OVERLAY ON)
 endif()
 
-if(LIBC_ENABLE_COVERAGE)
+if(LIBC_ENABLE_COVERAGE OR LLVM_LIBC_ENABLE_COVERAGE)
   if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_BAREMETAL)
     message(FATAL_ERROR
       "LIBC_ENABLE_COVERAGE is not supported on GPU or baremetal targets.")
