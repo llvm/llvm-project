@@ -1,9 +1,11 @@
 ! Test that -fstack-arrays is not applied to device code. The device stack is
 ! far smaller than the host one, so lowering records a policy of its own on
-! device and global procedures to keep their automatic arrays on the heap.
+! device and global procedures to keep their automatic arrays on the heap. The
+! policy is recorded whether or not -fstack-arrays was requested, so that the
+! opt-out is explicit in the IR.
 
-! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefix=DEFAULT
-! RUN: %flang_fc1 -emit-fir -fstack-arrays %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK,DEFAULT
+! RUN: %flang_fc1 -emit-fir -fstack-arrays %s -o - | FileCheck %s --check-prefixes=CHECK,STACK
 
 module m
 contains
@@ -38,12 +40,13 @@ contains
   end subroutine
 end module
 
-! Without -fstack-arrays the module policy already keeps automatic arrays on the
-! heap, so no procedure needs a policy of its own.
-! DEFAULT-NOT: func.func{{.*}}fir.allocation_policy
+! The module policy follows -fstack-arrays.
+! DEFAULT: module attributes {{.*}}fir.allocation_policy = #fir.allocation_policy<stack_arrays = false
+! STACK: module attributes {{.*}}fir.allocation_policy = #fir.allocation_policy<stack_arrays = true
 
-! CHECK: func.func @_QMmPkernel({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>, fir.allocation_policy = #fir.allocation_policy<stack_arrays = false,
-! CHECK: func.func @_QMmPdevsub({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.allocation_policy = #fir.allocation_policy<stack_arrays = false,
+! Device procedures opt out of it in both cases.
+! CHECK: func.func @_QMmPkernel({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>, fir.allocation_policy = #fir.allocation_policy<stack_arrays = false
+! CHECK: func.func @_QMmPdevsub({{.*}}) attributes {cuf.proc_attr = #cuf.cuda_proc<device>, fir.allocation_policy = #fir.allocation_policy<stack_arrays = false
 
 ! The host procedure keeps the module policy, so -fstack-arrays still applies
 ! to it.

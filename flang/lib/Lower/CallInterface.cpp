@@ -699,18 +699,17 @@ setCUDAAttributes(mlir::func::FuncOp func,
     auto procAttr = cuf::getProcAttribute(func.getContext(),
                                           *characteristic->cudaSubprogramAttrs);
     func.getOperation()->setAttr(cuf::getProcAttrName(), procAttr);
-    // -fstack-arrays cannot be honored in device code: the device stack is
-    // orders of magnitude smaller, and an automatic array that fits the host
-    // stack easily overflows it. host_device is the host copy of the routine.
+    // -fstack-arrays cannot be honored in device code: the device stack is far
+    // smaller, and an automatic array that fits the host stack overflows it.
+    // Recorded unconditionally so the opt-out is explicit in the IR, as on the
+    // module. host_device is the host copy of the routine.
     cuf::ProcAttribute proc = procAttr.getValue();
     if (proc != cuf::ProcAttribute::Host &&
         proc != cuf::ProcAttribute::HostDevice) {
       fir::AllocationPolicy policy =
           fir::getAllocationPolicy(func.getOperation());
-      if (policy.stackArrays) {
-        policy.stackArrays = false;
-        fir::setAllocationPolicy(func.getOperation(), policy);
-      }
+      policy.stackArrays = false;
+      fir::setAllocationPolicy(func.getOperation(), policy);
     }
   }
 
