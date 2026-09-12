@@ -2873,6 +2873,25 @@ TEST_F(DIFileTest, ScopeGetFile) {
   EXPECT_EQ(N, N->getFile());
 }
 
+TEST(DISourceLanguageNameTest, Comparison) {
+  DISourceLanguageName CppUnversioned(dwarf::DW_LNAME_C_plus_plus);
+  DISourceLanguageName CppUnversionedAgain(dwarf::DW_LNAME_C_plus_plus);
+  DISourceLanguageName CUnversioned(dwarf::DW_LNAME_C);
+  DISourceLanguageName Cpp17(dwarf::DW_LNAME_C_plus_plus, uint32_t(201703));
+  DISourceLanguageName Cpp17Again(dwarf::DW_LNAME_C_plus_plus,
+                                  uint32_t(201703));
+  DISourceLanguageName Cpp20(dwarf::DW_LNAME_C_plus_plus, uint32_t(202002));
+  DISourceLanguageName CppWithDialect(dwarf::DW_LNAME_C_plus_plus, uint16_t(1));
+
+  EXPECT_EQ(CppUnversioned, CppUnversionedAgain);
+  EXPECT_EQ(Cpp17, Cpp17Again);
+
+  EXPECT_NE(CppUnversioned, CUnversioned);   // Different name.
+  EXPECT_NE(Cpp17, Cpp20);                   // Different version.
+  EXPECT_NE(CppUnversioned, CppWithDialect); // Different dialect.
+  EXPECT_NE(CppUnversioned, Cpp17);          // Versioned vs. unversioned.
+}
+
 typedef MetadataTest DICompileUnitTest;
 
 TEST_F(DICompileUnitTest, get) {
