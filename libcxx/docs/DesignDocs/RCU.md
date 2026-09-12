@@ -118,7 +118,7 @@ Some key details of this design are:
   - flips the global state back to phase `a`
   - goes through another grace period: waits until all the threads that are in the critical section with phase `b` have exited their critical section
 
-When `rcu_synchronize`/`rcu_barrier` returns, we can be sure that all the readers that were in the critical section before `rcu_synchronize`/`rcu_barrier` are now out of the critical section.
+When `rcu_synchronize`/`rcu_barrier` returns, we can be sure that all the readers that were in the critical section before the call are now out of the critical section.
 The paper explains why we need to wait two phases instead of just one phase in detail. The key point is that, if we only wait for the readers in the previous phase to exit,
 there might be a late reader that enters the critical section after we flip the global state and before we wait for the previous phase's readers to exit.
 
