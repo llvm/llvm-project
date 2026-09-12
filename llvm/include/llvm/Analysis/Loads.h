@@ -87,15 +87,16 @@ LLVM_ABI bool isSafeToLoadUnconditionally(Value *V, Align Alignment,
 /// if desired.)  This is more powerful than the variants above when the
 /// address loaded from is analyzeable by SCEV.
 LLVM_ABI bool isDereferenceableAndAlignedInLoop(
-    LoadInst *LI, Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    LoadInst *LI, const Loop *L, ScalarEvolution &SE, DominatorTree &DT,
     AssumptionCache *AC = nullptr,
     SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Overload for isDereferenceableAndAlignedInLoop taking the pointer and access
 /// size directly as SCEVs.
 LLVM_ABI bool isDereferenceableAndAlignedInLoop(
-    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV, Loop *L,
-    ScalarEvolution &SE, DominatorTree &DT, AssumptionCache *AC = nullptr,
+    const SCEV *PtrSCEV, Align Alignment, const SCEV *EltSizeSCEV,
+    const Loop *L, ScalarEvolution &SE, DominatorTree &DT,
+    AssumptionCache *AC = nullptr,
     SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
 
 /// Returns true if the loop contains read-only memory accesses and doesn't

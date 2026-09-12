@@ -5490,7 +5490,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
 void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPRecipeBuilder &RecipeBuilder,
-                                                 VPCostContext &CostCtx) {
+                                                 VPCostContext &CostCtx,
+                                                 DominatorTree &DT) {
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -5656,6 +5657,45 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
             *cast<StoreInst>(I), VectorPtr, StoredVal, Mask,
             /*Consecutive=*/true, *VPI, VPI->getDebugLoc());
         return ReplaceWith(VPI, StoreR);
+      });
+
+  // convert safe uniform (potentially masked) loads to unconditional scalar
+  // loads.
+  VPlanTransforms::runPass(
+      "convertToSingleScalarMemOps", ProcessSubset, Plan,
+      [&](VPInstruction *VPI) {
+        if (VPI->getOpcode() != Instruction::Load)
+          return false;
+        VPValue *Addr = VPI->getOperand(0);
+        if (!vputils::isUniformAcrossVFsAndUFs(Addr))
+          return false;
+        ScalarEvolution &SE = *CostCtx.PSE.getSE();
+        const SCEV *PtrSCEV =
+            vputils::getSCEVExprForVPValue(Addr, CostCtx.PSE, CostCtx.L);
+        if (isa<SCEVCouldNotCompute>(PtrSCEV))
+          return false;
+        const DataLayout &DL = Plan.getDataLayout();
+        Type *ScalarTy = VPI->getScalarType();
+        APInt EltSize(DL.getIndexTypeSizeInBits(Addr->getScalarType()),
+                      DL.getTypeStoreSize(ScalarTy).getFixedValue());
+        auto &LI = cast<LoadInst>(*VPI->getUnderlyingInstr());
+
+        // Suppress speculative loads for sanitizers.
+        const Function &F = *LI.getFunction();
+        if (F.hasFnAttribute(Attribute::SanitizeAddress) ||
+            F.hasFnAttribute(Attribute::SanitizeMemory) ||
+            F.hasFnAttribute(Attribute::SanitizeThread) ||
+            F.hasFnAttribute(Attribute::SanitizeHWAddress))
+          return false;
+        if (!isDereferenceableAndAlignedInLoop(PtrSCEV, LI.getAlign(),
+                                               SE.getConstant(EltSize),
+                                               CostCtx.L, SE, DT))
+          return false;
+        auto *Recipe = VPBuilder::createSingleScalarOp(
+            VPI->getOpcode(), VPI->operandsWithoutMask(), /*Mask=*/nullptr,
+            *VPI, *VPI, VPI->getDebugLoc(), &LI);
+        Recipe->insertBefore(VPI);
+        return ReplaceWith(VPI, Recipe);
       });
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
