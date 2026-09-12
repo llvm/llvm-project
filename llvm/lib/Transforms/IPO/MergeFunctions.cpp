@@ -864,6 +864,28 @@ static bool canCreateAliasFor(Function *F) {
   return true;
 }
 
+/// Returns true if an alias that is visible to other objects points at \p F.
+static bool hasNonLocalAlias(const Function *F) {
+  for (const User *U : F->users())
+    if (const auto *GA = dyn_cast<GlobalAlias>(U))
+      if (!GA->hasLocalLinkage())
+        return true;
+  return false;
+}
+
+/// Returns true if an alias that is visible to other objects must not point at
+/// \p F.
+///
+/// COFF has no aliases: one is emitted as a weak external, which names the
+/// symbol to fall back to, and every object defining that alias has to name the
+/// same symbol. A local function has no name to fall back to, so MC makes one
+/// up out of an arbitrary other symbol in the object, and the two objects then
+/// disagree (LNK1227).
+static bool cannotBeAliasedExternally(const Function *F) {
+  return F->hasLocalLinkage() &&
+         F->getParent()->getTargetTriple().isOSBinFormatCOFF();
+}
+
 // Replace G with an alias to F (deleting function G)
 void MergeFunctions::writeAlias(Function *F, Function *G) {
   PointerType *PtrType = G->getType();
@@ -918,7 +940,8 @@ bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G,
                                                bool MergeAnnotations) {
   bool ShouldErase =
       G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
-  bool ShouldAlias = canCreateAliasFor(G);
+  bool ShouldAlias = canCreateAliasFor(G) &&
+                     !(!G->hasLocalLinkage() && cannotBeAliasedExternally(F));
   bool ShouldThunk = canCreateThunkFor(F);
 
   if (!ShouldErase && !ShouldAlias && !ShouldThunk)
@@ -1159,6 +1182,10 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     if (isODR(F))
       replaceDirectCallers(NewF, F);
 
+    // F is the shared implementation from here on. Demote it before writing the
+    // thunks, so that they are written against its final linkage.
+    F->setLinkage(GlobalValue::PrivateLinkage);
+
     // We collect alignment before writeThunkOrAliasIfNeeded that overwrites
     // NewF and G's content.
     const MaybeAlign NewFAlign = NewF->getAlign();
@@ -1176,7 +1203,6 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
       F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
     else
       F->setAlignment(std::nullopt);
-    F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
@@ -1185,8 +1211,10 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     if (!G->isInterposable() && !MergeFunctionsPDI) {
       // Functions referred to by llvm.used/llvm.compiler.used are special:
       // there are uses of the symbol name that are not visible to LLVM,
-      // usually from inline asm.
-      if (G->hasGlobalUnnamedAddr() && !Used.contains(G)) {
+      // usually from inline asm. A G that an alias points at cannot lose its
+      // symbol either, see cannotBeAliasedExternally.
+      if (G->hasGlobalUnnamedAddr() && !Used.contains(G) &&
+          !(hasNonLocalAlias(G) && cannotBeAliasedExternally(F))) {
         // G might have been a key in our GlobalNumberState, and it's illegal
         // to replace a key in ValueMap<GlobalValue *> with a non-global.
         GlobalNumbers.erase(G);
