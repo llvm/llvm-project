@@ -69,6 +69,20 @@ add_orc_rt_unittest(SupportTests
   LINK_LIBS orc-rt-support-objects
   )
 
+# Per-system test helpers, composed the way lib/ composes its per-system
+# implementations; see the note in lib/bedrock/CMakeLists.txt. Tests of portable
+# APIs stay in the shared list and reach the system through these.
+set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+  bedrock/sys/posix/SocketTestUtils.cpp
+)
+
+if (APPLE OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  set(ORC_RT_BEDROCK_TEST_SYS_SOURCES ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES})
+else()
+  # No list yet, so tests needing a socket will fail to link.
+  set(ORC_RT_BEDROCK_TEST_SYS_SOURCES)
+endif()
+
 add_orc_rt_unittest(BedrockTests
   bedrock/BootstrapInfoTest.cpp
   bedrock/ExecutorProcessInfoTest.cpp
@@ -78,6 +92,7 @@ add_orc_rt_unittest(BedrockTests
   bedrock/SessionTest.cpp
   bedrock/SimpleNativeMemoryMapTest.cpp
   bedrock/SimpleSymbolTableTest.cpp
+  bedrock/SocketHandleTest.cpp
   bedrock/StandaloneMachOUnwindInfoRegistrarTest.cpp
   bedrock/TaskGroupTest.cpp
   bedrock/ThreadPoolRunnerTest.cpp
@@ -90,6 +105,8 @@ add_orc_rt_unittest(BedrockTests
 
   bedrock/sys/CPUFeaturesTest.cpp
   bedrock/sys/TargetTripleTest.cpp
+
+  ${ORC_RT_BEDROCK_TEST_SYS_SOURCES}
 
   LINK_LIBS orc-rt-bedrock-objects orc-rt-support-objects
   )
