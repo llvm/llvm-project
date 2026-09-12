@@ -142,9 +142,6 @@ endif()
 # -nostdlib++ above: that is a C++ driver option, and check_library_exists compiles C, so on
 # a GCC toolchain the C driver rejects it and the check answers NO for any library.
 #
-# <fenv.h> rather than <cfenv>, because libc++'s <cfenv> is <fenv.h> plus a
-# `using ::feraiseexcept` -- the same declaration and the same symbol -- and the C header is
-# the one that exists while the C++ headers are still the libc++ being built.
 if((WIN32 AND NOT MINGW) OR APPLE)
   set(LIBCXX_HAS_M_LIB NO)
 else()
