@@ -121,15 +121,6 @@ public:
   getWavesPerEU(std::pair<unsigned, unsigned> FlatWorkGroupSizes,
                 unsigned LDSBytes, const Function &F) const;
 
-  /// Returns the target minimum/maximum number of waves per EU. This is based
-  /// on the minimum/maximum number of \p RequestedWavesPerEU and further
-  /// limited by the maximum achievable occupancy derived from the range of \p
-  /// FlatWorkGroupSizes and number of \p LDSBytes per workgroup.
-  std::pair<unsigned, unsigned>
-  getEffectiveWavesPerEU(std::pair<unsigned, unsigned> RequestedWavesPerEU,
-                         std::pair<unsigned, unsigned> FlatWorkGroupSizes,
-                         unsigned LDSBytes) const;
-
   /// Return the amount of LDS that can be used that will not restrict the
   /// occupancy lower than WaveCount.
   unsigned getMaxLocalMemSizeWithWaveCount(unsigned WaveCount,
