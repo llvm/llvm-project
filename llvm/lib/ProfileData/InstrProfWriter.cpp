@@ -741,8 +741,8 @@ void InstrProfWriter::writeRecordInText(StringRef Name, uint64_t Hash,
   for (uint64_t Count : Func.Counts)
     OS << Count << "\n";
 
-  if (Func.BitmapBytes.size() > 0) {
-    OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
+  OS << "# Num Bitmap Bytes:\n$" << Func.BitmapBytes.size() << "\n";
+  if (!Func.BitmapBytes.empty()) {
     OS << "# Bitmap Byte Values:\n";
     for (uint8_t Byte : Func.BitmapBytes) {
       OS << "0x";
