@@ -671,10 +671,11 @@ evaluateStaticInteger(mlir::Value value, const SliceTargetInfo &target,
     std::optional<llvm::APInt> constant = fir::getIntIfConstant(source);
     unsigned sourceWidth =
         getSliceOperandWidth(source.getType(), target, widthCache);
-    // Canonicalization may combine a conversion chain rooted at an i1 constant
-    // and materialize the direct conversion to index through signed getInt(),
-    // turning the set bit into -1. Reject the root so LoopVersioning has the
-    // same result whether canonicalization runs before or after this pass.
+    // Do not seed evaluation from an i1 constant. A direct i1-to-index
+    // conversion is sign-extended by generic lowering. An explicit
+    // i1-to-wider-integer conversion is zero-extended, but that chain remains
+    // conservatively rejected unless canonicalization has already materialized
+    // the wider constant.
     if (constant && sourceWidth > 1) {
       unsigned retainedWidth = std::min(sourceWidth, addressIndexWidth);
       llvm::APInt retained = isZeroExtendedSliceInteger(source.getType())
@@ -730,12 +731,14 @@ static bool isStaticOneInteger(mlir::Value value, const SliceTargetInfo &target,
 }
 
 /// Return whether a slice step uses a supported static-one form.
-/// A chain rooted at i1 is rejected so its classification is independent of
-/// canonicalization. An intermediate i1 produced from a wider integer is
-/// modeled with fir.convert's zero extension, while a final i1 remains
-/// unsupported because generic XArrayCoor lowering sign-extends it. Wider step
-/// types need no target-index admission check because a proven unit step is not
-/// materialized by the direct path.
+/// A chain whose unevaluated constant root is i1 is conservatively rejected.
+/// Canonicalization may first fold an explicit i1-to-wider-integer zero
+/// extension, after which the resulting wider constant can be recognized as
+/// one. An intermediate i1 produced from a wider integer is modeled with
+/// fir.convert's zero extension, while a final i1 remains unsupported because
+/// generic XArrayCoor lowering sign-extends it. Wider step types need no
+/// target-index admission check because a proven unit step is not materialized
+/// by the direct path.
 static bool isStaticOneSliceStep(mlir::Value value,
                                  const SliceTargetInfo &target,
                                  StaticIntegerCache &cache,
