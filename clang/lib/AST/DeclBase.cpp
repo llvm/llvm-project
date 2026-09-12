@@ -1489,19 +1489,12 @@ DeclContext *DeclContext::getNonTransparentContext() {
 }
 
 ASTContext &DeclContext::getParentASTContextSlow() const {
-  const DeclContext *DC = this;
-  while (!DC->isTranslationUnit()) {
-    DC = DC->getParent();
-    assert(DC && "This decl context is not contained in a translation unit!");
-  }
-
-  ASTContext &Context = cast<TranslationUnitDecl>(DC)->getASTContext();
-  CachedASTContext.store(&Context, std::memory_order_relaxed);
-  return Context;
+  CachedASTContext = &cast<Decl>(this)->getASTContext();
+  return *CachedASTContext;
 }
 
 DeclContext *DeclContext::getPrimaryContextSlow() {
-  DeclContext *Primary;
+  DeclContext *Primary = this;
   switch (getDeclKind()) {
   case Decl::ExternCContext:
   case Decl::LinkageSpec:
@@ -1515,7 +1508,6 @@ DeclContext *DeclContext::getPrimaryContextSlow() {
   case Decl::RequiresExprBody:
   case Decl::CXXExpansionStmt:
     // There is only one DeclContext for these entities.
-    Primary = this;
     break;
 
   case Decl::HLSLBuffer:
@@ -1525,7 +1517,6 @@ DeclContext *DeclContext::getPrimaryContextSlow() {
     // As long as buffers have unique resource bindings the names don't matter.
     // The names get exposed via the CPU-side reflection API which
     // supports querying bindings, so we cannot remove them.
-    Primary = this;
     break;
 
   case Decl::TranslationUnit:
@@ -1536,7 +1527,6 @@ DeclContext *DeclContext::getPrimaryContextSlow() {
     return static_cast<NamespaceDecl *>(this)->getFirstDecl();
 
   case Decl::ObjCMethod:
-    Primary = this;
     break;
 
   case Decl::ObjCInterface:
@@ -1553,12 +1543,10 @@ DeclContext *DeclContext::getPrimaryContextSlow() {
     return this;
 
   case Decl::ObjCCategory:
-    Primary = this;
     break;
 
   case Decl::ObjCImplementation:
   case Decl::ObjCCategoryImpl:
-    Primary = this;
     break;
 
   // If this is a tag type that has a definition or is currently
@@ -1581,11 +1569,10 @@ DeclContext *DeclContext::getPrimaryContextSlow() {
   default:
     assert(getDeclKind() >= Decl::firstFunction &&
            getDeclKind() <= Decl::lastFunction && "Unknown DeclContext kind");
-    Primary = this;
     break;
   }
 
-  CachedPrimaryContext.store(Primary, std::memory_order_relaxed);
+  CachedPrimaryContext = Primary;
   return Primary;
 }
 
