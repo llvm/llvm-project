@@ -11,6 +11,58 @@ define i8 @round_trip_e4m3fn_f32(i8 %x) {
   ret i8 %r
 }
 
+define i8 @round_trip_e4m3fn_f64(i8 %x) {
+; CHECK-LABEL: define i8 @round_trip_e4m3fn_f64(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %f = call nnan double @llvm.convert.from.arbitrary.fp.f64.i8(i8 %x, metadata !"Float8E4M3FN")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %f, metadata !"Float8E4M3FN", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e5m2_f64(i8 %x) {
+; CHECK-LABEL: define i8 @round_trip_e5m2_f64(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %f = call nnan double @llvm.convert.from.arbitrary.fp.f64.i8(i8 %x, metadata !"Float8E5M2")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e5m2_f64_ftz(i8 %x) #1 {
+; CHECK-LABEL: define i8 @round_trip_e5m2_f64_ftz(
+; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %f = call nnan double @llvm.convert.from.arbitrary.fp.f64.i8(i8 %x, metadata !"Float8E5M2")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e5m2_f80(i8 %x) {
+; CHECK-LABEL: define i8 @round_trip_e5m2_f80(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    ret i8 [[X]]
+;
+  %f = call nnan x86_fp80 @llvm.convert.from.arbitrary.fp.f80.i8(i8 %x, metadata !"Float8E5M2")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f80(x86_fp80 %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e5m2_ppcf128(i8 %x) {
+; CHECK-LABEL: define i8 @round_trip_e5m2_ppcf128(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[F:%.*]] = call nnan ppc_fp128 @llvm.convert.from.arbitrary.fp.ppcf128.i8(i8 [[X]], metadata !"Float8E5M2")
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.ppcf128(ppc_fp128 [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %f = call nnan ppc_fp128 @llvm.convert.from.arbitrary.fp.ppcf128.i8(i8 %x, metadata !"Float8E5M2")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.ppcf128(ppc_fp128 %f, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
 define i8 @round_trip_e4m3fn_f16(i8 %x) {
 ; CHECK-LABEL: define i8 @round_trip_e4m3fn_f16(
 ; CHECK-SAME: i8 [[X:%.*]]) {
@@ -82,7 +134,7 @@ define i8 @round_trip_e5m2_f32_saturating(i8 %x) {
 ; E5M2 subnormals are subnormal in half too.
 define i8 @round_trip_e5m2_f16_daz(i8 %x) #0 {
 ; CHECK-LABEL: define i8 @round_trip_e5m2_f16_daz(
-; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    [[F:%.*]] = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[X]], metadata !"Float8E5M2")
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -95,7 +147,7 @@ define i8 @round_trip_e5m2_f16_daz(i8 %x) #0 {
 ; Flushing on output alone is enough to lose the subnormal encodings.
 define i8 @round_trip_e5m2_f16_ftz(i8 %x) #1 {
 ; CHECK-LABEL: define i8 @round_trip_e5m2_f16_ftz(
-; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[F:%.*]] = call nnan half @llvm.convert.from.arbitrary.fp.f16.i8(i8 [[X]], metadata !"Float8E5M2")
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f16(half [[F]], metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
 ; CHECK-NEXT:    ret i8 [[R]]
@@ -207,6 +259,42 @@ define i8 @round_trip_unsupported_format(i8 %x) {
 ;
   %f = call nnan float @llvm.convert.from.arbitrary.fp.f32.i8(i8 %x, metadata !"Float8E3M4")
   %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float %f, metadata !"Float8E3M4", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e8m0fnu_f32_ftz(i8 %x) #1 {
+; CHECK-LABEL: define i8 @round_trip_e8m0fnu_f32_ftz(
+; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[F:%.*]] = call nnan float @llvm.convert.from.arbitrary.fp.f32.i8(i8 [[X]], metadata !"Float8E8M0FNU")
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float [[F]], metadata !"Float8E8M0FNU", metadata !"round.tonearest", i1 false)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %f = call nnan float @llvm.convert.from.arbitrary.fp.f32.i8(i8 %x, metadata !"Float8E8M0FNU")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f32(float %f, metadata !"Float8E8M0FNU", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e8m0fnu_bf16_ftz(i8 %x) #1 {
+; CHECK-LABEL: define i8 @round_trip_e8m0fnu_bf16_ftz(
+; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[F:%.*]] = call nnan bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 [[X]], metadata !"Float8E8M0FNU")
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.bf16(bfloat [[F]], metadata !"Float8E8M0FNU", metadata !"round.tonearest", i1 false)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %f = call nnan bfloat @llvm.convert.from.arbitrary.fp.bf16.i8(i8 %x, metadata !"Float8E8M0FNU")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.bf16(bfloat %f, metadata !"Float8E8M0FNU", metadata !"round.tonearest", i1 false)
+  ret i8 %r
+}
+
+define i8 @round_trip_e8m0fnu_f64_ftz(i8 %x) #1 {
+; CHECK-LABEL: define i8 @round_trip_e8m0fnu_f64_ftz(
+; CHECK-SAME: i8 [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[F:%.*]] = call nnan double @llvm.convert.from.arbitrary.fp.f64.i8(i8 [[X]], metadata !"Float8E8M0FNU")
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double [[F]], metadata !"Float8E8M0FNU", metadata !"round.tonearest", i1 false)
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %f = call nnan double @llvm.convert.from.arbitrary.fp.f64.i8(i8 %x, metadata !"Float8E8M0FNU")
+  %r = call i8 @llvm.convert.to.arbitrary.fp.i8.f64(double %f, metadata !"Float8E8M0FNU", metadata !"round.tonearest", i1 false)
   ret i8 %r
 }
 
