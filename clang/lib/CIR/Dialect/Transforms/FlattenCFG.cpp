@@ -830,8 +830,9 @@ static cir::AllocaOp getOrCreateCleanupDestSlot(cir::FuncOp funcOp,
   rewriter.setInsertionPointToStart(&entryBlock);
   cir::IntType s32Type =
       cir::IntType::get(rewriter.getContext(), 32, /*isSigned=*/true);
-  cir::PointerType ptrToS32Type = cir::PointerType::get(s32Type);
   cir::CIRDataLayout dataLayout(funcOp->getParentOfType<mlir::ModuleOp>());
+  cir::PointerType ptrToS32Type = cir::PointerType::get(
+      s32Type, dataLayout.getAllocaAddrSpace(rewriter.getContext()));
   uint64_t alignment = dataLayout.getAlignment(s32Type, true).value();
   auto allocaOp = cir::AllocaOp::create(
       rewriter, loc, ptrToS32Type, "__cleanup_dest_slot",
