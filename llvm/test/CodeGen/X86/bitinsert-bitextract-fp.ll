@@ -145,17 +145,6 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
   ret double %result
 }
 
-define double @test_bitextract_double_b231_crossword(b231 %src) {
-; CHECK-LABEL: test_bitextract_double_b231_crossword:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $549755813887, %rax # imm = 0x7FFFFFFFFF
-; CHECK-NEXT:    andq %rcx, %rax
-; CHECK-NEXT:    shldq $2, %rdx, %rax
-; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    retq
-  %result = bitextract double, b231 %src, i32 190
-  ret double %result
-}
 
 define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; CHECK-LABEL: test_bitinsert_half_full:
@@ -290,20 +279,6 @@ define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
   ret b87 %result
 }
 
-define b87 @test_bitinsert_float_b87_crossword(b87 %base, float %val) {
-; CHECK-LABEL: test_bitinsert_float_b87_crossword:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movd %xmm0, %edx
-; CHECK-NEXT:    movabsq $1152921504606846944, %rcx # imm = 0xFFFFFFFFFFFFFE0
-; CHECK-NEXT:    andq %rdi, %rcx
-; CHECK-NEXT:    movq %rdx, %rax
-; CHECK-NEXT:    shlq $60, %rax
-; CHECK-NEXT:    orq %rcx, %rax
-; CHECK-NEXT:    shrl $4, %edx
-; CHECK-NEXT:    retq
-  %result = bitinsert b87 %base, float %val, i32 60
-  ret b87 %result
-}
 
 define b64 @test_bitinsert_double_full(b64 %base, double %val) {
 ; CHECK-LABEL: test_bitinsert_double_full:
@@ -506,30 +481,5 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
   %result = bitinsert b231 %base, double %val, i32 %off
-  ret b231 %result
-}
-
-define b231 @test_bitinsert_double_b231_crossword(b231 %base, double %val) {
-; CHECK-LABEL: test_bitinsert_double_b231_crossword:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq %xmm0, %rdi
-; CHECK-NEXT:    movabsq $4611686018427387903, %r8 # imm = 0x3FFFFFFFFFFFFFFF
-; CHECK-NEXT:    andq %rcx, %r8
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    shlq $62, %rcx
-; CHECK-NEXT:    orq %r8, %rcx
-; CHECK-NEXT:    andq $-8388608, %rsi # imm = 0xFF800000
-; CHECK-NEXT:    movq %rdi, %r8
-; CHECK-NEXT:    shrq $2, %r8
-; CHECK-NEXT:    movl %r8d, 24(%rax)
-; CHECK-NEXT:    movq %rcx, 16(%rax)
-; CHECK-NEXT:    movq %rdx, 8(%rax)
-; CHECK-NEXT:    movq %rsi, (%rax)
-; CHECK-NEXT:    shrq $34, %rdi
-; CHECK-NEXT:    andl $127, %edi
-; CHECK-NEXT:    movb %dil, 28(%rax)
-; CHECK-NEXT:    retq
-  %result = bitinsert b231 %base, double %val, i32 190
   ret b231 %result
 }

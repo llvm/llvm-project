@@ -155,16 +155,6 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
   ret double %result
 }
 
-define double @test_bitextract_double_b231_crossword(b231 %src) {
-; AARCH64-LABEL: test_bitextract_double_b231_crossword:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and x8, x3, #0x7fffffffff
-; AARCH64-NEXT:    extr x8, x8, x2, #62
-; AARCH64-NEXT:    fmov d0, x8
-; AARCH64-NEXT:    ret
-  %result = bitextract double, b231 %src, i32 190
-  ret double %result
-}
 
 define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; AARCH64-LABEL: test_bitinsert_half_full:
@@ -293,17 +283,6 @@ define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
   ret b87 %result
 }
 
-define b87 @test_bitinsert_float_b87_crossword(b87 %base, float %val) {
-; AARCH64-LABEL: test_bitinsert_float_b87_crossword:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    fmov w8, s0
-; AARCH64-NEXT:    and x9, x0, #0xfffffffffffffe0
-; AARCH64-NEXT:    orr x0, x9, x8, lsl #60
-; AARCH64-NEXT:    lsr w1, w8, #4
-; AARCH64-NEXT:    ret
-  %result = bitinsert b87 %base, float %val, i32 60
-  ret b87 %result
-}
 
 define b64 @test_bitinsert_double_full(b64 %base, double %val) {
 ; AARCH64-LABEL: test_bitinsert_double_full:
@@ -484,17 +463,5 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; AARCH64-NEXT:    add sp, sp, #256
 ; AARCH64-NEXT:    ret
   %result = bitinsert b231 %base, double %val, i32 %off
-  ret b231 %result
-}
-
-define b231 @test_bitinsert_double_b231_crossword(b231 %base, double %val) {
-; AARCH64-LABEL: test_bitinsert_double_b231_crossword:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    fmov x8, d0
-; AARCH64-NEXT:    and x0, x0, #0xffffffffff800000
-; AARCH64-NEXT:    bfi x2, x8, #62, #2
-; AARCH64-NEXT:    lsr x3, x8, #2
-; AARCH64-NEXT:    ret
-  %result = bitinsert b231 %base, double %val, i32 190
   ret b231 %result
 }

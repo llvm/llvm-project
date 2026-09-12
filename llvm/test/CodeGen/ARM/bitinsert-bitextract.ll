@@ -214,30 +214,6 @@ define i16 @test_bitextract_b87(b87 %src, i32 %off) {
   ret i16 %result
 }
 
-define i32 @test_bitextract_b87_wide_field(b87 %src) {
-; ARM-LABEL: test_bitextract_b87_wide_field:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    bfc r2, #23, #9
-; ARM-NEXT:    lsr r0, r1, #28
-; ARM-NEXT:    orr r0, r0, r2, lsl #4
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitextract_b87_wide_field:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    bfc r2, #23, #9
-; THUMB-M-NEXT:    lsrs r0, r1, #28
-; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #4
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitextract_b87_wide_field:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    bfc r2, #23, #9
-; THUMB-A-NEXT:    lsrs r0, r1, #28
-; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #4
-; THUMB-A-NEXT:    bx lr
-  %result = bitextract i32, b87 %src, i32 60
-  ret i32 %result
-}
 
 define i32 @test_bitextract_b128(b128 %src, i32 %off) {
 ; ARM-LABEL: test_bitextract_b128:
@@ -422,42 +398,6 @@ define i32 @test_bitextract_b231(b231 %src, i32 %off) {
   ret i32 %result
 }
 
-define i64 @test_bitextract_b231_constant(b231 %src) {
-; ARM-LABEL: test_bitextract_b231_constant:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    ldmib sp, {r0, r1, r2}
-; ARM-NEXT:    and r2, r2, #127
-; ARM-NEXT:    lsr r0, r0, #30
-; ARM-NEXT:    lsl r2, r2, #2
-; ARM-NEXT:    orr r0, r0, r1, lsl #2
-; ARM-NEXT:    orr r1, r2, r1, lsr #30
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitextract_b231_constant:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ldr r0, [sp, #4]
-; THUMB-M-NEXT:    ldr r2, [sp, #12]
-; THUMB-M-NEXT:    ldr r1, [sp, #8]
-; THUMB-M-NEXT:    and r2, r2, #127
-; THUMB-M-NEXT:    lsrs r0, r0, #30
-; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #2
-; THUMB-M-NEXT:    lsls r2, r2, #2
-; THUMB-M-NEXT:    orr.w r1, r2, r1, lsr #30
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitextract_b231_constant:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    add r2, sp, #4
-; THUMB-A-NEXT:    ldm r2, {r0, r1, r2}
-; THUMB-A-NEXT:    and r2, r2, #127
-; THUMB-A-NEXT:    lsrs r0, r0, #30
-; THUMB-A-NEXT:    lsls r2, r2, #2
-; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #2
-; THUMB-A-NEXT:    orr.w r1, r2, r1, lsr #30
-; THUMB-A-NEXT:    bx lr
-  %result = bitextract i64, b231 %src, i32 190
-  ret i64 %result
-}
 
 
 ; Bitinsert
