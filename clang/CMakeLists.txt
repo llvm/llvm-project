@@ -283,6 +283,9 @@ set(ENABLE_X86_RELAX_RELOCATIONS ON CACHE BOOL
 set(PPC_LINUX_DEFAULT_IEEELONGDOUBLE OFF CACHE BOOL
     "Enable IEEE binary128 as default long double format on PowerPC Linux.")
 
+set(CLANG_DEFAULT_INPUT_ENCODING_IBM1047 OFF CACHE BOOL
+    "Set IBM-1047 as the default input encoding")
+
 set(CLANG_SPAWN_CC1 OFF CACHE BOOL
     "Whether clang should use a new process for the CC1 invocation")
 

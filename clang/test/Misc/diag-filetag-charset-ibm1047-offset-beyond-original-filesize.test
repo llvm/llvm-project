@@ -1,0 +1,13 @@
+// Test source location information in diagnostics when the offset is beyond the
+// original file size (as source location handling is sensitive to file sizes).
+// Conversion is driven by the filetag.
+//
+// Note: The column number is (unfortunately) the post-conversion byte offset.
+
+// REQUIRES: system-zos
+
+// RUN: rm -rf %t && mkdir -p %t
+// RUN: cp %S/Inputs/diag-input-charset-ibm1047-offset-beyond-original-filesize.c %t/diag-input-charset-ibm1047-offset-beyond-original-filesize.c
+// RUN: chtag -tc 1047 %t/diag-input-charset-ibm1047-offset-beyond-original-filesize.c
+// RUN: %clang_cc1 %t/diag-input-charset-ibm1047-offset-beyond-original-filesize.c 2>&1 | FileCheck %s
+// CHECK: {{.*}}diag-input-charset-ibm1047-offset-beyond-original-filesize.c:1:14: warning: treating Unicode character as whitespace [-Wunicode-whitespace]

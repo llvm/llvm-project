@@ -692,8 +692,10 @@ void Preprocessor::EnterMainSourceFile() {
           << PPOpts.PCHThroughHeader;
       return;
     }
-    setPCHThroughHeaderFileID(
-        SourceMgr.createFileID(*File, SourceLocation(), SrcMgr::C_User));
+    // FIXME: Figure out character-encoding converter treatment.
+    setPCHThroughHeaderFileID(SourceMgr.createFileID(*File, SourceLocation(),
+                                                     SrcMgr::C_User,
+                                                     /*InputEncodingName=*/{}));
   }
 
   // Skip tokens from the Predefines and if needed the main file.

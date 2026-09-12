@@ -866,6 +866,7 @@ public:
   ///
   /// \return True on success.
   static bool InitializeSourceManager(const FrontendInputFile &Input,
+                                      llvm::StringRef InputEncodingName,
                                       DiagnosticsEngine &Diags,
                                       FileManager &FileMgr,
                                       SourceManager &SourceMgr);
