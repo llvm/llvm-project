@@ -50,10 +50,12 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         Twine(EntryPath), sys::fs::OF_UpdateAtime, &ResultPath);
     std::error_code EC;
     if (FDOrErr) {
+      bool IsNFS = !sys::fs::is_local(CacheDirectoryPath);
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
           MemoryBuffer::getOpenFile(*FDOrErr, EntryPath,
                                     /*FileSize=*/-1,
-                                    /*RequiresNullTerminator=*/false);
+                                    /*RequiresNullTerminator=*/IsNFS,
+                                    /*IsVolatile=*/IsNFS);
       sys::fs::closeFile(*FDOrErr);
       if (MBOrErr) {
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
