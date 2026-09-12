@@ -1490,7 +1490,8 @@ void CodeGenModule::Release() {
   // Other targets have no apparent need for the ABI name, but set a non-empty
   // value.
   if (StringRef ABIStr = Target.getABI();
-      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV())) {
+      !ABIStr.empty() &&
+      (T.isARM() || T.isThumb() || T.isRISCV() || T.isPPC())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
