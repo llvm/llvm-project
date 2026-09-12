@@ -100,6 +100,8 @@ public:
 
   bool IsStripped() override;
 
+  bool IsSystem() const override { return IsSharedCacheBinary(); }
+
   void CreateSections(lldb_private::SectionList &unified_section_list) override;
 
   void Dump(lldb_private::Stream *s) override;
