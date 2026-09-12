@@ -66,7 +66,7 @@ class rcu_domain_impl {
   // flag used for waking up writer threads waiting for all reader threads' quiescent state
   std::atomic<bool> grace_period_waiting_flag_ = false;
 
-  rcu_thread_local_list_view retired_queue_stage0_;
+  using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
@@ -77,7 +77,9 @@ class rcu_domain_impl {
 
   void update_phase_and_wait() noexcept {
     rcu_singly_list_view working_queue;
-    working_queue.splice_back(retired_queue_stage0_);
+    per_thread_retired_queue_stage0::for_each([&working_queue](atomic_ref<rcu_atomic_list_view> thread_local_stage0) {
+      rcu_atomic_list_view::splice_back(thread_local_stage0, working_queue);
+    });
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -145,7 +147,10 @@ public:
     }
   }
 
-  void retire(__rcu_node* node) noexcept { retired_queue_stage0_.push_front(node); }
+  void retire(__rcu_node* node) noexcept {
+    auto thread_local_stage0_ref = per_thread_retired_queue_stage0::get_current_thread_instance();
+    rcu_atomic_list_view::push_front(thread_local_stage0_ref, node);
+  }
 
   void synchronize(bool invoke_callback) noexcept {
     std::atomic_thread_fence(memory_order_seq_cst);
@@ -161,7 +166,6 @@ public:
 
     std::atomic_signal_fence(memory_order_seq_cst);
     update_phase_and_wait();
-
 
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
