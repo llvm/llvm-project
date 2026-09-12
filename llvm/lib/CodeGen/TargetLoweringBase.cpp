@@ -2277,7 +2277,8 @@ void TargetLoweringBase::setMinimumBitTestCmps(unsigned Val) {
   MinimumBitTestCmps = Val;
 }
 
-Align TargetLoweringBase::getPrefLoopAlignment(MachineLoop *ML) const {
+Align TargetLoweringBase::getPrefLoopAlignment(
+    MachineLoop *ML, const MachineBasicBlock *BlockToAlign) const {
   if (TM.Options.LoopAlignment)
     return Align(TM.Options.LoopAlignment);
   return PrefLoopAlignment;

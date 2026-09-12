@@ -3032,7 +3032,9 @@ void MachineBlockPlacement::alignBlocks() {
     if (!L)
       continue;
 
-    const Align TLIAlign = TLI->getPrefLoopAlignment(L);
+    // Query the block being aligned rather than only the LoopInfo header.
+    // After loop rotation, ChainBB can be a different backedge destination.
+    const Align TLIAlign = TLI->getPrefLoopAlignment(L, ChainBB);
     unsigned MDAlign = 1;
     MDNode *LoopID = L->getLoopID();
     if (LoopID) {
