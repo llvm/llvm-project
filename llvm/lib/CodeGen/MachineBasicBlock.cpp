@@ -1388,6 +1388,13 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     // Update all intervals for registers whose uses may have been modified by
     // updateTerminator().
     LIS->repairIntervalsInRange(this, getFirstTerminator(), end(), UsedRegs);
+
+    // repairIntervalsInRange() does not update physregs; clear their ranges
+    // since updateTerminator() may have replaced defs.
+    for (Register Reg : UsedRegs) {
+      if (Reg.isPhysical())
+        LIS->removeAllRegUnitsForPhysReg(Reg.asMCReg());
+    }
   }
 
   if (MDTU)
