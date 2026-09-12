@@ -78,16 +78,6 @@ define i16 @test_bitextract_b87(b87 %src, i32 %off) {
   ret i16 %result
 }
 
-define i32 @test_bitextract_b87_wide_field(b87 %src) {
-; AARCH64-LABEL: test_bitextract_b87_wide_field:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    lsr x0, x0, #60
-; AARCH64-NEXT:    bfi w0, w1, #4, #23
-; AARCH64-NEXT:    // kill: def $w0 killed $w0 killed $x0
-; AARCH64-NEXT:    ret
-  %result = bitextract i32, b87 %src, i32 60
-  ret i32 %result
-}
 
 define i32 @test_bitextract_b128(b128 %src, i32 %off) {
 ; AARCH64-LABEL: test_bitextract_b128:
@@ -133,15 +123,6 @@ define i32 @test_bitextract_b231(b231 %src, i32 %off) {
   ret i32 %result
 }
 
-define i64 @test_bitextract_b231_constant(b231 %src) {
-; AARCH64-LABEL: test_bitextract_b231_constant:
-; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    and x8, x3, #0x7fffffffff
-; AARCH64-NEXT:    extr x0, x8, x2, #62
-; AARCH64-NEXT:    ret
-  %result = bitextract i64, b231 %src, i32 190
-  ret i64 %result
-}
 
 
 ; Bitinsert

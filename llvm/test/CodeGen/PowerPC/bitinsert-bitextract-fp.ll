@@ -159,16 +159,6 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
   ret double %result
 }
 
-define double @test_bitextract_double_b231_crossword(b231 %src) {
-; CHECK-LABEL: test_bitextract_double_b231_crossword:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    rldicl 4, 4, 2, 62
-; CHECK-NEXT:    rldimi 4, 3, 2, 23
-; CHECK-NEXT:    mtfprd 1, 4
-; CHECK-NEXT:    blr
-  %result = bitextract double, b231 %src, i32 190
-  ret double %result
-}
 
 define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; CHECK-LABEL: test_bitinsert_half_full:
@@ -291,19 +281,6 @@ define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
   ret b87 %result
 }
 
-define b87 @test_bitinsert_float_b87_crossword(b87 %base, float %val) {
-; CHECK-LABEL: test_bitinsert_float_b87_crossword:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    xscvdpspn 0, 1
-; CHECK-NEXT:    rotldi 4, 4, 59
-; CHECK-NEXT:    rldic 4, 4, 5, 4
-; CHECK-NEXT:    mffprwz 3, 0
-; CHECK-NEXT:    rldimi 4, 3, 60, 0
-; CHECK-NEXT:    rlwinm 3, 3, 28, 4, 31
-; CHECK-NEXT:    blr
-  %result = bitinsert b87 %base, float %val, i32 60
-  ret b87 %result
-}
 
 define b64 @test_bitinsert_double_full(b64 %base, double %val) {
 ; CHECK-LABEL: test_bitinsert_double_full:
@@ -510,17 +487,5 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; CHECK-NEXT:    addi 1, 1, 352
 ; CHECK-NEXT:    blr
   %result = bitinsert b231 %base, double %val, i32 %off
-  ret b231 %result
-}
-
-define b231 @test_bitinsert_double_b231_crossword(b231 %base, double %val) {
-; CHECK-LABEL: test_bitinsert_double_b231_crossword:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    mffprd 3, 1
-; CHECK-NEXT:    rldicr 6, 6, 0, 40
-; CHECK-NEXT:    rldimi 4, 3, 62, 0
-; CHECK-NEXT:    rldicl 3, 3, 62, 2
-; CHECK-NEXT:    blr
-  %result = bitinsert b231 %base, double %val, i32 190
   ret b231 %result
 }

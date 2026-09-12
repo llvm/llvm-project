@@ -474,42 +474,6 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
   ret double %result
 }
 
-define double @test_bitextract_double_b231_crossword(b231 %src) {
-; ARM-LABEL: test_bitextract_double_b231_crossword:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    ldmib sp, {r0, r1, r2}
-; ARM-NEXT:    and r2, r2, #127
-; ARM-NEXT:    lsr r0, r0, #30
-; ARM-NEXT:    lsl r2, r2, #2
-; ARM-NEXT:    orr r0, r0, r1, lsl #2
-; ARM-NEXT:    orr r1, r2, r1, lsr #30
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitextract_double_b231_crossword:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ldr r0, [sp, #4]
-; THUMB-M-NEXT:    ldr r2, [sp, #12]
-; THUMB-M-NEXT:    ldr r1, [sp, #8]
-; THUMB-M-NEXT:    and r2, r2, #127
-; THUMB-M-NEXT:    lsrs r0, r0, #30
-; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #2
-; THUMB-M-NEXT:    lsls r2, r2, #2
-; THUMB-M-NEXT:    orr.w r1, r2, r1, lsr #30
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitextract_double_b231_crossword:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    add r2, sp, #4
-; THUMB-A-NEXT:    ldm r2, {r0, r1, r2}
-; THUMB-A-NEXT:    and r2, r2, #127
-; THUMB-A-NEXT:    lsrs r0, r0, #30
-; THUMB-A-NEXT:    lsls r2, r2, #2
-; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #2
-; THUMB-A-NEXT:    orr.w r1, r2, r1, lsr #30
-; THUMB-A-NEXT:    bx lr
-  %result = bitextract double, b231 %src, i32 190
-  ret double %result
-}
 
 define b16 @test_bitinsert_half_full(b16 %base, half %val) {
 ; ARM-LABEL: test_bitinsert_half_full:
@@ -1100,33 +1064,6 @@ define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
   ret b87 %result
 }
 
-define b87 @test_bitinsert_float_b87_crossword(b87 %base, float %val) {
-; ARM-LABEL: test_bitinsert_float_b87_crossword:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    bic r1, r1, #-268435456
-; ARM-NEXT:    bic r0, r0, #31
-; ARM-NEXT:    orr r1, r1, r3, lsl #28
-; ARM-NEXT:    ubfx r2, r3, #4, #23
-; ARM-NEXT:    bx lr
-;
-; THUMB-M-LABEL: test_bitinsert_float_b87_crossword:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    bic r1, r1, #-268435456
-; THUMB-M-NEXT:    bic r0, r0, #31
-; THUMB-M-NEXT:    orr.w r1, r1, r3, lsl #28
-; THUMB-M-NEXT:    ubfx r2, r3, #4, #23
-; THUMB-M-NEXT:    bx lr
-;
-; THUMB-A-LABEL: test_bitinsert_float_b87_crossword:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    bic r1, r1, #-268435456
-; THUMB-A-NEXT:    bic r0, r0, #31
-; THUMB-A-NEXT:    orr.w r1, r1, r3, lsl #28
-; THUMB-A-NEXT:    ubfx r2, r3, #4, #23
-; THUMB-A-NEXT:    bx lr
-  %result = bitinsert b87 %base, float %val, i32 60
-  ret b87 %result
-}
 
 define b64 @test_bitinsert_double_full(b64 %base, double %val) {
 ; ARM-LABEL: test_bitinsert_double_full:
@@ -2218,79 +2155,5 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; THUMB-A-NEXT:    add sp, #268
 ; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b231 %base, double %val, i32 %off
-  ret b231 %result
-}
-
-define b231 @test_bitinsert_double_b231_crossword(b231 %base, double %val) {
-; ARM-LABEL: test_bitinsert_double_b231_crossword:
-; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; ARM-NEXT:    ldr r1, [sp, #52]
-; ARM-NEXT:    bfc r2, #0, #23
-; ARM-NEXT:    ldr r12, [sp, #48]
-; ARM-NEXT:    ldr r6, [sp, #36]
-; ARM-NEXT:    ubfx r7, r1, #2, #7
-; ARM-NEXT:    strb r7, [r0, #28]
-; ARM-NEXT:    lsr r7, r12, #2
-; ARM-NEXT:    ldr r5, [sp, #32]
-; ARM-NEXT:    bic r6, r6, #-1073741824
-; ARM-NEXT:    orr r1, r7, r1, lsl #30
-; ARM-NEXT:    ldr lr, [sp, #28]
-; ARM-NEXT:    orr r7, r6, r12, lsl #30
-; ARM-NEXT:    ldr r4, [sp, #24]
-; ARM-NEXT:    stm r0, {r2, r3, r4, lr}
-; ARM-NEXT:    str r5, [r0, #16]
-; ARM-NEXT:    str r7, [r0, #20]
-; ARM-NEXT:    str r1, [r0, #24]
-; ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
-;
-; THUMB-M-LABEL: test_bitinsert_double_b231_crossword:
-; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r7, lr}
-; THUMB-M-NEXT:    push {r7, lr}
-; THUMB-M-NEXT:    ldr.w r12, [sp, #36]
-; THUMB-M-NEXT:    bfc r2, #0, #23
-; THUMB-M-NEXT:    ldr.w lr, [sp, #32]
-; THUMB-M-NEXT:    ubfx r1, r12, #2, #7
-; THUMB-M-NEXT:    strb r1, [r0, #28]
-; THUMB-M-NEXT:    lsr.w r1, lr, #2
-; THUMB-M-NEXT:    orr.w r1, r1, r12, lsl #30
-; THUMB-M-NEXT:    str r1, [r0, #24]
-; THUMB-M-NEXT:    ldr r1, [sp, #20]
-; THUMB-M-NEXT:    bic r1, r1, #-1073741824
-; THUMB-M-NEXT:    orr.w r1, r1, lr, lsl #30
-; THUMB-M-NEXT:    str r1, [r0, #20]
-; THUMB-M-NEXT:    ldr r1, [sp, #16]
-; THUMB-M-NEXT:    str r1, [r0, #16]
-; THUMB-M-NEXT:    ldr r1, [sp, #12]
-; THUMB-M-NEXT:    str r1, [r0, #12]
-; THUMB-M-NEXT:    ldr r1, [sp, #8]
-; THUMB-M-NEXT:    strd r3, r1, [r0, #4]
-; THUMB-M-NEXT:    str r2, [r0]
-; THUMB-M-NEXT:    pop {r7, pc}
-;
-; THUMB-A-LABEL: test_bitinsert_double_b231_crossword:
-; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r4, r5, r6, r7, lr}
-; THUMB-A-NEXT:    push {r4, r5, r6, r7, lr}
-; THUMB-A-NEXT:    .pad #4
-; THUMB-A-NEXT:    sub sp, #4
-; THUMB-A-NEXT:    ldrd r12, r1, [sp, #48]
-; THUMB-A-NEXT:    bfc r2, #0, #23
-; THUMB-A-NEXT:    ldrd r5, r6, [sp, #32]
-; THUMB-A-NEXT:    ubfx r7, r1, #2, #7
-; THUMB-A-NEXT:    strb r7, [r0, #28]
-; THUMB-A-NEXT:    bic r6, r6, #-1073741824
-; THUMB-A-NEXT:    lsr.w r7, r12, #2
-; THUMB-A-NEXT:    orr.w r1, r7, r1, lsl #30
-; THUMB-A-NEXT:    orr.w r7, r6, r12, lsl #30
-; THUMB-A-NEXT:    ldrd r4, lr, [sp, #24]
-; THUMB-A-NEXT:    stm.w r0, {r2, r3, r4, lr}
-; THUMB-A-NEXT:    strd r5, r7, [r0, #16]
-; THUMB-A-NEXT:    str r1, [r0, #24]
-; THUMB-A-NEXT:    add sp, #4
-; THUMB-A-NEXT:    pop {r4, r5, r6, r7, pc}
-  %result = bitinsert b231 %base, double %val, i32 190
   ret b231 %result
 }

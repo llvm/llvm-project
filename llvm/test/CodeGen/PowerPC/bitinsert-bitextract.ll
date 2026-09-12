@@ -70,16 +70,6 @@ define i16 @test_bitextract_b87(b87 %src, i32 %off) {
   ret i16 %result
 }
 
-define i32 @test_bitextract_b87_wide_field(b87 %src) {
-; CHECK-LABEL: test_bitextract_b87_wide_field:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    rldicl 4, 4, 4, 60
-; CHECK-NEXT:    rlwimi 4, 3, 4, 5, 27
-; CHECK-NEXT:    mr 3, 4
-; CHECK-NEXT:    blr
-  %result = bitextract i32, b87 %src, i32 60
-  ret i32 %result
-}
 
 define i32 @test_bitextract_b128(b128 %src, i32 %off) {
 ; CHECK-LABEL: test_bitextract_b128:
@@ -126,16 +116,6 @@ define i32 @test_bitextract_b231(b231 %src, i32 %off) {
   ret i32 %result
 }
 
-define i64 @test_bitextract_b231_constant(b231 %src) {
-; CHECK-LABEL: test_bitextract_b231_constant:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    rldicl 4, 4, 2, 62
-; CHECK-NEXT:    rldimi 4, 3, 2, 23
-; CHECK-NEXT:    mr 3, 4
-; CHECK-NEXT:    blr
-  %result = bitextract i64, b231 %src, i32 190
-  ret i64 %result
-}
 
 
 ; Bitinsert

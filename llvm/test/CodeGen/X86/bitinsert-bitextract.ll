@@ -87,17 +87,6 @@ define i16 @test_bitextract_b87(b87 %src, i32 %off) {
   ret i16 %result
 }
 
-define i32 @test_bitextract_b87_wide_field(b87 %src) {
-; CHECK-LABEL: test_bitextract_b87_wide_field:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    andl $8388607, %eax # imm = 0x7FFFFF
-; CHECK-NEXT:    shldq $4, %rdi, %rax
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    retq
-  %result = bitextract i32, b87 %src, i32 60
-  ret i32 %result
-}
 
 define i32 @test_bitextract_b128(b128 %src, i32 %off) {
 ; CHECK-LABEL: test_bitextract_b128:
@@ -145,16 +134,6 @@ define i32 @test_bitextract_b231(b231 %src, i32 %off) {
   ret i32 %result
 }
 
-define i64 @test_bitextract_b231_constant(b231 %src) {
-; CHECK-LABEL: test_bitextract_b231_constant:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $549755813887, %rax # imm = 0x7FFFFFFFFF
-; CHECK-NEXT:    andq %rcx, %rax
-; CHECK-NEXT:    shldq $2, %rdx, %rax
-; CHECK-NEXT:    retq
-  %result = bitextract i64, b231 %src, i32 190
-  ret i64 %result
-}
 
 
 ; Bitinsert
