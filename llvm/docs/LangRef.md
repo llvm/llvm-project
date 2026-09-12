@@ -13752,7 +13752,7 @@ This instruction requires several arguments:
    ```llvm
    declare void @take_byval(ptr byval(i64))
    declare void @take_ptr(ptr)
-
+   
    ; Invalid (assuming @take_ptr dereferences the pointer), because %local
    ; may be de-allocated before the call to @take_ptr.
    define void @invalid_alloca() {
@@ -13761,7 +13761,7 @@ This instruction requires several arguments:
      tail call void @take_ptr(ptr %local)
      ret void
    }
-
+   
    ; Valid, the byval attribute causes the memory allocated by %local to be
    ; copied into @take_byval's stack frame.
    define void @byval_alloca() {
@@ -13770,7 +13770,7 @@ This instruction requires several arguments:
      tail call void @take_byval(ptr byval(i64) %local)
      ret void
    }
-
+   
    ; Invalid, because @use_global_va_list uses the variadic arguments from
    ; @invalid_va_list.
    %struct.va_list = type { ptr }
@@ -13786,14 +13786,14 @@ This instruction requires several arguments:
      tail call void @use_global_va_list()
      ret void
    }
-
+   
    ; Valid, byval argument forwarded to tail call as another byval argument.
    define void @forward_byval(ptr byval(i64) %x) {
    entry:
      tail call void @take_byval(ptr byval(i64) %x)
      ret void
    }
-
+   
    ; Invalid (assuming @take_ptr dereferences the pointer), byval argument
    ; passed to tail callee as non-byval ptr.
    define void @invalid_byval(ptr byval(i64) %x) {
@@ -27083,23 +27083,24 @@ declare void @llvm.pseudoprobe(i64 <guid>, i64 <index>, i32 <attributes>, i64 <f
 
 ##### Overview:
 
-The `llvm.pseudoprobe` intrinsic identifies a basic block of the function's
-pre-optimized CFG, so that samples collected from an optimized binary can be
-attributed back to the program as it was before optimization ran. It is emitted
-for sample-based profile-guided optimization.
+The `llvm.pseudoprobe` intrinsic identifies a basic block in a function before
+the module was optimized, so that samples collected from an optimized binary
+can be attributed back to it. It is emitted for sample-based profile-guided
+optimization.
 
-Probes are inserted in the first pass of the pipeline and indexed by walking
-the function rather than by source location, so a probe keeps naming the same
-original block however that block is later inlined, cloned or rearranged. It is
-a pseudo intrinsic: it performs no operation and lowers to no machine
-instruction, only to a label recorded in the `.pseudo_probe` section.
+Probes are inserted in the first pass of the pipeline and indexed by walking a
+function, so a probe keeps naming the same original block however that block is
+later inlined, cloned or rearranged. It is a pseudo intrinsic: it performs no
+operation and lowers to no machine instruction, only to a label recorded in the
+`.pseudo_probe` section.
 
 ##### Arguments:
 
-The first argument is the GUID of the function containing the probe, naming an
-entry in the module-level `!llvm.pseudo_probe_desc` metadata that pairs it with
-the function's name and a hash of its pre-optimized CFG. The second argument is
-the index of the probe, unique within its function.
+The first argument is the GUID of the function the probe was created for, which
+after inlining need not be the function that contains it. It names an entry in
+the module-level `!llvm.pseudo_probe_desc` metadata pairing the GUID with that
+function's name and a hash of its pre-optimized CFG. The second argument is the
+index of the probe, unique within that function.
 
 The third argument is a bit mask of probe attributes, at most three bits wide,
 shared with the encoding of probe records in the object file:
