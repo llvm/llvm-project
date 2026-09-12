@@ -488,34 +488,22 @@ define i1 @test_bitextract_b128_off_top(b128 %src) {
 define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 ; ARM-LABEL: test_bitinsert_b8_off1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r2, r0, #252
 ; ARM-NEXT:    and r1, r1, #1
-; ARM-NEXT:    lsr r2, r2, #1
-; ARM-NEXT:    orr r2, r2, r0, lsl #7
-; ARM-NEXT:    and r0, r0, #1
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    bic r0, r0, #2
 ; ARM-NEXT:    orr r0, r0, r1, lsl #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b8_off1:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r2, r0, #252
 ; THUMB-M-NEXT:    and r1, r1, #1
-; THUMB-M-NEXT:    lsrs r2, r2, #1
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #7
-; THUMB-M-NEXT:    and r0, r0, #1
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    bic r0, r0, #2
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b8_off1:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r2, r0, #252
 ; THUMB-A-NEXT:    and r1, r1, #1
-; THUMB-A-NEXT:    lsrs r2, r2, #1
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #7
-; THUMB-A-NEXT:    and r0, r0, #1
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    bic r0, r0, #2
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b8 %base, i1 %val, i32 1
@@ -525,34 +513,22 @@ define b8 @test_bitinsert_b8_off1(b8 %base, i1 %val) {
 define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 ; ARM-LABEL: test_bitinsert_b8_off2:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r2, r0, #240
 ; ARM-NEXT:    and r1, r1, #3
-; ARM-NEXT:    lsr r2, r2, #2
-; ARM-NEXT:    orr r2, r2, r0, lsl #6
-; ARM-NEXT:    and r0, r0, #3
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    bic r0, r0, #12
 ; ARM-NEXT:    orr r0, r0, r1, lsl #2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b8_off2:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r2, r0, #240
 ; THUMB-M-NEXT:    and r1, r1, #3
-; THUMB-M-NEXT:    lsrs r2, r2, #2
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #6
-; THUMB-M-NEXT:    and r0, r0, #3
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    bic r0, r0, #12
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #2
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b8_off2:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r2, r0, #240
 ; THUMB-A-NEXT:    and r1, r1, #3
-; THUMB-A-NEXT:    lsrs r2, r2, #2
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #6
-; THUMB-A-NEXT:    and r0, r0, #3
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    bic r0, r0, #12
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #2
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b8 %base, i2 %val, i32 2
@@ -562,24 +538,18 @@ define b8 @test_bitinsert_b8_off2(b8 %base, i2 %val) {
 define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 ; ARM-LABEL: test_bitinsert_b8_off4:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r1, r1, #15
-; ARM-NEXT:    orr r1, r1, r0, lsl #4
 ; ARM-NEXT:    and r0, r0, #15
 ; ARM-NEXT:    orr r0, r0, r1, lsl #4
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b8_off4:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r1, r1, #15
-; THUMB-M-NEXT:    orr.w r1, r1, r0, lsl #4
 ; THUMB-M-NEXT:    and r0, r0, #15
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #4
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b8_off4:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r1, r1, #15
-; THUMB-A-NEXT:    orr.w r1, r1, r0, lsl #4
 ; THUMB-A-NEXT:    and r0, r0, #15
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #4
 ; THUMB-A-NEXT:    bx lr
@@ -592,37 +562,22 @@ define b8 @test_bitinsert_b8_off4(b8 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 ; ARM-LABEL: test_bitinsert_b16_off1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    movw r2, #65532
 ; ARM-NEXT:    and r1, r1, #1
-; ARM-NEXT:    and r2, r0, r2
-; ARM-NEXT:    lsr r2, r2, #1
-; ARM-NEXT:    orr r2, r2, r0, lsl #15
-; ARM-NEXT:    and r0, r0, #1
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    bic r0, r0, #2
 ; ARM-NEXT:    orr r0, r0, r1, lsl #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b16_off1:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    movw r2, #65532
 ; THUMB-M-NEXT:    and r1, r1, #1
-; THUMB-M-NEXT:    ands r2, r0
-; THUMB-M-NEXT:    lsrs r2, r2, #1
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #15
-; THUMB-M-NEXT:    and r0, r0, #1
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    bic r0, r0, #2
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b16_off1:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    movw r2, #65532
 ; THUMB-A-NEXT:    and r1, r1, #1
-; THUMB-A-NEXT:    ands r2, r0
-; THUMB-A-NEXT:    lsrs r2, r2, #1
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #15
-; THUMB-A-NEXT:    and r0, r0, #1
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    bic r0, r0, #2
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b16 %base, i1 %val, i32 1
@@ -632,37 +587,22 @@ define b16 @test_bitinsert_b16_off1(b16 %base, i1 %val) {
 define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 ; ARM-LABEL: test_bitinsert_b16_off2:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    movw r2, #65520
 ; ARM-NEXT:    and r1, r1, #3
-; ARM-NEXT:    and r2, r0, r2
-; ARM-NEXT:    lsr r2, r2, #2
-; ARM-NEXT:    orr r2, r2, r0, lsl #14
-; ARM-NEXT:    and r0, r0, #3
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    bic r0, r0, #12
 ; ARM-NEXT:    orr r0, r0, r1, lsl #2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b16_off2:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    movw r2, #65520
 ; THUMB-M-NEXT:    and r1, r1, #3
-; THUMB-M-NEXT:    ands r2, r0
-; THUMB-M-NEXT:    lsrs r2, r2, #2
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #14
-; THUMB-M-NEXT:    and r0, r0, #3
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    bic r0, r0, #12
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #2
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b16_off2:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    movw r2, #65520
 ; THUMB-A-NEXT:    and r1, r1, #3
-; THUMB-A-NEXT:    ands r2, r0
-; THUMB-A-NEXT:    lsrs r2, r2, #2
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #14
-; THUMB-A-NEXT:    and r0, r0, #3
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    bic r0, r0, #12
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #2
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b16 %base, i2 %val, i32 2
@@ -672,34 +612,22 @@ define b16 @test_bitinsert_b16_off2(b16 %base, i2 %val) {
 define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 ; ARM-LABEL: test_bitinsert_b16_off4:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r2, r0, #65280
 ; ARM-NEXT:    and r1, r1, #15
-; ARM-NEXT:    lsr r2, r2, #4
-; ARM-NEXT:    orr r2, r2, r0, lsl #12
-; ARM-NEXT:    and r0, r0, #15
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    bic r0, r0, #240
 ; ARM-NEXT:    orr r0, r0, r1, lsl #4
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b16_off4:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r2, r0, #65280
 ; THUMB-M-NEXT:    and r1, r1, #15
-; THUMB-M-NEXT:    lsrs r2, r2, #4
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #12
-; THUMB-M-NEXT:    and r0, r0, #15
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    bic r0, r0, #240
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #4
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b16_off4:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r2, r0, #65280
 ; THUMB-A-NEXT:    and r1, r1, #15
-; THUMB-A-NEXT:    lsrs r2, r2, #4
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #12
-; THUMB-A-NEXT:    and r0, r0, #15
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    bic r0, r0, #240
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #4
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b16 %base, i4 %val, i32 4
@@ -709,24 +637,18 @@ define b16 @test_bitinsert_b16_off4(b16 %base, i4 %val) {
 define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 ; ARM-LABEL: test_bitinsert_b16_off8:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    uxtb r1, r1
-; ARM-NEXT:    orr r1, r1, r0, lsl #8
 ; ARM-NEXT:    uxtb r0, r0
 ; ARM-NEXT:    orr r0, r0, r1, lsl #8
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b16_off8:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    uxtb r1, r1
-; THUMB-M-NEXT:    orr.w r1, r1, r0, lsl #8
 ; THUMB-M-NEXT:    uxtb r0, r0
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #8
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b16_off8:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    uxtb r1, r1
-; THUMB-A-NEXT:    orr.w r1, r1, r0, lsl #8
 ; THUMB-A-NEXT:    uxtb r0, r0
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #8
 ; THUMB-A-NEXT:    bx lr
@@ -739,23 +661,23 @@ define b16 @test_bitinsert_b16_off8(b16 %base, i8 %val) {
 define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
 ; ARM-LABEL: test_bitinsert_b32_off1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, #1
-; ARM-NEXT:    bfi r0, r1, #0, #1
-; ARM-NEXT:    ror r0, r0, #31
+; ARM-NEXT:    and r1, r1, #1
+; ARM-NEXT:    bic r0, r0, #2
+; ARM-NEXT:    orr r0, r0, r1, lsl #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b32_off1:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ror.w r0, r0, #1
-; THUMB-M-NEXT:    bfi r0, r1, #0, #1
-; THUMB-M-NEXT:    ror.w r0, r0, #31
+; THUMB-M-NEXT:    and r1, r1, #1
+; THUMB-M-NEXT:    bic r0, r0, #2
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b32_off1:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    ror.w r0, r0, #1
-; THUMB-A-NEXT:    bfi r0, r1, #0, #1
-; THUMB-A-NEXT:    ror.w r0, r0, #31
+; THUMB-A-NEXT:    and r1, r1, #1
+; THUMB-A-NEXT:    bic r0, r0, #2
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, i1 %val, i32 1
   ret b32 %result
@@ -764,23 +686,23 @@ define b32 @test_bitinsert_b32_off1(b32 %base, i1 %val) {
 define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
 ; ARM-LABEL: test_bitinsert_b32_off2:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, #2
-; ARM-NEXT:    bfi r0, r1, #0, #2
-; ARM-NEXT:    ror r0, r0, #30
+; ARM-NEXT:    and r1, r1, #3
+; ARM-NEXT:    bic r0, r0, #12
+; ARM-NEXT:    orr r0, r0, r1, lsl #2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b32_off2:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ror.w r0, r0, #2
-; THUMB-M-NEXT:    bfi r0, r1, #0, #2
-; THUMB-M-NEXT:    ror.w r0, r0, #30
+; THUMB-M-NEXT:    and r1, r1, #3
+; THUMB-M-NEXT:    bic r0, r0, #12
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #2
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b32_off2:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    ror.w r0, r0, #2
-; THUMB-A-NEXT:    bfi r0, r1, #0, #2
-; THUMB-A-NEXT:    ror.w r0, r0, #30
+; THUMB-A-NEXT:    and r1, r1, #3
+; THUMB-A-NEXT:    bic r0, r0, #12
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #2
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, i2 %val, i32 2
   ret b32 %result
@@ -789,23 +711,23 @@ define b32 @test_bitinsert_b32_off2(b32 %base, i2 %val) {
 define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
 ; ARM-LABEL: test_bitinsert_b32_off4:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, #4
-; ARM-NEXT:    bfi r0, r1, #0, #4
-; ARM-NEXT:    ror r0, r0, #28
+; ARM-NEXT:    and r1, r1, #15
+; ARM-NEXT:    bic r0, r0, #240
+; ARM-NEXT:    orr r0, r0, r1, lsl #4
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b32_off4:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ror.w r0, r0, #4
-; THUMB-M-NEXT:    bfi r0, r1, #0, #4
-; THUMB-M-NEXT:    ror.w r0, r0, #28
+; THUMB-M-NEXT:    and r1, r1, #15
+; THUMB-M-NEXT:    bic r0, r0, #240
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #4
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b32_off4:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    ror.w r0, r0, #4
-; THUMB-A-NEXT:    bfi r0, r1, #0, #4
-; THUMB-A-NEXT:    ror.w r0, r0, #28
+; THUMB-A-NEXT:    and r1, r1, #15
+; THUMB-A-NEXT:    bic r0, r0, #240
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #4
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, i4 %val, i32 4
   ret b32 %result
@@ -814,23 +736,23 @@ define b32 @test_bitinsert_b32_off4(b32 %base, i4 %val) {
 define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 ; ARM-LABEL: test_bitinsert_b32_off8:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, #8
-; ARM-NEXT:    bfi r0, r1, #0, #8
-; ARM-NEXT:    ror r0, r0, #24
+; ARM-NEXT:    uxtb r1, r1
+; ARM-NEXT:    bic r0, r0, #65280
+; ARM-NEXT:    orr r0, r0, r1, lsl #8
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b32_off8:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ror.w r0, r0, #8
-; THUMB-M-NEXT:    bfi r0, r1, #0, #8
-; THUMB-M-NEXT:    ror.w r0, r0, #24
+; THUMB-M-NEXT:    uxtb r1, r1
+; THUMB-M-NEXT:    bic r0, r0, #65280
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #8
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b32_off8:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    ror.w r0, r0, #8
-; THUMB-A-NEXT:    bfi r0, r1, #0, #8
-; THUMB-A-NEXT:    ror.w r0, r0, #24
+; THUMB-A-NEXT:    uxtb r1, r1
+; THUMB-A-NEXT:    bic r0, r0, #65280
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #8
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, i8 %val, i32 8
   ret b32 %result
@@ -839,21 +761,18 @@ define b32 @test_bitinsert_b32_off8(b32 %base, i8 %val) {
 define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
 ; ARM-LABEL: test_bitinsert_b32_off16:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    pkhbt r0, r1, r0, lsl #16
-; ARM-NEXT:    ror r0, r0, #16
+; ARM-NEXT:    pkhbt r0, r0, r1, lsl #16
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b32_off16:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    uxth r1, r1
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsl #16
-; THUMB-M-NEXT:    ror.w r0, r0, #16
+; THUMB-M-NEXT:    uxth r0, r0
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #16
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b32_off16:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    pkhbt r0, r1, r0, lsl #16
-; THUMB-A-NEXT:    ror.w r0, r0, #16
+; THUMB-A-NEXT:    pkhbt r0, r0, r1, lsl #16
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, i16 %val, i32 16
   ret b32 %result
@@ -864,26 +783,23 @@ define b32 @test_bitinsert_b32_off16(b32 %base, i16 %val) {
 define b64 @test_bitinsert_b64_off1(b64 %base, i1 %val) {
 ; ARM-LABEL: test_bitinsert_b64_off1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    lsr r3, r0, #1
-; ARM-NEXT:    and r0, r0, #1
-; ARM-NEXT:    bfi r3, r2, #0, #1
-; ARM-NEXT:    orr r0, r0, r3, lsl #1
+; ARM-NEXT:    and r2, r2, #1
+; ARM-NEXT:    bic r0, r0, #2
+; ARM-NEXT:    orr r0, r0, r2, lsl #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b64_off1:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    lsrs r3, r0, #1
-; THUMB-M-NEXT:    and r0, r0, #1
-; THUMB-M-NEXT:    bfi r3, r2, #0, #1
-; THUMB-M-NEXT:    orr.w r0, r0, r3, lsl #1
+; THUMB-M-NEXT:    and r2, r2, #1
+; THUMB-M-NEXT:    bic r0, r0, #2
+; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b64_off1:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    lsrs r3, r0, #1
-; THUMB-A-NEXT:    and r0, r0, #1
-; THUMB-A-NEXT:    bfi r3, r2, #0, #1
-; THUMB-A-NEXT:    orr.w r0, r0, r3, lsl #1
+; THUMB-A-NEXT:    and r2, r2, #1
+; THUMB-A-NEXT:    bic r0, r0, #2
+; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b64 %base, i1 %val, i32 1
   ret b64 %result
@@ -892,26 +808,23 @@ define b64 @test_bitinsert_b64_off1(b64 %base, i1 %val) {
 define b64 @test_bitinsert_b64_off2(b64 %base, i2 %val) {
 ; ARM-LABEL: test_bitinsert_b64_off2:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    lsr r3, r0, #2
-; ARM-NEXT:    and r0, r0, #3
-; ARM-NEXT:    bfi r3, r2, #0, #2
-; ARM-NEXT:    orr r0, r0, r3, lsl #2
+; ARM-NEXT:    and r2, r2, #3
+; ARM-NEXT:    bic r0, r0, #12
+; ARM-NEXT:    orr r0, r0, r2, lsl #2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b64_off2:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    lsrs r3, r0, #2
-; THUMB-M-NEXT:    and r0, r0, #3
-; THUMB-M-NEXT:    bfi r3, r2, #0, #2
-; THUMB-M-NEXT:    orr.w r0, r0, r3, lsl #2
+; THUMB-M-NEXT:    and r2, r2, #3
+; THUMB-M-NEXT:    bic r0, r0, #12
+; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #2
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b64_off2:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    lsrs r3, r0, #2
-; THUMB-A-NEXT:    and r0, r0, #3
-; THUMB-A-NEXT:    bfi r3, r2, #0, #2
-; THUMB-A-NEXT:    orr.w r0, r0, r3, lsl #2
+; THUMB-A-NEXT:    and r2, r2, #3
+; THUMB-A-NEXT:    bic r0, r0, #12
+; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #2
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b64 %base, i2 %val, i32 2
   ret b64 %result
@@ -920,26 +833,23 @@ define b64 @test_bitinsert_b64_off2(b64 %base, i2 %val) {
 define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
 ; ARM-LABEL: test_bitinsert_b64_off4:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    lsr r3, r0, #4
-; ARM-NEXT:    and r0, r0, #15
-; ARM-NEXT:    bfi r3, r2, #0, #4
-; ARM-NEXT:    orr r0, r0, r3, lsl #4
+; ARM-NEXT:    and r2, r2, #15
+; ARM-NEXT:    bic r0, r0, #240
+; ARM-NEXT:    orr r0, r0, r2, lsl #4
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b64_off4:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    lsrs r3, r0, #4
-; THUMB-M-NEXT:    and r0, r0, #15
-; THUMB-M-NEXT:    bfi r3, r2, #0, #4
-; THUMB-M-NEXT:    orr.w r0, r0, r3, lsl #4
+; THUMB-M-NEXT:    and r2, r2, #15
+; THUMB-M-NEXT:    bic r0, r0, #240
+; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #4
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b64_off4:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    lsrs r3, r0, #4
-; THUMB-A-NEXT:    and r0, r0, #15
-; THUMB-A-NEXT:    bfi r3, r2, #0, #4
-; THUMB-A-NEXT:    orr.w r0, r0, r3, lsl #4
+; THUMB-A-NEXT:    and r2, r2, #15
+; THUMB-A-NEXT:    bic r0, r0, #240
+; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #4
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b64 %base, i4 %val, i32 4
   ret b64 %result
@@ -948,26 +858,23 @@ define b64 @test_bitinsert_b64_off4(b64 %base, i4 %val) {
 define b64 @test_bitinsert_b64_off8(b64 %base, i8 %val) {
 ; ARM-LABEL: test_bitinsert_b64_off8:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    lsr r3, r0, #8
-; ARM-NEXT:    uxtb r0, r0
-; ARM-NEXT:    bfi r3, r2, #0, #8
-; ARM-NEXT:    orr r0, r0, r3, lsl #8
+; ARM-NEXT:    uxtb r2, r2
+; ARM-NEXT:    bic r0, r0, #65280
+; ARM-NEXT:    orr r0, r0, r2, lsl #8
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b64_off8:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    lsrs r3, r0, #8
-; THUMB-M-NEXT:    uxtb r0, r0
-; THUMB-M-NEXT:    bfi r3, r2, #0, #8
-; THUMB-M-NEXT:    orr.w r0, r0, r3, lsl #8
+; THUMB-M-NEXT:    uxtb r2, r2
+; THUMB-M-NEXT:    bic r0, r0, #65280
+; THUMB-M-NEXT:    orr.w r0, r0, r2, lsl #8
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b64_off8:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    lsrs r3, r0, #8
-; THUMB-A-NEXT:    uxtb r0, r0
-; THUMB-A-NEXT:    bfi r3, r2, #0, #8
-; THUMB-A-NEXT:    orr.w r0, r0, r3, lsl #8
+; THUMB-A-NEXT:    uxtb r2, r2
+; THUMB-A-NEXT:    bic r0, r0, #65280
+; THUMB-A-NEXT:    orr.w r0, r0, r2, lsl #8
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b64 %base, i8 %val, i32 8
   ret b64 %result
@@ -1018,36 +925,27 @@ define b64 @test_bitinsert_b64_off32(b64 %base, i32 %val) {
 define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 ; ARM-LABEL: test_bitinsert_b128_off1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r11, lr}
-; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    ldr r12, [sp, #8]
-; ARM-NEXT:    lsr lr, r0, #1
-; ARM-NEXT:    and r0, r0, #1
-; ARM-NEXT:    bfi lr, r12, #0, #1
-; ARM-NEXT:    orr r0, r0, lr, lsl #1
-; ARM-NEXT:    pop {r11, pc}
+; ARM-NEXT:    ldr r12, [sp]
+; ARM-NEXT:    bic r0, r0, #2
+; ARM-NEXT:    and r12, r12, #1
+; ARM-NEXT:    orr r0, r0, r12, lsl #1
+; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b128_off1:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r7, lr}
-; THUMB-M-NEXT:    push {r7, lr}
-; THUMB-M-NEXT:    ldr.w lr, [sp, #8]
-; THUMB-M-NEXT:    lsr.w r12, r0, #1
-; THUMB-M-NEXT:    and r0, r0, #1
-; THUMB-M-NEXT:    bfi r12, lr, #0, #1
+; THUMB-M-NEXT:    ldr.w r12, [sp]
+; THUMB-M-NEXT:    bic r0, r0, #2
+; THUMB-M-NEXT:    and r12, r12, #1
 ; THUMB-M-NEXT:    orr.w r0, r0, r12, lsl #1
-; THUMB-M-NEXT:    pop {r7, pc}
+; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b128_off1:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r7, lr}
-; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    ldr.w r12, [sp, #8]
-; THUMB-A-NEXT:    lsr.w lr, r0, #1
-; THUMB-A-NEXT:    and r0, r0, #1
-; THUMB-A-NEXT:    bfi lr, r12, #0, #1
-; THUMB-A-NEXT:    orr.w r0, r0, lr, lsl #1
-; THUMB-A-NEXT:    pop {r7, pc}
+; THUMB-A-NEXT:    ldr.w r12, [sp]
+; THUMB-A-NEXT:    bic r0, r0, #2
+; THUMB-A-NEXT:    and r12, r12, #1
+; THUMB-A-NEXT:    orr.w r0, r0, r12, lsl #1
+; THUMB-A-NEXT:    bx lr
   %result = bitinsert b128 %base, i1 %val, i32 1
   ret b128 %result
 }
@@ -1055,36 +953,27 @@ define b128 @test_bitinsert_b128_off1(b128 %base, i1 %val) {
 define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 ; ARM-LABEL: test_bitinsert_b128_off2:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r11, lr}
-; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    ldr r12, [sp, #8]
-; ARM-NEXT:    lsr lr, r0, #2
-; ARM-NEXT:    and r0, r0, #3
-; ARM-NEXT:    bfi lr, r12, #0, #2
-; ARM-NEXT:    orr r0, r0, lr, lsl #2
-; ARM-NEXT:    pop {r11, pc}
+; ARM-NEXT:    ldr r12, [sp]
+; ARM-NEXT:    bic r0, r0, #12
+; ARM-NEXT:    and r12, r12, #3
+; ARM-NEXT:    orr r0, r0, r12, lsl #2
+; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b128_off2:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r7, lr}
-; THUMB-M-NEXT:    push {r7, lr}
-; THUMB-M-NEXT:    ldr.w lr, [sp, #8]
-; THUMB-M-NEXT:    lsr.w r12, r0, #2
-; THUMB-M-NEXT:    and r0, r0, #3
-; THUMB-M-NEXT:    bfi r12, lr, #0, #2
+; THUMB-M-NEXT:    ldr.w r12, [sp]
+; THUMB-M-NEXT:    bic r0, r0, #12
+; THUMB-M-NEXT:    and r12, r12, #3
 ; THUMB-M-NEXT:    orr.w r0, r0, r12, lsl #2
-; THUMB-M-NEXT:    pop {r7, pc}
+; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b128_off2:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r7, lr}
-; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    ldr.w r12, [sp, #8]
-; THUMB-A-NEXT:    lsr.w lr, r0, #2
-; THUMB-A-NEXT:    and r0, r0, #3
-; THUMB-A-NEXT:    bfi lr, r12, #0, #2
-; THUMB-A-NEXT:    orr.w r0, r0, lr, lsl #2
-; THUMB-A-NEXT:    pop {r7, pc}
+; THUMB-A-NEXT:    ldr.w r12, [sp]
+; THUMB-A-NEXT:    bic r0, r0, #12
+; THUMB-A-NEXT:    and r12, r12, #3
+; THUMB-A-NEXT:    orr.w r0, r0, r12, lsl #2
+; THUMB-A-NEXT:    bx lr
   %result = bitinsert b128 %base, i2 %val, i32 2
   ret b128 %result
 }
@@ -1092,36 +981,27 @@ define b128 @test_bitinsert_b128_off2(b128 %base, i2 %val) {
 define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 ; ARM-LABEL: test_bitinsert_b128_off4:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r11, lr}
-; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    ldr r12, [sp, #8]
-; ARM-NEXT:    lsr lr, r0, #4
-; ARM-NEXT:    and r0, r0, #15
-; ARM-NEXT:    bfi lr, r12, #0, #4
-; ARM-NEXT:    orr r0, r0, lr, lsl #4
-; ARM-NEXT:    pop {r11, pc}
+; ARM-NEXT:    ldr r12, [sp]
+; ARM-NEXT:    bic r0, r0, #240
+; ARM-NEXT:    and r12, r12, #15
+; ARM-NEXT:    orr r0, r0, r12, lsl #4
+; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b128_off4:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r7, lr}
-; THUMB-M-NEXT:    push {r7, lr}
-; THUMB-M-NEXT:    ldr.w lr, [sp, #8]
-; THUMB-M-NEXT:    lsr.w r12, r0, #4
-; THUMB-M-NEXT:    and r0, r0, #15
-; THUMB-M-NEXT:    bfi r12, lr, #0, #4
+; THUMB-M-NEXT:    ldr.w r12, [sp]
+; THUMB-M-NEXT:    bic r0, r0, #240
+; THUMB-M-NEXT:    and r12, r12, #15
 ; THUMB-M-NEXT:    orr.w r0, r0, r12, lsl #4
-; THUMB-M-NEXT:    pop {r7, pc}
+; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b128_off4:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r7, lr}
-; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    ldr.w r12, [sp, #8]
-; THUMB-A-NEXT:    lsr.w lr, r0, #4
-; THUMB-A-NEXT:    and r0, r0, #15
-; THUMB-A-NEXT:    bfi lr, r12, #0, #4
-; THUMB-A-NEXT:    orr.w r0, r0, lr, lsl #4
-; THUMB-A-NEXT:    pop {r7, pc}
+; THUMB-A-NEXT:    ldr.w r12, [sp]
+; THUMB-A-NEXT:    bic r0, r0, #240
+; THUMB-A-NEXT:    and r12, r12, #15
+; THUMB-A-NEXT:    orr.w r0, r0, r12, lsl #4
+; THUMB-A-NEXT:    bx lr
   %result = bitinsert b128 %base, i4 %val, i32 4
   ret b128 %result
 }
@@ -1129,39 +1009,24 @@ define b128 @test_bitinsert_b128_off4(b128 %base, i4 %val) {
 define b128 @test_bitinsert_b128_off8(b128 %base, i8 %val) {
 ; ARM-LABEL: test_bitinsert_b128_off8:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r11, lr}
-; ARM-NEXT:    push {r11, lr}
-; ARM-NEXT:    mvn lr, #255
-; ARM-NEXT:    ldrb r12, [sp, #8]
-; ARM-NEXT:    and lr, lr, r0, lsr #8
-; ARM-NEXT:    uxtb r0, r0
-; ARM-NEXT:    orr r12, lr, r12
+; ARM-NEXT:    ldrb r12, [sp]
+; ARM-NEXT:    bic r0, r0, #65280
 ; ARM-NEXT:    orr r0, r0, r12, lsl #8
-; ARM-NEXT:    pop {r11, pc}
+; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b128_off8:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r7, lr}
-; THUMB-M-NEXT:    push {r7, lr}
-; THUMB-M-NEXT:    mvn r12, #255
-; THUMB-M-NEXT:    ldrb.w lr, [sp, #8]
-; THUMB-M-NEXT:    and.w r12, r12, r0, lsr #8
-; THUMB-M-NEXT:    uxtb r0, r0
-; THUMB-M-NEXT:    add r12, lr
-; THUMB-M-NEXT:    orr.w r0, r0, r12, lsl #8
-; THUMB-M-NEXT:    pop {r7, pc}
+; THUMB-M-NEXT:    bic r12, r0, #65280
+; THUMB-M-NEXT:    ldrb.w r0, [sp]
+; THUMB-M-NEXT:    orr.w r0, r12, r0, lsl #8
+; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b128_off8:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r7, lr}
-; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    mvn lr, #255
-; THUMB-A-NEXT:    ldrb.w r12, [sp, #8]
-; THUMB-A-NEXT:    and.w lr, lr, r0, lsr #8
-; THUMB-A-NEXT:    uxtb r0, r0
-; THUMB-A-NEXT:    add r12, lr
+; THUMB-A-NEXT:    ldrb.w r12, [sp]
+; THUMB-A-NEXT:    bic r0, r0, #65280
 ; THUMB-A-NEXT:    orr.w r0, r0, r12, lsl #8
-; THUMB-A-NEXT:    pop {r7, pc}
+; THUMB-A-NEXT:    bx lr
   %result = bitinsert b128 %base, i8 %val, i32 8
   ret b128 %result
 }

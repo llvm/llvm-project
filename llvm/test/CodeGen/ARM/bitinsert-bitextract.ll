@@ -464,26 +464,36 @@ define i64 @test_bitextract_b231_constant(b231 %src) {
 define b32 @test_bitinsert_var(b32 %base, i16 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, r2
-; ARM-NEXT:    pkhbt r0, r1, r0
-; ARM-NEXT:    rsb r1, r2, #0
-; ARM-NEXT:    ror r0, r0, r1
+; ARM-NEXT:    movw r3, #0
+; ARM-NEXT:    rsb r12, r2, #0
+; ARM-NEXT:    movt r3, #65535
+; ARM-NEXT:    uxth r1, r1
+; ARM-NEXT:    and r0, r0, r3, ror r12
+; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    rors r0, r2
-; THUMB-M-NEXT:    bfi r0, r1, #0, #16
-; THUMB-M-NEXT:    rsbs r1, r2, #0
-; THUMB-M-NEXT:    rors r0, r1
+; THUMB-M-NEXT:    uxth r1, r1
+; THUMB-M-NEXT:    movs r3, #0
+; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    rsbs r2, r2, #0
+; THUMB-M-NEXT:    movt r3, #65535
+; THUMB-M-NEXT:    ror.w r2, r3, r2
+; THUMB-M-NEXT:    ands r0, r2
+; THUMB-M-NEXT:    orrs r0, r1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    rors r0, r2
-; THUMB-A-NEXT:    pkhbt r0, r1, r0
-; THUMB-A-NEXT:    rsbs r1, r2, #0
-; THUMB-A-NEXT:    rors r0, r1
+; THUMB-A-NEXT:    movs r3, #0
+; THUMB-A-NEXT:    rsb.w r12, r2, #0
+; THUMB-A-NEXT:    movt r3, #65535
+; THUMB-A-NEXT:    uxth r1, r1
+; THUMB-A-NEXT:    ror.w r3, r3, r12
+; THUMB-A-NEXT:    ands r0, r3
+; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, i16 %val, i32 %off
   ret b32 %result
@@ -514,185 +524,153 @@ define b37 @test_bitinsert_b37_var(b37 %base, i8 %val, i32 %off) {
 ; ARM-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; ARM-NEXT:    push {r4, r5, r6, r7, r8, lr}
 ; ARM-NEXT:    movw r12, #37197
-; ARM-NEXT:    lsl r4, r1, #1
+; ARM-NEXT:    mvn r4, #127
 ; ARM-NEXT:    movt r12, #47823
-; ARM-NEXT:    orr r4, r4, r0, lsr #31
+; ARM-NEXT:    mov r6, #15
 ; ARM-NEXT:    umull r12, lr, r3, r12
-; ARM-NEXT:    lsl r5, r0, #1
-; ARM-NEXT:    and r1, r1, #31
+; ARM-NEXT:    mvn r8, #255
+; ARM-NEXT:    mov r7, #31
+; ARM-NEXT:    uxtb r2, r2
 ; ARM-NEXT:    sub r12, r3, lr
 ; ARM-NEXT:    add r12, lr, r12, lsr #1
 ; ARM-NEXT:    mov lr, #37
 ; ARM-NEXT:    lsr r12, r12, #5
-; ARM-NEXT:    mls r3, r12, lr, r3
-; ARM-NEXT:    rsb r12, r3, #36
-; ARM-NEXT:    rsb r8, r3, #32
+; ARM-NEXT:    mls r12, r12, lr, r3
+; ARM-NEXT:    rsb lr, r12, #36
+; ARM-NEXT:    rsb r5, lr, #32
+; ARM-NEXT:    lsr r4, r4, lr
+; ARM-NEXT:    orr r4, r4, r6, lsl r5
+; ARM-NEXT:    rsbs r5, r12, #4
+; ARM-NEXT:    lsrpl r4, r6, r5
+; ARM-NEXT:    lsr r6, r6, lr
 ; ARM-NEXT:    rsb lr, r12, #32
-; ARM-NEXT:    lsr r0, r0, r3
-; ARM-NEXT:    orr r0, r0, r1, lsl r8
-; ARM-NEXT:    lsr r6, r5, lr
-; ARM-NEXT:    orr r4, r6, r4, lsl r12
-; ARM-NEXT:    rsbs r6, r3, #4
-; ARM-NEXT:    lslpl r4, r5, r6
-; ARM-NEXT:    lsl r5, r5, r12
-; ARM-NEXT:    movwpl r5, #0
-; ARM-NEXT:    subs r7, r3, #32
-; ARM-NEXT:    lsrpl r0, r1, r7
-; ARM-NEXT:    lsr r1, r1, r3
-; ARM-NEXT:    movwpl r1, #0
-; ARM-NEXT:    orr r0, r0, r5
-; ARM-NEXT:    orr r1, r1, r4
-; ARM-NEXT:    and r1, r1, #31
-; ARM-NEXT:    bfi r0, r2, #0, #8
-; ARM-NEXT:    lsrs r2, r1, #1
-; ARM-NEXT:    rrx r4, r0
-; ARM-NEXT:    and r2, r2, #31
-; ARM-NEXT:    lsr r4, r4, r12
-; ARM-NEXT:    cmp r6, #0
-; ARM-NEXT:    orr r5, r4, r2, lsl lr
-; ARM-NEXT:    lsrpl r5, r2, r6
-; ARM-NEXT:    lsr r2, r2, r12
+; ARM-NEXT:    movwpl r6, #0
+; ARM-NEXT:    lsr r5, r8, lr
+; ARM-NEXT:    orr r7, r5, r7, lsl r12
+; ARM-NEXT:    subs r5, r12, #32
+; ARM-NEXT:    lslpl r7, r8, r5
+; ARM-NEXT:    orr r7, r7, r6
+; ARM-NEXT:    rsb r6, r3, #32
+; ARM-NEXT:    and r1, r1, r7
+; ARM-NEXT:    lsl r7, r8, r12
+; ARM-NEXT:    movwpl r7, #0
+; ARM-NEXT:    subs r5, r3, #32
+; ARM-NEXT:    lsr r6, r2, r6
+; ARM-NEXT:    orr r7, r7, r4
+; ARM-NEXT:    lslpl r6, r2, r5
+; ARM-NEXT:    lsl r2, r2, r3
+; ARM-NEXT:    and r0, r0, r7
 ; ARM-NEXT:    movwpl r2, #0
-; ARM-NEXT:    lsr r6, r0, r8
-; ARM-NEXT:    cmp r7, #0
-; ARM-NEXT:    orr r1, r6, r1, lsl r3
-; ARM-NEXT:    lslpl r1, r0, r7
-; ARM-NEXT:    lsl r0, r0, r3
-; ARM-NEXT:    movwpl r0, #0
-; ARM-NEXT:    orr r1, r1, r2
-; ARM-NEXT:    orr r0, r0, r5
+; ARM-NEXT:    orr r1, r1, r6
+; ARM-NEXT:    orr r0, r0, r2
 ; ARM-NEXT:    pop {r4, r5, r6, r7, r8, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_b37_var:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; THUMB-M-NEXT:    movw r4, #37197
-; THUMB-M-NEXT:    lsls r5, r0, #1
-; THUMB-M-NEXT:    movt r4, #47823
-; THUMB-M-NEXT:    umull r4, r12, r3, r4
-; THUMB-M-NEXT:    sub.w r4, r3, r12
-; THUMB-M-NEXT:    add.w r4, r12, r4, lsr #1
-; THUMB-M-NEXT:    lsr.w r12, r4, #5
-; THUMB-M-NEXT:    movs r4, #37
-; THUMB-M-NEXT:    mls r3, r12, r4, r3
-; THUMB-M-NEXT:    lsls r4, r1, #1
-; THUMB-M-NEXT:    orr.w r4, r4, r0, lsr #31
-; THUMB-M-NEXT:    and r1, r1, #31
-; THUMB-M-NEXT:    rsb.w r12, r3, #36
-; THUMB-M-NEXT:    rsb.w r8, r3, #32
-; THUMB-M-NEXT:    rsb.w lr, r12, #32
-; THUMB-M-NEXT:    lsrs r0, r3
-; THUMB-M-NEXT:    lsl.w r4, r4, r12
-; THUMB-M-NEXT:    lsl.w r7, r1, r8
-; THUMB-M-NEXT:    lsr.w r6, r5, lr
-; THUMB-M-NEXT:    orrs r0, r7
-; THUMB-M-NEXT:    orrs r6, r4
-; THUMB-M-NEXT:    rsbs.w r4, r3, #4
+; THUMB-M-NEXT:    movw r12, #37197
+; THUMB-M-NEXT:    mvn r4, #127
+; THUMB-M-NEXT:    movt r12, #47823
+; THUMB-M-NEXT:    movs r6, #15
+; THUMB-M-NEXT:    umull r12, lr, r3, r12
+; THUMB-M-NEXT:    mvn r8, #255
+; THUMB-M-NEXT:    uxtb r2, r2
+; THUMB-M-NEXT:    sub.w r12, r3, lr
+; THUMB-M-NEXT:    add.w r12, lr, r12, lsr #1
+; THUMB-M-NEXT:    mov.w lr, #37
+; THUMB-M-NEXT:    lsr.w r12, r12, #5
+; THUMB-M-NEXT:    mls r12, r12, lr, r3
+; THUMB-M-NEXT:    rsb.w lr, r12, #36
+; THUMB-M-NEXT:    rsb.w r5, lr, #32
+; THUMB-M-NEXT:    lsr.w r4, r4, lr
+; THUMB-M-NEXT:    lsl.w r5, r6, r5
+; THUMB-M-NEXT:    orrs r4, r5
+; THUMB-M-NEXT:    rsbs.w r5, r12, #4
 ; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    lslpl.w r6, r5, r4
-; THUMB-M-NEXT:    lsl.w r5, r5, r12
+; THUMB-M-NEXT:    lsrpl.w r4, r6, r5
+; THUMB-M-NEXT:    mov.w r5, #31
+; THUMB-M-NEXT:    lsr.w r6, r6, lr
+; THUMB-M-NEXT:    lsl.w lr, r5, r12
+; THUMB-M-NEXT:    rsb.w r5, r12, #32
 ; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    movpl r5, #0
-; THUMB-M-NEXT:    subs.w r7, r3, #32
+; THUMB-M-NEXT:    movpl r6, #0
+; THUMB-M-NEXT:    subs.w r7, r12, #32
+; THUMB-M-NEXT:    lsr.w r5, r8, r5
+; THUMB-M-NEXT:    orr.w r5, r5, lr
 ; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    lsrpl.w r0, r1, r7
-; THUMB-M-NEXT:    lsr.w r1, r1, r3
+; THUMB-M-NEXT:    lslpl.w r5, r8, r7
+; THUMB-M-NEXT:    orr.w r7, r5, r6
+; THUMB-M-NEXT:    rsb.w r5, r3, #32
+; THUMB-M-NEXT:    and.w r1, r1, r7
+; THUMB-M-NEXT:    lsl.w r7, r8, r12
 ; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    movpl r1, #0
-; THUMB-M-NEXT:    orrs r0, r5
-; THUMB-M-NEXT:    orrs r1, r6
-; THUMB-M-NEXT:    bfi r0, r2, #0, #8
-; THUMB-M-NEXT:    and r1, r1, #31
-; THUMB-M-NEXT:    lsrs.w r2, r1, #1
-; THUMB-M-NEXT:    lsl.w r1, r1, r3
-; THUMB-M-NEXT:    and r2, r2, #31
-; THUMB-M-NEXT:    rrx r5, r0
-; THUMB-M-NEXT:    lsr.w r5, r5, r12
-; THUMB-M-NEXT:    cmp r4, #0
-; THUMB-M-NEXT:    lsl.w r6, r2, lr
-; THUMB-M-NEXT:    orr.w r6, r6, r5
-; THUMB-M-NEXT:    lsr.w r5, r0, r8
+; THUMB-M-NEXT:    movpl r7, #0
+; THUMB-M-NEXT:    lsr.w r5, r2, r5
+; THUMB-M-NEXT:    orrs r7, r4
+; THUMB-M-NEXT:    subs.w r6, r3, #32
 ; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    lsrpl.w r6, r2, r4
-; THUMB-M-NEXT:    lsr.w r2, r2, r12
-; THUMB-M-NEXT:    orr.w r1, r1, r5
+; THUMB-M-NEXT:    lslpl.w r5, r2, r6
+; THUMB-M-NEXT:    lsl.w r2, r2, r3
+; THUMB-M-NEXT:    and.w r0, r0, r7
 ; THUMB-M-NEXT:    it pl
 ; THUMB-M-NEXT:    movpl r2, #0
-; THUMB-M-NEXT:    cmp r7, #0
-; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    lslpl.w r1, r0, r7
-; THUMB-M-NEXT:    lsl.w r0, r0, r3
-; THUMB-M-NEXT:    orr.w r1, r1, r2
-; THUMB-M-NEXT:    it pl
-; THUMB-M-NEXT:    movpl r0, #0
-; THUMB-M-NEXT:    orrs r0, r6
+; THUMB-M-NEXT:    orrs r1, r5
+; THUMB-M-NEXT:    orrs r0, r2
 ; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_b37_var:
 ; THUMB-A:       @ %bb.0:
 ; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, lr}
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
-; THUMB-A-NEXT:    movw r4, #37197
-; THUMB-A-NEXT:    lsls r5, r0, #1
-; THUMB-A-NEXT:    movt r4, #47823
-; THUMB-A-NEXT:    umull r4, r12, r3, r4
-; THUMB-A-NEXT:    sub.w r4, r3, r12
-; THUMB-A-NEXT:    add.w r4, r12, r4, lsr #1
-; THUMB-A-NEXT:    lsr.w r12, r4, #5
-; THUMB-A-NEXT:    movs r4, #37
-; THUMB-A-NEXT:    mls r3, r12, r4, r3
-; THUMB-A-NEXT:    lsls r4, r1, #1
-; THUMB-A-NEXT:    orr.w r4, r4, r0, lsr #31
-; THUMB-A-NEXT:    and r1, r1, #31
-; THUMB-A-NEXT:    rsb.w r12, r3, #36
-; THUMB-A-NEXT:    rsb.w r8, r3, #32
-; THUMB-A-NEXT:    rsb.w lr, r12, #32
-; THUMB-A-NEXT:    lsrs r0, r3
-; THUMB-A-NEXT:    lsl.w r4, r4, r12
-; THUMB-A-NEXT:    lsl.w r7, r1, r8
-; THUMB-A-NEXT:    lsr.w r6, r5, lr
-; THUMB-A-NEXT:    orrs r0, r7
-; THUMB-A-NEXT:    orrs r6, r4
-; THUMB-A-NEXT:    rsbs.w r4, r3, #4
+; THUMB-A-NEXT:    movw r12, #37197
+; THUMB-A-NEXT:    mvn r4, #127
+; THUMB-A-NEXT:    movt r12, #47823
+; THUMB-A-NEXT:    movs r6, #15
+; THUMB-A-NEXT:    umull r12, lr, r3, r12
+; THUMB-A-NEXT:    mvn r8, #255
+; THUMB-A-NEXT:    uxtb r2, r2
+; THUMB-A-NEXT:    sub.w r12, r3, lr
+; THUMB-A-NEXT:    add.w r12, lr, r12, lsr #1
+; THUMB-A-NEXT:    mov.w lr, #37
+; THUMB-A-NEXT:    lsr.w r12, r12, #5
+; THUMB-A-NEXT:    mls r12, r12, lr, r3
+; THUMB-A-NEXT:    rsb.w lr, r12, #36
+; THUMB-A-NEXT:    rsb.w r5, lr, #32
+; THUMB-A-NEXT:    lsr.w r4, r4, lr
+; THUMB-A-NEXT:    lsl.w r5, r6, r5
+; THUMB-A-NEXT:    orrs r4, r5
+; THUMB-A-NEXT:    rsbs.w r5, r12, #4
 ; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    lslpl.w r6, r5, r4
-; THUMB-A-NEXT:    lsl.w r5, r5, r12
+; THUMB-A-NEXT:    lsrpl.w r4, r6, r5
+; THUMB-A-NEXT:    mov.w r5, #31
+; THUMB-A-NEXT:    lsr.w r6, r6, lr
+; THUMB-A-NEXT:    lsl.w lr, r5, r12
+; THUMB-A-NEXT:    rsb.w r5, r12, #32
 ; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    movpl r5, #0
-; THUMB-A-NEXT:    subs.w r7, r3, #32
+; THUMB-A-NEXT:    movpl r6, #0
+; THUMB-A-NEXT:    subs.w r7, r12, #32
+; THUMB-A-NEXT:    lsr.w r5, r8, r5
+; THUMB-A-NEXT:    orr.w r5, r5, lr
 ; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    lsrpl.w r0, r1, r7
-; THUMB-A-NEXT:    lsr.w r1, r1, r3
+; THUMB-A-NEXT:    lslpl.w r5, r8, r7
+; THUMB-A-NEXT:    orr.w r7, r5, r6
+; THUMB-A-NEXT:    rsb.w r6, r3, #32
+; THUMB-A-NEXT:    and.w r1, r1, r7
+; THUMB-A-NEXT:    lsl.w r7, r8, r12
 ; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    movpl r1, #0
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    orrs r1, r6
-; THUMB-A-NEXT:    bfi r0, r2, #0, #8
-; THUMB-A-NEXT:    and r1, r1, #31
-; THUMB-A-NEXT:    lsrs.w r2, r1, #1
-; THUMB-A-NEXT:    lsl.w r1, r1, r3
-; THUMB-A-NEXT:    and r2, r2, #31
-; THUMB-A-NEXT:    rrx r5, r0
-; THUMB-A-NEXT:    lsr.w r5, r5, r12
-; THUMB-A-NEXT:    cmp r4, #0
-; THUMB-A-NEXT:    lsl.w r6, r2, lr
-; THUMB-A-NEXT:    orr.w r6, r6, r5
-; THUMB-A-NEXT:    lsr.w r5, r0, r8
+; THUMB-A-NEXT:    movpl r7, #0
+; THUMB-A-NEXT:    lsr.w r6, r2, r6
+; THUMB-A-NEXT:    orrs r7, r4
+; THUMB-A-NEXT:    subs.w r5, r3, #32
 ; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    lsrpl.w r6, r2, r4
-; THUMB-A-NEXT:    lsr.w r2, r2, r12
-; THUMB-A-NEXT:    orr.w r1, r1, r5
+; THUMB-A-NEXT:    lslpl.w r6, r2, r5
+; THUMB-A-NEXT:    lsl.w r2, r2, r3
+; THUMB-A-NEXT:    and.w r0, r0, r7
 ; THUMB-A-NEXT:    it pl
 ; THUMB-A-NEXT:    movpl r2, #0
-; THUMB-A-NEXT:    cmp r7, #0
-; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    lslpl.w r1, r0, r7
-; THUMB-A-NEXT:    lsl.w r0, r0, r3
-; THUMB-A-NEXT:    orr.w r1, r1, r2
-; THUMB-A-NEXT:    it pl
-; THUMB-A-NEXT:    movpl r0, #0
-; THUMB-A-NEXT:    orrs r0, r6
+; THUMB-A-NEXT:    orrs r1, r6
+; THUMB-A-NEXT:    orrs r0, r2
 ; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
   %result = bitinsert b37 %base, i8 %val, i32 %off
   ret b37 %result
@@ -703,435 +681,380 @@ define b87 @test_bitinsert_b87_var(b87 %base, i16 %val, i32 %off) {
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; ARM-NEXT:    .pad #140
-; ARM-NEXT:    sub sp, sp, #140
-; ARM-NEXT:    ldr r7, [sp, #176]
-; ARM-NEXT:    movw r6, #39171
-; ARM-NEXT:    movt r6, #12052
-; ARM-NEXT:    str r3, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    str r1, [sp, #108]
-; ARM-NEXT:    mov r12, #0
-; ARM-NEXT:    umull r6, r5, r7, r6
-; ARM-NEXT:    str r12, [sp, #132]
-; ARM-NEXT:    mov r6, r2
-; ARM-NEXT:    bfc r6, #23, #9
-; ARM-NEXT:    str r6, [sp, #112]
-; ARM-NEXT:    str r12, [sp, #128]
-; ARM-NEXT:    str r12, [sp, #124]
-; ARM-NEXT:    lsr r6, r5, #4
-; ARM-NEXT:    mov r5, #87
-; ARM-NEXT:    mls r8, r6, r5, r7
-; ARM-NEXT:    lsl r7, r2, #1
-; ARM-NEXT:    orr r7, r7, r1, lsr #31
-; ARM-NEXT:    lsl r1, r1, #1
-; ARM-NEXT:    str r12, [sp, #120]
-; ARM-NEXT:    orr r1, r1, r0, lsr #31
+; ARM-NEXT:    .pad #124
+; ARM-NEXT:    sub sp, sp, #124
+; ARM-NEXT:    mov r9, r1
+; ARM-NEXT:    ldr r1, [sp, #160]
+; ARM-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; ARM-NEXT:    movw r0, #39171
+; ARM-NEXT:    movt r0, #12052
+; ARM-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; ARM-NEXT:    umull r0, r7, r1, r0
+; ARM-NEXT:    mov r4, #0
+; ARM-NEXT:    movw r0, #65535
+; ARM-NEXT:    movt r0, #127
+; ARM-NEXT:    str r0, [sp, #112]
+; ARM-NEXT:    movw r0, #0
+; ARM-NEXT:    movt r0, #65535
+; ARM-NEXT:    mvn r6, #0
 ; ARM-NEXT:    str r0, [sp, #104]
-; ARM-NEXT:    str r12, [sp, #116]
-; ARM-NEXT:    lsl r0, r0, #1
-; ARM-NEXT:    str r1, [sp, #92]
-; ARM-NEXT:    lsr r1, r2, #31
-; ARM-NEXT:    ubfx r11, r8, #5, #2
-; ARM-NEXT:    str r1, [sp, #100]
-; ARM-NEXT:    add r1, sp, #104
-; ARM-NEXT:    str r7, [sp, #96]
-; ARM-NEXT:    add r1, r1, r11, lsl #2
-; ARM-NEXT:    and lr, r8, #31
-; ARM-NEXT:    eor r2, lr, #31
-; ARM-NEXT:    rsb r7, r8, #86
-; ARM-NEXT:    ldr r10, [r1, #4]
-; ARM-NEXT:    ldr r6, [r1, #8]
-; ARM-NEXT:    ldr r1, [r1, #12]
-; ARM-NEXT:    str r0, [sp, #88]
-; ARM-NEXT:    lsr r0, r6, lr
-; ARM-NEXT:    str r12, [sp, #84]
-; ARM-NEXT:    lsl r1, r1, #1
-; ARM-NEXT:    str r12, [sp, #80]
-; ARM-NEXT:    orr r9, r0, r1, lsl r2
-; ARM-NEXT:    add r0, sp, #72
-; ARM-NEXT:    mov r1, #12
-; ARM-NEXT:    and r4, r1, r7, lsr #3
-; ARM-NEXT:    add r0, r0, #16
-; ARM-NEXT:    str r12, [sp, #76]
-; ARM-NEXT:    str r12, [sp, #72]
-; ARM-NEXT:    and r1, r7, #31
-; ARM-NEXT:    ldr r5, [r0, -r4]!
-; ARM-NEXT:    lsl r6, r6, #1
-; ARM-NEXT:    ldr r4, [r0, #8]
-; ARM-NEXT:    ldr r0, [r0, #4]
-; ARM-NEXT:    lsl r3, r4, r1
-; ARM-NEXT:    eor r4, r1, #31
-; ARM-NEXT:    lsrs r2, r0, #1
-; ARM-NEXT:    lsl r0, r0, r1
-; ARM-NEXT:    orr r2, r3, r2, lsr r4
-; ARM-NEXT:    lsr r3, r10, lr
-; ARM-NEXT:    orr r2, r9, r2
-; ARM-NEXT:    eor r9, lr, #31
-; ARM-NEXT:    orr r3, r3, r6, lsl r9
-; ARM-NEXT:    lsr r6, r5, #1
-; ARM-NEXT:    orr r0, r0, r6, lsr r4
-; ARM-NEXT:    orr r0, r3, r0
-; ARM-NEXT:    str r0, [sp, #28]
-; ARM-NEXT:    lsl r3, r10, #1
-; ARM-NEXT:    mov r10, r9
-; ARM-NEXT:    lsrs r0, r0, #1
-; ARM-NEXT:    orr r0, r0, r2, lsl #31
-; ARM-NEXT:    str r0, [sp, #44]
-; ARM-NEXT:    add r0, sp, #104
-; ARM-NEXT:    bfc r2, #23, #9
-; ARM-NEXT:    ldr r0, [r0, r11, lsl #2]
-; ARM-NEXT:    lsr r0, r0, lr
-; ARM-NEXT:    orr r0, r0, r3, lsl r9
-; ARM-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
-; ARM-NEXT:    orr r0, r0, r5, lsl r1
-; ARM-NEXT:    pkhbt r0, r3, r0
-; ARM-NEXT:    str r0, [sp, #24]
-; ARM-NEXT:    add r3, sp, #8
-; ARM-NEXT:    rrx r0, r0
-; ARM-NEXT:    add r5, r3, #16
-; ARM-NEXT:    str r0, [sp, #40]
+; ARM-NEXT:    lsr r0, r7, #4
+; ARM-NEXT:    mov r7, #87
+; ARM-NEXT:    mls r5, r0, r7, r1
+; ARM-NEXT:    movw r0, #65535
+; ARM-NEXT:    movt r0, #63
+; ARM-NEXT:    add r7, sp, #88
+; ARM-NEXT:    str r4, [sp, #116]
+; ARM-NEXT:    str r6, [sp, #108]
+; ARM-NEXT:    add r7, r7, #16
+; ARM-NEXT:    str r4, [sp, #100]
+; ARM-NEXT:    str r4, [sp, #96]
+; ARM-NEXT:    and r12, r5, #31
+; ARM-NEXT:    str r0, [sp, #64]
 ; ARM-NEXT:    mov r0, #12
-; ARM-NEXT:    and r0, r0, r8, lsr #3
-; ARM-NEXT:    str r12, [sp, #36]
-; ARM-NEXT:    str r12, [sp, #20]
-; ARM-NEXT:    lsrs r3, r12, #1
-; ARM-NEXT:    str r12, [sp, #16]
-; ARM-NEXT:    str r12, [sp, #12]
-; ARM-NEXT:    str r12, [sp, #8]
-; ARM-NEXT:    str r12, [sp, #68]
-; ARM-NEXT:    str r12, [sp, #64]
-; ARM-NEXT:    str r12, [sp, #60]
-; ARM-NEXT:    str r12, [sp, #56]
-; ARM-NEXT:    str r2, [sp, #32]
-; ARM-NEXT:    str r12, [sp, #52]
-; ARM-NEXT:    mov r12, r10
-; ARM-NEXT:    ldr r8, [r5, -r0]!
-; ARM-NEXT:    rrx r0, r2
-; ARM-NEXT:    bfc r0, #23, #9
-; ARM-NEXT:    str r0, [sp, #48]
-; ARM-NEXT:    ldr r0, [r5, #4]
-; ARM-NEXT:    lsr r6, r8, #1
-; ARM-NEXT:    ldr r9, [r5, #8]
-; ARM-NEXT:    lsl r2, r0, lr
-; ARM-NEXT:    orr r10, r2, r6, lsr r10
-; ARM-NEXT:    ubfx r6, r7, #5, #2
-; ARM-NEXT:    add r2, sp, #40
-; ARM-NEXT:    lsrs r0, r0, #1
-; ARM-NEXT:    add r7, r2, r6, lsl #2
-; ARM-NEXT:    ldr r5, [r7, #4]
+; ARM-NEXT:    and r0, r0, r5, lsr #3
+; ARM-NEXT:    str r4, [sp, #92]
+; ARM-NEXT:    str r4, [sp, #88]
+; ARM-NEXT:    ldr r2, [r7, -r0]!
+; ARM-NEXT:    movw r0, #32768
+; ARM-NEXT:    movt r0, #65535
+; ARM-NEXT:    str r2, [sp, #12] @ 4-byte Spill
+; ARM-NEXT:    str r0, [sp, #56]
+; ARM-NEXT:    uxth r0, r3
+; ARM-NEXT:    str r6, [sp, #60]
+; ARM-NEXT:    lsr r6, r2, #1
+; ARM-NEXT:    str r4, [sp, #84]
+; ARM-NEXT:    str r4, [sp, #80]
+; ARM-NEXT:    str r4, [sp, #76]
+; ARM-NEXT:    str r4, [sp, #72]
+; ARM-NEXT:    str r4, [sp, #68]
+; ARM-NEXT:    str r4, [sp, #52]
+; ARM-NEXT:    str r4, [sp, #48]
+; ARM-NEXT:    str r4, [sp, #44]
+; ARM-NEXT:    str r4, [sp, #36]
+; ARM-NEXT:    str r4, [sp, #32]
+; ARM-NEXT:    str r4, [sp, #28]
+; ARM-NEXT:    str r4, [sp, #24]
+; ARM-NEXT:    ldr r8, [r7, #4]
 ; ARM-NEXT:    ldr r3, [r7, #8]
-; ARM-NEXT:    ldr r11, [r7, #12]
-; ARM-NEXT:    lsr r2, r5, r1
-; ARM-NEXT:    lsl r7, r3, #1
-; ARM-NEXT:    orr r2, r2, r7, lsl r4
-; ARM-NEXT:    orr r10, r10, r2
-; ARM-NEXT:    lsl r2, r9, lr
-; ARM-NEXT:    orr r0, r2, r0, lsr r12
-; ARM-NEXT:    lsr r2, r3, r1
+; ARM-NEXT:    str r3, [sp, #4] @ 4-byte Spill
+; ARM-NEXT:    add r3, sp, #56
+; ARM-NEXT:    str r0, [sp, #40]
+; ARM-NEXT:    eor r0, r12, #31
+; ARM-NEXT:    lsl r4, r8, r12
+; ARM-NEXT:    orr r2, r4, r6, lsr r0
+; ARM-NEXT:    rsb r4, r5, #86
+; ARM-NEXT:    add r5, sp, #24
+; ARM-NEXT:    ubfx r0, r4, #5, #2
+; ARM-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; ARM-NEXT:    and r4, r4, #31
+; ARM-NEXT:    add r5, r5, #16
+; ARM-NEXT:    add r6, r3, r0, lsl #2
+; ARM-NEXT:    ldmib r6, {r11, lr}
+; ARM-NEXT:    lsl r10, lr, #1
+; ARM-NEXT:    ldr r0, [r6, #12]
+; ARM-NEXT:    eor r6, r4, #31
+; ARM-NEXT:    str r0, [sp] @ 4-byte Spill
+; ARM-NEXT:    lsr r0, r11, r4
+; ARM-NEXT:    orr r0, r0, r10, lsl r6
+; ARM-NEXT:    orr r0, r2, r0
+; ARM-NEXT:    and r10, r9, r0
+; ARM-NEXT:    mov r0, #12
+; ARM-NEXT:    and r2, r0, r1, lsr #3
+; ARM-NEXT:    and r0, r1, #31
+; ARM-NEXT:    ldr r7, [r5, -r2]!
+; ARM-NEXT:    ldr r2, [r5, #4]
+; ARM-NEXT:    ldr r9, [r5, #8]
+; ARM-NEXT:    eor r5, r0, #31
+; ARM-NEXT:    lsr r1, r7, #1
+; ARM-NEXT:    lsl r3, r2, r0
+; ARM-NEXT:    orr r1, r3, r1, lsr r5
+; ARM-NEXT:    orr r10, r10, r1
+; ARM-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
+; ARM-NEXT:    eor r5, r12, #31
+; ARM-NEXT:    lsrs r3, r8, #1
+; ARM-NEXT:    lsrs r2, r2, #1
+; ARM-NEXT:    lsl r1, r1, r12
+; ARM-NEXT:    orr r1, r1, r3, lsr r5
+; ARM-NEXT:    ldr r5, [sp] @ 4-byte Reload
+; ARM-NEXT:    lsr r3, lr, r4
+; ARM-NEXT:    lsl r5, r5, #1
+; ARM-NEXT:    orr r3, r3, r5, lsl r6
+; ARM-NEXT:    eor r5, r0, #31
+; ARM-NEXT:    orr r1, r1, r3
+; ARM-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; ARM-NEXT:    and r1, r3, r1
+; ARM-NEXT:    lsl r3, r9, r0
+; ARM-NEXT:    orr r2, r3, r2, lsr r5
+; ARM-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
+; ARM-NEXT:    orr r2, r1, r2
+; ARM-NEXT:    add r1, sp, #56
+; ARM-NEXT:    ldr r1, [r1, r3, lsl #2]
 ; ARM-NEXT:    lsl r3, r11, #1
-; ARM-NEXT:    orr r2, r2, r3, lsl r4
-; ARM-NEXT:    orr r2, r0, r2
-; ARM-NEXT:    add r0, sp, #40
-; ARM-NEXT:    ldr r0, [r0, r6, lsl #2]
 ; ARM-NEXT:    bfc r2, #23, #9
-; ARM-NEXT:    lsr r0, r0, r1
-; ARM-NEXT:    lsl r1, r5, #1
-; ARM-NEXT:    orr r0, r0, r1, lsl r4
+; ARM-NEXT:    lsr r1, r1, r4
+; ARM-NEXT:    orr r1, r1, r3, lsl r6
+; ARM-NEXT:    ldr r3, [sp, #12] @ 4-byte Reload
+; ARM-NEXT:    orr r1, r1, r3, lsl r12
+; ARM-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
+; ARM-NEXT:    and r1, r3, r1
+; ARM-NEXT:    orr r0, r1, r7, lsl r0
 ; ARM-NEXT:    mov r1, r10
-; ARM-NEXT:    orr r0, r0, r8, lsl lr
-; ARM-NEXT:    add sp, sp, #140
+; ARM-NEXT:    add sp, sp, #124
 ; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_b87_var:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-M-NEXT:    .pad #148
-; THUMB-M-NEXT:    sub sp, #148
-; THUMB-M-NEXT:    mov r7, r2
-; THUMB-M-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; THUMB-M-NEXT:    bfc r7, #23, #9
-; THUMB-M-NEXT:    mov.w r12, #0
+; THUMB-M-NEXT:    .pad #132
+; THUMB-M-NEXT:    sub sp, #132
+; THUMB-M-NEXT:    movs r6, #0
+; THUMB-M-NEXT:    movw r7, #65535
+; THUMB-M-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMB-M-NEXT:    movs r0, #0
+; THUMB-M-NEXT:    movt r6, #65535
+; THUMB-M-NEXT:    str r2, [sp, #24] @ 4-byte Spill
+; THUMB-M-NEXT:    movt r7, #127
+; THUMB-M-NEXT:    strd r0, r6, [sp, #108]
+; THUMB-M-NEXT:    movw r6, #65535
 ; THUMB-M-NEXT:    str r7, [sp, #120]
-; THUMB-M-NEXT:    lsrs r7, r2, #31
-; THUMB-M-NEXT:    lsls r2, r2, #1
-; THUMB-M-NEXT:    str.w r12, [sp, #140]
-; THUMB-M-NEXT:    strd r12, r12, [sp, #132]
-; THUMB-M-NEXT:    orr.w r2, r2, r1, lsr #31
-; THUMB-M-NEXT:    strd r12, r12, [sp, #124]
-; THUMB-M-NEXT:    add.w r8, sp, #80
-; THUMB-M-NEXT:    strd r12, r12, [sp, #88]
-; THUMB-M-NEXT:    add.w r3, r8, #16
-; THUMB-M-NEXT:    strd r12, r12, [sp, #80]
-; THUMB-M-NEXT:    str r7, [sp, #108]
-; THUMB-M-NEXT:    str r1, [sp, #116]
-; THUMB-M-NEXT:    lsls r1, r1, #1
-; THUMB-M-NEXT:    str r2, [sp, #104]
-; THUMB-M-NEXT:    lsls r2, r0, #1
-; THUMB-M-NEXT:    str r0, [sp, #112]
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsr #31
-; THUMB-M-NEXT:    ldr r1, [sp, #184]
-; THUMB-M-NEXT:    str r0, [sp, #100]
+; THUMB-M-NEXT:    mov.w r7, #-1
+; THUMB-M-NEXT:    movt r6, #63
+; THUMB-M-NEXT:    str r0, [sp, #124]
+; THUMB-M-NEXT:    mov.w r11, #12
+; THUMB-M-NEXT:    str r7, [sp, #116]
+; THUMB-M-NEXT:    mov r12, r1
+; THUMB-M-NEXT:    strd r0, r0, [sp, #100]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #92]
+; THUMB-M-NEXT:    strd r7, r6, [sp, #68]
+; THUMB-M-NEXT:    movw r7, #32768
+; THUMB-M-NEXT:    movt r7, #65535
+; THUMB-M-NEXT:    strd r0, r0, [sp, #84]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #76]
+; THUMB-M-NEXT:    strd r0, r7, [sp, #60]
+; THUMB-M-NEXT:    add r7, sp, #96
+; THUMB-M-NEXT:    strd r0, r0, [sp, #52]
+; THUMB-M-NEXT:    adds r7, #16
+; THUMB-M-NEXT:    strd r0, r0, [sp, #40]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #32]
+; THUMB-M-NEXT:    uxth r0, r3
+; THUMB-M-NEXT:    ldr.w r9, [sp, #168]
+; THUMB-M-NEXT:    str r0, [sp, #48]
 ; THUMB-M-NEXT:    movw r0, #39171
 ; THUMB-M-NEXT:    movt r0, #12052
-; THUMB-M-NEXT:    str r2, [sp, #96]
-; THUMB-M-NEXT:    umull r0, r2, r1, r0
-; THUMB-M-NEXT:    str.w r12, [sp, #44]
-; THUMB-M-NEXT:    strd r12, r12, [sp, #24]
-; THUMB-M-NEXT:    strd r12, r12, [sp, #16]
-; THUMB-M-NEXT:    str.w r12, [sp, #76]
-; THUMB-M-NEXT:    strd r12, r12, [sp, #68]
-; THUMB-M-NEXT:    strd r12, r12, [sp, #60]
-; THUMB-M-NEXT:    lsrs r0, r2, #4
-; THUMB-M-NEXT:    movs r2, #87
-; THUMB-M-NEXT:    mls r5, r0, r2, r1
-; THUMB-M-NEXT:    add r0, sp, #112
-; THUMB-M-NEXT:    and lr, r5, #31
-; THUMB-M-NEXT:    rsb.w r11, r5, #86
-; THUMB-M-NEXT:    ubfx r1, r5, #5, #2
-; THUMB-M-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMB-M-NEXT:    eor r9, lr, #31
-; THUMB-M-NEXT:    add.w r0, r0, r1, lsl #2
-; THUMB-M-NEXT:    ldr r1, [r0, #4]
-; THUMB-M-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; THUMB-M-NEXT:    and r1, r11, #31
-; THUMB-M-NEXT:    ldrd r6, r0, [r0, #8]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    lsl.w r0, r0, r9
-; THUMB-M-NEXT:    lsr.w r4, r6, lr
-; THUMB-M-NEXT:    orr.w r2, r4, r0
-; THUMB-M-NEXT:    movs r0, #12
-; THUMB-M-NEXT:    and.w r4, r0, r11, lsr #3
-; THUMB-M-NEXT:    subs r3, r3, r4
-; THUMB-M-NEXT:    eor r4, r1, #31
-; THUMB-M-NEXT:    ldrd r8, r0, [r3]
-; THUMB-M-NEXT:    lsls r6, r6, #1
-; THUMB-M-NEXT:    ldr r3, [r3, #8]
-; THUMB-M-NEXT:    lsrs.w r10, r0, #1
-; THUMB-M-NEXT:    lsr.w r7, r10, r4
-; THUMB-M-NEXT:    lsl.w r6, r6, r9
-; THUMB-M-NEXT:    lsls r0, r1
-; THUMB-M-NEXT:    lsls r3, r1
-; THUMB-M-NEXT:    orrs r3, r7
-; THUMB-M-NEXT:    orr.w r7, r2, r3
-; THUMB-M-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r3, r2, lr
-; THUMB-M-NEXT:    orrs r3, r6
-; THUMB-M-NEXT:    lsr.w r6, r8, #1
-; THUMB-M-NEXT:    lsrs r6, r4
+; THUMB-M-NEXT:    umull r0, r3, r9, r0
+; THUMB-M-NEXT:    lsrs r0, r3, #4
+; THUMB-M-NEXT:    movs r3, #87
+; THUMB-M-NEXT:    mls r0, r0, r3, r9
+; THUMB-M-NEXT:    and lr, r0, #31
+; THUMB-M-NEXT:    and.w r3, r11, r0, lsr #3
+; THUMB-M-NEXT:    rsb.w r0, r0, #86
+; THUMB-M-NEXT:    subs r3, r7, r3
+; THUMB-M-NEXT:    eor r4, lr, #31
+; THUMB-M-NEXT:    ldr r1, [r3]
+; THUMB-M-NEXT:    str r1, [sp, #20] @ 4-byte Spill
+; THUMB-M-NEXT:    ldrd r10, r2, [r3, #4]
+; THUMB-M-NEXT:    lsrs r5, r1, #1
+; THUMB-M-NEXT:    str r2, [sp, #8] @ 4-byte Spill
+; THUMB-M-NEXT:    ubfx r2, r0, #5, #2
+; THUMB-M-NEXT:    lsl.w r3, r10, lr
+; THUMB-M-NEXT:    lsrs r5, r4
+; THUMB-M-NEXT:    orr.w r1, r3, r5
+; THUMB-M-NEXT:    and r3, r0, #31
+; THUMB-M-NEXT:    add r0, sp, #64
+; THUMB-M-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; THUMB-M-NEXT:    add.w r0, r0, r2, lsl #2
+; THUMB-M-NEXT:    ldr r5, [r0, #4]
+; THUMB-M-NEXT:    str r5, [sp, #12] @ 4-byte Spill
+; THUMB-M-NEXT:    ldrd r2, r0, [r0, #8]
+; THUMB-M-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMB-M-NEXT:    lsr.w r0, r5, r3
+; THUMB-M-NEXT:    eor r5, r3, #31
+; THUMB-M-NEXT:    lsl.w r8, r2, #1
+; THUMB-M-NEXT:    lsrs r2, r3
+; THUMB-M-NEXT:    lsl.w r6, r8, r5
 ; THUMB-M-NEXT:    orrs r0, r6
-; THUMB-M-NEXT:    orrs r0, r3
-; THUMB-M-NEXT:    str r0, [sp, #36]
-; THUMB-M-NEXT:    lsrs.w r0, r0, #1
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsl #31
-; THUMB-M-NEXT:    str r0, [sp, #52]
-; THUMB-M-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
-; THUMB-M-NEXT:    add r0, sp, #112
-; THUMB-M-NEXT:    bfc r7, #23, #9
-; THUMB-M-NEXT:    ldr.w r0, [r0, r3, lsl #2]
-; THUMB-M-NEXT:    lsl.w r3, r2, #1
-; THUMB-M-NEXT:    lsl.w r3, r3, r9
-; THUMB-M-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r0, r0, lr
-; THUMB-M-NEXT:    orr.w r0, r0, r3
-; THUMB-M-NEXT:    lsl.w r3, r8, r1
-; THUMB-M-NEXT:    orr.w r0, r0, r3
-; THUMB-M-NEXT:    add r3, sp, #16
-; THUMB-M-NEXT:    bfi r0, r2, #0, #16
-; THUMB-M-NEXT:    str r0, [sp, #32]
-; THUMB-M-NEXT:    add.w r3, r3, #16
-; THUMB-M-NEXT:    rrx r0, r0
-; THUMB-M-NEXT:    str r0, [sp, #48]
-; THUMB-M-NEXT:    lsrs.w r0, r12, #1
-; THUMB-M-NEXT:    rrx r0, r7
-; THUMB-M-NEXT:    str r7, [sp, #40]
-; THUMB-M-NEXT:    bfc r0, #23, #9
-; THUMB-M-NEXT:    str r0, [sp, #56]
-; THUMB-M-NEXT:    movs r0, #12
-; THUMB-M-NEXT:    and.w r0, r0, r5, lsr #3
-; THUMB-M-NEXT:    subs r0, r3, r0
-; THUMB-M-NEXT:    ldrd r8, r6, [r0]
-; THUMB-M-NEXT:    ldr r0, [r0, #8]
-; THUMB-M-NEXT:    lsl.w r7, r6, lr
-; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
-; THUMB-M-NEXT:    add r0, sp, #48
-; THUMB-M-NEXT:    lsr.w r5, r8, #1
-; THUMB-M-NEXT:    lsr.w r5, r5, r9
-; THUMB-M-NEXT:    orr.w r10, r7, r5
-; THUMB-M-NEXT:    ubfx r5, r11, #5, #2
-; THUMB-M-NEXT:    add.w r0, r0, r5, lsl #2
-; THUMB-M-NEXT:    add.w r11, r0, #4
-; THUMB-M-NEXT:    ldm.w r11, {r3, r7, r11}
-; THUMB-M-NEXT:    lsl.w r12, r7, #1
-; THUMB-M-NEXT:    lsl.w r2, r12, r4
-; THUMB-M-NEXT:    lsr.w r0, r3, r1
-; THUMB-M-NEXT:    orrs r0, r2
-; THUMB-M-NEXT:    lsrs.w r2, r6, #1
-; THUMB-M-NEXT:    orr.w r10, r10, r0
-; THUMB-M-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r2, r2, r9
-; THUMB-M-NEXT:    lsl.w r0, r0, lr
-; THUMB-M-NEXT:    orrs r0, r2
-; THUMB-M-NEXT:    lsr.w r2, r7, r1
-; THUMB-M-NEXT:    lsl.w r7, r11, #1
-; THUMB-M-NEXT:    lsls r7, r4
-; THUMB-M-NEXT:    orrs r2, r7
-; THUMB-M-NEXT:    orrs r2, r0
-; THUMB-M-NEXT:    add r0, sp, #48
-; THUMB-M-NEXT:    ldr.w r0, [r0, r5, lsl #2]
-; THUMB-M-NEXT:    bfc r2, #23, #9
+; THUMB-M-NEXT:    add r6, sp, #32
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    and.w r12, r12, r0
+; THUMB-M-NEXT:    and.w r0, r11, r9, lsr #3
+; THUMB-M-NEXT:    adds r6, #16
+; THUMB-M-NEXT:    and r9, r9, #31
+; THUMB-M-NEXT:    subs r6, r6, r0
+; THUMB-M-NEXT:    eor r1, r9, #31
+; THUMB-M-NEXT:    ldm.w r6, {r7, r8, r11}
+; THUMB-M-NEXT:    lsl.w r6, r8, r9
+; THUMB-M-NEXT:    lsrs r0, r7, #1
 ; THUMB-M-NEXT:    lsrs r0, r1
-; THUMB-M-NEXT:    lsls r1, r3, #1
-; THUMB-M-NEXT:    lsls r1, r4
+; THUMB-M-NEXT:    orrs r0, r6
+; THUMB-M-NEXT:    lsrs.w r6, r10, #1
+; THUMB-M-NEXT:    orr.w r12, r12, r0
+; THUMB-M-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r4, r6, r4
+; THUMB-M-NEXT:    lsl.w r0, r0, lr
+; THUMB-M-NEXT:    orrs r0, r4
+; THUMB-M-NEXT:    ldr r4, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r4, r4, #1
+; THUMB-M-NEXT:    lsls r4, r5
+; THUMB-M-NEXT:    orrs r2, r4
+; THUMB-M-NEXT:    orrs r0, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs.w r4, r8, #1
+; THUMB-M-NEXT:    lsr.w r1, r4, r1
+; THUMB-M-NEXT:    ands r0, r2
+; THUMB-M-NEXT:    lsl.w r2, r11, r9
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    orr.w r2, r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; THUMB-M-NEXT:    add r0, sp, #64
+; THUMB-M-NEXT:    bfc r2, #23, #9
+; THUMB-M-NEXT:    ldr.w r0, [r0, r1, lsl #2]
+; THUMB-M-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r1, r1, #1
+; THUMB-M-NEXT:    lsrs r0, r3
+; THUMB-M-NEXT:    lsls r1, r5
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsl.w r1, r8, lr
+; THUMB-M-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, r1, lr
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    mov r1, r10
-; THUMB-M-NEXT:    add sp, #148
+; THUMB-M-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r7, r9
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    mov r1, r12
+; THUMB-M-NEXT:    add sp, #132
 ; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_b87_var:
 ; THUMB-A:       @ %bb.0:
 ; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-A-NEXT:    .pad #148
-; THUMB-A-NEXT:    sub sp, #148
-; THUMB-A-NEXT:    ldr r7, [sp, #184]
+; THUMB-A-NEXT:    .pad #132
+; THUMB-A-NEXT:    sub sp, #132
+; THUMB-A-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMB-A-NEXT:    movw r0, #65535
+; THUMB-A-NEXT:    movt r0, #127
+; THUMB-A-NEXT:    str r2, [sp, #24] @ 4-byte Spill
+; THUMB-A-NEXT:    str r0, [sp, #120]
+; THUMB-A-NEXT:    movs r0, #0
+; THUMB-A-NEXT:    movw r6, #65535
+; THUMB-A-NEXT:    movt r0, #65535
+; THUMB-A-NEXT:    str r0, [sp, #112]
+; THUMB-A-NEXT:    movs r0, #0
+; THUMB-A-NEXT:    mov.w r7, #-1
+; THUMB-A-NEXT:    movt r6, #63
+; THUMB-A-NEXT:    str r0, [sp, #124]
+; THUMB-A-NEXT:    mov r4, r1
+; THUMB-A-NEXT:    str r7, [sp, #116]
+; THUMB-A-NEXT:    uxth r3, r3
+; THUMB-A-NEXT:    str r0, [sp, #108]
+; THUMB-A-NEXT:    add r2, sp, #64
+; THUMB-A-NEXT:    str r6, [sp, #72]
+; THUMB-A-NEXT:    movw r6, #32768
+; THUMB-A-NEXT:    ldr.w r11, [sp, #168]
+; THUMB-A-NEXT:    movt r6, #65535
+; THUMB-A-NEXT:    str r0, [sp, #104]
+; THUMB-A-NEXT:    str r6, [sp, #64]
 ; THUMB-A-NEXT:    movw r6, #39171
 ; THUMB-A-NEXT:    movt r6, #12052
-; THUMB-A-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; THUMB-A-NEXT:    lsls r4, r2, #1
-; THUMB-A-NEXT:    strd r0, r1, [sp, #112]
-; THUMB-A-NEXT:    umull r6, r5, r7, r6
-; THUMB-A-NEXT:    orr.w r4, r4, r1, lsr #31
-; THUMB-A-NEXT:    mov r6, r2
-; THUMB-A-NEXT:    bfc r6, #23, #9
-; THUMB-A-NEXT:    str r6, [sp, #120]
-; THUMB-A-NEXT:    lsls r1, r1, #1
-; THUMB-A-NEXT:    mov.w r12, #0
-; THUMB-A-NEXT:    orr.w r1, r1, r0, lsr #31
-; THUMB-A-NEXT:    str.w r12, [sp, #140]
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    lsrs r6, r5, #4
-; THUMB-A-NEXT:    movs r5, #87
-; THUMB-A-NEXT:    mls r9, r6, r5, r7
-; THUMB-A-NEXT:    strd r12, r12, [sp, #132]
-; THUMB-A-NEXT:    strd r12, r12, [sp, #124]
-; THUMB-A-NEXT:    str r1, [sp, #100]
-; THUMB-A-NEXT:    lsrs r1, r2, #31
-; THUMB-A-NEXT:    str r1, [sp, #108]
-; THUMB-A-NEXT:    add r1, sp, #112
-; THUMB-A-NEXT:    str r4, [sp, #104]
-; THUMB-A-NEXT:    and r3, r9, #31
-; THUMB-A-NEXT:    rsb.w r6, r9, #86
-; THUMB-A-NEXT:    ubfx r2, r9, #5, #2
-; THUMB-A-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; THUMB-A-NEXT:    eor lr, r3, #31
-; THUMB-A-NEXT:    add.w r1, r1, r2, lsl #2
-; THUMB-A-NEXT:    ldrd r11, r7, [r1, #4]
-; THUMB-A-NEXT:    ldr r1, [r1, #12]
-; THUMB-A-NEXT:    lsr.w r4, r7, r3
-; THUMB-A-NEXT:    str r0, [sp, #96]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #96]
+; THUMB-A-NEXT:    umull r6, r5, r11, r6
+; THUMB-A-NEXT:    str r7, [sp, #68]
+; THUMB-A-NEXT:    movs r6, #87
+; THUMB-A-NEXT:    str r0, [sp, #92]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #84]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #76]
+; THUMB-A-NEXT:    str r0, [sp, #60]
+; THUMB-A-NEXT:    lsrs r7, r5, #4
+; THUMB-A-NEXT:    strd r0, r0, [sp, #52]
+; THUMB-A-NEXT:    mls r5, r7, r6, r11
+; THUMB-A-NEXT:    add r6, sp, #96
+; THUMB-A-NEXT:    strd r0, r0, [sp, #40]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #32]
 ; THUMB-A-NEXT:    movs r0, #12
-; THUMB-A-NEXT:    and.w r5, r0, r6, lsr #3
-; THUMB-A-NEXT:    str r6, [sp, #8] @ 4-byte Spill
-; THUMB-A-NEXT:    lsls r1, r1, #1
-; THUMB-A-NEXT:    strd r12, r12, [sp, #88]
-; THUMB-A-NEXT:    lsl.w r1, r1, lr
-; THUMB-A-NEXT:    orr.w r8, r4, r1
-; THUMB-A-NEXT:    add r4, sp, #80
-; THUMB-A-NEXT:    strd r12, r12, [sp, #80]
-; THUMB-A-NEXT:    adds r4, #16
-; THUMB-A-NEXT:    lsls r7, r7, #1
-; THUMB-A-NEXT:    subs r4, r4, r5
-; THUMB-A-NEXT:    lsl.w r7, r7, lr
-; THUMB-A-NEXT:    ldrd r2, r0, [r4]
-; THUMB-A-NEXT:    ldr r1, [r4, #8]
-; THUMB-A-NEXT:    and r4, r6, #31
-; THUMB-A-NEXT:    eor r5, r4, #31
-; THUMB-A-NEXT:    lsrs.w r10, r0, #1
-; THUMB-A-NEXT:    lsrs r6, r2, #1
-; THUMB-A-NEXT:    lsls r0, r4
-; THUMB-A-NEXT:    lsls r1, r4
-; THUMB-A-NEXT:    lsr.w r10, r10, r5
-; THUMB-A-NEXT:    orr.w r1, r1, r10
-; THUMB-A-NEXT:    lsrs r6, r5
-; THUMB-A-NEXT:    orr.w r1, r1, r8
-; THUMB-A-NEXT:    lsr.w r8, r11, r3
-; THUMB-A-NEXT:    orr.w r7, r7, r8
-; THUMB-A-NEXT:    orrs r0, r6
+; THUMB-A-NEXT:    adds r6, #16
+; THUMB-A-NEXT:    and.w r7, r0, r5, lsr #3
+; THUMB-A-NEXT:    subs r6, r6, r7
+; THUMB-A-NEXT:    ldr r0, [r6]
+; THUMB-A-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; THUMB-A-NEXT:    ldrd r10, r1, [r6, #4]
+; THUMB-A-NEXT:    lsrs r7, r0, #1
+; THUMB-A-NEXT:    str r1, [sp, #12] @ 4-byte Spill
+; THUMB-A-NEXT:    str r3, [sp, #48]
+; THUMB-A-NEXT:    and r3, r5, #31
+; THUMB-A-NEXT:    rsb.w r5, r5, #86
+; THUMB-A-NEXT:    eor r9, r3, #31
+; THUMB-A-NEXT:    lsl.w r0, r10, r3
+; THUMB-A-NEXT:    ubfx r1, r5, #5, #2
+; THUMB-A-NEXT:    lsr.w r7, r7, r9
 ; THUMB-A-NEXT:    orrs r0, r7
-; THUMB-A-NEXT:    str r0, [sp, #36]
-; THUMB-A-NEXT:    lsls r2, r4
-; THUMB-A-NEXT:    lsrs.w r0, r0, #1
-; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #31
-; THUMB-A-NEXT:    str r0, [sp, #52]
-; THUMB-A-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
-; THUMB-A-NEXT:    add r0, sp, #112
-; THUMB-A-NEXT:    bfc r1, #23, #9
-; THUMB-A-NEXT:    ldr.w r0, [r0, r6, lsl #2]
-; THUMB-A-NEXT:    lsl.w r6, r11, #1
-; THUMB-A-NEXT:    lsl.w r6, r6, lr
-; THUMB-A-NEXT:    lsr.w r0, r0, r3
-; THUMB-A-NEXT:    orr.w r0, r0, r6
-; THUMB-A-NEXT:    orr.w r0, r0, r2
-; THUMB-A-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
-; THUMB-A-NEXT:    pkhbt r0, r2, r0
-; THUMB-A-NEXT:    str r0, [sp, #32]
-; THUMB-A-NEXT:    rrx r0, r0
-; THUMB-A-NEXT:    str r0, [sp, #48]
-; THUMB-A-NEXT:    lsrs.w r0, r12, #1
-; THUMB-A-NEXT:    rrx r0, r1
-; THUMB-A-NEXT:    str.w r12, [sp, #44]
-; THUMB-A-NEXT:    bfc r0, #23, #9
-; THUMB-A-NEXT:    strd r12, r12, [sp, #24]
-; THUMB-A-NEXT:    strd r12, r12, [sp, #16]
-; THUMB-A-NEXT:    str.w r12, [sp, #76]
-; THUMB-A-NEXT:    strd r12, r12, [sp, #68]
-; THUMB-A-NEXT:    strd r12, r12, [sp, #60]
-; THUMB-A-NEXT:    str r1, [sp, #40]
-; THUMB-A-NEXT:    add r1, sp, #16
-; THUMB-A-NEXT:    str r0, [sp, #56]
-; THUMB-A-NEXT:    movs r0, #12
-; THUMB-A-NEXT:    and.w r0, r0, r9, lsr #3
-; THUMB-A-NEXT:    adds r1, #16
-; THUMB-A-NEXT:    subs r0, r1, r0
-; THUMB-A-NEXT:    ldrd r9, r2, [r0]
-; THUMB-A-NEXT:    ldr.w r8, [r0, #8]
-; THUMB-A-NEXT:    lsl.w r6, r2, r3
-; THUMB-A-NEXT:    ldr r0, [sp, #8] @ 4-byte Reload
-; THUMB-A-NEXT:    lsrs.w r2, r2, #1
-; THUMB-A-NEXT:    lsr.w r1, r9, #1
-; THUMB-A-NEXT:    lsr.w r2, r2, lr
-; THUMB-A-NEXT:    lsr.w r1, r1, lr
-; THUMB-A-NEXT:    ubfx r10, r0, #5, #2
-; THUMB-A-NEXT:    add r0, sp, #48
-; THUMB-A-NEXT:    orrs r1, r6
-; THUMB-A-NEXT:    add.w r0, r0, r10, lsl #2
-; THUMB-A-NEXT:    ldrd r7, r6, [r0, #4]
-; THUMB-A-NEXT:    ldr.w r11, [r0, #12]
-; THUMB-A-NEXT:    lsls r0, r6, #1
-; THUMB-A-NEXT:    lsls r0, r5
-; THUMB-A-NEXT:    lsr.w r12, r7, r4
-; THUMB-A-NEXT:    orr.w r0, r0, r12
+; THUMB-A-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; THUMB-A-NEXT:    add.w r7, r2, r1, lsl #2
+; THUMB-A-NEXT:    and r5, r5, #31
+; THUMB-A-NEXT:    ldr r1, [r7, #4]
+; THUMB-A-NEXT:    str r1, [sp, #8] @ 4-byte Spill
+; THUMB-A-NEXT:    ldrd r2, r7, [r7, #8]
+; THUMB-A-NEXT:    lsr.w r8, r1, r5
+; THUMB-A-NEXT:    str r7, [sp, #4] @ 4-byte Spill
+; THUMB-A-NEXT:    eor r7, r5, #31
+; THUMB-A-NEXT:    lsl.w r12, r2, #1
+; THUMB-A-NEXT:    lsrs r2, r5
+; THUMB-A-NEXT:    lsl.w r12, r12, r7
+; THUMB-A-NEXT:    orr.w r1, r8, r12
 ; THUMB-A-NEXT:    orrs r1, r0
-; THUMB-A-NEXT:    lsl.w r0, r8, r3
+; THUMB-A-NEXT:    movs r0, #12
+; THUMB-A-NEXT:    and.w lr, r4, r1
+; THUMB-A-NEXT:    add r4, sp, #32
+; THUMB-A-NEXT:    and.w r1, r0, r11, lsr #3
+; THUMB-A-NEXT:    adds r4, #16
+; THUMB-A-NEXT:    subs r4, r4, r1
+; THUMB-A-NEXT:    and r12, r11, #31
+; THUMB-A-NEXT:    ldrd r6, r8, [r4]
+; THUMB-A-NEXT:    eor r1, r12, #31
+; THUMB-A-NEXT:    ldr r0, [r4, #8]
+; THUMB-A-NEXT:    lsl.w r11, r8, r12
+; THUMB-A-NEXT:    str r0, [sp] @ 4-byte Spill
+; THUMB-A-NEXT:    lsrs.w r4, r10, #1
+; THUMB-A-NEXT:    lsrs r0, r6, #1
+; THUMB-A-NEXT:    lsr.w r4, r4, r9
+; THUMB-A-NEXT:    lsrs r0, r1
+; THUMB-A-NEXT:    orr.w r0, r0, r11
+; THUMB-A-NEXT:    orr.w lr, lr, r0
+; THUMB-A-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r0, r3
+; THUMB-A-NEXT:    orrs r0, r4
+; THUMB-A-NEXT:    ldr r4, [sp, #4] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r4, r4, #1
+; THUMB-A-NEXT:    lsls r4, r7
+; THUMB-A-NEXT:    orrs r2, r4
 ; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    lsr.w r2, r6, r4
-; THUMB-A-NEXT:    lsl.w r6, r11, #1
-; THUMB-A-NEXT:    lsls r7, r7, #1
-; THUMB-A-NEXT:    lsls r6, r5
-; THUMB-A-NEXT:    orrs r2, r6
-; THUMB-A-NEXT:    orrs r2, r0
-; THUMB-A-NEXT:    add r0, sp, #48
-; THUMB-A-NEXT:    lsls r7, r5
-; THUMB-A-NEXT:    lsl.w r3, r9, r3
-; THUMB-A-NEXT:    ldr.w r0, [r0, r10, lsl #2]
+; THUMB-A-NEXT:    ldr r2, [sp, #24] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs.w r4, r8, #1
+; THUMB-A-NEXT:    ands r0, r2
+; THUMB-A-NEXT:    ldr r2, [sp] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r1, r4, r1
+; THUMB-A-NEXT:    lsl.w r2, r2, r12
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    orr.w r2, r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; THUMB-A-NEXT:    add r0, sp, #64
 ; THUMB-A-NEXT:    bfc r2, #23, #9
-; THUMB-A-NEXT:    lsrs r0, r4
-; THUMB-A-NEXT:    orrs r0, r7
-; THUMB-A-NEXT:    orrs r0, r3
-; THUMB-A-NEXT:    add sp, #148
+; THUMB-A-NEXT:    ldr.w r0, [r0, r1, lsl #2]
+; THUMB-A-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r1, r1, #1
+; THUMB-A-NEXT:    lsrs r0, r5
+; THUMB-A-NEXT:    lsls r1, r7
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r1, r3
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r6, r12
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    mov r1, lr
+; THUMB-A-NEXT:    add sp, #132
 ; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b87 %base, i16 %val, i32 %off
   ret b87 %result
@@ -1140,205 +1063,251 @@ define b87 @test_bitinsert_b87_var(b87 %base, i16 %val, i32 %off) {
 define b128 @test_bitinsert_b128_var(b128 %base, i32 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_b128_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; ARM-NEXT:    ldr r12, [sp, #28]
-; ARM-NEXT:    mov lr, r0
-; ARM-NEXT:    mov r4, r3
-; ARM-NEXT:    tst r12, #64
-; ARM-NEXT:    moveq lr, r2
-; ARM-NEXT:    moveq r4, r1
-; ARM-NEXT:    moveq r2, r0
-; ARM-NEXT:    moveq r1, r3
-; ARM-NEXT:    tst r12, #32
-; ARM-NEXT:    mov r0, lr
-; ARM-NEXT:    mov r3, #31
-; ARM-NEXT:    moveq r0, r4
-; ARM-NEXT:    moveq r4, r2
-; ARM-NEXT:    moveq r2, r1
-; ARM-NEXT:    moveq r1, lr
-; ARM-NEXT:    bic lr, r3, r12
-; ARM-NEXT:    and r3, r12, #31
-; ARM-NEXT:    lsl r5, r1, #1
-; ARM-NEXT:    lsl r4, r4, #1
-; ARM-NEXT:    lsl r5, r5, lr
-; ARM-NEXT:    lsl r4, r4, lr
-; ARM-NEXT:    orr r0, r5, r0, lsr r3
-; ARM-NEXT:    orr r4, r4, r2, lsr r3
-; ARM-NEXT:    tst r12, #64
-; ARM-NEXT:    mov r7, r0
-; ARM-NEXT:    movne r7, r4
-; ARM-NEXT:    movne r4, r0
-; ARM-NEXT:    lsl r0, r2, #1
-; ARM-NEXT:    ldr r2, [sp, #24]
-; ARM-NEXT:    lsl r0, r0, lr
-; ARM-NEXT:    mov r5, r7
-; ARM-NEXT:    orr r0, r0, r1, lsr r3
-; ARM-NEXT:    mov r6, r0
-; ARM-NEXT:    movne r6, r2
-; ARM-NEXT:    movne r2, r0
-; ARM-NEXT:    tst r12, #32
-; ARM-NEXT:    movne r5, r2
-; ARM-NEXT:    movne r2, r4
-; ARM-NEXT:    movne r4, r6
-; ARM-NEXT:    lsl r0, r5, r3
-; ARM-NEXT:    lsr r1, r2, #1
-; ARM-NEXT:    movne r6, r7
-; ARM-NEXT:    orr r1, r0, r1, lsr lr
-; ARM-NEXT:    lsl r0, r2, r3
-; ARM-NEXT:    lsr r2, r4, #1
-; ARM-NEXT:    lsl r7, r6, r3
-; ARM-NEXT:    orr r0, r0, r2, lsr lr
-; ARM-NEXT:    lsr r2, r5, #1
-; ARM-NEXT:    orr r2, r7, r2, lsr lr
-; ARM-NEXT:    lsl r3, r4, r3
-; ARM-NEXT:    lsr r7, r6, #1
-; ARM-NEXT:    orr r3, r3, r7, lsr lr
-; ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
+; ARM-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; ARM-NEXT:    .pad #44
+; ARM-NEXT:    sub sp, sp, #44
+; ARM-NEXT:    ldr r9, [sp, #84]
+; ARM-NEXT:    mov r5, #0
+; ARM-NEXT:    str r5, [sp, #36]
+; ARM-NEXT:    mvn lr, #0
+; ARM-NEXT:    str r5, [sp, #32]
+; ARM-NEXT:    mvn r11, #0
+; ARM-NEXT:    str r5, [sp, #28]
+; ARM-NEXT:    and r4, r9, #31
+; ARM-NEXT:    str r5, [sp, #20]
+; ARM-NEXT:    mvn r8, #0
+; ARM-NEXT:    str r5, [sp, #16]
+; ARM-NEXT:    str r5, [sp, #12]
+; ARM-NEXT:    str r5, [sp, #8]
+; ARM-NEXT:    ands r5, r9, #64
+; ARM-NEXT:    ldr r6, [sp, #80]
+; ARM-NEXT:    mvnne r5, #0
+; ARM-NEXT:    movwne lr, #0
+; ARM-NEXT:    tst r9, #32
+; ARM-NEXT:    mov r7, r5
+; ARM-NEXT:    str r6, [sp, #24]
+; ARM-NEXT:    mov r6, #31
+; ARM-NEXT:    movne r11, lr
+; ARM-NEXT:    bic r12, r6, r9
+; ARM-NEXT:    mvnne r7, #0
+; ARM-NEXT:    lsr r6, r11, #1
+; ARM-NEXT:    lsl r10, r7, r4
+; ARM-NEXT:    orr r6, r10, r6, lsr r12
+; ARM-NEXT:    moveq r5, r8
+; ARM-NEXT:    and r10, r0, r6
+; ARM-NEXT:    mov r6, #12
+; ARM-NEXT:    add r0, sp, #8
+; ARM-NEXT:    and r9, r6, r9, lsr #3
+; ARM-NEXT:    add r6, r0, #16
+; ARM-NEXT:    lsr r8, r7, #1
+; ARM-NEXT:    lsl r7, r5, r4
+; ARM-NEXT:    mvnne lr, #0
+; ARM-NEXT:    ldr r9, [r6, -r9]!
+; ARM-NEXT:    orr r7, r7, r8, lsr r12
+; ARM-NEXT:    and r8, r1, r7
+; ARM-NEXT:    lsr r5, r5, #1
+; ARM-NEXT:    orr r0, r10, r9, lsl r4
+; ARM-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; ARM-NEXT:    lsr r1, r9, #1
+; ARM-NEXT:    ldmib r6, {r7, r9, r10}
+; ARM-NEXT:    eor r0, r4, #31
+; ARM-NEXT:    lsl r6, r7, r4
+; ARM-NEXT:    orr r1, r6, r1, lsr r0
+; ARM-NEXT:    lsl r6, lr, r4
+; ARM-NEXT:    orr r5, r6, r5, lsr r12
+; ARM-NEXT:    and r2, r2, r5
+; ARM-NEXT:    lsrs r6, r7, #1
+; ARM-NEXT:    lsl r5, r9, r4
+; ARM-NEXT:    lsr r7, lr, #1
+; ARM-NEXT:    orr r5, r5, r6, lsr r0
+; ARM-NEXT:    lsr r6, r9, #1
+; ARM-NEXT:    orr r2, r2, r5
+; ARM-NEXT:    lsl r5, r11, r4
+; ARM-NEXT:    orr r7, r5, r7, lsr r12
+; ARM-NEXT:    orr r1, r8, r1
+; ARM-NEXT:    and r3, r3, r7
+; ARM-NEXT:    lsl r7, r10, r4
+; ARM-NEXT:    orr r0, r7, r6, lsr r0
+; ARM-NEXT:    orr r3, r3, r0
+; ARM-NEXT:    ldr r0, [sp, #4] @ 4-byte Reload
+; ARM-NEXT:    add sp, sp, #44
+; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_b128_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, r5, r6, r7, lr}
-; THUMB-M-NEXT:    push {r4, r5, r6, r7, lr}
-; THUMB-M-NEXT:    ldr.w r12, [sp, #24]
-; THUMB-M-NEXT:    mov r4, r2
-; THUMB-M-NEXT:    mov r5, r3
-; THUMB-M-NEXT:    tst.w r12, #64
-; THUMB-M-NEXT:    itttt eq
-; THUMB-M-NEXT:    moveq r4, r0
-; THUMB-M-NEXT:    moveq r5, r1
-; THUMB-M-NEXT:    moveq r0, r2
-; THUMB-M-NEXT:    moveq r1, r3
-; THUMB-M-NEXT:    movs r3, #31
-; THUMB-M-NEXT:    mov r6, r1
-; THUMB-M-NEXT:    and lr, r12, #31
-; THUMB-M-NEXT:    bic.w r3, r3, r12
-; THUMB-M-NEXT:    tst.w r12, #32
-; THUMB-M-NEXT:    ittte eq
-; THUMB-M-NEXT:    moveq r6, r0
-; THUMB-M-NEXT:    moveq r0, r5
-; THUMB-M-NEXT:    moveq r5, r4
-; THUMB-M-NEXT:    movne r1, r4
-; THUMB-M-NEXT:    lsls r4, r5, #1
-; THUMB-M-NEXT:    lsr.w r2, r1, lr
-; THUMB-M-NEXT:    lsls r4, r3
-; THUMB-M-NEXT:    lsr.w r0, r0, lr
-; THUMB-M-NEXT:    orrs r4, r2
-; THUMB-M-NEXT:    lsls r2, r6, #1
-; THUMB-M-NEXT:    lsls r2, r3
-; THUMB-M-NEXT:    orrs r0, r2
-; THUMB-M-NEXT:    lsls r1, r1, #1
-; THUMB-M-NEXT:    tst.w r12, #64
-; THUMB-M-NEXT:    mov r7, r0
-; THUMB-M-NEXT:    lsl.w r1, r1, r3
+; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-M-NEXT:    .pad #52
+; THUMB-M-NEXT:    sub sp, #52
+; THUMB-M-NEXT:    ldr.w r11, [sp, #92]
+; THUMB-M-NEXT:    movs r7, #0
+; THUMB-M-NEXT:    ldr r6, [sp, #88]
+; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMB-M-NEXT:    and lr, r11, #31
+; THUMB-M-NEXT:    stm.w sp, {r1, r2, r3} @ 12-byte Folded Spill
+; THUMB-M-NEXT:    eor r5, lr, #31
+; THUMB-M-NEXT:    mov.w r0, #-1
+; THUMB-M-NEXT:    str r6, [sp, #32]
+; THUMB-M-NEXT:    add r6, sp, #16
+; THUMB-M-NEXT:    str r7, [sp, #44]
+; THUMB-M-NEXT:    adds r6, #16
+; THUMB-M-NEXT:    strd r7, r7, [sp, #36]
+; THUMB-M-NEXT:    strd r7, r7, [sp, #24]
+; THUMB-M-NEXT:    strd r7, r7, [sp, #16]
+; THUMB-M-NEXT:    movs r7, #12
+; THUMB-M-NEXT:    and.w r7, r7, r11, lsr #3
+; THUMB-M-NEXT:    subs r7, r6, r7
+; THUMB-M-NEXT:    ldrd r8, r4, [r7]
+; THUMB-M-NEXT:    ldrd r9, r10, [r7, #8]
+; THUMB-M-NEXT:    lsl.w r6, r4, lr
+; THUMB-M-NEXT:    lsrs.w r12, r4, #1
+; THUMB-M-NEXT:    lsr.w r7, r8, #1
+; THUMB-M-NEXT:    ands r4, r11, #64
+; THUMB-M-NEXT:    lsr.w r7, r7, r5
+; THUMB-M-NEXT:    orr.w r1, r6, r7
+; THUMB-M-NEXT:    mov.w r6, #-1
+; THUMB-M-NEXT:    mov.w r7, #31
+; THUMB-M-NEXT:    it ne
+; THUMB-M-NEXT:    movne r6, #0
+; THUMB-M-NEXT:    it ne
+; THUMB-M-NEXT:    movne.w r4, #-1
+; THUMB-M-NEXT:    bic.w r7, r7, r11
+; THUMB-M-NEXT:    tst.w r11, #32
 ; THUMB-M-NEXT:    itt ne
-; THUMB-M-NEXT:    movne r7, r4
-; THUMB-M-NEXT:    movne r4, r0
-; THUMB-M-NEXT:    lsr.w r0, r6, lr
+; THUMB-M-NEXT:    movne r0, r4
+; THUMB-M-NEXT:    movne.w r4, #-1
+; THUMB-M-NEXT:    lsr.w r3, r4, #1
+; THUMB-M-NEXT:    lsl.w r2, r0, lr
+; THUMB-M-NEXT:    lsr.w r3, r3, r7
+; THUMB-M-NEXT:    orr.w r2, r2, r3
+; THUMB-M-NEXT:    ldr r3, [sp] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r0, r0, #1
+; THUMB-M-NEXT:    and.w r2, r2, r3
+; THUMB-M-NEXT:    mov r3, r6
+; THUMB-M-NEXT:    orr.w r11, r2, r1
+; THUMB-M-NEXT:    lsl.w r1, r9, lr
+; THUMB-M-NEXT:    lsr.w r2, r12, r5
+; THUMB-M-NEXT:    orr.w r1, r1, r2
+; THUMB-M-NEXT:    it ne
+; THUMB-M-NEXT:    movne.w r3, #-1
+; THUMB-M-NEXT:    lsr.w r0, r0, r7
+; THUMB-M-NEXT:    lsl.w r2, r3, lr
+; THUMB-M-NEXT:    orr.w r0, r0, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    and.w r0, r0, r2
+; THUMB-M-NEXT:    orr.w r2, r0, r1
+; THUMB-M-NEXT:    lsr.w r1, r9, #1
+; THUMB-M-NEXT:    lsl.w r0, r10, lr
+; THUMB-M-NEXT:    lsr.w r1, r1, r5
 ; THUMB-M-NEXT:    orr.w r0, r0, r1
-; THUMB-M-NEXT:    ldr r1, [sp, #20]
-; THUMB-M-NEXT:    mov r2, r7
-; THUMB-M-NEXT:    mov r5, r0
-; THUMB-M-NEXT:    itt ne
-; THUMB-M-NEXT:    movne r5, r1
-; THUMB-M-NEXT:    movne r1, r0
-; THUMB-M-NEXT:    tst.w r12, #32
-; THUMB-M-NEXT:    itt ne
-; THUMB-M-NEXT:    movne r2, r1
-; THUMB-M-NEXT:    movne r1, r4
-; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r4, r5
-; THUMB-M-NEXT:    lsr.w r6, r4, #1
-; THUMB-M-NEXT:    lsl.w r0, r1, lr
-; THUMB-M-NEXT:    lsr.w r1, r1, #1
-; THUMB-M-NEXT:    lsr.w r6, r6, r3
-; THUMB-M-NEXT:    orr.w r0, r0, r6
-; THUMB-M-NEXT:    lsl.w r6, r2, lr
-; THUMB-M-NEXT:    lsr.w r1, r1, r3
-; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r5, r7
-; THUMB-M-NEXT:    lsrs r2, r2, #1
-; THUMB-M-NEXT:    orrs r1, r6
-; THUMB-M-NEXT:    lsrs r6, r5, #1
-; THUMB-M-NEXT:    lsrs r2, r3
-; THUMB-M-NEXT:    lsl.w r7, r5, lr
-; THUMB-M-NEXT:    lsr.w r3, r6, r3
-; THUMB-M-NEXT:    orrs r2, r7
-; THUMB-M-NEXT:    lsl.w r7, r4, lr
-; THUMB-M-NEXT:    orrs r3, r7
-; THUMB-M-NEXT:    pop {r4, r5, r6, r7, pc}
+; THUMB-M-NEXT:    lsr.w r1, r3, #1
+; THUMB-M-NEXT:    mov.w r3, #-1
+; THUMB-M-NEXT:    it eq
+; THUMB-M-NEXT:    moveq r6, r3
+; THUMB-M-NEXT:    lsrs r1, r7
+; THUMB-M-NEXT:    lsl.w r3, r6, lr
+; THUMB-M-NEXT:    orrs r1, r3
+; THUMB-M-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r1, r3
+; THUMB-M-NEXT:    orr.w r3, r1, r0
+; THUMB-M-NEXT:    lsrs r0, r6, #1
+; THUMB-M-NEXT:    lsrs r0, r7
+; THUMB-M-NEXT:    lsl.w r1, r4, lr
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r8, lr
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    mov r1, r11
+; THUMB-M-NEXT:    add sp, #52
+; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_b128_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r4, r5, r6, r7, lr}
-; THUMB-A-NEXT:    push {r4, r5, r6, r7, lr}
-; THUMB-A-NEXT:    ldr.w r12, [sp, #24]
-; THUMB-A-NEXT:    mov r5, r0
-; THUMB-A-NEXT:    mov r4, r3
-; THUMB-A-NEXT:    tst.w r12, #64
-; THUMB-A-NEXT:    itttt eq
-; THUMB-A-NEXT:    moveq r5, r2
-; THUMB-A-NEXT:    moveq r4, r1
-; THUMB-A-NEXT:    moveq r2, r0
-; THUMB-A-NEXT:    moveq r1, r3
-; THUMB-A-NEXT:    movs r3, #31
-; THUMB-A-NEXT:    mov r0, r4
-; THUMB-A-NEXT:    tst.w r12, #32
-; THUMB-A-NEXT:    ittte eq
-; THUMB-A-NEXT:    moveq r0, r2
-; THUMB-A-NEXT:    moveq r2, r1
-; THUMB-A-NEXT:    moveq r1, r5
-; THUMB-A-NEXT:    movne r4, r5
-; THUMB-A-NEXT:    bic.w r3, r3, r12
-; THUMB-A-NEXT:    lsls r5, r1, #1
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    and lr, r12, #31
-; THUMB-A-NEXT:    lsls r5, r3
-; THUMB-A-NEXT:    lsls r0, r3
-; THUMB-A-NEXT:    lsr.w r4, r4, lr
-; THUMB-A-NEXT:    orr.w r7, r5, r4
-; THUMB-A-NEXT:    lsr.w r5, r2, lr
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    tst.w r12, #64
-; THUMB-A-NEXT:    mov r5, r0
-; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r5, r7
-; THUMB-A-NEXT:    movne r7, r0
-; THUMB-A-NEXT:    lsr.w r0, r1, lr
-; THUMB-A-NEXT:    lsl.w r1, r2, #1
-; THUMB-A-NEXT:    ldr r2, [sp, #20]
-; THUMB-A-NEXT:    lsl.w r1, r1, r3
-; THUMB-A-NEXT:    orr.w r0, r0, r1
-; THUMB-A-NEXT:    mov r4, r7
-; THUMB-A-NEXT:    mov r6, r0
-; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r6, r2
-; THUMB-A-NEXT:    movne r2, r0
-; THUMB-A-NEXT:    tst.w r12, #32
-; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r4, r2
-; THUMB-A-NEXT:    movne r2, r5
-; THUMB-A-NEXT:    lsr.w r0, r2, #1
-; THUMB-A-NEXT:    lsr.w r0, r0, r3
-; THUMB-A-NEXT:    lsl.w r1, r4, lr
+; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-A-NEXT:    .pad #52
+; THUMB-A-NEXT:    sub sp, #52
+; THUMB-A-NEXT:    ldrd r7, r10, [sp, #88]
+; THUMB-A-NEXT:    movs r6, #0
+; THUMB-A-NEXT:    strd r2, r3, [sp, #4] @ 8-byte Folded Spill
+; THUMB-A-NEXT:    and lr, r10, #31
+; THUMB-A-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMB-A-NEXT:    eor r8, lr, #31
+; THUMB-A-NEXT:    strd r7, r6, [sp, #32]
+; THUMB-A-NEXT:    movs r7, #12
+; THUMB-A-NEXT:    strd r6, r6, [sp, #40]
+; THUMB-A-NEXT:    and.w r7, r7, r10, lsr #3
+; THUMB-A-NEXT:    strd r6, r6, [sp, #24]
+; THUMB-A-NEXT:    mov r2, r1
+; THUMB-A-NEXT:    strd r6, r6, [sp, #16]
+; THUMB-A-NEXT:    add r6, sp, #16
+; THUMB-A-NEXT:    adds r6, #16
+; THUMB-A-NEXT:    subs r7, r6, r7
+; THUMB-A-NEXT:    mov.w r6, #-1
+; THUMB-A-NEXT:    ldrd r12, r0, [r7]
+; THUMB-A-NEXT:    lsl.w r5, r0, lr
+; THUMB-A-NEXT:    ldrd r9, r7, [r7, #8]
+; THUMB-A-NEXT:    lsr.w r4, r12, #1
+; THUMB-A-NEXT:    lsr.w r4, r4, r8
+; THUMB-A-NEXT:    orr.w r1, r5, r4
+; THUMB-A-NEXT:    ands r5, r10, #64
+; THUMB-A-NEXT:    mov.w r4, #31
 ; THUMB-A-NEXT:    it ne
-; THUMB-A-NEXT:    movne r5, r6
-; THUMB-A-NEXT:    orr.w r1, r1, r0
-; THUMB-A-NEXT:    lsl.w r0, r2, lr
-; THUMB-A-NEXT:    lsr.w r2, r5, #1
+; THUMB-A-NEXT:    movne.w r5, #-1
 ; THUMB-A-NEXT:    it ne
-; THUMB-A-NEXT:    movne r6, r7
-; THUMB-A-NEXT:    lsrs r2, r3
-; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    lsrs r2, r4, #1
+; THUMB-A-NEXT:    movne r6, #0
+; THUMB-A-NEXT:    lsrs.w r0, r0, #1
+; THUMB-A-NEXT:    bic.w r4, r4, r10
+; THUMB-A-NEXT:    tst.w r10, #32
+; THUMB-A-NEXT:    mov.w r10, #-1
+; THUMB-A-NEXT:    itt ne
+; THUMB-A-NEXT:    movne r10, r5
+; THUMB-A-NEXT:    movne.w r5, #-1
+; THUMB-A-NEXT:    lsr.w r11, r5, #1
+; THUMB-A-NEXT:    lsl.w r3, r10, lr
+; THUMB-A-NEXT:    lsr.w r11, r11, r4
+; THUMB-A-NEXT:    orr.w r3, r3, r11
+; THUMB-A-NEXT:    lsr.w r0, r0, r8
+; THUMB-A-NEXT:    and.w r2, r2, r3
+; THUMB-A-NEXT:    mov r3, r6
+; THUMB-A-NEXT:    orr.w r1, r1, r2
+; THUMB-A-NEXT:    lsl.w r2, r9, lr
+; THUMB-A-NEXT:    orr.w r11, r2, r0
+; THUMB-A-NEXT:    lsr.w r2, r10, #1
+; THUMB-A-NEXT:    it ne
+; THUMB-A-NEXT:    movne.w r3, #-1
+; THUMB-A-NEXT:    lsl.w r0, r3, lr
+; THUMB-A-NEXT:    lsr.w r2, r2, r4
+; THUMB-A-NEXT:    orr.w r0, r0, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r3, r3, #1
+; THUMB-A-NEXT:    lsr.w r3, r3, r4
+; THUMB-A-NEXT:    and.w r0, r0, r2
+; THUMB-A-NEXT:    orr.w r2, r0, r11
+; THUMB-A-NEXT:    lsl.w r0, r7, lr
+; THUMB-A-NEXT:    lsr.w r7, r9, #1
+; THUMB-A-NEXT:    lsr.w r7, r7, r8
+; THUMB-A-NEXT:    orr.w r0, r0, r7
+; THUMB-A-NEXT:    mov.w r7, #-1
+; THUMB-A-NEXT:    it eq
+; THUMB-A-NEXT:    moveq r6, r7
 ; THUMB-A-NEXT:    lsl.w r7, r6, lr
-; THUMB-A-NEXT:    lsrs r6, r6, #1
-; THUMB-A-NEXT:    lsrs r2, r3
-; THUMB-A-NEXT:    lsr.w r3, r6, r3
-; THUMB-A-NEXT:    orrs r2, r7
-; THUMB-A-NEXT:    lsl.w r7, r5, lr
 ; THUMB-A-NEXT:    orrs r3, r7
-; THUMB-A-NEXT:    pop {r4, r5, r6, r7, pc}
+; THUMB-A-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r3, r7
+; THUMB-A-NEXT:    lsl.w r7, r12, lr
+; THUMB-A-NEXT:    orrs r3, r0
+; THUMB-A-NEXT:    lsrs r0, r6, #1
+; THUMB-A-NEXT:    lsrs r0, r4
+; THUMB-A-NEXT:    lsl.w r4, r5, lr
+; THUMB-A-NEXT:    orrs r0, r4
+; THUMB-A-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r0, r4
+; THUMB-A-NEXT:    orrs r0, r7
+; THUMB-A-NEXT:    add sp, #52
+; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b128 %base, i32 %val, i32 %off
   ret b128 %result
 }
@@ -1348,937 +1317,799 @@ define b231 @test_bitinsert_b231_var(b231 %base, i32 %val, i32 %off) {
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; ARM-NEXT:    .pad #316
-; ARM-NEXT:    sub sp, sp, #316
-; ARM-NEXT:    lsl r5, r3, #1
-; ARM-NEXT:    str r0, [sp, #52] @ 4-byte Spill
-; ARM-NEXT:    orr r5, r5, r2, lsr #31
-; ARM-NEXT:    ldr r0, [sp, #380]
-; ARM-NEXT:    str r5, [sp, #220]
-; ARM-NEXT:    movw r5, #41989
-; ARM-NEXT:    movt r5, #7092
-; ARM-NEXT:    ldr r12, [sp, #372]
-; ARM-NEXT:    umull r4, r5, r0, r5
-; ARM-NEXT:    str r2, [sp, #248]
-; ARM-NEXT:    mov r4, #0
-; ARM-NEXT:    str r4, [sp, #308]
-; ARM-NEXT:    str r4, [sp, #304]
-; ARM-NEXT:    mov r1, #231
-; ARM-NEXT:    str r4, [sp, #300]
-; ARM-NEXT:    lsl r2, r2, #1
-; ARM-NEXT:    str r4, [sp, #296]
-; ARM-NEXT:    str r4, [sp, #292]
-; ARM-NEXT:    str r4, [sp, #288]
-; ARM-NEXT:    str r4, [sp, #284]
-; ARM-NEXT:    str r4, [sp, #280]
-; ARM-NEXT:    str r4, [sp, #212]
-; ARM-NEXT:    str r4, [sp, #208]
-; ARM-NEXT:    str r4, [sp, #204]
-; ARM-NEXT:    str r4, [sp, #200]
-; ARM-NEXT:    str r4, [sp, #196]
-; ARM-NEXT:    str r4, [sp, #192]
-; ARM-NEXT:    str r4, [sp, #188]
-; ARM-NEXT:    str r4, [sp, #184]
-; ARM-NEXT:    str r4, [sp, #84]
-; ARM-NEXT:    str r4, [sp, #80]
-; ARM-NEXT:    str r4, [sp, #76]
-; ARM-NEXT:    str r4, [sp, #72]
-; ARM-NEXT:    str r4, [sp, #68]
-; ARM-NEXT:    str r4, [sp, #64]
-; ARM-NEXT:    str r4, [sp, #60]
-; ARM-NEXT:    str r4, [sp, #56]
-; ARM-NEXT:    str r4, [sp, #180]
-; ARM-NEXT:    str r4, [sp, #176]
-; ARM-NEXT:    str r4, [sp, #172]
-; ARM-NEXT:    str r4, [sp, #168]
-; ARM-NEXT:    str r4, [sp, #164]
-; ARM-NEXT:    str r4, [sp, #160]
-; ARM-NEXT:    str r4, [sp, #156]
-; ARM-NEXT:    str r4, [sp, #152]
-; ARM-NEXT:    and r4, r12, #127
-; ARM-NEXT:    str r4, [sp, #276]
-; ARM-NEXT:    sub r4, r0, r5
-; ARM-NEXT:    ldr r6, [sp, #364]
-; ARM-NEXT:    add r5, r5, r4, lsr #1
-; ARM-NEXT:    ldr r4, [sp, #368]
-; ARM-NEXT:    ldr r7, [sp, #360]
-; ARM-NEXT:    lsr r5, r5, #7
-; ARM-NEXT:    ldr lr, [sp, #356]
-; ARM-NEXT:    mls r5, r5, r1, r0
-; ARM-NEXT:    lsl r1, r12, #1
-; ARM-NEXT:    ldr r0, [sp, #352]
-; ARM-NEXT:    orr r1, r1, r4, lsr #31
-; ARM-NEXT:    str r4, [sp, #272]
-; ARM-NEXT:    str r6, [sp, #268]
-; ARM-NEXT:    str r7, [sp, #264]
-; ARM-NEXT:    str lr, [sp, #260]
-; ARM-NEXT:    and r9, r5, #31
-; ARM-NEXT:    str r0, [sp, #256]
+; ARM-NEXT:    .pad #268
+; ARM-NEXT:    sub sp, sp, #268
+; ARM-NEXT:    ldr r4, [sp, #332]
+; ARM-NEXT:    movw r7, #41989
+; ARM-NEXT:    movt r7, #7092
+; ARM-NEXT:    mov r1, #127
+; ARM-NEXT:    str r3, [sp, #64] @ 4-byte Spill
+; ARM-NEXT:    mvn r3, #0
+; ARM-NEXT:    umull r7, r6, r4, r7
+; ARM-NEXT:    str r2, [sp, #68] @ 4-byte Spill
+; ARM-NEXT:    str r1, [sp, #260]
+; ARM-NEXT:    mov r1, #0
+; ARM-NEXT:    mov r7, #63
+; ARM-NEXT:    str r3, [sp, #256]
 ; ARM-NEXT:    str r3, [sp, #252]
-; ARM-NEXT:    str r1, [sp, #244]
-; ARM-NEXT:    lsl r1, r4, #1
-; ARM-NEXT:    orr r1, r1, r6, lsr #31
-; ARM-NEXT:    str r1, [sp, #240]
-; ARM-NEXT:    lsl r1, r6, #1
-; ARM-NEXT:    str r2, [sp, #216]
-; ARM-NEXT:    orr r1, r1, r7, lsr #31
-; ARM-NEXT:    str r1, [sp, #236]
-; ARM-NEXT:    lsl r1, r7, #1
-; ARM-NEXT:    orr r1, r1, lr, lsr #31
+; ARM-NEXT:    mov r12, #28
+; ARM-NEXT:    str r3, [sp, #248]
+; ARM-NEXT:    mov lr, r0
+; ARM-NEXT:    str r3, [sp, #244]
+; ARM-NEXT:    str r3, [sp, #240]
+; ARM-NEXT:    str r3, [sp, #236]
 ; ARM-NEXT:    str r1, [sp, #232]
-; ARM-NEXT:    lsl r1, lr, #1
-; ARM-NEXT:    orr r1, r1, r0, lsr #31
-; ARM-NEXT:    lsl r0, r0, #1
-; ARM-NEXT:    orr r0, r0, r3, lsr #31
-; ARM-NEXT:    str r0, [sp, #224]
-; ARM-NEXT:    ubfx r0, r5, #5, #3
 ; ARM-NEXT:    str r1, [sp, #228]
-; ARM-NEXT:    add r1, sp, #248
-; ARM-NEXT:    eor r3, r9, #31
-; ARM-NEXT:    add r11, r1, r0, lsl #2
-; ARM-NEXT:    ldr r8, [r11, #24]
-; ARM-NEXT:    ldr r2, [r11, #28]
-; ARM-NEXT:    str r2, [sp, #40] @ 4-byte Spill
-; ARM-NEXT:    lsr r0, r8, r9
-; ARM-NEXT:    str r5, [sp, #44] @ 4-byte Spill
-; ARM-NEXT:    lsl r2, r2, #1
-; ARM-NEXT:    orr r7, r0, r2, lsl r3
-; ARM-NEXT:    mov r0, r3
-; ARM-NEXT:    rsb r3, r5, #230
-; ARM-NEXT:    add r2, sp, #184
-; ARM-NEXT:    add r6, r2, #32
-; ARM-NEXT:    mov r2, #28
-; ARM-NEXT:    and r2, r2, r3, lsr #3
-; ARM-NEXT:    str r3, [sp, #48] @ 4-byte Spill
-; ARM-NEXT:    and r3, r3, #31
-; ARM-NEXT:    ldr r2, [r6, -r2]!
-; ARM-NEXT:    str r2, [sp, #32] @ 4-byte Spill
-; ARM-NEXT:    ldr r2, [r6, #24]
-; ARM-NEXT:    str r2, [sp, #36] @ 4-byte Spill
-; ARM-NEXT:    ldr r1, [r6, #20]
-; ARM-NEXT:    lsl r4, r2, r3
-; ARM-NEXT:    eor r2, r3, #31
-; ARM-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; ARM-NEXT:    lsrs r5, r1, #1
-; ARM-NEXT:    orr r5, r4, r5, lsr r2
-; ARM-NEXT:    orr r7, r7, r5
-; ARM-NEXT:    str r7, [sp, #16] @ 4-byte Spill
-; ARM-NEXT:    ldr r7, [r11, #4]
-; ARM-NEXT:    str r7, [sp, #28] @ 4-byte Spill
-; ARM-NEXT:    ldr r7, [r11, #8]
-; ARM-NEXT:    str r7, [sp, #24] @ 4-byte Spill
-; ARM-NEXT:    ldr r5, [r11, #12]
-; ARM-NEXT:    ldr r1, [r11, #16]
-; ARM-NEXT:    lsr r7, r7, r9
-; ARM-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; ARM-NEXT:    lsl r4, r5, #1
-; ARM-NEXT:    orr r4, r7, r4, lsl r0
-; ARM-NEXT:    ldr r7, [r6, #4]
-; ARM-NEXT:    str r7, [sp, #20] @ 4-byte Spill
-; ARM-NEXT:    ldr r12, [r6, #8]
-; ARM-NEXT:    ldr r1, [r6, #16]
-; ARM-NEXT:    lsrs r10, r7, #1
-; ARM-NEXT:    ldr lr, [r6, #12]
-; ARM-NEXT:    lsl r0, r12, r3
-; ARM-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    orr r0, r0, r10, lsr r2
-; ARM-NEXT:    ldr r11, [r11, #20]
-; ARM-NEXT:    orr r10, r4, r0
-; ARM-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
-; ARM-NEXT:    lsl r4, r8, #1
-; ARM-NEXT:    eor r8, r9, #31
-; ARM-NEXT:    lsr r7, r11, r9
-; ARM-NEXT:    orr r4, r7, r4, lsl r8
-; ARM-NEXT:    lsl r7, r0, r3
-; ARM-NEXT:    lsr r0, r1, #1
-; ARM-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; ARM-NEXT:    orr r0, r7, r0, lsr r2
-; ARM-NEXT:    lsr r7, r12, #1
-; ARM-NEXT:    orr r4, r4, r0
-; ARM-NEXT:    lsr r0, r5, r9
-; ARM-NEXT:    lsl r5, r1, #1
-; ARM-NEXT:    str r4, [sp, #108]
-; ARM-NEXT:    orr r0, r0, r5, lsl r8
-; ARM-NEXT:    lsl r5, lr, r3
-; ARM-NEXT:    orr r7, r5, r7, lsr r2
-; ARM-NEXT:    orr r0, r0, r7
-; ARM-NEXT:    str r0, [sp, #100]
-; ARM-NEXT:    lsrs r7, lr, #1
-; ARM-NEXT:    ldr lr, [sp, #16] @ 4-byte Reload
-; ARM-NEXT:    lsrs r5, r0, #1
-; ARM-NEXT:    rrx r12, r10
-; ARM-NEXT:    lsrs r4, r4, #1
-; ARM-NEXT:    lsl r0, r11, #1
-; ARM-NEXT:    orr r4, r4, lr, lsl #31
-; ARM-NEXT:    str r4, [sp, #140]
-; ARM-NEXT:    lsr r4, r1, r9
-; ARM-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; ARM-NEXT:    orr r0, r4, r0, lsl r8
-; ARM-NEXT:    lsl r4, r1, r3
-; ARM-NEXT:    orr r7, r4, r7, lsr r2
-; ARM-NEXT:    orr r0, r0, r7
-; ARM-NEXT:    orr r7, r5, r0, lsl #31
-; ARM-NEXT:    str r7, [sp, #132]
+; ARM-NEXT:    str r1, [sp, #224]
+; ARM-NEXT:    str r1, [sp, #220]
+; ARM-NEXT:    str r1, [sp, #216]
+; ARM-NEXT:    str r1, [sp, #212]
+; ARM-NEXT:    str r1, [sp, #208]
+; ARM-NEXT:    str r1, [sp, #204]
+; ARM-NEXT:    str r1, [sp, #200]
+; ARM-NEXT:    str r7, [sp, #164]
+; ARM-NEXT:    sub r7, r4, r6
+; ARM-NEXT:    str r1, [sp, #196]
+; ARM-NEXT:    add r7, r6, r7, lsr #1
+; ARM-NEXT:    mov r6, #231
+; ARM-NEXT:    str r1, [sp, #192]
+; ARM-NEXT:    lsr r7, r7, #7
+; ARM-NEXT:    str r1, [sp, #188]
+; ARM-NEXT:    mls r6, r7, r6, r4
+; ARM-NEXT:    add r7, sp, #200
+; ARM-NEXT:    add r7, r7, #32
+; ARM-NEXT:    str r1, [sp, #184]
+; ARM-NEXT:    str r1, [sp, #180]
+; ARM-NEXT:    str r1, [sp, #176]
+; ARM-NEXT:    str r1, [sp, #172]
+; ARM-NEXT:    and r9, r6, #31
+; ARM-NEXT:    and r5, r12, r6, lsr #3
+; ARM-NEXT:    str r1, [sp, #168]
+; ARM-NEXT:    str r3, [sp, #160]
+; ARM-NEXT:    eor r11, r9, #31
+; ARM-NEXT:    str r3, [sp, #156]
+; ARM-NEXT:    str r3, [sp, #152]
+; ARM-NEXT:    str r3, [sp, #148]
+; ARM-NEXT:    str r3, [sp, #144]
+; ARM-NEXT:    str r3, [sp, #140]
+; ARM-NEXT:    ldr r2, [r7, -r5]!
+; ARM-NEXT:    mov r5, #-2147483648
+; ARM-NEXT:    ldr r0, [sp, #328]
+; ARM-NEXT:    str r2, [sp, #60] @ 4-byte Spill
+; ARM-NEXT:    add r2, sp, #72
+; ARM-NEXT:    str r5, [sp, #136]
+; ARM-NEXT:    str r1, [sp, #132]
+; ARM-NEXT:    str r1, [sp, #128]
+; ARM-NEXT:    str r1, [sp, #124]
+; ARM-NEXT:    str r1, [sp, #120]
+; ARM-NEXT:    str r1, [sp, #116]
+; ARM-NEXT:    str r1, [sp, #112]
+; ARM-NEXT:    str r1, [sp, #108]
 ; ARM-NEXT:    str r0, [sp, #104]
-; ARM-NEXT:    rrx r0, r0
-; ARM-NEXT:    ldr r4, [sp, #28] @ 4-byte Reload
-; ARM-NEXT:    lsr r7, r4, r9
-; ARM-NEXT:    ldr r4, [sp, #24] @ 4-byte Reload
-; ARM-NEXT:    lsl r5, r4, #1
-; ARM-NEXT:    ldr r4, [sp, #20] @ 4-byte Reload
-; ARM-NEXT:    orr r7, r7, r5, lsl r8
-; ARM-NEXT:    lsl r5, r4, r3
-; ARM-NEXT:    ldr r4, [sp, #32] @ 4-byte Reload
-; ARM-NEXT:    str r10, [sp, #96]
-; ARM-NEXT:    lsr r4, r4, #1
-; ARM-NEXT:    orr r5, r5, r4, lsr r2
-; ARM-NEXT:    orr r7, r7, r5
-; ARM-NEXT:    str r7, [sp, #92]
-; ARM-NEXT:    lsrs r7, r7, #1
-; ARM-NEXT:    orr r7, r7, r10, lsl #31
-; ARM-NEXT:    str r7, [sp, #124]
-; ARM-NEXT:    ldr r7, [sp, #376]
-; ARM-NEXT:    str r7, [sp, #88]
-; ARM-NEXT:    ldr r6, [r6, #28]
-; ARM-NEXT:    ldr r4, [sp, #36] @ 4-byte Reload
-; ARM-NEXT:    rrx r7, r7
-; ARM-NEXT:    lsl r6, r6, r3
-; ARM-NEXT:    lsr r5, r4, #1
-; ARM-NEXT:    add r4, sp, #120
-; ARM-NEXT:    orr r6, r6, r5, lsr r2
-; ARM-NEXT:    ldr r5, [sp, #40] @ 4-byte Reload
-; ARM-NEXT:    orr r6, r6, r5, lsr r9
-; ARM-NEXT:    and r6, r6, #127
-; ARM-NEXT:    str r6, [sp, #116]
-; ARM-NEXT:    str r7, [sp, #120]
-; ARM-NEXT:    mov r7, #28
-; ARM-NEXT:    lsrs r6, r6, #1
-; ARM-NEXT:    str r12, [sp, #128]
-; ARM-NEXT:    and r6, r6, #127
-; ARM-NEXT:    str r6, [sp, #148]
-; ARM-NEXT:    str r0, [sp, #136]
-; ARM-NEXT:    mov r12, r8
-; ARM-NEXT:    ldr r0, [sp, #44] @ 4-byte Reload
-; ARM-NEXT:    str lr, [sp, #112]
-; ARM-NEXT:    and r7, r7, r0, lsr #3
-; ARM-NEXT:    add r0, sp, #56
-; ARM-NEXT:    add r0, r0, #32
-; ARM-NEXT:    ldr r7, [r0, -r7]!
-; ARM-NEXT:    str r7, [sp, #44] @ 4-byte Spill
-; ARM-NEXT:    rrx r7, lr
-; ARM-NEXT:    ldr r6, [r0, #28]
-; ARM-NEXT:    mov lr, r12
-; ARM-NEXT:    str r7, [sp, #144]
-; ARM-NEXT:    ldr r5, [r0, #24]
-; ARM-NEXT:    lsl r7, r6, r9
-; ARM-NEXT:    lsr r6, r5, #1
-; ARM-NEXT:    lsl r1, r5, r9
-; ARM-NEXT:    orr r6, r7, r6, lsr r8
-; ARM-NEXT:    ldr r7, [sp, #48] @ 4-byte Reload
-; ARM-NEXT:    ldr r8, [sp, #52] @ 4-byte Reload
-; ARM-NEXT:    ubfx r7, r7, #5, #3
-; ARM-NEXT:    str r7, [sp, #48] @ 4-byte Spill
-; ARM-NEXT:    add r4, r4, r7, lsl #2
-; ARM-NEXT:    ldr r7, [r4, #28]
-; ARM-NEXT:    orr r6, r6, r7, lsr r3
-; ARM-NEXT:    lsl r10, r7, #1
-; ARM-NEXT:    and r6, r6, #127
-; ARM-NEXT:    strb r6, [r8, #28]
-; ARM-NEXT:    ldr r6, [r0, #20]
-; ARM-NEXT:    lsrs r5, r6, #1
-; ARM-NEXT:    orr r1, r1, r5, lsr r12
-; ARM-NEXT:    ldr r5, [r4, #24]
-; ARM-NEXT:    lsr r7, r5, r3
-; ARM-NEXT:    lsl r5, r5, #1
-; ARM-NEXT:    orr r7, r7, r10, lsl r2
-; ARM-NEXT:    orr r7, r1, r7
-; ARM-NEXT:    str r7, [r8, #24]
-; ARM-NEXT:    ldmib r0, {r1, r10, r11}
-; ARM-NEXT:    lsl r7, r6, r9
-; ARM-NEXT:    ldr r0, [r0, #16]
-; ARM-NEXT:    lsr r6, r0, #1
+; ARM-NEXT:    str r1, [sp, #100]
+; ARM-NEXT:    str r1, [sp, #96]
+; ARM-NEXT:    str r1, [sp, #92]
+; ARM-NEXT:    str r1, [sp, #88]
+; ARM-NEXT:    str r1, [sp, #84]
+; ARM-NEXT:    str r1, [sp, #80]
+; ARM-NEXT:    str r1, [sp, #76]
+; ARM-NEXT:    str r1, [sp, #72]
+; ARM-NEXT:    ldr r0, [r7, #28]
+; ARM-NEXT:    ldr r3, [r7, #24]
+; ARM-NEXT:    str r3, [sp, #48] @ 4-byte Spill
 ; ARM-NEXT:    lsl r0, r0, r9
-; ARM-NEXT:    orr r6, r7, r6, lsr r12
-; ARM-NEXT:    ldr r7, [r4, #20]
-; ARM-NEXT:    lsr r12, r7, r3
-; ARM-NEXT:    orr r5, r12, r5, lsl r2
-; ARM-NEXT:    orr r6, r6, r5
-; ARM-NEXT:    str r6, [r8, #20]
-; ARM-NEXT:    lsrs r6, r11, #1
-; ARM-NEXT:    ldr r12, [r4, #4]
-; ARM-NEXT:    orr r6, r0, r6, lsr lr
-; ARM-NEXT:    ldr r5, [r4, #8]
-; ARM-NEXT:    ldr r0, [r4, #12]
-; ARM-NEXT:    lsl r7, r7, #1
-; ARM-NEXT:    ldr r4, [r4, #16]
-; ARM-NEXT:    lsr lr, r4, r3
-; ARM-NEXT:    orr r7, lr, r7, lsl r2
-; ARM-NEXT:    orr r7, r6, r7
-; ARM-NEXT:    eor lr, r9, #31
-; ARM-NEXT:    str r7, [r8, #16]
-; ARM-NEXT:    lsl r7, r11, r9
-; ARM-NEXT:    lsr r6, r10, #1
-; ARM-NEXT:    lsl r4, r4, #1
-; ARM-NEXT:    orr r7, r7, r6, lsr lr
-; ARM-NEXT:    lsr r6, r0, r3
-; ARM-NEXT:    orr r6, r6, r4, lsl r2
+; ARM-NEXT:    str r9, [sp, #12] @ 4-byte Spill
+; ARM-NEXT:    lsr r1, r3, #1
+; ARM-NEXT:    str r11, [sp, #20] @ 4-byte Spill
+; ARM-NEXT:    orr r5, r0, r1, lsr r11
+; ARM-NEXT:    rsb r0, r6, #230
+; ARM-NEXT:    and r10, r0, #31
+; ARM-NEXT:    ldr r3, [sp, #324]
+; ARM-NEXT:    ubfx r1, r0, #5, #3
+; ARM-NEXT:    add r0, sp, #136
+; ARM-NEXT:    str r1, [sp, #56] @ 4-byte Spill
+; ARM-NEXT:    add r0, r0, r1, lsl #2
+; ARM-NEXT:    ldr r8, [r0, #28]
+; ARM-NEXT:    orr r5, r5, r8, lsr r10
+; ARM-NEXT:    and r1, r3, r5
+; ARM-NEXT:    and r5, r12, r4, lsr #3
+; ARM-NEXT:    add r12, r2, #32
+; ARM-NEXT:    ldr r2, [r12, -r5]!
+; ARM-NEXT:    and r5, r4, #31
+; ARM-NEXT:    str r2, [sp, #52] @ 4-byte Spill
+; ARM-NEXT:    eor r6, r5, #31
+; ARM-NEXT:    ldr r2, [r12, #28]
+; ARM-NEXT:    ldr r3, [r12, #24]
+; ARM-NEXT:    str lr, [sp, #24] @ 4-byte Spill
+; ARM-NEXT:    lsl r2, r2, r5
+; ARM-NEXT:    lsr r4, r3, #1
+; ARM-NEXT:    lsl r3, r3, r5
+; ARM-NEXT:    orr r2, r2, r4, lsr r6
+; ARM-NEXT:    lsl r4, r8, #1
+; ARM-NEXT:    orr r2, r1, r2
+; ARM-NEXT:    eor r8, r10, #31
+; ARM-NEXT:    and r2, r2, #127
+; ARM-NEXT:    strb r2, [lr, #28]
+; ARM-NEXT:    ldr r1, [sp, #48] @ 4-byte Reload
+; ARM-NEXT:    lsl r2, r1, r9
+; ARM-NEXT:    ldr r9, [r7, #20]
+; ARM-NEXT:    lsrs r6, r9, #1
+; ARM-NEXT:    orr r1, r2, r6, lsr r11
+; ARM-NEXT:    ldr r11, [r0, #24]
+; ARM-NEXT:    ldr r6, [sp, #320]
+; ARM-NEXT:    lsr r2, r11, r10
+; ARM-NEXT:    orr r2, r2, r4, lsl r8
+; ARM-NEXT:    eor r4, r5, #31
+; ARM-NEXT:    orr r2, r1, r2
+; ARM-NEXT:    and r2, r6, r2
+; ARM-NEXT:    ldr r6, [r12, #20]
+; ARM-NEXT:    lsrs r1, r6, #1
+; ARM-NEXT:    orr r1, r3, r1, lsr r4
+; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    str r1, [lr, #24]
+; ARM-NEXT:    ldr r2, [r7, #4]
+; ARM-NEXT:    str r2, [sp, #48] @ 4-byte Spill
+; ARM-NEXT:    ldr r2, [r7, #8]
+; ARM-NEXT:    str r2, [sp, #36] @ 4-byte Spill
+; ARM-NEXT:    ldr lr, [r7, #12]
+; ARM-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
+; ARM-NEXT:    str lr, [sp, #8] @ 4-byte Spill
+; ARM-NEXT:    ldr r2, [r7, #16]
+; ARM-NEXT:    lsl r1, r9, r4
+; ARM-NEXT:    ldr r9, [sp, #20] @ 4-byte Reload
+; ARM-NEXT:    lsr r3, r2, #1
+; ARM-NEXT:    orr r1, r1, r3, lsr r9
+; ARM-NEXT:    lsl r3, r11, #1
+; ARM-NEXT:    ldr r11, [r0, #20]
+; ARM-NEXT:    lsr r7, r11, r10
+; ARM-NEXT:    orr r3, r7, r3, lsl r8
+; ARM-NEXT:    ldr r7, [r12, #4]
+; ARM-NEXT:    orr r1, r1, r3
+; ARM-NEXT:    ldr r3, [sp, #316]
+; ARM-NEXT:    lsl r11, r11, #1
+; ARM-NEXT:    str r7, [sp, #44] @ 4-byte Spill
+; ARM-NEXT:    eor r7, r5, #31
+; ARM-NEXT:    and r3, r3, r1
+; ARM-NEXT:    lsl r1, r6, r5
+; ARM-NEXT:    ldr r6, [r12, #8]
+; ARM-NEXT:    str r6, [sp, #32] @ 4-byte Spill
+; ARM-NEXT:    ldr r6, [r12, #12]
+; ARM-NEXT:    str r6, [sp, #16] @ 4-byte Spill
+; ARM-NEXT:    ldr r12, [r12, #16]
+; ARM-NEXT:    lsr r6, r12, #1
+; ARM-NEXT:    orr r1, r1, r6, lsr r7
+; ARM-NEXT:    orr r1, r3, r1
+; ARM-NEXT:    ldr r3, [sp, #24] @ 4-byte Reload
+; ARM-NEXT:    str r1, [r3, #20]
+; ARM-NEXT:    lsl r1, r2, r4
+; ARM-NEXT:    lsrs r2, lr, #1
+; ARM-NEXT:    orr r6, r1, r2, lsr r9
+; ARM-NEXT:    ldr r1, [r0, #4]
+; ARM-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; ARM-NEXT:    ldr r1, [r0, #8]
+; ARM-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; ARM-NEXT:    ldr lr, [r0, #12]
+; ARM-NEXT:    ldr r0, [r0, #16]
+; ARM-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; ARM-NEXT:    lsr r1, r0, r10
 ; ARM-NEXT:    lsl r0, r0, #1
-; ARM-NEXT:    orr r7, r7, r6
-; ARM-NEXT:    str r7, [r8, #12]
-; ARM-NEXT:    lsl r7, r10, r9
-; ARM-NEXT:    lsrs r6, r1, #1
-; ARM-NEXT:    orr r7, r7, r6, lsr lr
-; ARM-NEXT:    lsr r6, r5, r3
-; ARM-NEXT:    orr r0, r6, r0, lsl r2
-; ARM-NEXT:    mov r4, r8
-; ARM-NEXT:    orr r0, r7, r0
-; ARM-NEXT:    str r0, [r8, #8]
-; ARM-NEXT:    ldr r8, [sp, #44] @ 4-byte Reload
-; ARM-NEXT:    lsl r0, r1, r9
-; ARM-NEXT:    lsl r6, r5, #1
-; ARM-NEXT:    lsr r7, r8, #1
-; ARM-NEXT:    orr r0, r0, r7, lsr lr
-; ARM-NEXT:    lsr r7, r12, r3
-; ARM-NEXT:    orr r7, r7, r6, lsl r2
+; ARM-NEXT:    orr r1, r1, r11, lsl r8
+; ARM-NEXT:    eor r11, r5, #31
+; ARM-NEXT:    orr r1, r6, r1
+; ARM-NEXT:    ldr r6, [sp, #312]
+; ARM-NEXT:    lsrs r7, r2, #1
+; ARM-NEXT:    and r1, r6, r1
+; ARM-NEXT:    lsl r6, r12, r5
+; ARM-NEXT:    orr r7, r6, r7, lsr r11
+; ARM-NEXT:    mov r6, r3
+; ARM-NEXT:    orr r1, r1, r7
+; ARM-NEXT:    str r1, [r3, #16]
+; ARM-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
+; ARM-NEXT:    ldr r3, [sp, #36] @ 4-byte Reload
+; ARM-NEXT:    ldr r12, [sp, #32] @ 4-byte Reload
+; ARM-NEXT:    lsl r1, r1, r4
+; ARM-NEXT:    lsr r7, r3, #1
+; ARM-NEXT:    orr r1, r1, r7, lsr r9
+; ARM-NEXT:    lsr r7, lr, r10
+; ARM-NEXT:    orr r0, r7, r0, lsl r8
+; ARM-NEXT:    lsr r7, r12, #1
+; ARM-NEXT:    orr r0, r1, r0
+; ARM-NEXT:    ldr r1, [sp, #308]
+; ARM-NEXT:    and r0, r1, r0
+; ARM-NEXT:    lsl r1, r2, r5
+; ARM-NEXT:    orr r1, r1, r7, lsr r11
+; ARM-NEXT:    mov r7, r6
+; ARM-NEXT:    orr r0, r0, r1
+; ARM-NEXT:    str r0, [r6, #12]
 ; ARM-NEXT:    ldr r6, [sp, #48] @ 4-byte Reload
-; ARM-NEXT:    orr r0, r0, r7
-; ARM-NEXT:    add r7, sp, #120
-; ARM-NEXT:    ldr r7, [r7, r6, lsl #2]
-; ARM-NEXT:    str r0, [r4, #4]
-; ARM-NEXT:    lsr r0, r7, r3
-; ARM-NEXT:    lsl r3, r12, #1
-; ARM-NEXT:    orr r0, r0, r3, lsl r2
-; ARM-NEXT:    orr r0, r0, r8, lsl r9
-; ARM-NEXT:    str r0, [r4]
-; ARM-NEXT:    add sp, sp, #316
+; ARM-NEXT:    lsl r0, r3, r4
+; ARM-NEXT:    mov r11, r4
+; ARM-NEXT:    ldr r4, [sp, #28] @ 4-byte Reload
+; ARM-NEXT:    lsl r2, lr, #1
+; ARM-NEXT:    ldr r3, [sp, #44] @ 4-byte Reload
+; ARM-NEXT:    lsrs r1, r6, #1
+; ARM-NEXT:    orr r0, r0, r1, lsr r9
+; ARM-NEXT:    lsr r1, r4, r10
+; ARM-NEXT:    orr r1, r1, r2, lsl r8
+; ARM-NEXT:    lsrs r2, r3, #1
+; ARM-NEXT:    orr r0, r0, r1
+; ARM-NEXT:    ldr r1, [sp, #304]
+; ARM-NEXT:    and lr, r1, r0
+; ARM-NEXT:    eor r0, r5, #31
+; ARM-NEXT:    lsl r1, r12, r5
+; ARM-NEXT:    orr r1, r1, r2, lsr r0
+; ARM-NEXT:    lsl r2, r4, #1
+; ARM-NEXT:    orr r0, lr, r1
+; ARM-NEXT:    str r0, [r7, #8]
+; ARM-NEXT:    ldr r12, [sp, #60] @ 4-byte Reload
+; ARM-NEXT:    lsl r0, r6, r11
+; ARM-NEXT:    ldr lr, [sp, #40] @ 4-byte Reload
+; ARM-NEXT:    ldr r6, [sp, #52] @ 4-byte Reload
+; ARM-NEXT:    lsr r1, r12, #1
+; ARM-NEXT:    orr r0, r0, r1, lsr r9
+; ARM-NEXT:    lsr r1, lr, r10
+; ARM-NEXT:    orr r1, r1, r2, lsl r8
+; ARM-NEXT:    lsr r2, r6, #1
+; ARM-NEXT:    orr r0, r0, r1
+; ARM-NEXT:    ldr r1, [sp, #64] @ 4-byte Reload
+; ARM-NEXT:    and r0, r1, r0
+; ARM-NEXT:    lsl r1, r3, r5
+; ARM-NEXT:    eor r3, r5, #31
+; ARM-NEXT:    orr r1, r1, r2, lsr r3
+; ARM-NEXT:    orr r0, r0, r1
+; ARM-NEXT:    str r0, [r7, #4]
+; ARM-NEXT:    ldr r1, [sp, #56] @ 4-byte Reload
+; ARM-NEXT:    add r0, sp, #136
+; ARM-NEXT:    ldr r0, [r0, r1, lsl #2]
+; ARM-NEXT:    lsl r1, lr, #1
+; ARM-NEXT:    lsr r0, r0, r10
+; ARM-NEXT:    orr r0, r0, r1, lsl r8
+; ARM-NEXT:    ldr r1, [sp, #68] @ 4-byte Reload
+; ARM-NEXT:    orr r0, r0, r12, lsl r11
+; ARM-NEXT:    and r0, r1, r0
+; ARM-NEXT:    orr r0, r0, r6, lsl r5
+; ARM-NEXT:    str r0, [r7]
+; ARM-NEXT:    add sp, sp, #268
 ; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_b231_var:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-M-NEXT:    .pad #308
-; THUMB-M-NEXT:    sub sp, #308
-; THUMB-M-NEXT:    str r0, [sp, #44] @ 4-byte Spill
-; THUMB-M-NEXT:    movs r1, #0
-; THUMB-M-NEXT:    ldr r0, [sp, #364]
-; THUMB-M-NEXT:    add r6, sp, #176
-; THUMB-M-NEXT:    strd r1, r1, [sp, #296]
-; THUMB-M-NEXT:    adds r6, #32
-; THUMB-M-NEXT:    and r7, r0, #127
-; THUMB-M-NEXT:    str r7, [sp, #268]
-; THUMB-M-NEXT:    ldr r7, [sp, #360]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    strd r1, r1, [sp, #288]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #280]
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsr #31
-; THUMB-M-NEXT:    strd r1, r1, [sp, #272]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #200]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #192]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #184]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #176]
-; THUMB-M-NEXT:    str r7, [sp, #264]
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    strd r0, r2, [sp, #236]
-; THUMB-M-NEXT:    lsls r0, r2, #1
-; THUMB-M-NEXT:    str r0, [sp, #208]
-; THUMB-M-NEXT:    ldr r0, [sp, #356]
+; THUMB-M-NEXT:    .pad #268
+; THUMB-M-NEXT:    sub sp, #268
+; THUMB-M-NEXT:    mov r10, r0
+; THUMB-M-NEXT:    movs r0, #127
+; THUMB-M-NEXT:    strd r3, r2, [sp, #48] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    mov.w r1, #-1
 ; THUMB-M-NEXT:    str r0, [sp, #260]
-; THUMB-M-NEXT:    orr.w r7, r7, r0, lsr #31
-; THUMB-M-NEXT:    str r7, [sp, #232]
-; THUMB-M-NEXT:    ldr r7, [sp, #352]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    str r7, [sp, #256]
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #228]
-; THUMB-M-NEXT:    ldr r0, [sp, #348]
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    str r0, [sp, #252]
-; THUMB-M-NEXT:    orr.w r7, r7, r0, lsr #31
-; THUMB-M-NEXT:    str r7, [sp, #224]
-; THUMB-M-NEXT:    ldr r7, [sp, #344]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    str r7, [sp, #248]
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #220]
-; THUMB-M-NEXT:    lsls r0, r7, #1
-; THUMB-M-NEXT:    str r3, [sp, #244]
-; THUMB-M-NEXT:    orr.w r0, r0, r3, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #216]
-; THUMB-M-NEXT:    lsls r0, r3, #1
-; THUMB-M-NEXT:    orr.w r0, r0, r2, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #212]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #72]
+; THUMB-M-NEXT:    movs r0, #0
+; THUMB-M-NEXT:    strd r1, r1, [sp, #252]
+; THUMB-M-NEXT:    movs r2, #63
+; THUMB-M-NEXT:    strd r1, r1, [sp, #244]
+; THUMB-M-NEXT:    mov.w lr, #28
+; THUMB-M-NEXT:    strd r1, r1, [sp, #236]
+; THUMB-M-NEXT:    add r5, sp, #72
+; THUMB-M-NEXT:    str r0, [sp, #232]
+; THUMB-M-NEXT:    adds r5, #32
+; THUMB-M-NEXT:    strd r0, r0, [sp, #224]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #216]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #208]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #200]
+; THUMB-M-NEXT:    strd r1, r1, [sp, #156]
+; THUMB-M-NEXT:    strd r1, r1, [sp, #148]
+; THUMB-M-NEXT:    strd r1, r1, [sp, #140]
+; THUMB-M-NEXT:    mov.w r1, #-2147483648
+; THUMB-M-NEXT:    ldr.w r9, [sp, #332]
+; THUMB-M-NEXT:    str r2, [sp, #164]
+; THUMB-M-NEXT:    add r2, sp, #200
+; THUMB-M-NEXT:    strd r0, r0, [sp, #192]
+; THUMB-M-NEXT:    adds r2, #32
+; THUMB-M-NEXT:    strd r0, r0, [sp, #184]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #176]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #168]
+; THUMB-M-NEXT:    strd r0, r1, [sp, #132]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #124]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #116]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #108]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #96]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #88]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #80]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #72]
 ; THUMB-M-NEXT:    movw r0, #41989
-; THUMB-M-NEXT:    strd r1, r1, [sp, #64]
+; THUMB-M-NEXT:    ldr r1, [sp, #328]
 ; THUMB-M-NEXT:    movt r0, #7092
-; THUMB-M-NEXT:    strd r1, r1, [sp, #56]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #48]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #168]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #160]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #152]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #144]
-; THUMB-M-NEXT:    ldr r1, [sp, #372]
-; THUMB-M-NEXT:    umull r0, r2, r1, r0
-; THUMB-M-NEXT:    subs r0, r1, r2
-; THUMB-M-NEXT:    add.w r0, r2, r0, lsr #1
-; THUMB-M-NEXT:    movs r2, #231
-; THUMB-M-NEXT:    lsrs r0, r0, #7
-; THUMB-M-NEXT:    mls r1, r0, r2, r1
-; THUMB-M-NEXT:    add r2, sp, #240
-; THUMB-M-NEXT:    str r1, [sp, #36] @ 4-byte Spill
-; THUMB-M-NEXT:    and r12, r1, #31
-; THUMB-M-NEXT:    ubfx r0, r1, #5, #3
-; THUMB-M-NEXT:    eor r8, r12, #31
-; THUMB-M-NEXT:    add.w r0, r2, r0, lsl #2
-; THUMB-M-NEXT:    ldr r3, [r0, #28]
-; THUMB-M-NEXT:    ldr.w r9, [r0, #24]
-; THUMB-M-NEXT:    str r3, [sp, #32] @ 4-byte Spill
-; THUMB-M-NEXT:    lsls r3, r3, #1
-; THUMB-M-NEXT:    lsl.w r3, r3, r8
-; THUMB-M-NEXT:    lsr.w r2, r9, r12
-; THUMB-M-NEXT:    orr.w lr, r2, r3
-; THUMB-M-NEXT:    rsb.w r3, r1, #230
-; THUMB-M-NEXT:    str r3, [sp, #40] @ 4-byte Spill
-; THUMB-M-NEXT:    and r2, r3, #31
-; THUMB-M-NEXT:    movs r1, #28
-; THUMB-M-NEXT:    and.w r3, r1, r3, lsr #3
-; THUMB-M-NEXT:    subs r6, r6, r3
-; THUMB-M-NEXT:    eor r3, r2, #31
-; THUMB-M-NEXT:    ldr r1, [r6, #24]
-; THUMB-M-NEXT:    str r1, [sp, #28] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r5, [r6, #20]
-; THUMB-M-NEXT:    lsl.w r4, r1, r2
-; THUMB-M-NEXT:    lsrs.w r7, r5, #1
-; THUMB-M-NEXT:    lsls r5, r2
-; THUMB-M-NEXT:    lsrs r7, r3
-; THUMB-M-NEXT:    orrs r4, r7
-; THUMB-M-NEXT:    orr.w r1, lr, r4
 ; THUMB-M-NEXT:    str r1, [sp, #104]
-; THUMB-M-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; THUMB-M-NEXT:    lsl.w r7, r9, #1
-; THUMB-M-NEXT:    ldr.w r10, [r0, #20]
-; THUMB-M-NEXT:    lsl.w r7, r7, r8
-; THUMB-M-NEXT:    ldr.w lr, [r6, #16]
-; THUMB-M-NEXT:    lsr.w r4, r10, r12
+; THUMB-M-NEXT:    umull r0, r1, r9, r0
+; THUMB-M-NEXT:    sub.w r0, r9, r1
+; THUMB-M-NEXT:    add.w r0, r1, r0, lsr #1
+; THUMB-M-NEXT:    movs r1, #231
+; THUMB-M-NEXT:    lsrs r0, r0, #7
+; THUMB-M-NEXT:    mls r0, r0, r1, r9
+; THUMB-M-NEXT:    and r11, r0, #31
+; THUMB-M-NEXT:    and.w r1, lr, r0, lsr #3
+; THUMB-M-NEXT:    eor r7, r11, #31
+; THUMB-M-NEXT:    subs r6, r2, r1
+; THUMB-M-NEXT:    rsb.w r0, r0, #230
+; THUMB-M-NEXT:    and r8, r0, #31
+; THUMB-M-NEXT:    ldr r1, [r6, #28]
+; THUMB-M-NEXT:    str r7, [sp, #16] @ 4-byte Spill
+; THUMB-M-NEXT:    str.w r11, [sp, #68] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r3, [r6, #24]
+; THUMB-M-NEXT:    lsl.w r1, r1, r11
+; THUMB-M-NEXT:    lsrs r2, r3, #1
+; THUMB-M-NEXT:    lsrs r2, r7
+; THUMB-M-NEXT:    orr.w r4, r1, r2
+; THUMB-M-NEXT:    ubfx r1, r0, #5, #3
+; THUMB-M-NEXT:    add r0, sp, #136
+; THUMB-M-NEXT:    str r1, [sp, #44] @ 4-byte Spill
+; THUMB-M-NEXT:    add.w r12, r0, r1, lsl #2
+; THUMB-M-NEXT:    ldr.w r2, [r12, #28]
+; THUMB-M-NEXT:    lsr.w r7, r2, r8
 ; THUMB-M-NEXT:    orrs r4, r7
-; THUMB-M-NEXT:    lsr.w r7, lr, #1
-; THUMB-M-NEXT:    lsrs r7, r3
-; THUMB-M-NEXT:    orrs r5, r7
-; THUMB-M-NEXT:    orrs r5, r4
-; THUMB-M-NEXT:    str r5, [sp, #100]
-; THUMB-M-NEXT:    ldr r4, [r6]
-; THUMB-M-NEXT:    lsl.w r7, r10, #1
-; THUMB-M-NEXT:    str r4, [sp, #20] @ 4-byte Spill
-; THUMB-M-NEXT:    lsl.w r7, r7, r8
-; THUMB-M-NEXT:    ldr r4, [r6, #4]
-; THUMB-M-NEXT:    str r4, [sp, #12] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r4, [r6, #8]
-; THUMB-M-NEXT:    str r4, [sp, #4] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r4, [r6, #12]
-; THUMB-M-NEXT:    lsrs.w r11, r4, #1
-; THUMB-M-NEXT:    lsrs.w r5, r5, #1
-; THUMB-M-NEXT:    orr.w r5, r5, r1, lsl #31
-; THUMB-M-NEXT:    str r5, [sp, #132]
-; THUMB-M-NEXT:    ldr r1, [r0, #4]
-; THUMB-M-NEXT:    lsr.w r5, r11, r3
-; THUMB-M-NEXT:    str r1, [sp, #16] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r1, [r0, #8]
-; THUMB-M-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMB-M-NEXT:    ldrd r9, r0, [r0, #12]
-; THUMB-M-NEXT:    lsr.w r1, r0, r12
-; THUMB-M-NEXT:    lsl.w r0, r0, #1
-; THUMB-M-NEXT:    orr.w r1, r1, r7
-; THUMB-M-NEXT:    lsl.w r7, lr, r2
-; THUMB-M-NEXT:    orr.w r7, r7, r5
-; THUMB-M-NEXT:    lsl.w r0, r0, r8
-; THUMB-M-NEXT:    orr.w r1, r1, r7
-; THUMB-M-NEXT:    str r1, [sp, #96]
-; THUMB-M-NEXT:    rrx r7, r1
-; THUMB-M-NEXT:    str r7, [sp, #128]
-; THUMB-M-NEXT:    lsr.w r7, r9, r12
-; THUMB-M-NEXT:    ldr.w lr, [sp, #4] @ 4-byte Reload
-; THUMB-M-NEXT:    orrs r0, r7
-; THUMB-M-NEXT:    lsl.w r7, r4, r2
-; THUMB-M-NEXT:    lsr.w r5, lr, #1
-; THUMB-M-NEXT:    lsrs r5, r3
-; THUMB-M-NEXT:    orrs r7, r5
-; THUMB-M-NEXT:    orrs r0, r7
-; THUMB-M-NEXT:    str r0, [sp, #92]
-; THUMB-M-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
-; THUMB-M-NEXT:    lsrs.w r7, r5, #1
-; THUMB-M-NEXT:    lsrs.w r0, r0, #1
-; THUMB-M-NEXT:    lsr.w r7, r7, r3
-; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #31
-; THUMB-M-NEXT:    str r0, [sp, #124]
-; THUMB-M-NEXT:    ldr r4, [sp, #8] @ 4-byte Reload
-; THUMB-M-NEXT:    lsl.w r1, r9, #1
-; THUMB-M-NEXT:    lsl.w r1, r1, r8
-; THUMB-M-NEXT:    lsr.w r0, r4, r12
-; THUMB-M-NEXT:    orr.w r0, r0, r1
-; THUMB-M-NEXT:    lsl.w r1, lr, r2
-; THUMB-M-NEXT:    orr.w r1, r1, r7
-; THUMB-M-NEXT:    lsl.w r7, r4, #1
-; THUMB-M-NEXT:    orr.w r0, r0, r1
-; THUMB-M-NEXT:    str r0, [sp, #88]
-; THUMB-M-NEXT:    lsl.w r7, r7, r8
-; THUMB-M-NEXT:    rrx r1, r0
-; THUMB-M-NEXT:    str r1, [sp, #120]
-; THUMB-M-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r1, r1, r12
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    lsl.w r7, r5, r2
-; THUMB-M-NEXT:    ldr r5, [sp, #20] @ 4-byte Reload
-; THUMB-M-NEXT:    lsrs r5, r5, #1
-; THUMB-M-NEXT:    lsrs r5, r3
-; THUMB-M-NEXT:    orrs r7, r5
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    str r1, [sp, #84]
-; THUMB-M-NEXT:    lsrs.w r1, r1, #1
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsl #31
-; THUMB-M-NEXT:    str r0, [sp, #116]
-; THUMB-M-NEXT:    ldr r0, [sp, #368]
-; THUMB-M-NEXT:    str r0, [sp, #80]
-; THUMB-M-NEXT:    rrx r0, r0
-; THUMB-M-NEXT:    str r0, [sp, #112]
-; THUMB-M-NEXT:    ldr r1, [sp, #28] @ 4-byte Reload
-; THUMB-M-NEXT:    ldr r0, [r6, #28]
-; THUMB-M-NEXT:    lsrs r1, r1, #1
-; THUMB-M-NEXT:    lsls r0, r2
-; THUMB-M-NEXT:    lsrs r1, r3
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    ldr r1, [sp, #32] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r1, r1, r12
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    and r0, r0, #127
-; THUMB-M-NEXT:    str r0, [sp, #108]
-; THUMB-M-NEXT:    movs r1, #28
-; THUMB-M-NEXT:    lsrs.w r0, r0, #1
-; THUMB-M-NEXT:    and r0, r0, #127
-; THUMB-M-NEXT:    str r0, [sp, #140]
-; THUMB-M-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
-; THUMB-M-NEXT:    rrx r0, r0
-; THUMB-M-NEXT:    str r0, [sp, #136]
-; THUMB-M-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
-; THUMB-M-NEXT:    ldr.w r9, [sp, #44] @ 4-byte Reload
-; THUMB-M-NEXT:    and.w r0, r1, r0, lsr #3
-; THUMB-M-NEXT:    add r1, sp, #48
-; THUMB-M-NEXT:    adds r1, #32
-; THUMB-M-NEXT:    subs r0, r1, r0
-; THUMB-M-NEXT:    ldr r1, [r0, #28]
-; THUMB-M-NEXT:    ldr r4, [r0, #24]
-; THUMB-M-NEXT:    lsl.w r1, r1, r12
-; THUMB-M-NEXT:    lsrs r7, r4, #1
-; THUMB-M-NEXT:    lsr.w r7, r7, r8
-; THUMB-M-NEXT:    orr.w r5, r1, r7
-; THUMB-M-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
-; THUMB-M-NEXT:    add r7, sp, #112
-; THUMB-M-NEXT:    ubfx r1, r1, #5, #3
+; THUMB-M-NEXT:    ldr r7, [sp, #324]
+; THUMB-M-NEXT:    lsls r2, r2, #1
+; THUMB-M-NEXT:    ands r4, r7
+; THUMB-M-NEXT:    and.w r7, lr, r9, lsr #3
+; THUMB-M-NEXT:    subs r7, r5, r7
+; THUMB-M-NEXT:    and r9, r9, #31
+; THUMB-M-NEXT:    eor r5, r9, #31
+; THUMB-M-NEXT:    ldr r1, [r7, #24]
+; THUMB-M-NEXT:    ldr.w lr, [r7, #28]
 ; THUMB-M-NEXT:    str r1, [sp, #40] @ 4-byte Spill
-; THUMB-M-NEXT:    add.w r6, r7, r1, lsl #2
-; THUMB-M-NEXT:    ldr r7, [r6, #28]
-; THUMB-M-NEXT:    lsr.w r1, r7, r2
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsls r7, r3
+; THUMB-M-NEXT:    lsrs r1, r1, #1
+; THUMB-M-NEXT:    strd r5, r9, [sp, #56] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    lsrs r1, r5
+; THUMB-M-NEXT:    lsl.w lr, lr, r9
+; THUMB-M-NEXT:    orr.w r1, r1, lr
+; THUMB-M-NEXT:    str.w r10, [sp, #64] @ 4-byte Spill
+; THUMB-M-NEXT:    orrs r1, r4
+; THUMB-M-NEXT:    eor lr, r8, #31
 ; THUMB-M-NEXT:    and r1, r1, #127
-; THUMB-M-NEXT:    strb.w r1, [r9, #28]
-; THUMB-M-NEXT:    lsl.w r1, r4, r12
-; THUMB-M-NEXT:    ldr r4, [r0, #20]
-; THUMB-M-NEXT:    lsrs.w r5, r4, #1
-; THUMB-M-NEXT:    lsr.w r5, r5, r8
-; THUMB-M-NEXT:    orr.w r10, r1, r5
-; THUMB-M-NEXT:    ldr r5, [r6, #24]
-; THUMB-M-NEXT:    lsr.w r1, r5, r2
+; THUMB-M-NEXT:    strb.w r1, [r10, #28]
+; THUMB-M-NEXT:    ldr r4, [r6, #20]
+; THUMB-M-NEXT:    lsl.w r1, r3, r11
+; THUMB-M-NEXT:    ldr.w r11, [sp, #16] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r2, r2, lr
+; THUMB-M-NEXT:    ldr.w r0, [r12, #24]
+; THUMB-M-NEXT:    lsrs.w r3, r4, #1
+; THUMB-M-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMB-M-NEXT:    lsr.w r3, r3, r11
+; THUMB-M-NEXT:    str.w lr, [sp, #8] @ 4-byte Spill
+; THUMB-M-NEXT:    orrs r3, r1
+; THUMB-M-NEXT:    lsr.w r1, r0, r8
+; THUMB-M-NEXT:    ldr r0, [sp, #40] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #320]
+; THUMB-M-NEXT:    orrs r1, r3
+; THUMB-M-NEXT:    ldr r3, [r7, #20]
+; THUMB-M-NEXT:    ands r1, r2
+; THUMB-M-NEXT:    lsl.w r2, r0, r9
+; THUMB-M-NEXT:    ldr.w r9, [sp, #56] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs.w r5, r3, #1
+; THUMB-M-NEXT:    lsr.w r5, r5, r9
+; THUMB-M-NEXT:    orrs r2, r5
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    str.w r1, [r10, #24]
+; THUMB-M-NEXT:    ldr r0, [sp, #68] @ 4-byte Reload
+; THUMB-M-NEXT:    mov r2, r11
+; THUMB-M-NEXT:    ldr.w r10, [r6, #16]
+; THUMB-M-NEXT:    ldr r5, [sp, #36] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, r4, r0
+; THUMB-M-NEXT:    lsr.w r4, r10, #1
+; THUMB-M-NEXT:    lsr.w r4, r4, r11
+; THUMB-M-NEXT:    ldr.w r11, [r12, #20]
 ; THUMB-M-NEXT:    lsls r5, r5, #1
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    lsls r5, r3
-; THUMB-M-NEXT:    orr.w r1, r1, r10
-; THUMB-M-NEXT:    str.w r1, [r9, #24]
-; THUMB-M-NEXT:    lsl.w r1, r4, r12
-; THUMB-M-NEXT:    ldr r4, [r0, #16]
-; THUMB-M-NEXT:    lsrs r7, r4, #1
-; THUMB-M-NEXT:    lsr.w r7, r7, r8
-; THUMB-M-NEXT:    orr.w r10, r1, r7
-; THUMB-M-NEXT:    ldr r7, [r6, #20]
-; THUMB-M-NEXT:    lsr.w r1, r7, r2
-; THUMB-M-NEXT:    lsls r7, r7, #1
+; THUMB-M-NEXT:    orrs r1, r4
+; THUMB-M-NEXT:    lsl.w r5, r5, lr
+; THUMB-M-NEXT:    mov lr, r9
+; THUMB-M-NEXT:    lsr.w r4, r11, r8
+; THUMB-M-NEXT:    orrs r5, r4
 ; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsls r7, r3
-; THUMB-M-NEXT:    orr.w r1, r1, r10
-; THUMB-M-NEXT:    str.w r1, [r9, #20]
-; THUMB-M-NEXT:    ldr r5, [r0]
-; THUMB-M-NEXT:    lsl.w r1, r4, r12
-; THUMB-M-NEXT:    str r5, [sp, #36] @ 4-byte Spill
-; THUMB-M-NEXT:    ldrd r11, r5, [r0, #4]
-; THUMB-M-NEXT:    ldr r0, [r0, #12]
-; THUMB-M-NEXT:    lsrs.w r4, r0, #1
-; THUMB-M-NEXT:    lsl.w r0, r0, r12
-; THUMB-M-NEXT:    lsr.w r4, r4, r8
-; THUMB-M-NEXT:    orrs r4, r1
-; THUMB-M-NEXT:    ldr r1, [r6, #4]
-; THUMB-M-NEXT:    str r1, [sp, #32] @ 4-byte Spill
-; THUMB-M-NEXT:    ldrd r10, lr, [r6, #8]
-; THUMB-M-NEXT:    ldr r6, [r6, #16]
-; THUMB-M-NEXT:    lsr.w r1, r6, r2
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    lsl.w r7, lr, #1
-; THUMB-M-NEXT:    orrs r1, r4
-; THUMB-M-NEXT:    str.w r1, [r9, #16]
-; THUMB-M-NEXT:    lsrs r1, r5, #1
-; THUMB-M-NEXT:    lsls r4, r6, #1
-; THUMB-M-NEXT:    lsr.w r1, r1, r8
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsr.w r1, lr, r2
-; THUMB-M-NEXT:    lsls r4, r3
-; THUMB-M-NEXT:    orrs r1, r4
-; THUMB-M-NEXT:    lsls r7, r3
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsrs.w r1, r11, #1
-; THUMB-M-NEXT:    str.w r0, [r9, #12]
-; THUMB-M-NEXT:    lsl.w r0, r5, r12
-; THUMB-M-NEXT:    lsr.w r1, r1, r8
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsr.w r1, r10, r2
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    lsl.w r7, r10, #1
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    str.w r0, [r9, #8]
-; THUMB-M-NEXT:    ldr r6, [sp, #36] @ 4-byte Reload
-; THUMB-M-NEXT:    lsl.w r0, r11, r12
-; THUMB-M-NEXT:    ldr r5, [sp, #32] @ 4-byte Reload
-; THUMB-M-NEXT:    lsls r7, r3
-; THUMB-M-NEXT:    lsrs r1, r6, #1
-; THUMB-M-NEXT:    lsr.w r1, r1, r8
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsr.w r1, r5, r2
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    str.w r0, [r9, #4]
-; THUMB-M-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
-; THUMB-M-NEXT:    add r0, sp, #112
-; THUMB-M-NEXT:    ldr.w r0, [r0, r1, lsl #2]
-; THUMB-M-NEXT:    lsls r1, r5, #1
+; THUMB-M-NEXT:    ldr r5, [sp, #316]
+; THUMB-M-NEXT:    ands r1, r5
+; THUMB-M-NEXT:    ldr r5, [sp, #60] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r3, r5
+; THUMB-M-NEXT:    ldr r5, [r7, #16]
+; THUMB-M-NEXT:    lsrs r4, r5, #1
+; THUMB-M-NEXT:    lsr.w r4, r4, r9
+; THUMB-M-NEXT:    orrs r3, r4
+; THUMB-M-NEXT:    orrs r1, r3
+; THUMB-M-NEXT:    ldr r3, [sp, #64] @ 4-byte Reload
+; THUMB-M-NEXT:    str r1, [r3, #20]
+; THUMB-M-NEXT:    lsl.w r3, r10, r0
+; THUMB-M-NEXT:    ldr r0, [r6]
+; THUMB-M-NEXT:    mov r10, r2
+; THUMB-M-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r6, #4]
+; THUMB-M-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r6, #8]
+; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr.w r0, [r12, #4]
+; THUMB-M-NEXT:    ldr r1, [r6, #12]
+; THUMB-M-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr.w r0, [r12, #8]
+; THUMB-M-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; THUMB-M-NEXT:    lsrs.w r6, r1, #1
+; THUMB-M-NEXT:    ldr.w r4, [r12, #12]
+; THUMB-M-NEXT:    lsrs r6, r2
+; THUMB-M-NEXT:    str r4, [sp] @ 4-byte Spill
+; THUMB-M-NEXT:    orr.w r2, r3, r6
+; THUMB-M-NEXT:    ldr.w r9, [r12, #16]
+; THUMB-M-NEXT:    lsl.w r6, r11, #1
+; THUMB-M-NEXT:    ldr.w r12, [sp, #8] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr.w r11, [sp, #60] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r0, r9, r8
+; THUMB-M-NEXT:    lsl.w r6, r6, r12
+; THUMB-M-NEXT:    orrs r0, r6
+; THUMB-M-NEXT:    orrs r0, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #312]
+; THUMB-M-NEXT:    lsl.w r3, r5, r11
+; THUMB-M-NEXT:    mov r5, lr
+; THUMB-M-NEXT:    and.w r6, r2, r0
+; THUMB-M-NEXT:    ldr r0, [r7]
+; THUMB-M-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r7, #4]
+; THUMB-M-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r7, #8]
+; THUMB-M-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r7, [r7, #12]
+; THUMB-M-NEXT:    lsrs.w r2, r7, #1
+; THUMB-M-NEXT:    lsr.w r2, r2, lr
+; THUMB-M-NEXT:    ldr.w lr, [sp, #64] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r2, r3
+; THUMB-M-NEXT:    orrs r2, r6
+; THUMB-M-NEXT:    lsl.w r6, r9, #1
+; THUMB-M-NEXT:    str.w r2, [lr, #16]
+; THUMB-M-NEXT:    lsl.w r6, r6, r12
+; THUMB-M-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr r3, [sp, #68] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs r2, r0, #1
 ; THUMB-M-NEXT:    lsls r1, r3
-; THUMB-M-NEXT:    lsrs r0, r2
+; THUMB-M-NEXT:    lsr.w r2, r2, r10
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    lsr.w r2, r4, r8
+; THUMB-M-NEXT:    orrs r2, r6
+; THUMB-M-NEXT:    mov r4, r12
+; THUMB-M-NEXT:    ldr.w r12, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #308]
+; THUMB-M-NEXT:    mov r6, r3
+; THUMB-M-NEXT:    ands r1, r2
+; THUMB-M-NEXT:    lsl.w r2, r7, r11
+; THUMB-M-NEXT:    lsr.w r7, r12, #1
+; THUMB-M-NEXT:    lsrs r7, r5
+; THUMB-M-NEXT:    orrs r2, r7
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    str.w r1, [lr, #12]
+; THUMB-M-NEXT:    mov r7, lr
+; THUMB-M-NEXT:    ldr.w lr, [sp, #28] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, r0, r3
+; THUMB-M-NEXT:    ldr r0, [sp] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr.w r9, [sp, #24] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs.w r2, lr, #1
+; THUMB-M-NEXT:    ldr r5, [sp, #56] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r2, r2, r10
+; THUMB-M-NEXT:    lsls r3, r0, #1
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    lsr.w r2, r9, r8
+; THUMB-M-NEXT:    lsls r3, r4
+; THUMB-M-NEXT:    orrs r2, r3
+; THUMB-M-NEXT:    lsl.w r0, r12, r11
+; THUMB-M-NEXT:    ldr.w r12, [sp, #20] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #304]
+; THUMB-M-NEXT:    mov r3, r7
+; THUMB-M-NEXT:    ands r1, r2
+; THUMB-M-NEXT:    lsrs.w r2, r12, #1
+; THUMB-M-NEXT:    lsrs r2, r5
+; THUMB-M-NEXT:    orrs r0, r2
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsl.w r1, r6, r12
+; THUMB-M-NEXT:    str r0, [r7, #8]
+; THUMB-M-NEXT:    lsl.w r0, lr, r6
+; THUMB-M-NEXT:    ldr.w lr, [sp, #40] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r2, r9, #1
+; THUMB-M-NEXT:    ldr r7, [sp, #32] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r2, r4
+; THUMB-M-NEXT:    lsr.w r1, lr, #1
+; THUMB-M-NEXT:    lsr.w r1, r1, r10
+; THUMB-M-NEXT:    ldr.w r10, [sp, #36] @ 4-byte Reload
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    str.w r0, [r9]
-; THUMB-M-NEXT:    add sp, #308
+; THUMB-M-NEXT:    lsr.w r1, r10, r8
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    lsrs r2, r7, #1
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #48] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs r2, r5
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r12, r11
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    str r0, [r3, #4]
+; THUMB-M-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; THUMB-M-NEXT:    add r0, sp, #136
+; THUMB-M-NEXT:    ldr.w r0, [r0, r1, lsl #2]
+; THUMB-M-NEXT:    lsl.w r1, r10, #1
+; THUMB-M-NEXT:    lsls r1, r4
+; THUMB-M-NEXT:    lsr.w r0, r0, r8
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #68] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, lr, r1
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #52] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r7, r11
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    str r0, [r3]
+; THUMB-M-NEXT:    add sp, #268
 ; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_b231_var:
 ; THUMB-A:       @ %bb.0:
 ; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-A-NEXT:    .pad #308
-; THUMB-A-NEXT:    sub sp, #308
-; THUMB-A-NEXT:    lsls r5, r3, #1
-; THUMB-A-NEXT:    str r0, [sp, #44] @ 4-byte Spill
-; THUMB-A-NEXT:    orr.w r5, r5, r2, lsr #31
-; THUMB-A-NEXT:    ldr r0, [sp, #372]
-; THUMB-A-NEXT:    str r5, [sp, #212]
-; THUMB-A-NEXT:    movw r5, #41989
-; THUMB-A-NEXT:    movt r5, #7092
-; THUMB-A-NEXT:    ldr r6, [sp, #364]
-; THUMB-A-NEXT:    umull r4, r5, r0, r5
-; THUMB-A-NEXT:    str r2, [sp, #240]
-; THUMB-A-NEXT:    movs r4, #0
-; THUMB-A-NEXT:    lsls r2, r2, #1
-; THUMB-A-NEXT:    strd r4, r4, [sp, #296]
-; THUMB-A-NEXT:    movs r1, #231
-; THUMB-A-NEXT:    strd r4, r4, [sp, #288]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #280]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #272]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #200]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #192]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #184]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #176]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #72]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #64]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #56]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #48]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #168]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #160]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #152]
-; THUMB-A-NEXT:    strd r4, r4, [sp, #144]
-; THUMB-A-NEXT:    and r4, r6, #127
-; THUMB-A-NEXT:    str r4, [sp, #268]
-; THUMB-A-NEXT:    lsls r6, r6, #1
-; THUMB-A-NEXT:    str r2, [sp, #208]
-; THUMB-A-NEXT:    subs r2, r0, r5
-; THUMB-A-NEXT:    ldr r7, [sp, #360]
-; THUMB-A-NEXT:    add.w r2, r5, r2, lsr #1
-; THUMB-A-NEXT:    ldr r5, [sp, #356]
-; THUMB-A-NEXT:    ldrd r12, lr, [sp, #348]
-; THUMB-A-NEXT:    lsrs r2, r2, #7
-; THUMB-A-NEXT:    orr.w r6, r6, r7, lsr #31
-; THUMB-A-NEXT:    mls r4, r2, r1, r0
-; THUMB-A-NEXT:    ldr r0, [sp, #344]
-; THUMB-A-NEXT:    lsls r1, r7, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r5, lsr #31
-; THUMB-A-NEXT:    str r4, [sp, #36] @ 4-byte Spill
-; THUMB-A-NEXT:    strd r5, r7, [sp, #260]
-; THUMB-A-NEXT:    strd r12, lr, [sp, #252]
-; THUMB-A-NEXT:    strd r3, r0, [sp, #244]
-; THUMB-A-NEXT:    str r1, [sp, #232]
-; THUMB-A-NEXT:    lsls r1, r5, #1
-; THUMB-A-NEXT:    orr.w r1, r1, lr, lsr #31
-; THUMB-A-NEXT:    str r1, [sp, #228]
-; THUMB-A-NEXT:    lsl.w r1, lr, #1
-; THUMB-A-NEXT:    str r6, [sp, #236]
-; THUMB-A-NEXT:    orr.w r1, r1, r12, lsr #31
-; THUMB-A-NEXT:    str r1, [sp, #224]
-; THUMB-A-NEXT:    lsl.w r1, r12, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r0, lsr #31
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    orr.w r0, r0, r3, lsr #31
-; THUMB-A-NEXT:    str r0, [sp, #216]
-; THUMB-A-NEXT:    ubfx r0, r4, #5, #3
-; THUMB-A-NEXT:    str r1, [sp, #220]
-; THUMB-A-NEXT:    add r1, sp, #240
-; THUMB-A-NEXT:    rsb.w r3, r4, #230
-; THUMB-A-NEXT:    add.w r10, r1, r0, lsl #2
-; THUMB-A-NEXT:    and r1, r4, #31
-; THUMB-A-NEXT:    eor r12, r1, #31
-; THUMB-A-NEXT:    ldr.w r0, [r10, #28]
-; THUMB-A-NEXT:    str r0, [sp, #32] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr.w r2, [r10, #24]
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; THUMB-A-NEXT:    lsl.w r0, r0, r12
-; THUMB-A-NEXT:    str r3, [sp, #40] @ 4-byte Spill
-; THUMB-A-NEXT:    lsrs r2, r1
-; THUMB-A-NEXT:    orr.w r7, r2, r0
-; THUMB-A-NEXT:    add r0, sp, #176
-; THUMB-A-NEXT:    movs r2, #28
-; THUMB-A-NEXT:    and.w r2, r2, r3, lsr #3
-; THUMB-A-NEXT:    adds r0, #32
-; THUMB-A-NEXT:    subs r5, r0, r2
-; THUMB-A-NEXT:    and r3, r3, #31
-; THUMB-A-NEXT:    eor lr, r3, #31
-; THUMB-A-NEXT:    ldr.w r8, [r5, #20]
-; THUMB-A-NEXT:    ldr r0, [r5, #24]
-; THUMB-A-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; THUMB-A-NEXT:    lsrs.w r6, r8, #1
-; THUMB-A-NEXT:    lsr.w r6, r6, lr
-; THUMB-A-NEXT:    lsl.w r4, r0, r3
-; THUMB-A-NEXT:    orrs r6, r4
-; THUMB-A-NEXT:    orr.w r0, r7, r6
-; THUMB-A-NEXT:    str r0, [sp, #8] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr.w r0, [r10, #4]
-; THUMB-A-NEXT:    str r0, [sp, #24] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr.w r0, [r10, #8]
-; THUMB-A-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; THUMB-A-NEXT:    ldrd r2, r4, [r10, #12]
-; THUMB-A-NEXT:    lsr.w r7, r0, r1
-; THUMB-A-NEXT:    str r4, [sp] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr r0, [r5]
-; THUMB-A-NEXT:    lsls r4, r2, #1
-; THUMB-A-NEXT:    str r0, [sp, #20] @ 4-byte Spill
-; THUMB-A-NEXT:    lsl.w r4, r4, r12
-; THUMB-A-NEXT:    ldr r6, [r5, #4]
-; THUMB-A-NEXT:    orrs r4, r7
-; THUMB-A-NEXT:    str r6, [sp, #12] @ 4-byte Spill
-; THUMB-A-NEXT:    lsrs r2, r1
-; THUMB-A-NEXT:    ldrd r0, r9, [r5, #8]
-; THUMB-A-NEXT:    lsrs.w r7, r6, #1
-; THUMB-A-NEXT:    ldr.w r10, [r10, #20]
-; THUMB-A-NEXT:    lsr.w r7, r7, lr
-; THUMB-A-NEXT:    lsl.w r11, r0, r3
-; THUMB-A-NEXT:    orr.w r7, r7, r11
-; THUMB-A-NEXT:    orr.w r11, r4, r7
-; THUMB-A-NEXT:    ldr r4, [sp, #4] @ 4-byte Reload
-; THUMB-A-NEXT:    lsrs r0, r0, #1
-; THUMB-A-NEXT:    lsr.w r0, r0, lr
-; THUMB-A-NEXT:    lsls r7, r4, #1
-; THUMB-A-NEXT:    lsr.w r4, r10, r1
-; THUMB-A-NEXT:    lsl.w r7, r7, r12
-; THUMB-A-NEXT:    orrs r4, r7
-; THUMB-A-NEXT:    lsl.w r7, r8, r3
-; THUMB-A-NEXT:    ldr.w r8, [r5, #16]
-; THUMB-A-NEXT:    lsr.w r6, r8, #1
-; THUMB-A-NEXT:    lsr.w r6, r6, lr
-; THUMB-A-NEXT:    orrs r6, r7
-; THUMB-A-NEXT:    ldr r7, [sp] @ 4-byte Reload
-; THUMB-A-NEXT:    orrs r4, r6
-; THUMB-A-NEXT:    str r4, [sp, #100]
-; THUMB-A-NEXT:    lsls r6, r7, #1
-; THUMB-A-NEXT:    lsl.w r6, r6, r12
-; THUMB-A-NEXT:    orrs r2, r6
-; THUMB-A-NEXT:    lsl.w r6, r9, r3
-; THUMB-A-NEXT:    orrs r0, r6
-; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    str r0, [sp, #92]
-; THUMB-A-NEXT:    lsrs.w r6, r9, #1
-; THUMB-A-NEXT:    ldr r2, [sp, #8] @ 4-byte Reload
-; THUMB-A-NEXT:    lsrs.w r0, r0, #1
-; THUMB-A-NEXT:    lsr.w r6, r6, lr
-; THUMB-A-NEXT:    rrx r9, r11
-; THUMB-A-NEXT:    lsrs.w r4, r4, #1
-; THUMB-A-NEXT:    orr.w r4, r4, r2, lsl #31
-; THUMB-A-NEXT:    str r4, [sp, #132]
-; THUMB-A-NEXT:    lsr.w r4, r7, r1
-; THUMB-A-NEXT:    lsl.w r7, r10, #1
-; THUMB-A-NEXT:    lsl.w r7, r7, r12
-; THUMB-A-NEXT:    orr.w r4, r4, r7
-; THUMB-A-NEXT:    lsl.w r7, r8, r3
-; THUMB-A-NEXT:    orr.w r6, r6, r7
-; THUMB-A-NEXT:    orr.w r4, r4, r6
-; THUMB-A-NEXT:    orr.w r0, r0, r4, lsl #31
-; THUMB-A-NEXT:    str r0, [sp, #124]
-; THUMB-A-NEXT:    str r4, [sp, #96]
-; THUMB-A-NEXT:    rrx r0, r4
-; THUMB-A-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
-; THUMB-A-NEXT:    ldr r4, [sp, #24] @ 4-byte Reload
-; THUMB-A-NEXT:    ldr r7, [sp, #20] @ 4-byte Reload
-; THUMB-A-NEXT:    lsls r6, r6, #1
-; THUMB-A-NEXT:    lsrs r4, r1
-; THUMB-A-NEXT:    lsl.w r6, r6, r12
-; THUMB-A-NEXT:    orrs r4, r6
-; THUMB-A-NEXT:    ldr r6, [sp, #12] @ 4-byte Reload
-; THUMB-A-NEXT:    lsrs r7, r7, #1
-; THUMB-A-NEXT:    str.w r11, [sp, #88]
-; THUMB-A-NEXT:    lsr.w r7, r7, lr
-; THUMB-A-NEXT:    lsls r6, r3
-; THUMB-A-NEXT:    orrs r6, r7
-; THUMB-A-NEXT:    orrs r4, r6
-; THUMB-A-NEXT:    str r4, [sp, #84]
-; THUMB-A-NEXT:    lsrs.w r4, r4, #1
-; THUMB-A-NEXT:    orr.w r4, r4, r11, lsl #31
-; THUMB-A-NEXT:    str r4, [sp, #116]
-; THUMB-A-NEXT:    ldr r4, [sp, #368]
-; THUMB-A-NEXT:    str r4, [sp, #80]
-; THUMB-A-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
-; THUMB-A-NEXT:    ldr r5, [r5, #28]
-; THUMB-A-NEXT:    rrx r4, r4
-; THUMB-A-NEXT:    lsrs r6, r6, #1
-; THUMB-A-NEXT:    lsls r5, r3
-; THUMB-A-NEXT:    lsr.w r6, r6, lr
-; THUMB-A-NEXT:    orrs r5, r6
-; THUMB-A-NEXT:    ldr r6, [sp, #32] @ 4-byte Reload
-; THUMB-A-NEXT:    lsrs r6, r1
-; THUMB-A-NEXT:    orrs r5, r6
-; THUMB-A-NEXT:    and r5, r5, #127
-; THUMB-A-NEXT:    str r5, [sp, #108]
-; THUMB-A-NEXT:    str r4, [sp, #112]
-; THUMB-A-NEXT:    add r6, sp, #48
-; THUMB-A-NEXT:    lsrs.w r5, r5, #1
-; THUMB-A-NEXT:    str r0, [sp, #128]
-; THUMB-A-NEXT:    and r5, r5, #127
-; THUMB-A-NEXT:    str r5, [sp, #140]
-; THUMB-A-NEXT:    str.w r9, [sp, #120]
-; THUMB-A-NEXT:    rrx r0, r2
-; THUMB-A-NEXT:    str r2, [sp, #104]
-; THUMB-A-NEXT:    movs r4, #28
-; THUMB-A-NEXT:    ldr r2, [sp, #36] @ 4-byte Reload
-; THUMB-A-NEXT:    adds r6, #32
-; THUMB-A-NEXT:    and.w r7, r4, r2, lsr #3
-; THUMB-A-NEXT:    add r2, sp, #112
-; THUMB-A-NEXT:    subs r5, r6, r7
-; THUMB-A-NEXT:    ldr r7, [r5, #28]
-; THUMB-A-NEXT:    str r0, [sp, #136]
-; THUMB-A-NEXT:    ldr r6, [r5, #24]
-; THUMB-A-NEXT:    lsl.w r0, r7, r1
-; THUMB-A-NEXT:    ldr.w r11, [sp, #44] @ 4-byte Reload
-; THUMB-A-NEXT:    lsrs r7, r6, #1
+; THUMB-A-NEXT:    .pad #268
+; THUMB-A-NEXT:    sub sp, #268
+; THUMB-A-NEXT:    str r0, [sp, #68] @ 4-byte Spill
+; THUMB-A-NEXT:    movs r0, #127
+; THUMB-A-NEXT:    strd r3, r2, [sp, #52] @ 8-byte Folded Spill
+; THUMB-A-NEXT:    mov.w r2, #-1
+; THUMB-A-NEXT:    str r0, [sp, #260]
+; THUMB-A-NEXT:    movs r0, #0
+; THUMB-A-NEXT:    strd r2, r2, [sp, #252]
+; THUMB-A-NEXT:    movs r3, #63
+; THUMB-A-NEXT:    strd r2, r2, [sp, #244]
+; THUMB-A-NEXT:    mov.w r9, #28
+; THUMB-A-NEXT:    strd r2, r2, [sp, #236]
+; THUMB-A-NEXT:    str r0, [sp, #232]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #224]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #216]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #208]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #200]
+; THUMB-A-NEXT:    strd r2, r2, [sp, #156]
+; THUMB-A-NEXT:    strd r2, r2, [sp, #148]
+; THUMB-A-NEXT:    strd r2, r2, [sp, #140]
+; THUMB-A-NEXT:    mov.w r2, #-2147483648
+; THUMB-A-NEXT:    str r2, [sp, #136]
+; THUMB-A-NEXT:    movw r2, #41989
+; THUMB-A-NEXT:    ldrd r1, r11, [sp, #328]
+; THUMB-A-NEXT:    movt r2, #7092
+; THUMB-A-NEXT:    str r3, [sp, #164]
+; THUMB-A-NEXT:    umull r2, r3, r11, r2
+; THUMB-A-NEXT:    strd r0, r0, [sp, #192]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #184]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #176]
+; THUMB-A-NEXT:    movs r2, #231
+; THUMB-A-NEXT:    strd r0, r0, [sp, #168]
+; THUMB-A-NEXT:    strd r1, r0, [sp, #104]
+; THUMB-A-NEXT:    sub.w r1, r11, r3
+; THUMB-A-NEXT:    strd r0, r0, [sp, #128]
+; THUMB-A-NEXT:    add.w r1, r3, r1, lsr #1
+; THUMB-A-NEXT:    strd r0, r0, [sp, #120]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #112]
+; THUMB-A-NEXT:    lsrs r1, r1, #7
+; THUMB-A-NEXT:    strd r0, r0, [sp, #96]
+; THUMB-A-NEXT:    mls r1, r1, r2, r11
+; THUMB-A-NEXT:    add r2, sp, #200
+; THUMB-A-NEXT:    strd r0, r0, [sp, #88]
+; THUMB-A-NEXT:    strd r0, r0, [sp, #80]
+; THUMB-A-NEXT:    adds r2, #32
+; THUMB-A-NEXT:    strd r0, r0, [sp, #72]
+; THUMB-A-NEXT:    and r3, r1, #31
+; THUMB-A-NEXT:    and.w r0, r9, r1, lsr #3
+; THUMB-A-NEXT:    eor r12, r3, #31
+; THUMB-A-NEXT:    subs r6, r2, r0
+; THUMB-A-NEXT:    ldrd r10, r0, [r6, #24]
+; THUMB-A-NEXT:    lsls r0, r3
+; THUMB-A-NEXT:    str r3, [sp, #64] @ 4-byte Spill
+; THUMB-A-NEXT:    lsr.w r7, r10, #1
 ; THUMB-A-NEXT:    lsr.w r7, r7, r12
-; THUMB-A-NEXT:    orr.w r9, r0, r7
-; THUMB-A-NEXT:    ldr r0, [sp, #40] @ 4-byte Reload
-; THUMB-A-NEXT:    ubfx r0, r0, #5, #3
-; THUMB-A-NEXT:    str r0, [sp, #40] @ 4-byte Spill
-; THUMB-A-NEXT:    add.w r4, r2, r0, lsl #2
-; THUMB-A-NEXT:    ldr r7, [r4, #28]
-; THUMB-A-NEXT:    lsr.w r0, r7, r3
-; THUMB-A-NEXT:    lsls r7, r7, #1
-; THUMB-A-NEXT:    orr.w r0, r0, r9
-; THUMB-A-NEXT:    lsl.w r9, r6, r1
-; THUMB-A-NEXT:    and r0, r0, #127
-; THUMB-A-NEXT:    strb.w r0, [r11, #28]
-; THUMB-A-NEXT:    ldr r6, [r5, #20]
-; THUMB-A-NEXT:    lsl.w r7, r7, lr
-; THUMB-A-NEXT:    lsrs.w r0, r6, #1
-; THUMB-A-NEXT:    lsr.w r0, r0, r12
-; THUMB-A-NEXT:    orr.w r9, r9, r0
-; THUMB-A-NEXT:    ldr r0, [r4, #24]
-; THUMB-A-NEXT:    lsr.w r2, r0, r3
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    orrs r2, r7
-; THUMB-A-NEXT:    lsl.w r0, r0, lr
-; THUMB-A-NEXT:    orr.w r2, r2, r9
-; THUMB-A-NEXT:    str.w r2, [r11, #24]
-; THUMB-A-NEXT:    lsl.w r2, r6, r1
-; THUMB-A-NEXT:    ldr r6, [r5, #16]
-; THUMB-A-NEXT:    lsrs r7, r6, #1
-; THUMB-A-NEXT:    lsr.w r7, r7, r12
-; THUMB-A-NEXT:    orr.w r9, r2, r7
-; THUMB-A-NEXT:    ldr r7, [r4, #20]
-; THUMB-A-NEXT:    lsr.w r2, r7, r3
-; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    orr.w r0, r0, r9
-; THUMB-A-NEXT:    str.w r0, [r11, #20]
-; THUMB-A-NEXT:    ldr r0, [r5]
-; THUMB-A-NEXT:    lsl.w r2, r6, r1
-; THUMB-A-NEXT:    str r0, [sp, #36] @ 4-byte Spill
-; THUMB-A-NEXT:    ldrd r9, r8, [r5, #4]
-; THUMB-A-NEXT:    ldr r5, [r5, #12]
-; THUMB-A-NEXT:    ldr r0, [r4, #4]
-; THUMB-A-NEXT:    str r0, [sp, #32] @ 4-byte Spill
-; THUMB-A-NEXT:    lsrs.w r6, r5, #1
-; THUMB-A-NEXT:    lsls r5, r1
-; THUMB-A-NEXT:    lsr.w r6, r6, r12
-; THUMB-A-NEXT:    orrs r6, r2
-; THUMB-A-NEXT:    lsls r2, r7, #1
-; THUMB-A-NEXT:    ldrd r7, r0, [r4, #8]
-; THUMB-A-NEXT:    lsl.w r2, r2, lr
-; THUMB-A-NEXT:    ldr r4, [r4, #16]
-; THUMB-A-NEXT:    lsr.w r10, r4, r3
-; THUMB-A-NEXT:    orr.w r2, r2, r10
-; THUMB-A-NEXT:    orrs r2, r6
-; THUMB-A-NEXT:    lsls r4, r4, #1
-; THUMB-A-NEXT:    str.w r2, [r11, #16]
-; THUMB-A-NEXT:    lsr.w r2, r8, #1
-; THUMB-A-NEXT:    lsr.w r2, r2, r12
-; THUMB-A-NEXT:    lsl.w r4, r4, lr
-; THUMB-A-NEXT:    orrs r2, r5
-; THUMB-A-NEXT:    lsr.w r5, r0, r3
+; THUMB-A-NEXT:    orrs r7, r0
+; THUMB-A-NEXT:    rsb.w r0, r1, #230
+; THUMB-A-NEXT:    and r8, r0, #31
+; THUMB-A-NEXT:    ubfx r1, r0, #5, #3
+; THUMB-A-NEXT:    add r0, sp, #136
+; THUMB-A-NEXT:    str r1, [sp, #48] @ 4-byte Spill
+; THUMB-A-NEXT:    add.w lr, r0, r1, lsl #2
+; THUMB-A-NEXT:    ldr.w r4, [lr, #28]
+; THUMB-A-NEXT:    lsr.w r5, r4, r8
+; THUMB-A-NEXT:    orrs r5, r7
+; THUMB-A-NEXT:    ldr r7, [sp, #324]
+; THUMB-A-NEXT:    and.w r0, r7, r5
+; THUMB-A-NEXT:    add r7, sp, #72
+; THUMB-A-NEXT:    and.w r5, r9, r11, lsr #3
+; THUMB-A-NEXT:    adds r7, #32
+; THUMB-A-NEXT:    subs r7, r7, r5
+; THUMB-A-NEXT:    and r9, r11, #31
+; THUMB-A-NEXT:    eor r5, r9, #31
+; THUMB-A-NEXT:    ldr r2, [r7, #28]
+; THUMB-A-NEXT:    lsl.w r11, r2, r9
+; THUMB-A-NEXT:    ldr r2, [r7, #24]
+; THUMB-A-NEXT:    str r2, [sp, #44] @ 4-byte Spill
+; THUMB-A-NEXT:    str r5, [sp, #8] @ 4-byte Spill
+; THUMB-A-NEXT:    lsrs r2, r2, #1
+; THUMB-A-NEXT:    str.w r9, [sp] @ 4-byte Spill
+; THUMB-A-NEXT:    lsr.w r1, r2, r5
+; THUMB-A-NEXT:    ldr r2, [sp, #68] @ 4-byte Reload
+; THUMB-A-NEXT:    orr.w r1, r1, r11
+; THUMB-A-NEXT:    mov r11, r12
+; THUMB-A-NEXT:    orrs r1, r0
+; THUMB-A-NEXT:    eor r0, r8, #31
+; THUMB-A-NEXT:    and r1, r1, #127
+; THUMB-A-NEXT:    strb r1, [r2, #28]
+; THUMB-A-NEXT:    ldr r2, [r6, #20]
+; THUMB-A-NEXT:    lsl.w r1, r10, r3
+; THUMB-A-NEXT:    str.w r12, [sp, #60] @ 4-byte Spill
+; THUMB-A-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMB-A-NEXT:    lsrs.w r3, r2, #1
+; THUMB-A-NEXT:    lsr.w r3, r3, r12
+; THUMB-A-NEXT:    orr.w r5, r1, r3
+; THUMB-A-NEXT:    ldr.w r1, [lr, #24]
+; THUMB-A-NEXT:    lsls r3, r4, #1
+; THUMB-A-NEXT:    lsls r3, r0
+; THUMB-A-NEXT:    ldr r4, [sp, #320]
+; THUMB-A-NEXT:    str.w lr, [sp, #24] @ 4-byte Spill
+; THUMB-A-NEXT:    mov r0, lr
+; THUMB-A-NEXT:    lsr.w r10, r1, r8
+; THUMB-A-NEXT:    orr.w r3, r3, r10
+; THUMB-A-NEXT:    orrs r3, r5
+; THUMB-A-NEXT:    ldr.w r10, [sp, #8] @ 4-byte Reload
+; THUMB-A-NEXT:    and.w r12, r4, r3
+; THUMB-A-NEXT:    ldr r3, [sp, #44] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r1, r1, #1
+; THUMB-A-NEXT:    lsl.w r4, r3, r9
+; THUMB-A-NEXT:    ldr r3, [r7, #20]
+; THUMB-A-NEXT:    ldr.w r9, [sp, #68] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs.w r5, r3, #1
+; THUMB-A-NEXT:    lsr.w r5, r5, r10
 ; THUMB-A-NEXT:    orrs r4, r5
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    orrs r2, r4
-; THUMB-A-NEXT:    lsrs.w r4, r9, #1
-; THUMB-A-NEXT:    str.w r2, [r11, #12]
-; THUMB-A-NEXT:    lsl.w r2, r8, r1
-; THUMB-A-NEXT:    lsr.w r4, r4, r12
-; THUMB-A-NEXT:    lsl.w r0, r0, lr
-; THUMB-A-NEXT:    orrs r2, r4
-; THUMB-A-NEXT:    lsr.w r4, r7, r3
+; THUMB-A-NEXT:    orr.w r5, r12, r4
+; THUMB-A-NEXT:    str.w r5, [r9, #24]
+; THUMB-A-NEXT:    ldr r5, [r6, #16]
+; THUMB-A-NEXT:    ldr.w r12, [sp, #64] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr.w lr, [sp, #4] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs r4, r5, #1
+; THUMB-A-NEXT:    lsr.w r4, r4, r11
+; THUMB-A-NEXT:    lsl.w r2, r2, r12
+; THUMB-A-NEXT:    orr.w r11, r2, r4
+; THUMB-A-NEXT:    ldr r4, [r0, #20]
+; THUMB-A-NEXT:    lsl.w r1, r1, lr
+; THUMB-A-NEXT:    ldr r0, [r7, #16]
+; THUMB-A-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMB-A-NEXT:    lsr.w r2, r4, r8
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    orr.w r1, r1, r11
+; THUMB-A-NEXT:    ldr.w r11, [sp] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr r2, [sp, #316]
+; THUMB-A-NEXT:    ands r1, r2
+; THUMB-A-NEXT:    lsl.w r2, r3, r11
+; THUMB-A-NEXT:    lsrs r3, r0, #1
+; THUMB-A-NEXT:    lsr.w r3, r3, r10
+; THUMB-A-NEXT:    orrs r2, r3
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    str.w r1, [r9, #20]
+; THUMB-A-NEXT:    ldr r0, [r6]
+; THUMB-A-NEXT:    lsl.w r2, r5, r12
+; THUMB-A-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMB-A-NEXT:    mov r12, lr
+; THUMB-A-NEXT:    ldr r0, [r6, #4]
+; THUMB-A-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r0, [r6, #8]
+; THUMB-A-NEXT:    str r0, [sp, #16] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r0, [r6, #12]
+; THUMB-A-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
+; THUMB-A-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; THUMB-A-NEXT:    lsrs.w r5, r0, #1
+; THUMB-A-NEXT:    ldr r3, [sp, #60] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr r0, [r1, #4]
+; THUMB-A-NEXT:    str r0, [sp, #40] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r0, [r1, #8]
+; THUMB-A-NEXT:    lsrs r5, r3
+; THUMB-A-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMB-A-NEXT:    orrs r5, r2
+; THUMB-A-NEXT:    ldr r0, [r1, #12]
+; THUMB-A-NEXT:    lsls r2, r4, #1
+; THUMB-A-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMB-A-NEXT:    lsl.w r4, r2, lr
+; THUMB-A-NEXT:    ldr r6, [r1, #16]
+; THUMB-A-NEXT:    lsr.w r0, r6, r8
 ; THUMB-A-NEXT:    orrs r0, r4
-; THUMB-A-NEXT:    lsls r7, r7, #1
-; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    str.w r0, [r11, #8]
-; THUMB-A-NEXT:    ldr r4, [sp, #36] @ 4-byte Reload
-; THUMB-A-NEXT:    lsl.w r0, r9, r1
-; THUMB-A-NEXT:    ldr r5, [sp, #32] @ 4-byte Reload
-; THUMB-A-NEXT:    lsl.w r7, r7, lr
-; THUMB-A-NEXT:    lsrs r2, r4, #1
-; THUMB-A-NEXT:    lsl.w r1, r4, r1
-; THUMB-A-NEXT:    lsr.w r2, r2, r12
-; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    lsr.w r2, r5, r3
-; THUMB-A-NEXT:    orrs r2, r7
-; THUMB-A-NEXT:    ldr r7, [sp, #40] @ 4-byte Reload
-; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    add r2, sp, #112
-; THUMB-A-NEXT:    ldr.w r2, [r2, r7, lsl #2]
-; THUMB-A-NEXT:    str.w r0, [r11, #4]
-; THUMB-A-NEXT:    lsls r0, r5, #1
-; THUMB-A-NEXT:    lsl.w r0, r0, lr
-; THUMB-A-NEXT:    lsrs r2, r3
+; THUMB-A-NEXT:    ldr r4, [sp, #312]
+; THUMB-A-NEXT:    orrs r0, r5
+; THUMB-A-NEXT:    ands r4, r0
+; THUMB-A-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r5, r0, r11
+; THUMB-A-NEXT:    ldr r0, [r7]
+; THUMB-A-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r0, [r7, #4]
+; THUMB-A-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; THUMB-A-NEXT:    ldrd lr, r7, [r7, #8]
+; THUMB-A-NEXT:    lsrs.w r9, r7, #1
+; THUMB-A-NEXT:    lsr.w r1, r9, r10
+; THUMB-A-NEXT:    ldr.w r9, [sp, #68] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r1, r5
+; THUMB-A-NEXT:    orrs r1, r4
+; THUMB-A-NEXT:    str.w r1, [r9, #16]
+; THUMB-A-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr r5, [sp, #64] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs r1, r2, #1
+; THUMB-A-NEXT:    lsrs r1, r3
+; THUMB-A-NEXT:    lsl.w r3, r0, r5
+; THUMB-A-NEXT:    ldr r0, [sp, #12] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r1, r3
+; THUMB-A-NEXT:    lsls r3, r6, #1
+; THUMB-A-NEXT:    lsl.w r3, r3, r12
+; THUMB-A-NEXT:    lsr.w r4, r0, r8
+; THUMB-A-NEXT:    orrs r3, r4
+; THUMB-A-NEXT:    orrs r1, r3
+; THUMB-A-NEXT:    ldr r3, [sp, #308]
+; THUMB-A-NEXT:    lsl.w r4, r7, r11
+; THUMB-A-NEXT:    ands r1, r3
+; THUMB-A-NEXT:    lsr.w r3, lr, #1
+; THUMB-A-NEXT:    lsr.w r3, r3, r10
+; THUMB-A-NEXT:    orrs r3, r4
+; THUMB-A-NEXT:    mov r4, r12
+; THUMB-A-NEXT:    orrs r1, r3
+; THUMB-A-NEXT:    str.w r1, [r9, #12]
+; THUMB-A-NEXT:    ldr r7, [sp, #32] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r1, r2, r5
+; THUMB-A-NEXT:    ldr r6, [sp, #60] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r2, r0, #1
+; THUMB-A-NEXT:    ldr r5, [sp, #28] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r2, r2, r12
+; THUMB-A-NEXT:    lsrs.w r3, r7, #1
+; THUMB-A-NEXT:    lsl.w r0, lr, r11
+; THUMB-A-NEXT:    lsrs r3, r6
+; THUMB-A-NEXT:    orrs r1, r3
+; THUMB-A-NEXT:    lsr.w r3, r5, r8
+; THUMB-A-NEXT:    orrs r2, r3
+; THUMB-A-NEXT:    ldr.w lr, [sp, #24] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #304]
+; THUMB-A-NEXT:    mov r3, r9
+; THUMB-A-NEXT:    ands r1, r2
+; THUMB-A-NEXT:    lsrs.w r2, lr, #1
+; THUMB-A-NEXT:    lsr.w r2, r2, r10
 ; THUMB-A-NEXT:    orrs r0, r2
 ; THUMB-A-NEXT:    orrs r0, r1
-; THUMB-A-NEXT:    str.w r0, [r11]
-; THUMB-A-NEXT:    add sp, #308
+; THUMB-A-NEXT:    str.w r0, [r9, #8]
+; THUMB-A-NEXT:    ldr.w r9, [sp, #44] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r2, r5, #1
+; THUMB-A-NEXT:    ldr.w r12, [sp, #64] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r2, r4
+; THUMB-A-NEXT:    lsr.w r1, r9, #1
+; THUMB-A-NEXT:    lsrs r1, r6
+; THUMB-A-NEXT:    ldr r6, [sp, #40] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r0, r7, r12
+; THUMB-A-NEXT:    ldr r7, [sp, #36] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    lsr.w r1, r6, r8
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    lsrs r2, r7, #1
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #52] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r2, r2, r10
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, lr, r11
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    str r0, [r3, #4]
+; THUMB-A-NEXT:    ldr r1, [sp, #48] @ 4-byte Reload
+; THUMB-A-NEXT:    add r0, sp, #136
+; THUMB-A-NEXT:    ldr.w r0, [r0, r1, lsl #2]
+; THUMB-A-NEXT:    lsls r1, r6, #1
+; THUMB-A-NEXT:    lsls r1, r4
+; THUMB-A-NEXT:    lsr.w r0, r0, r8
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r9, r12
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #56] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r7, r11
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    str r0, [r3]
+; THUMB-A-NEXT:    add sp, #268
 ; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b231 %base, i32 %val, i32 %off
   ret b231 %result
@@ -2309,49 +2140,40 @@ define b1 @test_bitinsert_b1_var(b1 %base, i1 %val, i32 %off) {
 define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_b8_var:
 ; ARM:       @ %bb.0:
+; ARM-NEXT:    movw r3, #61680
 ; ARM-NEXT:    and r12, r2, #7
-; ARM-NEXT:    rsb r2, r2, #0
-; ARM-NEXT:    and r2, r2, #7
-; ARM-NEXT:    uxtb r3, r0
-; ARM-NEXT:    lsr r3, r3, r12
-; ARM-NEXT:    orr r0, r3, r0, lsl r2
-; ARM-NEXT:    bfi r0, r1, #0, #4
-; ARM-NEXT:    uxtb r1, r0
-; ARM-NEXT:    orr r0, r1, r0, lsl #8
-; ARM-NEXT:    lsl r0, r0, r12
-; ARM-NEXT:    lsr r0, r0, #8
+; ARM-NEXT:    movt r3, #65535
+; ARM-NEXT:    and r1, r1, #15
+; ARM-NEXT:    lsl r3, r3, r12
+; ARM-NEXT:    uxtb r2, r2
+; ARM-NEXT:    and r0, r0, r3, lsr #8
+; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b8_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r12, r2, #7
-; THUMB-M-NEXT:    rsbs r2, r2, #0
+; THUMB-M-NEXT:    and r1, r1, #15
+; THUMB-M-NEXT:    uxtb r3, r2
 ; THUMB-M-NEXT:    and r2, r2, #7
-; THUMB-M-NEXT:    uxtb r3, r0
-; THUMB-M-NEXT:    lsr.w r3, r3, r12
-; THUMB-M-NEXT:    lsls r0, r2
-; THUMB-M-NEXT:    orrs r0, r3
-; THUMB-M-NEXT:    bfi r0, r1, #0, #4
-; THUMB-M-NEXT:    uxtb r1, r0
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsl #8
-; THUMB-M-NEXT:    lsl.w r0, r0, r12
-; THUMB-M-NEXT:    lsrs r0, r0, #8
+; THUMB-M-NEXT:    lsls r1, r3
+; THUMB-M-NEXT:    movw r3, #61680
+; THUMB-M-NEXT:    movt r3, #65535
+; THUMB-M-NEXT:    lsl.w r2, r3, r2
+; THUMB-M-NEXT:    and.w r0, r0, r2, lsr #8
+; THUMB-M-NEXT:    orrs r0, r1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b8_var:
 ; THUMB-A:       @ %bb.0:
+; THUMB-A-NEXT:    movw r3, #61680
 ; THUMB-A-NEXT:    and r12, r2, #7
-; THUMB-A-NEXT:    rsbs r2, r2, #0
-; THUMB-A-NEXT:    and r2, r2, #7
-; THUMB-A-NEXT:    uxtb r3, r0
-; THUMB-A-NEXT:    lsr.w r3, r3, r12
-; THUMB-A-NEXT:    lsls r0, r2
-; THUMB-A-NEXT:    orrs r0, r3
-; THUMB-A-NEXT:    bfi r0, r1, #0, #4
-; THUMB-A-NEXT:    uxtb r1, r0
-; THUMB-A-NEXT:    orr.w r0, r1, r0, lsl #8
-; THUMB-A-NEXT:    lsl.w r0, r0, r12
-; THUMB-A-NEXT:    lsrs r0, r0, #8
+; THUMB-A-NEXT:    movt r3, #65535
+; THUMB-A-NEXT:    and r1, r1, #15
+; THUMB-A-NEXT:    lsl.w r3, r3, r12
+; THUMB-A-NEXT:    uxtb r2, r2
+; THUMB-A-NEXT:    and.w r0, r0, r3, lsr #8
+; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b8 %base, i4 %val, i32 %off
   ret b8 %result
@@ -2360,34 +2182,22 @@ define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 define b8 @test_bitinsert_b8_const(b8 %base, i4 %val) {
 ; ARM-LABEL: test_bitinsert_b8_const:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r2, r0, #128
 ; ARM-NEXT:    and r1, r1, #15
-; ARM-NEXT:    lsr r2, r2, #3
-; ARM-NEXT:    orr r2, r2, r0, lsl #5
-; ARM-NEXT:    and r0, r0, #7
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    bic r0, r0, #120
 ; ARM-NEXT:    orr r0, r0, r1, lsl #3
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b8_const:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r2, r0, #128
 ; THUMB-M-NEXT:    and r1, r1, #15
-; THUMB-M-NEXT:    lsrs r2, r2, #3
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #5
-; THUMB-M-NEXT:    and r0, r0, #7
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    bic r0, r0, #120
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #3
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b8_const:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r2, r0, #128
 ; THUMB-A-NEXT:    and r1, r1, #15
-; THUMB-A-NEXT:    lsrs r2, r2, #3
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #5
-; THUMB-A-NEXT:    and r0, r0, #7
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    bic r0, r0, #120
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #3
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b8 %base, i4 %val, i32 3
@@ -2397,26 +2207,25 @@ define b8 @test_bitinsert_b8_const(b8 %base, i4 %val) {
 define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_b21_var:
 ; ARM:       @ %bb.0:
+; ARM-NEXT:    .save {r11, lr}
+; ARM-NEXT:    push {r11, lr}
 ; ARM-NEXT:    movw r3, #49933
 ; ARM-NEXT:    bfc r2, #21, #11
 ; ARM-NEXT:    movt r3, #3120
 ; ARM-NEXT:    and r1, r1, #63
 ; ARM-NEXT:    umull r3, r12, r2, r3
 ; ARM-NEXT:    mov r3, #21
-; ARM-NEXT:    mls r2, r12, r3, r2
-; ARM-NEXT:    lsl r12, r0, #1
-; ARM-NEXT:    bfc r0, #21, #11
-; ARM-NEXT:    rsb r3, r2, #20
-; ARM-NEXT:    lsr r0, r0, r2
-; ARM-NEXT:    orr r12, r0, r12, lsl r3
-; ARM-NEXT:    movw r0, #65472
-; ARM-NEXT:    movt r0, #31
-; ARM-NEXT:    and r0, r12, r0
-; ARM-NEXT:    orr r0, r0, r1
-; ARM-NEXT:    lsl r1, r0, r2
-; ARM-NEXT:    lsr r0, r0, #1
-; ARM-NEXT:    orr r0, r1, r0, lsr r3
-; ARM-NEXT:    bx lr
+; ARM-NEXT:    mls r12, r12, r3, r2
+; ARM-NEXT:    movw r3, #65472
+; ARM-NEXT:    movt r3, #31
+; ARM-NEXT:    lsl lr, r3, r12
+; ARM-NEXT:    movw r3, #65504
+; ARM-NEXT:    rsb r12, r12, #20
+; ARM-NEXT:    movt r3, #15
+; ARM-NEXT:    orr r3, lr, r3, lsr r12
+; ARM-NEXT:    and r0, r0, r3
+; ARM-NEXT:    orr r0, r0, r1, lsl r2
+; ARM-NEXT:    pop {r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_b21_var:
 ; THUMB-M:       @ %bb.0:
@@ -2428,20 +2237,17 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; THUMB-M-NEXT:    and r1, r1, #63
 ; THUMB-M-NEXT:    umull r3, r12, r2, r3
 ; THUMB-M-NEXT:    movs r3, #21
-; THUMB-M-NEXT:    mls r2, r12, r3, r2
-; THUMB-M-NEXT:    lsl.w r12, r0, #1
-; THUMB-M-NEXT:    bfc r0, #21, #11
-; THUMB-M-NEXT:    rsb.w r3, r2, #20
-; THUMB-M-NEXT:    lsr.w lr, r0, r2
-; THUMB-M-NEXT:    lsl.w r0, r12, r3
-; THUMB-M-NEXT:    orr.w r12, lr, r0
-; THUMB-M-NEXT:    movw r0, #65472
-; THUMB-M-NEXT:    movt r0, #31
-; THUMB-M-NEXT:    and.w r0, r0, r12
-; THUMB-M-NEXT:    add r0, r1
-; THUMB-M-NEXT:    lsl.w r1, r0, r2
-; THUMB-M-NEXT:    lsrs r0, r0, #1
-; THUMB-M-NEXT:    lsrs r0, r3
+; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    mls r12, r12, r3, r2
+; THUMB-M-NEXT:    movw r3, #65472
+; THUMB-M-NEXT:    movt r3, #31
+; THUMB-M-NEXT:    lsl.w lr, r3, r12
+; THUMB-M-NEXT:    movw r3, #65504
+; THUMB-M-NEXT:    rsb.w r12, r12, #20
+; THUMB-M-NEXT:    movt r3, #15
+; THUMB-M-NEXT:    lsr.w r3, r3, r12
+; THUMB-M-NEXT:    orr.w r3, r3, lr
+; THUMB-M-NEXT:    ands r0, r3
 ; THUMB-M-NEXT:    orrs r0, r1
 ; THUMB-M-NEXT:    pop {r7, pc}
 ;
@@ -2455,20 +2261,17 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; THUMB-A-NEXT:    and r1, r1, #63
 ; THUMB-A-NEXT:    umull r3, r12, r2, r3
 ; THUMB-A-NEXT:    movs r3, #21
-; THUMB-A-NEXT:    mls r2, r12, r3, r2
-; THUMB-A-NEXT:    lsl.w r12, r0, #1
-; THUMB-A-NEXT:    bfc r0, #21, #11
-; THUMB-A-NEXT:    rsb.w r3, r2, #20
-; THUMB-A-NEXT:    lsr.w lr, r0, r2
-; THUMB-A-NEXT:    lsl.w r0, r12, r3
-; THUMB-A-NEXT:    orr.w r12, lr, r0
-; THUMB-A-NEXT:    movw r0, #65472
-; THUMB-A-NEXT:    movt r0, #31
-; THUMB-A-NEXT:    and.w r0, r0, r12
-; THUMB-A-NEXT:    add r0, r1
-; THUMB-A-NEXT:    lsl.w r1, r0, r2
-; THUMB-A-NEXT:    lsrs r0, r0, #1
-; THUMB-A-NEXT:    lsrs r0, r3
+; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    mls r12, r12, r3, r2
+; THUMB-A-NEXT:    movw r3, #65472
+; THUMB-A-NEXT:    movt r3, #31
+; THUMB-A-NEXT:    lsl.w lr, r3, r12
+; THUMB-A-NEXT:    movw r3, #65504
+; THUMB-A-NEXT:    rsb.w r12, r12, #20
+; THUMB-A-NEXT:    movt r3, #15
+; THUMB-A-NEXT:    lsr.w r3, r3, r12
+; THUMB-A-NEXT:    orr.w r3, r3, lr
+; THUMB-A-NEXT:    ands r0, r3
 ; THUMB-A-NEXT:    orrs r0, r1
 ; THUMB-A-NEXT:    pop {r7, pc}
   %result = bitinsert b21 %base, i6 %val, i32 %off
@@ -2478,34 +2281,28 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 define b21 @test_bitinsert_b21_const(b21 %base, i6 %val) {
 ; ARM-LABEL: test_bitinsert_b21_const:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r2, r0, #1048576
+; ARM-NEXT:    movw r2, #16383
 ; ARM-NEXT:    and r1, r1, #63
-; ARM-NEXT:    lsr r2, r2, #14
-; ARM-NEXT:    orr r2, r2, r0, lsl #7
-; ARM-NEXT:    bfc r0, #14, #18
-; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    movt r2, #16
+; ARM-NEXT:    and r0, r0, r2
 ; ARM-NEXT:    orr r0, r0, r1, lsl #14
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b21_const:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r2, r0, #1048576
+; THUMB-M-NEXT:    movw r2, #16383
 ; THUMB-M-NEXT:    and r1, r1, #63
-; THUMB-M-NEXT:    lsrs r2, r2, #14
-; THUMB-M-NEXT:    orr.w r2, r2, r0, lsl #7
-; THUMB-M-NEXT:    bfc r0, #14, #18
-; THUMB-M-NEXT:    add r1, r2
+; THUMB-M-NEXT:    movt r2, #16
+; THUMB-M-NEXT:    ands r0, r2
 ; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #14
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b21_const:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r2, r0, #1048576
+; THUMB-A-NEXT:    movw r2, #16383
 ; THUMB-A-NEXT:    and r1, r1, #63
-; THUMB-A-NEXT:    lsrs r2, r2, #14
-; THUMB-A-NEXT:    orr.w r2, r2, r0, lsl #7
-; THUMB-A-NEXT:    bfc r0, #14, #18
-; THUMB-A-NEXT:    add r1, r2
+; THUMB-A-NEXT:    movt r2, #16
+; THUMB-A-NEXT:    ands r0, r2
 ; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #14
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b21 %base, i6 %val, i32 14
@@ -2519,293 +2316,276 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; ARM-NEXT:    .pad #140
 ; ARM-NEXT:    sub sp, sp, #140
-; ARM-NEXT:    bic r6, r3, #-134217728
-; ARM-NEXT:    lsl r3, r3, #1
-; ARM-NEXT:    add r12, sp, #104
-; ARM-NEXT:    orr r3, r3, r2, lsr #31
-; ARM-NEXT:    stm r12, {r0, r1, r2, r6}
-; ARM-NEXT:    lsl r2, r2, #1
-; ARM-NEXT:    orr r2, r2, r1, lsr #31
-; ARM-NEXT:    lsl r1, r1, #1
-; ARM-NEXT:    mov r4, #0
-; ARM-NEXT:    orr r1, r1, r0, lsr #31
-; ARM-NEXT:    ldr r5, [sp, #180]
-; ARM-NEXT:    str r4, [sp, #132]
-; ARM-NEXT:    lsl r0, r0, #1
-; ARM-NEXT:    str r4, [sp, #128]
-; ARM-NEXT:    str r4, [sp, #124]
-; ARM-NEXT:    str r4, [sp, #120]
-; ARM-NEXT:    str r1, [sp, #92]
-; ARM-NEXT:    movw r1, #4263
-; ARM-NEXT:    movt r1, #2664
-; ARM-NEXT:    str r2, [sp, #96]
-; ARM-NEXT:    umull r1, r2, r5, r1
-; ARM-NEXT:    str r3, [sp, #100]
+; ARM-NEXT:    ldr lr, [sp, #180]
+; ARM-NEXT:    mov r5, #0
+; ARM-NEXT:    str r3, [sp, #36] @ 4-byte Spill
+; ARM-NEXT:    movw r3, #4263
+; ARM-NEXT:    movt r3, #2664
+; ARM-NEXT:    str r2, [sp, #28] @ 4-byte Spill
+; ARM-NEXT:    umull r6, r3, lr, r3
+; ARM-NEXT:    mvn r2, #-134217728
+; ARM-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; ARM-NEXT:    str r2, [sp, #132]
+; ARM-NEXT:    mvn r2, #0
+; ARM-NEXT:    str r5, [sp, #120]
+; ARM-NEXT:    str r2, [sp, #128]
+; ARM-NEXT:    mov r11, #12
+; ARM-NEXT:    sub r6, lr, r3
+; ARM-NEXT:    str r2, [sp, #124]
+; ARM-NEXT:    str r5, [sp, #116]
+; ARM-NEXT:    add r3, r3, r6, lsr #1
+; ARM-NEXT:    str r5, [sp, #112]
+; ARM-NEXT:    str r5, [sp, #108]
+; ARM-NEXT:    lsr r6, r3, #6
+; ARM-NEXT:    mov r3, #123
+; ARM-NEXT:    mls r4, r6, r3, lr
+; ARM-NEXT:    mvn r3, #-67108864
+; ARM-NEXT:    str r5, [sp, #104]
+; ARM-NEXT:    str r3, [sp, #84]
 ; ARM-NEXT:    add r3, sp, #104
-; ARM-NEXT:    str r4, [sp, #84]
-; ARM-NEXT:    str r4, [sp, #80]
-; ARM-NEXT:    str r4, [sp, #76]
-; ARM-NEXT:    sub r1, r5, r2
-; ARM-NEXT:    str r4, [sp, #72]
-; ARM-NEXT:    str r4, [sp, #20]
-; ARM-NEXT:    add r1, r2, r1, lsr #1
-; ARM-NEXT:    mov r2, #123
-; ARM-NEXT:    str r4, [sp, #16]
-; ARM-NEXT:    lsr r1, r1, #6
-; ARM-NEXT:    str r4, [sp, #12]
-; ARM-NEXT:    mls r5, r1, r2, r5
-; ARM-NEXT:    str r4, [sp, #8]
-; ARM-NEXT:    str r4, [sp, #68]
-; ARM-NEXT:    str r4, [sp, #64]
-; ARM-NEXT:    str r4, [sp, #60]
-; ARM-NEXT:    str r4, [sp, #56]
-; ARM-NEXT:    and r12, r5, #31
-; ARM-NEXT:    rsb r9, r5, #122
-; ARM-NEXT:    ubfx r2, r5, #5, #2
-; ARM-NEXT:    add r2, r3, r2, lsl #2
-; ARM-NEXT:    ldr r1, [r2, #4]
-; ARM-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    eor r1, r12, #31
-; ARM-NEXT:    ldr r8, [r2, #8]
-; ARM-NEXT:    ldr r11, [r2, #12]
-; ARM-NEXT:    str r0, [sp, #88]
-; ARM-NEXT:    lsr r0, r8, r12
-; ARM-NEXT:    lsl r2, r11, #1
-; ARM-NEXT:    orr r6, r0, r2, lsl r1
-; ARM-NEXT:    add r0, sp, #72
-; ARM-NEXT:    mov r1, #12
-; ARM-NEXT:    add r0, r0, #16
-; ARM-NEXT:    and r3, r1, r9, lsr #3
-; ARM-NEXT:    lsl r2, r8, #1
-; ARM-NEXT:    eor r8, r12, #31
-; ARM-NEXT:    ldr r3, [r0, -r3]!
-; ARM-NEXT:    ldr r7, [r0, #4]
-; ARM-NEXT:    ldr r4, [r0, #8]
-; ARM-NEXT:    lsr r3, r3, #1
+; ARM-NEXT:    str r2, [sp, #80]
+; ARM-NEXT:    add r3, r3, #16
+; ARM-NEXT:    str r2, [sp, #76]
+; ARM-NEXT:    str r5, [sp, #100]
+; ARM-NEXT:    and r6, r4, #31
+; ARM-NEXT:    and r2, r11, r4, lsr #3
+; ARM-NEXT:    str r5, [sp, #96]
+; ARM-NEXT:    str r5, [sp, #92]
+; ARM-NEXT:    eor r10, r6, #31
+; ARM-NEXT:    str r5, [sp, #88]
+; ARM-NEXT:    and r11, r11, lr, lsr #3
+; ARM-NEXT:    ldr r0, [r3, -r2]!
+; ARM-NEXT:    mov r2, #-2147483648
+; ARM-NEXT:    ldr r7, [sp, #176]
+; ARM-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; ARM-NEXT:    str r2, [sp, #72]
+; ARM-NEXT:    str r5, [sp, #68]
+; ARM-NEXT:    str r5, [sp, #64]
+; ARM-NEXT:    str r5, [sp, #60]
+; ARM-NEXT:    str r7, [sp, #56]
+; ARM-NEXT:    str r5, [sp, #52]
+; ARM-NEXT:    str r5, [sp, #48]
+; ARM-NEXT:    str r5, [sp, #44]
+; ARM-NEXT:    ldr r7, [r3, #4]
+; ARM-NEXT:    ldr r2, [r3, #8]
+; ARM-NEXT:    str r2, [sp, #12] @ 4-byte Spill
+; ARM-NEXT:    ldr r2, [r3, #12]
+; ARM-NEXT:    lsr r3, r0, #1
+; ARM-NEXT:    rsb r0, r4, #122
+; ARM-NEXT:    str r2, [sp, #24] @ 4-byte Spill
+; ARM-NEXT:    lsl r2, r7, r6
+; ARM-NEXT:    str r5, [sp, #40]
+; ARM-NEXT:    orr r2, r2, r3, lsr r10
+; ARM-NEXT:    ubfx r3, r0, #5, #2
+; ARM-NEXT:    add r5, sp, #72
+; ARM-NEXT:    str r3, [sp, #16] @ 4-byte Spill
+; ARM-NEXT:    add r4, r5, r3, lsl #2
+; ARM-NEXT:    ldr r3, [r4, #4]
+; ARM-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; ARM-NEXT:    ldr r12, [r4, #8]
+; ARM-NEXT:    ldr r9, [r4, #12]
+; ARM-NEXT:    and r4, r0, #31
+; ARM-NEXT:    eor r5, r4, #31
+; ARM-NEXT:    lsl r0, r12, #1
+; ARM-NEXT:    lsr r3, r3, r4
+; ARM-NEXT:    orr r0, r3, r0, lsl r5
+; ARM-NEXT:    orr r0, r2, r0
+; ARM-NEXT:    mov r2, lr
+; ARM-NEXT:    and r8, r1, r0
+; ARM-NEXT:    add r1, sp, #40
+; ARM-NEXT:    add r0, r1, #16
+; ARM-NEXT:    ldr lr, [r0, -r11]!
+; ARM-NEXT:    and r11, r2, #31
+; ARM-NEXT:    ldmib r0, {r3, r5}
+; ARM-NEXT:    lsr r1, lr, #1
 ; ARM-NEXT:    ldr r0, [r0, #12]
-; ARM-NEXT:    str r0, [sp] @ 4-byte Spill
-; ARM-NEXT:    and r0, r9, #31
-; ARM-NEXT:    eor lr, r0, #31
-; ARM-NEXT:    lsrs r10, r7, #1
-; ARM-NEXT:    lsl r1, r4, r0
-; ARM-NEXT:    ubfx r9, r9, #5, #2
-; ARM-NEXT:    orr r1, r1, r10, lsr lr
-; ARM-NEXT:    orr r6, r6, r1
-; ARM-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; ARM-NEXT:    lsr r1, r1, r12
-; ARM-NEXT:    orr r1, r1, r2, lsl r8
-; ARM-NEXT:    lsl r2, r7, r0
-; ARM-NEXT:    orr r2, r2, r3, lsr lr
-; ARM-NEXT:    lsr r3, r4, #1
-; ARM-NEXT:    orr r1, r1, r2
-; ARM-NEXT:    str r1, [sp, #28]
-; ARM-NEXT:    lsrs r1, r1, #1
-; ARM-NEXT:    orr r1, r1, r6, lsl #31
-; ARM-NEXT:    str r1, [sp, #44]
-; ARM-NEXT:    ldr r1, [sp, #176]
-; ARM-NEXT:    str r1, [sp, #24]
-; ARM-NEXT:    ldr r2, [sp] @ 4-byte Reload
-; ARM-NEXT:    rrx r1, r1
-; ARM-NEXT:    lsl r2, r2, r0
-; ARM-NEXT:    orr r2, r2, r3, lsr lr
-; ARM-NEXT:    orr r2, r2, r11, lsr r12
-; ARM-NEXT:    bic r2, r2, #-134217728
-; ARM-NEXT:    str r2, [sp, #36]
-; ARM-NEXT:    str r1, [sp, #40]
-; ARM-NEXT:    mov r1, #12
-; ARM-NEXT:    lsrs r2, r2, #1
-; ARM-NEXT:    and r1, r1, r5, lsr #3
-; ARM-NEXT:    bic r2, r2, #-134217728
-; ARM-NEXT:    str r2, [sp, #52]
-; ARM-NEXT:    add r2, sp, #8
-; ARM-NEXT:    str r6, [sp, #32]
-; ARM-NEXT:    add r2, r2, #16
-; ARM-NEXT:    ldr r11, [r2, -r1]!
-; ARM-NEXT:    rrx r1, r6
-; ARM-NEXT:    str r1, [sp, #48]
-; ARM-NEXT:    ldmib r2, {r3, r5, r10}
-; ARM-NEXT:    lsr r2, r11, #1
-; ARM-NEXT:    lsl r1, r3, r12
+; ARM-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; ARM-NEXT:    eor r0, r11, #31
+; ARM-NEXT:    lsl r2, r3, r11
+; ARM-NEXT:    orr r1, r2, r1, lsr r0
+; ARM-NEXT:    lsrs r2, r7, #1
+; ARM-NEXT:    orr r1, r8, r1
+; ARM-NEXT:    ldr r8, [sp, #12] @ 4-byte Reload
+; ARM-NEXT:    str r1, [sp] @ 4-byte Spill
+; ARM-NEXT:    lsl r7, r9, #1
 ; ARM-NEXT:    lsrs r3, r3, #1
-; ARM-NEXT:    orr r1, r1, r2, lsr r8
-; ARM-NEXT:    add r2, sp, #40
-; ARM-NEXT:    add r2, r2, r9, lsl #2
-; ARM-NEXT:    ldr r4, [r2, #8]
-; ARM-NEXT:    ldr r6, [r2, #4]
-; ARM-NEXT:    ldr r7, [r2, #12]
-; ARM-NEXT:    lsl r8, r4, #1
-; ARM-NEXT:    lsr r2, r6, r0
-; ARM-NEXT:    orr r2, r2, r8, lsl lr
-; ARM-NEXT:    eor r8, r12, #31
+; ARM-NEXT:    lsl r1, r8, r6
+; ARM-NEXT:    orr r1, r1, r2, lsr r10
+; ARM-NEXT:    lsr r2, r12, r4
+; ARM-NEXT:    mov r12, r9
+; ARM-NEXT:    eor r9, r4, #31
+; ARM-NEXT:    orr r2, r2, r7, lsl r9
+; ARM-NEXT:    eor r7, r4, #31
 ; ARM-NEXT:    orr r1, r1, r2
-; ARM-NEXT:    lsl r2, r5, r12
-; ARM-NEXT:    orr r2, r2, r3, lsr r8
-; ARM-NEXT:    lsr r3, r4, r0
-; ARM-NEXT:    lsl r4, r7, #1
-; ARM-NEXT:    orr r3, r3, r4, lsl lr
-; ARM-NEXT:    lsr r4, r5, #1
-; ARM-NEXT:    orr r2, r2, r3
-; ARM-NEXT:    lsl r3, r10, r12
-; ARM-NEXT:    orr r3, r3, r4, lsr r8
-; ARM-NEXT:    add r4, sp, #40
-; ARM-NEXT:    orr r3, r3, r7, lsr r0
-; ARM-NEXT:    ldr r4, [r4, r9, lsl #2]
-; ARM-NEXT:    lsr r0, r4, r0
-; ARM-NEXT:    lsl r4, r6, #1
-; ARM-NEXT:    orr r0, r0, r4, lsl lr
-; ARM-NEXT:    orr r0, r0, r11, lsl r12
-; ARM-NEXT:    add sp, sp, #140
+; ARM-NEXT:    ldr r2, [sp, #28] @ 4-byte Reload
+; ARM-NEXT:    and r1, r2, r1
+; ARM-NEXT:    lsl r2, r5, r11
+; ARM-NEXT:    orr r2, r2, r3, lsr r0
+; ARM-NEXT:    ldr r3, [sp, #16] @ 4-byte Reload
+; ARM-NEXT:    orr r2, r1, r2
+; ARM-NEXT:    add r1, sp, #72
+; ARM-NEXT:    ldr r1, [r1, r3, lsl #2]
+; ARM-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
+; ARM-NEXT:    lsr r1, r1, r4
+; ARM-NEXT:    lsl r3, r3, #1
+; ARM-NEXT:    orr r1, r1, r3, lsl r7
+; ARM-NEXT:    ldr r3, [sp, #20] @ 4-byte Reload
+; ARM-NEXT:    lsr r7, r8, #1
+; ARM-NEXT:    orr r1, r1, r3, lsl r6
+; ARM-NEXT:    ldr r3, [sp, #32] @ 4-byte Reload
+; ARM-NEXT:    and r1, r3, r1
+; ARM-NEXT:    ldr r3, [sp, #24] @ 4-byte Reload
+; ARM-NEXT:    orr r1, r1, lr, lsl r11
+; ARM-NEXT:    lsl r3, r3, r6
+; ARM-NEXT:    lsr r6, r5, #1
+; ARM-NEXT:    orr r3, r3, r7, lsr r10
+; ARM-NEXT:    ldr r7, [sp, #36] @ 4-byte Reload
+; ARM-NEXT:    orr r3, r3, r12, lsr r4
+; ARM-NEXT:    and r3, r7, r3
+; ARM-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
+; ARM-NEXT:    lsl r7, r7, r11
+; ARM-NEXT:    orr r0, r7, r6, lsr r0
+; ARM-NEXT:    orr r3, r3, r0
+; ARM-NEXT:    mov r0, r1
+; ARM-NEXT:    ldr r1, [sp], #140 @ 4-byte Reload
 ; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_b123_var:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-M-NEXT:    .pad #140
-; THUMB-M-NEXT:    sub sp, #140
-; THUMB-M-NEXT:    bic r6, r3, #-134217728
-; THUMB-M-NEXT:    lsls r3, r3, #1
-; THUMB-M-NEXT:    movs r5, #0
-; THUMB-M-NEXT:    orr.w r3, r3, r2, lsr #31
-; THUMB-M-NEXT:    strd r5, r5, [sp, #128]
-; THUMB-M-NEXT:    strd r5, r5, [sp, #120]
-; THUMB-M-NEXT:    strd r5, r5, [sp, #80]
-; THUMB-M-NEXT:    strd r5, r5, [sp, #72]
-; THUMB-M-NEXT:    strd r2, r6, [sp, #112]
-; THUMB-M-NEXT:    lsls r2, r2, #1
-; THUMB-M-NEXT:    strd r3, r0, [sp, #100]
-; THUMB-M-NEXT:    lsls r3, r0, #1
-; THUMB-M-NEXT:    str r3, [sp, #88]
-; THUMB-M-NEXT:    orr.w r2, r2, r1, lsr #31
-; THUMB-M-NEXT:    str r1, [sp, #108]
-; THUMB-M-NEXT:    lsls r1, r1, #1
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsr #31
-; THUMB-M-NEXT:    ldr r1, [sp, #180]
-; THUMB-M-NEXT:    str r0, [sp, #92]
-; THUMB-M-NEXT:    movw r0, #4263
-; THUMB-M-NEXT:    movt r0, #2664
-; THUMB-M-NEXT:    str r2, [sp, #96]
-; THUMB-M-NEXT:    umull r0, r2, r1, r0
-; THUMB-M-NEXT:    strd r5, r5, [sp, #16]
-; THUMB-M-NEXT:    strd r5, r5, [sp, #8]
-; THUMB-M-NEXT:    strd r5, r5, [sp, #64]
-; THUMB-M-NEXT:    strd r5, r5, [sp, #56]
-; THUMB-M-NEXT:    add r5, sp, #72
-; THUMB-M-NEXT:    adds r5, #16
-; THUMB-M-NEXT:    subs r0, r1, r2
-; THUMB-M-NEXT:    add.w r0, r2, r0, lsr #1
-; THUMB-M-NEXT:    movs r2, #123
-; THUMB-M-NEXT:    lsrs r0, r0, #6
-; THUMB-M-NEXT:    mls r3, r0, r2, r1
-; THUMB-M-NEXT:    add r2, sp, #104
-; THUMB-M-NEXT:    rsb.w r11, r3, #122
-; THUMB-M-NEXT:    and r12, r3, #31
-; THUMB-M-NEXT:    ubfx r0, r3, #5, #2
-; THUMB-M-NEXT:    eor r9, r12, #31
-; THUMB-M-NEXT:    add.w r0, r2, r0, lsl #2
-; THUMB-M-NEXT:    ldr r1, [r0, #4]
-; THUMB-M-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; THUMB-M-NEXT:    movs r1, #12
-; THUMB-M-NEXT:    ldrd r4, r10, [r0, #8]
-; THUMB-M-NEXT:    and.w r7, r1, r11, lsr #3
-; THUMB-M-NEXT:    subs r7, r5, r7
-; THUMB-M-NEXT:    lsl.w r2, r10, #1
-; THUMB-M-NEXT:    ldrd r5, r1, [r7, #8]
-; THUMB-M-NEXT:    lsl.w r2, r2, r9
-; THUMB-M-NEXT:    lsr.w r0, r4, r12
-; THUMB-M-NEXT:    orr.w r6, r0, r2
-; THUMB-M-NEXT:    and r0, r11, #31
-; THUMB-M-NEXT:    ldrd r8, r2, [r7]
-; THUMB-M-NEXT:    eor lr, r0, #31
-; THUMB-M-NEXT:    lsrs.w r7, r2, #1
-; THUMB-M-NEXT:    str r1, [sp] @ 4-byte Spill
-; THUMB-M-NEXT:    lsl.w r1, r5, r0
-; THUMB-M-NEXT:    lsr.w r7, r7, lr
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    orrs r6, r1
-; THUMB-M-NEXT:    str r6, [sp, #32]
-; THUMB-M-NEXT:    ldr r1, [sp, #4] @ 4-byte Reload
-; THUMB-M-NEXT:    lsls r4, r4, #1
-; THUMB-M-NEXT:    lsl.w r4, r4, r9
-; THUMB-M-NEXT:    lsls r2, r0
-; THUMB-M-NEXT:    ubfx r11, r11, #5, #2
-; THUMB-M-NEXT:    lsr.w r1, r1, r12
-; THUMB-M-NEXT:    orrs r1, r4
-; THUMB-M-NEXT:    lsr.w r4, r8, #1
-; THUMB-M-NEXT:    lsr.w r4, r4, lr
-; THUMB-M-NEXT:    orrs r2, r4
-; THUMB-M-NEXT:    orrs r1, r2
-; THUMB-M-NEXT:    str r1, [sp, #28]
-; THUMB-M-NEXT:    lsrs r2, r5, #1
-; THUMB-M-NEXT:    lsrs.w r1, r1, #1
-; THUMB-M-NEXT:    lsr.w r2, r2, lr
-; THUMB-M-NEXT:    orr.w r1, r1, r6, lsl #31
-; THUMB-M-NEXT:    str r1, [sp, #44]
-; THUMB-M-NEXT:    ldr r1, [sp, #176]
-; THUMB-M-NEXT:    str r1, [sp, #24]
-; THUMB-M-NEXT:    rrx r1, r1
-; THUMB-M-NEXT:    str r1, [sp, #40]
-; THUMB-M-NEXT:    ldr r1, [sp] @ 4-byte Reload
-; THUMB-M-NEXT:    lsls r1, r0
-; THUMB-M-NEXT:    orrs r1, r2
-; THUMB-M-NEXT:    lsr.w r2, r10, r12
-; THUMB-M-NEXT:    orrs r1, r2
-; THUMB-M-NEXT:    add r2, sp, #8
-; THUMB-M-NEXT:    bic r1, r1, #-134217728
-; THUMB-M-NEXT:    str r1, [sp, #36]
+; THUMB-M-NEXT:    .pad #148
+; THUMB-M-NEXT:    sub sp, #148
+; THUMB-M-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMB-M-NEXT:    mvn r0, #-134217728
+; THUMB-M-NEXT:    strd r2, r3, [sp, #36] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    movs r2, #0
+; THUMB-M-NEXT:    str r0, [sp, #140]
+; THUMB-M-NEXT:    mov.w r0, #-1
+; THUMB-M-NEXT:    strd r0, r0, [sp, #132]
+; THUMB-M-NEXT:    mvn r3, #-67108864
+; THUMB-M-NEXT:    str r2, [sp, #128]
+; THUMB-M-NEXT:    add r7, sp, #112
+; THUMB-M-NEXT:    strd r2, r2, [sp, #120]
+; THUMB-M-NEXT:    mov.w r8, #12
+; THUMB-M-NEXT:    strd r2, r2, [sp, #112]
+; THUMB-M-NEXT:    adds r7, #16
+; THUMB-M-NEXT:    strd r0, r0, [sp, #84]
+; THUMB-M-NEXT:    mov.w r0, #-2147483648
+; THUMB-M-NEXT:    ldr.w r11, [sp, #188]
+; THUMB-M-NEXT:    strd r2, r2, [sp, #104]
+; THUMB-M-NEXT:    strd r2, r2, [sp, #96]
+; THUMB-M-NEXT:    str r3, [sp, #92]
+; THUMB-M-NEXT:    strd r2, r0, [sp, #76]
+; THUMB-M-NEXT:    strd r2, r2, [sp, #68]
+; THUMB-M-NEXT:    strd r2, r2, [sp, #56]
+; THUMB-M-NEXT:    strd r2, r2, [sp, #48]
+; THUMB-M-NEXT:    movw r2, #4263
+; THUMB-M-NEXT:    movt r2, #2664
+; THUMB-M-NEXT:    ldr r0, [sp, #184]
+; THUMB-M-NEXT:    umull r2, r3, r11, r2
+; THUMB-M-NEXT:    str r0, [sp, #64]
+; THUMB-M-NEXT:    sub.w r2, r11, r3
+; THUMB-M-NEXT:    add.w r2, r3, r2, lsr #1
+; THUMB-M-NEXT:    movs r3, #123
+; THUMB-M-NEXT:    lsrs r2, r2, #6
+; THUMB-M-NEXT:    mls r2, r2, r3, r11
+; THUMB-M-NEXT:    and r12, r2, #31
+; THUMB-M-NEXT:    and.w r3, r8, r2, lsr #3
+; THUMB-M-NEXT:    rsb.w r2, r2, #122
+; THUMB-M-NEXT:    subs r4, r7, r3
+; THUMB-M-NEXT:    eor r10, r12, #31
+; THUMB-M-NEXT:    ldr r0, [r4]
+; THUMB-M-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMB-M-NEXT:    ldrd r5, r3, [r4, #4]
+; THUMB-M-NEXT:    lsrs r7, r0, #1
+; THUMB-M-NEXT:    ubfx r0, r2, #5, #2
+; THUMB-M-NEXT:    str r3, [sp, #12] @ 4-byte Spill
+; THUMB-M-NEXT:    lsr.w r7, r7, r10
+; THUMB-M-NEXT:    ldr r3, [r4, #12]
+; THUMB-M-NEXT:    lsl.w r4, r5, r12
+; THUMB-M-NEXT:    orr.w r6, r4, r7
+; THUMB-M-NEXT:    and r4, r2, #31
+; THUMB-M-NEXT:    add r2, sp, #80
+; THUMB-M-NEXT:    str r3, [sp, #24] @ 4-byte Spill
+; THUMB-M-NEXT:    add.w r2, r2, r0, lsl #2
+; THUMB-M-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMB-M-NEXT:    eor r7, r4, #31
+; THUMB-M-NEXT:    lsrs.w r5, r5, #1
+; THUMB-M-NEXT:    ldr r0, [r2, #4]
+; THUMB-M-NEXT:    lsr.w r5, r5, r10
+; THUMB-M-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; THUMB-M-NEXT:    ldrd lr, r2, [r2, #8]
+; THUMB-M-NEXT:    str r2, [sp, #4] @ 4-byte Spill
+; THUMB-M-NEXT:    lsr.w r2, r0, r4
+; THUMB-M-NEXT:    lsl.w r9, lr, #1
+; THUMB-M-NEXT:    lsr.w lr, lr, r4
+; THUMB-M-NEXT:    lsl.w r0, r9, r7
+; THUMB-M-NEXT:    orrs r0, r2
+; THUMB-M-NEXT:    add r2, sp, #48
+; THUMB-M-NEXT:    orrs r0, r6
 ; THUMB-M-NEXT:    adds r2, #16
-; THUMB-M-NEXT:    lsrs.w r1, r1, #1
-; THUMB-M-NEXT:    bic r1, r1, #-134217728
-; THUMB-M-NEXT:    str r1, [sp, #52]
-; THUMB-M-NEXT:    rrx r1, r6
-; THUMB-M-NEXT:    str r1, [sp, #48]
-; THUMB-M-NEXT:    movs r1, #12
-; THUMB-M-NEXT:    and.w r1, r1, r3, lsr #3
-; THUMB-M-NEXT:    subs r1, r2, r1
-; THUMB-M-NEXT:    ldr r4, [r1]
-; THUMB-M-NEXT:    str r4, [sp, #4] @ 4-byte Spill
-; THUMB-M-NEXT:    ldrd r2, r3, [r1, #4]
-; THUMB-M-NEXT:    ldr r1, [r1, #12]
-; THUMB-M-NEXT:    lsrs r6, r4, #1
-; THUMB-M-NEXT:    str r1, [sp] @ 4-byte Spill
-; THUMB-M-NEXT:    lsr.w r6, r6, r9
-; THUMB-M-NEXT:    lsl.w r1, r2, r12
-; THUMB-M-NEXT:    orr.w r8, r1, r6
-; THUMB-M-NEXT:    add r1, sp, #40
-; THUMB-M-NEXT:    lsrs.w r2, r2, #1
-; THUMB-M-NEXT:    add.w r7, r1, r11, lsl #2
-; THUMB-M-NEXT:    lsr.w r2, r2, r9
-; THUMB-M-NEXT:    adds r7, #4
-; THUMB-M-NEXT:    ldm r7, {r5, r6, r7}
-; THUMB-M-NEXT:    lsl.w r10, r6, #1
-; THUMB-M-NEXT:    lsl.w r4, r10, lr
-; THUMB-M-NEXT:    lsr.w r1, r5, r0
-; THUMB-M-NEXT:    orrs r1, r4
-; THUMB-M-NEXT:    lsl.w r4, r3, r12
-; THUMB-M-NEXT:    orrs r2, r4
-; THUMB-M-NEXT:    lsr.w r4, r6, r0
-; THUMB-M-NEXT:    lsls r6, r7, #1
-; THUMB-M-NEXT:    lsrs r3, r3, #1
-; THUMB-M-NEXT:    lsl.w r6, r6, lr
-; THUMB-M-NEXT:    orrs r4, r6
-; THUMB-M-NEXT:    orrs r2, r4
-; THUMB-M-NEXT:    ldr r4, [sp] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r3, r3, r9
-; THUMB-M-NEXT:    orr.w r1, r1, r8
-; THUMB-M-NEXT:    lsl.w r4, r4, r12
-; THUMB-M-NEXT:    orrs r3, r4
-; THUMB-M-NEXT:    lsr.w r4, r7, r0
-; THUMB-M-NEXT:    orrs r3, r4
-; THUMB-M-NEXT:    add r4, sp, #40
-; THUMB-M-NEXT:    ldr.w r4, [r4, r11, lsl #2]
-; THUMB-M-NEXT:    lsr.w r0, r4, r0
-; THUMB-M-NEXT:    lsls r4, r5, #1
-; THUMB-M-NEXT:    lsl.w r7, r4, lr
-; THUMB-M-NEXT:    orrs r0, r7
-; THUMB-M-NEXT:    ldr r7, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    and.w r6, r1, r0
+; THUMB-M-NEXT:    and.w r0, r8, r11, lsr #3
+; THUMB-M-NEXT:    subs r0, r2, r0
+; THUMB-M-NEXT:    ldrd r9, r3, [r0]
+; THUMB-M-NEXT:    ldrd r8, r0, [r0, #8]
+; THUMB-M-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; THUMB-M-NEXT:    and r0, r11, #31
+; THUMB-M-NEXT:    eor r1, r0, #31
+; THUMB-M-NEXT:    lsr.w r2, r9, #1
+; THUMB-M-NEXT:    lsl.w r11, r3, r0
+; THUMB-M-NEXT:    lsrs.w r3, r3, #1
+; THUMB-M-NEXT:    lsrs r2, r1
+; THUMB-M-NEXT:    lsrs r3, r1
+; THUMB-M-NEXT:    orr.w r2, r2, r11
+; THUMB-M-NEXT:    ldr.w r11, [sp, #12] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r2, r6
+; THUMB-M-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; THUMB-M-NEXT:    lsl.w r2, r11, r12
+; THUMB-M-NEXT:    orrs r2, r5
+; THUMB-M-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r6, r5, #1
+; THUMB-M-NEXT:    lsls r6, r7
+; THUMB-M-NEXT:    orr.w r6, r6, lr
+; THUMB-M-NEXT:    orrs r2, r6
+; THUMB-M-NEXT:    ldr r6, [sp, #36] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r2, r6
+; THUMB-M-NEXT:    lsl.w r6, r8, r0
+; THUMB-M-NEXT:    orrs r3, r6
+; THUMB-M-NEXT:    lsr.w r6, r11, #1
+; THUMB-M-NEXT:    orrs r2, r3
+; THUMB-M-NEXT:    ldr r3, [sp, #24] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r6, r6, r10
+; THUMB-M-NEXT:    lsl.w r3, r3, r12
+; THUMB-M-NEXT:    orrs r3, r6
+; THUMB-M-NEXT:    lsr.w r6, r5, r4
+; THUMB-M-NEXT:    orrs r3, r6
+; THUMB-M-NEXT:    ldr r6, [sp, #40] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r5, r8, #1
+; THUMB-M-NEXT:    ands r3, r6
+; THUMB-M-NEXT:    ldr r6, [sp, #8] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r1, r5, r1
+; THUMB-M-NEXT:    lsls r6, r0
+; THUMB-M-NEXT:    orrs r1, r6
+; THUMB-M-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r3, r1
+; THUMB-M-NEXT:    add r1, sp, #80
+; THUMB-M-NEXT:    lsl.w r0, r9, r0
+; THUMB-M-NEXT:    ldr.w r1, [r1, r6, lsl #2]
+; THUMB-M-NEXT:    ldr r6, [sp, #20] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r6, r6, #1
+; THUMB-M-NEXT:    lsrs r1, r4
+; THUMB-M-NEXT:    lsl.w r7, r6, r7
+; THUMB-M-NEXT:    orrs r1, r7
+; THUMB-M-NEXT:    ldr r7, [sp, #32] @ 4-byte Reload
 ; THUMB-M-NEXT:    lsl.w r7, r7, r12
-; THUMB-M-NEXT:    orrs r0, r7
-; THUMB-M-NEXT:    add sp, #140
+; THUMB-M-NEXT:    orrs r1, r7
+; THUMB-M-NEXT:    ldr r7, [sp, #44] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r1, r7
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #16] @ 4-byte Reload
+; THUMB-M-NEXT:    add sp, #148
 ; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_b123_var:
@@ -2814,151 +2594,141 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-A-NEXT:    .pad #148
 ; THUMB-A-NEXT:    sub sp, #148
-; THUMB-A-NEXT:    bic r6, r3, #-134217728
-; THUMB-A-NEXT:    lsls r3, r3, #1
-; THUMB-A-NEXT:    add.w r12, sp, #112
-; THUMB-A-NEXT:    orr.w r3, r3, r2, lsr #31
-; THUMB-A-NEXT:    stm.w r12, {r0, r1, r2, r6}
-; THUMB-A-NEXT:    lsls r2, r2, #1
-; THUMB-A-NEXT:    orr.w r2, r2, r1, lsr #31
-; THUMB-A-NEXT:    lsls r1, r1, #1
-; THUMB-A-NEXT:    movs r5, #0
-; THUMB-A-NEXT:    orr.w r1, r1, r0, lsr #31
-; THUMB-A-NEXT:    ldr r4, [sp, #188]
-; THUMB-A-NEXT:    strd r5, r5, [sp, #136]
-; THUMB-A-NEXT:    lsls r0, r0, #1
-; THUMB-A-NEXT:    strd r5, r5, [sp, #128]
-; THUMB-A-NEXT:    str r1, [sp, #100]
+; THUMB-A-NEXT:    mov r5, r1
+; THUMB-A-NEXT:    mvn r1, #-134217728
+; THUMB-A-NEXT:    strd r2, r3, [sp, #36] @ 8-byte Folded Spill
+; THUMB-A-NEXT:    mov.w r7, #-1
+; THUMB-A-NEXT:    str r0, [sp, #44] @ 4-byte Spill
+; THUMB-A-NEXT:    mov.w r12, #12
+; THUMB-A-NEXT:    str r1, [sp, #140]
 ; THUMB-A-NEXT:    movw r1, #4263
+; THUMB-A-NEXT:    ldrd r2, r11, [sp, #184]
 ; THUMB-A-NEXT:    movt r1, #2664
-; THUMB-A-NEXT:    str r2, [sp, #104]
-; THUMB-A-NEXT:    umull r1, r2, r4, r1
-; THUMB-A-NEXT:    str r3, [sp, #108]
-; THUMB-A-NEXT:    add r3, sp, #112
-; THUMB-A-NEXT:    str r5, [sp, #92]
-; THUMB-A-NEXT:    strd r5, r5, [sp, #84]
-; THUMB-A-NEXT:    strd r5, r5, [sp, #24]
-; THUMB-A-NEXT:    subs r1, r4, r2
-; THUMB-A-NEXT:    strd r5, r5, [sp, #16]
-; THUMB-A-NEXT:    strd r5, r5, [sp, #76]
-; THUMB-A-NEXT:    add.w r1, r2, r1, lsr #1
-; THUMB-A-NEXT:    movs r2, #123
-; THUMB-A-NEXT:    str r5, [sp, #72]
-; THUMB-A-NEXT:    lsrs r1, r1, #6
-; THUMB-A-NEXT:    strd r5, r5, [sp, #64]
-; THUMB-A-NEXT:    mls r1, r1, r2, r4
-; THUMB-A-NEXT:    and r12, r1, #31
-; THUMB-A-NEXT:    rsb.w r11, r1, #122
-; THUMB-A-NEXT:    ubfx r2, r1, #5, #2
-; THUMB-A-NEXT:    eor r10, r12, #31
-; THUMB-A-NEXT:    add.w r2, r3, r2, lsl #2
-; THUMB-A-NEXT:    ldr r3, [r2, #4]
-; THUMB-A-NEXT:    str r3, [sp, #8] @ 4-byte Spill
-; THUMB-A-NEXT:    ldrd r5, r2, [r2, #8]
-; THUMB-A-NEXT:    str r2, [sp, #12] @ 4-byte Spill
-; THUMB-A-NEXT:    str r0, [sp, #96]
-; THUMB-A-NEXT:    lsls r0, r2, #1
-; THUMB-A-NEXT:    lsl.w r0, r0, r10
-; THUMB-A-NEXT:    lsr.w r2, r5, r12
-; THUMB-A-NEXT:    orr.w r3, r2, r0
-; THUMB-A-NEXT:    add r0, sp, #80
-; THUMB-A-NEXT:    movs r2, #12
-; THUMB-A-NEXT:    adds r0, #16
-; THUMB-A-NEXT:    and.w r7, r2, r11, lsr #3
-; THUMB-A-NEXT:    lsls r5, r5, #1
-; THUMB-A-NEXT:    subs r0, r0, r7
-; THUMB-A-NEXT:    lsl.w r5, r5, r10
-; THUMB-A-NEXT:    ldrd r7, r4, [r0]
-; THUMB-A-NEXT:    ldrd r2, r0, [r0, #8]
-; THUMB-A-NEXT:    lsrs.w r9, r4, #1
-; THUMB-A-NEXT:    str r0, [sp, #4] @ 4-byte Spill
-; THUMB-A-NEXT:    and r0, r11, #31
-; THUMB-A-NEXT:    eor lr, r0, #31
-; THUMB-A-NEXT:    lsrs r7, r7, #1
-; THUMB-A-NEXT:    lsl.w r8, r2, r0
-; THUMB-A-NEXT:    lsls r4, r0
-; THUMB-A-NEXT:    lsr.w r9, r9, lr
-; THUMB-A-NEXT:    orr.w r6, r8, r9
-; THUMB-A-NEXT:    orrs r6, r3
-; THUMB-A-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
-; THUMB-A-NEXT:    lsr.w r7, r7, lr
-; THUMB-A-NEXT:    orrs r4, r7
-; THUMB-A-NEXT:    lsrs r2, r2, #1
-; THUMB-A-NEXT:    ubfx r11, r11, #5, #2
-; THUMB-A-NEXT:    lsr.w r8, r3, r12
-; THUMB-A-NEXT:    orr.w r5, r5, r8
-; THUMB-A-NEXT:    orrs r4, r5
-; THUMB-A-NEXT:    str r4, [sp, #36]
-; THUMB-A-NEXT:    lsr.w r2, r2, lr
-; THUMB-A-NEXT:    lsrs.w r4, r4, #1
-; THUMB-A-NEXT:    orr.w r4, r4, r6, lsl #31
-; THUMB-A-NEXT:    str r4, [sp, #52]
-; THUMB-A-NEXT:    ldr r4, [sp, #184]
-; THUMB-A-NEXT:    str r4, [sp, #32]
-; THUMB-A-NEXT:    ldr r3, [sp, #4] @ 4-byte Reload
-; THUMB-A-NEXT:    rrx r4, r4
-; THUMB-A-NEXT:    lsl.w r5, r3, r0
-; THUMB-A-NEXT:    ldr r3, [sp, #12] @ 4-byte Reload
-; THUMB-A-NEXT:    orrs r2, r5
-; THUMB-A-NEXT:    lsr.w r5, r3, r12
-; THUMB-A-NEXT:    orrs r2, r5
-; THUMB-A-NEXT:    bic r2, r2, #-134217728
-; THUMB-A-NEXT:    str r2, [sp, #44]
-; THUMB-A-NEXT:    str r4, [sp, #48]
-; THUMB-A-NEXT:    lsrs.w r2, r2, #1
-; THUMB-A-NEXT:    bic r2, r2, #-134217728
-; THUMB-A-NEXT:    str r2, [sp, #60]
-; THUMB-A-NEXT:    rrx r2, r6
-; THUMB-A-NEXT:    str r6, [sp, #40]
-; THUMB-A-NEXT:    str r2, [sp, #56]
-; THUMB-A-NEXT:    movs r2, #12
-; THUMB-A-NEXT:    and.w r1, r2, r1, lsr #3
-; THUMB-A-NEXT:    add r2, sp, #16
+; THUMB-A-NEXT:    umull r1, r3, r11, r1
+; THUMB-A-NEXT:    strd r7, r7, [sp, #132]
+; THUMB-A-NEXT:    movs r1, #0
+; THUMB-A-NEXT:    str r1, [sp, #128]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #120]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #112]
+; THUMB-A-NEXT:    sub.w r6, r11, r3
+; THUMB-A-NEXT:    strd r7, r7, [sp, #84]
+; THUMB-A-NEXT:    mov.w r7, #-2147483648
+; THUMB-A-NEXT:    add.w r3, r3, r6, lsr #1
+; THUMB-A-NEXT:    movs r6, #123
+; THUMB-A-NEXT:    str r7, [sp, #80]
+; THUMB-A-NEXT:    add r7, sp, #112
+; THUMB-A-NEXT:    lsrs r3, r3, #6
+; THUMB-A-NEXT:    adds r7, #16
+; THUMB-A-NEXT:    mls r3, r3, r6, r11
+; THUMB-A-NEXT:    mvn r6, #-67108864
+; THUMB-A-NEXT:    str r6, [sp, #92]
+; THUMB-A-NEXT:    str r2, [sp, #64]
+; THUMB-A-NEXT:    and r4, r3, #31
+; THUMB-A-NEXT:    and.w r2, r12, r3, lsr #3
+; THUMB-A-NEXT:    eor r8, r4, #31
+; THUMB-A-NEXT:    subs r2, r7, r2
+; THUMB-A-NEXT:    ldr r0, [r2]
+; THUMB-A-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r7, [r2, #4]
+; THUMB-A-NEXT:    str r7, [sp, #4] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r6, [r2, #8]
+; THUMB-A-NEXT:    str r6, [sp, #20] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r2, [r2, #12]
+; THUMB-A-NEXT:    str r2, [sp, #28] @ 4-byte Spill
+; THUMB-A-NEXT:    lsl.w r2, r7, r4
+; THUMB-A-NEXT:    strd r1, r1, [sp, #104]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #96]
+; THUMB-A-NEXT:    str r1, [sp, #76]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #68]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #56]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #48]
+; THUMB-A-NEXT:    lsrs r1, r0, #1
+; THUMB-A-NEXT:    lsr.w r1, r1, r8
+; THUMB-A-NEXT:    orrs r2, r1
+; THUMB-A-NEXT:    rsb.w r1, r3, #122
+; THUMB-A-NEXT:    add r3, sp, #80
+; THUMB-A-NEXT:    ubfx r0, r1, #5, #2
+; THUMB-A-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; THUMB-A-NEXT:    and r1, r1, #31
+; THUMB-A-NEXT:    add.w r7, r3, r0, lsl #2
+; THUMB-A-NEXT:    eor r9, r1, #31
+; THUMB-A-NEXT:    ldr r3, [r7, #4]
+; THUMB-A-NEXT:    str r3, [sp, #16] @ 4-byte Spill
+; THUMB-A-NEXT:    ldrd lr, r10, [r7, #8]
+; THUMB-A-NEXT:    lsr.w r6, r3, r1
+; THUMB-A-NEXT:    lsl.w r7, r10, #1
+; THUMB-A-NEXT:    lsl.w r7, r7, r9
+; THUMB-A-NEXT:    lsl.w r0, lr, #1
+; THUMB-A-NEXT:    lsl.w r0, r0, r9
+; THUMB-A-NEXT:    orrs r0, r6
+; THUMB-A-NEXT:    orrs r0, r2
+; THUMB-A-NEXT:    add r2, sp, #48
+; THUMB-A-NEXT:    and.w r6, r5, r0
+; THUMB-A-NEXT:    and.w r0, r12, r11, lsr #3
 ; THUMB-A-NEXT:    adds r2, #16
-; THUMB-A-NEXT:    subs r1, r2, r1
-; THUMB-A-NEXT:    ldr r3, [r1]
-; THUMB-A-NEXT:    str r3, [sp, #12] @ 4-byte Spill
-; THUMB-A-NEXT:    ldrd r2, r5, [r1, #4]
-; THUMB-A-NEXT:    ldr r1, [r1, #12]
-; THUMB-A-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMB-A-NEXT:    lsrs r1, r3, #1
-; THUMB-A-NEXT:    add r3, sp, #48
-; THUMB-A-NEXT:    lsl.w r7, r2, r12
-; THUMB-A-NEXT:    lsr.w r1, r1, r10
-; THUMB-A-NEXT:    add.w r6, r3, r11, lsl #2
-; THUMB-A-NEXT:    orrs r1, r7
-; THUMB-A-NEXT:    ldrd r4, r7, [r6, #4]
-; THUMB-A-NEXT:    lsl.w r8, r7, #1
-; THUMB-A-NEXT:    ldr r6, [r6, #12]
-; THUMB-A-NEXT:    lsrs.w r2, r2, #1
-; THUMB-A-NEXT:    lsl.w r8, r8, lr
-; THUMB-A-NEXT:    lsr.w r9, r4, r0
-; THUMB-A-NEXT:    orr.w r3, r9, r8
-; THUMB-A-NEXT:    orrs r1, r3
-; THUMB-A-NEXT:    lsl.w r3, r5, r12
-; THUMB-A-NEXT:    lsr.w r2, r2, r10
-; THUMB-A-NEXT:    lsrs r5, r5, #1
-; THUMB-A-NEXT:    orrs r2, r3
-; THUMB-A-NEXT:    lsr.w r3, r7, r0
-; THUMB-A-NEXT:    lsls r7, r6, #1
-; THUMB-A-NEXT:    lsr.w r5, r5, r10
-; THUMB-A-NEXT:    lsl.w r7, r7, lr
+; THUMB-A-NEXT:    subs r0, r2, r0
+; THUMB-A-NEXT:    ldr r2, [r0]
+; THUMB-A-NEXT:    str r2, [sp, #12] @ 4-byte Spill
+; THUMB-A-NEXT:    ldrd r12, r5, [r0, #4]
+; THUMB-A-NEXT:    ldr r0, [r0, #12]
+; THUMB-A-NEXT:    lsrs r3, r2, #1
+; THUMB-A-NEXT:    str r0, [sp] @ 4-byte Spill
+; THUMB-A-NEXT:    and r0, r11, #31
+; THUMB-A-NEXT:    eor r2, r0, #31
+; THUMB-A-NEXT:    lsl.w r11, r12, r0
+; THUMB-A-NEXT:    lsrs r3, r2
+; THUMB-A-NEXT:    orr.w r3, r3, r11
+; THUMB-A-NEXT:    ldr.w r11, [sp, #20] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r3, r6
+; THUMB-A-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; THUMB-A-NEXT:    str r3, [sp, #8] @ 4-byte Spill
+; THUMB-A-NEXT:    lsl.w r3, r11, r4
+; THUMB-A-NEXT:    lsrs.w r6, r6, #1
+; THUMB-A-NEXT:    lsr.w r6, r6, r8
+; THUMB-A-NEXT:    orrs r3, r6
+; THUMB-A-NEXT:    lsr.w r6, lr, r1
+; THUMB-A-NEXT:    orrs r7, r6
 ; THUMB-A-NEXT:    orrs r3, r7
-; THUMB-A-NEXT:    orrs r2, r3
-; THUMB-A-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
-; THUMB-A-NEXT:    lsls r4, r4, #1
-; THUMB-A-NEXT:    lsl.w r7, r4, lr
-; THUMB-A-NEXT:    lsl.w r3, r3, r12
-; THUMB-A-NEXT:    orrs r3, r5
-; THUMB-A-NEXT:    lsr.w r5, r6, r0
-; THUMB-A-NEXT:    add r6, sp, #48
-; THUMB-A-NEXT:    orrs r3, r5
-; THUMB-A-NEXT:    ldr.w r6, [r6, r11, lsl #2]
-; THUMB-A-NEXT:    lsr.w r0, r6, r0
-; THUMB-A-NEXT:    orrs r0, r7
-; THUMB-A-NEXT:    ldr r7, [sp, #12] @ 4-byte Reload
-; THUMB-A-NEXT:    lsl.w r7, r7, r12
-; THUMB-A-NEXT:    orrs r0, r7
+; THUMB-A-NEXT:    ldr r7, [sp, #36] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs.w r6, r12, #1
+; THUMB-A-NEXT:    ands r3, r7
+; THUMB-A-NEXT:    lsl.w r7, r5, r0
+; THUMB-A-NEXT:    lsrs r6, r2
+; THUMB-A-NEXT:    orrs r7, r6
+; THUMB-A-NEXT:    orr.w r6, r3, r7
+; THUMB-A-NEXT:    ldr r3, [sp, #28] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r7, r11, #1
+; THUMB-A-NEXT:    lsrs r5, r5, #1
+; THUMB-A-NEXT:    lsr.w r7, r7, r8
+; THUMB-A-NEXT:    lsr.w r2, r5, r2
+; THUMB-A-NEXT:    lsls r3, r4
+; THUMB-A-NEXT:    orrs r3, r7
+; THUMB-A-NEXT:    lsr.w r7, r10, r1
+; THUMB-A-NEXT:    orrs r3, r7
+; THUMB-A-NEXT:    ldr r7, [sp, #40] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r3, r7
+; THUMB-A-NEXT:    ldr r7, [sp] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r7, r0
+; THUMB-A-NEXT:    orrs r2, r7
+; THUMB-A-NEXT:    ldr r7, [sp, #24] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r3, r2
+; THUMB-A-NEXT:    add r2, sp, #80
+; THUMB-A-NEXT:    ldr.w r2, [r2, r7, lsl #2]
+; THUMB-A-NEXT:    lsr.w r1, r2, r1
+; THUMB-A-NEXT:    ldr r2, [sp, #16] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r2, r2, #1
+; THUMB-A-NEXT:    lsl.w r2, r2, r9
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #32] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r2, r4
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #44] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r1, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r0, r2, r0
+; THUMB-A-NEXT:    mov r2, r6
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
 ; THUMB-A-NEXT:    add sp, #148
 ; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b123 %base, i32 %val, i32 %off
@@ -2968,96 +2738,33 @@ define b123 @test_bitinsert_b123_var(b123 %base, i32 %val, i32 %off) {
 define b123 @test_bitinsert_b123_crossword(b123 %base, i32 %val) {
 ; ARM-LABEL: test_bitinsert_b123_crossword:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, r5, r11, lr}
-; ARM-NEXT:    push {r4, r5, r11, lr}
+; ARM-NEXT:    ldr r12, [sp]
+; ARM-NEXT:    bic r1, r1, #-268435456
+; ARM-NEXT:    and r2, r2, #-268435456
 ; ARM-NEXT:    bic r3, r3, #-134217728
-; ARM-NEXT:    lsl lr, r1, #1
-; ARM-NEXT:    orr lr, lr, r0, lsr #31
-; ARM-NEXT:    ubfx r4, r0, #1, #30
-; ARM-NEXT:    lsl r3, r3, #4
-; ARM-NEXT:    ubfx r1, r1, #1, #27
-; ARM-NEXT:    orr r3, r3, r2, lsr #28
-; ARM-NEXT:    orr r4, r4, lr, lsl #30
-; ARM-NEXT:    orr r3, r3, r0, lsl #31
-; ARM-NEXT:    lsrs lr, r1, #1
-; ARM-NEXT:    ldr r12, [sp, #16]
-; ARM-NEXT:    rrx r4, r4
-; ARM-NEXT:    lsrs r1, r3, #1
-; ARM-NEXT:    lsr r5, r0, #1
-; ARM-NEXT:    orr r0, r1, r5, lsl #31
-; ARM-NEXT:    and r1, r2, #-268435456
-; ARM-NEXT:    orr r2, r1, r12, lsr #4
-; ARM-NEXT:    lsl r1, r5, #28
-; ARM-NEXT:    orr r3, r1, r3, lsr #4
-; ARM-NEXT:    bic r1, lr, #-134217728
-; ARM-NEXT:    lsr r0, r0, #30
-; ARM-NEXT:    lsl r1, r1, #2
-; ARM-NEXT:    orr r0, r0, r4, lsl #2
-; ARM-NEXT:    orr r1, r1, r4, lsr #30
 ; ARM-NEXT:    orr r1, r1, r12, lsl #28
-; ARM-NEXT:    pop {r4, r5, r11, pc}
+; ARM-NEXT:    orr r2, r2, r12, lsr #4
+; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_b123_crossword:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, r5, r7, lr}
-; THUMB-M-NEXT:    push {r4, r5, r7, lr}
+; THUMB-M-NEXT:    ldr.w r12, [sp]
+; THUMB-M-NEXT:    bic r1, r1, #-268435456
+; THUMB-M-NEXT:    and r2, r2, #-268435456
 ; THUMB-M-NEXT:    bic r3, r3, #-134217728
-; THUMB-M-NEXT:    lsl.w r12, r1, #1
-; THUMB-M-NEXT:    orr.w r12, r12, r0, lsr #31
-; THUMB-M-NEXT:    ubfx lr, r0, #1, #30
-; THUMB-M-NEXT:    lsls r3, r3, #4
-; THUMB-M-NEXT:    ubfx r1, r1, #1, #27
-; THUMB-M-NEXT:    orr.w r3, r3, r2, lsr #28
-; THUMB-M-NEXT:    orr.w r12, lr, r12, lsl #30
-; THUMB-M-NEXT:    orr.w r3, r3, r0, lsl #31
-; THUMB-M-NEXT:    lsrs.w lr, r1, #1
-; THUMB-M-NEXT:    ldr r5, [sp, #16]
-; THUMB-M-NEXT:    rrx r12, r12
-; THUMB-M-NEXT:    lsrs.w r1, r3, #1
-; THUMB-M-NEXT:    lsrs r4, r0, #1
-; THUMB-M-NEXT:    orr.w r0, r1, r4, lsl #31
-; THUMB-M-NEXT:    and r1, r2, #-268435456
-; THUMB-M-NEXT:    orr.w r2, r1, r5, lsr #4
-; THUMB-M-NEXT:    lsls r1, r4, #28
-; THUMB-M-NEXT:    orr.w r3, r1, r3, lsr #4
-; THUMB-M-NEXT:    bic r1, lr, #-134217728
-; THUMB-M-NEXT:    lsrs r0, r0, #30
-; THUMB-M-NEXT:    lsls r1, r1, #2
-; THUMB-M-NEXT:    orr.w r0, r0, r12, lsl #2
-; THUMB-M-NEXT:    orr.w r1, r1, r12, lsr #30
-; THUMB-M-NEXT:    orr.w r1, r1, r5, lsl #28
-; THUMB-M-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-M-NEXT:    orr.w r1, r1, r12, lsl #28
+; THUMB-M-NEXT:    orr.w r2, r2, r12, lsr #4
+; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_b123_crossword:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r4, r5, r7, lr}
-; THUMB-A-NEXT:    push {r4, r5, r7, lr}
+; THUMB-A-NEXT:    ldr.w r12, [sp]
+; THUMB-A-NEXT:    bic r1, r1, #-268435456
+; THUMB-A-NEXT:    and r2, r2, #-268435456
 ; THUMB-A-NEXT:    bic r3, r3, #-134217728
-; THUMB-A-NEXT:    lsl.w lr, r1, #1
-; THUMB-A-NEXT:    orr.w lr, lr, r0, lsr #31
-; THUMB-A-NEXT:    ubfx r4, r0, #1, #30
-; THUMB-A-NEXT:    lsls r3, r3, #4
-; THUMB-A-NEXT:    ubfx r1, r1, #1, #27
-; THUMB-A-NEXT:    orr.w r3, r3, r2, lsr #28
-; THUMB-A-NEXT:    orr.w r4, r4, lr, lsl #30
-; THUMB-A-NEXT:    orr.w r3, r3, r0, lsl #31
-; THUMB-A-NEXT:    lsrs.w lr, r1, #1
-; THUMB-A-NEXT:    ldr.w r12, [sp, #16]
-; THUMB-A-NEXT:    rrx r4, r4
-; THUMB-A-NEXT:    lsrs.w r1, r3, #1
-; THUMB-A-NEXT:    lsrs r5, r0, #1
-; THUMB-A-NEXT:    orr.w r0, r1, r5, lsl #31
-; THUMB-A-NEXT:    and r1, r2, #-268435456
-; THUMB-A-NEXT:    orr.w r2, r1, r12, lsr #4
-; THUMB-A-NEXT:    lsls r1, r5, #28
-; THUMB-A-NEXT:    orr.w r3, r1, r3, lsr #4
-; THUMB-A-NEXT:    bic r1, lr, #-134217728
-; THUMB-A-NEXT:    lsrs r0, r0, #30
-; THUMB-A-NEXT:    lsls r1, r1, #2
-; THUMB-A-NEXT:    orr.w r0, r0, r4, lsl #2
-; THUMB-A-NEXT:    orr.w r1, r1, r4, lsr #30
 ; THUMB-A-NEXT:    orr.w r1, r1, r12, lsl #28
-; THUMB-A-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-A-NEXT:    orr.w r2, r2, r12, lsr #4
+; THUMB-A-NEXT:    bx lr
   %result = bitinsert b123 %base, i32 %val, i32 60
   ret b123 %result
 }
@@ -3106,26 +2813,33 @@ define b8 @test_bitinsert_val_b8_full(b8 %base, b8 %val) {
 define b32 @test_bitinsert_val_b8_into_b32_var(b32 %base, b8 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_val_b8_into_b32_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, r2
-; ARM-NEXT:    bfi r0, r1, #0, #8
-; ARM-NEXT:    rsb r1, r2, #0
-; ARM-NEXT:    ror r0, r0, r1
+; ARM-NEXT:    rsb r12, r2, #0
+; ARM-NEXT:    mvn r3, #255
+; ARM-NEXT:    uxtb r1, r1
+; ARM-NEXT:    and r0, r0, r3, ror r12
+; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b8_into_b32_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    rors r0, r2
-; THUMB-M-NEXT:    bfi r0, r1, #0, #8
-; THUMB-M-NEXT:    rsbs r1, r2, #0
-; THUMB-M-NEXT:    rors r0, r1
+; THUMB-M-NEXT:    uxtb r1, r1
+; THUMB-M-NEXT:    mvn r3, #255
+; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    rsbs r2, r2, #0
+; THUMB-M-NEXT:    ror.w r2, r3, r2
+; THUMB-M-NEXT:    ands r0, r2
+; THUMB-M-NEXT:    orrs r0, r1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b8_into_b32_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    rors r0, r2
-; THUMB-A-NEXT:    bfi r0, r1, #0, #8
-; THUMB-A-NEXT:    rsbs r1, r2, #0
-; THUMB-A-NEXT:    rors r0, r1
+; THUMB-A-NEXT:    rsb.w r12, r2, #0
+; THUMB-A-NEXT:    mvn r3, #255
+; THUMB-A-NEXT:    uxtb r1, r1
+; THUMB-A-NEXT:    ror.w r3, r3, r12
+; THUMB-A-NEXT:    ands r0, r3
+; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, b8 %val, i32 %off
   ret b32 %result
@@ -3134,23 +2848,23 @@ define b32 @test_bitinsert_val_b8_into_b32_var(b32 %base, b8 %val, i32 %off) {
 define b32 @test_bitinsert_val_b8_into_b32_const_mid(b32 %base, b8 %val) {
 ; ARM-LABEL: test_bitinsert_val_b8_into_b32_const_mid:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, #12
-; ARM-NEXT:    bfi r0, r1, #0, #8
-; ARM-NEXT:    ror r0, r0, #20
+; ARM-NEXT:    uxtb r1, r1
+; ARM-NEXT:    bic r0, r0, #1044480
+; ARM-NEXT:    orr r0, r0, r1, lsl #12
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b8_into_b32_const_mid:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    ror.w r0, r0, #12
-; THUMB-M-NEXT:    bfi r0, r1, #0, #8
-; THUMB-M-NEXT:    ror.w r0, r0, #20
+; THUMB-M-NEXT:    uxtb r1, r1
+; THUMB-M-NEXT:    bic r0, r0, #1044480
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #12
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b8_into_b32_const_mid:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    ror.w r0, r0, #12
-; THUMB-A-NEXT:    bfi r0, r1, #0, #8
-; THUMB-A-NEXT:    ror.w r0, r0, #20
+; THUMB-A-NEXT:    uxtb r1, r1
+; THUMB-A-NEXT:    bic r0, r0, #1044480
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #12
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, b8 %val, i32 12
   ret b32 %result
@@ -3181,49 +2895,40 @@ define b64 @test_bitinsert_val_b8_into_b64_const_top(b64 %base, b8 %val) {
 define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_val_b1_into_b8:
 ; ARM:       @ %bb.0:
+; ARM-NEXT:    movw r3, #65278
 ; ARM-NEXT:    and r12, r2, #7
-; ARM-NEXT:    rsb r2, r2, #0
-; ARM-NEXT:    and r2, r2, #7
-; ARM-NEXT:    uxtb r3, r0
-; ARM-NEXT:    lsr r3, r3, r12
-; ARM-NEXT:    orr r0, r3, r0, lsl r2
-; ARM-NEXT:    bfi r0, r1, #0, #1
-; ARM-NEXT:    uxtb r1, r0
-; ARM-NEXT:    orr r0, r1, r0, lsl #8
-; ARM-NEXT:    lsl r0, r0, r12
-; ARM-NEXT:    lsr r0, r0, #8
+; ARM-NEXT:    movt r3, #65535
+; ARM-NEXT:    and r1, r1, #1
+; ARM-NEXT:    lsl r3, r3, r12
+; ARM-NEXT:    uxtb r2, r2
+; ARM-NEXT:    and r0, r0, r3, lsr #8
+; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b1_into_b8:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r12, r2, #7
-; THUMB-M-NEXT:    rsbs r2, r2, #0
+; THUMB-M-NEXT:    and r1, r1, #1
+; THUMB-M-NEXT:    uxtb r3, r2
 ; THUMB-M-NEXT:    and r2, r2, #7
-; THUMB-M-NEXT:    uxtb r3, r0
-; THUMB-M-NEXT:    lsr.w r3, r3, r12
-; THUMB-M-NEXT:    lsls r0, r2
-; THUMB-M-NEXT:    orrs r0, r3
-; THUMB-M-NEXT:    bfi r0, r1, #0, #1
-; THUMB-M-NEXT:    uxtb r1, r0
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsl #8
-; THUMB-M-NEXT:    lsl.w r0, r0, r12
-; THUMB-M-NEXT:    lsrs r0, r0, #8
+; THUMB-M-NEXT:    lsls r1, r3
+; THUMB-M-NEXT:    movw r3, #65278
+; THUMB-M-NEXT:    movt r3, #65535
+; THUMB-M-NEXT:    lsl.w r2, r3, r2
+; THUMB-M-NEXT:    and.w r0, r0, r2, lsr #8
+; THUMB-M-NEXT:    orrs r0, r1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b1_into_b8:
 ; THUMB-A:       @ %bb.0:
+; THUMB-A-NEXT:    movw r3, #65278
 ; THUMB-A-NEXT:    and r12, r2, #7
-; THUMB-A-NEXT:    rsbs r2, r2, #0
-; THUMB-A-NEXT:    and r2, r2, #7
-; THUMB-A-NEXT:    uxtb r3, r0
-; THUMB-A-NEXT:    lsr.w r3, r3, r12
-; THUMB-A-NEXT:    lsls r0, r2
-; THUMB-A-NEXT:    orrs r0, r3
-; THUMB-A-NEXT:    bfi r0, r1, #0, #1
-; THUMB-A-NEXT:    uxtb r1, r0
-; THUMB-A-NEXT:    orr.w r0, r1, r0, lsl #8
-; THUMB-A-NEXT:    lsl.w r0, r0, r12
-; THUMB-A-NEXT:    lsrs r0, r0, #8
+; THUMB-A-NEXT:    movt r3, #65535
+; THUMB-A-NEXT:    and r1, r1, #1
+; THUMB-A-NEXT:    lsl.w r3, r3, r12
+; THUMB-A-NEXT:    uxtb r2, r2
+; THUMB-A-NEXT:    and.w r0, r0, r3, lsr #8
+; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b8 %base, b1 %val, i32 %off
   ret b8 %result
@@ -3232,23 +2937,20 @@ define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 define b32 @test_bitinsert_val_b1_into_b32_const_top(b32 %base, b1 %val) {
 ; ARM-LABEL: test_bitinsert_val_b1_into_b32_const_top:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    and r1, r1, #1
-; ARM-NEXT:    orr r0, r1, r0, lsl #1
-; ARM-NEXT:    ror r0, r0, #1
+; ARM-NEXT:    bic r0, r0, #-2147483648
+; ARM-NEXT:    orr r0, r0, r1, lsl #31
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b1_into_b32_const_top:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    and r1, r1, #1
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsl #1
-; THUMB-M-NEXT:    ror.w r0, r0, #1
+; THUMB-M-NEXT:    bic r0, r0, #-2147483648
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #31
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b1_into_b32_const_top:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    and r1, r1, #1
-; THUMB-A-NEXT:    orr.w r0, r1, r0, lsl #1
-; THUMB-A-NEXT:    ror.w r0, r0, #1
+; THUMB-A-NEXT:    bic r0, r0, #-2147483648
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #31
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, b1 %val, i32 31
   ret b32 %result
@@ -3276,26 +2978,36 @@ define b21 @test_bitinsert_val_b21_full(b21 %base, b21 %val) {
 define b32 @test_bitinsert_val_b21_into_b32_var(b32 %base, b21 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_val_b21_into_b32_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    ror r0, r0, r2
-; ARM-NEXT:    bfi r0, r1, #0, #21
-; ARM-NEXT:    rsb r1, r2, #0
-; ARM-NEXT:    ror r0, r0, r1
+; ARM-NEXT:    movw r3, #0
+; ARM-NEXT:    rsb r12, r2, #0
+; ARM-NEXT:    movt r3, #65504
+; ARM-NEXT:    bfc r1, #21, #11
+; ARM-NEXT:    and r0, r0, r3, ror r12
+; ARM-NEXT:    orr r0, r0, r1, lsl r2
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b21_into_b32_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    rors r0, r2
-; THUMB-M-NEXT:    bfi r0, r1, #0, #21
-; THUMB-M-NEXT:    rsbs r1, r2, #0
-; THUMB-M-NEXT:    rors r0, r1
+; THUMB-M-NEXT:    bfc r1, #21, #11
+; THUMB-M-NEXT:    movs r3, #0
+; THUMB-M-NEXT:    movt r3, #65504
+; THUMB-M-NEXT:    lsls r1, r2
+; THUMB-M-NEXT:    rsbs r2, r2, #0
+; THUMB-M-NEXT:    ror.w r2, r3, r2
+; THUMB-M-NEXT:    ands r0, r2
+; THUMB-M-NEXT:    orrs r0, r1
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b21_into_b32_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    rors r0, r2
-; THUMB-A-NEXT:    bfi r0, r1, #0, #21
-; THUMB-A-NEXT:    rsbs r1, r2, #0
-; THUMB-A-NEXT:    rors r0, r1
+; THUMB-A-NEXT:    movs r3, #0
+; THUMB-A-NEXT:    rsb.w r12, r2, #0
+; THUMB-A-NEXT:    movt r3, #65504
+; THUMB-A-NEXT:    bfc r1, #21, #11
+; THUMB-A-NEXT:    ror.w r3, r3, r12
+; THUMB-A-NEXT:    ands r0, r3
+; THUMB-A-NEXT:    lsls r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, b21 %val, i32 %off
   ret b32 %result
@@ -3304,23 +3016,20 @@ define b32 @test_bitinsert_val_b21_into_b32_var(b32 %base, b21 %val, i32 %off) {
 define b32 @test_bitinsert_val_b21_into_b32_const_top(b32 %base, b21 %val) {
 ; ARM-LABEL: test_bitinsert_val_b21_into_b32_const_top:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    bfc r1, #21, #11
-; ARM-NEXT:    orr r0, r1, r0, lsl #21
-; ARM-NEXT:    ror r0, r0, #21
+; ARM-NEXT:    bfc r0, #11, #21
+; ARM-NEXT:    orr r0, r0, r1, lsl #11
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b21_into_b32_const_top:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    bfc r1, #21, #11
-; THUMB-M-NEXT:    orr.w r0, r1, r0, lsl #21
-; THUMB-M-NEXT:    ror.w r0, r0, #21
+; THUMB-M-NEXT:    bfc r0, #11, #21
+; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #11
 ; THUMB-M-NEXT:    bx lr
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b21_into_b32_const_top:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    bfc r1, #21, #11
-; THUMB-A-NEXT:    orr.w r0, r1, r0, lsl #21
-; THUMB-A-NEXT:    ror.w r0, r0, #21
+; THUMB-A-NEXT:    bfc r0, #11, #21
+; THUMB-A-NEXT:    orr.w r0, r0, r1, lsl #11
 ; THUMB-A-NEXT:    bx lr
   %result = bitinsert b32 %base, b21 %val, i32 11
   ret b32 %result
@@ -3329,105 +3038,114 @@ define b32 @test_bitinsert_val_b21_into_b32_const_top(b32 %base, b21 %val) {
 define b64 @test_bitinsert_val_b21_into_b64_var(b64 %base, b21 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_val_b21_into_b64_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, lr}
-; ARM-NEXT:    push {r4, lr}
+; ARM-NEXT:    .save {r4, r5, r6, r7, r11, lr}
+; ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
+; ARM-NEXT:    movw r6, #0
+; ARM-NEXT:    mvn r12, #0
 ; ARM-NEXT:    tst r3, #32
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    moveq r12, r1
-; ARM-NEXT:    moveq r1, r0
-; ARM-NEXT:    mov r0, #31
-; ARM-NEXT:    bic r4, r0, r3
-; ARM-NEXT:    lsl lr, r1, #1
-; ARM-NEXT:    and r3, r3, #31
-; ARM-NEXT:    lsl r0, lr, r4
-; ARM-NEXT:    orr lr, r0, r12, lsr r3
-; ARM-NEXT:    lsl r0, r12, #1
-; ARM-NEXT:    lsl r0, r0, r4
-; ARM-NEXT:    orr r1, r0, r1, lsr r3
-; ARM-NEXT:    bfi r1, r2, #0, #21
-; ARM-NEXT:    mov r2, r1
-; ARM-NEXT:    moveq r1, lr
-; ARM-NEXT:    movne r2, lr
-; ARM-NEXT:    lsr r0, r1, #1
-; ARM-NEXT:    lsl r12, r2, r3
-; ARM-NEXT:    lsl r1, r1, r3
-; ARM-NEXT:    lsr r2, r2, #1
-; ARM-NEXT:    orr r0, r12, r0, lsr r4
-; ARM-NEXT:    orr r1, r1, r2, lsr r4
-; ARM-NEXT:    pop {r4, pc}
+; ARM-NEXT:    mov lr, #31
+; ARM-NEXT:    movwne r12, #0
+; ARM-NEXT:    movt r6, #65504
+; ARM-NEXT:    and r4, r3, #31
+; ARM-NEXT:    movtne r12, #65504
+; ARM-NEXT:    mvnne r6, #0
+; ARM-NEXT:    bic lr, lr, r3
+; ARM-NEXT:    lsl r5, r12, r4
+; ARM-NEXT:    lsr r7, r6, #1
+; ARM-NEXT:    orr r5, r5, r7, lsr lr
+; ARM-NEXT:    bfc r2, #21, #11
+; ARM-NEXT:    and r1, r1, r5
+; ARM-NEXT:    rsb r5, r3, #32
+; ARM-NEXT:    subs r7, r3, #32
+; ARM-NEXT:    lsl r4, r6, r4
+; ARM-NEXT:    lsr r5, r2, r5
+; ARM-NEXT:    lslpl r5, r2, r7
+; ARM-NEXT:    lsr r7, r12, #1
+; ARM-NEXT:    orr r7, r4, r7, lsr lr
+; ARM-NEXT:    lsl r2, r2, r3
+; ARM-NEXT:    and r0, r0, r7
+; ARM-NEXT:    movwpl r2, #0
+; ARM-NEXT:    orr r1, r1, r5
+; ARM-NEXT:    orr r0, r0, r2
+; ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b21_into_b64_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, r5, r7, lr}
-; THUMB-M-NEXT:    push {r4, r5, r7, lr}
-; THUMB-M-NEXT:    mov r12, r0
-; THUMB-M-NEXT:    and lr, r3, #31
+; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; THUMB-M-NEXT:    movw lr, #0
+; THUMB-M-NEXT:    bfc r2, #21, #11
+; THUMB-M-NEXT:    rsb.w r5, r3, #32
+; THUMB-M-NEXT:    mov.w r12, #-1
 ; THUMB-M-NEXT:    tst.w r3, #32
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r12, r1
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r1, r0
-; THUMB-M-NEXT:    mov.w r5, #31
-; THUMB-M-NEXT:    bic.w r3, r5, r3
-; THUMB-M-NEXT:    lsl.w r0, r1, #1
-; THUMB-M-NEXT:    lsl.w r5, r12, #1
-; THUMB-M-NEXT:    lsr.w r1, r1, lr
-; THUMB-M-NEXT:    lsl.w r5, r5, r3
-; THUMB-M-NEXT:    orr.w r1, r1, r5
-; THUMB-M-NEXT:    bfi r1, r2, #0, #21
-; THUMB-M-NEXT:    lsl.w r0, r0, r3
-; THUMB-M-NEXT:    lsr.w r4, r12, lr
-; THUMB-M-NEXT:    orr.w r0, r0, r4
-; THUMB-M-NEXT:    mov r2, r1
+; THUMB-M-NEXT:    movt lr, #65504
+; THUMB-M-NEXT:    itt ne
+; THUMB-M-NEXT:    movwne r12, #0
+; THUMB-M-NEXT:    movtne r12, #65504
 ; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r2, r0
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r1, r0
-; THUMB-M-NEXT:    lsrs r0, r1, #1
-; THUMB-M-NEXT:    lsl.w r5, r2, lr
-; THUMB-M-NEXT:    lsrs r0, r3
-; THUMB-M-NEXT:    lsrs r2, r2, #1
-; THUMB-M-NEXT:    lsl.w r1, r1, lr
-; THUMB-M-NEXT:    lsrs r2, r3
-; THUMB-M-NEXT:    orrs r0, r5
-; THUMB-M-NEXT:    orrs r1, r2
-; THUMB-M-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-M-NEXT:    movne.w lr, #-1
+; THUMB-M-NEXT:    subs.w r4, r3, #32
+; THUMB-M-NEXT:    lsr.w r5, r2, r5
+; THUMB-M-NEXT:    it pl
+; THUMB-M-NEXT:    lslpl.w r5, r2, r4
+; THUMB-M-NEXT:    mov.w r4, #31
+; THUMB-M-NEXT:    bic.w r4, r4, r3
+; THUMB-M-NEXT:    and r7, r3, #31
+; THUMB-M-NEXT:    lsr.w r6, lr, #1
+; THUMB-M-NEXT:    lsl.w r2, r2, r3
+; THUMB-M-NEXT:    lsr.w r8, r6, r4
+; THUMB-M-NEXT:    lsl.w r6, r12, r7
+; THUMB-M-NEXT:    orr.w r6, r6, r8
+; THUMB-M-NEXT:    lsl.w r7, lr, r7
+; THUMB-M-NEXT:    and.w r1, r1, r6
+; THUMB-M-NEXT:    lsr.w r6, r12, #1
+; THUMB-M-NEXT:    lsr.w r6, r6, r4
+; THUMB-M-NEXT:    orr.w r7, r7, r6
+; THUMB-M-NEXT:    and.w r0, r0, r7
+; THUMB-M-NEXT:    it pl
+; THUMB-M-NEXT:    movpl r2, #0
+; THUMB-M-NEXT:    orrs r1, r5
+; THUMB-M-NEXT:    orrs r0, r2
+; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b21_into_b64_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r4, r5, r7, lr}
-; THUMB-A-NEXT:    push {r4, r5, r7, lr}
-; THUMB-A-NEXT:    mov r12, r0
-; THUMB-A-NEXT:    and lr, r3, #31
+; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; THUMB-A-NEXT:    movw lr, #0
+; THUMB-A-NEXT:    bfc r2, #21, #11
+; THUMB-A-NEXT:    rsb.w r5, r3, #32
+; THUMB-A-NEXT:    mov.w r12, #-1
 ; THUMB-A-NEXT:    tst.w r3, #32
-; THUMB-A-NEXT:    it eq
-; THUMB-A-NEXT:    moveq r12, r1
-; THUMB-A-NEXT:    it eq
-; THUMB-A-NEXT:    moveq r1, r0
-; THUMB-A-NEXT:    mov.w r5, #31
-; THUMB-A-NEXT:    bic.w r3, r5, r3
-; THUMB-A-NEXT:    lsl.w r0, r1, #1
-; THUMB-A-NEXT:    lsl.w r5, r12, #1
-; THUMB-A-NEXT:    lsr.w r1, r1, lr
-; THUMB-A-NEXT:    lsl.w r5, r5, r3
-; THUMB-A-NEXT:    orr.w r1, r1, r5
-; THUMB-A-NEXT:    bfi r1, r2, #0, #21
-; THUMB-A-NEXT:    lsl.w r0, r0, r3
-; THUMB-A-NEXT:    lsr.w r4, r12, lr
-; THUMB-A-NEXT:    orr.w r0, r0, r4
-; THUMB-A-NEXT:    mov r2, r1
-; THUMB-A-NEXT:    ite ne
-; THUMB-A-NEXT:    movne r2, r0
-; THUMB-A-NEXT:    moveq r1, r0
-; THUMB-A-NEXT:    lsrs r0, r1, #1
-; THUMB-A-NEXT:    lsl.w r5, r2, lr
-; THUMB-A-NEXT:    lsrs r0, r3
-; THUMB-A-NEXT:    lsrs r2, r2, #1
-; THUMB-A-NEXT:    lsl.w r1, r1, lr
-; THUMB-A-NEXT:    lsrs r2, r3
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    orrs r1, r2
-; THUMB-A-NEXT:    pop {r4, r5, r7, pc}
+; THUMB-A-NEXT:    movt lr, #65504
+; THUMB-A-NEXT:    itt ne
+; THUMB-A-NEXT:    movwne r12, #0
+; THUMB-A-NEXT:    movtne r12, #65504
+; THUMB-A-NEXT:    it ne
+; THUMB-A-NEXT:    movne.w lr, #-1
+; THUMB-A-NEXT:    subs.w r4, r3, #32
+; THUMB-A-NEXT:    lsr.w r5, r2, r5
+; THUMB-A-NEXT:    it pl
+; THUMB-A-NEXT:    lslpl.w r5, r2, r4
+; THUMB-A-NEXT:    mov.w r4, #31
+; THUMB-A-NEXT:    bic.w r4, r4, r3
+; THUMB-A-NEXT:    and r7, r3, #31
+; THUMB-A-NEXT:    lsr.w r6, lr, #1
+; THUMB-A-NEXT:    lsl.w r2, r2, r3
+; THUMB-A-NEXT:    lsr.w r8, r6, r4
+; THUMB-A-NEXT:    lsl.w r6, r12, r7
+; THUMB-A-NEXT:    orr.w r6, r6, r8
+; THUMB-A-NEXT:    lsl.w r7, lr, r7
+; THUMB-A-NEXT:    and.w r1, r1, r6
+; THUMB-A-NEXT:    lsr.w r6, r12, #1
+; THUMB-A-NEXT:    lsr.w r6, r6, r4
+; THUMB-A-NEXT:    orr.w r7, r7, r6
+; THUMB-A-NEXT:    and.w r0, r0, r7
+; THUMB-A-NEXT:    it pl
+; THUMB-A-NEXT:    movpl r2, #0
+; THUMB-A-NEXT:    orrs r1, r5
+; THUMB-A-NEXT:    orrs r0, r2
+; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
   %result = bitinsert b64 %base, b21 %val, i32 %off
   ret b64 %result
 }
@@ -3435,182 +3153,261 @@ define b64 @test_bitinsert_val_b21_into_b64_var(b64 %base, b21 %val, i32 %off) {
 define b128 @test_bitinsert_val_b123_into_b128_var(b128 %base, b123 %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_val_b123_into_b128_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, r5, r6, lr}
-; ARM-NEXT:    push {r4, r5, r6, lr}
-; ARM-NEXT:    ldr r5, [sp, #24]
-; ARM-NEXT:    ldr r4, [sp, #32]
-; ARM-NEXT:    ldr r12, [sp, #16]
-; ARM-NEXT:    tst r4, #64
-; ARM-NEXT:    mov lr, r5
-; ARM-NEXT:    movne r0, r2
-; ARM-NEXT:    and r6, r4, #31
-; ARM-NEXT:    movne lr, r12
-; ARM-NEXT:    movne r12, r5
-; ARM-NEXT:    mov r5, r3
-; ARM-NEXT:    ldr r2, [sp, #20]
-; ARM-NEXT:    moveq r5, r1
-; ARM-NEXT:    moveq r1, r3
-; ARM-NEXT:    tst r4, #32
-; ARM-NEXT:    ldr r3, [sp, #28]
-; ARM-NEXT:    movne r1, r0
-; ARM-NEXT:    movne r0, r5
-; ARM-NEXT:    lsl r5, r0, #1
-; ARM-NEXT:    mov r0, #31
-; ARM-NEXT:    bic r0, r0, r4
-; ARM-NEXT:    tst r4, #64
-; ARM-NEXT:    lsl r5, r5, r0
-; ARM-NEXT:    orr r5, r5, r1, lsr r6
-; ARM-NEXT:    bfi r5, r3, #0, #27
+; ARM-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; ARM-NEXT:    .pad #44
+; ARM-NEXT:    sub sp, sp, #44
+; ARM-NEXT:    add r12, sp, #80
+; ARM-NEXT:    str r3, [sp, #4] @ 4-byte Spill
 ; ARM-NEXT:    mov r3, r2
-; ARM-NEXT:    movne r3, r5
-; ARM-NEXT:    movne r5, r2
-; ARM-NEXT:    tst r4, #32
-; ARM-NEXT:    mov r4, lr
-; ARM-NEXT:    movne r4, r3
-; ARM-NEXT:    movne r3, r12
-; ARM-NEXT:    movne r12, r5
-; ARM-NEXT:    lsl r1, r3, r6
-; ARM-NEXT:    lsr r2, r12, #1
-; ARM-NEXT:    movne r5, lr
+; ARM-NEXT:    ldr r9, [sp, #96]
+; ARM-NEXT:    ldm r12, {r4, r5, r6, r12}
+; ARM-NEXT:    add r2, sp, #24
+; ARM-NEXT:    mov r11, #-134217728
+; ARM-NEXT:    stm r2, {r4, r5, r6}
+; ARM-NEXT:    mov r6, #0
+; ARM-NEXT:    and r5, r9, #31
+; ARM-NEXT:    str r6, [sp, #20]
+; ARM-NEXT:    str r6, [sp, #16]
+; ARM-NEXT:    str r6, [sp, #12]
+; ARM-NEXT:    str r6, [sp, #8]
+; ARM-NEXT:    bic r6, r12, #-134217728
+; ARM-NEXT:    ands r12, r9, #64
+; ARM-NEXT:    str r6, [sp, #36]
+; ARM-NEXT:    movne r12, #-134217728
+; ARM-NEXT:    movwne r11, #0
+; ARM-NEXT:    ands r8, r9, #32
+; ARM-NEXT:    mov r6, #31
+; ARM-NEXT:    bic lr, r6, r9
+; ARM-NEXT:    mov r6, r8
+; ARM-NEXT:    movne r6, r11
+; ARM-NEXT:    movwne r11, #0
+; ARM-NEXT:    lsr r7, r11, #1
+; ARM-NEXT:    lsl r10, r6, r5
+; ARM-NEXT:    orr r7, r10, r7, lsr lr
+; ARM-NEXT:    and r10, r0, r7
+; ARM-NEXT:    mov r7, #12
+; ARM-NEXT:    add r0, sp, #8
+; ARM-NEXT:    and r9, r7, r9, lsr #3
+; ARM-NEXT:    add r7, r0, #16
+; ARM-NEXT:    ldr r9, [r7, -r9]!
+; ARM-NEXT:    orr r0, r10, r9, lsl r5
+; ARM-NEXT:    lsr r10, r6, #1
+; ARM-NEXT:    mov r6, r12
+; ARM-NEXT:    str r0, [sp] @ 4-byte Spill
+; ARM-NEXT:    movwne r6, #0
+; ARM-NEXT:    lsr r2, r9, #1
+; ARM-NEXT:    lsl r4, r6, r5
+; ARM-NEXT:    eor r0, r5, #31
+; ARM-NEXT:    orr r4, r4, r10, lsr lr
+; ARM-NEXT:    moveq r12, r8
+; ARM-NEXT:    and r10, r1, r4
+; ARM-NEXT:    ldmib r7, {r4, r9}
+; ARM-NEXT:    ldr r7, [r7, #12]
+; ARM-NEXT:    lsl r1, r4, r5
+; ARM-NEXT:    lsrs r4, r4, #1
 ; ARM-NEXT:    orr r1, r1, r2, lsr r0
-; ARM-NEXT:    lsr r2, r3, #1
-; ARM-NEXT:    lsl r3, r4, r6
-; ARM-NEXT:    orr r2, r3, r2, lsr r0
-; ARM-NEXT:    lsr r3, r4, #1
-; ARM-NEXT:    lsl r4, r5, r6
-; ARM-NEXT:    lsr r5, r5, #1
-; ARM-NEXT:    orr r3, r4, r3, lsr r0
-; ARM-NEXT:    lsl r6, r12, r6
-; ARM-NEXT:    orr r0, r6, r5, lsr r0
-; ARM-NEXT:    pop {r4, r5, r6, pc}
+; ARM-NEXT:    lsr r2, r6, #1
+; ARM-NEXT:    lsl r6, r12, r5
+; ARM-NEXT:    orr r2, r6, r2, lsr lr
+; ARM-NEXT:    and r2, r3, r2
+; ARM-NEXT:    lsl r3, r9, r5
+; ARM-NEXT:    orr r3, r3, r4, lsr r0
+; ARM-NEXT:    lsr r6, r12, #1
+; ARM-NEXT:    orr r2, r2, r3
+; ARM-NEXT:    lsl r3, r11, r5
+; ARM-NEXT:    orr r3, r3, r6, lsr lr
+; ARM-NEXT:    ldr r6, [sp, #4] @ 4-byte Reload
+; ARM-NEXT:    lsl r7, r7, r5
+; ARM-NEXT:    orr r1, r10, r1
+; ARM-NEXT:    and r3, r6, r3
+; ARM-NEXT:    lsr r6, r9, #1
+; ARM-NEXT:    orr r0, r7, r6, lsr r0
+; ARM-NEXT:    orr r3, r3, r0
+; ARM-NEXT:    ldr r0, [sp], #44 @ 4-byte Reload
+; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b123_into_b128_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, r5, r6, r7, lr}
-; THUMB-M-NEXT:    push {r4, r5, r6, r7, lr}
-; THUMB-M-NEXT:    .pad #4
-; THUMB-M-NEXT:    sub sp, #4
-; THUMB-M-NEXT:    ldr r4, [sp, #32]
-; THUMB-M-NEXT:    ldr r5, [sp, #40]
-; THUMB-M-NEXT:    ldr.w lr, [sp, #24]
-; THUMB-M-NEXT:    mov r12, r4
-; THUMB-M-NEXT:    tst.w r5, #64
-; THUMB-M-NEXT:    itt ne
-; THUMB-M-NEXT:    movne r12, lr
-; THUMB-M-NEXT:    movne lr, r4
-; THUMB-M-NEXT:    mov r4, r1
-; THUMB-M-NEXT:    itet eq
-; THUMB-M-NEXT:    moveq r4, r3
-; THUMB-M-NEXT:    movne r0, r2
-; THUMB-M-NEXT:    moveq r3, r1
-; THUMB-M-NEXT:    tst.w r5, #32
-; THUMB-M-NEXT:    itt eq
-; THUMB-M-NEXT:    moveq r3, r0
-; THUMB-M-NEXT:    moveq r0, r4
-; THUMB-M-NEXT:    and r4, r5, #31
-; THUMB-M-NEXT:    lsls r1, r3, #1
-; THUMB-M-NEXT:    movs r2, #31
-; THUMB-M-NEXT:    bic.w r3, r2, r5
-; THUMB-M-NEXT:    lsrs r0, r4
-; THUMB-M-NEXT:    tst.w r5, #64
-; THUMB-M-NEXT:    lsl.w r1, r1, r3
-; THUMB-M-NEXT:    orr.w r6, r1, r0
-; THUMB-M-NEXT:    ldr r0, [sp, #36]
-; THUMB-M-NEXT:    bfi r6, r0, #0, #27
-; THUMB-M-NEXT:    ldr r0, [sp, #28]
-; THUMB-M-NEXT:    mov r7, r0
-; THUMB-M-NEXT:    itt ne
-; THUMB-M-NEXT:    movne r7, r6
-; THUMB-M-NEXT:    movne r6, r0
-; THUMB-M-NEXT:    mov r2, r7
-; THUMB-M-NEXT:    tst.w r5, #32
-; THUMB-M-NEXT:    itt ne
-; THUMB-M-NEXT:    movne r2, lr
-; THUMB-M-NEXT:    movne lr, r6
+; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-M-NEXT:    .pad #52
+; THUMB-M-NEXT:    sub sp, #52
+; THUMB-M-NEXT:    ldr r7, [sp, #96]
+; THUMB-M-NEXT:    add r6, sp, #16
+; THUMB-M-NEXT:    stm.w sp, {r1, r2, r3} @ 12-byte Folded Spill
+; THUMB-M-NEXT:    adds r6, #16
+; THUMB-M-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMB-M-NEXT:    str r7, [sp, #40]
+; THUMB-M-NEXT:    ldr r7, [sp, #92]
+; THUMB-M-NEXT:    str r7, [sp, #36]
+; THUMB-M-NEXT:    ldr r7, [sp, #88]
+; THUMB-M-NEXT:    str r7, [sp, #32]
+; THUMB-M-NEXT:    movs r7, #0
+; THUMB-M-NEXT:    strd r7, r7, [sp, #24]
+; THUMB-M-NEXT:    strd r7, r7, [sp, #16]
+; THUMB-M-NEXT:    ldr r7, [sp, #100]
+; THUMB-M-NEXT:    ldr.w r10, [sp, #104]
+; THUMB-M-NEXT:    bic r7, r7, #-134217728
+; THUMB-M-NEXT:    str r7, [sp, #44]
+; THUMB-M-NEXT:    movs r7, #12
+; THUMB-M-NEXT:    and lr, r10, #31
+; THUMB-M-NEXT:    and.w r7, r7, r10, lsr #3
+; THUMB-M-NEXT:    subs r7, r6, r7
+; THUMB-M-NEXT:    eor r6, lr, #31
+; THUMB-M-NEXT:    ldrd r12, r5, [r7]
+; THUMB-M-NEXT:    lsrs.w r1, r5, #1
+; THUMB-M-NEXT:    ldrd r9, r8, [r7, #8]
+; THUMB-M-NEXT:    lsl.w r7, r5, lr
+; THUMB-M-NEXT:    ands r0, r10, #64
+; THUMB-M-NEXT:    lsr.w r4, r12, #1
 ; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r6, r12
-; THUMB-M-NEXT:    lsr.w r1, r6, #1
-; THUMB-M-NEXT:    lsr.w r5, lr, #1
-; THUMB-M-NEXT:    lsl.w r0, lr, r4
-; THUMB-M-NEXT:    lsr.w r1, r1, r3
-; THUMB-M-NEXT:    orr.w r0, r0, r1
-; THUMB-M-NEXT:    lsl.w r1, r2, r4
-; THUMB-M-NEXT:    lsr.w r5, r5, r3
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r7, r12
-; THUMB-M-NEXT:    lsrs r2, r2, #1
-; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsl.w r5, r7, r4
-; THUMB-M-NEXT:    lsrs r7, r7, #1
-; THUMB-M-NEXT:    lsrs r2, r3
-; THUMB-M-NEXT:    lsr.w r3, r7, r3
-; THUMB-M-NEXT:    lsls r6, r4
-; THUMB-M-NEXT:    orrs r2, r5
-; THUMB-M-NEXT:    orrs r3, r6
-; THUMB-M-NEXT:    add sp, #4
-; THUMB-M-NEXT:    pop {r4, r5, r6, r7, pc}
+; THUMB-M-NEXT:    movne.w r0, #-134217728
+; THUMB-M-NEXT:    lsr.w r4, r4, r6
+; THUMB-M-NEXT:    orr.w r11, r7, r4
+; THUMB-M-NEXT:    mov.w r7, #-134217728
+; THUMB-M-NEXT:    mov.w r4, #31
+; THUMB-M-NEXT:    bic.w r5, r4, r10
+; THUMB-M-NEXT:    it ne
+; THUMB-M-NEXT:    movne r7, #0
+; THUMB-M-NEXT:    ands r4, r10, #32
+; THUMB-M-NEXT:    lsr.w r1, r1, r6
+; THUMB-M-NEXT:    mov r10, r4
+; THUMB-M-NEXT:    it ne
+; THUMB-M-NEXT:    movne r10, r7
+; THUMB-M-NEXT:    lsr.w r3, r10, #1
+; THUMB-M-NEXT:    itt ne
+; THUMB-M-NEXT:    movne r4, r0
+; THUMB-M-NEXT:    movne r0, #0
+; THUMB-M-NEXT:    lsl.w r2, r0, lr
+; THUMB-M-NEXT:    lsr.w r3, r3, r5
+; THUMB-M-NEXT:    orr.w r2, r2, r3
+; THUMB-M-NEXT:    ldr r3, [sp] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r0, r0, #1
+; THUMB-M-NEXT:    lsr.w r0, r0, r5
+; THUMB-M-NEXT:    and.w r2, r2, r3
+; THUMB-M-NEXT:    orr.w r11, r11, r2
+; THUMB-M-NEXT:    lsl.w r2, r9, lr
+; THUMB-M-NEXT:    orr.w r1, r1, r2
+; THUMB-M-NEXT:    lsl.w r2, r4, lr
+; THUMB-M-NEXT:    orr.w r0, r0, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    it ne
+; THUMB-M-NEXT:    movne r7, #0
+; THUMB-M-NEXT:    lsl.w r3, r7, lr
+; THUMB-M-NEXT:    ands r0, r2
+; THUMB-M-NEXT:    orr.w r2, r0, r1
+; THUMB-M-NEXT:    lsr.w r1, r9, #1
+; THUMB-M-NEXT:    lsl.w r0, r8, lr
+; THUMB-M-NEXT:    lsrs r1, r6
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    lsrs r1, r4, #1
+; THUMB-M-NEXT:    lsrs r1, r5
+; THUMB-M-NEXT:    orrs r1, r3
+; THUMB-M-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r1, r3
+; THUMB-M-NEXT:    orr.w r3, r1, r0
+; THUMB-M-NEXT:    lsrs r0, r7, #1
+; THUMB-M-NEXT:    lsrs r0, r5
+; THUMB-M-NEXT:    lsl.w r1, r10, lr
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r12, lr
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    mov r1, r11
+; THUMB-M-NEXT:    add sp, #52
+; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b123_into_b128_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r4, r5, r6, lr}
-; THUMB-A-NEXT:    push {r4, r5, r6, lr}
-; THUMB-A-NEXT:    ldr r4, [sp, #24]
-; THUMB-A-NEXT:    ldr r5, [sp, #32]
-; THUMB-A-NEXT:    ldr.w r12, [sp, #16]
-; THUMB-A-NEXT:    mov lr, r4
-; THUMB-A-NEXT:    tst.w r5, #64
-; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne lr, r12
-; THUMB-A-NEXT:    movne r12, r4
-; THUMB-A-NEXT:    mov r4, r3
-; THUMB-A-NEXT:    itet eq
-; THUMB-A-NEXT:    moveq r4, r1
-; THUMB-A-NEXT:    movne r0, r2
-; THUMB-A-NEXT:    moveq r1, r3
-; THUMB-A-NEXT:    tst.w r5, #32
-; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r1, r0
-; THUMB-A-NEXT:    movne r0, r4
-; THUMB-A-NEXT:    lsls r6, r0, #1
-; THUMB-A-NEXT:    movs r0, #31
-; THUMB-A-NEXT:    and r4, r5, #31
-; THUMB-A-NEXT:    bics r0, r5
-; THUMB-A-NEXT:    ldr r2, [sp, #20]
-; THUMB-A-NEXT:    ldr r3, [sp, #28]
-; THUMB-A-NEXT:    lsrs r1, r4
-; THUMB-A-NEXT:    lsls r6, r0
-; THUMB-A-NEXT:    tst.w r5, #64
-; THUMB-A-NEXT:    orr.w r6, r6, r1
-; THUMB-A-NEXT:    bfi r6, r3, #0, #27
-; THUMB-A-NEXT:    mov r3, r2
-; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r3, r6
-; THUMB-A-NEXT:    movne r6, r2
-; THUMB-A-NEXT:    tst.w r5, #32
-; THUMB-A-NEXT:    mov r5, lr
-; THUMB-A-NEXT:    ittt ne
-; THUMB-A-NEXT:    movne r5, r3
-; THUMB-A-NEXT:    movne r3, r12
-; THUMB-A-NEXT:    movne r12, r6
-; THUMB-A-NEXT:    lsr.w r1, r12, #1
-; THUMB-A-NEXT:    lsr.w r1, r1, r0
-; THUMB-A-NEXT:    lsl.w r2, r3, r4
-; THUMB-A-NEXT:    orr.w r1, r1, r2
-; THUMB-A-NEXT:    lsr.w r2, r3, #1
-; THUMB-A-NEXT:    lsr.w r2, r2, r0
-; THUMB-A-NEXT:    lsl.w r3, r5, r4
+; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; THUMB-A-NEXT:    .pad #52
+; THUMB-A-NEXT:    sub sp, #52
+; THUMB-A-NEXT:    add.w r12, sp, #88
+; THUMB-A-NEXT:    str r0, [sp, #12] @ 4-byte Spill
+; THUMB-A-NEXT:    add r0, sp, #32
+; THUMB-A-NEXT:    ldr.w r10, [sp, #104]
+; THUMB-A-NEXT:    ldm.w r12, {r4, r6, r7, r12}
+; THUMB-A-NEXT:    and lr, r10, #31
+; THUMB-A-NEXT:    stm.w sp, {r1, r2, r3} @ 12-byte Folded Spill
+; THUMB-A-NEXT:    stm r0!, {r4, r6, r7}
+; THUMB-A-NEXT:    movs r7, #0
+; THUMB-A-NEXT:    add r6, sp, #16
+; THUMB-A-NEXT:    strd r7, r7, [sp, #24]
+; THUMB-A-NEXT:    adds r6, #16
+; THUMB-A-NEXT:    strd r7, r7, [sp, #16]
+; THUMB-A-NEXT:    bic r7, r12, #-134217728
+; THUMB-A-NEXT:    str r7, [sp, #44]
+; THUMB-A-NEXT:    movs r7, #12
+; THUMB-A-NEXT:    and.w r7, r7, r10, lsr #3
+; THUMB-A-NEXT:    ands r0, r10, #64
+; THUMB-A-NEXT:    sub.w r7, r6, r7
+; THUMB-A-NEXT:    eor r6, lr, #31
+; THUMB-A-NEXT:    ldrd r12, r5, [r7]
+; THUMB-A-NEXT:    ldrd r9, r8, [r7, #8]
+; THUMB-A-NEXT:    lsl.w r7, r5, lr
 ; THUMB-A-NEXT:    it ne
-; THUMB-A-NEXT:    movne r6, lr
-; THUMB-A-NEXT:    orrs r2, r3
-; THUMB-A-NEXT:    lsrs r3, r5, #1
-; THUMB-A-NEXT:    lsl.w r5, r6, r4
-; THUMB-A-NEXT:    lsrs r6, r6, #1
-; THUMB-A-NEXT:    lsrs r3, r0
-; THUMB-A-NEXT:    lsr.w r0, r6, r0
-; THUMB-A-NEXT:    orrs r3, r5
-; THUMB-A-NEXT:    lsl.w r5, r12, r4
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    pop {r4, r5, r6, pc}
+; THUMB-A-NEXT:    movne.w r0, #-134217728
+; THUMB-A-NEXT:    lsr.w r4, r12, #1
+; THUMB-A-NEXT:    lsr.w r4, r4, r6
+; THUMB-A-NEXT:    orr.w r11, r7, r4
+; THUMB-A-NEXT:    mov.w r4, #31
+; THUMB-A-NEXT:    mov.w r7, #-134217728
+; THUMB-A-NEXT:    bic.w r4, r4, r10
+; THUMB-A-NEXT:    and r10, r10, #32
+; THUMB-A-NEXT:    it ne
+; THUMB-A-NEXT:    movne r7, #0
+; THUMB-A-NEXT:    lsrs.w r1, r5, #1
+; THUMB-A-NEXT:    mov r5, r10
+; THUMB-A-NEXT:    cmp.w r10, #0
+; THUMB-A-NEXT:    it ne
+; THUMB-A-NEXT:    movne r5, r7
+; THUMB-A-NEXT:    lsr.w r3, r5, #1
+; THUMB-A-NEXT:    itt ne
+; THUMB-A-NEXT:    movne r10, r0
+; THUMB-A-NEXT:    movne r0, #0
+; THUMB-A-NEXT:    lsl.w r2, r0, lr
+; THUMB-A-NEXT:    lsr.w r3, r3, r4
+; THUMB-A-NEXT:    orr.w r2, r2, r3
+; THUMB-A-NEXT:    ldr r3, [sp] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r0, r0, #1
+; THUMB-A-NEXT:    lsr.w r1, r1, r6
+; THUMB-A-NEXT:    lsr.w r0, r0, r4
+; THUMB-A-NEXT:    and.w r2, r2, r3
+; THUMB-A-NEXT:    orr.w r11, r11, r2
+; THUMB-A-NEXT:    lsl.w r2, r9, lr
+; THUMB-A-NEXT:    orr.w r1, r1, r2
+; THUMB-A-NEXT:    lsl.w r2, r10, lr
+; THUMB-A-NEXT:    orr.w r0, r0, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #4] @ 4-byte Reload
+; THUMB-A-NEXT:    it ne
+; THUMB-A-NEXT:    movne r7, #0
+; THUMB-A-NEXT:    lsl.w r3, r7, lr
+; THUMB-A-NEXT:    ands r0, r2
+; THUMB-A-NEXT:    orr.w r2, r0, r1
+; THUMB-A-NEXT:    lsr.w r1, r9, #1
+; THUMB-A-NEXT:    lsl.w r0, r8, lr
+; THUMB-A-NEXT:    lsrs r1, r6
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    lsr.w r1, r10, #1
+; THUMB-A-NEXT:    lsrs r1, r4
+; THUMB-A-NEXT:    orrs r1, r3
+; THUMB-A-NEXT:    ldr r3, [sp, #8] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r1, r3
+; THUMB-A-NEXT:    orr.w r3, r1, r0
+; THUMB-A-NEXT:    lsrs r0, r7, #1
+; THUMB-A-NEXT:    lsrs r0, r4
+; THUMB-A-NEXT:    lsl.w r1, r5, lr
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #12] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r12, lr
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    mov r1, r11
+; THUMB-A-NEXT:    add sp, #52
+; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b128 %base, b123 %val, i32 %off
   ret b128 %result
 }
@@ -3676,860 +3473,820 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; ARM-NEXT:    .pad #292
-; ARM-NEXT:    sub sp, sp, #292
-; ARM-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; ARM-NEXT:    lsl r0, r3, #1
-; ARM-NEXT:    orr r0, r0, r2, lsr #31
-; ARM-NEXT:    ldr lr, [sp, #368]
-; ARM-NEXT:    str r0, [sp, #196]
-; ARM-NEXT:    movw r0, #41989
-; ARM-NEXT:    movt r0, #7092
-; ARM-NEXT:    ldr r12, [sp, #348]
-; ARM-NEXT:    umull r0, r5, lr, r0
-; ARM-NEXT:    ldr r4, [sp, #344]
-; ARM-NEXT:    mov r0, #0
-; ARM-NEXT:    ldr r6, [sp, #340]
-; ARM-NEXT:    str r0, [sp, #284]
-; ARM-NEXT:    str r0, [sp, #280]
-; ARM-NEXT:    str r0, [sp, #276]
-; ARM-NEXT:    str r0, [sp, #272]
+; ARM-NEXT:    .pad #276
+; ARM-NEXT:    sub sp, sp, #276
+; ARM-NEXT:    str r0, [sp, #76] @ 4-byte Spill
+; ARM-NEXT:    mov r0, #127
+; ARM-NEXT:    str r3, [sp, #64] @ 4-byte Spill
+; ARM-NEXT:    mvn r5, #0
+; ARM-NEXT:    str r2, [sp, #68] @ 4-byte Spill
+; ARM-NEXT:    mov r4, #63
 ; ARM-NEXT:    str r0, [sp, #268]
-; ARM-NEXT:    str r0, [sp, #264]
-; ARM-NEXT:    str r0, [sp, #260]
-; ARM-NEXT:    str r0, [sp, #256]
+; ARM-NEXT:    mov r0, #-134217728
+; ARM-NEXT:    str r0, [sp, #252]
+; ARM-NEXT:    mov r0, #0
+; ARM-NEXT:    ldr r12, [sp, #352]
+; ARM-NEXT:    str r5, [sp, #264]
+; ARM-NEXT:    str r5, [sp, #260]
+; ARM-NEXT:    str r5, [sp, #256]
+; ARM-NEXT:    str r0, [sp, #248]
+; ARM-NEXT:    str r0, [sp, #244]
+; ARM-NEXT:    str r0, [sp, #240]
+; ARM-NEXT:    str r0, [sp, #236]
+; ARM-NEXT:    str r0, [sp, #232]
+; ARM-NEXT:    str r0, [sp, #228]
+; ARM-NEXT:    str r0, [sp, #224]
+; ARM-NEXT:    str r0, [sp, #220]
+; ARM-NEXT:    str r0, [sp, #216]
+; ARM-NEXT:    str r0, [sp, #212]
+; ARM-NEXT:    str r0, [sp, #208]
+; ARM-NEXT:    str r5, [sp, #168]
+; ARM-NEXT:    str r5, [sp, #164]
+; ARM-NEXT:    str r5, [sp, #160]
+; ARM-NEXT:    mov r5, #-67108864
+; ARM-NEXT:    str r5, [sp, #156]
+; ARM-NEXT:    movw r5, #41989
+; ARM-NEXT:    movt r5, #7092
+; ARM-NEXT:    str r4, [sp, #172]
+; ARM-NEXT:    umull r5, r4, r12, r5
+; ARM-NEXT:    ldr r2, [sp, #340]
+; ARM-NEXT:    str r0, [sp, #204]
+; ARM-NEXT:    str r0, [sp, #200]
+; ARM-NEXT:    str r0, [sp, #196]
+; ARM-NEXT:    str r0, [sp, #192]
 ; ARM-NEXT:    str r0, [sp, #188]
 ; ARM-NEXT:    str r0, [sp, #184]
 ; ARM-NEXT:    str r0, [sp, #180]
 ; ARM-NEXT:    str r0, [sp, #176]
-; ARM-NEXT:    str r0, [sp, #172]
-; ARM-NEXT:    str r0, [sp, #168]
-; ARM-NEXT:    str r0, [sp, #164]
-; ARM-NEXT:    str r0, [sp, #160]
-; ARM-NEXT:    str r0, [sp, #60]
-; ARM-NEXT:    str r0, [sp, #56]
-; ARM-NEXT:    str r0, [sp, #52]
-; ARM-NEXT:    str r0, [sp, #48]
-; ARM-NEXT:    str r0, [sp, #44]
-; ARM-NEXT:    str r0, [sp, #40]
-; ARM-NEXT:    str r0, [sp, #36]
-; ARM-NEXT:    str r0, [sp, #32]
-; ARM-NEXT:    str r0, [sp, #156]
 ; ARM-NEXT:    str r0, [sp, #152]
 ; ARM-NEXT:    str r0, [sp, #148]
 ; ARM-NEXT:    str r0, [sp, #144]
+; ARM-NEXT:    str r2, [sp, #116]
+; ARM-NEXT:    sub r2, r12, r4
+; ARM-NEXT:    ldr r3, [sp, #344]
+; ARM-NEXT:    add r2, r4, r2, lsr #1
+; ARM-NEXT:    ldr r7, [sp, #336]
+; ARM-NEXT:    str r3, [sp, #120]
+; ARM-NEXT:    mov r3, #231
+; ARM-NEXT:    lsr r2, r2, #7
+; ARM-NEXT:    str r7, [sp, #112]
+; ARM-NEXT:    mls r7, r2, r3, r12
+; ARM-NEXT:    add r2, sp, #208
 ; ARM-NEXT:    str r0, [sp, #140]
 ; ARM-NEXT:    str r0, [sp, #136]
+; ARM-NEXT:    add r2, r2, #32
 ; ARM-NEXT:    str r0, [sp, #132]
 ; ARM-NEXT:    str r0, [sp, #128]
-; ARM-NEXT:    and r0, r12, #127
-; ARM-NEXT:    str r0, [sp, #252]
-; ARM-NEXT:    lsl r0, r12, #1
-; ARM-NEXT:    ldr r7, [sp, #336]
-; ARM-NEXT:    orr r0, r0, r4, lsr #31
-; ARM-NEXT:    str r4, [sp, #248]
-; ARM-NEXT:    str r0, [sp, #220]
-; ARM-NEXT:    lsl r0, r4, #1
-; ARM-NEXT:    orr r4, r0, r6, lsr #31
-; ARM-NEXT:    str r6, [sp, #244]
-; ARM-NEXT:    lsl r6, r6, #1
-; ARM-NEXT:    str r4, [sp, #216]
-; ARM-NEXT:    orr r6, r6, r7, lsr #31
-; ARM-NEXT:    str r7, [sp, #240]
-; ARM-NEXT:    str r6, [sp, #212]
-; ARM-NEXT:    sub r6, lr, r5
-; ARM-NEXT:    ldr r1, [sp, #332]
-; ARM-NEXT:    lsl r7, r7, #1
-; ARM-NEXT:    add r6, r5, r6, lsr #1
-; ARM-NEXT:    mov r5, #231
-; ARM-NEXT:    ldr r0, [sp, #328]
-; ARM-NEXT:    lsr r6, r6, #7
-; ARM-NEXT:    ldr r12, [sp, #356]
-; ARM-NEXT:    mls r4, r6, r5, lr
-; ARM-NEXT:    orr r7, r7, r1, lsr #31
-; ARM-NEXT:    ldr r6, [sp, #360]
-; ARM-NEXT:    ldr r8, [sp, #352]
-; ARM-NEXT:    str r4, [sp, #24] @ 4-byte Spill
-; ARM-NEXT:    str r1, [sp, #236]
-; ARM-NEXT:    lsl r1, r1, #1
-; ARM-NEXT:    str r0, [sp, #232]
-; ARM-NEXT:    orr r1, r1, r0, lsr #31
-; ARM-NEXT:    lsl r0, r0, #1
-; ARM-NEXT:    str r2, [sp, #224]
-; ARM-NEXT:    orr r0, r0, r3, lsr #31
-; ARM-NEXT:    str r3, [sp, #228]
-; ARM-NEXT:    str r12, [sp, #68]
-; ARM-NEXT:    lsl r2, r2, #1
-; ARM-NEXT:    str r8, [sp, #64]
-; ARM-NEXT:    str r0, [sp, #200]
-; ARM-NEXT:    lsrs r0, r12, #1
-; ARM-NEXT:    orr r0, r0, r6, lsl #31
-; ARM-NEXT:    str r7, [sp, #208]
-; ARM-NEXT:    str r1, [sp, #204]
-; ARM-NEXT:    add r1, sp, #224
+; ARM-NEXT:    str r0, [sp, #108]
+; ARM-NEXT:    and r8, r7, #31
+; ARM-NEXT:    str r0, [sp, #104]
+; ARM-NEXT:    eor r10, r8, #31
 ; ARM-NEXT:    str r0, [sp, #100]
-; ARM-NEXT:    rrx r0, r8
 ; ARM-NEXT:    str r0, [sp, #96]
-; ARM-NEXT:    ubfx r0, r4, #5, #3
-; ARM-NEXT:    and r12, r4, #31
-; ARM-NEXT:    rsb r7, r4, #230
-; ARM-NEXT:    add r0, r1, r0, lsl #2
-; ARM-NEXT:    ldr r1, [r0, #12]
-; ARM-NEXT:    str r1, [sp, #16] @ 4-byte Spill
-; ARM-NEXT:    ldr r1, [r0, #16]
-; ARM-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; ARM-NEXT:    eor r1, r12, #31
-; ARM-NEXT:    ldr r5, [r0, #24]
-; ARM-NEXT:    ldr r3, [r0, #28]
-; ARM-NEXT:    ldr r8, [r0, #20]
-; ARM-NEXT:    str r3, [sp, #8] @ 4-byte Spill
-; ARM-NEXT:    lsr r0, r5, r12
-; ARM-NEXT:    lsl r3, r3, #1
-; ARM-NEXT:    str r7, [sp, #20] @ 4-byte Spill
-; ARM-NEXT:    orr r9, r0, r3, lsl r1
-; ARM-NEXT:    add r0, sp, #160
-; ARM-NEXT:    mov r1, #28
-; ARM-NEXT:    add r0, r0, #32
-; ARM-NEXT:    and r3, r1, r7, lsr #3
-; ARM-NEXT:    lsl r5, r5, #1
-; ARM-NEXT:    str r2, [r0], -r3
-; ARM-NEXT:    and r2, r7, #31
-; ARM-NEXT:    eor r3, r2, #31
-; ARM-NEXT:    ldr r1, [r0, #8]
-; ARM-NEXT:    ldr r6, [r0, #24]
-; ARM-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; ARM-NEXT:    ldr r1, [r0, #20]
-; ARM-NEXT:    ldr r4, [r0, #16]
-; ARM-NEXT:    lsl lr, r6, r2
-; ARM-NEXT:    ldr r10, [r0, #12]
-; ARM-NEXT:    lsrs r11, r1, #1
-; ARM-NEXT:    lsl r1, r1, r2
-; ARM-NEXT:    orr r7, lr, r11, lsr r3
-; ARM-NEXT:    orr lr, r9, r7
-; ARM-NEXT:    eor r9, r12, #31
-; ARM-NEXT:    lsr r7, r8, r12
-; ARM-NEXT:    orr r5, r7, r5, lsl r9
-; ARM-NEXT:    lsr r7, r4, #1
-; ARM-NEXT:    orr r1, r1, r7, lsr r3
-; ARM-NEXT:    lsl r4, r4, r2
-; ARM-NEXT:    orr r1, r5, r1
-; ARM-NEXT:    lsrs r5, r10, #1
-; ARM-NEXT:    str r1, [sp, #84]
-; ARM-NEXT:    orr r4, r4, r5, lsr r3
-; ARM-NEXT:    lsrs r1, r1, #1
-; ARM-NEXT:    lsr r5, r6, #1
-; ARM-NEXT:    orr r1, r1, lr, lsl #31
-; ARM-NEXT:    str r1, [sp, #116]
-; ARM-NEXT:    ldr r0, [r0, #28]
-; ARM-NEXT:    lsl r7, r8, #1
-; ARM-NEXT:    ldr r11, [sp, #4] @ 4-byte Reload
-; ARM-NEXT:    lsl r0, r0, r2
-; ARM-NEXT:    orr r0, r0, r5, lsr r3
-; ARM-NEXT:    ldr r5, [sp, #8] @ 4-byte Reload
-; ARM-NEXT:    lsr r1, r11, r12
-; ARM-NEXT:    lsl r6, r11, #1
-; ARM-NEXT:    orr r1, r1, r7, lsl r9
-; ARM-NEXT:    orr r0, r0, r5, lsr r12
-; ARM-NEXT:    orr r1, r1, r4
-; ARM-NEXT:    and r0, r0, #127
 ; ARM-NEXT:    str r0, [sp, #92]
-; ARM-NEXT:    rrx r4, r1
-; ARM-NEXT:    lsrs r0, r0, #1
-; ARM-NEXT:    str r4, [sp, #112]
-; ARM-NEXT:    and r0, r0, #127
-; ARM-NEXT:    str r0, [sp, #124]
-; ARM-NEXT:    str lr, [sp, #88]
-; ARM-NEXT:    rrx r0, lr
-; ARM-NEXT:    ldr r7, [sp, #16] @ 4-byte Reload
-; ARM-NEXT:    mov lr, r9
-; ARM-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
-; ARM-NEXT:    str r1, [sp, #80]
-; ARM-NEXT:    lsr r7, r7, r12
-; ARM-NEXT:    orr r7, r7, r6, lsl r9
-; ARM-NEXT:    lsl r6, r10, r2
-; ARM-NEXT:    lsr r5, r4, #1
-; ARM-NEXT:    orr r6, r6, r5, lsr r3
-; ARM-NEXT:    orr r7, r7, r6
-; ARM-NEXT:    ldr r6, [sp, #364]
-; ARM-NEXT:    bfi r7, r6, #0, #27
-; ARM-NEXT:    str r7, [sp, #76]
-; ARM-NEXT:    str r0, [sp, #120]
-; ARM-NEXT:    lsrs r7, r7, #1
-; ARM-NEXT:    orr r1, r7, r1, lsl #31
-; ARM-NEXT:    str r1, [sp, #108]
-; ARM-NEXT:    mov r1, #28
-; ARM-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
-; ARM-NEXT:    ldr r7, [sp, #360]
-; ARM-NEXT:    str r7, [sp, #72]
-; ARM-NEXT:    and r1, r1, r0, lsr #3
-; ARM-NEXT:    add r0, sp, #32
+; ARM-NEXT:    str r0, [sp, #88]
+; ARM-NEXT:    str r0, [sp, #84]
+; ARM-NEXT:    str r0, [sp, #80]
+; ARM-NEXT:    mov r0, #28
+; ARM-NEXT:    and r3, r0, r7, lsr #3
+; ARM-NEXT:    ldr r1, [sp, #348]
+; ARM-NEXT:    rsb r7, r7, #230
+; ARM-NEXT:    ldr r6, [sp, #332]
+; ARM-NEXT:    ldr r3, [r2, -r3]!
+; ARM-NEXT:    bic r1, r1, #-134217728
+; ARM-NEXT:    str r3, [sp, #60] @ 4-byte Spill
+; ARM-NEXT:    add r3, sp, #144
+; ARM-NEXT:    str r1, [sp, #124]
+; ARM-NEXT:    and r9, r7, #31
+; ARM-NEXT:    ldr r1, [r2, #28]
+; ARM-NEXT:    ldr r5, [r2, #24]
+; ARM-NEXT:    str r5, [sp, #48] @ 4-byte Spill
+; ARM-NEXT:    lsl r1, r1, r8
+; ARM-NEXT:    str r8, [sp, #12] @ 4-byte Spill
+; ARM-NEXT:    lsr r5, r5, #1
+; ARM-NEXT:    str r10, [sp, #72] @ 4-byte Spill
+; ARM-NEXT:    orr r5, r1, r5, lsr r10
+; ARM-NEXT:    ubfx r1, r7, #5, #3
+; ARM-NEXT:    str r1, [sp, #56] @ 4-byte Spill
+; ARM-NEXT:    add r7, r3, r1, lsl #2
+; ARM-NEXT:    ldr r11, [r7, #28]
+; ARM-NEXT:    orr r5, r5, r11, lsr r9
+; ARM-NEXT:    lsl r11, r11, #1
+; ARM-NEXT:    and lr, r6, r5
+; ARM-NEXT:    and r5, r0, r12, lsr #3
+; ARM-NEXT:    add r0, sp, #80
 ; ARM-NEXT:    add r0, r0, #32
-; ARM-NEXT:    ldr r1, [r0, -r1]!
-; ARM-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; ARM-NEXT:    rrx r1, r7
-; ARM-NEXT:    ldr r4, [r0, #28]
-; ARM-NEXT:    str r1, [sp, #104]
-; ARM-NEXT:    lsl r1, r4, r12
-; ARM-NEXT:    ldr r4, [r0, #24]
-; ARM-NEXT:    lsr r5, r4, #1
-; ARM-NEXT:    lsl r4, r4, r12
-; ARM-NEXT:    orr r6, r1, r5, lsr r9
-; ARM-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
-; ARM-NEXT:    add r5, sp, #96
-; ARM-NEXT:    ldr r9, [sp, #28] @ 4-byte Reload
-; ARM-NEXT:    ubfx r1, r1, #5, #3
-; ARM-NEXT:    str r1, [sp, #20] @ 4-byte Spill
-; ARM-NEXT:    add r7, r5, r1, lsl #2
-; ARM-NEXT:    ldr r1, [r7, #28]
-; ARM-NEXT:    orr r6, r6, r1, lsr r2
-; ARM-NEXT:    lsl r1, r1, #1
+; ARM-NEXT:    ldr r1, [r0, -r5]!
+; ARM-NEXT:    and r5, r12, #31
+; ARM-NEXT:    str r1, [sp, #52] @ 4-byte Spill
+; ARM-NEXT:    eor r1, r5, #31
+; ARM-NEXT:    ldr r6, [r0, #28]
+; ARM-NEXT:    ldr r3, [r0, #24]
+; ARM-NEXT:    lsl r6, r6, r5
+; ARM-NEXT:    lsr r4, r3, #1
+; ARM-NEXT:    lsl r3, r3, r5
+; ARM-NEXT:    orr r6, r6, r4, lsr r1
+; ARM-NEXT:    orr r6, lr, r6
+; ARM-NEXT:    ldr lr, [sp, #76] @ 4-byte Reload
 ; ARM-NEXT:    and r6, r6, #127
-; ARM-NEXT:    strb r6, [r9, #28]
-; ARM-NEXT:    ldr r6, [r0, #20]
-; ARM-NEXT:    lsrs r5, r6, #1
-; ARM-NEXT:    orr r10, r4, r5, lsr lr
-; ARM-NEXT:    ldr r5, [r7, #24]
-; ARM-NEXT:    lsr r4, r5, r2
-; ARM-NEXT:    orr r1, r4, r1, lsl r3
-; ARM-NEXT:    orr r1, r10, r1
-; ARM-NEXT:    str r1, [r9, #24]
-; ARM-NEXT:    lsl r1, r6, r12
-; ARM-NEXT:    ldmib r0, {r10, r11}
-; ARM-NEXT:    ldr r6, [r0, #12]
+; ARM-NEXT:    strb r6, [lr, #28]
+; ARM-NEXT:    ldr r1, [sp, #48] @ 4-byte Reload
+; ARM-NEXT:    ldr r4, [r2, #20]
+; ARM-NEXT:    ldr r12, [r7, #24]
+; ARM-NEXT:    lsl r6, r1, r8
+; ARM-NEXT:    lsrs r1, r4, #1
+; ARM-NEXT:    orr r8, r6, r1, lsr r10
+; ARM-NEXT:    eor r6, r9, #31
+; ARM-NEXT:    lsr r1, r12, r9
+; ARM-NEXT:    ldr r10, [r0, #20]
+; ARM-NEXT:    orr r1, r1, r11, lsl r6
+; ARM-NEXT:    ldr r6, [sp, #328]
+; ARM-NEXT:    orr r1, r8, r1
+; ARM-NEXT:    and r8, r6, r1
+; ARM-NEXT:    eor r6, r5, #31
+; ARM-NEXT:    lsrs r1, r10, #1
+; ARM-NEXT:    orr r1, r3, r1, lsr r6
+; ARM-NEXT:    orr r1, r8, r1
+; ARM-NEXT:    str r1, [lr, #24]
+; ARM-NEXT:    ldr r3, [r2, #4]
+; ARM-NEXT:    str r3, [sp, #48] @ 4-byte Spill
+; ARM-NEXT:    ldr r3, [r2, #8]
+; ARM-NEXT:    str r3, [sp, #36] @ 4-byte Spill
+; ARM-NEXT:    ldr r3, [r2, #12]
+; ARM-NEXT:    str r3, [sp, #24] @ 4-byte Spill
+; ARM-NEXT:    ldr r11, [r2, #16]
+; ARM-NEXT:    ldr r3, [r7, #20]
+; ARM-NEXT:    ldr lr, [sp, #12] @ 4-byte Reload
+; ARM-NEXT:    ldr r8, [sp, #72] @ 4-byte Reload
+; ARM-NEXT:    lsr r2, r11, #1
+; ARM-NEXT:    str r3, [sp, #20] @ 4-byte Spill
+; ARM-NEXT:    lsl r1, r4, lr
+; ARM-NEXT:    lsr r4, r3, r9
+; ARM-NEXT:    eor r3, r9, #31
+; ARM-NEXT:    orr r1, r1, r2, lsr r8
+; ARM-NEXT:    lsl r2, r12, #1
+; ARM-NEXT:    orr r2, r4, r2, lsl r3
+; ARM-NEXT:    ldr r3, [r0, #4]
+; ARM-NEXT:    str r3, [sp, #44] @ 4-byte Spill
+; ARM-NEXT:    orr r1, r1, r2
+; ARM-NEXT:    ldr r3, [r0, #8]
+; ARM-NEXT:    eor r4, r5, #31
+; ARM-NEXT:    str r3, [sp, #32] @ 4-byte Spill
+; ARM-NEXT:    ldr r3, [r0, #12]
+; ARM-NEXT:    str r3, [sp, #16] @ 4-byte Spill
 ; ARM-NEXT:    ldr r0, [r0, #16]
-; ARM-NEXT:    lsr r4, r0, #1
-; ARM-NEXT:    lsl r0, r0, r12
-; ARM-NEXT:    orr r1, r1, r4, lsr lr
-; ARM-NEXT:    lsl r4, r5, #1
-; ARM-NEXT:    ldr r5, [r7, #20]
-; ARM-NEXT:    lsr r8, r5, r2
-; ARM-NEXT:    orr r4, r8, r4, lsl r3
-; ARM-NEXT:    orr r1, r1, r4
-; ARM-NEXT:    str r1, [r9, #20]
-; ARM-NEXT:    lsrs r1, r6, #1
-; ARM-NEXT:    ldr r8, [r7, #4]
-; ARM-NEXT:    orr r1, r0, r1, lsr lr
-; ARM-NEXT:    ldr r4, [r7, #8]
-; ARM-NEXT:    ldr r0, [r7, #12]
-; ARM-NEXT:    lsl r5, r5, #1
-; ARM-NEXT:    ldr r7, [r7, #16]
-; ARM-NEXT:    lsr lr, r7, r2
-; ARM-NEXT:    orr r5, lr, r5, lsl r3
-; ARM-NEXT:    orr r1, r1, r5
-; ARM-NEXT:    eor r5, r12, #31
-; ARM-NEXT:    str r1, [r9, #16]
-; ARM-NEXT:    lsl r1, r6, r12
-; ARM-NEXT:    lsr r6, r11, #1
-; ARM-NEXT:    lsl r7, r7, #1
-; ARM-NEXT:    orr r1, r1, r6, lsr r5
-; ARM-NEXT:    lsr r6, r0, r2
-; ARM-NEXT:    orr r7, r6, r7, lsl r3
-; ARM-NEXT:    lsl r0, r0, #1
-; ARM-NEXT:    orr r1, r1, r7
-; ARM-NEXT:    str r1, [r9, #12]
-; ARM-NEXT:    lsl r1, r11, r12
-; ARM-NEXT:    lsrs r7, r10, #1
-; ARM-NEXT:    orr r1, r1, r7, lsr r5
-; ARM-NEXT:    lsr r7, r4, r2
-; ARM-NEXT:    orr r0, r7, r0, lsl r3
-; ARM-NEXT:    lsl r7, r4, #1
-; ARM-NEXT:    orr r0, r1, r0
-; ARM-NEXT:    str r0, [r9, #8]
-; ARM-NEXT:    ldr lr, [sp, #24] @ 4-byte Reload
-; ARM-NEXT:    lsl r0, r10, r12
-; ARM-NEXT:    ldr r4, [sp, #20] @ 4-byte Reload
-; ARM-NEXT:    lsr r1, lr, #1
-; ARM-NEXT:    orr r0, r0, r1, lsr r5
-; ARM-NEXT:    lsr r1, r8, r2
-; ARM-NEXT:    orr r1, r1, r7, lsl r3
+; ARM-NEXT:    ldr r2, [sp, #324]
+; ARM-NEXT:    str r4, [sp, #8] @ 4-byte Spill
+; ARM-NEXT:    and r2, r2, r1
+; ARM-NEXT:    lsr r6, r0, #1
+; ARM-NEXT:    lsl r1, r10, r5
+; ARM-NEXT:    lsl r0, r0, r5
+; ARM-NEXT:    orr r1, r1, r6, lsr r4
+; ARM-NEXT:    orr r1, r2, r1
+; ARM-NEXT:    ldr r2, [sp, #76] @ 4-byte Reload
+; ARM-NEXT:    str r1, [r2, #20]
+; ARM-NEXT:    lsl r1, r11, lr
+; ARM-NEXT:    ldr r12, [sp, #24] @ 4-byte Reload
+; ARM-NEXT:    lsrs r2, r12, #1
+; ARM-NEXT:    orr r6, r1, r2, lsr r8
+; ARM-NEXT:    ldr r1, [r7, #4]
+; ARM-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; ARM-NEXT:    ldr r1, [r7, #8]
+; ARM-NEXT:    str r1, [sp, #28] @ 4-byte Spill
+; ARM-NEXT:    ldr r1, [r7, #12]
+; ARM-NEXT:    str r1, [sp, #4] @ 4-byte Spill
+; ARM-NEXT:    ldr r3, [r7, #16]
+; ARM-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
+; ARM-NEXT:    ldr r7, [sp, #16] @ 4-byte Reload
+; ARM-NEXT:    lsr r11, r3, r9
+; ARM-NEXT:    ldr r2, [sp, #76] @ 4-byte Reload
+; ARM-NEXT:    lsl r10, r1, #1
+; ARM-NEXT:    mov r1, r9
+; ARM-NEXT:    eor r9, r9, #31
+; ARM-NEXT:    orr r4, r11, r10, lsl r9
+; ARM-NEXT:    ldr r10, [sp, #8] @ 4-byte Reload
+; ARM-NEXT:    orr r4, r6, r4
+; ARM-NEXT:    ldr r6, [sp, #320]
+; ARM-NEXT:    mov r11, r5
+; ARM-NEXT:    and r4, r6, r4
+; ARM-NEXT:    lsrs r6, r7, #1
+; ARM-NEXT:    orr r0, r0, r6, lsr r10
+; ARM-NEXT:    lsl r6, r3, #1
+; ARM-NEXT:    orr r0, r4, r0
+; ARM-NEXT:    str r0, [r2, #16]
+; ARM-NEXT:    lsl r0, r12, lr
+; ARM-NEXT:    ldr r12, [sp, #36] @ 4-byte Reload
+; ARM-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
+; ARM-NEXT:    lsl r3, r7, r11
+; ARM-NEXT:    mov r7, r10
+; ARM-NEXT:    lsr r4, r12, #1
+; ARM-NEXT:    orr r0, r0, r4, lsr r8
+; ARM-NEXT:    lsr r4, r5, r1
+; ARM-NEXT:    orr r4, r4, r6, lsl r9
+; ARM-NEXT:    ldr r6, [sp, #32] @ 4-byte Reload
+; ARM-NEXT:    orr r0, r0, r4
+; ARM-NEXT:    ldr r4, [sp, #316]
+; ARM-NEXT:    and r0, r4, r0
+; ARM-NEXT:    lsr r4, r6, #1
+; ARM-NEXT:    orr r3, r3, r4, lsr r10
+; ARM-NEXT:    orr r0, r0, r3
+; ARM-NEXT:    str r0, [r2, #12]
+; ARM-NEXT:    lsl r0, r12, lr
+; ARM-NEXT:    ldr r12, [sp, #48] @ 4-byte Reload
+; ARM-NEXT:    ldr r10, [sp, #28] @ 4-byte Reload
+; ARM-NEXT:    lsl r2, r5, #1
+; ARM-NEXT:    ldr r4, [sp, #44] @ 4-byte Reload
+; ARM-NEXT:    mov r5, r11
+; ARM-NEXT:    lsrs r3, r12, #1
+; ARM-NEXT:    orr r0, r0, r3, lsr r8
+; ARM-NEXT:    lsr r3, r10, r1
+; ARM-NEXT:    orr r2, r3, r2, lsl r9
+; ARM-NEXT:    lsrs r3, r4, #1
+; ARM-NEXT:    orr r0, r0, r2
+; ARM-NEXT:    ldr r2, [sp, #312]
+; ARM-NEXT:    mov r8, r1
+; ARM-NEXT:    and r0, r2, r0
+; ARM-NEXT:    lsl r2, r6, r11
+; ARM-NEXT:    orr r2, r2, r3, lsr r7
+; ARM-NEXT:    ldr r3, [sp, #76] @ 4-byte Reload
+; ARM-NEXT:    orr r0, r0, r2
+; ARM-NEXT:    mov r11, r7
+; ARM-NEXT:    str r0, [r3, #8]
+; ARM-NEXT:    lsl r0, r12, lr
+; ARM-NEXT:    ldr r7, [sp, #60] @ 4-byte Reload
+; ARM-NEXT:    ldr r1, [sp, #72] @ 4-byte Reload
+; ARM-NEXT:    ldr r6, [sp, #40] @ 4-byte Reload
+; ARM-NEXT:    lsr r2, r7, #1
+; ARM-NEXT:    orr r0, r0, r2, lsr r1
+; ARM-NEXT:    lsl r1, r10, #1
+; ARM-NEXT:    lsr r2, r6, r8
+; ARM-NEXT:    orr r1, r2, r1, lsl r9
 ; ARM-NEXT:    orr r0, r0, r1
-; ARM-NEXT:    add r1, sp, #96
-; ARM-NEXT:    ldr r1, [r1, r4, lsl #2]
-; ARM-NEXT:    str r0, [r9, #4]
-; ARM-NEXT:    lsr r0, r1, r2
-; ARM-NEXT:    lsl r1, r8, #1
-; ARM-NEXT:    orr r0, r0, r1, lsl r3
-; ARM-NEXT:    orr r0, r0, lr, lsl r12
-; ARM-NEXT:    str r0, [r9]
-; ARM-NEXT:    add sp, sp, #292
+; ARM-NEXT:    ldr r1, [sp, #64] @ 4-byte Reload
+; ARM-NEXT:    and r0, r1, r0
+; ARM-NEXT:    lsl r1, r4, r5
+; ARM-NEXT:    ldr r4, [sp, #52] @ 4-byte Reload
+; ARM-NEXT:    lsr r2, r4, #1
+; ARM-NEXT:    orr r1, r1, r2, lsr r11
+; ARM-NEXT:    orr r0, r0, r1
+; ARM-NEXT:    str r0, [r3, #4]
+; ARM-NEXT:    ldr r1, [sp, #56] @ 4-byte Reload
+; ARM-NEXT:    add r0, sp, #144
+; ARM-NEXT:    ldr r0, [r0, r1, lsl #2]
+; ARM-NEXT:    lsl r1, r6, #1
+; ARM-NEXT:    lsr r0, r0, r8
+; ARM-NEXT:    orr r0, r0, r1, lsl r9
+; ARM-NEXT:    ldr r1, [sp, #68] @ 4-byte Reload
+; ARM-NEXT:    orr r0, r0, r7, lsl lr
+; ARM-NEXT:    and r0, r1, r0
+; ARM-NEXT:    orr r0, r0, r4, lsl r5
+; ARM-NEXT:    str r0, [r3]
+; ARM-NEXT:    add sp, sp, #276
 ; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b123_into_b231_var:
 ; THUMB-M:       @ %bb.0:
 ; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-M-NEXT:    .pad #292
-; THUMB-M-NEXT:    sub sp, #292
-; THUMB-M-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; THUMB-M-NEXT:    movs r1, #0
-; THUMB-M-NEXT:    ldr r0, [sp, #348]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #280]
-; THUMB-M-NEXT:    and r7, r0, #127
-; THUMB-M-NEXT:    str r7, [sp, #252]
-; THUMB-M-NEXT:    ldr r7, [sp, #344]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    strd r1, r1, [sp, #272]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #264]
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsr #31
-; THUMB-M-NEXT:    strd r1, r1, [sp, #256]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #184]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #176]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #168]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #160]
-; THUMB-M-NEXT:    str r7, [sp, #248]
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    strd r0, r2, [sp, #220]
-; THUMB-M-NEXT:    lsls r0, r2, #1
-; THUMB-M-NEXT:    str r0, [sp, #192]
-; THUMB-M-NEXT:    ldr r0, [sp, #340]
+; THUMB-M-NEXT:    .pad #268
+; THUMB-M-NEXT:    sub sp, #268
+; THUMB-M-NEXT:    mov r10, r0
+; THUMB-M-NEXT:    movs r0, #127
+; THUMB-M-NEXT:    strd r3, r2, [sp, #44] @ 8-byte Folded Spill
+; THUMB-M-NEXT:    mov.w r1, #-1
+; THUMB-M-NEXT:    str r0, [sp, #260]
+; THUMB-M-NEXT:    mov.w r0, #-134217728
 ; THUMB-M-NEXT:    str r0, [sp, #244]
-; THUMB-M-NEXT:    orr.w r7, r7, r0, lsr #31
-; THUMB-M-NEXT:    str r7, [sp, #216]
-; THUMB-M-NEXT:    ldr r7, [sp, #336]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    str r7, [sp, #240]
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #212]
-; THUMB-M-NEXT:    ldr r0, [sp, #332]
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    str r0, [sp, #236]
-; THUMB-M-NEXT:    orr.w r7, r7, r0, lsr #31
-; THUMB-M-NEXT:    str r7, [sp, #208]
-; THUMB-M-NEXT:    ldr r7, [sp, #328]
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    str r7, [sp, #232]
-; THUMB-M-NEXT:    orr.w r0, r0, r7, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #204]
-; THUMB-M-NEXT:    lsls r0, r7, #1
-; THUMB-M-NEXT:    str r3, [sp, #228]
-; THUMB-M-NEXT:    orr.w r0, r0, r3, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #200]
-; THUMB-M-NEXT:    lsls r0, r3, #1
-; THUMB-M-NEXT:    add r3, sp, #160
-; THUMB-M-NEXT:    orr.w r0, r0, r2, lsr #31
-; THUMB-M-NEXT:    str r0, [sp, #196]
-; THUMB-M-NEXT:    ldr r0, [sp, #356]
-; THUMB-M-NEXT:    adds r3, #32
-; THUMB-M-NEXT:    strd r1, r1, [sp, #56]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #48]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #40]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #32]
+; THUMB-M-NEXT:    movs r0, #0
+; THUMB-M-NEXT:    movs r2, #63
+; THUMB-M-NEXT:    str r1, [sp, #256]
+; THUMB-M-NEXT:    strd r1, r1, [sp, #248]
+; THUMB-M-NEXT:    mov.w lr, #28
+; THUMB-M-NEXT:    str r0, [sp, #240]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #232]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #224]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #216]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #208]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #200]
+; THUMB-M-NEXT:    strd r1, r2, [sp, #160]
+; THUMB-M-NEXT:    add r2, sp, #200
 ; THUMB-M-NEXT:    strd r1, r1, [sp, #152]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #144]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #136]
-; THUMB-M-NEXT:    strd r1, r1, [sp, #128]
-; THUMB-M-NEXT:    ldr r1, [sp, #360]
-; THUMB-M-NEXT:    str r0, [sp, #68]
-; THUMB-M-NEXT:    lsrs.w r0, r0, #1
-; THUMB-M-NEXT:    str r1, [sp, #72]
-; THUMB-M-NEXT:    orr.w r0, r0, r1, lsl #31
-; THUMB-M-NEXT:    str r0, [sp, #100]
-; THUMB-M-NEXT:    ldr r0, [sp, #352]
-; THUMB-M-NEXT:    str r0, [sp, #64]
-; THUMB-M-NEXT:    ldr r1, [sp, #368]
-; THUMB-M-NEXT:    rrx r0, r0
-; THUMB-M-NEXT:    str r0, [sp, #96]
-; THUMB-M-NEXT:    movw r0, #41989
-; THUMB-M-NEXT:    movt r0, #7092
-; THUMB-M-NEXT:    umull r0, r2, r1, r0
-; THUMB-M-NEXT:    subs r0, r1, r2
-; THUMB-M-NEXT:    add.w r0, r2, r0, lsr #1
-; THUMB-M-NEXT:    movs r2, #231
-; THUMB-M-NEXT:    lsrs r0, r0, #7
-; THUMB-M-NEXT:    mls r1, r0, r2, r1
-; THUMB-M-NEXT:    add r2, sp, #224
-; THUMB-M-NEXT:    str r1, [sp, #20] @ 4-byte Spill
-; THUMB-M-NEXT:    and r12, r1, #31
-; THUMB-M-NEXT:    ubfx r0, r1, #5, #3
-; THUMB-M-NEXT:    eor lr, r12, #31
-; THUMB-M-NEXT:    add.w r0, r2, r0, lsl #2
-; THUMB-M-NEXT:    ldr r2, [r0, #12]
-; THUMB-M-NEXT:    str r2, [sp, #16] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r2, [r0, #16]
-; THUMB-M-NEXT:    str r2, [sp, #4] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r2, [r0, #20]
-; THUMB-M-NEXT:    str r2, [sp] @ 4-byte Spill
-; THUMB-M-NEXT:    ldrd r6, r2, [r0, #24]
-; THUMB-M-NEXT:    str r2, [sp, #8] @ 4-byte Spill
-; THUMB-M-NEXT:    lsls r2, r2, #1
-; THUMB-M-NEXT:    lsr.w r0, r6, r12
-; THUMB-M-NEXT:    lsl.w r2, r2, lr
-; THUMB-M-NEXT:    orr.w r9, r0, r2
-; THUMB-M-NEXT:    rsb.w r0, r1, #230
-; THUMB-M-NEXT:    str r0, [sp, #24] @ 4-byte Spill
-; THUMB-M-NEXT:    and r2, r0, #31
-; THUMB-M-NEXT:    movs r1, #28
-; THUMB-M-NEXT:    and.w r0, r1, r0, lsr #3
-; THUMB-M-NEXT:    subs r0, r3, r0
-; THUMB-M-NEXT:    eor r3, r2, #31
-; THUMB-M-NEXT:    lsls r6, r6, #1
-; THUMB-M-NEXT:    ldr r1, [r0, #8]
-; THUMB-M-NEXT:    lsl.w r6, r6, lr
-; THUMB-M-NEXT:    ldr.w r10, [r0, #24]
-; THUMB-M-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; THUMB-M-NEXT:    ldr r1, [r0, #20]
-; THUMB-M-NEXT:    lsl.w r4, r10, r2
-; THUMB-M-NEXT:    ldrd r8, r5, [r0, #12]
-; THUMB-M-NEXT:    lsrs.w r11, r1, #1
-; THUMB-M-NEXT:    lsls r1, r2
-; THUMB-M-NEXT:    lsr.w r7, r11, r3
-; THUMB-M-NEXT:    orrs r4, r7
-; THUMB-M-NEXT:    orr.w r7, r9, r4
-; THUMB-M-NEXT:    str r7, [sp, #88]
-; THUMB-M-NEXT:    ldr.w r11, [sp] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r4, r11, r12
-; THUMB-M-NEXT:    orrs r4, r6
-; THUMB-M-NEXT:    lsrs r6, r5, #1
-; THUMB-M-NEXT:    lsrs r6, r3
-; THUMB-M-NEXT:    orrs r1, r6
-; THUMB-M-NEXT:    orrs r1, r4
-; THUMB-M-NEXT:    lsrs.w r4, r8, #1
-; THUMB-M-NEXT:    str r1, [sp, #84]
-; THUMB-M-NEXT:    lsl.w r6, r11, #1
-; THUMB-M-NEXT:    lsrs.w r1, r1, #1
-; THUMB-M-NEXT:    lsr.w r4, r4, r3
-; THUMB-M-NEXT:    orr.w r1, r1, r7, lsl #31
-; THUMB-M-NEXT:    str r1, [sp, #116]
-; THUMB-M-NEXT:    ldr.w r9, [sp, #4] @ 4-byte Reload
-; THUMB-M-NEXT:    lsl.w r5, r5, r2
-; THUMB-M-NEXT:    lsl.w r6, r6, lr
-; THUMB-M-NEXT:    orr.w r4, r4, r5
-; THUMB-M-NEXT:    lsr.w r1, r9, r12
-; THUMB-M-NEXT:    orr.w r1, r1, r6
-; THUMB-M-NEXT:    orr.w r5, r1, r4
-; THUMB-M-NEXT:    str r5, [sp, #80]
-; THUMB-M-NEXT:    rrx r1, r5
+; THUMB-M-NEXT:    mov.w r1, #-67108864
+; THUMB-M-NEXT:    strd r0, r1, [sp, #144]
+; THUMB-M-NEXT:    adds r2, #32
+; THUMB-M-NEXT:    strd r0, r0, [sp, #192]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #184]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #176]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #168]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #136]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #128]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #120]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #96]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #88]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #80]
+; THUMB-M-NEXT:    strd r0, r0, [sp, #72]
+; THUMB-M-NEXT:    ldr r0, [sp, #340]
+; THUMB-M-NEXT:    ldr r1, [sp, #336]
+; THUMB-M-NEXT:    bic r0, r0, #-134217728
+; THUMB-M-NEXT:    ldr.w r8, [sp, #344]
 ; THUMB-M-NEXT:    str r1, [sp, #112]
-; THUMB-M-NEXT:    lsr.w r1, r10, #1
-; THUMB-M-NEXT:    ldr r0, [r0, #28]
-; THUMB-M-NEXT:    lsrs r1, r3
-; THUMB-M-NEXT:    lsls r0, r2
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    ldr r1, [sp, #8] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r1, r1, r12
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    and r0, r0, #127
-; THUMB-M-NEXT:    str r0, [sp, #92]
-; THUMB-M-NEXT:    lsl.w r1, r9, #1
-; THUMB-M-NEXT:    lsrs.w r0, r0, #1
-; THUMB-M-NEXT:    lsl.w r1, r1, lr
-; THUMB-M-NEXT:    and r0, r0, #127
-; THUMB-M-NEXT:    str r0, [sp, #124]
-; THUMB-M-NEXT:    rrx r0, r7
-; THUMB-M-NEXT:    str r0, [sp, #120]
-; THUMB-M-NEXT:    ldr r0, [sp, #16] @ 4-byte Reload
-; THUMB-M-NEXT:    ldr r4, [sp, #12] @ 4-byte Reload
-; THUMB-M-NEXT:    lsr.w r0, r0, r12
-; THUMB-M-NEXT:    lsrs r4, r4, #1
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsl.w r1, r8, r2
-; THUMB-M-NEXT:    lsrs r4, r3
-; THUMB-M-NEXT:    orrs r1, r4
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    ldr r1, [sp, #364]
-; THUMB-M-NEXT:    bfi r0, r1, #0, #27
-; THUMB-M-NEXT:    str r0, [sp, #76]
-; THUMB-M-NEXT:    movs r1, #28
-; THUMB-M-NEXT:    lsrs.w r0, r0, #1
-; THUMB-M-NEXT:    orr.w r0, r0, r5, lsl #31
-; THUMB-M-NEXT:    str r0, [sp, #108]
-; THUMB-M-NEXT:    ldr r0, [sp, #360]
-; THUMB-M-NEXT:    rrx r0, r0
-; THUMB-M-NEXT:    str r0, [sp, #104]
-; THUMB-M-NEXT:    ldr r0, [sp, #20] @ 4-byte Reload
-; THUMB-M-NEXT:    ldr.w r9, [sp, #28] @ 4-byte Reload
-; THUMB-M-NEXT:    and.w r0, r1, r0, lsr #3
-; THUMB-M-NEXT:    add r1, sp, #32
-; THUMB-M-NEXT:    adds r1, #32
-; THUMB-M-NEXT:    subs r6, r1, r0
-; THUMB-M-NEXT:    ldr r0, [r6, #28]
-; THUMB-M-NEXT:    ldr r4, [r6, #24]
-; THUMB-M-NEXT:    lsl.w r0, r0, r12
-; THUMB-M-NEXT:    lsrs r1, r4, #1
-; THUMB-M-NEXT:    lsr.w r1, r1, lr
-; THUMB-M-NEXT:    orr.w r5, r0, r1
-; THUMB-M-NEXT:    ldr r0, [sp, #24] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr r1, [sp, #332]
+; THUMB-M-NEXT:    and r9, r8, #31
+; THUMB-M-NEXT:    str r0, [sp, #116]
+; THUMB-M-NEXT:    movw r0, #41989
+; THUMB-M-NEXT:    str r1, [sp, #108]
+; THUMB-M-NEXT:    movt r0, #7092
+; THUMB-M-NEXT:    ldr r1, [sp, #328]
+; THUMB-M-NEXT:    str r1, [sp, #104]
+; THUMB-M-NEXT:    umull r0, r1, r8, r0
+; THUMB-M-NEXT:    sub.w r0, r8, r1
+; THUMB-M-NEXT:    add.w r0, r1, r0, lsr #1
+; THUMB-M-NEXT:    movs r1, #231
+; THUMB-M-NEXT:    lsrs r0, r0, #7
+; THUMB-M-NEXT:    mls r0, r0, r1, r8
+; THUMB-M-NEXT:    and r11, r0, #31
+; THUMB-M-NEXT:    and.w r1, lr, r0, lsr #3
+; THUMB-M-NEXT:    eor r7, r11, #31
+; THUMB-M-NEXT:    subs r6, r2, r1
+; THUMB-M-NEXT:    rsb.w r0, r0, #230
+; THUMB-M-NEXT:    and r5, r0, #31
+; THUMB-M-NEXT:    ldr r1, [r6, #28]
+; THUMB-M-NEXT:    str r7, [sp, #60] @ 4-byte Spill
+; THUMB-M-NEXT:    str.w r11, [sp, #68] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r3, [r6, #24]
+; THUMB-M-NEXT:    lsl.w r1, r1, r11
+; THUMB-M-NEXT:    str r5, [sp, #56] @ 4-byte Spill
+; THUMB-M-NEXT:    lsrs r2, r3, #1
+; THUMB-M-NEXT:    lsrs r2, r7
+; THUMB-M-NEXT:    orr.w r4, r1, r2
 ; THUMB-M-NEXT:    ubfx r1, r0, #5, #3
-; THUMB-M-NEXT:    add r0, sp, #96
-; THUMB-M-NEXT:    str r1, [sp, #24] @ 4-byte Spill
-; THUMB-M-NEXT:    add.w r0, r0, r1, lsl #2
-; THUMB-M-NEXT:    ldr r7, [r0, #28]
-; THUMB-M-NEXT:    lsr.w r1, r7, r2
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsls r7, r3
+; THUMB-M-NEXT:    add r0, sp, #136
+; THUMB-M-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; THUMB-M-NEXT:    add.w r12, r0, r1, lsl #2
+; THUMB-M-NEXT:    ldr.w r2, [r12, #28]
+; THUMB-M-NEXT:    lsr.w r7, r2, r5
+; THUMB-M-NEXT:    orrs r4, r7
+; THUMB-M-NEXT:    ldr r7, [sp, #324]
+; THUMB-M-NEXT:    add r5, sp, #72
+; THUMB-M-NEXT:    adds r5, #32
+; THUMB-M-NEXT:    lsls r2, r2, #1
+; THUMB-M-NEXT:    ands r4, r7
+; THUMB-M-NEXT:    and.w r7, lr, r8, lsr #3
+; THUMB-M-NEXT:    subs r7, r5, r7
+; THUMB-M-NEXT:    eor r5, r9, #31
+; THUMB-M-NEXT:    ldr r1, [r7, #24]
+; THUMB-M-NEXT:    ldr.w lr, [r7, #28]
+; THUMB-M-NEXT:    str r1, [sp, #36] @ 4-byte Spill
+; THUMB-M-NEXT:    lsrs r1, r1, #1
+; THUMB-M-NEXT:    str r5, [sp, #52] @ 4-byte Spill
+; THUMB-M-NEXT:    lsrs r1, r5
+; THUMB-M-NEXT:    lsl.w lr, lr, r9
+; THUMB-M-NEXT:    orr.w r1, r1, lr
+; THUMB-M-NEXT:    str.w r9, [sp, #8] @ 4-byte Spill
+; THUMB-M-NEXT:    orrs r1, r4
+; THUMB-M-NEXT:    str.w r10, [sp, #64] @ 4-byte Spill
 ; THUMB-M-NEXT:    and r1, r1, #127
-; THUMB-M-NEXT:    strb.w r1, [r9, #28]
-; THUMB-M-NEXT:    lsl.w r1, r4, r12
+; THUMB-M-NEXT:    strb.w r1, [r10, #28]
 ; THUMB-M-NEXT:    ldr r4, [r6, #20]
-; THUMB-M-NEXT:    lsrs.w r5, r4, #1
-; THUMB-M-NEXT:    lsr.w r5, r5, lr
-; THUMB-M-NEXT:    orr.w r10, r1, r5
-; THUMB-M-NEXT:    ldr r5, [r0, #24]
-; THUMB-M-NEXT:    lsr.w r1, r5, r2
+; THUMB-M-NEXT:    lsl.w r1, r3, r11
+; THUMB-M-NEXT:    ldr.w r8, [sp, #56] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr.w r11, [sp, #60] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr.w r0, [r12, #24]
+; THUMB-M-NEXT:    lsrs.w r3, r4, #1
+; THUMB-M-NEXT:    eor lr, r8, #31
+; THUMB-M-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMB-M-NEXT:    lsr.w r3, r3, r11
+; THUMB-M-NEXT:    str.w lr, [sp, #12] @ 4-byte Spill
+; THUMB-M-NEXT:    orrs r3, r1
+; THUMB-M-NEXT:    lsr.w r1, r0, r8
+; THUMB-M-NEXT:    lsl.w r2, r2, lr
+; THUMB-M-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #320]
+; THUMB-M-NEXT:    orrs r1, r3
+; THUMB-M-NEXT:    ldr r3, [r7, #20]
+; THUMB-M-NEXT:    ands r1, r2
+; THUMB-M-NEXT:    lsl.w r2, r0, r9
+; THUMB-M-NEXT:    ldr.w r9, [sp, #52] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs.w r5, r3, #1
+; THUMB-M-NEXT:    lsr.w r5, r5, r9
+; THUMB-M-NEXT:    orrs r2, r5
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    str.w r1, [r10, #24]
+; THUMB-M-NEXT:    ldr r0, [sp, #68] @ 4-byte Reload
+; THUMB-M-NEXT:    mov r2, r11
+; THUMB-M-NEXT:    ldr.w r10, [r6, #16]
+; THUMB-M-NEXT:    ldr r5, [sp, #32] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, r4, r0
+; THUMB-M-NEXT:    lsr.w r4, r10, #1
+; THUMB-M-NEXT:    lsr.w r4, r4, r11
+; THUMB-M-NEXT:    orrs r1, r4
+; THUMB-M-NEXT:    ldr.w r4, [r12, #20]
 ; THUMB-M-NEXT:    lsls r5, r5, #1
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    lsls r5, r3
-; THUMB-M-NEXT:    orr.w r1, r1, r10
-; THUMB-M-NEXT:    str.w r1, [r9, #24]
-; THUMB-M-NEXT:    lsl.w r1, r4, r12
-; THUMB-M-NEXT:    ldr r4, [r6, #16]
+; THUMB-M-NEXT:    lsl.w r5, r5, lr
+; THUMB-M-NEXT:    str r4, [sp, #28] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr.w r11, [sp, #8] @ 4-byte Reload
+; THUMB-M-NEXT:    mov lr, r9
+; THUMB-M-NEXT:    lsr.w r4, r4, r8
+; THUMB-M-NEXT:    orrs r5, r4
+; THUMB-M-NEXT:    orrs r1, r5
+; THUMB-M-NEXT:    ldr r5, [sp, #316]
+; THUMB-M-NEXT:    lsl.w r3, r3, r11
+; THUMB-M-NEXT:    ands r1, r5
+; THUMB-M-NEXT:    ldr r5, [r7, #16]
+; THUMB-M-NEXT:    lsrs r4, r5, #1
+; THUMB-M-NEXT:    lsl.w r5, r5, r11
+; THUMB-M-NEXT:    lsr.w r4, r4, r9
+; THUMB-M-NEXT:    orrs r3, r4
+; THUMB-M-NEXT:    orrs r1, r3
+; THUMB-M-NEXT:    ldr r3, [sp, #64] @ 4-byte Reload
+; THUMB-M-NEXT:    str r1, [r3, #20]
+; THUMB-M-NEXT:    lsl.w r3, r10, r0
+; THUMB-M-NEXT:    ldr r0, [r6]
+; THUMB-M-NEXT:    mov r10, r2
+; THUMB-M-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r6, #4]
+; THUMB-M-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; THUMB-M-NEXT:    ldrd r8, r1, [r6, #8]
+; THUMB-M-NEXT:    ldr.w r0, [r12, #4]
+; THUMB-M-NEXT:    lsrs.w r6, r1, #1
+; THUMB-M-NEXT:    str r0, [sp, #32] @ 4-byte Spill
+; THUMB-M-NEXT:    lsrs r6, r2
+; THUMB-M-NEXT:    ldr.w r0, [r12, #8]
+; THUMB-M-NEXT:    orr.w r2, r3, r6
+; THUMB-M-NEXT:    ldr r6, [sp, #28] @ 4-byte Reload
+; THUMB-M-NEXT:    str r0, [sp, #20] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr.w r9, [sp, #56] @ 4-byte Reload
+; THUMB-M-NEXT:    ldrd r3, r4, [r12, #12]
+; THUMB-M-NEXT:    lsls r6, r6, #1
+; THUMB-M-NEXT:    ldr.w r12, [sp, #12] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r0, r4, r9
+; THUMB-M-NEXT:    lsl.w r6, r6, r12
+; THUMB-M-NEXT:    orrs r0, r6
+; THUMB-M-NEXT:    orrs r0, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #312]
+; THUMB-M-NEXT:    and.w r6, r2, r0
+; THUMB-M-NEXT:    ldr r0, [r7]
+; THUMB-M-NEXT:    str r0, [sp, #28] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r7, #4]
+; THUMB-M-NEXT:    str r0, [sp, #16] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r0, [r7, #8]
+; THUMB-M-NEXT:    str r0, [sp, #4] @ 4-byte Spill
+; THUMB-M-NEXT:    ldr r7, [r7, #12]
+; THUMB-M-NEXT:    lsrs.w r2, r7, #1
+; THUMB-M-NEXT:    lsr.w r2, r2, lr
+; THUMB-M-NEXT:    orrs r2, r5
+; THUMB-M-NEXT:    ldr r5, [sp, #64] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r2, r6
+; THUMB-M-NEXT:    lsls r6, r4, #1
+; THUMB-M-NEXT:    lsl.w r6, r6, r12
+; THUMB-M-NEXT:    str r2, [r5, #16]
+; THUMB-M-NEXT:    lsr.w r2, r8, #1
+; THUMB-M-NEXT:    ldr r0, [sp, #68] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r2, r2, r10
+; THUMB-M-NEXT:    ldr r4, [sp, #4] @ 4-byte Reload
+; THUMB-M-NEXT:    lsls r1, r0
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    lsr.w r2, r3, r9
+; THUMB-M-NEXT:    orrs r2, r6
+; THUMB-M-NEXT:    lsls r3, r3, #1
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #308]
+; THUMB-M-NEXT:    lsl.w r3, r3, r12
+; THUMB-M-NEXT:    mov r6, r0
+; THUMB-M-NEXT:    ands r1, r2
+; THUMB-M-NEXT:    lsl.w r2, r7, r11
 ; THUMB-M-NEXT:    lsrs r7, r4, #1
 ; THUMB-M-NEXT:    lsr.w r7, r7, lr
-; THUMB-M-NEXT:    orr.w r10, r1, r7
-; THUMB-M-NEXT:    ldr r7, [r0, #20]
-; THUMB-M-NEXT:    lsr.w r1, r7, r2
-; THUMB-M-NEXT:    lsls r7, r7, #1
-; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsl.w r5, r4, r12
-; THUMB-M-NEXT:    orr.w r1, r1, r10
-; THUMB-M-NEXT:    str.w r1, [r9, #20]
-; THUMB-M-NEXT:    ldr r1, [r6]
-; THUMB-M-NEXT:    lsls r7, r3
-; THUMB-M-NEXT:    str r1, [sp, #20] @ 4-byte Spill
-; THUMB-M-NEXT:    ldrd r11, r8, [r6, #4]
-; THUMB-M-NEXT:    ldr r6, [r6, #12]
-; THUMB-M-NEXT:    ldr r1, [r0, #4]
-; THUMB-M-NEXT:    str r1, [sp, #16] @ 4-byte Spill
-; THUMB-M-NEXT:    lsrs.w r4, r6, #1
-; THUMB-M-NEXT:    lsr.w r4, r4, lr
-; THUMB-M-NEXT:    orrs r5, r4
-; THUMB-M-NEXT:    ldrd r10, r4, [r0, #8]
-; THUMB-M-NEXT:    ldr r0, [r0, #16]
-; THUMB-M-NEXT:    lsr.w r1, r0, r2
-; THUMB-M-NEXT:    lsls r0, r0, #1
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    lsls r0, r3
-; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsr.w r5, r8, #1
-; THUMB-M-NEXT:    str.w r1, [r9, #16]
-; THUMB-M-NEXT:    lsl.w r1, r6, r12
-; THUMB-M-NEXT:    lsr.w r5, r5, lr
-; THUMB-M-NEXT:    orrs r1, r5
-; THUMB-M-NEXT:    lsr.w r5, r4, r2
-; THUMB-M-NEXT:    orrs r0, r5
+; THUMB-M-NEXT:    orrs r2, r7
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    str r1, [r5, #12]
+; THUMB-M-NEXT:    ldr.w lr, [sp, #24] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, r8, r0
+; THUMB-M-NEXT:    ldr.w r8, [sp, #20] @ 4-byte Reload
+; THUMB-M-NEXT:    mov r7, r5
+; THUMB-M-NEXT:    ldr r5, [sp, #52] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r0, r4, r11
+; THUMB-M-NEXT:    lsrs.w r2, lr, #1
+; THUMB-M-NEXT:    lsr.w r2, r2, r10
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    lsr.w r2, r8, r9
+; THUMB-M-NEXT:    mov r10, r12
+; THUMB-M-NEXT:    orrs r2, r3
+; THUMB-M-NEXT:    ldr.w r12, [sp, #16] @ 4-byte Reload
+; THUMB-M-NEXT:    orrs r1, r2
+; THUMB-M-NEXT:    ldr r2, [sp, #304]
+; THUMB-M-NEXT:    mov r3, r7
+; THUMB-M-NEXT:    ands r1, r2
+; THUMB-M-NEXT:    lsrs.w r2, r12, #1
+; THUMB-M-NEXT:    lsrs r2, r5
+; THUMB-M-NEXT:    orrs r0, r2
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsrs.w r1, r11, #1
-; THUMB-M-NEXT:    str.w r0, [r9, #12]
-; THUMB-M-NEXT:    lsl.w r0, r8, r12
-; THUMB-M-NEXT:    lsr.w r1, r1, lr
-; THUMB-M-NEXT:    lsls r4, r4, #1
+; THUMB-M-NEXT:    str r0, [r7, #8]
+; THUMB-M-NEXT:    lsl.w r0, lr, r6
+; THUMB-M-NEXT:    ldr.w lr, [sp, #36] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr r2, [sp, #60] @ 4-byte Reload
+; THUMB-M-NEXT:    ldr r4, [sp, #32] @ 4-byte Reload
+; THUMB-M-NEXT:    lsr.w r1, lr, #1
+; THUMB-M-NEXT:    ldr r7, [sp, #28] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs r1, r2
+; THUMB-M-NEXT:    lsl.w r2, r8, #1
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsr.w r1, r10, r2
-; THUMB-M-NEXT:    lsls r4, r3
-; THUMB-M-NEXT:    orrs r1, r4
+; THUMB-M-NEXT:    lsr.w r1, r4, r9
+; THUMB-M-NEXT:    lsl.w r2, r2, r10
+; THUMB-M-NEXT:    orrs r1, r2
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    str.w r0, [r9, #8]
-; THUMB-M-NEXT:    ldr r5, [sp, #20] @ 4-byte Reload
-; THUMB-M-NEXT:    lsl.w r0, r11, r12
-; THUMB-M-NEXT:    ldr r6, [sp, #16] @ 4-byte Reload
-; THUMB-M-NEXT:    lsl.w r7, r10, #1
-; THUMB-M-NEXT:    lsls r7, r3
-; THUMB-M-NEXT:    lsrs r1, r5, #1
-; THUMB-M-NEXT:    lsr.w r1, r1, lr
+; THUMB-M-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; THUMB-M-NEXT:    lsrs r2, r7, #1
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r12, r11
+; THUMB-M-NEXT:    lsrs r2, r5
+; THUMB-M-NEXT:    orrs r1, r2
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsr.w r1, r6, r2
-; THUMB-M-NEXT:    orrs r1, r7
-; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    str.w r0, [r9, #4]
-; THUMB-M-NEXT:    ldr r1, [sp, #24] @ 4-byte Reload
-; THUMB-M-NEXT:    add r0, sp, #96
+; THUMB-M-NEXT:    str r0, [r3, #4]
+; THUMB-M-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; THUMB-M-NEXT:    add r0, sp, #136
 ; THUMB-M-NEXT:    ldr.w r0, [r0, r1, lsl #2]
-; THUMB-M-NEXT:    lsls r1, r6, #1
-; THUMB-M-NEXT:    lsls r1, r3
-; THUMB-M-NEXT:    lsrs r0, r2
+; THUMB-M-NEXT:    lsls r1, r4, #1
+; THUMB-M-NEXT:    lsl.w r1, r1, r10
+; THUMB-M-NEXT:    lsr.w r0, r0, r9
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    lsl.w r1, r5, r12
+; THUMB-M-NEXT:    ldr r1, [sp, #68] @ 4-byte Reload
+; THUMB-M-NEXT:    lsl.w r1, lr, r1
 ; THUMB-M-NEXT:    orrs r0, r1
-; THUMB-M-NEXT:    str.w r0, [r9]
-; THUMB-M-NEXT:    add sp, #292
+; THUMB-M-NEXT:    ldr r1, [sp, #48] @ 4-byte Reload
+; THUMB-M-NEXT:    ands r0, r1
+; THUMB-M-NEXT:    lsl.w r1, r7, r11
+; THUMB-M-NEXT:    orrs r0, r1
+; THUMB-M-NEXT:    str r0, [r3]
+; THUMB-M-NEXT:    add sp, #268
 ; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b123_into_b231_var:
 ; THUMB-A:       @ %bb.0:
 ; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
-; THUMB-A-NEXT:    .pad #292
-; THUMB-A-NEXT:    sub sp, #292
-; THUMB-A-NEXT:    str r0, [sp, #28] @ 4-byte Spill
-; THUMB-A-NEXT:    lsls r0, r3, #1
-; THUMB-A-NEXT:    orr.w r0, r0, r2, lsr #31
-; THUMB-A-NEXT:    ldr.w lr, [sp, #368]
-; THUMB-A-NEXT:    str r0, [sp, #196]
-; THUMB-A-NEXT:    movw r0, #41989
-; THUMB-A-NEXT:    movt r0, #7092
-; THUMB-A-NEXT:    ldrd r5, r12, [sp, #344]
-; THUMB-A-NEXT:    umull r0, r7, lr, r0
-; THUMB-A-NEXT:    str r2, [sp, #224]
-; THUMB-A-NEXT:    movs r0, #0
-; THUMB-A-NEXT:    strd r0, r0, [sp, #280]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #272]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #264]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #256]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #184]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #176]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #168]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #160]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #56]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #48]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #40]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #32]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #152]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #144]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #136]
-; THUMB-A-NEXT:    strd r0, r0, [sp, #128]
-; THUMB-A-NEXT:    and r0, r12, #127
-; THUMB-A-NEXT:    str r0, [sp, #252]
-; THUMB-A-NEXT:    lsls r0, r2, #1
-; THUMB-A-NEXT:    str r0, [sp, #192]
-; THUMB-A-NEXT:    lsl.w r0, r12, #1
-; THUMB-A-NEXT:    ldr r4, [sp, #340]
-; THUMB-A-NEXT:    orr.w r0, r0, r5, lsr #31
-; THUMB-A-NEXT:    ldr r6, [sp, #336]
-; THUMB-A-NEXT:    str r5, [sp, #248]
-; THUMB-A-NEXT:    str r0, [sp, #220]
-; THUMB-A-NEXT:    lsls r0, r5, #1
-; THUMB-A-NEXT:    orr.w r0, r0, r4, lsr #31
-; THUMB-A-NEXT:    str r4, [sp, #244]
-; THUMB-A-NEXT:    str r0, [sp, #216]
-; THUMB-A-NEXT:    lsls r0, r4, #1
-; THUMB-A-NEXT:    orr.w r5, r0, r6, lsr #31
-; THUMB-A-NEXT:    str r6, [sp, #240]
-; THUMB-A-NEXT:    str r5, [sp, #212]
-; THUMB-A-NEXT:    sub.w r5, lr, r7
-; THUMB-A-NEXT:    ldr r1, [sp, #332]
-; THUMB-A-NEXT:    lsls r6, r6, #1
-; THUMB-A-NEXT:    add.w r7, r7, r5, lsr #1
-; THUMB-A-NEXT:    ldr r4, [sp, #328]
-; THUMB-A-NEXT:    ldr r2, [sp, #356]
-; THUMB-A-NEXT:    orr.w r5, r6, r1, lsr #31
-; THUMB-A-NEXT:    lsrs r7, r7, #7
-; THUMB-A-NEXT:    movs r6, #231
-; THUMB-A-NEXT:    ldr r0, [sp, #352]
-; THUMB-A-NEXT:    mls r6, r7, r6, lr
-; THUMB-A-NEXT:    ldr r7, [sp, #360]
-; THUMB-A-NEXT:    str r6, [sp, #20] @ 4-byte Spill
-; THUMB-A-NEXT:    str r1, [sp, #236]
-; THUMB-A-NEXT:    lsls r1, r1, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r4, lsr #31
-; THUMB-A-NEXT:    strd r3, r4, [sp, #228]
-; THUMB-A-NEXT:    strd r0, r2, [sp, #64]
-; THUMB-A-NEXT:    str r1, [sp, #204]
-; THUMB-A-NEXT:    lsls r1, r4, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r3, lsr #31
-; THUMB-A-NEXT:    str r1, [sp, #200]
-; THUMB-A-NEXT:    lsrs.w r1, r2, #1
-; THUMB-A-NEXT:    str r5, [sp, #208]
-; THUMB-A-NEXT:    orr.w r1, r1, r7, lsl #31
-; THUMB-A-NEXT:    str r1, [sp, #100]
-; THUMB-A-NEXT:    ubfx r1, r6, #5, #3
-; THUMB-A-NEXT:    add r2, sp, #224
-; THUMB-A-NEXT:    rrx r0, r0
-; THUMB-A-NEXT:    rsb.w r7, r6, #230
-; THUMB-A-NEXT:    add.w r3, r2, r1, lsl #2
-; THUMB-A-NEXT:    and r2, r6, #31
-; THUMB-A-NEXT:    eor r9, r2, #31
-; THUMB-A-NEXT:    ldr r1, [r3, #28]
-; THUMB-A-NEXT:    str r1, [sp, #8] @ 4-byte Spill
-; THUMB-A-NEXT:    str r0, [sp, #96]
-; THUMB-A-NEXT:    lsls r0, r1, #1
-; THUMB-A-NEXT:    ldr r1, [r3, #12]
-; THUMB-A-NEXT:    str r1, [sp, #16] @ 4-byte Spill
+; THUMB-A-NEXT:    .pad #268
+; THUMB-A-NEXT:    sub sp, #268
+; THUMB-A-NEXT:    movs r1, #127
+; THUMB-A-NEXT:    strd r3, r2, [sp, #44] @ 8-byte Folded Spill
+; THUMB-A-NEXT:    str r0, [sp, #68] @ 4-byte Spill
+; THUMB-A-NEXT:    mov.w r6, #-1
+; THUMB-A-NEXT:    str r1, [sp, #260]
+; THUMB-A-NEXT:    mov.w r1, #-134217728
+; THUMB-A-NEXT:    str r1, [sp, #244]
+; THUMB-A-NEXT:    movs r1, #0
+; THUMB-A-NEXT:    movs r5, #63
+; THUMB-A-NEXT:    ldr.w lr, [sp, #344]
+; THUMB-A-NEXT:    str r6, [sp, #256]
+; THUMB-A-NEXT:    strd r6, r6, [sp, #248]
+; THUMB-A-NEXT:    str r1, [sp, #240]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #232]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #224]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #216]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #208]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #200]
+; THUMB-A-NEXT:    strd r6, r5, [sp, #160]
+; THUMB-A-NEXT:    strd r6, r6, [sp, #152]
+; THUMB-A-NEXT:    mov.w r6, #-67108864
+; THUMB-A-NEXT:    strd r1, r6, [sp, #144]
+; THUMB-A-NEXT:    movw r6, #41989
+; THUMB-A-NEXT:    movt r6, #7092
+; THUMB-A-NEXT:    ldrd r7, r0, [sp, #336]
+; THUMB-A-NEXT:    umull r6, r5, lr, r6
+; THUMB-A-NEXT:    ldrd r3, r2, [sp, #328]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #192]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #184]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #176]
+; THUMB-A-NEXT:    bic r0, r0, #-134217728
+; THUMB-A-NEXT:    strd r1, r1, [sp, #168]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #136]
+; THUMB-A-NEXT:    strd r2, r7, [sp, #108]
+; THUMB-A-NEXT:    sub.w r2, lr, r5
+; THUMB-A-NEXT:    strd r1, r3, [sp, #100]
+; THUMB-A-NEXT:    movs r3, #231
+; THUMB-A-NEXT:    add.w r2, r5, r2, lsr #1
+; THUMB-A-NEXT:    strd r1, r1, [sp, #128]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #120]
+; THUMB-A-NEXT:    movs r7, #28
+; THUMB-A-NEXT:    lsrs r2, r2, #7
+; THUMB-A-NEXT:    strd r1, r1, [sp, #92]
+; THUMB-A-NEXT:    mls r3, r2, r3, lr
+; THUMB-A-NEXT:    str r1, [sp, #88]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #80]
+; THUMB-A-NEXT:    strd r1, r1, [sp, #72]
+; THUMB-A-NEXT:    add r1, sp, #200
+; THUMB-A-NEXT:    str r0, [sp, #116]
+; THUMB-A-NEXT:    adds r1, #32
+; THUMB-A-NEXT:    and r9, r3, #31
+; THUMB-A-NEXT:    and.w r0, r7, r3, lsr #3
+; THUMB-A-NEXT:    eor r10, r9, #31
+; THUMB-A-NEXT:    subs r6, r1, r0
+; THUMB-A-NEXT:    ldrd r11, r0, [r6, #24]
 ; THUMB-A-NEXT:    lsl.w r0, r0, r9
-; THUMB-A-NEXT:    ldr r1, [r3, #16]
-; THUMB-A-NEXT:    str r1, [sp, #4] @ 4-byte Spill
-; THUMB-A-NEXT:    movs r1, #28
-; THUMB-A-NEXT:    ldrd r10, r4, [r3, #20]
-; THUMB-A-NEXT:    lsr.w r3, r4, r2
-; THUMB-A-NEXT:    orr.w r5, r3, r0
-; THUMB-A-NEXT:    add r0, sp, #160
-; THUMB-A-NEXT:    and.w r3, r1, r7, lsr #3
-; THUMB-A-NEXT:    adds r0, #32
-; THUMB-A-NEXT:    str r7, [sp, #24] @ 4-byte Spill
-; THUMB-A-NEXT:    subs r0, r0, r3
-; THUMB-A-NEXT:    and r3, r7, #31
-; THUMB-A-NEXT:    eor lr, r3, #31
-; THUMB-A-NEXT:    lsls r4, r4, #1
-; THUMB-A-NEXT:    ldr r1, [r0, #8]
-; THUMB-A-NEXT:    lsl.w r4, r4, r9
-; THUMB-A-NEXT:    str r1, [sp, #12] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr r1, [r0, #12]
-; THUMB-A-NEXT:    str r1, [sp] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr.w r8, [r0, #24]
-; THUMB-A-NEXT:    ldrd r6, r1, [r0, #16]
-; THUMB-A-NEXT:    lsrs.w r7, r1, #1
-; THUMB-A-NEXT:    lsls r1, r3
-; THUMB-A-NEXT:    lsr.w r12, r7, lr
-; THUMB-A-NEXT:    lsl.w r11, r8, r3
-; THUMB-A-NEXT:    orr.w r7, r11, r12
-; THUMB-A-NEXT:    ldr.w r11, [sp] @ 4-byte Reload
-; THUMB-A-NEXT:    orr.w r12, r5, r7
-; THUMB-A-NEXT:    lsr.w r7, r10, r2
-; THUMB-A-NEXT:    orrs r4, r7
-; THUMB-A-NEXT:    lsrs r7, r6, #1
-; THUMB-A-NEXT:    lsr.w r7, r7, lr
-; THUMB-A-NEXT:    orrs r1, r7
-; THUMB-A-NEXT:    orrs r1, r4
-; THUMB-A-NEXT:    lsrs.w r4, r11, #1
-; THUMB-A-NEXT:    str r1, [sp, #84]
-; THUMB-A-NEXT:    lsl.w r7, r10, #1
-; THUMB-A-NEXT:    lsrs.w r1, r1, #1
-; THUMB-A-NEXT:    lsr.w r4, r4, lr
-; THUMB-A-NEXT:    orr.w r1, r1, r12, lsl #31
-; THUMB-A-NEXT:    str r1, [sp, #116]
-; THUMB-A-NEXT:    ldr r5, [sp, #4] @ 4-byte Reload
-; THUMB-A-NEXT:    lsl.w r6, r6, r3
-; THUMB-A-NEXT:    ldr r0, [r0, #28]
-; THUMB-A-NEXT:    orr.w r4, r4, r6
-; THUMB-A-NEXT:    lsl.w r7, r7, r9
-; THUMB-A-NEXT:    lsr.w r1, r5, r2
-; THUMB-A-NEXT:    lsl.w r6, r5, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r7
-; THUMB-A-NEXT:    lsl.w r0, r0, r3
-; THUMB-A-NEXT:    orr.w r1, r1, r4
-; THUMB-A-NEXT:    lsr.w r4, r8, #1
-; THUMB-A-NEXT:    lsr.w r4, r4, lr
-; THUMB-A-NEXT:    orr.w r0, r0, r4
-; THUMB-A-NEXT:    ldr r4, [sp, #8] @ 4-byte Reload
-; THUMB-A-NEXT:    rrx r10, r1
-; THUMB-A-NEXT:    lsl.w r6, r6, r9
-; THUMB-A-NEXT:    lsrs r4, r2
-; THUMB-A-NEXT:    orrs r0, r4
-; THUMB-A-NEXT:    and r0, r0, #127
-; THUMB-A-NEXT:    str r0, [sp, #92]
-; THUMB-A-NEXT:    lsrs.w r0, r0, #1
-; THUMB-A-NEXT:    and r0, r0, #127
-; THUMB-A-NEXT:    str r0, [sp, #124]
-; THUMB-A-NEXT:    str.w r12, [sp, #88]
-; THUMB-A-NEXT:    rrx r0, r12
-; THUMB-A-NEXT:    ldr r7, [sp, #16] @ 4-byte Reload
-; THUMB-A-NEXT:    ldr r5, [sp, #12] @ 4-byte Reload
-; THUMB-A-NEXT:    str r1, [sp, #80]
-; THUMB-A-NEXT:    lsrs r7, r2
-; THUMB-A-NEXT:    lsrs r4, r5, #1
-; THUMB-A-NEXT:    orrs r7, r6
-; THUMB-A-NEXT:    lsl.w r6, r11, r3
-; THUMB-A-NEXT:    lsr.w r4, r4, lr
-; THUMB-A-NEXT:    orrs r6, r4
-; THUMB-A-NEXT:    add r5, sp, #96
-; THUMB-A-NEXT:    orrs r7, r6
-; THUMB-A-NEXT:    ldr r6, [sp, #364]
-; THUMB-A-NEXT:    bfi r7, r6, #0, #27
-; THUMB-A-NEXT:    str r7, [sp, #76]
-; THUMB-A-NEXT:    str r0, [sp, #120]
-; THUMB-A-NEXT:    ldr r0, [sp, #360]
-; THUMB-A-NEXT:    lsrs.w r7, r7, #1
-; THUMB-A-NEXT:    orr.w r1, r7, r1, lsl #31
-; THUMB-A-NEXT:    strd r1, r10, [sp, #108]
-; THUMB-A-NEXT:    str r0, [sp, #72]
-; THUMB-A-NEXT:    mov.w r7, #28
-; THUMB-A-NEXT:    ldr r1, [sp, #20] @ 4-byte Reload
-; THUMB-A-NEXT:    rrx r0, r0
-; THUMB-A-NEXT:    and.w r1, r7, r1, lsr #3
-; THUMB-A-NEXT:    add r7, sp, #32
+; THUMB-A-NEXT:    lsr.w r1, r11, #1
+; THUMB-A-NEXT:    lsr.w r1, r1, r10
+; THUMB-A-NEXT:    orr.w r5, r0, r1
+; THUMB-A-NEXT:    rsb.w r0, r3, #230
+; THUMB-A-NEXT:    and r8, r0, #31
+; THUMB-A-NEXT:    ubfx r1, r0, #5, #3
+; THUMB-A-NEXT:    add r0, sp, #136
+; THUMB-A-NEXT:    str r1, [sp, #40] @ 4-byte Spill
+; THUMB-A-NEXT:    add.w r12, r0, r1, lsl #2
+; THUMB-A-NEXT:    eor r0, r8, #31
+; THUMB-A-NEXT:    ldr.w r3, [r12, #28]
+; THUMB-A-NEXT:    lsr.w r4, r3, r8
+; THUMB-A-NEXT:    lsls r3, r3, #1
+; THUMB-A-NEXT:    orrs r4, r5
+; THUMB-A-NEXT:    ldr r5, [sp, #324]
+; THUMB-A-NEXT:    lsls r3, r0
+; THUMB-A-NEXT:    ands r4, r5
+; THUMB-A-NEXT:    and.w r5, r7, lr, lsr #3
+; THUMB-A-NEXT:    add r7, sp, #72
+; THUMB-A-NEXT:    and lr, lr, #31
 ; THUMB-A-NEXT:    adds r7, #32
-; THUMB-A-NEXT:    subs r6, r7, r1
-; THUMB-A-NEXT:    ldr r1, [r6, #28]
-; THUMB-A-NEXT:    str r0, [sp, #104]
-; THUMB-A-NEXT:    ldr.w r11, [sp, #28] @ 4-byte Reload
-; THUMB-A-NEXT:    lsl.w r0, r1, r2
-; THUMB-A-NEXT:    ldr r1, [r6, #24]
-; THUMB-A-NEXT:    lsrs r7, r1, #1
-; THUMB-A-NEXT:    lsr.w r7, r7, r9
-; THUMB-A-NEXT:    orrs r0, r7
-; THUMB-A-NEXT:    ldr r7, [sp, #24] @ 4-byte Reload
-; THUMB-A-NEXT:    ubfx r7, r7, #5, #3
-; THUMB-A-NEXT:    str r7, [sp, #24] @ 4-byte Spill
-; THUMB-A-NEXT:    add.w r4, r5, r7, lsl #2
-; THUMB-A-NEXT:    ldr r7, [r4, #28]
-; THUMB-A-NEXT:    lsr.w r5, r7, r3
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    and r0, r0, #127
-; THUMB-A-NEXT:    strb.w r0, [r11, #28]
-; THUMB-A-NEXT:    lsl.w r0, r1, r2
-; THUMB-A-NEXT:    ldr r1, [r6, #20]
-; THUMB-A-NEXT:    lsrs.w r5, r1, #1
-; THUMB-A-NEXT:    lsr.w r5, r5, r9
-; THUMB-A-NEXT:    orr.w r10, r0, r5
-; THUMB-A-NEXT:    lsls r5, r7, #1
-; THUMB-A-NEXT:    ldr r7, [r4, #24]
-; THUMB-A-NEXT:    lsl.w r5, r5, lr
-; THUMB-A-NEXT:    lsr.w r0, r7, r3
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    orr.w r0, r0, r10
-; THUMB-A-NEXT:    str.w r0, [r11, #24]
-; THUMB-A-NEXT:    lsl.w r0, r1, r2
-; THUMB-A-NEXT:    ldr r1, [r6, #16]
-; THUMB-A-NEXT:    lsrs r5, r1, #1
-; THUMB-A-NEXT:    lsr.w r5, r5, r9
-; THUMB-A-NEXT:    orr.w r10, r0, r5
-; THUMB-A-NEXT:    lsls r5, r7, #1
-; THUMB-A-NEXT:    ldr r7, [r4, #20]
-; THUMB-A-NEXT:    lsl.w r5, r5, lr
-; THUMB-A-NEXT:    lsr.w r0, r7, r3
-; THUMB-A-NEXT:    orrs r0, r5
-; THUMB-A-NEXT:    lsl.w r5, r1, r2
-; THUMB-A-NEXT:    orr.w r0, r0, r10
-; THUMB-A-NEXT:    str.w r0, [r11, #20]
-; THUMB-A-NEXT:    ldr r0, [r6]
-; THUMB-A-NEXT:    str r0, [sp, #20] @ 4-byte Spill
-; THUMB-A-NEXT:    ldr r0, [r6, #4]
-; THUMB-A-NEXT:    str r0, [sp, #16] @ 4-byte Spill
-; THUMB-A-NEXT:    ldrd r12, r6, [r6, #8]
-; THUMB-A-NEXT:    lsrs.w r0, r6, #1
-; THUMB-A-NEXT:    lsls r6, r2
-; THUMB-A-NEXT:    lsr.w r0, r0, r9
-; THUMB-A-NEXT:    orr.w r8, r5, r0
-; THUMB-A-NEXT:    lsls r5, r7, #1
-; THUMB-A-NEXT:    lsl.w r1, r5, lr
-; THUMB-A-NEXT:    ldrd r5, r7, [r4, #4]
-; THUMB-A-NEXT:    ldrd r0, r4, [r4, #12]
-; THUMB-A-NEXT:    lsr.w r10, r4, r3
-; THUMB-A-NEXT:    orr.w r1, r1, r10
-; THUMB-A-NEXT:    orr.w r1, r1, r8
-; THUMB-A-NEXT:    lsls r4, r4, #1
-; THUMB-A-NEXT:    str.w r1, [r11, #16]
-; THUMB-A-NEXT:    lsr.w r1, r12, #1
-; THUMB-A-NEXT:    lsr.w r1, r1, r9
-; THUMB-A-NEXT:    lsl.w r4, r4, lr
-; THUMB-A-NEXT:    orrs r1, r6
-; THUMB-A-NEXT:    lsr.w r6, r0, r3
-; THUMB-A-NEXT:    orrs r4, r6
-; THUMB-A-NEXT:    lsls r0, r0, #1
+; THUMB-A-NEXT:    subs r7, r7, r5
+; THUMB-A-NEXT:    eor r5, lr, #31
+; THUMB-A-NEXT:    ldr r1, [r7, #24]
+; THUMB-A-NEXT:    ldr r2, [r7, #28]
+; THUMB-A-NEXT:    str r1, [sp, #36] @ 4-byte Spill
+; THUMB-A-NEXT:    lsrs r1, r1, #1
+; THUMB-A-NEXT:    str r5, [sp, #64] @ 4-byte Spill
+; THUMB-A-NEXT:    lsl.w r2, r2, lr
+; THUMB-A-NEXT:    lsrs r1, r5
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    ldr r2, [sp, #68] @ 4-byte Reload
 ; THUMB-A-NEXT:    orrs r1, r4
-; THUMB-A-NEXT:    str.w r1, [r11, #12]
-; THUMB-A-NEXT:    ldr r4, [sp, #16] @ 4-byte Reload
-; THUMB-A-NEXT:    lsl.w r1, r12, r2
-; THUMB-A-NEXT:    lsl.w r0, r0, lr
-; THUMB-A-NEXT:    lsrs.w r6, r4, #1
-; THUMB-A-NEXT:    lsr.w r6, r6, r9
+; THUMB-A-NEXT:    str.w lr, [sp, #4] @ 4-byte Spill
+; THUMB-A-NEXT:    and r1, r1, #127
+; THUMB-A-NEXT:    strb r1, [r2, #28]
+; THUMB-A-NEXT:    lsl.w r1, r11, r9
+; THUMB-A-NEXT:    ldr r2, [r6, #20]
+; THUMB-A-NEXT:    mov r11, r10
+; THUMB-A-NEXT:    str r0, [sp, #56] @ 4-byte Spill
+; THUMB-A-NEXT:    str.w r10, [sp, #52] @ 4-byte Spill
+; THUMB-A-NEXT:    lsrs.w r4, r2, #1
+; THUMB-A-NEXT:    ldr r0, [sp, #36] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r4, r4, r10
+; THUMB-A-NEXT:    orrs r1, r4
+; THUMB-A-NEXT:    ldr.w r4, [r12, #24]
+; THUMB-A-NEXT:    lsl.w r2, r2, r9
+; THUMB-A-NEXT:    str.w r8, [sp, #60] @ 4-byte Spill
+; THUMB-A-NEXT:    lsr.w r10, r4, r8
+; THUMB-A-NEXT:    orr.w r3, r3, r10
+; THUMB-A-NEXT:    orrs r1, r3
+; THUMB-A-NEXT:    ldr r3, [sp, #320]
+; THUMB-A-NEXT:    and.w r10, r3, r1
+; THUMB-A-NEXT:    ldr r1, [r7, #20]
+; THUMB-A-NEXT:    lsl.w r3, r0, lr
+; THUMB-A-NEXT:    ldr r0, [sp, #64] @ 4-byte Reload
+; THUMB-A-NEXT:    mov lr, r9
+; THUMB-A-NEXT:    lsrs.w r5, r1, #1
+; THUMB-A-NEXT:    lsrs r5, r0
+; THUMB-A-NEXT:    orrs r3, r5
+; THUMB-A-NEXT:    orr.w r3, r3, r10
+; THUMB-A-NEXT:    ldr.w r10, [sp, #68] @ 4-byte Reload
+; THUMB-A-NEXT:    str.w r3, [r10, #24]
+; THUMB-A-NEXT:    str.w r9, [sp, #12] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr.w r9, [r6, #16]
+; THUMB-A-NEXT:    ldr r3, [sp, #56] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r5, r9, #1
+; THUMB-A-NEXT:    lsr.w r5, r5, r11
+; THUMB-A-NEXT:    orr.w r11, r2, r5
+; THUMB-A-NEXT:    lsls r5, r4, #1
+; THUMB-A-NEXT:    ldr.w r4, [r12, #20]
+; THUMB-A-NEXT:    lsls r5, r3
+; THUMB-A-NEXT:    lsr.w r2, r4, r8
+; THUMB-A-NEXT:    ldr.w r8, [r7, #16]
+; THUMB-A-NEXT:    orrs r2, r5
+; THUMB-A-NEXT:    ldr r5, [sp, #316]
+; THUMB-A-NEXT:    orr.w r2, r2, r11
+; THUMB-A-NEXT:    ldr.w r11, [sp, #4] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r2, r5
+; THUMB-A-NEXT:    lsr.w r5, r8, #1
+; THUMB-A-NEXT:    lsrs r5, r0
+; THUMB-A-NEXT:    lsl.w r1, r1, r11
+; THUMB-A-NEXT:    orrs r1, r5
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    str.w r1, [r10, #20]
+; THUMB-A-NEXT:    ldr r0, [r6]
+; THUMB-A-NEXT:    lsl.w r2, r9, lr
+; THUMB-A-NEXT:    str r0, [sp, #36] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r0, [r6, #4]
+; THUMB-A-NEXT:    str r0, [sp, #24] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr r0, [r6, #8]
+; THUMB-A-NEXT:    str r0, [sp, #8] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr.w r9, [r6, #12]
+; THUMB-A-NEXT:    ldr r0, [sp, #52] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr.w lr, [sp, #60] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs.w r6, r9, #1
+; THUMB-A-NEXT:    ldr r5, [sp, #64] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs r6, r0
+; THUMB-A-NEXT:    orr.w r1, r2, r6
+; THUMB-A-NEXT:    lsls r2, r4, #1
+; THUMB-A-NEXT:    lsl.w r4, r2, r3
+; THUMB-A-NEXT:    ldr.w r2, [r12, #4]
+; THUMB-A-NEXT:    str r2, [sp, #32] @ 4-byte Spill
+; THUMB-A-NEXT:    ldr.w r2, [r12, #8]
+; THUMB-A-NEXT:    str r2, [sp, #20] @ 4-byte Spill
+; THUMB-A-NEXT:    ldrd r3, r12, [r12, #12]
+; THUMB-A-NEXT:    ldr r2, [r7]
+; THUMB-A-NEXT:    lsr.w r10, r12, lr
+; THUMB-A-NEXT:    str r2, [sp, #28] @ 4-byte Spill
+; THUMB-A-NEXT:    orr.w r4, r4, r10
+; THUMB-A-NEXT:    ldr r2, [r7, #4]
+; THUMB-A-NEXT:    orrs r1, r4
+; THUMB-A-NEXT:    ldr r4, [sp, #312]
+; THUMB-A-NEXT:    str r2, [sp, #16] @ 4-byte Spill
+; THUMB-A-NEXT:    ands r4, r1
+; THUMB-A-NEXT:    lsl.w r1, r8, r11
+; THUMB-A-NEXT:    ldrd r10, r8, [r7, #8]
+; THUMB-A-NEXT:    lsrs.w r6, r8, #1
+; THUMB-A-NEXT:    lsrs r6, r5
 ; THUMB-A-NEXT:    orrs r1, r6
-; THUMB-A-NEXT:    lsr.w r6, r7, r3
-; THUMB-A-NEXT:    orrs r0, r6
+; THUMB-A-NEXT:    ldr r6, [sp, #68] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r1, r4
+; THUMB-A-NEXT:    str r1, [r6, #16]
+; THUMB-A-NEXT:    ldr r7, [sp, #8] @ 4-byte Reload
+; THUMB-A-NEXT:    ldr r2, [sp, #12] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs r1, r7, #1
+; THUMB-A-NEXT:    lsrs r1, r0
+; THUMB-A-NEXT:    lsl.w r0, r12, #1
+; THUMB-A-NEXT:    ldr.w r12, [sp, #56] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r4, r9, r2
+; THUMB-A-NEXT:    orrs r1, r4
+; THUMB-A-NEXT:    lsr.w r4, r3, lr
+; THUMB-A-NEXT:    lsl.w r0, r0, r12
+; THUMB-A-NEXT:    orrs r0, r4
+; THUMB-A-NEXT:    lsl.w r4, r8, r11
 ; THUMB-A-NEXT:    orrs r0, r1
-; THUMB-A-NEXT:    str.w r0, [r11, #8]
-; THUMB-A-NEXT:    ldr r6, [sp, #20] @ 4-byte Reload
-; THUMB-A-NEXT:    lsls r7, r7, #1
-; THUMB-A-NEXT:    lsl.w r0, r4, r2
-; THUMB-A-NEXT:    lsl.w r7, r7, lr
-; THUMB-A-NEXT:    lsrs r1, r6, #1
-; THUMB-A-NEXT:    lsr.w r1, r1, r9
+; THUMB-A-NEXT:    ldr r1, [sp, #308]
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsr.w r1, r10, #1
+; THUMB-A-NEXT:    lsrs r1, r5
+; THUMB-A-NEXT:    orrs r1, r4
 ; THUMB-A-NEXT:    orrs r0, r1
-; THUMB-A-NEXT:    lsr.w r1, r5, r3
-; THUMB-A-NEXT:    orrs r1, r7
-; THUMB-A-NEXT:    ldr r7, [sp, #24] @ 4-byte Reload
+; THUMB-A-NEXT:    str r0, [r6, #12]
+; THUMB-A-NEXT:    ldr r4, [sp, #24] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r0, r7, r2
+; THUMB-A-NEXT:    ldr.w r8, [sp, #52] @ 4-byte Reload
+; THUMB-A-NEXT:    mov r6, r2
+; THUMB-A-NEXT:    ldr.w r9, [sp, #20] @ 4-byte Reload
+; THUMB-A-NEXT:    lsls r2, r3, #1
+; THUMB-A-NEXT:    lsrs.w r1, r4, #1
+; THUMB-A-NEXT:    lsl.w r2, r2, r12
+; THUMB-A-NEXT:    lsr.w r1, r1, r8
 ; THUMB-A-NEXT:    orrs r0, r1
-; THUMB-A-NEXT:    add r1, sp, #96
-; THUMB-A-NEXT:    ldr.w r1, [r1, r7, lsl #2]
-; THUMB-A-NEXT:    str.w r0, [r11, #4]
-; THUMB-A-NEXT:    lsls r0, r5, #1
-; THUMB-A-NEXT:    lsl.w r0, r0, lr
-; THUMB-A-NEXT:    lsrs r1, r3
+; THUMB-A-NEXT:    lsr.w r1, r9, lr
+; THUMB-A-NEXT:    ldr r7, [sp, #16] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    mov lr, r12
 ; THUMB-A-NEXT:    orrs r0, r1
-; THUMB-A-NEXT:    lsl.w r1, r6, r2
+; THUMB-A-NEXT:    ldr r1, [sp, #304]
+; THUMB-A-NEXT:    ldr.w r12, [sp, #68] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs.w r2, r7, #1
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r10, r11
+; THUMB-A-NEXT:    lsrs r2, r5
+; THUMB-A-NEXT:    orrs r1, r2
 ; THUMB-A-NEXT:    orrs r0, r1
-; THUMB-A-NEXT:    str.w r0, [r11]
-; THUMB-A-NEXT:    add sp, #292
+; THUMB-A-NEXT:    str.w r0, [r12, #8]
+; THUMB-A-NEXT:    ldr.w r10, [sp, #36] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r0, r4, r6
+; THUMB-A-NEXT:    ldr r3, [sp, #60] @ 4-byte Reload
+; THUMB-A-NEXT:    lsl.w r2, r9, #1
+; THUMB-A-NEXT:    lsl.w r2, r2, lr
+; THUMB-A-NEXT:    ldr r4, [sp, #28] @ 4-byte Reload
+; THUMB-A-NEXT:    lsr.w r1, r10, #1
+; THUMB-A-NEXT:    lsr.w r1, r1, r8
+; THUMB-A-NEXT:    ldr.w r8, [sp, #32] @ 4-byte Reload
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    lsr.w r1, r8, r3
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    lsrs r2, r4, #1
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #44] @ 4-byte Reload
+; THUMB-A-NEXT:    lsrs r2, r5
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r7, r11
+; THUMB-A-NEXT:    orrs r1, r2
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    str.w r0, [r12, #4]
+; THUMB-A-NEXT:    ldr r1, [sp, #40] @ 4-byte Reload
+; THUMB-A-NEXT:    add r0, sp, #136
+; THUMB-A-NEXT:    ldr.w r0, [r0, r1, lsl #2]
+; THUMB-A-NEXT:    lsl.w r1, r8, #1
+; THUMB-A-NEXT:    lsl.w r1, r1, lr
+; THUMB-A-NEXT:    lsrs r0, r3
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r10, r6
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    ldr r1, [sp, #48] @ 4-byte Reload
+; THUMB-A-NEXT:    ands r0, r1
+; THUMB-A-NEXT:    lsl.w r1, r4, r11
+; THUMB-A-NEXT:    orrs r0, r1
+; THUMB-A-NEXT:    str.w r0, [r12]
+; THUMB-A-NEXT:    add sp, #268
 ; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
   %result = bitinsert b231 %base, b123 %val, i32 %off
   ret b231 %result
@@ -4538,156 +4295,101 @@ define b231 @test_bitinsert_val_b123_into_b231_var(b231 %base, b123 %val, i32 %o
 define b231 @test_bitinsert_val_b123_into_b231_const_wordcross(b231 %base, b123 %val) {
 ; ARM-LABEL: test_bitinsert_val_b123_into_b231_const_wordcross:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, r5, r6, r7, r11, lr}
-; ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
-; ARM-NEXT:    ldr r1, [sp, #56]
-; ARM-NEXT:    ldr r4, [sp, #60]
-; ARM-NEXT:    ldr r6, [sp, #52]
-; ARM-NEXT:    lsr r7, r1, #4
-; ARM-NEXT:    ldr lr, [sp, #48]
-; ARM-NEXT:    ldr r5, [sp, #44]
-; ARM-NEXT:    lsl r1, r1, #28
-; ARM-NEXT:    orr r7, r7, r4, lsl #28
-; ARM-NEXT:    str r7, [r0, #16]
-; ARM-NEXT:    ldr r12, [sp, #40]
-; ARM-NEXT:    orr r1, r1, r6, lsr #4
-; ARM-NEXT:    ldr r7, [sp, #36]
-; ARM-NEXT:    and r5, r5, #127
-; ARM-NEXT:    strb r5, [r0, #28]
-; ARM-NEXT:    str r12, [r0, #24]
-; ARM-NEXT:    str r1, [r0, #12]
-; ARM-NEXT:    lsr r1, lr, #4
-; ARM-NEXT:    orr r1, r1, r6, lsl #28
+; ARM-NEXT:    .save {r4, r5, r6, r7, r8, r9, r11, lr}
+; ARM-NEXT:    push {r4, r5, r6, r7, r8, r9, r11, lr}
+; ARM-NEXT:    add lr, sp, #60
+; ARM-NEXT:    add r12, sp, #44
+; ARM-NEXT:    ldr r9, [sp, #56]
+; ARM-NEXT:    bic r3, r3, #-268435456
+; ARM-NEXT:    ldm lr, {r1, r7, lr}
+; ARM-NEXT:    ldm r12, {r5, r8, r12}
+; ARM-NEXT:    and r6, r12, #127
+; ARM-NEXT:    lsr r4, r9, #4
+; ARM-NEXT:    strb r6, [r0, #28]
+; ARM-NEXT:    lsr r6, r7, #4
+; ARM-NEXT:    lsl r7, r7, #28
+; ARM-NEXT:    bfc r5, #0, #23
+; ARM-NEXT:    orr r7, r7, r1, lsr #4
+; ARM-NEXT:    orr r1, r4, r1, lsl #28
+; ARM-NEXT:    movw r4, #65520
+; ARM-NEXT:    orr r3, r3, r9, lsl #28
+; ARM-NEXT:    movt r4, #2047
+; ARM-NEXT:    stm r0, {r2, r3}
+; ARM-NEXT:    and r4, lr, r4
 ; ARM-NEXT:    str r1, [r0, #8]
-; ARM-NEXT:    lsl r1, r7, #4
-; ARM-NEXT:    bfi r1, r4, #0, #27
-; ARM-NEXT:    and r4, r7, #-268435456
-; ARM-NEXT:    orr r1, r4, r1, lsr #4
-; ARM-NEXT:    str r1, [r0, #20]
-; ARM-NEXT:    lsl r1, r3, #1
-; ARM-NEXT:    ubfx r3, r3, #21, #7
-; ARM-NEXT:    orr r1, r1, r2, lsr #31
-; ARM-NEXT:    ubfx r4, r2, #21, #10
-; ARM-NEXT:    lsrs r3, r3, #1
-; ARM-NEXT:    orr r1, r4, r1, lsl #10
-; ARM-NEXT:    and r3, r3, #127
-; ARM-NEXT:    rrx r1, r1
-; ARM-NEXT:    lsl r3, r3, #22
-; ARM-NEXT:    orr r3, r3, r1, lsr #10
-; ARM-NEXT:    orr r3, r3, lr, lsl #28
-; ARM-NEXT:    str r3, [r0, #4]
-; ARM-NEXT:    lsl r3, r5, #4
-; ARM-NEXT:    orr r3, r3, r12, lsr #28
-; ARM-NEXT:    orr r3, r3, r2, lsl #11
-; ARM-NEXT:    lsr r2, r2, #21
-; ARM-NEXT:    lsrs r3, r3, #1
-; ARM-NEXT:    orr r2, r3, r2, lsl #31
-; ARM-NEXT:    lsr r2, r2, #10
-; ARM-NEXT:    orr r1, r2, r1, lsl #22
-; ARM-NEXT:    str r1, [r0]
-; ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
+; ARM-NEXT:    orr r6, r6, lr, lsl #28
+; ARM-NEXT:    str r7, [r0, #12]
+; ARM-NEXT:    orr r5, r5, r4, lsr #4
+; ARM-NEXT:    str r6, [r0, #16]
+; ARM-NEXT:    str r5, [r0, #20]
+; ARM-NEXT:    str r8, [r0, #24]
+; ARM-NEXT:    pop {r4, r5, r6, r7, r8, r9, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_val_b123_into_b231_const_wordcross:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, r5, r6, lr}
-; THUMB-M-NEXT:    push {r4, r5, r6, lr}
-; THUMB-M-NEXT:    ldr r1, [sp, #36]
-; THUMB-M-NEXT:    ldr r5, [sp, #52]
-; THUMB-M-NEXT:    and lr, r1, #127
-; THUMB-M-NEXT:    ldr r1, [sp, #48]
-; THUMB-M-NEXT:    ldr.w r12, [sp, #32]
-; THUMB-M-NEXT:    strb.w lr, [r0, #28]
-; THUMB-M-NEXT:    lsrs r4, r1, #4
-; THUMB-M-NEXT:    str.w r12, [r0, #24]
-; THUMB-M-NEXT:    orr.w r4, r4, r5, lsl #28
-; THUMB-M-NEXT:    str r4, [r0, #16]
-; THUMB-M-NEXT:    ldr r4, [sp, #44]
-; THUMB-M-NEXT:    lsls r1, r1, #28
-; THUMB-M-NEXT:    orr.w r1, r1, r4, lsr #4
+; THUMB-M-NEXT:    .save {r7, lr}
+; THUMB-M-NEXT:    push {r7, lr}
+; THUMB-M-NEXT:    ldr r1, [sp, #28]
+; THUMB-M-NEXT:    movw r12, #65520
+; THUMB-M-NEXT:    ldr.w lr, [sp, #44]
+; THUMB-M-NEXT:    movt r12, #2047
+; THUMB-M-NEXT:    and r1, r1, #127
+; THUMB-M-NEXT:    strb r1, [r0, #28]
+; THUMB-M-NEXT:    ldr r1, [sp, #24]
+; THUMB-M-NEXT:    and.w r12, r12, lr
+; THUMB-M-NEXT:    str r1, [r0, #24]
+; THUMB-M-NEXT:    ldr r1, [sp, #20]
+; THUMB-M-NEXT:    bfc r1, #0, #23
+; THUMB-M-NEXT:    orr.w r1, r1, r12, lsr #4
+; THUMB-M-NEXT:    ldr.w r12, [sp, #40]
+; THUMB-M-NEXT:    str r1, [r0, #20]
+; THUMB-M-NEXT:    lsr.w r1, r12, #4
+; THUMB-M-NEXT:    orr.w r1, r1, lr, lsl #28
+; THUMB-M-NEXT:    str r1, [r0, #16]
+; THUMB-M-NEXT:    lsl.w r1, r12, #28
+; THUMB-M-NEXT:    ldr.w r12, [sp, #36]
+; THUMB-M-NEXT:    ldr.w lr, [sp, #32]
+; THUMB-M-NEXT:    orr.w r1, r1, r12, lsr #4
 ; THUMB-M-NEXT:    str r1, [r0, #12]
-; THUMB-M-NEXT:    ldr r1, [sp, #40]
-; THUMB-M-NEXT:    lsrs r6, r1, #4
-; THUMB-M-NEXT:    orr.w r4, r6, r4, lsl #28
-; THUMB-M-NEXT:    str r4, [r0, #8]
-; THUMB-M-NEXT:    ldr r4, [sp, #28]
-; THUMB-M-NEXT:    lsls r6, r4, #4
-; THUMB-M-NEXT:    and r4, r4, #-268435456
-; THUMB-M-NEXT:    bfi r6, r5, #0, #27
-; THUMB-M-NEXT:    ubfx r5, r2, #21, #10
-; THUMB-M-NEXT:    orr.w r4, r4, r6, lsr #4
-; THUMB-M-NEXT:    str r4, [r0, #20]
-; THUMB-M-NEXT:    lsls r4, r3, #1
-; THUMB-M-NEXT:    ubfx r3, r3, #21, #7
-; THUMB-M-NEXT:    orr.w r4, r4, r2, lsr #31
-; THUMB-M-NEXT:    lsrs.w r3, r3, #1
-; THUMB-M-NEXT:    orr.w r4, r5, r4, lsl #10
-; THUMB-M-NEXT:    and r3, r3, #127
-; THUMB-M-NEXT:    rrx r4, r4
-; THUMB-M-NEXT:    lsls r3, r3, #22
-; THUMB-M-NEXT:    orr.w r3, r3, r4, lsr #10
-; THUMB-M-NEXT:    orr.w r1, r3, r1, lsl #28
-; THUMB-M-NEXT:    str r1, [r0, #4]
-; THUMB-M-NEXT:    lsl.w r1, lr, #4
-; THUMB-M-NEXT:    orr.w r1, r1, r12, lsr #28
-; THUMB-M-NEXT:    orr.w r1, r1, r2, lsl #11
-; THUMB-M-NEXT:    lsrs r2, r2, #21
-; THUMB-M-NEXT:    lsrs.w r1, r1, #1
-; THUMB-M-NEXT:    orr.w r1, r1, r2, lsl #31
-; THUMB-M-NEXT:    lsrs r1, r1, #10
-; THUMB-M-NEXT:    orr.w r1, r1, r4, lsl #22
-; THUMB-M-NEXT:    str r1, [r0]
-; THUMB-M-NEXT:    pop {r4, r5, r6, pc}
+; THUMB-M-NEXT:    lsr.w r1, lr, #4
+; THUMB-M-NEXT:    orr.w r1, r1, r12, lsl #28
+; THUMB-M-NEXT:    str r1, [r0, #8]
+; THUMB-M-NEXT:    bic r1, r3, #-268435456
+; THUMB-M-NEXT:    orr.w r1, r1, lr, lsl #28
+; THUMB-M-NEXT:    strd r2, r1, [r0]
+; THUMB-M-NEXT:    pop {r7, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_val_b123_into_b231_const_wordcross:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r4, r5, r6, r7, lr}
-; THUMB-A-NEXT:    push {r4, r5, r6, r7, lr}
+; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
 ; THUMB-A-NEXT:    .pad #4
 ; THUMB-A-NEXT:    sub sp, #4
-; THUMB-A-NEXT:    ldrd r1, r4, [sp, #56]
-; THUMB-A-NEXT:    ldrd lr, r6, [sp, #48]
-; THUMB-A-NEXT:    ldrd r12, r5, [sp, #40]
-; THUMB-A-NEXT:    lsrs r7, r1, #4
-; THUMB-A-NEXT:    lsls r1, r1, #28
-; THUMB-A-NEXT:    orr.w r7, r7, r4, lsl #28
-; THUMB-A-NEXT:    str r7, [r0, #16]
-; THUMB-A-NEXT:    orr.w r1, r1, r6, lsr #4
-; THUMB-A-NEXT:    ldr r7, [sp, #36]
-; THUMB-A-NEXT:    and r5, r5, #127
-; THUMB-A-NEXT:    strb r5, [r0, #28]
-; THUMB-A-NEXT:    str.w r12, [r0, #24]
-; THUMB-A-NEXT:    str r1, [r0, #12]
-; THUMB-A-NEXT:    lsr.w r1, lr, #4
-; THUMB-A-NEXT:    orr.w r1, r1, r6, lsl #28
-; THUMB-A-NEXT:    str r1, [r0, #8]
-; THUMB-A-NEXT:    lsls r1, r7, #4
-; THUMB-A-NEXT:    bfi r1, r4, #0, #27
-; THUMB-A-NEXT:    and r4, r7, #-268435456
-; THUMB-A-NEXT:    orr.w r1, r4, r1, lsr #4
-; THUMB-A-NEXT:    str r1, [r0, #20]
-; THUMB-A-NEXT:    lsls r1, r3, #1
-; THUMB-A-NEXT:    ubfx r3, r3, #21, #7
-; THUMB-A-NEXT:    orr.w r1, r1, r2, lsr #31
-; THUMB-A-NEXT:    ubfx r4, r2, #21, #10
-; THUMB-A-NEXT:    lsrs.w r3, r3, #1
-; THUMB-A-NEXT:    orr.w r1, r4, r1, lsl #10
-; THUMB-A-NEXT:    and r3, r3, #127
-; THUMB-A-NEXT:    rrx r1, r1
-; THUMB-A-NEXT:    lsls r3, r3, #22
-; THUMB-A-NEXT:    orr.w r3, r3, r1, lsr #10
-; THUMB-A-NEXT:    orr.w r3, r3, lr, lsl #28
-; THUMB-A-NEXT:    str r3, [r0, #4]
-; THUMB-A-NEXT:    lsls r3, r5, #4
-; THUMB-A-NEXT:    orr.w r3, r3, r12, lsr #28
-; THUMB-A-NEXT:    orr.w r3, r3, r2, lsl #11
-; THUMB-A-NEXT:    lsrs r2, r2, #21
-; THUMB-A-NEXT:    lsrs.w r3, r3, #1
-; THUMB-A-NEXT:    orr.w r2, r3, r2, lsl #31
-; THUMB-A-NEXT:    lsrs r2, r2, #10
-; THUMB-A-NEXT:    orr.w r1, r2, r1, lsl #22
-; THUMB-A-NEXT:    str r1, [r0]
+; THUMB-A-NEXT:    add.w r12, sp, #44
+; THUMB-A-NEXT:    ldrd r9, r1, [sp, #56]
+; THUMB-A-NEXT:    ldrd r7, lr, [sp, #64]
+; THUMB-A-NEXT:    bic r3, r3, #-268435456
+; THUMB-A-NEXT:    ldm.w r12, {r5, r8, r12}
+; THUMB-A-NEXT:    and r6, r12, #127
+; THUMB-A-NEXT:    lsr.w r4, r9, #4
+; THUMB-A-NEXT:    strb r6, [r0, #28]
+; THUMB-A-NEXT:    lsrs r6, r7, #4
+; THUMB-A-NEXT:    lsls r7, r7, #28
+; THUMB-A-NEXT:    bfc r5, #0, #23
+; THUMB-A-NEXT:    orr.w r7, r7, r1, lsr #4
+; THUMB-A-NEXT:    orr.w r1, r4, r1, lsl #28
+; THUMB-A-NEXT:    movw r4, #65520
+; THUMB-A-NEXT:    orr.w r3, r3, r9, lsl #28
+; THUMB-A-NEXT:    movt r4, #2047
+; THUMB-A-NEXT:    orr.w r6, r6, lr, lsl #28
+; THUMB-A-NEXT:    and.w r4, r4, lr
+; THUMB-A-NEXT:    strd r2, r3, [r0]
+; THUMB-A-NEXT:    strd r1, r7, [r0, #8]
+; THUMB-A-NEXT:    orr.w r5, r5, r4, lsr #4
+; THUMB-A-NEXT:    strd r6, r5, [r0, #16]
+; THUMB-A-NEXT:    str.w r8, [r0, #24]
 ; THUMB-A-NEXT:    add sp, #4
-; THUMB-A-NEXT:    pop {r4, r5, r6, r7, pc}
+; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
   %result = bitinsert b231 %base, b123 %val, i32 60
   ret b231 %result
 }
@@ -4697,91 +4399,100 @@ define b231 @test_bitinsert_val_b123_into_b231_const_wordcross(b231 %base, b123 
 define b64 @test_bitinsert_ptr_var(b64 %base, ptr %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_ptr_var:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, lr}
-; ARM-NEXT:    push {r4, lr}
-; ARM-NEXT:    tst r3, #32
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    moveq r12, r1
-; ARM-NEXT:    moveq r1, r0
-; ARM-NEXT:    lsl lr, r1, #1
-; ARM-NEXT:    mov r1, #31
-; ARM-NEXT:    bic r4, r1, r3
-; ARM-NEXT:    and r3, r3, #31
-; ARM-NEXT:    lsl r1, lr, r4
-; ARM-NEXT:    orr r1, r1, r12, lsr r3
-; ARM-NEXT:    mov r0, r1
-; ARM-NEXT:    movne r0, r2
-; ARM-NEXT:    movne r2, r1
-; ARM-NEXT:    lsl r12, r0, r3
-; ARM-NEXT:    lsr r1, r2, #1
-; ARM-NEXT:    lsr r0, r0, #1
-; ARM-NEXT:    lsl r2, r2, r3
-; ARM-NEXT:    orr r1, r12, r1, lsr r4
-; ARM-NEXT:    orr r0, r2, r0, lsr r4
-; ARM-NEXT:    pop {r4, pc}
+; ARM-NEXT:    .save {r4, r5, r6, r7, r11, lr}
+; ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
+; ARM-NEXT:    ands lr, r3, #32
+; ARM-NEXT:    mov r12, #31
+; ARM-NEXT:    mvn r6, #0
+; ARM-NEXT:    and r4, r3, #31
+; ARM-NEXT:    mvnne lr, #0
+; ARM-NEXT:    movwne r6, #0
+; ARM-NEXT:    bic r12, r12, r3
+; ARM-NEXT:    lsl r5, lr, r4
+; ARM-NEXT:    lsr r7, r6, #1
+; ARM-NEXT:    lsl r4, r6, r4
+; ARM-NEXT:    orr r5, r5, r7, lsr r12
+; ARM-NEXT:    lsr r6, lr, #1
+; ARM-NEXT:    and r0, r0, r5
+; ARM-NEXT:    lsl r5, r2, r3
+; ARM-NEXT:    subs r7, r3, #32
+; ARM-NEXT:    rsb r3, r3, #32
+; ARM-NEXT:    orr r6, r4, r6, lsr r12
+; ARM-NEXT:    movwpl r5, #0
+; ARM-NEXT:    lsr r3, r2, r3
+; ARM-NEXT:    and r1, r1, r6
+; ARM-NEXT:    lslpl r3, r2, r7
+; ARM-NEXT:    orr r0, r0, r5
+; ARM-NEXT:    orr r1, r1, r3
+; ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_ptr_var:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, lr}
-; THUMB-M-NEXT:    push {r4, lr}
-; THUMB-M-NEXT:    mov r12, r0
-; THUMB-M-NEXT:    tst.w r3, #32
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r12, r1
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r1, r0
-; THUMB-M-NEXT:    and lr, r3, #31
-; THUMB-M-NEXT:    lsl.w r0, r1, #1
-; THUMB-M-NEXT:    mov.w r1, #31
-; THUMB-M-NEXT:    bic.w r4, r1, r3
-; THUMB-M-NEXT:    mov r1, r2
-; THUMB-M-NEXT:    lsr.w r12, r12, lr
-; THUMB-M-NEXT:    lsl.w r0, r0, r4
-; THUMB-M-NEXT:    orr.w r3, r0, r12
-; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r1, r3
-; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r3, r2
-; THUMB-M-NEXT:    lsrs r2, r3, #1
-; THUMB-M-NEXT:    lsl.w r0, r1, lr
-; THUMB-M-NEXT:    lsrs r1, r1, #1
-; THUMB-M-NEXT:    lsrs r2, r4
-; THUMB-M-NEXT:    lsrs r1, r4
+; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; THUMB-M-NEXT:    rsb.w r5, r3, #32
+; THUMB-M-NEXT:    ands r12, r3, #32
+; THUMB-M-NEXT:    mov.w lr, #-1
+; THUMB-M-NEXT:    and r7, r3, #31
+; THUMB-M-NEXT:    itt ne
+; THUMB-M-NEXT:    movne.w lr, #0
+; THUMB-M-NEXT:    movne.w r12, #-1
+; THUMB-M-NEXT:    subs.w r4, r3, #32
+; THUMB-M-NEXT:    lsr.w r5, r2, r5
+; THUMB-M-NEXT:    lsr.w r6, r12, #1
+; THUMB-M-NEXT:    it pl
+; THUMB-M-NEXT:    lslpl.w r5, r2, r4
+; THUMB-M-NEXT:    mov.w r4, #31
+; THUMB-M-NEXT:    bic.w r4, r4, r3
+; THUMB-M-NEXT:    lsl.w r2, r2, r3
+; THUMB-M-NEXT:    it pl
+; THUMB-M-NEXT:    movpl r2, #0
+; THUMB-M-NEXT:    lsr.w r8, r6, r4
+; THUMB-M-NEXT:    lsl.w r6, lr, r7
+; THUMB-M-NEXT:    orr.w r6, r6, r8
+; THUMB-M-NEXT:    lsl.w r7, r12, r7
+; THUMB-M-NEXT:    ands r1, r6
+; THUMB-M-NEXT:    lsr.w r6, lr, #1
+; THUMB-M-NEXT:    lsrs r6, r4
+; THUMB-M-NEXT:    orrs r7, r6
+; THUMB-M-NEXT:    ands r0, r7
+; THUMB-M-NEXT:    orrs r1, r5
 ; THUMB-M-NEXT:    orrs r0, r2
-; THUMB-M-NEXT:    lsl.w r2, r3, lr
-; THUMB-M-NEXT:    orrs r1, r2
-; THUMB-M-NEXT:    pop {r4, pc}
+; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_ptr_var:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r7, lr}
-; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    mov r12, r0
-; THUMB-A-NEXT:    tst.w r3, #32
-; THUMB-A-NEXT:    it eq
-; THUMB-A-NEXT:    moveq r12, r1
-; THUMB-A-NEXT:    it eq
-; THUMB-A-NEXT:    moveq r1, r0
-; THUMB-A-NEXT:    and lr, r3, #31
-; THUMB-A-NEXT:    lsl.w r0, r1, #1
-; THUMB-A-NEXT:    mov.w r1, #31
-; THUMB-A-NEXT:    bic.w r3, r1, r3
-; THUMB-A-NEXT:    lsr.w r12, r12, lr
-; THUMB-A-NEXT:    lsl.w r0, r0, r3
-; THUMB-A-NEXT:    orr.w r1, r0, r12
-; THUMB-A-NEXT:    mov r0, r1
+; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; THUMB-A-NEXT:    rsb.w r5, r3, #32
+; THUMB-A-NEXT:    ands r12, r3, #32
+; THUMB-A-NEXT:    mov.w lr, #-1
+; THUMB-A-NEXT:    and r7, r3, #31
 ; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r0, r2
-; THUMB-A-NEXT:    movne r2, r1
-; THUMB-A-NEXT:    lsrs r1, r2, #1
-; THUMB-A-NEXT:    lsr.w r12, r1, r3
-; THUMB-A-NEXT:    lsl.w r1, r0, lr
-; THUMB-A-NEXT:    lsrs r0, r0, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r12
-; THUMB-A-NEXT:    lsrs r0, r3
-; THUMB-A-NEXT:    lsl.w r2, r2, lr
+; THUMB-A-NEXT:    movne.w lr, #0
+; THUMB-A-NEXT:    movne.w r12, #-1
+; THUMB-A-NEXT:    subs.w r4, r3, #32
+; THUMB-A-NEXT:    lsr.w r5, r2, r5
+; THUMB-A-NEXT:    lsr.w r6, r12, #1
+; THUMB-A-NEXT:    it pl
+; THUMB-A-NEXT:    lslpl.w r5, r2, r4
+; THUMB-A-NEXT:    mov.w r4, #31
+; THUMB-A-NEXT:    bic.w r4, r4, r3
+; THUMB-A-NEXT:    lsl.w r2, r2, r3
+; THUMB-A-NEXT:    it pl
+; THUMB-A-NEXT:    movpl r2, #0
+; THUMB-A-NEXT:    lsr.w r8, r6, r4
+; THUMB-A-NEXT:    lsl.w r6, lr, r7
+; THUMB-A-NEXT:    orr.w r6, r6, r8
+; THUMB-A-NEXT:    lsl.w r7, r12, r7
+; THUMB-A-NEXT:    ands r1, r6
+; THUMB-A-NEXT:    lsr.w r6, lr, #1
+; THUMB-A-NEXT:    lsrs r6, r4
+; THUMB-A-NEXT:    orrs r7, r6
+; THUMB-A-NEXT:    ands r0, r7
+; THUMB-A-NEXT:    orrs r1, r5
 ; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    pop {r7, pc}
+; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
   %result = bitinsert b64 %base, ptr %val, i32 %off
   ret b64 %result
 }
@@ -4810,91 +4521,100 @@ define b128 @test_bitinsert_ptr_const(b128 %base, ptr %val) {
 define b64 @test_bitinsert_ptr_addrspace1(b64 %base, ptr addrspace(1) %val, i32 %off) {
 ; ARM-LABEL: test_bitinsert_ptr_addrspace1:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    .save {r4, lr}
-; ARM-NEXT:    push {r4, lr}
-; ARM-NEXT:    tst r3, #32
-; ARM-NEXT:    mov r12, r0
-; ARM-NEXT:    moveq r12, r1
-; ARM-NEXT:    moveq r1, r0
-; ARM-NEXT:    lsl lr, r1, #1
-; ARM-NEXT:    mov r1, #31
-; ARM-NEXT:    bic r4, r1, r3
-; ARM-NEXT:    and r3, r3, #31
-; ARM-NEXT:    lsl r1, lr, r4
-; ARM-NEXT:    orr r1, r1, r12, lsr r3
-; ARM-NEXT:    mov r0, r1
-; ARM-NEXT:    movne r0, r2
-; ARM-NEXT:    movne r2, r1
-; ARM-NEXT:    lsl r12, r0, r3
-; ARM-NEXT:    lsr r1, r2, #1
-; ARM-NEXT:    lsr r0, r0, #1
-; ARM-NEXT:    lsl r2, r2, r3
-; ARM-NEXT:    orr r1, r12, r1, lsr r4
-; ARM-NEXT:    orr r0, r2, r0, lsr r4
-; ARM-NEXT:    pop {r4, pc}
+; ARM-NEXT:    .save {r4, r5, r6, r7, r11, lr}
+; ARM-NEXT:    push {r4, r5, r6, r7, r11, lr}
+; ARM-NEXT:    ands lr, r3, #32
+; ARM-NEXT:    mov r12, #31
+; ARM-NEXT:    mvn r6, #0
+; ARM-NEXT:    and r4, r3, #31
+; ARM-NEXT:    mvnne lr, #0
+; ARM-NEXT:    movwne r6, #0
+; ARM-NEXT:    bic r12, r12, r3
+; ARM-NEXT:    lsl r5, lr, r4
+; ARM-NEXT:    lsr r7, r6, #1
+; ARM-NEXT:    lsl r4, r6, r4
+; ARM-NEXT:    orr r5, r5, r7, lsr r12
+; ARM-NEXT:    lsr r6, lr, #1
+; ARM-NEXT:    and r0, r0, r5
+; ARM-NEXT:    lsl r5, r2, r3
+; ARM-NEXT:    subs r7, r3, #32
+; ARM-NEXT:    rsb r3, r3, #32
+; ARM-NEXT:    orr r6, r4, r6, lsr r12
+; ARM-NEXT:    movwpl r5, #0
+; ARM-NEXT:    lsr r3, r2, r3
+; ARM-NEXT:    and r1, r1, r6
+; ARM-NEXT:    lslpl r3, r2, r7
+; ARM-NEXT:    orr r0, r0, r5
+; ARM-NEXT:    orr r1, r1, r3
+; ARM-NEXT:    pop {r4, r5, r6, r7, r11, pc}
 ;
 ; THUMB-M-LABEL: test_bitinsert_ptr_addrspace1:
 ; THUMB-M:       @ %bb.0:
-; THUMB-M-NEXT:    .save {r4, lr}
-; THUMB-M-NEXT:    push {r4, lr}
-; THUMB-M-NEXT:    mov r12, r0
-; THUMB-M-NEXT:    tst.w r3, #32
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r12, r1
-; THUMB-M-NEXT:    it eq
-; THUMB-M-NEXT:    moveq r1, r0
-; THUMB-M-NEXT:    and lr, r3, #31
-; THUMB-M-NEXT:    lsl.w r0, r1, #1
-; THUMB-M-NEXT:    mov.w r1, #31
-; THUMB-M-NEXT:    bic.w r4, r1, r3
-; THUMB-M-NEXT:    mov r1, r2
-; THUMB-M-NEXT:    lsr.w r12, r12, lr
-; THUMB-M-NEXT:    lsl.w r0, r0, r4
-; THUMB-M-NEXT:    orr.w r3, r0, r12
-; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r1, r3
-; THUMB-M-NEXT:    it ne
-; THUMB-M-NEXT:    movne r3, r2
-; THUMB-M-NEXT:    lsrs r2, r3, #1
-; THUMB-M-NEXT:    lsl.w r0, r1, lr
-; THUMB-M-NEXT:    lsrs r1, r1, #1
-; THUMB-M-NEXT:    lsrs r2, r4
-; THUMB-M-NEXT:    lsrs r1, r4
+; THUMB-M-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; THUMB-M-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; THUMB-M-NEXT:    rsb.w r5, r3, #32
+; THUMB-M-NEXT:    ands r12, r3, #32
+; THUMB-M-NEXT:    mov.w lr, #-1
+; THUMB-M-NEXT:    and r7, r3, #31
+; THUMB-M-NEXT:    itt ne
+; THUMB-M-NEXT:    movne.w lr, #0
+; THUMB-M-NEXT:    movne.w r12, #-1
+; THUMB-M-NEXT:    subs.w r4, r3, #32
+; THUMB-M-NEXT:    lsr.w r5, r2, r5
+; THUMB-M-NEXT:    lsr.w r6, r12, #1
+; THUMB-M-NEXT:    it pl
+; THUMB-M-NEXT:    lslpl.w r5, r2, r4
+; THUMB-M-NEXT:    mov.w r4, #31
+; THUMB-M-NEXT:    bic.w r4, r4, r3
+; THUMB-M-NEXT:    lsl.w r2, r2, r3
+; THUMB-M-NEXT:    it pl
+; THUMB-M-NEXT:    movpl r2, #0
+; THUMB-M-NEXT:    lsr.w r8, r6, r4
+; THUMB-M-NEXT:    lsl.w r6, lr, r7
+; THUMB-M-NEXT:    orr.w r6, r6, r8
+; THUMB-M-NEXT:    lsl.w r7, r12, r7
+; THUMB-M-NEXT:    ands r1, r6
+; THUMB-M-NEXT:    lsr.w r6, lr, #1
+; THUMB-M-NEXT:    lsrs r6, r4
+; THUMB-M-NEXT:    orrs r7, r6
+; THUMB-M-NEXT:    ands r0, r7
+; THUMB-M-NEXT:    orrs r1, r5
 ; THUMB-M-NEXT:    orrs r0, r2
-; THUMB-M-NEXT:    lsl.w r2, r3, lr
-; THUMB-M-NEXT:    orrs r1, r2
-; THUMB-M-NEXT:    pop {r4, pc}
+; THUMB-M-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
 ;
 ; THUMB-A-LABEL: test_bitinsert_ptr_addrspace1:
 ; THUMB-A:       @ %bb.0:
-; THUMB-A-NEXT:    .save {r7, lr}
-; THUMB-A-NEXT:    push {r7, lr}
-; THUMB-A-NEXT:    mov r12, r0
-; THUMB-A-NEXT:    tst.w r3, #32
-; THUMB-A-NEXT:    it eq
-; THUMB-A-NEXT:    moveq r12, r1
-; THUMB-A-NEXT:    it eq
-; THUMB-A-NEXT:    moveq r1, r0
-; THUMB-A-NEXT:    and lr, r3, #31
-; THUMB-A-NEXT:    lsl.w r0, r1, #1
-; THUMB-A-NEXT:    mov.w r1, #31
-; THUMB-A-NEXT:    bic.w r3, r1, r3
-; THUMB-A-NEXT:    lsr.w r12, r12, lr
-; THUMB-A-NEXT:    lsl.w r0, r0, r3
-; THUMB-A-NEXT:    orr.w r1, r0, r12
-; THUMB-A-NEXT:    mov r0, r1
+; THUMB-A-NEXT:    .save {r4, r5, r6, r7, r8, lr}
+; THUMB-A-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; THUMB-A-NEXT:    rsb.w r5, r3, #32
+; THUMB-A-NEXT:    ands r12, r3, #32
+; THUMB-A-NEXT:    mov.w lr, #-1
+; THUMB-A-NEXT:    and r7, r3, #31
 ; THUMB-A-NEXT:    itt ne
-; THUMB-A-NEXT:    movne r0, r2
-; THUMB-A-NEXT:    movne r2, r1
-; THUMB-A-NEXT:    lsrs r1, r2, #1
-; THUMB-A-NEXT:    lsr.w r12, r1, r3
-; THUMB-A-NEXT:    lsl.w r1, r0, lr
-; THUMB-A-NEXT:    lsrs r0, r0, #1
-; THUMB-A-NEXT:    orr.w r1, r1, r12
-; THUMB-A-NEXT:    lsrs r0, r3
-; THUMB-A-NEXT:    lsl.w r2, r2, lr
+; THUMB-A-NEXT:    movne.w lr, #0
+; THUMB-A-NEXT:    movne.w r12, #-1
+; THUMB-A-NEXT:    subs.w r4, r3, #32
+; THUMB-A-NEXT:    lsr.w r5, r2, r5
+; THUMB-A-NEXT:    lsr.w r6, r12, #1
+; THUMB-A-NEXT:    it pl
+; THUMB-A-NEXT:    lslpl.w r5, r2, r4
+; THUMB-A-NEXT:    mov.w r4, #31
+; THUMB-A-NEXT:    bic.w r4, r4, r3
+; THUMB-A-NEXT:    lsl.w r2, r2, r3
+; THUMB-A-NEXT:    it pl
+; THUMB-A-NEXT:    movpl r2, #0
+; THUMB-A-NEXT:    lsr.w r8, r6, r4
+; THUMB-A-NEXT:    lsl.w r6, lr, r7
+; THUMB-A-NEXT:    orr.w r6, r6, r8
+; THUMB-A-NEXT:    lsl.w r7, r12, r7
+; THUMB-A-NEXT:    ands r1, r6
+; THUMB-A-NEXT:    lsr.w r6, lr, #1
+; THUMB-A-NEXT:    lsrs r6, r4
+; THUMB-A-NEXT:    orrs r7, r6
+; THUMB-A-NEXT:    ands r0, r7
+; THUMB-A-NEXT:    orrs r1, r5
 ; THUMB-A-NEXT:    orrs r0, r2
-; THUMB-A-NEXT:    pop {r7, pc}
+; THUMB-A-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
   %result = bitinsert b64 %base, ptr addrspace(1) %val, i32 %off
   ret b64 %result
 }

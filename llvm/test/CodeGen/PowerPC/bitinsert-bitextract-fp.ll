@@ -191,10 +191,12 @@ define b32 @test_bitinsert_half_const(b32 %base, half %val) {
 define b32 @test_bitinsert_half_var(b32 %base, half %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_half_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    neg 6, 5
-; CHECK-NEXT:    rotlw 3, 3, 6
-; CHECK-NEXT:    rlwimi 4, 3, 0, 0, 15
-; CHECK-NEXT:    rotlw 3, 4, 5
+; CHECK-NEXT:    clrlwi 4, 4, 16
+; CHECK-NEXT:    lis 6, -1
+; CHECK-NEXT:    slw 4, 4, 5
+; CHECK-NEXT:    rotlw 5, 6, 5
+; CHECK-NEXT:    and 3, 3, 5
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %result = bitinsert b32 %base, half %val, i32 %off
   ret b32 %result
@@ -225,12 +227,13 @@ define b64 @test_bitinsert_float_var(b64 %base, float %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_float_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xscvdpspn 0, 1
-; CHECK-NEXT:    neg 6, 5
-; CHECK-NEXT:    rotld 3, 3, 6
-; CHECK-NEXT:    rotldi 3, 3, 32
+; CHECK-NEXT:    li 6, -1
+; CHECK-NEXT:    rldic 6, 6, 32, 0
+; CHECK-NEXT:    rotld 6, 6, 5
 ; CHECK-NEXT:    mffprwz 4, 0
-; CHECK-NEXT:    rldimi 4, 3, 32, 0
-; CHECK-NEXT:    rotld 3, 4, 5
+; CHECK-NEXT:    and 3, 3, 6
+; CHECK-NEXT:    sld 4, 4, 5
+; CHECK-NEXT:    or 3, 3, 4
 ; CHECK-NEXT:    blr
   %result = bitinsert b64 %base, float %val, i32 %off
   ret b64 %result
@@ -239,58 +242,50 @@ define b64 @test_bitinsert_float_var(b64 %base, float %val, i32 %off) {
 define b87 @test_bitinsert_float_b87_var(b87 %base, float %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_float_b87_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lis 5, 12052
-; CHECK-NEXT:    clrldi 8, 3, 41
 ; CHECK-NEXT:    xscvdpspn 0, 1
-; CHECK-NEXT:    sldi 12, 4, 1
-; CHECK-NEXT:    ori 5, 5, 39171
-; CHECK-NEXT:    mulhwu 5, 6, 5
-; CHECK-NEXT:    mffprwz 7, 0
-; CHECK-NEXT:    srwi 5, 5, 4
-; CHECK-NEXT:    mulli 5, 5, 87
-; CHECK-NEXT:    sub 5, 6, 5
-; CHECK-NEXT:    subfic 9, 5, 64
-; CHECK-NEXT:    srd 6, 4, 5
-; CHECK-NEXT:    rotldi 4, 4, 1
-; CHECK-NEXT:    sld 10, 8, 9
-; CHECK-NEXT:    rldimi 4, 3, 1, 0
-; CHECK-NEXT:    or 6, 6, 10
-; CHECK-NEXT:    addi 10, 5, -64
-; CHECK-NEXT:    srd 11, 8, 10
-; CHECK-NEXT:    srd 8, 8, 5
-; CHECK-NEXT:    or 6, 6, 11
-; CHECK-NEXT:    subfic 11, 5, 86
-; CHECK-NEXT:    sld 0, 12, 11
-; CHECK-NEXT:    sld 3, 4, 11
-; CHECK-NEXT:    subfic 4, 11, 64
-; CHECK-NEXT:    or 6, 6, 0
-; CHECK-NEXT:    rotldi 0, 6, 32
-; CHECK-NEXT:    rotldi 6, 6, 63
-; CHECK-NEXT:    rlwimi 6, 7, 31, 1, 31
-; CHECK-NEXT:    rldimi 7, 0, 32, 0
-; CHECK-NEXT:    srd 0, 12, 4
-; CHECK-NEXT:    or 3, 3, 0
-; CHECK-NEXT:    subfic 0, 5, 22
-; CHECK-NEXT:    srd 9, 7, 9
-; CHECK-NEXT:    sld 12, 12, 0
-; CHECK-NEXT:    or 3, 3, 12
-; CHECK-NEXT:    or 8, 8, 3
-; CHECK-NEXT:    clrldi 3, 8, 41
-; CHECK-NEXT:    rldimi 6, 8, 63, 0
-; CHECK-NEXT:    sld 3, 3, 5
-; CHECK-NEXT:    srd 6, 6, 11
-; CHECK-NEXT:    sld 5, 7, 5
-; CHECK-NEXT:    or 3, 3, 9
-; CHECK-NEXT:    sld 9, 7, 10
-; CHECK-NEXT:    or 3, 3, 9
-; CHECK-NEXT:    rlwinm 9, 8, 31, 10, 31
-; CHECK-NEXT:    sld 4, 9, 4
-; CHECK-NEXT:    srd 10, 9, 11
-; CHECK-NEXT:    or 4, 6, 4
-; CHECK-NEXT:    srd 6, 9, 0
-; CHECK-NEXT:    or 3, 3, 10
-; CHECK-NEXT:    or 4, 4, 6
-; CHECK-NEXT:    or 4, 5, 4
+; CHECK-NEXT:    addi 7, 6, -64
+; CHECK-NEXT:    subfic 8, 6, 64
+; CHECK-NEXT:    lis 9, 127
+; CHECK-NEXT:    li 11, -1
+; CHECK-NEXT:    lis 12, 63
+; CHECK-NEXT:    ori 9, 9, 65535
+; CHECK-NEXT:    rldic 11, 11, 32, 0
+; CHECK-NEXT:    ori 12, 12, 65535
+; CHECK-NEXT:    mffprwz 5, 0
+; CHECK-NEXT:    sld 7, 5, 7
+; CHECK-NEXT:    srd 8, 5, 8
+; CHECK-NEXT:    sld 5, 5, 6
+; CHECK-NEXT:    or 7, 8, 7
+; CHECK-NEXT:    lis 8, 12052
+; CHECK-NEXT:    ori 8, 8, 39171
+; CHECK-NEXT:    mulhwu 8, 6, 8
+; CHECK-NEXT:    srwi 8, 8, 4
+; CHECK-NEXT:    mulli 8, 8, 87
+; CHECK-NEXT:    sub 8, 6, 8
+; CHECK-NEXT:    subfic 10, 8, 64
+; CHECK-NEXT:    sld 9, 9, 8
+; CHECK-NEXT:    srd 10, 11, 10
+; CHECK-NEXT:    or 9, 9, 10
+; CHECK-NEXT:    addi 10, 8, -64
+; CHECK-NEXT:    sld 10, 11, 10
+; CHECK-NEXT:    or 9, 9, 10
+; CHECK-NEXT:    subfic 10, 8, 86
+; CHECK-NEXT:    srd 0, 12, 10
+; CHECK-NEXT:    or 9, 9, 0
+; CHECK-NEXT:    and 3, 3, 9
+; CHECK-NEXT:    subfic 9, 10, 64
+; CHECK-NEXT:    or 3, 3, 7
+; CHECK-NEXT:    lis 7, -32768
+; CHECK-NEXT:    sld 9, 12, 9
+; CHECK-NEXT:    srd 7, 7, 10
+; CHECK-NEXT:    or 7, 7, 9
+; CHECK-NEXT:    subfic 9, 8, 22
+; CHECK-NEXT:    sld 8, 11, 8
+; CHECK-NEXT:    srd 9, 12, 9
+; CHECK-NEXT:    or 7, 7, 9
+; CHECK-NEXT:    or 7, 8, 7
+; CHECK-NEXT:    and 4, 4, 7
+; CHECK-NEXT:    or 4, 4, 5
 ; CHECK-NEXT:    blr
   %result = bitinsert b87 %base, float %val, i32 %off
   ret b87 %result
@@ -300,11 +295,11 @@ define b87 @test_bitinsert_float_b87_crossword(b87 %base, float %val) {
 ; CHECK-LABEL: test_bitinsert_float_b87_crossword:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xscvdpspn 0, 1
-; CHECK-NEXT:    rotldi 3, 4, 23
-; CHECK-NEXT:    mffprwz 5, 0
-; CHECK-NEXT:    rlwimi 4, 5, 5, 27, 31
-; CHECK-NEXT:    rlwimi 3, 5, 28, 4, 31
-; CHECK-NEXT:    rldimi 4, 5, 60, 0
+; CHECK-NEXT:    rotldi 4, 4, 59
+; CHECK-NEXT:    rldic 4, 4, 5, 4
+; CHECK-NEXT:    mffprwz 3, 0
+; CHECK-NEXT:    rldimi 4, 3, 60, 0
+; CHECK-NEXT:    rlwinm 3, 3, 28, 4, 31
 ; CHECK-NEXT:    blr
   %result = bitinsert b87 %base, float %val, i32 60
   ret b87 %result
@@ -331,23 +326,30 @@ define b128 @test_bitinsert_double_const(b128 %base, double %val) {
 define b128 @test_bitinsert_double_var(b128 %base, double %val, i32 %off) {
 ; CHECK-LABEL: test_bitinsert_double_var:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andi. 7, 6, 64
-; CHECK-NEXT:    clrlwi 6, 6, 26
 ; CHECK-NEXT:    mffprd 5, 1
-; CHECK-NEXT:    iseleq 7, 3, 4
-; CHECK-NEXT:    iseleq 3, 4, 3
-; CHECK-NEXT:    subfic 4, 6, 64
-; CHECK-NEXT:    srd 7, 7, 6
-; CHECK-NEXT:    sld 3, 3, 4
+; CHECK-NEXT:    addi 7, 6, -64
+; CHECK-NEXT:    subfic 8, 6, 64
+; CHECK-NEXT:    clrlwi 9, 6, 26
+; CHECK-NEXT:    rlwinm 11, 6, 26, 31, 31
+; CHECK-NEXT:    neg 11, 11
+; CHECK-NEXT:    sld 7, 5, 7
+; CHECK-NEXT:    srd 8, 5, 8
+; CHECK-NEXT:    sld 5, 5, 6
+; CHECK-NEXT:    or 7, 8, 7
+; CHECK-NEXT:    rlwinm 8, 6, 0, 25, 25
+; CHECK-NEXT:    addic 8, 8, -1
+; CHECK-NEXT:    subfe 8, 8, 8
+; CHECK-NEXT:    subfic 12, 9, 64
+; CHECK-NEXT:    sld 10, 8, 9
+; CHECK-NEXT:    srd 0, 11, 12
+; CHECK-NEXT:    or 10, 10, 0
+; CHECK-NEXT:    and 3, 3, 10
 ; CHECK-NEXT:    or 3, 3, 7
-; CHECK-NEXT:    iseleq 7, 5, 3
-; CHECK-NEXT:    iseleq 5, 3, 5
-; CHECK-NEXT:    srd 8, 7, 4
-; CHECK-NEXT:    sld 3, 5, 6
-; CHECK-NEXT:    srd 4, 5, 4
-; CHECK-NEXT:    sld 5, 7, 6
-; CHECK-NEXT:    or 3, 3, 8
-; CHECK-NEXT:    or 4, 5, 4
+; CHECK-NEXT:    srd 7, 8, 12
+; CHECK-NEXT:    sld 8, 11, 9
+; CHECK-NEXT:    or 7, 8, 7
+; CHECK-NEXT:    and 4, 4, 7
+; CHECK-NEXT:    or 4, 4, 5
 ; CHECK-NEXT:    blr
   %result = bitinsert b128 %base, double %val, i32 %off
   ret b128 %result
@@ -358,150 +360,152 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stdu 1, -352(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 352
+; CHECK-NEXT:    .cfi_offset r18, -112
+; CHECK-NEXT:    .cfi_offset r19, -104
+; CHECK-NEXT:    .cfi_offset r20, -96
+; CHECK-NEXT:    .cfi_offset r21, -88
+; CHECK-NEXT:    .cfi_offset r22, -80
+; CHECK-NEXT:    .cfi_offset r23, -72
+; CHECK-NEXT:    .cfi_offset r24, -64
+; CHECK-NEXT:    .cfi_offset r25, -56
 ; CHECK-NEXT:    .cfi_offset r26, -48
 ; CHECK-NEXT:    .cfi_offset r27, -40
 ; CHECK-NEXT:    .cfi_offset r28, -32
 ; CHECK-NEXT:    .cfi_offset r29, -24
 ; CHECK-NEXT:    .cfi_offset r30, -16
-; CHECK-NEXT:    std 29, 328(1) # 8-byte Folded Spill
-; CHECK-NEXT:    std 30, 336(1) # 8-byte Folded Spill
-; CHECK-NEXT:    xxlxor 0, 0, 0
-; CHECK-NEXT:    li 12, 16
-; CHECK-NEXT:    addi 30, 1, 240
-; CHECK-NEXT:    li 0, 48
-; CHECK-NEXT:    addi 11, 1, 176
-; CHECK-NEXT:    li 29, 32
-; CHECK-NEXT:    addi 9, 1, 48
-; CHECK-NEXT:    std 26, 304(1) # 8-byte Folded Spill
+; CHECK-NEXT:    lis 7, 70
+; CHECK-NEXT:    clrldi 9, 8, 32
+; CHECK-NEXT:    std 25, 296(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 27, 312(1) # 8-byte Folded Spill
+; CHECK-NEXT:    li 27, -1
+; CHECK-NEXT:    li 25, 1
+; CHECK-NEXT:    std 29, 328(1) # 8-byte Folded Spill
+; CHECK-NEXT:    xxlxor 0, 0, 0
+; CHECK-NEXT:    ori 7, 7, 60713
+; CHECK-NEXT:    addi 10, 1, 112
+; CHECK-NEXT:    li 12, 48
+; CHECK-NEXT:    addi 11, 1, 48
+; CHECK-NEXT:    std 26, 304(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std 28, 320(1) # 8-byte Folded Spill
-; CHECK-NEXT:    clrldi 10, 3, 25
-; CHECK-NEXT:    stxvw4x 0, 30, 12
+; CHECK-NEXT:    std 30, 336(1) # 8-byte Folded Spill
+; CHECK-NEXT:    li 0, 32
+; CHECK-NEXT:    rldic 7, 7, 34, 7
+; CHECK-NEXT:    li 30, 0
+; CHECK-NEXT:    li 28, -1
+; CHECK-NEXT:    rldic 26, 27, 0, 25
+; CHECK-NEXT:    rldic 25, 25, 63, 0
+; CHECK-NEXT:    rldic 27, 27, 0, 26
+; CHECK-NEXT:    std 18, 240(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 19, 248(1) # 8-byte Folded Spill
+; CHECK-NEXT:    oris 7, 7, 1280
+; CHECK-NEXT:    std 20, 256(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 21, 264(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 22, 272(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 23, 280(1) # 8-byte Folded Spill
+; CHECK-NEXT:    std 24, 288(1) # 8-byte Folded Spill
+; CHECK-NEXT:    addi 24, 1, 176
+; CHECK-NEXT:    mulhdu 7, 9, 7
+; CHECK-NEXT:    mulli 7, 7, 231
+; CHECK-NEXT:    sub 9, 8, 7
+; CHECK-NEXT:    li 7, 16
+; CHECK-NEXT:    subfic 29, 9, 230
+; CHECK-NEXT:    stxvw4x 0, 10, 7
+; CHECK-NEXT:    stxvw4x 0, 11, 12
+; CHECK-NEXT:    clrlwi 7, 9, 26
+; CHECK-NEXT:    rlwinm 12, 9, 29, 27, 28
 ; CHECK-NEXT:    stxvw4x 0, 11, 0
-; CHECK-NEXT:    stxvw4x 0, 11, 29
-; CHECK-NEXT:    stxvw4x 0, 9, 29
-; CHECK-NEXT:    addi 29, 1, 112
-; CHECK-NEXT:    stxvw4x 0, 9, 0
-; CHECK-NEXT:    mffprd 7, 1
-; CHECK-NEXT:    stxvw4x 0, 29, 12
-; CHECK-NEXT:    stxvw4x 0, 0, 30
-; CHECK-NEXT:    rotldi 7, 7, 63
-; CHECK-NEXT:    stxvw4x 0, 0, 29
-; CHECK-NEXT:    std 6, 296(1)
-; CHECK-NEXT:    std 10, 272(1)
-; CHECK-NEXT:    sldi 10, 6, 1
-; CHECK-NEXT:    rotldi 6, 6, 1
-; CHECK-NEXT:    std 5, 288(1)
-; CHECK-NEXT:    rldimi 6, 5, 1, 0
-; CHECK-NEXT:    rotldi 5, 5, 1
-; CHECK-NEXT:    rldimi 5, 4, 1, 0
-; CHECK-NEXT:    std 4, 280(1)
-; CHECK-NEXT:    rotldi 4, 4, 1
-; CHECK-NEXT:    std 10, 200(1)
-; CHECK-NEXT:    addi 10, 1, 272
-; CHECK-NEXT:    std 6, 192(1)
+; CHECK-NEXT:    stxvw4x 0, 0, 10
+; CHECK-NEXT:    stxvw4x 0, 0, 11
+; CHECK-NEXT:    std 30, 232(1)
+; CHECK-NEXT:    std 30, 224(1)
+; CHECK-NEXT:    std 30, 216(1)
+; CHECK-NEXT:    std 30, 208(1)
+; CHECK-NEXT:    std 30, 200(1)
+; CHECK-NEXT:    std 28, 192(1)
+; CHECK-NEXT:    std 28, 184(1)
+; CHECK-NEXT:    std 26, 176(1)
+; CHECK-NEXT:    std 28, 160(1)
+; CHECK-NEXT:    std 28, 152(1)
+; CHECK-NEXT:    std 25, 168(1)
+; CHECK-NEXT:    std 27, 144(1)
 ; CHECK-NEXT:    stfd 1, 72(1)
-; CHECK-NEXT:    rldimi 4, 3, 1, 0
-; CHECK-NEXT:    clrldi 3, 8, 32
-; CHECK-NEXT:    std 5, 184(1)
-; CHECK-NEXT:    std 4, 176(1)
-; CHECK-NEXT:    lis 4, 70
-; CHECK-NEXT:    ori 4, 4, 60713
-; CHECK-NEXT:    rldic 4, 4, 34, 7
-; CHECK-NEXT:    oris 4, 4, 1280
-; CHECK-NEXT:    mulhdu 3, 3, 4
-; CHECK-NEXT:    mulli 3, 3, 231
-; CHECK-NEXT:    sub 8, 8, 3
-; CHECK-NEXT:    rlwinm 5, 8, 29, 27, 28
-; CHECK-NEXT:    clrlwi 6, 8, 26
-; CHECK-NEXT:    subfic 30, 8, 230
-; CHECK-NEXT:    neg 3, 5
-; CHECK-NEXT:    clrlwi 8, 30, 26
-; CHECK-NEXT:    rlwinm 30, 30, 29, 27, 28
-; CHECK-NEXT:    extsw 3, 3
-; CHECK-NEXT:    neg 29, 30
-; CHECK-NEXT:    ldux 11, 30, 11
-; CHECK-NEXT:    ld 28, 24(30)
-; CHECK-NEXT:    ld 27, 16(30)
-; CHECK-NEXT:    ldux 4, 10, 3
-; CHECK-NEXT:    ld 3, 16(10)
-; CHECK-NEXT:    ld 12, 8(10)
+; CHECK-NEXT:    std 30, 64(1)
+; CHECK-NEXT:    rlwinm 23, 29, 29, 27, 28
+; CHECK-NEXT:    clrlwi 9, 29, 26
+; CHECK-NEXT:    rlwinm 29, 8, 29, 27, 28
+; CHECK-NEXT:    clrlwi 8, 8, 26
+; CHECK-NEXT:    ldux 30, 12, 24
+; CHECK-NEXT:    subfic 22, 7, 64
+; CHECK-NEXT:    ldux 11, 29, 11
+; CHECK-NEXT:    subfic 26, 8, 64
+; CHECK-NEXT:    neg 10, 23
+; CHECK-NEXT:    subfic 21, 9, 64
+; CHECK-NEXT:    ld 28, 16(29)
+; CHECK-NEXT:    ld 27, 8(29)
+; CHECK-NEXT:    ld 29, 24(29)
+; CHECK-NEXT:    sld 30, 30, 7
+; CHECK-NEXT:    extsw 0, 10
+; CHECK-NEXT:    addi 10, 1, 144
 ; CHECK-NEXT:    sld 11, 11, 8
-; CHECK-NEXT:    sld 26, 27, 8
-; CHECK-NEXT:    srd 0, 3, 6
-; CHECK-NEXT:    subfic 3, 6, 64
-; CHECK-NEXT:    sld 10, 12, 3
-; CHECK-NEXT:    srd 12, 12, 6
-; CHECK-NEXT:    or 0, 10, 0
-; CHECK-NEXT:    subfic 10, 8, 64
-; CHECK-NEXT:    srd 28, 28, 10
-; CHECK-NEXT:    or 28, 26, 28
-; CHECK-NEXT:    ld 26, 304(1) # 8-byte Folded Reload
-; CHECK-NEXT:    or 0, 0, 28
-; CHECK-NEXT:    sld 28, 4, 3
-; CHECK-NEXT:    srd 4, 4, 6
-; CHECK-NEXT:    std 0, 64(1)
-; CHECK-NEXT:    or 12, 28, 12
-; CHECK-NEXT:    srd 28, 27, 10
-; CHECK-NEXT:    rldimi 7, 0, 63, 0
-; CHECK-NEXT:    ld 30, 8(30)
-; CHECK-NEXT:    std 7, 168(1)
-; CHECK-NEXT:    sld 27, 30, 8
-; CHECK-NEXT:    srd 30, 30, 10
-; CHECK-NEXT:    or 11, 11, 30
-; CHECK-NEXT:    or 28, 27, 28
-; CHECK-NEXT:    addi 30, 1, 144
-; CHECK-NEXT:    xori 27, 8, 63
-; CHECK-NEXT:    or 4, 4, 11
-; CHECK-NEXT:    or 12, 12, 28
-; CHECK-NEXT:    rldicl 7, 4, 63, 26
-; CHECK-NEXT:    clrldi 11, 4, 25
-; CHECK-NEXT:    std 12, 56(1)
-; CHECK-NEXT:    std 7, 144(1)
-; CHECK-NEXT:    rotldi 7, 0, 63
-; CHECK-NEXT:    std 11, 48(1)
-; CHECK-NEXT:    rldimi 7, 12, 63, 0
-; CHECK-NEXT:    std 7, 160(1)
-; CHECK-NEXT:    rotldi 7, 12, 63
-; CHECK-NEXT:    rldimi 7, 4, 63, 0
-; CHECK-NEXT:    std 7, 152(1)
-; CHECK-NEXT:    ldux 7, 5, 9
-; CHECK-NEXT:    ld 9, 16(5)
-; CHECK-NEXT:    ld 11, 8(5)
-; CHECK-NEXT:    sld 7, 7, 6
-; CHECK-NEXT:    srd 4, 9, 3
-; CHECK-NEXT:    sld 12, 11, 6
-; CHECK-NEXT:    sld 9, 9, 6
-; CHECK-NEXT:    or 4, 12, 4
-; CHECK-NEXT:    extsw 12, 29
-; CHECK-NEXT:    ldux 12, 30, 12
-; CHECK-NEXT:    ld 29, 8(30)
-; CHECK-NEXT:    sld 0, 12, 10
-; CHECK-NEXT:    srd 28, 29, 8
-; CHECK-NEXT:    sldi 29, 29, 1
-; CHECK-NEXT:    or 0, 0, 28
-; CHECK-NEXT:    sld 29, 29, 27
-; CHECK-NEXT:    ld 27, 312(1) # 8-byte Folded Reload
-; CHECK-NEXT:    or 4, 4, 0
-; CHECK-NEXT:    ld 0, 24(5)
-; CHECK-NEXT:    srd 5, 0, 3
-; CHECK-NEXT:    srd 3, 11, 3
-; CHECK-NEXT:    sld 6, 0, 6
-; CHECK-NEXT:    or 5, 9, 5
-; CHECK-NEXT:    ld 9, 16(30)
-; CHECK-NEXT:    or 3, 7, 3
-; CHECK-NEXT:    srd 7, 12, 8
-; CHECK-NEXT:    or 3, 3, 7
-; CHECK-NEXT:    ld 7, 24(30)
+; CHECK-NEXT:    srd 25, 28, 26
+; CHECK-NEXT:    srd 23, 29, 26
+; CHECK-NEXT:    sld 28, 28, 8
+; CHECK-NEXT:    sld 24, 27, 8
+; CHECK-NEXT:    ldux 0, 10, 0
+; CHECK-NEXT:    or 28, 28, 23
+; CHECK-NEXT:    ld 23, 8(12)
+; CHECK-NEXT:    or 25, 24, 25
+; CHECK-NEXT:    ld 24, 16(12)
+; CHECK-NEXT:    ld 12, 24(12)
+; CHECK-NEXT:    sld 19, 23, 7
+; CHECK-NEXT:    srd 23, 23, 22
+; CHECK-NEXT:    srd 20, 24, 22
+; CHECK-NEXT:    srd 18, 12, 22
+; CHECK-NEXT:    sld 24, 24, 7
+; CHECK-NEXT:    sld 7, 12, 7
+; CHECK-NEXT:    or 30, 30, 23
+; CHECK-NEXT:    ld 23, 8(10)
+; CHECK-NEXT:    or 22, 19, 20
+; CHECK-NEXT:    ld 20, 16(10)
+; CHECK-NEXT:    or 24, 24, 18
+; CHECK-NEXT:    sld 19, 0, 21
+; CHECK-NEXT:    ld 10, 24(10)
+; CHECK-NEXT:    srd 0, 0, 9
+; CHECK-NEXT:    or 0, 30, 0
 ; CHECK-NEXT:    ld 30, 336(1) # 8-byte Folded Reload
-; CHECK-NEXT:    srd 28, 9, 8
-; CHECK-NEXT:    or 29, 28, 29
-; CHECK-NEXT:    srd 7, 7, 8
-; CHECK-NEXT:    sld 8, 9, 10
-; CHECK-NEXT:    ld 28, 320(1) # 8-byte Folded Reload
-; CHECK-NEXT:    or 5, 5, 29
-; CHECK-NEXT:    or 7, 8, 7
+; CHECK-NEXT:    srd 18, 23, 9
+; CHECK-NEXT:    sld 23, 23, 21
+; CHECK-NEXT:    and 3, 3, 0
+; CHECK-NEXT:    srd 0, 27, 26
+; CHECK-NEXT:    ld 27, 312(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 26, 304(1) # 8-byte Folded Reload
+; CHECK-NEXT:    or 19, 19, 18
+; CHECK-NEXT:    srd 18, 20, 9
+; CHECK-NEXT:    srd 9, 10, 9
+; CHECK-NEXT:    sld 10, 20, 21
+; CHECK-NEXT:    ld 21, 264(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 20, 256(1) # 8-byte Folded Reload
+; CHECK-NEXT:    or 11, 11, 0
+; CHECK-NEXT:    or 23, 23, 18
+; CHECK-NEXT:    or 22, 22, 19
+; CHECK-NEXT:    or 9, 10, 9
+; CHECK-NEXT:    ld 19, 248(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 18, 240(1) # 8-byte Folded Reload
+; CHECK-NEXT:    or 3, 3, 11
+; CHECK-NEXT:    or 24, 24, 23
+; CHECK-NEXT:    and 4, 4, 22
+; CHECK-NEXT:    or 7, 7, 9
+; CHECK-NEXT:    ld 23, 280(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 22, 272(1) # 8-byte Folded Reload
+; CHECK-NEXT:    and 5, 5, 24
+; CHECK-NEXT:    or 4, 4, 25
+; CHECK-NEXT:    and 6, 6, 7
+; CHECK-NEXT:    sld 7, 29, 8
 ; CHECK-NEXT:    ld 29, 328(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 25, 296(1) # 8-byte Folded Reload
+; CHECK-NEXT:    ld 24, 288(1) # 8-byte Folded Reload
+; CHECK-NEXT:    or 5, 5, 28
+; CHECK-NEXT:    ld 28, 320(1) # 8-byte Folded Reload
 ; CHECK-NEXT:    or 6, 6, 7
 ; CHECK-NEXT:    addi 1, 1, 352
 ; CHECK-NEXT:    blr
@@ -512,13 +516,10 @@ define b231 @test_bitinsert_double_b231_var(b231 %base, double %val, i32 %off) {
 define b231 @test_bitinsert_double_b231_crossword(b231 %base, double %val) {
 ; CHECK-LABEL: test_bitinsert_double_b231_crossword:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mffprd 7, 1
-; CHECK-NEXT:    rotldi 8, 6, 41
-; CHECK-NEXT:    rldimi 4, 7, 62, 0
-; CHECK-NEXT:    rotldi 3, 7, 62
-; CHECK-NEXT:    rotldi 7, 7, 23
-; CHECK-NEXT:    rldimi 3, 8, 62, 0
-; CHECK-NEXT:    rldimi 6, 7, 0, 41
+; CHECK-NEXT:    mffprd 3, 1
+; CHECK-NEXT:    rldicr 6, 6, 0, 40
+; CHECK-NEXT:    rldimi 4, 3, 62, 0
+; CHECK-NEXT:    rldicl 3, 3, 62, 2
 ; CHECK-NEXT:    blr
   %result = bitinsert b231 %base, double %val, i32 190
   ret b231 %result
