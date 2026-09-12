@@ -1767,9 +1767,16 @@ PackIndexingExpr *PackIndexingExpr::Create(
     Expr *PackIdExpr, Expr *IndexExpr, std::optional<int64_t> Index,
     ArrayRef<Expr *> SubstitutedExprs, bool FullySubstituted) {
   QualType Type;
-  if (Index && FullySubstituted && !SubstitutedExprs.empty())
-    Type = SubstitutedExprs[*Index]->getType();
-  else
+  if (Index && FullySubstituted && !SubstitutedExprs.empty()) {
+    unsigned SelIdx = SubstitutedExprs.size() == 1 ? 0 : *Index;
+    assert(SelIdx < SubstitutedExprs.size() && "pack index out of bounds");
+    Expr *Selected = SubstitutedExprs[SelIdx];
+    Type = Selected->getType();
+    // Store only the selected element once resolved.
+    if (!Selected->isInstantiationDependent() &&
+        !IndexExpr->isInstantiationDependent())
+      SubstitutedExprs = SubstitutedExprs.slice(SelIdx, 1);
+  } else
     Type = PackIdExpr->getType();
 
   void *Storage =
