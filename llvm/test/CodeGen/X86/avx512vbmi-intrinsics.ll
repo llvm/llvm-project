@@ -177,3 +177,24 @@ define <64 x i8>@test_int_x86_avx512_maskz_vpermt2var_qi_512(<64 x i8> %x0, <64 
   %3 = select <64 x i1> %2, <64 x i8> %1, <64 x i8> zeroinitializer
   ret <64 x i8> %3
 }
+
+; With VBMI this should use a (more efficient) byte permute, not a word permute.
+define <64 x i8> @vbmi_prefer_byte_permute(<64 x i8> %a, <64 x i8> %b) {
+; X86-LABEL: vbmi_prefer_byte_permute:
+; X86:       # %bb.0:
+; X86-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,64,65,2,3,66,67,4,5,68,69,6,7,70,71,8,9,72,73,10,11,74,75,12,13,76,77,14,15,78,79,16,17,80,81,18,19,82,83,20,21,84,85,22,23,86,87,24,25,88,89,26,27,90,91,28,29,92,93,30,31,94,95]
+; X86-NEXT:    # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x15,A,A,A,A]
+; X86-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: FK_Data_4
+; X86-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0 # encoding: [0x62,0xf2,0x6d,0x48,0x7d,0xc1]
+; X86-NEXT:    retl # encoding: [0xc3]
+;
+; X64-LABEL: vbmi_prefer_byte_permute:
+; X64:       # %bb.0:
+; X64-NEXT:    vmovdqa64 {{.*#+}} zmm2 = [0,1,64,65,2,3,66,67,4,5,68,69,6,7,70,71,8,9,72,73,10,11,74,75,12,13,76,77,14,15,78,79,16,17,80,81,18,19,82,83,20,21,84,85,22,23,86,87,24,25,88,89,26,27,90,91,28,29,92,93,30,31,94,95]
+; X64-NEXT:    # encoding: [0x62,0xf1,0xfd,0x48,0x6f,0x15,A,A,A,A]
+; X64-NEXT:    # fixup A - offset: 6, value: {{\.?LCPI[0-9]+_[0-9]+}}, kind: reloc_riprel_4byte
+; X64-NEXT:    vpermt2b %zmm1, %zmm2, %zmm0 # encoding: [0x62,0xf2,0x6d,0x48,0x7d,0xc1]
+; X64-NEXT:    retq # encoding: [0xc3]
+  %res = shufflevector <64 x i8> %a, <64 x i8> %b, <64 x i32> <i32 0, i32 1, i32 64, i32 65, i32 2, i32 3, i32 66, i32 67, i32 4, i32 5, i32 68, i32 69, i32 6, i32 7, i32 70, i32 71, i32 8, i32 9, i32 72, i32 73, i32 10, i32 11, i32 74, i32 75, i32 12, i32 13, i32 76, i32 77, i32 14, i32 15, i32 78, i32 79, i32 16, i32 17, i32 80, i32 81, i32 18, i32 19, i32 82, i32 83, i32 20, i32 21, i32 84, i32 85, i32 22, i32 23, i32 86, i32 87, i32 24, i32 25, i32 88, i32 89, i32 26, i32 27, i32 90, i32 91, i32 28, i32 29, i32 92, i32 93, i32 30, i32 31, i32 94, i32 95>
+  ret <64 x i8> %res
+}
