@@ -4,9 +4,6 @@
 Adding New CI Jobs
 ==================
 
-.. contents::
-  :local:
-
 Adding The Job
 ==============
 

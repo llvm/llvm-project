@@ -2,9 +2,6 @@
 Experimental Features
 =====================
 
-.. contents::
-   :local:
-
 .. _experimental features:
 
 Overview

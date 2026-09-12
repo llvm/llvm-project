@@ -2,9 +2,6 @@
 Extended C++03 Support
 =======================
 
-.. contents::
-   :local:
-
 Overview
 ========
 

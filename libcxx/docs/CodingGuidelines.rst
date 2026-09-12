@@ -4,9 +4,6 @@
 libc++ Coding Guidelines
 ========================
 
-.. contents::
-  :local:
-
 Use ``__ugly_names`` for implementation details
 ===============================================
 
