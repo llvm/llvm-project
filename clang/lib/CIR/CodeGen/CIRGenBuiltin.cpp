@@ -26,6 +26,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1234,6 +1235,20 @@ static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
                               isVarArg);
 
   return cir::FuncType::get(context, argTypes, resultTy, isVarArg);
+}
+
+void CIRGenFunction::checkTargetFeatures(const CallExpr *e,
+                                         const FunctionDecl *targetDecl) {
+  const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  CodeGenUtils::checkTargetFeatures(getContext(), cgm.getDiags(), getLangOpts(),
+                                    e, fd, targetDecl);
+}
+
+void CIRGenFunction::checkTargetFeatures(SourceLocation loc,
+                                         const FunctionDecl *targetDecl) {
+  const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
+  CodeGenUtils::checkTargetFeatures(getContext(), cgm.getDiags(), getLangOpts(),
+                                    loc, fd, targetDecl);
 }
 
 RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
@@ -2997,6 +3012,13 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   if (getContext().BuiltinInfo.isPredefinedLibFunction(builtinID))
     return emitLibraryCall(*this, fd, e,
                            emitScalarExpr(e->getCallee()).getDefiningOp());
+
+  // Check that a call to a target specific builtin has the correct target
+  // features.
+  // This is down here to avoid non-target specific builtins, however, if
+  // generic builtins start to require generic target features then we
+  // can move this up to the beginning of the function.
+  checkTargetFeatures(e, fd);
 
   // See if we have a target specific intrinsic.
   std::string name = getContext().BuiltinInfo.getName(builtinID);
