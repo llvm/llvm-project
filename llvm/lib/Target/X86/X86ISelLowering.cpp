@@ -56077,61 +56077,39 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
 //   Q = duplicate imaginary (b) : <b0i, b0i, b1i, b1i, ...>
 static bool isCFMulFromFMSUBADD(SDValue N, SelectionDAG &DAG, SDValue &A,
                                 SDValue &B) {
-  // isEven: Shuffle Mask <0, 0, 2, 2, ...> V
-  // else, Shuffle Mask <1, 1, 3, 3, ...> V
-  auto isSplat2EvenOrOddMask = [](ArrayRef<int> Mask, bool isEven) {
-    unsigned Size = Mask.size();
-    if (Size % 2 != 0)
-      return false;
-    unsigned Start = isEven ? 0 : 1;
-    for (unsigned i = 0; i < Size; i += 2) {
-      if (Mask[i] != (int)(Start + i) || Mask[i + 1] != (int)(Start + i))
-        return false;
-    }
-    return true;
-  };
-
-  // Shuffle Mask <1, 0, 3, 2, ...> V
-  auto isSwapAdjPairMask = [](ArrayRef<int> Mask) {
-    unsigned Size = Mask.size();
-    if (Size % 2 != 0)
-      return false;
-    for (unsigned i = 0; i < Size; i += 2) {
-      if (Mask[i] != (int)(i + 1) || Mask[i + 1] != (int)i)
-        return false;
-    }
-    return true;
-  };
-
   SDValue Op0 = N.getOperand(0);
   SDValue Op1 = N.getOperand(1);
   SDValue Op2 = N.getOperand(2);
-
   SmallVector<SDValue, 2> Inputs;
-  SmallVector<int, 32> Mask;
-  auto matchFMSUBADDPattern = [&](SDValue X, SDValue OpA) -> bool {
-    Inputs.clear();
-    Mask.clear();
-    A = OpA;
 
-    if (!getTargetShuffleInputs(X, Inputs, Mask, DAG) ||
-        !isSplat2EvenOrOddMask(Mask, true))
+  auto matchShufflePattern = [&DAG, &Inputs](SDValue V, ArrayRef<int> Pat) -> bool {
+    SmallVector<int, 32> Mask;
+    SmallVector<int, 8> RepeatedMask;
+    Inputs.clear();
+    if (!getTargetShuffleInputs(V, Inputs, Mask, DAG))
+      return false;
+    MVT VT = V.getSimpleValueType();
+    return is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask)
+           && isShuffleEquivalent(RepeatedMask, Pat, Inputs[0]);
+  };
+
+  auto matchFMSUBADDPattern = [&](SDValue X, SDValue OpA) -> bool {
+    if (!matchShufflePattern(X, {0, 0, 2, 2, 4, 4, 6, 6}))
       return false;
     B = Inputs[0];
-
+    A = OpA;
     if (Op2.getOpcode() != ISD::FMUL)
       return false;
     SDValue P = Op2.getOperand(0);
     SDValue Q = Op2.getOperand(1);
     auto matchFMulPattern = [&](SDValue P, SDValue Q) {
-      return getTargetShuffleInputs(P, Inputs, Mask, DAG) &&
-             isSwapAdjPairMask(Mask) && Inputs[0] == A &&
-             getTargetShuffleInputs(Q, Inputs, Mask, DAG) &&
-             isSplat2EvenOrOddMask(Mask, false) && Inputs[0] == B;
+      return matchShufflePattern(P, {1, 0, 3, 2, 5, 4, 7, 6})
+             && Inputs[0] == A
+             && matchShufflePattern(Q, {1, 1, 3, 3, 5, 5, 7, 7})
+             && Inputs[0] == B;
     };
     return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
   };
-
   // First 2 operands of FMSUBADD are commutable.
   return matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0);
 }
