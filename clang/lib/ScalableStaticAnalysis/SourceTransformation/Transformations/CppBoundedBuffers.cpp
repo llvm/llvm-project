@@ -596,7 +596,7 @@ private:
   /// \return true iff E needs edit and \c addEditToAtomicChange is called on
   /// AC.
   bool rewriteAddrofElementAccess(const Expr *E,
-                                   tooling::AtomicChange &AC) const;
+                                  tooling::AtomicChange &AC) const;
 
   /// Provided \c E is transformed, if it has the form
   /// '(T*)e/static_cast<T>(e)/reinterpret_cast<T>(e)', edit it to
@@ -916,7 +916,7 @@ bool ExpressionRewriter::rewriteAddrofElementAccess(
 }
 
 bool ExpressionRewriter::rewritePointerCast(const Expr *E,
-                                             tooling::AtomicChange &AC) const {
+                                            tooling::AtomicChange &AC) const {
   const auto *CE = dyn_cast<ExplicitCastExpr>(E->IgnoreParenImpCasts());
 
   if (!CE ||
