@@ -2,10 +2,6 @@
 Libc++ XX.YY.ZZ (In-Progress) Release Notes
 ===========================================
 
-.. contents::
-   :local:
-   :depth: 2
-
 Written by the `Libc++ Team <https://libcxx.llvm.org>`_
 
 .. warning::

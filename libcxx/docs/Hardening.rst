@@ -4,9 +4,6 @@
 Hardening Modes
 ===============
 
-.. contents::
-   :local:
-
 .. _using-hardening-modes:
 
 Using hardening modes

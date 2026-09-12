@@ -2,9 +2,6 @@
 Capturing configuration information in the headers
 ==================================================
 
-.. contents::
-   :local:
-
 The Problem
 ===========
 
