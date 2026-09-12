@@ -593,6 +593,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case PartialOrderingTTP:
   case SYCLKernelLaunchLookup:
   case SYCLKernelLaunchOverloadResolution:
+  case SYCLKernelHostSpecialParametersHandlerCall:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -1296,6 +1297,22 @@ void Sema::PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc) {
                    << convertCallArgsValueCategoryAndTypeToString(
                           *this, llvm::ArrayRef(Active->CallArgs,
                                                 Active->NumCallArgs)));
+      break;
+    }
+    case CodeSynthesisContext::SYCLKernelHostSpecialParametersHandlerCall: {
+      const auto *SKEPAttr =
+          Active->Entity->getAttr<SYCLKernelEntryPointAttr>();
+      assert(SKEPAttr && "Missing sycl_kernel_entry_point attribute");
+      assert(!SKEPAttr->isInvalidAttr() &&
+             "sycl_kernel_entry_point attribute is invalid");
+      DiagFunc(SKEPAttr->getLocation(), PDiag(diag::note_sycl_runtime_defect));
+      DiagFunc(SKEPAttr->getLocation(),
+               PDiag(diag::note_sycl_kernel_implicit_call_here)
+                   << "callable object returned by 'sycl_kernel_launch'"
+                   << convertCallArgsValueCategoryAndTypeToString(
+                          *this, llvm::ArrayRef(Active->CallArgs,
+                                                Active->NumCallArgs)));
+
       break;
     }
     case CodeSynthesisContext::ExpansionStmtInstantiation:
