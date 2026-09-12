@@ -27,7 +27,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MemoryLocation.h"

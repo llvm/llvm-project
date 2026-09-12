@@ -22,6 +22,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 
+#include "llvm/Support/Error.h"
+
 #include "DynamicLoaderDarwin.h"
 #include "DynamicLoaderMacOS.h"
 
@@ -423,18 +425,18 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
               addr_t notification_location = all_image_infos + 4 + // version
                                              4 +        // infoArrayCount
                                              addr_size; // infoArray
-              Status error;
-              addr_t notification_addr =
-                  process->ReadPointerFromMemory(notification_location, error);
-              if (!error.Success()) {
+              llvm::Expected<lldb::addr_t> notification_addr =
+                  process->ReadPointerFromMemory(notification_location);
+              if (!notification_addr) {
+                llvm::consumeError(notification_addr.takeError());
                 Debugger::ReportWarning(
                     "DynamicLoaderMacOS::NotifyBreakpointHit unable "
                     "to read address of dyld-handover notification function at "
                     "0x%" PRIx64,
                     notification_location);
               } else {
-                notification_addr = process->FixCodeAddress(notification_addr);
-                dyld_instance->SetDYLDHandoverBreakpoint(notification_addr);
+                dyld_instance->SetDYLDHandoverBreakpoint(
+                    process->FixCodeAddress(*notification_addr));
               }
             }
           }
@@ -572,22 +574,27 @@ addr_t DynamicLoaderMacOS::GetNotificationFuncAddrFromImageInfos() {
   // the actual address of this struct, dyld has not started
   // executing yet.  The 'notification' field can't be used by
   // lldb until it's resolved to an actual address.
-  Status error;
-  addr_t registered_infos_addr = m_process->ReadPointerFromMemory(
-      all_image_infos_addr + registered_infos_addr_offset, error);
-  if (!error.Success())
+  llvm::Expected<lldb::addr_t> registered_infos_addr =
+      m_process->ReadPointerFromMemory(all_image_infos_addr +
+                                       registered_infos_addr_offset);
+  if (!registered_infos_addr) {
+    llvm::consumeError(registered_infos_addr.takeError());
     return notification_addr;
-  if (registered_infos_addr != all_image_infos_addr)
+  }
+  if (*registered_infos_addr != all_image_infos_addr)
     return notification_addr;
 
   offset_t notification_fptr_offset = sizeof(uint32_t) + // version
                                       sizeof(uint32_t) + // infoArrayCount
                                       addr_size;         // infoArray
 
-  addr_t notification_fptr = m_process->ReadPointerFromMemory(
-      all_image_infos_addr + notification_fptr_offset, error);
-  if (error.Success())
-    notification_addr = m_process->FixCodeAddress(notification_fptr);
+  llvm::Expected<lldb::addr_t> notification_fptr =
+      m_process->ReadPointerFromMemory(all_image_infos_addr +
+                                       notification_fptr_offset);
+  if (notification_fptr)
+    notification_addr = m_process->FixCodeAddress(*notification_fptr);
+  else
+    llvm::consumeError(notification_fptr.takeError());
   return notification_addr;
 }
 

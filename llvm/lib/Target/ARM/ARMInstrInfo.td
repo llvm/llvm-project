@@ -605,6 +605,13 @@ def xor_su : PatFrag<(ops node:$lhs, node:$rhs), (xor node:$lhs, node:$rhs)>;
 let HasOneUse = 1 in
 def fmul_su : PatFrag<(ops node:$lhs, node:$rhs), (any_fmul node:$lhs, node:$rhs)>;
 
+// A single-use 'fmul' node carrying the contract flag.
+let HasOneUse = 1 in
+def fmul_su_contract : PatFrag<(ops node:$lhs, node:$rhs),
+                               (any_fmul node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract();
+}]>;
+
 // An 'fadd' node which checks for single non-hazardous use.
 def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
@@ -613,6 +620,18 @@ def fadd_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fadd node:$lhs, node:$rhs
 // An 'fsub' node which checks for single non-hazardous use.
 def fsub_mlx : PatFrag<(ops node:$lhs, node:$rhs),(any_fsub node:$lhs, node:$rhs),[{
   return hasNoVMLxHazardUse(N);
+}]>;
+
+// Contracted variants used to form the fused (single-rounded) VFMA / VFMS,
+// selected when the add/sub carries the contract flag.
+def fadd_mlx_contract : PatFrag<(ops node:$lhs, node:$rhs),
+                                (any_fadd node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract() && hasNoVMLxHazardUse(N);
+}]>;
+
+def fsub_mlx_contract : PatFrag<(ops node:$lhs, node:$rhs),
+                                (any_fsub node:$lhs, node:$rhs),[{
+  return N->getFlags().hasAllowContract() && hasNoVMLxHazardUse(N);
 }]>;
 
 def imm_even : ImmLeaf<i32, [{ return (Imm & 1) == 0; }]>;

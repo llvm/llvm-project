@@ -37,6 +37,15 @@
 namespace clang {
 namespace extractapi {
 
+inline std::string getTypeConstraintSpelling(const TypeConstraint *TC,
+                                             const ASTContext &Context) {
+  std::string Name;
+  llvm::raw_string_ostream OS(Name);
+  TC->getNamedConcept().print(OS, Context.getPrintingPolicy(),
+                              TemplateName::Qualified::None);
+  return Name;
+}
+
 class Template {
   struct TemplateParameter {
     // "class", "typename", or concept name
@@ -71,11 +80,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()
-                   ->getNamedConcept()
-                   .getAsTemplateDecl()
-                   ->getName()
-                   .str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -93,11 +99,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()
-                   ->getNamedConcept()
-                   .getAsTemplateDecl()
-                   ->getName()
-                   .str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else
@@ -115,11 +118,8 @@ public:
         continue;
       std::string Type;
       if (Param->hasTypeConstraint())
-        Type = Param->getTypeConstraint()
-                   ->getNamedConcept()
-                   .getAsTemplateDecl()
-                   ->getName()
-                   .str();
+        Type = getTypeConstraintSpelling(Param->getTypeConstraint(),
+                                         Param->getASTContext());
       else if (Param->wasDeclaredWithTypename())
         Type = "typename";
       else

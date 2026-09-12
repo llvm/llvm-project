@@ -399,8 +399,8 @@ bool SourceBreakpoint::BreakpointHitCallback(
       // evaluation
       const std::string &expr_str = messagePart.text;
       const char *expr = expr_str.c_str();
-      lldb::SBValue value = frame.GetValueForVariablePath(
-          expr, lldb::eDynamicDontRunTarget, lldb::eDILModeLegacy);
+      lldb::SBValue value = frame.GetValueForVariablePathWithMode(
+          expr, lldb::eDILModeLegacy, lldb::eDynamicDontRunTarget);
       if (value.GetError().Fail())
         value = frame.EvaluateExpression(expr);
       output += VariableDescription(

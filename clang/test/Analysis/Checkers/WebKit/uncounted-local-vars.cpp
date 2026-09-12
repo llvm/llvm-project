@@ -214,6 +214,23 @@ void foo9(RefCountable& o) {
   }
 }
 
+RefCountable* provide();
+
+struct Derived : public RefCountable {
+};
+
+void foo10() {
+  RefPtr<RefCountable> obj = provide();
+  if (obj) {
+    auto* ptr = downcast<Derived>(obj.get());
+    ptr->method();
+  }
+  if (obj) {
+    auto& ref = downcast<Derived>(*obj);
+    ref.method();
+  }
+}
+
 } // namespace guardian_scopes
 
 namespace auto_keyword {

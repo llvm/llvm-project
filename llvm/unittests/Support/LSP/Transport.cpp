@@ -182,7 +182,7 @@ TEST_F(TransportInputTest, OutgoingRequestJSONParseFailure) {
         llvm::Error err = result.takeError();
         EXPECT_EQ(id, 109);
         ASSERT_TRUE((bool)err);
-        EXPECT_THAT(debugString(err),
+        EXPECT_THAT(MessageHandler::debugString(err),
                     HasSubstr("failed to decode "
                               "reply:outgoing-request-json-parse-failure(109) "
                               "response: missing value at (root).character"));

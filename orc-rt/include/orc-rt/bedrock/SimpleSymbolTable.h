@@ -10,22 +10,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef ORC_RT_SIMPLESYMBOLTABLE_H
-#define ORC_RT_SIMPLESYMBOLTABLE_H
+#ifndef ORC_RT_BEDROCK_SIMPLESYMBOLTABLE_H
+#define ORC_RT_BEDROCK_SIMPLESYMBOLTABLE_H
 
-#include "orc-rt/bedrock/Error.h"
-#include "orc-rt/bedrock/move_only_function.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/Mangling.h"
+#include "orc-rt/support/move_only_function.h"
+
+#include <algorithm>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
-#define ORC_RT_SYMTAB_PAIR(sym) {{#sym}, reinterpret_cast<const void *>(&sym)}
+/// Builds a (name, address) pair for a symbol, taking its C-level name from the
+/// identifier itself. For use in the interface arrays passed to addUnique.
+#define ORC_RT_SYMTAB_C_PAIR(sym)                                              \
+  {SymbolNameSpec::c(#sym), reinterpret_cast<const void *>(&sym)}
 
 namespace orc_rt {
 
-/// A simple string-to-pointer symbol table. Symbols are added via
-/// addSymbolsUnique, which rejects duplicates with an error.
+/// A simple symbol table mapping linker-level names to addresses.
+///
+/// Entries are added via addUnique. Keys are always linker-level names: names
+/// given as SymbolNameSpecs are mangled on the way in, and count() and at()
+/// mangle their argument the same way.
 class SimpleSymbolTable {
 public:
   using SymbolTable = std::unordered_map<std::string, const void *>;
@@ -38,42 +47,71 @@ public:
   iterator begin() const noexcept { return Symbols.begin(); }
   iterator end() const noexcept { return Symbols.end(); }
 
-  template <typename KeyT> decltype(auto) count(KeyT &&K) const {
-    return Symbols.count(std::forward<KeyT>(K));
+  /// Returns 1 if NameSpec's mangled name is in the table, 0 otherwise.
+  size_t count(const SymbolNameSpec &NameSpec) const {
+    return Symbols.count(mangledCopy(NameSpec));
   }
 
-  template <typename KeyT> decltype(auto) at(KeyT &&K) const {
-    return Symbols.at(std::forward<KeyT>(K));
+  /// Returns the address registered for NameSpec's mangled name, which must be
+  /// present in the table.
+  const void *at(const SymbolNameSpec &NameSpec) const {
+    auto MangledName = mangledCopy(NameSpec);
+    assert(Symbols.count(MangledName) && "Name not present");
+    return Symbols.at(MangledName);
   }
 
-  /// Adds symbol/address pairs from NewSymbols, first checking that all
-  /// symbols in NewSymbols are unique (i.e. not previously defined).
+  /// Adds (name, address) pairs from NewSymbols, mangling each name according
+  /// to its SymbolNameKind. Redundant definitions where the (name, address)
+  /// pair matches an existing table entry are allowed. Duplicate symbol names
+  /// with different addresses will return an error, and addUnique will leave
+  /// the table unchanged.
   ///
   /// NewSymbols must not contain any internal duplicates.
   template <typename SymbolRangeT> Error addUnique(SymbolRangeT &&NewSymbols) {
+    // Generate the mangled version of the NewSymbols map.
+    std::vector<std::pair<std::string, const void *>> NewMangledSymbols;
+    NewMangledSymbols.reserve(std::size(NewSymbols));
+    for (auto &[NameSpec, Addr] : NewSymbols)
+      NewMangledSymbols.emplace_back(mangledCopy(NameSpec), Addr);
 
-    // First check for incompatible duplicate definitions (duplicates are
-    // only permitted if they resolve to the same address). Error out if any
-    // incompatible defs are found.
-    {
-      std::vector<std::string_view> IncompatibleDefs;
-      for (auto &[Name, Addr] : NewSymbols) {
-        auto I = Symbols.find(Name);
-        if (I == Symbols.end() || I->second == Addr)
-          continue;
-        if (Symbols.count(Name))
-          IncompatibleDefs.push_back(Name);
-      }
-      if (!IncompatibleDefs.empty())
-        return makeIncompatibleDefsError(std::move(IncompatibleDefs));
+    // Check for duplicate definitions whose addresses disagree.
+    std::vector<std::string_view> IncompatibleDefs;
+    for (auto &[MangledName, Addr] : NewMangledSymbols) {
+      auto I = Symbols.find(MangledName);
+      if (I != Symbols.end() && I->second != Addr)
+        IncompatibleDefs.push_back(MangledName);
     }
 
-    // No duplicates. Add entries.
-    for (auto &P : NewSymbols) {
-      [[maybe_unused]] auto [I, Added] = Symbols.insert(P);
-      assert((Added || I->second == P.second) &&
-             "NewSymbols contains incompatible definitions");
+    // If any incompatible definitions exist then return with an error.
+    if (!IncompatibleDefs.empty())
+      return makeIncompatibleDefsError(std::move(IncompatibleDefs));
+
+    // Otherwise update the table.
+    for (auto &[MangledName, Addr] : NewMangledSymbols) {
+      [[maybe_unused]] auto [I, Added] =
+          Symbols.insert({std::move(MangledName), Addr});
+      assert((Added || I->second == Addr) &&
+             "NewSymbols contains internal duplicates");
     }
+
+    return Error::success();
+  }
+
+  /// Adds all entries from Other. Duplicate handling matches addUnique above:
+  /// on error this table is left unchanged. Consumes Other.
+  Error addUnique(SimpleSymbolTable &&Other) {
+    std::vector<std::string_view> IncompatibleDefs;
+    for (auto &[Name, Addr] : Other.Symbols) {
+      auto I = Symbols.find(Name);
+      if (I != Symbols.end() && I->second != Addr)
+        IncompatibleDefs.push_back(Name);
+    }
+
+    if (!IncompatibleDefs.empty())
+      return makeIncompatibleDefsError(std::move(IncompatibleDefs));
+
+    // Splices nodes across, so no keys are copied.
+    Symbols.merge(Other.Symbols);
 
     return Error::success();
   }
@@ -87,4 +125,4 @@ private:
 
 } // namespace orc_rt
 
-#endif // ORC_RT_SIMPLESYMBOLTABLE_H
+#endif // ORC_RT_BEDROCK_SIMPLESYMBOLTABLE_H

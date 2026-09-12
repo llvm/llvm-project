@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <limits>
+#include <list>
 
 namespace llvm::ubi {
 
@@ -2633,7 +2634,7 @@ public:
   }
 
   void visitAllocaInst(AllocaInst &AI) {
-    uint64_t AllocSize = Ctx.getEffectiveTypeAllocSize(AI.getAllocatedType());
+    uint64_t AllocSize = Ctx.getEffectiveTypeSize(AI.getAllocationBaseSize(DL));
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {

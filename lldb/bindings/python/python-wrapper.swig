@@ -237,6 +237,18 @@ void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBData(PyObject * data)
   return sb_ptr;
 }
 
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBThreadPlan(PyObject * data) {
+  lldb::SBThreadPlan *sb_ptr = nullptr;
+
+  int valid_cast =
+      SWIG_ConvertPtr(data, (void **)&sb_ptr, SWIGTYPE_p_lldb__SBThreadPlan, 0);
+
+  if (valid_cast == -1)
+    return NULL;
+
+  return sb_ptr;
+}
+
 void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBBreakpoint(PyObject * data) {
   lldb::SBBreakpoint *sb_ptr = nullptr;
 

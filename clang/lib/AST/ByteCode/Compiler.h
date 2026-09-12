@@ -115,8 +115,8 @@ enum class ScopeKind { Block, FullExpression, Call };
 
 /// Compilation context for expressions.
 template <class Emitter>
-class Compiler : public ConstStmtVisitor<Compiler<Emitter>, bool>,
-                 public Emitter {
+class Compiler final : public ConstStmtVisitor<Compiler<Emitter>, bool>,
+                       public Emitter {
 protected:
   // Aliases for types defined in the emitter.
   using LabelTy = typename Emitter::LabelTy;

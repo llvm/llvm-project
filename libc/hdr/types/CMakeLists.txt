@@ -407,6 +407,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  pthread_attr_t
+  HDRS
+    pthread_attr_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.pthread_attr_t
+)
+
+add_proxy_header_library(
   pthread_t
   HDRS
     pthread_t.h
@@ -1311,6 +1319,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  glob_t
+  HDRS
+    glob_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.glob_t
+)
+
+add_proxy_header_library(
   regex_t
   HDRS
     regex_t.h
@@ -1364,4 +1380,12 @@ add_proxy_header_library(
     tcflag_t.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.tcflag_t
+)
+
+add_proxy_header_library(
+  id_t
+  HDRS
+    id_t.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.id_t
 )

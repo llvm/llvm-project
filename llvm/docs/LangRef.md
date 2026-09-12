@@ -2273,6 +2273,15 @@ define void @f() "no-sse" { ... }
     around the cases where the training input does not have good coverage
     on all the hot functions.
 
+`hybrid_patchable`
+:   This attribute applies to code compiled for ARM64EC (target triple
+    'arm64ec-*') targets and indicates that the function may be patched at
+    runtime. In addition to the function's actual implementation, an x86-64
+    function thunk is generated. Code referencing the function will use this
+    thunk as its address, and calls to the function perform an additional
+    runtime check to execute the call through the emulator if the thunk has
+    been patched.
+
 `inlinehint`
 :   This attribute indicates that the source code contained a hint that
     inlining this function is desirable (such as the "inline" keyword in
@@ -8622,6 +8631,21 @@ via a volatile memory access, I/O, or other synchronization. If such a loop is
 not found to interact with the environment in an observable way, the loop may
 be removed. This corresponds to the `mustprogress` function attribute.
 
+#### '`llvm.loop.align`' Metadata
+
+This metadata suggests an alignment (in bytes) for the loop to the backend. The
+first operand is the string `llvm.loop.align` and the second operand is a
+positive power-of-two integer constant of type `i32` specifying the alignment.
+For example:
+
+```llvm
+!0 = !{!"llvm.loop.align", i32 64}
+```
+
+The backend aligns the loop to the maximum of this value and the target's
+preferred loop alignment. This corresponds to the Clang `[[clang::code_align(N)]]`
+statement attribute.
+
 #### '`irr_loop`' Metadata
 
 `irr_loop` metadata may be attached to the terminator instruction of a basic
@@ -13273,7 +13297,8 @@ If `value` is of the {ref}`byte type <t_byte>`:
 ##### Syntax:
 
 ```
-<result> = addrspacecast <pty> <ptrval> to <pty2>       ; yields pty2
+<result> = addrspacecast <pty> <ptrval> to <pty2>          ; yields pty2
+<result> = addrspacecast nonnull <pty> <ptrval> to <pty2>  ; yields pty2
 ```
 
 ##### Overview:
@@ -13309,6 +13334,10 @@ should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
 address space casts return {ref}`poison <poisonvalues>`.
+
+The optional `nonnull` flag asserts that `ptrval` is not the null value of
+its source address space; if it is, the result is
+{ref}`poison <poisonvalues>`.
 
 ##### Example:
 

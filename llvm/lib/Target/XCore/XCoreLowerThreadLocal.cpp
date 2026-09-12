@@ -23,6 +23,7 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 #define DEBUG_TYPE "xcore-lower-thread-local"
@@ -121,20 +122,23 @@ static bool rewriteNonInstructionUses(GlobalVariable *GV, Pass *P) {
   return true;
 }
 
-static bool isZeroLengthArray(Type *Ty) {
-  ArrayType *AT = dyn_cast<ArrayType>(Ty);
-  return AT && (AT->getNumElements() == 0);
-}
-
 bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   Module *M = GV->getParent();
   if (!GV->isThreadLocal())
     return false;
 
-  // Skip globals that we can't lower and leave it for the backend to error.
-  if (!rewriteNonInstructionUses(GV, this) ||
-      !GV->getType()->isSized() || isZeroLengthArray(GV->getType()))
+  if (!rewriteNonInstructionUses(GV, this))
     return false;
+
+  // The lowered representation needs an ArrayType of the value type, which
+  // requires a known per-element stride: reject anything that can't provide
+  // one now, with a clear diagnostic, rather than emitting a malformed GEP
+  // that only fails much later (and much less clearly) in instruction
+  // selection.
+  if (!GV->getValueType()->isSized() ||
+      GV->getGlobalSize(M->getDataLayout()) == 0)
+    reportFatalUsageError("Size of thread local object '" + GV->getName() +
+                          "' is unknown");
 
   // Create replacement global.
   ArrayType *NewType = createLoweredType(GV->getValueType());

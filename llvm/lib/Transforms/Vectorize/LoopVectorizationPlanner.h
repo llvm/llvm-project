@@ -36,6 +36,7 @@ class GeneratedRTChecks;
 
 namespace llvm {
 
+class BranchProbabilityInfo;
 class LoopInfo;
 class DominatorTree;
 class LoopVectorizationLegality;
@@ -50,14 +51,14 @@ class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
 
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<bool> PreferInLoopReductions;
-
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
-std::optional<unsigned> getMaxVScale(const Function &F,
-                                     const TargetTransformInfo &TTI);
+std::optional<unsigned> getMaxVScale(const Function &F);
+
+/// \return The upper bound for the runtime value of \p EC, or std::nullopt
+/// if the upper bound is unknown.
+std::optional<uint64_t>
+getMaxRuntimeElementCount(ElementCount EC, const Function &F);
 
 // Utility functions that are used by different vectorization classes
 namespace LoopVectorizationUtils {
@@ -216,8 +217,8 @@ public:
                               Type *ResultTy, const VPIRFlags &Flags = {},
                               DebugLoc DL = DebugLoc::getUnknown(),
                               const Twine &Name = "") {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Operands, ResultTy, Flags, {}, DL, Name));
+    return tryInsertInstruction(
+        new VPInstruction(Opcode, Operands, Flags, {}, DL, Name, ResultTy));
   }
 
   VPInstruction *createFirstActiveLane(ArrayRef<VPValue *> Masks,
@@ -414,20 +415,13 @@ public:
         new VPDerivedIVRecipe(Kind, FPBinOp, Start, Current, Step, Flags));
   }
 
-  VPInstructionWithType *createScalarLoad(Type *ResultTy, VPValue *Addr,
-                                          DebugLoc DL,
-                                          const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Instruction::Load, Addr, ResultTy, {}, Metadata, DL));
-  }
-
   VPInstruction *createScalarCast(Instruction::CastOps Opcode, VPValue *Op,
                                   Type *ResultTy, DebugLoc DL,
                                   std::optional<VPIRFlags> Flags = std::nullopt,
                                   const VPIRMetadata &Metadata = {}) {
-    return tryInsertInstruction(new VPInstructionWithType(
-        Opcode, Op, ResultTy,
-        Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)), Metadata, DL));
+    return tryInsertInstruction(new VPInstruction(
+        Opcode, Op, Flags.value_or(VPIRFlags::getDefaultFlags(Opcode)),
+        Metadata, DL, "", ResultTy));
   }
 
   /// Create a scalar call to the intrinsic \p IntrinsicID with \p Operands, and
@@ -438,8 +432,8 @@ public:
     VPlan &Plan = getPlan();
     SmallVector<VPValue *, 2> Ops(Operands);
     Ops.push_back(Plan.getConstantInt(8 * sizeof(IntrinsicID), IntrinsicID));
-    return tryInsertInstruction(new VPInstructionWithType(
-        VPInstruction::Intrinsic, Ops, ResultTy, {}, {}, DL));
+    return tryInsertInstruction(new VPInstruction(VPInstruction::Intrinsic, Ops,
+                                                  {}, {}, DL, "", ResultTy));
   }
 
   /// Create a scalar llvm.vscale call.
@@ -491,8 +485,10 @@ public:
                                                  DebugLoc DL, Instruction *UV) {
     if (Instruction::isCast(Opcode)) {
       assert(!Mask && "Cast cannot be predicated");
-      return new VPInstructionWithType(Opcode, Operands, UV->getType(), Flags,
-                                       Metadata, DL, UV->getName(), UV);
+      auto *VPI = new VPInstruction(Opcode, Operands, Flags, Metadata, DL,
+                                    UV->getName(), UV->getType());
+      VPI->setUnderlyingValue(UV);
+      return VPI;
     }
     return new VPReplicateRecipe(UV, Operands, /*IsSingleScalar=*/true, Mask,
                                  Flags, Metadata, DL);
@@ -806,9 +802,11 @@ public:
   bool isLegalMaskedLoadOrStore(bool IsLoad, Type *ScalarTy, Align Alignment,
                                 unsigned AddressSpace) const;
 
-  /// Returns true if the target machine can represent \p V as a masked gather
-  /// or scatter operation.
-  bool isLegalGatherOrScatter(Value *V, ElementCount VF) const;
+  /// Returns true if the target machine supports a gather (if \p IsLoad)
+  /// or scatter of scalar type \p ScalarTy with \p Alignment for vectorization
+  /// factor \p VF.
+  bool isLegalGatherOrScatter(bool IsLoad, Type *ScalarTy, Align Alignment,
+                              ElementCount VF) const;
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
@@ -872,8 +870,8 @@ class LoopVectorizationPlanner {
   /// The legality analysis.
   LoopVectorizationLegality *Legal;
 
-  /// The profitability analysis.
-  LoopVectorizationCostModel &CM;
+  /// The profitability analysis. Cleared after making cost based decisions.
+  std::unique_ptr<LoopVectorizationCostModel> CM;
 
   /// VF selection state independent of cost-modeling decisions.
   VFSelectionContext &Config;
@@ -884,6 +882,9 @@ class LoopVectorizationPlanner {
   PredicatedScalarEvolution &PSE;
 
   OptimizationRemarkEmitter *ORE;
+
+  /// Lazily fetch BranchProbabilityInfo, independent of BlockFrequencyInfo.
+  std::function<const BranchProbabilityInfo &()> GetBPI;
 
   SmallVector<VPlanPtr, 4> VPlans;
 
@@ -913,11 +914,21 @@ public:
   LoopVectorizationPlanner(
       Loop *L, LoopInfo *LI, DominatorTree *DT, const TargetLibraryInfo *TLI,
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
-      LoopVectorizationCostModel &CM, VFSelectionContext &Config,
-      InterleavedAccessInfo &IAI, PredicatedScalarEvolution &PSE,
-      OptimizationRemarkEmitter *ORE)
-      : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        Config(Config), IAI(IAI), PSE(PSE), ORE(ORE) {}
+      std::unique_ptr<LoopVectorizationCostModel> CM,
+      VFSelectionContext &Config, InterleavedAccessInfo &IAI,
+      PredicatedScalarEvolution &PSE, OptimizationRemarkEmitter *ORE,
+      std::function<const BranchProbabilityInfo &()> GetBPI);
+
+  ~LoopVectorizationPlanner();
+
+  /// Return the cost model. Must not be called after clearCostModel().
+  LoopVectorizationCostModel &getCostModel() {
+    assert(CM && "Cost model has already been cleared");
+    return *CM;
+  }
+
+  /// Destroy the cost model.
+  void clearCostModel();
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and
@@ -981,9 +992,12 @@ public:
   /// \return A VPlan for the most profitable epilogue vectorization, with its
   /// VF narrowed to the chosen factor. The returned plan is a duplicate.
   /// Returns nullptr if epilogue vectorization is not supported or not
-  /// profitable for the loop.
-  std::unique_ptr<VPlan>
-  selectBestEpiloguePlan(VPlan &MainPlan, ElementCount MainLoopVF, unsigned IC);
+  /// profitable for the loop. \p ScalarEpilogueAllowed indicates whether the
+  /// epilogue lowering policy permits creating a scalar epilogue at all.
+  std::unique_ptr<VPlan> selectBestEpiloguePlan(VPlan &MainPlan,
+                                                ElementCount MainLoopVF,
+                                                unsigned IC,
+                                                bool ScalarEpilogueAllowed);
 
   /// Emit remarks for recipes with invalid costs in the available VPlans.
   void emitInvalidCostRemarks(OptimizationRemarkEmitter *ORE);

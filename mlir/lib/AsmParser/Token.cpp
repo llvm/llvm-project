@@ -51,15 +51,6 @@ std::optional<uint64_t> Token::getUInt64IntegerValue(StringRef spelling) {
   return result;
 }
 
-/// For a floatliteral, return its value as a double. Return std::nullopt if the
-/// value underflows or overflows.
-std::optional<double> Token::getFloatingPointValue() const {
-  double result = 0;
-  if (spelling.getAsDouble(result))
-    return std::nullopt;
-  return result;
-}
-
 /// For an inttype token, return its bitwidth.
 std::optional<unsigned> Token::getIntTypeBitwidth() const {
   assert(getKind() == inttype);

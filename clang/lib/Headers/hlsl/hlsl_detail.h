@@ -32,6 +32,12 @@ template <typename T> struct enable_if<true, T> {
 template <bool B, class T = void>
 using enable_if_t = typename enable_if<B, T>::Type;
 
+template <typename T> struct type_identity {
+  using Type = T;
+};
+
+template <typename T> using type_identity_t = typename type_identity<T>::Type;
+
 template <typename U, typename T, int R, int C>
 constexpr enable_if_t<sizeof(U) == sizeof(T), matrix<U, R, C>>
 bit_cast(matrix<T, R, C> M) {
@@ -52,6 +58,17 @@ constexpr enable_if_t<sizeof(U) == sizeof(T), U> bit_cast(T F) {
 template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
+
+template <typename T> struct elem_type {
+  using Type = T;
+};
+template <typename T, int N> struct elem_type<vector<T, N>> {
+  using Type = T;
+};
+template <typename T, int R, int C> struct elem_type<matrix<T, R, C>> {
+  using Type = T;
+};
+template <typename T> using elem_type_t = typename elem_type<T>::Type;
 
 } // namespace __detail
 } // namespace hlsl

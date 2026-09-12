@@ -27,13 +27,6 @@
 #include <memory>
 
 namespace llvm {
-// Simple helper function that returns a string as printed from a op.
-template <typename T> static std::string debugString(T &&Op) {
-  std::string InstrStr;
-  llvm::raw_string_ostream Os(InstrStr);
-  Os << Op;
-  return Os.str();
-}
 namespace lsp {
 class MessageHandler;
 
@@ -217,6 +210,14 @@ public:
       Logger::info("--> {0}", Method);
       Transport.notify(Method, llvm::json::Value(Params));
     };
+  }
+
+  // Simple helper function that returns a string as printed from a op.
+  template <typename T> static std::string debugString(T &&Op) {
+    std::string InstrStr;
+    llvm::raw_string_ostream Os(InstrStr);
+    Os << Op;
+    return Os.str();
   }
 
   /// Create an OutgoingRequest function that, when called, sends a request with

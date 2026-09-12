@@ -39,6 +39,8 @@ class LLVM_LIBRARY_VISIBILITY MachOTool : public Tool {
 protected:
   void AddMachOArch(const llvm::opt::ArgList &Args,
                     llvm::opt::ArgStringList &CmdArgs) const;
+  void AddMachOArchOnly(const llvm::opt::ArgList &Args,
+                        llvm::opt::ArgStringList &CmdArgs) const;
 
   const toolchains::MachO &getMachOToolChain() const {
     return reinterpret_cast<const toolchains::MachO &>(getToolChain());

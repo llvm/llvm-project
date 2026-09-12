@@ -128,7 +128,6 @@ public:
     return ST->hasVInstructions() ? TailFoldingStyle::DataWithEVL
                                   : TailFoldingStyle::None;
   }
-  std::optional<unsigned> getMaxVScale() const override;
   std::optional<unsigned> getVScaleForTuning() const override;
 
   TypeSize

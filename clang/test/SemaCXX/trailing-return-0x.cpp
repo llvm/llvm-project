@@ -111,3 +111,15 @@ namespace PR46637 {
   template<typename T> struct Y { T x; };
   Y<auto() -> auto> y; // expected-error {{'auto' not allowed in function return type}}
 }
+
+
+namespace GH162649 {
+
+auto bad() -> const int&;
+void test_bad() {
+  bad() = 10;
+  // expected-error@-1 {{cannot assign}}
+  // expected-note@-4 {{declared here}}
+}
+
+}

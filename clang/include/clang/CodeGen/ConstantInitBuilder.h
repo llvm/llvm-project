@@ -22,6 +22,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/CodeGen/ConstantInitFuture.h"
 
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -77,13 +78,12 @@ protected:
   }
 
 private:
-  llvm::GlobalVariable *createGlobal(llvm::Constant *initializer,
-                                     const llvm::Twine &name,
-                                     CharUnits alignment,
-                                     bool constant = false,
-                                     llvm::GlobalValue::LinkageTypes linkage
-                                       = llvm::GlobalValue::InternalLinkage,
-                                     unsigned addressSpace = 0);
+  llvm::GlobalVariable *
+  createGlobal(llvm::Constant *initializer, const llvm::Twine &name,
+               CharUnits alignment, bool constant = false,
+               llvm::GlobalValue::LinkageTypes linkage =
+                   llvm::GlobalValue::InternalLinkage,
+               std::optional<unsigned> addressSpace = std::nullopt);
 
   ConstantInitFuture createFuture(llvm::Constant *initializer);
 

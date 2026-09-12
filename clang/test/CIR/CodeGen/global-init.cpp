@@ -16,6 +16,9 @@
 // LLVM: @needsDtor = global %struct.NeedsDtor zeroinitializer, align 1
 // LLVM: @needsCtorDtor = global %struct.NeedsCtorDtor zeroinitializer, align 1
 // LLVM: @arrDtor = global [16 x %struct.ArrayDtor] zeroinitializer, align 16
+// LLVM: @globalInt = global i32 0, align 4
+// LLVM: @globalDoubleRef = global ptr null, align 8
+// LLVM: @_ZGR15globalDoubleRef_ = internal global double 0.000000e+00, align 8
 // LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_[[FILENAME:.*]], ptr null }]
 
 // OGCG: @needsCtor = global %struct.NeedsCtor zeroinitializer, align 1
@@ -23,6 +26,9 @@
 // OGCG: @__dso_handle = external hidden global i8
 // OGCG: @needsCtorDtor = global %struct.NeedsCtorDtor zeroinitializer, align 1
 // OGCG: @arrDtor = global [16 x %struct.ArrayDtor] zeroinitializer, align 16
+// OGCG: @globalInt = global i32 0, align 4
+// OGCG: @globalDoubleRef = global ptr null, align 8
+// OGCG: @_ZGR15globalDoubleRef_ = internal global double 0.000000e+00, align 8
 // OGCG: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__sub_I_[[FILENAME:.*]], ptr null }]
 
 struct NeedsCtor {
@@ -261,6 +267,43 @@ ArrayDtor arrDtor[16];
 // OGCG:   ret void
 // OGCG: }
 
+int globalInt;
+double &&globalDoubleRef = static_cast<double &&>(globalInt);
+// CIR-BEFORE-LPP: cir.global external @globalInt = #cir.int<0> : !s32i
+// CIR-BEFORE-LPP: cir.global external @globalDoubleRef = ctor : !cir.ptr<!cir.double> {
+// CIR-BEFORE-LPP:   %[[GET_SELF:.*]] = cir.get_global @globalDoubleRef : !cir.ptr<!cir.ptr<!cir.double>>
+// CIR-BEFORE-LPP:   %[[GET_BACKING_VAR:.*]] = cir.get_global @_ZGR15globalDoubleRef_ : !cir.ptr<!cir.double>
+// CIR-BEFORE-LPP:   %[[GET_INT_VAR:.*]] = cir.get_global @globalInt : !cir.ptr<!s32i>
+// CIR-BEFORE-LPP:   %[[INT_LOAD:.*]] = cir.load align(4) %[[GET_INT_VAR]] : !cir.ptr<!s32i>, !s32i
+// CIR-BEFORE-LPP:   %[[CAST:.*]] = cir.cast int_to_float %[[INT_LOAD]] : !s32i -> !cir.double
+// CIR-BEFORE-LPP:   cir.store align(8) %[[CAST]], %[[GET_BACKING_VAR]] : !cir.double, !cir.ptr<!cir.double>
+// CIR-BEFORE-LPP:   cir.store align(8) %[[GET_BACKING_VAR]], %[[GET_SELF]] : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
+// CIR-BEFORE-LPP: cir.global "private" internal @_ZGR15globalDoubleRef_ = #cir.fp<0.000000e+00> : !cir.double
+
+// CIR: cir.global external @globalInt = #cir.int<0> : !s32i
+// CIR: cir.global external @globalDoubleRef = #cir.ptr<null> : !cir.ptr<!cir.double>
+// CIR: cir.func internal private @__cxx_global_var_init.6() {
+// CIR:   %[[GET_SELF:.*]] = cir.get_global @globalDoubleRef : !cir.ptr<!cir.ptr<!cir.double>>
+// CIR:   %[[GET_BACKING_VAR:.*]] = cir.get_global @_ZGR15globalDoubleRef_ : !cir.ptr<!cir.double>
+// CIR:   %[[GET_INT_VAR:.*]] = cir.get_global @globalInt : !cir.ptr<!s32i>
+// CIR:   %[[INT_LOAD:.*]] = cir.load align(4) %[[GET_INT_VAR]] : !cir.ptr<!s32i>, !s32i
+// CIR:   %[[CAST:.*]] = cir.cast int_to_float %[[INT_LOAD]] : !s32i -> !cir.double
+// CIR:   cir.store align(8) %[[CAST]], %[[GET_BACKING_VAR]] : !cir.double, !cir.ptr<!cir.double>
+// CIR:   cir.store align(8) %[[GET_BACKING_VAR]], %[[GET_SELF]] : !cir.ptr<!cir.double>, !cir.ptr<!cir.ptr<!cir.double>>
+// CIR: cir.global "private" internal @_ZGR15globalDoubleRef_ = #cir.fp<0.000000e+00> : !cir.double
+
+// LLVM-LABEL: define internal void @__cxx_global_var_init.6()
+// LLVM:   %[[GET_INT_VAR:.*]] = load i32, ptr @globalInt, align 4
+// LLVM:   %[[CAST:.*]] = sitofp i32 %[[GET_INT_VAR]] to double
+// LLVM:   store double %[[CAST]], ptr @_ZGR15globalDoubleRef_, align 8
+// LLVM:   store ptr @_ZGR15globalDoubleRef_, ptr @globalDoubleRef, align 8
+
+// OGCG-LABEL: define internal void @__cxx_global_var_init.6()
+// OGCG:   %[[GET_INT_VAR:.*]] = load i32, ptr @globalInt, align 4
+// OGCG:   %[[CAST:.*]] = sitofp i32 %[[GET_INT_VAR]] to double
+// OGCG:   store double %[[CAST]], ptr @_ZGR15globalDoubleRef_, align 8
+// OGCG:   store ptr @_ZGR15globalDoubleRef_, ptr @globalDoubleRef, align 8
+
 // Common init function for all globals with default priority
 
 // CIR: cir.func internal private @_GLOBAL__sub_I_[[FILENAME:.*]]() {
@@ -270,6 +313,7 @@ ArrayDtor arrDtor[16];
 // CIR:   cir.call @__cxx_global_var_init.3() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.4() : () -> ()
 // CIR:   cir.call @__cxx_global_var_init.5() : () -> ()
+// CIR:   cir.call @__cxx_global_var_init.6() : () -> ()
 
 // LLVM: define internal void @_GLOBAL__sub_I_[[FILENAME]]()
 // LLVM:   call void @__cxx_global_var_init()
@@ -278,6 +322,7 @@ ArrayDtor arrDtor[16];
 // LLVM:   call void @__cxx_global_var_init.3()
 // LLVM:   call void @__cxx_global_var_init.4()
 // LLVM:   call void @__cxx_global_var_init.5()
+// LLVM:   call void @__cxx_global_var_init.6()
 
 // LLVM: attributes [[NOUNWIND]] = { nounwind }
 
@@ -288,3 +333,4 @@ ArrayDtor arrDtor[16];
 // OGCG:   call void @__cxx_global_var_init.3()
 // OGCG:   call void @__cxx_global_var_init.4()
 // OGCG:   call void @__cxx_global_var_init.5()
+// OGCG:   call void @__cxx_global_var_init.6()

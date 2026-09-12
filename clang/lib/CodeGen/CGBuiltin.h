@@ -72,6 +72,11 @@ llvm::Value *emitBuiltinWithOneOverloadedType(clang::CodeGen::CodeGenFunction &C
   return CGF.Builder.CreateCall(F, Args, Name);
 }
 
+// Fills in the trailing parameters of an intrinsic that the builtin does not
+// expose, using the values declared via ImmArg<..., DefaultValue<...>>.
+void appendDefaultIntrinsicArgs(llvm::SmallVectorImpl<llvm::Value *> &Args,
+                                llvm::Function *F);
+
 llvm::Value *emitUnaryMaybeConstrainedFPBuiltin(clang::CodeGen::CodeGenFunction &CGF,
                                                 const clang::CallExpr *E,
                                                 unsigned IntrinsicID,
