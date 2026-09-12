@@ -22,8 +22,8 @@ public:
 };
 
 // getInstSizeInBytes appends a 4-byte literal word for a VALU/SALU instruction
-// whose source operand is a non-inline immediate. The offset/cpol/swz/IsAsync
-// fields of an LDS-DMA buffer load are packed into the instruction word and are
+// whose source operand is a non-inline immediate. The offset/cpol/swz fields of
+// an LDS-DMA buffer load are packed into the instruction word and are
 // not source operands, so they must not be counted as a literal: the load is
 // 8 bytes, not 12.
 TEST_F(InstSizesTest, BufferLoadLdsIsNotOverSized) {
@@ -31,8 +31,8 @@ TEST_F(InstSizesTest, BufferLoadLdsIsNotOverSized) {
 name: buffer_load_lds
 body: |
   bb.0:
-    BUFFER_LOAD_DWORD_LDS_OFFEN $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
-    BUFFER_LOAD_DWORD_LDS_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, 0, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORD_LDS_OFFEN $vgpr1, $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, implicit $exec, implicit $m0
+    BUFFER_LOAD_DWORD_LDS_OFFSET $sgpr8_sgpr9_sgpr10_sgpr11, 0, 0, 0, 0, implicit $exec, implicit $m0
     $vgpr0 = V_MOV_B32_e32 12345, implicit $exec
     $vgpr0 = V_MOV_B32_e32 1, implicit $exec
     S_ENDPGM 0

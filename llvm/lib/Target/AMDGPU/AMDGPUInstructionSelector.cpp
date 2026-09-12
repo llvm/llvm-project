@@ -2437,7 +2437,19 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_tensor_load_to_lds:
   case Intrinsic::amdgcn_tensor_store_from_lds:
     return selectTensorLoadStore(I, IntrinsicID);
-  case Intrinsic::amdgcn_asyncmark:
+  case Intrinsic::amdgcn_asyncmark: {
+    if (!Subtarget->hasAsyncMark())
+      return false;
+    // Selected in C++ because TableGen rejects patterns that map an
+    // IntrHasSideEffects intrinsic to an instruction with hasSideEffects = 0.
+    // Match the dead-marking that SDAG and TableGen-emitted matchers apply
+    // to other $asyncmarker-defining instructions.
+    BuildMI(*I.getParent(), &I, I.getDebugLoc(), TII.get(AMDGPU::ASYNCMARK))
+        ->findRegisterDefOperand(AMDGPU::AsyncMarker, &TRI)
+        ->setIsDead();
+    I.eraseFromParent();
+    return true;
+  }
   case Intrinsic::amdgcn_wait_asyncmark:
     if (!Subtarget->hasAsyncMark())
       return false;
@@ -3496,7 +3508,7 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
   return true;
 }
 
-static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
+static bool isPreGFX12Async(Intrinsic::ID Intr) {
   switch (Intr) {
   case Intrinsic::amdgcn_raw_buffer_load_async_lds:
   case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
@@ -3571,6 +3583,12 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
     break;
   }
 
+  if (isPreGFX12Async(IntrinsicID)) {
+    int AsyncOpc = AMDGPU::getPreGFX12AsyncOp(Opc);
+    assert(AsyncOpc != -1 && "PreGFX12Async sibling missing");
+    Opc = AsyncOpc;
+  }
+
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
@@ -3604,7 +3622,6 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
       Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
           ? 1
           : 0); // swz
-  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   // Don't set the offset value here because the pointer points to the base of
@@ -3789,6 +3806,12 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
     }
   }
 
+  if (isPreGFX12Async(IntrinsicID)) {
+    int AsyncOpc = AMDGPU::getPreGFX12AsyncOp(Opc);
+    assert(AsyncOpc != -1 && "PreGFX12Async sibling missing");
+    Opc = AsyncOpc;
+  }
+
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc))
     .addReg(Addr);
 
@@ -3799,7 +3822,6 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
 
   unsigned Aux = MI.getOperand(5).getImm();
   MIB.addImm(Aux & ~AMDGPU::CPol::VIRTUAL_BITS); // cpol
-  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   MachinePointerInfo LoadPtrI = LoadMMO->getPointerInfo();

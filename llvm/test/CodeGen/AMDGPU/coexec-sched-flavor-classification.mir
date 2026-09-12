@@ -46,8 +46,8 @@ body: |
     DS_WRITE_B32 %2, %10, 0, 0, implicit $m0, implicit $exec
     DS_WRITE_B64 %2, %11, 0, 0, implicit $m0, implicit $exec
 
-    TENSOR_LOAD_TO_LDS_d2 %1, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 %2, %0, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    TENSOR_LOAD_TO_LDS_d2 %1, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 %2, %0, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
 
     %30:vreg_64_align2 = V_PK_ADD_F32_gfx1250 8, %11, 8, %11, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     %31:vgpr_32 = V_PERM_B32_e64 %10, %12, 84148480, implicit $exec
