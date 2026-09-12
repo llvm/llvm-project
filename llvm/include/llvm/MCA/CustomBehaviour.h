@@ -57,6 +57,11 @@ public:
   virtual void resetState() {}
 };
 
+/// Check if the instruction pair should be fused together.
+using MacroFusionPredicate = bool (*)(const MCSubtargetInfo &STI,
+                                      const Instruction &First,
+                                      const Instruction &Second);
+
 /// Class which can be overriden by targets to enforce instruction
 /// dependencies and behaviours that aren't expressed well enough
 /// within the scheduling model for mca to automatically simulate
@@ -113,6 +118,10 @@ public:
   /// Return a vector of Views that will be added after all other Views.
   virtual std::vector<std::unique_ptr<View>>
   getEndViews(llvm::MCInstPrinter &IP, llvm::ArrayRef<llvm::MCInst> Insts);
+
+  /// Return a list of predicates to check if a pair of instructions
+  /// can be fused into one.
+  virtual ArrayRef<MacroFusionPredicate> getFusionPredicates();
 };
 
 class Instrument {

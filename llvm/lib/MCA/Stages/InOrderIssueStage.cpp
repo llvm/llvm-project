@@ -157,7 +157,8 @@ static void addRegisterReadWrite(RegisterFile &PRF, Instruction &IS,
                                  unsigned SourceIndex,
                                  const MCSubtargetInfo &STI,
                                  SmallVectorImpl<unsigned> &UsedRegs) {
-  assert(!IS.isEliminated());
+  if (IS.isEliminated())
+    return;
 
   for (ReadState &RS : IS.getUses())
     PRF.addRegisterRead(RS, STI);
