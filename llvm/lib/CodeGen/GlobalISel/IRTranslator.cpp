@@ -4337,9 +4337,9 @@ bool IRTranslatorImpl::translateBitInsert(const User &U,
   assert(BaseTy.getSizeInBits() >= ValTy.getSizeInBits() &&
          "bitinsert val wider than base should be rejected by verifier");
 
-  // If Val is a floating-point type, bitcast it to an integer of the same
-  // size so buildZExtOrTrunc can safely extend or truncate it.
-  if (ValTy.isFloat()) {
+  // If Val is a floating-point or pointer type, bitcast it to an integer of
+  // the same size so buildZExtOrTrunc can safely extend or truncate it.
+  if (ValTy.isFloat() || ValTy.isPointer()) {
     ValTy = LLT::scalar(ValTy.getSizeInBits());
     Val = MIRBuilder.buildBitcast(ValTy, Val).getReg(0);
   }
@@ -4383,7 +4383,7 @@ bool IRTranslatorImpl::translateBitExtract(const User &U,
   // Shift right by Offset to bring the target field down to bit 0.
   Register Shifted = MIRBuilder.buildLShr(SrcTy, Src, LegalOffset).getReg(0);
 
-  if (ResTy.isFloat()) {
+  if (ResTy.isFloat() || ResTy.isPointer()) {
     // Drop into the integer domain to safely handle the size conversion
     LLT IntResTy = LLT::scalar(ResTy.getSizeInBits());
     Register IntRes = MRI.createGenericVirtualRegister(IntResTy);
