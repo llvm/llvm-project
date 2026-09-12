@@ -515,15 +515,15 @@ void Preprocessor::SuggestTypoedDirective(const Token &Tok,
   // directives.
   if (getLangOpts().AsmPreprocessor) return;
 
+  // A known directive (e.g. #include or #define inside a skipped conditional
+  // block) is not a typo of a conditional; don't scan it.
+  if (getIdentifierInfo(Directive)->getPPKeywordID() != tok::pp_not_keyword)
+    return;
+
   // The scan only feeds this diagnostic; skip it when the diagnostic is
   // disabled at this location (e.g. -w).
   if (getDiagnostics().isIgnored(diag::warn_pp_invalid_directive,
                                  Tok.getLocation()))
-    return;
-
-  // A known directive (e.g. #include or #define inside a skipped conditional
-  // block) is not a typo of a conditional; don't scan it.
-  if (getIdentifierInfo(Directive)->getPPKeywordID() != tok::pp_not_keyword)
     return;
 
   static constexpr StringRef AllCandidates[] = {
