@@ -32,8 +32,11 @@ namespace llvm {
 class AssumptionCache;
 class Constant;
 class DataLayout;
+class DebugLoc;
 class Instruction;
+class InsertElementInst;
 class IRBuilderBase;
+class PHINode;
 class TargetLibraryInfo;
 class Type;
 class Value;
@@ -410,6 +413,15 @@ void collectNarrowedLeaves(Value *V, unsigned RdxOpcode, unsigned WideBW,
                            SmallVectorImpl<Instruction *> &ChainInsts);
 
 TargetTransformInfo::TargetCostKind getSLPCostKind(const Function *F);
+
+/// \returns true if \p IE1 appears before \p IE2 in the same insertelement
+/// build-vector chain.
+bool isFirstInsertElement(const InsertElementInst *IE1,
+                          const InsertElementInst *IE2);
+
+/// \returns the debug location of \p PN, or an unknown location if it has
+/// none.
+DebugLoc getDebugLocFromPHI(PHINode &PN);
 
 } // namespace llvm::slpvectorizer
 
