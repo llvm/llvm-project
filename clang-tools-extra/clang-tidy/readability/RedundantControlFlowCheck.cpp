@@ -39,7 +39,8 @@ void RedundantControlFlowCheck::registerMatchers(MatchFinder *Finder) {
       this);
   Finder->addMatcher(mapAnyOf(forStmt, cxxForRangeStmt, whileStmt, doStmt)
                          .with(hasBody(compoundStmt(
-                             hasFinalStmt(continueStmt().bind("stmt"))))),
+                             hasFinalStmt(continueStmt().bind("stmt")))))
+                         .bind("loop"),
                      this);
 }
 
@@ -49,6 +50,15 @@ void RedundantControlFlowCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (StmtRange.getBegin().isMacroID())
     return;
+
+  if (const auto *Continue = dyn_cast<ContinueStmt>(&RedundantStmt)) {
+    if (const auto *Label = Continue->getLabelDecl()) {
+      const auto *Loop = Result.Nodes.getNodeAs<Stmt>("loop");
+      const auto *ContinueLoop = Label->getStmt()->getSubStmt();
+      if (Loop != ContinueLoop)
+        return;
+    }
+  }
 
   const auto RemovedRange = CharSourceRange::getCharRange(
       StmtRange.getBegin(),
