@@ -8631,6 +8631,21 @@ via a volatile memory access, I/O, or other synchronization. If such a loop is
 not found to interact with the environment in an observable way, the loop may
 be removed. This corresponds to the `mustprogress` function attribute.
 
+#### '`llvm.loop.align`' Metadata
+
+This metadata suggests an alignment (in bytes) for the loop to the backend. The
+first operand is the string `llvm.loop.align` and the second operand is a
+positive power-of-two integer constant of type `i32` specifying the alignment.
+For example:
+
+```llvm
+!0 = !{!"llvm.loop.align", i32 64}
+```
+
+The backend aligns the loop to the maximum of this value and the target's
+preferred loop alignment. This corresponds to the Clang `[[clang::code_align(N)]]`
+statement attribute.
+
 #### '`irr_loop`' Metadata
 
 `irr_loop` metadata may be attached to the terminator instruction of a basic
