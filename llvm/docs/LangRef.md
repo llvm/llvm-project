@@ -988,6 +988,7 @@ attributes <paramattrs>`), optional {ref}`function attributes <fnattrs>`,
 an optional address space, an optional section, an optional partition,
 an optional minimum alignment,
 an optional preferred alignment,
+an optional code model,
 an optional {ref}`comdat <langref_comdats>`,
 an optional {ref}`garbage collector name <gc>`, an optional {ref}`prefix <prefixdata>`,
 an optional {ref}`prologue <prologuedata>`,
@@ -1002,7 +1003,7 @@ define [linkage] [PreemptionSpecifier] [visibility] [DLLStorageClass]
        <ResultType> @<FunctionName> ([argument list])
        [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
        [section "name"] [partition "name"] [comdat [($name)]] [align N]
-       [prefalign(N)] [gc] [prefix Constant] [prologue Constant]
+       [prefalign(N)] [code_model "model"] [gc] [prefix Constant] [prologue Constant]
        [personality Constant] (!name !N)* { ... }
 ```
 
@@ -1021,8 +1022,8 @@ optional {ref}`linkage type <linkage>`, an optional {ref}`visibility style
 optional {ref}`calling convention <callingconv>`, an optional `unnamed_addr`
 or `local_unnamed_addr` attribute, an optional address space, a return type,
 an optional {ref}`parameter attribute <paramattrs>` for the return type, a function name, a possibly
-empty list of arguments, an optional alignment, an optional {ref}`garbage
-collector name <gc>`, an optional {ref}`prefix <prefixdata>`, and an optional
+empty list of arguments, an optional alignment, an optional code model,
+an optional {ref}`garbage collector name <gc>`, an optional {ref}`prefix <prefixdata>`, and an optional
 {ref}`prologue <prologuedata>`.
 
 Syntax:
@@ -1031,7 +1032,7 @@ Syntax:
 declare [linkage] [visibility] [DLLStorageClass]
         [cconv] [ret attrs]
         <ResultType> @<FunctionName> ([argument list])
-        [(unnamed_addr|local_unnamed_addr)] [align N] [gc]
+        [(unnamed_addr|local_unnamed_addr)] [align N] [code_model "model"] [gc]
         [prefix Constant] [prologue Constant]
 ```
 
