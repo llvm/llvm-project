@@ -603,6 +603,10 @@ public:
 
   bool isVSrc_b64() const { return isVCSrc_f64() || isLiteralImm(MVT::i64); }
 
+  bool isVSrc_NoLit64_b64() const {
+    return isVCSrc_b64() || isLiteralImm(MVT::i32);
+  }
+
   bool isVSrc_v2b64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::i64) ||
            isLiteralImm(MVT::i64);
@@ -611,6 +615,16 @@ public:
   bool isVSrc_v2f64() const {
     return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
            isLiteralImm(MVT::f64);
+  }
+
+  bool isVSrc_NoLit64_v2b64() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::i64) ||
+           isLiteralImm(MVT::i32);
+  }
+
+  bool isVSrc_NoLit64_v2f64() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_128RegClassID, MVT::f64) ||
+           isLiteralImm(MVT::f32);
   }
 
   bool isVSrcT_b16() const { return isVCSrcT_b16() || isLiteralImm(MVT::i16); }
@@ -640,6 +654,8 @@ public:
   }
 
   bool isVSrc_f64() const { return isVCSrc_f64() || isLiteralImm(MVT::f64); }
+
+  bool isVSrc_NoLit64_f64() const { return isVCSrc_f64(); }
 
   bool isVSrcT_bf16() const {
     return isVCSrcTBF16() || isLiteralImm(MVT::bf16);
@@ -2054,6 +2070,10 @@ static const fltSemantics *getOpFltSemantics(uint8_t OperandType) {
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
   case AMDGPU::OPERAND_REG_IMM_V2INT64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_FP64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_INT64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2INT64:
   case AMDGPU::OPERAND_KIMM64:
     return &APFloat::IEEEdouble();
   case AMDGPU::OPERAND_REG_IMM_FP16:
@@ -2364,13 +2384,18 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
   APInt Literal(64, Val);
   uint8_t OpTy = InstDesc.operands()[OpNum].OperandType;
 
-  bool CanUse64BitLiterals =
-      AsmParser->has64BitLiterals() && !SIInstrFlags::isVOP3Like(InstDesc);
   LitModifier Lit = getModifiers().Lit;
   MCContext &Ctx = AsmParser->getContext();
 
   if (Imm.IsFPImm) { // We got fp literal token
+    bool CanUse64BitLiterals = AsmParser->has64BitLiterals();
     switch (OpTy) {
+    case AMDGPU::OPERAND_REG_IMM_NOLIT64_INT64:
+    case AMDGPU::OPERAND_REG_IMM_NOLIT64_FP64:
+    case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2FP64:
+    case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2INT64:
+      CanUse64BitLiterals = false;
+      [[fallthrough]];
     case AMDGPU::OPERAND_REG_IMM_INT64:
     case AMDGPU::OPERAND_REG_IMM_FP64:
     case AMDGPU::OPERAND_REG_INLINE_C_INT64:
@@ -2390,9 +2415,9 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
                                    OpNum)) { // Expected 64-bit fp operand
         bool HasMandatoryLiteral =
             AMDGPU::hasNamedOperand(Inst.getOpcode(), AMDGPU::OpName::imm);
+
         // For fp operands we check if low 32 bits are zeros
-        if (Literal.getLoBits(32) != 0 &&
-            (InstDesc.getSize() != 4 || !AsmParser->has64BitLiterals()) &&
+        if (Literal.getLoBits(32) != 0 && !CanUse64BitLiterals &&
             !HasMandatoryLiteral) {
           const_cast<AMDGPUAsmParser *>(AsmParser)->Warning(
               Inst.getLoc(),
@@ -2402,6 +2427,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
         }
 
         if ((OpTy == AMDGPU::OPERAND_REG_IMM_FP64 ||
+             OpTy == AMDGPU::OPERAND_REG_IMM_NOLIT64_FP64 ||
              OpTy == AMDGPU::OPERAND_REG_INLINE_C_FP64 ||
              OpTy == AMDGPU::OPERAND_REG_INLINE_AC_FP64)) {
           if (CanUse64BitLiterals && Lit == LitModifier::None &&
@@ -2425,7 +2451,7 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
       llvm_unreachable("fp literal in 64-bit integer instruction.");
 
     case AMDGPU::OPERAND_KIMM64:
-      if (CanUse64BitLiterals && Lit == LitModifier::None &&
+      if (AsmParser->has64BitLiterals() && Lit == LitModifier::None &&
           (isInt<32>(Val) || isUInt<32>(Val)))
         Lit = LitModifier::Lit64;
       break;
@@ -2511,8 +2537,10 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
     break;
 
   case AMDGPU::OPERAND_REG_IMM_INT64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_INT64:
   case AMDGPU::OPERAND_REG_INLINE_C_INT64:
   case AMDGPU::OPERAND_REG_IMM_V2INT64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2INT64:
     if (Lit == LitModifier::None &&
         AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
@@ -2523,14 +2551,18 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
     // truncated to uint32_t), if the target doesn't support 64-bit literals, or
     // the lit modifier is explicitly used, we need to truncate it to the 32
     // LSBs.
-    if (!AsmParser->has64BitLiterals() || Lit == LitModifier::Lit)
+    if (!AsmParser->has64BitLiterals() || Lit == LitModifier::Lit ||
+        OpTy == AMDGPU::OPERAND_REG_IMM_NOLIT64_INT64 ||
+        OpTy == AMDGPU::OPERAND_REG_IMM_NOLIT64_V2INT64)
       Val = Lo_32(Val);
     break;
 
   case AMDGPU::OPERAND_REG_IMM_FP64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_FP64:
   case AMDGPU::OPERAND_REG_INLINE_C_FP64:
   case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
   case AMDGPU::OPERAND_REG_IMM_V2FP64:
+  case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2FP64:
     if (Lit == LitModifier::None &&
         AMDGPU::isInlinableLiteral64(Val, AsmParser->hasInv2PiInlineImm())) {
       Inst.addOperand(MCOperand::createImm(Val));
@@ -2539,6 +2571,8 @@ void AMDGPUOperand::addLiteralImmOperand(MCInst &Inst, int64_t Val,
 
     // If the target doesn't support 64-bit literals, we need to use the
     // constant as the high 32 MSBs of a double-precision floating point value.
+    // Note: we could filter AMDGPU::OPERAND_REG_IMM_NOLIT64_* here, but
+    // it would prevent later validation.
     if (!AsmParser->has64BitLiterals()) {
       Val = static_cast<uint64_t>(Val) << 32;
     } else {
@@ -5162,15 +5196,28 @@ bool AMDGPUAsmParser::validateVOPLiteral(const MCInst &Inst,
           static_cast<AMDGPU::OperandType>(Desc.operands()[OpIdx].OperandType);
       bool IsFP64 =
           (IsForcedFP64 || (AMDGPU::isSISrcFPOperand(Desc, OpIdx) &&
-                            OpTy != AMDGPU::OPERAND_REG_IMM_V2INT64)) &&
+                            OpTy != AMDGPU::OPERAND_REG_IMM_V2INT64 &&
+                            OpTy != AMDGPU::OPERAND_REG_IMM_NOLIT64_V2INT64)) &&
           AMDGPU::getOperandSize(Desc.operands()[OpIdx]) == 8;
       bool IsValid32Op =
           IsForcedLit || AMDGPU::isValid32BitLiteral(Value, IsFP64);
+      bool CanUse64BitLiterals;
+      switch (OpTy) {
+      case AMDGPU::OPERAND_REG_IMM_NOLIT64_INT64:
+      case AMDGPU::OPERAND_REG_IMM_NOLIT64_FP64:
+      case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2INT64:
+      case AMDGPU::OPERAND_REG_IMM_NOLIT64_V2FP64:
+        CanUse64BitLiterals = false;
+        break;
+      default:
+        CanUse64BitLiterals = has64BitLiterals();
+        break;
+      }
 
       if (((!IsValid32Op && !isInt<32>(Value) && !isUInt<32>(Value) &&
             !IsForcedFP64) ||
            (IsForcedLit64 && !HasMandatoryLiteral)) &&
-          (!has64BitLiterals() || Desc.getSize() != 4)) {
+          !CanUse64BitLiterals) {
         Error(getOperandLoc(Operands, OpIdx),
               "invalid operand for instruction");
         return false;
