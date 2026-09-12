@@ -611,6 +611,13 @@ Scope &SemanticsContext::FindScope(parser::CharBlock source) {
   }
 }
 
+bool SemanticsContext::IsValidScope(parser::CharBlock source) {
+  if (auto iter{SearchScopeIndex(source)}; iter != scopeIndex_.end())
+    return true;
+
+  return false;
+}
+
 void SemanticsContext::UpdateScopeIndex(
     Scope &scope, parser::CharBlock newSource) {
   if (scope.sourceRange().empty()) {
