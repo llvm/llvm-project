@@ -44,8 +44,6 @@ LLVM_ABI std::vector<std::string> getMAttrs();
 LLVM_ABI Reloc::Model getRelocModel();
 LLVM_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-LLVM_ABI ThreadModel getThreadModel();
-
 LLVM_ABI CodeModel::Model getCodeModel();
 LLVM_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
 
