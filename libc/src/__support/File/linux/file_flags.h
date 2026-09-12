@@ -15,6 +15,7 @@
 #include "hdr/sys_stat_macros.h" // For S_IS*, S_IF*, and S_IR* flags.
 #include "hdr/types/mode_t.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -28,14 +29,16 @@ public:
   static constexpr int CREATE_OR_TRUNCATE = O_CREAT | O_TRUNC;
 
   // File created will have 0666 permissions.
-  static constexpr mode_t OPEN_MODE =
+  LIBC_INLINE static constexpr mode_t OPEN_MODE =
       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
-  static constexpr int is_file_descriptor_opened_in_read_only(int flag) {
+  LIBC_INLINE static constexpr int
+  is_file_descriptor_opened_in_read_only(int flag) {
     return (flag & O_ACCMODE) == O_RDONLY;
   }
 
-  static constexpr int is_file_descriptor_opened_in_write_only(int flag) {
+  LIBC_INLINE static constexpr int
+  is_file_descriptor_opened_in_write_only(int flag) {
     return (flag & O_ACCMODE) == O_WRONLY;
   }
 
