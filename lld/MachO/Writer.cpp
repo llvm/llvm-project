@@ -662,6 +662,14 @@ void Writer::treatSpecialUndefineds() {
   }
 }
 
+// Give a symbol its single non-lazy pointer slot. For a thread-local,
+// __thread_ptrs and __got would hold the same value: the address of its TLV
+// descriptor. ld-prime canonicalizes both GOT and TLV references to one
+// __got entry, which also makes the choice independent of which reference is
+// scanned first. This is especially important for dynamic-lookup symbols,
+// whose thread-locality is unknowable until dyld binds the slot.
+static void addNonLazyPointerEntry(Symbol *sym) { in.got->addEntry(sym); }
+
 static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
                                     const Relocation &r) {
   if (!sym->isLive()) {
@@ -682,10 +690,10 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
     if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      in.got->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
-      in.tlvPointers->addEntry(sym);
+      addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
@@ -1440,7 +1448,6 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
-  in.tlvPointers = make<TlvPointerSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

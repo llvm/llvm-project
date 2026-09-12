@@ -65,7 +65,9 @@ public:
 
   virtual bool isTlv() const { return false; }
 
-  // Whether this symbol is in the GOT or TLVPointer sections.
+  // Whether this symbol has a non-lazy pointer slot. A symbol gets at most
+  // one, always in __got (including thread-local symbols).
+  // See Writer::addNonLazyPointerEntry.
   bool isInGot() const { return gotIndex != UINT32_MAX; }
 
   // Whether this symbol is in the StubsSection.
@@ -74,17 +76,19 @@ public:
   uint64_t getStubVA() const;
   uint64_t getLazyPtrVA() const;
   uint64_t getGotVA() const;
-  uint64_t getTlvVA() const;
   uint64_t resolveBranchVA() const {
     assert(isa<Defined>(this) || isa<DylibSymbol>(this));
     return isInStubs() ? getStubVA() : getVA();
   }
-  uint64_t resolveGotVA() const { return isInGot() ? getGotVA() : getVA(); }
-  uint64_t resolveTlvVA() const { return isInGot() ? getTlvVA() : getVA(); }
+  // The address of this symbol's non-lazy pointer slot, or the symbol's own
+  // address if it has none. A thread-local's slot holds the address of its
+  // TLV descriptor, which is also what a GOT reference to it wants, so GOT
+  // and TLV relocations both resolve through the same __got entry.
+  uint64_t resolveNonLazyPtrVA() const {
+    return isInGot() ? getGotVA() : getVA();
+  }
 
-  // The index of this symbol in the GOT or the TLVPointer section, depending
-  // on whether it is a thread-local. A given symbol cannot be referenced by
-  // both these sections at once.
+  // The index of this symbol's non-lazy pointer slot in __got.
   uint32_t gotIndex = UINT32_MAX;
   uint32_t lazyBindOffset = UINT32_MAX;
   uint32_t stubsHelperIndex = UINT32_MAX;
