@@ -35,7 +35,7 @@ struct ConditionInfo {
   /// AddRec llvm value
   Value *AddRecValue = nullptr;
   /// Non PHI AddRec llvm value
-  Value *NonPHIAddRecValue;
+  Value *NonPHIAddRecValue = nullptr;
   /// Bound llvm value
   Value *BoundValue = nullptr;
   /// AddRec SCEV
@@ -46,35 +46,6 @@ struct ConditionInfo {
   ConditionInfo() = default;
 };
 } // namespace
-
-static void analyzeICmp(ScalarEvolution &SE, ICmpInst *ICmp,
-                        ConditionInfo &Cond, const Loop &L) {
-  Cond.ICmp = ICmp;
-  if (match(ICmp, m_ICmp(Cond.Pred, m_Value(Cond.AddRecValue),
-                         m_Value(Cond.BoundValue)))) {
-    const SCEV *AddRecSCEV = SE.getSCEV(Cond.AddRecValue);
-    const SCEV *BoundSCEV = SE.getSCEV(Cond.BoundValue);
-    const SCEVAddRecExpr *LHSAddRecSCEV = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
-    const SCEVAddRecExpr *RHSAddRecSCEV = dyn_cast<SCEVAddRecExpr>(BoundSCEV);
-    // Locate AddRec in LHSSCEV and Bound in RHSSCEV.
-    if (!LHSAddRecSCEV && RHSAddRecSCEV) {
-      std::swap(Cond.AddRecValue, Cond.BoundValue);
-      std::swap(AddRecSCEV, BoundSCEV);
-      Cond.Pred = ICmpInst::getSwappedPredicate(Cond.Pred);
-    }
-
-    Cond.AddRecSCEV = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
-    Cond.BoundSCEV = BoundSCEV;
-    Cond.NonPHIAddRecValue = Cond.AddRecValue;
-
-    // If the Cond.AddRecValue is PHI node, update Cond.NonPHIAddRecValue with
-    // value from backedge.
-    if (Cond.AddRecSCEV && isa<PHINode>(Cond.AddRecValue)) {
-      PHINode *PN = cast<PHINode>(Cond.AddRecValue);
-      Cond.NonPHIAddRecValue = PN->getIncomingValueForBlock(L.getLoopLatch());
-    }
-  }
-}
 
 static bool calculateUpperBound(const Loop &L, ScalarEvolution &SE,
                                 ConditionInfo &Cond, bool IsExitCond) {
@@ -121,32 +92,70 @@ static bool calculateUpperBound(const Loop &L, ScalarEvolution &SE,
   return false;
 }
 
+/// Check whether \p ICmp compares an induction variable of \p L against a
+/// bound this pass can split on, and describe it in \p Cond if so. \p Cond is
+/// left untouched unless the condition is processable.
 static bool hasProcessableCondition(const Loop &L, ScalarEvolution &SE,
                                     ICmpInst *ICmp, ConditionInfo &Cond,
                                     bool IsExitCond) {
-  analyzeICmp(SE, ICmp, Cond, L);
+  CmpPredicate Pred;
+  Value *AddRecValue, *BoundValue;
+  if (!match(ICmp, m_ICmp(Pred, m_Value(AddRecValue), m_Value(BoundValue))))
+    return false;
+
+  const SCEV *AddRecSCEV = SE.getSCEV(AddRecValue);
+  const SCEV *BoundSCEV = SE.getSCEV(BoundValue);
+  // Locate the recurrence in AddRecSCEV and the bound in BoundSCEV.
+  if (!isa<SCEVAddRecExpr>(AddRecSCEV) && isa<SCEVAddRecExpr>(BoundSCEV)) {
+    std::swap(AddRecValue, BoundValue);
+    std::swap(AddRecSCEV, BoundSCEV);
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+  }
+
+  // Allowed AddRec as induction variable, and only one of this loop: a
+  // recurrence of another loop does not evolve with this loop's latch, and the
+  // bound calculated from it would not refer to this loop either.
+  const auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddRecSCEV);
+  if (!AddRec || AddRec->getLoop() != &L)
+    return false;
+
+  // If the induction variable is a PHI node, the value from the backedge is
+  // used instead. Only the header PHI has one: a recurrence of this loop is
+  // also reported for a PHI that merely forwards it, such as a single-entry
+  // PHI elsewhere in the loop.
+  Value *NonPHIAddRecValue = AddRecValue;
+  if (auto *PN = dyn_cast<PHINode>(AddRecValue)) {
+    if (PN->getParent() != L.getHeader())
+      return false;
+    NonPHIAddRecValue = PN->getIncomingValueForBlock(L.getLoopLatch());
+  }
 
   // The BoundSCEV should be evaluated at loop entry.
-  if (!SE.isAvailableAtLoopEntry(Cond.BoundSCEV, &L))
+  if (!SE.isAvailableAtLoopEntry(BoundSCEV, &L))
     return false;
 
-  // Allowed AddRec as induction variable.
-  if (!Cond.AddRecSCEV)
+  if (!AddRec->isAffine())
     return false;
 
-  if (!Cond.AddRecSCEV->isAffine())
-    return false;
-
-  const SCEV *StepRecSCEV = Cond.AddRecSCEV->getStepRecurrence(SE);
   // Allowed constant step.
-  if (!isa<SCEVConstant>(StepRecSCEV))
+  const auto *StepRecSCEV =
+      dyn_cast<SCEVConstant>(AddRec->getStepRecurrence(SE));
+  if (!StepRecSCEV)
     return false;
 
-  ConstantInt *StepCI = cast<SCEVConstant>(StepRecSCEV)->getValue();
   // Allowed positive step for now.
   // TODO: Support negative step.
+  ConstantInt *StepCI = StepRecSCEV->getValue();
   if (StepCI->isNegative() || StepCI->isZero())
     return false;
+
+  Cond.ICmp = ICmp;
+  Cond.Pred = Pred;
+  Cond.AddRecValue = AddRecValue;
+  Cond.NonPHIAddRecValue = NonPHIAddRecValue;
+  Cond.BoundValue = BoundValue;
+  Cond.AddRecSCEV = AddRec;
+  Cond.BoundSCEV = BoundSCEV;
 
   // Calculate upper bound.
   if (!calculateUpperBound(L, SE, Cond, IsExitCond))
