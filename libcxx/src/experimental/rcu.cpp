@@ -66,7 +66,7 @@ class rcu_domain_impl {
   // flag used for waking up writer threads waiting for all reader threads' quiescent state
   std::atomic<bool> grace_period_waiting_flag_ = false;
 
-  rcu_atomic_list_view retired_queue_stage0_;
+  rcu_thread_local_list_view retired_queue_stage0_;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
