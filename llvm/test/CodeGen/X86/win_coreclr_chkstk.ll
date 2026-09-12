@@ -111,6 +111,7 @@ declare i32 @bar(ptr) nounwind
 define win64cc i32 @main4k_alloca(i64 %n) nounwind {
 entry:
 ; WIN_X64: 	callq	bar
+; WIN_X64:  	xorl	[[Z:%e.*]], [[Z]]
 ; WIN_X64:  	movq	%gs:16, [[R:%r.*]]
 ; WIN_X64: 	callq	bar
 ; LINUX: 	callq	bar

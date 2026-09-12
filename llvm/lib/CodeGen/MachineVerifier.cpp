@@ -2717,6 +2717,21 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Missing tie flags on tied operand", MO, MONum);
       if (MI->findTiedOperandIdx(OtherIdx) != MONum)
         report("Inconsistent tie links", MO, MONum);
+
+      // Ban `%1 = OP undef %0(tied-def 0), undef %0`: rewriting the tie moves
+      // the tied operand to %1 and leaves the other read at %0, so the two
+      // undef operands stop reading one value.
+      if (MO->isUse() && MO->isUndef() && Reg.isVirtual() &&
+          OtherMO.getReg() != Reg) {
+        for (const MachineOperand &Other : MI->all_uses())
+          if (&Other != MO && Other.isUndef() && Other.getReg() == Reg &&
+              Other.getSubReg() == MO->getSubReg()) {
+            report("Tied undef use shares a virtual register with another read",
+                   MO, MONum);
+            break;
+          }
+      }
+
       if (MONum < MCID.getNumDefs()) {
         if (OtherIdx < MCID.getNumOperands()) {
           if (-1 == MCID.getOperandConstraint(OtherIdx, MCOI::TIED_TO))
