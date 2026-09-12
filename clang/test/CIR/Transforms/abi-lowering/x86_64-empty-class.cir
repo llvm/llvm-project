@@ -199,8 +199,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {llvm.align = 1 : i64, llvm.byref = !rec_NTCE})
-  // LLVM: define void @take_ntc_empty(ptr byref(%struct.NTCE) align 1 %{{.*}})
+  // CHECK: cir.func{{.*}} @take_ntc_empty(%arg0: !cir.ptr<!rec_NTCE> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef})
+  // LLVM: define void @take_ntc_empty(ptr nofreeobj noundef align 1 dereferenceable(1) %{{.*}})
 
   // The same record returned goes through sret rather than being dropped.
   cir.func @ret_ntc_empty() -> !rec_NTCE {
