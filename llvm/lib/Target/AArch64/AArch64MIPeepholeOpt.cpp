@@ -143,6 +143,8 @@ private:
   bool visitFMOVDr(MachineInstr &MI);
   bool visitUBFMXri(MachineInstr &MI);
   bool visitCopy(MachineInstr &MI);
+  bool isEqBranchOnReg(MachineInstr &Cmp, Register ConstReg, MachineInstr *&Br);
+  bool visitBcc(MachineInstr &MI);
 };
 
 struct AArch64MIPeepholeOptLegacy : public MachineFunctionPass {
@@ -957,6 +959,152 @@ bool AArch64MIPeepholeOptImpl::visitCopy(MachineInstr &MI) {
   return true;
 }
 
+// Whether Cmp is a register-form SUBS comparing a virtual register against
+// ConstReg, with a dead result, whose flags reach exactly one B.cond with
+// condition EQ or NE and nothing else (in particular no CCMP, and no flags
+// live into a successor). Returns that branch in Br.
+bool AArch64MIPeepholeOptImpl::isEqBranchOnReg(MachineInstr &Cmp,
+                                               Register ConstReg,
+                                               MachineInstr *&Br) {
+  unsigned Opc = Cmp.getOpcode();
+  if (Opc != AArch64::SUBSWrr && Opc != AArch64::SUBSXrr)
+    return false;
+  Register Dst = Cmp.getOperand(0).getReg();
+  if (Dst.isVirtual() ? !MRI->use_nodbg_empty(Dst)
+                      : (Dst != AArch64::WZR && Dst != AArch64::XZR))
+    return false;
+  Register Rn = Cmp.getOperand(1).getReg();
+  Register Rm = Cmp.getOperand(2).getReg();
+  if ((Rn != ConstReg && Rm != ConstReg) || Rn == Rm)
+    return false;
+  Register X = Rn == ConstReg ? Rm : Rn;
+  if (!X.isVirtual())
+    return false;
+  SmallVector<MachineInstr *, 4> Users;
+  std::optional<UsedNZCV> Used = examineCFlagsUse(Cmp, Cmp, *TRI, &Users);
+  if (!Used || Users.size() != 1 || Users[0]->getOpcode() != AArch64::Bcc)
+    return false;
+  auto CC = static_cast<AArch64CC::CondCode>(Users[0]->getOperand(0).getImm());
+  if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
+    return false;
+  Br = Users[0];
+  return true;
+}
+
+// A compare against a constant that is a logical immediate but no compare
+// immediate, feeding an equality branch:
+//   %c = MOVi64imm C                 (or SUBREG_TO_REG of a MOVi32imm)
+//   %d = SUBSXrr %x, %c, implicit-def $nzcv     ; %d dead
+//   Bcc EQ|NE, %bb
+// tests x == C, which is (x ^ C) == 0, and CBZ/CBNZ tests that directly:
+//   %e = EORXri %x, C
+//   CBZX|CBNZX %e, %bb
+// One instruction fewer, and no register carrying the constant. The rewrite
+// requires every use of the constant to be such a compare-and-branch, so the
+// materialization disappears altogether: converting a compare that shares a
+// hoisted constant with other consumers would trade a fused compare-and-branch
+// for two issue slots while removing nothing. Running after the conditional
+// compare pass, a compare that became part of a CCMP chain is never a
+// candidate, since its flags feed the CCMP rather than a branch.
+bool AArch64MIPeepholeOptImpl::visitBcc(MachineInstr &MI) {
+  // Speculative load hardening relies on flag-setting branches.
+  if (MI.getMF()->getFunction().hasFnAttribute(
+          Attribute::SpeculativeLoadHardening))
+    return false;
+  auto CC = static_cast<AArch64CC::CondCode>(MI.getOperand(0).getImm());
+  if (CC != AArch64CC::EQ && CC != AArch64CC::NE)
+    return false;
+
+  // The compare the branch reads: the nearest NZCV writer above it.
+  MachineBasicBlock &MBB = *MI.getParent();
+  MachineInstr *Cmp = nullptr;
+  for (MachineBasicBlock::iterator It = MI.getIterator(); It != MBB.begin();) {
+    --It;
+    if (It->modifiesRegister(AArch64::NZCV, TRI)) {
+      Cmp = &*It;
+      break;
+    }
+  }
+  if (!Cmp)
+    return false;
+  unsigned CmpOpc = Cmp->getOpcode();
+  if (CmpOpc != AArch64::SUBSWrr && CmpOpc != AArch64::SUBSXrr)
+    return false;
+  bool Is64 = CmpOpc == AArch64::SUBSXrr;
+
+  // One operand materializes the constant, directly or through a
+  // SUBREG_TO_REG of a 32-bit materialization.
+  Register ConstReg;
+  MachineInstr *MovMI = nullptr, *SubregMI = nullptr;
+  for (unsigned Idx : {1u, 2u}) {
+    Register R = Cmp->getOperand(Idx).getReg();
+    if (!R.isVirtual())
+      continue;
+    MachineInstr *Def = MRI->getUniqueVRegDef(R), *Sub = nullptr;
+    if (Def && Def->getOpcode() == TargetOpcode::SUBREG_TO_REG) {
+      Sub = Def;
+      Def = MRI->getUniqueVRegDef(Def->getOperand(1).getReg());
+    }
+    if (!Def || (Def->getOpcode() != AArch64::MOVi32imm &&
+                 Def->getOpcode() != AArch64::MOVi64imm))
+      continue;
+    if ((Def->getOpcode() == AArch64::MOVi32imm) != (!Is64 || Sub != nullptr))
+      continue;
+    ConstReg = R;
+    MovMI = Def;
+    SubregMI = Sub;
+    break;
+  }
+  if (!MovMI)
+    return false;
+  unsigned Bits = Is64 ? 64 : 32;
+  uint64_t Imm = MovMI->getOperand(1).getImm();
+  if (MovMI->getOpcode() == AArch64::MOVi32imm)
+    Imm &= 0xffffffffu;
+  // A constant CMP or CMN encodes is not this fold's business, and the EOR
+  // needs a logical immediate.
+  if (AArch64_AM::isLegalCmpImmed(APInt(Bits, Imm)) ||
+      !AArch64_AM::isLogicalImmediate(Imm, Bits))
+    return false;
+
+  // Every use of the constant must be such a compare-and-branch, this one
+  // included, so that the materialization goes away.
+  Register MovReg = MovMI->getOperand(0).getReg();
+  if (SubregMI && !MRI->hasOneNonDBGUse(MovReg))
+    return false;
+  MachineInstr *Br = nullptr;
+  for (MachineInstr &Use : MRI->use_nodbg_instructions(ConstReg))
+    if (!isEqBranchOnReg(Use, ConstReg, Br))
+      return false;
+  if (!isEqBranchOnReg(*Cmp, ConstReg, Br) || Br != &MI)
+    return false;
+
+  Register X = Cmp->getOperand(1).getReg() == ConstReg
+                   ? Cmp->getOperand(2).getReg()
+                   : Cmp->getOperand(1).getReg();
+  Register Eor = MRI->createVirtualRegister(Is64 ? &AArch64::GPR64RegClass
+                                                 : &AArch64::GPR32RegClass);
+  BuildMI(MBB, *Cmp, Cmp->getDebugLoc(),
+          TII->get(Is64 ? AArch64::EORXri : AArch64::EORWri), Eor)
+      .addReg(X)
+      .addImm(AArch64_AM::encodeLogicalImmediate(Imm, Bits));
+  unsigned BrOpc = CC == AArch64CC::EQ
+                       ? (Is64 ? AArch64::CBZX : AArch64::CBZW)
+                       : (Is64 ? AArch64::CBNZX : AArch64::CBNZW);
+  BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(BrOpc))
+      .addReg(Eor)
+      .addMBB(MI.getOperand(1).getMBB());
+  MI.eraseFromParent();
+  Cmp->eraseFromParent();
+  if (MRI->use_nodbg_empty(ConstReg)) {
+    if (SubregMI)
+      SubregMI->eraseFromParent();
+    if (MRI->use_nodbg_empty(MovReg))
+      MovMI->eraseFromParent();
+  }
+  return true;
+}
+
 bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
   TII = static_cast<const AArch64InstrInfo *>(MF.getSubtarget().getInstrInfo());
   TRI = static_cast<const AArch64RegisterInfo *>(
@@ -1069,6 +1217,9 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
         break;
       case AArch64::COPY:
         Changed |= visitCopy(MI);
+        break;
+      case AArch64::Bcc:
+        Changed |= visitBcc(MI);
         break;
       }
     }

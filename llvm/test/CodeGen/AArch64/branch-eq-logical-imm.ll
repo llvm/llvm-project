@@ -10,9 +10,8 @@ declare void @h()
 define void @br_eq_int64_min(i64 %x) {
 ; CHECK-LABEL: br_eq_int64_min:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    cmp x0, x8
-; CHECK-NEXT:    b.ne .LBB0_2
+; CHECK-NEXT:    eor x8, x0, #0x8000000000000000
+; CHECK-NEXT:    cbnz x8, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -34,9 +33,8 @@ exit:
 define void @br_ne_int64_min(i64 %x) {
 ; CHECK-LABEL: br_ne_int64_min:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-NEXT:    cmp x0, x8
-; CHECK-NEXT:    b.eq .LBB1_2
+; CHECK-NEXT:    eor x8, x0, #0x8000000000000000
+; CHECK-NEXT:    cbz x8, .LBB1_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -58,9 +56,8 @@ exit:
 define void @br_eq_i32_signbit(i32 %x) {
 ; CHECK-LABEL: br_eq_i32_signbit:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    b.ne .LBB2_2
+; CHECK-NEXT:    eor w8, w0, #0x80000000
+; CHECK-NEXT:    cbnz w8, .LBB2_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -82,9 +79,8 @@ exit:
 define void @br_ne_i32_ffffff(i32 %x) {
 ; CHECK-LABEL: br_ne_i32_ffffff:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #16777215 // =0xffffff
-; CHECK-NEXT:    cmp w0, w8
-; CHECK-NEXT:    b.eq .LBB3_2
+; CHECK-NEXT:    eor w8, w0, #0xffffff
+; CHECK-NEXT:    cbz w8, .LBB3_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -106,9 +102,8 @@ exit:
 define void @br_eq_i64_int32_max(i64 %x) {
 ; CHECK-LABEL: br_eq_i64_int32_max:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #2147483647 // =0x7fffffff
-; CHECK-NEXT:    cmp x0, x8
-; CHECK-NEXT:    b.ne .LBB4_2
+; CHECK-NEXT:    eor x8, x0, #0x7fffffff
+; CHECK-NEXT:    cbnz x8, .LBB4_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -131,26 +126,26 @@ exit:
 define void @br_two_uses(i64 %x, i64 %y) {
 ; CHECK-LABEL: br_two_uses:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    stp x30, x19, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov x20, #-9223372036854775808 // =0x8000000000000000
+; CHECK-NEXT:    .cfi_offset w30, -16
+; CHECK-NEXT:    eor x8, x0, #0x8000000000000000
 ; CHECK-NEXT:    mov x19, x1
-; CHECK-NEXT:    cmp x0, x20
-; CHECK-NEXT:    b.ne .LBB5_2
-; CHECK-NEXT:  // %bb.1: // %callg
+; CHECK-NEXT:    cbz x8, .LBB5_3
+; CHECK-NEXT:  // %bb.1: // %second
+; CHECK-NEXT:    eor x8, x19, #0x8000000000000000
+; CHECK-NEXT:    cbz x8, .LBB5_4
+; CHECK-NEXT:  .LBB5_2: // %exit
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB5_3: // %callg
 ; CHECK-NEXT:    bl g
-; CHECK-NEXT:  .LBB5_2: // %second
-; CHECK-NEXT:    cmp x19, x20
-; CHECK-NEXT:    b.ne .LBB5_4
-; CHECK-NEXT:  // %bb.3: // %callh
+; CHECK-NEXT:    eor x8, x19, #0x8000000000000000
+; CHECK-NEXT:    cbnz x8, .LBB5_2
+; CHECK-NEXT:  .LBB5_4: // %callh
 ; CHECK-NEXT:    bl h
-; CHECK-NEXT:  .LBB5_4: // %exit
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %cx = icmp eq i64 %x, -9223372036854775808
@@ -420,16 +415,14 @@ define void @br_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    b.lt .LBB14_6
 ; CHECK-NEXT:  // %bb.1: // %loop.preheader
-; CHECK-NEXT:    stp x30, x21, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x30, [sp, #-32]! // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #16] // 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    mov x19, x1
 ; CHECK-NEXT:    mov x20, x0
-; CHECK-NEXT:    mov x21, #-9223372036854775808 // =0x8000000000000000
 ; CHECK-NEXT:    b .LBB14_3
 ; CHECK-NEXT:  .LBB14_2: // %latch
 ; CHECK-NEXT:    // in Loop: Header=BB14_3 Depth=1
@@ -438,15 +431,15 @@ define void @br_loop(ptr %p, i64 %n) {
 ; CHECK-NEXT:  .LBB14_3: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr x8, [x20], #8
-; CHECK-NEXT:    cmp x8, x21
-; CHECK-NEXT:    b.ne .LBB14_2
+; CHECK-NEXT:    eor x8, x8, #0x8000000000000000
+; CHECK-NEXT:    cbnz x8, .LBB14_2
 ; CHECK-NEXT:  // %bb.4: // %call
 ; CHECK-NEXT:    // in Loop: Header=BB14_3 Depth=1
 ; CHECK-NEXT:    bl g
 ; CHECK-NEXT:    b .LBB14_2
 ; CHECK-NEXT:  .LBB14_5:
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp x30, x21, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ldr x30, [sp], #32 // 8-byte Folded Reload
 ; CHECK-NEXT:  .LBB14_6: // %exit
 ; CHECK-NEXT:    ret
 entry:
