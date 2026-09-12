@@ -89,12 +89,14 @@ void test_init_from_subscript(AGG arr[4]) {
 }
 
 // Array bounds - out-of-bounds access (RHS)
-// Note: GCC also does not detect the out-of-bounds access here when compiled as
-// C++.
+// In C++ this is a call to the implicit copy assignment operator, whose right
+// operand is copied and so must exist. It used to be missed there, because the
+// right operand of an aggregate assignment carries no lvalue-to-rvalue
+// conversion for the check to key on.
 
 // CHECK-LABEL: define {{.*}}@test_oob_rhs(
 // C: br i1 false, label %cont, label %handler.out_of_bounds
-// CXX: br i1 true, label %cont, label %handler.out_of_bounds
+// CXX: br i1 false, label %cont, label %handler.out_of_bounds
 // CHECK: handler.out_of_bounds:
 // CHECK-NEXT: call void @__ubsan_handle_out_of_bounds_abort
 // CHECK: handler.type_mismatch:
