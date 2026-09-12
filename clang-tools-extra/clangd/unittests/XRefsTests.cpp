@@ -135,6 +135,51 @@ TEST(HighlightsTest, All) {
             return 1;
         }
       )cpp",
+      R"cpp(// Overloaded operator: the whole name, not just `operator`, is highlighted.
+        using size_t = decltype(sizeof(0));
+        struct S {
+          static void *[[operator]] [[n^ew]](size_t);
+          static void operator delete(void *);
+        };
+      )cpp",
+      R"cpp(// Same, with the cursor on the operator keyword itself.
+        using size_t = decltype(sizeof(0));
+        struct S {
+          static void *[[^operator]] [[new]](size_t);
+          static void operator delete(void *);
+        };
+      )cpp",
+      R"cpp(// Same, for operator delete.
+        using size_t = decltype(sizeof(0));
+        struct S {
+          static void *operator new(size_t);
+          static void [[operator]] [[del^ete]](void *);
+        };
+      )cpp",
+      R"cpp(// Overloaded operator spanning multiple tokens.
+        struct S {
+          void [[operator]] [[^(]][[)]](int);
+        };
+      )cpp",
+      R"cpp(// Explicit operator-call syntax also highlights the whole name.
+        struct S {
+          S [[operator]] [[+]](S);
+        };
+        void f(S a) {
+          a.[[operator]] [[^+]](a);
+        }
+      )cpp",
+      R"cpp(// Literal operator: the suffix is lexed together with the preceding
+        // `""` as a single token, so the whole thing is highlighted.
+        long double [[operator]] [[""_te^st]](long double);
+      )cpp",
+      R"cpp(// Conversion operator: the target type name is highlighted too.
+        // (Clicking on `int` itself doesn't resolve to the declaration at
+        // all, a separate limitation.)
+        struct S {
+          [[^operator]] [[int]]();
+        };
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
