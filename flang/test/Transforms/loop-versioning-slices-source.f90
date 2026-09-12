@@ -18,6 +18,13 @@
 ! RUN:   -mmlir --mlir-print-ir-after=loop-versioning \
 ! RUN:   %s -o /dev/null 2>&1 | \
 ! RUN:   FileCheck %s --check-prefix=REPACK --enable-var-scope
+! RUN: %flang -S -O3 -fversion-loops-for-stride \
+! RUN:   -fdefault-integer-8 -fdefault-real-8 \
+! RUN:   -frepack-arrays -frepack-arrays-contiguity=whole \
+! RUN:   -mmlir --mlir-disable-threading \
+! RUN:   -mmlir --mlir-print-ir-after=loop-versioning \
+! RUN:   %s -o /dev/null 2>&1 | \
+! RUN:   FileCheck %s --check-prefix=WIDE-REPACK --enable-var-scope
 
 ! Verify that source-expressible slice forms reach the byte-address fast path
 ! through both the fc1 and driver pipelines. The additional driver modes make
@@ -35,9 +42,10 @@ subroutine facerec_slices(graph, gabor, indices, y)
   read(*, *) graph(:, :, indices), gabor(:, :, indices, y)
 end subroutine
 
-! Keep the frontend wrapper configuration in a compiler test. The runtime test
-! separately verifies that values written through the repacked fast path are
-! copied back to a noncontiguous actual argument.
+! Keep the frontend wrapper configuration in a compiler test. The execution
+! test in llvm-test-suite/Fortran/UnitTests/loop-versioning-slices verifies that
+! values written through the repacked fast path are copied back to a
+! noncontiguous actual argument.
 subroutine repacked_slice(values, indices)
   implicit none
   real, intent(inout) :: values(:, :)
@@ -138,15 +146,175 @@ end subroutine
 
 ! DRIVER: IR Dump After LoopVersioning
 ! DRIVER-LABEL: func.func @_QPfacerec_slices(
-! DRIVER: fir.if
-! DRIVER: !fir.ref<!fir.array<?xi8>>
-! DRIVER: fir.coordinate_of
+! DRIVER: fir.do_loop
+! DRIVER: %[[GRAPH_D0:.*]]:3 = fir.box_dims %[[GRAPH_DESC:[^,]+]],
+! DRIVER: %[[GRAPH_SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[GRAPH_PRED:.*]] = arith.cmpi eq, %[[GRAPH_D0]]#2, %[[GRAPH_SIZE]] : index
+! DRIVER: fir.if %[[GRAPH_PRED]]
+! DRIVER: %[[GRAPH_BOX:.*]] = fir.convert %[[GRAPH_DESC]]
+! DRIVER: %[[GRAPH_BYTES:.*]] = fir.box_addr %[[GRAPH_BOX]]
+! DRIVER-SAME: -> !fir.ref<!fir.array<?xi8>>
+! DRIVER: %[[GRAPH_ADDRESS:.*]] = fir.coordinate_of %[[GRAPH_BYTES]],
+! DRIVER-NEXT: %[[GRAPH_FAST:.*]] = fir.convert %[[GRAPH_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[GRAPH_FAST]])
 ! DRIVER: } else {
-! DRIVER: fir.array_coor
+! DRIVER: %[[GRAPH_FALLBACK:.*]] = fir.array_coor %[[GRAPH_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[GRAPH_FALLBACK]])
+! DRIVER: fir.do_loop
+! DRIVER: %[[GABOR_D0:.*]]:3 = fir.box_dims %[[GABOR_DESC:[^,]+]],
+! DRIVER: %[[GABOR_SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[GABOR_PRED:.*]] = arith.cmpi eq, %[[GABOR_D0]]#2, %[[GABOR_SIZE]] : index
+! DRIVER: fir.if %[[GABOR_PRED]]
+! DRIVER: %[[GABOR_BOX:.*]] = fir.convert %[[GABOR_DESC]]
+! DRIVER: %[[GABOR_BYTES:.*]] = fir.box_addr %[[GABOR_BOX]]
+! DRIVER: %[[GABOR_ADDRESS:.*]] = fir.coordinate_of %[[GABOR_BYTES]],
+! DRIVER-NEXT: %[[GABOR_FAST:.*]] = fir.convert %[[GABOR_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[GABOR_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[GABOR_FALLBACK:.*]] = fir.array_coor %[[GABOR_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[GABOR_FALLBACK]])
 ! DRIVER-LABEL: func.func @_QPrepacked_slice(
+! DRIVER: fir.do_loop
+! DRIVER: %[[REPACKED_D0:.*]]:3 = fir.box_dims %[[REPACKED_DESC:[^,]+]],
+! DRIVER: %[[SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[REPACKED_D0]]#2, %[[SIZE]] : index
+! DRIVER: fir.if %[[PRED]]
+! DRIVER: %[[REPACKED_BOX:.*]] = fir.convert %[[REPACKED_DESC]]
+! DRIVER: %[[REPACKED_BYTES:.*]] = fir.box_addr %[[REPACKED_BOX]]
+! DRIVER: %[[REPACKED_ADDRESS:.*]] = fir.coordinate_of %[[REPACKED_BYTES]],
+! DRIVER-NEXT: %[[REPACKED_FAST:.*]] = fir.convert %[[REPACKED_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[REPACKED_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[REPACKED_FALLBACK:.*]] = fir.array_coor %[[REPACKED_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[REPACKED_FALLBACK]])
+! DRIVER-LABEL: func.func @_QPoffset_slices(
+! DRIVER: fir.do_loop
+! DRIVER: %[[OFFSET_GRAPH_D0:.*]]:3 = fir.box_dims %[[OFFSET_GRAPH_DESC:[^,]+]],
+! DRIVER: %[[SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[OFFSET_GRAPH_D0]]#2, %[[SIZE]] : index
+! DRIVER: fir.if %[[PRED]]
+! DRIVER: %[[OFFSET_GRAPH_BOX:.*]] = fir.convert %[[OFFSET_GRAPH_DESC]]
+! DRIVER: %[[OFFSET_GRAPH_BYTES:.*]] = fir.box_addr %[[OFFSET_GRAPH_BOX]]
+! DRIVER: %[[OFFSET_GRAPH_ADDRESS:.*]] = fir.coordinate_of %[[OFFSET_GRAPH_BYTES]],
+! DRIVER-NEXT: %[[OFFSET_GRAPH_FAST:.*]] = fir.convert %[[OFFSET_GRAPH_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[OFFSET_GRAPH_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[OFFSET_GRAPH_FALLBACK:.*]] = fir.array_coor %[[OFFSET_GRAPH_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[OFFSET_GRAPH_FALLBACK]])
+! DRIVER: fir.do_loop
+! DRIVER: %[[OFFSET_GABOR_D0:.*]]:3 = fir.box_dims %[[OFFSET_GABOR_DESC:[^,]+]],
+! DRIVER: %[[OFFSET_GABOR_SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[OFFSET_GABOR_PRED:.*]] = arith.cmpi eq, %[[OFFSET_GABOR_D0]]#2, %[[OFFSET_GABOR_SIZE]] : index
+! DRIVER: fir.if %[[OFFSET_GABOR_PRED]]
+! DRIVER: %[[OFFSET_GABOR_BOX:.*]] = fir.convert %[[OFFSET_GABOR_DESC]]
+! DRIVER: %[[OFFSET_GABOR_BYTES:.*]] = fir.box_addr %[[OFFSET_GABOR_BOX]]
+! DRIVER: %[[OFFSET_GABOR_ADDRESS:.*]] = fir.coordinate_of %[[OFFSET_GABOR_BYTES]],
+! DRIVER-NEXT: %[[OFFSET_GABOR_FAST:.*]] = fir.convert %[[OFFSET_GABOR_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[OFFSET_GABOR_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[OFFSET_GABOR_FALLBACK:.*]] = fir.array_coor %[[OFFSET_GABOR_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[OFFSET_GABOR_FALLBACK]])
+! DRIVER-LABEL: func.func @_QPrank2_patterns(
+! DRIVER: fir.do_loop
+! DRIVER: %[[RANK2_D0:.*]]:3 = fir.box_dims %[[RANK2_DESC:[^,]+]],
+! DRIVER: %[[RANK2_SIZE0:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[RANK2_PRED0:.*]] = arith.cmpi eq, %[[RANK2_D0]]#2, %[[RANK2_SIZE0]] : index
+! DRIVER: fir.if %[[RANK2_PRED0]]
+! DRIVER: %[[RANK2_BOX0:.*]] = fir.convert %[[RANK2_DESC]]
+! DRIVER: %[[RANK2_BYTES0:.*]] = fir.box_addr %[[RANK2_BOX0]]
+! DRIVER: %[[RANK2_ADDRESS0:.*]] = fir.coordinate_of %[[RANK2_BYTES0]],
+! DRIVER-NEXT: %[[RANK2_FAST0:.*]] = fir.convert %[[RANK2_ADDRESS0]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[RANK2_FAST0]])
+! DRIVER: } else {
+! DRIVER: %[[RANK2_FALLBACK0:.*]] = fir.array_coor %[[RANK2_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[RANK2_FALLBACK0]])
+! DRIVER: fir.do_loop
+! DRIVER: %[[RANK2_D1:.*]]:3 = fir.box_dims %[[RANK2_DESC]],
+! DRIVER: %[[RANK2_SIZE1:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[RANK2_PRED1:.*]] = arith.cmpi eq, %[[RANK2_D1]]#2, %[[RANK2_SIZE1]] : index
+! DRIVER: fir.if %[[RANK2_PRED1]]
+! DRIVER: %[[RANK2_BOX1:.*]] = fir.convert %[[RANK2_DESC]]
+! DRIVER: %[[RANK2_BYTES1:.*]] = fir.box_addr %[[RANK2_BOX1]]
+! DRIVER: %[[RANK2_ADDRESS1:.*]] = fir.coordinate_of %[[RANK2_BYTES1]],
+! DRIVER-NEXT: %[[RANK2_FAST1:.*]] = fir.convert %[[RANK2_ADDRESS1]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[RANK2_FAST1]])
+! DRIVER: } else {
+! DRIVER: %[[RANK2_FALLBACK1:.*]] = fir.array_coor %[[RANK2_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[RANK2_FALLBACK1]])
+! DRIVER-LABEL: func.func @_QPgeneralized_slice(
+! DRIVER: fir.do_loop
+! DRIVER: %[[GENERAL_D0:.*]]:3 = fir.box_dims %[[GENERAL_DESC:[^,]+]],
+! DRIVER: %[[SIZE:.*]] = arith.constant 8 : index
+! DRIVER-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[GENERAL_D0]]#2, %[[SIZE]] : index
+! DRIVER: fir.if %[[PRED]]
+! DRIVER: %[[GENERAL_BOX:.*]] = fir.convert %[[GENERAL_DESC]]
+! DRIVER: %[[GENERAL_BYTES:.*]] = fir.box_addr %[[GENERAL_BOX]]
+! DRIVER: %[[GENERAL_ADDRESS:.*]] = fir.coordinate_of %[[GENERAL_BYTES]],
+! DRIVER-NEXT: %[[GENERAL_FAST:.*]] = fir.convert %[[GENERAL_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[GENERAL_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[GENERAL_FALLBACK:.*]] = fir.array_coor %[[GENERAL_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[GENERAL_FALLBACK]])
+! DRIVER-LABEL: func.func @_QPconstant_scalar(
+! DRIVER: fir.do_loop
+! DRIVER: %[[CONSTANT_D0:.*]]:3 = fir.box_dims %[[CONSTANT_DESC:[^,]+]],
+! DRIVER: %[[SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[CONSTANT_D0]]#2, %[[SIZE]] : index
+! DRIVER: fir.if %[[PRED]]
+! DRIVER: %[[CONSTANT_BOX:.*]] = fir.convert %[[CONSTANT_DESC]]
+! DRIVER: %[[CONSTANT_BYTES:.*]] = fir.box_addr %[[CONSTANT_BOX]]
+! DRIVER: %[[CONSTANT_ADDRESS:.*]] = fir.coordinate_of %[[CONSTANT_BYTES]],
+! DRIVER-NEXT: %[[CONSTANT_FAST:.*]] = fir.convert %[[CONSTANT_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[CONSTANT_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[CONSTANT_FALLBACK:.*]] = fir.array_coor %[[CONSTANT_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[CONSTANT_FALLBACK]])
+! DRIVER-LABEL: func.func @_QPisolated_descriptors(
+! DRIVER: fir.do_loop
+! DRIVER: %[[GOOD_D0:.*]]:3 = fir.box_dims %[[GOOD_DESC:[^,]+]],
+! DRIVER: %[[SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[GOOD_D0]]#2, %[[SIZE]] : index
+! DRIVER: fir.if %[[PRED]]
+! DRIVER: %[[GOOD_BOX:.*]] = fir.convert %[[GOOD_DESC]]
+! DRIVER: %[[GOOD_BYTES:.*]] = fir.box_addr %[[GOOD_BOX]]
+! DRIVER: %[[GOOD_ADDRESS:.*]] = fir.coordinate_of %[[GOOD_BYTES]],
+! DRIVER-NEXT: %[[GOOD_FAST:.*]] = fir.convert %[[GOOD_ADDRESS]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[GOOD_FAST]])
+! DRIVER: } else {
+! DRIVER: %[[GOOD_FALLBACK:.*]] = fir.array_coor %[[GOOD_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[GOOD_FALLBACK]])
+! DRIVER-LABEL: func.func @_QPsequential_owners(
+! DRIVER: fir.do_loop
+! DRIVER: %[[SEQUENTIAL_D0:.*]]:3 = fir.box_dims %[[SEQUENTIAL_DESC:[^,]+]],
+! DRIVER: %[[SIZE:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[SEQUENTIAL_D0]]#2, %[[SIZE]] : index
+! DRIVER: fir.if %[[PRED]]
+! DRIVER: %[[SEQUENTIAL_BOX0:.*]] = fir.convert %[[SEQUENTIAL_DESC]]
+! DRIVER: %[[SEQUENTIAL_BYTES0:.*]] = fir.box_addr %[[SEQUENTIAL_BOX0]]
+! DRIVER: %[[SEQUENTIAL_ADDRESS0:.*]] = fir.coordinate_of %[[SEQUENTIAL_BYTES0]],
+! DRIVER-NEXT: %[[SEQUENTIAL_FAST0:.*]] = fir.convert %[[SEQUENTIAL_ADDRESS0]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[SEQUENTIAL_FAST0]])
+! DRIVER: } else {
+! DRIVER: %[[SEQUENTIAL_FALLBACK0:.*]] = fir.array_coor %[[SEQUENTIAL_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[SEQUENTIAL_FALLBACK0]])
+! DRIVER: fir.do_loop
+! DRIVER: %[[SEQUENTIAL_D1:.*]]:3 = fir.box_dims %[[SEQUENTIAL_DESC]],
+! DRIVER: %[[SEQUENTIAL_SIZE1:.*]] = arith.constant 4 : index
+! DRIVER-NEXT: %[[SEQUENTIAL_PRED1:.*]] = arith.cmpi eq, %[[SEQUENTIAL_D1]]#2, %[[SEQUENTIAL_SIZE1]] : index
+! DRIVER: fir.if %[[SEQUENTIAL_PRED1]]
+! DRIVER: %[[SEQUENTIAL_BOX1:.*]] = fir.convert %[[SEQUENTIAL_DESC]]
+! DRIVER: %[[SEQUENTIAL_BYTES1:.*]] = fir.box_addr %[[SEQUENTIAL_BOX1]]
+! DRIVER: %[[SEQUENTIAL_ADDRESS1:.*]] = fir.coordinate_of %[[SEQUENTIAL_BYTES1]],
+! DRIVER-NEXT: %[[SEQUENTIAL_FAST1:.*]] = fir.convert %[[SEQUENTIAL_ADDRESS1]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[SEQUENTIAL_FAST1]])
+! DRIVER: } else {
+! DRIVER: %[[SEQUENTIAL_FALLBACK1:.*]] = fir.array_coor %[[SEQUENTIAL_DESC]]
+! DRIVER-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[SEQUENTIAL_FALLBACK1]])
 
 ! WIDE-LABEL: func.func @_QPfacerec_slices(
 ! WIDE-SAME: !fir.box<!fir.array<?x?x?xf64>>
+! WIDE: %[[WIDE_GABOR:.*]] = fir.declare {{.*}}uniq_name = "_QFfacerec_slicesEgabor"
+! WIDE: %[[WIDE_GABOR_REBOX:.*]] = fir.rebox %[[WIDE_GABOR]]
 ! WIDE: %[[WIDE_GRAPH:.*]] = fir.declare {{.*}}uniq_name = "_QFfacerec_slicesEgraph"
 ! WIDE: %[[WIDE_GRAPH_REBOX:.*]] = fir.rebox %[[WIDE_GRAPH]]
 ! WIDE: fir.box_dims %[[WIDE_GRAPH_REBOX]],
@@ -154,18 +322,172 @@ end subroutine
 ! WIDE: %[[WIDE_SIZE:.*]] = arith.constant 8 : index
 ! WIDE: %[[WIDE_PRED:.*]] = arith.cmpi eq, %[[WIDE_D0]]#2, %[[WIDE_SIZE]] : index
 ! WIDE: fir.if %[[WIDE_PRED]]
-! WIDE: %[[WIDE_ADDRESS:.*]] = fir.coordinate_of {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! WIDE: %[[WIDE_GRAPH_BOX:.*]] = fir.convert %[[WIDE_GRAPH]]
+! WIDE: %[[WIDE_GRAPH_BYTES:.*]] = fir.box_addr %[[WIDE_GRAPH_BOX]]
+! WIDE: %[[WIDE_ADDRESS:.*]] = fir.coordinate_of %[[WIDE_GRAPH_BYTES]], {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
 ! WIDE-NEXT: %[[WIDE_FAST:.*]] = fir.convert %[[WIDE_ADDRESS]] : (!fir.ref<i8>) -> !fir.ref<f64>
 ! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[WIDE_FAST]])
 ! WIDE: } else {
-! WIDE: %[[WIDE_FALLBACK:.*]] = fir.array_coor
+! WIDE: %[[WIDE_FALLBACK:.*]] = fir.array_coor %[[WIDE_GRAPH]]
 ! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[WIDE_FALLBACK]])
+! WIDE: fir.do_loop
+! WIDE: %[[WIDE_GABOR_D0:.*]]:3 = fir.box_dims %[[WIDE_GABOR]],
+! WIDE: %[[WIDE_GABOR_SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[WIDE_GABOR_PRED:.*]] = arith.cmpi eq, %[[WIDE_GABOR_D0]]#2, %[[WIDE_GABOR_SIZE]] : index
+! WIDE: fir.if %[[WIDE_GABOR_PRED]]
+! WIDE: %[[WIDE_GABOR_BOX:.*]] = fir.convert %[[WIDE_GABOR]]
+! WIDE: %[[WIDE_GABOR_BYTES:.*]] = fir.box_addr %[[WIDE_GABOR_BOX]]
+! WIDE: %[[WIDE_GABOR_ADDRESS:.*]] = fir.coordinate_of %[[WIDE_GABOR_BYTES]],
+! WIDE-NEXT: %[[WIDE_GABOR_FAST:.*]] = fir.convert %[[WIDE_GABOR_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[WIDE_GABOR_FAST]])
+! WIDE: } else {
+! WIDE: %[[WIDE_GABOR_FALLBACK:.*]] = fir.array_coor %[[WIDE_GABOR]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[WIDE_GABOR_FALLBACK]])
 ! WIDE-LABEL: func.func @_QPrepacked_slice(
+! WIDE: fir.do_loop
+! WIDE: %[[REPACKED_D0:.*]]:3 = fir.box_dims %[[REPACKED_DESC:[^,]+]],
+! WIDE: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[REPACKED_D0]]#2, %[[SIZE]] : index
+! WIDE: fir.if %[[PRED]]
+! WIDE: %[[REPACKED_BOX:.*]] = fir.convert %[[REPACKED_DESC]]
+! WIDE: %[[REPACKED_BYTES:.*]] = fir.box_addr %[[REPACKED_BOX]]
+! WIDE: %[[REPACKED_ADDRESS:.*]] = fir.coordinate_of %[[REPACKED_BYTES]],
+! WIDE-NEXT: %[[REPACKED_FAST:.*]] = fir.convert %[[REPACKED_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[REPACKED_FAST]])
+! WIDE: } else {
+! WIDE: %[[REPACKED_FALLBACK:.*]] = fir.array_coor %[[REPACKED_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[REPACKED_FALLBACK]])
+! WIDE-LABEL: func.func @_QPoffset_slices(
+! WIDE: fir.do_loop
+! WIDE: %[[OFFSET_GRAPH_D0:.*]]:3 = fir.box_dims %[[OFFSET_GRAPH_DESC:[^,]+]],
+! WIDE: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[OFFSET_GRAPH_D0]]#2, %[[SIZE]] : index
+! WIDE: fir.if %[[PRED]]
+! WIDE: %[[OFFSET_GRAPH_BOX:.*]] = fir.convert %[[OFFSET_GRAPH_DESC]]
+! WIDE: %[[OFFSET_GRAPH_BYTES:.*]] = fir.box_addr %[[OFFSET_GRAPH_BOX]]
+! WIDE: %[[OFFSET_GRAPH_ADDRESS:.*]] = fir.coordinate_of %[[OFFSET_GRAPH_BYTES]],
+! WIDE-NEXT: %[[OFFSET_GRAPH_FAST:.*]] = fir.convert %[[OFFSET_GRAPH_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[OFFSET_GRAPH_FAST]])
+! WIDE: } else {
+! WIDE: %[[OFFSET_GRAPH_FALLBACK:.*]] = fir.array_coor %[[OFFSET_GRAPH_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[OFFSET_GRAPH_FALLBACK]])
+! WIDE: fir.do_loop
+! WIDE: %[[OFFSET_GABOR_D0:.*]]:3 = fir.box_dims %[[OFFSET_GABOR_DESC:[^,]+]],
+! WIDE: %[[OFFSET_GABOR_SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[OFFSET_GABOR_PRED:.*]] = arith.cmpi eq, %[[OFFSET_GABOR_D0]]#2, %[[OFFSET_GABOR_SIZE]] : index
+! WIDE: fir.if %[[OFFSET_GABOR_PRED]]
+! WIDE: %[[OFFSET_GABOR_BOX:.*]] = fir.convert %[[OFFSET_GABOR_DESC]]
+! WIDE: %[[OFFSET_GABOR_BYTES:.*]] = fir.box_addr %[[OFFSET_GABOR_BOX]]
+! WIDE: %[[OFFSET_GABOR_ADDRESS:.*]] = fir.coordinate_of %[[OFFSET_GABOR_BYTES]],
+! WIDE-NEXT: %[[OFFSET_GABOR_FAST:.*]] = fir.convert %[[OFFSET_GABOR_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[OFFSET_GABOR_FAST]])
+! WIDE: } else {
+! WIDE: %[[OFFSET_GABOR_FALLBACK:.*]] = fir.array_coor %[[OFFSET_GABOR_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[OFFSET_GABOR_FALLBACK]])
+! WIDE-LABEL: func.func @_QPrank2_patterns(
+! WIDE: fir.do_loop
+! WIDE: %[[RANK2_D0:.*]]:3 = fir.box_dims %[[RANK2_DESC:[^,]+]],
+! WIDE: %[[RANK2_SIZE0:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[RANK2_PRED0:.*]] = arith.cmpi eq, %[[RANK2_D0]]#2, %[[RANK2_SIZE0]] : index
+! WIDE: fir.if %[[RANK2_PRED0]]
+! WIDE: %[[RANK2_BOX0:.*]] = fir.convert %[[RANK2_DESC]]
+! WIDE: %[[RANK2_BYTES0:.*]] = fir.box_addr %[[RANK2_BOX0]]
+! WIDE: %[[RANK2_ADDRESS0:.*]] = fir.coordinate_of %[[RANK2_BYTES0]],
+! WIDE-NEXT: %[[RANK2_FAST0:.*]] = fir.convert %[[RANK2_ADDRESS0]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[RANK2_FAST0]])
+! WIDE: } else {
+! WIDE: %[[RANK2_FALLBACK0:.*]] = fir.array_coor %[[RANK2_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[RANK2_FALLBACK0]])
+! WIDE: fir.do_loop
+! WIDE: %[[RANK2_D1:.*]]:3 = fir.box_dims %[[RANK2_DESC]],
+! WIDE: %[[RANK2_SIZE1:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[RANK2_PRED1:.*]] = arith.cmpi eq, %[[RANK2_D1]]#2, %[[RANK2_SIZE1]] : index
+! WIDE: fir.if %[[RANK2_PRED1]]
+! WIDE: %[[RANK2_BOX1:.*]] = fir.convert %[[RANK2_DESC]]
+! WIDE: %[[RANK2_BYTES1:.*]] = fir.box_addr %[[RANK2_BOX1]]
+! WIDE: %[[RANK2_ADDRESS1:.*]] = fir.coordinate_of %[[RANK2_BYTES1]],
+! WIDE-NEXT: %[[RANK2_FAST1:.*]] = fir.convert %[[RANK2_ADDRESS1]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[RANK2_FAST1]])
+! WIDE: } else {
+! WIDE: %[[RANK2_FALLBACK1:.*]] = fir.array_coor %[[RANK2_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[RANK2_FALLBACK1]])
+! WIDE-LABEL: func.func @_QPgeneralized_slice(
+! WIDE: fir.do_loop
+! WIDE: %[[GENERAL_D0:.*]]:3 = fir.box_dims %[[GENERAL_DESC:[^,]+]],
+! WIDE: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[GENERAL_D0]]#2, %[[SIZE]] : index
+! WIDE: fir.if %[[PRED]]
+! WIDE: %[[GENERAL_BOX:.*]] = fir.convert %[[GENERAL_DESC]]
+! WIDE: %[[GENERAL_BYTES:.*]] = fir.box_addr %[[GENERAL_BOX]]
+! WIDE: %[[GENERAL_ADDRESS:.*]] = fir.coordinate_of %[[GENERAL_BYTES]],
+! WIDE-NEXT: %[[GENERAL_FAST:.*]] = fir.convert %[[GENERAL_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[GENERAL_FAST]])
+! WIDE: } else {
+! WIDE: %[[GENERAL_FALLBACK:.*]] = fir.array_coor %[[GENERAL_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[GENERAL_FALLBACK]])
+! WIDE-LABEL: func.func @_QPconstant_scalar(
+! WIDE: fir.do_loop
+! WIDE: %[[CONSTANT_D0:.*]]:3 = fir.box_dims %[[CONSTANT_DESC:[^,]+]],
+! WIDE: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[CONSTANT_D0]]#2, %[[SIZE]] : index
+! WIDE: fir.if %[[PRED]]
+! WIDE: %[[CONSTANT_BOX:.*]] = fir.convert %[[CONSTANT_DESC]]
+! WIDE: %[[CONSTANT_BYTES:.*]] = fir.box_addr %[[CONSTANT_BOX]]
+! WIDE: %[[CONSTANT_ADDRESS:.*]] = fir.coordinate_of %[[CONSTANT_BYTES]],
+! WIDE-NEXT: %[[CONSTANT_FAST:.*]] = fir.convert %[[CONSTANT_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[CONSTANT_FAST]])
+! WIDE: } else {
+! WIDE: %[[CONSTANT_FALLBACK:.*]] = fir.array_coor %[[CONSTANT_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[CONSTANT_FALLBACK]])
+! WIDE-LABEL: func.func @_QPisolated_descriptors(
+! WIDE: fir.do_loop
+! WIDE: %[[GOOD_D0:.*]]:3 = fir.box_dims %[[GOOD_DESC:[^,]+]],
+! WIDE: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[GOOD_D0]]#2, %[[SIZE]] : index
+! WIDE: fir.if %[[PRED]]
+! WIDE: %[[GOOD_BOX:.*]] = fir.convert %[[GOOD_DESC]]
+! WIDE: %[[GOOD_BYTES:.*]] = fir.box_addr %[[GOOD_BOX]]
+! WIDE: %[[GOOD_ADDRESS:.*]] = fir.coordinate_of %[[GOOD_BYTES]],
+! WIDE-NEXT: %[[GOOD_FAST:.*]] = fir.convert %[[GOOD_ADDRESS]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[GOOD_FAST]])
+! WIDE: } else {
+! WIDE: %[[GOOD_FALLBACK:.*]] = fir.array_coor %[[GOOD_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[GOOD_FALLBACK]])
+! WIDE-LABEL: func.func @_QPsequential_owners(
+! WIDE: fir.do_loop
+! WIDE: %[[SEQUENTIAL_D0:.*]]:3 = fir.box_dims %[[SEQUENTIAL_DESC:[^,]+]],
+! WIDE: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[PRED:.*]] = arith.cmpi eq, %[[SEQUENTIAL_D0]]#2, %[[SIZE]] : index
+! WIDE: fir.if %[[PRED]]
+! WIDE: %[[SEQUENTIAL_BOX0:.*]] = fir.convert %[[SEQUENTIAL_DESC]]
+! WIDE: %[[SEQUENTIAL_BYTES0:.*]] = fir.box_addr %[[SEQUENTIAL_BOX0]]
+! WIDE: %[[SEQUENTIAL_ADDRESS0:.*]] = fir.coordinate_of %[[SEQUENTIAL_BYTES0]],
+! WIDE-NEXT: %[[SEQUENTIAL_FAST0:.*]] = fir.convert %[[SEQUENTIAL_ADDRESS0]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[SEQUENTIAL_FAST0]])
+! WIDE: } else {
+! WIDE: %[[SEQUENTIAL_FALLBACK0:.*]] = fir.array_coor %[[SEQUENTIAL_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[SEQUENTIAL_FALLBACK0]])
+! WIDE: fir.do_loop
+! WIDE: %[[SEQUENTIAL_D1:.*]]:3 = fir.box_dims %[[SEQUENTIAL_DESC]],
+! WIDE: %[[SEQUENTIAL_SIZE1:.*]] = arith.constant 8 : index
+! WIDE-NEXT: %[[SEQUENTIAL_PRED1:.*]] = arith.cmpi eq, %[[SEQUENTIAL_D1]]#2, %[[SEQUENTIAL_SIZE1]] : index
+! WIDE: fir.if %[[SEQUENTIAL_PRED1]]
+! WIDE: %[[SEQUENTIAL_BOX1:.*]] = fir.convert %[[SEQUENTIAL_DESC]]
+! WIDE: %[[SEQUENTIAL_BYTES1:.*]] = fir.box_addr %[[SEQUENTIAL_BOX1]]
+! WIDE: %[[SEQUENTIAL_ADDRESS1:.*]] = fir.coordinate_of %[[SEQUENTIAL_BYTES1]],
+! WIDE-NEXT: %[[SEQUENTIAL_FAST1:.*]] = fir.convert %[[SEQUENTIAL_ADDRESS1]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[SEQUENTIAL_FAST1]])
+! WIDE: } else {
+! WIDE: %[[SEQUENTIAL_FALLBACK1:.*]] = fir.array_coor %[[SEQUENTIAL_DESC]]
+! WIDE-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[SEQUENTIAL_FALLBACK1]])
 
 ! REPACK-LABEL: func.func @_QPrepacked_slice(
-! REPACK: %[[PACKED:.*]] = fir.pack_array
+! REPACK: %[[PACKED:.*]] = fir.pack_array %[[ORIGINAL:.*]] heap whole
 ! REPACK: %[[DECLARED:.*]] = fir.declare %[[PACKED]]
-! REPACK: fir.if
+! REPACK: fir.do_loop
+! REPACK: %[[SIZE:.*]] = arith.constant 4 : index
+! REPACK-NEXT: %[[PRED:.*]] = arith.cmpi eq, %{{.*}}#2, %[[SIZE]] : index
+! REPACK: fir.if %[[PRED]]
 ! REPACK: %[[BYTE_BOX:.*]] = fir.convert %[[DECLARED]]
 ! REPACK-SAME: -> !fir.box<!fir.array<?xi8>>
 ! REPACK: %[[BYTES:.*]] = fir.box_addr %[[BYTE_BOX]]
@@ -175,7 +497,28 @@ end subroutine
 ! REPACK: } else {
 ! REPACK: %[[FALLBACK:.*]] = fir.array_coor %[[DECLARED]]
 ! REPACK-NEXT: %{{.*}} = fir.call @_FortranAioInputReal32({{.*}}, %[[FALLBACK]])
+! REPACK: fir.unpack_array %[[PACKED]] to %[[ORIGINAL]] heap
 ! REPACK-LABEL: func.func @_QPoffset_slices(
+
+! WIDE-REPACK-LABEL: func.func @_QPrepacked_slice(
+! WIDE-REPACK-SAME: !fir.box<!fir.array<?x?xf64>>
+! WIDE-REPACK: %[[PACKED:.*]] = fir.pack_array %[[ORIGINAL:.*]] heap whole
+! WIDE-REPACK: %[[DECLARED:.*]] = fir.declare %[[PACKED]]
+! WIDE-REPACK: fir.do_loop
+! WIDE-REPACK: %[[SIZE:.*]] = arith.constant 8 : index
+! WIDE-REPACK-NEXT: %[[PRED:.*]] = arith.cmpi eq, %{{.*}}#2, %[[SIZE]] : index
+! WIDE-REPACK: fir.if %[[PRED]]
+! WIDE-REPACK: %[[BYTE_BOX:.*]] = fir.convert %[[DECLARED]]
+! WIDE-REPACK-SAME: -> !fir.box<!fir.array<?xi8>>
+! WIDE-REPACK: %[[BYTES:.*]] = fir.box_addr %[[BYTE_BOX]]
+! WIDE-REPACK: %[[BYTE_ADDRESS:.*]] = fir.coordinate_of %[[BYTES]], {{.*}} : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+! WIDE-REPACK-NEXT: %[[FAST:.*]] = fir.convert %[[BYTE_ADDRESS]] : (!fir.ref<i8>) -> !fir.ref<f64>
+! WIDE-REPACK-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[FAST]])
+! WIDE-REPACK: } else {
+! WIDE-REPACK: %[[FALLBACK:.*]] = fir.array_coor %[[DECLARED]]
+! WIDE-REPACK-NEXT: %{{.*}} = fir.call @_FortranAioInputReal64({{.*}}, %[[FALLBACK]])
+! WIDE-REPACK: fir.unpack_array %[[PACKED]] to %[[ORIGINAL]] heap
+! WIDE-REPACK-LABEL: func.func @_QPoffset_slices(
 
 ! CHECK-LABEL: func.func @_QPoffset_slices(
 ! CHECK: %[[OFFSET_GRAPH_SLICE:.*]] = fir.slice

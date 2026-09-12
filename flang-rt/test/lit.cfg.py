@@ -101,10 +101,6 @@ config.substitutions.append(
 # Library path of libflang_rt.runtime.a/.so (for lib search path when using non-Flang driver for linking and LD_LIBRARY_PATH)
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
 
-# Some driver tests require LLVM Flang-specific options.
-if getattr(config, "fortran_compiler_id", "") == "LLVMFlang":
-    config.available_features.add("llvm-flang")
-
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
 if config.flang_rt_experimental_offload_support == "CUDA":
     config.available_features.add("offload-cuda")

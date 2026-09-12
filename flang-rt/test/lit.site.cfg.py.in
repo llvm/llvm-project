@@ -13,7 +13,6 @@ config.flang_rt_experimental_offload_support = "@FLANG_RT_EXPERIMENTAL_OFFLOAD_S
 config.flang_rt_fortran_modules = @FLANG_RT_FORTRAN_MODULES@
 config.cc = "@CMAKE_C_COMPILER@"
 config.flang = "@CMAKE_Fortran_COMPILER@"
-config.fortran_compiler_id = "@CMAKE_Fortran_COMPILER_ID@"
 config.osx_sysroot = path(r"@CMAKE_OSX_SYSROOT@")
 config.target_triple = "@LLVM_TARGET_TRIPLE@"
 
