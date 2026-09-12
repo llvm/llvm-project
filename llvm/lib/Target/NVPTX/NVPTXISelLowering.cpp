@@ -156,8 +156,22 @@ bool NVPTXTargetLowering::usePrecSqrtF32(const SDNode *N) const {
   return true;
 }
 
+// PTX .ftz flushes subnormal *inputs and results* to sign-preserving zero, so
+// it faithfully implements exactly one denormal mode: preservesign on both
+// halves. Deciding on the output mode alone is wrong in both directions:
+// flushing an output is permitted but never mandated, while an ieee input mode
+// forbids flushing the inputs. So preservesign|ieee must not take .ftz even
+// though the output permission is there for the taking.
 bool NVPTXTargetLowering::useF32FTZ(const MachineFunction &MF) const {
-  return MF.getDenormalMode(APFloat::IEEEsingle()).Output ==
+  return MF.getDenormalMode(APFloat::IEEEsingle()) ==
+         DenormalMode::getPreserveSign();
+}
+
+/// True when the f32 input denormal mode mandates that subnormal inputs be
+/// treated as zero. Unlike useF32FTZ() this deliberately ignores the output
+/// mode: input flushing is mandated on its own.
+static bool flushF32Inputs(const MachineFunction &MF) {
+  return MF.getDenormalMode(APFloat::IEEEsingle()).Input ==
          DenormalMode::PreserveSign;
 }
 
@@ -1028,6 +1042,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN, MVT::v2bf16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::f32, Custom);
   setOperationAction(ISD::FCOPYSIGN, MVT::f64, Custom);
+
+  // Only f32 needs custom handling; see LowerFCANONICALIZE. Everything else
+  // keeps the generic multiply-by-1.0 expansion.
+  setOperationAction(ISD::FCANONICALIZE, MVT::f32, Custom);
 
   // These map to corresponding instructions for f32/f64. f16 must be
   // promoted to f32. v2f16 is expanded to f16, which is then promoted
@@ -2253,6 +2271,33 @@ SDValue NVPTXTargetLowering::LowerFCOPYSIGN(SDValue Op,
     return SDValue();
 
   return DAG.getNode(NVPTXISD::FCOPYSIGN, DL, VT, In1, In2);
+}
+
+// NVPTX has no canonicalize instruction, so llvm.canonicalize falls to the
+// generic multiply-by-1.0 expansion. That expansion only flushes subnormals if
+// the multiply it produces carries .ftz, and whether it does is decided by
+// useF32FTZ() -- which is a property of the whole denormal mode. When the input
+// mode mandates flushing but the output mode does not permit it, the generic
+// expansion picks a plain mul.rn.f32 and the canonicalize silently becomes a
+// no-op, which is precisely the case LangRef points at llvm.canonicalize to
+// handle. Emit an explicitly-.ftz multiply instead.
+SDValue NVPTXTargetLowering::LowerFCANONICALIZE(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  assert(Op.getValueType() == MVT::f32 && "only f32 is marked Custom");
+  const MachineFunction &MF = DAG.getMachineFunction();
+
+  // Where useF32FTZ() already agrees with the input mode, the generic
+  // expansion selects the right multiply on its own. Note that a positivezero
+  // input mode is left to it as well: .ftz preserves the sign, so it cannot
+  // implement that mode either way.
+  if (!flushF32Inputs(MF) || useF32FTZ(MF))
+    return SDValue();
+
+  SDLoc DL(Op);
+  return DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::f32,
+      DAG.getConstant(Intrinsic::nvvm_mul_rn_ftz_f, DL, MVT::i32),
+      Op.getOperand(0), DAG.getConstantFP(1.0, DL, MVT::f32));
 }
 
 SDValue NVPTXTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
@@ -3494,6 +3539,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerFROUND(Op, DAG);
   case ISD::FCOPYSIGN:
     return LowerFCOPYSIGN(Op, DAG);
+  case ISD::FCANONICALIZE:
+    return LowerFCANONICALIZE(Op, DAG);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
     return LowerINT_TO_FP(Op, DAG);
