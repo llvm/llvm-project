@@ -386,8 +386,12 @@ void MachineFunction::replaceFrameInstRegister(MCRegister FromReg,
 /// This guarantees that the MBB numbers are sequential, dense, and match the
 /// ordering of the blocks within the function.  If a specific MachineBasicBlock
 /// is specified, only that block and those after it are renumbered.
-void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
-  if (empty()) { MBBNumbering.clear(); return; }
+bool MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
+  if (empty()) {
+    bool Changed = !MBBNumbering.empty();
+    MBBNumbering.clear();
+    return Changed;
+  }
   MachineFunction::iterator MBBI, E = end();
   if (MBB == nullptr)
     MBBI = begin();
@@ -399,6 +403,7 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
   if (MBBI != begin())
     BlockNo = std::prev(MBBI)->getNumber() + 1;
 
+  bool Changed = false;
   for (; MBBI != E; ++MBBI, ++BlockNo) {
     if (MBBI->getNumber() != (int)BlockNo) {
       // Remove use of the old number.
@@ -414,13 +419,16 @@ void MachineFunction::RenumberBlocks(MachineBasicBlock *MBB) {
 
       MBBNumbering[BlockNo] = &*MBBI;
       MBBI->setNumber(BlockNo);
+      Changed = true;
     }
   }
 
   // Okay, all the blocks are renumbered.  If we have compactified the block
   // numbering, shrink MBBNumbering now.
   assert(BlockNo <= MBBNumbering.size() && "Mismatch!");
+  Changed |= BlockNo != MBBNumbering.size();
   MBBNumbering.resize(BlockNo);
+  return Changed;
 }
 
 int64_t MachineFunction::estimateFunctionSizeInBytes() {
