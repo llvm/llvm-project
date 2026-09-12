@@ -16,7 +16,7 @@
 ; RUN:     -force-target-max-vector-interleave=2 -small-loop-cost=0 \
 ; RUN:     -force-target-supports-masked-memory-ops \
 ; RUN:     -force-tail-folding-style=data-and-control \
-; RUN:     -tail-folding-policy=must-fold-tail -enable-wide-lane-mask \
+; RUN:     -tail-folding-policy=must-fold-tail \
 ; RUN:     -enable-interleave-cse -interleave-cse-min-ops=1 \
 ; RUN:     -interleave-cse-min-pct=1 -debug-only=loop-vectorize \
 ; RUN:     -disable-output %t/success.ll 2>&1 \
