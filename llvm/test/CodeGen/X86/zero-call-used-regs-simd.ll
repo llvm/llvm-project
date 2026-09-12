@@ -177,8 +177,8 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
 ; AVX2-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX2-NEXT:    vpmaskmovd %ymm0, %ymm1, 0
-; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -188,8 +188,8 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX512VL-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512VL-NEXT:    vptestmd %ymm1, %ymm1, %k1
 ; AVX512VL-NEXT:    vmovdqa32 %ymm0, 0 {%k1}
-; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VL-NEXT:    kxorw %k0, %k0, %k1
 ; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
@@ -199,8 +199,8 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX512BW-NEXT:    vpsllw $15, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpmovw2m %xmm1, %k1
 ; AVX512BW-NEXT:    vmovdqa32 %ymm0, 0 {%k1}
-; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512BW-NEXT:    kxorq %k0, %k0, %k1
 ; AVX512BW-NEXT:    vzeroupper
 ; AVX512BW-NEXT:    retq
@@ -208,4 +208,238 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
   ret void
 }
 
+; Under "all", each vector lane is cleared once (not once per XMM/YMM/ZMM view),
+; and no spurious VZEROUPPER is emitted.
+define void @all_no_live_vec() #1 {
+; SSE-LABEL: all_no_live_vec:
+; SSE:       # %bb.0:
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fldz
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    fstp %st(0)
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    xorl %ecx, %ecx
+; SSE-NEXT:    xorl %edi, %edi
+; SSE-NEXT:    xorl %edx, %edx
+; SSE-NEXT:    xorl %esi, %esi
+; SSE-NEXT:    xorl %r8d, %r8d
+; SSE-NEXT:    xorl %r9d, %r9d
+; SSE-NEXT:    xorl %r10d, %r10d
+; SSE-NEXT:    xorl %r11d, %r11d
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    xorps %xmm1, %xmm1
+; SSE-NEXT:    xorps %xmm2, %xmm2
+; SSE-NEXT:    xorps %xmm3, %xmm3
+; SSE-NEXT:    xorps %xmm4, %xmm4
+; SSE-NEXT:    xorps %xmm5, %xmm5
+; SSE-NEXT:    xorps %xmm6, %xmm6
+; SSE-NEXT:    xorps %xmm7, %xmm7
+; SSE-NEXT:    xorps %xmm8, %xmm8
+; SSE-NEXT:    xorps %xmm9, %xmm9
+; SSE-NEXT:    xorps %xmm10, %xmm10
+; SSE-NEXT:    xorps %xmm11, %xmm11
+; SSE-NEXT:    xorps %xmm12, %xmm12
+; SSE-NEXT:    xorps %xmm13, %xmm13
+; SSE-NEXT:    xorps %xmm14, %xmm14
+; SSE-NEXT:    xorps %xmm15, %xmm15
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: all_no_live_vec:
+; AVX:       # %bb.0:
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fldz
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    fstp %st(0)
+; AVX-NEXT:    xorl %eax, %eax
+; AVX-NEXT:    xorl %ecx, %ecx
+; AVX-NEXT:    xorl %edi, %edi
+; AVX-NEXT:    xorl %edx, %edx
+; AVX-NEXT:    xorl %esi, %esi
+; AVX-NEXT:    xorl %r8d, %r8d
+; AVX-NEXT:    xorl %r9d, %r9d
+; AVX-NEXT:    xorl %r10d, %r10d
+; AVX-NEXT:    xorl %r11d, %r11d
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX-NEXT:    vxorps %xmm6, %xmm6, %xmm6
+; AVX-NEXT:    vxorps %xmm7, %xmm7, %xmm7
+; AVX-NEXT:    vxorps %xmm8, %xmm8, %xmm8
+; AVX-NEXT:    vxorps %xmm9, %xmm9, %xmm9
+; AVX-NEXT:    vxorps %xmm10, %xmm10, %xmm10
+; AVX-NEXT:    vxorps %xmm11, %xmm11, %xmm11
+; AVX-NEXT:    vxorps %xmm12, %xmm12, %xmm12
+; AVX-NEXT:    vxorps %xmm13, %xmm13, %xmm13
+; AVX-NEXT:    vxorps %xmm14, %xmm14, %xmm14
+; AVX-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; AVX-NEXT:    retq
+;
+; AVX512VL-LABEL: all_no_live_vec:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fldz
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    fstp %st(0)
+; AVX512VL-NEXT:    xorl %eax, %eax
+; AVX512VL-NEXT:    xorl %ecx, %ecx
+; AVX512VL-NEXT:    xorl %edi, %edi
+; AVX512VL-NEXT:    xorl %edx, %edx
+; AVX512VL-NEXT:    xorl %esi, %esi
+; AVX512VL-NEXT:    xorl %r8d, %r8d
+; AVX512VL-NEXT:    xorl %r9d, %r9d
+; AVX512VL-NEXT:    xorl %r10d, %r10d
+; AVX512VL-NEXT:    xorl %r11d, %r11d
+; AVX512VL-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512VL-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512VL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512VL-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX512VL-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX512VL-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX512VL-NEXT:    vxorps %xmm6, %xmm6, %xmm6
+; AVX512VL-NEXT:    vxorps %xmm7, %xmm7, %xmm7
+; AVX512VL-NEXT:    vxorps %xmm8, %xmm8, %xmm8
+; AVX512VL-NEXT:    vxorps %xmm9, %xmm9, %xmm9
+; AVX512VL-NEXT:    vxorps %xmm10, %xmm10, %xmm10
+; AVX512VL-NEXT:    vxorps %xmm11, %xmm11, %xmm11
+; AVX512VL-NEXT:    vxorps %xmm12, %xmm12, %xmm12
+; AVX512VL-NEXT:    vxorps %xmm13, %xmm13, %xmm13
+; AVX512VL-NEXT:    vxorps %xmm14, %xmm14, %xmm14
+; AVX512VL-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; AVX512VL-NEXT:    vpxord %xmm16, %xmm16, %xmm16
+; AVX512VL-NEXT:    vpxord %xmm17, %xmm17, %xmm17
+; AVX512VL-NEXT:    vpxord %xmm18, %xmm18, %xmm18
+; AVX512VL-NEXT:    vpxord %xmm19, %xmm19, %xmm19
+; AVX512VL-NEXT:    vpxord %xmm20, %xmm20, %xmm20
+; AVX512VL-NEXT:    vpxord %xmm21, %xmm21, %xmm21
+; AVX512VL-NEXT:    vpxord %xmm22, %xmm22, %xmm22
+; AVX512VL-NEXT:    vpxord %xmm23, %xmm23, %xmm23
+; AVX512VL-NEXT:    vpxord %xmm24, %xmm24, %xmm24
+; AVX512VL-NEXT:    vpxord %xmm25, %xmm25, %xmm25
+; AVX512VL-NEXT:    vpxord %xmm26, %xmm26, %xmm26
+; AVX512VL-NEXT:    vpxord %xmm27, %xmm27, %xmm27
+; AVX512VL-NEXT:    vpxord %xmm28, %xmm28, %xmm28
+; AVX512VL-NEXT:    vpxord %xmm29, %xmm29, %xmm29
+; AVX512VL-NEXT:    vpxord %xmm30, %xmm30, %xmm30
+; AVX512VL-NEXT:    vpxord %xmm31, %xmm31, %xmm31
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k0
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k1
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k2
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k3
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k4
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k5
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k6
+; AVX512VL-NEXT:    kxorw %k0, %k0, %k7
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: all_no_live_vec:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fldz
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    fstp %st(0)
+; AVX512BW-NEXT:    xorl %eax, %eax
+; AVX512BW-NEXT:    xorl %ecx, %ecx
+; AVX512BW-NEXT:    xorl %edi, %edi
+; AVX512BW-NEXT:    xorl %edx, %edx
+; AVX512BW-NEXT:    xorl %esi, %esi
+; AVX512BW-NEXT:    xorl %r8d, %r8d
+; AVX512BW-NEXT:    xorl %r9d, %r9d
+; AVX512BW-NEXT:    xorl %r10d, %r10d
+; AVX512BW-NEXT:    xorl %r11d, %r11d
+; AVX512BW-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX512BW-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512BW-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; AVX512BW-NEXT:    vxorps %xmm3, %xmm3, %xmm3
+; AVX512BW-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; AVX512BW-NEXT:    vxorps %xmm5, %xmm5, %xmm5
+; AVX512BW-NEXT:    vxorps %xmm6, %xmm6, %xmm6
+; AVX512BW-NEXT:    vxorps %xmm7, %xmm7, %xmm7
+; AVX512BW-NEXT:    vxorps %xmm8, %xmm8, %xmm8
+; AVX512BW-NEXT:    vxorps %xmm9, %xmm9, %xmm9
+; AVX512BW-NEXT:    vxorps %xmm10, %xmm10, %xmm10
+; AVX512BW-NEXT:    vxorps %xmm11, %xmm11, %xmm11
+; AVX512BW-NEXT:    vxorps %xmm12, %xmm12, %xmm12
+; AVX512BW-NEXT:    vxorps %xmm13, %xmm13, %xmm13
+; AVX512BW-NEXT:    vxorps %xmm14, %xmm14, %xmm14
+; AVX512BW-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; AVX512BW-NEXT:    vpxord %xmm16, %xmm16, %xmm16
+; AVX512BW-NEXT:    vpxord %xmm17, %xmm17, %xmm17
+; AVX512BW-NEXT:    vpxord %xmm18, %xmm18, %xmm18
+; AVX512BW-NEXT:    vpxord %xmm19, %xmm19, %xmm19
+; AVX512BW-NEXT:    vpxord %xmm20, %xmm20, %xmm20
+; AVX512BW-NEXT:    vpxord %xmm21, %xmm21, %xmm21
+; AVX512BW-NEXT:    vpxord %xmm22, %xmm22, %xmm22
+; AVX512BW-NEXT:    vpxord %xmm23, %xmm23, %xmm23
+; AVX512BW-NEXT:    vpxord %xmm24, %xmm24, %xmm24
+; AVX512BW-NEXT:    vpxord %xmm25, %xmm25, %xmm25
+; AVX512BW-NEXT:    vpxord %xmm26, %xmm26, %xmm26
+; AVX512BW-NEXT:    vpxord %xmm27, %xmm27, %xmm27
+; AVX512BW-NEXT:    vpxord %xmm28, %xmm28, %xmm28
+; AVX512BW-NEXT:    vpxord %xmm29, %xmm29, %xmm29
+; AVX512BW-NEXT:    vpxord %xmm30, %xmm30, %xmm30
+; AVX512BW-NEXT:    vpxord %xmm31, %xmm31, %xmm31
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k0
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k1
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k2
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k3
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k4
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k5
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k6
+; AVX512BW-NEXT:    kxorq %k0, %k0, %k7
+; AVX512BW-NEXT:    retq
+  ret void
+}
+
 attributes #0 = { "zero-call-used-regs"="used" }
+attributes #1 = { "zero-call-used-regs"="all" }
