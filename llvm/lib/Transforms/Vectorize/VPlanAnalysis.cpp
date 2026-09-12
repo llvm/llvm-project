@@ -163,11 +163,10 @@ llvm::calculateRegisterUsageForPlan(VPlan &Plan, ArrayRef<ElementCount> VFs,
     if (VPBB == LoopRegion->getExiting()) {
       // VPWidenIntOrFpInductionRecipes are used implicitly at the end of the
       // exiting block, where their increment will get materialized eventually.
-      for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
-        if (auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
-          EndPoint[WideIV] = Idx2Recipe.size();
-          Ends.insert(WideIV);
-        }
+      for (auto &WideIV : vputils::recipesOnly<VPWidenIntOrFpInductionRecipe>(
+               LoopRegion->getEntryBasicBlock()->phis())) {
+        EndPoint[&WideIV] = Idx2Recipe.size();
+        Ends.insert(&WideIV);
       }
     }
   }

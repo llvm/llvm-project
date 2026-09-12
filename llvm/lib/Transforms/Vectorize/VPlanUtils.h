@@ -166,6 +166,15 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   return nullptr;
 }
 
+/// Returns an iterator range over \p Range which only includes \p RecipeTy
+/// recipes. The accesses are casted to \p RecipeTy.
+template <typename RecipeTy, typename T> auto recipesOnly(T &&Range) {
+  auto Filter = make_filter_range(std::forward<T>(Range),
+                                  [](auto &R) { return isa<RecipeTy>(R); });
+  return map_range(Filter,
+                   [](auto &R) -> RecipeTy & { return cast<RecipeTy>(R); });
+}
+
 /// Find the canonical IV increment of \p Plan's vector loop region. Returns
 /// nullptr if not found.
 VPInstruction *findCanonicalIVIncrement(VPlan &Plan);
