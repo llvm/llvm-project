@@ -435,9 +435,9 @@ define b1 @test_bitinsert_b1_var(b1 %base, i1 %val, i32 %off) {
 define b8 @test_bitinsert_b8_var(b8 %base, i4 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b8_var:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x8, x2, #0x7
+; AARCH64-NEXT:    mov w8, w2
 ; AARCH64-NEXT:    mov w9, #-3856 // =0xfffff0f0
+; AARCH64-NEXT:    and x8, x8, #0x7
 ; AARCH64-NEXT:    lsl w8, w9, w8
 ; AARCH64-NEXT:    and w9, w1, #0xf
 ; AARCH64-NEXT:    lsl w9, w9, w2
@@ -461,8 +461,7 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_b21_var:
 ; AARCH64:       // %bb.0:
 ; AARCH64-NEXT:    mov x9, #3121 // =0xc31
-; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x8, x2, #0x1fffff
+; AARCH64-NEXT:    mov w8, w2
 ; AARCH64-NEXT:    mov w10, #21 // =0x15
 ; AARCH64-NEXT:    movk x9, #12483, lsl #16
 ; AARCH64-NEXT:    mov w11, #1048544 // =0xfffe0
@@ -621,9 +620,9 @@ define b64 @test_bitinsert_val_b8_into_b64_const_top(b64 %base, b8 %val) {
 define b8 @test_bitinsert_val_b1_into_b8(b8 %base, b1 %val, i32 %off) {
 ; AARCH64-LABEL: test_bitinsert_val_b1_into_b8:
 ; AARCH64:       // %bb.0:
-; AARCH64-NEXT:    // kill: def $w2 killed $w2 def $x2
-; AARCH64-NEXT:    and x8, x2, #0x7
+; AARCH64-NEXT:    mov w8, w2
 ; AARCH64-NEXT:    mov w9, #-258 // =0xfffffefe
+; AARCH64-NEXT:    and x8, x8, #0x7
 ; AARCH64-NEXT:    lsl w8, w9, w8
 ; AARCH64-NEXT:    and w9, w1, #0x1
 ; AARCH64-NEXT:    lsl w9, w9, w2

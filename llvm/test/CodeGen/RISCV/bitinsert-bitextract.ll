@@ -2927,9 +2927,8 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; RV32-NEXT:    mv s0, a2
 ; RV32-NEXT:    mv s1, a1
 ; RV32-NEXT:    mv s2, a0
-; RV32-NEXT:    slli a0, a2, 11
-; RV32-NEXT:    srli a0, a0, 11
 ; RV32-NEXT:    li a1, 21
+; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:    call __umodsi3
 ; RV32-NEXT:    lui a1, 512
 ; RV32-NEXT:    li a2, 20
@@ -2971,9 +2970,8 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; RV32ZBB-NEXT:    mv s0, a2
 ; RV32ZBB-NEXT:    mv s1, a1
 ; RV32ZBB-NEXT:    mv s2, a0
-; RV32ZBB-NEXT:    slli a0, a2, 11
-; RV32ZBB-NEXT:    srli a0, a0, 11
 ; RV32ZBB-NEXT:    li a1, 21
+; RV32ZBB-NEXT:    mv a0, a2
 ; RV32ZBB-NEXT:    call __umodsi3
 ; RV32ZBB-NEXT:    lui a1, 512
 ; RV32ZBB-NEXT:    li a2, 20
@@ -3013,8 +3011,8 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; RV64-NEXT:    mv s0, a0
 ; RV64-NEXT:    andi a0, a1, 63
 ; RV64-NEXT:    sll s1, a0, a2
-; RV64-NEXT:    slli a0, a2, 43
-; RV64-NEXT:    srli a0, a0, 43
+; RV64-NEXT:    slli a0, a2, 32
+; RV64-NEXT:    srli a0, a0, 32
 ; RV64-NEXT:    li a1, 21
 ; RV64-NEXT:    call __umoddi3
 ; RV64-NEXT:    lui a1, 512
@@ -3050,8 +3048,8 @@ define b21 @test_bitinsert_b21_var(b21 %base, i6 %val, i32 %off) {
 ; RV64ZBB-NEXT:    mv s0, a2
 ; RV64ZBB-NEXT:    mv s1, a1
 ; RV64ZBB-NEXT:    mv s2, a0
-; RV64ZBB-NEXT:    slli a0, a2, 43
-; RV64ZBB-NEXT:    srli a0, a0, 43
+; RV64ZBB-NEXT:    slli a0, a2, 32
+; RV64ZBB-NEXT:    srli a0, a0, 32
 ; RV64ZBB-NEXT:    li a1, 21
 ; RV64ZBB-NEXT:    call __umoddi3
 ; RV64ZBB-NEXT:    lui a1, 512
