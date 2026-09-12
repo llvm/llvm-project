@@ -7558,10 +7558,8 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
           ILE->setInit(i, ConstantExpr::Create(Context, Init));
           continue;
         }
-        // Only a reference member is initialized by a glvalue, apart from a
-        // string literal initializing an array.
-        bool IsRef = Init->isGLValue() &&
-                     !isa<StringLiteral, ObjCEncodeExpr>(Init->IgnoreParens());
+        // Only a reference member is initialized by a glvalue.
+        bool IsRef = Init->isGLValue();
         if (!Init->isConstantInitializer(Context, IsRef)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();

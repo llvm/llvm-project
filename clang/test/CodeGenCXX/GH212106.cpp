@@ -53,8 +53,7 @@ RS rs = (RS){gv, __builtin_constant_p(n)};
 
 // CHECK-DAG: @rs = {{.*}}global { ptr, i32 } { ptr @gv, i32 0 }
 
-// A string literal initializing an array is an lvalue that is not a
-// reference binding.
+// A string literal initializing an array element is a prvalue.
 const char *ps = (const char[4]){"abc"};
 struct CS { int a; const char (*s)[4]; };
 CS cs = { g(), (const char[2][4]){"abc", "def"} };
