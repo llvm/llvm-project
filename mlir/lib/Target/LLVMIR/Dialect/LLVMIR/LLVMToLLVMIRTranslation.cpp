@@ -205,6 +205,11 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   if (failed(moduleTranslation.convertArgAndResultAttrs(op, inst)))
     return failure();
 
+  if (op.getInvariant()) {
+    llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), {});
+    inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
+  }
+
   if (op.getNumResults() == 1)
     moduleTranslation.mapValue(op->getResults().front()) = inst;
   return success();

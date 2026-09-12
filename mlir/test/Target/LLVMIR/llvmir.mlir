@@ -3486,6 +3486,17 @@ llvm.func @call_intrin_with_opbundle(%arg0 : !llvm.ptr) {
 
 // -----
 
+llvm.func @call_intrin_invariant(%arg0 : !llvm.ptr<8>, %arg1 : i32) -> f32 {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %1 = llvm.call_intrinsic "llvm.amdgcn.ptr.s.buffer.load.f32"(%arg0, %arg1, %0) {invariant} : (!llvm.ptr<8>, i32, i32) -> f32
+  llvm.return %1 : f32
+}
+
+// CHECK-LABEL: define float @call_intrin_invariant(
+//      CHECK:   call float @llvm.amdgcn.ptr.s.buffer.load.f32({{.*}}), !invariant.load
+
+// -----
+
 module {
   llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4 : i32>,
                      #llvm.mlir.module_flag<min, "PIC Level", 2 : i32>,
