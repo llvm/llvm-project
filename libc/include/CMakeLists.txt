@@ -623,6 +623,7 @@ add_header_macro(
     .llvm-libc-types.struct_passwd
     .llvm-libc-types.uid_t
     .llvm-libc-types.gid_t
+    .llvm-libc-types.size_t
     .llvm_libc_common_h
 )
 
