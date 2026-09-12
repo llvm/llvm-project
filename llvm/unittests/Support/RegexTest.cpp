@@ -90,13 +90,13 @@ TEST_F(RegexTest, Escapes) {
   EXPECT_TRUE(r4.match("aA"));
   EXPECT_FALSE(r4.match("aa"));
 
-  Regex r5("\\q");
-  EXPECT_TRUE(r5.match("q"));
-  EXPECT_FALSE(r5.match("\\q"));
+  Regex r5("p\\q");
+  EXPECT_TRUE(r5.match("pq"));
+  EXPECT_FALSE(r5.match("p\\q"));
 
-  Regex r6("\\xjq");
-  EXPECT_TRUE(r6.match("xjq"));
-  EXPECT_FALSE(r6.match("\\xjq"));
+  Regex r6("w\\xjq");
+  EXPECT_TRUE(r6.match("wxjq"));
+  EXPECT_FALSE(r6.match("w\\xjq"));
 }
 
 TEST_F(RegexTest, Backreferences) {
