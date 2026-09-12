@@ -1240,20 +1240,35 @@ computeScatterIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
   return {laneLayout, laneData};
 }
 
-// Computes the per-lane layout and data for a 2D block load/store/prefetch:
-// lanes are spread across the subgroup along the last dim (or rank-2 if
-// transposed), and laneData packs sub-bitwidth elements along the packing dim.
-static std::pair<SmallVector<int64_t>, SmallVector<int64_t>>
-compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
-                                  int64_t subgroupSize, int64_t bitwidth,
-                                  int64_t packingSize, bool transform = false) {
+// Computes the (lane_layout, lane_data, order) a 2D block instruction can
+// deliver over `instShape`, from the element `bitwidth` and the variant's
+// `packingSize`. lane_data packs elements narrower than the packing size along
+// the packing dim: the innermost one, or the one above it when transformed
+// (VNNI). Lanes are spread along the innermost dim, or the one above it when
+// transposed, which makes that dim fastest-changing and so returns a reversed
+// `order`. `order` is empty for the variants that keep the default. Leading
+// dims are unit.
+static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>,
+                  SmallVector<int64_t>>
+compute2DBlockIOLaneLayout(ArrayRef<int64_t> instShape, int64_t subgroupSize,
+                           int64_t bitwidth, int64_t packingSize,
+                           bool transform = false, bool transpose = false) {
   int64_t rank = instShape.size();
-  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-  int kDim = transform ? rank - 2 : rank - 1;
-  unsigned vnniFactor = packingSize / bitwidth;
-  laneData[kDim] = bitwidth < packingSize ? vnniFactor : 1;
-  laneLayout.back() =
-      std::min(subgroupSize, instShape.back() / laneData.back());
+  assert(rank >= 2 && "Expected at least a 2D shape for a 2D block op");
+  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1), order;
+
+  int64_t packDim = transform ? rank - 2 : rank - 1;
+  laneData[packDim] = llvm::divideCeil(packingSize, bitwidth);
+
+  int64_t laneDim = transpose ? rank - 2 : rank - 1;
+  laneLayout[laneDim] =
+      std::min(subgroupSize, instShape[laneDim] / laneData[laneDim]);
+
+  if (transpose) {
+    for (int64_t i = 0; i < rank; ++i)
+      order.push_back(rank - 1 - i);
+    std::swap(order[0], order[1]);
+  }
 
   // assert that the lane layout and data fit in the inst shape
   for (int64_t i = 0; i < rank; ++i) {
@@ -1262,7 +1277,7 @@ compute2DBlockIOLaneLayoutAndData(ArrayRef<int64_t> instShape,
            "lane_layout * lane_data must evenly divide the inst shape");
     (void)laneProduct;
   }
-  return {laneLayout, laneData};
+  return {laneLayout, laneData, order};
 }
 
 /// Computes the (lane_layout, lane_data) for a multi-reduction's source layout.
@@ -1439,18 +1454,18 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     return std::nullopt;
   auto subgroupSize = uArch->getSubgroupSize();
 
-  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
-      aTy.getShape(), subgroupSize,
-      aTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeA());
-  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
+  auto [laneLayoutA, laneDataA, orderA] =
+      compute2DBlockIOLaneLayout(aTy.getShape(), subgroupSize,
+                                 aTy.getElementType().getIntOrFloatBitWidth(),
+                                 uArchInstruction->getPackedFormatBitSizeA());
+  auto [laneLayoutB, laneDataB, orderB] = compute2DBlockIOLaneLayout(
       bTy.getShape(), subgroupSize,
       bTy.getElementType().getIntOrFloatBitWidth(),
       uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-      cdTy.getShape(), subgroupSize,
-      cdTy.getElementType().getIntOrFloatBitWidth(),
-      cdTy.getElementType().getIntOrFloatBitWidth());
+  auto [laneLayoutCD, laneDataCD, orderCD] =
+      compute2DBlockIOLaneLayout(cdTy.getShape(), subgroupSize,
+                                 cdTy.getElementType().getIntOrFloatBitWidth(),
+                                 cdTy.getElementType().getIntOrFloatBitWidth());
 
   auto instDataVecs = getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction);
   if (!instDataVecs)
@@ -1579,18 +1594,18 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     return std::nullopt;
   auto subgroupSize = uArch->getSubgroupSize();
 
-  auto [laneLayoutA, laneDataA] = compute2DBlockIOLaneLayoutAndData(
-      aTy.getShape(), subgroupSize,
-      aTy.getElementType().getIntOrFloatBitWidth(),
-      uArchInstruction->getPackedFormatBitSizeA());
-  auto [laneLayoutB, laneDataB] = compute2DBlockIOLaneLayoutAndData(
+  auto [laneLayoutA, laneDataA, orderA] =
+      compute2DBlockIOLaneLayout(aTy.getShape(), subgroupSize,
+                                 aTy.getElementType().getIntOrFloatBitWidth(),
+                                 uArchInstruction->getPackedFormatBitSizeA());
+  auto [laneLayoutB, laneDataB, orderB] = compute2DBlockIOLaneLayout(
       bTy.getShape(), subgroupSize,
       bTy.getElementType().getIntOrFloatBitWidth(),
       uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-  auto [laneLayoutCD, laneDataCD] = compute2DBlockIOLaneLayoutAndData(
-      cdTy.getShape(), subgroupSize,
-      cdTy.getElementType().getIntOrFloatBitWidth(),
-      cdTy.getElementType().getIntOrFloatBitWidth());
+  auto [laneLayoutCD, laneDataCD, orderCD] =
+      compute2DBlockIOLaneLayout(cdTy.getShape(), subgroupSize,
+                                 cdTy.getElementType().getIntOrFloatBitWidth(),
+                                 cdTy.getElementType().getIntOrFloatBitWidth());
   auto instDataVecs = getDpasInstDataLayouts(aTy, bTy, cdTy, uArchInstruction);
   if (!instDataVecs)
     return std::nullopt;
@@ -1671,9 +1686,9 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   // Compute the default 2D block IO lane layout / lane data.
   unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-      dataShape, subgroupSize, bitwidth,
-      uArchInstruction->getPackedFormatBitSize());
+  auto [laneLayout, laneData, order] =
+      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
+                                 uArchInstruction->getPackedFormatBitSize());
 
   if (layoutKind == xegpu::LayoutKind::Lane)
     return buildLaneLayout(context, laneLayout, laneData);
@@ -1727,9 +1742,9 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
 
   // Compute the default 2D block IO lane layout / lane data.
   unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
-      dataShape, subgroupSize, bitwidth,
-      uArchInstruction->getPackedFormatBitSize());
+  auto [laneLayout, laneData, order] =
+      compute2DBlockIOLaneLayout(dataShape, subgroupSize, bitwidth,
+                                 uArchInstruction->getPackedFormatBitSize());
 
   if (layoutKind == xegpu::LayoutKind::Lane)
     return buildLaneLayout(context, laneLayout, laneData);
@@ -1757,54 +1772,6 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
   }
 
   return nullptr;
-}
-
-/// Returns the (lane_layout, lane_data, order) a 2D block load can deliver for
-/// `elemTy`. All three follow the element width and the block variant, not the
-/// consumer.
-///
-///   * regular:   lane_layout [1, 16], lane_data packs elements narrower than
-///                the load's packed format size along the innermost dim.
-///   * transform: lane_layout [1, 16], lane_data packs along the
-///                second-innermost dim to the general packed format size. This
-///                is VNNI, so 16-bit and narrower only.
-///   * transpose: lane_layout [16, 1] with order [0, 1], lane_data packs along
-///                the innermost dim to the general packed format size.
-///
-/// Leading dims are unit. `order` is left null for the two variants that keep
-/// the default innermost-fastest linearization.
-static std::tuple<SmallVector<int64_t>, SmallVector<int64_t>, DenseI32ArrayAttr>
-get2DBlockLoadLaneLayout(
-    mlir::MLIRContext *context, Type elemTy, int rank, int64_t subgroupSize,
-    bool hasTransform, bool hasTranspose,
-    const xegpu::uArch::Subgroup2DBlockLoadInstruction *uArchInstruction,
-    const xegpu::uArch::uArch *uArch) {
-  SmallVector<int64_t> laneLayout(rank, 1), laneData(rank, 1);
-  unsigned bitwidth = elemTy.getIntOrFloatBitWidth();
-  unsigned packingSize = hasTransform || hasTranspose
-                             ? uArch->getGeneralPackedFormatBitSize()
-                             : uArchInstruction->getPackedFormatBitSize();
-
-  if (hasTranspose) {
-    laneLayout[rank - 2] = subgroupSize;
-    laneData[rank - 1] = llvm::divideCeil(packingSize, bitwidth);
-    SmallVector<int32_t> order(rank);
-    for (int i = 0; i < rank; i++)
-      order[i] = rank - 1 - i;
-    std::swap(order[0], order[1]);
-    return {laneLayout, laneData, DenseI32ArrayAttr::get(context, order)};
-  }
-
-  if (hasTransform) {
-    assert(bitwidth <= packingSize / 2 && "VNNI needs a sub-dword element");
-    laneLayout[rank - 1] = subgroupSize;
-    laneData[rank - 2] = llvm::divideCeil(packingSize, bitwidth);
-    return {laneLayout, laneData, nullptr};
-  }
-
-  laneLayout[rank - 1] = subgroupSize;
-  laneData[rank - 1] = llvm::divideCeil(packingSize, bitwidth);
-  return {laneLayout, laneData, nullptr};
 }
 
 /// Sets up the anchor layout for a load_nd operation. LoadNd takes a
@@ -1866,12 +1833,21 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
       return nullptr;
     auto [bWidths, bHeights, bCounts] = blockWHC.value();
 
-    // A consumer may ask for more elements per lane than the block load can
-    // pack, e.g. an f32 multi_reduction wanting 16. A downstream convert_layout
+    // lane_layout and lane_data are the block load's own, not the consumer's: a
+    // consumer may ask for more elements per lane than the hardware can pack,
+    // e.g. an f32 multi_reduction wanting 16. A downstream convert_layout
     // reconciles the difference.
-    auto [laneLayout, laneData, orderAttr] = get2DBlockLoadLaneLayout(
-        context, elemTy, rank, subgroupSize, hasTransform, hasTranspose,
-        uArchInstruction, uArch);
+    unsigned packingSize = hasTransform || hasTranspose
+                               ? uArch->getGeneralPackedFormatBitSize()
+                               : uArchInstruction->getPackedFormatBitSize();
+    auto [laneLayout, laneData, order] = compute2DBlockIOLaneLayout(
+        dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(), packingSize,
+        hasTransform, hasTranspose);
+    DenseI32ArrayAttr orderAttr =
+        order.empty()
+            ? nullptr
+            : DenseI32ArrayAttr::get(
+                  context, SmallVector<int32_t>(order.begin(), order.end()));
 
     // See whether the consumer's inst_data satisfies the block constraints.
     int64_t height = consumerInstData[rank - 2];
@@ -1898,9 +1874,9 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                 (laneLayout[rank - 1] * laneData[rank - 1]) !=
             0) {
       hasTransform = true;
-      std::tie(laneLayout, laneData, orderAttr) = get2DBlockLoadLaneLayout(
-          context, elemTy, rank, subgroupSize, hasTransform, hasTranspose,
-          uArchInstruction, uArch);
+      std::tie(laneLayout, laneData, order) = compute2DBlockIOLaneLayout(
+          dataShape, subgroupSize, elemTy.getIntOrFloatBitWidth(),
+          uArch->getGeneralPackedFormatBitSize(), hasTransform, hasTranspose);
     }
 
     auto instData = get2DBlockIOInstDataLayout(
@@ -2185,7 +2161,7 @@ xegpu::completeBlockStoreLaneLayoutFromInstData(
     return specifiedLayout;
 
   auto *context = specifiedLayout.getContext();
-  auto [laneLayout, laneData] = compute2DBlockIOLaneLayoutAndData(
+  auto [laneLayout, laneData, order] = compute2DBlockIOLaneLayout(
       specifiedInstData, subgroupSize, elemTy.getIntOrFloatBitWidth(),
       uArchInstruction->getPackedFormatBitSize());
   if (!isValidLaneLayout(specifiedInstData, laneLayout, laneData))
@@ -2266,20 +2242,22 @@ xegpu::completeDpasLaneLayoutFromInstData(xegpu::DistributeLayoutAttr aLayout,
   auto subgroupSize = uArch->getSubgroupSize();
   llvm::SmallVector<int64_t> laneLayoutA, laneDataA, laneLayoutB, laneDataB,
       laneLayoutCD, laneDataCD;
+  // DPAS operands are never transposed, so the order comes back empty.
+  llvm::SmallVector<int64_t> orderA, orderB, orderCD;
   SmallVector<int64_t> instDataA = aLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataB = bLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> instDataCD = cdLayout.getEffectiveInstDataAsInt();
 
   if (isa<xegpu::uArch::Xe2, xegpu::uArch::Xe3>(uArch)) {
-    std::tie(laneLayoutA, laneDataA) = compute2DBlockIOLaneLayoutAndData(
-        aTy.getShape(), subgroupSize,
-        aTy.getElementType().getIntOrFloatBitWidth(),
-        uArchInstruction->getPackedFormatBitSizeA());
-    std::tie(laneLayoutB, laneDataB) = compute2DBlockIOLaneLayoutAndData(
+    std::tie(laneLayoutA, laneDataA, orderA) =
+        compute2DBlockIOLaneLayout(aTy.getShape(), subgroupSize,
+                                   aTy.getElementType().getIntOrFloatBitWidth(),
+                                   uArchInstruction->getPackedFormatBitSizeA());
+    std::tie(laneLayoutB, laneDataB, orderB) = compute2DBlockIOLaneLayout(
         bTy.getShape(), subgroupSize,
         bTy.getElementType().getIntOrFloatBitWidth(),
         uArchInstruction->getPackedFormatBitSizeB(), /*vnni=*/true);
-    std::tie(laneLayoutCD, laneDataCD) = compute2DBlockIOLaneLayoutAndData(
+    std::tie(laneLayoutCD, laneDataCD, orderCD) = compute2DBlockIOLaneLayout(
         cdTy.getShape(), subgroupSize,
         cdTy.getElementType().getIntOrFloatBitWidth(),
         cdTy.getElementType().getIntOrFloatBitWidth());
