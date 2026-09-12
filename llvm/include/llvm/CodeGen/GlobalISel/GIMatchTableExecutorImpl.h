@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1120,6 +1121,20 @@ bool GIMatchTableExecutor::executeMatchTable(
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildConstant(TempReg["
                              << TempRegID << "], Imm=" << Imm << ")\n");
+      break;
+    }
+
+    case GIR_BuildFConstant: {
+      uint64_t TempRegID = readULEB();
+      uint64_t Bits = readU64();
+      initializeBuilder();
+      Register TempReg = State.TempRegisters[TempRegID];
+      LLT Ty = MRI.getType(TempReg).getScalarType();
+      APFloat Val(getFltSemanticForLLT(Ty), APInt(Ty.getSizeInBits(), Bits));
+      Builder.buildFConstant(TempReg, Val);
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_BuildFConstant(TempReg["
+                             << TempRegID << "], Bits=" << Bits << ")\n");
       break;
     }
 

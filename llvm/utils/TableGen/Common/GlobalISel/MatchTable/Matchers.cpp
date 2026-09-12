@@ -2076,6 +2076,15 @@ void BuildConstantAction::emitActionOpcodes(MatchTable &Table) const {
         << MatchTable::IntValue(8, Val) << MatchTable::LineBreak;
 }
 
+//===- BuildFConstantAction -----------------------------------------------===//
+
+void BuildFConstantAction::emitActionOpcodes(MatchTable &Table) const {
+  Table << MatchTable::Opcode("GIR_BuildFConstant")
+        << MatchTable::Comment("TempRegID")
+        << MatchTable::ULEB128Value(TempRegID) << MatchTable::Comment("Val")
+        << MatchTable::IntValue(8, Val) << MatchTable::LineBreak;
+}
+
 //===- EraseInstAction ----------------------------------------------------===//
 
 void EraseInstAction::emitActionOpcodes(MatchTable &Table) const {

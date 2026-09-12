@@ -162,6 +162,38 @@ class GIBuiltinInst;
 //   "canReplaceReg" is checked before applying the rule.
 def GIReplaceReg : GIBuiltinInst;
 
+// Replace a register defined by the match root with a fresh G_CONSTANT.
+// Splatted across all lanes if the type is a fixed vector.
+//
+// Usage:
+//    (apply (GIReplaceRegWithConstant $reg, Imm))
+//
+// Operands:
+// - $reg (out) register defined by the match root
+// - Imm: an integer literal
+//
+// Semantics:
+// - Can only appear in an 'apply' pattern.
+// - $reg must be a register defined by the match root.
+def GIReplaceRegWithConstant : GIBuiltinInst;
+
+// Replace a register defined by the match root with a fresh G_FCONSTANT.
+// Splatted across all lanes if the type is a fixed vector.
+//
+// Usage:
+//    (apply (GIReplaceRegWithFConstant $reg, Imm))
+//
+// Operands:
+// - $reg (out) register defined by the match root
+// - Imm: an integer literal, interpreted as the IEEE bit pattern of $reg's
+//   (scalar) type, not a decimal fp value: e.g. for an f32 $reg, `0` means
+//   the bit pattern 0x00000000 (i.e. +0.0).
+//
+// Semantics:
+// - Can only appear in an 'apply' pattern.
+// - $reg must be a register defined by the match root.
+def GIReplaceRegWithFConstant : GIBuiltinInst;
+
 // Apply action that erases the match root.
 //
 // Usage:
@@ -513,25 +545,25 @@ def undef_to_fp_zero_frags : unary_undef_frag<[G_UITOFP, G_SITOFP]>;
 def undef_to_fp_zero : GICombineRule<
   (defs root:$dst),
   (match (undef_to_fp_zero_frags $dst)),
-  (apply [{ Helper.replaceInstWithFConstant(*${dst}.getParent(), 0.0); }])>;
+  (apply (GIReplaceRegWithFConstant $dst, 0))>;
 
 def undef_to_int_zero_frags : binop_any_undef_frag<[G_AND, G_MUL]>;
 def undef_to_int_zero: GICombineRule<
   (defs root:$dst),
   (match (undef_to_int_zero_frags $dst)),
-  (apply [{ Helper.replaceInstWithConstant(*${dst}.getParent(), 0); }])>;
+  (apply (GIReplaceRegWithConstant $dst, 0))>;
 
 def undef_to_negative_one_frags : binop_any_undef_frag<[G_OR]>;
 def undef_to_negative_one: GICombineRule<
   (defs root:$dst),
   (match (undef_to_negative_one_frags $dst)),
-  (apply [{ Helper.replaceInstWithConstant(*${dst}.getParent(), -1); }])>;
+  (apply (GIReplaceRegWithConstant $dst, -1))>;
 
 def binop_left_undef_to_zero_frags : binop_left_undef_frag<[G_SHL, G_UDIV, G_UREM]>;
 def binop_left_undef_to_zero: GICombineRule<
   (defs root:$dst),
   (match (binop_left_undef_to_zero_frags $dst)),
-  (apply [{ Helper.replaceInstWithConstant(*${dst}.getParent(), 0); }])>;
+  (apply (GIReplaceRegWithConstant $dst, 0))>;
 
 def binop_right_undef_to_undef_frags : binop_right_undef_frag<[G_SHL, G_ASHR, G_LSHR]>;
 def binop_right_undef_to_undef: GICombineRule<
@@ -543,7 +575,7 @@ def unary_undef_to_zero_frags : unary_undef_frag<[G_ABS]>;
 def unary_undef_to_zero: GICombineRule<
   (defs root:$dst),
   (match (unary_undef_to_zero_frags $dst)),
-  (apply [{ Helper.replaceInstWithConstant(*${dst}.getParent(), 0); }])>;
+  (apply (GIReplaceRegWithConstant $dst, 0))>;
 
 def unary_undef_to_undef_frags : unary_undef_frag<
   [G_TRUNC, G_BITCAST, G_ANYEXT, G_PTRTOINT, G_INTTOPTR, G_FPTOSI, G_FPTOUI]>;
@@ -889,7 +921,7 @@ class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
   (match (opcode $dst, 0)),
   // Can't use COPY $dst, 0 here because the 0 operand may be a smaller type
   // than the destination for itofp.
-  (apply [{ Helper.replaceInstWithFConstant(*${dst}.getParent(), 0.0); }])
+  (apply (GIReplaceRegWithFConstant $dst, 0))
 >;
 def itof_const_zero_fold_si : itof_const_zero_fold_rule<G_SITOFP>;
 def itof_const_zero_fold_ui : itof_const_zero_fold_rule<G_UITOFP>;
