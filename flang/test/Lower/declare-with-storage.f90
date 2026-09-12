@@ -27,6 +27,7 @@ end module data3
 subroutine test1
   use data1
   use data2
+  call sub1(m1, m2, m3, m4)
 end subroutine test1
 ! ALL-LABEL:     func.func @_QPtest1() {
 ! HLFIR:           %[[VAL_1:.*]] = fir.address_of(@common1_) : !fir.ref<tuple<i32, !fir.array<31xi8>>>
@@ -96,6 +97,7 @@ end subroutine test2
 ! Test common2 with equivalence.
 subroutine test3
   use data3
+  call sub3(x, y)
 end subroutine test3
 ! ALL-LABEL:     func.func @_QPtest3() {
 ! HLFIR:           %[[VAL_1:.*]] = fir.address_of(@common2_) : !fir.ref<!fir.array<52xi8>>

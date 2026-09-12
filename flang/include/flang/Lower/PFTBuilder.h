@@ -625,6 +625,12 @@ struct FunctionLikeUnit;
 /// only instantiate referenced host module variables rather than all of them.
 VariableList getHostModuleVariableList(const FunctionLikeUnit &funit);
 
+/// Create an ordered list of the equivalence sets and variables that appear in
+/// the scope of \p funit. Use associated variables that are not referenced in
+/// \p funit are left out to avoid instantiating unused module variables. The
+/// result is not cached.
+VariableList getScopeVariableList(const FunctionLikeUnit &funit);
+
 void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
 
 /// Function-like units may contain evaluations (executable statements),
