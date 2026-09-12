@@ -776,13 +776,13 @@ static Instruction *foldSelectICmpAndAnd(Type *SelType, const Value *Cond,
   if (!match(TVal, m_And(m_Value(A), m_One())))
     return nullptr;
 
+  APInt BitWidth(SelType->getScalarSizeInBits(),
+                 SelType->getScalarSizeInBits());
   auto TValPattern = m_CombineOr(
       m_Deferred(X),
       m_LShr(m_Deferred(X),
-             m_Value(Z, m_SpecificInt_ICMP_ForbidPoison(
-                            CmpInst::ICMP_ULT,
-                            APInt(SelType->getScalarSizeInBits(),
-                                  SelType->getScalarSizeInBits())))));
+             m_Value(Z, m_SpecificInt_ICMP_ForbidPoison(CmpInst::ICMP_ULT,
+                                                         BitWidth))));
 
   if (!match(A, TValPattern)) {
     std::swap(X, Y);
