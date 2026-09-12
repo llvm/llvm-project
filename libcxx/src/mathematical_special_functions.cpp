@@ -37,6 +37,9 @@
 #  define BOOST_MATH_DISABLE_THREADS
 #endif
 
+// Report Boost's errors through errno (see the policy below) rather than by throwing. This is
+// unconditional: the entry points are noexcept, so a throw would terminate however libc++ was
+// built, and Boost static_asserts if a category ever reaches its throwing default.
 #define BOOST_MATH_NO_EXCEPTIONS
 #include <boost/math/policies/policy.hpp>
 #include <boost/math/special_functions/laguerre.hpp>
