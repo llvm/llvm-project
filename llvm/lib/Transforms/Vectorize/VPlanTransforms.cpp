@@ -961,7 +961,7 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan, VPValue *Op,
   // changed it means the exit is using the incremented value, so we need to
   // add the step.
   if (Incoming != WideIV) {
-    VPValue *One = Plan.getConstantInt(CanonicalIVType, 1);
+    VPValue *One = Plan.getOne(CanonicalIVType);
     EndValue = B.createAdd(EndValue, One, DL);
   }
 
@@ -1090,7 +1090,7 @@ static VPValue *optimizeLatchExitIVUserViaSCEV(VPlan &Plan, VPValue *Op,
                              : InductionDescriptor::IK_IntInduction;
   Type *TCTy = ResumeTC->getScalarType();
   VPValue *ExitCount = Builder.createOverflowingOp(
-      Instruction::Sub, {ResumeTC, Plan.getConstantInt(TCTy, 1)},
+      Instruction::Sub, {ResumeTC, Plan.getOne(TCTy)},
       {/*HasNUW=*/true, /*HasNSW=*/false}, DebugLoc::getUnknown());
   return Builder.createDerivedIV(Kind, /*FPBinOp=*/nullptr, StartVPV, ExitCount,
                                  StepVPV);
@@ -1187,7 +1187,7 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   // X | AllOnes -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_AllOnes())))
-    return Plan.getAllOnesValue(Def->getScalarType());
+    return Plan.getAllOnes(Def->getScalarType());
 
   // X | 0 -> X
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
@@ -1195,7 +1195,7 @@ static VPValue *simplifyLogicalRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
 
   // X | !X -> AllOnes
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X)))))
-    return Plan.getAllOnesValue(Def->getScalarType());
+    return Plan.getAllOnes(Def->getScalarType());
 
   // X & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
@@ -1820,9 +1820,9 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
         if (!Opc)
           continue;
         VPBuilder Builder(IntrR);
-        VPValue *SafeDivisor = Builder.createSelect(
-            IntrR->getOperand(2), IntrR->getOperand(1),
-            Plan.getConstantInt(IntrR->getScalarType(), 1));
+        VPValue *SafeDivisor =
+            Builder.createSelect(IntrR->getOperand(2), IntrR->getOperand(1),
+                                 Plan.getOne(IntrR->getScalarType()));
         VPValue *Clone = Builder.createNaryOp(
             *Opc, {IntrR->getOperand(0), SafeDivisor},
             VPIRFlags::getDefaultFlags(*Opc), IntrR->getDebugLoc());
@@ -2029,9 +2029,9 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     assert(!WideIV->getTruncInst() &&
            "canonical IV is not expected to have a truncation");
     auto *NewWideIV = new VPWidenIntOrFpInductionRecipe(
-        WideIV->getPHINode(), Plan.getZero(NewIVTy),
-        Plan.getConstantInt(NewIVTy, 1), WideIV->getVFValue(),
-        WideIV->getInductionDescriptor(), *WideIV, WideIV->getDebugLoc());
+        WideIV->getPHINode(), Plan.getZero(NewIVTy), Plan.getOne(NewIVTy),
+        WideIV->getVFValue(), WideIV->getInductionDescriptor(), *WideIV,
+        WideIV->getDebugLoc());
     NewWideIV->insertBefore(WideIV);
 
     auto *NewBTC = new VPWidenCastRecipe(
@@ -4344,7 +4344,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
     Step = UF;
-    Plan.getVF().replaceAllUsesWith(Plan.getConstantInt(CanIVTy, 1));
+    Plan.getVF().replaceAllUsesWith(Plan.getOne(CanIVTy));
   }
   // Materialize vector trip count with the narrowed step.
   materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,

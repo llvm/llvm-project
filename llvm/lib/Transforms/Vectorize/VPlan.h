@@ -5134,8 +5134,11 @@ public:
   /// Return a VPIRValue wrapping the null value of type \p Ty.
   VPIRValue *getZero(Type *Ty) { return getConstantInt(Ty, 0); }
 
+  /// Return a VPIRValue wrapping 1 of type \p Ty.
+  VPIRValue *getOne(Type *Ty) { return getConstantInt(Ty, 1); }
+
   /// Return a VPIRValue wrapping the AllOnes value of type \p Ty.
-  VPIRValue *getAllOnesValue(Type *Ty) {
+  VPIRValue *getAllOnes(Type *Ty) {
     return getConstantInt(APInt::getAllOnes(Ty->getIntegerBitWidth()));
   }
 
