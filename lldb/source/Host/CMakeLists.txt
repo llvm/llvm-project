@@ -135,8 +135,10 @@ else()
       set_property(SOURCE macosx/Host.mm APPEND PROPERTY
                COMPILE_DEFINITIONS "NO_XPC_SERVICES=1")
     endif()
-
-
+  elseif (CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+    add_host_subdirectory(emscripten
+      emscripten/HostInfoEmscripten.cpp
+      )
   elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
     add_host_subdirectory(linux
       linux/AbstractSocket.cpp
