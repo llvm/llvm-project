@@ -835,6 +835,55 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
 } // namespace clang
 
 using namespace clang::targets;
+
+bool TargetInfo::checkAuxTargetCompatibility(DiagnosticsEngine &Diags) const {
+  // Only a device target takes its pointer related types from another target,
+  // and only such a target is given the triple of the target it takes them
+  // from.
+  StringRef HostTriple = getTargetOpts().HostTriple;
+  if (HostTriple.empty())
+    return true;
+
+  // Logical SPIR-V has no pointer size to require.
+  if (getTriple().isSPIRVLogical())
+    return true;
+
+  // These getters return what the target took from the host, so a disagreement
+  // with the width its own data layout fixes is a host/device mismatch.
+  unsigned Required = getTriple().getArchPointerBitWidth();
+  struct Mismatch {
+    unsigned Which;
+    const char *TypeName;
+    unsigned HostBits;
+  };
+  // The order matches the %select in note_incompatible_host_and_device_type.
+  enum { Alignment, Size };
+
+  SmallVector<Mismatch, 5> Mismatches;
+  auto Check = [&](unsigned Which, const char *TypeName, uint64_t HostBits) {
+    if (HostBits != Required)
+      Mismatches.push_back({Which, TypeName, static_cast<unsigned>(HostBits)});
+  };
+
+  Check(Size, "void *", getPointerWidth(LangAS::Default));
+  Check(Alignment, "void *", getPointerAlign(LangAS::Default));
+  Check(Size, "size_t", getTypeWidth(getSizeType()));
+  Check(Size, "ptrdiff_t", getTypeWidth(getPtrDiffType(LangAS::Default)));
+  Check(Size, "intptr_t", getTypeWidth(getIntPtrType()));
+
+  if (Mismatches.empty())
+    return true;
+
+  Diags.Report(diag::err_incompatible_host_and_device_targets)
+      << getTriple().str() << HostTriple;
+  for (const Mismatch &M : Mismatches)
+    Diags.Report(diag::note_incompatible_host_and_device_type)
+        << M.Which << M.TypeName << M.HostBits / getCharWidth()
+        << Required / getCharWidth();
+
+  return false;
+}
+
 /// CreateTargetInfo - Return the target info object for the specified target
 /// options.
 TargetInfo *TargetInfo::CreateTargetInfo(DiagnosticsEngine &Diags,

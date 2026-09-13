@@ -326,6 +326,11 @@ public:
   static TargetInfo *CreateTargetInfo(DiagnosticsEngine &Diags,
                                       TargetOptions &Opts);
 
+  /// Diagnoses the pointer related types that this target took from its
+  /// auxiliary target if they disagree with its own data layout. Returns true
+  /// if no error was reported. Call after setAuxTarget().
+  bool checkAuxTargetCompatibility(DiagnosticsEngine &Diags) const;
+
   virtual ~TargetInfo();
 
   /// Retrieve the target options.

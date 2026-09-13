@@ -32,7 +32,7 @@
 // RUN:   -aux-triple x86_64-pc-windows-msvc < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
 // RUN: %clang_cc1 -x hip -fcuda-is-device -E -dM -triple=amdgpu12.50-amd-amdhsa \
-// RUN:   -aux-triple i386-unknown-linux-gnu < /dev/null \
+// RUN:   -aux-triple x86_64-pc-windows-msvc < /dev/null \
 // RUN:   | FileCheck -match-full-lines -check-prefix=LLP64 %s
 // RUN: %clang_cc1 -fopenmp -fopenmp-is-target-device -E -dM \
 // RUN:   -triple=amdgpu9.0a-amd-amdhsa -aux-triple x86_64-pc-windows-msvc < /dev/null \
