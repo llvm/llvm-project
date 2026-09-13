@@ -7,7 +7,6 @@ define void @test_fpsig_void_void(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_void_void (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test () -> ()
 ; CHECK-NEXT:    call use
@@ -24,7 +23,6 @@ define void @test_fpsig_return_i32(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_return_i32 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test () -> (i32)
 ; CHECK-NEXT:    call use
@@ -41,7 +39,6 @@ define void @test_fpsig_return_i64(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_return_i64 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test () -> (i64)
 ; CHECK-NEXT:    call use
@@ -58,7 +55,6 @@ define void @test_fpsig_return_f32(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_return_f32 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test () -> (f32)
 ; CHECK-NEXT:    call use
@@ -75,7 +71,6 @@ define void @test_fpsig_return_f64(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_return_f64 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test () -> (f64)
 ; CHECK-NEXT:    call use
@@ -93,7 +88,6 @@ define void @test_fpsig_param_i32(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_param_i32 (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test (f64) -> ()
 ; CHECK-NEXT:    call use
@@ -111,7 +105,6 @@ define void @test_fpsig_multiple_params_and_returns(ptr noundef %func) local_unn
 ; CHK64:         .functype test_fpsig_multiple_params_and_returns (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test (i64, f32, i64) -> (i32, i64, f32, f64)
 ; CHECK-NEXT:    call use
@@ -129,7 +122,6 @@ define void @test_fpsig_ptrs(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_fpsig_ptrs (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHK32-NEXT:    ref.test (i32, i32) -> (i32)
 ; CHK64-NEXT:    ref.test (i64, i64) -> (i64)
@@ -147,7 +139,6 @@ define void @test_reference_types(ptr noundef %func) local_unnamed_addr #0 {
 ; CHK64:         .functype test_reference_types (i64) -> ()
 ; CHECK-NEXT:  # %bb.0: # %entry
 ; CHECK-NEXT:    local.get 0
-; CHK64-NEXT:    i32.wrap_i64
 ; CHECK-NEXT:    table.get __indirect_function_table
 ; CHECK-NEXT:    ref.test (funcref, externref) -> (externref)
 ; CHECK-NEXT:    call use
