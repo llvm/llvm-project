@@ -4372,6 +4372,29 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
           return BinaryOperator::CreateAnd(Or, C01);
         }
       }
+
+      // ((trunc (lshr X, S)) & C0) | ((lshr (trunc X), S) & C1)
+      // --> ((trunc (lshr X, S)) & (C0 | C1)) (and similar cases)
+      // A = trunc (lshr X, S) B = lshr (trunc X), S
+      const APInt *ShiftAmt;
+      if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(B, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->isIntN(A->getType()->getScalarSizeInBits()) &&
+          !C1->intersects(APInt::getHighBitsSet(
+              A->getType()->getScalarSizeInBits(), ShiftAmt->getZExtValue()))) {
+        return BinaryOperator::CreateAnd(
+            A, ConstantInt::get(I.getType(), *C0 | *C1));
+      }
+      // A = lshr (trunc X), S
+      // B = trunc (lshr X, S)
+      if (match(B, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
+          match(A, m_LShr(m_Trunc(m_Specific(X)), m_SpecificInt(*ShiftAmt))) &&
+          ShiftAmt->isIntN(A->getType()->getScalarSizeInBits()) &&
+          !C0->intersects(APInt::getHighBitsSet(
+              A->getType()->getScalarSizeInBits(), ShiftAmt->getZExtValue()))) {
+        return BinaryOperator::CreateAnd(
+            B, ConstantInt::get(I.getType(), *C0 | *C1));
+      }
     }
 
     // Don't try to form a select if it's unlikely that we'll get rid of at
