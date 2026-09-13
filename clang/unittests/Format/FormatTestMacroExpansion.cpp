@@ -77,8 +77,7 @@ int f;
 ID(
     namespace foo {
     int a;
-    }
-) // namespace k
+    }) // namespace k
 )",
             format(R"(
 int a;
@@ -300,6 +299,104 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
                Style);
 }
 
+TEST_F(FormatTestMacroExpansion, PPDirectiveInDiscardedMacroArgs) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("A=a");
+  Style.Macros.push_back("ID(x)=x");
+  Style.Macros.push_back("PAIR(x, y)=x y");
+  Style.Macros.push_back("STMT=f();");
+  Style.Macros.push_back("EMPTY=");
+
+  verifyIncompleteFormat("A(\n"
+                         "#endif",
+                         Style);
+  verifyIncompleteFormat("ID(\n"
+                         "#endif",
+                         Style);
+  verifyIncompleteFormat("ID(\n"
+                         "#define X 1",
+                         Style);
+  verifyFormat("A(\n"
+               "#if X\n"
+               "    b;\n"
+               "#endif\n"
+               ")",
+               Style);
+  verifyFormat("ID(a,\n"
+               "#if X\n"
+               "   b\n"
+               "#endif\n"
+               ");",
+               Style);
+  verifyFormat("PAIR(\n"
+               "#define X ,\n"
+               "    a)",
+               Style);
+  verifyFormat("ID(\n"
+               "#if 0\n"
+               ",\n"
+               "#endif\n"
+               "    if (a) {\n"
+               "      f();\n"
+               "    })",
+               Style);
+  verifyFormat("STMT\n"
+               "#define F(x) g(x)\n"
+               "b;",
+               "STMT\n"
+               "#define F(x) g( x )\n"
+               "b;",
+               Style);
+  verifyFormat("EMPTY(\n"
+               "#define F(x) g(x)\n"
+               "1)",
+               "EMPTY(\n"
+               "#define F(x)  g(x)\n"
+               "1)",
+               Style);
+  EXPECT_EQ("A(\n"
+            "ID(\n"
+            "#define F(x) g(x)\n"
+            "))",
+            format("A(ID(\n"
+                   "#define F(x)  g(x)\n"
+                   "))",
+                   Style, SC_ExpectIncomplete));
+
+  Style.IndentPPDirectives = FormatStyle::PPDIS_BeforeHash;
+  verifyFormat("#if OUTER\n"
+               "EMPTY(\n"
+               "  #define X 1\n"
+               ")\n"
+               "#endif",
+               Style);
+  verifyFormat("void f() {\n"
+               "  if (x) {\n"
+               "    ID(a,\n"
+               "#if Y\n"
+               "  #define Z 1\n"
+               "#endif\n"
+               "    );\n"
+               "  }\n"
+               "}",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, PPDirectiveBeforeEmptyExpansion) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ID(x)=x");
+  verifyFormat("#define X 1\n"
+               "ID()",
+               "#define X   1\n"
+               "ID()",
+               Style);
+  verifyFormat("#define X 1\n"
+               "ID()",
+               "#define X   1\n"
+               "ID()",
+               Style, {tooling::Range(0, 13)}); // line 1
+}
+
 TEST_F(FormatTestMacroExpansion, ObjectLikeMacroCalledWithArgsDoesNotHang) {
   FormatStyle Style = getLLVMStyle();
   Style.Macros.push_back("CASE=case");
@@ -313,6 +410,37 @@ TEST_F(FormatTestMacroExpansion, ObjectLikeMacroCalledWithArgsDoesNotHang) {
                 "}",
                 Style);
   verifyNoCrash("CASE(1, \"1\");", Style);
+}
+
+TEST_F(FormatTestMacroExpansion, ExpandsAdjacentMacroCallsInOrder) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ID(x)=x");
+
+  verifyFormat("ID(a;)\n"
+               "ID(\n"
+               "    // c\n"
+               "    b;)",
+               Style);
+}
+
+TEST_F(FormatTestMacroExpansion, TokensAfterMacroCallAreNotPartOfCall) {
+  FormatStyle Style = getLLVMStyle();
+  Style.Macros.push_back("ID(x)=x");
+
+  verifyFormat("ID(a;) // c\n"
+               "ID(b;)",
+               "ID(\n"
+               "    a;) // c\n"
+               "ID(b;)",
+               Style);
+  verifyFormat("int x = ID(1) // c\n"
+               "        + 2;",
+               Style);
+  verifyFormat("ID(a;)\n"
+               "#if X\n"
+               "int b;\n"
+               "#endif",
+               Style);
 }
 
 } // namespace
