@@ -1259,3 +1259,21 @@ module attributes {gpu.container_module} {
     }
   }
 }
+
+// -----
+
+gpu.module @test_module_57 {
+  // CHECK-LABEL: func @gpu_subgroup_size
+  func.func @gpu_subgroup_size() -> (index, index) {
+    // CHECK: = nvvm.read.ptx.sreg.warpsize range <i32, 32, 33> : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %subgroupSize = gpu.subgroup_size : index
+
+    // A bound on the op does not narrow the exact hardware range.
+    // CHECK: = nvvm.read.ptx.sreg.warpsize range <i32, 32, 33> : i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %subgroupSize2 = gpu.subgroup_size upper_bound 32 : index
+
+    func.return %subgroupSize, %subgroupSize2 : index, index
+  }
+}
