@@ -30,9 +30,9 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -5870,45 +5870,50 @@ bool SROA::splitAlloca(AllocaInst &AI, AllocaSlices &AS) {
   bool IsSorted = true;
 
   uint64_t AllocaSize = AI.getAllocationSize(DL)->getFixedValue();
-  const uint64_t MaxBitVectorSize = 1024;
-  if (AllocaSize <= MaxBitVectorSize) {
-    // If a byte boundary is included in any load or store, a slice starting or
-    // ending at the boundary is not splittable.
-    SmallBitVector SplittableOffset(AllocaSize + 1, true);
-    for (Slice &S : AS)
-      for (unsigned O = S.beginOffset() + 1;
-           O < S.endOffset() && O < AllocaSize; O++)
-        SplittableOffset.reset(O);
-
-    for (Slice &S : AS) {
-      if (!S.isSplittable())
-        continue;
-
-      if ((S.beginOffset() > AllocaSize || SplittableOffset[S.beginOffset()]) &&
-          (S.endOffset() > AllocaSize || SplittableOffset[S.endOffset()]))
-        continue;
-
-      if (isa<LoadInst>(S.getUse()->getUser()) ||
-          isa<StoreInst>(S.getUse()->getUser())) {
-        S.makeUnsplittable();
-        IsSorted = false;
+  // We can split at the begin and end offsets of each slice, but only if those
+  // offsets don't lie inside another slice. Because slices are ordered by
+  // increasing begin offset, and then decreasing end offset, we can consider
+  // the slices as being split up into sets with the same begin offset where we
+  // can ignore every slice except the first (the begin offset will already be
+  // handled as the begin offset of the set, and the end offset we know is not a
+  // splittable offset as it's inside the first slice of the set).
+  SparseBitVector<> SplittableOffset;
+  uint64_t CurBegin = 0, CurEnd = 0;
+  for (Slice &S : AS) {
+    // Check if we have a new set of slices
+    if (S.beginOffset() > CurBegin || S.endOffset() > CurEnd) {
+      // If the start isn't inside the previous set it's splittable
+      if (S.beginOffset() >= CurEnd) {
+        SplittableOffset.set(S.beginOffset());
+      }
+      // If the previous end is inside this slice then remove it
+      if (CurEnd > S.beginOffset() && CurEnd < S.endOffset()) {
+        SplittableOffset.reset(CurEnd);
+      }
+      CurBegin = S.beginOffset();
+      // If the end offset isn't inside the previous set it's splittable. We
+      // also don't update the end offset in that case, as the next set may also
+      // be inside the previous set.
+      if (S.endOffset() > CurEnd) {
+        CurEnd = S.endOffset();
+        SplittableOffset.set(CurEnd);
       }
     }
-  } else {
-    // We only allow whole-alloca splittable loads and stores
-    // for a large alloca to avoid creating too large BitVector.
-    for (Slice &S : AS) {
-      if (!S.isSplittable())
-        continue;
+  }
 
-      if (S.beginOffset() == 0 && S.endOffset() >= AllocaSize)
-        continue;
+  for (Slice &S : AS) {
+    if (!S.isSplittable())
+      continue;
 
-      if (isa<LoadInst>(S.getUse()->getUser()) ||
-          isa<StoreInst>(S.getUse()->getUser())) {
-        S.makeUnsplittable();
-        IsSorted = false;
-      }
+    if ((S.beginOffset() > AllocaSize ||
+         SplittableOffset.test(S.beginOffset())) &&
+        (S.endOffset() > AllocaSize || SplittableOffset.test(S.endOffset())))
+      continue;
+
+    if (isa<LoadInst>(S.getUse()->getUser()) ||
+        isa<StoreInst>(S.getUse()->getUser())) {
+      S.makeUnsplittable();
+      IsSorted = false;
     }
   }
 
