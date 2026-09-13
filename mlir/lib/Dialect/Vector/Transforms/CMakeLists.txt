@@ -21,6 +21,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   VectorDropLeadUnitDim.cpp
   VectorEmulateMaskedLoadStore.cpp
   VectorEmulateNarrowType.cpp
+  VectorInferInBounds.cpp
   VectorInsertExtractStridedSliceRewritePatterns.cpp
   VectorLinearize.cpp
   VectorTransferOpTransforms.cpp
@@ -54,6 +55,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRTransforms
+  MLIRValueBoundsOpInterface
   MLIRVectorDialect
   MLIRVectorInterfaces
   MLIRVectorUtils
