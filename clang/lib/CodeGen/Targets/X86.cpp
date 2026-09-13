@@ -2432,8 +2432,7 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
 
   if (const auto *ED = Ty->getAsEnumDecl()) {
     // Classify the underlying integer type.
-    SmallVector<Class> IntEightBytes = {Lo, Hi};
-    classifyClang23(ED->getIntegerType(), OffsetBase, IntEightBytes, isNamedArg,
+    classifyClang23(ED->getIntegerType(), OffsetBase, EightBytes, isNamedArg,
                     IsRegCall);
     return;
   }
