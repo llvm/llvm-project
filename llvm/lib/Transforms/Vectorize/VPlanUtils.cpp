@@ -431,7 +431,7 @@ bool vputils::isElementwise(const VPValue *V) {
   return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
-bool vputils::isSingleScalar(const VPValue *VPV) {
+bool vputils::doesGenerateSingleScalar(const VPValue *VPV) {
   // Live-in, symbolic and canonical-IV region values are single-scalar.
   if (auto *RV = dyn_cast<VPRegionValue>(VPV))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -445,19 +445,10 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
-  }
-  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
-  if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return preservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
+    return Rep->isSingleScalar();
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
-           (preservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
+    return VPI->isSingleScalar() || VPI->isVectorToScalar();
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe>(
@@ -468,6 +459,26 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
+}
+
+bool vputils::isSingleScalar(const VPValue *VPV) {
+  if (doesGenerateSingleScalar(VPV))
+    return true;
+
+  // A uniformity-preserving operation is single-scalar if all its operands are.
+  if (auto *Rep = dyn_cast<VPReplicateRecipe>(VPV)) {
+    const VPRegionBlock *RegionOfR = Rep->getRegion();
+    if (RegionOfR && RegionOfR->isReplicator())
+      return false;
+    return preservesUniformity(Rep->getOpcode()) &&
+           all_of(Rep->operands(), isSingleScalar);
+  }
+  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
+    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
+
+  return isa<VPWidenRecipe, VPInstruction>(VPV) &&
+         preservesUniformity(vputils::getOpcode(VPV)) &&
+         all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
 }
 
 bool vputils::isUniformAcrossVFsAndUFs(const VPValue *V) {
