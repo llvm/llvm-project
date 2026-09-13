@@ -24,8 +24,6 @@ global:
     "llvm::omp::target::plugin::GenericPluginTy::launch_kernel(int, void*, llvm::omp::target::plugin::KernelLaunchArgsTy&, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::load_binary(int, __tgt_device_image*, __tgt_device_binary*)";
     "llvm::omp::target::plugin::GenericPluginTy::number_of_devices()";
-    "llvm::omp::target::plugin::GenericPluginTy::obtain_device_info(int)";
-    "llvm::omp::target::plugin::GenericPluginTy::print_device_info(int)";
     "llvm::omp::target::plugin::GenericPluginTy::release_interop(int, omp_interop_val_t*)";
     "llvm::omp::target::plugin::GenericPluginTy::set_device_identifier(int, int)";
     "llvm::omp::target::plugin::GenericPluginTy::sync_barrier(omp_interop_val_t*)";
