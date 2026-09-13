@@ -27115,6 +27115,41 @@ None.
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
 
+(llvm_pseudoprobe)=
+
+#### '`llvm.pseudoprobe`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.pseudoprobe(i64 %guid, i64 %index, i32 %attributes, i64 %factor)
+    inaccessiblememonly nounwind willreturn
+```
+
+##### Overview:
+
+The `llvm.pseudoprobe` intrinsic is a placeholder for pseudo-probe-based
+sample profiling (CSSPGO). It identifies the basic block it is placed in so
+that sample counts can later be attributed back to unoptimized IR. It
+performs no operation and is removed during code generation.
+
+##### Arguments:
+
+The first argument is a 64-bit GUID identifying the function that contains
+the probe. The second argument is the probe index within that function. The
+third argument is a bitfield of probe attributes. The fourth argument is a
+distribution factor used when a block is split; `-1` represents a full
+(100%) factor.
+
+##### Semantics:
+
+Like {ref}`llvm.sideeffect <llvm_sideeffect>`, this intrinsic is modeled as
+accessing inaccessible memory so that it is not deleted or moved out of the
+block it probes. It does not actually read or write memory. The memory
+effects exist to discourage transforms that merge or otherwise mix
+probe-carrying blocks in a way that would break sample-count attribution.
+They do not represent a real memory dependence.
+
 #### '`llvm.is.constant.*`' Intrinsic
 
 ##### Syntax:
