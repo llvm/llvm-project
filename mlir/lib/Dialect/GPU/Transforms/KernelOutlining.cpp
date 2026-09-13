@@ -24,6 +24,7 @@
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include <limits>
@@ -199,6 +200,25 @@ static gpu::GPUFuncOp outlineKernelFuncImpl(gpu::LaunchOp launchOp,
       builder, loc, kernelFnName, type,
       TypeRange(ValueRange(launchOp.getWorkgroupAttributionBBArgs())),
       TypeRange(ValueRange(launchOp.getPrivateAttributions())));
+
+  for (auto [index, operand] : llvm::enumerate(operands)) {
+    auto blockArg = dyn_cast<BlockArgument>(operand);
+    if (!blockArg)
+      continue;
+
+    auto function = dyn_cast_or_null<FunctionOpInterface>(
+        blockArg.getOwner()->getParentOp());
+    if (!function || function.empty())
+      continue;
+
+    // Only propagate attributes from actual function arguments.
+    if (blockArg.getOwner() != &function.front())
+      continue;
+
+    if (DictionaryAttr attrs = function.getArgAttrDict(blockArg.getArgNumber()))
+      outlinedFunc.setArgAttrs(index, attrs);
+  }
+
   outlinedFunc.setKernel(true);
 
   // If we can infer bounds on the grid and/or block sizes from the arguments
