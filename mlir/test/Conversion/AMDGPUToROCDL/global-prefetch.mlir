@@ -31,3 +31,19 @@ func.func @glb_prefetch3(%src : memref<64x64xf16, #gpu.address_space<global>>, %
   amdgpu.global_prefetch %src[%i, %j] NT_RT SE speculative : memref<64x64xf16, #gpu.address_space<global>>
   func.return
 }
+
+// -----
+
+// As above: a negative stride cannot carry the `nuw` promise.
+
+// CHECK-LABEL: @glb_prefetch_negative_stride
+func.func @glb_prefetch_negative_stride(
+    %src : memref<64x64xf16, strided<[64, -1], offset: 63>, #gpu.address_space<global>>,
+    %i : i64, %j : i64) {
+  // CHECK: llvm.getelementptr inbounds %{{.*}}[%{{.*}}]
+  // CHECK-NOT: inbounds|nuw
+  // CHECK: rocdl.global.prefetch
+  amdgpu.global_prefetch %src[%i, %j] HT WGP
+    : memref<64x64xf16, strided<[64, -1], offset: 63>, #gpu.address_space<global>>
+  func.return
+}
