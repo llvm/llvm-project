@@ -101,6 +101,19 @@ def _filter_flags(
 
     return filtered_flags
 
+def _indirect_deps_linking_context(deps):
+    """Creates a linking context with indirect inputs from deps."""
+    direct_dep_labels = set([dep.label for dep in deps])
+    indirect_dep_linker_inputs = [
+        linker_input
+        for dep in deps
+        for linker_input in dep[CcInfo].linking_context.linker_inputs.to_list()
+        if linker_input.owner not in direct_dep_labels
+    ]
+    return cc_common.create_linking_context(
+        linker_inputs = depset(indirect_dep_linker_inputs),
+    )
+
 def _create_merged_relocatable_object(
         ctx,
         inputs,
@@ -197,6 +210,12 @@ def _merge_relocatable_object_impl(ctx):
             objects = depset([merged_object]) if merged_object else None,
             pic_objects = depset([merged_pic_object]) if merged_pic_object else None,
         ),
+        linking_contexts = [
+            # Propagate transitive linking contexts from deps.
+            # We only propagate indirect transitive dependencies because
+            # the merged object file will contain symbols from direct deps.
+            _indirect_deps_linking_context(ctx.attr.deps),
+        ],
     )
     files = depset([o for o in [merged_object, merged_pic_object] if o])
     return [

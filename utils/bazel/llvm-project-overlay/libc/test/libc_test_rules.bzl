@@ -13,37 +13,43 @@ When performing tests we make sure to always use the internal version.
 """
 
 load("@rules_cc//cc:defs.bzl", "cc_library", "cc_test")
-load("//libc:libc_build_rules.bzl", "libc_common_copts")
+load("//libc:libc_build_rules.bzl", "libc_common_copts", "libc_common_deps")
 load("//libc:libc_configure_options.bzl", "LIBC_CONFIGURE_OPTIONS")
 
-_FULL_BUILD_COPTS = [
-    "-nostdlib++",
-    "-nostdlib",
-    "-DLIBC_FULL_BUILD",
-    "-DLIBC_COPT_USE_C_ASSERT",
-]
-
-_TEST_DEFINES = ["LIBC_TEST_SUBPROCESS_TESTS=1"]
+_TEST_DEFINES = [
+    "LIBC_TEST_SUBPROCESS_TESTS=1",
+] + select({
+    "//libc:full_build": [
+        "TARGET_SUPPORTS_CLOCK",
+    ],
+    "//conditions:default": [],
+})
 
 def libc_test(
         name,
+        srcs = [],
         copts = [],
         deps = [],
         local_defines = [],
+        linkopts = [],
         c_test = False,
         full_build = False,
+        target_compatible_with = [],
+        tags = [],
         **kwargs):
     """Add target for a libc test.
 
     Args:
       name: Test target name
+      srcs: The list of sources for this test.
       copts: The list of options to add to the C++ compilation command.
       deps: The list of libc functions and libraries to be linked in.
       local_defines: The list of target local_defines if any.
+      linkopts: Link options for the cc_test.
       c_test: Whether this test is a C unit test (uses LibcCTest).
-      full_build: Whether to compile with LIBC_FULL_BUILD and disallow
-          use of system headers. This is useful for tests that include both
-          LLVM libc headers and proxy headers to avoid conflicting definitions.
+      full_build: Whether the test should only be run in full-build mode.
+      target_compatible_with: Constraints the target is compatible with.
+      tags: Tags for the cc_test.
       **kwargs: Attributes relevant for a cc_test.
     """
     deps = deps + [
@@ -55,33 +61,68 @@ def libc_test(
         "//libc:func_free",
         "//libc:func_malloc",
         "//libc:func_realloc",
-    ]
+    ] + select({
+        "//libc:full_build": [
+            "//libc/startup/linux:crt1_library",
+
+            # The compiler may emit references to symbols it expects to exist,
+            # like `memset`. These dependencies hermetically provide them.
+            "//libc/test/UnitTest:HermeticTestUtils",
+            "//libc:__stack_chk_fail",  # Needed if -fstack-protector is set.
+        ],
+        "//conditions:default": [],
+    })
+
     if c_test:
         deps = deps + ["//libc/test/UnitTest:LibcCTest"]
     else:
         deps = deps + ["//libc/test/UnitTest:LibcUnitTest"]
 
-    tags = kwargs.pop("tags", [])
+    linkopts = linkopts + select({
+        "//libc:full_build": [
+            "-nolibc",
+            "-nostartfiles",
+            "-nostdlib++",
+            "-static",
+        ],
+        "//conditions:default": [],
+    })
+
     if full_build:
-        copts = copts + _FULL_BUILD_COPTS
+        target_compatible_with = target_compatible_with + select({
+            "//libc:full_build": [],
+            "//conditions:default": ["@platforms//:incompatible"],
+        })
 
         # Temporarily disable full_build tests (currently broken) to unblock CI.
+        # CI needs to be configured to separately run full-build tests
+        # and to avoid these tests in overlay mode.
         tags = tags + ["manual", "nobuildkite", "notap"]
+
     cc_test(
         name = name,
+        srcs = srcs,
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
-        deps = deps,
+        deps = deps + libc_common_deps(),
         copts = copts + libc_common_copts(),
+        target_compatible_with = target_compatible_with,
+        linkopts = linkopts,
         linkstatic = 1,
         tags = tags,
         **kwargs
     )
 
-def libc_test_library(name, copts = [], local_defines = [], **kwargs):
+def libc_test_library(
+        name,
+        deps = [],
+        copts = [],
+        local_defines = [],
+        **kwargs):
     """Add target for library used in libc tests.
 
     Args:
       name: Library target name.
+      deps: See cc_library.deps.
       copts: See cc_library.copts.
       local_defines: See cc_library.local_defines.
       **kwargs: Other attributes relevant to cc_library (e.g. "deps").
@@ -89,6 +130,7 @@ def libc_test_library(name, copts = [], local_defines = [], **kwargs):
     cc_library(
         name = name,
         testonly = True,
+        deps = deps + libc_common_deps(),
         copts = copts + libc_common_copts(),
         local_defines = local_defines + _TEST_DEFINES + LIBC_CONFIGURE_OPTIONS,
         linkstatic = 1,
