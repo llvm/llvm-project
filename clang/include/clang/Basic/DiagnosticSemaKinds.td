@@ -13492,6 +13492,9 @@ def err_sycl_special_type_num_init_method : Error<
   "method defined">;
 def err_sycl_device_invalid_target : Error<
   "%0 is not a supported SYCL device target">;
+def err_sycl_address_space_qualified_object : Error<
+  "the top-level type of a variable declaration cannot be qualified with the "
+  "'%0' address space attribute">;
 
 // SYCL external attribute diagnostics
 def err_sycl_external_invalid_linkage : Error<

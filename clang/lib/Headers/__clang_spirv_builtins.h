@@ -26,14 +26,16 @@
 #define __SPIRV_convergent __attribute__((convergent))
 #define __SPIRV_inline __attribute__((always_inline))
 
-#define __global __attribute__((opencl_global))
-#define __local __attribute__((opencl_local))
-#define __private __attribute__((opencl_private))
-#define __constant __attribute__((opencl_constant))
 #ifdef __SYCL_DEVICE_ONLY__
-#define __generic
+#define __SPIRV_GLOBALAS [[clang::sycl_global]]
+#define __SPIRV_LOCALAS [[clang::sycl_local]]
+#define __SPIRV_PRIVATEAS [[clang::sycl_private]]
+#define __SPIRV_GENERICAS [[clang::sycl_generic]]
 #else
-#define __generic __attribute__((opencl_generic))
+#define __SPIRV_GLOBALAS __attribute__((opencl_global))
+#define __SPIRV_LOCALAS __attribute__((opencl_local))
+#define __SPIRV_PRIVATEAS __attribute__((opencl_private))
+#define __SPIRV_GENERICAS __attribute__((opencl_generic))
 #endif
 
 // Check if SPIR-V builtins are supported.
@@ -79,123 +81,118 @@ extern __SPIRV_BUILTIN_ALIAS(__builtin_spirv_subgroup_local_invocation_id)
 
 // OpGenericCastToPtrExplicit
 
+extern __SPIRV_overloadable __SPIRV_BUILTIN_ALIAS(
+    __builtin_spirv_generic_cast_to_ptr_explicit) void __SPIRV_GLOBALAS
+    *__spirv_GenericCastToPtrExplicit_ToGlobal(void __SPIRV_GENERICAS *,
+                                               int) __SPIRV_NOEXCEPT;
 extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__global void *__spirv_GenericCastToPtrExplicit_ToGlobal(__generic void *,
-                                                         int) __SPIRV_NOEXCEPT;
+    __SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit) const
+    void __SPIRV_GLOBALAS *__spirv_GenericCastToPtrExplicit_ToGlobal(
+        const void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
+extern __SPIRV_overloadable __SPIRV_BUILTIN_ALIAS(
+    __builtin_spirv_generic_cast_to_ptr_explicit) volatile void __SPIRV_GLOBALAS
+    *__spirv_GenericCastToPtrExplicit_ToGlobal(
+        volatile void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
 extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__global const void *
-__spirv_GenericCastToPtrExplicit_ToGlobal(__generic const void *,
-                                          int) __SPIRV_NOEXCEPT;
+    __SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit) const
+    volatile void __SPIRV_GLOBALAS *__spirv_GenericCastToPtrExplicit_ToGlobal(
+        const volatile void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
+extern __SPIRV_overloadable __SPIRV_BUILTIN_ALIAS(
+    __builtin_spirv_generic_cast_to_ptr_explicit) void __SPIRV_LOCALAS
+    *__spirv_GenericCastToPtrExplicit_ToLocal(void __SPIRV_GENERICAS *,
+                                              int) __SPIRV_NOEXCEPT;
 extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__global volatile void *
-__spirv_GenericCastToPtrExplicit_ToGlobal(__generic volatile void *,
-                                          int) __SPIRV_NOEXCEPT;
+    __SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit) const
+    void __SPIRV_LOCALAS *__spirv_GenericCastToPtrExplicit_ToLocal(
+        const void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
+extern __SPIRV_overloadable __SPIRV_BUILTIN_ALIAS(
+    __builtin_spirv_generic_cast_to_ptr_explicit) volatile void __SPIRV_LOCALAS
+    *__spirv_GenericCastToPtrExplicit_ToLocal(volatile void __SPIRV_GENERICAS *,
+                                              int) __SPIRV_NOEXCEPT;
 extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__global const volatile void *
-__spirv_GenericCastToPtrExplicit_ToGlobal(__generic const volatile void *,
-                                          int) __SPIRV_NOEXCEPT;
+    __SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit) const
+    volatile void __SPIRV_LOCALAS *__spirv_GenericCastToPtrExplicit_ToLocal(
+        const volatile void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
+extern __SPIRV_overloadable __SPIRV_BUILTIN_ALIAS(
+    __builtin_spirv_generic_cast_to_ptr_explicit) void __SPIRV_PRIVATEAS
+    *__spirv_GenericCastToPtrExplicit_ToPrivate(void __SPIRV_GENERICAS *,
+                                                int) __SPIRV_NOEXCEPT;
 extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__local void *__spirv_GenericCastToPtrExplicit_ToLocal(__generic void *,
-                                                       int) __SPIRV_NOEXCEPT;
+    __SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit) const
+    void __SPIRV_PRIVATEAS *__spirv_GenericCastToPtrExplicit_ToPrivate(
+        const void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
+extern __SPIRV_overloadable __SPIRV_BUILTIN_ALIAS(
+    __builtin_spirv_generic_cast_to_ptr_explicit) volatile void __SPIRV_PRIVATEAS
+    *__spirv_GenericCastToPtrExplicit_ToPrivate(
+        volatile void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
 extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__local const void *
-__spirv_GenericCastToPtrExplicit_ToLocal(__generic const void *,
-                                         int) __SPIRV_NOEXCEPT;
-extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__local volatile void *
-__spirv_GenericCastToPtrExplicit_ToLocal(__generic volatile void *,
-                                         int) __SPIRV_NOEXCEPT;
-extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__local const volatile void *
-__spirv_GenericCastToPtrExplicit_ToLocal(__generic const volatile void *,
-                                         int) __SPIRV_NOEXCEPT;
-extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__private void *
-__spirv_GenericCastToPtrExplicit_ToPrivate(__generic void *,
-                                           int) __SPIRV_NOEXCEPT;
-extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__private const void *
-__spirv_GenericCastToPtrExplicit_ToPrivate(__generic const void *,
-                                           int) __SPIRV_NOEXCEPT;
-extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__private volatile void *
-__spirv_GenericCastToPtrExplicit_ToPrivate(__generic volatile void *,
-                                           int) __SPIRV_NOEXCEPT;
-extern __SPIRV_overloadable
-__SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit)
-__private const volatile void *
-__spirv_GenericCastToPtrExplicit_ToPrivate(__generic const volatile void *,
-                                           int) __SPIRV_NOEXCEPT;
+    __SPIRV_BUILTIN_ALIAS(__builtin_spirv_generic_cast_to_ptr_explicit) const
+    volatile void __SPIRV_PRIVATEAS *__spirv_GenericCastToPtrExplicit_ToPrivate(
+        const volatile void __SPIRV_GENERICAS *, int) __SPIRV_NOEXCEPT;
 
 // OpGenericCastToPtr
 
-static __SPIRV_overloadable __SPIRV_inline __global void *
-__spirv_GenericCastToPtr_ToGlobal(__generic void *p, int) __SPIRV_NOEXCEPT {
-  return (__global void *)p;
-}
-static __SPIRV_overloadable __SPIRV_inline __global const void *
-__spirv_GenericCastToPtr_ToGlobal(__generic const void *p,
+static __SPIRV_overloadable __SPIRV_inline void __SPIRV_GLOBALAS *
+__spirv_GenericCastToPtr_ToGlobal(void __SPIRV_GENERICAS *p,
                                   int) __SPIRV_NOEXCEPT {
-  return (__global const void *)p;
+  return (void __SPIRV_GLOBALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __global volatile void *
-__spirv_GenericCastToPtr_ToGlobal(__generic volatile void *p,
+static __SPIRV_overloadable __SPIRV_inline const void __SPIRV_GLOBALAS *
+__spirv_GenericCastToPtr_ToGlobal(const void __SPIRV_GENERICAS *p,
                                   int) __SPIRV_NOEXCEPT {
-  return (__global volatile void *)p;
+  return (const void __SPIRV_GLOBALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __global const volatile void *
-__spirv_GenericCastToPtr_ToGlobal(__generic const volatile void *p,
+static __SPIRV_overloadable __SPIRV_inline volatile void __SPIRV_GLOBALAS *
+__spirv_GenericCastToPtr_ToGlobal(volatile void __SPIRV_GENERICAS *p,
                                   int) __SPIRV_NOEXCEPT {
-  return (__global const volatile void *)p;
+  return (volatile void __SPIRV_GLOBALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __local void *
-__spirv_GenericCastToPtr_ToLocal(__generic void *p, int) __SPIRV_NOEXCEPT {
-  return (__local void *)p;
+static __SPIRV_overloadable
+    __SPIRV_inline const volatile void __SPIRV_GLOBALAS *
+    __spirv_GenericCastToPtr_ToGlobal(const volatile void __SPIRV_GENERICAS *p,
+                                      int) __SPIRV_NOEXCEPT {
+  return (const volatile void __SPIRV_GLOBALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __local const void *
-__spirv_GenericCastToPtr_ToLocal(__generic const void *p,
+static __SPIRV_overloadable __SPIRV_inline void __SPIRV_LOCALAS *
+__spirv_GenericCastToPtr_ToLocal(void __SPIRV_GENERICAS *p,
                                  int) __SPIRV_NOEXCEPT {
-  return (__local const void *)p;
+  return (void __SPIRV_LOCALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __local volatile void *
-__spirv_GenericCastToPtr_ToLocal(__generic volatile void *p,
+static __SPIRV_overloadable __SPIRV_inline const void __SPIRV_LOCALAS *
+__spirv_GenericCastToPtr_ToLocal(const void __SPIRV_GENERICAS *p,
                                  int) __SPIRV_NOEXCEPT {
-  return (__local volatile void *)p;
+  return (const void __SPIRV_LOCALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __local const volatile void *
-__spirv_GenericCastToPtr_ToLocal(__generic const volatile void *p,
+static __SPIRV_overloadable __SPIRV_inline volatile void __SPIRV_LOCALAS *
+__spirv_GenericCastToPtr_ToLocal(volatile void __SPIRV_GENERICAS *p,
                                  int) __SPIRV_NOEXCEPT {
-  return (__local const volatile void *)p;
+  return (volatile void __SPIRV_LOCALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __private void *
-__spirv_GenericCastToPtr_ToPrivate(__generic void *p, int) __SPIRV_NOEXCEPT {
-  return (__private void *)p;
+static __SPIRV_overloadable __SPIRV_inline const volatile void __SPIRV_LOCALAS *
+__spirv_GenericCastToPtr_ToLocal(const volatile void __SPIRV_GENERICAS *p,
+                                 int) __SPIRV_NOEXCEPT {
+  return (const volatile void __SPIRV_LOCALAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __private const void *
-__spirv_GenericCastToPtr_ToPrivate(__generic const void *p,
+static __SPIRV_overloadable __SPIRV_inline void __SPIRV_PRIVATEAS *
+__spirv_GenericCastToPtr_ToPrivate(void __SPIRV_GENERICAS *p,
                                    int) __SPIRV_NOEXCEPT {
-  return (__private const void *)p;
+  return (void __SPIRV_PRIVATEAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __private volatile void *
-__spirv_GenericCastToPtr_ToPrivate(__generic volatile void *p,
+static __SPIRV_overloadable __SPIRV_inline const void __SPIRV_PRIVATEAS *
+__spirv_GenericCastToPtr_ToPrivate(const void __SPIRV_GENERICAS *p,
                                    int) __SPIRV_NOEXCEPT {
-  return (__private volatile void *)p;
+  return (const void __SPIRV_PRIVATEAS *)p;
 }
-static __SPIRV_overloadable __SPIRV_inline __private const volatile void *
-__spirv_GenericCastToPtr_ToPrivate(__generic const volatile void *p,
+static __SPIRV_overloadable __SPIRV_inline volatile void __SPIRV_PRIVATEAS *
+__spirv_GenericCastToPtr_ToPrivate(volatile void __SPIRV_GENERICAS *p,
                                    int) __SPIRV_NOEXCEPT {
-  return (__private const volatile void *)p;
+  return (volatile void __SPIRV_PRIVATEAS *)p;
+}
+static __SPIRV_overloadable
+    __SPIRV_inline const volatile void __SPIRV_PRIVATEAS *
+    __spirv_GenericCastToPtr_ToPrivate(const volatile void __SPIRV_GENERICAS *p,
+                                       int) __SPIRV_NOEXCEPT {
+  return (const volatile void __SPIRV_PRIVATEAS *)p;
 }
 
 #pragma pop_macro("__size_t")
@@ -206,10 +203,10 @@ __spirv_GenericCastToPtr_ToPrivate(__generic const volatile void *p,
 #undef __SPIRV_convergent
 #undef __SPIRV_inline
 
-#undef __global
-#undef __local
-#undef __constant
-#undef __generic
+#undef __SPIRV_GLOBALAS
+#undef __SPIRV_LOCALAS
+#undef __SPIRV_PRIVATEAS
+#undef __SPIRV_GENERICAS
 
 #undef __SPIRV_BUILTIN_ALIAS
 #undef __SPIRV_NOEXCEPT

@@ -46,6 +46,8 @@ static constexpr LangASMap FakeAddrSpaceMap = {
     {LangAS::sycl_global_host, 6},
     {LangAS::sycl_local, 3},
     {LangAS::sycl_private, 0},
+    {LangAS::sycl_generic, 4},
+    {LangAS::sycl_constant, 2},
     {LangAS::ptr32_sptr, 10},
     {LangAS::ptr32_uptr, 11},
     {LangAS::ptr64, 12},
