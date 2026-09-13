@@ -120,46 +120,13 @@ groups in order to share resources when possible.
 :name: convergence-natural-loop
 :::
 
-:::{list-table}
+:::{table}
 :name: convergence-thread-example
-:align: left
 
-* -
-  -
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 6
-  - 7
-  - 8
-  - 9
-  -
-* - Thread 1
-  - Entry1
-  - H1
-  - B1
-  - L1
-  - H3
-  -
-  - L3
-  -
-  -
-  -
-  - Exit
-* - Thread 2
-  - Entry1
-  - H2
-  -
-  - L2
-  - H4
-  - B2
-  - L4
-  - H5
-  - B3
-  - L5
-  - Exit
+|          |        | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   |      |
+| :------- | :----- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+| Thread 1 | Entry1 | H1  | B1  | L1  | H3  |     | L3  |     |     |     | Exit |
+| Thread 2 | Entry1 | H2  |     | L2  | H4  | B2  | L4  | H5  | B3  | L5  | Exit |
 :::
 
 In the above table, each row is a different thread, listing the
@@ -186,50 +153,14 @@ that is defined as the transitive closure of:
    is executed strictly before `Q` in the same thread, then `P1`
    is *convergence-before* `Q`.
 
-:::{list-table}
+:::{table}
 :name: convergence-order-example
-:align: left
 
-* -
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 6
-  - 7
-  - 8
-  - 9
-* - Thread 1
-  - Entry
-  - ...
-  -
-  -
-  -
-  - S2
-  - T
-  - ...
-  - Exit
-* - Thread 2
-  - Entry
-  - ...
-  -
-  - Q2
-  - R
-  - S1
-  -
-  - ...
-  - Exit
-* - Thread 3
-  - Entry
-  - ...
-  - P
-  - Q1
-  -
-  -
-  -
-  - ...
-  -
+|          | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9    |
+| :------- | :---- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+| Thread 1 | Entry | ... |     |     |     | S2  | T   | ... | Exit |
+| Thread 2 | Entry | ... |     | Q2  | R   | S1  |     | ... | Exit |
+| Thread 3 | Entry | ... | P   | Q1  |     |     |     | ... |      |
 :::
 
 The above table shows partial sequences of dynamic instances from
@@ -282,22 +213,20 @@ a cycle if they both previously executed the cycle header the same number of
 times after they entered that cycle. In general, this needs to account for the
 iterations of parent cycles as well.
 
-```{eval-rst}
-   **Maximal converged-with:**
-
-   Dynamic instances ``X1`` and ``X2`` produced by different threads
-   for the same static instance ``X`` are converged in the maximal
-   converged-with relation if and only if:
-
-   - ``X`` is not contained in any cycle, or,
-   - For every cycle ``C`` with header ``H`` that contains ``X``:
-
-     - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in
-       the respective thread is convergence-before ``X2``, and,
-     - every dynamic instance ``H2`` of ``H`` that precedes ``X2`` in
-       the respective thread is convergence-before ``X1``,
-     - without assuming that ``X1`` is converged with ``X2``.
-```
+> **Maximal converged-with:**
+>
+> Dynamic instances `X1` and `X2` produced by different threads
+> for the same static instance `X` are converged in the maximal
+> converged-with relation if and only if:
+>
+> - `X` is not contained in any cycle, or,
+> - For every cycle `C` with header `H` that contains `X`:
+>
+>   - every dynamic instance `H1` of `H` that precedes `X1` in
+>     the respective thread is convergence-before `X2`, and,
+>   - every dynamic instance `H2` of `H` that precedes `X2` in
+>     the respective thread is convergence-before `X1`,
+>   - without assuming that `X1` is converged with `X2`.
 
 :::{note}
 Cycle headers may not be unique to a given CFG if it is irreducible. Each
@@ -311,46 +240,10 @@ relation for the given cycle hierarchy".
 
 Maximal convergence can now be demonstrated in the earlier example as follows:
 
-:::{list-table}
-:align: left
-
-* -
-  -
-  - 1
-  - 2
-  - 3
-  - 4
-  - 5
-  - 6
-  - 7
-  - 8
-  - 9
-  -
-* - Thread 1
-  - Entry1
-  - H1
-  - B1
-  - L1
-  - H3
-  -
-  - L3
-  -
-  -
-  -
-  - Exit
-* - Thread 2
-  - Entry2
-  - H2
-  -
-  - L2
-  - H4
-  - B2
-  - L4
-  - H5
-  - B3
-  - L5
-  - Exit
-:::
+|          |        | 1   | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   |      |
+| :------- | :----- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+| Thread 1 | Entry1 | H1  | B1  | L1  | H3  |     | L3  |     |     |     | Exit |
+| Thread 2 | Entry2 | H2  |     | L2  | H4  | B2  | L4  | H5  | B3  | L5  | Exit |
 
 - `Entry1` and `Entry2` are converged.
 - `H1` and `H2` are converged.
@@ -441,50 +334,11 @@ branches. The table below shows the convergence between three threads
 taking different paths through the CFG. Dynamic instances listed in
 the same column are converged.
 
-> :::{list-table}
-> :align: left
->
-> * -
->   - 1
->   - 2
->   - 3
->   - 4
->   - 5
->   - 6
->   - 7
->   - 8
->   - 10
-> * - Thread1
->   - Entry
->   - P1
->   - Q1
->   - S1
->   - P3
->   - Q3
->   - R1
->   - S2
->   - Exit
-> * - Thread2
->   - Entry
->   - P2
->   - Q2
->   -
->   -
->   -
->   - R2
->   - S3
->   - Exit
-> * - Thread3
->   - Entry
->   -
->   -
->   -
->   -
->   -
->   - R3
->   - S4
->   - Exit
-> :::
+|         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 10   |
+| :------ | :---- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+| Thread1 | Entry | P1  | Q1  | S1  | P3  | Q3  | R1  | S2  | Exit |
+| Thread2 | Entry | P2  | Q2  |     |     |     | R2  | S3  | Exit |
+| Thread3 | Entry |     |     |     |     |     | R3  | S4  | Exit |
 
 - `P2` and `P3` are not converged due to `S1`
 - `Q2` and `Q3` are not converged due to `S1`
@@ -583,13 +437,11 @@ Each node `X` in a given CFG is reported to be m-converged if and
 only if every cycle that contains `X` satisfies the following necessary
 conditions:
 
-```{eval-rst}
-  1. Every divergent branch inside the cycle satisfies the
-     :ref:`diverged entry criterion<convergence-diverged-entry>`, and,
-  2. There are no :ref:`diverged paths reaching the
-     cycle<convergence-diverged-outside>` from a divergent branch
-     outside it.
-```
+1. Every divergent branch inside the cycle satisfies the
+   {ref}`diverged entry criterion <convergence-diverged-entry>`, and,
+2. There are no {ref}`diverged paths reaching the
+   cycle <convergence-diverged-outside>` from a divergent branch
+   outside it.
 
 :::{note}
 A reducible cycle {ref}`trivially satisfies
@@ -679,46 +531,10 @@ S`.
   reconverge in the same iteration of the outer cycle `C`, but they
   may have executed the inner cycle `C'` differently.
 
-  :::{list-table}
-  :align: left
-
-  * -
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-    - 11
-  * - Thread1
-    - Entry
-    - P1
-    - Q1
-    -
-    -
-    -
-    - R1
-    - S1
-    - P3
-    - ...
-    - Exit
-  * - Thread2
-    - Entry
-    - P2
-    - Q2
-    - S2
-    - P4
-    - Q4
-    - R2
-    - S4
-    -
-    -
-    - Exit
-  :::
+  |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11   |
+  | :------ | :---- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+  | Thread1 | Entry | P1  | Q1  |     |     |     | R1  | S1  | P3  | ... | Exit |
+  | Thread2 | Entry | P2  | Q2  | S2  | P4  | Q4  | R2  | S4  |     |     | Exit |
 
   In the table above, `S2` is not converged with `S1` due to `R1`.
 
@@ -729,53 +545,20 @@ S`.
   `Q` to `S`. Informally, threads that diverge at `Q`
   reconverge at `S` in the same iteration of `C`.
 
-  :::{list-table}
-  :align: left
+  |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10   |
+  | :------ | :---- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+  | Thread1 | Entry | P1  | Q1  | R1  | S1  | P3  | Q3  | R3  | S3  | Exit |
+  | Thread2 | Entry | P2  | Q2  |     | S2  | P4  | Q4  | R2  | S4  | Exit |
 
-  * -
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-  * - Thread1
-    - Entry
-    - P1
-    - Q1
-    - R1
-    - S1
-    - P3
-    - Q3
-    - R3
-    - S3
-    - Exit
-  * - Thread2
-    - Entry
-    - P2
-    - Q2
-    -
-    - S2
-    - P4
-    - Q4
-    - R2
-    - S4
-    - Exit
-  :::
-
-> :::{note}
-> In general, the cycle `C` in the above statements is not
-> expected to be the same cycle for different headers. Cycles and
-> their headers are tightly coupled; for different headers in the
-> same outermost cycle, the child cycles detected may be different.
-> The property relevant to the above examples is that for every
-> closed path, there is a cycle `C` that contains the path and
-> whose header is on that path.
-> :::
+:::{note}
+In general, the cycle `C` in the above statements is not
+expected to be the same cycle for different headers. Cycles and
+their headers are tightly coupled; for different headers in the
+same outermost cycle, the child cycles detected may be different.
+The property relevant to the above examples is that for every
+closed path, there is a cycle `C` that contains the path and
+whose header is on that path.
+:::
 
 The diverged entry criterion must be checked for every closed path
 passing through a divergent branch `B` and its join `J`. Since
@@ -790,16 +573,14 @@ an outer cycle that contains `C`.
 Thus, the diverged entry criterion can be conservatively simplified
 as follows:
 
-```{eval-rst}
-  For a divergent branch ``B`` and its join node ``J``, the nodes in a
-  cycle ``C`` that contains both ``B`` and ``J`` are m-converged only
-  if:
-
-  - ``B`` strictly dominates ``J``, or,
-  - The header ``H`` of ``C`` strictly dominates ``J``, or,
-  - Recursively, there is cycle ``C'`` inside ``C`` that satisfies the
-    same condition.
-```
+> For a divergent branch `B` and its join node `J`, the nodes in a
+> cycle `C` that contains both `B` and `J` are m-converged only
+> if:
+>
+> - `B` strictly dominates `J`, or,
+> - The header `H` of `C` strictly dominates `J`, or,
+> - Recursively, there is cycle `C'` inside `C` that satisfies the
+>   same condition.
 
 When `J` is the same as `H` or `B`, the trivial dominance is
 insufficient to make any statement about entries to diverged paths.
@@ -820,98 +601,17 @@ or `R` is the header.
 
 - Convergence when `P` is the header.
 
-  :::{list-table}
-  :align: left
-
-  * -
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-    - 11
-    - 12
-    - 13
-  * - Thread1
-    - Entry
-    -
-    -
-    -
-    - P1
-    - Q1
-    - R1
-    - S1
-    - P3
-    - Q3
-    -
-    - S3
-    - Exit
-  * - Thread2
-    - Entry
-    -
-    - R2
-    - S2
-    - P2
-    - Q2
-    -
-    - S2
-    - P4
-    - Q4
-    - R3
-    - S4
-    - Exit
-  :::
+  |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12  | 13   |
+  | :------ | :---- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+  | Thread1 | Entry |     |     |     | P1  | Q1  | R1  | S1  | P3  | Q3  |     | S3  | Exit |
+  | Thread2 | Entry |     | R2  | S2  | P2  | Q2  |     | S2  | P4  | Q4  | R3  | S4  | Exit |
 
 - Convergence when `R` is the header.
 
-  :::{list-table}
-  :align: left
-
-  * -
-    - 1
-    - 2
-    - 3
-    - 4
-    - 5
-    - 6
-    - 7
-    - 8
-    - 9
-    - 10
-    - 11
-    - 12
-  * - Thread1
-    - Entry
-    -
-    - P1
-    - Q1
-    - R1
-    - S1
-    - P3
-    - Q3
-    - S3
-    -
-    -
-    - Exit
-  * - Thread2
-    - Entry
-    -
-    -
-    -
-    - R2
-    - S2
-    - P2
-    - Q2
-    - S2
-    - P4
-    - ...
-    - Exit
-  :::
+  |         | 1     | 2   | 3   | 4   | 5   | 6   | 7   | 8   | 9   | 10  | 11  | 12   |
+  | :------ | :---- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :--- |
+  | Thread1 | Entry |     | P1  | Q1  | R1  | S1  | P3  | Q3  | S3  |     |     | Exit |
+  | Thread2 | Entry |     |     |     | R2  | S2  | P2  | Q2  | S2  | P4  | ... | Exit |
 
 Thus, when diverged paths reach different entries of an irreducible
 cycle from outside the cycle, the static analysis conservatively

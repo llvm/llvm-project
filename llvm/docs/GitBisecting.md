@@ -16,11 +16,11 @@ be merged in a similar way soon.
 
 See <https://git-scm.com/docs/git-bisect> for a good overview. In summary:
 
-> ```bash
-> git bisect start
-> git bisect bad main
-> git bisect good f00ba
-> ```
+```bash
+git bisect start
+git bisect bad main
+git bisect good f00ba
+```
 
 git will check out a revision in between. Try to reproduce your problem at
 that revision, and run `git bisect good` or `git bisect bad`.
@@ -48,13 +48,13 @@ configured CMake to use Ninja. You have a file `repro.c` in the current
 directory that makes clang crash at trunk, but it worked fine at revision
 `f00ba`.
 
-> ```bash
-> # Build clang. If the build fails, `exit 125` causes this
-> # revision to be skipped
-> ninja -C ../llvm-build-project clang || exit 125
->
-> ../llvm-build-project/bin/clang repro.c
-> ```
+```bash
+# Build clang. If the build fails, `exit 125` causes this
+# revision to be skipped
+ninja -C ../llvm-build-project clang || exit 125
+
+../llvm-build-project/bin/clang repro.c
+```
 
 To make sure your run script works, it's a good idea to run `./run.sh` by
 hand and tweak the script until it works, then run `git bisect good` or
@@ -74,11 +74,11 @@ in the run script.)
 
 Here's how LLVM's history currently looks:
 
-> ```none
-> A-o-o-......-o-D-o-o-HEAD
->               /
->   B-o-...-o-C-
-> ```
+```none
+A-o-o-......-o-D-o-o-HEAD
+              /
+  B-o-...-o-C-
+```
 
 `A` is the first commit in LLVM ever, `97724f18c79c`.
 
@@ -100,4 +100,3 @@ of commits, meaning `B..C` will never be searched from `D`.
 ## More Resources
 
 <https://git-scm.com/book/en/v2/Git-Tools-Revision-Selection>
-

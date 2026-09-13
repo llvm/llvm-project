@@ -108,11 +108,9 @@ an undefined value.
 That is, the `textureSample` operation fits our definition of a convergent
 operation:
 
-```{eval-rst}
- 1. It communicates with a set of threads that implicitly depends on control
-    flow.
- 2. Correctness depends on this set of threads.
-```
+1. It communicates with a set of threads that implicitly depends on control
+   flow.
+2. Correctness depends on this set of threads.
 
 The compiler frontend can emit IR that expresses the convergence constraints as
 follows:
@@ -895,28 +893,26 @@ property <uniformity-analysis>` of static instances in the convergence region of
 
 (controlled_maximal_converged_with)=
 
-```{eval-rst}
-  **Controlled Maximal converged-with Relation**
-
-  1. Dynamic instances of a *convergent operation* are related in the controlled
-     maximal converged-with relation according to the semantics of the convergence
-     control tokens.
-  2. Dynamic instances ``X1`` and ``X2`` produced by different threads for the
-     same *non-convergent operation* ``X`` are related in the controlled maximal
-     converged-with relation if and only if:
-
-     1. Both threads executed converged dynamic instances of every token
-        definition ``D`` such that ``X`` is in the convergence region of ``D``,
-        and,
-     2. Either ``X`` is not contained in any cycle, or, for every cycle ``C``
-        with header ``H`` that contains ``X``:
-
-        - every dynamic instance ``H1`` of ``H`` that precedes ``X1`` in the
-          respective thread is convergence-before ``X2``, and,
-        - every dynamic instance ``H2`` of ``H`` that precedes ``X2`` in the
-          respective thread is convergence-before ``X1``,
-        - without assuming that ``X1`` is converged with ``X2``.
-```
+> **Controlled Maximal converged-with Relation**
+>
+> 1. Dynamic instances of a *convergent operation* are related in the controlled
+>    maximal converged-with relation according to the semantics of the convergence
+>    control tokens.
+> 2. Dynamic instances `X1` and `X2` produced by different threads for the
+>    same *non-convergent operation* `X` are related in the controlled maximal
+>    converged-with relation if and only if:
+>
+>    1. Both threads executed converged dynamic instances of every token
+>       definition `D` such that `X` is in the convergence region of `D`,
+>       and,
+>    2. Either `X` is not contained in any cycle, or, for every cycle `C`
+>       with header `H` that contains `X`:
+>
+>       - every dynamic instance `H1` of `H` that precedes `X1` in the
+>         respective thread is convergence-before `X2`, and,
+>       - every dynamic instance `H2` of `H` that precedes `X2` in the
+>         respective thread is convergence-before `X1`,
+>       - without assuming that `X1` is converged with `X2`.
 
 (controlled_m_converged)=
 

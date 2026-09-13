@@ -5,10 +5,10 @@
 LLVM's code-review policy and practices help maintain high code quality across
 the project. Specifically, our code review process aims to:
 
-> - Improve readability and maintainability.
-> - Improve robustness and prevent the introduction of defects.
-> - Best leverage the experience of other contributors for each proposed change.
-> - Help grow and develop new contributors, through mentorship by community leaders.
+- Improve readability and maintainability.
+- Improve robustness and prevent the introduction of defects.
+- Best leverage the experience of other contributors for each proposed change.
+- Help grow and develop new contributors, through mentorship by community leaders.
 
 It is important for all contributors to understand our code-review
 practices and participate in the code-review process.
