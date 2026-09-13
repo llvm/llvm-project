@@ -1,5 +1,11 @@
 get_property(LLDB_ALL_PLUGINS GLOBAL PROPERTY LLDB_PLUGINS)
 
+if(LLDB_BUILD_STATIC_LIBLLDB)
+  set(liblldb_library_type STATIC)
+else()
+  set(liblldb_library_type SHARED)
+endif()
+
 if(LLDB_BUILD_FRAMEWORK)
   set(option_install_prefix INSTALL_PREFIX ${LLDB_FRAMEWORK_INSTALL_DIR})
   set(option_framework FRAMEWORK)
@@ -33,7 +39,7 @@ add_custom_target(lldb-sbapi-dwarf-enums
   DEPENDS ${sb_languages_file})
 set_target_properties(lldb-sbapi-dwarf-enums PROPERTIES FOLDER "LLDB/Tablegenning")
 
-add_lldb_library(liblldb SHARED ${option_framework}
+add_lldb_library(liblldb ${liblldb_library_type} ${option_framework}
   SBAddress.cpp
   SBAddressRange.cpp
   SBAddressRangeList.cpp
@@ -154,13 +160,26 @@ if (NOT LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   endif()
 endif()
 
-set_target_properties(liblldb
-  PROPERTIES
-  VERSION ${LLDB_VERSION}
-)
+if(LLDB_BUILD_STATIC_LIBLLDB)
+  target_compile_definitions(liblldb PUBLIC LLDB_STATIC)
+  install(TARGETS liblldb
+    COMPONENT liblldb
+    ARCHIVE DESTINATION lib${LLVM_LIBDIR_SUFFIX})
+  if(NOT CMAKE_CONFIGURATION_TYPES)
+    add_llvm_install_targets(install-liblldb
+      DEPENDS liblldb
+      COMPONENT liblldb)
+  endif()
+else()
+  set_target_properties(liblldb
+    PROPERTIES
+    VERSION ${LLDB_VERSION}
+  )
+  target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
+endif()
 
-target_compile_definitions(liblldb PRIVATE LLDB_IN_LIBLLDB)
-if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+if (NOT LLDB_BUILD_STATIC_LIBLLDB AND
+    NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
   if (LLDB_EXPORT_ALL_SYMBOLS)
     if (LLDB_EXPORT_ALL_SYMBOLS_EXPORTS_FILE)
       message(STATUS "Symbols (liblldb): exporting all symbols specified in the exports "
@@ -208,7 +227,8 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
     message(STATUS "Symbols (liblldb): exporting all symbols from the lldb namespace")
     add_llvm_symbol_exports(liblldb ${CMAKE_CURRENT_SOURCE_DIR}/liblldb.exports)
   endif()
-elseif (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
+elseif (NOT LLDB_BUILD_STATIC_LIBLLDB AND
+        (LLDB_EXPORT_ALL_SYMBOLS OR LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS))
   # On Windows there is no per-plugin symbol extraction, so dynamically loaded
   # script interpreter plugins resolve their imports against the full set of
   # private symbols, same as LLDB_EXPORT_ALL_SYMBOLS.

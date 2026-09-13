@@ -67,6 +67,8 @@ add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highli
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
+option(LLDB_BUILD_STATIC_LIBLLDB
+  "Build liblldb as a static library instead of a shared library" OFF)
 option(LLDB_ENABLE_PROTOCOL_SERVERS "Enable protocol servers (e.g. MCP) in LLDB" ON)
 option(LLDB_NO_INSTALL_DEFAULT_RPATH "Disable default RPATH settings in binaries" OFF)
 option(LLDB_USE_SYSTEM_DEBUGSERVER "Use the system's debugserver for testing (Darwin only)." OFF)
@@ -94,6 +96,10 @@ if (LLDB_USE_SYSTEM_DEBUGSERVER)
 endif()
 
 if(LLDB_BUILD_FRAMEWORK)
+  if(LLDB_BUILD_STATIC_LIBLLDB)
+    message(FATAL_ERROR "LLDB_BUILD_STATIC_LIBLLDB is incompatible with LLDB_BUILD_FRAMEWORK")
+  endif()
+
   if(NOT APPLE)
     message(FATAL_ERROR "LLDB.framework can only be generated when targeting Apple platforms")
   endif()

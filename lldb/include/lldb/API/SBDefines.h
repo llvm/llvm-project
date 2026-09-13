@@ -18,7 +18,7 @@
 #include <cstdio> // For FILE *
 
 #ifndef LLDB_API
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(LLDB_STATIC)
 #if defined(LLDB_IN_LIBLLDB)
 #define LLDB_API __declspec(dllexport)
 #else
