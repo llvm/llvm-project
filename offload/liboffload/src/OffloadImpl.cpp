@@ -1706,5 +1706,9 @@ __ol_tgt_GetAsyncInfoFromQueue(ol_queue_handle_t Queue) {
   return Queue->AsyncInfo;
 }
 
+extern "C" void *__ol_tgt_GetKernelFromSymbol(ol_symbol_handle_t Symbol) {
+  return std::get<GenericKernelTy *>(Symbol->PluginImpl);
+}
+
 } // namespace offload
 } // namespace llvm
