@@ -18,119 +18,87 @@ define <16 x i8> @shuffle16_with_and_mask(<16 x i8> %src, <16 x i8> %mask) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 272
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    movi.16b v2, #15
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; CHECK-GI-NEXT:    and.16b v2, v1, v2
-; CHECK-GI-NEXT:    umov.b w9, v2[0]
+; CHECK-GI-NEXT:    umov.b w8, v2[0]
+; CHECK-GI-NEXT:    ldr b1, [x9, x8]
 ; CHECK-GI-NEXT:    umov.b w8, v2[1]
-; CHECK-GI-NEXT:    lsl x10, x9, #1
-; CHECK-GI-NEXT:    sub x9, x10, x9
-; CHECK-GI-NEXT:    mov x10, sp
-; CHECK-GI-NEXT:    ldr b1, [x10, x9]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    str q0, [sp, #16]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #16
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str q0, [sp, #32]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
-; CHECK-GI-NEXT:    add x9, sp, #32
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[4]
+; CHECK-GI-NEXT:    umov.b w8, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #32
+; CHECK-GI-NEXT:    str q0, [sp, #32]
+; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #48
 ; CHECK-GI-NEXT:    str q0, [sp, #48]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #48
 ; CHECK-GI-NEXT:    mov.b v1[2], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[5]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #64]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[4]
 ; CHECK-GI-NEXT:    add x9, sp, #64
+; CHECK-GI-NEXT:    str q0, [sp, #64]
 ; CHECK-GI-NEXT:    mov.b v1[3], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[6]
+; CHECK-GI-NEXT:    umov.b w8, v2[5]
+; CHECK-GI-NEXT:    add x9, sp, #80
 ; CHECK-GI-NEXT:    str q0, [sp, #80]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #80
 ; CHECK-GI-NEXT:    mov.b v1[4], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[7]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #96]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[6]
 ; CHECK-GI-NEXT:    add x9, sp, #96
+; CHECK-GI-NEXT:    str q0, [sp, #96]
 ; CHECK-GI-NEXT:    mov.b v1[5], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[8]
+; CHECK-GI-NEXT:    umov.b w8, v2[7]
+; CHECK-GI-NEXT:    add x9, sp, #112
 ; CHECK-GI-NEXT:    str q0, [sp, #112]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #112
 ; CHECK-GI-NEXT:    mov.b v1[6], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[9]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #128]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[8]
 ; CHECK-GI-NEXT:    add x9, sp, #128
+; CHECK-GI-NEXT:    str q0, [sp, #128]
 ; CHECK-GI-NEXT:    mov.b v1[7], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[10]
+; CHECK-GI-NEXT:    umov.b w8, v2[9]
+; CHECK-GI-NEXT:    add x9, sp, #144
 ; CHECK-GI-NEXT:    str q0, [sp, #144]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #144
 ; CHECK-GI-NEXT:    mov.b v1[8], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[11]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #160]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[10]
 ; CHECK-GI-NEXT:    add x9, sp, #160
+; CHECK-GI-NEXT:    str q0, [sp, #160]
 ; CHECK-GI-NEXT:    mov.b v1[9], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[12]
+; CHECK-GI-NEXT:    umov.b w8, v2[11]
+; CHECK-GI-NEXT:    add x9, sp, #176
 ; CHECK-GI-NEXT:    str q0, [sp, #176]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #176
 ; CHECK-GI-NEXT:    mov.b v1[10], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[13]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #192]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[12]
 ; CHECK-GI-NEXT:    add x9, sp, #192
+; CHECK-GI-NEXT:    str q0, [sp, #192]
 ; CHECK-GI-NEXT:    mov.b v1[11], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[14]
+; CHECK-GI-NEXT:    umov.b w8, v2[13]
+; CHECK-GI-NEXT:    add x9, sp, #208
 ; CHECK-GI-NEXT:    str q0, [sp, #208]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #208
 ; CHECK-GI-NEXT:    mov.b v1[12], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[15]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #224]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[14]
 ; CHECK-GI-NEXT:    add x9, sp, #224
+; CHECK-GI-NEXT:    str q0, [sp, #224]
 ; CHECK-GI-NEXT:    mov.b v1[13], v3[0]
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[15]
 ; CHECK-GI-NEXT:    add x9, sp, #240
 ; CHECK-GI-NEXT:    str q0, [sp, #240]
-; CHECK-GI-NEXT:    sub x8, x8, x10
+; CHECK-GI-NEXT:    mov.b v1[14], v3[0]
 ; CHECK-GI-NEXT:    ldr b0, [x9, x8]
-; CHECK-GI-NEXT:    mov.b v1[14], v2[0]
 ; CHECK-GI-NEXT:    mov.b v1[15], v0[0]
 ; CHECK-GI-NEXT:    mov.16b v0, v1
 ; CHECK-GI-NEXT:    add sp, sp, #272
@@ -204,62 +172,47 @@ define <8 x i8> @shuffle8_with_and_mask(<8 x i8> %src, <8 x i8> %mask) {
 ; CHECK-GI-NEXT:    sub sp, sp, #64
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    movi.8b v2, #7
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
 ; CHECK-GI-NEXT:    and.8b v2, v1, v2
 ; CHECK-GI-NEXT:    umov.b w8, v2[0]
-; CHECK-GI-NEXT:    umov.b w10, v2[1]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[2]
+; CHECK-GI-NEXT:    umov.b w8, v2[1]
+; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str d0, [sp, #16]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
-; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[4]
+; CHECK-GI-NEXT:    umov.b w8, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #16
+; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #24
 ; CHECK-GI-NEXT:    mov.b v1[2], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[5]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #32]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[4]
 ; CHECK-GI-NEXT:    add x9, sp, #32
+; CHECK-GI-NEXT:    str d0, [sp, #32]
 ; CHECK-GI-NEXT:    mov.b v1[3], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[6]
+; CHECK-GI-NEXT:    umov.b w8, v2[5]
+; CHECK-GI-NEXT:    add x9, sp, #40
 ; CHECK-GI-NEXT:    str d0, [sp, #40]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #40
 ; CHECK-GI-NEXT:    mov.b v1[4], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[7]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #48]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[6]
+; CHECK-GI-NEXT:    mov b2, v2[7]
 ; CHECK-GI-NEXT:    add x9, sp, #48
+; CHECK-GI-NEXT:    str d0, [sp, #48]
 ; CHECK-GI-NEXT:    mov.b v1[5], v3[0]
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    add x9, sp, #56
 ; CHECK-GI-NEXT:    str d0, [sp, #56]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    mov.b v1[6], v2[0]
+; CHECK-GI-NEXT:    mov.b v1[6], v3[0]
+; CHECK-GI-NEXT:    add x8, x9, w8, uxtb
 ; CHECK-GI-NEXT:    ld1.b { v1 }[7], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #64
@@ -308,63 +261,48 @@ define <8 x i8> @shuffle8_with_and_mask_different_constants(<8 x i8> %src, <8 x 
 ; CHECK-GI-NEXT:    sub sp, sp, #64
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    adrp x8, .LCPI2_0
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
 ; CHECK-GI-NEXT:    ldr d2, [x8, :lo12:.LCPI2_0]
 ; CHECK-GI-NEXT:    and.8b v2, v1, v2
 ; CHECK-GI-NEXT:    umov.b w8, v2[0]
-; CHECK-GI-NEXT:    umov.b w10, v2[1]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[2]
+; CHECK-GI-NEXT:    umov.b w8, v2[1]
+; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str d0, [sp, #16]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
-; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[4]
+; CHECK-GI-NEXT:    umov.b w8, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #16
+; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #24
 ; CHECK-GI-NEXT:    mov.b v1[2], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[5]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #32]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[4]
 ; CHECK-GI-NEXT:    add x9, sp, #32
+; CHECK-GI-NEXT:    str d0, [sp, #32]
 ; CHECK-GI-NEXT:    mov.b v1[3], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[6]
+; CHECK-GI-NEXT:    umov.b w8, v2[5]
+; CHECK-GI-NEXT:    add x9, sp, #40
 ; CHECK-GI-NEXT:    str d0, [sp, #40]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #40
 ; CHECK-GI-NEXT:    mov.b v1[4], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[7]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #48]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[6]
+; CHECK-GI-NEXT:    mov b2, v2[7]
 ; CHECK-GI-NEXT:    add x9, sp, #48
+; CHECK-GI-NEXT:    str d0, [sp, #48]
 ; CHECK-GI-NEXT:    mov.b v1[5], v3[0]
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    add x9, sp, #56
 ; CHECK-GI-NEXT:    str d0, [sp, #56]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    mov.b v1[6], v2[0]
+; CHECK-GI-NEXT:    mov.b v1[6], v3[0]
+; CHECK-GI-NEXT:    add x8, x9, w8, uxtb
 ; CHECK-GI-NEXT:    ld1.b { v1 }[7], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #64
@@ -412,68 +350,52 @@ define <8 x i8> @shuffle8_with_mask(<8 x i8> %src, <8 x i8> %mask) {
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    umov.b w9, v1[0]
-; CHECK-GI-NEXT:    umov.b w10, v1[1]
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
+; CHECK-GI-NEXT:    umov.b w10, v1[1]
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    lsl x11, x9, #1
-; CHECK-GI-NEXT:    sub x9, x11, x9
 ; CHECK-GI-NEXT:    ldr b2, [x8, x9]
-; CHECK-GI-NEXT:    and x8, x10, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[2]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    add x8, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[2]
 ; CHECK-GI-NEXT:    mov.b v2[0], v2[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[3]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #16
 ; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[3]
 ; CHECK-GI-NEXT:    mov.b v2[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #16
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[4]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[4]
 ; CHECK-GI-NEXT:    mov.b v2[2], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #24
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[5]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #32
 ; CHECK-GI-NEXT:    str d0, [sp, #32]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[5]
 ; CHECK-GI-NEXT:    mov.b v2[3], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #32
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[6]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #40
 ; CHECK-GI-NEXT:    str d0, [sp, #40]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[6]
 ; CHECK-GI-NEXT:    mov.b v2[4], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #40
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w10, v1[7]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #48
 ; CHECK-GI-NEXT:    str d0, [sp, #48]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
 ; CHECK-GI-NEXT:    mov.b v2[5], v3[0]
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    add x9, sp, #48
-; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    and x8, x10, #0x7
-; CHECK-GI-NEXT:    add x10, sp, #56
-; CHECK-GI-NEXT:    lsl x9, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    umov.b w8, v1[7]
+; CHECK-GI-NEXT:    add x9, sp, #56
 ; CHECK-GI-NEXT:    str d0, [sp, #56]
-; CHECK-GI-NEXT:    mov.b v2[6], v1[0]
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    add x8, x10, x8
+; CHECK-GI-NEXT:    mov.b v2[6], v3[0]
+; CHECK-GI-NEXT:    and x8, x8, #0x7
+; CHECK-GI-NEXT:    add x8, x9, x8
 ; CHECK-GI-NEXT:    ld1.b { v2 }[7], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d2
 ; CHECK-GI-NEXT:    add sp, sp, #64
@@ -555,69 +477,53 @@ define <8 x i8> @no_shuffle_only_some_and_constants(<8 x i8> %src, <8 x i8> %mas
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    umov.b w9, v1[0]
-; CHECK-GI-NEXT:    umov.b w10, v1[1]
 ; CHECK-GI-NEXT:    mov x8, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
+; CHECK-GI-NEXT:    umov.b w10, v1[1]
 ; CHECK-GI-NEXT:    and w9, w9, #0x7
 ; CHECK-GI-NEXT:    and x9, x9, #0x7
-; CHECK-GI-NEXT:    lsl x11, x9, #1
-; CHECK-GI-NEXT:    sub x9, x11, x9
 ; CHECK-GI-NEXT:    ldr b2, [x8, x9]
-; CHECK-GI-NEXT:    and x8, x10, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[2]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    add x8, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[2]
 ; CHECK-GI-NEXT:    mov.b v2[0], v2[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[3]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #16
 ; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[3]
 ; CHECK-GI-NEXT:    mov.b v2[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #16
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[4]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[4]
 ; CHECK-GI-NEXT:    mov.b v2[2], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #24
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[5]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #32
 ; CHECK-GI-NEXT:    str d0, [sp, #32]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[5]
 ; CHECK-GI-NEXT:    mov.b v2[3], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #32
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w9, v1[6]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #40
 ; CHECK-GI-NEXT:    str d0, [sp, #40]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
+; CHECK-GI-NEXT:    umov.b w10, v1[6]
 ; CHECK-GI-NEXT:    mov.b v2[4], v3[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #40
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    and x8, x9, #0x7
-; CHECK-GI-NEXT:    umov.b w10, v1[7]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    add x8, sp, #48
 ; CHECK-GI-NEXT:    str d0, [sp, #48]
+; CHECK-GI-NEXT:    and x9, x10, #0x7
 ; CHECK-GI-NEXT:    mov.b v2[5], v3[0]
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    add x9, sp, #48
-; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    and x8, x10, #0x7
-; CHECK-GI-NEXT:    add x10, sp, #56
-; CHECK-GI-NEXT:    lsl x9, x8, #1
+; CHECK-GI-NEXT:    ldr b3, [x8, x9]
+; CHECK-GI-NEXT:    umov.b w8, v1[7]
+; CHECK-GI-NEXT:    add x9, sp, #56
 ; CHECK-GI-NEXT:    str d0, [sp, #56]
-; CHECK-GI-NEXT:    mov.b v2[6], v1[0]
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    add x8, x10, x8
+; CHECK-GI-NEXT:    mov.b v2[6], v3[0]
+; CHECK-GI-NEXT:    and x8, x8, #0x7
+; CHECK-GI-NEXT:    add x8, x9, x8
 ; CHECK-GI-NEXT:    ld1.b { v2 }[7], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d2
 ; CHECK-GI-NEXT:    add sp, sp, #64
@@ -735,120 +641,88 @@ define <16 x i8> @no_shuffle_with_two_mask_sources(<16 x i8> %src, <16 x i8> %ma
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 272
 ; CHECK-GI-NEXT:    .cfi_offset w29, -16
 ; CHECK-GI-NEXT:    movi.16b v4, #15
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str q0, [sp]
 ; CHECK-GI-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; CHECK-GI-NEXT:    and.16b v3, v1, v4
 ; CHECK-GI-NEXT:    and.16b v2, v2, v4
-; CHECK-GI-NEXT:    umov.b w9, v3[0]
+; CHECK-GI-NEXT:    umov.b w8, v3[0]
+; CHECK-GI-NEXT:    ldr b1, [x9, x8]
 ; CHECK-GI-NEXT:    umov.b w8, v2[1]
-; CHECK-GI-NEXT:    lsl x10, x9, #1
-; CHECK-GI-NEXT:    sub x9, x10, x9
-; CHECK-GI-NEXT:    mov x10, sp
-; CHECK-GI-NEXT:    ldr b1, [x10, x9]
-; CHECK-GI-NEXT:    lsl x10, x8, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[2]
+; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    str q0, [sp, #16]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x10, x8
-; CHECK-GI-NEXT:    add x10, sp, #16
-; CHECK-GI-NEXT:    ldr b4, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str q0, [sp, #32]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v4[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
-; CHECK-GI-NEXT:    add x9, sp, #32
 ; CHECK-GI-NEXT:    ldr b4, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[4]
+; CHECK-GI-NEXT:    umov.b w8, v3[2]
+; CHECK-GI-NEXT:    add x9, sp, #32
+; CHECK-GI-NEXT:    str q0, [sp, #32]
+; CHECK-GI-NEXT:    mov.b v1[1], v4[0]
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #48
 ; CHECK-GI-NEXT:    str q0, [sp, #48]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #48
 ; CHECK-GI-NEXT:    mov.b v1[2], v4[0]
-; CHECK-GI-NEXT:    ldr b4, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[5]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #64]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v3[4]
 ; CHECK-GI-NEXT:    add x9, sp, #64
+; CHECK-GI-NEXT:    str q0, [sp, #64]
 ; CHECK-GI-NEXT:    mov.b v1[3], v4[0]
 ; CHECK-GI-NEXT:    ldr b4, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[6]
+; CHECK-GI-NEXT:    umov.b w8, v2[5]
+; CHECK-GI-NEXT:    add x9, sp, #80
 ; CHECK-GI-NEXT:    str q0, [sp, #80]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #80
 ; CHECK-GI-NEXT:    mov.b v1[4], v4[0]
-; CHECK-GI-NEXT:    ldr b4, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[7]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #96]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v3[6]
 ; CHECK-GI-NEXT:    add x9, sp, #96
+; CHECK-GI-NEXT:    str q0, [sp, #96]
 ; CHECK-GI-NEXT:    mov.b v1[5], v4[0]
 ; CHECK-GI-NEXT:    ldr b4, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[8]
+; CHECK-GI-NEXT:    umov.b w8, v2[7]
+; CHECK-GI-NEXT:    add x9, sp, #112
 ; CHECK-GI-NEXT:    str q0, [sp, #112]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #112
 ; CHECK-GI-NEXT:    mov.b v1[6], v4[0]
-; CHECK-GI-NEXT:    ldr b4, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[9]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #128]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v3[8]
 ; CHECK-GI-NEXT:    add x9, sp, #128
+; CHECK-GI-NEXT:    str q0, [sp, #128]
 ; CHECK-GI-NEXT:    mov.b v1[7], v4[0]
 ; CHECK-GI-NEXT:    ldr b4, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[10]
+; CHECK-GI-NEXT:    umov.b w8, v2[9]
+; CHECK-GI-NEXT:    add x9, sp, #144
 ; CHECK-GI-NEXT:    str q0, [sp, #144]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #144
 ; CHECK-GI-NEXT:    mov.b v1[8], v4[0]
-; CHECK-GI-NEXT:    ldr b4, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[11]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #160]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v3[10]
 ; CHECK-GI-NEXT:    add x9, sp, #160
+; CHECK-GI-NEXT:    str q0, [sp, #160]
 ; CHECK-GI-NEXT:    mov.b v1[9], v4[0]
 ; CHECK-GI-NEXT:    ldr b4, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[12]
+; CHECK-GI-NEXT:    umov.b w8, v2[11]
+; CHECK-GI-NEXT:    add x9, sp, #176
 ; CHECK-GI-NEXT:    str q0, [sp, #176]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #176
 ; CHECK-GI-NEXT:    mov.b v1[10], v4[0]
-; CHECK-GI-NEXT:    ldr b4, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[13]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str q0, [sp, #192]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v3[12]
 ; CHECK-GI-NEXT:    add x9, sp, #192
+; CHECK-GI-NEXT:    str q0, [sp, #192]
 ; CHECK-GI-NEXT:    mov.b v1[11], v4[0]
 ; CHECK-GI-NEXT:    ldr b4, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v3[14]
+; CHECK-GI-NEXT:    umov.b w8, v2[13]
+; CHECK-GI-NEXT:    add x9, sp, #208
 ; CHECK-GI-NEXT:    str q0, [sp, #208]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #208
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[15]
-; CHECK-GI-NEXT:    str q0, [sp, #224]
 ; CHECK-GI-NEXT:    mov.b v1[12], v4[0]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b4, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v3[14]
 ; CHECK-GI-NEXT:    add x9, sp, #224
-; CHECK-GI-NEXT:    mov.b v1[13], v3[0]
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    str q0, [sp, #224]
+; CHECK-GI-NEXT:    mov.b v1[13], v4[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[15]
 ; CHECK-GI-NEXT:    add x9, sp, #240
 ; CHECK-GI-NEXT:    str q0, [sp, #240]
-; CHECK-GI-NEXT:    sub x8, x8, x10
+; CHECK-GI-NEXT:    mov.b v1[14], v3[0]
 ; CHECK-GI-NEXT:    ldr b0, [x9, x8]
-; CHECK-GI-NEXT:    mov.b v1[14], v2[0]
 ; CHECK-GI-NEXT:    mov.b v1[15], v0[0]
 ; CHECK-GI-NEXT:    mov.16b v0, v1
 ; CHECK-GI-NEXT:    add sp, sp, #272
@@ -1010,34 +884,27 @@ define <8 x i8> @no_shuffle_not_enough_elements(<8 x i8> %src, <8 x i8> %mask) {
 ; CHECK-GI-NEXT:    sub sp, sp, #32
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-GI-NEXT:    movi.8b v2, #7
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
 ; CHECK-GI-NEXT:    and.8b v2, v1, v2
 ; CHECK-GI-NEXT:    umov.b w8, v2[0]
-; CHECK-GI-NEXT:    umov.b w10, v2[1]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[2]
+; CHECK-GI-NEXT:    umov.b w8, v2[1]
+; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str d0, [sp, #16]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[2]
+; CHECK-GI-NEXT:    mov b2, v2[3]
 ; CHECK-GI-NEXT:    add x9, sp, #16
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    add x9, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    mov.b v1[2], v2[0]
-; CHECK-GI-NEXT:    add x8, x9, x8
+; CHECK-GI-NEXT:    mov.b v1[2], v3[0]
+; CHECK-GI-NEXT:    add x8, x9, w8, uxtb
 ; CHECK-GI-NEXT:    ld1.b { v1 }[3], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #32
@@ -1106,62 +973,47 @@ define <8 x i8> @no_shuffle_different_vector_types(<8 x i8> %src, <16 x i8> %mas
 ; CHECK-GI-NEXT:    sub sp, sp, #64
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    movi.16b v2, #7
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
 ; CHECK-GI-NEXT:    and.16b v2, v1, v2
 ; CHECK-GI-NEXT:    umov.b w8, v2[0]
-; CHECK-GI-NEXT:    umov.b w10, v2[1]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[2]
+; CHECK-GI-NEXT:    umov.b w8, v2[1]
+; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str d0, [sp, #16]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
-; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[4]
+; CHECK-GI-NEXT:    umov.b w8, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #16
+; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #24
 ; CHECK-GI-NEXT:    mov.b v1[2], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[5]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #32]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[4]
 ; CHECK-GI-NEXT:    add x9, sp, #32
+; CHECK-GI-NEXT:    str d0, [sp, #32]
 ; CHECK-GI-NEXT:    mov.b v1[3], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[6]
+; CHECK-GI-NEXT:    umov.b w8, v2[5]
+; CHECK-GI-NEXT:    add x9, sp, #40
 ; CHECK-GI-NEXT:    str d0, [sp, #40]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #40
 ; CHECK-GI-NEXT:    mov.b v1[4], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[7]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #48]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[6]
+; CHECK-GI-NEXT:    mov b2, v2[7]
 ; CHECK-GI-NEXT:    add x9, sp, #48
+; CHECK-GI-NEXT:    str d0, [sp, #48]
 ; CHECK-GI-NEXT:    mov.b v1[5], v3[0]
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    add x9, sp, #56
 ; CHECK-GI-NEXT:    str d0, [sp, #56]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    mov.b v1[6], v2[0]
+; CHECK-GI-NEXT:    mov.b v1[6], v3[0]
+; CHECK-GI-NEXT:    add x8, x9, w8, uxtb
 ; CHECK-GI-NEXT:    ld1.b { v1 }[7], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #64
@@ -1241,62 +1093,47 @@ define <8 x i8> @no_shuffle_bad_mask_index(<8 x i8> %src, <8 x i8> %mask) {
 ; CHECK-GI-NEXT:    sub sp, sp, #64
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-GI-NEXT:    movi.8b v2, #7
+; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    str d0, [sp]
 ; CHECK-GI-NEXT:    and.8b v2, v1, v2
 ; CHECK-GI-NEXT:    umov.b w8, v2[1]
-; CHECK-GI-NEXT:    umov.b w10, v2[1]
-; CHECK-GI-NEXT:    lsl x9, x8, #1
-; CHECK-GI-NEXT:    sub x8, x9, x8
-; CHECK-GI-NEXT:    mov x9, sp
 ; CHECK-GI-NEXT:    ldr b1, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[2]
+; CHECK-GI-NEXT:    umov.b w8, v2[1]
+; CHECK-GI-NEXT:    add x9, sp, #8
 ; CHECK-GI-NEXT:    str d0, [sp, #8]
 ; CHECK-GI-NEXT:    mov.b v1[0], v1[0]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #8
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[3]
-; CHECK-GI-NEXT:    str d0, [sp, #16]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
-; CHECK-GI-NEXT:    sub x8, x8, x9
-; CHECK-GI-NEXT:    add x9, sp, #16
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[4]
+; CHECK-GI-NEXT:    umov.b w8, v2[2]
+; CHECK-GI-NEXT:    add x9, sp, #16
+; CHECK-GI-NEXT:    str d0, [sp, #16]
+; CHECK-GI-NEXT:    mov.b v1[1], v3[0]
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[3]
+; CHECK-GI-NEXT:    add x9, sp, #24
 ; CHECK-GI-NEXT:    str d0, [sp, #24]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #24
 ; CHECK-GI-NEXT:    mov.b v1[2], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[5]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #32]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[4]
 ; CHECK-GI-NEXT:    add x9, sp, #32
+; CHECK-GI-NEXT:    str d0, [sp, #32]
 ; CHECK-GI-NEXT:    mov.b v1[3], v3[0]
 ; CHECK-GI-NEXT:    ldr b3, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
-; CHECK-GI-NEXT:    umov.b w9, v2[6]
+; CHECK-GI-NEXT:    umov.b w8, v2[5]
+; CHECK-GI-NEXT:    add x9, sp, #40
 ; CHECK-GI-NEXT:    str d0, [sp, #40]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x10, sp, #40
 ; CHECK-GI-NEXT:    mov.b v1[4], v3[0]
-; CHECK-GI-NEXT:    ldr b3, [x10, x8]
-; CHECK-GI-NEXT:    umov.b w10, v2[7]
-; CHECK-GI-NEXT:    lsl x8, x9, #1
-; CHECK-GI-NEXT:    str d0, [sp, #48]
-; CHECK-GI-NEXT:    sub x8, x8, x9
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    umov.b w8, v2[6]
+; CHECK-GI-NEXT:    mov b2, v2[7]
 ; CHECK-GI-NEXT:    add x9, sp, #48
+; CHECK-GI-NEXT:    str d0, [sp, #48]
 ; CHECK-GI-NEXT:    mov.b v1[5], v3[0]
-; CHECK-GI-NEXT:    ldr b2, [x9, x8]
-; CHECK-GI-NEXT:    lsl x8, x10, #1
+; CHECK-GI-NEXT:    ldr b3, [x9, x8]
+; CHECK-GI-NEXT:    fmov w8, s2
 ; CHECK-GI-NEXT:    add x9, sp, #56
 ; CHECK-GI-NEXT:    str d0, [sp, #56]
-; CHECK-GI-NEXT:    sub x8, x8, x10
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    mov.b v1[6], v2[0]
+; CHECK-GI-NEXT:    mov.b v1[6], v3[0]
+; CHECK-GI-NEXT:    add x8, x9, w8, uxtb
 ; CHECK-GI-NEXT:    ld1.b { v1 }[7], [x8]
 ; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #64
