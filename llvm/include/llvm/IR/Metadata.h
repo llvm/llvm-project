@@ -394,17 +394,44 @@ class ReplaceableUses {
 public:
   using OwnerTy = MetadataTracking::OwnerTy;
 
+  enum Kind : uint8_t { ValueAsMetadataKind, WithContextKind };
+
+  struct UseEntry {
+    void *Ref = nullptr;
+    OwnerTy Owner = nullptr;
+  };
+
 private:
-  uint64_t NextIndex = 0;
-  SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
+  // Stores uses in insertion order, with dropped uses tombstoned (Ref =
+  // nullptr) to avoid shifting elements. Lookups use a two-tier hybrid
+  // strategy:
+  // - Small Mode (<= 4 uses): Scans linearly without auxiliary data structures.
+  // - Large Mode (>= 5 uses): Registers reverse lookups (Ref -> index) in
+  //   LLVMContextImpl::MetadataUseMap to maintain O(1) dropRef and moveRef.
+  SmallVector<UseEntry, 4> UseMap;
+
+  // The number of tombstones in UseMap.
+  unsigned NumDead = 0;
+
+  // True if we have switched to large mode. Once switched, we stay in
+  // large mode until UseMap becomes empty.
+  bool IsLarge = false;
+
+  Kind K;
+
+  template <bool IsLargeMode> void compact();
 
 protected:
+  ReplaceableUses(Kind K) : K(K) {}
   ~ReplaceableUses() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
   }
 
 public:
   ReplaceableUses &operator=(const ReplaceableUses &) = delete;
+
+  Kind getKind() const { return K; }
+  LLVMContext &getContext() const;
 
   /// Replace all uses of this with MD.
   ///
@@ -424,12 +451,15 @@ public:
   /// is resolved.
   LLVM_ABI void resolveAllUses(bool ResolveUsers = true);
 
-  unsigned getNumUses() const { return UseMap.size(); }
+  unsigned getNumUses() const { return UseMap.size() - NumDead; }
 
 private:
+  SmallVector<UseEntry, 8> getLiveUses() const;
+  bool hasRef(void *Ref) const;
   void addRef(void *Ref, OwnerTy Owner);
   void dropRef(void *Ref);
   void moveRef(void *Ref, void *New, const Metadata &MD);
+  void clear();
 
   /// Lazily construct RAUW support on MD.
   ///
@@ -453,7 +483,11 @@ class ReplaceableUsesWithContext : public ReplaceableUses {
 
 public:
   explicit ReplaceableUsesWithContext(LLVMContext &Context)
-      : Context(Context) {}
+      : ReplaceableUses(WithContextKind), Context(Context) {}
+
+  static bool classof(const ReplaceableUses *R) {
+    return R->getKind() == WithContextKind;
+  }
 
   LLVMContext &getContext() const { return Context; }
 };
@@ -478,7 +512,8 @@ class ValueAsMetadata : public Metadata, ReplaceableUses {
   }
 
 protected:
-  ValueAsMetadata(unsigned ID, Value *V) : Metadata(ID, Uniqued), V(V) {
+  ValueAsMetadata(unsigned ID, Value *V)
+      : Metadata(ID, Uniqued), ReplaceableUses(ValueAsMetadataKind), V(V) {
     assert(V && "Expected valid value");
   }
 

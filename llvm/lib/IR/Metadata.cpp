@@ -251,84 +251,218 @@ bool MetadataTracking::isReplaceable(const Metadata &MD) {
   return ReplaceableUses::isReplaceable(MD);
 }
 
+LLVMContext &ReplaceableUses::getContext() const {
+  if (auto *WithContext = dyn_cast<ReplaceableUsesWithContext>(this))
+    return WithContext->getContext();
+  return static_cast<const ValueAsMetadata *>(this)->getContext();
+}
+
+SmallVector<ReplaceableUses::UseEntry, 8>
+ReplaceableUses::getLiveUses() const {
+  SmallVector<UseEntry, 8> LiveUses;
+  LiveUses.reserve(getNumUses());
+  for (const auto &Entry : UseMap) {
+    if (Entry.Ref)
+      LiveUses.push_back(Entry);
+  }
+  return LiveUses;
+}
+
 SmallVector<Metadata *> ReplaceableUses::getAllArgListUsers() {
-  SmallVector<std::pair<OwnerTy, uint64_t> *> MDUsersWithID;
-  for (auto Pair : UseMap) {
-    OwnerTy Owner = Pair.second.first;
+  SmallVector<Metadata *> MDUsers;
+  for (const auto &[Ref, Owner] : UseMap) {
+    if (!Ref)
+      continue;
     if (Owner.isNull())
       continue;
     if (!isa<Metadata *>(Owner))
       continue;
     Metadata *OwnerMD = cast<Metadata *>(Owner);
     if (OwnerMD->getMetadataID() == Metadata::DIArgListKind)
-      MDUsersWithID.push_back(&UseMap[Pair.first]);
+      MDUsers.push_back(OwnerMD);
   }
-  llvm::sort(MDUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second < UserB->second;
-  });
-  SmallVector<Metadata *> MDUsers;
-  for (auto *UserWithID : MDUsersWithID)
-    MDUsers.push_back(cast<Metadata *>(UserWithID->first));
   return MDUsers;
 }
 
 SmallVector<DbgVariableRecord *>
 ReplaceableUses::getAllDbgVariableRecordUsers() {
-  SmallVector<std::pair<OwnerTy, uint64_t> *> DVRUsersWithID;
-  for (auto Pair : UseMap) {
-    OwnerTy Owner = Pair.second.first;
-    if (Owner.isNull())
-      continue;
-    if (!isa<DebugValueUser *>(Owner))
-      continue;
-    DVRUsersWithID.push_back(&UseMap[Pair.first]);
-  }
   // Order DbgVariableRecord users in reverse-creation order. Normal dbg.value
   // users of MetadataAsValues are ordered by their UseList, i.e. reverse order
   // of when they were added: we need to replicate that here. The structure of
   // debug-info output depends on the ordering of intrinsics, thus we need
   // to keep them consistent for comparisons sake.
-  llvm::sort(DVRUsersWithID, [](auto UserA, auto UserB) {
-    return UserA->second > UserB->second;
-  });
   SmallVector<DbgVariableRecord *> DVRUsers;
-  for (auto UserWithID : DVRUsersWithID)
-    DVRUsers.push_back(cast<DebugValueUser *>(UserWithID->first)->getUser());
+  for (const auto &[Ref, Owner] : reverse(UseMap)) {
+    if (!Ref)
+      continue;
+    if (Owner.isNull())
+      continue;
+    if (!isa<DebugValueUser *>(Owner))
+      continue;
+    DVRUsers.push_back(cast<DebugValueUser *>(Owner)->getUser());
+  }
   return DVRUsers;
 }
 
-void ReplaceableUses::addRef(void *Ref, OwnerTy Owner) {
-  bool WasInserted =
-      UseMap.insert(std::make_pair(Ref, std::make_pair(Owner, NextIndex)))
-          .second;
-  (void)WasInserted;
-  assert(WasInserted && "Expected to add a reference");
+bool ReplaceableUses::hasRef(void *Ref) const {
+  if (LLVM_LIKELY(!IsLarge)) {
+    for (const auto &Entry : UseMap) {
+      if (Entry.Ref == Ref)
+        return true;
+    }
+    return false;
+  }
+  return getContext().pImpl->MetadataUseMap.contains(Ref);
+}
 
-  ++NextIndex;
-  assert(NextIndex != 0 && "Unexpected overflow");
+// Filters out tombstones in place while preserving insertion order. In Large
+// Mode, updates MetadataUseMap only for elements whose indices actually shift.
+template <bool IsLargeMode> void ReplaceableUses::compact() {
+  DenseMap<void *, unsigned> *Map = nullptr;
+  if constexpr (IsLargeMode)
+    Map = &getContext().pImpl->MetadataUseMap;
+
+  unsigned WriteIdx = 0;
+  for (unsigned ReadIdx = 0, E = UseMap.size(); ReadIdx != E; ++ReadIdx) {
+    if (UseMap[ReadIdx].Ref != nullptr) {
+      if (WriteIdx != ReadIdx) {
+        UseMap[WriteIdx] = UseMap[ReadIdx];
+        if constexpr (IsLargeMode)
+          (*Map)[UseMap[WriteIdx].Ref] = WriteIdx;
+      }
+      ++WriteIdx;
+    }
+  }
+  UseMap.truncate(WriteIdx);
+  NumDead = 0;
+}
+
+void ReplaceableUses::addRef(void *Ref, OwnerTy Owner) {
+  assert(Ref && "Expected live reference");
+  assert(!hasRef(Ref) && "Reference already tracked");
+
+  if (!IsLarge) {
+    if (LLVM_LIKELY(UseMap.size() < 4)) {
+      UseMap.push_back({Ref, Owner});
+      return;
+    }
+
+    if (NumDead) {
+      compact</*IsLargeMode=*/false>();
+      UseMap.push_back({Ref, Owner});
+      return;
+    }
+
+    // Transition to large mode on the 5th live use.
+    IsLarge = true;
+    UseMap.reserve(8);
+    auto &Map = getContext().pImpl->MetadataUseMap;
+    for (unsigned I = 0, E = UseMap.size(); I != E; ++I)
+      Map[UseMap[I].Ref] = I;
+  } else {
+    if (LLVM_UNLIKELY(UseMap.size() == UseMap.capacity())) {
+      // Compact in place if at least half the entries are dead. Otherwise,
+      // double capacity. Because MetadataUseMap stores vector indices rather
+      // than element pointers, buffer reallocation preserves all existing
+      // indices via memcpy without touching the map.
+      if (LLVM_UNLIKELY(NumDead >= getNumUses()))
+        compact</*IsLargeMode=*/true>();
+      else
+        UseMap.reserve(UseMap.capacity() * 2);
+    }
+  }
+
+  auto &Map = getContext().pImpl->MetadataUseMap;
+  unsigned Index = UseMap.size();
+  UseMap.push_back({Ref, Owner});
+  Map[Ref] = Index;
 }
 
 void ReplaceableUses::dropRef(void *Ref) {
-  bool WasErased = UseMap.erase(Ref);
-  (void)WasErased;
-  assert(WasErased && "Expected to drop a reference");
+  UseEntry *Entry = nullptr;
+  if (LLVM_UNLIKELY(!IsLarge)) {
+    // Search backward for temporal locality; recently added references are
+    // often dropped first.
+    for (auto It = UseMap.rbegin(), E = UseMap.rend(); It != E; ++It) {
+      if (It->Ref == Ref) {
+        Entry = &*It;
+        break;
+      }
+    }
+    assert(Entry && "Expected to find Ref");
+  } else {
+    auto &Map = getContext().pImpl->MetadataUseMap;
+    // Return early if we are tearing down the whole context.
+    if (LLVM_UNLIKELY(Map.empty()))
+      return;
+    auto It = Map.find(Ref);
+    assert(It != Map.end() && "Expected Ref in MetadataUseMap");
+    Entry = &UseMap[It->second];
+    Map.erase(It);
+  }
+
+  // Place a tombstone.
+  Entry->Ref = nullptr;
+  ++NumDead;
+
+  if (LLVM_UNLIKELY(NumDead == UseMap.size())) {
+    UseMap.clear();
+    NumDead = 0;
+    IsLarge = false;
+  }
 }
 
 void ReplaceableUses::moveRef(void *Ref, void *New, const Metadata &MD) {
-  auto I = UseMap.find(Ref);
-  assert(I != UseMap.end() && "Expected to move a reference");
-  auto OwnerAndIndex = I->second;
-  UseMap.erase(I);
-  bool WasInserted = UseMap.insert(std::make_pair(New, OwnerAndIndex)).second;
-  (void)WasInserted;
-  assert(WasInserted && "Expected to add a reference");
+  UseEntry *Entry = nullptr;
+  if (LLVM_LIKELY(!IsLarge)) {
+    // Search backward for temporal locality; recently added references are
+    // often moved first.
+    for (auto It = UseMap.rbegin(), E = UseMap.rend(); It != E; ++It) {
+      if (It->Ref == Ref) {
+        Entry = &*It;
+        break;
+      }
+    }
+    assert(Entry && "Expected to move a reference");
+    assert(!hasRef(New) && "Cannot move to an existing reference");
+  } else {
+    auto &Map = getContext().pImpl->MetadataUseMap;
+    auto It = Map.find(Ref);
+    assert(It != Map.end() && "Expected Ref in MetadataUseMap");
+
+    unsigned Index = It->second;
+    Map.erase(It);
+    bool Inserted = Map.try_emplace(New, Index).second;
+    assert(Inserted && "Cannot move to an existing reference");
+    (void)Inserted;
+
+    Entry = &UseMap[Index];
+  }
+
+  OwnerTy Owner = Entry->Owner;
+  Entry->Ref = New;
 
   // Check that the references are direct if there's no owner.
   (void)MD;
-  assert((OwnerAndIndex.first || *static_cast<Metadata **>(Ref) == &MD) &&
+  assert((Owner || *static_cast<Metadata **>(Ref) == &MD) &&
          "Reference without owner must be direct");
-  assert((OwnerAndIndex.first || *static_cast<Metadata **>(New) == &MD) &&
+  assert((Owner || *static_cast<Metadata **>(New) == &MD) &&
          "Reference without owner must be direct");
+}
+
+void ReplaceableUses::clear() {
+  if (IsLarge) {
+    auto &Map = getContext().pImpl->MetadataUseMap;
+    if (LLVM_LIKELY(!Map.empty())) {
+      for (const auto &U : UseMap) {
+        if (U.Ref)
+          Map.erase(U.Ref);
+      }
+    }
+  }
+  UseMap.clear();
+  NumDead = 0;
+  IsLarge = false;
 }
 
 void ReplaceableUses::SalvageDebugInfo(const Constant &C) {
@@ -340,14 +474,11 @@ void ReplaceableUses::SalvageDebugInfo(const Constant &C) {
   auto &Store = Context.pImpl->ValuesAsMetadata;
   auto I = Store.find(&C);
   ValueAsMetadata *MD = I->second;
-  using UseTy =
-      std::pair<void *, std::pair<MetadataTracking::OwnerTy, uint64_t>>;
   // Copy out uses and update value of Constant used by debug info metadata with
-  // poison below
-  SmallVector<UseTy, 8> Uses(MD->UseMap.begin(), MD->UseMap.end());
+  // poison below.
+  SmallVector<UseEntry, 8> Uses = MD->getLiveUses();
 
-  for (const auto &Pair : Uses) {
-    MetadataTracking::OwnerTy Owner = Pair.second.first;
+  for (const auto &[Ref, Owner] : Uses) {
     if (!Owner)
       continue;
     // Check for MetadataAsValue.
@@ -363,7 +494,7 @@ void ReplaceableUses::SalvageDebugInfo(const Constant &C) {
       continue;
     if (isa<DINode>(OwnerMD)) {
       OwnerMD->handleChangedOperand(
-          Pair.first, ValueAsMetadata::get(PoisonValue::get(C.getType())));
+          Ref, ValueAsMetadata::get(PoisonValue::get(C.getType())));
     }
   }
 }
@@ -373,25 +504,21 @@ void ReplaceableUses::replaceAllUsesWith(Metadata *MD) {
     return;
 
   // Copy out uses since UseMap will get touched below.
-  using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
-  SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  llvm::sort(Uses, [](const UseTy &L, const UseTy &R) {
-    return L.second.second < R.second.second;
-  });
-  for (const auto &Pair : Uses) {
+  SmallVector<UseEntry, 8> Uses = getLiveUses();
+
+  for (const auto &[Ref, Owner] : Uses) {
     // Check that this Ref hasn't disappeared after RAUW (when updating a
     // previous Ref).
-    if (!UseMap.count(Pair.first))
+    if (!hasRef(Ref))
       continue;
 
-    OwnerTy Owner = Pair.second.first;
     if (!Owner) {
       // Update unowned tracking references directly.
-      Metadata *&Ref = *static_cast<Metadata **>(Pair.first);
-      Ref = MD;
+      Metadata *&DirectRef = *static_cast<Metadata **>(Ref);
+      dropRef(Ref);
+      DirectRef = MD;
       if (MD)
-        MetadataTracking::track(Ref);
-      UseMap.erase(Pair.first);
+        MetadataTracking::track(DirectRef);
       continue;
     }
 
@@ -402,7 +529,7 @@ void ReplaceableUses::replaceAllUsesWith(Metadata *MD) {
     }
 
     if (auto *DVU = dyn_cast<DebugValueUser *>(Owner)) {
-      DVU->handleChangedValue(Pair.first, MD);
+      DVU->handleChangedValue(Ref, MD);
       continue;
     }
 
@@ -411,7 +538,7 @@ void ReplaceableUses::replaceAllUsesWith(Metadata *MD) {
     switch (OwnerMD->getMetadataID()) {
 #define HANDLE_METADATA_LEAF(CLASS)                                            \
   case Metadata::CLASS##Kind:                                                  \
-    cast<CLASS>(OwnerMD)->handleChangedOperand(Pair.first, MD);                \
+    cast<CLASS>(OwnerMD)->handleChangedOperand(Ref, MD);                       \
     continue;
 #include "llvm/IR/Metadata.def"
     default:
@@ -426,19 +553,15 @@ void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
     return;
 
   if (!ResolveUsers) {
-    UseMap.clear();
+    clear();
     return;
   }
 
   // Copy out uses since UseMap could get touched below.
-  using UseTy = std::pair<void *, std::pair<OwnerTy, uint64_t>>;
-  SmallVector<UseTy, 8> Uses(UseMap.begin(), UseMap.end());
-  llvm::sort(Uses, [](const UseTy &L, const UseTy &R) {
-    return L.second.second < R.second.second;
-  });
-  UseMap.clear();
-  for (const auto &Pair : Uses) {
-    auto Owner = Pair.second.first;
+  SmallVector<UseEntry, 8> Uses = getLiveUses();
+  clear();
+  for (const auto &U : Uses) {
+    auto Owner = U.Owner;
     if (!Owner)
       continue;
     if (!isa<Metadata *>(Owner))
