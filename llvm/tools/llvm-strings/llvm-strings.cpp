@@ -95,7 +95,7 @@ static bool isStringChar(char C) { return isPrint(C) || C == '\t'; }
 static void strings(raw_ostream &OS, StringRef FileName,
                     sys::fs::file_t Handle) {
   SmallString<sys::fs::DefaultReadChunkSize> Buffer;
-  auto printHeader = [&OS, FileName](size_t StringStart) {
+  auto PrintHeader = [&OS, FileName](size_t StringStart) {
     if (PrintFileName)
       OS << FileName << ": ";
     switch (Radix) {
@@ -137,17 +137,6 @@ static void strings(raw_ostream &OS, StringRef FileName,
       errs() << FileName << ": "
              << errorToErrorCode(ReadBytesOrErr.takeError()).message() << '\n';
       return;
-=======
-  const char *B = Contents.begin();
-  const char *P = nullptr, *E = nullptr, *S = nullptr;
-  for (P = Contents.begin(), E = Contents.end(); P < E; ++P) {
-    if (isPrint(*P) || *P == '\t') {
-      if (S == nullptr)
-        S = P;
-    } else if (S) {
-      Print(S - B, StringRef(S, P - S));
-      S = nullptr;
->>>>>>> main
     }
     size_t ChunkSize = *ReadBytesOrErr;
     if (ChunkSize == 0)
@@ -185,7 +174,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
         // first, followed by the candidate from the previous chunk and the
         // current string. E.g. aa | bbbbbb
         // Output Header: aabbbbbb, where aabbbbbb is printed in here.
-        printHeader(ChunkOffset - Candidate.size());
+        PrintHeader(ChunkOffset - Candidate.size());
         OS << Candidate << StringRef(Begin, Len);
         Candidate.clear();
         InString = true;
@@ -224,7 +213,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
         // If it is not a printable character, we have reached the end of the
         // current string. Print it if long enough.
         if (static_cast<size_t>(Cur - StrHead) >= Min) {
-          printHeader(ChunkOffset + (StrHead - Begin));
+          PrintHeader(ChunkOffset + (StrHead - Begin));
           OS << StringRef(StrHead, Cur - StrHead) << '\n';
         }
         StrHead = nullptr;
@@ -238,7 +227,7 @@ static void strings(raw_ostream &OS, StringRef FileName,
       size_t Len = End - StrHead;
       // Print it, or append it to Candidate if it is too short.
       if (Len >= Min) {
-        printHeader(ChunkOffset + (StrHead - Begin));
+        PrintHeader(ChunkOffset + (StrHead - Begin));
         OS << StringRef(StrHead, Len);
         InString = true;
       } else {
