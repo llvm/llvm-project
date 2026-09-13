@@ -160,8 +160,7 @@ public:
   bool getNeg() const { return Neg; }
   bool getSext() const { return Sext; }
 
-  uint64_t getSrcMods(const SIInstrInfo *TII,
-                      const MachineOperand *SrcOp) const;
+  uint64_t getSrcMods(uint64_t Mods, SdwaSel ExistingSel) const;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void print(raw_ostream& OS) const override;
@@ -309,25 +308,32 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
   return MRI->getOneDef(Reg->getReg());
 }
 
-/// Combine an SDWA instruction's existing SDWA selection \p Sel with
-/// the SDWA selection \p OperandSel of its operand. If the selections
+/// Combine an SDWA source instruction's existing source selection \p Sel
+/// with the SDWA selection \p OperandSel of its operand. If the selections
 /// are compatible, return the combined selection, otherwise return a
-/// nullopt.
+/// nullopt. Destination selections are never combined this way, see
+/// SDWADstOperand::canCombineSelections.
 /// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
 ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
-static std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
+static std::optional<SdwaSel> combineSdwaSrcSel(SdwaSel Sel,
+                                                SdwaSel OperandSel) {
   if (Sel == SdwaSel::DWORD)
     return OperandSel;
 
-  if (Sel == OperandSel || OperandSel == SdwaSel::DWORD)
+  if (OperandSel == SdwaSel::DWORD)
     return Sel;
 
   if (Sel == SdwaSel::WORD_1 || Sel == SdwaSel::BYTE_2 ||
       Sel == SdwaSel::BYTE_3)
     return {};
 
+  // WORD_0 wholly contains the BYTE_0, BYTE_1 and WORD_0 that Sel can be here.
   if (OperandSel == SdwaSel::WORD_0)
     return Sel;
+
+  // Reading BYTE_0 of a BYTE_0 field is that same byte.
+  if (OperandSel == SdwaSel::BYTE_0 && Sel == SdwaSel::BYTE_0)
+    return SdwaSel::BYTE_0;
 
   if (OperandSel == SdwaSel::WORD_1) {
     if (Sel == SdwaSel::BYTE_0)
@@ -341,26 +347,20 @@ static std::optional<SdwaSel> combineSdwaSel(SdwaSel Sel, SdwaSel OperandSel) {
   return {};
 }
 
-uint64_t SDWASrcOperand::getSrcMods(const SIInstrInfo *TII,
-                                    const MachineOperand *SrcOp) const {
-  uint64_t Mods = 0;
-  const auto *MI = SrcOp->getParent();
-  if (TII->getNamedOperand(*MI, AMDGPU::OpName::src0) == SrcOp) {
-    if (auto *Mod = TII->getNamedOperand(*MI, AMDGPU::OpName::src0_modifiers)) {
-      Mods = Mod->getImm();
-    }
-  } else if (TII->getNamedOperand(*MI, AMDGPU::OpName::src1) == SrcOp) {
-    if (auto *Mod = TII->getNamedOperand(*MI, AMDGPU::OpName::src1_modifiers)) {
-      Mods = Mod->getImm();
-    }
-  }
+uint64_t SDWASrcOperand::getSrcMods(uint64_t Mods, SdwaSel ExistingSel) const {
   if (Abs || Neg) {
     assert(!Sext &&
            "Float and integer src modifiers can't be set simultaneously");
     Mods |= Abs ? SISrcMods::ABS : 0u;
     Mods ^= Neg ? SISrcMods::NEG : 0u;
-  } else if (Sext) {
-    Mods |= SISrcMods::SEXT;
+  } else if (ExistingSel == SdwaSel::DWORD) {
+    // SEXT is a no-op for a DWORD selection, so MI may carry one that means
+    // nothing. The combined selection is the operand's field, so use the
+    // operand's SEXT and drop whatever MI had. When ExistingSel narrows the
+    // field instead, the operand's SEXT bits fall outside the combined
+    // field, so MI's own SEXT is kept as is.
+    Mods &= ~uint64_t(SISrcMods::SEXT);
+    Mods |= Sext ? SISrcMods::SEXT : 0u;
   }
 
   return Mods;
@@ -500,23 +500,11 @@ bool SDWASrcOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   copyRegOperand(*Src, *getTargetOperand());
   if (!IsPreserveSrc) {
     SdwaSel ExistingSel = static_cast<SdwaSel>(SrcSel->getImm());
-    SrcSel->setImm(*combineSdwaSel(ExistingSel, getSrcSel()));
-    SrcMods->setImm(getSrcMods(TII, Src));
+    SrcSel->setImm(*combineSdwaSrcSel(ExistingSel, getSrcSel()));
+    SrcMods->setImm(getSrcMods(SrcMods->getImm(), ExistingSel));
   }
   getTargetOperand()->setIsKill(false);
   return true;
-}
-
-/// Verify that the SDWA selection operand \p SrcSelOpName of the SDWA
-/// instruction \p MI can be combined with the selection \p OpSel.
-static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
-                            AMDGPU::OpName SrcSelOpName, SdwaSel OpSel) {
-  assert(TII->isSDWA(MI.getOpcode()));
-
-  const MachineOperand *SrcSelOp = TII->getNamedOperand(MI, SrcSelOpName);
-  SdwaSel SrcSel = static_cast<SdwaSel>(SrcSelOp->getImm());
-
-  return combineSdwaSel(SrcSel, OpSel).has_value();
 }
 
 /// Verify that \p Op is the same register as the operand of the SDWA
@@ -532,7 +520,8 @@ static bool canCombineOpSel(const MachineInstr &MI, const SIInstrInfo *TII,
   if (!Src || !isSameReg(*Src, *Op))
     return true;
 
-  return canCombineOpSel(MI, TII, SrcSelOpName, OpSel);
+  auto SrcSel = static_cast<SdwaSel>(TII->getNamedImmOperand(MI, SrcSelOpName));
+  return combineSdwaSrcSel(SrcSel, OpSel).has_value();
 }
 
 bool SDWASrcOperand::canCombineSelections(const MachineInstr &MI,
@@ -590,8 +579,7 @@ bool SDWADstOperand::convertToSDWA(MachineInstr &MI, const SIInstrInfo *TII) {
   MachineOperand *DstSel= TII->getNamedOperand(MI, AMDGPU::OpName::dst_sel);
   assert(DstSel);
 
-  SdwaSel ExistingSel = static_cast<SdwaSel>(DstSel->getImm());
-  DstSel->setImm(combineSdwaSel(ExistingSel, getDstSel()).value());
+  DstSel->setImm(getDstSel());
 
   MachineOperand *DstUnused= TII->getNamedOperand(MI, AMDGPU::OpName::dst_unused);
   assert(DstUnused);
@@ -608,7 +596,9 @@ bool SDWADstOperand::canCombineSelections(const MachineInstr &MI,
   if (!TII->isSDWA(MI.getOpcode()))
     return true;
 
-  return canCombineOpSel(MI, TII, AMDGPU::OpName::dst_sel, getDstSel());
+  // Destination selections are never combined, so only fold into an MI that
+  // is not yet writing a sub-field of its destination.
+  return TII->getNamedImmOperand(MI, AMDGPU::OpName::dst_sel) == SdwaSel::DWORD;
 }
 
 bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
@@ -642,7 +632,9 @@ bool SDWADstPreserveOperand::convertToSDWA(MachineInstr &MI,
 
 bool SDWADstPreserveOperand::canCombineSelections(const MachineInstr &MI,
                                                   const SIInstrInfo *TII) {
-  return SDWADstOperand::canCombineSelections(MI, TII);
+  // DstSel came from the dst_sel already on MI, only dst_unused changes here.
+  assert(TII->getNamedImmOperand(MI, AMDGPU::OpName::dst_sel) == getDstSel());
+  return true;
 }
 
 std::optional<int64_t>
