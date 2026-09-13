@@ -115,6 +115,11 @@ static cl::opt<bool> MergeTextSections(
              "instead of separate .text/.text.cold sections (relocation mode)"),
     cl::init(false), cl::cat(BoltCategory));
 
+static cl::opt<bool> RemovePseudoProbes(
+    "remove-pseudo-probes",
+    cl::desc("remove pseudo probe sections from the output binary"),
+    cl::init(false), cl::cat(BoltOutputCategory));
+
 static cl::opt<std::string>
     BoltID("bolt-id",
            cl::desc("add any string to tag this execution in the "
@@ -345,6 +350,11 @@ cl::opt<RuntimeLibInitHookTarget> RuntimeLibInitHook(
     cl::ZeroOrMore, cl::cat(BoltOptCategory));
 
 } // namespace opts
+
+static bool shouldRemovePseudoProbeSection(StringRef SectionName) {
+  return opts::RemovePseudoProbes && (SectionName == ".pseudo_probe" ||
+                                      SectionName == ".pseudo_probe_desc");
+}
 
 // FIXME: implement a better way to mark sections for replacement.
 std::vector<std::string> RewriteInstance::DebugSectionsToOverwrite = {
@@ -3923,8 +3933,8 @@ void RewriteInstance::initializeMetadataManager() {
     MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
 
   MetadataManager.registerRewriter(createBuildIDRewriter(*BC));
-
-  MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
+  if (!opts::RemovePseudoProbes)
+    MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
 
   MetadataManager.registerRewriter(createRSeqRewriter(*BC));
 
@@ -5260,6 +5270,8 @@ void RewriteInstance::rewriteNoteSections(ELFObjectFile<ELFT> *File) {
 
   // Write new note sections.
   for (BinarySection &Section : BC->nonAllocatableSections()) {
+    if (shouldRemovePseudoProbeSection(Section.getOutputName()))
+      continue;
     if (Section.getOutputFileOffset() || !Section.getAllocAddress())
       continue;
 
@@ -5342,6 +5354,10 @@ void RewriteInstance::encodeBATSection() {
 template <typename ELFShdrTy>
 bool RewriteInstance::shouldStrip(const ELFShdrTy &Section,
                                   StringRef SectionName) {
+  // Do not emit pseudo probe metadata when its removal is requested.
+  if (shouldRemovePseudoProbeSection(SectionName))
+    return true;
+
   // Strip non-allocatable relocation sections.
   if (!(Section.sh_flags & ELF::SHF_ALLOC) &&
       (Section.sh_type == ELF::SHT_RELA || Section.sh_type == ELF::SHT_CREL))
