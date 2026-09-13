@@ -583,6 +583,29 @@ def SPIRV_CLFMinOp : SPIRV_CLBinaryArithmeticOp<"fmin", 28, SPIRV_Float> {
 
 // -----
 
+def SPIRV_CLFClampOp : SPIRV_CLTernaryArithmeticOp<"fclamp", 95, SPIRV_Float> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Returns min(max(x, minval), maxval).
+
+    Result Type, x, minval and maxval must be floating-point or
+    vector(2,3,4,8,16) of floating-point values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.fclamp %x, %min, %max : f32
+    %1 = spirv.CL.fclamp %x, %min, %max : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_CLFdimOp : SPIRV_CLBinaryArithmeticOp<"fdim", 24, SPIRV_Float> {
   let summary = "Compute the positive difference between x and y.";
 
@@ -1035,6 +1058,54 @@ def SPIRV_CLSAbsOp : SPIRV_CLUnaryArithmeticOp<"s_abs", 141, SPIRV_Integer> {
     ```mlir
     %2 = spirv.CL.s_abs %0 : i32
     %3 = spirv.CL.s_abs %1 : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLSClampOp : SPIRV_CLTernaryArithmeticOp<"s_clamp", 149, SPIRV_Integer> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Returns min(max(x, minval), maxval), where x, minval and maxval are
+    interpreted as signed integers.
+
+    Result Type, x, minval and maxval must be integer or vector(2,3,4,8,16)
+    of integer values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.s_clamp %x, %min, %max : i32
+    %1 = spirv.CL.s_clamp %x, %min, %max : vector<3xi16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_CLUClampOp : SPIRV_CLTernaryArithmeticOp<"u_clamp", 150, SPIRV_Integer> {
+  let summary = "Clamp x between min and max values.";
+
+  let description = [{
+    Returns min(max(x, minval), maxval), where x, minval and maxval are
+    interpreted as unsigned integers.
+
+    Result Type, x, minval and maxval must be integer or vector(2,3,4,8,16)
+    of integer values.
+
+    All of the operands, including the Result Type operand, must be of the
+    same type.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.CL.u_clamp %x, %min, %max : i32
+    %1 = spirv.CL.u_clamp %x, %min, %max : vector<3xi16>
     ```
   }];
 }

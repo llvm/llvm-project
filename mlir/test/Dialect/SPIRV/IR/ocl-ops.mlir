@@ -459,6 +459,58 @@ func.func @mix(%a : vector<3xf32>, %b : vector<3xf32>, %c : vector<3xf32>) -> ()
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.{f|s_|u_}clamp
+//===----------------------------------------------------------------------===//
+
+func.func @fclamp(%x : f32, %min : f32, %max : f32) -> () {
+  // CHECK: spirv.CL.fclamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : f32
+  %2 = spirv.CL.fclamp %x, %min, %max : f32
+  return
+}
+
+// -----
+
+func.func @fclamp(%x : vector<3xf32>, %min : vector<3xf32>, %max : vector<3xf32>) -> () {
+  // CHECK: spirv.CL.fclamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
+  %2 = spirv.CL.fclamp %x, %min, %max : vector<3xf32>
+  return
+}
+
+// -----
+
+func.func @sclamp(%x : i32, %min : i32, %max : i32) -> () {
+  // CHECK: spirv.CL.s_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+  %2 = spirv.CL.s_clamp %x, %min, %max : i32
+  return
+}
+
+// -----
+
+func.func @sclamp(%x : vector<3xi16>, %min : vector<3xi16>, %max : vector<3xi16>) -> () {
+  // CHECK: spirv.CL.s_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xi16>
+  %2 = spirv.CL.s_clamp %x, %min, %max : vector<3xi16>
+  return
+}
+
+// -----
+
+func.func @uclamp(%x : i32, %min : i32, %max : i32) -> () {
+  // CHECK: spirv.CL.u_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : i32
+  %2 = spirv.CL.u_clamp %x, %min, %max : i32
+  return
+}
+
+// -----
+
+func.func @uclamp(%x : vector<3xi16>, %min : vector<3xi16>, %max : vector<3xi16>) -> () {
+  // CHECK: spirv.CL.u_clamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xi16>
+  %2 = spirv.CL.u_clamp %x, %min, %max : vector<3xi16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.{F|S|U}{Max|Min}
 //===----------------------------------------------------------------------===//
 
