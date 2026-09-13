@@ -261,7 +261,7 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
 ///
 /// If \p UsedHeaderPHI is non-null, an incoming value that is a PHI in the
 /// loop header is accepted too. *UsedHeaderPHI is set to true if that happens.
-static bool areLoopExitPHIsLoopInvariant(const Loop &L,
+static bool areLoopExitPHIsTrivial(const Loop &L,
                                          const BasicBlock &ExitingBB,
                                          const BasicBlock &ExitBB,
                                          bool *UsedHeaderPHI = nullptr) {
@@ -608,7 +608,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // Redirecting the latch edge to the exit block will cause us to skip latch
   // instructions. This can only be done if the latch instructions don't have
   // side effects and don't have any convergent instructions.
-  if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
+  if (LatchIdx && areLoopExitPHIsTrivial(L, *LoopLatch, *ULExit) &&
       !llvm::any_of(*LoopLatch, [](Instruction &I) {
         if (const auto *CB = dyn_cast<CallBase>(&I))
           if (CB->isConvergent())
@@ -663,7 +663,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // header PHI. Those incomings are repaired after unswitching.
   // Branch always dominates the latch as guaranteed by the caller.
   bool TrivialFromHeader = false;
-  if (!ModifiedBranch && !areLoopExitPHIsLoopInvariant(
+  if (!ModifiedBranch && !areLoopExitPHIsTrivial(
                              L, *ParentBB, *LoopExitBB, &TrivialFromHeader)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
@@ -892,7 +892,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (L.contains(&BBToCheck))
       return false;
     // BBToCheck is not trivial to unswitch if its phis aren't loop invariant.
-    if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, BBToCheck))
+    if (!areLoopExitPHIsTrivial(L, *ParentBB, BBToCheck))
       return false;
     // We do not unswitch a block that only has an unreachable statement, as
     // it's possible this is a previously unswitched block. Only unswitch if
