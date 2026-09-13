@@ -82,3 +82,25 @@ body: |
     }
     S_ENDPGM 0
 ...
+
+# GCN-LABEL:    name: break_smem_clause_beyond_max_look_ahead_in_bundle
+# GCN:          $sgpr5 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+# XNACK-NEXT:   S_NOP
+# NOXNACK-NOT:  S_NOP
+# GCN-NEXT:     $sgpr10 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+# GCN:          }
+---
+name: break_smem_clause_beyond_max_look_ahead_in_bundle
+body: |
+  bb.0:
+    BUNDLE implicit-def $sgpr0, implicit-def $sgpr1, implicit-def $sgpr2, implicit-def $sgpr3, implicit-def $sgpr4, implicit-def $sgpr5, implicit-def $sgpr10, implicit $sgpr10_sgpr11, implicit $sgpr12_sgpr13, implicit $sgpr14_sgpr15, implicit $sgpr16_sgpr17, implicit $sgpr18_sgpr19, implicit $sgpr20_sgpr21, implicit $sgpr22_sgpr23 {
+      $sgpr0 = S_LOAD_DWORD_IMM $sgpr10_sgpr11, 0, 0
+      $sgpr1 = S_LOAD_DWORD_IMM $sgpr12_sgpr13, 0, 0
+      $sgpr2 = S_LOAD_DWORD_IMM $sgpr14_sgpr15, 0, 0
+      $sgpr3 = S_LOAD_DWORD_IMM $sgpr16_sgpr17, 0, 0
+      $sgpr4 = S_LOAD_DWORD_IMM $sgpr18_sgpr19, 0, 0
+      $sgpr5 = S_LOAD_DWORD_IMM $sgpr20_sgpr21, 0, 0
+      $sgpr10 = S_LOAD_DWORD_IMM $sgpr22_sgpr23, 0, 0
+    }
+    S_ENDPGM 0
+...

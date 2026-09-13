@@ -20107,6 +20107,7 @@ define inreg <32 x i32> @bitcast_v128i8_to_v32i32_scalar(<128 x i8> inreg %a, i3
 ; GFX9-NEXT:    buffer_load_ushort v25, off, s[0:3], s32 offset:140
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:136
 ; GFX9-NEXT:    buffer_load_ushort v23, off, s[0:3], s32 offset:132
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:128
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v18, off, s[0:3], s32 offset:120
@@ -56225,6 +56226,7 @@ define inreg <32 x float> @bitcast_v128i8_to_v32f32_scalar(<128 x i8> inreg %a, 
 ; GFX9-NEXT:    buffer_load_ushort v25, off, s[0:3], s32 offset:140
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:136
 ; GFX9-NEXT:    buffer_load_ushort v23, off, s[0:3], s32 offset:132
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:128
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v18, off, s[0:3], s32 offset:120
@@ -90562,6 +90564,7 @@ define inreg <16 x i64> @bitcast_v128i8_to_v16i64_scalar(<128 x i8> inreg %a, i3
 ; GFX9-NEXT:    buffer_load_ushort v25, off, s[0:3], s32 offset:140
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:136
 ; GFX9-NEXT:    buffer_load_ushort v23, off, s[0:3], s32 offset:132
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:128
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v18, off, s[0:3], s32 offset:120
@@ -123799,6 +123802,7 @@ define inreg <16 x double> @bitcast_v128i8_to_v16f64_scalar(<128 x i8> inreg %a,
 ; GFX9-NEXT:    buffer_load_ushort v25, off, s[0:3], s32 offset:140
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:136
 ; GFX9-NEXT:    buffer_load_ushort v23, off, s[0:3], s32 offset:132
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:128
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v18, off, s[0:3], s32 offset:120
@@ -143855,6 +143859,7 @@ define <64 x bfloat> @bitcast_v128i8_to_v64bf16(<128 x i8> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_load_ushort v60, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v35, off, s[0:3], s32 offset:120
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:372
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:744 ; 4-byte Folded Spill
@@ -149251,6 +149256,7 @@ define inreg <64 x bfloat> @bitcast_v128i8_to_v64bf16_scalar(<128 x i8> inreg %a
 ; GFX9-NEXT:    buffer_load_ushort v6, off, s[0:3], s32 offset:272
 ; GFX9-NEXT:    buffer_load_ushort v8, off, s[0:3], s32 offset:268
 ; GFX9-NEXT:    buffer_load_ushort v41, off, s[0:3], s32 offset:264
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v2, off, s[0:3], s32 offset:260
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:256
 ; GFX9-NEXT:    buffer_load_ushort v9, off, s[0:3], s32 offset:252
@@ -149348,6 +149354,7 @@ define inreg <64 x bfloat> @bitcast_v128i8_to_v64bf16_scalar(<128 x i8> inreg %a
 ; GFX9-NEXT:    buffer_load_ushort v30, off, s[0:3], s32 offset:60
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:56
 ; GFX9-NEXT:    buffer_load_ushort v52, off, s[0:3], s32 offset:52
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v14, off, s[0:3], s32 offset:48
 ; GFX9-NEXT:    buffer_load_ushort v29, off, s[0:3], s32 offset:44
 ; GFX9-NEXT:    buffer_load_ushort v39, off, s[0:3], s32 offset:40
@@ -170343,6 +170350,7 @@ define <64 x half> @bitcast_v128i8_to_v64f16(<128 x i8> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_load_ushort v60, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v35, off, s[0:3], s32 offset:120
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:372
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:744 ; 4-byte Folded Spill
@@ -175739,6 +175747,7 @@ define inreg <64 x half> @bitcast_v128i8_to_v64f16_scalar(<128 x i8> inreg %a, i
 ; GFX9-NEXT:    buffer_load_ushort v6, off, s[0:3], s32 offset:272
 ; GFX9-NEXT:    buffer_load_ushort v8, off, s[0:3], s32 offset:268
 ; GFX9-NEXT:    buffer_load_ushort v41, off, s[0:3], s32 offset:264
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v2, off, s[0:3], s32 offset:260
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:256
 ; GFX9-NEXT:    buffer_load_ushort v9, off, s[0:3], s32 offset:252
@@ -175836,6 +175845,7 @@ define inreg <64 x half> @bitcast_v128i8_to_v64f16_scalar(<128 x i8> inreg %a, i
 ; GFX9-NEXT:    buffer_load_ushort v30, off, s[0:3], s32 offset:60
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:56
 ; GFX9-NEXT:    buffer_load_ushort v52, off, s[0:3], s32 offset:52
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v14, off, s[0:3], s32 offset:48
 ; GFX9-NEXT:    buffer_load_ushort v29, off, s[0:3], s32 offset:44
 ; GFX9-NEXT:    buffer_load_ushort v39, off, s[0:3], s32 offset:40
@@ -191200,6 +191210,7 @@ define <64 x i16> @bitcast_v128i8_to_v64i16(<128 x i8> %a, i32 %b) #0 {
 ; GFX9-NEXT:    buffer_load_ushort v60, off, s[0:3], s32 offset:4
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:124
 ; GFX9-NEXT:    buffer_load_ushort v35, off, s[0:3], s32 offset:120
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v0, off, s[0:3], s32 offset:372
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:744 ; 4-byte Folded Spill
@@ -196596,6 +196607,7 @@ define inreg <64 x i16> @bitcast_v128i8_to_v64i16_scalar(<128 x i8> inreg %a, i3
 ; GFX9-NEXT:    buffer_load_ushort v6, off, s[0:3], s32 offset:272
 ; GFX9-NEXT:    buffer_load_ushort v8, off, s[0:3], s32 offset:268
 ; GFX9-NEXT:    buffer_load_ushort v41, off, s[0:3], s32 offset:264
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v2, off, s[0:3], s32 offset:260
 ; GFX9-NEXT:    buffer_load_ushort v24, off, s[0:3], s32 offset:256
 ; GFX9-NEXT:    buffer_load_ushort v9, off, s[0:3], s32 offset:252
@@ -196693,6 +196705,7 @@ define inreg <64 x i16> @bitcast_v128i8_to_v64i16_scalar(<128 x i8> inreg %a, i3
 ; GFX9-NEXT:    buffer_load_ushort v30, off, s[0:3], s32 offset:60
 ; GFX9-NEXT:    buffer_load_ushort v62, off, s[0:3], s32 offset:56
 ; GFX9-NEXT:    buffer_load_ushort v52, off, s[0:3], s32 offset:52
+; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    buffer_load_ushort v14, off, s[0:3], s32 offset:48
 ; GFX9-NEXT:    buffer_load_ushort v29, off, s[0:3], s32 offset:44
 ; GFX9-NEXT:    buffer_load_ushort v39, off, s[0:3], s32 offset:40
