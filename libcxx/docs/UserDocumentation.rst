@@ -224,6 +224,9 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_CODECVT**:
   This macro is used to re-enable all named declarations in ``<codecvt>``.
 
+**_LIBCPP_ENABLE_CXX26_REMOVED_SHARED_PTR_ATOMICS**:
+  This macro is used to re-enable all ``shared_ptr`` atomic access APIs in ``<memory>``.
+
 **_LIBCPP_ENABLE_CXX26_REMOVED_STRING_RESERVE**:
   This macro is used to re-enable the function
   ``std::basic_string<...>::reserve()``.
@@ -234,6 +237,7 @@ C++26 Specific Configuration Macros
 **_LIBCPP_ENABLE_CXX26_REMOVED_WSTRING_CONVERT**:
   This macro is used to re-enable the ``wstring_convert`` and ``wbuffer_convert``
   in ``<locale>``.
+
 
 Libc++ Extensions
 =================
