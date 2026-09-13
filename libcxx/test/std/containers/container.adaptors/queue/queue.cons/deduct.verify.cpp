@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cstddef>
 
-int main(int, char**) {
+void test() {
   //  Test the explicit deduction guides
   {
     //  queue(const Container&, const Alloc&);
@@ -41,6 +41,4 @@ int main(int, char**) {
     //  Also, we can't use {} instead of parens, because that constructs a
     //      stack<allocator<int>, allocator<allocator<int>>>
   }
-
-  return 0;
 }

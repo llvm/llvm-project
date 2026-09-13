@@ -18,7 +18,7 @@
 #include "test_allocator.h"
 
 template <class C>
-C make(int n) {
+TEST_CONSTEXPR_CXX26 C make(int n) {
   C c;
   for (int i = 0; i < n; ++i)
     c.push_back(i);
@@ -39,11 +39,20 @@ struct test : public std::queue<T, C> {
   allocator_type get_allocator() { return this->c.get_allocator(); }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<int> q(make<C>(5), test_allocator<int>(4));
   test<int> q2(q, test_allocator<int>(5));
   assert(q2.get_allocator() == test_allocator<int>(5));
   assert(q2.size() == 5);
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

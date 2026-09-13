@@ -15,13 +15,22 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::queue<int> q;
   assert(q.empty());
   q.push(1);
   assert(!q.empty());
   q.pop();
   assert(q.empty());
+
+  return 0;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
