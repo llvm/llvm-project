@@ -159,11 +159,11 @@ define void @shuffle_any_ext_8i16_to_8i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vilvl.h $vr1, $vr0, $vr0
-; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr1
 ; CHECK-NEXT:    vilvh.h $vr2, $vr0, $vr0
-; CHECK-NEXT:    vilvl.w $vr3, $vr2, $vr2
-; CHECK-NEXT:    vilvh.w $vr2, $vr2, $vr2
 ; CHECK-NEXT:    vextrins.h $vr0, $vr0, 65
+; CHECK-NEXT:    vilvl.w $vr3, $vr2, $vr2
+; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvh.w $vr2, $vr2, $vr2
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    vst $vr2, $a1, 48
 ; CHECK-NEXT:    vst $vr3, $a1, 32
@@ -197,10 +197,10 @@ define void @shuffle_any_ext_16i8_to_16i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vilvl.b $vr1, $vr0, $vr0
-; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr1
-; CHECK-NEXT:    vilvh.h $vr1, $vr1, $vr1
 ; CHECK-NEXT:    vilvh.b $vr0, $vr0, $vr0
+; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr1
 ; CHECK-NEXT:    vilvl.h $vr3, $vr0, $vr0
+; CHECK-NEXT:    vilvh.h $vr1, $vr1, $vr1
 ; CHECK-NEXT:    vilvh.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 48
 ; CHECK-NEXT:    vst $vr3, $a1, 32
@@ -219,20 +219,20 @@ define void @shuffle_any_ext_16i8_to_16i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vilvl.b $vr1, $vr0, $vr0
-; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr1
-; CHECK-NEXT:    vilvh.w $vr2, $vr2, $vr2
-; CHECK-NEXT:    vilvh.h $vr1, $vr1, $vr1
-; CHECK-NEXT:    vilvl.w $vr3, $vr1, $vr1
-; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr1
 ; CHECK-NEXT:    vilvh.b $vr4, $vr0, $vr0
-; CHECK-NEXT:    vilvl.h $vr5, $vr4, $vr4
-; CHECK-NEXT:    vilvl.w $vr6, $vr5, $vr5
-; CHECK-NEXT:    vilvh.w $vr5, $vr5, $vr5
-; CHECK-NEXT:    vilvh.h $vr4, $vr4, $vr4
-; CHECK-NEXT:    vilvl.w $vr7, $vr4, $vr4
-; CHECK-NEXT:    vilvh.w $vr4, $vr4, $vr4
 ; CHECK-NEXT:    vextrins.b $vr0, $vr0, 129
+; CHECK-NEXT:    vilvl.h $vr2, $vr1, $vr1
+; CHECK-NEXT:    vilvl.h $vr5, $vr4, $vr4
+; CHECK-NEXT:    vilvh.h $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvh.h $vr4, $vr4, $vr4
 ; CHECK-NEXT:    vst $vr0, $a1, 0
+; CHECK-NEXT:    vilvl.w $vr3, $vr1, $vr1
+; CHECK-NEXT:    vilvl.w $vr6, $vr5, $vr5
+; CHECK-NEXT:    vilvl.w $vr7, $vr4, $vr4
+; CHECK-NEXT:    vilvh.w $vr2, $vr2, $vr2
+; CHECK-NEXT:    vilvh.w $vr1, $vr1, $vr1
+; CHECK-NEXT:    vilvh.w $vr5, $vr5, $vr5
+; CHECK-NEXT:    vilvh.w $vr4, $vr4, $vr4
 ; CHECK-NEXT:    vst $vr4, $a1, 112
 ; CHECK-NEXT:    vst $vr7, $a1, 96
 ; CHECK-NEXT:    vst $vr5, $a1, 80

@@ -50,6 +50,7 @@ define void @one_div_sqrt_v8f32(ptr %res, ptr %a0) nounwind {
 ; LA32-NEXT:    addi.w $fp, $sp, 128
 ; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    vld $vr0, $a1, 16
+; LA32-NEXT:    xvldi $xr2, -1400
 ; LA32-NEXT:    vst $vr0, $sp, 48
 ; LA32-NEXT:    ld.w $a2, $a1, 12
 ; LA32-NEXT:    st.w $a2, $sp, 44
@@ -62,7 +63,6 @@ define void @one_div_sqrt_v8f32(ptr %res, ptr %a0) nounwind {
 ; LA32-NEXT:    xvld $xr0, $sp, 32
 ; LA32-NEXT:    xvfrsqrte.s $xr1, $xr0
 ; LA32-NEXT:    xvfmul.s $xr0, $xr0, $xr1
-; LA32-NEXT:    xvldi $xr2, -1400
 ; LA32-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; LA32-NEXT:    xvldi $xr2, -3137
 ; LA32-NEXT:    xvfmul.s $xr1, $xr1, $xr2
@@ -94,9 +94,9 @@ define void @one_div_sqrt_v8f32(ptr %res, ptr %a0) nounwind {
 ; LA64-LABEL: one_div_sqrt_v8f32:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a1, 0
+; LA64-NEXT:    xvldi $xr2, -1400
 ; LA64-NEXT:    xvfrsqrte.s $xr1, $xr0
 ; LA64-NEXT:    xvfmul.s $xr0, $xr0, $xr1
-; LA64-NEXT:    xvldi $xr2, -1400
 ; LA64-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; LA64-NEXT:    xvldi $xr2, -3137
 ; LA64-NEXT:    xvfmul.s $xr1, $xr1, $xr2
@@ -120,6 +120,7 @@ define void @one_div_sqrt_v4f64(ptr %res, ptr %a0) nounwind {
 ; FAULT-LA32-NEXT:    addi.w $fp, $sp, 128
 ; FAULT-LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; FAULT-LA32-NEXT:    vld $vr0, $a1, 16
+; FAULT-LA32-NEXT:    xvldi $xr1, -912
 ; FAULT-LA32-NEXT:    vst $vr0, $sp, 48
 ; FAULT-LA32-NEXT:    ld.w $a2, $a1, 12
 ; FAULT-LA32-NEXT:    st.w $a2, $sp, 44
@@ -131,7 +132,6 @@ define void @one_div_sqrt_v4f64(ptr %res, ptr %a0) nounwind {
 ; FAULT-LA32-NEXT:    st.w $a1, $sp, 32
 ; FAULT-LA32-NEXT:    xvld $xr0, $sp, 32
 ; FAULT-LA32-NEXT:    xvfsqrt.d $xr0, $xr0
-; FAULT-LA32-NEXT:    xvldi $xr1, -912
 ; FAULT-LA32-NEXT:    xvfdiv.d $xr0, $xr1, $xr0
 ; FAULT-LA32-NEXT:    xvst $xr0, $sp, 64
 ; FAULT-LA32-NEXT:    vld $vr0, $sp, 80
@@ -158,6 +158,8 @@ define void @one_div_sqrt_v4f64(ptr %res, ptr %a0) nounwind {
 ; LA32-NEXT:    addi.w $fp, $sp, 128
 ; LA32-NEXT:    bstrins.w $sp, $zero, 4, 0
 ; LA32-NEXT:    vld $vr0, $a1, 16
+; LA32-NEXT:    xvldi $xr3, -888
+; LA32-NEXT:    xvldi $xr4, -800
 ; LA32-NEXT:    vst $vr0, $sp, 48
 ; LA32-NEXT:    ld.w $a2, $a1, 12
 ; LA32-NEXT:    st.w $a2, $sp, 44
@@ -170,9 +172,7 @@ define void @one_div_sqrt_v4f64(ptr %res, ptr %a0) nounwind {
 ; LA32-NEXT:    xvld $xr0, $sp, 32
 ; LA32-NEXT:    xvfrsqrte.d $xr1, $xr0
 ; LA32-NEXT:    xvfmul.d $xr2, $xr0, $xr1
-; LA32-NEXT:    xvldi $xr3, -888
 ; LA32-NEXT:    xvfmadd.d $xr2, $xr2, $xr1, $xr3
-; LA32-NEXT:    xvldi $xr4, -800
 ; LA32-NEXT:    xvfmul.d $xr1, $xr1, $xr4
 ; LA32-NEXT:    xvfmul.d $xr1, $xr1, $xr2
 ; LA32-NEXT:    xvfmul.d $xr0, $xr0, $xr1
@@ -206,11 +206,11 @@ define void @one_div_sqrt_v4f64(ptr %res, ptr %a0) nounwind {
 ; LA64-LABEL: one_div_sqrt_v4f64:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    xvld $xr0, $a1, 0
+; LA64-NEXT:    xvldi $xr3, -888
+; LA64-NEXT:    xvldi $xr4, -800
 ; LA64-NEXT:    xvfrsqrte.d $xr1, $xr0
 ; LA64-NEXT:    xvfmul.d $xr2, $xr0, $xr1
-; LA64-NEXT:    xvldi $xr3, -888
 ; LA64-NEXT:    xvfmadd.d $xr2, $xr2, $xr1, $xr3
-; LA64-NEXT:    xvldi $xr4, -800
 ; LA64-NEXT:    xvfmul.d $xr1, $xr1, $xr4
 ; LA64-NEXT:    xvfmul.d $xr1, $xr1, $xr2
 ; LA64-NEXT:    xvfmul.d $xr0, $xr0, $xr1

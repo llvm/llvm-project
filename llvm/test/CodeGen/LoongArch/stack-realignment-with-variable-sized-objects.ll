@@ -20,8 +20,8 @@ define void @caller(i32 %n) {
 ; LA32-NEXT:    addi.w $fp, $sp, 64
 ; LA32-NEXT:    .cfi_def_cfa 22, 0
 ; LA32-NEXT:    bstrins.w $sp, $zero, 5, 0
-; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    addi.w $a0, $a0, 15
+; LA32-NEXT:    move $s8, $sp
 ; LA32-NEXT:    bstrins.w $a0, $zero, 3, 0
 ; LA32-NEXT:    sub.w $a0, $sp, $a0
 ; LA32-NEXT:    move $sp, $a0
@@ -47,8 +47,8 @@ define void @caller(i32 %n) {
 ; LA64-NEXT:    addi.d $fp, $sp, 128
 ; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    bstrins.d $sp, $zero, 5, 0
-; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    move $s8, $sp
 ; LA64-NEXT:    addi.d $a0, $a0, 15
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 32, 4
 ; LA64-NEXT:    slli.d $a0, $a0, 4

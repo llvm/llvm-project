@@ -10,11 +10,11 @@ define half @exp10_f16(half %x) #0 {
 ; LA32-NEXT:    bl __extendhfsf2
 ; LA32-NEXT:    bl exp10f
 ; LA32-NEXT:    bl __truncsfhf2
+; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
 ; LA32-NEXT:    lu12i.w $a1, -16
 ; LA32-NEXT:    or $a0, $a0, $a1
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
@@ -28,11 +28,11 @@ define half @exp10_f16(half %x) #0 {
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__truncsfhf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
+; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    lu12i.w $a1, -16
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    movgr2fr.w $fa0, $a0
-; LA64-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NEXT:    ret
   %r = call half @llvm.exp10.f16(half %x)
@@ -46,8 +46,8 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) #0 {
 ; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $fp, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    fst.d $fs0, $sp, 0 # 8-byte Folded Spill
-; LA32-NEXT:    movgr2fr.w $fs0, $a1
 ; LA32-NEXT:    movgr2fr.w $fa0, $a0
+; LA32-NEXT:    movgr2fr.w $fs0, $a1
 ; LA32-NEXT:    bl __extendhfsf2
 ; LA32-NEXT:    bl exp10f
 ; LA32-NEXT:    bl __truncsfhf2
@@ -56,11 +56,11 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) #0 {
 ; LA32-NEXT:    bl __extendhfsf2
 ; LA32-NEXT:    bl exp10f
 ; LA32-NEXT:    bl __truncsfhf2
-; LA32-NEXT:    movfr2gr.s $a1, $fa0
 ; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    fld.d $fs0, $sp, 0 # 8-byte Folded Reload
 ; LA32-NEXT:    ld.w $fp, $sp, 8 # 4-byte Folded Reload
 ; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NEXT:    movfr2gr.s $a1, $fa0
 ; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
@@ -69,8 +69,8 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -32
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $fp, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    movgr2fr.w $fa0, $a1
+; LA64-NEXT:    move $fp, $a0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__extendhfsf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(exp10f)
@@ -78,8 +78,8 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) #0 {
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__truncsfhf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    movfr2gr.s $a0, $fa0
-; LA64-NEXT:    st.h $a0, $sp, 2
 ; LA64-NEXT:    movgr2fr.w $fa0, $fp
+; LA64-NEXT:    st.h $a0, $sp, 2
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__extendhfsf2)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(exp10f)
@@ -89,10 +89,10 @@ define <2 x half> @exp10_v2f16(<2 x half> %x) #0 {
 ; LA64-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64-NEXT:    st.h $a0, $sp, 0
 ; LA64-NEXT:    vld $vr0, $sp, 0
-; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
-; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 1
 ; LA64-NEXT:    ld.d $fp, $sp, 16 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 24 # 8-byte Folded Reload
+; LA64-NEXT:    vpickve2gr.h $a0, $vr0, 0
+; LA64-NEXT:    vpickve2gr.h $a1, $vr0, 1
 ; LA64-NEXT:    addi.d $sp, $sp, 32
 ; LA64-NEXT:    ret
   %r = call <2 x half> @llvm.exp10.v2f16(<2 x half> %x)
@@ -148,10 +148,10 @@ define <2 x float> @exp10_v2f32(<2 x float> %x) #0 {
 ; LA64-NEXT:    # kill: def $f0 killed $f0 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(exp10f)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
-; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vextrins.w $vr0, $vr1, 16
 ; LA64-NEXT:    addi.d $sp, $sp, 48
 ; LA64-NEXT:    ret
   %r = call <2 x float> @llvm.exp10.v2f32(<2 x float> %x)
@@ -207,10 +207,10 @@ define <2 x double> @exp10_v2f64(<2 x double> %x) #0 {
 ; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 killed $vr0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(exp10)
 ; LA64-NEXT:    jirl $ra, $ra, 0
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA64-NEXT:    vld $vr1, $sp, 16 # 16-byte Folded Reload
-; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    ld.d $ra, $sp, 40 # 8-byte Folded Reload
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vextrins.d $vr0, $vr1, 16
 ; LA64-NEXT:    addi.d $sp, $sp, 48
 ; LA64-NEXT:    ret
   %r = call <2 x double> @llvm.exp10.v2f64(<2 x double> %x)

@@ -14,11 +14,11 @@ define void @merge_load_store(ptr noalias %src, ptr noalias %dst) unnamed_addr {
 ; LA32-NEXT:    st.b $a2, $a1, 0
 ; LA32-NEXT:    st.b $a3, $a1, 1
 ; LA32-NEXT:    st.b $a4, $a1, 2
-; LA32-NEXT:    st.b $a5, $a1, 3
 ; LA32-NEXT:    ld.b $a2, $a0, 4
 ; LA32-NEXT:    ld.b $a3, $a0, 5
 ; LA32-NEXT:    ld.b $a4, $a0, 6
 ; LA32-NEXT:    ld.b $a0, $a0, 7
+; LA32-NEXT:    st.b $a5, $a1, 3
 ; LA32-NEXT:    st.b $a2, $a1, 4
 ; LA32-NEXT:    st.b $a3, $a1, 5
 ; LA32-NEXT:    st.b $a4, $a1, 6

@@ -291,8 +291,8 @@ define void @test_trunc_v16i64_to_v16i8(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    xvld $xr2, $a0, 64
 ; CHECK-NEXT:    xvld $xr3, $a0, 96
 ; CHECK-NEXT:    xvpickev.w $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvpickev.w $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 216
 ; CHECK-NEXT:    xvpickev.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
@@ -314,8 +314,8 @@ define void @test_trunc_v16i64_to_v16i16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    xvld $xr2, $a0, 64
 ; CHECK-NEXT:    xvld $xr3, $a0, 96
 ; CHECK-NEXT:    xvpickev.w $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvpickev.w $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 216
 ; CHECK-NEXT:    xvpickev.h $xr0, $xr1, $xr0
 ; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
@@ -335,8 +335,8 @@ define void @test_trunc_v16i64_to_v16i32(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    xvld $xr2, $a0, 64
 ; CHECK-NEXT:    xvld $xr3, $a0, 96
 ; CHECK-NEXT:    xvpickev.w $xr0, $xr1, $xr0
-; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvpickev.w $xr1, $xr3, $xr2
+; CHECK-NEXT:    xvpermi.d $xr0, $xr0, 216
 ; CHECK-NEXT:    xvpermi.d $xr1, $xr1, 216
 ; CHECK-NEXT:    xvst $xr1, $a1, 32
 ; CHECK-NEXT:    xvst $xr0, $a1, 0

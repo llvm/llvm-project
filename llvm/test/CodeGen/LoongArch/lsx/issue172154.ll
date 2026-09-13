@@ -5,8 +5,8 @@
 define <4 x i32> @test(<4 x i32> %conv22) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vldi $vr1, -2305
 ; CHECK-NEXT:    lu12i.w $a0, -524280
+; CHECK-NEXT:    vldi $vr1, -2305
 ; CHECK-NEXT:    ori $a0, $a0, 1
 ; CHECK-NEXT:    vreplgr2vr.w $vr2, $a0
 ; CHECK-NEXT:    vmuh.wu $vr2, $vr0, $vr2

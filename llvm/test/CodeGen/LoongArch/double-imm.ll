@@ -230,8 +230,8 @@ define double @f64_constant_ins3() nounwind {
 ; LA32-5-LABEL: f64_constant_ins3:
 ; LA32-5:       # %bb.0:
 ; LA32-5-NEXT:    lu12i.w $a0, 268115
-; LA32-5-NEXT:    ori $a0, $a0, 344
 ; LA32-5-NEXT:    lu12i.w $a1, -131072
+; LA32-5-NEXT:    ori $a0, $a0, 344
 ; LA32-5-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-5-NEXT:    movgr2frh.w $fa0, $a0
 ; LA32-5-NEXT:    ret
@@ -239,8 +239,8 @@ define double @f64_constant_ins3() nounwind {
 ; LA32-6-LABEL: f64_constant_ins3:
 ; LA32-6:       # %bb.0:
 ; LA32-6-NEXT:    lu12i.w $a0, 268115
-; LA32-6-NEXT:    ori $a0, $a0, 344
 ; LA32-6-NEXT:    lu12i.w $a1, -131072
+; LA32-6-NEXT:    ori $a0, $a0, 344
 ; LA32-6-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-6-NEXT:    movgr2frh.w $fa0, $a0
 ; LA32-6-NEXT:    ret
@@ -319,10 +319,10 @@ define double @f64_constant_pi() nounwind {
 ;
 ; LA32-6-LABEL: f64_constant_pi:
 ; LA32-6:       # %bb.0:
-; LA32-6-NEXT:    lu12i.w $a0, 262290
-; LA32-6-NEXT:    ori $a0, $a0, 507
 ; LA32-6-NEXT:    lu12i.w $a1, 345154
+; LA32-6-NEXT:    lu12i.w $a0, 262290
 ; LA32-6-NEXT:    ori $a1, $a1, 3352
+; LA32-6-NEXT:    ori $a0, $a0, 507
 ; LA32-6-NEXT:    movgr2fr.w $fa0, $a1
 ; LA32-6-NEXT:    movgr2frh.w $fa0, $a0
 ; LA32-6-NEXT:    ret

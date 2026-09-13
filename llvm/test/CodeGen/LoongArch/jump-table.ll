@@ -109,12 +109,12 @@ define void @switch_4_arms(i32 %in, ptr %out) nounwind {
 ; LA64-JT-LABEL: switch_4_arms:
 ; LA64-JT:       # %bb.0: # %entry
 ; LA64-JT-NEXT:    addi.w $a0, $a0, 0
-; LA64-JT-NEXT:    addi.d $a0, $a0, -1
 ; LA64-JT-NEXT:    ori $a2, $zero, 3
+; LA64-JT-NEXT:    addi.d $a0, $a0, -1
 ; LA64-JT-NEXT:    bltu $a2, $a0, .LBB0_7
 ; LA64-JT-NEXT:  # %bb.1: # %entry
-; LA64-JT-NEXT:    slli.d $a0, $a0, 3
 ; LA64-JT-NEXT:    pcalau12i $a2, %pc_hi20(.LJTI0_0)
+; LA64-JT-NEXT:    slli.d $a0, $a0, 3
 ; LA64-JT-NEXT:    addi.d $a2, $a2, %pc_lo12(.LJTI0_0)
 ; LA64-JT-NEXT:    ldx.d $a0, $a2, $a0
 ; LA64-JT-NEXT:    jr $a0

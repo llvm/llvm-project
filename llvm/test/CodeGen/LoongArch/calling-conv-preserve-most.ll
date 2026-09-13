@@ -111,21 +111,21 @@ define void @preserve_mostcc3() nounwind {
 ; LA32-NEXT:    st.w $s1, $sp, 4 # 4-byte Folded Spill
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $a0, $t0
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $a1, $t1
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $a2, $t2
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $a3, $t3
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $a4, $t8
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    bl preserve_mostcc_func
@@ -158,21 +158,21 @@ define void @preserve_mostcc3() nounwind {
 ; LA64-NEXT:    fst.d $fs7, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $a0, $t0
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $a1, $t1
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $a2, $t2
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $a3, $t3
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $a4, $t8
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    pcaddu18i $ra, %call36(preserve_mostcc_func)
@@ -223,21 +223,21 @@ define void @preserve_mostcc4() nounwind {
 ; LA32-NEXT:    st.w $s5, $sp, 0 # 4-byte Folded Spill
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
+; LA32-NEXT:    #APP
+; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $fp, $t0
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $s2, $t1
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $s3, $t2
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $s4, $t3
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    move $s5, $t8
-; LA32-NEXT:    #APP
-; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    #APP
 ; LA32-NEXT:    #NO_APP
 ; LA32-NEXT:    bl standard_cc_func
@@ -272,21 +272,21 @@ define void @preserve_mostcc4() nounwind {
 ; LA64-NEXT:    st.d $s5, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
+; LA64-NEXT:    #APP
+; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $fp, $t0
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $s2, $t1
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $s3, $t2
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $s4, $t3
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    move $s5, $t8
-; LA64-NEXT:    #APP
-; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    #APP
 ; LA64-NEXT:    #NO_APP
 ; LA64-NEXT:    pcaddu18i $ra, %call36(standard_cc_func)

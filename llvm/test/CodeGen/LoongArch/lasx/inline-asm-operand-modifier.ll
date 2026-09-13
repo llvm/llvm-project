@@ -41,8 +41,8 @@ entry:
 define void @m128i_to_m256i(ptr %out, ptr %in) nounwind {
 ; CHECK-LABEL: m128i_to_m256i:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    xvrepli.b $xr1, 0
+; CHECK-NEXT:    vld $vr0, $a1, 0
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 32
 ; CHECK-NEXT:    #NO_APP

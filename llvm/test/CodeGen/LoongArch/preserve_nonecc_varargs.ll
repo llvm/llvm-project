@@ -11,8 +11,8 @@ define preserve_nonecc i32 @callee(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, 
 ; LA32-NEXT:    st.w $a7, $sp, 44
 ; LA32-NEXT:    st.w $a6, $sp, 40
 ; LA32-NEXT:    st.w $a5, $sp, 36
-; LA32-NEXT:    ld.w $a0, $sp, 20
 ; LA32-NEXT:    addi.w $a1, $sp, 36
+; LA32-NEXT:    ld.w $a0, $sp, 20
 ; LA32-NEXT:    st.w $a1, $sp, 8
 ; LA32-NEXT:    bgez $a0, .LBB0_3
 ; LA32-NEXT:  # %bb.1: # %maybe_reg
@@ -38,8 +38,8 @@ define preserve_nonecc i32 @callee(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, 
 ; LA64-NEXT:    st.d $a7, $sp, 72
 ; LA64-NEXT:    st.d $a6, $sp, 64
 ; LA64-NEXT:    st.d $a5, $sp, 56
-; LA64-NEXT:    ld.w $a0, $sp, 40
 ; LA64-NEXT:    addi.d $a1, $sp, 56
+; LA64-NEXT:    ld.w $a0, $sp, 40
 ; LA64-NEXT:    st.d $a1, $sp, 16
 ; LA64-NEXT:    bgez $a0, .LBB0_3
 ; LA64-NEXT:  # %bb.1: # %maybe_reg
@@ -110,9 +110,7 @@ define i32 @caller() nounwind ssp {
 ; LA32-NEXT:    st.w $s7, $sp, 12 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s8, $sp, 8 # 4-byte Folded Spill
 ; LA32-NEXT:    ori $a0, $zero, 10
-; LA32-NEXT:    st.w $a0, $sp, 4
 ; LA32-NEXT:    ori $t0, $zero, 9
-; LA32-NEXT:    ori $a0, $zero, 1
 ; LA32-NEXT:    ori $a1, $zero, 2
 ; LA32-NEXT:    ori $a2, $zero, 3
 ; LA32-NEXT:    ori $a3, $zero, 4
@@ -120,6 +118,8 @@ define i32 @caller() nounwind ssp {
 ; LA32-NEXT:    ori $a5, $zero, 6
 ; LA32-NEXT:    ori $a6, $zero, 7
 ; LA32-NEXT:    ori $a7, $zero, 8
+; LA32-NEXT:    st.w $a0, $sp, 4
+; LA32-NEXT:    ori $a0, $zero, 1
 ; LA32-NEXT:    st.w $t0, $sp, 0
 ; LA32-NEXT:    bl callee
 ; LA32-NEXT:    ld.w $s8, $sp, 8 # 4-byte Folded Reload
@@ -157,9 +157,7 @@ define i32 @caller() nounwind ssp {
 ; LA64-NEXT:    fst.d $fs6, $sp, 40 # 8-byte Folded Spill
 ; LA64-NEXT:    fst.d $fs7, $sp, 32 # 8-byte Folded Spill
 ; LA64-NEXT:    ori $a0, $zero, 10
-; LA64-NEXT:    st.d $a0, $sp, 8
 ; LA64-NEXT:    ori $t0, $zero, 9
-; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    ori $a1, $zero, 2
 ; LA64-NEXT:    ori $a2, $zero, 3
 ; LA64-NEXT:    ori $a3, $zero, 4
@@ -167,6 +165,8 @@ define i32 @caller() nounwind ssp {
 ; LA64-NEXT:    ori $a5, $zero, 6
 ; LA64-NEXT:    ori $a6, $zero, 7
 ; LA64-NEXT:    ori $a7, $zero, 8
+; LA64-NEXT:    st.d $a0, $sp, 8
+; LA64-NEXT:    ori $a0, $zero, 1
 ; LA64-NEXT:    st.d $t0, $sp, 0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee)
 ; LA64-NEXT:    jirl $ra, $ra, 0

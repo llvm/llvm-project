@@ -33,8 +33,8 @@ define void @caller(ptr %0) {
 ; CHECK-NEXT:    move $a3, $zero
 ; CHECK-NEXT:    jirl $ra, $zero, 0
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    st.d $zero, $zero, 0
 ; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; CHECK-NEXT:    st.d $zero, $zero, 0
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ret
   %2 = load i32, ptr null, align 4

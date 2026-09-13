@@ -13,8 +13,8 @@
 define i64 @f(i64 signext %a, i64 signext %b) {
 ; LA32-LABEL: f:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    add.w $a1, $a1, $a3
 ; LA32-NEXT:    add.w $a2, $a0, $a2
+; LA32-NEXT:    add.w $a1, $a1, $a3
 ; LA32-NEXT:    sltu $a0, $a2, $a0
 ; LA32-NEXT:    add.w $a1, $a1, $a0
 ; LA32-NEXT:    move $a0, $a2

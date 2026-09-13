@@ -14,11 +14,11 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) #0 {
 ; LA64-NEXT:    st.d $s1, $sp, 16 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s2, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s3, $sp, 0 # 8-byte Folded Spill
-; LA64-NEXT:    move $fp, $a2
-; LA64-NEXT:    move $s0, $a1
 ; LA64-NEXT:    move $s1, $a0
+; LA64-NEXT:    move $s0, $a1
 ; LA64-NEXT:    move $a0, $a1
 ; LA64-NEXT:    move $a1, $a2
+; LA64-NEXT:    move $fp, $a2
 ; LA64-NEXT:    pcaddu18i $ra, %call36(sinl)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    move $s2, $a0
@@ -57,10 +57,10 @@ define { <2 x fp128>, <2 x fp128> } @test_sincos_v2f128(<2 x fp128> %a) #0 {
 ; LA64-NEXT:    st.d $s5, $sp, 32 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s7, $sp, 16 # 8-byte Folded Spill
-; LA64-NEXT:    ld.d $fp, $a1, 16
-; LA64-NEXT:    ld.d $s0, $a1, 24
 ; LA64-NEXT:    ld.d $s1, $a1, 0
 ; LA64-NEXT:    ld.d $s2, $a1, 8
+; LA64-NEXT:    ld.d $fp, $a1, 16
+; LA64-NEXT:    ld.d $s0, $a1, 24
 ; LA64-NEXT:    move $s3, $a0
 ; LA64-NEXT:    move $a0, $s1
 ; LA64-NEXT:    move $a1, $s2

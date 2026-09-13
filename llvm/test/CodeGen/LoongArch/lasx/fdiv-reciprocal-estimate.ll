@@ -44,8 +44,8 @@ define void @fdiv_v4f64(ptr %res, ptr %a0, ptr %a1) nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a2, 0
 ; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvfrecipe.d $xr2, $xr0
 ; CHECK-NEXT:    xvldi $xr3, -784
+; CHECK-NEXT:    xvfrecipe.d $xr2, $xr0
 ; CHECK-NEXT:    xvfmadd.d $xr3, $xr0, $xr2, $xr3
 ; CHECK-NEXT:    xvfnmsub.d $xr2, $xr3, $xr2, $xr2
 ; CHECK-NEXT:    xvfmul.d $xr3, $xr1, $xr2
@@ -73,8 +73,8 @@ define void @one_fdiv_v8f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: one_fdiv_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvfrecipe.s $xr1, $xr0
 ; CHECK-NEXT:    xvldi $xr2, -1296
+; CHECK-NEXT:    xvfrecipe.s $xr1, $xr0
 ; CHECK-NEXT:    xvfmadd.s $xr0, $xr0, $xr1, $xr2
 ; CHECK-NEXT:    xvfnmsub.s $xr0, $xr0, $xr1, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
@@ -98,8 +98,8 @@ define void @one_fdiv_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: one_fdiv_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvfrecipe.d $xr1, $xr0
 ; CHECK-NEXT:    xvldi $xr2, -912
+; CHECK-NEXT:    xvfrecipe.d $xr1, $xr0
 ; CHECK-NEXT:    xvfnmsub.d $xr3, $xr0, $xr1, $xr2
 ; CHECK-NEXT:    xvfmadd.d $xr1, $xr1, $xr3, $xr1
 ; CHECK-NEXT:    xvfnmsub.d $xr0, $xr0, $xr1, $xr2

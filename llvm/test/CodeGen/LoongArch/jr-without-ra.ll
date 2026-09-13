@@ -20,11 +20,9 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    st.d $s6, $sp, 24 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $s7, $sp, 16 # 8-byte Folded Spill
 ; CHECK-NEXT:    st.d $s8, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    move $s6, $zero
-; CHECK-NEXT:    move $s1, $zero
+; CHECK-NEXT:    ld.d $s2, $sp, 168
 ; CHECK-NEXT:    ld.d $t0, $sp, 184
 ; CHECK-NEXT:    ld.d $t1, $sp, 176
-; CHECK-NEXT:    ld.d $s2, $sp, 168
 ; CHECK-NEXT:    ld.d $t2, $sp, 160
 ; CHECK-NEXT:    ld.d $t3, $sp, 152
 ; CHECK-NEXT:    ld.d $t4, $sp, 144
@@ -34,14 +32,16 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    ld.d $t8, $sp, 112
 ; CHECK-NEXT:    ld.d $fp, $sp, 104
 ; CHECK-NEXT:    ld.d $s0, $sp, 96
+; CHECK-NEXT:    ori $s5, $zero, 3
+; CHECK-NEXT:    move $s6, $zero
+; CHECK-NEXT:    move $s1, $zero
 ; CHECK-NEXT:    andi $a4, $a4, 1
+; CHECK-NEXT:    ori $s3, $zero, 50
+; CHECK-NEXT:    ori $s4, $zero, 1
+; CHECK-NEXT:    lu32i.d $s5, 262144
 ; CHECK-NEXT:    alsl.d $a6, $a6, $s2, 4
 ; CHECK-NEXT:    pcalau12i $s2, %pc_hi20(.LJTI0_0)
 ; CHECK-NEXT:    addi.d $s2, $s2, %pc_lo12(.LJTI0_0)
-; CHECK-NEXT:    ori $s3, $zero, 50
-; CHECK-NEXT:    ori $s4, $zero, 1
-; CHECK-NEXT:    ori $s5, $zero, 3
-; CHECK-NEXT:    lu32i.d $s5, 262144
 ; CHECK-NEXT:    b .LBB0_3
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB0_1: # %if.else58.i
@@ -49,8 +49,9 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    ldx.bu $s6, $a6, $s6
 ; CHECK-NEXT:  .LBB0_2: # %phy_tssi_get_ofdm_trim_de.exit
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    st.b $zero, $t8, 0
 ; CHECK-NEXT:    slli.d $s8, $t1, 2
+; CHECK-NEXT:    st.b $zero, $t8, 0
+; CHECK-NEXT:    ori $s7, $zero, 1
 ; CHECK-NEXT:    alsl.d $s8, $t1, $s8, 1
 ; CHECK-NEXT:    add.d $s8, $t6, $s8
 ; CHECK-NEXT:    ldx.b $s8, $s8, $t5
@@ -58,7 +59,6 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    st.b $zero, $a7, 0
 ; CHECK-NEXT:    st.b $zero, $t7, 0
 ; CHECK-NEXT:    st.b $s8, $a0, 0
-; CHECK-NEXT:    ori $s7, $zero, 1
 ; CHECK-NEXT:    alsl.d $s8, $s1, $s1, 3
 ; CHECK-NEXT:    alsl.d $s1, $s8, $s1, 1
 ; CHECK-NEXT:    add.d $s1, $t0, $s1
@@ -69,16 +69,16 @@ define void @jr_without_ra(ptr %rtwdev, ptr %chan, ptr %h2c, i8 %.pre, i1 %cmp.i
 ; CHECK-NEXT:    st.b $zero, $t2, 0
 ; CHECK-NEXT:    st.b $zero, $a1, 0
 ; CHECK-NEXT:    st.b $zero, $t3, 0
-; CHECK-NEXT:    st.b $s7, $a5, 0
 ; CHECK-NEXT:    ori $s1, $zero, 1
 ; CHECK-NEXT:    move $s6, $a3
+; CHECK-NEXT:    st.b $s7, $a5, 0
 ; CHECK-NEXT:  .LBB0_3: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    beqz $a4, .LBB0_6
 ; CHECK-NEXT:  # %bb.4: # %calc_6g.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_3 Depth=1
-; CHECK-NEXT:    move $s6, $zero
 ; CHECK-NEXT:    slli.d $s7, $zero, 3
+; CHECK-NEXT:    move $s6, $zero
 ; CHECK-NEXT:    ldx.d $s7, $s2, $s7
 ; CHECK-NEXT:    jr $s7
 ; CHECK-NEXT:  .LBB0_5: # %sw.bb12.i.i

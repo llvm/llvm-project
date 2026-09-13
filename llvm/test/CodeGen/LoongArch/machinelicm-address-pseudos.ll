@@ -74,8 +74,8 @@ define void @test_la_got(i32 signext %n) {
 ; LA32:       # %bb.0: # %entry
 ; LA32-NEXT:  .Lpcadd_hi1:
 ; LA32-NEXT:    pcaddu12i $a1, %got_pcadd_hi20(g)
-; LA32-NEXT:    ld.w $a1, $a1, %got_pcadd_lo12(.Lpcadd_hi1)
 ; LA32-NEXT:    move $a2, $zero
+; LA32-NEXT:    ld.w $a1, $a1, %got_pcadd_lo12(.Lpcadd_hi1)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB1_1: # %loop
 ; LA32-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -88,8 +88,8 @@ define void @test_la_got(i32 signext %n) {
 ; LA64-LABEL: test_la_got:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a1, %got_pc_hi20(g)
-; LA64-NEXT:    ld.d $a1, $a1, %got_pc_lo12(g)
 ; LA64-NEXT:    move $a2, $zero
+; LA64-NEXT:    ld.d $a1, $a1, %got_pc_lo12(g)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB1_1: # %loop
 ; LA64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -151,8 +151,8 @@ define void @test_la_tls_ie(i32 signext %n) {
 ; LA64-LABEL: test_la_tls_ie:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a1, %ie_pc_hi20(ie)
-; LA64-NEXT:    ld.d $a1, $a1, %ie_pc_lo12(ie)
 ; LA64-NEXT:    move $a2, $zero
+; LA64-NEXT:    ld.d $a1, $a1, %ie_pc_lo12(ie)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB2_1: # %loop
 ; LA64-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -208,9 +208,9 @@ define void @test_la_tls_ld(i32 signext %n) {
 ; LA32-NEXT:    .cfi_offset 23, -12
 ; LA32-NEXT:    .cfi_offset 24, -16
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    move $s1, $zero
 ; LA32-NEXT:  .Lpcadd_hi3:
 ; LA32-NEXT:    pcaddu12i $a0, %ld_pcadd_hi20(ld)
+; LA32-NEXT:    move $s1, $zero
 ; LA32-NEXT:    addi.w $s0, $a0, %ld_pcadd_lo12(.Lpcadd_hi3)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB3_1: # %loop
@@ -241,8 +241,8 @@ define void @test_la_tls_ld(i32 signext %n) {
 ; LA64-NEXT:    .cfi_offset 23, -24
 ; LA64-NEXT:    .cfi_offset 24, -32
 ; LA64-NEXT:    move $fp, $a0
-; LA64-NEXT:    move $s1, $zero
 ; LA64-NEXT:    pcalau12i $a0, %ld_pc_hi20(ld)
+; LA64-NEXT:    move $s1, $zero
 ; LA64-NEXT:    addi.d $s0, $a0, %got_pc_lo12(ld)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB3_1: # %loop
@@ -319,8 +319,8 @@ ret:
 define void @test_la_tls_le(i32 signext %n) {
 ; LA32-LABEL: test_la_tls_le:
 ; LA32:       # %bb.0: # %entry
-; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    lu12i.w $a2, %le_hi20_r(le)
+; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    add.w $a2, $a2, $tp, %le_add_r(le)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB4_1: # %loop
@@ -333,8 +333,8 @@ define void @test_la_tls_le(i32 signext %n) {
 ;
 ; LA64-LABEL: test_la_tls_le:
 ; LA64:       # %bb.0: # %entry
-; LA64-NEXT:    move $a1, $zero
 ; LA64-NEXT:    lu12i.w $a2, %le_hi20_r(le)
+; LA64-NEXT:    move $a1, $zero
 ; LA64-NEXT:    add.d $a2, $a2, $tp, %le_add_r(le)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB4_1: # %loop
@@ -347,8 +347,8 @@ define void @test_la_tls_le(i32 signext %n) {
 ;
 ; LA64LARGE-LABEL: test_la_tls_le:
 ; LA64LARGE:       # %bb.0: # %entry
-; LA64LARGE-NEXT:    move $a1, $zero
 ; LA64LARGE-NEXT:    lu12i.w $a2, %le_hi20(le)
+; LA64LARGE-NEXT:    move $a1, $zero
 ; LA64LARGE-NEXT:    ori $a2, $a2, %le_lo12(le)
 ; LA64LARGE-NEXT:    lu32i.d $a2, %le64_lo20(le)
 ; LA64LARGE-NEXT:    lu52i.d $a2, $a2, %le64_hi12(le)
@@ -385,9 +385,9 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; LA32-NEXT:    st.w $s0, $sp, 4 # 4-byte Folded Spill
 ; LA32-NEXT:    st.w $s1, $sp, 0 # 4-byte Folded Spill
 ; LA32-NEXT:    move $fp, $a0
-; LA32-NEXT:    move $s1, $zero
 ; LA32-NEXT:  .Lpcadd_hi4:
 ; LA32-NEXT:    pcaddu12i $a0, %gd_pcadd_hi20(gd)
+; LA32-NEXT:    move $s1, $zero
 ; LA32-NEXT:    addi.w $s0, $a0, %gd_pcadd_lo12(.Lpcadd_hi4)
 ; LA32-NEXT:    .p2align 4, , 16
 ; LA32-NEXT:  .LBB5_1: # %loop
@@ -413,8 +413,8 @@ define void @test_la_tls_gd(i32 signext %n) nounwind {
 ; LA64-NEXT:    st.d $s0, $sp, 8 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $s1, $sp, 0 # 8-byte Folded Spill
 ; LA64-NEXT:    move $fp, $a0
-; LA64-NEXT:    move $s1, $zero
 ; LA64-NEXT:    pcalau12i $a0, %gd_pc_hi20(gd)
+; LA64-NEXT:    move $s1, $zero
 ; LA64-NEXT:    addi.d $s0, $a0, %got_pc_lo12(gd)
 ; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB5_1: # %loop

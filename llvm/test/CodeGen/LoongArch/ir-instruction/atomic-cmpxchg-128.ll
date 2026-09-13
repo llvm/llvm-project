@@ -11,10 +11,10 @@ define void @cmpxchg_i128_acquire_acquire(ptr %ptr, i128 %cmp, i128 %val) nounwi
 ; LA64-NEXT:    move $a6, $a4
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
+; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    ori $a4, $zero, 2
 ; LA64-NEXT:    ori $a5, $zero, 2
-; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a6
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)
 ; LA64-NEXT:    jirl $ra, $ra, 0
@@ -51,9 +51,9 @@ define void @cmpxchg_i128_acquire_monotonic(ptr %ptr, i128 %cmp, i128 %val) noun
 ; LA64-NEXT:    move $a5, $a4
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
+; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    ori $a4, $zero, 2
-; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a5
 ; LA64-NEXT:    move $a5, $zero
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)
@@ -91,10 +91,10 @@ define i128 @cmpxchg_i128_acquire_acquire_reti128(ptr %ptr, i128 %cmp, i128 %val
 ; LA64-NEXT:    move $a6, $a4
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
+; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    ori $a4, $zero, 2
 ; LA64-NEXT:    ori $a5, $zero, 2
-; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a6
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)
 ; LA64-NEXT:    jirl $ra, $ra, 0
@@ -136,10 +136,10 @@ define i1 @cmpxchg_i128_acquire_acquire_reti1(ptr %ptr, i128 %cmp, i128 %val) no
 ; LA64-NEXT:    move $a6, $a4
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
+; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    ori $a4, $zero, 2
 ; LA64-NEXT:    ori $a5, $zero, 2
-; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a6
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)
 ; LA64-NEXT:    jirl $ra, $ra, 0
@@ -181,9 +181,9 @@ define void @cmpxchg_i128_monotonic_monotonic(ptr %ptr, i128 %cmp, i128 %val) no
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
-; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a4
+; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    move $a4, $zero
 ; LA64-NEXT:    move $a5, $zero
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)
@@ -237,9 +237,9 @@ define i128 @cmpxchg_i128_monotonic_monotonic_reti128(ptr %ptr, i128 %cmp, i128 
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
-; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a4
+; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    move $a4, $zero
 ; LA64-NEXT:    move $a5, $zero
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)
@@ -300,9 +300,9 @@ define i1 @cmpxchg_i128_monotonic_monotonic_reti1(ptr %ptr, i128 %cmp, i128 %val
 ; LA64-NEXT:    st.d $ra, $sp, 24 # 8-byte Folded Spill
 ; LA64-NEXT:    st.d $a2, $sp, 8
 ; LA64-NEXT:    st.d $a1, $sp, 0
-; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    move $a2, $a3
 ; LA64-NEXT:    move $a3, $a4
+; LA64-NEXT:    addi.d $a1, $sp, 0
 ; LA64-NEXT:    move $a4, $zero
 ; LA64-NEXT:    move $a5, $zero
 ; LA64-NEXT:    pcaddu18i $ra, %call36(__atomic_compare_exchange_16)

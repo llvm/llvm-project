@@ -7,11 +7,11 @@ define zeroext i16 @overflow_add(i16 zeroext %a, i16 zeroext %b) {
 ; LA32R-LABEL: overflow_add:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
-; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a1, 15
+; LA32R-NEXT:    ori $a2, $zero, 1024
+; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    ori $a1, $a1, 4095
 ; LA32R-NEXT:    and $a1, $a0, $a1
-; LA32R-NEXT:    ori $a2, $zero, 1024
 ; LA32R-NEXT:    ori $a0, $zero, 2
 ; LA32R-NEXT:    bltu $a2, $a1, .LBB0_2
 ; LA32R-NEXT:  # %bb.1:
@@ -22,13 +22,13 @@ define zeroext i16 @overflow_add(i16 zeroext %a, i16 zeroext %b) {
 ; LA32S-LABEL: overflow_add:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    add.w $a0, $a1, $a0
+; LA32S-NEXT:    ori $a1, $zero, 1024
+; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    ori $a0, $a0, 1
 ; LA32S-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32S-NEXT:    ori $a1, $zero, 1024
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 5
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -36,13 +36,13 @@ define zeroext i16 @overflow_add(i16 zeroext %a, i16 zeroext %b) {
 ; LA64-LABEL: overflow_add:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    ori $a1, $zero, 1024
+; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a0, $a0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    ori $a1, $zero, 1024
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 5
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -57,11 +57,11 @@ define zeroext i16 @overflow_sub(i16 zeroext %a, i16 zeroext %b) {
 ; LA32R-LABEL: overflow_sub:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    sub.w $a0, $a0, $a1
-; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a1, 15
+; LA32R-NEXT:    ori $a2, $zero, 1024
+; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    ori $a1, $a1, 4095
 ; LA32R-NEXT:    and $a1, $a0, $a1
-; LA32R-NEXT:    ori $a2, $zero, 1024
 ; LA32R-NEXT:    ori $a0, $zero, 2
 ; LA32R-NEXT:    bltu $a2, $a1, .LBB1_2
 ; LA32R-NEXT:  # %bb.1:
@@ -72,13 +72,13 @@ define zeroext i16 @overflow_sub(i16 zeroext %a, i16 zeroext %b) {
 ; LA32S-LABEL: overflow_sub:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    sub.w $a0, $a0, $a1
+; LA32S-NEXT:    ori $a1, $zero, 1024
+; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    ori $a0, $a0, 1
 ; LA32S-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32S-NEXT:    ori $a1, $zero, 1024
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 5
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -86,13 +86,13 @@ define zeroext i16 @overflow_sub(i16 zeroext %a, i16 zeroext %b) {
 ; LA64-LABEL: overflow_sub:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sub.d $a0, $a0, $a1
+; LA64-NEXT:    ori $a1, $zero, 1024
+; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a0, $a0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    ori $a1, $zero, 1024
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 5
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -107,11 +107,11 @@ define zeroext i16 @overflow_mul(i16 zeroext %a, i16 zeroext %b) {
 ; LA32R-LABEL: overflow_mul:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    mul.w $a0, $a1, $a0
-; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a1, 15
+; LA32R-NEXT:    ori $a2, $zero, 1024
+; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    ori $a1, $a1, 4095
 ; LA32R-NEXT:    and $a1, $a0, $a1
-; LA32R-NEXT:    ori $a2, $zero, 1024
 ; LA32R-NEXT:    ori $a0, $zero, 2
 ; LA32R-NEXT:    bltu $a2, $a1, .LBB2_2
 ; LA32R-NEXT:  # %bb.1:
@@ -122,13 +122,13 @@ define zeroext i16 @overflow_mul(i16 zeroext %a, i16 zeroext %b) {
 ; LA32S-LABEL: overflow_mul:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    mul.w $a0, $a1, $a0
+; LA32S-NEXT:    ori $a1, $zero, 1024
+; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    ori $a0, $a0, 1
 ; LA32S-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32S-NEXT:    ori $a1, $zero, 1024
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 5
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -136,13 +136,13 @@ define zeroext i16 @overflow_mul(i16 zeroext %a, i16 zeroext %b) {
 ; LA64-LABEL: overflow_mul:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    mul.d $a0, $a1, $a0
+; LA64-NEXT:    ori $a1, $zero, 1024
+; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a0, $a0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    ori $a1, $zero, 1024
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 5
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -157,11 +157,11 @@ define zeroext i16 @overflow_shl(i16 zeroext %a, i16 zeroext %b) {
 ; LA32R-LABEL: overflow_shl:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    sll.w $a0, $a0, $a1
-; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    lu12i.w $a1, 15
+; LA32R-NEXT:    ori $a2, $zero, 1024
+; LA32R-NEXT:    ori $a0, $a0, 1
 ; LA32R-NEXT:    ori $a1, $a1, 4095
 ; LA32R-NEXT:    and $a1, $a0, $a1
-; LA32R-NEXT:    ori $a2, $zero, 1024
 ; LA32R-NEXT:    ori $a0, $zero, 2
 ; LA32R-NEXT:    bltu $a2, $a1, .LBB3_2
 ; LA32R-NEXT:  # %bb.1:
@@ -172,13 +172,13 @@ define zeroext i16 @overflow_shl(i16 zeroext %a, i16 zeroext %b) {
 ; LA32S-LABEL: overflow_shl:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    sll.w $a0, $a0, $a1
+; LA32S-NEXT:    ori $a1, $zero, 1024
+; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    ori $a0, $a0, 1
 ; LA32S-NEXT:    bstrpick.w $a0, $a0, 15, 0
-; LA32S-NEXT:    ori $a1, $zero, 1024
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 5
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 2
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -186,13 +186,13 @@ define zeroext i16 @overflow_shl(i16 zeroext %a, i16 zeroext %b) {
 ; LA64-LABEL: overflow_shl:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sll.d $a0, $a0, $a1
+; LA64-NEXT:    ori $a1, $zero, 1024
+; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    ori $a0, $a0, 1
 ; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
-; LA64-NEXT:    ori $a1, $zero, 1024
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 5
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 2
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -218,11 +218,11 @@ define i32 @overflow_add_no_consts(i8 zeroext %a, i8 zeroext %b, i8 zeroext %lim
 ; LA32S-LABEL: overflow_add_no_consts:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    add.w $a0, $a1, $a0
+; LA32S-NEXT:    ori $a1, $zero, 16
 ; LA32S-NEXT:    andi $a0, $a0, 255
 ; LA32S-NEXT:    sltu $a0, $a2, $a0
-; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -230,11 +230,11 @@ define i32 @overflow_add_no_consts(i8 zeroext %a, i8 zeroext %b, i8 zeroext %lim
 ; LA64-LABEL: overflow_add_no_consts:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    add.d $a0, $a1, $a0
+; LA64-NEXT:    ori $a1, $zero, 16
 ; LA64-NEXT:    andi $a0, $a0, 255
 ; LA64-NEXT:    sltu $a0, $a2, $a0
-; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -248,8 +248,8 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 ; LA32R-LABEL: overflow_add_const_limit:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    add.w $a0, $a1, $a0
-; LA32R-NEXT:    andi $a1, $a0, 255
 ; LA32R-NEXT:    ori $a2, $zero, 128
+; LA32R-NEXT:    andi $a1, $a0, 255
 ; LA32R-NEXT:    ori $a0, $zero, 8
 ; LA32R-NEXT:    bltu $a2, $a1, .LBB5_2
 ; LA32R-NEXT:  # %bb.1:
@@ -260,12 +260,12 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 ; LA32S-LABEL: overflow_add_const_limit:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    add.w $a0, $a1, $a0
-; LA32S-NEXT:    andi $a0, $a0, 255
 ; LA32S-NEXT:    ori $a1, $zero, 128
+; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    andi $a0, $a0, 255
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 16
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 8
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -273,12 +273,12 @@ define i32 @overflow_add_const_limit(i8 zeroext %a, i8 zeroext %b) {
 ; LA64-LABEL: overflow_add_const_limit:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    add.d $a0, $a1, $a0
-; LA64-NEXT:    andi $a0, $a0, 255
 ; LA64-NEXT:    ori $a1, $zero, 128
+; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    andi $a0, $a0, 255
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 16
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 8
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -292,8 +292,8 @@ define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 ; LA32R-LABEL: overflow_add_positive_const_limit:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
-; LA32R-NEXT:    srai.w $a1, $a0, 24
 ; LA32R-NEXT:    addi.w $a2, $zero, -1
+; LA32R-NEXT:    srai.w $a1, $a0, 24
 ; LA32R-NEXT:    ori $a0, $zero, 8
 ; LA32R-NEXT:    blt $a1, $a2, .LBB6_2
 ; LA32R-NEXT:  # %bb.1:
@@ -304,10 +304,10 @@ define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 ; LA32S-LABEL: overflow_add_positive_const_limit:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ext.w.b $a0, $a0
-; LA32S-NEXT:    slti $a0, $a0, -1
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    slti $a0, $a0, -1
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -315,10 +315,10 @@ define i32 @overflow_add_positive_const_limit(i8 zeroext %a) {
 ; LA64-LABEL: overflow_add_positive_const_limit:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ext.w.b $a0, $a0
-; LA64-NEXT:    slti $a0, $a0, -1
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    slti $a0, $a0, -1
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -342,10 +342,10 @@ define i32 @unsafe_add_underflow(i8 zeroext %a) {
 ; LA32S-LABEL: unsafe_add_underflow:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $a0, $a0, -1
-; LA32S-NEXT:    sltui $a0, $a0, 1
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    sltui $a0, $a0, 1
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -353,10 +353,10 @@ define i32 @unsafe_add_underflow(i8 zeroext %a) {
 ; LA64-LABEL: unsafe_add_underflow:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $a0, $a0, -1
-; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    sltui $a0, $a0, 1
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -380,8 +380,8 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    sltui $a0, $a0, 1
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -390,8 +390,8 @@ define i32 @safe_add_underflow(i8 zeroext %a) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -415,10 +415,10 @@ define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; LA32S-LABEL: safe_add_underflow_neg:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $a0, $a0, -2
-; LA32S-NEXT:    sltui $a0, $a0, 251
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    sltui $a0, $a0, 251
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -426,10 +426,10 @@ define i32 @safe_add_underflow_neg(i8 zeroext %a) {
 ; LA64-LABEL: safe_add_underflow_neg:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $a0, $a0, -2
-; LA64-NEXT:    sltui $a0, $a0, 251
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    sltui $a0, $a0, 251
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -443,8 +443,8 @@ define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 ; LA32R-LABEL: overflow_sub_negative_const_limit:
 ; LA32R:       # %bb.0:
 ; LA32R-NEXT:    slli.w $a0, $a0, 24
-; LA32R-NEXT:    srai.w $a1, $a0, 24
 ; LA32R-NEXT:    addi.w $a2, $zero, -1
+; LA32R-NEXT:    srai.w $a1, $a0, 24
 ; LA32R-NEXT:    ori $a0, $zero, 8
 ; LA32R-NEXT:    blt $a1, $a2, .LBB10_2
 ; LA32R-NEXT:  # %bb.1:
@@ -455,10 +455,10 @@ define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 ; LA32S-LABEL: overflow_sub_negative_const_limit:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ext.w.b $a0, $a0
-; LA32S-NEXT:    slti $a0, $a0, -1
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    slti $a0, $a0, -1
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -466,10 +466,10 @@ define i32 @overflow_sub_negative_const_limit(i8 zeroext %a) {
 ; LA64-LABEL: overflow_sub_negative_const_limit:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ext.w.b $a0, $a0
-; LA64-NEXT:    slti $a0, $a0, -1
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    slti $a0, $a0, -1
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -494,10 +494,10 @@ define i32 @sext_sub_underflow(i8 zeroext %a) {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $a0, $a0, -6
 ; LA32S-NEXT:    addi.w $a1, $zero, -6
+; LA32S-NEXT:    ori $a2, $zero, 8
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 16
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 8
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -506,10 +506,10 @@ define i32 @sext_sub_underflow(i8 zeroext %a) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $a0, $a0, -6
 ; LA64-NEXT:    addi.w $a1, $zero, -6
+; LA64-NEXT:    ori $a2, $zero, 8
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 16
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 8
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -534,8 +534,8 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    sltui $a0, $a0, 1
 ; LA32S-NEXT:    ori $a1, $zero, 8
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 16
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -544,8 +544,8 @@ define i32 @safe_sub_underflow(i8 zeroext %a) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ori $a1, $zero, 8
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 16
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -570,10 +570,10 @@ define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $a0, $a0, -4
 ; LA32S-NEXT:    ori $a1, $zero, 250
+; LA32S-NEXT:    ori $a2, $zero, 8
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ori $a1, $zero, 16
 ; LA32S-NEXT:    masknez $a1, $a1, $a0
-; LA32S-NEXT:    ori $a2, $zero, 8
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -582,10 +582,10 @@ define i32 @safe_sub_underflow_neg(i8 zeroext %a) {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $a0, $a0, -4
 ; LA64-NEXT:    ori $a1, $zero, 250
+; LA64-NEXT:    ori $a2, $zero, 8
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ori $a1, $zero, 16
 ; LA64-NEXT:    masknez $a1, $a1, $a0
-; LA64-NEXT:    ori $a2, $zero, 8
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -610,10 +610,10 @@ define i32 @sext_sub_underflow_neg(i8 zeroext %a) {
 ; LA32S-LABEL: sext_sub_underflow_neg:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    addi.w $a0, $a0, -4
-; LA32S-NEXT:    sltui $a0, $a0, -3
 ; LA32S-NEXT:    ori $a1, $zero, 16
-; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    ori $a2, $zero, 8
+; LA32S-NEXT:    sltui $a0, $a0, -3
+; LA32S-NEXT:    masknez $a1, $a1, $a0
 ; LA32S-NEXT:    maskeqz $a0, $a2, $a0
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -621,10 +621,10 @@ define i32 @sext_sub_underflow_neg(i8 zeroext %a) {
 ; LA64-LABEL: sext_sub_underflow_neg:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.d $a0, $a0, -4
-; LA64-NEXT:    sltui $a0, $a0, -3
 ; LA64-NEXT:    ori $a1, $zero, 16
-; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    ori $a2, $zero, 8
+; LA64-NEXT:    sltui $a0, $a0, -3
+; LA64-NEXT:    masknez $a1, $a1, $a0
 ; LA64-NEXT:    maskeqz $a0, $a2, $a0
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -657,24 +657,24 @@ define i32 @safe_sub_var_imm(ptr nocapture readonly %b) local_unnamed_addr #1 {
 ; LA32R-LABEL: safe_sub_var_imm:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    ld.bu $a0, $a0, 0
-; LA32R-NEXT:    addi.w $a0, $a0, -248
 ; LA32R-NEXT:    addi.w $a1, $zero, -4
+; LA32R-NEXT:    addi.w $a0, $a0, -248
 ; LA32R-NEXT:    sltu $a0, $a1, $a0
 ; LA32R-NEXT:    ret
 ;
 ; LA32S-LABEL: safe_sub_var_imm:
 ; LA32S:       # %bb.0: # %entry
 ; LA32S-NEXT:    ld.bu $a0, $a0, 0
-; LA32S-NEXT:    addi.w $a0, $a0, -248
 ; LA32S-NEXT:    addi.w $a1, $zero, -4
+; LA32S-NEXT:    addi.w $a0, $a0, -248
 ; LA32S-NEXT:    sltu $a0, $a1, $a0
 ; LA32S-NEXT:    ret
 ;
 ; LA64-LABEL: safe_sub_var_imm:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    ld.bu $a0, $a0, 0
-; LA64-NEXT:    addi.d $a0, $a0, -248
 ; LA64-NEXT:    addi.w $a1, $zero, -4
+; LA64-NEXT:    addi.d $a0, $a0, -248
 ; LA64-NEXT:    sltu $a0, $a1, $a0
 ; LA64-NEXT:    ret
 entry:
@@ -735,8 +735,8 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; LA32R-NEXT:    ret
 ; LA32R-NEXT:  .LBB19_2:
 ; LA32R-NEXT:    addi.w $a1, $a1, -40
-; LA32R-NEXT:    sltui $a1, $a1, 20
 ; LA32R-NEXT:    ori $a2, $zero, 2
+; LA32R-NEXT:    sltui $a1, $a1, 20
 ; LA32R-NEXT:    sub.w $a1, $a2, $a1
 ; LA32R-NEXT:    and $a0, $a1, $a0
 ; LA32R-NEXT:    ret
@@ -744,10 +744,10 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; LA32S-LABEL: convert_add_order:
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    ori $a1, $a0, 1
+; LA32S-NEXT:    ori $a3, $zero, 2
 ; LA32S-NEXT:    sltui $a2, $a1, 50
 ; LA32S-NEXT:    addi.w $a1, $a1, -40
 ; LA32S-NEXT:    sltui $a1, $a1, 20
-; LA32S-NEXT:    ori $a3, $zero, 2
 ; LA32S-NEXT:    sub.w $a1, $a3, $a1
 ; LA32S-NEXT:    ori $a3, $zero, 255
 ; LA32S-NEXT:    masknez $a3, $a3, $a2
@@ -759,10 +759,10 @@ define i8 @convert_add_order(i8 zeroext %arg) {
 ; LA64-LABEL: convert_add_order:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ori $a1, $a0, 1
+; LA64-NEXT:    ori $a3, $zero, 2
 ; LA64-NEXT:    sltui $a2, $a1, 50
 ; LA64-NEXT:    addi.d $a1, $a1, -40
 ; LA64-NEXT:    sltui $a1, $a1, 20
-; LA64-NEXT:    ori $a3, $zero, 2
 ; LA64-NEXT:    sub.d $a1, $a3, $a1
 ; LA64-NEXT:    ori $a3, $zero, 255
 ; LA64-NEXT:    masknez $a3, $a3, $a2
@@ -796,10 +796,10 @@ define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
 ; LA32S:       # %bb.0:
 ; LA32S-NEXT:    slt $a2, $zero, $a0
 ; LA32S-NEXT:    and $a0, $a2, $a0
+; LA32S-NEXT:    ori $a2, $zero, 100
 ; LA32S-NEXT:    addi.w $a0, $a0, 245
 ; LA32S-NEXT:    sltu $a1, $a0, $a1
 ; LA32S-NEXT:    maskeqz $a0, $a0, $a1
-; LA32S-NEXT:    ori $a2, $zero, 100
 ; LA32S-NEXT:    masknez $a1, $a2, $a1
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -809,10 +809,10 @@ define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
 ; LA64-NEXT:    addi.w $a2, $a0, 0
 ; LA64-NEXT:    slt $a2, $zero, $a2
 ; LA64-NEXT:    and $a0, $a2, $a0
+; LA64-NEXT:    ori $a2, $zero, 100
 ; LA64-NEXT:    addi.d $a0, $a0, 245
 ; LA64-NEXT:    sltu $a1, $a0, $a1
 ; LA64-NEXT:    maskeqz $a0, $a0, $a1
-; LA64-NEXT:    ori $a2, $zero, 100
 ; LA64-NEXT:    masknez $a1, $a2, $a1
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret
@@ -829,8 +829,8 @@ define i8 @underflow_if_sub(i32 %arg, i8 zeroext %arg1) {
 define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ; LA32R-LABEL: underflow_if_sub_signext:
 ; LA32R:       # %bb.0:
-; LA32R-NEXT:    andi $a1, $a1, 255
 ; LA32R-NEXT:    slt $a2, $zero, $a0
+; LA32R-NEXT:    andi $a1, $a1, 255
 ; LA32R-NEXT:    and $a0, $a2, $a0
 ; LA32R-NEXT:    addi.w $a0, $a0, 245
 ; LA32R-NEXT:    bltu $a0, $a1, .LBB21_2
@@ -841,13 +841,13 @@ define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ;
 ; LA32S-LABEL: underflow_if_sub_signext:
 ; LA32S:       # %bb.0:
-; LA32S-NEXT:    andi $a1, $a1, 255
 ; LA32S-NEXT:    slt $a2, $zero, $a0
+; LA32S-NEXT:    andi $a1, $a1, 255
 ; LA32S-NEXT:    and $a0, $a2, $a0
+; LA32S-NEXT:    ori $a2, $zero, 100
 ; LA32S-NEXT:    addi.w $a0, $a0, 245
 ; LA32S-NEXT:    sltu $a1, $a0, $a1
 ; LA32S-NEXT:    maskeqz $a0, $a0, $a1
-; LA32S-NEXT:    ori $a2, $zero, 100
 ; LA32S-NEXT:    masknez $a1, $a2, $a1
 ; LA32S-NEXT:    or $a0, $a0, $a1
 ; LA32S-NEXT:    ret
@@ -858,10 +858,10 @@ define i8 @underflow_if_sub_signext(i32 %arg, i8 signext %arg1) {
 ; LA64-NEXT:    andi $a1, $a1, 255
 ; LA64-NEXT:    slt $a2, $zero, $a2
 ; LA64-NEXT:    and $a0, $a2, $a0
+; LA64-NEXT:    ori $a2, $zero, 100
 ; LA64-NEXT:    addi.d $a0, $a0, 245
 ; LA64-NEXT:    sltu $a1, $a0, $a1
 ; LA64-NEXT:    maskeqz $a0, $a0, $a1
-; LA64-NEXT:    ori $a2, $zero, 100
 ; LA64-NEXT:    masknez $a1, $a2, $a1
 ; LA64-NEXT:    or $a0, $a0, $a1
 ; LA64-NEXT:    ret

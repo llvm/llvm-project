@@ -17,17 +17,17 @@ define void @foo() {
 ; LA32-NEXT:    .cfi_offset 1, -4
 ; LA32-NEXT:    .cfi_offset 22, -8
 ; LA32-NEXT:    pcalau12i $a0, %got_pc_hi20(g_156)
+; LA32-NEXT:    pcalau12i $a2, %got_pc_hi20(g_813)
 ; LA32-NEXT:    ld.w $fp, $a0, %got_pc_lo12(g_156)
 ; LA32-NEXT:    pcalau12i $a0, %got_pc_hi20(g_490)
+; LA32-NEXT:    ld.w $a2, $a2, %got_pc_lo12(g_813)
 ; LA32-NEXT:    ld.w $a0, $a0, %got_pc_lo12(g_490)
 ; LA32-NEXT:    ld.w $a1, $fp, 24
-; LA32-NEXT:    pcalau12i $a2, %got_pc_hi20(g_813)
-; LA32-NEXT:    ld.w $a2, $a2, %got_pc_lo12(g_813)
 ; LA32-NEXT:    st.w $zero, $fp, 20
 ; LA32-NEXT:    st.w $zero, $a0, 0
+; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    st.w $a1, $a2, 0
 ; LA32-NEXT:    ori $a2, $zero, 48
-; LA32-NEXT:    move $a0, $fp
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    bl memset
 ; LA32-NEXT:    st.w $zero, $fp, 20
@@ -39,19 +39,19 @@ define void @foo() {
 ; LA64-LABEL: foo:
 ; LA64:       # %bb.0: # %entry
 ; LA64-NEXT:    pcalau12i $a0, %got_pc_hi20(g_156)
-; LA64-NEXT:    ld.d $a0, $a0, %got_pc_lo12(g_156)
 ; LA64-NEXT:    pcalau12i $a1, %got_pc_hi20(g_490)
-; LA64-NEXT:    ld.d $a1, $a1, %got_pc_lo12(g_490)
-; LA64-NEXT:    ld.w $a2, $a0, 24
 ; LA64-NEXT:    pcalau12i $a3, %got_pc_hi20(g_813)
-; LA64-NEXT:    ld.d $a3, $a3, %got_pc_lo12(g_813)
-; LA64-NEXT:    st.w $zero, $a1, 0
-; LA64-NEXT:    st.w $a2, $a3, 0
 ; LA64-NEXT:    xvrepli.b $xr0, 0
+; LA64-NEXT:    ld.d $a0, $a0, %got_pc_lo12(g_156)
+; LA64-NEXT:    ld.d $a1, $a1, %got_pc_lo12(g_490)
+; LA64-NEXT:    ld.d $a3, $a3, %got_pc_lo12(g_813)
+; LA64-NEXT:    ld.w $a2, $a0, 24
 ; LA64-NEXT:    xvst $xr0, $a0, 0
 ; LA64-NEXT:    vrepli.b $vr0, 0
+; LA64-NEXT:    st.w $zero, $a1, 0
 ; LA64-NEXT:    vst $vr0, $a0, 32
 ; LA64-NEXT:    st.w $zero, $a0, 20
+; LA64-NEXT:    st.w $a2, $a3, 0
 ; LA64-NEXT:    ret
 entry:
   store i32 0, ptr getelementptr inbounds (i8, ptr @g_156, i64 20), align 4

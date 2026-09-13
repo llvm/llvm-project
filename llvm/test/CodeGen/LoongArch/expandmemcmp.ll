@@ -415,15 +415,15 @@ define signext i32 @bcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a2, $a0, 0
 ; LA32-UAL-NEXT:    ld.w $a3, $a1, 0
 ; LA32-UAL-NEXT:    ld.w $a4, $a0, 4
-; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a6, $a0, 8
+; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 8
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 11
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 11
 ; LA32-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA32-UAL-NEXT:    xor $a3, $a4, $a5
-; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    xor $a0, $a0, $a1
+; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    or $a1, $a2, $a3
 ; LA32-UAL-NEXT:    or $a0, $a4, $a0
 ; LA32-UAL-NEXT:    or $a0, $a1, $a0
@@ -473,15 +473,15 @@ define signext i32 @bcmp_size_16(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a2, $a0, 0
 ; LA32-UAL-NEXT:    ld.w $a3, $a1, 0
 ; LA32-UAL-NEXT:    ld.w $a4, $a0, 4
-; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a6, $a0, 8
+; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 8
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 12
 ; LA32-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA32-UAL-NEXT:    xor $a3, $a4, $a5
-; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    xor $a0, $a0, $a1
+; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    or $a1, $a2, $a3
 ; LA32-UAL-NEXT:    or $a0, $a4, $a0
 ; LA32-UAL-NEXT:    or $a0, $a1, $a0
@@ -536,6 +536,8 @@ define signext i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 8
 ; LA32-UAL-NEXT:    ld.w $t0, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $t1, $a1, 12
+; LA32-UAL-NEXT:    ld.w $t2, $a0, 24
+; LA32-UAL-NEXT:    ld.w $t3, $a1, 24
 ; LA32-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA32-UAL-NEXT:    xor $a3, $a4, $a5
 ; LA32-UAL-NEXT:    xor $a4, $a6, $a7
@@ -544,14 +546,12 @@ define signext i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 16
 ; LA32-UAL-NEXT:    ld.w $t0, $a0, 20
 ; LA32-UAL-NEXT:    ld.w $t1, $a1, 20
-; LA32-UAL-NEXT:    ld.w $t2, $a0, 24
-; LA32-UAL-NEXT:    ld.w $t3, $a1, 24
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 27
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 27
 ; LA32-UAL-NEXT:    xor $a6, $a6, $a7
 ; LA32-UAL-NEXT:    xor $a7, $t0, $t1
-; LA32-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA32-UAL-NEXT:    xor $a0, $a0, $a1
+; LA32-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA32-UAL-NEXT:    or $a1, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a4, $a5
 ; LA32-UAL-NEXT:    or $a3, $a6, $a7
@@ -567,15 +567,15 @@ define signext i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.d $a2, $a0, 0
 ; LA64-UAL-NEXT:    ld.d $a3, $a1, 0
 ; LA64-UAL-NEXT:    ld.d $a4, $a0, 8
-; LA64-UAL-NEXT:    ld.d $a5, $a1, 8
 ; LA64-UAL-NEXT:    ld.d $a6, $a0, 16
+; LA64-UAL-NEXT:    ld.d $a5, $a1, 8
 ; LA64-UAL-NEXT:    ld.d $a7, $a1, 16
 ; LA64-UAL-NEXT:    ld.d $a0, $a0, 23
 ; LA64-UAL-NEXT:    ld.d $a1, $a1, 23
 ; LA64-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA64-UAL-NEXT:    xor $a3, $a4, $a5
-; LA64-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA64-UAL-NEXT:    xor $a0, $a0, $a1
+; LA64-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA64-UAL-NEXT:    or $a1, $a2, $a3
 ; LA64-UAL-NEXT:    or $a0, $a4, $a0
 ; LA64-UAL-NEXT:    or $a0, $a1, $a0
@@ -618,6 +618,8 @@ define signext i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 8
 ; LA32-UAL-NEXT:    ld.w $t0, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $t1, $a1, 12
+; LA32-UAL-NEXT:    ld.w $t2, $a0, 24
+; LA32-UAL-NEXT:    ld.w $t3, $a1, 24
 ; LA32-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA32-UAL-NEXT:    xor $a3, $a4, $a5
 ; LA32-UAL-NEXT:    xor $a4, $a6, $a7
@@ -626,14 +628,12 @@ define signext i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 16
 ; LA32-UAL-NEXT:    ld.w $t0, $a0, 20
 ; LA32-UAL-NEXT:    ld.w $t1, $a1, 20
-; LA32-UAL-NEXT:    ld.w $t2, $a0, 24
-; LA32-UAL-NEXT:    ld.w $t3, $a1, 24
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 28
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 28
 ; LA32-UAL-NEXT:    xor $a6, $a6, $a7
 ; LA32-UAL-NEXT:    xor $a7, $t0, $t1
-; LA32-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA32-UAL-NEXT:    xor $a0, $a0, $a1
+; LA32-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA32-UAL-NEXT:    or $a1, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a4, $a5
 ; LA32-UAL-NEXT:    or $a3, $a6, $a7
@@ -649,15 +649,15 @@ define signext i32 @bcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.d $a2, $a0, 0
 ; LA64-UAL-NEXT:    ld.d $a3, $a1, 0
 ; LA64-UAL-NEXT:    ld.d $a4, $a0, 8
-; LA64-UAL-NEXT:    ld.d $a5, $a1, 8
 ; LA64-UAL-NEXT:    ld.d $a6, $a0, 16
+; LA64-UAL-NEXT:    ld.d $a5, $a1, 8
 ; LA64-UAL-NEXT:    ld.d $a7, $a1, 16
 ; LA64-UAL-NEXT:    ld.d $a0, $a0, 24
 ; LA64-UAL-NEXT:    ld.d $a1, $a1, 24
 ; LA64-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA64-UAL-NEXT:    xor $a3, $a4, $a5
-; LA64-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA64-UAL-NEXT:    xor $a0, $a0, $a1
+; LA64-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA64-UAL-NEXT:    or $a1, $a2, $a3
 ; LA64-UAL-NEXT:    or $a0, $a4, $a0
 ; LA64-UAL-NEXT:    or $a0, $a1, $a0
@@ -710,6 +710,8 @@ define signext i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.d $a7, $a1, 16
 ; LA64-UAL-NEXT:    ld.d $t0, $a0, 24
 ; LA64-UAL-NEXT:    ld.d $t1, $a1, 24
+; LA64-UAL-NEXT:    ld.d $t2, $a0, 48
+; LA64-UAL-NEXT:    ld.d $t3, $a1, 48
 ; LA64-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA64-UAL-NEXT:    xor $a3, $a4, $a5
 ; LA64-UAL-NEXT:    xor $a4, $a6, $a7
@@ -718,14 +720,12 @@ define signext i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.d $a7, $a1, 32
 ; LA64-UAL-NEXT:    ld.d $t0, $a0, 40
 ; LA64-UAL-NEXT:    ld.d $t1, $a1, 40
-; LA64-UAL-NEXT:    ld.d $t2, $a0, 48
-; LA64-UAL-NEXT:    ld.d $t3, $a1, 48
 ; LA64-UAL-NEXT:    ld.d $a0, $a0, 55
 ; LA64-UAL-NEXT:    ld.d $a1, $a1, 55
 ; LA64-UAL-NEXT:    xor $a6, $a6, $a7
 ; LA64-UAL-NEXT:    xor $a7, $t0, $t1
-; LA64-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA64-UAL-NEXT:    xor $a0, $a0, $a1
+; LA64-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA64-UAL-NEXT:    or $a1, $a2, $a3
 ; LA64-UAL-NEXT:    or $a2, $a4, $a5
 ; LA64-UAL-NEXT:    or $a3, $a6, $a7
@@ -772,6 +772,8 @@ define signext i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.d $a7, $a1, 16
 ; LA64-UAL-NEXT:    ld.d $t0, $a0, 24
 ; LA64-UAL-NEXT:    ld.d $t1, $a1, 24
+; LA64-UAL-NEXT:    ld.d $t2, $a0, 48
+; LA64-UAL-NEXT:    ld.d $t3, $a1, 48
 ; LA64-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA64-UAL-NEXT:    xor $a3, $a4, $a5
 ; LA64-UAL-NEXT:    xor $a4, $a6, $a7
@@ -780,14 +782,12 @@ define signext i32 @bcmp_size_64(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.d $a7, $a1, 32
 ; LA64-UAL-NEXT:    ld.d $t0, $a0, 40
 ; LA64-UAL-NEXT:    ld.d $t1, $a1, 40
-; LA64-UAL-NEXT:    ld.d $t2, $a0, 48
-; LA64-UAL-NEXT:    ld.d $t3, $a1, 48
 ; LA64-UAL-NEXT:    ld.d $a0, $a0, 56
 ; LA64-UAL-NEXT:    ld.d $a1, $a1, 56
 ; LA64-UAL-NEXT:    xor $a6, $a6, $a7
 ; LA64-UAL-NEXT:    xor $a7, $t0, $t1
-; LA64-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA64-UAL-NEXT:    xor $a0, $a0, $a1
+; LA64-UAL-NEXT:    xor $t0, $t2, $t3
 ; LA64-UAL-NEXT:    or $a1, $a2, $a3
 ; LA64-UAL-NEXT:    or $a2, $a4, $a5
 ; LA64-UAL-NEXT:    or $a3, $a6, $a7
@@ -895,15 +895,15 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a2, $a0, 0
 ; LA32-UAL-NEXT:    ld.w $a3, $a1, 0
 ; LA32-UAL-NEXT:    ld.w $a4, $a0, 4
-; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a6, $a0, 8
+; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 8
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 12
 ; LA32-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA32-UAL-NEXT:    xor $a3, $a4, $a5
-; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    xor $a0, $a0, $a1
+; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    or $a1, $a2, $a3
 ; LA32-UAL-NEXT:    or $a0, $a4, $a0
 ; LA32-UAL-NEXT:    or $a0, $a1, $a0
@@ -928,8 +928,8 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 16
 ; LA32-NUAL-NEXT:    bl bcmp
-; LA32-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -940,8 +940,8 @@ define i1 @bcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 16
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -967,8 +967,8 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl bcmp
-; LA32-NUAL-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -979,8 +979,8 @@ define i1 @bcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    slti $a0, $a0, 0
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    slti $a0, $a0, 0
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -1012,8 +1012,8 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl bcmp
-; LA32-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -1024,8 +1024,8 @@ define i1 @bcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -1059,8 +1059,8 @@ define i1 @bcmp_le_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl bcmp
-; LA32-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -1071,8 +1071,8 @@ define i1 @bcmp_le_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -1098,9 +1098,9 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl bcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NUAL-NEXT:    addi.w $a1, $zero, -1
 ; LA32-NUAL-NEXT:    slt $a0, $a1, $a0
-; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -1111,9 +1111,9 @@ define i1 @bcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(bcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
+; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NUAL-NEXT:    addi.w $a1, $zero, -1
 ; LA64-NUAL-NEXT:    slt $a0, $a1, $a0
-; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -1231,19 +1231,19 @@ define signext i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.bu $a2, $a0, 2
 ; LA32-UAL-NEXT:    ld.hu $a0, $a0, 0
+; LA32-UAL-NEXT:    lu12i.w $a4, 15
 ; LA32-UAL-NEXT:    ld.bu $a3, $a1, 2
 ; LA32-UAL-NEXT:    ld.hu $a1, $a1, 0
-; LA32-UAL-NEXT:    lu12i.w $a4, 15
 ; LA32-UAL-NEXT:    ori $a4, $a4, 3840
 ; LA32-UAL-NEXT:    and $a5, $a0, $a4
+; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
 ; LA32-UAL-NEXT:    or $a2, $a5, $a2
 ; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
-; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
 ; LA32-UAL-NEXT:    or $a0, $a2, $a0
 ; LA32-UAL-NEXT:    and $a2, $a1, $a4
+; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
 ; LA32-UAL-NEXT:    or $a2, $a2, $a3
 ; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
-; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
 ; LA32-UAL-NEXT:    or $a1, $a2, $a1
 ; LA32-UAL-NEXT:    sltu $a2, $a0, $a1
 ; LA32-UAL-NEXT:    sltu $a0, $a1, $a0
@@ -1253,16 +1253,16 @@ define signext i32 @memcmp_size_3(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-LABEL: memcmp_size_3:
 ; LA64-UAL:       # %bb.0: # %entry
 ; LA64-UAL-NEXT:    ld.bu $a2, $a0, 2
-; LA64-UAL-NEXT:    ld.hu $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.bu $a3, $a1, 2
+; LA64-UAL-NEXT:    ld.hu $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.hu $a1, $a1, 0
 ; LA64-UAL-NEXT:    slli.d $a2, $a2, 16
 ; LA64-UAL-NEXT:    or $a0, $a0, $a2
 ; LA64-UAL-NEXT:    slli.d $a2, $a3, 16
 ; LA64-UAL-NEXT:    or $a1, $a1, $a2
 ; LA64-UAL-NEXT:    revb.2w $a0, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    revb.2w $a1, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    sltu $a2, $a0, $a1
 ; LA64-UAL-NEXT:    sltu $a0, $a1, $a0
@@ -1298,25 +1298,25 @@ define signext i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_4:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    lu12i.w $a3, 15
+; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA32-UAL-NEXT:    ori $a3, $a3, 3840
-; LA32-UAL-NEXT:    and $a2, $a2, $a3
+; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a2, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a3
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a0, $a0, $a2
 ; LA32-UAL-NEXT:    srli.w $a2, $a1, 8
 ; LA32-UAL-NEXT:    and $a2, $a2, $a3
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a3, $a1, $a3
-; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
+; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a3
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    sltu $a2, $a0, $a1
@@ -1329,8 +1329,8 @@ define signext i32 @memcmp_size_4(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    revb.2w $a0, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    revb.2w $a1, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    sltu $a2, $a0, $a1
 ; LA64-UAL-NEXT:    sltu $a0, $a1, $a0
@@ -1366,25 +1366,25 @@ define signext i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_5:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a2, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a3, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a4, $a2, 8
 ; LA32-UAL-NEXT:    lu12i.w $a5, 15
+; LA32-UAL-NEXT:    ld.w $a3, $a1, 0
 ; LA32-UAL-NEXT:    ori $a5, $a5, 3840
-; LA32-UAL-NEXT:    and $a4, $a4, $a5
+; LA32-UAL-NEXT:    srli.w $a4, $a2, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a2, 24
+; LA32-UAL-NEXT:    and $a4, $a4, $a5
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    and $a6, $a2, $a5
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a2, $a2, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a2, $a2, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
 ; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    srli.w $a4, $a3, 8
 ; LA32-UAL-NEXT:    and $a4, $a4, $a5
-; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
-; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    and $a5, $a3, $a5
-; LA32-UAL-NEXT:    slli.w $a5, $a5, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a5, $a5, 8
+; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    bne $a2, $a3, .LBB28_2
@@ -1402,8 +1402,8 @@ define signext i32 @memcmp_size_5(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-LABEL: memcmp_size_5:
 ; LA64-UAL:       # %bb.0: # %entry
 ; LA64-UAL-NEXT:    ld.bu $a2, $a0, 4
-; LA64-UAL-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.bu $a3, $a1, 4
+; LA64-UAL-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.wu $a1, $a1, 0
 ; LA64-UAL-NEXT:    slli.d $a2, $a2, 32
 ; LA64-UAL-NEXT:    or $a0, $a0, $a2
@@ -1445,38 +1445,38 @@ define signext i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_6:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a6, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a6
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a7, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a6
 ; LA32-UAL-NEXT:    or $a5, $a5, $a7
 ; LA32-UAL-NEXT:    and $a7, $a3, $a6
-; LA32-UAL-NEXT:    slli.w $a7, $a7, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a7, $a7, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a7
+; LA32-UAL-NEXT:    srli.w $a7, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a6
-; LA32-UAL-NEXT:    srli.w $a7, $a4, 24
-; LA32-UAL-NEXT:    or $a5, $a5, $a7
 ; LA32-UAL-NEXT:    and $a6, $a4, $a6
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
+; LA32-UAL-NEXT:    or $a5, $a5, $a7
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB29_3
 ; LA32-UAL-NEXT:  # %bb.1: # %loadbb1
 ; LA32-UAL-NEXT:    ld.hu $a0, $a0, 4
 ; LA32-UAL-NEXT:    ld.hu $a1, $a1, 4
+; LA32-UAL-NEXT:    ori $a2, $a2, 4095
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a3, $a1, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 8
 ; LA32-UAL-NEXT:    or $a1, $a1, $a3
-; LA32-UAL-NEXT:    ori $a2, $a2, 4095
 ; LA32-UAL-NEXT:    and $a3, $a0, $a2
 ; LA32-UAL-NEXT:    and $a4, $a1, $a2
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB29_3
@@ -1492,8 +1492,8 @@ define signext i32 @memcmp_size_6(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-LABEL: memcmp_size_6:
 ; LA64-UAL:       # %bb.0: # %entry
 ; LA64-UAL-NEXT:    ld.hu $a2, $a0, 4
-; LA64-UAL-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.hu $a3, $a1, 4
+; LA64-UAL-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.wu $a1, $a1, 0
 ; LA64-UAL-NEXT:    slli.d $a2, $a2, 32
 ; LA64-UAL-NEXT:    or $a0, $a0, $a2
@@ -1535,25 +1535,25 @@ define signext i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_7:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a2, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB30_3
@@ -1561,21 +1561,21 @@ define signext i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 3
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 3
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
-; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a2
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a3, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a0, $a1, 8
 ; LA32-UAL-NEXT:    and $a0, $a0, $a2
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    and $a2, $a1, $a2
-; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
+; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    or $a4, $a1, $a0
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB30_3
@@ -1593,16 +1593,16 @@ define signext i32 @memcmp_size_7(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.w $a2, $a0, 0
 ; LA64-UAL-NEXT:    ld.w $a3, $a1, 0
 ; LA64-UAL-NEXT:    revb.2w $a2, $a2
-; LA64-UAL-NEXT:    addi.w $a4, $a2, 0
 ; LA64-UAL-NEXT:    revb.2w $a3, $a3
+; LA64-UAL-NEXT:    addi.w $a4, $a2, 0
 ; LA64-UAL-NEXT:    addi.w $a5, $a3, 0
 ; LA64-UAL-NEXT:    bne $a4, $a5, .LBB30_3
 ; LA64-UAL-NEXT:  # %bb.1: # %loadbb1
 ; LA64-UAL-NEXT:    ld.w $a0, $a0, 3
 ; LA64-UAL-NEXT:    ld.w $a1, $a1, 3
 ; LA64-UAL-NEXT:    revb.2w $a2, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a2, 0
 ; LA64-UAL-NEXT:    revb.2w $a3, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a2, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a3, 0
 ; LA64-UAL-NEXT:    bne $a0, $a1, .LBB30_3
 ; LA64-UAL-NEXT:  # %bb.2:
@@ -1645,25 +1645,25 @@ define signext i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_8:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a2, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB31_3
@@ -1671,21 +1671,21 @@ define signext i32 @memcmp_size_8(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 4
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 4
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
-; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a2
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a3, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a0, $a1, 8
 ; LA32-UAL-NEXT:    and $a0, $a0, $a2
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    and $a2, $a1, $a2
-; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
+; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    or $a4, $a1, $a0
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB31_3
@@ -1738,25 +1738,25 @@ define signext i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_15:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a2, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB32_5
@@ -1764,21 +1764,21 @@ define signext i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 4
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 4
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB32_5
@@ -1786,21 +1786,21 @@ define signext i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 8
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 8
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB32_5
@@ -1808,21 +1808,21 @@ define signext i32 @memcmp_size_15(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 11
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 11
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
-; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a2
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a3, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a0, $a1, 8
 ; LA32-UAL-NEXT:    and $a0, $a0, $a2
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    and $a2, $a1, $a2
-; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
+; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    or $a4, $a1, $a0
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB32_5
@@ -1886,25 +1886,25 @@ define signext i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_16:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a2, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB33_5
@@ -1912,21 +1912,21 @@ define signext i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 4
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 4
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB33_5
@@ -1934,21 +1934,21 @@ define signext i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 8
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 8
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB33_5
@@ -1956,21 +1956,21 @@ define signext i32 @memcmp_size_16(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 12
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
-; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a2
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a3, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a0, $a1, 8
 ; LA32-UAL-NEXT:    and $a0, $a0, $a2
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    and $a2, $a1, $a2
-; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
+; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    or $a4, $a1, $a0
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB33_5
@@ -2034,25 +2034,25 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_31:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a2, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2060,21 +2060,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 4
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 4
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2082,21 +2082,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 8
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 8
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2104,21 +2104,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 12
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2126,21 +2126,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 16
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 16
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2148,21 +2148,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 20
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 20
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2170,21 +2170,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 24
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2192,21 +2192,21 @@ define signext i32 @memcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 27
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 27
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
-; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a2
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a3, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a0, $a1, 8
 ; LA32-UAL-NEXT:    and $a0, $a0, $a2
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    and $a2, $a1, $a2
-; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
+; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    or $a4, $a1, $a0
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB34_9
@@ -2282,25 +2282,25 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_size_32:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    lu12i.w $a2, 15
+; LA32-UAL-NEXT:    ld.w $a4, $a1, 0
 ; LA32-UAL-NEXT:    ori $a2, $a2, 3840
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
+; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2308,21 +2308,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 4
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 4
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2330,21 +2330,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 8
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 8
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2352,21 +2352,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 12
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2374,21 +2374,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 16
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 16
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2396,21 +2396,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 20
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 20
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2418,21 +2418,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a3, $a0, 24
 ; LA32-UAL-NEXT:    ld.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    srli.w $a5, $a3, 8
-; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    srli.w $a6, $a3, 24
+; LA32-UAL-NEXT:    and $a5, $a5, $a2
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a3, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a3, $a3, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a3, $a3, $a6
+; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a3, $a3, $a5
 ; LA32-UAL-NEXT:    srli.w $a5, $a4, 8
 ; LA32-UAL-NEXT:    and $a5, $a5, $a2
-; LA32-UAL-NEXT:    srli.w $a6, $a4, 24
 ; LA32-UAL-NEXT:    or $a5, $a5, $a6
 ; LA32-UAL-NEXT:    and $a6, $a4, $a2
-; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    slli.w $a4, $a4, 24
+; LA32-UAL-NEXT:    slli.w $a6, $a6, 8
 ; LA32-UAL-NEXT:    or $a4, $a4, $a6
 ; LA32-UAL-NEXT:    or $a4, $a4, $a5
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2440,21 +2440,21 @@ define signext i32 @memcmp_size_32(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 28
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 28
 ; LA32-UAL-NEXT:    srli.w $a3, $a0, 8
-; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a3, $a3, $a2
 ; LA32-UAL-NEXT:    or $a3, $a3, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a2
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a3, $a0, $a3
 ; LA32-UAL-NEXT:    srli.w $a0, $a1, 8
 ; LA32-UAL-NEXT:    and $a0, $a0, $a2
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    and $a2, $a1, $a2
-; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a2, $a2, 8
+; LA32-UAL-NEXT:    or $a0, $a0, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    or $a4, $a1, $a0
 ; LA32-UAL-NEXT:    bne $a3, $a4, .LBB35_9
@@ -2776,15 +2776,15 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-NEXT:    ld.w $a2, $a0, 0
 ; LA32-UAL-NEXT:    ld.w $a3, $a1, 0
 ; LA32-UAL-NEXT:    ld.w $a4, $a0, 4
-; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a6, $a0, 8
+; LA32-UAL-NEXT:    ld.w $a5, $a1, 4
 ; LA32-UAL-NEXT:    ld.w $a7, $a1, 8
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 12
 ; LA32-UAL-NEXT:    ld.w $a1, $a1, 12
 ; LA32-UAL-NEXT:    xor $a2, $a2, $a3
 ; LA32-UAL-NEXT:    xor $a3, $a4, $a5
-; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    xor $a0, $a0, $a1
+; LA32-UAL-NEXT:    xor $a4, $a6, $a7
 ; LA32-UAL-NEXT:    or $a1, $a2, $a3
 ; LA32-UAL-NEXT:    or $a0, $a4, $a0
 ; LA32-UAL-NEXT:    or $a0, $a1, $a0
@@ -2809,8 +2809,8 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 16
 ; LA32-NUAL-NEXT:    bl memcmp
-; LA32-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -2821,8 +2821,8 @@ define i1 @memcmp_eq_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 16
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(memcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    sltui $a0, $a0, 1
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -2835,25 +2835,25 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_lt_zero:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    lu12i.w $a3, 15
+; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA32-UAL-NEXT:    ori $a3, $a3, 3840
-; LA32-UAL-NEXT:    and $a2, $a2, $a3
+; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a2, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a3
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a0, $a0, $a2
 ; LA32-UAL-NEXT:    srli.w $a2, $a1, 8
 ; LA32-UAL-NEXT:    and $a2, $a2, $a3
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a3, $a1, $a3
-; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
+; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a3
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    sltu $a0, $a0, $a1
@@ -2864,8 +2864,8 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    revb.2w $a0, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    revb.2w $a1, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    sltu $a0, $a0, $a1
 ; LA64-UAL-NEXT:    ret
@@ -2876,8 +2876,8 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl memcmp
-; LA32-NUAL-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    srli.w $a0, $a0, 31
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -2888,8 +2888,8 @@ define i1 @memcmp_lt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(memcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    slti $a0, $a0, 0
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    slti $a0, $a0, 0
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -2902,25 +2902,25 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_gt_zero:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    lu12i.w $a3, 15
+; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA32-UAL-NEXT:    ori $a3, $a3, 3840
-; LA32-UAL-NEXT:    and $a2, $a2, $a3
+; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a2, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a3
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a0, $a0, $a2
 ; LA32-UAL-NEXT:    srli.w $a2, $a1, 8
 ; LA32-UAL-NEXT:    and $a2, $a2, $a3
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a3, $a1, $a3
-; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
+; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a3
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    sltu $a0, $a1, $a0
@@ -2931,8 +2931,8 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    revb.2w $a0, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    revb.2w $a1, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    sltu $a0, $a1, $a0
 ; LA64-UAL-NEXT:    ret
@@ -2943,8 +2943,8 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl memcmp
-; LA32-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -2955,8 +2955,8 @@ define i1 @memcmp_gt_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(memcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    slt $a0, $zero, $a0
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -2969,25 +2969,25 @@ define i1 @memcmp_le_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_le_zero:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    lu12i.w $a3, 15
+; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA32-UAL-NEXT:    ori $a3, $a3, 3840
-; LA32-UAL-NEXT:    and $a2, $a2, $a3
+; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a2, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a3
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a0, $a0, $a2
 ; LA32-UAL-NEXT:    srli.w $a2, $a1, 8
 ; LA32-UAL-NEXT:    and $a2, $a2, $a3
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a3, $a1, $a3
-; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
+; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a3
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    sltu $a0, $a1, $a0
@@ -2999,8 +2999,8 @@ define i1 @memcmp_le_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    revb.2w $a0, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    revb.2w $a1, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    sltu $a0, $a1, $a0
 ; LA64-UAL-NEXT:    xori $a0, $a0, 1
@@ -3012,8 +3012,8 @@ define i1 @memcmp_le_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl memcmp
-; LA32-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
+; LA32-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -3024,8 +3024,8 @@ define i1 @memcmp_le_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(memcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
-; LA64-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
+; LA64-NUAL-NEXT:    slti $a0, $a0, 1
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:
@@ -3038,25 +3038,25 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-UAL-LABEL: memcmp_ge_zero:
 ; LA32-UAL:       # %bb.0: # %entry
 ; LA32-UAL-NEXT:    ld.w $a0, $a0, 0
-; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
-; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    lu12i.w $a3, 15
+; LA32-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA32-UAL-NEXT:    ori $a3, $a3, 3840
-; LA32-UAL-NEXT:    and $a2, $a2, $a3
+; LA32-UAL-NEXT:    srli.w $a2, $a0, 8
 ; LA32-UAL-NEXT:    srli.w $a4, $a0, 24
+; LA32-UAL-NEXT:    and $a2, $a2, $a3
 ; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a4, $a0, $a3
-; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    slli.w $a0, $a0, 24
+; LA32-UAL-NEXT:    slli.w $a4, $a4, 8
 ; LA32-UAL-NEXT:    or $a0, $a0, $a4
+; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
 ; LA32-UAL-NEXT:    or $a0, $a0, $a2
 ; LA32-UAL-NEXT:    srli.w $a2, $a1, 8
 ; LA32-UAL-NEXT:    and $a2, $a2, $a3
-; LA32-UAL-NEXT:    srli.w $a4, $a1, 24
-; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    and $a3, $a1, $a3
-; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
 ; LA32-UAL-NEXT:    slli.w $a1, $a1, 24
+; LA32-UAL-NEXT:    slli.w $a3, $a3, 8
+; LA32-UAL-NEXT:    or $a2, $a2, $a4
 ; LA32-UAL-NEXT:    or $a1, $a1, $a3
 ; LA32-UAL-NEXT:    or $a1, $a1, $a2
 ; LA32-UAL-NEXT:    sltu $a0, $a0, $a1
@@ -3068,8 +3068,8 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-UAL-NEXT:    ld.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    ld.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    revb.2w $a0, $a0
-; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    revb.2w $a1, $a1
+; LA64-UAL-NEXT:    addi.w $a0, $a0, 0
 ; LA64-UAL-NEXT:    addi.w $a1, $a1, 0
 ; LA64-UAL-NEXT:    sltu $a0, $a0, $a1
 ; LA64-UAL-NEXT:    xori $a0, $a0, 1
@@ -3081,9 +3081,9 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; LA32-NUAL-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
 ; LA32-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA32-NUAL-NEXT:    bl memcmp
+; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NUAL-NEXT:    addi.w $a1, $zero, -1
 ; LA32-NUAL-NEXT:    slt $a0, $a1, $a0
-; LA32-NUAL-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
 ; LA32-NUAL-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NUAL-NEXT:    ret
 ;
@@ -3094,9 +3094,9 @@ define i1 @memcmp_ge_zero(ptr %s1, ptr %s2) nounwind {
 ; LA64-NUAL-NEXT:    ori $a2, $zero, 4
 ; LA64-NUAL-NEXT:    pcaddu18i $ra, %call36(memcmp)
 ; LA64-NUAL-NEXT:    jirl $ra, $ra, 0
+; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NUAL-NEXT:    addi.w $a1, $zero, -1
 ; LA64-NUAL-NEXT:    slt $a0, $a1, $a0
-; LA64-NUAL-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
 ; LA64-NUAL-NEXT:    addi.d $sp, $sp, 16
 ; LA64-NUAL-NEXT:    ret
 entry:

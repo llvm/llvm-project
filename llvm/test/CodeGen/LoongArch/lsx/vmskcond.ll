@@ -864,11 +864,11 @@ define i32 @vmsk2_sgt_and_sgt_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <3
 ; LA32-LABEL: vmsk2_sgt_and_sgt_v32i8:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vslt.b $vr0, $vr2, $vr0
-; LA32-NEXT:    vslt.b $vr1, $vr3, $vr1
 ; LA32-NEXT:    vslt.b $vr2, $vr6, $vr4
+; LA32-NEXT:    vslt.b $vr1, $vr3, $vr1
 ; LA32-NEXT:    vslt.b $vr3, $vr7, $vr5
-; LA32-NEXT:    vand.v $vr1, $vr1, $vr3
 ; LA32-NEXT:    vand.v $vr0, $vr0, $vr2
+; LA32-NEXT:    vand.v $vr1, $vr1, $vr3
 ; LA32-NEXT:    vmskltz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; LA32-NEXT:    vmskltz.b $vr0, $vr1
@@ -880,11 +880,11 @@ define i32 @vmsk2_sgt_and_sgt_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8> %c, <3
 ; LA64-LABEL: vmsk2_sgt_and_sgt_v32i8:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vslt.b $vr0, $vr2, $vr0
-; LA64-NEXT:    vslt.b $vr1, $vr3, $vr1
 ; LA64-NEXT:    vslt.b $vr2, $vr6, $vr4
+; LA64-NEXT:    vslt.b $vr1, $vr3, $vr1
 ; LA64-NEXT:    vslt.b $vr3, $vr7, $vr5
-; LA64-NEXT:    vand.v $vr1, $vr1, $vr3
 ; LA64-NEXT:    vand.v $vr0, $vr0, $vr2
+; LA64-NEXT:    vand.v $vr1, $vr1, $vr3
 ; LA64-NEXT:    vmskltz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
 ; LA64-NEXT:    vmskltz.b $vr0, $vr1
