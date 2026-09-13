@@ -29,36 +29,36 @@ void synchronization(std::mutex& m) {
   std::timed_mutex e;                // expected-warning {{unused variable}}
   std::unique_lock<std::mutex> f;    // This is https://llvm.org/PR222655
   std::unique_lock<std::mutex> g(m); // Shouldn't be diagnosed
-#  if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 17
   std::unique_lock<std::mutex> h(m, std::defer_lock); // This is https://llvm.org/PR222655
-#  endif
+#endif
 
   // <condition_variable>
   std::condition_variable i;     // expected-warning {{unused variable}}
   std::condition_variable_any j; // expected-warning {{unused variable}}
 
-#  if TEST_STD_VER >= 20
+#if TEST_STD_VER >= 20
   // <semaphore>
   std::counting_semaphore<> k(1); // expected-warning {{unused variable}}
-#  endif
+#endif
 
   // <shared_mutex>
-#  if TEST_STD_VER >= 17
+#if TEST_STD_VER >= 17
   std::shared_mutex l; // expected-warning {{unused variable}}
-#  endif
-#  if TEST_STD_VER >= 14
+#endif
+#if TEST_STD_VER >= 14
   std::shared_timed_mutex n; // expected-warning {{unused variable}}
   std::shared_timed_mutex n2;
   std::shared_lock<std::shared_timed_mutex> o;                      // This is https://llvm.org/PR222655
   std::shared_lock<std::shared_timed_mutex> p(n2);                  // Shouldn't be diagnosed
   std::shared_lock<std::shared_timed_mutex> q(n2, std::defer_lock); // This is https://llvm.org/PR222655
-#  endif
+#endif
 
-#  if TEST_STD_VER >= 20
+#if TEST_STD_VER >= 20
   // <barrier>
   std::barrier<> r(1); // expected-warning {{unused variable}}
 
   // <latch>
   std::latch s(1); // expected-warning {{unused variable}}
-#  endif
+#endif
 }
