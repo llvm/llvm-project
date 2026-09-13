@@ -676,6 +676,12 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed an assertion when instantiating a class template whose member template
+  has a default template argument that calls a generic lambda, e.g.
+  ``template <auto = []<typename... U>(U...) {}()> struct X;``. Template
+  argument deduction for the lambda's call operator now accounts for the depth
+  of its template parameters. (#GH176405)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
