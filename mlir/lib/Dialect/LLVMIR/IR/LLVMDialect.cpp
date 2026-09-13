@@ -1164,7 +1164,7 @@ MutableOperandRange CallOp::getArgOperandsMutable() {
   // Slice the generated range to retain its segment-size metadata. A raw
   // range would not update operandSegmentSizes when arguments are erased.
   return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
-                                         getArgOperandsImpl(*this).size());
+                                          getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1655,7 +1655,7 @@ MutableOperandRange InvokeOp::getArgOperandsMutable() {
   // Slice the generated range to retain its segment-size metadata. A raw
   // range would not update operandSegmentSizes when arguments are erased.
   return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
-                                         getArgOperandsImpl(*this).size());
+                                          getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {
