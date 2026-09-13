@@ -20,6 +20,7 @@ from clang.cindex import (
     TypeKind,
     PrintingPolicyProperty,
     BaseEnumeration,
+    UnaryOperator,
 )
 
 
@@ -56,6 +57,7 @@ class TestEnums(unittest.TestCase):
             "CXTLSKind": TLSKind,
             "CXTokenKind": TokenKind,
             "CXTypeKind": TypeKind,
+            "CXUnaryOperatorKind": UnaryOperator,
         }
 
         indexheader = (

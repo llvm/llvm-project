@@ -5483,6 +5483,11 @@ CXString clang_getCursorSpelling(CXCursor C) {
           clang_getCursorBinaryOperatorKind(C));
     }
 
+    if (C.kind == CXCursor_UnaryOperator) {
+      return clang_getUnaryOperatorKindSpelling(
+          clang_getCursorUnaryOperatorKind(C));
+    }
+
     const Decl *D = getDeclFromExpr(getCursorExpr(C));
     if (D)
       return getDeclSpelling(D);

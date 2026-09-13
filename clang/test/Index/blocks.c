@@ -29,5 +29,5 @@ void test() {
 // CHECK: blocks.c:9:50: MemberRefExpr=x:4:19 SingleRefName=[9:50 - 9:51] RefName=[9:50 - 9:51] Extent=[9:45 - 9:51]
 // CHECK: blocks.c:9:45: DeclRefExpr=foo:9:23 Extent=[9:45 - 9:48]
 // CHECK: blocks.c:9:54: DeclRefExpr=i:8:11 Extent=[9:54 - 9:55]
-// CHECK: blocks.c:9:59: UnaryOperator= Extent=[9:59 - 9:64]
+// CHECK: blocks.c:9:59: UnaryOperator=& Extent=[9:59 - 9:64]
 // CHECK: blocks.c:9:60: DeclRefExpr=_foo:7:21 Extent=[9:60 - 9:64]
