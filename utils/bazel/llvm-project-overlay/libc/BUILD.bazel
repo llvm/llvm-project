@@ -11786,6 +11786,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
+    ],
+)
+
+libc_math_function(
     name = "bf16divf",
     additional_deps = [
         ":__support_math_bf16divf",
@@ -13378,6 +13385,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "getpayloadbf16",
+    additional_deps = [
+        ":__support_math_getpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "getpayloadf",
     additional_deps = [
         ":__support_math_getpayloadf",
@@ -14482,6 +14496,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "setpayloadbf16",
+    additional_deps = [
+        ":__support_math_setpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "setpayloadf",
     additional_deps = [
         ":__support_math_setpayloadf",
@@ -14513,6 +14534,13 @@ libc_math_function(
     name = "setpayloadsig",
     additional_deps = [
         ":__support_math_setpayloadsig",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigbf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigbf16",
     ],
 )
 
