@@ -501,39 +501,39 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ; SSE3-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE3-NEXT:    pextrw $1, %xmm1, %ecx
 ; SSE3-NEXT:    pextrw $2, %xmm1, %edx
-; SSE3-NEXT:    pextrw $3, %xmm1, %edi
-; SSE3-NEXT:    pextrw $4, %xmm1, %r8d
-; SSE3-NEXT:    pextrw $5, %xmm1, %r9d
-; SSE3-NEXT:    pextrw $6, %xmm1, %r10d
-; SSE3-NEXT:    pextrw $7, %xmm1, %esi
+; SSE3-NEXT:    pextrw $3, %xmm1, %esi
+; SSE3-NEXT:    pextrw $4, %xmm1, %edi
+; SSE3-NEXT:    pextrw $5, %xmm1, %r8d
+; SSE3-NEXT:    pextrw $6, %xmm1, %r9d
+; SSE3-NEXT:    pextrw $7, %xmm1, %r10d
 ; SSE3-NEXT:    movdqa %xmm2, -24(%rsp)
 ; SSE3-NEXT:    andl $7, %eax
-; SSE3-NEXT:    movzwl -24(%rsp,%rax,2), %eax
 ; SSE3-NEXT:    andl $7, %ecx
-; SSE3-NEXT:    movzwl -24(%rsp,%rcx,2), %ecx
 ; SSE3-NEXT:    andl $7, %edx
-; SSE3-NEXT:    movzwl -24(%rsp,%rdx,2), %edx
+; SSE3-NEXT:    andl $7, %esi
 ; SSE3-NEXT:    andl $7, %edi
-; SSE3-NEXT:    movzwl -24(%rsp,%rdi,2), %edi
 ; SSE3-NEXT:    andl $7, %r8d
-; SSE3-NEXT:    movzwl -24(%rsp,%r8,2), %r8d
 ; SSE3-NEXT:    andl $7, %r9d
-; SSE3-NEXT:    movzwl -24(%rsp,%r9,2), %r9d
 ; SSE3-NEXT:    andl $7, %r10d
 ; SSE3-NEXT:    movzwl -24(%rsp,%r10,2), %r10d
-; SSE3-NEXT:    andl $7, %esi
-; SSE3-NEXT:    movzwl -24(%rsp,%rsi,2), %esi
-; SSE3-NEXT:    movd %esi, %xmm1
-; SSE3-NEXT:    movd %r10d, %xmm2
+; SSE3-NEXT:    movd %r10d, %xmm1
+; SSE3-NEXT:    movzwl -24(%rsp,%r9,2), %r9d
+; SSE3-NEXT:    movd %r9d, %xmm2
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
-; SSE3-NEXT:    movd %r9d, %xmm1
-; SSE3-NEXT:    movd %r8d, %xmm3
+; SSE3-NEXT:    movzwl -24(%rsp,%r8,2), %r8d
+; SSE3-NEXT:    movd %r8d, %xmm1
+; SSE3-NEXT:    movzwl -24(%rsp,%rdi,2), %edi
+; SSE3-NEXT:    movd %edi, %xmm3
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1],xmm3[2],xmm1[2],xmm3[3],xmm1[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE3-NEXT:    movd %edi, %xmm1
+; SSE3-NEXT:    movzwl -24(%rsp,%rsi,2), %esi
+; SSE3-NEXT:    movd %esi, %xmm1
+; SSE3-NEXT:    movzwl -24(%rsp,%rdx,2), %edx
 ; SSE3-NEXT:    movd %edx, %xmm2
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1],xmm2[2],xmm1[2],xmm2[3],xmm1[3]
+; SSE3-NEXT:    movzwl -24(%rsp,%rcx,2), %ecx
 ; SSE3-NEXT:    movd %ecx, %xmm1
+; SSE3-NEXT:    movzwl -24(%rsp,%rax,2), %eax
 ; SSE3-NEXT:    movd %eax, %xmm4
 ; SSE3-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm1[0],xmm4[1],xmm1[1],xmm4[2],xmm1[2],xmm4[3],xmm1[3]
 ; SSE3-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]

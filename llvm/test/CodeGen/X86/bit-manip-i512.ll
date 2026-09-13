@@ -459,31 +459,31 @@ define i512 @bext_i512(i512 %a0, i512 %idx, i512 %len) nounwind {
 ; AVX512VBMI-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
 ; AVX512VBMI-NEXT:    vmovdqu %ymm0, -{{[0-9]+}}(%rsp)
-; AVX512VBMI-NEXT:    movl %edi, %ecx
+; AVX512VBMI-NEXT:    vpbroadcastq %rdi, %zmm1
+; AVX512VBMI-NEXT:    # kill: def $edi killed $edi killed $rdi def $rdi
 ; AVX512VBMI-NEXT:    shrl $3, %edi
 ; AVX512VBMI-NEXT:    andl $56, %edi
-; AVX512VBMI-NEXT:    vmovdqu64 -128(%rsp,%rdi), %zmm1
-; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm1[1,2,3,4,5,6,7],zmm0[0]
-; AVX512VBMI-NEXT:    vpbroadcastq %rcx, %zmm3
-; AVX512VBMI-NEXT:    vpshrdvq %zmm3, %zmm0, %zmm1
+; AVX512VBMI-NEXT:    vmovdqu64 -128(%rsp,%rdi), %zmm3
+; AVX512VBMI-NEXT:    valignq {{.*#+}} zmm0 = zmm3[1,2,3,4,5,6,7],zmm0[0]
+; AVX512VBMI-NEXT:    vpshrdvq %zmm1, %zmm0, %zmm3
 ; AVX512VBMI-NEXT:    vextracti128 $1, %ymm2, %xmm0
 ; AVX512VBMI-NEXT:    vpextrq $1, %xmm0, %rdx
-; AVX512VBMI-NEXT:    vextracti32x4 $3, %zmm1, %xmm3
-; AVX512VBMI-NEXT:    vpextrq $1, %xmm3, %rcx
+; AVX512VBMI-NEXT:    vextracti32x4 $3, %zmm3, %xmm1
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm1, %rcx
 ; AVX512VBMI-NEXT:    vmovq %xmm2, %rsi
 ; AVX512VBMI-NEXT:    andq %r11, %rcx
-; AVX512VBMI-NEXT:    vmovq %xmm3, %rdi
-; AVX512VBMI-NEXT:    vextracti32x4 $2, %zmm1, %xmm2
-; AVX512VBMI-NEXT:    vpextrq $1, %xmm2, %r11
+; AVX512VBMI-NEXT:    vmovq %xmm1, %rdi
+; AVX512VBMI-NEXT:    vextracti32x4 $2, %zmm3, %xmm1
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm1, %r11
 ; AVX512VBMI-NEXT:    andq %r10, %rdi
 ; AVX512VBMI-NEXT:    andq %rbx, %r11
-; AVX512VBMI-NEXT:    vmovq %xmm2, %r10
+; AVX512VBMI-NEXT:    vmovq %xmm1, %r10
 ; AVX512VBMI-NEXT:    andq %r9, %r10
-; AVX512VBMI-NEXT:    vpextrq $1, %xmm1, %r9
+; AVX512VBMI-NEXT:    vpextrq $1, %xmm3, %r9
 ; AVX512VBMI-NEXT:    andq %r8, %r9
-; AVX512VBMI-NEXT:    vmovq %xmm1, %r8
+; AVX512VBMI-NEXT:    vmovq %xmm3, %r8
 ; AVX512VBMI-NEXT:    andq %rsi, %r8
-; AVX512VBMI-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; AVX512VBMI-NEXT:    vextracti128 $1, %ymm3, %xmm1
 ; AVX512VBMI-NEXT:    vpextrq $1, %xmm1, %rsi
 ; AVX512VBMI-NEXT:    vmovq %xmm0, %rbx
 ; AVX512VBMI-NEXT:    andq %rdx, %rsi
