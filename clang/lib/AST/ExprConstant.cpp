@@ -235,10 +235,6 @@ namespace {
         ArraySize = 0;
         MostDerivedLength = I + 1;
         IsArray = false;
-      } else {
-        // Path[I] describes a base class.
-        ArraySize = 0;
-        IsArray = false;
       }
     }
     return MostDerivedLength;

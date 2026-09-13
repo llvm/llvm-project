@@ -178,6 +178,89 @@ namespace LambdaCallOp {
   }
 }
 
+// Regression tests for https://github.com/llvm/llvm-project/issues/223064
+//
+// The constant evaluator loses track of an lvalue's most-derived array
+// information when an APValue containing a base-class path entry is
+// reconstructed into an LValue/SubobjectDesignator. A base-class path
+// entry does not advance the most-derived path length, so it must not
+// clobber the most-derived array size/flag either; those fields belong
+// to the entry at MostDerivedPathLength, not to whatever entry was
+// processed last.
+namespace GH223064 {
+
+// Original reproducer: 
+
+namespace BasicBaseSubobject {
+  struct A { int n; };
+  struct B : A {} b[2];
+
+  constexpr int *f() {
+    A *p = b;
+    return &static_cast<B*>(p)[1].n;
+  }
+  static_assert(f() == &b[1].n, "");
+}
+
+// Same shape, but through the second of two non-virtual bases, so the
+// base subobject sits at a non-zero offset within the derived object.
+namespace NonPrimaryBase {
+  struct A  { int n; };
+  struct A2 { int m; };
+  struct B : A, A2 {} b[2];
+
+  constexpr int *f() {
+    A2 *p = &b[0];
+    return &static_cast<B*>(p)[1].m;
+  }
+  static_assert(f() == &b[1].m, "");
+}
+
+// Two trailing base-class path entries in a row (C -> B -> A), rather than
+// just one
+namespace MultipleTrailingBaseEntries {
+  struct A { int n; };
+  struct B : A {};
+  struct C : B {} c[2];
+
+  constexpr int *f() {
+    A *p = &c[0];
+    return &static_cast<C*>(p)[1].n;
+  }
+  static_assert(f() == &c[1].n, "");
+}
+
+// Pointer arithmetic performed directly on the downcast pointer, rather
+// than array subscripting, must also see the correct bounds.
+namespace ArithmeticOnDowncastPointer {
+  struct A { int n; };
+  struct B : A {} b[3];
+
+  constexpr int *f() {
+    A *p = b;
+    B *q = static_cast<B*>(p) + 2;
+    return &q->n;
+  }
+  static_assert(f() == &b[2].n, "");
+}
+
+//  indexing
+// past the end of the array through the same base-subobject pattern
+// should still be rejected.
+namespace OutOfBoundsStillRejected {
+  struct A { int n; };
+  struct B : A {} b[2];
+
+  constexpr int *f(int i) {
+    A *p = b;
+    return &static_cast<B*>(p)[i].n; // expected-note {{cannot refer to element 5 of array of 2 elements in a constant expression}}
+  }
+  static_assert(f(5) == nullptr, ""); // expected-error {{not an integral constant expression}} \
+                                       // expected-note {{in call to 'f(5)'}}
+}
+
+} // namespace GH223064
+
 // This used to crash due to an assertion failure,
 // see gh#67690
 namespace {
