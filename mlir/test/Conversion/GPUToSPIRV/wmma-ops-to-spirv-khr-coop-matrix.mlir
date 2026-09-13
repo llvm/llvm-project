@@ -81,19 +81,27 @@ module attributes {
     // CHECK-SAME:    !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixB>
     // CHECK-SAME:    !spirv.coopmatrix<16x16xi32, Subgroup, MatrixAcc>
     gpu.func @gpu_wmma_signed_i8_mma_op(
+      %value: i8,
       %A: !gpu.mma_matrix<16x16xsi8, "AOp">,
       %B: !gpu.mma_matrix<16x16xsi8, "BOp">,
       %C: !gpu.mma_matrix<16x16xi32, "COp">,
       %ptr: memref<16x16xi32, #spirv.storage_class<StorageBuffer>>) kernel
       attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>} {
+      %i = arith.constant 0 : index
+      // CHECK:      %[[SIGNED_VALUE:.*]] = spirv.Bitcast %{{.*}} : i8 to si8
+      // CHECK:      spirv.CompositeInsert %[[SIGNED_VALUE]], %{{.*}}[0 : i32] : si8 into !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixA>
+      %insertedA = gpu.subgroup_mma_insert_thread_local %value, %A[%i] : i8, !gpu.mma_matrix<16x16xsi8, "AOp"> -> !gpu.mma_matrix<16x16xsi8, "AOp">
+      // CHECK:      spirv.CompositeExtract %{{.*}}[0 : i32] : !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixA>
+      %extractedA = gpu.subgroup_mma_extract_thread_local %insertedA[%i] : !gpu.mma_matrix<16x16xsi8, "AOp"> -> si8
+      // CHECK:      %[[REINSERTED_A:.*]] = spirv.CompositeInsert %{{.*}}, %{{.*}}[0 : i32] : si8 into !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixA>
+      %reinsertedA = gpu.subgroup_mma_insert_thread_local %extractedA, %insertedA[%i] : si8, !gpu.mma_matrix<16x16xsi8, "AOp"> -> !gpu.mma_matrix<16x16xsi8, "AOp">
       // CHECK:      spirv.KHR.CooperativeMatrixMulAdd {{%.*}}, {{%.*}}, {{%.*}}, <ASigned|BSigned> :
       // CHECK-SAME:   !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixA>,
       // CHECK-SAME:   !spirv.coopmatrix<16x16xsi8, Subgroup, MatrixB>
       // CHECK-SAME:   -> !spirv.coopmatrix<16x16xi32, Subgroup, MatrixAcc>
-      %D = gpu.subgroup_mma_compute %A, %B, %C : !gpu.mma_matrix<16x16xsi8, "AOp">,
+      %D = gpu.subgroup_mma_compute %reinsertedA, %B, %C : !gpu.mma_matrix<16x16xsi8, "AOp">,
                                                  !gpu.mma_matrix<16x16xsi8, "BOp">
                                                  -> !gpu.mma_matrix<16x16xi32, "COp">
-      %i = arith.constant 0 : index
       // CHECK:      spirv.KHR.CooperativeMatrixStore %{{.+}}, %{{.+}}, %{{.+}}, <RowMajor>
       gpu.subgroup_mma_store_matrix %D, %ptr[%i, %i] leadDimension 32 :
         !gpu.mma_matrix<16x16xi32, "COp">, memref<16x16xi32, #spirv.storage_class<StorageBuffer>>
