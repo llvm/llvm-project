@@ -301,7 +301,8 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
                    Variadic<LLVM_ScalarOrVectorOf<AnySignlessInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
                    TypeAttr:$elem_type,
-                   GEPNoWrapFlagsProp:$noWrapFlags);
+                   GEPNoWrapFlagsProp:$noWrapFlags,
+                   OptionalAttr<LLVM_ConstantRangeAttr>:$inrange);
   let results = (outs LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$res);
   let skipDefaultBuilders = 1;
 
@@ -320,6 +321,12 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     Note that 'inbounds' implies 'nusw' which is ensured by the enum
     definition. The flags can be set individually or in combination.
 
+    An optional `inrange` attribute corresponds to the LLVM IR `inrange(Start,
+    End)` qualifier on constant GEP expressions. Loading from or storing to any
+    pointer derived from the GEP has undefined behavior if the access would fall
+    outside the half-open range `[Start, End)` from the GEP result. LLVM IR
+    permits `inrange` only on constant GEP expressions.
+
     Examples:
 
     ```mlir
@@ -332,6 +339,10 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     // GEP with constant offsets into a structure
     %0 = llvm.getelementptr %1[0, 1]
        : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, f32)>
+
+    // Constant GEP with an inrange qualifier
+    %0 = llvm.getelementptr inbounds inrange <i32, -16, 8> %1[0, 0, 2]
+       : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(array<3 x ptr>)>
     ```
   }];
 
@@ -339,33 +350,19 @@ def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ValueRange":$indices,
                CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
+               CArg<"ConstantRangeAttr", "{}">:$inrange,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
     OpBuilder<(ins "Type":$resultType, "Type":$elementType, "Value":$basePtr,
                "ArrayRef<GEPArg>":$indices,
                CArg<"GEPNoWrapFlags", "GEPNoWrapFlags::none">:$noWrapFlags,
+               CArg<"ConstantRangeAttr", "{}">:$inrange,
                CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>,
   ];
   let llvmBuilder = [{
-    SmallVector<llvm::Value *> indices;
-    indices.reserve($rawConstantIndices.size());
-    GEPIndicesAdaptor<decltype($dynamicIndices)>
-        gepIndices(op.getRawConstantIndicesAttr(), $dynamicIndices);
-    for (PointerUnion<IntegerAttr, llvm::Value*> valueOrAttr : gepIndices) {
-      if (llvm::Value* value = ::llvm::dyn_cast<llvm::Value*>(valueOrAttr))
-        indices.push_back(value);
-      else
-        indices.push_back(
-            builder.getInt32(cast<IntegerAttr>(valueOrAttr).getInt()));
-    }
-    Type baseElementType = op.getElemType();
-    llvm::Type *elementType = moduleTranslation.convertType(baseElementType);
-    $res = builder.CreateGEP(elementType, $base, indices, "",
-                             llvm::GEPNoWrapFlags::fromRaw(
-                                 static_cast<unsigned>(
-                                     op.getNoWrapFlags())));
+    return convertGEPOp(op, builder, moduleTranslation);
   }];
   let assemblyFormat = [{
-    ($noWrapFlags^)?
+    ($noWrapFlags^)? (`inrange` $inrange^)?
     $base `[` custom<GEPIndices>($dynamicIndices, $rawConstantIndices) `]` attr-dict
     `:` functional-type(operands, results) `,` $elem_type
   }];
