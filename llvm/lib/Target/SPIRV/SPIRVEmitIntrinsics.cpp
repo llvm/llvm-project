@@ -236,7 +236,8 @@ class SPIRVEmitIntrinsicsImpl
                                      bool UnknownElemTypeI8);
   Type *deduceElementTypeByValueDeep(Type *ValueTy, Value *Operand,
                                      SmallPtrSetImpl<Value *> &Visited,
-                                     bool UnknownElemTypeI8);
+                                     bool UnknownElemTypeI8,
+                                     std::optional<unsigned> AddrSpace = {});
   Type *deduceElementTypeByUsersDeep(Value *Op,
                                      SmallPtrSetImpl<Value *> &Visited,
                                      bool UnknownElemTypeI8);
@@ -707,13 +708,14 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByValueDeep(
 
 Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeByValueDeep(
     Type *ValueTy, Value *Operand, SmallPtrSetImpl<Value *> &Visited,
-    bool UnknownElemTypeI8) {
+    bool UnknownElemTypeI8, std::optional<unsigned> AddrSpace) {
   Type *Ty = ValueTy;
   if (Operand) {
     if (auto *PtrTy = dyn_cast<PointerType>(Ty)) {
       if (Type *NestedTy =
               deduceElementTypeHelper(Operand, Visited, UnknownElemTypeI8))
-        Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+        Ty = getTypedPointerWrapper(
+            NestedTy, AddrSpace.value_or(PtrTy->getAddressSpace()));
     } else {
       Ty = deduceNestedTypeHelper(dyn_cast<User>(Operand), Ty, Visited,
                                   UnknownElemTypeI8);
@@ -987,10 +989,21 @@ Type *SPIRVEmitIntrinsicsImpl::deduceElementTypeHelper(
       Ty = SPIRV::getOriginalFunctionType(*Fn);
       GR->addDeducedElementType(I, Ty);
     } else {
-      Ty = deduceElementTypeByValueDeep(
-          Ref->getValueType(),
-          Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr, Visited,
-          UnknownElemTypeI8);
+      Value *Op = Ref->getNumOperands() > 0 ? Ref->getOperand(0) : nullptr;
+      // Code lives in the program address space, not in the address space of
+      // the global. For known SPIR-V targets, program address space 0 maps
+      // to Function/Private, which cannot hold code, so treat it as unset.
+      std::optional<unsigned> ProgramAS;
+      if (isa_and_nonnull<Function>(Op)) {
+        if (unsigned AS = CurrF->getDataLayout().getProgramAddressSpace())
+          ProgramAS = AS;
+        else if (TM.getSubtargetImpl()->canUseExtension(
+                     SPIRV::Extension::SPV_INTEL_function_pointers))
+          ProgramAS =
+              storageClassToAddressSpace(SPIRV::StorageClass::CodeSectionINTEL);
+      }
+      Ty = deduceElementTypeByValueDeep(Ref->getValueType(), Op, Visited,
+                                        UnknownElemTypeI8, ProgramAS);
     }
   } else if (auto *Ref = dyn_cast<AddrSpaceCastInst>(I)) {
     Type *RefTy = deduceElementTypeHelper(Ref->getPointerOperand(), Visited,
