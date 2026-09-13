@@ -330,15 +330,15 @@ public:
     // whether such an unresolved Linker run is in progress; if so, and the
     // next code point is the resolving Consonant, override the break
     // decision to "do not break", regardless of what the other rules said.
-    __inCB_property __next_inCB = __indic_conjunct_break::__get_property(__next_code_point);
-    if (__pending_linker_ && __next_inCB == __inCB_property::__Consonant)
+    __inCB_property __next_in_cb = __indic_conjunct_break::__get_property(__next_code_point);
+    if (__pending_linker_ && __next_in_cb == __inCB_property::__Consonant)
       __result = false;
 
     if (__result) {
       // A break occurred; the new cluster starts fresh at __next_code_point.
-      __pending_linker_ = __next_inCB == __inCB_property::__Linker;
+      __pending_linker_ = __next_in_cb == __inCB_property::__Linker;
     } else {
-      switch (__next_inCB) {
+      switch (__next_in_cb) {
       case __inCB_property::__Consonant:
         __pending_linker_ = false; // The run is resolved.
         break;
