@@ -81,3 +81,92 @@ define i64 @test_bzhi64_range(i64 %arg) nounwind readnone {
   %4 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771240, i64 %3)
   ret i64 %4
 }
+define i32 @test_bzhi32_control_upper_bits(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: test_bzhi32_control_upper_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
+  %control = or i32 %b, 256
+  %result = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 %control)
+  ret i32 %result
+}
+
+define i64 @test_bzhi64_control_upper_bits(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: test_bzhi64_control_upper_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+  %control = or i64 %b, 256
+  %result = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 %control)
+  ret i64 %result
+}
+
+; Constant control 0x110 (272) — low 8 bits are 0x10 (16), upper bits are junk.
+; Should simplify to bzhi(a, 16), which keeps low 16 bits.
+define i32 @test_bzhi32_constant_control_upper_bits(i32 %a) nounwind {
+; CHECK-LABEL: test_bzhi32_constant_control_upper_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $16, %eax
+; CHECK-NEXT:    bzhil %eax, %edi, %eax
+; CHECK-NEXT:    retq
+  %result = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 272)
+  ret i32 %result
+}
+
+define i64 @test_bzhi64_constant_control_upper_bits(i64 %a) nounwind {
+; CHECK-LABEL: test_bzhi64_constant_control_upper_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $16, %eax
+; CHECK-NEXT:    bzhiq %rax, %rdi, %rax
+; CHECK-NEXT:    retq
+  %result = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 272)
+  ret i64 %result
+}
+
+define i32 @test_bzhi32_src_upper_bits(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: test_bzhi32_src_upper_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $15, %esi
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
+  %src = or i32 %a, 65536
+  %control = and i32 %b, 15
+  %result = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %src, i32 %control)
+  ret i32 %result
+}
+
+define i64 @test_bzhi64_src_upper_bits(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: test_bzhi64_src_upper_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $15, %esi
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+  %src = or i64 %a, 65536
+  %control = and i64 %b, 15
+  %result = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %src, i64 %control)
+  ret i64 %result
+}
+
+define i32 @test_bzhi32_known_bits(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: test_bzhi32_known_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $7, %esi
+; CHECK-NEXT:    bzhil %esi, %edi, %eax
+; CHECK-NEXT:    retq
+  %control = and i32 %b, 7
+  %bzhi = tail call i32 @llvm.x86.bmi.bzhi.32(i32 %a, i32 %control)
+  %result = and i32 %bzhi, 127
+  ret i32 %result
+}
+
+define i64 @test_bzhi64_known_bits(i64 %a, i64 %b) nounwind {
+; CHECK-LABEL: test_bzhi64_known_bits:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andl $7, %esi
+; CHECK-NEXT:    bzhiq %rsi, %rdi, %rax
+; CHECK-NEXT:    retq
+  %control = and i64 %b, 7
+  %bzhi = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %a, i64 %control)
+  %result = and i64 %bzhi, 127
+  ret i64 %result
+}
