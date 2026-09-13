@@ -123,13 +123,31 @@ inline unsigned encodeULEB128(uint64_t Value, uint8_t *p,
   return (unsigned)(p - orig_p);
 }
 
-/// Utility function to decode a ULEB128 value.
+/// Identifies why ULEB128 decoding failed.
+enum class ULEB128DecodeError {
+  /// No decoding error has been reported.
+  None,
+  /// The encoding requires bytes beyond the supplied buffer.
+  UnexpectedEnd,
+  /// The encoded value does not fit in uint64_t.
+  TooBig,
+};
+
+/// Utility function to decode a ULEB128 value and report a typed error.
 ///
-/// If \p error is non-null, it will point to a static error message,
-/// if an error occurred. It will not be modified on success.
-inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
-                              const uint8_t *end = nullptr,
-                              const char **error = nullptr) {
+/// \p p is the first byte of the encoding.
+/// If \p n is non-null, it receives the number of bytes consumed.
+/// If \p end is non-null, decoding will not read at or beyond that address.
+/// If \p error is non-null, it will point to a static error message if an error
+/// occurred. It will not be modified on success.
+/// If \p errorCode is non-null, it will identify the decoding outcome. It is
+/// set to \c None on entry and only changed when decoding fails.
+inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n, const uint8_t *end,
+                              const char **error,
+                              ULEB128DecodeError *errorCode) {
+  if (errorCode)
+    *errorCode = ULEB128DecodeError::None;
+
   const uint8_t *orig_p = p;
   uint64_t Value = 0;
   unsigned Shift = 0;
@@ -137,6 +155,8 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
     if (LLVM_UNLIKELY(p == end)) {
       if (error)
         *error = "malformed uleb128, extends past end";
+      if (errorCode)
+        *errorCode = ULEB128DecodeError::UnexpectedEnd;
       Value = 0;
       break;
     }
@@ -146,6 +166,8 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
          (Shift > 63 && Slice != 0))) {
       if (error)
         *error = "uleb128 too big for uint64";
+      if (errorCode)
+        *errorCode = ULEB128DecodeError::TooBig;
       Value = 0;
       break;
     }
@@ -160,6 +182,18 @@ inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
   if (n)
     *n = (unsigned)(p - orig_p);
   return Value;
+}
+
+/// Utility function to decode a ULEB128 value.
+///
+/// If \p n is non-null, it receives the number of bytes consumed on success.
+/// If \p end is non-null, decoding will not read at or beyond that address.
+/// If \p error is non-null, it will point to a static error message if an error
+/// occurred. It will not be modified on success.
+inline uint64_t decodeULEB128(const uint8_t *p, unsigned *n = nullptr,
+                              const uint8_t *end = nullptr,
+                              const char **error = nullptr) {
+  return decodeULEB128(p, n, end, error, nullptr);
 }
 
 /// Utility function to decode a SLEB128 value.
