@@ -1883,6 +1883,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
       case Instruction::Sub:
       case Instruction::And:
       case Instruction::Or:
+      case Instruction::Xor:
       case Instruction::Mul: {
         // Change the context instruction to the "edge" that flows into the
         // phi. This is important because that is where the value is actually
@@ -1907,8 +1908,17 @@ static void computeKnownBitsFromOperator(const Operator *I,
         RecQ.CxtI = LatchTerm;
         computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
 
-        Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
-                                       KnownStep.countMinTrailingZeros()));
+        if (Opcode == Instruction::Or || Opcode == Instruction::Xor) {
+          Known.Zero |= KnownStart.Zero & KnownStep.Zero;
+          if (Opcode == Instruction::Or)
+            Known.One |= KnownStart.One;
+        } else if (Opcode == Instruction::And) {
+          Known.Zero |= KnownStart.Zero;
+          Known.One |= KnownStart.One & KnownStep.One;
+        } else {
+          Known.Zero.setLowBits(std::min(KnownStart.countMinTrailingZeros(),
+                                         KnownStep.countMinTrailingZeros()));
+        }
 
         auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(BO);
         if (!OverflowOp || !Q.IIQ.hasNoSignedWrap(OverflowOp))

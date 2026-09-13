@@ -227,7 +227,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<1234>, ir<-1>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = reduction-start-vector ir<%x>, ir<-1>, ir<1>
 ; CHECK-NEXT:    WIDEN-CAST ir<%recur.next> = sext ir<%y> to i32
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -281,7 +281,7 @@ define i32 @sink_replicate_region_3_reduction(i32 %x, i8 %y, ptr %ptr) optsize {
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
-; CHECK-NEXT:    IR   %and.red = phi i32 [ 1234, %entry ], [ %and.red.next, %loop ] (extra operand: ir<1234> from scalar.ph)
+; CHECK-NEXT:    IR   %and.red = phi i32 [ %x, %entry ], [ %and.red.next, %loop ] (extra operand: ir<%x> from scalar.ph)
 ; CHECK-NEXT:    IR   %rem = srem i32 %recur, %x
 ; CHECK-NEXT:    IR   %recur.next = sext i8 %y to i32
 ; CHECK-NEXT:    IR   %add = add i32 %rem, %recur.next
@@ -297,7 +297,7 @@ entry:
 loop:
   %recur = phi i32 [ 0, %entry ], [ %recur.next, %loop ]
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %and.red = phi i32 [ 1234, %entry ], [ %and.red.next, %loop ]
+  %and.red = phi i32 [ %x, %entry ], [ %and.red.next, %loop ]
   %rem = srem i32 %recur, %x
   %recur.next = sext i8 %y to i32
   %add = add i32 %rem, %recur.next
