@@ -20,7 +20,11 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalAlias.h"
+#include "llvm/IR/GlobalIFunc.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
@@ -128,6 +132,195 @@ TEST_F(ModuleWithFunctionTest, InvokeInst) {
     EXPECT_EQ(Invoke->getArgOperand(Idx)->getType(), Arg->getType());
     Idx++;
   }
+}
+
+TEST(InstructionsTest, CalleesMetadataDecoding) {
+  LLVMContext C;
+  Module M("test", C);
+  FunctionType *CalleeTy = FunctionType::get(Type::getVoidTy(C), false);
+  Function *Target0 =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "target0", M);
+  Function *Target1 =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "target1", M);
+
+  FunctionType *CallerTy =
+      FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C), false);
+  Function *Caller =
+      Function::Create(CallerTy, GlobalValue::ExternalLinkage, "caller", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", Caller);
+  CallInst *Indirect =
+      CallInst::Create(CalleeTy, Caller->getArg(0), {}, "", Entry);
+  CallInst *Direct = CallInst::Create(Target0, {}, "", Entry);
+  InlineAsm *Asm = InlineAsm::get(CalleeTy, "", "", true);
+  CallInst *InlineAsmCall = CallInst::Create(CalleeTy, Asm, {}, "", Entry);
+  ReturnInst::Create(C, Entry);
+
+  SmallVector<Function *, 4> Callees = {Target0};
+  EXPECT_FALSE(Indirect->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+
+  Indirect->setMetadata(LLVMContext::MD_callees, MDNode::get(C, {}));
+  EXPECT_TRUE(Indirect->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+
+  MDBuilder MDB(C);
+  Indirect->setMetadata(LLVMContext::MD_callees,
+                        MDB.createCallees({Target0, Target1, Target0}));
+  ASSERT_TRUE(Indirect->getCalleesMetadata(Callees));
+  ASSERT_EQ(Callees.size(), 2u);
+  EXPECT_EQ(Callees[0], Target0);
+  EXPECT_EQ(Callees[1], Target1);
+
+  MDNode *Valid = MDB.createCallees({Target0});
+  Direct->setMetadata(LLVMContext::MD_callees, Valid);
+  Callees.push_back(Target1);
+  ASSERT_TRUE(Direct->getCalleesMetadata(Callees));
+  ASSERT_EQ(Callees.size(), 1u);
+  EXPECT_EQ(Callees[0], Target0);
+
+  InlineAsmCall->setMetadata(LLVMContext::MD_callees, Valid);
+  Callees.push_back(Target1);
+  EXPECT_FALSE(InlineAsmCall->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+
+  InlineAsmCall->setMetadata(LLVMContext::MD_callees, MDNode::get(C, {}));
+  Callees.push_back(Target1);
+  EXPECT_FALSE(InlineAsmCall->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+
+  Function *Invoker =
+      Function::Create(CallerTy, GlobalValue::ExternalLinkage, "invoker", M);
+  BasicBlock *InvokeEntry = BasicBlock::Create(C, "entry", Invoker);
+  BasicBlock *Normal = BasicBlock::Create(C, "normal", Invoker);
+  BasicBlock *Unwind = BasicBlock::Create(C, "unwind", Invoker);
+  InvokeInst *Invoke = InvokeInst::Create(CalleeTy, Invoker->getArg(0), Normal,
+                                          Unwind, {}, "", InvokeEntry);
+  ReturnInst::Create(C, Normal);
+  new UnreachableInst(C, Unwind);
+  Invoke->setMetadata(LLVMContext::MD_callees,
+                      MDB.createCallees({Target1, Target0}));
+  ASSERT_TRUE(Invoke->getCalleesMetadata(Callees));
+  ASSERT_EQ(Callees.size(), 2u);
+  EXPECT_EQ(Callees[0], Target1);
+  EXPECT_EQ(Callees[1], Target0);
+}
+
+TEST(InstructionsTest, CalleesMetadataSurvivesCalleeSimplification) {
+  LLVMContext C;
+  Module M("test", C);
+  FunctionType *CalleeTy = FunctionType::get(Type::getVoidTy(C), false);
+  Function *Allowed =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "allowed", M);
+  Function *Excluded =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "excluded", M);
+  FunctionType *CallerTy =
+      FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C), false);
+  Function *Caller =
+      Function::Create(CallerTy, GlobalValue::ExternalLinkage, "caller", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", Caller);
+  CallInst *Call = CallInst::Create(CalleeTy, Caller->getArg(0), {}, "", Entry);
+  ReturnInst::Create(C, Entry);
+
+  MDBuilder MDB(C);
+  MDNode *MD = MDB.createCallees({Allowed});
+  Call->setMetadata(LLVMContext::MD_callees, MD);
+  SmallVector<Function *, 4> Callees;
+  auto CheckList = [&] {
+    ASSERT_TRUE(Call->getCalleesMetadata(Callees));
+    ASSERT_EQ(Callees.size(), 1u);
+    EXPECT_EQ(Callees[0], Allowed);
+    EXPECT_EQ(Call->getMetadata(LLVMContext::MD_callees), MD);
+  };
+  ASSERT_TRUE(Call->isIndirectCall());
+  CheckList();
+
+  // A proven direct target in the list satisfies the unchanged constraint.
+  Call->setCalledOperand(Allowed);
+  ASSERT_FALSE(Call->isIndirectCall());
+  CheckList();
+
+  // Executing this call would be UB, but the attachment is still well-formed.
+  // The decoder must not discard it when simplification exposes the mismatch.
+  Call->setCalledOperand(Excluded);
+  CheckList();
+
+  // Other constant operands must not erase the constraint either.
+  Call->setCalledOperand(ConstantPointerNull::get(PointerType::getUnqual(C)));
+  CheckList();
+
+  // Empty is still distinct from absence after a call becomes direct.
+  Call->setCalledOperand(Allowed);
+  Call->setMetadata(LLVMContext::MD_callees, MDNode::get(C, {}));
+  EXPECT_TRUE(Call->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+  Call->setMetadata(LLVMContext::MD_callees, nullptr);
+  EXPECT_FALSE(Call->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
+}
+
+TEST(InstructionsTest, CalleesMetadataRejectsMalformedOperands) {
+  LLVMContext C;
+  Module M("test", C);
+  FunctionType *CalleeTy = FunctionType::get(Type::getVoidTy(C), false);
+  Function *Target =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "target", M);
+  FunctionType *CallerTy =
+      FunctionType::get(Type::getVoidTy(C), PointerType::getUnqual(C), false);
+  Function *Caller =
+      Function::Create(CallerTy, GlobalValue::ExternalLinkage, "caller", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", Caller);
+  CallInst *Indirect =
+      CallInst::Create(CalleeTy, Caller->getArg(0), {}, "", Entry);
+  ReturnInst::Create(C, Entry);
+
+  auto *Global =
+      new GlobalVariable(M, Type::getInt8Ty(C), false,
+                         GlobalValue::ExternalLinkage, nullptr, "global");
+  GlobalAlias *Alias = GlobalAlias::create(
+      Target->getType(), 0, GlobalValue::ExternalLinkage, "alias", Target, &M);
+  GlobalIFunc *IFunc = GlobalIFunc::create(
+      Target->getType(), 0, GlobalValue::ExternalLinkage, "ifunc", Target, &M);
+
+  SmallVector<Function *, 4> Callees;
+  auto CheckMalformed = [&](StringRef Name, Metadata *BadOperand) {
+    SCOPED_TRACE(Name);
+    Metadata *Operands[] = {ConstantAsMetadata::get(Target), BadOperand};
+    Indirect->setMetadata(LLVMContext::MD_callees, MDNode::get(C, Operands));
+    Callees.push_back(Target);
+    EXPECT_FALSE(Indirect->getCalleesMetadata(Callees));
+    EXPECT_TRUE(Callees.empty());
+  };
+
+  CheckMalformed("raw null", nullptr);
+  CheckMalformed("typed null", ConstantAsMetadata::get(ConstantPointerNull::get(
+                                   PointerType::getUnqual(C))));
+  CheckMalformed("undef", ConstantAsMetadata::get(
+                              UndefValue::get(PointerType::getUnqual(C))));
+  CheckMalformed("poison", ConstantAsMetadata::get(
+                               PoisonValue::get(PointerType::getUnqual(C))));
+  CheckMalformed("global", ConstantAsMetadata::get(Global));
+  CheckMalformed("alias", ConstantAsMetadata::get(Alias));
+  CheckMalformed("ifunc", ConstantAsMetadata::get(IFunc));
+  CheckMalformed("constant expression",
+                 ConstantAsMetadata::get(
+                     ConstantExpr::getPtrToInt(Target, Type::getInt64Ty(C))));
+  CheckMalformed("integer", ConstantAsMetadata::get(
+                                ConstantInt::get(Type::getInt32Ty(C), 0)));
+  CheckMalformed("string", MDString::get(C, "not a function"));
+  CheckMalformed("nested node", MDNode::get(C, {}));
+  CheckMalformed("local value", ValueAsMetadata::get(Caller->getArg(0)));
+
+  Function *DeletedTarget =
+      Function::Create(CalleeTy, GlobalValue::ExternalLinkage, "deleted", M);
+  Indirect->setMetadata(
+      LLVMContext::MD_callees,
+      MDNode::getDistinct(C, ConstantAsMetadata::get(DeletedTarget)));
+  DeletedTarget->eraseFromParent();
+  ASSERT_EQ(Indirect->getMetadata(LLVMContext::MD_callees)->getOperand(0).get(),
+            nullptr);
+  Callees.push_back(Target);
+  EXPECT_FALSE(Indirect->getCalleesMetadata(Callees));
+  EXPECT_TRUE(Callees.empty());
 }
 
 TEST(InstructionsTest, UncondBrInst) {

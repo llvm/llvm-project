@@ -475,29 +475,6 @@ void SplitGraph::Node::visitAllDependencies(
   }
 }
 
-/// Checks if \p I has MD_callees and if it does, parse it and put the function
-/// in \p Callees.
-///
-/// \returns true if there was metadata and it was parsed correctly. false if
-/// there was no MD or if it contained unknown entries and parsing failed.
-/// If this returns false, \p Callees will contain incomplete information
-/// and must not be used.
-static bool handleCalleesMD(const Instruction &I,
-                            SetVector<Function *> &Callees) {
-  auto *MD = I.getMetadata(LLVMContext::MD_callees);
-  if (!MD)
-    return false;
-
-  for (const auto &Op : MD->operands()) {
-    Function *Callee = mdconst::extract_or_null<Function>(Op);
-    if (!Callee)
-      return false;
-    Callees.insert(Callee);
-  }
-
-  return true;
-}
-
 void SplitGraph::buildGraph(CallGraph &CG) {
   SplitModuleTimer SMT("buildGraph", "graph construction");
   LLVM_DEBUG(
@@ -550,8 +527,11 @@ void SplitGraph::buildGraph(CallGraph &CG) {
           continue;
         }
 
-        if (handleCalleesMD(Inst, KnownCallees))
+        SmallVector<Function *, 4> CallCallees;
+        if (CB->getCalleesMetadata(CallCallees)) {
+          KnownCallees.insert_range(CallCallees);
           continue;
+        }
         // If we failed to parse any !callees MD, or some was missing,
         // the entire KnownCallees list is now unreliable.
         KnownCallees.clear();

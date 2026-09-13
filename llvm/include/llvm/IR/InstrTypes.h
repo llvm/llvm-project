@@ -1424,6 +1424,17 @@ public:
   /// Return true if the callsite is an indirect call.
   LLVM_ABI bool isIndirectCall() const;
 
+  /// Decode the exhaustive list of possible callees from !callees metadata.
+  ///
+  /// Return true for a well-formed attachment on a function call, including an
+  /// empty attachment. Direct and indirect function calls are supported.
+  /// Return false for inline assembly calls, or if the attachment is absent or
+  /// contains an operand that is not a Function. This does not check whether
+  /// the called operand satisfies the callee constraint. \p Callees is cleared
+  /// on failure. On success, duplicate functions are omitted while preserving
+  /// the order of their first occurrence.
+  LLVM_ABI bool getCalleesMetadata(SmallVectorImpl<Function *> &Callees) const;
+
   /// Determine whether the passed iterator points to the callee operand's Use.
   bool isCallee(Value::const_user_iterator UI) const {
     return isCallee(&UI.getUse());

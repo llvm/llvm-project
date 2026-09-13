@@ -12359,14 +12359,13 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees);
-    if (!MD && !A.isClosedWorldModule())
+    SmallVector<Function *, 4> Callees;
+    HasCalleesMetadata = cast<CallBase>(getCtxI())->getCalleesMetadata(Callees);
+    if (!HasCalleesMetadata && !A.isClosedWorldModule())
       return;
 
-    if (MD) {
-      for (const auto &Op : MD->operands())
-        if (Function *Callee = mdconst::dyn_extract_or_null<Function>(Op))
-          PotentialCallees.insert(Callee);
+    if (HasCalleesMetadata) {
+      PotentialCallees.insert_range(Callees);
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
           A.getInfoCache().getIndirectlyCallableFunctions(A);
@@ -12387,6 +12386,11 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
     auto CheckPotentialCalleeUse = [&](Function &PotentialCallee,
                                        bool &UsedAssumedInformation) {
+      // A semantic !callees list can describe pointer flow through code
+      // outside this IR module. Do not remove a listed target merely because
+      // AAGlobalValueInfo cannot find an in-module path to the call operand.
+      if (HasCalleesMetadata)
+        return true;
       const auto *GIAA = A.getAAFor<AAGlobalValueInfo>(
           *this, IRPosition::value(PotentialCallee), DepClassTy::OPTIONAL);
       if (!GIAA || GIAA->isPotentialUse(CalleeUse))
@@ -12663,9 +12667,13 @@ private:
   /// Map to remember filter results.
   DenseMap<Function *, std::optional<bool>> FilterResults;
 
-  /// If the !callee metadata was present, this set will contain all potential
+  /// If !callees metadata was present, this set will contain all potential
   /// callees (superset).
   SmallSetVector<Function *, 4> PotentialCallees;
+
+  /// Whether PotentialCallees came from semantic !callees metadata rather than
+  /// the Attributor's closed-world candidate inventory.
+  bool HasCalleesMetadata = false;
 
   /// This set contains all currently assumed calllees, which might grow over
   /// time.
