@@ -2121,10 +2121,12 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 void ConstraintInfo::tightenBoundUsingNe(
     Value *A, Value *B, unsigned NumIn, unsigned NumOut,
     SmallVectorImpl<StackEntry> &DFSInStack) {
-  if (!A->getType()->isIntegerTy())
+  if (!A->getType()->isIntegerTy() && !A->getType()->isPointerTy())
     return;
 
   for (bool IsSigned : {false, true}) {
+    if (IsSigned && A->getType()->isPointerTy())
+      continue;
     // In the unsigned system `A u>= 0` holds for every A, so getConstraint
     // already turned `A != 0` into `A u> 0`.
     if (!IsSigned && match(B, m_Zero()))
