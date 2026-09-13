@@ -25,11 +25,14 @@
 
 namespace llvm {
 class APInt;
+class FastMathFlags;
 class FixedVectorType;
+class Instruction;
 class Type;
 class User;
 class Value;
 class VectorType;
+enum class RecurKind;
 } // namespace llvm
 
 namespace llvm::slpvectorizer {
@@ -69,6 +72,24 @@ getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec, unsigned Opcode,
                     Type *ScalarTy, unsigned NumElts,
                     const TargetTransformInfo::TargetCostKind CostKind,
                     FixedVectorType **PaddedTy = nullptr);
+
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as the wide reduction
+/// plus the result trunc.
+InstructionCost
+getBoolReduxWideRdxCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                        FixedVectorType *VecTy, const Value *Root,
+                        FastMathFlags FMF,
+                        TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of the booleanized logical and/or reduction of a vector
+/// of type \p VecTy with the i1 root \p Root, emitted as trunc+bitcast+cmp,
+/// estimated in the context of the replaced cast chain \p ChainInsts.
+InstructionCost
+getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI, RecurKind RdxKind,
+                           FixedVectorType *VecTy, const Value *Root,
+                           ArrayRef<Instruction *> ChainInsts,
+                           TargetTransformInfo::TargetCostKind CostKind);
 
 /// This is similar to TargetTransformInfo::getScalarizationOverhead, but if
 /// ScalarTy is a FixedVectorType, a vector will be inserted or extracted

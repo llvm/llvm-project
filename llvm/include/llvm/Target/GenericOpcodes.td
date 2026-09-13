@@ -592,6 +592,14 @@ def G_CLMUL : GenericInstruction {
   let isCommutable = true;
 }
 
+// Generic carry-less multiplication returning the high half of the result.
+def G_CLMULH : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = false;
+  let isCommutable = true;
+}
+
 
 //------------------------------------------------------------------------------
 // Overflow ops

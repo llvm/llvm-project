@@ -22,6 +22,8 @@ namespace {
 
 class CustomError : public ErrorExtends<CustomError, ErrorInfoBase> {
 public:
+  static constexpr const char *RTTIName = "::CustomError";
+
   std::string toString() const noexcept override { return "CustomError"; }
 };
 

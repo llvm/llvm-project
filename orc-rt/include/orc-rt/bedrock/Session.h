@@ -424,6 +424,18 @@ public:
     return addService(std::move(*Srv));
   }
 
+  /// Attach to an already constructed ControllerAccess instance.
+  ///
+  /// A Session may be attached at most once, and attach must not be called
+  /// after -- or concurrently with -- detach or shutdown: by the time a detach
+  /// has been requested it may be arbitrarily far along, so there is no point
+  /// at which a newly attached controller could be connected, or its
+  /// disconnection coherently reported. Violating this is a programming error,
+  /// checked by assertion.
+  void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI) noexcept {
+    doAttach(std::move(CA), std::move(BI));
+  }
+
   /// Construct a ControllerAccessT and immediately attach using the given
   /// BootstrapInfo.
   ///

@@ -823,6 +823,12 @@ public:
   /// getNumVirtRegs - Return the number of virtual registers created.
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }
 
+  /// Reserve space for at least \p NumVirtRegs virtual registers.
+  void reserveVirtRegs(unsigned NumVirtRegs) {
+    VRegInfo.reserve(NumVirtRegs);
+    VRegToType.reserve(NumVirtRegs);
+  }
+
   /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
   LLVM_ABI void clearVirtRegs();
 

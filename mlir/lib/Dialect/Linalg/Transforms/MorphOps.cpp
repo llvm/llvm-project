@@ -44,14 +44,10 @@ void LinalgMorphOpsPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
 
   // Lowering paths (named -> category -> generic)
-  if (namedToCategory)
-    populateLinalgNamedToElementwisePatterns(patterns);
   if (namedToGeneric || categoryToGeneric)
     populateLinalgNamedOpsGeneralizationPatterns(patterns);
 
   // Lifting paths (named <- category <- generic)
-  if (categoryToNamed)
-    populateLinalgCategoryToNamedPatterns(patterns);
   if (genericToNamed || genericToCategory) {
     GenericOpSpecializationOptions opts;
     opts.emitCategoryOps = genericToCategory;

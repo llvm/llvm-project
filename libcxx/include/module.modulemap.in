@@ -2449,6 +2449,9 @@ module std {
       module min_element {
         header "__pstl/cpu_algos/min_element.h"
       }
+      module minmax_element {
+        header "__pstl/cpu_algos/minmax_element.h"
+      }
       module mismatch {
         header "__pstl/cpu_algos/mismatch.h"
       }
