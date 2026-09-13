@@ -276,6 +276,23 @@ TEST_F(AMDGPUTestBase, TestOccupancyAbsoluteLimits) {
                      256);
 }
 
+TEST_F(AMDGPUTestBase, TestGFX6LocalMemorySize) {
+  for (StringRef CPU : {"gfx600", "gfx601", "gfx602"}) {
+    SCOPED_TRACE(CPU.str());
+    auto TM = createAMDGPUTargetMachine(Triple("amdgcn-amd-amdhsa"), CPU, "");
+    ASSERT_NE(TM, nullptr);
+    GCNSubtarget ST(TM->getTargetTriple(), CPU.str(), "", *TM);
+
+    EXPECT_EQ(ST.getLocalMemorySize(), 65536u);
+    EXPECT_EQ(ST.getAddressableLocalMemorySize(), 32768u);
+
+    // Two workgroups using 32 KiB each fit in a CU. With 256 threads per
+    // workgroup, each SIMD can therefore hold two waves, limited only by LDS.
+    EXPECT_EQ(ST.getOccupancyWithWorkGroupSizes(32768, {256, 256}),
+              std::make_pair(2u, 2u));
+  }
+}
+
 static const char *printSubReg(const TargetRegisterInfo &TRI, unsigned SubReg) {
   return SubReg ? TRI.getSubRegIndexName(SubReg) : "<none>";
 }

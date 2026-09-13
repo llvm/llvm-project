@@ -2867,7 +2867,11 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
         AMDGPU::FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY);
   };
 
-  // Only gfx10/11/12 address half of the physical LDS block.
+  // Gfx6 and gfx10/11/12 address half of the physical LDS block.
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX600));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX601));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX602));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX700));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX900));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1030));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1100));
