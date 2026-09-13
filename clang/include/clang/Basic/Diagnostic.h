@@ -225,6 +225,15 @@ public:
   }
 };
 
+/// Whether a source location is in a system header and/or a system macro.
+enum class DiagStateSystemClass : unsigned {
+  UserCode = 0,
+  SystemMacro = 1 << 0,
+  SystemHeader = 1 << 1,
+  SystemHeaderAndMacro = SystemHeader | SystemMacro,
+  NUM_CLASSES
+};
+
 /// Concrete class used by the front-end to report problems and issues.
 ///
 /// This massages the diagnostics (e.g. handling things like "report warnings
@@ -589,11 +598,11 @@ public:
     return GetDiagStateForLoc(Loc);
   }
 
-  /// Returns whether \p Loc is in a system header and/or a system macro, as a
-  /// value in [0, 4). Severity depends on this through
+  /// Returns whether \p Loc is in a system header and/or a system macro.
+  /// Severity depends on this through
   /// DiagnosticIDs::shouldSuppressAsSystemWarning(), so a cache keyed on
   /// getDiagStateKeyForLoc() must take it into account as well.
-  unsigned getDiagStateSystemClassForLoc(SourceLocation Loc) const;
+  DiagStateSystemClass getDiagStateSystemClassForLoc(SourceLocation Loc) const;
 
   /// True if an active diagnostic suppression mapping makes severity dependent
   /// on the file path.

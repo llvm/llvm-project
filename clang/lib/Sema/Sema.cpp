@@ -2806,11 +2806,11 @@ bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
   if (!DocDiagsEnabledIgnoringSystem)
     return false;
 
-  unsigned SysIdx = Diags.getDiagStateSystemClassForLoc(Loc);
-  if (SysIdx == 0)
+  DiagStateSystemClass SysClass = Diags.getDiagStateSystemClassForLoc(Loc);
+  if (SysClass == DiagStateSystemClass::UserCode)
     return true;
 
-  const unsigned Bit = 1u << SysIdx;
+  const unsigned Bit = 1u << static_cast<unsigned>(SysClass);
   if (!(DocDiagsExactComputed & Bit)) {
     DocDiagsExactComputed |= Bit;
     if (computeDocumentationDiagsAt(Loc))

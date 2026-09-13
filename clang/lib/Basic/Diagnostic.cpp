@@ -596,11 +596,15 @@ bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
   return LastSup > LastEmit;
 }
 
-unsigned
+DiagStateSystemClass
 DiagnosticsEngine::getDiagStateSystemClassForLoc(SourceLocation Loc) const {
   const SourceManager &SM = getSourceManager();
-  return (SM.isInSystemHeader(SM.getExpansionLoc(Loc)) ? 2u : 0u) |
-         (SM.isInSystemMacro(Loc) ? 1u : 0u);
+  unsigned Class = 0;
+  if (SM.isInSystemHeader(SM.getExpansionLoc(Loc)))
+    Class |= static_cast<unsigned>(DiagStateSystemClass::SystemHeader);
+  if (SM.isInSystemMacro(Loc))
+    Class |= static_cast<unsigned>(DiagStateSystemClass::SystemMacro);
+  return static_cast<DiagStateSystemClass>(Class);
 }
 
 bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,

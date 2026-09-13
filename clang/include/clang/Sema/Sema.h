@@ -1144,7 +1144,7 @@ private:
   bool DocDiagsEnabledIgnoringSystem = false;
 
   /// Level two, for when the location does matter. Bit i of each mask is a
-  /// getDiagStateSystemClassForLoc() value; bit 0 is unused.
+  /// DiagStateSystemClass value; bit 0 is unused.
   uint8_t DocDiagsExactComputed = 0;
   uint8_t DocDiagsExactEnabled = 0;
 

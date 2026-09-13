@@ -2802,7 +2802,7 @@ sema::AnalysisBasedWarnings::getPolicyInEffectAt(SourceLocation Loc) {
   unsigned SysIdx = 0;
   if (Cacheable) {
     StateKey = D.getDiagStateKeyForLoc(Loc);
-    SysIdx = D.getDiagStateSystemClassForLoc(Loc);
+    SysIdx = static_cast<unsigned>(D.getDiagStateSystemClassForLoc(Loc));
     auto It = PolicyCache[SysIdx].find(StateKey);
     if (It != PolicyCache[SysIdx].end()) {
       Policy P = It->second;
