@@ -445,10 +445,6 @@ public:
   LLVM_ABI bool matchCombineUnmergeZExtToZExt(MachineInstr &MI) const;
   LLVM_ABI void applyCombineUnmergeZExtToZExt(MachineInstr &MI) const;
 
-  /// Transform fp_instr(cst) to constant result of the fp operation.
-  LLVM_ABI void applyCombineConstantFoldFpUnary(MachineInstr &MI,
-                                                const ConstantFP *Cst) const;
-
   /// Constant fold a unary integer op (G_CTLZ, G_CTTZ, G_CTPOP and their
   /// _ZERO_POISON variants, G_ABS, G_BSWAP, G_BITREVERSE) when the operand is
   /// a scalar constant or a G_BUILD_VECTOR of constants.
@@ -728,7 +724,7 @@ public:
   /// \returns true if a G_ICMP instruction \p MI can be replaced with a true
   /// or false constant based off of KnownBits information.
   LLVM_ABI bool matchICmpToTrueFalseKnownBits(MachineInstr &MI,
-                                              int64_t &MatchInfo) const;
+                                              BuildFnTy &MatchInfo) const;
 
   /// \returns true if a G_ICMP \p MI can be replaced with its LHS based off of
   /// KnownBits information.
@@ -777,19 +773,23 @@ public:
 
   /// Do constant folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldCastOp(MachineInstr &MI,
-                                        APInt &MatchInfo) const;
+                                        BuildFnTy &MatchInfo) const;
 
   /// Do constant folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldBinOp(MachineInstr &MI,
-                                       APInt &MatchInfo) const;
+                                       BuildFnTy &MatchInfo) const;
 
   /// Do constant FP folding when opportunities are exposed after MIR building.
   LLVM_ABI bool matchConstantFoldFPBinOp(MachineInstr &MI,
-                                         ConstantFP *&MatchInfo) const;
+                                         BuildFnTy &MatchInfo) const;
+
+  /// Constant fold a unary FP operation when the source is constant.
+  LLVM_ABI bool matchConstantFoldFPUnary(MachineInstr &MI,
+                                         BuildFnTy &MatchInfo) const;
 
   /// Constant fold G_FMA/G_FMAD.
   LLVM_ABI bool matchConstantFoldFMA(MachineInstr &MI,
-                                     ConstantFP *&MatchInfo) const;
+                                     BuildFnTy &MatchInfo) const;
 
   /// \returns true if it is possible to narrow the width of a scalar binop
   /// feeding a G_AND instruction \p MI.
@@ -971,8 +971,7 @@ public:
 
   /// Match shifts greater or equal to the range (the bitwidth of the result
   /// datatype, or the effective bitwidth of the source value).
-  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI,
-                                  std::optional<int64_t> &MatchInfo) const;
+  LLVM_ABI bool matchShiftsTooBig(MachineInstr &MI, BuildFnTy &MatchInfo) const;
 
   /// Match constant LHS ops that should be commuted.
   LLVM_ABI bool matchCommuteConstantToRHS(MachineInstr &MI) const;
@@ -1018,7 +1017,7 @@ public:
                                  BuildFnTy &MatchInfo) const;
 
   LLVM_ABI bool matchCastOfInteger(const MachineInstr &CastMI,
-                                   APInt &MatchInfo) const;
+                                   BuildFnTy &MatchInfo) const;
 
   /// Combine addos.
   LLVM_ABI bool matchAddOverflow(MachineInstr &MI, BuildFnTy &MatchInfo) const;

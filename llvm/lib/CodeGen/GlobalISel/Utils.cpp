@@ -12,6 +12,7 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
@@ -34,9 +35,12 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/UndefPoison.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
+#include <cmath>
 #include <limits>
 #include <numeric>
 #include <optional>
@@ -828,6 +832,32 @@ llvm::ConstantFoldVectorBinop(unsigned Opcode, const Register Op1,
   return FoldedElements;
 }
 
+SmallVector<APFloat>
+llvm::ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
+                                const Register Op2,
+                                const MachineRegisterInfo &MRI) {
+  auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
+  if (!SrcVec2)
+    return SmallVector<APFloat>();
+
+  auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
+  if (!SrcVec1)
+    return SmallVector<APFloat>();
+
+  if (SrcVec1->getNumSources() != SrcVec2->getNumSources())
+    return SmallVector<APFloat>();
+
+  SmallVector<APFloat> FoldedElements;
+  for (unsigned Idx = 0, E = SrcVec1->getNumSources(); Idx < E; ++Idx) {
+    auto MaybeCst = ConstantFoldFPBinOp(Opcode, SrcVec1->getSourceReg(Idx),
+                                        SrcVec2->getSourceReg(Idx), MRI);
+    if (!MaybeCst)
+      return SmallVector<APFloat>();
+    FoldedElements.push_back(*MaybeCst);
+  }
+  return FoldedElements;
+}
+
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
   auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
@@ -965,6 +995,84 @@ llvm::ConstantFoldUnaryIntOp(unsigned Opcode, LLT DstTy, Register Src,
     if (!BV)
       return {};
     SmallVector<APInt> Folded;
+    for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
+      if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
+        Folded.emplace_back(std::move(*MaybeFold));
+        continue;
+      }
+      return {};
+    }
+    return Folded;
+  }
+  if (auto MaybeCst = tryFoldScalar(Src))
+    return {std::move(*MaybeCst)};
+  return {};
+}
+
+SmallVector<APFloat>
+llvm::ConstantFoldUnaryFPOp(unsigned Opcode, LLT DstTy, Register Src,
+                            const MachineRegisterInfo &MRI) {
+  LLT DstEltTy = DstTy.getScalarType();
+  auto Fold = [Opcode, DstEltTy,
+               &MRI](const APFloat &V) -> std::optional<APFloat> {
+    APFloat Result(V);
+    bool Unused;
+    switch (Opcode) {
+    case TargetOpcode::G_FNEG:
+      Result.changeSign();
+      return Result;
+    case TargetOpcode::G_FABS:
+      Result.clearSign();
+      return Result;
+    case TargetOpcode::G_FCEIL:
+      Result.roundToIntegral(APFloat::rmTowardPositive);
+      return Result;
+    case TargetOpcode::G_FFLOOR:
+      Result.roundToIntegral(APFloat::rmTowardNegative);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_TRUNC:
+      Result.roundToIntegral(APFloat::rmTowardZero);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_ROUND:
+      Result.roundToIntegral(APFloat::rmNearestTiesToAway);
+      return Result;
+    case TargetOpcode::G_INTRINSIC_ROUNDEVEN:
+    case TargetOpcode::G_FRINT:
+    case TargetOpcode::G_FNEARBYINT:
+      Result.roundToIntegral(APFloat::rmNearestTiesToEven);
+      return Result;
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTRUNC:
+      Result.convert(getFltSemanticForLLT(DstEltTy),
+                     APFloat::rmNearestTiesToEven, &Unused);
+      return Result;
+    case TargetOpcode::G_FSQRT:
+    case TargetOpcode::G_FLOG2: {
+      Type *Ty =
+          Type::getFloatingPointTy(MRI.getMF().getFunction().getContext(),
+                                   getFltSemanticForLLT(DstEltTy));
+      Constant *C = Opcode == TargetOpcode::G_FSQRT
+                        ? ConstantFoldFP(sqrt, V, Ty)
+                        : ConstantFoldFP(log2, V, Ty);
+      if (!C)
+        return std::nullopt;
+      return cast<ConstantFP>(C)->getValueAPF();
+    }
+    default:
+      llvm_unreachable("unexpected opcode in ConstantFoldUnaryFPOp");
+    }
+  };
+
+  auto tryFoldScalar = [&](Register R) -> std::optional<APFloat> {
+    if (const ConstantFP *Cst = getConstantFPVRegVal(R, MRI))
+      return Fold(Cst->getValueAPF());
+    return std::nullopt;
+  };
+  if (MRI.getType(Src).isVector()) {
+    auto *BV = getOpcodeDef<GBuildVector>(Src, MRI);
+    if (!BV)
+      return {};
+    SmallVector<APFloat> Folded;
     for (unsigned SrcIdx = 0; SrcIdx < BV->getNumSources(); ++SrcIdx) {
       if (auto MaybeFold = tryFoldScalar(BV->getSourceReg(SrcIdx))) {
         Folded.emplace_back(std::move(*MaybeFold));
