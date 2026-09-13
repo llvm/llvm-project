@@ -24531,6 +24531,10 @@ TEST_F(FormatTest, RequiresClauses) {
                "  requires(std::same_as<int, T>)\n"
                "decltype(auto) fun() {}");
 
+  verifyFormat("template <typename T>\n"
+               "  requires(!*T::foo && pred(&T::bar))\n"
+               "struct S;");
+
   auto Style = getLLVMStyle();
 
   verifyFormat(

@@ -835,6 +835,8 @@ features cannot lower the translation-unit ABI level;
 - `QualifierOrder` now supports `typedef`, `consteval`, `constinit`,
   `thread_local`, `extern`, `mutable`, `signed`, `unsigned`, `long`, `short`,
   and `explicit` declaration specifiers.
+- Fixed a regression that annotated a leading `*` or `&` in a `requires()`
+  clause as a binary operator (#GH221767)
 
 ### libclang
 
