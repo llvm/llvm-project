@@ -8,11 +8,6 @@
 
 # The derived type runtime information table
 
-```{contents}
----
-local:
----
-```
 
 ## Overview
 

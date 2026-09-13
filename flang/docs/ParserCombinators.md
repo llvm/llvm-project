@@ -8,11 +8,6 @@
 
 # Parser Combinators
 
-```{contents}
----
-local:
----
-```
 
 This document is a primer on Parser Combinators and their use in Flang.
 

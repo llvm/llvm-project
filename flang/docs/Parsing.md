@@ -8,11 +8,6 @@
 
 # The Flang Parser
 
-```{contents}
----
-local:
----
-```
 
 This program source code implements a parser for the Fortran programming
 language.

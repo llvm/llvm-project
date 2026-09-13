@@ -8,11 +8,6 @@
 
 # OpenACC Extensions in Flang
 
-```{contents}
----
-local:
----
-```
 
 Flang is more lenient than the OpenACC specification requires for purposes of
 compatibility. This document describes extensions to the OpenACC specification.

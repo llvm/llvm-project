@@ -8,11 +8,6 @@
 
 # Semantics: Resolving Labels and Construct Names
 
-```{contents}
----
-local:
----
-```
 
 ## Overview
 
