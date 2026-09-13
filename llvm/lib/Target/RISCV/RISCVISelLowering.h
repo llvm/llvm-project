@@ -572,6 +572,9 @@ private:
 
   SDValue lowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue lowerConcatVectorsOfVectorInterleave(SDValue Op,
+                                               SelectionDAG &DAG) const;
+
   SDValue expandUnalignedRVVLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue expandUnalignedRVVStore(SDValue Op, SelectionDAG &DAG) const;
 
