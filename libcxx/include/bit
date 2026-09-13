@@ -32,6 +32,12 @@ namespace std {
   template <class T>
     constexpr int bit_width(T x) noexcept;       // C++20
 
+  // [bit.shift], shifting
+  template<class T, class S>
+    constexpr T shl(T x, S s) noexcept; // C++29
+  template<class T, class S>
+    constexpr T shr(T x, S s) noexcept; // C++29
+
   // [bit.rotate], rotating
   template<class T>
     constexpr T rotl(T x, int s) noexcept; // C++20
@@ -82,6 +88,10 @@ namespace std {
 
 #  if _LIBCPP_STD_VER >= 23
 #    include <__bit/byteswap.h>
+#  endif
+
+#  if _LIBCPP_STD_VER >= 29
+#    include <__bit/shift.h>
 #  endif
 
 #  include <version>

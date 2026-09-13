@@ -244,6 +244,7 @@ set(files
   __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
+  __bit/shift.h
   __bit_reference
   __charconv/chars_format.h
   __charconv/from_chars_floating_point.h

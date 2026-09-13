@@ -931,6 +931,7 @@ module std {
     module invert_if        { header "__bit/invert_if.h" }
     module popcount         { header "__bit/popcount.h" }
     module rotate           { header "__bit/rotate.h" }
+    module shift            { header "__bit/shift.h" }
 
     header "bit"
     export *
