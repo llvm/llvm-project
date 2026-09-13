@@ -8,9 +8,6 @@
 
 // UNSUPPORTED: c++03
 
-// We don't control the implementation of the math.h functions on windows
-// UNSUPPORTED: windows
-
 // Check that functions from `<cmath>` that Clang marks with the `[[gnu::const]]` attribute are declared
 // `[[nodiscard]]`.
 
@@ -19,7 +16,13 @@
 #include <cmath>
 #include "test_macros.h"
 
+#ifdef _WIN32
+// expected-no-diagnostics
+#endif
+
 void test() {
+// We don't control the implementation of the math.h functions on windows
+#ifndef _WIN32
   // These tests rely on Clang's behaviour of adding `[[gnu::const]]` to the double overload of most of the functions
   // below.
   // Without that attribute being added implicitly, this test can't be checked consistently because its result depends
@@ -170,4 +173,5 @@ void test() {
   std::trunc(0.l);               // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::trunc(0);                 // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::trunc(0U);                // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif // #ifndef _WIN32
 }
