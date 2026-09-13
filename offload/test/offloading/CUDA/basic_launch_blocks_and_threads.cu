@@ -23,8 +23,7 @@ int main(int argc, char **argv) {
   cudaMalloc(&Ptr, sizeof(int));
   printf("Ptr %p\n", Ptr);
   // CHECK: Ptr [[Ptr:0x.*]]
-  int Zero = 0;
-  cudaMemcpy(Ptr, &Zero, sizeof(int), cudaMemcpyHostToDevice);
+  cudaMemset(Ptr, 0, sizeof(int));
   incrementCounter<<<7, 6>>>(Ptr);
   cudaDeviceSynchronize();
   cudaMemcpy(&I, Ptr, sizeof(int), cudaMemcpyDeviceToHost);

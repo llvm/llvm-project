@@ -14,6 +14,7 @@
 #define Malloc COMBINE(LANGUAGE, Malloc)
 #define Free COMBINE(LANGUAGE, Free)
 #define Memcpy COMBINE(LANGUAGE, Memcpy)
+#define Memset COMBINE(LANGUAGE, Memset)
 #define DeviceSynchronize COMBINE(LANGUAGE, DeviceSynchronize)
 #define Success COMBINE(LANGUAGE, Success)
 #define ErrorInvalidValue COMBINE(LANGUAGE, ErrorInvalidValue)

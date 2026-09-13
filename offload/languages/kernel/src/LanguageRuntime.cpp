@@ -26,6 +26,7 @@
 #include "OffloadAPI.h"
 
 #include <cassert>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -83,6 +84,20 @@ Error_t Memcpy(void *Dst, const void *Src, size_t Size, MemcpyKind Kind) {
     return convertAndSetLastError(Result);
 
   Result = DefaultStream->sync();
+  return convertAndSetLastError(Result);
+}
+
+Error_t Memset(void *DevPtr, int Value, size_t Count) {
+  ThreadStateTy ThreadState = ThreadStateTy::get();
+  ol_result_t Result = waitOnBlockingStreams(StateTy::get(), ThreadState);
+  if (Result != OL_SUCCESS)
+    return convertAndSetLastError(Result);
+
+  ol_queue_handle_t Queue = ThreadState.getDefaultQueue();
+  unsigned char Byte = static_cast<unsigned char>(Value);
+  Result = olMemFill(Queue, DevPtr, 1, &Byte, Count);
+  if (Result == OL_SUCCESS)
+    Result = olSyncQueue(Queue);
   return convertAndSetLastError(Result);
 }
 

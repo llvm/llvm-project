@@ -11,6 +11,7 @@
 #undef Malloc
 #undef Free
 #undef Memcpy
+#undef Memset
 #undef DeviceSynchronize
 #undef Success
 #undef ErrorInvalidValue
