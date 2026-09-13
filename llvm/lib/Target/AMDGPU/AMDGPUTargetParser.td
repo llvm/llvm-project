@@ -6,10 +6,32 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// TargetParser metadata attached to processor records for the
-// -gen-amdgpu-target-def backend.
+// TargetParser metadata for the -gen-amdgpu-target-def backend.
 //
 //===----------------------------------------------------------------------===//
+
+// How a generic target's numeric property must compare with the same property
+// on each covered GPU. This only compares values between GPUs; it does not
+// relax the checks for conflicting feature values within a GPU.
+class AMDGPUGenericNumericComparison;
+def AMDGPUGenericAtLeast : AMDGPUGenericNumericComparison;
+def AMDGPUGenericAtMost : AMDGPUGenericNumericComparison;
+def AMDGPUGenericEqual : AMDGPUGenericNumericComparison;
+
+// Opt a numeric SubtargetFeature field into generic-target validation. All
+// features setting FieldName participate, including implied features and ones
+// that are not frontend-visible, and must agree on an integer-literal value.
+// DefaultValue is the fallback used by both validation and table emission when
+// no feature sets the field, and must match the backend's fallback. Declare at
+// most one property per FieldName.
+//
+// Fields without this metadata retain the exact feature-record matching used
+// for frontend-visible capabilities.
+class AMDGPUGenericNumericProperty<string fieldName, int defaultValue, AMDGPUGenericNumericComparison comparison> {
+  string FieldName = fieldName;
+  int DefaultValue = defaultValue;
+  AMDGPUGenericNumericComparison GenericComparison = comparison;
+}
 
 // Marks a Processor/ProcessorModel record as a canonical GPU.
 //

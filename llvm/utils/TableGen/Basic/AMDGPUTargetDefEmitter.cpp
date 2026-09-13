@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
@@ -188,7 +189,7 @@ collectFrontendFeatures(const RecordKeeper &RK, StringRef ListName) {
 
 static void
 emitFeatureBitset(raw_ostream &OS, StringRef BitsetType, StringRef EnumPrefix,
-                  const Record *GPU,
+                  ArrayRef<const Record *> Closure,
                   const DenseMap<const Record *, unsigned> &FeatureIdx);
 
 // The transitive closure of a GPU's SubtargetFeatures, following the Implies
@@ -308,9 +309,12 @@ emitR600Table(raw_ostream &OS, const RecordKeeper &RK,
   OS << ";\n"
         "static constexpr R600Info R600GPUTable[] = {\n";
   for (const Record *R : Canon) {
+    SetVector<const Record *> Closure;
+    collectFeatureClosure(R, Closure);
     OS << "  {" << Names.GetOrAddStringOffset(R->getValueAsString("Name"))
        << ", ";
-    emitFeatureBitset(OS, "R600FeatureBitset", "R600_FEAT_", R, FeatureIdx);
+    emitFeatureBitset(OS, "R600FeatureBitset", "R600_FEAT_",
+                      Closure.getArrayRef(), FeatureIdx);
     OS << "},\n";
   }
   OS << "};\n"
@@ -463,10 +467,8 @@ static void emitFeatureNames(raw_ostream &OS, const FeatureNaming &Naming,
 
 // The set of frontend features that end up in the emitted bitset.
 static SetVector<const Record *>
-collectVisibleFeatures(const Record *GPU,
+collectVisibleFeatures(ArrayRef<const Record *> Closure,
                        const DenseMap<const Record *, unsigned> &FeatureIdx) {
-  SetVector<const Record *> Closure;
-  collectFeatureClosure(GPU, Closure);
   SetVector<const Record *> Visible;
   for (const Record *F : Closure) {
     if (FeatureIdx.contains(F))
@@ -476,88 +478,32 @@ collectVisibleFeatures(const Record *GPU,
   return Visible;
 }
 
-// Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
-// feature missing from any covered processor.
-//
-// FIXME: The check should cover all SubtargetFeatures, not just the
-// frontend-visible ones. It is limited to those because a generic legitimately
-// carries some features a covered GPU lacks (bug/hazard workarounds and
-// worst-case-valued features); those cases need to be marked to opt out of the
-// check, plus min-value handling for numeric features.
-static void
-validateGenericFeatures(const Record *GPU,
-                        const DenseMap<const Record *, unsigned> &FeatureIdx) {
-  std::vector<const Record *> Covered =
-      GPU->getValueAsListOfDefs("CoveredGPUs");
-  if (Covered.empty())
-    return;
+namespace {
+enum class GenericNumericComparison { AtLeast, AtMost, Equal };
 
-  SetVector<const Record *> GenericFeatures =
-      collectVisibleFeatures(GPU, FeatureIdx);
-  for (const Record *Member : Covered) {
-    SetVector<const Record *> MemberFeatures =
-        collectVisibleFeatures(Member, FeatureIdx);
-    for (const Record *F : GenericFeatures) {
-      if (!MemberFeatures.contains(F)) {
-        PrintFatalError(GPU->getLoc(),
-                        "generic target '" + GPU->getValueAsString("Name") +
-                            "' exposes feature '" +
-                            F->getValueAsString("Name") +
-                            "' not supported by covered GPU '" +
-                            Member->getValueAsString("Name") + "'");
-      }
-    }
-  }
-}
+struct NumericProperty {
+  int64_t DefaultValue;
+  GenericNumericComparison Comparison;
+};
 
-static void validateAMDGPU(const RecordKeeper &RK) {
-  DenseMap<const Record *, unsigned> FeatureIdx;
-  for (const auto &[Idx, F] :
-       enumerate(collectFrontendFeatures(RK, "AMDGPUFrontendVisibleFeatures")))
-    FeatureIdx[F] = Idx;
+using NumericPropertyMap = MapVector<StringRef, NumericProperty>;
+} // namespace
 
-  for (const Record *GPU : RK.getAllDerivedDefinitions("AMDGPUGPUInfo"))
-    validateGenericFeatures(GPU, FeatureIdx);
-}
-
-// Emit a GPU's feature bitset initializer: its feature closure intersected with
-// the frontend-visible set \p FeatureIdx, e.g.
-// "AMDGPUFeatureBitset({FEAT_DPP, FEAT_CI_INSTS})".
-static void
-emitFeatureBitset(raw_ostream &OS, StringRef BitsetType, StringRef EnumPrefix,
-                  const Record *GPU,
-                  const DenseMap<const Record *, unsigned> &FeatureIdx) {
-  SetVector<const Record *> Closure;
-  collectFeatureClosure(GPU, Closure);
-
-  // Sort by bit index for stable output.
-  SmallVector<std::pair<unsigned, StringRef>> Bits;
-  for (const Record *F : Closure) {
-    auto It = FeatureIdx.find(F);
-    if (It != FeatureIdx.end())
-      Bits.emplace_back(It->second, F->getValueAsString("Name"));
-  }
-  sort(Bits);
-
-  OS << BitsetType << "({";
-  ListSeparator LS(", ");
-  for (const auto &[Idx, Name] : Bits) {
-    OS << LS;
-    emitFeatureEnum(OS, EnumPrefix, Name);
-  }
-  OS << "})";
-}
-
-// The value of the SubtargetFeature in \p GPU's closure that sets \p FieldName,
-// or \p Default if it has none. Two features setting the same field to
-// different values is an error: SubtargetFeature silently takes the larger.
-static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
-                               int64_t Default) {
-  SetVector<const Record *> Closure;
-  collectFeatureClosure(GPU, Closure);
+// The value of the features setting FieldName in GPU's closure. Preserve the
+// check that such features agree: some backend consumers inspect individual
+// feature bits instead of using SubtargetFeature's maximum-value rule.
+// If no feature sets the field, use its property default, or
+// UnregisteredDefault for fields without metadata.
+static int64_t getFeatureValue(const Record *GPU,
+                               ArrayRef<const Record *> Closure,
+                               StringRef FieldName,
+                               const NumericPropertyMap &Properties,
+                               int64_t UnregisteredDefault = 0) {
+  auto It = Properties.find(FieldName);
+  int64_t Value =
+      It == Properties.end() ? UnregisteredDefault : It->second.DefaultValue;
 
   const Record *Found = nullptr;
-  int64_t Value = Default;
   for (const Record *F : Closure) {
     if (F->getValueAsString("FieldName") != FieldName)
       continue;
@@ -580,12 +526,160 @@ static int64_t getFeatureValue(const Record *GPU, StringRef FieldName,
   return Value;
 }
 
+static NumericPropertyMap collectNumericProperties(const RecordKeeper &RK) {
+  NumericPropertyMap Properties;
+  for (const Record *R :
+       RK.getAllDerivedDefinitionsIfDefined("AMDGPUGenericNumericProperty")) {
+    StringRef FieldName = R->getValueAsString("FieldName");
+    if (FieldName.empty())
+      PrintFatalError(R->getLoc(), "numeric property must have a field name");
+
+    StringRef ComparisonName = R->getValueAsDef("GenericComparison")->getName();
+    GenericNumericComparison Comparison;
+    if (ComparisonName == "AMDGPUGenericAtLeast")
+      Comparison = GenericNumericComparison::AtLeast;
+    else if (ComparisonName == "AMDGPUGenericAtMost")
+      Comparison = GenericNumericComparison::AtMost;
+    else if (ComparisonName == "AMDGPUGenericEqual")
+      Comparison = GenericNumericComparison::Equal;
+    else
+      PrintFatalError(R->getLoc(), "unknown generic numeric comparison '" +
+                                       ComparisonName + "'");
+
+    NumericProperty Property{R->getValueAsInt("DefaultValue"), Comparison};
+    if (!Properties.insert({FieldName, Property}).second)
+      PrintFatalError(R->getLoc(), "duplicate numeric property for field '" +
+                                       FieldName + "'");
+  }
+  return Properties;
+}
+
+static void validateGenericNumericProperties(
+    const Record *GPU, ArrayRef<int64_t> GenericValues, const Record *Member,
+    ArrayRef<const Record *> MemberClosure,
+    const NumericPropertyMap &Properties) {
+  for (const auto &[Entry, GenericValue] :
+       zip_equal(Properties, GenericValues)) {
+    const auto &[FieldName, Property] = Entry;
+    int64_t MemberValue =
+        getFeatureValue(Member, MemberClosure, FieldName, Properties);
+    StringRef RequiredRelation;
+    switch (Property.Comparison) {
+    case GenericNumericComparison::AtLeast:
+      if (GenericValue >= MemberValue)
+        continue;
+      RequiredRelation = "at least";
+      break;
+    case GenericNumericComparison::AtMost:
+      if (GenericValue <= MemberValue)
+        continue;
+      RequiredRelation = "at most";
+      break;
+    case GenericNumericComparison::Equal:
+      if (GenericValue == MemberValue)
+        continue;
+      RequiredRelation = "equal to";
+      break;
+    }
+    PrintFatalError(
+        GPU->getLoc(),
+        "generic target '" + GPU->getValueAsString("Name") + "' has '" +
+            FieldName + "' value " + Twine(GenericValue) + ", which must be " +
+            RequiredRelation + " the value " + Twine(MemberValue) +
+            " of covered GPU '" + Member->getValueAsString("Name") + "'");
+  }
+}
+
+// Make sure a "gfxN-generic" processor doesn't expose a frontend-visible
+// feature missing from any covered processor. Numeric properties with explicit
+// metadata are checked by field value instead of exact feature-record matching.
+//
+// FIXME: The capability check should cover all SubtargetFeatures, not just the
+// frontend-visible ones. It is limited to those because a generic legitimately
+// carries some boolean features a covered GPU lacks (bug and hazard
+// workarounds); those cases need to be marked to opt out of the check.
+static void
+validateGenericFeatures(const Record *GPU,
+                        const DenseMap<const Record *, unsigned> &FeatureIdx,
+                        const NumericPropertyMap &Properties) {
+  std::vector<const Record *> Covered =
+      GPU->getValueAsListOfDefs("CoveredGPUs");
+  if (Covered.empty())
+    return;
+
+  SetVector<const Record *> GenericClosure;
+  collectFeatureClosure(GPU, GenericClosure);
+  SetVector<const Record *> GenericFeatures =
+      collectVisibleFeatures(GenericClosure.getArrayRef(), FeatureIdx);
+  SmallVector<int64_t> GenericValues;
+  for (const auto &[FieldName, Property] : Properties)
+    GenericValues.push_back(getFeatureValue(GPU, GenericClosure.getArrayRef(),
+                                            FieldName, Properties));
+
+  for (const Record *Member : Covered) {
+    SetVector<const Record *> MemberClosure;
+    collectFeatureClosure(Member, MemberClosure);
+    validateGenericNumericProperties(GPU, GenericValues, Member,
+                                     MemberClosure.getArrayRef(), Properties);
+    SetVector<const Record *> MemberFeatures =
+        collectVisibleFeatures(MemberClosure.getArrayRef(), FeatureIdx);
+    for (const Record *F : GenericFeatures) {
+      if (Properties.contains(F->getValueAsString("FieldName")) ||
+          MemberFeatures.contains(F))
+        continue;
+
+      PrintFatalError(GPU->getLoc(),
+                      "generic target '" + GPU->getValueAsString("Name") +
+                          "' exposes feature '" + F->getValueAsString("Name") +
+                          "' not supported by covered GPU '" +
+                          Member->getValueAsString("Name") + "'");
+    }
+  }
+}
+
+static void validateAMDGPU(const RecordKeeper &RK,
+                           const NumericPropertyMap &Properties) {
+  DenseMap<const Record *, unsigned> FeatureIdx;
+  for (const auto &[Idx, F] :
+       enumerate(collectFrontendFeatures(RK, "AMDGPUFrontendVisibleFeatures")))
+    FeatureIdx[F] = Idx;
+
+  for (const Record *GPU : RK.getAllDerivedDefinitions("AMDGPUGPUInfo"))
+    validateGenericFeatures(GPU, FeatureIdx, Properties);
+}
+
+// Emit a GPU's feature bitset initializer: its feature closure intersected with
+// the frontend-visible set \p FeatureIdx, e.g.
+// "AMDGPUFeatureBitset({FEAT_DPP, FEAT_CI_INSTS})".
+static void
+emitFeatureBitset(raw_ostream &OS, StringRef BitsetType, StringRef EnumPrefix,
+                  ArrayRef<const Record *> Closure,
+                  const DenseMap<const Record *, unsigned> &FeatureIdx) {
+  // Sort by bit index for stable output.
+  SmallVector<std::pair<unsigned, StringRef>> Bits;
+  for (const Record *F : Closure) {
+    auto It = FeatureIdx.find(F);
+    if (It != FeatureIdx.end())
+      Bits.emplace_back(It->second, F->getValueAsString("Name"));
+  }
+  sort(Bits);
+
+  OS << BitsetType << "({";
+  ListSeparator LS(", ");
+  for (const auto &[Idx, Name] : Bits) {
+    OS << LS;
+    emitFeatureEnum(OS, EnumPrefix, Name);
+  }
+  OS << "})";
+}
+
 /// Emit a GPUInfo table indexed by (GPUKind - AMDGPUFirstGPUKind). Name and
 /// family strings are stored as offsets into the shared \p Names table.
 static void
 emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
                 StringToOffsetTable &Names,
-                const DenseMap<const Record *, unsigned> &FeatureIdx) {
+                const DenseMap<const Record *, unsigned> &FeatureIdx,
+                const NumericPropertyMap &Properties) {
   std::vector<const Record *> Canon = collectAMDGPUCanonicals(RK);
   if (Canon.empty())
     return;
@@ -597,21 +691,28 @@ emitAMDGPUTable(raw_ostream &OS, const RecordKeeper &RK,
   OS << ";\n"
         "static constexpr GPUInfo AMDGPUGPUTable[] = {\n";
   for (const Record *R : Canon) {
+    SetVector<const Record *> Closure;
+    collectFeatureClosure(R, Closure);
     StringRef Name = R->getValueAsString("Name");
+    auto GetValue = [&](StringRef FieldName, int64_t Default) {
+      return getFeatureValue(R, Closure.getArrayRef(), FieldName, Properties,
+                             Default);
+    };
     OS << "  {" << Names.GetOrAddStringOffset(Name) << ", ";
     emitSubArch(OS, R);
     OS << ", ";
-    emitFeatureBitset(OS, "AMDGPUFeatureBitset", "FEAT_", R, FeatureIdx);
+    emitFeatureBitset(OS, "AMDGPUFeatureBitset", "FEAT_", Closure.getArrayRef(),
+                      FeatureIdx);
     OS << ", ";
     emitIsaVersion(OS, R, '{', '}');
     SmallString<16> Family;
     raw_svector_ostream FamilyOS(Family);
     emitArchFamily(FamilyOS, R);
     OS << ", " << Names.GetOrAddStringOffset(Family) << ", "
-       << getFeatureValue(R, "MaxWavesPerEU", 10) << ", "
-       << getFeatureValue(R, "AddressableLocalMemorySize", 32768) << ", "
-       << getFeatureValue(R, "LDSBankCount", 32) << ", "
-       << getFeatureValue(R, "BufferResourceNumRecordsWidth", 0) << "},\n";
+       << GetValue("MaxWavesPerEU", 10) << ", "
+       << GetValue("AddressableLocalMemorySize", 32768) << ", "
+       << GetValue("LDSBankCount", 32) << ", "
+       << GetValue("BufferResourceNumRecordsWidth", 0) << "},\n";
   }
   OS << "};\n"
         "#endif // GET_AMDGPU_GPU_TABLE\n\n";
@@ -756,7 +857,8 @@ static void emitAMDGPUSubArchNames(raw_ostream &OS, const RecordKeeper &RK,
 }
 
 static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
-  validateAMDGPU(RK);
+  NumericPropertyMap Properties = collectNumericProperties(RK);
+  validateAMDGPU(RK, Properties);
 
   OS << "// Autogenerated by AMDGPUTargetDefEmitter.cpp\n\n";
   // R600.td and AMDGPU.td are separate top-level files, so a run sees exactly
@@ -810,7 +912,7 @@ static void emitAMDGPUTargetDef(const RecordKeeper &RK, raw_ostream &OS) {
 
     std::vector<unsigned> FeatureOffsets =
         emitFeatureEnum(TablesOS, AMDGPUFeatureNaming, Features, Names);
-    emitAMDGPUTable(TablesOS, RK, Names, FeatureIdx);
+    emitAMDGPUTable(TablesOS, RK, Names, FeatureIdx, Properties);
     emitFeatureNames(TablesOS, AMDGPUFeatureNaming, FeatureOffsets);
     emitAMDGPUAliases(TablesOS, RK, Names);
     emitAMDGPUSubArchNames(TablesOS, RK, Names);
