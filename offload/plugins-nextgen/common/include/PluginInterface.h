@@ -37,10 +37,6 @@
 #include "RecordReplay.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "omp-tools.h"
-#endif
-
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
@@ -1511,16 +1507,6 @@ protected:
   /// This is used to run the RPC server during task synchronization.
   RPCServerTy *RPCServer;
 
-#ifdef OMPT_SUPPORT
-  /// OMPT callback functions
-#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
-  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
-#undef defineOmptCallback
-
-  /// Internal representation for OMPT device (initialize & finalize)
-  std::atomic<bool> OmptInitialized;
-#endif
-
   /// The total per-block native shared memory that a kernel may use.
   size_t MaxBlockSharedMemSize = 0;
 };
@@ -1572,12 +1558,6 @@ struct GenericPluginTy {
 
   /// Get the number of active devices.
   int32_t getNumDevices() const { return NumDevices; }
-
-  /// Get the plugin-specific device identifier.
-  int32_t getUserId(int32_t DeviceId) const {
-    assert(UserDeviceIds.contains(DeviceId) && "No user-id registered");
-    return UserDeviceIds.at(DeviceId);
-  }
 
   /// Get the UID for the host device.
   static constexpr const char *getHostDeviceUid() { return "HOST"; }
@@ -1818,9 +1798,6 @@ public:
   /// Remove the event from the plugin.
   void set_info_flag(uint32_t NewInfoLevel);
 
-  /// Sets the offset into the devices for use by OMPT.
-  int32_t set_device_identifier(int32_t UserId, int32_t DeviceId);
-
   /// Returns if the plugin can support automatic copy.
   int32_t use_auto_zero_copy(int32_t DeviceId);
 
@@ -1875,9 +1852,6 @@ private:
 
   /// Number of devices available for the plugin.
   int32_t NumDevices = 0;
-
-  /// Map of plugin device identifiers to the user device identifier.
-  llvm::DenseMap<int32_t, int32_t> UserDeviceIds;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
