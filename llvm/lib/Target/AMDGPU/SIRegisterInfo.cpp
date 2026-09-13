@@ -4125,6 +4125,61 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
   return RC && isAGPRClass(RC);
 }
 
+// Find a single VMEM definition of a half register, allowing the COPY inserted
+// when REG_SEQUENCE is lowered. Do not look through general value-producing
+// instructions or registers with multiple definitions.
+static const MachineInstr *getHalfRegisterLoad(Register Reg, unsigned SubReg,
+                                               const MachineRegisterInfo &MRI) {
+  const MachineInstr *Def = nullptr;
+  for (const MachineOperand &MO : MRI.def_operands(Reg)) {
+    if (!MO.getSubReg())
+      return nullptr;
+    if (MO.getSubReg() != SubReg)
+      continue;
+    if (Def)
+      return nullptr;
+    Def = MO.getParent();
+  }
+  if (Def && Def->isCopy()) {
+    const MachineOperand &Src = Def->getOperand(1);
+    if (!Src.getReg().isVirtual() || Src.getSubReg() || Src.isUndef())
+      return nullptr;
+    Def = MRI.getUniqueVRegDef(Src.getReg());
+  }
+  if (!Def || !SIInstrInfo::isVMEM(*Def) || !Def->mayLoad() ||
+      Def->mayStore() || Def->hasOrderedMemoryRef())
+    return nullptr;
+  return Def;
+}
+
+bool SIRegisterInfo::shouldCoalesce(
+    MachineInstr *MI, const TargetRegisterClass *SrcRC, unsigned SubReg,
+    const TargetRegisterClass *DstRC, unsigned DstSubReg,
+    const TargetRegisterClass *NewRC, LiveIntervals &LIS) const {
+  if (!MI->isCopy() || !AMDGPU::AV_32RegClass.hasSubClassEq(SrcRC) ||
+      !AMDGPU::AV_32RegClass.hasSubClassEq(DstRC) || !hasVGPRs(SrcRC) ||
+      !hasVGPRs(DstRC))
+    return true;
+
+  const MachineOperand &Src = MI->getOperand(1);
+  unsigned Half = Src.getSubReg();
+  if (Src.isUndef() || MI->getOperand(0).getSubReg() != Half ||
+      (Half != AMDGPU::lo16 && Half != AMDGPU::hi16))
+    return true;
+
+  // Keep a shared-half copy from merging independent VMEM results in the other
+  // half. Ordinary copies into a packed value can still coalesce.
+  unsigned OtherHalf = Half == AMDGPU::lo16 ? AMDGPU::hi16 : AMDGPU::lo16;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const MachineInstr *SrcLoad =
+      getHalfRegisterLoad(Src.getReg(), OtherHalf, MRI);
+  const MachineInstr *DstLoad =
+      getHalfRegisterLoad(MI->getOperand(0).getReg(), OtherHalf, MRI);
+  return !SrcLoad || !DstLoad || SrcLoad == DstLoad ||
+         SrcLoad->getParent() != MI->getParent() ||
+         DstLoad->getParent() != MI->getParent();
+}
+
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                              MachineFunction &MF) const {
   unsigned MinOcc = ST.getOccupancyWithWorkGroupSizes(MF).first;
