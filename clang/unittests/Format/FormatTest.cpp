@@ -6015,6 +6015,78 @@ TEST_F(FormatTest, HashInMacroDefinition) {
       "  struct LongPrefix##Name##LongSuffix<VeryLongTemplateArgument> {};",
       Style);
 
+  Style = getLLVMStyle();
+  Style.IndentWidth = 4;
+  Style.ContinuationIndentWidth = 8;
+  Style.ColumnLimit = 80;
+  Style.AlignEscapedNewlines = FormatStyle::ENAS_Right;
+  verifyFormat(
+      "#define M(f, ...)                                                       "
+      "       \\\n"
+      "    auto f = "
+      "call(firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111,  \\\n"
+      "                  ##__VA_ARGS__);",
+      "#define M(f, ...) \\\n"
+      "    auto f = "
+      "call(firstArgumentThatIsQuiteLongEnoughToForceAWrapHere11111111, "
+      "##__VA_ARGS__);",
+      Style);
+  verifyFormat(
+      "#define CHECK(flagName, expr, ...)                                      "
+      "       \\\n"
+      "    ({                                                                 "
+      "        \\\n"
+      "        if ((false)) {                                                 "
+      "        \\\n"
+      "            if (expr) {                                                "
+      "        \\\n"
+      "            }                                                          "
+      "        \\\n"
+      "        }                                                              "
+      "        \\\n"
+      "        if (unlikely(!(expr))) {                                       "
+      "        \\\n"
+      "            if "
+      "(someLongContainerName.contains(SomeEnumTypeName::flagName)) {  \\\n"
+      "                "
+      "someLongContainerName.add(SomeEnumTypeName::flagName);         \\\n"
+      "            } else {                                                   "
+      "        \\\n"
+      "                reportFunction(std::source_location::current(),        "
+      "        \\\n"
+      "                               \"some diagnostic message "
+      "string here \"          \\\n"
+      "                               \"(\" #flagName \"): \" "
+      "#expr,                      \\\n"
+      "                               ##__VA_ARGS__, extra);                  "
+      "        \\\n"
+      "            }                                                          "
+      "        \\\n"
+      "        }                                                              "
+      "        \\\n"
+      "        (void)0;                                                       "
+      "        \\\n"
+      "    })",
+      "#define CHECK(flagName, expr, ...) \\\n"
+      "    ({ \\\n"
+      "        if ((false)) { \\\n"
+      "            if (expr) {} \\\n"
+      "        } \\\n"
+      "        if (unlikely(!(expr))) { \\\n"
+      "            if "
+      "(someLongContainerName.contains(SomeEnumTypeName::flagName)) { \\\n"
+      "                "
+      "someLongContainerName.add(SomeEnumTypeName::flagName); \\\n"
+      "            } else { \\\n"
+      "                reportFunction(std::source_location::current(), \"some "
+      "diagnostic message string here \" \"(\" #flagName \"): \" #expr, "
+      "##__VA_ARGS__, extra); \\\n"
+      "            } \\\n"
+      "        } \\\n"
+      "        (void) 0; \\\n"
+      "    })",
+      Style);
+
   verifyFormat("{\n"
                "  {\n"
                "#define GEN_ID(_x) char *_x{#_x}\n"
