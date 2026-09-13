@@ -1,0 +1,122 @@
+! RUN: bbc -emit-hlfir -fcuda -gpu=managed %s -o - | \
+! RUN:   FileCheck %s --check-prefixes=CHECK,MANAGED
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | \
+! RUN:   FileCheck %s --check-prefixes=CHECK,UNIFIED
+
+! Test -gpu=managed and -gpu=unified for ALLOCATABLE and POINTER components of
+! derived types. Both modes back them with CUDA managed memory; they differ only
+! in the allocator index (managed = 3, unified = 4).
+!
+! Components live in the derived type's own scope, so they are not reached by
+! the implicit-attribute sweep that covers allocatables and pointers declared in
+! an ordinary scope (see cuda-gpu-managed.cuf). They get the allocator index at
+! the ALLOCATE site instead, which is why they use the runtime allocation path
+! rather than cuf.allocate. Under -gpu=unified there is no such sweep at all, so
+! every unattributed allocatable and pointer takes that path.
+!
+! The containing object stays an ordinary object: it carries no CUDA data
+! attribute and must not be placed in managed memory via cuf.alloc, which would
+! also put its non-allocatable components there.
+
+module mod_derived
+  type :: t
+     real, allocatable :: alc(:)
+     real, pointer :: ptr(:) => null()
+     real :: fixed(4)
+  end type t
+  type :: outer
+     type(t) :: inner
+  end type outer
+  type(t) :: mod_obj
+end module
+
+! -----------------------------------------------------------------------------
+! Test 1: ALLOCATABLE component of a local derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_local()
+  use mod_derived
+  type(t) :: obj
+  allocate(obj%alc(100))
+  deallocate(obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_local()
+! CHECK-NOT: cuf.alloc
+! CHECK: fir.alloca !fir.type<_QMmod_derivedTt
+! CHECK: hlfir.designate {{.*}}{"alc"}
+! MANAGED: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! UNIFIED: fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK: fir.call @_FortranAAllocatableAllocate
+! CHECK-NOT: fir.allocmem
+
+! -----------------------------------------------------------------------------
+! Test 2: POINTER component of a local derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_pointer()
+  use mod_derived
+  type(t) :: obj
+  allocate(obj%ptr(100))
+  deallocate(obj%ptr)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_pointer()
+! CHECK-NOT: cuf.alloc
+! CHECK: hlfir.designate {{.*}}{"ptr"}
+! MANAGED: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! UNIFIED: fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK: fir.call @_FortranAPointerAllocate
+
+! -----------------------------------------------------------------------------
+! Test 3: ALLOCATABLE component of a module-scope derived-type object
+! -----------------------------------------------------------------------------
+subroutine test_component_module()
+  use mod_derived
+  allocate(mod_obj%alc(100))
+  deallocate(mod_obj%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_module()
+! CHECK-NOT: cuf.alloc
+! MANAGED: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! UNIFIED: fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK: fir.call @_FortranAAllocatableAllocate
+
+! -----------------------------------------------------------------------------
+! Test 4: ALLOCATABLE component reached through a nested derived type
+! -----------------------------------------------------------------------------
+subroutine test_component_nested()
+  use mod_derived
+  type(outer) :: o
+  allocate(o%inner%alc(100))
+  deallocate(o%inner%alc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_nested()
+! CHECK-NOT: cuf.alloc
+! MANAGED: fir.embox {{.*}} {allocator_idx = 3 : i32}
+! UNIFIED: fir.embox {{.*}} {allocator_idx = 4 : i32}
+! CHECK: fir.call @_FortranAAllocatableAllocate
+
+! -----------------------------------------------------------------------------
+! Test 5: an explicitly attributed component keeps its own allocator
+! -----------------------------------------------------------------------------
+module mod_explicit
+  type :: td
+     real, allocatable, device :: dev(:)
+  end type td
+end module
+
+subroutine test_component_explicit_device()
+  use mod_explicit
+  type(td) :: obj
+  allocate(obj%dev(100))
+  deallocate(obj%dev)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_component_explicit_device()
+! CHECK: fir.embox {{.*}} {allocator_idx = 2 : i32}
+
+! The module derived-type object itself is not CUDA-attributed: only its
+! ALLOCATABLE/POINTER components are redirected, and only at ALLOCATE.
+! CHECK: fir.global @_QMmod_derivedEmod_obj : !fir.type<_QMmod_derivedTt
+! CHECK-NOT: data_attr

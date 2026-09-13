@@ -528,17 +528,25 @@ private:
     bool isCudaDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
     unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(*cudaSymForAlloc);
 
-    // Under -gpu=mem:unified, back plain (unattributed) allocatables/pointers
-    // with managed memory by selecting the unified allocator index at the
-    // ALLOCATE site. The symbol stays unattributed, so argument passing,
-    // interfaces, and COMMON legality are unaffected.
+    // Under -gpu=mem:unified or -gpu=mem:managed, back plain (unattributed)
+    // allocatables/pointers with managed memory by selecting the unified or
+    // managed allocator index at the ALLOCATE site. The symbol stays
+    // unattributed, so argument passing, interfaces, and COMMON legality are
+    // unaffected.
     bool implicitManagedBacking = false;
     if (allocatorIdx == kDefaultAllocator && !isCudaAllocate &&
-        !isCudaDeviceContext && (box.isAllocatable() || box.isPointer()) &&
-        converter.getFoldingContext().languageFeatures().IsEnabled(
-            Fortran::common::LanguageFeature::CudaUnified)) {
-      allocatorIdx = kUnifiedAllocatorPos;
-      implicitManagedBacking = true;
+        !isCudaDeviceContext && (box.isAllocatable() || box.isPointer())) {
+      const Fortran::common::LanguageFeatureControl &features =
+          converter.getFoldingContext().languageFeatures();
+      if (features.IsEnabled(Fortran::common::LanguageFeature::CudaUnified)) {
+        allocatorIdx = kUnifiedAllocatorPos;
+        implicitManagedBacking = true;
+      } else if (features.IsEnabled(Fortran::common::LanguageFeature::CUDA) &&
+                 features.IsEnabled(
+                     Fortran::common::LanguageFeature::CudaManaged)) {
+        allocatorIdx = kManagedAllocatorPos;
+        implicitManagedBacking = true;
+      }
     }
 
     // The inlined allocation path emits a plain heap allocmem that ignores the
