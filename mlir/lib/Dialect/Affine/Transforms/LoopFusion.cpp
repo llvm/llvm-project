@@ -1087,7 +1087,8 @@ public:
         }
 
         // Fuse computation slice of 'srcLoopNest' into 'dstLoopNest'.
-        fuseLoops(srcAffineForOp, dstAffineForOp, bestSlice);
+        dstAffineForOp = fuseLoops(srcAffineForOp, dstAffineForOp, bestSlice);
+        dstNode->op = dstAffineForOp;
         dstNodeChanged = true;
 
         LDBG() << "Fused src loop " << srcId << " into dst loop " << dstId
@@ -1331,11 +1332,26 @@ public:
       // destination loop. Based on this, the fused loop may be optimized
       // further inside `fuseLoops`.
       bool isInnermostInsertion = (bestDstLoopDepth == dstLoopDepthTest);
-      // Fuse computation slice of 'sibLoopNest' into 'dstLoopNest'.
-      affine::fuseLoops(sibAffineForOp, dstAffineForOp, bestSlice,
-                        isInnermostInsertion);
+      unsigned oldDstNumResults = dstAffineForOp.getNumResults();
+      dstAffineForOp = affine::fuseLoops(sibAffineForOp, dstAffineForOp,
+                                         bestSlice, isInnermostInsertion);
+      dstNode->op = dstAffineForOp;
 
-      auto dstForInst = cast<AffineForOp>(dstNode->op);
+      unsigned numAddedResults = sibAffineForOp.getNumResults();
+      assert(dstAffineForOp.getNumResults() ==
+                 oldDstNumResults + numAddedResults &&
+             "unexpected destination loop results after sibling fusion");
+
+      // Sibling fusion appends the promoted reduction results to the existing
+      // destination loop results in the same order. Redirect external uses
+      // before erasing the original sibling loop.
+      for (unsigned i = 0; i < numAddedResults; ++i) {
+        sibAffineForOp.getResult(i).replaceAllUsesWith(
+            dstAffineForOp.getResult(oldDstNumResults + i));
+      }
+
+      auto dstForInst = dstAffineForOp;
+
       // Update operation position of fused loop nest (if needed).
       if (insertPointInst != dstForInst)
         dstForInst->moveBefore(insertPointInst);
