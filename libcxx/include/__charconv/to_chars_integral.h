@@ -110,6 +110,11 @@ namespace __itoa {
 template <unsigned _Base>
 struct _LIBCPP_HIDDEN __integral;
 
+template <size_t _Np>
+struct _LIBCPP_HIDDEN __chars_storage {
+  char __data[_Np];
+};
+
 template <>
 struct _LIBCPP_HIDDEN __integral<2> {
   template <typename _Tp>
@@ -126,21 +131,32 @@ struct _LIBCPP_HIDDEN __integral<2> {
     int __n         = __width(__value);
     if (__n > __cap)
       return {__last, errc::value_too_large};
-
     __last                   = __first + __n;
     char* __p                = __last;
-    const unsigned __divisor = 16;
-    while (__value > __divisor) {
-      unsigned __c = __value % __divisor;
+
+    constexpr auto __ncs_per_word   = 8u;
+    constexpr auto __divisor        = 1u << __ncs_per_word;
+    constexpr auto __dep_mask       = uint64_t{0x0101'0101'0101'0101};
+    constexpr auto __c0_offset_mask = uint64_t{0x3030'3030'3030'3030};
+    while (__value >= __divisor) {
+      const auto __digits = __builtin_elementwise_pdep(static_cast<uint64_t>(__value), __dep_mask);
+      auto __cs            = __digits | __c0_offset_mask;
+#ifdef _LIBCPP_LITTLE_ENDIAN
+      __cs = __builtin_bswap64(__cs);
+#endif
       __value /= __divisor;
-      __p -= 4;
-      std::copy_n(&__base_2_lut[4 * __c], 4, __p);
+      __p -= __ncs_per_word;
+      const auto __chars = __builtin_bit_cast(__chars_storage<__ncs_per_word>, __cs);
+      __builtin_memcpy(__p, __chars.__data, __ncs_per_word);
     }
-    do {
-      unsigned __c = __value % 2;
-      __value /= 2;
-      *--__p = "01"[__c];
-    } while (__value != 0);
+    const auto __digits = __builtin_elementwise_pdep(static_cast<uint64_t>(__value), __dep_mask);
+    auto __cs            = __digits | __c0_offset_mask;
+#ifdef _LIBCPP_LITTLE_ENDIAN
+    __cs = __builtin_bswap64(__cs);
+#endif
+    const auto __chars = __builtin_bit_cast(__chars_storage<__ncs_per_word>, __cs);
+    const auto __remaining = static_cast<size_t>(__p - __first);
+    __builtin_memcpy(__first, __chars.__data + __ncs_per_word - __remaining, __remaining);
     return {__last, errc(0)};
   }
 };
@@ -161,21 +177,32 @@ struct _LIBCPP_HIDDEN __integral<8> {
     int __n         = __width(__value);
     if (__n > __cap)
       return {__last, errc::value_too_large};
+    __last                   = __first + __n;
+    char* __p                = __last;
 
-    __last             = __first + __n;
-    char* __p          = __last;
-    unsigned __divisor = 64;
-    while (__value > __divisor) {
-      unsigned __c = __value % __divisor;
+    constexpr auto __ncs_per_word   = 8u;
+    constexpr auto __divisor        = 1u << (3 * __ncs_per_word);
+    constexpr auto __dep_mask       = uint64_t{0x0707'0707'0707'0707};
+    constexpr auto __c0_offset_mask = uint64_t{0x3030'3030'3030'3030};
+    while (__value >= __divisor) {
+      const auto __digits = __builtin_elementwise_pdep(static_cast<uint64_t>(__value), __dep_mask);
+      auto __cs            = __digits | __c0_offset_mask;
+#ifdef _LIBCPP_LITTLE_ENDIAN
+      __cs = __builtin_bswap64(__cs);
+#endif
       __value /= __divisor;
-      __p -= 2;
-      std::copy_n(&__base_8_lut[2 * __c], 2, __p);
+      __p -= __ncs_per_word;
+      const auto __chars = __builtin_bit_cast(__chars_storage<__ncs_per_word>, __cs);
+      __builtin_memcpy(__p, __chars.__data, __ncs_per_word);
     }
-    do {
-      unsigned __c = __value % 8;
-      __value /= 8;
-      *--__p = "01234567"[__c];
-    } while (__value != 0);
+    const auto __digits = __builtin_elementwise_pdep(static_cast<uint64_t>(__value), __dep_mask);
+    auto __cs            = __digits | __c0_offset_mask;
+#ifdef _LIBCPP_LITTLE_ENDIAN
+    __cs = __builtin_bswap64(__cs);
+#endif
+    const auto __chars = __builtin_bit_cast(__chars_storage<__ncs_per_word>, __cs);
+    const auto __remaining = static_cast<size_t>(__p - __first);
+    __builtin_memcpy(__first, __chars.__data + __ncs_per_word - __remaining, __remaining);
     return {__last, errc(0)};
   }
 };
@@ -197,21 +224,36 @@ struct _LIBCPP_HIDDEN __integral<16> {
     if (__n > __cap)
       return {__last, errc::value_too_large};
 
-    __last             = __first + __n;
-    char* __p          = __last;
-    unsigned __divisor = 256;
-    while (__value > __divisor) {
-      unsigned __c = __value % __divisor;
+    __last    = __first + __n;
+    char* __p = __last;
+
+    constexpr auto __ncs_per_word   = 8u;
+    constexpr auto __divisor        = uint64_t{1} << (4 * __ncs_per_word);
+    constexpr auto __dep_mask       = uint64_t{0x0f0f'0f0f'0f0f'0f0f};
+    constexpr auto __add_six_mask   = uint64_t{0x0606'0606'0606'0606};
+    constexpr auto __high_bit_mask  = uint64_t{0x1010'1010'1010'1010};
+    constexpr auto __c0_offset_mask = uint64_t{0x3030'3030'3030'3030};
+    while (__value >= __divisor) {
+      const auto __digits = __builtin_elementwise_pdep(static_cast<uint64_t>(__value), __dep_mask);
+    const auto __alpha = ((__digits + __add_six_mask) & __high_bit_mask) >> 4;
+    auto __cs          = __digits + __c0_offset_mask + __alpha * 0x27;
+#ifdef _LIBCPP_LITTLE_ENDIAN
+      __cs = __builtin_bswap64(__cs);
+#endif
       __value /= __divisor;
-      __p -= 2;
-      std::copy_n(&__base_16_lut[2 * __c], 2, __p);
+      __p -= __ncs_per_word;
+      const auto __chars = __builtin_bit_cast(__chars_storage<__ncs_per_word>, __cs);
+      __builtin_memcpy(__p, __chars.__data, __ncs_per_word);
     }
-    if (__first != __last)
-      do {
-        unsigned __c = __value % 16;
-        __value /= 16;
-        *--__p = "0123456789abcdef"[__c];
-      } while (__value != 0);
+    const auto __digits = __builtin_elementwise_pdep(static_cast<uint64_t>(__value), __dep_mask);
+    const auto __alpha = ((__digits + __add_six_mask) & __high_bit_mask) >> 4;
+    auto __cs          = __digits + __c0_offset_mask + __alpha * 0x27;
+#ifdef _LIBCPP_LITTLE_ENDIAN
+    __cs = __builtin_bswap64(__cs);
+#endif
+    const auto __chars     = __builtin_bit_cast(__chars_storage<__ncs_per_word>, __cs);
+    const auto __remaining = static_cast<size_t>(__p - __first);
+    __builtin_memcpy(__first, __chars.__data + __ncs_per_word - __remaining, __remaining);
     return {__last, errc(0)};
   }
 };
