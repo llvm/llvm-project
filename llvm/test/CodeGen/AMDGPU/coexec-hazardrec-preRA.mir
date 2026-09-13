@@ -260,27 +260,27 @@ body: |
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF3:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF4:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF5:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF8:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF14:%[0-9]+]]:vgpr_32_lo256 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF6]], [[DEF7]], 0, [[DEF8]], [[DEF9]], [[DEF10]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF13:%[0-9]+]]:vreg_256_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF14:%[0-9]+]]:vreg_512_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   early-clobber %15:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF11]], [[DEF12]], 0, [[DEF13]], [[DEF]], [[DEF1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
-  ; CHECK-NEXT:   early-clobber %16:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF14]], [[DEF2]], 0, [[DEF3]], [[DEF4]], [[DEF5]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   early-clobber %15:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF]], [[DEF1]], 0, [[DEF2]], [[DEF3]], [[DEF4]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   early-clobber %16:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF5]], [[DEF6]], 0, [[DEF7]], [[DEF8]], [[DEF9]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   early-clobber %17:vreg_256_align2 = V_WMMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_w32_threeaddr [[DEF10]], [[DEF11]], 0, [[DEF12]], [[DEF13]], [[DEF14]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   S_ENDPGM 0, implicit %15, implicit %16, implicit %17
   bb.0:
     successors: %bb.1
