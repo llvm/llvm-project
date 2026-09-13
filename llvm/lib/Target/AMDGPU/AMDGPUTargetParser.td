@@ -27,9 +27,7 @@ def AMDGPUGenericEqual : AMDGPUGenericNumericComparison;
 //
 // Fields without this metadata retain the exact feature-record matching used
 // for frontend-visible capabilities.
-class AMDGPUGenericNumericProperty<
-    string fieldName, int defaultValue,
-    AMDGPUGenericNumericComparison comparison> {
+class AMDGPUGenericNumericProperty<string fieldName, int defaultValue, AMDGPUGenericNumericComparison comparison> {
   string FieldName = fieldName;
   int DefaultValue = defaultValue;
   AMDGPUGenericNumericComparison GenericComparison = comparison;
