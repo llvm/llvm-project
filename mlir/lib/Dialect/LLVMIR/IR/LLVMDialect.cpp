@@ -1161,6 +1161,8 @@ Operation::operand_range CallOp::getArgOperands() {
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
   return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
                                          getArgOperandsImpl(*this).size());
 }
@@ -1650,6 +1652,8 @@ Operation::operand_range InvokeOp::getArgOperands() {
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
+  // Slice the generated range to retain its segment-size metadata. A raw
+  // range would not update operandSegmentSizes when arguments are erased.
   return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
                                          getArgOperandsImpl(*this).size());
 }
