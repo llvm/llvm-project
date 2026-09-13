@@ -17,13 +17,13 @@
 extern __global__ void square(int *A);
 
 int main(int argc, char **argv) {
-  int DevNo = 0;
   int *Ptr;
   hipMalloc(&Ptr, 4);
   printf("Ptr %p\n", Ptr);
   // CHECK: Ptr [[Ptr:0x.*]]
   square<<<1, 1>>>(Ptr);
   int I;
+  hipDeviceSynchronize();
   hipMemcpy(&I, Ptr, sizeof(int), hipMemcpyDeviceToHost);
   printf("I: %i\n", I);
   // CHECK: I: 42
