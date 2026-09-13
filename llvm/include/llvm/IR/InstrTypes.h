@@ -1165,6 +1165,13 @@ using ConstOperandBundleDef = OperandBundleDefT<const Value *>;
 //===----------------------------------------------------------------------===//
 
 /// Base class for all callable instructions (InvokeInst and CallInst)
+/// The atomicity of a memory access implemented by a call, as recorded by an
+/// "atomicity" operand bundle.
+struct AtomicityBundleInfo {
+  AtomicOrdering Order;
+  SyncScope::ID SSID;
+};
+
 /// Holds everything related to calling a function.
 ///
 /// All call-like instructions are required to use a common operand layout:
@@ -2202,6 +2209,10 @@ public:
   /// Return true if this operand bundle user has operand bundles that
   /// may write to the heap.
   LLVM_ABI bool hasClobberingOperandBundles() const;
+
+  /// Return the atomicity recorded by the "atomicity" operand bundle, or
+  /// std::nullopt if there is no such bundle.
+  LLVM_ABI std::optional<AtomicityBundleInfo> getAtomicityBundleInfo() const;
 
   /// Return true if the bundle operand at index \p OpIdx has the
   /// attribute \p A.

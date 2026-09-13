@@ -3456,6 +3456,30 @@ value of its first argument instead of calling the specified function
 or intrinsic. This is achieved with `PATCHINST` relocations on the
 target instructions (see the AArch64 psABI for details).
 
+(atomicity)=
+
+#### Atomicity Operand Bundles
+
+An `"atomicity"` operand bundle records that a call implements an atomic
+memory access, for cases where the atomicity cannot be recovered from the
+call itself. At most one such bundle may be present, and it must have exactly
+two operands: a metadata string naming an atomic ordering and a metadata
+string naming a synchronization scope, where the empty string denotes system
+scope.
+
+```llvm
+call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %val, ptr addrspace(8) %rsrc,
+    i32 %off, i32 0, i32 0)
+    [ "atomicity"(metadata !"release", metadata !"agent") ]
+```
+
+A call carrying the bundle reports `true` from `Instruction::isAtomic`, so
+generic transforms treat it like any other atomic operation. The bundle
+carries no memory effects of its own, so it does not make an
+otherwise-analyzable call opaque. See
+{ref}`AMDGPUUsage <amdgpu-buffer-intrinsic-atomicity>` for the AMDGPU buffer
+intrinsic use of it.
+
 (moduleasm)=
 
 ### Module-Level Inline Assembly
