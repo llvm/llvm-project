@@ -9,7 +9,10 @@
 #include "RedundantParenthesesCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
+#include "clang/AST/ASTContext.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
@@ -34,6 +37,51 @@ AST_MATCHER(ParenExpr, isInMacro) {
 }
 
 } // namespace
+
+// Returns true if `E` is an operand of a requires-clause or of a concept
+// definition.
+static bool isConstraintOperand(const Expr *E, ASTContext &Ctx) {
+  for (const DynTypedNode &Parent : Ctx.getParents(*E)) {
+    const auto *ParentExpr = Parent.get<Expr>();
+    const auto *BO = dyn_cast_or_null<BinaryOperator>(ParentExpr);
+    if (ParentExpr &&
+        (ParentExpr->IgnoreImplicit() == E || (BO && BO->isLogicalOp()))) {
+      if (isConstraintOperand(ParentExpr, Ctx))
+        return true;
+      continue;
+    }
+    // The 'requires (E);' of a nested requirement. Other expressions inside a
+    // requires-expression are unrestricted.
+    if (const auto *RE = Parent.get<RequiresExpr>()) {
+      if (llvm::any_of(
+              RE->getRequirements(), [E](const concepts::Requirement *R) {
+                const auto *NR = dyn_cast<concepts::NestedRequirement>(R);
+                return NR && !NR->hasInvalidConstraint() &&
+                       NR->getConstraintExpr() == E;
+              }))
+        return true;
+      continue;
+    }
+    const auto *D = Parent.get<Decl>();
+    if (!D)
+      continue;
+    // The requires-clause of a template parameter list.
+    const auto *TD = dyn_cast<TemplateDecl>(D);
+    const TemplateParameterList *TPL =
+        TD ? TD->getTemplateParameters() : D->getDescribedTemplateParams();
+    if (TPL && TPL->getRequiresClause() == E)
+      return true;
+    // The right hand side of a concept definition.
+    if (const auto *CD = dyn_cast<ConceptDecl>(D);
+        CD && CD->getConstraintExpr() == E)
+      return true;
+    // A trailing requires-clause.
+    if (const auto *FD = dyn_cast<FunctionDecl>(D);
+        FD && FD->getTrailingRequiresClause().ConstraintExpr == E)
+      return true;
+  }
+  return false;
+}
 
 static FixItHint createSpacedRemoval(SourceLocation Loc,
                                      const SourceManager &SM,
@@ -68,15 +116,17 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
   const auto ConstantExpr =
       expr(anyOf(integerLiteral(), floatLiteral(), characterLiteral(),
                  cxxBoolLiteral(), stringLiteral(), cxxNullPtrLiteralExpr()));
+  const auto ConstraintSensitiveExpr =
+      expr(anyOf(parenExpr(), memberExpr(),
+                 callExpr(unless(cxxOperatorCallExpr(
+                     unless(hasAnyOperatorName("()", "[]"))))),
+                 arraySubscriptExpr()));
   Finder->addMatcher(
       parenExpr(subExpr(anyOf(
-                    parenExpr(), ConstantExpr,
+                    ConstraintSensitiveExpr.bind("constraint_sensitive"),
+                    ConstantExpr,
                     declRefExpr(to(namedDecl(unless(
-                        matchers::matchesAnyListedRegexName(AllowedDecls))))),
-                    memberExpr(),
-                    callExpr(unless(cxxOperatorCallExpr(
-                        unless(hasAnyOperatorName("()", "[]"))))),
-                    arraySubscriptExpr())),
+                        matchers::matchesAnyListedRegexName(AllowedDecls))))))),
                 unless(anyOf(isInMacro(),
                              // sizeof(...) is common used.
                              hasParent(unaryExprOrTypeTraitExpr()))))
@@ -86,6 +136,9 @@ void RedundantParenthesesCheck::registerMatchers(MatchFinder *Finder) {
 
 void RedundantParenthesesCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *PE = Result.Nodes.getNodeAs<ParenExpr>("dup");
+  if (Result.Nodes.getNodeAs<Expr>("constraint_sensitive") &&
+      isConstraintOperand(PE, *Result.Context))
+    return;
   diag(PE->getBeginLoc(), "redundant parentheses around expression")
       << createSpacedRemoval(PE->getLParen(), *Result.SourceManager,
                              getLangOpts())
