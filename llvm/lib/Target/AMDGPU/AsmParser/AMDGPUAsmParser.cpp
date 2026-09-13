@@ -1826,6 +1826,8 @@ private:
   bool validateOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
+  bool validateBF16InlineConst(const MCInst &Inst,
+                               const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst, const OperandVector &Operands);
   bool validateConstantBusLimitations(const MCInst &Inst,
                                       const OperandVector &Operands);
@@ -4866,6 +4868,56 @@ bool AMDGPUAsmParser::validateSMEMOffset(const MCInst &Inst,
   return false;
 }
 
+// On subtargets with FeatureBF16InlineConstFromUpperFP32 the hardware generates
+// a bf16 inline constant in the high half of the corresponding fp32 inline
+// constant. A VOP1 bf16 opcode (v_cvt_f32_bf16 and the bf16 transcendentals)
+// reads the low half of its source, so it must use the VOP3 encoding with
+// op_sel[0] set in order to see the constant at all.
+bool AMDGPUAsmParser::validateBF16InlineConst(const MCInst &Inst,
+                                              const OperandVector &Operands) {
+  if (!getFeatureBits()[AMDGPU::FeatureBF16InlineConstFromUpperFP32])
+    return true;
+
+  const unsigned Opc = Inst.getOpcode();
+  const MCInstrDesc &Desc = MII.get(Opc);
+  const bool IsVOP3 =
+      SIInstrFlags::isVOP3(Desc) && !SIInstrFlags::isVOP3P(Desc);
+  if (!SIInstrFlags::isVOP1(Desc) && !IsVOP3)
+    return true;
+
+  // Only the single-source VOP1 bf16 opcodes are affected. Multi-source and
+  // packed bf16 instructions such as v_fma_mix*_bf16 are not.
+  if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::src1))
+    return true;
+
+  const int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+  if (Src0Idx == -1)
+    return true;
+
+  const MCOperandInfo &Src0Info = Desc.operands()[Src0Idx];
+  if (!AMDGPU::isBF16SrcOperand(Src0Info))
+    return true;
+
+  const MCOperand &Src0 = Inst.getOperand(Src0Idx);
+  if (!Src0.isImm() ||
+      !AMDGPU::isInlinableLiteralBF16(static_cast<int16_t>(Src0.getImm()),
+                                      hasInv2PiInlineImm()))
+    return true;
+
+  if (IsVOP3) {
+    const int ModsIdx =
+        AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers);
+    if (ModsIdx != -1 &&
+        (Inst.getOperand(ModsIdx).getImm() & SISrcMods::OP_SEL_0))
+      return true;
+  }
+
+  Error(getOperandLoc(Operands, Src0Idx),
+        "bf16 inline constant is read from the high half of the fp32 inline "
+        "constant on this GPU; use the e64 encoding with op_sel:[1,0]");
+  return false;
+}
+
 bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst,
                                          const OperandVector &Operands) {
   unsigned Opcode = Inst.getOpcode();
@@ -5747,6 +5799,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst, SMLoc IDLoc,
     return false;
   }
   if (!validateOffset(Inst, Operands)) {
+    return false;
+  }
+  if (!validateBF16InlineConst(Inst, Operands)) {
     return false;
   }
   if (!validateMAIAccWrite(Inst, Operands)) {
