@@ -99,7 +99,8 @@ LLVM_ABI void computeValueLLTs(const DataLayout &DL, Type &Ty,
 LLVM_ABI GlobalValue *ExtractTypeInfo(Value *V);
 
 /// Return true if landingpad result type \p Ty is a struct of an exception
-/// pointer (pointer or integer) and an integer selector, the only lowerable form.
+/// pointer (pointer or integer) and an integer selector, the only lowerable
+/// form.
 LLVM_ABI bool isExceptionPointerAndSelectorType(Type *Ty);
 
 /// getFCmpCondCode - Return the ISD condition code corresponding to
