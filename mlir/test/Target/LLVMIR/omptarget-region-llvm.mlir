@@ -42,7 +42,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: omp_offload.cont:
 
 // CHECK: define void @omp_target_no_map()
-// CHECK: call i32 @__tgt_target_kernel(ptr @4, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_no_map_l[[LINE2:.*]].region_id, ptr %kernel_args)
+// CHECK: call i32 @__tgt_target_kernel(ptr @6, i64 -1, i32 -1, i32 0, ptr @.__omp_offloading_[[DEV:.*]]_[[FIL:.*]]_omp_target_no_map_l[[LINE2:.*]].region_id, ptr %kernel_args)
 
 // CHECK: br i1 %{{.*}}, label %omp_offload.failed, label %omp_offload.cont
 // CHECK: omp_offload.failed:
