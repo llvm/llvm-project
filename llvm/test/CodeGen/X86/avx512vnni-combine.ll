@@ -189,7 +189,7 @@ define void @bar_512(i32 %0, ptr %1, <8 x i64> %2, ptr %3) {
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vmovdqa64 %zmm1, (%rsi,%r8)
 ; CHECK-NEXT:    addq $2, %rcx
-; CHECK-NEXT:    subq $-128, %r8
+; CHECK-NEXT:    addq $128, %r8
 ; CHECK-NEXT:    cmpq %rcx, %rdi
 ; CHECK-NEXT:    jne .LBB2_7
 ; CHECK-NEXT:  .LBB2_3:
