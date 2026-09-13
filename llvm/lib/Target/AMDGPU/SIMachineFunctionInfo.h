@@ -573,10 +573,10 @@ private:
   using WWMSpillsMap = MapVector<Register, int>;
   // To track the registers used in instructions that can potentially modify the
   // inactive lanes. The WWM instructions and the writelane instructions for
-  // spilling SGPRs to VGPRs fall under such category of operations. The VGPRs
-  // modified by them should be spilled/restored at function prolog/epilog to
-  // avoid any undesired outcome. Each entry in this map holds a pair of values,
-  // the VGPR and its stack slot index.
+  // spilling SGPRs to VGPRs fall under such category of operations. The vector
+  // registers modified by them should be spilled/restored at function
+  // prolog/epilog to avoid any undesired outcome. Each entry in this map holds
+  // a pair of values, the register and its stack slot index.
   WWMSpillsMap WWMSpills;
 
   // Before allocation, the VGPR registers are partitioned into two distinct
@@ -585,10 +585,10 @@ private:
   BitVector PerLaneVGPRMask;
 
   using ReservedRegSet = SmallSetVector<Register, 8>;
-  // To track the VGPRs reserved for WWM instructions. They get stack slots
-  // later during PrologEpilogInserter and get added into the superset WWMSpills
-  // for actual spilling. A separate set makes the register reserved part and
-  // the serialization easier.
+  // To track the vector registers reserved for WWM instructions. WWMSpills
+  // contains the subset that needs prolog/epilog preservation; its spill slots
+  // may be allocated when a register becomes physical or later during PEI. A
+  // separate set makes the register reserved part and serialization easier.
   ReservedRegSet WWMReservedRegs;
 
   bool IsWholeWaveFunction = false;
@@ -810,7 +810,7 @@ public:
 
   bool hasVRegFlags() { return VRegFlags.size(); }
 
-  void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
+  void allocateWWMSpill(MachineFunction &MF, Register Reg, uint64_t Size = 4,
                         Align Alignment = Align(4));
 
   void splitWWMSpillRegisters(
