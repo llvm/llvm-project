@@ -4,25 +4,21 @@
 define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr %p6, ptr %p7, ptr %p8, i64 %p9, i1 %cond, i32 %n) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
-; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %ebp
-; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    subq $56, %rsp
+; CHECK-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.2: # %bb1
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.4: # %bb2
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    movb $1, %r10b
+; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.5: # %bb2
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    testb %r10b, %r10b
 ; CHECK-NEXT:    jne .LBB0_9
 ; CHECK-NEXT:  # %bb.6: # %bb2
 ; CHECK-NEXT:    xorl %eax, %eax
@@ -30,16 +26,12 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:  .LBB0_7: # %bb3
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:  .LBB0_8: # %cleanup
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    addq $56, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
-; CHECK-NEXT:    popq %r15
-; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_9: # %bb5
-; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    jne .LBB0_7
 ; CHECK-NEXT:  # %bb.10: # %bb7
 ; CHECK-NEXT:    jne .LBB0_7
@@ -63,6 +55,10 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    cmpl $2, %eax
 ; CHECK-NEXT:    je .LBB0_7
 ; CHECK-NEXT:  # %bb.22: # %bb18
+; CHECK-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movl $1, %eax
@@ -71,31 +67,28 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_27
 ; CHECK-NEXT:  # %bb.23:
-; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    movq %rsi, %r12
-; CHECK-NEXT:    movq %r8, %rbx
-; CHECK-NEXT:    movq %r9, %r15
-; CHECK-NEXT:    xorl %r13d, %r13d
+; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %rbx
+; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:  .LBB0_24: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    movq %r15, %rsi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    callq *%r13
-; CHECK-NEXT:    movq %r12, %rdi
+; CHECK-NEXT:    callq *%r14
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
-; CHECK-NEXT:    movq {{[0-9]+}}(%rsp), %r9
+; CHECK-NEXT:    movq %rbx, %r9
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
-; CHECK-NEXT:    callq *%r13
+; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    movq %r14, %rsi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
 ; CHECK-NEXT:    xorl %edx, %edx
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
@@ -104,9 +97,9 @@ define fastcc i64 @foo(ptr %p0, ptr %p1, i64 %p2, i64 %p3, ptr %p4, ptr %p5, ptr
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
 ; CHECK-NEXT:    pushq $0
-; CHECK-NEXT:    callq *%r13
+; CHECK-NEXT:    callq *%r14
 ; CHECK-NEXT:    addq $32, %rsp
-; CHECK-NEXT:    testb $1, %bpl
+; CHECK-NEXT:    testb $1, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    je .LBB0_24
 ; CHECK-NEXT:  # %bb.25: # %cleanup2
 ; CHECK-NEXT:    jne .LBB0_27

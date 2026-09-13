@@ -91,48 +91,49 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_12
 ; CHECK-NEXT:  # %bb.1: # %if.end19
-; CHECK-NEXT:    movl (%rax), %r12d
-; CHECK-NEXT:    leal (,%r12,4), %ebp
-; CHECK-NEXT:    movl %ebp, %r15d
+; CHECK-NEXT:    movl (%rax), %r15d
+; CHECK-NEXT:    leal (,%r15,4), %ebp
+; CHECK-NEXT:    movl %ebp, %r14d
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    movq %r15, %rdi
+; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    callq cli_calloc@PLT
-; CHECK-NEXT:    movq %rax, %r14
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne .LBB1_12
 ; CHECK-NEXT:  # %bb.2: # %if.end50
 ; CHECK-NEXT:    # implicit-def: $rsi
-; CHECK-NEXT:    movq %r14, %rdi
-; CHECK-NEXT:    movq %r15, %rdx
+; CHECK-NEXT:    movq %rax, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    movq %rax, %rdi
+; CHECK-NEXT:    movq %r14, %rdx
 ; CHECK-NEXT:    callq memcpy@PLT
 ; CHECK-NEXT:    cmpl $4, %ebp
 ; CHECK-NEXT:    jb .LBB1_19
 ; CHECK-NEXT:  # %bb.3: # %shared_preheader
-; CHECK-NEXT:    movb $32, %cl
+; CHECK-NEXT:    movb $32, %dl
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movq (%rsp), %rcx # 8-byte Reload
 ; CHECK-NEXT:    jmp .LBB1_4
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_15: # %merge_predecessor_split
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    movb $32, %cl
+; CHECK-NEXT:    movb $32, %dl
 ; CHECK-NEXT:  .LBB1_4: # %outer_loop_header
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB1_8 Depth 2
-; CHECK-NEXT:    testl %r12d, %r12d
+; CHECK-NEXT:    testl %r15d, %r15d
 ; CHECK-NEXT:    je .LBB1_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_8: # %shared_loop_header
 ; CHECK-NEXT:    # Parent Loop BB1_4 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    testq %r14, %r14
+; CHECK-NEXT:    testq %rcx, %rcx
 ; CHECK-NEXT:    jne .LBB1_18
 ; CHECK-NEXT:  # %bb.9: # %inner_loop_body
 ; CHECK-NEXT:    # in Loop: Header=BB1_8 Depth=2
@@ -140,12 +141,12 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    je .LBB1_8
 ; CHECK-NEXT:  # %bb.10: # %if.end96.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    cmpl $3, %r12d
+; CHECK-NEXT:    cmpl $3, %r15d
 ; CHECK-NEXT:    jae .LBB1_11
 ; CHECK-NEXT:  # %bb.13: # %if.end287.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    # implicit-def: $cl
+; CHECK-NEXT:    # implicit-def: $dl
 ; CHECK-NEXT:    jne .LBB1_4
 ; CHECK-NEXT:  # %bb.14: # %if.end308.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
@@ -153,19 +154,19 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    je .LBB1_15
 ; CHECK-NEXT:  # %bb.16: # %if.end335.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    testb %cl, %cl
+; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    jne .LBB1_4
 ; CHECK-NEXT:  # %bb.17: # %merge_other
 ; CHECK-NEXT:    # in Loop: Header=BB1_4 Depth=1
-; CHECK-NEXT:    # implicit-def: $cl
+; CHECK-NEXT:    # implicit-def: $dl
 ; CHECK-NEXT:    jmp .LBB1_4
 ; CHECK-NEXT:  .LBB1_5: # %while.cond.us1412.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_7
 ; CHECK-NEXT:  # %bb.6: # %while.cond.us1412.i
-; CHECK-NEXT:    decb %cl
+; CHECK-NEXT:    decb %dl
 ; CHECK-NEXT:    jne .LBB1_12
 ; CHECK-NEXT:  .LBB1_7: # %if.end41.us1436.i
 ; CHECK-NEXT:  .LBB1_11: # %if.then99.i
@@ -176,8 +177,8 @@ define i32 @loop_shared_header(ptr %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    callq cli_dbgmsg@PLT
 ; CHECK-NEXT:  .LBB1_12: # %cleanup
 ; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp

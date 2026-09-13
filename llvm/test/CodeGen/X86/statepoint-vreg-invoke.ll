@@ -199,7 +199,7 @@ define void @test_duplicate_ir_values() gc "statepoint-example" personality ptr 
   ; CHECK-NEXT:   renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $edi = MOV32ri 10
-  ; CHECK-NEXT:   dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 2, 2, 2, killed renamable $rbx, renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, $edi, 2, 0, 2, 2, 2, 2, killed renamable $rbx, renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.exceptional_return (landing-pad):
@@ -209,7 +209,7 @@ define void @test_duplicate_ir_values() gc "statepoint-example" personality ptr 
   ; CHECK-NEXT:   renamable $rbx = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   $edi = MOV32ri -271
-  ; CHECK-NEXT:   dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, killed $edi, 2, 0, 2, 0, 2, 1, killed renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
+  ; CHECK-NEXT:   dead renamable $rbx = STATEPOINT 2882400000, 0, 1, target-flags(x86-plt) @__llvm_deoptimize, $edi, 2, 0, 2, 0, 2, 1, killed renamable $rbx, 2, 1, renamable $rbx(tied-def 0), 2, 0, 2, 1, 0, 0, csr_64, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
 entry:
   %val1 = load ptr addrspace(1), ptr addrspace(1) undef, align 8

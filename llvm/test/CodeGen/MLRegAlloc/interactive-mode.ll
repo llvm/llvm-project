@@ -7,7 +7,7 @@
 ; RUN: cp %S/Inputs/interactive_main.py %t.rundir
 ; RUN: %python %t.rundir/interactive_main.py %t.channel-basename \
 ; RUN:    llc -mtriple=x86_64-linux-unknown -regalloc=greedy -regalloc-enable-advisor=release -interactive-model-runner-echo-reply \
-; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename %S/Inputs/two-large-fcts.ll -o /dev/null | FileCheck %s
+; RUN:    -regalloc-evict-interactive-channel-base=%t.channel-basename -regalloc-csr-cost-scale=0 %S/Inputs/two-large-fcts.ll -o /dev/null | FileCheck %s
 
 ;; Make sure we see both contexts. Also sanity-check that the advice is the
 ;; expected one - the index of the first legal register
