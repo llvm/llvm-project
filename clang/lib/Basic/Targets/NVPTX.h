@@ -135,8 +135,11 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
 
+  // StringToOffloadArch also knows the Intel names, which are never an NVPTX
+  // CPU; Sema would otherwise read an Intel kind as an NVPTX one.
   bool isValidCPUName(StringRef Name) const override {
-    return !StringToOffloadArch(Name).isUnknown();
+    OffloadArch Arch = StringToOffloadArch(Name);
+    return !Arch.isUnknown() && !Arch.isIntel();
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override {
@@ -144,8 +147,10 @@ public:
   }
 
   bool setCPU(StringRef Name) override {
+    if (!isValidCPUName(Name))
+      return false;
     GPU = StringToOffloadArch(Name);
-    return !GPU.isUnknown();
+    return true;
   }
 
   void setSupportedOpenCLOpts() override {

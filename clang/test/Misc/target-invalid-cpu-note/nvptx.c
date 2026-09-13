@@ -2,6 +2,10 @@
 // previous check finished matching (specifically, caret is not treated as
 // matching a start of line when used like this in FileCheck).
 
+// An Intel GPU name is an offload architecture but never an NVPTX CPU.
+// RUN: not %clang_cc1 -triple nvptx64-nvidia-cuda -target-cpu xe-pvc -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix=INTEL
+// INTEL: error: unknown target CPU 'xe-pvc'
+
 // RUN: not %clang_cc1 -triple nvptx--- -target-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --implicit-check-not={{[a-zA-Z0-9]}}
 // CHECK: error: unknown target CPU 'not-a-cpu'
 // CHECK-NEXT: note: valid target CPU values are:

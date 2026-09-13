@@ -115,9 +115,20 @@
 ; AOT-INTEL-GPU:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
 ; AOT-INTEL-GPU-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
 ; AOT-INTEL-GPU-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 -a -b {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
-; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: bmg_g21
+; AOT-INTEL-GPU-NEXT: sycl-bundle: image kind: o, triple: spirv64, arch: xe-bmg-g21
 ; AOT-INTEL-GPU-NOT:  {{.+}}
 ;
+; Test that every accepted spelling of an Intel GPU reaches ocloc as ocloc's own.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-bmg-g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-NAME
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe_20.1.0 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-NAME
+; AOT-INTEL-NAME: "{{.*}}ocloc{{.*}}" {{.*}}-device bmg_g21 {{.*}}-output
+; AOT-INTEL-NAME: sycl-bundle: image kind: o, triple: spirv64, arch: xe-bmg-g21
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=xe-pvc %t/input1.bc -o %t/aot-gpu.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-PVC
+; AOT-INTEL-PVC: "{{.*}}ocloc{{.*}}" {{.*}}-device pvc {{.*}}-output
+
 ; Test that all --ocloc-options are passed to ocloc, even if they contain spaces or quotes.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=bmg_g21 %t/input1.bc -o %t/aot-gpu.out 2>&1 \
 ; RUN:     --ocloc-options="-a -b" --ocloc-options=-c --ocloc-options="d" --ocloc-options='"-e -f"' \
