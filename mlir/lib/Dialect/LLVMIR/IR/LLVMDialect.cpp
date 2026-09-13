@@ -1799,14 +1799,14 @@ ParseResult InvokeOp::parse(OpAsmParser &parser, OperationState &result) {
       parser.getBuilder(), result, argAttrs, resultAttrs,
       getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 
+  result.addSuccessors({normalDest, unwindDest});
+  result.addOperands(normalOperands);
+  result.addOperands(unwindOperands);
+
   if (resolveOpBundleOperands(parser, opBundlesLoc, result, opBundleOperands,
                               opBundleOperandTypes,
                               getOpBundleSizesAttrName(result.name)))
     return failure();
-
-  result.addSuccessors({normalDest, unwindDest});
-  result.addOperands(normalOperands);
-  result.addOperands(unwindOperands);
 
   int32_t numOpBundleOperands = 0;
   for (const auto &operands : opBundleOperands)
