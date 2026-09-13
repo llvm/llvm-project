@@ -356,12 +356,10 @@ CppTypeFor<TypeCategory::Real, 10> RTDEF(ErfcScaled10)(
   return ErfcScaled(x);
 }
 #endif
-#if HAS_LDBL128
-CppTypeFor<TypeCategory::Real, 16> RTDEF(ErfcScaled16)(
-    CppTypeFor<TypeCategory::Real, 16> x) {
-  return ErfcScaled(x);
-}
-#endif
+// ErfcScaled16 is not defined here. The shared approximation this file uses is
+// accurate to about seventeen digits, which is a thousand times short of what
+// binary128 holds, so REAL(16) has its own implementation over the exact
+// quadmath entry points - see flang-rt/lib/quadmath/erfc-scaled.cpp.
 
 CppTypeFor<TypeCategory::Integer, 4> RTDEF(Exponent4_4)(
     CppTypeFor<TypeCategory::Real, 4> x) {
