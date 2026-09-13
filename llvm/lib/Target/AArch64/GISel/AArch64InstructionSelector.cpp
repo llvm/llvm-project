@@ -880,38 +880,6 @@ static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
-/// Helper function to get the source and destination register classes for a
-/// copy. Returns a std::pair containing the source register class for the
-/// copy, and the destination register class for the copy. If a register class
-/// cannot be determined, then it will be nullptr.
-static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
-getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
-                     MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-                     const RegisterBankInfo &RBI) {
-  Register DstReg = I.getOperand(0).getReg();
-  Register SrcReg = I.getOperand(1).getReg();
-  const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
-  const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
-
-  TypeSize DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  TypeSize SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
-
-  // Special casing for cross-bank copies of s1s. We can technically represent
-  // a 1-bit value with any size of register. The minimum size for a GPR is 32
-  // bits. So, we need to put the FPR on 32 bits as well.
-  //
-  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
-  // then we can pull it into the helpers that get the appropriate class for a
-  // register bank. Or make a new helper that carries along some constraint
-  // information.
-  if (SrcRegBank != DstRegBank &&
-      (DstSize == TypeSize::getFixed(1) && SrcSize == TypeSize::getFixed(1)))
-    SrcSize = DstSize = TypeSize::getFixed(32);
-
-  return {getMinClassForRegBank(SrcRegBank, SrcSize, true),
-          getMinClassForRegBank(DstRegBank, DstSize, true)};
-}
-
 // FIXME: We need some sort of API in RBI/TRI to allow generic code to
 // constrain operands of simple instructions given a TargetRegisterClass
 // and LLT
@@ -952,10 +920,26 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
+  TypeSize DstRegSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  TypeSize SrcRegSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+
+  // Special casing for cross-bank copies of s1s. We can technically represent
+  // a 1-bit value with any size of register. The minimum size for a GPR is 32
+  // bits. So, we need to put the FPR on 32 bits as well.
+  //
+  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
+  // then we can pull it into the helpers that get the appropriate class for a
+  // register bank. Or make a new helper that carries along some constraint
+  // information.
+  if (SrcRegBank != DstRegBank && (DstRegSize == TypeSize::getFixed(1) &&
+                                   SrcRegSize == TypeSize::getFixed(1)))
+    SrcRegSize = DstRegSize = TypeSize::getFixed(32);
+
   // Find the correct register classes for the source and destination registers.
-  const TargetRegisterClass *SrcRC;
-  const TargetRegisterClass *DstRC;
-  std::tie(SrcRC, DstRC) = getRegClassesForCopy(I, TII, MRI, TRI, RBI);
+  const TargetRegisterClass *SrcRC =
+      getMinClassForRegBank(SrcRegBank, SrcRegSize, true);
+  const TargetRegisterClass *DstRC =
+      getMinClassForRegBank(DstRegBank, DstRegSize, true);
 
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Unexpected dest size "

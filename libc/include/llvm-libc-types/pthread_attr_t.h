@@ -13,6 +13,7 @@
 
 typedef struct {
   int __detachstate;
+  int __schedpolicy;
   void *__stack;
   size_t __stacksize;
   size_t __guardsize;

@@ -766,3 +766,41 @@ while.end:                                        ; preds = %while.cond
 
 declare i32 @llvm.abs.i32(i32, i1)
 declare i16 @llvm.abs.i16(i16, i1)
+
+; Same loop as ctlz_bad, but the input is known to be non-zero. The missing
+; zero check in front of the loop is not needed, so the idiom is recognized.
+define i32 @ctlz_known_nonzero_no_check(i32 %n) {
+; ALL-LABEL: @ctlz_known_nonzero_no_check(
+; ALL-NEXT:  entry:
+; ALL-NEXT:    [[N_NONZERO:%.*]] = or i32 [[N:%.*]], 1
+; ALL-NEXT:    [[TMP0:%.*]] = call i32 @llvm.ctlz.i32(i32 [[N_NONZERO]], i1 true)
+; ALL-NEXT:    [[TMP1:%.*]] = sub i32 32, [[TMP0]]
+; ALL-NEXT:    br label [[WHILE_COND:%.*]]
+; ALL:       while.cond:
+; ALL-NEXT:    [[TCPHI:%.*]] = phi i32 [ [[TMP1]], [[ENTRY:%.*]] ], [ [[TCDEC:%.*]], [[WHILE_COND]] ]
+; ALL-NEXT:    [[N_ADDR_0:%.*]] = phi i32 [ [[N_NONZERO]], [[ENTRY]] ], [ [[SHR:%.*]], [[WHILE_COND]] ]
+; ALL-NEXT:    [[I_0:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[INC:%.*]], [[WHILE_COND]] ]
+; ALL-NEXT:    [[SHR]] = lshr i32 [[N_ADDR_0]], 1
+; ALL-NEXT:    [[TCDEC]] = sub nsw i32 [[TCPHI]], 1
+; ALL-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TCDEC]], 0
+; ALL-NEXT:    [[INC]] = add nsw i32 [[I_0]], 1
+; ALL-NEXT:    br i1 [[TOBOOL]], label [[WHILE_END:%.*]], label [[WHILE_COND]]
+; ALL:       while.end:
+; ALL-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[TMP1]], [[WHILE_COND]] ]
+; ALL-NEXT:    ret i32 [[INC_LCSSA]]
+;
+entry:
+  %n.nonzero = or i32 %n, 1
+  br label %while.cond
+
+while.cond:                                       ; preds = %while.cond, %entry
+  %n.addr.0 = phi i32 [ %n.nonzero, %entry ], [ %shr, %while.cond ]
+  %i.0 = phi i32 [ 0, %entry ], [ %inc, %while.cond ]
+  %shr = lshr i32 %n.addr.0, 1
+  %tobool = icmp eq i32 %shr, 0
+  %inc = add nsw i32 %i.0, 1
+  br i1 %tobool, label %while.end, label %while.cond
+
+while.end:                                        ; preds = %while.cond
+  ret i32 %inc
+}

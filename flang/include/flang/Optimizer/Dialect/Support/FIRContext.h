@@ -135,6 +135,10 @@ CudaHeapAllocMode getCudaHeapAllocMode(mlir::ModuleOp mod);
 void setCudaHeapAllocMode(mlir::Operation *op, CudaHeapAllocMode mode);
 CudaHeapAllocMode getCudaHeapAllocMode(mlir::Operation *op);
 
+/// The array allocation policy is also recorded on the module, but its getter
+/// and setter live in flang/Optimizer/Support/AllocationPolicy.h: they build a
+/// FIR attribute, which this library cannot depend on.
+
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`
 /// command-line option.
