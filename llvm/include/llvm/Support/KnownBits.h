@@ -600,13 +600,13 @@ LLVM_ABI unsigned rot(unsigned SrcSignBits, unsigned BitWidth,
                       std::optional<APInt> RotAmt, bool IsRotateRight);
 
 /// Compute a lower bound on the number of sign bits in the demanded
-/// elements of an INSERT_SUBVECTOR.
-/// The callbacks use input indices 0 for the source and 1 for the subvector.
+/// elements of an INSERT_SUBVECTOR. ComputeNumSignBits(OpIdx, Demanded)
+/// returns the number of sign bits of operand OpIdx (0 for the source, 1 for
+/// the subvector) in the demanded elements.
 LLVM_ABI unsigned insertSubvector(
     ElementCount SrcEC, ElementCount SubEC, uint64_t Idx,
     const APInt &DemandedElts,
-    function_ref<unsigned(unsigned, const APInt &)> ComputeNumSignBits,
-    function_ref<unsigned(unsigned)> ComputeNumSignBitsAllElts);
+    function_ref<unsigned(unsigned, const APInt &)> ComputeNumSignBits);
 
 } // end namespace SignBitsOps
 

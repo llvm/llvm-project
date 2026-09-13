@@ -5423,12 +5423,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     Tmp = SignBitsOps::insertSubvector(
         Src.getValueType().getVectorElementCount(),
         Sub.getValueType().getVectorElementCount(), Op.getConstantOperandVal(2),
-        DemandedElts,
-        [&](unsigned OpIdx, const APInt &Demanded) {
+        DemandedElts, [&](unsigned OpIdx, const APInt &Demanded) {
           return ComputeNumSignBits(Op.getOperand(OpIdx), Demanded, Depth + 1);
-        },
-        [&](unsigned OpIdx) {
-          return ComputeNumSignBits(Op.getOperand(OpIdx), Depth + 1);
         });
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;

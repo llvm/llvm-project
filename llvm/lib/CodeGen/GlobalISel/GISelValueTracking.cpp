@@ -2739,16 +2739,11 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
   case TargetOpcode::G_INSERT_SUBVECTOR: {
     Register Src = MI.getOperand(1).getReg();
     Register Sub = MI.getOperand(2).getReg();
-    // MI operand 0 is the destination, so callback indices need a +1 offset.
     FirstAnswer = SignBitsOps::insertSubvector(
         MRI.getType(Src).getElementCount(), MRI.getType(Sub).getElementCount(),
         MI.getOperand(3).getImm(), DemandedElts,
         [&](unsigned OpIdx, const APInt &Demanded) {
-          return computeNumSignBits(MI.getOperand(OpIdx + 1).getReg(), Demanded,
-                                    Depth + 1);
-        },
-        [&](unsigned OpIdx) {
-          return computeNumSignBits(MI.getOperand(OpIdx + 1).getReg(),
+          return computeNumSignBits(OpIdx == 0 ? Src : Sub, Demanded,
                                     Depth + 1);
         });
     break;

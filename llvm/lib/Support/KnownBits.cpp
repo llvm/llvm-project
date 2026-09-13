@@ -1475,14 +1475,17 @@ unsigned llvm::SignBitsOps::rot(unsigned SrcSignBits, unsigned BitWidth,
 unsigned llvm::SignBitsOps::insertSubvector(
     ElementCount SrcEC, ElementCount SubEC, uint64_t Idx,
     const APInt &DemandedElts,
-    function_ref<unsigned(unsigned, const APInt &)> ComputeNumSignBits,
-    function_ref<unsigned(unsigned)> ComputeNumSignBitsAllElts) {
+    function_ref<unsigned(unsigned, const APInt &)> ComputeNumSignBits) {
 
   unsigned Result = std::numeric_limits<unsigned>::max();
   if (SrcEC.isScalable()) {
-    Result = ComputeNumSignBitsAllElts(1);
-    Result = std::min(Result, ComputeNumSignBitsAllElts(0));
-    return Result;
+    APInt DemandedSubElts = SubEC.isScalable()
+                                ? APInt(1, 1)
+                                : APInt::getAllOnes(SubEC.getFixedValue());
+    Result = ComputeNumSignBits(1, DemandedSubElts);
+    if (Result == 1)
+      return 1;
+    return std::min(Result, ComputeNumSignBits(0, APInt(1, 1)));
   }
 
   unsigned NumSubElts = SubEC.getFixedValue();
