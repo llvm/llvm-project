@@ -1,6 +1,7 @@
 @AUTO_GEN_COMMENT@
 
 config.test_c_compiler = "@OPENMP_TEST_C_COMPILER@"
+config.test_cxx_compiler = "@OPENMP_TEST_CXX_COMPILER@"
 config.test_compiler_features = @OPENMP_TEST_COMPILER_FEATURES@
 config.test_filecheck = "@OPENMP_FILECHECK_EXECUTABLE@"
 config.test_not = "@OPENMP_NOT_EXECUTABLE@"
@@ -17,6 +18,8 @@ config.target_triple = "@LLVM_TARGET_TRIPLE@"
 config.ompt_plugin = "@OMPT_PLUGIN@"
 config.ompt_include_dir = "@LIBOMP_INCLUDE_DIR@"
 config.ompd_module = "@CMAKE_CURRENT_BINARY_DIR@/../gdb-plugin/python-module/ompd/"
+config.llvm_config = "@LLVM_TOOLS_BINARY_DIR@/llvm-config"
+config.llvm_library_dir = "@LLVM_LIBRARY_DIR@"
 
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
