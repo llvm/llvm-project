@@ -164,7 +164,6 @@ headers_not_available = list(map(Header, [
     "linalg",
     "rcu",
     "spanstream",
-    "stacktrace",
     "stdfloat",
 ]))
 
@@ -209,6 +208,7 @@ mandatory_inclusions = {
     "regex": ["compare", "initializer_list"],
     "set": ["compare", "initializer_list"],
     "stack": ["compare", "initializer_list"],
+    "stacktrace": ["compare"],
     "string_view": ["compare"],
     "string": ["compare", "initializer_list"],
     "syncstream": ["ostream"],

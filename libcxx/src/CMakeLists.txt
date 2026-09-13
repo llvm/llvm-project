@@ -39,6 +39,13 @@ set(LIBCXX_SOURCES
   ryu/d2fixed.cpp
   ryu/d2s.cpp
   ryu/f2s.cpp
+  stacktrace/aix_impl.cpp
+  stacktrace/default_impl.cpp
+  stacktrace/entry.cpp
+  stacktrace/images.h
+  stacktrace/macos_impl.cpp
+  stacktrace/trace.cpp
+  stacktrace/windows_impl.cpp
   stdexcept.cpp
   string.cpp
   support/runtime/exception_fallback.ipp
@@ -59,6 +66,15 @@ set(LIBCXX_SOURCES
   vector.cpp
   verbose_abort.cpp
   )
+
+# -ffunction-sections (enabled above) splits each function's ARM EHABI unwind-index
+# entry into its own section; on some bare-metal targets the final link doesn't keep
+# these address-sorted, which breaks the binary-search unwind lookup. trace.cpp's
+# stack-walking code needs reliable unwind info, so exempt it.
+if (NOT MSVC AND NOT CMAKE_CXX_COMPILER_ID MATCHES "XL")
+  set_source_files_properties(stacktrace/trace.cpp PROPERTIES
+                               COMPILE_OPTIONS "-fno-function-sections;-fno-data-sections")
+endif()
 
 if (LIBCXX_ENABLE_THREADS)
   list(APPEND LIBCXX_SOURCES

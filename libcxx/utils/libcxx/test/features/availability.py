@@ -211,4 +211,35 @@ features += [
             cfg.available_features,
         ),
     ),
+    # Tests that require std::stacktrace in the built library
+    Feature(
+        name="availability-stacktrace-missing",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "(!libcpp-has-no-availability-markup && (stdlib=apple-libc++ && !_target-has-llvm-23))"
+            # 32-bit x86 Android's own (non-LLVM) unwinder is unreliable before API 24: it's the
+            # same legacy i686-linux-android(21|22|23) combination that llvm-libc++-android.cfg.in
+            # already works around a separate stack-misalignment bug for (see the -mstackrealign
+            # comment there and https://github.com/android/ndk/issues/693). Here it manifests as
+            # std::stacktrace::current() silently capturing an empty/truncated trace rather than
+            # a crash, so just treat stacktrace as unavailable on this narrow legacy combination.
+            "|| (target={{i686-linux-android.*}} && android-device-api={{2[123]}})"
+            # 32-bit x86 Windows: capture crashes outright (RtlCaptureContext's frame-pointer
+            # capture is unreliable on i686) rather than just producing a bad trace. Not treated
+            # as worth chasing further; declared unsupported here rather than fixed.
+            "|| target={{i686-.*windows.*}}",
+            cfg.available_features,
+        ),
+    ),
+    # Tests that require std::stacktrace_entry::source_file()/description() to resolve to
+    # something non-empty for a real capture. On bare-metal targets (no dynamic loader, no
+    # filesystem), there's no dl_iterate_phdr/proc-self-exe equivalent to learn the running
+    # image's own name from, so entries can never be associated with a source file/description,
+    # even though capturing a stacktrace itself works fine.
+    Feature(
+        name="availability-stacktrace-no-image-info",
+        when=lambda cfg: BooleanExpression.evaluate(
+            "target={{.*-none-eabi.*}}",
+            cfg.available_features,
+        ),
+    ),
 ]
