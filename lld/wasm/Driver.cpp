@@ -669,6 +669,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   // --threads= takes a positive integer and provides the default value for
   // --thinlto-jobs=.
+  parallel::strategy = available_concurrency();
   if (auto *arg = args.getLastArg(OPT_threads)) {
     StringRef v(arg->getValue());
     unsigned threads = 0;
