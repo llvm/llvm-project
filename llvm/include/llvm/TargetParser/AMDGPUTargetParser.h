@@ -192,12 +192,49 @@ LLVM_ABI unsigned getAddressableNumVGPRs(GPUKind AK, bool IsWave32);
 LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
                                          bool IsWave32);
 
-/// \returns Maximum LDS in bytes a single work-group can address. This is a
-/// fixed hardware cap and does not depend on how many SIMDs a work-group runs
-/// on.
+/// LDS size queries.
+///
+/// \c getMaxHWAddressableLocalMemorySize returns the architectural limit that
+/// one work-group can address. It is independent of execution mode.
+///
+/// \c getLocalMemorySize returns the LDS available to all work-groups sharing a
+/// physical block, which is the LDS capacity used to compute occupancy. In
+/// full-SIMD mode, a work-group runs on four SIMDs and the query returns the
+/// full physical block. In half-SIMD mode, it runs on two SIMDs and the query
+/// returns half the block.
+///
+/// \c getAddressableLocalMemorySize returns the amount one work-group can
+/// allocate:
+///
+///   min(getMaxHWAddressableLocalMemorySize(), getLocalMemorySize())
+///
+/// The physical LDS block belongs to a WGP on gfx10/11/12 and to a CU
+/// otherwise. On gfx10/11/12, the block is twice the address limit, so a
+/// work-group cannot address the entire block in full-SIMD mode.
+///
+/// The mode columns below show local/addressable LDS, in KiB:
+///
+///   GPU      address limit   full-SIMD   half-SIMD
+///   gfx900              64        64/64   n/a (always full-SIMD)
+///   gfx1030             64       128/64   64/64
+///   gfx1250            320      320/320   n/a (always full-SIMD)
+
+/// \returns Maximum LDS in bytes a single work-group can address.
 LLVM_ABI unsigned getMaxHWAddressableLocalMemorySize(GPUKind AK);
 LLVM_ABI unsigned
 getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch);
+
+/// \returns Total LDS in bytes available to work-groups sharing a physical
+/// block. \p FullSIMDMode selects full-SIMD mode (four SIMDs) when true and
+/// half-SIMD mode (two SIMDs) otherwise.
+LLVM_ABI unsigned getLocalMemorySize(GPUKind AK, bool FullSIMDMode);
+LLVM_ABI unsigned getLocalMemorySize(Triple::SubArchType SubArch,
+                                     bool FullSIMDMode);
+
+/// \returns LDS in bytes a single work-group can allocate.
+LLVM_ABI unsigned getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode);
+LLVM_ABI unsigned getAddressableLocalMemorySize(Triple::SubArchType SubArch,
+                                                bool FullSIMDMode);
 
 /// \returns Number of LDS banks per compute unit.
 LLVM_ABI unsigned getLDSBankCount(GPUKind AK);
