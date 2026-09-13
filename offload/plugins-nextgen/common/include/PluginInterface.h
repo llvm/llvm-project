@@ -1699,9 +1699,6 @@ public:
   /// Returns non-zero if the \p Image is compatible with the device.
   int32_t isDeviceCompatible(int32_t DeviceId, StringRef Image);
 
-  /// Return the number of devices this plugin can support.
-  int32_t number_of_devices();
-
   /// Initializes the record and replay mechanism inside the plugin.
   int32_t initialize_record_replay(int32_t DeviceId, int64_t MemorySize,
                                    void *VAddr, bool IsRecord, bool IsNative,

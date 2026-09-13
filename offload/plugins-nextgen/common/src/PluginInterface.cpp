@@ -1485,8 +1485,6 @@ int32_t GenericPluginTy::isDeviceCompatible(int32_t DeviceId, StringRef Image) {
   }
 }
 
-int32_t GenericPluginTy::number_of_devices() { return getNumDevices(); }
-
 int32_t GenericPluginTy::initialize_record_replay(
     int32_t DeviceId, int64_t MemorySize, void *VAddr, bool IsRecord,
     bool IsNative, bool SaveOutput, bool EmitReport, const char *ReportFilename,
