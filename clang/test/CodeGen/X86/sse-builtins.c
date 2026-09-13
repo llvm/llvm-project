@@ -12,6 +12,67 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+// Exercise equal, less-than, unordered, and greater-than lanes.
+#define CMP_PS_A ((__m128){1.0f, 1.0f, __builtin_nanf(""), 2.0f})
+#define CMP_PS_B ((__m128){1.0f, 2.0f, 0.0f, 1.0f})
+
+#define TEST_SSE_IMM(PRED, EQ, LT, UNORD, GT)                              \
+  TEST_CONSTEXPR(match_cmp_mask(_mm_cmp_ps(CMP_PS_A, CMP_PS_B, PRED), EQ,  \
+                                 LT, UNORD, GT));                           \
+  TEST_CONSTEXPR(match_scalar_cmp_mask(                                    \
+      _mm_cmp_ss(CMP_PS_A, CMP_PS_B, PRED), CMP_PS_A, EQ))
+
+TEST_SSE_IMM(_CMP_EQ_OQ, 1, 0, 0, 0);
+TEST_SSE_IMM(_CMP_LT_OS, 0, 1, 0, 0);
+TEST_SSE_IMM(_CMP_LE_OS, 1, 1, 0, 0);
+TEST_SSE_IMM(_CMP_UNORD_Q, 0, 0, 1, 0);
+TEST_SSE_IMM(_CMP_NEQ_UQ, 0, 1, 1, 1);
+TEST_SSE_IMM(_CMP_NLT_US, 1, 0, 1, 1);
+TEST_SSE_IMM(_CMP_NLE_US, 0, 0, 1, 1);
+TEST_SSE_IMM(_CMP_ORD_Q, 1, 1, 0, 1);
+
+#define TEST_SSE_NAMED_CMP(NAME, EQ, LT, UNORD, GT)                        \
+  TEST_CONSTEXPR(match_cmp_mask(_mm_cmp##NAME##_ps(CMP_PS_A, CMP_PS_B),    \
+                                 EQ, LT, UNORD, GT));                       \
+  TEST_CONSTEXPR(match_scalar_cmp_mask(                                    \
+      _mm_cmp##NAME##_ss(CMP_PS_A, CMP_PS_B), CMP_PS_A, EQ))
+
+TEST_SSE_NAMED_CMP(eq, 1, 0, 0, 0);
+TEST_SSE_NAMED_CMP(lt, 0, 1, 0, 0);
+TEST_SSE_NAMED_CMP(le, 1, 1, 0, 0);
+TEST_SSE_NAMED_CMP(unord, 0, 0, 1, 0);
+TEST_SSE_NAMED_CMP(neq, 0, 1, 1, 1);
+TEST_SSE_NAMED_CMP(nlt, 1, 0, 1, 1);
+TEST_SSE_NAMED_CMP(nle, 0, 0, 1, 1);
+TEST_SSE_NAMED_CMP(ord, 1, 1, 0, 1);
+TEST_SSE_NAMED_CMP(gt, 0, 0, 0, 1);
+TEST_SSE_NAMED_CMP(ge, 1, 0, 0, 1);
+TEST_SSE_NAMED_CMP(nge, 0, 1, 1, 0);
+TEST_SSE_NAMED_CMP(ngt, 1, 1, 1, 0);
+
+#define TEST_SSE_COMI(NAME, A, B, EXPECTED)                                \
+  TEST_CONSTEXPR(_mm_comi##NAME##_ss((__m128){A, 0.0f, 0.0f, 0.0f},       \
+                                      (__m128){B, 0.0f, 0.0f, 0.0f}) ==    \
+                 EXPECTED);                                                \
+  TEST_CONSTEXPR(_mm_ucomi##NAME##_ss((__m128){A, 0.0f, 0.0f, 0.0f},      \
+                                       (__m128){B, 0.0f, 0.0f, 0.0f}) ==   \
+                 EXPECTED)
+
+TEST_SSE_COMI(eq, 1.0f, 1.0f, 1);
+TEST_SSE_COMI(lt, 1.0f, 2.0f, 1);
+TEST_SSE_COMI(le, 1.0f, 1.0f, 1);
+TEST_SSE_COMI(gt, 2.0f, 1.0f, 1);
+TEST_SSE_COMI(ge, 1.0f, 1.0f, 1);
+TEST_SSE_COMI(neq, 1.0f, 2.0f, 1);
+TEST_SSE_COMI(eq, __builtin_nanf(""), 1.0f, 0);
+TEST_SSE_COMI(neq, __builtin_nanf(""), 1.0f, 1);
+
+#undef TEST_SSE_COMI
+#undef TEST_SSE_NAMED_CMP
+#undef TEST_SSE_IMM
+#undef CMP_PS_B
+#undef CMP_PS_A
+
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/sse-intrinsics-fast-isel.ll
 
 __m128 test_mm_add_ps(__m128 A, __m128 B) {

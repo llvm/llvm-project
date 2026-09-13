@@ -24,6 +24,76 @@
 #include <immintrin.h>
 #include "builtin_test_helpers.h"
 
+// Exercise equal, less-than, unordered, and greater-than lanes.
+#define CMP_PS128_A ((__m128){1.0f, 1.0f, __builtin_nanf(""), 2.0f})
+#define CMP_PS128_B ((__m128){1.0f, 2.0f, 0.0f, 1.0f})
+#define CMP_PS256_A ((__m256){1.0f, 1.0f, __builtin_nanf(""), 2.0f,        \
+                              1.0f, 1.0f, __builtin_nanf(""), 2.0f})
+#define CMP_PS256_B ((__m256){1.0f, 2.0f, 0.0f, 1.0f,                     \
+                              1.0f, 2.0f, 0.0f, 1.0f})
+#define CMP_PD128_A ((__m128d){1.0, __builtin_nan("")})
+#define CMP_PD128_B ((__m128d){1.0, 0.0})
+#define CMP_PD256_A ((__m256d){1.0, 1.0, __builtin_nan(""), 2.0})
+#define CMP_PD256_B ((__m256d){1.0, 2.0, 0.0, 1.0})
+
+#define TEST_AVX_CMP(PRED, EQ, LT, UNORD, GT)                              \
+  TEST_CONSTEXPR(match_cmp_mask(                                           \
+      _mm256_cmp_ps(CMP_PS256_A, CMP_PS256_B, PRED),                       \
+      EQ, LT, UNORD, GT, EQ, LT, UNORD, GT));                              \
+  TEST_CONSTEXPR(match_cmp_mask(                                           \
+      _mm256_cmp_pd(CMP_PD256_A, CMP_PD256_B, PRED), EQ, LT, UNORD, GT));  \
+  TEST_CONSTEXPR(match_cmp_mask(                                           \
+      _mm_cmp_ps(CMP_PS128_A, CMP_PS128_B, PRED), EQ, LT, UNORD, GT));     \
+  TEST_CONSTEXPR(match_cmp_mask(                                           \
+      _mm_cmp_pd(CMP_PD128_A, CMP_PD128_B, PRED), EQ, UNORD));             \
+  TEST_CONSTEXPR(match_scalar_cmp_mask(                                    \
+      _mm_cmp_ss(CMP_PS128_A, CMP_PS128_B, PRED), CMP_PS128_A, EQ));       \
+  TEST_CONSTEXPR(match_scalar_cmp_mask(                                    \
+      _mm_cmp_sd(CMP_PD128_A, CMP_PD128_B, PRED), CMP_PD128_A, EQ))
+
+TEST_AVX_CMP(_CMP_EQ_OQ, 1, 0, 0, 0);
+TEST_AVX_CMP(_CMP_LT_OS, 0, 1, 0, 0);
+TEST_AVX_CMP(_CMP_LE_OS, 1, 1, 0, 0);
+TEST_AVX_CMP(_CMP_UNORD_Q, 0, 0, 1, 0);
+TEST_AVX_CMP(_CMP_NEQ_UQ, 0, 1, 1, 1);
+TEST_AVX_CMP(_CMP_NLT_US, 1, 0, 1, 1);
+TEST_AVX_CMP(_CMP_NLE_US, 0, 0, 1, 1);
+TEST_AVX_CMP(_CMP_ORD_Q, 1, 1, 0, 1);
+TEST_AVX_CMP(_CMP_EQ_UQ, 1, 0, 1, 0);
+TEST_AVX_CMP(_CMP_NGE_US, 0, 1, 1, 0);
+TEST_AVX_CMP(_CMP_NGT_US, 1, 1, 1, 0);
+TEST_AVX_CMP(_CMP_FALSE_OQ, 0, 0, 0, 0);
+TEST_AVX_CMP(_CMP_NEQ_OQ, 0, 1, 0, 1);
+TEST_AVX_CMP(_CMP_GE_OS, 1, 0, 0, 1);
+TEST_AVX_CMP(_CMP_GT_OS, 0, 0, 0, 1);
+TEST_AVX_CMP(_CMP_TRUE_UQ, 1, 1, 1, 1);
+TEST_AVX_CMP(_CMP_EQ_OS, 1, 0, 0, 0);
+TEST_AVX_CMP(_CMP_LT_OQ, 0, 1, 0, 0);
+TEST_AVX_CMP(_CMP_LE_OQ, 1, 1, 0, 0);
+TEST_AVX_CMP(_CMP_UNORD_S, 0, 0, 1, 0);
+TEST_AVX_CMP(_CMP_NEQ_US, 0, 1, 1, 1);
+TEST_AVX_CMP(_CMP_NLT_UQ, 1, 0, 1, 1);
+TEST_AVX_CMP(_CMP_NLE_UQ, 0, 0, 1, 1);
+TEST_AVX_CMP(_CMP_ORD_S, 1, 1, 0, 1);
+TEST_AVX_CMP(_CMP_EQ_US, 1, 0, 1, 0);
+TEST_AVX_CMP(_CMP_NGE_UQ, 0, 1, 1, 0);
+TEST_AVX_CMP(_CMP_NGT_UQ, 1, 1, 1, 0);
+TEST_AVX_CMP(_CMP_FALSE_OS, 0, 0, 0, 0);
+TEST_AVX_CMP(_CMP_NEQ_OS, 0, 1, 0, 1);
+TEST_AVX_CMP(_CMP_GE_OQ, 1, 0, 0, 1);
+TEST_AVX_CMP(_CMP_GT_OQ, 0, 0, 0, 1);
+TEST_AVX_CMP(_CMP_TRUE_US, 1, 1, 1, 1);
+
+#undef TEST_AVX_CMP
+#undef CMP_PD256_B
+#undef CMP_PD256_A
+#undef CMP_PD128_B
+#undef CMP_PD128_A
+#undef CMP_PS256_B
+#undef CMP_PS256_A
+#undef CMP_PS128_B
+#undef CMP_PS128_A
+
 // NOTE: This should match the tests in llvm/test/CodeGen/X86/avx-intrinsics-fast-isel.ll
 
 __m256d test_mm256_add_pd(__m256d A, __m256d B) {
