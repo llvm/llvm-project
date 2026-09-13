@@ -386,8 +386,7 @@ define void @replace_const0_memcpy_by_memset(ptr align 4 %dst) {
 ; GFX942-LABEL: replace_const0_memcpy_by_memset:
 ; GFX942:       ; %bb.0: ; %entry
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v3, v2
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], 0
 ; GFX942-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]

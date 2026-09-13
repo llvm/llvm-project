@@ -33,6 +33,8 @@ bb:                                               ; preds = %bb49, %.lr.ph.i
   %.sroa.678.2 = phi <16 x float> [ zeroinitializer, %.lr.ph.i ], [ %i89, %bb49 ]
   %.sroa.730.2 = phi <16 x float> [ zeroinitializer, %.lr.ph.i ], [ %i90, %bb49 ]
   %.sroa.782.2 = phi <16 x float> [ zeroinitializer, %.lr.ph.i ], [ %i77, %bb49 ]
+  %new.h.0 = phi <16 x float> [ zeroinitializer, %.lr.ph.i ], [ %new.l.0, %bb49 ]
+  %new.h.1 = phi <16 x float> [ zeroinitializer, %.lr.ph.i ], [ %new.l.1, %bb49 ]
   %i = phi i64 [ 0, %.lr.ph.i ], [ 1, %bb49 ]
   br i1 %arg, label %bb1, label %bb2
 
@@ -87,6 +89,10 @@ bb2:                                              ; preds = %bb
   %i46 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %i31, i32 0, i32 0, i32 0)
   %i47 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %i32, i32 0, i32 0, i32 0)
   %i48 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %i33, i32 0, i32 0, i32 0)
+  %new.m2.0 = fmul <16 x float> %new.h.0, zeroinitializer
+  %new.a2.0 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %new.m2.0, i32 0, i32 0, i32 0)
+  %new.m2.1 = fmul <16 x float> %new.h.1, zeroinitializer
+  %new.a2.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %new.m2.1, i32 0, i32 0, i32 0)
   br label %bb49
 
 bb49:                                             ; preds = %bb2, %bb1
@@ -106,6 +112,8 @@ bb49:                                             ; preds = %bb2, %bb1
   %.sroa.678.3 = phi <16 x float> [ %.sroa.678.2, %bb1 ], [ %i46, %bb2 ]
   %.sroa.730.3 = phi <16 x float> [ %.sroa.730.2, %bb1 ], [ %i47, %bb2 ]
   %.sroa.782.3 = phi <16 x float> [ %.sroa.782.2, %bb1 ], [ %i48, %bb2 ]
+  %new.h3.0 = phi <16 x float> [ %new.h.0, %bb1 ], [ %new.a2.0, %bb2 ]
+  %new.h3.1 = phi <16 x float> [ %new.h.1, %bb1 ], [ %new.a2.1, %bb2 ]
   %i50 = fmul <16 x float> %.sroa.01121.3, zeroinitializer
   %i51 = fmul <16 x float> %.sroa.54.3, zeroinitializer
   %i52 = fmul <16 x float> %.sroa.106.3, zeroinitializer
@@ -147,6 +155,10 @@ bb49:                                             ; preds = %bb2, %bb1
   %i88 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %.sroa.574.2, i32 0, i32 0, i32 0)
   %i89 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %i75, i32 0, i32 0, i32 0)
   %i90 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %i76, i32 0, i32 0, i32 0)
+  %new.m3.0 = fmul <16 x float> %new.h3.0, zeroinitializer
+  %new.l.0 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %new.m3.0, i32 0, i32 0, i32 0)
+  %new.m3.1 = fmul <16 x float> %new.h3.1, zeroinitializer
+  %new.l.1 = tail call <16 x float> @llvm.amdgcn.mfma.f32.32x32x16.bf16(<8 x bfloat> zeroinitializer, <8 x bfloat> zeroinitializer, <16 x float> %new.m3.1, i32 0, i32 0, i32 0)
   %exitcond.not.i = icmp eq i64 %i, 0
   br i1 %exitcond.not.i, label %._crit_edge.i.loopexit, label %bb
 
