@@ -2092,6 +2092,8 @@ static bool anyTypeContainsFP(Type *RetTy, ArrayRef<Value *> Ops) {
 
 bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
                                  const TargetLibraryInfo *TLI) {
+  if (Call->isMustTailCall())
+    return false;
   if (Call->isNoBuiltin())
     return false;
   if (Call->getFunctionType() != F->getFunctionType())
@@ -2201,12 +2203,14 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
   case LibFunc_sinhf_finite:
   case LibFunc_sqrt:
   case LibFunc_sqrtf:
+  case LibFunc_strlen:
   case LibFunc_tan:
   case LibFunc_tanf:
   case LibFunc_tanh:
   case LibFunc_tanhf:
   case LibFunc_trunc:
   case LibFunc_truncf:
+  case LibFunc_wcslen:
     return true;
   default:
     return false;
@@ -2605,6 +2609,23 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       }
       return nullptr;
     }
+  }
+
+  if (Name == "strlen") {
+    if (uint64_t Len = GetStringLength(Operands[0]))
+      return ConstantInt::get(Ty, Len - 1);
+    return nullptr;
+  }
+
+  if (Name == "wcslen") {
+    if (!TLI || !Call || !Call->getModule())
+      return nullptr;
+    unsigned WCharSize = TLI->getWCharSize(*Call->getModule()) * 8;
+    if (WCharSize == 0)
+      return nullptr;
+    if (uint64_t Len = GetStringLength(Operands[0], WCharSize))
+      return ConstantInt::get(Ty, Len - 1);
+    return nullptr;
   }
 
   if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {
