@@ -1680,6 +1680,13 @@ static bool IsOverloadOrOverrideImpl(Sema &SemaRef, FunctionDecl *New,
               !hasExplicitAttr<CUDADeviceAttr>(New)) {
             return false;
           }
+          // Redeclarations inherit behavior for the __host__ __device__ case.
+          if (OldTarget == CUDAFunctionTarget::HostDevice &&
+              NewTarget == CUDAFunctionTarget::Host &&
+              !hasExplicitAttr<CUDAHostAttr>(New) &&
+              !hasExplicitAttr<CUDADeviceAttr>(New)) {
+            return false;
+          }
           return true;
         }
       }
