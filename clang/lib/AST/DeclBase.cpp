@@ -1080,16 +1080,23 @@ const AttrVec &Decl::getAttrs() const {
 }
 
 Decl *Decl::castFromDeclContext (const DeclContext *D) {
+  if (Decl *Cached = D->CachedDecl.load(std::memory_order_relaxed))
+    return Cached;
+
   Decl::Kind DK = D->getDeclKind();
+  Decl *Result = nullptr;
   switch (DK) {
 #define DECL(NAME, BASE)
 #define DECL_CONTEXT(NAME)                                                     \
   case Decl::NAME:                                                             \
-    return static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));
+    Result = static_cast<NAME##Decl *>(const_cast<DeclContext *>(D));          \
+    break;
 #include "clang/AST/DeclNodes.inc"
   default:
     llvm_unreachable("a decl that inherits DeclContext isn't handled");
   }
+  D->CachedDecl.store(Result, std::memory_order_relaxed);
+  return Result;
 }
 
 DeclContext *Decl::castToDeclContext(const Decl *D) {
