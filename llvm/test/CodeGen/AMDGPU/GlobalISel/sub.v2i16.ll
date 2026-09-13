@@ -399,9 +399,7 @@ define amdgpu_ps i32 @s_sub_v2i16(<2 x i16> inreg %a, <2 x i16> inreg %b) {
 define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg %b) {
 ; GFX9-LABEL: s_sub_v2i16_fneg_lhs:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX9-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX9-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX9-NEXT:    s_sub_i32 s0, s0, s1
@@ -411,9 +409,7 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg 
 ;
 ; GFX8-LABEL: s_sub_v2i16_fneg_lhs:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; GFX8-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX8-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX8-NEXT:    s_sub_i32 s0, s0, s1
@@ -426,9 +422,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg 
 ;
 ; GFX10-LABEL: s_sub_v2i16_fneg_lhs:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
+; GFX10-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; GFX10-NEXT:    s_lshr_b32 s3, s1, 16
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX10-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX10-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX10-NEXT:    s_sub_i32 s1, s2, s3
@@ -437,9 +432,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg 
 ;
 ; GFX11-LABEL: s_sub_v2i16_fneg_lhs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
+; GFX11-NEXT:    s_xor_b32 s0, s0, 0x80008000
 ; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX11-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX11-NEXT:    s_sub_i32 s1, s2, s3
@@ -455,9 +449,7 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs(<2 x half> inreg %a, <2 x i16> inreg 
 define amdgpu_ps i32 @s_sub_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg %b) {
 ; GFX9-LABEL: s_sub_v2i16_fneg_rhs:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX9-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX9-NEXT:    s_sub_i32 s0, s0, s1
@@ -467,9 +459,7 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg 
 ;
 ; GFX8-LABEL: s_sub_v2i16_fneg_rhs:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_mov_b32_e32 v0, s1
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX8-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX8-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX8-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX8-NEXT:    s_sub_i32 s0, s0, s1
@@ -482,9 +472,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg 
 ;
 ; GFX10-LABEL: s_sub_v2i16_fneg_rhs:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_xor_b32_e64 v0, 0x80008000, s1
+; GFX10-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX10-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX10-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX10-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX10-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX10-NEXT:    s_sub_i32 s1, s2, s3
@@ -493,9 +482,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg 
 ;
 ; GFX11-LABEL: s_sub_v2i16_fneg_rhs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_xor_b32_e64 v0, 0x80008000, s1
+; GFX11-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX11-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX11-NEXT:    s_sub_i32 s1, s2, s3
@@ -511,12 +499,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_rhs(<2 x i16> inreg %a, <2 x half> inreg 
 define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs_fneg_rhs(<2 x half> inreg %a, <2 x half> inreg %b) {
 ; GFX9-LABEL: s_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX9-NEXT:    v_mov_b32_e32 v0, s1
-; GFX9-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX9-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX9-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX9-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX9-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX9-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX9-NEXT:    s_sub_i32 s0, s0, s1
@@ -526,12 +510,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs_fneg_rhs(<2 x half> inreg %a, <2 x ha
 ;
 ; GFX8-LABEL: s_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX8-NEXT:    v_mov_b32_e32 v0, s1
-; GFX8-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s1, v0
+; GFX8-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX8-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX8-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX8-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX8-NEXT:    s_sub_i32 s0, s0, s1
@@ -544,10 +524,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs_fneg_rhs(<2 x half> inreg %a, <2 x ha
 ;
 ; GFX10-LABEL: s_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
-; GFX10-NEXT:    v_xor_b32_e64 v1, 0x80008000, s1
-; GFX10-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX10-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX10-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX10-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX10-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX10-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX10-NEXT:    s_sub_i32 s0, s0, s1
@@ -557,10 +535,8 @@ define amdgpu_ps i32 @s_sub_v2i16_fneg_lhs_fneg_rhs(<2 x half> inreg %a, <2 x ha
 ;
 ; GFX11-LABEL: s_sub_v2i16_fneg_lhs_fneg_rhs:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_xor_b32_e64 v0, 0x80008000, s0
-; GFX11-NEXT:    v_xor_b32_e64 v1, 0x80008000, s1
-; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-NEXT:    s_xor_b32 s0, s0, 0x80008000
+; GFX11-NEXT:    s_xor_b32 s1, s1, 0x80008000
 ; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
 ; GFX11-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX11-NEXT:    s_sub_i32 s0, s0, s1

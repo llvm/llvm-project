@@ -803,9 +803,7 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX8-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s3
-; GFX8-GISEL-NEXT:    v_xor_b32_e32 v0, 0x80008000, v0
-; GFX8-GISEL-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX8-GISEL-NEXT:    s_xor_b32 s0, s3, 0x80008000
 ; GFX8-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX8-GISEL-NEXT:    s_lshr_b32 s3, s0, 16
 ; GFX8-GISEL-NEXT:    v_add_f16_e32 v0, s2, v0
@@ -873,15 +871,7 @@ define amdgpu_ps <2 x half> @s_constained_fsub_v2f16_fpexcept_strict(<2 x half> 
 ;
 ; GFX12-GISEL-LABEL: s_constained_fsub_v2f16_fpexcept_strict:
 ; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_lshr_b32 s0, s3, 16
-; GFX12-GISEL-NEXT:    s_xor_b32 s1, s3, 0x8000
-; GFX12-GISEL-NEXT:    s_xor_b32 s0, s0, 0x8000
-; GFX12-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
-; GFX12-GISEL-NEXT:    s_add_f16 s1, s2, s1
-; GFX12-GISEL-NEXT:    s_add_f16 s0, s3, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX12-GISEL-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GFX12-GISEL-NEXT:    v_pk_add_f16 v0, s2, s3 neg_lo:[0,1] neg_hi:[0,1]
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call <2 x half> @llvm.experimental.constrained.fsub.v2f16(<2 x half> %x, <2 x half> %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret <2 x half> %val
