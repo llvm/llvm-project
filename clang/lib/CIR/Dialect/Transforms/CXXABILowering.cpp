@@ -55,7 +55,7 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
   // can have a data member/method.
   if (isa<mlir::DenseArrayAttr, mlir::FloatAttr, mlir::UnitAttr,
           mlir::StringAttr, mlir::IntegerAttr, mlir::SymbolRefAttr,
-          cir::AnnotationAttr>(attr))
+          cir::AnnotationAttr, cir::SanitizeAttr>(attr))
     return true;
 
   // Tablegen'ed always-legal attributes:
