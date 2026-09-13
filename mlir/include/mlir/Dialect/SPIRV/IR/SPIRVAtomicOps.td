@@ -438,6 +438,130 @@ def SPIRV_EXTAtomicFAddOp : SPIRV_ExtVendorOp<"AtomicFAdd", [
 
 // -----
 
+def SPIRV_EXTAtomicFMinOp : SPIRV_ExtVendorOp<"AtomicFMin", [
+  PointeeTypeMatchTrait<"pointer", "result">,
+  PointeeTypeMatchTrait<"pointer", "value">,
+]> {
+  let summary = "TBD";
+
+  let description = [{
+
+    <!-- End of AutoGen section -->
+
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value by finding the smallest floating-point number of
+    Original Value and Value, and
+
+    3) store the New Value back through Pointer.
+
+    The instruction's result is the Original Value.
+
+    Result Type must be a floating-point type scalar.
+
+    The type of Value must be the same as Result Type. The type of the value
+    pointed to by Pointer must be the same as Result Type.
+
+    Memory must be a valid memory Scope.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.EXT.AtomicFMin <Device> <None> %pointer, %value :
+                           !spirv.ptr<f32, StorageBuffer>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_shader_atomic_float_min_max]>,
+    Capability<[SPIRV_C_AtomicFloat16MinMaxEXT, SPIRV_C_AtomicFloat32MinMaxEXT, SPIRV_C_AtomicFloat64MinMaxEXT]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics,
+    SPIRV_Float:$value
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = [{
+    $memory_scope $semantics operands attr-dict `:` type($pointer)
+  }];
+}
+
+// -----
+
+def SPIRV_EXTAtomicFMaxOp : SPIRV_ExtVendorOp<"AtomicFMax", [
+  PointeeTypeMatchTrait<"pointer", "result">,
+  PointeeTypeMatchTrait<"pointer", "value">,
+]> {
+  let summary = "TBD";
+
+  let description = [{
+
+    <!-- End of AutoGen section -->
+
+    Perform the following steps atomically with respect to any other atomic
+    accesses within Scope to the same location:
+
+    1) load through Pointer to get an Original Value,
+
+    2) get a New Value by finding the largest floating-point number of
+    Original Value and Value, and
+
+    3) store the New Value back through Pointer.
+
+    The instruction's result is the Original Value.
+
+    Result Type must be a floating-point type scalar.
+
+    The type of Value must be the same as Result Type. The type of the value
+    pointed to by Pointer must be the same as Result Type.
+
+    Memory must be a valid memory Scope.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.EXT.AtomicFMax <Device> <None> %pointer, %value :
+                           !spirv.ptr<f32, StorageBuffer>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[SPV_EXT_shader_atomic_float_min_max]>,
+    Capability<[SPIRV_C_AtomicFloat16MinMaxEXT, SPIRV_C_AtomicFloat32MinMaxEXT, SPIRV_C_AtomicFloat64MinMaxEXT]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer,
+    SPIRV_ScopeAttr:$memory_scope,
+    SPIRV_MemorySemanticsAttr:$semantics,
+    SPIRV_Float:$value
+  );
+
+  let results = (outs
+    SPIRV_Float:$result
+  );
+
+  let assemblyFormat = [{
+    $memory_scope $semantics operands attr-dict `:` type($pointer)
+  }];
+}
+
+// -----
+
 def SPIRV_AtomicIAddOp : SPIRV_AtomicUpdateWithValueOp<"AtomicIAdd", []> {
   let summary = [{
     Perform the following steps atomically with respect to any other atomic
