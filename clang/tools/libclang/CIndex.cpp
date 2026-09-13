@@ -10240,16 +10240,25 @@ CXString clang_getBinaryOperatorKindSpelling(enum CXBinaryOperatorKind kind) {
 enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
 
   auto retOp = [](OverloadedOperatorKind Kind, int numArgs) {
-    if (Kind == OO_Subscript || Kind == OO_Call || Kind == OO_New ||
-        Kind == OO_Array_New || Kind == OO_Delete || Kind == OO_Array_Delete ||
-        Kind == OO_Conditional) {
+    switch (Kind) {
+    case OO_Subscript:
+    case OO_Call:
+    case OO_New:
+    case OO_Array_New:
+    case OO_Delete:
+    case OO_Array_Delete:
+    case OO_Conditional:
       // TODO: how to handle these?
       // These operators aren't handled in getOverloadedOpcode and crash.
+    case OO_PlusPlus:
+    case OO_MinusMinus:
+      // Post-inc/dec and are considered unary despite having 2 arguments.
+    case OO_None:
       return CXBinaryOperator_Invalid;
-    }
+    default:
+      if (numArgs != 2)
+        return CXBinaryOperator_Invalid;
 
-    if (!(Kind == OO_None || Kind == OO_PlusPlus || Kind == OO_MinusMinus ||
-          numArgs != 2)) {
       auto opcode = BinaryOperator::getOverloadedOpcode(Kind);
       return static_cast<CXBinaryOperatorKind>(opcode + 1);
     }
