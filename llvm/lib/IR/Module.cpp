@@ -700,8 +700,21 @@ void Module::setLongDoubleFormat(LongDoubleFormat Format) {
 
 FloatABI::ABIType Module::getFloatABI() const {
   if (auto *Val = dyn_cast_or_null<MDString>(getModuleFlag("float-abi")))
-    return FloatABI::parseABIType(Val->getString()).value_or(FloatABI::Default);
-  return FloatABI::Default;
+    return *FloatABI::parseABIType(Val->getString());
+  // Without an explicit flag, fall back to the ABI implied by the target
+  // triple.
+  return getTargetTriple().getDefaultFloatABI();
+}
+
+ThreadModel Module::getThreadModel() const {
+  if (auto *Val = cast_or_null<MDString>(getModuleFlag("thread-model")))
+    return *parseThreadModel(Val->getString());
+  return getTargetTriple().getDefaultThreadModel();
+}
+
+void Module::setThreadModel(ThreadModel Model) {
+  addModuleFlag(ModFlagBehavior::Error, "thread-model",
+                MDString::get(getContext(), getThreadModelName(Model)));
 }
 
 std::optional<uint64_t> Module::getLargeDataThreshold() const {

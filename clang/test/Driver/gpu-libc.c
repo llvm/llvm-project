@@ -17,13 +17,13 @@
 // RUN:   %clang -### -fopenmp=libomp --target=x86_64-unknown-linux-gnu \
 // RUN:     --offload-arch=gfx908 --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin %s 2>&1 | FileCheck %s --check-prefix=OPENMP-AMDGPU
-// OPENMP-AMDGPU: clang-linker-wrapper{{.*}}"--device-linker=amdgcn-amd-amdhsa=-lc"
+// OPENMP-AMDGPU: clang-linker-wrapper{{.*}}"--device-linker=amdgpu-amd-amdhsa=-lc"
 // RUN:   %clang -### -fopenmp=libomp --target=x86_64-unknown-linux-gnu -foffload-lto \
 // RUN:     --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin %s 2>&1 | FileCheck %s --check-prefix=OPENMP-NVPTX
 // OPENMP-NVPTX: clang-linker-wrapper{{.*}}"--device-linker=nvptx64-nvidia-cuda=-lc"
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx908 \
-// RUN:     --offload-new-driver --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
+// RUN:     --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -x hip %s 2>&1 | FileCheck %s --check-prefix=HIP
 // HIP-NOT: "--device-linker=amdgcn-amd-amdhsa=-lc"
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fgpu-rdc --offload-arch=sm_52 \

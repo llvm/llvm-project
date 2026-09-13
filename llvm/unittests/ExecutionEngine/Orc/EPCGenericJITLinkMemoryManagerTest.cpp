@@ -8,7 +8,7 @@
 
 #include "OrcTestCommon.h"
 
-#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManagerSPS.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
@@ -85,25 +85,24 @@ private:
 };
 
 CWrapperFunctionBuffer testReserve(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReserveSignature>::
-      handle(ArgData, ArgSize,
+  return WrapperFunction<rt::sps_ci::MemMgrReserve::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::reserve))
-          .release();
+      .release();
 }
 
 CWrapperFunctionBuffer testInitialize(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<
-             rt::SPSSimpleExecutorMemoryManagerInitializeSignature>::
-      handle(ArgData, ArgSize,
+  return WrapperFunction<rt::sps_ci::MemMgrInitialize::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::initialize))
-          .release();
+      .release();
 }
 
 CWrapperFunctionBuffer testRelease(const char *ArgData, size_t ArgSize) {
-  return WrapperFunction<rt::SPSSimpleExecutorMemoryManagerReleaseSignature>::
-      handle(ArgData, ArgSize,
+  return WrapperFunction<rt::sps_ci::MemMgrRelease::SPSSig>::handle(
+             ArgData, ArgSize,
              makeMethodWrapperHandler(&SimpleAllocator::release))
-          .release();
+      .release();
 }
 
 TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
@@ -129,7 +128,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, AllocFinalizeFree) {
        {ExecutorAddr::fromPtr(&testRelease), Exported}},
   })));
 
-  auto MemMgr = cantFail(EPCGenericJITLinkMemoryManager::Create(ES));
+  auto MemMgr = cantFail(sps::createEPCGenericJITLinkMemoryManager(ES));
   StringRef Hello = "hello";
   auto SSA = jitlink::SimpleSegmentAlloc::Create(
       *MemMgr, std::make_shared<SymbolStringPool>(),
@@ -181,7 +180,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromJITDylib) {
        {ReleaseAddr, JITSymbolFlags::Exported}},
   })));
 
-  auto Result = EPCGenericJITLinkMemoryManager::Create(JD);
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(JD);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());
@@ -202,7 +201,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFailsOnMissingSymbol) {
        {ExecutorAddr(1), JITSymbolFlags::Exported}},
   })));
 
-  auto Result = EPCGenericJITLinkMemoryManager::Create(JD);
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(JD);
   EXPECT_THAT_EXPECTED(Result, Failed());
 
   cantFail(ES.endSession());
@@ -236,7 +235,7 @@ TEST(EPCGenericJITLinkMemoryManagerTest, CreateFromExecutionSession) {
       std::make_unique<EPCWithBootstrapSymbols>(SSP, std::move(BootstrapSyms));
   ExecutionSession ES(std::move(EPC));
 
-  auto Result = EPCGenericJITLinkMemoryManager::Create(ES);
+  auto Result = sps::createEPCGenericJITLinkMemoryManager(ES);
   EXPECT_THAT_EXPECTED(Result, Succeeded());
 
   cantFail(ES.endSession());

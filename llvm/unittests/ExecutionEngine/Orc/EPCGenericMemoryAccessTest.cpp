@@ -9,7 +9,7 @@
 #include "OrcTestCommon.h"
 
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
-#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccess.h"
+#include "llvm/ExecutionEngine/Orc/EPCGenericMemoryAccessSPS.h"
 #include "llvm/ExecutionEngine/Orc/SelfExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SPSCI/MemoryAccessSPSCI.h"
 #include "llvm/Testing/Support/Error.h"
@@ -122,7 +122,7 @@ public:
         cantFail(SelfExecutorProcessControl::Create()));
 
     // Register the test wrappers in the bootstrap JITDylib under the SPS
-    // controller-interface names, so that EPCGenericMemoryAccess::Create
+    // controller-interface names, so that sps::createEPCGenericMemoryAccess
     // resolves its proxies to them.
     namespace sps_ci = rt::sps_ci;
     auto Exported = JITSymbolFlags::Exported;
@@ -162,7 +162,7 @@ public:
          {ES->intern(sps_ci::MemReadStrings::Name),
           {ExecutorAddr::fromPtr(&testReadStrings), Exported}}})));
 
-    MemAccess = cantFail(EPCGenericMemoryAccess::Create(*ES));
+    MemAccess = cantFail(sps::createEPCGenericMemoryAccess(*ES));
   }
 
   ~EPCGenericMemoryAccessTest() override { cantFail(ES->endSession()); }

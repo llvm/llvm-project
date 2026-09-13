@@ -860,9 +860,7 @@ QualType Sema::buildLambdaInitCaptureInitialization(
   }
   if (EllipsisLoc.isValid()) {
     if (Init->containsUnexpandedParameterPack()) {
-      Diag(EllipsisLoc, getLangOpts().CPlusPlus20
-                            ? diag::warn_cxx17_compat_init_capture_pack
-                            : diag::ext_init_capture_pack);
+      DiagCompat(EllipsisLoc, diag_compat::init_capture_pack);
       DeductType = Context.getPackExpansionType(DeductType, NumExpansions,
                                                 /*ExpectPackInType=*/false);
       TLB.push<PackExpansionTypeLoc>(DeductType).setEllipsisLoc(EllipsisLoc);
@@ -1120,6 +1118,9 @@ void Sema::CompleteLambdaCallOperator(
   }
 
   buildLambdaScopeReturnType(*this, LSI, Method, HasExplicitResultType);
+
+  // Not built by ActOnFunctionDeclarator, so tag it here.
+  addImplicitCallingConvAbiTag(Method);
 }
 
 void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
@@ -1193,9 +1194,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
        PrevCaptureLoc = C->Loc, ++C) {
     if (C->Kind == LCK_This || C->Kind == LCK_StarThis) {
       if (C->Kind == LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus17
-                         ? diag::ext_star_this_lambda_capture_cxx17
-                         : diag::warn_cxx14_compat_star_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::star_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p8:
       //   An identifier or this shall not appear more than once in a
@@ -1214,9 +1213,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
       //  "&identifier", "this", or "* this". [ Note: The form [&,this] is
       //  redundant but accepted for compatibility with ISO C++14. --end note ]
       if (Intro.Default == LCD_ByCopy && C->Kind != LCK_StarThis)
-        Diag(C->Loc, !getLangOpts().CPlusPlus20
-                         ? diag::ext_equals_this_lambda_capture_cxx20
-                         : diag::warn_cxx17_compat_equals_this_lambda_capture);
+        DiagCompat(C->Loc, diag_compat::equals_this_lambda_capture);
 
       // C++11 [expr.prim.lambda]p12:
       //   If this is captured by a local lambda expression, its nearest
@@ -1242,9 +1239,7 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     ValueDecl *Var = nullptr;
     if (C->Init.isUsable()) {
-      Diag(C->Loc, getLangOpts().CPlusPlus14
-                       ? diag::warn_cxx11_compat_init_capture
-                       : diag::ext_init_capture);
+      DiagCompat(C->Loc, diag_compat::init_capture);
 
       // If the initializer expression is usable, but the InitCaptureType
       // is not, then an error has occurred - so ignore the capture for now.
@@ -1513,10 +1508,6 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   CheckCXXDefaultArguments(Method);
 
-  // This represents the function body for the lambda function, check if we
-  // have to apply optnone due to a pragma.
-  AddRangeBasedOptnone(Method);
-
   // code_seg attribute on lambda apply to the method.
   if (Attr *A = getImplicitCodeSegOrSectionAttrForFunction(
           Method, /*IsDefinition=*/true))
@@ -1524,6 +1515,10 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
 
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
+
+  // This represents the function body for the lambda function, check if we
+  // have to apply optnone due to a pragma.
+  AddRangeBasedOptnone(Method);
 
   if (Context.getTargetInfo().getTriple().isAArch64())
     ARM().CheckSMEFunctionDefAttributes(Method);

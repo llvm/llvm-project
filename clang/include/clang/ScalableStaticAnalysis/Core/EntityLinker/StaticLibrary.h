@@ -23,6 +23,7 @@
 
 namespace clang::ssaf {
 
+class LinkCLI;
 class MultiArchCreateCLI;
 class StaticLibraryCreateCLI;
 
@@ -30,8 +31,8 @@ class StaticLibraryCreateCLI;
 ///
 /// A StaticLibrary bundles member translation units without performing
 /// entity resolution, mirroring the role of ar / libtool -static / lib.exe
-/// in native build pipelines. It is consumed by the EntityLinker for
-/// selective inclusion when passed as a command line argument.
+/// in native build pipelines. It is consumed by the EntityLinker when passed
+/// as a command line argument.
 ///
 /// Static libraries are single-architecture: every member's target triple
 /// must equal the library's. Multi-architecture static libraries are
@@ -40,8 +41,13 @@ class StaticLibraryCreateCLI;
 ///
 /// Members are stored as encoded TUSummaryEncoding objects: the
 /// static-library tool never decodes per-entity payloads, and the linker
-/// consumes them as-is during its selective inclusion pass.
+/// consumes them as-is while folding them into its link unit.
+///
+/// TODO: The linker currently folds in every member. Restrict inclusion to
+/// the members a link unit actually references, as native linkers do.
 class StaticLibrary {
+  friend class EntityLinker;
+  friend class LinkCLI;
   friend class MultiArchCreateCLI;
   friend class MultiArchStaticLibrary;
   friend class SerializationFormat;

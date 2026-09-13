@@ -24,12 +24,15 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/Casting.h"
@@ -37,9 +40,10 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <algorithm>
 
-#define DEBUG_TYPE "loadstore-opt"
+#define DEBUG_TYPE "load-store-opt"
 
 using namespace llvm;
+using namespace llvm::GISelAddressing;
 using namespace ore;
 using namespace MIPatternMatch;
 
@@ -47,22 +51,109 @@ STATISTIC(NumStoresMerged, "Number of stores merged");
 
 const unsigned MaxStoreSizeToForm = 128;
 
-char LoadStoreOpt::ID = 0;
-INITIALIZE_PASS_BEGIN(LoadStoreOpt, DEBUG_TYPE, "Generic memory optimizations",
-                      false, false)
-INITIALIZE_PASS_END(LoadStoreOpt, DEBUG_TYPE, "Generic memory optimizations",
-                    false, false)
+namespace {
 
-LoadStoreOpt::LoadStoreOpt(std::function<bool(const MachineFunction &)> F)
-    : MachineFunctionPass(ID), DoNotRunPass(F) {}
+class LoadStoreOptImpl {
+  MachineRegisterInfo *MRI = nullptr;
+  const TargetLowering *TLI = nullptr;
+  MachineFunction *MF = nullptr;
+  AliasAnalysis *AA = nullptr;
+  const LegalizerInfo *LI = nullptr;
 
-LoadStoreOpt::LoadStoreOpt()
-    : LoadStoreOpt([](const MachineFunction &) { return false; }) {}
+  MachineIRBuilder Builder;
 
-void LoadStoreOpt::init(MachineFunction &MF) {
+  /// Initialize the field members using \p MF.
+  void init(MachineFunction &MF, function_ref<AliasAnalysis *()> GetAA);
+
+  class StoreMergeCandidate {
+  public:
+    // The base pointer used as the base for all stores in this candidate.
+    Register BasePtr;
+    // Our algorithm is very simple at the moment. We assume that in instruction
+    // order stores are writing to incremeneting consecutive addresses. So when
+    // we walk the block in reverse order, the next eligible store must write to
+    // an offset one store width lower than CurrentLowestOffset.
+    int64_t CurrentLowestOffset;
+    SmallVector<GStore *> Stores;
+    // A vector of MachineInstr/unsigned pairs to denote potential aliases that
+    // need to be checked before the candidate is considered safe to merge. The
+    // unsigned value is an index into the Stores vector. The indexed store is
+    // the highest-indexed store that has already been checked to not have an
+    // alias with the instruction. We record this so we don't have to repeat
+    // alias checks that have been already done, only those with stores added
+    // after the potential alias is recorded.
+    SmallVector<std::pair<MachineInstr *, unsigned>> PotentialAliases;
+
+    LLVM_ABI void addPotentialAlias(MachineInstr &MI);
+
+    /// Reset this candidate back to an empty one.
+    void reset() {
+      Stores.clear();
+      PotentialAliases.clear();
+      CurrentLowestOffset = 0;
+      BasePtr = Register();
+    }
+  };
+
+  bool isLegalOrBeforeLegalizer(const LegalityQuery &Query,
+                                MachineFunction &MF) const;
+  /// If the given store is valid to be a member of the candidate, add it and
+  /// return true. Otherwise, returns false.
+  bool addStoreToCandidate(GStore &MI, StoreMergeCandidate &C);
+  /// Returns true if the instruction \p MI would potentially alias with any
+  /// stores in the candidate \p C.
+  bool operationAliasesWithCandidate(MachineInstr &MI, StoreMergeCandidate &C);
+  /// Merges the stores in the given vector into a wide store.
+  /// \p returns true if at least some of the stores were merged.
+  /// This may decide not to merge stores if heuristics predict it will not be
+  /// worth it.
+  bool mergeStores(SmallVectorImpl<GStore *> &StoresToMerge);
+  /// Perform a merge of all the stores in \p Stores into a single store.
+  /// Erases the old stores from the block when finished.
+  /// \returns true if merging was done. It may fail to perform a merge if
+  /// there are issues with materializing legal wide values.
+  bool doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores);
+  bool processMergeCandidate(StoreMergeCandidate &C);
+  bool mergeBlockStores(MachineBasicBlock &MBB);
+  bool mergeFunctionStores(MachineFunction &MF);
+
+  bool mergeTruncStore(GStore &StoreMI,
+                       SmallPtrSetImpl<GStore *> &DeletedStores);
+  bool mergeTruncStoresBlock(MachineBasicBlock &MBB);
+
+  /// Initialize some target-specific data structures for the store merging
+  /// optimization. \p AddrSpace indicates which address space to use when
+  /// probing the legalizer info for legal stores.
+  void initializeStoreMergeTargetInfo(unsigned AddrSpace = 0);
+  /// A map between address space numbers and a bitvector of supported stores
+  /// sizes. Each bit in the bitvector represents whether a store size of
+  /// that bit's value is legal. E.g. if bit 64 is set, then 64 bit scalar
+  /// stores are legal.
+  DenseMap<unsigned, BitVector> LegalStoreSizes;
+  bool IsPreLegalizer = false;
+  /// Contains instructions to be erased at the end of a block scan.
+  SmallPtrSet<MachineInstr *, 16> InstsToErase;
+
+public:
+  bool runOnMachineFunction(MachineFunction &MF,
+                            function_ref<AliasAnalysis *()> GetAA);
+};
+
+} // namespace
+
+char LoadStoreOptLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(LoadStoreOptLegacy, DEBUG_TYPE,
+                      "Generic memory optimizations", false, false)
+INITIALIZE_PASS_END(LoadStoreOptLegacy, DEBUG_TYPE,
+                    "Generic memory optimizations", false, false)
+
+LoadStoreOptLegacy::LoadStoreOptLegacy() : MachineFunctionPass(ID) {}
+
+void LoadStoreOptImpl::init(MachineFunction &MF,
+                            function_ref<AliasAnalysis *()> GetAA) {
   this->MF = &MF;
   MRI = &MF.getRegInfo();
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  AA = GetAA();
   TLI = MF.getSubtarget().getTargetLowering();
   LI = MF.getSubtarget().getLegalizerInfo();
   Builder.setMF(MF);
@@ -70,7 +161,7 @@ void LoadStoreOpt::init(MachineFunction &MF) {
   InstsToErase.clear();
 }
 
-void LoadStoreOpt::getAnalysisUsage(AnalysisUsage &AU) const {
+void LoadStoreOptLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<AAResultsWrapperPass>();
   AU.setPreservesAll();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -299,7 +390,7 @@ static bool isInstHardMergeHazard(MachineInstr &MI) {
   return MI.hasUnmodeledSideEffects() || MI.hasOrderedMemoryRef();
 }
 
-bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
+bool LoadStoreOptImpl::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
   // Try to merge all the stores in the vector, splitting into separate segments
   // as necessary.
   assert(StoresToMerge.size() > 1 && "Expected multiple stores to merge");
@@ -344,8 +435,8 @@ bool LoadStoreOpt::mergeStores(SmallVectorImpl<GStore *> &StoresToMerge) {
   return AnyMerged;
 }
 
-bool LoadStoreOpt::isLegalOrBeforeLegalizer(const LegalityQuery &Query,
-                                            MachineFunction &MF) const {
+bool LoadStoreOptImpl::isLegalOrBeforeLegalizer(const LegalityQuery &Query,
+                                                MachineFunction &MF) const {
   auto Action = LI->getAction(Query).Action;
   // If the instruction is unsupported, it can't be legalized at all.
   if (Action == LegalizeActions::Unsupported)
@@ -353,7 +444,7 @@ bool LoadStoreOpt::isLegalOrBeforeLegalizer(const LegalityQuery &Query,
   return IsPreLegalizer || Action == LegalizeAction::Legal;
 }
 
-bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
+bool LoadStoreOptImpl::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   assert(Stores.size() > 1);
   // We know that all the stores are consecutive and there are no aliasing
   // operations in the range. However, the values that are being stored may be
@@ -433,7 +524,7 @@ bool LoadStoreOpt::doSingleStoreMerge(SmallVectorImpl<GStore *> &Stores) {
   return true;
 }
 
-bool LoadStoreOpt::processMergeCandidate(StoreMergeCandidate &C) {
+bool LoadStoreOptImpl::processMergeCandidate(StoreMergeCandidate &C) {
   if (C.Stores.size() < 2) {
     C.reset();
     return false;
@@ -493,8 +584,8 @@ bool LoadStoreOpt::processMergeCandidate(StoreMergeCandidate &C) {
   return mergeStores(StoresToMerge);
 }
 
-bool LoadStoreOpt::operationAliasesWithCandidate(MachineInstr &MI,
-                                                 StoreMergeCandidate &C) {
+bool LoadStoreOptImpl::operationAliasesWithCandidate(MachineInstr &MI,
+                                                     StoreMergeCandidate &C) {
   if (C.Stores.empty())
     return false;
   return llvm::any_of(C.Stores, [&](MachineInstr *OtherMI) {
@@ -502,12 +593,13 @@ bool LoadStoreOpt::operationAliasesWithCandidate(MachineInstr &MI,
   });
 }
 
-void LoadStoreOpt::StoreMergeCandidate::addPotentialAlias(MachineInstr &MI) {
+void LoadStoreOptImpl::StoreMergeCandidate::addPotentialAlias(
+    MachineInstr &MI) {
   PotentialAliases.emplace_back(std::make_pair(&MI, Stores.size() - 1));
 }
 
-bool LoadStoreOpt::addStoreToCandidate(GStore &StoreMI,
-                                       StoreMergeCandidate &C) {
+bool LoadStoreOptImpl::addStoreToCandidate(GStore &StoreMI,
+                                           StoreMergeCandidate &C) {
   // Check if the given store writes to an adjacent address, and other
   // requirements.
   LLT ValueTy = MRI->getType(StoreMI.getValueReg());
@@ -577,7 +669,7 @@ bool LoadStoreOpt::addStoreToCandidate(GStore &StoreMI,
   return true;
 }
 
-bool LoadStoreOpt::mergeBlockStores(MachineBasicBlock &MBB) {
+bool LoadStoreOptImpl::mergeBlockStores(MachineBasicBlock &MBB) {
   bool Changed = false;
   // Walk through the block bottom-up, looking for merging candidates.
   StoreMergeCandidate Candidate;
@@ -705,8 +797,8 @@ getTruncStoreByteOffset(GStore &Store, Register &SrcVal,
 ///  p[3] = (val >> 0) & 0xFF;
 /// =>
 ///  *((i32)p) = BSWAP(val);
-bool LoadStoreOpt::mergeTruncStore(GStore &StoreMI,
-                                   SmallPtrSetImpl<GStore *> &DeletedStores) {
+bool LoadStoreOptImpl::mergeTruncStore(
+    GStore &StoreMI, SmallPtrSetImpl<GStore *> &DeletedStores) {
   LLT MemTy = StoreMI.getMMO().getMemoryType();
 
   // We only handle merging simple stores of 1-4 bytes.
@@ -900,7 +992,7 @@ bool LoadStoreOpt::mergeTruncStore(GStore &StoreMI,
   return true;
 }
 
-bool LoadStoreOpt::mergeTruncStoresBlock(MachineBasicBlock &BB) {
+bool LoadStoreOptImpl::mergeTruncStoresBlock(MachineBasicBlock &BB) {
   bool Changed = false;
   SmallVector<GStore *, 16> Stores;
   SmallPtrSet<GStore *, 8> DeletedStores;
@@ -918,7 +1010,7 @@ bool LoadStoreOpt::mergeTruncStoresBlock(MachineBasicBlock &BB) {
   return Changed;
 }
 
-bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
+bool LoadStoreOptImpl::mergeFunctionStores(MachineFunction &MF) {
   bool Changed = false;
   for (auto &BB : MF){
     Changed |= mergeBlockStores(BB);
@@ -938,7 +1030,7 @@ bool LoadStoreOpt::mergeFunctionStores(MachineFunction &MF) {
   return Changed;
 }
 
-void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
+void LoadStoreOptImpl::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   // Query the legalizer info to record what store types are legal.
   // We record this because we don't want to bother trying to merge stores into
   // illegal ones, which would just result in being split again.
@@ -971,7 +1063,8 @@ void LoadStoreOpt::initializeStoreMergeTargetInfo(unsigned AddrSpace) {
   LegalStoreSizes[AddrSpace] = std::move(LegalSizes);
 }
 
-bool LoadStoreOpt::runOnMachineFunction(MachineFunction &MF) {
+bool LoadStoreOptImpl::runOnMachineFunction(
+    MachineFunction &MF, function_ref<AliasAnalysis *()> GetAA) {
   // If the ISel pipeline failed, do not bother running that pass.
   if (MF.getProperties().hasFailedISel())
     return false;
@@ -979,10 +1072,30 @@ bool LoadStoreOpt::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "Begin memory optimizations for: " << MF.getName()
                     << '\n');
 
-  init(MF);
+  init(MF, GetAA);
   bool Changed = false;
   Changed |= mergeFunctionStores(MF);
 
   LegalStoreSizes.clear();
   return Changed;
+}
+
+bool LoadStoreOptLegacy::runOnMachineFunction(MachineFunction &MF) {
+  LoadStoreOptImpl Impl;
+  return Impl.runOnMachineFunction(MF, [&]() {
+    return &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  });
+}
+
+PreservedAnalyses LoadStoreOptPass::run(MachineFunction &MF,
+                                        MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier<LoadStoreOptPass> _(*this, MF);
+  LoadStoreOptImpl Impl;
+  Impl.runOnMachineFunction(MF, [&]() {
+    FunctionAnalysisManager &FAM =
+        MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+            .getManager();
+    return &FAM.getResult<AAManager>(MF.getFunction());
+  });
+  return PreservedAnalyses::all();
 }

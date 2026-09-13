@@ -721,15 +721,17 @@ bool ProcessMachCore::IsAlive() { return true; }
 bool ProcessMachCore::WarnBeforeDetach() const { return false; }
 
 // Process Memory
-size_t ProcessMachCore::ReadMemory(addr_t addr, void *buf, size_t size,
-                                   Status &error) {
+size_t ProcessMachCore::ReadMemory(const ProcessAddress &process_addr,
+                                   void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   // Don't allow the caching that lldb_private::Process::ReadMemory does since
   // in core files we have it all cached our our core file anyway.
   return DoReadMemory(FixAnyAddress(addr), buf, size, error);
 }
 
-size_t ProcessMachCore::DoReadMemory(addr_t addr, void *buf, size_t size,
-                                     Status &error) {
+size_t ProcessMachCore::DoReadMemory(const ProcessAddress &process_addr,
+                                     void *buf, size_t size, Status &error) {
+  lldb::addr_t addr = process_addr.GetValue();
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
   size_t bytes_read = 0;
 

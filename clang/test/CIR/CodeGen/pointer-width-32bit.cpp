@@ -47,7 +47,7 @@ M m;
 
 // LLVM: @s = global %struct.S zeroinitializer, align 4
 // LLVM: @m = global %struct.M { i32 -1, i32 0 }, align 4
-// LLVM: @_ZTV1A = global { [3 x ptr] } {{.*}}, align 4
+// LLVM: @_ZTV1A = constant { [3 x ptr] } {{.*}}, align 4
 
 // OGCG: @s = global %struct.S zeroinitializer, align 4
 // OGCG: @m = global %struct.M { i32 -1, i32 0 }, align 4

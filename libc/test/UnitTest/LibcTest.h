@@ -167,8 +167,12 @@ bool test(TestCond Cond, ValType LHS, ValType RHS, const char *LHSStr,
 
 bool test_str_eq(const char *LHS, const char *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
+bool test_str_eq(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc);
 
 bool test_str_ne(const char *LHS, const char *RHS, const char *LHSStr,
+                 const char *RHSStr, internal::Location Loc);
+bool test_str_ne(const wchar_t *LHS, const wchar_t *RHS, const char *LHSStr,
                  const char *RHSStr, internal::Location Loc);
 
 } // namespace internal
@@ -520,6 +524,14 @@ CString libc_make_test_file_path_func(const char *file_name);
   LIBC_TEST_PROCESS_(testProcessKilled, FUNC, SIG, return)
 
 #endif // LIBC_TEST_SKIP_DEATH_TESTS
+
+#else // LIBC_TEST_SUBPROCESS_TESTS
+
+// EXPECT_DEATH can appear in a test of any function, e.g. checking for a crash
+// if passing nullptr to the function. So it must be defined, even if it can't
+// do anything.
+#define EXPECT_DEATH(FUNC, SIG)
+#define ASSERT_DEATH(FUNC, SIG)
 
 #endif // LIBC_TEST_SUBPROCESS_TESTS
 

@@ -12,9 +12,7 @@ define <4 x double> @load_promote_v2f64(ptr %p) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 8
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -34,16 +32,12 @@ define <4 x double> @load_promote_v2f64_with_folded_offset(ptr %p) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 24
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
@@ -61,16 +55,12 @@ define <4 x double> @load_promote_v2f64_with_folded_gep_offset(ptr %p) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 24
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 16
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero 16
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
@@ -89,16 +79,14 @@ define <4 x double> @load_promote_v2f64_with_unfolded_gep_negative_offset(ptr %p
 ; CHECK-NEXT:    i32.const -16
 ; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    v128.load64_zero 8
+; CHECK-NEXT:    f64x2.promote_low_f32x4
+; CHECK-NEXT:    v128.store 16
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    v128.load64_zero 0
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
-; CHECK-NEXT:    f64x2.promote_low_f32x4
-; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    # fallthrough-return
   %s = getelementptr inbounds <4 x float>, ptr %p, i32 -1
   %e = load <4 x float>, ptr %s
@@ -163,13 +151,13 @@ define <4 x double> @load_promote_v2f64_from_numeric_address() {
 ; CHECK:         .functype load_promote_v2f64_from_numeric_address (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 40
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero 40
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 32
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero 32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return
@@ -185,15 +173,13 @@ define <4 x double> @load_promote_v2f64_from_global_address() {
 ; CHECK:         .functype load_promote_v2f64_from_global_address (i32) -> ()
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const gv_v4f32
 ; CHECK-NEXT:    i32.const 8
-; CHECK-NEXT:    i32.add
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    v128.load64_zero gv_v4f32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const gv_v4f32
-; CHECK-NEXT:    v128.load64_zero 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    v128.load64_zero gv_v4f32
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 0
 ; CHECK-NEXT:    # fallthrough-return

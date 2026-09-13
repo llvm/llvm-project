@@ -45,9 +45,7 @@ def CombiningKind : I32EnumAttr<
 
 /// An attribute that specifies the combining function for `vector.contract`,
 /// and `vector.reduction`.
-def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def Vector_CombiningKindAttr : EnumAttr<Vector_Dialect, CombiningKind, "kind">;
 
 def Vector_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
   I32EnumAttrCase<"parallel", 0>,
@@ -58,9 +56,7 @@ def Vector_IteratorType : I32EnumAttr<"IteratorType", "Iterator type", [
 }
 
 def Vector_IteratorTypeEnum
-    : EnumAttr<Vector_Dialect, Vector_IteratorType, "iterator_type"> {
-    let assemblyFormat = "`<` $value `>`";
-}
+    : EnumAttr<Vector_Dialect, Vector_IteratorType, "iterator_type">;
 
 def Vector_IteratorTypeArrayAttr
     : TypedArrayAttrBase<Vector_IteratorTypeEnum,
@@ -78,8 +74,6 @@ def PrintPunctuation : I32EnumAttr<"PrintPunctuation",
   let genSpecializedAttr = 0;
 }
 
-def Vector_PrintPunctuation : EnumAttr<Vector_Dialect, PrintPunctuation, "punctuation"> {
-  let assemblyFormat = "`<` $value `>`";
-}
+def Vector_PrintPunctuation : EnumAttr<Vector_Dialect, PrintPunctuation, "punctuation">;
 
 #endif // MLIR_DIALECT_VECTOR_IR_VECTOR_ATTRIBUTES

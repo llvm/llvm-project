@@ -540,6 +540,8 @@ enum class TemplateSubstitutionKind : char {
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     getInstantiationOfIfExists(const Decl *D);
 
+    LocalInstantiationScope *getOuterScope() const { return Outer; }
+
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);
     void MakeInstantiatedLocalArgPack(const Decl *D);
@@ -721,7 +723,7 @@ enum class TemplateSubstitutionKind : char {
 
     // Helper functions for instantiating methods.
     TypeSourceInfo *SubstFunctionType(FunctionDecl *D,
-                             SmallVectorImpl<ParmVarDecl *> &Params);
+                                      SmallVectorImpl<ParmVarDecl *> &Params);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 
@@ -729,6 +731,10 @@ enum class TemplateSubstitutionKind : char {
 
     TemplateParameterList *
       SubstTemplateParams(TemplateParameterList *List);
+
+    bool SubstTemplateParameterLists(
+        ArrayRef<TemplateParameterList *> TPLs,
+        SmallVectorImpl<TemplateParameterList *> &InstTPLs);
 
     bool SubstQualifier(const DeclaratorDecl *OldDecl,
                         DeclaratorDecl *NewDecl);
@@ -739,6 +745,8 @@ enum class TemplateSubstitutionKind : char {
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
+
+    bool InstantiateFriendPackExpansion(FriendDecl *D);
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     Decl *InstantiateTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);

@@ -54,36 +54,6 @@ constexpr int TIME_OVERFLOW = ERANGE;
 /// \return void on success, or error code on failure.
 ErrorOr<void> update_from_seconds(time_t total_seconds, tm *tm);
 
-LIBC_INLINE ErrorOr<char *> asctime(const tm *timeptr, char *buffer,
-                                    size_t bufferLength) {
-  if (timeptr == nullptr || buffer == nullptr) {
-    return cpp::unexpected(EINVAL);
-  }
-  if (timeptr->tm_wday < 0 ||
-      timeptr->tm_wday > (time_constants::DAYS_PER_WEEK - 1)) {
-    return cpp::unexpected(EINVAL);
-  }
-  if (timeptr->tm_mon < 0 ||
-      timeptr->tm_mon > (time_constants::MONTHS_PER_YEAR - 1)) {
-    return cpp::unexpected(EINVAL);
-  }
-
-  // TODO(michaelr): move this to use the strftime machinery
-  // equivalent to strftime(buffer, bufferLength, "%a %b %T %Y\n", timeptr)
-  int written_size = __builtin_snprintf(
-      buffer, bufferLength, "%.3s %.3s%3d %.2d:%.2d:%.2d %d\n",
-      time_constants::WEEK_DAY_NAMES[timeptr->tm_wday].data(),
-      time_constants::MONTH_NAMES[timeptr->tm_mon].data(), timeptr->tm_mday,
-      timeptr->tm_hour, timeptr->tm_min, timeptr->tm_sec,
-      time_constants::TIME_YEAR_BASE + timeptr->tm_year);
-  if (written_size < 0)
-    return cpp::unexpected(EINVAL);
-  if (static_cast<size_t>(written_size) >= bufferLength) {
-    return cpp::unexpected(TIME_OVERFLOW);
-  }
-  return buffer;
-}
-
 LIBC_INLINE ErrorOr<tm *> gmtime_internal(const time_t *timer, tm *result) {
   time_t seconds = *timer;
   auto status = update_from_seconds(seconds, result);

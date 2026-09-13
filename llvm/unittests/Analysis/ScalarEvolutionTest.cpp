@@ -23,6 +23,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -1278,6 +1279,67 @@ TEST_F(ScalarEvolutionsTest, SCEVAddNUW) {
   });
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVUseDropsRedundantFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M =
+      parseAssemblyString("define void @foo(i32 %x, i32 %y, i32 %z) { "
+                          "  ret void "
+                          "} ",
+                          Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    const SCEV *Z = SE.getSCEV(getArgByName(F, "z"));
+    const SCEV *NUWAdd = SE.getAddExpr(X, Y, SCEV::FlagNUW);
+    ASSERT_TRUE(cast<SCEVAddExpr>(NUWAdd)->hasNoUnsignedWrap());
+    ASSERT_FALSE(cast<SCEVAddExpr>(NUWAdd)->hasNoSignedWrap());
+
+    // Flags the expression already carries are not attached to the use, so the
+    // use remains the expression itself.
+    SCEVUse RedundantFlags(NUWAdd, SCEV::FlagNUW);
+    EXPECT_FALSE(RedundantFlags.hasUseFlags());
+    EXPECT_EQ(RedundantFlags, NUWAdd);
+
+    // Only flags the expression does not carry itself remain on the use, while
+    // the flags the use provides stay the same.
+    SCEVUse MixedFlags(NUWAdd, SCEV::FlagNUW | SCEV::FlagNSW);
+    EXPECT_TRUE(MixedFlags.hasUseFlags());
+    EXPECT_FALSE(any(MixedFlags.getUseNoWrapFlags() & SCEV::FlagNUW));
+    EXPECT_TRUE(any(MixedFlags.getUseNoWrapFlags() & SCEV::FlagNSW));
+    EXPECT_EQ(MixedFlags.getNoWrapFlags(SCEV::FlagNUW | SCEV::FlagNSW),
+              SCEV::FlagNUW | SCEV::FlagNSW);
+
+    // Use flags are part of an expression's identity, so dropping the redundant
+    // ones keeps expressions built from RedundantFlags canonical.
+    const SCEV *MaxRedundantFlags = SE.getUMaxExpr(RedundantFlags, Z);
+    EXPECT_EQ(MaxRedundantFlags, SE.getUMaxExpr(NUWAdd, Z));
+    EXPECT_TRUE(SCEVUse(MaxRedundantFlags).isCanonical());
+
+    // Flags that add information are still part of the expression's identity.
+    const SCEV *MaxMixedFlags = SE.getUMaxExpr(MixedFlags, Z);
+    EXPECT_NE(MaxMixedFlags, MaxRedundantFlags);
+    EXPECT_FALSE(SCEVUse(MaxMixedFlags).isCanonical());
+    EXPECT_EQ(SCEVUse(MaxMixedFlags).getCanonical(), MaxRedundantFlags);
+
+    // Expressions that cannot carry no-wrap flags themselves must not get use
+    // flags either, while FlagAnyWrap remains fine for them.
+    const SCEV *ZExt =
+        SE.getZeroExtendExpr(X, Type::getInt64Ty(F.getContext()));
+    EXPECT_FALSE(SCEVUse(ZExt, SCEV::FlagAnyWrap).hasUseFlags());
+#ifndef NDEBUG
+    EXPECT_DEATH((void)SCEVUse(ZExt, SCEV::FlagNUW),
+                 "use flags require an expression that can carry no-wrap");
+    EXPECT_DEATH((void)SCEVUse(MaxRedundantFlags, SCEV::FlagNSW),
+                 "use flags require an expression that can carry no-wrap");
+#endif
+  });
+}
+
 TEST_F(ScalarEvolutionsTest, ProveUMinULT) {
   LLVMContext C;
   SMDiagnostic Err;
@@ -2062,6 +2124,254 @@ TEST_F(ScalarEvolutionsTest, SimplifyICmpOperands) {
       EXPECT_EQ(NewRHS, B);
     }
   });
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *Numerator = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *Denominator = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Quotient = SE.getUDivExpr(Numerator, Denominator);
+    const SCEV *Zero = SE.getZero(Numerator->getType());
+
+    auto CheckSimplification = [&](CmpPredicate Pred,
+                                   ICmpInst::Predicate ExpectedPred) {
+      SCEVUse LHS = Quotient;
+      SCEVUse RHS = Zero;
+      EXPECT_TRUE(SE.SimplifyICmpOperands(Pred, LHS, RHS));
+      EXPECT_EQ(Pred, ExpectedPred);
+      EXPECT_EQ(LHS, Numerator);
+      EXPECT_EQ(RHS, Denominator);
+    };
+
+    // a / b == 0  =>  a < b
+    CheckSimplification(ICmpInst::ICMP_EQ, ICmpInst::ICMP_ULT);
+    // a / b != 0  =>  a >= b
+    CheckSimplification(ICmpInst::ICMP_NE, ICmpInst::ICMP_UGE);
+  });
 }
 
+// An operand of a SCEV expression is a SCEVUse and may carry use-specific
+// no-wrap flags. Check that SCEV::print renders the operands as uses, so such a
+// flag is visible in the printout of the expression using it.
+TEST_F(ScalarEvolutionsTest, PrintUseFlagsOfOperands) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b) {
+      entry:
+        br label %loop
+
+      loop:
+        %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+        %iv.next = add i32 %iv, 1
+        %c = icmp ult i32 %iv.next, 10
+        br i1 %c, label %loop, label %exit
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto Rendered = [](SCEVUse U) {
+      std::string S;
+      raw_string_ostream OS(S);
+      OS << U;
+      return S;
+    };
+
+    SCEVUse A = SE.getSCEV(getArgByName(F, "a"));
+    SCEVUse B = SE.getSCEV(getArgByName(F, "b"));
+    const Loop *L = LI.getLoopFor(getInstructionByName(F, "iv")->getParent());
+
+    // Uses of (%a + %b) and (4 + %a) carrying use-specific no-wrap flags.
+    SCEVUse Add = SE.getAddExpr(A, B);
+    SCEVUse Add4 = SE.getAddExpr(A, SE.getConstant(APInt(32, 4)));
+    SCEVUse NUWAdd(Add, SCEV::FlagNUW);
+    SCEVUse NSWAdd4(Add4, SCEV::FlagNSW);
+    EXPECT_EQ(Rendered(Add), "(%a + %b)");
+    EXPECT_EQ(Rendered(Add4), "(4 + %a)");
+    EXPECT_EQ(Rendered(NUWAdd), "(%a + %b)<u nuw>");
+    EXPECT_EQ(Rendered(NSWAdd4), "(4 + %a)<u nsw>");
+
+    SCEVUse Max = SE.getUMaxExpr(NUWAdd, NSWAdd4);
+    EXPECT_EQ(Rendered(Max), "((4 + %a)<u nsw> umax (%a + %b)<u nuw>)");
+
+    SCEVUse UDiv = SE.getUDivExpr(NUWAdd, NSWAdd4);
+    EXPECT_EQ(Rendered(UDiv), "((%a + %b)<u nuw> /u (4 + %a)<u nsw>)");
+
+    SCEVUse AR = SE.getAddRecExpr(NUWAdd, NSWAdd4, L, SCEV::FlagAnyWrap);
+    EXPECT_EQ(Rendered(AR), "{(%a + %b)<u nuw>,+,(4 + %a)<u nsw>}<%loop>");
+
+    // Casts print their operand as a use as well.
+    Type *I16 = Type::getInt16Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+    EXPECT_EQ(Rendered(SE.getTruncateExpr(NUWAdd, I16)),
+              "(trunc i32 (%a + %b)<u nuw> to i16)");
+    EXPECT_EQ(Rendered(SE.getZeroExtendExpr(NSWAdd4, I64)),
+              "(zext i32 (4 + %a)<u nsw> to i64)");
+    EXPECT_EQ(Rendered(SE.getSignExtendExpr(NUWAdd, I64)),
+              "(sext i32 (%a + %b)<u nuw> to i64)");
+  });
+}
+
+// An operand carrying use-specific no-wrap flags makes the expression built
+// from it distinct from the one built from the bare operand
+TEST_F(ScalarEvolutionsTest, OperandUseFlagsArePartOfIdentity) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %x, i32 %y, i32 %z, i1 %c) {
+      entry:
+        br label %loop
+      loop:
+        br i1 %c, label %loop, label %exit
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Y = SE.getSCEV(getArgByName(F, "y"));
+    const SCEV *Z = SE.getSCEV(getArgByName(F, "z"));
+    // Only expressions that can carry no-wrap flags themselves may have use
+    // flags. Flag a product for the sum below and a sum for all other nodes, so
+    // the flagged operand does not fold into the expression built from it.
+    const SCEV *Mul = SE.getMulExpr(X, Y);
+    const SCEV *Add = SE.getAddExpr(X, Y);
+    SCEVUse MulNUW(Mul, SCEV::FlagNUW);
+    SCEVUse MulNSW(Add, SCEV::FlagNUW);
+    ASSERT_FALSE(LI.empty());
+    const Loop *L = *LI.begin();
+
+    // Each builder keys its uniquing on the operand uses, so the flagged
+    // operand yields a different expression for every kind of node.
+    SCEVUse FlaggedAdd = SE.getAddExpr(MulNUW, Z);
+    EXPECT_NE(FlaggedAdd, SE.getAddExpr(Mul, Z));
+    EXPECT_NE(SE.getMulExpr(MulNSW, Z), SE.getMulExpr(Add, Z));
+    EXPECT_NE(SE.getUDivExpr(MulNSW, Z), SE.getUDivExpr(Add, Z));
+    EXPECT_NE(SE.getUMaxExpr(MulNSW, Z), SE.getUMaxExpr(Add, Z));
+    EXPECT_NE(SE.getAddRecExpr(MulNSW, Z, L, SCEV::FlagAnyWrap),
+              SE.getAddRecExpr(Add, Z, L, SCEV::FlagAnyWrap));
+    SmallVector<SCEVUse, 2> FlaggedSeqOps = {MulNSW, Z};
+    SmallVector<SCEVUse, 2> BareSeqOps = {Add, Z};
+    EXPECT_NE(SE.getUMinExpr(FlaggedSeqOps, /*Sequential=*/true),
+              SE.getUMinExpr(BareSeqOps, /*Sequential=*/true));
+
+    EXPECT_EQ(FlaggedAdd->getCanonical(), SE.getAddExpr(Mul, Z));
+    EXPECT_EQ(SE.getUDivExpr(MulNSW, Z)->getCanonical(),
+              SE.getUDivExpr(Add, Z));
+
+    // The flagged use is the operand of the expression built from it, while the
+    // canonical form's operands are all bare.
+    SmallVector<SCEVUse> FlaggedOps;
+    copy_if(FlaggedAdd->operands(), std::back_inserter(FlaggedOps),
+            [](SCEVUse Op) { return Op.hasUseFlags(); });
+    ASSERT_EQ(FlaggedOps.size(), 1u);
+    EXPECT_EQ(FlaggedOps[0], MulNUW);
+    EXPECT_TRUE(none_of(FlaggedAdd->getCanonical()->operands(),
+                        [](SCEVUse Op) { return Op.hasUseFlags(); }));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, CastsOfUsesWithNoWrapFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b) {
+      entry:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Type *I16 = Type::getInt16Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+
+    SCEVUse Add = SE.getAddExpr(SE.getSCEV(getArgByName(F, "a")),
+                                SE.getSCEV(getArgByName(F, "b")));
+    SCEVUse NUWAdd(Add, SCEV::FlagNUW);
+
+    // Check that Cast keeps the use-specific flags of NUWAdd and is a
+    // node distinct from Canon, the same cast of the canonical operand.
+    auto CheckCast = [&Add](const SCEV *Cast, const SCEV *Canon) {
+      SCEVUse Op = cast<SCEVCastExpr>(Cast)->getOperand();
+      EXPECT_EQ(Op.getPointer(), Add.getPointer());
+      EXPECT_EQ(Op.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+      EXPECT_NE(Cast, Canon);
+    };
+    CheckCast(SE.getTruncateExpr(NUWAdd, I16), SE.getTruncateExpr(Add, I16));
+    CheckCast(SE.getZeroExtendExpr(NUWAdd, I64),
+              SE.getZeroExtendExpr(Add, I64));
+    CheckCast(SE.getSignExtendExpr(NUWAdd, I64),
+              SE.getSignExtendExpr(Add, I64));
+    CheckCast(SE.getCastExpr(scTruncate, NUWAdd, I16),
+              SE.getCastExpr(scTruncate, Add, I16));
+    CheckCast(SE.getCastExpr(scZeroExtend, NUWAdd, I64),
+              SE.getCastExpr(scZeroExtend, Add, I64));
+    CheckCast(SE.getCastExpr(scSignExtend, NUWAdd, I64),
+              SE.getCastExpr(scSignExtend, Add, I64));
+    CheckCast(SE.getAnyExtendExpr(NUWAdd, I64), SE.getAnyExtendExpr(Add, I64));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, ExtendFoldCacheKeysUseFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %x) {
+      entry:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Type *I32 = Type::getInt32Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+
+    // Build (-2 * smax(smin(%x, 0), -50)), which is known to be in [0, 100],
+    // but cannot be proven to not wrap in an unsigned sense.
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    const SCEV *Bounded = SE.getSMaxExpr(SE.getSMinExpr(X, SE.getZero(I32)),
+                                         SE.getConstant(I32, -50, true));
+    SCEVUse Mul = SE.getMulExpr(SE.getConstant(I32, -2, true), Bounded);
+    ASSERT_TRUE(isa<SCEVMulExpr>(Mul));
+    ASSERT_FALSE(cast<SCEVMulExpr>(Mul.getPointer())->hasNoUnsignedWrap());
+    ASSERT_TRUE(SE.isKnownNonNegative(Mul));
+
+    SCEVUse MulNUW(Mul, SCEV::FlagNUW);
+    ASSERT_TRUE(MulNUW.hasUseFlags());
+
+    // For a known non-negative operand, getSignExtendExpr folds to a zero
+    // extend of the same operand use, and the fold gets cached. Make sure flags
+    // of SCEVUse operands are handled correctly.
+    const SCEV *SExtNUW = SE.getSignExtendExpr(MulNUW, I64);
+    const SCEV *SExtPlain = SE.getSignExtendExpr(Mul, I64);
+    EXPECT_NE(SExtNUW, SExtPlain);
+    EXPECT_EQ(cast<SCEVZeroExtendExpr>(SExtNUW)->getOperand(), MulNUW);
+    EXPECT_EQ(cast<SCEVZeroExtendExpr>(SExtPlain)->getOperand(), Mul);
+  });
+}
 }  // end namespace llvm

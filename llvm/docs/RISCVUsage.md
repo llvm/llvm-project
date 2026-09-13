@@ -124,6 +124,7 @@ on support follow.
 | `Smepmp` | Supported |
 | `Smmpm` | Supported |
 | `Smnpm` | Supported |
+| `Smpmpdeleg` | Supported |
 | `Smrnmi` | Supported |
 | `Smstateen` | Assembly Support |
 | `Ssaia` | Supported |
@@ -136,6 +137,8 @@ on support follow.
 | `Ssdbltrp` | Supported |
 | `Ssnpm` | Supported |
 | `Sspm` | Supported |
+| `Sspmp` | Supported |
+| `Sspmpen` | Supported |
 | `Ssqosid` | Assembly Support |
 | `Ssstateen` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
 | `Ssstrict` | Assembly Support ([See note](#riscv-profiles-extensions-note)) |
@@ -346,9 +349,9 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 : LLVM implements the [1.0 release specification](https://github.com/riscv/riscv-cfi/releases/tag/v1.0).
 
-`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`
+`experimental-smcsps`, `experimental-sscsps`, `experimental-smijt`, `experimental-ssijt`, `experimental-smehv`, `experimental-ssehv`, `experimental-smip`, `experimental-ssip`
 
-: LLVM implements the [0.19 release specification](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.19).
+: LLVM implements the [0.20 release specification](https://github.com/riscv/riscv-fast-interrupt/releases/tag/v0.20).
 
 `experimental-zvbc32e`, `experimental-zvkgs`
 
@@ -372,7 +375,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 `experimental-zvabd`
 
-: LLVM implements the [0.7 draft specification](https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.7).
+: LLVM implements the [0.9 draft specification](https://github.com/riscv/integer-vector-absolute-difference/releases/tag/v0.9).
 
 `experimental-zvzip`
 
@@ -461,10 +464,6 @@ The current vendor extensions supported are:
 `XTHeadVdot`
 
 : LLVM implements [version 1.0.0 of the THeadV-family custom instructions specification](https://github.com/T-head-Semi/thead-extension-spec/releases/download/2.2.0/xthead-2022-12-04-2.2.0.pdf) by T-HEAD of Alibaba. All instructions are prefixed with `th.` as described in the specification, and the riscv-toolchain-convention document linked above.
-
-`XVentanaCondOps`
-
-: LLVM implements [version 1.0.0 of the VTx-family custom instructions specification](https://github.com/ventanamicro/ventana-custom-extensions/releases/download/v1.0.0/ventana-custom-extensions-v1.0.0.pdf) by Ventana Micro Systems. All instructions are prefixed with `vt.` as described in the specification, and the riscv-toolchain-convention document linked above. These instructions are only available for riscv64 at this time.
 
 `Xsfmm*`
 

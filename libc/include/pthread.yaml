@@ -28,6 +28,10 @@ macros:
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_PROCESS_SHARED"
     macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_SCOPE_SYSTEM"
+    macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_SCOPE_PROCESS"
+    macro_header: pthread-macros.h
   - macro_name: "PTHREAD_MUTEX_INITIALIZER"
     macro_header: pthread-macros.h
   - macro_name: "PTHREAD_COND_INITIALIZER"
@@ -49,6 +53,10 @@ macros:
   - macro_name: "PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP"
     standards:
       - gnu
+    macro_header: pthread-macros.h
+  - macro_name: "PTHREAD_STACK_DYNAMIC_NP"
+    standards:
+      - llvm_libc_ext
     macro_header: pthread-macros.h
 types:
   - type_name: pthread_t
@@ -93,6 +101,18 @@ functions:
     arguments:
       - type: const pthread_attr_t *__restrict
       - type: struct sched_param *__restrict
+  - name: pthread_attr_getschedpolicy
+    return_type: int
+    arguments:
+      - type: const pthread_attr_t *__restrict
+      - type: int *__restrict
+  - name: pthread_attr_getscope
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const pthread_attr_t *__restrict
+      - type: int *__restrict
   - name: pthread_attr_getstack
     return_type: int
     arguments:
@@ -123,6 +143,18 @@ functions:
     arguments:
       - type: pthread_attr_t *__restrict
       - type: const struct sched_param *__restrict
+  - name: pthread_attr_setschedpolicy
+    return_type: int
+    arguments:
+      - type: pthread_attr_t *
+      - type: int
+  - name: pthread_attr_setscope
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: pthread_attr_t *
+      - type: int
   - name: pthread_attr_setstack
     return_type: int
     arguments:
@@ -242,6 +274,14 @@ functions:
     return_type: void *
     arguments:
       - type: pthread_key_t
+  - name: pthread_getstack_np
+    standards:
+      - llvm_libc_ext
+    return_type: int
+    arguments:
+      - type: pthread_t
+      - type: void **__restrict
+      - type: size_t *__restrict
   - name: pthread_join
     return_type: int
     arguments:

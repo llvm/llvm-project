@@ -219,6 +219,11 @@ private:
   /// Map code without relocating sections.
   void mapCodeSectionsInPlace(BOLTLinker::SectionMapper MapSection);
 
+  /// Fold every section in \p CodeSections into a single output section named
+  /// ".text". Sections in \p CodeSections form one contiguous address range
+  /// and their relative order is kept unchanged.
+  void mergeCodeSections(const std::vector<BinarySection *> &CodeSections);
+
   /// Map the rest of allocatable sections.
   void mapAllocatableSections(BOLTLinker::SectionMapper MapSection);
 
@@ -501,6 +506,22 @@ private:
   uint64_t NewTextSegmentOffset{0};
   uint64_t NewTextSegmentSize{0};
 
+  /// Bookkeeping for --merge-text-sections.
+  BinarySection *MergedTextSection{nullptr};
+  uint64_t MergedTextSize{0};
+  std::vector<BinarySection *> MergedAwayTextSections;
+
+  /// Original name and start address of each code section folded into the
+  /// merged .text, captured before the headers are dropped. Emitted as local
+  /// marker symbols so the pre-merge section layout stays recoverable. The
+  /// symbols are sizeless to keep symbolizers from attributing the range to
+  /// them instead of to the functions it contains.
+  struct MergedTextMarker {
+    std::string Name;
+    uint64_t Address;
+  };
+  std::vector<MergedTextMarker> MergedTextMarkers;
+
   /// New writable segment info.
   uint64_t NewWritableSegmentAddress{0};
   uint64_t NewWritableSegmentSize{0};
@@ -564,7 +585,8 @@ private:
       {".plt"}, {".plt.got"}, {".iplt"}, {nullptr}};
 
   /// RISCV PLT sections.
-  const PLTSectionInfo RISCV_PLTSections[2] = {{".plt"}, {nullptr}};
+  const PLTSectionInfo RISCV_PLTSections[3] = {
+      {".plt", 16}, {".iplt", 16}, {nullptr}};
 
   /// Return PLT information for a section with \p SectionName or nullptr
   /// if the section is not PLT.

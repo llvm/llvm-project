@@ -9,9 +9,6 @@
 #include "llvm/ExecutionEngine/Orc/EPCGenericJITLinkMemoryManager.h"
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/Orc/LookupAndRecordAddrs.h"
-#include "llvm/ExecutionEngine/Orc/RTBridge/SPS/GenericMemoryManagerProxySpecs.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 
 #include <limits>
 
@@ -81,34 +78,6 @@ private:
   ExecutorAddr AllocAddr;
   SegInfoMap Segs;
 };
-
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(JITDylib &JD) {
-  namespace sps = rt::sps;
-  namespace sps_ci = rt::sps_ci;
-  auto &ES = JD.getExecutionSession();
-  Bindings B;
-  // Instance is the executor-side allocator object -- a data symbol passed as
-  // the first argument to each call, not a wrapper to proxy.
-  if (auto Err = lookupAndRecordAddrs(
-          ES, LookupKind::Static, makeJITDylibSearchOrder({&JD}),
-          {{ES.intern(sps_ci::SimpleNativeMemoryMapInstanceName),
-            &B.Instance}}))
-    return std::move(Err);
-  // The proxies resolve to the specs' default (SimpleNativeMemoryMap) names.
-  if (auto Err = rt::buildProxies(
-          JD, rt::proxyInit<sps::MemMgrReserveProxySpec>(&B.Reserve),
-          rt::proxyInit<sps::MemMgrInitializeProxySpec>(&B.Initialize),
-          rt::proxyInit<sps::MemMgrDeinitializeProxySpec>(&B.Deinitialize),
-          rt::proxyInit<sps::MemMgrReleaseProxySpec>(&B.Release)))
-    return std::move(Err);
-  return std::make_unique<EPCGenericJITLinkMemoryManager>(ES, std::move(B));
-}
-
-Expected<std::unique_ptr<EPCGenericJITLinkMemoryManager>>
-EPCGenericJITLinkMemoryManager::Create(ExecutionSession &ES) {
-  return Create(ES.getBootstrapJITDylib());
-}
 
 void EPCGenericJITLinkMemoryManager::allocate(const JITLinkDylib *JD,
                                               LinkGraph &G,

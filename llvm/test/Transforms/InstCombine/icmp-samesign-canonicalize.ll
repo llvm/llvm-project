@@ -24,8 +24,7 @@ define <2 x i1> @ule_non_endpoint_vec(<2 x i8> %x) {
 define i1 @ule_smax(i8 %x) {
 ; CHECK-LABEL: define i1 @ule_smax(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ule i8 [[X]], 127
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp samesign ule i8 %x, 127
   ret i1 %cmp
@@ -34,7 +33,7 @@ define i1 @ule_smax(i8 %x) {
 define i1 @uge_smax(i8 %x) {
 ; CHECK-LABEL: define i1 @uge_smax(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i8 [[X]], 126
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 127
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %cmp = icmp samesign uge i8 %x, 127
@@ -44,8 +43,7 @@ define i1 @uge_smax(i8 %x) {
 define i1 @uge_smin(i8 %x) {
 ; CHECK-LABEL: define i1 @uge_smin(
 ; CHECK-SAME: i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign uge i8 [[X]], -128
-; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK-NEXT:    ret i1 true
 ;
   %cmp = icmp samesign uge i8 %x, -128
   ret i1 %cmp

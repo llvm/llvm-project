@@ -42,6 +42,8 @@ public:
                     raw_ostream &O, StringRef Modifier = {});
   void printCmpMode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O, StringRef Modifier = {});
+  void printFPRoundingMode(const MCInst *MI, int OpNum,
+                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printAtomicCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                        raw_ostream &O, StringRef Modifier = {});
   void printEvictionAndPrefetchHint(const MCInst *MI, int OpNum,
@@ -65,6 +67,10 @@ public:
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printCTAGroup(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  void printTMAValidateDataFlags(const MCInst *MI, int OpNum,
+                                 const MCSubtargetInfo &STI, raw_ostream &O);
+  void printEvictPolicy(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O, StringRef Modifier = {});
   void printCallOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                         raw_ostream &O, StringRef Modifier = {});
   void printFTZFlag(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,

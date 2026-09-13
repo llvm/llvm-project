@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -27,10 +26,6 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
 
 STATISTIC(NumDeadStore, "Number of dead stores eliminated");
 STATISTIC(NumGlobalCopies, "Number of allocas copied from constant global");
@@ -1161,9 +1156,9 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
       //  select(Cond, load (addrspacecast(&V1)), load (addrspacecast(&V2))).
       Align Alignment = LI.getAlign();
       if (isSafeToLoadUnconditionally(SI->getOperand(1), LI.getType(),
-                                      Alignment, DL, SI) &&
+                                      Alignment, SQ.getWithInstruction(SI)) &&
           isSafeToLoadUnconditionally(SI->getOperand(2), LI.getType(),
-                                      Alignment, DL, SI)) {
+                                      Alignment, SQ.getWithInstruction(SI))) {
 
         auto MaybeCastedLoadOperand = [&](Value *Op) {
           if (ASC)
@@ -1185,8 +1180,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
         // poison-generating metadata.
         V1->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
         V2->copyMetadata(LI, Metadata::PoisonGeneratingIDs);
-        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr,
-                                  ProfcheckDisableMetadataFixes ? nullptr : SI);
+        return SelectInst::Create(SI->getCondition(), V1, V2, "", nullptr, SI);
       }
     }
   }
@@ -1308,6 +1302,9 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
   // FIXME: We could probably with some care handle both volatile and ordered
   // atomic stores here but it isn't clear that this is important.
   if (!SI.isUnordered())
+    return false;
+
+  if (SI.isElementwise())
     return false;
 
   // swifterror values can't be bitcasted.

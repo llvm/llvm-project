@@ -27,8 +27,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstPosZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstNegZero) {
@@ -45,8 +45,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstNegZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassUndef) {
@@ -67,8 +67,8 @@ TEST_F(AArch64GISelMITest, TestFPClassUndef) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstVecNegZero) {
@@ -92,8 +92,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstVecNegZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPExt) {
@@ -115,8 +115,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPExt) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPExt) {
@@ -141,8 +141,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPExt) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPTrunc) {
@@ -164,8 +164,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPTrunc) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite | fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite | fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
@@ -190,8 +190,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite | fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite | fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectPos0) {
@@ -216,8 +216,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectPos0) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectNeg0) {
@@ -242,8 +242,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectNeg0) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectPosOrNeg0) {
@@ -268,16 +268,16 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectPosOrNeg0) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcZero, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectPosInf) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
+    %lhs:_(s32) = G_FCONSTANT float f0x7F800000
+    %rhs:_(s32) = G_FCONSTANT float f0x7F800000
     %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
@@ -294,16 +294,16 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectPosInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosInf, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosInf, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectNegInf) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
+    %lhs:_(s32) = G_FCONSTANT float f0xFF800000
+    %rhs:_(s32) = G_FCONSTANT float f0xFF800000
     %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
@@ -320,16 +320,16 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectNegInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegInf, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegInf, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectPosOrNegInf) {
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %cond:_(s1) = G_LOAD %ptr(p0) :: (load (s1))
-    %lhs:_(s32) = G_FCONSTANT float 0x7FF0000000000000
-    %rhs:_(s32) = G_FCONSTANT float 0xFFF0000000000000
+    %lhs:_(s32) = G_FCONSTANT float f0x7F800000
+    %rhs:_(s32) = G_FCONSTANT float f0xFF800000
     %sel:_(s32) = G_SELECT %cond, %lhs, %rhs
     %copy_sel:_(s32) = COPY %sel
 )";
@@ -346,8 +346,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectPosOrNegInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectNNaN) {
@@ -372,8 +372,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectNNaN) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(~fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(~fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectNInf) {
@@ -398,8 +398,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectNInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectNNaNNInf) {
@@ -424,8 +424,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectNNaNNInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(~(fcNan | fcInf), Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(~(fcNan | fcInf), Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFNegNInf) {
@@ -448,8 +448,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFNegNInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFabsUnknown) {
@@ -472,8 +472,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFabsUnknown) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPositive | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassVecFabsUnknown) {
@@ -496,8 +496,8 @@ TEST_F(AArch64GISelMITest, TestFPClassVecFabsUnknown) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPositive | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFnegFabs) {
@@ -521,8 +521,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFnegFabs) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegative | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegative | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFnegFabsNInf) {
@@ -546,8 +546,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFnegFabsNInf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegFinite | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegFinite | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFnegFabsNNan) {
@@ -571,8 +571,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFnegFabsNNan) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegative, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNegative, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCopySignNNanSrc0) {
@@ -597,8 +597,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCopySignNNanSrc0) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(~fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(~fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCopySignNInfSrc0_NegSign) {
@@ -623,8 +623,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCopySignNInfSrc0_NegSign) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNan | fcNegZero | fcNegNormal, Known.KnownFPClasses);
-  EXPECT_EQ(true, Known.SignBit);
+  EXPECT_EQ(fcNan | fcNegZero | fcNegNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(true, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCopySignNInfSrc0_PosSign) {
@@ -649,8 +649,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCopySignNInfSrc0_PosSign) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNan | fcPosZero | fcPosNormal, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcNan | fcPosZero | fcPosNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassUIToFP) {
@@ -673,8 +673,8 @@ TEST_F(AArch64GISelMITest, TestFPClassUIToFP) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosZero | fcPosNormal, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosZero | fcPosNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSIToFP) {
@@ -697,8 +697,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSIToFP) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosNormal | fcNegNormal | fcPosZero, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPosNormal | fcNegNormal | fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAdd) {
@@ -722,8 +722,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAdd_Zero) {
@@ -747,8 +747,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd_Zero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcAllFlags & ~fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAdd_NegZero) {
@@ -772,8 +772,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAdd_NegZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFstrictAdd_Zero) {
@@ -797,8 +797,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFstrictAdd_Zero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcAllFlags & ~fcNegZero, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFMul) {
@@ -822,8 +822,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFMul) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPositive | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFMulZero) {
@@ -848,8 +848,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFMulZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosZero, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosZero, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFLogNeg) {
@@ -874,8 +874,9 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogNeg) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNan | fcNegInf | fcPosZero | fcNormal, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcQNan | fcNegInf | fcPosZero | fcNormal,
+            Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFLogPosZero) {
@@ -897,8 +898,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogPosZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegInf | fcPosZero | fcNormal, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcNegInf | fcPosZero | fcNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFLogNegZero) {
@@ -920,8 +921,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogNegZero) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNegInf | fcPosZero | fcNormal, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcNegInf | fcPosZero | fcNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassCopy) {
@@ -945,8 +946,8 @@ TEST_F(AArch64GISelMITest, TestFPClassCopy) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(~fcNegative, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(~fcNegative, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassSelectIsFPClass) {
@@ -971,8 +972,8 @@ TEST_F(AArch64GISelMITest, TestFPClassSelectIsFPClass) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcZero, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFLDExp) {
@@ -997,8 +998,60 @@ TEST_F(AArch64GISelMITest, TestFPClassFLDExp) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPositive | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFPowPos) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %exp:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %fabs:_(s32) = G_FABS %val
+    %fpow:_(s32) = G_FPOW %fabs, %exp
+    %copy_fpow:_(s32) = COPY %fpow
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcPositive | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+  EXPECT_TRUE(Info.isKnownNeverNaN(SrcReg, true));
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFPowPosNNaN) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %exp:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %fabs:_(s32) = nnan G_FABS %val
+    %fabs_exp:_(s32) = nnan G_FABS %exp
+    %fpow:_(s32) = G_FPOW %fabs, %fabs_exp
+    %copy_fpow:_(s32) = COPY %fpow
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcPositive, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFPowIEvenExp) {
@@ -1022,8 +1075,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowIEvenExp) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPositive | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPositive | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFPowIPos) {
@@ -1048,8 +1101,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowIPos) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPositive, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPositive, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFPowIInf) {
@@ -1088,8 +1141,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowIInf) {
   Register SrcReg0 = FinalCopy0->getOperand(1).getReg();
   KnownFPClass Known0 = Info.computeKnownFPClass(SrcReg0, fcAllFlags);
   KnownFPClass KnownInf0 = Info.computeKnownFPClass(SrcReg0, fcInf);
-  EXPECT_EQ(~fcInf, Known0.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known0.SignBit);
+  EXPECT_EQ(~fcInf, Known0.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known0.getSignBit());
   EXPECT_TRUE(KnownInf0.isKnownNeverInfinity());
 
   // powi(finite, 2)  -->  fcPositive | fcNan
@@ -1098,8 +1151,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowIInf) {
   Register SrcReg1 = FinalCopy1->getOperand(1).getReg();
   KnownFPClass Known1 = Info.computeKnownFPClass(SrcReg1, fcAllFlags);
   KnownFPClass KnownInf1 = Info.computeKnownFPClass(SrcReg1, fcInf);
-  EXPECT_EQ(fcPositive | fcNan, Known1.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known1.SignBit);
+  EXPECT_EQ(fcPositive | fcNan, Known1.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known1.getSignBit());
   EXPECT_FALSE(KnownInf1.isKnownNeverInfinity());
 
   // powi(normal, -1)  -->  fcPosFinite
@@ -1108,8 +1161,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFPowIInf) {
   Register SrcReg2 = FinalCopy2->getOperand(1).getReg();
   KnownFPClass Known2 = Info.computeKnownFPClass(SrcReg2, fcAllFlags);
   KnownFPClass KnownInf2 = Info.computeKnownFPClass(SrcReg2, fcInf);
-  EXPECT_EQ(fcPosFinite, Known2.KnownFPClasses);
-  EXPECT_EQ(false, Known2.SignBit);
+  EXPECT_EQ(fcPosFinite, Known2.getKnownFPClasses());
+  EXPECT_EQ(false, Known2.getSignBit());
   EXPECT_TRUE(KnownInf2.isKnownNeverInfinity());
 
   // powi(zero_or_nan, nonneg)  -->  ~fcInf
@@ -1143,8 +1196,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFDiv) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosNormal | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPosNormal | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFDiv_Inf) {
@@ -1167,8 +1220,92 @@ TEST_F(AArch64GISelMITest, TestFPClassFDiv_Inf) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosInf, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosInf, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFDivSqrt) {
+  // The only negative value sqrt(x) can produce is -0.0, so the only negative
+  // value 1.0 / sqrt(x) can produce is -Inf.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %sqrt:_(s32) = G_FSQRT %x
+    %one:_(s32) = G_FCONSTANT float 1.0
+    %fdiv:_(s32) = G_FDIV %one, %sqrt
+    %copy_fdiv:_(s32) = COPY %fdiv
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcAllFlags & ~(fcNegNormal | fcNegSubnormal),
+            Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFDivNegSqrtNeg) {
+  // The only negative value sqrt(-x) can produce is -0.0, so the only positive
+  // value -1.0 / sqrt(-x) can produce is +Inf.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %neg_x:_(s32) = G_FNEG %x
+    %sqrt:_(s32) = G_FSQRT %neg_x
+    %neg_one:_(s32) = G_FCONSTANT float -1.0
+    %fdiv:_(s32) = G_FDIV %neg_one, %sqrt
+    %copy_fdiv:_(s32) = COPY %fdiv
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg, fcPositive);
+
+  EXPECT_EQ(fcAllFlags & ~(fcPosNormal | fcPosSubnormal),
+            Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassSqrtFDiv) {
+  // sqrt(1.0 / x) may produce -0.0 when x is -Inf, but cannot produce any
+  // other negative value or a subnormal value.
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %x:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %one:_(s32) = G_FCONSTANT float 1.0
+    %inv:_(s32) = G_FDIV %one, %x
+    %sqrt:_(s32) = G_FSQRT %inv
+    %copy_sqrt:_(s32) = COPY %sqrt
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcNan | fcZero | fcPosNormal | fcPosInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFRem) {
@@ -1192,8 +1329,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFRem) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcZero | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcZero | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFRemSelf_KnownFiniteNonZero) {
@@ -1219,7 +1356,7 @@ TEST_F(AArch64GISelMITest, TestFPClassFRemSelf_KnownFiniteNonZero) {
 
   // 2.0 % 2.0 = 0.0 exactly — NaN is impossible since 2.0 is finite and
   // nonzero.
-  EXPECT_EQ(fcZero, Known.KnownFPClasses);
+  EXPECT_EQ(fcZero, Known.getKnownFPClasses());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassShuffleVec) {
@@ -1244,8 +1381,8 @@ TEST_F(AArch64GISelMITest, TestFPClassShuffleVec) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassBuildVec) {
@@ -1270,8 +1407,8 @@ TEST_F(AArch64GISelMITest, TestFPClassBuildVec) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassConcatVec) {
@@ -1299,8 +1436,8 @@ TEST_F(AArch64GISelMITest, TestFPClassConcatVec) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassVecExtractElem) {
@@ -1325,8 +1462,8 @@ TEST_F(AArch64GISelMITest, TestFPClassVecExtractElem) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassVecInsertElem) {
@@ -1353,8 +1490,8 @@ TEST_F(AArch64GISelMITest, TestFPClassVecInsertElem) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFSinh) {
@@ -1372,8 +1509,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFSinh) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcAllFlags, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFSinhPos) {
@@ -1393,8 +1530,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFSinhPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPositive, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPositive, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFCosh) {
@@ -1413,8 +1550,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFCosh) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosNormal | fcPosInf | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPosNormal | fcPosInf | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFCoshNNaN) {
@@ -1434,8 +1571,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFCoshNNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosNormal | fcPosInf, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosNormal | fcPosInf, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFTanh) {
@@ -1454,8 +1591,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFTanh) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcAllFlags & ~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFTanhPos) {
@@ -1475,8 +1612,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFTanhPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAsin) {
@@ -1495,8 +1632,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAsin) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcAllFlags & ~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAsinPos) {
@@ -1517,12 +1654,12 @@ TEST_F(AArch64GISelMITest, TestFPClassFAsinPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPosFinite | fcQNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAcos) {
-  // acos is bounded to [0, π]: never Inf, never negative.
+  // acos is bounded to [0, π]: never infinite, negative, or subnormal.
   StringRef MIRString = R"(
     %ptr:_(p0) = G_IMPLICIT_DEF
     %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
@@ -1537,8 +1674,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAcos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPosZero | fcPosNormal | fcNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAcosPos) {
@@ -1559,8 +1696,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAcosPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite | fcQNan, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcPosZero | fcPosNormal | fcQNan, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAtan) {
@@ -1579,8 +1716,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcAllFlags & ~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAtanPos) {
@@ -1600,8 +1737,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtanPos) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcPosFinite, Known.KnownFPClasses);
-  EXPECT_EQ(false, Known.SignBit);
+  EXPECT_EQ(fcPosFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(false, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFTan) {
@@ -1620,8 +1757,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFTan) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcAllFlags & ~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFTanNNaN) {
@@ -1641,8 +1778,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFTanNNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcFinite, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAtan2) {
@@ -1662,8 +1799,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcAllFlags & ~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcAllFlags & ~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
@@ -1685,8 +1822,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFAtan2NNaN) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcFinite, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcFinite, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 // isAbsoluteValueULEOne: x - floor(x) is in [0, 1), so multiplying a known-
@@ -1710,8 +1847,8 @@ TEST_F(AArch64GISelMITest, TestFPClassFMulAbsULEOne) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(~fcInf, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(~fcInf, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
 // G_FMA with A == B (and A guaranteed not-undef): the multiply part is a
@@ -1733,6 +1870,6 @@ TEST_F(AArch64GISelMITest, TestFPClassFMASelfSquare) {
   Register SrcReg = FinalCopy->getOperand(1).getReg();
   GISelValueTracking Info(*MF);
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
-  EXPECT_EQ(fcNan | fcPosInf | fcPosNormal, Known.KnownFPClasses);
-  EXPECT_EQ(std::nullopt, Known.SignBit);
+  EXPECT_EQ(fcNan | fcPosInf | fcPosNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
 }

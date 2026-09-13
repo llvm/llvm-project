@@ -108,7 +108,8 @@ private:
   SDValue LowerCONVERT_FROM_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFromFP8(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
   SDValue LowerCONVERT_TO_ARBITRARY_FP(SDValue Op, SelectionDAG &DAG) const;
-  SDValue lowerToFP8(SDValue Op, bool IsBF8, SelectionDAG &DAG) const;
+  SDValue lowerToFP8(SDValue Op, bool IsBF8, bool IsE5M3,
+                     SelectionDAG &DAG) const;
 
   // The raw.tbuffer and struct.tbuffer intrinsics have two offset args: offset
   // (the offset that is included in bounds checking and swizzling, to be split
@@ -179,6 +180,8 @@ private:
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                 SelectionDAG &DAG) const;
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
 
@@ -236,6 +239,7 @@ private:
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFrexpSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue reassociateScalarOps(SDNode *N, SelectionDAG &DAG) const;
@@ -352,10 +356,6 @@ public:
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
-
-  void CollectTargetIntrinsicOperands(const CallInst &I,
-                                      SmallVectorImpl<SDValue> &Ops,
-                                      SelectionDAG &DAG) const override;
 
   bool getAddrModeArguments(const IntrinsicInst *I,
                             SmallVectorImpl<Value *> &Ops,
@@ -513,6 +513,9 @@ public:
   /// \p VT is used as written, so a vector type reports false.
   bool isFMADLegal(EVT VT, DenormalFPEnv FPEnv) const;
 
+  /// \p Ty is taken by its scalar type, so a vector type asks about a lane.
+  bool isFMADLegal(const Function &F, Type *Ty) const;
+
   bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
@@ -611,9 +614,6 @@ public:
   void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const override;
   void emitExpandAtomicLoad(LoadInst *LI) const override;
   void emitExpandAtomicStore(StoreInst *SI) const override;
-
-  LoadInst *
-  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
 
   const TargetRegisterClass *getRegClassFor(MVT VT,
                                             bool isDivergent) const override;

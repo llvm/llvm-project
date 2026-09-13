@@ -41,6 +41,16 @@ int main() {
   // CHECK: unknown name: Unrecognized error
   // CHECK: unknown string: Unknown error
 
+  print_error("invalid resource handle", cudaErrorInvalidResourceHandle);
+  // CHECK: invalid resource handle value: 4
+  // CHECK: invalid resource handle name: cudaErrorInvalidResourceHandle
+  // CHECK: invalid resource handle string: Invalid resource handle
+
+  print_error("invalid configuration", cudaErrorInvalidConfiguration);
+  // CHECK: invalid configuration value: 5
+  // CHECK: invalid configuration name: cudaErrorInvalidConfiguration
+  // CHECK: invalid configuration string: Invalid configuration argument
+
   cudaError_t Unrecognized = static_cast<cudaError_t>(999);
   print_error("unrecognized", Unrecognized);
   // CHECK: unrecognized value: 999
@@ -51,6 +61,16 @@ int main() {
   // CHECK: set invalid device value: 2
   // CHECK: set invalid device name: cudaErrorInvalidDevice
   // CHECK: set invalid device string: Invalid device number
+
+  print_error("get last error", cudaGetLastError());
+  // CHECK: get last error value: 2
+  // CHECK: get last error name: cudaErrorInvalidDevice
+  // CHECK: get last error string: Invalid device number
+
+  print_error("cleared last error", cudaGetLastError());
+  // CHECK: cleared last error value: 0
+  // CHECK: cleared last error name: cudaSuccess
+  // CHECK: cleared last error string: No error
 
   print_error("null stream destroy", cudaStreamDestroy(nullptr));
   // CHECK: null stream destroy value: 1

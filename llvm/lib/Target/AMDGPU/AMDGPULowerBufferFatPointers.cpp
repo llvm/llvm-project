@@ -51,10 +51,10 @@
 // including aggregates containing such pointers, to ones that use `i160`. This
 // is handled by `StoreFatPtrsAsIntsAndExpandMemcpyVisitor` , which visits
 // loads, stores, and allocas and, if the loaded or stored type contains `ptr
-// addrspace(7)`, rewrites that type to one where the p7s are replaced by i160s,
-// copying other parts of aggregates as needed. In the case of a store, each
-// pointer is `ptrtoint`d to i160 before storing, and load integers are
-// `inttoptr`d back. This same transformation is applied to vectors of pointers.
+// addrspace(7)`, rewrites it to use i160, `ptrtoint`ing before stores and
+// `inttoptr`ing after loads. Vectors of pointers work the same way. Since i160
+// and p7 differ in size and alignment, aggregates are split into one access per
+// leaf, and allocas and GEPs use byte offsets and sizes from the original type.
 //
 // Such a transformation allows the later phases of the pass to not need
 // to handle buffer fat pointers moving to and from memory, where we load
@@ -242,11 +242,9 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/Metadata.h"
-#include "llvm/IR/Operator.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ReplaceConstant.h"
-#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -435,27 +433,29 @@ class StoreFatPtrsAsIntsAndExpandMemcpyVisitor
     : public InstVisitor<StoreFatPtrsAsIntsAndExpandMemcpyVisitor, bool> {
   BufferFatPtrToIntTypeMap *TypeMap;
 
-  ValueToValueMapTy ConvertedForStore;
-
   IRBuilder<InstSimplifyFolder> IRB;
+
+  const DataLayout &DL;
 
   // Used for memcpy() lowering.
   const TargetTransformInfo *TTI;
   ScalarEvolution *SE;
 
-  // Convert all the buffer fat pointers within the input value to inttegers
-  // so that it can be stored in memory.
-  Value *fatPtrsToInts(Value *V, Type *From, Type *To, const Twine &Name);
-  // Convert all the i160s that need to be buffer fat pointers (as specified)
-  // by the To type) into those pointers to preserve the semantics of the rest
-  // of the program.
-  Value *intsToFatPtrs(Value *V, Type *From, Type *To, const Twine &Name);
+  Value *applyOffset(Value *Ptr, uint64_t Off);
+  // Visits each maximal subtree of `Ty` that is fat-ptr-free or is itself a
+  // [vector of] fat pointer(s), at its offset in `Ty`'s original layout.
+  void forEachAggLeaf(
+      Type *Ty, SmallVectorImpl<unsigned> &AggIdxs, uint64_t Off,
+      const Twine &Name,
+      function_ref<void(Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+                        uint64_t Off, const Twine &Name)>
+          Visit);
 
 public:
   StoreFatPtrsAsIntsAndExpandMemcpyVisitor(BufferFatPtrToIntTypeMap *TypeMap,
                                            const DataLayout &DL,
                                            LLVMContext &Ctx)
-      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)) {}
+      : TypeMap(TypeMap), IRB(Ctx, InstSimplifyFolder(DL)), DL(DL) {}
   bool processFunction(Function &F, const TargetTransformInfo *TTI,
                        ScalarEvolution *SE);
 
@@ -472,75 +472,45 @@ public:
 };
 } // namespace
 
-Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::fatPtrsToInts(
-    Value *V, Type *From, Type *To, const Twine &Name) {
-  if (From == To)
-    return V;
-  ValueToValueMapTy::iterator Find = ConvertedForStore.find(V);
-  if (Find != ConvertedForStore.end())
-    return Find->second;
-  if (isBufferFatPtrOrVector(From)) {
-    Value *Cast = IRB.CreatePtrToInt(V, To, Name + ".int");
-    ConvertedForStore[V] = Cast;
-    return Cast;
-  }
-  if (From->getNumContainedTypes() == 0)
-    return V;
-  // Structs, arrays, and other compound types.
-  Value *Ret = PoisonValue::get(To);
-  if (auto *AT = dyn_cast<ArrayType>(From)) {
-    Type *FromPart = AT->getArrayElementType();
-    Type *ToPart = cast<ArrayType>(To)->getElementType();
-    for (uint64_t I = 0, E = AT->getArrayNumElements(); I < E; ++I) {
-      Value *Field = IRB.CreateExtractValue(V, I);
-      Value *NewField =
-          fatPtrsToInts(Field, FromPart, ToPart, Name + "." + Twine(I));
-      Ret = IRB.CreateInsertValue(Ret, NewField, I);
-    }
-  } else {
-    for (auto [Idx, FromPart, ToPart] :
-         enumerate(From->subtypes(), To->subtypes())) {
-      Value *Field = IRB.CreateExtractValue(V, Idx);
-      Value *NewField =
-          fatPtrsToInts(Field, FromPart, ToPart, Name + "." + Twine(Idx));
-      Ret = IRB.CreateInsertValue(Ret, NewField, Idx);
-    }
-  }
-  ConvertedForStore[V] = Ret;
-  return Ret;
+Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::applyOffset(Value *Ptr,
+                                                             uint64_t Off) {
+  // The InstSimplifyFolder gives back `Ptr` itself when `Off` is 0.
+  return IRB.CreatePtrAdd(
+      Ptr, ConstantInt::get(DL.getIndexType(Ptr->getType()), Off),
+      Ptr->getName() + ".off." + Twine(Off), GEPNoWrapFlags::noUnsignedWrap());
 }
 
-Value *StoreFatPtrsAsIntsAndExpandMemcpyVisitor::intsToFatPtrs(
-    Value *V, Type *From, Type *To, const Twine &Name) {
-  if (From == To)
-    return V;
-  if (isBufferFatPtrOrVector(To)) {
-    Value *Cast = IRB.CreateIntToPtr(V, To, Name + ".ptr");
-    return Cast;
+void StoreFatPtrsAsIntsAndExpandMemcpyVisitor::forEachAggLeaf(
+    Type *Ty, SmallVectorImpl<unsigned> &AggIdxs, uint64_t Off,
+    const Twine &Name,
+    function_ref<void(Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+                      uint64_t Off, const Twine &Name)>
+        Visit) {
+  Type *IntTy = TypeMap->remapType(Ty);
+  if (isBufferFatPtrOrVector(Ty) || Ty == IntTy) {
+    // Zero-sized leaves ({} or [0 x T]) access no bytes; skip them.
+    if (DL.getTypeStoreSize(Ty) != 0)
+      Visit(Ty, IntTy, AggIdxs, Off, Name);
+    return;
   }
-  if (From->getNumContainedTypes() == 0)
-    return V;
-  // Structs, arrays, and other compound types.
-  Value *Ret = PoisonValue::get(To);
-  if (auto *AT = dyn_cast<ArrayType>(From)) {
-    Type *FromPart = AT->getArrayElementType();
-    Type *ToPart = cast<ArrayType>(To)->getElementType();
-    for (uint64_t I = 0, E = AT->getArrayNumElements(); I < E; ++I) {
-      Value *Field = IRB.CreateExtractValue(V, I);
-      Value *NewField =
-          intsToFatPtrs(Field, FromPart, ToPart, Name + "." + Twine(I));
-      Ret = IRB.CreateInsertValue(Ret, NewField, I);
-    }
-  } else {
-    for (auto [Idx, FromPart, ToPart] :
-         enumerate(From->subtypes(), To->subtypes())) {
-      Value *Field = IRB.CreateExtractValue(V, Idx);
-      Value *NewField =
-          intsToFatPtrs(Field, FromPart, ToPart, Name + "." + Twine(Idx));
-      Ret = IRB.CreateInsertValue(Ret, NewField, Idx);
-    }
+  auto Recurse = [&](unsigned I, Type *ElemTy, uint64_t ElemOff) {
+    AggIdxs.push_back(I);
+    forEachAggLeaf(ElemTy, AggIdxs, Off + ElemOff, Name + "." + Twine(I),
+                   Visit);
+    AggIdxs.pop_back();
+  };
+  if (auto *ST = dyn_cast<StructType>(Ty)) {
+    const StructLayout *Layout = DL.getStructLayout(ST);
+    for (auto [I, ElemTy, ElemOff] :
+         enumerate(ST->elements(), Layout->getMemberOffsets()))
+      Recurse(I, ElemTy, ElemOff.getFixedValue());
+    return;
   }
-  return Ret;
+  auto *AT = cast<ArrayType>(Ty);
+  Type *ElemTy = AT->getElementType();
+  uint64_t Stride = DL.getTypeAllocSize(ElemTy).getFixedValue();
+  for (unsigned I : seq<unsigned>(AT->getNumElements()))
+    Recurse(I, ElemTy, I * Stride);
 }
 
 bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
@@ -560,7 +530,6 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::processFunction(
   for (WeakTrackingVH VH : make_early_inc_range(CanBecomeLoops)) {
     Changed |= visit(cast<Instruction>(VH));
   }
-  ConvertedForStore.clear();
   this->TTI = nullptr;
   this->SE = nullptr;
   return Changed;
@@ -571,6 +540,11 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitAllocaInst(AllocaInst &I) {
   Type *NewTy = TypeMap->remapType(Ty);
   if (Ty == NewTy)
     return false;
+  // i160 is smaller than ptr addrspace(7) (24 bytes vs. 32); fall back to a
+  // byte array of the original size so sizes computed from Ty stay in bounds.
+  TypeSize AllocSize = DL.getTypeAllocSize(Ty);
+  if (AllocSize.isFixed() && DL.getTypeAllocSize(NewTy) != AllocSize)
+    NewTy = ArrayType::get(IRB.getInt8Ty(), AllocSize.getFixedValue());
   I.setAllocatedType(NewTy);
   return true;
 }
@@ -578,13 +552,16 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitAllocaInst(AllocaInst &I) {
 bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitGetElementPtrInst(
     GetElementPtrInst &I) {
   Type *Ty = I.getSourceElementType();
-  Type *NewTy = TypeMap->remapType(Ty);
-  if (Ty == NewTy)
+  if (Ty == TypeMap->remapType(Ty))
     return false;
-  // We'll be rewriting the type `ptr addrspace(7)` out of existence soon, so
-  // make sure GEPs don't have different semantics with the new type.
-  I.setSourceElementType(NewTy);
-  I.setResultElementType(TypeMap->remapType(I.getResultElementType()));
+  // Lower to a byte offset now, before remapping changes p7's layout (see file
+  // header).
+  IRB.SetInsertPoint(&I);
+  Value *Off = emitGEPOffset(&IRB, DL, &I);
+  Value *NewGEP = IRB.CreatePtrAdd(I.getPointerOperand(), Off, I.getName(),
+                                   I.getNoWrapFlags());
+  I.replaceAllUsesWith(NewGEP);
+  I.eraseFromParent();
   return true;
 }
 
@@ -595,12 +572,37 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitLoadInst(LoadInst &LI) {
     return false;
 
   IRB.SetInsertPoint(&LI);
+  if (!isBufferFatPtrOrVector(Ty)) {
+    // i160 has the same 20-byte store size as p7, so loading each leaf at
+    // its original-layout offset accesses the same bytes as the unlowered load.
+    Value *Agg = PoisonValue::get(Ty);
+    AAMDNodes AATags = LI.getAAMetadata();
+    SmallVector<unsigned> AggIdxs;
+    forEachAggLeaf(
+        Ty, AggIdxs, 0, LI.getName(),
+        [&](Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+            uint64_t Off, const Twine &Name) {
+          Value *Ptr = applyOffset(LI.getPointerOperand(), Off);
+          LoadInst *NewLI = IRB.CreateAlignedLoad(
+              IntLeafTy, Ptr, commonAlignment(LI.getAlign(), Off), Name);
+          NewLI->setVolatile(LI.isVolatile());
+          copyMetadataForLoad(*NewLI, LI);
+          NewLI->setAAMetadata(AATags.adjustForAccess(Off, IntLeafTy, DL));
+          Value *V = NewLI;
+          if (LeafTy != IntLeafTy)
+            V = IRB.CreateIntToPtr(NewLI, LeafTy, Name + ".ptr");
+          Agg = IRB.CreateInsertValue(Agg, V, Idxs, Name + ".agg");
+        });
+    LI.replaceAllUsesWith(Agg);
+    LI.eraseFromParent();
+    return true;
+  }
   auto *NLI = cast<LoadInst>(LI.clone());
   NLI->mutateType(IntTy);
   NLI = IRB.Insert(NLI);
   NLI->takeName(&LI);
 
-  Value *CastBack = intsToFatPtrs(NLI, IntTy, Ty, NLI->getName());
+  Value *CastBack = IRB.CreateIntToPtr(NLI, Ty, NLI->getName() + ".ptr");
   LI.replaceAllUsesWith(CastBack);
   LI.eraseFromParent();
   return true;
@@ -614,7 +616,31 @@ bool StoreFatPtrsAsIntsAndExpandMemcpyVisitor::visitStoreInst(StoreInst &SI) {
     return false;
 
   IRB.SetInsertPoint(&SI);
-  Value *IntV = fatPtrsToInts(V, Ty, IntTy, V->getName());
+  if (!isBufferFatPtrOrVector(Ty)) {
+    // Store each leaf at its byte offset in the original layout; see
+    // visitLoadInst.
+    AAMDNodes AATags = SI.getAAMetadata();
+    SmallVector<unsigned> AggIdxs;
+    forEachAggLeaf(
+        Ty, AggIdxs, 0, V->getName(),
+        [&](Type *LeafTy, Type *IntLeafTy, ArrayRef<unsigned> Idxs,
+            uint64_t Off, const Twine &Name) {
+          Value *Leaf = IRB.CreateExtractValue(V, Idxs, Name);
+          if (LeafTy != IntLeafTy)
+            Leaf = IRB.CreatePtrToInt(Leaf, IntLeafTy, Name + ".int");
+          auto *NewSI = cast<StoreInst>(SI.clone());
+          NewSI->setAlignment(commonAlignment(SI.getAlign(), Off));
+          NewSI->setOperand(0, Leaf);
+          NewSI->setOperand(1, applyOffset(SI.getPointerOperand(), Off));
+          // Each leaf covers only part of the original assignment.
+          NewSI->setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+          IRB.Insert(NewSI);
+          NewSI->setAAMetadata(AATags.adjustForAccess(Off, IntLeafTy, DL));
+        });
+    SI.eraseFromParent();
+    return true;
+  }
+  Value *IntV = IRB.CreatePtrToInt(V, IntTy, V->getName() + ".int");
   for (auto *Dbg : at::getDVRAssignmentMarkers(&SI))
     Dbg->setRawLocation(ValueAsMetadata::get(IntV));
 
@@ -896,21 +922,27 @@ LegalizeBufferContentTypesVisitor::analyzeOobProperties(Value *Ptr, Type *Ty,
   if (!NumRecordsIfKnown->second)
     return Result;
   const SCEV *NumRecords = SE->getSCEV(NumRecordsIfKnown->second);
-  // All-1s is (per ISA or as a consequence of the bonud)check rules, depending
-  // on arcihtecture) no bounds check.
-  if (NumRecords->isAllOnesValue())
+
+  // We'll normalize all bounds to the num_records width on the hardware.
+  std::optional<unsigned> MaybeNumRecordsWidth =
+      ST->getBufferResourceNumRecordsWidth();
+  if (!MaybeNumRecordsWidth)
+    return Result;
+  unsigned NumRecordsWidth = *MaybeNumRecordsWidth;
+  Type *NumRecordsTy = IRB.getIntNTy(NumRecordsWidth);
+  // Compare in i64 so wraparound is visible as a negative.
+  Type *CompareTy = IRB.getInt64Ty();
+  const SCEV *Bound = SE->getNoopOrZeroExtend(
+      SE->getTruncateOrZeroExtend(NumRecords, NumRecordsTy), CompareTy);
+
+  // All-1s is (per ISA or as a consequence of the bounds check rules, depending
+  // on architecture) no bounds check.
+  if (Bound == SE->getConstant(APInt::getMaxValue(NumRecordsWidth)
+                                   .zext(CompareTy->getIntegerBitWidth())))
     Result.NoPartialOOB = true;
 
-  const SCEV *BoundsDiff;
-  if (ST->has45BitNumRecordsBufferResource()) {
-    const SCEV *PtrDiffExt =
-        SE->getNoopOrZeroExtend(PtrDiff, NumRecords->getType());
-    BoundsDiff = SE->getMinusSCEV(NumRecords, PtrDiffExt);
-  } else {
-    const SCEV *NumRecordsI32 =
-        SE->getTruncateOrNoop(NumRecords, IRB.getInt32Ty());
-    BoundsDiff = SE->getMinusSCEV(NumRecordsI32, PtrDiff);
-  }
+  const SCEV *BoundsDiff =
+      SE->getMinusSCEV(Bound, SE->getNoopOrZeroExtend(PtrDiff, CompareTy));
 
   if (SE->getSignedRangeMin(BoundsDiff).sge(TypeSize) ||
       SE->isKnownNonPositive(BoundsDiff))
@@ -2224,10 +2256,16 @@ PtrParts SplitPtrStructs::visitIntToPtrInst(IntToPtrInst &IP) {
   auto *RetTy = cast<StructType>(IP.getType());
   Type *RsrcTy = RetTy->getElementType(0);
   Type *OffTy = RetTy->getElementType(1);
-  Value *RsrcPart = IRB.CreateLShr(
-      Int,
-      ConstantExpr::getIntegerValue(IntTy, APInt(Width, BufferOffsetWidth)));
-  Value *RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
+  // inttoptr zero-extends, so narrow inputs contribute nothing to the resource
+  // part.
+  Value *RsrcInt;
+  if (Width <= BufferOffsetWidth) {
+    RsrcInt = Constant::getNullValue(RsrcIntTy);
+  } else {
+    Value *RsrcPart =
+        IRB.CreateLShr(Int, ConstantInt::get(IntTy, BufferOffsetWidth));
+    RsrcInt = IRB.CreateIntCast(RsrcPart, RsrcIntTy, /*isSigned=*/false);
+  }
   Value *Rsrc = IRB.CreateIntToPtr(RsrcInt, RsrcTy, IP.getName() + ".rsrc");
   Value *Off =
       IRB.CreateIntCast(Int, OffTy, /*IsSigned=*/false, IP.getName() + ".off");

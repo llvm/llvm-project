@@ -821,6 +821,9 @@ Error LLJITBuilderState::prepareForConstruction() {
     case Triple::ppc64le:
       UseJITLink = TT.isOSBinFormatELF();
       break;
+    case Triple::systemz:
+      UseJITLink = TT.isOSBinFormatELF();
+      break;
     default:
       break;
     }
@@ -1102,7 +1105,7 @@ std::string LLJIT::mangle(StringRef UnmangledName) const {
   std::string MangledName;
   {
     raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
+    llvm::Mangler::getNameWithPrefix(MangledNameStream, UnmangledName, DL);
   }
   return MangledName;
 }

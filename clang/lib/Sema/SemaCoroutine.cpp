@@ -463,6 +463,12 @@ static ExprResult buildPromiseCall(Sema &S, VarDecl *Promise,
   return buildMemberCall(S, PromiseRef.get(), Loc, Name, Args);
 }
 
+static void markCoroutineParametersReferenced(FunctionDecl &FD) {
+  for (auto *PD : FD.parameters())
+    if (!PD->getType()->isDependentType())
+      PD->setReferenced();
+}
+
 VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
   assert(isa<FunctionDecl>(CurContext) && "not in a function scope");
   auto *FD = cast<FunctionDecl>(CurContext);
@@ -556,6 +562,10 @@ VarDecl *Sema::buildCoroutinePromise(SourceLocation Loc) {
         VD->setInit(MaybeCreateExprWithCleanups(Result.get()));
         VD->setInitStyle(VarDecl::CallInit);
         CheckCompleteVariableDeclaration(VD);
+        // The constructor is selected with the coroutine parameter copies as
+        // arguments. Mark the original parameters as referenced for
+        // -Wunused-parameter.
+        markCoroutineParametersReferenced(*FD);
       }
     } else
       ActOnUninitializedDecl(VD);
@@ -1045,6 +1055,19 @@ StmtResult Sema::BuildCoreturnStmt(SourceLocation Loc, Expr *E,
     E = R.get();
   }
 
+  // A type-dependent operand can init to either void or non-void.
+  // Delay selecting return_void or return_value until template init
+  // rebuilds the co_return statement with the operand type.
+  if (E && !isa<InitListExpr>(E) && E->isTypeDependent()) {
+    // Still finish the full-expression, so that potential captures in the
+    // operand are turned into actual captures of the enclosing lambda.
+    ExprResult FE = ActOnFinishFullExpr(E, /*DiscardedValue=*/false);
+    if (FE.isInvalid())
+      return StmtError();
+    return new (Context)
+        CoreturnStmt(Loc, FE.get(), /*PromiseCall=*/nullptr, IsImplicit);
+  }
+
   VarDecl *Promise = FSI->CoroutinePromise;
   ExprResult PC;
   if (E && (isa<InitListExpr>(E) || !E->getType()->isVoidType())) {
@@ -1386,9 +1409,14 @@ static bool collectPlacementArgs(Sema &S, FunctionDecl &FD, SourceLocation Loc,
 
     // Build a reference to the parameter.
     auto PDLoc = PD->getLocation();
+    // Preserve the referenced state for unused parameter diagnostics.
+    bool DeclReferenced = PD->isReferenced();
     ExprResult PDRefExpr =
         S.BuildDeclRefExpr(PD, PD->getOriginalType().getNonReferenceType(),
                            ExprValueKind::VK_LValue, PDLoc);
+
+    PD->setReferenced(DeclReferenced);
+
     if (PDRefExpr.isInvalid())
       return false;
 
@@ -1444,6 +1472,8 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
 
   FunctionDecl *OperatorNew = nullptr;
   SmallVector<Expr *, 1> PlacementArgs;
+  // Track whether PlacementArgs still refer to the coroutine parameters.
+  bool PlacementArgsFromCoroutine = false;
   DeclarationName NewName =
       S.getASTContext().DeclarationNames.getCXXOperatorName(OO_New);
 
@@ -1497,8 +1527,11 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
   // We don't expect to call to global operator new with (size, p0, …, pn).
   // So if we choose to lookup the allocation function in global scope, we
   // shouldn't lookup placement arguments.
-  if (PromiseContainsNew && !collectPlacementArgs(S, FD, Loc, PlacementArgs))
-    return false;
+  if (PromiseContainsNew) {
+    if (!collectPlacementArgs(S, FD, Loc, PlacementArgs))
+      return false;
+    PlacementArgsFromCoroutine = true;
+  }
 
   LookupAllocationFunction();
 
@@ -1564,6 +1597,7 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
     if (!StdNoThrow)
       return false;
     PlacementArgs = {StdNoThrow};
+    PlacementArgsFromCoroutine = false;
     OperatorNew = nullptr;
     LookupAllocationFunction(AllocationFunctionScope::Global);
   }
@@ -1650,8 +1684,14 @@ bool CoroutineStmtBuilder::makeNewAndDeleteExpr() {
       isAlignedAllocation(IAP.PassAlignment))
     NewArgs.push_back(FrameAlignment);
 
-  if (OperatorNew->getNumParams() > NewArgs.size())
+  // getNumParams() does not include an ellipsis, but a variadic allocation
+  // function still receives the coroutine parameters as placement arguments.
+  if (OperatorNew->isVariadic() ||
+      OperatorNew->getNumParams() > NewArgs.size()) {
     llvm::append_range(NewArgs, PlacementArgs);
+    if (PlacementArgsFromCoroutine)
+      markCoroutineParametersReferenced(FD);
+  }
 
   ExprResult NewExpr =
       S.BuildCallExpr(S.getCurScope(), NewRef.get(), Loc, NewArgs, Loc);

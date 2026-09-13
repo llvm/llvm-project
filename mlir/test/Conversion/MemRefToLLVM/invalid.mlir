@@ -23,7 +23,7 @@ func.func @bad_address_space(%a: memref<2xindex, "foo">) {
 // CHECK-LABEL: @invalid_int_conversion
 func.func @invalid_int_conversion() {
      // expected-error@unknown{{conversion of memref memory space 1 : ui64 to integer address space failed. Consider adding memory space conversions.}}
-     %alloc = memref.alloc() {alignment = 64 : i64} : memref<10xf32, 1 : ui64> 
+     %alloc = memref.alloc() alignment = 64 : memref<10xf32, 1 : ui64>
     return
 }
 

@@ -170,9 +170,9 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = llvm.getelementptr %[[ARG]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
     %0 = llvm.mlir.constant(1 : i32) : i32
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-    %2 = llvm.mlir.constant(0 : index) : i64
-    %3 = llvm.mlir.constant(1 : index) : i64
-    %4 = llvm.mlir.constant(9 : index) : i64
+    %2 = llvm.mlir.constant(0 : i64) : i64
+    %3 = llvm.mlir.constant(1 : i64) : i64
+    %4 = llvm.mlir.constant(9 : i64) : i64
     %5 = llvm.mlir.constant(48 : i32) : i32
     "llvm.intr.memcpy"(%1, %arg0, %5) <{arg_attrs = [{llvm.align = 8 : i64}, {llvm.align = 8 : i64}, {}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
     %6 = llvm.getelementptr %1[0, 7, %2, 0] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
@@ -183,7 +183,7 @@ module attributes {omp.is_target_device = true} {
     %11 = llvm.load %10 : !llvm.ptr -> i64
     %12 = llvm.sub %3, %7 : i64
     %13 = llvm.sub %4, %7 : i64
-    %14 = omp.map.bounds lower_bound(%12 : i64) upper_bound(%13 : i64) extent(%9 : i64) stride(%11 : i64) start_idx(%7 : i64) {stride_in_bytes = true}
+    %14 = omp.map.bounds lower_bound(%12 : i64) upper_bound(%13 : i64) extent(%9 : i64) stride(%11 : i64) start_idx(%7 : i64) stride_in_bytes(true)
     %15 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>
 
     // CHECK-NEXT: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG]] {{.*}} map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : !llvm.ptr, f32) -> !llvm.ptr
@@ -352,11 +352,10 @@ module attributes {omp.is_target_device = true} {
     // argument; it is captured by a matching `map_entries` entry.
     // CHECK-NEXT: %[[MAP:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
     %1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
-    // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) thread_limit(%[[ARG1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
-    // CHECK: } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
-    omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 : !llvm.ptr) map_entries(%1 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
+    // CHECK-NEXT: omp.target kernel_type(generic) allocate(%[[ARG0]] : !llvm.ptr -> %[[ARG0]] : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0]) thread_limit(%[[ARG1]] : i32) map_entries(%[[MAP]] -> %{{.*}} : !llvm.ptr) private(@privatizer %[[ARG0]] -> %{{.*}} : !llvm.ptr)
+    omp.target kernel_type(generic) allocate(%arg0 : !llvm.ptr -> %arg0 : !llvm.ptr) allocate_alignments([64]) allocate_private_indices([0]) depend(taskdependin -> %arg0 : !llvm.ptr) device(%arg1 : i32) if(%arg2) thread_limit(%arg1 : i32) in_reduction(@reduction %arg0 : !llvm.ptr) map_entries(%1 -> %arg3 : !llvm.ptr) private(@privatizer %arg0 -> %arg4 : !llvm.ptr) {
       omp.terminator
-    } {allocate_alignments = array<i64: 64>, allocate_private_indices = array<i64: 0>}
+    }
 
     // CHECK-NOT: omp.target_enter_data
     // CHECK-NOT: omp.target_exit_data
@@ -463,7 +462,7 @@ module attributes {omp.is_target_device = true} {
     llvm.return
   }
 
-  llvm.func @foo() attributes {omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter)>, sym_visibility = "private"}
+  llvm.func @foo() attributes {omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter>, sym_visibility = "private"}
   omp.private {type = firstprivate} @privatizer : i32 copy {
   ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
     %0 = llvm.load %arg0 : !llvm.ptr -> i32
@@ -490,16 +489,16 @@ module attributes {omp.is_target_device = true} {
   // CHECK: llvm.mlir.global external @declare_target_enter_any
   // CHECK: llvm.mlir.global external @declare_target_enter_host
   // CHECK: llvm.mlir.global external @declare_target_enter_nohost
-  llvm.mlir.global external @declare_target_enter_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (enter), automap = false>} : i32
-  llvm.mlir.global external @declare_target_enter_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (enter), automap = false>} : i32
-  llvm.mlir.global external @declare_target_enter_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (enter), automap = false>} : i32
+  llvm.mlir.global external @declare_target_enter_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = enter, automap = false>} : i32
+  llvm.mlir.global external @declare_target_enter_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = enter, automap = false>} : i32
+  llvm.mlir.global external @declare_target_enter_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = enter, automap = false>} : i32
 
   // CHECK: llvm.mlir.global external @declare_target_link_any
   // CHECK: llvm.mlir.global external @declare_target_link_host
   // CHECK: llvm.mlir.global external @declare_target_link_nohost
-  llvm.mlir.global external @declare_target_link_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (link), automap = false>} : i32
-  llvm.mlir.global external @declare_target_link_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (host), capture_clause = (link), automap = false>} : i32
-  llvm.mlir.global external @declare_target_link_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (nohost), capture_clause = (link), automap = false>} : i32
+  llvm.mlir.global external @declare_target_link_any() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = any, capture_clause = link, automap = false>} : i32
+  llvm.mlir.global external @declare_target_link_host() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = link, automap = false>} : i32
+  llvm.mlir.global external @declare_target_link_nohost() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = nohost, capture_clause = link, automap = false>} : i32
 
   llvm.func @LangRTPlaceholderFunc(!llvm.ptr {llvm.nocapture}, !llvm.ptr {llvm.nocapture}, !llvm.ptr, i8 {llvm.signext}, i32) attributes {sym_visibility = "private"}
 }

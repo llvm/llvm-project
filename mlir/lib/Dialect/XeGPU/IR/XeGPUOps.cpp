@@ -17,13 +17,15 @@
 
 #include "llvm/Support/Debug.h"
 
+#include <utility>
+
 #define DEBUG_TYPE "xegpu"
 
 using namespace mlir;
 using namespace mlir::xegpu;
 
 template <typename T>
-static std::string makeString(T array, bool breakline = false) {
+static std::string makeString(const T &array, bool breakline = false) {
   std::string buf;
   buf.clear();
   llvm::raw_string_ostream os(buf);
@@ -212,9 +214,6 @@ LogicalResult CreateMemDescOp::verify() {
 
 void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
                            Type tdesc, TypedValue<MemRefType> source) {
-  [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape() && "expecting a memref with static shape");
-
   build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
@@ -260,8 +259,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
 }
 
 LogicalResult CreateNdDescOp::verify() {
-  size_t rank = getMixedSizes().size();
-  bool invalidRank = rank != getMixedStrides().size();
+  auto srcMemrefTy = dyn_cast<MemRefType>(getSourceType());
+  size_t rank = srcMemrefTy ? srcMemrefTy.getRank() : getMixedSizes().size();
   bool invalidElemTy = false;
 
   // Memory space of created TensorDesc should match with the source.
@@ -280,17 +279,22 @@ LogicalResult CreateNdDescOp::verify() {
   if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
     invalidElemTy |= memrefTy.getElementType() != getElementType();
 
+  bool hasExplicitShapeStrides =
+      !getShape().empty() || !getStrides().empty() ||
+      (getConstShapeAttr() && !getConstShapeAttr().empty()) ||
+      (getConstStridesAttr() && !getConstStridesAttr().empty());
+
   if (llvm::isa<IntegerType>(getSourceType())) {
     // strides and shape must present for integer source.
     if (getMixedStrides().empty() || getMixedSizes().empty())
       return emitOpError("expecting strides and shape to be present for "
                          "integer source.");
+    if (getMixedSizes().size() != getMixedStrides().size())
+      return emitOpError("Expecting the rank of shape and strides to match.");
+  } else if (srcMemrefTy && hasExplicitShapeStrides) {
+    return emitOpError("shape and strides should not be specified for a memref "
+                       "source; they are inferred from the memref.");
   }
-
-  if (invalidRank)
-    return emitOpError(
-        "Expecting the rank of shape, strides, and source (if source "
-        "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)
@@ -547,7 +551,7 @@ LogicalResult StoreNdOp::verify() {
         "Mismatched ranks between offsets and tensor descriptor");
 
   if (auto layout = getAnchorLayout()) {
-    if (!layout.isDistributable(tdescShape))
+    if (!layout.isDistributable(std::move(tdescShape)))
       return emitOpError(
           "TensorDesc shape is not distributable with the layout");
   }
@@ -873,7 +877,7 @@ LogicalResult ConvertLayoutOp::verify() {
       return emitOpError(
           "invalid input layout, data cannot be evenly distributed.");
 
-    if (!resLayout.isDistributable(shape))
+    if (!resLayout.isDistributable(std::move(shape)))
       return emitOpError(
           "invalid target layout, data cannot be evenly distributed.");
   }

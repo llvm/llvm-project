@@ -45,8 +45,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
 
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-      ConstString("/usr/lib/libobjc.A.dylib"),
-      lldb::eSymbolSharedCacheUseHostSharedCache);
+      "/usr/lib/libobjc.A.dylib", lldb::eSymbolSharedCacheUseHostSharedCache);
   EXPECT_TRUE(image_info.GetUUID());
   EXPECT_TRUE(image_info.GetExtractor());
 
@@ -94,8 +93,7 @@ TEST_F(ObjectFileMachOTest, ModuleFromSharedCacheInfo) {
 
 TEST_F(ObjectFileMachOTest, IndirectSymbolsInTheSharedCache) {
   SharedCacheImageInfo image_info = HostInfo::GetSharedCacheImageInfo(
-      ConstString(
-          "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit"),
+      "/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit",
       lldb::eSymbolSharedCacheUseHostSharedCache);
   ModuleSpec spec(FileSpec(), UUID(), image_info.GetExtractor());
   lldb::ModuleSP module = std::make_shared<Module>(spec);
@@ -190,6 +188,51 @@ LoadCommands:
   ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
 
   // Simply no crashing is the regression check.
+  Symtab symtab(OF);
+  OF->ParseSymtab(symtab);
+}
+
+// An LC_SYMTAB whose nsyms claims far more symbols than the file could
+// possibly hold.
+TEST_F(ObjectFileMachOTest, ParseSymtabHugeSymbolCountIsBounded) {
+  const char *yamldata = R"(
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000001
+  ncmds:           2
+  sizeofcmds:      96
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        0
+    maxprot:         7
+    initprot:        5
+    nsects:          0
+    flags:           0
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          0
+    nsyms:           0x80000000
+    stroff:          0
+    strsize:         16
+...
+)";
+
+  llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+  ASSERT_THAT_EXPECTED(file, llvm::Succeeded());
+  lldb::ModuleSP module = std::make_shared<Module>(file->moduleSpec());
+  ObjectFile *OF = module->GetObjectFile();
+  ASSERT_TRUE(llvm::isa<ObjectFileMachO>(OF));
+
   Symtab symtab(OF);
   OF->ParseSymtab(symtab);
 }

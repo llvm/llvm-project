@@ -25,8 +25,11 @@
 #include <memory>
 #include <vector>
 
+#define SYCL_KHR_DEFAULT_CONTEXT 1
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
+class context;
 class device;
 
 namespace detail {
@@ -98,6 +101,10 @@ public:
   /// \return A std::vector containing all of the platforms from all backends
   /// that are available in the system.
   static std::vector<platform> get_platforms();
+
+  /// \return the context that contains all of the root devices that are
+  /// associated with this platform.
+  context khr_get_default_context() const;
 
 private:
   platform(detail::PlatformImpl &Impl) : impl(&Impl) {}

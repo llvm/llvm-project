@@ -52,9 +52,11 @@ SymbolLocator::LocateWithPlugins(const Request &request,
   if (!fs.Exists(module_spec.GetFileSpec()) ||
       !fs.Exists(module_spec.GetSymbolFileSpec())) {
     Status error;
-    PluginManager::DownloadObjectAndSymbolFile(module_spec, error,
-                                               request.external_lookup);
-    if (error.Fail() && request.external_lookup)
+    const bool downloaded = PluginManager::DownloadObjectAndSymbolFile(
+        module_spec, error, request.external_lookup);
+    // The plugins share one Status, so a failure recorded along the way says
+    // nothing about a search that ended in a download.
+    if (!downloaded && error.Fail() && request.external_lookup)
       result.symbol_error.emplace(error.takeError());
   }
 

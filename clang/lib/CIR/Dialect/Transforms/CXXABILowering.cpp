@@ -111,6 +111,9 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
         return tc.isLegal(gva.getType()) &&
                isCXXABIAttributeLegal(tc, gva.getIndices());
       })
+      .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
+        return tc.isLegal(goa.getType());
+      })
       .Case<cir::VTableAttr>([&tc](cir::VTableAttr vta) {
         return tc.isLegal(vta.getType()) &&
                isCXXABIAttributeLegal(tc, vta.getData());
@@ -208,6 +211,10 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
             tc.convertType(gva.getType()), gva.getSymbol(),
             mlir::cast<mlir::ArrayAttr>(
                 rewriteAttribute(tc, ctx, gva.getIndices())));
+      })
+      .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
+        return cir::GlobalOffsetAttr::get(tc.convertType(goa.getType()),
+                                          goa.getSymbol(), goa.getOffset());
       })
       .Case<cir::VTableAttr>([&tc, ctx](cir::VTableAttr vta) {
         return cir::VTableAttr::get(
@@ -492,6 +499,10 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
                                       gva.getIndices());
 
+    if (auto goa = mlir::dyn_cast_if_present<cir::GlobalOffsetAttr>(initVal))
+      return cir::GlobalOffsetAttr::get(convertedTy, goa.getSymbol(),
+                                        goa.getOffset());
+
     if (auto blockAddr =
             mlir::dyn_cast_if_present<cir::BlockAddrInfoAttr>(initVal)) {
       assert(convertedTy == ptrTy && "BlockAddrInfo type should not change");
@@ -636,10 +647,10 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
   cir::UsualDeleteParamsAttr deleteParams = op.getDeleteParams();
   bool cookieRequired = deleteParams.getSize() || op.getElementDtorAttr();
 
-  if (deleteParams.getTypeAwareDelete() || deleteParams.getDestroyingDelete() ||
-      deleteParams.getAlignment())
-    return rewriter.notifyMatchFailure(
-        op, "type-aware, destroying, or aligned delete not yet supported");
+  assert(!deleteParams.getDestroyingDelete() &&
+         "destroying delete not legal on arrays");
+  assert(!deleteParams.getTypeAwareDelete() &&
+         "type-aware delete not legal on arrays");
 
   const CIRCXXABI &cxxABI = lowerModule->getCXXABI();
   CIRBaseBuilderTy cirBuilder(rewriter);
@@ -716,6 +727,12 @@ mlir::LogicalResult CIRDeleteArrayOpABILowering::matchAndRewrite(
               cir::AddOp::create(b, l, sizeTy, allocSize, cookieSizeVal);
           callArgs.push_back(allocSize);
         }
+        if (deleteParams.getAlignment()) {
+          auto alignVal = cir::ConstantOp::create(
+              b, l, cir::IntAttr::get(sizeTy, *deleteParams.getAlignment()));
+          callArgs.push_back(alignVal);
+        }
+
         auto deleteCall =
             cir::CallOp::create(b, l, deleteFn, cir::VoidType(), callArgs);
         // operator delete[] is implicitly nothrow per [basic.stc.dynamic],
@@ -866,8 +883,8 @@ class CIRABITypeConverter : public mlir::TypeConverter {
       }
       auto s = mlir::cast<cir::StructType>(type);
       return cir::StructType::get(type.getContext(), converted,
-                                  type.getPacked(), type.getPadded(),
-                                  s.getIsClass(), s.getMemberKinds());
+                                  type.getPacked(), s.getIsClass(),
+                                  s.getMemberKinds());
     }
 
     assert(!type.isIncomplete() || type.getMembers().empty());
@@ -914,8 +931,8 @@ class CIRABITypeConverter : public mlir::TypeConverter {
     if (auto u = mlir::dyn_cast<cir::UnionType>(type))
       if (mlir::Type pad = u.getPadding())
         loweredPadding = convertType(pad);
-    convertedType.complete(convertedMembers, type.getPacked(), type.getPadded(),
-                           loweredPadding, type.getMemberKinds());
+    convertedType.complete(convertedMembers, type.getPacked(), loweredPadding,
+                           type.getMemberKinds());
     addConvertedRecordType(convertedType);
     return convertedType;
   }

@@ -1140,6 +1140,44 @@ void ASTStmtWriter::VisitBinaryOperator(BinaryOperator *E) {
       E->getObjectKind() == OK_Ordinary)
     AbbrevToUse = Writer.getBinaryOperatorAbbrev();
 
+  // When emitting reduced BMI, some necessary operators may be removed for ADL.
+  // Here we tries to save such operators.
+  if (Writer.isGeneratingReducedBMI() &&
+      // Assign doesn't take part in ADL.
+      E->getOpcode() != BO_Assign &&
+      (E->getLHS()->isTypeDependent() || E->getRHS()->isTypeDependent())) {
+    OverloadedOperatorKind Op =
+        BinaryOperator::getOverloadedOperator(E->getOpcode());
+
+    // [module.global.frag] performs a synthetic lookup in which each
+    // type-dependent operand has no associated namespaces or entities.
+    DeclarationName Name =
+        Record.getASTContext().DeclarationNames.getCXXOperatorName(Op);
+
+    auto PreserveAssociatedCandidates = [&](Expr *Operand) {
+      const auto *RT = Operand->getType()->getAs<RecordType>();
+      if (!RT)
+        return;
+
+      // Find the associated namespace and perform a synthetic lookup in it.
+      DeclContext *DC = RT->getDecl()->getDeclContext();
+      while (DC && !DC->isFileContext())
+        DC = DC->getParent();
+      if (auto *NS = dyn_cast_or_null<NamespaceDecl>(DC))
+        for (NamedDecl *D : NS->noload_lookup(Name))
+          Writer.GetDeclRef(D);
+    };
+
+    if (!E->getLHS()->isTypeDependent())
+      PreserveAssociatedCandidates(E->getLHS());
+    if (!E->getRHS()->isTypeDependent())
+      PreserveAssociatedCandidates(E->getRHS());
+
+    for (NamedDecl *D :
+         Record.getASTContext().getTranslationUnitDecl()->noload_lookup(Name))
+      Writer.GetDeclRef(D);
+  }
+
   Code = serialization::EXPR_BINARY_OPERATOR;
 }
 
@@ -2045,6 +2083,24 @@ void ASTStmtWriter::VisitCXXNewExpr(CXXNewExpr *E) {
 
   Record.AddDeclRef(E->getOperatorNew());
   Record.AddDeclRef(E->getOperatorDelete());
+
+  // Preserve the global candidates that the lookup at instantiation can find;
+  // otherwise a reduced BMI can elide them because the dependent CXXNewExpr has
+  // no direct reference to an allocation function.
+  if (Writer.isGeneratingReducedBMI() && !E->getOperatorNew()) {
+    auto PreserveGlobalCandidates = [&](OverloadedOperatorKind Kind) {
+      DeclarationName Name =
+          Record.getASTContext().DeclarationNames.getCXXOperatorName(Kind);
+      for (NamedDecl *Found :
+           Record.getASTContext().getTranslationUnitDecl()->noload_lookup(Name))
+        if (!Found->isImplicit())
+          Writer.GetDeclRef(Found);
+    };
+
+    PreserveGlobalCandidates(E->isArray() ? OO_Array_New : OO_New);
+    PreserveGlobalCandidates(E->isArray() ? OO_Array_Delete : OO_Delete);
+  }
+
   Record.AddTypeSourceInfo(E->getAllocatedTypeSourceInfo());
   if (E->isParenTypeId())
     Record.AddSourceRange(E->getTypeIdParens());
@@ -2108,6 +2164,15 @@ void ASTStmtWriter::VisitExprWithCleanups(ExprWithCleanups *E) {
   Record.push_back(E->cleanupsHaveSideEffects());
   Record.AddStmt(E->getSubExpr());
   Code = serialization::EXPR_EXPR_WITH_CLEANUPS;
+}
+
+void ASTStmtWriter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *E) {
+  VisitExpr(E);
+  Record.push_back(E->getNumTemplateArgs());
+  AddTemplateKWAndArgsInfo(E->KWAndArgs, E->getTrailingObjects());
+  Record.AddDeclarationNameInfo(E->getNameInfo());
+  Record.AddTemplateName(E->getTemplateName());
+  Code = serialization::EXPR_DEPENDENT_TEMPLATE_ID;
 }
 
 void ASTStmtWriter::VisitCXXDependentScopeMemberExpr(
@@ -2247,11 +2312,14 @@ void ASTStmtWriter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *E) {
 void ASTStmtWriter::VisitTypeTraitExpr(TypeTraitExpr *E) {
   VisitExpr(E);
   Record.push_back(E->TypeTraitExprBits.IsBooleanTypeTrait);
+  Record.push_back(E->TypeTraitExprBits.IsComparisonResult);
   Record.push_back(E->TypeTraitExprBits.NumArgs);
   Record.push_back(E->TypeTraitExprBits.Kind); // FIXME: Stable encoding
 
   if (E->TypeTraitExprBits.IsBooleanTypeTrait)
     Record.push_back(E->TypeTraitExprBits.Value);
+  else if (E->isValueDependent())
+    Record.AddAPValue(APValue());
   else
     Record.AddAPValue(E->getAPValue());
 

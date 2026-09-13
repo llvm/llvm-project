@@ -22,6 +22,21 @@ E b(int x) { return (E)x; }
 // CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381B1bEi
 // CHECK: ret i1 %tobool
 
+E c(float x) { return static_cast<E>(x); }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381B1cEf
+// CHECK: ret i1 %tobool
+
+E d(float x) { return (E)x; }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381B1dEf
+// CHECK: ret i1 %tobool
+
+E e(double x) { return static_cast<E>(x); }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381B1eEd
+// CHECK: ret i1 %tobool
+
+E f(double x) { return (E)x; }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381B1fEd
+// CHECK: ret i1 %tobool
 } // namespace B
 namespace C {
 enum class E { Zero, One };
@@ -43,6 +58,22 @@ E a(int x) { return static_cast<E>(x); }
 E b(int x) { return (E)x; }
 
 // CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381D1bEi
+// CHECK: ret i1 %tobool
+
+E c(float x) { return static_cast<E>(x); }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381D1cEf
+// CHECK: ret i1 %tobool
+
+E d(float x) { return (E)x; }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381D1dEf
+// CHECK: ret i1 %tobool
+
+E e(double x) { return static_cast<E>(x); }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381D1eEd
+// CHECK: ret i1 %tobool
+
+E f(double x) { return (E)x; }
+// CHECK-LABEL: define{{.*}} zeroext i1 @_ZN6dr23381D1fEd
 // CHECK: ret i1 %tobool
 
 } // namespace D

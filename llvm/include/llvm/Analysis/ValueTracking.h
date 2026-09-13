@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 
@@ -254,10 +255,6 @@ LLVM_ABI Intrinsic::ID getIntrinsicForCallSite(const CallBase &CB,
 LLVM_ABI bool isSignBitCheck(ICmpInst::Predicate Pred, const APInt &RHS,
                              bool &TrueIfSigned);
 
-LLVM_ABI KnownFPClass analyzeKnownFPClassFromSelect(
-    const Instruction *I, const KnownFPClass &KnownLHS,
-    const KnownFPClass &KnownRHS, const SimplifyQuery &SQ, unsigned Depth = 0);
-
 /// Determine which floating-point classes are valid for \p V, and return them
 /// in KnownFPClass bit sets.
 ///
@@ -380,7 +377,13 @@ inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
   Value *Base =
       Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt, AllowNonInbounds);
 
-  Offset = OffsetAPInt.getSExtValue();
+  std::optional<int64_t> OffsetInt64 = OffsetAPInt.trySExtValue();
+  if (!OffsetInt64) {
+    Offset = 0;
+    return Ptr;
+  }
+
+  Offset = *OffsetInt64;
   return Base;
 }
 inline const Value *

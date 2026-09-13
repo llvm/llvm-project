@@ -340,6 +340,7 @@ add_header_library(
     libc.hdr.stdint_proxy
     libc.include.stdlib
     libc.src.__support.CPP.cstddef
+    libc.src.__support.CPP.utility
     libc.src.string.memory_utils.inline_memcpy
 )
 
@@ -408,23 +409,6 @@ add_entrypoint_object(
   DEPENDS
     libc.src.__support.common
     libc.hdr.types.size_t
-)
-
-add_entrypoint_object(
-  mkstemp
-  SRCS
-    mkstemp.cpp
-  HDRS
-    mkstemp.h
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fcntl_macros
-    libc.src.__support.OSUtil.linux.syscall_wrappers.getrandom
-    libc.src.__support.OSUtil.linux.syscall_wrappers.open
-    libc.src.__support.common
-    libc.src.__support.libc_errno
-    libc.src.__support.macros.config
-    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -607,6 +591,27 @@ add_entrypoint_object(
     .${LIBC_TARGET_OS}.realpath
 )
 
+add_entrypoint_object(
+  getloadavg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.getloadavg
+)
+
+add_entrypoint_object(
+  mkdtemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkdtemp
+)
+
+add_entrypoint_object(
+  mkstemp
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.mkstemp
+)
+
 if(NOT LLVM_LIBC_FULL_BUILD)
   return()
 endif()
@@ -782,8 +787,6 @@ add_entrypoint_object(
     atexit.cpp
   HDRS
     atexit.h
-  CXX_STANDARD
-    20 # For constinit
   DEPENDS
     .exit_handler
 )
@@ -794,8 +797,6 @@ add_entrypoint_object(
     at_quick_exit.cpp
   HDRS
     at_quick_exit.h
-  CXX_STANDARD
-    20 # For constinit
   DEPENDS
     .exit_handler
     .atexit
@@ -811,12 +812,24 @@ if(NOT LIBC_TARGET_OS_IS_BAREMETAL)
   )
 endif()
 
+set(exit_compile_options "")
+# TODO: Revisit this when/if LIBC_CONF_THREAD_MODE controls more than the
+# mutex implementation.
+if(TARGET libc.src.__support.threads.thread)
+  list(APPEND exit_deps
+    libc.src.__support.threads.thread
+  )
+  libc_add_definition(exit_compile_options "LIBC_COPT_SUPPORT_THREADS")
+endif()
+
 add_entrypoint_object(
   exit
   SRCS
     exit.cpp
   HDRS
     exit.h
+  COMPILE_OPTIONS
+    ${exit_compile_options}
   DEPENDS
     ${exit_deps}
 )
@@ -845,3 +858,4 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.system
 )
+

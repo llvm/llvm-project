@@ -106,6 +106,12 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   pm.addPass(mlir::createTargetLoweringPass());
   pm.addPass(mlir::createCXXABILoweringPass());
 
+  // LoweringPrepare synthesizes calls to runtime helpers such as __divsc3, and
+  // outlines dynamic global initializers into functions.  It must run before
+  // CallConvLowering so the classifier sees them, otherwise their signatures
+  // go unclassified and caller and callee disagree on the ABI.
+  pm.addPass(mlir::createLoweringPreparePass(&astContext));
+
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
@@ -118,8 +124,6 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
           target, getX86AVXABILevel(targetInfo.getABI()),
           allowsX86TargetAttrAvx(astContext), getX86ABICompatInfo(astContext)));
   }
-
-  pm.addPass(mlir::createLoweringPreparePass(&astContext));
 
   pm.enableVerifier(enableVerifier);
   (void)mlir::applyPassManagerCLOptions(pm);

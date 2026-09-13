@@ -119,4 +119,22 @@ TEST(SortedVectorMapTest, ReserveAndCapacity) {
   EXPECT_EQ(Map.size(), 1u);
   EXPECT_GE(Map.capacity(), 50u);
 }
+
+TEST(SortedVectorMapTest, Iterators) {
+  SortedVectorMap<int, int> Map;
+  Map[3] = 30;
+  Map[1] = 10;
+  Map[2] = 20;
+
+  const auto &ConstMap = Map;
+  ASSERT_EQ(std::distance(ConstMap.cbegin(), ConstMap.cend()), 3);
+  EXPECT_EQ(ConstMap.cbegin()->first, 1);
+  EXPECT_EQ(std::prev(ConstMap.cend())->first, 3);
+
+  ASSERT_EQ(std::distance(ConstMap.crbegin(), ConstMap.crend()), 3);
+  EXPECT_EQ(Map.rbegin()->first, 3);
+  EXPECT_EQ(std::prev(Map.rend())->first, 1);
+  EXPECT_EQ(ConstMap.crbegin()->first, 3);
+  EXPECT_EQ(std::prev(ConstMap.crend())->first, 1);
+}
 } // namespace

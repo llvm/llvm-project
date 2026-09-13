@@ -8,15 +8,15 @@
 
 # _foo starts out as a (non-weak) dynamically looked up symbol and is merged
 # against the Undefined from foo.o. _bar isn't referenced in any object file,
-# but starts out as Undefined because of the -u flag. _baz isn't referenced
+# but starts out as Undefined because of the -u flag. _qux isn't referenced
 # at all.
-# RUN: %lld -lSystem %t/main.o -U _foo -U _bar -u _bar -U _baz -o %t/out
+# RUN: %lld -lSystem %t/main.o -U _foo -U _bar -u _bar -U _qux -o %t/out
 # RUN: llvm-objdump --macho --lazy-bind %t/out | FileCheck --check-prefix=DYNAMIC %s
 # RUN: llvm-nm -m %t/out | FileCheck --check-prefix=DYNAMICSYM %s
 
 # Same thing should happen if _foo starts out as an Undefined.
 # `-U _foo` being passed twice shouldn't have an effect either.
-# RUN: %lld -lSystem %t/main.o -u _foo -U _foo -U _foo -u _bar -U _bar -U _baz -o %t/out
+# RUN: %lld -lSystem %t/main.o -u _foo -U _foo -U _foo -u _bar -U _bar -U _qux -o %t/out
 # RUN: llvm-objdump --macho --lazy-bind %t/out | FileCheck --check-prefix=DYNAMIC %s
 # RUN: llvm-nm -m %t/out | FileCheck --check-prefix=DYNAMICSYM %s
 
@@ -26,7 +26,7 @@
 # handles this case, so match ld64's behavior.
 
 # DYNAMIC-NOT: _bar
-# DYNAMIC-NOT: _baz
+# DYNAMIC-NOT: _qux
 # DYNAMIC: flat-namespace   _foo
 
 # DYNAMICSYM:      (undefined) external _bar (dynamically looked up)

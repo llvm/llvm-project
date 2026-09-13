@@ -1,7 +1,7 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 llvm.func @_QPfoo(%arg0: !llvm.ptr {fir.bindc_name = "array", llvm.nocapture}, %arg1: !llvm.ptr {fir.bindc_name = "t", llvm.nocapture}) {
-  %0 = llvm.mlir.constant(0 : i64) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.mlir.constant(1 : i32) : i32
   %2 = llvm.mlir.constant(10 : i64) : i64
   %3 = llvm.mlir.constant(1 : i64) : i64

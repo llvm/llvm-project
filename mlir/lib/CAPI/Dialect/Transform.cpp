@@ -385,39 +385,67 @@ void mlirPatternDescriptorOpInterfaceAttachFallbackModel(
 // MemoryEffectsOpInterface helpers
 //===---------------------------------------------------------------------===//
 
+static void invokeMemoryEffectInstancesCallback(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects,
+    MlirMemoryEffectInstancesCallback callback, void *userData) {
+  SmallVector<MlirMemoryEffectInstance> wrappedEffects;
+  wrappedEffects.reserve(effects.size());
+  for (MemoryEffects::EffectInstance &effect : effects)
+    wrappedEffects.push_back(wrap(&effect));
+  callback(wrappedEffects.size(), wrappedEffects.data(), userData);
+}
+
 /// Set the effect for the operands to only read the transform handles.
 void mlirTransformOnlyReadsHandle(MlirOpOperand *operands, intptr_t numOperands,
-                                  MlirMemoryEffectInstancesList effects) {
-  MutableArrayRef<OpOperand> operandArray(unwrap(*operands), numOperands);
-  transform::onlyReadsHandle(operandArray, *unwrap(effects));
+                                  MlirMemoryEffectInstancesCallback callback,
+                                  void *userData) {
+  MutableArrayRef<OpOperand> operandArray;
+  if (numOperands != 0)
+    operandArray = MutableArrayRef<OpOperand>(unwrap(*operands), numOperands);
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::onlyReadsHandle(operandArray, effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect for the operands to consuming the transform handles.
 void mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
-                                 MlirMemoryEffectInstancesList effects) {
-  MutableArrayRef<OpOperand> operandArray(unwrap(*operands), numOperands);
-  transform::consumesHandle(operandArray, *unwrap(effects));
+                                 MlirMemoryEffectInstancesCallback callback,
+                                 void *userData) {
+  MutableArrayRef<OpOperand> operandArray;
+  if (numOperands != 0)
+    operandArray = MutableArrayRef<OpOperand>(unwrap(*operands), numOperands);
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::consumesHandle(operandArray, effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect for the results to that they produce transform handles.
 void mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
-                                 MlirMemoryEffectInstancesList effects) {
+                                 MlirMemoryEffectInstancesCallback callback,
+                                 void *userData) {
   // NB: calling `producesHandle()` `numResults` as we cannot cast array of
   // `OpResult`s to a single `ResultRange` (and neither is `ResultRange` exposed
   // to Python). `producesHandle` iterates over the given `ResultRange` anyway.
-  SmallVectorImpl<MemoryEffects::EffectInstance> &effectList = *unwrap(effects);
+  SmallVector<MemoryEffects::EffectInstance> effects;
   for (intptr_t i = 0; i < numResults; ++i) {
     auto opResult = cast<OpResult>(unwrap(results[i]));
-    transform::producesHandle(ResultRange(opResult), effectList);
+    transform::producesHandle(ResultRange(opResult), effects);
   }
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect of potentially modifying payload IR.
-void mlirTransformModifiesPayload(MlirMemoryEffectInstancesList effects) {
-  transform::modifiesPayload(*unwrap(effects));
+void mlirTransformModifiesPayload(MlirMemoryEffectInstancesCallback callback,
+                                  void *userData) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::modifiesPayload(effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }
 
 /// Set the effect of potentially reading payload IR.
-void mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesList effects) {
-  transform::onlyReadsPayload(*unwrap(effects));
+void mlirTransformOnlyReadsPayload(MlirMemoryEffectInstancesCallback callback,
+                                   void *userData) {
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  transform::onlyReadsPayload(effects);
+  invokeMemoryEffectInstancesCallback(effects, callback, userData);
 }

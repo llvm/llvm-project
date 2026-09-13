@@ -36,6 +36,12 @@ def int_dx_resource_handlefromimplicitbinding
           [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_ptr_ty],
           [IntrNoMem]>;
 
+// Create resource handle from a descriptor heap. Returns a `target("dx.")`
+// type appropriate for the kind of resource given a heap index. Type of
+// heap is determined by the intrinsic's resource overload type.
+def int_dx_resource_handlefromheap
+    : DefaultAttrsIntrinsic<[llvm_any_ty], [llvm_i32_ty], [IntrNoMem]>;
+
 def int_dx_resource_getpointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty, llvm_any_ty],
                             [IntrConvergent, IntrNoMem]>;
@@ -65,12 +71,14 @@ def int_dx_resource_store_rawbuffer
 // Atomic read-modify-write on a UAV resource element. Emitted by
 // DXILResourceAccess from an `atomicrmw` on a `dx.resource.getpointer` result,
 // and lowered by DXILOpLowering to the DXIL `AtomicBinOp` op (78).
-// Args: handle, AtomicBinOpCode, coord0 (index), coord1 (offset or poison),
-//       new value. Returns the original value.
+// Args: handle, AtomicBinOpCode, coord0, coord1, coord2, new value. Returns
+//       the original value. Buffer accesses use coord0 as the element index and
+//       coord1 as the byte offset into a struct, while texture accesses use one
+//       coordinate per texture dimension. Unused coordinates are poison.
 def int_dx_resource_atomic_binop
     : DefaultAttrsIntrinsic<
           [llvm_any_ty],
-          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+          [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
            LLVMMatchType<0>],
           [IntrArgMemOnly]>;
 // dx.resource.load.cbufferrow encodes the number of elements returned in the
@@ -102,24 +110,24 @@ def int_dx_resource_getdimensions_levels_xy
 def int_dx_resource_sample
     : DefaultAttrsIntrinsic<
           [llvm_any_ty], [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty],
-          [IntrReadMem]>;
+          [IntrReadMem, IntrConvergent]>;
 
 def int_dx_resource_sample_clamp
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty, llvm_any_ty,
                              llvm_float_ty],
-                            [IntrReadMem]>;
+                            [IntrReadMem, IntrConvergent]>;
 def int_dx_resource_samplebias
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty,
                              llvm_float_ty, llvm_any_ty],
-                            [IntrReadMem]>;
+                            [IntrReadMem, IntrConvergent]>;
 
 def int_dx_resource_samplebias_clamp
     : DefaultAttrsIntrinsic<[llvm_any_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty,
                              llvm_float_ty, llvm_any_ty, llvm_float_ty],
-                            [IntrReadMem]>;
+                            [IntrReadMem, IntrConvergent]>;
 
 def int_dx_resource_samplegrad
     : DefaultAttrsIntrinsic<[llvm_any_ty],
@@ -145,6 +153,12 @@ def int_dx_resource_load_level
                              llvm_any_ty],
                             [IntrReadMem]>;
 
+def int_dx_resource_load_ms
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_any_ty, llvm_any_ty, llvm_i32_ty,
+                             llvm_any_ty],
+                            [IntrReadMem]>;
+
 def int_dx_resource_store_texture
     : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_any_ty, llvm_any_ty],
                             [IntrWriteMem]>;
@@ -152,12 +166,12 @@ def int_dx_resource_store_texture
 def int_dx_resource_calculate_lod
     : DefaultAttrsIntrinsic<[llvm_float_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty],
-                            [IntrReadMem]>;
+                            [IntrReadMem, IntrConvergent]>;
 
 def int_dx_resource_calculate_lod_unclamped
     : DefaultAttrsIntrinsic<[llvm_float_ty],
                             [llvm_any_ty, llvm_any_ty, llvm_any_ty],
-                            [IntrReadMem]>;
+                            [IntrReadMem, IntrConvergent]>;
 
 def int_dx_resource_samplecmp
     : DefaultAttrsIntrinsic<[llvm_any_ty],
@@ -255,7 +269,6 @@ def int_dx_legacyf32tof16 : DefaultAttrsIntrinsic<[LLVMScalarOrSameVectorWidth<0
 
 def int_dx_imad : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_umad : DefaultAttrsIntrinsic<[llvm_anyint_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
-def int_dx_normalize : DefaultAttrsIntrinsic<[LLVMMatchType<0>], [llvm_anyfloat_ty], [IntrNoMem]>;
 def int_dx_wave_prefix_bit_count : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;
 def int_dx_rsqrt  : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrTriviallyScalarizable]>;
 def int_dx_wave_active_countbits : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i1_ty], [IntrConvergent, IntrNoMem]>;

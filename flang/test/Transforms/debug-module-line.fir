@@ -1,8 +1,9 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
 
 // The line of a DIModuleAttr comes from the location of the module's
-// `fir.module_debug_imports`, which is that of the MODULE statement. Without
-// one, it falls back to a guess based on the first member of the module.
+// `fir.module_debug_imports`, which is that of the MODULE statement. A module
+// without one is not defined in this compilation unit, so it is described as a
+// declaration and carries no line at all.
 
 module {
   // A module whose MODULE statement is on line 4, well before its first
@@ -27,7 +28,7 @@ module {
     fir.has_value %0 : i32
   } loc(#loc_y)
 
-  // No `fir.module_debug_imports`, so the line is guessed from the member.
+  // No `fir.module_debug_imports`, so this module is only used here.
   fir.global @_QMlegacyEz : i32 {
     %0 = fir.zero_bits i32
     fir.has_value %0 : i32
@@ -45,5 +46,4 @@ module {
 
 // CHECK-DAG: #llvm.di_module<{{.*}}name = "with_use", line = 8>
 
-// Fallback when the module has no `fir.module_debug_imports`.
-// CHECK-DAG: #llvm.di_module<{{.*}}name = "legacy", line = 29>
+// CHECK-DAG: #llvm.di_module<name = "legacy", isDecl = true>

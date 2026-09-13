@@ -70,12 +70,11 @@ private:
                      Register &SrcReg, const GlobalValue *GVal,
                      bool doSrcRegProp, bool IsAma);
   void processInst(MachineRegisterInfo *MRI, MachineInstr *Inst,
-                   MachineOperand *RelocOp, const GlobalValue *GVal);
-  void checkADDrr(MachineRegisterInfo *MRI, MachineOperand *RelocOp,
-                  const GlobalValue *GVal);
-  void checkShift(MachineRegisterInfo *MRI, MachineBasicBlock &MBB,
-                  MachineOperand *RelocOp, const GlobalValue *GVal,
-                  unsigned Opcode);
+                   unsigned RelocOpNo, const GlobalValue *GVal);
+  void checkADDrr(MachineRegisterInfo *MRI, MachineInstr *Inst,
+                  unsigned RelocOpNo, const GlobalValue *GVal);
+  void checkShift(MachineRegisterInfo *MRI, MachineInstr *Inst,
+                  unsigned RelocOpNo, const GlobalValue *GVal, unsigned Opcode);
 
 public:
   // Main entry point for this pass.
@@ -138,12 +137,10 @@ bool BPFMISimplifyPatchableImpl::isLoadInst(unsigned Opcode) {
 }
 
 void BPFMISimplifyPatchableImpl::checkADDrr(MachineRegisterInfo *MRI,
-                                            MachineOperand *RelocOp,
+                                            MachineInstr *Inst,
+                                            unsigned RelocOpNo,
                                             const GlobalValue *GVal) {
-  const MachineInstr *Inst = RelocOp->getParent();
-  const MachineOperand *Op1 = &Inst->getOperand(1);
-  const MachineOperand *Op2 = &Inst->getOperand(2);
-  const MachineOperand *BaseOp = (RelocOp == Op1) ? Op2 : Op1;
+  const MachineOperand *BaseOp = &Inst->getOperand(RelocOpNo == 1 ? 2 : 1);
 
   // Go through all uses of %1 as in %1 = ADD_rr %2, %3
   const MachineOperand Op0 = Inst->getOperand(0);
@@ -187,18 +184,20 @@ void BPFMISimplifyPatchableImpl::checkADDrr(MachineRegisterInfo *MRI,
 }
 
 void BPFMISimplifyPatchableImpl::checkShift(MachineRegisterInfo *MRI,
-                                            MachineBasicBlock &MBB,
-                                            MachineOperand *RelocOp,
+                                            MachineInstr *Inst,
+                                            unsigned RelocOpNo,
                                             const GlobalValue *GVal,
                                             unsigned Opcode) {
   // Relocation operand should be the operand #2.
-  MachineInstr *Inst = RelocOp->getParent();
-  if (RelocOp != &Inst->getOperand(2))
+  if (RelocOpNo != 2)
     return;
 
-  BuildMI(MBB, *Inst, Inst->getDebugLoc(), TII->get(BPF::CORE_SHIFT))
-      .add(Inst->getOperand(0)).addImm(Opcode)
-      .add(Inst->getOperand(1)).addGlobalAddress(GVal);
+  BuildMI(*Inst->getParent(), *Inst, Inst->getDebugLoc(),
+          TII->get(BPF::CORE_SHIFT))
+      .add(Inst->getOperand(0))
+      .addImm(Opcode)
+      .add(Inst->getOperand(1))
+      .addGlobalAddress(GVal);
   Inst->eraseFromParent();
 }
 
@@ -275,7 +274,7 @@ void BPFMISimplifyPatchableImpl::processDstReg(MachineRegisterInfo *MRI,
 
     // The candidate needs to have a unique definition.
     if (IsAma && MRI->getUniqueVRegDef(I->getReg()))
-      processInst(MRI, I->getParent(), &*I, GVal);
+      processInst(MRI, I->getParent(), I.getOperandNo(), GVal);
   }
 }
 
@@ -302,7 +301,7 @@ void BPFMISimplifyPatchableImpl::processDstReg(MachineRegisterInfo *MRI,
 //       %r4 = SRA_ri %r4, 63
 void BPFMISimplifyPatchableImpl::processInst(MachineRegisterInfo *MRI,
                                              MachineInstr *Inst,
-                                             MachineOperand *RelocOp,
+                                             unsigned RelocOpNo,
                                              const GlobalValue *GVal) {
   unsigned Opcode = Inst->getOpcode();
   if (isLoadInst(Opcode)) {
@@ -323,16 +322,16 @@ void BPFMISimplifyPatchableImpl::processInst(MachineRegisterInfo *MRI,
         AccessPattern.substr(SecondColon + 1, FirstDollar - SecondColon);
     int PatchImm = std::stoll(std::string(PatchImmStr));
     if (PatchImm <= INT16_MAX)
-      checkADDrr(MRI, RelocOp, GVal);
+      checkADDrr(MRI, Inst, RelocOpNo, GVal);
     return;
   }
 
   if (Opcode == BPF::SLL_rr)
-    checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SLL_ri);
+    checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SLL_ri);
   else if (Opcode == BPF::SRA_rr)
-    checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SRA_ri);
+    checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SRA_ri);
   else if (Opcode == BPF::SRL_rr)
-    checkShift(MRI, *Inst->getParent(), RelocOp, GVal, BPF::SRL_ri);
+    checkShift(MRI, Inst, RelocOpNo, GVal, BPF::SRL_ri);
 }
 
 /// Remove unneeded Load instructions.

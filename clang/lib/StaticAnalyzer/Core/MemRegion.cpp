@@ -76,12 +76,12 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1,
                                          const SuperTy *superRegion) {
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, arg1, superRegion);
-  void *InsertPos;
-  auto *R = cast_or_null<RegionTy>(Regions.FindNodeOrInsertPos(ID, InsertPos));
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, InsertToken));
 
   if (!R) {
     R = new (A) RegionTy(arg1, superRegion);
-    Regions.InsertNode(R, InsertPos);
+    Regions.insert(R, InsertToken);
     assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
@@ -93,12 +93,12 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
                                          const SuperTy *superRegion) {
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, arg1, arg2, superRegion);
-  void *InsertPos;
-  auto *R = cast_or_null<RegionTy>(Regions.FindNodeOrInsertPos(ID, InsertPos));
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, InsertToken));
 
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, superRegion);
-    Regions.InsertNode(R, InsertPos);
+    Regions.insert(R, InsertToken);
     assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
@@ -112,12 +112,12 @@ RegionTy* MemRegionManager::getSubRegion(const Arg1Ty arg1, const Arg2Ty arg2,
                                          const SuperTy *superRegion) {
   llvm::FoldingSetNodeID ID;
   RegionTy::ProfileRegion(ID, arg1, arg2, arg3, superRegion);
-  void *InsertPos;
-  auto *R = cast_or_null<RegionTy>(Regions.FindNodeOrInsertPos(ID, InsertPos));
+  llvm::FoldingSetInsertToken InsertToken;
+  auto *R = cast_or_null<RegionTy>(Regions.lookup(ID, InsertToken));
 
   if (!R) {
     R = new (A) RegionTy(arg1, arg2, arg3, superRegion);
-    Regions.InsertNode(R, InsertPos);
+    Regions.insert(R, InsertToken);
     assert(!isAReferenceTypedValueRegion(superRegion));
   }
 
@@ -207,22 +207,23 @@ QualType ParamVarRegion::getValueType() const {
 
 const ParmVarDecl *ParamVarRegion::getDecl() const {
   const Decl *D = getStackFrame()->getDecl();
-
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     assert(Index < FD->param_size());
     return FD->parameters()[Index];
-  } else if (const auto *BD = dyn_cast<BlockDecl>(D)) {
+  }
+  if (const auto *BD = dyn_cast<BlockDecl>(D)) {
     assert(Index < BD->param_size());
     return BD->parameters()[Index];
-  } else if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
+  }
+  if (const auto *MD = dyn_cast<ObjCMethodDecl>(D)) {
     assert(Index < MD->param_size());
     return MD->parameters()[Index];
-  } else if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
+  }
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(D)) {
     assert(Index < CD->param_size());
     return CD->parameters()[Index];
-  } else {
-    llvm_unreachable("Unexpected Decl kind!");
   }
+  llvm_unreachable("Unexpected Decl kind!");
 }
 
 //===----------------------------------------------------------------------===//
@@ -925,18 +926,16 @@ DefinedOrUnknownSVal MemRegionManager::getStaticSize(const MemRegion *MR,
 
 template <typename REG>
 const REG *MemRegionManager::LazyAllocate(REG*& region) {
-  if (!region) {
+  if (!region)
     region = new (A) REG(*this);
-  }
 
   return region;
 }
 
 template <typename REG, typename ARG>
 const REG *MemRegionManager::LazyAllocate(REG*& region, ARG a) {
-  if (!region) {
+  if (!region)
     region = new (A) REG(this, a);
-  }
 
   return region;
 }
@@ -1102,7 +1101,9 @@ const VarRegion *MemRegionManager::getVarRegion(const VarDecl *D,
   if (D->hasGlobalStorage() && !D->isStaticLocal()) {
     QualType Ty = D->getType();
     assert(!Ty.isNull());
-    if (Ty.isConstQualified()) {
+    // A function reference's binding cannot be changed after initialization,
+    // even though reference types themselves are never const-qualified.
+    if (Ty.isConstQualified() || Ty->isFunctionReferenceType()) {
       sReg = getGlobalsRegion(MemRegion::GlobalImmutableSpaceRegionKind);
     } else {
       // Pointer value of C standard streams is usually not modified by calls
@@ -1230,9 +1231,9 @@ MemRegionManager::getCompoundLiteralRegion(const CompoundLiteralExpr *CL,
                                            const StackFrame *SF) {
   const MemSpaceRegion *sReg = nullptr;
 
-  if (CL->isFileScope())
+  if (CL->isFileScope()) {
     sReg = getGlobalsRegion();
-  else {
+  } else {
     assert(SF);
     sReg = getStackLocalsRegion(SF);
   }
@@ -1259,13 +1260,13 @@ MemRegionManager::getElementRegion(QualType elementType, NonLoc Idx,
   llvm::FoldingSetNodeID ID;
   ElementRegion::ProfileRegion(ID, T, Idx, superRegion);
 
-  void *InsertPos;
-  MemRegion* data = Regions.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  MemRegion *data = Regions.lookup(ID, InsertToken);
   auto *R = cast_or_null<ElementRegion>(data);
 
   if (!R) {
     R = new (A) ElementRegion(T, Idx, superRegion);
-    Regions.InsertNode(R, InsertPos);
+    Regions.insert(R, InsertToken);
   }
 
   return R;
@@ -1638,7 +1639,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       }
 
       const CXXRecordDecl *Child = Ty->getAsCXXRecordDecl();
-      if (!Child) {
+      if (!Child || !ASTContext::hasLayout(Child)) {
         // We cannot compute the offset of the base class.
         SymbolicOffsetBase = R;
       } else {
@@ -1712,7 +1713,7 @@ static RegionOffset calculateOffset(const MemRegion *R) {
       assert(R);
 
       const RecordDecl *RD = FR->getDecl()->getParent();
-      if (RD->isUnion() || !RD->isCompleteDefinition()) {
+      if (RD->isUnion() || !ASTContext::hasLayout(RD)) {
         // We cannot compute offset for incomplete type.
         // For unions, we could treat everything as offset 0, but we'd rather
         // treat each field as a symbolic offset so they aren't stored on top

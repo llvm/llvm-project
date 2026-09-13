@@ -337,6 +337,12 @@ class RISCVSImmOp<int bitsNum> : RISCVOp {
 class RISCVSImmLeafOp<int bitsNum> :
   RISCVSImmOp<bitsNum>, ImmLeaf<XLenVT, "return isInt<" # bitsNum # ">(Imm);">;
 
+// Variant of RISCVSImmLeafOp for memory-operand offsets that may be omitted
+// entirely, e.g. "qc.e.lb a0, (a1)". See OptionalMemOffsetAsmOperand.
+class OptionalSImmLeafOp<int bitsNum> : RISCVSImmLeafOp<bitsNum> {
+  let ParserMatchClass = OptionalMemOffsetAsmOperand<SImmAsmOperand<bitsNum>>;
+}
+
 def FenceArg : AsmOperandClass {
   let Name = "FenceArg";
   let RenderMethod = "addFenceArgOperands";
@@ -400,6 +406,7 @@ def uimm64 : RISCVUImmOp<64>;
 def simm12 : RISCVSImmLeafOp<12>;
 
 class Simm12LoOp : RISCVSImmLeafOp<12> {
+  let DecoderMethod = "decodeSImm12LoOperand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -455,6 +462,7 @@ def bare_simm13_lsb0 : BareSImm13Lsb0MaybeSym,
 def bare_simm13_lsb0_bb : BareSImm13Lsb0MaybeSym;
 
 class UImm20OperandMaybeSym : RISCVUImmOp<20> {
+  let DecoderMethod = "decodeUImm20Operand";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -518,6 +526,21 @@ def CallSymbol : AsmOperandClass {
 // A bare symbol used in call/tail only.
 def call_symbol : Operand<XLenVT> {
   let ParserMatchClass = CallSymbol;
+}
+
+def TailCallSymbol : AsmOperandClass {
+  let Name = "TailCallSymbol";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidTailCallSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
+  let ParserMethod = "parseTailCallSymbol";
+  let SuperClasses = [CallSymbol];
+}
+
+// Like call_symbol but allows the symbol to be followed by a comma
+// (for "tail address, register" form).
+def tail_call_symbol : Operand<XLenVT> {
+  let ParserMatchClass = TailCallSymbol;
 }
 
 def PseudoJumpSymbol : AsmOperandClass {
@@ -1667,6 +1690,13 @@ def : PatGprSimm12<setult, SLTIU>;
 // These ComplexPatterns must be used in pairs.
 def riscv_setne : ComplexPattern<XLenVT, 1, "selectSETNE", [setcc]>;
 def riscv_seteq : ComplexPattern<XLenVT, 1, "selectSETEQ", [setcc]>;
+def riscv_setne_oneuse : ComplexPattern<XLenVT, 1, "selectSETNE<true>">;
+def riscv_seteq_oneuse : ComplexPattern<XLenVT, 1, "selectSETEQ<true>">;
+
+// Check that the value is known to be 0 or 1, i.e. a boolean value.
+def zero_or_one : PatLeaf<(XLenVT GPR:$src), [{
+  return CurDAG->computeKnownBits(SDValue(N, 0)).getMaxValue().ule(1);
+}]>;
 
 // Define pattern expansions for setcc operations that aren't directly
 // handled by a RISC-V instruction.
@@ -1708,22 +1738,23 @@ multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
              (CCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
+// The condition codes that can be compressed to c.beqz/c.bnez.
+def CompressibleCond : PatLeaf<(cond), [{
+  return ISD::isIntEqualitySetCC(N->get());
+}]>;
+
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
-
-class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond:$cc,
-                          (XLenVT GPR:$truev), GPR:$falsev),
-          (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
-                                                 (NegImm simm12_lo:$Constant))),
-                                   (XLenVT X0),
-                                   (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
 let Predicates = [HasStdExtZca, OptForMinSize] in {
-  def : SelectCompressOpt<SETEQ>;
-  def : SelectCompressOpt<SETNE>;
+  def  : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, CompressibleCond:$cc,
+                             (XLenVT GPR:$truev), GPR:$falsev),
+             (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
+                                                    (NegImm simm12_lo:$Constant))),
+                                      (XLenVT X0),
+                                      (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 }
 
 multiclass SelectCC_GPR_riirr<DAGOperand valty, DAGOperand imm> {
@@ -1903,11 +1934,26 @@ def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
 // PseudoTAIL is a pseudo instruction similar to PseudoCALL and will eventually
 // expand to auipc and jalr while encoding.
 // Define AsmString to print "tail" when compile with -S flag.
+// PseudoTAILX7 is the software-guarded variant that uses X7 (t2) as the temp
+// register for AUIPC+JALR expansion, required for cf-protection-branch so that
+// the callee's lpad accepts the incoming branch (lpad rejects X6 but accepts X7).
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2],
-    Size = 8, isCodeGenOnly = 0 in
+    Size = 8 in {
+let isCodeGenOnly = 0 in
 def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
                         "tail", "$dst">,
                  Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+// PseudoTAILReg is the asm form of "tail address, register" where the
+// register specifies the temp for AUIPC+JALR expansion.
+let isCodeGenOnly = 0, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoTAILReg : Pseudo<(outs), (ins tail_call_symbol:$dst, GPR:$rs), [],
+                            "tail", "$dst, $rs">,
+                    Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+// PseudoTAILX7 is CodeGenOnly; used when cf-protection-branch is active.
+// Lowered to PseudoTAILReg with X7 in RISCVAsmPrinter.
+def PseudoTAILX7 : Pseudo<(outs), (ins call_symbol:$dst), []>,
+                   Sched<[WriteIALU, WriteJalr, ReadJalr]>;
+}
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in {
 // Use GPRTCNonX7 to avoid X7 which is reserved for landing pad labels
@@ -1925,6 +1971,10 @@ def : Pat<(riscv_tail (iPTR tglobaladdr:$dst)),
           (PseudoTAIL tglobaladdr:$dst)>;
 def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
           (PseudoTAIL texternalsym:$dst)>;
+def : Pat<(riscv_sw_guarded_tail (iPTR tglobaladdr:$dst)),
+          (PseudoTAILX7 tglobaladdr:$dst)>;
+def : Pat<(riscv_sw_guarded_tail (iPTR texternalsym:$dst)),
+          (PseudoTAILX7 texternalsym:$dst)>;
 
 let isCall = 0, isBarrier = 1, isBranch = 1, isTerminator = 1, Size = 8,
     isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
@@ -2414,6 +2464,7 @@ include "RISCVInstrInfoZilx.td"
 
 // Privileged
 include "RISCVInstrInfoSmcsps.td"
+include "RISCVInstrInfoSmip.td"
 
 // Scalar FP
 include "RISCVInstrInfoF.td"
@@ -2460,7 +2511,6 @@ include "RISCVInstrInfoY.td"
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 
-include "RISCVInstrInfoXVentana.td"
 include "RISCVInstrInfoXTHead.td"
 include "RISCVInstrInfoXSf.td"
 include "RISCVInstrInfoXSfmm.td"

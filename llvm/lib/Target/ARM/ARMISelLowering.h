@@ -441,6 +441,8 @@ class VectorType;
     preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                        unsigned ExpansionFactor) const override;
 
+    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
+                                            bool isVarArg) const;
     CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool isVarArg) const;
     CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool isVarArg) const;
 
@@ -541,8 +543,6 @@ class VectorType;
                                  SDValue &Root, SelectionDAG &DAG,
                                  const SDLoc &dl) const;
 
-    CallingConv::ID getEffectiveCallingConv(CallingConv::ID CC,
-                                            bool isVarArg) const;
     CCAssignFn *CCAssignFnForNode(CallingConv::ID CC, bool Return,
                                   bool isVarArg) const;
     std::pair<SDValue, MachinePointerInfo>

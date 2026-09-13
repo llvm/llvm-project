@@ -157,14 +157,7 @@ StdAllocatorCaller InterpState::getStdAllocatorCaller(StringRef Name) const {
   return {};
 }
 
-bool InterpState::noteStep(CodePtr OpPC) {
-  if (InfiniteSteps)
-    return true;
-
-  --StepsLeft;
-  if (StepsLeft != 0)
-    return true;
-
+bool InterpState::diagnoseStepLimitExceeded(CodePtr OpPC) {
   FFDiag(Current->getSource(OpPC), diag::note_constexpr_step_limit_exceeded, 1)
       << getLangOpts().ConstexprStepLimit;
   Note(Current->getSource(OpPC), diag::note_constexpr_steps);

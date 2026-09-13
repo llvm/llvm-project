@@ -80,8 +80,8 @@ public:
   bool checkFullyInitialized(InterpState &S, const Pointer &Ptr) const;
   /// Check that none of the blocks the given pointer (transitively) points
   /// to are dynamically allocated.
-  bool checkDynamicAllocations(InterpState &S, const Context &Ctx,
-                               const Pointer &Ptr, SourceInfo Info);
+  bool checkDynamicAllocations(InterpState &S, const Pointer &Ptr,
+                               SourceInfo Info);
 
   QualType getSourceType() const {
     if (const auto *D = Source.asValueDecl())

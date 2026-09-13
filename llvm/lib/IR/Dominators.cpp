@@ -22,10 +22,11 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -354,8 +355,9 @@ PreservedAnalyses DominatorTreePrinterPass::run(Function &F,
 PreservedAnalyses DominatorTreeVerifierPass::run(Function &F,
                                                  FunctionAnalysisManager &AM) {
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  assert(DT.verify());
-  (void)DT;
+  if (!DT.verify())
+    reportFatalInternalError(createStringError(
+        "verify<domtree> detected an invalid dominator tree"));
   return PreservedAnalyses::all();
 }
 

@@ -2673,6 +2673,21 @@ DIObjCProperty *DIObjCProperty::getImpl(
   DEFINE_GETIMPL_STORE(DIObjCProperty, (Line, Attributes), Ops);
 }
 
+DIProperty::DIProperty(LLVMContext &C, StorageType Storage, unsigned Line,
+                       ArrayRef<Metadata *> Ops)
+    : DINode(C, DIPropertyKind, Storage, dwarf::DW_TAG_property, Ops),
+      Line(Line) {}
+
+DIProperty *DIProperty::getImpl(LLVMContext &Context, MDString *Name,
+                                Metadata *File, unsigned Line, Metadata *Type,
+                                Metadata *BackingStorage, StorageType Storage,
+                                bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DIProperty, (Name, File, Line, Type, BackingStorage));
+  Metadata *Ops[] = {Name, File, Type, BackingStorage};
+  DEFINE_GETIMPL_STORE(DIProperty, (Line), Ops);
+}
+
 DIImportedEntity *DIImportedEntity::getImpl(LLVMContext &Context, unsigned Tag,
                                             Metadata *Scope, Metadata *Entity,
                                             Metadata *File, unsigned Line,

@@ -136,10 +136,10 @@ entry:
 define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addrspace(1) %bar, ptr addrspace(1) %out, i32 %n) {
 ; SDAG-LABEL: test_pipelined_loop:
 ; SDAG:       ; %bb.0: ; %prolog
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; SDAG-NEXT:    s_load_b32 s3, s[4:5], 0x44 nv
@@ -175,13 +175,12 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 ; SDAG-NEXT:    s_cbranch_scc1 .LBB1_1
 ; SDAG-NEXT:  ; %bb.2: ; %epilog
 ; SDAG-NEXT:    s_lshl2_add_u32 s0, s3, s2
-; SDAG-NEXT:    v_mov_b32_e32 v2, 0
-; SDAG-NEXT:    s_add_co_i32 s0, s0, -8
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
 ; SDAG-NEXT:    ; wait_asyncmark(1)
 ; SDAG-NEXT:    s_wait_asynccnt 0x1
+; SDAG-NEXT:    s_add_co_i32 s0, s0, -8
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; SDAG-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v0, s0
+; SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
 ; SDAG-NEXT:    ds_load_b32 v0, v0
 ; SDAG-NEXT:    ; wait_asyncmark(0)
 ; SDAG-NEXT:    s_wait_dscnt 0x0
@@ -193,10 +192,10 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 ;
 ; GISEL-LABEL: test_pipelined_loop:
 ; GISEL:       ; %bb.0: ; %prolog
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; GISEL-NEXT:    s_load_b32 s3, s[4:5], 0x44 nv
@@ -235,14 +234,14 @@ define amdgpu_kernel void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrsp
 ; GISEL-NEXT:    s_cbranch_scc1 .LBB1_1
 ; GISEL-NEXT:  ; %bb.2: ; %epilog
 ; GISEL-NEXT:    s_lshl_b32 s0, s3, 2
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    s_add_co_u32 s0, s2, s0
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GISEL-NEXT:    s_add_co_u32 s0, s0, -8
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
 ; GISEL-NEXT:    ; wait_asyncmark(1)
 ; GISEL-NEXT:    s_wait_asynccnt 0x1
+; GISEL-NEXT:    s_add_co_u32 s0, s2, s0
+; GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-NEXT:    s_add_co_u32 s0, s0, -8
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x34 nv
 ; GISEL-NEXT:    ds_load_b32 v0, v0
 ; GISEL-NEXT:    ; wait_asyncmark(0)
 ; GISEL-NEXT:    s_wait_dscnt 0x0
@@ -313,10 +312,10 @@ epilog:
 define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo, ptr addrspace(3) %lds, ptr addrspace(1) %bar, ptr addrspace(1) %out, i32 %n) {
 ; SDAG-LABEL: test_pipelined_loop_with_global:
 ; SDAG:       ; %bb.0: ; %prolog
+; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; SDAG-NEXT:    v_nop
 ; SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; SDAG-NEXT:    s_clause 0x1
 ; SDAG-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24 nv
 ; SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
@@ -402,10 +401,10 @@ define amdgpu_kernel void @test_pipelined_loop_with_global(ptr addrspace(1) %foo
 ;
 ; GISEL-LABEL: test_pipelined_loop_with_global:
 ; GISEL:       ; %bb.0: ; %prolog
+; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_mov_b64 s[64:65], 0
 ; GISEL-NEXT:    v_nop
 ; GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GISEL-NEXT:    s_clause 0x1
 ; GISEL-NEXT:    s_load_b96 s[8:10], s[4:5], 0x24 nv
 ; GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x34 nv
