@@ -442,7 +442,9 @@ void CGNVCUDARuntime::emitDeviceStubBodyNew(CodeGenFunction &CGF,
   std::string KernelLaunchAPI = "LaunchKernel";
   if (CGF.getLangOpts().GPUDefaultStream ==
       LangOptions::GPUDefaultStreamKind::PerThread) {
-    if (CGF.getLangOpts().HIP)
+    if (CGF.getLangOpts().OffloadViaLLVM)
+      KernelLaunchAPI = KernelLaunchAPI + "";
+    else if (CGF.getLangOpts().HIP)
       KernelLaunchAPI = KernelLaunchAPI + "_spt";
     else if (CGF.getLangOpts().CUDA)
       KernelLaunchAPI = KernelLaunchAPI + "_ptsz";
