@@ -511,8 +511,6 @@ define <2 x i16> @atomic_load_global_monotonic_i16_d16_hi_vector_insert(ptr addr
 ; GFX9-LABEL: atomic_load_global_monotonic_i16_d16_hi_vector_insert:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v3, v[0:1], off glc
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_short_d16_hi v2, v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
@@ -606,8 +604,6 @@ define <2 x i16> @atomic_load_global_monotonic_i16_d16_lo_vector_insert(ptr addr
 ; GFX9-LABEL: atomic_load_global_monotonic_i16_d16_lo_vector_insert:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_ushort v3, v[0:1], off glc
-; GFX9-NEXT:    s_nop 0
 ; GFX9-NEXT:    global_load_short_d16 v2, v[0:1], off glc
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
