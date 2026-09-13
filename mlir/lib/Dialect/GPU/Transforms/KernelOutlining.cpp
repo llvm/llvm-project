@@ -72,9 +72,15 @@ static void injectGpuIndexOperations(Location loc, Region &launchFuncOpBody,
 /// Identifies operations that are beneficial to sink into kernels. These
 /// operations may not have side-effects, as otherwise sinking (and hence
 /// duplicating them) is not legal.
+///
+/// Sinking duplicates an operation into every thread, so only operations that
+/// are cheap to recompute are considered. Simple integer arithmetic is in the
+/// same cost class as the comparisons and selects already handled here, and
+/// sinking it avoids passing the result as an additional kernel argument.
 static bool isLikelyAnIndexComputation(Operation *op) {
   return matchPattern(op, m_Constant()) ||
-         isa<memref::DimOp, arith::SelectOp, arith::CmpIOp>(op);
+         isa<memref::DimOp, arith::SelectOp, arith::CmpIOp, arith::AddIOp,
+             arith::SubIOp, arith::MulIOp>(op);
 }
 
 /// For a given operation `op`, computes whether it is beneficial to sink the

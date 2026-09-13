@@ -98,3 +98,32 @@ func.func @multiple_uses2(%arg0 : memref<*xf32>) {
   }
   return
 }
+
+// -----
+
+// Integer arithmetic feeding the launch is recomputed inside it, so that the
+// value does not have to be passed in as a kernel argument.
+
+// CHECK-LABEL: @index_arithmetic
+// CHECK-SAME: %[[ARG0:.*]]: index
+func.func @index_arithmetic(%arg0: index) {
+  %c1 = arith.constant 1 : index
+  %sum = arith.addi %arg0, %c1 : index
+  %diff = arith.subi %arg0, %c1 : index
+  %prod = arith.muli %arg0, %c1 : index
+  // CHECK: gpu.launch blocks
+  gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1,
+                                       %grid_z = %c1)
+             threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1,
+                                        %block_z = %c1) {
+    // CHECK: %[[C1:.*]] = arith.constant 1 : index
+    // CHECK-NEXT: %[[SUM:.*]] = arith.addi %[[ARG0]], %[[C1]]
+    // CHECK-NEXT: %[[DIFF:.*]] = arith.subi %[[ARG0]], %[[C1]]
+    // CHECK-NEXT: %[[PROD:.*]] = arith.muli %[[ARG0]], %[[C1]]
+    // CHECK-NEXT: "use"(%[[ARG0]], %[[SUM]], %[[DIFF]], %[[PROD]])
+    // CHECK-NEXT: gpu.terminator
+    "use"(%arg0, %sum, %diff, %prod) : (index, index, index, index) -> ()
+    gpu.terminator
+  }
+  return
+}
