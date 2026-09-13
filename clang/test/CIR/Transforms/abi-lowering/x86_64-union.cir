@@ -392,7 +392,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_UNoRegs> {llvm.align = 4 : i64, llvm.byref = !rec_UNoRegs})
+  // CHECK: cir.func{{.*}} @take_no_regs(%arg0: !cir.ptr<!rec_UNoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef})
 
   // A struct member that is itself a union is mapped through the same union
   // handling, so the enclosing 8-byte struct coerces to one i64.
@@ -496,7 +496,7 @@ module attributes {
 // LLVM: define void @ret_empty_only()
 // LLVM: define void @call_empty_int(i32 %{{.+}})
 // LLVM:   call void @take_empty_int(i32 %{{.+}})
-// LLVM: define void @take_no_regs(ptr byref(%union.UNoRegs) align 4 %{{.+}})
+// LLVM: define void @take_no_regs(ptr nofreeobj noundef align 4 dereferenceable(4) %{{.+}})
 // LLVM: define void @take_struct_with_union(i64 %{{.+}})
 // LLVM: define i32 @ret_int_float(i32 %{{.+}})
 // LLVM: define void @ret_big(ptr dead_on_unwind noalias writable sret(%union.UBig) align 1 %{{.+}}, ptr noundef byval(%union.UBig) align 8 %{{.+}})

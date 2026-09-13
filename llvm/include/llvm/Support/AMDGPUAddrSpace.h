@@ -50,7 +50,10 @@ enum : unsigned {
 
   RESERVED_ADDRESS_SPACE_11 = 11, ///< Reserved for downstream use.
 
-  RESERVED_ADDRESS_SPACE_13 = 13, ///< Reserved for downstream use.
+  VGPR = 13, ///< Address space for VGPRs. The 32-bit address is a byte offset
+             ///< into the wave's view of its vector registers. Note this shares
+             ///< its numeric value with CONSTANT_BUFFER_5, which is only used
+             ///< by the (graphics) R600 path.
 
   RESERVED_ADDRESS_SPACE_14 = 14, ///< Reserved for downstream use.
 
@@ -194,6 +197,7 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
+  case VGPR:
     return -1;
   default:
     return 0;

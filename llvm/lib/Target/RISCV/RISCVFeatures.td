@@ -1316,14 +1316,6 @@ def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 
-// Ventana Extensions
-
-def FeatureVendorXVentanaCondOps
-    : RISCVExtension<1, 0, "Ventana Conditional Ops">;
-def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
-                                   "'XVentanaCondOps' (Ventana Conditional Ops)">;
-
 // T-Head Extensions
 
 def FeatureVendorXTHeadBa
@@ -2249,7 +2241,3 @@ def TuneMIPSP8700
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors", [], InlineIgnore>;
-
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [], InlineIgnore>;

@@ -6,6 +6,12 @@
 // RUN:   -DDXIL_TY=2 -DRW=0 -DDIM=2
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=Texture3D %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D --check-prefixes=CHECK,DXIL \
+// RUN:   -DDXIL_TY=4 -DRW=0 -DDIM=3
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
 // RUN:   -DTEXTURE=TextureCube %s \
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube --check-prefixes=CHECK,DXIL \
@@ -22,6 +28,12 @@
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=Texture2D --check-prefixes=CHECK,SPIRV \
 // RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=1 -DDIM=2
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
+// RUN:   -DTEXTURE=Texture3D %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=Texture3D --check-prefixes=CHECK,SPIRV \
+// RUN:   -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 -DSPV_DIM=2 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - -DLOD_TYPE=float3 \
 // RUN:   -DTEXTURE=TextureCube %s \

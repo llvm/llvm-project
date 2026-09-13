@@ -7129,7 +7129,7 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
   unsigned Mods;
   std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg());
 
-  if (mi_match(Src, *MRI, m_GFPExt(m_Reg(Src)))) {
+  if (!STI.useRealTrue16Insts() && mi_match(Src, *MRI, m_GFPExt(m_Reg(Src)))) {
     assert(MRI->getType(Src) == LLT::scalar(16));
 
     // Only change Src if src modifier could be gained. In such cases new Src

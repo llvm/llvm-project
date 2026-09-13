@@ -74,7 +74,7 @@ static bool areBinOpsSwapped(GenericOp genericOp) {
 //     linalg.yield %0: f32
 //   } -> tensor<?xf32>
 // Here, the returned index is 1, and the generic op can be represented as
-//   %0 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+//   %0 = linalg.elementwise <mul>
 //          indexing_maps = [#mapA, affine_map<(d0) -> ()>, #mapRes]
 //          ins(%A, %cst : tensor<?xf32>, f32) outs(...) -> tensor<?xf32>
 static bool findIndexOfScalarOperand(GenericOp genericOp, int &index) {
@@ -104,10 +104,11 @@ static bool findIndexOfScalarOperand(GenericOp genericOp, int &index) {
 //       linalg.yield %1 : f32
 //     } -> tensor<?x?xf32>
 //
-// is specialized to either
-//   linalg.exp ins(...) outs(...) -> ...
-// or
-//   linalg.elementwise kind=#linalg.elementwise_kind<exp> ...
+// is specialized to
+//   linalg.elementwise <exp> ...
+//
+// A named op is emitted instead for binary/ternary ops that still have a
+// linalg.* named equivalent (e.g. linalg.add).
 //
 // Only the category op can carry non-identity indexing maps; these are
 // transferred verbatim from the `genericOp`.
@@ -154,14 +155,14 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
       std::swap(inputs[0], inputs[1]);
 
     LinalgOp newOp;
-    if (!emitCategoryOp) {
-      using NamedOpTy = decltype(namedOp);
+    using NamedOpTy = decltype(namedOp);
+    // A null named op means the op only has a category form; emit
+    // `linalg.elementwise` regardless of the requested output form.
+    if (!std::is_null_pointer_v<NamedOpTy>) {
       if constexpr (!std::is_null_pointer_v<NamedOpTy>)
         newOp = NamedOpTy::create(rewriter, genericOp.getLoc(), inputs,
                                   genericOp.getDpsInits(),
                                   ArrayRef<NamedAttribute>{});
-      else
-        llvm_unreachable("Missing named op type");
     } else {
       SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
       // Swap indexing maps, too.
@@ -181,8 +182,7 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
                             scalarBroadcastMap);
       }
       newOp = ElementwiseOp::create(
-          rewriter, genericOp.getLoc(), inputs, genericOp.getDpsInits(),
-          ElementwiseKindAttr::get(rewriter.getContext(), kind),
+          rewriter, genericOp.getLoc(), inputs, genericOp.getDpsInits(), kind,
           rewriter.getAffineMapArrayAttr(indexingMaps));
     }
 
@@ -190,108 +190,103 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     return newOp;
   };
 
-  if (isUnary) {
+  // There are no named ops for these elementwise operations; can only emit the
+  // category form.
+  if (emitCategoryOp) {
     if (isa<math::ExpOp>(op))
-      return replaceOp(ExpOp{}, ElementwiseKind::exp);
-    if (isa<math::LogOp>(op))
-      return replaceOp(LogOp{}, ElementwiseKind::log);
+      return replaceOp(nullptr, ElementwiseKind::exp);
     if (isa<math::AbsFOp>(op))
-      return replaceOp(AbsOp{}, ElementwiseKind::abs);
+      return replaceOp(nullptr, ElementwiseKind::abs);
     if (isa<math::CeilOp>(op))
-      return replaceOp(CeilOp{}, ElementwiseKind::ceil);
+      return replaceOp(nullptr, ElementwiseKind::ceil);
     if (isa<math::FloorOp>(op))
-      return replaceOp(FloorOp{}, ElementwiseKind::floor);
+      return replaceOp(nullptr, ElementwiseKind::floor);
     if (isa<arith::NegFOp>(op))
-      return replaceOp(NegFOp{}, ElementwiseKind::negf);
+      return replaceOp(nullptr, ElementwiseKind::negf);
     if (auto divOp = dyn_cast<arith::DivFOp>(op)) {
       if (auto constOp = dyn_cast_if_present<arith::ConstantOp>(
               divOp.getLhs().getDefiningOp()))
         if (cast<FloatAttr>(constOp.getValue()).getValue().isExactlyValue(1.0))
-          return replaceOp(ReciprocalOp{}, ElementwiseKind::reciprocal,
+          return replaceOp(nullptr, ElementwiseKind::reciprocal,
                            /*mayHoistScalarOperand=*/false);
     }
     if (isa<math::RoundOp>(op))
-      return replaceOp(RoundOp{}, ElementwiseKind::round);
+      return replaceOp(nullptr, ElementwiseKind::round);
     if (isa<math::SqrtOp>(op))
-      return replaceOp(SqrtOp{}, ElementwiseKind::sqrt);
+      return replaceOp(nullptr, ElementwiseKind::sqrt);
     if (isa<math::RsqrtOp>(op))
-      return replaceOp(RsqrtOp{}, ElementwiseKind::rsqrt);
+      return replaceOp(nullptr, ElementwiseKind::rsqrt);
     if (auto mulOp = dyn_cast<arith::MulFOp>(op);
         mulOp && mulOp.getLhs() == mulOp.getRhs())
-      return replaceOp(SquareOp{}, ElementwiseKind::square);
+      return replaceOp(nullptr, ElementwiseKind::square);
     if (isa<math::TanhOp>(op))
-      return replaceOp(TanhOp{}, ElementwiseKind::tanh);
+      return replaceOp(nullptr, ElementwiseKind::tanh);
     if (isa<math::ErfOp>(op))
-      return replaceOp(ErfOp{}, ElementwiseKind::erf);
+      return replaceOp(nullptr, ElementwiseKind::erf);
+    if (isa<math::SinOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::sin);
+    if (isa<math::CosOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::cos);
+    if (isa<math::TanOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::tan);
+    if (isa<math::AcosOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::acos);
+    if (isa<math::AcoshOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::acosh);
+    if (isa<math::AsinOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::asin);
+    if (isa<math::AsinhOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::asinh);
+    if (isa<math::AtanOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::atan);
+    if (isa<math::AtanhOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::atanh);
+    if (isa<math::LogOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::log);
+    if (isa<math::Log10Op>(op))
+      return replaceOp(nullptr, ElementwiseKind::log10);
+    if (isa<math::Log1pOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::log1p);
+    if (isa<math::Log2Op>(op))
+      return replaceOp(nullptr, ElementwiseKind::log2);
 
-    // The following ops only have the category (elementwise) form, but no
-    // linalg.* named op equivalent.
-    if (emitCategoryOp) {
-      if (isa<math::SinOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::sin);
-      if (isa<math::CosOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::cos);
-      if (isa<math::TanOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::tan);
-      if (isa<math::AcosOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::acos);
-      if (isa<math::AcoshOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::acosh);
-      if (isa<math::AsinOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::asin);
-      if (isa<math::AsinhOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::asinh);
-      if (isa<math::AtanOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::atan);
-      if (isa<math::AtanhOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::atanh);
-      if (isa<math::Log10Op>(op))
-        return replaceOp(nullptr, ElementwiseKind::log10);
-      if (isa<math::Log1pOp>(op))
-        return replaceOp(nullptr, ElementwiseKind::log1p);
-      if (isa<math::Log2Op>(op))
-        return replaceOp(nullptr, ElementwiseKind::log2);
-    }
-
-    // At this point, we exhaustively checked the available unary named ops. The
-    // 1-input generic op might be representable as a `linalg.elementwise` that
-    // broadcasts a scalar operand. But if we can't emit the category op or
-    // don't have a scalar operand, exit now.
-    if (!emitCategoryOp || !hasScalarOperand)
+    // The remaining kinds are binary. A single-input generic can only be
+    // represented as a binary elementwise if it has a scalar operand to hoist;
+    // otherwise (e.g. a body reusing a block argument twice) it has no
+    // category form.
+    if (isUnary && !hasScalarOperand)
       return rewriter.notifyMatchFailure(
-          genericOp, "unary elementwise operation cannot be specialized to "
-                     "named or category op");
-  }
+          genericOp, "unary elementwise operation cannot be specialized to a "
+                     "category op");
 
-  // Boolean-typed `linalg.add` and `linalg.mul` require special handling.
-  bool allBool = llvm::all_of(op->getOperands(),
-                              [](Value v) { return v.getType().isInteger(1); });
+    // Boolean-typed `linalg.add` and `linalg.mul` require special handling.
+    bool allBool = llvm::all_of(
+        op->getOperands(), [](Value v) { return v.getType().isInteger(1); });
 
-  if (isa<arith::AddIOp, arith::AddFOp, complex::AddOp>(op) ||
-      (allBool && isa<arith::OrIOp>(op)))
-    return replaceOp(AddOp{}, ElementwiseKind::add);
-  if (isa<arith::SubIOp, arith::SubFOp, complex::SubOp>(op))
-    return replaceOp(SubOp{}, ElementwiseKind::sub);
-  if (isa<arith::MulIOp, arith::MulFOp, complex::MulOp>(op) ||
-      (allBool && isa<arith::AndIOp>(op)))
-    return replaceOp(MulOp{}, ElementwiseKind::mul);
-  if (isa<arith::DivSIOp, arith::DivFOp, complex::DivOp>(op))
-    return replaceOp(DivOp{}, ElementwiseKind::div);
-  if (isa<arith::DivUIOp>(op))
-    return replaceOp(DivUnsignedOp{}, ElementwiseKind::div_unsigned);
-  if (isa<arith::MaxSIOp, arith::MaximumFOp>(op))
-    return replaceOp(MaxOp{}, ElementwiseKind::max_signed);
-  if (isa<arith::MinSIOp, arith::MinimumFOp>(op))
-    return replaceOp(MinOp{}, ElementwiseKind::min_signed);
-  if (emitCategoryOp) {
+    if (isa<arith::AddFOp, arith::AddIOp, complex::AddOp>(op) ||
+        (allBool && isa<arith::OrIOp>(op)))
+      return replaceOp(nullptr, ElementwiseKind::add);
+    if (isa<arith::SubIOp, arith::SubFOp, complex::SubOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::sub);
+    if (isa<arith::MulIOp, arith::MulFOp, complex::MulOp>(op) ||
+        (allBool && isa<arith::AndIOp>(op)))
+      return replaceOp(nullptr, ElementwiseKind::mul);
+    if (isa<arith::DivSIOp, arith::DivFOp, complex::DivOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::div);
+    if (isa<arith::DivUIOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::div_unsigned);
+    if (isa<arith::MaxSIOp, arith::MaximumFOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::max_signed);
+    if (isa<arith::MinSIOp, arith::MinimumFOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::min_signed);
+    if (isa<math::PowFOp>(op))
+      return replaceOp(nullptr, ElementwiseKind::powf);
     // No named ops for unsigned maximum/minimum.
     if (isa<arith::MaxUIOp>(op))
       return replaceOp(nullptr, ElementwiseKind::max_unsigned);
     if (isa<arith::MinUIOp>(op))
       return replaceOp(nullptr, ElementwiseKind::min_unsigned);
   }
-  if (isa<math::PowFOp>(op))
-    return replaceOp(PowFOp{}, ElementwiseKind::powf);
 
   return rewriter.notifyMatchFailure(
       genericOp,

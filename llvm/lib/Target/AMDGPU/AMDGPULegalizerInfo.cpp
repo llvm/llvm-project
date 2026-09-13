@@ -730,7 +730,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   const std::initializer_list<LLT> FPTypesPK16_64 = {F32, F64, F16, V2F16,
                                                      V2F64};
 
-  const LLT MinExtendedFPTy = ST.has16BitInsts() ? F16 : F32;
   const LLT I1 = LLT::integer(1);
   const LLT I16 = LLT::integer(16);
   const LLT I32 = LLT::integer(32);
@@ -1356,17 +1355,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   FCmpBuilder.widenScalarToNextPow2(1).minScalar(1, F32).scalarize(0);
 
-  // FIXME: fpow has a selection pattern that should move to custom lowering.
-  auto &ExpOps = getActionDefinitionsBuilder(G_FPOW);
-  if (ST.has16BitInsts())
-    ExpOps.customFor({{F32}, {F16}});
-  else
-    ExpOps.customFor({F32});
-  ExpOps.clampScalar(0, MinExtendedFPTy, F32).scalarize(0);
+  getActionDefinitionsBuilder(G_FPOW)
+      .customFor({F32})
+      .clampScalar(0, F32, F32)
+      .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FPOWI)
-      .clampScalar(0, MinExtendedFPTy, F32)
-      .lower();
+  getActionDefinitionsBuilder(G_FPOWI).clampScalar(0, F32, F32).lower();
 
   getActionDefinitionsBuilder(G_FLOG2)
       .legalFor(ST.has16BitInsts(), {F16})
@@ -2390,7 +2384,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_FEXP10:
     return legalizeFExp(MI, B);
   case TargetOpcode::G_FPOW:
-    return legalizeFPow(MI, B);
+    return legalizeFPow(Helper, MI);
   case TargetOpcode::G_FFLOOR:
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
@@ -2412,7 +2406,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_SET_FPENV:
     return legalizeSetFPEnv(MI, MRI, B);
   case TargetOpcode::G_TRAP:
-    return legalizeTrap(MI, MRI, B);
+    return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
   default:
@@ -3020,8 +3014,11 @@ bool AMDGPULegalizerInfo::legalizeExtract(LegalizerHelper &Helper,
   if (DstCount == 1) {
     if (DstTy.isPointer())
       B.buildIntToPtr(DstReg, Unmerge.getReg(StartIdx));
-    else
+    else {
+      Helper.Observer.changingAllUsesOfReg(MRI, DstReg);
       MRI.replaceRegWith(DstReg, Unmerge.getReg(StartIdx));
+      Helper.Observer.finishedChangingAllUsesOfReg();
+    }
   } else {
     SmallVector<Register, 8> MergeVec;
     for (unsigned I = 0; I < DstCount; ++I)
@@ -3254,10 +3251,12 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
   //   which is a 64-bit pc-relative offset from the encoding of the $symbol
   //   operand to the global variable.
 
-  LLT ConstPtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
-
-  Register PCReg = PtrTy.getSizeInBits() != 32 ? DstReg :
-    B.getMRI()->createGenericVirtualRegister(ConstPtrTy);
+  MachineRegisterInfo &MRI = *B.getMRI();
+  LLT PCRegTy = PtrTy.getSizeInBits() == 32
+                    ? LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64)
+                    : PtrTy;
+  Register PCReg =
+      MRI.createVirtualRegister({&AMDGPU::SReg_64RegClass, PCRegTy});
 
   if (ST.has64BitLiterals()) {
     assert(GAFlags != SIInstrInfo::MO_NONE);
@@ -3276,11 +3275,10 @@ bool AMDGPULegalizerInfo::buildPCRelGlobalAddress(Register DstReg, LLT PtrTy,
       MIB.addGlobalAddress(GV, Offset, GAFlags + 1);
   }
 
-  if (!B.getMRI()->getRegClassOrNull(PCReg))
-    B.getMRI()->setRegClass(PCReg, &AMDGPU::SReg_64RegClass);
-
   if (PtrTy.getSizeInBits() == 32)
     B.buildExtract(DstReg, PCReg, 0);
+  else
+    B.buildCopy(DstReg, PCReg);
   return true;
 }
 
@@ -3291,24 +3289,17 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
   bool RequiresHighHalf = PtrTy.getSizeInBits() != 32;
 
   if (RequiresHighHalf && ST.has64BitLiterals()) {
-    if (!MRI.getRegClassOrNull(DstReg))
-      MRI.setRegClass(DstReg, &AMDGPU::SReg_64RegClass);
+    Register Addr =
+        MRI.createVirtualRegister({&AMDGPU::SReg_64RegClass, PtrTy});
     B.buildInstr(AMDGPU::S_MOV_B64)
-        .addDef(DstReg)
+        .addDef(Addr)
         .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS64);
+    B.buildCopy(DstReg, Addr);
     return;
   }
 
   LLT I32 = LLT::integer(32);
-
-  // Use the destination directly, if and only if we store the lower address
-  // part only and we don't have a register class being set.
-  Register AddrLo = !RequiresHighHalf && !MRI.getRegClassOrNull(DstReg)
-                        ? DstReg
-                        : MRI.createGenericVirtualRegister(I32);
-
-  if (!MRI.getRegClassOrNull(AddrLo))
-    MRI.setRegClass(AddrLo, &AMDGPU::SReg_32RegClass);
+  Register AddrLo = MRI.createVirtualRegister({&AMDGPU::SReg_32RegClass, I32});
 
   // Write the lower half.
   B.buildInstr(AMDGPU::S_MOV_B32)
@@ -3320,31 +3311,19 @@ void AMDGPULegalizerInfo::buildAbsGlobalAddress(
     assert(PtrTy.getSizeInBits() == 64 &&
            "Must provide a 64-bit pointer type!");
 
-    Register AddrHi = MRI.createGenericVirtualRegister(I32);
-    MRI.setRegClass(AddrHi, &AMDGPU::SReg_32RegClass);
+    Register AddrHi =
+        MRI.createVirtualRegister({&AMDGPU::SReg_32RegClass, I32});
 
     B.buildInstr(AMDGPU::S_MOV_B32)
         .addDef(AddrHi)
         .addGlobalAddress(GV, 0, SIInstrInfo::MO_ABS32_HI);
 
-    // Use the destination directly, if and only if we don't have a register
-    // class being set.
-    Register AddrDst = !MRI.getRegClassOrNull(DstReg)
-                           ? DstReg
-                           : MRI.createGenericVirtualRegister(LLT::integer(64));
-
-    if (!MRI.getRegClassOrNull(AddrDst))
-      MRI.setRegClass(AddrDst, &AMDGPU::SReg_64RegClass);
+    Register AddrDst =
+        MRI.createVirtualRegister({&AMDGPU::SReg_64RegClass, LLT::integer(64)});
 
     B.buildMergeValues(AddrDst, {AddrLo, AddrHi});
-
-    // If we created a new register for the destination, cast the result into
-    // the final output.
-    if (AddrDst != DstReg)
-      B.buildCast(DstReg, AddrDst);
-  } else if (AddrLo != DstReg) {
-    // If we created a new register for the destination, cast the result into
-    // the final output.
+    B.buildCast(DstReg, AddrDst);
+  } else {
     B.buildCast(DstReg, AddrLo);
   }
 }
@@ -4315,37 +4294,78 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeFPow(MachineInstr &MI,
-                                       MachineIRBuilder &B) const {
+// Keep in sync with AMDGPUTargetLowering::lowerFPOW, which documents this.
+bool AMDGPULegalizerInfo::legalizeFPow(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
   Register Dst = MI.getOperand(0).getReg();
-  Register Src0 = MI.getOperand(1).getReg();
-  Register Src1 = MI.getOperand(2).getReg();
+  Register X = MI.getOperand(1).getReg();
+  Register Y = MI.getOperand(2).getReg();
   unsigned Flags = MI.getFlags();
-  LLT Ty = B.getMRI()->getType(Dst);
+  assert(B.getMRI()->getType(Dst) == F32);
 
-  if (Ty == F32) {
-    auto Log = B.buildFLog2(F32, Src0, Flags);
+  // log2(0) is -inf, which exp2 turns back into a finite result, so the core
+  // goes infinite for inputs a ninf fpow still asserts about, like pow(0, 2).
+  unsigned CoreFlags = Flags & ~MachineInstr::FmNoInfs;
+
+  // Fast expansion: ignores denormals, NaN for a negative base.
+  if (allowApproxFunc(B.getMF(), Flags)) {
+    auto Log = B.buildIntrinsic(Intrinsic::amdgcn_log, {F32})
+                   .addUse(X)
+                   .setMIFlags(CoreFlags);
     auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
+                   .addUse(Y)
                    .addUse(Log.getReg(0))
-                   .addUse(Src1)
-                   .setMIFlags(Flags);
-    B.buildFExp2(Dst, Mul, Flags);
-  } else if (Ty == F16) {
-    // There's no f16 fmul_legacy, so we need to convert for it.
-    auto Log = B.buildFLog2(F16, Src0, Flags);
-    auto Ext0 = B.buildFPExt(F32, Log, Flags);
-    auto Ext1 = B.buildFPExt(F32, Src1, Flags);
-    auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
-                   .addUse(Ext0.getReg(0))
-                   .addUse(Ext1.getReg(0))
-                   .setMIFlags(Flags);
-    // The f32 product is finite whenever the original fpow was, but it can
-    // still be outside the f16 range. Drop ninf from the truncation and from
-    // the exp2, since neither can assume a finite value here.
-    unsigned FlagsNoNInf = Flags & ~MachineInstr::FmNoInfs;
-    B.buildFExp2(Dst, B.buildFPTrunc(F16, Mul, FlagsNoNInf), FlagsNoNInf);
-  } else
-    return false;
+                   .setMIFlags(CoreFlags);
+    buildExp(B, Dst, Mul.getReg(0), CoreFlags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  auto Abs = B.buildFAbs(F32, X, Flags);
+  auto Log = B.buildFLog2(F32, Abs, CoreFlags);
+  auto Mul = B.buildIntrinsic(Intrinsic::amdgcn_fmul_legacy, {F32})
+                 .addUse(Y)
+                 .addUse(Log.getReg(0))
+                 .setMIFlags(CoreFlags);
+
+  // A base that is never negative needs neither the sign fixup nor the NaN.
+  if (Helper.getValueTracking()
+          ->computeKnownFPClass(X, Flags, fcNegative, 0)
+          .signBitIsZeroOrNaN()) {
+    B.buildFExp2(Dst, Mul, CoreFlags);
+    MI.eraseFromParent();
+    return true;
+  }
+
+  Register R = B.buildFExp2(F32, Mul, CoreFlags).getReg(0);
+
+  auto YTrunc = B.buildIntrinsicTrunc(F32, Y);
+  auto YIsInt = B.buildFCmp(CmpInst::FCMP_OEQ, S1, YTrunc, Y);
+  auto YHalf = B.buildFMul(F32, Y, B.buildFConstant(F32, 0.5));
+  auto YHalfTrunc = B.buildIntrinsicTrunc(F32, YHalf);
+  auto YIsOdd = B.buildAnd(
+      S1, YIsInt, B.buildFCmp(CmpInst::FCMP_ONE, S1, YHalfTrunc, YHalf));
+
+  // pow(-x, odd y) = -pow(x, y). Selecting the copysign lets even y fold it.
+  auto Neg = B.buildFCopysign(F32, R, X);
+  if (Flags & MachineInstr::FmNoNans) {
+    B.buildSelect(Dst, YIsOdd, Neg, R);
+    MI.eraseFromParent();
+    return true;
+  }
+  R = B.buildSelect(F32, YIsOdd, Neg, R).getReg(0);
+
+  // A negative finite base to a non-integral power is NaN. -inf is excluded:
+  // the core already gives pow(+inf, y). So are subnormals when flushed.
+  FPClassTest NegFiniteMask = fcNegNormal;
+  if (!B.getMF().getDenormalMode(APFloat::IEEEsingle()).inputsAreZero())
+    NegFiniteMask |= fcNegSubnormal;
+  auto XNegFinite = B.buildIsFPClass(S1, X, NegFiniteMask);
+  // Not an ONE compare: pow(-1, NaN) needs the NaN-true behavior of !OEQ.
+  auto NegNonInt = B.buildAnd(S1, XNegFinite, B.buildNot(S1, YIsInt));
+  auto NaN = B.buildFConstant(F32, APFloat::getQNaN(APFloat::IEEEsingle()));
+  B.buildSelect(Dst, NegNonInt, NaN, R);
 
   MI.eraseFromParent();
   return true;
@@ -7778,19 +7798,22 @@ bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
 }
 
 // TODO: Move to selection
-bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
-                                       MachineRegisterInfo &MRI,
-                                       MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
+                                       MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
-    return legalizeTrapEndpgm(MI, MRI, B);
+    return legalizeTrapEndpgm(Helper, MI);
 
   return ST.supportsGetDoorbellID() ?
          legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
-    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
+                                             MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  GISelChangeObserver &Observer = Helper.Observer;
   const DebugLoc &DL = MI.getDebugLoc();
   MachineBasicBlock &BB = B.getMBB();
   MachineFunction *MF = BB.getParent();
@@ -7805,7 +7828,18 @@ bool AMDGPULegalizerInfo::legalizeTrapEndpgm(
   // We need a block split to make the real endpgm a terminator. We also don't
   // want to break phis in successor blocks, so we can't just delete to the
   // end of the block.
+  // An instruction's parent block is part of its CSE profile, so notify
+  // observers about the instructions moved by the split.
+  SmallVector<MachineInstr *, 8> MovedInstrs;
+  MachineBasicBlock::iterator SplitPoint(&MI);
+  ++SplitPoint;
+  for (auto I = SplitPoint, E = BB.end(); I != E; ++I) {
+    Observer.changingInstr(*I);
+    MovedInstrs.push_back(&*I);
+  }
   BB.splitAt(MI, false /*UpdateLiveIns*/);
+  for (MachineInstr *MovedMI : MovedInstrs)
+    Observer.changedInstr(*MovedMI);
   MachineBasicBlock *TrapBB = MF->CreateMachineBasicBlock();
   MF->push_back(TrapBB);
   BuildMI(*TrapBB, TrapBB->end(), DL, B.getTII().get(AMDGPU::S_ENDPGM))
@@ -8150,11 +8184,12 @@ bool AMDGPULegalizerInfo::legalizeConstHwRegRead(MachineInstr &MI,
                                                  unsigned Width) const {
   MachineRegisterInfo &MRI = *B.getMRI();
   Register DstReg = MI.getOperand(0).getReg();
-  if (!MRI.getRegClassOrNull(DstReg))
-    MRI.setRegClass(DstReg, &AMDGPU::SReg_32RegClass);
+  Register Result = MRI.createVirtualRegister(
+      {&AMDGPU::SReg_32RegClass, MRI.getType(DstReg)});
   B.buildInstr(AMDGPU::S_GETREG_B32_const)
-      .addDef(DstReg)
+      .addDef(Result)
       .addImm(AMDGPU::Hwreg::HwregEncoding::encode(HwReg, LowBit, Width));
+  B.buildCopy(DstReg, Result);
   MI.eraseFromParent();
   return true;
 }
@@ -8247,6 +8282,11 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       Register Def = MI.getOperand(1).getReg();
       Register Use = MI.getOperand(3).getReg();
+      const TargetRegisterClass *WaveMaskRC = TRI->getWaveMaskRegClass();
+      Register NewDef =
+          MRI.createVirtualRegister({WaveMaskRC, MRI.getType(Def)});
+      Register NewUse =
+          MRI.createVirtualRegister({WaveMaskRC, MRI.getType(Use)});
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
 
@@ -8254,15 +8294,16 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         std::swap(CondBrTarget, UncondBrTarget);
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
+      B.buildCopy(NewUse, Use);
       if (IntrID == Intrinsic::amdgcn_if) {
         B.buildInstr(AMDGPU::SI_IF)
-          .addDef(Def)
-          .addUse(Use)
-          .addMBB(UncondBrTarget);
+            .addDef(NewDef)
+            .addUse(NewUse)
+            .addMBB(UncondBrTarget);
       } else {
         B.buildInstr(AMDGPU::SI_ELSE)
-            .addDef(Def)
-            .addUse(Use)
+            .addDef(NewDef)
+            .addUse(NewUse)
             .addMBB(UncondBrTarget);
       }
 
@@ -8275,10 +8316,13 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
         B.buildBr(*CondBrTarget);
       }
 
-      MRI.setRegClass(Def, TRI->getWaveMaskRegClass());
-      MRI.setRegClass(Use, TRI->getWaveMaskRegClass());
       MI.eraseFromParent();
       BrCond->eraseFromParent();
+      // SI_IF and SI_ELSE are terminators, so replace uses of Def rather than
+      // defining Def with a following copy.
+      Helper.Observer.changingAllUsesOfReg(MRI, Def);
+      MRI.replaceRegWith(Def, NewDef);
+      Helper.Observer.finishedChangingAllUsesOfReg();
       return true;
     }
 
@@ -8295,14 +8339,15 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       MachineBasicBlock *CondBrTarget = BrCond->getOperand(1).getMBB();
       Register Reg = MI.getOperand(2).getReg();
+      Register NewReg = MRI.createVirtualRegister(
+          {TRI->getWaveMaskRegClass(), MRI.getType(Reg)});
 
       if (Negated)
         std::swap(CondBrTarget, UncondBrTarget);
 
       B.setInsertPt(B.getMBB(), BrCond->getIterator());
-      B.buildInstr(AMDGPU::SI_LOOP)
-        .addUse(Reg)
-        .addMBB(UncondBrTarget);
+      B.buildCopy(NewReg, Reg);
+      B.buildInstr(AMDGPU::SI_LOOP).addUse(NewReg).addMBB(UncondBrTarget);
 
       if (Br)
         Br->getOperand(0).setMBB(CondBrTarget);
@@ -8311,7 +8356,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
       MI.eraseFromParent();
       BrCond->eraseFromParent();
-      MRI.setRegClass(Reg, TRI->getWaveMaskRegClass());
       return true;
     }
 
