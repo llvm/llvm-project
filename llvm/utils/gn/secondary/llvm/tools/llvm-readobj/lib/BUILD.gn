@@ -1,0 +1,35 @@
+import("//llvm/utils/TableGen/tablegen.gni")
+
+tablegen("Opts") {
+  visibility = [ ":lib" ]
+  args = [ "-gen-opt-parser-defs" ]
+}
+
+static_library("lib") {
+  output_name = "LLVMReadobjDriver"
+  deps = [
+    ":Opts",
+    "//llvm/lib/BinaryFormat",
+    "//llvm/lib/DebugInfo/CodeView",
+    "//llvm/lib/DebugInfo/DWARF",
+    "//llvm/lib/DebugInfo/MSF",
+    "//llvm/lib/DebugInfo/PDB",
+    "//llvm/lib/Object",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
+  ]
+  sources = [
+    "ARMWinEHPrinter.cpp",
+    "COFFDumper.cpp",
+    "COFFImportDumper.cpp",
+    "ELFDumper.cpp",
+    "MachODumper.cpp",
+    "ObjDumper.cpp",
+    "WasmDumper.cpp",
+    "Win64EHDumper.cpp",
+    "WindowsResourceDumper.cpp",
+    "XCOFFDumper.cpp",
+    "llvm-readobj.cpp",
+  ]
+}
