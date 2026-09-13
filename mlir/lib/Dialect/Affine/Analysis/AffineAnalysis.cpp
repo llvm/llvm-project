@@ -456,15 +456,11 @@ static void computeDirectionVector(
   }
 }
 
-LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
-  // Create set corresponding to domain of access.
-  FlatAffineValueConstraints domain;
-  if (failed(getOpIndexSet(opInst, &domain)))
-    return failure();
-
+LogicalResult
+mlir::affine::getAccessRelation(const AffineValueMap &accessValueMap,
+                                const FlatAffineValueConstraints &domain,
+                                IntegerRelation &rel) {
   // Get access relation from access map.
-  AffineValueMap accessValueMap;
-  getAccessMap(&accessValueMap);
   if (failed(getRelationFromMap(accessValueMap, rel)))
     return failure();
 
@@ -502,6 +498,17 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
                      VarKind::Domain);
 
   return success();
+}
+
+LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
+  // Create set corresponding to domain of access.
+  FlatAffineValueConstraints domain;
+  if (failed(getOpIndexSet(opInst, &domain)))
+    return failure();
+
+  AffineValueMap accessValueMap;
+  getAccessMap(&accessValueMap);
+  return mlir::affine::getAccessRelation(accessValueMap, domain, rel);
 }
 
 // Populates 'accessMap' with composition of AffineApplyOps reachable from
@@ -651,16 +658,29 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
   // Note: this check is skipped if 'allowRAR' is true, because RAR deps
   // can exist irrespective of lexicographic ordering b/w src and dst.
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
-  assert(loopDepth <= numCommonLoops + 1);
+  assert(loopDepth <= numCommonLoops + 1 && "Invalid depth");
   if (!allowRAR && loopDepth > numCommonLoops &&
       !srcAppearsBeforeDstInAncestralBlock(srcAccess, dstAccess)) {
     return DependenceResult::NoDependence;
   }
 
+  return checkAccessDependence(srcRel, dstRel, loopDepth, dependenceConstraints,
+                               dependenceComponents);
+}
+
+DependenceResult mlir::affine::checkAccessDependence(
+    IntegerRelation srcRel, IntegerRelation dstRel, unsigned loopDepth,
+    FlatAffineValueConstraints *dependenceConstraints,
+    SmallVector<DependenceComponent, 2> *dependenceComponents) {
+  FlatAffineValueConstraints srcDomain(srcRel.getDomainSet());
+  FlatAffineValueConstraints dstDomain(dstRel.getDomainSet());
+  assert(loopDepth <= getNumCommonLoops(srcDomain, dstDomain) + 1 &&
+         "Invalid depth");
+
   // Compute the dependence relation by composing `srcRel` with the inverse of
-  // `dstRel`. Doing this builds a relation between iteration domain of
-  // `srcAccess` to the iteration domain of `dstAccess` which access the same
-  // memory locations.
+  // `dstRel`. Doing this builds a relation between the iteration domain of the
+  // source access to the iteration domain of the destination access which
+  // access the same memory locations.
   dstRel.inverse();
   // For 0-d spaces, there will be no IDs. Enable if that's the case.
   if (!dstRel.getSpace().isUsingIds())
