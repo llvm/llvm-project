@@ -47,6 +47,8 @@ subroutine s1()
   rVar1 = rCoarray[1,2,3,STAT=rVar2]
   !ERROR: Must be a scalar value, but is a rank-1 array
   rVar1 = rCoarray[1,2,3,STAT=intArray]
+  !ERROR: STAT= specifier must be a scalar integer variable
+  rVar1 = rCoarray[1,2,3,STAT=MASK(2)]
   ! Error on C929, no specifier can appear more than once
   !ERROR: coindexed reference has multiple STAT= specifiers
   rVar1 = rCoarray[1,2,3,STAT=iVar1, STAT=iVar2]
