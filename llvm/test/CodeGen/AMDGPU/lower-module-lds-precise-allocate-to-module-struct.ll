@@ -29,11 +29,11 @@
 define void @func_one() {
 ; CHECK-LABEL: define {{[^@]+}}@func_one() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[VAL0:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !noalias [[META2:![0-9]+]]
+; CHECK-NEXT:    [[VAL0:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META2:![0-9]+]]
 ; CHECK-NEXT:    [[ONE:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[ONE]], align 4
 ; CHECK-NEXT:    store i32 [[VAL0]], ptr addrspace(3) [[TMP2]], align 4
-; CHECK-NEXT:    store i16 10, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !noalias [[META11:![0-9]+]]
+; CHECK-NEXT:    store i16 10, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope [[META11:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %val0 = load i32, ptr addrspace(3) @both
@@ -47,7 +47,7 @@ define amdgpu_kernel void @kern_one() {
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META16:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kern_one.lds) ]
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !noalias [[META17:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META17:![0-9]+]]
 ; CHECK-NEXT:    call void @func_one()
 ; CHECK-NEXT:    ret void
 ;
@@ -59,11 +59,11 @@ entry:
 define void @func_two() {
 ; CHECK-LABEL: define {{[^@]+}}@func_two() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.amdgcn.lds.kernel.id()
-; CHECK-NEXT:    [[VAL0:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !noalias [[META2]]
+; CHECK-NEXT:    [[VAL0:%.*]] = load i32, ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META2]]
 ; CHECK-NEXT:    [[TWO:%.*]] = getelementptr inbounds [3 x [2 x ptr addrspace(3)]], ptr addrspace(4) @llvm.amdgcn.lds.offset.table, i32 0, i32 [[TMP1]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[TWO]], align 4
 ; CHECK-NEXT:    store i32 [[VAL0]], ptr addrspace(3) [[TMP2]], align 4
-; CHECK-NEXT:    store i16 20, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !noalias [[META11]]
+; CHECK-NEXT:    store i16 20, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope [[META11]]
 ; CHECK-NEXT:    ret void
 ;
   %val0 = load i32, ptr addrspace(3) @both
@@ -77,7 +77,7 @@ define amdgpu_kernel void @kern_two() {
 ; CHECK-SAME: () #[[ATTR0]] !llvm.amdgcn.lds.kernel.id [[META18:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kern_two.lds) ]
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META19:![0-9]+]], !noalias [[META20:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ], !alias.scope [[META19:![0-9]+]]
 ; CHECK-NEXT:    call void @func_two()
 ; CHECK-NEXT:    ret void
 ;
@@ -101,8 +101,8 @@ define void @func_block_direct_allocation() {
 ; CHECK-NEXT:    [[TMP3:%.*]] = load ptr addrspace(3), ptr addrspace(4) [[TWO]], align 4
 ; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr addrspace(3) [[TMP3]], align 4
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[VAL1]], [[VAL2]]
-; CHECK-NEXT:    store i32 [[SUM]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !noalias [[META2]]
-; CHECK-NEXT:    store i16 30, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !noalias [[META11]]
+; CHECK-NEXT:    store i32 [[SUM]], ptr addrspace(3) @llvm.amdgcn.module.lds, align 4, !alias.scope [[META2]]
+; CHECK-NEXT:    store i16 30, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_MODULE_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.module.lds, i32 0, i32 1), align 4, !alias.scope [[META11]]
 ; CHECK-NEXT:    ret void
 ;
   %val1 = load i32, ptr addrspace(3) @one
@@ -115,8 +115,8 @@ define void @func_block_direct_allocation() {
 
 define amdgpu_kernel void @kern_block_direct_allocation() {
 ; CHECK-LABEL: define {{[^@]+}}@kern_block_direct_allocation
-; CHECK-SAME: () #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META21:![0-9]+]] {
-; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kern_block_direct_allocation.lds) ], !alias.scope [[META22:![0-9]+]], !noalias [[META25:![0-9]+]]
+; CHECK-SAME: () #[[ATTR1:[0-9]+]] !llvm.amdgcn.lds.kernel.id [[META20:![0-9]+]] {
+; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.kernel.kern_block_direct_allocation.lds) ], !alias.scope [[META21:![0-9]+]]
 ; CHECK-NEXT:    call void @llvm.donothing() [ "ExplicitUse"(ptr addrspace(3) @llvm.amdgcn.module.lds) ]
 ; CHECK-NEXT:    call void @func_block_direct_allocation()
 ; CHECK-NEXT:    call void @func_one()
@@ -133,4 +133,29 @@ define amdgpu_kernel void @kern_block_direct_allocation() {
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-lds-size"="16" }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+;.
+; CHECK: [[META0]] = !{i32 0, i32 1}
+; CHECK: [[META1]] = !{i32 8, i32 9}
+; CHECK: [[META2]] = !{[[META3:![0-9]+]], [[META5:![0-9]+]], [[META7:![0-9]+]], [[META9:![0-9]+]]}
+; CHECK: [[META3]] = distinct !{[[META3]], [[META4:![0-9]+]]}
+; CHECK: [[META4]] = distinct !{[[META4]], i1 true}
+; CHECK: [[META5]] = distinct !{[[META5]], [[META6:![0-9]+]]}
+; CHECK: [[META6]] = distinct !{[[META6]], i1 true}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; CHECK: [[META8]] = distinct !{[[META8]], i1 true}
+; CHECK: [[META9]] = distinct !{[[META9]], [[META10:![0-9]+]]}
+; CHECK: [[META10]] = distinct !{[[META10]], i1 true}
+; CHECK: [[META11]] = !{[[META12:![0-9]+]], [[META13:![0-9]+]], [[META14:![0-9]+]], [[META15:![0-9]+]]}
+; CHECK: [[META12]] = distinct !{[[META12]], [[META4]]}
+; CHECK: [[META13]] = distinct !{[[META13]], [[META6]]}
+; CHECK: [[META14]] = distinct !{[[META14]], [[META8]]}
+; CHECK: [[META15]] = distinct !{[[META15]], [[META10]]}
+; CHECK: [[META16]] = !{i32 1}
+; CHECK: [[META17]] = !{[[META7]], [[META9]]}
+; CHECK: [[META18]] = !{i32 2}
+; CHECK: [[META19]] = !{[[META9]]}
+; CHECK: [[META20]] = !{i32 0}
+; CHECK: [[META21]] = !{[[META22:![0-9]+]]}
+; CHECK: [[META22]] = distinct !{[[META22]], [[META23:![0-9]+]]}
+; CHECK: [[META23]] = distinct !{[[META23]], i1 true}
 ;.
