@@ -3655,7 +3655,20 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   SmallVector<EVT, 2> ValueVTs;
   SDLoc dl = getCurSDLoc();
   ComputeValueVTs(TLI, DAG.getDataLayout(), LP.getType(), ValueVTs);
-  assert(ValueVTs.size() == 2 && "Only two-valued landingpads are supported");
+
+  // Only the two-valued (exception pointer, selector) form can be lowered.
+  // LangRef leaves the result type target-specific, so diagnose other shapes
+  // instead of asserting.
+  if (ValueVTs.size() != 2) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        *LP.getFunction(),
+        "landingpad result type must consist of exactly two values, the "
+        "exception pointer and the selector",
+        dl.getDebugLoc()));
+    if (!ValueVTs.empty())
+      setValueToPoison(&LP, dl);
+    return;
+  }
 
   // Get the two live-in registers as SDValues. The physregs have already been
   // copied into virtual registers.
