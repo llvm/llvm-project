@@ -2052,6 +2052,59 @@ define nofpclass(snan) float @known_nsub__minimum__known_ninf() {
   ret float %result
 }
 
+; A subnormal input is treated as zero in a non-IEEE input denormal mode,
+; so the intrinsic cannot be replaced with the original subnormal operand.
+define nofpclass(snan) float @known_nsub__minimum__known_pnorm__mode_ieee_positivezero(float nofpclass(nan inf zero psub norm) %nsub) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @known_nsub__minimum__known_pnorm__mode_ieee_positivezero(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[NSUB:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.minimum.f32(float [[NSUB]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.minimum.f32(float %nsub, float 1.000000e+00)
+  ret float %result
+}
+
+define nofpclass(snan) float @known_nsub__minimum__known_pnorm__mode_ieee_preservesign(float nofpclass(nan inf zero psub norm) %nsub) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @known_nsub__minimum__known_pnorm__mode_ieee_preservesign(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[NSUB:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.minimum.f32(float [[NSUB]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.minimum.f32(float %nsub, float 1.000000e+00)
+  ret float %result
+}
+
+; A subnormal result may be flushed to zero in a non-IEEE output denormal mode,
+; so the intrinsic cannot be replaced with the original subnormal operand.
+define nofpclass(snan) float @known_nsub__minimum__known_pnorm__mode_positivezero_ieee(float nofpclass(nan inf zero psub norm) %nsub) #4 {
+; CHECK-LABEL: define nofpclass(snan) float @known_nsub__minimum__known_pnorm__mode_positivezero_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[NSUB:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan nsz float @llvm.minimum.f32(float [[NSUB]], float 1.000000e+00)
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.minimum.f32(float %nsub, float 1.000000e+00)
+  ret float %result
+}
+
+; The operand fold remains valid when neither operand can be subnormal.
+define nofpclass(snan) float @known_nnorm__minimum__known_pnorm__mode_ieee_positivezero(float nofpclass(nan inf zero sub pnorm) %nnorm) #2 {
+; CHECK-LABEL: define nofpclass(snan) float @known_nnorm__minimum__known_pnorm__mode_ieee_positivezero(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[NNORM:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float [[NNORM]]
+;
+  %result = call float @llvm.minimum.f32(float %nnorm, float 1.000000e+00)
+  ret float %result
+}
+
+define nofpclass(snan) float @known_nnorm__minimum__known_pnorm__mode_ieee_preservesign(float nofpclass(nan inf zero sub pnorm) %nnorm) #3 {
+; CHECK-LABEL: define nofpclass(snan) float @known_nnorm__minimum__known_pnorm__mode_ieee_preservesign(
+; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[NNORM:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[NNORM]]
+;
+  %result = call float @llvm.minimum.f32(float %nnorm, float 1.000000e+00)
+  ret float %result
+}
+
 define nofpclass(snan) float @simplify_multiple_use_minimum(ptr %ptr) {
 ; CHECK-LABEL: define nofpclass(snan) float @simplify_multiple_use_minimum(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
@@ -2181,3 +2234,6 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
+attributes #2 = { denormal_fpenv(ieee|positivezero) }
+attributes #3 = { denormal_fpenv(ieee|preservesign) }
+attributes #4 = { denormal_fpenv(positivezero|ieee) }
