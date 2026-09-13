@@ -3953,6 +3953,9 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   if (LP.getType()->isTokenTy())
     return true;
 
+  if (!isExceptionPointerAndSelectorType(LP.getType()))
+    return false;
+
   // Add a label to mark the beginning of the landing pad.  Deletion of the
   // landing pad can thus be detected via the MachineModuleInfo.
   MIRBuilder.buildInstr(TargetOpcode::EH_LABEL)
