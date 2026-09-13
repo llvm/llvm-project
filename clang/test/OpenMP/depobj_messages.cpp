@@ -175,5 +175,7 @@ label1 : {
 #pragma omp depobj depend(in:x) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}} expected-error {{expected addressable lvalue expression, array element, array section or array shaping expression of non 'omp_depend_t' type}}
 #pragma omp depobj destroy (x) // omp52-error {{expected 'destroy' clause with an argument on '#pragma omp depobj' construct}} expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
 #pragma omp depobj update(in) (x) // expected-error {{expected depobj expression}} expected-warning {{extra tokens at the end of '#pragma omp depobj' are ignored}}
+#pragma omp depobj(x) depend(iterator(int), in: argc) // expected-error {{expected identifier}}
+#pragma omp depobj(x) depend(iterator(int, int j = 0:10), in: argc) // expected-error {{expected identifier}}
   return tmain(argc); // expected-note {{in instantiation of function template specialization 'tmain<int>' requested here}}
 }
