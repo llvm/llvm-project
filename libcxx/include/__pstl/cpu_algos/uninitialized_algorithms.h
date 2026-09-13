@@ -42,7 +42,7 @@ struct __cpu_parallel_uninitialized_copy {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_InputIterator>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      auto __res = __parallel_for_each_iter_pair<_Backend>(
+      auto __res = __pstl::__parallel_for_each_iter_pair<_Backend>(
           __first,
           __last,
           __result,
@@ -68,7 +68,7 @@ struct __cpu_parallel_uninitialized_move {
     if constexpr (__is_parallel_execution_policy_v<_RawExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_InputIterator>::value &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
-      auto __res = __parallel_for_each_iter_pair<_Backend>(
+      auto __res = __pstl::__parallel_for_each_iter_pair<_Backend>(
           __first,
           __last,
           __result,
