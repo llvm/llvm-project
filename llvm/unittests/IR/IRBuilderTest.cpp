@@ -615,13 +615,16 @@ TEST_F(IRBuilderTest, CreateBitPreservingCastChainByteTypes) {
                                     /*Scalable=*/false);
   Value *ByteVec = Builder.CreateLoad(ByteVecTy, Constant::getNullValue(PtrTy));
   Value *Ptr = Builder.CreateLoad(PtrTy, Constant::getNullValue(PtrTy));
+  // Both directions are a single bitcast: routing through ptrtoint/inttoptr
+  // would expose the provenance that the byte value carries.
   Value *ToPtr = Builder.CreateBitPreservingCastChain(DL, ByteVec, PtrTy);
-  ASSERT_TRUE(isa<IntToPtrInst>(ToPtr));
-  EXPECT_TRUE(isa<BitCastInst>(cast<IntToPtrInst>(ToPtr)->getOperand(0)));
+  ASSERT_EQ(ToPtr->getType(), PtrTy);
+  ASSERT_TRUE(isa<BitCastInst>(ToPtr));
+  EXPECT_EQ(cast<BitCastInst>(ToPtr)->getOperand(0), ByteVec);
   Value *ToByteVec = Builder.CreateBitPreservingCastChain(DL, Ptr, ByteVecTy);
   ASSERT_EQ(ToByteVec->getType(), ByteVecTy);
   ASSERT_TRUE(isa<BitCastInst>(ToByteVec));
-  EXPECT_TRUE(isa<PtrToIntInst>(cast<BitCastInst>(ToByteVec)->getOperand(0)));
+  EXPECT_EQ(cast<BitCastInst>(ToByteVec)->getOperand(0), Ptr);
 }
 
 TEST_F(IRBuilderTest, UnaryOperators) {
