@@ -2474,6 +2474,9 @@ module std {
       module transform_reduce {
         header "__pstl/cpu_algos/transform_reduce.h"
       }
+      module uninitialized_algorithms {
+        header "__pstl/cpu_algos/uninitialized_algorithms.h"
+      }
     }
     module dispatch           { header "__pstl/dispatch.h" }
     module handle_exception   { header "__pstl/handle_exception.h" }
