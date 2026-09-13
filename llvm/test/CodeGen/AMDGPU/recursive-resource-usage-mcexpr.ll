@@ -167,3 +167,56 @@ define void @D() {
   call void asm sideeffect "", "~{s70}"()
   ret void
 }
+
+; SCC order qux2, baz2, foo2 flattens baz2 before foo2 is assigned.
+; foo2's symbol must stay in the max, not be dropped.
+
+; CHECK-LABEL: {{^}}qux2
+; CHECK: .set .Lqux2.num_vgpr, max(42, .Lbaz2.num_vgpr, .Lfoo2.num_vgpr)
+; CHECK: .set .Lqux2.num_agpr, max(0, .Lbaz2.num_agpr, .Lfoo2.num_agpr)
+; CHECK: .set .Lqux2.numbered_sgpr, max(54, .Lbaz2.numbered_sgpr, .Lfoo2.numbered_sgpr)
+
+; CHECK-LABEL: {{^}}baz2
+; CHECK: .set .Lbaz2.num_vgpr, max(42, max(42, .Lfoo2.num_vgpr))
+; CHECK: .set .Lbaz2.num_agpr, max(0, max(0, .Lfoo2.num_agpr))
+; CHECK: .set .Lbaz2.numbered_sgpr, max(54, max(54, .Lfoo2.numbered_sgpr))
+
+; CHECK-LABEL: {{^}}foo2
+; CHECK: .set .Lfoo2.num_vgpr, max(61, 42)
+; CHECK: .set .Lfoo2.num_agpr, max(31, 0)
+; CHECK: .set .Lfoo2.numbered_sgpr, max(71, 54)
+
+; CHECK-LABEL: {{^}}usebaz2
+; CHECK: .set .Lusebaz2.num_vgpr, max(32, .Lbaz2.num_vgpr)
+; CHECK: .set .Lusebaz2.num_agpr, max(0, .Lbaz2.num_agpr)
+; CHECK: .set .Lusebaz2.numbered_sgpr, max(33, .Lbaz2.numbered_sgpr)
+; CHECK: NumVgprs: 61
+; CHECK: NumAgprs: 31
+; CHECK: TotalNumVgprs: 95
+
+define void @foo2() {
+entry:
+  call void asm sideeffect "", "~{v60},~{a30},~{s70}"()
+  call void @baz2()
+  ret void
+}
+
+define void @qux2() {
+entry:
+  call void @baz2()
+  call void @foo2()
+  ret void
+}
+
+define void @baz2() {
+entry:
+  call void asm sideeffect "", "~{v35}"()
+  call void @qux2()
+  ret void
+}
+
+define amdgpu_kernel void @usebaz2() {
+entry:
+  call void @baz2()
+  ret void
+}
