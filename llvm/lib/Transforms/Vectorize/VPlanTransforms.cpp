@@ -1263,6 +1263,12 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       Def->getScalarType() == A->getScalarType())
     return A;
 
+  // Shifting by zero is a no-op.
+  if (match(Def, m_CombineOr(m_Shl(m_VPValue(A), m_ZeroInt()),
+                             m_CombineOr(m_LShr(m_VPValue(A), m_ZeroInt()),
+                                         m_AShr(m_VPValue(A), m_ZeroInt())))))
+    return A;
+
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A)))))
     if (Def->getScalarType() == A->getScalarType())
       return A;
