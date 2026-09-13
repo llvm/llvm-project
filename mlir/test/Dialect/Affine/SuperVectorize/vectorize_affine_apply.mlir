@@ -43,7 +43,7 @@ func.func @vec_affine_apply_2(%arg0: memref<8x12x16xf32>, %arg1: memref<8x24x48x
 // CHECK-NEXT:     affine.for %[[ARG4:.*]] = 0 to 48 step 8 {
 // CHECK-NEXT:       %[[S0:.*]] = affine.apply #[[$MAP_ID2]](%[[ARG4]])
 // CHECK-NEXT:       %[[CST:.*]] = ub.poison : f32
-// CHECK-NEXT:       %[[S1:.*]] = vector.transfer_read %[[ARG0]][%[[ARG2]], %[[ARG3]], %[[S0]]], %[[CST]] {in_bounds = [true]} : memref<8x12x16xf32>, vector<8xf32>
+// CHECK-NEXT:       %[[S1:.*]] = vector.transfer_read %[[ARG0]][%[[ARG2]], %[[ARG3]], %[[S0]]], %[[CST]] : memref<8x12x16xf32>, vector<8xf32>
 // CHECK-NEXT:       vector.transfer_write %[[S1]], %[[ARG1]][%[[ARG2]], %[[ARG3]], %[[ARG4]]] {in_bounds = [true]} : vector<8xf32>, memref<8x24x48xf32>
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
