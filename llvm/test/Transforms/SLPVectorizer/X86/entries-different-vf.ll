@@ -17,8 +17,9 @@ define i1 @test(i64 %v) {
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub <8 x i64> [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <8 x i64> [[TMP8]], <8 x i64> [[TMP9]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 12, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult <8 x i64> [[TMP10]], zeroinitializer
-; CHECK-NEXT:    [[TMP12:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP11]])
-; CHECK-NEXT:    ret i1 [[TMP12]]
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i1> [[TMP11]] to i8
+; CHECK-NEXT:    [[TMP13:%.*]] = icmp ne i8 [[TMP12]], 0
+; CHECK-NEXT:    ret i1 [[TMP13]]
 ;
 entry:
   %0 = shl i64 %v, 1
