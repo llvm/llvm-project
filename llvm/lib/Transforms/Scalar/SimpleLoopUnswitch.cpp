@@ -261,10 +261,9 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
 ///
 /// If \p UsedHeaderPHI is non-null, an incoming value that is a PHI in the
 /// loop header is accepted too. *UsedHeaderPHI is set to true if that happens.
-static bool areLoopExitPHIsTrivial(const Loop &L,
-                                         const BasicBlock &ExitingBB,
-                                         const BasicBlock &ExitBB,
-                                         bool *UsedHeaderPHI = nullptr) {
+static bool areLoopExitPHIsTrivial(const Loop &L, const BasicBlock &ExitingBB,
+                                   const BasicBlock &ExitBB,
+                                   bool *UsedHeaderPHI = nullptr) {
   for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
@@ -663,8 +662,8 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // header PHI. Those incomings are repaired after unswitching.
   // Branch always dominates the latch as guaranteed by the caller.
   bool TrivialFromHeader = false;
-  if (!ModifiedBranch && !areLoopExitPHIsTrivial(
-                             L, *ParentBB, *LoopExitBB, &TrivialFromHeader)) {
+  if (!ModifiedBranch &&
+      !areLoopExitPHIsTrivial(L, *ParentBB, *LoopExitBB, &TrivialFromHeader)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
