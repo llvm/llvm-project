@@ -402,3 +402,53 @@ module attributes {transform.with_named_sequence} {
       transform.yield
   }
 }
+
+// -----
+
+// Interchanging (m, n, k) to (k, m, n) maps the original index 2 to index 0.
+// Packing must then reconstruct k as outer_k * 32 + inner_k. All dimensions
+// are divisible by their tiles: the extra +k term is not neutral under padding.
+// CHECK-DAG: #[[$GREEDY_PACK_K:.*]] = affine_map<()[s0, s1] -> (s0 * 32 + s1)>
+// CHECK-DAG: #[[$GREEDY_INTERCHANGE_K:.*]] = affine_map<(d0, d1, d2) -> (d0)>
+// CHECK-LABEL: func.func @pack_greedily_linalg_index(
+// CHECK:         linalg.generic
+// CHECK-SAME:    iterator_types = ["reduction", "parallel", "parallel", "reduction", "parallel", "parallel"]
+// CHECK-SAME:    ins(%{{.*}} : tensor<2x2x32x8xf32>, tensor<2x2x32x16xf32>)
+// CHECK-SAME:    outs(%{{.*}} : tensor<2x2x8x16xf32>)
+// CHECK:       ^bb0
+// CHECK:         %[[K_OUTER:.*]] = linalg.index 0 : index
+// CHECK-NEXT:    %[[K_INNER:.*]] = linalg.index 3 : index
+// CHECK-NEXT:    %[[PACKED_K:.*]] = affine.apply #[[$GREEDY_PACK_K]]()[%[[K_OUTER]], %[[K_INNER]]]
+// CHECK:         %[[K:.*]] = affine.apply #[[$GREEDY_INTERCHANGE_K]](%[[PACKED_K]], %{{.*}}, %{{.*}})
+// CHECK-NEXT:    arith.index_cast %[[K]] : index to i32
+func.func @pack_greedily_linalg_index(%A: tensor<16x64xf32>, %B: tensor<32x64xf32>,
+                                    %C: tensor<32x16xf32>) -> tensor<32x16xf32> {
+  %result = linalg.generic {
+      indexing_maps = [affine_map<(m, n, k) -> (m, k)>,
+                       affine_map<(m, n, k) -> (n, k)>,
+                       affine_map<(m, n, k) -> (n, m)>],
+      iterator_types = ["parallel", "parallel", "reduction"]}
+      ins(%A, %B : tensor<16x64xf32>, tensor<32x64xf32>)
+      outs(%C : tensor<32x16xf32>) {
+  ^bb0(%a: f32, %b: f32, %c: f32):
+    %k = linalg.index 2 : index
+    %k_i32 = arith.index_cast %k : index to i32
+    %k_f32 = arith.sitofp %k_i32 : i32 to f32
+    %product = arith.mulf %a, %b : f32
+    %sum = arith.addf %c, %product : f32
+    %indexed_sum = arith.addf %sum, %k_f32 : f32
+    linalg.yield %indexed_sum : f32
+  } -> tensor<32x16xf32>
+  return %result : tensor<32x16xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %generic = transform.structured.match ops{["linalg.generic"]} in %arg0
+      : (!transform.any_op) -> !transform.op<"linalg.generic">
+    transform.structured.pack_greedily %generic
+        matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
+      : (!transform.op<"linalg.generic">) -> !transform.op<"linalg.generic">
+    transform.yield
+  }
+}
