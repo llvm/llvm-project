@@ -14,7 +14,6 @@
 #include <__functional/function.h>
 #include <__rcu/rcu_domain.h>
 
-#include <atomic>
 #include <mutex>
 #include <optional>
 #include <vector>
@@ -27,6 +26,10 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
+// Tp must be thread-safe itself between 
+// - the operation that is done by the object from get_current_thread_instance calls
+// - and the operation that for_each
+// since there is no mutex guarding between them
 template <class Tp>
 class thread_local_container {
   struct thread_entry {
@@ -62,19 +65,19 @@ public:
   thread_local_container()                         = delete;
   thread_local_container(thread_local_container&&) = delete;
 
-  static atomic_ref<Tp> get_current_thread_instance() {
+  static Tp& get_current_thread_instance() {
     if (!thread_entry_.has_value()) {
       auto& entry = thread_entry_.emplace();
-      return atomic_ref(entry.instance_);
+      return entry.instance_;
     }
-    return atomic_ref(thread_entry_->instance_);
+    return thread_entry_->instance_;
   }
 
   template <class Func>
   static void for_each(Func&& f) {
     unique_lock<std::mutex> lock(mtx_);
     for (auto instance : instances_) {
-      f(atomic_ref(*instance));
+      f(*instance);
     }
   }
 };

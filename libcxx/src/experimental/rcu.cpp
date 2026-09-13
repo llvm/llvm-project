@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <rcu>
@@ -43,19 +44,41 @@ struct reader_states {
 
   using state_type = uint16_t;
 
-  static uint16_t get_grace_period_phase(state_type state) { return state & grace_period_phase_mask; }
+  std::atomic<state_type> state_{};
 
-  static uint16_t get_reader_nest_level(state_type state) { return state & reader_nest_level_mask; }
-
-  static bool is_quiescent_state(state_type state) { return get_reader_nest_level(state) == 0; }
-
-  static state_type make_state(state_type grace_period_phase, state_type reader_nest_level) {
-    return (grace_period_phase & grace_period_phase_mask) | (reader_nest_level & reader_nest_level_mask);
+  bool is_quiescent_state() const noexcept {
+    return get_reader_nest_level(state_.load(std::memory_order_relaxed)) == 0;
   }
+
+  bool is_grace_period_ongoing_at_phase(state_type global_phase) const noexcept {
+    auto state = state_.load(std::memory_order_relaxed);
+    return !is_quiescent_state(state) && get_grace_period_phase(state) != global_phase;
+  }
+
+  void set_state(state_type grace_period_phase, state_type reader_nest_level) {
+    auto state = (grace_period_phase & grace_period_phase_mask) | (reader_nest_level & reader_nest_level_mask);
+    state_.store(state, memory_order_relaxed);
+  }
+
+  void increment_nest_level() noexcept { state_.fetch_add(1, memory_order_relaxed); }
+
+  // return previous nested level
+  uint16_t decrement_nest_level() noexcept {
+    auto old_state = state_.fetch_sub(1, memory_order_relaxed);
+    return get_reader_nest_level(old_state);
+  }
+
+  state_type debug_get_state() const noexcept { return state_.load(); }
+
+private:
+  static uint16_t get_grace_period_phase(state_type state) noexcept { return state & grace_period_phase_mask; }
+  static bool is_quiescent_state(state_type state) noexcept { return get_reader_nest_level(state) == 0; }
+
+  static uint16_t get_reader_nest_level(state_type state) noexcept { return state & reader_nest_level_mask; }
 };
 
 class rcu_domain_impl {
-  using per_thread_states = thread_local_container<reader_states::state_type>;
+  using per_thread_states = thread_local_container<reader_states>;
 
   // only the highest bit is used for the phase.
   std::atomic<reader_states::state_type> global_reader_phase_{};
@@ -66,7 +89,7 @@ class rcu_domain_impl {
   // flag used for waking up writer threads waiting for all reader threads' quiescent state
   std::atomic<bool> grace_period_waiting_flag_ = false;
 
-  rcu_thread_local_list_view retired_queue_stage0_;
+  using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
@@ -77,7 +100,9 @@ class rcu_domain_impl {
 
   void update_phase_and_wait() noexcept {
     rcu_singly_list_view working_queue;
-    working_queue.splice_back(retired_queue_stage0_);
+    per_thread_retired_queue_stage0::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
+      working_queue.splice_back(stage0_list);
+    });
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -99,53 +124,45 @@ class rcu_domain_impl {
 
   bool any_reader_in_ongoing_grace_period(reader_states::state_type global_phase) noexcept {
     bool any_ongoing = false;
-    per_thread_states::for_each([this, global_phase, &any_ongoing](atomic_ref<reader_states::state_type> state) {
-      if (is_grace_period_ongoing(state.load(memory_order_relaxed), global_phase)) {
+    per_thread_states::for_each([global_phase, &any_ongoing](reader_states& state) {
+      if (state.is_grace_period_ongoing_at_phase(global_phase)) {
         any_ongoing = true;
       }
     });
     return any_ongoing;
   }
 
-  bool is_grace_period_ongoing(reader_states::state_type thread_state,
-                               reader_states::state_type global_phase) const noexcept {
-    // https://lwn.net/Articles/323929/
-    // The phase is flipped at the beginning of a grace period.
-    // Any readers that started before the flip will have the old phase
-    // and we consider them as ongoing that we need to wait for before we can close the grace period.
-    return !reader_states::is_quiescent_state(thread_state) &&
-           reader_states::get_grace_period_phase(thread_state) != global_phase;
-  }
-
 public:
   void lock() noexcept {
-    auto current_thread_state_ref = per_thread_states::get_current_thread_instance();
+    reader_states& current_thread_state = per_thread_states::get_current_thread_instance();
 
-    if ((reader_states::is_quiescent_state(current_thread_state_ref.load(memory_order_relaxed)))) {
-      // Entering a read-side critical section from a quiescent state.
-      current_thread_state_ref.store(
-          reader_states::make_state(global_reader_phase_.load(std::memory_order_relaxed), 1), memory_order_relaxed);
+    if (current_thread_state.is_quiescent_state()) {
+      // Enter critical section by setting the nested level from 0 -> 1
+      current_thread_state.set_state(global_reader_phase_.load(memory_order_relaxed), 1);
       std::atomic_thread_fence(memory_order_seq_cst);
     } else {
       // Already in read-side critical section, just increment the nest level.
-      current_thread_state_ref.fetch_add(1, memory_order_relaxed);
+      current_thread_state.increment_nest_level();
     }
   }
 
   void unlock() noexcept {
-    auto current_thread_state_ref = per_thread_states::get_current_thread_instance();
+    reader_states& current_thread_state = per_thread_states::get_current_thread_instance();
     std::atomic_thread_fence(memory_order_seq_cst);
     // Decrement the nest level.
-    auto old_state = current_thread_state_ref.fetch_sub(1, memory_order_relaxed);
+    auto old_nested_level = current_thread_state.decrement_nest_level();
 
-    if (reader_states::get_reader_nest_level(old_state) == 1 && grace_period_waiting_flag_.load(memory_order_relaxed)) {
+    if (old_nested_level == 1 && grace_period_waiting_flag_.load(memory_order_relaxed)) {
       // Transitioning to quiescent state, wake up waiters.
       grace_period_waiting_flag_.store(false, std::memory_order_relaxed);
       grace_period_waiting_flag_.notify_all();
     }
   }
 
-  void retire(__rcu_node* node) noexcept { retired_queue_stage0_.push_front(node); }
+  void retire(__rcu_node* node) noexcept {
+    rcu_atomic_list_view& stage0_queue = per_thread_retired_queue_stage0::get_current_thread_instance();
+    stage0_queue.push_front(node);
+  }
 
   void synchronize(bool invoke_callback) noexcept {
     std::atomic_thread_fence(memory_order_seq_cst);
@@ -162,7 +179,6 @@ public:
     std::atomic_signal_fence(memory_order_seq_cst);
     update_phase_and_wait();
 
-
     if (invoke_callback) {
       rcu_singly_list_view ready_callbacks;
       ready_callbacks.splice_back(retired_queue_stage2_);
@@ -172,7 +188,9 @@ public:
   }
 
   void debugPrintAllReaderStatesInHex() {
-    per_thread_states::for_each([](auto state_ref) { std::printf("Reader state: 0x%04x\n", state_ref.load()); });
+    per_thread_states::for_each([](reader_states& state) {
+      std::printf("Reader state: 0x%04x\n", state.debug_get_state());
+    });
   }
 };
 } // namespace
