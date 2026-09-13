@@ -70,12 +70,12 @@ define void @splat_subtree_with_scalar_uses(ptr noalias %out, ptr noalias %in) {
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 16
 ; CHECK-NEXT:    [[ARRAYIDX7:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 20
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds nuw i8, ptr [[IN]], i64 24
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[XOR24:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[IN]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[ARRAYIDX7]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX5]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ADD25:%.*]] = add i32 [[XOR24]], [[TMP3]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add i32 [[TMP2]], [[TMP16]]

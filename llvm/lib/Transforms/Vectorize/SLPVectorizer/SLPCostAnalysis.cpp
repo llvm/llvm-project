@@ -25,6 +25,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorTypeUtils.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 
 #include <cassert>
 #include <utility>
@@ -166,8 +167,17 @@ InstructionCost getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec,
   auto *MaskTy =
       FixedVectorType::get(IntegerType::getInt1Ty(ScalarTy->getContext()),
                            PaddedVecTy->getNumElements());
-  InstructionCost DirectCost = TTI.getArithmeticInstrCost(
-      Opcode, getWidenedType(ScalarTy, NumElts), CostKind);
+  // Division is scalarized on many targets, so the odd-width vector op is not a
+  // meaningful baseline. Compare against the sequence actually emitted without
+  // the mask - the full register ops plus the scalar tail.
+  InstructionCost DirectCost = 0;
+  for (unsigned Rem = NumElts; Rem > 0;) {
+    unsigned VF = std::max(
+        1u, getFloorFullVectorNumberOfElements(TTI, ScalarTy, Rem, ReVec));
+    DirectCost += TTI.getArithmeticInstrCost(
+        Opcode, VF > 1 ? getWidenedType(ScalarTy, VF) : ScalarTy, CostKind);
+    Rem -= VF;
+  }
   IntrinsicCostAttributes ICA(getMaskedDivRemIntrinsic(Opcode), PaddedVecTy,
                               {PaddedVecTy, PaddedVecTy, MaskTy});
   InstructionCost MaskedCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
@@ -303,6 +313,82 @@ InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
                                                           : CmpInst::ICMP_NE,
                                 CostKind, TTI.getOperandInfo(Root),
                                 TTI.getOperandInfo(CmpRHS), CmpI);
+}
+
+InstructionCost getReductionPaddingCost(const TargetTransformInfo &TTI,
+                                        VectorType *PaddedVecTy,
+                                        unsigned NumElts,
+                                        TTI::TargetCostKind CostKind) {
+  if (!PaddedVecTy || TTI.hasActiveVectorLength())
+    return 0;
+  unsigned PaddedElts = cast<FixedVectorType>(PaddedVecTy)->getNumElements();
+  assert(PaddedElts > NumElts && "Expected a padded type.");
+  return TTI.getScalarizationOverhead(
+      PaddedVecTy, APInt::getBitsSetFrom(PaddedElts, NumElts), /*Insert=*/true,
+      /*Extract=*/false, CostKind, /*ForPoisonSrc=*/false);
+}
+
+InstructionCost getReductionWidthCost(const TargetTransformInfo &TTI,
+                                      RecurKind RdxKind, Type *ScalarTy,
+                                      unsigned NumElts, VectorType *PaddedVecTy,
+                                      unsigned NumTail, FastMathFlags FMF) {
+  if (isa<FixedVectorType>(ScalarTy))
+    return InstructionCost::getInvalid();
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  auto *VecTy = FixedVectorType::get(ScalarTy, NumElts);
+  InstructionCost Cost =
+      getReductionPaddingCost(TTI, PaddedVecTy, NumElts, CostKind);
+  switch (RdxKind) {
+  case RecurKind::Add:
+  case RecurKind::Mul:
+  case RecurKind::Or:
+  case RecurKind::And:
+  case RecurKind::Xor:
+  case RecurKind::FAdd:
+  case RecurKind::FMul: {
+    unsigned Opcode = RecurrenceDescriptor::getOpcode(RdxKind);
+    return Cost + TTI.getArithmeticReductionCost(Opcode, VecTy, FMF, CostKind) +
+           TTI.getArithmeticInstrCost(Opcode, ScalarTy, CostKind) * NumTail;
+  }
+  case RecurKind::FMax:
+  case RecurKind::FMin:
+  case RecurKind::FMaximum:
+  case RecurKind::FMinimum:
+  case RecurKind::SMax:
+  case RecurKind::SMin:
+  case RecurKind::UMax:
+  case RecurKind::UMin: {
+    Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
+    IntrinsicCostAttributes ICA(Id, ScalarTy, {ScalarTy, ScalarTy}, FMF);
+    return Cost + TTI.getMinMaxReductionCost(Id, VecTy, FMF, CostKind) +
+           TTI.getIntrinsicInstrCost(ICA, CostKind) * NumTail;
+  }
+  default:
+    return InstructionCost::getInvalid();
+  }
+}
+
+bool isMaskedStoreExpandProfitable(const TargetTransformInfo &TTI,
+                                   FixedVectorType *VecTy,
+                                   FixedVectorType *PaddedVecTy, unsigned AS,
+                                   Align CommonAlignment) {
+  Type *ScalarTy = VecTy->getElementType();
+  if (!ScalarTy->isIntOrPtrTy() && !ScalarTy->isFloatingPointTy())
+    return false;
+  if (!TTI.isLegalMaskedStore(PaddedVecTy, CommonAlignment, AS,
+                              TTI::ConstantMask))
+    return false;
+  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
+  InstructionCost DirectCost =
+      TTI.getMemoryOpCost(Instruction::Store, VecTy, CommonAlignment, AS,
+                          CostKind) +
+      getShuffleCost(TTI, TTI::SK_ExtractSubvector, PaddedVecTy, {}, CostKind,
+                     /*Index=*/0, VecTy);
+  InstructionCost ExpandCost = TTI.getMemIntrinsicInstrCost(
+      MemIntrinsicCostAttributes(Intrinsic::masked_store, PaddedVecTy,
+                                 CommonAlignment, AS),
+      CostKind);
+  return ExpandCost < DirectCost;
 }
 
 } // namespace llvm::slpvectorizer

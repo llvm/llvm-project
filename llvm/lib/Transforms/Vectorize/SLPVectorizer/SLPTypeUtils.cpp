@@ -110,6 +110,18 @@ FixedVectorType *getMaskedDivRemType(const TargetTransformInfo &TTI,
   return cast<FixedVectorType>(getWidenedType(ScalarTy, PaddedNumElts));
 }
 
+VectorType *getReductionPaddedType(const TargetTransformInfo &TTI,
+                                   Type *ScalarTy, unsigned NumElts,
+                                   bool ReVec) {
+  if (isa<FixedVectorType>(ScalarTy))
+    return nullptr;
+  const unsigned PaddedElts =
+      getFullVectorNumberOfElements(TTI, ScalarTy, NumElts, ReVec);
+  if (PaddedElts <= NumElts)
+    return nullptr;
+  return cast<VectorType>(getWidenedType(ScalarTy, PaddedElts));
+}
+
 bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
                               unsigned Sz, bool ReVec) {
   if (Sz <= 1)
@@ -125,8 +137,12 @@ bool hasFullVectorsOrPowerOf2(const TargetTransformInfo &TTI, Type *Ty,
          Sz % NumParts == 0;
 }
 
-bool isAllowedNonPowerOf2VF(unsigned NumElts, bool AllowNonPowerOf2) {
-  return AllowNonPowerOf2 && has_single_bit(NumElts + 1);
+bool isAllowedNonPowerOf2VF(unsigned NumElts, bool IsVectorElement,
+                            bool AllowNonPowerOf2, bool ReVec) {
+  return AllowNonPowerOf2 && NumElts >= SmallestNonPowerOf2 &&
+         !has_single_bit(NumElts) &&
+         ((ReVec && IsVectorElement) || NumElts <= SmallProfitableNonPowerOf2 ||
+          !has_single_bit(NumElts - 1));
 }
 
 unsigned getNumberOfParts(const TargetTransformInfo &TTI, Type *VecTy,

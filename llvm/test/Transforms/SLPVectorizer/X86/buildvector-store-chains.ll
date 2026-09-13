@@ -15,10 +15,10 @@ define void @buildvector_store_middle(ptr %p, float %a0, float %a1, float %a2, f
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[A1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[TMP1]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[V2:%.*]] = fadd float [[A2]], 1.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[A3]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[A4]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[A5]], i64 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[A6]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[A3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[A4]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP5]], float [[A5]], i64 2
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP9]], float [[A6]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], splat (float 1.000000e+00)
 ; CHECK-NEXT:    [[V7:%.*]] = fadd float [[A7]], 1.000000e+00
 ; CHECK-NEXT:    store <2 x float> [[TMP2]], ptr [[P]], align 4
