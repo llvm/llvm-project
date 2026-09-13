@@ -494,13 +494,25 @@ def NVVM_Log2Op : NVVM_F32UnaryApproxOp<"log2"> {
   }];
 }
 
-def NVVM_Ex2Op : NVVM_F32UnaryApproxOp<"ex2"> {
+def NVVM_Ex2Op
+    : NVVM_SingleResultIntrinsicOp<"ex2", [Pure, SameOperandsAndResultType]> {
   let summary = "Base-2 exponential (fast approximation)";
   let description = [{
-    Computes a fast approximation of 2 raised to the power of the input
-    value. The `ftz` attribute, when set, flushes subnormal inputs and
-    results to sign-preserving zero.
+    Computes a fast approximation of 2 raised to the power of the input value.
+    Supports f32 and packed f16x2 and bf16x2 values. The `ftz` attribute is
+    optional for f32, unavailable for f16x2, and required for bf16x2.
   }];
+  let arguments = (ins
+    AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16]>,
+               VectorOfLengthAndType<[2], [BF16]>]>:$src,
+    DefaultValuedAttr<BoolAttr, "false">:$ftz);
+  let results = (outs
+    AnyTypeOf<[F32, VectorOfLengthAndType<[2], [F16]>,
+               VectorOfLengthAndType<[2], [BF16]>]>:$res);
+  let assemblyFormat = [{
+    $src oilist(`ftz` `=` $ftz) attr-dict `:` type($src)
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -55,3 +55,17 @@ llvm.func @nvvm_ex2_ftz(%arg0: f32) -> f32 {
   %0 = nvvm.ex2 %arg0 ftz = true : f32
   llvm.return %0 : f32
 }
+
+// CHECK-LABEL: @nvvm_ex2_f16x2
+llvm.func @nvvm_ex2_f16x2(%arg0: vector<2xf16>) -> vector<2xf16> {
+  // CHECK: call <2 x half> @llvm.nvvm.ex2.approx.v2f16(<2 x half> %{{.*}})
+  %0 = nvvm.ex2 %arg0 : vector<2xf16>
+  llvm.return %0 : vector<2xf16>
+}
+
+// CHECK-LABEL: @nvvm_ex2_bf16x2
+llvm.func @nvvm_ex2_bf16x2(%arg0: vector<2xbf16>) -> vector<2xbf16> {
+  // CHECK: call <2 x bfloat> @llvm.nvvm.ex2.approx.ftz.v2bf16(<2 x bfloat> %{{.*}})
+  %0 = nvvm.ex2 %arg0 ftz = true : vector<2xbf16>
+  llvm.return %0 : vector<2xbf16>
+}
