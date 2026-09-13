@@ -15,10 +15,15 @@ fld ft1, 100(a10) # CHECK: :[[@LINE]]:14: error: expected register
 fsgnjn.d fa100, fa2, fa3 # CHECK: :[[@LINE]]:10: error: register must be a FPR
 
 # Integer registers where FP regs are expected
-fadd.d a2, a1, a0 # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-1]]:8: note: register must be a FPR
-# CHECK: :[[@LINE-2]]:8: note: register must be a GPR when used as an FP operand
-# CHECK: :[[@LINE-3]]:8: note: register must be an even-numbered GPR when used as an FP operand
+fadd.d a2, a1, a0 
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:8: note: register must be a FPR
+# CHECK: :[[@LINE-3]]:1: note: instruction requires the following: 'Zdinx' (Double in Integer), RV64I Base Instruction Set
+# CHECK: :[[@LINE-4]]:1: note: instruction requires the following: 'Zdinx' (Double in Integer)
 
 # FP registers where integer regs are expected
-fcvt.wu.d ft2, a1 # CHECK: :[[@LINE]]:11: error: register must be a GPR
+fcvt.wu.d ft2, a1 
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[@LINE-2]]:11: note: register must be a GPR
+# CHECK: :[[@LINE-3]]:1: note: instruction requires the following: 'Zdinx' (Double in Integer), RV64I Base Instruction Set
+# CHECK: :[[@LINE-4]]:1: note: instruction requires the following: 'Zdinx' (Double in Integer)
