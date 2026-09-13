@@ -213,6 +213,8 @@ void createDefaultFIRPreCFGOptimizerPassPipeline(
   // Run LICM after CSE, which may reduce the number of operations to hoist.
   if (!disableFirLICM && pc.OptLevel != llvm::OptimizationLevel::O0)
     pm.addPass(fir::createLoopInvariantCodeMotion());
+  if (pc.OptLevel != llvm::OptimizationLevel::O0)
+    pm.addPass(fir::createLoopIdiomRecognize());
 
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
