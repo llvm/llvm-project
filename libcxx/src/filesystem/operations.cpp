@@ -362,7 +362,7 @@ bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_cod
   ec.clear();
   return true;
 }
-#elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM)
+#elif defined(_LIBCPP_FILESYSTEM_USE_FSTREAM) && defined(_LIBCPP_FILESYSTEM_NEED_FSTREAM)
 bool copy_file_impl(FileDescriptor& read_fd, FileDescriptor& write_fd, error_code& ec) {
   return copy_file_impl_fstream(read_fd, write_fd, ec);
 }
