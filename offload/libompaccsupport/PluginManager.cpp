@@ -48,6 +48,11 @@ void PluginManager::init() {
             ODBG(ODT_Init) << "Adding plugin " << Plugin->getName()
                            << " from liboffload";
             PM->Plugins.push_back(Plugin);
+            ol_platform_backend_t Backend;
+            olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND,
+                              sizeof(Backend), &Backend);
+            if (Backend == OL_PLATFORM_BACKEND_HOST)
+              PM->HostPlatform = Platform;
             return true;
           },
           this))
@@ -60,11 +65,44 @@ void PluginManager::deinit() {
   TIMESCOPE();
   ODBG(ODT_Deinit) << "Unloading RTLs...";
 
+  auto ExclusiveDevicesAccessor = getExclusiveDevicesAccessor();
+  for (auto &Device : *ExclusiveDevicesAccessor)
+    if (auto Err = Device->deinit())
+      REPORT() << "Failed to deinitialize device " << Device->DeviceID << ": "
+               << toString(std::move(Err));
+
   Plugins.clear();
   if (auto Res = olShutDown())
     REPORT() << "Failed to deinitialize liboffload: " << Res->Details;
 
   ODBG(ODT_Deinit) << "RTLs unloaded!";
+}
+
+ol_device_handle_t PluginManager::getHostDevice() {
+  if (!HostDevice) {
+    olIterateDevices(
+        [](ol_device_handle_t D, void *Data) {
+          ol_platform_handle_t Platform;
+          olGetDeviceInfo(D, OL_DEVICE_INFO_PLATFORM, sizeof(Platform),
+                          &Platform);
+          ol_platform_backend_t Backend;
+          olGetPlatformInfo(Platform, OL_PLATFORM_INFO_BACKEND, sizeof(Backend),
+                            &Backend);
+
+          if (Backend == OL_PLATFORM_BACKEND_HOST) {
+            GenericPluginTy *HostPlugin =
+                __ol_tgt_GetPluginFromPlatform(Platform);
+            HostPlugin->set_device_identifier(omp_initial_device, 0);
+            *(static_cast<ol_device_handle_t *>(Data)) = D;
+            return false;
+          }
+
+          return true;
+        },
+        &HostDevice);
+  }
+
+  return HostDevice;
 }
 
 bool PluginManager::initializeDevice(ol_device_handle_t DeviceHandle) {
@@ -466,11 +504,12 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
           if (!(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT_VTABLE) &&
               !(Entry.Flags & OMP_DECLARE_TARGET_INDIRECT) &&
               ((PM->getRequirements() & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY)))
-            if (Device.RTL->data_submit(DeviceId, DeviceEntry.Address,
-                                        Entry.Address,
-                                        Entry.Size) != OFFLOAD_SUCCESS)
+               (PM->getRequirements() & OMPX_REQ_AUTO_ZERO_COPY))) {
+            AsyncInfoTy AsyncInfo(Device);
+            if (Device.submitData(DeviceEntry.Address, Entry.Address,
+                                  Entry.Size, AsyncInfo) != OFFLOAD_SUCCESS)
               REPORT() << "Failed to write symbol for USM " << Entry.SymbolName;
+          }
         } else if (Entry.Address) {
           if (Device.RTL->get_function(Binary, Entry.SymbolName,
                                        &DeviceEntry.Address) != OFFLOAD_SUCCESS)
