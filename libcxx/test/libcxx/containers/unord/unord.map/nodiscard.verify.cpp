@@ -46,9 +46,18 @@ void test() {
 
   int key = 0;
 
+#if TEST_STD_VER >= 20
+  std::unordered_map<StoredKey, int, TransparentKeyHash, std::equal_to<>> tm;
+  const std::unordered_map<StoredKey, int, TransparentKeyHash, std::equal_to<>> ctm;
+  TransparentKey tkey;
+#endif
+
 #if TEST_STD_VER >= 17
   m.extract(0);         // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   m.extract(m.begin()); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif
+#if TEST_STD_VER >= 23
+  tm.extract(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
 
   m.hash_function(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -57,11 +66,6 @@ void test() {
   m.find(key);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   cm.find(key); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #if TEST_STD_VER >= 20
-  std::unordered_map<StoredKey, int, TransparentKeyHash, std::equal_to<>> tm;
-  const std::unordered_map<StoredKey, int, TransparentKeyHash, std::equal_to<>> ctm;
-
-  TransparentKey tkey;
-
   tm.find(tkey);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   ctm.find(tkey); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif
