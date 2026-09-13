@@ -356,6 +356,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_EM>::enumeration(
   ECase(EM_RISCV);
   ECase(EM_LANAI);
   ECase(EM_BPF);
+  ECase(EM_NANOMIPS);
   ECase(EM_VE);
   ECase(EM_CSKY);
   ECase(EM_LOONGARCH);
@@ -480,6 +481,15 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_MIPS_ARCH_64R2, EF_MIPS_ARCH);
     BCaseMask(EF_MIPS_ARCH_32R6, EF_MIPS_ARCH);
     BCaseMask(EF_MIPS_ARCH_64R6, EF_MIPS_ARCH);
+    break;
+  case ELF::EM_NANOMIPS:
+    BCase(EF_NANOMIPS_LINKRELAX);
+    BCase(EF_NANOMIPS_PIC);
+    BCase(EF_NANOMIPS_32BITMODE);
+    BCase(EF_NANOMIPS_PID);
+    BCase(EF_NANOMIPS_PCREL);
+    BCaseMask(EF_NANOMIPS_ARCH_32R6, EF_NANOMIPS_ARCH);
+    BCaseMask(EF_NANOMIPS_ABI_P32, EF_NANOMIPS_ABI);
     break;
   case ELF::EM_HEXAGON:
     BCaseMask(EF_HEXAGON_MACH_V2, EF_HEXAGON_MACH);
@@ -872,6 +882,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
     break;
   case ELF::EM_MIPS:
 #include "llvm/BinaryFormat/ELFRelocs/Mips.def"
+    break;
+  case ELF::EM_NANOMIPS:
+#include "llvm/BinaryFormat/ELFRelocs/NanoMips.def"
     break;
   case ELF::EM_HEXAGON:
 #include "llvm/BinaryFormat/ELFRelocs/Hexagon.def"

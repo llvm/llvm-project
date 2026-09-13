@@ -148,6 +148,10 @@ bool MipsMCCodeEmitter::isMips32r6(const MCSubtargetInfo &STI) const {
   return STI.hasFeature(Mips::FeatureMips32r6);
 }
 
+bool MipsMCCodeEmitter::isNanoMips(const MCSubtargetInfo &STI) const {
+  return STI.hasFeature(Mips::FeatureNanoMips);
+}
+
 void MipsMCCodeEmitter::EmitByte(unsigned char C, raw_ostream &OS) const {
   OS << (char)C;
 }
@@ -184,7 +188,7 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
   }
 
   size_t N = Fixups.size();
-  uint32_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
+  uint64_t Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
 
   // Check for unimplemented opcodes.
   // Unfortunately in MIPS both NOP and SLL will come in with Binary == 0
@@ -234,7 +238,12 @@ void MipsMCCodeEmitter::encodeInstruction(const MCInst &MI,
       IsLittleEndian ? llvm::endianness::little : llvm::endianness::big;
   if (Size == 2) {
     support::endian::write<uint16_t>(CB, Binary, Endian);
-  } else if (IsLittleEndian && isMicroMips(STI)) {
+  } else if (IsLittleEndian && Size == 4 &&
+             (isMicroMips(STI) || isNanoMips(STI))) {
+    support::endian::write<uint16_t>(CB, Binary >> 16, Endian);
+    support::endian::write<uint16_t>(CB, Binary & 0xffff, Endian);
+  } else if (IsLittleEndian && Size == 6 && isNanoMips(STI)) {
+    support::endian::write<uint16_t>(CB, Binary >> 32, Endian);
     support::endian::write<uint16_t>(CB, Binary >> 16, Endian);
     support::endian::write<uint16_t>(CB, Binary & 0xffff, Endian);
   } else {

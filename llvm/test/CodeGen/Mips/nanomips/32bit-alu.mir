@@ -1,0 +1,473 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 32-bit nanoMIPS ALU instructions (arithmetic, logical,
+# shifts, bitfield, PC/GP-relative address computation)
+#
+# Since the PC/GP-relative symbol operand will be fully supported in the next
+# upstreaming batch, it is set to 0 to allow confirming the mnemonics and
+# encoding of the remaining instruction parts.
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- three-register (ArithLogicR32) ---
+---
+# CHECK-LABEL: add:
+# CHECK: add $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x21]
+name: add
+body: |
+  bb.0:
+    $a0_nm = ADD_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: addu:
+# CHECK: addu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x21]
+name: addu
+body: |
+  bb.0:
+    $a0_nm = ADDu_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: and:
+# CHECK: and $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x22]
+name: and
+body: |
+  bb.0:
+    $a0_nm = AND_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: div:
+# CHECK: div $a0, $a1, $a2 # encoding: [0xc5,0x20,0x18,0x21]
+name: div
+body: |
+  bb.0:
+    $a0_nm = DIV_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: divu:
+# CHECK: divu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x98,0x21]
+name: divu
+body: |
+  bb.0:
+    $a0_nm = DIVU_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: mod:
+# CHECK: mod $a0, $a1, $a2 # encoding: [0xc5,0x20,0x58,0x21]
+name: mod
+body: |
+  bb.0:
+    $a0_nm = MOD_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: modu:
+# CHECK: modu $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd8,0x21]
+name: modu
+body: |
+  bb.0:
+    $a0_nm = MODU_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: muh:
+# CHECK: muh $a0, $a1, $a2 # encoding: [0xc5,0x20,0x58,0x20]
+name: muh
+body: |
+  bb.0:
+    $a0_nm = MUH_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: muhu:
+# CHECK: muhu $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd8,0x20]
+name: muhu
+body: |
+  bb.0:
+    $a0_nm = MUHU_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: mul:
+# CHECK: mul $a0, $a1, $a2 # encoding: [0xc5,0x20,0x18,0x20]
+name: mul
+body: |
+  bb.0:
+    $a0_nm = MUL_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: mulu:
+# CHECK: mulu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x98,0x20]
+name: mulu
+body: |
+  bb.0:
+    $a0_nm = MULU_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: nor:
+# CHECK: nor $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x22]
+name: nor
+body: |
+  bb.0:
+    $a0_nm = NOR_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: or:
+# CHECK: or $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x22]
+name: or
+body: |
+  bb.0:
+    $a0_nm = OR_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: rotrv:
+# CHECK: rotrv $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x20]
+name: rotrv
+body: |
+  bb.0:
+    $a0_nm = ROTRV_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: sllv:
+# CHECK: sllv $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x20]
+name: sllv
+body: |
+  bb.0:
+    $a0_nm = SLLV_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: slt:
+# CHECK: slt $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x23]
+name: slt
+body: |
+  bb.0:
+    $a0_nm = SLT_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: sltu:
+# CHECK: sltu $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x23]
+name: sltu
+body: |
+  bb.0:
+    $a0_nm = SLTU_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: sov:
+# CHECK: sov $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x23]
+name: sov
+body: |
+  bb.0:
+    $a0_nm = SOV_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: srav:
+# CHECK: srav $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x20]
+name: srav
+body: |
+  bb.0:
+    $a0_nm = SRAV_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: srlv:
+# CHECK: srlv $a0, $a1, $a2 # encoding: [0xc5,0x20,0x50,0x20]
+name: srlv
+body: |
+  bb.0:
+    $a0_nm = SRLV_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: sub:
+# CHECK: sub $a0, $a1, $a2 # encoding: [0xc5,0x20,0x90,0x21]
+name: sub
+body: |
+  bb.0:
+    $a0_nm = SUB_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: subu:
+# CHECK: subu $a0, $a1, $a2 # encoding: [0xc5,0x20,0xd0,0x21]
+name: subu
+body: |
+  bb.0:
+    $a0_nm = SUBu_NM $a1_nm, $a2_nm
+...
+---
+# CHECK-LABEL: xor:
+# CHECK: xor $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x23]
+name: xor
+body: |
+  bb.0:
+    $a0_nm = XOR_NM $a1_nm, $a2_nm
+...
+
+# --- register-only ---
+---
+# CHECK-LABEL: clo:
+# CHECK: clo $a0, $a1 # encoding: [0x85,0x20,0x3f,0x4b]
+name: clo
+body: |
+  bb.0:
+    $a0_nm = CLO_NM $a1_nm
+...
+---
+# CHECK-LABEL: clz:
+# CHECK: clz $a0, $a1 # encoding: [0x85,0x20,0x3f,0x5b]
+name: clz
+body: |
+  bb.0:
+    $a0_nm = CLZ_NM $a1_nm
+...
+---
+# CHECK-LABEL: movn:
+# CHECK: movn $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x26]
+name: movn
+body: |
+  bb.0:
+    $a0_nm = MOVN_NM $a1_nm, $a2_nm, $a0_nm
+...
+---
+# CHECK-LABEL: movz:
+# CHECK: movz $a0, $a1, $a2 # encoding: [0xc5,0x20,0x10,0x22]
+name: movz
+body: |
+  bb.0:
+    $a0_nm = MOVZ_NM $a1_nm, $a2_nm, $a0_nm
+...
+---
+# CHECK-LABEL: rdpgpr:
+# CHECK: rdpgpr $a0, $a1 # encoding: [0x85,0x20,0x7f,0xe1]
+name: rdpgpr
+body: |
+  bb.0:
+    $a0_nm = RDPGPR_NM $a1_nm
+...
+---
+# CHECK-LABEL: seb:
+# CHECK: seb $a0, $a1 # encoding: [0x85,0x20,0x08,0x00]
+name: seb
+body: |
+  bb.0:
+    $a0_nm = SEB_NM $a1_nm
+...
+---
+# CHECK-LABEL: seh:
+# CHECK: seh $a0, $a1 # encoding: [0x85,0x20,0x48,0x00]
+name: seh
+body: |
+  bb.0:
+    $a0_nm = SEH_NM $a1_nm
+...
+---
+# CHECK-LABEL: wrpgpr:
+# CHECK: wrpgpr $a0, $a1 # encoding: [0x85,0x20,0x7f,0xf1]
+name: wrpgpr
+body: |
+  bb.0:
+    $a0_nm = WRPGPR_NM $a1_nm
+...
+
+# --- register + immediate ---
+---
+# CHECK-LABEL: addiu:
+# CHECK: addiu $a0, $a1, 100 # encoding: [0x85,0x00,0x64,0x00]
+name: addiu
+body: |
+  bb.0:
+    $a0_nm = ADDIU_NM $a1_nm, 100
+...
+---
+# addiuneg's immediate (nimm12_nm) will be fully supported in the next
+# upstreaming batch. It is stored negated, so as a placeholder it is set
+# to 0 here to confirm the mnemonic and the opcode and register fields.
+
+# CHECK-LABEL: addiuneg:
+# CHECK: addiu $a0, $a1, 0 # encoding: [0x85,0x80,0x00,0x80]
+name: addiuneg
+body: |
+  bb.0:
+    $a0_nm = ADDIUNEG_NM $a1_nm, 0
+...
+---
+# CHECK-LABEL: addiurs5:
+# CHECK: addiu $a0, $a0, 4 # encoding: [0x8c,0x90]
+name: addiurs5
+body: |
+  bb.0:
+    $a0_nm = ADDIURS5_NM $a0_nm, 4
+...
+---
+# CHECK-LABEL: andi:
+# CHECK: andi $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x20]
+name: andi
+body: |
+  bb.0:
+    $a0_nm = ANDI_NM $a1_nm, 15
+...
+---
+# CHECK-LABEL: lui:
+# CHECK: lui $a0, 15 # encoding: [0x80,0xe0,0x00,0xf0]
+name: lui
+body: |
+  bb.0:
+    $a0_nm = LUI_NM 15
+...
+---
+# CHECK-LABEL: ori:
+# CHECK: ori $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x00]
+name: ori
+body: |
+  bb.0:
+    $a0_nm = ORI_NM $a1_nm, 15
+...
+---
+# CHECK-LABEL: rotr:
+# CHECK: rotr $a0, $a1, 3 # encoding: [0x85,0x80,0xc3,0xc0]
+name: rotr
+body: |
+  bb.0:
+    $a0_nm = ROTR_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: seqi:
+# CHECK: seqi $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x60]
+name: seqi
+body: |
+  bb.0:
+    $a0_nm = SEQI_NM $a1_nm, 15
+...
+---
+# CHECK-LABEL: sll:
+# CHECK: sll $a0, $a1, 3 # encoding: [0x85,0x80,0x03,0xc0]
+name: sll
+body: |
+  bb.0:
+    $a0_nm = SLL_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: slti:
+# CHECK: slti $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x40]
+name: slti
+body: |
+  bb.0:
+    $a0_nm = SLTI_NM $a1_nm, 15
+...
+---
+# CHECK-LABEL: sltiu:
+# CHECK: sltiu $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x50]
+name: sltiu
+body: |
+  bb.0:
+    $a0_nm = SLTIU_NM $a1_nm, 15
+...
+---
+# CHECK-LABEL: sra:
+# CHECK: sra $a0, $a1, 3 # encoding: [0x85,0x80,0x83,0xc0]
+name: sra
+body: |
+  bb.0:
+    $a0_nm = SRA_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: srl:
+# CHECK: srl $a0, $a1, 3 # encoding: [0x85,0x80,0x43,0xc0]
+name: srl
+body: |
+  bb.0:
+    $a0_nm = SRL_NM $a1_nm, 3
+...
+---
+# CHECK-LABEL: xori:
+# CHECK: xori $a0, $a1, 15 # encoding: [0x85,0x80,0x0f,0x10]
+name: xori
+body: |
+  bb.0:
+    $a0_nm = XORI_NM $a1_nm, 15
+...
+
+# --- bitfield ---
+---
+# CHECK-LABEL: bitrevw:
+# CHECK: bitrevw $a0, $a1 # encoding: [0x85,0x80,0x1f,0xd0]
+name: bitrevw
+body: |
+  bb.0:
+    $a0_nm = BITREVW_NM $a1_nm
+...
+---
+# CHECK-LABEL: byterevw:
+# CHECK: byterevw $a0, $a1 # encoding: [0x85,0x80,0x18,0xd2]
+name: byterevw
+body: |
+  bb.0:
+    $a0_nm = BYTEREVW_NM $a1_nm
+...
+---
+# CHECK-LABEL: ext:
+# CHECK: ext $a0, $a1, 3, 5 # encoding: [0x85,0x80,0x03,0xf1]
+name: ext
+body: |
+  bb.0:
+    $a0_nm = EXT_NM $a1_nm, 3, 5
+...
+---
+# CHECK-LABEL: extw:
+# CHECK: extw $a0, $a1, $a2, 3 # encoding: [0xc5,0x20,0xdf,0x20]
+name: extw
+body: |
+  bb.0:
+    $a0_nm = EXTW_NM $a1_nm, $a2_nm, 3
+...
+---
+# CHECK-LABEL: ins:
+# CHECK: ins $a0, $a1, 3, 5 # encoding: [0x85,0x80,0xc3,0xe1]
+name: ins
+body: |
+  bb.0:
+    $a0_nm = INS_NM $a1_nm, 3, 5, $a0_nm
+...
+---
+# CHECK-LABEL: rotx:
+# CHECK: rotx $a0, $a1, 3, 5, 0 # encoding: [0x85,0x80,0x03,0xd1]
+name: rotx
+body: |
+  bb.0:
+    $a0_nm = ROTX_NM $a1_nm, 3, 5, 0
+...
+
+# --- PC/GP-relative address (with placeholder operands for now) ---
+---
+# CHECK-LABEL: addiugpb:
+# CHECK: addiu $a0, $gp, 0 # encoding: [0x8c,0x44,0x00,0x00]
+name: addiugpb
+body: |
+  bb.0:
+    $a0_nm = ADDIUGPB_NM $gp_nm, 0
+...
+---
+# CHECK-LABEL: addiugpw:
+# CHECK: addiu $a0, $gp, 0 # encoding: [0x80,0x40,0x00,0x00]
+name: addiugpw
+body: |
+  bb.0:
+    $a0_nm = ADDIUGPW_NM $gp_nm, 0
+...
+---
+# CHECK-LABEL: addiupc:
+# CHECK: addiupc $a0, 0 # encoding: [0x80,0x04,0x00,0x00]
+name: addiupc
+body: |
+  bb.0:
+    $a0_nm = ADDIUPC_NM 0
+...
+---
+# CHECK-LABEL: aluipc:
+# CHECK: aluipc $a0, 0 # encoding: [0x80,0xe0,0x02,0x00]
+name: aluipc
+body: |
+  bb.0:
+    $a0_nm = ALUIPC_NM 0
+...
+---
+# CHECK-LABEL: lapc32:
+# CHECK: lapc.h $a0, 0 # encoding: [0x80,0x04,0x00,0x00]
+name: lapc32
+body: |
+  bb.0:
+    $a0_nm = LAPC32_NM 0
+...

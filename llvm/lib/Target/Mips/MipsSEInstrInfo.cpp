@@ -231,6 +231,9 @@ void MipsSEInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   } else if (Mips::MSA128BRegClass.contains(DestReg)) { // Copy to MSA reg
     if (Mips::MSA128BRegClass.contains(SrcReg))
       Opc = Mips::MOVE_V;
+  } else if (Mips::GPRNM32RegClass.contains(SrcReg)) { // Copy nanoMIPS CPU Reg.
+    if (Mips::GPRNM32NZRegClass.contains(DestReg))
+      Opc = Mips::MOVE_NM;
   }
 
   // FCMP + FSEL for MIPSr6 may emit
@@ -350,6 +353,8 @@ void MipsSEInstrInfo::storeRegToStack(MachineBasicBlock &MBB,
     Opc = Mips::SD;
   else if (Mips::DSPRRegClass.hasSubClassEq(RC))
     Opc = Mips::SWDSP;
+  else if (Mips::GPRNM32RegClass.hasSubClassEq(RC))
+    Opc = Mips::SW_NM;
 
   // Hi, Lo are normally caller save but they are callee save
   // for interrupt handling.
@@ -430,6 +435,8 @@ void MipsSEInstrInfo::loadRegFromStack(MachineBasicBlock &MBB,
     Opc = Mips::LD;
   else if (Mips::DSPRRegClass.hasSubClassEq(RC))
     Opc = Mips::LWDSP;
+  else if (Mips::GPRNM32RegClass.hasSubClassEq(RC))
+    Opc = Mips::LW_NM;
 
   assert(Opc && "Register class not handled!");
 
