@@ -187,3 +187,87 @@ DeletionKind cir::CastOp::removeBlockingUses(
     const SmallPtrSetImpl<OpOperand *> &blockingUses, OpBuilder &builder) {
   return DeletionKind::Delete;
 }
+
+//===----------------------------------------------------------------------===//
+// Interfaces for IfOp
+//===----------------------------------------------------------------------===//
+
+bool cir::IfOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                   bool hasValueStores) {
+  // A definition produced inside a region has to leave through a result, and
+  // cir.if has none. Parameters and enclosing locals have their alloca
+  // outside and are only read here; those promote. A variable declared inside
+  // the region (`if (c) { int x = 42; use(x); }`) has its initializing store
+  // inside after cir-hoist-allocas, which is hasValueStores, so it is refused.
+  return !hasValueStores;
+}
+
+void cir::IfOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  // Exactly one region executes, exactly once, entered from before the op, so
+  // both see the same reaching definition.
+  regionsToProcess.insert({&getThenRegion(), reachingDef});
+  regionsToProcess.insert({&getElseRegion(), reachingDef});
+}
+
+Value cir::IfOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.if cannot yield a new definition");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for ScopeOp
+//===----------------------------------------------------------------------===//
+
+bool cir::ScopeOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                      bool hasValueStores) {
+  // cir.scope yields at most one value, which it may already be using for the
+  // scope's own result. Same load-only restriction as cir.if.
+  return !hasValueStores;
+}
+
+void cir::ScopeOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  regionsToProcess.insert({&getScopeRegion(), reachingDef});
+}
+
+Value cir::ScopeOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.scope cannot yield a new definition");
+  return reachingDef;
+}
+
+//===----------------------------------------------------------------------===//
+// Interfaces for TernaryOp
+//===----------------------------------------------------------------------===//
+
+bool cir::TernaryOp::isRegionPromotable(const MemorySlot &slot, Region *region,
+                                        bool hasValueStores) {
+  // Same load-only restriction as cir.if. The existing result is the
+  // ternary's own yielded value; a store would need an extra result.
+  return !hasValueStores;
+}
+
+void cir::TernaryOp::setupPromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    llvm::SmallMapVector<Region *, Value, 2> &regionsToProcess) {
+  // Exactly one region executes, exactly once, entered from before the op, so
+  // both see the same reaching definition.
+  regionsToProcess.insert({&getTrueRegion(), reachingDef});
+  regionsToProcess.insert({&getFalseRegion(), reachingDef});
+}
+
+Value cir::TernaryOp::finalizePromotion(
+    const MemorySlot &slot, Value reachingDef, bool hasValueStores,
+    const llvm::DenseMap<Block *, Value> &reachingAtBlockEnd,
+    OpBuilder &builder) {
+  assert(!hasValueStores && "cir.ternary cannot yield a new definition");
+  return reachingDef;
+}
