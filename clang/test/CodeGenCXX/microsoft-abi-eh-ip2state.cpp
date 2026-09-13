@@ -40,7 +40,7 @@ void case_calls_dll_import() NO_TAIL {
 // CHECK: .seh_endprologue
 // CHECK: .Limpcall{{[0-9]+}}:
 // CHECK-NEXT: rex64
-// CHECK-NEXT: call __imp_some_dll_import
+// CHECK-NEXT: call qword ptr [rip + __imp_some_dll_import]
 // CHECK-NEXT: nop dword ptr {{\[.*\]}}
 // CHECK-NEXT: nop
 // CHECK-NEXT: .seh_startepilogue
