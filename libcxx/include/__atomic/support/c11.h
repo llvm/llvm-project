@@ -11,6 +11,7 @@
 
 #include <__atomic/clear_padding.h>
 #include <__atomic/memory_order.h>
+#include <__atomic/to_failure_order.h>
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__memory/addressof.h>
@@ -120,13 +121,6 @@ __cxx_atomic_exchange(__cxx_atomic_base_impl<_Tp>* __a, _Tp __value, memory_orde
   std::__clear_padding_if_needed(__value);
   return __c11_atomic_exchange(
       std::addressof(__a->__a_value), __value, static_cast<__memory_order_underlying_t>(__order));
-}
-
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR memory_order __to_failure_order(memory_order __order) {
-  // Avoid switch statement to make this a constexpr.
-  return __order == memory_order_release
-           ? memory_order_relaxed
-           : (__order == memory_order_acq_rel ? memory_order_acquire : __order);
 }
 
 template <class _Tp>
