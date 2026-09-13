@@ -26,6 +26,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Use.h"
+#include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -639,22 +640,56 @@ public:
     });
   }
 
+  /// Recover the scalar components of `Vec` from the `insertelement` chain that
+  /// built it. Since we run after the scalarizer, such a chain is usually just
+  /// a temporary gathered to pass the vector to a call.
+  static void collectInsertedElements(Value *Vec,
+                                      MutableArrayRef<Value *> Elements) {
+    unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
+    assert(NumElts <= Elements.size() && "Not enough room for the components");
+
+    SmallVector<InsertElementInst *, 4> Chain;
+    for (auto *IEI = dyn_cast<InsertElementInst>(Vec); IEI;
+         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0))) {
+      if (!isa<ConstantInt>(IEI->getOperand(2)))
+        break; // This break should never happen below SM6.9.
+      Chain.push_back(IEI);
+    }
+
+    // Replay element insertion from the innermost first, so that a repeated
+    // index ends up holding the live value.
+    while (!Chain.empty()) {
+      InsertElementInst *IEI = Chain.pop_back_val();
+      uint64_t IndexVal = cast<ConstantInt>(IEI->getOperand(2))->getZExtValue();
+      if (IndexVal < NumElts)
+        Elements[IndexVal] = IEI->getOperand(1);
+    }
+  }
+
   // Copies `Src` into `Args` starting at `ArgIdx`. If `Src` is a vector, its
-  // elements are extracted and stored in consecutive slots; otherwise `Src`
-  // is stored directly. At most `MaxElements` elements are expected.
+  // elements are placed in consecutive slots; otherwise `Src` is stored
+  // directly. At most `MaxElements` elements are expected.
   static void extractElementsIntoArgs(IRBuilder<> &IRB,
                                       MutableArrayRef<Value *> Args,
                                       unsigned ArgIdx, Value *Src,
                                       unsigned MaxElements) {
-    Type *Ty = Src->getType();
-    if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
-      unsigned Count = VecTy->getNumElements();
-      assert(Count <= MaxElements && "Expected at most 3 elements in vector");
-      for (unsigned I = 0; I < Count; ++I)
-        Args[ArgIdx + I] = IRB.CreateExtractElement(Src, uint64_t(I));
-    } else {
+    auto *VecTy = dyn_cast<FixedVectorType>(Src->getType());
+    if (!VecTy) {
       Args[ArgIdx] = Src;
+      return;
     }
+
+    unsigned Count = VecTy->getNumElements();
+    assert(Count <= MaxElements && "Too many elements for the arg list");
+
+    SmallVector<Value *, 4> Elements(Count, nullptr);
+    collectInsertedElements(Src, Elements);
+
+    for (unsigned I = 0; I < Count; ++I)
+      Args[ArgIdx + I] = Elements[I]
+                             ? Elements[I]
+                             : IRB.CreateExtractElement(
+                                   Src, ConstantInt::get(IRB.getInt32Ty(), I));
   }
 
   /// Copy offsets into the argument list at the given index, unless
@@ -676,6 +711,7 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Coords = CI->getArgOperand(1);
@@ -710,6 +746,8 @@ public:
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
         return E;
 
+      eraseDeadInsertElementChains(VectorArgs);
+
       return Error::success();
     });
   }
@@ -725,6 +763,7 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Sampler =
@@ -754,6 +793,8 @@ public:
         return E;
       if (Error E = replaceResRetUses(CI, *OpCall, /*HasCheckBit=*/false))
         return E;
+
+      eraseDeadInsertElementChains(VectorArgs);
 
       return Error::success();
     });
@@ -946,35 +987,8 @@ public:
   static std::array<Value *, 4> splitStoreData(IRBuilder<> &IRB, Value *Data,
                                                uint64_t NumElements,
                                                bool FillWithUndef) {
-    Type *DataTy = Data->getType();
-    Type *ScalarTy = DataTy->getScalarType();
-
     std::array<Value *, 4> DataElements{nullptr, nullptr, nullptr, nullptr};
-    if (DataTy == ScalarTy)
-      DataElements[0] = Data;
-    else {
-      // Since we're post-scalarizer, if we see a vector here it's likely
-      // constructed solely for the argument of the store. Just use the scalar
-      // values from before they're inserted into the temporary.
-      auto *IEI = dyn_cast<InsertElementInst>(Data);
-      while (IEI) {
-        auto *IndexOp = dyn_cast<ConstantInt>(IEI->getOperand(2));
-        if (!IndexOp)
-          break;
-        size_t IndexVal = IndexOp->getZExtValue();
-        assert(IndexVal < 4 && "Too many elements for resource store");
-        DataElements[IndexVal] = IEI->getOperand(1);
-        IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0));
-      }
-    }
-
-    // If for some reason we weren't able to forward the arguments from the
-    // scalarizer artifact, then we may need to actually extract elements from
-    // the vector.
-    for (uint64_t I = 0, E = NumElements; I < E; ++I)
-      if (DataElements[I] == nullptr)
-        DataElements[I] = IRB.CreateExtractElement(
-            Data, ConstantInt::get(IRB.getInt32Ty(), I));
+    extractElementsIntoArgs(IRB, DataElements, 0, Data, 4);
 
     // For any elements beyond the length of the vector, we should fill it up
     // with undef - however, for typed UAVs we repeat the first element to
@@ -982,13 +996,14 @@ public:
     for (uint64_t I = NumElements, E = 4; I < E; ++I)
       if (DataElements[I] == nullptr)
         DataElements[I] =
-            FillWithUndef ? UndefValue::get(ScalarTy) : DataElements[0];
+            FillWithUndef ? UndefValue::get(Data->getType()->getScalarType())
+                          : DataElements[0];
 
     return DataElements;
   }
 
-  /// Erase the chain of `insertelement`s that only existed to build up the
-  /// value operand of a store we've just replaced.
+  /// Erase the chain of `insertelement`s that only existed to build up a vector
+  /// operand of an intrinsic we've just replaced.
   static void eraseDeadInsertElementChain(Value *Data) {
     auto *IEI = dyn_cast<InsertElementInst>(Data);
     while (IEI && IEI->use_empty()) {
@@ -1059,6 +1074,23 @@ public:
     });
   }
 
+  /// Snapshot the vector-typed arguments of `CI` so their `insertelement`
+  /// chains can be cleaned up once `CI` has been replaced. The handles are weak
+  /// because two arguments can share an `insertelement` chain.
+  static SmallVector<WeakTrackingVH, 4> collectVectorArgs(CallInst *CI) {
+    SmallVector<WeakTrackingVH, 4> Vectors;
+    for (Value *Arg : CI->args())
+      if (isa<FixedVectorType>(Arg->getType()))
+        Vectors.emplace_back(Arg);
+    return Vectors;
+  }
+
+  static void eraseDeadInsertElementChains(ArrayRef<WeakTrackingVH> Vectors) {
+    for (const WeakTrackingVH &VH : Vectors)
+      if (Value *V = VH)
+        eraseDeadInsertElementChain(V);
+  }
+
   [[nodiscard]] bool lowerTextureStore(Function &F) {
     const DataLayout &DL = F.getDataLayout();
     IRBuilder<> &IRB = OpBuilder.getIRB();
@@ -1068,6 +1100,7 @@ public:
     return replaceFunction(F, [&](CallInst *CI) -> Error {
       IRB.SetInsertPoint(CI);
 
+      SmallVector<WeakTrackingVH, 4> VectorArgs = collectVectorArgs(CI);
       Value *Handle =
           createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
       Value *Coords = CI->getArgOperand(1);
@@ -1101,7 +1134,7 @@ public:
         return E;
 
       CI->eraseFromParent();
-      eraseDeadInsertElementChain(Data);
+      eraseDeadInsertElementChains(VectorArgs);
 
       return Error::success();
     });
