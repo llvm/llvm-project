@@ -935,22 +935,14 @@ def OpSubgroupImageMediaBlockWriteINTEL: Op<5581, (outs), (ins ID:$image, ID:$co
                   "OpSubgroupImageMediaBlockWriteINTEL $image $coordinate $width $height $data">;
 
 // - SPV_KHR_uniform_group_instructions
-def OpGroupIMulKHR: Op<6401, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupIMulKHR $type $scope $groupOp $value">;
-def OpGroupFMulKHR: Op<6402, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupFMulKHR $type $scope $groupOp $value">;
-def OpGroupBitwiseAndKHR: Op<6403, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupBitwiseAndKHR $type $scope $groupOp $value">;
-def OpGroupBitwiseOrKHR: Op<6404, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupBitwiseOrKHR $type $scope $groupOp $value">;
-def OpGroupBitwiseXorKHR: Op<6405, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupBitwiseXorKHR $type $scope $groupOp $value">;
-def OpGroupLogicalAndKHR: Op<6406, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupLogicalAndKHR $type $scope $groupOp $value">;
-def OpGroupLogicalOrKHR: Op<6407, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupLogicalOrKHR $type $scope $groupOp $value">;
-def OpGroupLogicalXorKHR: Op<6408, (outs ID:$res), (ins TYPE:$type, ID:$scope, i32imm:$groupOp, ID:$value),
-                  "$res = OpGroupLogicalXorKHR $type $scope $groupOp $value">;
+def OpGroupIMulKHR: OpGroup<"IMulKHR", 6401>;
+def OpGroupFMulKHR: OpGroup<"FMulKHR", 6402>;
+def OpGroupBitwiseAndKHR: OpGroup<"BitwiseAndKHR", 6403>;
+def OpGroupBitwiseOrKHR: OpGroup<"BitwiseOrKHR", 6404>;
+def OpGroupBitwiseXorKHR: OpGroup<"BitwiseXorKHR", 6405>;
+def OpGroupLogicalAndKHR: OpGroup<"LogicalAndKHR", 6406>;
+def OpGroupLogicalOrKHR: OpGroup<"LogicalOrKHR", 6407>;
+def OpGroupLogicalXorKHR: OpGroup<"LogicalXorKHR", 6408>;
 
 // Inline Assembly Instructions
 def OpAsmTargetINTEL: Op<5609, (outs ID:$res), (ins StringImm:$str, variable_ops), "$res = OpAsmTargetINTEL $str">;
