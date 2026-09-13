@@ -17,8 +17,12 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclContextInternals.h"
+<<<<<<< HEAD
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclVisitor.h"
+=======
+#include "clang/CodeGen/ModuleBuilder.h"
+>>>>>>> 6d90b8675095 (Add Initial impl ErrorRecovery.h)
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
@@ -88,9 +92,8 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
-    Consumer->HandleTranslationUnit(C);
     CleanUpPTU(C.getTranslationUnitDecl());
-
+    // Consumer->HandleTranslationUnit(C);
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
     return llvm::make_error<llvm::StringError>("Parsing failed.",
@@ -330,8 +333,8 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
 
   // Lookup alone is not enough: the redeclaration chain still reaches these.
   withdrawMostRecentTU(MostRecentTU);
-  RepairRedeclChain(MostRecentTU, MostRecentTU);
-  S.getASTContext().setTranslationUnitDecl(MostRecentTU->getPreviousDecl());
+  // RepairRedeclChain(MostRecentTU, MostRecentTU);
+  // S.getASTContext().setTranslationUnitDecl(MostRecentTU->getPreviousDecl());
 }
 
 PartialTranslationUnit &

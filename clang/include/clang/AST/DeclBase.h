@@ -43,10 +43,13 @@
 namespace clang {
 
 class ASTContext;
+class ASTContextStateRecovery;
+class ASTDeclDetacher;
 class ASTMutationListener;
 class Attr;
 class BlockDecl;
 class DeclContext;
+class DeclContextRepairer;
 class ExternalSourceSymbolAttr;
 class FunctionDecl;
 class FunctionType;
@@ -75,8 +78,6 @@ enum AvailabilityResult {
   AR_Deprecated,
   AR_Unavailable
 };
-
-class ASTContextStateStash;
 
 /// Decl - This represents one declaration (or definition), e.g. a variable,
 /// typedef, function, struct, etc.
@@ -260,7 +261,9 @@ protected:
 
 private:
   friend class DeclContext;
-  friend class ASTContextStateStash;
+  // friend class ASTContextStateRecovery;
+  friend class ASTDeclDetacher;
+  friend class DeclContextRepairer;
 
   struct MultipleDC {
     DeclContext *SemanticDC;
@@ -1345,11 +1348,10 @@ namespace llvm {
 }
 
 namespace clang {
-class ASTContextStateStash;
 /// A list storing NamedDecls in the lookup tables.
 class DeclListNode {
   friend class ASTContext; // allocate, deallocate nodes.
-  friend class ASTContextStateStash;
+  friend class ASTContextStateRecovery;
   friend class StoredDeclsList;
 public:
   using Decls = llvm::PointerUnion<NamedDecl*, DeclListNode*>;
@@ -1451,8 +1453,6 @@ enum class OMPDeclareReductionInitKind;
 enum class ObjCImplementationControl;
 enum class LinkageSpecLanguageIDs;
 
-class ASTContextStateStash;
-
 /// DeclContext - This is used only as base class of specific decl types that
 /// can act as declaration contexts. These decls are (only the top classes
 /// that directly derive from DeclContext are mentioned, not their subclasses):
@@ -1471,7 +1471,10 @@ class ASTContextStateStash;
 ///   BlockDecl
 ///   CapturedDecl
 class DeclContext {
-  friend class ASTContextStateStash;
+  /// For restoring decl to its previous state (clang-repl error-recovery).
+  friend class ASTDeclDetacher;
+
+  friend class DeclContextRepairer;
   /// For makeDeclVisibleInContextImpl
   friend class ASTDeclReader;
   /// For checking the new bits in the Serialization part.

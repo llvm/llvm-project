@@ -46,6 +46,8 @@
 
 namespace clang {
 
+class ASTDeclDetacher;
+class ASTStateReader;
 enum BuiltinTemplateKind : int;
 class ClassTemplateDecl;
 class ClassTemplatePartialSpecializationDecl;
@@ -824,7 +826,10 @@ protected:
 public:
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class ASTDeclDetacher;
   friend class ASTReader;
+  friend class ASTStateReader;
+
   template <class decl_type> friend class RedeclarableTemplate;
 
   /// Retrieves the canonical declaration of this template.
@@ -2312,6 +2317,7 @@ public:
 
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
+  friend class ASTStateReader;
   friend class TemplateDeclInstantiator;
 
   /// Load any lazily-loaded specializations from the external source.
