@@ -475,6 +475,13 @@ Value *createFakeIntVal(IRBuilderBase &Builder,
 
   if (AsPtr) {
     FakeVal = FakeValAddr;
+    // The runtime passes these extra arguments to the outlined function as
+    // generic pointers, so cast away a non-zero alloca address space.
+    if (FakeValAddr->getAddressSpace() != 0) {
+      FakeVal = cast<Instruction>(Builder.CreateAddrSpaceCast(
+          FakeValAddr, Builder.getPtrTy(), Name + ".ascast"));
+      ToBeDeleted.push_back(FakeVal);
+    }
   } else {
     FakeVal = Builder.CreateLoad(IntTy, FakeValAddr, Name + ".val");
     ToBeDeleted.push_back(FakeVal);
