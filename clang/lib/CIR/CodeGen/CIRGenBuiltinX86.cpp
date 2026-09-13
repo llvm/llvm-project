@@ -1391,6 +1391,10 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vcvtuw2ph512_mask:
   case X86::BI__builtin_ia32_vcvtudq2ph512_mask:
   case X86::BI__builtin_ia32_vcvtuqq2ph512_mask:
+  case X86::BI__builtin_ia32_vfmaddpd:
+  case X86::BI__builtin_ia32_vfmaddps:
+  case X86::BI__builtin_ia32_vfmaddsubpd:
+  case X86::BI__builtin_ia32_vfmaddsubps:
   case X86::BI__builtin_ia32_vfmaddsh3_mask:
   case X86::BI__builtin_ia32_vfmaddss3_mask:
   case X86::BI__builtin_ia32_vfmaddsd3_mask:
