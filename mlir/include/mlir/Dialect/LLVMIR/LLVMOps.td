@@ -629,8 +629,8 @@ class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
     auto *val = builder.Create}] # instName # [{($arg, $_resultType);
     $res = val;
     if ($dereferenceable) {
-      llvm::Instruction *inst = dyn_cast<llvm::Instruction>(val);
-      moduleTranslation.setDereferenceableMetadata(op, inst);
+      if (auto *inst = dyn_cast<llvm::Instruction>(val))
+        moduleTranslation.setDereferenceableMetadata(op, inst);
     }
   }];
   string mlirBuilder = [{
