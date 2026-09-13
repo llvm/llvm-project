@@ -8,8 +8,11 @@
 
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBMatchers.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
@@ -263,6 +266,151 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
                                paddingValue, /*nofold=*/false, dynDims);
 }
 
+/// Returns true if `operand` is indexed along at least one reduction dimension
+/// of `linalgOp`
+static bool isReducedOperand(linalg::LinalgOp linalgOp, OpOperand *operand,
+                             ArrayRef<utils::IteratorType> iterTypes) {
+  AffineMap map = linalgOp.getMatchingIndexingMap(operand);
+  return llvm::any_of(llvm::enumerate(iterTypes), [&](auto it) {
+    return it.value() == utils::IteratorType::reduction &&
+           map.isFunctionOfDim(it.index());
+  });
+}
+
+/// Returns `defaults` with the entry of every input of `linalgOp` that is
+/// indexed along a reduction dimension replaced by its padding value. Fails if
+/// the body of `linalgOp` is not contraction-like, or if its
+/// `elemwise`/`reduce` pair admits no padding value.
+static FailureOr<SmallVector<Attribute>>
+inferContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp linalgOp,
+                              ArrayRef<utils::IteratorType> iterTypes,
+                              ArrayRef<Attribute> defaults) {
+  // NOTE: For contraction-like Ops, we infer the padding value by looking at
+  // both elemwise and reduce Ops, where (see isContractionBody for details):
+  //   %0 = <elemwise>(permutation-of(cu(block-argument-0),
+  //                                  cu(block-argument-1)))
+  //   %1 = <reduce>(permutation-of(cu(%0), cu(block-argument-2)))
+  //   return-like cu(%1)
+  Operation *elemwise = nullptr, *reduce = nullptr;
+  auto captureBodyOps = [&](Operation *e, Operation *r) {
+    elemwise = e;
+    reduce = r;
+    return true;
+  };
+  if (!linalg::detail::isContractionBody(*linalgOp.getBlock(), captureBodyOps))
+    return failure();
+
+  // Identify the padding value, `p`, for which `elemwise(p, x)` is the neutral
+  // element of `reduce` for every `x`.
+  // Not every contraction can be zero-padded: a body with `elemwise` =
+  // `arith.addf` and `reduce` = `arith.maximumf` (a max-plus contraction) pads
+  // with `-inf` instead.
+  auto getPadValue = [&](Type elementType) -> Attribute {
+    // `0 * x = 0` and `0 + acc = acc`.
+    if ((isa<arith::MulFOp>(elemwise) && isa<arith::AddFOp>(reduce)) ||
+        (isa<arith::MulIOp>(elemwise) && isa<arith::AddIOp>(reduce)) ||
+        (isa<complex::MulOp>(elemwise) && isa<complex::AddOp>(reduce)))
+      return builder.getZeroAttr(elementType);
+    // `false & x = false` and `false | acc = acc`.
+    if (isa<arith::AndIOp>(elemwise) && isa<arith::OrIOp>(reduce) &&
+        elemwise->getResult(0).getType().isInteger(1))
+      return builder.getZeroAttr(elementType);
+    return {};
+  };
+
+  SmallVector<Attribute> paddingValues(defaults.begin(), defaults.end());
+  for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+    if (!isReducedOperand(linalgOp, input, iterTypes))
+      continue;
+    Attribute padValue =
+        getPadValue(getElementTypeOrSelf(input->get().getType()));
+    if (!padValue)
+      return failure();
+    paddingValues[input->getOperandNumber()] = padValue;
+  }
+  return paddingValues;
+}
+
+/// Infers a semantics-preserving padding value for every operand of `toPad`
+/// (indexed by operand number). Operands that are reduced are padded with the
+/// neutral element of their reduction combiner (e.g. `-inf` for `maximumf`, `1`
+/// for `mulf`); every other operand is padded with the zero value of its
+/// element type.
+///
+/// Inference is conservative: it returns failure when a semantics-preserving
+/// value cannot be determined (a non-LinalgOp reduction, or a reduction whose
+/// neutral element is unknown), letting callers set `options.paddingValues`
+/// explicitly instead.
+static FailureOr<SmallVector<Attribute>>
+inferPaddingValues(OpBuilder &builder, TilingInterface toPad) {
+  Operation *op = toPad.getOperation();
+
+  // Padding acts on operands; default each to the zero of its element type.
+  SmallVector<Attribute> paddingValues;
+  for (Type t : op->getOperandTypes())
+    paddingValues.push_back(builder.getZeroAttr(getElementTypeOrSelf(t)));
+
+  // No reduction: padded elements are never combined, so zero is always safe.
+  SmallVector<utils::IteratorType> iterTypes = toPad.getLoopIteratorTypes();
+  if (!llvm::is_contained(iterTypes, utils::IteratorType::reduction))
+    return paddingValues;
+
+  // A reduction's neutral element requires inspecting the combiner, which is
+  // only possible for a LinalgOp; fail conservatively otherwise.
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
+  if (!linalgOp)
+    return failure();
+
+  // A contraction-like body accumulates as `acc = reduce(elemwise(a, b), acc)`
+  // and pads with a value derived from that pair.
+  FailureOr<SmallVector<Attribute>> contractionValues =
+      inferContractionPaddingValues(builder, linalgOp, iterTypes,
+                                    paddingValues);
+  if (succeeded(contractionValues))
+    return *contractionValues;
+
+  // Only a single reduction has an unambiguous per-operand neutral.
+  if (linalgOp.getNumDpsInits() != 1)
+    return failure();
+
+  // For reduction-like bodies, the neutral element of the combiner is used to
+  // pad the reduced operands.
+  SmallVector<Operation *> combiners;
+  if (!matchReduction(linalgOp.getRegionOutputArgs(), /*redPos=*/0, combiners))
+    return failure();
+  if (combiners.size() != 1)
+    return failure();
+  Operation *combiner = combiners.front();
+
+  std::optional<TypedAttr> neutral = arith::getNeutralElement(combiner);
+  if (!neutral)
+    return failure();
+
+  // In case fastMath is enabled with `nnan`, the neutral element of
+  // `maxnumf`/`minnumf`, NaN, becomes an invalid padding value. Bail out and
+  // let the caller supply a value explicitly.
+  if (auto floatNeutral = dyn_cast<FloatAttr>(*neutral);
+      floatNeutral && floatNeutral.getValue().isNaN()) {
+    auto fastMath = dyn_cast<arith::ArithFastMathInterface>(combiner);
+    if (fastMath &&
+        arith::bitEnumContainsAny(fastMath.getFastMathFlagsAttr().getValue(),
+                                  arith::FastMathFlags::nnan))
+      return failure();
+  }
+
+  for (OpOperand *input : linalgOp.getDpsInputOperands()) {
+    if (!isReducedOperand(linalgOp, input, iterTypes))
+      continue;
+    // A reduced operand must feed the combiner directly to use its neutral; an
+    // indirect one (e.g. via a math.exp) has no valid pad value -> fail.
+    if (!llvm::is_contained(linalgOp.getMatchingBlockArgument(input).getUsers(),
+                            combiner))
+      return failure();
+    paddingValues[input->getOperandNumber()] = *neutral;
+  }
+  return paddingValues;
+}
+
 FailureOr<PadTilingInterfaceResult> linalg::rewriteAsPaddedOp(
     OpBuilder &builder, TilingInterface toPad,
     PadTilingInterfaceOptions options,
@@ -272,14 +420,14 @@ FailureOr<PadTilingInterfaceResult> linalg::rewriteAsPaddedOp(
   Location loc = toPad.getLoc();
 
   // Allow inference of pad values if they are not explicitly specified.
-  // TODO: be mindful about the value depending on the actual operation.
   if (options.paddingValues.empty()) {
-    SmallVector<Type> types(toPad->getOperandTypes());
-    llvm::append_range(types, toPad->getResultTypes());
-    for (Type t : types) {
-      options.paddingValues.push_back(
-          builder.getZeroAttr(getElementTypeOrSelf(t)));
+    FailureOr<SmallVector<Attribute>> inferred =
+        inferPaddingValues(builder, toPad);
+    if (failed(inferred)) {
+      LLVM_DEBUG(DBGS() << "Could not infer pad values: FAIL\n");
+      return failure();
     }
+    options.paddingValues = std::move(*inferred);
   }
 
   if (llvm::any_of(toPad->getOperands(),
