@@ -7400,8 +7400,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
   case AMDGPU::SCHED_BARRIER:
   case AMDGPU::SCHED_GROUP_BARRIER:
-    MI.getOperand(0).setImm(
-        AMDGPU::sanitizeSchedMask(MI.getOperand(0).getImm()));
+    MI.getOperand(0).setImm(MI.getOperand(0).getImm() &
+                            static_cast<unsigned>(AMDGPU::SchedGroupMask::ALL));
     return BB;
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
