@@ -24,8 +24,7 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_signbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #128 // =0x80
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
@@ -46,8 +45,7 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_lowestbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
@@ -68,8 +66,7 @@ define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_bitsinmiddle_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #24 // =0x18
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
@@ -92,8 +89,7 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i16_signbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #32768 // =0x8000
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
@@ -114,8 +110,7 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i16_lowestbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
@@ -136,8 +131,7 @@ define i1 @scalar_i16_bitsinmiddle_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i16_bitsinmiddle_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #4080 // =0xff0
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, eq
 ; CHECK-GI-NEXT:    ret
@@ -425,8 +419,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_signbit_ne:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #128 // =0x80
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
+; CHECK-GI-NEXT:    lsr w8, w8, w1
 ; CHECK-GI-NEXT:    tst w8, w0
 ; CHECK-GI-NEXT:    cset w0, ne
 ; CHECK-GI-NEXT:    ret
@@ -480,24 +473,14 @@ define i1 @scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 }
 
 define i1 @scalar_i8_signbit_eq_with_nonzero(i8 %x, i8 %y) nounwind {
-; CHECK-SD-LABEL: scalar_i8_signbit_eq_with_nonzero:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #128 // =0x80
-; CHECK-SD-NEXT:    lsr w8, w8, w1
-; CHECK-SD-NEXT:    and w8, w8, w0
-; CHECK-SD-NEXT:    cmp w8, #1
-; CHECK-SD-NEXT:    cset w0, eq
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: scalar_i8_signbit_eq_with_nonzero:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #128 // =0x80
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsr w8, w8, w9
-; CHECK-GI-NEXT:    and w8, w8, w0
-; CHECK-GI-NEXT:    cmp w8, #1
-; CHECK-GI-NEXT:    cset w0, eq
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: scalar_i8_signbit_eq_with_nonzero:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #128 // =0x80
+; CHECK-NEXT:    lsr w8, w8, w1
+; CHECK-NEXT:    and w8, w8, w0
+; CHECK-NEXT:    cmp w8, #1
+; CHECK-NEXT:    cset w0, eq
+; CHECK-NEXT:    ret
   %t0 = lshr i8 128, %y
   %t1 = and i8 %t0, %x
   %res = icmp eq i8 %t1, 1 ; should be comparing with 0
