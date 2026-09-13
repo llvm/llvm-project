@@ -2066,8 +2066,28 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
     [IntrReadMem, IntrArgMemOnly, ReadOnly<ArgIndex<0>>,
      NoCapture<ArgIndex<0>>]>;
 
-///===------------------------- Other Intrinsics --------------------------===//
+///===---------------------- Constant Time Intrinsics ----------------------===//
 //
+// Intrinsic to support constant-time select. The selected value is pure; the
+// inaccessible-memory effect claims no real access and exists only to pin the
+// call in place, the way llvm.allow.runtime.check and llvm.allow.ubsan.check
+// use it. Without it the call is a pure value that InstCombine will sink into
+// a conditionally-executed block and that GVN will partially redundify into
+// one copy per branch arm, neither of which a constant-time primitive should
+// be subject to. Being unmovable is all the effect buys: an unused call is
+// still trivially dead (see wouldInstructionBeTriviallyDead), and nothing here
+// stops a pass that matches on the intrinsic ID from rewriting the call into a
+// select. That contract is documented in LangRef and enforced in codegen by
+// ISD::CT_SELECT, which is opaque to the combiner and expands to bitwise ops.
+// llvm_any_ty alone would also admit aggregates, which codegen does not
+// support; the Verifier restricts the value type to integer, byte,
+// floating-point, or pointer types, or vectors of them.
+def int_ct_select
+    : DefaultAttrsIntrinsic<[llvm_any_ty],
+                            [llvm_i1_ty, LLVMMatchType<0>, LLVMMatchType<0>],
+                            [IntrInaccessibleMemOnly]>;
+
+///===------------------------- Other Intrinsics --------------------------===//
 // TODO: We should introduce a new memory kind fo traps (and other side effects
 //       we only model to keep things alive).
 def int_trap : Intrinsic<[], [],

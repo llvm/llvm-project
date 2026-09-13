@@ -16038,6 +16038,153 @@ catch:
     ret void
 ```
 
+### Constant-Time Intrinsics
+
+These intrinsics are provided to support constant-time operations for
+security-sensitive code. Constant-time operations are designed to execute in
+time independent of secret data values, preventing timing side-channel leaks.
+
+(int_ct_select)=
+
+#### '`llvm.ct.select.*`' Intrinsic
+
+##### Syntax:
+
+This is an overloaded intrinsic. You can use `llvm.ct.select` on any integer,
+byte, floating-point, or pointer type, or on any vector of those types,
+including scalable vectors. The declarations below are a representative sample:
+
+```
+declare i32 @llvm.ct.select.i32(i1 <cond>, i32 <val1>, i32 <val2>)
+declare float @llvm.ct.select.f32(i1 <cond>, float <val1>, float <val2>)
+declare ptr @llvm.ct.select.p0(i1 <cond>, ptr <val1>, ptr <val2>)
+declare <4 x i32> @llvm.ct.select.v4i32(i1 <cond>, <4 x i32> <val1>, <4 x i32> <val2>)
+```
+
+##### Overview:
+
+The '`llvm.ct.select`' intrinsic selects one of two values based on a
+condition, like the standard {ref}`select <i_select>` instruction, but is
+lowered to branchless code whose execution time does not depend on the
+condition value. This keeps the condition from leaking through timing side
+channels; see the Semantics section for the exact guarantee and its platform
+requirements.
+
+##### Arguments:
+
+The '`llvm.ct.select`' intrinsic requires three arguments:
+
+1. The condition, which must be a scalar value of type 'i1'. Unlike
+   {ref}`select <i_select>` which accepts both scalar 'i1' and vector
+   '`<N x i1>`' conditions, `llvm.ct.select` only accepts a scalar 'i1'
+   condition. Vector conditions are not supported.
+2. The first value argument, which must be an integer, byte, floating-point,
+   or pointer type, or a vector of those types. Other
+   {ref}`first class <t_firstclass>` types, such as aggregates, are not
+   supported.
+3. The second value argument, which must have the same type as the first
+   value argument.
+
+##### Semantics:
+
+If the condition evaluates to true, the intrinsic returns the first value
+argument; otherwise, it returns the second value argument.
+
+Poison and undef propagate as for {ref}`select <i_select>`: a `poison`
+condition yields `poison`, and an `undef` condition returns either value
+argument. Unlike `select`, both value arguments are always evaluated, so a
+`poison` value in either one yields `poison`.
+
+The key semantic difference from {ref}`select <i_select>` is the constant-time
+code generation guarantee: the intrinsic must be lowered to machine code that:
+
+- Does not introduce data-dependent control flow based on the condition value
+- Executes the same sequence of instructions regardless of the condition value
+- Uses both value arguments unconditionally; the not-selected argument is
+  never skipped or branched around
+
+**Platform Requirements:** The constant-time guarantee is conditional on
+hardware support for data-independent execution timing. This may be a
+processor mode that the platform enables, such as Arm DIT (Data Independent
+Timing) or x86 DOIT (Data Operand Independent Timing), or a static
+architectural guarantee, such as the RISC-V `Zkt` and `Zvkt` extensions,
+which certify data-independent latency for the scalar and vector instructions
+emitted by the lowering. Without such hardware support, the generated code
+will still be free from data-dependent control flow, but microarchitectural
+timing variations may still occur.
+
+The typical implementation uses bitwise operations to blend the two values
+based on a mask derived from the condition:
+
+```
+mask = sext(cond)  ; sign-extend condition to all 1s or all 0s
+result = val2 ^ ((val1 ^ val2) & mask)
+```
+
+Targets with native constant-time select support lower the intrinsic to
+suitable target instructions instead. Targets without native support use the
+generic bitwise expansion shown above. In either case the selection is kept
+as a single opaque operation until late in code generation, so optimization
+passes never see a pattern they could rewrite into a select or a conditional
+branch.
+
+Optimizations must preserve the constant-time code generation semantics.
+Transforms that would introduce data-dependent control flow are not permitted.
+This includes converting to conditional branches, using predicated instructions
+with data-dependent timing, or, except as described below, optimizing away
+either value argument before the selection completes.
+
+The call folds to one of its value arguments when the condition operand is a
+constant `i1`, or when both value arguments are the same value. Optimizers must
+not derive the fold by running value analyses (known-bits, range, or dominating
+conditions) on a non-constant condition. A condition that another pass has
+already proved to be a compile-time constant is no longer secret-dependent, so
+folding it is permitted. Rewrites that keep the `llvm.ct.select`, such as
+swapping the arguments to remove a negated condition, are allowed.
+
+A call whose result has no users may be removed. Nothing observes the
+selection in that case, so deleting it cannot expose the condition. This is the
+only way an `llvm.ct.select` disappears: as long as the result is used, the
+call is neither deleted, duplicated, merged with another `llvm.ct.select`, nor
+moved to a different point in the control-flow graph. Keeping it in place is
+what the intrinsic's `inaccessiblemem` memory effect is for; the effect does
+not model any real access to memory, and passes must not read it as one.
+
+Like other floating-point calls, `llvm.ct.select` may carry fast-math flags
+when it returns a supported floating-point type; the poison-generating flags
+(`nnan`, `ninf`) apply to both value arguments (the lowering blends both),
+and the optimizer may use them. No fast-math flag causes
+the intrinsic itself to be algebraically rewritten, so its constant-time
+lowering is unaffected.
+
+##### Examples:
+
+```llvm
+; Constant-time integer selection
+%x = call i32 @llvm.ct.select.i32(i1 %cond, i32 42, i32 17)
+%key = call i64 @llvm.ct.select.i64(i1 %cond, i64 %k_a, i64 %k_b)
+
+; Constant-time integer vector selection (scalar condition broadcast to all lanes)
+%v4 = call <4 x i32> @llvm.ct.select.v4i32(i1 %cond,
+                                           <4 x i32> <i32 1, i32 2, i32 3, i32 4>,
+                                           <4 x i32> <i32 5, i32 6, i32 7, i32 8>)
+
+; Constant-time float vector selection
+%v8f = call <8 x float> @llvm.ct.select.v8f32(i1 %cond,
+                                              <8 x float> %fvec_a, <8 x float> %fvec_b)
+
+; Constant-time scalable vector selection
+%sv = call <vscale x 4 x i32> @llvm.ct.select.nxv4i32(i1 %cond,
+                                                      <vscale x 4 x i32> %sv_a,
+                                                      <vscale x 4 x i32> %sv_b)
+
+; Constant-time float selection
+%f = call float @llvm.ct.select.f32(i1 %cond, float 1.0, float 0.0)
+
+; Constant-time pointer selection
+%ptr = call ptr @llvm.ct.select.p0(i1 %cond, ptr %ptr_a, ptr %ptr_b)
+```
+
 ### Standard C/C++ Library Intrinsics
 
 LLVM provides intrinsics for a few important standard C/C++ library

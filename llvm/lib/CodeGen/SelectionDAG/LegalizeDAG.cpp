@@ -201,6 +201,7 @@ private:
   SDValue ExpandInsertToVectorThroughStack(SDValue Op);
   SDValue ExpandVectorBuildThroughStack(SDNode* Node);
   SDValue ExpandConcatVectors(SDNode *Node);
+  SDValue ExpandCTSELECT(SDNode *Node);
 
   SDValue ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP);
   SDValue ExpandConstant(ConstantSDNode *CP);
@@ -3207,6 +3208,172 @@ SDValue SelectionDAGLegalize::PromoteReduction(SDNode *Node) {
                      DAG.getIntPtrConstant(0, DL, /*isTarget=*/true));
 }
 
+/// Expand a constant-time select to F ^ ((T ^ F) & Mask), where
+/// Mask = 0 - (cond & 1). The sequence is bitwise only: no SELECT or cmov
+/// SDNode is built, so the condition never reaches a branch. Floating-point
+/// values are blended on the same-size integer type; vectors compute the mask
+/// as a scalar and splat it, which avoids an illegal vNi1.
+SDValue SelectionDAGLegalize::ExpandCTSELECT(SDNode *Node) {
+  SDLoc dl(Node);
+  // Constant-time select: F ^ ((T ^ F) & Mask), Mask = 0 - (cond & 1).
+  // Bitwise-only — no select/cmov SDNode is constructed, so the CT property
+  // holds against any combiner that targets those opcodes. FP types operate
+  // on the same-size integer; vectors build the mask as a scalar then splat
+  // (avoids illegal vNi1).
+  //
+  // The masked-diff passes through an ARITH_FENCE so no future combine can
+  // fold the XOR/AND/XOR sequence back into a SELECT. No in-tree combine does
+  // that today; the fence is defense-in-depth and emits no code.
+  SDValue Cond = Node->getOperand(0);
+  SDValue T = Node->getOperand(1);
+  SDValue F = Node->getOperand(2);
+  EVT VT = T.getValueType();
+
+  // Memory-blend for FP scalars whose same-size integer isn't legal (f64 on
+  // i386 no-SSE, x86_fp80, fp128). The bitcast-to-int expansion below can't
+  // run since LegalizeDAG is the last legalization stage. Spill T/F, blend
+  // chunk-by-chunk at a legal int width in place over the T slot, reload it
+  // as the FP type. Fixed and scalable FP vectors fall through to the
+  // unified path below.
+  if (VT.isFloatingPoint() && !VT.isVector() &&
+      !TLI.isTypeLegal(VT.changeTypeToInteger())) {
+    const DataLayout &DL = DAG.getDataLayout();
+    Type *VTTy = VT.getTypeForEVT(*DAG.getContext());
+    unsigned StorageBytes = DL.getTypeStoreSize(VTTy);
+    assert(StorageBytes > 0 && "FP type with zero storage size");
+
+    // Blend at the widest legal scalar integer width. Chunks narrower than
+    // that (e.g. the 2-byte tail of x86_fp80) are zero-extended on load and
+    // truncated on store, so every value in the DAG has a legal type.
+    MVT BlendVT;
+    for (MVT MV : {MVT::i64, MVT::i32, MVT::i16, MVT::i8})
+      if (TLI.isTypeLegal(MV)) {
+        BlendVT = MV;
+        break;
+      }
+    assert(BlendVT.isValid() && "no legal scalar integer type");
+    unsigned BlendBytes = BlendVT.getSizeInBits() / 8;
+
+    MachineFunction &MF = DAG.getMachineFunction();
+    SDValue StackT = DAG.CreateStackTemporary(VT);
+    SDValue StackF = DAG.CreateStackTemporary(VT);
+    int FIT = cast<FrameIndexSDNode>(StackT.getNode())->getIndex();
+    int FIF = cast<FrameIndexSDNode>(StackF.getNode())->getIndex();
+    MachinePointerInfo PIT = MachinePointerInfo::getFixedStack(MF, FIT);
+    MachinePointerInfo PIF = MachinePointerInfo::getFixedStack(MF, FIF);
+
+    SDValue Chain = DAG.getEntryNode();
+    Chain = DAG.getStore(Chain, dl, T, StackT, PIT);
+    Chain = DAG.getStore(Chain, dl, F, StackF, PIF);
+
+    // Walk the storage in power-of-2 chunks, widest first, so every access
+    // stays naturally aligned within the max-aligned stack temporaries.
+    unsigned Offset = 0;
+    while (Offset < StorageBytes) {
+      unsigned ChunkBytes =
+          std::min(BlendBytes, llvm::bit_floor(StorageBytes - Offset));
+      MVT MemVT = MVT::getIntegerVT(ChunkBytes * 8);
+      TypeSize Off = TypeSize::getFixed(Offset);
+      SDValue TPtr = DAG.getMemBasePlusOffset(StackT, Off, dl);
+      SDValue FPtr = DAG.getMemBasePlusOffset(StackF, Off, dl);
+
+      SDValue Ti, Fi;
+      if (MemVT == BlendVT) {
+        Ti = DAG.getLoad(BlendVT, dl, Chain, TPtr, PIT.getWithOffset(Offset));
+        Chain = Ti.getValue(1);
+        Fi = DAG.getLoad(BlendVT, dl, Chain, FPtr, PIF.getWithOffset(Offset));
+      } else {
+        Ti = DAG.getExtLoad(ISD::ZEXTLOAD, dl, BlendVT, Chain, TPtr,
+                            PIT.getWithOffset(Offset), MemVT);
+        Chain = Ti.getValue(1);
+        Fi = DAG.getExtLoad(ISD::ZEXTLOAD, dl, BlendVT, Chain, FPtr,
+                            PIF.getWithOffset(Offset), MemVT);
+      }
+      Chain = Fi.getValue(1);
+
+      // Blend this chunk via CT_SELECT on the legal integer type (the
+      // recursive node is Expand'd by the scalar-int branch below), then
+      // store it back over the now-dead chunk of the T slot. The serial
+      // chain keeps each chunk's loads ahead of the store.
+      SDValue Ri = DAG.getCTSelect(dl, BlendVT, Cond, Ti, Fi);
+
+      if (MemVT == BlendVT)
+        Chain = DAG.getStore(Chain, dl, Ri, TPtr, PIT.getWithOffset(Offset));
+      else
+        Chain = DAG.getTruncStore(Chain, dl, Ri, TPtr,
+                                  PIT.getWithOffset(Offset), MemVT);
+      Offset += ChunkBytes;
+    }
+
+    return DAG.getLoad(VT, dl, Chain, StackT, PIT);
+  }
+
+  SDValue WorkingT = T;
+  SDValue WorkingF = F;
+  EVT WorkingVT = VT;
+
+  bool IsFP = VT.isVector() ? VT.getVectorElementType().isFloatingPoint()
+                            : VT.isFloatingPoint();
+  if (IsFP) {
+    WorkingVT = VT.changeTypeToInteger();
+    // Scalars with an illegal integer twin took the memory path above; FP
+    // vector types are expected to have a legal integer counterpart.
+    assert(TLI.isTypeLegal(WorkingVT) &&
+           "no legal same-width integer type for CT_SELECT expansion");
+    WorkingT = DAG.getBitcast(WorkingVT, T);
+    WorkingF = DAG.getBitcast(WorkingVT, F);
+  }
+
+  // Compute the all-ones/all-zeros mask as a scalar, then splat for vectors.
+  // The element type of a legal vector is not always a legal scalar type
+  // (i32 on riscv64, i64 on riscv32), so build the scalar mask at a legal
+  // width: BUILD_VECTOR and SPLAT_VECTOR implicitly truncate a wider
+  // scalar, and if every legal scalar is narrower than the element, splat
+  // at that width and sign-extend the mask vector (0 and -1 survive both).
+  EVT MaskEltVT =
+      WorkingVT.isVector() ? WorkingVT.getVectorElementType() : WorkingVT;
+  EVT MaskSclVT = MaskEltVT;
+  if (!TLI.isTypeLegal(MaskSclVT)) {
+    assert(WorkingVT.isVector() && "scalar CT_SELECT type must be legal");
+    MaskSclVT = TLI.getLegalTypeToTransformTo(*DAG.getContext(), MaskSclVT);
+    assert(TLI.isTypeLegal(MaskSclVT) && "no legal scalar integer type");
+  }
+  SDValue ScalarCond = Cond;
+  if (ScalarCond.getValueType() != MaskSclVT)
+    ScalarCond = DAG.getAnyExtOrTrunc(ScalarCond, dl, MaskSclVT);
+  SDValue ScalarMask =
+      DAG.getNode(ISD::SUB, dl, MaskSclVT, DAG.getConstant(0, dl, MaskSclVT),
+                  DAG.getNode(ISD::AND, dl, MaskSclVT, ScalarCond,
+                              DAG.getConstant(1, dl, MaskSclVT)));
+  SDValue Mask;
+  if (!WorkingVT.isVector()) {
+    Mask = ScalarMask;
+  } else if (MaskSclVT.bitsGE(MaskEltVT)) {
+    Mask = DAG.getSplat(WorkingVT, dl, ScalarMask);
+  } else {
+    EVT NarrowVT =
+        WorkingVT.changeVectorElementType(*DAG.getContext(), MaskSclVT);
+    assert(TLI.isTypeLegal(NarrowVT) &&
+           "no legal vector type for the CT_SELECT mask splat");
+    Mask = DAG.getNode(ISD::SIGN_EXTEND, dl, WorkingVT,
+                       DAG.getSplat(NarrowVT, dl, ScalarMask));
+  }
+
+  // F ^ ((T ^ F) & Mask)
+  SDValue XorTF = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingT, WorkingF);
+  SDValue TM = DAG.getNode(ISD::AND, dl, WorkingVT, XorTF, Mask);
+
+  // DAGCombine barrier (see above).
+  TM = DAG.getNode(ISD::ARITH_FENCE, dl, WorkingVT, TM);
+
+  SDValue Res = DAG.getNode(ISD::XOR, dl, WorkingVT, WorkingF, TM);
+
+  if (WorkingVT != VT)
+    Res = DAG.getBitcast(VT, Res);
+
+  return Res;
+}
+
 bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
   LLVM_DEBUG(dbgs() << "Trying to expand node\n");
   SmallVector<SDValue, 8> Results;
@@ -4335,6 +4502,9 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
                           Tmp2, Tmp3, ISD::SETNE, Node->getFlags());
     }
     Results.push_back(Tmp1);
+    break;
+  case ISD::CT_SELECT:
+    Results.push_back(ExpandCTSELECT(Node));
     break;
   case ISD::BR_JT: {
     SDValue Chain = Node->getOperand(0);
@@ -5661,7 +5831,8 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, OVT, Tmp2));
     break;
   }
-  case ISD::SELECT: {
+  case ISD::SELECT:
+  case ISD::CT_SELECT: {
     unsigned ExtOp, TruncOp;
     if (Node->getValueType(0).isVector() ||
         Node->getValueType(0).getSizeInBits() == NVT.getSizeInBits()) {
@@ -5678,8 +5849,14 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
     // Promote each of the values to the new type.
     Tmp2 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(1));
     Tmp3 = DAG.getNode(ExtOp, dl, NVT, Node->getOperand(2));
-    // Perform the larger operation, then round down.
-    Tmp1 = DAG.getSelect(dl, NVT, Tmp1, Tmp2, Tmp3);
+    // Perform the larger operation, then round down. CT_SELECT carries no
+    // SDNodeFlags (see ISDOpcodes.h); rebuild it through the helper.
+    if (Node->getOpcode() == ISD::CT_SELECT) {
+      Tmp1 = DAG.getCTSelect(dl, NVT, Tmp1, Tmp2, Tmp3);
+    } else {
+      SDNodeFlags Flags = Node->getFlags();
+      Tmp1 = DAG.getNode(ISD::SELECT, dl, NVT, Tmp1, Tmp2, Tmp3, Flags);
+    }
     if (TruncOp != ISD::FP_ROUND)
       Tmp1 = DAG.getNode(TruncOp, dl, Node->getValueType(0), Tmp1);
     else
