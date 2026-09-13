@@ -13,9 +13,10 @@
 
 #include "src/dirent/scandir.h"
 
+#include "hdr/func/free.h"
+#include "hdr/func/malloc.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_dirent.h"
-#include "src/__support/alloc-checker.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/libc_errno.h"
@@ -23,6 +24,7 @@
 #include "src/dirent/closedir.h"
 #include "src/dirent/opendir.h"
 #include "src/dirent/readdir.h"
+#include "src/stdlib/malloc.h"
 #include "src/stdlib/qsort_util.h"
 #include "src/string/memcpy.h"
 
@@ -37,6 +39,7 @@ LLVM_LIBC_FUNCTION(int, scandir,
     return -1;
   }
 
+  int saved_errno = 0;
   LIBC_NAMESPACE::cpp::vector<struct dirent*> entries;
 
   while (true) {
@@ -44,43 +47,46 @@ LLVM_LIBC_FUNCTION(int, scandir,
     struct dirent *entry = LIBC_NAMESPACE::readdir(dir_fd);
     if (entry == nullptr) {
       // If the readdir call failed it set errno
+      saved_errno = libc_errno;
       break;
     }
 
+    // Note, filter may modify errno
     if (filter != nullptr && !filter(entry)) {
       continue;
     }
 
-    AllocChecker ac;
-    struct dirent *new_entry = new (ac) struct dirent;
-    if (!ac || new_entry == NULL) {
-      libc_errno = ENOMEM;
-      break;
+    // struct dirent contains an equivalent of flexible array memeber we
+    // allocate with malloc and use d_reclen as size.
+    struct dirent *new_entry = static_cast<struct dirent*>(::malloc(entry->d_reclen));
+    if (new_entry == nullptr) {
+      saved_errno = ENOMEM;
     }
-
-    // struct dirent contains an equivalent of flexible array memeber,
-    // which makes sizeof unreliable, hence we use d_reclen.
     LIBC_NAMESPACE::memcpy(new_entry, entry, entry->d_reclen);
 
     if (!entries.push_back(new_entry)) {
-      libc_errno = ENOMEM;
+      free(new_entry);
+      saved_errno = ENOMEM;
       break;
     }
   }
 
+  // Closedir may modify errno and set it to EBADF, which is not amongst
+  // POSIX-defined error codes for scandir. So we ignore closedir's errno.
   LIBC_NAMESPACE::closedir(dir_fd);
 
+  struct dirent **result = static_cast<struct dirent**>(
+      ::malloc(entries.size() * sizeof(struct dirent *)));
 
-  AllocChecker ac;
-  struct dirent **result = new (ac) struct dirent*[entries.size()];
-  if (!ac) {
-    libc_errno = ENOMEM;
+  if (result == nullptr) {
+    saved_errno = ENOMEM;
   }
 
-  if (libc_errno != 0) {
+  if (saved_errno != 0) {
     for (struct dirent *entry: entries) {
-      delete entry;
+      ::free(entry);
     }
+    libc_errno = saved_errno;
     return -1;
   }
 
