@@ -50,6 +50,7 @@ public:
   void handleWebAssemblyExportNameAttr(Decl *D, const ParsedAttr &AL);
   void handleWebAssemblyImportModuleAttr(Decl *D, const ParsedAttr &AL);
   void handleWebAssemblyImportNameAttr(Decl *D, const ParsedAttr &AL);
+  void handleWebAssemblyGlobalAttr(Decl *D, const ParsedAttr &AL);
 };
 } // namespace clang
 

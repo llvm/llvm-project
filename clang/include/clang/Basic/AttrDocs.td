@@ -7337,6 +7337,18 @@ request a specific field name be used instead.
   }];
 }
 
+def WebAssemblyGlobalDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Clang supports the `[[clang::wasm_global]]` attribute for the WebAssembly
+target. This attribute declares that a variable is stored as a WebAssembly
+global rather than in linear memory.
+
+WebAssembly globals can be imported or exported using the
+`import_module`, `import_name`, and `export_name` attributes.
+  }];
+}
+
 def ArtificialDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
