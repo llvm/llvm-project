@@ -3244,6 +3244,17 @@ static bool canUseCtorHoming(const CXXRecordDecl *RD) {
       RD->hasConstexprNonCopyMoveConstructor())
     return false;
 
+  // Skip this optimization if this type is standard-layout and is a member of
+  // some standard-layout union in this translation unit. Per the C++ spec, "it
+  // is permitted to inspect the common initial part of any of" the "common
+  // initial sequence" of distinct types in a standard-layout union. This
+  // exception to strict aliasing enables producing a reference to a type
+  // without ever having constructed that type.
+  //
+  // See: https://timsong-cpp.github.io/cppwp/n3337/class.mem#19
+  if (RD->isStandardLayoutUnionMember())
+    return false;
+
   for (const CXXConstructorDecl *Ctor : RD->ctors()) {
     if (Ctor->isCopyOrMoveConstructor())
       continue;

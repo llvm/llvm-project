@@ -1233,6 +1233,15 @@ public:
   /// C++ [class]p7.
   bool isStandardLayout() const { return data().IsStandardLayout; }
 
+  /// Determine whether this class appears as a member of a standard-layout
+  /// union.
+  bool isStandardLayoutUnionMember() const {
+    return data().IsStandardLayoutUnionMember;
+  }
+  void setIsStandardLayoutUnionMember(bool V = true) {
+    data().IsStandardLayoutUnionMember = V;
+  }
+
   /// Determine whether this class was standard-layout per
   /// C++11 [class]p7, specifically using the C++11 rules without any DRs.
   bool isCXX11StandardLayout() const { return data().IsCXX11StandardLayout; }
