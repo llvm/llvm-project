@@ -26,6 +26,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <optional>
 
 #define DEBUG_TYPE "load-binary"
@@ -659,6 +660,12 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
         if (MCDesc.isUnconditionalBranch())
           UncondBranchAddrSet.insert(Address);
         BranchAddressSet.insert(Address);
+      } else if (MCDesc.isBarrier() || MCDesc.isTrap()) {
+        // Transfers of control are handled above, so what reaches here stops
+        // execution without naming where it continues, the AArch64 BRK and UDF
+        // above all. Recording it lets range inference end a range there
+        // instead of running it into code the trap never let execute.
+        BarrierAddressSet.insert(Address);
       }
 
       if (MCDesc.isIndirectBranch()) {
@@ -1297,6 +1304,105 @@ void ProfiledBinary::inferMissingFrames(
     const SmallVectorImpl<uint64_t> &Context,
     SmallVectorImpl<uint64_t> &NewContext) {
   MissingContextInferrer->inferMissingFrames(Context, NewContext);
+}
+
+void ProfiledBinary::buildRangeEnds() {
+  // The merge below and findRangeEnd's binary search both need increasing
+  // addresses, and instructions are collected in section-header order, which an
+  // object file need not keep sorted, so copy and sort when it is not.
+  //
+  // TODO: Sort CodeAddressVec in disassemble() and reduce this to an assertion.
+  // getIndexForAddr and InstructionPointer already depend on that order, so a
+  // binary listed out of it yields a wrong profile on those paths as well.
+  std::vector<uint64_t> SortedAddresses;
+  ArrayRef<uint64_t> Addresses = CodeAddressVec;
+  if (!llvm::is_sorted(CodeAddressVec)) {
+    SortedAddresses.assign(CodeAddressVec.begin(), CodeAddressVec.end());
+    llvm::sort(SortedAddresses);
+    Addresses = SortedAddresses;
+  }
+
+  // Walk instructions and function ranges backwards at the same time, so that
+  // classifying every instruction costs one merge step instead of a search.
+  auto FuncIt = StartAddrToFuncRangeMap.rbegin();
+  const FuncRange *NextRange = nullptr;
+  for (size_t I = Addresses.size(); I != 0; --I) {
+    uint64_t Current = Addresses[I - 1];
+
+    // Advance to the last function range that starts at or before Current, then
+    // keep it only if Current is inside that range.
+    while (FuncIt != StartAddrToFuncRangeMap.rend() && Current < FuncIt->first)
+      ++FuncIt;
+    const FuncRange *CurrentRange = nullptr;
+    if (FuncIt != StartAddrToFuncRangeMap.rend() &&
+        Current < FuncIt->second.EndAddress)
+      CurrentRange = &FuncIt->second;
+
+    // An instruction outside every function range is never a valid range end,
+    // because a range must not extend into code whose function is unknown, and
+    // findRangeEnd rejects such an address before the search.
+    if (CurrentRange) {
+      // The following instruction continues the range only when it is adjacent
+      // and belongs to the same function. NextRange is null for the highest
+      // address and for a following instruction no function range covers.
+      bool FollowsAdjacently = I < Addresses.size() &&
+                               Addresses[I] - Current == getInstSize(Current);
+
+      // Comparing the owning function rather than the range keeps a function
+      // described by several adjacent ranges, as function splitting produces,
+      // in one inferred range. Ranges are owned by name, so two same-named
+      // functions laid out back to back are separated only by IsFuncEntry,
+      // which a symbol on the second one sets.
+      bool EndsRange = !NextRange || !FollowsAdjacently ||
+                       NextRange->Func != CurrentRange->Func ||
+                       (NextRange != CurrentRange && NextRange->IsFuncEntry);
+      if (EndsRange || addressIsTransfer(Current) ||
+          BarrierAddressSet.count(Current))
+        RangeEnds.push_back(Current);
+    }
+    NextRange = CurrentRange;
+  }
+  // The traversal is backwards, so restore increasing order for binary search.
+  std::reverse(RangeEnds.begin(), RangeEnds.end());
+  RangeEndsBuilt = true;
+}
+
+uint64_t ProfiledBinary::findRangeEnd(uint64_t Address, bool *Uncovered) {
+  // Assigned on every path, so that a caller never reads a value left over
+  // from an earlier query.
+  if (Uncovered)
+    *Uncovered = false;
+
+  if (!addressIsCode(Address))
+    return 0;
+
+  // Function ranges come from debug info, and from the symbol table only where
+  // the binary carries pseudo probes. Where none covers Address, the executed
+  // range cannot be proven, so fail closed and keep that instruction alone.
+  if (!findFuncRange(Address)) {
+    if (Uncovered)
+      *Uncovered = true;
+    return Address;
+  }
+
+  // Every instruction before a range end has that end as its own, so indexing
+  // the ends alone keeps the index proportional to their number.
+  if (!RangeEndsBuilt)
+    buildRangeEnds();
+
+  // The greatest covered address always ends a range, and every covered address
+  // is at or below it, so the search finds an end.
+  auto End = llvm::lower_bound(RangeEnds, Address);
+  assert(End != RangeEnds.end() &&
+         "an address a function range covers has a range end at or above it");
+  // Should it not, fail closed as an uncovered address does rather than read
+  // past the index or hide the reduction from the caller.
+  if (End == RangeEnds.end()) {
+    if (Uncovered)
+      *Uncovered = true;
+    return Address;
+  }
+  return *End;
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,
