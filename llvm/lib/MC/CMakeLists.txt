@@ -47,6 +47,7 @@ add_llvm_component_library(LLVMMC
   MCSchedule.cpp
   MCSection.cpp
   MCSectionMachO.cpp
+  MCSemExpr.cpp
   MCStreamer.cpp
   MCSFrame.cpp
   MCSPIRVStreamer.cpp
