@@ -3505,6 +3505,10 @@ def clangir_disable_passes : Flag<["-"], "clangir-disable-passes">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Disable CIR transformations pipeline">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisablePasses">>;
+def clangir_stop_before_lowering : Flag<["-"], "clangir-stop-before-lowering">,
+  Visibility<[CC1Option]>,
+  HelpText<"ClangIR: Stop the pipeline before target lowering (ABI-free CIR)">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRStopBeforeLowering">>;
 def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"ClangIR: Disable MLIR module verifier">,
