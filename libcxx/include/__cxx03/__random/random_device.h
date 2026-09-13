@@ -30,10 +30,10 @@ class _LIBCPP_EXPORTED_FROM_ABI random_device {
   _LIBCPP_DIAGNOSTIC_PUSH
   _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wunused-private-field")
 
-  // Apple platforms used to use the `_LIBCPP_USING_DEV_RANDOM` code path, and now
-  // use `arc4random()` as of this comment. In order to avoid breaking the ABI, we
-  // retain the same layout as before.
-#    if defined(__APPLE__)
+  // Apple platforms and GNU/Linux used to use the `_LIBCPP_USING_DEV_RANDOM`
+  // code path, and now use `arc4random` or `getentropy`. In order to avoid
+  // breaking the ABI, we retain the same layout as before.
+#    if defined(__APPLE__) || defined(__GLIBC__)
   int __padding_; // padding to fake the `__f_` field above
 #    endif
 
