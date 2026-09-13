@@ -77,6 +77,13 @@ constrainRegClass(MachineRegisterInfo &MRI, Register Reg,
     return NewRC;
   if (NewRC->getNumRegs() < MinNumRegs)
     return nullptr;
+  // getCommonSubClass() can return a class with no allocatable registers (for
+  // targets whose register files overlap only in reserved registers). A vreg
+  // constrained to such a class cannot be allocated, and setRegClass() below
+  // requires an allocatable class, so report the constraint as infeasible. This
+  // mirrors the equivalent guard in the register coalescer.
+  if (!NewRC->isAllocatable())
+    return nullptr;
   MRI.setRegClass(Reg, NewRC);
   return NewRC;
 }
