@@ -37,7 +37,7 @@ body:             |
     ; GFX942-LABEL: name: spill_v32
     ; GFX942: liveins: $vgpr0
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX942-NEXT: S_NOP 0, implicit $vgpr0
@@ -45,7 +45,7 @@ body:             |
     ; GFX12-LABEL: name: spill_v32
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX12-NEXT: S_NOP 0, implicit $vgpr0
@@ -83,14 +83,14 @@ body:             |
     ; GFX942-LABEL: name: spill_v32_kill
     ; GFX942: liveins: $vgpr0
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ;
     ; GFX12-LABEL: name: spill_v32_kill
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr0, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     SI_SPILL_V32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
@@ -130,7 +130,7 @@ body:             |
     ; GFX942-LABEL: name: spill_v64
     ; GFX942: liveins: $vgpr0_vgpr1
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     ; GFX942-NEXT: S_NOP 0, implicit $vgpr0_vgpr1
@@ -138,7 +138,7 @@ body:             |
     ; GFX12-LABEL: name: spill_v64
     ; GFX12: liveins: $vgpr0_vgpr1
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX2_SADDR $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     ; GFX12-NEXT: S_NOP 0, implicit $vgpr0_vgpr1
@@ -178,14 +178,14 @@ body:             |
     ; GFX942-LABEL: name: spill_v64_kill
     ; GFX942: liveins: $vgpr0_vgpr1
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     ;
     ; GFX12-LABEL: name: spill_v64_kill
     ; GFX12: liveins: $vgpr0_vgpr1
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -225,14 +225,14 @@ body:             |
     ; GFX942-LABEL: name: spill_v64_undef_sub1_killed
     ; GFX942: liveins: $vgpr0
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     ;
     ; GFX12-LABEL: name: spill_v64_undef_sub1_killed
     ; GFX12: liveins: $vgpr0
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -270,14 +270,14 @@ body:             |
     ; GFX942-LABEL: name: spill_v64_undef_sub0_killed
     ; GFX942: liveins: $vgpr1
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     ;
     ; GFX12-LABEL: name: spill_v64_undef_sub0_killed
     ; GFX12: liveins: $vgpr1
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX2_SADDR killed $vgpr0_vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s64) into %stack.0, align 4, addrspace 5)
     SI_SPILL_V64_SAVE killed $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -319,14 +319,14 @@ body:             |
     ; GFX942-LABEL: name: spill_v128_kill
     ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     ;
     ; GFX12-LABEL: name: spill_v128_kill
     ; GFX12: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     SI_SPILL_V128_SAVE killed $vgpr0_vgpr1_vgpr2_vgpr3, %stack.0, $sgpr32, 0, implicit $exec :: (store (s128) into %stack.0, addrspace 5)
@@ -354,12 +354,12 @@ body:             |
     ; GFX90A-NEXT: S_NOP 0, implicit undef $vgpr0
     ;
     ; GFX942-LABEL: name: spill_v32_undef
-    ; GFX942: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: S_NOP 0, implicit undef $vgpr0
     ;
     ; GFX12-LABEL: name: spill_v32_undef
-    ; GFX12: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: S_NOP 0, implicit undef $vgpr0
     SI_SPILL_V32_SAVE undef $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
@@ -388,12 +388,12 @@ body:             |
     ; GFX90A-NEXT: S_NOP 0, implicit undef $vgpr0_vgpr1
     ;
     ; GFX942-LABEL: name: spill_v64_undef
-    ; GFX942: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: S_NOP 0, implicit undef $vgpr0_vgpr1
     ;
     ; GFX12-LABEL: name: spill_v64_undef
-    ; GFX12: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: S_NOP 0, implicit undef $vgpr0_vgpr1
     SI_SPILL_V64_SAVE undef $vgpr0_vgpr1, %stack.0, $sgpr32, 0, implicit $exec :: (store (s64) into %stack.0, addrspace 5)
@@ -436,7 +436,7 @@ body:             |
     ; GFX942-LABEL: name: spill_v128_kill_unaligned
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr2_vgpr3_vgpr4, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 4, align 4, addrspace 5)
@@ -444,14 +444,14 @@ body:             |
     ; GFX1200-LABEL: name: spill_v128_kill_unaligned
     ; GFX1200: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX1200-NEXT: SCRATCH_STORE_DWORDX4_SADDR killed $vgpr1_vgpr2_vgpr3_vgpr4, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     ;
     ; GFX1250-LABEL: name: spill_v128_kill_unaligned
     ; GFX1250: liveins: $vgpr1_vgpr2_vgpr3_vgpr4
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4, implicit $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX1250-NEXT: SCRATCH_STORE_DWORDX3_SADDR killed $vgpr2_vgpr3_vgpr4, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit killed $vgpr1_vgpr2_vgpr3_vgpr4 :: ("amdgpu-thread-private" store (s96) into %stack.0 + 4, align 4, addrspace 5)
@@ -496,7 +496,7 @@ body:             |
     ; GFX942-LABEL: name: spill_v128_unaligned
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 4, align 4, addrspace 5)
@@ -504,7 +504,7 @@ body:             |
     ; GFX1200-LABEL: name: spill_v128_unaligned
     ; GFX1200: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX1200-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr1_vgpr2_vgpr3_vgpr4, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     ; GFX1200-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr5, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0 + 16, addrspace 5)
@@ -512,7 +512,7 @@ body:             |
     ; GFX1250-LABEL: name: spill_v128_unaligned
     ; GFX1250: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX1250-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 4, align 4, addrspace 5)
@@ -563,7 +563,7 @@ body:             |
     ; GFX942-LABEL: name: spill_v256_aligned
     ; GFX942: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
@@ -571,7 +571,7 @@ body:             |
     ; GFX12-LABEL: name: spill_v256_aligned
     ; GFX12: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX12-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     ; GFX12-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr4_vgpr5_vgpr6_vgpr7, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
@@ -622,7 +622,7 @@ body:             |
     ; GFX942-LABEL: name: spill_v256_unaligned
     ; GFX942: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; GFX942-NEXT: {{  $}}
-    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x36, 0x24, 0x36, 0xe9, 0x02
+    ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 6, 6
     ; GFX942-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX942-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX942-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 4, align 4, addrspace 5)
@@ -631,7 +631,7 @@ body:             |
     ; GFX1200-LABEL: name: spill_v256_unaligned
     ; GFX1200: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; GFX1200-NEXT: {{  $}}
-    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX1200-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX1200-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr1_vgpr2_vgpr3_vgpr4, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s128) into %stack.0, align 4, addrspace 5)
     ; GFX1200-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr5_vgpr6_vgpr7_vgpr8, $sgpr32, 16, 0, implicit $exec, implicit $flat_scr, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s128) into %stack.0 + 16, align 4, addrspace 5)
@@ -639,7 +639,7 @@ body:             |
     ; GFX1250-LABEL: name: spill_v256_unaligned
     ; GFX1250: liveins: $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; GFX1250-NEXT: {{  $}}
-    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION escape 0x0f, 0x09, 0x90, 0x40, 0x94, 0x04, 0x35, 0x24, 0x36, 0xe9, 0x02
+    ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_def_cfa_register_address_transform $sgpr32, 4, 5, 6
     ; GFX1250-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX1250-NEXT: SCRATCH_STORE_DWORD_SADDR $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr, implicit-def $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, implicit $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 :: ("amdgpu-thread-private" store (s32) into %stack.0, addrspace 5)
     ; GFX1250-NEXT: SCRATCH_STORE_DWORDX4_SADDR $vgpr2_vgpr3_vgpr4_vgpr5, $sgpr32, 4, 0, implicit $exec, implicit $flat_scr :: ("amdgpu-thread-private" store (s128) into %stack.0 + 4, align 4, addrspace 5)
