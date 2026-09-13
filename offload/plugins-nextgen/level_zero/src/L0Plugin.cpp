@@ -273,6 +273,31 @@ Error LevelZeroPluginContextTy::deinit() {
   return Plugin::success();
 }
 
+Expected<PluginAllocInfoTy>
+LevelZeroPluginContextTy::getAllocInfo(const void *Ptr) {
+  void *Raw = const_cast<void *>(Ptr);
+
+  // Try each device's device-scope allocator first, then the driver-scoped
+  // host pool via the first device's L0 context.
+  for (auto *D : Devices) {
+    auto &L0Device = static_cast<L0DeviceTy &>(*D);
+    if (auto *Info = L0Device.getDeviceMemAllocator().getAllocInfo(Raw))
+      return PluginAllocInfoTy{D, static_cast<TargetAllocTy>(Info->Kind),
+                               Info->Base, Info->ReqSize};
+  }
+
+  if (!Devices.empty()) {
+    auto &L0Device = static_cast<L0DeviceTy &>(*Devices.front());
+    auto &HostAlloc = L0Device.getL0Context().getHostMemAllocator();
+    if (auto *Info = HostAlloc.getAllocInfo(Raw))
+      return PluginAllocInfoTy{nullptr, static_cast<TargetAllocTy>(Info->Kind),
+                               Info->Base, Info->ReqSize};
+  }
+
+  return Plugin::error(error::ErrorCode::NOT_FOUND,
+                       "pointer is not a known allocation in this context");
+}
+
 Expected<std::unique_ptr<PluginContextTy>>
 LevelZeroPluginTy::createPluginContext(
     llvm::ArrayRef<GenericDeviceTy *> Devices) {
