@@ -436,9 +436,10 @@ private:
   bool optimizeFunnelShift(IntrinsicInst *Fsh);
   bool optimizeSelectInst(SelectInst *SI);
   bool optimizeShuffleVectorInst(ShuffleVectorInst *SVI);
+  bool optimizeSwitchOfCmpIntrinsic(SwitchInst *SI);
   bool optimizeSwitchType(SwitchInst *SI);
   bool optimizeSwitchPhiConstants(SwitchInst *SI);
-  bool optimizeSwitchInst(SwitchInst *SI);
+  bool optimizeSwitchInst(SwitchInst *SI, ModifyDT &ModifiedDT);
   bool optimizeExtractElementInst(Instruction *Inst);
   bool dupRetToEnableTailCallOpts(BasicBlock *BB, ModifyDT &ModifiedDT);
   bool fixupDbgVariableRecord(DbgVariableRecord &I);
@@ -8062,6 +8063,141 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
   return Changed;
 }
 
+/// Lower a switch that sends each result of a comparison intrinsic to a
+/// different block into two branches comparing the intrinsic's operands.
+bool CodeGenPrepare::optimizeSwitchOfCmpIntrinsic(SwitchInst *SI) {
+  auto *Cmp = dyn_cast<CmpIntrinsic>(SI->getCondition());
+  if (!Cmp || !Cmp->hasOneUse())
+    return false;
+
+  // Must have three real successors.
+  // If two switch cases require a default reachable block.
+  unsigned NumCases = SI->getNumCases();
+  if (NumCases + !SI->defaultDestUnreachable() != 3)
+    return false;
+
+  // Each result must go to a different block.
+  // Make the later PHI update simpler.
+  SmallPtrSet<BasicBlock *, 4> Succs(from_range, successors(SI));
+  if (Succs.size() != SI->getNumSuccessors())
+    return false;
+
+  BasicBlock *SwitchBB = SI->getParent();
+  BasicBlock *Default = SI->getDefaultDest();
+
+  // Each arm is one comparison result
+  struct Arm {
+    BasicBlock *Dest;
+    CmpInst::Predicate Pred;
+    BranchProbability Prob;
+    uint32_t Weight;
+  };
+  SmallVector<Arm, 3> Arms;
+  SmallVector<uint32_t, 4> Weights;
+  bool HasWeights =
+      extractBranchWeights(getValidBranchWeightMDNode(*SI), Weights);
+  Weights.resize(4);
+  bool ExpectedWeights = HasWeights && hasBranchWeightOrigin(*SI);
+  auto AddArm = [&](BasicBlock *Dest, int8_t Result, unsigned Index) {
+    CmpInst::Predicate Pred = Result < 0   ? Cmp->getLTPredicate()
+                              : Result > 0 ? Cmp->getGTPredicate()
+                                           : CmpInst::ICMP_EQ;
+    Arms.push_back(
+        {Dest, Pred, BPI->getEdgeProbability(SwitchBB, Index), Weights[Index]});
+  };
+
+  // The results -1, 0 and 1 sum to zero, so with two cases the default takes
+  // the negated sum of the case values.
+  int8_t Sum = 0;
+  for (auto &Case : SI->cases()) {
+    std::optional<int64_t> Val = Case.getCaseValue()->getValue().trySExtValue();
+    if (!Val || *Val < -1 || *Val > 1)
+      return false;
+    Sum += *Val;
+    AddArm(Case.getCaseSuccessor(), *Val, Case.getSuccessorIndex());
+  }
+
+  if (NumCases == 2)
+    AddArm(Default, -Sum, 0);
+
+  // Test the most likely arm first.
+  stable_sort(Arms, [](const Arm &A, const Arm &B) { return A.Prob > B.Prob; });
+
+  // Check if any BBs contain a loop backedge.
+  MDNode *LoopMD = SI->getMetadata(LLVMContext::MD_loop);
+  auto IsBackedge = [&](const Arm &A) {
+    Loop *L = LI->getLoopFor(A.Dest);
+    return L && L->getHeader() == A.Dest && L->contains(SwitchBB);
+  };
+
+  MDNode *Unpredictable = SI->getMetadata(LLVMContext::MD_unpredictable);
+
+  IRBuilder<> Builder(SI);
+  auto CreateCheck = [&](const Arm &A, BasicBlock *FalseDest,
+                         uint64_t FalseWeight, bool IsLatch) {
+    Value *Cond = Builder.CreateICmp(A.Pred, Cmp->getLHS(), Cmp->getRHS());
+    auto *Br =
+        Builder.CreateCondBr(Cond, A.Dest, FalseDest, nullptr, Unpredictable);
+    if (HasWeights)
+      setFittedBranchWeights(*Br, {A.Weight, FalseWeight}, ExpectedWeights);
+    if (IsLatch)
+      Br->setMetadata(LLVMContext::MD_loop, LoopMD);
+  };
+  BasicBlock *Next =
+      BasicBlock::Create(SwitchBB->getContext(), "cmp.next",
+                         SwitchBB->getParent(), SwitchBB->getNextNode());
+  // The first icmp branch to mostly likely successor.
+  // Other two go to new Next branch.
+  CreateCheck(Arms[0], Next, uint64_t(Arms[1].Weight) + Arms[2].Weight,
+              IsBackedge(Arms[0]));
+  Builder.SetInsertPoint(Next);
+  CreateCheck(Arms[1], Arms[2].Dest, Arms[2].Weight,
+              IsBackedge(Arms[1]) || IsBackedge(Arms[2]));
+
+  // With three cases the unreachable default is no longer a successor.
+  SmallVector<DominatorTree::UpdateType, 6> Updates = {
+      {DominatorTree::Insert, SwitchBB, Next}};
+  if (NumCases == 3) {
+    Default->removePredecessor(SwitchBB);
+    Updates.push_back({DominatorTree::Delete, SwitchBB, Default});
+  }
+
+  // The first arm keeps its edge from SwitchBB. The other two move to Next.
+  for (const Arm &A : drop_begin(Arms)) {
+    A.Dest->replacePhiUsesWith(SwitchBB, Next);
+    Updates.push_back({DominatorTree::Delete, SwitchBB, A.Dest});
+    Updates.push_back({DominatorTree::Insert, Next, A.Dest});
+  }
+  SI->eraseFromParent();
+  Cmp->eraseFromParent();
+  DTU->applyUpdates(Updates);
+
+  // Split the BPI probability over all branches, freqencies are unchanged.
+  SmallVector<BranchProbability, 3> Probs = {Arms[0].Prob, Arms[1].Prob,
+                                             Arms[2].Prob};
+  BranchProbability::normalizeProbabilities(Probs);
+  BranchProbability RestProb = Probs[0].getCompl();
+  BPI->setEdgeProbability(SwitchBB, {Probs[0], RestProb});
+  SmallVector<BranchProbability, 2> NextProbs = {Probs[1], Probs[2]};
+  BranchProbability::normalizeProbabilities(NextProbs);
+  BPI->setEdgeProbability(Next, NextProbs);
+  BFI->setBlockFreq(Next, BFI->getBlockFreq(SwitchBB) * RestProb);
+
+  // Next belongs to the innermost loop that contains SwitchBB and at least one
+  // of Next's successors. If both successors leave SwitchBB's loop, Next is an
+  // exiting path and sits outside it.
+  Loop *L = LI->getLoopFor(SwitchBB);
+  while (L && !L->contains(Arms[1].Dest) && !L->contains(Arms[2].Dest))
+    L = L->getParentLoop();
+  if (L)
+    L->addBasicBlockToLoop(Next, *LI);
+
+  // Next BB to explore
+  if (IsHugeFunc)
+    FreshBBs.insert(Next);
+  return true;
+}
+
 bool CodeGenPrepare::optimizeSwitchType(SwitchInst *SI) {
   Value *Cond = SI->getCondition();
   Type *OldType = Cond->getType();
@@ -8190,7 +8326,12 @@ bool CodeGenPrepare::optimizeSwitchPhiConstants(SwitchInst *SI) {
   return Changed;
 }
 
-bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI) {
+bool CodeGenPrepare::optimizeSwitchInst(SwitchInst *SI, ModifyDT &ModifiedDT) {
+  // Lower a comparison switch before optimizeSwitchType widens its condition.
+  if (optimizeSwitchOfCmpIntrinsic(SI)) {
+    ModifiedDT = ModifyDT::ModifyBBDT;
+    return true;
+  }
   bool Changed = optimizeSwitchType(SI);
   Changed |= optimizeSwitchPhiConstants(SI);
   return Changed;
@@ -9125,7 +9266,7 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
   case Instruction::ShuffleVector:
     return optimizeShuffleVectorInst(cast<ShuffleVectorInst>(I));
   case Instruction::Switch:
-    return optimizeSwitchInst(cast<SwitchInst>(I));
+    return optimizeSwitchInst(cast<SwitchInst>(I), ModifiedDT);
   case Instruction::ExtractElement:
     return optimizeExtractElementInst(cast<ExtractElementInst>(I));
   case Instruction::CondBr:
@@ -9167,7 +9308,7 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
     while (CurInstIterator != BB.end()) {
       MadeChange |= optimizeInst(&*CurInstIterator++, ModifiedDT);
       if (ModifiedDT != ModifyDT::NotModifyDT) {
-        // For huge function we tend to quickly go though the inner optmization
+        // For huge function we tend to quickly go though the inner optimization
         // opportunities in the BB. So we go back to the BB head to re-optimize
         // each instruction instead of go back to the function head.
         if (IsHugeFunc)
