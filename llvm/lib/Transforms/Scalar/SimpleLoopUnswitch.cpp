@@ -256,11 +256,13 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
   }
 }
 
-/// Check that all the LCSSA PHI nodes in the loop exit block have trivial
-/// incoming values along this edge.
+/// Check that all the LCSSA PHI nodes in \p ExitBB have trivial incoming values
+/// along the edge from \p ExitingBB, i.e. values that are still correct if the
+/// loop is not entered.
 ///
-/// If \p UsedHeaderPHI is non-null, an incoming value that is a PHI in the
-/// loop header is accepted too. *UsedHeaderPHI is set to true if that happens.
+/// Only loop invariant values are trivial by default. If \p UsedHeaderPHI is
+/// non-null, a PHI in the loop header counts as trivial too, and
+/// *UsedHeaderPHI is set to true when one is found.
 static bool areLoopExitPHIsTrivial(const Loop &L, const BasicBlock &ExitingBB,
                                    const BasicBlock &ExitBB,
                                    bool *UsedHeaderPHI = nullptr) {
