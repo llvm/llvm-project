@@ -264,6 +264,7 @@ class CXXRecordDecl : public RecordDecl {
   friend class ASTRecordWriter;
   friend class ASTWriter;
   friend class DeclContext;
+  friend class IncrementalParser;
   friend class LambdaExpr;
   friend class ODRDiagsEmitter;
 
