@@ -1,4 +1,7 @@
-; RUN: llc < %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-windows -aarch64-min-jump-table-entries=4 -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
+; Disable the SimplifyCFG run in the AArch64 codegen pipeline, which would
+; otherwise turn this switch into a lookup table and leave no jump table targets
+; for the BTI landing pads below.
 
 define dso_local i32 @func(i32 %in) "sign-return-address"="non-leaf" "sign-return-address-key"="b_key" "branch-target-enforcement" {
 entry:

@@ -1,5 +1,7 @@
-; RUN: llc -mtriple=arm64-apple-ios -aarch64-min-jump-table-entries=4 < %s | FileCheck %s
-; RUN: llc -mtriple=arm64-linux-gnu -aarch64-min-jump-table-entries=4 < %s | FileCheck %s --check-prefix=CHECK-LINUX
+; RUN: llc -mtriple=arm64-apple-ios -aarch64-min-jump-table-entries=4 -aarch64-enable-atomic-cfg-tidy=0 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-linux-gnu -aarch64-min-jump-table-entries=4 -aarch64-enable-atomic-cfg-tidy=0 < %s | FileCheck %s --check-prefix=CHECK-LINUX
+; Disable the SimplifyCFG run in the AArch64 codegen pipeline, which would
+; otherwise turn this switch into a lookup table and leave no jump table to test.
 ; <rdar://11417675>
 
 define void @sum(i32 %a, ptr %to, i32 %c) {
