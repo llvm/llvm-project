@@ -189,7 +189,7 @@ LOCAL_LABEL(divby0):
 #      if defined(__ARM_EABI__)
 	push {r7, lr}
 	bl	__aeabi_idiv0 // due to relocation limit, can't use b.
-	pop  {r7, pc}
+	POP_PC_WITH_REGS(r7)
 #      else
 	JMP(lr)
 #      endif

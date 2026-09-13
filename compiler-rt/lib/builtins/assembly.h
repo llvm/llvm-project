@@ -203,14 +203,20 @@
 #define JMPc(r, c) mov##c pc, r
 #endif
 
-// pop {pc} can't switch Thumb mode on ARMv4T
+// clang-format off
+// ARMv4T ARM returns need BX to interwork with Thumb callers.
 #if __ARM_ARCH >= 5
 #define POP_PC() pop {pc}
+#define POP_PC_WITH_REGS(...) pop {__VA_ARGS__, pc}
 #else
 #define POP_PC()                                                               \
   pop {ip};                                                                    \
   JMP(ip)
+#define POP_PC_WITH_REGS(...)                                                  \
+  pop {__VA_ARGS__, ip};                                                       \
+  JMP(ip)
 #endif
+// clang-format on
 
 #if defined(USE_THUMB_2)
 #define WIDE(op) op.w

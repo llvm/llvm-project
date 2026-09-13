@@ -1,5 +1,8 @@
-// REQUIRES: arm-target-arch || armv6m-target-arch
+// REQUIRES: arm-target-arch || armv4t-target-arch || armv6m-target-arch
 // RUN: %clang_builtins %s %librt -o %t && %run %t
+// RUN: %if !armv6m-target-arch %{ \
+// RUN:   %clang_builtins -mthumb %s %librt -o %t.thumb && %run %t.thumb \
+// RUN: %}
 
 #include "int_lib.h"
 #include <stdio.h>
