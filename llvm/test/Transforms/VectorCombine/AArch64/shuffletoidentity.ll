@@ -1421,3 +1421,76 @@ define <16 x i8> @bitcast_narrow4_widen4_add(<16 x i8> %a, <16 x i8> %b) {
   %result = shufflevector <8 x i8> %bc_lo, <8 x i8> %bc_hi, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   ret <16 x i8> %result
 }
+
+define <8 x half> @splat_and_identity_commuted(<8 x half> %a) {
+; CHECK-LABEL: @splat_and_identity_commuted(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x half> [[A:%.*]], <8 x half> poison, <8 x i32> zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[TMP1]], [[A]]
+; CHECK-NEXT:    ret <8 x half> [[R]]
+;
+  %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %bs = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> zeroinitializer
+  %abt = fadd <4 x half> %at, %bs
+  %abb = fadd <4 x half> %bs, %ab
+  %r = shufflevector <4 x half> %abt, <4 x half> %abb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x half> %r
+}
+
+define <8 x half> @fadd_commuted(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: @fadd_commuted(
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <8 x half> [[R]]
+;
+  %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %at = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %bb = shufflevector <8 x half> %b, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %bt = shufflevector <8 x half> %b, <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %xb = fadd <4 x half> %ab, %bb
+  %xt = fadd <4 x half> %bt, %at
+  %r = shufflevector <4 x half> %xb, <4 x half> %xt, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %r
+}
+
+define <8 x i8> @constantsplat_commuted(<8 x i8> %a) {
+; CHECK-LABEL: @constantsplat_commuted(
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[A:%.*]], splat (i8 10)
+; CHECK-NEXT:    ret <8 x i8> [[R]]
+;
+  %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %xb = add <4 x i8> %ab, <i8 10, i8 10, i8 10, i8 10>
+  %xt = add <4 x i8> <i8 10, i8 10, i8 10, i8 10>, %at
+  %r = shufflevector <4 x i8> %xb, <4 x i8> %xt, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i8> %r
+}
+
+define <8 x i8> @undeflane_commuted(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: @undeflane_commuted(
+; CHECK-NEXT:    [[R:%.*]] = add <8 x i8> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret <8 x i8> [[R]]
+;
+  %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %bb = shufflevector <8 x i8> %b, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %bt = shufflevector <8 x i8> %b, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>
+  %abt = add <4 x i8> %at, %bt
+  %abb = add <4 x i8> %bb, %ab
+  %r = shufflevector <4 x i8> %abt, <4 x i8> %abb, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 poison, i32 1, i32 0>
+  ret <8 x i8> %r
+}
+
+define <8 x half> @commuted_poison_operand(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: @commuted_poison_operand(
+; CHECK-NEXT:    [[R:%.*]] = fadd <8 x half> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <8 x half> [[R]]
+;
+  %ab = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %at = shufflevector <8 x half> %a, <8 x half> poison, <4 x i32> <i32 4, i32 poison, i32 6, i32 7>
+  %bb = shufflevector <8 x half> %b, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %bt = shufflevector <8 x half> %b, <8 x half> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %xb = fadd <4 x half> %ab, %bb
+  %xt = fadd <4 x half> %bt, %at
+  %r = shufflevector <4 x half> %xb, <4 x half> %xt, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x half> %r
+}
