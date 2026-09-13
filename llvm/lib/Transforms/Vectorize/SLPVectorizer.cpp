@@ -6167,10 +6167,16 @@ BoUpSLP::LoadsState BoUpSLP::canVectorizeLoads(
     if (!IsMaskedGatherLegal())
       return LoadsState::Gather;
 
-    if (!all_of(PointerOps, [&](Value *P) {
-          return arePointersCompatible(P, PointerOps.front(), *TLI,
-                                       RecursionMaxDepth);
-        }))
+    // The gather address vector requires pointers of the same type.
+    Value *FrontPtr = PointerOps.front();
+    Type *PtrTy = FrontPtr->getType();
+    if (!all_of(PointerOps,
+                [&](Value *P) {
+                  return P->getType() == PtrTy &&
+                         arePointersCompatible(P, FrontPtr, *TLI,
+                                               RecursionMaxDepth);
+                }) &&
+        !isCopyableGEPAddressVector(PointerOps))
       return LoadsState::Gather;
 
   } else {
@@ -9467,7 +9473,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
   case Instruction::BitCast: {
     Type *SrcTy = VL0->getOperand(0)->getType();
     for (Value *V : VL) {
-      if (isa<PoisonValue>(V))
+      if (isa<PoisonValue>(V) || S.isCopyableElement(V))
         continue;
       Type *Ty = cast<Instruction>(V)->getOperand(0)->getType();
       if (Ty != SrcTy || !isValidElementType(Ty, SLPReVec)) {
@@ -9543,12 +9549,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       return TreeEntry::NeedToGather;
     return TreeEntry::Vectorize;
   case Instruction::GetElementPtr: {
+    auto IsMatchingGEPLane = [&](Value *V) {
+      return isa<GetElementPtrInst>(V) && !S.isCopyableElement(V);
+    };
     // We don't combine GEPs with complicated (nested) indexing.
     for (Value *V : VL) {
-      auto *I = dyn_cast<GetElementPtrInst>(V);
-      if (!I)
+      if (!IsMatchingGEPLane(V))
         continue;
-      if (I->getNumOperands() != 2) {
+      if (cast<GetElementPtrInst>(V)->getNumOperands() != 2) {
         LLVM_DEBUG(dbgs() << "SLP: not-vectorizable GEP (nested indexes).\n");
         return TreeEntry::NeedToGather;
       }
@@ -9559,7 +9567,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     Type *Ty0 = cast<GEPOperator>(VL0)->getSourceElementType();
     for (Value *V : VL) {
       auto *GEP = dyn_cast<GEPOperator>(V);
-      if (!GEP)
+      if (!GEP || S.isCopyableElement(V))
         continue;
       Type *CurTy = GEP->getSourceElementType();
       if (Ty0 != CurTy) {
@@ -9571,20 +9579,24 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     // We don't combine GEPs with non-constant indexes.
     Type *Ty1 = VL0->getOperand(1)->getType();
     for (Value *V : VL) {
-      auto *I = dyn_cast<GetElementPtrInst>(V);
-      if (!I)
+      if (!IsMatchingGEPLane(V))
         continue;
-      auto *Op = I->getOperand(1);
+      auto *Op = cast<GetElementPtrInst>(V)->getOperand(1);
       if ((!IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
           (Op->getType() != Ty1 &&
-           ((IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
-            Op->getType()->getScalarSizeInBits() >
-                DL->getIndexSizeInBits(
-                    V->getType()->getPointerAddressSpace())))) {
+           Op->getType()->getScalarSizeInBits() >
+               DL->getIndexSizeInBits(
+                   V->getType()->getPointerAddressSpace()))) {
         LLVM_DEBUG(
             dbgs() << "SLP: not-vectorizable GEP (non-constant indexes).\n");
         return TreeEntry::NeedToGather;
       }
+    }
+    // The indices must be representable in a single type, the operands
+    // builder casts the constants to it.
+    if (!getCommonGEPIndexType(VL, VL0, IsMatchingGEPLane, *DL)) {
+      LLVM_DEBUG(dbgs() << "SLP: not-vectorizable GEP (mixed index types).\n");
+      return TreeEntry::NeedToGather;
     }
 
     return TreeEntry::Vectorize;
@@ -10349,12 +10361,19 @@ class InstructionsCompatibilityAnalysis {
   /// call with a well-defined idempotent value (FP min/max lacks one because of
   /// NaNs). An extractelement with constant index from a fixed vector is also
   /// supported: the matching lanes reuse the source vector and the copyable
-  /// lanes are inserted into it.
+  /// lanes are inserted into it. A single-index scalar GEP is supported: the
+  /// copyable lanes are modeled as zero-index GEPs of the lane values
+  /// themselves. A scalar zext is supported: the copyable lanes are constants
+  /// modeled as zexts of truncated constants.
   static bool isSupportedMainOp(Instruction *I) {
     return isSupportedOpcode(I->getOpcode()) || isa<MinMaxIntrinsic>(I) ||
            RecurrenceDescriptor::isFMulAddIntrinsic(I) ||
            (isa<ExtractElementInst>(I) && isVectorLikeInstWithConstOps(I) &&
-            isa<FixedVectorType>(I->getOperand(0)->getType()));
+            isa<FixedVectorType>(I->getOperand(0)->getType())) ||
+           (isa<GetElementPtrInst>(I) && I->getNumOperands() == 2 &&
+            !I->getType()->isVectorTy()) ||
+           (isa<ZExtInst>(I) && !I->getType()->isVectorTy() &&
+            !isa<Constant>(I->getOperand(0)));
   }
 
   /// Identifies the best candidate value, which represents main opcode
@@ -10456,6 +10475,31 @@ class InstructionsCompatibilityAnalysis {
           continue;
       }
       UsedOutside = PUsedOutside;
+      if (P.first == Instruction::GetElementPtr) {
+        // Only the GEPs of the main op shape (source element type and index
+        // type) are matching lanes, the others are copyable. Select the most
+        // frequent shape to minimize the number of copyable lanes.
+        SmallDenseMap<std::pair<Type *, Type *>, unsigned, 4> ShapeCounts;
+        auto GetShape = [](Instruction *I) {
+          return std::make_pair(cast<GEPOperator>(I)->getSourceElementType(),
+                                I->getOperand(1)->getType());
+        };
+        for (Instruction *I : P.second)
+          if (IsSupportedInstruction(I, AnyUndef))
+            ++ShapeCounts[GetShape(I)];
+        unsigned BestShapeNum = 0;
+        for (Instruction *I : P.second) {
+          if (!IsSupportedInstruction(I, AnyUndef))
+            continue;
+          unsigned ShapeNum = ShapeCounts.lookup(GetShape(I));
+          if (ShapeNum > BestShapeNum) {
+            MainOp = I;
+            BestOpcodeNum = P.second.size();
+            BestShapeNum = ShapeNum;
+          }
+        }
+        continue;
+      }
       for (Instruction *I : P.second) {
         if (IsSupportedInstruction(I, AnyUndef)) {
           MainOp = I;
@@ -10496,8 +10540,19 @@ class InstructionsCompatibilityAnalysis {
   /// op(V, identity).
   SmallVector<Value *> getOperands(const InstructionsState &S, Value *V,
                                    bool SelfOp) const {
-    if (isa<PoisonValue>(V) || SelfOp)
+    if (SelfOp)
       return {V, V};
+    if (isa<PoisonValue>(V)) {
+      // Poison operands of the main op operand types: a GEP index or a cast
+      // source has a type, different from the lane type. Excludes the
+      // trailing callee operand of a call.
+      auto *CI = dyn_cast<CallInst>(MainOp);
+      return map_to_vector(
+          seq<unsigned>(CI ? CI->arg_size() : MainOp->getNumOperands()),
+          [&](unsigned Idx) -> Value * {
+            return PoisonValue::get(MainOp->getOperand(Idx)->getType());
+          });
+    }
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp)) {
@@ -10518,6 +10573,13 @@ class InstructionsCompatibilityAnalysis {
       // fmuladd(0.0, -0.0, V) == V.
       return {ConstantFP::getZero(Ty), ConstantFP::getNegativeZero(Ty), V};
     }
+    // gep V, 0 == V.
+    if (MainOpcode == Instruction::GetElementPtr)
+      return {V, ConstantInt::get(MainOp->getOperand(1)->getType(), 0)};
+    // zext(trunc(V)) == V for the round-trippable constant lanes.
+    if (MainOpcode == Instruction::ZExt)
+      return {ConstantExpr::getTrunc(cast<Constant>(V),
+                                     cast<CastInst>(MainOp)->getSrcTy())};
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     return {V, selectBestIdempotentValue()};
   }
@@ -10574,6 +10636,36 @@ class InstructionsCompatibilityAnalysis {
         SelfOpLanes.insert(V);
     }
     return SelfOpLanes;
+  }
+
+  /// Builds the index operands of a GEP node with the main op \p VL0. The
+  /// indices of the matching GEP lanes (for which \p IsGEPLane returns true)
+  /// are cast to the common index type, all other lanes (non-GEP pointers,
+  /// copyable and poison lanes, modeled as gep V, 0) get a zero index of that
+  /// type. Required to be able to find correct matches between different
+  /// gather nodes and reuse the vectorized values rather than trying to
+  /// gather them again. The vectorized nodes always have the common index
+  /// type (a legality invariant); the operands built for the profitability
+  /// analysis before that check may have none, the constants are cast to the
+  /// pointer index type then.
+  void buildGEPIndexOperands(ArrayRef<Value *> VL, Instruction *VL0,
+                             function_ref<bool(Value *)> IsGEPLane,
+                             BoUpSLP::ValueList &Indices) const {
+    constexpr unsigned IndexIdx = 1;
+    Type *Ty = getCommonGEPIndexType(VL, VL0, IsGEPLane, DL);
+    if (!Ty)
+      Ty = DL.getIndexType(VL0->getOperand(0)->getType()->getScalarType());
+    for (auto [Idx, V] : enumerate(VL)) {
+      if (!IsGEPLane(V)) {
+        Indices[Idx] = ConstantInt::getNullValue(Ty);
+        continue;
+      }
+      auto *Op = cast<GetElementPtrInst>(V)->getOperand(IndexIdx);
+      auto *CI = dyn_cast<ConstantInt>(Op);
+      Indices[Idx] = CI ? ConstantFoldIntegerCast(
+                              CI, Ty, CI->getValue().isSignBitSet(), DL)
+                        : Op;
+    }
   }
 
   /// Builds operands for the original instructions.
@@ -10709,37 +10801,11 @@ class InstructionsCompatibilityAnalysis {
       return;
     case Instruction::GetElementPtr: {
       Operands.assign(2, {VL.size(), nullptr});
-      // Need to cast all indices to the same type before vectorization to
-      // avoid crash.
-      // Required to be able to find correct matches between different gather
-      // nodes and reuse the vectorized values rather than trying to gather them
-      // again.
-      const unsigned IndexIdx = 1;
-      Type *VL0Ty = VL0->getOperand(IndexIdx)->getType();
-      Type *Ty =
-          all_of(VL,
-                 [&](Value *V) {
-                   auto *GEP = dyn_cast<GetElementPtrInst>(V);
-                   return !GEP || VL0Ty == GEP->getOperand(IndexIdx)->getType();
-                 })
-              ? VL0Ty
-              : DL.getIndexType(cast<GetElementPtrInst>(VL0)
-                                    ->getPointerOperandType()
-                                    ->getScalarType());
       for (auto [Idx, V] : enumerate(VL)) {
         auto *GEP = dyn_cast<GetElementPtrInst>(V);
-        if (!GEP) {
-          Operands[0][Idx] = V;
-          Operands[1][Idx] = ConstantInt::getNullValue(Ty);
-          continue;
-        }
-        Operands[0][Idx] = GEP->getPointerOperand();
-        auto *Op = GEP->getOperand(IndexIdx);
-        auto *CI = dyn_cast<ConstantInt>(Op);
-        Operands[1][Idx] = CI ? ConstantFoldIntegerCast(
-                                    CI, Ty, CI->getValue().isSignBitSet(), DL)
-                              : Op;
+        Operands[0][Idx] = GEP ? GEP->getPointerOperand() : V;
       }
+      buildGEPIndexOperands(VL, VL0, IsaPred<GetElementPtrInst>, Operands[1]);
       return;
     }
     case Instruction::Call: {
@@ -11023,6 +11089,16 @@ public:
       return S;
     InstructionsState OrigS = S;
     S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+    // Cast nodes support only matching lanes from the main op block and
+    // copyable (round-trippable constant) lanes.
+    if (isa<CastInst>(MainOp) && any_of(VL, [&](Value *V) {
+          auto *I = dyn_cast<Instruction>(V);
+          return !isa<PoisonValue>(V) &&
+                 !(I && I->getOpcode() == MainOpcode &&
+                   I->getParent() == MainOp->getParent()) &&
+                 !S.isCopyableElement(V);
+        }))
+      return OrigS;
     if (OrigS && !isCopyablePreferable(VL, R, OrigS, S))
       return OrigS;
     if (!WithProfitabilityCheck)
@@ -11042,6 +11118,16 @@ public:
     // Check if it is profitable to vectorize the instruction.
     unsigned CopyableNum =
         count_if(VL, [&](Value *V) { return S.isCopyableElement(V); });
+    // A cast copyable node just extends the sources of the matching lanes:
+    // the constant lanes are free in a gather of the original values, so it
+    // cannot be better unless the matching lanes are the majority and are not
+    // vectorized already (the gather reuses the vector otherwise).
+    if (isa<CastInst>(MainOp) &&
+        (CopyableNum * 2 >= VL.size() || none_of(VL, [&](Value *V) {
+           return !S.isCopyableElement(V) && !isa<PoisonValue>(V) &&
+                  !R.isVectorized(V);
+         })))
+      return OrigS;
     // Absorb copyable single-use fmuls/fadds as fmuladd(a, b, -0.0) or
     // fmuladd(1.0, a, b) when every copyable is such a binop: the binops die
     // instead of being computed and gathered.
@@ -11049,6 +11135,44 @@ public:
         AbsorbCopyableFMulOrFAdds)
       S.setAbsorbCopyableFMulOrFAdd(true);
     SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL, R);
+    auto CheckOperand = [&](ArrayRef<Value *> Ops) {
+      if (allConstant(Ops) || isSplat(Ops))
+        return true;
+      // Non-instruction operands of a call (args, constants) are always a
+      // trivial gather, same as the constant/splat cases above.
+      if (MainOpcode == Instruction::Call && none_of(Ops, IsaPred<Instruction>))
+        return true;
+      // Check if it is "almost" splat, i.e. has >= 4 elements and only single
+      // one is different.
+      constexpr unsigned Limit = 4;
+      if (Operands.front().size() >= Limit) {
+        SmallDenseMap<const Value *, unsigned> Counters;
+        for (Value *V : Ops) {
+          if (isa<UndefValue>(V))
+            continue;
+          ++Counters[V];
+        }
+        if (Counters.size() == 2 &&
+            any_of(Counters, [&](const auto &C) { return C.second == 1; }))
+          return true;
+      }
+      // First operand not a constant or splat? Last attempt - check for
+      // potential vectorization.
+      InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
+      InstructionsState OpS = Analysis.buildInstructionsState(Ops, R);
+      if (!OpS || (OpS.getOpcode() == Instruction::PHI && !allSameBlock(Ops)))
+        return false;
+      unsigned CopyableNum =
+          count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
+      return CopyableNum <= VL.size() / 2;
+    };
+    // A copyable GEP node is a vector GEP over the base pointers of the
+    // matching lanes and the values of the copyable lanes. It is profitable
+    // only if that base vector is cheap (a splat, constants or vectorizable),
+    // otherwise it is a gather not cheaper than the gather of the pointers.
+    if (MainOpcode == Instruction::GetElementPtr &&
+        !CheckOperand(Operands.front()))
+      return OrigS;
     auto BuildCandidates =
         [](SmallVectorImpl<std::pair<Value *, Value *>> &Candidates, Value *V1,
            Value *V2) {
@@ -11062,9 +11186,11 @@ public:
           Candidates.emplace_back(V1, (I1 || I2) ? V2 : V1);
         };
     if (VL.size() == 2) {
-      // The operand-pairing heuristic below does not apply to calls; defer
-      // to the full tree cost computation instead of pre-rejecting here.
-      if (MainOpcode == Instruction::Call)
+      // The operand-pairing heuristic below does not apply to calls, GEPs
+      // and casts; defer to the full tree cost computation instead of
+      // pre-rejecting here.
+      if (MainOpcode == Instruction::Call ||
+          MainOpcode == Instruction::GetElementPtr || isa<CastInst>(MainOp))
         return S;
       // Check if the operands allow better vectorization.
       SmallVector<std::pair<Value *, Value *>, 4> Candidates1, Candidates2;
@@ -11114,8 +11240,10 @@ public:
         return OrigS;
       return S;
     }
-    // fmuladd is the only 3-operand copyable.
+    // Casts are the only 1-operand and fmuladd is the only 3-operand
+    // copyable.
     assert((Operands.size() == 2 ||
+            (Operands.size() == 1 && isa<CastInst>(MainOp)) ||
             (Operands.size() == 3 &&
              RecurrenceDescriptor::isFMulAddIntrinsic(MainOp))) &&
            "Unexpected number of operands!");
@@ -11171,37 +11299,6 @@ public:
     if (Operands.size() == 2 &&
         count_if(Operands.back(), IsaPred<Instruction>) > 1)
       return OrigS;
-    auto CheckOperand = [&](ArrayRef<Value *> Ops) {
-      if (allConstant(Ops) || isSplat(Ops))
-        return true;
-      // Non-instruction operands of a call (args, constants) are always a
-      // trivial gather, same as the constant/splat cases above.
-      if (MainOpcode == Instruction::Call && none_of(Ops, IsaPred<Instruction>))
-        return true;
-      // Check if it is "almost" splat, i.e. has >= 4 elements and only single
-      // one is different.
-      constexpr unsigned Limit = 4;
-      if (Operands.front().size() >= Limit) {
-        SmallDenseMap<const Value *, unsigned> Counters;
-        for (Value *V : Ops) {
-          if (isa<UndefValue>(V))
-            continue;
-          ++Counters[V];
-        }
-        if (Counters.size() == 2 &&
-            any_of(Counters, [&](const auto &C) { return C.second == 1; }))
-          return true;
-      }
-      // First operand not a constant or splat? Last attempt - check for
-      // potential vectorization.
-      InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
-      InstructionsState OpS = Analysis.buildInstructionsState(Ops, R);
-      if (!OpS || (OpS.getOpcode() == Instruction::PHI && !allSameBlock(Ops)))
-        return false;
-      unsigned CopyableNum =
-          count_if(Ops, [&](Value *V) { return OpS.isCopyableElement(V); });
-      return CopyableNum <= VL.size() / 2;
-    };
     // Check the operand holding the copyable values.
     if (!CheckOperand(Operands[S.getCopyableOpIdx()])) {
       if (Operands.size() == 2)
@@ -11250,6 +11347,15 @@ public:
         for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
           Operands[OperandIdx][Idx] = Operand;
       }
+      // The copyable lanes of a GEP node are gep V, 0; cast the indices of
+      // the matching lanes and the zeroes to the common index type.
+      if (MainOpcode == Instruction::GetElementPtr)
+        buildGEPIndexOperands(
+            VL, MainOp,
+            [&](Value *V) {
+              return isa<GetElementPtrInst>(V) && !S.isCopyableElement(V);
+            },
+            Operands[1]);
       // Operand-order normalization below swaps OpIdx 0 and OpIdx 1
       // of non-copyable lanes. That is only safe when the main op is
       // commutative (e.g. 0 - X is not X - 0, so `sub` must be
@@ -34448,6 +34554,16 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
       InstructionsState S = Analysis.buildInstructionsState(
           NewVL, R, /*WithProfitabilityCheck=*/true,
           /*SkipSameCodeCheck=*/!SameParent);
+      // A copyable GEP node with non-constant indices is vectorizable only as
+      // the address vector of a masked gather, not as a stored value.
+      if (S && S.getOpcode() == Instruction::GetElementPtr &&
+          S.areInstructionsWithCopyableElements() &&
+          any_of(NewVL, [&](Value *V) {
+            auto *GEP = dyn_cast<GetElementPtrInst>(V);
+            return GEP && !S.isCopyableElement(V) &&
+                   !isa<ConstantInt>(GEP->getOperand(1));
+          }))
+        return false;
       if (S)
         return true;
       if (!SameParent)

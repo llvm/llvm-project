@@ -334,6 +334,39 @@ bool isSelectedBaseLoad(Type *ScalarTy, ArrayRef<Value *> PointerOps,
                         Value *&FalseBase,
                         SmallVectorImpl<Value *> &Conditions);
 
+/// Returns the common type for the indices of the single-index GEP lanes of
+/// a GEP node with the main op \p VL0, or nullptr if no such type exists.
+/// \p IsGEPLane tells which lanes of \p VL are matching GEPs, whose index is
+/// used as is; all other lanes (copyable, poison, non-GEP pointers) are
+/// modeled as gep V, 0 and just take a zero index of the common type.
+/// The common type is the index type of \p VL0 if all matching lanes share
+/// it. Otherwise the constant indices are cast: to the pointer index type if
+/// there are no non-constant indices (or the index type of \p VL0 already is
+/// the pointer index type), or to the index type of \p VL0 if all the
+/// non-constant indices have that type and all the constants are
+/// representable in it (GEP indices are sign-extended to the pointer index
+/// width, so the value must fit as a signed number). A non-constant index of
+/// a different type cannot be cast without a new instruction, so no common
+/// type exists.
+Type *getCommonGEPIndexType(ArrayRef<Value *> VL, Instruction *VL0,
+                            function_ref<bool(Value *)> IsGEPLane,
+                            const DataLayout &DL);
+
+/// Checks if the pointers \p PointerOps of the gathered loads, which are not
+/// compatible in the usual sense (some of them are constant-offset pointers,
+/// some have runtime indices), still form a cheap address vector as a
+/// copyable GEP node: a splat of the common base and a vector of indices.
+/// The constant-offset lanes are the base itself or single-index GEPs of the
+/// base with a constant index (modeled as gep V, 0 or as matching lanes with
+/// constant indices), the other lanes are single-index GEPs of the base of
+/// the same shape, whose indices are affine in a single runtime value (the
+/// stride): optionally cast (all with the same cast opcode) values, each of
+/// which is the stride itself or a binary operation of the stride and a
+/// constant, like b[i * S] or b[S + i]. Duplicate lanes are not accepted:
+/// the node would be a shuffled non-full vector, gathering the loads is
+/// cheaper then.
+bool isCopyableGEPAddressVector(ArrayRef<Value *> PointerOps);
+
 /// Shuffles \p Mask in accordance with the given \p SubMask.
 /// \param ExtendingManyInputs Supports reshuffling of the mask with not only
 /// one but two input vectors.

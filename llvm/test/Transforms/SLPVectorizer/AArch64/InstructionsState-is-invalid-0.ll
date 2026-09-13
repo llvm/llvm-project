@@ -7,20 +7,13 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @foo(ptr %0) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  vector.scevcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], i64 4
-; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr null, i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> [[TMP1]], ptr [[SCEVGEP]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x ptr> [[TMP2]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult <4 x ptr> [[TMP3]], splat (ptr null)
-; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i1> [[TMP4]], zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x ptr> [[TMP6]], ptr [[SCEVGEP3]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x ptr> [[TMP7]], <4 x ptr> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult <4 x ptr> [[TMP8]], splat (ptr null)
-; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i1> [[TMP9]], zeroinitializer
-; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i1> [[TMP5]], [[TMP10]]
-; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[RDX_OP]])
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x ptr> <ptr poison, ptr null, ptr poison>, ptr [[TMP0:%.*]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x ptr> [[TMP1]], <3 x ptr> poison, <3 x i32> <i32 0, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, <3 x ptr> [[TMP2]], <3 x i64> <i64 4, i64 0, i64 4>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <3 x ptr> [[TMP3]], <3 x ptr> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <8 x ptr> [[TMP4]], splat (ptr null)
+; CHECK-NEXT:    [[TMP6:%.*]] = and <8 x i1> [[TMP5]], zeroinitializer
+; CHECK-NEXT:    [[OP_RDX:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP6]])
 ; CHECK-NEXT:    br i1 [[OP_RDX]], label [[DOTLR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    ret void
