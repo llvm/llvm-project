@@ -64,6 +64,7 @@ private:
       SmallVectorImpl<MachineOperand *> *KillFlagCandidates = nullptr,
       unsigned MaxInstructions = 20) const;
   bool optimizeExecSequence();
+  bool blocksAndN2Sink(const MachineInstr &MI, Register Dst) const;
   bool optimizeAndN2WrExecSequence(MachineInstr &CopyToExecInst,
                                    Register Dst) const;
   void tryRecordVCmpxAndSaveexecSequence(MachineInstr &MI);
@@ -608,6 +609,20 @@ bool SIOptimizeExecMasking::optimizeExecSequence() {
   return Changed;
 }
 
+bool SIOptimizeExecMasking::blocksAndN2Sink(const MachineInstr &MI,
+                                            Register Dst) const {
+  for (const MachineOperand &MO : MI.operands()) {
+    if (!MO.isReg())
+      continue;
+    if (TRI->regsOverlap(MO.getReg(), Dst))
+      return true;
+    if (MO.isUse() ? TRI->regsOverlap(MO.getReg(), AMDGPU::SCC)
+                   : TRI->regsOverlap(MO.getReg(), LMC.ExecReg))
+      return true;
+  }
+  return false;
+}
+
 // Fold
 //
 //     sdst = S_ANDN2_B32 ssrc, exec
@@ -648,23 +663,7 @@ bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
       AndN2Inst = &MI;
       break;
     }
-    bool ReadsDst = false, ModifiesDst = false, ModifiesExec = false,
-         ReadsSCC = false;
-    for (const MachineOperand &MO : MI.operands()) {
-      if (!MO.isReg())
-        continue;
-      if (TRI->regsOverlap(MO.getReg(), Dst)) {
-        if (MO.isUse())
-          ReadsDst = true;
-        else
-          ModifiesDst = true;
-      }
-      if (!MO.isUse() && TRI->regsOverlap(MO.getReg(), LMC.ExecReg))
-        ModifiesExec = true;
-      if (MO.isUse() && TRI->regsOverlap(MO.getReg(), AMDGPU::SCC))
-        ReadsSCC = true;
-    }
-    if (ReadsDst || ModifiesDst || ModifiesExec || ReadsSCC)
+    if (blocksAndN2Sink(MI, Dst))
       return false;
   }
 
