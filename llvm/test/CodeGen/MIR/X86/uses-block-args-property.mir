@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=x86_64-- -run-pass=none -o - %s | FileCheck %s
+# Round-trip test for the usesBlockArgs machine function property.
+
+---
+# CHECK-LABEL: name: with_block_args
+# CHECK: usesBlockArgs: true
+name: with_block_args
+usesBlockArgs: true
+body: |
+  bb.0:
+    RET64
+...
+---
+# CHECK-LABEL: name: without_block_args
+# CHECK: usesBlockArgs: false
+name: without_block_args
+body: |
+  bb.0:
+    RET64
+...
