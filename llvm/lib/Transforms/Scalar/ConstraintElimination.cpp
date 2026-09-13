@@ -1188,6 +1188,21 @@ void State::addInfoForInductions(BasicBlock &BB) {
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
 
+    // A signed bound can be translated to the unsigned system if PN is signed
+    // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
+    // Then StartValue, PN and B must all have the same sign.
+    if (ICmpInst::isSigned(ContinuePred)) {
+      assert((ContinuePred == CmpInst::ICMP_SLT ||
+              ContinuePred == CmpInst::ICMP_SLE) &&
+             "Expected a signed less-than continuation predicate");
+      MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
+      if (Info.Signed && !Info.Decreasing) {
+        CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
+        WorkList.push_back(FactOrCheck::getConditionFact(
+            DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
+      }
+    }
+
     // A relational latch steps past B rather than landing on it, so none of the
     // reasoning below applies.
     return;
