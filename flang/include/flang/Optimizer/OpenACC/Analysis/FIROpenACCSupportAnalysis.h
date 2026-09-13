@@ -39,7 +39,8 @@ class FIROpenACCSupportAnalysis {
 public:
   FIROpenACCSupportAnalysis() = default;
 
-  std::string getVariableName(mlir::Value v);
+  std::string getVariableName(mlir::Value v,
+                              mlir::acc::VariableNameConfig config);
 
   std::string getRecipeName(mlir::acc::RecipeKind kind, mlir::Type type,
                             mlir::Value var);

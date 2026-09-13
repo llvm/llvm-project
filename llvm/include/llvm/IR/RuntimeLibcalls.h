@@ -188,6 +188,11 @@ public:
   LLVM_ABI static bool hasVectorMaskArgument(RTLIB::LibcallImpl Impl);
 
 private:
+  // Generated per-library setup helpers, dispatched from
+  // setTargetRuntimeLibcallSets.
+#define GET_RUNTIME_LIBCALLS_INFO_MEMBER_DECLS
+#include "llvm/IR/RuntimeLibcalls.inc"
+
   LLVM_ABI static iota_range<RTLIB::LibcallImpl>
   lookupLibcallImplNameImpl(StringRef Name);
 

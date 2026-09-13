@@ -19,7 +19,7 @@ def test_in_context(f):
 print_root_module = """
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%root: !transform.any_op) {
-    transform.print %root { name = \"from interpreter\" }: !transform.any_op
+    transform.print %root name = \"from interpreter\" : !transform.any_op
     transform.yield
   }
 }"""
@@ -116,7 +116,7 @@ module attributes {transform.with_named_sequence} {
 callee1_definition = """
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @callee1(%root: !transform.any_op {transform.readonly}) {
-    transform.print %root { name = \"from interpreter\" }: !transform.any_op
+    transform.print %root name = \"from interpreter\" : !transform.any_op
     transform.yield
   }
 }

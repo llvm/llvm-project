@@ -125,8 +125,8 @@ module @TestFloatAttr attributes {
   // CHECK-DAG: bytecode.f16 = 1.500000e+00 : f16
   // CHECK-DAG: bytecode.f32 = 3.140000e+00 : f32
   // CHECK-DAG: bytecode.f64 = 1.000000e+01 : f64
-  // CHECK-DAG: bytecode.f80 = 0.1{{.*}} : f80
-  // CHECK-DAG: bytecode.f128 = 0.1{{.*}} : f128
+  // CHECK-DAG: bytecode.f80 = 1.000000e-01 : f80
+  // CHECK-DAG: bytecode.f128 = 1.000000e-01 : f128
   // CHECK-DAG: bytecode.tf32 = 1.000000e+00 : tf32
   // CHECK-DAG: bytecode.f8E5M2 = 1.000000e+00 : f8E5M2
   // CHECK-DAG: bytecode.f8E4M3 = 1.000000e+00 : f8E4M3

@@ -1543,4 +1543,79 @@ define <vscale x 4 x float> @insert_nxv1f32_nxv4f32_3(<vscale x 4 x float> %vec,
   ret <vscale x 4 x float> %retval
 }
 
+define <vscale x 4 x i32> @insert_nxv4i32_nxv2i32_signbits(<vscale x 4 x i32> %vec, <vscale x 4 x i32> %subvec) {
+; CHECK-LABEL: insert_nxv4i32_nxv2i32_signbits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr z0.s, z0.s, #24
+; CHECK-NEXT:    asr z1.s, z1.s, #16
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    ret
+  %base = ashr <vscale x 4 x i32> %vec, splat (i32 24)
+  %sub0 = ashr <vscale x 4 x i32> %subvec, splat (i32 16)
+  %sub = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> %sub0, i64 0)
+  %res = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv2i32(<vscale x 4 x i32> %base, <vscale x 2 x i32> %sub, i64 0)
+  %shl = shl <vscale x 4 x i32> %res, splat (i32 16)
+  %sext = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %sext
+}
+
+define <vscale x 4 x i32> @insert_nxv4i32_v2i32_signbits(<vscale x 4 x i32> %vec, <4 x i32> %subvec) {
+; CHECK-LABEL: insert_nxv4i32_v2i32_signbits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr z0.s, z0.s, #24
+; CHECK-NEXT:    sshr v1.2s, v1.2s, #16
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
+; CHECK-NEXT:    ret
+  %base = ashr <vscale x 4 x i32> %vec, splat (i32 24)
+  %sub0 = ashr <4 x i32> %subvec, splat (i32 16)
+  %sub = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %sub0, i64 0)
+  %res = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v2i32(<vscale x 4 x i32> %base, <2 x i32> %sub, i64 0)
+  %shl = shl <vscale x 4 x i32> %res, splat (i32 16)
+  %sext = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %sext
+}
+
+define <vscale x 4 x i32> @insert_nxv4i32_nxv2i32_signbits_insufficient_base(<vscale x 4 x i32> %vec, <vscale x 4 x i32> %subvec) {
+; CHECK-LABEL: insert_nxv4i32_nxv2i32_signbits_insufficient_base:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr z0.s, z0.s, #15
+; CHECK-NEXT:    asr z1.s, z1.s, #16
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %base = ashr <vscale x 4 x i32> %vec, splat (i32 15)
+  %sub0 = ashr <vscale x 4 x i32> %subvec, splat (i32 16)
+  %sub = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> %sub0, i64 0)
+  %res = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv2i32(<vscale x 4 x i32> %base, <vscale x 2 x i32> %sub, i64 0)
+  %shl = shl <vscale x 4 x i32> %res, splat (i32 16)
+  %sext = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %sext
+}
+
+define <vscale x 4 x i32> @insert_nxv4i32_nxv2i32_signbits_insufficient_sub(<vscale x 4 x i32> %vec, <vscale x 4 x i32> %subvec) {
+; CHECK-LABEL: insert_nxv4i32_nxv2i32_signbits_insufficient_sub:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    asr z0.s, z0.s, #24
+; CHECK-NEXT:    asr z1.s, z1.s, #15
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    uunpklo z1.d, z1.s
+; CHECK-NEXT:    uunpkhi z0.d, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    sxth z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
+  %base = ashr <vscale x 4 x i32> %vec, splat (i32 24)
+  %sub0 = ashr <vscale x 4 x i32> %subvec, splat (i32 15)
+  %sub = call <vscale x 2 x i32> @llvm.vector.extract.nxv2i32.nxv4i32(<vscale x 4 x i32> %sub0, i64 0)
+  %res = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv2i32(<vscale x 4 x i32> %base, <vscale x 2 x i32> %sub, i64 0)
+  %shl = shl <vscale x 4 x i32> %res, splat (i32 16)
+  %sext = ashr <vscale x 4 x i32> %shl, splat (i32 16)
+  ret <vscale x 4 x i32> %sext
+}
+
 attributes #0 = { vscale_range(2,2) }
