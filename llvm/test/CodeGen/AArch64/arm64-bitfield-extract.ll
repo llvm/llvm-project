@@ -924,11 +924,11 @@ define i80 @fct20(i128 %a, i128 %b) {
 ; LLC-NEXT:    mov w11, #26220 // =0x666c
 ; LLC-NEXT:    movk x12, #11077, lsl #32
 ; LLC-NEXT:    and x11, x8, x11
-; LLC-NEXT:    cmp x10, #0
 ; LLC-NEXT:    movk x12, #45, lsl #48
-; LLC-NEXT:    csel x1, x11, x8, eq
 ; LLC-NEXT:    and x12, x9, x12
+; LLC-NEXT:    cmp x10, #0
 ; LLC-NEXT:    csel x0, x12, x9, eq
+; LLC-NEXT:    csel x1, x11, x8, eq
 ; LLC-NEXT:    ret
 ; OPT-LABEL: @fct20(
 ; OPT-NEXT:  entry:

@@ -77,8 +77,8 @@ define <vscale x 8 x i64> @split_insert_8i64_idx(<vscale x 8 x i64> %a, i64 %elt
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    cmp x1, x8
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    csel x8, x1, x8, lo
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    str x0, [x9, x8, lsl #3]
 ; CHECK-NEXT:    ldr z0, [sp]
@@ -138,9 +138,9 @@ define <vscale x 32 x i16> @split_insert_32i16(<vscale x 32 x i16> %a, i16 %elt)
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    str z2, [sp, #2, mul vl]
 ; CHECK-NEXT:    cmp x8, #128
-; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
+; CHECK-NEXT:    str z1, [sp, #1, mul vl]
 ; CHECK-NEXT:    str z0, [sp]
 ; CHECK-NEXT:    strh w0, [x9, x8, lsl #1]
 ; CHECK-NEXT:    ldr z0, [sp]

@@ -44,10 +44,10 @@ define i1 @test_signed_i1_f32(float %f) nounwind {
 define i8 @test_signed_i8_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i8_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w9, s0
-; CHECK-NEXT:    mov w8, #127 // =0x7f
-; CHECK-NEXT:    cmp w9, #127
-; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    mov w9, #127 // =0x7f
+; CHECK-NEXT:    cmp w8, #127
+; CHECK-NEXT:    csel w8, w8, w9, lt
 ; CHECK-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
@@ -59,10 +59,10 @@ define i8 @test_signed_i8_f32(float %f) nounwind {
 define i13 @test_signed_i13_f32(float %f) nounwind {
 ; CHECK-LABEL: test_signed_i13_f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w9, s0
-; CHECK-NEXT:    mov w8, #4095 // =0xfff
-; CHECK-NEXT:    cmp w9, #4095
-; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    fcvtzs w8, s0
+; CHECK-NEXT:    mov w9, #4095 // =0xfff
+; CHECK-NEXT:    cmp w8, #4095
+; CHECK-NEXT:    csel w8, w8, w9, lt
 ; CHECK-NEXT:    mov w9, #-4096 // =0xfffff000
 ; CHECK-NEXT:    cmn w8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    csel w0, w8, w9, gt
@@ -289,10 +289,10 @@ define i1 @test_signed_i1_f64(double %f) nounwind {
 define i8 @test_signed_i8_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i8_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w9, d0
-; CHECK-NEXT:    mov w8, #127 // =0x7f
-; CHECK-NEXT:    cmp w9, #127
-; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    mov w9, #127 // =0x7f
+; CHECK-NEXT:    cmp w8, #127
+; CHECK-NEXT:    csel w8, w8, w9, lt
 ; CHECK-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-NEXT:    cmn w8, #128
 ; CHECK-NEXT:    csel w0, w8, w9, gt
@@ -304,10 +304,10 @@ define i8 @test_signed_i8_f64(double %f) nounwind {
 define i13 @test_signed_i13_f64(double %f) nounwind {
 ; CHECK-LABEL: test_signed_i13_f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w9, d0
-; CHECK-NEXT:    mov w8, #4095 // =0xfff
-; CHECK-NEXT:    cmp w9, #4095
-; CHECK-NEXT:    csel w8, w9, w8, lt
+; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    mov w9, #4095 // =0xfff
+; CHECK-NEXT:    cmp w8, #4095
+; CHECK-NEXT:    csel w8, w8, w9, lt
 ; CHECK-NEXT:    mov w9, #-4096 // =0xfffff000
 ; CHECK-NEXT:    cmn w8, #1, lsl #12 // =4096
 ; CHECK-NEXT:    csel w0, w8, w9, gt
@@ -559,10 +559,10 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; CHECK-SD-CVT-LABEL: test_signed_i8_f16:
 ; CHECK-SD-CVT:       // %bb.0:
 ; CHECK-SD-CVT-NEXT:    fcvt s0, h0
-; CHECK-SD-CVT-NEXT:    mov w8, #127 // =0x7f
-; CHECK-SD-CVT-NEXT:    fcvtzs w9, s0
-; CHECK-SD-CVT-NEXT:    cmp w9, #127
-; CHECK-SD-CVT-NEXT:    csel w8, w9, w8, lt
+; CHECK-SD-CVT-NEXT:    mov w9, #127 // =0x7f
+; CHECK-SD-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-SD-CVT-NEXT:    cmp w8, #127
+; CHECK-SD-CVT-NEXT:    csel w8, w8, w9, lt
 ; CHECK-SD-CVT-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-SD-CVT-NEXT:    cmn w8, #128
 ; CHECK-SD-CVT-NEXT:    csel w0, w8, w9, gt
@@ -570,10 +570,10 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ;
 ; CHECK-SD-FP16-LABEL: test_signed_i8_f16:
 ; CHECK-SD-FP16:       // %bb.0:
-; CHECK-SD-FP16-NEXT:    fcvtzs w9, h0
-; CHECK-SD-FP16-NEXT:    mov w8, #127 // =0x7f
-; CHECK-SD-FP16-NEXT:    cmp w9, #127
-; CHECK-SD-FP16-NEXT:    csel w8, w9, w8, lt
+; CHECK-SD-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-SD-FP16-NEXT:    mov w9, #127 // =0x7f
+; CHECK-SD-FP16-NEXT:    cmp w8, #127
+; CHECK-SD-FP16-NEXT:    csel w8, w8, w9, lt
 ; CHECK-SD-FP16-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-SD-FP16-NEXT:    cmn w8, #128
 ; CHECK-SD-FP16-NEXT:    csel w0, w8, w9, gt
@@ -582,10 +582,10 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_signed_i8_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov w8, #127 // =0x7f
-; CHECK-GI-CVT-NEXT:    fcvtzs w9, s0
-; CHECK-GI-CVT-NEXT:    cmp w9, #127
-; CHECK-GI-CVT-NEXT:    csel w8, w9, w8, lt
+; CHECK-GI-CVT-NEXT:    mov w9, #127 // =0x7f
+; CHECK-GI-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-GI-CVT-NEXT:    cmp w8, #127
+; CHECK-GI-CVT-NEXT:    csel w8, w8, w9, lt
 ; CHECK-GI-CVT-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-GI-CVT-NEXT:    cmn w8, #128
 ; CHECK-GI-CVT-NEXT:    csel w0, w8, w9, gt
@@ -593,10 +593,10 @@ define i8 @test_signed_i8_f16(half %f) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i8_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs w9, h0
-; CHECK-GI-FP16-NEXT:    mov w8, #127 // =0x7f
-; CHECK-GI-FP16-NEXT:    cmp w9, #127
-; CHECK-GI-FP16-NEXT:    csel w8, w9, w8, lt
+; CHECK-GI-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-GI-FP16-NEXT:    mov w9, #127 // =0x7f
+; CHECK-GI-FP16-NEXT:    cmp w8, #127
+; CHECK-GI-FP16-NEXT:    csel w8, w8, w9, lt
 ; CHECK-GI-FP16-NEXT:    mov w9, #-128 // =0xffffff80
 ; CHECK-GI-FP16-NEXT:    cmn w8, #128
 ; CHECK-GI-FP16-NEXT:    csel w0, w8, w9, gt
@@ -609,10 +609,10 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; CHECK-SD-CVT-LABEL: test_signed_i13_f16:
 ; CHECK-SD-CVT:       // %bb.0:
 ; CHECK-SD-CVT-NEXT:    fcvt s0, h0
-; CHECK-SD-CVT-NEXT:    mov w8, #4095 // =0xfff
-; CHECK-SD-CVT-NEXT:    fcvtzs w9, s0
-; CHECK-SD-CVT-NEXT:    cmp w9, #4095
-; CHECK-SD-CVT-NEXT:    csel w8, w9, w8, lt
+; CHECK-SD-CVT-NEXT:    mov w9, #4095 // =0xfff
+; CHECK-SD-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-SD-CVT-NEXT:    cmp w8, #4095
+; CHECK-SD-CVT-NEXT:    csel w8, w8, w9, lt
 ; CHECK-SD-CVT-NEXT:    mov w9, #-4096 // =0xfffff000
 ; CHECK-SD-CVT-NEXT:    cmn w8, #1, lsl #12 // =4096
 ; CHECK-SD-CVT-NEXT:    csel w0, w8, w9, gt
@@ -620,10 +620,10 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ;
 ; CHECK-SD-FP16-LABEL: test_signed_i13_f16:
 ; CHECK-SD-FP16:       // %bb.0:
-; CHECK-SD-FP16-NEXT:    fcvtzs w9, h0
-; CHECK-SD-FP16-NEXT:    mov w8, #4095 // =0xfff
-; CHECK-SD-FP16-NEXT:    cmp w9, #4095
-; CHECK-SD-FP16-NEXT:    csel w8, w9, w8, lt
+; CHECK-SD-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-SD-FP16-NEXT:    mov w9, #4095 // =0xfff
+; CHECK-SD-FP16-NEXT:    cmp w8, #4095
+; CHECK-SD-FP16-NEXT:    csel w8, w8, w9, lt
 ; CHECK-SD-FP16-NEXT:    mov w9, #-4096 // =0xfffff000
 ; CHECK-SD-FP16-NEXT:    cmn w8, #1, lsl #12 // =4096
 ; CHECK-SD-FP16-NEXT:    csel w0, w8, w9, gt
@@ -632,10 +632,10 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ; CHECK-GI-CVT-LABEL: test_signed_i13_f16:
 ; CHECK-GI-CVT:       // %bb.0:
 ; CHECK-GI-CVT-NEXT:    fcvt s0, h0
-; CHECK-GI-CVT-NEXT:    mov w8, #4095 // =0xfff
-; CHECK-GI-CVT-NEXT:    fcvtzs w9, s0
-; CHECK-GI-CVT-NEXT:    cmp w9, #4095
-; CHECK-GI-CVT-NEXT:    csel w8, w9, w8, lt
+; CHECK-GI-CVT-NEXT:    mov w9, #4095 // =0xfff
+; CHECK-GI-CVT-NEXT:    fcvtzs w8, s0
+; CHECK-GI-CVT-NEXT:    cmp w8, #4095
+; CHECK-GI-CVT-NEXT:    csel w8, w8, w9, lt
 ; CHECK-GI-CVT-NEXT:    mov w9, #-4096 // =0xfffff000
 ; CHECK-GI-CVT-NEXT:    cmn w8, #1, lsl #12 // =4096
 ; CHECK-GI-CVT-NEXT:    csel w0, w8, w9, gt
@@ -643,10 +643,10 @@ define i13 @test_signed_i13_f16(half %f) nounwind {
 ;
 ; CHECK-GI-FP16-LABEL: test_signed_i13_f16:
 ; CHECK-GI-FP16:       // %bb.0:
-; CHECK-GI-FP16-NEXT:    fcvtzs w9, h0
-; CHECK-GI-FP16-NEXT:    mov w8, #4095 // =0xfff
-; CHECK-GI-FP16-NEXT:    cmp w9, #4095
-; CHECK-GI-FP16-NEXT:    csel w8, w9, w8, lt
+; CHECK-GI-FP16-NEXT:    fcvtzs w8, h0
+; CHECK-GI-FP16-NEXT:    mov w9, #4095 // =0xfff
+; CHECK-GI-FP16-NEXT:    cmp w8, #4095
+; CHECK-GI-FP16-NEXT:    csel w8, w8, w9, lt
 ; CHECK-GI-FP16-NEXT:    mov w9, #-4096 // =0xfffff000
 ; CHECK-GI-FP16-NEXT:    cmn w8, #1, lsl #12 // =4096
 ; CHECK-GI-FP16-NEXT:    csel w0, w8, w9, gt
@@ -947,8 +947,8 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    mov w19, w0
 ; CHECK-SD-NEXT:    bl __fixtfsi
-; CHECK-SD-NEXT:    cmp w19, #0
 ; CHECK-SD-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-SD-NEXT:    cmp w19, #0
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
 ; CHECK-SD-NEXT:    csel w19, w8, w0, mi
 ; CHECK-SD-NEXT:    adrp x8, .LCPI30_1
@@ -1004,8 +1004,8 @@ define i32 @test_signed_f128_i32(fp128 %f) {
 ; CHECK-GI-NEXT:    mov v1.16b, v0.16b
 ; CHECK-GI-NEXT:    bl __unordtf2
 ; CHECK-GI-NEXT:    cmp w0, #0
-; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    csel w0, wzr, w19, ne
+; CHECK-GI-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    ret

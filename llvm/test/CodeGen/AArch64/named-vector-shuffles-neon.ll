@@ -132,9 +132,9 @@ define <4 x i32> @splice_left_v4i32_variable_offset(<4 x i32> %a, <4 x i32> %b, 
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
 ; CHECK-NEXT:    ubfiz x8, x0, #2, #32
+; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-NEXT:    mov w9, #16 // =0x10
 ; CHECK-NEXT:    cmp x8, #16
-; CHECK-NEXT:    stp q0, q1, [sp, #-32]!
 ; CHECK-NEXT:    csel x8, x8, x9, lo
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    ldr q0, [x9, x8]

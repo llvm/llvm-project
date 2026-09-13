@@ -95,8 +95,8 @@ define i32 @ugt_i32(i32 %x) {
 define i32 @uge_i32(i32 %x) {
 ; CHECK-LABEL: uge_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    lsr w9, w0, #21
 ; CHECK-NEXT:    mov w8, #-2097152 // =0xffe00000
+; CHECK-NEXT:    lsr w9, w0, #21
 ; CHECK-NEXT:    sub w8, w8, w0
 ; CHECK-NEXT:    cmp w9, #2046
 ; CHECK-NEXT:    csel w0, w0, w8, hi
@@ -177,8 +177,8 @@ define i64 @sge_i64(i64 %x) {
 ; CHECK-LABEL: sge_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #100 // =0x64
-; CHECK-NEXT:    cmp x0, #99
 ; CHECK-NEXT:    sub x8, x8, x0
+; CHECK-NEXT:    cmp x0, #99
 ; CHECK-NEXT:    csel x0, x0, x8, gt
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i64 %x, 100
@@ -204,8 +204,8 @@ define i64 @sle_i64(i64 %x) {
 ; CHECK-LABEL: sle_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #100 // =0x64
-; CHECK-NEXT:    cmp x0, #101
 ; CHECK-NEXT:    sub x8, x8, x0
+; CHECK-NEXT:    cmp x0, #101
 ; CHECK-NEXT:    csel x0, x0, x8, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp sle i64 %x, 100
@@ -231,8 +231,8 @@ define i64 @uge_i64(i64 %x) {
 ; CHECK-LABEL: uge_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #100 // =0x64
-; CHECK-NEXT:    cmp x0, #99
 ; CHECK-NEXT:    sub x8, x8, x0
+; CHECK-NEXT:    cmp x0, #99
 ; CHECK-NEXT:    csel x0, x0, x8, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i64 %x, 100
@@ -258,8 +258,8 @@ define i64 @ule_i64(i64 %x) {
 ; CHECK-LABEL: ule_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #100 // =0x64
-; CHECK-NEXT:    cmp x0, #101
 ; CHECK-NEXT:    sub x8, x8, x0
+; CHECK-NEXT:    cmp x0, #101
 ; CHECK-NEXT:    csel x0, x0, x8, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i64 %x, 100
@@ -274,8 +274,8 @@ define i64 @both(i64 %x) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #100 // =0x64
 ; CHECK-NEXT:    sub x9, x0, #100
-; CHECK-NEXT:    cmp x0, #101
 ; CHECK-NEXT:    sub x8, x8, x0
+; CHECK-NEXT:    cmp x0, #101
 ; CHECK-NEXT:    csel x0, x8, x9, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i64 %x, 100

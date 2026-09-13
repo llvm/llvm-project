@@ -105,11 +105,11 @@ define i128 @cttz128(i128 %x) nounwind readnone {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    rbit x8, x1
 ; CHECK-NEXT:    rbit x9, x0
-; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    mov x1, xzr
 ; CHECK-NEXT:    clz x8, x8
 ; CHECK-NEXT:    clz x9, x9
 ; CHECK-NEXT:    add x8, x8, #64
+; CHECK-NEXT:    cmp x0, #0
 ; CHECK-NEXT:    csel x0, x9, x8, ne
 ; CHECK-NEXT:    ret
 ;
@@ -117,9 +117,9 @@ define i128 @cttz128(i128 %x) nounwind readnone {
 ; CHECK-CSSC:       // %bb.0:
 ; CHECK-CSSC-NEXT:    ctz x8, x1
 ; CHECK-CSSC-NEXT:    ctz x9, x0
-; CHECK-CSSC-NEXT:    cmp x0, #0
-; CHECK-CSSC-NEXT:    add x8, x8, #64
 ; CHECK-CSSC-NEXT:    mov x1, xzr
+; CHECK-CSSC-NEXT:    add x8, x8, #64
+; CHECK-CSSC-NEXT:    cmp x0, #0
 ; CHECK-CSSC-NEXT:    csel x0, x9, x8, ne
 ; CHECK-CSSC-NEXT:    ret
   %ctz = tail call i128 @llvm.cttz.i128(i128 %x)

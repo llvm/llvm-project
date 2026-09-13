@@ -82,8 +82,8 @@ define i32 @cttzne(i32 %x) {
 ; CHECK-LABEL: cttzne:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rbit w8, w0
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    clz w8, w8
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w0, wzr, w8, ne
 ; CHECK-NEXT:    ret
 entry:
@@ -97,8 +97,8 @@ define i32 @cttzxnot0(i32 %x) {
 ; CHECK-LABEL: cttzxnot0:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rbit w8, w0
-; CHECK-NEXT:    cmp w0, #10
 ; CHECK-NEXT:    clz w8, w8
+; CHECK-NEXT:    cmp w0, #10
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -113,8 +113,8 @@ define i32 @cttzlhsnot0(i32 %x) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rbit w9, w0
 ; CHECK-NEXT:    mov w8, #10 // =0xa
-; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    clz w9, w9
+; CHECK-NEXT:    cmp w0, #0
 ; CHECK-NEXT:    csel w0, w8, w9, eq
 ; CHECK-NEXT:    ret
 entry:
@@ -142,8 +142,8 @@ define i32 @cttzlhsnotx(i32 %x, i32 %y) {
 ; CHECK-LABEL: cttzlhsnotx:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    rbit w8, w0
-; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    clz w8, w8
+; CHECK-NEXT:    cmp w1, #0
 ; CHECK-NEXT:    csel w0, wzr, w8, eq
 ; CHECK-NEXT:    ret
 entry:
