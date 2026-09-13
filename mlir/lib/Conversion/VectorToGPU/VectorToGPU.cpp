@@ -325,48 +325,6 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
   return elementwiseSupportsMMAMatrixType(op);
 }
 
-/// Return an unsorted slice handling scf.for region differently than
-/// `getSlice`. In scf.for we only want to include as part of the slice elements
-/// that are part of the use/def chain.
-static SetVector<Operation *>
-getSliceContract(Operation *op,
-                 const BackwardSliceOptions &backwardSliceOptions,
-                 const ForwardSliceOptions &forwardSliceOptions) {
-  SetVector<Operation *> slice;
-  slice.insert(op);
-  unsigned currentIndex = 0;
-  SetVector<Operation *> backwardSlice;
-  SetVector<Operation *> forwardSlice;
-  while (currentIndex != slice.size()) {
-    auto *currentOp = (slice)[currentIndex];
-    // Compute and insert the backwardSlice starting from currentOp.
-    backwardSlice.clear();
-    LogicalResult result =
-        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
-    assert(result.succeeded() && "expected a backward slice");
-    (void)result;
-    slice.insert_range(backwardSlice);
-
-    // Compute and insert the forwardSlice starting from currentOp.
-    forwardSlice.clear();
-    // Special case for ForOp, we don't want to include the whole region but
-    // only the value using the region arguments.
-    // TODO: We should refine this to only care about the region arguments being
-    // converted to matrix type.
-    if (auto forOp = dyn_cast<scf::ForOp>(currentOp)) {
-      for (Value forOpResult : forOp.getResults())
-        getForwardSlice(forOpResult, &forwardSlice, forwardSliceOptions);
-      for (BlockArgument &arg : forOp.getRegionIterArgs())
-        getForwardSlice(arg, &forwardSlice, forwardSliceOptions);
-    } else {
-      getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
-    }
-    slice.insert_range(forwardSlice);
-    ++currentIndex;
-  }
-  return slice;
-}
-
 // Analyze slice of operations based on convert op to figure out if the whole
 // slice can be converted to MMA operations.
 static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
@@ -383,20 +341,77 @@ static SetVector<Operation *> getOpToConvert(mlir::Operation *op,
   ForwardSliceOptions forwardSliceOptions;
   forwardSliceOptions.filter = hasVectorSrc;
 
+  DenseMap<Operation *, SmallVector<Operation *>> backwardSliceCache;
+  DenseMap<Operation *, SmallVector<Operation *>> forwardSliceCache;
+  DenseMap<Operation *, bool> supportsMMAMatrixTypeCache;
+
+  auto getCachedBackwardSlice =
+      [&](Operation *currentOp) -> ArrayRef<Operation *> {
+    auto [it, inserted] = backwardSliceCache.try_emplace(currentOp);
+    if (!inserted)
+      return it->second;
+
+    SetVector<Operation *> backwardSlice;
+    LogicalResult result =
+        getBackwardSlice(currentOp, &backwardSlice, backwardSliceOptions);
+    assert(result.succeeded() && "expected a backward slice");
+    (void)result;
+    it->second = backwardSlice.takeVector();
+    return it->second;
+  };
+
+  auto getCachedForwardSlice =
+      [&](Operation *currentOp) -> ArrayRef<Operation *> {
+    auto [it, inserted] = forwardSliceCache.try_emplace(currentOp);
+    if (!inserted)
+      return it->second;
+
+    SetVector<Operation *> forwardSlice;
+    // Special case for ForOp, we don't want to include the whole region but
+    // only the value using the region arguments.
+    // TODO: We should refine this to only care about the region arguments being
+    // converted to matrix type.
+    if (auto forOp = dyn_cast<scf::ForOp>(currentOp)) {
+      for (Value forOpResult : forOp.getResults())
+        getForwardSlice(forOpResult, &forwardSlice, forwardSliceOptions);
+      for (BlockArgument &arg : forOp.getRegionIterArgs())
+        getForwardSlice(arg, &forwardSlice, forwardSliceOptions);
+    } else {
+      getForwardSlice(currentOp, &forwardSlice, forwardSliceOptions);
+    }
+    it->second = forwardSlice.takeVector();
+    return it->second;
+  };
+
+  auto cachedSupportsMMAMatrixType = [&](Operation *currentOp) {
+    auto [it, inserted] =
+        supportsMMAMatrixTypeCache.try_emplace(currentOp, false);
+    if (inserted)
+      it->second = supportsMMaMatrixType(currentOp, useNvGpu);
+    return it->second;
+  };
+
   SetVector<Operation *> opToConvert;
   op->walk([&](Operation *nestedOp) {
     if (!isa<vector::ContractionOp>(nestedOp) &&
         !elementwiseSupportsMMAMatrixType(nestedOp))
       return;
-    if (opToConvert.contains(nestedOp))
+    if (backwardSliceCache.contains(nestedOp))
       return;
-    SetVector<Operation *> dependentOps =
-        getSliceContract(nestedOp, backwardSliceOptions, forwardSliceOptions);
+
+    SetVector<Operation *> dependentOps;
+    dependentOps.insert(nestedOp);
+    unsigned currentIndex = 0;
+    while (currentIndex != dependentOps.size()) {
+      Operation *currentOp = dependentOps[currentIndex++];
+      dependentOps.insert_range(getCachedBackwardSlice(currentOp));
+      dependentOps.insert_range(getCachedForwardSlice(currentOp));
+    }
     // If any instruction cannot use MMA matrix type drop the whole
     // chain. MMA matrix are stored in an opaque type so they cannot be used
     // by all operations.
-    if (llvm::any_of(dependentOps, [useNvGpu](Operation *op) {
-          if (!supportsMMaMatrixType(op, useNvGpu)) {
+    if (llvm::any_of(dependentOps, [&](Operation *op) {
+          if (!cachedSupportsMMAMatrixType(op)) {
             LDBG() << "cannot convert op: " << *op;
             return true;
           }
