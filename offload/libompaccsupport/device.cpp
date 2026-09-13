@@ -12,6 +12,7 @@
 
 #include "device.h"
 #include "OffloadEntry.h"
+#include "OmpAccError.h"
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
@@ -38,6 +39,7 @@
 using namespace llvm::omp::target::ompt;
 #endif
 
+using namespace llvm::omp::target;
 using namespace llvm::omp::target::plugin;
 using namespace llvm::omp::target::debug;
 
@@ -76,9 +78,8 @@ DeviceTy::~DeviceTy() {
 
 llvm::Error DeviceTy::init() {
   if (olCreateContext(1, &DeviceHandle, &Context)) {
-    return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                     "failed to create context for device %d\n",
-                                     DeviceID);
+    return createError(ErrorCode::BackendFailure,
+                       "failed to create context for device %d\n", DeviceID);
   }
 
   // Envar that indicates whether mapped host buffers should be locked
@@ -131,9 +132,8 @@ llvm::Error DeviceTy::init() {
         OMPX_RecordReportFilename.get().c_str(),
         OMPX_RecordOutputDir.get().c_str());
     if (Ret != OFFLOAD_SUCCESS)
-      return error::createOffloadError(error::ErrorCode::BACKEND_FAILURE,
-                                       "failed to initialize RR in device %d\n",
-                                       DeviceID);
+      return createError(ErrorCode::BackendFailure,
+                         "failed to initialize RR in device %d\n", DeviceID);
   }
 
   return llvm::Error::success();
@@ -141,9 +141,8 @@ llvm::Error DeviceTy::init() {
 
 llvm::Error DeviceTy::deinit() {
   if (olDestroyContext(Context)) {
-    return error::createOffloadError(
-        error::ErrorCode::BACKEND_FAILURE,
-        "failed to destroy context for device %d\n", DeviceID);
+    return createError(ErrorCode::BackendFailure,
+                       "failed to destroy context for device %d\n", DeviceID);
   }
   return llvm::Error::success();
 }
@@ -199,12 +198,12 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
 
       // HstPtr = Entry.Address;
       if (Device.retrieveData(&res, Vtable, PtrSize, AsyncInfo))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
       if (Device.synchronize(AsyncInfo))
-        return error::createOffloadError(
-            error::ErrorCode::INVALID_BINARY,
-            "failed to synchronize after retrieving %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary,
+                           "failed to synchronize after retrieving %s",
+                           Entry.SymbolName);
       // Calculate and emplace entire Vtable from first Vtable byte
       for (uint64_t i = 0; i < Entry.Size / PtrSize; ++i) {
         auto &[HstPtr, DevPtr] = IndirectCallTable.emplace_back();
@@ -226,13 +225,13 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
 
       HstPtr = Entry.Address;
       if (Device.retrieveData(&DevPtr, Ptr, Entry.Size, AsyncInfo))
-        return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                         "failed to load %s", Entry.SymbolName);
+        return createError(ErrorCode::InvalidBinary, "failed to load %s",
+                           Entry.SymbolName);
     }
     if (Device.synchronize(AsyncInfo))
-      return error::createOffloadError(
-          error::ErrorCode::INVALID_BINARY,
-          "failed to synchronize after retrieving %s", Entry.SymbolName);
+      return createError(ErrorCode::InvalidBinary,
+                         "failed to synchronize after retrieving %s",
+                         Entry.SymbolName);
   }
 
   // If we do not have any indirect globals we exit early.
@@ -248,14 +247,12 @@ setupIndirectCallTable(DeviceTy &Device, __tgt_device_image *Image,
   void *DevicePtr = Device.allocData(TableSize, nullptr, TARGET_ALLOC_DEVICE);
   if (Device.submitData(DevicePtr, IndirectCallTable.data(), TableSize,
                         AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to copy data");
+    return createError(ErrorCode::InvalidBinary, "failed to copy data");
   // The IndirectCallTable is on the stack, so we must synchronize to ensure
   // the data is copied before we return.
   if (Device.synchronize(AsyncInfo))
-    return error::createOffloadError(
-        error::ErrorCode::INVALID_BINARY,
-        "failed to synchronize after copying data");
+    return createError(ErrorCode::InvalidBinary,
+                       "failed to synchronize after copying data");
 
   return std::pair<void *, uint64_t>(DevicePtr, IndirectCallTable.size());
 }
@@ -298,8 +295,7 @@ llvm::Expected<ProgramTy> DeviceTy::loadBinary(__tgt_device_image *Img) {
   AsyncInfoTy AsyncInfo(*this);
   if (submitData(DeviceEnvironmentPtr, &DeviceEnvironment,
                  sizeof(DeviceEnvironment), AsyncInfo))
-    return error::createOffloadError(error::ErrorCode::INVALID_BINARY,
-                                     "failed to copy data");
+    return createError(ErrorCode::InvalidBinary, "failed to copy data");
 
   return std::move(Program);
 }
@@ -419,9 +415,8 @@ llvm::Expected<void *> DeviceTy::registerMemory(void *HstPtr, int64_t Size,
   ol_memory_register_flags_t Flags =
       LockMemory ? OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY : 0;
   if (auto Res = olMemRegister(DeviceHandle, HstPtr, Size, Flags, &LockedPtr))
-    return error::createOffloadError(error::ErrorCode::UNKNOWN,
-                                     "failed to lock memory %p: %s", HstPtr,
-                                     Res->Details);
+    return createError(ErrorCode::Unknown, "failed to lock memory %p: %s",
+                       HstPtr, Res->Details);
   return LockedPtr;
 }
 
@@ -429,9 +424,8 @@ llvm::Error DeviceTy::unregisterMemory(void *HstPtr, bool UnlockMemory) {
   ol_memory_register_flags_t Flags =
       UnlockMemory ? OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY : 0;
   if (auto Res = olMemUnregister(DeviceHandle, HstPtr, Flags))
-    return error::createOffloadError(error::ErrorCode::UNKNOWN,
-                                     "failed to unlock memory %p: %s", HstPtr,
-                                     Res->Details);
+    return createError(ErrorCode::Unknown, "failed to unlock memory %p: %s",
+                       HstPtr, Res->Details);
   return llvm::Error::success();
 }
 
