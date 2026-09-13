@@ -45,7 +45,7 @@ define void @test(ptr %B) {
 ; AVX512:  Cost of 1 for VF 8: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ; AVX512:  Cost of 1 for VF 16: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ; AVX512:  Cost of 1 for VF 32: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
-; AVX512:  Cost of 2 for VF 64: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
+; AVX512:  Cost of 6 for VF 64: WIDEN ir<%valB.loaded> = load vp<[[VP6]]>, ir<%canLoad>
 ;
 entry:
   br label %for.body
