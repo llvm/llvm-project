@@ -29,14 +29,16 @@ static LogicalResult verifyGroupNonUniformArithmeticOp(Operation *groupOp) {
                                 "'ClusteredReduce' group operation");
   if (groupOp->getNumOperands() > 1) {
     Operation *sizeOp = groupOp->getOperand(1).getDefiningOp();
-    int32_t clusterSize = 0;
 
-    // TODO: support specialization constant here.
-    if (failed(extractValueFromConstOp(sizeOp, clusterSize)))
+    // SPIR-V spec: "ClusterSize must come from a constant instruction",
+    // which includes both a normal constant and a specialization constant.
+    if (!isa_and_present<spirv::ConstantOp, spirv::ReferenceOfOp>(sizeOp))
       return groupOp->emitOpError(
           "cluster size operand must come from a constant op");
 
-    if (!llvm::isPowerOf2_32(clusterSize))
+    int32_t clusterSize = 0;
+    if (succeeded(extractValueFromConstOp(sizeOp, clusterSize)) &&
+        !llvm::isPowerOf2_32(clusterSize))
       return groupOp->emitOpError(
           "cluster size operand must be a power of two");
   }
@@ -238,12 +240,15 @@ LogicalResult GroupNonUniformLogicalXorOp::verify() {
 LogicalResult GroupNonUniformRotateKHROp::verify() {
   if (Value clusterSizeVal = getClusterSize()) {
     mlir::Operation *defOp = clusterSizeVal.getDefiningOp();
-    int32_t clusterSize = 0;
 
-    if (failed(extractValueFromConstOp(defOp, clusterSize)))
+    // SPIR-V spec: "ClusterSize must come from a constant instruction",
+    // which includes both a normal constant and a specialization constant.
+    if (!isa_and_present<spirv::ConstantOp, spirv::ReferenceOfOp>(defOp))
       return emitOpError("cluster size operand must come from a constant op");
 
-    if (!llvm::isPowerOf2_32(clusterSize))
+    int32_t clusterSize = 0;
+    if (succeeded(extractValueFromConstOp(defOp, clusterSize)) &&
+        !llvm::isPowerOf2_32(clusterSize))
       return emitOpError("cluster size operand must be a power of two");
   }
 
