@@ -670,7 +670,6 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
-  bool AnyCombined = false;
   const SIRegisterInfo *TRI = ST->getRegisterInfo();
   SmallVector<MachineOperand *, 16> Uses(
       llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
@@ -700,20 +699,10 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
         break;
       }
 
-      // The DPP mov reg can appear in several operands.
+      // The DPP mov reg can appear in several operands, each with its own
+      // subreg index: REG_SEQUENCE inputs never overlap.
       unsigned OpNo = OrigMI.getOperandNo(Use);
       unsigned FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
-      auto It = RegSeqWithOpNos.find(&OrigMI);
-
-      // Duplicate subreg indices pass the verifier. Lane already queued.
-      if (It != RegSeqWithOpNos.end() &&
-          llvm::any_of(It->second, [&](unsigned N) {
-            return OrigMI.getOperand(N + 1).getImm() == FwdSubReg;
-          })) {
-        It->second.push_back(OpNo);
-        Rollback = false;
-        continue;
-      }
 
       // Marking the operand undef is unsound if another read consumes the lane.
       LaneBitmask FwdLanes = TRI->getSubRegIndexLaneMask(FwdSubReg);
@@ -789,7 +778,6 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
                                         OldOpndValue, CombBCZ, IsShrinkable)) {
         DPPMIs.push_back(DPPInst);
         Rollback = false;
-        AnyCombined = true;
       }
     } else {
       assert(Use == Src1 && OrigMI.isCommutable()); // by check [1]
@@ -803,7 +791,6 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
                               IsShrinkable)) {
           DPPMIs.push_back(DPPInst);
           Rollback = false;
-          AnyCombined = true;
         }
       } else
         LLVM_DEBUG(dbgs() << "  failed: cannot be commuted\n");
@@ -814,8 +801,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     OrigMIs.push_back(&OrigMI);
   }
 
-  // A REG_SEQUENCE lane with no readers must not commit the erase of MovMI.
-  Rollback |= !Uses.empty() || !AnyCombined;
+  Rollback |= !Uses.empty();
 
   for (auto *MI : *(Rollback? &DPPMIs : &OrigMIs))
     MI->eraseFromParent();
