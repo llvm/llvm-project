@@ -95,6 +95,10 @@ static cl::opt<unsigned> DomConditionsMaxUses("dom-conditions-max-uses",
 /// instruction.
 static constexpr unsigned MaxInstrsToCheckForFree = 32;
 
+template <typename InstTy>
+static bool matchTwoInputRecurrence(const PHINode *PN, InstTy *&Inst,
+                                    Value *&Init, Value *&OtherOp);
+
 /// Returns the bitwidth of the given scalar or pointer type. For vector types,
 /// returns the element type's bitwidth.
 static unsigned getBitWidth(Type *Ty, const DataLayout &DL) {
@@ -1958,6 +1962,61 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       default:
         break;
+      }
+    } else {
+      IntrinsicInst *II = nullptr;
+      if (matchTwoInputRecurrence<IntrinsicInst>(P, II, Start, Step)) {
+        // %iv      = [<Start>, %entry], [%iv.next, %backedge]
+        //
+        // %iv.next = <II>(%iv, <Step>)
+        // or
+        // %iv.next = <II>(<Step>, %iv)
+
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::umin: {
+          // Limit number of leading zeros by Start's number of leading zeros.
+          SimplifyQuery RecQ = Q.getWithoutCondContext();
+
+          unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
+          Instruction *StartInst = P->getIncomingBlock(OpNum)->getTerminator();
+
+          KnownBits KnownStart(BitWidth);
+          RecQ.CxtI = StartInst;
+          computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
+
+          Known.Zero.setHighBits(KnownStart.countMinLeadingZeros());
+          break;
+        }
+
+        case Intrinsic::umax: {
+          // Limit number of leading zeros by the minimum of Start's and Step's
+          // number of leading zeros, and number of leading ones by Start's
+          // number of leading ones.
+          SimplifyQuery RecQ = Q.getWithoutCondContext();
+
+          unsigned OpNum = P->getOperand(0) == Start ? 0 : 1;
+          Instruction *StartInst = P->getIncomingBlock(OpNum)->getTerminator();
+          Instruction *StepInst =
+              P->getIncomingBlock(1 - OpNum)->getTerminator();
+
+          KnownBits KnownStart(BitWidth);
+          RecQ.CxtI = StartInst;
+          computeKnownBits(Start, DemandedElts, KnownStart, RecQ, Depth + 1);
+
+          KnownBits KnownStep(BitWidth);
+          RecQ.CxtI = StepInst;
+          computeKnownBits(Step, DemandedElts, KnownStep, RecQ, Depth + 1);
+
+          Known.Zero.setHighBits(std::min(KnownStart.countMinLeadingZeros(),
+                                          KnownStep.countMinLeadingZeros()));
+          Known.One.setHighBits(KnownStart.countMinLeadingOnes());
+
+          break;
+        }
+
+        default:
+          break;
+        }
       }
     }
 
