@@ -1966,9 +1966,7 @@ static bool verifyScalarSize(uint64_t Size) {
 }
 
 static bool verifyVectorElementCount(uint64_t NumElts, bool HasVScale) {
-  // A fixed-length vector needs at least two elements: LLT::vector rejects a
-  // one-element ElementCount, and producers map such a type to the element
-  // type itself through LLT::scalarOrVector.
+  // A fixed-length vector needs at least two elements.
   return NumElts != 0 && (HasVScale || NumElts != 1) && isUInt<16>(NumElts);
 }
 
