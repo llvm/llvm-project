@@ -676,6 +676,10 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed an assertion when an invalid constructor (e.g. one declared with a
+  ref-qualifier) delegated to its own class and the class had no other
+  constructors, as in `struct A { A() && : A{} {} };`. (#GH186650)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
