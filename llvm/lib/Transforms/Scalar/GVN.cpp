@@ -765,6 +765,12 @@ uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
   Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
   return assignExpNewValueNum(Exp).first;
 }
+uint32_t GVNPass::ValueTable::lookupCmp(unsigned Opcode,
+                                        CmpInst::Predicate Predicate,
+                                        Value *LHS, Value *RHS) {
+  Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
+  return ExpressionNumbering.lookup(Exp);
+}
 
 /// Returns the value number of ptrtoint \p Ptr to \Ty.
 uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
@@ -3445,18 +3451,36 @@ bool GVNPass::processInstruction(Instruction *I) {
     }
   }
 
-  // If the number we were assigned was a brand new VN, then we don't
-  // need to do a lookup to see if the number already exists
-  // somewhere in the domtree: it can't!
-  if (Num >= NextNum) {
-    LeaderTable.insert(Num, I, I->getParent());
-    return false;
-  }
-
   // Perform fast-path value-number based elimination of values inherited from
-  // dominators.
-  Value *Repl = findLeader(I->getParent(), Num);
+  // dominators, unless if the number we were assigned was a brand new VN, then
+  // we don't need to do a lookup to see if the number already exists somewhere
+  // in the domtree: it can't!
+  Value *Repl = Num < NextNum ? findLeader(I->getParent(), Num) : nullptr;
   if (!Repl) {
+    // substitute cmp instruction with not if possible.
+    if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
+      uint32_t NotNum =
+          VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
+                       Cmp->getOperand(0), Cmp->getOperand(1));
+      if (NotNum != 0) {
+        Value *NotRepl = findLeader(I->getParent(), NotNum);
+        auto FlagCheck = [&]() {
+          if (auto *Icmp = dyn_cast<ICmpInst>(NotRepl))
+            return !Icmp->hasSameSign() ||
+                   Icmp->hasSameSign() == cast<ICmpInst>(I)->hasSameSign();
+          return cast<FPMathOperator>(NotRepl)->getFastMathFlags() ==
+                 cast<FPMathOperator>(I)->getFastMathFlags();
+        };
+        if (NotRepl && NotRepl != I && FlagCheck()) {
+          BinaryOperator *Not = BinaryOperator::CreateNot(
+              NotRepl, NotRepl->getName() + ".not", I->getIterator());
+          Not->setDebugLoc(I->getDebugLoc());
+          I->replaceAllUsesWith(Not);
+          salvageAndRemoveInstruction(I);
+          return true;
+        }
+      }
+    }
     // Failure, just remember this instance for future use.
     LeaderTable.insert(Num, I, I->getParent());
     return false;
