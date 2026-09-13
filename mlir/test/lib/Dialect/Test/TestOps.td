@@ -2366,6 +2366,11 @@ def BlackHoleOp : TEST_Op<"blackhole">,
 //===----------------------------------------------------------------------===//
 
 def TestRegionBuilderOp : TEST_Op<"region_builder">;
+def TestSegmentedReturnOp : TEST_Op<"segmented_return", [
+    Pure, ReturnLike, Terminator, AttrSizedOperandSegments]> {
+  let arguments = (ins Variadic<AnyType>:$first, Variadic<AnyType>:$second);
+}
+
 def TestReturnOp : TEST_Op<"return", [Pure, ReturnLike, Terminator]> {
   let arguments = (ins Variadic<AnyType>);
   let builders = [OpBuilder<(ins),
