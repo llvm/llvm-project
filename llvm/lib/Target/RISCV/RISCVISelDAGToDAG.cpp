@@ -18,7 +18,6 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
-#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
@@ -2074,13 +2073,35 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     return;
   }
   case RISCVISD::MQWACC:
-  case RISCVISD::MQRWACC: {
+  case RISCVISD::MQRWACC:
+  case RISCVISD::WMACC:
+  case RISCVISD::WMACCU:
+  case RISCVISD::WMACCSU: {
     assert(!Subtarget->is64Bit() && Subtarget->hasStdExtP() &&
            "Unexpected opcode");
 
     SDValue Op0 = buildGPRPair(CurDAG, DL, MVT::Untyped, Node->getOperand(0),
                                Node->getOperand(1));
-    unsigned Opc = Opcode == RISCVISD::MQRWACC ? RISCV::MQRWACC : RISCV::MQWACC;
+    unsigned Opc;
+    switch (Opcode) {
+    default:
+      llvm_unreachable("Unexpected opcode");
+    case RISCVISD::MQWACC:
+      Opc = RISCV::MQWACC;
+      break;
+    case RISCVISD::MQRWACC:
+      Opc = RISCV::MQRWACC;
+      break;
+    case RISCVISD::WMACC:
+      Opc = RISCV::WMACC;
+      break;
+    case RISCVISD::WMACCU:
+      Opc = RISCV::WMACCU;
+      break;
+    case RISCVISD::WMACCSU:
+      Opc = RISCV::WMACCSU;
+      break;
+    }
     MachineSDNode *New = CurDAG->getMachineNode(
         Opc, DL, MVT::Untyped, Op0, Node->getOperand(2), Node->getOperand(3));
     auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
@@ -4022,12 +4043,15 @@ bool RISCVDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
 /// \p ExpectedCCVal indicates the condition code to attempt to match (e.g.
 /// ISD::SETNE).
 bool RISCVDAGToDAGISel::selectSETCC(SDValue N, ISD::CondCode ExpectedCCVal,
-                                    SDValue &Val) {
+                                    SDValue &Val, bool OneUse) {
   assert(ISD::isIntEqualitySetCC(ExpectedCCVal) &&
          "Unexpected condition code!");
 
   // We're looking for a setcc.
   if (N->getOpcode() != ISD::SETCC)
+    return false;
+
+  if (OneUse && !N->hasOneUse())
     return false;
 
   // Must be an equality comparison.

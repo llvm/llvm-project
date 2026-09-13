@@ -534,7 +534,7 @@ test.format_optional_operand_type(%i64) : i64
 // CHECK: test.with_properties_and_attr 16 <rhs = 16>
 test.with_properties_and_attr 16 <{rhs = 16 : i64}>
 
-// CHECK: test.with_properties_and_inferred_type 16 <rhs = 16, packed = unit>
+// CHECK: test.with_properties_and_inferred_type 16 <rhs = 16, packed>
 %should_be_i32 = test.with_properties_and_inferred_type 16 <{packed, rhs = 16 : i64}>
 // Assert through the verifier that its inferred as i32.
 test.format_all_types_match_var %should_be_i32, %i32 : i32

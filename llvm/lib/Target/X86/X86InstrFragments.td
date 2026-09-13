@@ -390,6 +390,7 @@ def X86smul_flag : SDNode<"X86ISD::SMUL", SDTBinaryArithWithFlags,
 def X86umul_flag : SDNode<"X86ISD::UMUL", SDTBinaryArithWithFlags,
                           [SDNPCommutative]>;
 def X86adc_flag  : SDNode<"X86ISD::ADC",  SDTBinaryArithWithFlagsInOut>;
+def X86adox_flag : SDNode<"X86ISD::ADOX", SDTBinaryArithWithFlagsInOut>;
 def X86sbb_flag  : SDNode<"X86ISD::SBB",  SDTBinaryArithWithFlagsInOut>;
 
 def X86or_flag   : SDNode<"X86ISD::OR",   SDTBinaryArithWithFlags,
@@ -561,6 +562,11 @@ def i32immSExt8  : ImmLeaf<i32, [{ return isInt<8>(Imm); }]>;
 def i64immSExt8  : ImmLeaf<i64, [{ return isInt<8>(Imm); }]>;
 def i64immSExt32 : ImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
 def i64timmSExt32 : TImmLeaf<i64, [{ return isInt<32>(Imm); }]>;
+
+def GetLo32XForm : SDNodeXForm<imm, [{
+  // Transformation function: get the low 32 bits.
+  return getI32Imm((uint32_t)N->getZExtValue(), SDLoc(N));
+}]>;
 
 def i16relocImmSExt8 : PatLeaf<(i16 relocImm), [{
   return isSExtAbsoluteSymbolRef(8, N);

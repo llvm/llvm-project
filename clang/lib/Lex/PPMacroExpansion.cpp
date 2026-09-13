@@ -134,14 +134,14 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
   llvm::FoldingSetNodeID ID;
   ModuleMacro::Profile(ID, Mod, II);
 
-  void *InsertPos;
-  if (auto *MM = ModuleMacros.FindNodeOrInsertPos(ID, InsertPos)) {
+  llvm::FoldingSetInsertToken InsertToken;
+  if (auto *MM = ModuleMacros.lookup(ID, InsertToken)) {
     New = false;
     return MM;
   }
 
   auto *MM = ModuleMacro::create(*this, Mod, II, Macro, Overrides);
-  ModuleMacros.InsertNode(MM, InsertPos);
+  ModuleMacros.insert(MM, InsertToken);
 
   // Each overridden macro is now overridden by one more macro.
   bool HidAny = false;
@@ -171,8 +171,8 @@ ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
   llvm::FoldingSetNodeID ID;
   ModuleMacro::Profile(ID, Mod, II);
 
-  void *InsertPos;
-  return ModuleMacros.FindNodeOrInsertPos(ID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  return ModuleMacros.lookup(ID, InsertToken);
 }
 
 void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,

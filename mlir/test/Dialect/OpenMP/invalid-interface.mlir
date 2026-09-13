@@ -108,7 +108,7 @@ func.func @composable_conditional_combined(%x : i32) {
 // -----
 
 // expected-error @below {{omp.declare_target can only be applied to DeclareTargetInterface ops}}
-%0 = arith.constant { omp.declare_target = #omp.declaretarget<capture_clause = (enter)> } 2 : i32
+%0 = arith.constant { omp.declare_target = #omp.declaretarget<capture_clause = enter> } 2 : i32
 
 // -----
 
@@ -123,7 +123,7 @@ func.func private @declare_target_automap() attributes { omp.declare_target = #o
 // -----
 
 // expected-error @below {{omp.declare_target 'link' is not valid on functions}}
-func.func private @declare_target_link() attributes { omp.declare_target = #omp.declaretarget<capture_clause = (link)>}
+func.func private @declare_target_link() attributes { omp.declare_target = #omp.declaretarget<capture_clause = link>}
 
 // -----
 

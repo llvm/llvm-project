@@ -4,7 +4,7 @@
 ; CHECK: irce: loop has 1 inductive range checks:
 ; CHECK-NEXT:InductiveRangeCheck:
 ; CHECK-NEXT:  Begin: %offset  Step: 1  End:   %len
-; CHECK-NEXT:  CheckUse:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1 Operand: 0
+; CHECK-NEXT:  CheckUse:   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !{{[0-9]+}} Operand: 0
 ; CHECK-NEXT: irce: in function incrementing: constrained Loop at depth 1 containing: %loop<header><exiting>,%in.bounds<latch><exiting>
 
 define void @incrementing(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %offset) {

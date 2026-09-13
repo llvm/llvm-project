@@ -172,6 +172,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
                                       ///< functions.
   bool NSWOnLoopVarInc = true; ///< Add nsw flag to loop variable increments.
   bool EnableOpenACC = false; ///< Enable OpenACC lowering.
+  bool EnableCUDA = false; ///< Enable CUDA Fortran lowering.
   bool EnableOpenMP = false; ///< Enable OpenMP lowering.
   bool EnableOpenMPIsTargetDevice =
       false; ///< Compiling for an OpenMP target device.
@@ -204,12 +205,6 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       Opts.OpenMPIsTargetDevice, Opts.OpenMPIsGPU, Opts.OpenMPForceUSM,
       Opts.OpenMPVersion, Opts.OMPHostIRFile, Opts.OMPTargetTriples,
       Opts.NoGPULib);
-}
-
-[[maybe_unused]] static void setOpenMPIntegerWrapAround(
-    mlir::ModuleOp module, bool value) {
-  module.getOperation()->setAttr("omp.integer_wrap_around",
-      mlir::omp::IntegerWrapAroundAttr::get(module.getContext(), value));
 }
 
 #endif // FORTRAN_TOOLS_CROSS_TOOL_HELPERS_H

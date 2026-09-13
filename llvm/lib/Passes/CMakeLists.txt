@@ -3,7 +3,9 @@ add_llvm_component_library(LLVMPasses
   PassBuilder.cpp
   PassBuilderBindings.cpp
   PassBuilderPipelines.cpp
+  RunCodeGen.cpp
   StandardInstrumentations.cpp
+  TriggerCrashPasses.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm

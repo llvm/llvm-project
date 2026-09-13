@@ -1,12 +1,34 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header \
-// RUN:   -fsyntax-only -verify=expected,sm66 -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.5-library -finclude-default-header \
-// RUN:   -fsyntax-only -verify=expected,sm65 -DTEXTURE=Texture2D -DCOORD_TYPE=float2 %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header \
-// RUN:   -fsyntax-only -verify=expected,sm66 -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.5-library -finclude-default-header \
-// RUN:   -fsyntax-only -verify=expected,sm65 -DTEXTURE=Texture2DArray -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,sm66 \
+// RUN:   -DTEXTURE=Texture2D -DLOD_TYPE=float2 -DGRAD_TYPE=float2 \
+// RUN:   -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.5-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,sm65 \
+// RUN:   -DTEXTURE=Texture2D -DLOD_TYPE=float2 -DGRAD_TYPE=float2 \
+// RUN:   -DCOORD_TYPE=float2 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,sm66 \
+// RUN:   -DTEXTURE=Texture2DArray -DLOD_TYPE=float2 -DGRAD_TYPE=float2 \
+// RUN:   -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.5-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,sm65 \
+// RUN:   -DTEXTURE=Texture2DArray -DLOD_TYPE=float2 -DGRAD_TYPE=float2 \
+// RUN:   -DCOORD_TYPE=float3 %s
 
+// Parameterized over the texture types in the RUN lines above; adding a texture
+// of another dimension only requires new RUN lines.
+//
+//   TEXTURE            resource type name
+//   LOD_TYPE           CalculateLevelOfDetail location type
+//   GRAD_TYPE          SampleGrad ddx/ddy type, one component per resource
+//                      dimension
+//   COORD_TYPE         sample location type (DIM components plus the array
+//                      slice)
+//
+// Check prefixes:
+//   sm66               shader model 6.6 diagnostics
+//   sm65               shader model 6.5 diagnostics
+//
 // Texture methods that rely on implicit derivatives are available in pixel
 // shaders since Shader Model 6.0 and in compute, mesh and amplification
 // shaders since Shader Model 6.6. They are not available in any other shader
@@ -20,7 +42,7 @@ SamplerComparisonState cmpSamp;
 [shader("pixel")]
 void PixelEntry() {
   COORD_TYPE loc = (COORD_TYPE)0;
-  float2 lodLoc = float2(0, 0);
+  LOD_TYPE lodLoc = (LOD_TYPE)0;
 
   tex.Sample(samp, loc);
   tex.SampleBias(samp, loc, 0.5);
@@ -34,7 +56,7 @@ void PixelEntry() {
 [numthreads(1, 1, 1)]
 void ComputeEntry() {
   COORD_TYPE loc = (COORD_TYPE)0;
-  float2 lodLoc = float2(0, 0);
+  LOD_TYPE lodLoc = (LOD_TYPE)0;
 
   // sm65-error@+2 {{'Sample' is only available in compute environment on Shader Model 6.6 or newer}}
   // sm65-note@* {{'Sample' has been marked as being introduced in Shader Model 6.6 in compute environment here, but the deployment target is Shader Model 6.5 compute environment}}
@@ -61,7 +83,7 @@ void ComputeEntry() {
 [shader("vertex")]
 void VertexEntry() {
   COORD_TYPE loc = (COORD_TYPE)0;
-  float2 lodLoc = float2(0, 0);
+  LOD_TYPE lodLoc = (LOD_TYPE)0;
 
   // expected-error@+2 {{'Sample' is unavailable}}
   // expected-note@* {{'Sample' has been marked as being introduced in Shader Model}}
@@ -89,7 +111,7 @@ void VertexEntry() {
 [shader("vertex")]
 void ExplicitLodVertexEntry() {
   COORD_TYPE loc = (COORD_TYPE)0;
-  float2 grad = float2(0, 0);
+  GRAD_TYPE grad = (GRAD_TYPE)0;
 
   tex.SampleLevel(samp, loc, 0);
   tex.SampleGrad(samp, loc, grad, grad);

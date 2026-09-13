@@ -86,17 +86,13 @@ class CStringChecker
   mutable StringRef CurrentFunctionDescription;
 
 public:
-  // FIXME: The bug types emitted by this checker family have confused garbage
-  // in their Description and Category fields (e.g. `categories::UnixAPI` is
-  // passed as the description in several cases and `uninitialized` is mistyped
-  // as `unitialized`). This should be cleaned up.
-  CheckerFrontendWithBugType NullArg{categories::UnixAPI};
+  CheckerFrontendWithBugType NullArg{"Null pointer argument"};
   CheckerFrontendWithBugType OutOfBounds{"Out-of-bound array access"};
-  CheckerFrontendWithBugType BufferOverlap{categories::UnixAPI,
+  CheckerFrontendWithBugType BufferOverlap{"Overlapping buffers",
                                            "Improper arguments"};
-  CheckerFrontendWithBugType NotNullTerm{categories::UnixAPI};
+  CheckerFrontendWithBugType NotNullTerm{"Not null-terminated string"};
   CheckerFrontendWithBugType UninitializedRead{
-      "Accessing unitialized/garbage values"};
+      "Accessing uninitialized/garbage values"};
 
   StringRef getDebugTag() const override { return "MallocChecker"; }
 

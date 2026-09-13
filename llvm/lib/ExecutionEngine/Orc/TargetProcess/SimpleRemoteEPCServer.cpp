@@ -8,14 +8,11 @@
 
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleRemoteEPCServer.h"
 
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
-#include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/OrcRTBootstrap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Process.h"
 #include "llvm/TargetParser/Host.h"
-
-#include "OrcRTBootstrap.h"
 
 #define DEBUG_TYPE "orc"
 

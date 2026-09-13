@@ -73,6 +73,22 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  fnmatch_macros
+  HDRS
+    fnmatch_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.fnmatch_macros
+)
+
+add_proxy_header_library(
+  glob_macros
+  HDRS
+    glob_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.glob_macros
+)
+
+add_proxy_header_library(
   inet_address_macros
   HDRS
     inet-address-macros.h
@@ -86,6 +102,14 @@ add_proxy_header_library(
     net_if_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.net_if_macros
+)
+
+add_proxy_header_library(
+  netdb_macros
+  HDRS
+    netdb_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.netdb_macros
 )
 
 add_proxy_header_library(
@@ -160,6 +184,14 @@ add_proxy_header_library(
     sys_epoll_macros.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-macros.sys_epoll_macros
+)
+
+add_proxy_header_library(
+  sys_file_macros
+  HDRS
+    sys_file_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.sys_file_macros
 )
 
 add_proxy_header_library(

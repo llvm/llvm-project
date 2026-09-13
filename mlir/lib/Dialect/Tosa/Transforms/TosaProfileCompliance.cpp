@@ -8,12 +8,13 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaProfileCompliance.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
 
-TosaProfileCompliance::TosaProfileCompliance() {
+LLVM_ATTRIBUTE_MINSIZE TosaProfileCompliance::TosaProfileCompliance() {
   const TypeInfo boolT = {mlir::IntegerType::getTypeID(), 1};
   const TypeInfo i4T = {mlir::IntegerType::getTypeID(), 4};
   const TypeInfo i8T = {mlir::IntegerType::getTypeID(), 8};
