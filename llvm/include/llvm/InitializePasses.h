@@ -215,7 +215,7 @@ initializeMachineOptimizationRemarkEmitterPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineOutlinerPass(PassRegistry &);
 LLVM_ABI void initializeStaticDataProfileInfoWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeStaticDataAnnotatorLegacyPass(PassRegistry &);
-LLVM_ABI void initializeMachinePipelinerPass(PassRegistry &);
+LLVM_ABI void initializeMachinePipelinerLegacyPass(PassRegistry &);
 LLVM_ABI void initializeMachinePostDominatorTreeWrapperPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineRegionInfoPassPass(PassRegistry &);
 LLVM_ABI void initializeMachineRegisterClassInfoWrapperPassPass(PassRegistry &);

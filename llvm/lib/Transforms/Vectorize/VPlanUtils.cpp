@@ -1192,8 +1192,7 @@ getSuccessorProbabilities(const VPBasicBlock *VPBB) {
   // below still visits each of them.
   SmallVector<uint32_t> Weights;
   auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
-  if (!Term ||
-      !extractBranchWeights(Term->getMetadata(LLVMContext::MD_prof), Weights) ||
+  if (!Term || !extractBranchWeights(Term->getBranchWeights(), Weights) ||
       Weights.size() != Successors.size())
     Weights.assign(Successors.size(), 0);
   uint64_t Total = sum_of(Weights, uint64_t(0));
@@ -1223,31 +1222,39 @@ static BlockFrequency scaleKeepingNonZero(BlockFrequency Freq,
   return Scaled;
 }
 
-DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>>
+DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
 vputils::computeExecutionFrequencies(ArrayRef<VPBasicBlock *> Blocks) {
   assert(!Blocks.empty() && "expected at least the header block");
   // Push each block's frequency along its outgoing edges. Blocks is a DAG in
   // reverse post-order (the loop region's backedge is implicit), so a block's
   // frequency is final by the time it is visited.
-  DenseMap<const VPBasicBlock *, std::optional<BlockFrequency>> Frequencies;
+  DenseMap<const VPBasicBlock *, std::optional<VPExecutionFrequency>>
+      Frequencies;
   Frequencies.reserve(Blocks.size());
   // The header (first block) always executes, the others start out unreachable.
-  Frequencies[Blocks.front()] = BlockFrequency(AlwaysExecutesFreq);
+  Frequencies[Blocks.front()].emplace(BlockFrequency(AlwaysExecutesFreq),
+                                      false);
   for (VPBasicBlock *VPBB : Blocks.drop_front())
-    Frequencies[VPBB] = BlockFrequency();
+    Frequencies[VPBB].emplace(BlockFrequency(), false);
 
   for (VPBasicBlock *VPBB : Blocks) {
-    std::optional<BlockFrequency> SrcFreq = Frequencies.at(VPBB);
+    std::optional<VPExecutionFrequency> Src = Frequencies.at(VPBB);
+    auto *Term = dyn_cast_if_present<VPInstruction>(VPBB->getTerminator());
+    bool TermIsEstimated = Term && Term->hasEstimatedBranchWeights();
     for (const auto &[Succ, EdgeProb] : getSuccessorProbabilities(VPBB)) {
-      std::optional<BlockFrequency> &SuccFreq = Frequencies.at(Succ);
+      std::optional<VPExecutionFrequency> &SuccFreq = Frequencies.at(Succ);
       // An unknown edge or predecessor poisons the successor.
-      if (!SrcFreq || EdgeProb.isUnknown() || !SuccFreq) {
+      if (!Src || EdgeProb.isUnknown() || !SuccFreq) {
         SuccFreq = std::nullopt;
         continue;
       }
       // The sum can only exceed AlwaysExecutesFreq by rounding.
-      SuccFreq = std::min(BlockFrequency(AlwaysExecutesFreq),
-                          *SuccFreq + scaleKeepingNonZero(*SrcFreq, EdgeProb));
+      BlockFrequency NewFreq =
+          std::min(BlockFrequency(AlwaysExecutesFreq),
+                   SuccFreq->Freq + scaleKeepingNonZero(Src->Freq, EdgeProb));
+      bool NewIsEstimated =
+          SuccFreq->IsEstimated || Src->IsEstimated || TermIsEstimated;
+      SuccFreq.emplace(NewFreq, NewIsEstimated);
     }
   }
   return Frequencies;
@@ -1358,4 +1365,43 @@ void vputils::detail::pullOutPermutationsImpl(
           Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }
+}
+
+// Implements the algorithm described in "Simple and Efficient Construction of
+// Static Single Assignment Form" by Braun et al.
+VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
+                                 DenseMap<VPBasicBlock *, VPValue *> &Defs) {
+  assert(!Defs.empty() && "Defs shouldn't be empty");
+  assert(VPBB->getPlan() && "VPBB isn't reachable from entry");
+  if (VPValue *Def = Defs.lookup(VPBB))
+    return Def;
+  // If the entry block is reached and there's still no def, then Defs is
+  // missing a definition that covers this path.
+  assert(VPBB->getNumPredecessors() && "Not all paths have def");
+
+  if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
+    return reconstructSSA(cast<VPBasicBlock>(Pred), Defs);
+
+  // Multiple predecessors, create a join.
+  Type *Ty = Defs.begin()->second->getScalarType();
+  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+                   .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
+  Defs[VPBB] = Phi;
+  for (auto *Pred : VPBB->predecessors())
+    Phi->addIncoming(reconstructSSA(cast<VPBasicBlock>(Pred), Defs));
+
+  // Fold away trivial phis.
+  // TODO: Remove phi users which have become trivial too.
+  if (all_equal(Phi->incoming_values())) {
+    VPValue *Common = Phi->getIncomingValue(0);
+    Phi->replaceAllUsesWith(Common);
+    for (auto &[_, V] : Defs)
+      if (V == Phi)
+        V = Common;
+    Defs[VPBB] = Common;
+    Phi->eraseFromParent();
+    return Common;
+  }
+
+  return Phi;
 }

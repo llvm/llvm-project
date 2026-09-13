@@ -3382,6 +3382,8 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
 
     llvm::MDNode *metadataNode = node;
     auto emitUnhandledFunctionMetadataWarning = [&]() {
+      if (!emitExpensiveWarnings)
+        return;
       emitWarning(funcOp.getLoc())
           << "unhandled function metadata: "
           << diagMD(metadataNode, llvmModule.get()) << " on " << diag(*func);

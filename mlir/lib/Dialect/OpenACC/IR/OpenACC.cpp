@@ -225,7 +225,7 @@ struct MemRefPointerLikeModel
     if (memrefTy.getRank() != 0)
       return {};
 
-    return memref::LoadOp::create(builder, loc, memrefValue);
+    return memref::LoadOp::create(builder, loc, memrefValue, ValueRange{});
   }
 
   bool genStore(Type pointer, OpBuilder &builder, Location loc,
@@ -1684,21 +1684,6 @@ void acc::UpdateHostOp::getEffects(
                        acc::CurrentDeviceIdResource::get());
   addOperandEffect<MemoryEffects::Read>(effects, getAccVarMutable());
   addOperandEffect<MemoryEffects::Write>(effects, getVarMutable());
-}
-
-template <typename StructureOp>
-static ParseResult parseRegions(OpAsmParser &parser, OperationState &state,
-                                unsigned nRegions = 1) {
-
-  SmallVector<Region *, 2> regions;
-  for (unsigned i = 0; i < nRegions; ++i)
-    regions.push_back(state.addRegion());
-
-  for (Region *region : regions)
-    if (parser.parseRegion(*region, /*arguments=*/{}, /*argTypes=*/{}))
-      return failure();
-
-  return success();
 }
 
 namespace {

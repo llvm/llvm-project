@@ -133,7 +133,26 @@
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -emscripten-cxx-exceptions-allowed 2>&1 \
 // RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
-// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-femscripten-exceptions'
+
+// '-femscripten-exceptions' sets '-mllvm -enable-emscripten-cxx-exceptions'
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EXCEPTIONS %s
+// EMSCRIPTEN_EXCEPTIONS: "-cc1" {{.*}} "-mllvm" "-enable-emscripten-cxx-exceptions"
+
+// '-femscripten-exceptions' satisfies the '-emscripten-cxx-exceptions-allowed'
+// companion requirement.
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions \
+// RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
+
+// '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions -femscripten-exceptions 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_FEMSCRIPTEN_EH %s
+// WASM_EXCEPTIONS_FEMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
 
 // '-fwasm-exceptions' sets +exception-handling, -multivalue, -reference-types,
 // "-exception-model=wasm", and '-mllvm -wasm-enable-eh'

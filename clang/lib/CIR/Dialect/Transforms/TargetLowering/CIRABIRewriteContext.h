@@ -12,7 +12,7 @@
 // the ABI-lowered shape.
 //
 // This file handles Direct (pass-through and coerce-in-registers), Extend,
-// Ignore, Indirect (sret return, byval and byref arguments), and Expand
+// Ignore, Indirect (sret return, byval and non-byval arguments), and Expand
 // (struct flattening into scalar fields).
 //
 //===----------------------------------------------------------------------===//
@@ -24,6 +24,9 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/SmallVector.h"
+#include <cassert>
+#include <utility>
 
 namespace cir {
 
@@ -39,6 +42,11 @@ class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
   CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
       : module(module), dl(dl) {}
+
+  ~CIRABIRewriteContext() {
+    assert(pendingParamSlots.empty() &&
+           "finalizeParameterSlots must run before the rewrite context dies");
+  }
 
   mlir::LogicalResult
   rewriteFunctionDefinition(mlir::FunctionOpInterface funcOp,
@@ -58,11 +66,40 @@ public:
   void rewriteFunctionAddress(cir::GetGlobalOp addrOp, cir::FuncOp funcOp,
                               mlir::OpBuilder &builder);
 
+  /// Restate each non-byval indirect parameter's CIRGen slot alignment as the
+  /// alignment the ABI promises for that parameter.  CIRGen picked the slot's
+  /// alignment for a local copy of the record, but the slot is about to stand
+  /// in for the parameter, and a call forwarding it may only promise what the
+  /// incoming pointer does.  Call for every function before any call site is
+  /// rewritten, since a call is rewritten with its callee rather than with its
+  /// enclosing function and so may be reached first.  Not an override, since
+  /// this has no counterpart in the generic contract.
+  void
+  normalizeParameterSlotAlignments(cir::FuncOp funcOp,
+                                   const mlir::abi::FunctionClassification &fc);
+
+  /// Replace each non-byval indirect parameter's CIRGen slot with the
+  /// incoming pointer, so the body operates on the caller's storage in place.
+  /// Call once, after every function and call site has been rewritten: a call
+  /// forwarding such a parameter reads the slot to recognise it.  Not an
+  /// override, since deferring this has no counterpart in the generic
+  /// contract.
+  void finalizeParameterSlots();
+
   mlir::StringRef getDialectNamespace() const override { return "cir"; }
 
 private:
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
+
+  /// CIRGen param-slot allocas that non-byval indirect parameters will
+  /// replace, paired with the incoming pointer that replaces them.  The
+  /// rewrite retypes the block argument but leaves the slot standing, because
+  /// a call site recognises a forwardable parameter by the slot its operand
+  /// was loaded from.  finalizeParameterSlots does the replacement once every
+  /// call site has been rewritten.
+  llvm::SmallVector<std::pair<cir::AllocaOp, mlir::BlockArgument>>
+      pendingParamSlots;
 };
 
 } // namespace cir

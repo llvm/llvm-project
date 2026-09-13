@@ -271,6 +271,64 @@ define amdgpu_kernel void @v_sint_to_fp_i64_to_f64(ptr addrspace(1) %out, ptr ad
   ret void
 }
 
+define amdgpu_kernel void @s_sint_to_fp_sext_i32_to_f64(ptr addrspace(1) %out, i32 %in) {
+; CI-LABEL: s_sint_to_fp_sext_i32_to_f64:
+; CI:       ; %bb.0:
+; CI-NEXT:    s_load_dword s2, s[8:9], 0x2
+; CI-NEXT:    s_add_i32 s12, s12, s17
+; CI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    s_ashr_i32 s0, s2, 31
+; CI-NEXT:    v_cvt_f64_i32_e32 v[0:1], s0
+; CI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CI-NEXT:    v_cvt_f64_u32_e32 v[2:3], s2
+; CI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
+; CI-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; CI-NEXT:    s_waitcnt lgkmcnt(0)
+; CI-NEXT:    v_mov_b32_e32 v3, s1
+; CI-NEXT:    v_mov_b32_e32 v2, s0
+; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; CI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_sint_to_fp_sext_i32_to_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dword s0, s[8:9], 0x8
+; VI-NEXT:    s_add_i32 s12, s12, s17
+; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_ashr_i32 s1, s0, 31
+; VI-NEXT:    v_cvt_f64_i32_e32 v[0:1], s1
+; VI-NEXT:    v_cvt_f64_u32_e32 v[2:3], s0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; VI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
+; VI-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+;
+; GFX942-LABEL: s_sint_to_fp_sext_i32_to_f64:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_load_dword s2, s[4:5], 0x8
+; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    s_ashr_i32 s3, s2, 31
+; GFX942-NEXT:    v_cvt_f64_i32_e32 v[0:1], s3
+; GFX942-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[2:3], s2
+; GFX942-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; GFX942-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
+; GFX942-NEXT:    s_endpgm
+  %wide = sext i32 %in to i64
+  %result = sitofp i64 %wide to double
+  store double %result, ptr addrspace(1) %out
+  ret void
+}
+
 ; FIXME: bfe and sext on VI+
 define amdgpu_kernel void @s_sint_to_fp_i8_to_f64(ptr addrspace(1) %out, i8 %in) {
 ; CI-LABEL: s_sint_to_fp_i8_to_f64:
