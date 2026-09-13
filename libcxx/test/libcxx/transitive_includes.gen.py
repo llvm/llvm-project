@@ -39,6 +39,7 @@ lit_header_restrictions = {
     "experimental/utility": "// UNSUPPORTED: c++03",
     "filesystem": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14",
     "future": "// UNSUPPORTED: no-threads, c++03",
+    "hazard_pointer": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17, c++20, c++23",
     "latch": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "mutex": "// UNSUPPORTED: no-threads, c++03",
     "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing",  # TODO PRINT investigate

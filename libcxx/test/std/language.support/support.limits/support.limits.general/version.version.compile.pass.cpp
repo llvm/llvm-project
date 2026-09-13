@@ -7451,7 +7451,7 @@
 #    error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++26"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER)
 #    ifndef __cpp_lib_hazard_pointer
 #      error "__cpp_lib_hazard_pointer should be defined in c++26"
 #    endif
@@ -7460,7 +7460,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_hazard_pointer
-#      error "__cpp_lib_hazard_pointer should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_hazard_pointer should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER)' is not met!"
 #    endif
 #  endif
 
@@ -9537,7 +9537,7 @@
 #    error "__cpp_lib_has_unique_object_representations should have the value 201606L in c++29"
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
+#  if !defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER)
 #    ifndef __cpp_lib_hazard_pointer
 #      error "__cpp_lib_hazard_pointer should be defined in c++29"
 #    endif
@@ -9546,7 +9546,7 @@
 #    endif
 #  else
 #    ifdef __cpp_lib_hazard_pointer
-#      error "__cpp_lib_hazard_pointer should not be defined because it is unimplemented in libc++!"
+#      error "__cpp_lib_hazard_pointer should not be defined when the requirement '!defined(_LIBCPP_VERSION) || (_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_HAZARD_POINTER)' is not met!"
 #    endif
 #  endif
 
