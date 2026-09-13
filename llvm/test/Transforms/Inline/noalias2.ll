@@ -110,10 +110,10 @@ entry:
 ; CHECK: !7 = distinct !{!7, !"foo"}
 ; CHECK: !8 = !{!9}
 ; CHECK: !9 = distinct !{!9, !7, !"foo: %c"}
-; CHECK: !10 = !{!11}
+; CHECK: !10 = distinct !{!11}
 ; CHECK: !11 = distinct !{!11, !12, !"hello: %a"}
 ; CHECK: !12 = distinct !{!12, !"hello"}
-; CHECK: !13 = !{!14}
+; CHECK: !13 = distinct !{!14}
 ; CHECK: !14 = distinct !{!14, !12, !"hello: %c"}
 ; CHECK: !15 = !{!14, !9}
 ; CHECK: !16 = !{!11, !6}
