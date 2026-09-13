@@ -30,7 +30,7 @@
 
 namespace llvm {
 
-LLVM_ABI extern cl::opt<bool> DisableGISelLegalityCheck;
+LLVM_ABI_NOT_EXPORTED extern cl::opt<bool> DisableGISelLegalityCheck;
 
 class MachineFunction;
 class raw_ostream;
@@ -94,7 +94,7 @@ enum LegalizeAction : std::uint8_t {
   NotFound,
 };
 } // end namespace LegalizeActions
-LLVM_ABI raw_ostream &operator<<(raw_ostream &OS,
+LLVM_ABI_NOT_EXPORTED raw_ostream &operator<<(raw_ostream &OS,
                                  LegalizeActions::LegalizeAction Action);
 
 using LegalizeActions::LegalizeAction;
@@ -135,7 +135,7 @@ struct LegalityQuery {
       : Opcode(Opcode), Types(Types), MMODescrs(MMODescrs),
         Immediates(Immediates) {}
 
-  LLVM_ABI raw_ostream &print(raw_ostream &OS) const;
+  LLVM_ABI_NOT_EXPORTED raw_ostream &print(raw_ostream &OS) const;
 };
 
 /// The result of a query. It either indicates a final answer of Legal or
@@ -218,9 +218,9 @@ Predicate any(Predicate P0, Predicate P1, Args... args) {
 }
 
 /// True iff the given type index is the specified type.
-LLVM_ABI LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate typeIs(unsigned TypeIdx, LLT TypesInit);
 /// True iff the given type index is one of the specified types.
-LLVM_ABI LegalityPredicate typeInSet(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalityPredicate typeInSet(unsigned TypeIdx,
                                      std::initializer_list<LLT> TypesInit);
 
 /// True iff the given type index is not the specified type.
@@ -232,165 +232,165 @@ inline LegalityPredicate typeIsNot(unsigned TypeIdx, LLT Type) {
 
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
-LLVM_ABI LegalityPredicate
+LLVM_ABI_NOT_EXPORTED LegalityPredicate
 typePairInSet(unsigned TypeIdx0, unsigned TypeIdx1,
               std::initializer_list<std::pair<LLT, LLT>> TypesInit);
 /// True iff the given types for the given tuple of type indexes is one of the
 /// specified type tuple.
-LLVM_ABI LegalityPredicate
+LLVM_ABI_NOT_EXPORTED LegalityPredicate
 typeTupleInSet(unsigned TypeIdx0, unsigned TypeIdx1, unsigned Type2,
                std::initializer_list<std::tuple<LLT, LLT, LLT>> TypesInit);
 /// True iff the given types for the given pair of type indexes is one of the
 /// specified type pairs.
-LLVM_ABI LegalityPredicate typePairAndMemDescInSet(
+LLVM_ABI_NOT_EXPORTED LegalityPredicate typePairAndMemDescInSet(
     unsigned TypeIdx0, unsigned TypeIdx1, unsigned MMOIdx,
     std::initializer_list<TypePairAndMemDesc> TypesAndMemDescInit);
 /// True iff the specified type index is a scalar.
-LLVM_ABI LegalityPredicate isScalar(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate isScalar(unsigned TypeIdx);
 /// True iff the specified type index is a vector.
-LLVM_ABI LegalityPredicate isVector(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate isVector(unsigned TypeIdx);
 /// True iff the specified type index is a pointer (with any address space).
-LLVM_ABI LegalityPredicate isPointer(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate isPointer(unsigned TypeIdx);
 /// True iff the specified type index is a pointer with the specified address
 /// space.
-LLVM_ABI LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate isPointer(unsigned TypeIdx, unsigned AddrSpace);
 /// True iff the specified type index is a vector of pointers (with any address
 /// space).
-LLVM_ABI LegalityPredicate isPointerVector(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate isPointerVector(unsigned TypeIdx);
 
 /// True if the type index is a vector with element type \p EltTy
-LLVM_ABI LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate elementTypeIs(unsigned TypeIdx, LLT EltTy);
 
 /// True iff the specified type index is a scalar that's narrower than the given
 /// size.
-LLVM_ABI LegalityPredicate scalarNarrowerThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate scalarNarrowerThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar that's wider than the given
 /// size.
-LLVM_ABI LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar or vector with an element type
 /// that's narrower than the given size.
-LLVM_ABI LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx,
                                                    unsigned Size);
 
 /// True iff the specified type index is a vector with a number of elements
 /// that's greater than the given size.
-LLVM_ABI LegalityPredicate vectorElementCountIsGreaterThan(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalityPredicate vectorElementCountIsGreaterThan(unsigned TypeIdx,
                                                            unsigned Size);
 
 /// True iff the specified type index is a vector with a number of elements
 /// that's less than or equal to the given size.
-LLVM_ABI LegalityPredicate
+LLVM_ABI_NOT_EXPORTED LegalityPredicate
 vectorElementCountIsLessThanOrEqualTo(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar or a vector with an element
 /// type that's wider than the given size.
-LLVM_ABI LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx,
                                                 unsigned Size);
 
 /// True iff the specified type index is a scalar whose size is not a multiple
 /// of Size.
-LLVM_ABI LegalityPredicate sizeNotMultipleOf(unsigned TypeIdx, unsigned Size);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate sizeNotMultipleOf(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type index is a scalar whose size is not a power of
 /// 2.
-LLVM_ABI LegalityPredicate sizeNotPow2(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate sizeNotPow2(unsigned TypeIdx);
 
 /// True iff the specified type index is a scalar or vector whose element size
 /// is not a power of 2.
-LLVM_ABI LegalityPredicate scalarOrEltSizeNotPow2(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate scalarOrEltSizeNotPow2(unsigned TypeIdx);
 
 /// True if the total bitwidth of the specified type index is \p Size bits.
-LLVM_ABI LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate sizeIs(unsigned TypeIdx, unsigned Size);
 
 /// True iff the specified type indices are both the same bit size.
-LLVM_ABI LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate sameSize(unsigned TypeIdx0, unsigned TypeIdx1);
 
 /// True iff the first type index has a larger total bit size than second type
 /// index.
-LLVM_ABI LegalityPredicate largerThan(unsigned TypeIdx0, unsigned TypeIdx1);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate largerThan(unsigned TypeIdx0, unsigned TypeIdx1);
 
 /// True iff the first type index has a smaller total bit size than second type
 /// index.
-LLVM_ABI LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate smallerThan(unsigned TypeIdx0, unsigned TypeIdx1);
 
 /// True iff the specified MMO index has a size (rounded to bytes) that is not a
 /// power of 2.
-LLVM_ABI LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate memSizeInBytesNotPow2(unsigned MMOIdx);
 
 /// True iff the specified MMO index has a size that is not an even byte size,
 /// or that even byte size is not a power of 2.
-LLVM_ABI LegalityPredicate memSizeNotByteSizePow2(unsigned MMOIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate memSizeNotByteSizePow2(unsigned MMOIdx);
 
 /// True iff the specified type index is a vector whose element count is not a
 /// power of 2.
-LLVM_ABI LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate numElementsNotPow2(unsigned TypeIdx);
 /// True iff the specified MMO index has at an atomic ordering of at Ordering or
 /// stronger.
-LLVM_ABI LegalityPredicate
+LLVM_ABI_NOT_EXPORTED LegalityPredicate
 atomicOrderingAtLeastOrStrongerThan(unsigned MMOIdx, AtomicOrdering Ordering);
 
 /// True iff the immediate at the given index has the specified value.
-LLVM_ABI LegalityPredicate immIs(unsigned ImmIdx, int64_t Imm);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate immIs(unsigned ImmIdx, int64_t Imm);
 /// True iff the immediate at the given index has one of the specified values.
-LLVM_ABI LegalityPredicate immInSet(unsigned ImmIdx,
+LLVM_ABI_NOT_EXPORTED LegalityPredicate immInSet(unsigned ImmIdx,
                                     std::initializer_list<int64_t> ImmsInit);
 /// True iff the immediate at the given index does not have the specified value.
-LLVM_ABI LegalityPredicate immIsNot(unsigned ImmIdx, int64_t Imm);
+LLVM_ABI_NOT_EXPORTED LegalityPredicate immIsNot(unsigned ImmIdx, int64_t Imm);
 } // end namespace LegalityPredicates
 
 namespace LegalizeMutations {
 /// Select this specific type for the given type index.
-LLVM_ABI LegalizeMutation changeTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeTo(unsigned TypeIdx, LLT Ty);
 
 /// Keep the same type as the given type index.
-LLVM_ABI LegalizeMutation changeTo(unsigned TypeIdx, unsigned FromTypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeTo(unsigned TypeIdx, unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as the given type index.
-LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeElementTo(unsigned TypeIdx,
                                           unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as the given type.
-LLVM_ABI LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeElementTo(unsigned TypeIdx, LLT Ty);
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p FromTypeIdx.
-LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeElementCountTo(unsigned TypeIdx,
                                                unsigned FromTypeIdx);
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p Ty.
-LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeElementCountTo(unsigned TypeIdx,
                                                ElementCount EC);
 
 /// Change the scalar size or element size to have the same scalar size as type
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
 /// only changes the size.
-LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeElementSizeTo(unsigned TypeIdx,
                                               unsigned FromTypeIdx);
 
 /// Change the scalar size or element size to have the same scalar size as the
 /// type \p NewTy. Unlike changeElementTo, this discards pointer types and only
 /// changes the size.
-LLVM_ABI LegalizeMutation changeElementSizeTo(unsigned TypeIdx, LLT NewTy);
+LLVM_ABI_NOT_EXPORTED LegalizeMutation changeElementSizeTo(unsigned TypeIdx, LLT NewTy);
 
 /// Widen the scalar type or vector element type for the given type index to the
 /// next power of 2.
-LLVM_ABI LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation widenScalarOrEltToNextPow2(unsigned TypeIdx,
                                                      unsigned Min = 0);
 
 /// Widen the scalar type or vector element type for the given type index to
 /// next multiple of \p Size.
-LLVM_ABI LegalizeMutation widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation widenScalarOrEltToNextMultipleOf(unsigned TypeIdx,
                                                            unsigned Size);
 
 /// Add more elements to the type for the given type index to the next power of
 /// 2.
-LLVM_ABI LegalizeMutation moreElementsToNextPow2(unsigned TypeIdx,
+LLVM_ABI_NOT_EXPORTED LegalizeMutation moreElementsToNextPow2(unsigned TypeIdx,
                                                  unsigned Min = 0);
 /// Break up the vector type for the given type index into the element type.
-LLVM_ABI LegalizeMutation scalarize(unsigned TypeIdx);
+LLVM_ABI_NOT_EXPORTED LegalizeMutation scalarize(unsigned TypeIdx);
 } // end namespace LegalizeMutations
 
 /// A single rule in a legalizer info ruleset.
@@ -1325,17 +1325,17 @@ public:
   /// Check if there is no type index which is obviously not handled by the
   /// LegalizeRuleSet in any way at all.
   /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
-  LLVM_ABI bool verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const;
+  LLVM_ABI_NOT_EXPORTED bool verifyTypeIdxsCoverage(unsigned NumTypeIdxs) const;
   /// Check if there is no imm index which is obviously not handled by the
   /// LegalizeRuleSet in any way at all.
   /// \pre Type indices of the opcode form a dense [0, \p NumTypeIdxs) set.
-  LLVM_ABI bool verifyImmIdxsCoverage(unsigned NumImmIdxs) const;
+  LLVM_ABI_NOT_EXPORTED bool verifyImmIdxsCoverage(unsigned NumImmIdxs) const;
 
   /// Apply the ruleset to the given LegalityQuery.
-  LLVM_ABI LegalizeActionStep apply(const LegalityQuery &Query) const;
+  LLVM_ABI_NOT_EXPORTED LegalizeActionStep apply(const LegalityQuery &Query) const;
 };
 
-class LLVM_ABI LegalizerInfo {
+class LLVM_ABI_NOT_EXPORTED LegalizerInfo {
 public:
   virtual ~LegalizerInfo() = default;
 

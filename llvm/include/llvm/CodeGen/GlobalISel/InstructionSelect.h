@@ -36,7 +36,7 @@ class ProfileSummaryInfo;
 /// reverse order.
 ///
 /// \post for all inst in MF: not isPreISelGenericOpcode(inst.opcode)
-class LLVM_ABI InstructionSelectLegacy : public MachineFunctionPass {
+class LLVM_ABI_NOT_EXPORTED InstructionSelectLegacy : public MachineFunctionPass {
 public:
   static char ID;
   StringRef getPassName() const override { return "InstructionSelect"; }
