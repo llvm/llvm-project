@@ -21116,7 +21116,17 @@ bool Sema::IsValueInFlagEnum(const EnumDecl *ED, const llvm::APInt &Val,
   assert(ED->isClosedFlag() && "looking for value in non-flag or open enum");
   assert(ED->isCompleteDefinition() && "expected enum definition");
 
-  llvm::APInt FlagBits = FlagBitsCache.at(ED);
+  auto R = FlagBitsCache.try_emplace(ED);
+  llvm::APInt &FlagBits = R.first->second;
+
+  if (R.second) {
+    for (auto *E : ED->enumerators()) {
+      const auto &EVal = E->getInitVal();
+      // Only single-bit enumerators introduce new flag values.
+      if (EVal.isPowerOf2())
+        FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
+    }
+  }
 
   // A value is in a flag enum if either its bits are a subset of the enum's
   // flag bits (the first condition) or we are allowing masks and the same is
@@ -21326,20 +21336,6 @@ void Sema::ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
 
   CheckForDuplicateEnumValues(*this, Elements, Enum, EnumType);
   CheckForComparisonInEnumInitializer(*this, Enum);
-
-  if (Enum->hasAttr<FlagEnumAttr>()) {
-    auto R = FlagBitsCache.try_emplace(Enum);
-    llvm::APInt &FlagBits = R.first->second;
-
-    if (R.second) {
-      for (auto *E : Enum->enumerators()) {
-        const auto &EVal = E->getInitVal();
-        // Only single-bit enumerators introduce new flag values.
-        if (EVal.isPowerOf2())
-          FlagBits = FlagBits.zext(EVal.getBitWidth()) | EVal;
-      }
-    }
-  }
 
   if (Enum->isClosedFlag()) {
     for (Decl *D : Elements) {
