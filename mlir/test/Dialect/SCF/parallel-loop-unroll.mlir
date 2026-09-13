@@ -1,3 +1,5 @@
+// RUN: not mlir-opt %s -test-parallel-loop-unrolling -split-input-file 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING-FACTORS
+// RUN: not mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,0' -split-input-file 2>&1 | FileCheck %s --check-prefix=CHECK-ZERO-FACTOR
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2' -split-input-file | FileCheck %s
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2 loop-depth=1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-INNER
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-BY-3
@@ -14,6 +16,9 @@ func.func @unroll_simple_parallel_loop(%src: memref<1x16x12xf32>, %dst: memref<1
   }
   return
 }
+
+// CHECK-MISSING-FACTORS: error: missing `unroll-factors` pass option
+// CHECK-ZERO-FACTOR: error: unroll factors must be non-zero
 
 // CHECK-LABEL:   func @unroll_simple_parallel_loop
 // CHECK-SAME:     ([[ARG0:%.*]]: memref<1x16x12xf32>, [[ARG1:%.*]]: memref<1x16x12xf32>)
