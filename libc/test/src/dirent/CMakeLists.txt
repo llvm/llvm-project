@@ -51,7 +51,9 @@ add_libc_test(
     libc.src.stdio.asprintf
     libc.src.stdio.fopen
     libc.src.stdio.fclose
+    libc.src.stdio.remove
     libc.src.stdlib.mkdtemp
+    libc.src.string.strcoll
     libc.src.string.strdup
     libc.src.string.strncmp
     libc.src.unistd.rmdir
