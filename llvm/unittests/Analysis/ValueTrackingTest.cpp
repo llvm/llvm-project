@@ -1794,7 +1794,7 @@ TEST_F(ComputeKnownFPClassTest, FAdd) {
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(~fcSNan, std::nullopt, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FSub) {
@@ -1811,7 +1811,7 @@ TEST_F(ComputeKnownFPClassTest, FSub) {
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A5);
+  expectKnownFPClass(~fcSNan, std::nullopt, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FMul) {
@@ -1825,8 +1825,8 @@ TEST_F(ComputeKnownFPClassTest, FMul) {
       "  ret float %A\n"
       "}\n");
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcSNan, std::nullopt, A2);
+  expectKnownFPClass(~fcSNan, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
   expectKnownFPClass(fcPositive, false, A5);
 }
@@ -1845,11 +1845,11 @@ TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
       "}\n");
   expectKnownFPClass(fcFinite | fcInf, std::nullopt, A);
   expectKnownFPClass(fcPositive | fcNan, std::nullopt, A2);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A3);
+  expectKnownFPClass(~fcSNan, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
   expectKnownFPClass(fcAllFlags, std::nullopt, A5);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A6);
-  expectKnownFPClass(fcAllFlags, std::nullopt, A7);
+  expectKnownFPClass(~fcSNan, std::nullopt, A6);
+  expectKnownFPClass(~fcSNan, std::nullopt, A7);
 }
 
 TEST_F(ComputeKnownFPClassTest, MinimumNumSignBit) {
