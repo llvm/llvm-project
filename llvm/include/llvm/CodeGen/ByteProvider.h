@@ -58,16 +58,30 @@ public:
 };
 
 /// In a well formed or, one of the two byte providers is constant zero.
-std::optional<ByteProvider>
+inline std::optional<ByteProvider>
 selectOrByteProvider(const std::optional<ByteProvider> &LHS,
-                     const std::optional<ByteProvider> &RHS);
+                     const std::optional<ByteProvider> &RHS) {
+  if (!LHS || !RHS)
+    return std::nullopt;
+  if (LHS->isConstantZero())
+    return RHS;
+  if (RHS->isConstantZero())
+    return LHS;
+  return std::nullopt;
+}
 
 enum class NarrowByteAction { Unknown, ConstantZero, FromNarrow };
 
 /// FromNarrow keeps \p Index. \p NarrowBitWidth is not always the operand
 /// width, sign_extend_inreg takes it from the VTSDNode.
-NarrowByteAction classifyNarrowByte(unsigned Index, unsigned NarrowBitWidth,
-                                    bool ZeroFills);
+inline NarrowByteAction
+classifyNarrowByte(unsigned Index, unsigned NarrowBitWidth, bool ZeroFills) {
+  if (NarrowBitWidth % 8 != 0)
+    return NarrowByteAction::Unknown;
+  if (Index < NarrowBitWidth / 8)
+    return NarrowByteAction::FromNarrow;
+  return ZeroFills ? NarrowByteAction::ConstantZero : NarrowByteAction::Unknown;
+}
 
 } // end namespace llvm
 

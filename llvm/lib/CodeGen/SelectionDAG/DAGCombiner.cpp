@@ -9733,7 +9733,6 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   unsigned ByteWidth = BitWidth / 8;
   assert(Index < ByteWidth && "invalid index requested");
-  (void)ByteWidth;
 
   auto Recurse = [&](SDValue NextOp, unsigned NextIndex) {
     return calculateByteProvider(NextOp, NextIndex, Depth + 1, VectorIndex,
