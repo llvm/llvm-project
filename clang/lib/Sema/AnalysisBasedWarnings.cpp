@@ -284,6 +284,91 @@ static bool checkForRecursiveFunctionCall(const FunctionDecl *FD, CFG *cfg) {
   return foundRecursion;
 }
 
+namespace {
+/// Walks a 'pure'/'const' function body looking for stores through pointer
+/// or reference parameters, and stores to global or static-local variables.
+/// This is a syntactic heuristic, not a proof: it only catches direct writes
+/// reachable via straightforward lvalue expressions in the function's own
+/// body. It intentionally does not attempt interprocedural analysis (that's
+/// undecidable in general), locally-allocated memory escaping, or writes
+/// mediated through a level of indirection the visitor doesn't unwrap.
+class PureConstWriteChecker : public DynamicRecursiveASTVisitor {
+public:
+  PureConstWriteChecker(Sema &sema, const FunctionDecl *functionDecl,
+                        bool isConstAttr)
+      : S(sema), FD(functionDecl), IsConstAttr(isConstAttr) {}
+
+  bool VisitBinaryOperator(BinaryOperator *BO) override {
+    if (BO->isAssignmentOp() || BO->isCompoundAssignmentOp())
+      checkLvalue(BO->getLHS());
+
+    return true;
+  }
+
+private:
+  Sema &S;
+  const FunctionDecl *FD;
+  bool IsConstAttr;
+
+  void checkLvalue(const Expr *E) {
+    E = E->IgnoreParenImpCasts();
+
+    if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_Deref)
+        checkPointerBase(UO->getSubExpr());
+      return;
+    }
+
+    const auto *DRE = dyn_cast<DeclRefExpr>(E);
+    if (!DRE)
+      return;
+    const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+    if (!VD)
+      return;
+
+    if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
+      if (PVD->getType()->isReferenceType() &&
+          !PVD->getType()->getPointeeType().isConstQualified()) {
+        S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_argument)
+            << IsConstAttr << true << PVD;
+        S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
+            << IsConstAttr;
+      }
+      return;
+    }
+
+    if (VD->hasGlobalStorage()) {
+      S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_global)
+          << IsConstAttr << VD->isStaticLocal() << VD;
+      S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
+          << IsConstAttr;
+    }
+  }
+
+  void checkPointerBase(const Expr *Base) {
+    Base = Base->IgnoreParenCasts();
+    const auto *DRE = dyn_cast<DeclRefExpr>(Base);
+    if (!DRE)
+      return;
+    const auto *PVD = dyn_cast<ParmVarDecl>(DRE->getDecl());
+    if (!PVD)
+      return;
+    S.Diag(DRE->getLocation(), diag::warn_pure_function_writes_argument)
+        << IsConstAttr << false << PVD;
+    S.Diag(FD->getLocation(), diag::note_pure_function_declared_here)
+        << IsConstAttr;
+  }
+};
+
+static void checkPureConstFunctionWrites(Sema &S, const FunctionDecl *FD,
+                                         Stmt *Body) {
+  bool IsConstAttr = FD->hasAttr<ConstAttr>();
+  if (!IsConstAttr && !FD->hasAttr<PureAttr>())
+    return;
+  PureConstWriteChecker Checker(S, FD, IsConstAttr);
+  Checker.TraverseStmt(Body);
+}
+} // namespace
 static void checkRecursiveFunction(Sema &S, const FunctionDecl *FD,
                                    const Stmt *Body, AnalysisDeclContext &AC) {
   FD = FD->getCanonicalDecl();
@@ -3315,6 +3400,13 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
       checkRecursiveFunction(S, FD, Body, AC);
     }
+  }
+  if (!Diags.isIgnored(diag::warn_pure_function_writes_argument,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_pure_function_writes_global,
+                       D->getBeginLoc())) {
+    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+      checkPureConstFunctionWrites(S, FD, const_cast<Stmt *>(Body));
   }
 
   // Check for throw out of non-throwing function.
