@@ -79,7 +79,7 @@ struct TestCustomTypes {
     runway_sample(n + 1, [&](size_t size) {
       // Construct the source array for this iteration: X(1), X(2), X(3), ...
       for (size_t i = 0; i < size; ++i) {
-        std::construct_at(source + i, static_cast<int>(i + 1));
+        std::allocator_traits<std::allocator<Src>>::construct(alloc_src, source + i, static_cast<int>(i + 1));
       }
 
       auto ret = std::uninitialized_move_n(policy, Iter1(source), size, Iter2(dest));

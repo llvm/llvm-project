@@ -74,7 +74,7 @@ struct TestCustomTypes {
 
     // Source is Src(1), Src(2), Src(3), ...
     for (size_t i = 0; i < n; ++i) {
-      std::construct_at(source + i, static_cast<int>(i + 1));
+      std::allocator_traits<std::allocator<Src>>::construct(alloc_src, source + i, static_cast<int>(i + 1));
     }
 
     // Copy-construct different ranges of Y [0..size) from the source X array
