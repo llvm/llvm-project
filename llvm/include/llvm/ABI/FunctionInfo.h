@@ -71,10 +71,11 @@ private:
   bool ZeroExt : 1;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
+  bool CanBeFlattened : 1;
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false) {}
+        IndirectRealign(false), CanBeFlattened(false) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -85,12 +86,16 @@ public:
   ///               return value on x86-64).
   /// \param Align  Override for the argument's alignment. If absent, the
   ///               default alignment for \p T is used.
+  /// \param CanBeFlattened Whether a record coercion may be split into one
+  ///               wire argument per field. See getCanBeFlattened.
   static ArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
-                           MaybeAlign Align = std::nullopt) {
+                           MaybeAlign Align = std::nullopt,
+                           bool CanBeFlattened = true) {
     ArgInfo AI(Direct);
     AI.CoercionType = T;
     AI.Alignment = Align;
     AI.DirectAttr.Offset = Offset;
+    AI.CanBeFlattened = CanBeFlattened;
     return AI;
   }
 
@@ -140,6 +145,13 @@ public:
     return *this;
   }
 
+  /// See getCanBeFlattened.
+  ArgInfo &setCanBeFlattened(bool Flatten) {
+    assert(isDirect() && "Invalid Kind!");
+    CanBeFlattened = Flatten;
+    return *this;
+  }
+
   Kind getKind() const { return TheKind; }
   bool isDirect() const { return TheKind == Direct; }
   bool isIndirect() const { return TheKind == Indirect; }
@@ -176,6 +188,13 @@ public:
   bool getIndirectRealign() const {
     assert(isIndirect() && "Invalid Kind!");
     return IndirectRealign;
+  }
+
+  /// Whether a Direct record coercion may be split into one wire argument
+  /// per field. Mirrors clang::CodeGen::ABIArgInfo::CanBeFlattened.
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Invalid Kind!");
+    return CanBeFlattened;
   }
 
   bool isSignExt() const {
