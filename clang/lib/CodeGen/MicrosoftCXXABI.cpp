@@ -2531,19 +2531,23 @@ static void emitTlsGuardCheck(CodeGenFunction &CGF, llvm::GlobalValue *TlsGuard,
   CGF.Builder.CreateCondBr(CmpResult, DynInitBB, ContinueBB);
 }
 
-static void emitDynamicTlsInitializationCall(CodeGenFunction &CGF,
-                                             llvm::GlobalValue *TlsGuard,
-                                             llvm::BasicBlock *ContinueBB) {
+static void emitDynamicTlsInitializationCall(CodeGenFunction &CGF) {
   llvm::FunctionCallee Initializer = getDynTlsOnDemandInitFn(CGF.CGM);
   llvm::Function *InitializerFunction =
       cast<llvm::Function>(Initializer.getCallee());
   llvm::CallInst *CallVal = CGF.Builder.CreateCall(InitializerFunction);
   CallVal->setCallingConv(InitializerFunction->getCallingConv());
-
-  CGF.Builder.CreateBr(ContinueBB);
 }
 
 static void emitDynamicTlsInitialization(CodeGenFunction &CGF) {
+  if (CGF.CGM.getCodeGenOpts().EmulatedTLS) {
+    // __tls_guard is native TLS owned by the MSVC runtime and does not have an
+    // emutls descriptor. The runtime helper performs the same guard check, so
+    // call it directly rather than emitting a reference to __tls_guard.
+    emitDynamicTlsInitializationCall(CGF);
+    return;
+  }
+
   llvm::BasicBlock *DynInitBB =
       CGF.createBasicBlock("dyntls.dyn_init", CGF.CurFn);
   llvm::BasicBlock *ContinueBB =
@@ -2553,7 +2557,8 @@ static void emitDynamicTlsInitialization(CodeGenFunction &CGF) {
 
   emitTlsGuardCheck(CGF, TlsGuard, DynInitBB, ContinueBB);
   CGF.Builder.SetInsertPoint(DynInitBB);
-  emitDynamicTlsInitializationCall(CGF, TlsGuard, ContinueBB);
+  emitDynamicTlsInitializationCall(CGF);
+  CGF.Builder.CreateBr(ContinueBB);
   CGF.Builder.SetInsertPoint(ContinueBB);
 }
 
@@ -2791,13 +2796,20 @@ void MicrosoftCXXABI::EmitGuardedInit(CodeGenFunction &CGF, const VarDecl &D,
     // The algorithm is almost identical to what can be found in the appendix
     // found in N2325.
 
-    // This BasicBLock determines whether or not we have any work to do.
-    llvm::LoadInst *FirstGuardLoad = Builder.CreateLoad(GuardAddr);
-    FirstGuardLoad->setOrdering(llvm::AtomicOrdering::Unordered);
-    llvm::LoadInst *InitThreadEpoch =
-        Builder.CreateLoad(getInitThreadEpochPtr(CGM));
-    llvm::Value *IsUninitialized =
-        Builder.CreateICmpSGT(FirstGuardLoad, InitThreadEpoch);
+    llvm::Value *IsUninitialized;
+    if (CGM.getCodeGenOpts().EmulatedTLS) {
+      // _Init_thread_epoch is native TLS owned by the MSVC runtime. It does
+      // not have an emutls descriptor. Without its per-thread epoch, enter the
+      // runtime on every access to preserve its synchronization guarantees.
+      IsUninitialized = Builder.getTrue();
+    } else {
+      // This test determines whether or not we have any work to do.
+      llvm::LoadInst *FirstGuardLoad = Builder.CreateLoad(GuardAddr);
+      FirstGuardLoad->setOrdering(llvm::AtomicOrdering::Unordered);
+      llvm::LoadInst *InitThreadEpoch =
+          Builder.CreateLoad(getInitThreadEpochPtr(CGM));
+      IsUninitialized = Builder.CreateICmpSGT(FirstGuardLoad, InitThreadEpoch);
+    }
     llvm::BasicBlock *AttemptInitBlock = CGF.createBasicBlock("init.attempt");
     llvm::BasicBlock *EndBlock = CGF.createBasicBlock("init.end");
     CGF.EmitCXXGuardedInitBranch(IsUninitialized, AttemptInitBlock, EndBlock,
