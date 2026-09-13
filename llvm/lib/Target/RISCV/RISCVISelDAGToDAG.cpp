@@ -18,11 +18,13 @@
 #include "RISCVInstrInfo.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include <queue>
 
 using namespace llvm;
 
@@ -555,6 +557,132 @@ void RISCVDAGToDAGISel::selectXSfmmVSET(SDNode *Node) {
                 CurDAG->getMachineNode(PseudoOpCode, DL, XLenVT,
                                        Node->getOperand(1), Log2SEW, TWiden));
   }
+}
+
+bool RISCVDAGToDAGISel::tryPExtNarrowUnsigned(SDNode *Node) {
+  using namespace SDPatternMatch;
+
+  EVT VT = Node->getValueType(0);
+  SDLoc DL(Node);
+
+  APInt ConstMask;
+
+  if (sd_match(Node,
+               m_And(m_Add(m_Value(), m_Value()), m_ConstInt(ConstMask)))) {
+    uint64_t ConstMaskVal = ConstMask.getZExtValue();
+
+    uint64_t PAddOpcode;
+    uint64_t MinZeroBits;
+
+    bool IsRV32 = Subtarget->isRV32();
+
+    switch (ConstMaskVal) {
+    case ((1ll << 8) - 1):
+      PAddOpcode = RISCV::PADD_B;
+      MinZeroBits = (IsRV32 ? 24 : 56);
+      break;
+    case ((1ll << 16) - 1):
+      PAddOpcode = RISCV::PADD_H;
+      MinZeroBits = (IsRV32 ? 16 : 48);
+      break;
+    case ((1ll << 32) - 1):
+      if (IsRV32)
+        return false;
+      PAddOpcode = RISCV::PADD_W;
+      MinZeroBits = 32;
+      break;
+    default:
+      return false;
+    }
+
+    auto hasEnoughZeroBits = [MinZeroBits](SDNode *Node, SDValue Op) -> bool {
+      VTSDNode *ChainedNode = dyn_cast<VTSDNode>(Op);
+      if (!ChainedNode)
+        return false;
+
+      EVT FromTy = ChainedNode->getVT();
+      EVT ToTy = Node->getValueType(0);
+      return (ToTy.getSizeInBits() - FromTy.getSizeInBits()) >= MinZeroBits;
+    };
+
+    std::queue<SDNode *> Worklist;
+    Worklist.push(Node->getOperand(0).getNode());
+
+    std::vector<SDNode *> Ops;
+    while (!Worklist.empty()) {
+      SDNode *CurNode = Worklist.front();
+      Worklist.pop();
+
+      SDValue N0, N1, N2, N3;
+      SDValue A0, A1, V0, V1;
+      if (sd_match(CurNode, m_Add(m_Add(m_Value(N0), m_Value(N1)),
+                                  m_Add(m_Value(N2), m_Value(N3))))) {
+        SDValue Inner0 = CurNode->getOperand(0);
+        SDValue Inner1 = CurNode->getOperand(1);
+        if (!Inner0.hasOneUse() || !Inner1.hasOneUse())
+          return false;
+
+        Worklist.push(N3.getNode());
+        Worklist.push(N2.getNode());
+        Worklist.push(N1.getNode());
+        Worklist.push(N0.getNode());
+      } else if (sd_match(CurNode, m_Add(m_Add(m_Value(N0), m_Value(N1)),
+                                         m_Node(ISD::AssertZext, m_Value(V1),
+                                                m_Value(A1))))) {
+        SDValue Inner0 = CurNode->getOperand(0);
+        if (!Inner0.hasOneUse())
+          return false;
+
+        if (!hasEnoughZeroBits(V1.getNode(), A1))
+          return false;
+
+        Worklist.push(N1.getNode());
+        Worklist.push(N0.getNode());
+        Worklist.push(CurNode->getOperand(1).getNode());
+      } else if (sd_match(CurNode, m_Add(m_Node(ISD::AssertZext, m_Value(V0),
+                                                m_Value(A0)),
+                                         m_Node(ISD::AssertZext, m_Value(V1),
+                                                m_Value(A1))))) {
+        if (!hasEnoughZeroBits(V1.getNode(), A1) ||
+            !hasEnoughZeroBits(V0.getNode(), A0))
+          return false;
+        Worklist.push(CurNode->getOperand(0).getNode());
+        Worklist.push(CurNode->getOperand(1).getNode());
+      } else if (sd_match(CurNode,
+                          m_Node(ISD::AssertZext, m_Value(V0), m_Value(A1)))) {
+        if (!hasEnoughZeroBits(V0.getNode(), A1))
+          return false;
+        Ops.push_back(V0.getNode());
+      }
+    }
+
+    uint64_t Idx = 0, NumOps = Ops.size();
+    bool IsFirst = true;
+
+    SDValue LastOp;
+    while (Idx < NumOps) {
+      SDNode *Op0 = Ops[Idx++];
+      SDValue PAddNode;
+      if (IsFirst) {
+        SDNode *Op1 = Ops[Idx++];
+        PAddNode =
+            SDValue(CurDAG->getMachineNode(PAddOpcode, DL, VT, SDValue(Op0, 0),
+                                           SDValue(Op1, 0)),
+                    0);
+        IsFirst = false;
+      } else {
+        PAddNode = SDValue(
+            CurDAG->getMachineNode(PAddOpcode, DL, VT, LastOp, SDValue(Op0, 0)),
+            0);
+      }
+      LastOp = PAddNode;
+    }
+
+    ReplaceNode(Node, LastOp.getNode());
+    return true;
+  }
+
+  return false;
 }
 
 bool RISCVDAGToDAGISel::tryShrinkShlLogicImm(SDNode *Node) {
@@ -1814,6 +1942,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     if (tryShrinkShlLogicImm(Node))
       return;
+
+    if (!CurDAG->getMachineFunction().getFunction().hasMinSize())
+      if (Subtarget->hasStdExtP() && tryPExtNarrowUnsigned(Node))
+        return;
 
     break;
   }
