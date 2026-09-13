@@ -2142,6 +2142,17 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   RegsToPassVector RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
+  // A musttail call in a variadic function must receive the caller's unnamed
+  // register arguments unchanged.  The forwarded set is disjoint from the named
+  // arguments handled below.
+  if (isVarArg && CLI.CB && CLI.CB->isMustTailCall()) {
+    const auto &Forwards = AFI->getForwardedMustTailRegParms();
+    for (const ForwardedRegister &F : Forwards) {
+      SDValue Val = DAG.getCopyFromReg(Chain, dl, F.VReg, F.VT);
+      RegsToPass.push_back(std::make_pair(F.PReg, Val));
+    }
+  }
+
   // If we are doing a tail-call, any byval arguments will be written to stack
   // space which was used for incoming arguments. If any the values being used
   // are incoming byval arguments to this function, then they might be
@@ -4469,6 +4480,30 @@ SDValue ARMTargetLowering::LowerFormalArguments(
       DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
           DAG.getMachineFunction().getFunction(),
           "secure entry function must not be variadic", dl.getDebugLoc()));
+    }
+  }
+
+  // A variadic function that forwards through a musttail call needs its unnamed
+  // register arguments modelled as live, so the allocator does not use one as
+  // scratch.  This must run after the va_list save area above, which consumes
+  // the same registers, and is deliberately *not* predicated on hasVAStart():
+  // a forwarding thunk never calls va_start.
+  if (isVarArg && MFI.hasMustTailInVarArgFunc()) {
+    // getRemainingRegParmsForType() walks the assign function until an argument
+    // lands in memory, so the convention must have a stack fallback.  GHC and
+    // the Windows CFGuard check stub assign to registers only and would run off
+    // the end of their tables; neither supports variadic arguments anyway.
+    CallingConv::ID EffCC = getEffectiveCallingConv(CallConv, isVarArg);
+    if (EffCC != CallingConv::GHC && EffCC != CallingConv::CFGuard_Check) {
+      // Only the core registers can hold an unnamed argument:
+      // getEffectiveCallingConv() degrades every VFP convention to ARM_AAPCS
+      // when isVarArg is set.
+      SmallVector<MVT, 1> RegParmTypes;
+      RegParmTypes.push_back(MVT::i32);
+      SmallVectorImpl<ForwardedRegister> &Forwards =
+          AFI->getForwardedMustTailRegParms();
+      CCInfo.analyzeMustTailForwardedRegisters(
+          Forwards, RegParmTypes, CCAssignFnForCall(CallConv, isVarArg));
     }
   }
 
