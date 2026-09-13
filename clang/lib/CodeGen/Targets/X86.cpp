@@ -1229,6 +1229,18 @@ class X86_64ABIInfo : public ABIInfo {
     Memory
   };
 
+  struct ClassPair {
+    Class Lo = NoClass;
+    Class Hi = NoClass;
+  };
+
+  struct VectorTypeInfo {
+    QualType ElementType;
+    bool IsSingleElement;
+    bool IsFPElement;
+    bool IsInt128Element;
+  };
+
   /// merge - Implement the X86_64 ABI merging algorithm.
   ///
   /// Merge an accumulating classification \arg Accum with a field
@@ -1240,32 +1252,45 @@ class X86_64ABIInfo : public ABIInfo {
   /// should just return Memory for the aggregate).
   static Class merge(Class Accum, Class Field);
 
-  /// classify - Determine the x86_64 register classes in which the
-  /// given type T should be passed.
+  /// Return the classes intrinsic to the builtin type \param BT. The caller is
+  /// responsible for placing them at the type's offset.
+  ClassPair getBuiltinTypeClassification(const BuiltinType *BT) const;
+
+  /// Return the classes intrinsic to the complex type \param CT. The caller is
+  /// responsible for boundary splitting and class placement.
+  ClassPair getComplexTypeClassification(const ComplexType *CT) const;
+
+  /// Return the classes intrinsic to the bit-precise integer type \param BT.
+  /// The caller is responsible for class placement.
+  static ClassPair getBitIntTypeClassification(const BitIntType *BT);
+
+  /// Collect the canonical element type and shared classification properties
+  /// of the vector \param VT or matrix \param MT. At least one must be
+  /// non-null.
+  VectorTypeInfo getVectorTypeInfo(const VectorType *VT,
+                                   const MatrixType *MT = nullptr) const;
+
+  /// Return true when \param RT must be passed in memory without inspecting its
+  /// bases or fields because of its size, record ABI, or flexible array member.
+  bool isRecordPassedInMemory(const RecordType *RT, uint64_t Size) const;
+
+  /// Determine the x86_64 register classes used to pass or return \p T.
   ///
-  /// \param Lo - The classification for the parts of the type
-  /// residing in the low word of the containing object.
+  /// Each element of \p EightBytes describes an eightbyte in the containing
+  /// object. The Clang 24 classifier can produce an entry for every eightbyte,
+  /// while the legacy classifier represents the result using its first two
+  /// entries. NoClass denotes an unused eightbyte and Memory denotes a value
+  /// that must be passed in memory.
   ///
-  /// \param Hi - The classification for the parts of the type
-  /// residing in the high word of the containing object.
-  ///
-  /// \param OffsetBase - The bit offset of this type in the
-  /// containing object.  Some parameters are classified different
-  /// depending on whether they straddle an eightbyte boundary.
-  ///
-  /// \param isNamedArg - Whether the argument in question is a "named"
-  /// argument, as used in AMD64-ABI 3.5.7.
-  ///
-  /// \param IsRegCall - Whether the calling conversion is regcall.
-  ///
-  /// If a word is unused its result will be NoClass; if a type should
-  /// be passed in Memory then at least the classification of \arg Lo
-  /// will be Memory.
-  ///
-  /// The \arg Lo class will be NoClass iff the argument is ignored.
-  ///
-  /// If the \arg Lo class is ComplexX87, then the \arg Hi class will
-  /// also be ComplexX87.
+  /// \param T The type to classify.
+  /// \param OffsetBase The bit offset of \p T in its containing object.
+  /// Classification can depend on whether the type straddles an eightbyte
+  /// boundary.
+  /// \param EightBytes The resulting eightbyte classes.
+  /// \param isNamedArg Whether the argument is named rather than part of a
+  /// variadic argument list, as used in AMD64-ABI 3.5.7.
+  /// \param isRegCall Whether the calling convention is regcall. Regcall uses
+  /// the legacy classifier.
   void classify(QualType T, uint64_t OffsetBase,
                 SmallVectorImpl<Class> &EightBytes, bool isNamedArg,
                 bool isRegCall = false) const;
@@ -1871,6 +1896,108 @@ X86_64ABIInfo::Class X86_64ABIInfo::merge(Class Accum, Class Field) {
   return SSE;
 }
 
+X86_64ABIInfo::ClassPair
+X86_64ABIInfo::getBuiltinTypeClassification(const BuiltinType *BT) const {
+  BuiltinType::Kind K = BT->getKind();
+
+  if (K == BuiltinType::Void)
+    return {};
+  if (K == BuiltinType::Int128 || K == BuiltinType::UInt128)
+    return {Integer, Integer};
+  if (K >= BuiltinType::Bool && K <= BuiltinType::LongLong)
+    return {Integer};
+  if (K == BuiltinType::Float || K == BuiltinType::Double ||
+      K == BuiltinType::Float16 || K == BuiltinType::BFloat16)
+    return {SSE};
+  if (K == BuiltinType::Float128)
+    return {SSE, SSEUp};
+  if (K == BuiltinType::LongDouble) {
+    const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+    if (LDF == &llvm::APFloat::IEEEquad())
+      return {SSE, SSEUp};
+    if (LDF == &llvm::APFloat::x87DoubleExtended())
+      return {X87, X87Up};
+    if (LDF == &llvm::APFloat::IEEEdouble())
+      return {SSE};
+    llvm_unreachable("unexpected long double representation!");
+  }
+
+  return {Memory};
+}
+
+X86_64ABIInfo::ClassPair
+X86_64ABIInfo::getComplexTypeClassification(const ComplexType *CT) const {
+  QualType ET = getContext().getCanonicalType(CT->getElementType());
+  uint64_t Size = getContext().getTypeSize(QualType(CT, 0));
+
+  if (ET->isIntegralOrEnumerationType()) {
+    if (Size <= 64)
+      return {Integer};
+    if (Size <= 128)
+      return {Integer, Integer};
+    llvm_unreachable("unexpected complex integer type size");
+  }
+  if (ET->isFloat16Type() || ET == getContext().FloatTy || ET->isBFloat16Type())
+    return {SSE};
+  if (ET == getContext().DoubleTy)
+    return {SSE, SSE};
+  if (ET == getContext().LongDoubleTy) {
+    const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
+    if (LDF == &llvm::APFloat::IEEEquad())
+      return {Memory};
+    if (LDF == &llvm::APFloat::x87DoubleExtended())
+      return {ComplexX87};
+    if (LDF == &llvm::APFloat::IEEEdouble())
+      return {SSE, SSE};
+    llvm_unreachable("unexpected long double representation!");
+  }
+  if (ET->isFloat128Type())
+    return {Memory};
+  llvm_unreachable("unexpected complex element type");
+}
+
+X86_64ABIInfo::ClassPair
+X86_64ABIInfo::getBitIntTypeClassification(const BitIntType *BT) {
+  if (BT->getNumBits() <= 64)
+    return {Integer};
+  if (BT->getNumBits() <= 128)
+    return {Integer, Integer};
+  return {Memory};
+}
+
+X86_64ABIInfo::VectorTypeInfo
+X86_64ABIInfo::getVectorTypeInfo(const VectorType *VT,
+                                 const MatrixType *MT) const {
+  assert((VT || MT) && "expected a vector or matrix type");
+  QualType ElementType = getContext().getCanonicalType(
+      VT ? VT->getElementType() : MT->getElementType());
+  bool IsFPElement = ElementType->isFloat16Type() ||
+                     ElementType->isBFloat16Type() ||
+                     ElementType == getContext().FloatTy ||
+                     ElementType == getContext().DoubleTy;
+  bool IsInt128Element =
+      ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
+      ElementType->isSpecificBuiltinType(BuiltinType::UInt128);
+  return {ElementType, VT && VT->getNumElements() == 1, IsFPElement,
+          IsInt128Element};
+}
+
+bool X86_64ABIInfo::isRecordPassedInMemory(const RecordType *RT,
+                                           uint64_t Size) const {
+  // AMD64-ABI 3.2.3p2: Rule 1. Objects larger than eight eightbytes have class
+  // MEMORY.
+  if (Size > 512)
+    return true;
+
+  // Rule 2. C++ objects with a non-trivial copy constructor or destructor are
+  // passed by invisible reference.
+  if (getRecordArgABI(RT, getCXXABI()))
+    return true;
+
+  // Assume variable sized types are passed in memory.
+  return RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember();
+}
+
 void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase,
                              SmallVectorImpl<Class> &EightBytes,
                              bool isNamedArg, bool IsRegCall) const {
@@ -1958,6 +2085,17 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
     SetEightByte(llvm::alignDown(Offset, uint64_t(64)) + 64, HiClass);
   };
 
+  auto SetClassPair = [&](uint64_t Offset, ClassPair Classes) {
+    if (Classes.Lo == Memory || Classes.Hi == Memory) {
+      ClassifyAsMemory();
+      return;
+    }
+    if (Classes.Lo != NoClass)
+      SetEightByte(Offset, Classes.Lo);
+    if (Classes.Hi != NoClass)
+      SetEightByte(llvm::alignDown(Offset, uint64_t(64)) + 64, Classes.Hi);
+  };
+
   auto SetTouchedEightBytes = [&](uint64_t Size, Class C) {
     for (uint64_t Offset = OffsetBase, End = OffsetBase + Size; Offset < End;
          Offset = llvm::alignDown(Offset, uint64_t(64)) + 64)
@@ -2002,40 +2140,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // Built In Types
   if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    BuiltinType::Kind K = BT->getKind();
-
-    if (K == BuiltinType::Void)
-      return;
-    if (K == BuiltinType::Int128 || K == BuiltinType::UInt128) {
-      SetAdjacentEightBytes(OffsetBase, Integer, Integer);
-      return;
-    }
-    if (K >= BuiltinType::Bool && K <= BuiltinType::LongLong) {
-      SetEightByte(OffsetBase, Integer);
-      return;
-    }
-    if (K == BuiltinType::Float || K == BuiltinType::Double ||
-        K == BuiltinType::Float16 || K == BuiltinType::BFloat16) {
-      SetEightByte(OffsetBase, SSE);
-      return;
-    }
-    if (K == BuiltinType::Float128) {
-      SetAdjacentEightBytes(OffsetBase, SSE, SSEUp);
-      return;
-    }
-    if (K == BuiltinType::LongDouble) {
-      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-      if (LDF == &llvm::APFloat::IEEEquad())
-        SetAdjacentEightBytes(OffsetBase, SSE, SSEUp);
-      else if (LDF == &llvm::APFloat::x87DoubleExtended())
-        SetAdjacentEightBytes(OffsetBase, X87, X87Up);
-      else if (LDF == &llvm::APFloat::IEEEdouble())
-        SetEightByte(OffsetBase, SSE);
-      else
-        llvm_unreachable("unexpected long double representation!");
-      return;
-    }
-    ClassifyAsMemory();
+    SetClassPair(OffsetBase, getBuiltinTypeClassification(BT));
     return;
   }
 
@@ -2064,25 +2169,8 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
   // same element type.
   const VectorType *VT = Ty->getAs<VectorType>();
   const MatrixType *MT = Ty->getAs<MatrixType>();
-  bool IsVectorOrMatrix = VT != nullptr || MT != nullptr;
-  if (IsVectorOrMatrix) {
-    QualType ElementType;
-    bool IsSingleElementVector = false;
-    if (VT) {
-      ElementType = VT->getElementType();
-      IsSingleElementVector = VT->getNumElements() == 1;
-    } else if (MT) {
-      ElementType = MT->getElementType();
-    } else {
-      llvm_unreachable("invalid vector or matrix type");
-    }
-    ElementType = getContext().getCanonicalType(ElementType);
-
-    auto IsFPVectorElement = [&]() {
-      return ElementType->isFloat16Type() || ElementType->isBFloat16Type() ||
-             ElementType == getContext().FloatTy ||
-             ElementType == getContext().DoubleTy;
-    };
+  if (VT || MT) {
+    VectorTypeInfo Info = getVectorTypeInfo(VT, MT);
 
     auto SetEightByteClasses = [&](Class FirstClass, Class RestClass) {
       // Vector objects should not start partway through one eightbyte and
@@ -2102,7 +2190,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
         SetEightByte(Offset, RestClass);
     };
 
-    if (IsSingleElementVector && IsFPVectorElement()) {
+    if (Info.IsSingleElement && Info.IsFPElement) {
       // GCC passes single-element floating-point vectors in memory. This is a
       // compatibility rule, not a psABI classification rule.
       ClassifyAsMemory();
@@ -2113,9 +2201,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
     // as vectors of __int128 are classified. Match GCC, which passes vectors
     // of __int128 wider than 128 bits in memory on platforms that opt in to
     // this compatibility behavior.
-    if (passInt128VectorsInMem() && Size > 128 &&
-        (ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
-         ElementType->isSpecificBuiltinType(BuiltinType::UInt128))) {
+    if (passInt128VectorsInMem() && Size > 128 && Info.IsInt128Element) {
       ClassifyAsMemory();
       return;
     }
@@ -2131,7 +2217,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
       // 4 bytes - <4 x char>, <2 x short>, <1 x int>
       // 2 bytes - <2 x char>, <1 x short>
       // 1 byte  - <1 x char>
-      Class C = IsFPVectorElement() ? SSE : Integer;
+      Class C = Info.IsFPElement ? SSE : Integer;
 
       SetEightByteClasses(C, C);
     } else if (Size == 64) {
@@ -2150,35 +2236,11 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // Complex types
   if (const ComplexType *CT = Ty->getAs<ComplexType>()) {
-    QualType ET = getContext().getCanonicalType(CT->getElementType());
-
-    uint64_t Size = getContext().getTypeSize(Ty);
-    if (ET->isIntegralOrEnumerationType()) {
-      if (Size <= 64)
-        SetEightByte(OffsetBase, Integer);
-      else if (Size <= 128)
-        SetAdjacentEightBytes(OffsetBase, Integer, Integer);
-    } else if (ET->isFloat16Type() || ET == getContext().FloatTy ||
-               ET->isBFloat16Type()) {
-      SetEightByte(OffsetBase, SSE);
-    } else if (ET == getContext().DoubleTy) {
-      SetAdjacentEightBytes(OffsetBase, SSE, SSE);
-    } else if (ET == getContext().LongDoubleTy) {
-      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-      if (LDF == &llvm::APFloat::IEEEquad())
-        ClassifyAsMemory();
-      else if (LDF == &llvm::APFloat::x87DoubleExtended())
-        SetEightByte(OffsetBase, ComplexX87);
-      else if (LDF == &llvm::APFloat::IEEEdouble())
-        SetAdjacentEightBytes(OffsetBase, SSE, SSE);
-      else
-        llvm_unreachable("unexpected long double representation!");
-    } else if (ET->isFloat128Type()) {
-      ClassifyAsMemory();
-    }
+    SetClassPair(OffsetBase, getComplexTypeClassification(CT));
 
     // If this complex type crosses an eightbyte boundary then it
     // should be split.
+    QualType ET = getContext().getCanonicalType(CT->getElementType());
     uint64_t EB_Real = (OffsetBase) / 64;
     uint64_t EB_Imag = (OffsetBase + getContext().getTypeSize(ET)) / 64;
     if (EightBytes[EB_Imag] == NoClass && EB_Real != EB_Imag)
@@ -2190,15 +2252,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // BitInt Types
   if (const auto *EITy = Ty->getAs<BitIntType>()) {
-    if (EITy->getNumBits() <= 64)
-      SetEightByte(OffsetBase, Integer);
-    else if (EITy->getNumBits() <= 128)
-      SetAdjacentEightBytes(OffsetBase, Integer, Integer);
-    else {
-      // Larger values need to get passed in memory.
-      ClassifyAsMemory();
-    }
-
+    SetClassPair(OffsetBase, getBitIntTypeClassification(EITy));
     return;
   }
 
@@ -2243,31 +2297,12 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // CXX Record Type
   if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
-    // uint64_t Size = getContext().getTypeSize(Ty);
-
-    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
-    // than eight eightbytes, ..., it has class MEMORY.
-    if (Size > 512) {
-      ClassifyAsMemory();
-      return;
-    }
-
-    // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
-    // copy constructor or a non-trivial destructor, it is passed by
-    // invisible reference.
-    if (getRecordArgABI(RT, getCXXABI())) {
+    if (isRecordPassedInMemory(RT, Size)) {
       ClassifyAsMemory();
       return;
     }
 
     const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
-
-    // Assume variable sized types are passed in memory.
-    if (RD->hasFlexibleArrayMember()) {
-      ClassifyAsMemory();
-      return;
-    }
-
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
 
     // If this is a C++ record, classify the bases first.
@@ -2350,10 +2385,6 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
                                     SmallVectorImpl<Class> &EightBytes,
                                     bool isNamedArg, bool IsRegCall) const {
-  // FIXME: This code can be simplified by introducing a simple value class
-  // for Class pairs with appropriate constructor methods for the various
-  // situations.
-
   // FIXME: Some of the split computations are wrong; unaligned vectors
   // shouldn't be passed in registers for example, so there is no chance they
   // can straddle an eightbyte. Verify & simplify.
@@ -2396,37 +2427,17 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
   Class &Current = OffsetBase < 64 ? Lo : Hi;
   Current = Memory;
 
-  if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
-    BuiltinType::Kind k = BT->getKind();
-
-    if (k == BuiltinType::Void) {
-      Current = NoClass;
-    } else if (k == BuiltinType::Int128 || k == BuiltinType::UInt128) {
-      Lo = Integer;
-      Hi = Integer;
-    } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
-      Current = Integer;
-    } else if (k == BuiltinType::Float || k == BuiltinType::Double ||
-               k == BuiltinType::Float16 || k == BuiltinType::BFloat16) {
-      Current = SSE;
-    } else if (k == BuiltinType::Float128) {
-      Lo = SSE;
-      Hi = SSEUp;
-    } else if (k == BuiltinType::LongDouble) {
-      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-      if (LDF == &llvm::APFloat::IEEEquad()) {
-        Lo = SSE;
-        Hi = SSEUp;
-      } else if (LDF == &llvm::APFloat::x87DoubleExtended()) {
-        Lo = X87;
-        Hi = X87Up;
-      } else if (LDF == &llvm::APFloat::IEEEdouble()) {
-        Current = SSE;
-      } else
-        llvm_unreachable("unexpected long double representation!");
+  auto SetClassPair = [&](ClassPair Classes) {
+    if (Classes.Hi == NoClass) {
+      Current = Classes.Lo;
+      return;
     }
-    // FIXME: _Decimal32 and _Decimal64 are SSE.
-    // FIXME: _float128 and _Decimal128 are (SSE, SSEUp).
+    Lo = Classes.Lo;
+    Hi = Classes.Hi;
+  };
+
+  if (const BuiltinType *BT = Ty->getAs<BuiltinType>()) {
+    SetClassPair(getBuiltinTypeClassification(BT));
     return;
   }
 
@@ -2467,6 +2478,7 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
     uint64_t Size = getContext().getTypeSize(VT);
+    VectorTypeInfo Info = getVectorTypeInfo(VT);
     if (Size == 1 || Size == 8 || Size == 16 || Size == 32) {
       // gcc passes the following as integer:
       // 4 bytes - <4 x char>, <2 x short>, <1 x int>, <1 x float>
@@ -2481,20 +2493,18 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
       if (EB_Lo != EB_Hi)
         Hi = Lo;
     } else if (Size == 64) {
-      QualType ElementType = VT->getElementType();
-
       // gcc passes <1 x double> in memory. :(
-      if (ElementType->isSpecificBuiltinType(BuiltinType::Double))
+      if (Info.ElementType->isSpecificBuiltinType(BuiltinType::Double))
         return;
 
       // gcc passes <1 x long long> as SSE but clang used to unconditionally
       // pass them as integer.  For platforms where clang is the de facto
       // platform compiler, we must continue to use integer.
       if (!classifyIntegerMMXAsSSE() &&
-          (ElementType->isSpecificBuiltinType(BuiltinType::LongLong) ||
-           ElementType->isSpecificBuiltinType(BuiltinType::ULongLong) ||
-           ElementType->isSpecificBuiltinType(BuiltinType::Long) ||
-           ElementType->isSpecificBuiltinType(BuiltinType::ULong)))
+          (Info.ElementType->isSpecificBuiltinType(BuiltinType::LongLong) ||
+           Info.ElementType->isSpecificBuiltinType(BuiltinType::ULongLong) ||
+           Info.ElementType->isSpecificBuiltinType(BuiltinType::Long) ||
+           Info.ElementType->isSpecificBuiltinType(BuiltinType::ULong)))
         Current = Integer;
       else
         Current = SSE;
@@ -2505,12 +2515,8 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
         Hi = Lo;
     } else if (Size == 128 ||
                (isNamedArg && Size <= getNativeVectorSizeForAVXABI(AVXLevel))) {
-      QualType ElementType = VT->getElementType();
-
       // gcc passes 256 and 512 bit <X x __int128> vectors in memory. :(
-      if (passInt128VectorsInMem() && Size != 128 &&
-          (ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
-           ElementType->isSpecificBuiltinType(BuiltinType::UInt128)))
+      if (passInt128VectorsInMem() && Size != 128 && Info.IsInt128Element)
         return;
 
       // Arguments of 256-bits are split into four eightbyte chunks. The
@@ -2534,33 +2540,11 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
   }
 
   if (const ComplexType *CT = Ty->getAs<ComplexType>()) {
-    QualType ET = getContext().getCanonicalType(CT->getElementType());
-
-    uint64_t Size = getContext().getTypeSize(Ty);
-    if (ET->isIntegralOrEnumerationType()) {
-      if (Size <= 64)
-        Current = Integer;
-      else if (Size <= 128)
-        Lo = Hi = Integer;
-    } else if (ET->isFloat16Type() || ET == getContext().FloatTy ||
-               ET->isBFloat16Type()) {
-      Current = SSE;
-    } else if (ET == getContext().DoubleTy) {
-      Lo = Hi = SSE;
-    } else if (ET == getContext().LongDoubleTy) {
-      const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
-      if (LDF == &llvm::APFloat::IEEEquad())
-        Current = Memory;
-      else if (LDF == &llvm::APFloat::x87DoubleExtended())
-        Current = ComplexX87;
-      else if (LDF == &llvm::APFloat::IEEEdouble())
-        Lo = Hi = SSE;
-      else
-        llvm_unreachable("unexpected long double representation!");
-    }
+    SetClassPair(getComplexTypeClassification(CT));
 
     // If this complex type crosses an eightbyte boundary then it
     // should be split.
+    QualType ET = getContext().getCanonicalType(CT->getElementType());
     uint64_t EB_Real = (OffsetBase) / 64;
     uint64_t EB_Imag = (OffsetBase + getContext().getTypeSize(ET)) / 64;
     if (Hi == NoClass && EB_Real != EB_Imag)
@@ -2570,11 +2554,7 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
   }
 
   if (const auto *EITy = Ty->getAs<BitIntType>()) {
-    if (EITy->getNumBits() <= 64)
-      Current = Integer;
-    else if (EITy->getNumBits() <= 128)
-      Lo = Hi = Integer;
-    // Larger values need to get passed in memory.
+    SetClassPair(getBitIntTypeClassification(EITy));
     return;
   }
 
@@ -2632,24 +2612,10 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
 
   if (const RecordType *RT = Ty->getAsCanonical<RecordType>()) {
     uint64_t Size = getContext().getTypeSize(Ty);
-
-    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
-    // than eight eightbytes, ..., it has class MEMORY.
-    if (Size > 512)
-      return;
-
-    // AMD64-ABI 3.2.3p2: Rule 2. If a C++ object has either a non-trivial
-    // copy constructor or a non-trivial destructor, it is passed by invisible
-    // reference.
-    if (getRecordArgABI(RT, getCXXABI()))
+    if (isRecordPassedInMemory(RT, Size))
       return;
 
     const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
-
-    // Assume variable sized types are passed in memory.
-    if (RD->hasFlexibleArrayMember())
-      return;
-
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
 
     // Reset Lo class, this will be recomputed.
