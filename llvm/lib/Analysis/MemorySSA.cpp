@@ -2492,9 +2492,11 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
 }
 
 static const Instruction *
-getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
+getInvariantGroupClobberingInstruction(const MemorySSA &MSSA, Instruction &I) {
   if (!I.hasMetadata(LLVMContext::MD_invariant_group) || I.isVolatile())
     return nullptr;
+
+  DominatorTree &DT = MSSA.getDomTree();
 
   // We consider bitcasts and zero GEPs to be the same pointer value. Start by
   // stripping bitcasts and zero GEPs, then we will recursively look at loads
@@ -2518,8 +2520,14 @@ getInvariantGroupClobberingInstruction(Instruction &I, DominatorTree &DT) {
     // If we hit a load/store with an invariant.group metadata and the same
     // pointer operand, we can assume that value pointed to by the pointer
     // operand didn't change.
+    //
+    // MemorySSA may be scoped to a loop rather than the whole function, in
+    // which case instructions outside of that scope have no MemoryAccess and
+    // cannot be returned as a clobber. Skip them and keep looking for a
+    // candidate that is in scope.
     if (U->hasMetadata(LLVMContext::MD_invariant_group) &&
-        getLoadStorePointerOperand(U) == PointerOperand && !U->isVolatile()) {
+        getLoadStorePointerOperand(U) == PointerOperand && !U->isVolatile() &&
+        MSSA.getMemoryAccess(U)) {
       MostDominatingInstruction = U;
     }
   }
@@ -2537,7 +2545,7 @@ MemoryAccess *MemorySSA::ClobberWalkerBase::getClobberingMemoryAccessBase(
 
   if (UseInvariantGroup) {
     if (auto *I = getInvariantGroupClobberingInstruction(
-            *StartingAccess->getMemoryInst(), MSSA->getDomTree())) {
+            *MSSA, *StartingAccess->getMemoryInst())) {
       assert(isa<LoadInst>(I) || isa<StoreInst>(I));
 
       auto *ClobberMA = MSSA->getMemoryAccess(I);
