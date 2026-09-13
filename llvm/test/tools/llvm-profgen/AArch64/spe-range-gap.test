@@ -1,0 +1,774 @@
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/spe-range-gap.exe
+# RUN: llvm-profgen --binary=%t/spe-range-gap.exe \
+# RUN:   --perfscript=%t/perfscript --spe-branch-profile --skip-symbolization \
+# RUN:   --use-offset=0 --format=text --output=%t/profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SHRUNK
+# RUN: FileCheck %s --input-file=%t/profile
+# RUN: yaml2obj %t/no-debug.yaml -o %t/no-debug.exe
+# RUN: llvm-profgen --binary=%t/no-debug.exe \
+# RUN:   --perfscript=%t/no-debug.perfscript --spe-branch-profile --skip-symbolization \
+# RUN:   --use-offset=0 --format=text --output=%t/no-debug-profile 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=ALL-SHRUNK
+# RUN: FileCheck %s --check-prefix=NO-DEBUG --input-file=%t/no-debug-profile
+# RUN: yaml2obj %t/unordered.yaml -o %t/unordered.exe
+# RUN: llvm-profgen --binary=%t/unordered.exe \
+# RUN:   --perfscript=%t/unordered.perfscript --spe-branch-profile --skip-symbolization \
+# RUN:   --use-offset=0 --format=text --output=%t/unordered-profile 2>&1 \
+# RUN:   | FileCheck --allow-empty %s --check-prefix=NO-WARN
+# RUN: FileCheck %s --check-prefix=UNORDERED --input-file=%t/unordered-profile
+
+## A blank line between records is not a record, so it is not diagnosed. The
+## one record whose destination lies in code that debug info does not describe
+## is reported as a share, because its range covers a single instruction rather
+## than the code that ran.
+# SHRUNK-NOT: warning: Invalid
+# SHRUNK:     warning: 7.69%(1/13) of the sample lines of the trace are Arm SPE branch records whose destination cannot be associated with a function, so only that instruction is profiled.
+
+## A binary that carries no debug info at all has every range reduced that way,
+## which the share states outright instead of leaving it to be inferred from a
+## profile of one-instruction ranges. The trace holds the same record twice, so
+## the two lines aggregate into one sample of weight two: the share counts the
+## lines of the trace, not the samples that remained after aggregation.
+# ALL-SHRUNK: warning: 100.00%(2/2) of the sample lines of the trace are Arm SPE branch records whose destination cannot be associated with a function, so only that instruction is profiled.
+
+## Ordering the instruction addresses is what keeps the two functions apart, so
+## neither range is reduced and nothing is reported.
+# NO-WARN-NOT: warning:
+
+## Each record below is checked by one paragraph, in address order of the
+## inferred range.
+##
+## The first record starts a range in a function that is adjacent to the next
+## function. Stop at the function boundary rather than at the transfer that
+## follows it.
+##
+## The second record starts a range in a function that is separated from the
+## following transfer by an address gap. Stop at the gap.
+##
+## The third record starts a range in a function that debug info describes as
+## two adjacent ranges. No symbol starts the second range, so it continues the
+## same function and execution runs through the boundary, reaching the transfer
+## in the second range instead of stopping at the end of the first. A symbol
+## that starts a function at the later range, as a split-out part of a function
+## carries, ends the range there instead; the fifth record covers that.
+##
+## The fourth record starts a range in a function whose two debug info ranges
+## are separated by an address gap. Stop at the gap even though both sides
+## belong to one function.
+##
+## The fifth record starts a range in a function that is adjacent to a
+## different function of the same name, as produced by static functions of
+## different compilation units. Debug info groups both under one name, so stop
+## at the entry of the second function rather than run into it.
+##
+## The sixth record has an external source and a destination in code that no
+## debug info describes. Reduce the range to the destination instead of
+## extending it into the next described function, and still count the branch.
+##
+## The seventh and the eighth record start ranges that a call and a return end,
+## which transfer execution just as a branch does.
+##
+## The ninth record starts a range in a described function that is immediately
+## followed by code no debug info describes. Stop at the last instruction of
+## the function rather than continue into code of an unknown function.
+##
+## The tenth record starts a range in a function that is adjacent to a
+## differently named function whose first range carries no symbol, as a part
+## split out of a function does. The change of function is what ends the range
+## there, because a range that no symbol starts is not marked as an entry.
+##
+## The eleventh record starts a range in a function that holds a trap. The trap
+## transfers control nowhere, so it is no branch, call or return, but execution
+## never continues past it, and the range ends there instead of running on to
+## the branch that ends the function.
+##
+## The twelfth record is a branch to itself, so its range starts at the branch
+## and the branch ends it, leaving a range of that one instruction.
+##
+## The thirteenth record is the back edge of a loop whose body holds a branch
+## of its own. The range starts at the top of the body and ends at that inner
+## branch, because what follows it ran only if it was not taken, which the
+## record does not say. A back edge therefore does not attest that the whole
+## body ran.
+# CHECK:      13
+# CHECK-NEXT: 500-500:1
+# CHECK-NEXT: 1000-1004:1
+# CHECK-NEXT: 2000-2004:1
+# CHECK-NEXT: 4000-400c:1
+# CHECK-NEXT: 6000-6004:1
+# CHECK-NEXT: 8000-8004:1
+# CHECK-NEXT: 9000-9004:1
+# CHECK-NEXT: a000-a004:1
+# CHECK-NEXT: b000-b004:1
+# CHECK-NEXT: c000-c004:1
+# CHECK-NEXT: d800-d804:1
+# CHECK-NEXT: d900-d900:1
+# CHECK-NEXT: da00-da04:1
+# CHECK-NEXT: 13
+# CHECK-NEXT: 1->500:1
+# CHECK-NEXT: 100c->1000:1
+# CHECK-NEXT: 3000->2000:1
+# CHECK-NEXT: 400c->4000:1
+# CHECK-NEXT: 7004->6000:1
+# CHECK-NEXT: 800c->8000:1
+# CHECK-NEXT: 900c->9000:1
+# CHECK-NEXT: a00c->a000:1
+# CHECK-NEXT: b00c->b000:1
+# CHECK-NEXT: c00c->c000:1
+# CHECK-NEXT: d80c->d800:1
+# CHECK-NEXT: d900->d900:1
+# CHECK-NEXT: da0c->da00:1
+
+## Function ranges come from debug info, which profiled binaries are expected
+## to carry. Where they are missing, an inferred range must not run past an
+## unknown function boundary, so it is reduced to the sampled instruction while
+## the branch itself is still counted. Both counters weigh two, because the
+## trace holds the record twice.
+# NO-DEBUG:      1
+# NO-DEBUG-NEXT: 1000-1000:2
+# NO-DEBUG-NEXT: 1
+# NO-DEBUG-NEXT: 1008->1000:2
+
+## Instructions are collected in section-header order, which an object file
+## need not keep in address order. Range inference orders them itself, so each
+## sampled branch destination is bounded by the branch that ends the function it
+## belongs to. Both functions are sampled: without that ordering the backward
+## walk over instructions loses the function whose section is listed first, and
+## its range would shrink to the sampled instruction alone.
+# UNORDERED: 2
+# UNORDERED-NEXT: 1000-1004:1
+# UNORDERED-NEXT: 2000-2004:1
+# UNORDERED-NEXT: 2
+# UNORDERED-NEXT: 1004->1000:1
+# UNORDERED-NEXT: 2004->2000:1
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  ## Code that no debug info describes. The symbol makes it disassembled, and
+  ## the described functions that follow provide range ends that must not be
+  ## reached from here.
+  - Name:         .text.undescribed
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x500
+    Offset:       0x500
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5
+  - Name:         .text.adjacent
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1008
+    Offset:       0x1008
+    AddressAlign: 0x4
+    ## nop
+    ## b 0x1000
+    Content:      1F2003D5FDFFFF17
+  - Name:         .text.gap
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x2000
+    Offset:       0x2000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5
+  - Name:         .text.transfer
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x3000
+    Offset:       0x3000
+    AddressAlign: 0x4
+    ## b 0x2000
+    Content:      00FCFF17
+  - Name:         .text.split
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x4000
+    Offset:       0x4000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## nop
+    ## b 0x4000
+    Content:      1F2003D51F2003D51F2003D5FDFFFF17
+  - Name:         .text.split-gap-head
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x6000
+    Offset:       0x6000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5
+  - Name:         .text.split-gap-tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x7000
+    Offset:       0x7000
+    AddressAlign: 0x4
+    ## nop
+    ## b 0x6000
+    Content:      1F2003D5FFFBFF17
+  - Name:         .text.duplicate
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x8000
+    Offset:       0x8000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## nop
+    ## b 0x8000
+    Content:      1F2003D51F2003D51F2003D5FDFFFF17
+  - Name:         .text.call
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x9000
+    Offset:       0x9000
+    AddressAlign: 0x4
+    ## nop
+    ## bl 0x9000
+    ## nop
+    ## b 0x9000
+    Content:      1F2003D5FFFFFF971F2003D5FDFFFF17
+  - Name:         .text.ret
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xA000
+    Offset:       0xA000
+    AddressAlign: 0x4
+    ## nop
+    ## ret
+    ## nop
+    ## b 0xa000
+    Content:      1F2003D5C0035FD61F2003D5FDFFFF17
+  - Name:         .text.tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xB000
+    Offset:       0xB000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5
+  ## Code that no debug info describes, adjacent to the described function
+  ## above, so that only the unknown function can end the inferred range.
+  - Name:         .text.tail-undescribed
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xB008
+    Offset:       0xB008
+    AddressAlign: 0x4
+    ## nop
+    ## b 0xb000
+    Content:      1F2003D5FDFFFF17
+  - Name:         .text.func-change
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xC000
+    Offset:       0xC000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## nop
+    ## b 0xc000
+    Content:      1F2003D51F2003D51F2003D5FDFFFF17
+  - Name:         .text.func-change-tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xD000
+    Offset:       0xD000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    Content:      1F2003D51F2003D5
+  ## A trap in the middle of a function. It transfers control nowhere, so it is
+  ## no branch, call or return, but execution never continues past it either.
+  - Name:         .text.trap
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xD800
+    Offset:       0xD800
+    AddressAlign: 0x4
+    ## nop
+    ## brk #0
+    ## nop
+    ## b 0xd800
+    Content:      1F2003D5000020D41F2003D5FDFFFF17
+  ## A branch to itself, which is both the source and the destination of the
+  ## record below.
+  - Name:         .text.self
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xD900
+    Offset:       0xD900
+    AddressAlign: 0x4
+    ## b 0xd900
+    Content:      00000014
+  ## A loop whose body holds a branch of its own, so that the range inferred
+  ## from a record of the loop back edge covers a part of the body only.
+  - Name:         .text.inner
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0xDA00
+    Offset:       0xDA00
+    AddressAlign: 0x4
+    ## nop
+    ## b.eq 0xda00
+    ## nop
+    ## b 0xda00
+    Content:      1F2003D5E0FFFF541F2003D5FDFFFF17
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0xDA10
+    MemSize:  0xDA10
+    Align:    0x10000
+Symbols:
+  - Name:    undescribed
+    Type:    STT_FUNC
+    Section: .text.undescribed
+    Binding: STB_GLOBAL
+    Value:   0x500
+    Size:    0x8
+  - Name:    first
+    Type:    STT_FUNC
+    Section: .text.first
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x8
+  - Name:    second
+    Type:    STT_FUNC
+    Section: .text.adjacent
+    Binding: STB_GLOBAL
+    Value:   0x1008
+    Size:    0x8
+  - Name:    third
+    Type:    STT_FUNC
+    Section: .text.gap
+    Binding: STB_GLOBAL
+    Value:   0x2000
+    Size:    0x8
+  - Name:    fourth
+    Type:    STT_FUNC
+    Section: .text.transfer
+    Binding: STB_GLOBAL
+    Value:   0x3000
+    Size:    0x4
+  - Name:    split
+    Type:    STT_FUNC
+    Section: .text.split
+    Binding: STB_GLOBAL
+    Value:   0x4000
+    Size:    0x10
+  - Name:    split_gap
+    Type:    STT_FUNC
+    Section: .text.split-gap-head
+    Binding: STB_GLOBAL
+    Value:   0x6000
+    Size:    0x8
+  ## A name of its own, so that this range is not marked as a function entry
+  ## and only the address gap can end the inferred range.
+  - Name:    split_gap_tail
+    Type:    STT_FUNC
+    Section: .text.split-gap-tail
+    Binding: STB_GLOBAL
+    Value:   0x7000
+    Size:    0x8
+  - Name:    duplicate
+    Type:    STT_FUNC
+    Section: .text.duplicate
+    Binding: STB_GLOBAL
+    Value:   0x8000
+    Size:    0x8
+  ## Two functions cannot share a symbol name, so the second one carries the
+  ## internal suffix that link-time renaming appends. Debug info keeps the
+  ## source name for both, and the suffix is stripped before the symbol is
+  ## compared with it, so this range is still marked as a function entry.
+  - Name:    duplicate.llvm.1
+    Type:    STT_FUNC
+    Section: .text.duplicate
+    Binding: STB_GLOBAL
+    Value:   0x8008
+    Size:    0x8
+  - Name:    call_stop
+    Type:    STT_FUNC
+    Section: .text.call
+    Binding: STB_GLOBAL
+    Value:   0x9000
+    Size:    0x10
+  - Name:    ret_stop
+    Type:    STT_FUNC
+    Section: .text.ret
+    Binding: STB_GLOBAL
+    Value:   0xA000
+    Size:    0x10
+  - Name:    tail
+    Type:    STT_FUNC
+    Section: .text.tail
+    Binding: STB_GLOBAL
+    Value:   0xB000
+    Size:    0x8
+  - Name:    tail_undescribed
+    Type:    STT_FUNC
+    Section: .text.tail-undescribed
+    Binding: STB_GLOBAL
+    Value:   0xB008
+    Size:    0x8
+  - Name:    preceding
+    Type:    STT_FUNC
+    Section: .text.func-change
+    Binding: STB_GLOBAL
+    Value:   0xC000
+    Size:    0x8
+  ## The function that follows starts at 0xc008, where no symbol sits, so that
+  ## range is not marked as a function entry. Its symbol sits at its later
+  ## range, which keeps the function from having no entry at all.
+  - Name:    following
+    Type:    STT_FUNC
+    Section: .text.func-change-tail
+    Binding: STB_GLOBAL
+    Value:   0xD000
+    Size:    0x8
+  - Name:    trap_stop
+    Type:    STT_FUNC
+    Section: .text.trap
+    Binding: STB_GLOBAL
+    Value:   0xD800
+    Size:    0x10
+  - Name:    self_loop
+    Type:    STT_FUNC
+    Section: .text.self
+    Binding: STB_GLOBAL
+    Value:   0xD900
+    Size:    0x4
+  - Name:    inner_branch
+    Type:    STT_FUNC
+    Section: .text.inner
+    Binding: STB_GLOBAL
+    Value:   0xDA00
+    Size:    0x10
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+        ## A function whose code is described by a range list instead of a
+        ## single low_pc/high_pc pair.
+        - Code:     3
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_ranges
+              Form:      DW_FORM_sec_offset
+  debug_ranges:
+    ## Two adjacent ranges of one function.
+    - Offset: 0x0
+      Entries:
+        - LowOffset:  0x4000
+          HighOffset: 0x4008
+        - LowOffset:  0x4008
+          HighOffset: 0x4010
+        ## End of the range list.
+        - LowOffset:  0x0
+          HighOffset: 0x0
+    ## Two ranges of one function separated by an address gap.
+    - Offset: 0x40
+      Entries:
+        - LowOffset:  0x6000
+          HighOffset: 0x6008
+        - LowOffset:  0x7000
+          HighOffset: 0x7008
+        - LowOffset:  0x0
+          HighOffset: 0x0
+    ## Two ranges of one function, the first of them adjacent to the function
+    ## that precedes it and started by no symbol.
+    - Offset: 0x80
+      Entries:
+        - LowOffset:  0xC008
+          HighOffset: 0xC010
+        - LowOffset:  0xD000
+          HighOffset: 0xD008
+        - LowOffset:  0x0
+          HighOffset: 0x0
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 0
+      AddrSize:      8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: spe-range-gap.c
+        - AbbrCode: 2
+          Values:
+            - CStr:  first
+            - Value: 0x1000
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  second
+            - Value: 0x1008
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  third
+            - Value: 0x2000
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  fourth
+            - Value: 0x3000
+            - Value: 0x4
+        - AbbrCode: 3
+          Values:
+            - CStr:  split
+            - Value: 0x0
+        - AbbrCode: 3
+          Values:
+            - CStr:  split_gap
+            - Value: 0x40
+        ## Two functions of the same name, each described by its own entry.
+        - AbbrCode: 2
+          Values:
+            - CStr:  duplicate
+            - Value: 0x8000
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  duplicate
+            - Value: 0x8008
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  call_stop
+            - Value: 0x9000
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr:  ret_stop
+            - Value: 0xA000
+            - Value: 0x10
+        ## The code that follows this function has no entry of its own.
+        - AbbrCode: 2
+          Values:
+            - CStr:  tail
+            - Value: 0xB000
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  preceding
+            - Value: 0xC000
+            - Value: 0x8
+        - AbbrCode: 3
+          Values:
+            - CStr:  following
+            - Value: 0x80
+        - AbbrCode: 2
+          Values:
+            - CStr:  trap_stop
+            - Value: 0xD800
+            - Value: 0x10
+        - AbbrCode: 2
+          Values:
+            - CStr:  self_loop
+            - Value: 0xD900
+            - Value: 0x4
+        - AbbrCode: 2
+          Values:
+            - CStr:  inner_branch
+            - Value: 0xDA00
+            - Value: 0x10
+        - AbbrCode: 0
+
+#--- no-debug.yaml
+## The symbol table describes the function, but the binary carries no debug
+## info. Function ranges must not be recovered from the symbol table here.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## nop
+    ## nop
+    ## b 0x1000
+    Content:      1F2003D51F2003D5FEFFFF17
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x100C
+    MemSize:  0x100C
+    Align:    0x10000
+Symbols:
+  - Name:    foo
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0xC
+
+#--- perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0xe000) @ 0 00:00 0 0]: r-xp /tmp/spe-range-gap.exe
+70000000100c 0x70000000100c/0x700000001000/P/-/-/10/UNCOND/-
+
+700000003000 0x700000003000/0x700000002000/P/-/-/10/UNCOND/-
+70000000400c 0x70000000400c/0x700000004000/P/-/-/10/UNCOND/-
+700000007004 0x700000007004/0x700000006000/P/-/-/10/UNCOND/-
+70000000800c 0x70000000800c/0x700000008000/P/-/-/10/UNCOND/-
+70000000f000 0x70000000f000/0x700000000500/P/-/-/10/CALL/-
+70000000900c 0x70000000900c/0x700000009000/P/-/-/10/UNCOND/-
+70000000a00c 0x70000000a00c/0x70000000a000/P/-/-/10/UNCOND/-
+70000000b00c 0x70000000b00c/0x70000000b000/P/-/-/10/UNCOND/-
+70000000c00c 0x70000000c00c/0x70000000c000/P/-/-/10/UNCOND/-
+70000000d80c 0x70000000d80c/0x70000000d800/P/-/-/10/UNCOND/-
+70000000d900 0x70000000d900/0x70000000d900/P/-/-/10/UNCOND/-
+70000000da0c 0x70000000da0c/0x70000000da00/P/-/-/10/UNCOND/-
+
+#--- no-debug.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x2000) @ 0 00:00 0 0]: r-xp /tmp/no-debug.exe
+700000001008 0x700000001008/0x700000001000/P/-/-/10/UNCOND/-
+700000001008 0x700000001008/0x700000001000/P/-/-/10/UNCOND/-
+
+#--- unordered.yaml
+## Two described functions whose sections are listed in decreasing address
+## order, which leaves the collected instruction addresses unordered. The file
+## offsets still increase, as an object file requires.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x1000
+Sections:
+  - Name:         .text.high
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x2000
+    Offset:       0x1000
+    AddressAlign: 0x4
+    ## nop
+    ## b 0x2000
+    Content:      1F2003D5FFFFFF17
+  - Name:         .text.low
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    Offset:       0x1008
+    AddressAlign: 0x4
+    ## nop
+    ## b 0x1000
+    Content:      1F2003D5FFFFFF17
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0
+    VAddr:    0
+    FileSize: 0x1010
+    MemSize:  0x1010
+    Align:    0x10000
+Symbols:
+  - Name:    high
+    Type:    STT_FUNC
+    Section: .text.high
+    Binding: STB_GLOBAL
+    Value:   0x2000
+    Size:    0x8
+  - Name:    low
+    Type:    STT_FUNC
+    Section: .text.low
+    Binding: STB_GLOBAL
+    Value:   0x1000
+    Size:    0x8
+DWARF:
+  debug_abbrev:
+    - ID: 0
+      Table:
+        - Code:     1
+          Tag:      DW_TAG_compile_unit
+          Children: DW_CHILDREN_yes
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+        - Code:     2
+          Tag:      DW_TAG_subprogram
+          Children: DW_CHILDREN_no
+          Attributes:
+            - Attribute: DW_AT_name
+              Form:      DW_FORM_string
+            - Attribute: DW_AT_low_pc
+              Form:      DW_FORM_addr
+            - Attribute: DW_AT_high_pc
+              Form:      DW_FORM_data8
+  debug_info:
+    - Version:       4
+      AbbrevTableID: 0
+      AddrSize:      8
+      Entries:
+        - AbbrCode: 1
+          Values:
+            - CStr: unordered.c
+        - AbbrCode: 2
+          Values:
+            - CStr:  low
+            - Value: 0x1000
+            - Value: 0x8
+        - AbbrCode: 2
+          Values:
+            - CStr:  high
+            - Value: 0x2000
+            - Value: 0x8
+        - AbbrCode: 0
+
+#--- unordered.perfscript
+PERF_RECORD_MMAP2 1/1: [0x700000000000(0x3000) @ 0 00:00 0 0]: r-xp /tmp/unordered.exe
+700000001004 0x700000001004/0x700000001000/P/-/-/10/UNCOND/-
+700000002004 0x700000002004/0x700000002000/P/-/-/10/UNCOND/-

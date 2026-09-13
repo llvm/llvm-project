@@ -70,6 +70,12 @@ cl::opt<bool> TimeProfGen("time-profgen", cl::desc("Time llvm-profgen phases"),
 static const char *TimerGroupName = "profgen";
 static const char *TimerGroupDesc = "llvm-profgen";
 
+cl::opt<bool> ReadSPEBranchProfile(
+    "spe-branch-profile",
+    cl::desc("Read the input as an Arm SPE branch profile of an AArch64 "
+             "binary; requires FEAT_SPEv1p2 and event filtering."),
+    cl::cat(ProfGenCategory));
+
 namespace sampleprof {
 
 void VirtualUnwinder::unwindCall(UnwindState &State) {
@@ -364,8 +370,15 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
     return PerfReader;
   }
 
+  // An Arm SPE trace cannot be detected: its lines look like the branch-stack
+  // lines of an LBR trace, so detection would read it as one. The kind is also
+  // needed before a recording is printed, because the perf command differs.
+  if (ReadSPEBranchProfile)
+    Input.Content = PerfContent::ArmSPE;
+
   // For perf data input, we need to convert them into perf script first.
   // If this is a kernel perf file, there is no need for retrieving PIDs.
+  bool ConvertedFromPerfData = Input.Format == InputFormat::PerfData;
   if (Input.Format == InputFormat::PerfData)
     Input = PerfScriptReader::convertPerfDataToTrace(Binary, Binary->isKernel(),
                                                      Input, PIDFilter);
@@ -373,12 +386,16 @@ PerfReaderBase::create(ProfiledBinary *Binary, InputFile &Input,
   assert((Input.Format == InputFormat::PerfScript) &&
          "Should be a perfscript!");
 
-  Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
+  if (Input.Content == PerfContent::UnknownContent)
+    Input.Content = PerfScriptReader::checkPerfScriptType(Input.InputFilePath);
   if (Input.Content == PerfContent::LBRStack) {
     PerfReader.reset(
         new HybridPerfReader(Binary, Input.InputFilePath, PIDFilter));
   } else if (Input.Content == PerfContent::LBR) {
     PerfReader.reset(new LBRPerfReader(Binary, Input.InputFilePath, PIDFilter));
+  } else if (Input.Content == PerfContent::ArmSPE) {
+    PerfReader.reset(new ArmSPEReader(Binary, Input.InputFilePath, PIDFilter,
+                                      ConvertedFromPerfData));
   } else {
     exitWithError("Unsupported perfscript!");
   }
@@ -553,6 +570,10 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   SmallVector<StringRef, 8> ScriptSampleArgs;
   ScriptSampleArgs.push_back(PerfExecutablePath);
   ScriptSampleArgs.push_back("script");
+  // Decode Arm SPE branch events into a branch stack of one entry: a larger
+  // limit adds a synthesized entry with source 0x0, which the reader rejects.
+  if (File.Content == PerfContent::ArmSPE)
+    ScriptSampleArgs.push_back("--itrace=bl1");
   ScriptSampleArgs.push_back("--show-mmap-events");
   ScriptSampleArgs.push_back("-F");
   ScriptSampleArgs.push_back("ip,brstack");
@@ -564,8 +585,7 @@ PerfScriptReader::convertPerfDataToTrace(ProfiledBinary *Binary, bool SkipPID,
   }
   RunPerfScript(ScriptSampleArgs);
 
-  return {std::string(PerfTraceFile), InputFormat::PerfScript,
-          PerfContent::UnknownContent};
+  return {std::string(PerfTraceFile), InputFormat::PerfScript, File.Content};
 }
 
 static StringRef filename(StringRef Path, bool UseBackSlash) {
@@ -731,8 +751,45 @@ static bool parseAddress(StringRef Str, uint64_t &Addr, bool HasPrefix) {
   return Str.getAsInteger(16, Addr);
 }
 
+/// Clear the bit of the branch-stack entry at \p Index in \p TakenMask. Only a
+/// record format that holds a branch that was not taken reaches this, and the
+/// deepest such record holds one branch, so the index stays inside the mask.
+static void clearTaken(uint64_t &TakenMask, size_t Index) {
+  assert(Index < TakenMaskWidth && "Branch-stack entry past the mask");
+  TakenMask &= ~(1ULL << Index);
+}
+
+bool PerfScriptReader::parseBranchEntry(StringRef Token, uint64_t &Source,
+                                        uint64_t &Target, bool &Taken) {
+  // Only the source, the destination and the prediction field are read, so stop
+  // at the third slash and leave the rest of the entry as one field. Every
+  // field is kept, so a field count still counts the slashes before it.
+  SmallVector<StringRef, 4> Fields;
+  Token.split(Fields, "/", /*MaxSplit=*/3);
+  if (Fields.size() < 2 || parseAddress(Fields[0], Source, true) ||
+      parseAddress(Fields[1], Target, true))
+    return false;
+
+  // The third field holds the prediction flags, whose alphabet depends on the
+  // record format, so whether they mark a branch that was taken is left to the
+  // reader. A field the reader cannot read makes the entry unreadable. perf
+  // prints fields of its own after this one, so a prediction field that ends
+  // the entry was cut short and is withheld: its P may be all of a PN.
+  std::optional<bool> Flag =
+      parseTakenFlag(Fields.size() > 3 ? Fields[2] : StringRef());
+  if (!Flag)
+    return false;
+  Taken = *Flag;
+
+  // Canonicalize to use preferred load address as base address.
+  Source = Binary->canonicalizeVirtualAddress(Source);
+  Target = Binary->canonicalizeVirtualAddress(Target);
+  return true;
+}
+
 bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
-                                       SmallVectorImpl<LBREntry> &LBRStack) {
+                                       SmallVectorImpl<LBREntry> &LBRStack,
+                                       uint64_t &TakenMask) {
   // The raw format of LBR stack is like:
   // 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0 ...
   //                           ... 0x4005c8/0x4005dc/P/-/-/0
@@ -765,21 +822,16 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     if (Token.size() == 0)
       continue;
 
-    SmallVector<StringRef, 8> Addresses;
-    Token.split(Addresses, "/");
     uint64_t Src;
     uint64_t Dst;
+    bool Taken = true;
 
     // Stop at broken LBR records.
-    if (Addresses.size() < 2 || parseAddress(Addresses[0], Src, true) ||
-        parseAddress(Addresses[1], Dst, true)) {
+    if (!parseBranchEntry(Token, Src, Dst, Taken)) {
       WarnInvalidLBR(TraceIt);
       break;
     }
 
-    // Canonicalize to use preferred load address as base address.
-    Src = Binary->canonicalizeVirtualAddress(Src);
-    Dst = Binary->canonicalizeVirtualAddress(Dst);
     bool SrcIsInternal = Binary->addressIsCode(Src);
     bool DstIsInternal = Binary->addressIsCode(Dst);
     if (!SrcIsInternal)
@@ -790,10 +842,243 @@ bool PerfScriptReader::extractLBRStack(TraceStream &TraceIt,
     if (!SrcIsInternal && !DstIsInternal)
       continue;
 
+    if (!Taken)
+      clearTaken(TakenMask, LBRStack.size());
     LBRStack.emplace_back(LBREntry(Src, Dst));
   }
   TraceIt.advance();
   return !LBRStack.empty();
+}
+
+uint64_t ArmSPEReader::parseAggregatedCount(TraceStream &) {
+  // perf prints no repeat count for Arm SPE, so leave the line to
+  // extractLBRStack, which reports it when unreadable, instead of silently
+  // weighing the next record by an address read off it as a count.
+  return 1;
+}
+
+std::optional<bool> ArmSPEReader::parseTakenFlag(StringRef PredictionFlags) {
+  // perf appends N to the prediction flags of a branch it recorded as not
+  // taken, and prints `-`, `P`, `M`, `PN` or `MN` for the field. Anything else
+  // leaves the entry unreadable rather than silently counted as taken.
+  if (PredictionFlags == "-" || PredictionFlags == "P" ||
+      PredictionFlags == "M")
+    return true;
+  if (PredictionFlags == "PN" || PredictionFlags == "MN")
+    return false;
+  return std::nullopt;
+}
+
+bool ArmSPEReader::extractLBRStack(TraceStream &TraceIt,
+                                   SmallVectorImpl<LBREntry> &LBRStack,
+                                   uint64_t &TakenMask) {
+  // perf prints an Arm SPE branch record as a branch stack of one entry,
+  // preceded by the instruction pointer of the sample, which repeats the
+  // source of the branch:
+  //   ffff800080387878 0xffff800080387878/0xffff80008039c524/P/-/-/19/RET/-
+  SmallVector<StringRef, 4> Fields;
+  TraceIt.getCurrentLine().rtrim().split(Fields, " ", -1, false);
+
+  // A blank line carries no record, so skip it without a diagnostic.
+  if (Fields.empty()) {
+    TraceIt.advance();
+    return false;
+  }
+
+  // Report a line that holds no readable record. A trace printed with another
+  // field list holds millions of them, so name a line only on request;
+  // reportTraceLosses reports the share once.
+  auto ReportInvalidRecord = [&]() {
+    NumInvalidRecords++;
+    if (ShowDetailedWarning)
+      WithColor::warning() << "Invalid Arm SPE branch record at line "
+                           << TraceIt.getLineNumber() << ": "
+                           << TraceIt.getCurrentLine() << "\n";
+    TraceIt.advance();
+  };
+
+  // The leading instruction pointer is a bare address: no slash, and none of
+  // the 0x prefix that every address of an entry carries, so a prefixed field
+  // is something else and leaves the record unreadable.
+  size_t Index = 0;
+  uint64_t LeadingAddr = 0;
+  bool HasLeadingAddr = !Fields[0].contains('/');
+  if (HasLeadingAddr) {
+    if (parseAddress(Fields[0], LeadingAddr, /*HasPrefix=*/false)) {
+      ReportInvalidRecord();
+      return false;
+    }
+    Index = 1;
+  }
+
+  // A record holds the entry of the sampled branch right after the instruction
+  // pointer.
+  uint64_t Src = 0;
+  uint64_t Dst = 0;
+  bool Taken = true;
+  if (Fields.size() - Index < 1 ||
+      !parseBranchEntry(Fields[Index], Src, Dst, Taken)) {
+    ReportInvalidRecord();
+    return false;
+  }
+
+  // --itrace=bl1 leaves a record one entry. A second entry that parses is a
+  // deeper stack, whose synthesized source address 0x0 would fabricate a branch
+  // from outside the binary, so stop instead of weighing such a trace. Parse
+  // the field to decide, because a trailing field a wider -F list adds, a
+  // shared-object path above all, holds a slash too and leaves the record
+  // unreadable rather than the stack deeper.
+  if (Fields.size() - Index > 1) {
+    uint64_t ExtraSrc = 0;
+    uint64_t ExtraDst = 0;
+    bool ExtraTaken = true;
+    if (parseBranchEntry(Fields[Index + 1], ExtraSrc, ExtraDst, ExtraTaken))
+      exitWithError(
+          Twine("--spe-branch-profile requires Arm SPE branch records "
+                "created with `perf script --show-mmap-events --itrace=bl1 -F "
+                "ip,brstack`, but the record at line ") +
+          Twine(TraceIt.getLineNumber()) +
+          " holds a branch stack of more than one entry");
+    ReportInvalidRecord();
+    return false;
+  }
+
+  // A source address of zero names no instruction: perf prints it where the
+  // address of the sampled branch was lost, and left in place it reads as a
+  // branch from outside the binary. Compare against the canonical form of zero,
+  // because parseBranchEntry has already shifted every address of the trace
+  // onto the preferred load address of the binary.
+  if (Src == Binary->canonicalizeVirtualAddress(0)) {
+    ReportInvalidRecord();
+    return false;
+  }
+
+  // The leading instruction pointer repeats the source of the branch. Where the
+  // two differ, another field was printed first and neither can be trusted.
+  if (HasLeadingAddr &&
+      Binary->canonicalizeVirtualAddress(LeadingAddr) != Src) {
+    ReportInvalidRecord();
+    return false;
+  }
+
+  NumRecords++;
+
+  // The inherited parseSample reports a missing mmap event only for a record
+  // that yields a sample, and without the event every record is usually
+  // external and dropped below. The repeated call is a no-op once it has
+  // warned.
+  warnIfMissingMMap();
+
+  TraceIt.advance();
+  // A record holds one branch and no preceding one to bound a range with, so a
+  // destination outside the binary yields no counter at all. Count the record
+  // so that reportTraceLosses reports the share.
+  if (!Binary->addressIsCode(Dst)) {
+    NumDroppedRecords++;
+    return false;
+  }
+  // A branch from outside the binary keeps an external source, which the
+  // profile turns into a head sample of the function holding the destination.
+  if (!Binary->addressIsCode(Src))
+    Src = ExternalAddr;
+
+  // A branch that was not taken reports the following instruction as its
+  // destination, so keep the entry for the range that really was executed
+  // there; computeCounterFromLBR leaves out its branch counter from the flag.
+  if (!Taken)
+    clearTaken(TakenMask, LBRStack.size());
+  LBRStack.emplace_back(Src, Dst);
+  return true;
+}
+
+uint64_t ArmSPEReader::inferFirstRangeEnd(const PerfSample *Sample,
+                                          uint64_t Repeat) {
+  assert(!Sample->LBRStack.empty() &&
+         "an aggregated Arm SPE sample holds one branch");
+  // Execution continues at the destination of the recorded branch until the
+  // next transfer, so that transfer ends the range.
+  bool Uncovered = false;
+  uint64_t End =
+      Binary->findRangeEnd(Sample->LBRStack.front().Target, &Uncovered);
+  // Where the binary describes no function around the destination, the range
+  // is reduced to the sampled instruction. Count that here, in the one pass
+  // that looks the range of every sample up, so that reportTraceLosses needs
+  // no lookup of its own.
+  if (Uncovered)
+    NumUncoveredSamples += Repeat;
+  return End;
+}
+
+void ArmSPEReader::validateParsedTrace() {
+  // An input without a single Arm SPE branch record is the wrong input file, so
+  // reject it instead of writing an empty profile. Deciding after the whole
+  // trace was read keeps a damaged first line from discarding what follows.
+  if (NumRecords)
+    return;
+
+  // A recording is turned into a trace by this tool, with a perf command the
+  // user never wrote, so name what to record instead of what to print.
+  if (ConvertedFromPerfData)
+    exitWithError("--spe-branch-profile found no Arm SPE branch record in "
+                  "the perf data; record one with "
+                  "arm_spe/branch_filter=1,event_filter=2/ using perf 6.15 or "
+                  "later");
+
+  // For a trace the user printed, the field list of the perf command is what
+  // has to be corrected, so name it together with what the lines looked like.
+  StringRef Cause = NumInvalidRecords
+                        ? "no line of the input holds a usable one"
+                        : "the trace holds no record at all";
+  exitWithError(
+      Twine("--spe-branch-profile requires Arm SPE branch records created "
+            "with `perf script --show-mmap-events --itrace=bl1 -F "
+            "ip,brstack`, but ") +
+      Cause);
+}
+
+void ArmSPEReader::generateUnsymbolizedProfile() {
+  PerfScriptReader::generateUnsymbolizedProfile();
+  // Computing the counters looks the range of every sample up, which is what
+  // tells how many of them had to be reduced, so the trace is reported on once
+  // that has run rather than from warnInvalidRange.
+  reportTraceLosses();
+}
+
+void ArmSPEReader::reportTraceLosses() {
+  // Every share below is of the same base, the lines of the trace that were
+  // read as records, so that the reports can be read against one another.
+  // Blank lines are left out because they carry no record to lose.
+  uint64_t NumLines = NumInvalidRecords + NumRecords;
+
+  // Report the unreadable lines as a share, the way the other readers report
+  // their losses. Naming each line is left to --show-detailed-warning, because
+  // a wrong field list makes every line of the trace unreadable.
+  emitWarningSummary(NumInvalidRecords, NumLines,
+                     "of the sample lines of the trace are not usable Arm SPE "
+                     "branch records.");
+
+  // A record whose destination is not an instruction of this binary carries no
+  // counter, and a trace of another process or build consists of such records.
+  // Report their share, so a thinned profile is not taken for a complete one.
+  emitWarningSummary(NumDroppedRecords, NumLines,
+                     "of the sample lines of the trace are Arm SPE branch "
+                     "records whose destination is not an instruction of this "
+                     "binary.");
+
+  // The range of a record whose destination no function range covers is reduced
+  // to that one instruction. Report the share reduced this way; the count is of
+  // lines again because inferFirstRangeEnd weighs each sample by its repeats.
+  emitWarningSummary(NumUncoveredSamples, NumLines,
+                     "of the sample lines of the trace are Arm SPE branch "
+                     "records whose destination cannot be associated with a "
+                     "function, so only that instruction is profiled.");
+
+  // A trace whose every record was dropped yields an empty profile. The base
+  // class decides that from ranges formed out of consecutive branch-stack
+  // entries, which a single-branch record never forms, so name the records.
+  if (NumRecords == NumDroppedRecords)
+    WithColor::warning() << "No Arm SPE branch record yields a counter for "
+                            "this binary!\n";
 }
 
 bool PerfScriptReader::extractCallstack(TraceStream &TraceIt,
@@ -907,7 +1192,7 @@ void HybridPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
 
   if (!TraceIt.isAtEoF() && isLBRSample(TraceIt.getCurrentLine(), true)) {
     // Parsing LBR stack and populate into PerfSample.LBRStack
-    if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+    if (extractLBRStack(TraceIt, Sample->LBRStack, Sample->TakenMask)) {
       if (IgnoreStackSamples) {
         Sample->CallStack.clear();
       } else {
@@ -1072,20 +1357,26 @@ void UnsymbolizedProfileReader::parsePerfTraces() {
 void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
                                              uint64_t Repeat) {
   SampleCounter &Counter = SampleCounters.begin()->second;
-  uint64_t EndAddress = 0;
-  for (const LBREntry &LBR : Sample->LBRStack) {
+  uint64_t EndAddress = inferFirstRangeEnd(Sample, Repeat);
+  for (size_t I = 0; I < Sample->LBRStack.size(); I++) {
+    const LBREntry &LBR = Sample->LBRStack[I];
     uint64_t SourceAddress = LBR.Source;
     uint64_t TargetAddress = LBR.Target;
 
     // Record the branch if its SourceAddress is external. It can be the case an
     // external source call an internal function, later this branch will be used
     // to generate the function's head sample.
-    if (Binary->addressIsCode(TargetAddress)) {
+    // A branch that was not taken transferred no control, and counting it would
+    // make a fall-through that reaches the entry of the next function a call of
+    // that function and a head sample of it. A hardware branch stack holds
+    // taken branches alone, so every entry of one is flagged as taken.
+    if (Binary->addressIsCode(TargetAddress) && Sample->taken(I))
       Counter.recordBranchCount(SourceAddress, TargetAddress, Repeat);
-    }
 
     // If this not the first LBR, update the range count between TO of current
-    // LBR and FROM of next LBR.
+    // LBR and FROM of next LBR. The range that follows the first LBR is bound
+    // by no other entry, so it is only recorded for an input whose reader can
+    // infer where it ends.
     uint64_t StartAddress = TargetAddress;
     if (Binary->addressIsCode(StartAddress) &&
         Binary->addressIsCode(EndAddress) &&
@@ -1098,7 +1389,7 @@ void PerfScriptReader::computeCounterFromLBR(const PerfSample *Sample,
 void LBRPerfReader::parseSample(TraceStream &TraceIt, uint64_t Count) {
   std::shared_ptr<PerfSample> Sample = std::make_shared<PerfSample>();
   // Parsing LBR stack and populate into PerfSample.LBRStack
-  if (extractLBRStack(TraceIt, Sample->LBRStack)) {
+  if (extractLBRStack(TraceIt, Sample->LBRStack, Sample->TakenMask)) {
     warnIfMissingMMap();
     // Record LBR only samples by aggregation
     AggregatedSamples[Hashable<PerfSample>(Sample)] += Count;
@@ -1427,41 +1718,56 @@ void PerfScriptReader::warnInvalidRange() {
 }
 
 void PerfScriptReader::warnIfBranchTargetMismatch() {
-  // Collect unique branch source and target addresses from LBR samples,
-  // then check what percentage don't match known instructions in the binary.
+  // Check what share of branch samples with both endpoints in the binary
+  // disagrees with its instructions, weighing each aggregated sample by how
+  // often it was recorded.
 
   uint64_t MismatchedBranches = 0;
+  uint64_t NonConditionalNotTaken = 0;
   uint64_t MismatchedIndirectTargets = 0;
   uint64_t MismatchedTargets = 0;
   uint64_t TotalSamples = 0;
 
   for (const auto &Item : AggregatedSamples) {
     const PerfSample *Sample = Item.first.getPtr();
-    for (const LBREntry &LBR : Sample->LBRStack) {
-      uint64_t Source = LBR.Source;
-      uint64_t Target = LBR.Target;
+    uint64_t Repeat = Item.second;
+    for (size_t I = 0; I < Sample->LBRStack.size(); I++) {
+      uint64_t Source = Sample->LBRStack[I].Source;
+      uint64_t Target = Sample->LBRStack[I].Target;
       if (Source == ExternalAddr || Target == ExternalAddr)
         continue;
-      TotalSamples++;
+      TotalSamples += Repeat;
 
       // Validate Branch sources are Call/Branch/Indirect Branch
       if (!Binary->addressIsTransfer(Source))
-        MismatchedBranches++;
+        MismatchedBranches += Repeat;
 
-      // Validate Indirect Branch targets landed in code. This may over estimate
-      // the vaid targets only because there's no good way to determine jump
-      // table targets
-      if (Binary->addressIsIndirectBranch(Source)) {
+      // A not-taken branch must be conditional and target its following
+      // instruction, even when the recorded target is otherwise known.
+      if (!Sample->taken(I)) {
+        if (!Binary->addressIsConditionalBranch(Source))
+          NonConditionalNotTaken += Repeat;
+        else if (Target <= Source ||
+                 Target - Source != Binary->getInstSize(Source))
+          MismatchedTargets += Repeat;
+      } else if (Binary->addressIsIndirectBranch(Source)) {
+        // Validate indirect targets as code because jump-table targets cannot
+        // be identified more precisely.
         if (!Binary->addressIsCode(Target))
-          MismatchedIndirectTargets++;
+          MismatchedIndirectTargets += Repeat;
       } else if (!Binary->addressIsBranchTarget(Target) &&
-                 !Binary->findFuncRangeForStartAddr(Target))
-        MismatchedTargets++;
+                 !Binary->findFuncRangeForStartAddr(Target)) {
+        MismatchedTargets += Repeat;
+      }
     }
   }
 
   emitWarningSummary(MismatchedBranches, TotalSamples,
                      "of branch samples do not match the binary.");
+  emitWarningSummary(
+      NonConditionalNotTaken, TotalSamples,
+      "of branch samples are marked not taken but do not name a conditional "
+      "branch.");
   emitWarningSummary(MismatchedTargets, TotalSamples,
                      "of branch targets do not match the binary.");
   emitWarningSummary(MismatchedIndirectTargets, TotalSamples,
@@ -1471,6 +1777,7 @@ void PerfScriptReader::warnIfBranchTargetMismatch() {
 void PerfScriptReader::parsePerfTraces() {
   // Parse perf traces and do aggregation.
   parseAndAggregateTrace();
+  validateParsedTrace();
   if (Binary->isKernel() && !Binary->getIsLoadedByMMap()) {
     exitWithError(
         "Kernel is requested, but no kernel is found in mmap events.");
