@@ -923,7 +923,7 @@ struct RemoveDeadRegionBranchOpSuccessorInputs : public RewritePattern {
     for (auto &pair : operandsToRemove) {
       Operation *op = pair.first;
       BitVector &operands = pair.second;
-      rewriter.modifyOpInPlace(op, [&]() { eraseOperands(op, operands); });
+      rewriter.eraseOperands(op, operands);
     }
 
     // Erase block arguments.

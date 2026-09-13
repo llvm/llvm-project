@@ -1151,16 +1151,6 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// Operand mutation
-//===----------------------------------------------------------------------===//
-
-/// Erase the operands selected by `eraseIndices` and update operandSegmentSizes
-/// if the operation has AttrSizedOperandSegments. The bit vector must have one
-/// entry for each original operand. The caller must select operands that the
-/// operation permits removing and update any other dependent metadata.
-void eraseOperands(Operation *op, const BitVector &eraseIndices);
-
-//===----------------------------------------------------------------------===//
 // OperandStorage
 //===----------------------------------------------------------------------===//
 
