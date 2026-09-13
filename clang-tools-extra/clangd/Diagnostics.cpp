@@ -622,6 +622,9 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
     }
     setTags(Diag);
   }
+  if (Finalizer)
+    for (auto &Diag : Output)
+      Finalizer(Diag);
   // Deduplicate clang-tidy diagnostics -- some clang-tidy checks may emit
   // duplicated messages due to various reasons (e.g. the check doesn't handle
   // template instantiations well; clang-tidy alias checks).
