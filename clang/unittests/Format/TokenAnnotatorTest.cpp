@@ -2459,6 +2459,16 @@ TEST_F(TokenAnnotatorTest, UnderstandsLambdas) {
   EXPECT_TOKEN(Tokens[3], tok::star, TT_BinaryOperator);
   EXPECT_TOKEN(Tokens[4], tok::l_square, TT_LambdaLSquare);
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_LambdaLBrace);
+
+  // The new declarator is not a lambda.
+  Tokens = annotate("x = new a *[]{};");
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::l_square, TT_ArraySubscriptLSquare);
+  Tokens = annotate("x = new (a) a *[]{};");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[8], tok::l_square, TT_ArraySubscriptLSquare);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsFunctionAnnotations) {
