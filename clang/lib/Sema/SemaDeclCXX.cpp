@@ -18580,7 +18580,21 @@ NamedDecl *Sema::ActOnFriendFunctionDecl(Scope *S, Declarator &D,
 
   CXXScopeSpec &SS = D.getCXXScopeSpec();
   DeclarationNameInfo NameInfo = GetNameForDeclarator(D);
-  assert(NameInfo.getName());
+
+  // GetNameForDeclarator (via GetNameFromUnqualifiedId) can fail and return
+  // an empty name after it has already diagnosed the problem itself. For
+  // example, a declarator that was parsed as a deduction-guide name (see
+  // Sema::isDeductionGuideName) but does not actually name a class
+  // template, such as a template template parameter used as in
+  // 'friend C();' where C is a 'template <typename> class' parameter.
+  // [temp.deduct.guide]p3 only permits the simple-template-id to name a
+  // class template, so this is ill-formed, but it's still a valid
+  // declarator syntactically and reaches here. Recover the same way
+  // HandleDeclarator does for the analogous non-friend case rather than
+  // asserting.
+
+  if (!NameInfo.getName())
+    return nullptr;
 
   if (SS.isValid() && DiagnosePackIndexingInFriendNNS(
                           NameInfo.getLoc(), SS.getWithLocInContext(Context)))
