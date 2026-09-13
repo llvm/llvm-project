@@ -44,6 +44,11 @@ using namespace llvm;
 using namespace VPlanPatternMatch;
 using namespace SCEVPatternMatch;
 
+cl::opt<bool> llvm::EnableVPlanBasedStrideMV(
+    "enable-vplan-based-stride-mv", cl::init(false), cl::Hidden,
+    cl::desc("Perform stride multiversioning directly on VPlan instead of in "
+             "LoopAccessAnalysis."));
+
 // TODO: Remove this once the partial reduction intrinsics are no worse than
 //       normal vector operations.
 static cl::opt<bool> UsePartialReductionsByDefault(
@@ -5601,6 +5606,10 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
         });
   }
 
+  if (EnableVPlanBasedStrideMV && !CostCtx.Config.OptForSize)
+    RUN_VPLAN_PASS(VPlanTransforms::multiversionForUnitStridedMemOps, Plan,
+                   CostCtx, Range, MemOps);
+
   // Widen unit-stride consecutive accesses, matching the legacy CM. Both
   // forward (stride +1) and reverse (stride -1) accesses are handled.
   VPlanTransforms::runPass(
@@ -5666,6 +5675,198 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
                              return Scalarize(VPI);
                            });
+}
+
+/// Replace the stride and all integral casts derived from it. Some casts might
+/// be defined outside VPlan and modeled as live-ins only, so process users at
+/// the LLVM IR level to discover them.
+static void replaceUsesInVectorLoopThroughCastsRecursively(VPlan &Plan,
+                                                           ScalarEvolution &SE,
+                                                           Value *V,
+                                                           const SCEV *ToSCEV) {
+  VPValue *From = Plan.getLiveIn(V);
+  if (From) {
+    assert(From->getScalarType() == ToSCEV->getType() &&
+           "Wrong type for ToSCEV!");
+    VPValue *To = Plan.getConstantInt(cast<SCEVConstant>(ToSCEV)->getAPInt());
+
+    // Original scalar loop can still use `From`, make sure to only rewrite
+    // uses inside the vector loop that we guard with the checks.
+    From->replaceUsesWithIf(To, [&](VPUser &U, unsigned) {
+      auto *R = cast<VPRecipeBase>(&U);
+      return R->getRegion() || R->getParent() == Plan.getVectorPreheader();
+    });
+  }
+
+  for (User *U : V->users())
+    if (isa<SExtInst>(U))
+      replaceUsesInVectorLoopThroughCastsRecursively(
+          Plan, SE, U, SE.getSignExtendExpr(ToSCEV, U->getType()));
+    else if (isa<ZExtInst, TruncInst>(U))
+      replaceUsesInVectorLoopThroughCastsRecursively(
+          Plan, SE, U, SE.getTruncateOrZeroExtend(ToSCEV, U->getType()));
+}
+
+void VPlanTransforms::multiversionForUnitStridedMemOps(
+    VPlan &Plan, VPCostContext &CostCtx, VFRange &Range,
+    ArrayRef<VPInstruction *> MemOps) {
+  ScalarEvolution *SE = CostCtx.PSE.getSE();
+  SCEVUnionPredicate StridePredicates({}, *SE);
+
+  for (VPInstruction *VPI : MemOps) {
+    bool IsLoad = VPI->getOpcode() == Instruction::Load;
+    VPValue *PtrOp = IsLoad ? VPI->getOperand(0) : VPI->getOperand(1);
+
+    const SCEV *PtrSCEV =
+        vputils::getSCEVExprForVPValue(PtrOp, CostCtx.PSE, CostCtx.L);
+    const SCEV *Start, *Stride;
+
+    if (!match(PtrSCEV, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Stride),
+                                            m_SpecificLoop(CostCtx.L))))
+      continue;
+
+    Type *ScalarTy =
+        IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
+
+    if (VPI->getMask()) {
+      Instruction *I = VPI->getUnderlyingInstr();
+      // Don't speculate unit-strideness if it won't result in any unit-strided
+      // loads, as we'd pay the price of not taking vector loop if the runtime
+      // condition is false for no benefits.
+      if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy,
+                                                   getLoadStoreAlignment(I),
+                                                   getLoadStoreAddressSpace(I)))
+        continue;
+    }
+
+    if (isa<SCEVConstant>(Stride))
+      continue;
+
+    const auto *TypeSize = cast<SCEVConstant>(SE->getSizeOfExpr(
+        Stride->getType(), SE->getDataLayout().getTypeAllocSize(ScalarTy)));
+
+    const SCEVConstant *StrideConstantMultiplier;
+    const SCEV *StrideNonConstantMultiplier;
+
+    const SCEV *ToMultiVersion = Stride;
+    const SCEV *MVConst = TypeSize;
+    if (match(Stride, m_scev_c_Mul(m_SCEVConstant(StrideConstantMultiplier),
+                                   m_SCEV(StrideNonConstantMultiplier)))) {
+      if (TypeSize != StrideConstantMultiplier) {
+        // TODO: Support `TypeSize = N * StrideConstantMultiplier`,
+        // including negative `N`. For now, only process when they're equal,
+        // which matches the useful part of the legacy behavior that
+        // multiversiones GEP index for stride one.
+        continue;
+      }
+      ToMultiVersion = StrideNonConstantMultiplier;
+      MVConst = SE->getOne(ToMultiVersion->getType());
+    } else if (!TypeSize->isOne()) {
+      // Likewise - try to match legacy behavior.
+      continue;
+    }
+
+    while (auto *C = dyn_cast<SCEVIntegralCastExpr>(ToMultiVersion)) {
+      ToMultiVersion = C->getOperand();
+      MVConst = SE->getTruncateOrSignExtend(MVConst, ToMultiVersion->getType());
+    }
+
+    if (match(ToMultiVersion, m_scev_UndefOrPoison()))
+      continue;
+
+    if (!isa<SCEVUnknown>(ToMultiVersion)) {
+      // Match legacy behavior.
+      // If/when changed, make sure that explicit poison/undef in the defining
+      // expression doesn't cause any issues.
+      continue;
+    }
+
+    // This should probably use a rewrite using a union between
+    // PSE/StridePredicates, but I can't a craft a test as we're bailing out
+    // earlied via `isa<SCEVUnknown>`.
+    if (SE->isKnownPredicate(CmpInst::ICMP_NE, ToMultiVersion, MVConst))
+      continue;
+
+    Value *StrideVal = cast<SCEVUnknown>(ToMultiVersion)->getValue();
+
+    const SCEVPredicate *NewPred =
+        SE->getComparePredicate(CmpInst::ICMP_EQ, ToMultiVersion, MVConst);
+
+    auto *PredicatedMaxBTC = SE->rewriteUsingPredicate(
+        CostCtx.PSE.getSymbolicMaxBackedgeTakenCount(), CostCtx.L,
+        StridePredicates.getUnionWith(NewPred, *SE)
+            .getUnionWith(&CostCtx.PSE.getPredicate(), *SE));
+    Type *BTCTy = PredicatedMaxBTC->getType();
+
+    // If predicate implies scalar loop never takes the backedge, don't perform
+    // multiversioning.
+    if (SE->isKnownPredicate(ICmpInst::ICMP_ULT, PredicatedMaxBTC,
+                             SE->getOne(BTCTy)))
+      continue;
+
+    // If we don't fold the tail, we need enough scalar iterations to fill the
+    // full vector.
+    if (!Plan.hasTailFolded() &&
+        LoopVectorizationPlanner::getDecisionAndClampRange(
+            [&](ElementCount VF) {
+              return SE->isKnownPredicate(
+                  ICmpInst::ICMP_ULT, PredicatedMaxBTC,
+                  SE->getAddExpr(SE->getElementCount(BTCTy, VF),
+                                 SE->getMinusOne(BTCTy)));
+            },
+            Range))
+      continue;
+
+    StridePredicates = StridePredicates.getUnionWith(NewPred, *SE);
+
+    replaceUsesInVectorLoopThroughCastsRecursively(Plan, *SE, StrideVal,
+                                                   MVConst);
+  }
+
+  if (StridePredicates.isAlwaysTrue())
+    return;
+
+  VPBasicBlock *StridesCheckVPBB = Plan.createVPBasicBlock("strides.check");
+  // We will replace the condition once we expand the predicate.
+  attachVPCheckBlock(Plan, Plan.getTrue(), StridesCheckVPBB,
+                     /*AddBranchWeights=*/false);
+  VPBasicBlock *Entry = Plan.getEntry();
+  VPBuilder Builder(&StridesCheckVPBB->back());
+  DebugLoc DL = cast<VPIRBasicBlock>(Entry)
+                    ->getIRBasicBlock()
+                    ->getTerminator()
+                    ->getDebugLoc();
+  VPSCEVExpander Expander(Builder, *SE, DL);
+  VPValue *Pred = Expander.expandPredicate(&StridePredicates);
+  assert(Pred && "Must be expandable!");
+  StridesCheckVPBB->getTerminator()->setOperand(0, Pred);
+
+  // For now we only "speculate" stride but don't multiversion by handling two
+  // different paths of vector execution. As such, rewriting
+  // `VPExpandSCEVRecipe`s in the `Entry` is fine for now - at worst we'd
+  // "incorrectly" reach stride speculation check and jump to scalar loop from
+  // there. These recipes aren't passed to scalar loop if vector loop isn't
+  // entered. This rewrite is necessary to mimic current LAA's behavior.
+  for (auto &R : make_early_inc_range(*Entry)) {
+    auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
+    if (!ExpandSCEV)
+      continue;
+
+    const SCEV *S = ExpandSCEV->getSCEV();
+    Builder.setInsertPoint(ExpandSCEV);
+    const SCEV *NewS =
+        SE->rewriteUsingPredicate(S, CostCtx.L, StridePredicates);
+    if (NewS == S)
+      continue;
+    auto *NewR = Builder.createExpandSCEV(NewS);
+    ExpandSCEV->replaceAllUsesWith(NewR);
+
+    // If this recipe is a trip count then we need to reset it explicitly.
+    if (ExpandSCEV == Plan.getTripCount())
+      Plan.resetTripCount(NewR);
+
+    ExpandSCEV->eraseFromParent();
+  }
 }
 
 void VPlanTransforms::makeScalarizationDecisions(VPlan &Plan, VFRange &Range) {
