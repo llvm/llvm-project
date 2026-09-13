@@ -62,7 +62,7 @@ const uint64_t NOMORE_ICP_MAGICNUM = -1;
 ///
 /// This is a root class for typeless data in the IR.
 class Metadata {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
 
   /// RTTI.
   const unsigned char SubclassID;
@@ -182,7 +182,7 @@ inline raw_ostream &operator<<(raw_ostream &OS, const Metadata &MD) {
 /// Notably, this is the only thing in either hierarchy that is allowed to
 /// reference \a LocalAsMetadata.
 class MetadataAsValue : public Value {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
 
   Metadata *MD;
@@ -231,7 +231,7 @@ protected:
 public:
   LLVM_ABI DbgVariableRecord *getUser();
   LLVM_ABI const DbgVariableRecord *getUser() const;
-  /// To be called by ReplaceableMetadataImpl::replaceAllUsesWith, where `Old`
+  /// To be called by ReplaceableUses::replaceAllUsesWith, where `Old`
   /// is a pointer to one of the pointers in `DebugValues` (so should be type
   /// Metadata**), and `NewDebugValue` is the new Metadata* that is replacing
   /// *Old.
@@ -388,7 +388,7 @@ private:
 /// Most metadata cannot be RAUW'ed.  This is a shared implementation of
 /// use-lists and associated API for the three that support it (
 /// \a ValueAsMetadata, \a TempMDNode, and \a DIArgList).
-class ReplaceableMetadataImpl {
+class ReplaceableUses {
   friend class MetadataTracking;
 
 public:
@@ -399,12 +399,12 @@ private:
   SmallDenseMap<void *, std::pair<OwnerTy, uint64_t>, 4> UseMap;
 
 protected:
-  ~ReplaceableMetadataImpl() {
+  ~ReplaceableUses() {
     assert(UseMap.empty() && "Cannot destroy in-use replaceable metadata");
   }
 
 public:
-  ReplaceableMetadataImpl &operator=(const ReplaceableMetadataImpl &) = delete;
+  ReplaceableUses &operator=(const ReplaceableUses &) = delete;
 
   /// Replace all uses of this with MD.
   ///
@@ -435,10 +435,10 @@ private:
   ///
   /// If this is an unresolved MDNode, RAUW support will be created on-demand.
   /// ValueAsMetadata always has RAUW support.
-  static ReplaceableMetadataImpl *getOrCreate(Metadata &MD);
+  static ReplaceableUses *getOrCreate(Metadata &MD);
 
   /// Get RAUW support on MD, if it exists.
-  static ReplaceableMetadataImpl *getIfExists(Metadata &MD);
+  static ReplaceableUses *getIfExists(Metadata &MD);
 
   /// Check whether this node will support RAUW.
   ///
@@ -448,7 +448,7 @@ private:
 
 /// Replaceable metadata that remembers its \a LLVMContext, for owners with no
 /// other route to it.
-class ReplaceableUsesWithContext : public ReplaceableMetadataImpl {
+class ReplaceableUsesWithContext : public ReplaceableUses {
   LLVMContext &Context;
 
 public:
@@ -466,15 +466,15 @@ public:
 /// Because of full uniquing support, each value is only wrapped by a single \a
 /// ValueAsMetadata object, so the lookup maps are far more efficient than
 /// those using ValueHandleBase.
-class ValueAsMetadata : public Metadata, ReplaceableMetadataImpl {
-  friend class ReplaceableMetadataImpl;
+class ValueAsMetadata : public Metadata, ReplaceableUses {
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
 
   Value *V;
 
   /// Drop users without RAUW (during teardown).
   void dropUsers() {
-    ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+    ReplaceableUses::resolveAllUses(/* ResolveUsers */ false);
   }
 
 protected:
@@ -510,10 +510,10 @@ public:
   LLVMContext &getContext() const { return V->getContext(); }
 
   SmallVector<Metadata *> getAllArgListUsers() {
-    return ReplaceableMetadataImpl::getAllArgListUsers();
+    return ReplaceableUses::getAllArgListUsers();
   }
   SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
+    return ReplaceableUses::getAllDbgVariableRecordUsers();
   }
 
   LLVM_ABI static void handleDeletion(Value *V);
@@ -526,7 +526,7 @@ protected:
   /// \a Value gets RAUW'ed and the target already exists, this is used to
   /// merge the two metadata nodes.
   void replaceAllUsesWith(Metadata *MD) {
-    ReplaceableMetadataImpl::replaceAllUsesWith(MD);
+    ReplaceableUses::replaceAllUsesWith(MD);
   }
 
 public:
@@ -1077,7 +1077,7 @@ struct TempMDNodeDeleter {
 ///
 /// Clients can add operands to resizable MDNodes using push_back().
 class MDNode : public Metadata {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
   friend class DIAssignID;
 

@@ -4978,7 +4978,7 @@ public:
 /// List of ValueAsMetadata, to be used as an argument to a dbg.value
 /// intrinsic.
 class DIArgList : public Metadata, ReplaceableUsesWithContext {
-  friend class ReplaceableMetadataImpl;
+  friend class ReplaceableUses;
   friend class LLVMContextImpl;
   using iterator = SmallVectorImpl<ValueAsMetadata *>::iterator;
 
@@ -5009,7 +5009,7 @@ public:
   }
 
   SmallVector<DbgVariableRecord *> getAllDbgVariableRecordUsers() {
-    return ReplaceableMetadataImpl::getAllDbgVariableRecordUsers();
+    return ReplaceableUses::getAllDbgVariableRecordUsers();
   }
 
   LLVM_ABI void handleChangedOperand(void *Ref, Metadata *New);
