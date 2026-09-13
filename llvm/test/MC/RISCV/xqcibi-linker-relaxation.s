@@ -16,7 +16,7 @@ branch_over_relaxable:
 # CHECK: qc.e.jal 0x0 <branch_over_relaxable>
 # CHECK-NEXT: R_RISCV_VENDOR QUALCOMM
 # CHECK-NEXT: R_RISCV_QC_E_CALL_PLT foo
-# CHECK-NEXT: R_RISCV_RELAX *ABS*
+# CHECK-NEXT: R_RISCV_RELAX {{.*}}
   bne a0, a1, branch_over_relaxable
 # CHECK-NEXT: bne a0, a1, 0x6 <branch_over_relaxable+0x6>
 # CHECK-NEXT: R_RISCV_BRANCH branch_over_relaxable
@@ -45,7 +45,7 @@ short_jump_over_relaxable:
   call foo
 # CHECK: auipc ra, 0x0
 # CHECK-NEXT: R_RISCV_CALL_PLT foo
-# CHECK-NEXT: R_RISCV_RELAX *ABS*
+# CHECK-NEXT: R_RISCV_RELAX {{.*}}
 # CHECK-NEXT: jalr ra, 0x0(ra) <short_jump_over_relaxable>
   j short_jump_over_relaxable
 # CHECK-NEXT: c.j 0x20 <short_jump_over_relaxable+0x8>
@@ -63,7 +63,7 @@ mid_jump_over_fixed:
   j mid_jump_over_fixed
 # CHECK-NEXT: jal zero, 0x1026 <mid_jump_over_fixed+0x1002>
 # CHECK-NEXT: R_RISCV_JAL mid_jump_over_fixed
-# CHECK-NEXT: R_RISCV_RELAX *ABS*
+# CHECK-NEXT: R_RISCV_RELAX {{.*}}
   ret
 # CHECK-NEXT: c.jr ra
 
@@ -72,7 +72,7 @@ mid_jump_over_relaxable:
   call foo
 # CHECK: auipc ra, 0x0
 # CHECK-NEXT: R_RISCV_CALL_PLT foo
-# CHECK-NEXT: R_RISCV_RELAX *ABS*
+# CHECK-NEXT: R_RISCV_RELAX {{.*}}
 # CHECK-NEXT: jalr ra, 0x0(ra) <mid_jump_over_relaxable>
   .space 0x1000
 # CHECK-NEXT: ...

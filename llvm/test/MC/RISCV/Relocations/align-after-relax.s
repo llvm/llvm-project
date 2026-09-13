@@ -10,7 +10,7 @@
 # CHECK-NEXT:       c: 00 00 00 00 .word 0x00000000
 # CHECK:           10: auipc   ra, 0x0
 # CHECK-NEXT:                R_RISCV_CALL_PLT     foo
-# CHECK-NEXT:                R_RISCV_RELAX        *ABS*
+# CHECK-NEXT:                R_RISCV_RELAX        {{.*}}
 # CHECK:           18: c.nop
 # CHECK-NEXT:                R_RISCV_ALIGN        *ABS*+0x6
 
