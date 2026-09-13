@@ -352,7 +352,7 @@ LogicalResult mlir::affine::affineForOpBodySkew(AffineForOp forOp,
 
   if (unrollPrologueEpilogue && prologue)
     (void)loopUnrollFull(prologue);
-  if (unrollPrologueEpilogue && !epilogue && epilogue != prologue)
+  if (unrollPrologueEpilogue && epilogue && epilogue != prologue)
     (void)loopUnrollFull(epilogue);
 
   return success();
