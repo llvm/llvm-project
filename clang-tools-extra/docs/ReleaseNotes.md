@@ -70,6 +70,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### Diagnostics
 
+- Query-based custom clang-tidy checks can now be enabled with the
+  `Diagnostics.ClangTidy.ExperimentalCustomChecks` clangd configuration option.
+  Custom checks are subject to `FastCheckFilter`, and therefore require
+  `FastCheckFilter: Loose` or `None` to run.
+
 #### Semantic Highlighting
 
 #### Compile flags
@@ -82,6 +87,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 - clangd now applies clang-tidy fix-it post-processing before exposing fixes.
 
+- The `Extract to function` tweak is now offered for selections consisting of
+  a single expression-statement (e.g. a lone function call or an overloaded
+  operator call such as `stream << 42;`), which it previously refused to
+  extract.
+
 #### Signature help
 
 #### Cross-references
@@ -89,6 +99,10 @@ infrastructure are described first, followed by tool-specific sections.
 #### Objective-C
 
 #### Miscellaneous
+
+- Fixed `clangd-indexer --format=yaml` emitting invalid YAML when indexing
+  C++20 concepts.
+  ([#206875](https://github.com/llvm/llvm-project/issues/206875))
 
 ### Improvements to clang-doc
 
@@ -210,6 +224,11 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  fixing a crash when checking a const-qualified method declared with the
+  `lifetimebound` attribute.
+
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the
@@ -236,6 +255,9 @@ infrastructure are described first, followed by tool-specific sections.
   - Added support for naming lambda init-captures (e.g. `[Captured = Var]`) via
     the new `LambdaCapture` options. Simple, non-init captures continue to follow
     the naming style of the variable they capture.
+
+  - Added the {option}`AllowTrailingUnderscore`, which permits a
+    single trailing underscore on any identifier.
 
 - Improved {doc}`readability-named-parameter
   <clang-tidy/checks/readability/named-parameter>` check by ignoring

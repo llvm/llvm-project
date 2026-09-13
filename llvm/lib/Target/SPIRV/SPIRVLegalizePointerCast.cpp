@@ -707,11 +707,9 @@ class SPIRVLegalizePointerCastImpl {
     LI->setAlignment(Alignment);
     Value *OldValues = LI;
     buildAssignType(B, OldValues->getType(), OldValues);
-    Value *NewValues = Src;
 
     for (unsigned I = 0; I < SrcType->getNumElements(); ++I) {
-      Value *Element =
-          makeExtractElement(B, SrcType->getElementType(), NewValues, I);
+      Value *Element = extractScalarFromVector(B, Src, I);
       OldValues = makeInsertElement(B, OldValues, Element, I);
     }
 
