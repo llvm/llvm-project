@@ -5455,12 +5455,15 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     return Tmp;
   }
   case ISD::INSERT_SUBVECTOR: {
-    if (VT.isScalableVector())
-      break;
-    // Demand any elements from the subvector and the remainder from the src its
-    // inserted into.
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
+    if (VT.isScalableVector()) {
+      Tmp = ComputeNumSignBits(Sub, Depth + 1);
+      Tmp = std::min(Tmp, ComputeNumSignBits(Src, Depth + 1));
+      return Tmp;
+    }
+    // Demand any elements from the subvector and the remainder from the src its
+    // inserted into.
     uint64_t Idx = Op.getConstantOperandVal(2);
     unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
     APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
