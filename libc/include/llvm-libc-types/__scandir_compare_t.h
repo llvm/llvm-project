@@ -16,6 +16,7 @@
 
 #include "struct_dirent.h"
 
-typedef int (*__scandir_compare_t)(const struct dirent **, const struct dirent **);
+typedef int (*__scandir_compare_t)(const struct dirent **,
+                                   const struct dirent **);
 
-#endif  // LLVM_LIBC_TYPES___SCANDIR_COMPARE_T_H
+#endif // LLVM_LIBC_TYPES___SCANDIR_COMPARE_T_H

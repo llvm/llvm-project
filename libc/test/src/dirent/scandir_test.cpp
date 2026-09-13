@@ -15,8 +15,8 @@
 #include "src/__support/OSUtil/path.h"
 #include "src/dirent/scandir.h"
 #include "src/stdio/asprintf.h"
-#include "src/stdio/fopen.h"
 #include "src/stdio/fclose.h"
+#include "src/stdio/fopen.h"
 #include "src/stdio/remove.h"
 #include "src/stdlib/mkdtemp.h"
 #include "src/string/strcoll.h"
@@ -37,12 +37,15 @@ constexpr int ENTRIES_MIN = 2;
 
 char *join_path(char *dir, const char *filename) {
   char *path = nullptr;
-  if (LIBC_NAMESPACE::asprintf(&path, "%s%c%s", dir, LIBC_NAMESPACE::path::SEPARATOR, filename) == -1) {
+  if (LIBC_NAMESPACE::asprintf(&path, "%s%c%s", dir,
+                               LIBC_NAMESPACE::path::SEPARATOR,
+                               filename) == -1) {
     return nullptr;
   }
   return path;
 }
-bool create_empty_file(char *path) { FILE *file = LIBC_NAMESPACE::fopen(path, "w");
+bool create_empty_file(char *path) {
+  FILE *file = LIBC_NAMESPACE::fopen(path, "w");
   if (file == nullptr) {
     return false;
   }
@@ -53,14 +56,11 @@ bool create_empty_file(char *path) { FILE *file = LIBC_NAMESPACE::fopen(path, "w
   return true;
 }
 
-
 int alphasort(const struct dirent **a, const struct dirent **b) {
   return LIBC_NAMESPACE::strcoll((*a)->d_name, (*b)->d_name);
 }
 
-int skip_hidden(const struct dirent *entry) {
-    return entry->d_name[0] != '.';
-}
+int skip_hidden(const struct dirent *entry) { return entry->d_name[0] != '.'; }
 
 TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
   char *tmpl = LIBC_NAMESPACE::strdup(libc_make_test_file_path(TEMPLATE));
@@ -68,20 +68,19 @@ TEST_F(LlvmLibcScandirTest, TestEmptyDir) {
   ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
 
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, nullptr, nullptr), Succeeds(ENTRIES_MIN));
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, nullptr, nullptr),
+              Succeeds(ENTRIES_MIN));
   // Order of namelist is not guaranteed so we can't easily use ASSERT_STREQ
-  ASSERT_TRUE(
-      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".",  1) == 0 &&
-       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) ||
-      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
-       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".",  1) == 0));
+  ASSERT_TRUE((LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".", 1) == 0 &&
+               LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) ||
+              (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
+               LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".", 1) == 0));
 
   // We also test that both orderings can't be true at the same time.
-  ASSERT_FALSE(
-      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".",  1) == 0 &&
-       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) &&
-      (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
-       LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".",  1) == 0));
+  ASSERT_FALSE((LIBC_NAMESPACE::strncmp(namelist[0]->d_name, ".", 1) == 0 &&
+                LIBC_NAMESPACE::strncmp(namelist[1]->d_name, "..", 2) == 0) &&
+               (LIBC_NAMESPACE::strncmp(namelist[0]->d_name, "..", 2) == 0 &&
+                LIBC_NAMESPACE::strncmp(namelist[1]->d_name, ".", 1) == 0));
 
   ASSERT_THAT(LIBC_NAMESPACE::rmdir(tmpl), Succeeds());
   free(tmpl);
@@ -93,7 +92,8 @@ TEST_F(LlvmLibcScandirTest, TestDirFilter) {
   ASSERT_THAT(LIBC_NAMESPACE::mkdtemp(tmpl), Succeeds(tmpl));
 
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, nullptr), Succeeds(0));
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, nullptr),
+              Succeeds(0));
 
   ASSERT_THAT(LIBC_NAMESPACE::rmdir(tmpl), Succeeds());
   free(tmpl);
@@ -117,7 +117,8 @@ TEST_F(LlvmLibcScandirTest, TestDirSorted) {
   ASSERT_TRUE(create_empty_file(path_1));
 
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, alphasort), Succeeds(3));
+  ASSERT_THAT(LIBC_NAMESPACE::scandir(tmpl, &namelist, skip_hidden, alphasort),
+              Succeeds(3));
 
   ASSERT_STREQ(namelist[0]->d_name, "1");
   ASSERT_STREQ(namelist[1]->d_name, "a");
@@ -137,5 +138,6 @@ TEST_F(LlvmLibcScandirTest, TestDirSorted) {
 
 TEST_F(LlvmLibcScandirTest, TestBadDirname) {
   struct dirent **namelist;
-  ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL), Fails(ENOENT, -1));
+  ASSERT_THAT(LIBC_NAMESPACE::scandir("", &namelist, NULL, NULL),
+              Fails(ENOENT, -1));
 }
