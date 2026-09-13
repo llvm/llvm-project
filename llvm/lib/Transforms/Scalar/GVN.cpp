@@ -765,6 +765,12 @@ uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
   Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
   return assignExpNewValueNum(Exp).first;
 }
+uint32_t GVNPass::ValueTable::lookupCmp(unsigned Opcode,
+                                        CmpInst::Predicate Predicate,
+                                        Value *LHS, Value *RHS) {
+  Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
+  return ExpressionNumbering.lookup(Exp);
+}
 
 /// Returns the value number of ptrtoint \p Ptr to \Ty.
 uint32_t GVNPass::ValueTable::lookupPtrToInt(Value *Ptr, Type *Ty) {
@@ -3453,11 +3459,10 @@ bool GVNPass::processInstruction(Instruction *I) {
   if (!Repl) {
     // substiut cmp instruction with not if possible.
     if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
-      uint32_t NextNumNot = VN.getNextUnusedValueNumber();
       uint32_t NotNum =
-          VN.lookupOrAddCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
-                            Cmp->getOperand(0), Cmp->getOperand(1));
-      if (NotNum < NextNumNot) {
+          VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
+                       Cmp->getOperand(0), Cmp->getOperand(1));
+      if (NotNum != 0) {
         Value *NotRepl = findLeader(I->getParent(), NotNum);
         if (NotRepl && NotRepl != I) {
           BinaryOperator *Not = BinaryOperator::CreateNot(
