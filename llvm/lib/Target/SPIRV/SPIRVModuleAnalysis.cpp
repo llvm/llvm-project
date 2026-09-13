@@ -1050,7 +1050,9 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::VulkanMemoryModelKHR,
                     Capability::StorageImageExtendedFormats,
                     Capability::StorageImageMultisample,
-                    Capability::ImageMSArray});
+                    Capability::ImageMSArray,
+                    Capability::SampledCubeArray,
+                    Capability::ImageCubeArray});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
