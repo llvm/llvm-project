@@ -441,7 +441,7 @@ void XtensaInstPrinter::printImm7_22_AsmOperand(const MCInst *MI, int OpNum,
 }
 
 void XtensaInstPrinter::printSelect_2_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+                                                 raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 1) &&
@@ -452,7 +452,7 @@ void XtensaInstPrinter::printSelect_2_AsmOperand(const MCInst *MI, int OpNum,
 }
 
 void XtensaInstPrinter::printSelect_4_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+                                                 raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 3) &&
@@ -463,7 +463,7 @@ void XtensaInstPrinter::printSelect_4_AsmOperand(const MCInst *MI, int OpNum,
 }
 
 void XtensaInstPrinter::printSelect_8_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+                                                 raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 7) &&
@@ -474,7 +474,7 @@ void XtensaInstPrinter::printSelect_8_AsmOperand(const MCInst *MI, int OpNum,
 }
 
 void XtensaInstPrinter::printSelect_16_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+                                                  raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 15) &&
@@ -495,21 +495,23 @@ void XtensaInstPrinter::printSelect_256_AsmOperand(const MCInst *MI, int OpNum,
     printOperand(MI, OpNum, O);
 }
 
-void XtensaInstPrinter::printOffset_16_16_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_16_16_AsmOperand(const MCInst *MI,
+                                                     int OpNum,
+                                                     raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= -128 && Value <= 112 && (Value & 0xf) == 0) &&
            "Invalid argument, value must be in range [-128,112], first 4 bits "
            "should be zero");
     O << Value;
-  } else{
+  } else {
     printOperand(MI, OpNum, O);
   }
 }
 
-void XtensaInstPrinter::printOffset_256_8_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_256_8_AsmOperand(const MCInst *MI,
+                                                     int OpNum,
+                                                     raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= -1024 && Value <= 1016 && (Value & 0x7) == 0) &&
@@ -520,21 +522,23 @@ void XtensaInstPrinter::printOffset_256_8_AsmOperand(const MCInst *MI, int OpNum
     printOperand(MI, OpNum, O);
 }
 
-void XtensaInstPrinter::printOffset_256_16_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_256_16_AsmOperand(const MCInst *MI,
+                                                      int OpNum,
+                                                      raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= -2048 && Value <= 2032 && (Value & 0xf) == 0) &&
            "Invalid argument, value must be in range [-2048,2032], first 4 "
            "bits should be zero");
     O << Value;
-  } else{
+  } else {
     printOperand(MI, OpNum, O);
   }
 }
 
-void XtensaInstPrinter::printOffset_256_4_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_256_4_AsmOperand(const MCInst *MI,
+                                                     int OpNum,
+                                                     raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= -512 && Value <= 508 && (Value & 0x3) == 0) &&
@@ -545,8 +549,9 @@ void XtensaInstPrinter::printOffset_256_4_AsmOperand(const MCInst *MI, int OpNum
     printOperand(MI, OpNum, O);
 }
 
-void XtensaInstPrinter::printOffset_128_2_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_128_2_AsmOperand(const MCInst *MI,
+                                                     int OpNum,
+                                                     raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 254 && (Value & 0x1) == 0) &&
@@ -557,8 +562,9 @@ void XtensaInstPrinter::printOffset_128_2_AsmOperand(const MCInst *MI, int OpNum
     printOperand(MI, OpNum, O);
 }
 
-void XtensaInstPrinter::printOffset_128_1_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_128_1_AsmOperand(const MCInst *MI,
+                                                     int OpNum,
+                                                     raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= 0 && Value <= 127) &&
@@ -568,8 +574,9 @@ void XtensaInstPrinter::printOffset_128_1_AsmOperand(const MCInst *MI, int OpNum
     printOperand(MI, OpNum, O);
 }
 
-void XtensaInstPrinter::printOffset_64_16_AsmOperand(const MCInst *MI, int OpNum,
-                                                   raw_ostream &O) {
+void XtensaInstPrinter::printOffset_64_16_AsmOperand(const MCInst *MI,
+                                                     int OpNum,
+                                                     raw_ostream &O) {
   if (MI->getOperand(OpNum).isImm()) {
     int64_t Value = MI->getOperand(OpNum).getImm();
     assert((Value >= -512 && Value <= 496 && (Value & 0xf) == 0) &&

@@ -59,7 +59,7 @@ BitVector XtensaRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   }
   // Reserve stack pointer.
   Reserved.set(Xtensa::SP);
-  //Reserve QR regs
+  // Reserve QR regs
   Reserved.set(Xtensa::Q0);
   Reserved.set(Xtensa::Q1);
   Reserved.set(Xtensa::Q2);
