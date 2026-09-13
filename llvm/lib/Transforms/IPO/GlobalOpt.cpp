@@ -1348,7 +1348,7 @@ deleteIfDead(GlobalValue &GV,
     if (DeleteFnCallback)
       DeleteFnCallback(*F);
   }
-  ReplaceableMetadataImpl::SalvageDebugInfo(GV);
+  ReplaceableUses::SalvageDebugInfo(GV);
   GV.eraseFromParent();
   ++NumDeleted;
   return true;

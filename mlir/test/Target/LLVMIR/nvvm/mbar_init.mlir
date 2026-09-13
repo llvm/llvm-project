@@ -18,7 +18,7 @@ llvm.func @cp_async_mbarrier_arrive(%bar_shared: !llvm.ptr<3>, %bar_gen: !llvm.p
 llvm.func @mbarrier_init_generic(%barrier: !llvm.ptr) {
   // CHECK-LABEL: define void @mbarrier_init_generic(ptr %0) {
   // CHECK-NEXT: %2 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init(ptr %0, i32 %2)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.p0(ptr %0, i32 %2, /* layout=v0 */ i32 0)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %count = nvvm.read.ptx.sreg.ntid.x : i32
@@ -29,11 +29,31 @@ llvm.func @mbarrier_init_generic(%barrier: !llvm.ptr) {
 llvm.func @mbarrier_init_shared(%barrier: !llvm.ptr<3>) {
   // CHECK-LABEL: define void @mbarrier_init_shared(ptr addrspace(3) %0) {
   // CHECK-NEXT: %2 = call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.shared(ptr addrspace(3) %0, i32 %2)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %0, i32 %2, /* layout=v0 */ i32 0)
   // CHECK-NEXT: ret void
   // CHECK-NEXT: }
   %count = nvvm.read.ptx.sreg.ntid.x : i32
   nvvm.mbarrier.init %barrier, %count : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+llvm.func @mbarrier_init_layout_shared(%barrier: !llvm.ptr<3>, %count: i32) {
+  // CHECK-LABEL: define void @mbarrier_init_layout_shared(ptr addrspace(3) %0, i32 %1) {
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %0, i32 %1, /* layout=v0 */ i32 0)
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.p3(ptr addrspace(3) %0, i32 %1, /* layout=v1 */ i32 1)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.init %barrier, %count layout = 0 : !llvm.ptr<3>, i32
+  nvvm.mbarrier.init %barrier, %count layout = 1 : !llvm.ptr<3>, i32
+  llvm.return
+}
+
+llvm.func @mbarrier_init_layout_generic(%barrier: !llvm.ptr, %count: i32) {
+  // CHECK-LABEL: define void @mbarrier_init_layout_generic(ptr %0, i32 %1) {
+  // CHECK-NEXT: call void @llvm.nvvm.mbarrier.init.p0(ptr %0, i32 %1, /* layout=v1 */ i32 1)
+  // CHECK-NEXT: ret void
+  // CHECK-NEXT: }
+  nvvm.mbarrier.init %barrier, %count layout = 1 : !llvm.ptr, i32
   llvm.return
 }
 

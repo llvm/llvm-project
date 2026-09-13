@@ -2122,7 +2122,10 @@ bool GVNPass::processNonLocalLoad(LoadInst *Load,
     if (GetElementPtrInst *GEP =
             dyn_cast<GetElementPtrInst>(Load->getOperand(0))) {
       for (Use &U : GEP->indices())
-        if (Instruction *I = dyn_cast<Instruction>(U.get()))
+        // Instructions inserted by GVN during this iteration (e.g. coercion
+        // casts from MaterializeAdjustedValue) may not have value numbers yet,
+        // so they are skipped.
+        if (Instruction *I = dyn_cast<Instruction>(U.get()); I && VN.exists(I))
           Changed |= performScalarPRE(I);
     }
   }

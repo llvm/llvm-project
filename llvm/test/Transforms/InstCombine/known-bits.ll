@@ -1539,7 +1539,9 @@ define i16 @test_inf_only_bfloat(bfloat nofpclass(nan sub norm zero) %x) {
 
 define i128 @test_inf_only_ppc_fp128(ppc_fp128 nofpclass(nan sub norm zero) %x) {
 ; CHECK-LABEL: @test_inf_only_ppc_fp128(
-; CHECK-NEXT:    ret i128 9218868437227405312
+; CHECK-NEXT:    [[TMP1:%.*]] = call ppc_fp128 @llvm.fabs.ppcf128(ppc_fp128 [[X:%.*]])
+; CHECK-NEXT:    [[AND:%.*]] = bitcast ppc_fp128 [[TMP1]] to i128
+; CHECK-NEXT:    ret i128 [[AND]]
 ;
   %y = bitcast ppc_fp128 %x to i128
   %and = and i128 %y, 170141183460469231731687303715884105727
@@ -1607,7 +1609,7 @@ define i32 @test_ninf_only(double %x) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret i32 0
 ;
-  %cmp = fcmp oeq double %x, 0xFFF0000000000000
+  %cmp = fcmp oeq double %x, -inf
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:
@@ -1711,7 +1713,7 @@ define i1 @test_simplify_icmp2(double %x) {
 ; CHECK-NEXT:    ret i1 false
 ;
   %abs = tail call double @llvm.fabs.f64(double %x)
-  %cond = fcmp oeq double %abs, 0x7FF0000000000000
+  %cond = fcmp oeq double %abs, +inf
   br i1 %cond, label %if.then, label %if.else
 
 if.then:

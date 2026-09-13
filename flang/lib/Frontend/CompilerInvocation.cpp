@@ -318,7 +318,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.EnableSafeTrampoline = 1;
 
   if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
-                   clang::options::OPT_fno_fp_sum_reassociation, false))
+                   clang::options::OPT_fno_fp_sum_reassociation, true))
     opts.SplitSumExpressionTree = 1;
 
   // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),

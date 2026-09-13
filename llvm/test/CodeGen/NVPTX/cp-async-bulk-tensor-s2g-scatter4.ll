@@ -23,8 +23,8 @@ define void @cp_async_bulk_tensor_s2g_tile_scatter4_2d(i32 %flag, ptr addrspace(
 ; CHECK-PTX64-NEXT:    ld.param::func.b32 %r3, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_5];
 ; CHECK-PTX64-NEXT:    ld.param::func.b32 %r4, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_6];
 ; CHECK-PTX64-NEXT:    ld.param::func.b32 %r5, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_7];
-; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_8];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.global.shared::cta.tile::scatter4.bulk_group [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1];
+; CHECK-PTX64-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_8];
 ; CHECK-PTX64-NEXT:    cp.async.bulk.tensor.2d.global.shared::cta.tile::scatter4.bulk_group.L2::cache_hint [%rd2, {%r1, %r2, %r3, %r4, %r5}], [%rd1], %rd3;
 ; CHECK-PTX64-NEXT:    ret;
 ;
@@ -41,8 +41,8 @@ define void @cp_async_bulk_tensor_s2g_tile_scatter4_2d(i32 %flag, ptr addrspace(
 ; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r4, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_5];
 ; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r5, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_6];
 ; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b32 %r6, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_7];
-; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_8];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.global.shared::cta.tile::scatter4.bulk_group [%rd1, {%r2, %r3, %r4, %r5, %r6}], [%r1];
+; CHECK-PTX-SHARED32-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_tensor_s2g_tile_scatter4_2d_param_8];
 ; CHECK-PTX-SHARED32-NEXT:    cp.async.bulk.tensor.2d.global.shared::cta.tile::scatter4.bulk_group.L2::cache_hint [%rd1, {%r2, %r3, %r4, %r5, %r6}], [%r1], %rd2;
 ; CHECK-PTX-SHARED32-NEXT:    ret;
   tail call void @llvm.nvvm.cp.async.bulk.tensor.s2g.tile.scatter4.2d(ptr addrspace(3) %src, ptr %tmap, i32 %d0, i32 %d1, i32 %d2, i32 %d3, i32 %d4, i64 %ch, i1 0)
