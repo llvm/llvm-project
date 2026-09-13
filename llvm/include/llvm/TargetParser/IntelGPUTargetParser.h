@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file provides access to the Intel GPU list in IntelGPUTargetParser.def.
-// Only what is needed to name the device a driver reports is declared here; the
-// table itself carries more, and a consumer that needs the rest either declares
-// it here as well or expands the table directly.
+// It answers the two questions the compiler asks of the list: what to call the
+// device a driver reports, and what to compile for when the user names one.
 //
 //===----------------------------------------------------------------------===//
 
@@ -22,11 +21,16 @@
 #include <string>
 
 namespace llvm {
+template <typename T> class SmallVectorImpl;
+
 namespace IntelGPU {
 
 /// The Intel GPU architecture names this build knows, covering both physical
 /// devices and the compatibility names that stand for a whole product line.
-enum GPUKind : uint16_t {
+///
+/// The underlying type is fixed because clang/Basic/OffloadArch.h forward
+/// declares this enumeration; the two declarations have to agree.
+enum GPUKind : uint8_t {
   GK_NONE = 0,
 #define INTEL_GPU(NAME, KIND, ARCHITECTURE, RELEASE, IGCA_LEVEL, IGCA_SUFFIX)  \
   GK_##KIND,
@@ -60,6 +64,32 @@ LLVM_ABI StringRef getArchName(GPUKind Kind);
 /// Every device has such a name, including one that is not in the table, which
 /// makes this the only way to name a device this build does not know.
 LLVM_ABI std::string getNumericArchName(GMDID ID);
+
+/// The device \p Name denotes, or GK_NONE for a name this build does not know.
+///
+/// Every spelling the user may write is accepted: a human-friendly name such as
+/// "xe-pvc", a compatibility name such as "xe-dg2", an alias such as "bmg_g21",
+/// and a numeric name such as "xe_12.60.7". Only the human-friendly name is
+/// reported back for a device, so a spelling that is not one canonicalizes to
+/// the one that is. The revision of a numeric name takes no part in the lookup,
+/// since the table is keyed on the architecture and the release alone, so
+/// "xe_12.60.0" and "xe_12.60.7" name the same device; the revision may also be
+/// omitted. A numeric name for a device that is not in the table is not a name
+/// this build knows, and yields GK_NONE like any other unknown name.
+LLVM_ABI GPUKind parseArch(StringRef Name);
+
+/// The IGCA level name to compile \p Kind for, e.g. "xe-pvc" -> "igca_20ca",
+/// or "" for GK_NONE. This is the spelling -target-cpu is invoked with.
+///
+/// A level names a set of features rather than a device, and its suffix says
+/// which sets it comprises: igca_60 is the core features, igca_60c adds the
+/// compute features, and igca_60ca is exact, meaning that only a device at that
+/// level will do.
+LLVM_ABI StringRef getIGCAName(GPUKind Kind);
+
+/// Append every architecture name this build accepts, for diagnostics that
+/// offer the user an alternative to a name that did not parse.
+LLVM_ABI void fillValidArchList(SmallVectorImpl<StringRef> &Values);
 
 } // namespace IntelGPU
 } // namespace llvm
