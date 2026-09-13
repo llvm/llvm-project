@@ -16,7 +16,6 @@
 #include <list>
 #include <map>
 #include <set>
-#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -35,7 +34,6 @@ void containers() {
   std::unordered_multimap<int, int> i;
   std::unordered_set<int> j;
   std::unordered_multiset<int> k;
-  std::string l;
   std::vector<int> m;
   std::vector<bool> n;
 }
@@ -78,7 +76,6 @@ void container_const_iterators() {
   std::unordered_set<int>::const_iterator j;
   std::unordered_multiset<int>::const_iterator k;
 #if TEST_STD_VER <= 11
-  std::string::const_iterator l;
   std::vector<int>::const_iterator m;
 #endif
 #if TEST_STD_VER <= 17
