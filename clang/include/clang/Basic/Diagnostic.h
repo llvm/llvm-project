@@ -225,6 +225,15 @@ public:
   }
 };
 
+/// Whether a source location is in a system header and/or a system macro.
+enum class DiagStateSystemClass : unsigned {
+  UserCode = 0,
+  SystemMacro = 1 << 0,
+  SystemHeader = 1 << 1,
+  SystemHeaderAndMacro = SystemHeader | SystemMacro,
+  NUM_CLASSES
+};
+
 /// Concrete class used by the front-end to report problems and issues.
 ///
 /// This massages the diagnostics (e.g. handling things like "report warnings
@@ -588,6 +597,12 @@ public:
   const void *getDiagStateKeyForLoc(SourceLocation Loc) const {
     return GetDiagStateForLoc(Loc);
   }
+
+  /// Returns whether \p Loc is in a system header and/or a system macro.
+  /// Severity depends on this through
+  /// DiagnosticIDs::shouldSuppressAsSystemWarning(), so a cache keyed on
+  /// getDiagStateKeyForLoc() must take it into account as well.
+  DiagStateSystemClass getDiagStateSystemClassForLoc(SourceLocation Loc) const;
 
   /// True if an active diagnostic suppression mapping makes severity dependent
   /// on the file path.
@@ -974,6 +989,16 @@ public:
            diag::Severity::Ignored;
   }
 
+  bool areAllIgnored(StringRef Group, SourceLocation Loc) const {
+    llvm::SmallVector<diag::kind> diagsInGroup;
+    bool Failed = Diags->getDiagnosticsInGroup(diag::Flavor::WarningOrError,
+                                               Group, diagsInGroup);
+    assert(!Failed && "Incorrect group name?");
+    (void)Failed;
+    return Diags->getDiagnosticListHighestSeverity(diagsInGroup, Loc, *this) ==
+           diag::Severity::Ignored;
+  }
+
   /// Based on the way the client configured the DiagnosticsEngine
   /// object, classify the specified diagnostic ID into a Level, consumable by
   /// the DiagnosticConsumer.
@@ -1138,6 +1163,23 @@ public:
     Diag.setIgnoreAllWarnings(true);
   }
   ~IgnoreAllWarningDiagRAII() { Diag.setIgnoreAllWarnings(OldValue); }
+};
+
+/// RAII class that temporarily forces warnings in system headers and system
+/// macros to be shown on a DiagnosticsEngine and restores the previous state on
+/// destruction.  Use it to ask what a diagnostic's severity would be if the
+/// location were not in a system header.
+class ForceSystemWarningsRAII {
+  DiagnosticsEngine &Diag;
+  bool OldValue;
+
+public:
+  explicit ForceSystemWarningsRAII(DiagnosticsEngine &Diag, bool Force = true)
+      : Diag(Diag), OldValue(Diag.getForceSystemWarnings()) {
+    if (Force)
+      Diag.setForceSystemWarnings(true);
+  }
+  ~ForceSystemWarningsRAII() { Diag.setForceSystemWarnings(OldValue); }
 };
 
 /// The streaming interface shared between DiagnosticBuilder and

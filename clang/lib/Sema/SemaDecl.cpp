@@ -30,7 +30,6 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
-#include "clang/Basic/DiagnosticComment.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
@@ -15759,10 +15758,7 @@ void Sema::ActOnDocumentableDecls(ArrayRef<Decl *> Group) {
   if (Group.empty() || !Group[0])
     return;
 
-  if (Diags.isIgnored(diag::warn_doc_param_not_found,
-                      Group[0]->getLocation()) &&
-      Diags.isIgnored(diag::warn_unknown_comment_command_name,
-                      Group[0]->getLocation()))
+  if (!areDocumentationDiagsEnabled(Group[0]->getLocation()))
     return;
 
   if (Group.size() >= 2) {
