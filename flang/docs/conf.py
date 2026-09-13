@@ -91,7 +91,7 @@ configure_furo(
     source_directory="flang/docs/",
     html_title="The Flang Compiler",
     html_logo=shared_static_asset("LLVMWyvernSmall.png"),
-    local_static_path=["_static"],
+    local_static_path=[] if tags.has("builder-man") else ["_static"],
     extra_css_files=["custom.css"],
 )
 
