@@ -3775,6 +3775,8 @@ bool FunctionDecl::isTargetVersionMultiVersion() const {
 
 void
 FunctionDecl::setPreviousDeclaration(FunctionDecl *PrevDecl) {
+  // Linking this declaration to a previous one may change its linkage.
+  invalidateCachedLinkage();
   redeclarable_base::setPreviousDecl(PrevDecl);
 
   if (FunctionTemplateDecl *FunTmpl = getDescribedFunctionTemplate()) {
