@@ -5713,6 +5713,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformShuffle);
+  case Intrinsic::spv_wave_readlane_first:
+    return selectWaveOpInst(ResVReg, ResType, I,
+                            SPIRV::OpGroupNonUniformBroadcastFirst);
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_wave_prefix_product:
