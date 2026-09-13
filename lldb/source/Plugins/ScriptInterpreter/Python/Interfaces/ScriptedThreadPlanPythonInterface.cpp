@@ -10,7 +10,9 @@
 
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 
 #include "../SWIGPythonBridge.h"
@@ -86,8 +88,19 @@ lldb::StateType ScriptedThreadPlanPythonInterface::GetRunState() {
                                                     error))
     return lldb::eStateStepping;
 
-  return static_cast<lldb::StateType>(obj->GetUnsignedIntegerValue(
-      static_cast<uint32_t>(lldb::eStateStepping)));
+  // A thread plan's run state can formally be eStateSuspended, but that state
+  // is decided by the thread plan negotiation, not by the plan itself.  So a
+  // scripted plan's contract is only running or stepping: a bool.
+  if (StructuredData::Boolean *should_step = obj->GetAsBoolean())
+    return should_step->GetValue() ? lldb::eStateStepping : lldb::eStateRunning;
+
+  if (Log *log = GetLog(LLDBLog::Script)) {
+    StreamString reply;
+    obj->Dump(reply, /*pretty_print=*/false);
+    LLDB_LOG(log, "should_step returned {0}, not a bool; stepping.",
+             reply.GetData());
+  }
+  return lldb::eStateStepping;
 }
 
 llvm::Error
