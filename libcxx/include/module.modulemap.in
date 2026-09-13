@@ -1243,6 +1243,23 @@ module std {
     export *
   }
 
+  module debugging {
+    module support_impl {
+      textual header "__debugging/support/aix.h"
+      textual header "__debugging/support/bsd_like.h"
+      textual header "__debugging/support/linux.h"
+      textual header "__debugging/support/windows.h"
+    }
+
+    module support {
+      header "__debugging/support.h"
+      export *
+    }
+
+    header "debugging"
+    export *
+  }
+
   module deque {
     module fwd { header "__fwd/deque.h" }
 
