@@ -12,6 +12,10 @@
 
 let Component = "Parse" in {
 let CategoryName = "Parse Issue" in {
+def err_contracts_require_cxx26 : Error<"contracts are a C++26 feature">;
+def err_contracts_disabled : Error<
+  "contracts support is disabled; pass '-fcontracts' to enable it">;
+
 // C23 compatibility with C17 and earlier.
 defm c_label_at_end_of_compound_statement : C23Compat<
   "label at end of compound statement is", /*ext_warn*/true>;
@@ -333,6 +337,8 @@ def err_ms_attributes_not_enabled : Error<
 def err_expected_method_body : Error<"expected method body">;
 def err_declspec_after_virtspec : Error<
   "'%0' qualifier may not appear after the virtual specifier '%1'">;
+def err_virt_specifier_after_contract : Error<
+  "virtual specifier '%0' must appear before contract specifiers">;
 def err_invalid_token_after_toplevel_declarator : Error<
   "expected ';' after top level declarator">;
 def err_invalid_token_after_declarator_suggest_equal : Error<
@@ -428,6 +434,10 @@ def warn_cxx98_compat_trailing_return_type : Warning<
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_requires_clause_must_appear_after_trailing_return : Error<
   "trailing return type must appear before trailing requires clause">;
+def err_requires_clause_must_precede_contract_specifiers : Error<
+  "trailing requires clause must appear before contract specifiers">;
+def err_contract_specifier_not_function : Error<
+  "contract specifiers can only be applied to function declarations">;
 def err_requires_clause_on_declarator_not_declaring_a_function : Error<
   "trailing requires clause can only be used when declaring a function">;
 def err_requires_clause_inside_parens : Error<

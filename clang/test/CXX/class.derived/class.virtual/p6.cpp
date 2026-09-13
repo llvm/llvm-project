@@ -11,7 +11,9 @@ class A {
 template<typename T>
 class B : A<T> {
   virtual void f1() requires (sizeof(T) == 0) override {}
-  // expected-error@-1{{virtual function cannot have a requires clause}}
+  virtual void f2() override requires (sizeof(T) == 0) {}
+  // expected-error@-2{{virtual function cannot have a requires clause}}
+  // expected-error@-2{{virtual function cannot have a requires clause}}
 };
 
 template<typename T> struct C : T {void f() requires true; };

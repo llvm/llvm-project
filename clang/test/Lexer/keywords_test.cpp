@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -std=c++03 -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++11 -DCXX11 -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++20 -DCXX11 -DCXX20 -fsyntax-only %s
+// RUN: %clang_cc1 -std=c++26 -DCXX11 -DCXX20 -DCXX26 -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fdeclspec -DDECLSPEC -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fms-extensions -DDECLSPEC -fsyntax-only %s
 // RUN: %clang_cc1 -std=c++03 -fborland-extensions -DDECLSPEC -fsyntax-only %s
@@ -15,7 +16,7 @@
 // RUN: %clang -std=c++03 -target i686-windows-msvc -DMS -fno-declspec -fsyntax-only %s
 // RUN: %clang -std=c++03 -target x86_64-scei-ps4 -fno-declspec -fsyntax-only %s
 
-// RUN: %clang_cc1 -std=c++98 -DFutureKeyword -fsyntax-only -Wc++11-compat -Wc++20-compat -verify=cxx98 %s
+// RUN: %clang_cc1 -std=c++98 -DFutureKeyword -fsyntax-only -Wc++11-compat -Wc++20-compat -Wc++2c-compat -verify=cxx98 %s
 
 #define IS_KEYWORD(NAME) _Static_assert(!__is_identifier(NAME), #NAME)
 #define NOT_KEYWORD(NAME) _Static_assert(__is_identifier(NAME), #NAME)
@@ -25,6 +26,12 @@
 #define CXX20_KEYWORD(NAME)  IS_KEYWORD(NAME)
 #else
 #define CXX20_KEYWORD(NAME)  NOT_KEYWORD(NAME)
+#endif
+
+#if defined(CXX26)
+#define CXX26_KEYWORD(NAME)  IS_KEYWORD(NAME)
+#else
+#define CXX26_KEYWORD(NAME)  NOT_KEYWORD(NAME)
 #endif
 
 #ifdef DECLSPEC
@@ -71,6 +78,9 @@ CXX20_KEYWORD(co_await);
 CXX20_KEYWORD(co_return);
 CXX20_KEYWORD(co_yield);
 
+// C++26 keywords
+CXX26_KEYWORD(contract_assert);
+
 // __declspec extension
 DECLSPEC_KEYWORD(__declspec);
 
@@ -100,5 +110,6 @@ int constinit; // cxx98-warning {{'constinit' is a keyword in C++20}}
 int consteval; // cxx98-warning {{'consteval' is a keyword in C++20}}
 int requires; // cxx98-warning {{'requires' is a keyword in C++20}}
 int concept; // cxx98-warning {{'concept' is a keyword in C++20}}
+int contract_assert; // cxx98-warning {{'contract_assert' is a keyword in C++26}}
 
 #endif

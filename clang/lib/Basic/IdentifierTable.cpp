@@ -108,6 +108,10 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     if (LangOpts.CPlusPlus20)
       return KS_Enabled;
     return LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
+  case KEYCXX26:
+    if (LangOpts.CPlusPlus26)
+      return KS_Enabled;
+    return LangOpts.CPlusPlus ? KS_Future : KS_Unknown;
   case KEYGNU:
     return LangOpts.GNUKeywords ? KS_Extension : KS_Unknown;
   case KEYMS:
@@ -199,8 +203,8 @@ KeywordStatus clang::getKeywordStatus(const LangOptions &LangOpts,
 }
 
 static bool IsKeywordInCpp(unsigned Flags) {
-  return (Flags & (KEYCXX | KEYCXX11 | KEYCXX20 | BOOLSUPPORT | WCHARSUPPORT |
-                   CHAR8SUPPORT)) != 0;
+  return (Flags & (KEYCXX | KEYCXX11 | KEYCXX20 | KEYCXX26 | BOOLSUPPORT |
+                   WCHARSUPPORT | CHAR8SUPPORT)) != 0;
 }
 
 static void MarkIdentifierAsKeywordInCpp(IdentifierTable &Table,
@@ -847,6 +851,9 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
     if (((Flags & KEYCXX20) == KEYCXX20) ||
         ((Flags & CHAR8SUPPORT) == CHAR8SUPPORT))
       return diag::warn_cxx20_keyword;
+
+    if ((Flags & KEYCXX26) == KEYCXX26)
+      return diag::warn_cxx26_keyword;
   } else {
     if ((Flags & KEYC99) == KEYC99)
       return diag::warn_c99_keyword;

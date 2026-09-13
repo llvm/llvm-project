@@ -2052,6 +2052,19 @@ private:
 
   Expr *PackIndexingExpr;
 
+public:
+  /// A function contract specifier whose predicate must be parsed after its
+  /// enclosing class is complete.
+  struct LateParsedContractSpecifier {
+    bool IsPost;
+    IdentifierInfo *ResultName = nullptr;
+    SourceLocation ResultNameLoc;
+    std::unique_ptr<CachedTokens> PredicateTokens;
+  };
+
+private:
+  SmallVector<LateParsedContractSpecifier, 2> LateParsedContractSpecifiers;
+
   friend struct DeclaratorChunk;
 
 public:
@@ -2690,6 +2703,17 @@ public:
   /// declarator.
   bool hasTrailingRequiresClause() const {
     return TrailingRequiresClause != nullptr;
+  }
+
+  void addLateParsedContractSpecifier(LateParsedContractSpecifier &&Info) {
+    LateParsedContractSpecifiers.push_back(std::move(Info));
+  }
+  MutableArrayRef<LateParsedContractSpecifier>
+  getLateParsedContractSpecifiers() {
+    return LateParsedContractSpecifiers;
+  }
+  bool hasLateParsedContractSpecifiers() const {
+    return !LateParsedContractSpecifiers.empty();
   }
 
   /// Sets the template parameter lists that preceded the declarator.

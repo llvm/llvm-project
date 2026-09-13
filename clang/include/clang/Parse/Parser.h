@@ -1288,7 +1288,7 @@ private:
   /// LateParsedMethodDeclaration - A method declaration inside a class that
   /// contains at least one entity whose parsing needs to be delayed
   /// until the class itself is completely-defined, such as a default
-  /// argument (C++ [class.mem]p2).
+  /// argument or contract predicate (C++ [class.mem]).
   struct LateParsedMethodDeclaration : public LateParsedDeclaration {
     explicit LateParsedMethodDeclaration(Parser *P, Decl *M)
         : Self(P), Method(M), ExceptionSpecTokens(nullptr) {}
@@ -1300,16 +1300,18 @@ private:
     /// Method - The method declaration.
     Decl *Method;
 
-    /// DefaultArgs - Contains the parameters of the function and
-    /// their default arguments. At least one of the parameters will
-    /// have a default argument, but all of the parameters of the
-    /// method will be stored so that they can be reintroduced into
-    /// scope at the appropriate times.
+    /// DefaultArgs - Contains the parameters of the function and their default
+    /// arguments. All parameters are stored so that they can be reintroduced
+    /// into scope for any delayed part of the method declaration.
     SmallVector<LateParsedDefaultArgument, 8> DefaultArgs;
 
     /// The set of tokens that make up an exception-specification that
     /// has not yet been parsed.
     CachedTokens *ExceptionSpecTokens;
+
+    /// Contract predicates that must be parsed after the enclosing class is
+    /// complete.
+    SmallVector<Declarator::LateParsedContractSpecifier, 2> ContractSpecifiers;
   };
 
   /// LateParsedMemberInitializer - An initializer for a non-static class data
@@ -2763,6 +2765,17 @@ private:
       const Declarator &D, const DeclSpec &DS,
       std::optional<Sema::CXXThisScopeRAII> &ThisScope);
 
+  enum class ContractSpecifierKind { Pre, Post };
+  std::optional<ContractSpecifierKind> getContractSpecifierKind();
+  void ParseContractSpecifiers(Declarator &D);
+  /// Parse the trailing requires-clause and function contract specifiers.
+  ///
+  /// \param ParametersAlreadyInScope whether the parameters are already in an
+  /// active function prototype scope. This can be true for lambdas, which
+  /// always build their function prototype scope.
+  void ParseFunctionContractSpecifiersAndConstraints(
+      Declarator &D, bool ParametersAlreadyInScope = false);
+
   /// ParseRefQualifier - Parses a member function ref-qualifier. Returns
   /// true if a ref-qualifier is found.
   bool ParseRefQualifier(bool &RefQualifierIsLValueRef,
@@ -2887,6 +2900,10 @@ private:
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
 
+  /// C++26 contextual keywords.
+  mutable IdentifierInfo *Ident_pre;
+  mutable IdentifierInfo *Ident_post;
+
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
   /// parsed after the corresponding top-level class is complete.
@@ -2992,7 +3009,6 @@ private:
                                      bool MayBeFollowedByDirectInit);
 
   /// Parse a requires-clause as part of a function declaration.
-  void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
@@ -7597,6 +7613,11 @@ public:
   /// Note: this lets the caller parse the end ';'.
   ///
   StmtResult ParseBreakStatement();
+
+  /// Parse a C++26 contract-assertion statement.
+  /// TODO: Currently the AST result of contracts is not support, its predicate
+  /// will be parsed and the corresponding AST result will be discarded.
+  StmtResult ParseContractAssertStatement();
 
   /// ParseReturnStatement
   /// \verbatim
