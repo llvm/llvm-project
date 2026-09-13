@@ -3,6 +3,10 @@
 ; xUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GCN,FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,REAL16 %s
 ; xUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,REAL16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-FAKE16 %s
+; xUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-FAKE16 %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-REAL16 %s
+; xUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-REAL16 %s
 
 ; FIXME: GlobalISel does not work with bf16
 
@@ -34,6 +38,24 @@ define amdgpu_kernel void @cos_bf16(ptr addrspace(1) %out, bfloat %src) #1 {
 ; REAL16-NEXT:    v_cos_bf16_e32 v0.l, s2
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: cos_bf16:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    v_cos_bf16_e32 v0, s2
+; GFX13-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: cos_bf16:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
+; GFX13-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-REAL16-NEXT:    v_cos_bf16_e32 v0.l, s2
+; GFX13-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-REAL16-NEXT:    s_endpgm
   %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat %src) #0
   store bfloat %cos, ptr addrspace(1) %out, align 2
   ret void
@@ -65,6 +87,24 @@ define amdgpu_kernel void @cos_bf16_constant_4_strictfp(ptr addrspace(1) %out) #
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: cos_bf16_constant_4_strictfp:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-FAKE16-NEXT:    v_cos_bf16_e64 v0, 4.0 op_sel:[1,0]
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: cos_bf16_constant_4_strictfp:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-REAL16-NEXT:    v_cos_bf16_e64 v0.l, 4.0 op_sel:[1,0]
+; GFX13-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-REAL16-NEXT:    s_endpgm
   %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat 4.0) strictfp
   store bfloat %cos, ptr addrspace(1) %out, align 2
   ret void
@@ -96,6 +136,24 @@ define amdgpu_kernel void @cos_bf16_constant_100_strictfp(ptr addrspace(1) %out)
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: cos_bf16_constant_100_strictfp:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-FAKE16-NEXT:    v_cos_bf16_e32 v0, 0x42c8
+; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: cos_bf16_constant_100_strictfp:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-REAL16-NEXT:    v_cos_bf16_e32 v0.l, 0x42c8
+; GFX13-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-REAL16-NEXT:    s_endpgm
   %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat 100.0) strictfp
   store bfloat %cos, ptr addrspace(1) %out, align 2
   ret void
@@ -126,6 +184,23 @@ define amdgpu_kernel void @cos_bf16_constant_0.3(ptr addrspace(1) %out) #1 {
 ; REAL16-NEXT:    s_wait_kmcnt 0x0
 ; REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; REAL16-NEXT:    s_endpgm
+;
+; GFX13-FAKE16-LABEL: cos_bf16_constant_0.3:
+; GFX13-FAKE16:       ; %bb.0:
+; GFX13-FAKE16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-FAKE16-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, 0xffffbea1
+; GFX13-FAKE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-FAKE16-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX13-FAKE16-NEXT:    s_endpgm
+;
+; GFX13-REAL16-LABEL: cos_bf16_constant_0.3:
+; GFX13-REAL16:       ; %bb.0:
+; GFX13-REAL16-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
+; GFX13-REAL16-NEXT:    v_mov_b32_e32 v1, 0
+; GFX13-REAL16-NEXT:    v_mov_b16_e32 v0.l, 0xbea1
+; GFX13-REAL16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-REAL16-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX13-REAL16-NEXT:    s_endpgm
   %cos = call bfloat @llvm.amdgcn.cos.bf16(bfloat 0.3) #0
   store bfloat %cos, ptr addrspace(1) %out, align 2
   ret void
@@ -136,3 +211,4 @@ attributes #1 = { nounwind }
 attributes #2 = { nounwind strictfp }
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; GCN: {{.*}}
+; GFX13: {{.*}}
