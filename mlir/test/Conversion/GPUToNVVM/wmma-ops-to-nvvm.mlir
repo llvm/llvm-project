@@ -370,3 +370,52 @@ gpu.module @test_module {
     return %D : !gpu.mma_matrix<16x16xf16, "COp">
   }
 }
+
+// -----
+
+gpu.module @test_module {
+
+// CHECK-LABEL: func @gpu_wmma_elementwise_subf_negatef
+//       CHECK: %[[A0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK: %[[B0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK: %[[C0:.*]] = llvm.fsub %[[A0]], %[[B0]] : vector<2xf16>
+//       CHECK: llvm.insertvalue %[[C0]], %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+// CHECK-COUNT-3: llvm.fsub %{{.*}}, %{{.*}} : vector<2xf16>
+//       CHECK: %[[S0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+//       CHECK: %[[N0:.*]] = llvm.fneg %[[S0]] : vector<2xf16>
+//       CHECK: llvm.insertvalue %[[N0]], %{{.*}}[0] : !llvm.struct<(vector<2xf16>, vector<2xf16>, vector<2xf16>, vector<2xf16>)>
+// CHECK-COUNT-3: llvm.fneg %{{.*}} : vector<2xf16>
+  func.func @gpu_wmma_elementwise_subf_negatef(%A : !gpu.mma_matrix<16x16xf16, "COp">, %B : !gpu.mma_matrix<16x16xf16, "COp">)  ->(!gpu.mma_matrix<16x16xf16, "COp">) {
+    %C = gpu.subgroup_mma_elementwise subf %A, %B : (!gpu.mma_matrix<16x16xf16, "COp">, !gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
+    %D = gpu.subgroup_mma_elementwise negatef %C : (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
+    return %D : !gpu.mma_matrix<16x16xf16, "COp">
+  }
+}
+
+// -----
+
+gpu.module @test_module {
+
+// CHECK-LABEL: func @gpu_wmma_elementwise_int
+//       CHECK: %[[A0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
+//       CHECK: %[[B0:.*]] = llvm.extractvalue %{{.*}}[0] : !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
+//       CHECK: %[[C0:.*]] = llvm.add %[[A0]], %[[B0]] : i32
+//       CHECK: llvm.insertvalue %[[C0]], %{{.*}}[0] : !llvm.struct<(i32, i32, i32, i32, i32, i32, i32, i32)>
+// CHECK-COUNT-7: llvm.add %{{.*}}, %{{.*}} : i32
+// CHECK-COUNT-8: llvm.sub %{{.*}}, %{{.*}} : i32
+// CHECK-COUNT-8: llvm.mul %{{.*}}, %{{.*}} : i32
+// CHECK-COUNT-8: llvm.sdiv %{{.*}}, %{{.*}} : i32
+// CHECK-COUNT-8: llvm.udiv %{{.*}}, %{{.*}} : i32
+//       CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+//       CHECK: llvm.sub %[[ZERO]], %{{.*}} : i32
+// CHECK-COUNT-7: llvm.sub %{{.*}}, %{{.*}} : i32
+  func.func @gpu_wmma_elementwise_int(%A : !gpu.mma_matrix<16x16xi32, "COp">, %B : !gpu.mma_matrix<16x16xi32, "COp">)  ->(!gpu.mma_matrix<16x16xi32, "COp">) {
+    %C = gpu.subgroup_mma_elementwise addi %A, %B : (!gpu.mma_matrix<16x16xi32, "COp">, !gpu.mma_matrix<16x16xi32, "COp">) -> !gpu.mma_matrix<16x16xi32, "COp">
+    %D = gpu.subgroup_mma_elementwise subi %C, %B : (!gpu.mma_matrix<16x16xi32, "COp">, !gpu.mma_matrix<16x16xi32, "COp">) -> !gpu.mma_matrix<16x16xi32, "COp">
+    %E = gpu.subgroup_mma_elementwise muli %D, %B : (!gpu.mma_matrix<16x16xi32, "COp">, !gpu.mma_matrix<16x16xi32, "COp">) -> !gpu.mma_matrix<16x16xi32, "COp">
+    %F = gpu.subgroup_mma_elementwise divs %E, %B : (!gpu.mma_matrix<16x16xi32, "COp">, !gpu.mma_matrix<16x16xi32, "COp">) -> !gpu.mma_matrix<16x16xi32, "COp">
+    %G = gpu.subgroup_mma_elementwise divu %F, %B : (!gpu.mma_matrix<16x16xi32, "COp">, !gpu.mma_matrix<16x16xi32, "COp">) -> !gpu.mma_matrix<16x16xi32, "COp">
+    %H = gpu.subgroup_mma_elementwise negates %G : (!gpu.mma_matrix<16x16xi32, "COp">) -> !gpu.mma_matrix<16x16xi32, "COp">
+    return %H : !gpu.mma_matrix<16x16xi32, "COp">
+  }
+}
