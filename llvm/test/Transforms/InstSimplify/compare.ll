@@ -1902,6 +1902,79 @@ define <2 x i1> @icmp_shl_1_ule_signmask_poison2(<2 x i8> %V) {
   ret <2 x i1> %cmp
 }
 
+define i1 @icmp_shl_1_uge_signmask_plus_one(i8 %V) {
+; CHECK-LABEL: @icmp_shl_1_uge_signmask_plus_one(
+; CHECK-NEXT:    ret i1 false
+;
+  %shl = shl i8 1, %V
+  %cmp = icmp uge i8 %shl, -127
+  ret i1 %cmp
+}
+
+define i1 @icmp_shl_1_ult_signmask_plus_one(i8 %V) {
+; CHECK-LABEL: @icmp_shl_1_ult_signmask_plus_one(
+; CHECK-NEXT:    ret i1 true
+;
+  %shl = shl i8 1, %V
+  %cmp = icmp ult i8 %shl, -127
+  ret i1 %cmp
+}
+
+; (mul nuw X, C) ugt (C - 1) -- strict-form of (mul nuw X, C) uge C, where
+; X is known non-zero. Should fold to true.
+
+define i1 @nuwmul_ugt_const_minus_one(i32 %arg) {
+; CHECK-LABEL: @nuwmul_ugt_const_minus_one(
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    ret i1 true
+;
+  %nonzero = icmp ne i32 %arg, 0
+  call void @llvm.assume(i1 %nonzero)
+  %mul = mul nuw nsw i32 %arg, 24
+  %cmp = icmp ugt i32 %mul, 23
+  ret i1 %cmp
+}
+
+define i1 @nuwmul_uge_const(i32 %arg) {
+; CHECK-LABEL: @nuwmul_uge_const(
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    ret i1 true
+;
+  %nonzero = icmp ne i32 %arg, 0
+  call void @llvm.assume(i1 %nonzero)
+  %mul = mul nuw nsw i32 %arg, 24
+  %cmp = icmp uge i32 %mul, 24
+  ret i1 %cmp
+}
+
+define i1 @shape_ult_const(i32 %arg) {
+; CHECK-LABEL: @shape_ult_const(
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    ret i1 false
+;
+  %nonzero = icmp ne i32 %arg, 0
+  call void @llvm.assume(i1 %nonzero)
+  %mul = mul nuw nsw i32 %arg, 24
+  %cmp = icmp ult i32 %mul, 24
+  ret i1 %cmp
+}
+
+define i1 @shape_ule_const_minus_one(i32 %arg) {
+; CHECK-LABEL: @shape_ule_const_minus_one(
+; CHECK-NEXT:    [[NONZERO:%.*]] = icmp ne i32 [[ARG:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONZERO]])
+; CHECK-NEXT:    ret i1 false
+;
+  %nonzero = icmp ne i32 %arg, 0
+  call void @llvm.assume(i1 %nonzero)
+  %mul = mul nuw nsw i32 %arg, 24
+  %cmp = icmp ule i32 %mul, 23
+  ret i1 %cmp
+}
+
 define i1 @shl_1_cmp_eq_nonpow2(i32 %x) {
 ; CHECK-LABEL: @shl_1_cmp_eq_nonpow2(
 ; CHECK-NEXT:    ret i1 false
