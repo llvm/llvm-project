@@ -7169,8 +7169,10 @@ bool llvm::UpgradeModuleFlags(Module &M) {
 
     // Upgrade branch protection and return address signing module flags. The
     // module flag behavior for these fields were Error and now they are Min.
+    // The one exception is "sign-return-address-harden".
     if (ID->getString() == "branch-target-enforcement" ||
-        ID->getString().starts_with("sign-return-address")) {
+        ID->getString() == "sign-return-address" ||
+        ID->getString() == "sign-return-address-key") {
       if (auto *Behavior =
               mdconst::dyn_extract_or_null<ConstantInt>(Op->getOperand(0))) {
         if (Behavior->getLimitedValue() == Module::Error) {
