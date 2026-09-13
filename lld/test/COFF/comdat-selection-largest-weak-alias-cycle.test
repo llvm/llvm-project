@@ -1,0 +1,77 @@
+# REQUIRES: x86
+#
+# Weak aliases may form malformed cycles. Replacing and later discarding a
+# provisional secondary definition must restore the weak-alias state without
+# turning such input into use-after-replacement, recursion through stale
+# SymbolUnion storage, or a crash.
+#
+# RUN: split-file %s %t.dir
+# RUN: yaml2obj %t.dir/weak-cycle.yaml -o %t.weak-cycle.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/small.s -o %t.small.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/large.s -o %t.large.obj
+# RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj \
+# RUN:   %t.dir/root.s -o %t.root.obj
+#
+# /force:unresolved makes the result of the malformed alias cycle non-fatal;
+# the regression property is that deferred restoration terminates safely.
+# RUN: lld-link /force:unresolved /force:multiple /entry:entry \
+# RUN:   /subsystem:console /nodefaultlib /opt:noref %t.weak-cycle.obj \
+# RUN:   %t.small.obj %t.large.obj %t.root.obj /out:%t.exe 2>&1 | \
+# RUN:   FileCheck %s --allow-empty
+#
+# CHECK-NOT: PLEASE submit a bug report
+# CHECK-NOT: Assertion failed
+#
+#--- weak-cycle.yaml
+--- !COFF
+header:
+  Machine: IMAGE_FILE_MACHINE_AMD64
+  Characteristics: [ ]
+sections: []
+symbols:
+  # raw 0, auxiliary record raw 1, targets weak_b at raw 2
+  - Name: weak_a
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex: 2
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+  # raw 2, auxiliary record raw 3, targets weak_a at raw 0
+  - Name: weak_b
+    Value: 0
+    SectionNumber: 0
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_WEAK_EXTERNAL
+    WeakExternal:
+      TagIndex: 0
+      Characteristics: IMAGE_WEAK_EXTERN_SEARCH_ALIAS
+...
+#
+#--- small.s
+        .section .text$largest, "xr", largest, leader
+        .globl leader
+leader:
+        .byte 0x11
+
+        .globl weak_a
+weak_a:
+        retq
+#
+#--- large.s
+        .section .text$largest, "xr", largest, leader
+        .globl leader
+leader:
+        .space 32, 0x44
+#
+#--- root.s
+        .text
+        .globl entry
+entry:
+        callq weak_a
+        retq

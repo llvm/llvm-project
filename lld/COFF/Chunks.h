@@ -296,6 +296,24 @@ public:
   // and its children are treated as a group by the garbage collector.
   void addAssociative(SectionChunk *child);
 
+  // Secondary definitions in ANY/LARGEST groups are provisional until all
+  // competing groups have been seen. This also applies to definitions in
+  // associative children.
+  bool isInReplaceableCOMDATGroup() const { return replaceableCOMDAT; }
+
+  void setSelection(llvm::COFF::COMDATType value) {
+    selection = value;
+    if (value == llvm::COFF::IMAGE_COMDAT_SELECT_ANY ||
+        value == llvm::COFF::IMAGE_COMDAT_SELECT_LARGEST)
+      replaceableCOMDAT = true;
+  }
+
+  // Permanently discard a superseded COMDAT group, including its
+  // associative sections.
+  void discardCOMDATGroup();
+
+  bool isDiscardedByCOMDAT() const { return discardedByCOMDAT; }
+
   StringRef getDebugName() const;
 
   // True if this is a codeview debug info chunk. These will not be laid out in
@@ -385,7 +403,16 @@ public:
 
   // Whether this section needs to be kept distinct from other sections during
   // ICF. This is set by the driver using address-significance tables.
-  bool keepUnique = false;
+  bool keepUnique : 1;
+
+  // True if this section was permanently discarded when its COMDAT group lost
+  // selection or deferred symbol replay.
+  bool discardedByCOMDAT : 1;
+
+  // True for an associative child whose leader uses ANY/LARGEST selection.
+  // Keeping this as a bit of section state avoids increasing SectionChunk's
+  // size with a parent pointer.
+  bool replaceableCOMDAT : 1;
 
   // The COMDAT selection if this is a COMDAT chunk.
   llvm::COFF::COMDATType selection = (llvm::COFF::COMDATType)0;
@@ -993,7 +1020,7 @@ public:
     // Comdats from LTO files can't be fully treated as regular comdats
     // at this point; we don't know what size or contents they are going to
     // have, so we can't do proper checking of such aspects of them.
-    chunk.selection = llvm::COFF::IMAGE_COMDAT_SELECT_ANY;
+    chunk.setSelection(llvm::COFF::IMAGE_COMDAT_SELECT_ANY);
   }
 
   SectionChunk chunk;
