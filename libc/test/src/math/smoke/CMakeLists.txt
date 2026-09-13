@@ -4112,6 +4112,7 @@ add_fp_unittest(
     libc.src.math.nextafterf128
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.fp_bits
 )
 
@@ -4274,6 +4275,7 @@ add_fp_unittest(
     NextDownTest.h
   DEPENDS
     libc.src.math.nextdownf128
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(
@@ -4347,6 +4349,7 @@ add_fp_unittest(
     NextUpTest.h
   DEPENDS
     libc.src.math.nextupf128
+    libc.src.__support.FPUtil.float128
 )
 
 add_fp_unittest(
