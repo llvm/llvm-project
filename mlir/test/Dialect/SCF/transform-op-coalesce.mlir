@@ -141,11 +141,14 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:       affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[LB1]], %[[UB1]], %[[STEP1]]]
 //      CHECK:   %[[NITERS2:.+]] = affine.apply
 // CHECK-SAME:        affine_map<()[s0, s1, s2] -> ((-s0 + s1) ceildiv s2)>()[%[[LB2]], %[[UB2]], %[[STEP2]]]
-//      CHECK:   %[[NEWUB:.+]] = affine.apply affine_map<()[s0, s1, s2, s3, s4, s5, s6, s7, s8] ->
-// CHECK-SAME:       ((((-s0 + s1) ceildiv s2) * ((-s3 + s4) ceildiv s5)) * ((-s6 + s7) ceildiv s8))
-// CHECK-SAME:       [%[[LB0]], %[[UB0]], %[[STEP0]], %[[LB1]], %[[UB1]], %[[STEP1]], %[[LB2]], %[[UB2]], %[[STEP2]]]
+//  Each size is clamped at zero before the sizes are combined, so empty
+//  dimensions cannot cancel into a positive flattened extent.
+//      CHECK:   %[[CL0:.+]] = arith.maxsi %[[NITERS0]]
+//      CHECK:   %[[CL1:.+]] = arith.maxsi %[[NITERS1]]
+//      CHECK:   %[[CL2:.+]] = arith.maxsi %[[NITERS2]]
+//      CHECK:   %[[NEWUB:.+]] = affine.apply
 //      CHECK:   %[[RESULT:.+]] = scf.for %[[IV:[a-zA-Z0-9]+]] = %[[C0]] to %[[NEWUB]] step %[[C1]] iter_args(%[[ITER_ARG:.+]] = %[[ARG0]])
-//      CHECK:     %[[DELINEARIZE:.+]]:3 = affine.delinearize_index %[[IV]] into (%[[NITERS0]], %[[NITERS1]], %[[NITERS2]])
+//      CHECK:     %[[DELINEARIZE:.+]]:3 = affine.delinearize_index %[[IV]] into (%[[CL0]], %[[CL1]], %[[CL2]])
 //  CHECK-DAG:     %[[K:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#2)[%[[LB2]], %[[STEP2]]]
 //  CHECK-DAG:     %[[J:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#1)[%[[LB1]], %[[STEP1]]]
 //  CHECK-DAG:     %[[I:.+]] = affine.apply affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>(%[[DELINEARIZE]]#0)[%[[LB0]], %[[STEP0]]]
@@ -324,9 +327,11 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:     %[[ARG2:.+]]: index)
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:   %[[UB:.+]] = affine.apply affine_map<()[s0, s1] -> (s0 * s1)>()[%[[ARG1]], %[[ARG2]]]
+//       CHECK:   %[[CL1:.+]] = arith.maxsi %[[ARG1]]
+//       CHECK:   %[[CL2:.+]] = arith.maxsi %[[ARG2]]
+//       CHECK:   %[[UB:.+]] = affine.apply affine_map<()[s0, s1] -> (s0 * s1)>()[%[[CL1]], %[[CL2]]]
 //       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[UB]] step %[[C1]]
-//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[ARG1]], %[[ARG2]])
+//       CHECK:     %[[DELINEARIZE:.+]]:2 = affine.delinearize_index %[[IV]] into (%[[CL1]], %[[CL2]])
 //       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[DELINEARIZE]]#0, %[[C0]], %[[DELINEARIZE]]#1)
 
 // -----
@@ -363,7 +368,8 @@ module attributes {transform.with_named_sequence} {
 //  CHECK-SAME:     , %[[ARG1:.+]]: index)
 //   CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
-//       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[ARG1]] step %[[C1]]
+//       CHECK:   %[[CL:.+]] = arith.maxsi %[[ARG1]]
+//       CHECK:   scf.for %[[IV:.+]] = %[[C0]] to %[[CL]] step %[[C1]]
 //       CHECK:     "some_use"(%{{[a-zA-Z0-9]+}}, %[[C0]], %[[C0]], %[[IV]])
 
 // -----

@@ -989,6 +989,21 @@ delinearizeInductionVariable(RewriterBase &rewriter, Location loc,
   return {delinearizedIvs, preservedUsers};
 }
 
+/// Clamp a normalized loop size at zero. `emitNormalizedLoopBounds` returns
+/// `ceilDiv(ub - lb, step)`, which is negative for an empty loop: combining two
+/// such sizes cancels the signs into a positive extent, and a negative value is
+/// not a legal `affine.delinearize_index` basis.
+static Value clampSizeToNonNegative(RewriterBase &rewriter, Location loc,
+                                    Value size) {
+  if (auto cst = getConstantIntValue(size))
+    return *cst >= 0 ? size
+                     : getValueOrCreateConstantIntOp(rewriter, loc,
+                                                     rewriter.getIndexAttr(0));
+  Value zero = arith::ConstantOp::create(rewriter, loc,
+                                         rewriter.getZeroAttr(size.getType()));
+  return arith::MaxSIOp::create(rewriter, loc, size, zero);
+}
+
 LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
                                   MutableArrayRef<scf::ForOp> loops) {
   if (loops.size() < 2)
@@ -1035,8 +1050,9 @@ LogicalResult mlir::coalesceLoops(RewriterBase &rewriter,
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(outermost);
   Location loc = outermost.getLoc();
-  SmallVector<Value> upperBounds = llvm::map_to_vector(
-      loops, [](auto loop) { return loop.getUpperBound(); });
+  SmallVector<Value> upperBounds = llvm::map_to_vector(loops, [&](auto loop) {
+    return clampSizeToNonNegative(rewriter, loc, loop.getUpperBound());
+  });
   Value upperBound = getProductOfIntsOrIndexes(rewriter, loc, upperBounds);
   outermost.setUpperBound(upperBound);
 
@@ -1188,8 +1204,10 @@ void mlir::collapseParallelLoops(
     Value ub = loops.getUpperBound()[i];
     Value step = loops.getStep()[i];
     auto newLoopRange = emitNormalizedLoopBounds(rewriter, loc, lb, ub, step);
-    normalizedUpperBounds.push_back(getValueOrCreateConstantIntOp(
-        rewriter, loops.getLoc(), newLoopRange.size));
+    normalizedUpperBounds.push_back(clampSizeToNonNegative(
+        rewriter, loops.getLoc(),
+        getValueOrCreateConstantIntOp(rewriter, loops.getLoc(),
+                                      newLoopRange.size)));
 
     rewriter.setInsertionPointToStart(loops.getBody());
     denormalizeInductionVariable(rewriter, loc, loops.getInductionVars()[i], lb,
