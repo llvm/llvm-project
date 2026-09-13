@@ -2006,6 +2006,14 @@ bool TemplateInstantiator::instantiateMissingDeclsToScopeForConcepts(Decl *D) {
     if (!Pair)
       continue;
 
+    // Parameters belong to the current specialization. Reusing a mapping
+    // from an outer specialization can substitute the wrong arguments and
+    // recursively re-enter constraint satisfaction. Let CWG2770 instantiate
+    // parameters on demand instead; non-parameter declarations still reuse
+    // outer-scope mappings.
+    if (isa<ParmVarDecl>(D))
+      break;
+
     if (auto *InstD = dyn_cast<Decl *>(*Pair)) {
       Current->InstantiatedLocal(D, InstD);
     } else {

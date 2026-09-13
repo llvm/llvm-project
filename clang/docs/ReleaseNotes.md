@@ -592,6 +592,12 @@ features cannot lower the translation-unit ABI level;
 - Fixed concept evaluation bugs where some declarations were not added to
   the current instantiation scope. (#GH198052), (#GH209632)
 
+- Fixed a regression where the constraint of one specialization of a function
+  template could reuse the function parameters of an outer (still active)
+  specialization of the same template, causing a spurious
+  "satisfaction of constraint ... depends on itself" error for synthesized
+  three-way comparisons such as ``std::map``'s ``operator<=>``. (#GH223220)
+
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
