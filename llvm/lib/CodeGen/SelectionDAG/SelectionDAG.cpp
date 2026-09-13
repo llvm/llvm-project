@@ -5422,8 +5422,8 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
     SDValue Sub = Op.getOperand(1);
     Tmp = SignBitsOps::insertSubvector(
         Src.getValueType().getVectorElementCount(),
-        Sub.getValueType().getVectorElementCount(),
-        Op.getConstantOperandVal(2), DemandedElts,
+        Sub.getValueType().getVectorElementCount(), Op.getConstantOperandVal(2),
+        DemandedElts,
         [&](unsigned OpIdx, const APInt &Demanded) {
           return ComputeNumSignBits(Op.getOperand(OpIdx), Demanded, Depth + 1);
         },
