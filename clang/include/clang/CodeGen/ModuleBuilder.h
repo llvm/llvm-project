@@ -16,16 +16,13 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 namespace llvm {
   class Constant;
   class LLVMContext;
   class Module;
   class StringRef;
-
-  namespace vfs {
-  class FileSystem;
-  }
 }
 
 // Prefix of the name of the artificial inline frame.
