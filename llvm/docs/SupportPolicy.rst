@@ -81,7 +81,7 @@ It is the responsibility of each sub-community to care about their own parts
 and the intersection of that with the core tier and other peripheral parts.
 
 There are three main groups of code that fit in this category:
- * Code that is making its way into LLVM, via the `experimental <https://llvm.org/docs/DeveloperPolicy.html#introducing-new-components-into-llvm>`_
+ * Code that is making its way into LLVM, via the :ref:`experimental <new-llvm-components>`
    roadmap or similar efforts.
  * Code that is making its way out of LLVM, via deprecation, replacement or
    bit-rot, and will be removed if the sub-community that cares about it
@@ -239,4 +239,3 @@ overall maintenance costs to a minimum and will need to show steps to mitigate
 all of the issues that were listed as reasons for its original removal.
 
 Failing on those again, will lead to become a candidate for removal yet again.
-

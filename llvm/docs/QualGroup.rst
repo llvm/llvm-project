@@ -96,7 +96,7 @@ Participation
 There are several ways to participate:
 
 * Join discussions on the `LLVM Discourse <https://discourse.llvm.org/>`_ forum, under the "Community" category.
-* Engage in conversations on the LLVM Community Discord in the `#fusa-qual-wg <https://discord.com/channels/636084430946959380/1389362444169773117>`_ channel. Note: You need to join the community's `Discord chat server <https://llvm.org/docs/GettingInvolved.html#discord>`_ first.
+* Engage in conversations on the LLVM Community Discord in the `#fusa-qual-wg <https://discord.com/channels/636084430946959380/1389362444169773117>`_ channel. Note: You need to join the community's :ref:`Discord chat server <discord>` first.
 * Join our monthly sync-up calls. Details on working sessions and meeting minutes are shared on the :doc:`GettingInvolved` page.
 * Contribute ideas, feedback, or patches via GitHub, Discourse, or directly in working documents.
 

@@ -577,7 +577,7 @@ constants:
 
 where:
   - `<index>` is a 32-bit unsigned integer;
-  - `<value>` is a [LLVM IR Constant](https://www.llvm.org/docs/LangRef.html#constants);
+  - `<value>` is a [LLVM IR Constant](project:LangRef.md#constants);
   - `<alignment>` is a 32-bit unsigned integer specified in bytes, and must be
     power of two;
   - `<target-specific>` is either true or false.

@@ -14,7 +14,7 @@ If there are insufficient votes and it has been over two weeks since the last up
 To reopen the request, someone with repository triage or write access must reapply the label to get it back on the dashboard.
 
 [`infra:commit-access-request` label]: https://github.com/llvm/llvm-project/issues/?q=is%3Aissue%20state%3Aopen%20label%3Ainfra%3Acommit-access-request
-[commit access requirements]: https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access
+[commit access requirements]: project:DeveloperPolicy.md#obtaining-commit-access
 ['LLVM Committers' team]: https://github.com/orgs/llvm/teams/llvm-committers
 
 ## Commit Access Review

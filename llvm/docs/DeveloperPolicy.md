@@ -358,7 +358,7 @@ Below are some guidelines about the format of the message itself:
   caused issue #".
 - If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
   the issue being closed, as described
-  [here](https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs).
+  {ref}`here <resolving-closing-bugs>`.
 - It is also acceptable to add other metadata to the commit message to automate
   processes, including for downstream consumers. This metadata can include
   links to resources that are not available to the entire community. However,

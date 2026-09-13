@@ -558,4 +558,4 @@ Optimization (CGO 2016)*
 ## Obtaining Help
 
 To obtain help on LLVM in general and its CUDA support, see [the LLVM
-community](https://llvm.org/docs/#mailing-lists).
+community](project:GettingInvolved.md#forums-mailing-lists).
