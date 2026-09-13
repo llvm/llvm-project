@@ -5,9 +5,10 @@ add_entrypoint_object(
   HDRS
     ../scandir.h
   DEPENDS
+    libc.hdr.func.free
+    libc.hdr.func.malloc
     libc.hdr.types.size_t
     libc.hdr.types.struct_dirent
-    libc.src.__support.alloc_checker
     libc.src.__support.common
     libc.src.__support.CPP.vector
     libc.src.__support.macros.config
