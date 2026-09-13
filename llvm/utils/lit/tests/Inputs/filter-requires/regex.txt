@@ -1,0 +1,2 @@
+# REQUIRES: {{host.*}}
+# RUN: echo regex

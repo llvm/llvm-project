@@ -326,6 +326,15 @@ Run only those tests that previously failed. Tests that have been newly added
 but not yet run are not included.
 :::
 
+:::{option} --filter-requires EXPR
+Run only those tests with a `REQUIRES` combination matching the requested positive
+features exactly and no extra exclusions. Names are case sensitive and commas mean
+AND. `Base` selects tests without requirements. Matching tests bypass `REQUIRES`
+availability checks. `UNSUPPORTED` and `XFAIL` still apply. Regexes are unsupported.
+The maximum test count applies before requirement matching. The caller must choose
+a suitable device.
+:::
+
 :::{option} --xfail LIST
 Treat those tests whose name is in the semicolon separated list `LIST` as
 `XFAIL`. This can be helpful when one does not want to modify the test
