@@ -1440,9 +1440,9 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.LDSSize = MFI->getLDSSize();
 
-  unsigned LDSGranularityBytes = getLdsDwGranularity(STM) * 4;
+  unsigned LDSGranularity = getLdsGranularityEncoding(STM);
   ProgInfo.LDSBlocks =
-      alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
+      alignTo(ProgInfo.LDSSize, LDSGranularity) / LDSGranularity;
 
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {
@@ -1679,8 +1679,7 @@ static void EmitPALMetadataCommon(AMDGPUPALMetadata *MD,
 
   MD->updateHwStageMaximum(
       CC, ".lds_size",
-      (unsigned)(CurrentProgramInfo.LdsSize * getLdsDwGranularity(ST) *
-                 sizeof(uint32_t)));
+      (unsigned)(CurrentProgramInfo.LdsSize * getLdsGranularityEncoding(ST)));
 }
 
 // This is the equivalent of EmitProgramInfoSI above, but for when the OS type
