@@ -31,6 +31,61 @@ page](https://llvm.org/releases/).
 
 ## Bug Fixes
 
+- Fixed `fir::getTypeSizeAndAlignment` returning the wrong allocation size for
+  **packed `fir::RecordType`s** (produced by the AIX lowering of `BIND(C)`
+  derived types, or declared directly in textual FIR). Fields in a packed
+  record are placed back-to-back using each component's allocation size
+  (`alignTo(storeSize, ABIalign)`), not its raw store size, and the record's
+  ABI alignment is 1. For example, a packed `{i32, f64}` on x86-64 now
+  correctly reports 12 bytes instead of 16.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed `fir::getTypeSizeAndAlignment` omitting **tail padding** from unpacked
+  derived types. The returned size is now rounded up to the record's own ABI
+  alignment, matching the allocation extent used by array element strides, CUDA
+  shared-memory layout, and stack/heap allocation placement. For example,
+  `{i32, i8}` (store size 5 bytes, align 4) now correctly reports 8 bytes
+  instead of 5.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed a **`BIND(C)` / `VALUE` argument-passing ABI bug** on SystemZ:
+  derived types whose allocation size fits in a GPR were incorrectly passed
+  indirectly (by reference) instead of as an integer register value, because
+  `getTypeSizeAndAlignment` was returning the unpadded store size rather than
+  the allocation size. For example, `{i32, i8}` (allocation size 8 bytes) is
+  now correctly passed as `i64`, and `{i16, i8}` (4 bytes) as `i32`, matching
+  the C ABI.
+  Fortran programs with `BIND(C)` `VALUE` derived-type arguments of these shapes
+  that interoperate with C were already producing incorrect results; programs
+  compiled entirely in Fortran that relied on the old (incorrect) convention
+  must be recompiled.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed a **`BIND(C)` / `VALUE` argument-passing ABI bug** on PPC64le:
+  derived types were classified using the unpadded store size rather than the
+  allocation size, producing the wrong number of GPR slots. The argument was
+  already passed by value; only the slot count was wrong. For example,
+  `{f128, i8}` (allocation size 32 bytes) is now correctly passed as
+  `[4 x i64]` instead of `[3 x i64]`, matching the C ABI.
+  Fortran programs with `BIND(C)` `VALUE` derived-type arguments of these shapes
+  that interoperate with C were already producing incorrect results; programs
+  compiled entirely in Fortran that relied on the old (incorrect) convention
+  must be recompiled.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+- Fixed the `TRANSFER` intrinsic inline path to compare **stored-representation
+  widths** (excluding outer tail padding) rather than allocation sizes when
+  deciding whether to inline a load instead of calling the runtime. This
+  corrects two path-selection errors: inlining when the store sizes differ
+  (which loaded the wrong number of bytes) and falling back to the runtime
+  when the store sizes match (a missed-inlining regression). The inline path
+  now also byte-copies record data into result-aligned storage so that
+  internal padding bytes (e.g. in `BIND(C)` records) are preserved,
+  satisfying the F2023 16.9.212 requirement that the result's physical
+  representation be identical to the source's when both have the same length.
+  ([#220377](https://github.com/llvm/llvm-project/pull/220377))
+
+
 ## Non-comprehensive list of changes in this release
 
 - Added support for the OpenMP implementation-defined extension sentinels

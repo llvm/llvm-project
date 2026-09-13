@@ -1380,9 +1380,11 @@ struct FoldBoxEleSize : public mlir::OpRewritePattern<fir::BoxEleSizeOp> {
     if (!sizeAndAlign)
       return mlir::failure();
 
-    // The descriptor stores the byte stride between elements (not the raw
-    // natural size), so we must round up to alignment just as
-    // fir::computeElementDistance does.
+    // The descriptor stores the byte stride between elements, which is the
+    // allocation size including tail padding.  getTypeSizeAndAlignment already
+    // rounds up to alignment for RecordType, so llvm::alignTo here is a no-op
+    // for struct types; it is kept for scalar types (e.g. x86_fp80) where the
+    // rounding is still needed, matching fir::computeElementDistance.
     auto [size, alignment] = *sizeAndAlign;
     std::int64_t distance = llvm::alignTo(size, alignment);
 
