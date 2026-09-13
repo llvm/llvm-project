@@ -497,6 +497,8 @@ features cannot lower the translation-unit ABI level;
   inline-defined friend function shares the name of a non-static class
   member variable. (#GH221190)
 
+- Clang now diagnoses matrix logical operations on unsupported targets. (GH222381)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping

@@ -14350,4 +14350,7 @@ def err_cuda_device_kernel_launch_not_supported
 def err_cuda_device_kernel_launch_require_rdc
     : Error<"kernel launch from __device__ or __global__ function requires "
             "relocatable device code (i.e. requires -fgpu-rdc)">;
+
+def err_matrix_logical_operations_unsupported : Error<
+  "matix logical operations are not supported on the current target">;
 } // end of sema component.
