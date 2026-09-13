@@ -35,10 +35,11 @@ func.func @test_rebox_1(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   // CHECK: %[[OFFSET_0:.*]] = mul i64 2, %[[INSTRIDE_0]]
   // CHECK: %[[VOIDBASE0:.*]] = getelementptr i8, ptr %[[INBASE]], i64 %[[OFFSET_0]]
   // CHECK: %[[OFFSET_1:.*]] = mul i64 2, %[[INSTRIDE_1]]
-  // CHECK: %[[VOIDBASE1:.*]] = getelementptr i8, ptr %[[VOIDBASE0]], i64 %[[OFFSET_1]]
+  // CHECK: %[[VOIDBASE1:.*]] = getelementptr i8, ptr %[[VOIDBASE0]], i64 %{{.*}}
   // CHECK: %[[OUTSTRIDE0:.*]] = mul i64 3, %[[INSTRIDE_1]]
+  // CHECK: %[[VOIDBASE2:.*]] = select i1 {{.*}}, ptr %[[VOIDBASE1]], ptr %[[INBASE]]
   // CHECK: %[[OUTBOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[OUTSTRIDE0]], 7, 0, 2
-  // CHECK: %[[OUTBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX1]], ptr %[[VOIDBASE1]], 0
+  // CHECK: %[[OUTBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX1]], ptr %[[VOIDBASE2]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX2]], ptr %[[OUTBOX_ALLOC]], align 8
   %2 = fir.rebox %arg0(%1) [%0] : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>, !fir.slice<2>) -> !fir.box<!fir.array<?xf32>>
   // CHECK: call void @bar1(ptr %[[OUTBOX_ALLOC]])
@@ -161,16 +162,19 @@ func.func @test_cmplx_1(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   // CHECK: %[[FRONT_PTR:.*]] = load ptr, ptr %[[FRONT_GEP]]
   // CHECK: %[[FIELD_OFFSET_GEP:.*]] = getelementptr { float, float }, ptr %[[FRONT_PTR]], i64 0, i32 0
   // CHECK: %[[FRONT_OFFSET:.*]] = mul i64 0, %[[INSTRIDE_1]]
-  // CHECK: %[[OFFSET_GEP:.*]] = getelementptr i8, ptr %[[FIELD_OFFSET_GEP]], i64 %[[FRONT_OFFSET]]
+  // CHECK: %[[OFFSET_GEP:.*]] = getelementptr i8, ptr %[[FIELD_OFFSET_GEP]], i64 %{{.*}}
   // CHECK: %[[SUB_1:.*]] = sub i64 %[[INSTRIDE_0]], 1
   // CHECK: %[[ADD_1:.*]] = add i64 %[[SUB_1]], 1
   // CHECK: %[[DIV_1:.*]] = sdiv i64 %[[ADD_1]], 1
   // CHECK: %[[CHECK_NONZERO:.*]] = icmp sgt i64 %[[DIV_1]], 0
   // CHECK: %[[CHECKED_BOUND:.*]] = select i1 %[[CHECK_NONZERO]], i64 %[[DIV_1]], i64 0
   // CHECK: %[[STRIDE:.*]] = mul i64 1, %[[INSTRIDE_1]]
+  // CHECK: %[[IS_NONEMPTY:.*]] = icmp ne i64 %[[CHECKED_BOUND]], 0
+  // CHECK: %[[ALL_NONEMPTY:.*]] = and i1 {{.*}}, %[[IS_NONEMPTY]]
+  // CHECK: %[[RESULT_BASE:.*]] = select i1 %[[ALL_NONEMPTY]], ptr %[[OFFSET_GEP]], ptr %[[FIELD_OFFSET_GEP]]
   // CHECK: %[[VAL_BUILD_1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[CHECKED_BOUND]], 7, 0, 1
   // CHECK: %[[VAL_BUILD_2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_1]], i64 %[[STRIDE]], 7, 0, 2
-  // CHECK: %[[VAL_BUILD_3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_2]], ptr %[[OFFSET_GEP]], 0
+  // CHECK: %[[VAL_BUILD_3:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_2]], ptr %[[RESULT_BASE]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_3]], ptr %[[OUTBOX_ALLOC]]
   fir.call @bar1(%2) : (!fir.box<!fir.array<?xf32>>) -> ()
   // CHECK: call void @bar1(ptr %[[OUTBOX_ALLOC]])
@@ -200,12 +204,46 @@ func.func @test_cmplx_2(%arg0: !fir.box<!fir.array<?xcomplex<f32>>>) {
   // CHECK: %[[FRONT_PTR:.*]] = load ptr, ptr %[[FRONT_GEP]]
   // CHECK: %[[FIELD_OFFSET_GEP:.*]] = getelementptr { float, float }, ptr %[[FRONT_PTR]], i64 0, i32 1
   // CHECK: %[[FRONT_OFFSET:.*]] = mul i64 6, %[[INSTRIDE_0]]
-  // CHECK: %[[OFFSET_GEP:.*]] = getelementptr i8, ptr %[[FIELD_OFFSET_GEP]], i64 %[[FRONT_OFFSET]]
+  // CHECK: %[[OFFSET_GEP:.*]] = getelementptr i8, ptr %[[FIELD_OFFSET_GEP]], i64 %{{.*}}
   // CHECK: %[[STRIDE:.*]] = mul i64 5, %[[INSTRIDE_0]]
+  // CHECK: %[[RESULT_BASE:.*]] = select i1 {{.*}}, ptr %[[OFFSET_GEP]], ptr %[[FIELD_OFFSET_GEP]]
   // CHECK: %[[VAL_BUILD_1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 %[[STRIDE]], 7, 0, 2
-  // CHECK: %[[VAL_BUILD_2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_1]], ptr %[[OFFSET_GEP]], 0
+  // CHECK: %[[VAL_BUILD_2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_1]], ptr %[[RESULT_BASE]], 0
   // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[VAL_BUILD_2]], ptr %[[OUTBOX_ALLOC]]
   fir.call @bar1(%2) fastmath<contract> : (!fir.box<!fir.array<?xf32>>) -> ()
+  // CHECK: call void @bar1(ptr %[[OUTBOX_ALLOC]])
+  return
+}
+
+// Test reboxing a zero-sized array section like a(0:100:-1) on a zero-sized array.
+//
+//   subroutine test_zero_sized_rebox(a)
+//     real :: a(:)
+//     call bar1(a(0:100:-1))
+//   end subroutine
+
+// CHECK-LABEL: define void @test_zero_sized_rebox(
+// CHECK-SAME: ptr {{[^%]*}}%[[INBOX:.*]])
+func.func @test_zero_sized_rebox(%arg0: !fir.box<!fir.array<?xf32>>) {
+  // CHECK: %[[OUTBOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }
+  %c0 = arith.constant 0 : index
+  %c100 = arith.constant 100 : index
+  %cm1 = arith.constant -1 : index
+  %slice = fir.slice %c0, %c100, %cm1 : (index, index, index) -> !fir.slice<1>
+  // CHECK: %[[INSTRIDE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 7, i32 0, i32 2
+  // CHECK: %[[INSTRIDE:.*]] = load i64, ptr %[[INSTRIDE_GEP]]
+  // CHECK: %[[INBASE_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[INBOX]], i32 0, i32 0
+  // CHECK: %[[INBASE:.*]] = load ptr, ptr %[[INBASE_GEP]]
+  // CHECK: %[[OFFSET:.*]] = mul i64 -1, %[[INSTRIDE]]
+  // CHECK: %[[SHIFTED_PTR:.*]] = getelementptr i8, ptr %[[INBASE]], i64 %[[OFFSET]]
+  // CHECK: %[[STRIDE:.*]] = mul i64 -1, %[[INSTRIDE]]
+  // CHECK: %[[RESULT_BASE:.*]] = select i1 false, ptr %[[SHIFTED_PTR]], ptr %[[INBASE]]
+  // CHECK: %[[OUTBOX1:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %{{.*}}, i64 0, 7, 0, 1
+  // CHECK: %[[OUTBOX2:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX1]], i64 %[[STRIDE]], 7, 0, 2
+  // CHECK: %[[OUTBOX:.*]] = insertvalue { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX2]], ptr %[[RESULT_BASE]], 0
+  // CHECK: store { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] } %[[OUTBOX]], ptr %[[OUTBOX_ALLOC]]
+  %rebox = fir.rebox %arg0 [%slice] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+  fir.call @bar1(%rebox) : (!fir.box<!fir.array<?xf32>>) -> ()
   // CHECK: call void @bar1(ptr %[[OUTBOX_ALLOC]])
   return
 }
