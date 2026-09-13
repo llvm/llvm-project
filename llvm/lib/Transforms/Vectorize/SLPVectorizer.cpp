@@ -148,6 +148,11 @@ static cl::opt<bool>
 ShouldVectorizeHor("slp-vectorize-hor", cl::init(true), cl::Hidden,
                    cl::desc("Attempt to vectorize horizontal reductions"));
 
+static cl::opt<bool> VectorizeLoopAccRdx(
+    "slp-vectorize-loop-acc-rdx", cl::init(true), cl::Hidden,
+    cl::desc("Emit loop-carried horizontal reductions as a vector "
+             "accumulator in the loop plus a single reduction after it"));
+
 static cl::opt<bool> ShouldStartVectorizeHorAtStore(
     "slp-vectorize-hor-store", cl::init(false), cl::Hidden,
     cl::desc(
@@ -367,6 +372,10 @@ struct ReductionVectorPart {
   /// flattened through fsub/fneg operations.
   bool Negated = false;
 };
+} // namespace
+
+namespace {
+class HorizontalReduction;
 } // namespace
 
 /// Bottom Up SLP Vectorizer.
@@ -4233,6 +4242,7 @@ private:
 
   friend struct GraphTraits<BoUpSLP *>;
   friend struct DOTGraphTraits<BoUpSLP *>;
+  friend class ::HorizontalReduction;
 
   /// Contains all scheduling data for a basic block.
   /// It does not schedules instructions, which are not memory read/write
@@ -30454,12 +30464,499 @@ public:
     return true;
   }
 
+  /// Loop accumulator emission mode of the reduction: a reduction that
+  /// accumulates a loop phi (the phi is one of the reduced values and the
+  /// root is its backedge value) can be emitted as a vector accumulator in
+  /// the loop plus a single reduction after the loop instead of a horizontal
+  /// reduction on every iteration.
+  class LoopAccumulator {
+    /// The reduction root and the reduction operation kind and ordering.
+    Instruction *Root = nullptr;
+    RecurKind RdxKind = RecurKind::None;
+    ReductionOrdering RK = ReductionOrdering::None;
+    /// The vectorizer state and the analyses the accumulator cost and
+    /// emission are computed with.
+    BoUpSLP &R;
+    const TargetTransformInfo &TTI;
+    LoopInfo &LI;
+    /// The accumulated phi and the identity constant that replaced it in the
+    /// reduced values. The identity is never folded as a leftover: it does
+    /// not change the result.
+    PHINode *Phi = nullptr;
+    Constant *Identity = nullptr;
+    /// The number of calls in the loop, across which the vector accumulator
+    /// is kept live.
+    unsigned NumCalls = 0;
+    /// Exit phis consuming the reduction result outside the loop.
+    SmallSetVector<PHINode *, 2> ExitPhis;
+
+    /// \returns the identity constant of the reduction operation for \p Ty
+    /// under the fast-math flags \p FMF.
+    Constant *getIdentity(Type *Ty, FastMathFlags FMF) const {
+      Intrinsic::ID Id;
+      switch (RdxKind) {
+      case RecurKind::FMax:
+      case RecurKind::FMaxNum:
+        Id = Intrinsic::vector_reduce_fmax;
+        break;
+      case RecurKind::FMin:
+      case RecurKind::FMinNum:
+        Id = Intrinsic::vector_reduce_fmin;
+        break;
+      case RecurKind::FMaximum:
+        Id = Intrinsic::vector_reduce_fmaximum;
+        break;
+      case RecurKind::FMinimum:
+        Id = Intrinsic::vector_reduce_fminimum;
+        break;
+      default:
+        Id = RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind)
+                 ? getMinMaxReductionIntrinsicID(
+                       getMinMaxReductionIntrinsicOp(RdxKind))
+                 : getReductionForBinop(static_cast<Instruction::BinaryOps>(
+                       RecurrenceDescriptor::getOpcode(RdxKind)));
+        break;
+      }
+      return cast<Constant>(getReductionIdentity(Id, Ty, FMF));
+    }
+
+    /// \returns the extra cost of accumulating the slice lane-wise into the
+    /// vector accumulator instead of reducing it on every iteration: the
+    /// lane-wise operation, the spill and reload on every iteration of the
+    /// values live beyond the register file and keeping the vector
+    /// accumulator live across the calls of the loop.
+    InstructionCost getAccumulationCost(FastMathFlags FMF, VectorType *VectorTy,
+                                        Type *ScalarTy) const {
+      const TTI::TargetCostKind CostKind = R.getCostKind();
+      auto GetOpCost = [&](Type *OpTy) {
+        if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
+          IntrinsicCostAttributes ICA(getMinMaxReductionIntrinsicOp(RdxKind),
+                                      OpTy, {OpTy, OpTy}, FMF);
+          return TTI.getIntrinsicInstrCost(ICA, CostKind);
+        }
+        return TTI.getArithmeticInstrCost(
+            RecurrenceDescriptor::getOpcode(RdxKind), OpTy, CostKind);
+      };
+      // The lane-wise operation; also replaces the scalar operation folding
+      // the accumulator phi on top of the horizontal reduction (the scalar
+      // cost of the slice credits it neither, the slice lacks the phi).
+      InstructionCost Cost = GetOpCost(VectorTy) - GetOpCost(ScalarTy);
+      // The vector accumulator and the reduced vector are live at the same
+      // time; the registers they need beyond the register file are spilled
+      // and reloaded on every iteration.
+      constexpr unsigned NumLiveVectors = 2;
+      unsigned Parts = R.getNumberOfParts(VectorTy, ScalarTy);
+      unsigned RC = TTI.getRegisterClassForType(/*Vector=*/true, VectorTy);
+      unsigned NumRegs = TTI.getNumberOfRegisters(RC);
+      InstructionCost SpillReload =
+          TTI.getRegisterClassSpillCost(RC, CostKind) +
+          TTI.getRegisterClassReloadCost(RC, CostKind);
+      if (NumRegs != 0 && NumLiveVectors * Parts > NumRegs)
+        Cost += SpillReload * (NumLiveVectors * Parts - NumRegs);
+      // The vector accumulator replaces the scalar one across the calls of
+      // the loop: without callee-saved vector registers it is spilled and
+      // reloaded around every call, like a scalar FP accumulator.
+      if (NumCalls != 0) {
+        InstructionCost VecLive = std::max(
+            TTI.getCostOfKeepingLiveOverCall(VectorTy), SpillReload * Parts);
+        InstructionCost ScalarLive = TTI.getCostOfKeepingLiveOverCall(ScalarTy);
+        if (ScalarTy->isFloatingPointTy()) {
+          unsigned SRC =
+              TTI.getRegisterClassForType(/*Vector=*/false, ScalarTy);
+          ScalarLive = std::max(
+              ScalarLive, TTI.getRegisterClassSpillCost(SRC, CostKind) +
+                              TTI.getRegisterClassReloadCost(SRC, CostKind));
+        }
+        Cost += (VecLive - ScalarLive) * NumCalls;
+      }
+      return Cost;
+    }
+
+  public:
+    LoopAccumulator(Instruction *Root, RecurKind RdxKind, ReductionOrdering RK,
+                    BoUpSLP &R, const TargetTransformInfo &TTI, LoopInfo &LI)
+        : Root(Root), RdxKind(RdxKind), RK(RK), R(R), TTI(TTI), LI(LI) {}
+
+    /// If the reduction accumulates a loop phi (the phi is one of the reduced
+    /// values and the root is its backedge value), replaces the phi by the
+    /// reduction identity in the reduced values, so that the emitted tree
+    /// does not reference the phi. The identity does not change the result,
+    /// so if the accumulator emission does not apply, the phi is just folded
+    /// back on top of the emitted reduction. All unordered reduction kinds
+    /// have an identity constant.
+    void prepare(FastMathFlags RdxFMF,
+                 SmallVectorImpl<SmallVector<Value *>> &ReducedVals,
+                 SmallDenseMap<Value *, SmallVector<Instruction *>, 16>
+                     &ReducedValsToOps,
+                 const SmallPtrSetImpl<Value *> &NegatedReducedVals,
+                 bool HasNarrowedLeafShifts) {
+      if (!VectorizeLoopAccRdx || RK != ReductionOrdering::Unordered ||
+          Root->getType()->isIntegerTy(1) || Root->getType()->isVectorTy() ||
+          HasNarrowedLeafShifts || isCmpSelMinMax(Root) ||
+          Root->hasNUsesOrMore(UsesLimit))
+        return;
+      Loop *L = LI.getLoopFor(Root->getParent());
+      if (!L)
+        return;
+      BasicBlock *Latch = L->getLoopLatch();
+      if (!Latch)
+        return;
+      // Only a single accumulated phi, used by the reduction operations
+      // only, is supported.
+      auto FindAccPhi = [&]() -> PHINode * {
+        PHINode *AccPhi = nullptr;
+        for (ArrayRef<Value *> Candidates : ReducedVals)
+          for (Value *RdxVal : Candidates) {
+            auto *P = dyn_cast<PHINode>(RdxVal);
+            if (!P || P->getParent() != L->getHeader() ||
+                P->getNumIncomingValues() > MaxPHINumOperands ||
+                P->getIncomingValueForBlock(Latch) != Root)
+              continue;
+            if (AccPhi || P->hasNUsesOrMore(UsesLimit) ||
+                P->getNumUses() != ReducedValsToOps.at(P).size())
+              return nullptr;
+            AccPhi = P;
+          }
+        return AccPhi;
+      };
+      PHINode *AccPhi = FindAccPhi();
+      // A negated phi is subtracted from the reduction result, not
+      // accumulated.
+      if (!AccPhi || NegatedReducedVals.contains(AccPhi))
+        return;
+      Constant *IdC = getIdentity(AccPhi->getType(), RdxFMF);
+      if (ReducedValsToOps.contains(IdC))
+        return;
+      // The root may be used only by the accumulator phi and by phis outside
+      // the loop (the exit phis). The initial values are inserted into the
+      // identity vector at the end of their incoming blocks, so they must not
+      // be defined by the terminators; the final reduction is emitted at the
+      // beginning of the exit blocks, which must not be EH pads. Neither may
+      // land in a loop not containing the reduction loop, which would execute
+      // them repeatedly.
+      auto IsExecutedOncePerLoop = [&](BasicBlock *BB) {
+        Loop *BBL = LI.getLoopFor(BB);
+        return !BBL || BBL->contains(L);
+      };
+      if (any_of(zip(AccPhi->incoming_values(), AccPhi->blocks()),
+                 [&](const auto &P) {
+                   auto [IncV, B] = P;
+                   return IncV != Root && (IncV == B->getTerminator() ||
+                                           !IsExecutedOncePerLoop(B));
+                 }))
+        return;
+      auto IsValidExitPhi = [&](User *U) {
+        auto *ExitPhi = dyn_cast<PHINode>(U);
+        return ExitPhi &&
+               ExitPhi->getNumIncomingValues() <= MaxPHINumOperands &&
+               !ExitPhi->getParent()->isEHPad() &&
+               !L->contains(ExitPhi->getParent()) &&
+               IsExecutedOncePerLoop(ExitPhi->getParent());
+      };
+      auto CollectExitPhis = [&] {
+        for (User *U : Root->users()) {
+          if (U == AccPhi)
+            continue;
+          if (!IsValidExitPhi(U))
+            return false;
+          ExitPhis.insert(cast<PHINode>(U));
+        }
+        return true;
+      };
+      if (!CollectExitPhis())
+        return;
+      // The final reduction and the insert of the initial value would be on
+      // the loop-carried chain of an enclosing loop if the reduction result
+      // feeds the initial value of the accumulator through it: keep the
+      // horizontal reduction, whose chain is the scalar accumulator only.
+      auto IsFedByExitPhi = [&](Value *InitV) {
+        auto *InitPhi = dyn_cast<PHINode>(InitV);
+        // Too many incoming values to scan: keep the horizontal reduction.
+        if (InitV == Root || !InitPhi)
+          return false;
+        if (InitPhi->getNumIncomingValues() > MaxPHINumOperands)
+          return true;
+        return ExitPhis.contains(InitPhi) ||
+               any_of(InitPhi->incoming_values(), [&](Value *V) {
+                 return isa<PHINode>(V) && ExitPhis.contains(cast<PHINode>(V));
+               });
+      };
+      if (any_of(AccPhi->incoming_values(), IsFedByExitPhi))
+        return;
+      // Calls clobber the vector registers: the vector accumulator has to be
+      // kept live across them. Intrinsics cheaper than a call are not calls.
+      for (BasicBlock *BB : L->blocks())
+        NumCalls += count_if(*BB, [&](const Instruction &I) {
+          auto *CB = dyn_cast<CallBase>(&I);
+          if (!CB || CB->doesNotReturn())
+            return false;
+          auto *II = dyn_cast<IntrinsicInst>(CB);
+          if (!II)
+            return true;
+          if (II->isAssumeLikeIntrinsic())
+            return false;
+          IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II);
+          return TTI.getIntrinsicInstrCost(ICA, R.getCostKind()) >=
+                 TTI.getCallInstrCost(nullptr, II->getType(), ICA.getArgTypes(),
+                                      R.getCostKind());
+        });
+      for (SmallVector<Value *> &Candidates : ReducedVals)
+        for (Value *&RdxVal : Candidates)
+          if (RdxVal == AccPhi)
+            RdxVal = IdC;
+      ReducedValsToOps.try_emplace(IdC, ReducedValsToOps.lookup(AccPhi));
+      ReducedValsToOps.erase(AccPhi);
+      Phi = AccPhi;
+      Identity = IdC;
+    }
+
+    /// Collects the reduced values that were not vectorized; they are folded
+    /// into the reduction on top of the vectorized part. The accumulator
+    /// identity constant is never folded.
+    void collectLeftovers(
+        const DenseMap<Value *, unsigned> &VectorizedVals,
+        ArrayRef<SmallVector<Value *>> ReducedVals,
+        const SmallDenseMap<Value *, SmallVector<Instruction *>, 16>
+            &ReducedValsToOps,
+        SmallVectorImpl<std::pair<Instruction *, Value *>> &LeftoverReductions)
+        const {
+      SmallPtrSet<Value *, 8> Visited;
+      for (ArrayRef<Value *> Candidates : ReducedVals)
+        for (Value *RdxVal : Candidates) {
+          if (RdxVal == Identity || !Visited.insert(RdxVal).second)
+            continue;
+          unsigned NumOps = VectorizedVals.lookup(RdxVal);
+          for (Instruction *RedOp :
+               ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
+            LeftoverReductions.emplace_back(RedOp, RdxVal);
+        }
+    }
+
+    /// \returns the cost of the code the vector accumulator emits outside the
+    /// loop: the final reductions in the exit blocks and the insert of the
+    /// initial value, scaled by the enclosing loop nest.
+    InstructionCost getExitCost(FastMathFlags FMF, const Loop *L) const {
+      assert(
+          (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind) ||
+           Instruction::isBinaryOp(RecurrenceDescriptor::getOpcode(RdxKind))) &&
+          "Expected arithmetic or min/max reduction operation");
+      FixedVectorType *VecTy = R.getReductionType();
+      TTI::TargetCostKind CostKind = R.getCostKind();
+      InstructionCost RdxCost =
+          RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)
+              ? TTI.getMinMaxReductionCost(
+                    getMinMaxReductionIntrinsicOp(RdxKind), VecTy, FMF,
+                    CostKind)
+              : TTI.getArithmeticReductionCost(
+                    RecurrenceDescriptor::getOpcode(RdxKind), VecTy, FMF,
+                    CostKind);
+      InstructionCost Cost =
+          RdxCost * ExitPhis.size() +
+          TTI.getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                 /*Index=*/0);
+      return Cost * R.getLoopNestScale(L->getParentLoop());
+    }
+
+    /// Checks that the slice can be emitted as the vector accumulator: it is
+    /// the only one (all other reduced values are the identity), not scaled,
+    /// not reduced in-tree, of the root type and fully vectorized. An integer
+    /// accumulator stays in a callee-saved register across the calls of the
+    /// loop, the vector one would be spilled around every call on the
+    /// loop-carried chain.
+    bool isCandidate(const Value *VectorizedTree, bool HasVectorizedSlices,
+                     bool IsSupportedHorRdxIdentityOp,
+                     ArrayRef<SmallVector<Value *>> ReducedVals,
+                     ArrayRef<Value *> Candidates, unsigned I, unsigned Pos,
+                     unsigned ReduxWidth, bool OptReusedScalars,
+                     bool SameScaleFactor) const {
+      if (!Phi || VectorizedTree || HasVectorizedSlices || Pos != 0 ||
+          (OptReusedScalars && SameScaleFactor) || R.isReducedBitcastRoot() ||
+          R.isReducedCmpBitcastRoot() ||
+          (NumCalls != 0 && !Root->getType()->isFloatingPointTy()))
+        return false;
+      if (!all_of(ArrayRef(Candidates).drop_front(ReduxWidth),
+                  [&](Value *RdxVal) { return RdxVal == Identity; }))
+        return false;
+      if (!all_of(enumerate(ReducedVals), [&](const auto &P) {
+            auto [Idx, RV] = P;
+            return Idx == I || (RV.size() == 1 && RV.front() == Identity);
+          }))
+        return false;
+      if (R.getReductionType()->getElementType() != Root->getType())
+        return false;
+      return IsSupportedHorRdxIdentityOp ||
+             all_of(Candidates.slice(Pos, ReduxWidth),
+                    [&](Value *RdxVal) { return R.isVectorized(RdxVal); });
+    }
+
+    /// \returns the cost delta of the vector accumulator form vs the
+    /// horizontal reduction on every iteration. Both remove the same scalar
+    /// operations, so only the vector code is compared: the lane-wise
+    /// operation is executed on every iteration of the loop, the horizontal
+    /// reduction as often as the tree cost model assumes (once, if the
+    /// reduced values are loop-invariant), the final reduction and the
+    /// initial insert once, outside the loop.
+    InstructionCost getCostDelta(InstructionCost HorVecCost,
+                                 InstructionCost RdxOpCost, FastMathFlags FMF,
+                                 VectorType *VectorTy, Type *ScalarTy) const {
+      // The lane-wise accumulation replaces the reduction operation in the
+      // vector code.
+      InstructionCost AccVecCost =
+          HorVecCost - RdxOpCost + getAccumulationCost(FMF, VectorTy, ScalarTy);
+      Loop *L = LI.getLoopFor(Phi->getParent());
+      InstructionCost Delta = AccVecCost * R.getLoopNestScale(L) -
+                              HorVecCost * R.getScaleToLoopIterations(
+                                               R.getRootNode(), nullptr, Root) +
+                              getExitCost(FMF, L);
+      LLVM_DEBUG(dbgs() << "SLP: Loop accumulator cost delta " << Delta
+                        << "\n");
+      return Delta;
+    }
+
+    /// Emits the reduction as a vector accumulator if the accumulator form
+    /// applies; otherwise folds the accumulator phi back on top of the
+    /// reduction like a leftover and returns null.
+    Value *tryEmit(
+        IRBuilderBase &Builder, FastMathFlags RdxFMF, bool Vectorized,
+        const Value *VectorizedTree,
+        SmallVectorImpl<std::pair<Instruction *, Value *>> &LeftoverReductions,
+        ArrayRef<ReductionVectorPart> VectorValuesAndScales,
+        const SmallPtrSetImpl<Value *> &RequiredExtract,
+        const SmallDenseMap<Value *, SmallVector<Instruction *>, 16>
+            &ReducedValsToOps,
+        const ReductionOpsListType &ReductionOps,
+        function_ref<Value *(Value *, IRBuilderBase &, Type *)> EmitReduction) {
+      if (!shouldEmit(Vectorized, VectorizedTree, LeftoverReductions,
+                      VectorValuesAndScales, RequiredExtract)) {
+        // The accumulator phi is folded back on top of the reduction like a
+        // leftover: the identity replaced it in the reduced values and does
+        // not change the result.
+        if (Phi)
+          LeftoverReductions.emplace_back(ReducedValsToOps.at(Identity).front(),
+                                          Phi);
+        return nullptr;
+      }
+      return emit(Builder, RdxFMF, VectorValuesAndScales.front().Vec,
+                  ReductionOps, EmitReduction);
+    }
+
+  private:
+    /// Checks that the accumulator form applies: the slice was vectorized as
+    /// the accumulator and no other vectorized value or leftover reduced
+    /// values remain to fold; the slice is of the root type, not scaled, not
+    /// reduced in-tree and without extracts.
+    bool
+    shouldEmit(bool Vectorized, const Value *VectorizedTree,
+               ArrayRef<std::pair<Instruction *, Value *>> LeftoverReductions,
+               ArrayRef<ReductionVectorPart> VectorValuesAndScales,
+               const SmallPtrSetImpl<Value *> &RequiredExtract) const {
+      if (!Vectorized || VectorizedTree || !LeftoverReductions.empty() ||
+          VectorValuesAndScales.size() != 1 || !RequiredExtract.empty())
+        return false;
+      const ReductionVectorPart &P = VectorValuesAndScales.front();
+      return P.Scale == 1 && !P.ReducedInTree &&
+             cast<VectorType>(P.Vec->getType())->getElementType() ==
+                 Root->getType();
+    }
+
+    /// Emits the reduction as a vector accumulator: the vectorized reduced
+    /// values are accumulated lane-wise into a vector phi in the loop and
+    /// reduced once in the exit blocks.
+    Value *emit(
+        IRBuilderBase &Builder, FastMathFlags RdxFMF, Value *Vec,
+        const ReductionOpsListType &ReductionOps,
+        function_ref<Value *(Value *, IRBuilderBase &, Type *)> EmitReduction) {
+      auto *VecTy = cast<FixedVectorType>(Vec->getType());
+      // The initial values are placed in lane 0 of the identity splat at the
+      // end of their incoming blocks; multiple edges from a block carry the
+      // same value and share the insert.
+      Constant *IdVec =
+          ConstantVector::getSplat(VecTy->getElementCount(), Identity);
+      auto *VAcc = PHINode::Create(VecTy, Phi->getNumIncomingValues(),
+                                   "slprdx.acc", Phi->getIterator());
+      SmallDenseMap<BasicBlock *, Value *> InitVecs;
+      for (auto [IncV, B] : zip(Phi->incoming_values(), Phi->blocks())) {
+        if (IncV == Root)
+          continue;
+        Value *&InitVec = InitVecs[B];
+        if (!InitVec) {
+          IRBuilder<> EB(B->getTerminator());
+          InitVec = EB.CreateInsertElement(IdVec, IncV, EB.getInt32(0),
+                                           "slprdx.init");
+        }
+        VAcc->addIncoming(InitVec, B);
+      }
+      Builder.SetInsertPoint(Root);
+      Value *VAdd =
+          createOp(Builder, RdxKind, VAcc, Vec, "slprdx.acc", ReductionOps);
+      // The accumulation is on the loop-carried chain: do not let it be
+      // contracted into an FMA with the reduced multiplication, which would
+      // lengthen the chain.
+      if (auto *FPOp = dyn_cast<FPMathOperator>(VAdd)) {
+        FastMathFlags FMF = FPOp->getFastMathFlags();
+        FMF.setAllowContract(false);
+        cast<Instruction>(VAdd)->copyFastMathFlags(FMF);
+      }
+      // The accumulator is the backedge value.
+      for (auto [IncV, B] : zip(Phi->incoming_values(), Phi->blocks()))
+        if (IncV == Root)
+          VAcc->addIncoming(VAdd, B);
+      LLVM_DEBUG(dbgs() << "SLP: Emitting loop accumulator reduction for "
+                           "reduction with root "
+                        << *Root << "\n");
+      // The root is tracked by a weak handle: break its uses on the phi side.
+      Value *Poison = PoisonValue::get(Root->getType());
+      for (PHINode *ExitPhi : ExitPhis) {
+        // The accumulator replaces the root on the edges carrying it and is
+        // reduced once in the exit block. The values bypassing the loop never
+        // went through the reduction operations and must stay exact: the
+        // scalar phi keeps them and they are selected past the reduction.
+        unsigned NumIncoming = ExitPhi->getNumIncomingValues();
+        auto *VExit = PHINode::Create(VecTy, NumIncoming, "slprdx.exit",
+                                      ExitPhi->getIterator());
+        PHINode *FromLoop = nullptr;
+        if (any_of(ExitPhi->incoming_values(),
+                   [this](Value *V) { return V != Root; }))
+          FromLoop = PHINode::Create(Builder.getInt1Ty(), NumIncoming,
+                                     "slprdx.fromloop", ExitPhi->getIterator());
+        Value *VecPoison = PoisonValue::get(VecTy);
+        for (auto [V, B] : zip(ExitPhi->incoming_values(), ExitPhi->blocks())) {
+          bool IsRoot = V == Root;
+          VExit->addIncoming(IsRoot ? VAdd : VecPoison, B);
+          if (FromLoop)
+            FromLoop->addIncoming(Builder.getInt1(IsRoot), B);
+        }
+        ExitPhi->replaceUsesOfWith(Root, Poison);
+        IRBuilder<> XB(&*ExitPhi->getParent()->getFirstInsertionPt());
+        XB.SetCurrentDebugLocation(ExitPhi->getDebugLoc());
+        XB.setFastMathFlags(RdxFMF);
+        Value *Res = EmitReduction(VExit, XB, ExitPhi->getType());
+        if (!FromLoop) {
+          ExitPhi->replaceAllUsesWith(Res);
+          // The erasure is deferred: the block iteration is still in progress.
+          R.eraseInstruction(ExitPhi);
+          continue;
+        }
+        Value *Sel = XB.CreateSelectWithUnknownProfile(
+            FromLoop, Res, ExitPhi, DEBUG_TYPE, "slprdx.sel");
+        ExitPhi->replaceUsesWithIf(
+            Sel, [Sel](Use &U) { return U.getUser() != Sel; });
+      }
+      Phi->replaceUsesOfWith(Root, Poison);
+      R.eraseInstruction(Phi);
+      // Do not let the caller re-analyze the emitted vector operation as a new
+      // reduction seed.
+      R.analyzedReductionRoot(cast<Instruction>(VAdd));
+      return VAdd;
+    }
+  };
+
   /// Attempt to vectorize the tree found by matchAssociativeReduction.
   /// \p IsSeedRoot allows vectorizing the groups at the minimum vector
   /// factor. Set for single-use seed-level roots only.
   Value *tryToReduce(BoUpSLP &V, const DataLayout &DL, TargetTransformInfo *TTI,
                      const TargetLibraryInfo &TLI, AssumptionCache *AC,
-                     DominatorTree &DT, bool IsSeedRoot = false) {
+                     DominatorTree &DT, LoopInfo &LI, bool IsSeedRoot = false) {
     constexpr unsigned RegMaxNumber = 4;
     const unsigned RedValsMaxNumber =
         (RK == ReductionOrdering::Ordered &&
@@ -30586,6 +31083,15 @@ public:
     if (RK == ReductionOrdering::Ordered)
       IgnoreList.clear();
     bool IsCmpSelMinMax = isCmpSelMinMax(cast<Instruction>(ReductionRoot));
+
+    // A reduction that accumulates a loop phi can be emitted as a vector
+    // accumulator in the loop plus a single reduction after it.
+    LoopAccumulator LoopAcc(cast<Instruction>(ReductionRoot), RdxKind, RK, V,
+                            *TTI, LI);
+    LoopAcc.prepare(RdxFMF, ReducedVals, ReducedValsToOps, NegatedReducedVals,
+                    !NarrowedLeafShifts.empty());
+    // Set when the slice costed as the vector accumulator was vectorized.
+    bool LoopAccVectorized = false;
 
     // Need to track reduced vals, they may be changed during vectorization of
     // subvectors.
@@ -31074,6 +31580,14 @@ public:
         V.transformNodes();
         V.computeMinimumValueSizes();
         InstructionCost TreeCost = V.calculateTreeCostAndTrimNonProfitable(VL);
+        // A negated slice is subtracted in the final combine, it cannot be
+        // accumulated lane-wise.
+        const bool LoopAccCandidate =
+            !GroupNegated &&
+            LoopAcc.isCandidate(VectorizedTree, !VectorValuesAndScales.empty(),
+                                IsSupportedHorRdxIdentityOp, ReducedVals,
+                                Candidates, I, Pos, ReduxWidth,
+                                OptReusedScalars, SameScaleFactor);
 
         SmallPtrSet<Value *, 4> VLScalars(llvm::from_range, VL);
         // Gather externally used values.
@@ -31107,14 +31621,25 @@ public:
         V.buildExternalUses(LocalExternallyUsedValues);
 
         // Estimate cost.
-        InstructionCost ReductionCost;
+        InstructionCost ReductionCost, HorVecCost = 0, RdxOpCost = 0;
         if (RK == ReductionOrdering::Ordered || V.isReducedBitcastRoot() ||
             V.isReducedCmpBitcastRoot())
           ReductionCost = 0;
         else
-          ReductionCost =
-              getReductionCost(TTI, VL, SameValuesCounter, IsCmpSelMinMax,
-                               GroupRdxFMF, V, DT, DL, TLI);
+          ReductionCost = getReductionCost(TTI, VL, SameValuesCounter,
+                                           IsCmpSelMinMax, GroupRdxFMF, V, DT,
+                                           DL, TLI, HorVecCost, RdxOpCost);
+        // The vector accumulator form is used if it is not more expensive than
+        // the horizontal reduction on every iteration.
+        InstructionCost LoopAccDelta = 0;
+        if (LoopAccCandidate && ReductionCost.isValid())
+          LoopAccDelta =
+              LoopAcc.getCostDelta(HorVecCost, RdxOpCost, RdxFMF,
+                                   V.getReductionType(), VL.front()->getType());
+        // On a tie the accumulator wins: it also replaces the loop-carried
+        // scalar dependency through the horizontal reduction by a lane-wise
+        // one.
+        const bool UseLoopAccForm = LoopAccCandidate && LoopAccDelta <= 0;
         // If the root is a select (min/max idiom), the insert point is the
         // compare condition of that select.
         Instruction *RdxRootInst = cast<Instruction>(ReductionRoot);
@@ -31123,6 +31648,8 @@ public:
           InsertPt = GetCmpForMinMaxReduction(RdxRootInst);
         InstructionCost Cost =
             V.getTreeCost(TreeCost, VL, ReductionCost, InsertPt);
+        if (UseLoopAccForm)
+          Cost += LoopAccDelta;
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
                           << " for reduction\n");
         if (!Cost.isValid())
@@ -31264,6 +31791,7 @@ public:
                  : true,
              V.isReducedBitcastRoot() || V.isReducedCmpBitcastRoot(),
              GroupNegated});
+        LoopAccVectorized = UseLoopAccForm;
 
         // Count vectorized reduced values to exclude them from final reduction.
         for (const auto [Idx, RdxVal] : enumerate(VL)) {
@@ -31282,6 +31810,10 @@ public:
         if (ReduxWidth > 1)
           ReduxWidth = GetVectorFactor(NumReducedVals - Pos);
         AnyVectorized = true;
+        // All remaining reduced values are the identity: nothing left to
+        // vectorize for the accumulator form.
+        if (UseLoopAccForm)
+          break;
       }
       if (OptReusedScalars && !AnyVectorized) {
         for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
@@ -31307,7 +31839,23 @@ public:
     Type *BoolReduxWideTy =
         getBoolReduxWideTy(RdxKind, ReductionRoot->getType(),
                            ReducedVals.front().front()->getType());
-    if (!VectorValuesAndScales.empty()) {
+    SmallVector<std::pair<Instruction *, Value *>> LeftoverReductions;
+    LoopAcc.collectLeftovers(VectorizedVals, ReducedVals, ReducedValsToOps,
+                             LeftoverReductions);
+
+    // The accumulator form requires a single vectorized slice and no
+    // leftover reduced values; the latter would have to be folded into the
+    // scalar accumulator on every iteration. Otherwise the accumulator phi is
+    // folded back on top of the reduction like a leftover.
+    Value *AccV = LoopAcc.tryEmit(
+        Builder, RdxFMF, LoopAccVectorized, VectorizedTree, LeftoverReductions,
+        VectorValuesAndScales, RequiredExtract, ReducedValsToOps, ReductionOps,
+        [this, TTI](Value *Vec, IRBuilderBase &B, Type *Ty) {
+          return emitReduction(Vec, B, TTI, Ty);
+        });
+    if (AccV)
+      VectorizedTree = AccV;
+    else if (!VectorValuesAndScales.empty()) {
       Builder.setFastMathFlags(GroupRdxFMF);
       Value *Res = nullptr;
       bool ResNegated = false;
@@ -31462,18 +32010,9 @@ public:
     if (VectorizedTree)
       ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
                                    VectorizedTree);
-    SmallPtrSet<Value *, 8> Visited;
-    for (ArrayRef<Value *> Candidates : ReducedVals) {
-      for (Value *RdxVal : Candidates) {
-        if (!Visited.insert(RdxVal).second)
-          continue;
-        unsigned NumOps = VectorizedVals.lookup(RdxVal);
-        for (Instruction *RedOp :
-             ArrayRef(ReducedValsToOps.at(RdxVal)).drop_back(NumOps))
-          (IsNegated(RdxVal) ? NegExtraReductions : ExtraReductions)
-              .emplace_back(RedOp, RdxVal);
-      }
-    }
+    for (const auto &[RedOp, RdxVal] : LeftoverReductions)
+      (IsNegated(RdxVal) ? NegExtraReductions : ExtraReductions)
+          .emplace_back(RedOp, RdxVal);
     // Iterate through all not-vectorized reduction values/extra arguments,
     // combining them pairwise.
     auto CombineReds =
@@ -31513,7 +32052,9 @@ public:
         VectorizedTree->getType() != ReductionRoot->getType())
       VectorizedTree =
           Builder.CreateTrunc(VectorizedTree, ReductionRoot->getType());
-    ReductionRoot->replaceAllUsesWith(VectorizedTree);
+    // The accumulator emission already replaced all uses of the root.
+    if (!AccV)
+      ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
     // The original scalar reduction is expected to have no remaining
     // uses outside the reduction tree itself.  Assert that we got this
@@ -31671,9 +32212,11 @@ public:
           V.calculateTreeCostAndTrimNonProfitable(VL, RdxRootInst);
       V.buildExternalUses(LocalExternallyUsedValues);
 
+      InstructionCost VectorCost, RdxOpCost;
       InstructionCost ReductionCost =
           getReductionCost(TTI, VL, EmptySameValuesCounter,
-                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI);
+                           /*IsCmpSelMinMax=*/false, RdxFMF, V, DT, DL, TLI,
+                           VectorCost, RdxOpCost);
       InstructionCost Cost =
           V.getTreeCost(TreeCost, VL, ReductionCost, RdxRootInst);
       LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
@@ -31889,16 +32432,21 @@ private:
   }
 
   /// Calculate the cost of a reduction.
+  /// \p VectorCost receives the cost of the emitted vector code alone and
+  /// \p RdxOpCost the cost of the reduction operation in it.
   InstructionCost getReductionCost(
       TargetTransformInfo *TTI, ArrayRef<Value *> ReducedVals,
       const SmallMapVector<Value *, unsigned, 16> SameValuesCounter,
       bool IsCmpSelMinMax, FastMathFlags FMF, const BoUpSLP &R,
-      DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI) {
+      DominatorTree &DT, const DataLayout &DL, const TargetLibraryInfo &TLI,
+      InstructionCost &VectorCost, InstructionCost &RdxOpCost) {
     const TTI::TargetCostKind CostKind = R.getCostKind();
     Type *ScalarTy = ReducedVals.front()->getType();
     unsigned ReduxWidth = ReducedVals.size();
     FixedVectorType *VectorTy = R.getReductionType();
-    InstructionCost VectorCost = 0, ScalarCost;
+    InstructionCost ScalarCost;
+    VectorCost = 0;
+    RdxOpCost = 0;
     // If all of the reduced values are constant, the vector cost is 0, since
     // the reduction value can be calculated at the compile time.
     bool AllConsts = allConstant(ReducedVals);
@@ -32068,6 +32616,7 @@ private:
                   cast<VectorType>(getWidenedType(RType, ReduxWidth)), FMF,
                   CostKind);
             }
+            RdxOpCost = VectorCost;
           }
         } else {
           Type *RedTy = VectorTy->getElementType();
@@ -32159,6 +32708,7 @@ private:
       if (!AllConsts) {
         if (DoesRequireReductionOp) {
           VectorCost = TTI->getMinMaxReductionCost(Id, VectorTy, FMF, CostKind);
+          RdxOpCost = VectorCost;
         } else {
           // Check if the previous reduction already exists and account it as
           // series of operations + single reduction.
@@ -32176,6 +32726,7 @@ private:
             VectorCost += TTI->getCastInstrCost(
                 Opcode, VectorTy, RVecTy, TTI::CastContextHint::None, CostKind);
           }
+          RdxOpCost = VectorCost;
         }
       }
       ScalarCost = EvaluateScalarCost([&](Instruction *RdxOp) {
@@ -32833,7 +33384,8 @@ bool SLPVectorizerPass::vectorizeHorReduction(
     HorizontalReduction HorRdx;
     Value *Res = nullptr;
     if (HorRdx.matchAssociativeReduction(R, Inst, *SE, *DT, *DL, *TTI, *TLI)) {
-      Value *Red = HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, IsSeedRoot);
+      Value *Red =
+          HorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, *LI, IsSeedRoot);
       // The chain with the flattened fsub/fneg links produced no vector part:
       // retry with the fsub/fneg links as leaves, they may be vectorizable on
       // their own.
@@ -32841,7 +33393,7 @@ bool SLPVectorizerPass::vectorizeHorReduction(
         HorizontalReduction UnflattenedHorRdx;
         if (UnflattenedHorRdx.matchAssociativeReduction(
                 R, Inst, *SE, *DT, *DL, *TTI, *TLI, /*FlattenNegations=*/false))
-          Red = UnflattenedHorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT,
+          Red = UnflattenedHorRdx.tryToReduce(R, *DL, TTI, *TLI, AC, *DT, *LI,
                                               IsSeedRoot);
       }
       if (Red) {
@@ -33033,7 +33585,7 @@ bool SLPVectorizerPass::tryToVectorize(
     if (RedCost >= ScalarCost)
       return false;
 
-    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT) != nullptr;
+    return HorRdx.tryToReduce(R, *DL, &TTI, *TLI, AC, *DT, *LI) != nullptr;
   };
   if (Candidates.size() == 1)
     return TryToReduce(I, {Op0, Op1}) ||
