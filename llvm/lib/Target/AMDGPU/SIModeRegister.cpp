@@ -362,8 +362,9 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
   bool RevisitRequired = false;
   bool ExitSet = false;
   unsigned ThisBlock = MBB.getNumber();
-  if (MBB.pred_empty()) {
-    // There are no predecessors, so use the default starting status.
+  if (MBB.pred_empty() || MBB.isEntryBlock()) {
+    // There are no predecessors, or the block is only entered from the function
+    // entry, so use the default starting status.
     BlockInfo[ThisBlock]->Pred = DefaultStatus;
     ExitSet = true;
   } else {
@@ -374,12 +375,6 @@ void SIModeRegister::processBlockPhase2(MachineBasicBlock &MBB,
     // the intersection process may remove Mask bits.
     BlockData &Info = *BlockInfo[ThisBlock];
     bool SelfPredPending = false;
-    // An entry block is also entered from the function entry, so the default
-    // applies even when it has predecessors.
-    if (MBB.isEntryBlock()) {
-      Info.Pred = DefaultStatus;
-      ExitSet = true;
-    }
     for (MachineBasicBlock *Pred : MBB.predecessors()) {
       unsigned PredBlock = Pred->getNumber();
       const BlockData &PredInfo = *BlockInfo[PredBlock];
