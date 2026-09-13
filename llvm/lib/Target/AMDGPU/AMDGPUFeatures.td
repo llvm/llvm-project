@@ -31,10 +31,14 @@ def FeatureFlatOffsetBits12 : SubtargetFeatureFlatOffsetBits<12>;
 def FeatureFlatOffsetBits24 : SubtargetFeatureFlatOffsetBits<24>;
 
 // Addressable local memory size is the maximum number of bytes of LDS that can
-// be allocated to a single workgroup.
+// be allocated to a single workgroup. A generic target must not advertise more
+// addressable memory than any of its covered GPUs.
+def AddressableLocalMemorySizeProperty : AMDGPUGenericNumericProperty<
+  "AddressableLocalMemorySize", 32768, AMDGPUGenericAtMost>;
+
 class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
   "addressablelocalmemorysize"#Value,
-  "AddressableLocalMemorySize",
+  AddressableLocalMemorySizeProperty.FieldName,
   !cast<string>(Value),
   "The size of local memory in bytes"
 >;
