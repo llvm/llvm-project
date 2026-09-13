@@ -2540,10 +2540,20 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (Value *V = foldCmpIntrinsicOfExtended(II, Builder, DL))
       return replaceInstUsesWith(CI, V);
 
+    auto *Cmp = cast<CmpIntrinsic>(II);
+    Value *I0 = Cmp->getLHS(), *I1 = Cmp->getRHS();
+    Value *LHS, *RHS;
+    CmpInst::Predicate Pred = Cmp->getLTPredicate();
+    if (matchCommonBinOpOperands(I0, I1, Pred, LHS, RHS,
+                                 SQ.getWithInstruction(II))) {
+      if (ICmpInst::isGT(Pred))
+        std::swap(LHS, RHS);
+      return replaceInstUsesWith(
+          CI, Builder.CreateIntrinsic(II->getType(), IID, {LHS, RHS}));
+    }
+
     if (IID == Intrinsic::ucmp)
       break;
-
-    Value *I0 = II->getArgOperand(0), *I1 = II->getArgOperand(1);
 
     // scmp(X, 0) -> sext_or_trunc(X) if X is known to be one of -1, 0, 1.
     if (match(I1, m_Zero())) {
@@ -2553,7 +2563,6 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceInstUsesWith(
             CI, Builder.CreateSExtOrTrunc(I0, II->getType()));
     }
-    Value *LHS, *RHS;
     if (match(I0, m_NSWSub(m_Value(LHS), m_Value(RHS))) && match(I1, m_Zero()))
       return replaceInstUsesWith(
           CI,

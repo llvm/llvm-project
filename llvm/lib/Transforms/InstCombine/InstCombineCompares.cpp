@@ -21,6 +21,7 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/Utils/Local.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
@@ -5288,6 +5289,154 @@ static bool isMultipleOf(Value *X, const APInt &C, const SimplifyQuery &Q) {
   return MaskedValueIsZero(X, C - 1, Q);
 }
 
+static bool hasNoWrapProblem(const BinaryOperator &BO, CmpInst::Predicate Pred,
+                             bool &HasNSW, bool &HasNUW) {
+  if (isa<OverflowingBinaryOperator>(BO)) {
+    HasNUW = BO.hasNoUnsignedWrap();
+    HasNSW = BO.hasNoSignedWrap();
+    return ICmpInst::isEquality(Pred) ||
+           (CmpInst::isUnsigned(Pred) && HasNUW) ||
+           (CmpInst::isSigned(Pred) && HasNSW);
+  }
+  if (BO.getOpcode() == Instruction::Or) {
+    // The callers only use this result for an or matched by m_AddLike, which
+    // must be an or disjoint and is equivalent to an add nuw nsw.
+    HasNUW = true;
+    HasNSW = true;
+    return true;
+  }
+  return false;
+}
+
+bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
+                                                CmpInst::Predicate &Pred,
+                                                Value *&LHS, Value *&RHS,
+                                                const SimplifyQuery &Q) {
+  auto *BO0 = dyn_cast<BinaryOperator>(Op0);
+  auto *BO1 = dyn_cast<BinaryOperator>(Op1);
+  if (!BO0 || !BO1)
+    return false;
+
+  bool IsEquality = ICmpInst::isEquality(Pred);
+  bool IsSigned = ICmpInst::isSigned(Pred);
+
+  bool Op0HasNSW = false, Op0HasNUW = false;
+  bool Op1HasNSW = false, Op1HasNUW = false;
+  bool NoOp0WrapProblem = hasNoWrapProblem(*BO0, Pred, Op0HasNSW, Op0HasNUW);
+  bool NoOp1WrapProblem = hasNoWrapProblem(*BO1, Pred, Op1HasNSW, Op1HasNUW);
+
+  Value *A, *B, *C, *D;
+
+  // Handle all add-like operations.
+  if (match(BO0, m_AddLike(m_Value(A), m_Value(B))) &&
+      match(BO1, m_AddLike(m_Value(C), m_Value(D)))) {
+    if (!NoOp0WrapProblem || !NoOp1WrapProblem)
+      return false;
+
+    if (A == C) {
+      // (A + B) cmp (A + D) -> B cmp D
+      LHS = B;
+      RHS = D;
+      return true;
+    }
+    if (A == D) {
+      // (A + B) cmp (C + A) -> B cmp C
+      LHS = B;
+      RHS = C;
+      return true;
+    }
+    if (B == C) {
+      // (A + B) cmp (B + D) -> A cmp D
+      LHS = A;
+      RHS = D;
+      return true;
+    }
+    if (B == D) {
+      // (A + B) cmp (C + B) -> A cmp C
+      LHS = A;
+      RHS = C;
+      return true;
+    }
+    return false;
+  }
+
+  if (BO0->getOpcode() != BO1->getOpcode())
+    return false;
+
+  A = BO0->getOperand(0);
+  B = BO0->getOperand(1);
+  C = BO1->getOperand(0);
+  D = BO1->getOperand(1);
+
+  switch (BO0->getOpcode()) {
+  case Instruction::Sub:
+    if (!NoOp0WrapProblem || !NoOp1WrapProblem)
+      return false;
+
+    // (A - B) cmp (C - B) -> A cmp C
+    if (B == D) {
+      LHS = A;
+      RHS = C;
+      return true;
+    }
+    // (A - B) cmp (A - D) -> D cmp B
+    if (A == C) {
+      LHS = D;
+      RHS = B;
+      return true;
+    }
+    return false;
+
+  case Instruction::Mul: {
+    // Equality comparisons have additional modular-arithmetic folds and are
+    // handled by the existing multiplication logic in foldICmpBinOp().
+    if (IsEquality || !NoOp0WrapProblem || !NoOp1WrapProblem)
+      return false;
+
+    Value *Z;
+
+    if (A == C) {
+      // (A * B) cmp (A * D) -> B cmp D
+      Z = A;
+      LHS = B;
+      RHS = D;
+    } else if (A == D) {
+      // (A * B) cmp (C * A) -> B cmp C
+      Z = A;
+      LHS = B;
+      RHS = C;
+    } else if (B == C) {
+      // (A * B) cmp (B * D) -> A cmp D
+      Z = B;
+      LHS = A;
+      RHS = D;
+    } else if (B == D) {
+      // (A * B) cmp (C * B) -> A cmp C
+      Z = B;
+      LHS = A;
+      RHS = C;
+    } else {
+      return false;
+    }
+
+    if (!IsSigned)
+      return isKnownNonZero(Z, Q);
+
+    if (isKnownPositive(Z, Q))
+      return true;
+
+    if (isKnownNegative(Z, Q)) {
+      Pred = ICmpInst::getSwappedPredicate(Pred);
+      return true;
+    }
+
+    return false;
+  }
+  default:
+    return false;
+  }
+}
+
 /// Try to fold icmp (binop), X or icmp X, (binop).
 /// TODO: A large part of this logic is duplicated in InstSimplify's
 /// simplifyICmpWithBinOp(). We should be able to share that and avoid the code
@@ -5393,24 +5542,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
   bool Op0HasNSW = false, Op1HasNSW = false;
   // Analyze the case when either Op0 or Op1 is an add instruction.
   // Op0 = A + B (or A and B are null); Op1 = C + D (or C and D are null).
-  auto hasNoWrapProblem = [](const BinaryOperator &BO, CmpInst::Predicate Pred,
-                             bool &HasNSW, bool &HasNUW) -> bool {
-    if (isa<OverflowingBinaryOperator>(BO)) {
-      HasNUW = BO.hasNoUnsignedWrap();
-      HasNSW = BO.hasNoSignedWrap();
-      return ICmpInst::isEquality(Pred) ||
-             (CmpInst::isUnsigned(Pred) && HasNUW) ||
-             (CmpInst::isSigned(Pred) && HasNSW);
-    } else if (BO.getOpcode() == Instruction::Or) {
-      // The invariant here is that we are handling m_AddLike instructions,
-      // which can only be a or disjoint, which is equivalent to an add nuw nsw.
-      HasNUW = true;
-      HasNSW = true;
-      return true;
-    } else {
-      return false;
-    }
-  };
   Value *A = nullptr, *B = nullptr, *C = nullptr, *D = nullptr;
 
   if (BO0) {
@@ -5434,31 +5565,12 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
     return new ICmpInst(Pred, Constant::getNullValue(Op0->getType()),
                         C == Op0 ? D : C);
 
-  // icmp (A+B), (A+D) -> icmp B, D for equalities or if there is no overflow.
-  if (A && C && (A == C || A == D || B == C || B == D) && NoOp0WrapProblem &&
-      NoOp1WrapProblem) {
-    // Determine Y and Z in the form icmp (X+Y), (X+Z).
-    Value *Y, *Z;
-    if (A == C) {
-      // C + B == C + D  ->  B == D
-      Y = B;
-      Z = D;
-    } else if (A == D) {
-      // D + B == C + D  ->  B == C
-      Y = B;
-      Z = C;
-    } else if (B == C) {
-      // A + C == C + D  ->  A == D
-      Y = A;
-      Z = D;
-    } else {
-      assert(B == D);
-      // A + D == C + D  ->  A == C
-      Y = A;
-      Z = C;
-    }
-    return new ICmpInst(Pred, Y, Z);
-  }
+  // Fold comparisons of binops with a removable common operand.
+  Value *LHS;
+  Value *RHS;
+  CmpInst::Predicate NewPred = Pred;
+  if (matchCommonBinOpOperands(Op0, Op1, NewPred, LHS, RHS, Q))
+    return new ICmpInst(NewPred, LHS, RHS);
 
   if (ICmpInst::isRelational(Pred)) {
     // Return if both X and Y is divisible by Z/-Z.
@@ -5600,14 +5712,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
       isKnownNonZero(D, Q))
     return new ICmpInst(CmpInst::getFlippedStrictnessPredicate(Pred), C, D);
 
-  // icmp (A-B), (C-B) -> icmp A, C for equalities or if there is no overflow.
-  if (B && D && B == D && NoOp0WrapProblem && NoOp1WrapProblem)
-    return new ICmpInst(Pred, A, C);
-
-  // icmp (A-B), (A-D) -> icmp D, B for equalities or if there is no overflow.
-  if (A && C && A == C && NoOp0WrapProblem && NoOp1WrapProblem)
-    return new ICmpInst(Pred, D, B);
-
   // icmp (0-X) < cst --> x > -cst
   if (NoOp0WrapProblem && ICmpInst::isSigned(Pred)) {
     Value *X;
@@ -5633,11 +5737,6 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
          match(Op1, m_c_Mul(m_Specific(Z), m_Value(Y))))) {
       if (ICmpInst::isSigned(Pred)) {
         if (Op0HasNSW && Op1HasNSW) {
-          KnownBits ZKnown = computeKnownBits(Z, &I);
-          if (ZKnown.isStrictlyPositive())
-            return new ICmpInst(Pred, X, Y);
-          if (ZKnown.isNegative())
-            return new ICmpInst(ICmpInst::getSwappedPredicate(Pred), X, Y);
           Value *LessThan = simplifyICmpInst(ICmpInst::ICMP_SLT, X, Y,
                                              SQ.getWithInstruction(&I));
           if (LessThan && match(LessThan, m_One()))
@@ -5648,30 +5747,27 @@ Instruction *InstCombinerImpl::foldICmpBinOp(ICmpInst &I,
           if (GreaterThan && match(GreaterThan, m_One()))
             return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
         }
-      } else {
-        bool NonZero;
-        if (ICmpInst::isEquality(Pred)) {
-          // If X != Y, fold (X *nw Z) eq/ne (Y *nw Z) -> Z eq/ne 0
-          if (((Op0HasNSW && Op1HasNSW) || (Op0HasNUW && Op1HasNUW)) &&
-              isKnownNonEqual(X, Y, SQ))
-            return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
+      } else if (ICmpInst::isEquality(Pred)) {
+        // Handle equality folds beyond direct multiplier cancellation.
+        // If X != Y, fold (X *nw Z) eq/ne (Y *nw Z) -> Z eq/ne 0
+        if (((Op0HasNSW && Op1HasNSW) || (Op0HasNUW && Op1HasNUW)) &&
+            isKnownNonEqual(X, Y, SQ))
+          return new ICmpInst(Pred, Z, Constant::getNullValue(Z->getType()));
 
-          KnownBits ZKnown = computeKnownBits(Z, &I);
-          // if Z % 2 != 0
-          //    X * Z eq/ne Y * Z -> X eq/ne Y
-          if (ZKnown.countMaxTrailingZeros() == 0)
-            return new ICmpInst(Pred, X, Y);
-          NonZero = !ZKnown.One.isZero() || isKnownNonZero(Z, Q);
-          // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
-          //    X * Z eq/ne Y * Z -> X eq/ne Y
-          if (NonZero && BO0 && BO1 && Op0HasNSW && Op1HasNSW)
-            return new ICmpInst(Pred, X, Y);
-        } else
-          NonZero = isKnownNonZero(Z, Q);
+        KnownBits ZKnown = computeKnownBits(Z, &I);
+        // if Z % 2 != 0
+        //    X * Z eq/ne Y * Z -> X eq/ne Y
+        if (ZKnown.countMaxTrailingZeros() == 0)
+          return new ICmpInst(Pred, X, Y);
+        bool NonZero = !ZKnown.One.isZero() || isKnownNonZero(Z, Q);
+        // if Z != 0 and nsw(X * Z) and nsw(Y * Z)
+        //    X * Z eq/ne Y * Z -> X eq/ne Y
+        if (NonZero && Op0HasNSW && Op1HasNSW)
+          return new ICmpInst(Pred, X, Y);
 
         // If Z != 0 and nuw(X * Z) and nuw(Y * Z)
-        //    X * Z u{lt/le/gt/ge}/eq/ne Y * Z -> X u{lt/le/gt/ge}/eq/ne Y
-        if (NonZero && BO0 && BO1 && Op0HasNUW && Op1HasNUW)
+        //    X * Z eq/ne Y * Z -> X eq/ne Y
+        if (NonZero && Op0HasNUW && Op1HasNUW)
           return new ICmpInst(Pred, X, Y);
       }
     }
