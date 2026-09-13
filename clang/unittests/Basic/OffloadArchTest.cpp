@@ -36,10 +36,12 @@ TEST(OffloadArchTest, TargetArchClassification) {
   EXPECT_TRUE(IntelCPU.isIntelCPU());
   EXPECT_FALSE(IntelCPU.isIntelGPU());
 
-  OffloadArch IntelGPU = parse("bmg_g21");
+  OffloadArch IntelGPU = parse("xe-bmg-g21");
   EXPECT_TRUE(IntelGPU.isIntel());
   EXPECT_FALSE(IntelGPU.isIntelCPU());
   EXPECT_TRUE(IntelGPU.isIntelGPU());
+  EXPECT_TRUE(parse("xe-dg2").isIntelGPU());
+  EXPECT_TRUE(parse("xe_12.60.7").isIntelGPU());
 
   OffloadArch Generic = parse("generic");
   EXPECT_FALSE(Generic.isNVPTX());
@@ -57,11 +59,28 @@ TEST(OffloadArchTest, Unknown) {
 TEST(OffloadArchTest, RoundTrip) {
   for (const char *Name :
        {"sm_52", "sm_90a", "gfx906", "gfx1201", "gfx12-generic", "amdgcnspirv",
-        "graniterapids", "bmg_g21", "generic"}) {
+        "graniterapids", "xe-bmg-g21", "xe-pvc", "xe-dg2", "generic"}) {
     OffloadArch A = parse(Name);
     EXPECT_FALSE(A.isUnknown()) << Name;
     EXPECT_STREQ(OffloadArchToString(A), Name);
   }
+}
+
+// A spelling that is not the architecture name still denotes the device, and
+// canonicalizes to that name rather than round-tripping to itself.
+TEST(OffloadArchTest, IntelGPUAliases) {
+  // An alias, here the name ocloc uses for its own -device parameter.
+  EXPECT_EQ(parse("bmg_g21"), parse("xe-bmg-g21"));
+  // A numeric name, whose revision takes no part in the lookup.
+  EXPECT_EQ(parse("xe_12.60.0"), parse("xe-pvc"));
+  EXPECT_EQ(parse("xe_12.60.7"), parse("xe-pvc"));
+  EXPECT_EQ(parse("xe_12.60"), parse("xe-pvc"));
+  EXPECT_STREQ(OffloadArchToString(parse("bmg_g21")), "xe-bmg-g21");
+  EXPECT_STREQ(OffloadArchToString(parse("xe_12.60.7")), "xe-pvc");
+
+  // A well-formed numeric name for a device this build does not know is as
+  // unknown as any other unknown name.
+  EXPECT_TRUE(parse("xe_99.99.0").isUnknown());
 }
 
 TEST(OffloadArchTest, Defaults) {

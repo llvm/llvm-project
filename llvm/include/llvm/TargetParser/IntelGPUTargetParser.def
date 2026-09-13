@@ -17,10 +17,17 @@
 //     ARCHITECTURE - Architecture component of the GMDID the device reports.
 //     RELEASE      - Release component of the GMDID the device reports.
 //     IGCA_LEVEL   - Numeric IGCA level.
-//     IGCA_SUFFIX  - Token naming the feature sets that the level comprises:
+//     IGCA_SUFFIX  - Token naming the suffix class of the level, which says
+//                    which feature sets it comprises and whether it is exact:
 //                    Core (no suffix), Compute ("c"), Render ("r"),
-//                    ComputeExact ("ca") or RenderExact ("ra"). A consumer maps
-//                    the token onto an enumerator of its own.
+//                    ComputeExact ("ca") or RenderExact ("ra"). It is a token
+//                    rather than the suffix itself so that a typo is a build
+//                    error; getIGCAName maps it onto the spelling. Should
+//                    anything need to reason about the class itself, rather
+//                    than spell it, the tokens are spelled to serve as the
+//                    enumerators of an IntelGPU::LevelSuffix, in the way that
+//                    NVPTXTargetParser.def's SUFFIX column serves
+//                    NVPTX::ArchSuffix.
 //
 //   INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)
 //     A compatibility name that covers several releases, e.g. "xe-dg2", which
@@ -29,11 +36,24 @@
 //     never prints one, but they are legal --offload-arch values. The columns
 //     mean the same as above.
 //
+//   INTEL_GPU_ALIAS(NAME, KIND)
+//     A further spelling of a device that already has a row, e.g. the name
+//     ocloc uses for its own -device parameter. An alias declares no kind of
+//     its own and is never printed, so a device keeps one canonical name; it
+//     only widens what --offload-arch accepts.
+//
 // The revision (stepping) component of the GMDID is deliberately not part of
 // the key: every stepping of a release shares one name and one IGCA level.
 //
 // Several devices can share an architecture and a release. The rows are ordered
 // so that the name to print for such a group comes first.
+//
+// Devices that exist but have no published human-friendly name are deliberately
+// left out, because NAME has no legal value for them. They are not forgotten:
+// the offload-arch utility names such a device after its GMDID, and adding a
+// row later is all that is needed to make it targetable. Do not supply an
+// invented name in the meantime -- a name that ships becomes an --offload-arch
+// value that has to keep working, and an unofficial one cannot be withdrawn.
 //
 //===----------------------------------------------------------------------===//
 
@@ -43,6 +63,10 @@
 
 #ifndef INTEL_GPU_COMPAT
 #define INTEL_GPU_COMPAT(NAME, KIND, IGCA_LEVEL, IGCA_SUFFIX)
+#endif
+
+#ifndef INTEL_GPU_ALIAS
+#define INTEL_GPU_ALIAS(NAME, KIND)
 #endif
 
 INTEL_GPU("xe-cri",      XE_CRI,      35, 11,  60, Compute)
@@ -90,5 +114,9 @@ INTEL_GPU_COMPAT("xe-bmg", XE_BMG, 40, Render)
 INTEL_GPU_COMPAT("xe-mtl", XE_MTL, 30, Render)
 INTEL_GPU_COMPAT("xe-dg2", XE_DG2, 15, RenderExact)
 
+// Aliases, which are further spellings of a device named above
+INTEL_GPU_ALIAS("bmg_g21", XE_BMG_G21)
+
 #undef INTEL_GPU
 #undef INTEL_GPU_COMPAT
+#undef INTEL_GPU_ALIAS
