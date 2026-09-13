@@ -17,13 +17,14 @@ define void @min.signed.1(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_INC]] = add nuw nsw i32 [[IDX]], 1
-; CHECK-NEXT:    br i1 true, label [[OK:%.*]], label [[LATCH]]
+; CHECK-NEXT:    [[IN_BOUNDS:%.*]] = icmp slt i32 [[IDX]], [[A_LEN]]
+; CHECK-NEXT:    br i1 [[IN_BOUNDS]], label [[OK:%.*]], label [[LATCH]]
 ; CHECK:       ok:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[A]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 [[IDX]], ptr [[ADDR]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp slt i32 [[IDX_INC]], [[SMIN]]
+; CHECK-NEXT:    [[BE_COND:%.*]] = icmp slt i32 1, [[SMIN]]
 ; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
@@ -68,13 +69,14 @@ define void @min.signed.2(ptr %a, i32 %a_len, i32 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IDX:%.*]] = phi i32 [ [[IDX_INC:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IDX_INC]] = add nuw nsw i32 [[IDX]], 1
-; CHECK-NEXT:    br i1 true, label [[OK:%.*]], label [[LATCH]]
+; CHECK-NEXT:    [[IN_BOUNDS:%.*]] = icmp sgt i32 [[A_LEN]], [[IDX]]
+; CHECK-NEXT:    br i1 [[IN_BOUNDS]], label [[OK:%.*]], label [[LATCH]]
 ; CHECK:       ok:
 ; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[A]], i32 [[IDX]]
 ; CHECK-NEXT:    store i32 [[IDX]], ptr [[ADDR]], align 4
 ; CHECK-NEXT:    br label [[LATCH]]
 ; CHECK:       latch:
-; CHECK-NEXT:    [[BE_COND:%.*]] = icmp slt i32 [[IDX_INC]], [[SMIN]]
+; CHECK-NEXT:    [[BE_COND:%.*]] = icmp slt i32 1, [[SMIN]]
 ; CHECK-NEXT:    br i1 [[BE_COND]], label [[LOOP]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]

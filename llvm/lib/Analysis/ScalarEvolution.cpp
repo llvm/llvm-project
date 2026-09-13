@@ -12369,11 +12369,17 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
       if (isImpliedCondOperands(FoundPred, LHS, RHS, FoundLHS, FoundRHS, CtxI))
         return true;
 
-  if (isImpliedCondOperandsViaRanges(Pred, LHS, RHS, FoundPred, FoundLHS, FoundRHS))
+  // X >= Y is equivalent to X > Y - 1, and this holds trivially when Y - 1
+  // does not overflow. When it does overflow, it must be INT_MAX, and the
+  // comparison would evaluate to false anyway.
+  if (ICmpInst::isGE(Pred) &&
+      isImpliedCondOperands(ICmpInst::getStrictPredicate(Pred), LHS,
+                            getMinusSCEV(RHS, getOne(RHS->getType())), FoundLHS,
+                            FoundRHS, CtxI))
     return true;
 
-  // Otherwise assume the worst.
-  return false;
+  return isImpliedCondOperandsViaRanges(Pred, LHS, RHS, FoundPred, FoundLHS,
+                                        FoundRHS);
 }
 
 bool ScalarEvolution::splitBinaryAdd(SCEVUse Expr, SCEVUse &L, SCEVUse &R,
