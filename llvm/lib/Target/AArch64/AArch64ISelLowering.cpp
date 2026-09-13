@@ -2291,6 +2291,16 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v4f16,
                       MVT::v8f16, MVT::v4bf16, MVT::v8bf16})
         setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
+
+      // Mark the scalable predicate and fixed-length vector container types
+      // for custom lowering.
+      // Extracts can still combine to lastb/clastb, otherwise the target node
+      // lowers to lastp.
+      for (auto VT : {MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1,
+                      MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
+                      MVT::v4i32, MVT::v1i64, MVT::v2i64})
+        setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Custom);
+
     } else {
       // Promote v4i16/f16 to v4i32/f32 as the SVE container for v4i16 is nxv8,
       // which is not supported with for compact (with only +sve).
@@ -8283,6 +8293,36 @@ SDValue AArch64TargetLowering::LowerVECTOR_COMPRESS(SDValue Op,
                      Passthru);
 }
 
+SDValue
+AArch64TargetLowering::LowerVECTOR_FIND_LAST_ACTIVE(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  assert((Subtarget->hasSVE2p2() || Subtarget->hasSME2p2()) &&
+         "custom lowering requires LASTP");
+  SDVTList VTs = DAG.getVTList(Op.getValueType(), MVT::i32);
+  return DAG.getNode(AArch64ISD::FIND_LAST_ACTIVE, SDLoc(Op), VTs,
+                     Op.getOperand(0));
+}
+
+SDValue AArch64TargetLowering::expandFindLastActive(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  assert(Op.getOpcode() == AArch64ISD::FIND_LAST_ACTIVE);
+  SDLoc DL(Op);
+  SDValue Mask = Op.getOperand(0);
+  EVT MaskVT = Mask.getValueType();
+  bool HasLastP = Subtarget->hasSVE2p2() || Subtarget->hasSME2p2();
+  assert(HasLastP && "FIND_LAST_ACTIVE target node requires LASTP");
+
+  if (MaskVT.isScalableVector()) {
+    SDValue Pg = getPTrue(DAG, DL, MaskVT, AArch64SVEPredPattern::all);
+    return DAG.getNode(AArch64ISD::LASTP, DL, Op.getValueType(), Pg, Mask);
+  }
+  assert(MaskVT.isFixedLengthVector());
+
+  SDValue Pg = getPredicateForVector(DAG, DL, MaskVT);
+  Mask = convertFixedMaskToScalableVector(Mask, DAG);
+  return DAG.getNode(AArch64ISD::LASTP, DL, Op.getValueType(), Pg, Mask);
+}
+
 SDValue AArch64TargetLowering::LowerSMULFIXSAT(SDValue Op,
                                                SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -8993,6 +9033,8 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     return LowerVSCALE(Op, DAG);
   case ISD::VECTOR_COMPRESS:
     return LowerVECTOR_COMPRESS(Op, DAG);
+  case ISD::VECTOR_FIND_LAST_ACTIVE:
+    return LowerVECTOR_FIND_LAST_ACTIVE(Op, DAG);
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
@@ -22571,7 +22613,11 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   SDValue Vec = N->getOperand(0);
   SDValue Idx = N->getOperand(1);
 
-  if (DCI.isBeforeLegalize() || Idx.getOpcode() != ISD::VECTOR_FIND_LAST_ACTIVE)
+  // A custom lowering is used which introduces target specific node when
+  // sve2.2/sme2.2 is available.
+  if (DCI.isBeforeLegalize() ||
+      (Idx.getOpcode() != ISD::VECTOR_FIND_LAST_ACTIVE &&
+       Idx.getOpcode() != AArch64ISD::FIND_LAST_ACTIVE))
     return SDValue();
 
   // Only legal for 8, 16, 32, and 64 bit element types.
@@ -22582,8 +22628,9 @@ performExtractLastActiveCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return SDValue();
 
   SDValue Mask = Idx.getOperand(0);
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegal(ISD::VECTOR_FIND_LAST_ACTIVE, Mask.getValueType()))
+  if (!is_contained(
+          ArrayRef({MVT::nxv16i1, MVT::nxv8i1, MVT::nxv4i1, MVT::nxv2i1}),
+          Mask.getSimpleValueType().SimpleTy))
     return SDValue();
 
   return DAG.getNode(AArch64ISD::LASTB, SDLoc(N), N->getValueType(0), Mask,
@@ -30198,15 +30245,75 @@ static SDValue performVSelectCombine(SDNode *N,
                      IfTrue, IfFalse);
 }
 
+static SDValue
+performFindLastActiveSelectCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   const AArch64Subtarget *Subtarget) {
+  if (DCI.isBeforeLegalize() ||
+      (!Subtarget->hasSVE2p2() && !Subtarget->hasSME2p2()))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  // Replace the reduction used to detect an empty mask with the validity result
+  // returned by FIND_LAST_ACTIVE.
+  //
+  //   select (and (extract (UMAXV Mask), 0), 1),
+  //          (extract Vec, Find), Passthru
+  //
+  // becomes:
+  //
+  //   select (Find.valid), Extract, Passthru
+  SDValue Cond = N->getOperand(0);
+  if (Cond.getOpcode() != ISD::AND)
+    return SDValue();
+
+  SDValue Reduced;
+  if (isOneConstant(Cond.getOperand(0)))
+    Reduced = Cond.getOperand(1);
+  else if (isOneConstant(Cond.getOperand(1)))
+    Reduced = Cond.getOperand(0);
+
+  SDValue Extract = N->getOperand(1);
+  if (!Reduced || Reduced.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isNullConstant(Reduced.getOperand(1)) ||
+      Reduced.getOperand(0).getOpcode() != AArch64ISD::UMAXV ||
+      Extract.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  SDValue Find = Extract.getOperand(1);
+  if (Find.getOpcode() != AArch64ISD::FIND_LAST_ACTIVE)
+    return SDValue();
+
+  SDValue FindMask = Find.getOperand(0);
+  while (FindMask.getOpcode() == ISD::TRUNCATE)
+    FindMask = FindMask.getOperand(0);
+  SDValue ReducedMask = Reduced.getOperand(0).getOperand(0);
+  while (ReducedMask.getOpcode() == ISD::BITCAST)
+    ReducedMask = ReducedMask.getOperand(0);
+  if (FindMask != ReducedMask)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue IsActive = Find.getValue(1);
+  if (IsActive.getValueType() != Cond.getValueType())
+    IsActive = DAG.getZExtOrTrunc(IsActive, DL, Cond.getValueType());
+  return DAG.getSelect(DL, N->getValueType(0), IsActive, Extract,
+                       N->getOperand(2));
+}
+
 /// A vector select: "(select vL, vR, (setcc LHS, RHS))" is best performed with
 /// the compare-mask instructions rather than going via NZCV, even if LHS and
 /// RHS are really scalar. This replaces any scalar setcc in the above pattern
 /// with a vector one followed by a DUP shuffle on the result.
 static SDValue performSelectCombine(SDNode *N,
-                                    TargetLowering::DAGCombinerInfo &DCI) {
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const AArch64Subtarget *Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
   SDValue N0 = N->getOperand(0);
   EVT ResVT = N->getValueType(0);
+
+  if (SDValue R = performFindLastActiveSelectCombine(N, DCI, Subtarget))
+    return R;
 
   if (N0.getOpcode() != ISD::SETCC)
     return SDValue();
@@ -31755,7 +31862,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::INSERT_SUBVECTOR:
     return performInsertSubvectorCombine(N, DCI, DAG);
   case ISD::SELECT:
-    return performSelectCombine(N, DCI);
+    return performSelectCombine(N, DCI, Subtarget);
   case ISD::SELECT_CC:
     return performSELECT_CCCombine(N, DCI, DAG);
   case ISD::VSELECT:

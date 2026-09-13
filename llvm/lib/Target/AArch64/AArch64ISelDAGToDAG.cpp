@@ -8296,6 +8296,38 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
 
     SDValue Result;
     switch (N.getOpcode()) {
+    case AArch64ISD::FIND_LAST_ACTIVE: {
+      const auto *TLI = static_cast<const AArch64TargetLowering *>(
+          Subtarget->getTargetLowering());
+      Result = TLI->expandFindLastActive(SDValue(&N, 0), *CurDAG);
+      assert(Result.getOpcode() == AArch64ISD::LASTP &&
+             "FIND_LAST_ACTIVE must expand to LASTP");
+
+      // LASTP returns -1 for an empty mask. Convert that into the target
+      // node's two results here: a safe index for extraction and a separate
+      // validity value for empty-mask checks.
+      SDLoc DL(&N);
+      SDValue Zero = CurDAG->getSignedConstant(0, DL, Result.getValueType());
+      SDValue One = CurDAG->getSignedConstant(1, DL, Result.getValueType());
+      SDValue Add = CurDAG->getNode(
+          AArch64ISD::ADDS, DL,
+          CurDAG->getVTList(Result.getValueType(), MVT::i32), Result, One);
+      SDValue CC = CurDAG->getConstant(AArch64CC::EQ, DL, MVT::i32);
+      SDValue SafeIndex =
+          CurDAG->getNode(AArch64ISD::CSEL, DL, Result.getValueType(), Zero,
+                          Result, CC, Add.getValue(1));
+
+      SDValue Zero32 = CurDAG->getSignedConstant(0, DL, MVT::i32);
+      SDValue One32 = CurDAG->getSignedConstant(1, DL, MVT::i32);
+      SDValue Valid = CurDAG->getNode(AArch64ISD::CSEL, DL, MVT::i32, Zero32,
+                                      One32, CC, Add.getValue(1));
+
+      SDValue From[] = {SDValue(&N, 0), SDValue(&N, 1)};
+      SDValue To[] = {SafeIndex, Valid};
+      CurDAG->ReplaceAllUsesOfValuesWith(From, To, 2);
+      MadeChange = true;
+      continue;
+    }
     case ISD::SCALAR_TO_VECTOR: {
       EVT ScalarTy = N.getValueType(0).getVectorElementType();
       if ((ScalarTy == MVT::i32 || ScalarTy == MVT::i64) &&
