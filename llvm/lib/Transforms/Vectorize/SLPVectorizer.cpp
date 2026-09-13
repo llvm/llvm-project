@@ -30185,10 +30185,84 @@ public:
           ReducedValsCandidates = std::move(NewCandidates);
         }
       }
+      // Cap on the number of reduced values, including booleanized leaves.
+      constexpr unsigned ReducedValsLimit = 1024;
+      // Logical and/or reductions on i1 may have booleanized wide leaves:
+      // truncs of same-op chains or zero-tests of values from [0, 1].
+      // Reducing in the wide type and taking bit 0 of the result is
+      // equivalent, since trunc of a bitwise and/or is the bitwise and/or of
+      // the truncs, and it exposes the underlying (usually consecutive) wide
+      // values to the tree. All final leaves must be non-poison: the logical
+      // select/and/or ops may mask poison, which the wide reduction would
+      // propagate instead.
+      if ((RdxKind == RecurKind::And || RdxKind == RecurKind::Or) &&
+          RK == ReductionOrdering::Unordered && !IsCmpSelMinMax &&
+          Ty->isIntegerTy(1) && any_of(ReducedValsCandidates, [](Value *V) {
+            return isa<TruncInst, ICmpInst>(V);
+          })) {
+        unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
+        auto BooleanizeLeaves = [&]() {
+          Type *WideTy = nullptr;
+          SmallVector<Value *> NewCandidates;
+          SmallVector<Instruction *> ChainInsts;
+          for (Value *Cand : ReducedValsCandidates) {
+            SmallVector<Instruction *> RdxOps = ReducedValsToOps.lookup(Cand);
+            SmallVector<Value *> Worklist(1, Cand);
+            while (!Worklist.empty()) {
+              Value *V = Worklist.pop_back_val();
+              if (V->getType()->isIntegerTy(1)) {
+                Value *X;
+                // trunc iN to i1: bit 0 of the wide value.
+                if (match(V, m_OneUse(m_Trunc(m_Value(X))))) {
+                  ChainInsts.push_back(cast<Instruction>(V));
+                  Worklist.push_back(X);
+                  continue;
+                }
+                // Zero-test of a value from [0, 1]: same as bit 0 of the
+                // value.
+                CmpPredicate Pred;
+                if (match(V, m_OneUse(m_c_ICmp(Pred, m_Value(X), m_Zero()))) &&
+                    Pred == ICmpInst::ICMP_NE && X->getType()->isIntegerTy() &&
+                    computeKnownBits(X, DL).getMaxValue() == 1) {
+                  ChainInsts.push_back(cast<Instruction>(V));
+                  Worklist.push_back(X);
+                  continue;
+                }
+                return;
+              }
+              if (!V->getType()->isIntegerTy())
+                return;
+              // Same-op chain node: bit 0 of a bitwise and/or is the and/or
+              // of the operands' bit 0.
+              if (auto *BO = dyn_cast<BinaryOperator>(V);
+                  BO && BO->getOpcode() == RdxOpcode && BO->hasOneUse() &&
+                  !BO->hasPoisonGeneratingFlags()) {
+                ChainInsts.push_back(BO);
+                Worklist.push_back(BO->getOperand(1));
+                Worklist.push_back(BO->getOperand(0));
+                continue;
+              }
+              if (!isGuaranteedNotToBePoison(V) ||
+                  (WideTy && V->getType() != WideTy))
+                return;
+              if (!WideTy)
+                WideTy = V->getType();
+              NewCandidates.push_back(V);
+              ReducedValsToOps[V].append(RdxOps);
+              if (NewCandidates.size() > ReducedValsLimit)
+                return;
+            }
+          }
+          if (WideTy) {
+            NarrowedChainInsts.append(ChainInsts);
+            ReducedValsCandidates = std::move(NewCandidates);
+          }
+        };
+        BooleanizeLeaves();
+      }
       // Too many integer reduced values candidates for the ordered
       // reductions after adjustements - try to switch to unordered
       // reductions instead.
-      constexpr unsigned ReducedValsLimit = 1024;
       if (ReducedValsCandidates.size() > ReducedValsLimit &&
           AdjustedToOrdered &&
           ReducedValsCandidates.front()->getType()->isIntOrIntVectorTy())
@@ -31159,10 +31233,35 @@ public:
       return VectorizedTree;
     }
 
+    // A booleanized logical and/or reduction has an i1 root and wide integer
+    // reduced values; it is performed in the wide type and bit 0 of the
+    // result is the final value.
+    Type *BoolReduxWideTy =
+        getBoolReduxWideTy(RdxKind, ReductionRoot->getType(),
+                           ReducedVals.front().front()->getType());
     if (!VectorValuesAndScales.empty()) {
       Builder.setFastMathFlags(GroupRdxFMF);
-      auto [Res, ResNegated] =
-          emitReduction(Builder, *TTI, ReductionRoot->getType());
+      Value *Res = nullptr;
+      bool ResNegated = false;
+      const ReductionVectorPart &P = VectorValuesAndScales.front();
+      // A single fully vectorized booleanized reduction without scalar
+      // remainders can be emitted as trunc+bitcast+cmp, if cheaper.
+      if (BoolReduxWideTy && !VectorizedTree &&
+          VectorValuesAndScales.size() == 1 && !P.ReducedInTree && !P.Negated &&
+          isa<FixedVectorType>(P.Vec->getType()) &&
+          none_of(ReducedVals, [&](ArrayRef<Value *> Candidates) {
+            return any_of(Candidates, [&](Value *RdxVal) {
+              return VectorizedVals.lookup(RdxVal) <
+                     ReducedValsToOps.at(RdxVal).size();
+            });
+          }))
+        Res = tryEmitBoolReduxBitcastCmp(Builder, *TTI, RdxKind, P.Vec,
+                                         ReductionRoot, GroupRdxFMF,
+                                         V.getCostKind());
+      if (!Res)
+        std::tie(Res, ResNegated) = emitReduction(
+            Builder, *TTI,
+            BoolReduxWideTy ? BoolReduxWideTy : ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
       // final combine.
@@ -31342,6 +31441,10 @@ public:
       VectorizedTree = Op;
     }
 
+    if (BoolReduxWideTy &&
+        VectorizedTree->getType() != ReductionRoot->getType())
+      VectorizedTree =
+          Builder.CreateTrunc(VectorizedTree, ReductionRoot->getType());
     ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
     // The original scalar reduction is expected to have no remaining
@@ -31823,6 +31926,8 @@ private:
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
+      Type *BoolReduxWideTy =
+          getBoolReduxWideTy(RdxKind, ReductionRoot->getType(), ScalarTy);
       if (!AllConsts) {
         if (!NarrowedLeafShifts.empty()) {
           Type *WideTy = ReductionRoot->getType();
@@ -31873,7 +31978,20 @@ private:
             Type *RedTy = VectorTy->getElementType();
             auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
                 std::make_pair(RedTy, true));
-            if (RType == RedTy) {
+            if (BoolReduxWideTy) {
+              auto *WideVecTy = cast<FixedVectorType>(
+                  getWidenedType(BoolReduxWideTy, ReduxWidth));
+              VectorCost = getBoolReduxWideRdxCost(
+                  *TTI, RdxKind, WideVecTy, ReductionRoot, FMF, CostKind);
+              // The trunc+bitcast+cmp form applies only when the whole
+              // reduction is a single vector part, without scalar remainders.
+              if (this->ReducedVals.size() == 1 &&
+                  ReducedVals.size() == this->ReducedVals.front().size())
+                VectorCost = std::min(
+                    VectorCost, getBoolReduxBitcastCmpCost(
+                                    *TTI, RdxKind, WideVecTy, ReductionRoot,
+                                    NarrowedChainInsts, CostKind));
+            } else if (RType == RedTy) {
               VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
                                                            FMF, CostKind);
             } else {
