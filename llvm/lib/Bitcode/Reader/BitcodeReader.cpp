@@ -7210,6 +7210,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
   }
 
   for (auto &I : make_early_inc_range(instructions(F))) {
+    UpgradeInstructionMetadata(I);
+
     // "Upgrade" older incorrect branch weights by dropping them.
     if (auto *MD = I.getMetadata(LLVMContext::MD_prof)) {
       if (MD->getOperand(0) != nullptr && isa<MDString>(MD->getOperand(0))) {

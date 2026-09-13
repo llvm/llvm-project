@@ -1379,7 +1379,7 @@ void test_s_wakeup_barrier(void *bar)
 // CHECK-NEXT:    store float [[X:%.*]], ptr addrspace(5) [[X_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[ADDR_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[X_ADDR]], align 4
-// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], float [[TMP1]] syncscope("agent") monotonic, align 4, !amdgpu.no.fine.grained.memory [[META3:![0-9]+]], !amdgpu.ignore.denormal.mode [[META3]]
+// CHECK-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr addrspace(1) [[TMP0]], float [[TMP1]] syncscope("agent") monotonic, align 4, !atomic.ignore.denormal.mode [[META3:![0-9]+]], !amdgpu.no.fine.grained.memory [[META3]]
 // CHECK-NEXT:    ret float [[TMP2]]
 //
 float test_global_add_f32(global float *addr, float x) {

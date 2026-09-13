@@ -6757,7 +6757,7 @@ define amdgpu_kernel void @global_atomic_fmin_uni_address_uni_value_system_scope
 ; GFX1132-DPP-NEXT:    global_atomic_min_f32 v0, v1, s[0:1]
 ; GFX1132-DPP-NEXT:  .LBB12_2:
 ; GFX1132-DPP-NEXT:    s_endpgm
-  %result = atomicrmw fmin ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1, !amdgpu.ignore.denormal.mode !1
+  %result = atomicrmw fmin ptr addrspace(1) %ptr, float 4.0  monotonic, align 4, !amdgpu.no.fine.grained.memory !1, !amdgpu.no.remote.memory !1, !atomic.ignore.denormal.mode !1
   ret void
 }
 
