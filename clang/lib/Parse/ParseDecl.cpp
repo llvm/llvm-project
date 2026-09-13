@@ -7756,6 +7756,12 @@ void Parser::ParseParameterDeclarationClause(
           DelayTemplateIdDestructionRAII DontDestructTemplateIds(
               *this, /*DelayTemplateIdDestruction=*/true);
 
+          TemplateParameterDepthRAII CurTemplateDepthTracker(
+              TemplateParameterDepth);
+          unsigned Depth = Actions.getTemplateDepth(getCurScope());
+          if (Depth > TemplateParameterDepth)
+            CurTemplateDepthTracker.addDepth(Depth - TemplateParameterDepth);
+
           // The argument isn't actually potentially evaluated unless it is
           // used.
           EnterExpressionEvaluationContext Eval(

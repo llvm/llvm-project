@@ -165,12 +165,19 @@ bool CheckDefaultArgumentVisitor::VisitPseudoObjectExpr(
 }
 
 bool CheckDefaultArgumentVisitor::VisitLambdaExpr(const LambdaExpr *Lambda) {
+  bool Invalid = false;
+  for (NamedDecl *P : Lambda->getExplicitTemplateParameters()) {
+    const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(P);
+    if (!NTTP || !NTTP->hasDefaultArgument())
+      continue;
+    Invalid |= Visit(NTTP->getDefaultArgument().getArgument().getAsExpr());
+  }
+
   // [expr.prim.lambda.capture]p9
   // a lambda-expression appearing in a default argument cannot implicitly or
   // explicitly capture any local entity. Such a lambda-expression can still
   // have an init-capture if any full-expression in its initializer satisfies
   // the constraints of an expression appearing in a default argument.
-  bool Invalid = false;
   for (const LambdaCapture &LC : Lambda->captures()) {
     if (!Lambda->isInitCapture(&LC))
       return S.Diag(LC.getLocation(), diag::err_lambda_capture_default_arg);

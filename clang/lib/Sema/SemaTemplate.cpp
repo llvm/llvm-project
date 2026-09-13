@@ -76,11 +76,8 @@ unsigned Sema::getTemplateDepth(Scope *S) const {
     if (auto *LSI = dyn_cast<LambdaScopeInfo>(FSI)) {
       if (!LSI->TemplateParams.empty()) {
         ParamsAtDepth(LSI->AutoTemplateParameterDepth);
-        break;
-      }
-      if (LSI->GLTemplateParameterList) {
+      } else if (LSI->GLTemplateParameterList) {
         ParamsAtDepth(LSI->GLTemplateParameterList->getDepth());
-        break;
       }
     }
   }

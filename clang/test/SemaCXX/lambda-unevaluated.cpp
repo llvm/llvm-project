@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
 // RUN: %clang_cc1 -std=c++23 %s -verify
+// RUN: %clang_cc1 -std=c++26 %s -verify
 
 template <auto> struct Nothing {};
 Nothing<[]() { return 0; }()> nothing;
@@ -283,10 +284,21 @@ static_assert(__is_same_as(int, helper<int>));
 } // namespace GH138018
 
 namespace GH172814 {
+auto f() {
+  int x = 0;
+  return [](auto w = [&] { x += w(); }); // expected-error {{lambda expression in default argument cannot capture any entity}} \
+                                         // expected-error {{expected body of lambda expression}}
+}
+
 auto t() {
   int x = 0;
   return [](auto w = [&] { return x; }) { }; // expected-error {{lambda expression in default argument cannot capture any entity}}
 };
+
+auto g() {
+  int x = 0;
+  return []<class T>(T w = [&] { return x; }) {}; // expected-error {{lambda expression in default argument cannot capture any entity}}
+}
 }
 
 namespace GH176534 {
@@ -317,4 +329,39 @@ struct S {
   // expected-note@+1 {{'x' declared here}}
   void c(int x, int = sizeof([=] { return x; }));
 };
+}
+
+namespace GH48768 {
+
+auto a(auto x = 1, auto = []<auto = x> {}());               // expected-error {{default argument references parameter 'x'}}
+void b(auto x, auto = []<auto = x> {});                     // expected-error {{default argument references parameter 'x'}}
+auto c = [](auto x, int = []<auto = x> { return 0; }()) {}; // expected-error {{default argument references parameter 'x'}}
+
+constexpr int d(auto x, int n = []<auto N = sizeof(x)> { return N; }()) {
+  return n;
+}
+
+constexpr int e(auto x, int n = []<class T = decltype(x)> { return sizeof(T); }()) {
+  return n;
+}
+
+constexpr auto f = [](auto x, int n = []<auto N = sizeof(x)> { return N; }()) {
+  return n;
+};
+
+constexpr auto g = [](auto x, int n = []<class T = decltype(x)> { return sizeof(T); }()) {
+  return n;
+};
+
+constexpr auto h = [](auto x) {
+  return [](auto y, int n = []<auto N = sizeof(y)> { return N; }()) {
+    return n;
+  };
+};
+
+static_assert(d(0) == sizeof(int));
+static_assert(e(0) == sizeof(int));
+static_assert(f(0) == sizeof(int));
+static_assert(g(0) == sizeof(int));
+static_assert(h(0)('a') == 1);
 }
