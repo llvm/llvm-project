@@ -21,7 +21,10 @@
 // a bitwidth above a threshold into a call to auto-generated
 // functions.  This is useful for targets like x86_64 that cannot
 // lower divisions with more than 128 bits or targets like x86_32 that
-// cannot lower divisions with more than 64 bits.
+// cannot lower divisions with more than 64 bits. Unsigned operations
+// whose divisor is known to fit in 32 bits (16 bits when only 32-bit
+// division is legal) use a limb-by-limb long division loop instead of
+// the generic bit-serial expansion.
 //
 // Instructions with vector types are scalarized first if their scalar
 // types can be expanded. Scalable vector types are not supported.
@@ -53,6 +56,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/IntegerDivision.h"
@@ -188,6 +192,186 @@ static void expandPow2DivRem(BinaryOperator *BO) {
       RI->takeName(BO);
   BO->dropAllReferences();
   BO->eraseFromParent();
+}
+
+/// Expand an unsigned division or remainder of a wide integer by a divisor
+/// that is known to fit in half of the widest division the target can lower,
+/// using schoolbook long division over base 2^LimbBits digits ("limbs").
+///
+/// The generic expansion in expandDivision is a bit-serial shift-subtract loop
+/// that runs O(BitWidth) iterations, each of which shifts and compares the
+/// full BitWidth-wide operands, so it costs O(BitWidth^2) word operations.
+/// When the divisor fits in a single limb, single-limb long division (the
+/// algorithm behind e.g. GMP's mpn_divrem_1) needs only O(BitWidth / LimbBits)
+/// iterations, each working on one (2 * LimbBits)-wide value:
+///
+///   rem = 0
+///   for (i = NumLimbs - 1; i >= 0; --i) {
+///     acc = (rem << LimbBits) | limb[i]
+///     q[i] = acc / divisor
+///     rem = acc - q[i] * divisor
+///   }
+///
+/// Since rem < divisor < 2^LimbBits, acc < divisor * 2^LimbBits <
+/// 2^(2 * LimbBits) and every quotient limb fits in LimbBits bits, so the loop
+/// body only needs (2 * LimbBits)-wide arithmetic.
+///
+/// The dividend is zero-extended to a multiple of LimbBits, spilled to a stack
+/// slot and read back one limb per iteration; for udiv, the quotient limbs are
+/// written to a second stack slot and reloaded as a whole. This keeps the
+/// expansion a constant trip count loop over narrow values instead of a
+/// sequence of shifts of the wide value.
+///
+/// Returns false without changing anything if the divisor is not known to be
+/// small enough or the target cannot lower the narrow division.
+static bool expandUDivURemBySmallDivisor(BinaryOperator *BO,
+                                         unsigned MaxLegalDivRemBitWidth,
+                                         AssumptionCache *AC) {
+  unsigned Opcode = BO->getOpcode();
+  assert((Opcode == Instruction::UDiv || Opcode == Instruction::URem) &&
+         "Expected unsigned division or remainder");
+  bool IsDiv = Opcode == Instruction::UDiv;
+
+  // The loop body divides a (2 * LimbBits)-wide value, which must be a width
+  // the target lowers without this pass. Prefer i64 steps with 32-bit limbs
+  // and fall back to i32 steps with 16-bit limbs.
+  if (MaxLegalDivRemBitWidth < 32)
+    return false;
+  unsigned StepBits = MaxLegalDivRemBitWidth >= 64 ? 64 : 32;
+  unsigned LimbBits = StepBits / 2;
+
+  auto *Ty = cast<IntegerType>(BO->getType());
+  unsigned BitWidth = Ty->getBitWidth();
+  if (BitWidth <= StepBits)
+    return false;
+
+  const DataLayout &DL = BO->getDataLayout();
+  Value *Divisor = BO->getOperand(1);
+  KnownBits Known = computeKnownBits(Divisor, DL, AC, BO);
+  // Division by zero is undefined behavior; leave a divisor that is known to
+  // be zero to the generic expansion rather than emitting a narrow division
+  // by zero.
+  if (Known.isZero() || Known.countMaxActiveBits() > LimbBits)
+    return false;
+
+  LLVMContext &Ctx = BO->getContext();
+  unsigned NumLimbs = divideCeil(BitWidth, LimbBits);
+  IntegerType *IdxTy = DL.getIndexType(Ctx, DL.getAllocaAddrSpace());
+  if (!isUIntN(IdxTy->getBitWidth(), NumLimbs))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *BO << '\n');
+
+  Function *F = BO->getFunction();
+  unsigned PaddedBits = NumLimbs * LimbBits;
+  IntegerType *PaddedTy = IntegerType::get(Ctx, PaddedBits);
+  IntegerType *LimbTy = IntegerType::get(Ctx, LimbBits);
+  IntegerType *StepTy = IntegerType::get(Ctx, StepBits);
+  Align LimbAlign(LimbBits / 8);
+  Align SlotAlign = std::max(DL.getPrefTypeAlign(PaddedTy), LimbAlign);
+
+  // Stack slots for the dividend limbs and, for udiv, the quotient limbs.
+  IRBuilder<> EntryBuilder(&F->getEntryBlock(),
+                           F->getEntryBlock().getFirstNonPHIOrDbgOrAlloca());
+  AllocaInst *DividendSlot = EntryBuilder.CreateAlloca(
+      PaddedTy, DL.getAllocaAddrSpace(), nullptr, "dividend.slot");
+  DividendSlot->setAlignment(SlotAlign);
+  AllocaInst *QuotientSlot = nullptr;
+  if (IsDiv) {
+    QuotientSlot = EntryBuilder.CreateAlloca(PaddedTy, DL.getAllocaAddrSpace(),
+                                             nullptr, "quotient.slot");
+    QuotientSlot->setAlignment(SlotAlign);
+  }
+
+  IRBuilder<> Builder(BO);
+  Value *Dividend = BO->getOperand(0);
+  if (PaddedBits != BitWidth)
+    Dividend = Builder.CreateZExt(Dividend, PaddedTy);
+  Builder.CreateAlignedStore(Dividend, DividendSlot, SlotAlign);
+  // The divisor fits in a limb, so this truncation is lossless.
+  Value *StepDivisor = Builder.CreateTrunc(Divisor, StepTy, "divisor.step");
+
+  // Our CFG is going to look like:
+  // ; preheader:
+  // ;   store %dividend, %dividend.slot
+  // ;   br label %udivrem-limb-loop
+  // ; udivrem-limb-loop:
+  // ;   %limbs.remaining = phi [ NumLimbs, %preheader ], [ %limb.idx, %loop ]
+  // ;   %rem = phi [ 0, %preheader ], [ %rem.next, %loop ]
+  // ;   %limb.idx = sub %limbs.remaining, 1
+  // ;   %limb = load %dividend.slot[%limb.idx]
+  // ;   %acc = or (shl %rem, LimbBits), (zext %limb)
+  // ;   %q.limb = udiv %acc, %divisor
+  // ;   %rem.next = sub %acc, (mul %q.limb, %divisor)
+  // ;   store (trunc %q.limb), %quotient.slot[%limb.idx]   ; udiv only
+  // ;   %done = icmp eq %limb.idx, 0
+  // ;   br i1 %done, label %udivrem-limb-exit, label %udivrem-limb-loop
+  // ; udivrem-limb-exit:
+  // ;   %result = load %quotient.slot                     ; udiv
+  // ;   %result = zext %rem.next                           ; urem
+  BasicBlock *Preheader = BO->getParent();
+  BasicBlock *Exit =
+      Preheader->splitBasicBlock(BO->getIterator(), "udivrem-limb-exit");
+  BasicBlock *Loop = BasicBlock::Create(Ctx, "udivrem-limb-loop", F, Exit);
+
+  // Replace the unconditional branch created by the split.
+  Preheader->getTerminator()->eraseFromParent();
+  Builder.SetInsertPoint(Preheader);
+  Builder.CreateBr(Loop);
+
+  Builder.SetInsertPoint(Loop);
+  PHINode *LimbsRemaining = Builder.CreatePHI(IdxTy, 2, "limbs.remaining");
+  PHINode *Rem = Builder.CreatePHI(StepTy, 2, "rem");
+  Value *LimbIdx =
+      Builder.CreateSub(LimbsRemaining, ConstantInt::get(IdxTy, 1), "limb.idx",
+                        /*HasNUW=*/true, /*HasNSW=*/true);
+  // Limb i (least significant first) lives at slot index i on little-endian
+  // targets and at slot index NumLimbs - 1 - i on big-endian targets.
+  Value *SlotIdx = LimbIdx;
+  if (DL.isBigEndian())
+    SlotIdx = Builder.CreateSub(ConstantInt::get(IdxTy, NumLimbs - 1), LimbIdx,
+                                "slot.idx", /*HasNUW=*/true, /*HasNSW=*/true);
+  Value *LimbPtr = Builder.CreateInBoundsGEP(LimbTy, DividendSlot, SlotIdx);
+  Value *Limb = Builder.CreateAlignedLoad(LimbTy, LimbPtr, LimbAlign, "limb");
+  Value *Acc = Builder.CreateOr(Builder.CreateShl(Rem, LimbBits),
+                                Builder.CreateZExt(Limb, StepTy), "acc");
+  Value *QuotientLimb = Builder.CreateUDiv(Acc, StepDivisor, "q.limb");
+  Value *RemNext = Builder.CreateSub(
+      Acc, Builder.CreateMul(QuotientLimb, StepDivisor), "rem.next");
+  if (IsDiv) {
+    Value *QuotientPtr =
+        Builder.CreateInBoundsGEP(LimbTy, QuotientSlot, SlotIdx);
+    Builder.CreateAlignedStore(Builder.CreateTrunc(QuotientLimb, LimbTy),
+                               QuotientPtr, LimbAlign);
+  }
+  Value *Done =
+      Builder.CreateICmpEQ(LimbIdx, ConstantInt::get(IdxTy, 0), "done");
+  // The loop always runs NumLimbs times, so leaving it is the unlikely edge.
+  Value *LoopBr = Builder.CreateCondBr(Done, Exit, Loop);
+  applyProfMetadataIfEnabled(LoopBr, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
+  LimbsRemaining->addIncoming(ConstantInt::get(IdxTy, NumLimbs), Preheader);
+  LimbsRemaining->addIncoming(LimbIdx, Loop);
+  Rem->addIncoming(ConstantInt::get(StepTy, 0), Preheader);
+  Rem->addIncoming(RemNext, Loop);
+
+  Builder.SetInsertPoint(BO);
+  Value *Result;
+  if (IsDiv) {
+    Result = Builder.CreateAlignedLoad(PaddedTy, QuotientSlot, SlotAlign);
+    if (PaddedBits != BitWidth)
+      Result = Builder.CreateTrunc(Result, Ty);
+  } else {
+    Result = Builder.CreateZExt(RemNext, Ty);
+  }
+
+  BO->replaceAllUsesWith(Result);
+  Result->takeName(BO);
+  BO->eraseFromParent();
+  return true;
 }
 
 /// This class implements a precise expansion of the frem instruction.
@@ -1388,16 +1572,18 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::URem:
     case Instruction::SRem: {
       auto *BO = cast<BinaryOperator>(I);
+      unsigned Opc = BO->getOpcode();
       // TODO: isConstantPowerOfTwo does not handle vector constants, so
       // vector div/rem by a power-of-2 splat goes through the generic path.
-      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode()))) {
+      if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(Opc))) {
         expandPow2DivRem(BO);
+      } else if ((Opc == Instruction::UDiv || Opc == Instruction::URem) &&
+                 expandUDivURemBySmallDivisor(BO, MaxLegalDivRemBitWidth, AC)) {
+        // Expanded into a limb-by-limb long division loop.
+      } else if (Opc == Instruction::UDiv || Opc == Instruction::SDiv) {
+        expandDivision(BO);
       } else {
-        unsigned Opc = BO->getOpcode();
-        if (Opc == Instruction::UDiv || Opc == Instruction::SDiv)
-          expandDivision(BO);
-        else
-          expandRemainder(BO);
+        expandRemainder(BO);
       }
       break;
     }
