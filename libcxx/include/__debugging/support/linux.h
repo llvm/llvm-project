@@ -27,7 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
   // https://docs.kernel.org/filesystems/proc.html
   alignas(8) array<char, 256 + 1> __buffer{};
-  constexpr std::string_view __tracer_key("TracerPid:\t"); // Linux >= 2.6.0
+  constexpr std::string_view __tracer_key("\nTracerPid:\t"); // Linux >= 2.6.0
 
   int __buf_read      = ::open("/proc/self/status", O_RDONLY | O_CLOEXEC);
   const auto __result = ::read(__buf_read, __buffer.data(), __buffer.size() - 1);
@@ -45,8 +45,8 @@ _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
     return false;
   }
 
-  __view.remove_prefix(__tracerpid);         // Remove everything upto TracerPid:\t
-  __view.remove_prefix(__tracer_key.size()); // remove TracerPid:\t
+  __view.remove_prefix(__tracerpid);         // Remove everything upto \nTracerPid:\t
+  __view.remove_prefix(__tracer_key.size()); // remove \nTracerPid:\t
 
   const auto __pidn = __view.find('\n');
   if (__pidn == std::string_view::npos) {
