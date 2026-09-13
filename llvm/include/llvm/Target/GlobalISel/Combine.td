@@ -174,6 +174,12 @@ def GIReplaceReg : GIBuiltinInst;
 //
 // TODO: Allow using this directly, like (apply GIEraseRoot)
 def GIEraseRoot : GIBuiltinInst;
+/// Check that the first result of an instruction has only one use.
+/// Can be used in two ways:
+///   1. As a wrapper: (GIHasOneUse (G_MUL $x, $y, $z))
+///   2. As standalone: (G_MUL $mul, $x, $y), (GIHasOneUse $mul)
+class GIHasOneUse_Class;
+def GIHasOneUse : GIBuiltinInst, GIHasOneUse_Class;
 
 //===----------------------------------------------------------------------===//
 // Pattern MIFlags
@@ -403,9 +409,8 @@ def sub_to_add : GICombineRule<
 def sub_of_mul_const : GICombineRule<
   (defs root:$d),
   (match (G_CONSTANT $c, $imm),
-         (G_MUL $mul, $x, $c),
-         (G_SUB $d, $a, $mul),
-         [{ return MRI.hasOneNonDBGUse(${mul}.getReg()); }]),
+         (GIHasOneUse (G_MUL $mul, $x, $c)),
+         (G_SUB $d, $a, $mul)),
   (apply (G_SUB $negc, 0, $c),
          (G_MUL $newmul, $x, $negc),
          (G_ADD $d, $a, $newmul))>;

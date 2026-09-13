@@ -1051,11 +1051,13 @@ bool CombineRuleBuilder::addMatchPattern(std::unique_ptr<Pattern> Pat) {
     return false;
   }
 
-  // For now, none of the builtins can appear in 'match'.
+  // Most builtins cannot appear in 'match', except GIHasOneUse.
   if (const auto *BP = dyn_cast<BuiltinPattern>(Pat.get())) {
-    PrintError("'" + BP->getInstName() +
-               "' cannot be used in a 'match' pattern");
-    return false;
+    if (BP->getBuiltinKind() != BI_HasOneUse) {
+      PrintError("'" + BP->getInstName() +
+                 "' cannot be used in a 'match' pattern");
+      return false;
+    }
   }
 
   MatchPats[Name] = std::move(Pat);
@@ -1371,6 +1373,9 @@ bool CombineRuleBuilder::checkSemantics() {
       }
       break;
     }
+    case BI_HasOneUse:
+      // GIHasOneUse is a match-only predicate, not valid in apply patterns.
+      break;
     }
   }
 
@@ -1620,8 +1625,12 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 
     if (!emitPatFragMatchPattern(CE, Alts, M, &IM, *PFP, SeenPats))
       return false;
-  } else if (isa<BuiltinPattern>(&IP)) {
-    llvm_unreachable("No match builtins known!");
+  } else if (const auto *BP = dyn_cast<BuiltinPattern>(&IP)) {
+    if (BP->getBuiltinKind() == BI_HasOneUse) {
+      IM.addPredicate<OneUsePredicateMatcher>();
+    } else {
+      llvm_unreachable("No match builtins known!");
+    }
   } else {
     llvm_unreachable("Unknown kind of InstructionPattern!");
   }
@@ -1643,9 +1652,23 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
         return false;
       continue;
     }
-    case Pattern::K_Builtin:
+    case Pattern::K_Builtin: {
+      const auto *BP = cast<BuiltinPattern>(Pat.get());
+      if (BP->getBuiltinKind() == BI_HasOneUse) {
+        assert(BP->getNumInstOperands() == 1 && "GIHasOneUse takes 1 operand");
+        StringRef OpName = BP->getOperand(0).getOperandName();
+        const auto *DefPat = MatchOpTable.getDef(OpName);
+        if (!DefPat) {
+          PrintError("GIHasOneUse: operand '" + OpName + "' not defined");
+          return false;
+        }
+        auto &InsnMatcher = M.getInstructionMatcher(DefPat->getName());
+        InsnMatcher.addPredicate<OneUsePredicateMatcher>();
+        continue;
+      }
       PrintError("No known match builtins");
       return false;
+    }
     case Pattern::K_CodeGenInstruction:
       cast<InstructionPattern>(Pat.get())->reportUnreachable(RuleDef.getLoc());
       return false;
@@ -1701,9 +1724,6 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
           return false;
         continue;
       }
-      case Pattern::K_Builtin:
-        PrintError("No known match builtins");
-        return false;
       case Pattern::K_CodeGenInstruction:
         cast<InstructionPattern>(Pat.get())->reportUnreachable(
             RuleDef.getLoc());
@@ -2182,6 +2202,9 @@ bool CombineRuleBuilder::emitBuiltinApplyPattern(
       M.addAction<EraseInstAction>(/*InsnID*/ 0);
     return true;
   }
+  case BI_HasOneUse:
+    llvm_unreachable("GIHasOneUse cannot be used in apply patterns!");
+
   case BI_ReplaceReg: {
     StringRef Old = P.getOperand(0).getOperandName();
     StringRef New = P.getOperand(1).getOperandName();
@@ -2233,6 +2256,9 @@ bool CombineRuleBuilder::emitCodeGenInstructionMatchPattern(
 
   IM.addPredicate<InstructionOpcodeMatcher>(&P.getInst());
   declareInstExpansion(CE, IM, P.getName());
+
+  if (P.hasOneUse())
+    IM.addPredicate<OneUsePredicateMatcher>();
 
   // If this is an intrinsic, check the intrinsic ID.
   if (P.isIntrinsic()) {
