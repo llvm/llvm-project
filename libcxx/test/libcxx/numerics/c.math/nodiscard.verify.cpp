@@ -16,7 +16,7 @@
 #include <cmath>
 #include "test_macros.h"
 
-#ifdef _WIN32
+#if defined(_WIN32) && !(TEST_STD_VER >= 17 && _LIBCPP_AVAILABILITY_HAS_MATHEMATICAL_SPECIAL_FUNCTIONS)
 // expected-no-diagnostics
 #endif
 
@@ -174,4 +174,14 @@ void test() {
   std::trunc(0);                 // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::trunc(0U);                // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 #endif // #ifndef _WIN32
+
+#if TEST_STD_VER >= 17 && _LIBCPP_AVAILABILITY_HAS_MATHEMATICAL_SPECIAL_FUNCTIONS
+  // assoc_laguerre
+  std::assoc_laguerre(0, 0, 0.0f);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::assoc_laguerre(0, 0, 0.0);   // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::assoc_laguerre(0, 0, 0.0l);  // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::assoc_laguerre(0, 0, 0);     // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::assoc_laguerref(0, 0, 0.0f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::assoc_laguerrel(0, 0, 0.0l); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+#endif // TEST_STD_VER >= 17 && _LIBCPP_AVAILABILITY_HAS_MATHEMATICAL_SPECIAL_FUNCTIONS
 }
