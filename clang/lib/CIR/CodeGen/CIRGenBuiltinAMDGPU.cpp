@@ -974,12 +974,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
     return mlir::Value{};
   }
   case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtn:
-  case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_s_sendmsg_rtnl:
+    return emitBuiltinWithOneOverloadedType<1>(expr, "amdgcn.s.sendmsg.rtn",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_permlane16_swap:
   case AMDGPU::BI__builtin_amdgcn_permlane32_swap: {
     cgm.errorNYI(expr->getSourceRange(),
