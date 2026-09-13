@@ -2754,6 +2754,18 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     }
     return computeNumSignBits(SrcReg, DemandedSrcElts, Depth + 1);
   }
+  case TargetOpcode::G_INSERT_SUBVECTOR: {
+    Register Src = MI.getOperand(1).getReg();
+    Register Sub = MI.getOperand(2).getReg();
+    FirstAnswer = SignBitsOps::insertSubvector(
+        MRI.getType(Src).getElementCount(), MRI.getType(Sub).getElementCount(),
+        MI.getOperand(3).getImm(), DemandedElts,
+        [&](unsigned OpIdx, const APInt &Demanded) {
+          return computeNumSignBits(OpIdx == 0 ? Src : Sub, Demanded,
+                                    Depth + 1);
+        });
+    break;
+  }
   case TargetOpcode::G_SHUFFLE_VECTOR: {
     // Collect the minimum number of sign bits that are shared by every vector
     // element referenced by the shuffle.

@@ -15,10 +15,13 @@
 #define LLVM_SUPPORT_KNOWNBITS_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
+
+class ElementCount;
 
 // Struct for tracking the known zeros and ones of a value.
 struct KnownBits {
@@ -595,6 +598,15 @@ namespace SignBitsOps {
 /// Compute the number of sign bits after rotating a value.
 LLVM_ABI unsigned rot(unsigned SrcSignBits, unsigned BitWidth,
                       std::optional<APInt> RotAmt, bool IsRotateRight);
+
+/// Compute a lower bound on the number of sign bits in the demanded
+/// elements of an INSERT_SUBVECTOR. ComputeNumSignBits(OpIdx, Demanded)
+/// returns the number of sign bits of operand OpIdx (0 for the source, 1 for
+/// the subvector) in the demanded elements.
+LLVM_ABI unsigned insertSubvector(
+    ElementCount SrcEC, ElementCount SubEC, uint64_t Idx,
+    const APInt &DemandedElts,
+    function_ref<unsigned(unsigned, const APInt &)> ComputeNumSignBits);
 
 } // end namespace SignBitsOps
 

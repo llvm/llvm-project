@@ -5457,29 +5457,12 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::INSERT_SUBVECTOR: {
     SDValue Src = Op.getOperand(0);
     SDValue Sub = Op.getOperand(1);
-    if (VT.isScalableVector()) {
-      Tmp = ComputeNumSignBits(Sub, Depth + 1);
-      Tmp = std::min(Tmp, ComputeNumSignBits(Src, Depth + 1));
-      return Tmp;
-    }
-    // Demand any elements from the subvector and the remainder from the src its
-    // inserted into.
-    uint64_t Idx = Op.getConstantOperandVal(2);
-    unsigned NumSubElts = Sub.getValueType().getVectorNumElements();
-    APInt DemandedSubElts = DemandedElts.extractBits(NumSubElts, Idx);
-    APInt DemandedSrcElts = DemandedElts;
-    DemandedSrcElts.clearBits(Idx, Idx + NumSubElts);
-
-    Tmp = std::numeric_limits<unsigned>::max();
-    if (!!DemandedSubElts) {
-      Tmp = ComputeNumSignBits(Sub, DemandedSubElts, Depth + 1);
-      if (Tmp == 1)
-        return 1; // early-out
-    }
-    if (!!DemandedSrcElts) {
-      Tmp2 = ComputeNumSignBits(Src, DemandedSrcElts, Depth + 1);
-      Tmp = std::min(Tmp, Tmp2);
-    }
+    Tmp = SignBitsOps::insertSubvector(
+        Src.getValueType().getVectorElementCount(),
+        Sub.getValueType().getVectorElementCount(), Op.getConstantOperandVal(2),
+        DemandedElts, [&](unsigned OpIdx, const APInt &Demanded) {
+          return ComputeNumSignBits(Op.getOperand(OpIdx), Demanded, Depth + 1);
+        });
     assert(Tmp <= VTBits && "Failed to determine minimum sign bits");
     return Tmp;
   }
