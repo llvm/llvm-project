@@ -7346,6 +7346,62 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
+/// convert.to.arbitrary.fp(convert.from.arbitrary.fp(X, Fmt), Fmt, RM, Sat)
+/// --> X. RM is unused: every value the round trip reaches is exact in Fmt.
+static Value *simplifyArbitraryFPRoundTrip(Type *ReturnType,
+                                           ArrayRef<Value *> Args,
+                                           const SimplifyQuery &Q,
+                                           Function *CxtF) {
+  if (Args.size() != 4)
+    return nullptr;
+
+  auto *From = dyn_cast<IntrinsicInst>(Args[0]);
+  if (!From || From->getIntrinsicID() != Intrinsic::convert_from_arbitrary_fp)
+    return nullptr;
+
+  Value *X = From->getArgOperand(0);
+  if (X->getType() != ReturnType)
+    return nullptr;
+
+  // MDString is uniqued, so equal formats are the same operand.
+  if (Args[1] != From->getArgOperand(1))
+    return nullptr;
+
+  auto *Format =
+      dyn_cast<MDString>(cast<MetadataAsValue>(Args[1])->getMetadata());
+  if (!Format)
+    return nullptr;
+
+  const fltSemantics *Src =
+      APFloat::getArbitraryFPSemantics(Format->getString());
+  if (!Src)
+    return nullptr;
+
+  const fltSemantics &Dst = From->getType()->getScalarType()->getFltSemantics();
+  if (!APFloat::isLosslesslyConvertibleTo(*Src, Dst, /*IgnoreNaNs=*/true))
+    return nullptr;
+
+  // Inf is then the only out-of-range input, and saturation maps it to finite.
+  if (APFloat::semanticsHasInf(*Src) && !match(Args[3], m_Zero()))
+    return nullptr;
+
+  if (!APFloat::isRepresentableAsNormalIn(*Src, Dst)) {
+    // From may be detached, but its function, not CxtF, decides the mode.
+    const Function *F = From->getParent() ? From->getFunction() : CxtF;
+    if (!F)
+      return nullptr;
+    DenormalMode Mode = F->getDenormalMode(Dst);
+    if (Mode.inputsMayBeZero() || Mode.outputsMayBeZero())
+      return nullptr;
+  }
+
+  // A NaN result has a non-deterministic sign and payload.
+  if (APFloat::semanticsHasNaN(*Src) && !isKnownNeverNaN(From, Q))
+    return nullptr;
+
+  return X;
+}
+
 /// interleaveN(extractvalue(deinterleaveN(x), 0), ...,
 ///             extractvalue(deinterleaveN(x), N-1)) --> x
 static Value *simplifyIdentityInterleave(Intrinsic::ID IID,
@@ -7419,6 +7475,8 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
+  case Intrinsic::convert_to_arbitrary_fp:
+    return simplifyArbitraryFPRoundTrip(ReturnType, Args, Q, CxtF);
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
     Value *MaskArg = Args[1];
