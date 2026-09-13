@@ -457,6 +457,24 @@ llvm.func @minnum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vect
   llvm.return
 }
 
+// CHECK-LABEL: @minimumnum_test
+llvm.func @minimumnum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.minimumnum.f32
+  "llvm.intr.minimumnum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.minimumnum.v8f32
+  "llvm.intr.minimumnum"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
+// CHECK-LABEL: @maximumnum_test
+llvm.func @maximumnum_test(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: vector<8xf32>) {
+  // CHECK: call float @llvm.maximumnum.f32
+  "llvm.intr.maximumnum"(%arg0, %arg1) : (f32, f32) -> f32
+  // CHECK: call <8 x float> @llvm.maximumnum.v8f32
+  "llvm.intr.maximumnum"(%arg2, %arg3) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+  llvm.return
+}
+
 // CHECK-LABEL: @smax_test
 llvm.func @smax_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
   // CHECK: call i32 @llvm.smax.i32
@@ -534,6 +552,10 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   llvm.intr.vector.reduce.fmaximum(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call float @llvm.vector.reduce.fminimum.v8f32
   llvm.intr.vector.reduce.fminimum(%arg1) : (vector<8xf32>) -> f32
+  // CHECK: call float @llvm.vector.reduce.fminimumnum.v8f32
+  llvm.intr.vector.reduce.fminimumnum(%arg1) : (vector<8xf32>) -> f32
+  // CHECK: call float @llvm.vector.reduce.fmaximumnum.v8f32
+  llvm.intr.vector.reduce.fmaximumnum(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.mul.v8i32
   "llvm.intr.vector.reduce.mul"(%arg2) : (vector<8xi32>) -> i32
   // CHECK: call i32 @llvm.vector.reduce.or.v8i32

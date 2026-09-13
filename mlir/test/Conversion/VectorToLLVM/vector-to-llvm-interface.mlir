@@ -2053,6 +2053,30 @@ func.func @scalable_insert(%sub: vector<4xf32>, %dsv: vector<[4]xf32>) -> vector
 
 // -----
 
+func.func @reduce_fminimumnum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <minimumnumf>, %arg0, %arg1 : vector<16xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fminimumnum_f32(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fminimumnum(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.minimumnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
+func.func @reduce_fmaximumnum_f32(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
+  %0 = vector.reduction <maximumnumf>, %arg0, %arg1 : vector<16xf32> into f32
+  return %0 : f32
+}
+// CHECK-LABEL: @reduce_fmaximumnum_f32(
+// CHECK-SAME: %[[A:.*]]: vector<16xf32>, %[[B:.*]]: f32)
+//      CHECK: %[[V:.*]] = llvm.intr.vector.reduce.fmaximumnum(%[[A]]) : (vector<16xf32>) -> f32
+//      CHECK: %[[R:.*]] = llvm.intr.maximumnum(%[[V]], %[[B]]) : (f32, f32) -> f32
+//      CHECK: return %[[R]] : f32
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // vector.scalable_extract
 //===----------------------------------------------------------------------===//
