@@ -91,7 +91,8 @@ class rcu_domain_impl {
 
   // stage 0 queue is thread local. In case a thread dies with non-empty list in stage 0,
   // those nodes will be move into the orphaned_stage0_ on destruction
-  rcu_atomic_list_view retired_queue_orphaned_stage0_;
+  rcu_singly_list_view retired_queue_orphaned_stage0_;
+  std::mutex retired_queue_orphaned_stage0_mutex_;
 
   using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>;
 
@@ -107,7 +108,9 @@ class rcu_domain_impl {
     per_thread_retired_queue_stage0::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
       working_queue.splice_back(stage0_list);
     });
+    std::unique_lock lk(retired_queue_orphaned_stage0_mutex_);
     working_queue.splice_back(retired_queue_orphaned_stage0_);
+    lk.unlock();
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -138,7 +141,8 @@ class rcu_domain_impl {
   }
 
   void move_to_orphan_list_on_destruction(rcu_atomic_list_view& stage0_to_be_destroyed) noexcept {
-    retired_queue_orphaned_stage0_.splice_front(stage0_to_be_destroyed);
+    std::lock_guard g(retired_queue_orphaned_stage0_mutex_);
+    retired_queue_orphaned_stage0_.splice_back(stage0_to_be_destroyed);
   }
 
 public:
