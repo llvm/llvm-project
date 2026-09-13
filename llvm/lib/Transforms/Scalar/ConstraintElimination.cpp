@@ -1188,14 +1188,15 @@ void State::addInfoForInductions(BasicBlock &BB) {
     WorkList.push_back(FactOrCheck::getConditionFact(
         DTN, ContinuePred, PN, B, ConditionTy(ContinuePred, StartValue, B)));
 
-    // For a non-negative backedge value, 0 s<= PN s< B implies B is
-    // non-negative as well, so the same bound holds in the unsigned system.
+    // A signed bound can be translated to the unsigned system if PN is signed
+    // non-decreasing (StartValue s<= PN s< B) and StartValue u< B holds.
+    // Then StartValue, PN and B must all have the same sign.
     if (ICmpInst::isSigned(ContinuePred)) {
       assert((ContinuePred == CmpInst::ICMP_SLT ||
               ContinuePred == CmpInst::ICMP_SLE) &&
              "Expected a signed less-than continuation predicate");
       MonotonicInfo Info = getMonotonicityInfo(*PN, Backedge);
-      if ((Info.Signed && !Info.Decreasing)) {
+      if (Info.Signed && !Info.Decreasing) {
         CmpInst::Predicate UPred = ICmpInst::getUnsignedPredicate(ContinuePred);
         WorkList.push_back(FactOrCheck::getConditionFact(
             DTN, UPred, PN, B, ConditionTy(UPred, StartValue, B)));
