@@ -42,7 +42,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF9:%[0-9]+]]:vreg_128 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_NOP 0, implicit-def %12
   ; CHECK-NEXT:   S_NOP 0, implicit-def %13
-  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:vreg_1024_align2 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF10:%[0-9]+]]:areg_1024_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   SCHED_BARRIER 0
   ; CHECK-NEXT:   [[DEF11:%[0-9]+]]:vreg_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF12:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
@@ -58,12 +58,14 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub0, [[DEF12]], implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[V_ADD_U32_e32_1]]
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[V_ADD_U32_e32_1:%[0-9]+]].sub0:vreg_128_align2 = V_ADD_U32_e32 [[DEF13]].sub1, [[DEF12]], implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:areg_128_align2 = COPY [[V_ADD_U32_e32_1]]
   ; CHECK-NEXT:   S_BRANCH %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
@@ -78,7 +80,7 @@ body:             |
   ; CHECK-NEXT:   [[DEF17:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF18:%[0-9]+]]:av_128_align2 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF19:%[0-9]+]]:vreg_64_align2 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[DEF10:%[0-9]+]].sub0_sub1_sub2_sub3:vreg_1024_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64 [[DEF17]], [[DEF18]], [[V_ADD_U32_e32_1]], 4, 4, [[DEF19]].sub0, [[DEF12]], 0, 0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   [[DEF10:%[0-9]+]].sub0_sub1_sub2_sub3:areg_1024_align2 = contract nofpexcept V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64 [[DEF17]], [[DEF18]], [[COPY]], 4, 4, [[DEF19]].sub0, [[DEF12]], 0, 0, implicit $mode, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
   ; CHECK-NEXT:   successors: %bb.7(0x40000000), %bb.6(0x40000000)

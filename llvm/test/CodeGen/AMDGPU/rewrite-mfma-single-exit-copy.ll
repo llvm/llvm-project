@@ -250,14 +250,6 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v194, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v193, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v192, 0
-; CHECK-NEXT:    v_mov_b32_e32 v243, 0
-; CHECK-NEXT:    v_mov_b32_e32 v242, 0
-; CHECK-NEXT:    v_mov_b32_e32 v241, 0
-; CHECK-NEXT:    v_mov_b32_e32 v240, 0
-; CHECK-NEXT:    v_mov_b32_e32 v247, 0
-; CHECK-NEXT:    v_mov_b32_e32 v246, 0
-; CHECK-NEXT:    v_mov_b32_e32 v245, 0
-; CHECK-NEXT:    v_mov_b32_e32 v244, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v251, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v250, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v249, 0
@@ -266,6 +258,14 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    v_mov_b32_e32 v254, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v253, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v252, 0
+; CHECK-NEXT:    v_mov_b32_e32 v243, 0
+; CHECK-NEXT:    v_mov_b32_e32 v242, 0
+; CHECK-NEXT:    v_mov_b32_e32 v241, 0
+; CHECK-NEXT:    v_mov_b32_e32 v240, 0
+; CHECK-NEXT:    v_mov_b32_e32 v247, 0
+; CHECK-NEXT:    v_mov_b32_e32 v246, 0
+; CHECK-NEXT:    v_mov_b32_e32 v245, 0
+; CHECK-NEXT:    v_mov_b32_e32 v244, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v239, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v238, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v237, 0
@@ -304,18 +304,18 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
 ; CHECK-NEXT:    s_add_i32 s1, s1, 1
-; CHECK-NEXT:    v_pk_add_f32 v[242:243], v[242:243], v[242:243]
-; CHECK-NEXT:    v_pk_add_f32 v[240:241], v[240:241], v[240:241]
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
-; CHECK-NEXT:    v_add_f32_e64 v246, v246, v246
-; CHECK-NEXT:    v_add_f32_e64 v247, v247, v247
-; CHECK-NEXT:    v_pk_add_f32 v[244:245], v[244:245], v[244:245]
 ; CHECK-NEXT:    v_pk_add_f32 v[250:251], v[250:251], v[250:251]
+; CHECK-NEXT:    v_pk_add_f32 v[248:249], v[248:249], v[248:249]
 ; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
-; CHECK-NEXT:    v_add_f32_e64 v248, v248, v248
-; CHECK-NEXT:    v_add_f32_e64 v249, v249, v249
-; CHECK-NEXT:    v_pk_add_f32 v[254:255], v[254:255], v[254:255]
+; CHECK-NEXT:    v_add_f32_e64 v254, v254, v254
+; CHECK-NEXT:    v_add_f32_e64 v255, v255, v255
 ; CHECK-NEXT:    v_pk_add_f32 v[252:253], v[252:253], v[252:253]
+; CHECK-NEXT:    v_pk_add_f32 v[242:243], v[242:243], v[242:243]
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
+; CHECK-NEXT:    v_add_f32_e64 v240, v240, v240
+; CHECK-NEXT:    v_add_f32_e64 v241, v241, v241
+; CHECK-NEXT:    v_pk_add_f32 v[246:247], v[246:247], v[246:247]
+; CHECK-NEXT:    v_pk_add_f32 v[244:245], v[244:245], v[244:245]
 ; CHECK-NEXT:    v_pk_add_f32 v[238:239], v[238:239], v[238:239]
 ; CHECK-NEXT:    v_pk_add_f32 v[236:237], v[236:237], v[236:237]
 ; CHECK-NEXT:    v_pk_add_f32 v[234:235], v[234:235], v[234:235]
@@ -441,104 +441,105 @@ define amdgpu_kernel void @single_exit_copy(
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .loc 1 10 1 is_stmt 1 ; test:10:1
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, s8
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, s9
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, s10
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, s11
+; CHECK-NEXT:    v_accvgpr_write_b32 a8, s8
+; CHECK-NEXT:    v_accvgpr_write_b32 a9, s9
+; CHECK-NEXT:    v_accvgpr_write_b32 a10, s10
+; CHECK-NEXT:    v_accvgpr_write_b32 a11, s11
+; CHECK-NEXT:    v_accvgpr_write_b32 a12, s12
+; CHECK-NEXT:    v_accvgpr_write_b32 a13, s13
+; CHECK-NEXT:    v_accvgpr_write_b32 a14, s14
+; CHECK-NEXT:    v_accvgpr_write_b32 a15, s15
 ; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x28
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, s12
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, s13
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, s14
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, s15
-; CHECK-NEXT:    v_accvgpr_write_b32 a15, v3
-; CHECK-NEXT:    v_accvgpr_write_b32 a14, v2
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[4:7], a[8:11], a[0:3]
-; CHECK-NEXT:    v_accvgpr_write_b32 a13, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a12, v0
+; CHECK-NEXT:    v_accvgpr_write_b32 a19, v3
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[8:11], a[12:15], a[0:3]
+; CHECK-NEXT:    v_accvgpr_write_b32 a18, v2
+; CHECK-NEXT:    v_accvgpr_write_b32 a17, v1
+; CHECK-NEXT:    v_accvgpr_write_b32 a16, v0
+; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[4:7], a[8:11], a[12:15], a[0:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dwordx4 v0, v[240:243], s[0:1] offset:2032
+; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:2032
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    global_store_dwordx4 v0, v[244:247], s[0:1] offset:2016
-; CHECK-NEXT:    global_store_dwordx4 v0, v[248:251], s[0:1] offset:2000
-; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_accvgpr_read_b32 v243, a3
-; CHECK-NEXT:    v_accvgpr_read_b32 v242, a2
-; CHECK-NEXT:    v_accvgpr_read_b32 v241, a1
-; CHECK-NEXT:    v_accvgpr_read_b32 v240, a0
-; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:1984
-; CHECK-NEXT:    .loc 1 20 1 ; test:20:1
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[244:247], a[4:7], a[8:11], v[240:243]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    v_mov_b32_e32 v245, 0
-; CHECK-NEXT:    global_store_dwordx4 v245, v[236:239], s[0:1] offset:1968
 ; CHECK-NEXT:    .loc 1 30 1 ; test:30:1
+; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 a[0:3], a[12:15], a[8:11], a[0:3]
+; CHECK-NEXT:    v_mov_b32_e32 v248, 0
+; CHECK-NEXT:    global_store_dwordx4 v248, v[240:243], s[0:1] offset:2000
+; CHECK-NEXT:    global_store_dwordx4 v248, v[244:247], s[0:1] offset:1984
+; CHECK-NEXT:    global_store_dwordx4 v0, v[252:255], s[0:1] offset:2016
+; CHECK-NEXT:    v_mov_b32_e32 v242, 0
+; CHECK-NEXT:    global_store_dwordx4 v242, v[236:239], s[0:1] offset:1968
 ; CHECK-NEXT:    s_nop 1
-; CHECK-NEXT:    v_mfma_f32_16x16x32_f16 v[236:239], a[8:11], a[4:7], v[240:243]
-; CHECK-NEXT:    s_nop 7
-; CHECK-NEXT:    v_add_f32_e32 v238, 1.0, v244
-; CHECK-NEXT:    v_add_f32_e32 v239, 2.0, v236
-; CHECK-NEXT:    global_store_dwordx2 v245, v[238:239], s[0:1]
-; CHECK-NEXT:    global_store_dwordx4 v245, v[232:235], s[0:1] offset:1952
-; CHECK-NEXT:    global_store_dwordx4 v245, v[228:231], s[0:1] offset:1936
-; CHECK-NEXT:    global_store_dwordx4 v245, v[224:227], s[0:1] offset:1920
-; CHECK-NEXT:    global_store_dwordx4 v245, v[220:223], s[0:1] offset:368
-; CHECK-NEXT:    global_store_dwordx4 v245, v[216:219], s[0:1] offset:352
-; CHECK-NEXT:    global_store_dwordx4 v245, v[212:215], s[0:1] offset:336
-; CHECK-NEXT:    global_store_dwordx4 v245, v[208:211], s[0:1] offset:320
-; CHECK-NEXT:    global_store_dwordx4 v245, v[204:207], s[0:1] offset:304
-; CHECK-NEXT:    global_store_dwordx4 v245, v[200:203], s[0:1] offset:288
-; CHECK-NEXT:    global_store_dwordx4 v245, v[196:199], s[0:1] offset:272
-; CHECK-NEXT:    global_store_dwordx4 v245, v[192:195], s[0:1] offset:256
-; CHECK-NEXT:    global_store_dwordx4 v245, v[188:191], s[0:1] offset:496
-; CHECK-NEXT:    global_store_dwordx4 v245, v[184:187], s[0:1] offset:480
-; CHECK-NEXT:    global_store_dwordx4 v245, v[180:183], s[0:1] offset:464
-; CHECK-NEXT:    global_store_dwordx4 v245, v[176:179], s[0:1] offset:448
-; CHECK-NEXT:    global_store_dwordx4 v245, v[172:175], s[0:1] offset:432
-; CHECK-NEXT:    global_store_dwordx4 v245, v[168:171], s[0:1] offset:416
-; CHECK-NEXT:    global_store_dwordx4 v245, v[164:167], s[0:1] offset:400
-; CHECK-NEXT:    global_store_dwordx4 v245, v[160:163], s[0:1] offset:384
-; CHECK-NEXT:    global_store_dwordx4 v245, v[156:159], s[0:1] offset:624
-; CHECK-NEXT:    global_store_dwordx4 v245, v[152:155], s[0:1] offset:608
-; CHECK-NEXT:    global_store_dwordx4 v245, v[148:151], s[0:1] offset:592
-; CHECK-NEXT:    global_store_dwordx4 v245, v[144:147], s[0:1] offset:576
-; CHECK-NEXT:    global_store_dwordx4 v245, v[140:143], s[0:1] offset:560
-; CHECK-NEXT:    global_store_dwordx4 v245, v[136:139], s[0:1] offset:544
-; CHECK-NEXT:    global_store_dwordx4 v245, v[132:135], s[0:1] offset:528
-; CHECK-NEXT:    global_store_dwordx4 v245, v[128:131], s[0:1] offset:512
-; CHECK-NEXT:    global_store_dwordx4 v245, v[124:127], s[0:1] offset:752
-; CHECK-NEXT:    global_store_dwordx4 v245, v[120:123], s[0:1] offset:736
-; CHECK-NEXT:    global_store_dwordx4 v245, v[116:119], s[0:1] offset:720
-; CHECK-NEXT:    global_store_dwordx4 v245, v[112:115], s[0:1] offset:704
-; CHECK-NEXT:    global_store_dwordx4 v245, v[108:111], s[0:1] offset:688
-; CHECK-NEXT:    global_store_dwordx4 v245, v[104:107], s[0:1] offset:672
-; CHECK-NEXT:    global_store_dwordx4 v245, v[100:103], s[0:1] offset:656
-; CHECK-NEXT:    global_store_dwordx4 v245, v[96:99], s[0:1] offset:640
-; CHECK-NEXT:    global_store_dwordx4 v245, v[92:95], s[0:1] offset:880
-; CHECK-NEXT:    global_store_dwordx4 v245, v[88:91], s[0:1] offset:864
-; CHECK-NEXT:    global_store_dwordx4 v245, v[84:87], s[0:1] offset:848
-; CHECK-NEXT:    global_store_dwordx4 v245, v[80:83], s[0:1] offset:832
-; CHECK-NEXT:    global_store_dwordx4 v245, v[76:79], s[0:1] offset:816
-; CHECK-NEXT:    global_store_dwordx4 v245, v[72:75], s[0:1] offset:800
-; CHECK-NEXT:    global_store_dwordx4 v245, v[68:71], s[0:1] offset:784
-; CHECK-NEXT:    global_store_dwordx4 v245, v[64:67], s[0:1] offset:768
-; CHECK-NEXT:    global_store_dwordx4 v245, v[60:63], s[0:1] offset:1008
-; CHECK-NEXT:    global_store_dwordx4 v245, v[56:59], s[0:1] offset:992
-; CHECK-NEXT:    global_store_dwordx4 v245, v[52:55], s[0:1] offset:976
-; CHECK-NEXT:    global_store_dwordx4 v245, v[48:51], s[0:1] offset:960
-; CHECK-NEXT:    global_store_dwordx4 v245, v[44:47], s[0:1] offset:944
-; CHECK-NEXT:    global_store_dwordx4 v245, v[40:43], s[0:1] offset:928
-; CHECK-NEXT:    global_store_dwordx4 v245, v[36:39], s[0:1] offset:912
-; CHECK-NEXT:    global_store_dwordx4 v245, v[32:35], s[0:1] offset:896
-; CHECK-NEXT:    global_store_dwordx4 v245, v[28:31], s[0:1] offset:1136
-; CHECK-NEXT:    global_store_dwordx4 v245, v[24:27], s[0:1] offset:1120
-; CHECK-NEXT:    global_store_dwordx4 v245, v[20:23], s[0:1] offset:1104
-; CHECK-NEXT:    global_store_dwordx4 v245, v[16:19], s[0:1] offset:1088
-; CHECK-NEXT:    global_store_dwordx4 v245, v[12:15], s[0:1] offset:1072
-; CHECK-NEXT:    global_store_dwordx4 v245, v[8:11], s[0:1] offset:1056
-; CHECK-NEXT:    global_store_dwordx4 v245, v[4:7], s[0:1] offset:1040
-; CHECK-NEXT:    global_store_dwordx4 v245, a[12:15], s[0:1] offset:1024
+; CHECK-NEXT:    v_accvgpr_read_b32 v238, a6
+; CHECK-NEXT:    v_accvgpr_read_b32 v237, a5
+; CHECK-NEXT:    v_accvgpr_read_b32 v236, a4
+; CHECK-NEXT:    v_accvgpr_read_b32 v238, a0
+; CHECK-NEXT:    v_accvgpr_read_b32 v239, a7
+; CHECK-NEXT:    v_add_f32_e32 v236, 1.0, v236
+; CHECK-NEXT:    v_add_f32_e32 v237, 2.0, v238
+; CHECK-NEXT:    v_accvgpr_read_b32 v241, a3
+; CHECK-NEXT:    v_accvgpr_read_b32 v240, a2
+; CHECK-NEXT:    v_accvgpr_read_b32 v239, a1
+; CHECK-NEXT:    global_store_dwordx2 v242, v[236:237], s[0:1]
+; CHECK-NEXT:    global_store_dwordx4 v242, v[232:235], s[0:1] offset:1952
+; CHECK-NEXT:    global_store_dwordx4 v242, v[228:231], s[0:1] offset:1936
+; CHECK-NEXT:    global_store_dwordx4 v242, v[224:227], s[0:1] offset:1920
+; CHECK-NEXT:    global_store_dwordx4 v242, v[220:223], s[0:1] offset:368
+; CHECK-NEXT:    global_store_dwordx4 v242, v[216:219], s[0:1] offset:352
+; CHECK-NEXT:    global_store_dwordx4 v242, v[212:215], s[0:1] offset:336
+; CHECK-NEXT:    global_store_dwordx4 v242, v[208:211], s[0:1] offset:320
+; CHECK-NEXT:    global_store_dwordx4 v242, v[204:207], s[0:1] offset:304
+; CHECK-NEXT:    global_store_dwordx4 v242, v[200:203], s[0:1] offset:288
+; CHECK-NEXT:    global_store_dwordx4 v242, v[196:199], s[0:1] offset:272
+; CHECK-NEXT:    global_store_dwordx4 v242, v[192:195], s[0:1] offset:256
+; CHECK-NEXT:    global_store_dwordx4 v242, v[188:191], s[0:1] offset:496
+; CHECK-NEXT:    global_store_dwordx4 v242, v[184:187], s[0:1] offset:480
+; CHECK-NEXT:    global_store_dwordx4 v242, v[180:183], s[0:1] offset:464
+; CHECK-NEXT:    global_store_dwordx4 v242, v[176:179], s[0:1] offset:448
+; CHECK-NEXT:    global_store_dwordx4 v242, v[172:175], s[0:1] offset:432
+; CHECK-NEXT:    global_store_dwordx4 v242, v[168:171], s[0:1] offset:416
+; CHECK-NEXT:    global_store_dwordx4 v242, v[164:167], s[0:1] offset:400
+; CHECK-NEXT:    global_store_dwordx4 v242, v[160:163], s[0:1] offset:384
+; CHECK-NEXT:    global_store_dwordx4 v242, v[156:159], s[0:1] offset:624
+; CHECK-NEXT:    global_store_dwordx4 v242, v[152:155], s[0:1] offset:608
+; CHECK-NEXT:    global_store_dwordx4 v242, v[148:151], s[0:1] offset:592
+; CHECK-NEXT:    global_store_dwordx4 v242, v[144:147], s[0:1] offset:576
+; CHECK-NEXT:    global_store_dwordx4 v242, v[140:143], s[0:1] offset:560
+; CHECK-NEXT:    global_store_dwordx4 v242, v[136:139], s[0:1] offset:544
+; CHECK-NEXT:    global_store_dwordx4 v242, v[132:135], s[0:1] offset:528
+; CHECK-NEXT:    global_store_dwordx4 v242, v[128:131], s[0:1] offset:512
+; CHECK-NEXT:    global_store_dwordx4 v242, v[124:127], s[0:1] offset:752
+; CHECK-NEXT:    global_store_dwordx4 v242, v[120:123], s[0:1] offset:736
+; CHECK-NEXT:    global_store_dwordx4 v242, v[116:119], s[0:1] offset:720
+; CHECK-NEXT:    global_store_dwordx4 v242, v[112:115], s[0:1] offset:704
+; CHECK-NEXT:    global_store_dwordx4 v242, v[108:111], s[0:1] offset:688
+; CHECK-NEXT:    global_store_dwordx4 v242, v[104:107], s[0:1] offset:672
+; CHECK-NEXT:    global_store_dwordx4 v242, v[100:103], s[0:1] offset:656
+; CHECK-NEXT:    global_store_dwordx4 v242, v[96:99], s[0:1] offset:640
+; CHECK-NEXT:    global_store_dwordx4 v242, v[92:95], s[0:1] offset:880
+; CHECK-NEXT:    global_store_dwordx4 v242, v[88:91], s[0:1] offset:864
+; CHECK-NEXT:    global_store_dwordx4 v242, v[84:87], s[0:1] offset:848
+; CHECK-NEXT:    global_store_dwordx4 v242, v[80:83], s[0:1] offset:832
+; CHECK-NEXT:    global_store_dwordx4 v242, v[76:79], s[0:1] offset:816
+; CHECK-NEXT:    global_store_dwordx4 v242, v[72:75], s[0:1] offset:800
+; CHECK-NEXT:    global_store_dwordx4 v242, v[68:71], s[0:1] offset:784
+; CHECK-NEXT:    global_store_dwordx4 v242, v[64:67], s[0:1] offset:768
+; CHECK-NEXT:    global_store_dwordx4 v242, v[60:63], s[0:1] offset:1008
+; CHECK-NEXT:    global_store_dwordx4 v242, v[56:59], s[0:1] offset:992
+; CHECK-NEXT:    global_store_dwordx4 v242, v[52:55], s[0:1] offset:976
+; CHECK-NEXT:    global_store_dwordx4 v242, v[48:51], s[0:1] offset:960
+; CHECK-NEXT:    global_store_dwordx4 v242, v[44:47], s[0:1] offset:944
+; CHECK-NEXT:    global_store_dwordx4 v242, v[40:43], s[0:1] offset:928
+; CHECK-NEXT:    global_store_dwordx4 v242, v[36:39], s[0:1] offset:912
+; CHECK-NEXT:    global_store_dwordx4 v242, v[32:35], s[0:1] offset:896
+; CHECK-NEXT:    global_store_dwordx4 v242, v[28:31], s[0:1] offset:1136
+; CHECK-NEXT:    global_store_dwordx4 v242, v[24:27], s[0:1] offset:1120
+; CHECK-NEXT:    global_store_dwordx4 v242, v[20:23], s[0:1] offset:1104
+; CHECK-NEXT:    global_store_dwordx4 v242, v[16:19], s[0:1] offset:1088
+; CHECK-NEXT:    global_store_dwordx4 v242, v[12:15], s[0:1] offset:1072
+; CHECK-NEXT:    global_store_dwordx4 v242, v[8:11], s[0:1] offset:1056
+; CHECK-NEXT:    global_store_dwordx4 v242, v[4:7], s[0:1] offset:1040
+; CHECK-NEXT:    global_store_dwordx4 v242, a[16:19], s[0:1] offset:1024
 ; CHECK-NEXT:    s_endpgm
 ; CHECK-NEXT:  .Ltmp2:
 ; Loop body: MFMAs in AGPR form.
