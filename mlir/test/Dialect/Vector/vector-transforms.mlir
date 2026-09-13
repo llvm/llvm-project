@@ -446,3 +446,13 @@ func.func @vector_extract_dynamic_index(%arg0 : vector<4xi32>, %index : index) -
 // CHECK: %[[BC:.+]] = vector.bitcast %[[VEC]] : vector<4xi32> to vector<8xi16>
 // CHECK: %[[EXTRACT:.+]] = vector.extract %[[BC]][%[[IDX]]] : i16 from vector<8xi16>
 // CHECK: return %[[EXTRACT]]
+
+
+// CHECK-LABEL: func.func @bitcast_non_divisible_last_dim
+// CHECK:         arith.trunci
+// CHECK:         vector.bitcast
+func.func @bitcast_non_divisible_last_dim(%arg0: vector<16xi16>) -> vector<3xi16> {
+  %0 = arith.trunci %arg0 : vector<16xi16> to vector<16xi3>
+  %1 = vector.bitcast %0 : vector<16xi3> to vector<3xi16>
+  return %1 : vector<3xi16>
+}
