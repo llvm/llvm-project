@@ -6799,11 +6799,18 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   Builder.setInsertPoint(&*std::prev(std::prev(LatchVPBB->end())));
   VPBasicBlock::iterator IP = MiddleVPBB->getFirstNonPhi();
   VPValue *HeaderMask = Plan->getVectorLoopRegion()->getHeaderMask();
-  for (VPRecipeBase &R :
-       Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+  for (VPRecipeBase &R : make_early_inc_range(
+           Plan->getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
     VPReductionPHIRecipe *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
     if (!PhiR)
       continue;
+
+    // Clean up reductions that have become invariant.
+    if (PhiR->getBackedgeValue() == PhiR) {
+      PhiR->replaceAllUsesWith(PhiR->getStartValue());
+      PhiR->eraseFromParent();
+      continue;
+    }
 
     RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
