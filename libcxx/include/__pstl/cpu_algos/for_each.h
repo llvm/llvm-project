@@ -37,6 +37,24 @@ _LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceTy
   return __first + __n;
 }
 
+// Applies the 3-legged function to sub-ranges of the input ranges in parallel:
+//   f(sub_range1_first, sub_range1_last, sub_range2_first)
+template <class _Backend, class _RandomAccessIterator1, class _RandomAccessIterator2, class _BrickFunction>
+_LIBCPP_HIDE_FROM_ABI optional<__empty> __parallel_for_each_iter_pair(
+    _RandomAccessIterator1 __first1,
+    _RandomAccessIterator1 __last1,
+    _RandomAccessIterator2 __first2,
+    _BrickFunction __f) {
+  return __cpu_traits<_Backend>::__for_each(
+      __first1,
+      __last1,
+      [__first1, __first2, __f = std::move(__f)](
+          _RandomAccessIterator1 __brick_first1, _RandomAccessIterator1 __brick_last1) {
+        _RandomAccessIterator2 __brick_first2 = __first2 + (__brick_first1 - __first1);
+        __f(__brick_first1, __brick_last1, __brick_first2);
+      });
+}
+
 template <class _Backend, class _RawExecutionPolicy>
 struct __cpu_parallel_for_each {
   template <class _Policy, class _ForwardIterator, class _Function>
