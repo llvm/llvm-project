@@ -53,6 +53,7 @@ struct PtrView {
   bool inUnion() const { return getInlineDesc()->InUnion; };
   bool inArray() const { return getFieldDesc()->IsArray; }
   bool inPrimitiveArray() const { return getFieldDesc()->isPrimitiveArray(); }
+  bool canBeInitialized() const { return Pointee && Base > 0; }
   const Block *block() const { return Pointee; }
 
   unsigned getEvalID() { return Pointee->getEvalID(); }

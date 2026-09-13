@@ -3697,12 +3697,12 @@ static void expandVector(APValue &Vec, unsigned NumElements) {
 /// is trivial. Note that this is never true for a union type with fields
 /// (because the copy always "reads" the active member) and always true for
 /// a non-class type.
-static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
-static bool isReadByLvalueToRvalueConversion(QualType T) {
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD);
+bool isReadByLvalueToRvalueConversion(QualType T) {
   CXXRecordDecl *RD = T->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   return !RD || isReadByLvalueToRvalueConversion(RD);
 }
-static bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
+bool isReadByLvalueToRvalueConversion(const CXXRecordDecl *RD) {
   // FIXME: A trivial copy of a union copies the object representation, even if
   // the union is empty.
   if (RD->isUnion())
