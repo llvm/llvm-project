@@ -78,7 +78,7 @@ exit:
 define void @different_non_constant_strides_known_backward_min_distance_16(ptr %A) {
 ; CHECK-LABEL: 'different_non_constant_strides_known_backward_min_distance_16'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 64 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %l = load i32, ptr %gep, align 4 ->
