@@ -182,6 +182,8 @@ set(x86_files
   avx10_2_512niintrin.h
   avx10_2_512satcvtdsintrin.h
   avx10_2_512satcvtintrin.h
+  avx10_2_512v2auxintrin.h
+  avx10_2_v2auxintrin.h
   avx10_2bf16intrin.h
   avx10_2convertintrin.h
   avx10_2copyintrin.h

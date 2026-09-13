@@ -11536,6 +11536,8 @@ def err_ppc_invalid_arg_type : Error<
   "argument %0 must be of type %1">;
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
+def err_x86_builtin_reserved_vunpackb_imm : Error<
+  "argument value %0 is a reserved VUNPACKB immediate">;
 def err_x86_builtin_invalid_scale : Error<
   "scale argument must be 1, 2, 4, or 8">;
 def err_x86_builtin_tile_arg_duplicate : Error<
