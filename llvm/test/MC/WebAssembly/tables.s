@@ -20,6 +20,10 @@ table1:
 table2:
     .tabletype table2, funcref, 42, 100
 
+.import_module table3, env
+.import_name table3, table3
+.tabletype table3, funcref, 42, 100
+
 # Table instructions
 
 #      CHECK: copy_tables:
@@ -28,6 +32,8 @@ table2:
 # CHECK-NEXT:	local.get	1
 #      CHECK:	table.size	table1
 #      CHECK:	table.copy	table1, table2
+#      CHECK:	table.size	table2
+#      CHECK:	table.copy	table2, table3
 # CHECK-NEXT:	end_function
 copy_tables:
     .functype copy_tables (i32, i32) -> ()
@@ -39,6 +45,11 @@ copy_tables:
 
     # ENC: table.copy	table1, table2          # encoding: [0xfc,0x0e,0x80'A',0x80'A',0x80'A',0x80'A',A,0x80'B',0x80'B',0x80'B',0x80'B',B]
     table.copy table1, table2
+
+    local.get 0
+    local.get 1
+    table.size table2
+    table.copy table2, table3
     end_function
 
 #      CHECK: table_get:
@@ -109,21 +120,31 @@ table_fill:
     table.fill table1
     end_function
 
+# BIN:    Field:           table3
+# BIN-NEXT:    Kind:            TABLE
+# BIN-NEXT:    Table:
+# BIN-NEXT:      Index: 0
+# BIN-NEXT:      ElemType:        FUNCREF
+# BIN-NEXT:      Limits:
+# BIN-NEXT:        Flags:           [ HAS_MAX ]
+# BIN-NEXT:        Minimum:         0x2A
+# BIN-NEXT:        Maximum:         0x64
+
 #      BIN:  - Type:            TABLE
 # BIN-NEXT:    Tables:
-# BIN-NEXT:      - Index:           0
-# BIN-NEXT:        ElemType:        EXTERNREF
-# BIN-NEXT:        Limits:
-# BIN-NEXT:          Minimum:         0x0
 # BIN-NEXT:      - Index:           1
-# BIN-NEXT:        ElemType:        FUNCREF
+# BIN-NEXT:        ElemType:        EXTERNREF
 # BIN-NEXT:        Limits:
 # BIN-NEXT:          Minimum:         0x0
 # BIN-NEXT:      - Index:           2
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
-# BIN-NEXT:          Minimum:         0x2A
+# BIN-NEXT:          Minimum:         0x0
 # BIN-NEXT:      - Index:           3
+# BIN-NEXT:        ElemType:        FUNCREF
+# BIN-NEXT:        Limits:
+# BIN-NEXT:          Minimum:         0x2A
+# BIN-NEXT:      - Index:           4
 # BIN-NEXT:        ElemType:        FUNCREF
 # BIN-NEXT:        Limits:
 # BIN-NEXT:          Flags:           [ HAS_MAX ]
@@ -142,39 +163,48 @@ table_fill:
 # BIN-NEXT:        Index:           3
 # BIN-NEXT:        Offset:          0x15
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
-# BIN-NEXT:        Index:           0
+# BIN-NEXT:        Index:           3
 # BIN-NEXT:        Offset:          0x20
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
-# BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x2D
+# BIN-NEXT:        Index:           3
+# BIN-NEXT:        Offset:          0x27
+# BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
+# BIN-NEXT:        Index:           5
+# BIN-NEXT:        Offset:          0x2C
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x38
+# BIN-NEXT:        Offset:          0x37
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           0
-# BIN-NEXT:        Offset:          0x41
+# BIN-NEXT:        Offset:          0x44
+# BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
+# BIN-NEXT:        Index:           0
+# BIN-NEXT:        Offset:          0x4F
+# BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
+# BIN-NEXT:        Index:           0
+# BIN-NEXT:        Offset:          0x58
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x51
+# BIN-NEXT:        Offset:          0x68
 # BIN-NEXT:      - Type:            R_WASM_TABLE_NUMBER_LEB
 # BIN-NEXT:        Index:           2
-# BIN-NEXT:        Offset:          0x5A
+# BIN-NEXT:        Offset:          0x71
 # BIN-NEXT:    Functions:
 # BIN-NEXT:      - Index:           0
 # BIN-NEXT:        Locals:          []
-# BIN-NEXT:        Body:            20002001FC108280808000FC0E828080800083808080000B
+# BIN-NEXT:        Body:            20002001FC108380808000FC0E8380808000848080800020002001FC108480808000FC0E848080800080808080000B
 # BIN-NEXT:      - Index:           1
 # BIN-NEXT:        Locals:          []
-# BIN-NEXT:        Body:            20002580808080000B
+# BIN-NEXT:        Body:            20002581808080000B
 # BIN-NEXT:      - Index:           2
 # BIN-NEXT:        Locals:          []
-# BIN-NEXT:        Body:            200020012680808080000B
+# BIN-NEXT:        Body:            200020012681808080000B
 # BIN-NEXT:      - Index:           3
 # BIN-NEXT:        Locals:          []
-# BIN-NEXT:        Body:            41002580808080002000FC0F808080800020006A0B
+# BIN-NEXT:        Body:            41002581808080002000FC0F818080800020006A0B
 # BIN-NEXT:      - Index:           4
 # BIN-NEXT:        Locals:          []
-# BIN-NEXT:        Body:            200041002582808080002001FC1182808080000B
+# BIN-NEXT:        Body:            200041002583808080002001FC1183808080000B
 
 #      BIN:  - Type:            CUSTOM
 # BIN-NEXT:    Name:            linking
@@ -184,20 +214,25 @@ table_fill:
 # BIN-NEXT:        Kind:            TABLE
 # BIN-NEXT:        Name:            foo
 # BIN-NEXT:        Flags:           [ BINDING_LOCAL ]
-# BIN-NEXT:        Table:           0
+# BIN-NEXT:        Table:           1
 # BIN-NEXT:      - Index:           1
 # BIN-NEXT:        Kind:            TABLE
 # BIN-NEXT:        Name:            bar
 # BIN-NEXT:        Flags:           [ BINDING_LOCAL ]
-# BIN-NEXT:        Table:           1
+# BIN-NEXT:        Table:           2
 # BIN-NEXT:      - Index:           2
 # BIN-NEXT:        Kind:            TABLE
 # BIN-NEXT:        Name:            table1
 # BIN-NEXT:        Flags:           [ BINDING_LOCAL ]
-# BIN-NEXT:        Table:           2
+# BIN-NEXT:        Table:           3
 # BIN-NEXT:      - Index:           3
 # BIN-NEXT:        Kind:            TABLE
 # BIN-NEXT:        Name:            table2
 # BIN-NEXT:        Flags:           [ BINDING_LOCAL ]
-# BIN-NEXT:        Table:           3
-# BIN-NEXT:      - Index:           4
+# BIN-NEXT:        Table:           4
+#      BIN:      - Index:           5
+# BIN-NEXT:        Kind:            TABLE
+# BIN-NEXT:        Name:            table3
+# BIN-NEXT:        Flags:           [ UNDEFINED, EXPLICIT_NAME ]
+# BIN-NEXT:        Table:           0
+# BIN-NEXT:      - Index:           6
