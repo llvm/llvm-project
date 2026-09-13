@@ -85,7 +85,7 @@ template <> struct DenseMapInfo<ScalableVecTyKey> {
 namespace clang {
 
 class APValue;
-class ASTContextStateStash;
+class ASTContextStateRecovery;
 class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
@@ -235,21 +235,12 @@ struct QualTypeBoolInfo {
   }
 };
 
-struct TypeForDeclMutation {
-  TypeDecl *Decl;
-  const Type *OldValue;
-};
-
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
   mutable SmallVector<Type *, 0> Types;
-
-  bool IncrementalErrorRecoveryMode = true;
-  mutable SmallVector<TypeForDeclMutation> PendingTypeForDeclMutations;
-  mutable llvm::DenseSet<const DeclContext *> PendingDCMutations;
 
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
@@ -612,18 +603,14 @@ public:
   using TemplateOrSpecializationInfo =
       llvm::PointerUnion<VarTemplateDecl *, MemberSpecializationInfo *>;
 
-  bool isIncrementalErrorRecoveryMode() const {
-    return IncrementalErrorRecoveryMode;
-  }
-
 private:
   friend class ASTDeclReader;
   friend class ASTReader;
   friend class ASTWriter;
   template <class> friend class serialization::AbstractTypeReader;
   friend class CXXRecordDecl;
-  // friend class IncrementalParser;
-  friend class ASTContextStateStash;
+  friend class IncrementalParser;
+  friend class ASTContextStateRecovery;
 
   /// A mapping to contain the template or declaration that
   /// a variable declaration describes or was instantiated from,

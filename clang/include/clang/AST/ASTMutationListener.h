@@ -195,6 +195,12 @@ public:
   virtual void AddedAnonymousNamespace(const TranslationUnitDecl *TU,
                                        NamespaceDecl *AnonNamespace) {}
 
+  /// A TagDecl's cached TypeForDecl was materialized for the first time.
+  ///
+  /// \param TD The declaration whose type cache was populated.
+  /// \param T The Type now cached. Never null.
+  virtual void AddedTagDeclType(const TagDecl *TD, const Type *T) {}
+
   // NOTE: If new methods are added they should also be added to
   // MultiplexASTMutationListener.
 };

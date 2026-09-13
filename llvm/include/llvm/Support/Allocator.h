@@ -45,8 +45,7 @@ LLVM_ABI void printBumpPtrAllocatorStats(unsigned NumSlabs, size_t TotalMemory);
 struct SlabCheckPoint {
   unsigned ActiveSlabIdx;
   char *CurPtr;
-  char *End;
-  size_t BytesAllocated;
+  uintptr_t EndSentinel;
 };
 
 /// Allocate memory in an ever growing pool, as if by bump-pointer.
@@ -223,7 +222,7 @@ public:
       void *NewSlab = Slabs[ActiveSlabIdx];
       size_t AllocatedSlabSize = computeSlabSize(ActiveSlabIdx);
       CurPtr = (char *)(NewSlab);
-      End = ((char *)NewSlab) + AllocatedSlabSize;
+      EndSentinel = uintptr_t(NewSlab) + AllocatedSlabSize + 1;
     } else
       // Otherwise, start a new slab and try again.
       StartNewSlab();
@@ -259,7 +258,7 @@ public:
   size_t GetNumSlabs() const { return Slabs.size() + CustomSizedSlabs.size(); }
 
   SlabCheckPoint checkPoint() const {
-    return {ActiveSlabIdx, CurPtr, End, BytesAllocated};
+    return {ActiveSlabIdx, CurPtr, EndSentinel};
   }
 
   static void poisonMemory(void *Ptr, size_t Size) {
@@ -298,16 +297,19 @@ public:
   void restoreToCheckPoint(SlabCheckPoint CP) {
     assert(CP.ActiveSlabIdx >= 0 && CP.ActiveSlabIdx < Slabs.size());
     assert(CP.CurPtr >= (const char *)Slabs[CP.ActiveSlabIdx] &&
-           CP.End == ((const char *)Slabs[CP.ActiveSlabIdx] +
-                      computeSlabSize(CP.ActiveSlabIdx)));
+           CP.EndSentinel == uintptr_t(Slabs[CP.ActiveSlabIdx]) +
+                      computeSlabSize(CP.ActiveSlabIdx) + 1);
     ActiveSlabIdx = CP.ActiveSlabIdx;
     CurPtr = CP.CurPtr;
-    End = CP.End;
-    BytesAllocated = CP.BytesAllocated;
-    llvm::outs() << "Poisoned range = [" << (void *)CurPtr << ", " << (void *)End << ")\n";
-    llvm::outs() << "Poisoned End Size = [" << (void *)CurPtr << ", " << (void *)(CurPtr + (size_t)(End - CurPtr)) << ")\n";
+    EndSentinel = CP.EndSentinel;
+
+    uintptr_t EndRange =
+        uintptr_t(Slabs[CP.ActiveSlabIdx]) + computeSlabSize(CP.ActiveSlabIdx);
+
+    llvm::outs() << "Poisoned range = [" << (void *)CurPtr << ", " << (void *)(EndSentinel - 1) << "]\n";
+    llvm::outs() << "Poisoned End Size = [" << (void *)CurPtr << ", " << (void *)(CurPtr + ((EndSentinel - 1) - (uintptr_t)CurPtr)) << "]\n";
     llvm::outs().flush();
-    poisonMemory((void *)CurPtr, (size_t)(End - CurPtr));
+    poisonMemory((void *)CurPtr, (size_t)(EndRange - uintptr_t(CurPtr)));
     for (unsigned I = ActiveSlabIdx + 1; I < Slabs.size(); ++I)
       // Should we deallocate any extra slabs?
       poisonMemory(Slabs[I], computeSlabSize(I));

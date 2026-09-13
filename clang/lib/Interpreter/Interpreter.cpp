@@ -579,8 +579,8 @@ Interpreter::Parse(llvm::StringRef Code) {
 
   private:
     ASTContext &Ctx;
-    ASTContextStateStash ASTCtxState;
-    SemaStateStash SemaState;
+    ASTContextStateRecovery ASTCtxState;
+    SemaStateRecovery SemaState;
     llvm::SlabCheckPoint CheckPoint;
     bool Committed = false;
     StashCheckPoint CtxCheckPoint;
@@ -610,11 +610,11 @@ Interpreter::Parse(llvm::StringRef Code) {
   getCompilerInstance()->getDiagnostics().setSeverity(
       clang::diag::warn_unused_expr, diag::Severity::Ignored, SourceLocation());
 
-  PTUSlabRollback Rollback(CI->getSema());
+  // PTUSlabRollback Rollback(CI->getSema());
 
   llvm::Expected<TranslationUnitDecl *> TuOrErr = IncrParser->Parse(Code);
   if (!TuOrErr) {
-    Act->GenModule(true);
+    // Act->GenModule();
     return TuOrErr.takeError();
   }
 
@@ -626,7 +626,7 @@ Interpreter::Parse(llvm::StringRef Code) {
           frontend::EmitLLVM)
     LastPTU.TheModule->print(llvm::outs(), /*AAW=*/nullptr);
 
-  Rollback.commit(LastPTU);
+  // Rollback.commit(LastPTU);
   return LastPTU;
 }
 

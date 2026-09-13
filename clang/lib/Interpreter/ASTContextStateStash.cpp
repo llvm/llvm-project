@@ -1,4 +1,4 @@
-//===--- ASTContextStateStash.cpp - ASTContext persistent state stash/restore
+//===--- ASTContextStateRecovery.cpp - ASTContext persistent state stash/restore
 //----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -30,6 +30,29 @@ namespace clang {
 
 /// Erases nodes from a FoldingSet based on a predicate.
 template <typename EntryType, typename PredT>
+static void eraseFoldingSetIf(llvm::UniquingSet<EntryType> &FS, PredT &&Pred) {
+  SmallVector<EntryType *, 16> ToRemove;
+  for (auto &N : FS)
+    if (Pred(N))
+      ToRemove.push_back(&N);
+
+  for (auto *N : ToRemove)
+    FS.erase(N);
+}
+
+template <typename EntryType, typename UniquingSetInfo, typename PredT>
+static void eraseFoldingSetIf(llvm::UniquingSet<EntryType, UniquingSetInfo> &FS,
+                              PredT &&Pred) {
+  SmallVector<EntryType *, 16> ToRemove;
+  for (auto &N : FS)
+    if (Pred(N))
+      ToRemove.push_back(&N);
+
+  for (auto *N : ToRemove)
+    FS.erase(N);
+}
+
+template <typename EntryType, typename PredT>
 static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred) {
   SmallVector<EntryType *, 16> ToRemove;
   for (auto &N : FS)
@@ -37,7 +60,7 @@ static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred) {
       ToRemove.push_back(&N);
 
   for (auto *N : ToRemove)
-    FS.RemoveNode(N);
+    FS.erase(N);
 }
 
 template <typename EntryType, typename PredT>
@@ -51,7 +74,7 @@ eraseFoldingSetIf(llvm::ContextualFoldingSet<EntryType, ASTContext &> &FS,
       ToRemove.push_back(&N);
 
   for (auto *N : ToRemove)
-    FS.RemoveNode(N);
+    FS.erase(N);
 }
 
 /// Erase from DenseMap based on predicate
@@ -79,7 +102,7 @@ static void eraseDenseSetIf(llvm::DenseSet<ValueT> &Set, PredT &&Pred) {
     Set.erase(Key);
 }
 
-void ASTContextStateStash::stash(StashCheckPoint &CP) {
+void ASTContextStateRecovery::stash(StashCheckPoint &CP) {
   CP.TypesSize = Ctx.Types.size();
   CP.ExtQualNodesSize = Ctx.ExtQualNodes.size();
   CP.ComplexTypesSize = Ctx.ComplexTypes.size();
@@ -188,7 +211,8 @@ void ASTContextStateStash::stash(StashCheckPoint &CP) {
   CP.GlobalArrayOperatorDeletesForVirtualDtorSize =
       Ctx.GlobalArrayOperatorDeletesForVirtualDtor.size();
 
-  CP.RequireVectorDeletingDtorSize = Ctx.RequireVectorDeletingDtor.size();
+  CP.MaybeRequireVectorDeletingDtorSize =
+      Ctx.MaybeRequireVectorDeletingDtor.size();
 
   CP.MergedDeclsSize = Ctx.MergedDecls.size();
   CP.DeclAttrsSize = Ctx.DeclAttrs.size();
@@ -200,7 +224,7 @@ void ASTContextStateStash::stash(StashCheckPoint &CP) {
 
   CP.ScalableVecTyMapSize = Ctx.ScalableVecTyMap.size();
   CP.LambdaCastPathsSize = Ctx.LambdaCastPaths.size();
-  CP.DeclRawCommentsSize = Ctx.DeclRawComments.size();
+  CP.RawCommentsSize = Ctx.RawComments.size();
   CP.RedeclChainCommentsSize = Ctx.RedeclChainComments.size();
   CP.CommentlessRedeclChainsSize = Ctx.CommentlessRedeclChains.size();
   CP.ParsedCommentsSize = Ctx.ParsedComments.size();
@@ -236,11 +260,209 @@ void ASTContextStateStash::stash(StashCheckPoint &CP) {
 
   CP.ObjCClassDeclCP = Ctx.ObjCClassDecl;
 
-  Ctx.ObjCProtocolClassDecl = CP.ObjCProtocolClassDeclCP;
+  CP.ObjCProtocolClassDeclCP = Ctx.ObjCProtocolClassDecl;
+
+  /// DeclarationNameTable
+  CP.DeclarationNames.CXXConstructorNamesSize =
+      Ctx.DeclarationNames.CXXConstructorNames.size();
+  CP.DeclarationNames.CXXDestructorNamesSize =
+      Ctx.DeclarationNames.CXXDestructorNames.size();
+  CP.DeclarationNames.CXXConversionFunctionNamesSize =
+      Ctx.DeclarationNames.CXXConversionFunctionNames.size();
+  for (unsigned I = 0; I < NUM_OVERLOADED_OPERATORS; I++)
+    CP.DeclarationNames.CXXOperatorNamesCP[I] =
+        Ctx.DeclarationNames.CXXOperatorNames[I];
+  CP.DeclarationNames.CXXLiteralOperatorNamesSize =
+      Ctx.DeclarationNames.CXXLiteralOperatorNames.size();
+  CP.DeclarationNames.CXXDeductionGuideNamesSize =
+      Ctx.DeclarationNames.CXXDeductionGuideNames.size();
 }
 
-void ASTContextStateStash::restore(StashCheckPoint &CP,
-                                   llvm::SlabCheckPoint SlabCP) {
+class DeclContextRepairer {
+  ASTContext &Ctx;
+  llvm::SlabCheckPoint SlabCP;
+  // in case to avoid revisit.
+  llvm::SmallPtrSet<const DeclContext *, 8> Visited;
+
+  bool isAfterCP(const void *P) const {
+    return Ctx.getAllocator().isAfterCheckpoint(P, SlabCP);
+  }
+
+  static bool isExtensibleContainer(const Decl *D) {
+    return isa<NamespaceDecl>(D) || isa<TagDecl>(D);
+  }
+
+  static bool isRedeclarableOrOnlyDecl(Decl *D) {
+    return D->getPreviousDecl() != nullptr;
+  }
+
+  // Walk D's redecl chain looking for the newest decl that was from previous
+  // PTU. Returns nullptr if the entire chain was created this PTU.
+  template <typename DeclT> DeclT *findSurvivor(DeclT *D) {
+    for (DeclT *It = D->getMostRecentDecl(); It; It = It->getPreviousDecl()) {
+      if (!isAfterCP(It))
+        return It;
+      if (It == It->getFirstDecl())
+        break;
+    }
+    return nullptr;
+  }
+
+  template <typename decl_type>
+  void patchRedeclLink(Redeclarable<decl_type> *D, decl_type *Survivor) {
+    D->getFirstDecl()->RedeclLink.setLatest(Survivor);
+  }
+
+  void repairLexicalChain(DeclContext &DC) {
+    Decl *Prev = nullptr;
+    for (Decl *Cur = DC.FirstDecl; Cur; Cur = Cur->getNextDeclInContext()) {
+      if (isAfterCP(Cur)) {
+        if (Prev) {
+          DC.LastDecl = Prev;
+          Prev->NextInContextAndBits.setPointer(nullptr);
+        } else {
+          DC.FirstDecl = DC.LastDecl = nullptr; // nothing survives
+        }
+        return;
+      }
+      Prev = Cur;
+    }
+  }
+
+  NamedDecl *tryRepairRedeclChain(Decl *D) {
+    if (!isRedeclarableOrOnlyDecl(D))
+      return nullptr; // nothing to do
+
+    NamedDecl *Survivor = nullptr;
+
+    auto repairRedeclChain = [&](auto *RD) {
+      // using DeclT = std::remove_pointer_t<decltype(RD)>;
+
+      auto *SurvivorDecl = findSurvivor(RD);
+      if (SurvivorDecl)
+        patchRedeclLink(RD, SurvivorDecl);
+
+      Survivor = SurvivorDecl;
+    };
+
+    switch (D->getKind()) {
+    case Decl::Function:
+      repairRedeclChain(cast<FunctionDecl>(D));
+      break;
+
+    case Decl::Var:
+      repairRedeclChain(cast<VarDecl>(D));
+      break;
+
+    case Decl::Enum:
+      repairRedeclChain(cast<TagDecl>(D));
+      break;
+
+    case Decl::Record:
+    case Decl::CXXRecord:
+      repairRedeclChain(cast<TagDecl>(D));
+      break;
+
+    case Decl::ClassTemplate:
+      repairRedeclChain(cast<RedeclarableTemplateDecl>(D));
+      break;
+
+    case Decl::FunctionTemplate:
+      repairRedeclChain(cast<RedeclarableTemplateDecl>(D));
+      break;
+
+    case Decl::TypeAliasTemplate:
+      repairRedeclChain(cast<RedeclarableTemplateDecl>(D));
+      break;
+
+    case Decl::VarTemplate:
+      repairRedeclChain(cast<RedeclarableTemplateDecl>(D));
+      break;
+
+    case Decl::Namespace:
+      repairRedeclChain(cast<NamespaceDecl>(D));
+      break;
+
+    default:
+      break;
+    }
+
+    return Survivor;
+  }
+
+  void repairLookupEntry(StoredDeclsMap &Map, DeclarationName Key,
+                         StoredDeclsList &List, bool Recurse) {
+    // Snapshot first: remove()/addOrReplaceDecl() below invalidate the live
+    // view getLookupResult() returns.
+    SmallVector<NamedDecl *, 4> Snapshot(List.getLookupResult().begin(),
+                                         List.getLookupResult().end());
+
+    for (NamedDecl *D : Snapshot) {
+      if (Recurse && isExtensibleContainer(D))
+        repairDeclContextLookup(cast<DeclContext>(D), Recurse);
+
+      if (!isAfterCP(D))
+        continue; // predates this PTU -- untouched
+
+      NamedDecl *Survivor = tryRepairRedeclChain(D); // may be null
+
+      if (!Survivor) {
+        List.remove(D); // whole chain born this PTU
+        continue;
+      }
+      assert(Survivor != D && "survivor postdates the checkpoint");
+
+      // If the survivor is already visible under this name, D was an extra
+      // entry (an overload); otherwise D had REPLACED the survivor's slot
+      // via HandleRedeclaration and has to hand it back.
+      if (llvm::is_contained(Snapshot, Survivor))
+        List.remove(D);
+      else
+        List.addOrReplaceDecl(Survivor);
+    }
+
+    if (List.isNull())
+      Map.erase(Key);
+  }
+
+public:
+  DeclContextRepairer(ASTContext &Ctx, llvm::SlabCheckPoint CP)
+      : Ctx(Ctx), SlabCP(CP) {}
+
+  template <typename decl_type>
+  void repairRedeclchain(Redeclarable<decl_type> *D) {
+    decl_type *SurviourDecl = findSurvivor(D);
+    if (SurviourDecl)
+      patchRedeclLink(D, SurviourDecl);
+  }
+
+  // Public entry point -- recursivly repair affected DCs.
+  void repairDeclContextLookup(DeclContext *DC, bool NoRecursive = false) {
+    DeclContext *Primary = DC->getPrimaryContext();
+    if (!Visited.insert(Primary).second)
+      return;
+
+    bool CompletelyNew = isAfterCP(cast<Decl>(Primary)->getCanonicalDecl());
+    StoredDeclsMap *Map = Primary->getLookupPtr();
+
+    if (CompletelyNew) {
+      // Primary's very first declaration happened this PTU -- the entire
+      // entity is being discarded as a unit, so there's nothing to
+      // individually repair.
+      if (Map)
+        Map->clear();
+      return;
+    }
+
+    if (Map)
+      for (auto &Entry : *Map)
+        repairLookupEntry(*Map, Entry.first, Entry.second, NoRecursive);
+    repairLexicalChain(*Primary);
+  }
+};
+
+void ASTContextStateRecovery::restore(StashCheckPoint &CP,
+                                      llvm::SlabCheckPoint SlabCP) {
   if (CP.AutoDeductTy != Ctx.AutoDeductTy) {
     llvm::dbgs() << "Ctx.AutoDeductTy != CP.AutoDeductTy\n";
     Ctx.AutoDeductTy = CP.AutoDeductTy;
@@ -678,8 +900,8 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
     // mutable llvm::DenseMap<llvm::FoldingSetNodeID, AutoType *> AutoTypes;
     eraseDenseMapIf(
         Ctx.AutoTypes,
-        [&](llvm::detail::DenseMapPair<llvm::FoldingSetNodeID, AutoType *> &KV)
-            -> bool {
+        [&](llvm::detail::DenseMapPair<llvm::FoldingSetNodeIDRef, AutoType *>
+                &KV) -> bool {
           return Ctx.getAllocator().isAfterCheckpoint(
               static_cast<void *>(KV.getSecond()), SlabCP);
         });
@@ -1110,17 +1332,18 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
            Ctx.GlobalArrayOperatorDeletesForVirtualDtor.size());
   }
 
-  if (CP.RequireVectorDeletingDtorSize !=
-      Ctx.RequireVectorDeletingDtor.size()) {
-    llvm::dbgs() << "if (CP.RequireVectorDeletingDtorSize != "
-                    "Ctx.RequireVectorDeletingDtor.size()\n";
-    eraseDenseSetIf(
-        Ctx.RequireVectorDeletingDtor, [&](const CXXRecordDecl *RD) -> bool {
-          return Ctx.getAllocator().isAfterCheckpoint(
-              static_cast<void *>(const_cast<CXXRecordDecl *>(RD)), SlabCP);
-        });
-    assert(CP.RequireVectorDeletingDtorSize ==
-           Ctx.RequireVectorDeletingDtor.size());
+  if (CP.MaybeRequireVectorDeletingDtorSize !=
+      Ctx.MaybeRequireVectorDeletingDtor.size()) {
+    llvm::dbgs() << "if (CP.MaybeRequireVectorDeletingDtorSize != "
+                    "Ctx.MaybeRequireVectorDeletingDtor.size()\n";
+    eraseDenseSetIf(Ctx.MaybeRequireVectorDeletingDtor,
+                    [&](const CXXRecordDecl *RD) -> bool {
+                      return Ctx.getAllocator().isAfterCheckpoint(
+                          static_cast<void *>(const_cast<CXXRecordDecl *>(RD)),
+                          SlabCP);
+                    });
+    assert(CP.MaybeRequireVectorDeletingDtorSize ==
+           Ctx.MaybeRequireVectorDeletingDtor.size());
   }
 
   if (CP.MergedDeclsSize != Ctx.MergedDecls.size()) {
@@ -1176,9 +1399,9 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
     assert(CP.LambdaCastPathsSize == Ctx.LambdaCastPaths.size());
   }
 
-  if (CP.DeclRawCommentsSize != Ctx.DeclRawComments.size()) {
-    llvm::dbgs() << "CP.DeclRawCommentsSize != Ctx.DeclRawComments.size()\n";
-    assert(CP.DeclRawCommentsSize == Ctx.DeclRawComments.size());
+  if (CP.RawCommentsSize != Ctx.RawComments.size()) {
+    llvm::dbgs() << "CP.RawCommentsSize != Ctx.RawComments.size()\n";
+    assert(CP.RawCommentsSize == Ctx.RawComments.size());
   }
 
   if (CP.RedeclChainCommentsSize != Ctx.RedeclChainComments.size()) {
@@ -1224,6 +1447,23 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   if (CP.TemplateOrInstantiationSize != Ctx.TemplateOrInstantiation.size()) {
     llvm::dbgs() << "CP.TemplateOrInstantiationSize != "
                     "Ctx.TemplateOrInstantiation.size()\n";
+    //                     llvm::DenseMap<const VarDecl *,
+    //                     TemplateOrSpecializationInfo>
+    // TemplateOrInstantiation;
+    eraseDenseMapIf(
+        Ctx.TemplateOrInstantiation,
+        [&](llvm::detail::DenseMapPair<
+            const VarDecl *, ASTContext::TemplateOrSpecializationInfo> &KV)
+            -> bool {
+          ASTContext::TemplateOrSpecializationInfo &T = KV.getSecond();
+          bool IsAfterCP = false;
+          if (auto *M = T.dyn_cast<MemberSpecializationInfo *>())
+            IsAfterCP = Ctx.getAllocator().isAfterCheckpoint(M, SlabCP);
+          if (auto *V = T.dyn_cast<VarTemplateDecl *>())
+            IsAfterCP = Ctx.getAllocator().isAfterCheckpoint(V, SlabCP);
+          return IsAfterCP ||
+                 Ctx.getAllocator().isAfterCheckpoint(KV.getFirst(), SlabCP);
+        });
     assert(CP.TemplateOrInstantiationSize ==
            Ctx.TemplateOrInstantiation.size());
   }
@@ -1339,7 +1579,6 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
     assert(CP.TraversalScopeSize == Ctx.TraversalScope.size());
   }
 
-
   /// Obj-C
   if (CP.ObjCObjectTypesSize != Ctx.ObjCObjectTypes.size()) {
     llvm::dbgs() << "CP.ObjCObjectTypesSize != Ctx.ObjCObjectTypes.size()\n";
@@ -1383,55 +1622,120 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
     assert(CP.ObjCProtocolClassDeclCP == Ctx.ObjCProtocolClassDecl);
   }
 
-  for (auto &[Decl, OldTy] : Ctx.PendingTypeForDeclMutations)
-    Decl->TypeForDecl = OldTy;
-
-  Ctx.PendingTypeForDeclMutations.clear();
-  TranslationUnitDecl *MostRecentTU = Ctx.getTranslationUnitDecl();
-  for (const auto *DC : Ctx.PendingDCMutations) {
-    if (MostRecentTU->getPrimaryContext() == DC)
-      continue;
-    if (StoredDeclsMap *Map = const_cast<DeclContext *>(DC)
-                                  ->getPrimaryContext()
-                                  ->getLookupPtr()) {
-      for (auto &&[Key, List] : *Map) {
-        DeclContextLookupResult R = List.getLookupResult();
-        std::vector<NamedDecl *> NamedDeclsToRemove;
-        // bool RemoveAll = true;
-        for (NamedDecl *D : R) {
-          // llvm::outs() << "D->getTranslationUnitDecl() == MostRecentTU (" <<
-          // (D->getTranslationUnitDecl() == MostRecentTU) << ")\n";
-          // llvm::outs() << "DeclContext : " << DC << "\n";
-          // D->dump();
-          // if (D->getTranslationUnitDecl() == MostRecentTU)
-          if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(D),
-                                                   SlabCP))
-            NamedDeclsToRemove.push_back(D);
-          // else
-          //   RemoveAll = false;
-        }
-        // if (LLVM_LIKELY(RemoveAll)) {
-        //   Map->erase(Key);
-        // } else {
-        for (NamedDecl *D : NamedDeclsToRemove)
-          List.remove(D);
-        // }
-      }
-    }
-
-    // Decl *Prev = DC->FirstDecl;
-    // Decl *Cur = DC->FirstDecl;
-    // while (Cur) {
-    //   if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(Cur),
-    //                                            SlabCP)) {
-    //     DC->LastDecl = Prev;
-    //     DC->LastDecl->NextInContextAndBits.setPointer(nullptr);
-    //     break;
-    //   }
-    //   Prev = Cur;
-    //   Cur = Cur->getNextDeclInContext();
-    // }
+  if (CP.DeclarationNames.CXXConstructorNamesSize !=
+      Ctx.DeclarationNames.CXXConstructorNames.size()) {
+    llvm::dbgs() << "CP.DeclarationNames.CXXConstructorNamesSize != "
+                    "Ctx.DeclarationNames.CXXConstructorNames.size()";
+    eraseFoldingSetIf(Ctx.DeclarationNames.CXXConstructorNames,
+                      [&](detail::CXXSpecialNameExtra &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(&Node,
+                                                                    SlabCP);
+                      });
+    assert(CP.DeclarationNames.CXXConstructorNamesSize ==
+           Ctx.DeclarationNames.CXXConstructorNames.size());
   }
+  if (CP.DeclarationNames.CXXDestructorNamesSize !=
+      Ctx.DeclarationNames.CXXDestructorNames.size()) {
+    llvm::dbgs() << "CP.DeclarationNames.CXXDestructorNamesSize != "
+                    "Ctx.DeclarationNames.CXXDestructorNames.size()";
+    eraseFoldingSetIf(Ctx.DeclarationNames.CXXDestructorNames,
+                      [&](detail::CXXSpecialNameExtra &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(&Node,
+                                                                    SlabCP);
+                      });
+    assert(CP.DeclarationNames.CXXDestructorNamesSize ==
+           Ctx.DeclarationNames.CXXDestructorNames.size());
+  }
+  if (CP.DeclarationNames.CXXConversionFunctionNamesSize !=
+      Ctx.DeclarationNames.CXXConversionFunctionNames.size()) {
+    llvm::dbgs() << "CP.DeclarationNames.CXXConversionFunctionNamesSize != "
+                    "Ctx.DeclarationNames.CXXConversionFunctionNames.size()";
+    eraseFoldingSetIf(Ctx.DeclarationNames.CXXConversionFunctionNames,
+                      [&](detail::CXXSpecialNameExtra &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(&Node,
+                                                                    SlabCP);
+                      });
+    assert(CP.DeclarationNames.CXXConversionFunctionNamesSize ==
+           Ctx.DeclarationNames.CXXConversionFunctionNames.size());
+  }
+  if (CP.DeclarationNames.CXXLiteralOperatorNamesSize !=
+      Ctx.DeclarationNames.CXXLiteralOperatorNames.size()) {
+    llvm::dbgs() << "CP.DeclarationNames.CXXLiteralOperatorNamesSize != "
+                    "Ctx.DeclarationNames.CXXLiteralOperatorNames.size()";
+    eraseFoldingSetIf(Ctx.DeclarationNames.CXXLiteralOperatorNames,
+                      [&](detail::CXXLiteralOperatorIdName &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(&Node,
+                                                                    SlabCP);
+                      });
+    assert(CP.DeclarationNames.CXXLiteralOperatorNamesSize ==
+           Ctx.DeclarationNames.CXXLiteralOperatorNames.size());
+  }
+  if (CP.DeclarationNames.CXXDeductionGuideNamesSize !=
+      Ctx.DeclarationNames.CXXDeductionGuideNames.size()) {
+    llvm::dbgs() << "CP.DeclarationNames.CXXDeductionGuideNamesSize != "
+                    "Ctx.DeclarationNames.CXXDeductionGuideNames.size()";
+    eraseFoldingSetIf(Ctx.DeclarationNames.CXXDeductionGuideNames,
+                      [&](detail::CXXDeductionGuideNameExtra &Node) -> bool {
+                        return Ctx.getAllocator().isAfterCheckpoint(&Node,
+                                                                    SlabCP);
+                      });
+    assert(CP.DeclarationNames.CXXDeductionGuideNamesSize ==
+           Ctx.DeclarationNames.CXXDeductionGuideNames.size());
+  }
+  for (unsigned I = 0; I < NUM_OVERLOADED_OPERATORS; I++)
+    Ctx.DeclarationNames.CXXOperatorNames[I] =
+        CP.DeclarationNames.CXXOperatorNamesCP[I];
+
+  // for (auto &[Decl, OldTy] : Ctx.PendingTypeForDeclMutations)
+  //   Decl->TypeForDecl = OldTy;
+
+  // Ctx.PendingTypeForDeclMutations.clear();
+  // TranslationUnitDecl *MostRecentTU = Ctx.getTranslationUnitDecl();
+  // for (const auto *DC : Ctx.PendingDCMutations) {
+  //   // if (MostRecentTU->getPrimaryContext() == DC)
+  //   //   continue;
+  //   if (StoredDeclsMap *Map = const_cast<DeclContext *>(DC)
+  //                                 ->getPrimaryContext()
+  //                                 ->getLookupPtr()) {
+  //     for (auto &&[Key, List] : *Map) {
+  //       DeclContextLookupResult R = List.getLookupResult();
+  //       std::vector<NamedDecl *> NamedDeclsToRemove;
+  //       // bool RemoveAll = true;
+  //       for (NamedDecl *D : R) {
+  //         // llvm::outs() << "D->getTranslationUnitDecl() == MostRecentTU ("
+  //         <<
+  //         // (D->getTranslationUnitDecl() == MostRecentTU) << ")\n";
+  //         // llvm::outs() << "DeclContext : " << DC << "\n";
+  //         // D->dump();
+  //         // if (D->getTranslationUnitDecl() == MostRecentTU)
+  //         if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(D),
+  //                                                  SlabCP))
+  //           NamedDeclsToRemove.push_back(D);
+  //         // else
+  //         // RemoveAll = false;
+  //       }
+  //       // if (LLVM_LIKELY(RemoveAll)) {
+  //       //   Map->erase(Key);
+  //       // } else {
+  //       for (NamedDecl *D : NamedDeclsToRemove)
+  //         List.remove(D);
+  //       // }
+  //     }
+  //   }
+
+  // Decl *Prev = DC->FirstDecl;
+  // Decl *Cur = DC->FirstDecl;
+  // while (Cur) {
+  //   if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(Cur),
+  //                                            SlabCP)) {
+  //     DC->LastDecl = Prev;
+  //     DC->LastDecl->NextInContextAndBits.setPointer(nullptr);
+  //     break;
+  //   }
+  //   Prev = Cur;
+  //   Cur = Cur->getNextDeclInContext();
+  // }
+  // }
 
   // if (FirstDecl) {
   //   LastDecl->NextInContextAndBits.setPointer(D);
@@ -1469,8 +1773,6 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   // /// end of the import declaration.
   // llvm::PointerIntPair<ImportDecl *, 1, bool> NextLocalImportAndComplete;
 
-  Ctx.PendingDCMutations.clear();
-
   // llvm::PointerIntPair<StoredDeclsMap*,1> LastSDM = Ctx.LastSDM;
 
   // StoredDeclsMap *Map = LastSDM.getPointer();
@@ -1502,8 +1804,5 @@ void ASTContextStateStash::restore(StashCheckPoint &CP,
   Ctx.Types.resize(CP.TypesSize);
 }
 
-void ASTContextStateStash::commit() {
-  Ctx.PendingTypeForDeclMutations.clear();
-  Ctx.PendingDCMutations.clear();
-}
+void ASTContextStateRecovery::commit() {}
 } // end namespace clang

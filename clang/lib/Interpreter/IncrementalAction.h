@@ -36,7 +36,7 @@ private:
   bool IsTerminating = false;
   Interpreter &Interp;
   [[maybe_unused]] CompilerInstance &CI;
-  llvm::LLVMContext &LLVMCtx;
+  // llvm::LLVMContext &LLVMCtx;
   std::unique_ptr<ASTConsumer> Consumer;
 
   /// When CodeGen is created the first llvm::Module gets cached in many places
@@ -75,7 +75,7 @@ public:
   CodeGenerator *getCodeGen() const;
 
   /// Generate an LLVM module for the most recent parsed input.
-  std::unique_ptr<llvm::Module> GenModule(bool WasFailure = false);
+  std::unique_ptr<llvm::Module> GenModule();
 };
 
 class InProcessPrintingASTConsumer final : public MultiplexConsumer {

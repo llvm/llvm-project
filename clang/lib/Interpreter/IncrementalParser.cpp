@@ -16,6 +16,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
+#include "clang/CodeGen/ModuleBuilder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
@@ -85,9 +86,8 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
-    Consumer->HandleTranslationUnit(C);
     CleanUpPTU(C.getTranslationUnitDecl());
-
+    // Consumer->HandleTranslationUnit(C);
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
     return llvm::make_error<llvm::StringError>("Parsing failed.",
@@ -192,28 +192,6 @@ void IncrementalParser::withdrawMostRecentTU(
   C.TUDecl = Prev;
 }
 
-template <typename decl_type>
-void IncrementalParser::RepairRedeclChain(decl_type *D,
-                                          TranslationUnitDecl *PTU) {
-  decl_type *NewLatestDecl = nullptr;
-  decl_type *It = D->getMostRecentDecl();
-  while (It) {
-    if (It->getTranslationUnitDecl() != PTU) {
-      NewLatestDecl = It;
-      break;
-    }
-    if (It == It->getFirstDecl())
-      break;
-    It = It->getPreviousDecl();
-  }
-
-  if (!NewLatestDecl)
-    return; // entire chain from FailedTU
-
-  Redeclarable<decl_type> *RD = D->getFirstDecl();
-  RD->RedeclLink.setLatest(NewLatestDecl);
-}
-
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
     // Collect the keys to erase: erasing during iteration invalidates the map
@@ -270,6 +248,20 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     }
   }
 
+  // llvm::SmallVector<llvm::StringRef> Decls;
+  // Decls.reserve(64);
+  // auto *Gen = Act->getCodeGen();
+  // for (auto &F : Gen->GetModule()->functions()) {
+  //   if (const Decl *D = Gen->GetDeclForMangledName(F.getName())) {
+  //     if (D->getTranslationUnitDecl() == MostRecentTU)
+  //       Decls.push_back(F.getName());
+  //   }
+  // }
+
+  // Act->getCodeGen()->restoreManglings(Decls);
+  // Act->getCodeGen()->restoreManglings();
+
+  // FIXME: We should de-allocate MostRecentTU
   for (Decl *D : MostRecentTU->decls()) {
     auto *ND = dyn_cast<NamedDecl>(D);
     if (!ND || ND->getDeclName().isEmpty())
@@ -279,8 +271,8 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
 
   // Lookup alone is not enough: the redeclaration chain still reaches these.
   withdrawMostRecentTU(MostRecentTU);
-  RepairRedeclChain(MostRecentTU, MostRecentTU);
-  S.getASTContext().setTranslationUnitDecl(MostRecentTU->getPreviousDecl());
+  // RepairRedeclChain(MostRecentTU, MostRecentTU);
+  // S.getASTContext().setTranslationUnitDecl(MostRecentTU->getPreviousDecl());
 }
 
 PartialTranslationUnit &

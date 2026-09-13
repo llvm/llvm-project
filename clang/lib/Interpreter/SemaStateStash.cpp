@@ -1,4 +1,4 @@
-//===--- SemaStateStash.cpp - Sema persistent state stash/restore
+//===--- SemaStateRecovery.cpp - Sema persistent state stash/restore
 //----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -29,8 +29,7 @@
 namespace clang {
 
 template <typename EntryType, typename PredT>
-static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred)
-{
+static void eraseFoldingSetIf(llvm::FoldingSet<EntryType> &FS, PredT &&Pred) {
   SmallVector<EntryType *, 16> ToRemove;
   for (auto &N : FS)
     if (Pred(N))
@@ -116,7 +115,7 @@ static void eraseSmallPtrSetIf(llvm::SmallPtrSet<T, SmallSize> &Set,
 // Pragma / value snapshot (uses Sema friend access for nested types)
 //===----------------------------------------------------------------------===//
 
-// struct SemaStateStash::PragmaSnapshot {
+// struct SemaStateRecovery::PragmaSnapshot {
 //   Sema::PragmaClangSection PragmaClangBSSSection;
 //   Sema::PragmaClangSection PragmaClangDataSection;
 //   Sema::PragmaClangSection PragmaClangRodataSection;
@@ -140,7 +139,7 @@ static void eraseSmallPtrSetIf(llvm::SmallPtrSet<T, SmallSize> &Set,
 //   FileNullabilityMap NullabilityMap;
 // };
 
-void SemaStateStash::stash(SemaStashCheckPoint &CP) {
+void SemaStateRecovery::stash(SemaStashCheckPoint &CP) {
   CP.SemaBumpSlabCP = S.BumpAlloc.checkPoint();
   // CP.CachedFunctionScopeSize = S.CachedFunctionScope.size();
   CP.FunctionScopesSize = S.FunctionScopes.size();
@@ -230,7 +229,7 @@ void SemaStateStash::stash(SemaStashCheckPoint &CP) {
       S.CodeSynthesisContextLookupModules.size();
   CP.LookupModulesCacheSize = S.LookupModulesCache.size();
   CP.VisibleNamespaceCacheSize = S.VisibleNamespaceCache.size();
-  CP.TemplateInstCallbacksSize = S.TemplateInstCallbacks.size();
+  // CP.TemplateInstCallbacksSize = S.TemplateInstCallbacks.size();
   CP.PendingInstantiationsSize = S.PendingInstantiations.size();
   CP.LateParsedInstantiationsSize = S.LateParsedInstantiations.size();
   CP.SavedVTableUsesSize = S.SavedVTableUses.size();
@@ -239,6 +238,8 @@ void SemaStateStash::stash(SemaStashCheckPoint &CP) {
       S.PendingLocalImplicitInstantiations.size();
   CP.UnsubstitutedConstraintSatisfactionCacheSize =
       S.UnsubstitutedConstraintSatisfactionCache.size();
+  if (S.CurrentCachedTemplateArgs)
+    CP.CurrentCachedTemplateArgsSize = S.CurrentCachedTemplateArgs->size();
   CP.SubsumptionCacheSize = S.SubsumptionCache.size();
   CP.NormalizationCacheSize = S.NormalizationCache.size();
   CP.SatisfactionCacheSize = S.SatisfactionCache.size();
@@ -248,8 +249,8 @@ void SemaStateStash::stash(SemaStashCheckPoint &CP) {
   // CP.AllEffectsToVerifySize = S.AllEffectsToVerify.size();
 }
 
-void SemaStateStash::restore(SemaStashCheckPoint &CP,
-                             llvm::SlabCheckPoint SlabCP) {
+void SemaStateRecovery::restore(SemaStashCheckPoint &CP,
+                                llvm::SlabCheckPoint SlabCP) {
 
   ASTContext &Ctx = S.getASTContext();
   if (CP.FunctionScopesSize != S.FunctionScopes.size()) {
@@ -438,7 +439,8 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
         *S.PureVirtualClassDiagSet.get(), [&](const CXXRecordDecl *RD) -> bool {
           return Ctx.getAllocator().isAfterCheckpoint(RD, SlabCP);
         });
-    // assert(CP.PureVirtualClassDiagSetSize == S.PureVirtualClassDiagSet->size());
+    // assert(CP.PureVirtualClassDiagSetSize ==
+    // S.PureVirtualClassDiagSet->size());
   }
 
   if (CP.DelegatingCtorDeclsSize != S.DelegatingCtorDecls.end()) {
@@ -464,7 +466,7 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
 
   if (CP.UndefinedButUsedSize != S.UndefinedButUsed.size()) {
     llvm::dbgs() << "CP.UndefinedButUsedSize != S.UndefinedButUsed.size()\n";
-      // llvm::MapVector<NamedDecl *, SourceLocation> UndefinedButUsed;
+    // llvm::MapVector<NamedDecl *, SourceLocation> UndefinedButUsed;
     while (CP.UndefinedButUsedSize != S.UndefinedButUsed.size())
       S.UndefinedButUsed.pop_back();
     assert(CP.UndefinedButUsedSize == S.UndefinedButUsed.size());
@@ -580,11 +582,13 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
                     "S.TypoCorrectionFailures.size()\n";
     // eraseDenseMapIf(
     //     S.TypoCorrectionFailures,
-    //     [&](llvm::detail::DenseMapPair<IdentifierInfo *, Sema::SrcLocSet> &KV)
+    //     [&](llvm::detail::DenseMapPair<IdentifierInfo *, Sema::SrcLocSet>
+    //     &KV)
     //         -> bool {
-    //           llvm::outs() << "SlabCheckPoint Cur : " << (void *)SlabCP.CurPtr << "\n";
-    //           llvm::outs() << "SlabCheckPoint END : " << (void *)SlabCP.End << "\n";
-    //           llvm::outs() << "Addr: " << static_cast<void *>(KV.getFirst()) << "\n";
+    //           llvm::outs() << "SlabCheckPoint Cur : " << (void
+    //           *)SlabCP.CurPtr << "\n"; llvm::outs() << "SlabCheckPoint END :
+    //           " << (void *)SlabCP.End << "\n"; llvm::outs() << "Addr: " <<
+    //           static_cast<void *>(KV.getFirst()) << "\n";
     //       return Ctx.getAllocator().isAfterCheckpoint(
     //           static_cast<void *>(KV.getFirst()), SlabCP);
     //     });
@@ -737,13 +741,13 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
     assert(CP.VisibleNamespaceCacheSize == S.VisibleNamespaceCache.size());
   }
 
-  if (CP.TemplateInstCallbacksSize != S.TemplateInstCallbacks.size()) {
-    llvm::dbgs() << "CP.TemplateInstCallbacksSize != "
-                    "S.TemplateInstCallbacks.size()\n";
-    //    std::vector<std::unique_ptr<TemplateInstantiationCallback>>
-    //   TemplateInstCallbacks;
-    assert(CP.TemplateInstCallbacksSize == S.TemplateInstCallbacks.size());
-  }
+  // if (CP.TemplateInstCallbacksSize != S.TemplateInstCallbacks.size()) {
+  //   llvm::dbgs() << "CP.TemplateInstCallbacksSize != "
+  //                   "S.TemplateInstCallbacks.size()\n";
+  //   //    std::vector<std::unique_ptr<TemplateInstantiationCallback>>
+  //   //   TemplateInstCallbacks;
+  //   assert(CP.TemplateInstCallbacksSize == S.TemplateInstCallbacks.size());
+  // }
 
   if (CP.PendingInstantiationsSize != S.PendingInstantiations.size()) {
     llvm::dbgs() << "CP.PendingInstantiationsSize != "
@@ -785,6 +789,22 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
         CP.PendingLocalImplicitInstantiationsSize);
     assert(CP.PendingLocalImplicitInstantiationsSize ==
            S.PendingLocalImplicitInstantiations.size());
+  }
+
+  if (S.CurrentCachedTemplateArgs && (CP.CurrentCachedTemplateArgsSize !=
+                                      S.CurrentCachedTemplateArgs->size())) {
+    llvm::dbgs() << "CP.CurrentCachedTemplateArgsSize != "
+                    "S.CurrentCachedTemplateArgs->size()\n ";
+    // eraseDenseMapIf(
+    //     S.UnsubstitutedConstraintSatisfactionCache,
+    //     [&](UnsubstitutedConstraintSatisfactionCacheResult
+    //     &R) -> bool {
+    //       return Ctx.isAfterCheckpoint(static_cast<void
+    //       *>(R.SubstExpr.get()),
+    //                                    SlabCP)
+    //     });
+    assert(CP.CurrentCachedTemplateArgsSize ==
+           S.CurrentCachedTemplateArgs->size());
   }
 
   if (CP.UnsubstitutedConstraintSatisfactionCacheSize !=
@@ -859,12 +879,15 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
   if (CP.SpecialMemberCacheSize != S.SpecialMemberCache.size()) {
     llvm::dbgs() << "CP.SpecialMemberCacheSize != "
                     "S.SpecialMemberCache.size()\n";
-    
-    eraseFoldingSetIf(
+
+    eraseDenseMapIf(
         S.SpecialMemberCache,
-        [&](Sema::SpecialMemberOverloadResultEntry &Node) -> bool {
-          return S.BumpAlloc.isAfterCheckpoint(static_cast<void *>(&Node),
-                                               CP.SemaBumpSlabCP);
+        [&](llvm::detail::DenseMapPair<Sema::SpecialMemberCacheKey,
+                                       Sema::SpecialMemberOverloadResult> &KV)
+            -> bool {
+          return S.BumpAlloc.isAfterCheckpoint(
+              static_cast<void *>(KV.getSecond().getMethod()),
+              CP.SemaBumpSlabCP);
         });
     assert(CP.SpecialMemberCacheSize == S.SpecialMemberCache.size());
   }
@@ -876,7 +899,8 @@ void SemaStateStash::restore(SemaStashCheckPoint &CP,
     assert(isa<NamedDecl>(TmpD) && "Decl isn't NamedDecl?");
     NamedDecl *D = cast<NamedDecl>(TmpD);
 
-    if (!D->getDeclName()) continue;
+    if (!D->getDeclName())
+      continue;
 
     if (Ctx.getAllocator().isAfterCheckpoint(static_cast<void *>(D), SlabCP)) {
       if (D->getDeclName().getFETokenInfo())

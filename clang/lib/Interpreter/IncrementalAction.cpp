@@ -54,7 +54,7 @@ IncrementalAction::IncrementalAction(CompilerInstance &Instance,
         }
         return Act;
       }()),
-      Interp(I), CI(Instance), LLVMCtx(LLVMCtx), Consumer(std::move(Consumer)) {}
+      Interp(I), CI(Instance), Consumer(std::move(Consumer)) {}
 
 std::unique_ptr<ASTConsumer>
 IncrementalAction::CreateASTConsumer(CompilerInstance & /*CI*/,
@@ -96,10 +96,8 @@ llvm::Module *IncrementalAction::getCachedCodeGenModule() const {
   return CachedInCodeGenModule.get();
 }
 
-std::unique_ptr<llvm::Module> IncrementalAction::GenModule(bool WasFailure) {
+std::unique_ptr<llvm::Module> IncrementalAction::GenModule() {
   static unsigned ID = 0;
-  if (WasFailure)
-    --ID;
   if (CodeGenerator *CG = getCodeGen()) {
     // Clang's CodeGen is designed to work with a single llvm::Module. In many
     // cases for convenience various CodeGen parts have a reference to the
@@ -116,10 +114,8 @@ std::unique_ptr<llvm::Module> IncrementalAction::GenModule(bool WasFailure) {
              CachedInCodeGenModule->alias_empty() &&
              CachedInCodeGenModule->ifunc_empty())) &&
            "CodeGen wrote to a readonly module");
-    std::unique_ptr<llvm::Module> M = nullptr;
-    if (!WasFailure)
-      M = CG->ReleaseModule();
-    CG->StartModule("incr_module_" + std::to_string(ID++), M ? M->getContext() : LLVMCtx);
+    std::unique_ptr<llvm::Module> M(CG->ReleaseModule());
+    CG->StartModule("incr_module_" + std::to_string(ID++), M->getContext());
     return M;
   }
   return nullptr;

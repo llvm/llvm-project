@@ -54,6 +54,8 @@
 namespace clang {
 
 class ASTContext;
+class ASTDeclDetacher;
+class ASTStateReader;
 class ClassTemplateDecl;
 class ConstructorUsingShadowDecl;
 class CXXBasePath;
@@ -257,11 +259,13 @@ public:
 /// Represents a C++ struct/union/class.
 class CXXRecordDecl : public RecordDecl {
   friend class ASTDeclMerger;
+  friend class ASTDeclDetacher;
   friend class ASTDeclReader;
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
   friend class ASTReader;
   friend class ASTRecordWriter;
+  friend class ASTStateReader;
   friend class ASTWriter;
   friend class DeclContext;
   friend class LambdaExpr;
