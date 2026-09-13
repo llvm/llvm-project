@@ -12081,7 +12081,7 @@ public:
 
     /// The checked, converted argument will be added to the
     /// end of these vectors.
-    SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
+    SmallVector<TemplateArgument, 8> SugaredConverted, CanonicalConverted;
 
     /// The check is being performed in the context of partial ordering.
     bool PartialOrdering;
@@ -12186,7 +12186,10 @@ public:
   ///
   /// This routine implements the semantics of C++ [temp.arg.type]. It
   /// returns true if an error occurred, and false otherwise.
-  bool CheckTemplateArgument(TypeSourceInfo *Arg);
+  ///
+  /// \param CanonicalArg If non-null, receives the canonical type of \p Arg.
+  bool CheckTemplateArgument(TypeSourceInfo *Arg,
+                             QualType *CanonicalArg = nullptr);
 
   /// Check a template argument against its corresponding
   /// non-type template parameter.

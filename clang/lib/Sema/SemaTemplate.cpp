@@ -5285,7 +5285,8 @@ bool Sema::CheckTemplateTypeArgument(
   }
   }
 
-  if (CheckTemplateArgument(TSI))
+  QualType CanonArgType;
+  if (CheckTemplateArgument(TSI, &CanonArgType))
     return true;
 
   // Objective-C ARC:
@@ -5297,11 +5298,11 @@ bool Sema::CheckTemplateTypeArgument(
     Qualifiers Qs;
     Qs.setObjCLifetime(Qualifiers::OCL_Strong);
     ArgType = Context.getQualifiedType(ArgType, Qs);
+    CanonArgType = Context.getCanonicalType(ArgType);
   }
 
   SugaredConverted.push_back(TemplateArgument(ArgType));
-  CanonicalConverted.push_back(
-      TemplateArgument(Context.getCanonicalType(ArgType)));
+  CanonicalConverted.push_back(TemplateArgument(CanonArgType));
   return false;
 }
 
@@ -5855,6 +5856,19 @@ static bool diagnoseMissingArgument(Sema &S, SourceLocation Loc,
   return true;
 }
 
+/// Return whether \p Param has a default template argument.
+///
+/// \p Param must be one of the three template parameter declaration kinds.
+static bool hasDefaultTemplateArgument(const NamedDecl *Param) {
+  if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(Param))
+    return TTP->hasDefaultArgument();
+  if (const auto *TTP = dyn_cast<TemplateTemplateParmDecl>(Param))
+    return TTP->hasDefaultArgument();
+  if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(Param))
+    return NTTP->hasDefaultArgument();
+  llvm_unreachable("expected a template parameter declaration");
+}
+
 /// Check that the given template argument list is well-formed
 /// for specializing the given template.
 bool Sema::CheckTemplateArgumentList(
@@ -5919,10 +5933,13 @@ bool Sema::CheckTemplateArgumentList(
       }
     }
 
+    bool IsParameterPack = (*Param)->isTemplateParameterPack();
+    UnsignedOrNone ExpandedPackSize = getExpandedPackSize(*Param);
+
     // If we have an expanded parameter pack, make sure we don't have too
     // many arguments.
-    if (UnsignedOrNone Expansions = getExpandedPackSize(*Param)) {
-      if (*Expansions == SugaredArgumentPack.size()) {
+    if (ExpandedPackSize) {
+      if (*ExpandedPackSize == SugaredArgumentPack.size()) {
         // We're done with this parameter pack. Pack up its arguments and add
         // them to the list.
         CTAI.SugaredConverted.push_back(
@@ -5972,8 +5989,25 @@ bool Sema::CheckTemplateArgumentList(
 
     if (ArgIdx < NumArgs) {
       TemplateArgumentLoc &ArgLoc = NewArgs[ArgIdx];
-      bool NonPackParameter =
-          !(*Param)->isTemplateParameterPack() || getExpandedPackSize(*Param);
+      // Fast path for the common one-to-one case.
+      if (!IsParameterPack && !ArgLoc.getArgument().isPackExpansion()) {
+        SaveAndRestore _1(CTAI.PartialOrdering, false);
+        if (CheckTemplateArgument(*Param, ArgLoc, Template, TemplateLoc,
+                                  RAngleLoc, 0, CTAI, CTAK_Specified))
+          return true;
+        if (hasDefaultTemplateArgument(*Param))
+          CTAI.CanonicalConverted.back().setIsDefaulted(
+              clang::isSubstitutedDefaultArgument(
+                  Context, ArgLoc.getArgument(), *Param,
+                  CTAI.CanonicalConverted, Params->getDepth()));
+        else if (CTAI.CanonicalConverted.back().getIsDefaulted())
+          CTAI.CanonicalConverted.back().setIsDefaulted(false);
+        ++ArgIdx;
+        ++Param;
+        continue;
+      }
+
+      bool NonPackParameter = !IsParameterPack || ExpandedPackSize;
       bool ArgIsExpansion = ArgLoc.getArgument().isPackExpansion();
 
       if (ArgIsExpansion && CTAI.MatchingTTP) {
@@ -5993,10 +6027,13 @@ bool Sema::CheckTemplateArgumentList(
                                     CTAK_Specified))
             return true;
           Arg = NewArgLoc.getArgument();
-          CTAI.CanonicalConverted.back().setIsDefaulted(
-              clang::isSubstitutedDefaultArgument(Context, Arg, *Param,
-                                                  CTAI.CanonicalConverted,
-                                                  Params->getDepth()));
+          if (hasDefaultTemplateArgument(*Param))
+            CTAI.CanonicalConverted.back().setIsDefaulted(
+                clang::isSubstitutedDefaultArgument(Context, Arg, *Param,
+                                                    CTAI.CanonicalConverted,
+                                                    Params->getDepth()));
+          else if (CTAI.CanonicalConverted.back().getIsDefaulted())
+            CTAI.CanonicalConverted.back().setIsDefaulted(false);
         }
         ArgLoc = TemplateArgumentLoc(
             TemplateArgument::CreatePackCopy(Context, Args),
@@ -6007,10 +6044,13 @@ bool Sema::CheckTemplateArgumentList(
                                   RAngleLoc, SugaredArgumentPack.size(), CTAI,
                                   CTAK_Specified))
           return true;
-        CTAI.CanonicalConverted.back().setIsDefaulted(
-            clang::isSubstitutedDefaultArgument(Context, ArgLoc.getArgument(),
-                                                *Param, CTAI.CanonicalConverted,
-                                                Params->getDepth()));
+        if (hasDefaultTemplateArgument(*Param))
+          CTAI.CanonicalConverted.back().setIsDefaulted(
+              clang::isSubstitutedDefaultArgument(
+                  Context, ArgLoc.getArgument(), *Param,
+                  CTAI.CanonicalConverted, Params->getDepth()));
+        else if (CTAI.CanonicalConverted.back().getIsDefaulted())
+          CTAI.CanonicalConverted.back().setIsDefaulted(false);
         if (ArgIsExpansion && NonPackParameter) {
           // CWG1430/CWG2686: we have a pack expansion as an argument to an
           // alias template, builtin template, or concept, and it's not part of
@@ -6061,7 +6101,7 @@ bool Sema::CheckTemplateArgumentList(
         return false;
       }
 
-      if ((*Param)->isTemplateParameterPack()) {
+      if (IsParameterPack) {
         // The template parameter was a template parameter pack, so take the
         // deduced argument and place it on the argument pack. Note that we
         // stay on the same template parameter so that we can deduce more
@@ -6088,9 +6128,8 @@ bool Sema::CheckTemplateArgumentList(
 
     // If we have a template parameter pack with no more corresponding
     // arguments, just break out now and we'll fill in the argument pack below.
-    if ((*Param)->isTemplateParameterPack()) {
-      assert(!getExpandedPackSize(*Param) &&
-             "Should have dealt with this already");
+    if (IsParameterPack) {
+      assert(!ExpandedPackSize && "Should have dealt with this already");
 
       // A non-expanded parameter pack before the end of the parameter list
       // only occurs for an ill-formed template parameter list, unless we've
@@ -6207,7 +6246,8 @@ bool Sema::CheckTemplateArgumentList(
   if (UpdateArgsWithConversions)
     TemplateArgs = std::move(NewArgs);
 
-  if (!PartialTemplateArgs) {
+  if (!PartialTemplateArgs && !isa<ConceptDecl>(Template) &&
+      Template->hasAssociatedConstraints()) {
     // Setup the context/ThisScope for the case where we are needing to
     // re-instantiate constraints outside of normal instantiation.
     DeclContext *NewContext = Template->getDeclContext();
@@ -6231,8 +6271,7 @@ bool Sema::CheckTemplateArgumentList(
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConceptInstantiation=*/true);
-    if (!isa<ConceptDecl>(Template) &&
-        EnsureTemplateArgumentListConstraints(
+    if (EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
       if (ConstraintsNotSatisfied)
@@ -6548,11 +6587,14 @@ bool UnnamedLocalNoLinkageFinder::VisitHLSLInlineSpirvType(
   return false;
 }
 
-bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo) {
+bool Sema::CheckTemplateArgument(TypeSourceInfo *ArgInfo,
+                                 QualType *CanonicalArg) {
   assert(ArgInfo && "invalid TypeSourceInfo");
   QualType Arg = ArgInfo->getType();
   SourceRange SR = ArgInfo->getTypeLoc().getSourceRange();
   QualType CanonArg = Context.getCanonicalType(Arg);
+  if (CanonicalArg)
+    *CanonicalArg = CanonArg;
 
   if (CanonArg->isVariablyModifiedType()) {
     return Diag(SR.getBegin(), diag::err_variably_modified_template_arg) << Arg;
