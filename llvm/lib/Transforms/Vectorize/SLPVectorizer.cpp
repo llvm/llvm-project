@@ -26184,7 +26184,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
             if (!Visited.insert(In).second) {
               It = find(make_range(std::next(It), Op.end()), I);
-              break;
+              continue;
             }
             HadSelfUse |= In == I;
             ScheduleCopyableDataMapByInstUser
