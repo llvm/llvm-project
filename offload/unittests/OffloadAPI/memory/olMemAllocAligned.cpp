@@ -10,6 +10,9 @@
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
 
+#include <cstdint>
+#include <limits>
+
 using olMemAllocAlignedTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocAlignedTest);
 
@@ -31,6 +34,10 @@ OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE_WITH_PARAM(
     defaultPrinterWithParam<ol_alloc_type_t>);
 
 constexpr size_t DefaultAlignment = 16;
+
+static void expectAligned(void *Alloc, size_t Alignment) {
+  EXPECT_EQ(reinterpret_cast<uintptr_t>(Alloc) % Alignment, 0U);
+}
 
 TEST_P(olMemAllocAlignedTest, SuccessAllocMany) {
   std::vector<void *> Allocs;
@@ -85,6 +92,14 @@ TEST_P(olMemAllocAlignedTest, InvalidAlignmentNotAPowerOfTwo) {
       olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024, 3, &Alloc));
 }
 
+TEST_P(olMemAllocAlignedTest, InvalidAlignmentMaxValue) {
+  void *Alloc = nullptr;
+
+  ASSERT_ERROR(OL_ERRC_INVALID_ARGUMENT,
+               olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
+                                 std::numeric_limits<uint32_t>::max(), &Alloc));
+}
+
 TEST_P(olMemAllocAlignedTest, InvalidHostType) {
   void *Alloc = nullptr;
   ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,
@@ -116,8 +131,55 @@ TEST_P(olMemAllocAlignedTypesTest, SuccessAllocDifferentAlignments) {
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
     ASSERT_SUCCESS(allocateDeviceOrHost(DefaultAllocSize, Alignment, &Alloc));
     ASSERT_NE(Alloc, nullptr);
+    expectAligned(Alloc, Alignment);
     olMemFree(Alloc);
   }
+}
+
+TEST_P(olMemAllocAlignedTypesTest, SuccessAllocDifferentSizesAndAlignments) {
+  const size_t Sizes[] = {8, 512, 2048};
+  const size_t Alignments[] = {4, 8, 16, 32, 64};
+
+  for (size_t Size : Sizes) {
+    for (size_t Alignment : Alignments) {
+      SCOPED_TRACE("size: " + std::to_string(Size) +
+                   ", alignment: " + std::to_string(Alignment));
+
+      void *Alloc = nullptr;
+      std::vector<uint8_t> Input(Size, 42);
+      std::vector<uint8_t> Output(Size, 0);
+
+      ASSERT_SUCCESS(allocateDeviceOrHost(Size, Alignment, &Alloc));
+      ASSERT_NE(Alloc, nullptr);
+      expectAligned(Alloc, Alignment);
+
+      ASSERT_SUCCESS(
+          olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
+      ASSERT_SUCCESS(
+          olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
+      EXPECT_EQ(Output, Input);
+
+      ASSERT_SUCCESS(olMemFree(Alloc));
+    }
+  }
+}
+
+TEST_P(olMemAllocAlignedTypesTest, SuccessAllocAboveMemoryManagerThreshold) {
+  const size_t Size = 16 * 1024;
+  const size_t Alignment = 64;
+  std::vector<uint8_t> Input(Size, 42);
+  std::vector<uint8_t> Output(Size, 0);
+  void *Alloc = nullptr;
+
+  ASSERT_SUCCESS(allocateDeviceOrHost(Size, Alignment, &Alloc));
+  ASSERT_NE(Alloc, nullptr);
+  expectAligned(Alloc, Alignment);
+
+  ASSERT_SUCCESS(olMemcpy(nullptr, Alloc, Device, Input.data(), Host, Size));
+  ASSERT_SUCCESS(olMemcpy(nullptr, Output.data(), Host, Alloc, Device, Size));
+  EXPECT_EQ(Output, Input);
+
+  ASSERT_SUCCESS(olMemFree(Alloc));
 }
 
 TEST_P(olMemAllocAlignedTypesTest, SuccessMemcpyDiferentAlignments) {
@@ -132,6 +194,8 @@ TEST_P(olMemAllocAlignedTypesTest, SuccessMemcpyDiferentAlignments) {
     Alignment = Alignments[i];
     SCOPED_TRACE("alignment: " + std::to_string(Alignment));
     ASSERT_SUCCESS(allocateDeviceOrHost(DefaultAllocSize, Alignment, &Alloc));
+    ASSERT_NE(Alloc, nullptr);
+    expectAligned(Alloc, Alignment);
     // memcpy is synchronous when queue is unspecified.
     ASSERT_SUCCESS(
         olMemcpy(nullptr, Alloc, Device, Input.data(), Host, DefaultAllocSize));
