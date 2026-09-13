@@ -576,6 +576,14 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_LONG_DOUBLE_IS_80_BIT
 #endif
 
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 106
+#  define TEST_LONG_DOUBLE_IS_PPCDOUBLEDOUBLE
+#endif
+
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 113
+#  define TEST_LONG_DOUBLE_IS_BINARY128
+#endif
+
 // Align benchmark functions and never inline them to reduce changes in performance in unrelated benchmarks
 #define TEST_ALIGN_BENCHMARK __attribute__((aligned(128), noinline))
 
