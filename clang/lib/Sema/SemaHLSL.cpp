@@ -4643,6 +4643,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   }
   case Builtin::BI__builtin_hlsl_interlocked_add:
   case Builtin::BI__builtin_hlsl_interlocked_and:
+  case Builtin::BI__builtin_hlsl_interlocked_exchange:
   case Builtin::BI__builtin_hlsl_interlocked_max:
   case Builtin::BI__builtin_hlsl_interlocked_min:
   case Builtin::BI__builtin_hlsl_interlocked_or:
@@ -4654,15 +4655,22 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     // argument count, integer-type matching, and the address-space requirement
     // on `dest`. The checks below are a safety net for callers that invoke the
     // builtin by its mangled name and would otherwise reach CodeGen unchecked.
-    if (TheCall->getNumArgs() < 2) {
-      SemaRef.Diag(TheCall->getEndLoc(),
-                   diag::err_typecheck_call_too_few_args_at_least)
-          << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
-          << /*is_non_object=*/0 << TheCall->getSourceRange();
-      return true;
+    // InterlockedExchange always reports the previous value, so it requires
+    // `original_value` instead of accepting it as an optional argument.
+    if (BuiltinID == Builtin::BI__builtin_hlsl_interlocked_exchange) {
+      if (SemaRef.checkArgCount(TheCall, 3))
+        return true;
+    } else {
+      if (TheCall->getNumArgs() < 2) {
+        SemaRef.Diag(TheCall->getEndLoc(),
+                     diag::err_typecheck_call_too_few_args_at_least)
+            << /*callee_type=*/0 << /*min_arg_count=*/2 << TheCall->getNumArgs()
+            << /*is_non_object=*/0 << TheCall->getSourceRange();
+        return true;
+      }
+      if (SemaRef.checkArgCountAtMost(TheCall, 3))
+        return true;
     }
-    if (SemaRef.checkArgCountAtMost(TheCall, 3))
-      return true;
 
     QualType DestTy = TheCall->getArg(0)->getType().getUnqualifiedType();
     if (!DestTy->isIntegerType()) {

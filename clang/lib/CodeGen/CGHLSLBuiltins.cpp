@@ -1481,6 +1481,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_interlocked_and: {
     return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::And);
   }
+  case Builtin::BI__builtin_hlsl_interlocked_exchange: {
+    return handleInterlockedOp(*this, E, llvm::AtomicRMWInst::Xchg);
+  }
   case Builtin::BI__builtin_hlsl_interlocked_max: {
     llvm::AtomicRMWInst::BinOp Op =
         E->getArg(0)->getType()->hasSignedIntegerRepresentation()
