@@ -63,6 +63,24 @@ void genCopyInAssign(fir::FirOpBuilder &builder, mlir::Location loc,
 void genCopyOutAssign(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value varBoxAddr, mlir::Value tempBoxAddr);
 
+/// Generate runtime call to "CopyOutReadOnlyMode": returns an i32 mode value
+/// (0 = off, 1 = trust the memory-map snapshot, 2 = confirm each hit) for the
+/// read-only copy-out skip policy, so inlined copy-out code can apply the
+/// same policy as the CopyOutAssign runtime.
+mlir::Value genCopyOutReadOnlyMode(fir::FirOpBuilder &builder,
+                                   mlir::Location loc);
+/// Generate runtime call to "CopyOutReadOnlyCandidate": i1, true iff \p box's
+/// data span lies within the snapshot's read-only regions (no system calls).
+mlir::Value genCopyOutReadOnlyCandidate(fir::FirOpBuilder &builder,
+                                        mlir::Location loc, mlir::Value box);
+/// Generate runtime call to "CopyOutReadOnlyConfirm": i1, true iff \p box's
+/// data span is read-only in the current memory map (mode-2 re-confirmation).
+mlir::Value genCopyOutReadOnlyConfirm(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value box);
+/// Generate runtime call to "NoteSkippedCopyOut" (diagnostics for a skipped
+/// copy-out).
+void genNoteSkippedCopyOut(fir::FirOpBuilder &builder, mlir::Location loc);
+
 /// Generate runtime call to AssignSimple (fast path for intrinsic types).
 /// \p destBox must be a fir.ref<fir.box<T>> and \p sourceBox a fir.box<T>.
 /// Preconditions enforced at call site:
