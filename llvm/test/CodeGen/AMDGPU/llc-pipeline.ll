@@ -1415,6 +1415,7 @@
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix
 ; GCN-O3-NEXT:        Greedy Register Allocator
+; GCN-O3-NEXT:        AMDGPU Optimize VGPR Encoding
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        AMDGPU Rewrite AGPR-Copy-MFMA
 ; GCN-O3-NEXT:        Virtual Register Rewriter
