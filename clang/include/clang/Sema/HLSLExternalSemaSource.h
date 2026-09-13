@@ -43,8 +43,10 @@ public:
 
 private:
   void defineTrivialHLSLTypes();
+  void defineInternalHLSLTypes();
   void defineHLSLVectorAlias();
   void defineHLSLMatrixAlias();
+  void defineHeapResourceInfoTypes();
   void defineHLSLTypesWithForwardDeclarations();
   void defineHLSLAtomicIntrinsics();
   void onCompletion(CXXRecordDecl *Record, CompletionFunction Fn);

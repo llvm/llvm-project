@@ -74,8 +74,9 @@ void main(COORD_TYPE loc, float cmp) {
   // offset-note@*:* {{candidate function not viable: no known conversion from 'SamplerState' to 'hlsl::SamplerComparisonState' for 1st argument}}
   // offset-note@*:* {{candidate function not viable: requires 4 arguments, but 3 were provided}}
   // nooffset-note@*:* {{candidate constructor not viable: no known conversion from 'SamplerState' to 'const hlsl::SamplerComparisonState &' for 1st argument}}
-  // offset-error@+2 {{no matching member function for call to 'SampleCmpLevelZero'}}
-  // nooffset-error@+1 {{no viable conversion from 'SamplerState' to 'hlsl::SamplerComparisonState'}}
+  // offset-error@+3 {{no matching member function for call to 'SampleCmpLevelZero'}}
+  // nooffset-error@+2 {{no viable conversion from 'SamplerState' to 'hlsl::SamplerComparisonState'}}
+  // nooffset-note@*:* {{candidate constructor not viable: no known conversion from 'SamplerState' to 'hlsl::__hlsl_heap_sampler_info' for 1st argument}}
   t.SampleCmpLevelZero(s2, loc, cmp);
 
 #ifdef HAS_OFFSET

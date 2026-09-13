@@ -104,6 +104,23 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: AlwaysInlineAttr
 
+// Heap info constructor
+
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (hlsl::__hlsl_heap_resource_info)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__hlsl_heap_resource_info'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: BinaryOperator {{.*}} '='
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: CStyleCastExpr {{.*}} '__hlsl_resource_t
+// CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
+// CHECK-NEXT: DeclRefExpr {{.*}} '<builtin fn type>' Function {{.*}} '__builtin_hlsl_resource_handlefromheap' '__hlsl_resource_t (__hlsl_resource_t, unsigned int) noexcept'
+// CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
+// CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
+// CHECK-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__hlsl_heap_resource_info'
+// CHECK-NEXT: AlwaysInlineAttr
+
 // Static __createFromBinding method
 
 // CHECK: CXXMethodDecl {{.*}} __createFromBinding 'hlsl::[[RESOURCE]]<element_type> (unsigned int, unsigned int, int, unsigned int, const char *)' static
