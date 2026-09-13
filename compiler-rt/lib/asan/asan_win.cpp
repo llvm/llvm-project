@@ -24,6 +24,7 @@
 #  include "asan_report.h"
 #  include "asan_stack.h"
 #  include "asan_thread.h"
+#  include "asan_win_common_runtime_thunk.h"
 #  include "sanitizer_common/sanitizer_libc.h"
 #  include "sanitizer_common/sanitizer_mutex.h"
 #  include "sanitizer_common/sanitizer_win.h"
