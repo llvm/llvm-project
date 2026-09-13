@@ -2630,6 +2630,26 @@ Instruction *InstCombinerImpl::visitUIToFP(CastInst &CI) {
     CI.setNonNeg();
     return &CI;
   }
+
+  // uitofp (and (trunc X), Mask) --> uitofp (and X, zext(Mask))
+  Value *Src = CI.getOperand(0);
+  Value *X;
+  Constant *Mask;
+  if (match(Src, m_OneUse(m_And(m_OneUse(m_Trunc(m_Value(X))),
+                                m_ImmConstant(Mask))))) {
+    unsigned SourceWidth = Src->getType()->getScalarSizeInBits();
+    unsigned InputWidth = X->getType()->getScalarSizeInBits();
+    if (!DL.isLegalInteger(SourceWidth) &&
+        shouldChangeType(SourceWidth, InputWidth)) {
+      Value *MaskedX =
+          Builder.CreateAnd(X, Builder.CreateZExt(Mask, X->getType()));
+      auto *NewUIToFP =
+          CastInst::Create(Instruction::UIToFP, MaskedX, CI.getType());
+      NewUIToFP->setNonNeg(CI.hasNonNeg());
+      return NewUIToFP;
+    }
+  }
+
   return nullptr;
 }
 
