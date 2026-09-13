@@ -1125,6 +1125,71 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     }
     break;
   }
+  case TargetOpcode::G_BITCAST: {
+    if (DstTy.isScalableVector())
+      break;
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    // Ignore bitcasts from untyped sources.
+    if (SrcTy.isAnyScalar() || SrcTy.isAnyVector())
+      break;
+
+    unsigned SrcBitWidth = SrcTy.getScalarSizeInBits();
+    unsigned NumElts = DemandedElts.getBitWidth();
+
+    // Fast handling of 'identity' bitcasts.
+    if (BitWidth == SrcBitWidth) {
+      computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);
+      break;
+    }
+
+    bool IsLE = getDataLayout().isLittleEndian();
+    // Bitcast 'small element' vector to 'large element' scalar/vector.
+    if ((BitWidth % SrcBitWidth) == 0) {
+      assert(SrcTy.isVector() && "Expected bitcast from vector");
+      // Collect known bits for the (larger) output by collecting the known
+      // bits from each set of sub elements and shift these into place.
+      // We need to separately call computeKnownBits for each set of
+      // sub elements as the knownbits for each is likely to be different.
+      unsigned SubScale = BitWidth / SrcBitWidth;
+      APInt SubDemandedElts(NumElts * SubScale, 0);
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i])
+          SubDemandedElts.setBit(i * SubScale);
+      for (unsigned i = 0; i != SubScale; ++i) {
+        computeKnownBitsImpl(SrcReg, Known2, SubDemandedElts.shl(i), Depth + 1);
+        unsigned Shifts = IsLE ? i : SubScale - 1 - i;
+        Known.insertBits(Known2, SrcBitWidth * Shifts);
+      }
+    }
+
+    // Bitcast 'large element' scalar/vector to 'small element' vector.
+    if ((SrcBitWidth % BitWidth) == 0) {
+      assert(DstTy.isVector() && "Expected bitcast to vector");
+
+      // Collect known bits for the (smaller) output by collecting the known
+      // bits from the overlapping larger input elements and extracting the
+      // sub sections we actually care about.
+      unsigned SubScale = SrcBitWidth / BitWidth;
+
+      APInt SubDemandedElts =
+          APIntOps::ScaleBitMask(DemandedElts, NumElts / SubScale);
+      computeKnownBitsImpl(SrcReg, Known2, SubDemandedElts, Depth + 1);
+
+      Known.setAllConflict();
+
+      for (unsigned i = 0; i != NumElts; ++i)
+        if (DemandedElts[i]) {
+          unsigned Shifts = IsLE ? i : NumElts - 1 - i;
+          unsigned Offset = (Shifts % SubScale) * BitWidth;
+          Known = Known.intersectWith(Known2.extractBits(BitWidth, Offset));
+          // If we don't know any bits, early out.
+          if (Known.isUnknown())
+            break;
+        }
+    }
+    break;
+  }
   case TargetOpcode::G_ABS: {
     Register SrcReg = MI.getOperand(1).getReg();
     computeKnownBitsImpl(SrcReg, Known, DemandedElts, Depth + 1);

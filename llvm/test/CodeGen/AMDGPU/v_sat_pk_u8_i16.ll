@@ -1783,7 +1783,7 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v1, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GISEL-GFX9-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-GFX11-TRUE16-LABEL: basic_smax_smin_vec_input_rev:
@@ -1804,8 +1804,7 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
 ; GISEL-GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GISEL-GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GISEL-GFX11-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GISEL-GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -1838,8 +1837,7 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; GISEL-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX12-FAKE16-NEXT:    v_pk_min_i16 v0, 0xff00ff, v0
 ; GISEL-GFX12-FAKE16-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GISEL-GFX12-FAKE16-NEXT:    v_and_b32_e32 v0, 0xff, v0
-; GISEL-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GISEL-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX12-FAKE16-NEXT:    v_and_b32_e32 v1, 0xff, v1
 ; GISEL-GFX12-FAKE16-NEXT:    v_lshlrev_b16 v1, 8, v1
 ; GISEL-GFX12-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
