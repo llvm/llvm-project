@@ -16,8 +16,13 @@
 #ifndef LLVM_CLANG_TOOLING_CORE_DIAGNOSTIC_H
 #define LLVM_CLANG_TOOLING_CORE_DIAGNOSTIC_H
 
+// Please do not #include Clang headers in this file. This file can be used
+// from clang-tblgen, and consuming Clang headers here will create a circular
+// dependency. It _is_ acceptable to forward-declare types from the "clang"
+// namespace, as long as the consuming code in clang-tblgen does not need to use
+// any of the functions that use the forward-declared types.
 #include "Replacement.h"
-#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticLevel.h" // OK because it only defines the enum.
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -67,19 +72,19 @@ struct DiagnosticMessage {
 /// fixes to be applied.
 struct Diagnostic {
   enum Level {
-    Remark = DiagnosticsEngine::Remark,
-    Warning = DiagnosticsEngine::Warning,
-    Error = DiagnosticsEngine::Error
+    Remark = static_cast<uint8_t>(DiagnosticLevel::Remark),
+    Warning = static_cast<uint8_t>(DiagnosticLevel::Warning),
+    Error = static_cast<uint8_t>(DiagnosticLevel::Error)
   };
 
   Diagnostic() = default;
 
   Diagnostic(llvm::StringRef DiagnosticName, Level DiagLevel,
-             StringRef BuildDirectory);
+             llvm::StringRef BuildDirectory);
 
   Diagnostic(llvm::StringRef DiagnosticName, const DiagnosticMessage &Message,
-             const SmallVector<DiagnosticMessage, 1> &Notes, Level DiagLevel,
-             llvm::StringRef BuildDirectory);
+             const llvm::SmallVector<DiagnosticMessage, 1> &Notes,
+             Level DiagLevel, llvm::StringRef BuildDirectory);
 
   /// Name identifying the Diagnostic.
   std::string DiagnosticName;
@@ -88,7 +93,7 @@ struct Diagnostic {
   DiagnosticMessage Message;
 
   /// Potential notes about the diagnostic.
-  SmallVector<DiagnosticMessage, 1> Notes;
+  llvm::SmallVector<DiagnosticMessage, 1> Notes;
 
   /// Diagnostic level. Can indicate either an error or a warning.
   Level DiagLevel;
