@@ -7577,18 +7577,55 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
   //  "If the compound literal occurs outside the body of a function, the
   //  initializer list shall consist of constant expressions."
   if (IsFileScope)
-    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr))
+    if (auto ILE = dyn_cast<InitListExpr>(LiteralExpr)) {
+      // A default argument or default member initializer containing an
+      // immediate call or source_location is rebuilt at each use site, where
+      // its elements are evaluated (see BuildCXXDefaultArgExpr).
+      bool InDefaultArgOrInit =
+          isCheckingDefaultArgumentOrInitializer() ||
+          InnermostDeclarationWithDelayedImmediateInvocations().has_value();
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
-        if (!Init->isTypeDependent() && !Init->isValueDependent() &&
-            !Init->isConstantInitializer(Context)) {
+        // An immediate invocation is already a ConstantExpr and receives its
+        // value at the end of the full-expression.
+        if (isa<ConstantExpr>(Init))
+          continue;
+        if (Init->isTypeDependent() || Init->isValueDependent()) {
+          ILE->setInit(i, ConstantExpr::Create(Context, Init));
+          continue;
+        }
+        // Only a reference member is initialized by a glvalue.
+        bool IsRef = Init->isGLValue();
+        if (!Init->isConstantInitializer(Context, IsRef)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
         }
 
-        ILE->setInit(i, ConstantExpr::Create(Context, Init));
+        // Store the value so CodeGen does not re-evaluate the element outside
+        // a constant context.
+        bool DeferToUseSite = false;
+        if (InDefaultArgOrInit) {
+          ImmediateCallVisitor V(Context);
+          V.TraverseStmt(Init);
+          DeferToUseSite = V.HasImmediateCalls;
+        }
+        Expr::EvalResult Eval;
+        bool Evaluated = false;
+        if (!DeferToUseSite) {
+          if (IsRef)
+            Evaluated = Init->EvaluateAsLValue(Eval, Context,
+                                               /*InConstantContext=*/true);
+          else if (Init->isPRValue())
+            Evaluated = Init->EvaluateAsRValue(Eval, Context,
+                                               /*InConstantContext=*/true);
+        }
+        if (Evaluated && !Eval.HasSideEffects && Eval.Val.hasValue())
+          ILE->setInit(i, ConstantExpr::Create(Context, Init, Eval.Val));
+        else
+          ILE->setInit(i, ConstantExpr::Create(Context, Init));
       }
+    }
 
   auto *E = new (Context) CompoundLiteralExpr(LParenLoc, TInfo, literalType, VK,
                                               LiteralExpr, IsFileScope);

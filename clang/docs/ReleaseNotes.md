@@ -715,6 +715,11 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
   evaluated to a value not representable by a signed integer, such as an
   unsigned wrap around. (#GH221418)
+- Fixed an assertion failure when the dynamic initializer of a global variable
+  takes the address of a file-scope compound literal whose initializer is only
+  constant under constant-evaluation rules, such as `__builtin_constant_p` of a
+  non-constant expression. The elements of a file-scope compound literal are now
+  evaluated once in Sema and the results are stored in the AST. (#GH212106)
 
 ### OpenACC Specific Changes
 
