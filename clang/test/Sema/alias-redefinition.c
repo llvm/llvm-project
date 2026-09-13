@@ -24,6 +24,8 @@ void __attribute((alias("f5"))) fun5(void) {} // expected-error {{definition 'fu
 
 int var1 __attribute((alias("v1"))); // expected-error {{definition 'var1' cannot also be an alias}}
 static int var2 __attribute((alias("v2"))) = 2; // expected-error {{definition 'var2' cannot also be an alias}}
+extern int var_with_extern_initializer __attribute__((alias(""))) = 42; // expected-warning {{'extern' variable has an initializer}}
+// expected-error@-1 {{definition 'var_with_extern_initializer' cannot also be an alias}}
 
 extern int var3 __attribute__((alias("C"))); // expected-note{{previous definition is here}}
 int var3 = 3; // expected-error{{redefinition of 'var3'}}
