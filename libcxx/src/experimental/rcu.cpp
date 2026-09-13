@@ -52,7 +52,7 @@ struct reader_states {
 
   bool is_grace_period_ongoing_at_phase(state_type global_phase) const noexcept {
     auto state = state_.load(std::memory_order_relaxed);
-    return !is_quiescent_state(state) && get_grace_period_phase(state) != global_phase;
+    return !is_quiescent_state(state) && get_grace_period_phase(state) == global_phase;
   }
 
   void set_state(state_type grace_period_phase, state_type reader_nest_level) {
@@ -106,13 +106,13 @@ class rcu_domain_impl {
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
-    auto new_phase = old_phase ^ reader_states::grace_period_phase_mask;
+    // auto new_phase = old_phase ^ reader_states::grace_period_phase_mask;
     // std::printf("rcu_domain::update_phase_and_wait() new phase: 0x%04x\n", new_phase);
 
     std::atomic_signal_fence(std::memory_order_seq_cst);
 
     // Wait for all threads to quiesce in the old phase
-    while (any_reader_in_ongoing_grace_period(new_phase)) {
+    while (any_reader_in_ongoing_grace_period(old_phase)) {
       grace_period_waiting_flag_.store(true, std::memory_order_relaxed);
       grace_period_waiting_flag_.wait(true, std::memory_order_relaxed);
     }
