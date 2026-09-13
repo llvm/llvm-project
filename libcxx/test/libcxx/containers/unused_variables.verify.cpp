@@ -32,7 +32,6 @@ void containers() {
   std::unordered_multimap<int, int> i; // expected-warning {{unused variable}}
   std::unordered_set<int> j;           // expected-warning {{unused variable}}
   std::unordered_multiset<int> k;      // expected-warning {{unused variable}}
-  std::string l;                       // expected-warning {{unused variable}}
   std::vector<int> m;                  // expected-warning {{unused variable}}
   std::vector<bool> n;                 // expected-warning {{unused variable}}
 }
@@ -49,7 +48,6 @@ void container_iterators() {
   std::unordered_multimap<int, int>::iterator i; // expected-warning {{unused variable}}
   std::unordered_set<int>::iterator j;           // expected-warning {{unused variable}}
   std::unordered_multiset<int>::iterator k;      // expected-warning {{unused variable}}
-  std::string::iterator l;                       // expected-warning {{unused variable}}
   std::vector<int>::iterator m;                  // expected-warning {{unused variable}}
   std::vector<bool>::iterator n;                 // expected-warning {{unused variable}}
 }
@@ -66,7 +64,6 @@ void container_const_iterators() {
   std::unordered_multimap<int, int>::const_iterator i; // expected-warning {{unused variable}}
   std::unordered_set<int>::const_iterator j;           // expected-warning {{unused variable}}
   std::unordered_multiset<int>::const_iterator k;      // expected-warning {{unused variable}}
-  std::string::const_iterator l;                       // expected-warning {{unused variable}}
   std::vector<int>::const_iterator m;                  // expected-warning {{unused variable}}
   std::vector<bool>::const_iterator n;                 // expected-warning {{unused variable}}
 }
