@@ -89,10 +89,22 @@ def note_constexpr_array_index : Note<"cannot refer to element %0 of "
   "in a constant expression">;
 def note_constexpr_float_arithmetic : Note<
   "floating point arithmetic produces %select{an infinity|a NaN}0">;
+def note_constexpr_float_underflow : Note<
+  "call to %0 raises a floating-point underflow exception">;
+def note_constexpr_float_overflow : Note<
+  "call to %0 raises a floating-point overflow exception">;
+def note_constexpr_float_divide_by_zero : Note<
+  "call to %0 raises a floating-point divide-by-zero exception">;
+def note_constexpr_float_invalid_op : Note<
+  "call to %0 raises an invalid floating-point operation exception">;
+def note_constexpr_unsupported_rounding : Note<
+  "cannot evaluate call to %0 in '%1' rounding mode">;
 def note_constexpr_dynamic_rounding : Note<
-  "cannot evaluate this expression if rounding mode is dynamic">;
+  "cannot evaluate this expression in dynamic rounding mode">;
 def note_constexpr_float_arithmetic_strict : Note<
-  "compile time floating point arithmetic suppressed in strict evaluation modes">;
+  "compile-time floating-point evaluation suppressed in strict evaluation modes">;
+def note_constexpr_math_errno : Note<
+  "call to %0 sets 'errno' at runtime">;
 def note_constexpr_pointer_subtraction_not_same_array : Note<
   "subtracted pointers are not elements of the same array">;
 def note_constexpr_pointer_subtraction_zero_size : Note<
