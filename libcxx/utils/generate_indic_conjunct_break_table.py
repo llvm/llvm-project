@@ -89,7 +89,7 @@ DATA_ARRAY_TEMPLATE = """
 /// The entries of the indic conjunct break property table.
 ///
 /// The data is generated from
-/// -  https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
+/// -  https://www.unicode.org/Public/18.0.0/ucd/DerivedCoreProperties.txt
 ///
 /// The data has 3 values
 /// - bits [0, 1] The property. One of the values generated from the datafiles
@@ -283,7 +283,7 @@ def generate_cpp_data(prop_name: str, ranges: list[PropertyRange]) -> str:
 def generate_data_tables() -> str:
     """
     Generate Unicode data for inclusion into <format> from
-    - https://www.unicode.org/Public/UCD/latest/ucd/DerivedCoreProperties.txt
+    - https://www.unicode.org/Public/18.0.0/ucd/DerivedCoreProperties.txt
 
     These files are expected to be stored in the same directory as this script.
     """
