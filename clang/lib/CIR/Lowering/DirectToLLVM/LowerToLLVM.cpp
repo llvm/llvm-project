@@ -3855,6 +3855,9 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     assert(!cir::MissingFeatures::addressSpace());
     return mlir::LLVM::LLVMPointerType::get(type.getContext());
   });
+  converter.addConversion([&](cir::CUDADeviceSurfaceType type) -> mlir::Type {
+    return mlir::IntegerType::get(type.getContext(), 64);
+  });
   converter.addConversion([&](cir::CUDADeviceTextureType type) -> mlir::Type {
     return mlir::IntegerType::get(type.getContext(), 64);
   });
