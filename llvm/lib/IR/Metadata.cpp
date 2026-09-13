@@ -211,7 +211,7 @@ bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
   assert(Ref && "Expected live reference");
   assert((Owner || *static_cast<Metadata **>(Ref) == &MD) &&
          "Reference without owner must be direct");
-  if (auto *R = ReplaceableMetadataImpl::getOrCreate(MD)) {
+  if (auto *R = ReplaceableUses::getOrCreate(MD)) {
     R->addRef(Ref, Owner);
     return true;
   }
@@ -226,7 +226,7 @@ bool MetadataTracking::track(void *Ref, Metadata &MD, OwnerTy Owner) {
 
 void MetadataTracking::untrack(void *Ref, Metadata &MD) {
   assert(Ref && "Expected live reference");
-  if (auto *R = ReplaceableMetadataImpl::getIfExists(MD))
+  if (auto *R = ReplaceableUses::getIfExists(MD))
     R->dropRef(Ref);
   else if (auto *PH = dyn_cast<DistinctMDOperandPlaceholder>(&MD))
     PH->Use = nullptr;
@@ -236,7 +236,7 @@ bool MetadataTracking::retrack(void *Ref, Metadata &MD, void *New) {
   assert(Ref && "Expected live reference");
   assert(New && "Expected live reference");
   assert(Ref != New && "Expected change");
-  if (auto *R = ReplaceableMetadataImpl::getIfExists(MD)) {
+  if (auto *R = ReplaceableUses::getIfExists(MD)) {
     R->moveRef(Ref, New, MD);
     return true;
   }
@@ -248,10 +248,10 @@ bool MetadataTracking::retrack(void *Ref, Metadata &MD, void *New) {
 }
 
 bool MetadataTracking::isReplaceable(const Metadata &MD) {
-  return ReplaceableMetadataImpl::isReplaceable(MD);
+  return ReplaceableUses::isReplaceable(MD);
 }
 
-SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
+SmallVector<Metadata *> ReplaceableUses::getAllArgListUsers() {
   SmallVector<std::pair<OwnerTy, uint64_t> *> MDUsersWithID;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
@@ -273,7 +273,7 @@ SmallVector<Metadata *> ReplaceableMetadataImpl::getAllArgListUsers() {
 }
 
 SmallVector<DbgVariableRecord *>
-ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
+ReplaceableUses::getAllDbgVariableRecordUsers() {
   SmallVector<std::pair<OwnerTy, uint64_t> *> DVRUsersWithID;
   for (auto Pair : UseMap) {
     OwnerTy Owner = Pair.second.first;
@@ -297,7 +297,7 @@ ReplaceableMetadataImpl::getAllDbgVariableRecordUsers() {
   return DVRUsers;
 }
 
-void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
+void ReplaceableUses::addRef(void *Ref, OwnerTy Owner) {
   bool WasInserted =
       UseMap.insert(std::make_pair(Ref, std::make_pair(Owner, NextIndex)))
           .second;
@@ -308,14 +308,13 @@ void ReplaceableMetadataImpl::addRef(void *Ref, OwnerTy Owner) {
   assert(NextIndex != 0 && "Unexpected overflow");
 }
 
-void ReplaceableMetadataImpl::dropRef(void *Ref) {
+void ReplaceableUses::dropRef(void *Ref) {
   bool WasErased = UseMap.erase(Ref);
   (void)WasErased;
   assert(WasErased && "Expected to drop a reference");
 }
 
-void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
-                                      const Metadata &MD) {
+void ReplaceableUses::moveRef(void *Ref, void *New, const Metadata &MD) {
   auto I = UseMap.find(Ref);
   assert(I != UseMap.end() && "Expected to move a reference");
   auto OwnerAndIndex = I->second;
@@ -332,7 +331,7 @@ void ReplaceableMetadataImpl::moveRef(void *Ref, void *New,
          "Reference without owner must be direct");
 }
 
-void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
+void ReplaceableUses::SalvageDebugInfo(const Constant &C) {
   if (!C.isUsedByMetadata()) {
     return;
   }
@@ -369,7 +368,7 @@ void ReplaceableMetadataImpl::SalvageDebugInfo(const Constant &C) {
   }
 }
 
-void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
+void ReplaceableUses::replaceAllUsesWith(Metadata *MD) {
   if (UseMap.empty())
     return;
 
@@ -422,7 +421,7 @@ void ReplaceableMetadataImpl::replaceAllUsesWith(Metadata *MD) {
   assert(UseMap.empty() && "Expected all uses to be replaced");
 }
 
-void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
+void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
   if (UseMap.empty())
     return;
 
@@ -458,7 +457,7 @@ void ReplaceableMetadataImpl::resolveAllUses(bool ResolveUsers) {
 // Special handing of DIArgList is required in the RemoveDIs project, see
 // commentry in DIArgList::handleChangedOperand for details. Hidden behind
 // conditional compilation to avoid a compile time regression.
-ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
+ReplaceableUses *ReplaceableUses::getOrCreate(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
     return !N->isResolved() || N->isAlwaysReplaceable()
                ? N->Context.getOrCreateReplaceableUses()
@@ -469,7 +468,7 @@ ReplaceableMetadataImpl *ReplaceableMetadataImpl::getOrCreate(Metadata &MD) {
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
-ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
+ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
     return !N->isResolved() || N->isAlwaysReplaceable()
                ? N->Context.getReplaceableUses()
@@ -480,7 +479,7 @@ ReplaceableMetadataImpl *ReplaceableMetadataImpl::getIfExists(Metadata &MD) {
   return dyn_cast<ValueAsMetadata>(&MD);
 }
 
-bool ReplaceableMetadataImpl::isReplaceable(const Metadata &MD) {
+bool ReplaceableUses::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
     return !N->isResolved() || N->isAlwaysReplaceable();
   return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);

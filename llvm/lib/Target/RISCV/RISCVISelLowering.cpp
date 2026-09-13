@@ -4796,7 +4796,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (Subtarget.isRV32() && Subtarget.hasStdExtP()) {
+  if (!Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
     if (VT == MVT::v2i16) {
       SDValue Lo = DAG.getBitcast(
           MVT::v2i16,

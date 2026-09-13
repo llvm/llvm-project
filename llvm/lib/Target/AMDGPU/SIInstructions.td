@@ -542,6 +542,7 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
 
 def SCHED_BARRIER : SPseudoInstSI<(outs), (ins i32imm:$mask),
   [(int_amdgcn_sched_barrier (i32 timm:$mask))]> {
+  let usesCustomInserter = 1;
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
@@ -557,6 +558,7 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   (outs),
   (ins i32imm:$mask, i32imm:$size, i32imm:$syncid),
   [(int_amdgcn_sched_group_barrier (i32 timm:$mask), (i32 timm:$size), (i32 timm:$syncid))]> {
+  let usesCustomInserter = 1;
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
