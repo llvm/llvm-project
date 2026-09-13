@@ -609,11 +609,41 @@ func.func @cmp(%arg0: index) -> (i1, i1, i1, i1, i1, i1) {
 
   // CHECK-DAG: %[[TRUE:.*]] = index.bool.constant true
   // CHECK-DAG: %[[FALSE:.*]] = index.bool.constant false
-  // CHECK-DAG: [[IDX0:%.*]] = index.constant 0
-  // CHECK-DAG: [[V4:%.*]] = index.cmp sgt([[IDX0]], %arg0)
-  // CHECK-DAG: [[V5:%.*]] = index.cmp sgt(%arg0, [[IDX0]])
-  // CHECK: return %[[FALSE]], %[[TRUE]], %[[TRUE]], %[[FALSE]]
+  // CHECK-DAG: %[[IDX0:.*]] = index.constant 0
+  // CHECK: %[[SUB0:.*]] = index.sub %[[IDX0]], %arg0
+  // CHECK-NEXT: %[[V4:.*]] = index.cmp sgt(%[[SUB0]], %[[IDX0]])
+  // CHECK-NEXT: %[[SUB1:.*]] = index.sub %[[IDX0]], %arg0
+  // CHECK-NEXT: %[[V5:.*]] = index.cmp sgt(%[[IDX0]], %[[SUB1]])
+  // CHECK-NEXT: return %[[FALSE]], %[[TRUE]], %[[TRUE]], %[[FALSE]], %[[V4]], %[[V5]]
   return %0, %1, %2, %3, %5, %7 : i1, i1, i1, i1, i1, i1
+}
+
+// CHECK-LABEL: @cmp_sub_ordered
+func.func @cmp_sub_ordered(%arg0: index) -> i1 {
+  %zero = index.constant 0
+  %two = index.constant 2
+  %sub = index.sub %arg0, %two
+  %cmp = index.cmp ule(%sub, %zero)
+
+  // CHECK-DAG: %[[ZERO:.*]] = index.constant 0
+  // CHECK-DAG: %[[TWO:.*]] = index.constant 2
+  // CHECK: %[[SUB:.*]] = index.sub %arg0, %[[TWO]]
+  // CHECK-NEXT: %[[CMP:.*]] = index.cmp ule(%[[SUB]], %[[ZERO]])
+  // CHECK-NEXT: return %[[CMP]]
+  return %cmp : i1
+}
+
+// CHECK-LABEL: @cmp_sub_eq_ne
+func.func @cmp_sub_eq_ne(%arg0: index, %arg1: index) -> (i1, i1) {
+  %zero = index.constant 0
+  %sub = index.sub %arg0, %arg1
+  %eq = index.cmp eq(%sub, %zero)
+  %ne = index.cmp ne(%zero, %sub)
+
+  // CHECK-DAG: %[[EQ:.*]] = index.cmp eq(%arg0, %arg1)
+  // CHECK-DAG: %[[NE:.*]] = index.cmp ne(%arg1, %arg0)
+  // CHECK: return %[[EQ]], %[[NE]]
+  return %eq, %ne : i1, i1
 }
 
 // CHECK-LABEL: @cmp_same_args
