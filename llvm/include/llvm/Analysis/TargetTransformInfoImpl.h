@@ -1167,6 +1167,11 @@ public:
 
   virtual bool preferSLPInstCountCheck() const { return true; }
 
+  virtual bool isNarrowFPReductionUnprofitable(Type *ScalarTy,
+                                               bool IsScalable) const {
+    return false;
+  }
+
   virtual bool preferPredicatedReductionSelect() const { return false; }
 
   virtual bool preferEpilogueVectorization(ElementCount Iters) const {
