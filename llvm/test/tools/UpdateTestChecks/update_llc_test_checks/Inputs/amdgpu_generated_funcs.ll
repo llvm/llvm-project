@@ -1,4 +1,4 @@
-; RUN: llc -enable-machine-outliner -mtriple=amdgcn-adm-amdhsa < %s | FileCheck %s
+; RUN: llc -enable-machine-outliner -disable-promote-alloca-to-vector -mtriple=amdgcn-adm-amdhsa < %s | FileCheck %s
 
 ; NOTE: Machine outliner doesn't run.
 @x = dso_local global i32 0, align 4
