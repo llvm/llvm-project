@@ -676,6 +676,12 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
+- Fixed an assertion failure when an array whose element type was still
+  incomplete when the array type was formed (for example, an array of a class
+  template specialization that is only instantiated later) turned out to be too
+  large once the element type was completed. Clang now diagnoses the oversized
+  array instead of asserting. (#GH213855)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
