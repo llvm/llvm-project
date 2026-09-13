@@ -767,8 +767,13 @@ public:
   /// Indicates if the binary is Linux kernel.
   bool IsLinuxKernel{false};
 
-  /// Indicates if relocations are available for usage.
+  /// Indicates whether the relocation-mode rewriting pipeline is active.
   bool HasRelocations{false};
+
+  /// True when --recover-relocations is enabled. BOLT reconstructs code and
+  /// data references that are missing from the input static relocation records,
+  /// then uses relocation-mode rewriting to move the referenced functions.
+  bool RecoverRelocations{false};
 
   /// Indicates if the binary is stripped
   bool IsStripped{false};

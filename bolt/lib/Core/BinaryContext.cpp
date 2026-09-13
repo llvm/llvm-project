@@ -635,6 +635,8 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
                                      const uint64_t NextJTAddress,
                                      JumpTable::AddressesType *EntriesAsAddress,
                                      bool *HasEntryInFragment) const {
+  const bool HasSymbolTable = !IsStripped;
+
   // Target address of __builtin_unreachable.
   const uint64_t UnreachableAddress = BF.getAddress() + BF.getSize();
 
@@ -701,7 +703,7 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
     LLVM_DEBUG(dbgs() << "  * Checking 0x" << Twine::utohexstr(EntryAddress)
                       << " -> ");
     // Check if there's a proper relocation against the jump table entry.
-    if (HasRelocations) {
+    if (HasRelocations && !RecoverRelocations) {
       if (Type == JumpTable::JTT_PIC &&
           !DataPCRelocations.count(EntryAddress)) {
         LLVM_DEBUG(
@@ -740,7 +742,16 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
 
     // Function or one of its fragments.
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
-    if (!TargetBF || !areRelatedFragments(TargetBF, &BF)) {
+    if (!TargetBF) {
+      LLVM_DEBUG(printEntryDiagnostics(dbgs(), TargetBF));
+      (void)printEntryDiagnostics;
+      break;
+    }
+
+    // areRelatedFragments() identifies split-function fragments by symbol name.
+    // A stripped binary has no names for this check, so skip it after verifying
+    // above that Value lies within a BinaryFunction registered in the context.
+    if (HasSymbolTable && !areRelatedFragments(TargetBF, &BF)) {
       LLVM_DEBUG(printEntryDiagnostics(dbgs(), TargetBF));
       (void)printEntryDiagnostics;
       break;
@@ -934,20 +945,28 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     if (llvm::is_contained(JT->Parents, &Function))
       return JT->getFirstLabel();
 
-    // Prevent associating a jump table to a specific fragment twice.
-    auto isSibling = std::bind(&BinaryContext::areRelatedFragments, this,
-                               &Function, std::placeholders::_1);
-    assert(llvm::all_of(JT->Parents, isSibling) &&
-           "cannot reuse jump table of a different function");
-    (void)isSibling;
+    // Symbol names establish fragment relationships. Without a symbol table,
+    // separately discovered functions can refer to the same jump table but
+    // cannot be classified as fragments by name.
+    if (!IsStripped) {
+      auto IsSibling = std::bind(&BinaryContext::areRelatedFragments, this,
+                                 &Function, std::placeholders::_1);
+      assert(llvm::all_of(JT->Parents, IsSibling) &&
+             "cannot reuse jump table of a different function");
+      (void)IsSibling;
+    }
     if (opts::Verbosity > 2) {
-      this->outs() << "BOLT-INFO: multiple fragments access the same jump table"
-                   << ": " << *JT->Parents[0] << "; " << Function << '\n';
+      this->outs() << "BOLT-INFO: multiple "
+                   << (IsStripped ? "functions" : "fragments")
+                   << " access the same jump table: " << *JT->Parents[0] << "; "
+                   << Function << '\n';
       JT->print(this->outs());
     }
-    if (JT->Parents.size() == 1)
-      JT->Parents.front()->setHasIndirectTargetToSplitFragment(true);
-    Function.setHasIndirectTargetToSplitFragment(true);
+    if (!IsStripped) {
+      if (JT->Parents.size() == 1)
+        JT->Parents.front()->setHasIndirectTargetToSplitFragment(true);
+      Function.setHasIndirectTargetToSplitFragment(true);
+    }
     // Duplicate the entry for the parent function for easy access
     JT->Parents.push_back(&Function);
     Function.JumpTables.emplace(Address, JT);
@@ -1093,20 +1112,32 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
 
   auto isNoop = std::bind(&MCPlusBuilder::isNoop, MIB.get(), _1);
 
-  // Some functions have a jump to the next function or to the padding area
-  // inserted after the body.
+  // Some functions have a jump over linker-inserted code or padding after the
+  // body. On AArch64, accept the skipped range only when it contains an
+  // erratum 843419 helper discovered earlier.
   auto isSkipJump = [&](const MCInst &Instr) {
-    if (!isX86())
-      return false;
     uint64_t TargetAddress = 0;
-    if (MIB->isUnconditionalBranch(Instr) &&
-        MIB->evaluateBranch(Instr, InstrAddress, InstrSize, TargetAddress)) {
-      if (TargetAddress >= InstrAddress + InstrSize &&
-          TargetAddress <= BF.getAddress() + BF.getMaxSize()) {
-        return true;
-      }
-    }
-    return false;
+    if (!MIB->isUnconditionalBranch(Instr) ||
+        !MIB->evaluateBranch(Instr, InstrAddress, InstrSize, TargetAddress) ||
+        TargetAddress < InstrAddress + InstrSize)
+      return false;
+
+    if (isX86())
+      return TargetAddress <= BF.getAddress() + BF.getMaxSize();
+    if (!isAArch64() || !RecoverRelocations)
+      return false;
+
+    auto TargetSection = getSectionForAddress(TargetAddress);
+    if (!TargetSection || &*TargetSection != BF.getOriginSection())
+      return false;
+
+    // GNU ld places a forward branch before an erratum veneer island. Stripped
+    // function discovery registers the veneer before padding validation, so a
+    // matching function in the skipped range identifies this layout.
+    auto NextFunction = BinaryFunctions.upper_bound(InstrAddress);
+    return NextFunction != BinaryFunctions.end() &&
+           NextFunction->first < TargetAddress &&
+           NextFunction->second.getOneName().starts_with("__BOLT_e843419_");
   };
 
   // For veneers that are not already covered by binary functions, only those

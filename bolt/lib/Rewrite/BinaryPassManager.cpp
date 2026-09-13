@@ -30,6 +30,7 @@
 #include "bolt/Passes/PointerAuthCFIFixup.h"
 #include "bolt/Passes/ProfileQualityStats.h"
 #include "bolt/Passes/RegReAssign.h"
+#include "bolt/Passes/RelocationRecovery.h"
 #include "bolt/Passes/ReorderData.h"
 #include "bolt/Passes/ReorderFunctions.h"
 #include "bolt/Passes/RetpolineInsertion.h"
@@ -84,6 +85,11 @@ cl::opt<bool>
 
 cl::opt<bool> NeverPrint("never-print", cl::desc("never print"),
                          cl::ReallyHidden, cl::cat(BoltOptCategory));
+
+static cl::opt<bool> PrintRelocationRecovery(
+    "print-relocation-recovery",
+    cl::desc("print functions after relocation recovery"), cl::Hidden,
+    cl::cat(BoltOptCategory));
 
 cl::opt<bool>
 PrintAfterBranchFixup("print-after-branch-fixup",
@@ -373,6 +379,10 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   if (BC.isAArch64())
     Manager.registerPass(
         std::make_unique<PointerAuthCFIAnalyzer>(PrintPAuthCFIAnalyzer));
+
+  if (BC.RecoverRelocations)
+    Manager.registerPass(
+        std::make_unique<RelocationRecovery>(PrintRelocationRecovery));
 
   Manager.registerPass(
       std::make_unique<EstimateEdgeCounts>(PrintEstimateEdgeCounts));
