@@ -30,6 +30,7 @@ _LIBCPP_PUSH_MACROS
 #  include <__type_traits/remove_cvref.h>
 #  include <__utility/forward.h>
 #  include <__utility/move.h>
+#  include <__utility/pair.h>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
