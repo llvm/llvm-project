@@ -290,7 +290,6 @@ def MapOp : LinalgStructuredBase_Op<"map", [
     MutableOperandRange getDpsInitsMutable() { return getInitMutable(); }
 
     bool payloadUsesValueFromOperand(OpOperand * opOperand) {
-      if (isDpsInit(opOperand)) return false;
       return !getMatchingBlockArgument(opOperand).use_empty();
     }
 
