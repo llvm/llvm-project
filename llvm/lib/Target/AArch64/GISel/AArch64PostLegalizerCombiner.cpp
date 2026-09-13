@@ -257,6 +257,43 @@ void applyAArch64MulConstCombine(
   MI.eraseFromParent();
 }
 
+/// Skip redundant AND on shift amounts. AArch64 shift instructions only
+/// use the low 5 bits (i32) or 6 bits (i64) of the shift amount, so an
+/// AND that masks to exactly a byte or halfword is redundant.
+bool matchShiftAmountMask(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          Register &NewShiftReg) {
+  assert(MI.getOpcode() == TargetOpcode::G_SHL ||
+         MI.getOpcode() == TargetOpcode::G_LSHR ||
+         MI.getOpcode() == TargetOpcode::G_ASHR);
+
+  LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+  if (SrcTy.isVector())
+    return false;
+
+  Register ShiftReg = MI.getOperand(2).getReg();
+  int64_t MaskImm;
+  Register MaskSrc;
+
+  if (!mi_match(ShiftReg, MRI,
+                m_OneNonDBGUse(m_GAnd(m_Reg(MaskSrc), m_ICst(MaskImm)))))
+    return false;
+
+  uint64_t UMask = (uint64_t)MaskImm;
+  if (UMask != 0xff && UMask != 0xffff)
+    return false;
+
+  NewShiftReg = MaskSrc;
+  return true;
+}
+
+void applyShiftAmountMask(MachineInstr &MI, MachineRegisterInfo &MRI,
+                          GISelChangeObserver &Observer,
+                          Register &NewShiftReg) {
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(NewShiftReg);
+  Observer.changedInstr(MI);
+}
+
 /// Try to fold a G_MERGE_VALUES of 2 s32 sources, where the second source
 /// is a zero, into a G_ZEXT of the first.
 bool matchFoldMergeToZext(MachineInstr &MI, MachineRegisterInfo &MRI) {

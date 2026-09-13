@@ -264,6 +264,13 @@ def mul_const : GICombineRule<
   (apply [{ applyAArch64MulConstCombine(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def shift_amount_mask_matchdata : GIDefMatchData<"Register">;
+def shift_amount_mask : GICombineRule<
+  (defs root:$root, shift_amount_mask_matchdata:$matchinfo),
+  (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR):$root,
+         [{ return matchShiftAmountMask(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyShiftAmountMask(*${root}, MRI, Observer, ${matchinfo}); }])>;
+
 def mull_matchdata : GIDefMatchData<"std::tuple<bool, Register, Register>">;
 def extmultomull : GICombineRule<
   (defs root:$root, mull_matchdata:$matchinfo),
@@ -404,7 +411,7 @@ def AArch64PostLegalizerCombiner
                         hoist_logic_op_with_same_opcode_hands,
                         redundant_and, xor_of_and_with_same_reg,
                         extractvecelt_pairwise_add, redundant_or,
-                        mul_const, redundant_sext_inreg,
+                        mul_const, shift_amount_mask, redundant_sext_inreg,
                         redundant_zext_sext_inreg, redundant_aext_sext_inreg,
                         redundant_aext_unmerge_sext_inreg, redundant_zext_unmerge_sext_inreg,
                         form_bitfield_extract, rotate_out_of_range,
