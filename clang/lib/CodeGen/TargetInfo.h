@@ -334,6 +334,9 @@ public:
   /// Get LLVM calling convention for device kernels.
   virtual unsigned getDeviceKernelCallingConv() const;
 
+  /// \return true if the target's launch model delivers complete work-groups.
+  virtual bool hasUniformWorkGroupLaunch() const { return false; }
+
   /// Get target specific null pointer.
   /// \param T is the LLVM type of the null pointer.
   /// \param QT is the clang QualType of the null pointer.

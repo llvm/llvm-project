@@ -140,6 +140,10 @@ public:
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
+  bool hasUniformWorkGroupLaunch() const override {
+    return getABIInfo().getTarget().getTriple().getVendor() ==
+           llvm::Triple::AMD;
+  }
 
   LangAS getSRetAddrSpace(const CXXRecordDecl *RD) const override;
 };

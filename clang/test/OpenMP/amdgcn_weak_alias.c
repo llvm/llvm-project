@@ -98,7 +98,7 @@ extern int __attribute__((alias("__Three_var"))) Three_var_;
 //.
 // HOST: attributes #[[ATTR0]] = { noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 //.
-// DEVICE: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// DEVICE: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 //.
 // HOST: [[META0:![0-9]+]] = !{i32 1, !"__Two_var", i32 0, i32 0}
 // HOST: [[META1:![0-9]+]] = !{i32 1, !"__Three_var", i32 0, i32 1}

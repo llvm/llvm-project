@@ -22,6 +22,7 @@ void use() { kernel_single_task<KN>(K{}); }
 // Both the kernel and the sycl_external function must carry sycl-module-id
 // with a value equal to the module identifier (the source file path).
 // CHECK: source_filename = "[[MODID:.*]]"
-// CHECK-DAG: define {{.*}}spir_kernel {{.*}}@{{.*}}2KN{{.*}} #[[SATTR:[0-9]+]]
-// CHECK-DAG: define {{.*}}spir_func {{.*}}@_Z3exti{{.*}} #[[SATTR]]
-// CHECK: attributes #[[SATTR]] = { {{.*}}"sycl-module-id"="[[MODID]]"
+// CHECK-DAG: define {{.*}}spir_kernel {{.*}}@{{.*}}2KN{{.*}} #[[KATTR:[0-9]+]]
+// CHECK-DAG: define {{.*}}spir_func {{.*}}@_Z3exti{{.*}} #[[SATTR:[0-9]+]]
+// CHECK-DAG: attributes #[[KATTR]] = { {{.*}}"sycl-module-id"="[[MODID]]"
+// CHECK-DAG: attributes #[[SATTR]] = { {{.*}}"sycl-module-id"="[[MODID]]"

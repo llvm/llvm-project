@@ -51,6 +51,7 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   bool shouldEmitStaticExternCAliases() const override;
+  bool hasUniformWorkGroupLaunch() const override { return true; }
 
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
                                 llvm::AtomicOrdering Ordering) const override;

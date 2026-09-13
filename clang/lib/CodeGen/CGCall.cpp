@@ -2865,12 +2865,10 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
                                  NumElemsParam);
     }
 
-    // OpenCL v2.0 Work groups may be whether uniform or not.
-    // '-cl-uniform-work-group-size' compile option gets a hint
-    // to the compiler that the global work-size be a multiple of
-    // the work-group size specified to clEnqueueNDRangeKernel
-    // (i.e. work groups are uniform).
-    if (getLangOpts().OffloadUniformBlock)
+    if (getLangOpts().OffloadUniformBlock &&
+        (getLangOpts().OpenCL || getLangOpts().CUDA ||
+         getLangOpts().isTargetDevice() ||
+         getTargetCodeGenInfo().hasUniformWorkGroupLaunch()))
       FuncAttrs.addAttribute("uniform-work-group-size");
 
     if (TargetDecl->hasAttr<ArmLocallyStreamingAttr>())
