@@ -1711,6 +1711,21 @@ bool TargetInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
   if (MI.getOpcode() == TargetOpcode::INLINEASM_BR)
     return true;
 
+  // Sanitizers need a correct stack frame at the point of a crash,
+  // which can happen anywhere. Treat frame register modifications
+  // as scheduling boundaries so the scheduler can't reorder other
+  // instructions across the frame register save/restore.
+  if (MF.getFunction().hasFnAttribute(Attribute::SanitizeAddress) ||
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeThread) ||
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeMemory) ||
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeType) ||
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress) ||
+      MF.getFunction().hasFnAttribute(Attribute::SanitizeMemTag)) {
+    Register FrameReg = TRI.getFrameRegister(MF);
+    if (MI.modifiesRegister(FrameReg, &TRI))
+      return true;
+  }
+
   // Don't attempt to schedule around any instruction that defines
   // a stack-oriented pointer, as it's unlikely to be profitable. This
   // saves compile time, because it doesn't require every single
