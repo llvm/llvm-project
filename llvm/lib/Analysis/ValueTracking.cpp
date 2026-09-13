@@ -1145,6 +1145,21 @@ void llvm::computeKnownBitsFromContext(const Value *V, KnownBits &Known,
       Known.One.setBit(0);
       return;
     }
+    // assume(!(trunc V)) -> last bit of V is 0
+    Value *NotOp;
+    if (match(Arg, m_Not(m_Value(NotOp))) && Arg->hasOneUse() &&
+        NotOp->hasOneUse()) {
+      auto *NotTrunc = dyn_cast<TruncInst>(NotOp);
+      if (NotTrunc && NotTrunc->getOperand(0) == V &&
+          isValidAssumeForContext(I, Q)) {
+        if (NotTrunc->hasNoUnsignedWrap()) {
+          Known = KnownBits::makeConstant(APInt(BitWidth, 0));
+          return;
+        }
+        Known.Zero.setBit(0);
+        return;
+      }
+    }
 
     // The remaining tests are all recursive, so bail out if we hit the limit.
     if (Depth == MaxAnalysisRecursionDepth)

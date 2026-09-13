@@ -1332,6 +1332,66 @@ define i1 @neg_assume_trunc_eq_one(i8 %x) {
   ret i1 %q
 }
 
+define i1 @assume_not_trunc_nuw_eq_zero(i8 %x) {
+; CHECK-LABEL: @assume_not_trunc_nuw_eq_zero(
+; CHECK-NEXT:    [[A:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[N:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N]])
+; CHECK-NEXT:    ret i1 true
+;
+  %a = trunc nuw i8 %x to i1
+  %n = xor i1 %a, true
+  call void @llvm.assume(i1 %n)
+  %q = icmp eq i8 %x, 0
+  ret i1 %q
+}
+
+define i1 @neg_assume_not_trunc_eq_zero(i8 %x) {
+; CHECK-LABEL: @neg_assume_not_trunc_eq_zero(
+; CHECK-NEXT:    [[A:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[N:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N]])
+; CHECK-NEXT:    [[Q:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[Q]]
+;
+  %a = trunc i8 %x to i1
+  %n = xor i1 %a, true
+  call void @llvm.assume(i1 %n)
+  %q = icmp eq i8 %x, 0
+  ret i1 %q
+}
+
+define i8 @assume_not_trunc_low_bit(i8 %x) {
+; CHECK-LABEL: @assume_not_trunc_low_bit(
+; CHECK-NEXT:    [[A:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[N:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N]])
+; CHECK-NEXT:    ret i8 0
+;
+  %a = trunc i8 %x to i1
+  %n = xor i1 %a, true
+  call void @llvm.assume(i1 %n)
+  %q = and i8 %x, 1
+  ret i8 %q
+}
+
+define i8 @assume_not_trunc_multi_use(i8 %x) {
+; CHECK-LABEL: @assume_not_trunc_multi_use(
+; CHECK-NEXT:    [[A:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[N:%.*]] = xor i1 [[A]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N]])
+; CHECK-NEXT:    call void @use(i1 [[N]])
+; CHECK-NEXT:    [[Q:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    ret i8 [[Q]]
+;
+  %a = trunc i8 %x to i1
+  %n = xor i1 %a, true
+  call void @llvm.assume(i1 %n)
+  call void @use(i1 %n)
+  %q = and i8 %x, 1
+  ret i8 %q
+}
+
 define void @assume_dereferenceable_0(ptr %ptr) {
 ; CHECK-LABEL: @assume_dereferenceable_0(
 ; CHECK-NEXT:    ret void
