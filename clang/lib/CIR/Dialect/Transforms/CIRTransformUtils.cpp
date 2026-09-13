@@ -77,23 +77,21 @@ mlir::Block *cir::replaceCallWithTryCall(cir::CallOp callOp,
                                normalDest, unwindDest, callOp.getArgOperands());
   }
 
-  // Copy all attributes from the original call except those already set by
-  // TryCallOp::create or that are operation-specific and should not be copied.
-  llvm::StringRef excludedAttrs[] = {
-      cir::CIRDialect::getCalleeAttrName(), // Set by create()
-      cir::CIRDialect::getOperandSegmentSizesAttrName(),
-  };
-  for (mlir::NamedAttribute attr : callOp->getAttrs()) {
-    if (llvm::is_contained(excludedAttrs, attr.getName()))
-      continue;
-    assert(!llvm::is_contained(
-               {
-                   cir::CIRDialect::getNoThrowAttrName(),
-                   cir::CIRDialect::getNoUnwindAttrName(),
-               },
-               attr.getName()) &&
+  // Preserve the call semantics shared by CallOp and TryCallOp. The callee and
+  // operand segments are already populated by TryCallOp::create, and a
+  // throwing call cannot carry the nothrow property.
+  tryCallOp.setInlineKind(callOp.getInlineKind());
+  tryCallOp.setMusttail(callOp.getMusttail());
+  tryCallOp.setSideEffect(callOp.getSideEffect());
+  if (mlir::ArrayAttr argAttrs = callOp.getArgAttrsAttr())
+    tryCallOp.setArgAttrsAttr(argAttrs);
+  if (mlir::ArrayAttr resAttrs = callOp.getResAttrsAttr())
+    tryCallOp.setResAttrsAttr(resAttrs);
+
+  for (mlir::NamedAttribute attr : callOp->getDiscardableAttrs()) {
+    assert(attr.getName() != cir::CIRDialect::getNoUnwindAttrName() &&
            "unexpected attribute on converted call");
-    tryCallOp->setAttr(attr.getName(), attr.getValue());
+    tryCallOp->setDiscardableAttr(attr.getName(), attr.getValue());
   }
 
   // Replace uses of the call result with the try_call result. Use the
@@ -131,17 +129,10 @@ mlir::Block *cir::replaceThrowWithTryThrow(cir::ThrowOp throwOp,
       rewriter, loc, throwOp.getExceptionPtr(), throwOp.getTypeInfoAttr(),
       throwOp.getDtorAttr(), normalDest, unwindDest);
 
-  // Copy any extra attributes from the original throw. The type_info and
-  // dtor attributes are already set by TryThrowOp::create above.
-  llvm::StringRef excludedAttrs[] = {
-      "type_info",
-      "dtor",
-  };
-  for (mlir::NamedAttribute attr : throwOp->getAttrs()) {
-    if (llvm::is_contained(excludedAttrs, attr.getName()))
-      continue;
-    tryThrowOp->setAttr(attr.getName(), attr.getValue());
-  }
+  // The shared inherent state is already set by TryThrowOp::create. Preserve
+  // only auxiliary metadata here.
+  for (mlir::NamedAttribute attr : throwOp->getDiscardableAttrs())
+    tryThrowOp->setDiscardableAttr(attr.getName(), attr.getValue());
 
   // Erase the throw along with any operations that followed it in its
   // parent block (typically a cir.unreachable left over from CIR codegen).
