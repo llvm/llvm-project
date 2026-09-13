@@ -49,6 +49,22 @@ def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMe
 def FeatureAddressableLocalMemorySize196608 : SubtargetFeatureAddressableLocalMemorySize<196608>;
 def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
+// A generic target uses the largest allocation granularity of its covered GPUs.
+def LDSAllocGranularityProperty : AMDGPUGenericNumericProperty<
+  "LDSAllocationGranularity", 256, AMDGPUGenericAtLeast>;
+
+class SubtargetFeatureLDSAllocGranularity <int Granularity> : SubtargetFeature <
+  "lds-alloc-granularity-"#Granularity,
+  LDSAllocGranularityProperty.FieldName,
+  !cast<string>(Granularity),
+  "LDS allocation granularity in bytes.">;
+
+def FeatureLDSAllocGranularity256 : SubtargetFeatureLDSAllocGranularity<256>;
+def FeatureLDSAllocGranularity512 : SubtargetFeatureLDSAllocGranularity<512>;
+def FeatureLDSAllocGranularity1024 : SubtargetFeatureLDSAllocGranularity<1024>;
+def FeatureLDSAllocGranularity1280 : SubtargetFeatureLDSAllocGranularity<1280>;
+def FeatureLDSAllocGranularity2048 : SubtargetFeatureLDSAllocGranularity<2048>;
+
 // Whether each wavefront size mode is available on the hardware,
 // independent of the active mode.
 def FeatureSupportsWave32 : SubtargetFeature<"supports-wave32",
