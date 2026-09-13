@@ -954,6 +954,11 @@ public:
   // Binary operators and binary compound assignment operators.
 #define HANDLEBINOP(OP)                                                        \
   Value *VisitBin##OP(const BinaryOperator *E) {                               \
+    if (E->getType()->isCooperativeMatrixType()) {                             \
+      return CGF.EmitCoopMatBinaryOp(                                          \
+          E->getOpcode(), CGF.EmitScalarExpr(E->getLHS()),                     \
+          CGF.EmitScalarExpr(E->getRHS()), E->getType());                      \
+    }                                                                          \
     QualType promotionTy = getPromotionType(E->getType());                     \
     auto result = Emit##OP(EmitBinOps(E, promotionTy));                        \
     if (result && !promotionTy.isNull())                                       \
@@ -3025,7 +3030,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     CGF.EmitIgnoredExpr(E);
     return nullptr;
   }
-  case CK_MatrixCast: {
+  case CK_MatrixCast:
+  case CK_CoopMatrixCast: {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
@@ -3691,6 +3697,10 @@ Value *ScalarExprEmitter::VisitPlus(const UnaryOperator *E,
 
 Value *ScalarExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
                                           QualType PromotionType) {
+  if (E->getSubExpr()->getType()->isCooperativeMatrixType())
+    return CGF.EmitCoopMatNeg(CGF.EmitScalarExpr(E->getSubExpr()),
+                              E->getType());
+
   QualType promotionTy = PromotionType.isNull()
                              ? getPromotionType(E->getSubExpr()->getType())
                              : PromotionType;

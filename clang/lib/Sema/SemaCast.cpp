@@ -1607,6 +1607,15 @@ static TryCastResult TryStaticCast(Sema &Self, ExprResult &SrcExpr,
     return TC_Success;
   }
 
+  if (SrcType->isCooperativeMatrixType() &&
+      DestType->isCooperativeMatrixType()) {
+    if (Self.CheckCoopMatrixCast(OpRange, DestType, SrcType, Kind)) {
+      SrcExpr = ExprError();
+      return TC_Failed;
+    }
+    return TC_Success;
+  }
+
   if (SrcType == Self.Context.AMDGPUFeaturePredicateTy &&
       DestType == Self.Context.getLogicalOperationType()) {
     SrcExpr = Self.AMDGPU().ExpandAMDGPUPredicateBuiltIn(SrcExpr.get());
@@ -3239,6 +3248,13 @@ void CastOperation::CheckCStyleCast() {
 
   if (DestType->getAs<MatrixType>() || SrcType->getAs<MatrixType>()) {
     if (Self.CheckMatrixCast(OpRange, DestType, SrcType, Kind))
+      SrcExpr = ExprError();
+    return;
+  }
+
+  if (DestType->getAs<CooperativeMatrixType>() ||
+      SrcType->getAs<CooperativeMatrixType>()) {
+    if (Self.CheckCoopMatrixCast(OpRange, DestType, SrcType, Kind))
       SrcExpr = ExprError();
     return;
   }

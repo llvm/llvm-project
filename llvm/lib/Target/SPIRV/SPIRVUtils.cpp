@@ -562,6 +562,21 @@ static bool isNonMangledOCLBuiltin(StringRef Name) {
 }
 
 std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
+  // Cooperative-matrix builtins emitted by Clang CodeGen carry mangling
+  // suffixes to avoid IR function-signature collisions, e.g.:
+  //   "__spirv_CooperativeMatrixLoadKHR_f32_sc3_16x16_u0_global"
+  // Strip everything from the first '_' after "__spirv_CooperativeMatrix"
+  // so the name matches the canonical DemangledNativeBuiltin entry in
+  // SPIRVBuiltins.td (e.g. "__spirv_CooperativeMatrixLoadKHR").
+  static constexpr StringRef CoopMatPrefix = "__spirv_CooperativeMatrix";
+  if (Name.starts_with(CoopMatPrefix)) {
+    size_t SuffixPos = Name.find('_', CoopMatPrefix.size());
+    if (SuffixPos != StringRef::npos)
+      return Name.substr(0, SuffixPos).str();
+    // No mangling suffix present — return the name as-is.
+    return Name.str();
+  }
+
   bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
   bool IsNonMangledSPIRV = Name.starts_with("__spirv_");
   bool IsNonMangledHLSL = Name.starts_with("__hlsl_");

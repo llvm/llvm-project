@@ -336,6 +336,9 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
     return getTypeInfo(MTy->getElementType());
   }
 
+  if (const auto *CMTy = dyn_cast<CooperativeMatrixType>(Ty))
+    return getTypeInfo(CMTy->getElementType());
+
   // Enum types are distinct types. In C++ they have "underlying types",
   // however they aren't related for TBAA.
   if (const EnumType *ETy = dyn_cast<EnumType>(Ty)) {

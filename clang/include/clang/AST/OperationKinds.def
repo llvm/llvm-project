@@ -185,6 +185,9 @@ CAST_OPERATION(ToVoid)
 /// CK_MatrixCast - A cast between matrix types of the same dimensions.
 CAST_OPERATION(MatrixCast)
 
+/// CK_CoopMatrixCast - A cast between compatible cooperative matrix types.
+CAST_OPERATION(CoopMatrixCast)
+
 /// CK_VectorSplat - A conversion from an arithmetic type to a
 /// vector of that element type.  Fills all elements ("splats") with
 /// the source value.

@@ -136,6 +136,10 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
                                 MT->getNumRows() * MT->getNumColumns(),
                                 ASTCtx.getTypeSize(QT), /*IsMatrixType=*/true);
   }
+  case Type::CooperativeMatrix: {
+    llvm::reportFatalInternalError(
+        "Cooperative Matrix type not supported in ABI lowering library");
+  }
   case Type::MemberPointer:
     return convertMemberPointerType(cast<MemberPointerType>(QT));
   case Type::BitInt: {
