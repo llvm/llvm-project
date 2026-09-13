@@ -26172,6 +26172,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           const auto *It = find(Op, I);
           assert(It != Op.end() && "Lane not set");
           SmallPtrSet<Instruction *, 4> Visited;
+          bool HadSelfUse = false;
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
@@ -26185,14 +26186,21 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
               It = find(make_range(std::next(It), Op.end()), I);
               break;
             }
+            HadSelfUse |= In == I;
             ScheduleCopyableDataMapByInstUser
                 [std::make_pair(std::make_pair(In, EI.EdgeIdx), I)]
                     .pop_back();
             It = find(make_range(std::next(It), Op.end()), I);
           } while (It != Op.end());
-          EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
-          if (ScheduleCopyableData *UserCD = getScheduleCopyableData(UserEI, I))
-            ScheduleCopyableDataMapByUsers[I].insert(UserCD);
+          // Restore the parent-edge copyable data as a user of I only if the
+          // cancelled data displaced it at creation (chained copyable
+          // self-use); otherwise the extra user dependency is never released.
+          if (HadSelfUse) {
+            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
+            if (ScheduleCopyableData *UserCD =
+                    getScheduleCopyableData(UserEI, I))
+              ScheduleCopyableDataMapByUsers[I].insert(UserCD);
+          }
         }
         if (ScheduleCopyableDataMapByUsers[I].empty())
           ScheduleCopyableDataMapByUsers.erase(I);

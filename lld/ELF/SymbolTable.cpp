@@ -119,6 +119,14 @@ static bool canBeVersioned(const Symbol &sym) {
   return sym.isDefined() || sym.isCommon() || sym.isLazy();
 }
 
+static std::string demangleForVersion(StringRef name) {
+  auto [base, ver] = name.split('@');
+  std::string s = demangle(base);
+  if (!ver.empty() && !ver.starts_with('@'))
+    s += ("@" + ver).str();
+  return s;
+}
+
 // Initialize demangledSyms with a map from demangled symbols to symbol
 // objects. Used to handle "extern C++" directive in version scripts.
 //
@@ -135,23 +143,9 @@ static bool canBeVersioned(const Symbol &sym) {
 StringMap<SmallVector<Symbol *, 0>> &SymbolTable::getDemangledSyms() {
   if (!demangledSyms) {
     demangledSyms.emplace();
-    std::string demangled;
     for (Symbol *sym : symVector)
-      if (canBeVersioned(*sym)) {
-        StringRef name = sym->getName();
-        size_t pos = name.find('@');
-        std::string substr;
-        if (pos == std::string::npos)
-          demangled = demangle(name);
-        else if (pos + 1 == name.size() || name[pos + 1] == '@') {
-          substr = name.substr(0, pos);
-          demangled = demangle(substr);
-        } else {
-          substr = name.substr(0, pos);
-          demangled = (demangle(substr) + name.substr(pos)).str();
-        }
-        (*demangledSyms)[demangled].push_back(sym);
-      }
+      if (canBeVersioned(*sym))
+        (*demangledSyms)[demangleForVersion(sym->getName())].push_back(sym);
   }
   return *demangledSyms;
 }
@@ -172,9 +166,8 @@ SmallVector<Symbol *, 0> SymbolTable::findAllByVersion(SymbolVersion ver,
   auto check = [&](const Symbol &sym) -> bool {
     if (!includeNonDefault)
       return !sym.hasVersionSuffix;
-    StringRef name = sym.getName();
-    size_t pos = name.find('@');
-    return !(pos + 1 < name.size() && name[pos + 1] == '@');
+    return !sym.hasVersionSuffix ||
+           !sym.getName().split('@').second.starts_with('@');
   };
 
   if (ver.isExternCpp) {
