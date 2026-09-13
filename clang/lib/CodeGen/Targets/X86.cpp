@@ -2151,7 +2151,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
     return;
   }
 
-  // Ptrs
+  // Pointers and OpenCL pipes have pointer-sized runtime representations.
   if (Ty->hasPointerRepresentation() || Ty->isPipeType()) {
     SetEightByte(OffsetBase, Integer);
     return;
