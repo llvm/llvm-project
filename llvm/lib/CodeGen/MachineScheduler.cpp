@@ -4532,7 +4532,7 @@ SUnit *PostGenericScheduler::pickNode(bool &IsTopNode) {
   if (RegionPolicy.OnlyBottomUp) {
     SU = Bot.pickOnlyChoice();
     if (SU) {
-      tracePick(SU, Only1, /*IsTopNode=*/true, /*IsPostRA=*/true);
+      tracePick(SU, Only1, /*IsTopNode=*/false, /*IsPostRA=*/true);
     } else {
       CandPolicy NoPolicy;
       BotCand.reset(NoPolicy);

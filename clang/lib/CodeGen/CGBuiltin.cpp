@@ -1801,9 +1801,11 @@ enum class MSVCSetJmpKind {
 };
 }
 
-/// MSVC handles setjmp a bit differently on different platforms. On every
-/// architecture except 32-bit x86, the frame address is passed. On x86, extra
-/// parameters can be passed as variadic arguments, but we always pass none.
+/// MSVC handles setjmp a bit differently on different platforms. On 32-bit x86
+/// extra parameters can be passed as variadic arguments, but we always pass
+/// none. Everywhere else a frame value is passed: the stack pointer as it was
+/// on entry to the function for AArch64 and 32-bit Arm, and the frame address
+/// for the rest.
 static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
                                const CallExpr *E) {
   llvm::Value *Arg1 = nullptr;
@@ -1818,7 +1820,8 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   } else {
     Name = SJKind == MSVCSetJmpKind::_setjmp ? "_setjmp" : "_setjmpex";
     Arg1Ty = CGF.Int8PtrTy;
-    if (CGF.getTarget().getTriple().getArch() == llvm::Triple::aarch64) {
+    const llvm::Triple &T = CGF.getTarget().getTriple();
+    if (T.getArch() == llvm::Triple::aarch64 || T.isARM() || T.isThumb()) {
       Arg1 = CGF.Builder.CreateCall(
           CGF.CGM.getIntrinsic(Intrinsic::sponentry, CGF.AllocaInt8PtrTy));
     } else

@@ -4183,6 +4183,11 @@ genGlobalCtors(Fortran::lower::AbstractConverter &converter,
     }
 
     addDeclareAttr(builder, globalOp.getOperation(), clause);
+    // Named constants are emitted as initialized device globals. Do not
+    // emit a host ctor/dtor: that would register a symbol that already has
+    // a device definition.
+    if (Fortran::semantics::IsNamedConstant(symbol.GetUltimate()))
+      return;
     auto crtPos = builder.saveInsertionPoint();
     modBuilder.setInsertionPointAfter(globalOp);
     if (mlir::isa<fir::BaseBoxType>(fir::unwrapRefType(globalOp.getType()))) {
