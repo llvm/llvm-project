@@ -614,6 +614,8 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
   auto &TargetInfo = getASTContext().getTargetInfo();
   bool HasDefault = false;
   bool HasComma = false;
+  bool HasNegativeCategory2 = false;
+  StringRef NegativeCategory2Feature;
   for (unsigned I = 0, E = Params.size(); I < E; ++I) {
     const StringRef Param = Params[I].trim();
     const SourceLocation &Loc = Locs[I];
@@ -633,6 +635,10 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       const SourceLocation &CurLoc =
           Loc.getLocWithOffset(LHS.data() - Param.data());
 
+      if (LHS.empty())
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unsupported << None << "" << TargetClones;
+
       if (LHS.starts_with("cpu=")) {
         StringRef CPUStr = LHS.drop_front(sizeof("cpu=") - 1);
         if (!TargetInfo.isValidCPUName(CPUStr))
@@ -644,9 +650,27 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       } else if (LHS == "default") {
         HasDefault = true;
       } else {
-        // it's a feature string, but not supported yet.
-        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << None << LHS << TargetClones;
+        bool IsNegated = LHS.starts_with("no-");
+        StringRef FeatureName = IsNegated ? LHS.drop_front(3) : LHS;
+        if (!TargetInfo.isValidClonesFeatureName(FeatureName))
+          return Diag(CurLoc, diag::err_ppc_feature_no_runtime_detection)
+                 << FeatureName;
+        // All target_clones feature names must be valid target feature names.
+        assert(TargetInfo.isValidFeatureName(FeatureName));
+
+        if (llvm::PPC::canDisableFeatureOnAIX(FeatureName)) {
+          if (IsNegated) {
+            // Only one negative target-feature that can be disabled.
+            if (HasNegativeCategory2) {
+              return Diag(CurLoc, diag::err_ppc_multiple_negative_category2)
+                     << LHS << NegativeCategory2Feature;
+            }
+            HasNegativeCategory2 = true;
+            NegativeCategory2Feature = LHS;
+          }
+          // Positive category 2 features are always allowed
+        }
+        // Category 1 features (positive or negative) are always allowed
       }
       SmallString<64> CPU;
       if (LHS.starts_with("cpu=")) {
