@@ -70,6 +70,7 @@ public:
   bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
                             unsigned ExpectedFieldNum, bool AllowName);
   bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
+  bool BuiltinARMAtomicStoreHintCall(unsigned BuiltinID, CallExpr *TheCall);
 
   bool MveAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
   bool CdeAliasValid(unsigned BuiltinID, llvm::StringRef AliasName);
