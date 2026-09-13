@@ -198,9 +198,8 @@ define float @bitcast_xor(float %a1, float %a2) nounwind {
 ; RV32F-NEXT:    fmv.w.x fa4, a0
 ; RV32F-NEXT:    fmul.s fa5, fa4, fa5
 ; RV32F-NEXT:    fmul.s fa5, fa4, fa5
+; RV32F-NEXT:    fneg.s fa5, fa5
 ; RV32F-NEXT:    fmv.x.w a0, fa5
-; RV32F-NEXT:    lui a1, 524288
-; RV32F-NEXT:    xor a0, a0, a1
 ; RV32F-NEXT:    ret
 ;
 ; RV32ZFINX-LABEL: bitcast_xor:
@@ -216,9 +215,8 @@ define float @bitcast_xor(float %a1, float %a2) nounwind {
 ; RV32FD-NEXT:    fmv.w.x fa4, a0
 ; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
 ; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV32FD-NEXT:    fneg.s fa5, fa5
 ; RV32FD-NEXT:    fmv.x.w a0, fa5
-; RV32FD-NEXT:    lui a1, 524288
-; RV32FD-NEXT:    xor a0, a0, a1
 ; RV32FD-NEXT:    ret
 ;
 ; RV64F-LABEL: bitcast_xor:
@@ -363,10 +361,8 @@ define double @bitcast_double_xor(double %a1, double %a2) nounwind {
 ; RV64FD-NEXT:    fmv.d.x fa4, a0
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV64FD-NEXT:    fneg.d fa5, fa5
 ; RV64FD-NEXT:    fmv.x.d a0, fa5
-; RV64FD-NEXT:    li a1, -1
-; RV64FD-NEXT:    slli a1, a1, 63
-; RV64FD-NEXT:    xor a0, a0, a1
 ; RV64FD-NEXT:    ret
   %a3 = fmul double %a1, %a2
   %bc1 = bitcast double %a3 to i64
@@ -384,9 +380,8 @@ define float @bitcast_or(float %a1, float %a2) nounwind {
 ; RV32F-NEXT:    fmul.s fa5, fa4, fa5
 ; RV32F-NEXT:    fabs.s fa5, fa5
 ; RV32F-NEXT:    fmul.s fa5, fa4, fa5
+; RV32F-NEXT:    fneg.s fa5, fa5
 ; RV32F-NEXT:    fmv.x.w a0, fa5
-; RV32F-NEXT:    lui a1, 524288
-; RV32F-NEXT:    xor a0, a0, a1
 ; RV32F-NEXT:    ret
 ;
 ; RV32ZFINX-LABEL: bitcast_or:
@@ -404,9 +399,8 @@ define float @bitcast_or(float %a1, float %a2) nounwind {
 ; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
 ; RV32FD-NEXT:    fabs.s fa5, fa5
 ; RV32FD-NEXT:    fmul.s fa5, fa4, fa5
+; RV32FD-NEXT:    fneg.s fa5, fa5
 ; RV32FD-NEXT:    fmv.x.w a0, fa5
-; RV32FD-NEXT:    lui a1, 524288
-; RV32FD-NEXT:    xor a0, a0, a1
 ; RV32FD-NEXT:    ret
 ;
 ; RV64F-LABEL: bitcast_or:
@@ -560,10 +554,8 @@ define double @bitcast_double_or(double %a1, double %a2) nounwind {
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
 ; RV64FD-NEXT:    fabs.d fa5, fa5
 ; RV64FD-NEXT:    fmul.d fa5, fa4, fa5
+; RV64FD-NEXT:    fneg.d fa5, fa5
 ; RV64FD-NEXT:    fmv.x.d a0, fa5
-; RV64FD-NEXT:    li a1, -1
-; RV64FD-NEXT:    slli a1, a1, 63
-; RV64FD-NEXT:    xor a0, a0, a1
 ; RV64FD-NEXT:    ret
   %a3 = fmul double %a1, %a2
   %bc1 = bitcast double %a3 to i64

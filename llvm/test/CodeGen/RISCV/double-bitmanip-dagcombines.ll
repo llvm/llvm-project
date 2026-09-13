@@ -48,9 +48,9 @@ define double @fneg(double %a) nounwind {
 ;
 ; RV64IFD-LABEL: fneg:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    li a1, -1
-; RV64IFD-NEXT:    slli a1, a1, 63
-; RV64IFD-NEXT:    xor a0, a0, a1
+; RV64IFD-NEXT:    fmv.d.x fa5, a0
+; RV64IFD-NEXT:    fneg.d fa5, fa5
+; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret
 ;
 ; RV64IZFINXZDINX-LABEL: fneg:
@@ -147,10 +147,9 @@ define double @fcopysign_fneg(double %a, double %b) nounwind {
 ;
 ; RV64IFD-LABEL: fcopysign_fneg:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    not a1, a1
-; RV64IFD-NEXT:    fmv.d.x fa5, a0
-; RV64IFD-NEXT:    fmv.d.x fa4, a1
-; RV64IFD-NEXT:    fsgnj.d fa5, fa5, fa4
+; RV64IFD-NEXT:    fmv.d.x fa5, a1
+; RV64IFD-NEXT:    fmv.d.x fa4, a0
+; RV64IFD-NEXT:    fsgnjn.d fa5, fa4, fa5
 ; RV64IFD-NEXT:    fmv.x.d a0, fa5
 ; RV64IFD-NEXT:    ret
 ;
