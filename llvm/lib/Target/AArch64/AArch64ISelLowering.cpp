@@ -3185,11 +3185,12 @@ void AArch64TargetLowering::computeKnownBitsForTargetInstr(
   case AArch64::G_VLSHR: {
     unsigned BitWidth = MRI.getType(R).getScalarSizeInBits();
     uint64_t Shift = MI->getOperand(2).getImm();
-    // A shift by the full element width is legal for these instructions, but
-    // KnownBits::ashr/lshr model IR shifts, for which it is poison. Leave the
-    // result unknown in that case.
-    if (Shift >= BitWidth)
-      break;
+    // Unlike the IR shifts KnownBits models, a shift by the full element width
+    // is legal here: ushr gives zero, which KnownBits::lshr also returns, and
+    // sshr fills every bit with the sign bit, the same as a shift by
+    // BitWidth - 1.
+    if (MI->getOpcode() == AArch64::G_VASHR)
+      Shift = std::min<uint64_t>(Shift, BitWidth - 1);
     KnownBits SrcKnown(BitWidth);
     Analysis.computeKnownBitsImpl(MI->getOperand(1).getReg(), SrcKnown,
                                   DemandedElts, Depth + 1);

@@ -26,7 +26,7 @@ body: |
     liveins: $q0
   ; CHECK-LABEL: name: @VLSHR_by_element_width
   ; CHECK-NEXT: %0:fpr KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
-  ; CHECK-NEXT: %1:fpr KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %1:fpr KnownBits:0000000000000000 SignBits:16 IsKnownNeverZero:0
     %0:fpr(<8 x i16>) = COPY $q0
     %1:fpr(<8 x i16>) = G_VLSHR %0, 16
     $q0 = COPY %1:fpr(<8 x i16>)
