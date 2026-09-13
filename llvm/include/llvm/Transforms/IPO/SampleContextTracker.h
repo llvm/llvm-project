@@ -210,6 +210,11 @@ private:
   void setContextNode(const FunctionSamples *FSample, ContextTrieNode *Node) {
     ProfileToNodeMap[FSample] = Node;
   }
+  // Drop ProfileToNodeMap entries for Node and its whole subtree that still
+  // point at these nodes, so getContextNodeForProfile() never returns a
+  // dangling pointer after the nodes are destroyed. Entries already repointed
+  // to a relocated copy (moveContextSamples) are left untouched.
+  void invalidateContextNodesInMap(ContextTrieNode &Node);
   // Map from function name to context profiles (excluding base profile)
   HashKeyMap<std::unordered_map, FunctionId, ContextSamplesTy>
       FuncToCtxtProfiles;
