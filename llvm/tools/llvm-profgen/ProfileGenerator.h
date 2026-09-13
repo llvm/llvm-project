@@ -165,9 +165,11 @@ public:
   void generateProfile() override;
 
 private:
+  bool UsePseudoProbeProfile = false;
   void generateLineNumBasedProfile();
   void generateProbeBasedProfile();
-  RangeSample preprocessRangeCounter(const RangeSample &RangeCounter);
+  RangeSample preprocessRangeCounter(const RangeSample &RangeCounter,
+                                     const BasicSample *BasicSamples = nullptr);
   FunctionSamples &getTopLevelFunctionProfile(FunctionId FuncName);
   // Helper function to get the leaf frame's FunctionProfile by traversing the
   // inline stack and meanwhile it adds the total samples for each frame's
@@ -175,7 +177,7 @@ private:
   FunctionSamples &
   getLeafProfileAndAddTotalSamples(const SampleContextFrameVector &FrameVec,
                                    uint64_t Count);
-  void populateBodySamplesForAllFunctions(const RangeSample &RangeCounter);
+  void populateBodySamplesForAllFunctions(const SampleCounter &SC);
   void
   populateBoundarySamplesForAllFunctions(const BranchSample &BranchCounters);
   void

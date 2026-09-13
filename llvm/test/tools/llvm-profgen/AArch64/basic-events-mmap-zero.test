@@ -1,0 +1,54 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %S/Inputs/basic-events.yaml -o %t/binary
+# RUN: llvm-dwarfdump --verify %t/binary
+
+## Perf prints a zero address as "0" in both mmap formats.
+# RUN: llvm-profgen --basic-events --binary=%t/binary \
+# RUN:   --perfscript=%t/zero-address.perfscript --skip-symbolization \
+# RUN:   --output=%t/basic.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=BASIC --input-file=%t/basic.raw
+
+## Zero-sized records parse successfully but cannot own sampled addresses.
+# RUN: not llvm-profgen --basic-events --binary=%t/binary \
+# RUN:   --perfscript=%t/zero-size.perfscript --skip-symbolization \
+# RUN:   --output=%t/unused 2>&1 | FileCheck %s --check-prefix=EMPTY
+
+## The shared mmap parser gives LBR the same value for "0" and "0x0".
+# RUN: llvm-profgen --binary=%t/binary \
+# RUN:   --perfscript=%t/lbr.perfscript --skip-symbolization --output=%t/lbr.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=LBR --input-file=%t/lbr.raw
+# RUN: sed 's/\[0(/\[0x0(/' %t/lbr.perfscript > %t/lbr-prefixed.perfscript
+# RUN: llvm-profgen --binary=%t/binary \
+# RUN:   --perfscript=%t/lbr-prefixed.perfscript --skip-symbolization \
+# RUN:   --output=%t/lbr-prefixed.raw
+# RUN: diff %t/lbr.raw %t/lbr-prefixed.raw
+
+# BASIC:      # llvm-profgen-content: basic-event
+# BASIC-NEXT: 1
+# BASIC-NEXT: 5b0:2
+# BASIC-NOT:  {{.}}
+
+# EMPTY: error: Invalid basic event perf script input: no usable mmap
+
+# LBR:      0
+# LBR-NEXT: 1
+# LBR-NEXT: 5e4->5b0:1
+# LBR-NOT:  {{.}}
+
+#--- zero-address.perfscript
+PERF_RECORD_MMAP 100/100: [0(0x1000) @ 0]: x /tmp/binary
+100 5b0
+PERF_RECORD_MMAP2 200/200: [0(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+200 5b0
+
+#--- zero-size.perfscript
+PERF_RECORD_MMAP 100/100: [0(0) @ 0]: x /tmp/binary
+100 5b0
+PERF_RECORD_MMAP2 200/200: [0(0) @ 0 00:1d 1 1]: r-xp /tmp/binary
+200 5b0
+
+#--- lbr.perfscript
+PERF_RECORD_MMAP2 100/100: [0(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+5e4 0x5e4/0x5b0/P/-/-/0

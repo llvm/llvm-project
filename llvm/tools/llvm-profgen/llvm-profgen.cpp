@@ -21,6 +21,7 @@
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include <limits>
 
 using namespace llvm;
 using namespace sampleprof;
@@ -33,8 +34,9 @@ static cl::opt<std::string> PerfScriptFilename(
     "perfscript", cl::value_desc("perfscript"),
     cl::desc("Path of a trace created by the Linux `perf script` command. For "
              "LBR or BRBE input, the raw perf data must contain branch "
-             "stacks, for example from recording with -b. "
-             "Cannot be used with --perfdata, --unsymbolized-profile, or "
+             "stacks, for example from recording with -b. With --basic-events, "
+             "it must contain sampled instruction pointers. Cannot be used "
+             "with --perfdata, --unsymbolized-profile, or "
              "--llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
@@ -44,11 +46,20 @@ static cl::opt<std::string> PerfDataFilename(
     "perfdata", cl::value_desc("perfdata"),
     cl::desc("Path of raw perf data created by the Linux perf tool. For LBR or "
              "BRBE input, it must contain branch stacks, for example from "
-             "recording with -b. Cannot be used with --perfscript, "
+             "recording with -b. With --basic-events, it must contain sampled "
+             "instruction pointers. Cannot be used with --perfscript, "
              "--unsymbolized-profile, or --llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
                      cl::aliasopt(PerfDataFilename));
+
+static cl::opt<bool> BasicEvents(
+    "basic-events", cl::init(false),
+    cl::desc("Read perf input containing sampled instruction pointers instead "
+             "of branch stacks. Can be used with --perfdata or --perfscript."),
+    cl::cat(ProfGenCategory));
+static cl::alias BA("ba", cl::desc("Alias for --basic-events"),
+                    cl::aliasopt(BasicEvents));
 
 static cl::opt<std::string> UnsymbolizedProfFilename(
     "unsymbolized-profile", cl::value_desc("unsymbolized profile"),
@@ -139,7 +150,18 @@ static void validateCommandLine() {
     CheckFileExists(HasUnsymbolizedProfile, UnsymbolizedProfFilename);
     CheckFileExists(HasSampleProfile, SampleProfFilename);
     CheckFileExists(HasEtm, ETMPath);
+
+    if (BasicEvents && !HasPerfData && !HasPerfScript)
+      exitWithError("--basic-events requires --perfdata or --perfscript");
   }
+
+  if (BasicEvents && ShowDisassemblyOnly)
+    exitWithError(
+        "--basic-events cannot be used together with --show-disassembly-only");
+  if (BasicEvents && !DataAccessProfileFilename.empty())
+    exitWithError("--data-access-perftrace cannot be used with --basic-events");
+  if (BasicEvents && ProcessId > std::numeric_limits<int32_t>::max())
+    exitWithError("--pid is out of range for --basic-events");
 
   if (!llvm::sys::fs::exists(BinaryPath)) {
     std::string Msg = "Input binary(" + BinaryPath + ") doesn't exist.";
@@ -170,6 +192,8 @@ static InputFile getInputFile() {
     File.InputFilePath = ETMPath;
     File.Format = InputFormat::ETMFormat;
   }
+  if (BasicEvents)
+    File.Content = PerfContent::BasicEvent;
   return File;
 }
 
@@ -231,6 +255,9 @@ int main(int argc, const char *argv[]) {
       PerfReader->parsePerfTraces();
 
       if (!DataAccessProfileFilename.empty()) {
+        if (PerfReader->hasBasicSamples())
+          exitWithError(
+              "--data-access-perftrace cannot be used with Basic samples");
         if (PerfReader->profileIsCS() || Binary->usePseudoProbes()) {
           exitWithError("Symbolizing vtables from data access profiles is not "
                         "yet supported for context-sensitive perf traces or "

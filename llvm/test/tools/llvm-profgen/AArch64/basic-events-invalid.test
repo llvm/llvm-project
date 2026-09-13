@@ -1,0 +1,79 @@
+; REQUIRES: aarch64-registered-target
+
+; RUN: rm -rf %t && split-file %s %t
+; RUN: yaml2obj %S/Inputs/basic-events.yaml -o %t/binary
+; RUN: llvm-dwarfdump --verify %t/binary
+
+; Check the accepted PID/time/IP record before varying its required fields.
+; RUN: llvm-profgen --basic-events --perfscript=%t/valid.perfscript \
+; RUN:   --binary=%t/binary \
+; RUN:   --skip-symbolization --output=%t/valid.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=VALID --input-file=%t/valid.raw
+
+; PID must fit the process identifier type; IP must fit the address type.
+; RUN: sed 's/^100 /2147483648 /' %t/valid.perfscript > %t/pid.perfscript
+; RUN: not llvm-profgen --basic-events --perfscript=%t/pid.perfscript \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=INVALID-SAMPLE
+; RUN: sed 's/: 5005b0$/: 10000000000000000/' %t/valid.perfscript > %t/ip.perfscript
+; RUN: not llvm-profgen --basic-events --perfscript=%t/ip.perfscript \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=INVALID-SAMPLE
+
+; The optional timestamp must be finite.
+; RUN: sed 's/1.000000:/nan:/' %t/valid.perfscript > %t/time.perfscript
+; RUN: not llvm-profgen --basic-events --perfscript=%t/time.perfscript \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=INVALID-SAMPLE
+
+; Read the valid Basic marker/count/address record, then check each boundary
+; of that record: its content marker, declared length and trailing content.
+; RUN: llvm-profgen --unsymbolized-profile=%t/valid.raw \
+; RUN:   --binary=%t/binary --format=text \
+; RUN:   --output=%t/valid.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=PROFILE --input-file=%t/valid.prof
+; RUN: not llvm-profgen --unsymbolized-profile=%t/unknown.raw \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=UNKNOWN
+; RUN: not llvm-profgen --unsymbolized-profile=%t/truncated.raw \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=TRUNCATED
+; RUN: not llvm-profgen --unsymbolized-profile=%t/trailing.raw \
+; RUN:   --binary=%t/binary --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --check-prefix=TRAILING
+
+; VALID:      # llvm-profgen-content: basic-event
+; VALID-NEXT: 1
+; VALID-NEXT: 5b0:1
+; VALID-NOT:  {{.}}
+
+; PROFILE:      bar:4:0
+; PROFILE-NEXT:  0: 1
+; PROFILE-NEXT:  1: 0
+; PROFILE-NEXT:  2: 0
+; PROFILE-NEXT:  4: 0
+; PROFILE-NEXT:  5: 0
+; PROFILE-NOT:  {{.}}
+
+; INVALID-SAMPLE: Invalid basic event perf script input
+; UNKNOWN: Unsupported raw profile content
+; TRUNCATED: Invalid raw profile!
+; TRAILING: Invalid basic event raw profile: unexpected trailing content
+
+;--- valid.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/binary
+100 1.000000: 5005b0
+
+;--- unknown.raw
+# llvm-profgen-content: unknown
+1
+5b0:1
+;--- truncated.raw
+# llvm-profgen-content: basic-event
+2
+5b0:1
+;--- trailing.raw
+# llvm-profgen-content: basic-event
+1
+5b0:1
+0

@@ -1,0 +1,213 @@
+# REQUIRES: aarch64-registered-target
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/segments.exe
+# RUN: llvm-readobj --program-headers %t/segments.exe | FileCheck %s --check-prefix=HEADERS
+# RUN: llvm-objdump -d %t/segments.exe | FileCheck %s --check-prefix=INSTRUCTIONS
+
+## Executable headers follow virtual-address order, while their file offsets
+## are reversed. Samples exercise an exact segment start (0x5000), a page-aligned
+## prefix (0x1000 before the segment at 0x1120), and a mid-segment map (0x6000).
+## Every runtime address uses the same relocation of 0x4000000.
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/absolute.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=ABSOLUTE --input-file=%t/absolute.raw
+
+## Default offsets retain the base from the first executable header:
+## 0x401000 - 0x5000 = 0x3fc000.
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization --output=%t/default.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=DEFAULT --input-file=%t/default.raw
+
+## The first loadable header supplies a distinct base of 0x400000.
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/perfscript --skip-symbolization \
+# RUN:   --use-first-loadable-segment-as-base --output=%t/loadable.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=LOADABLE --input-file=%t/loadable.raw
+
+## Mapping file offset zero as executable replaces the first page, whose code
+## came from file offset 0x5000. The second page, another PID and a child forked
+## before replacement retain their mappings. A later child inherits the
+## replacement, and a subsequent mapping of 0x5000 restores the first page.
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/remap.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/remap.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=REMAP --input-file=%t/remap.raw
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe --pid=100 \
+# RUN:   --perfscript=%t/remap.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/remap-pid.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=REMAP-PID --input-file=%t/remap-pid.raw
+# RUN: llvm-profgen --basic-events --binary=%t/segments.exe --pid=400 \
+# RUN:   --perfscript=%t/remap.perfscript --skip-symbolization --use-offset=0 \
+# RUN:   --output=%t/remap-child.raw
+# RUN: FileCheck %s --match-full-lines --check-prefix=REMAP-CHILD --input-file=%t/remap-child.raw
+
+## An mmap outside executable ELF segments cannot establish usable target
+## ownership, including when its process forks.
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe \
+# RUN:   --perfscript=%t/unresolved.perfscript --skip-symbolization \
+# RUN:   --output=%t/unused 2>&1 | FileCheck %s --check-prefix=NO-MAPPING
+# RUN: not llvm-profgen --basic-events --binary=%t/segments.exe --pid=200 \
+# RUN:   --perfscript=%t/unresolved.perfscript --skip-symbolization \
+# RUN:   --output=%t/unused 2>&1 | FileCheck %s --check-prefix=NO-MAPPING
+
+# HEADERS:      Offset: 0x0
+# HEADERS-NEXT: VirtualAddress: 0x400000
+# HEADERS:      Offset: 0x5000
+# HEADERS-NEXT: VirtualAddress: 0x401000
+# HEADERS:      FileSize: 4100
+# HEADERS-NEXT: MemSize: 4100
+# HEADERS:      Offset: 0x1120
+# HEADERS-NEXT: VirtualAddress: 0x501120
+
+# INSTRUCTIONS: 501120: d65f03c0{{.*}}ret
+# INSTRUCTIONS: 401000: d65f03c0{{.*}}ret
+# INSTRUCTIONS: 402000: d65f03c0{{.*}}ret
+
+# ABSOLUTE:      # llvm-profgen-content: basic-event
+# ABSOLUTE-NEXT: 3
+# ABSOLUTE-NEXT: 401000:1
+# ABSOLUTE-NEXT: 402000:1
+# ABSOLUTE-NEXT: 501120:1
+# ABSOLUTE-NOT:  {{.}}
+
+# DEFAULT:      # llvm-profgen-content: basic-event
+# DEFAULT-NEXT: 3
+# DEFAULT-NEXT: 5000:1
+# DEFAULT-NEXT: 6000:1
+# DEFAULT-NEXT: 105120:1
+# DEFAULT-NOT:  {{.}}
+
+# LOADABLE:      # llvm-profgen-content: basic-event
+# LOADABLE-NEXT: 3
+# LOADABLE-NEXT: 1000:1
+# LOADABLE-NEXT: 2000:1
+# LOADABLE-NEXT: 101120:1
+# LOADABLE-NOT:  {{.}}
+
+# REMAP:      # llvm-profgen-content: basic-event
+# REMAP-NEXT: 2
+# REMAP-NEXT: 401000:4
+# REMAP-NEXT: 402000:3
+# REMAP-NOT:  {{.}}
+
+# REMAP-PID:      # llvm-profgen-content: basic-event
+# REMAP-PID-NEXT: 2
+# REMAP-PID-NEXT: 401000:2
+# REMAP-PID-NEXT: 402000:2
+# REMAP-PID-NOT:  {{.}}
+
+# REMAP-CHILD:      # llvm-profgen-content: basic-event
+# REMAP-CHILD-NEXT: 1
+# REMAP-CHILD-NEXT: 402000:1
+# REMAP-CHILD-NOT:  {{.}}
+
+# NO-MAPPING: Invalid basic event perf script input: no usable mmap
+
+#--- perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x5000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401000
+PERF_RECORD_MMAP2 100/100: [0x4501000(0x1000) @ 0x1000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4501120
+PERF_RECORD_MMAP2 100/100: [0x4402000(0x1000) @ 0x6000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4402000
+
+#--- remap.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x2000) @ 0x5000 00:1d 1 1]: r-xp /tmp/segments.exe
+PERF_RECORD_MMAP2 200/200: [0x4401000(0x2000) @ 0x5000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 1.000000: PERF_RECORD_FORK(300:300):(100:100)
+100 4401000
+100 4402000
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401000
+100 4402000
+200 4401000
+300 4401000
+100 2.000000: PERF_RECORD_FORK(400:400):(100:100)
+400 4401000
+400 4402000
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0x5000 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401000
+
+#--- unresolved.perfscript
+PERF_RECORD_MMAP2 100/100: [0x4401000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/segments.exe
+100 4401000
+100 1.000000: PERF_RECORD_FORK(200:200):(100:100)
+200 4401000
+
+#--- binary.yaml
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x401000
+Sections:
+  - Name:         .text.second
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x501120
+    Offset:       0x1120
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    Offset:       0x5000
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.first.tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x402000
+    Offset:       0x6000
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x0
+    VAddr:    0x400000
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0x5000
+    VAddr:    0x401000
+    FileSize: 0x1004
+    MemSize:  0x1004
+    Align:    0x1000
+    FirstSec: .text.first
+    LastSec:  .text.first.tail
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0x1120
+    VAddr:    0x501120
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text.second
+    LastSec:  .text.second
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Section: .text.first
+    Binding: STB_GLOBAL
+    Value:   0x401000
+    Size:    0x4
+  - Name:    first_tail
+    Type:    STT_FUNC
+    Section: .text.first.tail
+    Binding: STB_GLOBAL
+    Value:   0x402000
+    Size:    0x4
+  - Name:    second
+    Type:    STT_FUNC
+    Section: .text.second
+    Binding: STB_GLOBAL
+    Value:   0x501120
+    Size:    0x4
