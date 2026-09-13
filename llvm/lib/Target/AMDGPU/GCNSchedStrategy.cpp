@@ -84,6 +84,9 @@ static cl::opt<unsigned> PendingQueueLimit(
         "Max (Available+Pending) size to inspect pending queue (0 disables)"),
     cl::init(256));
 
+// Heuristic VGPR pressure lookahead used near register limits.
+static constexpr unsigned MaxVGPRPressureInc = 16;
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 #define DUMP_MAX_REG_PRESSURE
 static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
@@ -406,7 +409,6 @@ void GCNSchedStrategy::initCandidate(SchedCandidate &Cand, SUnit *SU,
   // only for VGPRs, AGPRs or SGPRs. Priority: VGPR > AGPR > SGPR.
 
   // FIXME: Better heuristics to determine whether to prefer SGPRs or VGPRs.
-  const unsigned MaxVGPRPressureInc = 16;
   bool ShouldTrackVGPRs = VGPRPressure + MaxVGPRPressureInc >= VGPRExcessLimit;
   bool ShouldTrackAGPRs = AGPRExcessLimit > 0 && !ShouldTrackVGPRs &&
                           AGPRPressure + MaxVGPRPressureInc >= AGPRExcessLimit;
@@ -799,6 +801,13 @@ bool GCNSchedStrategy::tryPendingCandidate(SchedCandidate &Cand,
       tryPressure(TryCand.RPDelta.CriticalMax, Cand.RPDelta.CriticalMax,
                   TryCand, Cand, RegCritical, TRI, DAG->MF))
     return TryCand.Reason != NoCand;
+
+  // Near a unified VGPR occupancy boundary, retain the existing pressure and
+  // physical-register preferences, but avoid selecting pending nodes solely
+  // for resource heuristics while candidate costs do not fully model unified
+  // VGPR/AGPR allocation.
+  if (!AllowPendingResourceHeuristics)
+    return false;
 
   bool SameBoundary = Zone != nullptr;
   if (SameBoundary) {
@@ -1868,6 +1877,37 @@ bool GCNSchedStage::initGCNRegion() {
   }
 
   PressureBefore = DAG.Pressure[RegionIdx];
+
+  S.AllowPendingResourceHeuristics = true;
+
+  // Only adjust the initial max-occupancy schedule, and do not override the
+  // explicit scheduling policy of an IGLP region.
+  if (StageID == GCNSchedStageID::OccInitialSchedule && ST.hasGFX90AInsts() &&
+      !DAG.RegionsWithIGLPInstrs[RegionIdx]) {
+    unsigned DynamicVGPRBlockSize = MFI.getDynamicVGPRBlockSize();
+    unsigned RegionOccupancy =
+        std::min(DAG.MinOccupancy,
+                 PressureBefore.getOccupancy(ST, DynamicVGPRBlockSize));
+
+    // Pending describes resource readiness; selecting a pending node can raise
+    // or lower pressure. In the motivating gfx950 case, resource-based pending
+    // selection lengthened a result's live range and worsened final allocation.
+    // Conservatively restrict those resource preferences near an occupancy
+    // boundary. Round the estimate to the hardware allocation granule and keep
+    // the final block for the current occupancy in reserve. At one wave there
+    // is no lower occupancy to protect.
+    if (RegionOccupancy > 1) {
+      unsigned UnifiedVGPRPressure =
+          PressureBefore.getVGPRNum(/*UnifiedVGPRFile=*/true);
+      unsigned EstimatedUnifiedVGPRPressure =
+          alignTo(UnifiedVGPRPressure + MaxVGPRPressureInc + S.ErrorMargin,
+                  ST.getVGPRAllocGranule(DynamicVGPRBlockSize));
+      unsigned MaxVGPRs =
+          ST.getMaxNumVGPRs(RegionOccupancy, DynamicVGPRBlockSize);
+      S.AllowPendingResourceHeuristics =
+          EstimatedUnifiedVGPRPressure < MaxVGPRs;
+    }
+  }
 
   LLVM_DEBUG(
       dbgs() << "Pressure before scheduling:\nRegion live-ins:"

@@ -1,0 +1,53 @@
+# RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -run-pass=machine-scheduler -misched-prera-direction=topdown -verify-machineinstrs -verify-misched -debug-only=machine-scheduler -o /dev/null %s 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# A pending MFMA ends both matrix-input live ranges. Waiting for that MFMA
+# before scheduling the independent LDS load preserves occupancy in this region.
+# The 42 VGPRs kept live across the region make its original peak 62 VGPRs.
+# Suppressing all pending candidates instead creates a 66-VGPR schedule, which
+# the scheduler must revert. Check the initial schedule to expose this loss of
+# a pressure-reducing candidate even when the final instruction order is restored.
+
+# CHECK-LABEL: pending_reduces_pressure:%bb.1
+# CHECK: Region register pressure: VGPRs: 62 AGPRs: 0
+# CHECK: Scheduling SU(0) %r0:
+# CHECK-NEXT: Top Pressure: VGPR_32=58
+# CHECK: hazard:  SU(1) HWXDL[0]=4c, is later than CurrCycle = 1c
+# CHECK: Queue TopQ.P: 1
+# CHECK: Pending Q:
+# CHECK: Cand SU(1) REG-CRIT
+# CHECK: Cycle: 4 TopQ.A
+# CHECK: Scheduling SU(1) %r1:
+# CHECK-NEXT: Top Pressure: VGPR_32=50
+# CHECK: Scheduling SU(2) %load:
+# CHECK: Pressure after scheduling: VGPRs: 62 AGPRs: 0
+# CHECK: Occupancy before scheduling: 8, after 8.
+# CHECK-NEXT: Ending scheduling stage: Max Occupancy Initial Schedule
+--- |
+  define amdgpu_kernel void @pending_reduces_pressure() #0 { ret void }
+  attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "target-cpu"="gfx950" }
+...
+---
+name: pending_reduces_pressure
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  occupancy: 8
+body: |
+  bb.0:
+    %a:vreg_128_align2 = IMPLICIT_DEF
+    %b:vreg_128_align2 = IMPLICIT_DEF
+    %c0:vreg_128_align2 = IMPLICIT_DEF
+    %c1:vreg_128_align2 = IMPLICIT_DEF
+    %keep0:vreg_512 = IMPLICIT_DEF
+    %keep1:vreg_512 = IMPLICIT_DEF
+    %keep2:vreg_256 = IMPLICIT_DEF
+    %addr:vreg_64 = IMPLICIT_DEF
+    S_BRANCH %bb.1
+
+  bb.1:
+    %r0:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %a, %b, %c0, 0, 0, 0, implicit $mode, implicit $exec
+    %r1:vreg_128_align2 = V_MFMA_F32_16X16X32_BF16_vgprcd_e64 %a, %b, %c1, 0, 0, 0, implicit $mode, implicit $exec
+    %load:vreg_128_align2 = DS_READ_B128_gfx9 %addr.sub0, 0, 0, implicit $exec
+    S_ENDPGM 0, implicit %r0, implicit %r1, implicit %load, implicit %keep0, implicit %keep1, implicit %keep2, implicit %addr
+...
