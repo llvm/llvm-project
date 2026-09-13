@@ -493,6 +493,9 @@ features cannot lower the translation-unit ABI level;
   `operator delete`, since such a delete expression never invokes the
   destructor. (#GH65524)
 
+- `-Wflag-enum` now warns if any of the bitwise operators for scoped enumeration types with
+  the `[[clang::flag_enum]]` attribute are not available, ambiguous or deleted.
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
