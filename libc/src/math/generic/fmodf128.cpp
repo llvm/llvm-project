@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/fmodf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/fmodf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, fmodf128, (float128 x, float128 y)) {
-  return math::fmodf128(x, y);
+  return cpp::bit_cast<float128>(
+      math::fmodf128(cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y)));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

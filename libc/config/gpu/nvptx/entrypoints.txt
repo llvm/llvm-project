@@ -406,6 +406,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fminl
     libc.src.math.fmod
     libc.src.math.fmodf
+    libc.src.math.fmodf128
     libc.src.math.fmodl
     libc.src.math.fmul
     libc.src.math.fmull
@@ -502,6 +503,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.powf
     libc.src.math.remainder
     libc.src.math.remainderf
+    libc.src.math.remainderf128
     libc.src.math.remainderl
     libc.src.math.remquo
     libc.src.math.remquof
