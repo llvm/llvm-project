@@ -306,13 +306,11 @@ define void @try_catch_shared_zt0_callee() "aarch64_inout_zt0" personality ptr @
 ; CHECK-NEXT:    .cfi_personality 156, DW.ref.__gxx_personality_v0
 ; CHECK-NEXT:    .cfi_lsda 28, .Lexception3
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    sub sp, sp, #96
-; CHECK-NEXT:    str x30, [sp, #64] // 8-byte Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #80] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
+; CHECK-NEXT:    sub sp, sp, #80
+; CHECK-NEXT:    stp x30, x19, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
+; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:  .Ltmp9: // EH_LABEL
 ; CHECK-NEXT:    mov x19, sp
 ; CHECK-NEXT:    str zt0, [x19]
@@ -322,18 +320,18 @@ define void @try_catch_shared_zt0_callee() "aarch64_inout_zt0" personality ptr @
 ; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    ldr zt0, [x19]
 ; CHECK-NEXT:  // %bb.1: // %return_normally
-; CHECK-NEXT:    ldp x20, x19, [sp, #80] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #64] // 8-byte Reload
-; CHECK-NEXT:    add sp, sp, #96
+; CHECK-NEXT:    ldp x30, x19, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #80
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_2: // %unwind_dtors
 ; CHECK-NEXT:  .Ltmp11: // EH_LABEL
-; CHECK-NEXT:    mov x20, sp
+; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    smstart za
-; CHECK-NEXT:    ldr zt0, [x20]
+; CHECK-NEXT:    ldr zt0, [x8]
 ; CHECK-NEXT:    bl shared_zt0_call
-; CHECK-NEXT:    str zt0, [x20]
+; CHECK-NEXT:    mov x8, sp
+; CHECK-NEXT:    str zt0, [x8]
 ; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    mov x0, x19
 ; CHECK-NEXT:    bl _Unwind_Resume

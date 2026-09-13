@@ -360,6 +360,10 @@ private:
                                    AllocationOrder &Order, MCRegister PhysReg,
                                    uint8_t &CostPerUseLimit,
                                    SmallVectorImpl<Register> &NewVRegs);
+  /// Return the rematerialization cost, or BlockFrequency::max() if
+  /// rematerialization is not possible.
+  BlockFrequency calcRematCost(const LiveInterval &VirtReg,
+                               AllocationOrder &Order) const;
   BlockFrequency calcSpillCost(const LiveInterval &LI);
   void initializeCSRCost();
   MCRegister tryBlockSplit(const LiveInterval &, AllocationOrder &,
