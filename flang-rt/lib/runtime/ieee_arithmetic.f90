@@ -289,7 +289,7 @@ module ieee_arithmetic
 #endif
 
 #define IEEE_CLASS_R(XKIND) \
-  elemental type(ieee_class_type) function ieee_class_a##XKIND(x); \
+  simple elemental type(ieee_class_type) function ieee_class_a##XKIND(x); \
     import ieee_class_type; \
     real(XKIND), intent(in) :: x; \
   end function ieee_class_a##XKIND;
@@ -300,7 +300,7 @@ module ieee_arithmetic
 #undef IEEE_CLASS_R
 
 #define IEEE_COPY_SIGN_RR(XKIND, YKIND) \
-  elemental real(XKIND) function ieee_copy_sign_a##XKIND##_a##YKIND(x, y); \
+  simple elemental real(XKIND) function ieee_copy_sign_a##XKIND##_a##YKIND(x, y); \
     real(XKIND), intent(in) :: x; \
     real(YKIND), intent(in) :: y; \
   end function ieee_copy_sign_a##XKIND##_a##YKIND;
@@ -337,7 +337,7 @@ module ieee_arithmetic
 #undef IEEE_GET_UNDERFLOW_MODE_L
 
 #define IEEE_IS_FINITE_R(XKIND) \
-  elemental logical function ieee_is_finite_a##XKIND(x); \
+  simple elemental logical function ieee_is_finite_a##XKIND(x); \
     real(XKIND), intent(in) :: x; \
     !dir$ ignore_tkr(d) x; \
   end function ieee_is_finite_a##XKIND;
@@ -348,7 +348,7 @@ module ieee_arithmetic
 #undef IEEE_IS_FINITE_R
 
 #define IEEE_LOGB_R(XKIND) \
-  elemental real(XKIND) function ieee_logb_a##XKIND(x); \
+  simple elemental real(XKIND) function ieee_logb_a##XKIND(x); \
     real(XKIND), intent(in) :: x; \
   end function ieee_logb_a##XKIND;
   interface ieee_logb
@@ -358,7 +358,7 @@ module ieee_arithmetic
 #undef IEEE_LOGB_R
 
 #define IEEE_MAX_R(XKIND) \
-  elemental real(XKIND) function ieee_max_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_max_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_max_a##XKIND;
   interface ieee_max
@@ -368,7 +368,7 @@ module ieee_arithmetic
 #undef IEEE_MAX_R
 
 #define IEEE_MAX_MAG_R(XKIND) \
-  elemental real(XKIND) function ieee_max_mag_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_max_mag_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_max_mag_a##XKIND;
   interface ieee_max_mag
@@ -378,7 +378,7 @@ module ieee_arithmetic
 #undef IEEE_MAX_MAG_R
 
 #define IEEE_MAX_NUM_R(XKIND) \
-  elemental real(XKIND) function ieee_max_num_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_max_num_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_max_num_a##XKIND;
   interface ieee_max_num
@@ -388,7 +388,7 @@ module ieee_arithmetic
 #undef IEEE_MAX_NUM_R
 
 #define IEEE_MAX_NUM_MAG_R(XKIND) \
-  elemental real(XKIND) function ieee_max_num_mag_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_max_num_mag_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_max_num_mag_a##XKIND;
   interface ieee_max_num_mag
@@ -398,7 +398,7 @@ module ieee_arithmetic
 #undef IEEE_MAX_NUM_MAG_R
 
 #define IEEE_MIN_R(XKIND) \
-  elemental real(XKIND) function ieee_min_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_min_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_min_a##XKIND;
   interface ieee_min
@@ -408,7 +408,7 @@ module ieee_arithmetic
 #undef IEEE_MIN_R
 
 #define IEEE_MIN_MAG_R(XKIND) \
-  elemental real(XKIND) function ieee_min_mag_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_min_mag_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_min_mag_a##XKIND;
   interface ieee_min_mag
@@ -418,7 +418,7 @@ module ieee_arithmetic
 #undef IEEE_MIN_MAG_R
 
 #define IEEE_MIN_NUM_R(XKIND) \
-  elemental real(XKIND) function ieee_min_num_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_min_num_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_min_num_a##XKIND;
   interface ieee_min_num
@@ -428,7 +428,7 @@ module ieee_arithmetic
 #undef IEEE_MIN_NUM_R
 
 #define IEEE_MIN_NUM_MAG_R(XKIND) \
-  elemental real(XKIND) function ieee_min_num_mag_a##XKIND(x, y); \
+  simple elemental real(XKIND) function ieee_min_num_mag_a##XKIND(x, y); \
     real(XKIND), intent(in) :: x, y; \
   end function ieee_min_num_mag_a##XKIND;
   interface ieee_min_num_mag
@@ -438,7 +438,7 @@ module ieee_arithmetic
 #undef IEEE_MIN_NUM_MAG_R
 
 #define IEEE_QUIET_EQ_R(AKIND) \
-  elemental logical function ieee_quiet_eq_a##AKIND(a, b); \
+  simple elemental logical function ieee_quiet_eq_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_quiet_eq_a##AKIND;
   interface ieee_quiet_eq
@@ -448,7 +448,7 @@ module ieee_arithmetic
 #undef IEEE_QUIET_EQ_R
 
 #define IEEE_QUIET_GE_R(AKIND) \
-  elemental logical function ieee_quiet_ge_a##AKIND(a, b); \
+  simple elemental logical function ieee_quiet_ge_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_quiet_ge_a##AKIND;
   interface ieee_quiet_ge
@@ -458,7 +458,7 @@ module ieee_arithmetic
 #undef IEEE_QUIET_GE_R
 
 #define IEEE_QUIET_GT_R(AKIND) \
-  elemental logical function ieee_quiet_gt_a##AKIND(a, b); \
+  simple elemental logical function ieee_quiet_gt_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_quiet_gt_a##AKIND;
   interface ieee_quiet_gt
@@ -468,7 +468,7 @@ module ieee_arithmetic
 #undef IEEE_QUIET_GT_R
 
 #define IEEE_QUIET_LE_R(AKIND) \
-  elemental logical function ieee_quiet_le_a##AKIND(a, b); \
+  simple elemental logical function ieee_quiet_le_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_quiet_le_a##AKIND;
   interface ieee_quiet_le
@@ -478,7 +478,7 @@ module ieee_arithmetic
 #undef IEEE_QUIET_LE_R
 
 #define IEEE_QUIET_LT_R(AKIND) \
-  elemental logical function ieee_quiet_lt_a##AKIND(a, b); \
+  simple elemental logical function ieee_quiet_lt_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_quiet_lt_a##AKIND;
   interface ieee_quiet_lt
@@ -488,7 +488,7 @@ module ieee_arithmetic
 #undef IEEE_QUIET_LT_R
 
 #define IEEE_QUIET_NE_R(AKIND) \
-  elemental logical function ieee_quiet_ne_a##AKIND(a, b); \
+  simple elemental logical function ieee_quiet_ne_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_quiet_ne_a##AKIND;
   interface ieee_quiet_ne
@@ -498,7 +498,7 @@ module ieee_arithmetic
 #undef IEEE_QUIET_NE_R
 
 #define IEEE_REM_rRR(RKIND, XKIND, YKIND) \
-  elemental real(RKIND) function ieee_rem_a##XKIND##_a##YKIND(x, y); \
+  simple elemental real(RKIND) function ieee_rem_a##XKIND##_a##YKIND(x, y); \
     real(XKIND), intent(in) :: x; \
     real(YKIND), intent(in) :: y; \
   end function ieee_rem_a##XKIND##_a##YKIND;
@@ -509,7 +509,7 @@ module ieee_arithmetic
 #undef IEEE_REM_rRR
 
 #define IEEE_RINT_R(XKIND) \
-  elemental real(XKIND) function ieee_rint_a##XKIND(x, round); \
+  simple elemental real(XKIND) function ieee_rint_a##XKIND(x, round); \
     import ieee_round_type; \
     real(XKIND), intent(in) :: x; \
     type(ieee_round_type), optional, intent(in) :: round; \
@@ -547,7 +547,7 @@ module ieee_arithmetic
 #undef IEEE_SET_UNDERFLOW_MODE_L
 
 #define IEEE_SIGNALING_EQ_R(AKIND) \
-  elemental logical function ieee_signaling_eq_a##AKIND(a, b); \
+  simple elemental logical function ieee_signaling_eq_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_signaling_eq_a##AKIND;
   interface ieee_signaling_eq
@@ -557,7 +557,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNALING_EQ_R
 
 #define IEEE_SIGNALING_GE_R(AKIND) \
-  elemental logical function ieee_signaling_ge_a##AKIND(a, b); \
+  simple elemental logical function ieee_signaling_ge_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_signaling_ge_a##AKIND;
   interface ieee_signaling_ge
@@ -567,7 +567,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNALING_GE_R
 
 #define IEEE_SIGNALING_GT_R(AKIND) \
-  elemental logical function ieee_signaling_gt_a##AKIND(a, b); \
+  simple elemental logical function ieee_signaling_gt_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_signaling_gt_a##AKIND;
   interface ieee_signaling_gt
@@ -577,7 +577,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNALING_GT_R
 
 #define IEEE_SIGNALING_LE_R(AKIND) \
-  elemental logical function ieee_signaling_le_a##AKIND(a, b); \
+  simple elemental logical function ieee_signaling_le_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_signaling_le_a##AKIND;
   interface ieee_signaling_le
@@ -587,7 +587,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNALING_LE_R
 
 #define IEEE_SIGNALING_LT_R(AKIND) \
-  elemental logical function ieee_signaling_lt_a##AKIND(a, b); \
+  simple elemental logical function ieee_signaling_lt_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_signaling_lt_a##AKIND;
   interface ieee_signaling_lt
@@ -597,7 +597,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNALING_LT_R
 
 #define IEEE_SIGNALING_NE_R(AKIND) \
-  elemental logical function ieee_signaling_ne_a##AKIND(a, b); \
+  simple elemental logical function ieee_signaling_ne_a##AKIND(a, b); \
     real(AKIND), intent(in) :: a, b; \
   end function ieee_signaling_ne_a##AKIND;
   interface ieee_signaling_ne
@@ -607,7 +607,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNALING_NE_R
 
 #define IEEE_SIGNBIT_R(XKIND) \
-  elemental logical function ieee_signbit_a##XKIND(x); \
+  simple elemental logical function ieee_signbit_a##XKIND(x); \
     real(XKIND), intent(in) :: x; \
   end function ieee_signbit_a##XKIND;
   interface ieee_signbit
@@ -617,7 +617,7 @@ module ieee_arithmetic
 #undef IEEE_SIGNBIT_R
 
 #define IEEE_UNORDERED_RR(XKIND, YKIND) \
-  elemental logical function ieee_unordered_a##XKIND##_a##YKIND(x, y); \
+  simple elemental logical function ieee_unordered_a##XKIND##_a##YKIND(x, y); \
     real(XKIND), intent(in) :: x; \
     real(YKIND), intent(in) :: y; \
   end function ieee_unordered_a##XKIND##_a##YKIND;
@@ -628,7 +628,7 @@ module ieee_arithmetic
 #undef IEEE_UNORDERED_RR
 
 #define IEEE_VALUE_R(XKIND) \
-  elemental real(XKIND) function ieee_value_a##XKIND(x, class); \
+  simple elemental real(XKIND) function ieee_value_a##XKIND(x, class); \
     import ieee_class_type; \
     real(XKIND), intent(in) :: x; \
     type(ieee_class_type), intent(in) :: class; \
