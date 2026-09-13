@@ -69,9 +69,6 @@ add_libc_test(
     libc.src.string.strcoll
     libc.src.string.strdup
     libc.src.string.strncmp
-    libc.src.stdlib.mkdtemp
-    libc.src.string.strdup
-    libc.src.string.strncmp
     libc.src.unistd.rmdir
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
