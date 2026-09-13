@@ -1610,7 +1610,13 @@ math_test(
     hdrs = ["ModfTest.h"],
 )
 
-# TODO: add nan tests.
+math_test(
+    name = "nanf128",
+    deps = [
+        "//libc:__support_fputil_float128",
+        "//libc:hdr_signal_macros",
+    ],
+)
 
 math_test(
     name = "nearbyint",
