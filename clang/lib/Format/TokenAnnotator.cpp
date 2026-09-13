@@ -3259,14 +3259,17 @@ public:
   void parse(int Precedence = 0) {
     // Skip 'return' and ObjC selector colons as they are not part of a binary
     // expression.
-    while (Current && (Current->is(tok::kw_return) ||
-                       (Current->is(tok::colon) &&
-                        Current->isOneOf(TT_ObjCMethodExpr, TT_DictLiteral)))) {
+    while (Current && Current != RequiresClauseLimit &&
+           (Current->is(tok::kw_return) ||
+            (Current->is(tok::colon) &&
+             Current->isOneOf(TT_ObjCMethodExpr, TT_DictLiteral)))) {
       next();
     }
 
-    if (!Current || Precedence > PrecedenceArrowAndPeriod)
+    if (!Current || Current == RequiresClauseLimit ||
+        Precedence > PrecedenceArrowAndPeriod) {
       return;
+    }
 
     // Conditional expressions need to be parsed separately for proper nesting.
     if (Precedence == prec::Conditional) {
@@ -3287,7 +3290,7 @@ public:
     // The first name of the current type in a port list.
     FormatToken *VerilogFirstOfType = nullptr;
 
-    while (Current) {
+    while (Current && Current != RequiresClauseLimit) {
       // In Verilog ports in a module header that don't have a type take the
       // type of the previous one.  For example,
       //   module a(output b,
@@ -3301,6 +3304,8 @@ public:
 
       // Consume operators with higher precedence.
       parse(Precedence + 1);
+      if (!Current || Current == RequiresClauseLimit)
+        break;
 
       int CurrentPrecedence = getCurrentPrecedence();
       if (CurrentPrecedence > prec::Conditional &&
@@ -3351,9 +3356,18 @@ public:
       // Consume scopes: (), [], <> and {}
       // In addition to that we handle require clauses as scope, so that the
       // constraints in that are correctly indented.
-      if (Current->opensScope() ||
-          Current->isOneOf(TT_RequiresClause,
+      if (Current->isOneOf(TT_RequiresClause,
                            TT_RequiresClauseInARequiresExpression)) {
+        const auto *End = Current;
+        while (End && !End->ClosesRequiresClause)
+          End = End->Next;
+
+        const auto *PreviousLimit = RequiresClauseLimit;
+        RequiresClauseLimit = End ? End->getNextNonComment() : PreviousLimit;
+        next();
+        parse();
+        RequiresClauseLimit = PreviousLimit;
+      } else if (Current->opensScope()) {
         // In fragment of a JavaScript template string can look like '}..${' and
         // thus close a scope and open a new one at the same time.
         while (Current && (!Current->closesScope() || Current->opensScope())) {
@@ -3657,6 +3671,8 @@ private:
   const AdditionalKeywords &Keywords;
   const AnnotatedLine &Line;
   FormatToken *Current;
+  // The first non-comment token after the requires clause being parsed.
+  const FormatToken *RequiresClauseLimit = nullptr;
 };
 
 } // end anonymous namespace
