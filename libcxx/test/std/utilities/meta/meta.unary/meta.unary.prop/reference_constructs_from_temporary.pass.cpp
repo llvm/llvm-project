@@ -55,6 +55,7 @@ constexpr bool test() {
   assert((std::is_constructible_v<const int&, ConvertsToRef<long, long&>>));
   test_reference_constructs_from_temporary<const int&, ConvertsToRef<long, long&>, true>();
 #ifndef TEST_COMPILER_GCC
+  // TODO: Remove this guard once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120529 gets fixed.
   test_reference_constructs_from_temporary<const int&, ConvertsToRefPrivate<long, long&>, false>();
 #endif
 
@@ -62,6 +63,33 @@ constexpr bool test() {
   test_reference_constructs_from_temporary<int, long, false>();
 
   test_reference_constructs_from_temporary<const int&, long, true>();
+
+#if defined(TEST_COMPILER_GCC) ||                                                                                      \
+    (defined(TEST_CLANG_VER) &&                                                                                        \
+     ((!defined(__ANDROID__) && TEST_CLANG_VER >= 2100) || (defined(__ANDROID__) && TEST_CLANG_VER >= 2200))) ||       \
+    (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER >= 1800)
+  // TODO: Bump the version numbers if newer Apple Clang or Android Clang hasn't implemented LWG3819 yet.
+  // TODO: Remove this guard once no supported Clang is affected by https://llvm.org/PR114344.
+
+  // Test function references.
+  test_reference_constructs_from_temporary<void (&)(), void(), false>();
+  test_reference_constructs_from_temporary<void (&&)(), void(), false>();
+
+  // Test cv-qualification dropping for scalar prvalues. LWG3819 also covers this.
+  test_reference_constructs_from_temporary<int&&, const int, true>();
+  test_reference_constructs_from_temporary<int&&, volatile int, true>();
+#endif
+
+#if !defined(TEST_COMPILER_GCC) &&                                                                                     \
+    ((defined(TEST_CLANG_VER) &&                                                                                       \
+      ((!defined(__ANDROID__) && TEST_CLANG_VER >= 2100) || (defined(__ANDROID__) && TEST_CLANG_VER >= 2200))) ||      \
+     (defined(TEST_APPLE_CLANG_VER) && TEST_APPLE_CLANG_VER >= 1800))
+  // TODO: Bump the version numbers if newer Apple Clang or Android Clang hasn't implemented LWG3819 yet.
+  // TODO: Remove this guard once supported Clang and GCC have LWG3819 implemented.
+
+  // Test LWG3819: reference_meows_from_temporary should not use is_meowible.
+  test_reference_constructs_from_temporary<ConvertsFromNonMovable&&, NonMovable, true>();
+#endif
 
   // Additional checks
   test_reference_constructs_from_temporary<const Base&, Derived, true>();
