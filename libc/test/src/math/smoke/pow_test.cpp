@@ -1,9 +1,14 @@
-//===-- Unittests for pow -------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Smoke tests for pow.
+///
 //===----------------------------------------------------------------------===//
 
 #include "hdr/fenv_macros.h"
@@ -69,8 +74,7 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(zero, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(zero, neg_zero));
     EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::pow(zero, inf));
-    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::pow(zero, neg_inf),
-                                FE_DIVBYZERO);
+    EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(zero, neg_inf));
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(zero, aNaN));
 
     // pow( -0.0, exponent )
@@ -89,8 +93,7 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(neg_zero, zero));
     EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(neg_zero, neg_zero));
     EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::pow(neg_zero, inf));
-    EXPECT_FP_EQ_WITH_EXCEPTION(inf, LIBC_NAMESPACE::pow(neg_zero, neg_inf),
-                                FE_DIVBYZERO);
+    EXPECT_FP_EQ(inf, LIBC_NAMESPACE::pow(neg_zero, neg_inf));
     EXPECT_FP_IS_NAN(LIBC_NAMESPACE::pow(neg_zero, aNaN));
 
     // pow( 1.0, exponent )
@@ -195,26 +198,24 @@ TEST_F(LlvmLibcPowTest, SpecialNumbers) {
     EXPECT_FP_EQ(zero, LIBC_NAMESPACE::pow(-1.1, neg_inf));
 
     // Exact powers of 2:
-    // TODO: Enable these tests when we use exp2.
-    // EXPECT_FP_EQ(0x1.0p15, LIBC_NAMESPACE::pow(2.0, 15.0));
-    // EXPECT_FP_EQ(0x1.0p126, LIBC_NAMESPACE::pow(2.0, 126.0));
-    // EXPECT_FP_EQ(0x1.0p-45, LIBC_NAMESPACE::pow(2.0, -45.0));
-    // EXPECT_FP_EQ(0x1.0p-126, LIBC_NAMESPACE::pow(2.0, -126.0));
-    // EXPECT_FP_EQ(0x1.0p-149, LIBC_NAMESPACE::pow(2.0, -149.0));
+    EXPECT_FP_EQ(0x1.0p15, LIBC_NAMESPACE::pow(2.0, 15.0));
+    EXPECT_FP_EQ(0x1.0p126, LIBC_NAMESPACE::pow(2.0, 126.0));
+    EXPECT_FP_EQ(0x1.0p-45, LIBC_NAMESPACE::pow(2.0, -45.0));
+    EXPECT_FP_EQ(0x1.0p-126, LIBC_NAMESPACE::pow(2.0, -126.0));
+    EXPECT_FP_EQ(0x1.0p-149, LIBC_NAMESPACE::pow(2.0, -149.0));
 
     // Exact powers of 10:
-    // TODO: Enable these tests when we use exp10
-    // EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(10.0, 0.0));
-    // EXPECT_FP_EQ(10.0, LIBC_NAMESPACE::pow(10.0, 1.0));
-    // EXPECT_FP_EQ(100.0, LIBC_NAMESPACE::pow(10.0, 2.0));
-    // EXPECT_FP_EQ(1000.0, LIBC_NAMESPACE::pow(10.0, 3.0));
-    // EXPECT_FP_EQ(10000.0, LIBC_NAMESPACE::pow(10.0, 4.0));
-    // EXPECT_FP_EQ(100000.0, LIBC_NAMESPACE::pow(10.0, 5.0));
-    // EXPECT_FP_EQ(1000000.0, LIBC_NAMESPACE::pow(10.0, 6.0));
-    // EXPECT_FP_EQ(10000000.0, LIBC_NAMESPACE::pow(10.0, 7.0));
-    // EXPECT_FP_EQ(100000000.0, LIBC_NAMESPACE::pow(10.0, 8.0));
-    // EXPECT_FP_EQ(1000000000.0, LIBC_NAMESPACE::pow(10.0, 9.0));
-    // EXPECT_FP_EQ(10000000000.0, LIBC_NAMESPACE::pow(10.0, 10.0));
+    EXPECT_FP_EQ(1.0, LIBC_NAMESPACE::pow(10.0, 0.0));
+    EXPECT_FP_EQ(10.0, LIBC_NAMESPACE::pow(10.0, 1.0));
+    EXPECT_FP_EQ(100.0, LIBC_NAMESPACE::pow(10.0, 2.0));
+    EXPECT_FP_EQ(1000.0, LIBC_NAMESPACE::pow(10.0, 3.0));
+    EXPECT_FP_EQ(10000.0, LIBC_NAMESPACE::pow(10.0, 4.0));
+    EXPECT_FP_EQ(100000.0, LIBC_NAMESPACE::pow(10.0, 5.0));
+    EXPECT_FP_EQ(1000000.0, LIBC_NAMESPACE::pow(10.0, 6.0));
+    EXPECT_FP_EQ(10000000.0, LIBC_NAMESPACE::pow(10.0, 7.0));
+    EXPECT_FP_EQ(100000000.0, LIBC_NAMESPACE::pow(10.0, 8.0));
+    EXPECT_FP_EQ(1000000000.0, LIBC_NAMESPACE::pow(10.0, 9.0));
+    EXPECT_FP_EQ(10000000000.0, LIBC_NAMESPACE::pow(10.0, 10.0));
 
     // Overflow / Underflow:
     if (ROUNDING_MODES[i] != RoundingMode::Downward &&
