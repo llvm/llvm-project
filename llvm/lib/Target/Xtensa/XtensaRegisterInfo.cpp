@@ -13,11 +13,13 @@
 #include "XtensaRegisterInfo.h"
 #include "MCTargetDesc/XtensaMCTargetDesc.h"
 #include "XtensaInstrInfo.h"
+#include "XtensaMachineFunctionInfo.h"
 #include "XtensaSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -91,6 +93,47 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     FrameReg = Xtensa::SP;
   else
     FrameReg = getFrameRegister(MF);
+
+  // In a dynamically realigned WindowedABI frame, SP no longer holds the value
+  // it had on entry (realignment moved it by a runtime-variable pad). Incoming
+  // stack arguments are fixed objects addressed relative to that entry SP, so
+  // resolving them against the realigned SP would be wrong by the pad. Reload
+  // the preserved original SP from its slot and use it as the base register.
+  {
+    auto *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
+    if (Subtarget.isWindowedABI() && MFI.getMaxAlign().value() > 32 &&
+        MFI.isFixedObjectIndex(FrameIndex) &&
+        XtensaFI->getRealignSP0FrameIndex() != -1) {
+      int SP0FI = XtensaFI->getRealignSP0FrameIndex();
+      int64_t SP0Off = MFI.getObjectOffset(SP0FI) + (int64_t)StackSize;
+      MachineBasicBlock &MBB = *MI.getParent();
+      DebugLoc DL = II->getDebugLoc();
+      const XtensaInstrInfo &TII = *static_cast<const XtensaInstrInfo *>(
+          MBB.getParent()->getSubtarget().getInstrInfo());
+      Register SP0Reg =
+          MF.getRegInfo().createVirtualRegister(&Xtensa::ARRegClass);
+      // The slot is a local object: address it the same way the generic path
+      // below addresses locals -- off FrameReg (FP when the function has one,
+      // which stays fixed while SP moves for dynamic allocas; SP otherwise).
+      if (Xtensa::isValidAddrOffsetForOpcode(Xtensa::L32I, SP0Off)) {
+        BuildMI(MBB, II, DL, TII.get(Xtensa::L32I), SP0Reg)
+            .addReg(FrameReg)
+            .addImm(SP0Off);
+      } else {
+        // The slot offset does not fit the L32I immediate; materialize it and
+        // index off FrameReg through a temporary register.
+        MCRegister OffReg;
+        TII.loadImmediate(MBB, II, &OffReg, SP0Off);
+        BuildMI(MBB, II, DL, TII.get(Xtensa::ADD), OffReg)
+            .addReg(FrameReg)
+            .addReg(OffReg, RegState::Kill);
+        BuildMI(MBB, II, DL, TII.get(Xtensa::L32I), SP0Reg)
+            .addReg(OffReg, RegState::Kill)
+            .addImm(0);
+      }
+      FrameReg = SP0Reg;
+    }
+  }
 
   // Calculate final offset.
   // - There is no need to change the offset if the frame object is one of the
