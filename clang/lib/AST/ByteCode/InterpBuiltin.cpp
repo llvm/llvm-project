@@ -759,22 +759,54 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
                                 const CallExpr *Call) {
   const Floating &Arg = S.Stk.pop<Floating>();
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
-  llvm::RoundingMode RM = llvm::RoundingMode::NearestTiesToEven;
-  if (S.inConstantContext())
-    RM = getRoundingMode(FPO);
+  llvm::RoundingMode RM = getRoundingMode(FPO);
   APFloat::opStatus Status = APFloat::opStatus::opOK;
   std::optional<APFloat> Result = exp(Arg.getAPFloat(), RM, &Status);
-  // Check for unsupported rounding modes.
-  if (!Result.has_value())
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  if (!Result.has_value()) {
+    if (S.inConstantContext())
+      S.FFDiag(E, diag::note_constexpr_unsupported_rounding)
+          << Call->getDirectCallee() << llvm::spell(RM);
     return false;
-  // Check for raised non-FE_INEXACT exceptions.
-  if (Status & (~APFloat::opStatus::opInexact))
+  }
+
+  if (S.inConstantContext()) {
+    // [library.c]p3: A call to a math function is not a core constant
+    // expression if an exception other than FE_INEXACT is raised.
+    if (Status & (~APFloat::opStatus::opInexact)) {
+      const FunctionDecl *FD = Call->getDirectCallee();
+      if (Status & APFloat::opStatus::opUnderflow)
+        S.FFDiag(E, diag::note_constexpr_float_underflow) << FD;
+      else if (Status & APFloat::opStatus::opOverflow)
+        S.FFDiag(E, diag::note_constexpr_float_overflow) << FD;
+      else if (Status & APFloat::opStatus::opDivByZero)
+        S.FFDiag(E, diag::note_constexpr_float_divide_by_zero) << FD;
+      else
+        S.FFDiag(E, diag::note_constexpr_float_invalid_op) << FD;
+      return false;
+    }
+    Floating Res = S.allocFloat(Arg.getSemantics());
+    Res.copy(*Result);
+    S.Stk.push<Floating>(Res);
+    return true;
+  }
+
+  // Under -fmath-errno, any error condition that sets errno at runtime
+  // (domain error EDOM via opInvalidOp, pole error ERANGE via opDivByZero,
+  // or range error ERANGE via opOverflow/opUnderflow) cannot be folded.
+  // This check is performed here rather than in CheckFloatStatus because errno
+  // is specific to math functions (and not set by core language operators).
+  if (S.getLangOpts().MathErrno && (Status & (~APFloat::opStatus::opInexact))) {
+    S.FFDiag(E, diag::note_constexpr_math_errno) << Call->getDirectCallee();
     return false;
-  Floating Res = S.allocFloat(Arg.getSemantics());
-  Res.copy(*Result);
-  // Add diagnostic when not in constant evaluation context.
+  }
+
   if (!CheckFloatStatus(S, OpPC, Status, FPO))
     return false;
+
+  Floating Res = S.allocFloat(Arg.getSemantics());
+  Res.copy(*Result);
   S.Stk.push<Floating>(Res);
   return true;
 }
