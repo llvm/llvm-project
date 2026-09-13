@@ -28,10 +28,10 @@ define void @reverse_reaches_base(ptr dereferenceable(16) %A, ptr dereferenceabl
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr))<nsw> High: (16 + %B)<nuw>)
+; CHECK-NEXT:          (Low: null High: (16 + %B)<nuw>)
 ; CHECK-NEXT:            Member: {(12 + %B)<nuw>,+,-4}<nw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: (-4 + inttoptr (i64 -1 to ptr))<nsw> High: (16 + %A)<nuw>)
+; CHECK-NEXT:          (Low: null High: (16 + %A)<nuw>)
 ; CHECK-NEXT:            Member: {(12 + %A)<nuw>,+,-4}<nw><%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.

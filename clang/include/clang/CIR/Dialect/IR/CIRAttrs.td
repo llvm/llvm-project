@@ -78,16 +78,12 @@ class CIR_UnitAttr<string name, string attrMnemonic, list<Trait> traits = []>
 
 // TODO: Add cases for other languages that Clang supports.
 
-def CIR_SourceLanguage : CIR_I32EnumAttr<"SourceLanguage", "source language", [
-  I32EnumAttrCase<"C", 1, "c">,
-  I32EnumAttrCase<"CXX", 2, "cxx">,
-  I32EnumAttrCase<"OpenCLC", 3, "opencl_c">,
-  I32EnumAttrCase<"OpenCLCXX", 4, "opencl_cxx">
-]> {
-  // The enum attr class is defined in `CIR_SourceLanguageAttr` below,
-  // so that it can define extra class methods.
-  let genSpecializedAttr = 0;
-}
+def CIR_SourceLanguage : CIR_I32Enum<"SourceLanguage", "source language", [
+  I32EnumCase<"C", 1, "c">,
+  I32EnumCase<"CXX", 2, "cxx">,
+  I32EnumCase<"OpenCLC", 3, "opencl_c">,
+  I32EnumCase<"OpenCLCXX", 4, "opencl_cxx">
+]>;
 
 def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 
@@ -120,17 +116,59 @@ def CIR_SourceLanguageAttr : CIR_EnumAttr<CIR_SourceLanguage, "lang"> {
 }
 
 //===----------------------------------------------------------------------===//
+// OffloadKindAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_OffloadKind : CIR_I32Enum<"OffloadKind", "offload kind", [
+  I32EnumCase<"Host", 0, "host">,
+  I32EnumCase<"Device", 1, "device">
+]>;
+
+def CIR_OffloadKindAttr : CIR_EnumAttr<CIR_OffloadKind, "offload"> {
+  let summary = "Offload kind of a module in an offload container";
+  let description = [{
+    Marks a module nested inside an offload container - identified by the
+    `cir.offload.container` unit attribute - as either the host module (carrying
+    `cir.offload.kind = #cir.offload<host>`) or one of the device modules
+    (carrying `cir.offload.kind = #cir.offload<device>`) of the offload
+    container. This creates a tiered module layout, where a singular offload
+    container contains a single host module and one or more device modules,
+    granting the offload merge/split pipeline passes the cross-boundary view.
+
+    Example:
+    ```mlir
+    module attributes {cir.offload.container} {
+      module @host attributes {cir.offload.kind = #cir.offload<host>} {}
+      module @device1 attributes {cir.offload.kind = #cir.offload<device>} {}
+      module @device2 attributes {cir.offload.kind = #cir.offload<device>} {}
+    }
+    ```
+
+    Note: In order to simplify offload passes, the offload container module
+    requires that the first module inside it is the host module and the rest
+    of the modules are device modules.
+
+    The nested modules are plain `builtin.module` ops rather than a dedicated
+    container op, so that the existing module infrastructure applies to them
+    unchanged; the layout above is enforced by the CIR dialect attribute
+    verifier, following the `gpu.container_module` precedent.
+
+    The attribute names `cir.offload.container` and `cir.offload.kind` are
+    defined by the `getOffloadContainerAttrName` and `getOffloadKindAttrName`
+    methods in the CIRDialect class.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ArgPassingKind + RecordLayoutAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_ArgPassingKind : CIR_I32EnumAttr<
+def CIR_ArgPassingKind : CIR_I32Enum<
     "ArgPassingKind", "record argument passing eligibility", [
-  I32EnumAttrCase<"CanPassInRegs", 0, "can_pass_in_regs">,
-  I32EnumAttrCase<"CannotPassInRegs", 1, "cannot_pass_in_regs">,
-  I32EnumAttrCase<"CanNeverPassInRegs", 2, "can_never_pass_in_regs">
-]> {
-  let genSpecializedAttr = 0;
-}
+  I32EnumCase<"CanPassInRegs", 0, "can_pass_in_regs">,
+  I32EnumCase<"CannotPassInRegs", 1, "cannot_pass_in_regs">,
+  I32EnumCase<"CanNeverPassInRegs", 2, "can_never_pass_in_regs">
+]>;
 
 def CIR_RecordLayoutAttr : CIR_Attr<"RecordLayout", "record_layout", [
     // record_align is consumed as an llvm::Align, whose constructor asserts a
@@ -732,14 +770,12 @@ def CIR_MethodAttr : CIR_ValueLikeAttr<"Method", "method"> {
 // CmpThreeWayInfoAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_CmpOrdering : CIR_I32EnumAttr<
+def CIR_CmpOrdering : CIR_I32Enum<
   "CmpOrdering", "three-way comparison ordering kind", [
-    I32EnumAttrCase<"Strong", 0, "strong">,
-    I32EnumAttrCase<"Weak", 1, "weak">,
-    I32EnumAttrCase<"Partial", 2, "partial">
-]> {
-  let genSpecializedAttr = 0;
-}
+    I32EnumCase<"Strong", 0, "strong">,
+    I32EnumCase<"Weak", 1, "weak">,
+    I32EnumCase<"Partial", 2, "partial">
+]>;
 
 def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
   let summary = "Holds information about a three-way comparison operation";
@@ -816,35 +852,33 @@ def CIR_CmpThreeWayInfoAttr : CIR_Attr<"CmpThreeWayInfo", "cmp3way_info"> {
 // FenvAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_FPDynamicRoundingMode : CIR_I32EnumAttr<
+def CIR_FPDynamicRoundingMode : CIR_I32Enum<
     "FPDynamicRoundingMode", "floating-point dynamic rounding mode", [
-  I32EnumAttrCase<"ToNearest", 0, "tonearest">,
-  I32EnumAttrCase<"Downward", 1, "downward">,
-  I32EnumAttrCase<"Upward", 2, "upward">,
-  I32EnumAttrCase<"UpwardZero", 3, "upwardzero">,
-  I32EnumAttrCase<"ToNearestAway", 4, "tonearestaway">,
-  I32EnumAttrCase<"Unknown", 7, "unknown">
+  I32EnumCase<"ToNearest", 0, "tonearest">,
+  I32EnumCase<"Downward", 1, "downward">,
+  I32EnumCase<"Upward", 2, "upward">,
+  I32EnumCase<"UpwardZero", 3, "upwardzero">,
+  I32EnumCase<"ToNearestAway", 4, "tonearestaway">,
+  I32EnumCase<"Unknown", 7, "unknown">
 ]> {
   let description = [{
     The known dynamic rounding mode at the point the instruction is executed.
     If the actual dynamic rounding mode differs from this value, the behavior
     is undefined.
   }];
-  let genSpecializedAttr = 0;
 }
 
-def CIR_FPExceptionMode : CIR_I32EnumAttr<
+def CIR_FPExceptionMode : CIR_I32Enum<
     "FPExceptionMode", "floating-point exception mode", [
-  I32EnumAttrCase<"Unknown", 0, "unknown">,
-  I32EnumAttrCase<"Masked", 1, "masked">,
-  I32EnumAttrCase<"Unmasked", 2, "unmasked">
+  I32EnumCase<"Unknown", 0, "unknown">,
+  I32EnumCase<"Masked", 1, "masked">,
+  I32EnumCase<"Unmasked", 2, "unmasked">
 ]> {
   let description = [{
     The known floating-point exception mode at the point the instruction is
     executed. If the actual exception mode differs from this value, the
     behavior is undefined.
   }];
-  let genSpecializedAttr = 0;
 }
 
 def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
@@ -1351,13 +1385,11 @@ def CIR_ConstComplexAttr : CIR_ValueLikeAttr<"ConstComplex", "const_complex"> {
 // VisibilityKind
 //===----------------------------------------------------------------------===//
 
-def CIR_VisibilityKind : CIR_I32EnumAttr<"VisibilityKind", "C/C++ visibility", [
-  I32EnumAttrCase<"Default", 0, "default">,
-  I32EnumAttrCase<"Hidden", 1, "hidden">,
-  I32EnumAttrCase<"Protected", 2, "protected">
-]> {
-  let genSpecializedAttr = 0;
-}
+def CIR_VisibilityKind : CIR_I32Enum<"VisibilityKind", "C/C++ visibility", [
+  I32EnumCase<"Default", 0, "default">,
+  I32EnumCase<"Hidden", 1, "hidden">,
+  I32EnumCase<"Protected", 2, "protected">
+]>;
 
 //===----------------------------------------------------------------------===//
 // GloblCtorAttr
@@ -1417,14 +1449,12 @@ def CIR_GlobalDtorAttr : CIR_GlobalCtorDtor<"Dtor", "dtor"> {
 // CXX SpecialMemberAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_CtorKind : CIR_I32EnumAttr<"CtorKind", "CXX Constructor Kind", [
-  I32EnumAttrCase<"Custom", 0, "custom">,
-  I32EnumAttrCase<"Default", 1, "default">,
-  I32EnumAttrCase<"Copy", 2, "copy">,
-  I32EnumAttrCase<"Move", 3, "move">,
-]> {
-  let genSpecializedAttr = 0;
-}
+def CIR_CtorKind : CIR_I32Enum<"CtorKind", "CXX Constructor Kind", [
+  I32EnumCase<"Custom", 0, "custom">,
+  I32EnumCase<"Default", 1, "default">,
+  I32EnumCase<"Copy", 2, "copy">,
+  I32EnumCase<"Move", 3, "move">,
+]>;
 
 def CIR_CXXCtorAttr : CIR_Attr<"CXXCtor", "cxx_ctor"> {
   let summary = "Marks a function as a C++ constructor";
@@ -1485,12 +1515,10 @@ def CIR_CXXDtorAttr : CIR_Attr<"CXXDtor", "cxx_dtor"> {
   }];
 }
 
-def CIR_AssignKind : CIR_I32EnumAttr<"AssignKind", "CXX Assignment Operator Kind", [
-  I32EnumAttrCase<"Copy", 0, "copy">,
-  I32EnumAttrCase<"Move", 1, "move">,
-]> {
-  let genSpecializedAttr = 0;
-}
+def CIR_AssignKind : CIR_I32Enum<"AssignKind", "CXX Assignment Operator Kind", [
+  I32EnumCase<"Copy", 0, "copy">,
+  I32EnumCase<"Move", 1, "move">,
+]>;
 
 def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
   let summary = "Marks a function as a CXX assignment operator";
@@ -1526,16 +1554,10 @@ def CIR_CXXAssignAttr : CIR_Attr<"CXXAssign", "cxx_assign"> {
 
 // The standard library entities the identity tag can name. Each entry
 // pairs with one raised operation in CIRStdOps.td.
-def CIR_KnownFuncKind : CIR_I32EnumAttr<"KnownFuncKind",
+def CIR_KnownFuncKind : CIR_I32Enum<"KnownFuncKind",
     "known standard library entity", [
-  I32EnumAttrCase<"StdFind", 1, "std::find">,
-]> {
-  let genSpecializedAttr = 0;
-  // A name like std::find is not a bare identifier, so print it as a quoted
-  // string. The enum parser already reads a quoted string back.
-  let parameterPrinter =
-      "$_printer.printKeywordOrString(" # symbolToStringFnName # "($_self))";
-}
+  I32EnumCase<"StdFind", 1, "std::find">,
+]>;
 
 def CIR_FuncIdentityAttr : CIR_Attr<"FuncIdentity", "func_identity"> {
   let summary = "Identifies a function as a known standard library entity";
@@ -1821,16 +1843,13 @@ def CIR_TypeInfoAttr : CIR_ValueLikeAttr<"TypeInfo", "typeinfo"> {
 // InlineKindAttr
 //===----------------------------------------------------------------------===//
 
-def CIR_InlineKind : CIR_I32EnumAttr<"InlineKind", "inlineKind", [
-  I32EnumAttrCase<"NoInline", 1, "no_inline">,
-  I32EnumAttrCase<"AlwaysInline", 2, "always_inline">,
-  I32EnumAttrCase<"InlineHint", 3, "inline_hint">
-]> {
-  let genSpecializedAttr = 0;
-}
+def CIR_InlineKind : CIR_I32Enum<"InlineKind", "inline kind", [
+  I32EnumCase<"NoInline", 1, "no_inline">,
+  I32EnumCase<"AlwaysInline", 2, "always_inline">,
+  I32EnumCase<"InlineHint", 3, "inline_hint">
+]>;
 
-def CIR_InlineKindAttr: CIR_EnumAttr<CIR_InlineKind, "inline_kind"> {
-  let summary = "Inline kind attribute";
+def CIR_InlineKindAttr: CIR_EnumAttr<CIR_InlineKind, "inline"> {
   let description = [{ Inline Kind attributes.  `no_inline` and `always_inline`
     spellings correspond to the attributes of the same name, and `inline_hint`
       is the `inline` keyword in the language.}];
@@ -1937,11 +1956,11 @@ def CIR_BlockAddrDiffAttr
 // Side Effect
 //===----------------------------------------------------------------------===//
 
-def CIR_SideEffect : CIR_I32EnumAttr<
+def CIR_SideEffect : CIR_I32Enum<
     "SideEffect", "allowed side effects of a function", [
-      I32EnumAttrCase<"All", 0, "all">,
-      I32EnumAttrCase<"Pure", 1, "pure">,
-      I32EnumAttrCase<"Const", 2, "const">
+      I32EnumCase<"All", 0, "all">,
+      I32EnumCase<"Pure", 1, "pure">,
+      I32EnumCase<"Const", 2, "const">
 ]> {
   let description = [{
     The side effect attribute specifies the possible side effects of a function
@@ -1964,8 +1983,6 @@ def CIR_SideEffect : CIR_I32EnumAttr<
     %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
     ```
   }];
-
-  let genSpecializedAttr = 0;
 }
 
 def CIR_SideEffectAttr : CIR_EnumAttr<CIR_SideEffect, "side_effect">;
@@ -2123,34 +2140,30 @@ def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
 // CIR-native thread-local storage kind. Cases mirror clang::VarDecl::TLSKind
 // so CIRGen can map between them, but CIR does not depend on the underlying
 // clang enumerator values.
-def CIR_TLSKind : CIR_I32EnumAttr<"TLSKind", "thread-local storage kind", [
-  I32EnumAttrCase<"None", 0, "none">,          // clang::VarDecl::TLS_None
-  I32EnumAttrCase<"Static", 1, "static">,      // clang::VarDecl::TLS_Static
-  I32EnumAttrCase<"Dynamic", 2, "dynamic">     // clang::VarDecl::TLS_Dynamic
-]> {
-  let genSpecializedAttr = 0;
-}
+def CIR_TLSKind : CIR_I32Enum<"TLSKind", "thread-local storage kind", [
+  I32EnumCase<"None", 0, "none">,          // clang::VarDecl::TLS_None
+  I32EnumCase<"Static", 1, "static">,      // clang::VarDecl::TLS_Static
+  I32EnumCase<"Dynamic", 2, "dynamic">     // clang::VarDecl::TLS_Dynamic
+]>;
 
 // CIR-native template-specialization kind. Cases mirror
 // clang::TemplateSpecializationKind.
 def CIR_TemplateSpecializationKind
-    : CIR_I32EnumAttr<"TemplateSpecializationKind",
+    : CIR_I32Enum<"TemplateSpecializationKind",
                       "template specialization kind", [
   // clang::TSK_Undeclared
-  I32EnumAttrCase<"Undeclared", 0, "undeclared">,
+  I32EnumCase<"Undeclared", 0, "undeclared">,
   // clang::TSK_ImplicitInstantiation
-  I32EnumAttrCase<"ImplicitInstantiation", 1, "implicit_instantiation">,
+  I32EnumCase<"ImplicitInstantiation", 1, "implicit_instantiation">,
   // clang::TSK_ExplicitSpecialization
-  I32EnumAttrCase<"ExplicitSpecialization", 2, "explicit_specialization">,
+  I32EnumCase<"ExplicitSpecialization", 2, "explicit_specialization">,
   // clang::TSK_ExplicitInstantiationDeclaration
-  I32EnumAttrCase<"ExplicitInstantiationDeclaration", 3,
+  I32EnumCase<"ExplicitInstantiationDeclaration", 3,
                   "explicit_instantiation_declaration">,
   // clang::TSK_ExplicitInstantiationDefinition
-  I32EnumAttrCase<"ExplicitInstantiationDefinition", 4,
+  I32EnumCase<"ExplicitInstantiationDefinition", 4,
                   "explicit_instantiation_definition">
-]> {
-  let genSpecializedAttr = 0;
-}
+]>;
 
 def CIR_StaticLocalInfoAttr
     : CIR_Attr<"StaticLocalInfo", "static_local_info"> {

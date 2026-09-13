@@ -436,17 +436,17 @@ define amdgpu_kernel void @usage_external_recurse() #0 {
 }
 
 ; GCN-LABEL: {{^}}direct_recursion_use_stack:
-; GCN: .set .Ldirect_recursion_use_stack.num_vgpr, 41
+; GCN: .set .Ldirect_recursion_use_stack.num_vgpr, 42
 ; GCN: .set .Ldirect_recursion_use_stack.num_agpr, 0
-; GCN: .set .Ldirect_recursion_use_stack.numbered_sgpr, 36
+; GCN: .set .Ldirect_recursion_use_stack.numbered_sgpr, 34
 ; GCN: .set .Ldirect_recursion_use_stack.private_seg_size, 2064
 ; GCN: .set .Ldirect_recursion_use_stack.uses_vcc, 1
 ; GCN: .set .Ldirect_recursion_use_stack.uses_flat_scratch, 0
 ; GCN: .set .Ldirect_recursion_use_stack.has_dyn_sized_stack, 0
 ; GCN: .set .Ldirect_recursion_use_stack.has_recursion, 1
 ; GCN: .set .Ldirect_recursion_use_stack.has_indirect_call, 0
-; GCN: TotalNumSgprs: 40
-; GCN: NumVgprs: 41
+; GCN: TotalNumSgprs: 38
+; GCN: NumVgprs: 42
 ; GCN: ScratchSize: 2064
 define void @direct_recursion_use_stack(i32 %val) #2 {
   %alloca = alloca [512 x i32], align 4, addrspace(5)
@@ -473,8 +473,8 @@ ret:
 ; GCN:  .set .Lusage_direct_recursion.has_dyn_sized_stack, or(0, .Ldirect_recursion_use_stack.has_dyn_sized_stack)
 ; GCN:  .set .Lusage_direct_recursion.has_recursion, or(1, .Ldirect_recursion_use_stack.has_recursion)
 ; GCN:  .set .Lusage_direct_recursion.has_indirect_call, or(0, .Ldirect_recursion_use_stack.has_indirect_call)
-; GCN: TotalNumSgprs: 42
-; GCN: NumVgprs: 41
+; GCN: TotalNumSgprs: 40
+; GCN: NumVgprs: 42
 ; GCN: ScratchSize: 2064
 define amdgpu_kernel void @usage_direct_recursion(i32 %n) #0 {
   call void @direct_recursion_use_stack(i32 %n)

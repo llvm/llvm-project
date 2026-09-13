@@ -166,7 +166,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // crt1-command.o. And once LLVM no longer needs to support WASI libc
     // versions before that, it can switch to using crt1-command.o.
     Crt1 = "crt1.o";
-    if (ToolChain.GetFilePath("crt1-command.o") != "crt1-command.o")
+    if (ToolChain.GetFilePathIfExists("crt1-command.o"))
       Crt1 = "crt1-command.o";
   } else {
     Crt1 = "crt1-reactor.o";
@@ -460,6 +460,12 @@ void WebAssembly::addClangTargetOptions(const ArgList &DriverArgs,
     // Backend needs -wasm-enable-eh to enable Wasm EH
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-wasm-enable-eh");
+  }
+
+  if (DriverArgs.getLastArg(options::OPT_femscripten_exceptions)) {
+    // Backend needs -enable-emscripten-cxx-exceptions to enable Emscripten EH
+    CC1Args.push_back("-mllvm");
+    CC1Args.push_back("-enable-emscripten-cxx-exceptions");
   }
 
   for (const Arg *A : DriverArgs.filtered(options::OPT_mllvm)) {
