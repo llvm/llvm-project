@@ -1563,6 +1563,24 @@ define amdgpu_ps i64 @s_shl_i64_31(i64 inreg %value) {
   ret i64 %result
 }
 
+define amdgpu_ps i64 @s_shl_i64_or32(i64 inreg %value, i32 inreg %amount) {
+; GCN-LABEL: s_shl_i64_or32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_lshl_b32 s1, s0, s2
+; GCN-NEXT:    s_mov_b32 s0, 0
+; GCN-NEXT:    ; return to shader part epilog
+;
+; GFX10PLUS-LABEL: s_shl_i64_or32:
+; GFX10PLUS:       ; %bb.0:
+; GFX10PLUS-NEXT:    s_lshl_b32 s1, s0, s2
+; GFX10PLUS-NEXT:    s_mov_b32 s0, 0
+; GFX10PLUS-NEXT:    ; return to shader part epilog
+  %amount.or = or i32 %amount, 32
+  %amount.ext = zext i32 %amount.or to i64
+  %result = shl i64 %value, %amount.ext
+  ret i64 %result
+}
+
 define amdgpu_ps <2 x float> @shl_i64_sv(i64 inreg %value, i64 %amount) {
 ; GFX6-LABEL: shl_i64_sv:
 ; GFX6:       ; %bb.0:

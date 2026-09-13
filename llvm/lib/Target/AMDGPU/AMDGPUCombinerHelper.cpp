@@ -596,27 +596,27 @@ bool AMDGPUCombinerHelper::matchShiftKnownGeHalfWidth(
 
   Register Src = MI.getOperand(1).getReg();
   MatchInfo = [=, &MI](MachineIRBuilder &B) {
-    const LLT S32 = LLT::integer(32);
-    auto Unmerge = B.buildUnmerge(S32, Src);
+    const LLT I32 = LLT::integer(32);
+    auto Unmerge = B.buildUnmerge(I32, Src);
     Register Lo = Unmerge.getReg(0);
     Register Hi = Unmerge.getReg(1);
-    auto MaskedAmt = B.buildAnd(S32, ShiftAmt, B.buildConstant(S32, 31));
+    auto MaskedAmt = B.buildAnd(I32, ShiftAmt, B.buildConstant(I32, 31));
 
     switch (Opc) {
     case TargetOpcode::G_SHL: {
-      auto Shl = B.buildShl(S32, Lo, MaskedAmt, MI.getFlags());
-      B.buildMergeLikeInstr(Dst, {B.buildConstant(S32, 0), Shl});
+      auto Shl = B.buildShl(I32, Lo, MaskedAmt, MI.getFlags());
+      B.buildMergeLikeInstr(Dst, {B.buildConstant(I32, 0), Shl});
       break;
     }
     case TargetOpcode::G_LSHR: {
-      auto Shr = B.buildLShr(S32, Hi, MaskedAmt, MI.getFlags());
-      B.buildMergeLikeInstr(Dst, {Shr, B.buildConstant(S32, 0)});
+      auto Shr = B.buildLShr(I32, Hi, MaskedAmt, MI.getFlags());
+      B.buildMergeLikeInstr(Dst, {Shr, B.buildConstant(I32, 0)});
       break;
     }
     case TargetOpcode::G_ASHR: {
-      auto FrozenHi = B.buildFreeze(S32, Hi);
-      auto NewLo = B.buildAShr(S32, FrozenHi, MaskedAmt, MI.getFlags());
-      auto NewHi = B.buildAShr(S32, FrozenHi, B.buildConstant(S32, 31));
+      auto FrozenHi = B.buildFreeze(I32, Hi);
+      auto NewLo = B.buildAShr(I32, FrozenHi, MaskedAmt, MI.getFlags());
+      auto NewHi = B.buildAShr(I32, FrozenHi, B.buildConstant(I32, 31));
       B.buildMergeLikeInstr(Dst, {NewLo, NewHi});
       break;
     }
