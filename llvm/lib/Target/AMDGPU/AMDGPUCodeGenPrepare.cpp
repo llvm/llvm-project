@@ -19,7 +19,6 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/FloatingPointPredicateUtils.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -214,12 +213,13 @@ public:
   bool canWidenScalarExtLoad(LoadInst &I) const;
 
   Value *matchFractPatImpl(Value &V, const APFloat &C) const;
-  Value *matchFractPatNanAvoidant(Value &V,
-                                  Instruction *RootToReplace = nullptr);
+  Value *matchFractPatNanAvoidant(Value &V, bool &NeedsInfGuard);
   bool isFractNanAvoidantFoldLegalAtInf(const IntrinsicInst *MinI,
-                                        const Value *Sub, const Value *X,
-                                        Instruction *Root) const;
+                                        const Value *Sub, const Value *X) const;
+  bool foldFractNanSelect(SelectInst &I, Value *InfGuardedX = nullptr);
+  bool foldFractMin(IntrinsicInst &I, Value *InfGuardedX);
   Value *applyFractPat(IRBuilder<> &Builder, Value *FractArg);
+  Value *applyInfGuard(IRBuilder<> &Builder, Value *Fract, Value *X);
 
   bool canOptimizeWithRsq(FastMathFlags DivFMF, FastMathFlags SqrtFMF) const;
 
@@ -1584,19 +1584,32 @@ bool AMDGPUCodeGenPrepareImpl::visitLoadInst(LoadInst &I) {
   return false;
 }
 
+/// \returns V of select (fcmp une (fabs X), +inf), V, 0.0 or its commuted form.
+static Value *matchClampInfToZero(Value *Sel, Value *&X) {
+  CmpPredicate Pred;
+  Value *TrueVal, *FalseVal;
+  if (!match(Sel, m_Select(m_FCmp(Pred, m_FAbs(m_Value(X)), m_PosInf()),
+                           m_Value(TrueVal), m_Value(FalseVal))))
+    return nullptr;
+
+  if (Pred == FCmpInst::FCMP_UNE && match(FalseVal, m_PosZeroFP()))
+    return TrueVal;
+  if (Pred == FCmpInst::FCMP_OEQ && match(TrueVal, m_PosZeroFP()))
+    return FalseVal;
+  return nullptr;
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
   FPMathOperator *FPOp = dyn_cast<FPMathOperator>(&I);
   if (!FPOp)
     return false;
-
-  Value *X;
-  Value *Fract = nullptr;
 
   // Match:
   //   (x - floor(x)) >= MIN_CONSTANT ? MIN_CONSTANT : (x - floor(x))
   //
   // This is the preferred way to implement fract.
   // TODO: Could also match with compare against 1.0
+  Value *X;
   const APFloat *C;
   if (match(&I, m_UnordFMin(m_Value(X), m_APFloatAllowPoison(C)))) {
     Value *FractSrc = matchFractPatImpl(*X, *C);
@@ -1604,65 +1617,97 @@ bool AMDGPUCodeGenPrepareImpl::visitSelectInst(SelectInst &I) {
       return false;
     IRBuilder<> Builder(&I);
     Builder.setFastMathFlags(FPOp->getFastMathFlags());
-    Fract = applyFractPat(Builder, FractSrc);
+    Value *Fract = applyFractPat(Builder, FractSrc);
+    Fract->takeName(&I);
+    I.replaceAllUsesWith(Fract);
+    DeadVals.push_back(&I);
+    return true;
+  }
+
+  // An enclosing clamp of +/-inf to zero discards the difference between fract
+  // and the min there, so fold the value it guards instead.
+  Value *GuardedX;
+  if (Value *Guarded = matchClampInfToZero(&I, GuardedX)) {
+    if (!Guarded->hasOneUse())
+      return false;
+    if (auto *Inner = dyn_cast<SelectInst>(Guarded))
+      return foldFractNanSelect(*Inner, GuardedX);
+    if (auto *Min = dyn_cast<IntrinsicInst>(Guarded))
+      return foldFractMin(*Min, GuardedX);
+    return false;
+  }
+
+  return foldFractNanSelect(I);
+}
+
+/// Match patterns which may appear in legacy implementations of the fract()
+/// function, built around the nan-avoidant minnum intrinsic. These are the core
+/// pattern plus additional clamping of inf and nan values on the result.
+///
+/// \p InfGuardedX is the fract source when an enclosing select already discards
+/// the result at +/-inf.
+bool AMDGPUCodeGenPrepareImpl::foldFractNanSelect(SelectInst &I,
+                                                  Value *InfGuardedX) {
+  Value *CmpVal;
+  CmpPredicate IsNanPred;
+
+  // Match fract pattern with nan check.
+  if (!match(I.getCondition(), m_FCmp(IsNanPred, m_Value(CmpVal), m_NonNaN())))
+    return false;
+  if (InfGuardedX && InfGuardedX != CmpVal)
+    return false;
+
+  bool IsUno = IsNanPred == FCmpInst::FCMP_UNO;
+  if (!IsUno && IsNanPred != FCmpInst::FCMP_ORD)
+    return false;
+  Value *NanArm = IsUno ? I.getTrueValue() : I.getFalseValue();
+  Value *FractArm = IsUno ? I.getFalseValue() : I.getTrueValue();
+  if (NanArm != CmpVal)
+    return false;
+
+  IRBuilder<> Builder(&I);
+  Builder.setFastMathFlags(I.getFastMathFlags());
+
+  Value *Fract;
+  bool NeedsInfGuard;
+  if (CmpVal == matchFractPatNanAvoidant(*FractArm, NeedsInfGuard)) {
+    Fract = applyFractPat(Builder, CmpVal);
+    if (!InfGuardedX && NeedsInfGuard)
+      Fract = applyInfGuard(Builder, Fract, CmpVal);
+  } else if (!IsUno) {
+    // Match an intermediate clamp infinity to 0 pattern. i.e.
+    // !isnan(x) ? (!isinf(x) ? fract(x) : 0.0) : x
+    Value *InfCheckX;
+    Value *IfNotInf = matchClampInfToZero(FractArm, InfCheckX);
+    if (!IfNotInf || InfCheckX != CmpVal ||
+        CmpVal != matchFractPatNanAvoidant(*IfNotInf, NeedsInfGuard))
+      return false;
+
+    // The rewiring below only handles the guarded value in the true arm.
+    auto *ClampInfSelect = cast<SelectInst>(FractArm);
+    if (ClampInfSelect->getTrueValue() != IfNotInf)
+      return false;
+
+    // The clamp is mutated in place, so another user would see fract at nan.
+    if (!ClampInfSelect->hasOneUse())
+      return false;
+
+    // Insert before the fabs
+    Value *InsertPt =
+        cast<Instruction>(ClampInfSelect->getCondition())->getOperand(0);
+
+    Builder.SetInsertPoint(cast<Instruction>(InsertPt));
+    Value *NewFract = applyFractPat(Builder, CmpVal);
+    NewFract->takeName(FractArm);
+
+    // Thread the new fract into the inf clamping sequence.
+    DeadVals.push_back(ClampInfSelect->getOperand(1));
+    ClampInfSelect->setOperand(1, NewFract);
+
+    // The outer select nan handling is also absorbed into the fract.
+    Fract = ClampInfSelect;
   } else {
-    // Match patterns which may appear in legacy implementations of the fract()
-    // function, built around the nan-avoidant minnum intrinsic. These are the
-    // core pattern plus additional clamping of inf and nan values on the
-    // result.
-    Value *Cond = I.getCondition();
-    Value *TrueVal = I.getTrueValue();
-    Value *FalseVal = I.getFalseValue();
-    Value *CmpVal;
-    CmpPredicate IsNanPred;
-
-    // Match fract pattern with nan check.
-    if (!match(Cond, m_FCmp(IsNanPred, m_Value(CmpVal), m_NonNaN())))
-      return false;
-
-    IRBuilder<> Builder(&I);
-    Builder.setFastMathFlags(FPOp->getFastMathFlags());
-
-    if (IsNanPred == FCmpInst::FCMP_UNO && TrueVal == CmpVal &&
-        CmpVal == matchFractPatNanAvoidant(*FalseVal, &I)) {
-      // isnan(x) ? x : fract(x)
-      Fract = applyFractPat(Builder, CmpVal);
-    } else if (IsNanPred == FCmpInst::FCMP_ORD && FalseVal == CmpVal) {
-      if (CmpVal == matchFractPatNanAvoidant(*TrueVal, &I)) {
-        // !isnan(x) ? fract(x) : x
-        Fract = applyFractPat(Builder, CmpVal);
-      } else {
-        // Match an intermediate clamp infinity to 0 pattern. i.e.
-        // !isnan(x) ? (!isinf(x) ? fract(x) : 0.0) : x
-        CmpPredicate PredInf;
-        Value *IfNotInf;
-
-        if (!match(TrueVal, m_Select(m_FCmp(PredInf, m_FAbs(m_Specific(CmpVal)),
-                                            m_PosInf()),
-                                     m_Value(IfNotInf), m_PosZeroFP())) ||
-            PredInf != FCmpInst::FCMP_UNE ||
-            CmpVal != matchFractPatNanAvoidant(*IfNotInf))
-          return false;
-
-        SelectInst *ClampInfSelect = cast<SelectInst>(TrueVal);
-
-        // Insert before the fabs
-        Value *InsertPt =
-            cast<Instruction>(ClampInfSelect->getCondition())->getOperand(0);
-
-        Builder.SetInsertPoint(cast<Instruction>(InsertPt));
-        Value *NewFract = applyFractPat(Builder, CmpVal);
-        NewFract->takeName(TrueVal);
-
-        // Thread the new fract into the inf clamping sequence.
-        DeadVals.push_back(ClampInfSelect->getOperand(1));
-        ClampInfSelect->setOperand(1, NewFract);
-
-        // The outer select nan handling is also absorbed into the fract.
-        Fract = ClampInfSelect;
-      }
-    } else
-      return false;
+    return false;
   }
 
   Fract->takeName(&I);
@@ -2106,12 +2151,14 @@ Value *AMDGPUCodeGenPrepareImpl::matchFractPatImpl(Value &FractSrc,
 /// If fract is a useful instruction for the subtarget. Does not account for the
 /// nan handling; the instruction has a nan check on the input value.
 ///
-/// If \p RootToReplace is set, the fract must also be unobservable at +/-inf.
-Value *
-AMDGPUCodeGenPrepareImpl::matchFractPatNanAvoidant(Value &V,
-                                                   Instruction *RootToReplace) {
+/// At +/-inf fract returns nan where the min returns MIN_CONSTANT, so \p
+/// NeedsInfGuard is set when the fold has to reproduce that.
+Value *AMDGPUCodeGenPrepareImpl::matchFractPatNanAvoidant(Value &V,
+                                                          bool &NeedsInfGuard) {
   Value *Arg0;
   const APFloat *C;
+
+  NeedsInfGuard = false;
 
   // The value is only used in contexts where we know the input isn't a nan, so
   // any of the fmin variants are fine.
@@ -2125,52 +2172,21 @@ AMDGPUCodeGenPrepareImpl::matchFractPatNanAvoidant(Value &V,
   if (!FractArg)
     return nullptr;
 
-  if (RootToReplace &&
-      !isFractNanAvoidantFoldLegalAtInf(cast<IntrinsicInst>(&V), Arg0, FractArg,
-                                        RootToReplace))
-    return nullptr;
+  NeedsInfGuard = !isFractNanAvoidantFoldLegalAtInf(cast<IntrinsicInst>(&V),
+                                                    Arg0, FractArg);
 
   return FractArg;
 }
 
-/// True if \p U is a select that never picks \p V when \p X is infinity, e.g.
-/// fract's library inf-clamp: select (fcmp oeq (fabs X), +inf), 0.0, V
-static bool isInfDiscardingSelect(User *U, const Value *X, const Value *V) {
-  auto *Sel = dyn_cast<SelectInst>(U);
-  if (!Sel)
-    return false;
-
-  bool IsTrueArm = Sel->getTrueValue() == V;
-  if (!IsTrueArm && Sel->getFalseValue() != V)
-    return false;
-  if (IsTrueArm && Sel->getFalseValue() == V)
-    return false;
-
-  auto *Cmp = dyn_cast<FCmpInst>(Sel->getCondition());
-  if (!Cmp)
-    return false;
-
-  auto [ClassVal, ClassesIfTrue, ClassesIfFalse] =
-      fcmpImpliesClass(Cmp->getPredicate(), *Sel->getFunction(),
-                       Cmp->getOperand(0), Cmp->getOperand(1));
-  if (ClassVal != X)
-    return false;
-
-  return !((IsTrueArm ? ClassesIfTrue : ClassesIfFalse) & fcInf);
-}
-
-/// At +/-inf \p Sub is nan, so \p MinI clamps while fract would return nan;
-/// true if replacing \p Root with fract of \p X is unobservable there. Callers
-/// must not pass a \p Root that can select around \p MinI at +/-inf, since the
-/// poison cases assume \p Root is poison whenever \p MinI is.
+/// At +/-inf \p Sub is nan, so \p MinI clamps to its constant operand while
+/// fract of \p X returns nan. True if a bare fract matches \p MinI anyway.
 bool AMDGPUCodeGenPrepareImpl::isFractNanAvoidantFoldLegalAtInf(
-    const IntrinsicInst *MinI, const Value *Sub, const Value *X,
-    Instruction *Root) const {
+    const IntrinsicInst *MinI, const Value *Sub, const Value *X) const {
   // minimum propagates the nan from x - floor(x), exactly like fract.
   if (MinI->getIntrinsicID() == Intrinsic::minimum)
     return true;
 
-  // nnan poisons the min at +/-inf; ninf proves nothing here.
+  // nnan poisons the min at +/-inf. ninf proves nothing here.
   if (MinI->hasNoNaNs())
     return true;
 
@@ -2179,13 +2195,7 @@ bool AMDGPUCodeGenPrepareImpl::isFractNanAvoidantFoldLegalAtInf(
   if (FPSub->hasNoNaNs() || FPSub->hasNoInfs())
     return true;
 
-  // The result is only observed where an explicit infinity check discards it:
-  //   isinf(x) ? 0.0 : (isnan(x) ? x : minnum(x - floor(x), C))
-  if (all_of(Root->users(),
-             [=](User *U) { return isInfDiscardingSelect(U, X, Root); }))
-    return true;
-
-  return isKnownNeverInfinity(X, SQ.getWithInstruction(Root));
+  return isKnownNeverInfinity(X, SQ.getWithInstruction(MinI));
 }
 
 Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
@@ -2204,9 +2214,33 @@ Value *AMDGPUCodeGenPrepareImpl::applyFractPat(IRBuilder<> &Builder,
   return insertValues(Builder, FractArg->getType(), ResultVals);
 }
 
+/// Emit isinf(X) ? MIN_CONSTANT : Fract, restoring the min result at +/-inf.
+Value *AMDGPUCodeGenPrepareImpl::applyInfGuard(IRBuilder<> &Builder,
+                                               Value *Fract, Value *X) {
+  // The guard has to observe nan and inf inputs, so drop the fract flags.
+  IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+  Builder.clearFastMathFlags();
+
+  Type *Ty = X->getType();
+  APFloat MinConstant = APFloat::getOne(Ty->getScalarType()->getFltSemantics());
+  MinConstant.next(true);
+
+  Value *Abs = Builder.CreateFAbs(X);
+  Value *IsInf = Builder.CreateFCmpOEQ(Abs, ConstantFP::getInfinity(Ty));
+  return Builder.CreateSelect(IsInf, ConstantFP::get(Ty, MinConstant), Fract);
+}
+
 bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
+  return foldFractMin(I, nullptr);
+}
+
+/// \p InfGuardedX is the fract source when an enclosing select already discards
+/// the result at +/-inf.
+bool AMDGPUCodeGenPrepareImpl::foldFractMin(IntrinsicInst &I,
+                                            Value *InfGuardedX) {
   const APFloat *C;
   Value *FractArg;
+  bool NeedsInfGuard = false;
 
   //  minimum(x - floor(x), MIN_CONSTANT)
   Value *X;
@@ -2217,7 +2251,7 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
       return false;
   } else {
     //  minnum(x - floor(x), MIN_CONSTANT)
-    FractArg = matchFractPatNanAvoidant(I, &I);
+    FractArg = matchFractPatNanAvoidant(I, NeedsInfGuard);
     if (!FractArg)
       return false;
 
@@ -2228,12 +2262,21 @@ bool AMDGPUCodeGenPrepareImpl::visitFMinLike(IntrinsicInst &I) {
       return false;
   }
 
+  if (InfGuardedX) {
+    if (InfGuardedX != FractArg)
+      return false;
+    // The enclosing select already discards the result at +/-inf.
+    NeedsInfGuard = false;
+  }
+
   IRBuilder<> Builder(&I);
   FastMathFlags FMF = I.getFastMathFlags();
   FMF.setNoNaNs();
   Builder.setFastMathFlags(FMF);
 
   Value *Fract = applyFractPat(Builder, FractArg);
+  if (NeedsInfGuard)
+    Fract = applyInfGuard(Builder, Fract, FractArg);
   Fract->takeName(&I);
   I.replaceAllUsesWith(Fract);
   DeadVals.push_back(&I);
