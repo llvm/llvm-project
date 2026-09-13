@@ -1,7 +1,7 @@
 ; RUN: not llc -global-isel=0 -mtriple=amdgpu9.00 -filetype=null %s 2>&1 | FileCheck %s
 ; RUN: not llc -global-isel -mtriple=amdgpu9.00 -filetype=null %s 2>&1 | FileCheck %s
-; RUN: not llc -global-isel=0 -mtriple=amdgpu9.0a -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A %s
-; RUN: not llc -global-isel -mtriple=amdgpu9.0a -mcpu=gfx90a -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu9.0a -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A %s
+; RUN: not llc -global-isel -mtriple=amdgpu9.0a -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX90A %s
 
 ; An i8 buffer.load.format / buffer.store.format has no corresponding real
 ; instruction (no byte-granularity format access exists in hardware), so both
@@ -23,10 +23,7 @@ define amdgpu_ps void @store_i8(ptr addrspace(8) inreg %rsrc, i8 %data, i32 %ind
   ret void
 }
 
-; D16 buffer.load.format combined with TFE has no real hardware encoding on
-; gfx90a, so it must be refused there. Other targets (gfx8/gfx10/gfx11/gfx12)
-; have real TFE encodings and are covered by
-; llvm.amdgcn.struct.ptr.buffer.load.format.d16.tfe.ll instead.
+; D16 buffer.load.format with TFE has no hardware encoding on gfx90a.
 ; CHECK-NOT: error: {{.*}}TFE D16 format buffer load
 ; GFX90A: error: {{.*}}TFE D16 format buffer load is not supported on this GPU
 define amdgpu_kernel void @load_v3i16_tfe(ptr addrspace(8) inreg %rsrc, ptr addrspace(1) %out, ptr addrspace(1) %status) {

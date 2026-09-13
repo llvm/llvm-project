@@ -6845,6 +6845,22 @@ static void buildBufferLoad(unsigned Opc, Register LoadDstReg, Register RSrc,
       .addMemOperand(MMO);
 }
 
+static void buildTFEBufferLoad(unsigned Opc, ArrayRef<Register> ValueDsts,
+                               Register StatusDst, Register RSrc,
+                               Register VIndex, Register VOffset,
+                               Register SOffset, unsigned ImmOffset,
+                               unsigned Format, unsigned AuxiliaryData,
+                               MachineMemOperand *MMO, bool IsTyped,
+                               bool HasVIndex, MachineIRBuilder &B) {
+  LLT LoadTy = LLT::fixed_vector(ValueDsts.size() + 1, LLT::integer(32));
+  Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
+  buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
+                  Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+  SmallVector<Register, 5> Unmerge(ValueDsts);
+  Unmerge.push_back(StatusDst);
+  B.buildUnmerge(Unmerge, LoadDstReg);
+}
+
 bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                                              LegalizerHelper &Helper,
                                              bool IsFormat,
@@ -6931,7 +6947,7 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     return true;
   }
 
-  if (IsFormat && !IsTyped && IsD16 && IsTFE && !ST.hasBufferTFEFormatD16()) {
+  if (!IsTyped && IsD16 && IsTFE && !ST.hasBufferTFEFormatD16()) {
     const Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
         Fn, "TFE D16 format buffer load is not supported on this GPU",
@@ -6978,85 +6994,60 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   }
 
   if (IsTFE && IsD16 && Ty.isVector()) {
-    // D16 dwords are packed (or, on unpacked-D16 targets, one element per
-    // dword) at a different granularity than Ty's own bit width, so the
-    // dwords loaded for the value do not necessarily cover Ty exactly (e.g.
-    // v3i16 needs 2 dwords = 64 bits for its 48 bits of data). Load the
-    // dwords, then repack/truncate down to Ty the same way the MUBUF/MIMG
-    // TFE v3i16 case does.
+    // Value dwords need not cover Ty exactly: v3i16 needs 2 dwords for 48 bits.
     const unsigned NumElts = Ty.getNumElements();
-    const unsigned NumValueDWords =
-        Unpacked ? NumElts : divideCeil(NumElts * 16, 32);
-    const unsigned NumLoadDWords = NumValueDWords + 1;
-    LLT LoadTy = LLT::fixed_vector(NumLoadDWords, I32);
-    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
-    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
-                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+    const unsigned NumValueDWords = Unpacked ? NumElts : divideCeil(NumElts, 2);
 
-    SmallVector<Register, 5> LoadElts;
+    SmallVector<Register, 4> ValueDWords;
     for (unsigned I = 0; I != NumValueDWords; ++I)
-      LoadElts.push_back(B.getMRI()->createGenericVirtualRegister(I32));
-    LoadElts.push_back(StatusDst);
-    B.buildUnmerge(LoadElts, LoadDstReg);
-    LoadElts.truncate(NumValueDWords);
+      ValueDWords.push_back(MRI.createGenericVirtualRegister(I32));
+    buildTFEBufferLoad(Opc, ValueDWords, StatusDst, RSrc, VIndex, VOffset,
+                       SOffset, ImmOffset, Format, AuxiliaryData, MMO, IsTyped,
+                       HasVIndex, B);
 
-    Register PackedI16;
     if (Unpacked) {
-      SmallVector<Register, 4> Repack;
-      for (Register R : LoadElts)
-        Repack.push_back(B.buildTrunc(LLT::integer(16), R).getReg(0));
-      LLT RepackedTy = LLT::fixed_vector(NumValueDWords, LLT::integer(16));
-      PackedI16 = B.buildMergeLikeInstr(RepackedTy, Repack).getReg(0);
+      for (Register &R : ValueDWords)
+        R = B.buildTrunc(EltTy, R).getReg(0);
+      B.buildMergeLikeInstr(Dst, ValueDWords);
     } else {
-      Register Merged;
-      if (NumValueDWords == 1) {
-        Merged = LoadElts[0];
+      Register Merged =
+          NumValueDWords == 1
+              ? ValueDWords[0]
+              : B.buildMergeLikeInstr(LLT::fixed_vector(NumValueDWords, I32),
+                                      ValueDWords)
+                    .getReg(0);
+      LLT PackedTy = LLT::fixed_vector(NumValueDWords * 2, EltTy);
+      if (PackedTy == Ty) {
+        B.buildBitcast(Dst, Merged);
       } else {
-        LLT MergedTy = LLT::fixed_vector(NumValueDWords, I32);
-        Merged = B.buildMergeLikeInstr(MergedTy, LoadElts).getReg(0);
+        Register Packed = B.buildBitcast(PackedTy, Merged).getReg(0);
+        B.buildDeleteTrailingVectorElements(Dst, Packed);
       }
-      LLT PackedI16Ty = LLT::fixed_vector(NumValueDWords * 2, LLT::integer(16));
-      PackedI16 = B.buildBitcast(PackedI16Ty, Merged).getReg(0);
     }
-
-    LLT PackedI16Ty = B.getMRI()->getType(PackedI16);
-    LLT DstIntTy = Ty.changeElementType(LLT::integer(16));
-    Register ValueI16 = PackedI16;
-    if (PackedI16Ty.getNumElements() != NumElts) {
-      ValueI16 = B.getMRI()->createGenericVirtualRegister(DstIntTy);
-      B.buildDeleteTrailingVectorElements(ValueI16, PackedI16);
-    }
-    if (EltTy.isFloat())
-      B.buildBitcast(Dst, ValueI16);
-    else
-      B.buildCopy(Dst, ValueI16);
   } else if (IsTFE) {
-    unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
-    unsigned NumLoadDWords = NumValueDWords + 1;
-    LLT LoadTy = LLT::fixed_vector(NumLoadDWords, I32);
-    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
-    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
-                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
-    bool IsFloat = Ty.getScalarType().isFloat();
-    LLT DstIntTy =
-        IsFloat ? Ty.changeElementType(LLT::integer(EltTy.getSizeInBits()))
-                : Ty;
+    const unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
     Register DstInt =
-        IsFloat ? B.getMRI()->createGenericVirtualRegister(DstIntTy) : Dst;
+        EltTy.isFloat() ? MRI.createGenericVirtualRegister(Ty.changeElementType(
+                              LLT::integer(EltTy.getSizeInBits())))
+                        : Dst;
     if (MemTy.getSizeInBits() < 32) {
-      Register ExtDst = B.getMRI()->createGenericVirtualRegister(I32);
-      B.buildUnmerge({ExtDst, StatusDst}, LoadDstReg);
+      Register ExtDst = MRI.createGenericVirtualRegister(I32);
+      buildTFEBufferLoad(Opc, ExtDst, StatusDst, RSrc, VIndex, VOffset, SOffset,
+                         ImmOffset, Format, AuxiliaryData, MMO, IsTyped,
+                         HasVIndex, B);
       B.buildTrunc(DstInt, ExtDst);
     } else if (NumValueDWords == 1) {
-      B.buildUnmerge({DstInt, StatusDst}, LoadDstReg);
+      buildTFEBufferLoad(Opc, DstInt, StatusDst, RSrc, VIndex, VOffset, SOffset,
+                         ImmOffset, Format, AuxiliaryData, MMO, IsTyped,
+                         HasVIndex, B);
     } else {
-      SmallVector<Register, 5> LoadElts;
+      SmallVector<Register, 4> ValueDWords;
       for (unsigned I = 0; I != NumValueDWords; ++I)
-        LoadElts.push_back(B.getMRI()->createGenericVirtualRegister(I32));
-      LoadElts.push_back(StatusDst);
-      B.buildUnmerge(LoadElts, LoadDstReg);
-      LoadElts.truncate(NumValueDWords);
-      B.buildMergeLikeInstr(DstInt, LoadElts);
+        ValueDWords.push_back(MRI.createGenericVirtualRegister(I32));
+      buildTFEBufferLoad(Opc, ValueDWords, StatusDst, RSrc, VIndex, VOffset,
+                         SOffset, ImmOffset, Format, AuxiliaryData, MMO,
+                         IsTyped, HasVIndex, B);
+      B.buildMergeLikeInstr(DstInt, ValueDWords);
     }
     if (DstInt != Dst)
       B.buildBitcast(Dst, DstInt);
