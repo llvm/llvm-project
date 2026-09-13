@@ -12246,6 +12246,19 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
           OutVal = DAG.getNode(ISD::AssertNoFPClass, dl, OutVal.getValueType(),
                                OutVal, SDNoFPClass);
         }
+        if (VT.isInteger()) {
+          if (auto CR = Arg.getRange()) {
+            if (!CR->isFullSet() && !CR->isEmptySet() &&
+                !CR->isUpperWrapped()) {
+              APInt Hi = CR->getUnsignedMax();
+              unsigned Bits = std::max(Hi.getActiveBits(),
+                                       (unsigned)IntegerType::MIN_INT_BITS);
+              EVT SmallVT = EVT::getIntegerVT(*DAG.getContext(), Bits);
+              OutVal = DAG.getNode(ISD::AssertZext, dl, OutVal.getValueType(),
+                                   OutVal, DAG.getValueType(SmallVT));
+            }
+          }
+        }
         ArgValues.push_back(OutVal);
       }
 

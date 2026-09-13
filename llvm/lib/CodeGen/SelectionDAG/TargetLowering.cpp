@@ -10811,6 +10811,25 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = Node->getOperand(0);
   unsigned Len = VT.getScalarSizeInBits();
+
+  // Compute effective bit width from known bits, allowing us to shift the
+  // active bits down if necessary to fit into smaller specialized expansions.
+  KnownBits Known = DAG.computeKnownBits(Op);
+  unsigned LZ = Known.countMinLeadingZeros();
+  unsigned TZ = Known.countMinTrailingZeros();
+  unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
+
+  // If the active bits are not at the low end, shift them down
+  if (ShiftedActiveBits < Len && TZ > 0) {
+    Op = DAG.getNode(ISD::SRL, dl, VT, Op,
+                     DAG.getShiftAmountConstant(TZ, VT, dl));
+  }
+
+  // Round up to 8-bit boundary for byte-oriented SWAR algorithm
+  unsigned EffectiveLen = Len;
+  if (ShiftedActiveBits > 0 && ShiftedActiveBits < Len)
+    EffectiveLen = std::min(alignTo(ShiftedActiveBits, 8), Len);
+
   assert(VT.isInteger() && "CTPOP not implemented for this type.");
 
   // TODO: Add support for irregular type lengths.
@@ -10849,13 +10868,13 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
                                            DAG.getConstant(4, dl, ShVT))),
                    Mask0F);
 
-  if (Len <= 8)
+  if (EffectiveLen <= 8)
     return Op;
 
   // Avoid the multiply if we only have 2 bytes to add.
   // TODO: Only doing this for scalars because vectors weren't as obviously
   // improved.
-  if (Len == 16 && !VT.isVector()) {
+  if (EffectiveLen == 16 && !VT.isVector()) {
     // v = (v + (v >> 8)) & 0x00FF;
     return DAG.getNode(ISD::AND, dl, VT,
                      DAG.getNode(ISD::ADD, dl, VT, Op,
@@ -10873,7 +10892,7 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     V = DAG.getNode(ISD::MUL, dl, VT, Op, Mask01);
   } else {
     V = Op;
-    for (unsigned Shift = 8; Shift < Len; Shift *= 2) {
+    for (unsigned Shift = 8; Shift < EffectiveLen; Shift *= 2) {
       SDValue ShiftC = DAG.getShiftAmountConstant(Shift, VT, dl);
       V = DAG.getNode(ISD::ADD, dl, VT, V,
                       DAG.getNode(ISD::SHL, dl, VT, V, ShiftC));
