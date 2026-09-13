@@ -19,11 +19,11 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    s_mov_b32 s2, s0
 ; CHECK-NEXT:    s_mov_b32 s3, s0
 ; CHECK-NEXT:    s_addc_u32 s9, s9, 0
-; CHECK-NEXT:    s_buffer_load_dword s1, s[0:3], 0x0
+; CHECK-NEXT:    s_buffer_load_dword s2, s[0:3], 0x0
 ; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmp_ge_i32 s1, 0
+; CHECK-NEXT:    s_cmp_ge_i32 s2, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: ; %bb12
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 1.0, 0, s0
@@ -35,23 +35,22 @@ define amdgpu_ps void @_amdgpu_ps_main(i1 %arg) {
 ; CHECK-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; CHECK-NEXT:    s_swappc_b64 s[30:31], 0
 ; CHECK-NEXT:  .LBB0_2: ; %bb2.preheader
-; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_mov_b32 s2, 0
+; CHECK-NEXT:    s_mov_b32 s3, 0
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:    .p2align 6
 ; CHECK-NEXT:  .LBB0_3: ; %bb6
 ; CHECK-NEXT:    ; in Loop: Header=BB0_4 Depth=1
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; CHECK-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
-; CHECK-NEXT:    s_or_b32 s4, s3, 1
-; CHECK-NEXT:    s_and_b32 s0, s0, s2
-; CHECK-NEXT:    s_cmp_lt_i32 s3, 0
+; CHECK-NEXT:    s_or_b32 s4, s2, 1
+; CHECK-NEXT:    s_and_b32 s0, s0, s3
+; CHECK-NEXT:    s_cmp_lt_i32 s2, 0
 ; CHECK-NEXT:    s_cselect_b32 s5, 1, 0
-; CHECK-NEXT:    s_andn2_b32 s2, s2, exec_lo
+; CHECK-NEXT:    s_andn2_b32 s2, s3, exec_lo
 ; CHECK-NEXT:    s_and_b32 s3, exec_lo, s0
-; CHECK-NEXT:    s_or_b32 s2, s2, s3
-; CHECK-NEXT:    s_mov_b32 s3, s4
+; CHECK-NEXT:    s_or_b32 s3, s2, s3
+; CHECK-NEXT:    s_mov_b32 s2, s4
 ; CHECK-NEXT:    s_cmp_lg_u32 s5, 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: ; %bb2
@@ -71,7 +70,7 @@ bb:
 
 bb2:
   %i3 = phi i1 [ %i9, %bb6 ], [ false, %bb ]
-  %i4 = phi i32 [ %i10, %bb6 ], [ 0, %bb ]
+  %i4 = phi i32 [ %i10, %bb6 ], [ %i, %bb ]
   br i1 %arg, label %bb5, label %bb6
 
 bb5:
