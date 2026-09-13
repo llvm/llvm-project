@@ -4321,7 +4321,7 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       }
 
       // ((trunc (lshr X, S)) & C0) | ((lshr (trunc X), S) & C1)
-      // --> (trunc (lshr X, S) & (C0 | C1)) (and similar cases)
+      // --> ((trunc (lshr X, S)) & (C0 | C1)) (and similar cases)
       // A = trunc (lshr X, S) B = lshr (trunc X), S
       const APInt *ShiftAmt;
       if (match(A, m_Trunc(m_LShr(m_Value(X), m_APInt(ShiftAmt)))) &&
