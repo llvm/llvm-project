@@ -121,6 +121,45 @@ template struct S<1>; // expected-note {{in instantiation}}
 
 }
 
+namespace GH218323 {
+template <auto V> struct W {
+  static constexpr auto value = V;
+  template <class T> auto f(T) -> W<value(T::value)>; // #gh218323-f
+  template <class T> auto g(T) -> W<int(T::type)>; // #gh218323-g
+  template <class T> auto h(T) -> W<value(T::type)>; // #gh218323-h
+  template <class... Ts> auto p(Ts...) -> W<value(Ts::value...)>;
+};
+template struct W<42>;
+
+template <auto V> struct WPtr {
+  static constexpr int arr[1] = {V};
+  static constexpr const int *p = arr;
+  template <class T> auto f(T) -> WPtr<p(T::value)>;
+};
+template struct WPtr<42>;
+
+struct HasValue { static constexpr int value = 1; };
+struct HasAlias { using type = int; };
+void use(W<42> w) {
+  w.f(HasValue{}); // expected-error {{no matching member function for call to 'f'}}
+                   // expected-note@#gh218323-f {{candidate template ignored: substitution failure [with T = HasValue]: called object type 'int' is not a function or function pointer}}
+  w.g(HasAlias{}); // expected-error {{no matching member function for call to 'g'}}
+                   // expected-note@#gh218323-g {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
+  w.h(HasAlias{}); // expected-error {{no matching member function for call to 'h'}}
+                   // expected-note@#gh218323-h {{candidate template ignored: substitution failure [with T = HasAlias]: missing 'typename' prior to dependent type name 'GH218323::HasAlias::type'}}
+}
+
+template <auto V> struct WTypename { // #gh218323-WTypename
+  static constexpr auto value = V;
+  template <class T> auto f(T) -> WTypename<int(typename T::type)>; // expected-error {{template argument for non-type template parameter is treated as function type 'int (typename T::type)'}}
+                                                                    // expected-note@#gh218323-WTypename {{template parameter is declared here}}
+  template <class T> auto g(T) -> WTypename<typename T::type(value)>;
+};
+template struct WTypename<42>;
+void use_typename(WTypename<42> w) {
+  w.g(HasAlias{});
+}
+}
 
 #endif
 #if __cplusplus >= 201702L
