@@ -15146,9 +15146,10 @@ SDValue SITargetLowering::performAndCombine(SDNode *N,
 // ultimately provides. \p SrcIndex is the byte of the src that maps to this
 // dest of the or byte. \p Depth tracks how many recursive iterations we have
 // performed.
-static const std::optional<ByteProvider<SDValue>>
-calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
-                 unsigned Depth = 0) {
+static std::optional<ByteProvider> calculateSrcByte(const SDValue Op,
+                                                    uint64_t DestByte,
+                                                    uint64_t SrcIndex = 0,
+                                                    unsigned Depth = 0) {
   // We may need to recursively traverse a series of SRLs
   if (Depth >= 6)
     return std::nullopt;
@@ -15157,7 +15158,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
     return std::nullopt;
 
   if (Op.getValueType().isVector())
-    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
+    return ByteProvider::getSrc(Op, DestByte, SrcIndex);
 
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
@@ -15203,7 +15204,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   }
 
   default: {
-    return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
+    return ByteProvider::getSrc(Op, DestByte, SrcIndex);
   }
   }
   llvm_unreachable("fully handled switch");
@@ -15215,7 +15216,7 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
 // the byte position of the Op that corresponds with the originally requested
 // byte of the Or \p Depth tracks how many recursive iterations we have
 // performed. \p StartingIndex is the originally requested byte of the Or
-static const std::optional<ByteProvider<SDValue>>
+static std::optional<ByteProvider>
 calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
                       unsigned StartingIndex = 0) {
   // Finding Src tree of RHS of or typically requires at least 1 additional
@@ -15235,23 +15236,13 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     if (IsVec)
       return std::nullopt;
 
-    auto RHS = calculateByteProvider(Op.getOperand(1), Index, Depth + 1,
-                                     StartingIndex);
+    std::optional<ByteProvider> RHS = calculateByteProvider(
+        Op.getOperand(1), Index, Depth + 1, StartingIndex);
     if (!RHS)
       return std::nullopt;
-    auto LHS = calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                     StartingIndex);
-    if (!LHS)
-      return std::nullopt;
-    // A well formed Or will have two ByteProviders for each byte, one of which
-    // is constant zero
-    if (!LHS->isConstantZero() && !RHS->isConstantZero())
-      return std::nullopt;
-    if (!LHS || LHS->isConstantZero())
-      return RHS;
-    if (!RHS || RHS->isConstantZero())
-      return LHS;
-    return std::nullopt;
+    return selectOrByteProvider(calculateByteProvider(Op.getOperand(0), Index,
+                                                      Depth + 1, StartingIndex),
+                                RHS);
   }
 
   case ISD::AND: {
@@ -15271,7 +15262,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       // is not well formatted
       if (IndexMask & BitMask)
         return std::nullopt;
-      return ByteProvider<SDValue>::getConstantZero();
+      return ByteProvider::getConstantZero();
     }
 
     return calculateSrcByte(Op->getOperand(0), StartingIndex, Index);
@@ -15283,7 +15274,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 
     // fshr(X,Y,Z): (X << (BW - (Z % BW))) | (Y >> (Z % BW))
     auto *ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(2));
-    if (!ShiftOp || Op.getValueType().isVector())
+    if (!ShiftOp)
       return std::nullopt;
 
     uint64_t BitsProvided = Op.getValueSizeInBits();
@@ -15329,7 +15320,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // SRA's out-of-range bytes are sign bits, not constant zero.
     if (Op.getOpcode() == ISD::SRA)
       return std::nullopt;
-    return ByteProvider<SDValue>::getConstantZero();
+    return ByteProvider::getConstantZero();
   }
 
   case ISD::SHL: {
@@ -15349,10 +15340,10 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     // the index we are trying to provide, then it provides 0s. If not,
     // then this bytes are not definitively 0s, and the corresponding byte
     // of interest is Index - ByteShift of the src
-    return Index < ByteShift
-               ? ByteProvider<SDValue>::getConstantZero()
-               : calculateByteProvider(Op.getOperand(0), Index - ByteShift,
-                                       Depth + 1, StartingIndex);
+    if (Index < ByteShift)
+      return ByteProvider::getConstantZero();
+    return calculateByteProvider(Op.getOperand(0), Index - ByteShift, Depth + 1,
+                                 StartingIndex);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -15371,30 +15362,25 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
       auto *VTSign = cast<VTSDNode>(Op->getOperand(1));
       NarrowBitWidth = VTSign->getVT().getSizeInBits();
     }
-    if (NarrowBitWidth % 8 != 0)
+    switch (classifyNarrowByte(Index, NarrowBitWidth,
+                               Op.getOpcode() == ISD::ZERO_EXTEND)) {
+    case NarrowByteAction::Unknown:
       return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    if (Index >= NarrowByteWidth)
-      return Op.getOpcode() == ISD::ZERO_EXTEND
-                 ? std::optional<ByteProvider<SDValue>>(
-                       ByteProvider<SDValue>::getConstantZero())
-                 : std::nullopt;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex);
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return calculateByteProvider(NarrowOp, Index, Depth + 1, StartingIndex);
+    }
+    llvm_unreachable("fully handled switch");
   }
 
   case ISD::TRUNCATE: {
     if (IsVec)
       return std::nullopt;
 
-    uint64_t NarrowByteWidth = BitWidth / 8;
-
-    if (NarrowByteWidth >= Index) {
-      return calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
-                                   StartingIndex);
-    }
-
-    return std::nullopt;
+    // Index is already bounded by BitWidth / 8 above.
+    return calculateByteProvider(Op.getOperand(0), Index, Depth + 1,
+                                 StartingIndex);
   }
 
   case ISD::CopyFromReg: {
@@ -15407,26 +15393,16 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
   case ISD::LOAD: {
     auto *L = cast<LoadSDNode>(Op.getNode());
 
-    unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
-    if (NarrowBitWidth % 8 != 0)
+    switch (classifyNarrowByte(Index, L->getMemoryVT().getSizeInBits(),
+                               L->getExtensionType() == ISD::ZEXTLOAD)) {
+    case NarrowByteAction::Unknown:
       return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    // If the width of the load does not reach byte we are trying to provide for
-    // and it is not a ZEXTLOAD, then the load does not provide for the byte in
-    // question
-    if (Index >= NarrowByteWidth) {
-      return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<ByteProvider<SDValue>>(
-                       ByteProvider<SDValue>::getConstantZero())
-                 : std::nullopt;
-    }
-
-    if (NarrowByteWidth > Index) {
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
       return calculateSrcByte(Op, StartingIndex, Index);
     }
-
-    return std::nullopt;
+    llvm_unreachable("fully handled switch");
   }
 
   case ISD::BSWAP: {
@@ -15466,8 +15442,7 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     auto NextIndex = IdxMask > 0x03 ? IdxMask % 4 : IdxMask;
 
     return IdxMask != 0x0c ? calculateSrcByte(NextOp, StartingIndex, NextIndex)
-                           : ByteProvider<SDValue>(
-                                 ByteProvider<SDValue>::getConstantZero());
+                           : ByteProvider::getConstantZero();
   }
 
   default: {
@@ -15612,13 +15587,13 @@ static SDValue getDWordFromOffset(SelectionDAG &DAG, SDLoc SL, SDValue Src,
 static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
   [[maybe_unused]] EVT VT = N->getValueType(0);
-  SmallVector<ByteProvider<SDValue>, 8> PermNodes;
+  SmallVector<ByteProvider, 8> PermNodes;
 
   // VT is known to be MVT::i32, so we need to provide 4 bytes.
   assert(VT == MVT::i32);
   for (int i = 0; i < 4; i++) {
     // Find the ByteProvider that provides the ith byte of the result of OR
-    std::optional<ByteProvider<SDValue>> P =
+    std::optional<ByteProvider> P =
         calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
     // TODO support constantZero
     if (!P || P->isConstantZero())
@@ -15649,7 +15624,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
       // Set the index of the second distinct Src node
       SecondSrc = {i, PermNodes[i].SrcOffset / 4};
-      assert(!(PermNodes[SecondSrc->first].Src->getValueSizeInBits() % 8));
+      assert(!(PermNodes[SecondSrc->first].Src.getValueSizeInBits() % 8));
       SrcByteAdjust = 0;
     }
     assert((PermOp.SrcOffset % 4) + SrcByteAdjust < 8);
@@ -15657,7 +15632,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     PermMask |= ((PermOp.SrcOffset % 4) + SrcByteAdjust) << (i * 8);
   }
   SDLoc DL(N);
-  SDValue Op = *PermNodes[FirstSrc.first].Src;
+  SDValue Op = PermNodes[FirstSrc.first].Src;
   Op = getDWordFromOffset(DAG, DL, Op, FirstSrc.second);
   assert(Op.getValueSizeInBits() == 32);
 
@@ -15674,7 +15649,7 @@ static SDValue matchPERM(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
       return DAG.getBitcast(MVT::getIntegerVT(32), Op);
   }
 
-  SDValue OtherOp = SecondSrc ? *PermNodes[SecondSrc->first].Src : Op;
+  SDValue OtherOp = SecondSrc ? PermNodes[SecondSrc->first].Src : Op;
 
   if (SecondSrc) {
     OtherOp = getDWordFromOffset(DAG, DL, OtherOp, SecondSrc->second);
@@ -15986,18 +15961,18 @@ SITargetLowering::performZeroOrAnyExtendCombine(SDNode *N,
   // possible we're missing out on some combine opportunities, but we'd need to
   // weigh the cost of extracting the byte from the upper dwords.
 
-  std::optional<ByteProvider<SDValue>> BP0 =
+  std::optional<ByteProvider> BP0 =
       calculateByteProvider(SDValue(N, 0), 0, 0, 0);
-  if (!BP0 || BP0->SrcOffset >= 4 || !BP0->Src)
+  if (!BP0 || BP0->SrcOffset >= 4 || !BP0->hasSrc())
     return SDValue();
-  SDValue V0 = *BP0->Src;
+  SDValue V0 = BP0->Src;
 
-  std::optional<ByteProvider<SDValue>> BP1 =
+  std::optional<ByteProvider> BP1 =
       calculateByteProvider(SDValue(N, 0), 1, 0, 1);
-  if (!BP1 || BP1->SrcOffset >= 4 || !BP1->Src)
+  if (!BP1 || BP1->SrcOffset >= 4 || !BP1->hasSrc())
     return SDValue();
 
-  SDValue V1 = *BP1->Src;
+  SDValue V1 = BP1->Src;
 
   if (V0 == V1)
     return SDValue();
@@ -17535,8 +17510,7 @@ SITargetLowering::foldAddSub64WithZeroLowBitsTo32(SDNode *N,
 
 // Collect the ultimate src of each of the mul node's operands, and confirm
 // each operand is 8 bytes.
-static std::optional<ByteProvider<SDValue>>
-handleMulOperand(const SDValue &MulOperand) {
+static std::optional<ByteProvider> handleMulOperand(const SDValue &MulOperand) {
   auto Byte0 = calculateByteProvider(MulOperand, 0, 0);
   if (!Byte0 || Byte0->isConstantZero()) {
     return std::nullopt;
@@ -17568,23 +17542,22 @@ struct DotSrc {
   int64_t DWordOffset;
 };
 
-static void placeSources(ByteProvider<SDValue> &Src0,
-                         ByteProvider<SDValue> &Src1,
+static void placeSources(ByteProvider &Src0, ByteProvider &Src1,
                          SmallVectorImpl<DotSrc> &Src0s,
                          SmallVectorImpl<DotSrc> &Src1s, int Step) {
 
-  assert(Src0.Src.has_value() && Src1.Src.has_value());
+  assert(Src0.hasSrc() && Src1.hasSrc());
   // Src0s and Src1s are empty, just place arbitrarily.
   if (Step == 0) {
-    Src0s.push_back({*Src0.Src, ((Src0.SrcOffset % 4) << 24) + 0x0c0c0c,
+    Src0s.push_back({Src0.Src, ((Src0.SrcOffset % 4) << 24) + 0x0c0c0c,
                      Src0.SrcOffset / 4});
-    Src1s.push_back({*Src1.Src, ((Src1.SrcOffset % 4) << 24) + 0x0c0c0c,
+    Src1s.push_back({Src1.Src, ((Src1.SrcOffset % 4) << 24) + 0x0c0c0c,
                      Src1.SrcOffset / 4});
     return;
   }
 
   for (int BPI = 0; BPI < 2; BPI++) {
-    std::pair<ByteProvider<SDValue>, ByteProvider<SDValue>> BPP = {Src0, Src1};
+    std::pair<ByteProvider, ByteProvider> BPP = {Src0, Src1};
     if (BPI == 1) {
       BPP = {Src1, Src0};
     }
@@ -17602,7 +17575,7 @@ static void placeSources(ByteProvider<SDValue> &Src0,
     for (int I = 0; I < 2; I++) {
       SmallVectorImpl<DotSrc> &Srcs = I == 0 ? Src0s : Src1s;
       auto MatchesFirst = [&BPP](DotSrc &IterElt) {
-        return IterElt.SrcOp == *BPP.first.Src &&
+        return IterElt.SrcOp == BPP.first.Src &&
                (IterElt.DWordOffset == (BPP.first.SrcOffset / 4));
       };
 
@@ -17616,14 +17589,14 @@ static void placeSources(ByteProvider<SDValue> &Src0,
     if (FirstGroup != -1) {
       SmallVectorImpl<DotSrc> &Srcs = FirstGroup == 1 ? Src0s : Src1s;
       auto MatchesSecond = [&BPP](DotSrc &IterElt) {
-        return IterElt.SrcOp == *BPP.second.Src &&
+        return IterElt.SrcOp == BPP.second.Src &&
                (IterElt.DWordOffset == (BPP.second.SrcOffset / 4));
       };
       auto *Match = llvm::find_if(Srcs, MatchesSecond);
       if (Match != Srcs.end()) {
         Match->PermMask = addPermMasks(SecondMask, Match->PermMask);
       } else
-        Srcs.push_back({*BPP.second.Src, SecondMask, BPP.second.SrcOffset / 4});
+        Srcs.push_back({BPP.second.Src, SecondMask, BPP.second.SrcOffset / 4});
       return;
     }
   }
@@ -17635,11 +17608,11 @@ static void placeSources(ByteProvider<SDValue> &Src0,
   unsigned FMask = 0xFF << (8 * (3 - Step));
 
   Src0s.push_back(
-      {*Src0.Src,
+      {Src0.Src,
        ((Src0.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src0.SrcOffset / 4});
   Src1s.push_back(
-      {*Src1.Src,
+      {Src1.Src,
        ((Src1.SrcOffset % 4) << (8 * (3 - Step)) | (ZeroMask & ~FMask)),
        Src1.SrcOffset / 4});
 }
@@ -17728,9 +17701,9 @@ static bool isMul(const SDValue Op) {
 }
 
 static std::optional<bool>
-checkDot4MulSignedness(const SDValue &N, ByteProvider<SDValue> &Src0,
-                       ByteProvider<SDValue> &Src1, const SDValue &S0Op,
-                       const SDValue &S1Op, const SelectionDAG &DAG) {
+checkDot4MulSignedness(const SDValue &N, ByteProvider &Src0, ByteProvider &Src1,
+                       const SDValue &S0Op, const SDValue &S1Op,
+                       const SelectionDAG &DAG) {
   // If we both ops are i8s (pre legalize-dag), then the signedness semantics
   // of the dot4 is irrelevant.
   if (S0Op.getValueSizeInBits() == 8 && S1Op.getValueSizeInBits() == 8)

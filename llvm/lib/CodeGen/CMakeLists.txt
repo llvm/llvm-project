@@ -43,6 +43,7 @@ add_llvm_component_library(LLVMCodeGen
   BranchFolding.cpp
   BranchRelaxation.cpp
   BreakFalseDeps.cpp
+  ByteProvider.cpp
   BasicBlockSections.cpp
   BasicBlockPathCloning.cpp
   BasicBlockSectionsProfileReader.cpp

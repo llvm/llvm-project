@@ -9706,9 +9706,8 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL,
 ///                 LOAD
 ///
 /// *ExtractVectorElement
-using SDByteProvider = ByteProvider<SDNode *>;
 
-static std::optional<SDByteProvider>
+static std::optional<ByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
                       unsigned StartingIndex = 0,
@@ -9734,24 +9733,19 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   unsigned ByteWidth = BitWidth / 8;
   assert(Index < ByteWidth && "invalid index requested");
-  (void) ByteWidth;
+  (void)ByteWidth;
+
+  auto Recurse = [&](SDValue NextOp, unsigned NextIndex) {
+    return calculateByteProvider(NextOp, NextIndex, Depth + 1, VectorIndex,
+                                 StartingIndex, ByteMask);
+  };
 
   switch (Op.getOpcode()) {
   case ISD::OR: {
-    auto LHS = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                     VectorIndex, StartingIndex, ByteMask);
+    std::optional<ByteProvider> LHS = Recurse(Op.getOperand(0), Index);
     if (!LHS)
       return std::nullopt;
-    auto RHS = calculateByteProvider(Op->getOperand(1), Index, Depth + 1,
-                                     VectorIndex, StartingIndex, ByteMask);
-    if (!RHS)
-      return std::nullopt;
-
-    if (LHS->isConstantZero())
-      return RHS;
-    if (RHS->isConstantZero())
-      return LHS;
-    return std::nullopt;
+    return selectOrByteProvider(LHS, Recurse(Op.getOperand(1), Index));
   }
   case ISD::SHL: {
     auto ShiftOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
@@ -9768,7 +9762,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     // provide, then do not provide anything. Otherwise, subtract the index by
     // the amount we shifted by.
     return Index < ByteShift
-               ? SDByteProvider::getConstantZero()
+               ? ByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
                                        Depth + 1, VectorIndex, Index, ByteMask);
   }
@@ -9776,23 +9770,19 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
   case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND: {
     SDValue NarrowOp = Op->getOperand(0);
-    unsigned NarrowBitWidth = NarrowOp.getScalarValueSizeInBits();
-    if (NarrowBitWidth % 8 != 0)
+    switch (classifyNarrowByte(Index, NarrowOp.getScalarValueSizeInBits(),
+                               Op.getOpcode() == ISD::ZERO_EXTEND)) {
+    case NarrowByteAction::Unknown:
       return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    if (Index >= NarrowByteWidth)
-      return Op.getOpcode() == ISD::ZERO_EXTEND
-                 ? std::optional<SDByteProvider>(
-                       SDByteProvider::getConstantZero())
-                 : std::nullopt;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
-                                 StartingIndex, ByteMask);
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return Recurse(NarrowOp, Index);
+    }
+    llvm_unreachable("fully handled switch");
   }
   case ISD::BSWAP:
-    return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
-                                 Depth + 1, VectorIndex, StartingIndex,
-                                 ByteMask);
+    return Recurse(Op->getOperand(0), ByteWidth - Index - 1);
   case ISD::AND: {
     // Constants are canonicalized to the RHS of AND, so only operand 1 needs
     // to be checked.
@@ -9804,10 +9794,9 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
         MaskOp->getAPIntValue().extractBitsAsZExtValue(8, Index * 8);
 
     if (MaskByte == 0x00)
-      return SDByteProvider::getConstantZero();
+      return ByteProvider::getConstantZero();
 
-    auto Result = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                        VectorIndex, StartingIndex, ByteMask);
+    auto Result = Recurse(Op->getOperand(0), Index);
     if (!Result)
       return std::nullopt;
 
@@ -9847,30 +9836,23 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     if ((*VectorIndex + 1) * NarrowByteWidth <= StartingIndex)
       return std::nullopt;
 
-    return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                 VectorIndex, StartingIndex, ByteMask);
+    return Recurse(Op->getOperand(0), Index);
   }
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
     if (!L->isSimple() || L->isIndexed())
       return std::nullopt;
 
-    unsigned NarrowBitWidth = L->getMemoryVT().getScalarSizeInBits();
-    if (NarrowBitWidth % 8 != 0)
+    switch (classifyNarrowByte(Index, L->getMemoryVT().getScalarSizeInBits(),
+                               L->getExtensionType() == ISD::ZEXTLOAD)) {
+    case NarrowByteAction::Unknown:
       return std::nullopt;
-    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
-
-    // If the width of the load does not reach byte we are trying to provide for
-    // and it is not a ZEXTLOAD, then the load does not provide for the byte in
-    // question
-    if (Index >= NarrowByteWidth)
-      return L->getExtensionType() == ISD::ZEXTLOAD
-                 ? std::optional<SDByteProvider>(
-                       SDByteProvider::getConstantZero())
-                 : std::nullopt;
-
-    unsigned BPVectorIndex = VectorIndex.value_or(0U);
-    return SDByteProvider::getSrc(L, Index, BPVectorIndex);
+    case NarrowByteAction::ConstantZero:
+      return ByteProvider::getConstantZero();
+    case NarrowByteAction::FromNarrow:
+      return ByteProvider::getSrc(Op, Index, VectorIndex.value_or(0U));
+    }
+    llvm_unreachable("fully handled switch");
   }
   }
 
@@ -10176,9 +10158,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   unsigned ByteWidth = VT.getSizeInBits() / 8;
 
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
-  auto MemoryByteOffset = [&](SDByteProvider P) {
+  auto MemoryByteOffset = [&](ByteProvider P) {
     assert(P.hasSrc() && "Must be a memory byte provider");
-    auto *Load = cast<LoadSDNode>(P.Src.value());
+    auto *Load = cast<LoadSDNode>(P.Src);
 
     unsigned LoadBitWidth = Load->getMemoryVT().getScalarSizeInBits();
 
@@ -10193,7 +10175,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SDValue Chain;
 
   SmallPtrSet<LoadSDNode *, 8> Loads;
-  std::optional<SDByteProvider> FirstByteProvider;
+  std::optional<ByteProvider> FirstByteProvider;
   int64_t FirstOffset = INT64_MAX;
 
   // Check if all the bytes of the OR we are looking at are loaded from the same
@@ -10216,7 +10198,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
       continue;
     }
     assert(P->hasSrc() && "provenance should either be memory or zero");
-    auto *L = cast<LoadSDNode>(P->Src.value());
+    auto *L = cast<LoadSDNode>(P->Src);
 
     // All loads must share the same chain
     SDValue LChain = L->getChain();
@@ -10289,7 +10271,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   // So the combined value can be loaded from the first load address.
   if (MemoryByteOffset(*FirstByteProvider) != 0)
     return SDValue();
-  auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
+  auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src);
 
   // Before legalization we allow introducing loads that are wider than legal,
   // which will later be split into legally sized loads. This enables us to
