@@ -105,8 +105,7 @@ public:
         noexcept(is_nothrow_default_constructible<allocator_type>::value);                      // constexpr since C++20
     explicit basic_string(const allocator_type& a);                                             // constexpr since C++20
     basic_string(const basic_string& str);                                                      // constexpr since C++20
-    basic_string(basic_string&& str)
-        noexcept(is_nothrow_move_constructible<allocator_type>::value);                         // constexpr since C++20
+    basic_string(basic_string&& str) noexcept;                                                  // constexpr since C++20
     basic_string(const basic_string& str, size_type pos,
                  const allocator_type& a = allocator_type());                                   // constexpr since C++20
     basic_string(const basic_string& str, size_type pos, size_type n,
@@ -974,13 +973,9 @@ public:
   }
 
 #  ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(basic_string&& __str)
-#    if _LIBCPP_STD_VER <= 14
-      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-#    else
-      _NOEXCEPT
-#    endif
-      : __rep_(std::move(__str.__rep_)), __alloc_(std::move(__str.__alloc_)) {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 basic_string(basic_string&& __str) _NOEXCEPT
+      : __rep_(std::move(__str.__rep_)),
+        __alloc_(std::move(__str.__alloc_)) {
     __str.__rep_ = __rep();
     __str.__annotate_new(0);
     if (!__is_long())

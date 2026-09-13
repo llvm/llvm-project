@@ -10,7 +10,7 @@
 
 // <string>
 
-// basic_string(basic_string<charT,traits,Allocator>&& str); // constexpr since C++20
+// basic_string(basic_string&& str) noexcept; // constexpr since C++20
 
 #include <string>
 #include <cassert>
