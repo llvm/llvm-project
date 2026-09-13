@@ -482,32 +482,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
 #undef bindOmptCallback
 
 #endif
-
-  // Envar that indicates whether mapped host buffers should be locked
-  // automatically. The possible values are boolean (on/off) and a special:
-  //   off:       Mapped host buffers are not locked.
-  //   on:        Mapped host buffers are locked in a best-effort approach.
-  //              Failure to lock the buffers are silent.
-  //   mandatory: Mapped host buffers are always locked and failures to lock
-  //              a buffer results in a fatal error.
-  StringEnvar OMPX_LockMappedBuffers("LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS",
-                                     "off");
-
-  bool Enabled;
-  if (StringParser::parse(OMPX_LockMappedBuffers.get().data(), Enabled)) {
-    // Parsed as a boolean value. Enable the feature if necessary.
-    LockMappedBuffers = Enabled;
-    IgnoreLockMappedFailures = true;
-  } else if (OMPX_LockMappedBuffers.get() == "mandatory") {
-    // Enable the feature and failures are fatal.
-    LockMappedBuffers = true;
-    IgnoreLockMappedFailures = false;
-  } else {
-    // Disable by default.
-    ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
-                     << OMPX_LockMappedBuffers.get();
-    LockMappedBuffers = false;
-  }
 }
 
 Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
@@ -1523,60 +1497,6 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
       getDevice(DeviceId).dataDelete(TgtPtr, static_cast<TargetAllocTy>(Kind));
   if (Err) {
     REPORT() << "Failure to deallocate device pointer " << TgtPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
-                                   void **LockedPtr) {
-  auto LockedPtrOrErr = getDevice(DeviceId).registerMemory(Ptr, Size);
-  if (!LockedPtrOrErr) {
-    auto Err = LockedPtrOrErr.takeError();
-    REPORT() << "Failure to lock memory " << Ptr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  if (!(*LockedPtrOrErr)) {
-    REPORT() << "Failure to lock memory " << Ptr
-             << ": obtained a null locked pointer";
-    return OFFLOAD_FAIL;
-  }
-  *LockedPtr = *LockedPtrOrErr;
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_unlock(int32_t DeviceId, void *Ptr) {
-  auto Err = getDevice(DeviceId).unregisterMemory(Ptr);
-  if (Err) {
-    REPORT() << "Failure to unlock memory " << Ptr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_notify_mapped(int32_t DeviceId, void *HstPtr,
-                                            int64_t Size) {
-  auto Err = getDevice(DeviceId).notifyDataMapped(HstPtr, Size);
-  if (Err) {
-    REPORT() << "Failure to notify data mapped " << HstPtr << ": "
-             << toString(std::move(Err));
-    return OFFLOAD_FAIL;
-  }
-
-  return OFFLOAD_SUCCESS;
-}
-
-int32_t GenericPluginTy::data_notify_unmapped(int32_t DeviceId, void *HstPtr) {
-  auto Err = getDevice(DeviceId).notifyDataUnmapped(HstPtr);
-  if (Err) {
-    REPORT() << "Failure to notify data unmapped " << HstPtr << ": "
              << toString(std::move(Err));
     return OFFLOAD_FAIL;
   }
