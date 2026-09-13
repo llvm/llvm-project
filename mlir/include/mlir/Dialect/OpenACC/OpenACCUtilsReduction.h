@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_OPENACC_OPENACCUTILSREDUCTION_H_
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSREDUCTION_H_
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenACC/OpenACCParMapping.h"
 #include "mlir/IR/Builders.h"

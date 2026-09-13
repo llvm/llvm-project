@@ -8,8 +8,9 @@ define i1 @all_32(ptr %input) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <32 x i8>, ptr [[INPUT]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <32 x i8> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.and.v32i8(<32 x i8> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[TMP2]] to i1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <32 x i8> [[TMP1]] to <32 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <32 x i1> [[TMP2]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP4]], -1
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
 entry:
@@ -133,8 +134,9 @@ define i1 @or_16(ptr %input) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[INPUT]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = freeze <16 x i8> [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc i8 [[TMP2]] to i1
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <16 x i8> [[TMP1]] to <16 x i1>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <16 x i1> [[TMP2]] to i16
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i16 [[TMP4]], 0
 ; CHECK-NEXT:    ret i1 [[TMP3]]
 ;
 entry:

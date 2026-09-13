@@ -162,6 +162,9 @@ public:
   LLVM_ABI static bool intersectWithMin(AttrKind Kind);
   LLVM_ABI static bool intersectWithCustom(AttrKind Kind);
 
+  /// Whether this is an ABI attribute (for returns or arguments).
+  LLVM_ABI static bool isABIAttr(AttrKind Kind);
+
 private:
   AttributeImpl *pImpl = nullptr;
 

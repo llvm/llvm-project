@@ -112,7 +112,7 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
-    requires forward_range<_View> && forward_range<const _View>
+    requires forward_range<_View> && forward_range<const _View> && forward_range<const _Pattern>
   {
     return __outer_iterator<true>{*this, ranges::begin(__base_)};
   }
@@ -124,7 +124,8 @@ public:
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const {
-    if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View>) {
+    if constexpr (forward_range<_View> && forward_range<const _View> && common_range<const _View> &&
+                  forward_range<const _Pattern>) {
       return __outer_iterator<true>{*this, ranges::end(__base_)};
     } else {
       return default_sentinel;
@@ -192,12 +193,12 @@ private:
 
     struct value_type : view_interface<value_type> {
     private:
+      friend struct __outer_iterator;
       __outer_iterator __i_ = __outer_iterator();
 
-    public:
-      _LIBCPP_HIDE_FROM_ABI value_type() = default;
       _LIBCPP_HIDE_FROM_ABI constexpr explicit value_type(__outer_iterator __i) : __i_(std::move(__i)) {}
 
+    public:
       [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __inner_iterator<_Const> begin() const {
         return __inner_iterator<_Const>{__i_};
       }

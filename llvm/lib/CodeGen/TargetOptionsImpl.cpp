@@ -17,12 +17,6 @@
 #include "llvm/Target/TargetOptions.h"
 using namespace llvm;
 
-/// HonorSignDependentRoundingFPMath - Return true if the codegen must assume
-/// that the rounding mode of the FPU can change from its default.
-bool TargetOptions::HonorSignDependentRoundingFPMath() const {
-  return HonorSignDependentRoundingFPMathOption;
-}
-
 /// NOTE: There are targets that still do not support the debug entry values
 /// production and that is being controlled with the SupportsDebugEntryValues.
 /// In addition, SCE debugger does not have the feature implemented, so prefer
