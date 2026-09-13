@@ -716,8 +716,14 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 
   StringRef Arch(Args.getLastArgValue(OPT_arch_EQ));
   assert(!Arch.empty() && "Arch must be specified for AOT compilation");
+  // ocloc spells a device without the "xe-" prefix and with "_" between words,
+  // e.g. "bmg_g21" for "xe-bmg-g21", so translate any accepted spelling.
+  std::string Device = StringRef(OffloadArchToString(StringToOffloadArch(Arch)))
+                           .drop_front(strlen("xe-"))
+                           .str();
+  llvm::replace(Device, '-', '_');
   CmdArgs.push_back("-device");
-  CmdArgs.push_back(Arch);
+  CmdArgs.push_back(Device);
 
   // getAllArgValues returns a temporary vector; retain it so the StringRefs
   // remain valid through the executeCommands call below.
