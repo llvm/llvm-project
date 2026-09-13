@@ -14,7 +14,6 @@ add_mlir_dialect_library(MLIRLinalgDialect
   MLIRLinalgOpsIncGen
   MLIRLinalgStructuredOpsIncGen
   MLIRLinalgRelayoutOpsIncGen
-  MLIRShardingInterfaceIncGen
   MLIRRelayoutOpInterfaceIncGen
 
   # LinalgDialect.cpp includes ShardingInterface.h for promised interfaces.

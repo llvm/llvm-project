@@ -9,7 +9,6 @@ add_mlir_dialect_library(MLIROpenACCDialect
   MLIROpenACCOpsIncGen
   MLIROpenACCEnumsIncGen
   MLIROpenACCAttributesIncGen
-  MLIROpenACCMPOpsInterfacesIncGen
   MLIROpenACCOpsInterfacesIncGen
   MLIROpenACCTypeInterfacesIncGen
 

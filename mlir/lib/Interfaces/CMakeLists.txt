@@ -115,9 +115,7 @@ add_mlir_library(MLIRSubsetOpInterface
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
   DEPENDS
-  MLIRDestinationStyleOpInterface
   MLIRSubsetOpInterfaceIncGen
-  MLIRValueBoundsOpInterface
 
   LINK_LIBS PUBLIC
   MLIRDestinationStyleOpInterface
@@ -148,9 +146,7 @@ add_mlir_library(MLIRValueBoundsOpInterface
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Interfaces
 
   DEPENDS
-  MLIRDestinationStyleOpInterface
   MLIRValueBoundsOpInterfaceIncGen
-  MLIRViewLikeInterface
 
   LINK_LIBS PUBLIC
   MLIRAnalysis

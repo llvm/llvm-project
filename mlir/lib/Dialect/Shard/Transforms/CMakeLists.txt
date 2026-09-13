@@ -9,7 +9,6 @@ add_mlir_dialect_library(MLIRShardTransforms
 
   DEPENDS
   MLIRShardPassIncGen
-  MLIRShardingInterface
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect

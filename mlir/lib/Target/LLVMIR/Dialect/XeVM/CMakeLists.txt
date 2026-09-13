@@ -5,9 +5,6 @@ set(LLVM_OPTIONAL_SOURCES
 add_mlir_translation_library(MLIRXeVMToLLVMIRTranslation
   XeVMToLLVMIRTranslation.cpp
 
-  DEPENDS
-  MLIRXeVMConversionsIncGen
-
   LINK_COMPONENTS
   Core
 
