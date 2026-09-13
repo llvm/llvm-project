@@ -12,7 +12,13 @@
 #include <string>
 
 void strings() {
-  std::string l;                 // expected-warning {{unused variable}}
-  std::string::iterator l;       // expected-warning {{unused variable}}
+  std::string l; // expected-warning {{unused variable}}
+}
+
+void strings_iterators() {
+  std::string::iterator l; // expected-warning {{unused variable}}
+}
+
+void strings_const_iterators() {
   std::string::const_iterator l; // expected-warning {{unused variable}}
 }

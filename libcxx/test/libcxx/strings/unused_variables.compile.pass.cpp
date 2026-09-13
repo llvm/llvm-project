@@ -15,11 +15,16 @@
 
 #include "test_macros.h"
 
-void strings() {
-  std::string l;
+void strings() { std::string l; }
 
+void strings_iterators() {
 #if TEST_STD_VER <= 11
   std::string::iterator l;
+#endif
+}
+
+void strings_const_iterators() {
+#if TEST_STD_VER <= 11
   std::string::const_iterator l;
 #endif
 }
