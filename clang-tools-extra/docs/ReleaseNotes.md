@@ -235,6 +235,10 @@ infrastructure are described first, followed by tool-specific sections.
   `INT09-C-EX1` exception, allowing enumerators initialized by referencing
   another enumerator in the same enum (e.g., `last = first`).
 
+- Improved {doc}`readability-function-cognitive-complexity
+  <clang-tidy/checks/readability/function-cognitive-complexity>` check by fixing
+  a crash when checking a function declared with the `alias` attribute.
+
 - Improved {doc}`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check:
 
