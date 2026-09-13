@@ -72,3 +72,15 @@ enum E1 comma4(void) {
   return ((void)1, 2); // expected-warning {{implicit conversion from 'int' to enumeration type 'enum E1' is invalid in C++}} \
                           cxx-error {{cannot initialize return object of type 'enum E1' with an rvalue of type 'int'}}
 }
+
+// The branches of a conditional operand are each converted to the context
+// type, so a conditional between enumerators of the target type is fine in
+// C++ and must not be diagnosed here either.
+enum E1 comma5(int c) {
+  return ((void)0, c ? E1_One : E1_Zero); // Okay, no conversion in C++
+}
+
+enum E1 comma6(int c) {
+  return ((void)0, c ? E1_One : 2); // expected-warning {{implicit conversion from 'int' to enumeration type 'enum E1' is invalid in C++}} \
+                                       cxx-error {{cannot initialize return object of type 'enum E1' with an rvalue of type 'int'}}
+}
