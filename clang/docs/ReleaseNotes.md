@@ -710,6 +710,8 @@ features cannot lower the translation-unit ABI level;
   declaration. (#GH217489)
 - Fixed an assertion failure when instantiating a block that captures
   `this` via a member access through a dependent base class.
+- Fixed an assertion failure when diagnosing a constant expression that
+  accesses a vector element through a past-the-end or null pointer. (#GH220256)
 - Fixed `DiagnoseUnguardedAvailability::TraverseIfStmt` dereferencing a nullptr
   on `if consteval {}`. (#GH220004)
 - Fixed an assertion when the `dim` argument to an OpenACC `gang` clause
