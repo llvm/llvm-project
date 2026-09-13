@@ -90,6 +90,7 @@ public:
     uint8_t Opcode; ///< The Op Opcode, DW_OP_<something>.
     Description Desc;
     bool Error = false;
+    bool OperandError = false;
     uint64_t EndOffset;
     SmallVector<uint64_t> Operands;
     SmallVector<uint64_t> OperandEndOffsets;
@@ -109,6 +110,10 @@ public:
     }
     uint64_t getEndOffset() const { return EndOffset; }
     bool isError() const { return Error; }
+    /// Whether a known operation failed because an operand could not be
+    /// decoded. Unknown operations can be in the general error state without
+    /// having an operand error.
+    bool isOperandError() const { return Error && OperandError; }
 
   private:
     LLVM_ABI bool extract(DataExtractor Data, uint8_t AddressSize,

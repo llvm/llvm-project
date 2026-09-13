@@ -2230,6 +2230,67 @@ TEST(DWARFDebugInfo, TestDWARFDieRangeInfoIntersects) {
   AssertRangesIntersect(Ranges, {{0x20, 0x21}, {0x2f, 0x31}});
 }
 
+namespace {
+
+void ExpectVariableLocationRejected(
+    ArrayRef<uint8_t> Expression, uint64_t QueryAddress,
+    std::optional<uint64_t> AddressTableEntry = std::nullopt) {
+  Triple Triple = getDefaultTargetTripleForAddrSize(/*AddrSize=*/8);
+  if (!isConfigurationSupported(Triple))
+    GTEST_SKIP();
+
+  auto ExpectedDG = dwarfgen::Generator::create(Triple, /*Version=*/5);
+  ASSERT_THAT_EXPECTED(ExpectedDG, Succeeded());
+  dwarfgen::Generator *DG = ExpectedDG.get().get();
+  dwarfgen::CompileUnit &CU = DG->addCompileUnit();
+  dwarfgen::DIE CUDie = CU.getUnitDIE();
+
+  if (AddressTableEntry) {
+    CUDie.addAddrBaseAttribute();
+    CUDie.addAttribute(DW_AT_low_pc, DW_FORM_addrx, *AddressTableEntry);
+  }
+
+  dwarfgen::DIE Variable = CUDie.addChild(DW_TAG_variable);
+  Variable.addAttribute(DW_AT_location, DW_FORM_exprloc, Expression.data(),
+                        Expression.size());
+
+  MemoryBufferRef FileBuffer(DG->generate(), "dwarf");
+  auto Obj = object::ObjectFile::createObjectFile(FileBuffer);
+  ASSERT_TRUE((bool)Obj);
+  std::unique_ptr<DWARFContext> DwarfContext = DWARFContext::create(**Obj);
+  DWARFCompileUnit *U = cast<DWARFCompileUnit>(DwarfContext->getUnitAtIndex(0));
+
+  EXPECT_FALSE(U->getVariableForAddress(QueryAddress).isValid());
+}
+
+} // namespace
+
+#ifdef NO_SUPPORT_DEBUG_ADDR
+TEST(DWARFDebugInfo, DISABLED_VariableLocationsRejectFirstOperandErrors) {
+#else
+TEST(DWARFDebugInfo, VariableLocationsRejectFirstOperandErrors) {
+#endif
+  constexpr uint64_t AddrxAddress = 0x1010101010101010;
+  const uint8_t InvalidAddrxExpr[] = {
+      DW_OP_addrx,
+      // The operand encodes 2^64 and cannot name a .debug_addr entry.
+      0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02};
+  ExpectVariableLocationRejected(InvalidAddrxExpr, AddrxAddress, AddrxAddress);
+}
+
+TEST(DWARFDebugInfo, VariableLocationsRejectSecondOperandErrors) {
+  constexpr uint64_t BaseAddress = 0x3030303030303030;
+  const uint8_t InvalidPlusExpr[] = {
+      DW_OP_addr,
+      // Repeated bytes make the address independent of target endianness.
+      0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, DW_OP_plus_uconst,
+      // The operand encodes 2^64 and cannot be used as an address addend.
+      0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x02};
+  // The iterator reuses operation storage, so the failed second operation
+  // retains the first operation's raw operand unless the error is rejected.
+  ExpectVariableLocationRejected(InvalidPlusExpr, BaseAddress * 2);
+}
+
 TEST(DWARFDebugInfo, TestDWARF64UnitLength) {
   static const char DebugInfoSecRaw[] =
       "\xff\xff\xff\xff"                 // DWARF64 mark
