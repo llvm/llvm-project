@@ -359,8 +359,9 @@ class WebAssemblyLowerEmscriptenEHSjLjImpl {
 
 public:
   WebAssemblyLowerEmscriptenEHSjLjImpl(
+      bool EnableEmEH,
       std::function<DominatorTree &(Function &F)> GetDominatorTree)
-      : EnableEmEH(WebAssembly::WasmEnableEmEH),
+      : EnableEmEH(EnableEmEH || WebAssembly::WasmEnableEmEH),
         EnableEmSjLj(WebAssembly::WasmEnableEmSjLj),
         EnableWasmSjLj(WebAssembly::WasmEnableSjLj),
         GetDominatorTree(GetDominatorTree) {
@@ -375,6 +376,8 @@ public:
 };
 
 class WebAssemblyLowerEmscriptenEHSjLjLegacy final : public ModulePass {
+  bool EnableEmEH;
+
   StringRef getPassName() const override {
     return "WebAssembly Lower Emscripten Exceptions";
   }
@@ -382,7 +385,8 @@ class WebAssemblyLowerEmscriptenEHSjLjLegacy final : public ModulePass {
 public:
   static char ID;
 
-  WebAssemblyLowerEmscriptenEHSjLjLegacy() : ModulePass(ID) {}
+  WebAssemblyLowerEmscriptenEHSjLjLegacy(bool EnableEmEH = false)
+      : ModulePass(ID), EnableEmEH(EnableEmEH) {}
   bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -396,8 +400,9 @@ INITIALIZE_PASS(WebAssemblyLowerEmscriptenEHSjLjLegacy, DEBUG_TYPE,
                 "WebAssembly Lower Emscripten Exceptions / Setjmp / Longjmp",
                 false, false)
 
-ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass() {
-  return new WebAssemblyLowerEmscriptenEHSjLjLegacy();
+ModulePass *
+llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass(bool EnableEmEH) {
+  return new WebAssemblyLowerEmscriptenEHSjLjLegacy(EnableEmEH);
 }
 
 static bool canThrow(const Value *V) {
@@ -1871,7 +1876,7 @@ void WebAssemblyLowerEmscriptenEHSjLjImpl::handleLongjmpableCallsForWasmSjLj(
 
 bool WebAssemblyLowerEmscriptenEHSjLjLegacy::runOnModule(Module &M) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      [&](Function &F) -> DominatorTree & {
+      EnableEmEH, [&](Function &F) -> DominatorTree & {
         return getAnalysis<DominatorTreeWrapperPass>(F).getDomTree();
       });
   return Impl.runOnModule(M);
@@ -1881,7 +1886,7 @@ PreservedAnalyses
 WebAssemblyLowerEmscriptenEHSjLjPass::run(Module &M,
                                           ModuleAnalysisManager &MAM) {
   WebAssemblyLowerEmscriptenEHSjLjImpl Impl(
-      [&](Function &F) -> DominatorTree & {
+      EnableEmEH, [&](Function &F) -> DominatorTree & {
         return MAM.getResult<FunctionAnalysisManagerModuleProxy>(M)
             .getManager()
             .getResult<DominatorTreeAnalysis>(F);
