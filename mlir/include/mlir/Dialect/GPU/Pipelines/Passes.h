@@ -72,17 +72,16 @@ struct GPUToROCDLPipelineOptions
       llvm::cl::desc("Bitwidth of the index type for the host (warning this "
                      "should be 64 until the GPU layering is fixed)"),
       llvm::cl::init(64)};
-  PassOptions::Option<std::string> triple{
-      *this, "triple",
-      llvm::cl::desc("AMDGPU target triple (e.g. amdgcn-amd-amdhsa)."),
-      llvm::cl::init("amdgcn-amd-amdhsa")};
-  PassOptions::Option<std::string> chip{
-      *this, "chip",
+  PassOptions::Option<std::string> arch{
+      *this, "arch",
       llvm::cl::desc(
-          "AMDGPU target chip (e.g. gfx90a, gfx942, gfx1100). Required: "
-          "AMDGCN binaries are not forward-compatible across chip families.")};
-  PassOptions::Option<std::string> features{
-      *this, "features", llvm::cl::desc("AMDGPU target features."),
+          "AMDGPU target architecture, as in Clang, with optional target-ID "
+          "modifiers (e.g. gfx942, gfx90a:xnack+, "
+          "amdgpu9.0a-amd-amdhsa--gfx90a:xnack-). Required: AMDGCN binaries "
+          "are "
+          "not forward-compatible across chip families.")};
+  PassOptions::Option<std::string> chip{
+      *this, "chip", llvm::cl::desc("Deprecated alias for 'arch'."),
       llvm::cl::init("")};
   PassOptions::Option<std::string> binaryFormat{
       *this, "binary-format",
@@ -93,11 +92,11 @@ struct GPUToROCDLPipelineOptions
       *this, "abi",
       llvm::cl::desc("AMDHSA ABI version (e.g. \"500\", \"600\")."),
       llvm::cl::init("600")};
-  PassOptions::Option<bool> wave64{
-      *this, "wave64",
-      llvm::cl::desc("Use Wave64 mode (default true; wave32 if false, "
-                     "appropriate for RDNA / gfx10+ where supported)."),
-      llvm::cl::init(true)};
+  PassOptions::Option<unsigned> waveSize{
+      *this, "wavesize",
+      llvm::cl::desc("Wavefront size (32 or 64) for targets that run at "
+                     "either, or 0 to use the architecture's default."),
+      llvm::cl::init(0)};
   PassOptions::Option<int> optLevel{
       *this, "opt-level",
       llvm::cl::desc("Optimization level for ROCDL/AMDGPU compilation."),
