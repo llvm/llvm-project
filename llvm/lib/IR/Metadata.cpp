@@ -257,8 +257,7 @@ LLVMContext &ReplaceableUses::getContext() const {
   return static_cast<const ValueAsMetadata *>(this)->getContext();
 }
 
-SmallVector<ReplaceableUses::UseEntry, 8>
-ReplaceableUses::getLiveUses() const {
+SmallVector<ReplaceableUses::UseEntry, 8> ReplaceableUses::getLiveUses() const {
   SmallVector<UseEntry, 8> LiveUses;
   LiveUses.reserve(getNumUses());
   for (const auto &Entry : UseMap) {
