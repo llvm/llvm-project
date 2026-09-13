@@ -37,6 +37,12 @@ using namespace llvm;
 
 #define DEBUG_TYPE "dwarfdebug"
 
+bool llvm::DisableDwarfLocations;
+static cl::opt<bool, true> DisableDwarfLocationsOpt(
+    "disable-dwarf-locations",
+    cl::desc("Disable emitting DWARF location DIE attributes"),
+    cl::ReallyHidden, cl::location(DisableDwarfLocations), cl::init(false));
+
 DIEDwarfExpression::DIEDwarfExpression(const AsmPrinter &AP,
                                        DwarfCompileUnit &CU, DIELoc &DIE)
     : DwarfExpression(AP.getDwarfVersion(), CU), AP(AP), OutDIE(DIE) {}
@@ -437,6 +443,8 @@ DIE &DwarfUnit::createAndAddDIE(dwarf::Tag Tag, DIE &Parent, const DINode *N) {
 void DwarfUnit::addBlock(DIE &Die, dwarf::Attribute Attribute, DIELoc *Loc) {
   Loc->computeSize(Asm->getDwarfFormParams());
   DIELocs.push_back(Loc); // Memoize so we can call the destructor later on.
+  if (DisableDwarfLocations)
+    return;
   addAttribute(Die, Attribute, Loc->BestForm(DD->getDwarfVersion()), Loc);
 }
 
