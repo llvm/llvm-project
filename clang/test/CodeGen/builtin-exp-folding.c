@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fmath-errno %s | FileCheck %s --check-prefix=CHECK-ERRNO
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -fno-math-errno %s | FileCheck %s --check-prefix=CHECK-NO-ERRNO
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - %s | FileCheck %s --check-prefix=CHECK-NO-ERRNO
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -frounding-math %s | FileCheck %s --check-prefix=CHECK-ROUNDING
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -w -o - -ffp-exception-behavior=strict %s | FileCheck %s --check-prefix=CHECK-STRICT
 

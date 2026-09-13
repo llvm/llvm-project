@@ -1288,22 +1288,6 @@ bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
 
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO) {
-  // [expr.pre]p4:
-  //   If during the evaluation of an expression, the result is not
-  //   mathematically defined [...], the behavior is undefined.
-  // FIXME: C++ rules require us to not conform to IEEE 754 here.
-  if (Result.isNan()) {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
-        << /*NaN=*/true << S.Current->getRange(OpPC);
-    return S.noteUndefinedBehavior();
-  }
-
-  return CheckFloatStatus(S, OpPC, Status, FPO);
-}
-
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
-                      APFloat::opStatus Status, FPOptions FPO) {
   // FIXME: The standard quote below is deleted by P3899R3.
   // [expr.pre]p4:
   //   If during the evaluation of an expression, the result is not

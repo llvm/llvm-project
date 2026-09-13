@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-unknown-pragmas %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter -Wno-unknown-pragmas %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-unknown-pragmas -fmath-errno %s
-// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-unknown-pragmas -fno-math-errno %s
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter -Wno-unknown-pragmas -fmath-errno %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -Wno-unknown-pragmas -frounding-math %s
 // RUN: %clang_cc1 -std=c++17 -fsyntax-only -verify -fexperimental-new-constant-interpreter -Wno-unknown-pragmas -frounding-math %s
 
