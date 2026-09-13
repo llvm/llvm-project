@@ -8,7 +8,7 @@
 
 // <deque>
 
-// deque(size_type n, const value_type& v);
+// deque(size_type n, const value_type& v); // constexpr since C++26
 
 #include "asan_testing.h"
 #include <deque>
@@ -20,7 +20,7 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void test(unsigned n, const T& x) {
+TEST_CONSTEXPR_CXX26 void test(unsigned n, const T& x) {
   typedef std::deque<T, Allocator> C;
   typedef typename C::const_iterator const_iterator;
   C d(n, x);
@@ -31,7 +31,7 @@ void test(unsigned n, const T& x) {
     assert(*i == x);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   test<int, std::allocator<int> >(0, 5);
   test<int, std::allocator<int> >(1, 10);
   test<int, std::allocator<int> >(10, 11);
@@ -47,6 +47,22 @@ int main(int, char**) {
   LIBCPP_ONLY(test<int, limited_allocator<int, 4096> >(4095, 90));
 #if TEST_STD_VER >= 11
   test<int, min_allocator<int> >(4095, 90);
+#endif
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  std::deque<int> d(3, 7);
+  for (int n : d)
+    assert(n == 7);
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;

@@ -8,18 +8,19 @@
 
 // <deque>
 
-// void push_front(const value_type& v);
+// void push_front(const value_type& v); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
-#include "test_macros.h"
+#include "asan_testing.h"
 #include "min_allocator.h"
+#include "test_macros.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -38,7 +39,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(C& c1, int x) {
+TEST_CONSTEXPR_CXX26 void test(C& c1, int x) {
   typedef typename C::iterator I;
   std::size_t c1_osize = c1.size();
   c1.push_front(x);
@@ -53,12 +54,12 @@ void test(C& c1, int x) {
 }
 
 template <class C>
-void testN(int start, int N) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N) {
   C c1 = make<C>(N, start);
   test(c1, -10);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -81,6 +82,28 @@ int main(int, char**) {
       for (int j = 0; j < N; ++j)
         testN<std::deque<int, safe_allocator<int>> >(rng[i], rng[j]);
   }
+#endif
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  const int dst_array[]      = {158, 650, 43, -605, 8420, 481, 78, -27, 580, 7036, 873};
+  const std::size_t dst_size = sizeof(dst_array) / sizeof(dst_array[0]);
+
+  std::deque<int> d(std::begin(dst_array) + 1, std::end(dst_array));
+  int value = dst_array[0];
+  d.push_front(value);
+  assert(d.size() == dst_size);
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
+
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;

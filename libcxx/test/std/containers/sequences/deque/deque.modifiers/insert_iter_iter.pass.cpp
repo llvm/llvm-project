@@ -17,21 +17,22 @@
 // <deque>
 
 // template <class InputIterator>
-//   iterator insert (const_iterator p, InputIterator f, InputIterator l);
+//   iterator insert (const_iterator p, InputIterator f, InputIterator l); // constexpr since C++26
 
-#include "asan_testing.h"
-#include <deque>
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <deque>
 
+#include "asan_testing.h"
+#include "test_allocator.h"
 #include "test_macros.h"
 #include "test_iterators.h"
-#include "MoveOnly.h"
-#include "test_allocator.h"
 #include "min_allocator.h"
+#include "MoveOnly.h"
 
 template <class C>
-C make(int size, int start = 0) {
+TEST_CONSTEXPR_CXX26 C make(int size, int start = 0) {
   const int b = 4096 / sizeof(int);
   int init    = 0;
   if (start > 0) {
@@ -50,7 +51,7 @@ C make(int size, int start = 0) {
 }
 
 template <class C>
-void test(int P, const C& c0, const C& c2) {
+TEST_CONSTEXPR_CXX26 void test(int P, const C& c0, const C& c2) {
   {
     typedef typename C::const_iterator CI;
     typedef cpp17_input_iterator<CI> BCI;
@@ -107,7 +108,7 @@ void test(int P, const C& c0, const C& c2) {
 }
 
 template <class C>
-void testN(int start, int N, int M) {
+TEST_CONSTEXPR_CXX26 void testN(int start, int N, int M) {
   for (int i = 0; i <= 3; ++i) {
     if (0 <= i && i <= N) {
       C c1 = make<C>(N, start);
@@ -153,7 +154,7 @@ void testN(int start, int N, int M) {
 }
 
 template <class C>
-void testI(int P, C& c1, const C& c2) {
+TEST_CONSTEXPR_CXX26 void testI(int P, C& c1, const C& c2) {
   typedef typename C::const_iterator CI;
   typedef cpp17_input_iterator<CI> ICI;
   std::size_t c1_osize = c1.size();
@@ -173,7 +174,7 @@ void testI(int P, C& c1, const C& c2) {
 }
 
 template <class C>
-void testNI(int start, int N, int M) {
+TEST_CONSTEXPR_CXX26 void testNI(int start, int N, int M) {
   for (int i = 0; i <= 3; ++i) {
     if (0 <= i && i <= N) {
       C c1 = make<C>(N, start);
@@ -212,7 +213,7 @@ void testNI(int start, int N, int M) {
 }
 
 template <class C>
-void test_move() {
+TEST_CONSTEXPR_CXX26 void test_move() {
 #if TEST_STD_VER >= 11
   C c;
   typedef typename C::const_iterator CI;
@@ -235,7 +236,7 @@ void test_move() {
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool tests() {
   {
     int rng[]   = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng) / sizeof(rng[0]);
@@ -269,6 +270,29 @@ int main(int, char**) {
     testNI<std::deque<int> >(1500, 2000, 1000);
     test_move<std::deque<MoveOnly, safe_allocator<MoveOnly> > >();
   }
+#endif
+  return true;
+}
+
+TEST_CONSTEXPR_CXX26 bool test_constexpr() {
+  const int src_array[] = {1, 4};
+  const int dst_array[] = {1, 2, 3, 4};
+  const int input[]     = {2, 3};
+
+  std::deque<int> d(std::begin(src_array), std::end(src_array));
+  auto it = d.insert(d.begin() + 1, input, input + 2);
+  assert(*it == 2);
+  assert(d.size() == 4);
+  assert(std::equal(d.begin(), d.end(), std::begin(dst_array)));
+
+  return true;
+}
+
+int main(int, char**) {
+  tests();
+  test_constexpr();
+#if TEST_STD_VER >= 26
+  static_assert(test_constexpr());
 #endif
 
   return 0;
