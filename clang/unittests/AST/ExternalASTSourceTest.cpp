@@ -13,6 +13,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -224,4 +225,52 @@ TEST(ExternalASTSourceTest, IncrementGeneration) {
   EXPECT_EQ(Secondary->bump(Ctx), 2u);
   EXPECT_EQ(Secondary->getGeneration(), 3u);
   EXPECT_EQ(Topmost->getGeneration(), 3u);
+}
+
+// Even a complete local lookup map must refresh its redeclaration chain when
+// an external source advances to a new generation.
+TEST(ExternalASTSourceTest, LocalLookupRefreshesExternalRedeclarations) {
+  struct TestSource : BumpableSource {
+    NamespaceDecl *Namespace = nullptr;
+    VarDecl *Pending = nullptr;
+    unsigned Completions = 0;
+
+    void CompleteRedeclChain(const Decl *D) override {
+      if (D != Namespace || !Pending)
+        return;
+      ++Completions;
+      VarDecl *NewDecl = Pending;
+      Pending = nullptr;
+      Namespace->addDecl(NewDecl);
+    }
+  };
+
+  auto AST = tooling::buildASTFromCode("");
+  ASSERT_TRUE(AST);
+  ASTContext &Ctx = AST->getASTContext();
+  auto Source = llvm::makeIntrusiveRefCnt<TestSource>();
+  Ctx.setExternalSource(Source);
+
+  // Create the namespace after installing the source so that its
+  // redeclaration link observes changes to the source's generation.
+  auto *NS = NamespaceDecl::Create(Ctx, Ctx.getTranslationUnitDecl(), false,
+                                   SourceLocation(), SourceLocation(),
+                                   &Ctx.Idents.get("N"), nullptr, false);
+  Source->Namespace = NS;
+  auto MakeVariable = [&](StringRef Name) {
+    return VarDecl::Create(Ctx, NS, SourceLocation(), SourceLocation(),
+                           &Ctx.Idents.get(Name), Ctx.IntTy, nullptr, SC_None);
+  };
+  auto *Known = MakeVariable("known");
+  NS->addDecl(Known);
+  ASSERT_TRUE(NS->lookup(Known->getDeclName()).isSingleResult());
+  ASSERT_FALSE(NS->hasExternalVisibleStorage());
+
+  auto *Late = MakeVariable("late");
+  Source->Pending = Late;
+  Source->bump(Ctx);
+  auto Result = NS->lookup(Late->getDeclName());
+  ASSERT_TRUE(Result.isSingleResult());
+  EXPECT_EQ(Result.front(), Late);
+  EXPECT_EQ(Source->Completions, 1u);
 }
