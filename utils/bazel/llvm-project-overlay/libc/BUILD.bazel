@@ -16942,6 +16942,10 @@ libc_function(
     name = "sysconf",
     srcs = ["src/unistd/linux/sysconf.cpp"],
     hdrs = ["src/unistd/sysconf.h"],
+    target_compatible_with = select({
+        ":full_build_linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
     deps = [
         ":__support_common",
         ":__support_libc_errno",
