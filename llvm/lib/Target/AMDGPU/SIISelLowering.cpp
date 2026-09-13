@@ -11818,6 +11818,29 @@ static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
   DAG.UpdateNodeOperands(N, Ops);
 }
 
+// Try to resolve a named barrier object to a constant barrier ID.
+// Named barrier IDs are encoded at bits [5:0] of a BARRIER address space
+// address.
+static std::optional<uint32_t>
+getConstantNamedBarrierNumber(SDValue BarOp, SelectionDAG &DAG) {
+  std::optional<uint64_t> BarVal;
+  if (auto *C = dyn_cast<ConstantSDNode>(BarOp)) {
+    BarVal = C->getZExtValue();
+  } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp)) {
+    const auto *GV = cast<GlobalVariable>(GA->getGlobal());
+    if (AMDGPU::isNamedBarrier(*GV) &&
+        AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(*GV,
+                                                           AMDGPUAS::BARRIER)) {
+      auto *MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+      BarVal = MFI->allocateBarrierGlobal(DAG.getDataLayout(), *GV) +
+               GA->getOffset();
+    }
+  }
+  if (BarVal)
+    return *BarVal & 0x3F;
+  return std::nullopt;
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = Op.getConstantOperandVal(1);
@@ -12397,12 +12420,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SmallVector<SDValue, 2> Ops;
     unsigned Opc;
 
-    if (isa<ConstantSDNode>(Op->getOperand(2))) {
-      uint64_t BarID = cast<ConstantSDNode>(Op->getOperand(2))->getZExtValue();
-      if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
-        BarID = BarID & 0x3F;
+    std::optional<uint32_t> BarID;
+    if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
+      BarID = getConstantNamedBarrierNumber(Op->getOperand(2), DAG);
+    else if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(2)))
+      BarID = C->getZExtValue();
+
+    if (BarID) {
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
-      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      SDValue K = DAG.getTargetConstant(*BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
@@ -13019,19 +13045,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (CntC && CntC->isZero()) {
       SDValue Chain = Op->getOperand(0);
       SDValue BarOp = Op->getOperand(2);
-      SmallVector<SDValue, 2> Ops;
 
-      std::optional<uint64_t> BarVal;
-      if (auto *C = dyn_cast<ConstantSDNode>(BarOp))
-        BarVal = C->getZExtValue();
-      else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp))
-        if (auto Addr = AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
-                *GA->getGlobal(), AMDGPUAS::BARRIER))
-          BarVal = *Addr + GA->getOffset();
-
-      if (BarVal) {
-        unsigned BarID = *BarVal & 0x3F;
-        Ops.push_back(DAG.getTargetConstant(BarID, DL, MVT::i32));
+      if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
+        SmallVector<SDValue, 2> Ops;
+        Ops.push_back(DAG.getTargetConstant(*BarID, DL, MVT::i32));
         Ops.push_back(Chain);
         auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
                                          Op->getVTList(), Ops);
@@ -13080,8 +13097,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarOp = Op->getOperand(2);
     unsigned Opc;
 
-    if (isa<ConstantSDNode>(BarOp)) {
-      uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
+    if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
       switch (IntrinsicID) {
       default:
         return SDValue();
@@ -13092,9 +13108,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
         break;
       }
-      // extract the BarrierID from bits 0-5 of the immediate
-      unsigned BarID = BarVal & 0x3F;
-      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      SDValue K = DAG.getTargetConstant(*BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
