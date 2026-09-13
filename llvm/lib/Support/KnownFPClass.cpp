@@ -631,16 +631,19 @@ KnownFPClass KnownFPClass::exp(const KnownFPClass &KnownSrc) {
 
   Known.propagateNonNaN(KnownSrc);
 
-  if (KnownSrc.cannotBeOrderedLessThanZero()) {
-    // If the source is positive this cannot underflow.
+  // The following deductions assume that exp10(-1.0) = +0.1 and
+  // exp10(+1.0) = +10.0 are both finite normal values.
+
+  // Zero can only be produced if x < -1.0.
+  if (KnownSrc.isKnownNever(fcNegNormal | fcNegInf))
     Known.knownNot(fcPosZero);
 
-    // Cannot introduce denormal values.
+  // Subnormals can only be produced if x < -1.0 and x is finite.
+  if (KnownSrc.isKnownNever(fcNegNormal))
     Known.knownNot(fcPosSubnormal);
-  }
 
-  // If the source is negative, this cannot overflow to infinity.
-  if (KnownSrc.cannotBeOrderedGreaterThanZero())
+  // Infinity can only be produced if x > +1.0.
+  if (KnownSrc.isKnownNever(fcPosNormal | fcPosInf))
     Known.knownNot(fcPosInf);
 
   return Known;
