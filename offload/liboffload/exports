@@ -20,7 +20,6 @@ global:
     "llvm::omp::target::plugin::GenericPluginTy::get_function(__tgt_device_binary, char const*, void**)";
     "llvm::omp::target::plugin::GenericPluginTy::get_global(__tgt_device_binary, unsigned long, char const*, void**)";
     "llvm::omp::target::plugin::GenericPluginTy::initialize_record_replay(int, long, void*, bool, bool, bool, bool, char const*, char const*)";
-    "llvm::omp::target::plugin::GenericPluginTy::is_accessible_ptr(int, void const*, unsigned long)";
     "llvm::omp::target::plugin::GenericPluginTy::is_initialized() const";
     "llvm::omp::target::plugin::GenericPluginTy::launch_kernel(int, void*, llvm::omp::target::plugin::KernelLaunchArgsTy&, __tgt_async_info*)";
     "llvm::omp::target::plugin::GenericPluginTy::load_binary(int, __tgt_device_image*, __tgt_device_binary*)";

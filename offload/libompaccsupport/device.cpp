@@ -564,5 +564,10 @@ bool DeviceTy::useAutoZeroCopy() {
 }
 
 bool DeviceTy::isAccessiblePtr(const void *Ptr, size_t Size) {
-  return RTL->is_accessible_ptr(RTLDeviceID, Ptr, Size);
+  bool IsAccessible = false;
+  if (auto Res = olMemIsAccessible(DeviceHandle, Ptr, Size, &IsAccessible)) {
+    REPORT() << "Failure to check pointer accessibility: " << Res->Details;
+    return false;
+  }
+  return IsAccessible;
 }
