@@ -32,9 +32,8 @@ class AffineForOp;
 class AffineValueMap;
 struct MemRefAccess;
 
-// LoopNestStateCollector walks loop nests and collects load and store
-// operations, and whether or not a region holding op other than ForOp and IfOp
-// was encountered in the loop nest.
+// LoopNestStateCollector walks loop nests and collects affine and non-affine
+// memory operations.
 struct LoopNestStateCollector {
   SmallVector<AffineForOp, 4> forOps;
   // Affine loads.
@@ -47,9 +46,11 @@ struct LoopNestStateCollector {
   SmallVector<Operation *, 4> memrefStores;
   // Free operations.
   SmallVector<Operation *, 4> memrefFrees;
+  // True when an operation has effects that cannot be represented by the
+  // memref-keyed dependence graph.
+  bool hasUnmodeledMemoryEffects = false;
 
-  // Collects load and store operations, and whether or not a region holding op
-  // other than ForOp and IfOp was encountered in the loop nest.
+  // Collects affine and non-affine memory operations in the loop nest.
   void collect(Operation *opToWalk);
 };
 
@@ -127,13 +128,13 @@ public:
     // If this edge is stored in Edge = Node.outEdges[i], then
     // 'Node.outEdges[i].id' is the identifier of the dest node of the edge.
     unsigned id;
-    // The SSA value on which this edge represents a dependence.
-    // If the value is a memref, then the dependence is between graph nodes
-    // which contain accesses to the same memref 'value'. If the value is a
-    // non-memref value, then the dependence is between a graph node which
-    // defines an SSA value and another graph node which uses the SSA value
-    // (e.g. a constant or load operation defining a value which is used inside
-    // a loop nest).
+    // Whether this is a storage-level memory dependence or an exact SSA
+    // dependence.
+    enum class Kind { Memory, SSA };
+    Kind kind;
+    // The value on which this edge represents a dependence. Memory edges carry
+    // the canonical representative of a view-like storage class. SSA edges
+    // retain the exact defining value, including for memrefs.
     Value value;
   };
 
@@ -158,8 +159,9 @@ public:
   // side-effect-free operations with zero results and no regions. Assigns each
   // node in the graph a node id based on the order in block. Fails if certain
   // kinds of operations, for which `Node` creation isn't supported, are
-  // encountered (unknown region holding ops). If `fullAffineDependences` is
-  // set, affine memory dependence analysis is performed before concluding that
+  // encountered (unknown effects or region holding ops). If
+  // `fullAffineDependences` is set, affine memory dependence analysis is
+  // performed before concluding that
   // conflicting affine memory accesses lead to a dependence check; otherwise, a
   // pair of conflicting affine memory accesses (where one of them is a store
   // and they are to the same memref) always leads to an edge (conservatively).
@@ -192,16 +194,20 @@ public:
   // argument to) the block. Returns false otherwise.
   bool writesToLiveInOrEscapingMemrefs(unsigned id) const;
 
-  // Returns true iff there is an edge from node 'srcId' to node 'dstId' which
-  // is for 'value' if non-null, or for any value otherwise. Returns false
-  // otherwise.
+  // Returns true iff there is any edge from node 'srcId' to node 'dstId'
+  // which is for 'value' if non-null, or for any value otherwise.
   bool hasEdge(unsigned srcId, unsigned dstId, Value value = nullptr) const;
 
-  // Adds an edge from node 'srcId' to node 'dstId' for 'value'.
-  void addEdge(unsigned srcId, unsigned dstId, Value value);
+  // Returns true iff there is an edge of 'kind' from node 'srcId' to node
+  // 'dstId' which is for 'value' if non-null, or for any value otherwise.
+  bool hasEdge(unsigned srcId, unsigned dstId, Value value,
+               Edge::Kind kind) const;
 
-  // Removes an edge from node 'srcId' to node 'dstId' for 'value'.
-  void removeEdge(unsigned srcId, unsigned dstId, Value value);
+  // Adds an edge of 'kind' from node 'srcId' to node 'dstId' for 'value'.
+  void addEdge(unsigned srcId, unsigned dstId, Value value, Edge::Kind kind);
+
+  // Removes an edge of 'kind' from node 'srcId' to node 'dstId' for 'value'.
+  void removeEdge(unsigned srcId, unsigned dstId, Value value, Edge::Kind kind);
 
   // Returns true if there is a path in the dependence graph from node 'srcId'
   // to node 'dstId'. Returns false otherwise. `srcId`, `dstId`, and the
@@ -245,20 +251,20 @@ public:
                  ArrayRef<Operation *> memrefStores,
                  ArrayRef<Operation *> memrefFrees);
 
-  void clearNodeLoadAndStores(unsigned id);
+  void clearNodeMemoryOps(unsigned id);
 
-  // Calls 'callback' for each input edge incident to node 'id' which carries a
-  // memref dependence.
+  // Calls 'callback' for each input edge incident to node 'id' whose value is a
+  // memref, whether it carries a memory or an SSA dependence.
   void forEachMemRefInputEdge(unsigned id,
                               const std::function<void(Edge)> &callback);
 
-  // Calls 'callback' for each output edge from node 'id' which carries a
-  // memref dependence.
+  // Calls 'callback' for each output edge from node 'id' whose value is a
+  // memref, whether it carries a memory or an SSA dependence.
   void forEachMemRefOutputEdge(unsigned id,
                                const std::function<void(Edge)> &callback);
 
-  // Calls 'callback' for each edge in 'edges' which carries a memref
-  // dependence.
+  // Calls 'callback' for each edge in 'edges' whose value is a memref, whether
+  // it carries a memory or an SSA dependence.
   void forEachMemRefEdge(ArrayRef<Edge> edges,
                          const std::function<void(Edge)> &callback);
 
