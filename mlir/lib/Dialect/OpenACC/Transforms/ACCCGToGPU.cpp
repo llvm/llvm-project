@@ -53,7 +53,7 @@
 // --------
 // Before:
 //   %c128 = arith.constant 128 : index
-//   %tx = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
+//   %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
 //   acc.compute_region launch(%arg0 = %tx) {
 //     %c0 = arith.constant 0 : index
 //     %c1 = arith.constant 1 : index
