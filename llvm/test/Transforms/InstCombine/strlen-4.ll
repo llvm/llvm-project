@@ -155,9 +155,8 @@ define i64 @fold_strlen_s3_s5_s7(i32 %X) {
 ; CHECK-LABEL: @fold_strlen_s3_s5_s7(
 ; CHECK-NEXT:    [[X_EQ_3:%.*]] = icmp eq i32 [[X:%.*]], 3
 ; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
-; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], ptr @s5, ptr @s7
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[X_EQ_3]], ptr @s3, ptr [[SEL_X_EQ_5]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strlen(ptr noundef nonnull dereferenceable(1) [[SEL]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X_EQ_5]], i64 5, i64 7
+; CHECK-NEXT:    [[LEN:%.*]] = select i1 [[X_EQ_3]], i64 3, i64 [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 

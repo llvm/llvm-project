@@ -16,14 +16,18 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
@@ -93,6 +97,79 @@ static cl::opt<unsigned> GuardWideningWindow(
     cl::init(3),
     cl::desc("How wide an instruction window to bypass looking for "
              "another guard"));
+
+static Value *foldUnaryCallWithOperand(CallInst &CI, Value *Op,
+                                       const SimplifyQuery &SQ) {
+  assert(CI.arg_size() == 1 && "Expected a unary call");
+  SmallVector<Value *, 1> Args = {Op};
+  return simplifyCall(&CI, CI.getCalledOperand(), Args,
+                      SQ.getWithInstruction(&CI));
+}
+
+static Value *foldUnaryCallThroughSelectOrPhi(
+    CallInst &CI, Value *Op, const SimplifyQuery &SQ, IRBuilderBase &Builder,
+    unsigned Depth, SmallPtrSetImpl<Value *> &Visiting,
+    DenseMap<Value *, Value *> &Cache) {
+  if (Value *V = foldUnaryCallWithOperand(CI, Op, SQ))
+    return V;
+
+  if (Depth == 0)
+    return nullptr;
+  if (Value *V = Cache.lookup(Op))
+    return V;
+  if (!Visiting.insert(Op).second)
+    return nullptr;
+
+  scope_exit RemoveFromVisiting([&]() { Visiting.erase(Op); });
+
+  if (auto *Sel = dyn_cast<SelectInst>(Op)) {
+    Value *TrueV = foldUnaryCallThroughSelectOrPhi(
+        CI, Sel->getTrueValue(), SQ, Builder, Depth - 1, Visiting, Cache);
+    if (!TrueV)
+      return nullptr;
+    Value *FalseV = foldUnaryCallThroughSelectOrPhi(
+        CI, Sel->getFalseValue(), SQ, Builder, Depth - 1, Visiting, Cache);
+    if (!FalseV)
+      return nullptr;
+    if (TrueV == FalseV)
+      return Cache[Op] = TrueV;
+
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(Sel->getNextNode());
+    return Cache[Op] = Builder.CreateSelect(Sel->getCondition(), TrueV, FalseV);
+  }
+
+  if (auto *Phi = dyn_cast<PHINode>(Op)) {
+    SmallVector<Value *, 8> IncomingValues;
+    Value *CommonValue = nullptr;
+    bool AllSame = true;
+    for (Value *Incoming : Phi->incoming_values()) {
+      Value *IncomingV = foldUnaryCallThroughSelectOrPhi(
+          CI, Incoming, SQ, Builder, Depth - 1, Visiting, Cache);
+      if (!IncomingV)
+        return nullptr;
+      IncomingValues.push_back(IncomingV);
+      if (!CommonValue)
+        CommonValue = IncomingV;
+      else if (IncomingV != CommonValue)
+        AllSame = false;
+    }
+
+    if (AllSame)
+      return Cache[Op] = CommonValue;
+
+    IRBuilderBase::InsertPointGuard Guard(Builder);
+    Builder.SetInsertPoint(Phi->getParent(),
+                           Phi->getParent()->getFirstInsertionPt());
+    PHINode *NewPhi =
+        Builder.CreatePHI(CI.getType(), Phi->getNumIncomingValues());
+    for (auto [IncomingV, IncomingBB] : zip(IncomingValues, Phi->blocks()))
+      NewPhi->addIncoming(IncomingV, IncomingBB);
+    return Cache[Op] = NewPhi;
+  }
+
+  return nullptr;
+}
 
 /// Return the specified type promoted as it would be to pass though a va_arg
 /// area.
@@ -2041,13 +2118,49 @@ static Value *foldCmpIntrinsicOfExtended(IntrinsicInst *II,
 /// instructions. For normal calls, it allows visitCallBase to do the heavy
 /// lifting.
 Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
+  auto TryFoldUnaryCallThroughSelectOrPhi =
+      [&]() -> std::optional<Instruction *> {
+    if (CI.use_empty() || CI.arg_size() != 1 || isa<IntrinsicInst>(&CI))
+      return std::nullopt;
+    Function *F = CI.getCalledFunction();
+    if (!F || !canConstantFoldCallTo(&CI, F, SQ.TLI))
+      return std::nullopt;
+
+    Value *Op = CI.getArgOperand(0);
+    if (!isa<SelectInst>(Op) && !isa<PHINode>(Op))
+      return std::nullopt;
+    if (auto *Sel = dyn_cast<SelectInst>(Op))
+      if (foldUnaryCallWithOperand(CI, Sel->getTrueValue(), SQ) &&
+          foldUnaryCallWithOperand(CI, Sel->getFalseValue(), SQ))
+        return std::nullopt;
+
+    SmallPtrSet<Value *, 8> Visiting;
+    DenseMap<Value *, Value *> Cache;
+    if (Value *V = foldUnaryCallThroughSelectOrPhi(CI, Op, SQ, Builder, 16,
+                                                   Visiting, Cache)) {
+      replaceInstUsesWith(CI, V);
+      return eraseInstFromFunction(CI);
+    }
+    return std::nullopt;
+  };
+
   // Don't try to simplify calls without uses. It will not do anything useful,
   // but will result in the following folds being skipped.
   if (!CI.use_empty()) {
+    if (std::optional<Instruction *> I = TryFoldUnaryCallThroughSelectOrPhi())
+      return *I;
+
     SmallVector<Value *, 8> Args(CI.args());
     if (Value *V = simplifyCall(&CI, CI.getCalledOperand(), Args,
-                                SQ.getWithInstruction(&CI)))
+                                SQ.getWithInstruction(&CI))) {
+      if (Function *F = CI.getCalledFunction())
+        if (CI.arg_size() == 1 &&
+            (F->getName() == "strlen" || F->getName() == "wcslen")) {
+          replaceInstUsesWith(CI, V);
+          return eraseInstFromFunction(CI);
+        }
       return replaceInstUsesWith(CI, V);
+    }
   }
 
   if (Value *FreedOp = getFreedOperand(&CI, &TLI))
@@ -2061,8 +2174,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
   }
 
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(&CI);
-  if (!II)
-    return visitCallBase(CI);
+  if (!II) {
+    Instruction *I = visitCallBase(CI);
+    if (I && I != &CI)
+      return I;
+
+    if (std::optional<Instruction *> R = TryFoldUnaryCallThroughSelectOrPhi())
+      return *R;
+    return I;
+  }
 
   // Intrinsics cannot occur in an invoke or a callbr, so handle them here
   // instead of in visitCallBase.
