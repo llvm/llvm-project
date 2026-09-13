@@ -449,14 +449,23 @@ class MCOrgFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
+  /// Whether the fragment may be omitted if we missed the target offset.
+  bool AllowOmission = false;
+
 public:
   MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc)
       : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc) {}
+
+  MCOrgFragment(const MCExpr &Offset, int8_t Value, SMLoc Loc,
+                bool AllowOmission = false)
+      : MCFragment(FT_Org), Value(Value), Offset(&Offset), Loc(Loc),
+        AllowOmission(AllowOmission) {}
 
   const MCExpr &getOffset() const { return *Offset; }
   uint8_t getValue() const { return Value; }
 
   SMLoc getLoc() const { return Loc; }
+  bool getAllowOmission() const { return AllowOmission; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Org;
