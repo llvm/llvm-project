@@ -73,6 +73,14 @@ static std::string getDefaultOutputPath(const NewArchiveMember &FirstMember) {
   return std::string(Val);
 }
 
+// lib.exe names the import library members after the def file when the def
+// file does not contain a LIBRARY statement.
+static std::string getDefaultDllName(StringRef DefPath) {
+  SmallString<128> Val = sys::path::filename(DefPath);
+  sys::path::replace_extension(Val, ".dll");
+  return std::string(Val);
+}
+
 static std::vector<StringRef> getSearchPaths(opt::InputArgList *Args,
                                              StringSaver &Saver) {
   std::vector<StringRef> Ret;
@@ -290,11 +298,11 @@ static void appendFile(std::vector<NewArchiveMember> &Members,
     if (FileMachine != COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
       if (LibMachine == COFF::IMAGE_FILE_MACHINE_UNKNOWN) {
         if (FileMachine == COFF::IMAGE_FILE_MACHINE_ARM64EC) {
-            llvm::errs() << MB.getBufferIdentifier() << ": file machine type "
-                         << machineToStr(FileMachine)
-                         << " conflicts with inferred library machine type,"
-                         << " use /machine:arm64ec or /machine:arm64x\n";
-            exit(1);
+          llvm::errs() << MB.getBufferIdentifier() << ": file machine type "
+                       << machineToStr(FileMachine)
+                       << " conflicts with inferred library machine type,"
+                       << " use /machine:arm64ec or /machine:arm64x\n";
+          exit(1);
         }
         LibMachine = FileMachine;
         LibMachineSource =
@@ -401,6 +409,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
 
     std::vector<COFFShortExport> NativeExports;
     std::string OutputFile = Def->OutputFile;
+    if (OutputFile.empty())
+      OutputFile = getDefaultDllName(Args.getLastArg(OPT_deffile)->getValue());
 
     if (isArm64EC(LibMachine) && Args.hasArg(OPT_nativedeffile)) {
       std::unique_ptr<MemoryBuffer> NativeMB =
@@ -423,6 +433,9 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
       }
       NativeExports = std::move(NativeDef->Exports);
       OutputFile = std::move(NativeDef->OutputFile);
+      if (OutputFile.empty())
+        OutputFile =
+            getDefaultDllName(Args.getLastArg(OPT_nativedeffile)->getValue());
     }
 
     if (Error E =
