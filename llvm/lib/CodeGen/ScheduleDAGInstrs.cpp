@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseSet.h"
 #include "llvm/ADT/iterator_range.h"
@@ -556,14 +557,15 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-
-void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
-                                            unsigned Latency) {
+bool ScheduleDAGInstrs::addChainDependency(SUnit *SUa, SUnit *SUb,
+                                           unsigned Latency) {
   if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);
+    return true;
   }
+  return false;
 }
 
 /// Creates an SUnit for each real instruction, numbered in top-down
@@ -679,6 +681,36 @@ public:
 
   void dump();
 };
+
+static void collectTransitiveSuccessors(SUnit *SU,
+                                        SmallPtrSetImpl<SUnit *> &Res) {
+  SmallVector<SUnit *, 16> WorkList;
+  WorkList.push_back(SU);
+  while (!WorkList.empty()) {
+    SUnit *Curr = WorkList.pop_back_val();
+    for (const SDep &SuccDep : Curr->Succs) {
+      SUnit *Succ = SuccDep.getSUnit();
+      if (Res.insert(Succ).second)
+        WorkList.push_back(Succ);
+    }
+  }
+}
+
+void ScheduleDAGInstrs::addChainDependencies(SUnit *SU, SUList &SUs,
+                                             unsigned Latency) {
+  // Skip adding transitive dependencies, as addChainDependency() can be
+  // expensive. SUs begins with instructions later in the block, so iterate
+  // backwards to get as many transitive successors as possible in the first
+  // couple iterations.
+  SmallPtrSet<SUnit *, 16> RedundantSUs;
+  for (auto I = SUs.rbegin(), E = SUs.rend(); I != E; ++I) {
+    SUnit *Entry = *I;
+    if (RedundantSUs.count(Entry))
+      continue;
+    if (addChainDependency(SU, Entry, Latency))
+      collectTransitiveSuccessors(Entry, RedundantSUs);
+  }
+}
 
 void ScheduleDAGInstrs::addChainDependencies(SUnit *SU,
                                              Value2SUsMap &Val2SUsMap) {
