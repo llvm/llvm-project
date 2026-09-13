@@ -5131,15 +5131,20 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
       function = &specific;
     } else if (!subroutine && specific.test(Symbol::Flag::Subroutine)) {
       subroutine = &specific;
-      if (details.derivedType() &&
+      // A generic can retain an ambiguous homonymous derived type as a
+      // UseErrorDetails symbol.  It is not a derived type for this warning.
+      if (const Symbol *derivedType{details.derivedType()}; derivedType &&
+          derivedType->GetUltimate().has<DerivedTypeDetails>() &&
           context().ShouldWarn(
               common::LanguageFeature::SubroutineAndFunctionSpecifics) &&
           !InModuleFile()) {
-        SayDerivedType(generic.name(),
-            "Generic interface '%s' should only contain functions due to derived type with same name"_warn_en_US,
-            *details.derivedType()->GetUltimate().scope())
-            .set_languageFeature(
-                common::LanguageFeature::SubroutineAndFunctionSpecifics);
+        if (const Scope *typeScope{derivedType->GetUltimate().scope()}) {
+          SayDerivedType(generic.name(),
+              "Generic interface '%s' should only contain functions due to derived type with same name"_warn_en_US,
+              *typeScope)
+              .set_languageFeature(
+                  common::LanguageFeature::SubroutineAndFunctionSpecifics);
+        }
       }
     }
     if (function && subroutine) { // F'2023 C1514
@@ -8623,7 +8628,9 @@ std::optional<DerivedTypeSpec> DeclarationVisitor::ResolveDerivedType(
     // type name.
     outer.add_importName(name.source);
   }
-  if (CheckUseError(name)) {
+  // name.symbol can remain the generic while symbol is its homonymous
+  // derived-type candidate, which may carry a USE-association error.
+  if (HadUseError(context(), name.source, symbol)) {
     return std::nullopt;
   } else if (symbol->GetUltimate().has<DerivedTypeDetails>()) {
     return DerivedTypeSpec{name.source, *symbol};
