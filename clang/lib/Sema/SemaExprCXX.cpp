@@ -6867,7 +6867,9 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
   CXXBindTemporaryExpr *Bind = CXXBindTemporaryExpr::Create(Context, Temp, E);
 
   if (IsDecltype)
-    ExprEvalContexts.back().DelayedDecltypeBinds.push_back(Bind);
+    ExprEvalContexts.back()
+        .getOrCreateRareData()
+        .DelayedDecltypeBinds.push_back(Bind);
 
   return Bind;
 }
@@ -6988,9 +6990,10 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
     return E;
 
   // Perform the semantic checks we delayed until this point.
-  for (unsigned I = 0, N = ExprEvalContexts.back().DelayedDecltypeCalls.size();
-       I != N; ++I) {
-    CallExpr *Call = ExprEvalContexts.back().DelayedDecltypeCalls[I];
+  auto *Rare = ExprEvalContexts.back().getRareData();
+  unsigned NumDelayedCalls = Rare ? Rare->DelayedDecltypeCalls.size() : 0;
+  for (unsigned I = 0; I != NumDelayedCalls; ++I) {
+    CallExpr *Call = Rare->DelayedDecltypeCalls[I];
     if (Call == TopCall)
       continue;
 
@@ -7001,10 +7004,9 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
 
   // Now all relevant types are complete, check the destructors are accessible
   // and non-deleted, and annotate them on the temporaries.
-  for (unsigned I = 0, N = ExprEvalContexts.back().DelayedDecltypeBinds.size();
-       I != N; ++I) {
-    CXXBindTemporaryExpr *Bind =
-      ExprEvalContexts.back().DelayedDecltypeBinds[I];
+  unsigned NumDelayedBinds = Rare ? Rare->DelayedDecltypeBinds.size() : 0;
+  for (unsigned I = 0; I != NumDelayedBinds; ++I) {
+    CXXBindTemporaryExpr *Bind = Rare->DelayedDecltypeBinds[I];
     if (Bind == TopBind)
       continue;
 
