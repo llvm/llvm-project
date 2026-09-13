@@ -728,6 +728,24 @@ static Decomposition decompose(Value *V, const ConstraintInfo &Info,
     return V;
   }
 
+  if (match(V, m_Exact(m_Shr(m_Value(Op0), m_ConstantInt(CI)))) &&
+      canUseSExt(CI)) {
+    if (CI->getSExtValue() >= 0 && CI->getSExtValue() < 63) {
+      int64_t Shift = CI->getSExtValue();
+      int64_t Factor = int64_t(1) << Shift;
+      auto Result = decompose(Op0, Info, IsSigned, DL);
+      if (Result.Offset % Factor == 0 &&
+          all_of(Result.Vars, [Factor](const DecompEntry &E) {
+            return E.Coefficient % Factor == 0;
+          })) {
+        Result.Offset /= Factor;
+        for (auto &E : Result.Vars)
+          E.Coefficient /= Factor;
+        return Result;
+      }
+    }
+  }
+
   if (match(V, m_Sub(m_Value(Op0), m_Value(Op1)))) {
     // a - b can be decomposed when there is no unsigned wrap (either known via
     // flag or proven as precondition).
