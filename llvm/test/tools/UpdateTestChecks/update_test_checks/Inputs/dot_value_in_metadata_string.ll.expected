@@ -14,9 +14,9 @@ define i32 @dot_value_and_metadata_string(ptr %p, i32 %n) {
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"callee: %.arg"}
-!2 = distinct !{!2, !"callee"}
+!2 = distinct !{!2, i1 false, !"callee"}
 ;.
 ; CHECK: [[META0]] = !{[[META1:![0-9]+]]}
 ; CHECK: [[META1]] = distinct !{[[META1]], [[META2:![0-9]+]], !"callee: %.arg"}
-; CHECK: [[META2]] = distinct !{[[META2]], !"callee"}
+; CHECK: [[META2]] = distinct !{[[META2]], i1 false, !"callee"}
 ;.

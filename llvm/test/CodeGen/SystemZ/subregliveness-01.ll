@@ -40,7 +40,7 @@ attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disa
 !0 = !{!"clang version 8.0.0"}
 !1 = !{!2}
 !2 = distinct !{!2, !3, !"func_1: %agg.result"}
-!3 = distinct !{!3, !"func_1"}
+!3 = distinct !{!3, i1 false, !"func_1"}
 !4 = !{!5, !5, i64 0}
 !5 = !{!"long", !6, i64 0}
 !6 = !{!"omnipotent char", !7, i64 0}

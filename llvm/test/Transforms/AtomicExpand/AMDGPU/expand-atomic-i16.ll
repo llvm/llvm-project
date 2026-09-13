@@ -2073,7 +2073,7 @@ define i16 @test_atomicrmw_usub_sat_i16_flat_agent_align4(ptr %ptr, i16 %value) 
 !1 = !{!"foo", !"bar"}
 !2 = !{!3}
 !3 = distinct !{!3, !4}
-!4 = distinct !{!4}
+!4 = distinct !{!4, i1 false}
 !5 = !{i64 0, i64 4, !1, i64 8, i64 4}
 !6 = !{!7, !7, i64 0}
 !7 = !{!"omnipotent char", !8, i64 0}

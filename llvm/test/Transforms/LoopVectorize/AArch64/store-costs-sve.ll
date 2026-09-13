@@ -264,7 +264,7 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ; DEFAULT: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
 ; DEFAULT: [[META6]] = !{[[META7:![0-9]+]]}
 ; DEFAULT: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
-; DEFAULT: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; DEFAULT: [[META8]] = distinct !{[[META8]], i1 false, !"LVerDomain"}
 ; DEFAULT: [[META9]] = !{[[META10:![0-9]+]]}
 ; DEFAULT: [[META10]] = distinct !{[[META10]], [[META8]]}
 ; DEFAULT: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]]}
@@ -277,7 +277,7 @@ attributes #1 = { vscale_range(1,16) "target-features"="+sve" }
 ; PRED: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; PRED: [[META3]] = !{[[META4:![0-9]+]]}
 ; PRED: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
-; PRED: [[META5]] = distinct !{[[META5]], !"LVerDomain"}
+; PRED: [[META5]] = distinct !{[[META5]], i1 false, !"LVerDomain"}
 ; PRED: [[META6]] = !{[[META7:![0-9]+]]}
 ; PRED: [[META7]] = distinct !{[[META7]], [[META5]]}
 ; PRED: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}

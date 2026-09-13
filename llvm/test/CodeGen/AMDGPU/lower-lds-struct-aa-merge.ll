@@ -9,12 +9,12 @@ define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(ptr addrs
 ; CHECK-LABEL: define amdgpu_kernel void @no_clobber_ds_load_stores_x2_preexisting_aa(
 ; CHECK-SAME: ptr addrspace(1) [[ARG:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, align 16, !tbaa [[TBAA1:![0-9]+]], !noalias !6
+; CHECK-NEXT:    store i32 1, ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, align 16, !tbaa [[TBAA1:![0-9]+]], !noalias [[META6:![0-9]+]]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 [[I]]
-; CHECK-NEXT:    [[VAL_A:%.*]] = load i32, ptr addrspace(3) [[GEP_A]], align 4, !tbaa [[TBAA1]], !noalias !6
-; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_PREEXISTING_AA_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa [[TBAA1]], !noalias !11
+; CHECK-NEXT:    [[VAL_A:%.*]] = load i32, ptr addrspace(3) [[GEP_A]], align 4, !tbaa [[TBAA1]], !noalias [[META6]]
+; CHECK-NEXT:    store i32 2, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_PREEXISTING_AA_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), align 16, !tbaa [[TBAA1]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds [64 x i32], ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_NO_CLOBBER_DS_LOAD_STORES_X2_PREEXISTING_AA_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.no_clobber_ds_load_stores_x2_preexisting_aa.lds, i32 0, i32 1), i32 0, i32 [[I]]
-; CHECK-NEXT:    [[VAL_B:%.*]] = load i32, ptr addrspace(3) [[GEP_B]], align 4, !tbaa [[TBAA1]], !noalias !11
+; CHECK-NEXT:    [[VAL_B:%.*]] = load i32, ptr addrspace(3) [[GEP_B]], align 4, !tbaa [[TBAA1]], !noalias [[META11]]
 ; CHECK-NEXT:    [[VAL:%.*]] = add i32 [[VAL_A]], [[VAL_B]]
 ; CHECK-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[ARG]], align 4
 ; CHECK-NEXT:    ret void
@@ -33,7 +33,7 @@ bb:
 
 !0 = !{!1}
 !1 = distinct !{!1, !2}
-!2 = distinct !{!2}
+!2 = distinct !{!2, i1 false}
 !3 = !{!4}
 !4 = distinct !{!4, !2}
 !5 = !{!6, !7, i64 0}
@@ -50,9 +50,9 @@ bb:
 ; CHECK:!5 = !{!"Simple C++ TBAA"}
 ; CHECK:!6 = !{!7, !9}
 ; CHECK:!7 = distinct !{!7, !8}
-; CHECK:!8 = distinct !{!8}
+; CHECK:!8 = distinct !{!8, i1 false}
 ; CHECK:!9 = distinct !{!9, !10}
-; CHECK:!10 = distinct !{!10}
+; CHECK:!10 = distinct !{!10, i1 false}
 ; CHECK:!11 = !{!12, !13}
 ; CHECK:!12 = distinct !{!12, !8}
 ; CHECK:!13 = distinct !{!13, !10}

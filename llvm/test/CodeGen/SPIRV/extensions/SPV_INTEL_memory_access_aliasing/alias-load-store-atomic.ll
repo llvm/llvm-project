@@ -41,13 +41,13 @@ declare spir_func void @_Z19__spirv_AtomicStorePU3AS4iiii(ptr addrspace(4), i32,
 
 !1 = !{!2}
 !2 = distinct !{!2, !3}
-!3 = distinct !{!3}
+!3 = distinct !{!3, i1 false}
 !4 = !{!5}
 !5 = distinct !{!5, !6}
-!6 = distinct !{!6}
+!6 = distinct !{!6, i1 false}
 !7 = !{!8}
 !8 = distinct !{!8, !9}
-!9 = distinct !{!9}
+!9 = distinct !{!9, i1 false}
 !10 = !{!11}
 !11 = distinct !{!11, !12}
-!12 = distinct !{!12}
+!12 = distinct !{!12, i1 false}

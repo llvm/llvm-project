@@ -631,7 +631,7 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 !3 = !{!"omnipotent char", !2, i64 0}
 !4 = !{!5}
 !5 = distinct !{!5, !6, !"g1"}
-!6 = distinct !{!6, !"t2"}
+!6 = distinct !{!6, i1 false, !"t2"}
 
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0, i64 0}
@@ -650,13 +650,13 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 ; CHECK: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META5]]}
 ; CHECK: [[META14]] = !{[[META15:![0-9]+]]}
 ; CHECK: [[META15]] = distinct !{[[META15]], [[META16:![0-9]+]]}
-; CHECK: [[META16]] = distinct !{[[META16]], !"LVerDomain"}
+; CHECK: [[META16]] = distinct !{[[META16]], i1 false, !"LVerDomain"}
 ; CHECK: [[LOOP17]] = distinct !{[[LOOP17]], [[META5]], [[META6]]}
 ; CHECK: [[META18]] = !{[[META19:![0-9]+]]}
 ; CHECK: [[META19]] = distinct !{[[META19]], [[META16]]}
 ; CHECK: [[META20]] = !{[[META21:![0-9]+]], [[META15]]}
 ; CHECK: [[META21]] = distinct !{[[META21]], [[META22:![0-9]+]], !"g1"}
-; CHECK: [[META22]] = distinct !{[[META22]], !"t2"}
+; CHECK: [[META22]] = distinct !{[[META22]], i1 false, !"t2"}
 ; CHECK: [[META23]] = !{[[META21]]}
 ; CHECK: [[LOOP24]] = distinct !{[[LOOP24]], [[META5]]}
 ;.
@@ -676,13 +676,13 @@ attributes #1 = { nounwind "vector-function-abi-variant"="_ZGV_LLVM_N2v_bar(bar_
 ; INTERLEAVE: [[LOOP13]] = distinct !{[[LOOP13]], [[META6]], [[META5]]}
 ; INTERLEAVE: [[META14]] = !{[[META15:![0-9]+]]}
 ; INTERLEAVE: [[META15]] = distinct !{[[META15]], [[META16:![0-9]+]]}
-; INTERLEAVE: [[META16]] = distinct !{[[META16]], !"LVerDomain"}
+; INTERLEAVE: [[META16]] = distinct !{[[META16]], i1 false, !"LVerDomain"}
 ; INTERLEAVE: [[LOOP17]] = distinct !{[[LOOP17]], [[META5]], [[META6]]}
 ; INTERLEAVE: [[META18]] = !{[[META19:![0-9]+]]}
 ; INTERLEAVE: [[META19]] = distinct !{[[META19]], [[META16]]}
 ; INTERLEAVE: [[META20]] = !{[[META21:![0-9]+]], [[META15]]}
 ; INTERLEAVE: [[META21]] = distinct !{[[META21]], [[META22:![0-9]+]], !"g1"}
-; INTERLEAVE: [[META22]] = distinct !{[[META22]], !"t2"}
+; INTERLEAVE: [[META22]] = distinct !{[[META22]], i1 false, !"t2"}
 ; INTERLEAVE: [[META23]] = !{[[META21]]}
 ; INTERLEAVE: [[LOOP24]] = distinct !{[[LOOP24]], [[META5]]}
 ;.

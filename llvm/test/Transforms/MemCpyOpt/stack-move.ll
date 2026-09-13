@@ -246,7 +246,7 @@ define void @alias_no_mod() {
 }
 
 ; Scope domain
-!0 = !{!0}
+!0 = !{!0, i1 false}
 ; Scope in that domain
 !1 = !{!1, !0}
 ; Scope list
