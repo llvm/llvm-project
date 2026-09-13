@@ -224,6 +224,9 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
+  ArgStringList WasmOptUserArgs;
+  Args.AddAllArgValues(WasmOptUserArgs, options::OPT_mwasm_opt_args_EQ);
+
   if (!WasmOptPath.empty()) {
     CmdArgs.push_back("--keep-section=target_features");
   }
@@ -248,6 +251,7 @@ void wasm::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         ArgStringList OptArgs;
         OptArgs.push_back(Output.getFilename());
         OptArgs.push_back(Args.MakeArgString(llvm::Twine("-O") + OOpt));
+        OptArgs.append(WasmOptUserArgs.begin(), WasmOptUserArgs.end());
         OptArgs.push_back("-o");
         OptArgs.push_back(Output.getFilename());
         C.addCommand(std::make_unique<Command>(
