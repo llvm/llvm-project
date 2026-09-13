@@ -1171,7 +1171,7 @@ json::Value toJSON(const ExceptionDetails &ED) {
 }
 
 llvm::json::Value toJSON(const CompileUnit &CU) {
-  json::Object result{{"compileUnitPath", CU.compileUnitPath}};
+  json::Object result{{"id", CU.id}, {"compileUnitPath", CU.compileUnitPath}};
   return result;
 }
 
@@ -1224,6 +1224,8 @@ llvm::json::Value toJSON(const StackFrame &SF) {
                    EncodeMemoryReference(SF.instructionPointerReference)});
   if (SF.moduleId)
     result.insert({"moduleId", *SF.moduleId});
+  if (SF.compileUnitId)
+    result.insert({"compileUnitId", *SF.compileUnitId});
   if (SF.presentationHint != StackFrame::ePresentationHintNone)
     result.insert({"presentationHint", SF.presentationHint});
 

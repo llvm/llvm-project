@@ -361,19 +361,19 @@ define void @minmax_neg_inf_nnan_v2f64(<2 x double> %x, ptr %minnum_res, ptr %ma
 ; CHECK-NEXT:    store <2 x double> [[X]], ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
-  %minnum = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> splat (double 0xFFF0000000000000))
+  %minnum = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> %x, <2 x double> splat (double -inf))
   store <2 x double> %minnum, ptr %minnum_res
-  %maxnum = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> splat (double 0xFFF0000000000000))
+  %maxnum = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> %x, <2 x double> splat (double -inf))
   store <2 x double> %maxnum, ptr %maxnum_res
 
-  %minimum = call nnan <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> splat (double 0xFFF0000000000000))
+  %minimum = call nnan <2 x double> @llvm.minimum.v2f64(<2 x double> %x, <2 x double> splat (double -inf))
   store <2 x double> %minimum, ptr %minimum_res
-  %maximum = call nnan <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> splat (double 0xFFF0000000000000))
+  %maximum = call nnan <2 x double> @llvm.maximum.v2f64(<2 x double> %x, <2 x double> splat (double -inf))
   store <2 x double> %maximum, ptr %maximum_res
 
-  %minimumnum = call nnan <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> splat (double 0xFFF0000000000000))
+  %minimumnum = call nnan <2 x double> @llvm.minimumnum.v2f64(<2 x double> %x, <2 x double> splat (double -inf))
   store <2 x double> %minimumnum, ptr %minimumnum_res
-  %maximumnum = call nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> splat (double 0xFFF0000000000000))
+  %maximumnum = call nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> %x, <2 x double> splat (double -inf))
   store <2 x double> %maximumnum, ptr %maximumnum_res
   ret void
 }
@@ -601,19 +601,19 @@ define void @minmax_mixed_pos_inf_poison_v2f64_nnan(<2 x double> %x, ptr %minnum
 ; CHECK-NEXT:    store <2 x double> <double poison, double +inf>, ptr [[MAXIMUMNUM_RES:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
-  %minnum = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  %minnum = call nnan <2 x double> @llvm.minnum.v2f64(<2 x double> <double poison, double +inf>, <2 x double> %x)
   store <2 x double> %minnum, ptr %minnum_res
-  %maxnum = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  %maxnum = call nnan <2 x double> @llvm.maxnum.v2f64(<2 x double> <double poison, double +inf>, <2 x double> %x)
   store <2 x double> %maxnum, ptr %maxnum_res
 
-  %minimum = call nnan <2 x double> @llvm.minimum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  %minimum = call nnan <2 x double> @llvm.minimum.v2f64(<2 x double> <double poison, double +inf>, <2 x double> %x)
   store <2 x double> %minimum, ptr %minimum_res
-  %maximum = call nnan <2 x double> @llvm.maximum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  %maximum = call nnan <2 x double> @llvm.maximum.v2f64(<2 x double> <double poison, double +inf>, <2 x double> %x)
   store <2 x double> %maximum, ptr %maximum_res
 
-  %minimumnum = call nnan <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  %minimumnum = call nnan <2 x double> @llvm.minimumnum.v2f64(<2 x double> <double poison, double +inf>, <2 x double> %x)
   store <2 x double> %minimumnum, ptr %minimumnum_res
-  %maximumnum = call nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double poison, double 0x7FF0000000000000>, <2 x double> %x)
+  %maximumnum = call nnan <2 x double> @llvm.maximumnum.v2f64(<2 x double> <double poison, double +inf>, <2 x double> %x)
   store <2 x double> %maximumnum, ptr %maximumnum_res
   ret void
 }

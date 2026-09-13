@@ -278,10 +278,10 @@ llvm.func @rocdl.wave_barrier() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.init(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.init
-  // CHECK: call void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %{{.*}}, i32 1)
-  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.barrier.init(ptr addrspace(15) %{{.*}}, i32 1)
+  rocdl.s.barrier.init %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
@@ -292,17 +292,17 @@ llvm.func @rocdl.s.barrier.signal() {
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.signal.var(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.signal.var
-  // CHECK: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(3) %{{.*}}, i32 1)
-  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.barrier.signal.var(ptr addrspace(15) %{{.*}}, i32 1)
+  rocdl.s.barrier.signal.var %ptr member_cnt = 1 : !llvm.ptr<15>
   llvm.return
 }
 
-llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.barrier.join(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.barrier.join
-  // CHECK: call void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %{{.*}})
-  rocdl.s.barrier.join %ptr : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) %{{.*}})
+  rocdl.s.barrier.join %ptr : !llvm.ptr<15>
   llvm.return
 }
 
@@ -334,17 +334,17 @@ llvm.func @rocdl.s.get.barrier.state() {
   llvm.return
 }
 
-llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.get.named.barrier.state(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.get.named.barrier.state
-  // CHECK: %{{.*}} = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %{{.*}})
-  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<3> -> i32
+  // CHECK: %{{.*}} = call i32 @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(15) %{{.*}})
+  %0 = rocdl.s.get.named.barrier.state %ptr : !llvm.ptr<15> -> i32
   llvm.return
 }
 
-llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<3>) {
+llvm.func @rocdl.s.wakeup.barrier(%ptr : !llvm.ptr<15>) {
   // CHECK-LABEL: rocdl.s.wakeup.barrier
-  // CHECK: call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %{{.*}})
-  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<3>
+  // CHECK: call void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(15) %{{.*}})
+  rocdl.s.wakeup.barrier %ptr : !llvm.ptr<15>
   llvm.return
 }
 

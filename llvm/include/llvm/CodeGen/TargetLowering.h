@@ -929,13 +929,13 @@ public:
   // Given:
   //    (icmp eq/ne (and X, C0), (shift X, C1))
   // or
-  //    (icmp eq/ne X, (rotate X, CPow2))
+  //    (icmp eq/ne X, (rotate X, C1))
 
   // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
   // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
   // Do we prefer the shift to be shift-right, shift-left, or rotate.
-  // Note: Its only valid to convert the rotate version to the shift version iff
-  // the shift-amt (`C1`) is a power of 2 (including 0).
+  // Note: It's only valid to convert between the rotate and shift versions iff
+  // the shift-amt (`C1`) divides the bit width.
   // If ShiftOpc (current Opcode) is returned, do nothing.
   virtual unsigned preferedOpcodeForCmpEqPiecesOfOperand(
       EVT VT, unsigned ShiftOpc, bool MayTransformRotate,
@@ -1772,6 +1772,24 @@ public:
   bool isPartialReduceMLALegalOrCustom(unsigned Opc, EVT AccVT,
                                        EVT InputVT) const {
     LegalizeAction Action = getPartialReduceMLAAction(Opc, AccVT, InputVT);
+    return Action == Legal || Action == Custom;
+  }
+
+  /// Return how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and VT should be handled.
+  LegalizeAction getVectorInterleaveAction(unsigned Opc, unsigned Factor,
+                                           EVT VT) const {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.getSimpleVT().SimpleTy};
+    auto It = VectorInterleaveActions.find(Key);
+    return It != VectorInterleaveActions.end() ? It->second : Expand;
+  }
+
+  /// Return true if a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor and fragment type is legal or custom.
+  bool isVectorInterleaveLegalOrCustom(unsigned Opc, unsigned Factor,
+                                       EVT VT) const {
+    LegalizeAction Action = getVectorInterleaveAction(Opc, Factor, VT);
     return Action == Legal || Action == Custom;
   }
 
@@ -2881,6 +2899,23 @@ protected:
       setPartialReduceMLAAction(Opc, AccVT, InputVT, Action);
   }
 
+  /// Indicate how a VECTOR_INTERLEAVE or VECTOR_DEINTERLEAVE node with the
+  /// given interleave factor Factor and type VT should be treated.
+  void setVectorInterleaveAction(unsigned Opc, unsigned Factor, MVT VT,
+                                 LegalizeAction Action) {
+    assert((Opc == ISD::VECTOR_INTERLEAVE || Opc == ISD::VECTOR_DEINTERLEAVE));
+    VectorInterleaveActionKey Key = {Opc, Factor, VT.SimpleTy};
+    VectorInterleaveActions[Key] = Action;
+  }
+
+  void setVectorInterleaveAction(ArrayRef<unsigned> Opcodes,
+                                 ArrayRef<unsigned> Factors, MVT VT,
+                                 LegalizeAction Action) {
+    for (unsigned Opc : Opcodes)
+      for (unsigned Factor : Factors)
+        setVectorInterleaveAction(Opc, Factor, VT, Action);
+  }
+
   /// If Opc/OrigVT is specified as being promoted, the promotion code defaults
   /// to trying a larger integer/fp until it can find one that works. If that
   /// default is insufficient, this method can be used by the target to override
@@ -3910,6 +3945,12 @@ private:
   /// keep a LegalizeAction which indicates how instruction selection should
   /// deal with this operation.
   DenseMap<PartialReduceActionTypes, LegalizeAction> PartialReduceMLAActions;
+
+  using VectorInterleaveActionKey =
+      std::tuple<unsigned, unsigned, MVT::SimpleValueType>;
+  /// For each vector (de)interleave opcode, interleave factor and fragment
+  /// type combination, keep the corresponding LegalizeAction.
+  DenseMap<VectorInterleaveActionKey, LegalizeAction> VectorInterleaveActions;
 
   ValueTypeActionImpl ValueTypeActions;
 
