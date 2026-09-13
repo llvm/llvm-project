@@ -20546,6 +20546,33 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   return Result;
 }
 
+// Narrow an integer source that fits in half its width when the target finds
+// the wide type undesirable for the conversion.
+static SDValue narrowIntToFPSource(SDNode *N, const SDLoc &DL,
+                                   SelectionDAG &DAG,
+                                   const TargetLowering &TLI) {
+  unsigned Opc = N->getOpcode();
+  SDValue N0 = N->getOperand(0);
+  EVT OpVT = N0.getValueType();
+  if (!OpVT.isScalarInteger() || !TLI.isTypeLegal(OpVT) ||
+      TLI.isTypeDesirableForOp(Opc, OpVT))
+    return SDValue();
+
+  EVT HalfVT = OpVT.getHalfSizedIntegerVT(*DAG.getContext());
+  if (!TLI.isTypeDesirableForOp(Opc, HalfVT) ||
+      !TLI.isOperationLegalOrCustom(Opc, HalfVT))
+    return SDValue();
+
+  unsigned SrcBits = Opc == ISD::SINT_TO_FP
+                         ? DAG.ComputeMaxSignificantBits(N0)
+                         : DAG.computeKnownBits(N0).countMaxActiveBits();
+  if (SrcBits > HalfVT.getSizeInBits())
+    return SDValue();
+
+  return DAG.getNode(Opc, DL, N->getValueType(0),
+                     DAG.getNode(ISD::TRUNCATE, DL, HalfVT, N0));
+}
+
 SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
@@ -20597,6 +20624,9 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
                                N0.getOperand(0).getValueType()))
     return DAG.getNode(ISD::SINT_TO_FP, DL, VT, N0.getOperand(0));
 
+  if (SDValue Narrow = narrowIntToFPSource(N, DL, DAG, TLI))
+    return Narrow;
+
   return SDValue();
 }
 
@@ -20639,6 +20669,9 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
       TLI.isTypeDesirableForOp(ISD::UINT_TO_FP,
                                N0.getOperand(0).getValueType()))
     return DAG.getNode(ISD::UINT_TO_FP, DL, VT, N0.getOperand(0));
+
+  if (SDValue Narrow = narrowIntToFPSource(N, DL, DAG, TLI))
+    return Narrow;
 
   return SDValue();
 }
