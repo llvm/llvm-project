@@ -3282,6 +3282,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_nocontext:
   case OMPC_filter:
   case OMPC_partial:
+  case OMPC_depth:
   case OMPC_align:
   case OMPC_message:
   case OMPC_ompx_dyn_cgroup_mem:
