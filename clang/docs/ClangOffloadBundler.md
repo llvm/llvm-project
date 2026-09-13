@@ -279,7 +279,7 @@ without differentiation based on offload kind.
 
 **target-triple**
 
-: The target triple of the code object. See [Target Triple](https://clang.llvm.org/docs/CrossCompilation.html#target-triple).
+: The target triple of the code object. See [Target Triple](project:CrossCompilation.md#target-triple).
 
   LLVM target triples can be with or without the optional environment field:
 

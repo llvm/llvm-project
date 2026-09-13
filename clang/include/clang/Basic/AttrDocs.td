@@ -1823,6 +1823,8 @@ have the same respective semantics when applied to CoreFoundation objects.
 These attributes affect code generation when interacting with ARC code, and
 they are used by the Clang Static Analyzer.
 
+(os-retained-attr-family)=
+
 Finally, in C++ interacting with XNU kernel (objects inheriting from OSObject),
 the same attribute family is present:
 `__attribute__((os_returns_not_retained))`,

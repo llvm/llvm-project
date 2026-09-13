@@ -109,7 +109,7 @@ node - this information has to be encoded for each specific node type.
 This algorithm is encoded in the
 [RecursiveASTVisitor](https://clang.llvm.org/doxygen/classclang_1_1RecursiveASTVisitor.html).
 See the [RecursiveASTVisitor
-tutorial](https://clang.llvm.org/docs/RAVFrontendAction.html).
+tutorial](project:RAVFrontendAction.rst).
 
 The two most basic nodes in the Clang AST are statements
 ([Stmt](https://clang.llvm.org/doxygen/classclang_1_1Stmt.html)) and
@@ -118,4 +118,3 @@ declarations
 that expressions
 ([Expr](https://clang.llvm.org/doxygen/classclang_1_1Expr.html)) are
 also statements in Clang's AST.
-
