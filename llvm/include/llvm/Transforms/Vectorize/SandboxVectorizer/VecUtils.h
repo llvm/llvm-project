@@ -453,6 +453,49 @@ public:
 #endif // NDEBUG
 };
 
+/// An ArrayRef of Values or Instructions that we can print/dump for debugging.
+/// It is mainly used for the vectorizer's instr/value bundles.
+template <typename T> class BndlRef : public ArrayRef<T> {
+public:
+  // Inherit constructors.
+  using ArrayRef<T>::ArrayRef;
+
+#ifndef NDEBUG
+  /// Helper dump function for debugging.
+  void print(raw_ostream &OS) const {
+    for (const auto &[Idx, Val] : enumerate(*this))
+      OS << Idx << ". " << *Val << "\n";
+  }
+  LLVM_DUMP_METHOD void dump() const;
+#endif // NDEBUG
+};
+
+/// @name BndlRef Deduction guides
+/// @{
+/// Deduction guide to construct a BndlRef from a single element.
+template <typename T> BndlRef(const T &OneElt) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a pointer and length
+template <typename T> BndlRef(const T *data, size_t length) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a range
+template <typename T> BndlRef(const T *data, const T *end) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T> BndlRef(const SmallVectorImpl<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a SmallVector
+template <typename T, unsigned N>
+BndlRef(const SmallVector<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::vector
+template <typename T> BndlRef(const std::vector<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a std::array
+template <typename T, std::size_t N>
+BndlRef(const std::array<T, N> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef (const)
+template <typename T> BndlRef(const BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from an BndlRef
+template <typename T> BndlRef(BndlRef<T> &Vec) -> BndlRef<T>;
+/// Deduction guide to construct a BndlRef from a C array.
+template <typename T, size_t N> BndlRef(const T (&Arr)[N]) -> BndlRef<T>;
+/// @}
+
 } // namespace sandboxir
 
 } // namespace llvm

@@ -1299,3 +1299,38 @@ entry:
       sandboxir::VecUtils::getNextUserBundles({Ld0, Ld1}, IMaps, Claimed)
           .empty());
 }
+
+TEST_F(VecUtilsTest, BndlRef) {
+  parseIR(R"IR(
+define void @vectorized_seed_user(i8 %v0, i8 %v1) {
+entry:
+  %add0 = add i8 %v0, 0
+  %add1 = add i8 %v1, 1
+  ret void
+}
+)IR");
+  sandboxir::Context Ctx(C);
+  auto *F = Ctx.createFunction(M->getFunction("vectorized_seed_user"));
+  auto &BB = getBasicBlockByName(*F, "entry");
+  auto It = BB.begin();
+  auto *Ld0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ld1 = cast<sandboxir::Instruction>(&*It++);
+  std::string Str;
+  raw_string_ostream SS(Str);
+
+  SmallVector<sandboxir::Value *> ValuesVec(
+      {static_cast<sandboxir::Value *>(Ld0),
+       static_cast<sandboxir::Value *>(Ld1)});
+  sandboxir::BndlRef ValuesBndl(ValuesVec);
+  Str.clear();
+  ValuesBndl.print(SS);
+  EXPECT_THAT(Str, testing::MatchesRegex("0. *%add0 = add i8 %v0, 0 .*\n"
+                                         "1. *%add1 = add i8 %v1, 1 .*\n"));
+
+  SmallVector<sandboxir::Instruction *> InstrsVec({Ld0, Ld1});
+  sandboxir::BndlRef InstrsBndl(InstrsVec);
+  Str.clear();
+  ValuesBndl.print(SS);
+  EXPECT_THAT(Str, testing::MatchesRegex("0. *%add0 = add i8 %v0, 0 .*\n"
+                                         "1. *%add1 = add i8 %v1, 1 .*\n"));
+}
