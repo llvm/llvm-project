@@ -629,12 +629,13 @@ multiclass vmaxmin_inst<string op, bit opc, PatFrags SD> {
 defm VFP_VMAXNM : vmaxmin_inst<"vmaxnm", 0, any_fmaxnum>;
 defm VFP_VMINNM : vmaxmin_inst<"vminnm", 1, any_fminnum>;
 
-// Match reassociated forms only if not sign dependent rounding.
+// These reassociated forms assume default rounding; only
+// non-constrained fmul matches.
 def : Pat<(fmul (fneg DPR:$a), (f64 DPR:$b)),
           (VNMULD DPR:$a, DPR:$b)>,
-          Requires<[NoHonorSignDependentRounding,HasDPVFP]>;
+          Requires<[HasDPVFP]>;
 def : Pat<(fmul (fneg SPR:$a), SPR:$b),
-          (VNMULS SPR:$a, SPR:$b)>, Requires<[NoHonorSignDependentRounding]>;
+          (VNMULS SPR:$a, SPR:$b)>;
 
 // These are encoded as unary instructions.
 let Defs = [FPSCR_NZCV], mayRaiseFPException = 1, Uses = [FPSCR_RM] in {

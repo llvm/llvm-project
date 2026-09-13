@@ -1001,9 +1001,7 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
   const QualType type = lv.getType();
 
   if (isa<ImplicitValueInitExpr, CXXScalarValueInitExpr>(e)) {
-    const mlir::Location loc = e->getSourceRange().isValid()
-                                   ? cgf.getLoc(e->getSourceRange())
-                                   : *cgf.currSrcLoc;
+    const mlir::Location loc = cgf.getLoc(e->getSourceRange());
     return emitNullInitializationToLValue(loc, lv);
   }
 
@@ -1028,7 +1026,7 @@ void AggExprEmitter::emitInitializationToLValue(Expr *e, LValue lv) {
     return;
   case cir::TEK_Scalar:
     if (lv.isSimple())
-      cgf.emitScalarInit(e, cgf.getLoc(e->getSourceRange()), lv);
+      cgf.emitScalarInit(e, lv);
     else
       cgf.emitStoreThroughLValue(RValue::get(cgf.emitScalarExpr(e)), lv);
     return;
@@ -1083,7 +1081,7 @@ void AggExprEmitter::emitComparisonResult(const Expr *e, mlir::Location loc,
 }
 
 void AggExprEmitter::VisitLambdaExpr(LambdaExpr *e) {
-  CIRGenFunction::SourceLocRAIIObject loc{cgf, cgf.getLoc(e->getSourceRange())};
+  CIRGenFunction::SourceLocRAIIObject loc{cgf, e->getSourceRange()};
   AggValueSlot slot = ensureSlot(cgf.getLoc(e->getSourceRange()), e->getType());
   LValue slotLV = cgf.makeAddrLValue(slot.getAddress(), e->getType());
 
@@ -1305,8 +1303,7 @@ void AggExprEmitter::visitCXXParenListOrInitListExpr(
 
     if (curInitIndex < numInitElements) {
       // Store the initializer into the field.
-      CIRGenFunction::SourceLocRAIIObject loc{
-          cgf, cgf.getLoc(record->getSourceRange())};
+      CIRGenFunction::SourceLocRAIIObject loc{cgf, record->getSourceRange()};
       emitInitializationToLValue(args[curInitIndex++], lv);
     } else {
       // We're out of initializers; default-initialize to null

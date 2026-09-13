@@ -1198,17 +1198,17 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     switch (Cst->getKind()) {
     case GFConstant::GFConstantKind::Scalar: {
       auto APF = Cst->getScalarValue();
-      Known.KnownFPClasses = APF.classify();
+      Known.setKnownFPClasses(APF.classify());
       Known.setSignBit(APF.isNegative());
       break;
     }
     case GFConstant::GFConstantKind::FixedVector: {
-      Known.KnownFPClasses = fcNone;
+      Known.setKnownFPClasses(fcNone);
       bool SignBitAllZero = true;
       bool SignBitAllOne = true;
 
       for (auto C : *Cst) {
-        Known.KnownFPClasses |= C.classify();
+        Known.setKnownFPClasses(Known.getKnownFPClasses() | C.classify());
         if (C.isNegative())
           SignBitAllZero = false;
         else
@@ -1304,11 +1304,11 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     KnownFPClass Known2;
     computeKnownFPClass(LHS, DemandedElts, InterestedClasses & FilterLHS, Known,
                         Depth + 1);
-    Known.KnownFPClasses &= FilterLHS;
+    Known.setKnownFPClasses(Known.getKnownFPClasses() & FilterLHS);
 
     computeKnownFPClass(RHS, DemandedElts, InterestedClasses & FilterRHS,
                         Known2, Depth + 1);
-    Known2.KnownFPClasses &= FilterRHS;
+    Known2.setKnownFPClasses(Known2.getKnownFPClasses() & FilterRHS);
 
     Known |= Known2;
     break;
@@ -1612,22 +1612,33 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   case TargetOpcode::G_FLOG:
   case TargetOpcode::G_FLOG2:
   case TargetOpcode::G_FLOG10: {
-    // log(+inf) -> +inf
-    // log([+-]0.0) -> -inf
-    // log(-inf) -> nan
-    // log(-x) -> nan
-    if ((InterestedClasses & (fcNan | fcInf)) == fcNone)
-      break;
+    FPClassTest InterestedSrcs = fcNone;
 
-    FPClassTest InterestedSrcs = InterestedClasses;
-    if ((InterestedClasses & fcNegInf) != fcNone)
-      InterestedSrcs |= fcZero | fcSubnormal;
+    // log(negative) produces NaN.
     if ((InterestedClasses & fcNan) != fcNone)
       InterestedSrcs |= fcNan | fcNegative;
 
+    // log(logical-zero) produces negative infinity.
+    if ((InterestedClasses & fcNegInf) != fcNone)
+      InterestedSrcs |= fcZero | fcSubnormal;
+
+    // log(x) < -0.0 if x < +1.0
+    if ((InterestedClasses & fcNegNormal) != fcNone)
+      InterestedSrcs |= fcPosSubnormal | fcPosNormal;
+
+    // log(x) >= +0.0 if x >= +1.0
+    if ((InterestedClasses & (fcPosZero | fcPosNormal)) != fcNone)
+      InterestedSrcs |= fcPosNormal;
+
+    // log(x) is positive infinity iff x is positive infinity.
+    if ((InterestedClasses & fcPosInf) != fcNone)
+      InterestedSrcs |= fcPosInf;
+
     Register Val = MI.getOperand(1).getReg();
     KnownFPClass KnownSrc;
-    computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc, Depth + 1);
+    if (InterestedSrcs != fcNone)
+      computeKnownFPClass(Val, DemandedElts, InterestedSrcs, KnownSrc,
+                          Depth + 1);
 
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FltSem = getFltSemanticForLLT(Ty);
@@ -1710,7 +1721,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     // Can refine inf/zero handling based on the exponent operand.
     const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
     KnownBits ExpBits;
-    if ((KnownSrc.KnownFPClasses & ExpInfoMask) != fcNone) {
+    if ((KnownSrc.getKnownFPClasses() & ExpInfoMask) != fcNone) {
       Register ExpReg = MI.getOperand(2).getReg();
       LLT ExpTy = MRI.getType(ExpReg);
       ExpBits = getKnownBits(
@@ -1824,7 +1835,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1)) {
       // X / X is always exactly 1.0 or a NaN.
-      Known.KnownFPClasses = fcPosNormal | fcNan;
+      Known.setKnownFPClasses(fcPosNormal | fcNan);
 
       if (!WantNan)
         break;
@@ -1869,7 +1880,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
 
     if (LHS == RHS && isGuaranteedNotToBeUndef(LHS, MRI, Depth + 1)) {
       // X % X is always exactly [+-]0.0 or a NaN.
-      Known.KnownFPClasses = fcZero | fcNan;
+      Known.setKnownFPClasses(fcZero | fcNan);
 
       if (!WantNan)
         break;
@@ -2077,7 +2088,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.KnownFPClasses = fcNone;
+      Known.setKnownFPClasses(fcNone);
     }
 
     // Do we need anymore elements from Vec?
@@ -2116,7 +2127,7 @@ void GISelValueTracking::computeKnownFPClass(Register R,
       if (Known.isUnknown())
         break;
     } else {
-      Known.KnownFPClasses = fcNone;
+      Known.setKnownFPClasses(fcNone);
     }
 
     if (!!DemandedRHS) {
@@ -2195,9 +2206,9 @@ KnownFPClass GISelValueTracking::computeKnownFPClass(
       computeKnownFPClass(R, DemandedElts, InterestedClasses, Depth);
 
   if (Flags & MachineInstr::MIFlag::FmNoNans)
-    Result.KnownFPClasses &= ~fcNan;
+    Result.setKnownFPClasses(Result.getKnownFPClasses() & ~fcNan);
   if (Flags & MachineInstr::MIFlag::FmNoInfs)
-    Result.KnownFPClasses &= ~fcInf;
+    Result.setKnownFPClasses(Result.getKnownFPClasses() & ~fcInf);
   return Result;
 }
 

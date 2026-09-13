@@ -342,7 +342,6 @@ bool InstructionSelectImpl::selectMachineFunction(MachineFunction &MF) {
     }
   }
 
-  // FIXME: FinalizeISel pass calls finalizeLowering, so it's called twice.
   auto &TLI = *MF.getSubtarget().getTargetLowering();
   TLI.finalizeLowering(MF);
 
