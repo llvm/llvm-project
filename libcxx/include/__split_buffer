@@ -416,7 +416,8 @@ public:
     auto __last      = __first + __n;
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__first), std::__to_address(__last), std::__to_address(__new_begin));
-    __set_valid_range(__new_begin, end());
+    __set_valid_range(__new_begin, __n);
+
     __n = 0;
 
     __swap_layouts(__first, __n, __capacity);
