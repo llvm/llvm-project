@@ -9953,6 +9953,10 @@ isImpliedCondICmps(CmpPredicate LPred, const Value *L0, const Value *L1,
   if (L0 == R0 && L1 == R1)
     return ICmpInst::isImpliedByMatchingCmp(LPred, RPred);
 
+  // X Pred ~Y is equivalent to Y Pred ~X for all predicates.
+  if (match(L1, m_Not(m_Specific(R0))) && match(R1, m_Not(m_Specific(L0))))
+    return ICmpInst::isImpliedByMatchingCmp(LPred, RPred);
+
   // It only really makes sense in the context of signed comparison for "X - Y
   // must be positive if X >= Y and no overflow".
   // Take SGT as an example:  L0:x > L1:y and C >= 0
