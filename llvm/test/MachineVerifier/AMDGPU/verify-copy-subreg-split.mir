@@ -1,6 +1,6 @@
-# RUN: not --crash llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
+# RUN: not --crash llc -mtriple=amdgpu11.00-amd-amdhsa -run-pass=none -filetype=null %s 2>&1 | FileCheck -implicit-check-not="Bad machine code" %s
 # gfx942 expands this into a single V_MOV_B64, so it needs no subregisters.
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX942 -implicit-check-not="Bad machine code" %s
+# RUN: llc -mtriple=amdgpu9.42-amd-amdhsa -run-pass=none -filetype=null %s 2>&1 | FileCheck -check-prefix=GFX942 -implicit-check-not="Bad machine code" %s
 
 # src_shared_base has no addressable high half, so the copy cannot be split.
 

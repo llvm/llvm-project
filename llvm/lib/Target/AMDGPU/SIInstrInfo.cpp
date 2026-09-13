@@ -1118,7 +1118,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
-  if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
+  if (isSingleMoveCopy(RC, SrcRC)) {
     if (ST.hasVMovB64Inst()) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
@@ -5296,6 +5296,13 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
          SubReg.getReg() == SuperVec.getReg();
 }
 
+bool SIInstrInfo::isSingleMoveCopy(const TargetRegisterClass *DstRC,
+                                   const TargetRegisterClass *SrcRC) const {
+  return DstRC == RI.getVGPR64Class() &&
+         (SrcRC == DstRC || RI.isSGPRClass(SrcRC)) &&
+         (ST.hasVMovB64Inst() || ST.hasPkMovB32());
+}
+
 // Verify the illegal copy from vector register to SGPR for generic opcode COPY
 bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI,
@@ -5316,9 +5323,7 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
   if (!RC || !SrcRC || RI.isSGPRClass(RC) || RI.getRegSizeInBits(*RC) <= 32)
     return true;
 
-  // Copies handled by a single 64-bit move are not decomposed.
-  if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC)) &&
-      (ST.hasVMovB64Inst() || ST.hasPkMovB32()))
+  if (isSingleMoveCopy(RC, SrcRC))
     return true;
 
   // Other wide vector copies split into per-subregister moves.

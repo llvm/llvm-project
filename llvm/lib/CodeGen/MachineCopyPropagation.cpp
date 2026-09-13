@@ -821,14 +821,30 @@ bool MachineCopyPropagation::canUpdateSrcUsers(const MachineInstr &Copy,
   return true;
 }
 
-/// Ignores artificial subregisters: copies never split into them, and
-/// requiring a match would reject pairs differing only in artificial shape.
+/// Return true if \p NewReg can replace \p OldReg in a COPY that the target
+/// may expand into one move per subregister.
+///
+/// Only an index that tiles the register together with a disjoint complement
+/// can take part in such an expansion, so indices like x86's sub_8bit_hi,
+/// which no copy is ever split into, are ignored. Artificial subregisters are
+/// ignored as well.
 static bool hasMatchingSubRegs(MCRegister OldReg, MCRegister NewReg,
                                const TargetRegisterInfo &TRI) {
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(OldReg);
+  if (!RC)
+    return true;
+
+  SmallVector<LaneBitmask, 8> Masks;
+  for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI)
+    if (!TRI.isArtificial(SRI.getSubReg()))
+      Masks.push_back(TRI.getSubRegIndexLaneMask(SRI.getSubRegIndex()));
+
   for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI) {
-    if (TRI.isArtificial(SRI.getSubReg()))
+    unsigned SubIdx = SRI.getSubRegIndex();
+    if (TRI.isArtificial(SRI.getSubReg()) || TRI.getSubReg(NewReg, SubIdx))
       continue;
-    if (!TRI.getSubReg(NewReg, SRI.getSubRegIndex()))
+    LaneBitmask Mask = TRI.getSubRegIndexLaneMask(SubIdx);
+    if (is_contained(Masks, RC->LaneMask & ~Mask))
       return false;
   }
   return true;
@@ -888,18 +904,16 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
       }
     }
 
-    if (MRI->isReserved(CopySrc)) {
-      // Don't forward COPYs of reserved regs unless they are constant.
-      if (!MRI->isConstantPhysReg(CopySrc))
-        continue;
+    // Don't forward COPYs of reserved regs unless they are constant.
+    if (MRI->isReserved(CopySrc) && !MRI->isConstantPhysReg(CopySrc))
+      continue;
 
-      // A reserved source may lack subregs the copy is later split into.
-      if (isCopyInstr(MI, *TII, UseCopyInstr) &&
-          !hasMatchingSubRegs(MOUse.getReg().asMCReg(), ForwardedReg, *TRI)) {
-        LLVM_DEBUG(dbgs() << "MCP: Copy source is missing subregisters of "
-                          << printReg(MOUse.getReg(), TRI) << '\n');
-        continue;
-      }
+    // The new source may lack subregs the copy is later split into.
+    if (isCopyInstr(MI, *TII, UseCopyInstr) &&
+        !hasMatchingSubRegs(MOUse.getReg().asMCReg(), ForwardedReg, *TRI)) {
+      LLVM_DEBUG(dbgs() << "MCP: Copy source is missing subregisters of "
+                        << printReg(MOUse.getReg(), TRI) << '\n');
+      continue;
     }
 
     if (!isForwardableRegClassCopy(*Copy, MI, OpIdx))

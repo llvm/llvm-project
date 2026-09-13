@@ -217,6 +217,11 @@ private:
   bool verifyCopy(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                   StringRef &ErrInfo) const;
 
+  /// Return true if copyPhysReg emits a single 64-bit move instead of
+  /// splitting the copy into per-subregister moves.
+  bool isSingleMoveCopy(const TargetRegisterClass *DstRC,
+                        const TargetRegisterClass *SrcRC) const;
+
   bool resultDependsOnExec(const MachineInstr &MI) const;
 
   MachineInstr *convertToThreeAddressImpl(MachineInstr &MI,
