@@ -266,6 +266,12 @@ infrastructure are described first, followed by tool-specific sections.
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Improved {doc}`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by fixing false
+  positives on pointers passed to atomic builtins, whose operands may be
+  written to, such as the `expected` parameter of
+  `atomic_compare_exchange_strong()`.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 
