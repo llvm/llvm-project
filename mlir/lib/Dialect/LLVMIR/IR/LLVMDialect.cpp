@@ -1161,8 +1161,8 @@ Operation::operand_range CallOp::getArgOperands() {
 }
 
 MutableOperandRange CallOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                         getArgOperandsImpl(*this).size());
 }
 
 /// Verify that an inlinable callsite of a debug-info-bearing function in a
@@ -1650,8 +1650,8 @@ Operation::operand_range InvokeOp::getArgOperands() {
 }
 
 MutableOperandRange InvokeOp::getArgOperandsMutable() {
-  return MutableOperandRange(*this, getNumConsumedCalleeOperands(*this),
-                             getArgOperandsImpl(*this).size());
+  return getCalleeOperandsMutable().slice(getNumConsumedCalleeOperands(*this),
+                                         getArgOperandsImpl(*this).size());
 }
 
 LogicalResult InvokeOp::verify() {

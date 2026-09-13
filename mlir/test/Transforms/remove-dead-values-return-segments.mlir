@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s -split-input-file -remove-dead-values="canonicalize=0" | FileCheck %s
-// RUN: mlir-opt %s -split-input-file -remove-dead-values="canonicalize=1" | FileCheck %s
+// RUN: mlir-opt %s --split-input-file --remove-dead-values="canonicalize=0" | FileCheck %s
+// RUN: mlir-opt %s --split-input-file --remove-dead-values="canonicalize=1" | FileCheck %s
 
 // Remove unused function results and update the return operand segments.
 // Check with and without canonicalization to test the cleanup pass directly.
