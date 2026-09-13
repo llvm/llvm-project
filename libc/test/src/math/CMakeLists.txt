@@ -1743,6 +1743,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  logbf128_test
+  NEED_MPFR_F128
+  SUITE
+    libc-math-unittests
+  SRCS
+    logbf128_test.cpp
+  HDRS
+    LogbTest.h
+  DEPENDS
+    libc.src.math.logbf128
+    libc.src.__support.FPUtil.float128
+    libc.src.__support.FPUtil.manipulation_functions
+)
+
+add_fp_unittest(
   logbl_test
   SUITE
     libc-math-unittests

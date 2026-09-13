@@ -5,14 +5,24 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Declaration of the float128 frexp function.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_MATH_FREXPF128_H
 #define LLVM_LIBC_SRC_MATH_FREXPF128_H
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif
 
 float128 frexpf128(float128 x, int *exp);
 

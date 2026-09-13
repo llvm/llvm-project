@@ -253,6 +253,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.fmodl
     libc.src.math.frexp
     libc.src.math.frexpf
+    libc.src.math.frexpf128
     libc.src.math.frexpl
     libc.src.math.fsub
     libc.src.math.fsubl
@@ -260,6 +261,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.hypotf
     libc.src.math.ilogb
     libc.src.math.ilogbf
+    libc.src.math.ilogbf128
     libc.src.math.ilogbl
     libc.src.math.iscanonicalf128
     libc.src.math.isnanf128
@@ -286,6 +288,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.logf
     libc.src.math.logb
     libc.src.math.logbf
+    libc.src.math.logbf128
     libc.src.math.logbl
     libc.src.math.lrint
     libc.src.math.lrintf
@@ -401,6 +404,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.issignalingbf16
   libc.src.math.ldexpbf16
   libc.src.math.llogbbf16
+  libc.src.math.llogbf128
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
   libc.src.math.log_bf16
