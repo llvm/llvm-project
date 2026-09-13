@@ -1911,7 +1911,6 @@ bool ARMConstantIslands::optimizeThumb2Branches() {
     // Folding the compare into a CBZ/CBNZ clobbers the comparison, so it is not
     // safe if CPSR is live past the branch.
     //
-    // TODO: This could be safe if it's only live into this branch's target.
     for (const MachineBasicBlock *Succ : Br.MI->getParent()->successors()) {
       if (Succ->isLiveIn(ARM::CPSR))
         return false;
