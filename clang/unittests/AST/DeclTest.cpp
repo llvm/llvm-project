@@ -37,6 +37,84 @@ using namespace clang::ast_matchers;
 using namespace clang::tooling;
 using namespace clang;
 
+TEST(Decl, PrimaryContextAfterNamespaceRedeclaration) {
+  auto AST = tooling::buildASTFromCode("");
+  ASTContext &Ctx = AST->getASTContext();
+  auto *TU = Ctx.getTranslationUnitDecl();
+  auto *First = NamespaceDecl::Create(Ctx, TU, false, {}, {},
+                                      &Ctx.Idents.get("N"), nullptr, false);
+  auto *Second = NamespaceDecl::Create(Ctx, TU, false, {}, {},
+                                       &Ctx.Idents.get("N"), nullptr, false);
+  // A primary-context query must not freeze the redeclaration chain.
+  EXPECT_EQ(Second, Second->getPrimaryContext());
+  Second->setPreviousDecl(First);
+  EXPECT_EQ(First, Second->getPrimaryContext());
+  EXPECT_EQ(&Ctx, &Second->getParentASTContext());
+}
+
+TEST(Decl, PrimaryContextAfterDefinitionDemotion) {
+  auto AST = tooling::buildASTFromCodeWithArgs("struct S; struct S {};", {},
+                                               "input.c");
+  ASTContext &Ctx = AST->getASTContext();
+  auto *Forward = const_cast<RecordDecl *>(selectFirst<RecordDecl>(
+      "s",
+      match(recordDecl(hasName("S"), unless(isDefinition())).bind("s"), Ctx)));
+  ASSERT_NE(nullptr, Forward);
+  auto *Definition = Forward->getDefinition();
+  ASSERT_NE(nullptr, Definition);
+  EXPECT_EQ(Definition, Forward->getPrimaryContext());
+  Definition->demoteThisDefinitionToDeclaration();
+  EXPECT_EQ(Forward, Forward->getPrimaryContext());
+}
+
+TEST(Decl, PrimaryContextAfterObjCDuplicateDefinition) {
+  auto AST = tooling::buildASTFromCodeWithArgs("@protocol P @end",
+                                               {"-x", "objective-c"});
+  ASTContext &Ctx = AST->getASTContext();
+  auto *First = const_cast<ObjCProtocolDecl *>(selectFirst<ObjCProtocolDecl>(
+      "p", match(objcProtocolDecl(hasName("P")).bind("p"), Ctx)));
+  ASSERT_NE(nullptr, First);
+  auto *Duplicate = ObjCProtocolDecl::Create(
+      Ctx, Ctx.getTranslationUnitDecl(), &Ctx.Idents.get("P"), {}, {}, First);
+  Duplicate->startDuplicateDefinitionForComparison();
+  EXPECT_EQ(Duplicate, Duplicate->getPrimaryContext());
+  Duplicate->mergeDuplicateDefinitionWithCommon(First);
+  EXPECT_EQ(First, Duplicate->getPrimaryContext());
+}
+
+TEST(Decl, PrimaryContextAfterEnumDefinitionDemotion) {
+  auto AST = tooling::buildASTFromCodeWithArgs("enum E; enum E { Value };", {},
+                                               "input.c");
+  ASSERT_NE(nullptr, AST);
+  ASTContext &Ctx = AST->getASTContext();
+  auto *Forward = const_cast<EnumDecl *>(selectFirst<EnumDecl>(
+      "e",
+      match(enumDecl(hasName("E"), unless(isDefinition())).bind("e"), Ctx)));
+  ASSERT_NE(nullptr, Forward);
+  auto *Definition = Forward->getDefinition();
+  ASSERT_NE(nullptr, Definition);
+  EXPECT_EQ(Definition, Forward->getPrimaryContext());
+  Definition->demoteThisDefinitionToDeclaration();
+  EXPECT_EQ(Forward, Forward->getPrimaryContext());
+}
+
+TEST(Decl, PrimaryContextAfterObjCInterfaceDuplicateDefinition) {
+  auto AST = tooling::buildASTFromCodeWithArgs("@interface I @end",
+                                               {"-x", "objective-c"});
+  ASSERT_NE(nullptr, AST);
+  ASTContext &Ctx = AST->getASTContext();
+  auto *First = const_cast<ObjCInterfaceDecl *>(selectFirst<ObjCInterfaceDecl>(
+      "i", match(objcInterfaceDecl(hasName("I")).bind("i"), Ctx)));
+  ASSERT_NE(nullptr, First);
+  auto *Duplicate =
+      ObjCInterfaceDecl::Create(Ctx, Ctx.getTranslationUnitDecl(), {},
+                                &Ctx.Idents.get("I"), nullptr, First);
+  Duplicate->startDuplicateDefinitionForComparison();
+  EXPECT_EQ(Duplicate, Duplicate->getPrimaryContext());
+  Duplicate->mergeDuplicateDefinitionWithCommon(First);
+  EXPECT_EQ(First, Duplicate->getPrimaryContext());
+}
+
 TEST(Decl, CleansUpAPValues) {
   MatchFinder Finder;
   std::unique_ptr<FrontendActionFactory> Factory(
