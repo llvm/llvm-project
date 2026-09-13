@@ -1,0 +1,61 @@
+# RUN: %python %s > %t.mir
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage %t.mir -o %t.s
+# RUN: FileCheck %s --check-prefix=ASM < %t.s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa \
+# RUN:   -start-before=amdgpu-resource-usage -filetype=obj %t.mir -o %t.o
+# RUN: llvm-readobj --notes %t.o | FileCheck %s --check-prefix=META
+
+# This acyclic graph has 64 functions, each with a 16-byte final frame.
+# Every function calls the next two functions, so its private-size expression
+# shares subexpressions along exponentially many paths. The longest call chain
+# visits all 64 functions and requires exactly 1024 bytes. Exercise real kernel
+# descriptor and metadata emission through both the assembly and object paths.
+# ASM-LABEL: .amdhsa_kernel kernel
+# ASM:       .amdhsa_private_segment_fixed_size 1024
+# ASM:       .amdhsa_uses_dynamic_stack 0
+# META:      .name: kernel
+# META:      .private_segment_fixed_size: 1024
+# META:      .uses_dynamic_stack: false
+
+COUNT = 64
+
+print('--- |')
+print('  target triple = "amdgpu9.00-amd-amdhsa"')
+for i in range(COUNT):
+    print(f'  define hidden void @f{i}() norecurse {{ ret void }}')
+print('  define amdgpu_kernel void @kernel() norecurse { ret void }')
+print('...')
+
+for i in range(COUNT):
+    callees = range(i + 1, min(i + 3, COUNT))
+    print('---')
+    print(f'name: f{i}')
+    print('tracksRegLiveness: true')
+    print('frameInfo:')
+    print('  stackSize: 16')
+    if callees:
+        print('  hasCalls: true')
+        print('  maxCallFrameSize: 0')
+    print('body: |')
+    print('  bb.0:')
+    for callee in callees:
+        print('    dead $sgpr30_sgpr31 = SI_CALL '
+              f'undef $sgpr4_sgpr5, @f{callee}, csr_amdgpu')
+    print('    S_ENDPGM 0')
+    print('...')
+
+print('''---
+name: kernel
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+frameInfo:
+  hasCalls: true
+  maxCallFrameSize: 0
+body: |
+  bb.0:
+    dead $sgpr30_sgpr31 = SI_CALL undef $sgpr4_sgpr5, @f0, csr_amdgpu
+    S_ENDPGM 0
+...
+''')
