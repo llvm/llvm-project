@@ -89,6 +89,10 @@ class rcu_domain_impl {
   // flag used for waking up writer threads waiting for all reader threads' quiescent state
   std::atomic<bool> grace_period_waiting_flag_ = false;
 
+  // stage 0 queue is thread local. In case a thread dies with non-empty list in stage 0,
+  // those nodes will be move into the orphaned_stage0_ on destruction
+  rcu_atomic_list_view retired_queue_orphaned_stage0_;
+
   using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>;
 
   // these two queues do not need extra synchronization
@@ -103,6 +107,7 @@ class rcu_domain_impl {
     per_thread_retired_queue_stage0::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
       working_queue.splice_back(stage0_list);
     });
+    working_queue.splice_back(retired_queue_orphaned_stage0_);
 
     // Flip the global phase
     auto old_phase = global_reader_phase_.fetch_xor(reader_states::grace_period_phase_mask, std::memory_order_relaxed);
@@ -130,6 +135,10 @@ class rcu_domain_impl {
       }
     });
     return any_ongoing;
+  }
+
+  void move_to_orphan_list_on_destruction(rcu_atomic_list_view& stage0_to_be_destroyed) noexcept {
+    retired_queue_orphaned_stage0_.splice_front(stage0_to_be_destroyed);
   }
 
 public:
@@ -160,7 +169,8 @@ public:
   }
 
   void retire(__rcu_node* node) noexcept {
-    rcu_atomic_list_view& stage0_queue = per_thread_retired_queue_stage0::get_current_thread_instance();
+    rcu_atomic_list_view& stage0_queue = per_thread_retired_queue_stage0::get_current_thread_instance(
+        function_ref(std::cw<&rcu_domain_impl::move_to_orphan_list_on_destruction>, this));
     stage0_queue.push_front(node);
   }
 
