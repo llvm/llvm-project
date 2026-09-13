@@ -17,10 +17,10 @@
 #include "hdr/func/malloc.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/struct_dirent.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
-#include "src/__support/libc_errno.h"
 #include "src/__support/CPP/vector.h"
+#include "src/__support/common.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 #include "src/dirent/closedir.h"
 #include "src/dirent/opendir.h"
 #include "src/dirent/readdir.h"
@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(int, scandir,
   }
 
   int saved_errno = 0;
-  LIBC_NAMESPACE::cpp::vector<struct dirent*> entries;
+  LIBC_NAMESPACE::cpp::vector<struct dirent *> entries;
 
   while (true) {
     libc_errno = 0;
@@ -58,7 +58,8 @@ LLVM_LIBC_FUNCTION(int, scandir,
 
     // struct dirent contains an equivalent of flexible array memeber we
     // allocate with malloc and use d_reclen as size.
-    struct dirent *new_entry = static_cast<struct dirent*>(::malloc(entry->d_reclen));
+    struct dirent *new_entry =
+        static_cast<struct dirent *>(::malloc(entry->d_reclen));
     if (new_entry == nullptr) {
       saved_errno = ENOMEM;
     }
@@ -75,7 +76,7 @@ LLVM_LIBC_FUNCTION(int, scandir,
   // POSIX-defined error codes for scandir. So we ignore closedir's errno.
   LIBC_NAMESPACE::closedir(dir_fd);
 
-  struct dirent **result = static_cast<struct dirent**>(
+  struct dirent **result = static_cast<struct dirent **>(
       ::malloc(entries.size() * sizeof(struct dirent *)));
 
   if (result == nullptr) {
@@ -83,7 +84,7 @@ LLVM_LIBC_FUNCTION(int, scandir,
   }
 
   if (saved_errno != 0) {
-    for (struct dirent *entry: entries) {
+    for (struct dirent *entry : entries) {
       ::free(entry);
     }
     libc_errno = saved_errno;
@@ -96,7 +97,8 @@ LLVM_LIBC_FUNCTION(int, scandir,
       auto right = static_cast<const struct dirent **>(const_cast<void *>(b));
       return compare(left, right);
     };
-    internal::unstable_sort(entries.data(), entries.size(), sizeof(struct dirent*), cmp_fn);
+    internal::unstable_sort(entries.data(), entries.size(),
+                            sizeof(struct dirent *), cmp_fn);
   }
 
   for (size_t i = 0; i < entries.size(); ++i) {

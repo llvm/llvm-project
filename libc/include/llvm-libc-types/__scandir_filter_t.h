@@ -18,4 +18,4 @@
 
 typedef int (*__scandir_filter_t)(const struct dirent *);
 
-#endif  // LLVM_LIBC_TYPES___SCANDIR_FILTER_H
+#endif // LLVM_LIBC_TYPES___SCANDIR_FILTER_H
