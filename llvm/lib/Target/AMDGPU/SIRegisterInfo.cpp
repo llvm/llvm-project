@@ -468,8 +468,8 @@ const uint32_t *SIRegisterInfo::getNoPreservedMask() const {
   return CSR_AMDGPU_NoRegs_RegMask;
 }
 
-bool SIRegisterInfo::isChainScratchRegister(Register VGPR) {
-  return VGPR >= AMDGPU::VGPR0 && VGPR < AMDGPU::VGPR8;
+bool SIRegisterInfo::isChainScratchRegister(Register Reg) {
+  return Reg >= AMDGPU::VGPR0 && Reg < AMDGPU::VGPR8;
 }
 
 const TargetRegisterClass *

@@ -2,10 +2,12 @@
 ; RUN: llc -mtriple=amdgpu9.06-amd-amdhsa < %s | FileCheck -check-prefix=GFX906 %s
 ; RUN: llc -mtriple=amdgpu9.08-amd-amdhsa < %s | FileCheck -check-prefix=GFX908 %s
 
-; Due to high register pressure, regalloc would split the liverange of wwm VGPR register used for SGPR spills
-; and introduce a copy. The copy should be of whole-wave with exec mask manipulation around it.
-; FIXME: The destination register involved in the whole-wave copy should be considered for preserving all the lanes
-; with a spill/restore at function prolog/epilog. The copy might otherwise clobber its inactive lanes unwantedly.
+; Due to high register pressure, regalloc would split the live range of a WWM
+; VGPR used for SGPR spills and introduce a copy. The copy should be whole-wave
+; with EXEC mask manipulation around it.
+; The destination register involved in the whole-wave copy must preserve all
+; lanes with a spill/restore at function prolog/epilog. The copy might otherwise
+; clobber its inactive lanes.
 define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 ; GFX906-LABEL: preserve_wwm_copy_dstreg:
 ; GFX906:       ; %bb.0:
@@ -829,4 +831,3 @@ define void @preserve_wwm_copy_dstreg(ptr %parg0, ptr %parg1, ptr %parg2) #0 {
 declare void @foo()
 
 attributes #0 = { nounwind "amdgpu-num-vgpr"="42" "amdgpu-num-sgpr"="40"}
-
