@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "hdr/signal_macros.h"
-#include "src/__support/FPUtil/float128.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/float128.h"
 #include "src/__support/uint128.h"
 #include "src/math/nanf128.h"
 #include "test/UnitTest/FEnvSafeTest.h"

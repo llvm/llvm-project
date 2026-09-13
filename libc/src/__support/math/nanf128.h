@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_NANF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_NANF128_H
 
-#include "src/__support/libc_errno.h"
 #include "src/__support/FPUtil/float128.h"
+#include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/str_to_float.h"
 
