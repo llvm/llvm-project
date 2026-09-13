@@ -98,6 +98,10 @@ LLVM_ABI void computeValueLLTs(const DataLayout &DL, Type &Ty,
 /// ExtractTypeInfo - Returns the type info, possibly bitcast, encoded in V.
 LLVM_ABI GlobalValue *ExtractTypeInfo(Value *V);
 
+/// Return true if landingpad result type \p Ty is a struct of an exception
+/// pointer (pointer or integer) and an integer selector, the only lowerable form.
+LLVM_ABI bool isExceptionPointerAndSelectorType(Type *Ty);
+
 /// getFCmpCondCode - Return the ISD condition code corresponding to
 /// the given LLVM IR floating-point condition code.  This includes
 /// consideration of global floating-point math flags.
