@@ -6845,6 +6845,22 @@ static void buildBufferLoad(unsigned Opc, Register LoadDstReg, Register RSrc,
       .addMemOperand(MMO);
 }
 
+static void buildTFEBufferLoad(unsigned Opc, ArrayRef<Register> ValueDsts,
+                               Register StatusDst, Register RSrc,
+                               Register VIndex, Register VOffset,
+                               Register SOffset, unsigned ImmOffset,
+                               unsigned Format, unsigned AuxiliaryData,
+                               MachineMemOperand *MMO, bool IsTyped,
+                               bool HasVIndex, MachineIRBuilder &B) {
+  LLT LoadTy = LLT::fixed_vector(ValueDsts.size() + 1, LLT::integer(32));
+  Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
+  buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
+                  Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
+  SmallVector<Register, 5> Unmerge(ValueDsts);
+  Unmerge.push_back(StatusDst);
+  B.buildUnmerge(Unmerge, LoadDstReg);
+}
+
 bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                                              LegalizerHelper &Helper,
                                              bool IsFormat,
@@ -6931,6 +6947,17 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     return true;
   }
 
+  if (!IsTyped && IsD16 && IsTFE && !ST.hasBufferTFEFormatD16()) {
+    const Function &Fn = B.getMF().getFunction();
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "TFE D16 format buffer load is not supported on this GPU",
+        MI.getDebugLoc()));
+    B.buildUndef(Dst);
+    B.buildUndef(StatusDst);
+    MI.eraseFromParent();
+    return true;
+  }
+
   std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
 
   unsigned Opc;
@@ -6943,9 +6970,8 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
                   AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT;
   } else if (IsFormat) {
     if (IsD16) {
-      if (IsTFE)
-        return false;
-      Opc = AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16;
+      Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE
+                  : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16;
     } else {
       Opc = IsTFE ? AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE
                   : AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT;
@@ -6967,33 +6993,61 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
     }
   }
 
-  if (IsTFE) {
-    unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
-    unsigned NumLoadDWords = NumValueDWords + 1;
-    LLT LoadTy = LLT::fixed_vector(NumLoadDWords, I32);
-    Register LoadDstReg = B.getMRI()->createGenericVirtualRegister(LoadTy);
-    buildBufferLoad(Opc, LoadDstReg, RSrc, VIndex, VOffset, SOffset, ImmOffset,
-                    Format, AuxiliaryData, MMO, IsTyped, HasVIndex, B);
-    bool IsFloat = Ty.getScalarType().isFloat();
-    LLT DstIntTy =
-        IsFloat ? Ty.changeElementType(LLT::integer(EltTy.getSizeInBits()))
-                : Ty;
+  if (IsTFE && IsD16 && Ty.isVector()) {
+    // Value dwords need not cover Ty exactly: v3i16 needs 2 dwords for 48 bits.
+    const unsigned NumElts = Ty.getNumElements();
+    const unsigned NumValueDWords = Unpacked ? NumElts : divideCeil(NumElts, 2);
+
+    SmallVector<Register, 4> ValueDWords;
+    for (unsigned I = 0; I != NumValueDWords; ++I)
+      ValueDWords.push_back(MRI.createGenericVirtualRegister(I32));
+    buildTFEBufferLoad(Opc, ValueDWords, StatusDst, RSrc, VIndex, VOffset,
+                       SOffset, ImmOffset, Format, AuxiliaryData, MMO, IsTyped,
+                       HasVIndex, B);
+
+    if (Unpacked) {
+      for (Register &R : ValueDWords)
+        R = B.buildTrunc(EltTy, R).getReg(0);
+      B.buildMergeLikeInstr(Dst, ValueDWords);
+    } else {
+      Register Merged =
+          NumValueDWords == 1
+              ? ValueDWords[0]
+              : B.buildMergeLikeInstr(LLT::fixed_vector(NumValueDWords, I32),
+                                      ValueDWords)
+                    .getReg(0);
+      LLT PackedTy = LLT::fixed_vector(NumValueDWords * 2, EltTy);
+      if (PackedTy == Ty) {
+        B.buildBitcast(Dst, Merged);
+      } else {
+        Register Packed = B.buildBitcast(PackedTy, Merged).getReg(0);
+        B.buildDeleteTrailingVectorElements(Dst, Packed);
+      }
+    }
+  } else if (IsTFE) {
+    const unsigned NumValueDWords = divideCeil(Ty.getSizeInBits(), 32);
     Register DstInt =
-        IsFloat ? B.getMRI()->createGenericVirtualRegister(DstIntTy) : Dst;
+        EltTy.isFloat() ? MRI.createGenericVirtualRegister(Ty.changeElementType(
+                              LLT::integer(EltTy.getSizeInBits())))
+                        : Dst;
     if (MemTy.getSizeInBits() < 32) {
-      Register ExtDst = B.getMRI()->createGenericVirtualRegister(I32);
-      B.buildUnmerge({ExtDst, StatusDst}, LoadDstReg);
+      Register ExtDst = MRI.createGenericVirtualRegister(I32);
+      buildTFEBufferLoad(Opc, ExtDst, StatusDst, RSrc, VIndex, VOffset, SOffset,
+                         ImmOffset, Format, AuxiliaryData, MMO, IsTyped,
+                         HasVIndex, B);
       B.buildTrunc(DstInt, ExtDst);
     } else if (NumValueDWords == 1) {
-      B.buildUnmerge({DstInt, StatusDst}, LoadDstReg);
+      buildTFEBufferLoad(Opc, DstInt, StatusDst, RSrc, VIndex, VOffset, SOffset,
+                         ImmOffset, Format, AuxiliaryData, MMO, IsTyped,
+                         HasVIndex, B);
     } else {
-      SmallVector<Register, 5> LoadElts;
+      SmallVector<Register, 4> ValueDWords;
       for (unsigned I = 0; I != NumValueDWords; ++I)
-        LoadElts.push_back(B.getMRI()->createGenericVirtualRegister(I32));
-      LoadElts.push_back(StatusDst);
-      B.buildUnmerge(LoadElts, LoadDstReg);
-      LoadElts.truncate(NumValueDWords);
-      B.buildMergeLikeInstr(DstInt, LoadElts);
+        ValueDWords.push_back(MRI.createGenericVirtualRegister(I32));
+      buildTFEBufferLoad(Opc, ValueDWords, StatusDst, RSrc, VIndex, VOffset,
+                         SOffset, ImmOffset, Format, AuxiliaryData, MMO,
+                         IsTyped, HasVIndex, B);
+      B.buildMergeLikeInstr(DstInt, ValueDWords);
     }
     if (DstInt != Dst)
       B.buildBitcast(Dst, DstInt);
