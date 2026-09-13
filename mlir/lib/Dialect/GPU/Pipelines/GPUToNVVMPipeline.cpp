@@ -30,6 +30,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/StringExtras.h"
 
 using namespace mlir;
 
@@ -73,6 +74,14 @@ void buildGpuPassPipeline(OpPassManager &pm,
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
   opt.allowPatternRollback = options.allowPatternRollback;
+  // redux.sync exists from sm_80, and the chip this pipeline serializes for is
+  // the only thing that decides whether it may be used, so there is no reason
+  // to ask for it as an option of its own.
+  StringRef chip(options.cubinChip);
+  unsigned smVersion = 0;
+  if (chip.consume_front("sm_"))
+    chip.take_while(llvm::isDigit).getAsInteger(10, smVersion);
+  opt.hasRedux = smVersion >= 80;
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps(opt));
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
