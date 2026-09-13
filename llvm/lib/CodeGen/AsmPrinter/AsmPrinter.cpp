@@ -1343,6 +1343,12 @@ static bool emitDebugValueComment(const MachineInstr *MI, AsmPrinter &AP) {
       OS << "!target-index(" << Op.getIndex() << "," << Op.getOffset() << ")";
       break;
     }
+    case MachineOperand::MO_GlobalAddress: {
+      Op.getGlobal()->printAsOperand(OS, /*PrintType=*/false);
+      if (Op.getOffset())
+        OS << '+' << Op.getOffset();
+      break;
+    }
     case MachineOperand::MO_Register:
     case MachineOperand::MO_FrameIndex: {
       Register Reg;
