@@ -339,4 +339,5 @@ def AMDGPURegBankCombiner : GICombiner<
    d16_load, smax_to_minmax3, smin_to_minmax3, umax_to_minmax3,
    umin_to_minmax3, fmax_to_minmax3, fmin_to_minmax3, fmaximum_to_minmax3,
    fminimum_to_minmax3, fmax_ieee_to_minmax3, fmin_ieee_to_minmax3]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }
