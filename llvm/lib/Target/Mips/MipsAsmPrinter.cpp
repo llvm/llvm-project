@@ -730,14 +730,33 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     // around it by re-initializing the PIC state here.
     TS.setPic(OutContext.getObjectFileInfo()->isPositionIndependent());
 
-    // Try to get target-features from the first function.
+    // Try to get target-features from the first function definition. A module
+    // can start with declarations, which carry no target attributes, so
+    // reading them off M.begin() unconditionally selects the default subtarget
+    // for such a module. That is most visible under LTO, where the target
+    // machine has no feature string of its own and the layout of the merged
+    // module decides which ABI flags are emitted. Fall back to the first
+    // function if the module has no definitions at all.
+    const Function *F = M.empty() ? nullptr : &*M.begin();
+    for (const Function &Fn : M) {
+      if (!Fn.isDeclaration()) {
+        F = &Fn;
+        break;
+      }
+    }
+
+    // A module with no functions at all tells us nothing about the ABI it was
+    // built for. Emitting the default subtarget's FP ABI would be a guess, and
+    // a linker has to reject it when the rest of the link disagrees, so leave
+    // the FP ABI unset for those. LTO produces such modules routinely.
+    const bool HaveFpABI = !M.empty() || !TM.getTargetFeatureString().empty();
+
     StringRef FS = TM.getTargetFeatureString();
-    Module::iterator F = M.begin();
-    if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
+    if (FS.empty() && F && F->hasFnAttribute("target-features"))
       FS = F->getFnAttribute("target-features").getValueAsString();
 
     std::string strFS = FS.str();
-    if (M.size() && F->getFnAttribute("use-soft-float").getValueAsBool())
+    if (F && F->getFnAttribute("use-soft-float").getValueAsBool())
       strFS += strFS.empty() ? "+soft-float" : ",+soft-float";
 
     // Compute MIPS architecture attributes based on the default subtarget
@@ -774,6 +793,10 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     // TODO: handle O64 ABI
 
     TS.updateABIInfo(STI);
+
+    if (!HaveFpABI)
+      TS.getABIFlagsSection().setFpABI(MipsABIFlagsSection::FpABIKind::ANY,
+                                       ABI.IsO32());
 
     // We should always emit a '.module fp=...' but binutils 2.24 does not
     // accept it. We therefore emit it when it contradicts the ABI defaults
