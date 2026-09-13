@@ -367,9 +367,9 @@ public:
   /// Add a dynamic relocation at the given /p Offset.
   void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
                             uint64_t Addend, uint64_t Value = 0,
-                            bool IsRELR = false) {
+                            bool IsRELR = false, bool IsJmpRel = false) {
     addDynamicRelocation(
-        Relocation{Offset, Symbol, Type, Addend, Value, IsRELR});
+        Relocation{Offset, Symbol, Type, Addend, Value, IsRELR, IsJmpRel});
   }
 
   void addDynamicRelocation(const Relocation &Reloc) {

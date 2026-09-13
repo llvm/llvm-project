@@ -1669,9 +1669,12 @@ Error RewriteInstance::updateRtInitReloc() {
       if (BF->getAddress() + Reloc->Addend != BC->StartFunctionAddress)
         return createStringError(std::errc::not_supported,
                                  "inconsistent .init_array dynamic relocation");
+      // This .init_array relocation is expected to come from DT_RELA.
+      // Preserve its origin defensively when constructing the replacement.
       InitArraySection->addDynamicRelocation(Relocation{
           /*Offset*/ 0, /*Symbol*/ nullptr, /*Type*/ Relocation::getAbs64(),
-          /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0});
+          /*Addend*/ RT->getRuntimeStartAddress(), /*Value*/ 0,
+          /*IsRELR=*/false, /*IsJmpRel=*/Reloc->isJmpRel()});
     }
   }
   // Update the static relocation by adding a pending relocation which will get
@@ -3075,9 +3078,6 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
              << " : + 0x" << Twine::utohexstr(Addend) << '\n'
     );
 
-    if (IsJmpRel)
-      IsJmpRelocation[RType] = true;
-
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
 
@@ -3093,7 +3093,8 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       handleRelativeDynamicRelocation(Rel.getOffset(), ReferencedAddress);
     }
 
-    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
+    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend,
+                             /*Value=*/0, /*IsRELR=*/false, IsJmpRel);
   }
 }
 
@@ -6349,10 +6350,10 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         NewRelA.r_offset = RelOffset;
         NewRelA.r_addend = Addend;
 
-        const bool IsJmpRel = IsJmpRelocation.contains(Rel.Type);
-        uint64_t &Offset = IsJmpRel ? RelPltOffset : RelDynOffset;
+        const bool IsPltJmpRel = Rel.isJmpRel();
+        uint64_t &Offset = IsPltJmpRel ? RelPltOffset : RelDynOffset;
         const uint64_t &EndOffset =
-            IsJmpRel ? RelPltEndOffset : RelDynEndOffset;
+            IsPltJmpRel ? RelPltEndOffset : RelDynEndOffset;
         if (!Offset || !EndOffset) {
           BC->errs() << "BOLT-ERROR: Invalid offsets for dynamic relocation\n";
           exit(1);

@@ -543,9 +543,6 @@ private:
   std::optional<uint64_t> PLTRelocationsAddress;
   uint64_t PLTRelocationsSize{0};
 
-  /// True if relocation of specified type came from .rela.plt
-  DenseMap<uint64_t, bool> IsJmpRelocation;
-
   /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
   /// is filled and used only with the relocations-related symbols.
   std::unordered_map<const MCSymbol *, uint32_t> SymbolIndex;

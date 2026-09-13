@@ -1,0 +1,192 @@
+## IRELATIVE relocations can occur in both DT_RELA and DT_JMPREL.
+## Preserve their input table even when data reordering moves the relocation
+## site. Both entries deliberately use symbol index zero and the same resolver.
+##
+## RUN: split-file %s %t
+## RUN: yaml2obj %t/input.yaml -o %t/input.so
+## RUN: llvm-readelf -r %t/input.so | FileCheck %s --check-prefix=INPUT
+## RUN: llvm-bolt %t/input.so -o %t/output.so --lite=0
+## RUN: llvm-readelf -rs %t/output.so > %t/output.txt
+## RUN: FileCheck %s --input-file=%t/output.txt --check-prefixes=CHECK,FIXED
+## RUN: FileCheck %s --input-file=%t/output.txt --check-prefix=ADDR
+## RUN: llvm-bolt %t/input.so -o %t/moved.so --lite=0 \
+## RUN:   --reorder-data=.data --data=%t/profile.fdata
+## RUN: llvm-readelf -rs %t/moved.so > %t/moved.txt
+## RUN: FileCheck %s --input-file=%t/moved.txt --check-prefixes=CHECK,MOVED
+## RUN: FileCheck %s --input-file=%t/moved.txt --check-prefixes=ADDR,MOVED-ADDR
+
+# INPUT:      Relocation section '.rela.dyn' {{.*}} contains 1 entries:
+# INPUT-NEXT: {{.*}}Offset
+# INPUT-NEXT: {{^0*3000}} {{0*25}} R_X86_64_IRELATIVE 1008{{$}}
+# INPUT:      Relocation section '.rela.plt' {{.*}} contains 1 entries:
+# INPUT-NEXT: {{.*}}Offset
+# INPUT-NEXT: {{^0*3008}} {{0*25}} R_X86_64_IRELATIVE 1008{{$}}
+
+## Check table membership, the relocated data symbol, and the updated resolver.
+# CHECK:      Relocation section '.rela.dyn' {{.*}} contains 1 entries:
+# CHECK-NEXT: {{.*}}Offset
+# CHECK-NEXT: {{^0*3000}} {{0*25}} R_X86_64_IRELATIVE [[#%x,RES:]]{{$}}
+# CHECK:      Relocation section '.rela.plt' {{.*}} contains 1 entries:
+# CHECK-NEXT: {{.*}}Offset
+# FIXED-NEXT: {{^0*3008}} {{0*25}} R_X86_64_IRELATIVE [[#RES]]{{$}}
+# MOVED-NEXT: {{^}}[[#%x,SITE:]] {{0*25}} R_X86_64_IRELATIVE [[#RES]]{{$}}
+# CHECK:      Symbol table '.symtab'
+# CHECK: {{^ *[0-9]+: +0*}}[[#RES]] 8 FUNC {{.*}} resolver{{$}}
+# CHECK: {{^ *[0-9]+: +0*3000}} 8 OBJECT {{.*}} ptr_dyn{{$}}
+# FIXED: {{^ *[0-9]+: +0*3008}} 8 OBJECT {{.*}} ptr_plt{{$}}
+# MOVED: {{^ *[0-9]+: +0*}}[[#SITE]] 8 OBJECT {{.*}} ptr_plt{{$}}
+
+## Check movement separately: CHECK-NOT cannot reject text consumed by a
+## positive match. With no following positive checks, these NOT patterns cover
+## the entire symbol table and only reject the old addresses of these symbols.
+# ADDR:           Symbol table '.symtab'
+# ADDR-NOT:       {{^ *[0-9]+: +0*1008 +.* resolver$}}
+# MOVED-ADDR-NOT: {{^ *[0-9]+: +0*3008 +.* ptr_plt$}}
+
+#--- profile.fdata
+4 entry 0 4 ptr_plt 0 100
+#--- input.yaml
+## .text contains:
+## entry:          mov ptr_plt(%rip), %rax; ret
+## resolver:       lea implementation(%rip), %rax; ret
+## implementation: ret
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W, PF_X ]
+    FirstSec: .dynsym
+    LastSec:  .data
+    VAddr:    0
+    Offset:   0
+    Align:    0x1000
+  - Type:     PT_DYNAMIC
+    Flags:    [ PF_R, PF_W ]
+    FirstSec: .dynamic
+    LastSec:  .dynamic
+    VAddr:    0x2000
+    Align:    8
+Sections:
+  - Name:    .dynsym
+    Type:    SHT_DYNSYM
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x200
+    Offset:  0x200
+    Link:    .dynstr
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x230
+    Offset:  0x230
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x240
+    Offset:  0x240
+    Link:    .dynsym
+    Relocations:
+      - Offset: 0x3000
+        Type:   R_X86_64_IRELATIVE
+        Addend: 0x1008
+  - Name:    .rela.plt
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x258
+    Offset:  0x258
+    Link:    .dynsym
+    Relocations:
+      - Offset: 0x3008
+        Type:   R_X86_64_IRELATIVE
+        Addend: 0x1008
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Offset:  0x1000
+    Content: 488B0501200000C3488D0501000000C3C3
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x2000
+    Offset:  0x2000
+    Link:    .dynstr
+    Entries:
+      - Tag: DT_RELA
+        Value: 0x240
+      - Tag: DT_RELASZ
+        Value: 24
+      - Tag: DT_RELAENT
+        Value: 24
+      - Tag: DT_JMPREL
+        Value: 0x258
+      - Tag: DT_PLTRELSZ
+        Value: 24
+      - Tag: DT_PLTREL
+        Value: 7
+      - Tag: DT_SYMTAB
+        Value: 0x200
+      - Tag: DT_SYMENT
+        Value: 24
+      - Tag: DT_STRTAB
+        Value: 0x230
+      - Tag: DT_STRSZ
+        Value: 7
+      - Tag: DT_NULL
+        Value: 0
+  - Name:    .data
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x3000
+    Offset:  0x3000
+    Content: '00000000000000000000000000000000'
+  - Name: .rela.text
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text
+    Relocations:
+      - Offset: 0x1003
+        Symbol: ptr_plt
+        Type:   R_X86_64_PC32
+        Addend: -4
+Symbols:
+  - Name: entry
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x1000
+    Size: 8
+  - Name: resolver
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x1008
+    Size: 8
+  - Name: implementation
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x1010
+    Size: 1
+  - Name: ptr_dyn
+    Type: STT_OBJECT
+    Binding: STB_GLOBAL
+    Section: .data
+    Value: 0x3000
+    Size: 8
+  - Name: ptr_plt
+    Type: STT_OBJECT
+    Binding: STB_GLOBAL
+    Section: .data
+    Value: 0x3008
+    Size: 8
+DynamicSymbols:
+  - Name: entry
+    Type: STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Value: 0x1000
+    Size: 8
