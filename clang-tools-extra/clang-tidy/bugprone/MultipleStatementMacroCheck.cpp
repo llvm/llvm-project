@@ -57,10 +57,11 @@ getExpansionRanges(SourceLocation Loc, const MatchFinder::MatchResult &Result) {
 void MultipleStatementMacroCheck::registerMatchers(MatchFinder *Finder) {
   const auto Inner = expr(isInMacro(), unless(compoundStmt())).bind("inner");
   Finder->addMatcher(
-      stmt(anyOf(ifStmt(hasThen(Inner)), ifStmt(hasElse(Inner)).bind("else"),
-                 whileStmt(hasBody(Inner)), forStmt(hasBody(Inner))))
+      ifStmt(anyOf(hasThen(Inner), allOf(hasElse(Inner), stmt().bind("else"))))
           .bind("outer"),
       this);
+  Finder->addMatcher(whileStmt(hasBody(Inner)).bind("outer"), this);
+  Finder->addMatcher(forStmt(hasBody(Inner)).bind("outer"), this);
 }
 
 void MultipleStatementMacroCheck::check(
