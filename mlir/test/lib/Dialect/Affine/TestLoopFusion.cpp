@@ -52,6 +52,11 @@ struct TestLoopFusion
       *this, "test-loop-fusion-utilities",
       llvm::cl::desc("Enable testing of loop fusion transformation utilities"),
       llvm::cl::init(false)};
+
+  Option<bool> clTestFusionComputeCost{
+      *this, "test-fusion-compute-cost",
+      llvm::cl::desc("Enable testing of the fusion compute cost"),
+      llvm::cl::init(false)};
 };
 
 } // namespace
@@ -154,6 +159,30 @@ static bool testLoopFusionUtilities(AffineForOp forOpA, AffineForOp forOpB,
   return false;
 }
 
+static LogicalResult testFusionComputeCost(AffineForOp srcForOp,
+                                           AffineForOp dstForOp) {
+  LoopNestStats srcStats;
+  LoopNestStats dstStats;
+  if (!getLoopNestStats(srcForOp, &srcStats) ||
+      !getLoopNestStats(dstForOp, &dstStats))
+    return failure();
+
+  ComputationSliceState slice;
+  slice.ivs.push_back(srcForOp.getInductionVar());
+  slice.lbs.resize(1);
+  slice.ubs.resize(1);
+  slice.lbOperands.resize(1);
+  slice.ubOperands.resize(1);
+  slice.insertPoint = dstForOp.getBody()->begin();
+
+  int64_t computeCost;
+  if (!getFusionComputeCost(srcForOp, srcStats, dstForOp, dstStats, slice,
+                            &computeCost))
+    return failure();
+  dstForOp->emitRemark() << "fusion compute cost: " << computeCost;
+  return success();
+}
+
 using LoopFunc = function_ref<bool(AffineForOp, AffineForOp, unsigned, unsigned,
                                    unsigned, unsigned)>;
 
@@ -197,6 +226,14 @@ void TestLoopFusion::runOnOperation() {
 
   // Gather all AffineForOps by loop depth.
   gatherLoops(getOperation(), depthToLoops);
+
+  if (clTestFusionComputeCost) {
+    if (depthToLoops.empty() || depthToLoops.front().size() != 2 ||
+        failed(testFusionComputeCost(depthToLoops.front()[0],
+                                     depthToLoops.front()[1])))
+      return signalPassFailure();
+    return;
+  }
 
   // Run tests on all combinations of src/dst loop nests in 'depthToLoops'.
   if (clTestDependenceCheck)
