@@ -179,8 +179,8 @@ static void collectBlocks(PtrView Ptr,
            P.isDereferencable() && !P.isUnknownSizeArray() && !P.isOnePastEnd();
   };
 
-  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isDummy() ||
-      Ptr.isUnknownSizeArray() || Ptr.isOnePastEnd())
+  if (!Ptr.isLive() || Ptr.isZero() || Ptr.isUnknownSizeArray() ||
+      Ptr.isOnePastEnd())
     return;
 
   Blocks.insert(Ptr.Pointee);
