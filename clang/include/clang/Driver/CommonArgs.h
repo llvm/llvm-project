@@ -59,6 +59,11 @@ void claimNoWarnArgs(const llvm::opt::ArgList &Args);
 bool addSanitizerRuntimes(const ToolChain &TC, const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);
 
+bool addHIPRuntimeSanitizerRuntimes(const ToolChain &TC,
+                                    unsigned ActiveOffloadKinds,
+                                    const llvm::opt::ArgList &Args,
+                                    llvm::opt::ArgStringList &CmdArgs);
+
 void linkSanitizerRuntimeDeps(const ToolChain &TC,
                               const llvm::opt::ArgList &Args,
                               llvm::opt::ArgStringList &CmdArgs);

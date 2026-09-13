@@ -881,14 +881,20 @@ void Linux::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
+/// Whether a link with these arguments gets the offloading runtime libraries
+/// appended to it.
+static bool linksOffloadRTLibs(const ArgList &Args) {
+  return Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                      true) &&
+         !Args.hasArg(options::OPT_nostdlib) &&
+         !Args.hasArg(options::OPT_no_hip_rt) && !Args.hasArg(options::OPT_r) &&
+         !Args.hasFlag(options::OPT_foffload_via_llvm,
+                       options::OPT_fno_offload_via_llvm, false);
+}
+
 void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
                              ArgStringList &CmdArgs) const {
-  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
-                    true) ||
-      Args.hasArg(options::OPT_nostdlib) ||
-      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r) ||
-      Args.hasFlag(options::OPT_foffload_via_llvm,
-                   options::OPT_fno_offload_via_llvm, false))
+  if (!linksOffloadRTLibs(Args))
     return;
 
   llvm::SmallVector<std::pair<StringRef, StringRef>> Libraries;
@@ -928,6 +934,10 @@ void Linux::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
     CmdArgs.push_back("-u");
     CmdArgs.push_back("__llvm_profile_offload_register_dynamic_module");
   }
+}
+
+bool Linux::hipRuntimeRequiresAddressSanitizer(const ArgList &Args) const {
+  return linksOffloadRTLibs(Args) && RocmInstallation->hasHIPRuntimeAsan();
 }
 
 void Linux::AddIAMCUIncludeArgs(const ArgList &DriverArgs,
