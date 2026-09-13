@@ -263,12 +263,13 @@ export namespace std {
   using std::signbit _LIBCPP_USING_IF_EXISTS;
 
   // [sf.cmath], mathematical special functions
-#if 0
+
   // [sf.cmath.assoc.laguerre], associated Laguerre polynomials
   using std::assoc_laguerre;
   using std::assoc_laguerref;
   using std::assoc_laguerrel;
 
+#if 0
   // [sf.cmath.assoc.legendre], associated Legendre functions
   using std::assoc_legendre;
   using std::assoc_legendref;

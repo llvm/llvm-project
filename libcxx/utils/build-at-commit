@@ -18,6 +18,7 @@ LIBCXX_REQUIRED_DIRECTORIES = [
     'runtimes',
     'cmake',
     'third-party/benchmark',
+    'third-party/boost-math',
     'libc'
 ]
 

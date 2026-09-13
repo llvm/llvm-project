@@ -693,6 +693,10 @@ function(cxx_link_system_libraries target)
     target_link_libraries(${target} PRIVATE atomic)
   endif()
 
+  if (LIBCXX_HAS_M_LIB)
+    target_link_libraries(${target} PRIVATE m)
+  endif()
+
   if (MINGW)
     target_link_libraries(${target} PRIVATE "${MINGW_LIBRARIES}")
   endif()
@@ -860,6 +864,7 @@ add_custom_target(cxx-test-depends
   COMMENT "Build dependencies required to run the libc++ test suite.")
 
 add_subdirectory(include)
+
 add_subdirectory(src)
 add_subdirectory(utils)
 add_subdirectory(modules)
