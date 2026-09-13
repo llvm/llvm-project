@@ -7,9 +7,86 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "GISelMITest.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/GlobalISel/Combiner.h"
+#include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
+#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+
+namespace {
+
+class TestGIMatchTableExecutor : public Combiner {
+public:
+  TestGIMatchTableExecutor(MachineFunction &MF, const CombinerInfo &CInfo)
+      : Combiner(MF, CInfo, /*VT*/ nullptr) {}
+
+  static const char *getName() { return "test-gimatchtable-executor"; }
+
+  void setupGeneratedPerFunctionState(MachineFunction &MF) override {}
+  bool tryCombineAll(MachineInstr &I) const override { return false; }
+
+  bool runCustomAction(unsigned FnID, const MatcherState &State,
+                       NewMIVector &OutMIs) const override {
+    assert(FnID == 1 && "Expected a valid FnID");
+    MachineInstr &Root = *State.MIs[0];
+    MachineBasicBlock &MBB = *Root.getParent();
+    MachineInstrBuilder MIB =
+        BuildMI(MBB, Root.getIterator(), Root.getDebugLoc(),
+                Root.getMF()->getSubtarget().getInstrInfo()->get(
+                    TargetOpcode::G_SUB))
+            .addDef(Root.getOperand(0).getReg())
+            .addUse(Root.getOperand(1).getReg())
+            .addUse(Root.getOperand(2).getReg());
+    MIB.setMIFlags(MachineInstr::NoSWrap);
+    OutMIs.push_back(MIB);
+    return true;
+  }
+
+  bool run(MachineInstr &Root, MachineIRBuilder &Builder,
+           const uint8_t *MatchTable, const TargetInstrInfo &TII,
+           MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
+           const RegisterBankInfo &RBI) const {
+    MatcherState State(/*MaxRenderers=*/0);
+    State.MIs.push_back(&Root);
+    using PredicateBitset = Bitset<1>;
+    using ComplexMatcherMemFn =
+        ComplexRendererFns (TestGIMatchTableExecutor::*)(MachineOperand &)
+            const;
+    using CustomRendererFn = void (TestGIMatchTableExecutor::*)(
+        MachineInstrBuilder &, const MachineInstr &, int64_t) const;
+    const ExecInfoTy<PredicateBitset, ComplexMatcherMemFn, CustomRendererFn>
+        ExecInfo(nullptr, 0, nullptr, nullptr, nullptr);
+    PredicateBitset AvailableFeatures;
+    return executeMatchTable(*const_cast<TestGIMatchTableExecutor *>(this),
+                             State, ExecInfo, Builder, MatchTable, TII, MRI,
+                             TRI, RBI, AvailableFeatures, nullptr);
+  }
+};
+
+static void appendU16(SmallVectorImpl<uint8_t> &Table, uint16_t Value) {
+  Table.push_back(Value & 0xff);
+  Table.push_back((Value >> 8) & 0xff);
+}
+
+static void appendU32(SmallVectorImpl<uint8_t> &Table, uint32_t Value) {
+  Table.push_back(Value & 0xff);
+  Table.push_back((Value >> 8) & 0xff);
+  Table.push_back((Value >> 16) & 0xff);
+  Table.push_back((Value >> 24) & 0xff);
+}
+
+static CombinerInfo getTestCombinerInfo() {
+  return CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
+                      /*LInfo*/ nullptr, /*OptEnabled*/ true,
+                      /*OptSize*/ false, /*MinSize*/ false);
+}
+
+} // namespace
 
 TEST(GlobalISelLEB128Test, fastDecodeULEB128) {
 #define EXPECT_DECODE_ULEB128_EQ(EXPECTED, VALUE)                              \
@@ -46,4 +123,102 @@ TEST(GlobalISelLEB128Test, fastDecodeULEB128) {
                            "\x80\x80\x80\x80\x80\x80\x80\x80\x80\x01");
 
 #undef EXPECT_DECODE_ULEB128_EQ
+}
+
+TEST_F(AArch64GISelMITest, MatchTableCombinerDropsRootPoisonFlags) {
+  setUp("");
+  if (!TM)
+    GTEST_SKIP();
+
+  Register RootReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  auto Root =
+      B.buildInstr(TargetOpcode::G_ADD, {RootReg}, {Copies[1], Copies[2]});
+  Root->setFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
+
+  CombinerInfo CInfo = getTestCombinerInfo();
+  TestGIMatchTableExecutor Executor(*MF, CInfo);
+  Executor.setupMF(*MF, nullptr);
+
+  SmallVector<uint8_t, 48> MatchTable;
+  auto BuildMI = [&](unsigned InsnID, unsigned Opcode) {
+    MatchTable.push_back(GIR_BuildMI);
+    MatchTable.push_back(InsnID);
+    appendU16(MatchTable, Opcode);
+  };
+  BuildMI(0, TargetOpcode::G_SUB);
+  BuildMI(1, TargetOpcode::G_MUL);
+  MatchTable.push_back(GIR_SetMIFlags);
+  MatchTable.push_back(1); // InsnID
+  appendU32(MatchTable, MachineInstr::NoSWrap);
+  BuildMI(2, TargetOpcode::G_AND);
+  MatchTable.push_back(GIR_CopyMIFlags);
+  MatchTable.push_back(2); // InsnID
+  MatchTable.push_back(0); // OldInsnID
+  BuildMI(3, TargetOpcode::G_OR);
+  MatchTable.push_back(GIR_SetMIFlags);
+  MatchTable.push_back(3); // InsnID
+  appendU32(MatchTable, MachineInstr::NoSWrap);
+  MatchTable.push_back(GIR_UnsetMIFlags);
+  MatchTable.push_back(3); // InsnID
+  appendU32(MatchTable, MachineInstr::NoSWrap);
+  MatchTable.push_back(GIR_Done);
+
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  EXPECT_TRUE(Executor.run(*Root, B, MatchTable.data(), *STI.getInstrInfo(),
+                           *MRI, *STI.getRegisterInfo(),
+                           *STI.getRegBankInfo()));
+
+  SmallDenseMap<unsigned, MachineInstr *, 4> BuiltMIs;
+  for (MachineInstr &MI : *EntryMBB)
+    BuiltMIs.try_emplace(MI.getOpcode(), &MI);
+
+  ASSERT_TRUE(BuiltMIs.contains(TargetOpcode::G_SUB));
+  EXPECT_FALSE(BuiltMIs[TargetOpcode::G_SUB]->getFlag(MachineInstr::NoUWrap));
+  EXPECT_FALSE(BuiltMIs[TargetOpcode::G_SUB]->getFlag(MachineInstr::NoSWrap));
+
+  ASSERT_TRUE(BuiltMIs.contains(TargetOpcode::G_MUL));
+  EXPECT_FALSE(BuiltMIs[TargetOpcode::G_MUL]->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(BuiltMIs[TargetOpcode::G_MUL]->getFlag(MachineInstr::NoSWrap));
+
+  ASSERT_TRUE(BuiltMIs.contains(TargetOpcode::G_AND));
+  EXPECT_TRUE(BuiltMIs[TargetOpcode::G_AND]->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(BuiltMIs[TargetOpcode::G_AND]->getFlag(MachineInstr::NoSWrap));
+
+  ASSERT_TRUE(BuiltMIs.contains(TargetOpcode::G_OR));
+  EXPECT_FALSE(BuiltMIs[TargetOpcode::G_OR]->getFlag(MachineInstr::NoSWrap));
+}
+
+TEST_F(AArch64GISelMITest, MatchTableCustomActionDropsRootPoisonFlags) {
+  setUp("");
+  if (!TM)
+    GTEST_SKIP();
+
+  Register RootReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+  auto Root =
+      B.buildInstr(TargetOpcode::G_ADD, {RootReg}, {Copies[1], Copies[2]});
+  Root->setFlags(MachineInstr::NoUWrap | MachineInstr::NoSWrap);
+
+  CombinerInfo CInfo = getTestCombinerInfo();
+  TestGIMatchTableExecutor Executor(*MF, CInfo);
+  Executor.setupMF(*MF, nullptr);
+
+  SmallVector<uint8_t, 4> MatchTable;
+  MatchTable.push_back(GIR_DoneWithCustomAction);
+  appendU16(MatchTable, 1); // FnID
+
+  const TargetSubtargetInfo &STI = MF->getSubtarget();
+  EXPECT_TRUE(Executor.run(*Root, B, MatchTable.data(), *STI.getInstrInfo(),
+                           *MRI, *STI.getRegisterInfo(),
+                           *STI.getRegBankInfo()));
+
+  MachineInstr *BuiltMI = nullptr;
+  for (MachineInstr &MI : *EntryMBB) {
+    if (MI.getOpcode() == TargetOpcode::G_SUB) {
+      BuiltMI = &MI;
+      break;
+    }
+  }
+  ASSERT_NE(BuiltMI, nullptr);
+  EXPECT_FALSE(BuiltMI->getFlag(MachineInstr::NoUWrap));
+  EXPECT_TRUE(BuiltMI->getFlag(MachineInstr::NoSWrap));
 }
