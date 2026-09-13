@@ -651,26 +651,26 @@ define void @useLEA(ptr readonly %x) {
 ; ENABLE-NEXT:    movzwl (%rdi), %eax
 ; ENABLE-NEXT:    leal -54(%rax), %ecx
 ; ENABLE-NEXT:    cmpl $14, %ecx
-; ENABLE-NEXT:    ja LBB8_3
-; ENABLE-NEXT:  ## %bb.7: ## %lor.lhs.false
+; ENABLE-NEXT:    ja LBB8_4
+; ENABLE-NEXT:  ## %bb.3: ## %lor.lhs.false
 ; ENABLE-NEXT:    movl $24599, %edx ## imm = 0x6017
 ; ENABLE-NEXT:    btl %ecx, %edx
-; ENABLE-NEXT:    jae LBB8_3
+; ENABLE-NEXT:    jae LBB8_4
 ; ENABLE-NEXT:  LBB8_8:
 ; ENABLE-NEXT:    addq $8, %rsp
 ; ENABLE-NEXT:  LBB8_9: ## %cleanup
 ; ENABLE-NEXT:    retq
-; ENABLE-NEXT:  LBB8_3: ## %lor.lhs.false
+; ENABLE-NEXT:  LBB8_4: ## %lor.lhs.false
 ; ENABLE-NEXT:    cmpl $134, %eax
 ; ENABLE-NEXT:    je LBB8_8
-; ENABLE-NEXT:  ## %bb.4: ## %lor.lhs.false
+; ENABLE-NEXT:  ## %bb.5: ## %lor.lhs.false
 ; ENABLE-NEXT:    cmpl $140, %eax
 ; ENABLE-NEXT:    je LBB8_8
-; ENABLE-NEXT:  ## %bb.5: ## %if.end.55
+; ENABLE-NEXT:  ## %bb.6: ## %if.end.55
 ; ENABLE-NEXT:    callq _find_temp_slot_from_address
 ; ENABLE-NEXT:    testq %rax, %rax
 ; ENABLE-NEXT:    je LBB8_8
-; ENABLE-NEXT:  ## %bb.6: ## %if.then.60
+; ENABLE-NEXT:  ## %bb.7: ## %if.then.60
 ; ENABLE-NEXT:    movb $1, 57(%rax)
 ; ENABLE-NEXT:    jmp LBB8_8
 ;
@@ -679,34 +679,34 @@ define void @useLEA(ptr readonly %x) {
 ; DISABLE-NEXT:    pushq %rax
 ; DISABLE-NEXT:    .cfi_def_cfa_offset 16
 ; DISABLE-NEXT:    testq %rdi, %rdi
-; DISABLE-NEXT:    je LBB8_7
+; DISABLE-NEXT:    je LBB8_8
 ; DISABLE-NEXT:  ## %bb.1: ## %if.end
 ; DISABLE-NEXT:    cmpw $66, (%rdi)
-; DISABLE-NEXT:    jne LBB8_7
+; DISABLE-NEXT:    jne LBB8_8
 ; DISABLE-NEXT:  ## %bb.2: ## %lor.lhs.false
 ; DISABLE-NEXT:    movq 8(%rdi), %rdi
 ; DISABLE-NEXT:    movzwl (%rdi), %eax
 ; DISABLE-NEXT:    leal -54(%rax), %ecx
 ; DISABLE-NEXT:    cmpl $14, %ecx
-; DISABLE-NEXT:    ja LBB8_3
-; DISABLE-NEXT:  ## %bb.8: ## %lor.lhs.false
+; DISABLE-NEXT:    ja LBB8_4
+; DISABLE-NEXT:  ## %bb.3: ## %lor.lhs.false
 ; DISABLE-NEXT:    movl $24599, %edx ## imm = 0x6017
 ; DISABLE-NEXT:    btl %ecx, %edx
-; DISABLE-NEXT:    jae LBB8_3
-; DISABLE-NEXT:  LBB8_7: ## %cleanup
+; DISABLE-NEXT:    jae LBB8_4
+; DISABLE-NEXT:  LBB8_8: ## %cleanup
 ; DISABLE-NEXT:    popq %rax
 ; DISABLE-NEXT:    retq
-; DISABLE-NEXT:  LBB8_3: ## %lor.lhs.false
+; DISABLE-NEXT:  LBB8_4: ## %lor.lhs.false
 ; DISABLE-NEXT:    cmpl $134, %eax
-; DISABLE-NEXT:    je LBB8_7
-; DISABLE-NEXT:  ## %bb.4: ## %lor.lhs.false
+; DISABLE-NEXT:    je LBB8_8
+; DISABLE-NEXT:  ## %bb.5: ## %lor.lhs.false
 ; DISABLE-NEXT:    cmpl $140, %eax
-; DISABLE-NEXT:    je LBB8_7
-; DISABLE-NEXT:  ## %bb.5: ## %if.end.55
+; DISABLE-NEXT:    je LBB8_8
+; DISABLE-NEXT:  ## %bb.6: ## %if.end.55
 ; DISABLE-NEXT:    callq _find_temp_slot_from_address
 ; DISABLE-NEXT:    testq %rax, %rax
-; DISABLE-NEXT:    je LBB8_7
-; DISABLE-NEXT:  ## %bb.6: ## %if.then.60
+; DISABLE-NEXT:    je LBB8_8
+; DISABLE-NEXT:  ## %bb.7: ## %if.then.60
 ; DISABLE-NEXT:    movb $1, 57(%rax)
 ; DISABLE-NEXT:    popq %rax
 ; DISABLE-NEXT:    retq

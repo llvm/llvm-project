@@ -108,50 +108,51 @@ define i32 @goo(i32 noundef signext %x) {
 ; CHECK-NEXT:    cmplwi r3, 12
 ; CHECK-NEXT:    stw r31, 60(r1) # 4-byte Folded Spill
 ; CHECK-NEXT:    mr r31, r3
-; CHECK-NEXT:    bgt cr0, L..BB1_7
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    bgt cr0, L..BB1_6
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    li r3, 1
-; CHECK-NEXT:    slw r3, r3, r31
-; CHECK-NEXT:    andi. r4, r3, 5632
+; CHECK-NEXT:    li r4, 1
+; CHECK-NEXT:    slw r4, r4, r31
+; CHECK-NEXT:    andi. r5, r4, 5632
 ; CHECK-NEXT:    bne cr0, L..BB1_4
 ; CHECK-NEXT:  # %bb.2: # %entry
-; CHECK-NEXT:    andi. r3, r3, 2304
-; CHECK-NEXT:    beq cr0, L..BB1_5
+; CHECK-NEXT:    andi. r4, r4, 2304
+; CHECK-NEXT:    beq cr0, L..BB1_7
 ; CHECK-NEXT:  # %bb.3: # %sw.bb1
 ; CHECK-NEXT:    mr r3, r31
 ; CHECK-NEXT:    bl .foo2[PR]
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    b L..BB1_9
+; CHECK-NEXT:    b L..BB1_5
 ; CHECK-NEXT:  L..BB1_4: # %sw.bb2
 ; CHECK-NEXT:    mr r3, r31
 ; CHECK-NEXT:    bl .foo3[PR]
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    b L..BB1_9
-; CHECK-NEXT:  L..BB1_5: # %entry
-; CHECK-NEXT:    cmplwi r31, 7
-; CHECK-NEXT:    bne cr0, L..BB1_7
-; CHECK-NEXT:  # %bb.6: # %sw.bb
-; CHECK-NEXT:    li r3, 7
-; CHECK-NEXT:    li r31, 7
-; CHECK-NEXT:    bl .foo1[PR]
-; CHECK-NEXT:    nop
-; CHECK-NEXT:    b L..BB1_9
-; CHECK-NEXT:  L..BB1_7: # %entry
-; CHECK-NEXT:    cmplwi r31, 4
-; CHECK-NEXT:    li r31, 0
-; CHECK-NEXT:    bne cr0, L..BB1_9
-; CHECK-NEXT:  # %bb.8: # %sw.bb3
-; CHECK-NEXT:    li r3, 4
-; CHECK-NEXT:    li r31, 4
-; CHECK-NEXT:    bl .foo4[PR]
-; CHECK-NEXT:    nop
-; CHECK-NEXT:  L..BB1_9: # %return
+; CHECK-NEXT:  L..BB1_5: # %return
 ; CHECK-NEXT:    mr r3, r31
+; CHECK-NEXT:  L..BB1_6: # %return
 ; CHECK-NEXT:    lwz r31, 60(r1) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi r1, r1, 64
 ; CHECK-NEXT:    lwz r0, 8(r1)
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
+; CHECK-NEXT:  L..BB1_7: # %entry
+; CHECK-NEXT:    cmplwi r31, 7
+; CHECK-NEXT:    bne cr0, L..BB1_9
+; CHECK-NEXT:  # %bb.8: # %sw.bb
+; CHECK-NEXT:    li r3, 7
+; CHECK-NEXT:    bl .foo1[PR]
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    li r3, 7
+; CHECK-NEXT:    b L..BB1_6
+; CHECK-NEXT:  L..BB1_9: # %entry
+; CHECK-NEXT:    cmplwi r31, 4
+; CHECK-NEXT:    bne cr0, L..BB1_6
+; CHECK-NEXT:  # %bb.10: # %sw.bb3
+; CHECK-NEXT:    li r3, 4
+; CHECK-NEXT:    bl .foo4[PR]
+; CHECK-NEXT:    nop
+; CHECK-NEXT:    li r3, 4
+; CHECK-NEXT:    b L..BB1_6
 entry:
   switch i32 %x, label %return [
   i32 7, label %sw.bb
