@@ -387,6 +387,7 @@ protected:
   bool ContainsNoDuplicateCall = false;
   bool HasReturn = false;
   bool HasIndirectBr = false;
+  bool HasIndirectMustTailCall = false;
   bool HasUninlineableIntrinsic = false;
   bool InitsVargArgs = false;
 
@@ -2494,6 +2495,11 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
     Value *Callee = Call.getCalledOperand();
     F = getSimplifiedValue<Function>(Callee);
     if (!F || F->getFunctionType() != Call.getFunctionType()) {
+      // The callee ends in a tail call to an unknown target, so inlining it
+      // will not remove the call, it will only move it into the caller.
+      if (Call.isMustTailCall())
+        HasIndirectMustTailCall = true;
+
       onCallArgumentSetup(Call);
 
       if (!Call.onlyReadsMemory())
@@ -3044,6 +3050,18 @@ InlineResult CallAnalyzer::analyze() {
   // is not actually duplicated, just moved).
   if (!isSoleCallToLocalFunction(CandidateCall, F) && ContainsNoDuplicateCall)
     return InlineResult::failure("noduplicate");
+
+  // Inlining a musttail call whose callee ends in an indirect musttail call
+  // just extends a tail call dispatch chain: the caller keeps ending in the
+  // same indirect tail call it would have jumped to, so no call is removed,
+  // and the callee body is duplicated into every caller of the chain. Threaded
+  // interpreters, where PGO promotes the dispatch and the inliner then chains
+  // handler after handler, are the pathological case. Inlining the sole call
+  // to a local function is still fine, as that moves the body rather than
+  // duplicating it.
+  if (CandidateCall.isMustTailCall() && HasIndirectMustTailCall &&
+      !isSoleCallToLocalFunction(CandidateCall, F))
+    return InlineResult::failure("musttail dispatch chain");
 
   // If the callee's stack size exceeds the user-specified threshold,
   // do not let it be inlined.
