@@ -480,3 +480,124 @@ void useHasField() {
 // LLVM: %[[GET_MEM:.*]] = getelementptr i8, ptr %[[LOAD_ARG]], i64 0
 // LLVM: store i32 1, ptr %[[GET_MEM]]
 
+struct Inner {
+  int x;
+  int y;
+};
+
+struct Outer {
+  int a;
+  Inner inner;
+};
+
+Inner test_agg_dot(const Outer &o, Inner Outer::*p) {
+  return o.*p;
+}
+
+// CIR-BEFORE-LABEL: cir.func {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
+// CIR-BEFORE-SAME:         %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
+// CIR-BEFORE-SAME:         %[[P_ARG:.*]]: !cir.data_member<!rec_Inner in !rec_Outer>
+// CIR-BEFORE:         %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Outer>>
+// CIR-BEFORE:         %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.data_member<!rec_Inner in !rec_Outer>>
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         cir.store %[[O_ARG]], %[[O_ADDR]]
+// CIR-BEFORE:         cir.store %[[P_ARG]], %[[P_ADDR]]
+// CIR-BEFORE:         %[[O:.*]] = cir.load %[[O_ADDR]]
+// CIR-BEFORE:         %[[P:.*]] = cir.load{{.*}} %[[P_ADDR]]
+// CIR-BEFORE:         %[[RT_MEMBER:.*]] = cir.get_runtime_member %[[O]][%[[P]] : !cir.data_member<!rec_Inner in !rec_Outer>] : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         cir.copy %[[RT_MEMBER]] to %[[RETVAL_ADDR]] : !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         cir.return
+
+// CIR-AFTER-LABEL: cir.func {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
+// CIR-AFTER-SAME:        %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
+// CIR-AFTER-SAME:        %[[P_ARG:.*]]: !s64i
+// CIR-AFTER:        %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Outer>>
+// CIR-AFTER:        %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-AFTER:        cir.store %[[O_ARG]], %[[O_ADDR]] : !cir.ptr<!rec_Outer>, !cir.ptr<!cir.ptr<!rec_Outer>>
+// CIR-AFTER:        cir.store %[[P_ARG]], %[[P_ADDR]] : !s64i, !cir.ptr<!s64i>
+// CIR-AFTER:        %[[O:.*]] = cir.load %[[O_ADDR]] : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
+// CIR-AFTER:        %[[P:.*]] = cir.load{{.*}} %[[P_ADDR]] : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER:        %[[BYTE_PTR:.*]] = cir.cast bitcast %[[O]] : !cir.ptr<!rec_Outer> -> !cir.ptr<!s8i>
+// CIR-AFTER:        %[[BYTE_PTR_STRIDE:.*]] = cir.ptr_stride %[[BYTE_PTR]], %[[P]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.cast bitcast %[[BYTE_PTR_STRIDE]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Inner>
+// CIR-AFTER:        cir.copy %[[MEMBER_ADDR]] to %[[RETVAL_ADDR]] : !cir.ptr<!rec_Inner>
+// CIR-AFTER:        cir.return
+
+// LLVM-LABEL: define {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
+// LLVM:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner
+// LLVM:   %[[O_ADDR:.*]] = alloca ptr
+// LLVM:   %[[P_ADDR:.*]] = alloca i64
+// LLVM:   store ptr %[[O_ARG:.*]], ptr %[[O_ADDR]]
+// LLVM:   store i64 %[[P_ARG:.*]], ptr %[[P_ADDR]]
+// LLVM:   %[[O:.*]] = load ptr, ptr %[[O_ADDR]]
+// LLVM:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
+// LLVM:   %[[RT_MEMBER:.*]] = getelementptr i8, ptr %[[O]], i64 %[[P]]
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+
+// OGCG-LABEL: define {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
+// OGCG:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner
+// OGCG:   %[[O_ADDR:.*]] = alloca ptr
+// OGCG:   %[[P_ADDR:.*]] = alloca i64
+// OGCG:   store ptr %[[O_ARG:.*]], ptr %[[O_ADDR]]
+// OGCG:   store i64 %[[P_ARG:.*]], ptr %[[P_ADDR]]
+// OGCG:   %[[O:.*]] = load ptr, ptr %[[O_ADDR]]
+// OGCG:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
+// OGCG:   %[[RT_MEMBER:.*]] = getelementptr inbounds i8, ptr %[[O]], i64 %[[P]]
+// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+
+Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
+  return o->*p;
+}
+
+// CIR-BEFORE-LABEL: cir.func {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
+// CIR-BEFORE-SAME:         %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
+// CIR-BEFORE-SAME:         %[[P_ARG:.*]]: !cir.data_member<!rec_Inner in !rec_Outer>
+// CIR-BEFORE:         %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Outer>>
+// CIR-BEFORE:         %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.data_member<!rec_Inner in !rec_Outer>>
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         cir.store %[[O_ARG]], %[[O_ADDR]]
+// CIR-BEFORE:         cir.store %[[P_ARG]], %[[P_ADDR]]
+// CIR-BEFORE:         %[[O:.*]] = cir.load{{.*}} %[[O_ADDR]]
+// CIR-BEFORE:         %[[P:.*]] = cir.load{{.*}} %[[P_ADDR]]
+// CIR-BEFORE:         %[[RT_MEMBER:.*]] = cir.get_runtime_member %[[O]][%[[P]] : !cir.data_member<!rec_Inner in !rec_Outer>] : !cir.ptr<!rec_Outer> -> !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         cir.copy %[[RT_MEMBER]] to %[[RETVAL_ADDR]] : !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         cir.return
+
+// CIR-AFTER-LABEL: cir.func {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
+// CIR-AFTER-SAME:        %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
+// CIR-AFTER-SAME:        %[[P_ARG:.*]]: !s64i
+// CIR-AFTER:        %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Outer>>
+// CIR-AFTER:        %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-AFTER:        cir.store %[[O_ARG]], %[[O_ADDR]] : !cir.ptr<!rec_Outer>, !cir.ptr<!cir.ptr<!rec_Outer>>
+// CIR-AFTER:        cir.store %[[P_ARG]], %[[P_ADDR]] : !s64i, !cir.ptr<!s64i>
+// CIR-AFTER:        %[[O:.*]] = cir.load{{.*}} %[[O_ADDR]] : !cir.ptr<!cir.ptr<!rec_Outer>>, !cir.ptr<!rec_Outer>
+// CIR-AFTER:        %[[P:.*]] = cir.load{{.*}} %[[P_ADDR]] : !cir.ptr<!s64i>, !s64i
+// CIR-AFTER:        %[[BYTE_PTR:.*]] = cir.cast bitcast %[[O]] : !cir.ptr<!rec_Outer> -> !cir.ptr<!s8i>
+// CIR-AFTER:        %[[BYTE_PTR_STRIDE:.*]] = cir.ptr_stride %[[BYTE_PTR]], %[[P]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+// CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.cast bitcast %[[BYTE_PTR_STRIDE]] : !cir.ptr<!s8i> -> !cir.ptr<!rec_Inner>
+// CIR-AFTER:        cir.copy %[[MEMBER_ADDR]] to %[[RETVAL_ADDR]] : !cir.ptr<!rec_Inner>
+// CIR-AFTER:        cir.return
+
+// LLVM-LABEL: define {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
+// LLVM:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner
+// LLVM:   %[[O_ADDR:.*]] = alloca ptr
+// LLVM:   %[[P_ADDR:.*]] = alloca i64
+// LLVM:   store ptr %[[O_ARG:.*]], ptr %[[O_ADDR]]
+// LLVM:   store i64 %[[P_ARG:.*]], ptr %[[P_ADDR]]
+// LLVM:   %[[O:.*]] = load ptr, ptr %[[O_ADDR]]
+// LLVM:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
+// LLVM:   %[[RT_MEMBER:.*]] = getelementptr i8, ptr %[[O]], i64 %[[P]]
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
+
+// OGCG-LABEL: define {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
+// OGCG:   %[[RETVAL_ADDR:.*]] = alloca %struct.Inner
+// OGCG:   %[[O_ADDR:.*]] = alloca ptr
+// OGCG:   %[[P_ADDR:.*]] = alloca i64
+// OGCG:   store ptr %[[O_ARG:.*]], ptr %[[O_ADDR]]
+// OGCG:   store i64 %[[P_ARG:.*]], ptr %[[P_ADDR]]
+// OGCG:   %[[O:.*]] = load ptr, ptr %[[O_ADDR]]
+// OGCG:   %[[P:.*]] = load i64, ptr %[[P_ADDR]]
+// OGCG:   %[[RT_MEMBER:.*]] = getelementptr inbounds i8, ptr %[[O]], i64 %[[P]]
+// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[RETVAL_ADDR]], ptr align 4 %[[RT_MEMBER]], i64 8, i1 false)
