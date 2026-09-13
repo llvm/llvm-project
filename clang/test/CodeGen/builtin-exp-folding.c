@@ -122,7 +122,7 @@ double test_exp_rounding_math() {
   return __builtin_exp(1.0);
 }
 // CHECK-ROUNDING-LABEL: @test_exp_rounding_math
-// CHECK-ROUNDING: call double @llvm.experimental.constrained.exp.f64(double 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+// CHECK-ROUNDING: call double @llvm.experimental.constrained.exp.f64(double 1.000000e+00, metadata !"round.downward", metadata !"fpexcept.ignore")
 
 // Overriding -frounding-math with static tonearest rounding pragma allows folding:
 float test_rounding_math_override() {
@@ -138,7 +138,9 @@ float test_pragma_fenv_round_dynamic() {
   return __builtin_expf(1.0f);
 }
 // CHECK-ERRNO-LABEL: @test_pragma_fenv_round_dynamic
-// CHECK-ERRNO: call float @llvm.experimental.constrained.exp.f32(float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.ignore")
+// CHECK-ERRNO: call float @expf(float noundef 1.000000e+00)
+// CHECK-NO-ERRNO-LABEL: @test_pragma_fenv_round_dynamic
+// CHECK-NO-ERRNO: call float @llvm.exp.f32(float 1.000000e+00)
 
 // Local dynamic rounding mode pragma still allows exact folding:
 float test_pragma_fenv_round_dynamic_exact() {
@@ -147,6 +149,8 @@ float test_pragma_fenv_round_dynamic_exact() {
 }
 // CHECK-ERRNO-LABEL: @test_pragma_fenv_round_dynamic_exact
 // CHECK-ERRNO: ret float 1.000000e+00
+// CHECK-NO-ERRNO-LABEL: @test_pragma_fenv_round_dynamic_exact
+// CHECK-NO-ERRNO: ret float 1.000000e+00
 
 // Pragma STDC FENV_ACCESS ON prevents folding of inexact calls:
 float test_fenv_access_inexact() {
@@ -154,7 +158,7 @@ float test_fenv_access_inexact() {
   return __builtin_expf(1.0f);
 }
 // CHECK-ERRNO-LABEL: @test_fenv_access_inexact
-// CHECK-ERRNO: call float @llvm.experimental.constrained.exp.f32(float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
+// CHECK-ERRNO: call float @expf(float noundef 1.000000e+00)
 // CHECK-NO-ERRNO-LABEL: @test_fenv_access_inexact
 // CHECK-NO-ERRNO: call float @llvm.experimental.constrained.exp.f32(float 1.000000e+00, metadata !"round.dynamic", metadata !"fpexcept.strict")
 
