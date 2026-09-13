@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/setpayloadf128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/setpayloadf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(int, setpayloadf128, (float128 * res, float128 pl)) {
-  return math::setpayloadf128(res, pl);
+  return math::setpayloadf128(cpp::bit_cast<Float128 *>(res),
+                              cpp::bit_cast<Float128>(pl));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

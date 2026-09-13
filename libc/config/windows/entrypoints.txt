@@ -300,6 +300,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.modfl
     libc.src.math.nan
     libc.src.math.nanf
+    libc.src.math.nanf128
     libc.src.math.nanl
     libc.src.math.nearbyint
     libc.src.math.nearbyintf
@@ -395,6 +396,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.fromfpbf16
   libc.src.math.fromfpxbf16
   libc.src.math.getpayloadbf16
+  libc.src.math.getpayloadf128
   libc.src.math.hypotbf16
   libc.src.math.ilogbbf16
   libc.src.math.iscanonicalbf16
@@ -422,7 +424,9 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.scalblnbf16
   libc.src.math.scalbnbf16
   libc.src.math.setpayloadbf16
+  libc.src.math.setpayloadf128
   libc.src.math.setpayloadsigbf16
+  libc.src.math.setpayloadsigf128
   libc.src.math.sqrtbf16
   libc.src.math.tanbf16
   libc.src.math.truncbf16
@@ -436,4 +440,3 @@ set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
 )
-
