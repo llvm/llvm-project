@@ -145,13 +145,26 @@ static bool valsAreEquivalent(Value val1, Value val2,
     return false;
   if (!isMemoryEffectFree(val1DefOp) || !isMemoryEffectFree(val2DefOp))
     return false;
+
+  auto checkCommutativeEquivalent = [&](ValueRange lhs,
+                                        ValueRange rhs) -> LogicalResult {
+    if (lhs.size() != 2 || rhs.size() != 2)
+      return failure();
+    if (valsAreEquivalent(lhs[0], rhs[0], loopsIVsMap) &&
+        valsAreEquivalent(lhs[1], rhs[1], loopsIVsMap))
+      return success();
+    return success(valsAreEquivalent(lhs[0], rhs[1], loopsIVsMap) &&
+                   valsAreEquivalent(lhs[1], rhs[0], loopsIVsMap));
+  };
+
   return OperationEquivalence::isEquivalentTo(
       val1DefOp, val2DefOp,
       [&](Value v1, Value v2) {
         return success(loopsIVsMap.lookupOrDefault(v1) == v2 ||
                        loopsIVsMap.lookupOrDefault(v2) == v1);
       },
-      /*markEquivalent=*/nullptr, OperationEquivalence::Flags::IgnoreLocations);
+      /*markEquivalent=*/nullptr, OperationEquivalence::Flags::IgnoreLocations,
+      checkCommutativeEquivalent);
 }
 
 /// If the `expr` value is the result of an integer addition of `base` and a

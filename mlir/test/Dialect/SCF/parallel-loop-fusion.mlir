@@ -1761,3 +1761,33 @@ func.func @do_not_fuse_distinct_dynamic_bounds(%A: memref<16xf32>,
 // CHECK-LABEL: func @do_not_fuse_distinct_dynamic_bounds
 // CHECK:        scf.parallel
 // CHECK:        scf.parallel
+
+// -----
+
+func.func @fuse_commuted_indices(%arg0: memref<32xf32>,
+                                 %arg1: memref<32xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c16 = arith.constant 16 : index
+  %cst = arith.constant 3.000000e+00 : f32
+
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    %index = arith.addi %i, %c1 : index
+    memref.store %cst, %arg0[%index] : memref<32xf32>
+    scf.reduce
+  }
+
+  scf.parallel (%i) = (%c0) to (%c16) step (%c1) {
+    %index = arith.addi %c1, %i : index
+    %value = memref.load %arg0[%index] : memref<32xf32>
+    memref.store %value, %arg1[%index] : memref<32xf32>
+    scf.reduce
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @fuse_commuted_indices
+// CHECK:       scf.parallel
+// CHECK-NOT:   scf.parallel
+// CHECK:       return
