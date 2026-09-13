@@ -16,6 +16,7 @@
 #include "Context.h"
 #include "DynamicAllocator.h"
 #include "Floating.h"
+#include "FrameAllocator.h"
 #include "Function.h"
 #include "InterpFrame.h"
 #include "InterpStack.h"
@@ -27,6 +28,7 @@ class Context;
 class SourceMapper;
 
 struct StdAllocatorCaller {
+
   const Expr *Call = nullptr;
   QualType AllocType;
   explicit operator bool() { return Call; }
@@ -42,10 +44,11 @@ enum class EvaluationKind : uint8_t {
 /// Interpreter context.
 class InterpState final : public State {
 public:
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const State &Parent, Program &P, InterpStack &Stk,
+              FrameAllocator &FrameAlloc, Context &Ctx,
               SourceMapper *M = nullptr);
-  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
-              const Function *Func);
+  InterpState(const State &Parent, Program &P, InterpStack &Stk,
+              FrameAllocator &FrameAlloc, Context &Ctx, const Function *Func);
 
   ~InterpState();
 
@@ -190,6 +193,27 @@ public:
 
   unsigned newStringID() { return StringID++; }
 
+  /// Allocate memory and create a new InterpFrame for the given function.
+  template <typename... Ts>
+  InterpFrame *allocFrame(const Function *F, Ts &&...Args) {
+    unsigned FrameSize = InterpFrame::allocSize(F);
+    InterpFrame *NewFrame = new (FrameAlloc.reserve(FrameSize))
+        InterpFrame(*this, F, std::forward<Ts>(Args)...);
+    assert(NewFrame);
+    return NewFrame;
+  }
+
+  /// Free resources associated with the current frame and set the caller to be
+  /// the new current frame.
+  void resetCurrentFrame() {
+    assert(Current);
+    unsigned CurrentSize = InterpFrame::allocSize(Current->getFunction());
+    InterpFrame *Caller = Current->Caller;
+    Current->~InterpFrame();
+    FrameAlloc.pop(CurrentSize);
+    Current = Caller;
+  }
+
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
@@ -203,6 +227,8 @@ private:
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
   /// Diagnose that we've reached the constexpr step limit.
   bool diagnoseStepLimitExceeded(CodePtr OpPC);
+
+  FrameAllocator &FrameAlloc;
 
 public:
   CodePtr PC;

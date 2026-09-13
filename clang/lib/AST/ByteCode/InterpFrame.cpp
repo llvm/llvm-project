@@ -76,15 +76,9 @@ InterpFrame::~InterpFrame() {
   for (unsigned I = 0, N = Func->getNumWrittenParams(); I != N; ++I)
     S.deallocate(argBlock(I));
 
-  // When destroying the InterpFrame, call the Dtor for all block
+  // When destroying the InterpFrame, call the Dtor for all blocks
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  destroyScopes();
-}
-
-void InterpFrame::destroyScopes() {
-  if (!Func || Func->getFrameSize() == 0)
-    return;
   for (auto &Scope : Func->scopes()) {
     for (auto &Local : Scope.locals()) {
       S.deallocate(localBlock(Local.Offset));
