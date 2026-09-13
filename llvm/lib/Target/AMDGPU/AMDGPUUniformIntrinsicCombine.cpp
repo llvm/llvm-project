@@ -86,7 +86,10 @@ static bool optimizeUniformIntrinsic(IntrinsicInst &II, UniformityInfo &UI,
           // Case: (icmp eq %ballot, 0) -> xor %ballot_arg, 1
           Instruction *NotOp =
               BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
-          Tracker[NotOp] = true; // NOT preserves uniformity
+          // NOT preserves uniformity, but only where UI already proved the
+          // icmp uniform: a use outside the loop can be temporally divergent.
+          Tracker[NotOp] = all_of(
+              ICmp->uses(), [&](const Use &U) { return UI.isUniformAtUse(U); });
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << '\n');
           ICmp->replaceAllUsesWith(NotOp);
           Changed = true;
