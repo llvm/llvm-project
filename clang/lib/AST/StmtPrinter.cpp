@@ -301,7 +301,12 @@ void StmtPrinter::VisitLabelStmt(LabelStmt *Node) {
 void StmtPrinter::VisitAttributedStmt(AttributedStmt *Node) {
   ArrayRef<const Attr *> Attrs = Node->getAttrs();
   for (const auto *Attr : Attrs) {
-    Attr->printPretty(OS, Policy);
+    // UnknownAttr has no spelling, so printPretty emits nothing; reconstruct it
+    // from the retained name/scope and argument text (see DeclPrinter).
+    if (const auto *UA = dyn_cast<UnknownAttr>(Attr))
+      printUnknownAttrPretty(OS, *UA, UA->getArgsText());
+    else
+      Attr->printPretty(OS, Policy);
     if (Attr != Attrs.back())
       OS << ' ';
   }
