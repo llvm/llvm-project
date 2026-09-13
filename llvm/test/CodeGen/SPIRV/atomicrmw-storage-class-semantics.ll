@@ -16,6 +16,7 @@
 ; AcquireRelease       = 0x008 =   8 -> with CrossWorkgroup: 520, with Workgroup: 264
 ; SequentiallyConsistent = 0x010 = 16 -> with CrossWorkgroup: 528, with Workgroup: 272
 ; Acquire              = 0x002 =   2 -> with CrossWorkgroup: 514
+; 0x300 = 768 -> with AcquireRelease: 776
 
 ; CHECK-DAG: %[[#Int:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#MemSem_AcqRel_CW:]] = OpConstant %[[#Int]] 520
@@ -23,6 +24,7 @@
 ; CHECK-DAG: %[[#MemSem_Acquire_CW:]] = OpConstant %[[#Int]] 514
 ; CHECK-DAG: %[[#MemSem_AcqRel_WG:]] = OpConstant %[[#Int]] 264
 ; CHECK-DAG: %[[#MemSem_SeqCst_WG:]] = OpConstant %[[#Int]] 272
+; CHECK-DAG: %[[#MemSem_AcqRel_GEN:]] = OpConstant %[[#Int]] 776
 
 @g_cw = common dso_local addrspace(1) global i32 0, align 4
 @g_wg = common dso_local addrspace(3) global i32 0, align 4
@@ -53,6 +55,14 @@ entry:
   ; Workgroup pointer + seq_cst -> MemSem 272 (16 | 0x100)
   ; CHECK: OpAtomicExchange %[[#Int]] %{{[0-9]+}} %{{[0-9]+}} %[[#MemSem_SeqCst_WG]] %{{[0-9]+}}
   %1 = atomicrmw xchg ptr addrspace(3) @g_wg, i32 7 seq_cst
+
+  ret void
+}
+
+define dso_local spir_func void @test_generic(ptr addrspace(4) %p) {
+entry:
+  ; CHECK: OpAtomicIAdd %[[#Int]] %{{[0-9]+}} %{{[0-9]+}} %[[#MemSem_AcqRel_GEN]] %{{[0-9]+}}
+  %0 = atomicrmw add ptr addrspace(4) %p, i32 1 acq_rel
 
   ret void
 }
