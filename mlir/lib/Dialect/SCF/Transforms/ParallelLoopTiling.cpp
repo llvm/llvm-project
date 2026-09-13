@@ -45,8 +45,8 @@ using namespace mlir::scf;
 ///     scf.parallel (%j0, %j1) = (0, 0) to (%arg4*tileSize[0],
 ///                                          %arg5*tileSize[1])
 ///                                      step (%arg4, %arg5)
-///        %inbound = (%j0 * %arg4 + %i0 < %arg2) &&
-///                   (%j1 * %arg5 + %i1 < %arg3)
+///        %inbound = (%j0 + %i0 < %arg2) &&
+///                   (%j1 + %i1 < %arg3)
 ///        scf.if (%inbound)
 ///          ....
 ///
@@ -145,10 +145,8 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
          llvm::zip(outerLoop.getUpperBound(), outerLoop.getInductionVars(),
                    innerLoop.getInductionVars(), innerLoop.getStep())) {
       // %in_bound = %in_bound &&
-      //             (%inner_iv * %inner_step + %outer_iv < %outer_upper_bound)
-      Value index = arith::AddIOp::create(
-          b, op.getLoc(),
-          arith::MulIOp::create(b, op.getLoc(), innerIV, innerStep), outerIV);
+      //             (%inner_iv + %outer_iv < %outer_upper_bound)
+      Value index = arith::AddIOp::create(b, op.getLoc(), innerIV, outerIV);
       Value dimInbound = arith::CmpIOp::create(
           b, op.getLoc(), arith::CmpIPredicate::ult, index, outerUpperBound);
       inbound = arith::AndIOp::create(b, op.getLoc(), inbound, dimInbound);
