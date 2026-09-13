@@ -821,6 +821,19 @@ bool MachineCopyPropagation::canUpdateSrcUsers(const MachineInstr &Copy,
   return true;
 }
 
+/// Ignores artificial subregisters: copies never split into them, and
+/// requiring a match would reject pairs differing only in artificial shape.
+static bool hasMatchingSubRegs(MCRegister OldReg, MCRegister NewReg,
+                               const TargetRegisterInfo &TRI) {
+  for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI) {
+    if (TRI.isArtificial(SRI.getSubReg()))
+      continue;
+    if (!TRI.getSubReg(NewReg, SRI.getSubRegIndex()))
+      return false;
+  }
+  return true;
+}
+
 /// Look for available copies whose destination register is used by \p MI and
 /// replace the use in \p MI with the copy's source register.
 void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
@@ -875,9 +888,19 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
       }
     }
 
-    // Don't forward COPYs of reserved regs unless they are constant.
-    if (MRI->isReserved(CopySrc) && !MRI->isConstantPhysReg(CopySrc))
-      continue;
+    if (MRI->isReserved(CopySrc)) {
+      // Don't forward COPYs of reserved regs unless they are constant.
+      if (!MRI->isConstantPhysReg(CopySrc))
+        continue;
+
+      // A reserved source may lack subregs the copy is later split into.
+      if (isCopyInstr(MI, *TII, UseCopyInstr) &&
+          !hasMatchingSubRegs(MOUse.getReg().asMCReg(), ForwardedReg, *TRI)) {
+        LLVM_DEBUG(dbgs() << "MCP: Copy source is missing subregisters of "
+                          << printReg(MOUse.getReg(), TRI) << '\n');
+        continue;
+      }
+    }
 
     if (!isForwardableRegClassCopy(*Copy, MI, OpIdx))
       continue;
