@@ -1922,6 +1922,7 @@ public:
   cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
+  cir::CoroNoopOp emitCoroNoopBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
   RValue emitCoroutineFrame();
 

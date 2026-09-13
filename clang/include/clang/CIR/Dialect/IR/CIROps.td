@@ -5078,6 +5078,20 @@ def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
 }
 
 //===----------------------------------------------------------------------===//
+// Coroutine intrinsic NoopOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroNoopOp : CIR_CoroIntrinsicOp<"noop", (ins),
+    (outs CIR_VoidPtrType:$result)> {
+  let summary = "Represents llvm.coro.noop";
+  let description = [{
+    Returns a handle to a coroutine that does nothing when resumed or
+    destroyed.
+  }];
+  let llvmOp = "CoroNoopOp";
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 

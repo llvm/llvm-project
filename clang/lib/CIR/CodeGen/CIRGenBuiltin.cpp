@@ -1739,8 +1739,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_coro_noop:
-    cgm.errorNYI(e->getSourceRange(), "BI__builtin_coro_noop NYI");
-    return getUndefRValue(e->getType());
+    return RValue::get(emitCoroNoopBuiltinCall(e).getResult());
   case Builtin::BI__builtin_coro_destroy: {
     emitCoroDestroyBuiltinCall(e);
     return RValue::get(nullptr);
