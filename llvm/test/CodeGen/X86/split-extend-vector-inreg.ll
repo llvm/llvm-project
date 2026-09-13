@@ -9,10 +9,10 @@ define <4 x i64> @autogen_SD88863() {
 ; X86-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X86-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
 ; X86-NEXT:    movb $1, %al
+; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    .p2align 4
 ; X86-NEXT:  .LBB0_1: # %CF
 ; X86-NEXT:    # =>This Inner Loop Header: Depth=1
-; X86-NEXT:    testb %al, %al
 ; X86-NEXT:    jne .LBB0_1
 ; X86-NEXT:  # %bb.2: # %CF240
 ; X86-NEXT:    retl
@@ -23,10 +23,10 @@ define <4 x i64> @autogen_SD88863() {
 ; X64-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; X64-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[3],ymm1[3]
 ; X64-NEXT:    movb $1, %al
+; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    .p2align 4
 ; X64-NEXT:  .LBB0_1: # %CF
 ; X64-NEXT:    # =>This Inner Loop Header: Depth=1
-; X64-NEXT:    testb %al, %al
 ; X64-NEXT:    jne .LBB0_1
 ; X64-NEXT:  # %bb.2: # %CF240
 ; X64-NEXT:    retq

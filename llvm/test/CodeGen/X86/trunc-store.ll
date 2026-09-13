@@ -29,10 +29,10 @@
 define void @fn1(i64 %a0) {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0: # %for.cond
+; CHECK-NEXT:    cmpq $8, %rdi
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %vector.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmpq $8, %rdi
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %middle.block
 ; CHECK-NEXT:    retq

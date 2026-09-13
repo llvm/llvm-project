@@ -7,10 +7,10 @@ define void @simplify_assertzext(ptr %0) {
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    movl $275047, %eax # imm = 0x43267
 ; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %CF246
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb %cl, %cl
 ; CHECK-NEXT:    jne .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %CF260
 ; CHECK-NEXT:    orl $278403, %eax # imm = 0x43F83
