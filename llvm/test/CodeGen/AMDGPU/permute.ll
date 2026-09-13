@@ -432,4 +432,99 @@ bb:
   ret void
 }
 
+define amdgpu_kernel void @dword_from_v16i16_combine_loop(ptr addrspace(1) %out) {
+; GCN-LABEL: dword_from_v16i16_combine_loop:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    v_and_b32_e32 v1, 3, v0
+; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_and_saveexec_b64 s[0:1], vcc
+; GCN-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v2, s1
+; GCN-NEXT:    v_mov_b32_e32 v1, s0
+; GCN-NEXT:    flat_store_byte v[1:2], v0
+; GCN-NEXT:    s_endpgm
+entry:
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
+  %ins = insertelement <2 x i32> poison, i32 %tid, i64 0
+  %splat = shufflevector <2 x i32> %ins, <2 x i32> poison, <2 x i32> zeroinitializer
+  %masked = and <2 x i32> %splat, <i32 31, i32 7>
+  %e1 = extractelement <2 x i32> %masked, i64 1
+  %and = and i32 %e1, 3
+  %cond = icmp eq i32 %and, 0
+  br i1 %cond, label %bb1, label %bb2
+
+bb1:
+  %wide = shufflevector <2 x i32> %masked, <2 x i32> poison, <16 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %trunc = trunc <16 x i32> %wide to <16 x i16>
+  %s0 = shufflevector <16 x i16> <i16 0, i16 0, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 9, i16 poison, i16 100, i16 poison, i16 poison>, <16 x i16> %trunc, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 17, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 11, i32 poison, i32 13, i32 poison, i32 poison>
+  %s1 = insertelement <16 x i16> %s0, i16 7, i64 5
+  %s2 = shufflevector <16 x i16> %s1, <16 x i16> %trunc, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 16, i32 poison, i32 poison, i32 poison, i32 poison, i32 11, i32 poison, i32 13, i32 poison, i32 poison>
+  %s3 = shufflevector <16 x i16> %s2, <16 x i16> <i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 0, i16 0, i16 0, i16 0, i16 poison, i16 0, i16 poison, i16 0, i16 0>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 23, i32 24, i32 25, i32 26, i32 11, i32 28, i32 13, i32 30, i32 31>
+  %max = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %s3, <16 x i16> zeroinitializer)
+  %bytes = bitcast <16 x i16> %max to <32 x i8>
+  br label %bb2
+
+bb2:
+  %phi = phi <32 x i8> [ %bytes, %bb1 ], [ zeroinitializer, %entry ]
+  %byte16 = extractelement <32 x i8> %phi, i64 16
+  store i8 %byte16, ptr addrspace(1) %out, align 1
+  ret void
+}
+
+define amdgpu_kernel void @dword_from_v16i16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+; GCN-LABEL: dword_from_v16i16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GCN-NEXT:    v_lshlrev_b32_e32 v0, 5, v0
+; GCN-NEXT:    v_mov_b32_e32 v4, 8
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v1, s3
+; GCN-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
+; GCN-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
+; GCN-NEXT:    v_add_u32_e32 v2, vcc, 20, v0
+; GCN-NEXT:    v_addc_u32_e32 v3, vcc, 0, v1, vcc
+; GCN-NEXT:    flat_load_dword v2, v[2:3]
+; GCN-NEXT:    flat_load_dword v3, v[0:1]
+; GCN-NEXT:    s_mov_b32 s2, 0xc0c0500
+; GCN-NEXT:    s_mov_b32 s3, 0x4020c0c
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    s_waitcnt vmcnt(1)
+; GCN-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_lshlrev_b32_sdwa v4, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
+; GCN-NEXT:    v_perm_b32 v3, v4, v3, s2
+; GCN-NEXT:    v_perm_b32 v2, v5, v2, s3
+; GCN-NEXT:    v_or_b32_e32 v2, v3, v2
+; GCN-NEXT:    flat_store_dword v[0:1], v2
+; GCN-NEXT:    s_endpgm
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %gep = getelementptr <16 x i16>, ptr addrspace(1) %in, i32 %tid
+  %v = load <16 x i16>, ptr addrspace(1) %gep, align 32
+  %e0 = extractelement <16 x i16> %v, i32 0
+  %e1 = extractelement <16 x i16> %v, i32 1
+  %e10 = extractelement <16 x i16> %v, i32 10
+  %e11 = extractelement <16 x i16> %v, i32 11
+  %z0 = zext i16 %e0 to i32
+  %z1 = zext i16 %e1 to i32
+  %z10 = zext i16 %e10 to i32
+  %z11 = zext i16 %e11 to i32
+  %b0 = and i32 %z0, 255
+  %b1 = shl i32 %z1, 8
+  %b1m = and i32 %b1, 65280
+  %b2 = shl i32 %z10, 16
+  %b2m = and i32 %b2, 16711680
+  %b3 = shl i32 %z11, 24
+  %b3m = and i32 %b3, 4278190080
+  %o1 = or i32 %b0, %b1m
+  %o2 = or i32 %b2m, %b3m
+  %r = or i32 %o1, %o2
+  store i32 %r, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x()

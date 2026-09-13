@@ -408,6 +408,12 @@ module {
     llvm.return
   }
 
+  llvm.func @uniform_work_group_size() attributes { uniform_work_group_size } {
+    // CHECK: @uniform_work_group_size
+    // CHECK-SAME: attributes {uniform_work_group_size}
+    llvm.return
+  }
+
   llvm.func @zero_call_used_regs() attributes { zero_call_used_regs="used-gpr-arg"} {
     // CHECK: @zero_call_used_regs
     // CHECK-SAME: attributes {zero_call_used_regs = "used-gpr-arg"}
@@ -503,6 +509,13 @@ module {
 module {
   // expected-error@+1 {{external functions must have 'external' or 'extern_weak' linkage}}
   llvm.func internal @internal_external_func()
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{external functions cannot have "function_entry_count" attribute}}
+  llvm.func @external_func() attributes {function_entry_count = #llvm.function_entry_count<entry_count = 1>}
 }
 
 // -----

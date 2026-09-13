@@ -86,7 +86,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
 #    ifndef __cpp_lib_quoted_string_io
@@ -101,6 +101,21 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION
+#    ifndef __cpp_lib_quoted_string_io
+#      error "__cpp_lib_quoted_string_io should be defined in c++29"
+#    endif
+#    if __cpp_lib_quoted_string_io != 201304L
+#      error "__cpp_lib_quoted_string_io should have the value 201304L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_quoted_string_io
+#      error "__cpp_lib_quoted_string_io should not be defined when the requirement '!defined(_LIBCPP_VERSION) || _LIBCPP_HAS_LOCALIZATION' is not met!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

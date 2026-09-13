@@ -40,6 +40,15 @@ using namespace mlir;
 using namespace mlir::wasmssa;
 namespace {
 
+template <typename OpTy>
+static typename OpTy::Properties getDefaultProperties(MLIRContext *context) {
+  typename OpTy::Properties properties{};
+  if constexpr (!std::is_same_v<typename OpTy::Properties, EmptyProperties>)
+    OpTy::populateDefaultProperties(
+        OperationName(OpTy::getOperationName(), context), properties);
+  return properties;
+}
+
 template <typename SourceOp, typename TargetIntOp, typename TargetFPOp>
 struct IntFPDispatchMappingConversion : OpConversionPattern<SourceOp> {
   using OpConversionPattern<SourceOp>::OpConversionPattern;
@@ -49,14 +58,18 @@ struct IntFPDispatchMappingConversion : OpConversionPattern<SourceOp> {
                   ConversionPatternRewriter &rewriter) const override {
     Type type = srcOp.getRhs().getType();
     if (type.isInteger()) {
-      rewriter.replaceOpWithNewOp<TargetIntOp>(srcOp, srcOp->getResultTypes(),
-                                               adaptor.getOperands());
+      rewriter.replaceOpWithNewOp<TargetIntOp>(
+          srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+          getDefaultProperties<TargetIntOp>(rewriter.getContext()),
+          ArrayRef<NamedAttribute>{});
       return success();
     }
     if (!type.isFloat())
       return failure();
-    rewriter.replaceOpWithNewOp<TargetFPOp>(srcOp, srcOp->getResultTypes(),
-                                            adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<TargetFPOp>(
+        srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+        getDefaultProperties<TargetFPOp>(rewriter.getContext()),
+        ArrayRef<NamedAttribute>{});
     return success();
   }
 };
@@ -77,8 +90,10 @@ struct OpMappingConversion : OpConversionPattern<SourceOp> {
   LogicalResult
   matchAndRewrite(SourceOp srcOp, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.replaceOpWithNewOp<TargetOp>(srcOp, srcOp->getResultTypes(),
-                                          adaptor.getOperands());
+    rewriter.replaceOpWithNewOp<TargetOp>(
+        srcOp, srcOp->getResultTypes(), adaptor.getOperands(),
+        getDefaultProperties<TargetOp>(rewriter.getContext()),
+        ArrayRef<NamedAttribute>{});
     return success();
   }
 };
@@ -671,6 +686,23 @@ struct WasmGlobalWithGetGlobalInitConversion
   }
 };
 
+struct WasmGlobalSetOpConversion : OpConversionPattern<GlobalSetOp> {
+  using OpConversionPattern::OpConversionPattern;
+  LogicalResult
+  matchAndRewrite(GlobalSetOp globalSetOp, GlobalSetOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = globalSetOp.getLoc();
+    auto globalPtr = memref::GetGlobalOp::create(
+        rewriter, loc, MemRefType::get({1}, adaptor.getValue().getType()),
+        globalSetOp.getGlobal());
+    auto idx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    rewriter.replaceOpWithNewOp<memref::StoreOp>(
+        globalSetOp, adaptor.getValue(), globalPtr.getResult(),
+        ValueRange{idx.getResult()});
+    return success();
+  }
+};
+
 struct WasmMemoryOpConversion : OpConversionPattern<MemOp> {
   using OpConversionPattern::OpConversionPattern;
 
@@ -796,6 +828,24 @@ struct WasmReturnOpConversion : OpConversionPattern<ReturnOp> {
   }
 };
 
+struct WasmSelectOpConversion : OpConversionPattern<SelectOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(SelectOp selectOp, SelectOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = selectOp.getLoc();
+    auto zero =
+        arith::ConstantOp::create(rewriter, loc, rewriter.getI32IntegerAttr(0));
+    auto flag = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ne,
+                                      adaptor.getCondition(), zero.getResult());
+    rewriter.replaceOpWithNewOp<arith::SelectOp>(selectOp, flag.getResult(),
+                                                 adaptor.getTrueValue(),
+                                                 adaptor.getFalseValue());
+    return success();
+  }
+};
+
 struct RaiseWasmMLIRPass : public impl::RaiseWasmMLIRBase<RaiseWasmMLIRPass> {
   void runOnOperation() override {
     ConversionTarget target{getContext()};
@@ -876,6 +926,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmGeSIOpConversion,
            WasmGeUIOpConversion,
            WasmGlobalImportOpConverter,
+           WasmGlobalSetOpConversion,
            WasmGlobalWithConstInitConversion,
            WasmGlobalWithGetGlobalInitConversion,
            WasmGtOpConversion,
@@ -906,6 +957,7 @@ void mlir::populateRaiseWasmMLIRConversionPatterns(
            WasmReturnOpConversion,
            WasmRotlOpConversion,
            WasmRotrOpConversion,
+           WasmSelectOpConversion,
            WasmShLOpConversion,
            WasmShRSOpConversion,
            WasmShRUOpConversion,

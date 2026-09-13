@@ -6,8 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// A simple memory mapper that uses EPC calls to implement reserve, initialize,
-// deinitialize, and release.
+// A simple memory mapper that implements reserve, initialize, deinitialize and
+// release by driving an executor-side memory manager through Proxy objects.
+//
+// This header is protocol-agnostic. To build the bindings for the ORC runtime's
+// SPS controller interface, see SimpleMemoryMapSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,71 +18,53 @@
 #define LLVM_EXECUTIONENGINE_ORC_SIMPLEREMOTEMEMORYMAPPER_H
 
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
+#include "llvm/ExecutionEngine/Orc/SimpleMemoryMap.h"
 
 namespace llvm::orc {
 
-/// Manages remote memory by making SPS-based EPC calls.
+/// Manages remote memory by driving an executor-side memory manager.
 class LLVM_ABI SimpleRemoteMemoryMapper final : public MemoryMapper {
 public:
-  struct SymbolAddrs {
-    ExecutorAddr Instance;
-    ExecutorAddr Reserve;
-    ExecutorAddr Initialize;
-    ExecutorAddr Deinitialize;
-    ExecutorAddr Release;
-  };
-
-  SimpleRemoteMemoryMapper(ExecutorProcessControl &EPC, SymbolAddrs SAs);
+  /// Create a SimpleRemoteMemoryMapper from a given set of memory-manager
+  /// bindings.
+  SimpleRemoteMemoryMapper(ExecutionSession &ES, SimpleMemoryMapBindings B);
 
   static Expected<std::unique_ptr<SimpleRemoteMemoryMapper>>
-  Create(ExecutorProcessControl &EPC, SymbolAddrs SAs) {
-    return std::make_unique<SimpleRemoteMemoryMapper>(EPC, SAs);
+  Create(ExecutionSession &ES, SimpleMemoryMapBindings B) {
+    return std::make_unique<SimpleRemoteMemoryMapper>(ES, std::move(B));
   }
 
-  unsigned int getPageSize() override { return EPC.getPageSize(); }
+  unsigned int getPageSize() override {
+    return ES.getExecutorProcessControl().getPageSize();
+  }
 
-  /// Reserves memory in the remote process by calling a remote
-  /// SPS-wrapper-function with signature
-  ///
-  ///   SPSExpected<SPSExecutorAddr>(uint64_t Size).
-  ///
-  /// On success, returns the base address of the reserved range.
+  /// Reserves memory in the executor, returning the base address of the
+  /// reserved range on success.
   void reserve(size_t NumBytes, OnReservedFunction OnReserved) override;
 
   char *prepare(jitlink::LinkGraph &G, ExecutorAddr Addr,
                 size_t ContentSize) override;
 
-  /// Initializes memory within a previously reserved region (applying
-  /// protections and running any finalization actions) by calling a remote
-  /// SPS-wrapper-function with signature
-  ///
-  ///   SPSExpected<SPSExecutorAddr>(SPSFinalizeRequest)
+  /// Initializes memory within a previously reserved region, applying
+  /// protections and running any finalization actions.
   ///
   /// On success, returns a key that can be used to deinitialize the region.
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override;
 
   /// Given a series of keys from previous initialize calls, deinitialize
-  /// previously initialized memory regions (running dealloc actions, resetting
-  /// permissions and decommitting if possible) by calling a remote
-  /// SPS-wrapper-function with signature
-  ///
-  ///   SPSError(SPSSequence<SPSExecutorAddr> Keys)
-  ///
+  /// previously initialized memory regions: run their dealloc actions, reset
+  /// permissions, and decommit if possible.
   void deinitialize(ArrayRef<ExecutorAddr> Allocations,
                     OnDeinitializedFunction OnDeInitialized) override;
 
   /// Given a sequence of base addresses from previous reserve calls, release
-  /// the underlying ranges (deinitializing any remaining regions within them)
-  /// by calling a remote SPS-wrapper-function with signature
-  ///
-  ///   SPSError(SPSSequence<SPSExecutorAddr> Bases)
-  ///
+  /// the underlying ranges, deinitializing any remaining regions within them.
   void release(ArrayRef<ExecutorAddr> Reservations,
                OnReleasedFunction OnRelease) override;
 
 private:
-  ExecutorProcessControl &EPC;
-  SymbolAddrs SAs;
+  ExecutionSession &ES;
+  SimpleMemoryMapBindings B;
 };
 
 } // namespace llvm::orc

@@ -118,7 +118,8 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
     decisions (such as generate an atomic update). E.g.
 
     ```
-      acc.reduction_combine %src into %dest <addi> : memref<i32>
+      acc.reduction_combine %src into %dest <addi>
+          par_dims(#acc<par_dims[thread_x]>) : memref<i32>
     ```
 
     Might lower to something similar to
@@ -140,11 +141,28 @@ def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine",
 
   let arguments = (ins OpenACC_AnyPointerOrMappableType:$destMemref,
                        OpenACC_AnyPointerOrMappableType:$srcMemref,
-                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
   
   let assemblyFormat = [{
-    $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
+    $srcMemref `into` $destMemref $reductionOperator
+    (`par_dims` `(` qualified($par_dims)^ `)`)?
+    `:` type($destMemref) attr-dict
   }];
+  let builders = [
+    OpBuilder<(ins "::mlir::Value":$destMemref,
+                   "::mlir::Value":$srcMemref,
+                   "::mlir::acc::ReductionOperatorAttr":$reductionOperator), [{
+      build($_builder, $_state, destMemref, srcMemref, reductionOperator,
+            nullptr);
+    }]>,
+    OpBuilder<(ins "::mlir::Value":$destMemref,
+                   "::mlir::Value":$srcMemref,
+                   "::mlir::acc::ReductionOperator":$reductionOperator), [{
+      build($_builder, $_state, destMemref, srcMemref, reductionOperator,
+            nullptr);
+    }]>,
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -170,9 +188,9 @@ def OpenACC_ReductionAccumulateOp
       }
     } {acc.par_dims = #acc<par_dims[thread_x]>}
     acc.reduction_accumulate %partial to %private <add>
-        : i32 -> memref<i32> {par_dims = #acc<par_dims[thread_x]>}
-    acc.reduction_combine %private into %shared <add> : memref<i32>
-        {acc.par_dims = #acc<par_dims[thread_x]>}
+        par_dims(#acc<par_dims[thread_x]>) : i32 -> memref<i32>
+    acc.reduction_combine %private into %shared <add>
+        par_dims(#acc<par_dims[thread_x]>) : memref<i32>
     ```
   }];
   let arguments = (ins AnyTypeOf<[AnyInteger, AnyFloat, AnyComplex]>:$value,
@@ -182,7 +200,9 @@ def OpenACC_ReductionAccumulateOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims);
   let assemblyFormat = [{
-    $value `to` $memref $reductionOperator `:` type($value) `->` type($memref) attr-dict
+    $value `to` $memref $reductionOperator
+    `par_dims` `(` qualified($par_dims) `)` `:` type($value) `->`
+    type($memref) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -205,7 +225,8 @@ def OpenACC_ReductionAccumulateArrayOp
                        OpenACC_ReductionOperatorAttr:$reductionOperator,
                        OpenACC_GPUParallelDimsAttr:$par_dims);
   let assemblyFormat = [{
-    $memref `bounds` `(` $bounds `)` $reductionOperator `:` type($memref) attr-dict
+    $memref `bounds` `(` $bounds `)` $reductionOperator
+    `par_dims` `(` qualified($par_dims) `)` `:` type($memref) attr-dict
   }];
   let hasVerifier = 1;
 }
@@ -317,14 +338,16 @@ def OpenACC_PrivatizeOp : OpenACC_Op<"privatize", []> {
     Optional `index` operands supply dynamic sizes when the privatized shape
     depends on SSA values (for example `memref<?xi32>` row lengths).
 
-    The optional `acc.par_dims` attribute records which GPU parallel dimensions
+    The optional `par_dims` attribute records which GPU parallel dimensions
     participate in the privatization.
   }];
   let arguments = (ins Variadic<Index>:$dynamicSizes,
                        OptionalAttr<OpenACC_GPUParallelDimsAttr>:$par_dims);
   let results = (outs OpenACC_PrivateType:$result);
   let assemblyFormat = [{
-    (`(` $dynamicSizes^ `)`)? (`[` qualified($par_dims)^ `]`)? attr-dict `:` functional-type(operands, results)
+    (`(` $dynamicSizes^ `)`)?
+    (`par_dims` `(` qualified($par_dims)^ `)`)?
+    attr-dict `:` functional-type(operands, results)
   }];
   let builders = [
     OpBuilder<(ins "::mlir::Type":$resultType,
@@ -409,17 +432,17 @@ def OpenACC_ParWidthOp
 
     ```mlir
     // Known width from SSA value
-    %w1 = acc.par_width %vector_len {par_dim = #acc.par_dim<thread_x>}
+    %w1 = acc.par_width %vector_len par_dim(#acc.par_dim<thread_x>)
 
     // Unknown width (to be computed later)
-    %w2 = acc.par_width {par_dim = #acc.par_dim<block_x>}
+    %w2 = acc.par_width par_dim(#acc.par_dim<block_x>)
     ```
   }];
   let arguments = (ins Optional<Index>:$launchArg,
                        OpenACC_GPUParallelDimAttr:$par_dim);
   let results = (outs Index:$output);
   let assemblyFormat = [{
-    ($launchArg^)? attr-dict
+    ($launchArg^)? `par_dim` `(` qualified($par_dim) `)` attr-dict
   }];
 }
 
@@ -482,10 +505,10 @@ def OpenACC_GPUSharedMemoryOp : OpenACC_Op<"gpu_shared_memory"> {
     ```mlir
     %sz = arith.constant 128 : index
     %cache = acc.gpu_shared_memory(%sz)
-        {num_copies = 1 : i64,
+        <{num_copies = 1 : i64,
          static_upper_bound_bytes = 1560 : i64,
          dynamic_shared_memory_scaling_bytes = 12 : i64,
-         dynamic_shared_memory_fixed_bytes = 24 : i64}
+         dynamic_shared_memory_fixed_bytes = 24 : i64}>
         : (index) -> memref<?xf32, #gpu.address_space<workgroup>>
     ```
   }];
@@ -499,7 +522,8 @@ def OpenACC_GPUSharedMemoryOp : OpenACC_Op<"gpu_shared_memory"> {
   let results = (outs Res<AnyMemRef, "", [MemAlloc<DefaultResource, 0,
                                            FullEffect>]>:$result);
   let assemblyFormat = [{
-    (`(` $dynamic_sizes^ `)`)? attr-dict `:` functional-type(operands, results)
+    (`(` $dynamic_sizes^ `)`)? prop-dict attr-dict
+    `:` functional-type(operands, results)
   }];
   let builders = [
     OpBuilder<(ins "::mlir::Type":$resultType,
@@ -573,8 +597,8 @@ def OpenACC_ComputeRegionOp
     Example:
 
     ```mlir
-    %w0 = acc.par_width %c128 {par_dim = #acc.par_dim<thread_x>}
-    %w1 = acc.par_width %c8 {par_dim = #acc.par_dim<block_x>}
+    %w0 = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+    %w1 = acc.par_width %c8 par_dim(#acc.par_dim<block_x>)
     acc.compute_region launch(%arg0 = %w0, %arg1 = %w1)
         ins(%arg2 = %data) : (memref<1024xf32>) {
       %c0 = arith.constant 0 : index
@@ -585,7 +609,7 @@ def OpenACC_ComputeRegionOp
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
     ```
   }];
 
@@ -714,11 +738,133 @@ def OpenACC_PredicateRegionOp
         scf.reduce
       } {acc.par_dims = #acc<par_dims[block_x]>}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
     ```
   }];
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "$region attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// acc.map_info
+//===----------------------------------------------------------------------===//
+
+def OpenACC_MapInfoOp : OpenACC_Op<"map_info", [AttrSizedOperandSegments,
+    AllTypesMatch<["var", "accVar"]>]> {
+  let summary = "OpenACC map metadata for offload lowering";
+  let description = [{
+    Captures the runtime allocation or mapping contract for one object,
+    including attach points, descriptor facts, bounds, byte size, and offload
+    map-type flags. This operation does not itself allocate or map the object.
+    `accVar` is a result token of the same type as `var`; a construct consumes
+    the token to issue the corresponding runtime operation.
+
+    Data clauses use the token as a data operand of a data, compute, declare,
+    or update construct. When `var` is an `acc.privatize` result, the token is
+    used as the kernel argument and its `private` and parallel-level map flags
+    request the runtime allocation with the required replication.
+
+    - `var`: Mapped variable (pointer-like or mappable, same as data-entry
+      `var`).
+    - `varType`: Type of the mapped object (same role as data-entry `varType`).
+    - `varPtrPtr`: Optional attach point (host address of the pointer slot).
+    - `desc`: Optional base descriptor when it differs from `var`. Omitted when
+      `var` itself is that descriptor; consumers then use `var` whenever
+      `descKind` is not `none`.
+    - `descKind`: Which descriptor layouts describe the mapped object, as a
+      bitfield so that a nested descriptor can name each level. `none` means
+      the object is described by its address and `size` alone.
+    - `mapFlags`: Offload map-type flags (`to`/`from`/`ptr_and_obj`/`private`/
+      ...), combining enter and exit clause effects or describing a
+      privatized allocation.
+    - `elementSize`: Optional byte size of one element of the mapped object.
+      `bounds` and descriptor extents count elements rather than bytes, so
+      this is what converts them into byte strides. It is stated explicitly
+      because `varType` does not always determine it: a character or
+      derived-type element takes its length from the descriptor.
+    - `size`: Optional total mapped byte size. A constant `0` means the size is
+      carried by `bounds` or by a descriptor instead of being stated here, a
+      constant `-1` means it is not known at compile time, and a non-constant
+      value supplies the size at run time (e.g. loaded from a type
+      descriptor).
+    - `exitLoc`: Optional source location of the exit effects, which for a
+      structured construct is its end directive rather than the location of
+      this operation. Reported by the runtime for the region end.
+    - `accVar`: Result token. Its use by a construct causes that construct to
+      issue the runtime mapping or allocation described here.
+  }];
+
+  let arguments = (ins OpenACC_AnyPointerOrMappableType:$var,
+                       TypeAttr:$varType,
+                       Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
+                       Optional<OpenACC_AnyPointerOrMappableType>:$desc,
+                       DefaultValuedAttr<OpenACC_DataDescKindAttr,
+                         "mlir::acc::DataDescKind::none">:$descKind,
+                       Variadic<OpenACC_DataBoundsType>:$bounds,
+                       Optional<IntOrIndex>:$size,
+                       DefaultValuedAttr<OpenACC_MapFlagsAttr,
+                         "mlir::acc::MapFlags::none">:$mapFlags,
+                       OptionalAttr<StrAttr>:$name,
+                       OptionalAttr<ConfinedAttr<I64Attr, [IntNonNegative]>>:$elementSize,
+                       OptionalAttr<LocationAttr>:$exitLoc);
+
+  let results = (outs OpenACC_AnyPointerOrMappableType:$accVar);
+
+  let extraClassDeclaration = [{
+    mlir::TypedValue<mlir::acc::PointerLikeType> getVarPtr() {
+      return mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(
+          getVar());
+    }
+    mlir::TypedValue<mlir::acc::PointerLikeType> getAccPtr() {
+      return mlir::dyn_cast<mlir::TypedValue<mlir::acc::PointerLikeType>>(
+          getAccVar());
+    }
+  }];
+
+  let assemblyFormat = [{
+    custom<Var>($var) `:` custom<VarPtrType>(type($var), $varType)
+    oilist(
+        `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
+      | `desc` `(` $desc `:` type($desc) `)`
+      | `bounds` `(` $bounds `)`
+      | `size` `(` $size `:` type($size) `)`
+      | `elementSize` `(` $elementSize `)`
+      | `name` `(` $name `)`
+      | `exitLoc` `(` custom<SourceLocation>($exitLoc) `)`
+    )
+    `descKind` `(` enum($descKind) `)`
+    `mapFlags` `(` enum($mapFlags) `)`
+    `->` type($accVar) attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "::mlir::Type":$accVarType, "::mlir::Value":$var,
+                   "::mlir::Type":$varType,
+                   "::mlir::acc::MapFlags":$mapFlags,
+                   CArg<"::mlir::Value", "{}">:$varPtrPtr,
+                   CArg<"::mlir::Value", "{}">:$desc,
+                   CArg<"::mlir::acc::DataDescKind",
+                        "::mlir::acc::DataDescKind::none">:$descKind,
+                   CArg<"::mlir::ValueRange", "{}">:$bounds,
+                   CArg<"std::optional<::llvm::StringRef>",
+                        "std::nullopt">:$name,
+                   CArg<"std::optional<int64_t>", "std::nullopt">:$elementSize,
+                   CArg<"::mlir::Value", "{}">:$size,
+                   CArg<"::mlir::LocationAttr", "{}">:$exitLoc),
+      [{
+        ::mlir::acc::DataDescKind kind = descKind;
+        if (!bounds.empty())
+          kind = kind | ::mlir::acc::DataDescKind::openacc;
+        build($_builder, $_state, accVarType, var, varType, varPtrPtr, desc,
+              kind, bounds, size, mapFlags,
+              name ? $_builder.getStringAttr(*name) : ::mlir::StringAttr{},
+              elementSize ? $_builder.getI64IntegerAttr(*elementSize)
+                          : ::mlir::IntegerAttr{},
+              exitLoc);
+      }]>,
+  ];
+
   let hasVerifier = 1;
 }
 

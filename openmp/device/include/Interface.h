@@ -44,6 +44,7 @@ int omp_get_dynamic(void);
 ///
 ///{
 void omp_set_num_threads(int);
+void kmp_set_num_threads_8(int64_t);
 int omp_get_max_threads(void);
 ///}
 
@@ -217,6 +218,9 @@ uint32_t __kmpc_get_hardware_num_threads_in_block();
 /// External interface to get the warp size.
 uint32_t __kmpc_get_warp_size();
 
+/// External interface to get how many of a block's threads a team can use.
+uint32_t __kmpc_get_max_team_threads(int32_t IsSPMD);
+
 /// Kernel
 ///
 ///{
@@ -224,6 +228,8 @@ uint32_t __kmpc_get_warp_size();
 struct KernelEnvironmentTy;
 
 int8_t __kmpc_is_spmd_exec_mode();
+
+int32_t __kmpc_is_team_main_thread();
 
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                            KernelLaunchEnvironmentTy *KernelLaunchEnvironment);

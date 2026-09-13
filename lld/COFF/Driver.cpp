@@ -33,6 +33,7 @@
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
+#include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -2327,6 +2328,19 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   if (args.hasFlag(OPT_prefetch_inputs, OPT_prefetch_inputs_no, false))
     config->prefetchInputs = true;
 
+  config->optRemarksFilename = args.getLastArgValue(OPT_opt_remarks_filename);
+  config->optRemarksPasses = args.getLastArgValue(OPT_opt_remarks_passes);
+  config->optRemarksFormat = args.getLastArgValue(OPT_opt_remarks_format);
+  config->optRemarksWithHotness = args.hasArg(OPT_opt_remarks_with_hotness);
+  if (auto *arg = args.getLastArg(OPT_opt_remarks_hotness_threshold)) {
+    auto resultOrErr = remarks::parseHotnessThresholdOption(arg->getValue());
+    if (!resultOrErr)
+      Err(ctx) << arg->getSpelling() << ": invalid argument '"
+               << arg->getValue() << "', only integer or 'auto' is supported";
+    else
+      config->optRemarksHotnessThreshold = *resultOrErr;
+  }
+
   if (errCount(ctx))
     return;
 
@@ -2805,9 +2819,11 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   ltoCompilationDone = true;
   ctx.forEachSymtab([](SymbolTable &symtab) { symtab.compileBitcodeFiles(); });
 
-  if (Defined *d =
-          dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore("_tls_used")))
-    config->gcroot.push_back(d);
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    if (Defined *d =
+            dyn_cast_or_null<Defined>(symtab.findUnderscore("_tls_used")))
+      config->gcroot.push_back(d);
+  });
 
   // If -thinlto-index-only is given, we should create only "index
   // files" and not object files. Index file creation is already done
@@ -2836,6 +2852,22 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   if (errorCount())
     return;
+
+  if (ctx.hybridSymtab) {
+    // On ARM64X, merge tls chunks, there may be only one true _tls_start and
+    // _tls_end chunk.
+    auto maybeReplaceWithNative = [&](StringRef name) {
+      auto nativeSym = dyn_cast_or_null<DefinedRegular>(
+          ctx.hybridSymtab->findUnderscore(name));
+      if (!nativeSym)
+        return;
+      if (auto ecSym =
+              dyn_cast_or_null<DefinedRegular>(ctx.symtab.findUnderscore(name)))
+        nativeSym->getChunk()->replace(ecSym->getChunk());
+    };
+    maybeReplaceWithNative("_tls_start");
+    maybeReplaceWithNative("_tls_end");
+  }
 
   ctx.forEachActiveSymtab([](SymbolTable &symtab) {
     symtab.initializeECThunks();

@@ -1,18 +1,18 @@
 # A rule to add startup system tests. When we have a complete startup system,
-# we should be able to use the add_libc_unittest rule or an extension of it.
+# we should be able to use the add_libc_test rule or an extension of it.
 # But, while the system is being developed,  we need to use a special rule like
 # this.
 function(add_startup_test target_name)
   if(NOT CMAKE_HOST_UNIX)
     message(
-        WARNING
-        "Test for the startup system currently assume a POSIX/Unix like "
-        "environment and may not work on your platform.")
+      WARNING
+      "Test for the startup system currently assume a POSIX/Unix like "
+      "environment and may not work on your platform.")
   endif()
 
   cmake_parse_arguments(
     "ADD_STARTUP_TEST"
-    ""    # No option arguments
+    "" # No option arguments
     "SRC" # Single value arguments
     "DEPENDS;ARGS;ENV" # Multivalue arguments.
     ${ARGN}
@@ -55,7 +55,7 @@ function(add_startup_test target_name)
   )
 
   add_dependencies(libc_startup_tests ${fq_target_name})
-endfunction(add_startup_test)
+endfunction()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${LIBC_TARGET_OS})

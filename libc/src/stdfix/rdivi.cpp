@@ -1,4 +1,4 @@
-//===-- Implementation of rdivi function ---------------------------------===//
+//===-- Implementation of rdivi function ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,15 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "rdivi.h"
-#include "include/llvm-libc-macros/stdfix-macros.h" // fract
-#include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION
-#include "src/__support/fixed_point/fx_bits.h"      // fixed_point
-#include "src/__support/macros/config.h"            // LIBC_NAMESPACE_DECL
+#include "src/__support/common.h"
+#include "src/__support/fixed_point/fx_bits.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(fract, rdivi, (int a, int b)) {
-  return fixed_point::divi<fract>(a, b);
+LLVM_LIBC_FUNCTION(fract, rdivi, (int n, int d)) {
+  return fixed_point::fxdivi<fract, int>(n, d);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

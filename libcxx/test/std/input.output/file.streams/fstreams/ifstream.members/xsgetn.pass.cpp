@@ -25,6 +25,14 @@
 
 #include "test_macros.h"
 
+void check_unget(std::filebuf* fb, char expected) {
+  auto c = fb->sungetc();
+  if (c != EOF) {
+    assert(c == expected);
+    assert(fb->sbumpc() == expected);
+  }
+}
+
 int main(int, char**) {
   std::vector<char> stream_buffer(10);
   std::ifstream fs("xsgetn.test.dat");
@@ -40,33 +48,39 @@ int main(int, char**) {
   { // Check that a read smaller than the buffer works fine
     assert(fb->sgetn(test_buffer.data(), 5) == 5);
     assert(std::string(test_buffer.data(), 5) == "this ");
+    check_unget(fb, ' ');
   }
   { // Check that reading up to the buffer end works fine
     assert(fb->sgetn(test_buffer.data(), 5) == 5);
     assert(std::string(test_buffer.data(), 5) == "is so");
+    check_unget(fb, 'o');
   }
   { // Check that reading from an empty buffer, but more than the buffer can
     // hold works fine
     test_buffer.resize(12);
     assert(fb->sgetn(test_buffer.data(), 12) == 12);
     assert(std::string(test_buffer.data(), 12) == "me random da");
+    check_unget(fb, 'a');
   }
   { // Check that reading from a non-empty buffer, and more than the buffer can
     // hold works fine Fill the buffer up
     test_buffer.resize(2);
     assert(fb->sgetn(test_buffer.data(), 2) == 2);
     assert(std::string(test_buffer.data(), 2) == "ta");
+    check_unget(fb, 'a');
 
     // Do the actual check
     test_buffer.resize(12);
     assert(fb->sgetn(test_buffer.data(), 12) == 12);
     assert(std::string(test_buffer.data(), 12) == " to be able ");
+    check_unget(fb, ' ');
   }
   { // Check that trying to read more than the file size works fine
     test_buffer.resize(30);
     assert(fb->sgetn(test_buffer.data(), 30) == 24);
     test_buffer.resize(24);
     assert(std::string(test_buffer.data(), 24) == "to test buffer behaviour");
+    check_unget(fb, 'r');
   }
   { // Ensure that the read fails gracefully with an unopened ifstream
     // See https://llvm.org/PR168628

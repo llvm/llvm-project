@@ -64,12 +64,12 @@ body:             |
     ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23 = V_WMMA_F32_16X16X32_BF16_w32_twoaddr killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, killed $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, 8, killed $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23, 0, 0, 0, 0, implicit $exec
+    ; GCN-NEXT: $sgpr4 = S_MOV_B32 killed $sgpr0
     ; GCN-NEXT: $vgpr31 = V_MOV_B32_e32 killed $vgpr26, implicit $exec
     ; GCN-NEXT: $vgpr32 = V_MOV_B32_e32 killed $vgpr27, implicit $exec
-    ; GCN-NEXT: $vgpr33 = V_MOV_B32_e32 killed $vgpr28, implicit $exec
-    ; GCN-NEXT: $sgpr4 = S_MOV_B32 killed $sgpr0
     ; GCN-NEXT: $sgpr5 = S_MOV_B32 killed $sgpr1
     ; GCN-NEXT: $sgpr6 = S_MOV_B32 killed $sgpr2
+    ; GCN-NEXT: $vgpr33 = V_MOV_B32_e32 killed $vgpr28, implicit $exec
     ; GCN-NEXT: $sgpr7 = S_MOV_B32 killed $sgpr3
     ; GCN-NEXT: $vgpr30 = V_MOV_B32_e32 killed $vgpr25, implicit $exec
     ; GCN-NEXT: $vgpr29 = V_ADD_F32_e32 killed $vgpr24, killed $vgpr16, implicit $mode, implicit $exec

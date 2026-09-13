@@ -3,7 +3,7 @@
 ; RUN: opt -p loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-consider-reg-pressure=true -S < %s | FileCheck %s
 ; RUN: opt -p loop-vectorize -mtriple riscv64 -mattr=+v -vectorizer-consider-reg-pressure=false -S < %s | FileCheck %s --check-prefix=NO-REG-PRESSURE-CHECK
 
-define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) {
+define void @f(ptr noalias %p0, ptr noalias %p1, ptr noalias %p2) vscale_range(2, 1024) {
 ; CHECK-LABEL: define void @f(
 ; CHECK-SAME: ptr noalias [[P0:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

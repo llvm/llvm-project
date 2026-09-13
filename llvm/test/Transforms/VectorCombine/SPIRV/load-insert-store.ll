@@ -800,7 +800,7 @@ entry:
 
 declare void @foo()
 declare void @maywrite(ptr)
-declare void @nowrite(ptr) readonly
+declare void @nowrite(ptr) readonly nofree
 
 ; To test if number of instructions in-between exceeds the limit (default 30),
 ; the combine will quit.

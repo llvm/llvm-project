@@ -922,6 +922,12 @@ struct build_version_command {
   uint32_t ntools;   // number of tool entries following this
 };
 
+struct target_triple_command {
+  uint32_t cmd;     // LC_TARGET_TRIPLE
+  uint32_t cmdsize; // including string
+  uint32_t triple;  // target triple string
+};
+
 struct dyld_env_command {
   uint32_t cmd;
   uint32_t cmdsize;
@@ -1517,6 +1523,12 @@ inline void swapStruct(build_version_command &C) {
   sys::swapByteOrder(C.ntools);
 }
 
+inline void swapStruct(target_triple_command &C) {
+  sys::swapByteOrder(C.cmd);
+  sys::swapByteOrder(C.cmdsize);
+  sys::swapByteOrder(C.triple);
+}
+
 inline void swapStruct(build_tool_version &C) {
   sys::swapByteOrder(C.tool);
   sys::swapByteOrder(C.version);
@@ -1703,6 +1715,7 @@ enum CPUSubTypeARM64 : uint32_t {
   CPU_SUBTYPE_ARM64_ALL = 0,
   CPU_SUBTYPE_ARM64_V8 = 1,
   CPU_SUBTYPE_ARM64E = 2,
+  CPU_SUBTYPE_ARM64E_X1 = 12,
 
   // arm64e uses the capability bits to encode ptrauth ABI information.
   // Bit 63 marks the binary as Versioned.

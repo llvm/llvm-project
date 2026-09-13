@@ -284,6 +284,31 @@ struct DivOpPattern final : OpConversionPattern<complex::DivOp> {
   }
 };
 
+template <typename Atan2Op>
+struct AngleOpPattern final : OpConversionPattern<complex::AngleOp> {
+  using OpConversionPattern<complex::AngleOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(complex::AngleOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type spirvType =
+        this->getTypeConverter()->convertType(op.getResult().getType());
+    if (!spirvType)
+      return rewriter.notifyMatchFailure(op, "unable to convert result type");
+
+    Location loc = op.getLoc();
+    Value complexVal = adaptor.getComplex();
+
+    Value re =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {0});
+    Value im =
+        spirv::CompositeExtractOp::create(rewriter, loc, complexVal, {1});
+
+    rewriter.replaceOpWithNewOp<Atan2Op>(op, im, re);
+    return success();
+  }
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -294,16 +319,18 @@ void mlir::populateComplexToSPIRVPatterns(
     const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
-               ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
-               ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
-               ComparisonOpPattern<complex::EqualOp, spirv::FOrdEqualOp,
-                                   spirv::LogicalAndOp>,
-               ComparisonOpPattern<complex::NotEqualOp, spirv::FUnordNotEqualOp,
-                                   spirv::LogicalOrOp>,
-               MulOpPattern, DivOpPattern,
-               NegationOpPattern<complex::NegOp, /*NegateReal=*/true>,
-               NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,
-               AbsOpPattern<spirv::GLSqrtOp>, AbsOpPattern<spirv::CLSqrtOp>>(
-      typeConverter, context);
+  patterns
+      .add<ConstantOpPattern, CreateOpPattern, ReOpPattern, ImOpPattern,
+           ElementwiseBinaryOpPattern<complex::AddOp, spirv::FAddOp>,
+           ElementwiseBinaryOpPattern<complex::SubOp, spirv::FSubOp>,
+           ComparisonOpPattern<complex::EqualOp, spirv::FOrdEqualOp,
+                               spirv::LogicalAndOp>,
+           ComparisonOpPattern<complex::NotEqualOp, spirv::FUnordNotEqualOp,
+                               spirv::LogicalOrOp>,
+           MulOpPattern, DivOpPattern,
+           NegationOpPattern<complex::NegOp, /*NegateReal=*/true>,
+           NegationOpPattern<complex::ConjOp, /*NegateReal=*/false>,
+           AbsOpPattern<spirv::GLSqrtOp>, AbsOpPattern<spirv::CLSqrtOp>,
+           AngleOpPattern<spirv::GLAtan2Op>, AngleOpPattern<spirv::CLAtan2Op>>(
+          typeConverter, context);
 }

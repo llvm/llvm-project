@@ -49,8 +49,9 @@ void ReplaceAutoPtrCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
-  auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isInStdNamespace());
-  auto AutoPtrType = hasCanonicalType(recordType(hasDeclaration(AutoPtrDecl)));
+  const auto AutoPtrDecl = recordDecl(hasName("auto_ptr"), isInStdNamespace());
+  const auto AutoPtrType =
+      hasCanonicalType(recordType(hasDeclaration(AutoPtrDecl)));
 
   //   std::auto_ptr<int> a;
   //        ^~~~~~~~~~~~~
@@ -76,7 +77,7 @@ void ReplaceAutoPtrCheck::registerMatchers(MatchFinder *Finder) {
   //   std::auto_ptr<int> i, j;
   //   i = j;
   //   ~~~~^
-  auto MovableArgumentMatcher =
+  const auto MovableArgumentMatcher =
       expr(isLValue(), hasType(AutoPtrType)).bind(AutoPtrOwnershipTransferId);
 
   Finder->addMatcher(
@@ -107,10 +108,11 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
     if (Range.isInvalid())
       return;
 
-    auto Diag = diag(Range.getBegin(), "use std::move to transfer ownership")
-                << FixItHint::CreateInsertion(Range.getBegin(), "std::move(")
-                << FixItHint::CreateInsertion(Range.getEnd(), ")")
-                << Inserter.createMainFileIncludeInsertion("<utility>");
+    const auto Diag =
+        diag(Range.getBegin(), "use std::move to transfer ownership")
+        << FixItHint::CreateInsertion(Range.getBegin(), "std::move(")
+        << FixItHint::CreateInsertion(Range.getEnd(), ")")
+        << Inserter.createMainFileIncludeInsertion("<utility>");
 
     return;
   }
@@ -118,11 +120,11 @@ void ReplaceAutoPtrCheck::check(const MatchFinder::MatchResult &Result) {
   SourceLocation AutoPtrLoc;
   if (const auto *PTL = Result.Nodes.getNodeAs<TypeLoc>(AutoPtrTokenId)) {
     auto TL = *PTL;
-    if (auto QTL = TL.getAs<QualifiedTypeLoc>())
+    if (const auto QTL = TL.getAs<QualifiedTypeLoc>())
       TL = QTL.getUnqualifiedLoc();
     //   std::auto_ptr<int> i;
     //        ^
-    if (auto Loc = TL.getAs<TemplateSpecializationTypeLoc>())
+    if (const auto Loc = TL.getAs<TemplateSpecializationTypeLoc>())
       AutoPtrLoc = Loc.getTemplateNameLoc();
   } else if (const auto *D =
                  Result.Nodes.getNodeAs<UsingDecl>(AutoPtrTokenId)) {

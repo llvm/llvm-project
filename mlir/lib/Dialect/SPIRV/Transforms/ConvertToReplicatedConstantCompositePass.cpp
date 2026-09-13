@@ -109,7 +109,8 @@ struct SpecConstantCompositeOpConversion final
           op, "expected flat symbol reference for splat constituent");
 
     rewriter.replaceOpWithNewOp<spirv::EXTSpecConstantCompositeReplicateOp>(
-        op, TypeAttr::get(op.getType()), op.getSymNameAttr(), splatConstituent);
+        op, TypeAttr::get(op.getType()), op.getSymNameAttr(), splatConstituent,
+        op.getSymVisibilityAttr());
 
     return success();
   }

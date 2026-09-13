@@ -2449,7 +2449,8 @@ bool SystemZInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                             const MachineFunction &MF) const {
   if (TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF))
     return true;
-  return MI.getOpcode() == SystemZ::FENCE;
+  return MI.getOpcode() == SystemZ::FENCE ||
+         MI.getOpcode() == TargetOpcode::PATCHABLE_FUNCTION_ENTER;
 }
 
 MCInst SystemZInstrInfo::getNop() const {

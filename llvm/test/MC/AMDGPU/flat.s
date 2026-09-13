@@ -2,7 +2,6 @@
 // RUN: not llvm-mc -triple=amdgpu8.02 -show-encoding %s | FileCheck %s --check-prefix=CIVI --check-prefix=VI
 
 // RUN: not llvm-mc -triple=amdgpu8.02 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOVI --implicit-check-not=error:
-// RUN: not llvm-mc -triple=amdgcn %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
 // RUN: not llvm-mc -triple=amdgpu6.00 %s -filetype=null 2>&1 | FileCheck %s --check-prefix=NOSI --implicit-check-not=error:
 
 //===----------------------------------------------------------------------===//

@@ -304,6 +304,50 @@ constexpr bool testSubscript() {
   return true;
 }
 
+#if TEST_STD_VER >= 29
+
+template <class T>
+concept AtInvocable = requires(T const& obj, std::size_t n) { obj.at(n); };
+
+constexpr bool testAt() {
+  static_assert(!AtInvocable<ForwardRange>);
+  static_assert(AtInvocable<RARange>);
+
+  RARange randomAccess;
+  assert(randomAccess.at(2) == 2);
+  assert(static_cast<RARange const&>(randomAccess).at(2) == 2);
+  randomAccess.at(2) = 3;
+  assert(randomAccess.at(2) == 3);
+
+#  ifndef TEST_HAS_NO_EXCEPTIONS
+  if (!std::is_constant_evaluated()) {
+    try {
+      TEST_IGNORE_NODISCARD randomAccess.at(0);
+      assert(true);
+    } catch (std::out_of_range const&) {
+      // pass
+      assert(false); // This should not be reached because index 0 is valid.
+    } catch (...) {
+      assert(false);
+    }
+
+    // Test that at() throws an exception when the index is out of range.
+    try {
+      TEST_IGNORE_NODISCARD randomAccess.at(10);
+      assert(false);
+    } catch (std::out_of_range const&) {
+      // pass
+    } catch (...) {
+      assert(false);
+    }
+  }
+#  endif
+
+  return true;
+}
+
+#endif // TEST_STD_VER >= 29
+
 template <class T>
 concept FrontInvocable = requires(T const& obj) { obj.front(); };
 
@@ -354,6 +398,11 @@ int main(int, char**) {
 
   testSubscript();
   static_assert(testSubscript());
+
+#if TEST_STD_VER >= 29
+  testAt();
+  static_assert(testAt());
+#endif
 
   testFrontBack();
   static_assert(testFrontBack());

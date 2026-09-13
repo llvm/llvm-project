@@ -623,6 +623,82 @@ void testCloneWithMapping(MlirContext ctx) {
   fprintf(stderr, "testCloneWithMapping: PASSED\n");
 }
 
+void testInsertionPointSaveRestore(MlirContext ctx) {
+  // CHECK-LABEL: @testInsertionPointSaveRestore
+  fprintf(stderr, "@testInsertionPointSaveRestore\n");
+
+  const char *moduleString = "\"dialect.op1\"() : () -> ()\n"
+                             "\"dialect.op2\"() : () -> ()\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirOperation op = mlirModuleGetOperation(module);
+  MlirBlock body = mlirModuleGetBody(module);
+  MlirOperation op1 = mlirBlockGetFirstOperation(body);
+  MlirOperation op2 = mlirOperationGetNextInBlock(op1);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+
+  // Save an insertion point that points right before op2.
+  mlirRewriterBaseSetInsertionPointBefore(rewriter, op2);
+  MlirRewriterBaseInsertPoint saved =
+      mlirRewriterBaseSaveInsertionPoint(rewriter);
+  assert(!mlirBlockIsNull(saved.block));
+  assert(mlirOperationEqual(saved.operationAfter, op2));
+
+  // Move the insertion point to the end of the block. An end-of-block insertion
+  // point round-trips with a null `operationAfter`.
+  mlirRewriterBaseSetInsertionPointToEnd(rewriter, body);
+  MlirRewriterBaseInsertPoint endIp =
+      mlirRewriterBaseSaveInsertionPoint(rewriter);
+  assert(!mlirBlockIsNull(endIp.block));
+  assert(mlirOperationIsNull(endIp.operationAfter));
+
+  // Restoring the first saved insertion point makes subsequent insertions land
+  // before op2 again, not at the end where we just were.
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, saved);
+  MlirOperation opRestored =
+      createOperationWithName(ctx, "dialect.op_restored");
+  mlirRewriterBaseInsert(rewriter, opRestored);
+
+  // Restoring the null-`operationAfter` point re-establishes end-of-block, even
+  // though the insertion point currently sits in the middle of the block.
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, endIp);
+  assert(!mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+  assert(mlirOperationIsNull(
+      mlirRewriterBaseGetOperationAfterInsertion(rewriter)));
+  MlirOperation opEnd = createOperationWithName(ctx, "dialect.op_end");
+  mlirRewriterBaseInsert(rewriter, opEnd);
+
+  // A cleared insertion point round-trips as a null block.
+  mlirRewriterBaseClearInsertionPoint(rewriter);
+  MlirRewriterBaseInsertPoint clearedIp =
+      mlirRewriterBaseSaveInsertionPoint(rewriter);
+  assert(mlirBlockIsNull(clearedIp.block));
+  assert(mlirOperationIsNull(clearedIp.operationAfter));
+
+  // Restoring a cleared insertion point clears the current one.
+  mlirRewriterBaseSetInsertionPointToStart(rewriter, body);
+  assert(!mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+  mlirRewriterBaseRestoreInsertionPoint(rewriter, clearedIp);
+  assert(mlirBlockIsNull(mlirRewriterBaseGetInsertionBlock(rewriter)));
+
+  mlirOperationDump(op);
+  // clang-format off
+  // CHECK:      module {
+  // CHECK-NEXT:   "dialect.op1"() : () -> ()
+  // CHECK-NEXT:   %{{.*}} = "dialect.op_restored"() : () -> index
+  // CHECK-NEXT:   "dialect.op2"() : () -> ()
+  // CHECK-NEXT:   %{{.*}} = "dialect.op_end"() : () -> index
+  // CHECK-NEXT: }
+  // clang-format on
+
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testInsertionPointSaveRestore: PASSED
+  fprintf(stderr, "testInsertionPointSaveRestore: PASSED\n");
+}
+
 static MlirConversionTargetLegality dynamicLegalityAlwaysLegal(MlirOperation op,
                                                                void *userData) {
   (void)op;
@@ -1899,6 +1975,7 @@ int main(void) {
   testReplaceUses(ctx);
   testGreedyRewriteDriverConfig(ctx);
   testCloneWithMapping(ctx);
+  testInsertionPointSaveRestore(ctx);
   testConversionTargetDynamicLegality(ctx);
   testTypeConverterSourceMaterialization(ctx);
   testTypeConverterTargetMaterialization(ctx);

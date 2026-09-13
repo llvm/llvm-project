@@ -68,7 +68,7 @@ private:
   /// The type of the resource referenced.
   TypeID opaqueID;
   /// The dialect owning the given resource.
-  Dialect *dialect;
+  Dialect *dialect = nullptr;
 };
 
 /// This class represents a CRTP base class for dialect resource handles. It
@@ -501,6 +501,11 @@ public:
   /// printed some other way (like as a fixed operand).
   virtual void printOptionalAttrDict(ArrayRef<NamedAttribute> attrs,
                                      ArrayRef<StringRef> elidedAttrs = {}) = 0;
+
+  void printOptionalAttrDict(DictionaryAttr attrs,
+                             ArrayRef<StringRef> elidedAttrs = {}) {
+    printOptionalAttrDict(attrs.getValue(), elidedAttrs);
+  }
 
   /// If the specified operation has attributes, print out an attribute
   /// dictionary prefixed with 'attributes'.

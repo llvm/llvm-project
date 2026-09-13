@@ -279,6 +279,7 @@ class TestStatusline(PExpectTest):
     @skipIfDarwin
     @skipIfLinux  # https://github.com/llvm/llvm-project/issues/154763
     @add_test_categories(["lldb-server"])
+    @skipIfWasm  # the test drives a native debug server for the program
     def test_modulelist_deadlock(self):
         """Regression test for a deadlock that occurs when the status line is enabled before connecting
         to a gdb-remote server.

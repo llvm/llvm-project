@@ -1,7 +1,7 @@
 // DEFINE: %{entry_point} = test_load_store_zaq0
 // DEFINE: %{compile} = mlir-opt %s -test-lower-to-arm-sme -test-lower-to-llvm
 // DEFINE: %{run} = %mcr_aarch64_cmd \
-// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  -march=aarch64 -mattr=+sme \
 // DEFINE:  -e %{entry_point} -entry-point-result=void \
 // DEFINE:  -shared-libs=%native_mlir_runner_utils,%native_mlir_c_runner_utils,%native_arm_sme_abi_shlib
 
@@ -24,7 +24,7 @@ func.func @vector_copy_i128(%src: memref<?x?xi128>, %dst: memref<?x?xi128>) {
   return
 }
 
-func.func @test_load_store_zaq0() {
+func.func @test_load_store_zaq0() attributes {llvm.arm_locally_streaming} {
   %c0 = arith.constant 0 : index
   %min_elts_q = arith.constant 1 : index
   %bytes_per_128_bit = arith.constant 16 : index
@@ -38,8 +38,8 @@ func.func @test_load_store_zaq0() {
   /// Allocate memory for two 128-bit tiles (A and B) and fill them a constant.
   /// The tiles are allocated as bytes so we can fill and print them, as there's
   /// very little that can be done with 128-bit types directly.
-  %tile_a_bytes = memref.alloca(%zaq_size_bytes) {alignment = 16} : memref<?xi8>
-  %tile_b_bytes = memref.alloca(%zaq_size_bytes) {alignment = 16} : memref<?xi8>
+  %tile_a_bytes = memref.alloca(%zaq_size_bytes) alignment = 16 : memref<?xi8>
+  %tile_b_bytes = memref.alloca(%zaq_size_bytes) alignment = 16 : memref<?xi8>
   %fill_a_i8 = arith.constant 7 : i8
   %fill_b_i8 = arith.constant 64 : i8
   linalg.fill ins(%fill_a_i8 : i8) outs(%tile_a_bytes : memref<?xi8>)

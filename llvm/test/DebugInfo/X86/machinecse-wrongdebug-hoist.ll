@@ -1,8 +1,8 @@
 ; RUN: llc %s -o - -print-after=machine-cse -mtriple=x86_64-- 2>&1 | FileCheck %s --match-full-lines
 
-; CHECK: %5:gr32 = SUB32ri %0:gr32(tied-def 0), 1, implicit-def $eflags, debug-location !24; a.c:3:13
+; CHECK: %5:gr32 = SUB32ri %0:gr32(tied-def 0), 1, implicit-def $eflags, debug-location !{{[0-9]+}}; a.c:3:13
 ; CHECK-NEXT: %10:gr32 = MOVSX32rr8 %4:gr8
-; CHECK-NEXT: JCC_1 %bb.2, 15, implicit $eflags, debug-location !25; a.c:3:18
+; CHECK-NEXT: JCC_1 %bb.2, 15, implicit $eflags, debug-location !{{[0-9]+}}; a.c:3:18
 
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.15.0"

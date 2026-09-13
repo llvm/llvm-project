@@ -1,5 +1,5 @@
-// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes --allow-unregistered-dialect %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,DEFAULT
-// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes="convert-function-boundaries" --allow-unregistered-dialect %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,FUNCBOUND
+// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,DEFAULT
+// RUN: mlir-opt --split-input-file --verify-diagnostics --tosa-infer-shapes="convert-function-boundaries" %s | FileCheck %s --allow-unused-prefixes --check-prefixes=CHECK,FUNCBOUND
 
 // CHECK-LABEL: @test_return
 func.func @test_return(%arg0 : tensor<4xf32>) -> tensor<*xf32> {
@@ -69,7 +69,7 @@ func.func @test_unary_f32(%arg0 : tensor<4xf32>) -> () {
   %11 = tosa.sigmoid %arg0 : (tensor<4xf32>) -> tensor<*xf32>
 
   // CHECK: tosa.cast %arg0 : (tensor<4xf32>) -> tensor<4xi32>
-  %12 = tosa.cast %arg0 : (tensor<4xf32>) -> tensor<*xi32>
+  %12 = tosa.cast %arg0 {input_unsigned = false} : (tensor<4xf32>) -> tensor<*xi32>
 
   // CHECK: tosa.erf %arg0 : (tensor<4xf32>) -> tensor<4xf32>
   %13 = tosa.erf %arg0 : (tensor<4xf32>) -> tensor<*xf32>
@@ -357,7 +357,7 @@ func.func @test_dynamic_mixed_matmul(%arg0 : tensor<?x3x?xi32>, %arg1 : tensor<?
 // CHECK-LABEL: @test_unranked_zero_points_matmul
 func.func @test_unranked_zero_points_matmul(%arg0: tensor<1x2x3xf32>, %arg1: tensor<1x3x4xf32>, %zero_point: tensor<1xf32>) -> tensor<1x2x4xf32> {
     // CHECK: %[[ZP:.*]] = tosa.cast %arg2 : (tensor<1xf32>) -> tensor<1xf32>
-    %zero_point_unranked = "tosa.cast"(%zero_point) : (tensor<1xf32>) -> tensor<*xf32>
+    %zero_point_unranked = "tosa.cast"(%zero_point) {input_unsigned = false} : (tensor<1xf32>) -> tensor<*xf32>
     // CHECK: tosa.matmul %arg0, %arg1, %[[ZP]], %[[ZP]] : (tensor<1x2x3xf32>, tensor<1x3x4xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1x2x4xf32>
     %0 = tosa.matmul %arg0, %arg1, %zero_point_unranked, %zero_point_unranked : (tensor<1x2x3xf32>, tensor<1x3x4xf32>, tensor<*xf32>, tensor<*xf32>)  -> tensor<1x2x4xf32>
     return %0 : tensor<1x2x4xf32>
@@ -435,7 +435,7 @@ func.func @test_unranked_matmul_t(%arg0 : tensor<*xi32>, %arg1 : tensor<*xi32>) 
 func.func @test_accepts_unranked_scalar_tensor(%arg0: tensor<1x2x2xf32>, %arg1: tensor<1xf32>) -> tensor<*xf32> {
   // CHECK-DAG: %[[SHAPE:.*]] = tosa.const_shape {values = dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
   // CHECK-DAG: %[[ZP:.*]] = tosa.cast %arg1 : (tensor<1xf32>) -> tensor<1xf32>
-  %0 = tosa.cast %arg1 : (tensor<1xf32>) -> tensor<*xf32>
+  %0 = tosa.cast %arg1 {input_unsigned = false} : (tensor<1xf32>) -> tensor<*xf32>
   %1 = tosa.const_shape {values = dense<[0, 0, 0, 1, 0, 1]> : tensor<6xindex>} : () -> !tosa.shape<6>
   // CHECK: %[[PAD:.*]] = tosa.pad %arg0, %[[SHAPE]], %[[ZP]] : (tensor<1x2x2xf32>, !tosa.shape<6>, tensor<1xf32>) -> tensor<1x3x3xf32>
   %2 = tosa.pad %arg0, %1, %0 : (tensor<1x2x2xf32>, !tosa.shape<6>, tensor<*xf32>) -> tensor<*xf32>
@@ -450,7 +450,7 @@ func.func @test_accepts_unranked_scalar_tensor(%arg0: tensor<1x2x2xf32>, %arg1: 
 // CHECK-LABEL: @test_unranked_scalar_i8_tensor
 func.func @test_unranked_scalar_i8_tensor(%arg0: tensor<4xi32>, %arg1: tensor<4xi32>, %arg2: tensor<1xi8>) -> tensor<4xi32> {
   // CHECK: %[[SHIFT:.*]] = tosa.cast %arg2 : (tensor<1xi8>) -> tensor<1xi8>
-  %shift = tosa.cast %arg2 : (tensor<1xi8>) -> tensor<*xi8>
+  %shift = tosa.cast %arg2 {input_unsigned = false} : (tensor<1xi8>) -> tensor<*xi8>
   // CHECK: tosa.mul %arg0, %arg1, %[[SHIFT]] : (tensor<4xi32>, tensor<4xi32>, tensor<1xi8>) -> tensor<4xi32>
   %0 = tosa.mul %arg0, %arg1, %shift : (tensor<4xi32>, tensor<4xi32>, tensor<*xi8>) -> tensor<4xi32>
   return %0 : tensor<4xi32>
@@ -1657,8 +1657,8 @@ func.func @while_dont_crash(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
     // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
     %3 = tosa.add %arg1, %arg1 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
     // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
-    // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
-    "use"(%3) : (tensor<*xi32>) -> ()
+    // CHECK: "test.use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+    "test.use"(%3) : (tensor<*xi32>) -> ()
     tosa.yield %3 : tensor<*xi32>
   }
   // DEFAULT: %[[CAST:.+]] = tensor.cast
@@ -1708,8 +1708,8 @@ func.func @while_dont_crash_nested(%arg0 : tensor<i32>) -> (tensor<*xi32>) {
       // CHECK-SAME: (tensor<i32>, tensor<i32>) -> tensor<i32>
       %4 = tosa.add %arg2, %arg2 : (tensor<*xi32>, tensor<*xi32>) -> tensor<*xi32>
       // CHECK: %[[CAST:.+]] = tensor.cast %{{.*}} : tensor<i32> to tensor<*xi32>
-      // CHECK: "use"(%[[CAST]]) : (tensor<*xi32>) -> ()
-      "use"(%4) : (tensor<*xi32>) -> ()
+      // CHECK: "test.use"(%[[CAST]]) : (tensor<*xi32>) -> ()
+      "test.use"(%4) : (tensor<*xi32>) -> ()
       // CHECK:      tosa.yield
       // CHECK-SAME: tensor<i32>
       tosa.yield %4 : tensor<*xi32>
@@ -1877,7 +1877,7 @@ func.func @test_tosa_use_def_chain(%arg0: tensor<1x32x32x3xf32>, %arg1: tensor<1
 func.func @test_multiple_non_inferrable_consumers(%arg0: tensor<1x2x8xf32>) {
   // CHECK: %[[TOSA_CAST:.*]] = tosa.cast %[[ARG]] : (tensor<1x2x8xf32>) -> tensor<1x2x8xf32>
   // CHECK: %[[TENSOR_CAST:.*]] = tensor.cast %[[TOSA_CAST]] : tensor<1x2x8xf32> to tensor<?x2x8xf32>
-  %0 = tosa.cast %arg0 : (tensor<1x2x8xf32>) -> tensor<?x2x8xf32>
+  %0 = tosa.cast %arg0 {input_unsigned = false} : (tensor<1x2x8xf32>) -> tensor<?x2x8xf32>
 
   %c0 = arith.constant 0 : index
   %dim = tensor.dim %0, %c0 : tensor<?x2x8xf32>

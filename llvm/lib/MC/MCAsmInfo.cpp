@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCAsmInfo.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCContext.h"
@@ -46,6 +47,8 @@ MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::boolOrDefault::BOU_UNSET)
     HasLEB128Directives = UseLEB128Directives == cl::boolOrDefault::BOU_TRUE;
+  if (Options.BinutilsVersion.first > 0)
+    BinutilsVersion = Options.BinutilsVersion;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;
@@ -120,15 +123,15 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
         (SectionName == ".bss" && !usesELFSectionDirectiveForBSS());
 }
 
-void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {
+void MCAsmInfo::initializeAtSpecifiers(EnumStrings<AtSpecifierKind, 1> Descs) {
   assert(AtSpecifierToName.empty() && "cannot initialize twice");
   UseAtForSpecifier = true;
-  for (auto Desc : Descs) {
+  for (const auto &Desc : Descs) {
     [[maybe_unused]] auto It =
-        AtSpecifierToName.try_emplace(Desc.Kind, Desc.Name);
+        AtSpecifierToName.try_emplace(Desc.value(), Desc.name());
     assert(It.second && "duplicate Kind");
     [[maybe_unused]] auto It2 =
-        NameToAtSpecifier.try_emplace(Desc.Name.lower(), Desc.Kind);
+        NameToAtSpecifier.try_emplace(Desc.name().lower(), Desc.value());
     assert(It2.second);
   }
 }

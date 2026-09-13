@@ -33,10 +33,8 @@ define amdgpu_kernel void @v3i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; GFX906-NEXT:    v_lshlrev_b16_e32 v0, 8, v0
 ; GFX906-NEXT:    v_or_b32_sdwa v0, v4, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX906-NEXT:    v_and_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX906-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX906-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX906-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX906-NEXT:    v_and_b32_sdwa v1, v4, v1 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX906-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
 ; GFX906-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX906-NEXT:    global_store_short v1, v0, s[6:7]
 ; GFX906-NEXT:    global_store_byte_d16_hi v1, v0, s[6:7] offset:2

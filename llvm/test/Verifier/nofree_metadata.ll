@@ -2,14 +2,14 @@
 
 declare ptr @dummy()
 
-; CHECK: nofree applies only to inttoptr instruction
+; CHECK: nofreeobj applies only to inttoptr instruction
 define void @test_not_inttoptr() {
-  call ptr @dummy(), !nofree !{}
+  call ptr @dummy(), !nofreeobj !{}
   ret void
 }
 
-; CHECK: nofree metadata must be empty
+; CHECK: nofreeobj metadata must be empty
 define void @test_invalid_arg(i32 %p) {
-  inttoptr i32 %p to ptr, !nofree !{i32 0}
+  inttoptr i32 %p to ptr, !nofreeobj !{i32 0}
   ret void
 }

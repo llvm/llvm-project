@@ -131,6 +131,7 @@ libc_test(
     deps = [
         "//libc:__support_cpp_string_view",
         "//libc:fscanf",
+        "//libc:hdr_stdio_macros",
     ],
 )
 

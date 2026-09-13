@@ -62,6 +62,10 @@ std::optional<StringRef> Dialect::getExtraClassDeclaration() const {
   return value.empty() ? std::optional<StringRef>() : value;
 }
 
+bool Dialect::useStrictPropertiesInAssemblyFormat() const {
+  return def->getValueAsBit("useStrictPropertiesInAssemblyFormat");
+}
+
 bool Dialect::hasCanonicalizer() const {
   return def->getValueAsBit("hasCanonicalizer");
 }

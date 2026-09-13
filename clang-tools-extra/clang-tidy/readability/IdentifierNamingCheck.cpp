@@ -12,7 +12,7 @@
 #include "../utils/ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/Lex/PPCallbacks.h"
-#include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
@@ -94,6 +94,7 @@ namespace readability {
     m(LocalConstantPointer) \
     m(LocalPointer) \
     m(LocalVariable) \
+    m(LambdaCapture) \
     m(StaticConstexprVariable) \
     m(StaticConstant) \
     m(StaticVariable) \
@@ -263,7 +264,7 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
     const size_t StyleSize = StyleNames[I].size();
     StyleString.assign({StyleNames[I], "HungarianPrefix"});
 
-    auto HPTOpt =
+    const auto HPTOpt =
         Options.get<IdentifierNamingCheck::HungarianPrefixType>(StyleString);
     if (HPTOpt && !HungarianNotation.checkOptionValid(I))
       configurationDiag("invalid identifier naming option '%0'") << StyleString;
@@ -290,8 +291,16 @@ IdentifierNamingCheck::FileStyle IdentifierNamingCheck::getFileStyleFromOptions(
   const bool IgnoreMainLike = Options.get("IgnoreMainLikeFunctions", false);
   const bool CheckAnonFieldInParent =
       Options.get("CheckAnonFieldInParent", false);
-  return {std::move(Styles), std::move(HNOption), IgnoreMainLike,
-          CheckAnonFieldInParent};
+  const bool TypedefInheritAnonTagConfig =
+      Options.get("TypedefInheritAnonTagConfig", false);
+  const bool AllowTrailingUnderscore =
+      Options.get("AllowTrailingUnderscore", false);
+  return {std::move(Styles),
+          std::move(HNOption),
+          IgnoreMainLike,
+          CheckAnonFieldInParent,
+          TypedefInheritAnonTagConfig,
+          AllowTrailingUnderscore};
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
@@ -304,7 +313,7 @@ std::string IdentifierNamingCheck::HungarianNotation::getDeclTypeName(
     return {};
 
   // Get type text of variable declarations.
-  auto &SM = VD->getASTContext().getSourceManager();
+  const auto &SM = VD->getASTContext().getSourceManager();
   const char *Begin = SM.getCharacterData(VD->getBeginLoc());
   const char *End = SM.getCharacterData(VD->getEndLoc());
   intptr_t StrLen = End - Begin;
@@ -403,7 +412,7 @@ IdentifierNamingCheck::IdentifierNamingCheck(StringRef Name,
     : RenamerClangTidyCheck(Name, Context), Context(Context),
       GetConfigPerFile(Options.get("GetConfigPerFile", true)),
       IgnoreFailedSplit(Options.get("IgnoreFailedSplit", false)) {
-  auto IterAndInserted = NamingStylesCache.try_emplace(
+  const auto IterAndInserted = NamingStylesCache.try_emplace(
       llvm::sys::path::parent_path(Context->getCurrentFile()),
       getFileStyleFromOptions(Options));
   assert(IterAndInserted.second && "Couldn't insert Style");
@@ -416,6 +425,9 @@ IdentifierNamingCheck::~IdentifierNamingCheck() = default;
 
 bool IdentifierNamingCheck::HungarianNotation::checkOptionValid(
     int StyleKindIndex) const {
+  if (StyleKindIndex == SK_Default)
+    return true;
+
   if ((StyleKindIndex >= SK_EnumConstant) &&
       (StyleKindIndex <= SK_ConstantParameter))
     return true;
@@ -431,7 +443,7 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
   if (OptionKey.empty())
     return false;
 
-  auto Iter = StrMap.find(OptionKey);
+  const auto Iter = StrMap.find(OptionKey);
   if (Iter == StrMap.end())
     return false;
 
@@ -643,7 +655,7 @@ StringRef IdentifierNamingCheck::HungarianNotation::getClassPrefix(
       !isOptionEnabled("TreatStructAsClass", HNOption.General))
     return {};
 
-  return CRD->isAbstract() ? "I" : "C";
+  return CRD->hasDefinition() && CRD->isAbstract() ? "I" : "C";
 }
 
 std::string IdentifierNamingCheck::HungarianNotation::getEnumPrefix(
@@ -858,13 +870,17 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 MainFileStyle->isIgnoringMainLikeFunction());
   Options.store(Opts, "CheckAnonFieldInParent",
                 MainFileStyle->isCheckingAnonFieldInParentScope());
+  Options.store(Opts, "TypedefInheritAnonTagConfig",
+                MainFileStyle->isTypedefInheritingAnonTagConfig());
+  Options.store(Opts, "AllowTrailingUnderscore",
+                MainFileStyle->isAllowingTrailingUnderscore());
 }
 
 bool IdentifierNamingCheck::matchesStyle(
     StringRef Type, StringRef Name,
     const IdentifierNamingCheck::NamingStyle &Style,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    const NamedDecl *Decl) const {
+    const NamedDecl *Decl, bool AllowTrailingUnderscore) const {
   static const llvm::Regex Matchers[] = {
       llvm::Regex("^.*$"),
       llvm::Regex("^[a-z][a-z0-9_]*$"),
@@ -878,7 +894,8 @@ bool IdentifierNamingCheck::matchesStyle(
 
   if (!Name.consume_front(Style.Prefix))
     return false;
-  if (!Name.consume_back(Style.Suffix))
+  if (!((AllowTrailingUnderscore && Name.consume_back(Style.Suffix + "_")) ||
+        Name.consume_back(Style.Suffix)))
     return false;
   if (IdentifierNamingCheck::HungarianPrefixType::HPT_Off != Style.HPType) {
     const std::string HNPrefix = HungarianNotation.getPrefix(Decl, HNOption);
@@ -1035,7 +1052,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
   if (!FDecl->getDeclName().isIdentifier())
     return false;
   enum MainType { None, Main, WMain };
-  auto IsCharPtrPtr = [](QualType QType) -> MainType {
+  const auto IsCharPtrPtr = [](QualType QType) -> MainType {
     if (QType.isNull())
       return None;
     if (QType = QType->getPointeeType(), QType.isNull())
@@ -1048,7 +1065,7 @@ bool IdentifierNamingCheck::isParamInMainLikeFunction(
       return WMain;
     return None;
   };
-  auto IsIntType = [](QualType QType) {
+  const auto IsIntType = [](QualType QType) {
     if (QType.isNull())
       return false;
     if (const auto *Builtin =
@@ -1087,9 +1104,12 @@ std::string IdentifierNamingCheck::fixupWithStyle(
     StringRef Type, StringRef Name,
     const IdentifierNamingCheck::NamingStyle &Style,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    const Decl *D) const {
+    const Decl *D, bool AllowTrailingUnderscore) const {
   Name.consume_front(Style.Prefix);
-  Name.consume_back(Style.Suffix);
+  const bool KeepTrailingUnderscore =
+      AllowTrailingUnderscore && Name.consume_back(Style.Suffix + "_");
+  if (!KeepTrailingUnderscore)
+    Name.consume_back(Style.Suffix);
   std::string Fixed = fixupWithCase(
       Type, Name, D, Style, HNOption,
       Style.Case.value_or(IdentifierNamingCheck::CaseType::CT_AnyCase));
@@ -1110,18 +1130,42 @@ std::string IdentifierNamingCheck::fixupWithStyle(
   if (Mid.empty())
     Mid = "_";
 
-  return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix).str();
+  return (Style.Prefix + HungarianPrefix + Mid + Style.Suffix +
+          (KeepTrailingUnderscore ? "_" : ""))
+      .str();
+}
+
+/// Returns \c true if \p Style can reject a name. A Hungarian prefix cannot
+/// (it is empty for a type declaration).
+static bool canConstrainName(
+    const std::optional<IdentifierNamingCheck::NamingStyle> &Style) {
+  return Style &&
+         (Style->Case || !Style->Prefix.empty() || !Style->Suffix.empty());
 }
 
 StyleKind IdentifierNamingCheck::findStyleKind(
     const NamedDecl *D,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
-    bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope) const {
+    bool IgnoreMainLikeFunctions, bool CheckAnonFieldInParentScope,
+    bool TypedefInheritAnonTagConfig) const {
   assert(D && D->getIdentifier() && !D->getName().empty() && !D->isImplicit() &&
          "Decl must be an explicit identifier with a name.");
 
   if (isa<ObjCIvarDecl>(D) && NamingStyles[SK_ObjcIvar])
     return SK_ObjcIvar;
+
+  // A typedef that provides the only name of an otherwise unnamed tag, as in
+  // `typedef enum {} E;`, names the tag itself, so it can be checked against
+  // the style configured for that tag kind.
+  if (TypedefInheritAnonTagConfig && isa<TypedefDecl, TypeAliasDecl>(D)) {
+    const TagDecl *Tag =
+        cast<TypedefNameDecl>(D)->getUnderlyingType()->getAsTagDecl();
+    if (Tag && Tag->getTypedefNameForAnonDecl() == D) {
+      const StyleKind SK = findStyleKindForTag(Tag, NamingStyles);
+      if (SK != SK_Invalid && canConstrainName(NamingStyles[SK]))
+        return SK;
+    }
+  }
 
   if (isa<TypedefDecl>(D) && NamingStyles[SK_Typedef])
     return SK_Typedef;
@@ -1164,30 +1208,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (Decl->isAnonymousStructOrUnion())
       return SK_Invalid;
 
-    if (const auto *Definition = Decl->getDefinition()) {
-      if (const auto *CxxRecordDecl = dyn_cast<CXXRecordDecl>(Definition)) {
-        if (CxxRecordDecl->isAbstract() && NamingStyles[SK_AbstractClass])
-          return SK_AbstractClass;
-      }
-
-      if (Definition->isStruct() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isStruct() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isUnion() && NamingStyles[SK_Union])
-        return SK_Union;
-
-      if (Definition->isEnum() && NamingStyles[SK_Enum])
-        return SK_Enum;
-    }
+    const StyleKind SK = findStyleKindForTag(Decl, NamingStyles);
+    if (SK != SK_Invalid)
+      return SK;
 
     return undefinedStyle(NamingStyles);
   }
@@ -1241,9 +1264,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
   // C++17 structured bindings: treat each binding as if it were a variable
   // with the same storage and qualifiers as the parent DecompositionDecl.
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (const auto *Decomp = dyn_cast_or_null<VarDecl>(BD->getDecomposedDecl()))
-      if (!BD->getType().isNull())
-        return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
+    if (const DecompositionDecl *Decomp = BD->getDecomposedDecl();
+        Decomp && !BD->getType().isNull())
+      return findStyleKindForVar(Decomp, BD->getType(), NamingStyles);
     return SK_Invalid;
   }
 
@@ -1255,9 +1278,9 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     // If this method has the same name as any base method, this is likely
     // necessary even if it's not an override. e.g. CRTP.
     for (const CXXBaseSpecifier &Base : Decl->getParent()->bases())
-      if (const auto *RD = Base.getType()->getAsCXXRecordDecl())
-        if (RD->hasMemberName(Decl->getDeclName()))
-          return SK_Invalid;
+      if (const auto *RD = Base.getType()->getAsCXXRecordDecl();
+          RD && RD->hasMemberName(Decl->getDeclName()))
+        return SK_Invalid;
 
     if (Decl->isConstexpr() && NamingStyles[SK_ConstexprMethod])
       return SK_ConstexprMethod;
@@ -1352,7 +1375,8 @@ IdentifierNamingCheck::getFailureInfo(
     SourceLocation Location,
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
-    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const {
+    StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit,
+    bool AllowTrailingUnderscore) const {
   if (SK == SK_Invalid)
     return std::nullopt;
 
@@ -1364,7 +1388,7 @@ IdentifierNamingCheck::getFailureInfo(
   if (Style.IgnoredRegexp.isValid() && Style.IgnoredRegexp.match(Name))
     return std::nullopt;
 
-  if (matchesStyle(Type, Name, Style, HNOption, ND))
+  if (matchesStyle(Type, Name, Style, HNOption, ND, AllowTrailingUnderscore))
     return std::nullopt;
 
   std::string KindName =
@@ -1374,7 +1398,8 @@ IdentifierNamingCheck::getFailureInfo(
                           IdentifierNamingCheck::CT_LowerCase);
   llvm::replace(KindName, '_', ' ');
 
-  std::string Fixup = fixupWithStyle(Type, Name, Style, HNOption, ND);
+  std::string Fixup =
+      fixupWithStyle(Type, Name, Style, HNOption, ND, AllowTrailingUnderscore);
   if (StringRef(Fixup) == Name) {
     if (!IgnoreFailedSplit) {
       LLVM_DEBUG(Location.print(llvm::dbgs(), SM);
@@ -1405,8 +1430,9 @@ IdentifierNamingCheck::getDeclFailureInfo(const NamedDecl *Decl,
       FileStyle.getStyles(), FileStyle.getHNOption(),
       findStyleKind(Decl, FileStyle.getStyles(),
                     FileStyle.isIgnoringMainLikeFunction(),
-                    FileStyle.isCheckingAnonFieldInParentScope()),
-      SM, IgnoreFailedSplit);
+                    FileStyle.isCheckingAnonFieldInParentScope(),
+                    FileStyle.isTypedefInheritingAnonTagConfig()),
+      SM, IgnoreFailedSplit, FileStyle.isAllowingTrailingUnderscore());
 }
 
 std::optional<RenamerClangTidyCheck::FailureInfo>
@@ -1424,7 +1450,8 @@ IdentifierNamingCheck::getMacroFailureInfo(const Token &MacroNameTok,
 
   return getFailureInfo("", MacroNameTok.getIdentifierInfo()->getName(),
                         nullptr, Loc, Style.getStyles(), Style.getHNOption(),
-                        UsedKind, SM, IgnoreFailedSplit);
+                        UsedKind, SM, IgnoreFailedSplit,
+                        Style.isAllowingTrailingUnderscore());
 }
 
 RenamerClangTidyCheck::DiagInfo
@@ -1437,7 +1464,7 @@ IdentifierNamingCheck::getDiagInfo(const NamingCheckId &ID,
 }
 
 StringRef IdentifierNamingCheck::getRealFileName(StringRef FileName) const {
-  auto Iter = RealFileNameCache.try_emplace(FileName);
+  const auto Iter = RealFileNameCache.try_emplace(FileName);
   SmallString<256U> &RealFileName = Iter.first->getValue();
   if (!Iter.second)
     return RealFileName;
@@ -1452,21 +1479,21 @@ IdentifierNamingCheck::getStyleForFile(StringRef FileName) const {
 
   const StringRef RealFileName = getRealFileName(FileName);
   const StringRef Parent = llvm::sys::path::parent_path(RealFileName);
-  auto Iter = NamingStylesCache.find(Parent);
+  const auto Iter = NamingStylesCache.find(Parent);
   if (Iter != NamingStylesCache.end())
     return Iter->getValue();
 
   const StringRef CheckName = getID();
   ClangTidyOptions Options = Context->getOptionsForFile(RealFileName);
   if (Options.Checks && GlobList(*Options.Checks).contains(CheckName)) {
-    auto It = NamingStylesCache.try_emplace(
+    const auto It = NamingStylesCache.try_emplace(
         Parent,
         getFileStyleFromOptions({CheckName, Options.CheckOptions, Context}));
     assert(It.second);
     return It.first->getValue();
   }
   // Default construction gives an empty style.
-  auto It = NamingStylesCache.try_emplace(Parent);
+  const auto It = NamingStylesCache.try_emplace(Parent);
   assert(It.second);
   return It.first->getValue();
 }
@@ -1515,9 +1542,47 @@ StyleKind IdentifierNamingCheck::findStyleKindForField(
   return undefinedStyle(NamingStyles);
 }
 
+StyleKind IdentifierNamingCheck::findStyleKindForTag(
+    const TagDecl *Tag,
+    ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (isa<EnumDecl>(Tag) && NamingStyles[SK_Enum])
+    return SK_Enum;
+
+  const auto *Record = dyn_cast<RecordDecl>(Tag);
+  if (!Record)
+    return SK_Invalid;
+
+  if (const auto *Definition = Record->getDefinition()) {
+    if (const auto *CxxRecordDecl = dyn_cast<CXXRecordDecl>(Definition)) {
+      if (CxxRecordDecl->isAbstract() && NamingStyles[SK_AbstractClass])
+        return SK_AbstractClass;
+    }
+
+    if (Definition->isStruct() && NamingStyles[SK_Struct])
+      return SK_Struct;
+
+    if (Definition->isStruct() && NamingStyles[SK_Class])
+      return SK_Class;
+
+    if (Definition->isClass() && NamingStyles[SK_Class])
+      return SK_Class;
+
+    if (Definition->isClass() && NamingStyles[SK_Struct])
+      return SK_Struct;
+
+    if (Definition->isUnion() && NamingStyles[SK_Union])
+      return SK_Union;
+  }
+
+  return SK_Invalid;
+}
+
 StyleKind IdentifierNamingCheck::findStyleKindForVar(
     const VarDecl *Var, QualType Type,
     ArrayRef<std::optional<NamingStyle>> NamingStyles) const {
+  if (Var->isInitCapture() && NamingStyles[SK_LambdaCapture])
+    return SK_LambdaCapture;
+
   if (Var->isConstexpr()) {
     if (Var->isStaticDataMember() && NamingStyles[SK_ClassConstexpr])
       return SK_ClassConstexpr;

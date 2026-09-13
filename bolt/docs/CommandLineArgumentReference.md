@@ -196,6 +196,11 @@
 
   Write BOLT Address Translation tables
 
+- `--fix-branches-with-liveness`
+
+  Use liveness analysis to decide whether AArch64 branch inversion must
+  preserve condition flags
+
 - `--force-data-relocations`
 
   Force relocations to data sections to always be processed

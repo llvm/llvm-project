@@ -21,13 +21,13 @@ func.func @_QPsub1(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, 
   %12 = fir.embox %11(%10) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.box<!fir.array<?x?xf32>>
   %13:3 = fir.box_dims %12, %c0 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
   %14 = arith.subi %13#1, %c1 : index
-  %15 = acc.bounds lowerbound(%c0 : index) upperbound(%14 : index) extent(%13#1 : index) stride(%13#2 : index) startIdx(%c1 : index) {strideInBytes = true}
+  %15 = acc.bounds lowerbound(%c0 : index) upperbound(%14 : index) extent(%13#1 : index) stride(%13#2 : index) startIdx(%c1 : index) strideInBytes(true)
   %16 = arith.muli %13#2, %13#1 : index
   %17:3 = fir.box_dims %12, %c1 : (!fir.box<!fir.array<?x?xf32>>, index) -> (index, index, index)
   %18 = arith.subi %17#1, %c1 : index
-  %19 = acc.bounds lowerbound(%c0 : index) upperbound(%18 : index) extent(%17#1 : index) stride(%16 : index) startIdx(%c1 : index) {strideInBytes = true}
+  %19 = acc.bounds lowerbound(%c0 : index) upperbound(%18 : index) extent(%17#1 : index) stride(%16 : index) startIdx(%c1 : index) strideInBytes(true)
   %20 = fir.box_addr %12 {acc.declare = #acc.declare<dataClause =  acc_present>} : (!fir.box<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
-  %21 = acc.present varPtr(%20 : !fir.ref<!fir.array<?x?xf32>>) bounds(%15, %19) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
+  %21 = acc.present varPtr(%20 : !fir.ref<!fir.array<?x?xf32>>) bounds(%15, %19) name("a") -> !fir.ref<!fir.array<?x?xf32>>
   %22 = acc.declare_enter dataOperands(%21 : !fir.ref<!fir.array<?x?xf32>>)
   acc.declare_exit token(%22)
   return
@@ -36,5 +36,5 @@ func.func @_QPsub1(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}, 
 // CHECK-LABEL: func.func @_QPsub1(
 // CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}
 // CHECK: %[[DECL:.*]] = fir.declare %[[ARG0]](%{{.*}}) {acc.declare = #acc.declare<dataClause =  acc_present>, uniq_name = "_QFsub1Ea"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<?x?xf32>>
-// CHECK: %[[PRES:.*]] = acc.present varPtr(%[[DECL]] : !fir.ref<!fir.array<?x?xf32>>) bounds(%{{.*}}, %{{.*}}) -> !fir.ref<!fir.array<?x?xf32>> {name = "a"}
+// CHECK: %[[PRES:.*]] = acc.present varPtr(%[[DECL]] : !fir.ref<!fir.array<?x?xf32>>) bounds(%{{.*}}, %{{.*}}) name("a") -> !fir.ref<!fir.array<?x?xf32>>
 // CHECK: %{{.*}} = acc.declare_enter dataOperands(%[[PRES]] : !fir.ref<!fir.array<?x?xf32>>)

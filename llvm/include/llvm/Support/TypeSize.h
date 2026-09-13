@@ -253,26 +253,22 @@ public:
     return LeafTy::get(getKnownMinValue() / RHS, isScalable());
   }
 
-  constexpr LeafTy multiplyCoefficientBy(ScalarTy RHS) const {
-    return LeafTy::get(getKnownMinValue() * RHS, isScalable());
-  }
-
   constexpr LeafTy coefficientNextPowerOf2() const {
     return LeafTy::get(
         static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
         isScalable());
   }
 
-  /// Returns true if there exists a value X where RHS.multiplyCoefficientBy(X)
-  /// will result in a value whose quantity matches our own.
+  /// Returns true if there exists a value X where RHS*X will result in a value
+  /// whose quantity matches our own.
   constexpr bool
   hasKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     return isScalable() == RHS.isScalable() &&
            getKnownMinValue() % RHS.getKnownMinValue() == 0;
   }
 
-  /// Returns a value X where RHS.multiplyCoefficientBy(X) will result in a
-  /// value whose quantity matches our own.
+  /// Returns a value X where RHS*X will result in a value whose quantity
+  /// matches our own.
   constexpr ScalarTy
   getKnownScalarFactor(const FixedOrScalableQuantity &RHS) const {
     assert(hasKnownScalarFactor(RHS) && "Expected RHS to be a known factor!");
@@ -389,6 +385,11 @@ public:
   friend constexpr TypeSize operator*(const TypeSize &LHS, const unsigned RHS) {
     return LHS * (ScalarTy)RHS;
   }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const TypeSize &LHS, const unsigned long RHS) {
+    return LHS * (ScalarTy)RHS;
+  }
   friend constexpr TypeSize operator*(const TypeSize &LHS, const int64_t RHS) {
     return LHS * (ScalarTy)RHS;
   }
@@ -399,6 +400,11 @@ public:
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const int64_t LHS, const TypeSize &RHS) {
+    return RHS * LHS;
+  }
+  template <typename U = ScalarTy>
+  friend constexpr std::enable_if_t<!std::is_same_v<U, unsigned long>, TypeSize>
+  operator*(const unsigned long LHS, const TypeSize &RHS) {
     return RHS * LHS;
   }
   friend constexpr TypeSize operator*(const uint64_t LHS, const TypeSize &RHS) {

@@ -167,6 +167,22 @@ private:
   NonCopyable &operator=(const NonCopyable &) = delete;
 };
 
+struct MoveConstructOnly {
+  explicit MoveConstructOnly(int Value) : Value(Value) {}
+  MoveConstructOnly(MoveConstructOnly &&RHS) : Value(RHS.Value) {
+    RHS.Value = -1;
+  }
+
+  MoveConstructOnly(const MoveConstructOnly &) = delete;
+  MoveConstructOnly &operator=(const MoveConstructOnly &) = delete;
+  MoveConstructOnly &operator=(MoveConstructOnly &&) = delete;
+
+  int Value;
+};
+
+static_assert(std::is_move_constructible_v<MoveConstructOnly>);
+static_assert(!std::is_move_assignable_v<MoveConstructOnly>);
+
 LLVM_ATTRIBUTE_USED void CompileTest() {
   SmallVector<NonCopyable, 0> V;
   V.resize(42);
@@ -175,6 +191,67 @@ LLVM_ATTRIBUTE_USED void CompileTest() {
 TEST(SmallVectorTest, ConstructNonCopyableTest) {
   SmallVector<NonCopyable, 0> V(42);
   EXPECT_EQ(V.size(), (size_t)42);
+}
+
+TEST(SmallVectorTest, MoveConstructNonMoveAssignableInlineElements) {
+  SmallVector<MoveConstructOnly, 2> From;
+  From.emplace_back(1);
+  From.emplace_back(2);
+  const MoveConstructOnly *FromData = From.data();
+
+  SmallVector<MoveConstructOnly, 2> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(2u, To.size());
+  EXPECT_NE(FromData, To.data());
+  EXPECT_EQ(1, To[0].Value);
+  EXPECT_EQ(2, To[1].Value);
+}
+
+TEST(SmallVectorTest, MoveConstructNonMoveAssignableAllocatedElements) {
+  SmallVector<MoveConstructOnly, 1> From;
+  From.emplace_back(1);
+  From.emplace_back(2);
+  const MoveConstructOnly *FromData = From.data();
+
+  SmallVector<MoveConstructOnly, 1> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(2u, To.size());
+  EXPECT_EQ(FromData, To.data());
+  EXPECT_EQ(1, To[0].Value);
+  EXPECT_EQ(2, To[1].Value);
+}
+
+TEST(SmallVectorTest, MoveConstructNonMoveAssignableFromSmallVectorImpl) {
+  SmallVector<MoveConstructOnly, 2> From;
+  From.emplace_back(1);
+  From.emplace_back(2);
+
+  SmallVector<MoveConstructOnly, 0> To(
+      std::move(static_cast<SmallVectorImpl<MoveConstructOnly> &>(From)));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(2u, To.size());
+  EXPECT_EQ(1, To[0].Value);
+  EXPECT_EQ(2, To[1].Value);
+}
+
+TEST(SmallVectorTest, MoveConstructNestedNonMoveAssignableElements) {
+  SmallVector<MoveConstructOnly, 2> Inner;
+  Inner.emplace_back(1);
+  Inner.emplace_back(2);
+
+  SmallVector<SmallVector<MoveConstructOnly, 2>, 1> From;
+  From.push_back(std::move(Inner));
+
+  SmallVector<SmallVector<MoveConstructOnly, 2>, 1> To(std::move(From));
+
+  EXPECT_TRUE(From.empty());
+  ASSERT_EQ(1u, To.size());
+  ASSERT_EQ(2u, To[0].size());
+  EXPECT_EQ(1, To[0][0].Value);
+  EXPECT_EQ(2, To[0][1].Value);
 }
 
 // Assert that v contains the specified values, in order.
@@ -1062,11 +1139,6 @@ struct Emplaceable {
   Emplaceable(A0Ty &&A0, A1Ty &&A1)
       : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
         State(ES_Emplaced) {}
-
-  template <class A0Ty, class A1Ty, class A2Ty>
-  Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2)
-      : A0(std::forward<A0Ty>(A0)), A1(std::forward<A1Ty>(A1)),
-        A2(std::forward<A2Ty>(A2)), State(ES_Emplaced) {}
 
   template <class A0Ty, class A1Ty, class A2Ty, class A3Ty>
   Emplaceable(A0Ty &&A0, A1Ty &&A1, A2Ty &&A2, A3Ty &&A3)

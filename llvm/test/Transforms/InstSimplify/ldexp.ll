@@ -100,16 +100,16 @@ define void @ldexp_f32_val_infinity(i32 %y) {
 ; CHECK-NEXT:    store volatile float -inf, ptr addrspace(1) undef, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %inf = call float @llvm.ldexp.f32.i32(float 0x7ff0000000000000, i32 %y)
+  %inf = call float @llvm.ldexp.f32.i32(float +inf, i32 %y)
   store volatile float %inf, ptr addrspace(1) undef
 
-  %neg.inf = call float @llvm.ldexp.f32.i32(float 0xfff0000000000000, i32 %y)
+  %neg.inf = call float @llvm.ldexp.f32.i32(float -inf, i32 %y)
   store volatile float %neg.inf, ptr addrspace(1) undef
 
-  %inf.zero = call float @llvm.ldexp.f32.i32(float 0x7ff0000000000000, i32 0)
+  %inf.zero = call float @llvm.ldexp.f32.i32(float +inf, i32 0)
   store volatile float %inf.zero, ptr addrspace(1) undef
 
-  %neg.inf.zero = call float @llvm.ldexp.f32.i32(float 0xfff0000000000000, i32 0)
+  %neg.inf.zero = call float @llvm.ldexp.f32.i32(float -inf, i32 0)
   store volatile float %neg.inf.zero, ptr addrspace(1) undef
 
   ret void

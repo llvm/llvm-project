@@ -544,7 +544,7 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
-    if (STI.isRV32()) {
+    if (!STI.is64Bit()) {
       if (STI.hasStdExtZdinx()) {
         // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
         // registers, in one instruction.
@@ -1631,7 +1631,12 @@ bool RISCVInstrInfo::isFromLoadImm(const MachineRegisterInfo &MRI,
     Imm = 0;
     return true;
   }
-  return Reg.isVirtual() && isLoadImm(MRI.getVRegDef(Reg), Imm);
+
+  if (!Reg.isVirtual())
+    return false;
+
+  const MachineInstr *DefMI = MRI.getVRegDef(Reg);
+  return DefMI && isLoadImm(DefMI, Imm);
 }
 
 bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
@@ -3034,6 +3039,7 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
         CASE_OPERAND_UIMM_LSB_ZEROS(2, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(5, 0)
         CASE_OPERAND_UIMM_LSB_ZEROS(6, 0)
+        CASE_OPERAND_UIMM_LSB_ZEROS(6, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 00)
         CASE_OPERAND_UIMM_LSB_ZEROS(7, 000)
         CASE_OPERAND_UIMM_LSB_ZEROS(8, 00)
@@ -3693,8 +3699,15 @@ static bool cannotInsertTailCall(const MachineBasicBlock &MBB) {
   // that can be used for expanding PseudoTAIL instruction,
   // then we cannot insert tail call.
   const TargetSubtargetInfo &STI = MBB.getParent()->getSubtarget();
+  const RISCVMachineFunctionInfo *RVFI =
+      MBB.getParent()->getInfo<RISCVMachineFunctionInfo>();
+  // When cf-protection-branch is active, the outliner will emit PseudoTAILX7
+  // which always uses X7. Otherwise, PseudoTAIL is emitted and the register
+  // is determined by Zicfilp at encode time.
   MCRegister TailExpandUseRegNo =
-      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+      RVFI->hasCFProtectionBranch()
+          ? RISCV::X7
+          : RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   for (const MachineInstr &MI : MBB) {
     if (isMIReadsReg(MI, STI.getRegisterInfo(), TailExpandUseRegNo))
       return true;
@@ -3736,8 +3749,12 @@ bool RISCVInstrInfo::analyzeCandidate(outliner::Candidate &C) const {
   // If the expansion register for tail calls is live across the candidate
   // outlined call site, we cannot outline that candidate as the expansion
   // would clobber the register.
+  const RISCVMachineFunctionInfo *RVFI =
+      C.getMF()->getInfo<RISCVMachineFunctionInfo>();
   MCRegister TailExpandUseReg =
-      RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
+      RVFI->hasCFProtectionBranch()
+          ? RISCV::X7
+          : RISCVII::getTailExpandUseRegNo(STI.getFeatureBits());
   if (C.back().isReturn() &&
       !C.isAvailableAcrossAndOutOfSeq(TailExpandUseReg, RegInfo)) {
     LLVM_DEBUG(dbgs() << "MBB:\n" << *C.getMBB());
@@ -3921,7 +3938,11 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
     MachineFunction &MF, outliner::Candidate &C) const {
 
   if (C.CallConstructionID == MachineOutlinerTailCall) {
-    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(RISCV::PseudoTAIL))
+    const RISCVMachineFunctionInfo *RVFI =
+        MF.getInfo<RISCVMachineFunctionInfo>();
+    unsigned TailOpc =
+        RVFI->hasCFProtectionBranch() ? RISCV::PseudoTAILX7 : RISCV::PseudoTAIL;
+    It = MBB.insert(It, BuildMI(MF, DebugLoc(), get(TailOpc))
                             .addGlobalAddress(M.getNamedValue(MF.getName()),
                                               /*Offset=*/0, RISCVII::MO_CALL));
     return It;
@@ -3977,9 +3998,11 @@ void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR64), Reg);
   } else if (RISCV::FPR128RegClass.contains(Reg)) {
     BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR128), Reg);
+  } else if (RISCV::VRRegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearVR), Reg);
   } else {
     llvm::reportFatalInternalError(
-        "buildClearRegister is not implemented for vector registers");
+        "buildClearRegister is not implemented for " + TRI.getRegAsmName(Reg));
   }
 }
 
@@ -5322,12 +5345,12 @@ unsigned RISCV::getDestLog2EEW(const MCInstrDesc &Desc, unsigned Log2SEW) {
   return Scaled;
 }
 
-static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
+static std::optional<int64_t> getEffectiveImm(const MachineRegisterInfo &MRI,
+                                              const MachineOperand &MO) {
   assert(MO.isImm() || MO.getReg().isVirtual());
   if (MO.isImm())
     return MO.getImm();
-  const MachineInstr *Def =
-      MO.getParent()->getMF()->getRegInfo().getVRegDef(MO.getReg());
+  const MachineInstr *Def = MRI.getVRegDef(MO.getReg());
   int64_t Imm;
   if (isLoadImm(Def, Imm))
     return Imm;
@@ -5335,9 +5358,9 @@ static std::optional<int64_t> getEffectiveImm(const MachineOperand &MO) {
 }
 
 /// Given two VL operands, do we know that LHS <= RHS? Must be used in SSA form.
-bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
-  assert((LHS.isImm() || LHS.getParent()->getMF()->getRegInfo().isSSA()) &&
-         (RHS.isImm() || RHS.getParent()->getMF()->getRegInfo().isSSA()));
+bool RISCV::isVLKnownLE(const MachineRegisterInfo &MRI,
+                        const MachineOperand &LHS, const MachineOperand &RHS) {
+  assert((LHS.isImm() || MRI.isSSA()) && (RHS.isImm() || MRI.isSSA()));
   if (LHS.isReg() && RHS.isReg() && LHS.getReg().isVirtual() &&
       LHS.getReg() == RHS.getReg())
     return true;
@@ -5347,8 +5370,8 @@ bool RISCV::isVLKnownLE(const MachineOperand &LHS, const MachineOperand &RHS) {
     return true;
   if (LHS.isImm() && LHS.getImm() == RISCV::VLMaxSentinel)
     return false;
-  std::optional<int64_t> LHSImm = getEffectiveImm(LHS),
-                         RHSImm = getEffectiveImm(RHS);
+  std::optional<int64_t> LHSImm = getEffectiveImm(MRI, LHS),
+                         RHSImm = getEffectiveImm(MRI, RHS);
   if (!LHSImm || !RHSImm)
     return false;
   return LHSImm <= RHSImm;
@@ -5537,10 +5560,9 @@ bool RISCVInstrInfo::isSafeToMove(const MachineInstr &From,
       if (II->definesRegister(PhysReg, nullptr) ||
           II->readsRegister(PhysReg, nullptr))
         return false;
-    if (II->mayStore()) {
-      SawStore = true;
+    II->isSafeToMove(SawStore);
+    if (SawStore)
       break;
-    }
   }
   return From.isSafeToMove(SawStore);
 }

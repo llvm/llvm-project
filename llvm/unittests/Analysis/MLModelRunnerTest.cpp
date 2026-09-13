@@ -8,6 +8,7 @@
 
 #include "llvm/Analysis/MLModelRunner.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/EmitCModelRunner.h"
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
@@ -120,6 +121,18 @@ public:
   }
   void *result_data(int RIndex) { return getModel()->result_data(RIndex); }
   void Run() { getModel()->Run(); }
+};
+
+class MockEmitCModel final {
+  int64_t A = 0;
+  int64_t B = 0;
+
+public:
+  std::map<std::string, void *> reflectionMap;
+
+  MockEmitCModel() : reflectionMap{{"a", &A}, {"b", &B}} {}
+
+  int64_t operator()() { return A - B; }
 };
 
 static EmbeddedModelRunnerOptions makeOptions() {
@@ -260,6 +273,50 @@ TEST(ReleaseModelRunner, ModelSelector) {
 
   // Asking for a model that's not supported isn't handled by our infra and we
   // expect the model implementation to fail at a point.
+}
+
+TEST(EmitCModelRunner, NormalUse) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
+                                 TensorSpec::createSpec<int64_t>("b", {1})};
+  auto Evaluator =
+      std::make_unique<EmitCModelRunner<MockEmitCModel>>(Ctx, Inputs);
+  EXPECT_TRUE(EmitCModelRunner<MockEmitCModel>::classof(Evaluator.get()));
+  EXPECT_EQ(Evaluator->getKind(), MLModelRunner::Kind::Release);
+  *Evaluator->getTensor<int64_t>(0) = 10;
+  *Evaluator->getTensor<int64_t>(1) = 3;
+  EXPECT_EQ(Evaluator->evaluate<int64_t>(), 7);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(0), 10);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(1), 3);
+}
+
+TEST(EmitCModelRunner, ExtraFeatures) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("a", {1}),
+                                 TensorSpec::createSpec<int64_t>("b", {1}),
+                                 TensorSpec::createSpec<int64_t>("c", {1})};
+  auto Evaluator =
+      std::make_unique<EmitCModelRunner<MockEmitCModel>>(Ctx, Inputs);
+  *Evaluator->getTensor<int64_t>(0) = 10;
+  *Evaluator->getTensor<int64_t>(1) = 3;
+  *Evaluator->getTensor<int64_t>(2) = -5;
+  EXPECT_EQ(Evaluator->evaluate<int64_t>(), 7);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(0), 10);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(1), 3);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(2), -5);
+}
+
+TEST(EmitCModelRunner, ExtraFeaturesOutOfOrder) {
+  LLVMContext Ctx;
+  std::vector<TensorSpec> Inputs{TensorSpec::createSpec<int64_t>("b", {1}),
+                                 TensorSpec::createSpec<int64_t>("a", {1})};
+  auto Evaluator =
+      std::make_unique<EmitCModelRunner<MockEmitCModel>>(Ctx, Inputs);
+  *Evaluator->getTensor<int64_t>(0) = 3;        // b
+  *Evaluator->getTensor<int64_t>(1) = 10;       // a
+  EXPECT_EQ(Evaluator->evaluate<int64_t>(), 7); // a - b = 10 - 3 = 7
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(0), 3);
+  EXPECT_EQ(*Evaluator->getTensor<int64_t>(1), 10);
 }
 
 #if defined(LLVM_ON_UNIX)

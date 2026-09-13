@@ -11,6 +11,7 @@ add_header_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.macros.attributes
     libc.src.errno.errno
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_header_library(
@@ -302,6 +303,26 @@ add_header_library(
     .cast
     .comparison_operations
     .dyadic_float
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.limits
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.uint128
+)
+
+add_header_library(
+  float80
+  HDRS
+    float80.h
+  DEPENDS
+    .cast
+    .comparison_operations
+    .dyadic_float
+    .float128
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.add_sub

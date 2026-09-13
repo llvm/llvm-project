@@ -3,12 +3,21 @@
 
 ;; Types:
 ; CHECK:         %[[#F32:]] = OpTypeFloat 32
+; CHECK:         %[[#I32:]] = OpTypeInt 32 0
 ;; Constants:
-; CHECK:         %[[#CONST:]] = OpConstant %[[#F32]] 1
+; CHECK-DAG:     %[[#CONST:]] = OpConstant %[[#F32]] 1
+; CHECK-DAG:     %[[#RELAXED:]] = OpConstantNull %[[#I32]]
+; CHECK-DAG:     %[[#DEVICE:]] = OpConstant %[[#I32]] 1
+; CHECK-DAG:     %[[#WORKGROUP:]] = OpConstant %[[#I32]] 2
+; CHECK-DAG:     %[[#SEQCST:]] = OpConstant %[[#I32]] 16
 ;; Atomic instructions:
 ; CHECK:         OpStore %[[#]] %[[#CONST]]
-; CHECK-COUNT-3: OpAtomicStore
-; CHECK-COUNT-3: OpAtomicLoad
+; CHECK:         OpAtomicStore %[[#]] %[[#DEVICE]] %[[#SEQCST]] %[[#CONST]]
+; CHECK:         OpAtomicStore %[[#]] %[[#DEVICE]] %[[#RELAXED]] %[[#CONST]]
+; CHECK:         OpAtomicStore %[[#]] %[[#WORKGROUP]] %[[#RELAXED]] %[[#CONST]]
+; CHECK:         OpAtomicLoad %[[#]] %[[#]] %[[#DEVICE]] %[[#SEQCST]]
+; CHECK:         OpAtomicLoad %[[#]] %[[#]] %[[#DEVICE]] %[[#RELAXED]]
+; CHECK:         OpAtomicLoad %[[#]] %[[#]] %[[#WORKGROUP]] %[[#RELAXED]]
 ; CHECK-COUNT-3: OpAtomicExchange
 
 define spir_kernel void @test_atomic_kernel(ptr addrspace(3) %ff) local_unnamed_addr #0 !kernel_arg_addr_space !3 !kernel_arg_access_qual !4 !kernel_arg_type !5 !kernel_arg_base_type !6 !kernel_arg_type_qual !7 {

@@ -1,10 +1,10 @@
 // RUN: llvm-mc -triple=amdgpu7.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
-// RUN: llvm-mc -triple=amdgcn-amd-amdhsa -mcpu=gfx800 -show-encoding %s | FileCheck --check-prefix=CHECK %s
+// RUN: llvm-mc -triple=amdgpu8.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 // RUN: llvm-mc -triple=amdgpu9.00-amd-amdhsa -show-encoding %s | FileCheck --check-prefix=CHECK %s
 
 ; CHECK:      	.amdgpu_metadata
-; CHECK:      amdhsa.kernels:  
-; CHECK-NEXT:   - .args:           
+; CHECK:      amdhsa.kernels:
+; CHECK-NEXT:   - .args:
 ; CHECK-NEXT:       - .offset:         1
 ; CHECK-NEXT:         .size:           1
 ; CHECK-NEXT:         .type_name:      char
@@ -31,7 +31,7 @@
 ; CHECK-NEXT:     .kernarg_segment_align: 64
 ; CHECK-NEXT:     .kernarg_segment_size: 8
 ; CHECK-NEXT:     .language:       OpenCL C
-; CHECK-NEXT:     .language_version: 
+; CHECK-NEXT:     .language_version:
 ; CHECK-NEXT:       - 2
 ; CHECK-NEXT:       - 0
 ; CHECK-NEXT:     .max_flat_workgroup_size: 256
@@ -41,10 +41,10 @@
 ; CHECK-NEXT:     .symbol:         'test_kernel@kd'
 ; CHECK-NEXT:     .vgpr_count:     40
 ; CHECK-NEXT:     .wavefront_size: 128
-; CHECK-NEXT: amdhsa.printf:   
+; CHECK-NEXT: amdhsa.printf:
 ; CHECK-NEXT:   - '1:1:4:%d\n'
 ; CHECK-NEXT:   - '2:1:8:%g\n'
-; CHECK-NEXT: amdhsa.version:  
+; CHECK-NEXT: amdhsa.version:
 ; CHECK-NEXT:   - 1
 ; CHECK-NEXT:   - 0
 ; CHECK:      	.end_amdgpu_metadata

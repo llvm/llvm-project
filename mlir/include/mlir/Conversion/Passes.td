@@ -414,19 +414,13 @@ def LiftControlFlowToSCFPass : Pass<"lift-cf-to-scf"> {
     Otherwise a single ControlFlow switch branching to one block per return-like
     operation kind remains.
 
-    This pass may need to create unreachable terminators in case of infinite
-    loops, which is only supported for 'func.func' for now. If you potentially
-    have infinite loops inside CFG regions not belonging to 'func.func',
-    consider using `transformCFGToSCF` function directly with corresponding
-    `CFGToSCFInterface::createUnreachableTerminator` implementation.
+    This pass may need to create `ub.unreachable` terminators in case of
+    statically known infinite loops.
   }];
 
   let dependentDialects = ["scf::SCFDialect",
                            "arith::ArithDialect",
-                           "ub::UBDialect",
-                           // TODO: This is only necessary until we have a
-                           //       ub.unreachable op.
-                           "func::FuncDialect"];
+                           "ub::UBDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -919,6 +913,7 @@ def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
   ];
   let dependentDialects = [
     "arith::ArithDialect",
+    "vector::VectorDialect",
     "xevm::XeVMDialect",
     "LLVM::LLVMDialect",
   ];
@@ -1119,6 +1114,15 @@ def ConvertNVGPUToNVVMPass : Pass<"convert-nvgpu-to-nvvm"> {
 def ConvertOpenACCToSCFPass : Pass<"convert-openacc-to-scf", "ModuleOp"> {
   let summary = "Convert the OpenACC ops to OpenACC with SCF dialect";
   let dependentDialects = ["scf::SCFDialect", "acc::OpenACCDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// OpenACCToLLVM
+//===----------------------------------------------------------------------===//
+
+def ConvertACCToLLVMPass : Pass<"acc-to-llvm", "ModuleOp"> {
+  let summary = "Lower OpenACC operations to LLVM dialect.";
+  let dependentDialects = ["LLVM::LLVMDialect", "acc::OpenACCDialect"];
 }
 
 //===----------------------------------------------------------------------===//

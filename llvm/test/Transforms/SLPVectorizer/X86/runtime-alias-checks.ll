@@ -23,7 +23,7 @@ define void @test(ptr %dst, ptr %x, ptr %y) {
 ; CHECK-NEXT:    [[RT_CONFLICT13:%.*]] = and i1 [[RT_BOUND011]], [[RT_BOUND112]]
 ; CHECK-NEXT:    [[RT_CONFLICT_ALL:%.*]] = or i1 [[RT_CONFLICT]], [[RT_CONFLICT13]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT_ALL]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0:![0-9]+]]
 ; CHECK:       [[ENTRY_RTVEC]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load <4 x double>, ptr [[X]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = load <4 x double>, ptr [[Y]], align 8
@@ -228,7 +228,7 @@ define void @test_dup_switch_successor(ptr %dst, ptr %x, ptr %y, i32 %cond) {
 ; CHECK-NEXT:    [[RT_CONFLICT13:%.*]] = and i1 [[RT_BOUND011]], [[RT_BOUND112]]
 ; CHECK-NEXT:    [[RT_CONFLICT_ALL:%.*]] = or i1 [[RT_CONFLICT]], [[RT_CONFLICT13]]
 ; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT_ALL]]
-; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0]]
 ; CHECK:       [[EXIT:.*]]:
 ; CHECK-NEXT:    ret void
 ; CHECK:       [[ENTRY_RTVEC]]:
@@ -1104,3 +1104,463 @@ entry:
   store double %d7, ptr %dst7, align 8
   ret void
 }
+
+@global = external global i8, align 1
+
+define void @versioned_block_with_loop_defined_base(ptr %arg, ptr %arg1, ptr %arg2) {
+; CHECK-LABEL: define void @versioned_block_with_loop_defined_base(
+; CHECK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[BBL:.*]]:
+; CHECK-NEXT:    [[ARG22:%.*]] = ptrtoaddr ptr [[ARG2]] to i64
+; CHECK-NEXT:    br label %[[BBL4:.*]]
+; CHECK:       [[BBL4]]:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ @global, %[[BBL6:.*]] ], [ [[ARG1]], %[[BBL]] ]
+; CHECK-NEXT:    br label %[[BBL6]]
+; CHECK:       [[BBL6]]:
+; CHECK-NEXT:    [[PHI7:%.*]] = phi ptr [ [[ARG]], %[[BBL4]] ], [ [[PHI]], %[[BBL6]] ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PHI7]], align 4
+; CHECK-NEXT:    switch i8 [[LOAD]], label %[[BBL6]] [
+; CHECK-NEXT:      i8 3, label %[[BBL9:.*]]
+; CHECK-NEXT:      i8 6, label %[[BBL4]]
+; CHECK-NEXT:    ]
+; CHECK:       [[BBL9]]:
+; CHECK-NEXT:    [[PHI_LCSSA:%.*]] = phi ptr [ [[PHI]], %[[BBL6]] ]
+; CHECK-NEXT:    [[PHI_LCSSA1:%.*]] = ptrtoaddr ptr [[PHI_LCSSA]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[PHI_LCSSA1]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ARG22]], 16
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[ARG22]], [[TMP0]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[PHI_LCSSA1]], [[TMP1]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[BBL9_RTSCALAR:.*]], label %[[BBL9_RTVEC:.*]], !prof [[PROF0]]
+; CHECK:       [[BBL9_RTVEC]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = load <16 x i8>, ptr [[PHI_LCSSA]], align 1
+; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[ARG2]], align 1
+; CHECK-NEXT:    br label %[[BBL9_RTCONT:.*]]
+; CHECK:       [[BBL9_RTSCALAR]]:
+; CHECK-NEXT:    [[LOAD10_SCALAR:%.*]] = load i8, ptr [[PHI_LCSSA]], align 1
+; CHECK-NEXT:    store i8 [[LOAD10_SCALAR]], ptr [[ARG2]], align 1
+; CHECK-NEXT:    [[GEP1_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 1
+; CHECK-NEXT:    [[LOAD11_SCALAR:%.*]] = load i8, ptr [[GEP1_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP12_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 1
+; CHECK-NEXT:    store i8 [[LOAD11_SCALAR]], ptr [[GEP12_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP13_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 2
+; CHECK-NEXT:    [[LOAD14_SCALAR:%.*]] = load i8, ptr [[GEP13_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP15_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 2
+; CHECK-NEXT:    store i8 [[LOAD14_SCALAR]], ptr [[GEP15_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP16_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 3
+; CHECK-NEXT:    [[LOAD17_SCALAR:%.*]] = load i8, ptr [[GEP16_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP18_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 3
+; CHECK-NEXT:    store i8 [[LOAD17_SCALAR]], ptr [[GEP18_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP19_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 4
+; CHECK-NEXT:    [[LOAD20_SCALAR:%.*]] = load i8, ptr [[GEP19_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP21_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 4
+; CHECK-NEXT:    store i8 [[LOAD20_SCALAR]], ptr [[GEP21_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP22_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 5
+; CHECK-NEXT:    [[LOAD23_SCALAR:%.*]] = load i8, ptr [[GEP22_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP24_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 5
+; CHECK-NEXT:    store i8 [[LOAD23_SCALAR]], ptr [[GEP24_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP25_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 6
+; CHECK-NEXT:    [[LOAD26_SCALAR:%.*]] = load i8, ptr [[GEP25_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP27_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 6
+; CHECK-NEXT:    store i8 [[LOAD26_SCALAR]], ptr [[GEP27_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP28_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 7
+; CHECK-NEXT:    [[LOAD29_SCALAR:%.*]] = load i8, ptr [[GEP28_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP30_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 7
+; CHECK-NEXT:    store i8 [[LOAD29_SCALAR]], ptr [[GEP30_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP31_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 8
+; CHECK-NEXT:    [[LOAD32_SCALAR:%.*]] = load i8, ptr [[GEP31_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP33_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 8
+; CHECK-NEXT:    store i8 [[LOAD32_SCALAR]], ptr [[GEP33_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP34_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 9
+; CHECK-NEXT:    [[LOAD35_SCALAR:%.*]] = load i8, ptr [[GEP34_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP36_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 9
+; CHECK-NEXT:    store i8 [[LOAD35_SCALAR]], ptr [[GEP36_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP37_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 10
+; CHECK-NEXT:    [[LOAD38_SCALAR:%.*]] = load i8, ptr [[GEP37_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP39_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 10
+; CHECK-NEXT:    store i8 [[LOAD38_SCALAR]], ptr [[GEP39_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP40_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 11
+; CHECK-NEXT:    [[LOAD41_SCALAR:%.*]] = load i8, ptr [[GEP40_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP42_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 11
+; CHECK-NEXT:    store i8 [[LOAD41_SCALAR]], ptr [[GEP42_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP43_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 12
+; CHECK-NEXT:    [[LOAD44_SCALAR:%.*]] = load i8, ptr [[GEP43_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP45_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 12
+; CHECK-NEXT:    store i8 [[LOAD44_SCALAR]], ptr [[GEP45_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP46_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 13
+; CHECK-NEXT:    [[LOAD47_SCALAR:%.*]] = load i8, ptr [[GEP46_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP48_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 13
+; CHECK-NEXT:    store i8 [[LOAD47_SCALAR]], ptr [[GEP48_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP49_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 14
+; CHECK-NEXT:    [[LOAD50_SCALAR:%.*]] = load i8, ptr [[GEP49_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP51_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 14
+; CHECK-NEXT:    store i8 [[LOAD50_SCALAR]], ptr [[GEP51_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP52_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI_LCSSA]], i64 15
+; CHECK-NEXT:    [[LOAD53_SCALAR:%.*]] = load i8, ptr [[GEP52_SCALAR]], align 1
+; CHECK-NEXT:    [[GEP54_SCALAR:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 15
+; CHECK-NEXT:    store i8 [[LOAD53_SCALAR]], ptr [[GEP54_SCALAR]], align 1
+; CHECK-NEXT:    br label %[[BBL9_RTCONT]]
+; CHECK:       [[BBL9_RTCONT]]:
+; CHECK-NEXT:    ret void
+;
+; NOCHK-LABEL: define void @versioned_block_with_loop_defined_base(
+; NOCHK-SAME: ptr [[ARG:%.*]], ptr [[ARG1:%.*]], ptr [[ARG2:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[BBL:.*]]:
+; NOCHK-NEXT:    br label %[[BBL4:.*]]
+; NOCHK:       [[BBL4]]:
+; NOCHK-NEXT:    [[PHI:%.*]] = phi ptr [ @global, %[[BBL6:.*]] ], [ [[ARG1]], %[[BBL]] ]
+; NOCHK-NEXT:    br label %[[BBL6]]
+; NOCHK:       [[BBL6]]:
+; NOCHK-NEXT:    [[PHI7:%.*]] = phi ptr [ [[ARG]], %[[BBL4]] ], [ [[PHI]], %[[BBL6]] ]
+; NOCHK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[PHI7]], align 4
+; NOCHK-NEXT:    switch i8 [[LOAD]], label %[[BBL6]] [
+; NOCHK-NEXT:      i8 3, label %[[BBL9:.*]]
+; NOCHK-NEXT:      i8 6, label %[[BBL4]]
+; NOCHK-NEXT:    ]
+; NOCHK:       [[BBL9]]:
+; NOCHK-NEXT:    [[LOAD10:%.*]] = load i8, ptr [[PHI]], align 1
+; NOCHK-NEXT:    store i8 [[LOAD10]], ptr [[ARG2]], align 1
+; NOCHK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 1
+; NOCHK-NEXT:    [[LOAD11:%.*]] = load i8, ptr [[GEP1]], align 1
+; NOCHK-NEXT:    [[GEP12:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 1
+; NOCHK-NEXT:    store i8 [[LOAD11]], ptr [[GEP12]], align 1
+; NOCHK-NEXT:    [[GEP13:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 2
+; NOCHK-NEXT:    [[LOAD14:%.*]] = load i8, ptr [[GEP13]], align 1
+; NOCHK-NEXT:    [[GEP15:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 2
+; NOCHK-NEXT:    store i8 [[LOAD14]], ptr [[GEP15]], align 1
+; NOCHK-NEXT:    [[GEP16:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 3
+; NOCHK-NEXT:    [[LOAD17:%.*]] = load i8, ptr [[GEP16]], align 1
+; NOCHK-NEXT:    [[GEP18:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 3
+; NOCHK-NEXT:    store i8 [[LOAD17]], ptr [[GEP18]], align 1
+; NOCHK-NEXT:    [[GEP19:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 4
+; NOCHK-NEXT:    [[LOAD20:%.*]] = load i8, ptr [[GEP19]], align 1
+; NOCHK-NEXT:    [[GEP21:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 4
+; NOCHK-NEXT:    store i8 [[LOAD20]], ptr [[GEP21]], align 1
+; NOCHK-NEXT:    [[GEP22:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 5
+; NOCHK-NEXT:    [[LOAD23:%.*]] = load i8, ptr [[GEP22]], align 1
+; NOCHK-NEXT:    [[GEP24:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 5
+; NOCHK-NEXT:    store i8 [[LOAD23]], ptr [[GEP24]], align 1
+; NOCHK-NEXT:    [[GEP25:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 6
+; NOCHK-NEXT:    [[LOAD26:%.*]] = load i8, ptr [[GEP25]], align 1
+; NOCHK-NEXT:    [[GEP27:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 6
+; NOCHK-NEXT:    store i8 [[LOAD26]], ptr [[GEP27]], align 1
+; NOCHK-NEXT:    [[GEP28:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 7
+; NOCHK-NEXT:    [[LOAD29:%.*]] = load i8, ptr [[GEP28]], align 1
+; NOCHK-NEXT:    [[GEP30:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 7
+; NOCHK-NEXT:    store i8 [[LOAD29]], ptr [[GEP30]], align 1
+; NOCHK-NEXT:    [[GEP31:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 8
+; NOCHK-NEXT:    [[LOAD32:%.*]] = load i8, ptr [[GEP31]], align 1
+; NOCHK-NEXT:    [[GEP33:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 8
+; NOCHK-NEXT:    store i8 [[LOAD32]], ptr [[GEP33]], align 1
+; NOCHK-NEXT:    [[GEP34:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 9
+; NOCHK-NEXT:    [[LOAD35:%.*]] = load i8, ptr [[GEP34]], align 1
+; NOCHK-NEXT:    [[GEP36:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 9
+; NOCHK-NEXT:    store i8 [[LOAD35]], ptr [[GEP36]], align 1
+; NOCHK-NEXT:    [[GEP37:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 10
+; NOCHK-NEXT:    [[LOAD38:%.*]] = load i8, ptr [[GEP37]], align 1
+; NOCHK-NEXT:    [[GEP39:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 10
+; NOCHK-NEXT:    store i8 [[LOAD38]], ptr [[GEP39]], align 1
+; NOCHK-NEXT:    [[GEP40:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 11
+; NOCHK-NEXT:    [[LOAD41:%.*]] = load i8, ptr [[GEP40]], align 1
+; NOCHK-NEXT:    [[GEP42:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 11
+; NOCHK-NEXT:    store i8 [[LOAD41]], ptr [[GEP42]], align 1
+; NOCHK-NEXT:    [[GEP43:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 12
+; NOCHK-NEXT:    [[LOAD44:%.*]] = load i8, ptr [[GEP43]], align 1
+; NOCHK-NEXT:    [[GEP45:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 12
+; NOCHK-NEXT:    store i8 [[LOAD44]], ptr [[GEP45]], align 1
+; NOCHK-NEXT:    [[GEP46:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 13
+; NOCHK-NEXT:    [[LOAD47:%.*]] = load i8, ptr [[GEP46]], align 1
+; NOCHK-NEXT:    [[GEP48:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 13
+; NOCHK-NEXT:    store i8 [[LOAD47]], ptr [[GEP48]], align 1
+; NOCHK-NEXT:    [[GEP49:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 14
+; NOCHK-NEXT:    [[LOAD50:%.*]] = load i8, ptr [[GEP49]], align 1
+; NOCHK-NEXT:    [[GEP51:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 14
+; NOCHK-NEXT:    store i8 [[LOAD50]], ptr [[GEP51]], align 1
+; NOCHK-NEXT:    [[GEP52:%.*]] = getelementptr inbounds nuw i8, ptr [[PHI]], i64 15
+; NOCHK-NEXT:    [[LOAD53:%.*]] = load i8, ptr [[GEP52]], align 1
+; NOCHK-NEXT:    [[GEP54:%.*]] = getelementptr inbounds nuw i8, ptr [[ARG2]], i64 15
+; NOCHK-NEXT:    store i8 [[LOAD53]], ptr [[GEP54]], align 1
+; NOCHK-NEXT:    ret void
+;
+bbl:
+  br label %bbl4
+
+bbl4:
+  %phi = phi ptr [ @global, %bbl6 ], [ %arg1, %bbl ]
+  br label %bbl6
+
+bbl6:
+  %phi7 = phi ptr [ %arg, %bbl4 ], [ %phi, %bbl6 ]
+  %load = load i8, ptr %phi7, align 4
+  switch i8 %load, label %bbl6 [
+  i8 3, label %bbl9
+  i8 6, label %bbl4
+  ]
+
+bbl9:
+  %load10 = load i8, ptr %phi, align 1
+  store i8 %load10, ptr %arg2, align 1
+  %gep1 = getelementptr inbounds nuw i8, ptr %phi, i64 1
+  %load11 = load i8, ptr %gep1, align 1
+  %gep12 = getelementptr inbounds nuw i8, ptr %arg2, i64 1
+  store i8 %load11, ptr %gep12, align 1
+  %gep13 = getelementptr inbounds nuw i8, ptr %phi, i64 2
+  %load14 = load i8, ptr %gep13, align 1
+  %gep15 = getelementptr inbounds nuw i8, ptr %arg2, i64 2
+  store i8 %load14, ptr %gep15, align 1
+  %gep16 = getelementptr inbounds nuw i8, ptr %phi, i64 3
+  %load17 = load i8, ptr %gep16, align 1
+  %gep18 = getelementptr inbounds nuw i8, ptr %arg2, i64 3
+  store i8 %load17, ptr %gep18, align 1
+  %gep19 = getelementptr inbounds nuw i8, ptr %phi, i64 4
+  %load20 = load i8, ptr %gep19, align 1
+  %gep21 = getelementptr inbounds nuw i8, ptr %arg2, i64 4
+  store i8 %load20, ptr %gep21, align 1
+  %gep22 = getelementptr inbounds nuw i8, ptr %phi, i64 5
+  %load23 = load i8, ptr %gep22, align 1
+  %gep24 = getelementptr inbounds nuw i8, ptr %arg2, i64 5
+  store i8 %load23, ptr %gep24, align 1
+  %gep25 = getelementptr inbounds nuw i8, ptr %phi, i64 6
+  %load26 = load i8, ptr %gep25, align 1
+  %gep27 = getelementptr inbounds nuw i8, ptr %arg2, i64 6
+  store i8 %load26, ptr %gep27, align 1
+  %gep28 = getelementptr inbounds nuw i8, ptr %phi, i64 7
+  %load29 = load i8, ptr %gep28, align 1
+  %gep30 = getelementptr inbounds nuw i8, ptr %arg2, i64 7
+  store i8 %load29, ptr %gep30, align 1
+  %gep31 = getelementptr inbounds nuw i8, ptr %phi, i64 8
+  %load32 = load i8, ptr %gep31, align 1
+  %gep33 = getelementptr inbounds nuw i8, ptr %arg2, i64 8
+  store i8 %load32, ptr %gep33, align 1
+  %gep34 = getelementptr inbounds nuw i8, ptr %phi, i64 9
+  %load35 = load i8, ptr %gep34, align 1
+  %gep36 = getelementptr inbounds nuw i8, ptr %arg2, i64 9
+  store i8 %load35, ptr %gep36, align 1
+  %gep37 = getelementptr inbounds nuw i8, ptr %phi, i64 10
+  %load38 = load i8, ptr %gep37, align 1
+  %gep39 = getelementptr inbounds nuw i8, ptr %arg2, i64 10
+  store i8 %load38, ptr %gep39, align 1
+  %gep40 = getelementptr inbounds nuw i8, ptr %phi, i64 11
+  %load41 = load i8, ptr %gep40, align 1
+  %gep42 = getelementptr inbounds nuw i8, ptr %arg2, i64 11
+  store i8 %load41, ptr %gep42, align 1
+  %gep43 = getelementptr inbounds nuw i8, ptr %phi, i64 12
+  %load44 = load i8, ptr %gep43, align 1
+  %gep45 = getelementptr inbounds nuw i8, ptr %arg2, i64 12
+  store i8 %load44, ptr %gep45, align 1
+  %gep46 = getelementptr inbounds nuw i8, ptr %phi, i64 13
+  %load47 = load i8, ptr %gep46, align 1
+  %gep48 = getelementptr inbounds nuw i8, ptr %arg2, i64 13
+  store i8 %load47, ptr %gep48, align 1
+  %gep49 = getelementptr inbounds nuw i8, ptr %phi, i64 14
+  %load50 = load i8, ptr %gep49, align 1
+  %gep51 = getelementptr inbounds nuw i8, ptr %arg2, i64 14
+  store i8 %load50, ptr %gep51, align 1
+  %gep52 = getelementptr inbounds nuw i8, ptr %phi, i64 15
+  %load53 = load i8, ptr %gep52, align 1
+  %gep54 = getelementptr inbounds nuw i8, ptr %arg2, i64 15
+  store i8 %load53, ptr %gep54, align 1
+  ret void
+}
+
+define void @test_udiv(ptr %dst, ptr %x, ptr %y) {
+; CHECK-LABEL: define void @test_udiv(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[DST10:%.*]] = ptrtoaddr ptr [[DST]] to i64
+; CHECK-NEXT:    [[Y9:%.*]] = ptrtoaddr ptr [[Y]] to i64
+; CHECK-NEXT:    [[X8:%.*]] = ptrtoaddr ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[X8]], 32
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[Y9]], 32
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[DST10]], 32
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[DST10]], [[TMP0]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[X8]], [[TMP2]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_BOUND011:%.*]] = icmp ult i64 [[DST10]], [[TMP1]]
+; CHECK-NEXT:    [[RT_BOUND112:%.*]] = icmp ult i64 [[Y9]], [[TMP2]]
+; CHECK-NEXT:    [[RT_CONFLICT13:%.*]] = and i1 [[RT_BOUND011]], [[RT_BOUND112]]
+; CHECK-NEXT:    [[RT_CONFLICT_ALL:%.*]] = or i1 [[RT_CONFLICT]], [[RT_CONFLICT13]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT_ALL]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[ENTRY_RTSCALAR:.*]], label %[[ENTRY_RTVEC:.*]], !prof [[PROF0]]
+; CHECK:       [[ENTRY_RTVEC]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = load <8 x i32>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <8 x i32>, ptr [[Y]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = udiv <8 x i32> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    store <8 x i32> [[TMP5]], ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT:.*]]
+; CHECK:       [[ENTRY_RTSCALAR]]:
+; CHECK-NEXT:    [[X0_SCALAR:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    [[Y0_SCALAR:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    [[D0_SCALAR:%.*]] = udiv i32 [[X0_SCALAR]], [[Y0_SCALAR]]
+; CHECK-NEXT:    store i32 [[D0_SCALAR]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[X1P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
+; CHECK-NEXT:    [[X1_SCALAR:%.*]] = load i32, ptr [[X1P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y1P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[Y1_SCALAR:%.*]] = load i32, ptr [[Y1P_SCALAR]], align 4
+; CHECK-NEXT:    [[D1_SCALAR:%.*]] = udiv i32 [[X1_SCALAR]], [[Y1_SCALAR]]
+; CHECK-NEXT:    [[DST1_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
+; CHECK-NEXT:    store i32 [[D1_SCALAR]], ptr [[DST1_SCALAR]], align 4
+; CHECK-NEXT:    [[X2P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 2
+; CHECK-NEXT:    [[X2_SCALAR:%.*]] = load i32, ptr [[X2P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y2P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 2
+; CHECK-NEXT:    [[Y2_SCALAR:%.*]] = load i32, ptr [[Y2P_SCALAR]], align 4
+; CHECK-NEXT:    [[D2_SCALAR:%.*]] = udiv i32 [[X2_SCALAR]], [[Y2_SCALAR]]
+; CHECK-NEXT:    [[DST2_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 2
+; CHECK-NEXT:    store i32 [[D2_SCALAR]], ptr [[DST2_SCALAR]], align 4
+; CHECK-NEXT:    [[X3P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 3
+; CHECK-NEXT:    [[X3_SCALAR:%.*]] = load i32, ptr [[X3P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y3P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 3
+; CHECK-NEXT:    [[Y3_SCALAR:%.*]] = load i32, ptr [[Y3P_SCALAR]], align 4
+; CHECK-NEXT:    [[D3_SCALAR:%.*]] = udiv i32 [[X3_SCALAR]], [[Y3_SCALAR]]
+; CHECK-NEXT:    [[DST3_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
+; CHECK-NEXT:    store i32 [[D3_SCALAR]], ptr [[DST3_SCALAR]], align 4
+; CHECK-NEXT:    [[X4P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 4
+; CHECK-NEXT:    [[X4_SCALAR:%.*]] = load i32, ptr [[X4P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y4P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 4
+; CHECK-NEXT:    [[Y4_SCALAR:%.*]] = load i32, ptr [[Y4P_SCALAR]], align 4
+; CHECK-NEXT:    [[D4_SCALAR:%.*]] = udiv i32 [[X4_SCALAR]], [[Y4_SCALAR]]
+; CHECK-NEXT:    [[DST4_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 4
+; CHECK-NEXT:    store i32 [[D4_SCALAR]], ptr [[DST4_SCALAR]], align 4
+; CHECK-NEXT:    [[X5P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 5
+; CHECK-NEXT:    [[X5_SCALAR:%.*]] = load i32, ptr [[X5P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y5P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 5
+; CHECK-NEXT:    [[Y5_SCALAR:%.*]] = load i32, ptr [[Y5P_SCALAR]], align 4
+; CHECK-NEXT:    [[D5_SCALAR:%.*]] = udiv i32 [[X5_SCALAR]], [[Y5_SCALAR]]
+; CHECK-NEXT:    [[DST5_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 5
+; CHECK-NEXT:    store i32 [[D5_SCALAR]], ptr [[DST5_SCALAR]], align 4
+; CHECK-NEXT:    [[X6P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 6
+; CHECK-NEXT:    [[X6_SCALAR:%.*]] = load i32, ptr [[X6P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y6P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 6
+; CHECK-NEXT:    [[Y6_SCALAR:%.*]] = load i32, ptr [[Y6P_SCALAR]], align 4
+; CHECK-NEXT:    [[D6_SCALAR:%.*]] = udiv i32 [[X6_SCALAR]], [[Y6_SCALAR]]
+; CHECK-NEXT:    [[DST6_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 6
+; CHECK-NEXT:    store i32 [[D6_SCALAR]], ptr [[DST6_SCALAR]], align 4
+; CHECK-NEXT:    [[X7P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 7
+; CHECK-NEXT:    [[X7_SCALAR:%.*]] = load i32, ptr [[X7P_SCALAR]], align 4
+; CHECK-NEXT:    [[Y7P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 7
+; CHECK-NEXT:    [[Y7_SCALAR:%.*]] = load i32, ptr [[Y7P_SCALAR]], align 4
+; CHECK-NEXT:    [[D7_SCALAR:%.*]] = udiv i32 [[X7_SCALAR]], [[Y7_SCALAR]]
+; CHECK-NEXT:    [[DST7_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 7
+; CHECK-NEXT:    store i32 [[D7_SCALAR]], ptr [[DST7_SCALAR]], align 4
+; CHECK-NEXT:    br label %[[ENTRY_RTCONT]]
+; CHECK:       [[ENTRY_RTCONT]]:
+; CHECK-NEXT:    ret void
+;
+; NOCHK-LABEL: define void @test_udiv(
+; NOCHK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], ptr [[Y:%.*]]) #[[ATTR1]] {
+; NOCHK-NEXT:  [[ENTRY:.*:]]
+; NOCHK-NEXT:    [[X0:%.*]] = load i32, ptr [[X]], align 4
+; NOCHK-NEXT:    [[Y0:%.*]] = load i32, ptr [[Y]], align 4
+; NOCHK-NEXT:    [[D0:%.*]] = udiv i32 [[X0]], [[Y0]]
+; NOCHK-NEXT:    store i32 [[D0]], ptr [[DST]], align 4
+; NOCHK-NEXT:    [[X1P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
+; NOCHK-NEXT:    [[X1:%.*]] = load i32, ptr [[X1P]], align 4
+; NOCHK-NEXT:    [[Y1P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 1
+; NOCHK-NEXT:    [[Y1:%.*]] = load i32, ptr [[Y1P]], align 4
+; NOCHK-NEXT:    [[D1:%.*]] = udiv i32 [[X1]], [[Y1]]
+; NOCHK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
+; NOCHK-NEXT:    store i32 [[D1]], ptr [[DST1]], align 4
+; NOCHK-NEXT:    [[X2P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 2
+; NOCHK-NEXT:    [[X2:%.*]] = load i32, ptr [[X2P]], align 4
+; NOCHK-NEXT:    [[Y2P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 2
+; NOCHK-NEXT:    [[Y2:%.*]] = load i32, ptr [[Y2P]], align 4
+; NOCHK-NEXT:    [[D2:%.*]] = udiv i32 [[X2]], [[Y2]]
+; NOCHK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 2
+; NOCHK-NEXT:    store i32 [[D2]], ptr [[DST2]], align 4
+; NOCHK-NEXT:    [[X3P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 3
+; NOCHK-NEXT:    [[X3:%.*]] = load i32, ptr [[X3P]], align 4
+; NOCHK-NEXT:    [[Y3P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 3
+; NOCHK-NEXT:    [[Y3:%.*]] = load i32, ptr [[Y3P]], align 4
+; NOCHK-NEXT:    [[D3:%.*]] = udiv i32 [[X3]], [[Y3]]
+; NOCHK-NEXT:    [[DST3:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 3
+; NOCHK-NEXT:    store i32 [[D3]], ptr [[DST3]], align 4
+; NOCHK-NEXT:    [[X4P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 4
+; NOCHK-NEXT:    [[X4:%.*]] = load i32, ptr [[X4P]], align 4
+; NOCHK-NEXT:    [[Y4P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 4
+; NOCHK-NEXT:    [[Y4:%.*]] = load i32, ptr [[Y4P]], align 4
+; NOCHK-NEXT:    [[D4:%.*]] = udiv i32 [[X4]], [[Y4]]
+; NOCHK-NEXT:    [[DST4:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 4
+; NOCHK-NEXT:    store i32 [[D4]], ptr [[DST4]], align 4
+; NOCHK-NEXT:    [[X5P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 5
+; NOCHK-NEXT:    [[X5:%.*]] = load i32, ptr [[X5P]], align 4
+; NOCHK-NEXT:    [[Y5P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 5
+; NOCHK-NEXT:    [[Y5:%.*]] = load i32, ptr [[Y5P]], align 4
+; NOCHK-NEXT:    [[D5:%.*]] = udiv i32 [[X5]], [[Y5]]
+; NOCHK-NEXT:    [[DST5:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 5
+; NOCHK-NEXT:    store i32 [[D5]], ptr [[DST5]], align 4
+; NOCHK-NEXT:    [[X6P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 6
+; NOCHK-NEXT:    [[X6:%.*]] = load i32, ptr [[X6P]], align 4
+; NOCHK-NEXT:    [[Y6P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 6
+; NOCHK-NEXT:    [[Y6:%.*]] = load i32, ptr [[Y6P]], align 4
+; NOCHK-NEXT:    [[D6:%.*]] = udiv i32 [[X6]], [[Y6]]
+; NOCHK-NEXT:    [[DST6:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 6
+; NOCHK-NEXT:    store i32 [[D6]], ptr [[DST6]], align 4
+; NOCHK-NEXT:    [[X7P:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 7
+; NOCHK-NEXT:    [[X7:%.*]] = load i32, ptr [[X7P]], align 4
+; NOCHK-NEXT:    [[Y7P:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 7
+; NOCHK-NEXT:    [[Y7:%.*]] = load i32, ptr [[Y7P]], align 4
+; NOCHK-NEXT:    [[D7:%.*]] = udiv i32 [[X7]], [[Y7]]
+; NOCHK-NEXT:    [[DST7:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 7
+; NOCHK-NEXT:    store i32 [[D7]], ptr [[DST7]], align 4
+; NOCHK-NEXT:    ret void
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %y0 = load i32, ptr %y, align 4
+  %d0 = udiv i32 %x0, %y0
+  store i32 %d0, ptr %dst, align 4
+  %x1p = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %x1p, align 4
+  %y1p = getelementptr inbounds i32, ptr %y, i64 1
+  %y1 = load i32, ptr %y1p, align 4
+  %d1 = udiv i32 %x1, %y1
+  %dst1 = getelementptr inbounds i32, ptr %dst, i64 1
+  store i32 %d1, ptr %dst1, align 4
+  %x2p = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %x2p, align 4
+  %y2p = getelementptr inbounds i32, ptr %y, i64 2
+  %y2 = load i32, ptr %y2p, align 4
+  %d2 = udiv i32 %x2, %y2
+  %dst2 = getelementptr inbounds i32, ptr %dst, i64 2
+  store i32 %d2, ptr %dst2, align 4
+  %x3p = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %x3p, align 4
+  %y3p = getelementptr inbounds i32, ptr %y, i64 3
+  %y3 = load i32, ptr %y3p, align 4
+  %d3 = udiv i32 %x3, %y3
+  %dst3 = getelementptr inbounds i32, ptr %dst, i64 3
+  store i32 %d3, ptr %dst3, align 4
+  %x4p = getelementptr inbounds i32, ptr %x, i64 4
+  %x4 = load i32, ptr %x4p, align 4
+  %y4p = getelementptr inbounds i32, ptr %y, i64 4
+  %y4 = load i32, ptr %y4p, align 4
+  %d4 = udiv i32 %x4, %y4
+  %dst4 = getelementptr inbounds i32, ptr %dst, i64 4
+  store i32 %d4, ptr %dst4, align 4
+  %x5p = getelementptr inbounds i32, ptr %x, i64 5
+  %x5 = load i32, ptr %x5p, align 4
+  %y5p = getelementptr inbounds i32, ptr %y, i64 5
+  %y5 = load i32, ptr %y5p, align 4
+  %d5 = udiv i32 %x5, %y5
+  %dst5 = getelementptr inbounds i32, ptr %dst, i64 5
+  store i32 %d5, ptr %dst5, align 4
+  %x6p = getelementptr inbounds i32, ptr %x, i64 6
+  %x6 = load i32, ptr %x6p, align 4
+  %y6p = getelementptr inbounds i32, ptr %y, i64 6
+  %y6 = load i32, ptr %y6p, align 4
+  %d6 = udiv i32 %x6, %y6
+  %dst6 = getelementptr inbounds i32, ptr %dst, i64 6
+  store i32 %d6, ptr %dst6, align 4
+  %x7p = getelementptr inbounds i32, ptr %x, i64 7
+  %x7 = load i32, ptr %x7p, align 4
+  %y7p = getelementptr inbounds i32, ptr %y, i64 7
+  %y7 = load i32, ptr %y7p, align 4
+  %d7 = udiv i32 %x7, %y7
+  %dst7 = getelementptr inbounds i32, ptr %dst, i64 7
+  store i32 %d7, ptr %dst7, align 4
+  ret void
+}
+;.
+; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
+;.

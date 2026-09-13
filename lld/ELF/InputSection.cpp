@@ -233,6 +233,12 @@ uint64_t SectionBase::getVA(uint64_t offset) const {
   return (out ? out->addr : 0) + getOffset(offset);
 }
 
+uint64_t SectionBase::getRelocVA(uint64_t offset) const {
+  if (auto *es = dyn_cast<EhInputSection>(this))
+    return es->getParent()->getVA(offset);
+  return getVA(offset);
+}
+
 OutputSection *SectionBase::getOutputSection() {
   InputSection *sec;
   if (auto *isec = dyn_cast<InputSection>(this))

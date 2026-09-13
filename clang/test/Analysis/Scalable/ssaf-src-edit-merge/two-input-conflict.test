@@ -1,0 +1,29 @@
+# Two inputs with overlapping replacements (same file, same offset, same
+# length, but different replacement text) — under the tool's drop-all
+# conflict policy both candidates are removed from the merged YAML; the
+# tool emits one "conflict:" cluster line for that (file, offset) with the
+# full cluster size, and exits 0.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/b.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" %t.dir/a.yaml %t.dir/b.yaml
+
+# RUN: clang-ssaf-src-edit-merge -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# Drop-all: zero replacements survive at the conflict offset.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml %s
+# CHECK-NOT: ReplacementText:
+
+# Tool emits the cluster summary on stderr (alongside the library's own
+# detailed message which we do not assert on, since it is owned by
+# clang-apply-replacements and may evolve).
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 2
+# CONFLICT-SAME: foo.cpp:10

@@ -54,19 +54,23 @@ for.end6:                                         ; preds = %for.cond
   ret i32 0
 }
 
-; WITHCONST:  %[[IVOut:polly.indvar[0-9]*]] = phi i64 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
-; WITHCONST:  %[[IVIn:polly.indvar[0-9]*]] = phi i64 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
-; WITHCONST:  %[[MUL1:[._a-zA-Z0-9]+]] = mul nsw i64 16, %[[IVOut]]
-; WITHCONST:  %[[MUL2:[._a-zA-Z0-9]+]] = mul nsw i64 2, %[[IVIn]]
+; WITHCONST:  %[[IVOut:polly.indvar[0-9]*]] = phi i32 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
+; WITHCONST:  %[[IVIn:polly.indvar[0-9]*]] = phi i32 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
+; WITHCONST:  %[[EXTOut:[._a-zA-Z0-9]+]] = sext i32 %[[IVOut]] to i64
+; WITHCONST:  %[[MUL1:[._a-zA-Z0-9]+]] = mul nsw i64 16, %[[EXTOut]]
+; WITHCONST:  %[[EXTIn:[._a-zA-Z0-9]+]] = sext i32 %[[IVIn]] to i64
+; WITHCONST:  %[[MUL2:[._a-zA-Z0-9]+]] = mul nsw i64 2, %[[EXTIn]]
 ; WITHCONST:  %[[SUM1:[._a-zA-Z0-9]+]] = add nsw i64 %[[MUL1]], %[[MUL2]]
 ; WITHCONST:  %[[SUM2:[._a-zA-Z0-9]+]] = add nsw i64 %[[SUM1]], 5
 ; WITHCONST:  %[[ACC:[._a-zA-Z0-9]*]] = getelementptr i32, ptr @A, i64 %[[SUM2]]
 ; WITHCONST:  store i32 100, ptr %[[ACC]]
 
-; WITHOUTCONST:  %[[IVOut:polly.indvar[0-9]*]] = phi i64 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
-; WITHOUTCONST:  %[[IVIn:polly.indvar[0-9]*]] = phi i64 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
-; WITHOUTCONST:  %[[MUL1:[._a-zA-Z0-9]+]] = mul nsw i64 16, %[[IVOut]]
-; WITHOUTCONST:  %[[MUL2:[._a-zA-Z0-9]+]] = mul nsw i64 2, %[[IVIn]]
+; WITHOUTCONST:  %[[IVOut:polly.indvar[0-9]*]] = phi i32 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
+; WITHOUTCONST:  %[[IVIn:polly.indvar[0-9]*]] = phi i32 [ 0, %polly.loop_preheader{{[0-9]*}} ], [ %polly.indvar_next{{[0-9]*}}, %polly.{{[._a-zA-Z0-9]*}} ]
+; WITHOUTCONST:  %[[EXTOut:[._a-zA-Z0-9]+]] = sext i32 %[[IVOut]] to i64
+; WITHOUTCONST:  %[[MUL1:[._a-zA-Z0-9]+]] = mul nsw i64 16, %[[EXTOut]]
+; WITHOUTCONST:  %[[EXTIn:[._a-zA-Z0-9]+]] = sext i32 %[[IVIn]] to i64
+; WITHOUTCONST:  %[[MUL2:[._a-zA-Z0-9]+]] = mul nsw i64 2, %[[EXTIn]]
 ; WITHOUTCONST:  %[[SUM1:[._a-zA-Z0-9]+]] = add nsw i64 %[[MUL1]], %[[MUL2]]
 ; WITHOUTCONST:  %[[ACC:[._a-zA-Z0-9]*]] = getelementptr i32, ptr @A, i64 %[[SUM1]]
 ; WITHOUTCONST:  store i32 100, ptr %[[ACC]]

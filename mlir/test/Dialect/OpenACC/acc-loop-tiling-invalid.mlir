@@ -10,7 +10,7 @@ func.func @tile_wider_than_iv(%arg0: memref<100xf32>) {
   // expected-error @+1 {{not yet implemented: tile size type (i64) is wider than loop IV type (i32)}}
   acc.loop tile({%c4_i64 : i64}) control(%i : i32) = (%c0 : i32) to (%c100 : i32) step (%c1 : i32) {
     acc.yield
-  } attributes {independent = [#acc.device_type<none>]}
+  } independent
   return
 }
 
@@ -33,6 +33,6 @@ func.func @tile_with_collapse(%arg0: memref<100x50xf32>) {
     %fval = arith.sitofp %val : i32 to f32
     memref.store %fval, %arg0[%i, %j] : memref<100x50xf32>
     acc.yield
-  } attributes {collapse = [2], collapseDeviceType = [#acc.device_type<none>], independent = [#acc.device_type<none>]}
+  } collapse([2]) collapseDeviceType([#acc.device_type<none>]) independent
   return
 }

@@ -2668,27 +2668,26 @@ define amdgpu_kernel void @udot4_acc8_vecMul(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    global_load_ubyte v3, v0, s[6:7]
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NEXT:    v_lshrrev_b16 v4, 8, v1
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 24, v1
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v4, 24, v1
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v6, 24, v2
-; GFX10-DL-NEXT:    v_lshrrev_b16 v7, 8, v2
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v9, 16, v2
-; GFX10-DL-NEXT:    v_mul_lo_u16 v5, v5, v6
-; GFX10-DL-NEXT:    v_mul_lo_u16 v4, v4, v7
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 24, v2
+; GFX10-DL-NEXT:    v_lshrrev_b16 v6, 8, v1
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
+; GFX10-DL-NEXT:    v_lshrrev_b16 v9, 8, v2
+; GFX10-DL-NEXT:    v_mul_lo_u16 v4, v4, v5
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NEXT:    v_mad_u16 v1, v1, v2, v3
-; GFX10-DL-NEXT:    v_mul_lo_u16 v6, v8, v9
-; GFX10-DL-NEXT:    v_lshlrev_b16 v5, 8, v5
+; GFX10-DL-NEXT:    v_mul_lo_u16 v5, v7, v8
+; GFX10-DL-NEXT:    v_mul_lo_u16 v6, v6, v9
 ; GFX10-DL-NEXT:    v_lshlrev_b16 v4, 8, v4
-; GFX10-DL-NEXT:    v_or_b32_sdwa v6, v6, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; GFX10-DL-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v2, 8, v5
-; GFX10-DL-NEXT:    v_lshl_or_b32 v4, v6, 16, v4
-; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v4, 8, v4
-; GFX10-DL-NEXT:    v_add_nc_u16 v1, v1, v4
-; GFX10-DL-NEXT:    v_mad_u16 v1, v8, v9, v1
+; GFX10-DL-NEXT:    v_lshlrev_b16 v6, 8, v6
+; GFX10-DL-NEXT:    v_or_b32_sdwa v5, v5, v4 dst_sel:WORD_1 dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v2, 8, v4
+; GFX10-DL-NEXT:    v_or_b32_sdwa v5, v5, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
+; GFX10-DL-NEXT:    v_lshrrev_b32_e32 v5, 8, v5
+; GFX10-DL-NEXT:    v_add_nc_u16 v1, v1, v5
+; GFX10-DL-NEXT:    v_mad_u16 v1, v7, v8, v1
 ; GFX10-DL-NEXT:    v_add_nc_u16 v1, v1, v2
 ; GFX10-DL-NEXT:    global_store_byte v0, v1, s[6:7]
 ; GFX10-DL-NEXT:    s_endpgm

@@ -3,18 +3,11 @@
 ; RUN: llc -mtriple=aarch64 -global-isel -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
 define <2 x i32> @and_extract_zext_idx0(<4 x i16> %vec) nounwind {
-; CHECK-SD-LABEL: and_extract_zext_idx0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and_extract_zext_idx0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and_extract_zext_idx0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
   %zext = zext <4 x i16> %vec to <4 x i32>
   %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 0)
   %and = and <2 x i32> %extract, <i32 65535, i32 65535>
@@ -41,19 +34,11 @@ define <4 x i16> @and_extract_sext_idx0(<8 x i8> %vec) nounwind {
 }
 
 define <2 x i32> @and_extract_zext_idx2(<4 x i16> %vec) nounwind {
-; CHECK-SD-LABEL: and_extract_zext_idx2:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and_extract_zext_idx2:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-GI-NEXT:    movi d1, #0x00ffff0000ffff
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and_extract_zext_idx2:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
   %zext = zext <4 x i16> %vec to <4 x i32>
   %extract = call <2 x i32> @llvm.vector.extract.v2i32.v4i32(<4 x i32> %zext, i64 2)
   %and = and <2 x i32> %extract, <i32 65535, i32 65535>
@@ -123,18 +108,11 @@ define <2 x i32> @sext_extract_zext_idx0_negtest(<4 x i16> %vec) nounwind {
 }
 
 define <4 x i16> @sext_extract_sext_idx0(<8 x i8> %vec) nounwind {
-; CHECK-SD-LABEL: sext_extract_sext_idx0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_extract_sext_idx0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_extract_sext_idx0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    ret
   %sext = sext <8 x i8> %vec to <8 x i16>
   %extract = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %sext, i64 0)
   %sext_inreg_step0 = shl <4 x i16> %extract, <i16 8, i16 8, i16 8, i16 8>
@@ -164,19 +142,11 @@ define <2 x i32> @sext_extract_zext_idx2(<4 x i16> %vec) nounwind {
 }
 
 define <4 x i16> @sext_extract_sext_idx4(<8 x i8> %vec) nounwind {
-; CHECK-SD-LABEL: sext_extract_sext_idx4:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    mov d0, v0.d[1]
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sext_extract_sext_idx4:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll v0.8h, v0.8b, #0
-; CHECK-GI-NEXT:    mov d0, v0.d[1]
-; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sext_extract_sext_idx4:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sshll v0.8h, v0.8b, #0
+; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    ret
   %sext = sext <8 x i8> %vec to <8 x i16>
   %extract = call <4 x i16> @llvm.vector.extract.v4i16.v8i16(<8 x i16> %sext, i64 4)
   %sext_inreg_step0 = shl <4 x i16> %extract, <i16 8, i16 8, i16 8, i16 8>

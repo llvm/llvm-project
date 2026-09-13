@@ -1865,7 +1865,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
     if (!Method || !Method->isDefaulted())
       return false;
 
-    return getDefaultedFunctionKind(Method).isSpecialMember();
+    return Method->getDefaultedFunctionKind().isSpecialMember();
   };
 
   // Implicit special members should not mark fields as used.

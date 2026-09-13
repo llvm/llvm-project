@@ -9,7 +9,7 @@ from lldbsuite.test import lldbutil
 
 class ImportStdModule(TestBase):
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIf(macos_version=["<", "15.0"])
     @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
@@ -39,7 +39,7 @@ class ImportStdModule(TestBase):
         )
 
     @add_test_categories(["libc++"])
-    @skipIf(compiler=no_match("clang"))
+    @requireClang
     @skipIf(macos_version=["<", "15.0"])
     @skipIf(macos_sdk_version=["<", "16.0"])
     def test_non_cpp_language(self):

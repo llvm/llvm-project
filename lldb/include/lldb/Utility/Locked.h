@@ -168,6 +168,34 @@ template <typename T, typename Mutex = llvm::sys::RWMutex>
 using SharedLockedUP = SharedLocked<std::unique_ptr<const T>, Mutex>;
 /// @}
 
+/// Bundles a value of type `T` with the `Mutex` that guards it.
+///
+/// This class prevents accidential use of a value without aquiring the
+/// lock and should be preferred over a member + mutex pair.
+///
+/// `Mutex` must satisfy `Lockable` when calling `Lock()` and `SharedLockable`
+/// when calling `LockShared()`.
+template <typename T, typename Mutex = llvm::sys::RWMutex> class Guarded {
+public:
+  Guarded() = default;
+  explicit Guarded(T value) : m_value(std::move(value)) {}
+
+  Guarded(const Guarded &) = delete;
+  Guarded &operator=(const Guarded &) = delete;
+
+  /// Exclusive (read/write) access to the value.
+  LockedPtr<T, Mutex> Lock() { return LockedPtr<T, Mutex>(m_mutex, &m_value); }
+
+  /// Shared (read-only) access to the value.
+  SharedLockedPtr<T, Mutex> LockShared() const {
+    return SharedLockedPtr<T, Mutex>(m_mutex, &m_value);
+  }
+
+private:
+  mutable Mutex m_mutex;
+  T m_value{};
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_UTILITY_LOCKED_H

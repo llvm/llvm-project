@@ -62,6 +62,8 @@ struct SideEffectsPass
           diag << " on a symbol '" << symbolRef << "',";
 
         diag << " on resource '" << instance.getResource()->getName() << "'";
+        if (Attribute parameters = instance.getParameters())
+          diag << " with parameters " << parameters;
       }
     });
 

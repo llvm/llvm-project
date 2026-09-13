@@ -10,17 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "ompdDLService.h"
+
 #include <Python.h>
 #include <omp-tools.h>
 // #include <ompd.h>
-#include <dlfcn.h>
 #include <errno.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-void *ompd_library;
 
 #define OMPD_WEAK_ATTR __attribute__((weak))
 
@@ -41,8 +40,8 @@ ompd_rc_t _print(const char *str, int category);
 OMPD_WEAK_ATTR ompd_rc_t ompd_get_api_version(ompd_word_t *addr) {
   static ompd_rc_t (*my_get_api_version)(ompd_word_t *) = NULL;
   if (!my_get_api_version) {
-    my_get_api_version = dlsym(ompd_library, "ompd_get_api_version");
-    if (dlerror()) {
+    my_get_api_version = ompd_get_symbol("ompd_get_api_version");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -52,8 +51,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_api_version(ompd_word_t *addr) {
 OMPD_WEAK_ATTR ompd_rc_t ompd_get_version_string(const char **string) {
   static ompd_rc_t (*my_get_version_string)(const char **) = NULL;
   if (!my_get_version_string) {
-    my_get_version_string = dlsym(ompd_library, "ompd_get_version_string");
-    if (dlerror()) {
+    my_get_version_string = ompd_get_symbol("ompd_get_version_string");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -63,8 +62,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_version_string(const char **string) {
 OMPD_WEAK_ATTR ompd_rc_t ompd_finalize(void) {
   static ompd_rc_t (*my_ompd_finalize)(void) = NULL;
   if (!my_ompd_finalize) {
-    my_ompd_finalize = dlsym(ompd_library, "ompd_finalize");
-    if (dlerror()) {
+    my_ompd_finalize = ompd_get_symbol("ompd_finalize");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -77,8 +76,8 @@ ompd_process_initialize(ompd_address_space_context_t *context,
   static ompd_rc_t (*my_ompd_process_initialize)(
       ompd_address_space_context_t *, ompd_address_space_handle_t **) = NULL;
   if (!my_ompd_process_initialize) {
-    my_ompd_process_initialize = dlsym(ompd_library, "ompd_process_initialize");
-    if (dlerror()) {
+    my_ompd_process_initialize = ompd_get_symbol("ompd_process_initialize");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -90,8 +89,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_omp_version(
   static ompd_rc_t (*my_ompd_get_omp_version)(ompd_address_space_handle_t *,
                                               ompd_word_t *) = NULL;
   if (!my_ompd_get_omp_version) {
-    my_ompd_get_omp_version = dlsym(ompd_library, "ompd_get_omp_version");
-    if (dlerror()) {
+    my_ompd_get_omp_version = ompd_get_symbol("ompd_get_omp_version");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -104,8 +103,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_omp_version_string(
       ompd_address_space_handle_t *, const char **) = NULL;
   if (!my_ompd_get_omp_version_string) {
     my_ompd_get_omp_version_string =
-        dlsym(ompd_library, "ompd_get_omp_version_string");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_omp_version_string");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -119,8 +118,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_thread_handle(
       ompd_address_space_handle_t *, ompd_thread_id_t, ompd_size_t,
       const void *, ompd_thread_handle_t **) = NULL;
   if (!my_get_thread_handle) {
-    my_get_thread_handle = dlsym(ompd_library, "ompd_get_thread_handle");
-    if (dlerror()) {
+    my_get_thread_handle = ompd_get_symbol("ompd_get_thread_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -133,9 +132,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_thread_in_parallel(
   static ompd_rc_t (*my_get_thread_in_parallel)(ompd_parallel_handle_t *, int,
                                                 ompd_thread_handle_t **) = NULL;
   if (!my_get_thread_in_parallel) {
-    my_get_thread_in_parallel =
-        dlsym(ompd_library, "ompd_get_thread_in_parallel");
-    if (dlerror()) {
+    my_get_thread_in_parallel = ompd_get_symbol("ompd_get_thread_in_parallel");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -148,9 +146,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_thread_handle_compare(
   static ompd_rc_t (*my_thread_handle_compare)(
       ompd_thread_handle_t *, ompd_thread_handle_t *, int *) = NULL;
   if (!my_thread_handle_compare) {
-    my_thread_handle_compare =
-        dlsym(ompd_library, "ompd_thread_handle_compare");
-    if (dlerror()) {
+    my_thread_handle_compare = ompd_get_symbol("ompd_thread_handle_compare");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -164,8 +161,8 @@ ompd_get_curr_parallel_handle(ompd_thread_handle_t *threadHandle,
       ompd_thread_handle_t *, ompd_parallel_handle_t **) = NULL;
   if (!my_get_current_parallel_handle) {
     my_get_current_parallel_handle =
-        dlsym(ompd_library, "ompd_get_curr_parallel_handle");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_curr_parallel_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -179,8 +176,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_parallel_handle_compare(
       ompd_parallel_handle_t *, ompd_parallel_handle_t *, int *) = NULL;
   if (!my_parallel_handle_compare) {
     my_parallel_handle_compare =
-        dlsym(ompd_library, "ompd_parallel_handle_compare");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_parallel_handle_compare");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -195,8 +192,8 @@ ompd_get_enclosing_parallel_handle(ompd_parallel_handle_t *parallelHandle,
       ompd_parallel_handle_t *, ompd_parallel_handle_t **) = NULL;
   if (!my_get_enclosing_parallel_handle) {
     my_get_enclosing_parallel_handle =
-        dlsym(ompd_library, "ompd_get_enclosing_parallel_handle");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_enclosing_parallel_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -210,8 +207,8 @@ ompd_get_task_parallel_handle(ompd_task_handle_t *taskHandle,
       ompd_task_handle_t *, ompd_parallel_handle_t **) = NULL;
   if (!my_get_task_parallel_handle) {
     my_get_task_parallel_handle =
-        dlsym(ompd_library, "ompd_get_task_parallel_handle");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_task_parallel_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -223,9 +220,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_curr_task_handle(
   static ompd_rc_t (*my_get_current_task_handle)(ompd_thread_handle_t *,
                                                  ompd_task_handle_t **) = NULL;
   if (!my_get_current_task_handle) {
-    my_get_current_task_handle =
-        dlsym(ompd_library, "ompd_get_curr_task_handle");
-    if (dlerror()) {
+    my_get_current_task_handle = ompd_get_symbol("ompd_get_curr_task_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -238,8 +234,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_generating_task_handle(
       ompd_task_handle_t *, ompd_task_handle_t **) = NULL;
   if (!my_get_generating_task_handle) {
     my_get_generating_task_handle =
-        dlsym(ompd_library, "ompd_get_generating_task_handle");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_generating_task_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -252,8 +248,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_scheduling_task_handle(
       ompd_task_handle_t *, ompd_task_handle_t **) = NULL;
   if (!my_get_scheduling_task_handle) {
     my_get_scheduling_task_handle =
-        dlsym(ompd_library, "ompd_get_scheduling_task_handle");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_scheduling_task_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -266,8 +262,8 @@ ompd_get_task_in_parallel(ompd_parallel_handle_t *parallelHandle, int threadNum,
   static ompd_rc_t (*my_get_task_in_parallel)(ompd_parallel_handle_t *, int,
                                               ompd_task_handle_t **) = NULL;
   if (!my_get_task_in_parallel) {
-    my_get_task_in_parallel = dlsym(ompd_library, "ompd_get_task_in_parallel");
-    if (dlerror()) {
+    my_get_task_in_parallel = ompd_get_symbol("ompd_get_task_in_parallel");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -280,8 +276,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_task_frame(ompd_task_handle_t *taskHandle,
   static ompd_rc_t (*my_get_task_frame)(
       ompd_task_handle_t *, ompd_frame_info_t *, ompd_frame_info_t *) = NULL;
   if (!my_get_task_frame) {
-    my_get_task_frame = dlsym(ompd_library, "ompd_get_task_frame");
-    if (dlerror()) {
+    my_get_task_frame = ompd_get_symbol("ompd_get_task_frame");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -295,8 +291,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_icv_from_scope(void *handle,
   static ompd_rc_t (*my_get_icv_from_scope)(void *, ompd_scope_t, ompd_icv_id_t,
                                             ompd_word_t *) = NULL;
   if (!my_get_icv_from_scope) {
-    my_get_icv_from_scope = dlsym(ompd_library, "ompd_get_icv_from_scope");
-    if (dlerror()) {
+    my_get_icv_from_scope = ompd_get_symbol("ompd_get_icv_from_scope");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -311,8 +307,8 @@ ompd_enumerate_icvs(ompd_address_space_handle_t *handle, ompd_icv_id_t current,
       ompd_address_space_handle_t *, ompd_icv_id_t, ompd_icv_id_t *,
       const char **, ompd_scope_t *, int *) = NULL;
   if (!my_enumerate_icvs) {
-    my_enumerate_icvs = dlsym(ompd_library, "ompd_enumerate_icvs");
-    if (dlerror()) {
+    my_enumerate_icvs = ompd_get_symbol("ompd_enumerate_icvs");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -327,8 +323,8 @@ ompd_enumerate_states(ompd_address_space_handle_t *addrSpaceHandle,
                                           ompd_word_t, ompd_word_t *,
                                           const char **, ompd_word_t *) = NULL;
   if (!my_enumerate_states) {
-    my_enumerate_states = dlsym(ompd_library, "ompd_enumerate_states");
-    if (dlerror()) {
+    my_enumerate_states = ompd_get_symbol("ompd_enumerate_states");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -342,8 +338,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_state(ompd_thread_handle_t *threadHandle,
   static ompd_rc_t (*my_get_state)(ompd_thread_handle_t *, ompd_word_t *,
                                    ompd_wait_id_t *) = NULL;
   if (!my_get_state) {
-    my_get_state = dlsym(ompd_library, "ompd_get_state");
-    if (dlerror()) {
+    my_get_state = ompd_get_symbol("ompd_get_state");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -355,8 +351,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_task_function(ompd_task_handle_t *taskHandle,
   static ompd_rc_t (*my_get_task_function)(ompd_task_handle_t *,
                                            ompd_address_t *) = NULL;
   if (!my_get_task_function) {
-    my_get_task_function = dlsym(ompd_library, "ompd_get_task_function");
-    if (dlerror()) {
+    my_get_task_function = ompd_get_symbol("ompd_get_task_function");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -369,8 +365,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_thread_id(ompd_thread_handle_t *threadHandle,
   static ompd_rc_t (*my_get_thread_id)(ompd_thread_handle_t *, ompd_thread_id_t,
                                        ompd_size_t, void *) = NULL;
   if (!my_get_thread_id) {
-    my_get_thread_id = dlsym(ompd_library, "ompd_get_thread_id");
-    if (dlerror()) {
+    my_get_thread_id = ompd_get_symbol("ompd_get_thread_id");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -383,8 +379,8 @@ OMPD_WEAK_ATTR ompd_rc_t ompd_get_tool_data(void *handle, ompd_scope_t scope,
   static ompd_rc_t (*my_get_tool_data)(void *, ompd_scope_t, ompd_word_t *,
                                        ompd_address_t *) = NULL;
   if (!my_get_tool_data) {
-    my_get_tool_data = dlsym(ompd_library, "ompd_get_tool_data");
-    if (dlerror()) {
+    my_get_tool_data = ompd_get_symbol("ompd_get_tool_data");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -398,8 +394,8 @@ ompd_get_icv_string_from_scope(void *handle, ompd_scope_t scope,
       void *, ompd_scope_t, ompd_icv_id_t, const char **) = NULL;
   if (!my_get_icv_string_from_scope) {
     my_get_icv_string_from_scope =
-        dlsym(ompd_library, "ompd_get_icv_string_from_scope");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_icv_string_from_scope");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -410,8 +406,8 @@ OMPD_WEAK_ATTR ompd_rc_t
 ompd_rel_thread_handle(ompd_thread_handle_t *threadHandle) {
   static ompd_rc_t (*my_release_thread_handle)(ompd_thread_handle_t *) = NULL;
   if (!my_release_thread_handle) {
-    my_release_thread_handle = dlsym(ompd_library, "ompd_rel_thread_handle");
-    if (dlerror()) {
+    my_release_thread_handle = ompd_get_symbol("ompd_rel_thread_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -423,9 +419,8 @@ ompd_rel_parallel_handle(ompd_parallel_handle_t *parallelHandle) {
   static ompd_rc_t (*my_release_parallel_handle)(ompd_parallel_handle_t *) =
       NULL;
   if (!my_release_parallel_handle) {
-    my_release_parallel_handle =
-        dlsym(ompd_library, "ompd_rel_parallel_handle");
-    if (dlerror()) {
+    my_release_parallel_handle = ompd_get_symbol("ompd_rel_parallel_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -435,8 +430,8 @@ ompd_rel_parallel_handle(ompd_parallel_handle_t *parallelHandle) {
 OMPD_WEAK_ATTR ompd_rc_t ompd_rel_task_handle(ompd_task_handle_t *taskHandle) {
   static ompd_rc_t (*my_release_task_handle)(ompd_task_handle_t *) = NULL;
   if (!my_release_task_handle) {
-    my_release_task_handle = dlsym(ompd_library, "ompd_rel_task_handle");
-    if (dlerror()) {
+    my_release_task_handle = ompd_get_symbol("ompd_rel_task_handle");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -449,8 +444,8 @@ ompd_task_handle_compare(ompd_task_handle_t *task_handle_1,
   static ompd_rc_t (*my_task_handle_compare)(
       ompd_task_handle_t *, ompd_task_handle_t *, int *) = NULL;
   if (!my_task_handle_compare) {
-    my_task_handle_compare = dlsym(ompd_library, "ompd_task_handle_compare");
-    if (dlerror()) {
+    my_task_handle_compare = ompd_get_symbol("ompd_task_handle_compare");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -464,8 +459,8 @@ ompd_get_display_control_vars(ompd_address_space_handle_t *address_space_handle,
       ompd_address_space_handle_t *, const char *const **) = NULL;
   if (!my_ompd_get_display_control_vars) {
     my_ompd_get_display_control_vars =
-        dlsym(ompd_library, "ompd_get_display_control_vars");
-    if (dlerror()) {
+        ompd_get_symbol("ompd_get_display_control_vars");
+    if (ompd_get_dl_error()) {
       return ompd_rc_error;
     }
   }
@@ -475,21 +470,18 @@ ompd_get_display_control_vars(ompd_address_space_handle_t *address_space_handle,
 /**
  * Loads the OMPD library (libompd.so). Returns an integer with the version if
  * the OMPD library could be loaded successfully. Error codes: -1: argument
- * could not be converted to string -2: error when calling dlopen -3: error when
- * fetching version of OMPD API else: see ompd return codes
+ * could not be converted to string -2: error when loading the library
+ * else: see ompd return codes
  */
 static PyObject *ompd_open(PyObject *self, PyObject *args) {
-  const char *name, *dlerr;
-  dlerror();
+  const char *name;
   if (!PyArg_ParseTuple(args, "s", &name)) {
     return Py_BuildValue("i", -1);
   }
-  ompd_library = dlopen(name, RTLD_LAZY);
-  if ((dlerr = dlerror())) {
+  if (ompd_load_library(name) != 0) {
+    /* Keep -2 so ompd.py can try the next ompd_dll_locations entry.
+     * The helper error stays in ompd_get_dl_error() for the caller. */
     return Py_BuildValue("i", -2);
-  }
-  if (dlerror()) {
-    return Py_BuildValue("i", -3);
   }
   ompd_word_t version;
   ompd_rc_t rc = ompd_get_api_version(&version);
@@ -498,6 +490,16 @@ static PyObject *ompd_open(PyObject *self, PyObject *args) {
 
   int returnValue = version;
   return Py_BuildValue("i", returnValue);
+}
+
+/**
+ * Last load/lookup error from the symbol-lookup helper, or None.
+ */
+static PyObject *call_ompd_get_dl_error(PyObject *self, PyObject *noargs) {
+  const char *err = ompd_get_dl_error();
+  if (!err)
+    Py_RETURN_NONE;
+  return Py_BuildValue("s", err);
 }
 
 /**
@@ -825,7 +827,12 @@ static PyObject *call_ompd_initialize(PyObject *self, PyObject *noargs) {
       NULL,   _read_string, _endianess, _endianess, _thread_context};
 
   ompd_rc_t (*my_ompd_init)(ompd_word_t version, ompd_callbacks_t *) =
-      dlsym(ompd_library, "ompd_initialize");
+      ompd_get_symbol("ompd_initialize");
+  if (!my_ompd_init) {
+    _printf("An error occurred when looking up ompd_initialize: %s",
+            ompd_get_dl_error() ? ompd_get_dl_error() : "unknown");
+    Py_RETURN_NONE;
+  }
   ompd_rc_t returnInit = my_ompd_init(201811, &table);
   if (returnInit != ompd_rc_ok) {
     _printf("An error occurred when calling ompd_initialize! Error code: %d",
@@ -834,7 +841,12 @@ static PyObject *call_ompd_initialize(PyObject *self, PyObject *noargs) {
   ompd_address_space_handle_t *addr_space = NULL;
   ompd_rc_t (*my_proc_init)(ompd_address_space_context_t *,
                             ompd_address_space_handle_t **) =
-      dlsym(ompd_library, "ompd_process_initialize");
+      ompd_get_symbol("ompd_process_initialize");
+  if (!my_proc_init) {
+    _printf("An error occurred when looking up ompd_process_initialize: %s",
+            ompd_get_dl_error() ? ompd_get_dl_error() : "unknown");
+    Py_RETURN_NONE;
+  }
   ompd_rc_t retProcInit = my_proc_init(&acontext, &addr_space);
   if (retProcInit != ompd_rc_ok) {
     _printf("An error occurred when calling ompd_process_initialize! Error "
@@ -968,7 +980,8 @@ static PyObject *call_ompd_get_task_parallel_handle(PyObject *self,
 
   if (retVal != ompd_rc_ok) {
     _printf("An error occurred when calling ompd_get_task_parallel_handle! "
-            "Error code: %d", retVal);
+            "Error code: %d",
+            retVal);
     return Py_BuildValue("l", retVal);
   }
   return PyCapsule_New(taskParallelHandle, "ParallelHandle",
@@ -1482,7 +1495,9 @@ PyObject *test_ompd_enumerate_states(PyObject *self, PyObject *noargs);
  */
 static PyMethodDef ompdModule_methods[] = {
     {"ompd_open", ompd_open, METH_VARARGS,
-     "Execute dlopen, return OMPD version."},
+     "Load libompd, return OMPD version."},
+    {"ompd_get_dl_error", call_ompd_get_dl_error, METH_NOARGS,
+     "Return the last OMPD library load/lookup error, or None."},
     {"call_ompd_initialize", call_ompd_initialize, METH_NOARGS,
      "Initializes OMPD environment and callbacks."},
     {"call_ompd_rel_thread_handle", call_ompd_rel_thread_handle, METH_VARARGS,
