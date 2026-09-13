@@ -681,7 +681,8 @@ public:
   /// second operand.
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
                                 bool FoldWithMultiUse = false,
-                                bool SimplifyBothArms = false);
+                                bool SimplifyBothArms = false,
+                                bool AllowNoArmSimplification = false);
 
   Instruction *foldBinOpSelectBinOp(BinaryOperator &Op);
 

@@ -460,6 +460,12 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   if (!MatchOp)
     return nullptr;
 
+  // Two constant divisors would become one variable divisor, which needs a
+  // hardware divide that neither of them needed.
+  if (TI->isIntDivRem() && MatchIsOpZero && isa<Constant>(OtherOpT) &&
+      isa<Constant>(OtherOpF))
+    return nullptr;
+
   // If the select condition is a vector, the operands of the original select's
   // operands also must be vectors. This may not be the case for getelementptr
   // for example.
