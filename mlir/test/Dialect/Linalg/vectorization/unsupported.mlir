@@ -411,3 +411,22 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// The number of vector sizes has to match the number of loops of the target
+// op. More sizes than loops used to trip an out-of-bounds assertion.
+
+func.func @invalid_number_of_vec_sizes(%arg0: memref<?x?xbf16>, %arg1: memref<?x?xbf16>, %arg2: memref<?x?xbf16>) {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  linalg.add ins(%arg0, %arg1 : memref<?x?xbf16>, memref<?x?xbf16>) outs(%arg2 : memref<?x?xbf16>)
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, [16], 4] : !transform.any_op
+    transform.yield
+  }
+}
