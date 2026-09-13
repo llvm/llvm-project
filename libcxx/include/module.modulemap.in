@@ -1950,6 +1950,7 @@ module std {
       export std.ranges.ref_view
     }
     module as_rvalue_view                 { header "__ranges/as_rvalue_view.h" }
+    module cache_latest_view              { header "__ranges/cache_latest_view.h" }
     module chunk_by_view {
       header "__ranges/chunk_by_view.h"
       export std.functional.bind_back
@@ -2005,6 +2006,7 @@ module std {
     module ref_view                       { header "__ranges/ref_view.h" }
     module rend                           { header "__ranges/rend.h" }
     module repeat_view                    { header "__ranges/repeat_view.h" }
+    module reserve_hint                   { header "__ranges/reserve_hint.h" }
     module reverse_view                   { header "__ranges/reverse_view.h" }
     module single_view                    { header "__ranges/single_view.h" }
     module size                           { header "__ranges/size.h" }
