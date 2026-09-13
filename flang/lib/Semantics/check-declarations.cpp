@@ -22,6 +22,7 @@
 #include "flang/Semantics/type.h"
 #include <algorithm>
 #include <map>
+#include <ostream>
 #include <string>
 
 namespace Fortran::semantics {
@@ -3149,7 +3150,7 @@ void CheckHelper::CheckGlobalName(const Symbol &symbol) {
       if (context_.HasError(symbol) || context_.HasError(other)) {
         // don't pile on
       } else if (symbol.has<CommonBlockDetails>() &&
-          other.has<CommonBlockDetails>() && symbol.name() == other.name()) {
+          other.has<CommonBlockDetails>() && symbol.owner() != other.owner()) {
         // Two common blocks can have the same global name so long as
         // they're not in the same scope.
       } else if ((IsProcedure(symbol) || IsBlockData(symbol)) &&
