@@ -821,6 +821,13 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setOperationAction(ISD::FCANONICALIZE, MVT::f32, Legal);
   }
 
+  if (Subtarget.hasFPU()) {
+    setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
+    if (Subtarget.use64BitRegs() ||
+        (Subtarget.hasAltivec() && Subtarget.useCRBits()))
+      setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
+  }
+
   if (Subtarget.hasAltivec()) {
     for (MVT VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
       setOperationAction(ISD::AVGCEILS, VT, Legal);
@@ -1264,9 +1271,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Custom);
 
       // Test data class instructions store results in CR bits.
+      // f32/f64 are already registered Custom in the hasVSX() block above;
+      // only f128/ppcf128 need the P9 xststdcqp instruction.
       if (Subtarget.useCRBits()) {
-        setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
-        setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::f128, Custom);
         setOperationAction(ISD::IS_FPCLASS, MVT::ppcf128, Custom);
       }
@@ -11965,18 +11972,74 @@ static SDValue getDataClassTest(SDValue Op, FPClassTest Mask, const SDLoc &Dl,
 
 SDValue PPCTargetLowering::LowerIS_FPCLASS(SDValue Op,
                                            SelectionDAG &DAG) const {
-  assert(Subtarget.hasP9Vector() && "Test data class requires Power9");
   SDValue LHS = Op.getOperand(0);
   uint64_t RHSC = Op.getConstantOperandVal(1);
   SDLoc Dl(Op);
   FPClassTest Category = static_cast<FPClassTest>(RHSC);
-  if (LHS.getValueType() == MVT::ppcf128) {
+  EVT VT = LHS.getValueType();
+
+  // ppcf128/f128 only reach here on P9+useCRBits() targets.
+  if (VT == MVT::ppcf128) {
+    assert(Subtarget.hasP9Vector() && Subtarget.useCRBits());
     // The higher part determines the value class.
     LHS = DAG.getNode(ISD::EXTRACT_ELEMENT, Dl, MVT::f64, LHS,
                       DAG.getConstant(1, Dl, MVT::i32));
+    VT = MVT::f64;
   }
 
-  return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
+  // P9 + useCRBits: xststdcdp/xststdcsp/xststdcqp cover all masks directly.
+  if (Subtarget.hasP9Vector() && Subtarget.useCRBits())
+    return getDataClassTest(LHS, Category, Dl, DAG, Subtarget);
+
+  // f32 on all FPU targets, f64 on use64BitRegs() targets only.
+  // LowerIS_FPCLASS is invoked during Legalize (after type-legalization), so
+  // PPC machine nodes are safe here. They carry no FP-exception semantics,
+  // making this correct under -ffp-model=strict.
+  assert((VT == MVT::f32 || VT == MVT::f64) &&
+         "unexpected type in LowerIS_FPCLASS");
+
+  if (Category != fcNan && Category != ~fcNan)
+    return SDValue();
+
+  // fcNan / ~fcNan: emit a self-comparison using the best available
+  // instruction both are exception-free on PPC hardware.
+  // VSX (P8+): xscmpudp (f64 operand; extend f32 first).
+  // Non-VSX FPU: fcmpu (FCMPUS for f32, FCMPUD for f64).
+  SDValue Cmp;
+  if (Subtarget.hasVSX()) {
+    if (VT == MVT::f32)
+      LHS = DAG.getNode(ISD::FP_EXTEND, Dl, MVT::f64, LHS);
+    // xscmpudp Ra, Ra: FU (unordered) bit set when Ra is NaN.
+    Cmp = SDValue(DAG.getMachineNode(PPC::XSCMPUDP, Dl, MVT::i32, LHS, LHS),
+                  0);
+  } else {
+    // fcmpu Ra, Ra: FU bit set when Ra is NaN.
+    unsigned FcmpOp = (VT == MVT::f32) ? PPC::FCMPUS : PPC::FCMPUD;
+    Cmp = SDValue(DAG.getMachineNode(FcmpOp, Dl, MVT::i32, LHS, LHS), 0);
+  }
+
+  if (Subtarget.useCRBits()) {
+    // fcNan  -> sub_un (FU): 1 when NaN
+    // ~fcNan -> sub_eq (EQ): 1 when not NaN (ordered self-compare is equal)
+    unsigned SubReg = (Category == fcNan) ? PPC::sub_un : PPC::sub_eq;
+    return SDValue(
+        DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, Dl, MVT::i1, Cmp,
+                           DAG.getTargetConstant(SubReg, Dl, MVT::i32)),
+        0);
+  }
+
+  // !useCRBits(): MVT::i1 is not a legal type ¡ª never emit EXTRACT_SUBREG to
+  // i1.  Use SELECT_CC_I4 directly on the CR field (Cmp, MVT::i32) to produce
+  // a legal MVT::i32 result without creating any i1 node.
+  // PRED_UN: true when FU (unordered/NaN) bit is set.
+  // PRED_EQ: true when EQ bit is set (ordered self-compare => not NaN).
+  unsigned Pred = (Category == fcNan) ? PPC::PRED_UN : PPC::PRED_EQ;
+  return SDValue(
+      DAG.getMachineNode(PPC::SELECT_CC_I4, Dl, MVT::i32,
+                         {Cmp, DAG.getConstant(1, Dl, MVT::i32),
+                          DAG.getConstant(0, Dl, MVT::i32),
+                          DAG.getTargetConstant(Pred, Dl, MVT::i32)}),
+      0);
 }
 
 // Adjust the length value for a load/store with length to account for the
