@@ -590,7 +590,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUdeviceptr DevicePtr;
     CUresult Res;
 
-    if (Alignment > 0 && Alignment > Granularity) {
+    if (Alignment > Granularity) {
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "requested alignment (%lu) larger than maximum "
                            "supported alignment (%lu)",
