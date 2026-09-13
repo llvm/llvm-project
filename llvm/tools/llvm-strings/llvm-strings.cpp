@@ -130,9 +130,6 @@ static void strings(raw_ostream &OS, StringRef FileName,
 
   Buffer.resize_for_overwrite(sys::fs::DefaultReadChunkSize);
 
-  // To prevent performance regression under O0, access the raw pointer instead
-  // of using methods provided by the standard library, which are not inlined
-  // under O0.
   while (true) {
     Expected<size_t> ReadBytesOrErr = sys::fs::readNativeFile(
         Handle, MutableArrayRef(Buffer.data(), Buffer.size()));
@@ -145,6 +142,9 @@ static void strings(raw_ostream &OS, StringRef FileName,
     if (ChunkSize == 0)
       break;
 
+    // To prevent performance regression under O0, access the raw pointer
+    // instead of using methods provided by the standard library, which are not
+    // inlined under O0.
     const char *const Begin = Buffer.data();
     const char *const End = Begin + ChunkSize;
     const char *Cur = Begin;
@@ -158,28 +158,29 @@ static void strings(raw_ostream &OS, StringRef FileName,
     // With a large Min, the buffer must hold at least Min bytes, since we need
     // enough data to decide whether to print it.
     if (InString || !Candidate.empty()) {
-      // Find the end of the current buffer
+      // Find the end of the current string.
       while (Cur != End && isStringChar(*Cur))
         ++Cur;
       size_t Len = Cur - Begin;
       if (InString) {
         // Print the remaining part if the previous chunk has already printed
         // the header. E.g. header: aaaaa | bbbbb, where | is the chunk
-        // boundary.                        ^
+        // boundary.
+        // Output: Header: aaaaabbbbb, where bbbbb is printed in here.
         OS << StringRef(Begin, Len);
       } else if (Candidate.size() + Len >= Min) {
         // If the header hasn't been printed yet (e.g. the previous candidate
         // was smaller than Min), but we can print it now, print the header
         // first, followed by the candidate from the previous chunk and the
-        // current string. E.g. '\0' | bbbbbb
-        //                             ^
+        // current string. E.g. aa | bbbbbb
+        // Output Header: aabbbbbb, where aabbbbbb is printed in here.
         printHeader(ChunkOffset - Candidate.size());
         OS << Candidate << StringRef(Begin, Len);
         Candidate.clear();
         InString = true;
       } else if (Cur == End) {
-        // If the current chunk + previous candidate is still smaller than Min ,
-        // append it to Candidate
+        // If the current chunk + previous candidate is still smaller than Min,
+        // append it to Candidate.
         Candidate.append(Begin, End);
       } else {
         // If the string has terminated but is still smaller than Min, clear the
@@ -205,12 +206,12 @@ static void strings(raw_ostream &OS, StringRef FileName,
     const char *StrHead = nullptr;
     for (; Cur != End; ++Cur) {
       if (isStringChar(*Cur)) {
-        // Find the start of the next string
+        // Find the start of the next string.
         if (!StrHead)
           StrHead = Cur;
       } else if (StrHead) {
-        // If it is not a StringChar, we have reached the end of the current
-        // string. Try to print it.
+        // If it is not a printable character, we have reached the end of the
+        // current string. Print it if long enough.
         if (static_cast<size_t>(Cur - StrHead) >= Min) {
           printHeader(ChunkOffset + (StrHead - Begin));
           OS << StringRef(StrHead, Cur - StrHead) << '\n';
@@ -219,11 +220,9 @@ static void strings(raw_ostream &OS, StringRef FileName,
       }
     }
 
-    // The last string spans multiple chunks. If it is larger than Min, print
-    // the header immediately and set the InString flag to avoid printing it
-    // again.
-    // e.g. aaaaa | bbbbb
-    //          ^
+    // The last string could span multiple chunks. If it is larger than Min,
+    // print the header immediately and set the InString flag to avoid printing
+    // it again.
     if (StrHead) {
       size_t Len = End - StrHead;
       // Print it, or append it to Candidate if it is too short.

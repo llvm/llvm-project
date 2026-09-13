@@ -48,9 +48,23 @@ RUN: %python -c "import sys; sys.stdout.buffer.write(b'S' + b'M' * 16384 + b'E\n
 RUN: llvm-strings %t.6 > %t.6.out
 RUN: diff %t.6.expected %t.6.out
 
+## Case 7: the minimum length is greater than the chunk size, so a candidate
+## has to be buffered across more than one chunk before it is known to be long
+## enough. A run of exactly the minimum length is printed, with the offset of
+## its start (0x8), which precedes the chunk in which the decision is made.
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 8 + b'A' * 20000 + b'\0' * 4)" > %t.7
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'%7x ' % 8 + b'A' * 20000 + b'\n')" > %t.7.expected
+RUN: llvm-strings --radix=x --bytes=20000 %t.7 > %t.7.out
+RUN: diff %t.7.expected %t.7.out
+
+## Case 8: as case 7, but the run is one byte short of the minimum length, so
+## the buffered candidate is discarded and nothing is printed.
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 8 + b'A' * 19999 + b'\0' * 4)" > %t.8
+RUN: llvm-strings --bytes=20000 %t.8 | count 0
+
 ## A string terminated by the end of the file (no trailing unprintable byte)
 ## must still be printed.
-RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16380 + b'TRAILING')" > %t.7
-RUN: llvm-strings %t.7 | FileCheck %s --check-prefix=EOF --strict-whitespace --implicit-check-not={{.}}
+RUN: %python -c "import sys; sys.stdout.buffer.write(b'\0' * 16380 + b'TRAILING')" > %t.9
+RUN: llvm-strings %t.9 | FileCheck %s --check-prefix=EOF --strict-whitespace --implicit-check-not={{.}}
 
 EOF:{{^}}TRAILING{{$}}
