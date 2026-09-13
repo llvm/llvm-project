@@ -604,27 +604,27 @@ void test_builtin_elementwise_fshl(long long int i1, long long int i2,
   // CIR-LABEL: test_builtin_elementwise_fshl
   // LLVM-LABEL: test_builtin_elementwise_fshl
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!s64i, !s64i, !s64i) -> !s64i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !s64i
   // LLVM: call i64 @llvm.fshl.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
   i1 = __builtin_elementwise_fshl(i1, i2, i3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!u16i, !u16i, !u16i) -> !u16i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !u16i
   // LLVM: call i16 @llvm.fshl.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
   us1 = __builtin_elementwise_fshl(us1, us2, us3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!s8i, !s8i, !s8i) -> !s8i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !s8i
   // LLVM: call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   c1 = __builtin_elementwise_fshl(c1, c2, c3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!u8i, !u8i, !u8i) -> !u8i
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !u8i
   // LLVM: call i8 @llvm.fshl.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   uc1 = __builtin_elementwise_fshl(uc1, uc2, uc3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.fshl.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vi1 = __builtin_elementwise_fshl(vi1, vi2, vi3);
 
-  // CIR: cir.call_llvm_intrinsic "fshl" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: cir.fshl %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_fshl(vu1, vu2, vu3);
 }
@@ -640,27 +640,27 @@ void test_builtin_elementwise_fshr(long long int i1, long long int i2,
   // CIR-LABEL: test_builtin_elementwise_fshr
   // LLVM-LABEL: test_builtin_elementwise_fshr
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!s64i, !s64i, !s64i) -> !s64i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !s64i
   // LLVM: call i64 @llvm.fshr.i64(i64 %{{.*}}, i64 %{{.*}}, i64 %{{.*}})
   i1 = __builtin_elementwise_fshr(i1, i2, i3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!u16i, !u16i, !u16i) -> !u16i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !u16i
   // LLVM: call i16 @llvm.fshr.i16(i16 %{{.*}}, i16 %{{.*}}, i16 %{{.*}})
   us1 = __builtin_elementwise_fshr(us1, us2, us3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!s8i, !s8i, !s8i) -> !s8i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !s8i
   // LLVM: call i8 @llvm.fshr.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   c1 = __builtin_elementwise_fshr(c1, c2, c3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!u8i, !u8i, !u8i) -> !u8i
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !u8i
   // LLVM: call i8 @llvm.fshr.i8(i8 %{{.*}}, i8 %{{.*}}, i8 %{{.*}})
   uc1 = __builtin_elementwise_fshr(uc1, uc2, uc3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<8 x !s16i>
   // LLVM: call <8 x i16> @llvm.fshr.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}}, <8 x i16> %{{.*}})
   vi1 = __builtin_elementwise_fshr(vi1, vi2, vi3);
 
-  // CIR: cir.call_llvm_intrinsic "fshr" %{{.*}}, %{{.*}}, %{{.*}} : (!cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>) -> !cir.vector<4 x !s32i>
+  // CIR: cir.fshr %{{.*}}, %{{.*}}, %{{.*}} : !cir.vector<4 x !s32i>
   // LLVM: call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %{{.*}}, <4 x i32> %{{.*}}, <4 x i32> %{{.*}})
   vu1 = __builtin_elementwise_fshr(vu1, vu2, vu3);
 }

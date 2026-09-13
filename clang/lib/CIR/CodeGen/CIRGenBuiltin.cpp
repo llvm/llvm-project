@@ -596,6 +596,20 @@ static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
 }
 
 template <typename Op>
+static RValue emitTernarySameTypeBuiltin(CIRGenFunction &cgf,
+                                         const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+  mlir::Value arg2 = cgf.emitScalarExpr(e.getArg(2));
+
+  mlir::Location loc = cgf.getLoc(e.getExprLoc());
+  mlir::Type ty = cgf.convertType(e.getType());
+  auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2);
+
+  return RValue::get(call->getResult(0));
+}
+
+template <typename Op>
 static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
                                                    const CallExpr &e) {
   CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &e);
@@ -2044,22 +2058,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_canonicalize:
   case Builtin::BI__builtin_elementwise_copysign:
     return errorBuiltinNYI(*this, e, builtinID);
-  case Builtin::BI__builtin_elementwise_fshl: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value a = emitScalarExpr(e->getArg(0));
-    mlir::Value b = emitScalarExpr(e->getArg(1));
-    mlir::Value c = emitScalarExpr(e->getArg(2));
-    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshl", a.getType(),
-                                                   mlir::ValueRange{a, b, c}));
-  }
-  case Builtin::BI__builtin_elementwise_fshr: {
-    mlir::Location loc = getLoc(e->getExprLoc());
-    mlir::Value a = emitScalarExpr(e->getArg(0));
-    mlir::Value b = emitScalarExpr(e->getArg(1));
-    mlir::Value c = emitScalarExpr(e->getArg(2));
-    return RValue::get(builder.emitIntrinsicCallOp(loc, "fshr", a.getType(),
-                                                   mlir::ValueRange{a, b, c}));
-  }
+  case Builtin::BI__builtin_elementwise_fshl:
+    return emitTernarySameTypeBuiltin<cir::FshlOp>(*this, *e);
+  case Builtin::BI__builtin_elementwise_fshr:
+    return emitTernarySameTypeBuiltin<cir::FshrOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_clmul:
   case Builtin::BI__builtin_elementwise_pext:
   case Builtin::BI__builtin_elementwise_pdep:
