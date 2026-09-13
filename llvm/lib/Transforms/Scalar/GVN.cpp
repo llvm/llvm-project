@@ -3457,14 +3457,21 @@ bool GVNPass::processInstruction(Instruction *I) {
   // in the domtree: it can't!
   Value *Repl = Num < NextNum ? findLeader(I->getParent(), Num) : nullptr;
   if (!Repl) {
-    // substiut cmp instruction with not if possible.
+    // substitute cmp instruction with not if possible.
     if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
       uint32_t NotNum =
           VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
                        Cmp->getOperand(0), Cmp->getOperand(1));
       if (NotNum != 0) {
         Value *NotRepl = findLeader(I->getParent(), NotNum);
-        if (NotRepl && NotRepl != I) {
+        auto FlagCheck = [&]() {
+          if (auto *Icmp = dyn_cast<ICmpInst>(NotRepl))
+            return !Icmp->hasSameSign() ||
+                   Icmp->hasSameSign() == cast<ICmpInst>(I)->hasSameSign();
+          return cast<FPMathOperator>(NotRepl)->getFastMathFlags() ==
+                 cast<FPMathOperator>(I)->getFastMathFlags();
+        };
+        if (NotRepl && NotRepl != I && FlagCheck()) {
           BinaryOperator *Not = BinaryOperator::CreateNot(
               NotRepl, NotRepl->getName() + ".not", I->getIterator());
           Not->setDebugLoc(I->getDebugLoc());
