@@ -95,10 +95,15 @@ with tempfile.TemporaryDirectory() as tmpdir:
         cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        check=True,
         universal_newlines=True,
         cwd=tmpdir,
     )
+    if proc.returncode != 0:
+        # Show the compiler's diagnostics rather than swallowing them in a
+        # CalledProcessError traceback.
+        print(f"{cmd} failed with exit status {proc.returncode}:")
+        sys.stdout.write(proc.stderr)
+        sys.exit(1)
     src1 = proc.stdout
     messages = proc.stderr
 
