@@ -15,7 +15,8 @@ namespace LIBC_NAMESPACE_DECL {
 using LIBC_NAMESPACE::fputil::Float128;
 
 LLVM_LIBC_FUNCTION(int, setpayloadsigf128, (float128 * res, float128 pl)) {
-  return math::setpayloadsigf128(cpp::bit_cast<Float128 *>(res), cpp::bit_cast<Float128>(pl));
+  return math::setpayloadsigf128(cpp::bit_cast<Float128 *>(res),
+                                 cpp::bit_cast<Float128>(pl));
 }
 
 } // namespace LIBC_NAMESPACE_DECL
