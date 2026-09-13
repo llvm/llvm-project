@@ -39,3 +39,9 @@ void matrix_unsupported_bit_int() {
   using m6 = _BitInt(64) __attribute__((matrix_type(4, 4)));
   using m7 = _BitInt(256) __attribute__((matrix_type(4, 4)));
 }
+
+void matrix_logical_op() {
+  matrix_int_t a;
+  matrix_int_t b;
+  matrix_int_t c = a && b;  // expected-error{{matix logical operations are not supported on the current target}}
+}
