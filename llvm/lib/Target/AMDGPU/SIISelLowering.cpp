@@ -1069,6 +1069,22 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::i16, MVT::bf16, MVT::i8, MVT::i128},
                      Custom);
 
+  // The s_buffer_load intrinsics accept any result type in IR, but only a few
+  // of them can be selected. Mark the remaining illegal result types Custom so
+  // ReplaceNodeResults gets a chance to diagnose them instead of letting the
+  // type legalizer abort. Its INTRINSIC_WO_CHAIN case dispatches on the
+  // intrinsic ID, but INTRINSIC_W_CHAIN does not, so remember the types added
+  // here to keep other chained intrinsics on generic legalization.
+  for (MVT VT : MVT::all_valuetypes()) {
+    if (VT.isScalableVector() || isTypeLegal(VT))
+      continue;
+    setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
+    if (getOperationAction(ISD::INTRINSIC_W_CHAIN, VT) != Custom) {
+      setOperationAction(ISD::INTRINSIC_W_CHAIN, VT, Custom);
+      SBufferLoadDiagnosticVTs.set(VT.SimpleTy);
+    }
+  }
+
   setOperationAction(ISD::INTRINSIC_VOID,
                      {MVT::Other, MVT::v2i16, MVT::v2f16, MVT::v2bf16,
                       MVT::v3i16, MVT::v3f16, MVT::v4f16, MVT::v4i16,
@@ -8446,53 +8462,11 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
     case Intrinsic::amdgcn_s_buffer_load: {
-      // Lower llvm.amdgcn.s.buffer.load.(i8, u8) intrinsics. First, we generate
-      // s_buffer_load_u8 for signed and unsigned load instructions. Next, DAG
-      // combiner tries to merge the s_buffer_load_u8 with a sext instruction
-      // (performSignExtendInRegCombine()) and it replaces s_buffer_load_u8 with
-      // s_buffer_load_i8.
-      if (!Subtarget->hasScalarSubwordLoads())
-        return;
       SDValue Op = SDValue(N, 0);
-      SDValue Rsrc = Op.getOperand(1);
-      SDValue Offset = Op.getOperand(2);
-      SDValue CachePolicy = Op.getOperand(3);
       EVT VT = Op.getValueType();
-      assert(VT == MVT::i8 && "Expected 8-bit s_buffer_load intrinsics.\n");
-      SDLoc DL(Op);
-      MachineFunction &MF = DAG.getMachineFunction();
-      const DataLayout &DataLayout = DAG.getDataLayout();
-      Align Alignment =
-          DataLayout.getABITypeAlign(VT.getTypeForEVT(*DAG.getContext()));
-      MachineMemOperand *MMO = MF.getMachineMemOperand(
-          MachinePointerInfo(),
-          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable |
-              MachineMemOperand::MOInvariant,
-          VT.getStoreSize(), Alignment);
-      SDValue LoadVal;
-      if (!Offset->isDivergent()) {
-        SDValue Ops[] = {DAG.getEntryNode(), // Chain
-                         Rsrc,               // source register
-                         Offset, CachePolicy};
-        SDValue BufferLoad = DAG.getMemIntrinsicNode(
-            AMDGPUISD::SBUFFER_LOAD_UBYTE, DL,
-            DAG.getVTList(MVT::i32, MVT::Other), Ops, VT, MMO);
-        LoadVal = DAG.getNode(ISD::TRUNCATE, DL, VT, BufferLoad);
-      } else {
-        SDValue Ops[] = {
-            DAG.getEntryNode(),                    // Chain
-            Rsrc,                                  // rsrc
-            DAG.getConstant(0, DL, MVT::i32),      // vindex
-            {},                                    // voffset
-            {},                                    // soffset
-            {},                                    // offset
-            CachePolicy,                           // cachepolicy
-            DAG.getTargetConstant(0, DL, MVT::i1), // idxen
-        };
-        setBufferOffsets(Offset, DAG, &Ops[3], Align(4));
-        LoadVal = handleByteShortBufferLoads(DAG, VT, DL, Ops, MMO);
-      }
-      Results.push_back(LoadVal);
+      Results.push_back(lowerSBuffer(VT, VT, SDLoc(Op), DAG.getEntryNode(),
+                                     Op.getOperand(1), Op.getOperand(2),
+                                     Op.getOperand(3), DAG));
       return;
     }
     case Intrinsic::amdgcn_dead: {
@@ -8504,6 +8478,10 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {
+    if (N->getConstantOperandVal(1) != Intrinsic::amdgcn_ptr_s_buffer_load &&
+        N->getValueType(0).isSimple() &&
+        SBufferLoadDiagnosticVTs[N->getSimpleValueType(0).SimpleTy])
+      break;
     if (SDValue Res = LowerINTRINSIC_W_CHAIN(SDValue(N, 0), DAG)) {
       if (Res.getOpcode() == ISD::MERGE_VALUES) {
         // FIXME: Hacky
@@ -10843,6 +10821,19 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
   MachineFunction &MF = DAG.getMachineFunction();
   bool HasChainResult = MMO != nullptr;
 
+  // SBUFFER_LOAD only produces values that fill whole SGPRs, apart from the
+  // subword loads below.
+  bool IsSubwordLoad = (MemVT == MVT::i8 || MemVT == MVT::i16) &&
+                       Subtarget->hasScalarSubwordLoads();
+  if ((!isTypeLegal(VT) || VT.getSizeInBits() % 32 != 0) && !IsSubwordLoad) {
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        MF.getFunction(), "unsupported s_buffer_load result type",
+        DL.getDebugLoc()));
+    EVT ResultTypes[] = {VT, MVT::Other};
+    return DAG.getErrorMergeValues(
+        ArrayRef(ResultTypes, HasChainResult ? 2 : 1), Chain, DL);
+  }
+
   if (!HasChainResult) {
     const DataLayout &DataLayout = DAG.getDataLayout();
     Align Alignment =
@@ -10878,8 +10869,9 @@ SDValue SITargetLowering::lowerSBuffer(EVT VT, EVT MemVT, SDLoc DL,
     if (MemVT == MVT::i16 && Subtarget->hasScalarSubwordLoads())
       return HandleScalarSubwordLoads(AMDGPUISD::SBUFFER_LOAD_USHORT);
 
-    // Widen vec3 load to vec4.
+    // Widen vec3 load to vec4. Only 32-bit elements have a vec4 pattern.
     if (VT.isVector() && VT.getVectorNumElements() == 3 &&
+        VT.getVectorElementType().getSizeInBits() == 32 &&
         !Subtarget->hasScalarDwordx3Loads()) {
       EVT WidenedVT =
           EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(), 4);
