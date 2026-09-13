@@ -29,4 +29,13 @@ TEST(Demangle, demangleTest) {
   // extended type qualifier (https://bugs.llvm.org/show_bug.cgi?id=48009)
   EXPECT_EQ(demangle("_Z3fooILi79EEbU7_ExtIntIXT_EEi"),
             "bool foo<79>(int _ExtInt<79>)");
+
+  // Conversion operators with substitutions that have template args
+  // (https://github.com/llvm/llvm-project/issues/109130)
+  EXPECT_EQ(demangle("_ZN3foocvNSt7__cxx1112basic_stringIcSt11char_"
+                     "traitsIcESaIcEEEEv"),
+            "foo::operator std::__cxx11::basic_string<char, "
+            "std::char_traits<char>, std::allocator<char>>()");
+  EXPECT_EQ(demangle("_ZN1XcvSt6vectorIiSaIiEEEv"),
+            "X::operator std::vector<int, std::allocator<int>>()");
 }
