@@ -1124,8 +1124,9 @@ void State::addInfoForInductions(BasicBlock &BB) {
   PHINode *PN = nullptr;
   const APInt *IncStep = nullptr;
   CmpPredicate Pred;
-  auto IndValue =
-      m_Value(A, m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep)));
+  auto BaseInd = m_CombineOr(m_Phi(PN), m_IncrementOf(m_Phi(PN), IncStep));
+  auto IndValue = m_Value(
+      A, m_CombineOr(BaseInd, m_CombineOr(m_ZExt(BaseInd), m_SExt(BaseInd))));
 
   auto *Br = dyn_cast<CondBrInst>(BB.getTerminator());
   if (!Br)
@@ -1267,23 +1268,43 @@ void State::addInfoForInductions(BasicBlock &BB) {
   // added precondition StartValue <= B for the former and the strict
   // StartValue < B for the latter (which implies StartValue + Step <= B),
   // neither PN nor the increment can wrap.
+  Value *IndTarget = PN;
+  Value *ExtStartValue = StartValue;
+  if (&BB == Header &&
+      (match(A, m_ZExt(m_Value())) || match(A, m_SExt(m_Value())))) {
+    IndTarget = A;
+    if (auto *StartC = dyn_cast<ConstantInt>(StartValue)) {
+      if (match(A, m_ZExt(m_Value()))) {
+        ExtStartValue = ConstantInt::get(
+            A->getType(),
+            StartC->getValue().zext(A->getType()->getScalarSizeInBits()));
+      } else {
+        ExtStartValue = ConstantInt::get(
+            A->getType(),
+            StartC->getValue().sext(A->getType()->getScalarSizeInBits()));
+      }
+    }
+  }
+
   CmpInst::Predicate UPrecond = IncStep ? CmpInst::ICMP_ULT : CmpInst::ICMP_ULE;
-  ConditionTy StartBeforeBoundUnsigned = {UPrecond, StartValue, B};
+  ConditionTy StartBeforeBoundUnsigned = {UPrecond, ExtStartValue, B};
   ConditionTy StartBeforeBoundSigned = {ICmpInst::getSignedPredicate(UPrecond),
-                                        StartValue, B};
+                                        ExtStartValue, B};
 
   // Add PN >= StartValue, as the loop exits before wrapping.
   if (!Info.Unsigned)
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_UGE, PN, StartValue, StartBeforeBoundUnsigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_UGE,
+                                                     IndTarget, ExtStartValue,
+                                                     StartBeforeBoundUnsigned));
   if (!Info.Signed)
-    WorkList.push_back(FactOrCheck::getConditionFact(
-        DTN, CmpInst::ICMP_SGE, PN, StartValue, StartBeforeBoundSigned));
+    WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SGE,
+                                                     IndTarget, ExtStartValue,
+                                                     StartBeforeBoundSigned));
   // Add PN < B, as the loop exits once the compared value reaches B.
-  WorkList.push_back(FactOrCheck::getConditionFact(DTN, CmpInst::ICMP_SLT, PN,
-                                                   B, StartBeforeBoundSigned));
   WorkList.push_back(FactOrCheck::getConditionFact(
-      DTN, CmpInst::ICMP_ULT, PN, B, StartBeforeBoundUnsigned));
+      DTN, CmpInst::ICMP_SLT, IndTarget, B, StartBeforeBoundSigned));
+  WorkList.push_back(FactOrCheck::getConditionFact(
+      DTN, CmpInst::ICMP_ULT, IndTarget, B, StartBeforeBoundUnsigned));
 
   // Try to add condition from the header or latch to the dedicated exit
   // blocks. When exiting either with EQ or NE, we know that the induction value
