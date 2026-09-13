@@ -435,7 +435,7 @@ end:
 
 define void @unreachable_term(i1 %c1) {
 ; CHECK-LABEL: @unreachable_term(
-; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[A_SROA_0:%.*]] = alloca i32, align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB1_I:%.*]]
