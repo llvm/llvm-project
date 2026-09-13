@@ -164,53 +164,50 @@ declare void @baz()
 define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ; CHECK-LABEL: test_conditional2:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
+; CHECK-NEXT:    sub sp, sp, #48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    .cfi_offset w19, -24
-; CHECK-NEXT:    .cfi_offset w20, -32
-; CHECK-NEXT:    .cfi_offset w21, -40
-; CHECK-NEXT:    .cfi_offset w22, -48
-; CHECK-NEXT:    mov x19, x2
-; CHECK-NEXT:    mov w20, w1
-; CHECK-NEXT:    mov w21, w0
 ; CHECK-NEXT:  LBB3_1: ; %cmpxchg.start
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldaxr w8, [x19]
-; CHECK-NEXT:    cmp w8, w21
+; CHECK-NEXT:    ldaxr w8, [x2]
+; CHECK-NEXT:    cmp w8, w0
 ; CHECK-NEXT:    b.ne LBB3_9
 ; CHECK-NEXT:  ; %bb.2: ; %cmpxchg.trystore
 ; CHECK-NEXT:    ; in Loop: Header=BB3_1 Depth=1
-; CHECK-NEXT:    stlxr w8, w20, [x19]
+; CHECK-NEXT:    stlxr w8, w1, [x2]
 ; CHECK-NEXT:    cbnz w8, LBB3_1
 ; CHECK-NEXT:  ; %bb.3:
 ; CHECK-NEXT:    mov w8, #1 ; =0x1
 ; CHECK-NEXT:  LBB3_4: ; %for.cond.preheader
-; CHECK-NEXT:    mov w22, #2 ; =0x2
+; CHECK-NEXT:    mov w9, #2 ; =0x2
 ; CHECK-NEXT:  LBB3_5: ; %for.cond
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cbz w22, LBB3_8
+; CHECK-NEXT:    cbz w9, LBB3_8
 ; CHECK-NEXT:  ; %bb.6: ; %for.body
 ; CHECK-NEXT:    ; in Loop: Header=BB3_5 Depth=1
-; CHECK-NEXT:    sub w22, w22, #1
-; CHECK-NEXT:    orr w9, w21, w20
-; CHECK-NEXT:    ldr w10, [x19, w22, sxtw #2]
-; CHECK-NEXT:    cmp w9, w10
+; CHECK-NEXT:    sub w9, w9, #1
+; CHECK-NEXT:    orr w10, w0, w1
+; CHECK-NEXT:    ldr w11, [x2, w9, sxtw #2]
+; CHECK-NEXT:    cmp w10, w11
 ; CHECK-NEXT:    b.eq LBB3_5
 ; CHECK-NEXT:  ; %bb.7: ; %if.then
 ; CHECK-NEXT:    ; in Loop: Header=BB3_5 Depth=1
-; CHECK-NEXT:    str w9, [x19, w22, sxtw #2]
+; CHECK-NEXT:    str w10, [x2, w9, sxtw #2]
+; CHECK-NEXT:    str x2, [sp, #24] ; 8-byte Spill
+; CHECK-NEXT:    stp w1, w0, [sp, #16] ; 8-byte Folded Spill
+; CHECK-NEXT:    str w9, [sp, #12] ; 4-byte Spill
 ; CHECK-NEXT:    bl _foo
+; CHECK-NEXT:    ldp w9, w1, [sp, #12] ; 8-byte Folded Reload
+; CHECK-NEXT:    ldr w0, [sp, #20] ; 4-byte Reload
+; CHECK-NEXT:    ldr x2, [sp, #24] ; 8-byte Reload
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    b LBB3_5
 ; CHECK-NEXT:  LBB3_8: ; %for.cond.cleanup
 ; CHECK-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
 ; CHECK-NEXT:    and w0, w8, #0x1
-; CHECK-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
-; CHECK-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
+; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  LBB3_9: ; %cmpxchg.nostore
 ; CHECK-NEXT:    mov w8, wzr
@@ -219,10 +216,11 @@ define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ;
 ; OUTLINE-ATOMICS-LABEL: test_conditional2:
 ; OUTLINE-ATOMICS:       ; %bb.0: ; %entry
-; OUTLINE-ATOMICS-NEXT:    stp x22, x21, [sp, #-48]! ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #16] ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #32] ; 16-byte Folded Spill
-; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 48
+; OUTLINE-ATOMICS-NEXT:    sub sp, sp, #64
+; OUTLINE-ATOMICS-NEXT:    stp x22, x21, [sp, #16] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    stp x20, x19, [sp, #32] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    stp x29, x30, [sp, #48] ; 16-byte Folded Spill
+; OUTLINE-ATOMICS-NEXT:    .cfi_def_cfa_offset 64
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w30, -8
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w29, -16
 ; OUTLINE-ATOMICS-NEXT:    .cfi_offset w19, -24
@@ -234,29 +232,32 @@ define i1 @test_conditional2(i32 %a, i32 %b, ptr %c) {
 ; OUTLINE-ATOMICS-NEXT:    mov w21, w0
 ; OUTLINE-ATOMICS-NEXT:    bl ___aarch64_cas4_acq_rel
 ; OUTLINE-ATOMICS-NEXT:    cmp w0, w21
-; OUTLINE-ATOMICS-NEXT:    mov w22, #2 ; =0x2
-; OUTLINE-ATOMICS-NEXT:    cset w8, eq
+; OUTLINE-ATOMICS-NEXT:    mov w8, #2 ; =0x2
+; OUTLINE-ATOMICS-NEXT:    cset w9, eq
 ; OUTLINE-ATOMICS-NEXT:  LBB3_1: ; %for.cond
 ; OUTLINE-ATOMICS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; OUTLINE-ATOMICS-NEXT:    cbz w22, LBB3_4
+; OUTLINE-ATOMICS-NEXT:    cbz w8, LBB3_4
 ; OUTLINE-ATOMICS-NEXT:  ; %bb.2: ; %for.body
 ; OUTLINE-ATOMICS-NEXT:    ; in Loop: Header=BB3_1 Depth=1
-; OUTLINE-ATOMICS-NEXT:    sub w22, w22, #1
-; OUTLINE-ATOMICS-NEXT:    orr w9, w21, w20
-; OUTLINE-ATOMICS-NEXT:    ldr w10, [x19, w22, sxtw #2]
-; OUTLINE-ATOMICS-NEXT:    cmp w9, w10
+; OUTLINE-ATOMICS-NEXT:    sub w8, w8, #1
+; OUTLINE-ATOMICS-NEXT:    orr w10, w21, w20
+; OUTLINE-ATOMICS-NEXT:    ldr w11, [x19, w8, sxtw #2]
+; OUTLINE-ATOMICS-NEXT:    cmp w10, w11
 ; OUTLINE-ATOMICS-NEXT:    b.eq LBB3_1
 ; OUTLINE-ATOMICS-NEXT:  ; %bb.3: ; %if.then
 ; OUTLINE-ATOMICS-NEXT:    ; in Loop: Header=BB3_1 Depth=1
-; OUTLINE-ATOMICS-NEXT:    str w9, [x19, w22, sxtw #2]
+; OUTLINE-ATOMICS-NEXT:    str w10, [x19, w8, sxtw #2]
+; OUTLINE-ATOMICS-NEXT:    str w8, [sp, #12] ; 4-byte Spill
 ; OUTLINE-ATOMICS-NEXT:    bl _foo
-; OUTLINE-ATOMICS-NEXT:    mov w8, wzr
+; OUTLINE-ATOMICS-NEXT:    ldr w8, [sp, #12] ; 4-byte Reload
+; OUTLINE-ATOMICS-NEXT:    mov w9, wzr
 ; OUTLINE-ATOMICS-NEXT:    b LBB3_1
 ; OUTLINE-ATOMICS-NEXT:  LBB3_4: ; %for.cond.cleanup
-; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #32] ; 16-byte Folded Reload
-; OUTLINE-ATOMICS-NEXT:    and w0, w8, #0x1
-; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp, #16] ; 16-byte Folded Reload
-; OUTLINE-ATOMICS-NEXT:    ldp x22, x21, [sp], #48 ; 16-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ldp x29, x30, [sp, #48] ; 16-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    and w0, w9, #0x1
+; OUTLINE-ATOMICS-NEXT:    ldp x20, x19, [sp, #32] ; 16-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    ldp x22, x21, [sp, #16] ; 16-byte Folded Reload
+; OUTLINE-ATOMICS-NEXT:    add sp, sp, #64
 ; OUTLINE-ATOMICS-NEXT:    ret
 entry:
   %pair = cmpxchg ptr %c, i32 %a, i32 %b seq_cst seq_cst
