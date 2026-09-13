@@ -138,6 +138,7 @@ end program
 
 ! O2-NEXT: 'func.func' Pipeline
 ! O2-NEXT:   LoopInvariantCodeMotion
+! O2-NEXT:   LoopIdiomRecognize
 
 ! ALL-NEXT: PolymorphicOpConversion
 ! ALL-NEXT: 'func.func' Pipeline
