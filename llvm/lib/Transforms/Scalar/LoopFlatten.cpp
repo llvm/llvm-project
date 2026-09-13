@@ -126,9 +126,9 @@ struct FlattenInfo {
                                    // tripcount. Also used to recognise a
                                    // linear expression that will be replaced.
 
-  SmallPtrSet<Value *, 4> LinearIVUses;  // Contains the linear expressions
-                                         // of the form i*M+j that will be
-                                         // replaced.
+  SmallPtrSet<Value *, 4> LinearIVUses; // Contains the linear expressions
+                                        // of the form i*M+j that will be
+                                        // replaced.
 
   BinaryOperator *InnerIncrement = nullptr;  // Uses of induction variables in
   BinaryOperator *OuterIncrement = nullptr;  // loop control statements that
@@ -823,7 +823,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
   // deleted, and invalidate any outer loop information.
-  SE->forgetLoop(FI.OuterLoop);
+  SE->forgetLoop(FI.OuterLoop, /*MayIncreaseBackedgeTakenCount=*/true);
   SE->forgetBlockAndLoopDispositions();
   if (U)
     U->markLoopAsDeleted(*FI.InnerLoop, FI.InnerLoop->getName());

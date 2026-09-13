@@ -8663,7 +8663,8 @@ void ScalarEvolution::visitAndClearUsers(
   }
 }
 
-void ScalarEvolution::forgetLoop(const Loop *L) {
+void ScalarEvolution::forgetLoop(const Loop *L,
+                                 bool MayIncreaseBackedgeTakenCount) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
   SmallVector<Instruction *, 32> Worklist;
   SmallPtrSet<Instruction *, 16> Visited;
@@ -8694,7 +8695,7 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     // ValuesAtScopes map.
     LoopWorklist.append(CurrL->begin(), CurrL->end());
   }
-  forgetMemoizedResults(ToForget);
+  forgetMemoizedResults(ToForget, MayIncreaseBackedgeTakenCount);
 }
 
 void ScalarEvolution::forgetTopmostLoop(const Loop *L) {
@@ -14665,7 +14666,8 @@ void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
   }
 }
 
-void ScalarEvolution::forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs) {
+void ScalarEvolution::forgetMemoizedResults(
+    ArrayRef<SCEVUse> SCEVs, bool DropFlagsDerivedFromOldBECount) {
   SmallPtrSet<const SCEV *, 8> ToForget(llvm::from_range, SCEVs);
   SmallVector<SCEVUse, 8> Worklist(ToForget.begin(), ToForget.end());
 
@@ -14679,13 +14681,29 @@ void ScalarEvolution::forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs) {
   }
 
   for (const auto *S : ToForget)
-    forgetMemoizedResultsImpl(S);
+    forgetMemoizedResultsImpl(S, DropFlagsDerivedFromOldBECount);
 
   PredicatedSCEVRewrites.remove_if(
       [&](const auto &Entry) { return ToForget.count(Entry.first.first); });
 }
 
-void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
+void ScalarEvolution::dropFlagsDerivedFromOldBECount(const SCEV *S) {
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(S))
+    const_cast<SCEVAddRecExpr *>(AR)->SubclassData &=
+        ~static_cast<unsigned short>(SCEV::NoWrapMask);
+  else if (auto *Add = dyn_cast<SCEVAddExpr>(S))
+    const_cast<SCEVAddExpr *>(Add)->SubclassData &=
+        ~static_cast<unsigned short>(SCEV::NoWrapMask);
+  else if (auto *Mul = dyn_cast<SCEVMulExpr>(S))
+    const_cast<SCEVMulExpr *>(Mul)->SubclassData &=
+        ~static_cast<unsigned short>(SCEV::NoWrapMask);
+}
+
+void ScalarEvolution::forgetMemoizedResultsImpl(
+    const SCEV *S, bool DropFlagsDerivedFromOldBECount) {
+  if (DropFlagsDerivedFromOldBECount)
+    dropFlagsDerivedFromOldBECount(S);
+
   LoopDispositions.erase(S);
   BlockDispositions.erase(S);
   UnsignedRanges.erase(S);
