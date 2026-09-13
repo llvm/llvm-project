@@ -81,6 +81,11 @@ static cl::opt<bool>
                  cl::desc("Generate the profile for Linux kernel binary."),
                  cl::cat(ProfGenCategory));
 
+static cl::opt<bool>
+    WarnNotSymbolized("warn-not-symbolized", cl::init(false),
+                      cl::desc("Generate warnings for unsymbolized addresses"),
+                      cl::cat(ProfGenCategory));
+
 namespace sampleprof {
 
 static const Target *getTarget(const ObjectFile *Obj) {
@@ -1175,6 +1180,14 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
     LineLocation Line(LineOffset, Discriminator);
     auto It = NameStrings.insert(FunctionName);
     CallStack.emplace_back(FunctionId(It.first->getKey()), Line);
+  }
+
+  if (WarnNotSymbolized && CallStack.empty()) {
+    uint64_t VAddr = IP.Address + BaseAddress - getPreferredBaseAddress();
+    if (isVaddrMMapped(VAddr))
+      WithColor::warning() << "Failed to symbolize address "
+                           << format("%8" PRIx64, IP.Address)
+                           << " (vaddr=" << format("%8" PRIx64, VAddr) << ")\n";
   }
 
   return CallStack;

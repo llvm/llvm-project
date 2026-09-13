@@ -29,6 +29,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/SymbolTableListTraits.h"
+#include "llvm/IR/ValueMap.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -669,7 +670,7 @@ public:
     if (It == ValueToGUIDMap.end())
       return std::nullopt;
 
-    return It->getSecond();
+    return It->second;
   }
 
   void insertGUID(const Value *V, GlobalValue::GUID GUID) {
@@ -684,10 +685,15 @@ public:
   }
 
 private:
+  /// Do not transfer GUID of a value to the value it is being RAUWed with.
+  struct GUIDMapConfig : ValueMapConfig<const Value *> {
+    enum { FollowRAUW = false };
+  };
+
   /// A mapping directly from Value to GUID. Populated from bitcode
   /// (MODULE_CODE_GUIDLIST). Necessary for lazy-loading modules, where we
   /// don't load metadata.
-  DenseMap<const Value *, GlobalValue::GUID> ValueToGUIDMap;
+  ValueMap<const Value *, GlobalValue::GUID, GUIDMapConfig> ValueToGUIDMap;
 
   /// @}
   /// @name Direct access to the globals list, functions list, and symbol table
@@ -1077,6 +1083,18 @@ public:
   /// Returns the floating-point ABI recorded by the "float-abi" module flag, or
   /// the ABI implied by the target triple when the flag is absent.
   FloatABI::ABIType getFloatABI() const;
+  /// @}
+
+  /// @}
+  /// @name Utility function for querying and setting the thread model
+  /// @{
+
+  /// Returns the thread model recorded by the "thread-model" module flag, or
+  /// the model implied by the target triple when the flag is absent.
+  ThreadModel getThreadModel() const;
+
+  /// Set the thread model.
+  void setThreadModel(ThreadModel Model);
   /// @}
 
   /// @}

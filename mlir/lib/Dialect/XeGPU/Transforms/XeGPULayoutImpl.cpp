@@ -70,6 +70,13 @@ xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
   return out;
 }
 
+void xegpu::dropInstDataOnInherentAttrs(Operation *op) {
+  op->getName().walkInherentAttrs(op, [](StringRef, Attribute &attr) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr))
+      attr = dist.dropInstData();
+  });
+}
+
 // Sets the layout on a TensorDesc value by updating its type to include
 // the given layout, if the type does not already have a layout attached.
 static void setTensorDescLayout(Value val, xegpu::DistributeLayoutAttr layout) {
@@ -391,8 +398,8 @@ template <typename T, typename>
 void xegpu::removeLayoutAttr(const T &operandOrResult) {
   Operation *owner = operandOrResult.getOwner();
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
-  if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
-    owner->removeAttr(name);
+  if (owner->hasDiscardableAttrOfType<DistributeLayoutAttr>(name))
+    owner->removeDiscardableAttr(name);
 }
 
 // Explicit instantiation for OpResult
@@ -407,19 +414,19 @@ void xegpu::removeLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
     // Remove all attributes of DistributeLayoutAttr type
     SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : nestOp->getAttrs()) {
+    for (auto namedAttr : nestOp->getDiscardableAttrDictionary().getValue()) {
       if (isa<DistributeLayoutAttr>(namedAttr.getValue()))
         attrsToRemove.push_back(namedAttr.getName());
     }
     for (auto attrName : attrsToRemove)
-      nestOp->removeAttr(attrName);
+      nestOp->removeDiscardableAttr(attrName);
   });
 }
 
 void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
     SmallVector<StringAttr> attrsToRemove;
-    for (auto namedAttr : nestOp->getDiscardableAttrs()) {
+    for (auto namedAttr : nestOp->getDiscardableAttrDictionary().getValue()) {
       if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
         attrsToRemove.push_back(namedAttr.getName());
     }

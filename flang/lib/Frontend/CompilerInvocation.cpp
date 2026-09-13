@@ -318,7 +318,7 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.EnableSafeTrampoline = 1;
 
   if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
-                   clang::options::OPT_fno_fp_sum_reassociation, false))
+                   clang::options::OPT_fno_fp_sum_reassociation, true))
     opts.SplitSumExpressionTree = 1;
 
   // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
@@ -918,6 +918,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.features.Enable(Fortran::common::LanguageFeature::Unsigned,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
+
+  // -f{no-}out-of-bounds-subscripts
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
+      args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
+                   clang::options::OPT_fno_out_of_bounds_subscripts, true));
 
   // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
   opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,

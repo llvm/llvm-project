@@ -19,6 +19,24 @@ class XeGPUAttr<string name, string attrMnemonic, list<Trait> traits = [],
   let mnemonic = attrMnemonic;
 }
 
+//===----------------------------------------------------------------------===//
+// XeGPU Memory Scope Enums.
+//===----------------------------------------------------------------------===//
+def XeGPU_MemorySpaceGlobal: I32EnumAttrCase<"Global", 0, "global">;
+def XeGPU_MemorySpaceShared: I32EnumAttrCase<"SLM", 3, "slm">;
+def XeGPU_MemorySpace: I32EnumAttr<"MemorySpace",
+      "The address space of the memory the tensor descriptor is created for",
+      [XeGPU_MemorySpaceGlobal, XeGPU_MemorySpaceShared]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::xegpu";
+}
+
+def XeGPU_MemorySpaceAttr:
+  EnumAttr<XeGPU_Dialect, XeGPU_MemorySpace, "memory_space"> {
+    let summary = [{Describe the location of data described by a `TensorDesc`:
+                 Global device memory (`Global`) or Shared local memory (`SLM`).}];
+}
+
 class XeGPU_TensorDescAttr<string name, string attrMnemonic, list<Trait> traits = [],
                          string baseCppClass = "::mlir::Attribute">
     : XeGPUAttr<name, attrMnemonic, traits, baseCppClass> {
@@ -42,8 +60,8 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
   let parameters = (ins
-    DefaultValuedParameter<
-      "MemorySpaceAttr",
+    DefaultValuedEnumAttrParameter<
+      XeGPU_MemorySpaceAttr,
       "MemorySpaceAttr::get($_ctxt, xegpu::MemorySpace::Global)",
       "Data memory location">: $memory_space,
     DefaultValuedParameter<
@@ -71,26 +89,6 @@ def XeGPU_BlockTensorDescAttr: XeGPU_TensorDescAttr<"BlockTensorDesc", "block_td
   }];
 
 }
-
-//===----------------------------------------------------------------------===//
-// XeGPU Memory Scope Enums.
-//===----------------------------------------------------------------------===//
-def XeGPU_MemorySpaceGlobal: I32EnumAttrCase<"Global", 0, "global">;
-def XeGPU_MemorySpaceShared: I32EnumAttrCase<"SLM", 3, "slm">;
-def XeGPU_MemorySpace: I32EnumAttr<"MemorySpace",
-      "The address space of the memory the tensor descritor is created for",
-      [XeGPU_MemorySpaceGlobal, XeGPU_MemorySpaceShared]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::xegpu";
-}
-
-def XeGPU_MemorySpaceAttr:
-  EnumAttr<XeGPU_Dialect, XeGPU_MemorySpace, "memory_space"> {
-    let summary = [{Describe the location of data described by a `TensorDesc`:
-                 Global device memory (`Global`) or Shared local memory (`SLM`).}];
-    let assemblyFormat = "$value";
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU Cache Enums.
 //===----------------------------------------------------------------------===//
@@ -112,7 +110,6 @@ def XeGPU_CachePolicyEnums : I32EnumAttr<"CachePolicy", "Cache policy",
 def XeGPU_CacheHintAttr
   : EnumAttr<XeGPU_Dialect, XeGPU_CachePolicyEnums, "cache_hint"> {
     let summary = [{Describe the cache settings for prefetch/load/store operators}];
-    let assemblyFormat = "`<` $value `>`";
 }
 
 def XeGPU_FenceScopeWorkgroup: I32EnumAttrCase<"Workgroup", 0, "workgroup">;
@@ -129,7 +126,6 @@ def XeGPU_FenceScopeAttr:
     let summary = [{Describes the scope of fence.
                     "workgroup" means that the scope is within each work group.
                     "gpu" means the scope is across work groups within the gpu.}];
-    let assemblyFormat = "$value";
 }
 
 //===----------------------------------------------------------------------===//
@@ -150,7 +146,6 @@ def XeGPU_LaneShuffleModeAttr:
                     "pack" gathers a lane's elements into consecutive logical
                     positions. "unpack" scatters them back out, strided by the
                     subgroup size.}];
-    let assemblyFormat = "$value";
 }
 
 def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {

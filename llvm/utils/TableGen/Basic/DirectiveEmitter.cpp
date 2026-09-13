@@ -768,6 +768,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     Block,       // If the order of the rest of these changes, update the
     Declaration, // 'Reduce' function below.
     Delimited,
+    Explicit,
     LoopNest,
     LoopSeq,
     Separating,
@@ -782,6 +783,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
         .Case("AS_Block", Association::Block)
         .Case("AS_Declaration", Association::Declaration)
         .Case("AS_Delimited", Association::Delimited)
+        .Case("AS_Explicit", Association::Explicit)
         .Case("AS_LoopNest", Association::LoopNest)
         .Case("AS_LoopSeq", Association::LoopSeq)
         .Case("AS_None", Association::None)

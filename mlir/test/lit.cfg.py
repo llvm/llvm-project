@@ -316,6 +316,23 @@ elif "MLIR_GENERATE_PATTERN_CATALOG" in os.environ:
 else:
     tools.extend(["mlir-opt"])
 
+
+def enable_llc(llc_executable):
+    config.available_features.add("has_llc_binary")
+    tools.extend(
+        [
+            ToolSubst(
+                "%llc-verify",
+                f"{llc_executable} -verify-machineinstrs -o {os.devnull}",
+            ),
+        ]
+    )
+
+
+llc_executable = lit.util.which("llc", config.llvm_tools_dir)
+if llc_executable:
+    enable_llc(llc_executable)
+
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
 

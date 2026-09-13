@@ -62,6 +62,9 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
             def setBreakpoint(self, packet):
                 return "OK"
 
+            def clearBreakpoint(self, packet):
+                return "OK"
+
             def readRegisters(self):
                 return "00" * 160
 
@@ -106,8 +109,6 @@ class TestBatchedBreakpointStepOver(GDBRemoteTestBase):
                     return "vCont;c;C;s;S"
                 if packet.startswith("vCont;"):
                     return self._handle_vCont(packet)
-                if packet.startswith("z"):
-                    return "OK"
                 return ""
 
             def _handle_vCont(self, packet):

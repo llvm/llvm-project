@@ -594,6 +594,8 @@ void PerfScriptReader::updateBinaryAddress(const MMapEvent &Event) {
   if (PIDFilter && Event.PID != *PIDFilter)
     return;
 
+  Binary->addMMapRange(Event.Address, Event.Size);
+
   // Check if the FileOffset falls within the [Event.Offset, Event.Offset +
   // Event.Size) range.
   auto MMapContainsFileOffset = [&](uint64_t FileOffset) {

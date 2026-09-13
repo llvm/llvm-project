@@ -1719,6 +1719,7 @@ static LogicalResult createReductionsAndCleanup(
   // and remove it later.
   llvm::UnreachableInst *tempTerminator = builder.CreateUnreachable();
   builder.SetInsertPoint(tempTerminator);
+  llvm::DebugLoc reductionLoc = builder.getCurrentDebugLocation();
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
       ompBuilder->createReductions(builder, allocaIP, reductionInfos, isByRef,
                                    isNowait, isTeamsReduction);
@@ -1732,7 +1733,8 @@ static LogicalResult createReductionsAndCleanup(
   llvm::OpenMPIRBuilder::InsertPointTy afterIP = *contInsertPoint;
   if (!isTeamsReduction) {
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy barrierIP =
-        ompBuilder->createBarrier(*contInsertPoint, llvm::omp::OMPD_for);
+        ompBuilder->createBarrier({*contInsertPoint, reductionLoc},
+                                  llvm::omp::OMPD_for);
 
     if (failed(handleError(barrierIP, *op)))
       return failure();
@@ -2857,7 +2859,7 @@ void TaskContextStructManager::generateTaskContextStruct() {
   llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(structTy);
 
   // Heap allocate the structure
-  structPtr = builder.CreateMalloc(intPtrTy, structTy, allocSize,
+  structPtr = builder.CreateMalloc(intPtrTy, allocSize,
                                    /*ArraySize=*/nullptr, /*MallocF=*/nullptr,
                                    "omp.task.context_ptr");
 }
@@ -3176,8 +3178,8 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
   // dynamic-sized alloca outside the entry block (e.g. inside loops).
   llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
   llvm::Value *depArray =
-      builder.CreateMalloc(ompBuilder.SizeTy, dependInfoTy, allocSize,
-                           totalCount, /*MallocF=*/nullptr, ".dep.arr.addr");
+      builder.CreateMalloc(ompBuilder.SizeTy, allocSize, totalCount,
+                           /*MallocF=*/nullptr, ".dep.arr.addr");
 
   // Fill non-iterated entries at indices [0, numLocator).
   if (numLocator > 0) {
@@ -3519,7 +3521,8 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(taskOp.getIfExpr()), dependencies, ad,
           taskOp.getMergeable(),
           moduleTranslation.lookupValue(taskOp.getEventHandle()),
-          moduleTranslation.lookupValue(taskOp.getPriority()));
+          moduleTranslation.lookupValue(taskOp.getPriority()),
+          taskOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, *taskOp)))
     return failure();
@@ -4156,7 +4159,8 @@ convertOmpTaskloopContextOp(omp::TaskloopContextOp contextOp,
           contextOp.getMergeable(),
           moduleTranslation.lookupValue(contextOp.getPriority()),
           loopOp.getCollapseNumLoops(), taskDupOrNull,
-          taskStructMgr.getStructPtr());
+          taskStructMgr.getStructPtr(),
+          contextOp.getThreadset() == omp::ThreadsetPolicy::omp_pool);
 
   if (failed(handleError(afterIP, opInst)))
     return failure();
@@ -6919,6 +6923,63 @@ static Value getBaseValueForTypeLookup(Value value) {
   return value;
 }
 
+// Determine the LLVM type whose storage size should be allocated for an
+// OpenMP allocate directive list item. Opaque pointers lose element type, so
+// trace through declare wrappers to the underlying global or stack allocation.
+static llvm::Type *
+getAllocatedLlvmTypeForVariable(Value var, Value baseVar,
+                                LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
+  if (!llvmVarTy->isPointerTy())
+    return llvmVarTy;
+
+  if (Operation *globalOp = getGlobalOpFromValue(baseVar))
+    if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
+      return moduleTranslation.convertType(gop.getGlobalType());
+
+  if (auto allocaOp =
+          dyn_cast_if_present<LLVM::AllocaOp>(baseVar.getDefiningOp()))
+    return moduleTranslation.convertType(allocaOp.getElemType());
+
+  if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar))
+    if (auto *allocaInst = dyn_cast<llvm::AllocaInst>(baseLlvm))
+      return allocaInst->getAllocatedType();
+
+  return llvmVarTy;
+}
+
+// For dynamically-sized stack allocations, compute the allocation size from
+// the alloca's element count at runtime.
+static std::optional<llvm::Value *> getDynamicAllocatedSize(
+    Value var, Value baseVar, LLVM::ModuleTranslation &moduleTranslation,
+    llvm::IRBuilderBase &builder, const llvm::DataLayout &dataLayout) {
+  if (auto allocaOp =
+          dyn_cast_if_present<LLVM::AllocaOp>(baseVar.getDefiningOp())) {
+    if (Value arraySize = allocaOp.getArraySize()) {
+      llvm::Type *elemTy =
+          moduleTranslation.convertType(allocaOp.getElemType());
+      llvm::Value *numElems = moduleTranslation.lookupValue(arraySize);
+      if (!numElems->getType()->isIntegerTy(64))
+        numElems = builder.CreateZExt(numElems, builder.getInt64Ty());
+      uint64_t elemSize = dataLayout.getTypeAllocSize(elemTy).getFixedValue();
+      return builder.CreateMul(numElems, builder.getInt64(elemSize));
+    }
+  }
+  if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
+    if (auto *allocaInst = dyn_cast<llvm::AllocaInst>(baseLlvm)) {
+      if (allocaInst->isArrayAllocation() &&
+          !llvm::isa<llvm::ArrayType>(allocaInst->getAllocatedType())) {
+        uint64_t elemSize =
+            dataLayout.getTypeAllocSize(allocaInst->getAllocatedType())
+                .getFixedValue();
+        return builder.CreateMul(allocaInst->getArraySize(),
+                                 builder.getInt64(elemSize));
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 static llvm::SmallString<64>
 getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
                              llvm::OpenMPIRBuilder &ompBuilder,
@@ -7836,8 +7897,10 @@ static void mapParentWithMembers(
     baseFlag |= (parentFlags & preserve);
   } else {
     MapFlags parentFlags = mapData.Types[mapDataIndex];
-    MapFlags preserve =
-        MapFlags::OMP_MAP_PRESENT | MapFlags::OMP_MAP_RETURN_PARAM;
+    MapFlags preserve = MapFlags::OMP_MAP_TO | MapFlags::OMP_MAP_FROM |
+                        MapFlags::OMP_MAP_PRESENT |
+                        MapFlags::OMP_MAP_RETURN_PARAM |
+                        MapFlags::OMP_MAP_IMPLICIT;
     baseFlag |= (parentFlags & preserve);
   }
 
@@ -10242,34 +10305,20 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
   }
 
   for (Value var : vars) {
-    llvm::Type *llvmVarTy = moduleTranslation.convertType(var.getType());
-
-    // Opaque pointers lose element type. Trace to GlobalOp for type
-    // Falls back to llvmVarTy when not from a global.
-    llvm::Type *typeToInspect = llvmVarTy;
-    if (llvmVarTy->isPointerTy()) {
-      Value baseVar = getBaseValueForTypeLookup(var);
-      if (Operation *globalOp = getGlobalOpFromValue(baseVar)) {
-        if (auto gop = dyn_cast<LLVM::GlobalOp>(globalOp))
-          typeToInspect = moduleTranslation.convertType(gop.getGlobalType());
-      }
-    }
+    Value baseVar = getBaseValueForTypeLookup(var);
+    llvm::Type *typeToInspect =
+        getAllocatedLlvmTypeForVariable(var, baseVar, moduleTranslation);
 
     llvm::Value *size;
-    if (auto arrTy = llvm::dyn_cast<llvm::ArrayType>(typeToInspect)) {
-      llvm::Value *elementCount = builder.getInt64(1);
-      llvm::Type *currentType = arrTy;
-      while (auto nestedArrTy = llvm::dyn_cast<llvm::ArrayType>(currentType)) {
-        elementCount = builder.CreateMul(
-            elementCount, builder.getInt64(nestedArrTy->getNumElements()));
-        currentType = nestedArrTy->getElementType();
-      }
-      uint64_t elemSizeInBits = dataLayout.getTypeSizeInBits(currentType);
-      size =
-          builder.CreateMul(elementCount, builder.getInt64(elemSizeInBits / 8));
+    if (std::optional<llvm::Value *> dynamicSize = getDynamicAllocatedSize(
+            var, baseVar, moduleTranslation, builder, dataLayout)) {
+      size = *dynamicSize;
+    } else if (typeToInspect->isArrayTy()) {
+      size = builder.getInt64(
+          dataLayout.getTypeAllocSize(typeToInspect).getFixedValue());
     } else {
       size = builder.getInt64(
-          dataLayout.getTypeStoreSize(typeToInspect).getFixedValue());
+          dataLayout.getTypeAllocSize(typeToInspect).getFixedValue());
     }
 
     uint64_t alignValue =
@@ -10294,6 +10343,16 @@ convertAllocateDirOp(Operation &opInst, llvm::IRBuilderBase &builder,
     }
     // Record the alloc pointer keyed by the MLIR variable value.
     ompIface.registerAllocatedPtr(var, allocCall);
+
+    if (llvm::Value *baseLlvm = moduleTranslation.lookupValue(baseVar)) {
+      llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocCall, baseLlvm->getType());
+      moduleTranslation.remapAllValuesWith(baseLlvm, boundPtr);
+    } else if (llvm::Value *varLlvm = moduleTranslation.lookupValue(var)) {
+      llvm::Value *boundPtr = builder.CreatePointerBitCastOrAddrSpaceCast(
+          allocCall, varLlvm->getType());
+      moduleTranslation.remapAllValuesWith(varLlvm, boundPtr);
+    }
   }
 
   return success();

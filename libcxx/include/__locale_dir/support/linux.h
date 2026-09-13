@@ -250,4 +250,10 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 3, 4) int __asprintf(
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#if defined(__BIONIC__) || _LIBCPP_HAS_MUSL_LIBC
+#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 1
+#else
+#  define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE 0
+#endif
+
 #endif // _LIBCPP___LOCALE_DIR_SUPPORT_LINUX_H

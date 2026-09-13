@@ -1812,7 +1812,7 @@ void CIRGenItaniumCXXABI::emitRethrow(CIRGenFunction &cgf, bool isNoReturn) {
   if (isNoReturn) {
     CIRGenBuilderTy &builder = cgf.getBuilder();
     assert(cgf.currSrcLoc && "expected source location");
-    mlir::Location loc = *cgf.currSrcLoc;
+    mlir::Location loc = cgf.getLoc(*cgf.currSrcLoc);
     insertThrowAndSplit(builder, loc);
   } else {
     cgm.errorNYI("emitRethrow with isNoReturn false");

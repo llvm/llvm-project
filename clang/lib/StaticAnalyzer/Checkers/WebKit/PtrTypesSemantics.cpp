@@ -219,6 +219,9 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
     } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
       auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
       return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *RD = type->getAs<RecordType>()) {
+      auto *Decl = RD->getDecl();
+      return Decl && Pred(Decl->getNameAsString());
     } else
       break;
   }

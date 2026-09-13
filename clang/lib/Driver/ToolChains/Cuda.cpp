@@ -519,14 +519,12 @@ void NVPTX::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
+                          "--options-file="},
       Exec, CmdArgs, Inputs, Output));
 }
 
 static bool shouldIncludePTX(const ArgList &Args, StringRef InputArch) {
-  // The new driver does not include PTX by default to avoid overhead.
-  bool includePTX = !Args.hasFlag(options::OPT_offload_new_driver,
-                                  options::OPT_no_offload_new_driver, true);
+  bool includePTX = false;
   for (Arg *A : Args.filtered(options::OPT_cuda_include_ptx_EQ,
                               options::OPT_no_cuda_include_ptx_EQ)) {
     A->claim();
@@ -588,7 +586,7 @@ void NVPTX::FatBinary::ConstructJob(Compilation &C, const JobAction &JA,
   C.addCommand(std::make_unique<Command>(
       JA, *this,
       ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
+                          "--options-file="},
       Exec, CmdArgs, Inputs, Output));
 }
 
@@ -686,9 +684,7 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this,
-      ResponseFileSupport{ResponseFileSupport::RF_Full, llvm::sys::WEM_UTF8,
-                          "--options-file"},
+      JA, *this, ResponseFileSupport::AtFileUTF8(),
       Args.MakeArgString(getToolChain().GetProgramPath("clang-nvlink-wrapper")),
       CmdArgs, Inputs, Output));
 }
@@ -917,9 +913,7 @@ void CudaToolChain::addClangTargetOptions(
           DeviceOffloadingKind == Action::OFK_Cuda || UsesLLVMOffloading) &&
          "Only OpenMP or CUDA offloading kinds are supported for NVIDIA GPUs.");
 
-  CC1Args.append({"-fcuda-is-device", "-mllvm",
-                  "-enable-memcpyopt-without-libcalls",
-                  "-fno-threadsafe-statics"});
+  CC1Args.append({"-fcuda-is-device", "-fno-threadsafe-statics"});
 
   if (DriverArgs.hasFlag(options::OPT_fcuda_short_ptr,
                          options::OPT_fno_cuda_short_ptr, false))

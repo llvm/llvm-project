@@ -88,9 +88,7 @@ class SPIRV_BitEnum<string name, string description,
 }
 class SPIRV_BitEnumAttr<string name, string description, string mnemonic,
                         list<BitEnumAttrCaseBase> cases> :
-    EnumAttr<SPIRV_Dialect, SPIRV_BitEnum<name, description, cases>, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<SPIRV_Dialect, SPIRV_BitEnum<name, description, cases>, mnemonic>;
 
 // Wrapper over base I32EnumAttr to set common fields.
 class SPIRV_I32Enum<string name, string description,
@@ -101,9 +99,7 @@ class SPIRV_I32Enum<string name, string description,
 }
 class SPIRV_I32EnumAttr<string name, string description, string mnemonic,
                         list<I32EnumAttrCase> cases> :
-    EnumAttr<SPIRV_Dialect, SPIRV_I32Enum<name, description, cases>, mnemonic> {
-  let assemblyFormat = "`<` $value `>`";
-}
+    EnumAttr<SPIRV_Dialect, SPIRV_I32Enum<name, description, cases>, mnemonic>;
 
 //===----------------------------------------------------------------------===//
 // SPIR-V availability definitions

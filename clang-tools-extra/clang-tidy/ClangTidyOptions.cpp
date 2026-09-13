@@ -531,7 +531,12 @@ std::error_code parseLineFilter(StringRef LineFilter,
                                 clang::tidy::ClangTidyGlobalOptions &Options) {
   llvm::yaml::Input Input(LineFilter);
   Input >> Options.LineFilter;
-  return Input.error();
+  if (const std::error_code &Error = Input.error())
+    return Error;
+
+  for (FileFilter &Filter : Options.LineFilter)
+    Filter.Name = llvm::sys::path::convert_to_slash(Filter.Name);
+  return {};
 }
 
 llvm::ErrorOr<ClangTidyOptions>
