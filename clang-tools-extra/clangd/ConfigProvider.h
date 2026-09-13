@@ -84,8 +84,33 @@ public:
   /// Order is preserved; later providers take precedence over earlier ones.
   static std::unique_ptr<Provider> combine(std::vector<const Provider *>);
 
+  /// Returns providers for the configuration files that clangd tools read by
+  /// default: project config (ancestor `.clangd` files) and the user's
+  /// global config file.
+  static std::vector<std::unique_ptr<Provider>>
+  createDefaultProviders(const ThreadsafeFS &);
+
+  /// The result of combining several providers, bundled together with the
+  /// providers themselves. combine() only stores raw pointers to the
+  /// providers it combines, so those providers must outlive it; keeping
+  /// them together in one movable object (rather than as separate
+  /// same-scope variables at the call site) makes it hard to accidentally
+  /// let them go out of scope before Combined does.
+  struct OwningProvider {
+    std::unique_ptr<Provider> Combined;
+    std::vector<std::unique_ptr<Provider>> Sources;
+  };
+
+  /// Like combine(), but takes ownership of the providers being combined.
+  static OwningProvider
+  combineOwned(std::vector<std::unique_ptr<Provider>> Sources);
+
   /// Build a config based on this provider.
   Config getConfig(const Params &, DiagnosticCallback) const;
+
+  /// Help text for the --enable-config flag, shared by clangd tools that
+  /// expose createDefaultProviders() on the command line.
+  static const char *const EnableConfigFlagDesc;
 
 private:
   /// Provide fragments that may be relevant to the file.
