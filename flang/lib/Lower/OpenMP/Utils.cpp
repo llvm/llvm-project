@@ -1442,6 +1442,8 @@ void collectEnclosingConstructTraits(
   // be able to match construct={target, parallel}. The final reverse yields
   // outermost-to-innermost order as required by OMPContext.
   for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::SimdOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
     if (mlir::isa<mlir::omp::ParallelOp>(op))
@@ -1450,9 +1452,13 @@ void collectEnclosingConstructTraits(
     if (mlir::isa<mlir::omp::TeamsOp>(op))
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_teams_teams);
-    if (mlir::isa<mlir::omp::TargetOp>(op))
+    if (mlir::isa<mlir::omp::TargetOp>(op)) {
       constructTraits.push_back(
           llvm::omp::TraitProperty::construct_target_target);
+      // The construct context starts at the innermost TARGET, as in
+      // semantic analysis.
+      break;
+    }
   }
   std::reverse(constructTraits.begin(), constructTraits.end());
 }
