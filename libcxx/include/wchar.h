@@ -116,7 +116,10 @@ size_t wcsrtombs(char* restrict dst, const wchar_t** restrict src, size_t len,
 #    include_next <wchar.h>
 #  endif
 
-#  ifndef _LIBCPP_WCHAR_H
+// <__mbstate_t.h> can reach us through its #include_next of <wchar.h>. It only needs the C library
+// declarations pulled in above, and including <__mbstate_t.h> from here would be cyclic, so stop
+// before libc++'s own additions in that case.
+#  if !defined(_LIBCPP_WCHAR_H) && !defined(_LIBCPP_WCHAR_H_SYSTEM_HEADER_ONLY)
 #    define _LIBCPP_WCHAR_H
 
 #    include <__mbstate_t.h> // provide mbstate_t
