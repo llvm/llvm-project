@@ -94,7 +94,7 @@ static mlir::Value emitLogbBuiltin(CIRGenFunction &cgf, const CallExpr *e,
   mlir::Value siToFp = cir::CastOp::create(
       builder, loc, srcTy, cir::CastKind::int_to_float, expMinus1);
 
-  mlir::Value fabs = cir::FAbsOp::create(builder, loc, srcTy, src0);
+  mlir::Value fabs = cir::FAbsOp::create(builder, loc, src0);
 
   llvm::APFloat infVal = llvm::APFloat::getInf(fSem);
   mlir::Value inf = builder.getConstant(loc, cir::FPAttr::get(srcTy, infVal));
@@ -202,9 +202,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_div_fmas:
   case AMDGPU::BI__builtin_amdgcn_div_fmasf:
     return emitBuiltinWithOneOverloadedType<4>(expr, "amdgcn.div.fmas")
-        .getValue();
-  case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
-    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.ds.swizzle")
         .getValue();
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:

@@ -287,6 +287,60 @@ define amdgpu_kernel void @s_uint_to_fp_v4i64_to_v4f64(ptr addrspace(1) %out, <4
   ret void
 }
 
+define amdgpu_kernel void @s_uint_to_fp_zext_i32_to_f64(ptr addrspace(1) %out, i32 %in) {
+; SI-LABEL: s_uint_to_fp_zext_i32_to_f64:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dword s2, s[8:9], 0x2
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; SI-NEXT:    v_cvt_f64_u32_e32 v[0:1], 0
+; SI-NEXT:    s_add_i32 s12, s12, s17
+; SI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cvt_f64_u32_e32 v[2:3], s2
+; SI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
+; SI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; SI-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; SI-NEXT:    v_mov_b32_e32 v3, s1
+; SI-NEXT:    v_mov_b32_e32 v2, s0
+; SI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: s_uint_to_fp_zext_i32_to_f64:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_cvt_f64_u32_e32 v[0:1], 0
+; VI-NEXT:    s_load_dword s0, s[8:9], 0x8
+; VI-NEXT:    s_add_i32 s12, s12, s17
+; VI-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; VI-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
+; VI-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_cvt_f64_u32_e32 v[2:3], s0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; VI-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v3, s1
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+;
+; GFX942-LABEL: s_uint_to_fp_zext_i32_to_f64:
+; GFX942:       ; %bb.0:
+; GFX942-NEXT:    s_load_dword s2, s[4:5], 0x8
+; GFX942-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[0:1], 0
+; GFX942-NEXT:    v_ldexp_f64 v[0:1], v[0:1], 32
+; GFX942-NEXT:    v_mov_b32_e32 v4, 0
+; GFX942-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX942-NEXT:    v_cvt_f64_u32_e32 v[2:3], s2
+; GFX942-NEXT:    v_add_f64 v[0:1], v[0:1], v[2:3]
+; GFX942-NEXT:    global_store_dwordx2 v4, v[0:1], s[0:1]
+; GFX942-NEXT:    s_endpgm
+  %wide = zext i32 %in to i64
+  %result = uitofp i64 %wide to double
+  store double %result, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_kernel void @s_uint_to_fp_i32_to_f64(ptr addrspace(1) %out, i32 %in) {
 ; SI-LABEL: s_uint_to_fp_i32_to_f64:
 ; SI:       ; %bb.0:

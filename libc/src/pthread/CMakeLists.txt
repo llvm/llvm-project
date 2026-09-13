@@ -85,6 +85,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  pthread_attr_getscope
+  SRCS
+    pthread_attr_getscope.cpp
+  HDRS
+    pthread_attr_getscope.h
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
   pthread_attr_setschedparam
   SRCS
     pthread_attr_setschedparam.cpp
@@ -101,6 +115,21 @@ add_entrypoint_object(
   HDRS
     pthread_attr_setschedpolicy.h
   DEPENDS
+    libc.hdr.types.pthread_attr_t
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+)
+
+add_entrypoint_object(
+  pthread_attr_setscope
+  SRCS
+    pthread_attr_setscope.cpp
+  HDRS
+    pthread_attr_setscope.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.pthread_macros
     libc.hdr.types.pthread_attr_t
     libc.src.__support.common
     libc.src.__support.macros.config

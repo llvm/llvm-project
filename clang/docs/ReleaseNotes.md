@@ -485,7 +485,8 @@ features cannot lower the translation-unit ABI level;
   `int vla[n][0]`. (#GH28328)
 
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
-  (#GH181730)
+
+- Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
 
 - `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
   no longer warn when the selected deallocation function is a destroying
@@ -755,6 +756,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+  stack pointer as it was on entry to the function, as the frame value the CRT
+  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  already did on AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
@@ -791,6 +797,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
+
+- Clang now provides device-side definitions of `__cxa_pure_virtual()` and
+  `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
+  virtual function that could not be optimised out would cause the program to
+  fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
 #### AIX Support
 

@@ -2455,6 +2455,9 @@ def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
   HelpText<"Use SEH style exceptions">;
 def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
   HelpText<"Use WebAssembly style exceptions">;
+def femscripten_exceptions : Flag<["-"], "femscripten-exceptions">,
+  Group<f_Group>,
+  HelpText<"Use Emscripten JavaScript-based C++ exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
   Values<"dwarf,sjlj,seh,wasm,none">,
@@ -2596,6 +2599,12 @@ defm keep_persistent_storage_variables : BoolFOption<"keep-persistent-storage-va
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
   BothFlags<[], [],
           " keeping all variables that have a persistent storage duration, including global, static and thread-local variables, to guarantee that they can be directly addressed">>;
+defm keep_inline_functions : BoolFOption<"keep-inline-functions",
+  CodeGenOpts<"KeepInlineFunctions">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Keep">,
+  NegFlag<SetFalse, [], [ClangOption], "Don't keep">,
+  BothFlags<[], [],
+          " inline functions whose definition is owned by this translation unit, even if they are inlined into all callers.">>;
 defm fixed_point : BoolFOption<"fixed-point",
   LangOpts<"FixedPoint">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Enable">,
@@ -6261,9 +6270,10 @@ defm zos_ppa1_name : BoolMOption<"zos-ppa1-name",
   BothFlags<[TargetSpecific], [ClangOption, CC1Option]>>;
 
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
-def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
+def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>, 
+  Visibility<[ClangOption, FlangOption]>, HelpText<"Keep the frame pointer in leaf functions">;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
-  HelpText<"Omit frame pointer setup for leaf functions">;
+  Visibility<[ClangOption, FlangOption]>, HelpText<"Omit frame pointer setup for leaf functions">;
 def mno_reserve_frame_pointer_reg : Flag<["-"], "mno-reserve-frame-pointer-reg">, Group<m_Group>;
 def mreserve_frame_pointer_reg : Flag<["-"], "mreserve-frame-pointer-reg">, Group<m_Group>,
   HelpText<"Reserve the frame pointer register even if the function doesn't have a frame">;
@@ -7640,7 +7650,6 @@ multiclass BooleanFFlag<string name> {
   def fno_#NAME : Flag<["-"], "fno-"#name>;
 }
 
-defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimization_f_Group>;
 
 def fprofile_dir : Joined<["-"], "fprofile-dir=">, Group<f_Group>;
 
