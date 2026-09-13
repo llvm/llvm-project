@@ -259,12 +259,6 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
                       APFloat::opStatus Status, FPOptions FPO);
 
-/// Check if the given floating-point evaluation status is allowed for
-/// compile-time constant folding during translation (as opposed to mandatory
-/// constant expression evaluation).
-bool CheckFloatStatus(InterpState &S, CodePtr OpPC, APFloat::opStatus Status,
-                      FPOptions FPO);
-
 /// Checks why the given DeclRefExpr is invalid.
 bool CheckDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR);
 bool InvalidDeclRef(InterpState &S, CodePtr OpPC, const DeclRefExpr *DR,

@@ -9,7 +9,6 @@
 #include "Boolean.h"
 #include "Char.h"
 #include "EvalEmitter.h"
-#include "Interp.h"
 #include "InterpBuiltinBitCast.h"
 #include "InterpHelpers.h"
 #include "PrimType.h"
@@ -762,12 +761,13 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
   llvm::RoundingMode RM = getRoundingMode(FPO);
   APFloat::opStatus Status = APFloat::opStatus::opOK;
   std::optional<APFloat> Result = exp(Arg.getAPFloat(), RM, &Status);
-  const SourceInfo &E = S.Current->getSource(OpPC);
 
-  if (!Result.has_value()) {
-    if (S.inConstantContext())
+  if (!Result) {
+    if (S.inConstantContext()) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_unsupported_rounding)
           << Call->getDirectCallee() << llvm::spell(RM);
+    }
     return false;
   }
 
@@ -775,6 +775,7 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
     // [library.c]p3: A call to a math function is not a core constant
     // expression if an exception other than FE_INEXACT is raised.
     if (Status & (~APFloat::opStatus::opInexact)) {
+      const SourceInfo &E = S.Current->getSource(OpPC);
       const FunctionDecl *FD = Call->getDirectCallee();
       if (Status & APFloat::opStatus::opUnderflow)
         S.FFDiag(E, diag::note_constexpr_float_underflow) << FD;
@@ -798,6 +799,7 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
   // This check is performed here rather than in CheckFloatStatus because errno
   // is specific to math functions (and not set by core language operators).
   if (S.getLangOpts().MathErrno && (Status & (~APFloat::opStatus::opInexact))) {
+    const SourceInfo &E = S.Current->getSource(OpPC);
     S.FFDiag(E, diag::note_constexpr_math_errno) << Call->getDirectCallee();
     return false;
   }
