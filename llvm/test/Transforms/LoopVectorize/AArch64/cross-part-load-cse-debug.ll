@@ -10,8 +10,8 @@
 ; RUN:     -debug-only=loop-vectorize -disable-output %t/success.ll 2>&1 \
 ; RUN:     | FileCheck %t/success.ll --check-prefix=SUCCESS
 ;
-; A fixed-VF, wide-lane-mask tail-folded plan reaches IC selection, but its
-; masked widened loads remain outside the exact unmasked-load model.
+; A fixed-VF tail-folded plan is ineligible for interleaving. Cross-part
+; analysis must not override that policy or emit a profitability estimate.
 ; RUN: opt -passes=loop-vectorize -force-vector-width=4 \
 ; RUN:     -force-target-max-vector-interleave=2 -small-loop-cost=0 \
 ; RUN:     -force-target-supports-masked-memory-ops \
@@ -68,7 +68,7 @@
 ; SUCCESS-NOT: LV: Not Interleaving.
 ; SUCCESS: LV: Found a vectorizable loop
 ; MASKED-LABEL: LV: Checking a loop in 'positive'
-; MASKED: LV: Cross-part load overlap estimate: ops=0,
+; MASKED-NOT: LV: Cross-part load overlap estimate:
 ; MASKED-NOT: Exact cross-part load overlap predicts a downstream saving
 ; MASKED: Executing best plan with VF=4, UF=1
 ; SUCCESS-SMALL-LABEL: LV: Checking a loop in 'positive'
