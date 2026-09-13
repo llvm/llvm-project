@@ -41,7 +41,7 @@ struct MCPlusBuilderTester : public testing::TestWithParam<Triple::ArchType> {
   void SetUp() override {
     initalizeLLVM();
     prepareElf();
-    initializeBolt();
+    initializeBOLT();
   }
 
 protected:
@@ -80,7 +80,7 @@ protected:
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
 
-  void initializeBolt() {
+  void initializeBOLT() {
     const Triple TheTriple = GetParam();
     Relocation::Arch = TheTriple.getArch();
     // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty
@@ -1121,7 +1121,3 @@ TEST_P(MCPlusBuilderTester, Annotation) {
   ASSERT_DEATH(BC->MIB->addEHInfo(Inst, MCPlus::MCLandingPad(LPSymbol, Value)),
                "annotation value out of range");
 }
-
-#if !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
-GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MCPlusBuilderTester);
-#endif // !defined(X86_AVAILABLE) && !defined(AARCH64_AVAILABLE)
