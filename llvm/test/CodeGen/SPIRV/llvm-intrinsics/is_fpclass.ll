@@ -57,8 +57,7 @@ define i1 @isfpclass_0_none(float %a) {
 ; CHECK: %[[#T2:]] = OpUGreaterThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#InfWithQnanBit]]
 ; CHECK: %[[#T4:]] = OpLogicalAnd %[[#BoolTy]] %[[#T2]] %[[#T3]]
-; CHECK: %[[#T5:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T4]]
-; CHECK: OpReturnValue %[[#T5]]
+; CHECK: OpReturnValue %[[#T4]]
 ; CHECK: OpFunctionEnd
 
 define i1 @isfpclass_1_issnan(float %a) {
@@ -73,8 +72,7 @@ define i1 @isfpclass_1_issnan(float %a) {
 ; CHECK: %[[#T2:]] = OpUGreaterThan %[[#V4BoolTy]] %[[#T1]] %[[#InfV4]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#V4BoolTy]] %[[#T1]] %[[#InfWithQnanBitV4]]
 ; CHECK: %[[#T4:]] = OpLogicalAnd %[[#V4BoolTy]] %[[#T2]] %[[#T3]]
-; CHECK: %[[#T5:]] = OpLogicalOr %[[#V4BoolTy]] %[[#FalseV4]] %[[#T4]]
-; CHECK: OpReturnValue %[[#T5]]
+; CHECK: OpReturnValue %[[#T4]]
 ; CHECK: OpFunctionEnd
 
 define <4 x i1> @isfpclass_1_issnan_v4f32(<4 x float> %a) {
@@ -87,8 +85,7 @@ define <4 x i1> @isfpclass_1_issnan_v4f32(<4 x float> %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpUGreaterThanEqual %[[#BoolTy]] %[[#T1]] %[[#InfWithQnanBit]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: OpReturnValue %[[#T3]]
+; CHECK: OpReturnValue %[[#T2]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_1_isqnan(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 2)
@@ -100,8 +97,7 @@ define i1 @isfpclass_1_isqnan(float %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpUGreaterThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: OpReturnValue %[[#T3]]
+; CHECK: OpReturnValue %[[#T2]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_1_isnan(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 3)
@@ -112,8 +108,7 @@ define i1 @isfpclass_1_isnan(float %a) {
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#Inf]]
-; CHECK: %[[#T2:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T1]]
-; CHECK: OpReturnValue %[[#T2]]
+; CHECK: OpReturnValue %[[#T1]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_1_ispinf(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 512)
@@ -124,8 +119,7 @@ define i1 @isfpclass_1_ispinf(float %a) {
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInf]]
-; CHECK: %[[#T2:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T1]]
-; CHECK: OpReturnValue %[[#T2]]
+; CHECK: OpReturnValue %[[#T1]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_1_isninf(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 4)
@@ -137,8 +131,7 @@ define i1 @isfpclass_1_isninf(float %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpIEqual %[[#BoolTy]] %[[#T1]] %[[#Inf]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: OpReturnValue %[[#T3]]
+; CHECK: OpReturnValue %[[#T2]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_1_isinf(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 516)
@@ -154,8 +147,7 @@ define i1 @isfpclass_1_isinf(float %a) {
 ; CHECK: %[[#T4:]] = OpULessThan %[[#BoolTy]] %[[#T3]] %[[#MaxExpMinus1]]
 ; CHECK: %[[#T5:]] = OpLogicalNotEqual %[[#BoolTy]] %[[#T2]] %[[#True]]
 ; CHECK: %[[#T6:]] = OpLogicalAnd %[[#BoolTy]] %[[#T4]] %[[#T5]]
-; CHECK: %[[#T7:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T6]]
-; CHECK: OpReturnValue %[[#T7]]
+; CHECK: OpReturnValue %[[#T6]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isposnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 256)
@@ -170,8 +162,7 @@ define i1 @isfpclass_isposnormal(float %a) {
 ; CHECK: %[[#T3:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#ExpLSB]]
 ; CHECK: %[[#T4:]] = OpULessThan %[[#BoolTy]] %[[#T3]] %[[#MaxExpMinus1]]
 ; CHECK: %[[#T5:]] = OpLogicalAnd %[[#BoolTy]] %[[#T4]] %[[#T2]]
-; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T5]]
-; CHECK: OpReturnValue %[[#T6]]
+; CHECK: OpReturnValue %[[#T5]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnegnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 8)
@@ -184,8 +175,7 @@ define i1 @isfpclass_isnegnormal(float %a) {
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#ExpLSB]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T2]] %[[#MaxExpMinus1]]
-; CHECK: %[[#T4:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T3]]
-; CHECK: OpReturnValue %[[#T4]]
+; CHECK: OpReturnValue %[[#T3]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 264)
@@ -197,11 +187,10 @@ define i1 @isfpclass_isnormal(float %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpUGreaterThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: %[[#T4:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#ExpLSB]]
-; CHECK: %[[#T5:]] = OpULessThan %[[#BoolTy]] %[[#T4]] %[[#MaxExpMinus1]]
-; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#T3]] %[[#T5]]
-; CHECK: OpReturnValue %[[#T6]]
+; CHECK: %[[#T3:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#ExpLSB]]
+; CHECK: %[[#T4:]] = OpULessThan %[[#BoolTy]] %[[#T3]] %[[#MaxExpMinus1]]
+; CHECK: %[[#T5:]] = OpLogicalOr %[[#BoolTy]] %[[#T2]] %[[#T4]]
+; CHECK: OpReturnValue %[[#T5]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_1_isnan_or_normal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 267)
@@ -213,8 +202,7 @@ define i1 @isfpclass_1_isnan_or_normal(float %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpISub %[[#I32Ty]] %[[#T0]] %[[#One]]
 ; CHECK: %[[#T2:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#AllOneMantissa]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: OpReturnValue %[[#T3]]
+; CHECK: OpReturnValue %[[#T2]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_ispsubnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 128)
@@ -229,8 +217,7 @@ define i1 @isfpclass_ispsubnormal(float %a) {
 ; CHECK: %[[#T3:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#One]]
 ; CHECK: %[[#T4:]] = OpULessThan %[[#BoolTy]] %[[#T3]] %[[#AllOneMantissa]]
 ; CHECK: %[[#T5:]] = OpLogicalAnd %[[#BoolTy]] %[[#T4]] %[[#T2]]
-; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T5]]
-; CHECK: OpReturnValue %[[#T6]]
+; CHECK: OpReturnValue %[[#T5]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnsubnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 16)
@@ -243,8 +230,7 @@ define i1 @isfpclass_isnsubnormal(float %a) {
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpISub %[[#I32Ty]] %[[#T1]] %[[#One]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T2]] %[[#AllOneMantissa]]
-; CHECK: %[[#T4:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T3]]
-; CHECK: OpReturnValue %[[#T4]]
+; CHECK: OpReturnValue %[[#T3]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_issubnormal(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 144)
@@ -255,8 +241,7 @@ define i1 @isfpclass_issubnormal(float %a) {
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#Zero]]
-; CHECK: %[[#T2:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T1]]
-; CHECK: OpReturnValue %[[#T2]]
+; CHECK: OpReturnValue %[[#T1]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_ispzero(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 64)
@@ -267,8 +252,7 @@ define i1 @isfpclass_ispzero(float %a) {
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#SignBit]]
-; CHECK: %[[#T2:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T1]]
-; CHECK: OpReturnValue %[[#T2]]
+; CHECK: OpReturnValue %[[#T1]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnzero(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 32)
@@ -280,8 +264,7 @@ define i1 @isfpclass_isnzero(float %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpIEqual %[[#BoolTy]] %[[#T1]] %[[#Zero]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: OpReturnValue %[[#T3]]
+; CHECK: OpReturnValue %[[#T2]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_iszero(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 96)
@@ -292,8 +275,7 @@ define i1 @isfpclass_iszero(float %a) {
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpULessThan %[[#BoolTy]] %[[#T0]] %[[#Inf]]
-; CHECK: %[[#T2:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T1]]
-; CHECK: OpReturnValue %[[#T2]]
+; CHECK: OpReturnValue %[[#T1]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_ispfinite(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 448)
@@ -307,8 +289,7 @@ define i1 @isfpclass_ispfinite(float %a) {
 ; CHECK: %[[#T2:]] = OpINotEqual %[[#BoolTy]] %[[#T0]] %[[#T1]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
 ; CHECK: %[[#T4:]] = OpLogicalAnd %[[#BoolTy]] %[[#T3]] %[[#T2]]
-; CHECK: %[[#T5:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T4]]
-; CHECK: OpReturnValue %[[#T5]]
+; CHECK: OpReturnValue %[[#T4]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnfinite(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 56)
@@ -320,8 +301,7 @@ define i1 @isfpclass_isnfinite(float %a) {
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpBitwiseAnd %[[#I32Ty]] %[[#T0]] %[[#ValueMask]]
 ; CHECK: %[[#T2:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
-; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T2]]
-; CHECK: OpReturnValue %[[#T3]]
+; CHECK: OpReturnValue %[[#T2]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isfinite(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 504)
@@ -332,10 +312,9 @@ define i1 @isfpclass_isfinite(float %a) {
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#FP32Ty]]
 ; CHECK: %[[#T0:]] = OpBitcast %[[#I32Ty]] %[[#A]]
 ; CHECK: %[[#T1:]] = OpULessThan %[[#BoolTy]] %[[#T0]] %[[#Inf]]
-; CHECK: %[[#T2:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T1]]
-; CHECK: %[[#T3:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#Inf]]
-; CHECK: %[[#T4:]] = OpLogicalOr %[[#BoolTy]] %[[#T2]] %[[#T3]]
-; CHECK: OpReturnValue %[[#T4]]
+; CHECK: %[[#T2:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#Inf]]
+; CHECK: %[[#T3:]] = OpLogicalOr %[[#BoolTy]] %[[#T1]] %[[#T2]]
+; CHECK: OpReturnValue %[[#T3]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_ispositive(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 960)
@@ -349,10 +328,9 @@ define i1 @isfpclass_ispositive(float %a) {
 ; CHECK: %[[#T2:]] = OpINotEqual %[[#BoolTy]] %[[#T0]] %[[#T1]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#Inf]]
 ; CHECK: %[[#T4:]] = OpLogicalAnd %[[#BoolTy]] %[[#T3]] %[[#T2]]
-; CHECK: %[[#T5:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T4]]
-; CHECK: %[[#T6:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInf]]
-; CHECK: %[[#T7:]] = OpLogicalOr %[[#BoolTy]] %[[#T5]] %[[#T6]]
-; CHECK: OpReturnValue %[[#T7]]
+; CHECK: %[[#T5:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInf]]
+; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#T4]] %[[#T5]]
+; CHECK: OpReturnValue %[[#T6]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_isnegative(float %a) {
   %v = call i1 @llvm.is.fpclass.f32(float %a, i32 60)
@@ -375,10 +353,9 @@ define i1 @isfpclass_all(float %a) {
 ; CHECK: %[[#T2:]] = OpINotEqual %[[#BoolTy]] %[[#T0]] %[[#T1]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#InfFP64]]
 ; CHECK: %[[#T4:]] = OpLogicalAnd %[[#BoolTy]] %[[#T3]] %[[#T2]]
-; CHECK: %[[#T5:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T4]]
-; CHECK: %[[#T6:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInfFP64]]
-; CHECK: %[[#T7:]] = OpLogicalOr %[[#BoolTy]] %[[#T5]] %[[#T6]]
-; CHECK: OpReturnValue %[[#T7]]
+; CHECK: %[[#T5:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInfFP64]]
+; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#T4]] %[[#T5]]
+; CHECK: OpReturnValue %[[#T6]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_f64_isnegative(double %a) {
   %v = call i1 @llvm.is.fpclass.f64(double %a, i32 60)
@@ -392,10 +369,9 @@ define i1 @isfpclass_f64_isnegative(double %a) {
 ; CHECK: %[[#T2:]] = OpINotEqual %[[#BoolTy]] %[[#T0]] %[[#T1]]
 ; CHECK: %[[#T3:]] = OpULessThan %[[#BoolTy]] %[[#T1]] %[[#InfFP16]]
 ; CHECK: %[[#T4:]] = OpLogicalAnd %[[#BoolTy]] %[[#T3]] %[[#T2]]
-; CHECK: %[[#T5:]] = OpLogicalOr %[[#BoolTy]] %[[#False]] %[[#T4]]
-; CHECK: %[[#T6:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInfFP16]]
-; CHECK: %[[#T7:]] = OpLogicalOr %[[#BoolTy]] %[[#T5]] %[[#T6]]
-; CHECK: OpReturnValue %[[#T7]]
+; CHECK: %[[#T5:]] = OpIEqual %[[#BoolTy]] %[[#T0]] %[[#NegInfFP16]]
+; CHECK: %[[#T6:]] = OpLogicalOr %[[#BoolTy]] %[[#T4]] %[[#T5]]
+; CHECK: OpReturnValue %[[#T6]]
 ; CHECK: OpFunctionEnd
 define i1 @isfpclass_f16_isnegative(half %a) {
   %v = call i1 @llvm.is.fpclass.f16(half %a, i32 60)
