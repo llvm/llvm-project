@@ -540,17 +540,6 @@ static unsigned getHlslClampArgIndex(const HLSLAttributedResourceType *RT,
              : OffsetArgIndex;
 }
 
-static Value *emitHlslClamp(CodeGenFunction &CGF, const CallExpr *E,
-                            unsigned ClampArgIndex) {
-  Value *Clamp = CGF.EmitScalarExpr(E->getArg(ClampArgIndex));
-  // The builtin is defined with variadic arguments, so the clamp parameter
-  // might have been promoted to double. The intrinsic requires a 32-bit
-  // float.
-  if (Clamp->getType() != CGF.Builder.getFloatTy())
-    Clamp = CGF.Builder.CreateFPCast(Clamp, CGF.Builder.getFloatTy());
-  return Clamp;
-}
-
 static Value *emitGetDimensions(CodeGenFunction &CGF, const CallExpr *E,
                                 unsigned IntrinsicID, unsigned NumRetComps,
                                 bool HasLod) {
@@ -721,7 +710,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleIntrinsic(), Args,
                                RetTy);
 
-    Args.push_back(emitHlslClamp(*this, E, ClampIdx));
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleClampIntrinsic(),
                              Args, RetTy);
   }
@@ -730,8 +719,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *BiasOp = EmitScalarExpr(E->getArg(3));
-    if (BiasOp->getType() != Builder.getFloatTy())
-      BiasOp = Builder.CreateFPCast(BiasOp, Builder.getFloatTy());
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleBias
@@ -748,7 +735,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasIntrinsic(),
                                Args, RetTy);
 
-    Args.push_back(emitHlslClamp(*this, E, ClampIdx));
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
     return EmitIntrinsicCall(CGM.getHLSLRuntime().getSampleBiasClampIntrinsic(),
                              Args, RetTy);
   }
@@ -776,7 +763,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleGradIntrinsic(), Args);
 
-    Args.push_back(emitHlslClamp(*this, E, ClampIdx));
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleGradClampIntrinsic(), Args);
   }
@@ -785,8 +772,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *LODOp = EmitScalarExpr(E->getArg(3));
-    if (LODOp->getType() != Builder.getFloatTy())
-      LODOp = Builder.CreateFPCast(LODOp, Builder.getFloatTy());
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args; // Max 5 arguments for SampleLevel
@@ -843,9 +828,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
     Value *CoordOp = EmitScalarExpr(E->getArg(1));
     Value *SampleOp = EmitScalarExpr(E->getArg(2));
-    if (SampleOp->getType() != Builder.getInt32Ty())
-      SampleOp = Builder.CreateIntCast(SampleOp, Builder.getInt32Ty(),
-                                       /*isSigned=*/true);
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 4> Args;
@@ -863,8 +845,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
-    if (CmpOp->getType() != Builder.getFloatTy())
-      CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 6> Args; // Max 6 arguments for SampleCmp
@@ -881,7 +861,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
       return Builder.CreateIntrinsic(
           RetTy, CGM.getHLSLRuntime().getSampleCmpIntrinsic(), Args);
 
-    Args.push_back(emitHlslClamp(*this, E, ClampIdx));
+    Args.push_back(EmitScalarExpr(E->getArg(ClampIdx)));
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getSampleCmpClampIntrinsic(), Args);
   }
@@ -890,8 +870,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *CmpOp = EmitScalarExpr(E->getArg(3));
-    if (CmpOp->getType() != Builder.getFloatTy())
-      CmpOp = Builder.CreateFPCast(CmpOp, Builder.getFloatTy());
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args;
@@ -929,9 +907,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *ComponentOp = EmitScalarExpr(E->getArg(3));
-    if (ComponentOp->getType() != Builder.getInt32Ty())
-      ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
-                                          /*isSigned=*/false);
     const HLSLAttributedResourceType *RT = getRequiredHandleType(E, 0);
 
     SmallVector<Value *, 5> Args;
@@ -950,8 +925,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *SamplerOp = EmitScalarExpr(E->getArg(1));
     Value *CoordOp = EmitScalarExpr(E->getArg(2));
     Value *CompareOp = EmitScalarExpr(E->getArg(3));
-    if (CompareOp->getType() != Builder.getFloatTy())
-      CompareOp = Builder.CreateFPCast(CompareOp, Builder.getFloatTy());
 
     SmallVector<Value *, 6> Args;
     Args.push_back(HandleOp);
@@ -961,9 +934,6 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     if (CGM.getTarget().getTriple().isDXIL()) {
       Value *ComponentOp = EmitScalarExpr(E->getArg(4));
-      if (ComponentOp->getType() != Builder.getInt32Ty())
-        ComponentOp = Builder.CreateIntCast(ComponentOp, Builder.getInt32Ty(),
-                                            /*isSigned=*/false);
       Args.push_back(ComponentOp);
     }
 
