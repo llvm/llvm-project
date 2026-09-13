@@ -5025,7 +5025,7 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
   string llvmBuilder = [{
     auto [id, args] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
                       *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
+    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 

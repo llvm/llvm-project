@@ -208,6 +208,16 @@ def hasMMASparseWithMXF4NVF4Scale4xE8M0
 //  - tile_scatter4 mode support
 def hasTMABlackwellSupport : PredOr<[SM100f, SM110f]>;
 
+
+def hasCpAsyncBulkClusterSupport : PredAnd<[PTX80, SM90]>;
+def hasCpAsyncBulkCTASupport : PredAnd<[PTX86, SM90]>;
+
+// Checks support for relaxed memory ordering semantics support in cp.async.bulk family.
+def hasCpAsyncBulkRelaxedSupport : PredAnd<[PTX93, PredOr<[SM90a, SM100f, SM110f]>]>;
+
+// Checks for out of bounds (OOB) support in cp.async.bulk family.
+def hasCpAsyncBulkOOBSupport : PredAnd<[PTX92, SM90]>;
+
 // Checks support for conversions involving e4m3x2 and e5m2x2. These arrived
 // with sm_90 in PTX 7.8, which SM90 already implies, and were extended to
 // sm_89 in PTX 8.1.
