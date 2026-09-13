@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/Transforms/Passes.h"
 
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
@@ -272,6 +273,77 @@ getDominanceFilterForPrivateMemRefRepl(Block *sliceInsertionBlock,
   return firstAncestor;
 }
 
+static std::optional<presburger::IntegerRelation>
+getAccessRelationForPrivateBuffer(Operation *op, unsigned loopDepth) {
+  if (!isa<AffineLoadOp, AffineStoreOp>(op))
+    return std::nullopt;
+
+  // Reject domains that getAccessRelation cannot represent exactly.
+  Operation *ancestor = op->getParentOp();
+  for (; ancestor && !ancestor->hasTrait<OpTrait::AffineScope>();
+       ancestor = ancestor->getParentOp()) {
+    if (auto forOp = dyn_cast<AffineForOp>(ancestor)) {
+      if (forOp.getStepAsInt() != 1 && !forOp.hasConstantLowerBound())
+        return std::nullopt;
+    } else if (auto parallelOp = dyn_cast<AffineParallelOp>(ancestor)) {
+      if (!llvm::all_of(parallelOp.getSteps(),
+                        [](int64_t step) { return step == 1; }))
+        return std::nullopt;
+    } else {
+      return std::nullopt;
+    }
+  }
+  if (!ancestor)
+    return std::nullopt;
+
+  presburger::IntegerRelation relation(
+      presburger::PresburgerSpace::getRelationSpace());
+  if (failed(MemRefAccess(op).getAccessRelation(relation)))
+    return std::nullopt;
+
+  if (getNestingDepth(op) != relation.getNumDomainVars() ||
+      loopDepth > relation.getNumDomainVars())
+    return std::nullopt;
+
+  relation.convertToLocal(presburger::VarKind::Domain, loopDepth,
+                          relation.getNumDomainVars());
+  return relation;
+}
+
+/// Returns true if every load is covered by `store` in each private-buffer
+/// instance.
+static bool areLoadsCoveredByStore(Operation *store,
+                                   ArrayRef<Operation *> loads,
+                                   unsigned loopDepth) {
+  assert(store && "expected producer store");
+  assert(!loads.empty() && "expected consumer load");
+
+  auto write = getAccessRelationForPrivateBuffer(store, loopDepth);
+  if (!write)
+    return false;
+  for (Operation *load : loads) {
+    auto read = getAccessRelationForPrivateBuffer(load, loopDepth);
+    if (!read ||
+        !write->getSpace().isAligned(read->getSpace(),
+                                     presburger::VarKind::Domain) ||
+        write->getNumRangeVars() != read->getNumRangeVars())
+      return false;
+
+    write->mergeAndAlignSymbols(*read);
+    if (!read->isSubsetOf(*write))
+      return false;
+  }
+  return true;
+}
+
+static bool haveSameAccessFunction(ArrayRef<Operation *> stores) {
+  assert(!stores.empty() && "expected producer store");
+  MemRefAccess first(cast<AffineWriteOpInterface>(stores.front()));
+  return llvm::all_of(llvm::drop_begin(stores), [&](Operation *store) {
+    return first == MemRefAccess(cast<AffineWriteOpInterface>(store));
+  });
+}
+
 /// Returns the amount of additional (redundant) computation that will be done
 /// as a fraction of the total computation if `srcForOp` is fused into
 /// `dstForOp` at depth `depth`. The method returns the compute cost of the
@@ -327,41 +399,60 @@ static std::optional<double> getAdditionalComputeFraction(
 // Creates and returns a private (single-user) memref for fused loop rooted at
 // 'forOp', with (potentially reduced) memref size based on the memref region
 // written to by `storeOps` at depth 'dstLoopDepth'. 'sliceInsertionBlock'
-// specifies the block in which the slice was/will be inserted. The method
-// expects that all stores ops to the memref have the same access function.
-// Returns nullptr if the creation failed.
+// specifies the block in which the slice was/will be inserted. Returns nullptr
+// unless the fused producer covers every consumer access that would be
+// redirected to the private memref.
 static Value createPrivateMemRef(AffineForOp forOp,
                                  ArrayRef<Operation *> storeOps,
+                                 Operation *fusedProducerStore,
                                  unsigned dstLoopDepth,
                                  std::optional<unsigned> fastMemorySpace,
                                  Block *sliceInsertionBlock,
                                  uint64_t localBufSizeThreshold) {
   assert(!storeOps.empty() && "no source stores supplied");
 
-  // Check if all stores have the same access function; we only support this
-  // case.
-  // TODO: Use union of memref write regions to compute private memref footprint
-  // for store ops with different access functions.
-  if (storeOps.size() > 1 &&
-      !std::equal(std::next(storeOps.begin()), storeOps.end(), storeOps.begin(),
-                  [](Operation *a, Operation *b) {
-                    MemRefAccess aM(cast<AffineWriteOpInterface>(a));
-                    MemRefAccess bM(cast<AffineWriteOpInterface>(b));
-                    return aM == bM;
-                  })) {
+  // TODO: Use a union of write regions to support stores with different access
+  // functions.
+  if (!fusedProducerStore)
+    return nullptr;
+  if (!haveSameAccessFunction(storeOps)) {
     LDBG() << "Private memref creation unsupported for multiple producer "
-           << "stores with different access functions.";
+              "stores with different access functions.";
     return nullptr;
   }
 
-  Operation *srcStoreOp = storeOps[0];
+  Operation *srcStoreOp = storeOps.front();
+  Value oldMemRef = cast<AffineWriteOpInterface>(srcStoreOp).getMemRef();
+  if (cast<AffineWriteOpInterface>(fusedProducerStore).getMemRef() != oldMemRef)
+    return nullptr;
+
+  // Match the exact set of users that replaceAllMemRefUsesWith will rewrite.
+  // Privatization is only legal when the fused producer writes every element
+  // read from each private-buffer instance.
+  Operation *domFilter =
+      getDominanceFilterForPrivateMemRefRepl(sliceInsertionBlock, storeOps);
+  DominanceInfo domInfo(domFilter->getParentOfType<FunctionOpInterface>());
+  SmallVector<Operation *, 4> loads;
+  for (Operation *user : oldMemRef.getUsers()) {
+    if (!domInfo.dominates(domFilter, user) ||
+        hasSingleEffect<MemoryEffects::Free>(user, oldMemRef))
+      continue;
+    if (isa<AffineLoadOp>(user)) {
+      loads.push_back(user);
+      continue;
+    }
+    if (!isa<AffineStoreOp>(user) || !llvm::is_contained(storeOps, user))
+      return nullptr;
+  }
+  if (loads.empty() ||
+      !areLoadsCoveredByStore(fusedProducerStore, loads, dstLoopDepth))
+    return nullptr;
 
   // Create builder to insert alloc op just before 'forOp'.
   OpBuilder b(forOp);
   // Builder to create constants at the top level.
   OpBuilder top(forOp->getParentRegion());
   // Create new memref type based on slice bounds.
-  auto oldMemRef = cast<AffineWriteOpInterface>(srcStoreOp).getMemRef();
   auto oldMemRefType = cast<MemRefType>(oldMemRef.getType());
   unsigned rank = oldMemRefType.getRank();
 
@@ -441,12 +532,8 @@ static Value createPrivateMemRef(AffineForOp forOp,
       AffineMap::get(outerIVs.size() + rank, 0, remapExprs, forOp.getContext());
 
   // Replace all users of 'oldMemRef' with 'newMemRef'.
-  Operation *domFilter =
-      getDominanceFilterForPrivateMemRefRepl(sliceInsertionBlock, storeOps);
   auto userFilterFn = [&](Operation *user) {
-    auto domInfo = std::make_unique<DominanceInfo>(
-        domFilter->getParentOfType<FunctionOpInterface>());
-    return domInfo->dominates(domFilter, user);
+    return domInfo.dominates(domFilter, user);
   };
   LogicalResult res = replaceAllMemRefUsesWith(
       oldMemRef, newMemRef, /*extraIndices=*/{}, indexRemap,
@@ -1075,15 +1162,20 @@ public:
             srcId, dstId, bestSlice, fusedLoopInsPoint, srcEscapingMemRefs,
             *mdg);
 
-        DenseSet<Value> privateMemrefs;
+        DenseSet<Value> privateMemRefCandidates;
         for (Value memref : producerConsumerMemrefs) {
           if (canCreatePrivateMemRef(memref, srcEscapingMemRefs, srcId, dstId,
                                      removeSrcNode)) {
-            // Create a private version of this memref.
-            LDBG() << "Creating private memref for " << memref;
-            // Create a private version of this memref.
-            privateMemrefs.insert(memref);
+            LDBG() << "Considering private memref for " << memref;
+            privateMemRefCandidates.insert(memref);
           }
+        }
+
+        DenseSet<Operation *> preexistingDstStores;
+        if (!privateMemRefCandidates.empty()) {
+          dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
+            preexistingDstStores.insert(storeOp.getOperation());
+          });
         }
 
         // Fuse computation slice of 'srcLoopNest' into 'dstLoopNest'.
@@ -1098,35 +1190,51 @@ public:
         if (fusedLoopInsPoint != dstAffineForOp)
           dstAffineForOp->moveBefore(fusedLoopInsPoint);
 
-        // Update edges between 'srcNode' and 'dstNode'.
-        mdg->updateEdges(srcNode->id, dstNode->id, privateMemrefs,
-                         removeSrcNode);
-
-        // Create private memrefs.
-        if (!privateMemrefs.empty()) {
-          // Note the block into which fusion was performed. This can be used to
-          // place `alloc`s that create private memrefs.
-          Block *sliceInsertionBlock = bestSlice.insertPoint->getBlock();
-
-          // Gather stores for all the private-to-be memrefs.
-          DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
+        // Privatization rewrites the consumer accesses to a buffer sized from
+        // the fused producer stores. Only do so when the producer's exact
+        // access set covers every rewritten consumer load. Otherwise, retain
+        // the legal fusion while keeping accesses on the original memref.
+        unsigned privateMemRefLoopDepth =
+            getNestingDepth(dstAffineForOp) + bestDstLoopDepth;
+        Block *sliceInsertionBlock = bestSlice.insertPoint->getBlock();
+        DenseMap<Value, SmallVector<Operation *, 4>> privateMemRefToStores;
+        DenseMap<Value, Operation *> privateMemRefToFusedProducerStore;
+        if (!privateMemRefCandidates.empty()) {
           dstAffineForOp.walk([&](AffineWriteOpInterface storeOp) {
-            Value storeMemRef = storeOp.getMemRef();
-            if (privateMemrefs.count(storeMemRef) > 0)
-              privateMemRefToStores[storeMemRef].push_back(storeOp);
+            Value memref = storeOp.getMemRef();
+            if (!privateMemRefCandidates.contains(memref))
+              return;
+            privateMemRefToStores[memref].push_back(storeOp);
+            if (!preexistingDstStores.contains(storeOp))
+              privateMemRefToFusedProducerStore.try_emplace(memref, storeOp);
           });
+        }
 
-          // Replace original memrefs with private memrefs. Note that all the
-          // loads and stores on these memrefs will be replaced with a new
-          // loads and stores. Any reference to the original ones becomes
-          // invalid after this point.
-          for (auto &memrefToStoresPair : privateMemRefToStores) {
-            ArrayRef<Operation *> storesForMemref = memrefToStoresPair.second;
-            Value newMemRef = createPrivateMemRef(
-                dstAffineForOp, storesForMemref, bestDstLoopDepth,
-                fastMemorySpace, sliceInsertionBlock, localBufSizeThreshold);
-            if (!newMemRef)
-              continue;
+        // Create only private memrefs whose producer covers every rewritten
+        // load, and update the dependence graph with exactly those memrefs.
+        DenseSet<Value> privateMemrefs;
+        SmallVector<Value, 4> newPrivateMemrefs;
+        for (auto &[oldMemRef, stores] : privateMemRefToStores) {
+          Value newMemRef = createPrivateMemRef(
+              dstAffineForOp, stores,
+              privateMemRefToFusedProducerStore.lookup(oldMemRef),
+              privateMemRefLoopDepth, fastMemorySpace, sliceInsertionBlock,
+              localBufSizeThreshold);
+          if (!newMemRef) {
+            LDBG() << "Skipping private memref with unsupported or uncovered "
+                      "consumer accesses: "
+                   << oldMemRef;
+            continue;
+          }
+          privateMemrefs.insert(oldMemRef);
+          newPrivateMemrefs.push_back(newMemRef);
+        }
+
+        // Update edges between 'srcNode' and 'dstNode'.
+        mdg->updateEdges(srcId, dstId, privateMemrefs, removeSrcNode);
+
+        if (!newPrivateMemrefs.empty()) {
+          for (Value newMemRef : newPrivateMemrefs) {
             // Create new node in dependence graph for 'newMemRef' alloc op.
             unsigned newMemRefNodeId = mdg->addNode(newMemRef.getDefiningOp());
             // Add edge from 'newMemRef' node to dstNode.
