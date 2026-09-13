@@ -754,14 +754,6 @@ L0DeviceTy::createImmCmdList(uint32_t Ordinal, uint32_t Index,
   return CmdList;
 }
 
-Error L0DeviceTy::dataFence(__tgt_async_info *Async) {
-  auto QueueOrErr = getOrCreateQueue(Async);
-  if (!QueueOrErr)
-    return QueueOrErr.takeError();
-  L0QueueTy *Queue = *QueueOrErr;
-  return Queue->dataFence();
-}
-
 Expected<bool> L0DeviceTy::isAccessiblePtrImpl(const void *Ptr, size_t Size) {
   if (!Ptr || Size == 0)
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
