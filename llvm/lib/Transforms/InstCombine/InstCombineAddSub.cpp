@@ -1984,6 +1984,22 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
     I.setHasNoUnsignedWrap(true);
   }
 
+  // X + umax(X, 1) --> umax(X << 1, 1) if X + X does not overflow.
+  if (match(&I, m_c_Add(m_Value(A), m_OneUse(m_c_UMax(m_Value(B), m_One())))) &&
+      A == B) {
+    auto Cache = A == LHSCache ? LHSCache : RHSCache;
+    auto One = ConstantInt::get(Ty, 1);
+    bool NoUW =
+        I.hasNoUnsignedWrap() || willNotOverflowUnsignedAdd(Cache, Cache, I);
+    // Do not apply this transformation if the original add might overflow.
+    if (NoUW || I.hasNoSignedWrap())
+      return replaceInstUsesWith(
+          I, Builder.CreateIntrinsic(
+                 Intrinsic::umax, {Ty},
+                 {One, Builder.CreateShl(A, One, "mul2", NoUW,
+                                         I.hasNoSignedWrap())}));
+  }
+
   if (Instruction *V = canonicalizeLowbitMask(I, Builder))
     return V;
 
