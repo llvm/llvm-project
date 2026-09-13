@@ -1127,6 +1127,65 @@ isl::set polly::getPartialTilePrefixes(isl::set ScheduleRange,
   return LoopPrefixes.subtract(BadPrefixes);
 }
 
+/// Restrict the last @p Sizes.size() dimensions of @p Set to a complete tile,
+/// that is, to 0 <= dim <= size - 1 for each of them.
+static isl::set addTileExtentConstraints(isl::set Set,
+                                         llvm::ArrayRef<int> Sizes) {
+  unsigned Dims = unsignedFromIslSize(Set.tuple_dim());
+  unsigned NumTileDims = Sizes.size();
+  assert(Dims >= NumTileDims);
+  isl::local_space LocalSpace = isl::local_space(Set.get_space());
+
+  for (unsigned i = 0; i < NumTileDims; ++i) {
+    unsigned Pos = Dims - NumTileDims + i;
+
+    isl::constraint LowerBound = isl::constraint::alloc_inequality(LocalSpace);
+    LowerBound = LowerBound.set_constant_si(0);
+    LowerBound = LowerBound.set_coefficient_si(isl::dim::set, Pos, 1);
+    Set = Set.add_constraint(LowerBound);
+
+    isl::constraint UpperBound = isl::constraint::alloc_inequality(LocalSpace);
+    UpperBound = UpperBound.set_constant_si(Sizes[i] - 1);
+    UpperBound = UpperBound.set_coefficient_si(isl::dim::set, Pos, -1);
+    Set = Set.add_constraint(UpperBound);
+  }
+
+  return Set;
+}
+
+isl::set polly::getFullTilePrefixes(isl::set ScheduleRange,
+                                    llvm::ArrayRef<int> TileSizes,
+                                    unsigned NumCompleteDims) {
+  unsigned Dims = unsignedFromIslSize(ScheduleRange.tuple_dim());
+  unsigned NumTileDims = TileSizes.size();
+  assert(Dims >= NumTileDims);
+  assert(NumCompleteDims >= 1 && NumCompleteDims <= NumTileDims);
+
+  // Same idea as getPartialTilePrefixes, but keeping the prefixes of the
+  // complete tiles instead of the incomplete ones: over-approximate the
+  // schedule range in the dimensions whose completeness is required, add the
+  // constraints of a complete tile there, and drop every prefix for which that
+  // tile leaves the schedule range.
+  //
+  // Requiring completeness in fewer than all point dimensions leaves the outer
+  // tile dimensions unconstrained in the result, so the AST generator has to
+  // separate the isolated part along the innermost dimensions only. That trades
+  // some of the constant loop bounds for a smaller number of copies of the loop
+  // nest.
+  isl::set Relaxed = ScheduleRange.drop_constraints_involving_dims(
+      isl::dim::set, Dims - NumCompleteDims, NumCompleteDims);
+  Relaxed =
+      addTileExtentConstraints(Relaxed, TileSizes.take_back(NumCompleteDims));
+
+  isl::set BadPrefixes = Relaxed.subtract(ScheduleRange);
+  BadPrefixes =
+      BadPrefixes.project_out(isl::dim::set, Dims - NumTileDims, NumTileDims);
+  isl::set LoopPrefixes =
+      ScheduleRange.project_out(isl::dim::set, Dims - NumTileDims, NumTileDims);
+
+  return LoopPrefixes.subtract(BadPrefixes);
+}
+
 isl::union_set polly::getIsolateOptions(isl::set IsolateDomain,
                                         unsigned OutDimsNum) {
   if (IsolateDomain.is_null())
