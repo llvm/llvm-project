@@ -11,8 +11,8 @@ define i32 @lds_then_dma.global.singlethread(ptr addrspace(1) %g, ptr addrspace(
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-NEXT:    ds_load_b32 v2, v3
-; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -28,8 +28,8 @@ define i32 @lds_then_dma.global.wave(ptr addrspace(1) %g, ptr addrspace(3) inreg
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-NEXT:    ds_load_b32 v2, v3
-; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    global_load_async_to_lds_b32 v3, v[0:1], off
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v2
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
@@ -97,6 +97,7 @@ define i32 @lds_then_dma.global.singlethread.partial(ptr addrspace(1) %g, ptr ad
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
 ; CHECK-NEXT:    ds_load_b32 v4, v2
 ; CHECK-NEXT:    ds_load_b32 v3, v3
+; CHECK-NEXT:    s_wait_dscnt 0x1
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v4, v3
@@ -117,6 +118,7 @@ define i32 @lds_then_dma.global.wave.partial(ptr addrspace(1) %g, ptr addrspace(
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s0 :: v_dual_mov_b32 v3, s1
 ; CHECK-NEXT:    ds_load_b32 v4, v2
 ; CHECK-NEXT:    ds_load_b32 v3, v3
+; CHECK-NEXT:    s_wait_dscnt 0x1
 ; CHECK-NEXT:    global_load_async_to_lds_b32 v2, v[0:1], off
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v4, v3
@@ -199,8 +201,8 @@ define i32 @lds_then_dma.tensor.singlethread(<4 x i32> inreg %D0, <8 x i32> inre
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s24
 ; CHECK-NEXT:    ds_load_b32 v0, v0
-; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("singlethread") release, !mmra !0
@@ -215,8 +217,8 @@ define i32 @lds_then_dma.tensor.wave(<4 x i32> inreg %D0, <8 x i32> inreg %D1, p
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s24
 ; CHECK-NEXT:    ds_load_b32 v0, v0
-; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_wait_dscnt 0x0
+; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_set_pc_i64 s[30:31]
   %v = load i32, ptr addrspace(3) %lds, align 4
   fence syncscope("wavefront") release, !mmra !0
@@ -280,6 +282,7 @@ define i32 @lds_then_dma.tensor.singlethread.partial(<4 x i32> inreg %D0, <8 x i
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
 ; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
+; CHECK-NEXT:    s_wait_dscnt 0x1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
@@ -300,6 +303,7 @@ define i32 @lds_then_dma.tensor.wave.partial(<4 x i32> inreg %D0, <8 x i32> inre
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s24 :: v_dual_mov_b32 v1, s25
 ; CHECK-NEXT:    ds_load_b32 v0, v0
 ; CHECK-NEXT:    ds_load_b32 v1, v1
+; CHECK-NEXT:    s_wait_dscnt 0x1
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[16:23]
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, v0, v1
