@@ -33,7 +33,10 @@ Synopsis
 
   rcu_domain& rcu_default_domain() noexcept;
 
+  // blocks until all previous readers exit the critical section
   void rcu_synchronize(rcu_domain& dom = rcu_default_domain()) noexcept;
+
+  // blocks until all deleters of previously retired objects run
   void rcu_barrier(rcu_domain& dom = rcu_default_domain()) noexcept;
 
   template<class T, class D = default_delete<T>>
@@ -54,6 +57,7 @@ Here is an example usage ::
   struct Data { /* members */ };
   std::atomic<Data*> data_;
 
+  // reader thread
   // ==============================================
   template <typename Func>
   Result reader_op(Func fn) {
@@ -65,6 +69,7 @@ Here is an example usage ::
     return fn(p);
  }
 
+  // writer thread
   // ==============================================
   // May be called concurrently with reader_op
   void update(Data* newdata) {
@@ -72,12 +77,20 @@ Here is an example usage ::
     std::rcu_retire(olddata); // reclaim *olddata when safe
   }
 
+  // collector thread 
+  // ==============================================
+  void collect_garbage(std::stop_token st) {
+    while (!st.stop_requested()) {
+      std::rcu_barrier();
+      std::this_thread::sleep(1s);
+    }
+  }
+
 There are several key properties that an implementation of `rcu` must satisfy:
 
-- On the reader side, `rcu_domain::lock` and `rcu_domain::unlock` must not block the thread while the writer thread
-  is performing updates, or the collector thread is reclaiming the objects.
+- On the reader side, `rcu_domain::lock` and `rcu_domain::unlock` must not block the thread while the writer thread is performing updates, other readers are `lock` ing the critical section, or the collector thread is reclaiming the objects.
 
-- On the writer side, `retire`-ing an object in principle should not block at all. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `rcu_retire`).
+- On the writer side, our interpretation is that `retire`-ing an object should not block for quality of implementation reasons. However, it is technically conforming to block (e.g. evaluate the `deleter`s directly inside `rcu_retire`).
 
 - On the collector side, `rcu_synchronize` should block until at least all the existing readers exit their critical sections
   via `rcu_domain::unlock`. Note that this is a key difference between `rcu` and read-write locks:
@@ -137,7 +150,7 @@ Implementation Details
 ----------------------
 
 `class thread_local_container`
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 A helper class that manages thread local objects. It provides APIs to get the `thread_local` object for the current thread, and to iterate through all the `thread_local` objects from all threads.
 It only contains `static` member variables and functions.
@@ -148,7 +161,7 @@ the contention on the `mutex` should be low.
 TODO: We need to replace `mutex` as all non allocating APIs in `rcu` are designed to be `noexcept` and `mutex` can throw.
 
 `struct reader_states`
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 It defines the state of each reader thread. The state is essentially a pair of `(phase, lock_nested_level)` merged into a single `uint16_t` . 
 
@@ -156,27 +169,23 @@ It defines the state of each reader thread. The state is essentially a pair of `
 - `lock_nested_level` is the nested level of the `rcu_domain::lock` . As you can call `rcu_domain::lock` multiple times in the same thread, we need to keep track of the nested level.
   When `lock_nested_level` is `0`, it means the current thread is in a quiescent state (not in a critical section).
 
-The `reader_states` class is also a `static` helper class which only provides static definitions and functions, instead of the wrapper of the `uint16_t` state. This is because we need
-the `atomic` integer API, e.g. `fetch_or`. An `atomic` of a wrapper struct won't have these APIs.
-
-`rcu_singly_list_view`
-~~~~~~~~~~~~~~~~~~~~~~
-
-A helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It also stores the back pointer of the list to make the splice back operation more efficient.
-It provides APIs to splice from another `rcu_singly_list_view` or  `rcu_thread_local_list_view`, and to iterate through the list.
-
-`rcu_thread_local_list_view`
+`class rcu_singly_list_view`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+A helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It also stores the back pointer of the list to make the splice back operation more efficient.
+It provides APIs to splice from another `rcu_singly_list_view` or  `rcu_atomic_list_view`, and to iterate through the list.
+
+`class rcu_atomic_list_view`
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 A thread safe helper class that provides a view of the intrusive singly linked list of `__rcu_node` s. It provides APIs to push a node into the list, or to be spliced to another `rcu_singly_list_view`.
-It uses `thread_local` storage to avoid contentions from multiple threads pushing nodes into the list.
 
-For the derived class of `rcu_obj_base`, the `retire` is `noexcept`, which means that no memory allocation can happen when pushing it to the retired callback queue.
-
-`rcu_domain_impl`
-~~~~~~~~~~~~~~~~~
+`class rcu_domain_impl`
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 This is the main class that implements the `rcu` logic. It contains
+
+- `using per_thread_states = thread_local_container<reader_states>`. It contains each thread's `reader_states`. This is not a member but static thread_local objects.
 
 - `std::atomic<reader_states::state_type> global_reader_phase_` : the global state that flips between two phases. The readers will record the phase when they enter the critical section, and the collector will flip the global state when it calls `rcu_synchronize` to start a new grace period.
 
@@ -185,7 +194,7 @@ This is the main class that implements the `rcu` logic. It contains
 
 - `std::atomic<bool> grace_period_waiting_flag_` : This flag is used to sleep/wake up the collector thread that is waiting for the grace period to end.
 
-- `rcu_thread_local_list_view retired_queue_stage0_;` : All the retired objects are directly pushed to this queue first.
+- `using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>` : All the retired objects are directly pushed to this queue first. This is not a member but static thread_local objects.
 
 - `rcu_singly_list_view retired_queue_stage1_` and `rcu_singly_list_view retired_queue_stage2_` : These two queues are used to let the retired callbacks go through two grace periods before being invoked. No additional synchronization is needed for these two queues as they are only processed when the collector thread is holding the `grace_period_mutex_`.
   Note that `_retired_queue_stage2_` queue holds the callbacks that are ready to be called.
