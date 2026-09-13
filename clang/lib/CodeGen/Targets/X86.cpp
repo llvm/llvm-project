@@ -1256,19 +1256,30 @@ class X86_64ABIInfo : public ABIInfo {
   /// responsible for placing them at the type's offset.
   ClassPair getBuiltinTypeClassification(const BuiltinType *BT) const;
 
-  /// Return the classes intrinsic to the complex type \param CT. The caller is
-  /// responsible for boundary splitting and class placement.
-  ClassPair getComplexTypeClassification(const ComplexType *CT) const;
+  /// Return the classes intrinsic to the complex type \param CT, including any
+  /// splitting required at \param Offset. The caller is responsible for class
+  /// placement.
+  ClassPair getComplexTypeClassification(const ComplexType *CT,
+                                         uint64_t Offset) const;
 
   /// Return the classes intrinsic to the bit-precise integer type \param BT.
   /// The caller is responsible for class placement.
   static ClassPair getBitIntTypeClassification(const BitIntType *BT);
+
+  /// Return \param C for each eightbyte touched by the bit span beginning at
+  /// \param Offset. The result is relative to the first touched eightbyte.
+  static ClassPair getClassPairForSpan(uint64_t Offset, uint64_t Size, Class C);
 
   /// Collect the canonical element type and shared classification properties
   /// of the vector \param VT or matrix \param MT. At least one must be
   /// non-null.
   VectorTypeInfo getVectorTypeInfo(const VectorType *VT,
                                    const MatrixType *MT = nullptr) const;
+
+  /// Return true when \param AT must be passed in memory because of the SysV
+  /// size limit or the alignment of its base. Regcall ignores the size limit.
+  bool isArrayPassedInMemory(const ConstantArrayType *AT, uint64_t Offset,
+                             uint64_t Size, bool IsRegCall) const;
 
   /// Return true when \param RT must be passed in memory without inspecting its
   /// bases or fields because of its size, record ABI, or flexible array member.
@@ -1926,34 +1937,46 @@ X86_64ABIInfo::getBuiltinTypeClassification(const BuiltinType *BT) const {
 }
 
 X86_64ABIInfo::ClassPair
-X86_64ABIInfo::getComplexTypeClassification(const ComplexType *CT) const {
+X86_64ABIInfo::getComplexTypeClassification(const ComplexType *CT,
+                                            uint64_t Offset) const {
   QualType ET = getContext().getCanonicalType(CT->getElementType());
+  uint64_t ElementSize = getContext().getTypeSize(ET);
   uint64_t Size = getContext().getTypeSize(QualType(CT, 0));
+  ClassPair Classes;
 
   if (ET->isIntegralOrEnumerationType()) {
     if (Size <= 64)
-      return {Integer};
-    if (Size <= 128)
-      return {Integer, Integer};
-    llvm_unreachable("unexpected complex integer type size");
-  }
-  if (ET->isFloat16Type() || ET == getContext().FloatTy || ET->isBFloat16Type())
-    return {SSE};
-  if (ET == getContext().DoubleTy)
-    return {SSE, SSE};
-  if (ET == getContext().LongDoubleTy) {
+      Classes = {Integer};
+    else if (Size <= 128)
+      Classes = {Integer, Integer};
+    else
+      llvm_unreachable("unexpected complex integer type size");
+  } else if (ET->isFloat16Type() || ET == getContext().FloatTy ||
+             ET->isBFloat16Type()) {
+    Classes = {SSE};
+  } else if (ET == getContext().DoubleTy) {
+    Classes = {SSE, SSE};
+  } else if (ET == getContext().LongDoubleTy) {
     const llvm::fltSemantics *LDF = &getTarget().getLongDoubleFormat();
     if (LDF == &llvm::APFloat::IEEEquad())
-      return {Memory};
-    if (LDF == &llvm::APFloat::x87DoubleExtended())
-      return {ComplexX87};
-    if (LDF == &llvm::APFloat::IEEEdouble())
-      return {SSE, SSE};
-    llvm_unreachable("unexpected long double representation!");
+      Classes = {Memory};
+    else if (LDF == &llvm::APFloat::x87DoubleExtended())
+      Classes = {ComplexX87};
+    else if (LDF == &llvm::APFloat::IEEEdouble())
+      Classes = {SSE, SSE};
+    else
+      llvm_unreachable("unexpected long double representation!");
+  } else if (ET->isFloat128Type()) {
+    Classes = {Memory};
+  } else {
+    llvm_unreachable("unexpected complex element type");
   }
-  if (ET->isFloat128Type())
-    return {Memory};
-  llvm_unreachable("unexpected complex element type");
+
+  uint64_t EBReal = Offset / 64;
+  uint64_t EBImag = (Offset + ElementSize) / 64;
+  if (Classes.Hi == NoClass && EBReal != EBImag)
+    Classes.Hi = Classes.Lo;
+  return Classes;
 }
 
 X86_64ABIInfo::ClassPair
@@ -1963,6 +1986,13 @@ X86_64ABIInfo::getBitIntTypeClassification(const BitIntType *BT) {
   if (BT->getNumBits() <= 128)
     return {Integer, Integer};
   return {Memory};
+}
+
+X86_64ABIInfo::ClassPair
+X86_64ABIInfo::getClassPairForSpan(uint64_t Offset, uint64_t Size, Class C) {
+  assert(Size && Offset % 64 + Size <= 128 &&
+         "span must touch no more than two eightbytes");
+  return {C, Offset % 64 + Size > 64 ? C : NoClass};
 }
 
 X86_64ABIInfo::VectorTypeInfo
@@ -1980,6 +2010,16 @@ X86_64ABIInfo::getVectorTypeInfo(const VectorType *VT,
       ElementType->isSpecificBuiltinType(BuiltinType::UInt128);
   return {ElementType, VT && VT->getNumElements() == 1, IsFPElement,
           IsInt128Element};
+}
+
+bool X86_64ABIInfo::isArrayPassedInMemory(const ConstantArrayType *AT,
+                                          uint64_t Offset, uint64_t Size,
+                                          bool IsRegCall) const {
+  // AMD64-ABI 3.2.3p2: Rule 1. Objects larger than eight eightbytes or
+  // containing unaligned fields have class MEMORY. Regcall does not impose the
+  // SysV size limit.
+  return (!IsRegCall && Size > 512) ||
+         Offset % getContext().getTypeAlign(AT->getElementType());
 }
 
 bool X86_64ABIInfo::isRecordPassedInMemory(const RecordType *RT,
@@ -2079,12 +2119,6 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
     EightBytes[Offset / 64] = C;
   };
 
-  auto SetAdjacentEightBytes = [&](uint64_t Offset, Class LoClass,
-                                   Class HiClass) {
-    SetEightByte(Offset, LoClass);
-    SetEightByte(llvm::alignDown(Offset, uint64_t(64)) + 64, HiClass);
-  };
-
   auto SetClassPair = [&](uint64_t Offset, ClassPair Classes) {
     if (Classes.Lo == Memory || Classes.Hi == Memory) {
       ClassifyAsMemory();
@@ -2094,12 +2128,6 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
       SetEightByte(Offset, Classes.Lo);
     if (Classes.Hi != NoClass)
       SetEightByte(llvm::alignDown(Offset, uint64_t(64)) + 64, Classes.Hi);
-  };
-
-  auto SetTouchedEightBytes = [&](uint64_t Size, Class C) {
-    for (uint64_t Offset = OffsetBase, End = OffsetBase + Size; Offset < End;
-         Offset = llvm::alignDown(Offset, uint64_t(64)) + 64)
-      SetEightByte(Offset, C);
   };
 
   // End Helpers
@@ -2146,7 +2174,6 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // Enums
   if (const auto *ED = Ty->getAsEnumDecl()) {
-    // Classify the underlying integer type.
     classifyClang24(ED->getIntegerType(), OffsetBase, EightBytes, isNamedArg);
     return;
   }
@@ -2160,7 +2187,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
   // C++ pointer-to-member types have integer-class storage: data member
   // pointers are one ptrdiff_t, and member function pointers are two.
   if (Ty->isMemberPointerType()) {
-    SetTouchedEightBytes(Size, Integer);
+    SetClassPair(OffsetBase, getClassPairForSpan(OffsetBase, Size, Integer));
     return;
   }
 
@@ -2236,17 +2263,7 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // Complex types
   if (const ComplexType *CT = Ty->getAs<ComplexType>()) {
-    SetClassPair(OffsetBase, getComplexTypeClassification(CT));
-
-    // If this complex type crosses an eightbyte boundary then it
-    // should be split.
-    QualType ET = getContext().getCanonicalType(CT->getElementType());
-    uint64_t EB_Real = (OffsetBase) / 64;
-    uint64_t EB_Imag = (OffsetBase + getContext().getTypeSize(ET)) / 64;
-    if (EightBytes[EB_Imag] == NoClass && EB_Real != EB_Imag)
-      SetAdjacentEightBytes(OffsetBase, EightBytes[EB_Real],
-                            EightBytes[EB_Real]);
-
+    SetClassPair(OffsetBase, getComplexTypeClassification(CT, OffsetBase));
     return;
   }
 
@@ -2258,26 +2275,12 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
   // Arrays
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
-    // Arrays are treated like structures.
-
-    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
-    // than eight eightbytes, ..., it has class MEMORY.
-    if (Size > 512) {
+    if (isArrayPassedInMemory(AT, OffsetBase, Size,
+                              /*IsRegCall=*/false)) {
       ClassifyAsMemory();
       return;
     }
 
-    // AMD64-ABI 3.2.3p2: Rule 1. If ..., or it contains unaligned
-    // fields, it has class MEMORY.
-    //
-    // Only need to check alignment of array base.
-    if (OffsetBase % getContext().getTypeAlign(AT->getElementType())) {
-      ClassifyAsMemory();
-      return;
-    }
-
-    // Otherwise implement simplified merge. We could be smarter about
-    // this, but it isn't worth it and would be harder to verify.
     uint64_t EltSize = getContext().getTypeSize(AT->getElementType());
     uint64_t ArraySize = AT->getZExtSize();
 
@@ -2305,23 +2308,19 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
     const RecordDecl *RD = RT->getDecl()->getDefinitionOrSelf();
     const ASTRecordLayout &Layout = getContext().getASTRecordLayout(RD);
 
-    // If this is a C++ record, classify the bases first.
+    // Classify bases followed by fields, merging each component's eightbyte
+    // classes. Bit-fields are handled directly because they may straddle
+    // eightbyte boundaries.
     if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
       for (const auto &I : CXXRD->bases()) {
         assert(!I.isVirtual() && !I.getType()->isDependentType() &&
                "Unexpected base class!");
         const auto *Base = I.getType()->castAsCXXRecordDecl();
 
-        // Classify this field.
-        //
-        // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate exceeds
-        // a single eightbyte, each is classified separately. Each
-        // eightbyte gets initialized to class NO_CLASS.
         SmallVector<Class> BaseEightBytes;
         uint64_t Offset =
             OffsetBase + getContext().toBits(Layout.getBaseClassOffset(Base));
         classifyClang24(I.getType(), Offset % 64, BaseEightBytes, isNamedArg);
-        // If the base is memory the whole record will be passed as memory
         if (BaseEightBytes[0] == Memory) {
           ClassifyAsMemory();
           return;
@@ -2330,7 +2329,6 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
       }
     }
 
-    // Classify the fields one at a time, merging the results.
     unsigned idx = 0;
 
     for (RecordDecl::field_iterator i = RD->field_begin(), e = RD->field_end();
@@ -2345,22 +2343,13 @@ void X86_64ABIInfo::classifyClang24(QualType Ty, uint64_t OffsetBase,
 
       bool IsInMemory =
           Offset % getContext().getTypeAlign(i->getType().getCanonicalType());
-      // Note, skip this test for bit-fields, see below.
+      // Bit-fields may be unaligned and are handled below.
       if (!BitField && IsInMemory) {
         ClassifyAsMemory();
         PostMerge();
         return;
       }
 
-      // Classify this field.
-      //
-      // AMD64-ABI 3.2.3p2: Rule 3. If the size of the aggregate
-      // exceeds a single eightbyte, each is classified
-      // separately. Each eightbyte gets initialized to class
-      // NO_CLASS.
-      // Bit-fields require special handling, they do not force the
-      // structure to be passed in memory even if unaligned, and
-      // therefore they can straddle an eightbyte.
       if (BitField) {
         assert(!i->isZeroLengthBitField());
         uint64_t BitSize = i->getBitWidthValue();
@@ -2454,25 +2443,8 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
   }
 
   if (Ty->isMemberPointerType()) {
-    if (Ty->isMemberFunctionPointerType()) {
-      if (Has64BitPointers) {
-        // If Has64BitPointers, this is an {i64, i64}, so classify both
-        // Lo and Hi now.
-        Lo = Hi = Integer;
-      } else {
-        // Otherwise, with 32-bit pointers, this is an {i32, i32}. If that
-        // straddles an eightbyte boundary, Hi should be classified as well.
-        uint64_t EB_FuncPtr = (OffsetBase) / 64;
-        uint64_t EB_ThisAdj = (OffsetBase + 64 - 1) / 64;
-        if (EB_FuncPtr != EB_ThisAdj) {
-          Lo = Hi = Integer;
-        } else {
-          Current = Integer;
-        }
-      }
-    } else {
-      Current = Integer;
-    }
+    SetClassPair(
+        getClassPairForSpan(OffsetBase, getContext().getTypeSize(Ty), Integer));
     return;
   }
 
@@ -2540,16 +2512,7 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
   }
 
   if (const ComplexType *CT = Ty->getAs<ComplexType>()) {
-    SetClassPair(getComplexTypeClassification(CT));
-
-    // If this complex type crosses an eightbyte boundary then it
-    // should be split.
-    QualType ET = getContext().getCanonicalType(CT->getElementType());
-    uint64_t EB_Real = (OffsetBase) / 64;
-    uint64_t EB_Imag = (OffsetBase + getContext().getTypeSize(ET)) / 64;
-    if (Hi == NoClass && EB_Real != EB_Imag)
-      Hi = Lo;
-
+    SetClassPair(getComplexTypeClassification(CT, OffsetBase));
     return;
   }
 
@@ -2560,21 +2523,8 @@ void X86_64ABIInfo::classifyClang23(QualType Ty, uint64_t OffsetBase,
 
   if (const ConstantArrayType *AT = getContext().getAsConstantArrayType(Ty)) {
     // Arrays are treated like structures.
-
     uint64_t Size = getContext().getTypeSize(Ty);
-
-    // AMD64-ABI 3.2.3p2: Rule 1. If the size of an object is larger
-    // than eight eightbytes, ..., it has class MEMORY.
-    // regcall ABI doesn't have limitation to an object. The only limitation
-    // is the free registers, which will be checked in computeInfo.
-    if (!IsRegCall && Size > 512)
-      return;
-
-    // AMD64-ABI 3.2.3p2: Rule 1. If ..., or it contains unaligned
-    // fields, it has class MEMORY.
-    //
-    // Only need to check alignment of array base.
-    if (OffsetBase % getContext().getTypeAlign(AT->getElementType()))
+    if (isArrayPassedInMemory(AT, OffsetBase, Size, IsRegCall))
       return;
 
     // Otherwise implement simplified merge. We could be smarter about
