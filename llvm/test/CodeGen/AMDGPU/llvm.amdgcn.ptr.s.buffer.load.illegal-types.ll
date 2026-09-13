@@ -1,7 +1,7 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,SDAG
-; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GISEL
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,SDAG
-; RUN: not llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GISEL
+; RUN: not llc -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,SDAG
+; RUN: not llc -global-isel=1 -mtriple=amdgpu9.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GISEL
+; RUN: not llc -mtriple=amdgpu11.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,SDAG
+; RUN: not llc -global-isel=1 -mtriple=amdgpu11.00-amd-amdhsa -filetype=null %s 2>&1 | FileCheck %s --check-prefixes=CHECK,GISEL
 
 ; There is no s_buffer_load for these result types.
 
