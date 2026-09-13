@@ -1,4 +1,3 @@
-// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -6,15 +5,17 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// UNSUPPORTED: no-threads
+// REQUIRES: std-at-least-c++26
 
-export namespace std {
-#  if _LIBCPP_STD_VER >= 23
-  // 2.2.3, class template rcu_obj_base using std::rcu_obj_base;
-  // 2.2.4, class rcu_domain
-  using std::rcu_domain;
-  using std::rcu_default_domain();
-  using std::rcu_barrier;
-  using std::rcu_retire;
-  using std::rcu_synchronize;
-#  endif // _LIBCPP_STD_VER >= 23
-} // namespace std
+// template<class T, class D = default_delete<T>>
+//   class rcu_obj_base
+// T may be an incomplete type. It shall be complete before any member of the resulting specialization of rcu_obj_base is referenced.
+
+#include <rcu>
+#include <type_traits>
+
+class A;
+
+void test(std::rcu_obj_base<A>*) {}
