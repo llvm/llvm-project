@@ -2485,6 +2485,9 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   if (VT == MVT::i1 && Op == ISD::SETCC)
     return false;
 
+  if (VT == MVT::i64 && (Op == ISD::SINT_TO_FP || Op == ISD::UINT_TO_FP))
+    return false;
+
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 

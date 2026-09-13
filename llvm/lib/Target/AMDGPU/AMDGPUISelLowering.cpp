@@ -3674,15 +3674,6 @@ SDValue AMDGPUTargetLowering::lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(CvtOpc, DL, DestVT, Ext);
   }
 
-  // Narrow an i64 that fits in 32 bits.
-  if (SrcVT == MVT::i64 &&
-      (Signed ? DAG.ComputeNumSignBits(Src) > 32
-              : DAG.MaskedValueIsZero(Src, APInt::getHighBitsSet(64, 32)))) {
-    SDLoc DL(Op);
-    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Src);
-    return DAG.getNode(CvtOpc, DL, DestVT, Trunc);
-  }
-
   if (DestVT == MVT::bf16 || DestVT == MVT::f16)
     return LowerINT_TO_FP16(Op, DAG, DestVT);
 
