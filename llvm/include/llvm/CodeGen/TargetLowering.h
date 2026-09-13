@@ -2298,11 +2298,14 @@ public:
   unsigned getMinCmpXchgSizeInBits() const { return MinCmpXchgSizeInBits; }
 
   /// Return true if the target supports an atomic access of \p SizeInBytes
-  /// bytes at the given \p Alignment. The default implementation only allows
-  /// naturally aligned atomics, unless setSupportsUnalignedAtomics(true) was
-  /// called.
-  virtual bool isAtomicAlignmentSupported(Align Alignment,
-                                          uint64_t SizeInBytes) const {
+  /// bytes at the given \p Alignment in \p AddrSpace. \p ElementSizeInBytes is
+  /// the granularity at which the access has to be indivisible; it is smaller
+  /// than \p SizeInBytes only for elementwise atomics. The default
+  /// implementation ignores both and only allows naturally aligned atomics,
+  /// unless setSupportsUnalignedAtomics(true) was called.
+  virtual bool isAtomicAlignmentSupported(Align Alignment, uint64_t SizeInBytes,
+                                          uint64_t ElementSizeInBytes,
+                                          unsigned AddrSpace) const {
     return SupportsUnalignedAtomics || Alignment.value() >= SizeInBytes;
   }
 
