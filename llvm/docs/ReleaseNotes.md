@@ -271,9 +271,10 @@ Makes programs 10x faster by doing Special New Thing.
   stack objects.
 * Fixed a crash
   ([#220959](https://github.com/llvm/llvm-project/issues/220959)) when
-  compiling a `landingpad` whose result type does not consist of an exception
-  pointer and a selector (for example `{}`). Such a landingpad is now rejected
-  with a clean "unsupported" diagnostic instead of an assertion failure.
+  compiling a `landingpad` whose result type is not a struct of an exception
+  pointer and an integer selector (for example `{}`). Such a landingpad is now
+  rejected with a clean "unsupported" diagnostic instead of an assertion
+  failure.
 
 ### Changes to the Metadata Info
 

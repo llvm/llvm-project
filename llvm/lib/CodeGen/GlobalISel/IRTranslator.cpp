@@ -3951,9 +3951,7 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   if (LP.getType()->isTokenTy())
     return true;
 
-  // Only the two-valued (exception pointer, selector) form can be translated.
-  auto *LPTy = dyn_cast<StructType>(LP.getType());
-  if (!LPTy || LPTy->getNumElements() != 2)
+  if (!isExceptionPointerAndSelectorType(LP.getType()))
     return false;
 
   // Add a label to mark the beginning of the landing pad.  Deletion of the
@@ -3972,8 +3970,9 @@ bool IRTranslatorImpl::translateLandingPad(const User &U,
   MIRBuilder.buildUndef(Undef);
 
   SmallVector<LLT, 2> Tys;
-  for (Type *Ty : LPTy->elements())
+  for (Type *Ty : cast<StructType>(LP.getType())->elements())
     Tys.push_back(getLLTForType(*Ty, *DL));
+  assert(Tys.size() == 2 && "Only two-valued landingpads are supported");
 
   // Mark exception register as live in.
   Register ExceptionReg = TLI->getExceptionPointerRegister(

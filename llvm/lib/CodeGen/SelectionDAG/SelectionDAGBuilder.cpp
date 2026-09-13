@@ -1821,6 +1821,8 @@ void SelectionDAGBuilder::setValueToPoison(const Value *V, const SDLoc &dl) {
   SmallVector<EVT, 4> ValueVTs;
   ComputeValueVTs(DAG.getTargetLoweringInfo(), DAG.getDataLayout(),
                   V->getType(), ValueVTs);
+  if (ValueVTs.empty())
+    return;
   setValue(V, DAG.getErrorMergeValues(ValueVTs, SDValue(), dl));
 }
 
@@ -3652,23 +3654,22 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
   if (LP.getType()->isTokenTy())
     return;
 
-  SmallVector<EVT, 2> ValueVTs;
+  // LangRef leaves the result type target-specific, so diagnose types this
+  // lowering cannot represent instead of asserting.
   SDLoc dl = getCurSDLoc();
-  ComputeValueVTs(TLI, DAG.getDataLayout(), LP.getType(), ValueVTs);
-
-  // Only the two-valued (exception pointer, selector) form can be lowered.
-  // LangRef leaves the result type target-specific, so diagnose other shapes
-  // instead of asserting.
-  if (ValueVTs.size() != 2) {
+  if (!isExceptionPointerAndSelectorType(LP.getType())) {
     DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
         *LP.getFunction(),
-        "landingpad result type must consist of exactly two values, the "
-        "exception pointer and the selector",
+        "landingpad result type must be a struct of an exception pointer and "
+        "an integer selector",
         dl.getDebugLoc()));
-    if (!ValueVTs.empty())
-      setValueToPoison(&LP, dl);
+    setValueToPoison(&LP, dl);
     return;
   }
+
+  SmallVector<EVT, 2> ValueVTs;
+  ComputeValueVTs(TLI, DAG.getDataLayout(), LP.getType(), ValueVTs);
+  assert(ValueVTs.size() == 2 && "Only two-valued landingpads are supported");
 
   // Get the two live-in registers as SDValues. The physregs have already been
   // copied into virtual registers.
