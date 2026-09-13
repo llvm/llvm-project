@@ -1135,8 +1135,32 @@ emitCombinerOrInitializer(CodeGenModule &CGM, QualType Ty,
                          Out->getType().getQualifiers(),
                          /*IsInitializer=*/true);
   }
-  if (CombinerInitializer)
-    CGF.EmitIgnoredExpr(CombinerInitializer);
+  if (CombinerInitializer) {
+    // For non-trivial types with user initializers wrapped in StmtExpr,
+    // manually emit each statement to ensure constructor targets the right
+    // address.
+    if (!IsCombiner && isa<StmtExpr>(CombinerInitializer)) {
+      const auto *SE = cast<StmtExpr>(CombinerInitializer);
+      const CompoundStmt *CS = SE->getSubStmt();
+      AggValueSlot Slot = AggValueSlot::forAddr(
+          CGF.GetAddrOfLocalVar(Out), Ty.getQualifiers(),
+          AggValueSlot::IsDestructed, AggValueSlot::DoesNotNeedGCBarriers,
+          AggValueSlot::IsNotAliased, AggValueSlot::DoesNotOverlap);
+
+      // Emit each statement individually, passing slot to constructor.
+      for (const Stmt *S : CS->body()) {
+        const Stmt *Inner = S;
+        if (const auto *EWC = dyn_cast<ExprWithCleanups>(S))
+          Inner = EWC->getSubExpr();
+        if (const auto *CtorExpr = dyn_cast<CXXConstructExpr>(Inner))
+          CGF.EmitCXXConstructExpr(CtorExpr, Slot);
+        else
+          CGF.EmitStmt(S);
+      }
+    } else {
+      CGF.EmitIgnoredExpr(CombinerInitializer);
+    }
+  }
   Scope.ForceCleanup();
   CGF.FinishFunction();
   return Fn;
