@@ -18,6 +18,7 @@
 
 #include "llvm/Transforms/IPO/ConstantMerge.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -29,6 +30,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO.h"
 #include <algorithm>
@@ -39,7 +41,14 @@ using namespace llvm;
 
 #define DEBUG_TYPE "constmerge"
 
+static cl::opt<unsigned> MaxPoisonCandidates(
+    "constmerge-max-poison-candidates", cl::Hidden, cl::init(1024),
+    cl::desc("Largest set of constants of one type that a constant holding "
+             "poison is compared against. A larger set is left alone"));
+
 STATISTIC(NumIdenticalMerged, "Number of identical global constants merged");
+STATISTIC(NumPoisonMerged,
+          "Number of global constants merged that differed only in poison");
 
 /// Find values that are marked as llvm.used.
 static void FindUsedValues(GlobalVariable *LLVMUsed,
@@ -133,6 +142,119 @@ static void replace(Module &M, GlobalVariable *Old, GlobalVariable *New) {
   assert(Old->hasLocalLinkage() &&
          "Refusing to delete an externally visible global variable.");
   Old->eraseFromParent();
+}
+
+/// Unify two array constants that differ only where one of them holds poison.
+///
+/// Poison may be replaced by any value, so a table holding poison at an index
+/// and a table holding a defined value there describe the same thing: taking
+/// the defined value refines both. Returns the unified constant, or null if the
+/// two disagree anywhere they are both defined.
+///
+/// Copies of an inlined switch produce exactly this shape when each copy tests
+/// a different case ahead of its lookup table: every copy's table is the same
+/// but for the slots standing in for the cases that copy tested, which nothing
+/// loads and which are therefore poison.
+static Constant *unifyPoison(Constant *A, Constant *B) {
+  if (A == B)
+    return A;
+  auto *ATy = dyn_cast<ArrayType>(A->getType());
+  if (!ATy || A->getType() != B->getType())
+    return nullptr;
+
+  uint64_t N = ATy->getNumElements();
+  SmallVector<Constant *, 64> Unified(N);
+  for (uint64_t I = 0; I != N; ++I) {
+    Constant *EA = A->getAggregateElement(I);
+    Constant *EB = B->getAggregateElement(I);
+    if (!EA || !EB)
+      return nullptr;
+    if (EA == EB) {
+      Unified[I] = EA;
+      continue;
+    }
+    if (isa<PoisonValue>(EA)) {
+      Unified[I] = EB;
+      continue;
+    }
+    if (isa<PoisonValue>(EB)) {
+      Unified[I] = EA;
+      continue;
+    }
+    return nullptr;
+  }
+  return ConstantArray::get(ATy, Unified);
+}
+
+/// Merge globals whose initializers differ only in poison elements.
+///
+/// Kept apart from the identical-initializer merging above because it cannot
+/// use a hash map. Two constants that unify need not be equal, and no hash of
+/// one of them can find the other, since they disagree exactly where a hash
+/// would read. Only a constant that holds poison has anything to gain, so those
+/// drive the search, and each is compared against the constants of its type,
+/// bounded by MaxPoisonCandidates. Giving that bound up costs an optimisation,
+/// never correctness.
+static size_t
+mergePoisonCompatible(Module &M,
+                      const SmallPtrSetImpl<const GlobalValue *> &UsedGlobals) {
+  // Candidates, grouped by type so only plausible pairs are compared.
+  MapVector<Type *, SmallVector<GlobalVariable *, 8>> ByType;
+  SmallVector<GlobalVariable *, 8> HoldsPoison;
+  for (GlobalVariable &GV : M.globals()) {
+    // The same conditions the merging above puts on a constant before it may
+    // stand in for another. A global it refuses to make canonical must not
+    // become one here either, since replace() assumes it could have.
+    if (isUnmergeableGlobal(&GV, UsedGlobals) || !GV.hasLocalLinkage() ||
+        GV.isWeakForLinker() || GV.hasMetadataOtherThanDebugLocAndGuid())
+      continue;
+    // Only ConstantArray can hold poison. An array of defined integers is a
+    // ConstantDataArray, which nothing here can unify with anyway.
+    auto *Init = dyn_cast<ConstantArray>(GV.getInitializer());
+    if (!Init)
+      continue;
+    ByType[GV.getValueType()].push_back(&GV);
+    if (any_of(Init->operands(),
+               [](const Use &U) { return isa<PoisonValue>(U.get()); }))
+      HoldsPoison.push_back(&GV);
+  }
+
+  size_t Merged = 0;
+  for (GlobalVariable *GV : HoldsPoison) {
+    SmallVectorImpl<GlobalVariable *> &Candidates = ByType[GV->getValueType()];
+    if (Candidates.size() > MaxPoisonCandidates)
+      continue;
+
+    // Merge into the constant that needs the fewest elements filled in, so that
+    // the outcome does not depend on the order the globals happen to appear in.
+    // Ties go to the earlier one, which keeps it deterministic.
+    GlobalVariable *Into = nullptr;
+    Constant *Unified = nullptr;
+    unsigned FewestPoison = 0;
+    for (GlobalVariable *C : Candidates) {
+      if (C == GV || C->getParent() != &M)
+        continue;
+      Constant *U = unifyPoison(C->getInitializer(), GV->getInitializer());
+      if (!U)
+        continue;
+      unsigned Poison =
+          count_if(cast<ConstantArray>(C->getInitializer())->operands(),
+                   [](const Use &Op) { return isa<PoisonValue>(Op.get()); });
+      if (Into && Poison >= FewestPoison)
+        continue;
+      Into = C;
+      Unified = U;
+      FewestPoison = Poison;
+    }
+    if (!Into || makeMergeable(GV, Into) == CanMerge::No)
+      continue;
+
+    Into->setInitializer(Unified);
+    replace(M, GV, Into);
+    ++Merged;
+    ++NumPoisonMerged;
+  }
+  return Merged;
 }
 
 static bool mergeConstants(Module &M) {
@@ -243,6 +365,8 @@ static bool mergeConstants(Module &M) {
     SameContentReplacements.clear();
     CMap.clear();
   }
+
+  ChangesMade += mergePoisonCompatible(M, UsedGlobals);
 
   return ChangesMade;
 }
