@@ -1492,7 +1492,10 @@ enum DeclCode {
   /// An ImportDecl recording a module import.
   DECL_IMPORT,
 
-  /// An OMPThreadPrivateDecl record.
+  /// A PrivateModuleFragmentDecl record.
+  DECL_PRIVATE_MODULE_FRAGMENT,
+
+  /// An OMPThreadPrivateDecl Record.
   DECL_OMP_THREADPRIVATE,
 
   /// An OMPRequiresDecl record.

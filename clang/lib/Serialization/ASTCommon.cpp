@@ -446,6 +446,7 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::OutlinedFunction:
   case Decl::Captured:
   case Decl::Import:
+  case Decl::PrivateModuleFragment:
   case Decl::OMPThreadPrivate:
   case Decl::OMPGroupPrivate:
   case Decl::OMPAllocate:

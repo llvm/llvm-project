@@ -565,8 +565,10 @@ Sema::ActOnPrivateModuleFragmentDecl(SourceLocation ModuleLoc,
   TU->setModuleOwnershipKind(Decl::ModuleOwnershipKind::ModulePrivate);
   TU->setLocalOwningModule(PrivateModuleFragment);
 
-  // FIXME: Consider creating an explicit representation of this declaration.
-  return nullptr;
+  auto *PMF = PrivateModuleFragmentDecl::Create(
+      Context, CurContext, ModuleLoc, PrivateLoc, PrivateModuleFragment);
+  CurContext->addDecl(PMF);
+  return ConvertDeclToDeclGroup(PMF);
 }
 
 DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,

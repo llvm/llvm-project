@@ -140,6 +140,7 @@ namespace clang {
     void VisitFileScopeAsmDecl(FileScopeAsmDecl *D);
     void VisitTopLevelStmtDecl(TopLevelStmtDecl *D);
     void VisitImportDecl(ImportDecl *D);
+    void VisitPrivateModuleFragmentDecl(PrivateModuleFragmentDecl *D);
     void VisitAccessSpecDecl(AccessSpecDecl *D);
     void VisitFriendDecl(FriendDecl *D);
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
@@ -1828,6 +1829,13 @@ void ASTDeclWriter::VisitAccessSpecDecl(AccessSpecDecl *D) {
   VisitDecl(D);
   Record.AddSourceLocation(D->getColonLoc());
   Code = serialization::DECL_ACCESS_SPEC;
+}
+void ASTDeclWriter::VisitPrivateModuleFragmentDecl(
+    PrivateModuleFragmentDecl *D) {
+  VisitDecl(D);
+  Record.push_back(Writer.getSubmoduleID(D->getFragment()));
+  Record.AddSourceLocation(D->getPrivateLoc());
+  Code = serialization::DECL_PRIVATE_MODULE_FRAGMENT;
 }
 
 void ASTDeclWriter::VisitFriendDecl(FriendDecl *D) {
