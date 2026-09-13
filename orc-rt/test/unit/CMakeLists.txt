@@ -131,5 +131,6 @@ set_target_properties(RTTICrossDylibTestLib PROPERTIES
   PREFIX ""
   CXX_VISIBILITY_PRESET hidden
   VISIBILITY_INLINES_HIDDEN ON)
+target_compile_options(RTTICrossDylibTestLib PRIVATE ${ORC_RT_COMPILE_FLAGS})
 target_link_libraries(RTTICrossDylibTestLib PRIVATE orc-rt-bedrock)
 target_link_libraries(SupportTests PRIVATE RTTICrossDylibTestLib)
