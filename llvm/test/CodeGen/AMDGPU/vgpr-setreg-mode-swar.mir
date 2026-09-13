@@ -517,3 +517,125 @@ body:             |
     S_SETREG_IMM32_B32 23228, 30785, implicit-def $mode, implicit $mode
     S_ENDPGM 0
 ...
+
+---
+# S_SETREG_IMM32_B32_mode clobbers VGPR MSBs the same way as S_SETREG_IMM32_B32.
+
+# ASM-LABEL: {{^}}setreg_imm32_mode_variant:
+# ASM: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), 0x5005
+
+# DIS-LABEL: <setreg_imm32_mode_variant>:
+# DIS: s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), 0x5005
+# DIS-NEXT: v_mov_b32_e32 v2 /*v258*/, v3 /*v259*/
+
+name:            setreg_imm32_mode_variant
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: setreg_imm32_mode_variant
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_IMM32_B32_mode 20485, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: $vgpr258 = V_MOV_B32_e32 $vgpr259, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
+    S_SETREG_IMM32_B32_mode 5, 6145, implicit-def $mode, implicit $mode
+    $vgpr258 = V_MOV_B32_e32 $vgpr259, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+# Register variants write an SGPR to MODE, so the VGPR MSBs are unknown at
+# compile time and must always be restored.
+
+# ASM-LABEL: {{^}}setreg_sgpr:
+# ASM: s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), s0
+# ASM-NEXT: s_nop 0
+# ASM-NEXT: s_set_vgpr_msb 0x4141
+
+# DIS-LABEL: <setreg_sgpr>:
+# DIS: s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), s0
+# DIS-NEXT: s_nop 0
+# DIS-NEXT: s_set_vgpr_msb 0x4141
+# DIS-NEXT: v_mov_b32_e32 v2 /*v258*/, v3 /*v259*/
+
+name:            setreg_sgpr
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: setreg_sgpr
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_B32 $sgpr0, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: S_SET_VGPR_MSB 16705, implicit-def $mode
+    ; CHECK-NEXT: $vgpr258 = V_MOV_B32_e32 $vgpr259, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
+    S_SETREG_B32 $sgpr0, 6145, implicit-def $mode, implicit $mode
+    $vgpr258 = V_MOV_B32_e32 $vgpr259, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+# ASM-LABEL: {{^}}setreg_sgpr_mode_variant:
+# ASM: s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), s0
+# ASM-NEXT: s_nop 0
+# ASM-NEXT: s_set_vgpr_msb 0x4141
+
+# DIS-LABEL: <setreg_sgpr_mode_variant>:
+# DIS: s_setreg_b32 hwreg(HW_REG_WAVE_MODE, 0, 4), s0
+# DIS-NEXT: s_nop 0
+# DIS-NEXT: s_set_vgpr_msb 0x4141
+# DIS-NEXT: v_mov_b32_e32 v2 /*v258*/, v3 /*v259*/
+
+name:            setreg_sgpr_mode_variant
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: setreg_sgpr_mode_variant
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_B32_mode $sgpr0, 6145, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_NOP 0
+    ; CHECK-NEXT: S_SET_VGPR_MSB 16705, implicit-def $mode
+    ; CHECK-NEXT: $vgpr258 = V_MOV_B32_e32 $vgpr259, implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=4, offset=0, hwreg=MODE: simm16 = 0x1801 = 6145
+    S_SETREG_B32_mode $sgpr0, 6145, implicit-def $mode, implicit $mode
+    $vgpr258 = V_MOV_B32_e32 $vgpr259, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+# A non-MODE register setreg must be left alone.
+
+# ASM-LABEL: {{^}}setreg_sgpr_non_mode:
+# ASM: s_setreg_b32 hwreg(HW_REG_WAVE_STATUS, 0, 4), s0
+# ASM-NOT: s_set_vgpr_msb
+# ASM: s_endpgm
+
+# DIS-LABEL: <setreg_sgpr_non_mode>:
+# DIS: s_setreg_b32 hwreg(HW_REG_WAVE_STATUS, 0, 4), s0
+# DIS-NEXT: s_endpgm
+
+name:            setreg_sgpr_non_mode
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: setreg_sgpr_non_mode
+    ; CHECK: S_SET_VGPR_MSB 65, implicit-def $mode
+    ; CHECK-NEXT: $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; CHECK-NEXT: S_SETREG_B32 $sgpr0, 6146, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_ENDPGM 0
+    $vgpr256 = V_MOV_B32_e32 $vgpr257, implicit $exec
+    ; size=4, offset=0, hwreg=STATUS: simm16 = 0x1802 = 6146
+    S_SETREG_B32 $sgpr0, 6146, implicit-def $mode, implicit $mode
+    S_ENDPGM 0
+...
