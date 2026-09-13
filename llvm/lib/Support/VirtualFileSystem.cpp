@@ -31,6 +31,8 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/FormatAdapters.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -708,7 +710,7 @@ public:
   llvm::MemoryBuffer *getBuffer() const { return Buffer.get(); }
 
   std::string toString(unsigned Indent) const override {
-    return (std::string(Indent, ' ') + Stat.getName() + "\n").str();
+    return formatv("{0}{1}\n", fmt_repeat(' ', Indent), Stat.getName()).str();
   }
 
   static bool classof(const InMemoryNode *N) {
@@ -731,8 +733,9 @@ public:
   }
 
   std::string toString(unsigned Indent) const override {
-    return std::string(Indent, ' ') + "HardLink to -> " +
-           ResolvedFile.toString(0);
+    return formatv("{0}HardLink to -> {1}", fmt_repeat(' ', Indent),
+                   ResolvedFile.toString(0))
+        .str();
   }
 
   static bool classof(const InMemoryNode *N) {
@@ -750,7 +753,9 @@ public:
         Stat(Stat) {}
 
   std::string toString(unsigned Indent) const override {
-    return std::string(Indent, ' ') + "SymbolicLink to -> " + TargetPath;
+    return formatv("{0}SymbolicLink to -> {1}", fmt_repeat(' ', Indent),
+                   TargetPath)
+        .str();
   }
 
   Status getStatus(const Twine &RequestedName) const override {
@@ -830,7 +835,7 @@ public:
 
   std::string toString(unsigned Indent) const override {
     std::string Result =
-        (std::string(Indent, ' ') + Stat.getName() + "\n").str();
+        formatv("{0}{1}\n", fmt_repeat(' ', Indent), Stat.getName()).str();
     for (const auto &Entry : Entries)
       Result += Entry.second->toString(Indent + 2);
     return Result;
