@@ -1100,13 +1100,16 @@ static bool setShiftFlags(BinaryOperator &I, const SimplifyQuery &Q) {
       return false;
 
     // shr (shl X, Y), Y
-    if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1))))) {
+    // Y must not be undef, as its uses could observe different values.
+    if (match(I.getOperand(0), m_Shl(m_Value(), m_Specific(I.getOperand(1)))) &&
+        isGuaranteedNotToBeUndef(I.getOperand(1), Q.AC, Q.CxtI, Q.DT)) {
       I.setIsExact();
       return true;
     }
     // Infer 'exact' flag if shift amount is cttz(x) on the same operand.
     if (match(I.getOperand(1),
-              m_Cttz(m_Specific(I.getOperand(0)), m_Value()))) {
+              m_Cttz(m_Specific(I.getOperand(0)), m_Value())) &&
+        isGuaranteedNotToBeUndef(I.getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
       I.setIsExact();
       return true;
     }
