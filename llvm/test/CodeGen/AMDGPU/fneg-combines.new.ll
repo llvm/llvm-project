@@ -4612,6 +4612,49 @@ bb:
   ret float %i1
 }
 
+define { float, float } @v_fneg_add_multi_use_add_f32_fneg_nsz(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_add_multi_use_add_f32_fneg_nsz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v1, v0, v1
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
+; GCN-NEXT:    v_mul_f32_e32 v1, 4.0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %add = fadd float %a, %b
+  %fneg = fneg nsz float %add
+  %use1 = fmul float %add, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
+define float @v_fneg_add_f32_fneg_nsz(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_add_f32_fneg_nsz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_sub_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %add = fadd float %a, %b
+  %fneg = fneg nsz float %add
+  ret float %fneg
+}
+
+define { float, float } @v_fneg_fma_multi_use_fma_f32_fneg_nsz(float %a, float %b, float %c) #0 {
+; GCN-LABEL: v_fneg_fma_multi_use_fma_f32_fneg_nsz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_fma_f32 v1, v0, v1, v2
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
+; GCN-NEXT:    v_mul_f32_e32 v1, 4.0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fma = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %fneg = fneg nsz float %fma
+  %use1 = fmul float %fma, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare float @llvm.fma.f32(float, float, float) #1
 declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)

@@ -20,9 +20,9 @@ executable("llc") {
     "//llvm/lib/Transforms/Vectorize",
   ]
   sources = [
-    "NewPMDriver.cpp",
+    "lib/NewPMDriver.cpp",
     "llc.cpp",
-    "llcdriver.cpp",
+    "lib/llcdriver.cpp",
   ]
 
   # Support plugins.

@@ -589,9 +589,6 @@ features cannot lower the translation-unit ABI level;
 - Fixed a crash when module directive export module foo not following a
   semicolon and there are no rest pp-tokens in current module file. (#GH187771)
 
-- Fixed concept evaluation bugs where some declarations were not added to
-  the current instantiation scope. (#GH198052), (#GH209632)
-
 - Fixed a crash when a lambda parameter pack was given a default argument that
   is a pack expansion referencing an enclosing function's parameter pack (e.g.
   `[](Types... = args...) {}`). Clang now diagnoses the illegal default
@@ -758,6 +755,11 @@ features cannot lower the translation-unit ABI level;
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
+
+- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+  stack pointer as it was on entry to the function, as the frame value the CRT
+  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  already did on AArch64.
 
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
