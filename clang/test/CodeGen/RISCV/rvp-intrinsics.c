@@ -11574,3 +11574,203 @@ int32x2_t test_pjoin2_i32x2(int32_t e0, int32_t e1) {
 uint32x2_t test_pjoin2_u32x2(uint32_t e0, uint32_t e1) {
   return __riscv_pjoin2_u32x2(e0, e1);
 }
+
+/* Packed Load (32-bit) */
+// RV32-LABEL: define dso_local i32 @test_pld_i8x4(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pld_i8x4(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pld_i8x4(int8_t *p) {
+  return __riscv_pld_i8x4(p);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pld_u8x4(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pld_u8x4(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint8x4_t test_pld_u8x4(uint8_t *p) {
+  return __riscv_pld_u8x4(p);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pld_i16x2(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pld_i16x2(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int16x2_t test_pld_i16x2(int16_t *p) {
+  return __riscv_pld_i16x2(p);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pld_u16x2(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pld_u16x2(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint16x2_t test_pld_u16x2(uint16_t *p) {
+  return __riscv_pld_u16x2(p);
+}
+
+/* Packed Load (64-bit) */
+// RV32-LABEL: define dso_local i64 @test_pld_i8x8(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_i8x8(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int8x8_t test_pld_i8x8(int8_t *p) {
+  return __riscv_pld_i8x8(p);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pld_u8x8(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_u8x8(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint8x8_t test_pld_u8x8(uint8_t *p) {
+  return __riscv_pld_u8x8(p);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pld_i16x4(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_i16x4(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int16x4_t test_pld_i16x4(int16_t *p) {
+  return __riscv_pld_i16x4(p);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pld_u16x4(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_u16x4(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint16x4_t test_pld_u16x4(uint16_t *p) {
+  return __riscv_pld_u16x4(p);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pld_i32x2(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_i32x2(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int32x2_t test_pld_i32x2(int32_t *p) {
+  return __riscv_pld_i32x2(p);
+}
+
+// RV32-LABEL: define dso_local i64 @test_pld_u32x2(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_u32x2(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint32x2_t test_pld_u32x2(uint32_t *p) {
+  return __riscv_pld_u32x2(p);
+}
+
+/* Packed Load with provable alignment (cf. the P-ext spec's note on
+ * __builtin_assume_aligned) */
+// RV32-LABEL: define dso_local i32 @test_pld_i8x4_aligned(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 4) ]
+// RV32-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i32 @test_pld_i8x4_aligned(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 4) ]
+// RV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[P]], align 1
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+int8x4_t test_pld_i8x4_aligned(int8_t *p) {
+  return __riscv_pld_i8x4(__builtin_assume_aligned(p, 4));
+}
+
+// RV32-LABEL: define dso_local i64 @test_pld_i32x2_aligned(
+// RV32-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i32 8) ]
+// RV32-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV32-NEXT:    ret i64 [[TMP0]]
+//
+// RV64-LABEL: define dso_local i64 @test_pld_i32x2_aligned(
+// RV64-SAME: ptr noundef [[P:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[P]], i64 8) ]
+// RV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[P]], align 1
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+int32x2_t test_pld_i32x2_aligned(int32_t *p) {
+  return __riscv_pld_i32x2(__builtin_assume_aligned(p, 8));
+}
