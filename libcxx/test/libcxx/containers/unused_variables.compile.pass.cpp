@@ -53,7 +53,6 @@ void container_iterators() {
   std::unordered_set<int>::iterator j;
   std::unordered_multiset<int>::iterator k;
 #if TEST_STD_VER <= 11
-  std::string::iterator l;
   std::vector<int>::iterator m;
 #endif
 #if TEST_STD_VER <= 17
