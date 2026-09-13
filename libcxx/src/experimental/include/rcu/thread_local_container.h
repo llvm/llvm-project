@@ -11,7 +11,7 @@
 #define _LIBCPP___RCU_THREAD_LOCAL_CONTAINER_H
 
 #include <__config>
-#include <__functional/function.h>
+#include <__functional/function_ref.h>
 #include <__rcu/rcu_domain.h>
 
 #include <mutex>
@@ -26,20 +26,26 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
-// Tp must be thread-safe itself between 
+// Tp must be thread-safe itself between
 // - the operation that is done by the object from get_current_thread_instance calls
 // - and the operation that for_each
 // since there is no mutex guarding between them
 template <class Tp>
 class thread_local_container {
+  static void empty_callback(Tp&) noexcept {}
+
   struct thread_entry {
     Tp instance_;
+    function_ref<void(Tp&) noexcept> pre_dtor_callback_;
 
-    thread_entry() : instance_() { register_instance(instance_); }
+    thread_entry( function_ref<void(Tp&) noexcept> cb) : instance_(), pre_dtor_callback_(cb) { register_instance(instance_); }
     thread_entry(const thread_entry&) = delete;
     thread_entry(thread_entry&&)      = delete;
 
-    ~thread_entry() { deregister_instance(instance_); }
+    ~thread_entry() {
+      deregister_instance(instance_);
+      pre_dtor_callback_(instance_);
+    }
   };
 
   inline static thread_local optional<thread_entry> thread_entry_{};
@@ -65,9 +71,9 @@ public:
   thread_local_container()                         = delete;
   thread_local_container(thread_local_container&&) = delete;
 
-  static Tp& get_current_thread_instance() {
+  static Tp& get_current_thread_instance(function_ref<void(Tp&) noexcept> cb = cw<&empty_callback>) {
     if (!thread_entry_.has_value()) {
-      auto& entry = thread_entry_.emplace();
+      auto& entry = thread_entry_.emplace(cb);
       return entry.instance_;
     }
     return thread_entry_->instance_;
