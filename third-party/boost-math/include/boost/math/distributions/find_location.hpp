@@ -10,6 +10,7 @@
 
 #include <boost/math/distributions/fwd.hpp> // for all distribution signatures.
 #include <boost/math/distributions/complement.hpp>
+#include <boost/math/distributions/detail/common_error_handling.hpp>
 #include <boost/math/policies/policy.hpp>
 #include <boost/math/tools/traits.hpp>
 #include <boost/math/special_functions/fpclassify.hpp>
@@ -51,10 +52,10 @@ namespace boost
        return policies::raise_domain_error<typename Dist::value_type>(
            function, "z parameter was %1%, but must be finite!", z, pol);
       }
-      if(!(boost::math::isfinite)(scale))
+      typename Dist::value_type result;
+      if(!(boost::math::detail::check_scale)(function, scale, &result, pol))
       {
-       return policies::raise_domain_error<typename Dist::value_type>(
-           function, "scale parameter was %1%, but must be finite!", scale, pol);
+       return result;
       }
         
       //cout << "z " << z << ", p " << p << ",  quantile(Dist(), p) "
@@ -94,11 +95,11 @@ namespace boost
        return policies::raise_domain_error<typename Dist::value_type>(
            function, "z parameter was %1%, but must be finite!", z, policies::policy<>());
       }
+      typename Dist::value_type result;
       typename Dist::value_type scale = c.param2;
-      if(!(boost::math::isfinite)(scale))
+      if(!(boost::math::detail::check_scale)(function, scale, &result, policies::policy<>()))
       {
-       return policies::raise_domain_error<typename Dist::value_type>(
-           function, "scale parameter was %1%, but must be finite!", scale, policies::policy<>());
+       return result;
       }
        // cout << "z " << c.dist << ", quantile (Dist(), " << c.param1 << ") * scale " << c.param2 << endl;
        return z - quantile(Dist(), p) * scale;
@@ -123,11 +124,11 @@ namespace boost
        return policies::raise_domain_error<typename Dist::value_type>(
            function, "z parameter was %1%, but must be finite!", z, c.param3);
       }
+      typename Dist::value_type result;
       typename Dist::value_type scale = c.param2;
-      if(!(boost::math::isfinite)(scale))
+      if(!(boost::math::detail::check_scale)(function, scale, &result, c.param3))
       {
-       return policies::raise_domain_error<typename Dist::value_type>(
-           function, "scale parameter was %1%, but must be finite!", scale, c.param3);
+       return result;
       }
        // cout << "z " << c.dist << ", quantile (Dist(), " << c.param1 << ") * scale " << c.param2 << endl;
        return z - quantile(Dist(), p) * scale;

@@ -14,7 +14,6 @@ constant boost_dependencies :
     /boost/lexical_cast//boost_lexical_cast
     /boost/predef//boost_predef
     /boost/random//boost_random
-    /boost/static_assert//boost_static_assert
     /boost/throw_exception//boost_throw_exception ;
 
 project /boost/math

@@ -12,6 +12,7 @@
 #include <iostream>
 #include <sstream>
 #include <limits>
+#include <cstdint>
 
 namespace boost {
 namespace math {
@@ -154,7 +155,7 @@ public:
         return x_.size();
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return 3*x_.size()*sizeof(Real) + 3*sizeof(x_);
     }
@@ -278,7 +279,7 @@ public:
         return y_.size();
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return 2*y_.size()*sizeof(Real) + 2*sizeof(y_) + 2*sizeof(Real);
     }
@@ -413,7 +414,7 @@ public:
         return dat_.size();
     }
 
-    int64_t bytes() const
+    std::int64_t bytes() const
     {
         return dat_.size()*dat_[0].size()*sizeof(Real) + sizeof(dat_) + 2*sizeof(Real);
     }

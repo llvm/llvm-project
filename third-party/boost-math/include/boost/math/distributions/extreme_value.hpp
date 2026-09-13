@@ -173,8 +173,6 @@ BOOST_MATH_GPU_ENABLED inline RealType cdf(const extreme_value_distribution<Real
       return result;
    if(0 == detail::check_finite(function, a, &result, Policy()))
       return result;
-   if(0 == detail::check_finite(function, a, &result, Policy()))
-      return result;
    if(0 == detail::check_x("boost::math::cdf(const extreme_value_distribution<%1%>&, %1%)", x, &result, Policy()))
       return result;
 
@@ -196,8 +194,6 @@ BOOST_MATH_GPU_ENABLED inline RealType logcdf(const extreme_value_distribution<R
    RealType b = dist.scale();
    RealType result = 0;
    if(0 == detail::verify_scale_b(function, b, &result, Policy()))
-      return result;
-   if(0 == detail::check_finite(function, a, &result, Policy()))
       return result;
    if(0 == detail::check_finite(function, a, &result, Policy()))
       return result;
