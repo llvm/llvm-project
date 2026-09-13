@@ -77,6 +77,10 @@ using namespace __memprof;
     MEMPROF_MEMSET_IMPL(block, c, size);                                       \
   } while (false)
 
+// Needed by the default fortified _chk implementations, which cannot use REAL()
+// until initialization has completed.
+#define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!memprof_inited)
+
 #include "sanitizer_common/sanitizer_common_interceptors_memintrinsics.inc"
 
 void *__memprof_memcpy(void *to, const void *from, uptr size) {
