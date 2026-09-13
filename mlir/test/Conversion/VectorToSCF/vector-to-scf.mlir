@@ -923,3 +923,75 @@ func.func private @transfer_write_no_alloc_scope()
 %cst = arith.constant dense<0.0> : vector<2x3xf32>
 %m = memref.alloc() : memref<2x3xf32>
 vector.transfer_write %cst, %m[%c0, %c0] : vector<2x3xf32>, memref<2x3xf32>
+
+// -----
+
+// Negative tests: a transfer op inside `vector.mask` is left alone, since the
+// mask region can only hold that one op. The mask has to be lowered first.
+
+// CHECK-LABEL: @masked_transfer_read
+// CHECK:       vector.mask %{{.*}} { vector.transfer_read
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @masked_transfer_read
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_read
+// FULL-UNROLL-NOT:   vector.extract
+// TARGET-RANK-ZERO-LABEL: @masked_transfer_read
+// TARGET-RANK-ZERO:       vector.mask %{{.*}} { vector.transfer_read
+// TARGET-RANK-ZERO-NOT:   vector.extract
+func.func @masked_transfer_read(%mem: memref<?x?xf32>, %mask: vector<4x8xi1>) -> vector<4x8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = vector.mask %mask { vector.transfer_read %mem[%c0, %c0], %pad : memref<?x?xf32>, vector<4x8xf32> } : vector<4x8xi1> -> vector<4x8xf32>
+  return %0 : vector<4x8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @masked_transfer_write
+// CHECK:       vector.mask %{{.*}} { vector.transfer_write
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @masked_transfer_write
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_write
+// FULL-UNROLL-NOT:   vector.extract
+// TARGET-RANK-ZERO-LABEL: @masked_transfer_write
+// TARGET-RANK-ZERO:       vector.mask %{{.*}} { vector.transfer_write
+// TARGET-RANK-ZERO-NOT:   vector.extract
+func.func @masked_transfer_write(%vec: vector<4x8xf32>, %mem: memref<?x?xf32>, %mask: vector<4x8xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask { vector.transfer_write %vec, %mem[%c0, %c0] : vector<4x8xf32>, memref<?x?xf32> } : vector<4x8xi1>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @masked_transfer_read_1d_strided
+// CHECK:       vector.mask %{{.*}} { vector.transfer_read
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @masked_transfer_read_1d_strided
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_read
+// FULL-UNROLL-NOT:   scf.for
+// TARGET-RANK-ZERO-LABEL: @masked_transfer_read_1d_strided
+// TARGET-RANK-ZERO:       vector.mask %{{.*}} { vector.transfer_read
+// TARGET-RANK-ZERO-NOT:   scf.for
+func.func @masked_transfer_read_1d_strided(%mem: memref<?x?xf32>, %mask: vector<8xi1>) -> vector<8xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = vector.mask %mask { vector.transfer_read %mem[%c0, %c0], %pad {permutation_map = affine_map<(d0, d1) -> (d0)>} : memref<?x?xf32>, vector<8xf32> } : vector<8xi1> -> vector<8xf32>
+  return %0 : vector<8xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @masked_scalable_transpose_store
+// CHECK:       vector.mask %{{.*}} { vector.transfer_write
+// CHECK-NOT:   scf.for
+// FULL-UNROLL-LABEL: @masked_scalable_transpose_store
+// FULL-UNROLL:       vector.mask %{{.*}} { vector.transfer_write
+// FULL-UNROLL-NOT:   scf.for
+func.func @masked_scalable_transpose_store(%vec: vector<[4]x4xf32>, %mem: memref<?x?xf32>, %a: index, %b: index) {
+  %c0 = arith.constant 0 : index
+  %transpose = vector.transpose %vec, [1, 0] : vector<[4]x4xf32> to vector<4x[4]xf32>
+  %mask = vector.create_mask %a, %b : vector<4x[4]xi1>
+  vector.mask %mask { vector.transfer_write %transpose, %mem[%c0, %c0] : vector<4x[4]xf32>, memref<?x?xf32> } : vector<4x[4]xi1>
+  return
+}
