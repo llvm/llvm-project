@@ -2882,13 +2882,17 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
                                  const llvm::opt::ArgList &DriverArgs,
                                  llvm::opt::ArgStringList &CC1Args) {
 
+  bool UseLLVMOffload =
+      DriverArgs.hasFlag(options::OPT_foffload_via_llvm,
+                         options::OPT_fno_offload_via_llvm, false);
+
   StringRef LibclcNamespec;
   const Arg *A = DriverArgs.getLastArg(options::OPT_libclc_lib_EQ);
   if (A) {
     // If the namespec is of the form :filename we use it exactly.
     LibclcNamespec = A->getValue();
   } else {
-    if (!TT.isAMDGPU() || TT.getEnvironment() != llvm::Triple::LLVM)
+        if (!(UseLLVMOffload && (TT.isAMDGPU() || TT.isNVPTX())))
       return false;
 
     // TODO: Should this accept following -stdlib to override?
@@ -2919,6 +2923,9 @@ bool tools::addOpenCLBuiltinsLib(const Driver &D, const llvm::Triple &TT,
 
   // Helper to check for libclc.bc in a specific triple directory.
   auto TryTriplePath = [&](StringRef TripleStr) -> bool {
+    if (UseLLVMOffload)
+      TripleStr.consume_back("-llvm");
+
     SmallString<128> BasePath(ResourceLibPath);
     llvm::sys::path::append(BasePath, TripleStr);
 
