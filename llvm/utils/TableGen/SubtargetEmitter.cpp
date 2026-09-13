@@ -1544,6 +1544,7 @@ void SubtargetEmitter::emitProcessorModels(raw_ostream &OS) {
     emitProcessorProp(OS, PM.ModelDef, "LoadLatency", ',');
     emitProcessorProp(OS, PM.ModelDef, "HighLatency", ',');
     emitProcessorProp(OS, PM.ModelDef, "MispredictPenalty", ',');
+    emitProcessorProp(OS, PM.ModelDef, "StoreLoadForwardingPenalty", ',');
 
     bool PostRAScheduler =
         (PM.ModelDef ? PM.ModelDef->getValueAsBit("PostRAScheduler") : false);
