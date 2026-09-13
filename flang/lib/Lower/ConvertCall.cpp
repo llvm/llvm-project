@@ -18,6 +18,7 @@
 #include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/CustomIntrinsicCall.h"
 #include "flang/Lower/HlfirIntrinsics.h"
+#include "flang/Lower/OpenMP.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
@@ -35,6 +36,7 @@
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -576,6 +578,63 @@ Fortran::lower::genCallOpAndResult(
       funcSymbolAttr = {}; // This marks it as indirect call
     }
     funcType = *modifiedFuncType;
+  }
+
+  // OpenMP dispatch `novariants`/`nocontext`: at runtime pick the right target
+  // via an indirect call, evaluating arguments once. All candidate procedures
+  // share one signature; revisit if declare-variant `adjust_args`/`append_args`
+  // land.
+  if (funcSymbolAttr) {
+    mlir::Value novariantsCond =
+        Fortran::lower::omp::getEnclosingDispatchNovariants(builder);
+    mlir::Value nocontextCond =
+        Fortran::lower::omp::getEnclosingDispatchNocontext(builder);
+    const Fortran::semantics::Symbol *baseSym =
+        caller.getCallDescription().proc().GetSymbol();
+    const Fortran::semantics::Symbol *selectedSym = caller.getProcedureSymbol();
+    // A runtime choice is only needed when a variant was actually selected for
+    // the enclosing dispatch context (otherwise the base is already the call
+    // target and dropping the dispatch construct cannot introduce a variant).
+    if ((novariantsCond || nocontextCond) && baseSym && selectedSym &&
+        &baseSym->GetUltimate() != &selectedSym->GetUltimate()) {
+      const Fortran::semantics::Symbol &baseUlt = baseSym->GetUltimate();
+      const Fortran::semantics::Symbol &selectedUlt =
+          selectedSym->GetUltimate();
+
+      auto addrOfSym =
+          [&](const Fortran::semantics::Symbol &sym) -> mlir::Value {
+        return fir::AddrOfOp::create(
+            builder, loc, funcType,
+            builder.getSymbolRefAttr(converter.mangleName(sym)));
+      };
+
+      // Start from the variant selected with the dispatch construct in context.
+      mlir::Value target =
+          fir::AddrOfOp::create(builder, loc, funcType, funcSymbolAttr);
+
+      // `nocontext(true)`: re-select the variant with the dispatch construct
+      // removed from the OpenMP context. That may resolve to a different
+      // variant (e.g. one matching `device={kind(host)}`) or to the base
+      // procedure.
+      if (nocontextCond) {
+        const Fortran::semantics::Symbol *nocontextSym =
+            Fortran::lower::omp::resolveDeclareVariantCallee(
+                baseUlt, converter, /*excludeDispatchContext=*/true);
+        const Fortran::semantics::Symbol &nocontextUlt =
+            nocontextSym ? nocontextSym->GetUltimate() : baseUlt;
+        if (&nocontextUlt != &selectedUlt)
+          target = mlir::arith::SelectOp::create(
+              builder, loc, nocontextCond, addrOfSym(nocontextUlt), target);
+      }
+
+      // `novariants(true)` takes final precedence: always call the base.
+      if (novariantsCond)
+        target = mlir::arith::SelectOp::create(builder, loc, novariantsCond,
+                                               addrOfSym(baseUlt), target);
+
+      funcPointer = target;
+      funcSymbolAttr = {}; // Mark as an indirect call.
+    }
   }
 
   llvm::SmallVector<mlir::Value> operands;
