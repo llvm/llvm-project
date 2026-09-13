@@ -53,6 +53,8 @@ public:
                         raw_ostream &O);
   void printMmaCode(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &O, StringRef Modifier = {});
+  void printSPQualifier(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
+                        raw_ostream &O, StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                        raw_ostream &O, StringRef Modifier = {});
   void printUsedBytesMaskPragma(const MCInst *MI, int OpNum,
