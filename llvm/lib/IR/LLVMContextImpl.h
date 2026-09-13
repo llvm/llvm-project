@@ -1636,6 +1636,11 @@ public:
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
+  // Maps a tracked metadata reference pointer (void *Ref) to its current index
+  // in ReplaceableMetadataImpl::UseMap. Only populated for replaceable metadata
+  // instances in Large Mode (IsLarge == true). Instantiated eagerly in the
+  // constructor and reset to std::nullopt at teardown.
+  std::optional<DenseMap<void *, unsigned>> MetadataUseMap;
 
   uint32_t NextMetadataPrintID = 0;
 
