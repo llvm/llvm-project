@@ -864,28 +864,8 @@ struct SgToLaneVectorBitcast : public OpConversionPattern<vector::BitCastOp> {
 };
 
 /// Distributes a subgroup-level vector.create_mask or vector.constant_mask op
-/// to lane-level. Uses `computeDistributedCoords()` to obtain the
-/// coordinates each lane owns, then compares each coordinate against the
-/// original mask bounds using `arith.cmpi slt`. The per-element boolean
-/// results are assembled into the distributed mask vector.
-///
-/// For multi-dimensional masks, the element is in-bounds when ALL dimensions
-/// satisfy `coord[i] < bound[i]`.
-///
-/// Example (1D):
-///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
-///   %mask = vector.create_mask %m0 : vector<16xi1>
-/// For lane k, computeDistributedCoords gives coord = [k], so:
-///   %in_bounds = arith.cmpi slt, %coord, %m0  →  i1
-///   %mask = vector.broadcast %in_bounds : i1 to vector<1xi1>
-///
-/// Example (2D):
-///   layout = #xegpu.layout<lane_layout = [8, 2], lane_data = [1, 1]>
-///   %mask = vector.create_mask %m0, %m1 : vector<8x4xi1>
-/// Each WI owns a 1x2 slice. computeDistributedCoords returns 2 coords:
-///   [[r0, c0], [r0, c1]]
-/// For each coord: in_bounds = (r < m0) && (c < m1)
-///   %mask = vector.from_elements %bit0, %bit1 : vector<1x2xi1>
+/// to lane-level. An element is in-bounds when every dim satisfies
+/// `coord[d] < bound[d]`.
 template <typename OpType,
           typename = std::enable_if_t<llvm::is_one_of<
               OpType, vector::CreateMaskOp, vector::ConstantMaskOp>::value>>
@@ -933,36 +913,90 @@ struct SgToLaneCreateMask : public OpConversionPattern<OpType> {
       return rewriter.notifyMatchFailure(
           op, "failed to compute distributed coordinates from layout");
 
-    SmallVector<SmallVector<Value>> coordsVec = maybeCoordsVec.value();
+    SmallVector<SmallVector<Value>> laneDataCoords = maybeCoordsVec.value();
+    SmallVector<int64_t> laneData = layout.getEffectiveLaneDataAsInt();
+    ArrayRef<int64_t> distShape = distType.getShape();
+    int64_t rank = distType.getRank();
     int64_t numElements = distType.getNumElements();
-    assert(static_cast<int64_t>(coordsVec.size()) == numElements &&
-           "number of coordinate sets must match number of distributed "
-           "elements");
 
-    // For each element, compare all coordinates against bounds.
-    Value trueVal =
-        arith::ConstantIntOp::create(rewriter, loc, /*value=*/1, /*width=*/1);
-    SmallVector<Value> maskBits;
-    for (auto &coords : coordsVec) {
-      Value inBounds = trueVal;
-      for (size_t i = 0; i < coords.size(); ++i) {
-        Value cmp = arith::CmpIOp::create(
-            rewriter, loc, arith::CmpIPredicate::slt, coords[i], origBounds[i]);
-        inBounds = arith::AndIOp::create(rewriter, loc, inBounds, cmp);
+    if (static_cast<int64_t>(laneData.size()) != rank ||
+        !computeShapeRatio(distShape, laneData))
+      return rewriter.notifyMatchFailure(
+          op, "lane_data does not tile the distributed vector");
+
+    SmallVector<int64_t> resultStrides = computeStrides(distShape);
+    assert(static_cast<int64_t>(laneDataCoords.size()) *
+                   computeProduct(laneData) ==
+               numElements &&
+           "number of coordinate sets must match number of lane_data blocks");
+
+    // Static offsets to be applied to a dynamic lane's dist units coordinates.
+    SmallVector<SmallVector<int64_t>> staticLaneDataOffsetsOrigShape =
+        layout.computeStaticDistributedCoords(/*linearId=*/0, origShape);
+    if (staticLaneDataOffsetsOrigShape.empty() ||
+        staticLaneDataOffsetsOrigShape.size() != laneDataCoords.size())
+      return rewriter.notifyMatchFailure(
+          op, "static and dynamic coordinates disagree on the distribution "
+              "unit count");
+
+    SmallVector<int64_t> unitTile(rank, 1);
+    int64_t linearLaneDataIdx = 0;
+    // Layout and shape information is static, compute static offset of lane's
+    // elements in the source dimensions.
+    SmallVector<SmallVector<int64_t>> staticElemOffsetInSrcDims(
+        rank, SmallVector<int64_t>(numElements));
+    // For each lane_data block in the overall lane's shape
+    for (SmallVector<int64_t> laneDataOffsetInResult :
+         StaticTileOffsetRange(distShape, laneData)) {
+      ArrayRef<int64_t> staticLaneDataOffsetInSource =
+          staticLaneDataOffsetsOrigShape[linearLaneDataIdx++];
+      // For each element in the lane_data block
+      for (SmallVector<int64_t> elementOffsetInLaneData :
+           StaticTileOffsetRange(laneData, unitTile)) {
+        // For each dim of indexing space
+        SmallVector<int64_t> elementOffsetInResult(rank);
+        for (int64_t d = 0; d < rank; d++)
+          elementOffsetInResult[d] =
+              laneDataOffsetInResult[d] + elementOffsetInLaneData[d];
+        int64_t elemLinearizedIdx =
+            linearize(elementOffsetInResult, resultStrides);
+        for (int64_t d = 0; d < rank; d++)
+          staticElemOffsetInSrcDims[d][elemLinearizedIdx] =
+              staticLaneDataOffsetInSource[d] + elementOffsetInLaneData[d];
       }
-      maskBits.push_back(inBounds);
     }
 
-    // Build the distributed mask vector.
-    Value result;
-    if (numElements == 1) {
-      result =
-          vector::BroadcastOp::create(rewriter, loc, distType, maskBits[0]);
-    } else {
-      result =
-          vector::FromElementsOp::create(rewriter, loc, distType, maskBits);
+    // Check, whether ALL elements of the distributed mask are within the valid
+    // extent of EACH source dimension.
+    // Expressed as dyn_offset[d] + static_offset[d] < dyn_mask_bound[d],
+    // or equivalently,
+    // static_offset[d] < dyn_mask_bound[d] - dyn_offset[d]
+    auto flatIndexType = VectorType::get(numElements, rewriter.getIndexType());
+    Value inBounds;
+    for (int64_t d = 0; d < rank; d++) {
+      Value materializedStaticOffset = arith::ConstantOp::create(
+          rewriter, loc,
+          rewriter.getIndexVectorAttr(staticElemOffsetInSrcDims[d]));
+      // Consider only the first unit, all others are compile-time multiple
+      // offsets of the first one and are already encoded in staticOffsets.
+      Value validDimExtent = arith::SubIOp::create(rewriter, loc, origBounds[d],
+                                                   laneDataCoords[0][d]);
+      // Dim extent applies to all elements.
+      Value validDimExtentPerElement = vector::BroadcastOp::create(
+          rewriter, loc, flatIndexType, validDimExtent);
+      Value elementMaskInDim = arith::CmpIOp::create(
+          rewriter, loc, arith::CmpIPredicate::slt, materializedStaticOffset,
+          validDimExtentPerElement);
+      // An element is valid iff it is within the valid extent of ALL
+      // dimensions.
+      inBounds = inBounds ? arith::AndIOp::create(rewriter, loc, inBounds,
+                                                  elementMaskInDim)
+                                .getResult()
+                          : elementMaskInDim;
     }
-    rewriter.replaceOp(op, result);
+    auto resMask =
+        rewriter.createOrFold<vector::ShapeCastOp>(loc, distType, inBounds);
+    rewriter.replaceOp(op, resMask);
     return success();
   }
 };
