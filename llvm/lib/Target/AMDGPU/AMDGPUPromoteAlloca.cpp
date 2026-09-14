@@ -110,7 +110,6 @@ struct MemTransferInfo {
 // An AllocaAnalysis may represent one alloca or a group of allocas if they need
 // to be promoted together.
 struct AllocaAnalysis {
-  AllocaInst *Alloca = nullptr; // Primary member (lane 0).
   DenseSet<Value *> Pointers;
   SmallDenseSet<Use *> Uses;
   unsigned Score = 0;
@@ -142,11 +141,12 @@ struct AllocaAnalysis {
     SmallVector<User *> Worklist;
   } LDS;
 
-  explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {
-    Members.push_back(Alloca);
-  }
+  explicit AllocaAnalysis(AllocaInst *Alloca) { Members.push_back(Alloca); }
 
   bool isGroup() const { return Members.size() > 1; }
+
+  // Returns the leader alloca if this is an alloca group.
+  AllocaInst *getLeaderAlloca() const { return Members[0]; }
 };
 
 // Shared implementation which can do both promotion to vector and to LDS.
@@ -304,7 +304,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
     return false;
   };
 
-  SmallVector<Instruction *, 4> WorkList({AA.Alloca});
+  SmallVector<Instruction *, 4> WorkList({AA.getLeaderAlloca()});
 
   SmallPtrSet<Value *, 8> Visited;
   // Other allocas which are merged by phi/select with current alloca.
@@ -331,7 +331,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
 
         for (auto *Obj : BaseObjs) {
           if (auto *BaseAlloca = dyn_cast<AllocaInst>(Obj)) {
-            if (BaseAlloca != AA.Alloca) {
+            if (BaseAlloca != AA.getLeaderAlloca()) {
               MergedAllocas.insert(const_cast<AllocaInst *>(BaseAlloca));
             }
             WorkList.push_back(Inst);
@@ -351,7 +351,7 @@ bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
 }
 
 void AMDGPUPromoteAllocaImpl::scoreAlloca(AllocaAnalysis &AA) const {
-  LLVM_DEBUG(dbgs() << "Scoring: " << *AA.Alloca << "\n");
+  LLVM_DEBUG(dbgs() << "Scoring: " << *AA.getLeaderAlloca() << "\n");
   unsigned Score = 0;
   // Increment score by one for each user + a bonus for users within loops.
   for (auto *U : AA.Uses) {
@@ -419,21 +419,22 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
 
     bool Promotable = true;
     SmallVector<AllocaInst *> Worklist;
-    LLVM_DEBUG(dbgs() << "Process leader alloca " << *AA.Alloca << '\n');
+    LLVM_DEBUG(dbgs() << "Process leader alloca " << *AA.getLeaderAlloca()
+                      << '\n');
     Worklist.append(AA.Links);
     // Pull the information from links into the leader alloca.
     while (!Worklist.empty()) {
       auto *CurLink = Worklist.pop_back_val();
-      auto *LinkIter = AllocaAnalysisMap.find(CurLink);
+      auto LinkIter = AllocaAnalysisMap.find(CurLink);
       if (LinkIter != AllocaAnalysisMap.end()) {
         AllocaAnalysis &LinkAA = LinkIter->second;
         // Skip if the linked alloca was done or points to the leader alloca
         // itself.
-        if (LinkAA.Uses.empty() || LinkAA.Alloca == AA.Alloca)
+        if (LinkAA.Uses.empty() || &LinkAA == &AA)
           continue;
 
         LLVM_DEBUG({
-          dbgs() << "  Process link: " << *LinkAA.Alloca << '\n';
+          dbgs() << "  Process link: " << *LinkAA.getLeaderAlloca() << '\n';
           for (auto *X : LinkAA.Uses)
             dbgs() << "    Add User " << *X->getUser() << '\n';
         });
@@ -441,7 +442,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
         AA.Uses.insert_range(LinkAA.Uses);
         LinkAA.Uses.clear();
         AA.HaveUnpromotableMerge |= LinkAA.HaveUnpromotableMerge;
-        AA.Members.push_back(LinkAA.Alloca);
+        AA.Members.push_back(LinkAA.getLeaderAlloca());
 
         // Add indirect links to worklist, so that their info are properly
         // propagated to the leader alloca.
@@ -487,7 +488,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   LLVM_DEBUG(
     dbgs() << "Sorted Worklist:\n";
     for (const auto &AA : Allocas)
-      dbgs() << "  " << *AA.Alloca << "\n";
+      dbgs() << "  " << *AA.getLeaderAlloca() << "\n";
   );
   // clang-format on
 
@@ -514,7 +515,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
       } else {
         LLVM_DEBUG(dbgs() << "Alloca too big for vectorization (size:"
                           << AllocaCost << ", budget:" << VectorizationBudget
-                          << "): " << *AA.Alloca << "\n");
+                          << "): " << *AA.getLeaderAlloca() << "\n");
       }
     }
 
@@ -622,7 +623,7 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
     // Offset by the lane of the root pointer this GEP is based on. For a member
     // alloca this is its constant base lane; for a pointer phi/select it is the
     // parallel lane-index value.
-    if (I->second.BasePtr != AA.Alloca || AA.isGroup()) {
+    if (I->second.BasePtr != AA.getLeaderAlloca() || AA.isGroup()) {
       Value *BaseIdx = calculateVectorIndex(I->second.BasePtr, AA);
       if (auto *C = dyn_cast<ConstantInt>(BaseIdx); !C || !C->isZero())
         Result = B.CreateAdd(Result, BaseIdx);
@@ -1201,8 +1202,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
       Ptr = Ptr->stripPointerCasts();
 
       // Alloca already accessed as vector for single alloca group case.
-      if (!AA.isGroup() && Ptr == AA.Alloca &&
-          DL.getTypeStoreSize(AA.Alloca->getAllocatedType()) ==
+      if (!AA.isGroup() && Ptr == AA.getLeaderAlloca() &&
+          DL.getTypeStoreSize(AA.getLeaderAlloca()->getAllocatedType()) ==
               DL.getTypeStoreSize(AccessTy)) {
         AA.Vector.Worklist.push_back(Inst);
         continue;
@@ -1227,7 +1228,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
     }
 
     if (MemSetInst *MSI = dyn_cast<MemSetInst>(Inst);
-        MSI && !AA.isGroup() && isSupportedMemset(MSI, AA.Alloca, DL)) {
+        MSI && !AA.isGroup() &&
+        isSupportedMemset(MSI, AA.getLeaderAlloca(), DL)) {
       AA.Vector.Worklist.push_back(Inst);
       continue;
     }
@@ -1244,13 +1246,13 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
                                 "not a multiple of the vector element size");
 
       auto getConstIndexIntoAlloca = [&](Value *Ptr) -> ConstantInt * {
-        if (Ptr == AA.Alloca)
+        if (Ptr == AA.getLeaderAlloca())
           return ConstantInt::get(Ptr->getContext(), APInt(32, 0));
 
         auto Index = computeGEPToVectorIndex(cast<GetElementPtrInst>(Ptr), AA,
                                              VecEltTy, DL);
 
-        if (!Index || Index->VarIndex || Index->BasePtr != AA.Alloca)
+        if (!Index || Index->VarIndex || Index->BasePtr != AA.getLeaderAlloca())
           return nullptr;
         if (Index->ConstIndex)
           return Index->ConstIndex;
@@ -1313,9 +1315,11 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToVector(AllocaAnalysis &AA) const {
 }
 
 void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
-  LLVM_DEBUG(dbgs() << "Promoting to vectors: " << *AA.Alloca << '\n');
-  LLVM_DEBUG(dbgs() << "  type conversion: " << *AA.Alloca->getAllocatedType()
-                    << " -> " << *AA.Vector.Ty << '\n');
+  LLVM_DEBUG(dbgs() << "Promoting to vectors: " << *AA.getLeaderAlloca()
+                    << '\n');
+  LLVM_DEBUG(dbgs() << "  type conversion: "
+                    << *AA.getLeaderAlloca()->getAllocatedType() << " -> "
+                    << *AA.Vector.Ty << '\n');
   const unsigned VecStoreSize = DL.getTypeStoreSize(AA.Vector.Ty);
 
   Type *VecEltTy = AA.Vector.Ty->getElementType();
@@ -1326,14 +1330,14 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   SSAUpdater Updater;
   Updater.Initialize(AA.Vector.Ty, "promotealloca");
 
-  BasicBlock *EntryBB = AA.Alloca->getParent();
+  BasicBlock *EntryBB = AA.getLeaderAlloca()->getParent();
   BasicBlock::iterator InitInsertPos =
-      skipToNonAllocaInsertPt(*EntryBB, AA.Alloca->getIterator());
+      skipToNonAllocaInsertPt(*EntryBB, AA.getLeaderAlloca()->getIterator());
   IRBuilder<> Builder(&*InitInsertPos);
   Value *AllocaInitValue = Builder.CreateFreeze(PoisonValue::get(AA.Vector.Ty));
-  AllocaInitValue->takeName(AA.Alloca);
+  AllocaInitValue->takeName(AA.getLeaderAlloca());
 
-  Updater.AddAvailableValue(AA.Alloca->getParent(), AllocaInitValue);
+  Updater.AddAvailableValue(AA.getLeaderAlloca()->getParent(), AllocaInitValue);
 
   // First handle the initial worklist, in basic block order.
   //
@@ -1579,7 +1583,7 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
   // Don't promote the alloca to LDS for shader calling conventions as the work
   // item ID intrinsics are not supported for these calling conventions.
   // Furthermore not all LDS is available for some of the stages.
-  const Function &ContainingFunction = *AA.Alloca->getFunction();
+  const Function &ContainingFunction = *AA.getLeaderAlloca()->getFunction();
   CallingConv::ID CC = ContainingFunction.getCallingConv();
 
   switch (CC) {
@@ -1636,7 +1640,8 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
     // Only promote a select if we know that the other select operand
     // is from another pointer that will also be promoted.
     if (ICmpInst *ICmp = dyn_cast<ICmpInst>(UseInst)) {
-      if (!binaryOpIsDerivedFromSameAlloca(AA.Alloca, Use->get(), ICmp, 0, 1))
+      if (!binaryOpIsDerivedFromSameAlloca(AA.getLeaderAlloca(), Use->get(),
+                                           ICmp, 0, 1))
         return;
 
       // May need to rewrite constant operands.
@@ -1798,19 +1803,21 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
     AllocaAnalysis &AA, bool SufficientLDS,
     SetVector<IntrinsicInst *> &DeferredIntrs) {
-  LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << *AA.Alloca << '\n');
+  LLVM_DEBUG(dbgs() << "Trying to promote to LDS: " << *AA.getLeaderAlloca()
+                    << '\n');
 
   // Not likely to have sufficient local memory for promotion.
   if (!SufficientLDS)
     return false;
 
-  IRBuilder<> Builder(AA.Alloca);
+  IRBuilder<> Builder(AA.getLeaderAlloca());
 
-  const Function &ContainingFunction = *AA.Alloca->getParent()->getParent();
+  const Function &ContainingFunction =
+      *AA.getLeaderAlloca()->getParent()->getParent();
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
-  Align Alignment = AA.Alloca->getAlign();
+  Align Alignment = AA.getLeaderAlloca()->getAlign();
 
   // FIXME: This computed padding is likely wrong since it depends on inverse
   // usage order.
@@ -1819,7 +1826,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   // could end up using more than the maximum due to alignment padding.
 
   uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
-  std::optional<TypeSize> ElemSize = AA.Alloca->getAllocationSize(DL);
+  std::optional<TypeSize> ElemSize =
+      AA.getLeaderAlloca()->getAllocationSize(DL);
   if (!ElemSize || ElemSize->isScalable())
     return false;
   TypeSize AllocSize = WorkGroupSize * *ElemSize;
@@ -1835,15 +1843,16 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
 
   LLVM_DEBUG(dbgs() << "Promoting alloca to local memory\n");
 
-  Function *F = AA.Alloca->getFunction();
+  Function *F = AA.getLeaderAlloca()->getFunction();
 
-  Type *GVTy = ArrayType::get(AA.Alloca->getAllocatedType(), WorkGroupSize);
+  Type *GVTy =
+      ArrayType::get(AA.getLeaderAlloca()->getAllocatedType(), WorkGroupSize);
   GlobalVariable *GV = new GlobalVariable(
       Mod, GVTy, false, GlobalValue::InternalLinkage, PoisonValue::get(GVTy),
-      Twine(F->getName()) + Twine('.') + AA.Alloca->getName(), nullptr,
-      GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
+      Twine(F->getName()) + Twine('.') + AA.getLeaderAlloca()->getName(),
+      nullptr, GlobalVariable::NotThreadLocal, AMDGPUAS::LOCAL_ADDRESS);
   GV->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  GV->setAlignment(AA.Alloca->getAlign());
+  GV->setAlignment(AA.getLeaderAlloca()->getAlign());
 
   Value *TCntY, *TCntZ;
 
@@ -1862,9 +1871,9 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context)), TID};
 
   Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
-  AA.Alloca->mutateType(Offset->getType());
-  AA.Alloca->replaceAllUsesWith(Offset);
-  AA.Alloca->eraseFromParent();
+  AA.getLeaderAlloca()->mutateType(Offset->getType());
+  AA.getLeaderAlloca()->replaceAllUsesWith(Offset);
+  AA.getLeaderAlloca()->eraseFromParent();
 
   PointerType *NewPtrTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
