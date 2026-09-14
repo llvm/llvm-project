@@ -16,6 +16,7 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -1101,6 +1102,37 @@ bool MipsDelaySlotFiller::examinePred(MachineBasicBlock &Pred,
   return true;
 }
 
+/// Moving an instruction whose result is not available to the next instruction
+/// into a delay slot moves that unprotected shadow across the branch: the
+/// instruction executed next is the branch target or the fall-through, neither
+/// of which is adjacent to the candidate in the listing. Returns true if the
+/// hazard would be exposed on any path. \p IsSafe decides whether one
+/// particular instruction may execute in the shadow of \p Candidate.
+static bool delayExposesHazard(
+    const BranchInformation &BranchInfo, const MachineInstr &Candidate,
+    function_ref<bool(const MachineInstr &, const MachineInstr &)> IsSafe) {
+  // With no branch, or a branch whose target we cannot see, we do not know
+  // which instruction executes next. Assume the worst.
+  if (!BranchInfo.hasBranchInstr() || BranchInfo.isIndirectBranch())
+    return true;
+
+  const MachineBasicBlock *TargetMBB = BranchInfo.getBranchTarget();
+  if (!TargetMBB || TargetMBB->empty())
+    return true;
+
+  bool Exposed = !IsSafe(TargetMBB->instr_front(), Candidate);
+
+  // A conditional branch also falls through, so the instruction after the
+  // delay slot can be the one that reads the result.
+  if (!BranchInfo.isUnconditionalBranch()) {
+    if (!BranchInfo.hasBranchElseInstr())
+      return true;
+    Exposed |= !IsSafe(*BranchInfo.getBranchElseInstr(), Candidate);
+  }
+
+  return Exposed;
+}
+
 bool MipsDelaySlotFiller::delayHasHazard(const MipsSubtarget &STI,
                                          const MachineInstr &Candidate,
                                          const BranchInformation &BranchInfo,
@@ -1114,49 +1146,28 @@ bool MipsDelaySlotFiller::delayHasHazard(const MipsSubtarget &STI,
   HasHazard |= IM.hasHazard(Candidate);
   HasHazard |= RegDU.update(Candidate, 0, Candidate.getNumOperands());
 
-  // This only matters for MIPS1 and only if we do not have a hazard already
-  if (STI.hasMips1() && !STI.hasMips2() && !HasHazard) {
+  if (!HasHazard) {
     const MipsInstrInfo *TII = STI.getInstrInfo();
-    const bool HasLoadDelaySlot = TII->HasLoadDelaySlot(Candidate);
 
-    // We only need to act if the candidate is having a load delay slot
-    if (HasLoadDelaySlot) {
-      // We have no branch so we can not determine a hazard
-      // Assume the worst
-      if (!BranchInfo.hasBranchInstr()) {
-        return true;
-      }
+    // MIPS-I has no load-use interlock: the instruction executed after a load
+    // must not read the loaded register.
+    if (STI.hasMips1() && !STI.hasMips2() && TII->HasLoadDelaySlot(Candidate))
+      return delayExposesHazard(
+          BranchInfo, Candidate,
+          [TII](const MachineInstr &InShadow, const MachineInstr &Cand) {
+            return TII->SafeInLoadDelaySlot(InShadow, Cand);
+          });
 
-      // Being an indirect branch means we can not tell if we are a hazard
-      // Assume the worst
-      if (BranchInfo.isIndirectBranch()) {
-        return true;
-      }
-
-      // If this is a direct branch we should find a MBB operand for the jump
-      // target
-      const MachineBasicBlock *TargetMBB = BranchInfo.getBranchTarget();
-      if (!TargetMBB || TargetMBB->empty()) {
-        return true;
-      }
-
-      const auto &BranchTargetInstr = TargetMBB->instr_front();
-      bool HasNewHazard =
-          !TII->SafeInLoadDelaySlot(BranchTargetInstr, Candidate);
-      // If the branch is unconditional then we do not need to bother to check
-      // the next instruction after the branch
-      if (!BranchInfo.isUnconditionalBranch()) {
-        // We are a conditional branch so we should have an `else` branch
-        if (BranchInfo.hasBranchElseInstr()) {
-          HasNewHazard |= !TII->SafeInLoadDelaySlot(
-              *BranchInfo.getBranchElseInstr(), Candidate);
-        } else {
-          // Without the `else` branch we need to assume the worst
-          HasNewHazard = true;
-        }
-      }
-      return HasNewHazard;
-    }
+    // MIPS-I to MIPS-III have the same problem for transfers out of the FPU.
+    // This mirrors the condition in
+    // MipsBranchExpansion::handleFPUDelaySlot(), which covers the
+    // straight-line case.
+    if (!STI.hasMips32() && !STI.hasMips4() && TII->HasFPUDelaySlot(Candidate))
+      return delayExposesHazard(
+          BranchInfo, Candidate,
+          [TII](const MachineInstr &InShadow, const MachineInstr &Cand) {
+            return TII->SafeInFPUDelaySlot(InShadow, Cand);
+          });
   }
 
   return HasHazard;
