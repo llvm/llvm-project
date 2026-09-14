@@ -120,8 +120,9 @@ public:
   bool doFinalization(Module &M) override;
   bool runOnMachineFunction(MachineFunction &MF) override;
 
-  /// Create AMDGPU-specific DwarfDebug handler.
-  DwarfDebug *createDwarfDebug() override;
+  dwarf::Attribute getTypeAddressSpaceAttribute() const override {
+    return dwarf::DW_AT_LLVM_address_space;
+  }
 
   /// Wrapper for MCInstLowering.lowerOperand() for the tblgen'erated
   /// pseudo lowering.

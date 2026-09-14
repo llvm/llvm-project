@@ -914,7 +914,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   // verifier checks that DWARF address space only exists for pointer
   // or reference types.
   if (auto AS = DTy->getDWARFAddressSpace())
-    addUInt(Buffer, DD->getTypeAddressSpaceAttribute(), dwarf::DW_FORM_data4,
+    addUInt(Buffer, Asm->getTypeAddressSpaceAttribute(), dwarf::DW_FORM_data4,
             *AS);
 
   // Add template alias template parameters.
