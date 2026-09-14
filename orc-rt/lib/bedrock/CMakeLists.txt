@@ -92,7 +92,7 @@ target_compile_options(orc-rt-bedrock-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})
 
 # The shipped library: Bedrock's objects plus Support's (Support is never
 # shipped on its own).
-add_library(orc-rt-bedrock STATIC)
+add_library(orc-rt-bedrock ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
 target_link_libraries(orc-rt-bedrock PUBLIC orc-rt-headers)
 
