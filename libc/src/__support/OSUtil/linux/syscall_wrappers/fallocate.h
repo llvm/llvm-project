@@ -39,8 +39,9 @@ LIBC_INLINE ErrorOr<int> fallocate(int fd, int mode, off_t offset, off_t size) {
     long len_high = static_cast<long>(len_bits >> 32);
     return syscall_checked<int>(SYS_fallocate, fd, mode, offset_low,
                                 offset_high, len_low, len_high);
-  } else
+  } else {
     return syscall_checked<int>(SYS_fallocate, fd, mode, offset, size);
+  }
 }
 
 } // namespace linux_syscalls

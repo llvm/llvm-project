@@ -100,18 +100,6 @@ add_libc_test(
     libc.test.UnitTest.ErrnoSetterMatcher
 )
 
-add_libc_test(
-  fallocate_test
-  SUITE
-    libc_fcntl_unittests
-  SRCS
-    fallocate_test.cpp
-  DEPENDS
-    libc.include.fcntl
-    libc.src.fcntl.fallocate
-    libc.src.fcntl.open
-    libc.src.unistd.close
-    libc.src.unistd.unlink
-    libc.src.sys.stat.fstat
-    libc.src.__support.libc_errno
-)
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+endif()
