@@ -3140,8 +3140,14 @@ public:
       unsigned S = 1;
       while (S < 32 && divideCeil(BW, S) > (1u << S))
         ++S;
-      if (S * S < BW && TLI->isOperationLegalOrCustom(
-                            ISD::MUL, TLI->getValueType(DL, RetTy))) {
+
+      // The naive algorithm usually uses AND+MUL+XOR per bit.
+      unsigned NaiveCost = 3 * BW;
+      unsigned HolesCost = S * S + 3 * S + S * (S - 1) + (S - 1);
+
+      if (HolesCost < NaiveCost &&
+          TLI->isOperationLegalOrCustom(ISD::MUL,
+                                        TLI->getValueType(DL, RetTy))) {
         return S * S * MulCost + 3 * S * AndCost + S * (S - 1) * XorCost +
                (S - 1) * OrCost;
       }

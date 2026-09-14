@@ -322,38 +322,31 @@ define i64 @clmul_i64(i64 %x, i64 %y) {
 define i16 @clmul_i16_zext(i8 %x, i8 %y) {
 ; CHECK-LABEL: clmul_i16_zext:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NEXT:    and lr, r1, #73
-; CHECK-NEXT:    and r3, r0, #146
-; CHECK-NEXT:    and r4, r0, #73
-; CHECK-NEXT:    and r2, r1, #146
-; CHECK-NEXT:    mul r12, r3, lr
-; CHECK-NEXT:    and r1, r1, #36
-; CHECK-NEXT:    and r0, r0, #36
-; CHECK-NEXT:    mul r5, r4, r2
-; CHECK-NEXT:    mul r6, r4, lr
-; CHECK-NEXT:    eor.w r12, r12, r5
-; CHECK-NEXT:    mul r5, r0, r1
-; CHECK-NEXT:    eor.w r12, r12, r5
-; CHECK-NEXT:    movw r5, #9362
-; CHECK-NEXT:    and.w r12, r12, r5
-; CHECK-NEXT:    mul r5, r3, r1
-; CHECK-NEXT:    muls r1, r4, r1
-; CHECK-NEXT:    eors r5, r6
-; CHECK-NEXT:    mul r6, r0, r2
-; CHECK-NEXT:    muls r2, r3, r2
-; CHECK-NEXT:    mul r0, r0, lr
-; CHECK-NEXT:    eors r5, r6
-; CHECK-NEXT:    movw r6, #4681
-; CHECK-NEXT:    ands r5, r6
-; CHECK-NEXT:    eors r1, r2
-; CHECK-NEXT:    add.w r6, r5, r12
-; CHECK-NEXT:    eors r0, r1
-; CHECK-NEXT:    movw r1, #18724
-; CHECK-NEXT:    ands r0, r1
-; CHECK-NEXT:    add r0, r6
-; CHECK-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-NEXT:    and r2, r1, #2
+; CHECK-NEXT:    and r3, r1, #1
+; CHECK-NEXT:    uxtb r0, r0
+; CHECK-NEXT:    muls r2, r0, r2
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    and r3, r1, #4
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    and r3, r1, #8
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    and r3, r1, #16
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    and r3, r1, #32
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    and r3, r1, #64
+; CHECK-NEXT:    and r1, r1, #128
+; CHECK-NEXT:    muls r3, r0, r3
+; CHECK-NEXT:    muls r0, r1, r0
+; CHECK-NEXT:    eors r2, r3
+; CHECK-NEXT:    eors r0, r2
+; CHECK-NEXT:    bx lr
   %zextx = zext i8 %x to i16
   %zexty = zext i8 %y to i16
   %a = call i16 @llvm.clmul.i16(i16 %zextx, i16 %zexty)
@@ -4804,57 +4797,39 @@ define <1 x i128> @clmul_v1i128(<1 x i128> %x, <1 x i128> %y) {
 define <8 x i16> @clmul_v8i16_zext(<8 x i8> %x, <8 x i8> %y) {
 ; CHECK-LABEL: clmul_v8i16_zext:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #64
-; CHECK-NEXT:    sub sp, #64
-; CHECK-NEXT:    movw r0, #37449
-; CHECK-NEXT:    vmovlb.u8 q6, q1
-; CHECK-NEXT:    vdup.16 q4, r0
-; CHECK-NEXT:    movw r0, #9362
-; CHECK-NEXT:    vdup.16 q7, r0
+; CHECK-NEXT:    vmovlb.u8 q1, q1
+; CHECK-NEXT:    vmov.i16 q2, #0x2
+; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vand q2, q6, q4
-; CHECK-NEXT:    vstrw.32 q4, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vand q1, q0, q7
-; CHECK-NEXT:    vand q3, q6, q7
-; CHECK-NEXT:    vand q4, q0, q4
-; CHECK-NEXT:    vstrw.32 q1, [sp] @ 16-byte Spill
-; CHECK-NEXT:    vmul.i16 q1, q1, q2
-; CHECK-NEXT:    vmul.i16 q5, q4, q3
-; CHECK-NEXT:    vstrw.32 q2, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    veor q2, q5, q1
-; CHECK-NEXT:    movw r0, #18724
-; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q5, r0
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vand q6, q6, q5
-; CHECK-NEXT:    vand q0, q0, q5
-; CHECK-NEXT:    vmul.i16 q2, q0, q6
-; CHECK-NEXT:    veor q2, q1, q2
-; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vand q2, q2, q7
-; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i16 q7, q1, q6
-; CHECK-NEXT:    vmul.i16 q1, q1, q3
-; CHECK-NEXT:    vmul.i16 q2, q4, q2
-; CHECK-NEXT:    veor q2, q2, q7
-; CHECK-NEXT:    vmul.i16 q7, q0, q3
-; CHECK-NEXT:    vmul.i16 q3, q4, q6
-; CHECK-NEXT:    veor q2, q2, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    veor q1, q3, q1
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vand q2, q2, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i16 q0, q0, q3
-; CHECK-NEXT:    veor q0, q1, q0
-; CHECK-NEXT:    vorr q2, q2, q7
-; CHECK-NEXT:    vand q0, q0, q5
-; CHECK-NEXT:    vorr q0, q2, q0
-; CHECK-NEXT:    add sp, #64
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q2, q0, q2
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q3, q2
+; CHECK-NEXT:    vmov.i16 q3, #0x4
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x8
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x10
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x20
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x40
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x80
+; CHECK-NEXT:    vand q1, q1, q3
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    bx lr
   %zextx = zext <8 x i8> %x to <8 x i16>
   %zexty = zext <8 x i8> %y to <8 x i16>
@@ -9110,58 +9085,40 @@ define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <8 x i8> @clmulr_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; CHECK-LABEL: clmulr_v8i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #64
-; CHECK-NEXT:    sub sp, #64
-; CHECK-NEXT:    movw r0, #37449
-; CHECK-NEXT:    vmovlb.u8 q6, q1
-; CHECK-NEXT:    vdup.16 q4, r0
-; CHECK-NEXT:    movw r0, #9362
-; CHECK-NEXT:    vdup.16 q7, r0
+; CHECK-NEXT:    vmovlb.u8 q1, q1
+; CHECK-NEXT:    vmov.i16 q2, #0x2
+; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vand q2, q6, q4
-; CHECK-NEXT:    vstrw.32 q4, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vand q1, q0, q7
-; CHECK-NEXT:    vand q3, q6, q7
-; CHECK-NEXT:    vand q4, q0, q4
-; CHECK-NEXT:    vstrw.32 q1, [sp] @ 16-byte Spill
-; CHECK-NEXT:    vmul.i16 q1, q1, q2
-; CHECK-NEXT:    vmul.i16 q5, q4, q3
-; CHECK-NEXT:    vstrw.32 q2, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    veor q2, q5, q1
-; CHECK-NEXT:    movw r0, #18724
-; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q5, r0
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vand q6, q6, q5
-; CHECK-NEXT:    vand q0, q0, q5
-; CHECK-NEXT:    vmul.i16 q2, q0, q6
-; CHECK-NEXT:    veor q2, q1, q2
-; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vand q2, q2, q7
-; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i16 q7, q1, q6
-; CHECK-NEXT:    vmul.i16 q1, q1, q3
-; CHECK-NEXT:    vmul.i16 q2, q4, q2
-; CHECK-NEXT:    veor q2, q2, q7
-; CHECK-NEXT:    vmul.i16 q7, q0, q3
-; CHECK-NEXT:    vmul.i16 q3, q4, q6
-; CHECK-NEXT:    veor q2, q2, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    veor q1, q3, q1
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vand q2, q2, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i16 q0, q0, q3
-; CHECK-NEXT:    veor q0, q1, q0
-; CHECK-NEXT:    vorr q2, q2, q7
-; CHECK-NEXT:    vand q0, q0, q5
-; CHECK-NEXT:    vorr q0, q2, q0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q2, q0, q2
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q3, q2
+; CHECK-NEXT:    vmov.i16 q3, #0x4
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x8
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x10
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x20
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x40
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x80
+; CHECK-NEXT:    vand q1, q1, q3
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    vshr.u16 q0, q0, #7
-; CHECK-NEXT:    add sp, #64
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
@@ -12298,58 +12255,40 @@ define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 define <8 x i8> @clmulh_v8i8(<8 x i8> %a, <8 x i8> %b) nounwind {
 ; CHECK-LABEL: clmulh_v8i8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    .pad #64
-; CHECK-NEXT:    sub sp, #64
-; CHECK-NEXT:    movw r0, #37449
-; CHECK-NEXT:    vmovlb.u8 q6, q1
-; CHECK-NEXT:    vdup.16 q4, r0
-; CHECK-NEXT:    movw r0, #9362
-; CHECK-NEXT:    vdup.16 q7, r0
+; CHECK-NEXT:    vmovlb.u8 q1, q1
+; CHECK-NEXT:    vmov.i16 q2, #0x2
+; CHECK-NEXT:    vmov.i16 q3, #0x1
+; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmovlb.u8 q0, q0
-; CHECK-NEXT:    vand q2, q6, q4
-; CHECK-NEXT:    vstrw.32 q4, [sp, #32] @ 16-byte Spill
-; CHECK-NEXT:    vand q1, q0, q7
-; CHECK-NEXT:    vand q3, q6, q7
-; CHECK-NEXT:    vand q4, q0, q4
-; CHECK-NEXT:    vstrw.32 q1, [sp] @ 16-byte Spill
-; CHECK-NEXT:    vmul.i16 q1, q1, q2
-; CHECK-NEXT:    vmul.i16 q5, q4, q3
-; CHECK-NEXT:    vstrw.32 q2, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    veor q2, q5, q1
-; CHECK-NEXT:    movw r0, #18724
-; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q5, r0
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vand q6, q6, q5
-; CHECK-NEXT:    vand q0, q0, q5
-; CHECK-NEXT:    vmul.i16 q2, q0, q6
-; CHECK-NEXT:    veor q2, q1, q2
-; CHECK-NEXT:    vldrw.u32 q1, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vand q2, q2, q7
-; CHECK-NEXT:    vstrw.32 q2, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vldrw.u32 q2, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i16 q7, q1, q6
-; CHECK-NEXT:    vmul.i16 q1, q1, q3
-; CHECK-NEXT:    vmul.i16 q2, q4, q2
-; CHECK-NEXT:    veor q2, q2, q7
-; CHECK-NEXT:    vmul.i16 q7, q0, q3
-; CHECK-NEXT:    vmul.i16 q3, q4, q6
-; CHECK-NEXT:    veor q2, q2, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    veor q1, q3, q1
-; CHECK-NEXT:    vldrw.u32 q3, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    vand q2, q2, q7
-; CHECK-NEXT:    vldrw.u32 q7, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vmul.i16 q0, q0, q3
-; CHECK-NEXT:    veor q0, q1, q0
-; CHECK-NEXT:    vorr q2, q2, q7
-; CHECK-NEXT:    vand q0, q0, q5
-; CHECK-NEXT:    vorr q0, q2, q0
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q2, q0, q2
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q3, q2
+; CHECK-NEXT:    vmov.i16 q3, #0x4
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x8
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x10
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x20
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x40
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmul.i16 q3, q0, q3
+; CHECK-NEXT:    veor q2, q2, q3
+; CHECK-NEXT:    vmov.i16 q3, #0x80
+; CHECK-NEXT:    vand q1, q1, q3
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    vshr.u16 q0, q0, #8
-; CHECK-NEXT:    add sp, #64
-; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    bx lr
   %a.ext = zext <8 x i8> %a to <8 x i16>
   %b.ext = zext <8 x i8> %b to <8 x i16>
