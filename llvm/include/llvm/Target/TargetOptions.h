@@ -38,13 +38,6 @@ enum JumpTableType {
 };
 }
 
-namespace ThreadModel {
-enum Model {
-  POSIX, // POSIX Threads
-  Single // Single Threaded Environment
-};
-}
-
 enum class BasicBlockSection {
   All,    // Use Basic Block Sections for all basic blocks.  A section
           // for every basic block can significantly bloat object file sizes.
@@ -315,7 +308,7 @@ public:
 
   /// ThreadModel - This flag specifies the type of threading model to assume
   /// for things like atomics
-  ThreadModel::Model ThreadModel = ThreadModel::POSIX;
+  llvm::ThreadModel ThreadModel = llvm::ThreadModel::POSIX;
 
   /// EABIVersion - This flag specifies the EABI version
   EABI EABIVersion = EABI::Default;
