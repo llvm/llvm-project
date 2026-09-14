@@ -134,11 +134,13 @@ bool isEmptyRecordForLayout(const ASTContext &Context, QualType T);
 /// element struct", i.e. it has exactly one non-empty field or
 /// exactly one field which is itself a single element
 /// struct. Structures with flexible array members are never
-/// considered single element structs.
+/// considered single element structs. If \p AllowUnions is false, neither T
+/// nor any record it contains may be a union.
 ///
 /// \return The field declaration for the single non-empty field, if
 /// it exists.
-const Type *isSingleElementStruct(QualType T, ASTContext &Context);
+const Type *isSingleElementStruct(QualType T, ASTContext &Context,
+                                  bool AllowUnions = true);
 
 Address EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
                        const ABIArgInfo &AI);
