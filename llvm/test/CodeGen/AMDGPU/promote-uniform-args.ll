@@ -4,6 +4,7 @@
 @gvar = addrspace(1) global float 0.000000e+00
 @gptr = addrspace(1) global ptr null
 @fnptr = global ptr null
+@captured_fn = global ptr @callee_global_init
 
 ; Kernel scalar and pointer arguments are passed in SGPRs, so they are
 ; trivially uniform and promoted. The workitem id is not trivially uniform.
@@ -120,6 +121,48 @@ define amdgpu_kernel void @k_ccc(ptr %p) {
 ; CHECK-NEXT:    ret void
 ;
   call void @callee_ccc(ptr %p)
+  ret void
+}
+
+; Other CCs (coldcc, amdgpu_gfx) are eligible; there is no CC allowlist.
+
+define internal coldcc void @callee_coldcc(ptr %p) {
+; CHECK-LABEL: define internal coldcc void @callee_coldcc(
+; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store float 0.000000e+00, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_coldcc(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_coldcc(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call coldcc void @callee_coldcc(ptr inreg [[P]])
+; CHECK-NEXT:    ret void
+;
+  call coldcc void @callee_coldcc(ptr %p)
+  ret void
+}
+
+define internal amdgpu_gfx void @callee_gfx(ptr %p) {
+; CHECK-LABEL: define internal amdgpu_gfx void @callee_gfx(
+; CHECK-SAME: ptr inreg [[P:%.*]]) {
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store float 0.000000e+00, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_gfx(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_gfx(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call amdgpu_gfx void @callee_gfx(ptr inreg [[P]])
+; CHECK-NEXT:    ret void
+;
+  call amdgpu_gfx void @callee_gfx(ptr %p)
   ret void
 }
 
@@ -267,6 +310,26 @@ define amdgpu_kernel void @k_addrtaken(ptr %p) {
 ;
   store ptr @callee_addrtaken, ptr @fnptr
   call fastcc void @callee_addrtaken(ptr %p)
+  ret void
+}
+
+; Address captured in a global initializer.
+
+define internal fastcc void @callee_global_init(ptr %p) {
+; CHECK-LABEL: define internal fastcc void @callee_global_init(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    ret void
+;
+  ret void
+}
+
+define amdgpu_kernel void @k_global_init(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_global_init(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call fastcc void @callee_global_init(ptr [[P]])
+; CHECK-NEXT:    ret void
+;
+  call fastcc void @callee_global_init(ptr %p)
   ret void
 }
 
@@ -695,6 +758,28 @@ define amdgpu_kernel void @k_inlinehint(ptr %p) {
 ; CHECK-NEXT:    ret void
 ;
   call fastcc void @callee_inlinehint(ptr %p)
+  ret void
+}
+
+; Fixed arguments of a vararg callee can still be promoted.
+
+define internal void @callee_vararg(ptr %p, ...) {
+; CHECK-LABEL: define internal void @callee_vararg(
+; CHECK-SAME: ptr inreg [[P:%.*]], ...) {
+; CHECK-NEXT:    store float 0.000000e+00, ptr [[P]], align 4
+; CHECK-NEXT:    ret void
+;
+  store float 0.000000e+00, ptr %p
+  ret void
+}
+
+define amdgpu_kernel void @k_vararg(ptr %p) {
+; CHECK-LABEL: define amdgpu_kernel void @k_vararg(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    call void (ptr, ...) @callee_vararg(ptr inreg [[P]], i32 1)
+; CHECK-NEXT:    ret void
+;
+  call void (ptr, ...) @callee_vararg(ptr %p, i32 1)
   ret void
 }
 

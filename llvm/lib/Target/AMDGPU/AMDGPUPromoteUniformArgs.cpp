@@ -37,7 +37,7 @@ namespace {
 
 static bool canPromoteArgToInReg(const Argument &A) {
   Type *Ty = A.getType();
-  if (!(Ty->isIntOrPtrTy() || Ty->isFloatingPointTy()) || A.hasInRegAttr())
+  if ((!Ty->isIntOrPtrTy() && !Ty->isFloatingPointTy()) || A.hasInRegAttr())
     return false;
   // inreg is mutually exclusive with byval, inalloca, preallocated, byref,
   // sret, and nest. The first five are covered by hasPointeeInMemoryValueAttr.
@@ -48,17 +48,10 @@ static bool canPromoteArgToInReg(const Argument &A) {
 
 static bool collectDirectCallSites(Function &F,
                                    SmallVectorImpl<CallBase *> &Calls) {
-  if (F.isDeclaration() || F.isVarArg() || !F.canChangeSignature())
+  if (F.isDeclaration() || !F.canChangeSignature())
     return false;
   if (!F.hasLocalLinkage())
     return false;
-  switch (F.getCallingConv()) {
-  case CallingConv::C:
-  case CallingConv::Fast:
-    break;
-  default:
-    return false;
-  }
 
   // Every use must be the callee of a direct call to F. isCallee distinguishes
   // that from F appearing as a call operand. Reject musttail/invoke *to* F.
