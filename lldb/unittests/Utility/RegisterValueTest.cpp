@@ -91,8 +91,8 @@ TEST(RegisterValueTest, GetDataInTargetByteOrder) {
       llvm::ArrayRef(little_endian_bytes));
 
   uint8_t padded_big_endian_bytes[] = {0x00, 0x01, 0x02, 0x03};
-  RegisterValue padded_value(llvm::ArrayRef(padded_big_endian_bytes),
-                             lldb::eByteOrderBig);
+  RegisterValue padded_value = RegisterValue(
+      llvm::ArrayRef(padded_big_endian_bytes), lldb::eByteOrderBig);
   ASSERT_TRUE(padded_value.GetData(target_data, reg_info.byte_size,
                                    lldb::eByteOrderBig));
   EXPECT_EQ(
@@ -102,16 +102,19 @@ TEST(RegisterValueTest, GetDataInTargetByteOrder) {
 
 TEST(RegisterValueTest, GetDataRejectsUnsupportedByteOrder) {
   uint8_t bytes[] = {0x01, 0x02, 0x03};
+  llvm::ArrayRef bytes_ref(bytes);
   DataExtractor data;
 
-  RegisterValue invalid_source(llvm::ArrayRef(bytes), lldb::eByteOrderInvalid);
+  RegisterValue invalid_source =
+      RegisterValue(bytes_ref, lldb::eByteOrderInvalid);
   EXPECT_FALSE(
       invalid_source.GetData(data, sizeof(bytes), lldb::eByteOrderLittle));
 
-  RegisterValue pdp_source(llvm::ArrayRef(bytes), lldb::eByteOrderPDP);
+  RegisterValue pdp_source = RegisterValue(bytes_ref, lldb::eByteOrderPDP);
   EXPECT_FALSE(pdp_source.GetData(data, sizeof(bytes), lldb::eByteOrderLittle));
 
-  RegisterValue little_source(llvm::ArrayRef(bytes), lldb::eByteOrderLittle);
+  RegisterValue little_source =
+      RegisterValue(bytes_ref, lldb::eByteOrderLittle);
   EXPECT_FALSE(
       little_source.GetData(data, sizeof(bytes), lldb::eByteOrderInvalid));
   EXPECT_FALSE(little_source.GetData(data, sizeof(bytes), lldb::eByteOrderPDP));
