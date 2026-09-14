@@ -65,7 +65,7 @@ class _LIBCPP_EXPORTED_FROM_ABI rcu_domain {
     __dom.__retire(__node);
   }
 
-  rcu_domain();
+  rcu_domain(void*, void*);
 
   void __retire(__rcu_node*) noexcept;
 

@@ -78,7 +78,7 @@ private:
 };
 
 class rcu_domain_impl {
-  using per_thread_states = thread_local_container<reader_states>;
+  thread_local_container<reader_states> per_thread_states_;
 
   // only the highest bit is used for the phase.
   std::atomic<reader_states::state_type> global_reader_phase_{};
@@ -94,7 +94,7 @@ class rcu_domain_impl {
   rcu_singly_list_view retired_queue_orphaned_stage0_;
   std::mutex retired_queue_orphaned_stage0_mutex_;
 
-  using per_thread_retired_queue_stage0 = thread_local_container<rcu_atomic_list_view>;
+  thread_local_container<rcu_atomic_list_view> per_thread_retired_queue_stage0_;
 
   // these two queues do not need extra synchronization
   // as they are always processed under the grace period mutex
@@ -105,7 +105,7 @@ class rcu_domain_impl {
 
   void update_phase_and_wait() noexcept {
     rcu_singly_list_view working_queue;
-    per_thread_retired_queue_stage0::for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
+    per_thread_retired_queue_stage0_.for_each([&working_queue](rcu_atomic_list_view& stage0_list) {
       working_queue.splice_back(stage0_list);
     });
     std::unique_lock lk(retired_queue_orphaned_stage0_mutex_);
@@ -132,7 +132,7 @@ class rcu_domain_impl {
 
   bool any_reader_in_ongoing_grace_period(reader_states::state_type global_phase) noexcept {
     bool any_ongoing = false;
-    per_thread_states::for_each([global_phase, &any_ongoing](reader_states& state) {
+    per_thread_states_.for_each([global_phase, &any_ongoing](reader_states& state) {
       if (state.is_grace_period_ongoing_at_phase(global_phase)) {
         any_ongoing = true;
       }
@@ -146,8 +146,12 @@ class rcu_domain_impl {
   }
 
 public:
+  rcu_domain_impl(thread_local_container<reader_states>::get_thread_entry_fn* get_reader_states,
+                  thread_local_container<rcu_atomic_list_view>::get_thread_entry_fn* get_stage0)
+      : per_thread_states_(get_reader_states), per_thread_retired_queue_stage0_(get_stage0) {}
+
   void lock() noexcept {
-    reader_states& current_thread_state = per_thread_states::get_current_thread_instance();
+    reader_states& current_thread_state = per_thread_states_.get_current_thread_instance();
 
     if (current_thread_state.is_quiescent_state()) {
       // Enter critical section by setting the nested level from 0 -> 1
@@ -160,7 +164,7 @@ public:
   }
 
   void unlock() noexcept {
-    reader_states& current_thread_state = per_thread_states::get_current_thread_instance();
+    reader_states& current_thread_state = per_thread_states_.get_current_thread_instance();
     std::atomic_thread_fence(memory_order_seq_cst);
     // Decrement the nest level.
     auto old_nested_level = current_thread_state.decrement_nest_level();
@@ -173,7 +177,7 @@ public:
   }
 
   void retire(__rcu_node* node) noexcept {
-    rcu_atomic_list_view& stage0_queue = per_thread_retired_queue_stage0::get_current_thread_instance(
+    rcu_atomic_list_view& stage0_queue = per_thread_retired_queue_stage0_.get_current_thread_instance(
         function_ref(std::cw<&rcu_domain_impl::move_to_orphan_list_on_destruction>, this));
     stage0_queue.push_front(node);
   }
@@ -202,21 +206,37 @@ public:
   }
 
   void __debug_print_all_reader_states_in_hex() {
-    per_thread_states::for_each([](reader_states& state) {
+    per_thread_states_.for_each([](reader_states& state) {
       std::printf("Reader state: 0x%04x\n", state.debug_get_state());
     });
   }
 };
+
+thread_local thread_local_container<reader_states>::thread_local_t default_reader_states;
+thread_local thread_local_container<rcu_atomic_list_view>::thread_local_t default_stage0_list;
+
+auto& get_default_reader_states() { return default_reader_states; }
+
+auto& get_default_stage0_list() { return default_stage0_list; }
+
 } // namespace
 
-class rcu_domain::__impl : public rcu_domain_impl {};
+class rcu_domain::__impl : public rcu_domain_impl {
+public:
+  using rcu_domain_impl::rcu_domain_impl;
+};
 
 rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
-  static rcu_domain default_domain;
+  static rcu_domain default_domain(
+      reinterpret_cast<void*>(&get_default_reader_states), reinterpret_cast<void*>(&get_default_stage0_list));
   return default_domain;
 }
 
-rcu_domain::rcu_domain() : __pimpl_(std::make_unique<__impl>()) {}
+rcu_domain::rcu_domain(void* get_reader_states, void* get_stage0)
+    : __pimpl_(std::make_unique<__impl>(
+          reinterpret_cast<thread_local_container<reader_states>::get_thread_entry_fn*>(get_reader_states),
+          reinterpret_cast<thread_local_container<rcu_atomic_list_view>::get_thread_entry_fn*>(get_stage0))) {}
+
 rcu_domain::~rcu_domain() = default;
 
 void rcu_domain::__debug_print_all_reader_states_in_hex() { __pimpl_->__debug_print_all_reader_states_in_hex(); }
