@@ -46,6 +46,9 @@ defm nonstatic_member_init : CXX11Compat<
 defm alias_declaration : CXX11Compat<"alias declarations are">;
 defm override_control_keyword : CXX11Compat<"'%0' keyword is">;
 defm inline_namespace : CXX11Compat<"inline namespaces are">;
+defm extern_template : CXX11Compat<"extern templates are", /*ext_warn*/false>;
+defm cxx_enumerator_list_comma : CXX11Compat<
+  "commas at the end of enumerator lists are", /*ext_warn*/false>;
 
 // C++14 compatibility with C++11 and earlier.
 defm decltype_auto_type_specifier : CXX14Compat<
@@ -184,12 +187,6 @@ def ext_c99_compound_literal : Extension<
 def ext_enumerator_list_comma_c : Extension<
   "commas at the end of enumerator lists are a C99-specific "
   "feature">, InGroup<C99>;
-def ext_enumerator_list_comma_cxx : Extension<
-  "commas at the end of enumerator lists are a C++11 extension">,
-  InGroup<CXX11>;
-def warn_cxx98_compat_enumerator_list_comma : Warning<
-  "commas at the end of enumerator lists are incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def err_enumerator_list_missing_comma : Error<
   "missing ',' between enumerators">;
 def err_enumerator_unnamed_no_def : Error<
@@ -877,11 +874,6 @@ def err_cxx26_template_template_params
     : Error<"%select{variable template|concept}0 template parameter is a C++2c "
             "extension">;
 
-def ext_extern_template : Extension<
-  "extern templates are a C++11 extension">, InGroup<CXX11>;
-def warn_cxx98_compat_extern_template : Warning<
-  "extern templates are incompatible with C++98">,
-  InGroup<CXX98CompatPedantic>, DefaultIgnore;
 def warn_static_inline_explicit_inst_ignored : Warning<
   "ignoring '%select{static|inline}0' keyword on explicit template "
   "instantiation">, InGroup<DiagGroup<"static-inline-explicit-instantiation">>;

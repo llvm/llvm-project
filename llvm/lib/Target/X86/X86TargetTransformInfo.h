@@ -159,9 +159,7 @@ public:
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind,
-      std::optional<FastMathFlags> FMF) const override {
-    return InstructionCost::getInvalid();
-  }
+      std::optional<FastMathFlags> FMF) const override;
 
   InstructionCost getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                 TTI::TargetCostKind CostKind,

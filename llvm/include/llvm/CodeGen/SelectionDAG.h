@@ -1535,9 +1535,6 @@ public:
   }
   LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
                             SDValue Ptr, MachineMemOperand *MMO);
-  LLVM_ABI SDValue getStore(SDValue Chain, const SDLoc &dl, SDValue Val,
-                            SDValue Ptr, SDValue Offset,
-                            MachineMemOperand *MMO);
   LLVM_ABI SDValue getTruncStore(
       SDValue Chain, const SDLoc &dl, SDValue Val, SDValue Ptr, SDValue Offset,
       MachinePointerInfo PtrInfo, EVT SVT, Align Alignment,
@@ -1618,9 +1615,6 @@ public:
                                 SDValue Mask, SDValue EVL, EVT MemVT,
                                 MachineMemOperand *MMO,
                                 bool IsExpanding = false);
-  LLVM_ABI SDValue getIndexedLoadVP(SDValue OrigLoad, const SDLoc &dl,
-                                    SDValue Base, SDValue Offset,
-                                    ISD::MemIndexedMode AM);
   LLVM_ABI SDValue getStoreVP(SDValue Chain, const SDLoc &dl, SDValue Val,
                               SDValue Ptr, SDValue Offset, SDValue Mask,
                               SDValue EVL, EVT MemVT, MachineMemOperand *MMO,
@@ -1637,9 +1631,6 @@ public:
                                    SDValue Ptr, SDValue Mask, SDValue EVL,
                                    EVT SVT, MachineMemOperand *MMO,
                                    bool IsCompressing = false);
-  LLVM_ABI SDValue getIndexedStoreVP(SDValue OrigStore, const SDLoc &dl,
-                                     SDValue Base, SDValue Offset,
-                                     ISD::MemIndexedMode AM);
 
   LLVM_ABI SDValue getStridedLoadVP(
       ISD::MemIndexedMode AM, ISD::LoadExtType ExtType, EVT VT, const SDLoc &DL,
@@ -1662,12 +1653,6 @@ public:
                                      ISD::MemIndexedMode AM,
                                      bool IsTruncating = false,
                                      bool IsCompressing = false);
-  LLVM_ABI SDValue getTruncStridedStoreVP(SDValue Chain, const SDLoc &DL,
-                                          SDValue Val, SDValue Ptr,
-                                          SDValue Stride, SDValue Mask,
-                                          SDValue EVL, EVT SVT,
-                                          MachineMemOperand *MMO,
-                                          bool IsCompressing = false);
 
   LLVM_ABI SDValue getGatherVP(SDVTList VTs, EVT VT, const SDLoc &dl,
                                ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
