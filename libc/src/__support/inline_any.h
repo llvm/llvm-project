@@ -22,7 +22,8 @@ namespace LIBC_NAMESPACE_DECL {
 // A utility providing inline storage for a type-erased value with trivial type.
 //
 // The maximum size and alignment of stored types is controlled by `Size` and
-// `Alignment`. Does not store or check any type information. Example:
+// `Alignment`. Does not store or check any type information for the saved value.
+// Example:
 //
 //     InlineAny<20> any;
 //     any.store(5.0);
