@@ -1175,6 +1175,43 @@ class MapInfoFinalizationPass
       deferrableDesc.push_back(std::make_pair(newMapInfoOp, attachMap));
   }
 
+  /// Use the materialized descriptor's address for target data block arguments.
+  /// Lowering initially binds assumed-shape arguments to box values, whereas
+  /// their maps return the type of the box's base address. The use_device_addr
+  /// and use_device_ptr clauses require the map result and block argument types
+  /// to agree. Load the box inside the region to preserve its existing uses.
+  void updateUseDeviceDescriptorArgs(mlir::omp::MapInfoOp map,
+                                     mlir::Value descriptor,
+                                     mlir::Operation *target,
+                                     fir::FirOpBuilder &builder) {
+    auto targetData = mlir::dyn_cast<mlir::omp::TargetDataOp>(target);
+    if (!targetData)
+      return;
+
+    auto argIface = mlir::cast<mlir::omp::BlockArgOpenMPOpInterface>(target);
+    auto updateArgs = [&](mlir::ValueRange maps,
+                          llvm::ArrayRef<mlir::BlockArgument> args) {
+      for (auto [mapValue, blockArg] : llvm::zip_equal(maps, args)) {
+        mlir::BlockArgument arg = blockArg;
+        if (mapValue != map.getResult() ||
+            !mlir::isa<fir::BaseBoxType>(arg.getType()))
+          continue;
+
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(arg.getOwner());
+        arg.setType(descriptor.getType());
+        auto load = fir::LoadOp::create(builder, arg.getLoc(), arg);
+        arg.replaceAllUsesExcept(load.getResult(), load);
+        map.getResult().setType(
+            mlir::cast<mlir::omp::PointerLikeType>(descriptor.getType()));
+      }
+    };
+    updateArgs(targetData.getUseDeviceAddrVars(),
+               argIface.getUseDeviceAddrBlockArgs());
+    updateArgs(targetData.getUseDevicePtrVars(),
+               argIface.getUseDevicePtrBlockArgs());
+  }
+
   // This function handles the splitting of allocatable/pointer maps in
   // Fortran into descriptor, pointer and attach map components, as
   // well as the handling of ref_ptr, ref_ptee, ref_ptr_ptee and attach
@@ -1210,6 +1247,7 @@ class MapInfoFinalizationPass
 
     mlir::Value descriptor = getDescriptorFromBoxMap(
         op, builder, descCanBeDeferred, canOptimizeDescViaPrivatization);
+    updateUseDeviceDescriptorArgs(op, descriptor, target, builder);
     mlir::FlatSymbolRefAttr mapperId = op.getMapperIdAttr();
 
     // Exclude irregular maps from optimization via privatization; at least for

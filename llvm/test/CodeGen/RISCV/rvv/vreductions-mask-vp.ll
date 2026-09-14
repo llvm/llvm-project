@@ -955,3 +955,18 @@ define zeroext i1 @vpreduce_mul_nxv64i1(i1 zeroext %s, <vscale x 64 x i1> %v, <v
   %r = call i1 @llvm.vp.reduce.mul.nxv64i1(i1 %s, <vscale x 64 x i1> %v, <vscale x 64 x i1> %m, i32 %evl)
   ret i1 %r
 }
+
+define zeroext i1 @vpreduce_and_icmp(i1 zeroext %s, <vscale x 8 x i8> %v, <vscale x 8 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: vpreduce_and_icmp:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
+; CHECK-NEXT:    vmsle.vi v8, v8, 4
+; CHECK-NEXT:    vmnot.m v8, v8
+; CHECK-NEXT:    vcpop.m a1, v8, v0.t
+; CHECK-NEXT:    seqz a1, a1
+; CHECK-NEXT:    and a0, a1, a0
+; CHECK-NEXT:    ret
+  %c = icmp slt <vscale x 8 x i8> %v, splat (i8 5)
+  %red = call i1 @llvm.vp.reduce.and(i1 %s, <vscale x 8 x i1> %c, <vscale x 8 x i1> %m, i32 zeroext %evl)
+  ret i1 %red
+}

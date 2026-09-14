@@ -366,7 +366,7 @@ void OmpStructureChecker::CheckNestedConstruct(
       }
     }
 
-  } else if (assoc == llvm::omp::Association::LoopSeq) {
+  } else if (assoc == llvm::omp::Association::LoopSequence) {
     if (haveLength.value == 0) {
       context_.Say(beginSource, MsgShouldContainDoOr, "sequence");
     } else {
