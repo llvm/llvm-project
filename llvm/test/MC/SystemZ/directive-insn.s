@@ -75,7 +75,7 @@ label.rsi:
   .insn rx,0x59000000,%r1,160(%r3,%r15)
 
 #CHECK: ed 13 f0 a0 00 19     cdb %f1, 160(%r3,%r15)
-  .insn rxe,0xed0000000019,%f1,160(%r3,%r15)
+  .insn rxe,0xed0000000019,%f1,160(%r3,%r15),0
 
 #CHECK: ed 23 f0 a0 10 1e     madb %f1, %f2, 160(%r3,%r15)
   .insn rxf,0xed000000001e,%f1,%f2,160(%r3,%r15)

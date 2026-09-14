@@ -49,11 +49,8 @@ static std::string getMatchClassKind(const Record &Def, const Init *Arg,
                           "directive operand");
 
   // Get name of ParserMatchClass associated with operand.
-  StringRef MC = OpRec->getValueAsDef("ParserMatchClass")->getName();
-
-  // Drop AsmOperandSuffix if present.
-  if (MC.ends_with("AsmOperand"))
-    MC = MC.drop_back(10);
+  StringRef MC =
+      OpRec->getValueAsDef("ParserMatchClass")->getValueAsString("Name");
 
   // Prepend MCK_ and return.
   return "MCK_" + std::string(MC);

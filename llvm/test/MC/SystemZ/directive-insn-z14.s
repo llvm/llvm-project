@@ -14,7 +14,7 @@ label.START:
       .insn vri_g,0xe6000000005b,%v1,%v2,103,52,5
 
 #CHECK: e6 10 34 56 70 49      vlip %v1, 13398, 7
-      .insn vri_h,0xe60000000049,%v1,13398,7,0
+      .insn vri_h,0xe60000000049,%v1,13398,7
 
 #CHECK: e6 12 00 34 50 58      vcvd %v1, %r2, 69, 3
       .insn vri_i,0xe60000000058,%v1,%r2,69,3

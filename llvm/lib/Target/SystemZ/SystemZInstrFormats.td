@@ -193,6 +193,7 @@ class InstE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
   bits<16> enc;
+
   let Inst = !if(!ne(op, 0), op, enc);
 }
 
@@ -200,6 +201,7 @@ class InstI<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<2, outs, ins, asmstr, pattern> {
   field bits<16> Inst;
   bits<16> enc;
+
   bits<8> I1;
 
   let Inst{15-8} = !if(!ne(op, 0), op, enc{15-8});
@@ -210,6 +212,7 @@ class InstIE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
   bits<32> enc;
+
   bits<4> I1;
   bits<4> I2;
 
@@ -223,6 +226,7 @@ class InstMII<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
   bits<48> enc;
+
   bits<4> M1;
   bits<12> RI2;
   bits<24> RI3;
@@ -237,6 +241,7 @@ class InstRIa<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
   bits<32> enc;
+
   bits<4> R1;
   bits<16> I2;
 
@@ -250,6 +255,7 @@ class InstRIb<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
   bits<32> enc;
+
   bits<4> R1;
   bits<16> RI2;
 
@@ -263,6 +269,7 @@ class InstRIc<bits<12> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<4, outs, ins, asmstr, pattern> {
   field bits<32> Inst;
   bits<32> enc;
+
   bits<4> M1;
   bits<16> RI2;
 
@@ -784,7 +791,7 @@ class InstRSb<bits<8> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{11-0}  = D2;
 }
 
-class InstRSEa<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
+class InstRSE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   : InstSystemZ<6, outs, ins, asmstr, pattern> {
   field bits<48> Inst;
   bits<48> enc;
