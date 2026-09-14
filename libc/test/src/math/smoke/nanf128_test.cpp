@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Unittests for nanf128.
+/// Unittests for nanf128.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -22,7 +22,7 @@
 
 #ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
 using float128 = LIBC_NAMESPACE::fputil::Float128;
-#endif
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 class LlvmLibcNanf128Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 public:
