@@ -4,6 +4,29 @@
 # SIOptimizeExecMasking folds the split EXEC update emitted by the waterfall
 # loop back into S_ANDN2_WREXEC.
 
+--- |
+  define void @fold_adjacent() { ret void }
+  define void @fold_across_meta() { ret void }
+  define void @fold_across_dbg_value() !dbg !4 { ret void }
+  define void @fold_across_instr() { ret void }
+  define void @no_fold_scc_live() { ret void }
+  define void @no_fold_src_clobbered() { ret void }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!2, !3}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, emissionKind: FullDebug)
+  !1 = !DIFile(filename: "t.c", directory: "/")
+  !2 = !{i32 7, !"Dwarf Version", i32 5}
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = distinct !DISubprogram(name: "f", scope: !1, file: !1, line: 1, type: !5, scopeLine: 1, spFlags: DISPFlagDefinition, unit: !0, retainedNodes: !10)
+  !5 = !DISubroutineType(types: !6)
+  !6 = !{null}
+  !7 = !DILocalVariable(name: "x", scope: !4, file: !1, line: 1, type: !8)
+  !8 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !9 = !DILocation(line: 1, column: 1, scope: !4)
+  !10 = !{!7}
+
 ---
 name:            fold_adjacent
 tracksRegLiveness: true
@@ -29,7 +52,8 @@ body:             |
 ...
 
 ---
-# The register allocator may leave meta instructions between the pair.
+# Meta instructions between the pair do not block the fold, but the EXEC write
+# stays where it was.
 name:            fold_across_meta
 tracksRegLiveness: true
 body:             |
@@ -38,8 +62,8 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $sgpr4, $vgpr0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   $sgpr4 = S_ANDN2_WREXEC_B32 $sgpr4, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   KILL implicit-def $vgpr0
+  ; CHECK-NEXT:   $sgpr4 = S_ANDN2_WREXEC_B32 $sgpr4, implicit-def $exec, implicit-def $scc, implicit $exec
   ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.0, implicit $exec
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -48,6 +72,33 @@ body:             |
     liveins: $sgpr4, $vgpr0
     $sgpr4 = S_ANDN2_B32 $sgpr4, $exec_lo, implicit-def dead $scc
     KILL implicit-def $vgpr0
+    $exec_lo = S_MOV_B32_term $sgpr4
+    S_CBRANCH_EXECNZ %bb.0, implicit $exec
+
+  bb.1:
+    S_ENDPGM 0
+...
+
+---
+# The EXEC write moves above trailing DBG_VALUEs so they stay after the def.
+name:            fold_across_dbg_value
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: fold_across_dbg_value
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   $sgpr4 = S_ANDN2_WREXEC_B32 $sgpr4, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; CHECK-NEXT:   DBG_VALUE $sgpr4, $noreg, !8, !DIExpression(), debug-location !DILocation(line: 1, column: 1, scope: !4)
+  ; CHECK-NEXT:   S_CBRANCH_EXECNZ %bb.0, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    liveins: $sgpr4
+    $sgpr4 = S_ANDN2_B32 $sgpr4, $exec_lo, implicit-def dead $scc
+    DBG_VALUE $sgpr4, $noreg, !7, !DIExpression(), debug-location !9
     $exec_lo = S_MOV_B32_term $sgpr4
     S_CBRANCH_EXECNZ %bb.0, implicit $exec
 

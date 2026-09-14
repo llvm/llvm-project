@@ -7494,8 +7494,7 @@ static void emitLoadScalarOpsFromVGPRLoop(
     // Compute the remaining lanes into a plain virtual register and write EXEC
     // from a terminator, so spill code for NewExec is placed before EXEC
     // changes. SIOptimizeExecMasking opportunistically folds the pair back
-    // into S_ANDN2_WREXEC after register allocation; if it can't, this is
-    // still correct, just one instruction longer.
+    // into S_ANDN2_WREXEC after register allocation.
     MRI.setSimpleHint(NewExec, PhiExec);
     BuildMI(BodyBB, I, DL, TII.get(LMC.AndN2Opc), NewExec)
         .addReg(PhiExec)

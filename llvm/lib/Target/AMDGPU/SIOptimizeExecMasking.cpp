@@ -614,10 +614,14 @@ bool SIOptimizeExecMasking::blocksAndN2Sink(const MachineInstr &MI,
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
+    // Any access to Dst would see a stale value once the def sinks past it, a
+    // use of SCC would see the s_andn2 result, and a redefinition of EXEC
+    // would change what the s_andn2 computes.
     if (TRI->regsOverlap(MO.getReg(), Dst))
       return true;
-    if (MO.isUse() ? TRI->regsOverlap(MO.getReg(), AMDGPU::SCC)
-                   : TRI->regsOverlap(MO.getReg(), LMC.ExecReg))
+    if (MO.isUse() && TRI->regsOverlap(MO.getReg(), AMDGPU::SCC))
+      return true;
+    if (MO.isDef() && TRI->regsOverlap(MO.getReg(), LMC.ExecReg))
       return true;
   }
   return false;
@@ -639,35 +643,25 @@ bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
 
   MachineBasicBlock &MBB = *CopyToExecInst.getParent();
 
-  // Keep the fused instruction ahead of any trailing meta instructions (e.g.
-  // DBG_VALUEs of Dst), which emit no code, so that the sequence is unchanged
-  // in the common case where the two are already adjacent.
+  // Keep the fused instruction ahead of any trailing debug instructions, so
+  // DBG_VALUEs of Dst stay after its def.
   MachineBasicBlock::iterator InsertPt = CopyToExecInst.getIterator();
-  while (InsertPt != MBB.begin() && std::prev(InsertPt)->isMetaInstruction())
+  while (InsertPt != MBB.begin() && std::prev(InsertPt)->isDebugInstr())
     --InsertPt;
 
   // Scan back for the s_andn2 computing the new exec value. The scheduler may
   // have moved it away from the exec write, so allow instructions in between
   // as long as sinking the s_andn2 past them is safe.
-  const unsigned SearchLimit = 20;
-  unsigned Count = 0;
-  MachineInstr *AndN2Inst = nullptr;
-  for (MachineInstr &MI : make_range(
-           std::next(MachineBasicBlock::reverse_iterator(CopyToExecInst)),
-           MBB.rend())) {
-    if (MI.isMetaInstruction())
-      continue;
-    if (++Count > SearchLimit)
-      return false;
-    if (MI.getOpcode() == LMC.AndN2Opc && MI.getOperand(0).getReg() == Dst) {
-      AndN2Inst = &MI;
-      break;
-    }
-    if (blocksAndN2Sink(MI, Dst))
-      return false;
-  }
-
-  if (!AndN2Inst)
+  auto IsAndN2Def = [&](const MachineInstr &MI) {
+    return MI.getOpcode() == LMC.AndN2Opc && MI.getOperand(0).getReg() == Dst;
+  };
+  MachineInstr *AndN2Inst = findInstrBackwards(
+      CopyToExecInst,
+      [&](MachineInstr *Check) {
+        return IsAndN2Def(*Check) || blocksAndN2Sink(*Check, Dst);
+      },
+      /*NonModifiableRegs=*/{});
+  if (!AndN2Inst || !IsAndN2Def(*AndN2Inst))
     return false;
 
   const MachineOperand &Src = AndN2Inst->getOperand(1);
