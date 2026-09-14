@@ -1066,6 +1066,13 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
       }
     }
 
+    // FIXME: The nested llvm.loop.* property tags (llvm.loop.align,
+    // llvm.loop.estimated_trip_count, the boolean enable/disable tags below)
+    // are only meaningful as operands of an llvm.loop node. Neither llvm.loop's
+    // structure nor the requirement that these tags appear only within it is
+    // validated here; the checks below fire on any matching tuple regardless of
+    // where it appears.
+
     // Check llvm.loop.estimated_trip_count.
     if (CurrentMD->getNumOperands() > 0 &&
         CurrentMD->getOperand(0).equalsStr(LLVMLoopEstimatedTripCount)) {
@@ -1078,6 +1085,26 @@ void Verifier::visitMDNode(const MDNode &BaseMD,
             "Expected second operand to be an integer constant of type i32 or "
             "smaller",
             CurrentMD);
+    }
+
+    // Check llvm.loop.align.
+    if (CurrentMD->getNumOperands() > 0 &&
+        CurrentMD->getOperand(0).equalsStr("llvm.loop.align")) {
+      Check(CurrentMD->getNumOperands() == 2, "Expected two operands",
+            CurrentMD);
+      auto *AlignMD =
+          mdconst::dyn_extract_or_null<ConstantInt>(CurrentMD->getOperand(1));
+      Check(AlignMD && AlignMD->getType()->isIntegerTy(32),
+            "Expected the alignment to be an integer constant of type i32",
+            CurrentMD);
+      if (AlignMD) {
+        uint64_t Align = AlignMD->getValue().getZExtValue();
+        Check(isPowerOf2_64(Align),
+              "Expected the alignment to be a power of two", CurrentMD);
+        Check(Align <= Value::MaximumAlignment,
+              "Alignment is larger than the implementation defined limit",
+              CurrentMD);
+      }
     }
 
     // Enforce the single-operand form of the loop enable/disable pairs.
@@ -2109,6 +2136,17 @@ Verifier::visitModuleFlag(const MDNode *Op,
     if (Value)
       Check(FloatABI::parseABIType(Value->getString()).has_value(),
             "invalid float-abi metadata value", Op);
+    return;
+  }
+
+  if (Name == "thread-model") {
+    Check(MFB == Module::Error,
+          "thread-model module flag must use 'error' merge behavior", Op);
+    const MDString *Value = dyn_cast_or_null<MDString>(Op->getOperand(2));
+    Check(Value, "thread-model metadata requires a string argument");
+    if (Value)
+      Check(parseThreadModel(Value->getString()).has_value(),
+            "invalid thread-model metadata value", Op);
     return;
   }
 

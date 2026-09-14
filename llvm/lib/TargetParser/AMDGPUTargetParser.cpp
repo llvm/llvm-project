@@ -16,6 +16,7 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 #include <array>
 #include <cassert>
 
@@ -42,6 +43,7 @@ struct GPUInfo {
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
+  uint8_t BufferResourceNumRecordsWidth;
 };
 
 // Per-GPU data for the R600 GPUKinds.
@@ -476,6 +478,35 @@ AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
   return getMaxHWAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch));
 }
 
+unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
+  // gfx10/11/12 address half of the physical block, e.g. 64 KiB of 128 KiB.
+  unsigned Size = getMaxHWAddressableLocalMemorySize(AK);
+  if (getFeatureBitset(AK).test(FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY))
+    Size *= 2;
+
+  // In half-SIMD mode the work-group reaches only half of the block.
+  if (!FullSIMDMode)
+    Size /= 2;
+
+  return Size;
+}
+
+unsigned AMDGPU::getLocalMemorySize(Triple::SubArchType SubArch,
+                                    bool FullSIMDMode) {
+  return getLocalMemorySize(getGPUKindFromSubArch(SubArch), FullSIMDMode);
+}
+
+unsigned AMDGPU::getAddressableLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
+  return std::min(getMaxHWAddressableLocalMemorySize(AK),
+                  getLocalMemorySize(AK, FullSIMDMode));
+}
+
+unsigned AMDGPU::getAddressableLocalMemorySize(Triple::SubArchType SubArch,
+                                               bool FullSIMDMode) {
+  return getAddressableLocalMemorySize(getGPUKindFromSubArch(SubArch),
+                                       FullSIMDMode);
+}
+
 unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
   const GPUInfo *Info = getAMDGPUInfo(AK);
   return Info ? Info->LDSBankCount : 32;
@@ -483,6 +514,18 @@ unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
 
 unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
   return getLDSBankCount(getGPUKindFromSubArch(SubArch));
+}
+
+std::optional<unsigned> AMDGPU::getBufferResourceNumRecordsWidth(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  if (!Info || Info->BufferResourceNumRecordsWidth == 0)
+    return std::nullopt;
+  return Info->BufferResourceNumRecordsWidth;
+}
+
+std::optional<unsigned>
+AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
+  return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {

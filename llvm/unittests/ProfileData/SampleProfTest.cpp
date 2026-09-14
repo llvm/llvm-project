@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ProfileData/SampleProf.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -24,6 +25,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gtest/gtest.h"
+#include <limits>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -138,9 +141,12 @@ struct SampleProfTest : ::testing::Test {
     delete PS;
   }
 
-  // Write a minimal profile with a specific format version to an in-memory
-  // buffer.
-  ErrorOr<SmallVector<char, 128>> writeProfileToBuffer(uint64_t Version) {
+  // Write the supplied profile map, optionally requesting a specific format
+  // version, to an in-memory buffer.
+  ErrorOr<SmallVector<char, 128>>
+  writeProfileToBuffer(const SampleProfileMap &Profiles,
+                       std::optional<uint64_t> Version = std::nullopt,
+                       bool UseComposite = false) {
     SmallVector<char, 128> Buffer;
     std::unique_ptr<raw_ostream> OS =
         std::make_unique<raw_svector_ostream>(Buffer);
@@ -149,8 +155,24 @@ struct SampleProfTest : ::testing::Test {
     if (std::error_code EC = WriterOrErr.getError())
       return EC;
     auto Writer = std::move(WriterOrErr.get());
-    Writer->setFormatVersion(Version);
+    if (Version)
+      Writer->setFormatVersion(*Version);
+    else if (UseComposite)
+      Writer->setFormatVersion(CompositeProfileVersion);
+    Writer->setUseCompositeProfile(UseComposite);
 
+    if (std::error_code EC = Writer->write(Profiles))
+      return EC;
+    Writer->getOutputStream().flush();
+    Writer.reset();
+    return Buffer;
+  }
+
+  // Write a minimal profile, optionally requesting a specific format version,
+  // to an in-memory buffer.
+  ErrorOr<SmallVector<char, 128>>
+  writeProfileToBuffer(std::optional<uint64_t> Version = std::nullopt,
+                       bool UseComposite = false) {
     StringRef FooName("_Z3fooi");
     FunctionSamples FooSamples;
     FooSamples.setFunction(FunctionId(FooName));
@@ -158,12 +180,7 @@ struct SampleProfTest : ::testing::Test {
 
     SampleProfileMap Profiles;
     Profiles[FooName] = std::move(FooSamples);
-
-    if (std::error_code EC = Writer->write(Profiles))
-      return EC;
-    Writer->getOutputStream().flush();
-    Writer.reset();
-    return Buffer;
+    return writeProfileToBuffer(Profiles, Version, UseComposite);
   }
 
   // Write a raw profile header (Magic + Version) directly to a buffer.
@@ -200,7 +217,8 @@ struct SampleProfTest : ::testing::Test {
 
   void testRoundTrip(SampleProfileFormat Format, bool Remap, bool UseMD5,
                      bool UseMD5ProfSymList = false,
-                     bool UseMD5IndexedTables = false) {
+                     bool UseMD5IndexedTables = false,
+                     bool UseComposite = false) {
     TempFile ProfileFile("profile", "", "", /*Unique*/ true);
     createWriter(Format, ProfileFile.path());
     if (Format == SampleProfileFormat::SPF_Ext_Binary) {
@@ -210,6 +228,9 @@ struct SampleProfTest : ::testing::Test {
         Writer->setUseMD5ProfileSymbolList();
       if (UseMD5IndexedTables)
         Writer->setUseMD5IndexedTables();
+      if (UseComposite)
+        Writer->setFormatVersion(CompositeProfileVersion);
+      Writer->setUseCompositeProfile(UseComposite);
     }
 
     StringRef FooName("_Z3fooi");
@@ -305,6 +326,7 @@ struct SampleProfTest : ::testing::Test {
     ASSERT_TRUE(NoError(EC));
 
     if (Format == SampleProfileFormat::SPF_Ext_Binary) {
+      EXPECT_EQ(UseComposite, Reader->hasCompositeProfileSection());
       std::unique_ptr<ProfileSymbolList> ReaderList =
           Reader->getProfileSymbolList();
       ReaderList->contains("zoo");
@@ -490,6 +512,117 @@ TEST_F(SampleProfTest, roundtrip_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false);
 }
 
+// Verify the full ExtBinary round trip through composite profile sections.
+TEST_F(SampleProfTest, roundtrip_composite_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, false,
+                /*UseMD5ProfSymList=*/false,
+                /*UseMD5IndexedTables=*/false, /*UseComposite=*/true);
+}
+
+// Verify that the writer and reader handle a multi-byte ULEB128 payload size.
+TEST_F(SampleProfTest, roundtrip_large_composite_ext_binary_profile) {
+  constexpr uint32_t BodyRecordCount = 128;
+  StringRef FunctionName("_Z5largev");
+
+  // Build one function whose encoded LBR payload is necessarily larger than the
+  // single-byte ULEB128 range.
+  FunctionSamples LargeSamples;
+  LargeSamples.setFunction(FunctionId(FunctionName));
+  ASSERT_EQ(sampleprof_error::success,
+            LargeSamples.addTotalSamples(BodyRecordCount));
+  ASSERT_EQ(sampleprof_error::success, LargeSamples.addHeadSamples(1));
+  for (uint32_t LineOffset = 1; LineOffset <= BodyRecordCount; ++LineOffset)
+    ASSERT_EQ(sampleprof_error::success,
+              LargeSamples.addBodySamples(LineOffset, 0, 1));
+
+  SampleProfileMap Profiles;
+  Profiles[FunctionName] = std::move(LargeSamples);
+  auto BufferOrErr =
+      writeProfileToBuffer(Profiles, std::nullopt, /*UseComposite=*/true);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+
+  // Inspect the decoded block structure to verify that the writer emitted a
+  // payload size outside the single-byte ULEB128 range.
+  std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+      StringRef(BufferOrErr->data(), BufferOrErr->size()), "profile");
+  auto FS = vfs::getRealFileSystem();
+  auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+  ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+  auto ProfileReader = std::move(ReaderOrErr.get());
+  std::string ProfileTypeInfo;
+  raw_string_ostream InfoOS(ProfileTypeInfo);
+  ASSERT_TRUE(NoError(ProfileReader->dumpProfileTypeInfo(InfoOS)));
+
+  StringRef PayloadSizeText =
+      StringRef(ProfileTypeInfo).split("Payload size: ").second;
+  ASSERT_FALSE(PayloadSizeText.empty());
+  PayloadSizeText = PayloadSizeText.split('\n').first;
+  uint64_t PayloadSize = 0;
+  ASSERT_FALSE(PayloadSizeText.getAsInteger(10, PayloadSize));
+  EXPECT_GE(PayloadSize, 128u);
+
+  // Confirm that the same read preserved every body record, including both
+  // ends of the generated range.
+  FunctionSamples *ReadSamples = ProfileReader->getSamplesFor(FunctionName);
+  ASSERT_NE(ReadSamples, nullptr);
+  EXPECT_EQ(ReadSamples->getBodySamples().size(), BodyRecordCount);
+  auto FirstSample = ReadSamples->findSamplesAt(1, 0);
+  ASSERT_TRUE(NoError(FirstSample.getError()));
+  EXPECT_EQ(FirstSample.get(), 1u);
+  auto LastSample = ReadSamples->findSamplesAt(BodyRecordCount, 0);
+  ASSERT_TRUE(NoError(LastSample.getError()));
+  EXPECT_EQ(LastSample.get(), 1u);
+}
+
+// Verify that reconfiguring one ExtBinary writer in both directions updates the
+// profile and offset section types. Version 105 supports both representations.
+TEST_F(SampleProfTest, ext_binary_writer_toggles_composite_layout) {
+  SmallVector<char, 128> Buffer;
+  std::unique_ptr<raw_ostream> OS =
+      std::make_unique<raw_svector_ostream>(Buffer);
+  auto WriterOrErr =
+      SampleProfileWriter::create(OS, SampleProfileFormat::SPF_Ext_Binary);
+  ASSERT_TRUE(NoError(WriterOrErr.getError()));
+  auto ProfileWriter = std::move(WriterOrErr.get());
+  ProfileWriter->setFormatVersion(CompositeProfileVersion);
+  ProfileWriter->setUseCompositeProfile(true);
+
+  StringRef FooName("_Z3fooi");
+  FunctionSamples FooSamples;
+  FooSamples.setFunction(FunctionId(FooName));
+  FooSamples.addTotalSamples(1);
+  SampleProfileMap Profiles;
+  Profiles[FooName] = std::move(FooSamples);
+
+  auto VerifyFormat = [&](bool IsComposite, uint64_t ExpectedVersion) {
+    std::unique_ptr<MemoryBuffer> MemBuffer = MemoryBuffer::getMemBufferCopy(
+        StringRef(Buffer.data(), Buffer.size()), "profile");
+    auto FS = vfs::getRealFileSystem();
+    auto ReaderOrErr = SampleProfileReader::create(MemBuffer, Context, *FS);
+    ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+    auto ProfileReader = std::move(ReaderOrErr.get());
+    ASSERT_TRUE(NoError(ProfileReader->read()));
+    EXPECT_EQ(IsComposite, ProfileReader->hasCompositeProfileSection());
+    EXPECT_EQ(ExpectedVersion, ProfileReader->getFormatVersion());
+  };
+
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(true, CompositeProfileVersion);
+
+  Buffer.clear();
+  ProfileWriter->setUseCompositeProfile(false);
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(false, CompositeProfileVersion);
+
+  Buffer.clear();
+  ProfileWriter->setUseCompositeProfile(true);
+  ASSERT_TRUE(NoError(ProfileWriter->write(Profiles)));
+  ProfileWriter->getOutputStream().flush();
+  VerifyFormat(true, CompositeProfileVersion);
+}
+
 TEST_F(SampleProfTest, roundtrip_md5_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true);
 }
@@ -502,6 +635,13 @@ TEST_F(SampleProfTest, roundtrip_eytzinger_ext_binary_profile) {
 TEST_F(SampleProfTest, roundtrip_eytzinger_name_table_ext_binary_profile) {
   testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
                 /*UseMD5ProfSymList=*/false, /*UseMD5IndexedTables=*/true);
+}
+
+// Verify composite ExtBinary round trips when the name table uses MD5 hashes.
+TEST_F(SampleProfTest, roundtrip_composite_md5_ext_binary_profile) {
+  testRoundTrip(SampleProfileFormat::SPF_Ext_Binary, false, true,
+                /*UseMD5ProfSymList=*/false,
+                /*UseMD5IndexedTables=*/false, /*UseComposite=*/true);
 }
 
 TEST_F(SampleProfTest, remap_text_profile) {
@@ -635,12 +775,43 @@ TEST_F(SampleProfTest, SampleProfileFormatVersion102) {
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
 }
 
-// Verify that requesting format version 105 (above latest supported) is
-// rejected by the reader.
+// Verify that requesting format version 105 results in a version 105 legacy
+// profile.
 TEST_F(SampleProfTest, SampleProfileFormatVersion105) {
-  auto Buffer = writeRawHeaderToBuffer(105);
+  auto BufferOrErr = writeProfileToBuffer(105);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+  auto Buffer = std::move(*BufferOrErr);
+
+  auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, CompositeProfileVersion);
+}
+
+// Verify that requesting format version 106 (above latest supported) is
+// rejected by the reader.
+TEST_F(SampleProfTest, SampleProfileFormatVersion106) {
+  auto Buffer = writeRawHeaderToBuffer(106);
   auto ReadVersionOrErr = readVersionFromBuffer(Buffer);
   EXPECT_EQ(ReadVersionOrErr.getError(), sampleprof_error::unsupported_version);
+}
+
+// Verify composite output with the first compatible ExtBinary version.
+TEST_F(SampleProfTest, CompositeProfileSupportsVersion105) {
+  auto BufferOrErr = writeProfileToBuffer(std::nullopt, /*UseComposite=*/true);
+  ASSERT_TRUE(NoError(BufferOrErr.getError()));
+
+  auto ReadVersionOrErr = readVersionFromBuffer(*BufferOrErr);
+  ASSERT_TRUE(NoError(ReadVersionOrErr.getError()));
+  EXPECT_EQ(*ReadVersionOrErr, CompositeProfileVersion);
+}
+
+// Verify that the writer rejects a programmatic legacy version instead of
+// silently overriding it when composite output is required.
+TEST_F(SampleProfTest, CompositeProfileRejectsProgrammaticLegacyVersions) {
+  for (uint64_t Version : {103u, 104u}) {
+    auto BufferOrErr = writeProfileToBuffer(Version, /*UseComposite=*/true);
+    EXPECT_EQ(BufferOrErr.getError(), sampleprof_error::unsupported_version);
+  }
 }
 
 TEST_F(SampleProfTest, ProfileSymbolListMD5) {

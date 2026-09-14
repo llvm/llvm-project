@@ -153,6 +153,81 @@ void Scheduler::notifyCreateInstr(Instruction *I) {
   }
 }
 
+void Scheduler::notifyEraseInstr(Instruction *I) {
+  // We don't maintain the state while reverting.
+  if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
+    return;
+  auto *N = DAG.getNode(I);
+  if (N == nullptr)
+    return;
+  ReadyList.remove(N);
+  // Also decrement the unscheduledDep counter for the dependents and add them
+  // to the ready list if they become ready.
+  auto UpdateNodeAndTryAddToReadyList = [this, N](DGNode *DepN) {
+    if (DepN->scheduled())
+      return;
+    if (!N->scheduled() && !DepN->ready())
+      DepN->decrUnscheduledDeps();
+    if (DepN->ready() && !ReadyList.contains(DepN))
+      ReadyList.insert(DepN);
+  };
+  if (Dir == SchedDirection::BottomUp) {
+    for (auto *DepN : N->preds(DAG))
+      UpdateNodeAndTryAddToReadyList(DepN);
+  } else if (Dir == SchedDirection::TopDown) {
+    for (auto *DepN : N->succs(DAG))
+      UpdateNodeAndTryAddToReadyList(DepN);
+  }
+}
+
+void Scheduler::notifyMoveInstr(Instruction *I, const BBIterator &To) {
+  // We don't maintain the state while reverting.
+  if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
+    return;
+  // We assume that the dependencies have not changed because the user will
+  // only attempt instruction moves that don't modify the dependencies, because
+  // if they did they would not be legal.
+  //
+  // If this assumption does not hold, we would need to empty the ready list and
+  // re-fill it.
+}
+void Scheduler::notifySetUse(const Use &U, Value *NewSrc) {
+  // We don't maintain the state while reverting.
+  if (Ctx.getTracker().getState() == Tracker::TrackerState::Reverting)
+    return;
+  Instruction *DstI = cast<Instruction>(U.getUser());
+  DGNode *DstN = DAG.getNode(DstI);
+  Value *OldSrc = U.get();
+  DGNode *OldSrcN = isa<Instruction>(OldSrc)
+                        ? DAG.getNode(cast<Instruction>(OldSrc))
+                        : nullptr;
+  DGNode *NewSrcN = isa<Instruction>(NewSrc)
+                        ? DAG.getNode(cast<Instruction>(NewSrc))
+                        : nullptr;
+  switch (Dir) {
+  case SchedDirection::BottomUp: {
+    // Check if OldSrc is now ready and add it to the ready list.
+    if (OldSrcN && OldSrcN->ready() && !OldSrcN->scheduled() &&
+        !ReadyList.contains(OldSrcN))
+      ReadyList.insert(OldSrcN);
+    // Check if NewSrcN needs to be removed from the ready list.
+    if (NewSrcN && (!DstN || !DstN->scheduled()) && !NewSrcN->ready())
+      ReadyList.remove(NewSrcN);
+    break;
+  }
+  case SchedDirection::TopDown: {
+    // Check if we need to add DstN to the ready list.
+    if (DstN && DstN->ready() && !NewSrcN->scheduled() &&
+        !ReadyList.contains(NewSrcN))
+      ReadyList.insert(NewSrcN);
+    // Check if we need to remove DstN from the ready list.
+    if (DstN && !DstN->ready())
+      ReadyList.remove(NewSrcN);
+    break;
+  }
+  }
+}
+
 SchedBundle *Scheduler::createBundle(ArrayRef<Instruction *> Instrs) {
   SchedBundle::ContainerTy Nodes;
   Nodes.reserve(Instrs.size());

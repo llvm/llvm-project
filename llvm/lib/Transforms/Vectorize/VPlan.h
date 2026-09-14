@@ -120,8 +120,8 @@ private:
   /// List of successor blocks.
   SmallVector<VPBlockBase *, 1> Successors;
 
-  /// VPlan containing the block. Can only be set on the entry block of the
-  /// plan.
+  /// VPlan containing the block. Set when the block is created via VPlan
+  /// helpers.
   VPlan *Plan = nullptr;
 
   /// Subclass identifier (for isa/dyn_cast).
@@ -194,12 +194,11 @@ public:
   const VPRegionBlock *getParent() const { return Parent; }
 
   /// \return A pointer to the plan containing the current block.
-  VPlan *getPlan();
-  const VPlan *getPlan() const;
+  VPlan *getPlan() { return Plan; }
+  const VPlan *getPlan() const { return Plan; }
 
-  /// Sets the pointer of the plan containing the block. The block must be the
-  /// entry block into the VPlan.
-  void setPlan(VPlan *ParentPlan);
+  /// Sets the pointer of the plan containing the block.
+  void setPlan(VPlan *ParentPlan) { Plan = ParentPlan; }
 
   void setParent(VPRegionBlock *P) { Parent = P; }
 
@@ -5192,6 +5191,7 @@ public:
   VPBasicBlock *createVPBasicBlock(const Twine &Name,
                                    VPRecipeBase *Recipe = nullptr) {
     auto *VPB = new VPBasicBlock(Name, Recipe);
+    VPB->setPlan(this);
     VPB->setNumber(CreatedBlocks.size());
     CreatedBlocks.push_back(VPB);
     return VPB;
@@ -5206,6 +5206,7 @@ public:
                                   VPBlockBase *Entry = nullptr,
                                   VPBlockBase *Exiting = nullptr) {
     auto *VPB = new VPRegionBlock(CanIVTy, DL, Entry, Exiting, Name);
+    VPB->setPlan(this);
     VPB->setNumber(CreatedBlocks.size());
     CreatedBlocks.push_back(VPB);
     return VPB;
@@ -5217,6 +5218,7 @@ public:
   VPRegionBlock *createReplicateRegion(VPBlockBase *Entry, VPBlockBase *Exiting,
                                        const std::string &Name = "") {
     auto *VPB = new VPRegionBlock(Entry, Exiting, Name);
+    VPB->setPlan(this);
     VPB->setNumber(CreatedBlocks.size());
     CreatedBlocks.push_back(VPB);
     return VPB;

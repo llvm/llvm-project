@@ -1086,6 +1086,18 @@ public:
   /// @}
 
   /// @}
+  /// @name Utility function for querying and setting the thread model
+  /// @{
+
+  /// Returns the thread model recorded by the "thread-model" module flag, or
+  /// the model implied by the target triple when the flag is absent.
+  ThreadModel getThreadModel() const;
+
+  /// Set the thread model.
+  void setThreadModel(ThreadModel Model);
+  /// @}
+
+  /// @}
   /// @name Utility function for querying and setting the large data threshold
   /// @{
 

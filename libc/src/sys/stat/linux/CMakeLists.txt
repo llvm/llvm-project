@@ -127,3 +127,15 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  umask
+  SRCS
+    umask.cpp
+  HDRS
+    ../umask.h
+  DEPENDS
+    libc.hdr.types.mode_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.umask
+    libc.src.__support.common
+)

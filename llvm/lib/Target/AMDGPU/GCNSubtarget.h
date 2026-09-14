@@ -364,6 +364,11 @@ public:
 
   bool isCuModeEnabled() const { return EnableCuMode; }
 
+  /// \returns Whether a work-group runs on all of the block's SIMDs.
+  bool isFullSIMDMode() const {
+    return (HasGFX1250Insts && getGeneration() < GFX13) || !EnableCuMode;
+  }
+
   bool isPreciseMemoryEnabled() const { return EnablePreciseMemory; }
 
   bool hasFlatScrRegister() const { return hasFlatAddressSpace(); }
@@ -527,6 +532,8 @@ public:
 
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
+
+  bool hasBufferTFEFormatD16() const { return !HasGFX90AInsts; }
 
   bool hasFmaakFmamkF32Insts() const {
     return getGeneration() >= GFX10 || hasGFX940Insts();

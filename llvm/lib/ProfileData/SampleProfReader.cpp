@@ -22,6 +22,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
@@ -35,6 +36,7 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -719,7 +721,14 @@ SampleProfileReaderBinary::readCallsiteVTableProf(FunctionSamples &FProfile) {
 }
 
 std::error_code
-SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
+SampleProfileReaderBinary::readLBRProfile(FunctionSamples &FProfile,
+                                          bool IsNested) {
+  if (ProfileSecRange.IsComposite && !IsNested) {
+    auto NumHeadSamples = readNumber<uint64_t>();
+    if (std::error_code EC = NumHeadSamples.getError())
+      return EC;
+    FProfile.addHeadSamples(*NumHeadSamples);
+  }
   auto NumSamples = readNumber<uint64_t>();
   if (std::error_code EC = NumSamples.getError())
     return EC;
@@ -771,6 +780,96 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     FProfile.addBodySamples(*LineOffset, DiscriminatorVal, *NumSamples);
   }
 
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readCompositeProfile(FunctionSamples &FProfile,
+                                                bool IsNested) {
+  // Read the number of profile types.
+  auto ProfNum = readNumber<uint64_t>();
+  if (std::error_code EC = ProfNum.getError())
+    return EC;
+  if (ProfileTypeInfoOS)
+    *ProfileTypeInfoOS << (IsNested ? "Nested function: " : "Function: ")
+                       << FProfile.getContext().toString()
+                       << "\n  Profile blocks: " << *ProfNum << "\n";
+
+  // Each type identifies one logical payload for the function. Decoding the
+  // same type twice would merge absolute counters from malformed input.
+  SmallSet<uint64_t, 4> SeenTypes;
+
+  // Read the specified number of composite profiles.
+  for (uint64_t I = 0; I < *ProfNum; ++I) {
+    auto Type = readNumber<uint64_t>();
+    if (std::error_code EC = Type.getError())
+      return EC;
+    // Report the conflicting ID so malformed profiles can be diagnosed
+    // without inspecting their binary encoding.
+    if (!SeenTypes.insert(*Type).second) {
+      reportError(0, "Duplicate profile type ID: " + Twine(*Type));
+      return sampleprof_error::malformed;
+    }
+    auto Size = readNumber<uint64_t>();
+    if (std::error_code EC = Size.getError())
+      return EC;
+    if (ProfileTypeInfoOS)
+      *ProfileTypeInfoOS << "  Type: " << *Type << " ("
+                         << getProfTypeName(*Type)
+                         << "), Payload size: " << *Size << "\n";
+    const uint64_t RemainingSize = End - Data;
+    // Diagnose a size that would let the payload cross its containing section.
+    if (*Size > RemainingSize) {
+      reportError(0, "Profile type ID " + Twine(*Type) +
+                         " declares payload size " + Twine(*Size) +
+                         ", but only " + Twine(RemainingSize) +
+                         " bytes remain");
+      return sampleprof_error::truncated;
+    }
+
+    const uint8_t *PayloadEnd = Data + *Size;
+    std::error_code EC = sampleprof_error::success;
+    // Restrict field readers to the current payload so they reject fields that
+    // extend into the following payload.
+    SaveAndRestore<const uint8_t *> RestoreEnd(End, PayloadEnd);
+    switch (*Type) {
+    case ProfTypeLBR:
+      EC = readLBRProfile(FProfile, IsNested);
+      break;
+    default:
+      // Skip unknown profile types for forward compatibility.
+      HasUnknownProfileTypes = true;
+      Data = PayloadEnd;
+      break;
+    }
+
+    if (EC)
+      return EC;
+    // Reject trailing bytes because every known decoder must consume exactly
+    // the payload declared for its type.
+    if (Data != PayloadEnd) {
+      reportError(0,
+                  "Profile type ID " + Twine(*Type) +
+                      " did not consume its complete payload; unread bytes: " +
+                      Twine(PayloadEnd - Data));
+      return sampleprof_error::malformed;
+    }
+  }
+
+  return sampleprof_error::success;
+}
+
+std::error_code
+SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile,
+                                       bool IsNested) {
+  if (ProfileSecRange.IsComposite) {
+    if (std::error_code EC = readCompositeProfile(FProfile, IsNested))
+      return EC;
+  } else {
+    if (std::error_code EC = readLBRProfile(FProfile, IsNested))
+      return EC;
+  }
+
   // Read all the samples for inlined function calls.
   auto NumCallsites = readNumber<uint32_t>();
   if (std::error_code EC = NumCallsites.getError())
@@ -795,7 +894,7 @@ SampleProfileReaderBinary::readProfile(FunctionSamples &FProfile) {
     FunctionSamples &CalleeProfile = FProfile.functionSamplesAt(
         LineLocation(*LineOffset, DiscriminatorVal))[*FName];
     CalleeProfile.setFunction(*FName);
-    if (std::error_code EC = readProfile(CalleeProfile))
+    if (std::error_code EC = readProfile(CalleeProfile, /*IsNested=*/true))
       return EC;
   }
 
@@ -809,10 +908,12 @@ std::error_code
 SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
                                            SampleProfileMap &Profiles) {
   Data = Start;
-  auto NumHeadSamples = readNumber<uint64_t>();
-  if (std::error_code EC = NumHeadSamples.getError())
-    return EC;
-
+  ErrorOr<uint64_t> NumHeadSamples = 0;
+  if (!ProfileSecRange.IsComposite) {
+    NumHeadSamples = readNumber<uint64_t>();
+    if (std::error_code EC = NumHeadSamples.getError())
+      return EC;
+  }
   auto FContextHash(readSampleContextFromTable());
   if (std::error_code EC = FContextHash.getError())
     return EC;
@@ -822,12 +923,13 @@ SampleProfileReaderBinary::readFuncProfile(const uint8_t *Start,
   auto Res = Profiles.try_emplace(Hash, FContext, FunctionSamples());
   FunctionSamples &FProfile = Res.first->second;
   FProfile.setContext(FContext);
-  FProfile.addHeadSamples(*NumHeadSamples);
+  if (!ProfileSecRange.IsComposite)
+    FProfile.addHeadSamples(*NumHeadSamples);
 
   if (FContext.hasContext())
     CSProfileCount++;
 
-  if (std::error_code EC = readProfile(FProfile))
+  if (std::error_code EC = readProfile(FProfile, /*IsNested=*/false))
     return EC;
   return sampleprof_error::success;
 }
@@ -888,11 +990,14 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecLBRProfile:
-    ProfileSecRange = std::make_pair(Data, End);
+  case SecCompositeProfile:
+    // Retain the section and its encoding for subsequent on-demand reads.
+    ProfileSecRange = {Data, End, Entry.Type == SecCompositeProfile};
     if (std::error_code EC = readFuncProfiles())
       return EC;
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     // If module is absent, we are using LLVM tools, and need to read all
     // profiles, so skip reading the function offset table.
     if (!M) {
@@ -970,8 +1075,8 @@ SampleProfileReaderExtBinaryBase::read(const DenseSet<StringRef> &FuncsToUse,
   if (FuncsToUse.empty())
     return sampleprof_error::success;
 
-  Data = ProfileSecRange.first;
-  End = ProfileSecRange.second;
+  Data = ProfileSecRange.Start;
+  End = ProfileSecRange.End;
   if (std::error_code EC = readFuncProfiles(FuncsToUse, Profiles))
     return EC;
   End = Data;
@@ -1621,6 +1726,12 @@ SampleProfileReaderExtBinaryBase::readSecHdrTableEntry(uint64_t Idx) {
     return EC;
   Entry.Type = static_cast<SecType>(*Type);
 
+  // Reject a section whose encoding is newer than the declared file version.
+  if ((Entry.Type == SecCompositeProfile ||
+       Entry.Type == SecCompositeFuncOffsetTable) &&
+      FormatVersion < CompositeProfileVersion)
+    return sampleprof_error::unsupported_version;
+
   auto Flags = readUnencodedNumber<uint64_t>();
   if (std::error_code EC = Flags.getError())
     return EC;
@@ -1722,6 +1833,7 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
       Flags.append("fs-discriminator,");
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagOrdered))
       Flags.append("ordered,");
     if (hasSecFlag(Entry, SecFuncOffsetFlags::SecFlagEytzinger))

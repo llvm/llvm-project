@@ -7005,22 +7005,28 @@ getDeclareTargetRefPtrSuffix(LLVM::GlobalOp globalOp,
 static bool isDeclareTargetLink(Value value) {
   if (auto declareTargetGlobal =
           dyn_cast_if_present<omp::DeclareTargetInterface>(
-              getGlobalOpFromValue(value)))
-    if (declareTargetGlobal.getDeclareTargetCaptureClause() ==
-        omp::DeclareTargetCaptureClause::link)
+              getGlobalOpFromValue(value))) {
+    omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetGlobal.getDeclareTarget();
+    if (declareTargetAttr && declareTargetAttr.getCaptureClause() ==
+                                 omp::DeclareTargetCaptureClause::link)
       return true;
+  }
   return false;
 }
 
 static bool isDeclareTargetTo(Value value) {
   if (auto declareTargetGlobal =
           dyn_cast_if_present<omp::DeclareTargetInterface>(
-              getGlobalOpFromValue(value)))
-    if (declareTargetGlobal.getDeclareTargetCaptureClause() ==
-            omp::DeclareTargetCaptureClause::to ||
-        declareTargetGlobal.getDeclareTargetCaptureClause() ==
-            omp::DeclareTargetCaptureClause::enter)
+              getGlobalOpFromValue(value))) {
+    omp::DeclareTargetAttr declareTargetAttr =
+        declareTargetGlobal.getDeclareTarget();
+    if (declareTargetAttr && (declareTargetAttr.getCaptureClause() ==
+                                  omp::DeclareTargetCaptureClause::to ||
+                              declareTargetAttr.getCaptureClause() ==
+                                  omp::DeclareTargetCaptureClause::enter))
       return true;
+  }
   return false;
 }
 
@@ -7897,8 +7903,10 @@ static void mapParentWithMembers(
     baseFlag |= (parentFlags & preserve);
   } else {
     MapFlags parentFlags = mapData.Types[mapDataIndex];
-    MapFlags preserve =
-        MapFlags::OMP_MAP_PRESENT | MapFlags::OMP_MAP_RETURN_PARAM;
+    MapFlags preserve = MapFlags::OMP_MAP_TO | MapFlags::OMP_MAP_FROM |
+                        MapFlags::OMP_MAP_PRESENT |
+                        MapFlags::OMP_MAP_RETURN_PARAM |
+                        MapFlags::OMP_MAP_IMPLICIT;
     baseFlag |= (parentFlags & preserve);
   }
 
@@ -9830,8 +9838,7 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       if (!offloadMod.getIsTargetDevice())
         return success();
 
-      omp::DeclareTargetDeviceType declareType =
-          attribute.getDeviceType().getValue();
+      omp::DeclareTargetDeviceType declareType = attribute.getDeviceType();
 
       if (declareType == omp::DeclareTargetDeviceType::host) {
         llvm::Function *llvmFunc =
@@ -9874,10 +9881,9 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       auto loc = op->getLoc()->findInstanceOf<FileLineColLoc>();
       llvm::StringRef mangledName = gOp.getSymName();
       mlir::omp::DeclareTargetCaptureClause captureClause =
-          attribute.getCaptureClause().getValue();
+          attribute.getCaptureClause();
       auto captureClauseKind = convertToCaptureClauseKind(captureClause);
-      auto deviceClause =
-          convertToDeviceClauseKind(attribute.getDeviceType().getValue());
+      auto deviceClause = convertToDeviceClauseKind(attribute.getDeviceType());
       llvm::StringRef entryMangledName = mangledName;
       llvm::Constant *entryAddr = llvm::cast<llvm::Constant>(gVal);
       std::function<llvm::GlobalValue::LinkageTypes()> variableLinkage;
@@ -9886,8 +9892,8 @@ convertDeclareTargetAttr(Operation *op, mlir::omp::DeclareTargetAttr attribute,
       bool isToOrEnter =
           captureClause == omp::DeclareTargetCaptureClause::to ||
           captureClause == omp::DeclareTargetCaptureClause::enter;
-      bool isHostOnly = attribute.getDeviceType().getValue() ==
-                        omp::DeclareTargetDeviceType::host;
+      bool isHostOnly =
+          attribute.getDeviceType() == omp::DeclareTargetDeviceType::host;
 
       // A to/enter declare-target variable needs a device-resident,
       // name-resolvable copy and a host offloading entry. A local-linkage
@@ -10175,11 +10181,13 @@ static bool isHostDeviceOp(Operation *op) {
   if (auto parentFn = op->getParentOfType<LLVM::LLVMFuncOp>()) {
     if (auto declareTargetIface =
             llvm::dyn_cast<mlir::omp::DeclareTargetInterface>(
-                parentFn.getOperation()))
-      if (declareTargetIface.isDeclareTarget() &&
-          declareTargetIface.getDeclareTargetDeviceType() !=
-              mlir::omp::DeclareTargetDeviceType::host)
+                parentFn.getOperation())) {
+      omp::DeclareTargetAttr declareTargetAttr =
+          declareTargetIface.getDeclareTarget();
+      if (declareTargetAttr && declareTargetAttr.getDeviceType() !=
+                                   mlir::omp::DeclareTargetDeviceType::host)
         return false;
+    }
 
     return true;
   }

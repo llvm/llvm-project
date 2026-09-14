@@ -794,7 +794,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+      if (!Def ||
+          !isa<VPReplicateRecipe, VPWidenRecipe, VPWidenGEPRecipe>(Def) ||
           Def->user_empty() || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
@@ -1262,6 +1263,12 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       Def->getScalarType() == A->getScalarType())
     return A;
 
+  // Shifting by zero is a no-op.
+  if (match(Def, m_CombineOr(m_Shl(m_VPValue(A), m_ZeroInt()),
+                             m_CombineOr(m_LShr(m_VPValue(A), m_ZeroInt()),
+                                         m_AShr(m_VPValue(A), m_ZeroInt())))))
+    return A;
+
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A)))))
     if (Def->getScalarType() == A->getScalarType())
       return A;
@@ -1368,6 +1375,13 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return A;
 
   return nullptr;
+}
+
+/// Returns true if \p V is available at the end of \p VPBB, i.e. it either is a
+/// live-in from the original IR or defined in \p VPBB.
+static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
+  VPRecipeBase *DefR = V->getDefiningRecipe();
+  return DefR ? DefR->getParent() == VPBB : isa<VPIRValue>(V);
 }
 
 /// Combine \p Def into a simpler recipe. May modify or create new recipes.
@@ -1668,20 +1682,20 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   VPValue *IVInc;
   if (match(Def, m_Add(m_VPValue(IVInc, m_Add(m_VPValue(X), m_VPValue())),
                        m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc)))) {
+      match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc))) &&
+      IVInc->getNumUsers() == 2) {
     auto *Phi = cast<VPPhi>(X);
-    if (IVInc->getNumUsers() == 2) {
-      // If Phi has a second user (besides IVInc's defining recipe), it must
-      // be Inc = Phi + Y for the fold to apply.
-      auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
-          findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
-      if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
-        Def->replaceAllUsesWith(IVInc);
-        if (Inc)
-          Inc->replaceAllUsesWith(Phi);
-        Phi->setOperand(0, Y);
-        return Def;
-      }
+    // If Phi has a second user (besides IVInc's defining recipe), it must be
+    // Inc = Phi + Y for the fold to apply.
+    auto *Inc = dyn_cast_if_present<VPSingleDefRecipe>(
+        findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+    if ((Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) &&
+        isAvailableAtEndOf(Y, Phi->getIncomingBlock(0))) {
+      Def->replaceAllUsesWith(IVInc);
+      if (Inc)
+        Inc->replaceAllUsesWith(Phi);
+      Phi->setOperand(0, Y);
+      return Def;
     }
   }
 
@@ -2545,17 +2559,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
              "Only ICmps should not need extending the result.");
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
 
-      // For loads/intrinsics we don't recreate the recipe; just wrap the
-      // original wide result in a ZExt to OldResTy.
-      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R)) {
-        if (OldResSizeInBits != NewResSizeInBits) {
-          auto *Ext = VPBuilder::getToInsertAfter(&R).createWidenCast(
-              Instruction::ZExt, ResultVPV, OldResTy);
-          ResultVPV->replaceAllUsesWith(Ext);
-          Ext->setOperand(0, ResultVPV);
-        }
+      // Loads/intrinsics are not recreated; they keep producing their original
+      // wide result and narrowed users will truncate it as needed below.
+      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R))
         continue;
-      }
 
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx =
@@ -2583,9 +2590,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       NWR->insertBefore(&R);
 
       // Wrap NWR in a ZExt to preserve the original wide type for downstream
-      // users (unless this is an ICmp, which produces i1 regardless).
+      // users. Not needed for ICmps, whose result type is i1 irrespective of
+      // the narrowing of their operands.
       VPValue *Replacement = NWR->getVPSingleValue();
-      if (OldResSizeInBits != NewResSizeInBits)
+      if (Replacement->getScalarType() != OldResTy)
         Replacement =
             VPBuilder::getToInsertAfter(NWR)
                 .createWidenCast(Instruction::ZExt, Replacement, OldResTy)

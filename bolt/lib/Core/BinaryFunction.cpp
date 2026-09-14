@@ -169,10 +169,6 @@ bool shouldPrint(const BinaryFunction &Function) {
 namespace llvm {
 namespace bolt {
 
-template <typename R> static bool emptyRange(const R &Range) {
-  return Range.begin() == Range.end();
-}
-
 /// Gets debug line information for the instruction located at the given
 /// address in the original binary. Returns an optional DebugLineTableRowRef
 /// that references the corresponding row in the DWARF line table. Since binary

@@ -471,6 +471,8 @@ public:
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
+    assert(Op->getScalarType() != ResultTy &&
+           "must not create a no-op cast recipe");
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
