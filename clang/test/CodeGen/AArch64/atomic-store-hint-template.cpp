@@ -28,7 +28,7 @@ void test_atomic_store_hint_template_hint(int *ptr, int val) {
   __builtin_arm_atomic_store_with_hint(ptr, val, __ATOMIC_SEQ_CST, Hint);
 }
 
-template void test_atomic_store_hint_template_hint<1>(int *, int);
+template void test_atomic_store_hint_template_hint<HINT_STSHH_STRM>(int *, int);
 
 //.
 // CHECK: [[META4]] = !{i32 1, [[META5:![0-9]+]]}

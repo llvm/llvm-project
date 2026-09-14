@@ -1780,7 +1780,7 @@ void test_atomic_store_hint_char(char *ptr, char data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_uchar(unsigned char *ptr, unsigned char data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_schar(
@@ -1789,7 +1789,7 @@ void test_atomic_store_hint_uchar(unsigned char *ptr, unsigned char data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_schar(signed char *ptr, signed char data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_bool(
@@ -1801,7 +1801,7 @@ void test_atomic_store_hint_schar(signed char *ptr, signed char data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_bool(bool *ptr, bool data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_mfloat(
@@ -1810,7 +1810,7 @@ void test_atomic_store_hint_bool(bool *ptr, bool data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_mfloat(__mfp8 *ptr, __mfp8 data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_bfloat(
@@ -1828,7 +1828,7 @@ void test_atomic_store_hint_bfloat(__bf16 *ptr, __bf16 data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_half(__fp16 *ptr, __fp16 data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 1);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_STRM);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_short(
@@ -1837,7 +1837,7 @@ void test_atomic_store_hint_half(__fp16 *ptr, __fp16 data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_short(short *ptr, short data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_ushort(
@@ -1846,7 +1846,7 @@ void test_atomic_store_hint_short(short *ptr, short data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_ushort(unsigned short *ptr, unsigned short data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_int(
@@ -1855,7 +1855,7 @@ void test_atomic_store_hint_ushort(unsigned short *ptr, unsigned short data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_int(int *ptr, int data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_unsigned(
@@ -1864,7 +1864,7 @@ void test_atomic_store_hint_int(int *ptr, int data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_unsigned(unsigned *ptr, unsigned data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_u32(
@@ -1873,7 +1873,7 @@ void test_atomic_store_hint_unsigned(unsigned *ptr, unsigned data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_u32(uint32_t *ptr, uint32_t data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_s32(
@@ -1882,7 +1882,7 @@ void test_atomic_store_hint_u32(uint32_t *ptr, uint32_t data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_s32(int32_t *ptr, int32_t data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_float(
@@ -1891,7 +1891,7 @@ void test_atomic_store_hint_s32(int32_t *ptr, int32_t data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_float(float *ptr, float data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_s64(
@@ -1900,7 +1900,7 @@ void test_atomic_store_hint_float(float *ptr, float data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_s64(int64_t *ptr, int64_t data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 1);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_STRM);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_long(
@@ -1909,7 +1909,7 @@ void test_atomic_store_hint_s64(int64_t *ptr, int64_t data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_long(long *ptr, long data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_ulong(
@@ -1918,7 +1918,7 @@ void test_atomic_store_hint_long(long *ptr, long data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_ulong(unsigned long *ptr, unsigned long data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_long_long_int(
@@ -1927,7 +1927,7 @@ void test_atomic_store_hint_ulong(unsigned long *ptr, unsigned long data) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_long_long_int(long long int *ptr, long long int data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_long_long_uint(
@@ -1936,7 +1936,7 @@ void test_atomic_store_hint_long_long_int(long long int *ptr, long long int data
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_long_long_uint(unsigned long long int *ptr, unsigned long long int data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 0);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_double(
@@ -1945,7 +1945,7 @@ void test_atomic_store_hint_long_long_uint(unsigned long long int *ptr, unsigned
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_double(double *ptr, double data) {
-  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 1);
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_STRM);
 }
 
 typedef int aliased_int;
@@ -1956,7 +1956,7 @@ typedef int aliased_int;
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_typedef_ptr(aliased_int *ptr, int value) {
-  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELAXED, 0);
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_typedef_val(
@@ -1965,7 +1965,7 @@ void test_atomic_store_hint_typedef_ptr(aliased_int *ptr, int value) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_typedef_val(int *ptr, aliased_int value) {
-  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELEASE, 1);
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELEASE, HINT_STSHH_STRM);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_volatile(
@@ -1974,7 +1974,7 @@ void test_atomic_store_hint_typedef_val(int *ptr, aliased_int value) {
 // AArch64-NEXT:    ret void
 //
 void test_atomic_store_hint_volatile(volatile int *ptr, int value) {
-  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_SEQ_CST, 0);
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
 }
 
 // AArch64-LABEL: @test_atomic_store_hint_array_arg(
@@ -1986,7 +1986,7 @@ void test_atomic_store_hint_volatile(volatile int *ptr, int value) {
 //
 void test_atomic_store_hint_array_arg() {
   int storage[1];
-  __builtin_arm_atomic_store_with_hint(storage, 0, __ATOMIC_RELAXED, 1);
+  __builtin_arm_atomic_store_with_hint(storage, 0, __ATOMIC_RELAXED, HINT_STSHH_STRM);
 }
 
 // AArch64: [[HINT1]] = !{i32 1, [[HINT2:![0-9]+]]}

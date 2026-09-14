@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple aarch64-windows -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-WIN
 // RUN: %clang_cc1 -triple arm64_32-apple-ios13 -disable-O0-optnone -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 #include <stdint.h>
+#include <arm_acle.h>
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
@@ -220,10 +221,13 @@ void atomic_store_with_hint(int64_t *a, int64_t b) {
   __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELAXED, 0); // HINT_STSHH_KEEP
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} monotonic, align 8, !mem.cache_hint ![[M1:[0-9]]]
 
-  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_SEQ_CST, 0);
+  __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} seq_cst, align 8, !mem.cache_hint ![[M1]]
 
   __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, 1); // HINT_STSHH_STRM
+  // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
+
+    __builtin_arm_atomic_store_with_hint(a, b, __ATOMIC_RELEASE, HINT_STSHH_STRM);
   // CHECK: store atomic i64 {{.*}}, ptr {{.*}} release, align 8, !mem.cache_hint ![[M3:[0-9]+]]
 
   // Invalid hint should be dropped
