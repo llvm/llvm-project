@@ -244,7 +244,7 @@ namespace ArithmeticOnDowncastPointer {
   static_assert(f() == &b[2].n, "");
 }
 
-//  indexing
+// indexing
 // past the end of the array through the same base-subobject pattern
 // should still be rejected.
 namespace OutOfBoundsStillRejected {
