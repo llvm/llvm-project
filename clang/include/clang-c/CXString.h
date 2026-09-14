@@ -16,6 +16,7 @@
 
 #include "clang-c/ExternC.h"
 #include "clang-c/Platform.h"
+#include <stddef.h>
 
 LLVM_CLANG_C_EXTERN_C_BEGIN
 
@@ -44,6 +45,11 @@ typedef struct {
   unsigned Count;
 } CXStringSet;
 
+typedef struct {
+  const char *string;
+  size_t length;
+} CStringInfo;
+
 /**
  * Retrieve the character data associated with the given string.
  *
@@ -52,6 +58,15 @@ typedef struct {
  * to `std::string::c_str()`.
  */
 CINDEX_LINKAGE const char *clang_getCString(CXString string);
+
+/**
+ * Retrieve the character data associated with the given string and its length.
+ *
+ * The returned lenght might be bigger than strlen(.string) if the string
+ * contains nul bytes. This function has the same requirements and guarantees as
+ * clang_getCString.
+ */
+CINDEX_LINKAGE CStringInfo clang_getCStringInfo(CXString string);
 
 /**
  * Free the given string.
@@ -70,4 +85,3 @@ CINDEX_LINKAGE void clang_disposeStringSet(CXStringSet *set);
 LLVM_CLANG_C_EXTERN_C_END
 
 #endif
-
