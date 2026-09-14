@@ -364,10 +364,24 @@ public:
     if (is_contained({8u, 16u}, DataType->getScalarSizeInBits()) &&
         !(ST->hasSVE2p2() && ST->hasSME2p2()) &&
         DataType->getPrimitiveSizeInBits().getKnownMinValue() < 128) {
-      auto LT = getTypeLegalizationCost(DataType);
-      if (!LT.first.isValid())
-        return false;
-      DataType = EVT(LT.second).getTypeForEVT(DataType->getContext());
+      EVT DataTypeEVT = EVT::getEVT(DataType);
+      // Scalable f16/bf16 vectors with widths of 2 and 4 can use
+      // the nxv2i64/nxv4i32 compact instructions.
+      switch (DataTypeEVT.getSimpleVT().SimpleTy) {
+      case MVT::nxv2f16:
+      case MVT::nxv2bf16:
+        DataType = EVT(MVT::nxv2i64).getTypeForEVT(DataType->getContext());
+        break;
+      case MVT::nxv4f16:
+      case MVT::nxv4bf16:
+        DataType = EVT(MVT::nxv4i32).getTypeForEVT(DataType->getContext());
+        break;
+      default:
+        auto LT = getTypeLegalizationCost(DataType);
+        if (LT.first.isValid())
+          DataType = EVT(LT.second).getTypeForEVT(DataType->getContext());
+        break;
+      };
     }
 
     return isElementTypeLegalForCompressStore(DataType->getScalarType());
