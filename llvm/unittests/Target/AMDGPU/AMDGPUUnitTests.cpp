@@ -278,13 +278,13 @@ TEST_F(AMDGPUTestBase, TestOccupancyAbsoluteLimits) {
 
 TEST_F(AMDGPUTestBase, TestGFX6LocalMemorySize) {
   for (Triple::SubArchType SubArch :
-       {Triple::AMDGPUSubArch_600, Triple::AMDGPUSubArch_601,
-        Triple::AMDGPUSubArch_602}) {
-    SCOPED_TRACE(CPU.str());
-    auto TM =
-        createAMDGPUTargetMachine(Triple(Triple::amdgpu, SubArch), "", "");
+       {Triple::AMDGPUSubArch600, Triple::AMDGPUSubArch601,
+        Triple::AMDGPUSubArch602}) {
+    SCOPED_TRACE(AMDGPU::getArchNameFromSubArch(SubArch));
+    Triple TT(Triple::amdgpu, SubArch);
+    auto TM = createAMDGPUTargetMachine(TT, /*CPU=*/"", /*FS=*/"");
     ASSERT_NE(TM, nullptr);
-    GCNSubtarget ST(TM->getTargetTriple(), CPU.str(), "", *TM);
+    GCNSubtarget ST(TT, TM->getTargetCPU(), /*FS=*/"", *TM);
 
     EXPECT_EQ(ST.getLocalMemorySize(), 65536u);
     EXPECT_EQ(ST.getAddressableLocalMemorySize(), 32768u);
