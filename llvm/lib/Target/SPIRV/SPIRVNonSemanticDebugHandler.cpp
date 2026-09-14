@@ -9,6 +9,7 @@
 
 #include "SPIRVNonSemanticDebugHandler.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
+#include "SPIRVNonSemanticDebugInfo200.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/SetVector.h"
@@ -869,7 +870,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::mapDISignatureTypeToReg(
 
 // NonSemantic.Shader.DebugInfo.100 debug operation encodings
 // (section 4.5, "Debug Operations").
-enum class NonSemanticDebugOp : uint32_t {
+namespace llvm {
+namespace SPIRV {
+namespace NSDI100 {
+enum class DebugOp : uint32_t {
   Deref = 0,
   Plus = 1,
   Minus = 2,
@@ -881,45 +885,62 @@ enum class NonSemanticDebugOp : uint32_t {
   Constu = 8,
   Fragment = 9
 };
+} // namespace NSDI100
+} // namespace SPIRV
+} // namespace llvm
 
-static std::optional<NonSemanticDebugOp>
-mapDwarfOpToNonSemanticOp(uint64_t DwarfOp) {
+static std::optional<SPIRV::NSDI100::DebugOp>
+mapDwarfOpToDebugOp100(uint64_t DwarfOp) {
   switch (DwarfOp) {
   case dwarf::DW_OP_deref:
-    return NonSemanticDebugOp::Deref;
+    return SPIRV::NSDI100::DebugOp::Deref;
   case dwarf::DW_OP_plus:
-    return NonSemanticDebugOp::Plus;
+    return SPIRV::NSDI100::DebugOp::Plus;
   case dwarf::DW_OP_minus:
-    return NonSemanticDebugOp::Minus;
+    return SPIRV::NSDI100::DebugOp::Minus;
   case dwarf::DW_OP_plus_uconst:
-    return NonSemanticDebugOp::PlusUconst;
+    return SPIRV::NSDI100::DebugOp::PlusUconst;
   case dwarf::DW_OP_bit_piece:
-    return NonSemanticDebugOp::BitPiece;
+    return SPIRV::NSDI100::DebugOp::BitPiece;
   case dwarf::DW_OP_swap:
-    return NonSemanticDebugOp::Swap;
+    return SPIRV::NSDI100::DebugOp::Swap;
   case dwarf::DW_OP_xderef:
-    return NonSemanticDebugOp::Xderef;
+    return SPIRV::NSDI100::DebugOp::Xderef;
   case dwarf::DW_OP_stack_value:
-    return NonSemanticDebugOp::StackValue;
+    return SPIRV::NSDI100::DebugOp::StackValue;
   case dwarf::DW_OP_constu:
-    return NonSemanticDebugOp::Constu;
+    return SPIRV::NSDI100::DebugOp::Constu;
   case dwarf::DW_OP_LLVM_fragment:
-    return NonSemanticDebugOp::Fragment;
+    return SPIRV::NSDI100::DebugOp::Fragment;
   default:
     return std::nullopt;
   }
+}
+
+static std::optional<uint32_t> mapDwarfOpToDebugOpEncoding(uint64_t DwarfOp,
+                                                           unsigned NSSet) {
+  if (NSSet == SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200) {
+    if (std::optional<SPIRV::NSDI200::DebugOp> Op200 =
+            SPIRV::NSDI200::mapDwarfOpToDebugOp200(DwarfOp))
+      return static_cast<uint32_t>(*Op200);
+  }
+
+  // .200 fallbacks to .100 for those 10 that are in the 100 set.
+  if (std::optional<SPIRV::NSDI100::DebugOp> Op100 =
+          mapDwarfOpToDebugOp100(DwarfOp))
+    return static_cast<uint32_t>(*Op100);
+  return std::nullopt;
 }
 
 std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
     const DIExpression::ExprOperand &Op, MCRegister VoidTypeReg,
     MCRegister I32TypeReg, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  std::optional<NonSemanticDebugOp> NSOp =
-      mapDwarfOpToNonSemanticOp(Op.getOp());
+  std::optional<uint32_t> NSOp = mapDwarfOpToDebugOpEncoding(Op.getOp(), NSSet);
   if (!NSOp)
     return std::nullopt;
 
-  SmallVector<uint32_t, 3> Key{static_cast<uint32_t>(*NSOp)};
+  SmallVector<uint32_t, DebugOperationMaxOperands> Key{*NSOp};
   for (unsigned I = 0, E = Op.getNumArgs(); I != E; ++I) {
     uint64_t Arg = Op.getArg(I);
     if (!isUInt<32>(Arg))
@@ -931,7 +952,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
   if (!Inserted)
     return It->second;
 
-  SmallVector<MCRegister, 3> Operands;
+  SmallVector<MCRegister, DebugOperationMaxOperands> Operands;
   for (uint32_t V : It->first)
     Operands.push_back(emitOpConstantI32(V, I32TypeReg, MAI));
   MCRegister Reg = emitExtInst(SPIRV::NonSemanticExtInst::DebugOperation,
