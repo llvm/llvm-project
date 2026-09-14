@@ -229,7 +229,7 @@ public:
 
   ArrayRef<BlockT *> getEntries(CycleRef C) const {
     const CycleT &Cyc = deref(C);
-    return ArrayRef(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
+    return ArrayRef<BlockT *>(BlockLayout).slice(Cyc.EntryBegin, Cyc.EntrySize);
   }
   bool isEntry(CycleRef C, const BlockT *Block) const {
     return is_contained(getEntries(C), Block);

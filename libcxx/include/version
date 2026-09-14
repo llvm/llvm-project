@@ -674,7 +674,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_simd_bitops                          202607L
 // # define __cpp_lib_simd_complex                         202502L
 // # define __cpp_lib_thread_attributes                    202606L
-// # define __cpp_lib_view_interface                       202606L
+# define __cpp_lib_view_interface                       202606L
 #endif
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

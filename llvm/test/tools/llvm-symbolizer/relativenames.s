@@ -1,7 +1,7 @@
 # REQUIRES: x86-registered-target
 
 ## Test that the relative names option to llvm-symbolizer works properly.
-## See llvm/docs/CommandGuide/llvm-symbolizer.rst for commands
+## See llvm/docs/CommandGuide/llvm-symbolizer.md for commands
 ## that would produce this test case
 
 # RUN: llvm-mc %s -filetype obj -triple x86_64-pc-linux -o %t.o

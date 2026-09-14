@@ -1,0 +1,5 @@
+# RUN: orc-rt-process-info-check --print-triple --print-page-size \
+# RUN:   | FileCheck %s -DARCH=%target-arch
+
+# CHECK: {{^}}[[ARCH]]-{{.*}}-linux
+# CHECK-NEXT: {{4096|16384}}

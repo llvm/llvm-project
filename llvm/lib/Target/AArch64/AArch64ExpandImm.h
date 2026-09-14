@@ -21,8 +21,8 @@ namespace AArch64_IMM {
 
 struct ImmInsnModel {
   unsigned Opcode;
-  uint64_t Op1;
-  uint64_t Op2;
+  std::optional<uint32_t> Op1;
+  std::optional<uint32_t> Op2;
 };
 
 struct AddrInsnModel {

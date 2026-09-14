@@ -591,6 +591,8 @@ public:
   bool Pre(const parser::OpenMPInvalidDirective &x) { return false; }
 
   bool Pre(const parser::DoConstruct &);
+  bool Pre(const parser::InputImpliedDo &);
+  bool Pre(const parser::OutputImpliedDo &);
 
   bool Pre(const parser::OpenMPSectionsConstruct &);
   void Post(const parser::OpenMPSectionsConstruct &) { PopContext(); }
@@ -645,7 +647,7 @@ public:
     PushContext(x.source, llvm::omp::Directive::OMPD_requires);
 
     // Gather information from the clauses.
-    llvm::omp::ClauseSet reqs;
+    llvm::omp::Clauses reqs;
     std::optional<common::OmpMemoryOrderType> memOrder;
     for (const parser::OmpClause &clause : x.v.Clauses().v) {
       using OmpClause = parser::OmpClause;
@@ -653,7 +655,7 @@ public:
           common::visitors{
               [&](const OmpClause::AtomicDefaultMemOrder &admo) {
                 memOrder = admo.v.v;
-                return llvm::omp::ClauseSet{clause.Id()};
+                return llvm::omp::Clauses{clause.Id()};
               },
               [&](auto &&s) {
                 using TypeS = llvm::remove_cvref_t<decltype(s)>;
@@ -665,10 +667,10 @@ public:
                     std::is_same_v<TypeS, OmpClause::UnifiedAddress> ||
                     std::is_same_v<TypeS, OmpClause::UnifiedSharedMemory>) {
                   if (omp::GetLogicalArgument(s.v, context_).value_or(true)) {
-                    return llvm::omp::ClauseSet{clause.Id()};
+                    return llvm::omp::Clauses{clause.Id()};
                   }
                 }
-                return llvm::omp::ClauseSet{};
+                return llvm::omp::Clauses{};
               },
           },
           clause.u);
@@ -915,7 +917,7 @@ public:
   }
 
   void Post(const parser::OmpMapClause &x) {
-    unsigned version{context_.langOptions().OpenMPVersion};
+    llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
     std::optional<Symbol::Flag> ompFlag;
 
     auto &mods{OmpGetModifiers(x)};
@@ -1041,7 +1043,7 @@ private:
   void CheckObjectIsPrivatizable(
       const parser::Name &, const Symbol &, Symbol::Flag);
 
-  void AddOmpRequiresToScope(Scope &, const llvm::omp::ClauseSet &,
+  void AddOmpRequiresToScope(Scope &, const llvm::omp::Clauses &,
       const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
@@ -2136,7 +2138,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPLoopConstruct &x) {
 
 void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     const parser::Name &iv) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   // Find the parallel, teams or task generating construct enclosing the
   // sequential loop.
   auto targetIt{dirContext_.rbegin()};
@@ -2216,6 +2218,28 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
   return true;
 }
 
+static const parser::Name &GetIoImpliedDoIndex(
+    const parser::IoImpliedDoControl &control) {
+  return parser::UnwrapRef<parser::Name>(control.Name());
+}
+
+// [OMP-5.2] 5.1.1 - Implied-DO indices are predetermined private.
+bool OmpAttributeVisitor::Pre(const parser::InputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
+bool OmpAttributeVisitor::Pre(const parser::OutputImpliedDo &x) {
+  if (WithinConstruct()) {
+    ResolveSeqLoopIndexInParallelOrTaskConstruct(
+        GetIoImpliedDoIndex(std::get<parser::IoImpliedDoControl>(x.t)));
+  }
+  return true;
+}
+
 // 2.15.1.1 Data-sharing Attribute Rules - Predetermined
 //   - The loop iteration variable(s) in the associated do-loop(s) of a do,
 //     parallel do, taskloop, or distribute construct is (are) private.
@@ -2227,7 +2251,7 @@ bool OmpAttributeVisitor::Pre(const parser::DoConstruct &x) {
 void OmpAttributeVisitor::PrivatizeAssociatedLoopIndex(
     const parser::OpenMPLoopConstruct &x) {
   const parser::OmpDirectiveSpecification &spec{x.BeginDir()};
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
 
   auto [depth, _]{
       omp::GetAffectedNestDepthWithReason(spec, version, &context_)};
@@ -2283,8 +2307,8 @@ bool OmpAttributeVisitor::Pre(const parser::OmpGroupprivateDirective &x) {
     device = parser::UnwrapRef<common::OmpDeviceType>(*devClause);
   }
 
-  unsigned version{context_.langOptions().OpenMPVersion};
-  llvm::omp::ClauseSet clauses{llvm::omp::Clause::OMPC_device_type};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+  llvm::omp::Clauses clauses{llvm::omp::Clause::OMPC_device_type};
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
     if (const parser::OmpObject *object{parser::omp::GetArgumentObject(arg)}) {
       if (const Symbol *sym{omp::GetObjectSymbol(*object)}) {
@@ -2337,7 +2361,7 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPCriticalConstruct &x) {
 bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_declare_target);
 
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   std::map<const Symbol *, WithOmpDeclarative> details;
   std::optional<common::OmpDeviceType> device;
 
@@ -2350,7 +2374,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
       [&](const parser::OmpObject &object, llvm::omp::Clause clauseId) {
         if (const Symbol *sym{omp::GetObjectSymbol(object)}) {
           auto &clauseSet{
-              const_cast<llvm::omp::ClauseSet &>(details[sym].ompDeclTarget())};
+              const_cast<llvm::omp::Clauses &>(details[sym].ompDeclTarget())};
           clauseSet.set(clauseId);
         }
       }};
@@ -2379,7 +2403,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
     if (auto *proc{const_cast<Symbol *>(scope.symbol())}) {
       proc->flags().set(Symbol::Flag::OmpDeclareTarget);
       auto &clauseSet{
-          const_cast<llvm::omp::ClauseSet &>(details[proc].ompDeclTarget())};
+          const_cast<llvm::omp::Clauses &>(details[proc].ompDeclTarget())};
       clauseSet.set(llvm::omp::Clause::OMPC_enter);
     }
   }
@@ -2393,7 +2417,7 @@ bool OmpAttributeVisitor::Pre(const parser::OmpDeclareTargetDirective &x) {
           if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
             d.set_version(version);
             auto &clauseSet{
-                const_cast<llvm::omp::ClauseSet &>(d.ompDeclTarget())};
+                const_cast<llvm::omp::Clauses &>(d.ompDeclTarget())};
             clauseSet |= decl.ompDeclTarget();
             if (device) {
               clauseSet.set(llvm::omp::Clause::OMPC_device_type);
@@ -2731,6 +2755,7 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         dirContext.defaultDSA == Symbol::Flag::OmpNone) {
       checkDefaultNone = true;
     }
+    bool hasDefaultNoneError{false};
     if (checkDefaultNone) {
       auto defaultNoneError = [&](parser::CharBlock loc, const Symbol *sym) {
         if (crayPtr) {
@@ -2742,13 +2767,30 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
               "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-sharing attribute clause"_err_en_US,
               sym->name());
         }
+        hasDefaultNoneError = true;
       };
+      Symbol *curSymbol{nullptr};
+      if (auto it{scope.find(symbol->name())}; it != scope.end()) {
+        curSymbol = &*it->second;
+      }
+      // Setting the DSA of a symbol with OmpNone DSA in the enclosing construct
+      // is allowed when:
+      // - The DSA is private (no read or write to the original variable).
+      // - The DSA is predetermined (should only private be allowed?).
+      // - The DSA is implicit. The standard seems to allow this only for
+      //   variables that are not referenced in the construct
+      //   (OpenMP 6.0 - 7.5.1 default Clause), but current implementation
+      //   allows the DSA to be implicitly set by a non-leaf directive.
       if (dsa.test(Symbol::Flag::OmpPrivate) ||
           crayPtrDSA.test(Symbol::Flag::OmpPrivate)) {
         checkDefaultNone = false;
-      } else if (dsa.any() || crayPtrDSA.any()) {
+      } else if ((dsa.any() && curSymbol &&
+                     curSymbol->test(Symbol::Flag::OmpExplicit)) ||
+          (crayPtrDSA.any() && crayPtr &&
+              crayPtr->test(Symbol::Flag::OmpExplicit))) {
         defaultNoneError(dirContext.directiveSource, symbol);
-      } else if (dirDepth == (int)dirContext_.size() - 1) {
+      } else if (dsa.none() && crayPtrDSA.none() &&
+          dirDepth == (int)dirContext_.size() - 1) {
         defaultNoneError(name.source, symbol);
       }
     }
@@ -2785,14 +2827,18 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
 
     if (dirContext.defaultDSA == Symbol::Flag::OmpPrivate ||
         dirContext.defaultDSA == Symbol::Flag::OmpFirstPrivate ||
-        dirContext.defaultDSA == Symbol::Flag::OmpShared) {
+        dirContext.defaultDSA == Symbol::Flag::OmpShared ||
+        (dirContext.defaultDSA == Symbol::Flag::OmpNone &&
+            !hasDefaultNoneError)) {
       // 1) default
       // Allowed only with parallel, teams and task generating constructs.
       if (!parallelDir && !taskGenDir && !teamsDir) {
         return;
       }
       dsa = {dirContext.defaultDSA};
-      makeSymbol(dsa);
+      if (dirContext.defaultDSA != Symbol::Flag::OmpNone) {
+        makeSymbol(dsa);
+      }
       PRINT_IMPLICIT_RULE("1) default");
     } else if (parallelDir) {
       // 2) parallel -> shared
@@ -2833,6 +2879,12 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
         makeSymbol(dsa)->set(Symbol::Flag::OmpImplicit);
         PRINT_IMPLICIT_RULE("7) taskgen: firstprivate");
       }
+    }
+    if (hasDefaultNoneError &&
+        (dsa.none() || dsa == Symbol::Flags{Symbol::Flag::OmpNone})) {
+      // Set DSA to avoid reporting the same error multiple times.
+      dsa = {Symbol::Flag::OmpShared};
+      makeSymbol(dsa);
     }
     prevDSA = dsa;
   }
@@ -3045,7 +3097,7 @@ static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
 
 void OmpAttributeVisitor::ResolveOmpDesignator(
     const parser::Designator &designator, Symbol::Flag ompFlag) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   llvm::omp::Directive directive{GetContext().directive};
 
   const auto *name{parser::GetDesignatorNameIfDataRef(designator)};
@@ -3449,9 +3501,9 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
 }
 
 void OmpAttributeVisitor::AddOmpRequiresToScope(Scope &scope,
-    const llvm::omp::ClauseSet &reqs,
+    const llvm::omp::Clauses &reqs,
     const std::optional<common::OmpMemoryOrderType> &memOrder) {
-  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   const Scope &programUnit{omp::GetProgramUnit(scope)};
 
   if (auto *symbol{const_cast<Symbol *>(programUnit.symbol())}) {

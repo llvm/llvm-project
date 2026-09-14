@@ -39,8 +39,8 @@ define i32 @reduction_sum_single(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP7]], [[TMP5]]
 ; CHECK-NEXT:    [[BIN_RDX7:%.*]] = add i32 [[TMP9]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP11]], [[BIN_RDX7]]
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE1:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:
@@ -344,8 +344,8 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[BIN_RDX34:%.*]] = add i32 [[TMP107]], [[BIN_RDX]]
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = add i32 [[TMP110]], [[BIN_RDX34]]
-; CHECK-NEXT:    br [[DOT_CRIT_EDGE:label %.*]]
-; CHECK:       [[__CRIT_EDGE1:.*:]]
+; CHECK-NEXT:    br label %[[DOT_CRIT_EDGE:.*]]
+; CHECK:       [[DOT_CRIT_EDGE]]:
 ; CHECK-NEXT:    ret i32 [[SUM_0_LCSSA]]
 ;
 entry:

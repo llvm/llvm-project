@@ -19,6 +19,7 @@
 #include "SIDefines.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include <bitset>
 
 namespace llvm {
 
@@ -33,6 +34,11 @@ struct ImageDimIntrinsicInfo;
 class SITargetLowering final : public AMDGPUTargetLowering {
 private:
   const GCNSubtarget *Subtarget;
+
+  /// Result types made Custom for ISD::INTRINSIC_W_CHAIN only so that
+  /// unsupported s_buffer_load result types can be diagnosed. Any other
+  /// intrinsic returning one of these must keep using generic legalization.
+  std::bitset<MVT::VALUETYPE_SIZE> SBufferLoadDiagnosticVTs;
 
 public:
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
@@ -140,8 +146,8 @@ private:
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const;
-  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M,
-                              SelectionDAG &DAG, ArrayRef<SDValue> Ops,
+  SDValue adjustLoadValueType(unsigned Opcode, MemSDNode *M, SelectionDAG &DAG,
+                              ArrayRef<SDValue> Ops,
                               bool IsIntrinsic = false) const;
 
   SDValue lowerIntrinsicLoad(MemSDNode *M, bool IsFormat, SelectionDAG &DAG,
@@ -180,6 +186,8 @@ private:
   SDValue lowerXMULO(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerXMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
 
+  SDValue getBaseSegmentAperture(unsigned AS, const SDLoc &DL,
+                                 SelectionDAG &DAG) const;
   SDValue getSegmentAperture(unsigned AS, const SDLoc &DL,
                              SelectionDAG &DAG) const;
 
@@ -237,6 +245,7 @@ private:
   SDValue performExtractVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performInsertVectorEltCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFPRoundCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue performFrexpSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   SDValue reassociateScalarOps(SDNode *N, SelectionDAG &DAG) const;
@@ -353,10 +362,6 @@ public:
   void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &, const CallBase &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
-
-  void CollectTargetIntrinsicOperands(const CallInst &I,
-                                      SmallVectorImpl<SDValue> &Ops,
-                                      SelectionDAG &DAG) const override;
 
   bool getAddrModeArguments(const IntrinsicInst *I,
                             SmallVectorImpl<Value *> &Ops,
@@ -514,6 +519,9 @@ public:
   /// \p VT is used as written, so a vector type reports false.
   bool isFMADLegal(EVT VT, DenormalFPEnv FPEnv) const;
 
+  /// \p Ty is taken by its scalar type, so a vector type asks about a lane.
+  bool isFMADLegal(const Function &F, Type *Ty) const;
+
   bool isFMAFasterThanFMulAndFAdd(const Function &F, Type *Ty) const override;
 
   SDValue splitUnaryVectorOp(SDValue Op, SelectionDAG &DAG) const;
@@ -612,9 +620,6 @@ public:
   void emitExpandAtomicCmpXchg(AtomicCmpXchgInst *CI) const override;
   void emitExpandAtomicLoad(LoadInst *LI) const override;
   void emitExpandAtomicStore(StoreInst *SI) const override;
-
-  LoadInst *
-  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
 
   const TargetRegisterClass *getRegClassFor(MVT VT,
                                             bool isDivergent) const override;
