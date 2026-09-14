@@ -76,9 +76,10 @@ ABIArgInfo SparcV8ABIInfo::classifyReturnType(QualType Ty) const {
     if (VT->getElementType()->isRealFloatingType() || Size > 64)
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
+    // Return smaller integer vectors via float registers.
     llvm::Type *FloatTy = llvm::Type::getFloatTy(getVMContext());
-    llvm::Type *CoerceTy =
-        Size <= 32 ? FloatTy : llvm::StructType::get(FloatTy, FloatTy);
+    llvm::Type *DoubleTy = llvm::Type::getDoubleTy(getVMContext());
+    llvm::Type *CoerceTy = Size <= 32 ? FloatTy : DoubleTy;
     return ABIArgInfo::getDirect(CoerceTy);
   }
 
