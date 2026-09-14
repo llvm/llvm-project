@@ -3970,6 +3970,13 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                                     *DAG.getContext(), IntVT)))
     return SDValue();
 
+  // USUBO_CARRY's carry-in must be 0 or 1, which the matched pattern does not
+  // guarantee.
+  if (!DAG.MaskedValueIsZero(
+          CarryIn,
+          APInt::getBitsSetFrom(CarryIn.getScalarValueSizeInBits(), 1)))
+    return SDValue();
+
   SDLoc DL(N);
   SDVTList VTs = DAG.getVTList(IntVT, N->getValueType(0));
   return DAG.getNode(ISD::USUBO_CARRY, DL, VTs, A, B, CarryIn).getValue(1);
