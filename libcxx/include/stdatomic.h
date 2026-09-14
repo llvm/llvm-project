@@ -126,7 +126,10 @@ using std::atomic_signal_fence                         // see below
 #    pragma GCC system_header
 #  endif
 
-#  if defined(__cplusplus) && _LIBCPP_STD_VER >= 23
+// The Android LLVM toolchain has historically allowed combining the <atomic>
+// and <stdatomic.h> headers in dialects before C++23, so for backwards
+// compatibility, preserve that ability when targeting Android.
+#  if defined(__cplusplus) && (_LIBCPP_STD_VER >= 23 || defined(__ANDROID__))
 
 #    include <atomic>
 #    include <version>
