@@ -109,6 +109,9 @@ private:
 
   void AnalyzeGlobals(Module &M);
   void AnalyzeCallGraph(CallGraph &CG, Module &M);
+  static bool maySyncOrCallIntoModule(const Function &F);
+  static bool addFunctionAttributeInfo(const Function &F, FunctionInfo &FI);
+  static void scanFunctionBodyForModRef(Function &F, FunctionInfo &FI);
   bool AnalyzeUsesOfPointer(Value *V,
                             SmallPtrSetImpl<Function *> *Readers = nullptr,
                             SmallPtrSetImpl<Function *> *Writers = nullptr,

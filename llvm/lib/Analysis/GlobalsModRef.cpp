@@ -472,6 +472,56 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   return true;
 }
 
+// Intrinsics, like any other synchronizing function, can make effects
+// of other threads visible. Without nosync we know nothing really.
+// Similarly, if `nocallback` is missing the function, or intrinsic,
+// can call into the module arbitrarily. If both are set the function
+// has an effect but will not interact with accesses of internal
+// globals inside the module. We are conservative here for optnone
+// functions, might not be necessary.
+bool GlobalsAAResult::maySyncOrCallIntoModule(const Function &F) {
+  return !F.isDeclaration() || !F.hasNoSync() ||
+         !F.hasFnAttribute(Attribute::NoCallback);
+}
+
+bool GlobalsAAResult::addFunctionAttributeInfo(const Function &F,
+                                               FunctionInfo &FI) {
+  // Try to get mod/ref behaviour from function attributes.
+  if (F.doesNotAccessMemory()) {
+    // Can't do better than that!
+  } else if (F.onlyReadsMemory()) {
+    FI.addModRefInfo(ModRefInfo::Ref);
+    if (!F.onlyAccessesArgMemory() && maySyncOrCallIntoModule(F))
+      // This function might call back into the module and read a global -
+      // consider every global as possibly being read by this function.
+      FI.setMayReadAnyGlobal();
+  } else {
+    FI.addModRefInfo(ModRefInfo::ModRef);
+    if (!F.onlyAccessesArgMemory())
+      FI.setMayReadAnyGlobal();
+    if (maySyncOrCallIntoModule(F))
+      return false;
+  }
+  return true;
+}
+
+void GlobalsAAResult::scanFunctionBodyForModRef(Function &F, FunctionInfo &FI) {
+  for (Instruction &I : instructions(&F)) {
+    if (isModAndRefSet(FI.getModRefInfo()))
+      break; // The mod/ref lattice saturates here.
+    // We handle calls specially because the graph-relevant aspects are
+    // handled above.
+    if (isa<CallBase>(&I))
+      continue;
+    // All non-call instructions we use the primary predicates for whether
+    // they read or write memory.
+    if (I.mayReadFromMemory())
+      FI.addModRefInfo(ModRefInfo::Ref);
+    if (I.mayWriteToMemory())
+      FI.addModRefInfo(ModRefInfo::Mod);
+  }
+}
+
 /// AnalyzeCallGraph - At this point, we know the functions where globals are
 /// immediately stored to and read from.  Propagate this information up the call
 /// graph to all callers and compute the mod/ref info for all memory for each
@@ -499,18 +549,6 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
     Handles.front().I = Handles.begin();
     bool KnowNothing = false;
 
-    // Intrinsics, like any other synchronizing function, can make effects
-    // of other threads visible. Without nosync we know nothing really.
-    // Similarly, if `nocallback` is missing the function, or intrinsic,
-    // can call into the module arbitrarily. If both are set the function
-    // has an effect but will not interact with accesses of internal
-    // globals inside the module. We are conservative here for optnone
-    // functions, might not be necessary.
-    auto MaySyncOrCallIntoModule = [](const Function &F) {
-      return !F.isDeclaration() || !F.hasNoSync() ||
-             !F.hasFnAttribute(Attribute::NoCallback);
-    };
-
     // Collect the mod/ref properties due to called functions.  We only compute
     // one mod-ref set.
     for (unsigned i = 0, e = SCC.size(); i != e && !KnowNothing; ++i) {
@@ -521,23 +559,9 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       }
 
       if (F->isDeclaration() || F->hasOptNone()) {
-        // Try to get mod/ref behaviour from function attributes.
-        if (F->doesNotAccessMemory()) {
-          // Can't do better than that!
-        } else if (F->onlyReadsMemory()) {
-          FI.addModRefInfo(ModRefInfo::Ref);
-          if (!F->onlyAccessesArgMemory() && MaySyncOrCallIntoModule(*F))
-            // This function might call back into the module and read a global -
-            // consider every global as possibly being read by this function.
-            FI.setMayReadAnyGlobal();
-        } else {
-          FI.addModRefInfo(ModRefInfo::ModRef);
-          if (!F->onlyAccessesArgMemory())
-            FI.setMayReadAnyGlobal();
-          if (MaySyncOrCallIntoModule(*F)) {
-            KnowNothing = true;
-            break;
-          }
+        if (!addFunctionAttributeInfo(*F, FI)) {
+          KnowNothing = true;
+          break;
         }
         continue;
       }
@@ -579,22 +603,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
       if (Node->getFunction()->hasOptNone())
         continue;
 
-      for (Instruction &I : instructions(Node->getFunction())) {
-        if (isModAndRefSet(FI.getModRefInfo()))
-          break; // The mod/ref lattice saturates here.
-
-        // We handle calls specially because the graph-relevant aspects are
-        // handled above.
-        if (isa<CallBase>(&I))
-          continue;
-
-        // All non-call instructions we use the primary predicates for whether
-        // they read or write memory.
-        if (I.mayReadFromMemory())
-          FI.addModRefInfo(ModRefInfo::Ref);
-        if (I.mayWriteToMemory())
-          FI.addModRefInfo(ModRefInfo::Mod);
-      }
+      scanFunctionBodyForModRef(*Node->getFunction(), FI);
     }
 
     if (!isModSet(FI.getModRefInfo()))
