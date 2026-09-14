@@ -137,7 +137,8 @@ bool TargetInfo::isHomogeneousAggregate(const Type *Ty, const Type *&Base,
       // Ignore (non-zero arrays of) empty records.
       const Type *FT = FD.FieldType;
       while (const auto *AT = dyn_cast<ArrayType>(FT)) {
-        // TODO: Keep this in sync with Clang's handling of matrix types.
+        // Don't drill down to the element type of a matrix type here.
+        // That should fall through to the element isHomogeneousAggregate check.
         if (AT->isMatrixType())
           break;
         if (AT->getNumElements() == 0)
