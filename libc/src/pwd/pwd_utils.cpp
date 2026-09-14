@@ -17,7 +17,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
-#include "src/pwd/flat_file_db.h"
+#include "src/__support/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
 #ifndef LIBC_COPT_PWD_FILE_PATH

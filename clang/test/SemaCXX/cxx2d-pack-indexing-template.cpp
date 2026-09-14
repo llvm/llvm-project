@@ -18,6 +18,24 @@ template <template <class> auto VV>
 constexpr int X = VV...[0]<int>; // expected-error {{'VV' does not refer to the name of a parameter pack}}
 }
 
+namespace GH220502 {
+void fn() {}
+void nontemplate(fn...[0]) {} // expected-error {{'fn' does not refer to the name of a parameter pack}}
+
+template <class T> concept Concept = true;
+template <class T> constexpr int Variable = 0;
+template <class T> void Function();
+template <class T> void Overloaded(T);
+template <class T> void Overloaded(T *);
+
+void f() {
+  (void)Concept...[0]<int>;  // expected-error {{'Concept' does not refer to the name of a parameter pack}}
+  (void)Variable...[0]<int>; // expected-error {{'Variable' does not refer to the name of a parameter pack}}
+  Function...[0]<int>();     // expected-error {{'Function' does not refer to the name of a parameter pack}}
+  Overloaded...[0]<int>(0);  // expected-error {{'Overloaded' does not refer to the name of a parameter pack}}
+}
+}
+
 namespace index {
 template <template <class> class... TT>
 struct S {
@@ -32,12 +50,10 @@ using E1 = OutOfBounds<A, B>;      // expected-note {{in instantiation of templa
 template <template <class> class... TT>
 using Negative = TT...[-1]<int>;
 // expected-error@-1 {{pack index evaluates to -1, which cannot be narrowed to type '__size_t'}}
-// expected-error@-2 {{expected ';' after alias declaration}}
 
 template <template <class> class... TT>
 using Narrowing = TT...[1.0]<int>;
 // expected-error@-1 {{conversion from 'double' to '__size_t' (aka 'unsigned long') is not allowed in a converted constant expression}}
-// expected-error@-2 {{expected ';' after alias declaration}}
 
 template <template <class> class... TT>
 using NonConstant = TT...[x]<int>;
@@ -105,6 +121,18 @@ auto ctad() {
   return x;
 }
 static_assert(__is_same(decltype(ctad<Deduce>()), Deduce<int>));
+
+template <template <class> class... TT>
+auto ctad_paren() {
+  return TT...[0](42);
+}
+static_assert(__is_same(decltype(ctad_paren<Deduce>()), Deduce<int>));
+
+template <template <class> class... TT>
+auto ctad_braced() {
+  return TT...[1]{42};
+}
+static_assert(__is_same(decltype(ctad_braced<A, Deduce>()), Deduce<int>));
 }
 
 namespace deduction_guides {

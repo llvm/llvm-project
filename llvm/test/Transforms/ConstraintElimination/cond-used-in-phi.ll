@@ -13,7 +13,7 @@ define void @phi_loop_1(i8 %x) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[C_PHI:%.*]] = phi i1 [ false, [[ENTRY]] ], [ true, [[LOOP]] ]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.exit:
@@ -54,7 +54,7 @@ define void @phi_loop_2(i8 %x) {
 ; CHECK:       loop.2:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 0, [[LOOP_1_HEADER]] ], [ [[IV_NEXT:%.*]], [[LOOP_2]] ]
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP_2]], label [[LOOP_1_LATCH]]
 ; CHECK:       loop.1.latch:
@@ -103,7 +103,7 @@ define void @phi_loop_3(i8 %x, i1 %c) {
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LOOP_LATCH]], label [[LOOP_EXIT:%.*]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i8 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ult i8 [[IV_NEXT]], 3
 ; CHECK-NEXT:    br i1 [[EC]], label [[LOOP]], label [[LOOP_EXIT]]
 ; CHECK:       loop.exit:
