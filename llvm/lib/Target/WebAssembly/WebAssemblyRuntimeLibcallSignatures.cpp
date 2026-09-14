@@ -116,7 +116,6 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::MUL_I128] = i64_i64_func_i64_i64_i64_i64;
     Table[RTLIB::MULO_I32] = i32_func_i32_i32_iPTR;
     Table[RTLIB::MULO_I64] = i64_func_i64_i64_iPTR;
-    Table[RTLIB::MULO_I128] = i64_i64_func_i64_i64_i64_i64_iPTR;
     Table[RTLIB::SDIV_I8] = i8_func_i8_i8;
     Table[RTLIB::SDIV_I16] = i16_func_i16_i16;
     Table[RTLIB::SDIV_I32] = i32_func_i32_i32;

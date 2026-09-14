@@ -3633,7 +3633,7 @@ def isOSEmscripten : RuntimeLibcallAvailability<(all_of IsOSEmscripten)>;
 def WasmSystemLibrary
     : SystemRuntimeLibrary<isWasm,
       (add DefaultRuntimeLibcallImpls, Int128RTLibcalls,
-           CompilerRTOnlyInt64Libcalls, CompilerRTOnlyInt128Libcalls,
+           CompilerRTOnlyInt64Libcalls,
            exp10f, exp10,
            emscripten_return_address,
            LibcallImpls<(add __small_printf,

@@ -1,6 +1,10 @@
 ; RUN: llc -asm-verbose=false < %s -wasm-keep-registers | FileCheck %s
 
-; Test that 128-bit smul.with.overflow assembles as expected.
+; Test that 128-bit smul.with.overflow is expanded inline rather than emitting
+; a call to __muloti4. The MULO_I128 libcall was removed from WebAssembly to
+; avoid infinite recursion when compiling custom implementations of __muloti4
+; (e.g. Zig's compiler-rt).
+; See https://github.com/llvm/llvm-project/issues/189173
 
 target triple = "wasm32-unknown-unknown"
 
@@ -13,6 +17,6 @@ entry:
   ret i128 %X
 }
 
-; CHECK: call __muloti4, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}, $pop{{[0-9]*}}{{$}}
+; CHECK-NOT: call __muloti4
 
 declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128) nounwind readnone
