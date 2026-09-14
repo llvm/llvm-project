@@ -13,5 +13,8 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_tool(llvm-mc
   llvm-mc.cpp
   Disassembler.cpp
+
+  SUPPORT_PLUGINS
   )
 
+export_executable_symbols_for_plugins(llvm-mc)
