@@ -159,11 +159,11 @@ define i64 @bextr64_a0_arithmetic(i64 %val, i64 %numskipbits, i64 %numlowbits) n
 define i64 @bextr64_a1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bextr64_a1_indexzext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsr x9, x0, x1
-; CHECK-NEXT:    lsl x8, x8, x2
+; CHECK-NEXT:    mov w8, w2
+; CHECK-NEXT:    mov w9, #1 // =0x1
+; CHECK-NEXT:    mov w10, w1
+; CHECK-NEXT:    lsl x8, x9, x8
+; CHECK-NEXT:    lsr x9, x0, x10
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    and x0, x8, x9
 ; CHECK-NEXT:    ret
@@ -198,11 +198,11 @@ define i64 @bextr64_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; CHECK-LABEL: bextr64_a3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x9, x9, x2
-; CHECK-NEXT:    lsr x8, x8, x1
+; CHECK-NEXT:    mov w9, w2
+; CHECK-NEXT:    mov w10, #1 // =0x1
+; CHECK-NEXT:    mov w11, w1
+; CHECK-NEXT:    lsl x9, x10, x9
+; CHECK-NEXT:    lsr x8, x8, x11
 ; CHECK-NEXT:    sub x9, x9, #1
 ; CHECK-NEXT:    and x0, x9, x8
 ; CHECK-NEXT:    ret
@@ -397,12 +397,12 @@ define i64 @bextr64_b0(i64 %val, i64 %numskipbits, i64 %numlowbits) nounwind {
 define i64 @bextr64_b1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bextr64_b1_indexzext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsr x9, x0, x1
-; CHECK-NEXT:    lsl x8, x8, x2
-; CHECK-NEXT:    bic x0, x9, x8
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    mov w9, w2
+; CHECK-NEXT:    mov x10, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    lsr x8, x0, x8
+; CHECK-NEXT:    lsl x9, x10, x9
+; CHECK-NEXT:    bic x0, x8, x9
 ; CHECK-NEXT:    ret
   %skip = zext i8 %numskipbits to i64
   %shifted = lshr i64 %val, %skip
@@ -434,11 +434,11 @@ define i64 @bextr64_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; CHECK-LABEL: bextr64_b3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr x8, [x0]
-; CHECK-NEXT:    mov x9, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    // kill: def $w2 killed $w2 def $x2
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x9, x9, x2
-; CHECK-NEXT:    lsr x8, x8, x1
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    mov w10, w2
+; CHECK-NEXT:    mov x11, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    lsr x8, x8, x9
+; CHECK-NEXT:    lsl x9, x11, x10
 ; CHECK-NEXT:    bic x0, x8, x9
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %w

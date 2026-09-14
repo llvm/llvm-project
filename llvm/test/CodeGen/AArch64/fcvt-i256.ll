@@ -552,364 +552,167 @@ define double @u256_to_f64(i256 %val) {
 }
 
 define i256 @f32_to_s256(float %val) {
-; CHECK-SD-LABEL: f32_to_s256:
-; CHECK-SD:       // %bb.0: // %fp-to-i-entry
-; CHECK-SD-NEXT:    fmov w8, s0
-; CHECK-SD-NEXT:    ubfx w10, w8, #23, #8
-; CHECK-SD-NEXT:    cmp w10, #127
-; CHECK-SD-NEXT:    b.hs .LBB4_2
-; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    mov x2, xzr
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB4_2: // %fp-to-i-if-check.exp.size
-; CHECK-SD-NEXT:    sbfx x9, x8, #31, #1
-; CHECK-SD-NEXT:    mov w11, #8388608 // =0x800000
-; CHECK-SD-NEXT:    cmp w10, #149
-; CHECK-SD-NEXT:    bfxil w11, w8, #0, #23
-; CHECK-SD-NEXT:    orr x8, x9, #0x1
-; CHECK-SD-NEXT:    b.hi .LBB4_4
-; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-exp.small
-; CHECK-SD-NEXT:    mov w12, #150 // =0x96
-; CHECK-SD-NEXT:    sub w10, w12, w10
-; CHECK-SD-NEXT:    lsr w10, w11, w10
-; CHECK-SD-NEXT:    umulh x13, x10, x8
-; CHECK-SD-NEXT:    umulh x12, x10, x9
-; CHECK-SD-NEXT:    umulh x11, x9, x10
-; CHECK-SD-NEXT:    smull x14, w10, w9
-; CHECK-SD-NEXT:    smull x15, w9, w10
-; CHECK-SD-NEXT:    smull x9, w9, w10
-; CHECK-SD-NEXT:    adds x1, x14, x13
-; CHECK-SD-NEXT:    smull x0, w10, w8
-; CHECK-SD-NEXT:    adcs x2, x15, x12
-; CHECK-SD-NEXT:    adc x3, x11, x9
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB4_4: // %fp-to-i-if-exp.large
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    sub w10, w10, #150
-; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    lsr x11, x10, #3
-; CHECK-SD-NEXT:    mov x12, sp
-; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x12, x12, #32
-; CHECK-SD-NEXT:    and x16, x10, #0x3f
-; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    and x11, x11, #0x18
-; CHECK-SD-NEXT:    eor x16, x16, #0x3f
-; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x11, x12, x11
-; CHECK-SD-NEXT:    stp q0, q0, [sp]
-; CHECK-SD-NEXT:    ldp x12, x15, [x11]
-; CHECK-SD-NEXT:    ldp x1, x11, [x11, #16]
-; CHECK-SD-NEXT:    lsl x18, x15, x10
-; CHECK-SD-NEXT:    lsr x15, x15, #1
-; CHECK-SD-NEXT:    lsl x13, x12, x10
-; CHECK-SD-NEXT:    lsr x12, x12, #1
-; CHECK-SD-NEXT:    lsl x4, x1, x10
-; CHECK-SD-NEXT:    lsr x1, x1, #1
-; CHECK-SD-NEXT:    lsr x15, x15, x2
-; CHECK-SD-NEXT:    lsl x10, x11, x10
-; CHECK-SD-NEXT:    umulh x14, x13, x8
-; CHECK-SD-NEXT:    lsr x12, x12, x16
-; CHECK-SD-NEXT:    lsr x11, x1, x16
-; CHECK-SD-NEXT:    orr x15, x4, x15
-; CHECK-SD-NEXT:    mul x0, x13, x9
-; CHECK-SD-NEXT:    orr x12, x18, x12
-; CHECK-SD-NEXT:    orr x10, x10, x11
-; CHECK-SD-NEXT:    umulh x4, x8, x15
-; CHECK-SD-NEXT:    mul x3, x12, x8
-; CHECK-SD-NEXT:    umulh x11, x9, x13
-; CHECK-SD-NEXT:    umulh x18, x12, x8
-; CHECK-SD-NEXT:    adds x14, x3, x14
-; CHECK-SD-NEXT:    umulh x17, x13, x9
-; CHECK-SD-NEXT:    madd x10, x8, x10, x4
-; CHECK-SD-NEXT:    cinc x18, x18, hs
-; CHECK-SD-NEXT:    adds x1, x0, x14
-; CHECK-SD-NEXT:    madd x11, x9, x12, x11
-; CHECK-SD-NEXT:    mul x16, x12, x9
-; CHECK-SD-NEXT:    umulh x2, x12, x9
-; CHECK-SD-NEXT:    madd x10, x9, x15, x10
-; CHECK-SD-NEXT:    mul x12, x8, x15
-; CHECK-SD-NEXT:    mul x15, x9, x13
-; CHECK-SD-NEXT:    madd x9, x9, x13, x11
-; CHECK-SD-NEXT:    cinc x11, x17, hs
-; CHECK-SD-NEXT:    adds x11, x18, x11
-; CHECK-SD-NEXT:    mul x0, x13, x8
-; CHECK-SD-NEXT:    cset w8, hs
-; CHECK-SD-NEXT:    adds x11, x16, x11
-; CHECK-SD-NEXT:    adc x8, x2, x8
-; CHECK-SD-NEXT:    adds x12, x15, x12
-; CHECK-SD-NEXT:    adc x9, x9, x10
-; CHECK-SD-NEXT:    adds x2, x11, x12
-; CHECK-SD-NEXT:    adc x3, x8, x9
-; CHECK-SD-NEXT:    add sp, sp, #64
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: f32_to_s256:
-; CHECK-GI:       // %bb.0: // %fp-to-i-entry
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    mov x1, xzr
-; CHECK-GI-NEXT:    mov x2, xzr
-; CHECK-GI-NEXT:    mov x3, xzr
-; CHECK-GI-NEXT:    ubfx w11, w8, #23, #8
-; CHECK-GI-NEXT:    cmn w8, #1
-; CHECK-GI-NEXT:    cset w9, le
-; CHECK-GI-NEXT:    cmp w11, #127
-; CHECK-GI-NEXT:    b.lo .LBB4_4
-; CHECK-GI-NEXT:  // %bb.1: // %fp-to-i-if-check.exp.size
-; CHECK-GI-NEXT:    sbfx x10, x9, #0, #1
-; CHECK-GI-NEXT:    and w12, w8, #0x7fffff
-; CHECK-GI-NEXT:    cmp w11, #150
-; CHECK-GI-NEXT:    asr x9, x10, #63
-; CHECK-GI-NEXT:    orr x8, x10, #0x1
-; CHECK-GI-NEXT:    orr w10, w12, #0x800000
-; CHECK-GI-NEXT:    b.hs .LBB4_3
-; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-if-exp.small
-; CHECK-GI-NEXT:    mov w12, #150 // =0x96
-; CHECK-GI-NEXT:    umulh x15, x9, xzr
-; CHECK-GI-NEXT:    sub w11, w12, w11
-; CHECK-GI-NEXT:    lsr w10, w10, w11
-; CHECK-GI-NEXT:    umulh x12, x8, xzr
-; CHECK-GI-NEXT:    umulh x11, x10, x8
-; CHECK-GI-NEXT:    umulh x13, x10, x9
-; CHECK-GI-NEXT:    smull x14, w10, w9
-; CHECK-GI-NEXT:    smull x16, w10, w9
-; CHECK-GI-NEXT:    smull x0, w10, w8
-; CHECK-GI-NEXT:    adds x1, x11, x14
-; CHECK-GI-NEXT:    add x14, x12, x15
-; CHECK-GI-NEXT:    add x12, x12, x13
-; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    adds x12, x12, x16
-; CHECK-GI-NEXT:    add x13, x14, x13
-; CHECK-GI-NEXT:    and x11, x11, #0x1
-; CHECK-GI-NEXT:    smaddl x9, w10, w9, x13
-; CHECK-GI-NEXT:    cset w13, hs
-; CHECK-GI-NEXT:    adds x2, x12, x11
-; CHECK-GI-NEXT:    and x8, x13, #0x1
-; CHECK-GI-NEXT:    cset w10, hs
-; CHECK-GI-NEXT:    and x10, x10, #0x1
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    add x3, x8, x10
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB4_3: // %fp-to-i-if-exp.large
-; CHECK-GI-NEXT:    sub w11, w11, #150
-; CHECK-GI-NEXT:    mov w13, #64 // =0x40
-; CHECK-GI-NEXT:    mov w12, #128 // =0x80
-; CHECK-GI-NEXT:    sub x14, x11, #64
-; CHECK-GI-NEXT:    sub x15, x13, x11
-; CHECK-GI-NEXT:    lsl x16, x10, x11
-; CHECK-GI-NEXT:    lsr x15, x10, x15
-; CHECK-GI-NEXT:    lsl x14, x10, x14
-; CHECK-GI-NEXT:    sub x12, x12, x11
-; CHECK-GI-NEXT:    cmp x11, #64
-; CHECK-GI-NEXT:    sub x17, x11, #128
-; CHECK-GI-NEXT:    lsr x18, x10, x12
-; CHECK-GI-NEXT:    csel x16, x16, xzr, lo
-; CHECK-GI-NEXT:    csel x14, x15, x14, lo
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    sub x15, x17, #64
-; CHECK-GI-NEXT:    csel x14, xzr, x14, eq
-; CHECK-GI-NEXT:    cmp x12, #64
-; CHECK-GI-NEXT:    sub x13, x13, x17
-; CHECK-GI-NEXT:    csel x18, x18, xzr, lo
-; CHECK-GI-NEXT:    cmp x12, #0
-; CHECK-GI-NEXT:    lsl x12, x10, x17
-; CHECK-GI-NEXT:    lsr x13, x10, x13
-; CHECK-GI-NEXT:    lsl x15, x10, x15
-; CHECK-GI-NEXT:    csel x18, x10, x18, eq
-; CHECK-GI-NEXT:    cmp x17, #64
-; CHECK-GI-NEXT:    csel x12, x12, xzr, lo
-; CHECK-GI-NEXT:    csel x10, x13, x15, lo
-; CHECK-GI-NEXT:    cmp x17, #0
-; CHECK-GI-NEXT:    csel x13, xzr, x10, eq
-; CHECK-GI-NEXT:    cmp x11, #128
-; CHECK-GI-NEXT:    csel x10, x16, xzr, lo
-; CHECK-GI-NEXT:    csel x14, x14, xzr, lo
-; CHECK-GI-NEXT:    csel x12, x18, x12, lo
-; CHECK-GI-NEXT:    csel x13, xzr, x13, lo
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    umulh x11, x10, x9
-; CHECK-GI-NEXT:    csel x12, xzr, x12, eq
-; CHECK-GI-NEXT:    csel x13, xzr, x13, eq
-; CHECK-GI-NEXT:    umulh x18, x14, x9
-; CHECK-GI-NEXT:    umulh x17, x12, x8
-; CHECK-GI-NEXT:    umulh x15, x10, x8
-; CHECK-GI-NEXT:    add x18, x18, x11
-; CHECK-GI-NEXT:    mul x16, x10, x9
-; CHECK-GI-NEXT:    add x17, x17, x18
-; CHECK-GI-NEXT:    mul x0, x14, x8
-; CHECK-GI-NEXT:    madd x17, x10, x9, x17
-; CHECK-GI-NEXT:    adds x15, x15, x16
-; CHECK-GI-NEXT:    umulh x2, x14, x8
-; CHECK-GI-NEXT:    cset w3, hs
-; CHECK-GI-NEXT:    adds x1, x15, x0
-; CHECK-GI-NEXT:    mul x18, x14, x9
-; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    madd x14, x14, x9, x17
-; CHECK-GI-NEXT:    adds x11, x2, x11
-; CHECK-GI-NEXT:    mul x17, x12, x8
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    adds x11, x11, x16
-; CHECK-GI-NEXT:    and x16, x0, #0x1
-; CHECK-GI-NEXT:    madd x9, x12, x9, x14
-; CHECK-GI-NEXT:    and x12, x3, #0x1
-; CHECK-GI-NEXT:    and x14, x15, #0x1
-; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    adds x11, x11, x18
-; CHECK-GI-NEXT:    and x15, x15, #0x1
-; CHECK-GI-NEXT:    mul x0, x10, x8
-; CHECK-GI-NEXT:    add x10, x12, x14
-; CHECK-GI-NEXT:    cset w14, hs
-; CHECK-GI-NEXT:    adds x11, x11, x17
-; CHECK-GI-NEXT:    add x12, x16, x15
-; CHECK-GI-NEXT:    madd x8, x13, x8, x9
-; CHECK-GI-NEXT:    and x9, x14, #0x1
-; CHECK-GI-NEXT:    cset w13, hs
-; CHECK-GI-NEXT:    adds x2, x11, x10
-; CHECK-GI-NEXT:    add x9, x12, x9
-; CHECK-GI-NEXT:    and x10, x13, #0x1
-; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    add x9, x9, x10
-; CHECK-GI-NEXT:    and x10, x11, #0x1
-; CHECK-GI-NEXT:    add x9, x9, x10
-; CHECK-GI-NEXT:    add x3, x8, x9
-; CHECK-GI-NEXT:  .LBB4_4: // %fp-to-i-cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: f32_to_s256:
+; CHECK:       // %bb.0: // %fp-to-i-entry
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    ubfx w10, w8, #23, #8
+; CHECK-NEXT:    cmp w10, #127
+; CHECK-NEXT:    b.hs .LBB4_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_2: // %fp-to-i-if-check.exp.size
+; CHECK-NEXT:    sbfx x9, x8, #31, #1
+; CHECK-NEXT:    mov w11, #8388608 // =0x800000
+; CHECK-NEXT:    cmp w10, #149
+; CHECK-NEXT:    bfxil w11, w8, #0, #23
+; CHECK-NEXT:    orr x8, x9, #0x1
+; CHECK-NEXT:    b.hi .LBB4_4
+; CHECK-NEXT:  // %bb.3: // %fp-to-i-if-exp.small
+; CHECK-NEXT:    mov w12, #150 // =0x96
+; CHECK-NEXT:    sub w10, w12, w10
+; CHECK-NEXT:    lsr w10, w11, w10
+; CHECK-NEXT:    umulh x13, x10, x8
+; CHECK-NEXT:    umulh x12, x10, x9
+; CHECK-NEXT:    umulh x11, x9, x10
+; CHECK-NEXT:    smull x14, w10, w9
+; CHECK-NEXT:    smull x15, w9, w10
+; CHECK-NEXT:    smull x9, w9, w10
+; CHECK-NEXT:    adds x1, x14, x13
+; CHECK-NEXT:    smull x0, w10, w8
+; CHECK-NEXT:    adcs x2, x15, x12
+; CHECK-NEXT:    adc x3, x11, x9
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB4_4: // %fp-to-i-if-exp.large
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    sub w10, w10, #150
+; CHECK-NEXT:    str x11, [sp, #32]
+; CHECK-NEXT:    lsr x11, x10, #3
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    str xzr, [sp, #56]
+; CHECK-NEXT:    add x12, x12, #32
+; CHECK-NEXT:    and x16, x10, #0x3f
+; CHECK-NEXT:    mvn w2, w10
+; CHECK-NEXT:    and x11, x11, #0x18
+; CHECK-NEXT:    eor x16, x16, #0x3f
+; CHECK-NEXT:    stur q0, [sp, #40]
+; CHECK-NEXT:    sub x11, x12, x11
+; CHECK-NEXT:    stp q0, q0, [sp]
+; CHECK-NEXT:    ldp x12, x15, [x11]
+; CHECK-NEXT:    ldp x1, x11, [x11, #16]
+; CHECK-NEXT:    lsl x18, x15, x10
+; CHECK-NEXT:    lsr x15, x15, #1
+; CHECK-NEXT:    lsl x13, x12, x10
+; CHECK-NEXT:    lsr x12, x12, #1
+; CHECK-NEXT:    lsl x4, x1, x10
+; CHECK-NEXT:    lsr x1, x1, #1
+; CHECK-NEXT:    lsr x15, x15, x2
+; CHECK-NEXT:    lsl x10, x11, x10
+; CHECK-NEXT:    umulh x14, x13, x8
+; CHECK-NEXT:    lsr x12, x12, x16
+; CHECK-NEXT:    lsr x11, x1, x16
+; CHECK-NEXT:    orr x15, x4, x15
+; CHECK-NEXT:    mul x0, x13, x9
+; CHECK-NEXT:    orr x12, x18, x12
+; CHECK-NEXT:    orr x10, x10, x11
+; CHECK-NEXT:    umulh x4, x8, x15
+; CHECK-NEXT:    mul x3, x12, x8
+; CHECK-NEXT:    umulh x11, x9, x13
+; CHECK-NEXT:    umulh x18, x12, x8
+; CHECK-NEXT:    adds x14, x3, x14
+; CHECK-NEXT:    umulh x17, x13, x9
+; CHECK-NEXT:    madd x10, x8, x10, x4
+; CHECK-NEXT:    cinc x18, x18, hs
+; CHECK-NEXT:    adds x1, x0, x14
+; CHECK-NEXT:    madd x11, x9, x12, x11
+; CHECK-NEXT:    mul x16, x12, x9
+; CHECK-NEXT:    umulh x2, x12, x9
+; CHECK-NEXT:    madd x10, x9, x15, x10
+; CHECK-NEXT:    mul x12, x8, x15
+; CHECK-NEXT:    mul x15, x9, x13
+; CHECK-NEXT:    madd x9, x9, x13, x11
+; CHECK-NEXT:    cinc x11, x17, hs
+; CHECK-NEXT:    adds x11, x18, x11
+; CHECK-NEXT:    mul x0, x13, x8
+; CHECK-NEXT:    cset w8, hs
+; CHECK-NEXT:    adds x11, x16, x11
+; CHECK-NEXT:    adc x8, x2, x8
+; CHECK-NEXT:    adds x12, x15, x12
+; CHECK-NEXT:    adc x9, x9, x10
+; CHECK-NEXT:    adds x2, x11, x12
+; CHECK-NEXT:    adc x3, x8, x9
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
   %result = fptosi float %val to i256
   ret i256 %result
 }
 
 define i256 @f32_to_u256(float %val) {
-; CHECK-SD-LABEL: f32_to_u256:
-; CHECK-SD:       // %bb.0: // %fp-to-i-entry
-; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    ubfx w9, w10, #23, #8
-; CHECK-SD-NEXT:    cmp w9, #127
-; CHECK-SD-NEXT:    b.hs .LBB5_2
-; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    mov x2, xzr
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB5_2: // %fp-to-i-if-check.exp.size
-; CHECK-SD-NEXT:    mov w8, #8388608 // =0x800000
-; CHECK-SD-NEXT:    cmp w9, #149
-; CHECK-SD-NEXT:    bfxil w8, w10, #0, #23
-; CHECK-SD-NEXT:    b.hi .LBB5_4
-; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-exp.small
-; CHECK-SD-NEXT:    mov w10, #150 // =0x96
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    mov x2, xzr
-; CHECK-SD-NEXT:    sub w9, w10, w9
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    lsr w0, w8, w9
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB5_4: // %fp-to-i-if-exp.large
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    sub w9, w9, #150
-; CHECK-SD-NEXT:    str x8, [sp, #32]
-; CHECK-SD-NEXT:    lsr x8, x9, #3
-; CHECK-SD-NEXT:    mov x10, sp
-; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x10, x10, #32
-; CHECK-SD-NEXT:    and x13, x9, #0x3f
-; CHECK-SD-NEXT:    mvn w17, w9
-; CHECK-SD-NEXT:    and x8, x8, #0x18
-; CHECK-SD-NEXT:    eor x13, x13, #0x3f
-; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x8, x10, x8
-; CHECK-SD-NEXT:    stp q0, q0, [sp]
-; CHECK-SD-NEXT:    ldp x11, x10, [x8, #8]
-; CHECK-SD-NEXT:    ldr x12, [x8]
-; CHECK-SD-NEXT:    ldr x8, [x8, #24]
-; CHECK-SD-NEXT:    lsr x16, x12, #1
-; CHECK-SD-NEXT:    lsl x0, x12, x9
-; CHECK-SD-NEXT:    lsr x14, x10, #1
-; CHECK-SD-NEXT:    lsr x15, x11, #1
-; CHECK-SD-NEXT:    lsl x8, x8, x9
-; CHECK-SD-NEXT:    lsl x10, x10, x9
-; CHECK-SD-NEXT:    lsl x11, x11, x9
-; CHECK-SD-NEXT:    lsr x15, x15, x17
-; CHECK-SD-NEXT:    lsr x14, x14, x13
-; CHECK-SD-NEXT:    lsr x13, x16, x13
-; CHECK-SD-NEXT:    orr x3, x8, x14
-; CHECK-SD-NEXT:    orr x2, x10, x15
-; CHECK-SD-NEXT:    orr x1, x11, x13
-; CHECK-SD-NEXT:    add sp, sp, #64
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: f32_to_u256:
-; CHECK-GI:       // %bb.0: // %fp-to-i-entry
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    mov x1, xzr
-; CHECK-GI-NEXT:    mov x2, xzr
-; CHECK-GI-NEXT:    mov x3, xzr
-; CHECK-GI-NEXT:    ubfx w9, w8, #23, #8
-; CHECK-GI-NEXT:    cmp w9, #127
-; CHECK-GI-NEXT:    b.lo .LBB5_4
-; CHECK-GI-NEXT:  // %bb.1: // %fp-to-i-if-check.exp.size
-; CHECK-GI-NEXT:    and w8, w8, #0x7fffff
-; CHECK-GI-NEXT:    cmp w9, #150
-; CHECK-GI-NEXT:    orr w8, w8, #0x800000
-; CHECK-GI-NEXT:    b.hs .LBB5_3
-; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-if-exp.small
-; CHECK-GI-NEXT:    mov w10, #150 // =0x96
-; CHECK-GI-NEXT:    mov x1, xzr
-; CHECK-GI-NEXT:    mov x2, xzr
-; CHECK-GI-NEXT:    sub w9, w10, w9
-; CHECK-GI-NEXT:    mov x3, xzr
-; CHECK-GI-NEXT:    lsr w0, w8, w9
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB5_3: // %fp-to-i-if-exp.large
-; CHECK-GI-NEXT:    sub w9, w9, #150
-; CHECK-GI-NEXT:    mov w11, #64 // =0x40
-; CHECK-GI-NEXT:    mov w10, #128 // =0x80
-; CHECK-GI-NEXT:    sub x12, x9, #64
-; CHECK-GI-NEXT:    sub x13, x11, x9
-; CHECK-GI-NEXT:    lsl x14, x8, x9
-; CHECK-GI-NEXT:    lsr x13, x8, x13
-; CHECK-GI-NEXT:    lsl x12, x8, x12
-; CHECK-GI-NEXT:    sub x10, x10, x9
-; CHECK-GI-NEXT:    cmp x9, #64
-; CHECK-GI-NEXT:    sub x15, x9, #128
-; CHECK-GI-NEXT:    lsr x16, x8, x10
-; CHECK-GI-NEXT:    csel x14, x14, xzr, lo
-; CHECK-GI-NEXT:    csel x12, x13, x12, lo
-; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    sub x13, x15, #64
-; CHECK-GI-NEXT:    csel x12, xzr, x12, eq
-; CHECK-GI-NEXT:    cmp x10, #64
-; CHECK-GI-NEXT:    sub x11, x11, x15
-; CHECK-GI-NEXT:    csel x16, x16, xzr, lo
-; CHECK-GI-NEXT:    cmp x10, #0
-; CHECK-GI-NEXT:    lsl x10, x8, x15
-; CHECK-GI-NEXT:    lsr x11, x8, x11
-; CHECK-GI-NEXT:    lsl x13, x8, x13
-; CHECK-GI-NEXT:    csel x8, x8, x16, eq
-; CHECK-GI-NEXT:    cmp x15, #64
-; CHECK-GI-NEXT:    csel x10, x10, xzr, lo
-; CHECK-GI-NEXT:    csel x11, x11, x13, lo
-; CHECK-GI-NEXT:    cmp x15, #0
-; CHECK-GI-NEXT:    csel x11, xzr, x11, eq
-; CHECK-GI-NEXT:    cmp x9, #128
-; CHECK-GI-NEXT:    csel x0, x14, xzr, lo
-; CHECK-GI-NEXT:    csel x1, x12, xzr, lo
-; CHECK-GI-NEXT:    csel x8, x8, x10, lo
-; CHECK-GI-NEXT:    csel x10, xzr, x11, lo
-; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    csel x2, xzr, x8, eq
-; CHECK-GI-NEXT:    csel x3, xzr, x10, eq
-; CHECK-GI-NEXT:  .LBB5_4: // %fp-to-i-cleanup
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: f32_to_u256:
+; CHECK:       // %bb.0: // %fp-to-i-entry
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    ubfx w9, w10, #23, #8
+; CHECK-NEXT:    cmp w9, #127
+; CHECK-NEXT:    b.hs .LBB5_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB5_2: // %fp-to-i-if-check.exp.size
+; CHECK-NEXT:    mov w8, #8388608 // =0x800000
+; CHECK-NEXT:    cmp w9, #149
+; CHECK-NEXT:    bfxil w8, w10, #0, #23
+; CHECK-NEXT:    b.hi .LBB5_4
+; CHECK-NEXT:  // %bb.3: // %fp-to-i-if-exp.small
+; CHECK-NEXT:    mov w10, #150 // =0x96
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    sub w9, w10, w9
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    lsr w0, w8, w9
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB5_4: // %fp-to-i-if-exp.large
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    sub w9, w9, #150
+; CHECK-NEXT:    str x8, [sp, #32]
+; CHECK-NEXT:    lsr x8, x9, #3
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    str xzr, [sp, #56]
+; CHECK-NEXT:    add x10, x10, #32
+; CHECK-NEXT:    and x13, x9, #0x3f
+; CHECK-NEXT:    mvn w17, w9
+; CHECK-NEXT:    and x8, x8, #0x18
+; CHECK-NEXT:    eor x13, x13, #0x3f
+; CHECK-NEXT:    stur q0, [sp, #40]
+; CHECK-NEXT:    sub x8, x10, x8
+; CHECK-NEXT:    stp q0, q0, [sp]
+; CHECK-NEXT:    ldp x11, x10, [x8, #8]
+; CHECK-NEXT:    ldr x12, [x8]
+; CHECK-NEXT:    ldr x8, [x8, #24]
+; CHECK-NEXT:    lsr x16, x12, #1
+; CHECK-NEXT:    lsl x0, x12, x9
+; CHECK-NEXT:    lsr x14, x10, #1
+; CHECK-NEXT:    lsr x15, x11, #1
+; CHECK-NEXT:    lsl x8, x8, x9
+; CHECK-NEXT:    lsl x10, x10, x9
+; CHECK-NEXT:    lsl x11, x11, x9
+; CHECK-NEXT:    lsr x15, x15, x17
+; CHECK-NEXT:    lsr x14, x14, x13
+; CHECK-NEXT:    lsr x13, x16, x13
+; CHECK-NEXT:    orr x3, x8, x14
+; CHECK-NEXT:    orr x2, x10, x15
+; CHECK-NEXT:    orr x1, x11, x13
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
   %result = fptoui float %val to i256
   ret i256 %result
 }
@@ -1276,432 +1079,197 @@ define i256 @f64_to_u256(double %val) {
 }
 
 define i256 @f32_to_s256_sat(float %val) {
-; CHECK-SD-LABEL: f32_to_s256_sat:
-; CHECK-SD:       // %bb.0: // %fp-to-i-entry
-; CHECK-SD-NEXT:    fmov w8, s0
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    ubfx w10, w8, #23, #8
-; CHECK-SD-NEXT:    cmp w10, #127
-; CHECK-SD-NEXT:    b.lo .LBB8_5
-; CHECK-SD-NEXT:  // %bb.1: // %fp-to-i-entry
-; CHECK-SD-NEXT:    fcmp s0, s0
-; CHECK-SD-NEXT:    mov x1, x0
-; CHECK-SD-NEXT:    mov x2, x0
-; CHECK-SD-NEXT:    mov x3, x0
-; CHECK-SD-NEXT:    b.vs .LBB8_7
-; CHECK-SD-NEXT:  // %bb.2: // %fp-to-i-if-check.saturate
-; CHECK-SD-NEXT:    cmp w10, #255
-; CHECK-SD-NEXT:    b.hs .LBB8_8
-; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
-; CHECK-SD-NEXT:    sbfx x9, x8, #31, #1
-; CHECK-SD-NEXT:    mov w11, #8388608 // =0x800000
-; CHECK-SD-NEXT:    cmp w10, #149
-; CHECK-SD-NEXT:    bfxil w11, w8, #0, #23
-; CHECK-SD-NEXT:    orr x8, x9, #0x1
-; CHECK-SD-NEXT:    b.hi .LBB8_6
-; CHECK-SD-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
-; CHECK-SD-NEXT:    mov w12, #150 // =0x96
-; CHECK-SD-NEXT:    sub w10, w12, w10
-; CHECK-SD-NEXT:    lsr w10, w11, w10
-; CHECK-SD-NEXT:    umulh x13, x10, x8
-; CHECK-SD-NEXT:    umulh x12, x10, x9
-; CHECK-SD-NEXT:    umulh x11, x9, x10
-; CHECK-SD-NEXT:    smull x14, w10, w9
-; CHECK-SD-NEXT:    smull x15, w9, w10
-; CHECK-SD-NEXT:    smull x9, w9, w10
-; CHECK-SD-NEXT:    adds x1, x14, x13
-; CHECK-SD-NEXT:    smull x0, w10, w8
-; CHECK-SD-NEXT:    adcs x2, x15, x12
-; CHECK-SD-NEXT:    adc x3, x11, x9
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB8_5:
-; CHECK-SD-NEXT:    mov x1, x0
-; CHECK-SD-NEXT:    mov x2, x0
-; CHECK-SD-NEXT:    mov x3, x0
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB8_6: // %fp-to-i-if-exp.large
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    sub w10, w10, #150
-; CHECK-SD-NEXT:    str x11, [sp, #32]
-; CHECK-SD-NEXT:    lsr x11, x10, #3
-; CHECK-SD-NEXT:    mov x12, sp
-; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x12, x12, #32
-; CHECK-SD-NEXT:    and x16, x10, #0x3f
-; CHECK-SD-NEXT:    mvn w2, w10
-; CHECK-SD-NEXT:    and x11, x11, #0x18
-; CHECK-SD-NEXT:    eor x16, x16, #0x3f
-; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x11, x12, x11
-; CHECK-SD-NEXT:    stp q0, q0, [sp]
-; CHECK-SD-NEXT:    ldp x12, x15, [x11]
-; CHECK-SD-NEXT:    ldp x1, x11, [x11, #16]
-; CHECK-SD-NEXT:    lsl x18, x15, x10
-; CHECK-SD-NEXT:    lsr x15, x15, #1
-; CHECK-SD-NEXT:    lsl x13, x12, x10
-; CHECK-SD-NEXT:    lsr x12, x12, #1
-; CHECK-SD-NEXT:    lsl x4, x1, x10
-; CHECK-SD-NEXT:    lsr x1, x1, #1
-; CHECK-SD-NEXT:    lsr x15, x15, x2
-; CHECK-SD-NEXT:    lsl x10, x11, x10
-; CHECK-SD-NEXT:    umulh x14, x13, x8
-; CHECK-SD-NEXT:    lsr x12, x12, x16
-; CHECK-SD-NEXT:    lsr x11, x1, x16
-; CHECK-SD-NEXT:    orr x15, x4, x15
-; CHECK-SD-NEXT:    mul x0, x13, x9
-; CHECK-SD-NEXT:    orr x12, x18, x12
-; CHECK-SD-NEXT:    orr x10, x10, x11
-; CHECK-SD-NEXT:    umulh x4, x8, x15
-; CHECK-SD-NEXT:    mul x3, x12, x8
-; CHECK-SD-NEXT:    umulh x11, x9, x13
-; CHECK-SD-NEXT:    umulh x18, x12, x8
-; CHECK-SD-NEXT:    adds x14, x3, x14
-; CHECK-SD-NEXT:    umulh x17, x13, x9
-; CHECK-SD-NEXT:    madd x10, x8, x10, x4
-; CHECK-SD-NEXT:    cinc x18, x18, hs
-; CHECK-SD-NEXT:    adds x1, x0, x14
-; CHECK-SD-NEXT:    madd x11, x9, x12, x11
-; CHECK-SD-NEXT:    mul x16, x12, x9
-; CHECK-SD-NEXT:    umulh x2, x12, x9
-; CHECK-SD-NEXT:    madd x10, x9, x15, x10
-; CHECK-SD-NEXT:    mul x12, x8, x15
-; CHECK-SD-NEXT:    mul x15, x9, x13
-; CHECK-SD-NEXT:    madd x9, x9, x13, x11
-; CHECK-SD-NEXT:    cinc x11, x17, hs
-; CHECK-SD-NEXT:    adds x11, x18, x11
-; CHECK-SD-NEXT:    mul x0, x13, x8
-; CHECK-SD-NEXT:    cset w8, hs
-; CHECK-SD-NEXT:    adds x11, x16, x11
-; CHECK-SD-NEXT:    adc x8, x2, x8
-; CHECK-SD-NEXT:    adds x12, x15, x12
-; CHECK-SD-NEXT:    adc x9, x9, x10
-; CHECK-SD-NEXT:    adds x2, x11, x12
-; CHECK-SD-NEXT:    adc x3, x8, x9
-; CHECK-SD-NEXT:    add sp, sp, #64
-; CHECK-SD-NEXT:  .LBB8_7: // %fp-to-i-cleanup
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB8_8: // %fp-to-i-if-saturate
-; CHECK-SD-NEXT:    // kill: def $w8 killed $w8 killed $x8 def $x8
-; CHECK-SD-NEXT:    sbfx x8, x8, #31, #1
-; CHECK-SD-NEXT:    mvn x0, x8
-; CHECK-SD-NEXT:    eor x3, x8, #0x7fffffffffffffff
-; CHECK-SD-NEXT:    mov x1, x0
-; CHECK-SD-NEXT:    mov x2, x0
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: f32_to_s256_sat:
-; CHECK-GI:       // %bb.0: // %fp-to-i-entry
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    ubfx w11, w8, #23, #8
-; CHECK-GI-NEXT:    cmn w8, #1
-; CHECK-GI-NEXT:    cset w9, le
-; CHECK-GI-NEXT:    cmp w11, #127
-; CHECK-GI-NEXT:    b.lo .LBB8_5
-; CHECK-GI-NEXT:  // %bb.1: // %fp-to-i-entry
-; CHECK-GI-NEXT:    fcmp s0, s0
-; CHECK-GI-NEXT:    b.vs .LBB8_5
-; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-if-check.saturate
-; CHECK-GI-NEXT:    cmp w11, #255
-; CHECK-GI-NEXT:    b.hs .LBB8_7
-; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
-; CHECK-GI-NEXT:    sbfx x10, x9, #0, #1
-; CHECK-GI-NEXT:    and w12, w8, #0x7fffff
-; CHECK-GI-NEXT:    cmp w11, #150
-; CHECK-GI-NEXT:    asr x9, x10, #63
-; CHECK-GI-NEXT:    orr x8, x10, #0x1
-; CHECK-GI-NEXT:    orr w10, w12, #0x800000
-; CHECK-GI-NEXT:    b.hs .LBB8_6
-; CHECK-GI-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
-; CHECK-GI-NEXT:    mov w12, #150 // =0x96
-; CHECK-GI-NEXT:    umulh x15, x9, xzr
-; CHECK-GI-NEXT:    sub w11, w12, w11
-; CHECK-GI-NEXT:    lsr w10, w10, w11
-; CHECK-GI-NEXT:    umulh x12, x8, xzr
-; CHECK-GI-NEXT:    umulh x11, x10, x8
-; CHECK-GI-NEXT:    umulh x13, x10, x9
-; CHECK-GI-NEXT:    smull x14, w10, w9
-; CHECK-GI-NEXT:    smull x16, w10, w9
-; CHECK-GI-NEXT:    smull x0, w10, w8
-; CHECK-GI-NEXT:    adds x1, x11, x14
-; CHECK-GI-NEXT:    add x14, x12, x15
-; CHECK-GI-NEXT:    add x12, x12, x13
-; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    adds x12, x12, x16
-; CHECK-GI-NEXT:    add x13, x14, x13
-; CHECK-GI-NEXT:    and x11, x11, #0x1
-; CHECK-GI-NEXT:    smaddl x9, w10, w9, x13
-; CHECK-GI-NEXT:    cset w13, hs
-; CHECK-GI-NEXT:    adds x2, x12, x11
-; CHECK-GI-NEXT:    and x8, x13, #0x1
-; CHECK-GI-NEXT:    cset w10, hs
-; CHECK-GI-NEXT:    and x10, x10, #0x1
-; CHECK-GI-NEXT:    add x8, x9, x8
-; CHECK-GI-NEXT:    add x3, x8, x10
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB8_5:
-; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    mov x1, xzr
-; CHECK-GI-NEXT:    mov x2, xzr
-; CHECK-GI-NEXT:    mov x3, xzr
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB8_6: // %fp-to-i-if-exp.large
-; CHECK-GI-NEXT:    sub w11, w11, #150
-; CHECK-GI-NEXT:    mov w13, #64 // =0x40
-; CHECK-GI-NEXT:    mov w12, #128 // =0x80
-; CHECK-GI-NEXT:    sub x14, x11, #64
-; CHECK-GI-NEXT:    sub x15, x13, x11
-; CHECK-GI-NEXT:    lsl x16, x10, x11
-; CHECK-GI-NEXT:    lsr x15, x10, x15
-; CHECK-GI-NEXT:    lsl x14, x10, x14
-; CHECK-GI-NEXT:    sub x12, x12, x11
-; CHECK-GI-NEXT:    cmp x11, #64
-; CHECK-GI-NEXT:    sub x17, x11, #128
-; CHECK-GI-NEXT:    lsr x18, x10, x12
-; CHECK-GI-NEXT:    csel x16, x16, xzr, lo
-; CHECK-GI-NEXT:    csel x14, x15, x14, lo
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    sub x15, x17, #64
-; CHECK-GI-NEXT:    csel x14, xzr, x14, eq
-; CHECK-GI-NEXT:    cmp x12, #64
-; CHECK-GI-NEXT:    sub x13, x13, x17
-; CHECK-GI-NEXT:    csel x18, x18, xzr, lo
-; CHECK-GI-NEXT:    cmp x12, #0
-; CHECK-GI-NEXT:    lsl x12, x10, x17
-; CHECK-GI-NEXT:    lsr x13, x10, x13
-; CHECK-GI-NEXT:    lsl x15, x10, x15
-; CHECK-GI-NEXT:    csel x18, x10, x18, eq
-; CHECK-GI-NEXT:    cmp x17, #64
-; CHECK-GI-NEXT:    csel x12, x12, xzr, lo
-; CHECK-GI-NEXT:    csel x10, x13, x15, lo
-; CHECK-GI-NEXT:    cmp x17, #0
-; CHECK-GI-NEXT:    csel x13, xzr, x10, eq
-; CHECK-GI-NEXT:    cmp x11, #128
-; CHECK-GI-NEXT:    csel x10, x16, xzr, lo
-; CHECK-GI-NEXT:    csel x14, x14, xzr, lo
-; CHECK-GI-NEXT:    csel x12, x18, x12, lo
-; CHECK-GI-NEXT:    csel x13, xzr, x13, lo
-; CHECK-GI-NEXT:    cmp x11, #0
-; CHECK-GI-NEXT:    umulh x11, x10, x9
-; CHECK-GI-NEXT:    csel x12, xzr, x12, eq
-; CHECK-GI-NEXT:    csel x13, xzr, x13, eq
-; CHECK-GI-NEXT:    umulh x18, x14, x9
-; CHECK-GI-NEXT:    umulh x17, x12, x8
-; CHECK-GI-NEXT:    umulh x15, x10, x8
-; CHECK-GI-NEXT:    add x18, x18, x11
-; CHECK-GI-NEXT:    mul x16, x10, x9
-; CHECK-GI-NEXT:    add x17, x17, x18
-; CHECK-GI-NEXT:    mul x0, x14, x8
-; CHECK-GI-NEXT:    madd x17, x10, x9, x17
-; CHECK-GI-NEXT:    adds x15, x15, x16
-; CHECK-GI-NEXT:    umulh x2, x14, x8
-; CHECK-GI-NEXT:    cset w3, hs
-; CHECK-GI-NEXT:    adds x1, x15, x0
-; CHECK-GI-NEXT:    mul x18, x14, x9
-; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    madd x14, x14, x9, x17
-; CHECK-GI-NEXT:    adds x11, x2, x11
-; CHECK-GI-NEXT:    mul x17, x12, x8
-; CHECK-GI-NEXT:    cset w0, hs
-; CHECK-GI-NEXT:    adds x11, x11, x16
-; CHECK-GI-NEXT:    and x16, x0, #0x1
-; CHECK-GI-NEXT:    madd x9, x12, x9, x14
-; CHECK-GI-NEXT:    and x12, x3, #0x1
-; CHECK-GI-NEXT:    and x14, x15, #0x1
-; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    adds x11, x11, x18
-; CHECK-GI-NEXT:    and x15, x15, #0x1
-; CHECK-GI-NEXT:    mul x0, x10, x8
-; CHECK-GI-NEXT:    add x10, x12, x14
-; CHECK-GI-NEXT:    cset w14, hs
-; CHECK-GI-NEXT:    adds x11, x11, x17
-; CHECK-GI-NEXT:    add x12, x16, x15
-; CHECK-GI-NEXT:    madd x8, x13, x8, x9
-; CHECK-GI-NEXT:    and x9, x14, #0x1
-; CHECK-GI-NEXT:    cset w13, hs
-; CHECK-GI-NEXT:    adds x2, x11, x10
-; CHECK-GI-NEXT:    add x9, x12, x9
-; CHECK-GI-NEXT:    and x10, x13, #0x1
-; CHECK-GI-NEXT:    cset w11, hs
-; CHECK-GI-NEXT:    add x9, x9, x10
-; CHECK-GI-NEXT:    and x10, x11, #0x1
-; CHECK-GI-NEXT:    add x9, x9, x10
-; CHECK-GI-NEXT:    add x3, x8, x9
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB8_7: // %fp-to-i-if-saturate
-; CHECK-GI-NEXT:    cmn w8, #1
-; CHECK-GI-NEXT:    mov w9, wzr
-; CHECK-GI-NEXT:    cset w8, gt
-; CHECK-GI-NEXT:    cmp w9, #1
-; CHECK-GI-NEXT:    mov x9, #-9223372036854775808 // =0x8000000000000000
-; CHECK-GI-NEXT:    sbfx x0, x8, #0, #1
-; CHECK-GI-NEXT:    asr x8, x0, #63
-; CHECK-GI-NEXT:    adcs x1, x8, xzr
-; CHECK-GI-NEXT:    adcs x2, x8, xzr
-; CHECK-GI-NEXT:    adc x3, x8, x9
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: f32_to_s256_sat:
+; CHECK:       // %bb.0: // %fp-to-i-entry
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    ubfx w10, w8, #23, #8
+; CHECK-NEXT:    cmp w10, #127
+; CHECK-NEXT:    b.lo .LBB8_5
+; CHECK-NEXT:  // %bb.1: // %fp-to-i-entry
+; CHECK-NEXT:    fcmp s0, s0
+; CHECK-NEXT:    mov x1, x0
+; CHECK-NEXT:    mov x2, x0
+; CHECK-NEXT:    mov x3, x0
+; CHECK-NEXT:    b.vs .LBB8_7
+; CHECK-NEXT:  // %bb.2: // %fp-to-i-if-check.saturate
+; CHECK-NEXT:    cmp w10, #255
+; CHECK-NEXT:    b.hs .LBB8_8
+; CHECK-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
+; CHECK-NEXT:    sbfx x9, x8, #31, #1
+; CHECK-NEXT:    mov w11, #8388608 // =0x800000
+; CHECK-NEXT:    cmp w10, #149
+; CHECK-NEXT:    bfxil w11, w8, #0, #23
+; CHECK-NEXT:    orr x8, x9, #0x1
+; CHECK-NEXT:    b.hi .LBB8_6
+; CHECK-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
+; CHECK-NEXT:    mov w12, #150 // =0x96
+; CHECK-NEXT:    sub w10, w12, w10
+; CHECK-NEXT:    lsr w10, w11, w10
+; CHECK-NEXT:    umulh x13, x10, x8
+; CHECK-NEXT:    umulh x12, x10, x9
+; CHECK-NEXT:    umulh x11, x9, x10
+; CHECK-NEXT:    smull x14, w10, w9
+; CHECK-NEXT:    smull x15, w9, w10
+; CHECK-NEXT:    smull x9, w9, w10
+; CHECK-NEXT:    adds x1, x14, x13
+; CHECK-NEXT:    smull x0, w10, w8
+; CHECK-NEXT:    adcs x2, x15, x12
+; CHECK-NEXT:    adc x3, x11, x9
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB8_5:
+; CHECK-NEXT:    mov x1, x0
+; CHECK-NEXT:    mov x2, x0
+; CHECK-NEXT:    mov x3, x0
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB8_6: // %fp-to-i-if-exp.large
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    sub w10, w10, #150
+; CHECK-NEXT:    str x11, [sp, #32]
+; CHECK-NEXT:    lsr x11, x10, #3
+; CHECK-NEXT:    mov x12, sp
+; CHECK-NEXT:    str xzr, [sp, #56]
+; CHECK-NEXT:    add x12, x12, #32
+; CHECK-NEXT:    and x16, x10, #0x3f
+; CHECK-NEXT:    mvn w2, w10
+; CHECK-NEXT:    and x11, x11, #0x18
+; CHECK-NEXT:    eor x16, x16, #0x3f
+; CHECK-NEXT:    stur q0, [sp, #40]
+; CHECK-NEXT:    sub x11, x12, x11
+; CHECK-NEXT:    stp q0, q0, [sp]
+; CHECK-NEXT:    ldp x12, x15, [x11]
+; CHECK-NEXT:    ldp x1, x11, [x11, #16]
+; CHECK-NEXT:    lsl x18, x15, x10
+; CHECK-NEXT:    lsr x15, x15, #1
+; CHECK-NEXT:    lsl x13, x12, x10
+; CHECK-NEXT:    lsr x12, x12, #1
+; CHECK-NEXT:    lsl x4, x1, x10
+; CHECK-NEXT:    lsr x1, x1, #1
+; CHECK-NEXT:    lsr x15, x15, x2
+; CHECK-NEXT:    lsl x10, x11, x10
+; CHECK-NEXT:    umulh x14, x13, x8
+; CHECK-NEXT:    lsr x12, x12, x16
+; CHECK-NEXT:    lsr x11, x1, x16
+; CHECK-NEXT:    orr x15, x4, x15
+; CHECK-NEXT:    mul x0, x13, x9
+; CHECK-NEXT:    orr x12, x18, x12
+; CHECK-NEXT:    orr x10, x10, x11
+; CHECK-NEXT:    umulh x4, x8, x15
+; CHECK-NEXT:    mul x3, x12, x8
+; CHECK-NEXT:    umulh x11, x9, x13
+; CHECK-NEXT:    umulh x18, x12, x8
+; CHECK-NEXT:    adds x14, x3, x14
+; CHECK-NEXT:    umulh x17, x13, x9
+; CHECK-NEXT:    madd x10, x8, x10, x4
+; CHECK-NEXT:    cinc x18, x18, hs
+; CHECK-NEXT:    adds x1, x0, x14
+; CHECK-NEXT:    madd x11, x9, x12, x11
+; CHECK-NEXT:    mul x16, x12, x9
+; CHECK-NEXT:    umulh x2, x12, x9
+; CHECK-NEXT:    madd x10, x9, x15, x10
+; CHECK-NEXT:    mul x12, x8, x15
+; CHECK-NEXT:    mul x15, x9, x13
+; CHECK-NEXT:    madd x9, x9, x13, x11
+; CHECK-NEXT:    cinc x11, x17, hs
+; CHECK-NEXT:    adds x11, x18, x11
+; CHECK-NEXT:    mul x0, x13, x8
+; CHECK-NEXT:    cset w8, hs
+; CHECK-NEXT:    adds x11, x16, x11
+; CHECK-NEXT:    adc x8, x2, x8
+; CHECK-NEXT:    adds x12, x15, x12
+; CHECK-NEXT:    adc x9, x9, x10
+; CHECK-NEXT:    adds x2, x11, x12
+; CHECK-NEXT:    adc x3, x8, x9
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:  .LBB8_7: // %fp-to-i-cleanup
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB8_8: // %fp-to-i-if-saturate
+; CHECK-NEXT:    // kill: def $w8 killed $w8 killed $x8 def $x8
+; CHECK-NEXT:    sbfx x8, x8, #31, #1
+; CHECK-NEXT:    mvn x0, x8
+; CHECK-NEXT:    eor x3, x8, #0x7fffffffffffffff
+; CHECK-NEXT:    mov x1, x0
+; CHECK-NEXT:    mov x2, x0
+; CHECK-NEXT:    ret
   %result = call i256 @llvm.fptosi.sat(float %val)
   ret i256 %result
 }
 
 define i256 @f32_to_u256_sat(float %val) {
-; CHECK-SD-LABEL: f32_to_u256_sat:
-; CHECK-SD:       // %bb.0: // %fp-to-i-entry
-; CHECK-SD-NEXT:    fmov w10, s0
-; CHECK-SD-NEXT:    mov w9, #127 // =0x7f
-; CHECK-SD-NEXT:    cmp w10, #0
-; CHECK-SD-NEXT:    ubfx w8, w10, #23, #8
-; CHECK-SD-NEXT:    fccmp s0, s0, #1, pl
-; CHECK-SD-NEXT:    ccmp w8, w9, #0, vc
-; CHECK-SD-NEXT:    b.hs .LBB9_2
-; CHECK-SD-NEXT:  // %bb.1:
-; CHECK-SD-NEXT:    mov x0, xzr
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    mov x2, xzr
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB9_2: // %fp-to-i-if-check.saturate
-; CHECK-SD-NEXT:    cmp w8, #254
-; CHECK-SD-NEXT:    b.hi .LBB9_6
-; CHECK-SD-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
-; CHECK-SD-NEXT:    mov w9, #8388608 // =0x800000
-; CHECK-SD-NEXT:    cmp w8, #149
-; CHECK-SD-NEXT:    bfxil w9, w10, #0, #23
-; CHECK-SD-NEXT:    b.hi .LBB9_5
-; CHECK-SD-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
-; CHECK-SD-NEXT:    mov w10, #150 // =0x96
-; CHECK-SD-NEXT:    mov x1, xzr
-; CHECK-SD-NEXT:    mov x2, xzr
-; CHECK-SD-NEXT:    sub w8, w10, w8
-; CHECK-SD-NEXT:    mov x3, xzr
-; CHECK-SD-NEXT:    lsr w0, w9, w8
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB9_5: // %fp-to-i-if-exp.large
-; CHECK-SD-NEXT:    sub sp, sp, #64
-; CHECK-SD-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
-; CHECK-SD-NEXT:    sub w8, w8, #150
-; CHECK-SD-NEXT:    str x9, [sp, #32]
-; CHECK-SD-NEXT:    lsr x9, x8, #3
-; CHECK-SD-NEXT:    mov x10, sp
-; CHECK-SD-NEXT:    str xzr, [sp, #56]
-; CHECK-SD-NEXT:    add x10, x10, #32
-; CHECK-SD-NEXT:    and x13, x8, #0x3f
-; CHECK-SD-NEXT:    mvn w17, w8
-; CHECK-SD-NEXT:    and x9, x9, #0x18
-; CHECK-SD-NEXT:    eor x13, x13, #0x3f
-; CHECK-SD-NEXT:    stur q0, [sp, #40]
-; CHECK-SD-NEXT:    sub x9, x10, x9
-; CHECK-SD-NEXT:    stp q0, q0, [sp]
-; CHECK-SD-NEXT:    ldp x11, x10, [x9, #8]
-; CHECK-SD-NEXT:    ldr x12, [x9]
-; CHECK-SD-NEXT:    ldr x9, [x9, #24]
-; CHECK-SD-NEXT:    lsr x16, x12, #1
-; CHECK-SD-NEXT:    lsl x0, x12, x8
-; CHECK-SD-NEXT:    lsr x14, x10, #1
-; CHECK-SD-NEXT:    lsr x15, x11, #1
-; CHECK-SD-NEXT:    lsl x9, x9, x8
-; CHECK-SD-NEXT:    lsl x10, x10, x8
-; CHECK-SD-NEXT:    lsl x11, x11, x8
-; CHECK-SD-NEXT:    lsr x15, x15, x17
-; CHECK-SD-NEXT:    lsr x14, x14, x13
-; CHECK-SD-NEXT:    lsr x13, x16, x13
-; CHECK-SD-NEXT:    orr x3, x9, x14
-; CHECK-SD-NEXT:    orr x2, x10, x15
-; CHECK-SD-NEXT:    orr x1, x11, x13
-; CHECK-SD-NEXT:    add sp, sp, #64
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB9_6:
-; CHECK-SD-NEXT:    mov x0, #-1 // =0xffffffffffffffff
-; CHECK-SD-NEXT:    mov x1, #-1 // =0xffffffffffffffff
-; CHECK-SD-NEXT:    mov x2, #-1 // =0xffffffffffffffff
-; CHECK-SD-NEXT:    mov x3, #-1 // =0xffffffffffffffff
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: f32_to_u256_sat:
-; CHECK-GI:       // %bb.0: // %fp-to-i-entry
-; CHECK-GI-NEXT:    fmov w8, s0
-; CHECK-GI-NEXT:    mov x0, xzr
-; CHECK-GI-NEXT:    ubfx w9, w8, #23, #8
-; CHECK-GI-NEXT:    cmp w9, #127
-; CHECK-GI-NEXT:    b.lo .LBB9_6
-; CHECK-GI-NEXT:  // %bb.1: // %fp-to-i-entry
-; CHECK-GI-NEXT:    fcmp s0, s0
-; CHECK-GI-NEXT:    b.vs .LBB9_6
-; CHECK-GI-NEXT:  // %bb.2: // %fp-to-i-entry
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
-; CHECK-GI-NEXT:    tbnz w8, #31, .LBB9_8
-; CHECK-GI-NEXT:  // %bb.3: // %fp-to-i-if-check.saturate
-; CHECK-GI-NEXT:    cmp w9, #255
-; CHECK-GI-NEXT:    b.hs .LBB9_9
-; CHECK-GI-NEXT:  // %bb.4: // %fp-to-i-if-check.exp.size
-; CHECK-GI-NEXT:    and w8, w8, #0x7fffff
-; CHECK-GI-NEXT:    cmp w9, #150
-; CHECK-GI-NEXT:    orr w8, w8, #0x800000
-; CHECK-GI-NEXT:    b.hs .LBB9_7
-; CHECK-GI-NEXT:  // %bb.5: // %fp-to-i-if-exp.small
-; CHECK-GI-NEXT:    mov w10, #150 // =0x96
-; CHECK-GI-NEXT:    mov x1, xzr
-; CHECK-GI-NEXT:    mov x2, xzr
-; CHECK-GI-NEXT:    sub w9, w10, w9
-; CHECK-GI-NEXT:    mov x3, xzr
-; CHECK-GI-NEXT:    lsr w0, w8, w9
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB9_6:
-; CHECK-GI-NEXT:    mov x1, x0
-; CHECK-GI-NEXT:    mov x2, x0
-; CHECK-GI-NEXT:    mov x3, x0
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB9_7: // %fp-to-i-if-exp.large
-; CHECK-GI-NEXT:    sub w9, w9, #150
-; CHECK-GI-NEXT:    mov w11, #64 // =0x40
-; CHECK-GI-NEXT:    mov w10, #128 // =0x80
-; CHECK-GI-NEXT:    sub x12, x9, #64
-; CHECK-GI-NEXT:    sub x13, x11, x9
-; CHECK-GI-NEXT:    lsl x14, x8, x9
-; CHECK-GI-NEXT:    lsr x13, x8, x13
-; CHECK-GI-NEXT:    lsl x12, x8, x12
-; CHECK-GI-NEXT:    sub x10, x10, x9
-; CHECK-GI-NEXT:    cmp x9, #64
-; CHECK-GI-NEXT:    sub x15, x9, #128
-; CHECK-GI-NEXT:    lsr x16, x8, x10
-; CHECK-GI-NEXT:    csel x14, x14, xzr, lo
-; CHECK-GI-NEXT:    csel x12, x13, x12, lo
-; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    sub x13, x15, #64
-; CHECK-GI-NEXT:    csel x12, xzr, x12, eq
-; CHECK-GI-NEXT:    cmp x10, #64
-; CHECK-GI-NEXT:    sub x11, x11, x15
-; CHECK-GI-NEXT:    csel x16, x16, xzr, lo
-; CHECK-GI-NEXT:    cmp x10, #0
-; CHECK-GI-NEXT:    lsl x10, x8, x15
-; CHECK-GI-NEXT:    lsr x11, x8, x11
-; CHECK-GI-NEXT:    lsl x13, x8, x13
-; CHECK-GI-NEXT:    csel x8, x8, x16, eq
-; CHECK-GI-NEXT:    cmp x15, #64
-; CHECK-GI-NEXT:    csel x10, x10, xzr, lo
-; CHECK-GI-NEXT:    csel x11, x11, x13, lo
-; CHECK-GI-NEXT:    cmp x15, #0
-; CHECK-GI-NEXT:    csel x11, xzr, x11, eq
-; CHECK-GI-NEXT:    cmp x9, #128
-; CHECK-GI-NEXT:    csel x0, x14, xzr, lo
-; CHECK-GI-NEXT:    csel x1, x12, xzr, lo
-; CHECK-GI-NEXT:    csel x8, x8, x10, lo
-; CHECK-GI-NEXT:    csel x10, xzr, x11, lo
-; CHECK-GI-NEXT:    cmp x9, #0
-; CHECK-GI-NEXT:    csel x2, xzr, x8, eq
-; CHECK-GI-NEXT:    csel x3, xzr, x10, eq
-; CHECK-GI-NEXT:  .LBB9_8: // %fp-to-i-cleanup
-; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:  .LBB9_9:
-; CHECK-GI-NEXT:    mov x0, #-1 // =0xffffffffffffffff
-; CHECK-GI-NEXT:    mov x1, #-1 // =0xffffffffffffffff
-; CHECK-GI-NEXT:    mov x2, #-1 // =0xffffffffffffffff
-; CHECK-GI-NEXT:    mov x3, #-1 // =0xffffffffffffffff
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: f32_to_u256_sat:
+; CHECK:       // %bb.0: // %fp-to-i-entry
+; CHECK-NEXT:    fmov w10, s0
+; CHECK-NEXT:    mov w9, #127 // =0x7f
+; CHECK-NEXT:    cmp w10, #0
+; CHECK-NEXT:    ubfx w8, w10, #23, #8
+; CHECK-NEXT:    fccmp s0, s0, #1, pl
+; CHECK-NEXT:    ccmp w8, w9, #0, vc
+; CHECK-NEXT:    b.hs .LBB9_2
+; CHECK-NEXT:  // %bb.1:
+; CHECK-NEXT:    mov x0, xzr
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB9_2: // %fp-to-i-if-check.saturate
+; CHECK-NEXT:    cmp w8, #254
+; CHECK-NEXT:    b.hi .LBB9_6
+; CHECK-NEXT:  // %bb.3: // %fp-to-i-if-check.exp.size
+; CHECK-NEXT:    mov w9, #8388608 // =0x800000
+; CHECK-NEXT:    cmp w8, #149
+; CHECK-NEXT:    bfxil w9, w10, #0, #23
+; CHECK-NEXT:    b.hi .LBB9_5
+; CHECK-NEXT:  // %bb.4: // %fp-to-i-if-exp.small
+; CHECK-NEXT:    mov w10, #150 // =0x96
+; CHECK-NEXT:    mov x1, xzr
+; CHECK-NEXT:    mov x2, xzr
+; CHECK-NEXT:    sub w8, w10, w8
+; CHECK-NEXT:    mov x3, xzr
+; CHECK-NEXT:    lsr w0, w9, w8
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB9_5: // %fp-to-i-if-exp.large
+; CHECK-NEXT:    sub sp, sp, #64
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    sub w8, w8, #150
+; CHECK-NEXT:    str x9, [sp, #32]
+; CHECK-NEXT:    lsr x9, x8, #3
+; CHECK-NEXT:    mov x10, sp
+; CHECK-NEXT:    str xzr, [sp, #56]
+; CHECK-NEXT:    add x10, x10, #32
+; CHECK-NEXT:    and x13, x8, #0x3f
+; CHECK-NEXT:    mvn w17, w8
+; CHECK-NEXT:    and x9, x9, #0x18
+; CHECK-NEXT:    eor x13, x13, #0x3f
+; CHECK-NEXT:    stur q0, [sp, #40]
+; CHECK-NEXT:    sub x9, x10, x9
+; CHECK-NEXT:    stp q0, q0, [sp]
+; CHECK-NEXT:    ldp x11, x10, [x9, #8]
+; CHECK-NEXT:    ldr x12, [x9]
+; CHECK-NEXT:    ldr x9, [x9, #24]
+; CHECK-NEXT:    lsr x16, x12, #1
+; CHECK-NEXT:    lsl x0, x12, x8
+; CHECK-NEXT:    lsr x14, x10, #1
+; CHECK-NEXT:    lsr x15, x11, #1
+; CHECK-NEXT:    lsl x9, x9, x8
+; CHECK-NEXT:    lsl x10, x10, x8
+; CHECK-NEXT:    lsl x11, x11, x8
+; CHECK-NEXT:    lsr x15, x15, x17
+; CHECK-NEXT:    lsr x14, x14, x13
+; CHECK-NEXT:    lsr x13, x16, x13
+; CHECK-NEXT:    orr x3, x9, x14
+; CHECK-NEXT:    orr x2, x10, x15
+; CHECK-NEXT:    orr x1, x11, x13
+; CHECK-NEXT:    add sp, sp, #64
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB9_6:
+; CHECK-NEXT:    mov x0, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov x1, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov x2, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    mov x3, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    ret
   %result = call i256 @llvm.fptoui.sat(float %val)
   ret i256 %result
 }

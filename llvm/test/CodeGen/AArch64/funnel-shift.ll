@@ -18,25 +18,14 @@ declare <4 x i32> @llvm.fshr.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 ; General case - all operands can be variables.
 
 define i32 @fshl_i32(i32 %x, i32 %y, i32 %z) {
-; CHECK-SD-LABEL: fshl_i32:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsr w8, w1, #1
-; CHECK-SD-NEXT:    mvn w9, w2
-; CHECK-SD-NEXT:    lsl w10, w0, w2
-; CHECK-SD-NEXT:    lsr w8, w8, w9
-; CHECK-SD-NEXT:    orr w0, w10, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fshl_i32:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    lsr w9, w1, #1
-; CHECK-GI-NEXT:    and w10, w2, #0x1f
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w10, w0, w10
-; CHECK-GI-NEXT:    lsr w8, w9, w8
-; CHECK-GI-NEXT:    orr w0, w10, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fshl_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w1, #1
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl w10, w0, w2
+; CHECK-NEXT:    lsr w8, w8, w9
+; CHECK-NEXT:    orr w0, w10, w8
+; CHECK-NEXT:    ret
   %f = call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %z)
   ret i32 %f
 }
@@ -300,12 +289,10 @@ define i32 @fshr_i32(i32 %x, i32 %y, i32 %z) {
 ;
 ; CHECK-GI-LABEL: fshr_i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    lsl w9, w0, #1
-; CHECK-GI-NEXT:    and w10, w2, #0x1f
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w8, w9, w8
-; CHECK-GI-NEXT:    lsr w9, w1, w10
+; CHECK-GI-NEXT:    lsl w8, w0, #1
+; CHECK-GI-NEXT:    mvn w9, w2
+; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsr w9, w1, w2
 ; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
   %f = call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %z)
@@ -551,14 +538,12 @@ define i32 @or_shl_fshl(i32 %x, i32 %y, i32 %s) {
 ;
 ; CHECK-GI-LABEL: or_shl_fshl:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    and w9, w2, #0x1f
-; CHECK-GI-NEXT:    lsr w10, w1, #1
-; CHECK-GI-NEXT:    lsl w11, w1, w2
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w9, w0, w9
-; CHECK-GI-NEXT:    lsr w8, w10, w8
-; CHECK-GI-NEXT:    orr w9, w9, w11
+; CHECK-GI-NEXT:    lsr w8, w1, #1
+; CHECK-GI-NEXT:    lsl w9, w1, w2
+; CHECK-GI-NEXT:    mvn w10, w2
+; CHECK-GI-NEXT:    lsl w11, w0, w2
+; CHECK-GI-NEXT:    lsr w8, w8, w10
+; CHECK-GI-NEXT:    orr w9, w11, w9
 ; CHECK-GI-NEXT:    orr w0, w9, w8
 ; CHECK-GI-NEXT:    ret
   %shy = shl i32 %y, %s
@@ -594,14 +579,12 @@ define i32 @or_shl_fshl_commute(i32 %x, i32 %y, i32 %s) {
 ;
 ; CHECK-GI-LABEL: or_shl_fshl_commute:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    and w9, w2, #0x1f
-; CHECK-GI-NEXT:    lsr w10, w1, #1
-; CHECK-GI-NEXT:    lsl w11, w1, w2
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w9, w0, w9
-; CHECK-GI-NEXT:    lsr w8, w10, w8
-; CHECK-GI-NEXT:    orr w9, w11, w9
+; CHECK-GI-NEXT:    lsr w8, w1, #1
+; CHECK-GI-NEXT:    lsl w9, w1, w2
+; CHECK-GI-NEXT:    mvn w10, w2
+; CHECK-GI-NEXT:    lsl w11, w0, w2
+; CHECK-GI-NEXT:    lsr w8, w8, w10
+; CHECK-GI-NEXT:    orr w9, w9, w11
 ; CHECK-GI-NEXT:    orr w0, w9, w8
 ; CHECK-GI-NEXT:    ret
   %shy = shl i32 %y, %s
@@ -637,14 +620,12 @@ define i32 @or_lshr_fshr(i32 %x, i32 %y, i32 %s) {
 ;
 ; CHECK-GI-LABEL: or_lshr_fshr:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    and w9, w2, #0x1f
-; CHECK-GI-NEXT:    lsl w10, w1, #1
-; CHECK-GI-NEXT:    lsr w11, w1, w2
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsr w9, w0, w9
-; CHECK-GI-NEXT:    lsl w8, w10, w8
-; CHECK-GI-NEXT:    orr w9, w9, w11
+; CHECK-GI-NEXT:    lsl w8, w1, #1
+; CHECK-GI-NEXT:    lsr w9, w1, w2
+; CHECK-GI-NEXT:    mvn w10, w2
+; CHECK-GI-NEXT:    lsr w11, w0, w2
+; CHECK-GI-NEXT:    lsl w8, w8, w10
+; CHECK-GI-NEXT:    orr w9, w11, w9
 ; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
   %shy = lshr i32 %y, %s
@@ -679,14 +660,12 @@ define i32 @or_lshr_fshr_commute(i32 %x, i32 %y, i32 %s) {
 ;
 ; CHECK-GI-LABEL: or_lshr_fshr_commute:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    and w9, w2, #0x1f
-; CHECK-GI-NEXT:    lsl w10, w1, #1
-; CHECK-GI-NEXT:    lsr w11, w1, w2
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsr w9, w0, w9
-; CHECK-GI-NEXT:    lsl w8, w10, w8
-; CHECK-GI-NEXT:    orr w9, w11, w9
+; CHECK-GI-NEXT:    lsl w8, w1, #1
+; CHECK-GI-NEXT:    lsr w9, w1, w2
+; CHECK-GI-NEXT:    mvn w10, w2
+; CHECK-GI-NEXT:    lsr w11, w0, w2
+; CHECK-GI-NEXT:    lsl w8, w8, w10
+; CHECK-GI-NEXT:    orr w9, w9, w11
 ; CHECK-GI-NEXT:    orr w0, w9, w8
 ; CHECK-GI-NEXT:    ret
   %shy = lshr i32 %y, %s
@@ -709,25 +688,14 @@ define i32 @or_lshr_rotr_commute(i32 %x, i32 %y, i32 %s) {
 }
 
 define i32 @or_shl_fshl_simplify(i32 %x, i32 %y, i32 %s) {
-; CHECK-SD-LABEL: or_shl_fshl_simplify:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsr w8, w0, #1
-; CHECK-SD-NEXT:    mvn w9, w2
-; CHECK-SD-NEXT:    lsl w10, w1, w2
-; CHECK-SD-NEXT:    lsr w8, w8, w9
-; CHECK-SD-NEXT:    orr w0, w10, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: or_shl_fshl_simplify:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    lsr w9, w0, #1
-; CHECK-GI-NEXT:    and w10, w2, #0x1f
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w10, w1, w10
-; CHECK-GI-NEXT:    lsr w8, w9, w8
-; CHECK-GI-NEXT:    orr w0, w10, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: or_shl_fshl_simplify:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsr w8, w0, #1
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl w10, w1, w2
+; CHECK-NEXT:    lsr w8, w8, w9
+; CHECK-NEXT:    orr w0, w10, w8
+; CHECK-NEXT:    ret
   %shy = shl i32 %y, %s
   %fun = call i32 @llvm.fshl.i32(i32 %y, i32 %x, i32 %s)
   %or = or i32 %fun, %shy
@@ -746,12 +714,10 @@ define i32 @or_lshr_fshr_simplify(i32 %x, i32 %y, i32 %s) {
 ;
 ; CHECK-GI-LABEL: or_lshr_fshr_simplify:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    lsl w9, w0, #1
-; CHECK-GI-NEXT:    and w10, w2, #0x1f
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w8, w9, w8
-; CHECK-GI-NEXT:    lsr w9, w1, w10
+; CHECK-GI-NEXT:    lsl w8, w0, #1
+; CHECK-GI-NEXT:    mvn w9, w2
+; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsr w9, w1, w2
 ; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
   %shy = lshr i32 %y, %s

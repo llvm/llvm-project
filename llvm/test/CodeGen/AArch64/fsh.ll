@@ -385,25 +385,14 @@ entry:
 }
 
 define i32 @fshl_i32(i32 %a, i32 %b, i32 %c) {
-; CHECK-SD-LABEL: fshl_i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    lsr w8, w1, #1
-; CHECK-SD-NEXT:    mvn w9, w2
-; CHECK-SD-NEXT:    lsl w10, w0, w2
-; CHECK-SD-NEXT:    lsr w8, w8, w9
-; CHECK-SD-NEXT:    orr w0, w10, w8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: fshl_i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    lsr w9, w1, #1
-; CHECK-GI-NEXT:    and w10, w2, #0x1f
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w10, w0, w10
-; CHECK-GI-NEXT:    lsr w8, w9, w8
-; CHECK-GI-NEXT:    orr w0, w10, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: fshl_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    lsr w8, w1, #1
+; CHECK-NEXT:    mvn w9, w2
+; CHECK-NEXT:    lsl w10, w0, w2
+; CHECK-NEXT:    lsr w8, w8, w9
+; CHECK-NEXT:    orr w0, w10, w8
+; CHECK-NEXT:    ret
 entry:
   %d = call i32 @llvm.fshl(i32 %a, i32 %b, i32 %c)
   ret i32 %d
@@ -421,12 +410,10 @@ define i32 @fshr_i32(i32 %a, i32 %b, i32 %c) {
 ;
 ; CHECK-GI-LABEL: fshr_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
-; CHECK-GI-NEXT:    lsl w9, w0, #1
-; CHECK-GI-NEXT:    and w10, w2, #0x1f
-; CHECK-GI-NEXT:    bic w8, w8, w2
-; CHECK-GI-NEXT:    lsl w8, w9, w8
-; CHECK-GI-NEXT:    lsr w9, w1, w10
+; CHECK-GI-NEXT:    lsl w8, w0, #1
+; CHECK-GI-NEXT:    mvn w9, w2
+; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsr w9, w1, w2
 ; CHECK-GI-NEXT:    orr w0, w8, w9
 ; CHECK-GI-NEXT:    ret
 entry:
