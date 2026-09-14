@@ -12427,6 +12427,9 @@ def err_omp_wrong_var_in_declare_reduction : Error<"only %select{'omp_priv' or '
 def err_omp_unsupported_on_binding : Error<
   "%select{reductions|conditional lastprivate|linear clause with parallel constructs}0 on structured bindings "
   "%plural{0:are|:is}0 not yet supported">;
+def err_omp_loop_var_is_structured_binding : Error<
+  "structured binding %0 cannot be used as the loop control variable of an "
+  "OpenMP loop">;
 def err_omp_declare_reduction_redefinition : Error<"redefinition of user-defined reduction for type %0">;
 def err_omp_mapper_wrong_type : Error<
   "mapper type must be of struct, union or class type">;

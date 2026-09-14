@@ -3903,19 +3903,37 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
   }
 }
 
+namespace {
+/// Visitor to collect variables used in a statement.
+class VarUsageVisitor : public DynamicRecursiveASTVisitor {
+  llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars;
+  llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings;
+
+public:
+  VarUsageVisitor(llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars,
+                  llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings)
+      : UsedVars(UsedVars), UsedBindings(UsedBindings) {}
+
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
+    if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+      UsedVars.insert(cast<VarDecl>(VD->getCanonicalDecl()));
+    else if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
+      UsedBindings.insert(cast<BindingDecl>(BD->getCanonicalDecl()));
+    return true;
+  }
+};
+} // namespace
+
 /// Check if bindings from the same structured binding have conflicting
-/// capture kinds (by-ref vs by-copy) in target/teams regions.
+/// capture kinds (by-ref vs by-copy). Bindings share the underlying
+/// DecompositionDecl storage, so mixing by-ref and by-copy clauses on
+/// different bindings from the same decomposition is not representable.
 /// For example: map(a) creates by-ref, firstprivate(b) creates by-copy.
 static bool checkDecompositionCaptureConflict(
     Sema &SemaRef, OpenMPDirectiveKind DKind,
     llvm::SmallDenseMap<const DecompositionDecl *,
                         std::pair<bool, SourceLocation>, 4> &SeenDecompositions,
     const ValueDecl *D, SourceLocation ELoc, OpenMPClauseKind ClauseKind) {
-  // Only check for target/teams directives where map vs firstprivate matters.
-  if (!isOpenMPTargetExecutionDirective(DKind) &&
-      !isOpenMPTeamsDirective(DKind))
-    return false;
-
   const auto *BD = dyn_cast<BindingDecl>(D);
   if (!BD)
     return false;
@@ -3928,7 +3946,8 @@ static bool checkDecompositionCaptureConflict(
   bool IsByRef = false;
   switch (ClauseKind) {
   case OMPC_map:
-    // Map clauses are by-reference.
+  case OMPC_shared:
+    // Map and shared clauses are by-reference.
     IsByRef = true;
     break;
   case OMPC_firstprivate:
@@ -3953,17 +3972,32 @@ static bool checkDecompositionCaptureConflict(
 }
 
 /// Helper to check all clauses in a directive for structured binding
-/// capture conflicts. Returns true if an error was found.
-static bool
-checkClausesForDecompositionConflicts(Sema &SemaRef, OpenMPDirectiveKind DKind,
-                                      ArrayRef<OMPClause *> Clauses) {
+/// capture conflicts. Returns true if an error was found. If Body is
+/// provided and the directive has default(shared), bindings used in the
+/// body but not listed in explicit clauses are treated as implicit
+/// shared (by-reference).
+static bool checkClausesForDecompositionConflicts(Sema &SemaRef,
+                                                  OpenMPDirectiveKind DKind,
+                                                  ArrayRef<OMPClause *> Clauses,
+                                                  Stmt *Body = nullptr) {
   llvm::SmallDenseMap<const DecompositionDecl *,
                       std::pair<bool, SourceLocation>, 4>
       SeenDecompositions;
+  llvm::SmallPtrSet<const BindingDecl *, 8> ExplicitBindings;
   bool HasError = false;
+  bool HasDefaultShared = false;
+  SourceLocation DefaultSharedLoc;
   for (OMPClause *C : Clauses) {
+    if (auto *DC = dyn_cast<OMPDefaultClause>(C)) {
+      if (DC->getDefaultKind() == llvm::omp::DefaultKind::OMP_DEFAULT_shared) {
+        HasDefaultShared = true;
+        DefaultSharedLoc = DC->getBeginLoc();
+      }
+      continue;
+    }
     OpenMPClauseKind CK = C->getClauseKind();
-    if (CK != OMPC_map && CK != OMPC_firstprivate && CK != OMPC_private)
+    if (CK != OMPC_map && CK != OMPC_firstprivate && CK != OMPC_private &&
+        CK != OMPC_shared)
       continue;
     ArrayRef<Expr *> Varlist;
     if (auto *MPC = dyn_cast<OMPMapClause>(C))
@@ -3972,39 +4006,47 @@ checkClausesForDecompositionConflicts(Sema &SemaRef, OpenMPDirectiveKind DKind,
       Varlist = FPC->varlist();
     else if (auto *PC = dyn_cast<OMPPrivateClause>(C))
       Varlist = PC->varlist();
+    else if (auto *SC = dyn_cast<OMPSharedClause>(C))
+      Varlist = SC->varlist();
 
     for (Expr *VE : Varlist) {
       if (auto *DRE = dyn_cast<DeclRefExpr>(VE->IgnoreParenImpCasts())) {
+        ValueDecl *D = DRE->getDecl();
+        // Look through OMPCapturedExprDecl (used when clauses reference
+        // variables from an enclosing captured region) to find the
+        // underlying BindingDecl.
+        if (auto *CED = dyn_cast<OMPCapturedExprDecl>(D)) {
+          if (auto *InitDRE =
+                  dyn_cast<DeclRefExpr>(CED->getInit()->IgnoreParenImpCasts()))
+            D = InitDRE->getDecl();
+        }
+        if (auto *BD = dyn_cast<BindingDecl>(D))
+          ExplicitBindings.insert(cast<BindingDecl>(BD->getCanonicalDecl()));
         if (checkDecompositionCaptureConflict(
-                SemaRef, DKind, SeenDecompositions, DRE->getDecl(),
-                VE->getExprLoc(), CK))
+                SemaRef, DKind, SeenDecompositions, D, VE->getExprLoc(), CK))
           HasError = true;
       }
     }
   }
+
+  // With default(shared), bindings used in the body but not in an explicit
+  // clause become implicit shared (by-reference). Check those for conflicts
+  // with explicit by-copy clauses on the same decomposition.
+  if (HasDefaultShared && Body) {
+    llvm::SmallPtrSet<const VarDecl *, 8> UsedVars;
+    llvm::SmallPtrSet<const BindingDecl *, 8> UsedBindings;
+    VarUsageVisitor Visitor(UsedVars, UsedBindings);
+    Visitor.TraverseStmt(Body);
+    for (const BindingDecl *BD : UsedBindings) {
+      if (ExplicitBindings.contains(BD))
+        continue;
+      if (checkDecompositionCaptureConflict(SemaRef, DKind, SeenDecompositions,
+                                            BD, DefaultSharedLoc, OMPC_shared))
+        HasError = true;
+    }
+  }
   return HasError;
 }
-
-namespace {
-/// Visitor to collect variables used in a statement.
-class VarUsageVisitor : public DynamicRecursiveASTVisitor {
-  llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars;
-  llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings;
-
-public:
-  VarUsageVisitor(llvm::SmallPtrSet<const VarDecl *, 8> &UsedVars,
-                  llvm::SmallPtrSet<const BindingDecl *, 8> &UsedBindings)
-      : UsedVars(UsedVars), UsedBindings(UsedBindings) {}
-
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
-    if (auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-      UsedVars.insert(cast<VarDecl>(VD->getCanonicalDecl()));
-    else if (auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
-      UsedBindings.insert(cast<BindingDecl>(BD->getCanonicalDecl()));
-    return true;
-  }
-};
-} // namespace
 
 /// Check if original variable is explicitly mapped but only bindings are used.
 /// Returns true if an error was found.
@@ -8305,6 +8347,11 @@ SemaOpenMP::ActOnOpenMPParallelDirective(ArrayRef<OMPClause *> Clauses,
   if (!AStmt)
     return StmtError();
 
+  // Check for conflicting capture kinds on structured bindings.
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_parallel, Clauses,
+                                            AStmt))
+    return StmtError();
+
   setBranchProtectedScope(SemaRef, OMPD_parallel, AStmt);
 
   return OMPParallelDirective::Create(
@@ -8807,6 +8854,19 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
     }
   }
 
+  // Helper lambda to reject structured bindings used as OpenMP loop
+  // control variables. Loop counters are implicitly private, but bindings
+  // share storage with their decomposition, so this is not representable.
+  auto CheckBindingAsLoopVar = [&](ValueDecl *LoopVar,
+                                   SourceLocation Loc) -> bool {
+    if (!isa<BindingDecl>(LoopVar))
+      return false;
+    if (EmitDiags)
+      SemaRef.Diag(Loc, diag::err_omp_loop_var_is_structured_binding)
+          << LoopVar;
+    return true;
+  };
+
   // Helper lambda to check if a loop variable is already used in an outer
   // loop.
   auto CheckLoopVarReuse = [&](ValueDecl *LoopVar, SourceLocation Loc) -> bool {
@@ -8835,6 +8895,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
             return setLCDeclAndLB(LoopVar, ME, BO->getRHS(), EmitDiags);
           }
         ValueDecl *LoopVar = DRE->getDecl();
+        if (CheckBindingAsLoopVar(LoopVar, DRE->getLocation()))
+          return true;
         if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
           return true;
         return setLCDeclAndLB(LoopVar, DRE, BO->getRHS(), EmitDiags);
@@ -8882,6 +8944,8 @@ bool OpenMPIterationSpaceChecker::checkAndSetInit(Stmt *S, bool EmitDiags) {
             return setLCDeclAndLB(LoopVar, ME, CE->getArg(1), EmitDiags);
           }
         ValueDecl *LoopVar = DRE->getDecl();
+        if (CheckBindingAsLoopVar(LoopVar, DRE->getLocation()))
+          return true;
         if (CheckLoopVarReuse(LoopVar, DRE->getLocation()))
           return true;
         return setLCDeclAndLB(LoopVar, DRE, CE->getArg(1), EmitDiags);
@@ -11980,6 +12044,10 @@ StmtResult SemaOpenMP::ActOnOpenMPTaskDirective(ArrayRef<OMPClause *> Clauses,
   // appear on the same directive.
   if (checkMutuallyExclusiveClauses(SemaRef, Clauses,
                                     {OMPC_detach, OMPC_mergeable}))
+    return StmtError();
+
+  // Check for conflicting capture kinds on structured bindings.
+  if (checkClausesForDecompositionConflicts(SemaRef, OMPD_task, Clauses, AStmt))
     return StmtError();
 
   setBranchProtectedScope(SemaRef, OMPD_task, AStmt);

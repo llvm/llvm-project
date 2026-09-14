@@ -268,6 +268,65 @@ void test_conflicting_capture_kinds_map_private() {
   }
 }
 
+void test_conflicting_capture_kinds_parallel_shared_firstprivate() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp parallel shared(a) firstprivate(b)
+  {
+    a = b;
+  }
+}
+
+void test_conflicting_capture_kinds_parallel_shared_private() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp parallel private(a) shared(b)
+  {
+    a = 100;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_parallel_default_shared_firstprivate() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp parallel default(shared) firstprivate(a)
+  {
+    a++;
+    b++;
+  }
+}
+
+void test_binding_as_loop_var_for() {
+  Point p{0, 0};
+  auto [a, b] = p;
+#pragma omp for
+  // expected-error@+1{{structured binding 'a' cannot be used as the loop control variable of an OpenMP loop}}
+  for (a = 0; a < 10; ++a)
+    ;
+}
+
+void test_binding_as_loop_var_parallel_for() {
+  Point p{0, 0};
+  auto [a, b] = p;
+#pragma omp parallel for
+  // expected-error@+1{{structured binding 'a' cannot be used as the loop control variable of an OpenMP loop}}
+  for (a = 0; a < 10; ++a)
+    ;
+}
+
+void test_binding_as_loop_var_simd() {
+  Point p{0, 0};
+  auto [a, b] = p;
+#pragma omp simd
+  // expected-error@+1{{structured binding 'a' cannot be used as the loop control variable of an OpenMP loop}}
+  for (a = 0; a < 10; ++a)
+    ;
+}
+
 void test_conflicting_capture_kinds_target_teams() {
   Point p{1, 2};
   auto [a, b] = p;
