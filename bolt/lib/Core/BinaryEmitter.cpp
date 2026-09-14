@@ -19,6 +19,8 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFCompileUnit.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/CommandLine.h"
@@ -309,12 +311,24 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
     // tentative layout.
     Section->ensureMinAlignment(Align(BC.AlignFunctions));
 
-    Streamer.emitCodeAlignment(Function.getMinAlign(), *BC.STI);
-    uint16_t MaxAlignBytes = FF.isSplitFragment()
-                                 ? Function.getMaxColdAlignmentBytes()
-                                 : Function.getMaxAlignmentBytes();
-    if (MaxAlignBytes > 0)
-      Streamer.emitCodeAlignment(Function.getAlign(), *BC.STI, MaxAlignBytes);
+    std::optional<uint64_t> DesiredOffset;
+    if (FF.isMainFragment())
+      DesiredOffset = Function.getDesiredOffset();
+
+    if (DesiredOffset) {
+      const MCExpr *OffsetExpr =
+          MCConstantExpr::create(*DesiredOffset, *BC.Ctx);
+      const unsigned FillValue = BC.Ctx->getAsmInfo().getTextAlignFillValue();
+      static_cast<MCObjectStreamer &>(Streamer).emitValueToOffset(
+          OffsetExpr, FillValue, SMLoc(), /*AllowOmission=*/true);
+    } else {
+      Streamer.emitCodeAlignment(Function.getMinAlign(), *BC.STI);
+      uint16_t MaxAlignBytes = FF.isSplitFragment()
+                                   ? Function.getMaxColdAlignmentBytes()
+                                   : Function.getMaxAlignmentBytes();
+      if (MaxAlignBytes > 0)
+        Streamer.emitCodeAlignment(Function.getAlign(), *BC.STI, MaxAlignBytes);
+    }
   } else {
     Streamer.emitCodeAlignment(Function.getAlign(), *BC.STI);
   }
