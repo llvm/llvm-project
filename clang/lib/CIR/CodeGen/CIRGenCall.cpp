@@ -104,7 +104,7 @@ void CIRGenFunction::emitAggregateStore(mlir::Value value, Address dest) {
   // scope as the value, don't make assumptions about current insertion point.
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointAfter(value.getDefiningOp());
-  builder.createStore(*currSrcLoc, value, dest);
+  builder.createStore(getLoc(*currSrcLoc), value, dest);
 }
 
 static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
@@ -1210,9 +1210,10 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
                                 ReturnValueSlot returnValue,
                                 const CallArgList &args,
                                 cir::CIRCallOpInterface *callOp,
-                                bool isMustTail, mlir::Location loc) {
+                                bool isMustTail, SourceRange clangLoc) {
   QualType retTy = funcInfo.getReturnType();
   cir::FuncType cirFuncTy = getTypes().getFunctionType(funcInfo);
+  mlir::Location loc = getLoc(clangLoc);
 
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
@@ -1452,7 +1453,7 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
     mlir::ResultRange results = theCall->getOpResults();
     assert(results.size() <= 1 && "multiple returns from a call");
 
-    SourceLocRAIIObject loc{*this, callLoc};
+    SourceLocRAIIObject loc{*this, clangLoc};
     emitAggregateStore(results[0], destPtr);
     return RValue::getAggregate(destPtr);
   }

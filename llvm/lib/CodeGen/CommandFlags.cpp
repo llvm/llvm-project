@@ -70,7 +70,7 @@ CGOPT(std::string, MCPU)
 CGOPT(std::string, MTune)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
-CGOPT(ThreadModel::Model, ThreadModel)
+CGOPT(ThreadModel, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
@@ -157,12 +157,13 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Combination of ropi and rwpi")));
   CGBINDOPT(RelocModel);
 
-  static cl::opt<ThreadModel::Model> ThreadModel(
+  static cl::opt<ThreadModel> ThreadModel(
       "thread-model", cl::desc("Choose threading model"),
-      cl::init(ThreadModel::POSIX),
+      cl::init(llvm::ThreadModel::POSIX),
       cl::values(
-          clEnumValN(ThreadModel::POSIX, "posix", "POSIX thread model"),
-          clEnumValN(ThreadModel::Single, "single", "Single thread model")));
+          clEnumValN(llvm::ThreadModel::POSIX, "posix", "POSIX thread model"),
+          clEnumValN(llvm::ThreadModel::Single, "single",
+                     "Single thread model")));
   CGBINDOPT(ThreadModel);
 
   static cl::opt<CodeModel::Model> CodeModel(
@@ -194,7 +195,9 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(ExceptionHandling::WinEH, "wineh",
                      "Windows exception model"),
           clEnumValN(ExceptionHandling::Wasm, "wasm",
-                     "WebAssembly exception handling")));
+                     "WebAssembly exception handling"),
+          clEnumValN(ExceptionHandling::Emscripten, "emscripten",
+                     "Emscripten JavaScript-based exception handling")));
   CGBINDOPT(ExceptionModel);
 
   static cl::opt<CodeGenFileType> FileType(

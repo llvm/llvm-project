@@ -4371,6 +4371,8 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
           module->getAttr(cir::CIRDialect::getModuleLevelAsmAttrName()))
     module->setAttr(mlir::LLVM::LLVMDialect::getModuleLevelAsmAttrName(),
                     asmAttr);
+
+  lowerOpenCLModuleMetadataAttrs(module);
 }
 
 void ConvertCIRToLLVMPass::runOnOperation() {
