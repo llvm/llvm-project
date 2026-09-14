@@ -2680,10 +2680,10 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 const SmallPtrSetImpl<const MDNode *> &DependenceInfo::getLoopAliasScopes() {
   if (!LoopAliasScopesPopulated) {
     LoopAliasScopesPopulated = true;
-    Function *DeclFn =
-        F->getParent() ? F->getParent()->getFunction(Intrinsic::getName(
-                             Intrinsic::experimental_noalias_scope_decl))
-                       : nullptr;
+    Function *DeclFn = F->getParent()
+                           ? F->getParent()->getFunction(Intrinsic::getName(
+                                 Intrinsic::experimental_noalias_scope_decl))
+                           : nullptr;
     if (!LI->empty() && (!F->getParent() || (DeclFn && !DeclFn->use_empty()))) {
       for (const BasicBlock &BB : *F) {
         if (!LI->getLoopFor(&BB))
