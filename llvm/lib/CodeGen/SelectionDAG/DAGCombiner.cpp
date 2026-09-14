@@ -31739,6 +31739,11 @@ SDValue DAGCombiner::BuildLogBase2(SDValue V, const SDLoc &DL,
 
 SDValue DAGCombiner::materializeFPConstant(double Value, const SDLoc &DL,
                                            EVT VT) {
+  // SelectionDAG::getConstantFP represents a fixed-length vector constant as a
+  // BUILD_VECTOR of scalar ConstantFP operands, and SoftenFloatOperand has no
+  // BUILD_VECTOR case. A legal fixed-length vector whose element type softens
+  // therefore takes a constant-pool load here. The vector legality check keeps
+  // the helper to that case. Every other type keeps getConstantFP.
   if (!VT.isFixedLengthVector() || !TLI.isTypeLegal(VT) ||
       TLI.getTypeAction(*DAG.getContext(), VT.getScalarType()) !=
           TargetLowering::TypeSoftenFloat)
