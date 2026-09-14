@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c11 -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c11 -O0 %s -o - | FileCheck %s --check-prefix=CHECK
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c++17 -x c++ -O0 %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c11 -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,C
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c11 -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefix=CHECK
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=null,alignment,array-bounds -Wno-array-bounds -std=c++17 -x c++ -O0 -DUSE_UNION %s -o - | FileCheck %s --check-prefixes=CHECK,CXX
 
 #ifdef USE_UNION
@@ -89,12 +89,13 @@ void test_init_from_subscript(AGG arr[4]) {
 }
 
 // Array bounds - out-of-bounds access (RHS)
-// Note: GCC also does not detect the out-of-bounds access here when compiled as
-// C++.
+// Both languages detect this now. C++ used to miss it: the read goes through the
+// implicitly-declared operator=, whose argument carries a const conversion, so
+// the old shape test in EmitCheckedLValue did not recognise the subscript.
+// (GCC still does not detect it when compiled as C++.)
 
 // CHECK-LABEL: define {{.*}}@test_oob_rhs(
-// C: br i1 false, label %cont, label %handler.out_of_bounds
-// CXX: br i1 true, label %cont, label %handler.out_of_bounds
+// CHECK: br i1 false, label %cont, label %handler.out_of_bounds
 // CHECK: handler.out_of_bounds:
 // CHECK-NEXT: call void @__ubsan_handle_out_of_bounds_abort
 // CHECK: handler.type_mismatch:
