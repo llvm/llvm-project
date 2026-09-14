@@ -23,7 +23,6 @@
 #include "llvm/Support/AllocToken.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SipHash.h"
-#include <cstdint>
 
 namespace clang {
 namespace interp {
@@ -4390,8 +4389,8 @@ static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
       VectorA.getNumElems() != VectorB.getNumElems())
     return false;
 
-  llvm::APFloat A = VectorA.elem<Floating>(0).getAPFloat();
-  llvm::APFloat B = VectorB.elem<Floating>(0).getAPFloat();
+  APFloat A = VectorA.elem<Floating>(0).getAPFloat();
+  APFloat B = VectorB.elem<Floating>(0).getAPFloat();
   bool Matches = MatchesPredicate(Predicate, A.compare(B));
   pushInteger(S, Matches, Call->getType());
   return true;
@@ -4405,11 +4404,11 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
   const Pointer &VectorA = S.Stk.pop<Pointer>();
   Pointer &Dst = S.Stk.peek<Pointer>();
 
-  unsigned NumLanes = VectorA.getNumElems();
-  if (NumLanes != VectorB.getNumElems())
+  unsigned NumElems = VectorA.getNumElems();
+  if (NumElems != VectorB.getNumElems())
     return false;
 
-  for (unsigned I = 0; I != NumLanes; ++I) {
+  for (unsigned I = 0; I != NumElems; ++I) {
     // Handle cmpss/cmpsd
     if (IsScalar && I > 0) {
       // Copy the upper 3 packed elements from a to the upper elements of dst
@@ -4417,8 +4416,8 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
       continue;
     }
 
-    llvm::APFloat AElement = VectorA.elem<Floating>(I).getAPFloat();
-    llvm::APFloat BElement = VectorB.elem<Floating>(I).getAPFloat();
+    APFloat AElement = VectorA.elem<Floating>(I).getAPFloat();
+    APFloat BElement = VectorB.elem<Floating>(I).getAPFloat();
 
     auto CompareResult = AElement.compare(BElement);
     bool Matches = MatchesPredicate(Predicate, CompareResult);
@@ -4427,13 +4426,13 @@ static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
     // True = all bits set (0xFFFFFFFF for float, 0xFFFFFFFFFFFFFFFF for double)
     // False = all bits zero
     const llvm::fltSemantics &Sem = AElement.getSemantics();
-    unsigned BitWidth = llvm::APFloat::getSizeInBits(Sem);
+    unsigned BitWidth = APFloat::getSizeInBits(Sem);
 
     if (Matches) {
-      llvm::APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
+      APFloat True(Sem, llvm::APInt::getAllOnes(BitWidth));
       Dst.elem<Floating>(I) = Floating(True);
     } else {
-      llvm::APFloat False(Sem, llvm::APInt(BitWidth, 0));
+      APFloat False(Sem, llvm::APInt(BitWidth, 0));
       Dst.elem<Floating>(I) = Floating(False);
     }
   }
@@ -5896,12 +5895,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_pblendd128:
   case clang::X86::BI__builtin_ia32_pblendd256:
     return interp__builtin_ia32_shuffle_generic(
-        S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
-          // Bit index for mask.
-          unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
-          unsigned SrcVecIdx = MaskBit ? 1 : 0; // 1 = TrueVec, 0 = FalseVec
-          return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
-        });
+      S, OpPC, Call, [](unsigned DstIdx, unsigned ShuffleMask) {
+        // Bit index for mask.
+        unsigned MaskBit = (ShuffleMask >> (DstIdx % 8)) & 0x1;
+        unsigned SrcVecIdx = MaskBit ? 1 : 0;  // 1 = TrueVec, 0 = FalseVec
+        return std::pair<unsigned, int>{SrcVecIdx, static_cast<int>(DstIdx)};
+      });
+
+
 
   case clang::X86::BI__builtin_ia32_blendvpd:
   case clang::X86::BI__builtin_ia32_blendvpd256:
@@ -6724,44 +6725,65 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
           return llvm::maximum(A, B);
         });
 
+  // COMI and UCOMI produce the same boolean result, but keep their signaling
+  // and quiet predicates distinct to reflect their different floating-point
+  // exception behavior, even though constant evaluation does not expose it.
   case X86::BI__builtin_ia32_comieq:
-  case X86::BI__builtin_ia32_ucomieq:
   case X86::BI__builtin_ia32_comisdeq:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_EQ_OS);
+
+  case X86::BI__builtin_ia32_ucomieq:
   case X86::BI__builtin_ia32_ucomisdeq:
     return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
                                     X86CmpImm::CMP_EQ_OQ);
 
   case X86::BI__builtin_ia32_comilt:
-  case X86::BI__builtin_ia32_ucomilt:
   case X86::BI__builtin_ia32_comisdlt:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_LT_OS);
+
+  case X86::BI__builtin_ia32_ucomilt:
   case X86::BI__builtin_ia32_ucomisdlt:
     return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
                                     X86CmpImm::CMP_LT_OQ);
 
   case X86::BI__builtin_ia32_comile:
-  case X86::BI__builtin_ia32_ucomile:
   case X86::BI__builtin_ia32_comisdle:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_LE_OS);
+
+  case X86::BI__builtin_ia32_ucomile:
   case X86::BI__builtin_ia32_ucomisdle:
     return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
                                     X86CmpImm::CMP_LE_OQ);
 
   case X86::BI__builtin_ia32_comigt:
-  case X86::BI__builtin_ia32_ucomigt:
   case X86::BI__builtin_ia32_comisdgt:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_GT_OS);
+
+  case X86::BI__builtin_ia32_ucomigt:
   case X86::BI__builtin_ia32_ucomisdgt:
     return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
                                     X86CmpImm::CMP_GT_OQ);
 
   case X86::BI__builtin_ia32_comige:
-  case X86::BI__builtin_ia32_ucomige:
   case X86::BI__builtin_ia32_comisdge:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_GE_OS);
+
+  case X86::BI__builtin_ia32_ucomige:
   case X86::BI__builtin_ia32_ucomisdge:
     return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
                                     X86CmpImm::CMP_GE_OQ);
 
   case X86::BI__builtin_ia32_comineq:
-  case X86::BI__builtin_ia32_ucomineq:
   case X86::BI__builtin_ia32_comisdneq:
+    return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
+                                    X86CmpImm::CMP_NEQ_US);
+
+  case X86::BI__builtin_ia32_ucomineq:
   case X86::BI__builtin_ia32_ucomisdneq:
     return interp__builtin_x86_comi(S, OpPC, Frame, Call, BuiltinID,
                                     X86CmpImm::CMP_NEQ_UQ);

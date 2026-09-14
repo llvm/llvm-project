@@ -50,6 +50,8 @@ TEST_SSE_NAMED_CMP(ge, 1, 0, 0, 1);
 TEST_SSE_NAMED_CMP(nge, 0, 1, 1, 0);
 TEST_SSE_NAMED_CMP(ngt, 1, 1, 1, 0);
 
+// COMI and UCOMI have the same integer result. They differ only in floating-
+// point exception behavior, which constant evaluation does not expose.
 #define TEST_SSE_COMI(NAME, A, B, EXPECTED)                                \
   TEST_CONSTEXPR(_mm_comi##NAME##_ss((__m128){A, 0.0f, 0.0f, 0.0f},       \
                                       (__m128){B, 0.0f, 0.0f, 0.0f}) ==    \

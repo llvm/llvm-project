@@ -32,47 +32,46 @@ class ASTContext;
 class CharUnits;
 class Expr;
 
-// SSE/AVX floating-point comparison immediates
+// SSE/AVX floating-point comparison immediates.
 namespace X86CmpImm {
-constexpr uint32_t CMP_EQ_OQ = 0x00; // Equal (ordered, quiet)
-constexpr uint32_t CMP_LT_OS = 0x01; // Less than (ordered, signaling)
-constexpr uint32_t CMP_LE_OS = 0x02; // Less than or equal (ordered, signaling)
-constexpr uint32_t CMP_UNORD_Q = 0x03; // Unordered (quiet)
-constexpr uint32_t CMP_NEQ_UQ = 0x04;  // Not equal (unordered, quiet)
-constexpr uint32_t CMP_NLT_US = 0x05;  // Not less than (unordered, signaling)
-constexpr uint32_t CMP_NLE_US =
-    0x06; // Not less than or equal (unordered, signaling)
-constexpr uint32_t CMP_ORD_Q = 0x07; // Ordered (quiet)
-constexpr uint32_t CMP_EQ_UQ = 0x08; // Equal (unordered, quiet)
-constexpr uint32_t CMP_NGE_US =
-    0x09; // Not greater than or equal (unordered, signaling)
-constexpr uint32_t CMP_NGT_US = 0x0A; // Not greater than (unordered, signaling)
-constexpr uint32_t CMP_FALSE_OQ = 0x0B; // False (ordered, quiet)
-constexpr uint32_t CMP_NEQ_OQ = 0x0C;   // Not equal (ordered, quiet)
-constexpr uint32_t CMP_GE_OS =
-    0x0D; // Greater than or equal (ordered, signaling)
-constexpr uint32_t CMP_GT_OS = 0x0E;   // Greater than (ordered, signaling)
-constexpr uint32_t CMP_TRUE_UQ = 0x0F; // True (unordered, quiet)
 
-// Signaling variants (0x10-0x1F)
-constexpr uint32_t CMP_EQ_OS = 0x10;   // Equal (ordered, signaling)
-constexpr uint32_t CMP_LT_OQ = 0x11;   // Less than (ordered, quiet)
-constexpr uint32_t CMP_LE_OQ = 0x12;   // Less than or equal (ordered, quiet)
-constexpr uint32_t CMP_UNORD_S = 0x13; // Unordered (signaling)
-constexpr uint32_t CMP_NEQ_US = 0x14;  // Not equal (unordered, signaling)
-constexpr uint32_t CMP_NLT_UQ = 0x15;  // Not less than (unordered, quiet)
-constexpr uint32_t CMP_NLE_UQ =
-    0x16; // Not less than or equal (unordered, quiet)
-constexpr uint32_t CMP_ORD_S = 0x17; // Ordered (signaling)
-constexpr uint32_t CMP_EQ_US = 0x18; // Equal (unordered, signaling)
-constexpr uint32_t CMP_NGE_UQ =
-    0x19; // Not greater than or equal (unordered, quiet)
-constexpr uint32_t CMP_NGT_UQ = 0x1A;   // Not greater than (unordered, quiet)
-constexpr uint32_t CMP_FALSE_OS = 0x1B; // False (ordered, signaling)
-constexpr uint32_t CMP_NEQ_OS = 0x1C;   // Not equal (ordered, signaling)
-constexpr uint32_t CMP_GE_OQ = 0x1D;   // Greater than or equal (ordered, quiet)
-constexpr uint32_t CMP_GT_OQ = 0x1E;   // Greater than (ordered, quiet)
-constexpr uint32_t CMP_TRUE_US = 0x1F; // True (unordered, signaling)
+enum Predicate : uint32_t {
+  CMP_EQ_OQ = 0x00,    // Equal (ordered, quiet)
+  CMP_LT_OS = 0x01,    // Less than (ordered, signaling)
+  CMP_LE_OS = 0x02,    // Less than or equal (ordered, signaling)
+  CMP_UNORD_Q = 0x03,  // Unordered (quiet)
+  CMP_NEQ_UQ = 0x04,   // Not equal (unordered, quiet)
+  CMP_NLT_US = 0x05,   // Not less than (unordered, signaling)
+  CMP_NLE_US = 0x06,   // Not less than or equal (unordered, signaling)
+  CMP_ORD_Q = 0x07,    // Ordered (quiet)
+  CMP_EQ_UQ = 0x08,    // Equal (unordered, quiet)
+  CMP_NGE_US = 0x09,   // Not greater than or equal (unordered, signaling)
+  CMP_NGT_US = 0x0A,   // Not greater than (unordered, signaling)
+  CMP_FALSE_OQ = 0x0B, // False (ordered, quiet)
+  CMP_NEQ_OQ = 0x0C,   // Not equal (ordered, quiet)
+  CMP_GE_OS = 0x0D,    // Greater than or equal (ordered, signaling)
+  CMP_GT_OS = 0x0E,    // Greater than (ordered, signaling)
+  CMP_TRUE_UQ = 0x0F,  // True (unordered, quiet)
+
+  // Signaling variants (0x10-0x1F).
+  CMP_EQ_OS = 0x10,    // Equal (ordered, signaling)
+  CMP_LT_OQ = 0x11,    // Less than (ordered, quiet)
+  CMP_LE_OQ = 0x12,    // Less than or equal (ordered, quiet)
+  CMP_UNORD_S = 0x13,  // Unordered (signaling)
+  CMP_NEQ_US = 0x14,   // Not equal (unordered, signaling)
+  CMP_NLT_UQ = 0x15,   // Not less than (unordered, quiet)
+  CMP_NLE_UQ = 0x16,   // Not less than or equal (unordered, quiet)
+  CMP_ORD_S = 0x17,    // Ordered (signaling)
+  CMP_EQ_US = 0x18,    // Equal (unordered, signaling)
+  CMP_NGE_UQ = 0x19,   // Not greater than or equal (unordered, quiet)
+  CMP_NGT_UQ = 0x1A,   // Not greater than (unordered, quiet)
+  CMP_FALSE_OS = 0x1B, // False (ordered, signaling)
+  CMP_NEQ_OS = 0x1C,   // Not equal (ordered, signaling)
+  CMP_GE_OQ = 0x1D,    // Greater than or equal (ordered, quiet)
+  CMP_GT_OQ = 0x1E,    // Greater than (ordered, quiet)
+  CMP_TRUE_US = 0x1F,  // True (unordered, signaling)
+};
+
 } // namespace X86CmpImm
 
 // Return true if immediate and the comparison flags are matching

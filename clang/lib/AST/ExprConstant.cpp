@@ -18775,39 +18775,54 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     });
   }
 
+  // COMI and UCOMI produce the same boolean result, but keep their signaling
+  // and quiet predicates distinct to reflect their different floating-point
+  // exception behavior, even though constant evaluation does not expose it.
   case X86::BI__builtin_ia32_comieq:
-  case X86::BI__builtin_ia32_ucomieq:
   case X86::BI__builtin_ia32_comisdeq:
+    return EvalX86Comi(X86CmpImm::CMP_EQ_OS);
+
+  case X86::BI__builtin_ia32_ucomieq:
   case X86::BI__builtin_ia32_ucomisdeq:
     return EvalX86Comi(X86CmpImm::CMP_EQ_OQ);
 
   case X86::BI__builtin_ia32_comilt:
-  case X86::BI__builtin_ia32_ucomilt:
   case X86::BI__builtin_ia32_comisdlt:
+    return EvalX86Comi(X86CmpImm::CMP_LT_OS);
+
+  case X86::BI__builtin_ia32_ucomilt:
   case X86::BI__builtin_ia32_ucomisdlt:
     return EvalX86Comi(X86CmpImm::CMP_LT_OQ);
 
   case X86::BI__builtin_ia32_comile:
-  case X86::BI__builtin_ia32_ucomile:
   case X86::BI__builtin_ia32_comisdle:
+    return EvalX86Comi(X86CmpImm::CMP_LE_OS);
+
+  case X86::BI__builtin_ia32_ucomile:
   case X86::BI__builtin_ia32_ucomisdle:
     return EvalX86Comi(X86CmpImm::CMP_LE_OQ);
 
   case X86::BI__builtin_ia32_comigt:
-  case X86::BI__builtin_ia32_ucomigt:
   case X86::BI__builtin_ia32_comisdgt:
+    return EvalX86Comi(X86CmpImm::CMP_GT_OS);
+
+  case X86::BI__builtin_ia32_ucomigt:
   case X86::BI__builtin_ia32_ucomisdgt:
     return EvalX86Comi(X86CmpImm::CMP_GT_OQ);
 
   case X86::BI__builtin_ia32_comige:
-  case X86::BI__builtin_ia32_ucomige:
   case X86::BI__builtin_ia32_comisdge:
+    return EvalX86Comi(X86CmpImm::CMP_GE_OS);
+
+  case X86::BI__builtin_ia32_ucomige:
   case X86::BI__builtin_ia32_ucomisdge:
     return EvalX86Comi(X86CmpImm::CMP_GE_OQ);
 
   case X86::BI__builtin_ia32_comineq:
-  case X86::BI__builtin_ia32_ucomineq:
   case X86::BI__builtin_ia32_comisdneq:
+    return EvalX86Comi(X86CmpImm::CMP_NEQ_US);
+
+  case X86::BI__builtin_ia32_ucomineq:
   case X86::BI__builtin_ia32_ucomisdneq:
     return EvalX86Comi(X86CmpImm::CMP_NEQ_UQ);
 
