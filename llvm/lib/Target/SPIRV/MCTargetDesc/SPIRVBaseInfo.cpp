@@ -16,6 +16,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
+#include "llvm/Support/ErrorHandling.h"
 
 namespace llvm {
 namespace SPIRV {
@@ -238,6 +239,8 @@ std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
     return "GLSL.std.450";
   case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100:
     return "NonSemantic.Shader.DebugInfo.100";
+  case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200:
+    return "NonSemantic.Shader.DebugInfo.200";
   case SPIRV::InstructionSet::NonSemantic_AuxData:
     return "NonSemantic.AuxData";
   case SPIRV::InstructionSet::SPV_AMD_shader_trinary_minmax:
@@ -246,11 +249,25 @@ std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set) {
   return "UNKNOWN_EXT_INST_SET";
 }
 
+uint32_t
+getNonSemanticDebugInfoVersion(SPIRV::InstructionSet::InstructionSet Set) {
+  switch (Set) {
+  case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100:
+    return 100;
+  case SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200:
+    return 200;
+  default:
+    report_fatal_error(
+        "unexpected NonSemantic.Shader.DebugInfo instruction set");
+  }
+}
+
 SPIRV::InstructionSet::InstructionSet
 getExtInstSetFromString(std::string SetName) {
   for (auto Set :
        {SPIRV::InstructionSet::GLSL_std_450, SPIRV::InstructionSet::OpenCL_std,
         SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100,
+        SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200,
         SPIRV::InstructionSet::NonSemantic_AuxData}) {
     if (SetName == getExtInstSetName(Set))
       return Set;
@@ -262,6 +279,10 @@ std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,
                            uint32_t InstructionNumber) {
   const SPIRV::ExtendedBuiltin *Lookup =
       SPIRV::lookupExtendedBuiltinBySetAndNumber(Set, InstructionNumber);
+  if (!Lookup && Set == SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_200)
+    Lookup = SPIRV::lookupExtendedBuiltinBySetAndNumber(
+        SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100,
+        InstructionNumber);
 
   if (!Lookup)
     return "UNKNOWN_EXT_INST";

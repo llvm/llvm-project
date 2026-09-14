@@ -284,6 +284,8 @@ std::string getLinkStringForBuiltIn(SPIRV::BuiltIn::BuiltIn BuiltInValue);
 bool getSpirvBuiltInIdByName(StringRef Name, SPIRV::BuiltIn::BuiltIn &BI);
 
 std::string getExtInstSetName(SPIRV::InstructionSet::InstructionSet Set);
+uint32_t
+getNonSemanticDebugInfoVersion(SPIRV::InstructionSet::InstructionSet Set);
 SPIRV::InstructionSet::InstructionSet
 getExtInstSetFromString(std::string SetName);
 std::string getExtInstName(SPIRV::InstructionSet::InstructionSet Set,

@@ -36,9 +36,11 @@ namespace llvm {
 class GlobalVariable;
 class SPIRVSubtarget;
 
-/// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo.100 (NSDI)
+/// AsmPrinter handler that emits NonSemantic.Shader.DebugInfo (NSDI)
 /// instructions for the SPIR-V backend. Registered with SPIRVAsmPrinter when
-/// the module contains debug info (llvm.dbg.cu).
+/// the module contains debug info (llvm.dbg.cu). Which version of the ext-inst
+/// set is imported is selected by -spirv-nonsemantic-debug-info-version
+/// (.100 by default).
 ///
 /// Call sequence:
 /// - beginModule() collects compile-unit metadata.
@@ -52,8 +54,7 @@ class SPIRVSubtarget;
 ///   the synthesized entry OpLabel when there are no OpVariables.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
-  static constexpr unsigned NSSet = static_cast<unsigned>(
-      SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100);
+  const unsigned NSSet;
 
   struct CompileUnitInfo {
     const DICompileUnit *TheCU = nullptr;
