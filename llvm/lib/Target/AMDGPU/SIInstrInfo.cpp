@@ -8772,9 +8772,26 @@ void SIInstrInfo::moveToVALUImpl(
 
     if (Inst.isCopy() && Inst.getOperand(1).getReg().isVirtual()) {
       Register NewDstReg = Inst.getOperand(1).getReg();
+      unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
       const TargetRegisterClass *SrcRC = RI.getRegClassForReg(MRI, NewDstReg);
-      if (const TargetRegisterClass *CommonRC =
-              RI.getCommonSubClass(NewDstRC, SrcRC)) {
+      // Don't fold a narrowed read into a PHI operand: it has to supply the
+      // full width of the PHI's def, and DetectDeadLanes would mark the short
+      // edge undef and let the source's def be deleted.
+      unsigned SrcSizeInBits = SrcSubReg ? RI.getSubRegIdxSize(SrcSubReg)
+                                         : RI.getRegSizeInBits(*SrcRC);
+      bool NarrowsPHIOperand =
+          any_of(MRI.use_nodbg_operands(DstReg), [&](const MachineOperand &MO) {
+            const MachineInstr *UseMI = MO.getParent();
+            if (MO.getSubReg() || !UseMI->isPHI())
+              return false;
+            Register PHIDst = UseMI->getOperand(0).getReg();
+            return SrcSizeInBits <
+                   RI.getRegSizeInBits(*RI.getRegClassForReg(MRI, PHIDst));
+          });
+
+      const TargetRegisterClass *CommonRC =
+          RI.getCommonSubClass(NewDstRC, SrcRC);
+      if (CommonRC && !NarrowsPHIOperand) {
         // Instead of creating a copy where src and dst are the same register
         // class, we just replace all uses of dst with src.  These kinds of
         // copies interfere with the heuristics MachineSink uses to decide
@@ -8782,7 +8799,6 @@ void SIInstrInfo::moveToVALUImpl(
         // that copies will end up as machine instructions and not be
         // eliminated.
         addUsersToMoveToVALUWorklist(DstReg, MRI, Worklist);
-        unsigned SrcSubReg = Inst.getOperand(1).getSubReg();
         bool IsUndef = Inst.getOperand(1).isUndef();
         for (MachineOperand &UseMO :
              make_early_inc_range(MRI.use_operands(DstReg))) {
@@ -8823,7 +8839,11 @@ void SIInstrInfo::moveToVALUImpl(
     if (ST.useRealTrue16Insts() && Inst.isCopy() &&
         Inst.getOperand(1).getReg().isVirtual() &&
         RI.isVGPR(MRI, Inst.getOperand(1).getReg())) {
-      const TargetRegisterClass *SrcRegRC = getOpRegClass(Inst, 1);
+      // Use the subreg-aware class: a source reading lo16 of a VGPR_32 needs
+      // the REG_SEQUENCE too, as DetectDeadLanes cannot model a 16-to-32-bit
+      // COPY and would mark the source undef.
+      const TargetRegisterClass *SrcRegRC =
+          RI.getRegClassForOperandReg(MRI, Inst.getOperand(1));
       if (RI.getMatchingSuperRegClass(NewDstRC, SrcRegRC, AMDGPU::lo16)) {
         Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
         Register Undef = MRI.createVirtualRegister(&AMDGPU::VGPR_16RegClass);
@@ -8831,7 +8851,8 @@ void SIInstrInfo::moveToVALUImpl(
                 get(AMDGPU::IMPLICIT_DEF), Undef);
         BuildMI(*Inst.getParent(), &Inst, Inst.getDebugLoc(),
                 get(AMDGPU::REG_SEQUENCE), NewDstReg)
-            .addReg(Inst.getOperand(1).getReg())
+            .addReg(Inst.getOperand(1).getReg(), {},
+                    Inst.getOperand(1).getSubReg())
             .addImm(AMDGPU::lo16)
             .addReg(Undef)
             .addImm(AMDGPU::hi16);
@@ -8839,7 +8860,8 @@ void SIInstrInfo::moveToVALUImpl(
         MRI.replaceRegWith(DstReg, NewDstReg);
         addUsersToMoveToVALUWorklist(NewDstReg, MRI, Worklist);
         return;
-      } else if (RI.getMatchingSuperRegClass(SrcRegRC, NewDstRC,
+      } else if (!Inst.getOperand(1).getSubReg() &&
+                 RI.getMatchingSuperRegClass(SrcRegRC, NewDstRC,
                                              AMDGPU::lo16)) {
         Inst.getOperand(1).setSubReg(AMDGPU::lo16);
         Register NewDstReg = MRI.createVirtualRegister(NewDstRC);
