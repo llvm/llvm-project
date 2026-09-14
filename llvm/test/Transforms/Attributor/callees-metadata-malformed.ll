@@ -27,7 +27,25 @@ define void @empty_callees(ptr %callee) {
   ret void
 }
 
+; A declaration referenced only by metadata can also disappear while a
+; different target remains live. The surviving entry is not exhaustive.
+define i32 @known_target() {
+  ret i32 17
+}
+
+declare i32 @external_target()
+
+define i32 @mixed_callees(ptr %callee) {
+; CHECK-LABEL: define i32 @mixed_callees(
+; CHECK:         %[[R:.*]] = call i32 %callee(), !callees ![[MIXED:[0-9]+]]
+; CHECK-NEXT:    ret i32 %[[R]]
+  %r = call i32 %callee(), !callees !2
+  ret i32 %r
+}
+
 ; CHECK: ![[CALLEES]] = distinct !{null}
+; CHECK: ![[MIXED]] = distinct !{ptr @known_target, null}
 
 !0 = !{ptr @metadata_only_target}
 !1 = !{}
+!2 = !{ptr @known_target, ptr @external_target}

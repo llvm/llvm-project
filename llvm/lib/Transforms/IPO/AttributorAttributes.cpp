@@ -12373,11 +12373,11 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     SmallVector<Function *, 4> Callees;
-    HasCalleesMetadata = cast<CallBase>(getCtxI())->getCalleesMetadata(Callees);
-    if (!HasCalleesMetadata && !A.isClosedWorldModule())
+    bool HasCalleesMD = cast<CallBase>(getCtxI())->getCalleesMetadata(Callees);
+    if (!HasCalleesMD && !A.isClosedWorldModule())
       return;
 
-    if (HasCalleesMetadata) {
+    if (HasCalleesMD) {
       PotentialCallees.insert_range(Callees);
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
@@ -12399,11 +12399,6 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
     auto CheckPotentialCalleeUse = [&](Function &PotentialCallee,
                                        bool &UsedAssumedInformation) {
-      // A semantic !callees list can describe pointer flow through code
-      // outside this IR module. Do not remove a listed target merely because
-      // AAGlobalValueInfo cannot find an in-module path to the call operand.
-      if (HasCalleesMetadata)
-        return true;
       const auto *GIAA = A.getAAFor<AAGlobalValueInfo>(
           *this, IRPosition::value(PotentialCallee), DepClassTy::OPTIONAL);
       if (!GIAA || GIAA->isPotentialUse(CalleeUse))
@@ -12681,10 +12676,6 @@ private:
   /// If !callees metadata was present, this set will contain all potential
   /// callees (superset).
   SmallSetVector<Function *, 4> PotentialCallees;
-
-  /// Whether PotentialCallees came from semantic !callees metadata rather than
-  /// the Attributor's closed-world candidate inventory.
-  bool HasCalleesMetadata = false;
 
   /// This set contains all currently assumed calllees, which might grow over
   /// time.
