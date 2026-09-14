@@ -831,9 +831,11 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
         case ISD::FSINCOS:
           LC = RTLIB::getSINCOS(VT);
           break;
-        default:
+        case ISD::FSINCOSPI:
           LC = RTLIB::getSINCOSPI(VT);
           break;
+        default:
+          llvm_unreachable("unexpected intrinsic");
         }
         if (TL->getLibcallImpl(LC) != RTLIB::Unsupported)
           return false;
