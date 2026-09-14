@@ -114,13 +114,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr stacktrace_entry& operator=(const stacktrace_entry&) noexcept = default;
 
   // (19.6.3.3) [stacktrace.entry.obs], observers
-  _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept { return __base_.__addr_; }
+   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept { return __base_.__addr_; }
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return native_handle() != 0; }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-  _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.__view()); }
-  _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.__view()); }
-  _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
+   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.__view()); }
+   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.__view()); }
+   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool
@@ -139,7 +139,7 @@ public:
 
 #  if _LIBCPP_HAS_LOCALIZATION
 
-_LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
+ [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
   return __stacktrace::_Entry::__entry_base(__entry).__to_string();
 }
 
@@ -158,7 +158,7 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const stacktrace
 
 template <>
 struct hash<stacktrace_entry> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(const stacktrace_entry& __entry) const noexcept {
+   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const stacktrace_entry& __entry) const noexcept {
     return __stacktrace::_Entry::__entry_base(__entry).__hash_code();
   }
 };
