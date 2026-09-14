@@ -151,16 +151,17 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
       LookupTable.getThreadLocalMode(), LookupTable.getAddressSpace(),
       LookupTable.isExternallyInitialized());
 
+  Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  Type *Int32Ty = Type::getInt32Ty(M.getContext());
+  Constant *Base = ConstantExpr::getPtrToInt(RelLookupTable, IntPtrTy);
+
   uint64_t Idx = 0;
   SmallVector<Constant *, 64> RelLookupTableContents(Info.Ptrs.size());
 
   for (Constant *Element : Info.Ptrs) {
-    Type *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
-    Constant *Base = llvm::ConstantExpr::getPtrToInt(RelLookupTable, IntPtrTy);
-    Constant *Target = llvm::ConstantExpr::getPtrToInt(Element, IntPtrTy);
-    Constant *Sub = llvm::ConstantExpr::getSub(Target, Base);
-    Constant *RelOffset =
-        llvm::ConstantExpr::getTrunc(Sub, Type::getInt32Ty(M.getContext()));
+    Constant *Target = ConstantExpr::getPtrToInt(Element, IntPtrTy);
+    Constant *Sub = ConstantExpr::getSub(Target, Base);
+    Constant *RelOffset = ConstantExpr::getTrunc(Sub, Int32Ty);
     RelLookupTableContents[Idx++] = RelOffset;
   }
 
