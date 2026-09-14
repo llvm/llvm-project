@@ -72,7 +72,10 @@ bool ABIInfo::isHomogeneousAggregate(QualType Ty, const Type *&Base,
     if (!isHomogeneousAggregate(AT->getElementType(), Base, Members))
       return false;
     Members *= NElements;
-  } else if (const auto *MT = Ty->getAs<ConstantMatrixType>()) {
+  } else if (Ty->isConstantMatrixType() &&
+             getContext().getLangOpts().getClangABICompat() >
+                 LangOptions::ClangABI::Ver23) {
+    const ConstantMatrixType *MT = Ty->castAs<ConstantMatrixType>();
     uint64_t NElements = MT->getNumElementsFlattened();
     if (NElements == 0)
       return false;
