@@ -8076,11 +8076,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_CONCAT_VECTORS(SDNode *N) {
     SDValue Result = DAG.getPOISON(VT);
     unsigned NumInElts = InVT.getVectorMinNumElements();
     for (unsigned i = 0; i < NumOperands; ++i) {
-      SDValue InOp = N->getOperand(i);
-      assert(getTypeAction(InOp.getValueType()) ==
-                 TargetLowering::TypeWidenVector &&
-             "Unexpected type action");
-      InOp = GetWidenedVector(InOp);
+      SDValue InOp = GetWidenedVector(N->getOperand(i));
       if (InOp.getValueType() != InVT)
         InOp = DAG.getExtractSubvector(dl, InVT, InOp, 0);
       Result = DAG.getInsertSubvector(dl, Result, InOp, i * NumInElts);
