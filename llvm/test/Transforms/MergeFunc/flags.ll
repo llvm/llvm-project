@@ -64,7 +64,7 @@ define internal float @fn_fadd_ninf_reassoc(float %a) {
 define i32 @fn_vararg_add_nsw(i32 %a, ...) {
 ; CHECK-LABEL: define i32 @fn_vararg_add_nsw(
 ; CHECK-SAME: i32 [[A:%.*]], ...) {
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 1
 ; CHECK-NEXT:    ret i32 [[ADD]]
 ;
   %add = add nsw i32 %a, 1
