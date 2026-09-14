@@ -450,7 +450,7 @@ using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx,
 /// Print only DIEs that have a certain name.
 static bool filterByName(
     const StringSet<> &Names, DWARFDie Die, StringRef NameRef, raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   DIDumpOptions DumpOpts = getDumpOpts(Die.getDwarfUnit()->getContext());
   DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
   std::string Name =
@@ -481,7 +481,7 @@ static bool filterByName(
 static void filterByName(
     const StringSet<> &Names, DWARFContext::unit_iterator_range CUs,
     raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   auto filterDieNames = [&](DWARFUnit *Unit) {
     for (const auto &Entry : Unit->dies()) {
       DWARFDie Die = {Unit, &Entry};
@@ -556,7 +556,7 @@ static void getDies(DWARFContext &DICtx, const DWARFDebugNames &Accel,
 /// Print only DIEs that have a certain name.
 static void filterByAccelName(
     ArrayRef<std::string> Names, DWARFContext &DICtx, raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   SmallVector<DWARFDie, 4> Dies;
   for (const auto &Name : Names) {
     getDies(DICtx, DICtx.getAppleNames(), Name, Dies);
@@ -576,7 +576,7 @@ static void filterByAccelName(
 /// Print all DIEs in apple accelerator tables
 static void findAllApple(
     DWARFContext &DICtx, raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
+    std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   MapVector<StringRef, llvm::SmallSet<DWARFDie, 2>> NameToDies;
 
   auto PushDIEs = [&](const AppleAcceleratorTable &Accel) {
