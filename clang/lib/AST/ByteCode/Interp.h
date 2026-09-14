@@ -2617,9 +2617,9 @@ std::optional<Pointer> OffsetHelper(InterpState &S, CodePtr OpPC,
   } else if (Ptr.isStringPointer()) {
     int64_t NewOffset;
     if constexpr (Op == ArithOp::Add)
-      NewOffset = Ptr.getRawOffset() + static_cast<int64_t>(Offset);
+      NewOffset = Ptr.getByteOffset() + static_cast<int64_t>(Offset);
     else
-      NewOffset = Ptr.getRawOffset() - static_cast<int64_t>(Offset);
+      NewOffset = Ptr.getByteOffset() - static_cast<int64_t>(Offset);
     if (NewOffset < 0 ||
         NewOffset > (Ptr.asStringPointer().getLiteral()->getLength() + 1)) {
       diagnoseArrayIndex(S, OpPC, APSInt::get(NewOffset),

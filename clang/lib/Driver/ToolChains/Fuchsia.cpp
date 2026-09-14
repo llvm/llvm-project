@@ -173,7 +173,7 @@ void fuchsia::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // Note that Fuchsia never needs to link in sanitizer runtime deps.  Any
     // sanitizer runtimes with system dependencies use the `.deplibs` feature
     // instead.
-    addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+    addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
 
     addXRayRuntime(ToolChain, Args, CmdArgs);
 
