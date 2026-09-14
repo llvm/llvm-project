@@ -742,6 +742,22 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   if (dirId != llvm::omp::Directive::OMPD_metadirective) {
     metadirectiveLoopVariants_.push_back(
         {currentWhenSelector_, &x, checkDefaultNoneInAssociatedLoop});
+    // Metadirective is "pure", but its selected variant may not be.
+    // Check the variant independently only when metadirective is legal;
+    // otherwise, the outer metadirective check already reports the error.
+    if (GetDirectiveNest(MetadirectiveNest)) {
+      llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
+      if (version >= llvm::omp::getDirectivePureSince(
+                         llvm::omp::Directive::OMPD_metadirective)) {
+        CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      }
+      if (IsDoConcurrentLegal(version)) {
+        CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
+      }
+    } else {
+      CheckDirectiveInPureProcedure(x.DirName().source, dirId, x);
+      CheckDirectiveInDoConcurrent(x.DirName().source, dirId, x);
+    }
   }
 }
 
