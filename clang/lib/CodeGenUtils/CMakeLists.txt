@@ -5,7 +5,6 @@ set(LLVM_LINK_COMPONENTS
 add_clang_library(clangCodeGenUtils
   CallUtils.cpp
   ClassUtils.cpp
-  CodeGenUtils.cpp
   EHPersonality.cpp
   ExprUtils.cpp
   FunctionUtils.cpp

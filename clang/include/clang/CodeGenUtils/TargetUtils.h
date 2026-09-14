@@ -21,6 +21,7 @@
 namespace clang {
 class Decl;
 class FunctionDecl;
+class TargetInfo;
 } // namespace clang
 
 namespace clang::CodeGenUtils {
@@ -52,6 +53,9 @@ ArmSMEInlinability getArmSMEInlinability(const FunctionDecl *Caller,
 /// the logic in Sema.
 /// TODO: Make this return false for SISD builtins.
 bool hasExtraNeonArgument(unsigned BuiltinID);
+
+/// Helper method to check if the underlying ABI is AAPCS
+bool isAAPCS(const TargetInfo &TargetInfo);
 
 /// Returns whether \p D, which currently has hidden visibility as reported by
 /// \p HasHiddenVisibility, must be given protected visibility on AMDGPU.

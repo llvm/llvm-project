@@ -22,7 +22,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/Support/Casting.h"
 

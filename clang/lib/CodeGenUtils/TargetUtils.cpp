@@ -10,6 +10,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 
 namespace clang::CodeGenUtils {
 
@@ -70,6 +71,10 @@ bool hasExtraNeonArgument(unsigned BuiltinID) {
   }
 
   return mask != 0;
+}
+
+bool isAAPCS(const TargetInfo &TargetInfo) {
+  return TargetInfo.getABI().starts_with("aapcs");
 }
 
 bool requiresAMDGPUProtectedVisibility(const Decl *D,

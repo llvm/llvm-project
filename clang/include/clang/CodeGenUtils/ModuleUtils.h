@@ -19,6 +19,13 @@
 
 namespace clang::CodeGenUtils {
 
+/// Determines whether the language options require us to model
+/// unwind exceptions.  We treat -fexceptions as mandating this
+/// except under the fragile ObjC ABI with only ObjC exceptions
+/// enabled.  This means, for example, that C with -fexceptions
+/// enables this.
+bool hasUnwindExceptions(const LangOptions &LangOpts);
+
 /// Check whether \p D is a strong definition, and thus must not be given
 /// common linkage.  \p NoCommon reflects -fno-common.
 bool isVarDeclStrongDefinition(const ASTContext &Ctx, const VarDecl *D,

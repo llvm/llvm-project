@@ -24,6 +24,22 @@ namespace clang::CodeGenUtils {
 /// properly set.
 bool baseInitializerUsesThis(ASTContext &Ctx, const Expr *Init);
 
+/// Check whether we need to initialize any vtable pointers before calling this
+/// destructor.
+bool canSkipVTablePointerInitialization(ASTContext &Ctx,
+                                        const CXXDestructorDecl *Dtor);
+
+/// Check whether destructing \p Field has no observable behaviors, and thus can
+/// be skipped when creating a destructor body. So non-record types, anonymous
+/// structs/unions, or record types where the destructor doesnt DO anything are
+/// considered as this version of 'trivial'.
+/// Note: This is a more liberal definition of trivial destruction than the C++
+/// Standard's version, and thus cannot be used as a substitute for C++ Standard
+/// requirements.
+bool fieldHasTrivialDestructorBody(ASTContext &Context, const FieldDecl *Field);
+
+bool isInitializerOfDynamicClass(const CXXCtorInitializer *BaseInit);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_CLASSUTILS_H
