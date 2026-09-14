@@ -138,6 +138,17 @@ add_libc_test(
 )
 
 add_libc_test(
+  inline_any_test
+  SUITE
+    libc-support-tests
+  SRCS
+    inline_any_test.cpp
+  DEPENDS
+    libc.src.__support.inline_any
+    libc.src.__support.uint128
+)
+
+add_libc_test(
   str_to_float_test
   SUITE
     libc-support-tests

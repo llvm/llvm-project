@@ -271,6 +271,15 @@ add_header_library(
 )
 
 add_header_library(
+  inline_any
+  HDRS
+    inline_any.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.type_traits
+)
+
+add_header_library(
   str_to_float
   HDRS
     str_to_float.h

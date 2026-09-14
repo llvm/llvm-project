@@ -19,6 +19,10 @@ template <class T, class... Args>
 struct is_trivially_constructible
     : integral_constant<bool, __is_trivially_constructible(T, Args...)> {};
 
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_trivially_constructible_v =
+    is_trivially_constructible<T>::value;
+
 } // namespace cpp
 } // namespace LIBC_NAMESPACE_DECL
 
