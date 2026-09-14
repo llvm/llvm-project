@@ -15,6 +15,7 @@
 
 #include "mlir/Pass/Pass.h"
 #include "llvm/ABI/TargetInfo.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace cir {
 /// The ABI target whose calling-convention rules drive CallConvLowering.
@@ -26,6 +27,14 @@ enum class CallConvTarget { None, Test, X86_64 };
 namespace clang {
 class ASTContext;
 }
+
+namespace llvm::vfs {
+class FileSystem;
+} // namespace llvm::vfs
+
+namespace cir {
+class LowerModule;
+} // namespace cir
 
 namespace mlir {
 
@@ -41,7 +50,9 @@ std::unique_ptr<Pass> createCallConvLoweringPass(
     bool allowsX86TargetAttrAvx, const llvm::abi::ABICompatInfo &x86AbiCompat);
 std::unique_ptr<Pass> createHoistAllocasPass();
 std::unique_ptr<Pass> createLoweringPreparePass();
-std::unique_ptr<Pass> createLoweringPreparePass(clang::ASTContext *astCtx);
+std::unique_ptr<Pass> createLoweringPreparePass(
+    cir::LowerModule *lowerModule,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> vfs = nullptr);
 std::unique_ptr<Pass> createGotoSolverPass();
 std::unique_ptr<Pass> createIdiomRecognizerPass();
 std::unique_ptr<Pass> createLibOptPass();

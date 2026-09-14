@@ -1051,6 +1051,28 @@ bool FrontendAction::BeginSourceFile(CompilerInstance &CI,
     return true;
   }
 
+  // Serialized ClangIR (.cir) input bypasses AST/preprocessor initialization
+  // the same way LLVM IR does.
+  if (Input.getKind().getLanguage() == Language::CIR) {
+    if (!hasCIRSupport()) {
+      CI.getDiagnostics().Report(diag::err_ast_action_on_cir)
+          << Input.getFile();
+      return false;
+    }
+
+    CI.getDiagnosticClient().BeginSourceFile(CI.getLangOpts(), nullptr);
+    HasBegunSourceFile = true;
+
+    if (!BeginSourceFileAction(CI))
+      return false;
+
+    if (!CI.InitializeSourceManager(CurrentInput))
+      return false;
+
+    FailureCleanup.release();
+    return true;
+  }
+
   if (!CI.getPreprocessorOpts().ImplicitPCHInclude.empty()) {
     FileManager &FileMgr = CI.getFileManager();
     PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
@@ -1542,6 +1564,9 @@ bool WrapperFrontendAction::hasASTFileSupport() const {
 }
 bool WrapperFrontendAction::hasIRSupport() const {
   return WrappedAction->hasIRSupport();
+}
+bool WrapperFrontendAction::hasCIRSupport() const {
+  return WrappedAction->hasCIRSupport();
 }
 bool WrapperFrontendAction::hasCodeCompletionSupport() const {
   return WrappedAction->hasCodeCompletionSupport();

@@ -419,6 +419,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIRDisableCIRVerifier : 1;
 
+  /// Stop the CIR pipeline at the ABI-free boundary, before target lowering.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned ClangIRStopBeforeLowering : 1;
+
   /// Enable Clang IR (CIR) idiom recognizer
   LLVM_PREFERRED_TYPE(bool)
   unsigned ClangIREnableIdiomRecognizer : 1;
@@ -569,9 +573,10 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), ClangIREnableIdiomRecognizer(false),
-        ClangIRCallConvLowering(true), ClangIRLibOptEnabled(false),
-        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
+        ClangIRDisableCIRVerifier(false), ClangIRStopBeforeLowering(false),
+        ClangIREnableIdiomRecognizer(false), ClangIRCallConvLowering(true),
+        ClangIRLibOptEnabled(false), TimeTraceGranularity(500),
+        TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
