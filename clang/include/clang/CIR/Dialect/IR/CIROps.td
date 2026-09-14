@@ -6957,6 +6957,68 @@ def CIR_RotateOp : CIR_Op<"rotate", [Pure, SameOperandsAndResultType]> {
 }
 
 //===----------------------------------------------------------------------===//
+// Funnel Shift Operations
+//===----------------------------------------------------------------------===//
+
+// Concatenate `a` and `b`, shift by `c`, and return one half of the doubled
+// width. All operands and the result share an integer or vector-of-integer
+// type.
+class CIR_FunnelShiftOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins
+    CIR_AnyIntOrVecOfIntType:$a,
+    CIR_AnyIntOrVecOfIntType:$b,
+    CIR_AnyIntOrVecOfIntType:$c
+  );
+
+  let results = (outs CIR_AnyIntOrVecOfIntType:$result);
+
+  let assemblyFormat = "$a `,` $b `,` $c `:` type($a) attr-dict";
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_FshlOp : CIR_FunnelShiftOp<"fshl", "FshlOp"> {
+  let summary = "Funnel shift left";
+  let description = [{
+    The `cir.fshl` operation concatenates `a` and `b` (with `a` in the high
+    half), shifts the concatenation left by `c` bit positions, and returns the
+    high half of the result. The shift amount is treated modulo the bitwidth
+    of the operands.
+
+    All operands and the result must have the same integer type or
+    vector-of-integer type.
+
+    Example:
+
+    ```
+    %r = cir.fshl %a, %b, %c : !u32i
+    %v = cir.fshl %va, %vb, %vc : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+def CIR_FshrOp : CIR_FunnelShiftOp<"fshr", "FshrOp"> {
+  let summary = "Funnel shift right";
+  let description = [{
+    The `cir.fshr` operation concatenates `a` and `b` (with `a` in the high
+    half), shifts the concatenation right by `c` bit positions, and returns
+    the low half of the result. The shift amount is treated modulo the bitwidth
+    of the operands.
+
+    All operands and the result must have the same integer type or
+    vector-of-integer type.
+
+    Example:
+
+    ```
+    %r = cir.fshr %a, %b, %c : !u32i
+    %v = cir.fshr %va, %vb, %vc : !cir.vector<4 x !s32i>
+    ```
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FPClass Test Flags
 //===----------------------------------------------------------------------===//
 
