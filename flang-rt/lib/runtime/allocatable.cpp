@@ -239,6 +239,11 @@ void RTDEF(AllocatableDeallocateNoFinal)(
   }
 }
 
+void RTDEF(AllocatableSetBaseAddr)(Descriptor &desc, void *new_base_addr) {
+  desc.set_base_addr(new_base_addr);
+  desc.SetByteStrides();
+}
+
 // TODO: AllocatableCheckLengthParameter
 
 RT_EXT_API_GROUP_END
