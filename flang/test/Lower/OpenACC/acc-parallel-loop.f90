@@ -979,9 +979,9 @@ subroutine acc_parallel_loop_firstprivate_assumed_shape(b)
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_assumed_shape
-! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) name("b")
+! CHECK: acc.firstprivate var({{.*}}) recipe({{.*}}) name("b")
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate
-! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) implicit(true) name("b")
+! CHECK: acc.firstprivate var({{.*}}) recipe({{.*}}) implicit(true) name("b")
 ! CHECK: acc.loop combined(parallel) {{.*}}firstprivate
 
 subroutine acc_parallel_loop_firstprivate_with_reduction
