@@ -275,6 +275,18 @@ void VPPredicator::createSwitchEdgeMasks(const VPInstruction *SI) {
   setEdgeMask(Src, DefaultDst, DefaultMask);
 }
 
+/// Gets the common non-poison value out amongst \p Vals.
+template <typename Ty> static VPValue *getCommonValue(Ty Vals) {
+  VPValue *Common = nullptr;
+  for (VPValue *V : Vals) {
+    if (!Common || match(Common, m_Poison()))
+      Common = V;
+    else if (V != Common && !match(V, m_Poison()))
+      return nullptr;
+  }
+  return Common;
+}
+
 // Start by keeping track of what edges lead to which value. Then see if any
 // node has the same value for all outgoing edges. If so then propagate that
 // value up to every node it postdominates. E.g:
@@ -296,9 +308,11 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
   auto AddEdge = [&Edges](const VPBlockBase *From, const VPBlockBase *To,
                           VPValue *V) {
     EdgeTy Edge = {cast<VPBasicBlock>(From), cast<VPBasicBlock>(To)};
-    assert((!Edges.contains(Edge) || Edges.lookup(Edge) == V) &&
-           "Clobbering an edge?");
-    Edges[Edge] = V;
+    VPValue *&Old = Edges[Edge];
+    if (Old && match(V, m_Poison()))
+      return;
+    assert(!Old || Old == V || match(Old, m_Poison()) && "Clobbering an edge?");
+    Old = V;
   };
 
   for (auto [InVal, InVPBB] : Phi->incoming_values_and_blocks())
@@ -321,8 +335,10 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
       OutEdges.emplace_back(VPBB, cast<VPBasicBlock>(Succ));
     auto OutVals =
         map_range(OutEdges, [&Edges](EdgeTy E) { return Edges.lookup(E); });
-    VPValue *Common = *OutVals.begin();
-    if (!Common || !all_equal(OutVals))
+    if (OutVals.empty() || any_of(OutVals, equal_to(nullptr)))
+      continue;
+    VPValue *Common = getCommonValue(OutVals);
+    if (!Common)
       continue;
 
     // They have the same value: we can move the edges up.
@@ -332,7 +348,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
     // If the value is a phi postdominated by VPBB, then look through the inner
     // incoming values instead of propagating the phi.
     if (auto *Phi = dyn_cast<VPPhi>(Common))
-      if (Phi->hasOneUse() && VPPDT.dominates(VPBB, Phi->getParent())) {
+      if (!Phi->hasMoreThanOneUniqueUser() &&
+          VPPDT.dominates(VPBB, Phi->getParent())) {
         for (auto [InV, InVPBB] : Phi->incoming_values_and_blocks()) {
           AddEdge(InVPBB, Phi->getParent(), InV);
           Worklist.insert(InVPBB);
@@ -350,6 +367,8 @@ VPPredicator::computeBlendEdges(VPPhi *Phi) {
       Worklist.insert(cast<VPBasicBlock>(Frontier));
     }
   }
+
+  Edges.remove_if([](auto X) { return match(X.second, m_Poison()); });
 
   return Edges;
 }
