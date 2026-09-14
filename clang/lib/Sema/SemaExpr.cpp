@@ -14547,9 +14547,19 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
     llvm_unreachable("did not take early return for MLV_Valid");
   case Expr::MLV_InvalidExpression:
   case Expr::MLV_MemberFunction:
-  case Expr::MLV_ClassTemporary:
+  case Expr::MLV_ClassTemporary: {
+    if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
+      const Expr *Op = UnaryOp->getSubExpr()->IgnoreParens();
+      if (UnaryOp->getOpcode() == UO_Imag &&
+          !Op->getType()->isAnyComplexType()) {
+        DiagID = diag::err_typecheck_lvalue_imag_not_modifiable_lvalue;
+        break;
+      }
+    }
+
     DiagID = diag::err_typecheck_expression_not_modifiable_lvalue;
     break;
+  }
   case Expr::MLV_IncompleteType:
   case Expr::MLV_IncompleteVoidType:
     return S.RequireCompleteType(Loc, E->getType(),
