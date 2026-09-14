@@ -134,7 +134,7 @@ template <class _ToDuration, class _Rep, class _Period>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR _ToDuration __ceil(const duration<_Rep, _Period>& __d) {
   _ToDuration __t = chrono::duration_cast<_ToDuration>(__d);
   if (__t < __d)
-    __t = __t + _ToDuration{1};
+    __t = __t + _ToDuration(1);
   return __t;
 }
 
