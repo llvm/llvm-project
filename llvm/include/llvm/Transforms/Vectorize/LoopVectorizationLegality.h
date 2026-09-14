@@ -367,9 +367,11 @@ public:
   /// to be vectorized.
   LLVM_ABI bool blockNeedsPredication(const BasicBlock *BB) const;
 
-  /// Add unit stride predicates for memory accesses to PSE, if runtime checks
-  /// are allowed and an inner loop is vectorized.
-  LLVM_ABI void collectUnitStridePredicates() const;
+  /// Get the unit-stride predicates from LoopAccessAnalysis'
+  /// stride-speculation, if runtime checks are allowed and an inner loop is
+  /// vectorized.
+  LLVM_ABI SmallVector<const SCEVPredicate *>
+  collectUnitStridePredicates() const;
 
   /// Check if this pointer is consecutive when vectorizing. This happens
   /// when the last index of the GEP is the induction variable, or that the
