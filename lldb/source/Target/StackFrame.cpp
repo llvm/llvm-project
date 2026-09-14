@@ -624,7 +624,7 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
 
   ConstString name_const_string(var_expr.substr(0, separator_idx));
 
-  var_sp = variable_list->FindVariable(name_const_string, false);
+  var_sp = variable_list->FindVariable(name_const_string, *this, false);
 
   bool synthetically_added_instance_object = false;
 
@@ -638,7 +638,7 @@ ValueObjectSP StackFrame::LegacyGetValueForVariableExpressionPath(
     GetSymbolContext(eSymbolContextFunction | eSymbolContextBlock);
     llvm::StringRef instance_name = m_sc.GetInstanceName();
     if (!instance_name.empty()) {
-      var_sp = variable_list->FindVariable(ConstString(instance_name));
+      var_sp = variable_list->FindVariable(ConstString(instance_name), *this);
       if (var_sp) {
         separator_idx = 0;
         if (Type *var_type = var_sp->GetType())
@@ -1879,7 +1879,7 @@ lldb::ValueObjectSP StackFrame::FindVariable(ConstString name) {
             can_create, get_parent_variables, stop_if_block_is_inlined_function,
             [this](Variable *v) { return v->IsInScope(this); },
             &variable_list)) {
-      var_sp = variable_list.FindVariable(name);
+      var_sp = variable_list.FindVariable(name, *this);
     }
 
     if (var_sp)
