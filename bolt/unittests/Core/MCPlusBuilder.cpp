@@ -41,7 +41,7 @@ struct MCPlusBuilderTester : public testing::TestWithParam<Triple::ArchType> {
   void SetUp() override {
     initalizeLLVM();
     prepareElf();
-    initializeBOLT();
+    initializeBolt();
   }
 
 protected:
@@ -80,7 +80,7 @@ protected:
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
 
-  void initializeBOLT() {
+  void initializeBolt() {
     const Triple TheTriple = GetParam();
     Relocation::Arch = TheTriple.getArch();
     // Minimal test ELFs have no RISC-V attributes. RISC-V needs an empty

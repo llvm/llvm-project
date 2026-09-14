@@ -11,7 +11,6 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/Testing/Support/Error.h"
@@ -56,20 +55,7 @@ protected:
     ELF64LE::Ehdr *EHdr = reinterpret_cast<typename ELF64LE::Ehdr *>(ElfBuf);
     EHdr->e_ident[llvm::ELF::EI_CLASS] = llvm::ELF::ELFCLASS64;
     EHdr->e_ident[llvm::ELF::EI_DATA] = llvm::ELF::ELFDATA2LSB;
-    switch (GetParam()) {
-    case Triple::aarch64:
-      EHdr->e_machine = EM_AARCH64;
-      break;
-    case Triple::riscv64:
-      EHdr->e_machine = EM_RISCV;
-      break;
-    case Triple::x86_64:
-      EHdr->e_machine = EM_X86_64;
-      break;
-    default:
-      llvm_unreachable("Unsupported architecture");
-      break;
-    }
+    EHdr->e_machine = convertTripleArchTypeToEMachine(GetParam());
     MemoryBufferRef Source(StringRef(ElfBuf, sizeof(ElfBuf)), "ELF");
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
