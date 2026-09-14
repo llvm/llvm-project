@@ -335,9 +335,18 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
   EXPECT_EQ(Binary.getImage(), ImageContent);
   EXPECT_EQ(Binary.getSize(), Uncompressed.size());
 
-  // The concatenated form should still extract properly when compressed.
+  // Two compressed binaries should extract across the first binary's padding.
+  OffloadBinary::OffloadingImage SecondData;
+  SecondData.TheImageKind = IMG_Bitcode;
+  SecondData.TheOffloadKind = OFK_OpenMP;
+  SecondData.Image = MemoryBuffer::getMemBuffer(
+      "SecondImage", "", /*RequiresNullTerminator=*/false);
+  Expected<SmallString<0>> SecondCompressedOrErr =
+      OffloadBinary::write(SecondData, *Params);
+  ASSERT_THAT_EXPECTED(SecondCompressedOrErr, Succeeded());
+
   SmallString<0> Concat = Compressed;
-  Concat.append(Uncompressed);
+  Concat.append(*SecondCompressedOrErr);
   SmallVector<OffloadFile> Files;
   ASSERT_THAT_ERROR(
       extractOffloadBinaries(
@@ -346,5 +355,5 @@ TEST(OffloadingTest, checkCompressedRoundTrip) {
       Succeeded());
   ASSERT_EQ(Files.size(), 2u);
   EXPECT_EQ(Files[0].getBinary()->getImage(), ImageContent);
-  EXPECT_EQ(Files[1].getBinary()->getImage(), ImageContent);
+  EXPECT_EQ(Files[1].getBinary()->getImage(), "SecondImage");
 }
