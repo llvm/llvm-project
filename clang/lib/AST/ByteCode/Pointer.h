@@ -968,18 +968,10 @@ public:
 
   /// Returns the byte offset from the start.
   uint64_t getByteOffset() const {
-    if (isIntegralPointer())
-      return Int.Value + Offset;
-    if (isTypeidPointer())
-      return reinterpret_cast<uintptr_t>(Typeid.TypePtr) + Offset;
-    if (isOpaquePointer())
-      return Offset;
-    if (isOnePastEnd())
-      return PtrView::PastEndMark;
+    if (isBlockPointer())
+      return isOnePastEnd() ? PtrView::PastEndMark : Offset;
     return Offset;
   }
-
-  uint64_t getRawOffset() const { return Offset; }
 
   /// Returns the number of elements.
   unsigned getNumElems() const {
