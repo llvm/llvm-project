@@ -297,8 +297,7 @@ func.func @extract_column(%arg0: !fir.ref<!fir.array<100x5xf32>> {fir.bindc_name
 // CHECK:         [[BOXADDR2:%.*]] = fir.box_addr [[EMBOX]] : (!fir.box<!fir.array<7xf32>>) -> !fir.ref<!fir.array<7xf32>>
 // CHECK:         [[CONVERT:%.*]] = fir.convert [[BOXADDR2]] : (!fir.ref<!fir.array<7xf32>>) -> memref<7xf32>
 // CHECK:         %[[C1_0:.*]] = arith.constant 1 : index
-// CHECK:         [[ADD2:%.*]] = arith.addi %[[ARG0]], %[[C_NEG1]] : index
-// CHECK:         [[SUB1:%.*]] = arith.subi [[ADD2]], %[[C0]] : index
+// CHECK:         [[SUB1:%.*]] = arith.subi [[ADD1]], %[[C0]] : index
 // CHECK:         [[MUL1:%.*]] = arith.muli [[SUB1]], %[[C1_0]] : index
 // CHECK:         [[SUB2:%[0-9]+]] = arith.subi %[[C0]], %[[C0]] : index
 // CHECK:         [[ADD3:%.*]] = arith.addi [[MUL1]], [[SUB2]] : index

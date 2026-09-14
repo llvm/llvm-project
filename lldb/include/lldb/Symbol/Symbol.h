@@ -139,7 +139,9 @@ public:
     }
   }
 
-  lldb::addr_t ResolveCallableAddress(Target &target) const;
+  lldb::addr_t
+  ResolveCallableAddress(Target &target,
+                         const lldb::ModuleSP &containing_module_sp) const;
 
   ConstString GetName() const;
 
@@ -175,7 +177,20 @@ public:
 
   bool SetReExportedSymbolSharedLibrary(const FileSpec &fspec);
 
-  Symbol *ResolveReExportedSymbol(Target &target) const;
+  /// Find the symbol this re-exported symbol resolves to.
+  ///
+  /// The library recorded on the symbol is searched first. If
+  /// \p containing_module_sp is provided, the libraries re-exported by that
+  /// module (ObjectFile::GetReExportedLibraries()) are then searched in
+  /// order. This matches the DT_FILTER / DT_AUXILIARY behavior in ELF, where
+  /// a filter library may reference multiple filtees and the dynamic linker
+  /// searches them in the order they appear in the dynamic section.
+  /// MachO provides per-symbol ReExported tag, which means every symbol knows
+  /// their final filtee and therefore no need to relies on
+  /// containing_module_sp.
+  Symbol *ResolveReExportedSymbol(
+      Target &target,
+      const lldb::ModuleSP &containing_module_sp = lldb::ModuleSP()) const;
 
   uint32_t GetSiblingIndex() const;
 

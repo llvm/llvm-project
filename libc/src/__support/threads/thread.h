@@ -151,6 +151,9 @@ struct Thread {
   // Get the scheduling policy and parameters of the thread.
   // Return SchedParameters on success, or an error number on failure.
   ErrorOr<SchedParameters> getschedparam() const;
+
+  // Send a signal to the thread.
+  ErrorOr<void> kill(int sig);
 };
 
 // Platforms should implement this function.

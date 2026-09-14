@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -36,6 +37,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -256,7 +258,7 @@ public:
                                 ArrayRef<const Record *> Classes);
   static const RecordRecTy *get(const Record *Class);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Record *> getKey() const { return getClasses(); }
 
   ArrayRef<const Record *> getClasses() const {
     return getTrailingObjects(NumClasses);
@@ -529,7 +531,7 @@ public:
     return get(Value, Aux);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Init *, ArgAuxType> getKey() const { return {Value, Aux}; }
 
   const Init *resolveReferences(Resolver &R) const override;
   std::string getAsString() const override {
@@ -607,7 +609,7 @@ public:
 
   static BitsInit *get(RecordKeeper &RK, ArrayRef<const Init *> Range);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  ArrayRef<const Init *> getKey() const { return getBits(); }
 
   unsigned getNumBits() const { return NumBits; }
 
@@ -770,8 +772,6 @@ public:
   }
   static const ListInit *get(ArrayRef<const Init *> Range, const RecTy *EltTy);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   ArrayRef<const Init *> getElements() const {
     return ArrayRef(getTrailingObjects(), NumElements);
   }
@@ -780,6 +780,10 @@ public:
   ArrayRef<const Init *> getValues() const { return getElements(); }
 
   const Init *getElement(unsigned Idx) const { return getElements()[Idx]; }
+
+  std::pair<ArrayRef<const Init *>, const RecTy *> getKey() const {
+    return {getElements(), getElementType()};
+  }
 
   const RecTy *getElementType() const {
     return cast<ListRecTy>(getType())->getElementType();
@@ -867,10 +871,12 @@ public:
 
   static const UnOpInit *get(UnaryOp opc, const Init *lhs, const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   UnaryOp getOpcode() const { return (UnaryOp)Opc; }
   const Init *getOperand() const { return LHS; }
+
+  std::tuple<UnaryOp, const Init *, const RecTy *> getKey() const {
+    return {getOpcode(), LHS, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -936,11 +942,14 @@ public:
   static const Init *getStrConcat(const Init *lhs, const Init *rhs);
   static const Init *getListConcat(const TypedInit *lhs, const Init *rhs);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getRHS() const { return RHS; }
+
+  std::tuple<BinaryOp, const Init *, const Init *, const RecTy *>
+  getKey() const {
+    return {getOpcode(), LHS, RHS, getType()};
+  }
 
   std::optional<bool> CompareInit(unsigned Opc, const Init *LHS,
                                   const Init *RHS) const;
@@ -989,12 +998,15 @@ public:
   static const TernOpInit *get(TernaryOp opc, const Init *lhs, const Init *mhs,
                                const Init *rhs, const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
-
   TernaryOp getOpcode() const { return (TernaryOp)Opc; }
   const Init *getLHS() const { return LHS; }
   const Init *getMHS() const { return MHS; }
   const Init *getRHS() const { return RHS; }
+
+  std::tuple<TernaryOp, const Init *, const Init *, const Init *, const RecTy *>
+  getKey() const {
+    return {getOpcode(), LHS, MHS, RHS, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1034,7 +1046,10 @@ public:
                                ArrayRef<const Init *> Values,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const RecTy *, ArrayRef<const Init *>, ArrayRef<const Init *>>
+  getKey() const {
+    return {ValType, getConds(), getVals()};
+  }
 
   const RecTy *getValType() const { return ValType; }
 
@@ -1100,7 +1115,11 @@ public:
                                const Init *A, const Init *B, const Init *Expr,
                                const RecTy *Type);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const Init *, const Init *, const Init *,
+             const Init *, const RecTy *>
+  getKey() const {
+    return {Start, List, A, B, Expr, getType()};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1133,7 +1152,9 @@ public:
 
   static const IsAOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1167,7 +1188,9 @@ public:
 
   static const ExistsOpInit *get(const RecTy *CheckType, const Init *Expr);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {CheckType, Expr};
+  }
 
   // Fold - If possible, fold this to a simpler init. Return this if not
   // possible to fold.
@@ -1204,7 +1227,9 @@ public:
 
   static const InstancesOpInit *get(const RecTy *Type, const Init *Regex);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const RecTy *, const Init *> getKey() const {
+    return {Type, Regex};
+  }
 
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
 
@@ -1353,7 +1378,9 @@ public:
   static const VarDefInit *get(SMLoc Loc, const Record *Class,
                                ArrayRef<const ArgumentInit *> Args);
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::pair<const Record *, ArrayRef<const ArgumentInit *>> getKey() const {
+    return {Class, args()};
+  }
 
   const Init *resolveReferences(Resolver &R) const override;
   const Init *Fold() const;
@@ -1467,7 +1494,11 @@ public:
     return DagInit::get(V, nullptr, ArgAndNames);
   }
 
-  void Profile(FoldingSetNodeID &ID) const;
+  std::tuple<const Init *, const StringInit *, ArrayRef<const Init *>,
+             ArrayRef<const StringInit *>>
+  getKey() const {
+    return {Val, ValName, getArgs(), getArgNames()};
+  }
 
   const Init *getOperator() const { return Val; }
   const Record *getOperatorAsDef(ArrayRef<SMLoc> Loc) const;

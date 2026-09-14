@@ -99,8 +99,6 @@ void addCfgConversionPass(mlir::PassManager &pm,
 
 void addMemoryAllocationOpt(mlir::PassManager &pm);
 
-void addAllocationPlacement(mlir::PassManager &pm, bool stackArrays);
-
 void addCodeGenRewritePass(mlir::PassManager &pm, bool preserveDeclare);
 
 void addTargetRewritePass(mlir::PassManager &pm);
@@ -166,6 +164,9 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
                                   const MLIRToLLVMPassPipelineConfig &config);
 
 struct OpenMPFIRPassPipelineOpts {
+  /// Whether only OpenMP simd constructs are being honored.
+  bool isSimdOnly;
+
   /// Whether code is being generated for a target device rather than the host
   /// device
   bool isTargetDevice;

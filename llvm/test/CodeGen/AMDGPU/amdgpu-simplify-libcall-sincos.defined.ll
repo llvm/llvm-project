@@ -119,6 +119,41 @@ entry:
   ret void
 }
 
+; The merged call must go after the whole phi group, not right after %x.
+define float @sincos_f32_arg_is_not_last_phi(i1 %c, float %a, float %b, float %d) {
+; CHECK-LABEL: define float @sincos_f32_arg_is_not_last_phi
+; CHECK-SAME: (i1 [[C:%.*]], float [[A:%.*]], float [[B:%.*]], float [[D:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[__SINCOS_:%.*]] = alloca float, align 4, addrspace(5)
+; CHECK-NEXT:    br i1 [[C]], label [[T:%.*]], label [[M:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    br label [[M]]
+; CHECK:       m:
+; CHECK-NEXT:    [[X:%.*]] = phi float [ [[A]], [[T]] ], [ [[B]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[Y:%.*]] = phi float [ [[D]], [[T]] ], [ 0.000000e+00, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call contract float @_Z6sincosfPU3AS5f(float [[X]], ptr addrspace(5) [[__SINCOS_]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr addrspace(5) [[__SINCOS_]], align 4
+; CHECK-NEXT:    [[COS:%.*]] = call contract float @_Z3cosf(float [[X]])
+; CHECK-NEXT:    [[SUM:%.*]] = fadd float [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[SUM2:%.*]] = fadd float [[SUM]], [[Y]]
+; CHECK-NEXT:    ret float [[SUM2]]
+;
+entry:
+  br i1 %c, label %t, label %m
+
+t:
+  br label %m
+
+m:
+  %x = phi float [ %a, %t ], [ %b, %entry ]
+  %y = phi float [ %d, %t ], [ 0.0, %entry ]
+  %sin = call contract float @_Z3sinf(float %x)
+  %cos = call contract float @_Z3cosf(float %x)
+  %sum = fadd float %sin, %cos
+  %sum2 = fadd float %sum, %y
+  ret float %sum2
+}
+
 define void @sincos_f32_value_is_same_constantfp(ptr addrspace(1) nocapture writeonly %sin_out, ptr addrspace(1) nocapture writeonly %cos_out) {
 ; CHECK-LABEL: define void @sincos_f32_value_is_same_constantfp
 ; CHECK-SAME: (ptr addrspace(1) writeonly captures(none) [[SIN_OUT:%.*]], ptr addrspace(1) writeonly captures(none) [[COS_OUT:%.*]]) {

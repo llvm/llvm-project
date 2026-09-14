@@ -6,10 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/MSP430MCAsmInfo.h"
 #include "MCTargetDesc/MSP430MCTargetDesc.h"
 #include "MSP430.h"
-#include "MSP430RegisterInfo.h"
 #include "TargetInfo/MSP430TargetInfo.h"
 
 #include "llvm/ADT/APInt.h"

@@ -53,7 +53,7 @@ grab_liba:
 # CHECK:         Opcode:          I32_CONST
 # CHECK:         Value:           65536
 # CHECK:       Content:         68656C6C6F00776F726C6400
-# "weahters" section.
+# "weathers" section.
 # CHECK: - SectionOffset:   27
 # CHECK:   InitFlags:       0
 # CHECK:   Offset:

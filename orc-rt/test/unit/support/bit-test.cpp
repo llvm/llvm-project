@@ -167,6 +167,19 @@ TEST(BitTest, HasSingleBit) {
 
   static const int16_t kValueS16 = -32768;
   EXPECT_TRUE(orc_rt::has_single_bit(static_cast<uint16_t>(kValueS16)));
+
+  // Dense sweep and power-of-two boundaries.
+  for (unsigned V : {0x00U, 0x03U, 0x05U, 0x06U, 0x07U, 0x09U, 0x0aU, 0x0bU,
+                     0x0cU, 0x0dU, 0x0eU, 0x0fU})
+    EXPECT_FALSE(orc_rt::has_single_bit(V)) << "V = " << V;
+  for (unsigned V : {0x01U, 0x02U, 0x04U, 0x08U, 0x10U})
+    EXPECT_TRUE(orc_rt::has_single_bit(V)) << "V = " << V;
+
+  for (unsigned V : {0x20U, 0x40U, 0x80U, 0x40000000U}) {
+    EXPECT_FALSE(orc_rt::has_single_bit(V - 1)) << "V = " << V;
+    EXPECT_TRUE(orc_rt::has_single_bit(V)) << "V = " << V;
+    EXPECT_FALSE(orc_rt::has_single_bit(V + 1)) << "V = " << V;
+  }
 }
 
 TEST(BitTest, Rotl) {
