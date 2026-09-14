@@ -1,10 +1,9 @@
-; RUN: llc < %s -O2 -filetype=null -o -
+; RUN: llc < %s -filetype=null -o -
 
 ; Keep the issue reproducer as compile-only coverage. Compile-time comparisons
 ; are performed separately because a timing threshold would be host-dependent.
 ; https://github.com/llvm/llvm-project/issues/211018
 
-target datalayout = "e-p:64:64-i64:64-i128:128-v16:16-v32:32-n16:32:64-S32"
 target triple = "nvptx64-nvidia-cuda"
 
 declare float @llvm.vector.reduce.fadd.v65536f32(float, <65536 x float>)
