@@ -946,6 +946,11 @@ def get_active_lane_mask
           SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisInt<1>, SDTCisSameAs<1, 2>]>,
           []>;
 
+def mask_beforefirst
+    : SDNode<"ISD::MASK_BEFOREFIRST",
+             SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0, 1>]>,
+             []>;
+
 def vector_match
     : SDNode<"ISD::VECTOR_MATCH",
              SDTypeProfile<1, 3, [SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>,

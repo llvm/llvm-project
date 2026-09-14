@@ -1659,6 +1659,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
                          Custom);
       setOperationAction(ISD::VECTOR_FIND_LAST_ACTIVE, VT, Legal);
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
+      setOperationAction(ISD::MASK_BEFOREFIRST, VT, Legal);
     }
 
     if (Subtarget->hasSVE2() && Subtarget->isSVEAvailable()) {
