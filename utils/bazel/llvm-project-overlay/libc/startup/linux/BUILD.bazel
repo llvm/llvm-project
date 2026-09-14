@@ -46,10 +46,6 @@ libc_startup_library(
     hdrs = [
         "do_start.h",
     ],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
     deps = [
         ":gnu_property_section",
         ":irelative_hdr",

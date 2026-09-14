@@ -16,6 +16,7 @@
 
 #include "hdr/stdint_proxy.h"
 #include "hdr/types/size_t.h"
+#include "hdr/types/struct___pthread_cleanup_frame.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
@@ -108,12 +109,14 @@ struct alignas(STACK_ALIGNMENT) ThreadAttributes {
   ThreadAtExitCallbackMgr *atexit_callback_mgr;
   void *platform_data;
   cpp::Atomic<ThreadAttributes *> joiner;
+  __pthread_cleanup_frame *cleanup_stack;
 
   LIBC_INLINE constexpr ThreadAttributes()
       : detach_state(uint32_t(DetachState::DETACHED)), stack(nullptr),
         stacksize(0), guardsize(0), tls(0), tls_size(0), owned_stack(false),
         tid(-1), style(ThreadStyle::POSIX), retval(),
-        atexit_callback_mgr(nullptr), platform_data(nullptr), joiner(nullptr) {}
+        atexit_callback_mgr(nullptr), platform_data(nullptr), joiner(nullptr),
+        cleanup_stack(nullptr) {}
 };
 
 } // namespace LIBC_NAMESPACE_DECL
