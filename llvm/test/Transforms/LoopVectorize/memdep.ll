@@ -270,3 +270,34 @@ for.end:
   ret void
 }
 
+; Test with dependence with i8 access, but widest type is from an unrelated i64 store.
+; CHECK-LABEL: @maxvf_mixed_element_types(
+; CHECK-NOT: vector.body:
+
+; WIDTH-LABEL: @maxvf_mixed_element_types(
+; WIDTH-NOT: vector.body:
+
+define void @maxvf_mixed_element_types(ptr noalias %A, ptr noalias %B) {
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %arrayidx = getelementptr inbounds i8, ptr %A, i64 %iv
+  %0 = load i8, ptr %arrayidx, align 1
+  %add = add i8 %0, 1
+  %1 = add nuw nsw i64 %iv, 8
+  %arrayidx2 = getelementptr inbounds i8, ptr %A, i64 %1
+  store i8 %add, ptr %arrayidx2, align 1
+  %arrayidx4 = getelementptr inbounds i64, ptr %B, i64 %iv
+  %2 = load i64, ptr %arrayidx4, align 8
+  %add5 = add nsw i64 %2, 1
+  store i64 %add5, ptr %arrayidx4, align 8
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ne i64 %iv.next, 1024
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
