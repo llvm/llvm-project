@@ -31,7 +31,8 @@ MCSectionGOFF *MCSymbolGOFF::getSectionForCommonSymbol(MCContext &Ctx,
   return Ctx.getGOFFSection(
       SectionKind::getBSS(), getName(),
       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_XPLink, getBindingScope(), 0},
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_64,
+                   getBindingScope(), 0},
       ED);
 }
 

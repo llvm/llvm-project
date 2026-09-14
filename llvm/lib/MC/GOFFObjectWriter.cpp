@@ -267,6 +267,7 @@ public:
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setBindingStrength(Attr.BindingStrength);
     BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
   }
@@ -403,7 +404,7 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
                   ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
                                Symbol.getBindingStrength(), Symbol.getLinkage(),
-                               Symbol.getBindingScope(), 0});
+                               GOFF::ESD_AMODE_64, Symbol.getBindingScope(), 0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
