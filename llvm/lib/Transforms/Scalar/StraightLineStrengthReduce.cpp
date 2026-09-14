@@ -1462,7 +1462,7 @@ public:
     // Compute live-in and live-out of each BB in CFG
     buildBBToLiveness(*F);
 
-    DEBUG_SLSR_REWRITE_FILTER(dbgs() << "-- MaxRP of BBs -- \n");
+    DEBUG_SLSR_REWRITE_FILTER(dbgs() << "-- Max liveness of BBs -- \n");
     SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
     for (auto &BB : *F) {
 
@@ -1472,13 +1472,14 @@ public:
         continue;
 
       const BlockLiveness &BL = getLiveness(&BB);
-      auto [MaxRP, MaxRPWithSLSR] =
+      auto [MaxLiveness, MaxLivenessWithSLSR] =
           maxLivenessInBlockBackward(BB, BL.LiveIn, BL.LiveOut);
-      DEBUG_SLSR_REWRITE_FILTER(dbgs()
-                                << "MaxRP:" << BB.getName() << ": (" << MaxRP
-                                << ", " << MaxRPWithSLSR << ")" << "\n");
+      DEBUG_SLSR_REWRITE_FILTER(dbgs() << "MaxLiveness:" << BB.getName()
+                                       << ": (" << MaxLiveness << ", "
+                                       << MaxLivenessWithSLSR << ")" << "\n");
 
-      if (!rewriteWouldOverflowBudget(MaxRP, MaxRPWithSLSR, *Budget))
+      if (!rewriteWouldOverflowBudget(MaxLiveness, MaxLivenessWithSLSR,
+                                      *Budget))
         continue;
 
       DEBUG_SLSR_REWRITE_FILTER(
@@ -1540,8 +1541,8 @@ private:
                                   unsigned Budget) const {
     // Leave the allocator some slack: it also has to satisfy register class
     // and ABI constraints that this estimate knows nothing about.
-    constexpr double SLSRRPSafeFraction = 0.9;
-    unsigned SafeBudget = static_cast<unsigned>(Budget * SLSRRPSafeFraction);
+    constexpr double SafeRatio = 0.9;
+    unsigned SafeBudget = static_cast<unsigned>(Budget * SafeRatio);
 
     // There is headroom, so however much the rewrite adds is irrelevant.
     if (After <= SafeBudget)
@@ -1553,8 +1554,8 @@ private:
 
     // Already over budget. SLSR can still lower pressure here, so only refuse
     // rewrites that make it meaningfully worse.
-    constexpr unsigned SLSRRPAbsDelta = 4;
-    return After > Before && After - Before > SLSRRPAbsDelta;
+    constexpr unsigned AbsDelta = 4;
+    return After > Before && After - Before > AbsDelta;
   }
 
   std::pair<unsigned, unsigned> countCandsAndBasisesInBB(
@@ -1596,7 +1597,7 @@ private:
     const DataLayout &DL = F->getDataLayout();
 
     // TTI's getRegUsageForType is less accurate than
-    // default logic to compute RP for targets like AMDGPU
+    // default logic to compute pressure for targets like AMDGPU
     return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
   }
 
@@ -1769,7 +1770,7 @@ private:
           SeenLastUse.insert(Op);
         }
 
-      // Compute RP reaching for this instruction.
+      // Compute weight reaching for this instruction.
       unsigned W = 0;
       for (const Value *V : LiveSet) {
         auto RW = weight(V);
