@@ -1530,11 +1530,28 @@ class MapInfoFinalizationPass
                                  mlir::omp::TargetDataOp targetDataOp,
                                  mlir::omp::MapInfoOp mapOp,
                                  mlir::ModuleOp module) {
-    mlir::Location loc = targetDataOp.getLoc();
+    // Disable mapping of the descriptor to the GPU by setting literal map type
     mapOp.setMapType(mapOp.getMapType() | mlir::omp::ClauseMapFlags::literal);
+    auto loc = targetDataOp.getLoc();
+    // Make sure that updateUseDeviceDescriptorArgs was launched earlier
     auto arg = getUseDeviceAddrBlockArg(mapOp, *targetDataOp.getOperation());
+    bool isArgBoxType = mlir::isa<fir::BaseBoxType>(arg.getType());
+    bool useArgLoad =
+        arg.hasOneUse() && mlir::isa<fir::LoadOp>(*arg.use_begin()->getOwner());
+    assert((isArgBoxType || useArgLoad) &&
+           "Expected either BaseBox item or Load operation");
+
+    auto argUserOp = arg.use_begin()->getOwner();
     auto insertionPoint = builder.saveInsertionPoint();
-    builder.setInsertionPoint(&targetDataOp->getRegion(0).front().front());
+    mlir::Value hostDescriptor;
+    if (isArgBoxType) {
+      hostDescriptor = arg;
+      builder.setInsertionPoint(&targetDataOp->getRegion(0).front().front());
+    } else {
+      auto loadOp = arg.use_begin()->getOwner();
+      hostDescriptor = loadOp->getResult(0);
+      builder.setInsertionPointAfter(loadOp);
+    }
     // We need to create a temporary copy of the host descriptor, which will
     // be used inside the use_device_addr code region. The copy will be updated
     // with the target pointer of the mapped array. The lifetime of the
@@ -1543,8 +1560,8 @@ class MapInfoFinalizationPass
     // descriptor if we want to update the host descriptor inside the
     // use_device_addr.
     auto allocaTgtDescriptor =
-        fir::AllocaOp::create(builder, loc, arg.getType());
-    auto hostAddrPtr = fir::BoxAddrOp::create(builder, loc, arg);
+        fir::AllocaOp::create(builder, loc, hostDescriptor.getType());
+    auto hostAddrPtr = fir::BoxAddrOp::create(builder, loc, hostDescriptor);
     auto convertedAddr = fir::ConvertOp::create(
         builder, loc,
         fir::LLVMPointerType::get(builder.getContext(), builder.getI8Type()),
@@ -1556,14 +1573,14 @@ class MapInfoFinalizationPass
     llvm::SmallVector<mlir::Value> lbounds;
     llvm::SmallVector<mlir::Value> extents;
     llvm::SmallVector<mlir::Value> strides;
-    fir::factory::genDimInfoFromBox(builder, loc, arg, &lbounds, &extents,
-                                    &strides);
+    fir::factory::genDimInfoFromBox(builder, loc, hostDescriptor, &lbounds,
+                                    &extents, &strides);
     auto newDescriptor =
-        fir::CreateBoxOp::create(builder, loc, arg.getType(), convertedGPUAddr,
-                                 lbounds, extents, strides);
+        fir::CreateBoxOp::create(builder, loc, hostDescriptor.getType(),
+                                 convertedGPUAddr, lbounds, extents, strides);
     fir::StoreOp::create(builder, loc, newDescriptor, allocaTgtDescriptor);
     auto res = fir::LoadOp::create(builder, loc, allocaTgtDescriptor);
-    arg.replaceUsesWithIf(res, [&](mlir::OpOperand &use) {
+    hostDescriptor.replaceUsesWithIf(res, [&](mlir::OpOperand &use) {
       mlir::Operation *user = use.getOwner();
       return res->isBeforeInBlock(user);
     });
