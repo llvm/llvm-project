@@ -928,12 +928,18 @@ static std::optional<OperandInfo> getOperandInfo(const MachineInstr &MI,
       return OperandInfo(*Log2EEW);
     break;
 
-  // Zvzip - vzip.vv interleaves two LMUL vectors into a 2*LMUL result with
-  // the same SEW. Dest, passthru, and mask therefore have 2 * EMUL.
+  // Zvzip - vzip.vv interleaves two half-LMUL vectors into an LMUL result with
+  // the same SEW. The vtype LMUL describes the result, so only the two source
+  // operands have half the instruction's EMUL.
   case RISCV::VZIP_VV: {
     auto EMUL = getEMULEqualsEEWDivSEWTimesLMUL(*Log2EEW, MI);
-    if (OpIdx == 0 || OpIdx == MI.getNumExplicitDefs() || OpIdx == 4)
-      EMUL = doubleEMUL(EMUL);
+    if (OpIdx == 2 || OpIdx == 3) {
+      auto [Num, IsFractional] = EMUL;
+      if (IsFractional || Num == 1)
+        EMUL = std::make_pair(Num * 2, true);
+      else
+        EMUL = std::make_pair(Num / 2, false);
+    }
     return OperandInfo(EMUL, *Log2EEW);
   }
   // Zvzip - vunzipe.v / vunzipo.v split a 2*LMUL vector into LMUL even/odd
@@ -1153,8 +1159,7 @@ DemandedVL RISCVVLOptimizerImpl::getMinimumVLForUser(const MachineInstr &UserMI,
   if (RISCV::isVLKnownLE(*MRI, DemandedVLs.lookup(&UserMI).VL, VLOp))
     MinimumVL = DemandedVLs.lookup(&UserMI);
 
-  if ((IsVUNZIP && UserOp.getOperandNo() == 2) ||
-      (IsVZIP && UserOp.getOperandNo() == 4))
+  if (IsVUNZIP && UserOp.getOperandNo() == 2)
     MinimumVL = doubleVL(MinimumVL);
 
   return MinimumVL;
