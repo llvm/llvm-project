@@ -4790,6 +4790,9 @@
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-unknown-linux \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_LDBL
 // CHECK_SPARC_LDBL: #define __LONG_DOUBLE_128__ 1
 
 // RUN: %clang -E -dM %s -o - 2>&1 \

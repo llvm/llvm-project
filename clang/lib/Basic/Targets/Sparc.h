@@ -167,11 +167,9 @@ public:
       break;
     }
 
-    // Bare-metal and RTEMS targets default to 64-bit long double, matching
-    // GCC. Other targets use 128-bit per the SPARCv8 System V ABI, with
-    // 64-bit alignment.
-    if (getTriple().getOS() == llvm::Triple::UnknownOS ||
-        getTriple().getOS() == llvm::Triple::RTEMS) {
+    // Base long double format on the triple.
+    if (getTriple().getDefaultLongDoubleFormat() ==
+        llvm::LongDoubleFormat::IEEEdouble) {
       LongDoubleWidth = 64;
       LongDoubleAlign = 64;
       LongDoubleFormat = &llvm::APFloat::IEEEdouble();
