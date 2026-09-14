@@ -1,15 +1,15 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -disable-promote-alloca-to-vector < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck %s
 
 define i64 @i64_test(i64 %i) nounwind readnone {
   %loc = alloca i64, addrspace(5)
-  %j = load i64, ptr addrspace(5) %loc
+  %j = load volatile i64, ptr addrspace(5) %loc
   %r = add i64 %i, %j
   ret i64 %r
 }
 
 define i64 @i32_test(i32 %i) nounwind readnone {
   %loc = alloca i32, addrspace(5)
-  %j = load i32, ptr addrspace(5) %loc
+  %j = load volatile i32, ptr addrspace(5) %loc
   %r = add i32 %i, %j
   %ext = zext i32 %r to i64
   ret i64 %ext
@@ -17,7 +17,7 @@ define i64 @i32_test(i32 %i) nounwind readnone {
 
 define i64 @i16_test(i16 %i) nounwind readnone {
   %loc = alloca i16, addrspace(5)
-  %j = load i16, ptr addrspace(5) %loc
+  %j = load volatile i16, ptr addrspace(5) %loc
   %r = add i16 %i, %j
   %ext = zext i16 %r to i64
   ret i64 %ext
@@ -25,7 +25,7 @@ define i64 @i16_test(i16 %i) nounwind readnone {
 
 define i64 @i8_test(i8 %i) nounwind readnone {
   %loc = alloca i8, addrspace(5)
-  %j = load i8, ptr addrspace(5) %loc
+  %j = load volatile i8, ptr addrspace(5) %loc
   %r = add i8 %i, %j
   %ext = zext i8 %r to i64
   ret i64 %ext

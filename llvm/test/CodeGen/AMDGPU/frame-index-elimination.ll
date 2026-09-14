@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,MUBUF %s
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-MUBUF,MUBUF %s
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
-; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -disable-promote-alloca-to-lds -mattr=+real-true16 < %s | FileCheck --check-prefixes=GFX11-TRUE16 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -disable-promote-alloca-to-lds -mattr=-real-true16 < %s | FileCheck --check-prefixes=GFX11-FAKE16 %s
 
 ; Test that non-entry function frame indices are expanded properly to
 ; give an index relative to the scratch wave offset register
@@ -306,17 +306,18 @@ ret:
 
 ; GFX11-TRUE16-LABEL: tied_operand_test:
 ; GFX11-TRUE16:       ; %bb.0: ; %entry
-; GFX11-TRUE16:     scratch_load_d16_b16 [[LDRESULT:v[0-9]+]], off, off
-; GFX11-TRUE16:     v_mov_b16_e32 [[C:v[0-9]]].{{(l|h)}}, 0x7b
-; GFX11-TRUE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
+; GFX11-TRUE16:     v_mov_b16_e32 [[C:v[0-9]+]].{{(l|h)}}, 0x7b
+; GFX11-TRUE16:     scratch_load_d16_b16 [[LDRESULT:v[0-9]+]], off, off glc dlc
+; GFX11-TRUE16-DAG:     ds_store_b16_d16_hi v{{[0-9]+}}, [[C]] offset:8
+; GFX11-TRUE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]] offset:10
 ; GFX11-TRUE16-NEXT:    s_endpgm
 ;
 ; GFX11-FAKE16-LABEL: tied_operand_test:
 ; GFX11-FAKE16:       ; %bb.0: ; %entry
-; GFX11-FAKE16:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off
+; GFX11-FAKE16:     scratch_load_u16 [[LDRESULT:v[0-9]+]], off, off glc dlc
 ; GFX11-FAKE16:     v_dual_mov_b32 [[C:v[0-9]+]], 0x7b :: v_dual_mov_b32 v{{[0-9]+}}, s{{[0-9]+}}
-; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
 ; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[C]]  offset:8
+; GFX11-FAKE16-DAG:     ds_store_b16 v{{[0-9]+}}, [[LDRESULT]]  offset:10
 ; GFX11-FAKE16-NEXT:    s_endpgm
 define protected amdgpu_kernel void @tied_operand_test(i1 %c1, i1 %c2, i32 %val) {
 entry:
@@ -324,8 +325,8 @@ entry:
   %scratch1 = alloca i16, align 4, addrspace(5)
   %first = select i1 %c1, ptr addrspace(5) %scratch0, ptr addrspace(5) %scratch1
   %spec.select = select i1 %c2, ptr addrspace(5) %first, ptr addrspace(5) %scratch0
-  %dead.load = load i16, ptr addrspace(5) %spec.select, align 2
-  %scratch0.load = load i16, ptr addrspace(5) %scratch0, align 4
+  %dead.load = load volatile i16, ptr addrspace(5) %spec.select, align 2
+  %scratch0.load = load volatile i16, ptr addrspace(5) %scratch0, align 4
   %add4 = add nuw nsw i32 %val, 4
   %addr0 = getelementptr inbounds %struct0, ptr addrspace(3) @_ZZN0, i32 0, i32 0, i32 %add4, i32 0
   store i16 123, ptr addrspace(3) %addr0, align 2
