@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SUPERH_SUPERHISELLOWERING_H
 
 #include "SuperH.h"
+#include "SuperHInstrInfo.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/IR/GlobalValue.h"
@@ -78,7 +79,7 @@ public:
   SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const;
   SDValue getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                   SelectionDAG &DAG, SDLoc DL) const;
+                   SDValue &OutCC, SelectionDAG &DAG, SDLoc DL) const;
 
   // Inserters
   MachineBasicBlock *

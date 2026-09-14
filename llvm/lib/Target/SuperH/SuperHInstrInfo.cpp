@@ -12,12 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "SuperHInstrInfo.h"
+#include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "SuperHRegisterInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
 #include "MCTargetDesc/SuperHInstPrinter.h"
 #include "SuperH.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -72,45 +74,36 @@ void SuperHInstrInfo::insertNoop(MachineBasicBlock &MBB,
   BuildMI(&MBB, MI->getDebugLoc(), get(SH::NOP));
 }
 
-ISD::CondCode SuperHInstrInfo::getCondFromBranchOp(unsigned Op) const {
+SHCC::CondCode SuperHInstrInfo::getCondFromBranchOp(unsigned Op) const {
   switch (Op) {
   default:
-    return ISD::SETCC_INVALID;
+    return SHCC::COND_INVALID;
   case SH::NOP:
   case SH::BT:
   case SH::BTS:
-    return ISD::SETTRUE;
+    return SHCC::COND_T;
   case SH::BF:
   case SH::BFS:
-    return ISD::SETFALSE;
+    return SHCC::COND_F;
   }
 }
 
-ISD::CondCode SuperHInstrInfo::getOppositeCondCode(ISD::CondCode Op) const {
+SHCC::CondCode SuperHInstrInfo::getOppositeCondCode(SHCC::CondCode Op) const {
   switch (Op) {
-  default:
-    return ISD::SETCC_INVALID;
-  case ISD::SETTRUE:
-    return ISD::SETFALSE;
-  case ISD::SETFALSE:
-    return ISD::SETTRUE;
+  default:              return SHCC::COND_INVALID;
+  case SHCC::COND_T:    return SHCC::COND_F;
+  case SHCC::COND_F:    return SHCC::COND_T;
   }
 }
 
-const MCInstrDesc &SuperHInstrInfo::getBrCond(ISD::CondCode CC) const {
+const MCInstrDesc &SuperHInstrInfo::getBrCond(SHCC::CondCode CC, bool delaySlot) const {
   switch (CC) {
   default:
     llvm_unreachable("Unknown condition code!");
-  case ISD::SETTRUE:
-  case ISD::SETEQ:
-  case ISD::SETGT:
-  case ISD::SETGE:
-    return get(SH::BT);
-  case ISD::SETFALSE:
-  case ISD::SETNE:
-  case ISD::SETLT:
-  case ISD::SETLE:
-    return get(SH::BF);
+  case SHCC::COND_T:
+    return get(delaySlot ? SH::BTS : SH::BT);
+  case SHCC::COND_F:
+    return get(delaySlot ? SH::BFS : SH::BF);
   }
 }
 
@@ -186,92 +179,8 @@ void SuperHInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 //                              Stack Frames
 //===----------------------------------------------------------------------===//
 
-void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator II, 
-                                          Register SrcReg, bool isKill, int FrameIndex, 
-                                          const TargetRegisterClass *RC, Register VReg, 
-                                          MachineInstr::MIFlag Flags) const {
-
-  MachineInstr &MI = *II;
-  const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  uint ObjectSize = MFI.getObjectSize(FrameIndex);
-  DebugLoc DL = MI.getDebugLoc();
-
-  LLVM_DEBUG(dbgs() << "Store " << RI.getName(SrcReg) 
-                    << " to slot " << FrameIndex
-                    << " size=" << ObjectSize << "\n");
-
-  switch(ObjectSize) {
-  default: llvm_unreachable("Cannot store this register into stack slot!");
-  case 1: {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVBSPtr))
-      .addReg(SrcReg, getKillRegState(isKill))
-      .addFrameIndex(FrameIndex)
-      .addImm(0);
-    break;
-  }
-  case 2: {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVWSPtr))
-      .addReg(SrcReg, getKillRegState(isKill))
-      .addFrameIndex(FrameIndex)
-      .addImm(0);
-    break;
-  }
-  case 4: {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVLSPtr))
-      .addReg(SrcReg, getKillRegState(isKill))
-      .addFrameIndex(FrameIndex)
-      .addImm(0);
-    break;
-  }
-  }
-}
-
-void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator II, 
-                                           Register DestReg, int FrameIndex, 
-                                           const TargetRegisterClass *RC, Register VReg,
-                                           unsigned SubReg, MachineInstr::MIFlag Flags) const {
-
-  MachineInstr &MI = *II;
-  const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = MF.getFrameInfo();
-  uint ObjectSize = MFI.getObjectSize(FrameIndex);
-  DebugLoc DL = MI.getDebugLoc();
-
-  // HACK: This is ugly but it works.. somehow.
-  II = std::next(II);
-  II = std::next(II);
-
-  LLVM_DEBUG(dbgs() << "Load " << RI.getName(DestReg) 
-                    << " from slot " << FrameIndex
-                    << " size=" << ObjectSize << "\n");
-
-  switch(ObjectSize) {
-  default: llvm_unreachable("Cannot load this register from stack slot!");
-  case 1: {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVBLPtr), DestReg)
-      .addFrameIndex(FrameIndex)
-      .addImm(0);
-    break;
-  }
-
-  case 2: {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVWLPtr), DestReg)
-      .addFrameIndex(FrameIndex)
-      .addImm(0);
-    break;
-  }
-  case 4: {
-    BuildMI(MBB, II, DebugLoc(), get(SH::MOVLLPtr), DestReg)
-      .addFrameIndex(FrameIndex)
-      .addImm(0);
-    break;
-  }
-  }
-}
-
-Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex) const {
-  if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+Register SuperHInstrInfo::isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex) const {
+  if (MI.getOperand(0).isReg() && MI.getOperand(1).isFI() &&
       MI.getOperand(2).getImm() == 0) {
     FrameIndex = MI.getOperand(1).getIndex();
     return MI.getOperand(0).getReg();
@@ -279,13 +188,75 @@ Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &Frame
   return 0;
 }
 
-Register SuperHInstrInfo::isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex) const {
-  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+void SuperHInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator II, 
+                                          Register SrcReg, bool isKill, int FrameIndex, 
+                                          const TargetRegisterClass *RC, Register VReg, 
+                                          MachineInstr::MIFlag Flags) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint ObjectSize = MFI.getObjectSize(FrameIndex);
+
+  LLVM_DEBUG(dbgs() << "Store " << (SrcReg > RI.getNumRegs() ? "VREG" : RI.getName(SrcReg)) 
+                    << " to slot " << FrameIndex
+                    << " size=" << ObjectSize << "\n");
+
+  unsigned Opc;
+  switch(ObjectSize) {
+  default: llvm_unreachable("Cannot store this register into stack slot!");
+  case 1:
+    Opc = SH::MOVBSPtr;
+    break;
+  case 2:
+    Opc = SH::MOVWSPtr;
+    break;
+  case 4:
+    Opc = SH::MOVLSPtr;
+    break;
+  }
+  BuildMI(MBB, II, DebugLoc(), get(Opc))
+    .addReg(SrcReg, getKillRegState(isKill))
+    .addFrameIndex(FrameIndex)
+    .addImm(0);
+}
+
+Register SuperHInstrInfo::isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex) const {
+  if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() && 
       MI.getOperand(1).getImm() == 0) {
     FrameIndex = MI.getOperand(0).getIndex();
     return MI.getOperand(2).getReg();
   }
   return 0;
+}
+
+void SuperHInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator II, 
+                                           Register DestReg, int FrameIndex, 
+                                           const TargetRegisterClass *RC, Register VReg,
+                                           unsigned SubReg, MachineInstr::MIFlag Flags) const {
+  const MachineFunction &MF = *MBB.getParent();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  uint ObjectSize = MFI.getObjectSize(FrameIndex);
+
+  LLVM_DEBUG(dbgs() << "Load " << (DestReg > RI.getNumRegs() ? "VREG" : RI.getName(DestReg)) 
+                    << " from slot " << FrameIndex
+                    << " size=" << ObjectSize << "\n");
+  
+  unsigned Opc;
+  switch(ObjectSize) {
+  default: llvm_unreachable("Cannot load this register from stack slot!");
+  case 1:
+    Opc = SH::MOVBLPtr;
+    break;
+  case 2:
+    Opc = SH::MOVWLPtr;
+    break;
+  case 4:
+    Opc = SH::MOVLLPtr;
+    break;
+  }
+
+  BuildMI(MBB, II, DebugLoc(), get(Opc), DestReg)
+    .addFrameIndex(FrameIndex)
+    .addImm(0);
 }
 
 
@@ -351,8 +322,8 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
     }
 
     // Handle conditional branches.
-    ISD::CondCode BranchCode = getCondFromBranchOp(I->getOpcode());
-    if (BranchCode == ISD::SETCC_INVALID) {
+    SHCC::CondCode BranchCode = getCondFromBranchOp(I->getOpcode());
+    if (BranchCode == SHCC::COND_INVALID) {
       return true; // Can't handle indirect branch.
     }
 
@@ -363,7 +334,7 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
           MBB.isLayoutSuccessor(TargetBB)) {
 
         BranchCode = getOppositeCondCode(BranchCode);
-        auto JNCC = getBrCond(BranchCode);
+        auto JNCC = getBrCond(BranchCode, false);
 
         MachineBasicBlock::iterator OldInst = I;
         BuildMI(MBB, UnCondBrIter, MBB.findDebugLoc(I), JNCC)
@@ -397,7 +368,7 @@ bool SuperHInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&
       return true;
     }
 
-    ISD::CondCode OldBranchCode = (ISD::CondCode)Cond[0].getImm();
+    SHCC::CondCode OldBranchCode = (SHCC::CondCode)Cond[0].getImm();
     // If the conditions are the same, we can leave them alone.
     if (OldBranchCode == BranchCode) {
       continue;
@@ -431,8 +402,8 @@ unsigned SuperHInstrInfo::insertBranch(MachineBasicBlock &MBB, MachineBasicBlock
 
   // Conditional branch.
   unsigned Count = 0;
-  ISD::CondCode CC = (ISD::CondCode)Cond[0].getImm();
-  auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC)).addMBB(TBB);
+  SHCC::CondCode CC = (SHCC::CondCode)Cond[0].getImm();
+  auto &CondMI = *BuildMI(&MBB, DL, getBrCond(CC, false)).addMBB(TBB);
 
   if (BytesAdded)
     *BytesAdded += getInstSizeInBytes(CondMI);
@@ -483,7 +454,7 @@ bool
 SuperHInstrInfo::reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const {
   assert(Cond.size() == 1 && "Invalid SH branch condition!");
 
-  ISD::CondCode CC = static_cast<ISD::CondCode>(Cond[0].getImm());
+  SHCC::CondCode CC = (SHCC::CondCode)Cond[0].getImm();
   Cond[0].setImm(getOppositeCondCode(CC));
   return false;
 }

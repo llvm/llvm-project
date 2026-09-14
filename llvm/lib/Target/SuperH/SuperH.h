@@ -29,6 +29,7 @@ FunctionPass *createSuperHISelDag(SuperHTargetMachine &TM, CodeGenOptLevel OptLe
 FunctionPass *createSuperHFillDelaySlotsPass();
 FunctionPass *createSuperHConstantIslandPass();
 FunctionPass *createSuperHExpandPseudoPass();
+FunctionPass *createSuperHFrameFixupPass();
 
 void initializeSuperHDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeSuperHAsmPrinterPass(PassRegistry &);

@@ -18,9 +18,11 @@
 #include "SuperHRegisterInfo.h"
 #include "SuperHSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
@@ -279,20 +281,14 @@ bool SuperHFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB, Mach
   DebugLoc DL = MBB.findDebugLoc(MI);
   MachineFunction &MF = *MBB.getParent();
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
-  const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
-  Register SP = RII.getStackRegister();
-
   for (const CalleeSavedInfo &I : reverse(CSI)) {
-    MCRegister Reg = I.getReg();
-    BuildMI(MBB, MI, DL, TII.get(SH::MOVLM), SP)
-      .addReg(Reg)
-      .setMIFlag(MachineInstr::FrameSetup);
+    TII.storeRegToStackSlot(MBB, MI, I.getReg(), true, I.getFrameIdx(), &SH::GPRRegClass, 0);
   }
   return true;
 }
 
-bool SuperHFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+bool SuperHFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
                                    MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
   
   LLVM_DEBUG(dbgs() << "Restoring " << CSI.size() << " registers...\n");
@@ -300,19 +296,12 @@ bool SuperHFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB, Ma
       return false;
   }
 
-  DebugLoc DL = MBB.findDebugLoc(MI);
+  DebugLoc DL = MBB.findDebugLoc(II);
   MachineFunction &MF = *MBB.getParent();
   const SuperHSubtarget &STI = MF.getSubtarget<SuperHSubtarget>();
-  const SuperHRegisterInfo &RII = *STI.getRegisterInfo();
   const TargetInstrInfo &TII = *STI.getInstrInfo();
-  Register SP = RII.getStackRegister();
-
-  for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
-
-    MCRegister Reg = I.getReg();
-    BuildMI(MBB, MI, DL, TII.get(SH::MOVLM), SP)
-      .addReg(Reg)
-      .setMIFlag(MachineInstr::FrameDestroy);
+  for (const CalleeSavedInfo &I : CSI) {
+    TII.loadRegFromStackSlot(MBB, II, I.getReg(), I.getFrameIdx(), &SH::GPRRegClass, 0);
   }
 
   return true;
@@ -363,3 +352,109 @@ bool SuperHFrameLowering::hasReservedCallFrame(const MachineFunction &MF) const 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   return hasFP(MF) && !MFI.hasVarSizedObjects();
 }
+
+
+
+//===--------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
+//                         Frame Load-Store Fixup Pass
+//===--------------------------------------------------------------------------===//
+//===--------------------------------------------------------------------------===//
+
+#undef DEBUG_TYPE
+#define DEBUG_TYPE "sh-frame-fixup"
+
+namespace llvm {
+
+// This pass serves to fix up frame loads and stores after subroutine jumps
+// to ensure that return values are not clobbered.
+struct SuperHFrameFixupPass : public MachineFunctionPass {
+private:
+  const SuperHSubtarget *STI;
+
+public:
+  static char ID;
+  typedef MachineBasicBlock::iterator BlockIt;
+  typedef MachineBasicBlock &Block;
+
+  SuperHFrameFixupPass() : MachineFunctionPass(ID) {}
+
+  // Fixes up JSR instructions so that their return values don't 
+  // get clobbered by the implicit stores done by stack loads
+  // 
+  bool fixupJSR(Block MBB, BlockIt MBII) {
+    LLVM_DEBUG(dbgs() << " - Fixing up JSR instruction...\n");
+    MachineInstr *MP = &*std::next(MBII);
+    int Moved = 0;
+
+    BlockIt II = std::next(MBII), E = MBB.end();
+    while (II != E) {
+      BlockIt NII = std::next(II);
+
+      switch(II->getOpcode()) {
+      case SH::MOVBLPtr:
+      case SH::MOVWLPtr:
+      case SH::MOVLLPtr:
+      case SH::ADJCALLSTACKUP:
+      case SH::NOP: {
+        break;
+      }
+      case SH::COPY: {
+        if (II->readsRegister(SH::R0, nullptr) || II->readsRegister(SH::R1, nullptr)) {
+          II->moveBefore(MP);
+          Moved++;
+        }
+        break;
+      }
+      default: 
+
+        // We've reached a barrier where moving instructions up could be dangerous.
+        // as such, end the MBB pass here.
+        NII = E;
+        break;
+      }
+
+      II = NII;
+    }
+
+    LLVM_DEBUG(dbgs() << " - Moved " << Moved << " instructions in BB.\n");
+    return Moved > 0;
+  }
+
+  bool runOnBasicBlock(Block &MBB) {
+    BlockIt II = MBB.begin(), E = MBB.end();
+    while (II != E) {
+      switch(II->getOpcode()) {
+      default: break;
+      case SH::JSR:
+        return fixupJSR(MBB, II);
+      }
+      II = std::next(II);
+    }
+    return false;
+  }
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    LLVM_DEBUG(dbgs() << "\n********** SuperHFrameFixupPass **********\n");
+    LLVM_DEBUG(dbgs() << "Fixing up " << MF.getName() << "...\n");
+
+    STI = &MF.getSubtarget<SuperHSubtarget>();
+
+    int Modified = 0;
+    for (Block &BB : MF) {
+      Modified += runOnBasicBlock(BB);
+    }
+    LLVM_DEBUG(dbgs() << "Modified " << Modified << " BBs in " << MF.getName() << "...\n\n");
+    return Modified > 0;
+  }
+
+
+  StringRef getPassName() const override { return "SuperH frame load/store fixup pass"; }
+};
+
+char SuperHFrameFixupPass::ID = 0;
+
+/// Creates instance of the frame analyzer pass.
+FunctionPass *createSuperHFrameFixupPass() { return new SuperHFrameFixupPass(); }
+
+} // namespace llvm

@@ -52,6 +52,10 @@ const uint32_t *SuperHRegisterInfo::getCallPreservedMask(const MachineFunction &
   return CSR_SH_RegMask; 
 }
 
+const uint32_t *SuperHRegisterInfo::getNoPreservedMask() const {
+  return CSR_SH_RegMask; 
+}
+
 const TargetRegisterClass *
 SuperHRegisterInfo::getLargestLegalSuperClass(const TargetRegisterClass *RC,
                                            const MachineFunction &MF) const {
@@ -133,7 +137,8 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 Register SuperHRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return SH::R14;
+  const TargetFrameLowering *TFI = getFrameLowering(MF);
+  return TFI->hasFP(MF) ? SH::R14 : SH::R15;
 }
 
 Register SuperHRegisterInfo::getFrameRegister() const {
