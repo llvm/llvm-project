@@ -7,21 +7,23 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation of the scalblnf128 function.
+/// Exhaustive tests for the scalblnf128 function.
 ///
 //===----------------------------------------------------------------------===//
 
+#include "ScalbnTest.h"
+
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/scalblnf128.h"
-#include "src/__support/CPP/bit.h"
-#include "src/__support/math/scalblnf128.h"
 
-namespace LIBC_NAMESPACE_DECL {
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-using LIBC_NAMESPACE::fputil::Float128;
-
-LLVM_LIBC_FUNCTION(float128, scalblnf128, (float128 x, long n)) {
-  return cpp::bit_cast<float128>(
-      math::scalblnf128(cpp::bit_cast<Float128>(x), n));
+namespace {
+float128 wrapper(float128 x, int n) {
+  return LIBC_NAMESPACE::scalblnf128(x, static_cast<long>(n));
 }
+} // namespace
 
-} // namespace LIBC_NAMESPACE_DECL
+LIST_SCALBN_TESTS(float128, wrapper)

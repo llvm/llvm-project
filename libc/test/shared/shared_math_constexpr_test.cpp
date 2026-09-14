@@ -1,9 +1,14 @@
-//===-- Unittests for shared math functions in constexpr context ----------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for shared math functions in constexpr context.
+///
 //===----------------------------------------------------------------------===//
 
 #define LIBC_ENABLE_CONSTEXPR 1
@@ -422,6 +427,8 @@ static_assert(Float128(0.0) ==
 static_assert(1 == LIBC_NAMESPACE::shared::iscanonicalf128(Float128(0.0)));
 static_assert(0 == LIBC_NAMESPACE::shared::isnanf128(Float128(0.0)));
 static_assert(0.0 == LIBC_NAMESPACE::shared::issignalingf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::ldexpf128(Float128(0.0), 0));
 static_assert(0LL == LIBC_NAMESPACE::shared::llrintf128(Float128(0.0)));
 static_assert(0LL == LIBC_NAMESPACE::shared::llroundf128(Float128(0.0)));
 static_assert(0L == LIBC_NAMESPACE::shared::lrintf128(Float128(0.0)));
@@ -433,6 +440,10 @@ static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundevenf128(Float128(0.0)));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::roundf128(Float128(0.0)));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::scalblnf128(Float128(0.0), 0L));
+static_assert(Float128(0.0) ==
+              LIBC_NAMESPACE::shared::scalbnf128(Float128(0.0), 0));
 static_assert(Float128(0.0) ==
               LIBC_NAMESPACE::shared::truncf128(Float128(0.0)));
 
@@ -491,10 +502,6 @@ static_assert(float128(0.0) == [] {
   int exp{};
   return LIBC_NAMESPACE::shared::remquof128(float128(1.0), float128(1.0), &exp);
 }());
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::scalblnf128(float128(0.0), 0.0));
-static_assert(float128(0.0) ==
-              LIBC_NAMESPACE::shared::scalbnf128(float128(0.0), 0.0));
 static_assert(0 == [] {
   float128 setpayload_x = float128(0.0);
   return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, float128(0.0));
