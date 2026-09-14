@@ -10,10 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Utils/LoopRotationUtils.h"
+#include <optional>
+
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
+#include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -32,8 +36,11 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LoopRotationUtils.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-rotate"
@@ -45,10 +52,12 @@ STATISTIC(NumInstrsHoisted,
 STATISTIC(NumInstrsDuplicated,
           "Number of instructions cloned into loop preheader");
 
-// Probability that a rotated loop has zero trip count / is never entered.
-static constexpr uint32_t ZeroTripCountWeights[] = {1, 127};
-
 namespace {
+struct RotatedLatchWeights {
+  uint64_t Exit;
+  uint64_t Backedge;
+};
+
 /// A simple loop rotation transformation.
 class LoopRotate {
   const unsigned MaxHeaderSize;
@@ -208,9 +217,38 @@ static bool profitableToRotateLoopExitingLatch(Loop *L, ScalarEvolution *SE) {
   return false;
 }
 
-static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
-                                bool HasConditionalPreHeader,
-                                bool SuccsSwapped) {
+// Rebuild local BFI before moveToHeader/edge splitting, while block
+// frequencies still reflect the pre-rotation layout. Only used for folded-guard
+// multi-exit loops, so the extra analysis cost is limited to that case.
+static std::optional<RotatedLatchWeights> getFoldedMultiExitLatchWeightsFromBFI(
+    Function &F, const SimplifyQuery &SQ, DominatorTree *DT,
+    BasicBlock *OrigPreheader, BasicBlock *OrigHeader, BasicBlock *NewHeader) {
+  CycleInfo CI;
+  CI.compute(F);
+  BranchProbabilityInfo BPI(F, CI, SQ.TLI, DT);
+  BlockFrequencyInfo BFI(F, BPI, CI);
+  uint64_t PreheaderFreq = BFI.getBlockFreq(OrigPreheader).getFrequency();
+  uint64_t HeaderFreq = BFI.getBlockFreq(OrigHeader).getFrequency();
+  uint64_t NewHeaderFreq = BFI.getBlockFreq(NewHeader).getFrequency();
+  if (HeaderFreq < NewHeaderFreq || NewHeaderFreq < PreheaderFreq) {
+    LLVM_DEBUG(dbgs() << "LoopRotation: inconsistent BFI for folded "
+                      << "multi-exit latch weights\n");
+    return std::nullopt;
+  }
+  uint64_t ExitFreq = HeaderFreq - NewHeaderFreq;
+  uint64_t BackedgeFreq = NewHeaderFreq - PreheaderFreq;
+  if (!ExitFreq && !BackedgeFreq) {
+    LLVM_DEBUG(dbgs() << "LoopRotation: zero BFI-derived latch weights for "
+                      << "folded multi-exit loop\n");
+    return std::nullopt;
+  }
+  return RotatedLatchWeights{ExitFreq, BackedgeFreq};
+}
+
+static void updateBranchWeights(
+    CondBrInst &PreHeaderBI, CondBrInst &LoopBI, bool HasConditionalPreHeader,
+    bool SuccsSwapped, bool IsMultiExitLoop,
+    std::optional<RotatedLatchWeights> MultiExitFoldedGuardWeights) {
   MDNode *WeightMD = getBranchWeightMDNode(PreHeaderBI);
   if (WeightMD == nullptr)
     return;
@@ -220,6 +258,45 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   // where instsimplify changed the instructions.
   if (WeightMD != getBranchWeightMDNode(LoopBI))
     return;
+
+  // A conditional copied guard and latch use the same weights {x, y}:
+  //
+  //    |  |--------             |
+  //    V  V       |             V
+  //   Br {x, y}   |            Br {x, y}
+  //   |       |   |            |     |
+  //  x|      y|   |  becomes: x|    y|  |------
+  //   V       V   |            |     V  V     |
+  // Exit    Loop  |            |     Loop     |
+  //           |   |            |    Br {x, y} |
+  //           -----            |    |     |   |
+  //                          x |  x |    y|   |
+  //                            V    V     -----
+  //                             Exit
+  //
+  // This preserves block frequencies, including multi-exit loops when the
+  // guard stays conditional.
+  if (HasConditionalPreHeader)
+    return;
+
+  // Use BFI because header weights miss side exits.
+  if (MultiExitFoldedGuardWeights) {
+    const uint64_t LoopBIWeights[] = {
+        SuccsSwapped ? MultiExitFoldedGuardWeights->Backedge
+                     : MultiExitFoldedGuardWeights->Exit,
+        SuccsSwapped ? MultiExitFoldedGuardWeights->Exit
+                     : MultiExitFoldedGuardWeights->Backedge,
+    };
+    setFittedBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
+    return;
+  }
+
+  // Keep the original weights for multi-exit loops without usable BFI.
+  if (IsMultiExitLoop) {
+    LLVM_DEBUG(dbgs() << "LoopRotation: keeping original latch weights for "
+                      << "multi-exit loop without usable BFI\n");
+    return;
+  }
 
   SmallVector<uint32_t, 2> Weights;
   extractFromBranchWeightMD32(WeightMD, Weights);
@@ -231,108 +308,32 @@ static void updateBranchWeights(CondBrInst &PreHeaderBI, CondBrInst &LoopBI,
   if (SuccsSwapped)
     std::swap(OrigLoopExitWeight, OrigLoopBackedgeWeight);
 
-  // Update branch weights. Consider the following edge-counts:
-  //
-  //    |  |--------             |
-  //    V  V       |             V
-  //   Br i1 ...   |            Br i1 ...
-  //   |       |   |            |     |
-  //  x|      y|   |  becomes:  |   y0|  |-----
-  //   V       V   |            |     V  V    |
-  // Exit    Loop  |            |    Loop     |
-  //           |   |            |   Br i1 ... |
-  //           -----            |   |      |  |
-  //                          x0| x1|   y1 |  |
-  //                            V   V      ----
-  //                            Exit
-  //
-  // The following must hold:
-  //  -  x == x0 + x1        # counts to "exit" must stay the same.
-  //  - y0 == x - x0 == x1   # how often loop was entered at all.
-  //  - y1 == y - y0         # How often loop was repeated (after first iter.).
-  //
-  // We cannot generally deduce how often we had a zero-trip count loop so we
-  // have to make a guess for how to distribute x among the new x0 and x1.
-
-  uint32_t ExitWeight0;    // aka x0
-  uint32_t ExitWeight1;    // aka x1
-  uint32_t EnterWeight;    // aka y0
-  uint32_t LoopBackWeight; // aka y1
+  // The first iteration is now unconditional. Keep the historical single-exit
+  // latch adjustment. This does not account for side exits on multi-exit
+  // loops when the guard folds away.
+  uint32_t ExitWeight;
+  uint32_t LoopBackWeight;
   if (OrigLoopExitWeight > 0 && OrigLoopBackedgeWeight > 0) {
-    ExitWeight0 = 0;
-    if (HasConditionalPreHeader) {
-      // Here we cannot know how many 0-trip count loops we have, so we guess:
-      if (OrigLoopBackedgeWeight >= OrigLoopExitWeight) {
-        // If the loop count is bigger than the exit count then we set
-        // probabilities as if 0-trip count nearly never happens.
-        ExitWeight0 = ZeroTripCountWeights[0];
-        // Scale up counts if necessary so we can match `ZeroTripCountWeights`
-        // for the `ExitWeight0`:`ExitWeight1` (aka `x0`:`x1` ratio`) ratio.
-        while (OrigLoopExitWeight < ZeroTripCountWeights[1] + ExitWeight0) {
-          // ... but don't overflow.
-          uint32_t const HighBit = uint32_t{1} << (sizeof(uint32_t) * 8 - 1);
-          if ((OrigLoopBackedgeWeight & HighBit) != 0 ||
-              (OrigLoopExitWeight & HighBit) != 0)
-            break;
-          OrigLoopBackedgeWeight <<= 1;
-          OrigLoopExitWeight <<= 1;
-        }
-      } else {
-        // If there's a higher exit-count than backedge-count then we set
-        // probabilities as if there are only 0-trip and 1-trip cases.
-        ExitWeight0 = OrigLoopExitWeight - OrigLoopBackedgeWeight;
-      }
-    } else {
-      // Theoretically, if the loop body must be executed at least once, the
-      // backedge count must be not less than exit count. However the branch
-      // weight collected by sampling-based PGO may be not very accurate due to
-      // sampling. Therefore this workaround is required here to avoid underflow
-      // of unsigned in following update of branch weight.
-      if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
-        OrigLoopBackedgeWeight = OrigLoopExitWeight;
-    }
-    assert(OrigLoopExitWeight >= ExitWeight0 && "Bad branch weight");
-    ExitWeight1 = OrigLoopExitWeight - ExitWeight0;
-    EnterWeight = ExitWeight1;
-    assert(OrigLoopBackedgeWeight >= EnterWeight && "Bad branch weight");
-    LoopBackWeight = OrigLoopBackedgeWeight - EnterWeight;
+    // Sampling can report fewer backedges than exits. Clamp to avoid underflow.
+    if (OrigLoopExitWeight > OrigLoopBackedgeWeight)
+      OrigLoopBackedgeWeight = OrigLoopExitWeight;
+    ExitWeight = OrigLoopExitWeight;
+    LoopBackWeight = OrigLoopBackedgeWeight - OrigLoopExitWeight;
   } else if (OrigLoopExitWeight == 0) {
-    if (OrigLoopBackedgeWeight == 0) {
-      // degenerate case... keep everything zero...
-      ExitWeight0 = 0;
-      ExitWeight1 = 0;
-      EnterWeight = 0;
-      LoopBackWeight = 0;
-    } else {
-      // Special case "LoopExitWeight == 0" weights which behaves like an
-      // endless where we don't want loop-enttry (y0) to be the same as
-      // loop-exit (x1).
-      ExitWeight0 = 0;
-      ExitWeight1 = 0;
-      EnterWeight = 1;
-      LoopBackWeight = OrigLoopBackedgeWeight;
-    }
+    ExitWeight = 0;
+    LoopBackWeight = OrigLoopBackedgeWeight;
   } else {
-    // loop is never entered.
+    // Loop is never entered.
     assert(OrigLoopBackedgeWeight == 0 && "remaining case is backedge zero");
-    ExitWeight0 = 1;
-    ExitWeight1 = 1;
-    EnterWeight = 0;
+    ExitWeight = 1;
     LoopBackWeight = 0;
   }
 
   const uint32_t LoopBIWeights[] = {
-      SuccsSwapped ? LoopBackWeight : ExitWeight1,
-      SuccsSwapped ? ExitWeight1 : LoopBackWeight,
+      SuccsSwapped ? LoopBackWeight : ExitWeight,
+      SuccsSwapped ? ExitWeight : LoopBackWeight,
   };
   setBranchWeights(LoopBI, LoopBIWeights, /*IsExpected=*/false);
-  if (HasConditionalPreHeader) {
-    const uint32_t PreHeaderBIWeights[] = {
-        SuccsSwapped ? EnterWeight : ExitWeight0,
-        SuccsSwapped ? ExitWeight0 : EnterWeight,
-    };
-    setBranchWeights(PreHeaderBI, PreHeaderBIWeights, /*IsExpected=*/false);
-  }
 }
 
 /// Rotate loop LP. Return true if the loop is rotated.
@@ -456,6 +457,10 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   assert(L->contains(NewHeader) && !L->contains(Exit) &&
          "Unable to determine loop header and exit blocks");
 
+  // getExitingBlock() is null when there is no unique dedicated exit block.
+  bool IsMultiExitLoop = !L->getExitingBlock();
+  std::optional<RotatedLatchWeights> MultiExitFoldedGuardWeights;
+
   // This code assumes that the new header has exactly one predecessor.
   // Remove any single-entry PHI nodes in it.
   assert(NewHeader->getSinglePredecessor() &&
@@ -576,7 +581,6 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       mapAtomInstance(DL, ValueMap);
 
     C->insertBefore(LoopEntryBranch->getIterator());
-
     ++NumInstrsDuplicated;
 
     if (!NextDbgInsts.empty()) {
@@ -620,6 +624,21 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       if (MSSAU)
         InsertNewValueIntoMap(ValueMapMSSA, Inst, C);
     }
+  }
+
+  auto *PHBI = cast<CondBrInst>(ValueMap.lookup(BI));
+  const Value *Cond = PHBI->getCondition();
+  const bool HasConditionalPreHeader =
+      !isa<ConstantInt>(Cond) ||
+      PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
+
+  // Derive latch weights before moveToHeader/edge splitting, while block
+  // frequencies still reflect the pre-rotation layout.
+  // exit = header - body, backedge = body - preheader.
+  if (!HasConditionalPreHeader && IsMultiExitLoop &&
+      getBranchWeightMDNode(*BI)) {
+    MultiExitFoldedGuardWeights = getFoldedMultiExitLatchWeightsFromBFI(
+        *OrigHeader->getParent(), SQ, DT, OrigPreheader, OrigHeader, NewHeader);
   }
 
   if (!NoAliasDeclInstructions.empty()) {
@@ -749,13 +768,20 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
   // then we fold away the cond branch to an uncond branch.  This simplifies the
   // loop in cases important for nested loops, and it also means we don't have
   // to split as many edges.
-  CondBrInst *PHBI = cast<CondBrInst>(OrigPreheader->getTerminator());
-  const Value *Cond = PHBI->getCondition();
-  const bool HasConditionalPreHeader =
-      !isa<ConstantInt>(Cond) ||
-      PHBI->getSuccessor(cast<ConstantInt>(Cond)->isZero()) != NewHeader;
+  assert(PHBI == OrigPreheader->getTerminator() &&
+         "Unexpected cloned preheader branch");
 
-  updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped);
+  // Save the trip count before updating branch weights. Only infer it from
+  // profile weights for single-exit loops (see IsMultiExitLoop above), but
+  // still read and decrement explicit llvm.loop.estimated_trip_count.
+  bool HasExplicitEstimatedTripCount =
+      getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount).has_value();
+  std::optional<unsigned> EstimatedTripCount;
+  if (!IsMultiExitLoop || HasExplicitEstimatedTripCount)
+    EstimatedTripCount = getLoopEstimatedTripCount(L);
+
+  updateBranchWeights(*PHBI, *BI, HasConditionalPreHeader, BISuccsSwapped,
+                      IsMultiExitLoop, MultiExitFoldedGuardWeights);
 
   if (HasConditionalPreHeader) {
     // The conditional branch can't be folded, handle the general case.
@@ -805,6 +831,16 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // Update MSSA too, if available.
     if (MSSAU)
       MSSAU->removeEdge(OrigPreheader, Exit);
+  }
+
+  if (EstimatedTripCount) {
+    // One header test moved to the preheader and no longer counts as a trip.
+    // Record the decremented count in loop metadata only; updateBranchWeights()
+    // already handled branch weights above.
+    if (!setLoopEstimatedTripCount(
+            L, *EstimatedTripCount == 0 ? 0 : *EstimatedTripCount - 1))
+      LLVM_DEBUG(dbgs() << "LoopRotation: failed to set estimated trip "
+                        << "count after rotation\n");
   }
 
   assert(L->getLoopPreheader() && "Invalid loop preheader after loop rotation");
