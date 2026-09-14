@@ -439,3 +439,104 @@ entry:
   ret i64 %mask.1.11
 }
 
+define i64 @bitmask_16xi8_shl(ptr %src) {
+; SSE-LABEL: @bitmask_16xi8_shl(
+; SSE-NEXT:  entry:
+; SSE-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; SSE-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
+; SSE-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+; SSE-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i64
+; SSE-NEXT:    ret i64 [[TMP3]]
+;
+; AVX-LABEL: @bitmask_16xi8_shl(
+; AVX-NEXT:  entry:
+; AVX-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; AVX-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
+; AVX-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+; AVX-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i64
+; AVX-NEXT:    ret i64 [[TMP3]]
+;
+; AVX512-LABEL: @bitmask_16xi8_shl(
+; AVX512-NEXT:  entry:
+; AVX512-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[SRC:%.*]], align 1
+; AVX512-NEXT:    [[TMP1:%.*]] = icmp ne <16 x i8> [[TMP0]], zeroinitializer
+; AVX512-NEXT:    [[TMP2:%.*]] = bitcast <16 x i1> [[TMP1]] to i16
+; AVX512-NEXT:    [[TMP3:%.*]] = zext i16 [[TMP2]] to i64
+; AVX512-NEXT:    ret i64 [[TMP3]]
+;
+entry:
+  %0 = load i8, ptr %src, align 1, !range !0, !noundef !1
+  %arrayidx.1 = getelementptr inbounds nuw i8, ptr %src, i64 1
+  %1 = load i8, ptr %arrayidx.1, align 1, !range !0, !noundef !1
+  %2 = shl nuw nsw i8 %1, 1
+  %mask.1.18 = or disjoint i8 %2, %0
+  %arrayidx.2 = getelementptr inbounds nuw i8, ptr %src, i64 2
+  %3 = load i8, ptr %arrayidx.2, align 1, !range !0, !noundef !1
+  %4 = shl nuw nsw i8 %3, 2
+  %mask.1.29 = or disjoint i8 %4, %mask.1.18
+  %arrayidx.3 = getelementptr inbounds nuw i8, ptr %src, i64 3
+  %5 = load i8, ptr %arrayidx.3, align 1, !range !0, !noundef !1
+  %6 = shl nuw nsw i8 %5, 3
+  %mask.1.310 = or disjoint i8 %6, %mask.1.29
+  %arrayidx.4 = getelementptr inbounds nuw i8, ptr %src, i64 4
+  %7 = load i8, ptr %arrayidx.4, align 1, !range !0, !noundef !1
+  %8 = shl nuw nsw i8 %7, 4
+  %mask.1.411 = or disjoint i8 %8, %mask.1.310
+  %arrayidx.5 = getelementptr inbounds nuw i8, ptr %src, i64 5
+  %9 = load i8, ptr %arrayidx.5, align 1, !range !0, !noundef !1
+  %10 = shl nuw nsw i8 %9, 5
+  %mask.1.512 = or i8 %10, %mask.1.411
+  %arrayidx.6 = getelementptr inbounds nuw i8, ptr %src, i64 6
+  %11 = load i8, ptr %arrayidx.6, align 1, !range !0, !noundef !1
+  %12 = shl nuw nsw i8 %11, 6
+  %mask.1.613 = or i8 %12, %mask.1.512
+  %arrayidx.7 = getelementptr inbounds nuw i8, ptr %src, i64 7
+  %13 = load i8, ptr %arrayidx.7, align 1, !range !0, !noundef !1
+  %14 = shl nuw i8 %13, 7
+  %mask.1.714 = or i8 %14, %mask.1.613
+  %mask.1.7 = zext i8 %mask.1.714 to i64
+  %arrayidx.8 = getelementptr inbounds nuw i8, ptr %src, i64 8
+  %15 = load i8, ptr %arrayidx.8, align 1, !range !0, !noundef !1
+  %16 = zext nneg i8 %15 to i64
+  %or.8 = shl nuw nsw i64 %16, 8
+  %mask.1.8 = or disjoint i64 %or.8, %mask.1.7
+  %arrayidx.9 = getelementptr inbounds nuw i8, ptr %src, i64 9
+  %17 = load i8, ptr %arrayidx.9, align 1, !range !0, !noundef !1
+  %18 = zext nneg i8 %17 to i64
+  %or.9 = shl nuw nsw i64 %18, 9
+  %mask.1.9 = or disjoint i64 %or.9, %mask.1.8
+  %arrayidx.10 = getelementptr inbounds nuw i8, ptr %src, i64 10
+  %19 = load i8, ptr %arrayidx.10, align 1, !range !0, !noundef !1
+  %20 = zext nneg i8 %19 to i64
+  %or.10 = shl nuw nsw i64 %20, 10
+  %mask.1.10 = or disjoint i64 %or.10, %mask.1.9
+  %arrayidx.11 = getelementptr inbounds nuw i8, ptr %src, i64 11
+  %21 = load i8, ptr %arrayidx.11, align 1, !range !0, !noundef !1
+  %22 = zext nneg i8 %21 to i64
+  %or.11 = shl nuw nsw i64 %22, 11
+  %mask.1.11 = or i64 %or.11, %mask.1.10
+  %arrayidx.12 = getelementptr inbounds nuw i8, ptr %src, i64 12
+  %23 = load i8, ptr %arrayidx.12, align 1, !range !0, !noundef !1
+  %24 = zext nneg i8 %23 to i64
+  %or.12 = shl nuw nsw i64 %24, 12
+  %mask.1.12 = or i64 %or.12, %mask.1.11
+  %arrayidx.13 = getelementptr inbounds nuw i8, ptr %src, i64 13
+  %25 = load i8, ptr %arrayidx.13, align 1, !range !0, !noundef !1
+  %26 = zext nneg i8 %25 to i64
+  %or.13 = shl nuw nsw i64 %26, 13
+  %mask.1.13 = or i64 %or.13, %mask.1.12
+  %arrayidx.14 = getelementptr inbounds nuw i8, ptr %src, i64 14
+  %27 = load i8, ptr %arrayidx.14, align 1, !range !0, !noundef !1
+  %28 = zext nneg i8 %27 to i64
+  %or.14 = shl nuw nsw i64 %28, 14
+  %mask.1.14 = or i64 %or.14, %mask.1.13
+  %arrayidx.15 = getelementptr inbounds nuw i8, ptr %src, i64 15
+  %29 = load i8, ptr %arrayidx.15, align 1, !range !0, !noundef !1
+  %30 = zext nneg i8 %29 to i64
+  %or.15 = shl nuw nsw i64 %30, 15
+  %mask.1.15 = or i64 %or.15, %mask.1.14
+  ret i64 %mask.1.15
+}
+
+!0 = !{i8 0, i8 2}
+!1 = !{}
