@@ -373,18 +373,18 @@ module attributes {transform.with_named_sequence} {
 
 // CHECK-LABEL: @elementwise_no_mnk(
 func.func @elementwise_no_mnk(%A : !A, %B : !A, %C : !A) -> !A {
-  //      CHECK: linalg.add
-  %0 = linalg.add ins(%A, %B : !A, !A) outs(%C : !A) -> !A
+  //      CHECK: linalg.elementwise <add>
+  %0 = linalg.elementwise <add> ins(%A, %B : !A, !A) outs(%C : !A) -> !A
   return %0 : !A
 }
 
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
-    %add = transform.structured.match ops{["linalg.add"]} in %module_op
-      : (!transform.any_op) -> !transform.op<"linalg.add">
+    %add = transform.structured.match ops{["linalg.elementwise"]} in %module_op
+      : (!transform.any_op) -> !transform.op<"linalg.elementwise">
     transform.structured.pack_greedily %add
         matmul_packed_sizes = [8, 16, 32] matmul_inner_dims_order = [1, 2, 0]
-      : (!transform.op<"linalg.add">) -> !transform.any_op
+      : (!transform.op<"linalg.elementwise">) -> !transform.any_op
       transform.yield
   }
 }
