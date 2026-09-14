@@ -1089,11 +1089,6 @@ define i7 @test_cttz_select_i7(i7 %0) {
 ; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    addi a2, a3, -241
 ; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    slli a2, a0, 8
-; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    slli a2, a0, 16
-; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    srli a0, a0, 24
 ; RV32I-NEXT:    j .LBB11_3
 ; RV32I-NEXT:  .LBB11_2:
 ; RV32I-NEXT:    li a0, 7
@@ -1130,13 +1125,6 @@ define i7 @test_cttz_select_i7(i7 %0) {
 ; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    add a2, a2, a4
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    slli a2, a0, 8
-; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    slli a2, a0, 32
-; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    srli a0, a0, 56
 ; RV64I-NEXT:    j .LBB11_3
 ; RV64I-NEXT:  .LBB11_2:
 ; RV64I-NEXT:    li a0, 7
@@ -1292,11 +1280,9 @@ define i10 @test_ctlz_select_i10(i10 %0) {
 ; RV32I-NEXT:    add a0, a0, a2
 ; RV32I-NEXT:    addi a2, a3, -241
 ; RV32I-NEXT:    and a0, a0, a2
-; RV32I-NEXT:    slli a2, a0, 8
+; RV32I-NEXT:    srli a2, a0, 8
 ; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    slli a2, a0, 16
-; RV32I-NEXT:    add a0, a0, a2
-; RV32I-NEXT:    srli a0, a0, 24
+; RV32I-NEXT:    andi a0, a0, 31
 ; RV32I-NEXT:    j .LBB12_3
 ; RV32I-NEXT:  .LBB12_2:
 ; RV32I-NEXT:    li a0, 10
@@ -1342,13 +1328,9 @@ define i10 @test_ctlz_select_i10(i10 %0) {
 ; RV64I-NEXT:    add a0, a0, a3
 ; RV64I-NEXT:    add a2, a2, a4
 ; RV64I-NEXT:    and a0, a0, a2
-; RV64I-NEXT:    slli a2, a0, 8
+; RV64I-NEXT:    srli a2, a0, 8
 ; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    slli a2, a0, 16
-; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    slli a2, a0, 32
-; RV64I-NEXT:    add a0, a0, a2
-; RV64I-NEXT:    srli a0, a0, 56
+; RV64I-NEXT:    andi a0, a0, 31
 ; RV64I-NEXT:    j .LBB12_3
 ; RV64I-NEXT:  .LBB12_2:
 ; RV64I-NEXT:    li a0, 10
