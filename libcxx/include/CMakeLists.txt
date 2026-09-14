@@ -962,6 +962,7 @@ set(files
   __undef_macros
   __utility/as_const.h
   __utility/as_lvalue.h
+  __utility/assume.h
   __utility/auto_cast.h
   __utility/cmp.h
   __utility/constant_wrapper.h
