@@ -41,7 +41,7 @@ constexpr void test() {
 
   auto const it   = v.begin();
   auto const c_it = std::as_const(v).begin();
-  auto const s    = v.end();
+  auto const st    = v.end();
 
   std::same_as<bool> decltype(auto) eqItSResult = (it == s);
   assert(!eqItSResult);
@@ -64,7 +64,7 @@ constexpr void test() {
   assert(neqSConstItResult);
 }
 
-constexpr bool tests() {
+constexpr bool test() {
   test<cpp17_input_iterator<int*>>();
   test<cpp20_input_iterator<int*>>();
   test<forward_iterator<int*>>();
