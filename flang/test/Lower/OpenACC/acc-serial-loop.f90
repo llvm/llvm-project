@@ -638,3 +638,39 @@ end subroutine
 ! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) independent
+
+! Not only scalars on serial loop: array gets loop firstprivate.
+subroutine acc_serial_loop_firstprivate_array
+  integer :: i, n
+  real :: b(10)
+  n = 10
+  !$acc serial loop firstprivate(b)
+  do i = 1, n
+    b(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_array
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_B]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_B_LOOP]] : !fir.ref<!fir.array<10xf32>>)
+
+! Not only independent on serial loop: seq still gets loop firstprivate.
+subroutine acc_serial_loop_firstprivate_seq
+  integer :: i, n, v
+  real :: a(10)
+  n = 10
+  v = 7
+  !$acc serial loop seq firstprivate(v)
+  do i = 1, n
+    a(i) = v
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_seq
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: } inclusiveUpperbound(array<i1: true>) seq

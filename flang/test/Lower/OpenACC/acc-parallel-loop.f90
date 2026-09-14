@@ -728,6 +728,23 @@ end subroutine
 ! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
 
+! Not only scalars: array gets loop firstprivate too.
+subroutine acc_parallel_loop_firstprivate_array
+  integer :: i, n
+  real :: b(10)
+  n = 10
+  !$acc parallel loop firstprivate(b)
+  do i = 1, n
+    b(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_array
+! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_B]] : !fir.ref<!fir.array<10xf32>>)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_B_LOOP]] : !fir.ref<!fir.array<10xf32>>)
+
 subroutine acc_parallel_loop_firstprivate_mixed
   integer :: i, n, v
   real :: b(10)
@@ -950,6 +967,22 @@ end subroutine
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
 ! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+
+! Not only scalars: assumed-shape array dummy (boxed array).
+subroutine acc_parallel_loop_firstprivate_assumed_shape(b)
+  real :: b(:)
+  integer :: i
+  !$acc parallel loop firstprivate(b)
+  do i = 1, size(b)
+    b(i) = 1.0
+  end do
+end subroutine
+
+! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_assumed_shape
+! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) name("b")
+! CHECK: acc.parallel combined(loop) {{.*}}firstprivate
+! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) implicit(true) name("b")
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate
 
 subroutine acc_parallel_loop_firstprivate_with_reduction
   integer :: i, n, v, r
