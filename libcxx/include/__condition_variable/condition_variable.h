@@ -41,9 +41,8 @@ _LIBCPP_DECLARE_STRONG_ENUM(cv_status){no_timeout, timeout};
 _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
 template <class _Duration>
-inline _LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
-  using namespace chrono;
-  return steady_clock::now() + ceil<steady_clock::duration>(__rel_time);
+_LIBCPP_HIDE_FROM_ABI chrono::steady_clock::time_point __rel_to_abs(const _Duration& __rel_time) {
+  return chrono::steady_clock::now() + chrono::__ceil<chrono::steady_clock::duration>(__rel_time);
 }
 
 template <class _Rep, class _Period, __enable_if_t<is_floating_point<_Rep>::value, int> = 0>
