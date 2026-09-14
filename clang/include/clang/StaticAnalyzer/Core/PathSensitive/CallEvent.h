@@ -421,10 +421,11 @@ public:
   /// frame. The behavior is undefined if the block count is different from the
   /// one that is there when call happens. May fail; returns null on failure.
   ///
-  /// \param DeclParamIdx refers to the index of the declared parameter of the callee.
-  /// See getDeclaredParameterIndex().
-  const ParamVarRegion *getParameterLocation(std::optional<unsigned> DeclParamIdx,
-                                             unsigned BlockCount) const;
+  /// \param DeclParamIdx refers to the index of the declared parameter of the
+  /// callee. See getDeclaredParameterIndex().
+  const ParamVarRegion *
+  getParameterLocation(std::optional<unsigned> DeclParamIdx,
+                       unsigned BlockCount) const;
 
   /// Returns true if on the current path, the argument was constructed by
   /// calling a C++ constructor over it. This is an internal detail of the
