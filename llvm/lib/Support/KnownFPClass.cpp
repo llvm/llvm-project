@@ -547,8 +547,7 @@ KnownFPClass KnownFPClass::frem(const KnownFPClass &KnownLHS,
   // A positive zero result can additionally come from a negative finite
   // result being flushed to positive zero.
   if (KnownLHS.isKnownNever(fcPosFinite) &&
-      (!Mode.inputsMayBePositiveZero() ||
-       KnownLHS.isKnownNever(fcNegSubnormal)) &&
+      KnownLHS.isKnownNeverLogicalPosZero(Mode) &&
       (!Mode.outputsMayBePositiveZero() ||
        KnownLHS.isKnownNever(fcNegNormal | fcNegSubnormal)))
     Known.knownNot(fcPosZero);
