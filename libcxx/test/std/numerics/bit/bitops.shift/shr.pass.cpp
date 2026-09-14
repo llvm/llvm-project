@@ -57,9 +57,9 @@ static_assert(!can_shr_shift<E2>);
 
 template <class T>
 constexpr bool test_signed() {
-  using U               = std::make_unsigned_t<T>;
-  constexpr int width   = std::numeric_limits<U>::digits;
-  constexpr T highbit   = T(1) << (width - 1);
+  using U             = std::make_unsigned_t<T>;
+  constexpr int width = std::numeric_limits<U>::digits;
+  constexpr T highbit = T(1) << (width - 1);
 
   ASSERT_SAME_TYPE(decltype(std::shr(T(), 0)), T);
   ASSERT_NOEXCEPT(std::shr(T(), 0));
