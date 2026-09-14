@@ -121,6 +121,21 @@ public:
 
   uint16_t getDialect() const { return Dialect; }
 
+  /// Returns \c true if \p LHS and \p RHS hold the same language name,
+  /// version and dialect. Note that this is a structural comparison; a
+  /// versioned name never compares equal to an unversioned one, even if
+  /// both denote the same source language.
+  friend bool operator==(const DISourceLanguageName &LHS,
+                         const DISourceLanguageName &RHS) {
+    return LHS.Name == RHS.Name && LHS.HasVersion == RHS.HasVersion &&
+           LHS.Version == RHS.Version && LHS.Dialect == RHS.Dialect;
+  }
+
+  friend bool operator!=(const DISourceLanguageName &LHS,
+                         const DISourceLanguageName &RHS) {
+    return !(LHS == RHS);
+  }
+
   DISourceLanguageName(uint16_t Lang, uint32_t Version, uint16_t Dialect = 0)
       : Version(Version), Name(Lang), HasVersion(true), Dialect(Dialect) {}
   DISourceLanguageName(uint16_t Lang, uint16_t Dialect = 0)
