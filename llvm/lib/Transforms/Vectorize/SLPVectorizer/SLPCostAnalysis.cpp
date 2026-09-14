@@ -326,6 +326,8 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   // Pick the cheapest shift width: the narrowest type still holding the field
   // content is not always the cheapest (e.g. missing narrow variable shifts).
   Type *Int8Ty = IntegerType::get(SrcTy->getContext(), 8);
+  assert(BitWidth % 8 == 0 &&
+         "The byte-multiple field width divides the result bit width.");
   unsigned OutBytes = BitWidth / 8;
   auto *PackTy = FixedVectorType::get(Int8Ty, OutBytes);
   unsigned MinShiftWidth = 8;

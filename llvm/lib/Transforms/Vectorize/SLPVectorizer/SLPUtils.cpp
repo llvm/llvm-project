@@ -1245,6 +1245,8 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
                     unsigned ShiftWidth) {
   auto *VecTy = cast<FixedVectorType>(X->getType());
   unsigned BitWidth = VecTy->getScalarSizeInBits();
+  assert(BitWidth % 8 == 0 &&
+         "The byte-multiple field width divides the result bit width.");
   unsigned NumElts = VecTy->getNumElements();
   Value *Y = X;
   if (ShiftWidth != BitWidth) {

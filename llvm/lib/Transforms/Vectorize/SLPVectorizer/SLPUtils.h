@@ -27,6 +27,7 @@
 #include "llvm/IR/Intrinsics.h"
 
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <string>
 
@@ -34,7 +35,6 @@ namespace llvm {
 class AssumptionCache;
 class Constant;
 class DataLayout;
-class IRBuilderBase;
 class Instruction;
 class IRBuilderBase;
 class TargetLibraryInfo;
@@ -422,7 +422,7 @@ APInt getScalarMaxValue(const Value *V, unsigned Depth = 0);
 /// Description of a bitfield packing of vector lanes into a scalar value:
 /// every lane contributes a disjoint contiguous byte field of the result.
 struct BitPackInfo {
-  static constexpr unsigned NoLane = ~0u;
+  static constexpr unsigned NoLane = std::numeric_limits<unsigned>::max();
   unsigned FieldWidth = 0;
   /// Lane covering each field, NoLane if the field is always zero.
   SmallVector<unsigned, 8> LaneOfField;

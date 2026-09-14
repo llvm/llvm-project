@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -1981,9 +1982,27 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
         return A->getReg() < B->getReg();
       if (A->isFI()) {
         const MachineFunction &MF = *A->getParent()->getParent()->getParent();
+        const MachineFrameInfo &MFI = MF.getFrameInfo();
         const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
         bool StackGrowsDown = TFI.getStackGrowthDirection() ==
                               TargetFrameLowering::StackGrowsDown;
+        bool AIsFixed = MFI.isFixedObjectIndex(A->getIndex());
+        bool BIsFixed = MFI.isFixedObjectIndex(B->getIndex());
+        // Sort fixed and non-fixed bases as separate groups, preserving the
+        // existing frame-index ordering between the groups. Do not rely on
+        // non-fixed object offsets before frame layout.
+        if (AIsFixed != BIsFixed)
+          return StackGrowsDown ? !AIsFixed : AIsFixed;
+        if (AIsFixed) {
+          // Fixed objects have explicit offsets, and targets may create their
+          // frame indices in an order unrelated to those offsets. Sort by the
+          // actual object offsets so target clustering hooks see fixed object
+          // bases in address order.
+          int64_t AOffset = MFI.getObjectOffset(A->getIndex());
+          int64_t BOffset = MFI.getObjectOffset(B->getIndex());
+          if (AOffset != BOffset)
+            return AOffset < BOffset;
+        }
         return StackGrowsDown ? A->getIndex() > B->getIndex()
                               : A->getIndex() < B->getIndex();
       }
