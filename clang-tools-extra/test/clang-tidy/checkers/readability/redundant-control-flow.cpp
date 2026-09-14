@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s readability-redundant-control-flow %t
+// RUN: %check_clang_tidy %s readability-redundant-control-flow %t -- -- -Xclang=-fnamed-loops
 
 void g(int i);
 void j();
@@ -272,3 +272,22 @@ void semicolon_far_from_continue() {
 // CHECK-MESSAGES: :[[@LINE-5]]:5: warning: redundant continue statement at the end of loop statement
 // CHECK-FIXES:      for (int i = 0; i < 20; ++i) {
 // CHECK-FIXES-NEXT: }
+
+void continue_labeled_loop() {
+  loop:
+  for (int i = 0; i < 10; ++i) {
+    continue loop;
+  }
+}
+// CHECK-MESSAGES: :[[@LINE-4]]:5: warning: redundant continue statement at the end of loop statement
+// CHECK-FIXES:      for (int i = 0; i < 10; ++i) {
+// CHECK-FIXES-NEXT: }
+
+void continue_outer_labeled_loop() {
+  outer:
+  for (int i = 0; i < 10; ++i) {
+    for (int j = 0; j < 10; ++j) {
+      continue outer;
+    }
+  }
+}
