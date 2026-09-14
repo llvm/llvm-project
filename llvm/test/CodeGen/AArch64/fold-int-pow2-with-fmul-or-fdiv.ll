@@ -209,7 +209,7 @@ define float @fmul_fly_pow_mul_min_pow2(i64 %cnt) nounwind {
 ; CHECK-NEXT:    lsl x8, x8, x0
 ; CHECK-NEXT:    cmp x8, #2, lsl #12 // =8192
 ; CHECK-NEXT:    csel x8, x8, x9, lo
-; CHECK-NEXT:    ucvtf s0, x8
+; CHECK-NEXT:    ucvtf s0, w8
 ; CHECK-NEXT:    fmul s0, s0, s1
 ; CHECK-NEXT:    ret
   %shl8 = shl nuw i64 8, %cnt
