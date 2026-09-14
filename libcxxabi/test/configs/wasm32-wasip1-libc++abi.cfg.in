@@ -1,0 +1,41 @@
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}', '--sysroot=@CMAKE_INSTALL_PREFIX@ @WASI_EH_FLAGS@'))
+
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{include} -I %{cxx-include} -I %{cxx-target-include} %{maybe-include-libunwind} -I %{libcxx}/test/support -I %{libcxx}/src -D_LIBCPP_ENABLE_CXX17_REMOVED_UNEXPECTED_FUNCTIONS'
+
+    # wasi-libc gates signals, process clocks and setjmp/longjmp behind these, and
+    # the runtime implements only the standardized exception handling encoding.
+    ' -D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_PROCESS_CLOCKS'
+    ' -mllvm -wasm-enable-sjlj -mllvm -wasm-use-legacy-eh=false'
+))
+config.substitutions.append(('%{link_flags}',
+    # wasi-libc keeps long double formatting out of libc to save size, so the
+    # archive providing it has to override libc's stubs.
+    '-nodefaultlibs -L %{lib} -lc++ -lc++abi -lc-printscan-long-double'
+    ' -lc -lwasi-emulated-signal -lwasi-emulated-process-clocks -lsetjmp'
+    ' -lclang_rt.builtins'
+
+    # wasm-ld defaults the stack to 64 KiB, far below what tests holding large
+    # objects on it need. Match the 8 MiB a hosted main thread gets.
+    ' -Wl,-z,stack-size=0x800000'
+))
+
+config.executor = (
+    '@LIBCXXABI_LIBCXX_PATH@/utils/wasm.py'
+    ' --runtime @WASI_RUNTIME@')
+config.substitutions.append(('%{exec}',
+    '%{executor}'
+    ' --execdir %{temp}'
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXXABI_LIBCXX_PATH@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)

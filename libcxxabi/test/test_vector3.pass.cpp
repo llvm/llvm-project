@@ -6,6 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Whether the stack unwinds before std::terminate runs for an exception with no
+// handler is implementation-defined. Wasm unwinds, so the cleanup this test
+// expects to be skipped runs.
+// XFAIL: LIBCXX-WASI-FIXME
+
 // UNSUPPORTED: no-exceptions
 
 #include "cxxabi.h"
