@@ -224,6 +224,11 @@ infrastructure are described first, followed by tool-specific sections.
   offered when an argument covers only part of a macro expansion, as it then
   has no source text of its own.
 
+- Improved {doc}`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability/convert-member-functions-to-static>` check by
+  fixing a crash when checking a const-qualified method declared with the
+  `lifetimebound` attribute.
+
 - Improved {doc}`readability-enum-initial-value
   <clang-tidy/checks/readability/enum-initial-value>` check by adding
   the {option}`AllowReferencedInitialValues` to support the

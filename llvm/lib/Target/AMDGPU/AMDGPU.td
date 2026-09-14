@@ -2443,7 +2443,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureSupportsXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
@@ -2484,6 +2483,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2514,6 +2514,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2548,6 +2549,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2567,6 +2569,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<

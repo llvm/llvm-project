@@ -759,6 +759,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+  stack pointer as it was on entry to the function, as the frame value the CRT
+  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  already did on AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
