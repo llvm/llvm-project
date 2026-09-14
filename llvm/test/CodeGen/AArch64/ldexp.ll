@@ -363,3 +363,198 @@ entry:
   %0 = tail call fast bfloat @llvm.ldexp.bf16.i32(bfloat %val, i32 %a)
   ret bfloat %0
 }
+
+define fp128 @testExpf128(fp128 %val, i32 %a) {
+; SVELINUX-LABEL: testExpf128:
+; SVELINUX:       // %bb.0: // %entry
+; SVELINUX-NEXT:    b ldexpl
+;
+; GISEL-LABEL: testExpf128:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    b ldexpl
+;
+; SVEWINDOWS-LABEL: testExpf128:
+; SVEWINDOWS:       .seh_proc testExpf128
+; SVEWINDOWS-NEXT:  // %bb.0: // %entry
+; SVEWINDOWS-NEXT:    sub sp, sp, #128
+; SVEWINDOWS-NEXT:    .seh_stackalloc 128
+; SVEWINDOWS-NEXT:    stp x19, x20, [sp, #80] // 16-byte Folded Spill
+; SVEWINDOWS-NEXT:    .seh_save_regp x19, 80
+; SVEWINDOWS-NEXT:    stp x21, x22, [sp, #96] // 16-byte Folded Spill
+; SVEWINDOWS-NEXT:    .seh_save_regp x21, 96
+; SVEWINDOWS-NEXT:    str x30, [sp, #112] // 8-byte Spill
+; SVEWINDOWS-NEXT:    .seh_save_reg x30, 112
+; SVEWINDOWS-NEXT:    .seh_endprologue
+; SVEWINDOWS-NEXT:    mov w8, #49149 // =0xbffd
+; SVEWINDOWS-NEXT:    mov w10, #-32766 // =0xffff8002
+; SVEWINDOWS-NEXT:    mov w9, #-16383 // =0xffffc001
+; SVEWINDOWS-NEXT:    cmp w0, w8
+; SVEWINDOWS-NEXT:    mov w19, w0
+; SVEWINDOWS-NEXT:    add w20, w0, w9
+; SVEWINDOWS-NEXT:    csel w8, w0, w8, lt
+; SVEWINDOWS-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; SVEWINDOWS-NEXT:    add w21, w8, w10
+; SVEWINDOWS-NEXT:    adrp x8, "__xmm@7ffe0000000000000000000000000000"
+; SVEWINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@7ffe0000000000000000000000000000"]
+; SVEWINDOWS-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; SVEWINDOWS-NEXT:    bl __multf3
+; SVEWINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; SVEWINDOWS-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; SVEWINDOWS-NEXT:    bl __multf3
+; SVEWINDOWS-NEXT:    mov w8, #32766 // =0x7ffe
+; SVEWINDOWS-NEXT:    cmp w19, w8
+; SVEWINDOWS-NEXT:    csel w20, w21, w20, hi
+; SVEWINDOWS-NEXT:    b.ls .LBB9_2
+; SVEWINDOWS-NEXT:  // %bb.1: // %entry
+; SVEWINDOWS-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; SVEWINDOWS-NEXT:  .LBB9_2: // %entry
+; SVEWINDOWS-NEXT:    mov w8, #-48920 // =0xffff40e8
+; SVEWINDOWS-NEXT:    mov w10, #32538 // =0x7f1a
+; SVEWINDOWS-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
+; SVEWINDOWS-NEXT:    cmp w19, w8
+; SVEWINDOWS-NEXT:    mov w9, #16269 // =0x3f8d
+; SVEWINDOWS-NEXT:    csel w8, w19, w8, gt
+; SVEWINDOWS-NEXT:    add w21, w19, w9
+; SVEWINDOWS-NEXT:    add w22, w8, w10
+; SVEWINDOWS-NEXT:    adrp x8, "__xmm@00720000000000000000000000000000"
+; SVEWINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@00720000000000000000000000000000"]
+; SVEWINDOWS-NEXT:    str q1, [sp] // 16-byte Spill
+; SVEWINDOWS-NEXT:    bl __multf3
+; SVEWINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; SVEWINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; SVEWINDOWS-NEXT:    bl __multf3
+; SVEWINDOWS-NEXT:    mov w8, #-32651 // =0xffff8075
+; SVEWINDOWS-NEXT:    cmp w19, w8
+; SVEWINDOWS-NEXT:    csel w8, w22, w21, lo
+; SVEWINDOWS-NEXT:    b.hs .LBB9_4
+; SVEWINDOWS-NEXT:  // %bb.3: // %entry
+; SVEWINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; SVEWINDOWS-NEXT:  .LBB9_4: // %entry
+; SVEWINDOWS-NEXT:    mov w9, #-16382 // =0xffffc002
+; SVEWINDOWS-NEXT:    cmp w19, w9
+; SVEWINDOWS-NEXT:    b.ge .LBB9_6
+; SVEWINDOWS-NEXT:  // %bb.5: // %entry
+; SVEWINDOWS-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; SVEWINDOWS-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; SVEWINDOWS-NEXT:  .LBB9_6: // %entry
+; SVEWINDOWS-NEXT:    csel w8, w8, w19, lt
+; SVEWINDOWS-NEXT:    cmp w19, #4, lsl #12 // =16384
+; SVEWINDOWS-NEXT:    b.lt .LBB9_8
+; SVEWINDOWS-NEXT:  // %bb.7: // %entry
+; SVEWINDOWS-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
+; SVEWINDOWS-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; SVEWINDOWS-NEXT:  .LBB9_8: // %entry
+; SVEWINDOWS-NEXT:    csel w8, w20, w8, ge
+; SVEWINDOWS-NEXT:    mov w9, #16383 // =0x3fff
+; SVEWINDOWS-NEXT:    add w8, w8, w9
+; SVEWINDOWS-NEXT:    lsl x8, x8, #48
+; SVEWINDOWS-NEXT:    stp xzr, x8, [sp, #64]
+; SVEWINDOWS-NEXT:    ldp q0, q1, [sp, #48] // 16-byte Folded Reload
+; SVEWINDOWS-NEXT:    .seh_startepilogue
+; SVEWINDOWS-NEXT:    ldr x30, [sp, #112] // 8-byte Reload
+; SVEWINDOWS-NEXT:    .seh_save_reg x30, 112
+; SVEWINDOWS-NEXT:    ldp x21, x22, [sp, #96] // 16-byte Folded Reload
+; SVEWINDOWS-NEXT:    .seh_save_regp x21, 96
+; SVEWINDOWS-NEXT:    ldp x19, x20, [sp, #80] // 16-byte Folded Reload
+; SVEWINDOWS-NEXT:    .seh_save_regp x19, 80
+; SVEWINDOWS-NEXT:    add sp, sp, #128
+; SVEWINDOWS-NEXT:    .seh_stackalloc 128
+; SVEWINDOWS-NEXT:    .seh_endepilogue
+; SVEWINDOWS-NEXT:    b __multf3
+; SVEWINDOWS-NEXT:    .seh_endfunclet
+; SVEWINDOWS-NEXT:    .seh_endproc
+;
+; WINDOWS-LABEL: testExpf128:
+; WINDOWS:       .seh_proc testExpf128
+; WINDOWS-NEXT:  // %bb.0: // %entry
+; WINDOWS-NEXT:    sub sp, sp, #128
+; WINDOWS-NEXT:    .seh_stackalloc 128
+; WINDOWS-NEXT:    stp x19, x20, [sp, #80] // 16-byte Folded Spill
+; WINDOWS-NEXT:    .seh_save_regp x19, 80
+; WINDOWS-NEXT:    stp x21, x22, [sp, #96] // 16-byte Folded Spill
+; WINDOWS-NEXT:    .seh_save_regp x21, 96
+; WINDOWS-NEXT:    str x30, [sp, #112] // 8-byte Spill
+; WINDOWS-NEXT:    .seh_save_reg x30, 112
+; WINDOWS-NEXT:    .seh_endprologue
+; WINDOWS-NEXT:    mov w8, #49149 // =0xbffd
+; WINDOWS-NEXT:    mov w10, #-32766 // =0xffff8002
+; WINDOWS-NEXT:    mov w9, #-16383 // =0xffffc001
+; WINDOWS-NEXT:    cmp w0, w8
+; WINDOWS-NEXT:    mov w19, w0
+; WINDOWS-NEXT:    add w20, w0, w9
+; WINDOWS-NEXT:    csel w8, w0, w8, lt
+; WINDOWS-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; WINDOWS-NEXT:    add w21, w8, w10
+; WINDOWS-NEXT:    adrp x8, "__xmm@7ffe0000000000000000000000000000"
+; WINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@7ffe0000000000000000000000000000"]
+; WINDOWS-NEXT:    str q1, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    mov w8, #32766 // =0x7ffe
+; WINDOWS-NEXT:    cmp w19, w8
+; WINDOWS-NEXT:    csel w20, w21, w20, hi
+; WINDOWS-NEXT:    b.ls .LBB9_2
+; WINDOWS-NEXT:  // %bb.1: // %entry
+; WINDOWS-NEXT:    str q0, [sp, #32] // 16-byte Spill
+; WINDOWS-NEXT:  .LBB9_2: // %entry
+; WINDOWS-NEXT:    mov w8, #-48920 // =0xffff40e8
+; WINDOWS-NEXT:    mov w10, #32538 // =0x7f1a
+; WINDOWS-NEXT:    ldr q0, [sp, #48] // 16-byte Reload
+; WINDOWS-NEXT:    cmp w19, w8
+; WINDOWS-NEXT:    mov w9, #16269 // =0x3f8d
+; WINDOWS-NEXT:    csel w8, w19, w8, gt
+; WINDOWS-NEXT:    add w21, w19, w9
+; WINDOWS-NEXT:    add w22, w8, w10
+; WINDOWS-NEXT:    adrp x8, "__xmm@00720000000000000000000000000000"
+; WINDOWS-NEXT:    ldr q1, [x8, :lo12:"__xmm@00720000000000000000000000000000"]
+; WINDOWS-NEXT:    str q1, [sp] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    ldr q1, [sp] // 16-byte Reload
+; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:    bl __multf3
+; WINDOWS-NEXT:    mov w8, #-32651 // =0xffff8075
+; WINDOWS-NEXT:    cmp w19, w8
+; WINDOWS-NEXT:    csel w8, w22, w21, lo
+; WINDOWS-NEXT:    b.hs .LBB9_4
+; WINDOWS-NEXT:  // %bb.3: // %entry
+; WINDOWS-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; WINDOWS-NEXT:  .LBB9_4: // %entry
+; WINDOWS-NEXT:    mov w9, #-16382 // =0xffffc002
+; WINDOWS-NEXT:    cmp w19, w9
+; WINDOWS-NEXT:    b.ge .LBB9_6
+; WINDOWS-NEXT:  // %bb.5: // %entry
+; WINDOWS-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
+; WINDOWS-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; WINDOWS-NEXT:  .LBB9_6: // %entry
+; WINDOWS-NEXT:    csel w8, w8, w19, lt
+; WINDOWS-NEXT:    cmp w19, #4, lsl #12 // =16384
+; WINDOWS-NEXT:    b.lt .LBB9_8
+; WINDOWS-NEXT:  // %bb.7: // %entry
+; WINDOWS-NEXT:    ldr q0, [sp, #32] // 16-byte Reload
+; WINDOWS-NEXT:    str q0, [sp, #48] // 16-byte Spill
+; WINDOWS-NEXT:  .LBB9_8: // %entry
+; WINDOWS-NEXT:    csel w8, w20, w8, ge
+; WINDOWS-NEXT:    mov w9, #16383 // =0x3fff
+; WINDOWS-NEXT:    add w8, w8, w9
+; WINDOWS-NEXT:    lsl x8, x8, #48
+; WINDOWS-NEXT:    stp xzr, x8, [sp, #64]
+; WINDOWS-NEXT:    ldp q0, q1, [sp, #48] // 16-byte Folded Reload
+; WINDOWS-NEXT:    .seh_startepilogue
+; WINDOWS-NEXT:    ldr x30, [sp, #112] // 8-byte Reload
+; WINDOWS-NEXT:    .seh_save_reg x30, 112
+; WINDOWS-NEXT:    ldp x21, x22, [sp, #96] // 16-byte Folded Reload
+; WINDOWS-NEXT:    .seh_save_regp x21, 96
+; WINDOWS-NEXT:    ldp x19, x20, [sp, #80] // 16-byte Folded Reload
+; WINDOWS-NEXT:    .seh_save_regp x19, 80
+; WINDOWS-NEXT:    add sp, sp, #128
+; WINDOWS-NEXT:    .seh_stackalloc 128
+; WINDOWS-NEXT:    .seh_endepilogue
+; WINDOWS-NEXT:    b __multf3
+; WINDOWS-NEXT:    .seh_endfunclet
+; WINDOWS-NEXT:    .seh_endproc
+entry:
+  %ldexp = call fp128 @llvm.ldexp.f128.i32(fp128 %val, i32 %a)
+  ret fp128 %ldexp
+}

@@ -28,6 +28,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ExpandIRInsts.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -562,6 +563,220 @@ static bool expandFRem(BinaryOperator &I, std::optional<SimplifyQuery> &SQ) {
   I.eraseFromParent();
 
   return true;
+}
+
+static void expandLdexp(IntrinsicInst *II) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *II << '\n');
+
+  IRBuilder<> B(II);
+  B.SetCurrentDebugLocation(II->getDebugLoc());
+  LLVMContext &Ctx = II->getContext();
+
+  Type *VT = II->getType();
+  Value *X = II->getArgOperand(0);
+  Value *N = II->getArgOperand(1);
+  Type *ExpVT = N->getType();
+  Type *AsIntVT = B.getIntNTy(VT->getScalarSizeInBits());
+
+  const fltSemantics &FltSem = VT->getFltSemantics();
+
+  const APFloat::ExponentType MaxExpVal = APFloat::semanticsMaxExponent(FltSem);
+  const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
+  const int Precision = APFloat::semanticsPrecision(FltSem);
+
+  Constant *MaxExp = ConstantInt::getSigned(ExpVT, MaxExpVal);
+  Constant *MinExp = ConstantInt::getSigned(ExpVT, MinExpVal);
+
+  Constant *DoubleMaxExp = ConstantInt::getSigned(ExpVT, 2 * MaxExpVal);
+
+  const APFloat One = APFloat::getOne(FltSem);
+  APFloat ScaleUpK = scalbn(One, MaxExpVal, APFloat::rmNearestTiesToEven);
+
+  // Offset by precision to avoid denormal range.
+  APFloat ScaleDownK =
+      scalbn(One, MinExpVal + Precision, APFloat::rmNearestTiesToEven);
+
+  // TODO: Should really introduce control flow and use a block for the >
+  // MaxExp, < MinExp cases
+
+  // First, handle exponents Exp > MaxExp and scale down.
+  Value *NGtMaxExp = B.CreateICmpSGT(N, MaxExp);
+
+  Value *DecN0 = B.CreateNSWSub(N, MaxExp);
+  Constant *ClampMaxVal = ConstantInt::get(ExpVT, 3 * MaxExpVal);
+  Value *ClampN_Big = B.CreateBinaryIntrinsic(Intrinsic::smin, N, ClampMaxVal);
+  Value *DecN1 = B.CreateNSWSub(ClampN_Big, DoubleMaxExp);
+
+  Value *ScaleUpTwice = B.CreateICmpUGT(N, DoubleMaxExp);
+
+  Constant *ScaleUpVal = ConstantFP::get(Ctx, ScaleUpK);
+  Value *ScaleUp0 = B.CreateFMul(X, ScaleUpVal);
+  Value *ScaleUp1 = B.CreateFMul(ScaleUp0, ScaleUpVal);
+
+  Value *SelectN_Big = B.CreateSelect(ScaleUpTwice, DecN1, DecN0);
+  Value *SelectX_Big = B.CreateSelect(ScaleUpTwice, ScaleUp1, ScaleUp0);
+
+  // Now handle exponents Exp < MinExp
+  Value *NLtMinExp = B.CreateICmpSLT(N, MinExp);
+
+  Constant *Increment0 = ConstantInt::get(ExpVT, -(MinExpVal + Precision));
+  Constant *Increment1 = ConstantInt::get(ExpVT, -2 * (MinExpVal + Precision));
+
+  Value *IncN0 =
+      B.CreateAdd(N, Increment0, "", /*HasNUW=*/true, /*HasNSW=*/true);
+
+  Constant *ClampMinVal =
+      ConstantInt::getSigned(ExpVT, 3 * MinExpVal + 2 * Precision);
+  Value *ClampN_Small =
+      B.CreateBinaryIntrinsic(Intrinsic::smax, N, ClampMinVal);
+  Value *IncN1 = B.CreateNSWAdd(ClampN_Small, Increment1);
+
+  Constant *ScaleDownVal = ConstantFP::get(Ctx, ScaleDownK);
+  Value *ScaleDown0 = B.CreateFMul(X, ScaleDownVal);
+  Value *ScaleDown1 = B.CreateFMul(ScaleDown0, ScaleDownVal);
+
+  Value *ScaleDownTwice = B.CreateICmpULT(
+      N, ConstantInt::getSigned(ExpVT, 2 * MinExpVal + Precision));
+
+  Value *SelectN_Small = B.CreateSelect(ScaleDownTwice, IncN1, IncN0);
+  Value *SelectX_Small = B.CreateSelect(ScaleDownTwice, ScaleDown1, ScaleDown0);
+
+  // Now combine the two out of range exponent handling cases with the base
+  // case.
+  Value *NewX = B.CreateSelect(NGtMaxExp, SelectX_Big,
+                               B.CreateSelect(NLtMinExp, SelectX_Small, X));
+
+  Value *NewN = B.CreateSelect(NGtMaxExp, SelectN_Big,
+                               B.CreateSelect(NLtMinExp, SelectN_Small, N));
+
+  Value *BiasedN = B.CreateNSWAdd(NewN, MaxExp);
+
+  Constant *ExponentShiftAmt = ConstantInt::get(AsIntVT, Precision - 1);
+  Value *CastExpToValTy = B.CreateZExtOrTrunc(BiasedN, AsIntVT);
+
+  Value *AsInt = B.CreateShl(CastExpToValTy, ExponentShiftAmt, "",
+                             /*HasNUW=*/true, /*HasNSW=*/true);
+  Value *AsFP = B.CreateBitCast(AsInt, VT);
+  Value *Result = B.CreateFMul(NewX, AsFP);
+
+  II->replaceAllUsesWith(Result);
+  if (auto *RI = dyn_cast<Instruction>(Result))
+    RI->takeName(II);
+  II->eraseFromParent();
+}
+
+static void expandFrexp(IntrinsicInst *II) {
+  LLVM_DEBUG(dbgs() << "Expanding instruction: " << *II << '\n');
+
+  IRBuilder<> B(II);
+  B.SetCurrentDebugLocation(II->getDebugLoc());
+  LLVMContext &Ctx = II->getContext();
+
+  Value *Val = II->getArgOperand(0);
+  auto *RetTy = cast<StructType>(II->getType());
+  Type *VT = Val->getType();
+  Type *ExpVT = RetTy->getElementType(1);
+  Type *AsIntVT = B.getIntNTy(VT->getScalarSizeInBits());
+
+  const fltSemantics &FltSem = VT->getFltSemantics();
+  const APFloat::ExponentType MinExpVal = APFloat::semanticsMinExponent(FltSem);
+  const unsigned Precision = APFloat::semanticsPrecision(FltSem);
+  const unsigned BitSize = VT->getScalarSizeInBits();
+
+  // TODO: Could introduce control flow and skip over the denormal handling.
+
+  // scale_up = fmul value, scalbn(1.0, precision + 1)
+  // extracted_exp = (bitcast value to uint) >> precision - 1
+  // biased_exp = extracted_exp + min_exp
+  // extracted_fract = (bitcast value to uint) & (fract_mask | sign_mask)
+  //
+  // is_denormal = val < smallest_normalized
+  // computed_fract = is_denormal ? scale_up : extracted_fract
+  // computed_exp = is_denormal ? biased_exp + (-precision - 1) : biased_exp
+  //
+  // result_0 =  (!isfinite(val) || iszero(val)) ? val : computed_fract
+  // result_1 =  (!isfinite(val) || iszero(val)) ? 0 : computed_exp
+
+  Constant *NegSmallestNormalizedInt = ConstantInt::get(
+      AsIntVT, APFloat::getSmallestNormalized(FltSem, true).bitcastToAPInt());
+
+  Constant *SmallestNormalizedInt = ConstantInt::get(
+      AsIntVT, APFloat::getSmallestNormalized(FltSem, false).bitcastToAPInt());
+
+  // Masks out the exponent bits.
+  Constant *ExpMask =
+      ConstantInt::get(AsIntVT, APFloat::getInf(FltSem).bitcastToAPInt());
+
+  // Mask out the exponent part of the value.
+  //
+  // e.g, for f32 FractSignMaskVal = 0x807fffff
+  APInt FractSignMaskVal = APInt::getBitsSet(BitSize, 0, Precision - 1);
+  FractSignMaskVal.setBit(BitSize - 1); // Set the sign bit
+
+  APInt SignMaskVal = APInt::getSignedMaxValue(BitSize);
+  Constant *SignMask = ConstantInt::get(AsIntVT, SignMaskVal);
+
+  Constant *FractSignMask = ConstantInt::get(AsIntVT, FractSignMaskVal);
+
+  const APFloat One(FltSem, "1.0");
+  // Scale a possible denormal input.
+  // e.g., for f64, 0x1p+54
+  APFloat ScaleUpKVal =
+      scalbn(One, Precision + 1, APFloat::rmNearestTiesToEven);
+
+  Constant *ScaleUpK = ConstantFP::get(Ctx, ScaleUpKVal);
+  Value *ScaleUp = B.CreateFMul(Val, ScaleUpK);
+
+  Value *AsInt = B.CreateBitCast(Val, AsIntVT);
+
+  Value *Abs = B.CreateAnd(AsInt, SignMask);
+
+  Value *AddNegSmallestNormal = B.CreateAdd(Abs, NegSmallestNormalizedInt);
+  Value *DenormOrZero =
+      B.CreateICmpULE(AddNegSmallestNormal, NegSmallestNormalizedInt);
+
+  Value *IsDenormal = B.CreateICmpULT(Abs, SmallestNormalizedInt);
+
+  Constant *MinExp = ConstantInt::getSigned(ExpVT, MinExpVal);
+  Constant *Zero = ConstantInt::get(ExpVT, 0);
+
+  Value *ScaledAsInt = B.CreateBitCast(ScaleUp, AsIntVT);
+  Value *ScaledSelect = B.CreateSelect(IsDenormal, ScaledAsInt, AsInt);
+
+  Value *ExpMaskScaled = B.CreateAnd(ScaledAsInt, ExpMask);
+
+  Value *ScaledValue = B.CreateSelect(IsDenormal, ExpMaskScaled, Abs);
+
+  // Extract the exponent bits.
+  Constant *ExponentShiftAmt = ConstantInt::get(AsIntVT, Precision - 1);
+  Value *ShiftedExp = B.CreateLShr(ScaledValue, ExponentShiftAmt);
+  Value *Exp = B.CreateSExtOrTrunc(ShiftedExp, ExpVT);
+
+  Value *NormalBiasedExp = B.CreateAdd(Exp, MinExp);
+  Constant *DenormalOffset = ConstantInt::get(ExpVT, -Precision - 1);
+  Value *DenormalExpBias = B.CreateSelect(IsDenormal, DenormalOffset, Zero);
+
+  Value *MaskedFractAsInt = B.CreateAnd(ScaledSelect, FractSignMask);
+  const APFloat Half(FltSem, "0.5");
+  Constant *FPHalf = ConstantInt::get(AsIntVT, Half.bitcastToAPInt());
+  Value *Or = B.CreateOr(MaskedFractAsInt, FPHalf);
+  Value *MaskedFract = B.CreateBitCast(Or, VT);
+
+  Value *ComputedExp = B.CreateAdd(NormalBiasedExp, DenormalExpBias);
+
+  Value *Result0 = B.CreateSelect(DenormOrZero, Val, MaskedFract);
+
+  Value *Result1 = B.CreateSelect(DenormOrZero, Zero, ComputedExp);
+
+  // Combine the two results into the { fp, int } aggregate the intrinsic
+  // returns (the SelectionDAG expansion returns a merge_values instead).
+  Value *Res = PoisonValue::get(RetTy);
+  Res = B.CreateInsertValue(Res, Result0, {0});
+  Res = B.CreateInsertValue(Res, Result1, {1});
+
+  II->replaceAllUsesWith(Res);
+  Res->takeName(II);
+  II->eraseFromParent();
 }
 // clang-format off: preserve formatting of the following example
 
@@ -1293,7 +1508,22 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
       MaxLegalDivRemBitWidth >= IntegerType::MAX_INT_BITS;
   bool DisableFrem = !FRemExpander::shouldExpandAnyFremType(TLI, Libcalls);
 
-  if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem)
+  static constexpr std::array ExpandableTypes{MVT::f32, MVT::f64, MVT::f128};
+  auto NeedsExpand = [&](EVT VT, unsigned ISDOp, RTLIB::Libcall LC) {
+    // For f16/bf16 LC is UNKNOWN_LIBCALL, they are handled via promotion.
+    return LC != RTLIB::UNKNOWN_LIBCALL &&
+           TLI.getOperationAction(ISDOp, VT) == TargetLowering::Expand &&
+           Libcalls.getLibcallImpl(LC) == RTLIB::Unsupported;
+  };
+  bool DisableLdexp = none_of(ExpandableTypes, [&](MVT VT) {
+    return NeedsExpand(VT, ISD::FLDEXP, RTLIB::getLDEXP(VT));
+  });
+  bool DisableFrexp = none_of(ExpandableTypes, [&](MVT VT) {
+    return NeedsExpand(VT, ISD::FFREXP, RTLIB::getFREXP(VT));
+  });
+
+  if (DisableExpandLargeFp && DisableFrem && DisableExpandLargeDivRem &&
+      DisableLdexp && DisableFrexp)
     return false;
 
   auto ShouldHandleInst = [&](Instruction &I) {
@@ -1329,13 +1559,32 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
                  MaxLegalDivRemBitWidth;
     case Instruction::Call: {
       auto *II = dyn_cast<IntrinsicInst>(&I);
-      if (II && (II->getIntrinsicID() == Intrinsic::fptoui_sat ||
-                 II->getIntrinsicID() == Intrinsic::fptosi_sat)) {
+      if (!II)
+        return false;
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
         return !DisableExpandLargeFp &&
                cast<IntegerType>(Ty->getScalarType())->getIntegerBitWidth() >
                    MaxLegalFpConvertBitWidth;
+      case Intrinsic::ldexp: {
+        // the IEEE check skips fp80/ppcf128/vectors.
+        Type *FpTy = II->getArgOperand(0)->getType();
+        if (DisableLdexp || !FpTy->isIEEELikeFPTy())
+          return false;
+        EVT VT = EVT::getEVT(FpTy);
+        return NeedsExpand(VT, ISD::FLDEXP, RTLIB::getLDEXP(VT));
       }
-      return false;
+      case Intrinsic::frexp: {
+        Type *FpTy = II->getArgOperand(0)->getType();
+        if (DisableFrexp || !FpTy->isIEEELikeFPTy())
+          return false;
+        EVT VT = EVT::getEVT(FpTy);
+        return NeedsExpand(VT, ISD::FFREXP, RTLIB::getFREXP(VT));
+      }
+      default:
+        return false;
+      }
     }
     }
 
@@ -1403,10 +1652,21 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     }
     case Instruction::Call: {
       auto *II = cast<IntrinsicInst>(I);
-      assert(II->getIntrinsicID() == Intrinsic::fptoui_sat ||
-             II->getIntrinsicID() == Intrinsic::fptosi_sat);
-      expandFPToI(I, /*IsSaturating=*/true,
-                  /*IsSigned=*/II->getIntrinsicID() == Intrinsic::fptosi_sat);
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::ldexp:
+        expandLdexp(II);
+        break;
+      case Intrinsic::frexp:
+        expandFrexp(II);
+        break;
+      case Intrinsic::fptoui_sat:
+      case Intrinsic::fptosi_sat:
+        expandFPToI(I, /*IsSaturating=*/true,
+                    /*IsSigned=*/II->getIntrinsicID() == Intrinsic::fptosi_sat);
+        break;
+      default:
+        llvm_unreachable("unexpected intrinsic in ExpandIRInsts worklist");
+      }
       break;
     }
     }
