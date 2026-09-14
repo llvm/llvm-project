@@ -255,6 +255,8 @@ void RewriterBase::eraseOperands(Operation *op, const BitVector &eraseIndices) {
     if (!op->hasTrait<OpTrait::AttrSizedOperandSegments>())
       return;
 
+    // TODO: Add an interface to update the operand segment-size property
+    // directly, without converting it to and from an attribute.
     auto attrName = StringAttr::get(
         op->getContext(),
         OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
