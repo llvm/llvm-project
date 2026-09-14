@@ -6,6 +6,7 @@ add_flang_library(FIRCodeGenDialect
   CUFAttrsIncGen
 
   LINK_LIBS
+  CUFAttrs
   FIRDialect
 
   LINK_COMPONENTS
