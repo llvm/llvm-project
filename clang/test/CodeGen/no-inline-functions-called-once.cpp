@@ -3,7 +3,7 @@
 
 // INLINE-LABEL: define{{.*}}@main
 // INLINE-NOT: call{{.*}}@_ZL12bad_functionv
-// INLINE: ret void
+// INLINE: ret i32 0
 
 // NOINLINE-LABEL: define{{.*}}@_ZL4testv
 // NOINLINE: call{{.*}}@_ZL12bad_functionv
