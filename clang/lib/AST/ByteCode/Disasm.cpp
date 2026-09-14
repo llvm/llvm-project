@@ -348,11 +348,10 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     Bytes += DummyVariables.getMemorySize();
 
     // All Records.
-    for (const Record *R : Records.values()) {
-      Bytes += sizeof(Record) + R->BaseMap.getMemorySize();
-      Bytes += R->Fields.capacity_in_bytes() + R->Bases.capacity_in_bytes() +
-               R->VirtualBases.capacity_in_bytes();
-    }
+    // They are allocated using the program allocator, so only get the size from
+    // the BaseMap.
+    for (const Record *R : Records.values())
+      Bytes += R->BaseMap.getMemorySize();
 
     // Globals are allocated via the allocator, so already counted.
 
