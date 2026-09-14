@@ -12,7 +12,7 @@ add_custom_command(
   DEPENDS ${SWIG_INTERFACES}
   DEPENDS ${SWIG_HEADERS}
   DEPENDS lldb-sbapi-dwarf-enums
-  COMMAND ${SWIG_EXECUTABLE}
+  COMMAND ${CMAKE_COMMAND} -E env "SWIG_LIB=${SWIG_DIR}" ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
       -doxygen
       -I${CMAKE_CURRENT_SOURCE_DIR}
