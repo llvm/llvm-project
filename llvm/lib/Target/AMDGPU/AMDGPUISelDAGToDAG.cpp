@@ -4817,22 +4817,21 @@ bool AMDGPUDAGToDAGISel::SelectInlineAsmMemoryOperand(
     OutOps.push_back(Op);
     return false;
   case InlineAsm::ConstraintCode::RF: {
-    // flat_load/flat_store require the address in a VGPR. If the operand is
-    // non-divergent it will be SGPR-allocated, so copy it to the right VGPR
-    // class before handing it to the inline asm.
-    if (!Op.getNode()->isDivergent()) {
-      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
-      MVT VT = Op.getSimpleValueType();
-      const TargetRegisterClass *VRC =
-          TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
-      if (VRC) {
-        SDLoc DL(Op);
-        SDValue RC = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
-        SDNode *Copy =
-            CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RC});
-        OutOps.push_back(SDValue(Copy, 0));
-        return false;
-      }
+    // flat_load/flat_store require the address in a VGPR. Force a copy to the
+    // appropriate VGPR class if the operand is not already in one.
+    const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+    MVT VT = Op.getSimpleValueType();
+    const TargetRegisterClass *VRC =
+        TRI->getVGPRClassForBitWidth(VT.getSizeInBits());
+    const TargetRegisterClass *RC =
+        getOperandRegClass(Op.getNode(), Op.getResNo());
+    if (VRC && (!RC || !TRI->isVGPRClass(RC))) {
+      SDLoc DL(Op);
+      SDValue RCVal = CurDAG->getTargetConstant(VRC->getID(), DL, MVT::i32);
+      SDNode *Copy =
+          CurDAG->getMachineNode(AMDGPU::COPY_TO_REGCLASS, DL, VT, {Op, RCVal});
+      OutOps.push_back(SDValue(Copy, 0));
+      return false;
     }
     OutOps.push_back(Op);
     return false;

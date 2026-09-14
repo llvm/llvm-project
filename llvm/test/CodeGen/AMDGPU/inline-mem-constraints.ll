@@ -494,6 +494,23 @@ define amdgpu_kernel void @flat_load_RF_sgpr_addr(ptr %in) {
   ret void
 }
 
+; Arguments passed as inreg may be in SGPR, in which case the RF constraint
+; must insert a SGPR->VGPR copy for the address.
+define void @flat_load_RF_inreg(ptr inreg %in) {
+; VI-LABEL: flat_load_RF_inreg:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_mov_b32_e32 v0, s16
+; VI-NEXT:    v_mov_b32_e32 v1, s17
+; VI-NEXT:    ;;#ASMSTART
+; VI-NEXT:    flat_load_dword v0, v[0:1]
+; VI-NEXT:    ;;#ASMEND
+; VI-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %a = call i32 asm sideeffect "flat_load_dword $0, $1", "=v,*^RF"(ptr elementtype(i32) %in)
+  ret void
+}
+
 define amdgpu_kernel void @flat_load_RF_sgpr_addr_as1(ptr addrspace(1) %in) {
 ; VI-LABEL: flat_load_RF_sgpr_addr_as1:
 ; VI:       ; %bb.0:
