@@ -7,7 +7,7 @@ entry:
   %arrayidx.i = getelementptr inbounds float, ptr %a, i64 5
   store float %0, ptr %arrayidx.i, align 4, !alias.scope !4
 
-; CHECK: NoAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !3
+; CHECK: NoAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}
   ret void
 }
 
@@ -20,9 +20,9 @@ entry:
   %arrayidx.i2 = getelementptr inbounds float, ptr %a, i64 15
   store float %0, ptr %arrayidx.i2, align 4, !alias.scope !5
 
-; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !4
-; CHECK: NoAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx.i2, align 4, !alias.scope !5
-; CHECK: NoAlias:   store float %0, ptr %arrayidx.i2, align 4, !alias.scope !5 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !4
+; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}
+; CHECK: NoAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i2, align 4, !alias.scope !{{[0-9]+}}
+; CHECK: NoAlias:   store float %0, ptr %arrayidx.i2, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}
   ret void
 }
 
@@ -33,7 +33,7 @@ entry:
   %arrayidx.i = getelementptr inbounds float, ptr %a, i64 5
   store float %0, ptr %arrayidx.i, align 4, !alias.scope !10
 
-; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !3
+; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}
   ret void
 }
 
@@ -44,7 +44,7 @@ entry:
   %arrayidx.i = getelementptr inbounds float, ptr %a, i64 5
   store float %0, ptr %arrayidx.i, align 4, !alias.scope !13
 
-; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !0 <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !3
+; CHECK: MayAlias:   %0 = load float, ptr %c, align 4, !alias.scope !{{[0-9]+}} <->   store float %0, ptr %arrayidx.i, align 4, !alias.scope !{{[0-9]+}}
   ret void
 }
 
