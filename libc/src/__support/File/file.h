@@ -92,6 +92,19 @@ public:
     EXCLUSIVE = 0x100,
   };
 
+  // This is a convenience RAII class to lock and unlock file objects.
+  class FileLock {
+    File *file;
+
+  public:
+    explicit FileLock(File *f) : file(f) { file->lock(); }
+
+    ~FileLock() { file->unlock(); }
+
+    FileLock(const FileLock &) = delete;
+    FileLock(FileLock &&) = delete;
+  };
+
 private:
   enum class FileOp : uint8_t { NONE, READ, WRITE, SEEK };
 
@@ -139,19 +152,6 @@ private:
 
   Orientation orientation;
   internal::mbstate mbstate;
-
-  // This is a convenience RAII class to lock and unlock file objects.
-  class FileLock {
-    File *file;
-
-  public:
-    explicit FileLock(File *f) : file(f) { file->lock(); }
-
-    ~FileLock() { file->unlock(); }
-
-    FileLock(const FileLock &) = delete;
-    FileLock(FileLock &&) = delete;
-  };
 
 protected:
   constexpr bool write_allowed() const {

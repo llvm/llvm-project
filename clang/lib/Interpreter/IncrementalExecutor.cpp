@@ -35,7 +35,7 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
-#include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SharedMemoryMapperSPSCI.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/ExecutionEngine/Orc/SimpleRemoteEPC.h"
 
@@ -117,18 +117,15 @@ createSharedMemoryManager(llvm::orc::ExecutorProcessControl &EPC,
   llvm::orc::SharedMemoryMapper::SymbolAddrs SAs;
   if (auto Err = EPC.getBootstrapSymbols(
           {{SAs.Instance,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceInstanceName},
+            llvm::orc::rt::sps_ci::SharedMemoryMapperInstanceName},
            {SAs.Reserve,
-            llvm::orc::rt::ExecutorSharedMemoryMapperServiceReserveWrapperName},
+            llvm::orc::rt::sps_ci::SharedMemoryMapperReserve::Name},
            {SAs.Initialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceInitializeWrapperName},
+            llvm::orc::rt::sps_ci::SharedMemoryMapperInitialize::Name},
            {SAs.Deinitialize,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceDeinitializeWrapperName},
+            llvm::orc::rt::sps_ci::SharedMemoryMapperDeinitialize::Name},
            {SAs.Release,
-            llvm::orc::rt::
-                ExecutorSharedMemoryMapperServiceReleaseWrapperName}}))
+            llvm::orc::rt::sps_ci::SharedMemoryMapperRelease::Name}}))
     return std::move(Err);
 
   size_t SlabSize;
