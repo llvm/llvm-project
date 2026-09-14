@@ -11,10 +11,10 @@
 //===----------------------------------------------------------------------===//
 //
 // The policy controlling where array allocations should live: on the stack
-// (fir.alloca) or on the heap (fir.allocmem). Lowering records it on the module,
-// and on the functions that need a narrower one, so that policy-aware passes can
-// make consistent decisions and dumped IR replays with the policy it was
-// compiled with.
+// (fir.alloca) or on the heap (fir.allocmem). Lowering records it on the
+// module, and on the functions that need a narrower one, so that policy-aware
+// passes can make consistent decisions and dumped IR replays with the policy it
+// was compiled with.
 //
 //===----------------------------------------------------------------------===//
 
