@@ -83,7 +83,7 @@ void CheckerManager::runCheckersOnASTDecl(const Decl *D, AnalysisManager& mgr,
 
 void CheckerManager::runCheckersOnASTBody(const Decl *D, AnalysisManager& mgr,
                                           BugReporter &BR) {
-  assert(D && D->hasBody());
+  assert(D && D->getBody());
 
   for (const auto &BodyChecker : BodyCheckers)
     BodyChecker(D, mgr, BR);
