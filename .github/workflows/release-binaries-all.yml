@@ -54,7 +54,6 @@ on:
       - '.github/workflows/release-binaries-save-stage/*'
       - 'clang/cmake/caches/Release.cmake'
       - 'llvm/utils/release/build_llvm_release.bat'
-      - 'llvm/utils/release/build-libxml2.sh'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'dispatch' }}

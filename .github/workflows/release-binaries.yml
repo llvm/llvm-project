@@ -263,7 +263,32 @@ jobs:
       shell: bash
       run: |
         libxml2_prefix="$BUILD_PREFIX/libxml2-install"
-        ./llvm/utils/release/build-libxml2.sh "$BUILD_PREFIX/libxml2-build" "$libxml2_prefix"
+        libxml2_build_dir="$BUILD_PREFIX/libxml2-build"
+        libxml2_version=2.15.1
+        libxml2_archive="libxml2-$libxml2_version.tar.xz"
+        libxml2_checksum=c008bac08fd5c7b4a87f7b8a71f283fa581d80d80ff8d2efd3b26224c39bc54c
+
+        mkdir -p "$libxml2_build_dir" "$libxml2_prefix"
+        cd "$libxml2_build_dir" || exit
+        curl --fail --location --retry 3 \
+          "https://download.gnome.org/sources/libxml2/2.15/$libxml2_archive" -o "$libxml2_archive"
+        echo "$libxml2_checksum  $libxml2_archive" | sha256sum --check
+        tar -xf "$libxml2_archive"
+
+        cmake -G Ninja -S "libxml2-$libxml2_version" -B build \
+          -DCMAKE_BUILD_TYPE=Release \
+          -DCMAKE_INSTALL_PREFIX="$libxml2_prefix" \
+          -DCMAKE_INSTALL_LIBDIR=lib \
+          -DBUILD_SHARED_LIBS=OFF \
+          -DLIBXML2_WITH_ICU=OFF \
+          -DLIBXML2_WITH_ICONV=OFF \
+          -DLIBXML2_WITH_MODULES=OFF \
+          -DLIBXML2_WITH_PROGRAMS=OFF \
+          -DLIBXML2_WITH_TESTS=OFF \
+          -DLIBXML2_WITH_ZLIB=ON
+        cmake --build build --parallel
+        cmake --install build --component development
+
         echo "PKG_CONFIG_PATH=$libxml2_prefix/lib/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" >> "$GITHUB_ENV"
 
     - name: Configure Linux/MacOS
