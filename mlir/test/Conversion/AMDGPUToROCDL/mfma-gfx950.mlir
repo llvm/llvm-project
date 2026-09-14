@@ -97,9 +97,6 @@ func.func @scaled_mfma_to_rocdl(%arg0 : vector<16xf32>,
   func.return
 }
 
-// gfx950 does not have the xf32 MFMAs -- FeatureXF32Insts is set on gfx942
-// only -- but it compares greater than gfx942 by ISA version, so the
-// reduced-precision f32 MFMAs are currently selected for it.
 // CHECK-LABEL: func @mfma_reduce_precision_to_rocdl
 func.func @mfma_reduce_precision_to_rocdl(%arg0 : vector<2xf32>,
                                           %arg1 : vector<16xf32>,
