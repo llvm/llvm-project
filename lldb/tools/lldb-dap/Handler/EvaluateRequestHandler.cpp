@@ -15,11 +15,15 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandReturnObject.h"
+#include "lldb/API/SBExecutionContext.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 
 using namespace llvm;
+using namespace lldb;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
@@ -91,11 +95,20 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
       dap.focus_tid = frame.GetThread().GetThreadID();
     }
 
-    bool required_command_failed = false;
-    body.result = RunLLDBCommands(
-        dap.debugger, dap.GetAPIMutex(), llvm::StringRef(), {expression},
-        required_command_failed,
-        /*parse_command_directives=*/false, /*echo_commands=*/false);
+    SBCommandInterpreter interp = dap.debugger.GetCommandInterpreter();
+    auto ctx = frame ? SBExecutionContext(frame) : SBExecutionContext();
+    SBCommandReturnObject result{};
+    interp.HandleCommand(expression.c_str(), ctx, result,
+                         /*add_to_history=*/true);
+
+    if (!result.Succeeded()) {
+      return llvm::make_error<DAPError>(
+          std::string(result.GetError(), result.GetErrorSize()),
+          /**error_code=*/llvm::inconvertibleErrorCode(),
+          /**show_user= */ false);
+    }
+
+    body.result = std::string(result.GetOutput(), result.GetOutputSize());
     return body;
   }
 

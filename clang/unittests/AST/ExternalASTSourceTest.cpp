@@ -19,6 +19,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
 
@@ -151,7 +152,7 @@ struct LazyTemplatePatterns : TestExternalASTSource {
         ASTTemplateArgumentListInfo::Create(Ctx, ArgsInfo));
 
     TU->addDecl(Partial);
-    Template->AddPartialSpecialization(Partial, nullptr);
+    Template->AddPartialSpecialization(Partial, {});
   }
 
   void CompleteType(TagDecl *Tag) override {
@@ -181,4 +182,46 @@ TEST(ExternalASTSourceTest, CompletesPatternInEitherOrder) {
     EXPECT_EQ(1u, Source->PrimaryCompletions) << Code;
     EXPECT_EQ(1u, Source->PartialCompletions) << Code;
   }
+}
+
+namespace {
+// incrementGeneration is protected, so reaching it needs a source of our own.
+struct BumpableSource : ExternalASTSource {
+  uint32_t bump(ASTContext &C) { return incrementGeneration(C); }
+};
+} // namespace
+
+// Multiple external sources synchronize their generations, and the return
+// values of incrementGeneration() and getGeneration() are as expected. This
+// is relied upon by ASTReader and LazyGenerationalUpdatePtr.
+TEST(ExternalASTSourceTest, IncrementGeneration) {
+  std::unique_ptr<ASTUnit> AST = tooling::buildASTFromCode("");
+  ASSERT_TRUE(AST != nullptr);
+  ASTContext &Ctx = AST->getASTContext();
+
+  auto Topmost = llvm::makeIntrusiveRefCnt<BumpableSource>();
+  auto Secondary = llvm::makeIntrusiveRefCnt<BumpableSource>();
+  Ctx.setExternalSource(Topmost);
+  ASSERT_EQ(Ctx.getExternalSource(), Topmost.get());
+
+  // The generation starts at the same value for the two sources.
+  ASSERT_EQ(Topmost->getGeneration(), 0u);
+  ASSERT_EQ(Secondary->getGeneration(), 0u);
+
+  // Bumping the "secondary" source bumps the toplevel one, and leaves the two
+  // agreeing on the generation afterwards.
+  EXPECT_EQ(Secondary->bump(Ctx), 0u);
+  EXPECT_EQ(Secondary->getGeneration(), 1u);
+  EXPECT_EQ(Topmost->getGeneration(), 1u);
+
+  // Bumping the topmost source increments its generation by one.
+  EXPECT_EQ(Topmost->bump(Ctx), 1u);
+  EXPECT_EQ(Topmost->getGeneration(), 2u);
+  // At this point, the "secondary" source is out-of-sync...
+  EXPECT_EQ(Secondary->getGeneration(), 1u);
+
+  // Another bump synchronizes the two sources.
+  EXPECT_EQ(Secondary->bump(Ctx), 2u);
+  EXPECT_EQ(Secondary->getGeneration(), 3u);
+  EXPECT_EQ(Topmost->getGeneration(), 3u);
 }

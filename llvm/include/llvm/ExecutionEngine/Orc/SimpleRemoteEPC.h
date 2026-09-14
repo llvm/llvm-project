@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ExecutionEngine/Orc/CallProxies.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
@@ -127,7 +128,7 @@ private:
 
   std::unique_ptr<SimpleRemoteEPCTransport> T;
 
-  ExecutorAddr RunAsMainAddr;
+  CallMainProxy CallMain;
 
   uint64_t NextSeqNo = 0;
   PendingCallWrapperResultsMap PendingCallWrapperResults;

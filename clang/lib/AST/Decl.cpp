@@ -4394,7 +4394,7 @@ FunctionDecl::getTemplateSpecializationArgsAsWritten() const {
 
 void FunctionDecl::setFunctionTemplateSpecialization(
     ASTContext &C, FunctionTemplateDecl *Template,
-    TemplateArgumentList *TemplateArgs, void *InsertPos,
+    TemplateArgumentList *TemplateArgs, llvm::FoldingSetInsertToken InsertToken,
     TemplateSpecializationKind TSK,
     const TemplateArgumentListInfo *TemplateArgsAsWritten,
     SourceLocation PointOfInstantiation) {
@@ -4414,7 +4414,7 @@ void FunctionDecl::setFunctionTemplateSpecialization(
           dyn_cast_if_present<MemberSpecializationInfo *>(
               TemplateOrSpecialization));
   TemplateOrSpecialization = Info;
-  Template->addSpecialization(Info, InsertPos);
+  Template->addSpecialization(Info, InsertToken);
 }
 
 void FunctionDecl::setDependentTemplateSpecialization(
@@ -4641,10 +4641,12 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
   case Builtin::BImemmove:
     return Builtin::BImemmove;
 
+  case Builtin::BI__builtin_strlcpy:
   case Builtin::BIstrlcpy:
   case Builtin::BI__builtin___strlcpy_chk:
     return Builtin::BIstrlcpy;
 
+  case Builtin::BI__builtin_strlcat:
   case Builtin::BIstrlcat:
   case Builtin::BI__builtin___strlcat_chk:
     return Builtin::BIstrlcat;
@@ -4724,6 +4726,10 @@ unsigned FunctionDecl::getMemoryFunctionKind() const {
         return Builtin::BIbzero;
       if (FnInfo->isStr("bcopy"))
         return Builtin::BIbcopy;
+      if (FnInfo->isStr("strlcat"))
+        return Builtin::BIstrlcat;
+      if (FnInfo->isStr("strlcpy"))
+        return Builtin::BIstrlcpy;
     } else if (isInStdNamespace()) {
       if (FnInfo->isStr("free"))
         return Builtin::BIfree;

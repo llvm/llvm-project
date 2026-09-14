@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Tests for orc-rt's SimpleRemoteCA protocol base class.
+// Tests for the transport-independent half of the SimpleRemote protocol.
 //
-// SimpleRemoteCA is transport-independent, so these tests drive its protocol
-// operations directly through a capture-only test double and observe the
-// results via a Session.
+// These cover the payload encodings and the pending-call table on their own.
+// When a call may be registered, what ends a session, and who notifies the
+// Session are all the transport's to decide, and are tested with it.
 //
 //===----------------------------------------------------------------------===//
 
@@ -18,74 +18,70 @@
 
 #include "gtest/gtest.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
-#include <optional>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
 using namespace orc_rt;
 
 namespace {
 
-// A SimpleRemoteCA with no real transport. It exposes the protected protocol
-// operations for tests, records outgoing controller calls as pending results,
-// and records the wrapper results the executor produces.
-class TestSimpleRemoteCA : public SimpleRemoteCA {
+/// Exposes the protected utilities, and captures the handler that
+/// Session::callController hands over so tests have a real one to register.
+class TestCA : public SimpleRemoteCA {
 public:
-  TestSimpleRemoteCA(Session &S, TestSimpleRemoteCA **Self = nullptr)
-      : SimpleRemoteCA(S) {
+  using ControllerAccess::failPendingControllerCall;
+  using ControllerAccess::OnControllerCallReturn;
+  using SimpleRemoteCA::decodeHangup;
+  using SimpleRemoteCA::encodeHangup;
+  using SimpleRemoteCA::encodeSetup;
+  using SimpleRemoteCA::PendingCallsMap;
+  using SimpleRemoteCA::registerCall;
+  using SimpleRemoteCA::takeAllCalls;
+  using SimpleRemoteCA::takeCall;
+
+  TestCA(Session &S, TestCA **Self = nullptr) : SimpleRemoteCA(S) {
     if (Self)
       *Self = this;
   }
 
-  using SimpleRemoteCA::Action;
-  using SimpleRemoteCA::encodeHangupPayload;
-  using SimpleRemoteCA::encodeSetupMessage;
-  using SimpleRemoteCA::handleMessage;
-  using SimpleRemoteCA::Opcode;
+  void connect(BootstrapInfo BI) override {}
 
-  void connect(BootstrapInfo) override {}
   void disconnect() override {
-    // Mirror a real transport's teardown order: drain, then notify. A locally
-    // requested disconnect is orderly, so the mode is success.
-    failAllPendingCalls();
+    // What a transport owes on the way out: fail what is pending, then notify.
+    for (auto &[SeqNo, OnComplete] : takeAllCalls())
+      failPendingControllerCall(std::move(OnComplete));
     notifyDisconnected(Error::success());
   }
+
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag,
-                      WrapperFunctionBuffer) override {
-    LastCallSeqNo = registerPendingCall(std::move(OnComplete));
-  }
-  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
-                         uint64_t CallId) override {
-    WrapperResults.emplace_back(CallId, std::move(ResultBytes));
+                      orc_rt_ControllerHandlerTag T,
+                      WrapperFunctionBuffer ArgBytes) override {
+    Captured = std::move(OnComplete);
   }
 
-  uint64_t LastCallSeqNo = 0;
-  std::vector<std::pair<uint64_t, WrapperFunctionBuffer>> WrapperResults;
+  void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
+                         uint64_t CallId) override {}
+
+  /// Single-threaded here, so no lock: a real transport takes its own.
+  OnControllerCallReturn takePendingCall(uint64_t SeqNo) override {
+    return takeCall(SeqNo);
+  }
+
+  /// A handler taken from the Session, for registering.
+  OnControllerCallReturn Captured;
 };
 
-constexpr uint64_t opc(TestSimpleRemoteCA::Opcode Op) {
-  return static_cast<uint64_t>(Op);
-}
-
-// Wrapper that echoes its arguments back as the result.
-void echoWrapper(orc_rt_SessionRef S, orc_rt_WrapperFunctionBuffer ArgBytes,
-                 orc_rt_WrapperFunctionReturn Return, uint64_t CallId) {
-  Return(S, ArgBytes, CallId);
-}
-
-// Expect an Expected<T> to hold an error whose message equals ExpectedMsg.
-template <typename T> void expectError(Expected<T> R, const char *ExpectedMsg) {
-  if (R)
-    ADD_FAILURE() << "expected error \"" << ExpectedMsg << "\", got a value";
-  else
-    EXPECT_EQ(toString(R.takeError()), ExpectedMsg);
+/// Drives Session::callController once and returns the handler it produced.
+TestCA::OnControllerCallReturn borrowHandler(Session &S, TestCA &CA) {
+  S.callController([](WrapperFunctionBuffer) {}, nullptr,
+                   WrapperFunctionBuffer());
+  return std::move(CA.Captured);
 }
 
 } // namespace
@@ -98,17 +94,17 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
                             SPSSequence<SPSTuple<SPSString, SPSSequence<char>>>,
                             SPSSequence<SPSTuple<SPSString, SPSExecutorAddr>>>;
 
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
 
   int SomeSymbol = 0;
   SimpleSymbolTable Symbols;
-  std::vector<std::pair<std::string, const void *>> SymbolDefs = {
-      {"foo", &SomeSymbol}};
+  std::vector<std::pair<SymbolNameSpec, const void *>> SymbolDefs = {
+      {SymbolNameSpec::linker("foo"), &SomeSymbol}};
   cantFail(Symbols.addUnique(SymbolDefs));
 
   BootstrapInfo BI(S, std::move(Symbols),
                    BootstrapInfo::ValueMap{{"key", "value"}});
-  auto Payload = TestSimpleRemoteCA::encodeSetupMessage(BI);
+  auto Payload = TestCA::encodeSetup(BI);
 
   std::string Triple;
   uint64_t PageSize = 0;
@@ -128,164 +124,89 @@ TEST(SimpleRemoteCATest, SetupMessageRoundTrips) {
   // The payload holds exactly the setup fields: no padding, and nothing the
   // controller would be left to interpret.
   EXPECT_EQ(static_cast<size_t>(IB.data() - Payload.data()), Payload.size());
-}
 
-TEST(SimpleRemoteCATest, HandleMessageRejectsInvalidOpcode) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-  expectError(CA.handleMessage(/*OpC=*/99, /*SeqNo=*/0, ExecutorAddr(),
-                               WrapperFunctionBuffer()),
-              "Invalid opcode 99");
-}
-
-TEST(SimpleRemoteCATest, HandleMessageRejectsUnexpectedSetup) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-  expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Setup), 0,
-                               ExecutorAddr(), WrapperFunctionBuffer()),
-              "Unexpected Setup message");
-}
-
-TEST(SimpleRemoteCATest, HandleMessageAcceptsWellFormedHangup) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-  auto R = CA.handleMessage(
-      opc(TestSimpleRemoteCA::Opcode::Hangup), 0, ExecutorAddr(),
-      TestSimpleRemoteCA::encodeHangupPayload(Error::success()));
-  if (!R)
-    ADD_FAILURE() << "unexpected error: " << toString(R.takeError());
-  else
-    EXPECT_EQ(*R, TestSimpleRemoteCA::Action::End);
-}
-
-TEST(SimpleRemoteCATest, HandleMessageReportsHangupReason) {
-  // A hang-up carrying a reason ends the session with that reason, rather than
-  // reporting a plain End: the reactor turns it into the disconnection error.
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-  expectError(CA.handleMessage(
-                  opc(TestSimpleRemoteCA::Opcode::Hangup), 0, ExecutorAddr(),
-                  TestSimpleRemoteCA::encodeHangupPayload(
-                      make_error<StringError>("controller ran out of x"))),
-              "controller ran out of x");
-}
-
-TEST(SimpleRemoteCATest, HandleMessageRejectsMalformedHangup) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-
-  // A hang-up must carry no sequence number and no tag.
-  expectError(CA.handleMessage(
-                  opc(TestSimpleRemoteCA::Opcode::Hangup), /*SeqNo=*/5,
-                  ExecutorAddr(),
-                  TestSimpleRemoteCA::encodeHangupPayload(Error::success())),
-              "Malformed hang-up message");
-  expectError(CA.handleMessage(
-                  opc(TestSimpleRemoteCA::Opcode::Hangup), 0,
-                  ExecutorAddr(0x1000),
-                  TestSimpleRemoteCA::encodeHangupPayload(Error::success())),
-              "Malformed hang-up message");
-
-  // It must carry a deserializable reason. An empty payload is never valid --
-  // the two ends are rev-locked, so this is a bug in the peer rather than skew.
-  expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Hangup), 0,
-                               ExecutorAddr(), WrapperFunctionBuffer()),
-              "Malformed hang-up message: could not deserialize reason");
-}
-
-TEST(SimpleRemoteCATest, HandleMessageRejectsResultWithTag) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-  expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Result),
-                               /*SeqNo=*/1, ExecutorAddr(0x1000),
-                               WrapperFunctionBuffer()),
-              "Result message should not carry a handler tag");
-}
-
-TEST(SimpleRemoteCATest, HandleMessageRejectsResultForUnknownSequenceNumber) {
-  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
-  TestSimpleRemoteCA CA(S);
-  expectError(CA.handleMessage(opc(TestSimpleRemoteCA::Opcode::Result),
-                               /*SeqNo=*/7, ExecutorAddr(),
-                               WrapperFunctionBuffer::copyFrom("r", 1)),
-              "No pending call for sequence number 7");
-}
-
-TEST(SimpleRemoteCATest, ResultCompletesPendingCall) {
-  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
-  TestSimpleRemoteCA *CA = nullptr;
-  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), &CA);
-  ASSERT_TRUE(CA);
-
-  // Originate a controller call; the test double registers it as pending.
-  std::optional<std::string> Res;
-  S.callController(
-      [&](WrapperFunctionBuffer R) {
-        ASSERT_FALSE(R.getOutOfBandError()) << R.getOutOfBandError();
-        Res = std::string(R.data(), R.size());
-      },
-      nullptr, WrapperFunctionBuffer());
-
-  uint64_t SeqNo = CA->LastCallSeqNo;
-  ASSERT_NE(SeqNo, 0u);
-  ASSERT_FALSE(Res) << "handler fired before the result arrived";
-
-  // Deliver the matching result; handleMessage completes the call inline.
-  auto R = CA->handleMessage(opc(TestSimpleRemoteCA::Opcode::Result), SeqNo,
-                             ExecutorAddr(),
-                             WrapperFunctionBuffer::copyFrom("a", 1));
-  if (!R)
-    ADD_FAILURE() << "unexpected error: " << toString(R.takeError());
-  else
-    EXPECT_EQ(*R, TestSimpleRemoteCA::Action::Continue);
-
-  ASSERT_TRUE(Res);
-  EXPECT_EQ(*Res, "a");
-}
-
-TEST(SimpleRemoteCATest, CallDispatchesWrapperAndReturnsResult) {
-  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
-  TestSimpleRemoteCA *CA = nullptr;
-  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), &CA);
-  ASSERT_TRUE(CA);
-
-  // A Call names echoWrapper via the tag; SeqNo is the call id.
-  auto R = CA->handleMessage(
-      opc(TestSimpleRemoteCA::Opcode::Call), /*SeqNo=*/42,
-      ExecutorAddr::fromPtr(reinterpret_cast<void *>(echoWrapper)),
-      WrapperFunctionBuffer::copyFrom("world", 5));
-  if (!R)
-    ADD_FAILURE() << "unexpected error: " << toString(R.takeError());
-  else
-    EXPECT_EQ(*R, TestSimpleRemoteCA::Action::Continue);
-
-  ASSERT_EQ(CA->WrapperResults.size(), 1u);
-  EXPECT_EQ(CA->WrapperResults[0].first, 42u);
-  auto &Result = CA->WrapperResults[0].second;
-  EXPECT_EQ(std::string(Result.data(), Result.size()), "world");
-}
-
-TEST(SimpleRemoteCATest, DisconnectDrainsPendingCalls) {
-  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
-  TestSimpleRemoteCA *CA = nullptr;
-  S.attach<TestSimpleRemoteCA>(BootstrapInfo(S), &CA);
-  ASSERT_TRUE(CA);
-
-  // A controller call is in flight (no result will arrive).
-  std::optional<std::string> Err;
-  S.callController(
-      [&](WrapperFunctionBuffer R) {
-        if (const char *M = R.getOutOfBandError())
-          Err = M;
-      },
-      nullptr, WrapperFunctionBuffer());
-  ASSERT_NE(CA->LastCallSeqNo, 0u);
-  ASSERT_FALSE(Err) << "handler fired before disconnect";
-
-  // Detach drives disconnect, which drains the pending call with a
-  // "disconnected" error.
   S.detach([] {});
+}
 
-  ASSERT_TRUE(Err);
-  EXPECT_EQ(*Err, "disconnected");
+TEST(SimpleRemoteCATest, OrderlyHangupRoundTrips) {
+  // Both ends encode and decode hang-ups through these, so a success value must
+  // survive the trip as a success.
+  auto Err = TestCA::decodeHangup(TestCA::encodeHangup(Error::success()));
+  EXPECT_FALSE(!!Err) << "an orderly hang-up is not an error";
+}
+
+TEST(SimpleRemoteCATest, HangupReasonRoundTrips) {
+  auto Err = TestCA::decodeHangup(
+      TestCA::encodeHangup(make_error<StringError>("controller ran out of x")));
+  ASSERT_TRUE(!!Err);
+  EXPECT_EQ(toString(std::move(Err)), "controller ran out of x");
+}
+
+TEST(SimpleRemoteCATest, DecodeHangupRejectsAnEmptyPayload) {
+  // Never valid: the two ends are rev-locked, so this is a bug in the peer
+  // rather than version skew. It comes back as an error like any other reason,
+  // since both outcomes end the session.
+  auto Err = TestCA::decodeHangup(WrapperFunctionBuffer());
+  ASSERT_TRUE(!!Err);
+  EXPECT_EQ(toString(std::move(Err)),
+            "Malformed hang-up message: could not deserialize reason");
+}
+
+TEST(SimpleRemoteCATest, RegisterCallReturnsDistinctNonZeroSequenceNumbers) {
+  // Zero is reserved for messages with no result to await, so a registered call
+  // must never get it.
+  TestCA *CA = nullptr;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  S.attach<TestCA>(BootstrapInfo(S), &CA);
+  ASSERT_TRUE(CA);
+
+  uint64_t First = CA->registerCall(borrowHandler(S, *CA));
+  uint64_t Second = CA->registerCall(borrowHandler(S, *CA));
+  EXPECT_NE(First, 0u);
+  EXPECT_NE(Second, 0u);
+  EXPECT_NE(First, Second);
+
+  S.detach([] {});
+}
+
+TEST(SimpleRemoteCATest, TakeCallYieldsTheHandlerExactlyOnce) {
+  TestCA *CA = nullptr;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  S.attach<TestCA>(BootstrapInfo(S), &CA);
+  ASSERT_TRUE(CA);
+
+  uint64_t SeqNo = CA->registerCall(borrowHandler(S, *CA));
+  auto Taken = CA->takeCall(SeqNo);
+  EXPECT_TRUE(!!Taken) << "the registered handler should come back";
+
+  // A second take finds nothing: a result for a call that was never made, or
+  // answered twice, which the transport reports as terminal.
+  EXPECT_FALSE(!!CA->takeCall(SeqNo));
+  EXPECT_FALSE(!!CA->takeCall(/*SeqNo=*/9999)) << "never registered";
+
+  CA->failPendingControllerCall(std::move(Taken));
+  S.detach([] {});
+}
+
+TEST(SimpleRemoteCATest, TakeAllCallsEmptiesTheTable) {
+  TestCA *CA = nullptr;
+  Session S(mockExecutorProcessInfo(), inlineDispatch, noErrors);
+  S.attach<TestCA>(BootstrapInfo(S), &CA);
+  ASSERT_TRUE(CA);
+
+  uint64_t First = CA->registerCall(borrowHandler(S, *CA));
+  uint64_t Second = CA->registerCall(borrowHandler(S, *CA));
+
+  auto All = CA->takeAllCalls();
+  EXPECT_EQ(All.size(), 2u);
+  EXPECT_EQ(All.count(First), 1u);
+  EXPECT_EQ(All.count(Second), 1u);
+
+  // Emptied, so a second drain finds nothing and a late result finds no call.
+  EXPECT_TRUE(CA->takeAllCalls().empty());
+  EXPECT_FALSE(!!CA->takeCall(First));
+
+  for (auto &[SeqNo, OnComplete] : All)
+    CA->failPendingControllerCall(std::move(OnComplete));
+  S.detach([] {});
 }

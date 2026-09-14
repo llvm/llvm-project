@@ -177,3 +177,54 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> :
 // CHECK: %[[VALUE:.*]] = fir.load %[[DECL]] : !fir.ref<i32>
 // CHECK: fir.store %[[VALUE]] to %[[DST]] : !fir.ref<i32>
 // CHECK-NOT: fir.call @_FortranACUFDataTransferPtrPtr
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<f80, dense<128> : vector<2xi64>>, #dlti.dl_entry<i128, dense<128> : vector<2xi64>>, #dlti.dl_entry<i64, dense<64> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr<272>, dense<64> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<271>, dense<32> : vector<4xi64>>, #dlti.dl_entry<!llvm.ptr<270>, dense<32> : vector<4xi64>>, #dlti.dl_entry<f128, dense<128> : vector<2xi64>>, #dlti.dl_entry<f64, dense<64> : vector<2xi64>>, #dlti.dl_entry<f16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i32, dense<32> : vector<2xi64>>, #dlti.dl_entry<i16, dense<16> : vector<2xi64>>, #dlti.dl_entry<i8, dense<8> : vector<2xi64>>, #dlti.dl_entry<i1, dense<8> : vector<2xi64>>, #dlti.dl_entry<!llvm.ptr, dense<64> : vector<4xi64>>, #dlti.dl_entry<"dlti.endianness", "little">, #dlti.dl_entry<"dlti.stack_alignment", 128 : i64>>} {
+  func.func @_QQconstant_scalar_device_device() {
+    %0 = fir.address_of(@_QMcon4Ecsrc) : !fir.ref<i32>
+    %1 = fir.declare %0 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon4Ecsrc"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %2 = fir.address_of(@_QMcon4Ecdst) : !fir.ref<i32>
+    %3 = fir.declare %2 {data_attr = #cuf.cuda<constant>, uniq_name = "_QMcon4Ecdst"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    %4 = fir.address_of(@_QMcon4Edev) : !fir.ref<i32>
+    %5 = fir.declare %4 {data_attr = #cuf.cuda<device>, uniq_name = "_QMcon4Edev"} : (!fir.ref<i32>) -> !fir.ref<i32>
+    cuf.data_transfer %1 to %3 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<i32>, !fir.ref<i32>
+    cuf.data_transfer %5 to %3 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<i32>, !fir.ref<i32>
+    cuf.data_transfer %1 to %5 {transfer_kind = #cuf.cuda_transfer<device_device>} : !fir.ref<i32>, !fir.ref<i32>
+    return
+  }
+  fir.global @_QMcon4Ecsrc {data_attr = #cuf.cuda<constant>} : i32
+  fir.global @_QMcon4Ecdst {data_attr = #cuf.cuda<constant>} : i32
+  fir.global @_QMcon4Edev {data_attr = #cuf.cuda<device>} : i32
+}
+
+// A scalar CUDA constant is designated by its host shadow, so a device to
+// device transfer involving one must be routed through that shadow.
+
+// CHECK-LABEL: func.func @_QQconstant_scalar_device_device()
+// CHECK-DAG: %[[CSRC:.*]] = fir.address_of(@_QMcon4Ecsrc) : !fir.ref<i32>
+// CHECK-DAG: %[[CDST:.*]] = fir.address_of(@_QMcon4Ecdst) : !fir.ref<i32>
+
+// The fourth operand is the transfer mode: 0 is host to device, 1 is device to
+// host. It must never be 2 (device to device) here, since a host shadow cannot
+// be an operand of a device to device copy.
+
+// constant = constant: copy shadow to shadow, then push the destination shadow
+// to constant memory.
+// CHECK: %[[V:.*]] = fir.load %[[CSRC]] : !fir.ref<i32>
+// CHECK: fir.store %[[V]] to %[[CDST]] : !fir.ref<i32>
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK: %[[S0:.*]] = fir.convert %[[CDST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[S0]], %{{[^,]*}}, %c0_i32
+
+// constant = device: pull the device value into the destination shadow, then
+// push that shadow to constant memory.
+// CHECK: %[[D1:.*]] = fir.convert %[[CDST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%[[D1]], %{{[^,]*}}, %{{[^,]*}}, %c1_i32
+// CHECK: fir.call @_FortranACUFGetDeviceAddress
+// CHECK: %[[S1:.*]] = fir.convert %[[CDST]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[S1]], %{{[^,]*}}, %c0_i32
+
+// device = constant: the source shadow is already the host value to push.
+// CHECK: %[[S2:.*]] = fir.convert %[[CSRC]] : (!fir.ref<i32>) -> !fir.llvm_ptr<i8>
+// CHECK: fir.call @_FortranACUFDataTransferPtrPtr(%{{[^,]*}}, %[[S2]], %{{[^,]*}}, %c0_i32
