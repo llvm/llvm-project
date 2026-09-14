@@ -4,9 +4,8 @@
 ; howManyLessThans: prove a symbolic stride is positive from a guard dominating
 ; the loop, so the backedge-taken count becomes computable.
 
-; Positive: an assume dominating the loop establishes s > 0 on the loop path.
-; The stride is refined to (1 smax %s) via the loop guards, which is positive,
-; so the backedge-taken count of this multi-exit loop is computable.
+; Multi-exit symbolic-stride loop with a dominating assume(s > 0): the stride is
+; proven positive from the guard, so the backedge-taken count is computable.
 define void @pos_stride_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ; CHECK-LABEL: 'pos_stride_guard'
 ; CHECK-NEXT:  Classifying expressions for: @pos_stride_guard
@@ -46,7 +45,8 @@ exit:
   ret void
 }
 
-; same as above without precondition showing stride is positive.
+; Multi-exit symbolic-stride loop with no guard: the stride's sign is unknown,
+; so the backedge-taken count is not computable.
 define void @no_guard(i32 %n, i32 %s, i32 %bound, ptr %p) {
 ; CHECK-LABEL: 'no_guard'
 ; CHECK-NEXT:  Classifying expressions for: @no_guard
@@ -74,6 +74,38 @@ loop:
   br i1 %oob, label %exit, label %latch
 
 latch:
+  %addr = getelementptr i32, ptr %p, i32 %i
+  store i32 0, ptr %addr
+  %i.next = add nsw i32 %i, %s
+  %cmp = icmp slt i32 %i.next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Single-exit symbolic-stride loop: the backedge-taken count is computable
+; without a guard, via the (1 umax stride) clamp.
+define void @single_exit_stride(i32 %n, i32 %s, ptr %p) mustprogress {
+; CHECK-LABEL: 'single_exit_stride'
+; CHECK-NEXT:  Classifying expressions for: @single_exit_stride
+; CHECK-NEXT:    %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
+; CHECK-NEXT:    --> {0,+,%s}<nsw><%loop> U: full-set S: full-set Exits: (((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s)))) * %s) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %addr = getelementptr i32, ptr %p, i32 %i
+; CHECK-NEXT:    --> {%p,+,(4 * (sext i32 %s to i64))<nsw>}<%loop> U: full-set S: full-set Exits: ((4 * (zext i32 ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s)))) to i64) * (sext i32 %s to i64)) + %p) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %i.next = add nsw i32 %i, %s
+; CHECK-NEXT:    --> {%s,+,%s}<nsw><%loop> U: full-set S: full-set Exits: ((1 + (((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s)))) * %s) LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @single_exit_stride
+; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is ((((-1 * (1 umin ((-1 * %s) + (%n smax %s))))<nuw><nsw> + (-1 * %s) + (%n smax %s)) /u (1 umax %s)) + (1 umin ((-1 * %s) + (%n smax %s))))
+; CHECK-NEXT:  Loop %loop: Trip multiple is 1
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
   %addr = getelementptr i32, ptr %p, i32 %i
   store i32 0, ptr %addr
   %i.next = add nsw i32 %i, %s
