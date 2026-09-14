@@ -228,7 +228,7 @@ void FlushUnneededASanShadowMemory(uptr p, uptr size) {
 // ---------------------- TSD ---------------- {{{
 static bool tsd_key_inited = false;
 
-static __declspec(thread) void *fake_tsd = 0;
+static THREADLOCAL void* fake_tsd = 0;
 
 // https://docs.microsoft.com/en-us/windows/desktop/api/winternl/ns-winternl-_teb
 // "[This structure may be altered in future versions of Windows. Applications
