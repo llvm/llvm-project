@@ -1552,7 +1552,7 @@ entry:
   %floor = tail call float @llvm.floor.f32(float %x)
   %sub = fsub float %x, %floor
   %min = tail call float @llvm.minnum.f32(float %sub, float 0x3FEFFFFFE0000000)
-  %uno = fcmp uno float %x, 0x7FF8000000000000
+  %uno = fcmp uno float %x, +qnan
   %cond = select i1 %uno, float %x, float %min
   ret float %cond
 }

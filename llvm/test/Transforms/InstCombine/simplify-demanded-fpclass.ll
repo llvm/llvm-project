@@ -323,7 +323,7 @@ define nofpclass(inf nan) float @ret_nofpclass_inf_nan__select_chain_inf_nan_0(i
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float [[X]]
 ;
-  %select0 = select i1 %cond, float 0x7FF8000000000000, float %x
+  %select0 = select i1 %cond, float +qnan, float %x
   %select1 = select i1 %cond, float +inf, float %select0
   ret float %select1
 }
@@ -333,7 +333,7 @@ define nofpclass(inf nan) float @ret_nofpclass_inf_nan__select_chain_inf_nan_1(i
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float poison
 ;
-  %select0 = select i1 %cond, float %x, float 0x7FF8000000000000
+  %select0 = select i1 %cond, float %x, float +qnan
   %select1 = select i1 %cond, float +inf, float %select0
   ret float %select1
 }
@@ -344,7 +344,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__select_chain_inf_nan(i1 %cond, f
 ; CHECK-NEXT:    [[SELECT1:%.*]] = select i1 [[COND]], float +inf, float [[X]]
 ; CHECK-NEXT:    ret float [[SELECT1]]
 ;
-  %select0 = select i1 %cond, float 0x7FF8000000000000, float %x
+  %select0 = select i1 %cond, float +qnan, float %x
   %select1 = select i1 %cond, float +inf, float %select0
   ret float %select1
 }
@@ -354,7 +354,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_chain_inf_nan_0(i1 %cond,
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float [[X]]
 ;
-  %select0 = select i1 %cond, float 0x7FF8000000000000, float %x
+  %select0 = select i1 %cond, float +qnan, float %x
   %select1 = select i1 %cond, float +inf, float %select0
   ret float %select1
 }
@@ -364,7 +364,7 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_chain_inf_nan_1(i1 %cond,
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %select0 = select i1 %cond, float 0x7FF8000000000000, float %x
+  %select0 = select i1 %cond, float +qnan, float %x
   %select1 = select i1 %cond, float %select0, float +inf
   ret float %select1
 }
@@ -1520,12 +1520,12 @@ entry:
   %i6 = fcmp oeq float %x, 0.000000e+00
   %i7 = select i1 %i6, float %i5, float %i3
   %i8 = fcmp oeq float %y, 0.000000e+00
-  %i9 = select i1 %i6, float 0x7FF8000000000000, float 1.000000e+00
+  %i9 = select i1 %i6, float +qnan, float 1.000000e+00
   %i10 = select i1 %i8, float %i9, float %i7
   %i11 = fcmp oeq float %x, 1.000000e+00
   %i12 = select i1 %i11, float 1.000000e+00, float %i10
   %i13 = fcmp olt float %x, 0.000000e+00
-  %i14 = select i1 %i13, float 0x7FF8000000000000, float %i12
+  %i14 = select i1 %i13, float +qnan, float %i12
   ret float %i14
 }
 
@@ -1543,16 +1543,16 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ;
 bb:
   %i = fcmp olt float %arg, 0.000000e+00
-  %i2 = select i1 %i, float 0x7FF8000000000000, float %arg
+  %i2 = select i1 %i, float +qnan, float %arg
   %i3 = tail call float @llvm.log2.f32(float noundef %i2) #2
-  %i4 = select i1 %i, float 0x7FF8000000000000, float %arg1
+  %i4 = select i1 %i, float +qnan, float %arg1
   %i5 = fmul float %i4, %i3
   %i6 = tail call noundef nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float noundef %i5)
   %i7 = fcmp olt float %i4, 0.000000e+00
   %i8 = select i1 %i7, float +inf, float 0.000000e+00
   %i9 = fcmp ueq float %i4, 0.000000e+00
   %i10 = fcmp oeq float %i2, 0.000000e+00
-  %i11 = select i1 %i9, float 0x7FF8000000000000, float %i8
+  %i11 = select i1 %i9, float +qnan, float %i8
   %i12 = select i1 %i10, float %i11, float %i6
   ret float %i12
 }
@@ -1600,7 +1600,7 @@ bb:
   %i12 = select i1 %i11, float %arg, float 1.000000e+00
   %i13 = tail call noundef float @llvm.copysign.f32(float noundef %i4, float noundef %i12)
   %i14 = fcmp olt float %arg, 0.000000e+00
-  %i15 = select i1 %i7, float %i13, float 0x7FF8000000000000
+  %i15 = select i1 %i7, float %i13, float +qnan
   %i16 = select i1 %i14, float %i15, float %i13
   %i17 = fcmp oeq float %arg, 0.000000e+00
   %i18 = fcmp olt float %arg1, 0.000000e+00
@@ -1994,7 +1994,7 @@ define nofpclass(nan) float @ret_nonan_fmul_select_fmul_select_nan_multiple_use(
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[X]], [[X]]
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
-  %select = select i1 %cond, float %x, float 0x7FF8000000000000
+  %select = select i1 %cond, float %x, float +qnan
   %fmul = fmul float %select, %select
   ret float %fmul
 }
@@ -2005,7 +2005,7 @@ define nofpclass(nan) float @ret_nonan_fmul_select_fmul_select_nan_multiple_use_
 ; CHECK-NEXT:    [[FMUL:%.*]] = fmul float [[X]], [[X]]
 ; CHECK-NEXT:    ret float [[FMUL]]
 ;
-  %select = select i1 %cond, float 0x7FF8000000000000, float %x
+  %select = select i1 %cond, float +qnan, float %x
   %fmul = fmul float %select, %select
   ret float %fmul
 }
@@ -2019,7 +2019,7 @@ define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use(i1 %cond, float
 ; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul nnan float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[NAN_USER]]
 ;
-  %select = select i1 %cond, float %x, float 0x7FF8000000000000
+  %select = select i1 %cond, float %x, float +qnan
   store float %select, ptr %ptr
   %nan.user = fmul float %select, %y
   ret float %nan.user
@@ -2033,7 +2033,7 @@ define nofpclass(nan) float @ret_nonan_fmul_select_nan_other_use_commute(i1 %con
 ; CHECK-NEXT:    [[NAN_USER:%.*]] = fmul nnan float [[X]], [[Y]]
 ; CHECK-NEXT:    ret float [[NAN_USER]]
 ;
-  %select = select i1 %cond, float 0x7FF8000000000000, float %x
+  %select = select i1 %cond, float +qnan, float %x
   store float %select, ptr %ptr
   %nan.user = fmul float %select, %y
   ret float %nan.user
