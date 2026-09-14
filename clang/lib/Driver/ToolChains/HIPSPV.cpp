@@ -92,13 +92,6 @@ void HIPSPV::Linker::constructLinkAndEmitSpirvCommand(
     if (Input.isFilename())
       LinkArgs.push_back(Input.getFilename());
 
-  // Add static device libraries using the common helper function.
-  // This handles unbundling archives (.a) containing bitcode bundles.
-  StringRef Arch = getToolChain().getTriple().getArchName();
-  StringRef Target =
-      "generic"; // SPIR-V is generic, no specific target ID like -mcpu
-  tools::AddStaticDeviceLibsLinking(C, *this, JA, Inputs, Args, LinkArgs, Arch,
-                                    Target, /*IsBitCodeSDL=*/true);
   tools::constructLLVMLinkCommand(C, *this, JA, Inputs, LinkArgs, Output, Args,
                                   TempFile);
 
@@ -232,11 +225,6 @@ void HIPSPV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-  if (Inputs.size() > 0 && Inputs[0].getType() == types::TY_Image &&
-      JA.getType() == types::TY_Object)
-    return HIP::constructGenerateObjFileFromHIPFatBinary(C, Output, Inputs,
-                                                         Args, JA, *this);
-
   if (JA.getType() == types::TY_HIP_FATBIN)
     return HIP::constructHIPFatbinCommand(C, JA, Output.getFilename(), Inputs,
                                           Args, *this);

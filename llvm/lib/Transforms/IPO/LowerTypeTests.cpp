@@ -206,23 +206,32 @@ void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
   std::vector<uint64_t> &Fragment = Fragments.back();
   uint64_t FragmentIndex = Fragments.size() - 1;
 
+  std::vector<std::vector<uint64_t>> SubFragments;
   for (auto ObjIndex : F) {
     uint64_t OldFragmentIndex = FragmentMap[ObjIndex];
     if (OldFragmentIndex == 0) {
       // We haven't seen this object index before, so just add it to the current
       // fragment.
-      Fragment.push_back(ObjIndex);
-    } else {
+      SubFragments.push_back({ObjIndex});
+    } else if (!Fragments[OldFragmentIndex].empty()) {
       // This index belongs to an existing fragment. Copy the elements of the
       // old fragment into this one and clear the old fragment. We don't update
       // the fragment map just yet, this ensures that any further references to
       // indices from the old fragment in this fragment do not insert any more
       // indices.
-      std::vector<uint64_t> &OldFragment = Fragments[OldFragmentIndex];
-      llvm::append_range(Fragment, OldFragment);
-      OldFragment.clear();
+      SubFragments.push_back(std::move(Fragments[OldFragmentIndex]));
     }
   }
+
+  if (Less) {
+    llvm::stable_sort(SubFragments, [&](const std::vector<uint64_t> &A,
+                                        const std::vector<uint64_t> &B) {
+      return Less(A.back(), B.back());
+    });
+  }
+
+  for (auto &SF : SubFragments)
+    llvm::append_range(Fragment, std::move(SF));
 
   // Update the fragment map to point our object indices to this fragment.
   for (uint64_t ObjIndex : Fragment)
@@ -230,6 +239,18 @@ void GlobalLayoutBuilder::addFragment(const std::set<uint64_t> &F) {
 }
 
 const std::vector<uint64_t> &GlobalLayoutBuilder::build() {
+  if (Less) {
+    // If multiple root fragments remain (e.g. disjoint signatures with no
+    // generalized type), order them so the one containing the hottest function
+    // is placed last.
+    llvm::erase_if(Fragments,
+                   [](const std::vector<uint64_t> &F) { return F.empty(); });
+    llvm::stable_sort(Fragments, [&](const std::vector<uint64_t> &FA,
+                                     const std::vector<uint64_t> &FB) {
+      return Less(FA.back(), FB.back());
+    });
+  }
+
   std::vector<uint64_t> Layout;
   Layout.reserve(FragmentMap.size());
   for (auto &&F : Fragments)

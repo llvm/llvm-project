@@ -255,5 +255,10 @@ int main(int, char**)
     test_perfect_forwarding();
     test_noexcept();
 
+  { // Test that constructing a T& returns the same object
+    int i;
+    assert(&std::make_from_tuple<const int&>(std::tuple<int&>(i)) == &i);
+  }
+
   return 0;
 }

@@ -28,7 +28,6 @@
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
@@ -140,7 +139,6 @@ class MachineSinking {
   // Required for split critical edge
   LiveIntervals *LIS;
   SlotIndexes *SI;
-  LiveVariables *LV;
   MachineLoopInfo *MLI;
 
   // Remember which edges have been considered for breaking.
@@ -200,14 +198,13 @@ class MachineSinking {
 
 public:
   MachineSinking(bool EnableSinkAndFold, MachineDominatorTree *DT,
-                 MachinePostDominatorTree *PDT, LiveVariables *LV,
-                 MachineLoopInfo *MLI, SlotIndexes *SI, LiveIntervals *LIS,
-                 MachineCycleInfo *CI, ProfileSummaryInfo *PSI,
-                 MachineBlockFrequencyInfo *MBFI,
+                 MachinePostDominatorTree *PDT, MachineLoopInfo *MLI,
+                 SlotIndexes *SI, LiveIntervals *LIS, MachineCycleInfo *CI,
+                 ProfileSummaryInfo *PSI, MachineBlockFrequencyInfo *MBFI,
                  const MachineBranchProbabilityInfo *MBPI, AliasAnalysis *AA,
                  RegisterClassInfo *RegClassInfo)
       : DT(DT), PDT(PDT), CI(CI), PSI(PSI), MBFI(MBFI), MBPI(MBPI), AA(AA),
-        RegClassInfo(RegClassInfo), LIS(LIS), SI(SI), LV(LV), MLI(MLI),
+        RegClassInfo(RegClassInfo), LIS(LIS), SI(SI), MLI(MLI),
         EnableSinkAndFold(EnableSinkAndFold) {}
 
   bool run(MachineFunction &MF);
@@ -784,11 +781,10 @@ MachineSinkingPass::run(MachineFunction &MF,
                   .getResult<AAManager>(MF.getFunction());
   auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
   auto *SI = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
-  auto *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
   auto *MLI = MFAM.getCachedResult<MachineLoopAnalysis>(MF);
   auto *RegClassInfo = &MFAM.getResult<MachineRegisterClassAnalysis>(MF);
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
-                      MBFI, MBPI, AA, RegClassInfo);
+  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, SI, LIS, CI, PSI, MBFI,
+                      MBPI, AA, RegClassInfo);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -831,15 +827,13 @@ bool MachineSinkingLegacy::runOnMachineFunction(MachineFunction &MF) {
   auto *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
   auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
   auto *SI = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  auto *LVWrapper = getAnalysisIfAvailable<LiveVariablesWrapperPass>();
-  auto *LV = LVWrapper ? &LVWrapper->getLV() : nullptr;
   auto *MLIWrapper = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>();
   auto *MLI = MLIWrapper ? &MLIWrapper->getLI() : nullptr;
   auto *RegClassInfo =
       &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
 
-  MachineSinking Impl(EnableSinkAndFold, DT, PDT, LV, MLI, SI, LIS, CI, PSI,
-                      MBFI, MBPI, AA, RegClassInfo);
+  MachineSinking Impl(EnableSinkAndFold, DT, PDT, MLI, SI, LIS, CI, PSI, MBFI,
+                      MBPI, AA, RegClassInfo);
   return Impl.run(MF);
 }
 
@@ -868,7 +862,7 @@ bool MachineSinking::run(MachineFunction &MF) {
                                MachineDomTreeUpdater::UpdateStrategy::Lazy);
     for (const auto &Pair : ToSplit) {
       auto NewSucc = Pair.first->SplitCriticalEdge(
-          Pair.second, {LIS, SI, LV, MLI}, nullptr, &MDTU);
+          Pair.second, {LIS, SI, /*LV=*/nullptr, MLI}, nullptr, &MDTU);
       if (NewSucc != nullptr) {
         LLVM_DEBUG(dbgs() << " *** Splitting critical edge: "
                           << printMBBReference(*Pair.first) << " -- "
