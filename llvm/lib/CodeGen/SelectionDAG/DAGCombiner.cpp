@@ -5567,7 +5567,8 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
   // computed. Defer for types that will be promoted and do not fold if DIVREM
   // is available
   unsigned DivRemOpc = isSigned ? ISD::SDIVREM : ISD::UDIVREM;
-  if (!TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()) &&
+  if (!ForCodeSize &&
+      !TLI.isOperationLegalOrCustom(DivRemOpc, VT.getScalarType()) &&
       !isDivRemLibcallAvailable(N, isSigned, DAG) &&
       TLI.getTypeAction(*DAG.getContext(), VT) !=
           TargetLowering::TypePromoteInteger) {
