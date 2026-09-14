@@ -1850,7 +1850,8 @@ bool FileCheck::readCheckFile(
     std::string Prefix = "-implicit-check-not='";
     std::string Suffix = "'";
     std::unique_ptr<MemoryBuffer> CmdLine = MemoryBuffer::getMemBufferCopy(
-        (Prefix + PatternString + Suffix).str(), "command line");
+        formatv("{0}{1}{2}", Prefix, PatternString, Suffix).str(),
+        "command line");
 
     StringRef PatternInBuffer =
         CmdLine->getBuffer().substr(Prefix.size(), PatternString.size());
@@ -2596,7 +2597,8 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // Append a copy of the command-line definition adapted to use the same
       // format as in the input file to be able to reuse
       // parseNumericSubstitutionBlock.
-      CmdlineDefsDiag += (DefPrefix + CmdlineDef + " (parsed as: [[").str();
+      CmdlineDefsDiag +=
+          formatv("{0}{1} (parsed as: [[", DefPrefix, CmdlineDef).str();
       std::string SubstitutionStr = std::string(CmdlineDef);
       SubstitutionStr[EqIdx] = ':';
       CmdlineDefsIndices.push_back(
