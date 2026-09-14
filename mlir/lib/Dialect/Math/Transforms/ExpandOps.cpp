@@ -277,8 +277,8 @@ static LogicalResult convertFmaFOp(math::FmaOp op, PatternRewriter &rewriter) {
 // Converts a ceilf() function to the following:
 // ceilf(float x) ->
 //      y = (float)(int) x
-//      if (x > y) then incr = 1 else incr = 0
-//      y = y + incr   <= replace this op with the ceilf op.
+//      if (x > y) then y = y + 1
+//          => replace y with the ceilf op.
 static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   ImplicitLocOpBuilder b(op->getLoc(), rewriter);
   Value operand = op.getOperand();
@@ -338,16 +338,14 @@ static LogicalResult convertCeilOp(math::CeilOp op, PatternRewriter &rewriter) {
   Value fpFixedConvert = createTruncatedFPValue(operand, b);
 
   // Creating constants for later use.
-  Value zero = createFloatConst(op->getLoc(), opType, 0.00, rewriter, operand);
   Value one = createFloatConst(op->getLoc(), opType, 1.00, rewriter, operand);
 
   Value gtCheck = arith::CmpFOp::create(b, arith::CmpFPredicate::OGT, operand,
                                         fpFixedConvert);
-  Value incrValue =
-      arith::SelectOp::create(b, op->getLoc(), gtCheck, one, zero);
-
-  Value add = arith::AddFOp::create(b, opType, fpFixedConvert, incrValue);
-  Value ret = arith::SelectOp::create(b, isSpecialValOrLargeVal, operand, add);
+  Value add = arith::AddFOp::create(b, opType, fpFixedConvert, one);
+  Value rounded = arith::SelectOp::create(b, gtCheck, add, fpFixedConvert);
+  Value ret =
+      arith::SelectOp::create(b, isSpecialValOrLargeVal, operand, rounded);
   rewriter.replaceOp(op, ret);
   return success();
 }

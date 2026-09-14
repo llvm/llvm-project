@@ -154,7 +154,6 @@ func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
 // CHECK-LABEL:     func @ceilf_func
 // CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
 func.func @ceilf_func(%a: f64) -> f64 {
-  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
   // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
   // CHECK-DAG:   [[C_4841369599423283200:%.*]] = arith.constant 4841369599423283200
   // CHECK-DAG:   [[C_9223372036854775807:%.*]] = arith.constant 9223372036854775807
@@ -165,9 +164,9 @@ func.func @ceilf_func(%a: f64) -> f64 {
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
   // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
-  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
-  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
-  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[C_1]]
+  // CHECK-NEXT:   [[ROUNDED:%.+]] = arith.select [[COMP]], [[ADDF]], [[COPYSIGN]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ROUNDED]]
   // CHECK-NEXT:   return [[RESULT]]
   // CHECK-FILTER: math.ceil
   %ret = math.ceil %a : f64
@@ -179,7 +178,6 @@ func.func @ceilf_func(%a: f64) -> f64 {
 // CHECK-LABEL:     func @ceilf_fnuz_func
 // CHECK-SAME:      ([[ARG0:%.+]]: f8E5M2FNUZ) -> f8E5M2FNUZ
 func.func @ceilf_fnuz_func(%a: f8E5M2FNUZ) -> f8E5M2FNUZ {
-  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
   // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
   // CHECK-DAG:   [[C_NEG_128:%.*]] = arith.constant -128
   // CHECK-DAG:   [[C_72:%.*]] = arith.constant 72
@@ -193,9 +191,9 @@ func.func @ceilf_fnuz_func(%a: f8E5M2FNUZ) -> f8E5M2FNUZ {
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
   // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
-  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
-  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
-  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[C_1]]
+  // CHECK-NEXT:   [[ROUNDED:%.+]] = arith.select [[COMP]], [[ADDF]], [[COPYSIGN]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ROUNDED]]
   // CHECK-NEXT:   return [[RESULT]]
   // CHECK-FILTER: math.ceil
   %ret = math.ceil %a : f8E5M2FNUZ
@@ -821,7 +819,6 @@ func.func @rsqrt_tns(%float: tensor<5x8xf32>) -> (tensor<5x8xf32>)  {
 // CHECK-LABEL:    func.func @non_static_shape_ceil_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
 // CHECK-SAME:     -> tensor<?xf32>
-// CHECK-DAG:       arith.constant 0.000000e+00 : f32
 // CHECK-DAG:       arith.constant 1.000000e+00 : f32
 // CHECK-DAG:       tensor.dim %[[ARG]]
 // CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
