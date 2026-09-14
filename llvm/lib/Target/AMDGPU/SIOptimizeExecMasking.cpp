@@ -614,14 +614,11 @@ bool SIOptimizeExecMasking::blocksAndN2Sink(const MachineInstr &MI,
   for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
-    // Any access to Dst would see a stale value once the def sinks past it, a
-    // use of SCC would see the s_andn2 result, and a redefinition of EXEC
-    // would change what the s_andn2 computes.
+    // Any access to Dst would see a stale value once the def sinks past it,
+    // and a use of SCC would see the s_andn2 result.
     if (TRI->regsOverlap(MO.getReg(), Dst))
       return true;
-    if (MO.isUse() && TRI->regsOverlap(MO.getReg(), AMDGPU::SCC))
-      return true;
-    if (MO.isDef() && TRI->regsOverlap(MO.getReg(), LMC.ExecReg))
+    if (MO.isUse() && MO.getReg() == AMDGPU::SCC)
       return true;
   }
   return false;
@@ -646,8 +643,8 @@ bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
   // Keep the fused instruction ahead of any trailing debug instructions, so
   // DBG_VALUEs of Dst stay after its def.
   MachineBasicBlock::iterator InsertPt = CopyToExecInst.getIterator();
-  while (InsertPt != MBB.begin() && std::prev(InsertPt)->isDebugInstr())
-    --InsertPt;
+  if (InsertPt != MBB.begin())
+    InsertPt = std::next(prev_nodbg(InsertPt, MBB.begin()));
 
   // Scan back for the s_andn2 computing the new exec value. The scheduler may
   // have moved it away from the exec write, so allow instructions in between
@@ -669,10 +666,11 @@ bool SIOptimizeExecMasking::optimizeAndN2WrExecSequence(
   if (!Src.isReg() || !Mask.isReg() || Mask.getReg() != LMC.ExecReg)
     return false;
 
-  for (MachineInstr &MI :
-       make_range(std::next(MachineBasicBlock::iterator(AndN2Inst)), InsertPt))
+  for (MachineInstr &MI : make_range(
+           std::next(MachineBasicBlock::iterator(AndN2Inst)), InsertPt)) {
     if (MI.modifiesRegister(Src.getReg(), TRI))
       return false;
+  }
 
   // The fused form also clobbers SCC, at the point the s_andn2 is moved to.
   if (isRegisterInUseAfter(CopyToExecInst, AMDGPU::SCC))
