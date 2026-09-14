@@ -196,8 +196,8 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
                      "Windows exception model"),
           clEnumValN(ExceptionHandling::Wasm, "wasm",
                      "WebAssembly exception handling"),
-          clEnumValN(ExceptionHandling::EmscriptenEH, "emscripten",
-                     "Emscripten JavaScript-based C++ exception handling")));
+          clEnumValN(ExceptionHandling::Emscripten, "emscripten",
+                     "Emscripten JavaScript-based exception handling")));
   CGBINDOPT(ExceptionModel);
 
   static cl::opt<CodeGenFileType> FileType(

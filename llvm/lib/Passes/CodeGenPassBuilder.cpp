@@ -473,7 +473,7 @@ void CodeGenPassBuilder::addPassesToHandleExceptions(PassManagerWrapper &PMW) {
     addFunctionPass(WasmEHPreparePass(), PMW);
     break;
   case ExceptionHandling::None:
-  case ExceptionHandling::EmscriptenEH:
+  case ExceptionHandling::Emscripten:
     // Emscripten EH is lowered earlier by WebAssemblyLowerEmscriptenEHSjLj, so
     // by this point it needs no generic EH preparation, like the None case.
     addFunctionPass(LowerInvokePass(), PMW);

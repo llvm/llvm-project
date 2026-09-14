@@ -405,7 +405,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   if (CodeGenOpts.hasWasmExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
   if (CodeGenOpts.hasEmscriptenExceptions())
-    Options.ExceptionModel = llvm::ExceptionHandling::EmscriptenEH;
+    Options.ExceptionModel = llvm::ExceptionHandling::Emscripten;
 
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 

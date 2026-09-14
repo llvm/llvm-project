@@ -144,7 +144,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   // Emscripten EH is selected by the exception model. WasmEnableEmEH is a
   // deprecated cl::opt alias, OR-ed in here until it is removed.
   bool EnableEmEH =
-      TM->Options.ExceptionModel == ExceptionHandling::EmscriptenEH ||
+      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
       WasmEnableEmEH;
 
   // You can't enable two modes of EH at the same time
@@ -170,7 +170,7 @@ static void basicCheckForEHAndSjLj(TargetMachine *TM) {
   // Basic Correctness checking related to -exception-model
   if (TM->Options.ExceptionModel != ExceptionHandling::None &&
       TM->Options.ExceptionModel != ExceptionHandling::Wasm &&
-      TM->Options.ExceptionModel != ExceptionHandling::EmscriptenEH)
+      TM->Options.ExceptionModel != ExceptionHandling::Emscripten)
     report_fatal_error(
         "-exception-model should be either 'none', 'wasm', or 'emscripten'");
   if (WasmEnableEH && TM->Options.ExceptionModel != ExceptionHandling::Wasm)
@@ -343,7 +343,7 @@ void WebAssemblyPassConfig::addIRPasses() {
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
   bool EnableEmEH =
-      TM->Options.ExceptionModel == ExceptionHandling::EmscriptenEH ||
+      TM->Options.ExceptionModel == ExceptionHandling::Emscripten ||
       WasmEnableEmEH;
   if (!EnableEmEH && !WasmEnableEH) {
     addPass(createLowerInvokePass());

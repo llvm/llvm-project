@@ -205,7 +205,7 @@ public:
     WinEH,
     DwarfCFI,
     Wasm,
-    EmscriptenEH
+    Emscripten
   };
 
   enum class SwiftAsyncFramePointerKind {
@@ -642,7 +642,7 @@ public:
   }
 
   bool hasEmscriptenExceptions() const {
-    return getExceptionHandling() == ExceptionHandlingKind::EmscriptenEH;
+    return getExceptionHandling() == ExceptionHandlingKind::Emscripten;
   }
 
   /// Check if Clang profile instrumenation is on.

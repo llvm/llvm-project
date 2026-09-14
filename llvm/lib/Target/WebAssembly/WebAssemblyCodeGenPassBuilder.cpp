@@ -128,7 +128,7 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // passes and Emscripten SjLj handling expects all invokes to be lowered
   // before.
   bool EnableEmEH =
-      TM.Options.ExceptionModel == ExceptionHandling::EmscriptenEH ||
+      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
       WasmEnableEmEH;
   if (!EnableEmEH && !WasmEnableEH) {
     addFunctionPass(LowerInvokePass(), PMW);
