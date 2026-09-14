@@ -118,7 +118,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
   UP.Threshold =
       F.getFnAttributeAsParsedInteger("amdgpu-unroll-threshold", 300);
   UP.PartialThreshold = F.getFnAttributeAsParsedInteger(
-      "amdgpu-partial-unroll-threshold", UP.PartialThreshold);
+      "amdgpu-partial-unroll-threshold", 150);
   UP.MaxCount = std::numeric_limits<unsigned>::max();
   UP.Partial = true;
 
