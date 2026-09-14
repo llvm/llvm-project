@@ -31,6 +31,7 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/PointerAuthOptions.h"
 #include "clang/CodeGen/ConstantInitBuilder.h"
+#include "clang/CodeGenUtils/ItaniumCXXABIUtils.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Instructions.h"
@@ -1554,58 +1555,6 @@ static llvm::FunctionCallee getBadCastFn(CodeGenFunction &CGF) {
   return CGF.CGM.CreateRuntimeFunction(FTy, "__cxa_bad_cast");
 }
 
-/// Compute the src2dst_offset hint as described in the
-/// Itanium C++ ABI [2.9.7]
-static CharUnits computeOffsetHint(ASTContext &Context,
-                                   const CXXRecordDecl *Src,
-                                   const CXXRecordDecl *Dst) {
-  CXXBasePaths Paths(/*FindAmbiguities=*/true, /*RecordPaths=*/true,
-                     /*DetectVirtual=*/false);
-
-  // If Dst is not derived from Src we can skip the whole computation below and
-  // return that Src is not a public base of Dst.  Record all inheritance paths.
-  if (!Dst->isDerivedFrom(Src, Paths))
-    return CharUnits::fromQuantity(-2ULL);
-
-  unsigned NumPublicPaths = 0;
-  CharUnits Offset;
-
-  // Now walk all possible inheritance paths.
-  for (const CXXBasePath &Path : Paths) {
-    if (Path.Access != AS_public)  // Ignore non-public inheritance.
-      continue;
-
-    ++NumPublicPaths;
-
-    for (const CXXBasePathElement &PathElement : Path) {
-      // If the path contains a virtual base class we can't give any hint.
-      // -1: no hint.
-      if (PathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
-
-      if (NumPublicPaths > 1) // Won't use offsets, skip computation.
-        continue;
-
-      // Accumulate the base class offsets.
-      const ASTRecordLayout &L = Context.getASTRecordLayout(PathElement.Class);
-      Offset += L.getBaseClassOffset(
-          PathElement.Base->getType()->getAsCXXRecordDecl());
-    }
-  }
-
-  // -2: Src is not a public base of Dst.
-  if (NumPublicPaths == 0)
-    return CharUnits::fromQuantity(-2ULL);
-
-  // -3: Src is a multiple public base type but never a virtual base type.
-  if (NumPublicPaths > 1)
-    return CharUnits::fromQuantity(-3ULL);
-
-  // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
-  // Return the offset of Src from the origin of Dst.
-  return Offset;
-}
-
 static llvm::FunctionCallee getBadTypeidFn(CodeGenFunction &CGF) {
   // void __cxa_bad_typeid();
   llvm::FunctionType *FTy = llvm::FunctionType::get(CGF.VoidTy, false);
@@ -1667,7 +1616,8 @@ llvm::Value *ItaniumCXXABI::emitDynamicCastCall(
   const CXXRecordDecl *DestDecl = DestRecordTy->getAsCXXRecordDecl();
   llvm::Value *OffsetHint = llvm::ConstantInt::getSigned(
       PtrDiffLTy,
-      computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl).getQuantity());
+      CodeGenUtils::computeOffsetHint(CGF.getContext(), SrcDecl, DestDecl)
+          .getQuantity());
 
   // Emit the call to __dynamic_cast.
   llvm::Value *Value = ThisAddr.emitRawPointer(CGF);

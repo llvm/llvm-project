@@ -33,6 +33,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/DiagnosticTrap.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGenUtils/ExprUtils.h"
 #include "llvm/ADT/APFixedPoint.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Argument.h"
@@ -5913,24 +5914,6 @@ Value *ScalarExprEmitter::VisitBinComma(const BinaryOperator *E) {
 //                             Other Operators
 //===----------------------------------------------------------------------===//
 
-/// isCheapEnoughToEvaluateUnconditionally - Return true if the specified
-/// expression is cheap enough and side-effect-free enough to evaluate
-/// unconditionally instead of conditionally.  This is used to convert control
-/// flow into selects in some cases.
-static bool isCheapEnoughToEvaluateUnconditionally(const Expr *E,
-                                                   CodeGenFunction &CGF) {
-  // Anything that is an integer or floating point constant is fine.
-  return E->IgnoreParens()->isEvaluatable(CGF.getContext());
-
-  // Even non-volatile automatic variables can't be evaluated unconditionally.
-  // Referencing a thread_local may cause non-trivial initialization work to
-  // occur. If we're inside a lambda and one of the variables is from the scope
-  // outside the lambda, that function may have returned already. Reading its
-  // locals is a bad idea. Also, these reads may introduce races there didn't
-  // exist in the source-level program.
-}
-
-
 Value *ScalarExprEmitter::
 VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   TestAndClearIgnoreResultAssign();
@@ -6036,8 +6019,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // select instead of as control flow.  We can only do this if it is cheap and
   // safe to evaluate the LHS and RHS unconditionally.
   if (!llvm::EnableSingleByteCoverage &&
-      isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
-      isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
+      CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(lhsExpr,
+                                                           CGF.getContext()) &&
+      CodeGenUtils::isCheapEnoughToEvaluateUnconditionally(rhsExpr,
+                                                           CGF.getContext())) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
     llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
 

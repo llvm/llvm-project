@@ -36,6 +36,7 @@
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGenUtils/FunctionUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
@@ -58,32 +59,14 @@
 using namespace clang;
 using namespace CodeGen;
 
-/// shouldEmitLifetimeMarkers - Decide whether we need emit the life-time
-/// markers.
-static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
-                                      const LangOptions &LangOpts) {
-  if (CGOpts.DisableLifetimeMarkers)
-    return false;
-
-  // Sanitizers may use markers.
-  if (CGOpts.SanitizeAddressUseAfterScope ||
-      LangOpts.Sanitize.has(SanitizerKind::HWAddress) ||
-      LangOpts.Sanitize.has(SanitizerKind::Memory) ||
-      LangOpts.Sanitize.has(SanitizerKind::MemtagStack))
-    return true;
-
-  // For now, only in optimized builds.
-  return CGOpts.OptimizationLevel != 0;
-}
-
 CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
     : CodeGenTypeCache(cgm), CGM(cgm), Target(cgm.getTarget()),
       Builder(cgm, cgm.getModule().getContext(), CGBuilderInserterTy(this)),
       SanOpts(CGM.getLangOpts().Sanitize), CurFPFeatures(CGM.getLangOpts()),
       DebugInfo(CGM.getModuleDebugInfo()),
       PGO(std::make_unique<CodeGenPGO>(cgm)),
-      ShouldEmitLifetimeMarkers(
-          shouldEmitLifetimeMarkers(CGM.getCodeGenOpts(), CGM.getLangOpts())) {
+      ShouldEmitLifetimeMarkers(CodeGenUtils::shouldEmitLifetimeMarkers(
+          CGM.getCodeGenOpts(), CGM.getLangOpts())) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
   EHStack.setCGF(this);

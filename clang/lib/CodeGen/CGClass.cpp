@@ -21,11 +21,11 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclTemplate.h"
-#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "clang/CodeGenUtils/ClassUtils.h"
 #include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
@@ -513,30 +513,7 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
   }
 };
 
-/// A visitor which checks whether an initializer uses 'this' in a
-/// way which requires the vtable to be properly set.
-struct DynamicThisUseChecker
-    : ConstEvaluatedExprVisitor<DynamicThisUseChecker> {
-  typedef ConstEvaluatedExprVisitor<DynamicThisUseChecker> super;
-
-  bool UsesThis;
-
-  DynamicThisUseChecker(const ASTContext &C) : super(C), UsesThis(false) {}
-
-  // Black-list all explicit and implicit references to 'this'.
-  //
-  // Do we need to worry about external references to 'this' derived
-  // from arbitrary code?  If so, then anything which runs arbitrary
-  // external code might potentially access the vtable.
-  void VisitCXXThisExpr(const CXXThisExpr *E) { UsesThis = true; }
-};
 } // end anonymous namespace
-
-static bool BaseInitializerUsesThis(ASTContext &C, const Expr *Init) {
-  DynamicThisUseChecker Checker(C);
-  Checker.Visit(Init);
-  return Checker.UsesThis;
-}
 
 static void EmitBaseInitializer(CodeGenFunction &CGF,
                                 const CXXRecordDecl *ClassDecl,
@@ -552,7 +529,8 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
   // If the initializer for the base (other than the constructor
   // itself) accesses 'this' in any way, we need to initialize the
   // vtables.
-  if (BaseInitializerUsesThis(CGF.getContext(), BaseInit->getInit()))
+  if (CodeGenUtils::baseInitializerUsesThis(CGF.getContext(),
+                                            BaseInit->getInit()))
     CGF.InitializeVTablePointers(ClassDecl);
 
   // We can pretend to be a complete class because it only matters for
