@@ -2089,6 +2089,35 @@ LogicalResult MemcpyOp::verify() {
 
 namespace {
 
+/// Fold gpu.memcpy(%x, %x).
+struct FoldSelfCopy : public OpRewritePattern<MemcpyOp> {
+  using OpRewritePattern<MemcpyOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MemcpyOp memcpyOp,
+                                PatternRewriter &rewriter) const override {
+    if (memcpyOp.getSrc() != memcpyOp.getDst())
+      return failure();
+
+    // Synchronous self-copy is a no-op.
+    if (!memcpyOp.getAsyncToken()) {
+      rewriter.eraseOp(memcpyOp);
+      return success();
+    }
+
+    ValueRange asyncDependencies = memcpyOp.getAsyncDependencies();
+
+    // If only 1 dependency, replace `memcpyOp` with the dependency.
+    if (asyncDependencies.size() == 1)
+      rewriter.replaceOp(memcpyOp, asyncDependencies.front());
+
+    // If several dependencies, replace `memcpyOp` with a `gpu.wait`.
+    rewriter.replaceOpWithNewOp<WaitOp>(
+        memcpyOp, memcpyOp.getAsyncToken().getType(), asyncDependencies);
+
+    return success();
+  }
+};
+
 /// Erases a common case of copy ops where a destination value is used only by
 /// the copy op, alloc and dealloc ops.
 struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
@@ -2126,7 +2155,12 @@ struct EraseTrivialCopyOp : public OpRewritePattern<MemcpyOp> {
 
 void MemcpyOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results.add<EraseTrivialCopyOp>(context);
+  results.add<EraseTrivialCopyOp, FoldSelfCopy>(context);
+}
+
+LogicalResult MemcpyOp::fold(FoldAdaptor adaptor,
+                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
+  return memref::foldMemRefCast(*this);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2196,11 +2230,6 @@ LogicalResult SubgroupMmaComputeOp::verify() {
     return emitError("operand shapes do not satisfy matmul constraints");
 
   return success();
-}
-
-LogicalResult MemcpyOp::fold(FoldAdaptor adaptor,
-                             SmallVectorImpl<::mlir::OpFoldResult> &results) {
-  return memref::foldMemRefCast(*this);
 }
 
 LogicalResult MemsetOp::fold(FoldAdaptor adaptor,
