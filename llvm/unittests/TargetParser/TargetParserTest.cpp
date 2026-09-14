@@ -50,7 +50,7 @@ const char *ARMArch[] = {
     "armv9-a",     "armv9",     "armv9a",       "armv9.1-a",   "armv9.1a",
     "armv9.2-a",   "armv9.2a",  "armv9.3-a",    "armv9.3a",    "armv9.4-a",
     "armv9.4a",    "armv9.5-a", "armv9.5a",     "armv9.6a",    "armv9.6-a",
-    "armv9.7a",    "armv9.7-a",
+    "armv9.7a",    "armv9.7-a", "armv9.8a",     "armv9.8-a",
 };
 
 std::string FormatExtensionFlags(int64_t Flags) {
@@ -664,6 +664,8 @@ TEST(TargetParserTest, testARMArch) {
                           ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(testARMArch("armv9.7-a", "generic", "v9.7a",
                           ARMBuildAttrs::CPUArch::v9_A));
+  EXPECT_TRUE(testARMArch("armv9.8-a", "generic", "v9.8a",
+                          ARMBuildAttrs::CPUArch::v9_A));
   EXPECT_TRUE(
       testARMArch("armv8-r", "generic", "v8r", ARMBuildAttrs::CPUArch::v8_R));
   EXPECT_TRUE(testARMArch("armv8-m.base", "generic", "v8m.base",
@@ -978,6 +980,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
     case ARM::ArchKind::ARMV9_5A:
     case ARM::ArchKind::ARMV9_6A:
     case ARM::ArchKind::ARMV9_7A:
+    case ARM::ArchKind::ARMV9_8A:
       EXPECT_EQ(ARM::ProfileKind::A, ARM::parseArchProfile(ARMArch[i]));
       break;
     default:
@@ -1350,6 +1353,7 @@ TEST(TargetParserTest, testAArch64Arch) {
   EXPECT_TRUE(testAArch64Arch("armv9.5-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.6-a"));
   EXPECT_TRUE(testAArch64Arch("armv9.7-a"));
+  EXPECT_TRUE(testAArch64Arch("armv9.8-a"));
 }
 
 bool testAArch64Extension(StringRef CPUName, StringRef ArchExt) {
@@ -1655,6 +1659,7 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_5A.ArchFeature], "+v9.5a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_6A.ArchFeature], "+v9.6a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_7A.ArchFeature], "+v9.7a");
+  EXPECT_EQ(AArch64::StrTab[AArch64::ARMV9_8A.ArchFeature], "+v9.8a");
   EXPECT_EQ(AArch64::StrTab[AArch64::ARMV8R.ArchFeature], "+v8r");
 }
 
@@ -1685,7 +1690,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   for (const auto *A :
        {&AArch64::ARMV9_1A, &AArch64::ARMV9_2A, &AArch64::ARMV9_3A,
         &AArch64::ARMV9_4A, &AArch64::ARMV9_5A, &AArch64::ARMV9_6A,
-        &AArch64::ARMV9_7A})
+        &AArch64::ARMV9_7A, &AArch64::ARMV9_8A})
     EXPECT_TRUE(A->implies(AArch64::ARMV9A));
 
   EXPECT_TRUE(AArch64::ARMV8_1A.implies(AArch64::ARMV8A));
@@ -1705,6 +1710,7 @@ TEST(TargetParserTest, AArch64ArchPartialOrder) {
   EXPECT_TRUE(AArch64::ARMV9_5A.implies(AArch64::ARMV9_4A));
   EXPECT_TRUE(AArch64::ARMV9_6A.implies(AArch64::ARMV9_5A));
   EXPECT_TRUE(AArch64::ARMV9_7A.implies(AArch64::ARMV9_6A));
+  EXPECT_TRUE(AArch64::ARMV9_8A.implies(AArch64::ARMV9_7A));
 
   EXPECT_TRUE(AArch64::ARMV9A.implies(AArch64::ARMV8_5A));
   EXPECT_TRUE(AArch64::ARMV9_1A.implies(AArch64::ARMV8_6A));
