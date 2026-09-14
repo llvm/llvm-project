@@ -36,19 +36,18 @@ struct GPUNameAlias {
 struct GPUInfo {
   StringTable::Offset Name;
   Triple::SubArchType SubArch;
-  unsigned ArchFeatures;
   AMDGPUFeatureBitset Features;
   IsaVersion Version;
   StringTable::Offset FamilyName;
   uint8_t MaxWavesPerEU;
   uint32_t MaxHWAddressableLocalMemorySize;
   uint8_t LDSBankCount;
+  uint8_t BufferResourceNumRecordsWidth;
 };
 
 // Per-GPU data for the R600 GPUKinds.
 struct R600Info {
   StringTable::Offset Name;
-  R600FeatureKind ArchFeatures;
   R600FeatureBitset Features;
 };
 
@@ -312,21 +311,6 @@ AMDGPU::GPUKind llvm::AMDGPU::parseArchR600(StringRef CPU) {
                        R600GPUAliases);
 }
 
-unsigned AMDGPU::getArchAttrAMDGCN(GPUKind AK) {
-  const GPUInfo *Info = getAMDGPUInfo(AK);
-  return Info ? Info->ArchFeatures : FEATURE_NONE;
-}
-
-unsigned AMDGPU::getArchAttrAMDGCN(Triple::SubArchType SubArch) {
-  const GPUInfo *Info = getAMDGPUInfo(getGPUKindFromSubArch(SubArch));
-  return Info ? Info->ArchFeatures : FEATURE_NONE;
-}
-
-R600FeatureKind AMDGPU::getArchAttrR600(GPUKind AK) {
-  const R600Info *Info = getR600Info(AK);
-  return Info ? Info->ArchFeatures : R600_FEATURE_NONE;
-}
-
 const AMDGPUFeatureBitset &AMDGPU::getFeatureBitset(GPUKind AK) {
   static constexpr AMDGPUFeatureBitset Empty{};
   const GPUInfo *Info = getAMDGPUInfo(AK);
@@ -500,6 +484,18 @@ unsigned AMDGPU::getLDSBankCount(GPUKind AK) {
 
 unsigned AMDGPU::getLDSBankCount(Triple::SubArchType SubArch) {
   return getLDSBankCount(getGPUKindFromSubArch(SubArch));
+}
+
+std::optional<unsigned> AMDGPU::getBufferResourceNumRecordsWidth(GPUKind AK) {
+  const GPUInfo *Info = getAMDGPUInfo(AK);
+  if (!Info || Info->BufferResourceNumRecordsWidth == 0)
+    return std::nullopt;
+  return Info->BufferResourceNumRecordsWidth;
+}
+
+std::optional<unsigned>
+AMDGPU::getBufferResourceNumRecordsWidth(Triple::SubArchType SubArch) {
+  return getBufferResourceNumRecordsWidth(getGPUKindFromSubArch(SubArch));
 }
 
 unsigned AMDGPU::getMaxWavesPerEU(GPUKind AK) {

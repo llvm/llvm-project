@@ -122,11 +122,15 @@ static inline uint64_t SPMagic(SampleProfileFormat Format = SPF_Binary) {
 static constexpr uint64_t MinSupportedVersion = 103;
 
 // The default version of the extensible binary profile format written by the
-// compiler.  We default to v103 as v104 is work in progress.
+// compiler. We default to v103 as v104 is reserved for the in-progress on-disk
+// hash table.
 static constexpr uint64_t DefaultVersion = 103;
 
+// The first version that permits composite profile sections.
+static constexpr uint64_t CompositeProfileVersion = 105;
+
 // The latest supported version of the extensible binary profile format.
-static constexpr uint64_t LatestVersion = 104;
+static constexpr uint64_t LatestVersion = CompositeProfileVersion;
 
 // Query if a given format version is supported by this compiler.
 static inline bool formatVersionIsSupported(uint64_t Version) {
@@ -148,9 +152,13 @@ enum SecType {
   SecFuncOffsetTable = 4,
   SecFuncMetadata = 5,
   SecCSNameTable = 6,
+  // Function offset table used by the composite profile representation.
+  SecCompositeFuncOffsetTable = 7,
   // marker for the first type of profile.
   SecFuncProfileFirst = 32,
-  SecLBRProfile = SecFuncProfileFirst
+  SecLBRProfile = SecFuncProfileFirst,
+  // Function profile section used by the composite profile representation.
+  SecCompositeProfile = 33
 };
 
 static inline std::string getSecName(SecType Type) {
@@ -169,10 +177,28 @@ static inline std::string getSecName(SecType Type) {
     return "FunctionMetadata";
   case SecCSNameTable:
     return "CSNameTableSection";
+  case SecCompositeFuncOffsetTable:
+    return "CompositeFuncOffsetTableSection";
   case SecLBRProfile:
     return "LBRProfileSection";
+  case SecCompositeProfile:
+    return "CompositeProfileSection";
   default:
     return "UnknownSection";
+  }
+}
+
+// Types of sample profiles that can be placed in SecCompositeProfile. These
+// values are persisted on disk; never change existing values, only append new
+// profile type IDs.
+enum ProfTypes { ProfTypeLBR = 0 };
+
+static inline StringRef getProfTypeName(uint64_t Type) {
+  switch (Type) {
+  case ProfTypeLBR:
+    return "LBR";
+  default:
+    return "unknown";
   }
 }
 
@@ -279,6 +305,7 @@ static inline void verifySecFlag(SecType Type, SecFlagType Flag) {
     IsFlagLegal = std::is_same<SecFuncMetadataFlags, SecFlagType>();
     break;
   case SecFuncOffsetTable:
+  case SecCompositeFuncOffsetTable:
     IsFlagLegal = std::is_same<SecFuncOffsetFlags, SecFlagType>();
     break;
   default:
