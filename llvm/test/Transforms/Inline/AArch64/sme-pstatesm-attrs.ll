@@ -645,7 +645,7 @@ define void @nonstreaming_caller_single_streaming_compatible_callee() {
 define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompatible_callee_dont_inline() "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompatible_callee_dont_inline
 ; CHECK-SAME: () #[[ATTR2]] {
-; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    call void @nonstreaming_caller_single_streaming_compatible_callee()
 ; CHECK-NEXT:    ret void
 ;
   call void @nonstreaming_caller_single_streaming_compatible_callee()
@@ -666,7 +666,7 @@ define void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline
 define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompatible_callee_inline() "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @streaming_caller_to_nonstreaming_callee_with_single_streamingcompatible_callee_inline
 ; CHECK-SAME: () #[[ATTR2]] {
-; CHECK-NEXT:    call void @streaming_compatible_body()
+; CHECK-NEXT:    call void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline()
 ; CHECK-NEXT:    ret void
 ;
   call void @nonstreaming_caller_single_streaming_compatible_callee_alwaysinline()
@@ -735,8 +735,8 @@ define ptr @vscale_dependent_op(ptr %p, i64 %k) {
 define ptr @incompatible_vscale_dependent_operation_sm(ptr %p) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define ptr @incompatible_vscale_dependent_operation_sm
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[RES_I:%.*]] = getelementptr <vscale x 4 x i32>, ptr [[P]], i64 4
-; CHECK-NEXT:    ret ptr [[RES_I]]
+; CHECK-NEXT:    [[RES:%.*]] = call ptr @vscale_dependent_op(ptr [[P]], i64 4)
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
   %res = call ptr @vscale_dependent_op(ptr %p, i64 4)
   ret ptr %res
@@ -782,10 +782,7 @@ define void @scalable_alloca_op(ptr %p) {
 define void @incompatible_scalable_alloca_op_caller(ptr %p) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @incompatible_scalable_alloca_op_caller
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    [[ALLOCA_I:%.*]] = alloca <vscale x 4 x i32>, align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[ALLOCA_I]])
-; CHECK-NEXT:    call void [[P]](ptr [[ALLOCA_I]]), !inline_history [[META0:![0-9]+]]
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[ALLOCA_I]])
+; CHECK-NEXT:    call void @scalable_alloca_op(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @scalable_alloca_op(ptr %p)
@@ -963,7 +960,7 @@ define void @fixed_length_vector_operation(ptr %p) {
 define void @fixed_length_vector_operation_caller_dont_inline(ptr %p) "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define void @fixed_length_vector_operation_caller_dont_inline
 ; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR2]] {
-; CHECK-NEXT:    store <4 x i32> zeroinitializer, ptr [[P]], align 16
+; CHECK-NEXT:    call void @fixed_length_vector_operation(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
   call void @fixed_length_vector_operation(ptr %p)
@@ -988,8 +985,8 @@ define float @strict_fp(float %in) strictfp {
 define float @incompatible_fp_environment_sm(float %in) strictfp "aarch64_pstate_sm_enabled" {
 ; CHECK-LABEL: define float @incompatible_fp_environment_sm
 ; CHECK-SAME: (float [[IN:%.*]]) #[[ATTR9:[0-9]+]] {
-; CHECK-NEXT:    [[RES_I:%.*]] = call float @llvm.experimental.constrained.fadd.f32(float [[IN]], float 4.200000e+01, metadata !"round.tonearest", metadata !"fpexcept.ignore") #[[ATTR14:[0-9]+]]
-; CHECK-NEXT:    ret float [[RES_I]]
+; CHECK-NEXT:    [[RES:%.*]] = call float @strict_fp(float [[IN]])
+; CHECK-NEXT:    ret float [[RES]]
 ;
   %res = call float @strict_fp(float %in)
   ret float %res
