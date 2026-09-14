@@ -4331,6 +4331,27 @@ void AssemblyWriter::printFunction(const Function *F) {
     Out << " align " << A->value();
   if (MaybeAlign A = F->getPreferredAlignment())
     Out << " prefalign(" << A->value() << ')';
+  if (auto CM = F->getCodeModel()) {
+    Out << " code_model \"";
+    switch (*CM) {
+    case CodeModel::Tiny:
+      Out << "tiny";
+      break;
+    case CodeModel::Small:
+      Out << "small";
+      break;
+    case CodeModel::Kernel:
+      Out << "kernel";
+      break;
+    case CodeModel::Medium:
+      Out << "medium";
+      break;
+    case CodeModel::Large:
+      Out << "large";
+      break;
+    }
+    Out << '"';
+  }
   if (F->hasGC())
     Out << " gc \"" << F->getGC() << '"';
   if (F->hasPrefixData()) {
