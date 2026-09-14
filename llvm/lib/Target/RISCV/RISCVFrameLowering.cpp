@@ -493,9 +493,8 @@ bool RISCVFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const TargetRegisterInfo *RegInfo = MF.getSubtarget().getRegisterInfo();
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-      RegInfo->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-      MFI.isFrameAddressTaken())
+  if (MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
+      MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken())
     return true;
 
   // With large callframes around we may need to use FP to access the scavenging
@@ -2714,9 +2713,13 @@ bool RISCVFrameLowering::canUseAsEpilogue(const MachineBasicBlock &MBB) const {
   if (!SuccMBB)
     return true;
 
-  // The successor can only contain a return, since we would effectively be
-  // replacing the successor with our own tail return at the end of our block.
-  return SuccMBB->isReturnBlock() && SuccMBB->size() == 1;
+  // The successor can only contain a return and debug instructions, since we
+  // would effectively replace it with our own tail return at the end of this
+  // block. The debug instructions would not execute on the tail-return path.
+  return SuccMBB->isReturnBlock() &&
+         llvm::count_if(SuccMBB->instrs(), [](const MachineInstr &MI) {
+           return !MI.isDebugInstr();
+         }) == 1;
 }
 
 bool RISCVFrameLowering::isSupportedStackID(TargetStackID::Value ID) const {

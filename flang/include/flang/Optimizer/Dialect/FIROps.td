@@ -298,6 +298,7 @@ def fir_FreeMemOp : fir_Op<"freemem", []> {
 
 def fir_LoadOp : fir_OneResultOp<"load", [
   FirAliasTagOpInterface,
+  fir_FortranObjectLoadOpInterface,
   DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
   DeclareOpInterfaceMethods<PromotableMemOpInterface>
 ]> {
@@ -332,6 +333,9 @@ def fir_LoadOp : fir_OneResultOp<"load", [
 
   let extraClassDeclaration = [{
     static mlir::ParseResult getElementOf(mlir::Type &ele, mlir::Type ref);
+
+    // FortranObjectLoadOpInterface methods:
+    mlir::Value getLoadSource(mlir::OpResult) { return getMemref(); }
   }];
 }
 
@@ -2750,6 +2754,10 @@ def fir_VolatileCastOp
 def fir_ConvertOp
     : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
                                         ConditionallySpeculatable,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableOpInterface>,
+                                        DeclareOpInterfaceMethods<
+                                            PromotableAliaserInterface>,
                                         fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -3283,6 +3291,8 @@ def fir_DeclareOp
                          DeclareOpInterfaceMethods<PromotableOpInterface,
                                                    ["requiresReplacedValues",
                                                     "visitReplacedValues"]>,
+                         DeclareOpInterfaceMethods<
+                             PromotableAliaserInterface>,
                          fir_FortranObjectViewOpInterface]> {
   let summary = "declare a variable";
 
