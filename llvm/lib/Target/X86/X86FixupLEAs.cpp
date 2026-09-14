@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineSizeOpts.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetSchedule.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -33,6 +34,12 @@ using namespace llvm;
 #define DEBUG_TYPE FIXUPLEA_NAME
 
 STATISTIC(NumLEAs, "Number of LEA instructions created");
+
+static cl::opt<unsigned> SearchALUInstrDistanceThreshold(
+    "x86-fixup-leas-search-distance-threshold", cl::Hidden,
+    cl::desc("Maximum instruction distance when searching for an ADD or SUB "
+             "after a LEA"),
+    cl::init(5));
 
 namespace {
 class FixupLEAsImpl {
@@ -412,8 +419,7 @@ static inline unsigned getINCDECFromLEA(unsigned LEAOpcode, bool IsINC) {
 MachineBasicBlock::iterator
 FixupLEAsImpl::searchALUInst(MachineBasicBlock::iterator &I,
                              MachineBasicBlock &MBB) const {
-  const int InstrDistanceThreshold = 5;
-  int InstrDistance = 1;
+  unsigned InstrDistance = 1;
 
   unsigned LEAOpcode = I->getOpcode();
   unsigned AddOpcode = getADDrrFromLEA(LEAOpcode);
@@ -424,7 +430,7 @@ FixupLEAsImpl::searchALUInst(MachineBasicBlock::iterator &I,
            std::next(I), MBB.end(), /*SkipPseudoOp=*/false)) {
     if (CurInst.isCall() || CurInst.isInlineAsm())
       break;
-    if (InstrDistance > InstrDistanceThreshold)
+    if (InstrDistance > SearchALUInstrDistanceThreshold)
       break;
 
     // Check if the lea dest register is used in an add/sub instruction only.
