@@ -6,7 +6,7 @@
 ; constant, but the pointer stride exceeds INT32_MAX on rv64 with a narrow IV.
 
 ; TODO: Should form a strided load with SCEV predicates.
-define void @stride_sext_exceeds_i32_max(ptr noalias readonly %src, ptr noalias %dst, i16 %start) {
+define void @stride_sext_exceeds_i32_max(ptr noalias readonly %src, ptr noalias %dst, i16 %start) vscale_range(4, 1024) {
 ; CHECK-LABEL: define void @stride_sext_exceeds_i32_max(
 ; CHECK-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias [[DST:%.*]], i16 [[START:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -61,7 +61,7 @@ exit:
   ret void
 }
 
-define void @stride_zext_exceeds_i32_max(ptr noalias readonly %src, ptr noalias %dst, i16 %start) {
+define void @stride_zext_exceeds_i32_max(ptr noalias readonly %src, ptr noalias %dst, i16 %start) vscale_range(4, 1024) {
 ; CHECK-LABEL: define void @stride_zext_exceeds_i32_max(
 ; CHECK-SAME: ptr noalias readonly [[SRC:%.*]], ptr noalias [[DST:%.*]], i16 [[START:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]

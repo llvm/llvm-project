@@ -155,9 +155,7 @@ define amdgpu_cs void @atomic_load_f16x2_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -165,9 +163,7 @@ define amdgpu_cs void @atomic_load_f16x2_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <2 x half>, ptr addrspace(1) %p syncscope("agent") monotonic, align 4
@@ -204,9 +200,7 @@ define amdgpu_cs void @atomic_load_f16x2_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -215,9 +209,7 @@ define amdgpu_cs void @atomic_load_f16x2_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <2 x half>, ptr addrspace(1) %p syncscope("agent") seq_cst, align 4
@@ -249,9 +241,7 @@ define amdgpu_cs void @atomic_load_f16x2_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -259,9 +249,7 @@ define amdgpu_cs void @atomic_load_f16x2_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <2 x half>, ptr addrspace(1) %p syncscope("wavefront") monotonic, align 4
@@ -294,9 +282,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -304,9 +290,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a = load atomic <2 x i16>, ptr addrspace(1) %p syncscope("agent") monotonic, align 4
@@ -344,9 +328,7 @@ define amdgpu_cs void @atomic_load_i16x2_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -355,9 +337,7 @@ define amdgpu_cs void @atomic_load_i16x2_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a = load atomic <2 x i16>, ptr addrspace(1) %p syncscope("agent") seq_cst, align 4
@@ -390,9 +370,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -400,9 +378,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a = load atomic <2 x i16>, ptr addrspace(1) %p syncscope("wavefront") monotonic, align 4
@@ -438,11 +414,8 @@ define amdgpu_cs void @atomic_load_f16x4_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GFX11-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
@@ -452,11 +425,8 @@ define amdgpu_cs void @atomic_load_f16x4_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GFX12-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX12-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
@@ -503,11 +473,8 @@ define amdgpu_cs void @atomic_load_f16x4_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GFX11-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
@@ -518,11 +485,8 @@ define amdgpu_cs void @atomic_load_f16x4_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GFX12-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX12-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
@@ -564,11 +528,8 @@ define amdgpu_cs void @atomic_load_f16x4_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GFX11-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
+; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX11-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
@@ -578,11 +539,8 @@ define amdgpu_cs void @atomic_load_f16x4_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v4.l
-; GFX12-NEXT:    v_mul_f16_e32 v0.h, v1.l, v5.l
+; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
+; GFX12-NEXT:    v_mul_f16_e32 v0.h, v1.l, v1.h
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
@@ -625,11 +583,9 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GFX11-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -637,11 +593,9 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(1) %p, pt
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GFX12-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <4 x i16>, ptr addrspace(1) %p syncscope("agent") monotonic, align 8
@@ -687,11 +641,9 @@ define amdgpu_cs void @atomic_load_i16x4_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GFX11-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -700,11 +652,9 @@ define amdgpu_cs void @atomic_load_i16x4_seq_cst_agent(ptr addrspace(1) %p, ptr 
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GFX12-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <4 x i16>, ptr addrspace(1) %p syncscope("agent") seq_cst, align 8
@@ -745,11 +695,9 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GFX11-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -757,11 +705,9 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_wavefront(ptr addrspace(1) %p
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v4.l
-; GFX12-NEXT:    v_mad_u16 v0.l, v1.l, v5.l, v0.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    v_mad_u16 v0.l, v1.l, v1.h, v0.l
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %a0 = load atomic <4 x i16>, ptr addrspace(1) %p syncscope("wavefront") monotonic, align 8
@@ -892,9 +838,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_1(ptr addrspace(
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:1 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -902,9 +846,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_1(ptr addrspace(
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:1 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(1) %p, i64 1
@@ -951,9 +893,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_max(ptr addrspac
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4095 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX11-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX11-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -961,9 +901,7 @@ define amdgpu_cs void @atomic_load_i16x2_monotonic_agent_offset_max(ptr addrspac
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    global_load_b32 v0, v[0:1], off offset:4095 scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v1.l
+; GFX12-NEXT:    v_add_nc_u16 v0.l, v0.l, v0.h
 ; GFX12-NEXT:    global_store_b16 v[2:3], v0, off
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr inbounds i8, ptr addrspace(1) %p, i64 4095

@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/bedrock/NativeDylibManager.h"
-#include "orc-rt-internal/support/sys/DynamicLibrary.h"
+#include "orc-rt-internal/bedrock/sys/DynamicLibrary.h"
 #include "orc-rt/bedrock/Session.h"
 
 namespace orc_rt {
@@ -26,12 +26,13 @@ NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
   SimpleSymbolTable NDMST;
   if (auto Err = AddInterface(NDMST))
     return Err;
-  std::pair<const char *, const void *> InstanceSym[] = {
-      {InstanceName, static_cast<const void *>(Instance.get())}};
+  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
+      {SymbolNameSpec::c(InstanceName),
+       static_cast<const void *>(Instance.get())}};
   if (auto Err = NDMST.addUnique(InstanceSym))
     return std::move(Err);
 
-  if (auto Err = ST.addUnique(NDMST))
+  if (auto Err = ST.addUnique(std::move(NDMST)))
     return std::move(Err);
 
   return std::move(Instance);

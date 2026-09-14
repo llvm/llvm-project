@@ -768,6 +768,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     Block,       // If the order of the rest of these changes, update the
     Declaration, // 'Reduce' function below.
     Delimited,
+    Explicit,
     LoopNest,
     LoopSeq,
     Separating,
@@ -782,6 +783,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
         .Case("AS_Block", Association::Block)
         .Case("AS_Declaration", Association::Declaration)
         .Case("AS_Delimited", Association::Delimited)
+        .Case("AS_Explicit", Association::Explicit)
         .Case("AS_LoopNest", Association::LoopNest)
         .Case("AS_LoopSeq", Association::LoopSeq)
         .Case("AS_None", Association::None)
@@ -910,29 +912,45 @@ static void generateGetDirectiveCategory(const DirectiveLanguage &DirLang,
   OS << "}\n";
 }
 
+// Must match the sentinel in DirectiveBase.td and in
+// OmpStructureChecker::CheckDirectiveInPureProcedure.
+// Note: This is at global scope instead of file scope becasue MSVC 19.29
+// rejects the use of a constexpr local in a captureless lambda (C3493),
+namespace {
+constexpr int NeverPure = 0x7FFFFFFF;
+} // namespace
 static void generateGetDirectivePureSince(const DirectiveLanguage &DirLang,
                                           raw_ostream &OS) {
-  // Must match the sentinel in DirectiveBase.td and in
-  // OmpStructureChecker::CheckDirectiveInPureProcedure.
-  constexpr int NeverPure = 0x7FFFFFFF;
   StringRef VersionType = getVersionType(DirLang);
-  OS << "constexpr " << VersionType
-     << " getDirectivePureSince(Directive Dir) {\n";
-  OS << "  switch (Dir) {\n";
 
-  StringRef Prefix = DirLang.getDirectivePrefix();
-
-  for (const Record *R : DirLang.getDirectives()) {
+  bool AnyPure = any_of(DirLang.getDirectives(), [](const Record *R) {
     Directive D(R);
-    int PureSince = D.getPureSince();
-    if (PureSince == NeverPure)
-      continue;
-    OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
-    OS << "    return " << VersionType << "(" << PureSince << ");\n";
+    return D.getPureSince() != NeverPure;
+  });
+
+  OS << "constexpr " << VersionType << " getDirectivePureSince(Directive"
+     << (AnyPure ? " Dir" : "") << ") {\n";
+
+  // Only print the switch if we have any pure directives, as the switch with
+  // only a default is a warning on MSVC (C4065).
+  if (AnyPure) {
+    OS << "  switch (Dir) {\n";
+    StringRef Prefix = DirLang.getDirectivePrefix();
+
+    for (const Record *R : DirLang.getDirectives()) {
+      Directive D(R);
+      int PureSince = D.getPureSince();
+      if (PureSince == NeverPure)
+        continue;
+      OS << "  case " << getIdentifierName(R, Prefix) << ":\n";
+      OS << "    return " << VersionType << "(" << PureSince << ");\n";
+    }
+    OS << "  default:\n";
+    OS << "    return " << VersionType << "(" << NeverPure << ");\n";
+    OS << "  } // switch (Dir)\n";
+  } else {
+    OS << "  return " << VersionType << "(" << NeverPure << ");\n";
   }
-  OS << "  default:\n";
-  OS << "    return " << VersionType << "(0x7FFFFFFF);\n";
-  OS << "  } // switch (Dir)\n";
   OS << "}\n";
 }
 

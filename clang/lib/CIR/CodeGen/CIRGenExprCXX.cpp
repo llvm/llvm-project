@@ -121,7 +121,7 @@ CIRGenFunction::emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
   return emitCall(cgm.getTypes().arrangeCXXMethodCall(argsList, fpt, required,
                                                       /*PrefixSize=*/0),
                   callee, returnValue, argsList, nullptr, ce == mustTailCall,
-                  loc);
+                  ce->getSourceRange());
 }
 
 RValue CIRGenFunction::emitCXXMemberOrOperatorMemberCallExpr(
@@ -321,7 +321,7 @@ RValue CIRGenFunction::emitCXXMemberOrOperatorCall(
   auto &fnInfo = cgm.getTypes().arrangeCXXMethodCall(
       args, fpt, callInfo.reqArgs, callInfo.prefixSize);
   assert((ce || currSrcLoc) && "expected source location");
-  mlir::Location loc = ce ? getLoc(ce->getExprLoc()) : *currSrcLoc;
+  SourceRange loc = ce ? ce->getSourceRange() : *currSrcLoc;
   return emitCall(fnInfo, callee, returnValue, args, nullptr,
                   ce && ce == mustTailCall, loc);
 }
@@ -901,7 +901,7 @@ public:
     if (isAlignedAllocation(params.Alignment)) {
       QualType sizeType = cgf.getContext().getSizeType();
       cir::ConstantOp align = cgf.getBuilder().getAlignment(
-          *cgf.currSrcLoc, cgf.convertType(sizeType), allocAlign);
+          cgf.getLoc(*cgf.currSrcLoc), cgf.convertType(sizeType), allocAlign);
       deleteArgs.add(RValue::get(align), sizeType);
     }
 
@@ -1006,8 +1006,7 @@ static void storeAnyExprIntoOneUnit(CIRGenFunction &cgf, const Expr *init,
   // FIXME: Refactor with emitExprAsInit.
   switch (cgf.getEvaluationKind(allocType)) {
   case cir::TEK_Scalar:
-    cgf.emitScalarInit(init, cgf.getLoc(init->getSourceRange()),
-                       cgf.makeAddrLValue(newPtr, allocType), false);
+    cgf.emitScalarInit(init, cgf.makeAddrLValue(newPtr, allocType), false);
     return;
   case cir::TEK_Complex:
     cgf.emitComplexExprIntoLValue(init, cgf.makeAddrLValue(newPtr, allocType),
@@ -1369,8 +1368,7 @@ RValue CIRGenFunction::emitCXXDestructorCall(
   assert((ce || dtor.getDecl()) && "expected source location provider");
   return emitCall(cgm.getTypes().arrangeCXXStructorDeclaration(dtor), callee,
                   ReturnValueSlot(), args, nullptr, ce && ce == mustTailCall,
-                  ce ? getLoc(ce->getExprLoc())
-                     : getLoc(dtor.getDecl()->getSourceRange()));
+                  ce ? ce->getSourceRange() : dtor.getDecl()->getSourceRange());
 }
 
 RValue CIRGenFunction::emitCXXPseudoDestructorExpr(
@@ -1643,7 +1641,7 @@ mlir::Value CIRGenFunction::emitCXXNewExpr(const CXXNewExpr *e) {
       if (allocatorType->getNumParams() > indexOfAlignArg)
         alignValType = allocatorType->getParamType(indexOfAlignArg);
       cir::ConstantOp align = builder.getAlignment(
-          *currSrcLoc, convertType(alignValType), allocAlign);
+          getLoc(*currSrcLoc), convertType(alignValType), allocAlign);
       allocatorArgs.add(RValue::get(align), alignValType);
       ++paramsToSkip;
     }
@@ -1857,8 +1855,9 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
     CharUnits deleteTypeSize = getContext().getTypeSizeInChars(deleteTy);
     assert(mlir::isa<cir::IntType>(convertType(sizeType)) &&
            "expected cir::IntType");
-    cir::ConstantOp size = builder.getConstInt(
-        *currSrcLoc, convertType(sizeType), deleteTypeSize.getQuantity());
+    cir::ConstantOp size =
+        builder.getConstInt(getLoc(*currSrcLoc), convertType(sizeType),
+                            deleteTypeSize.getQuantity());
 
     deleteArgs.add(RValue::get(size), sizeType);
   }
@@ -1870,7 +1869,7 @@ void CIRGenFunction::emitDeleteCall(const FunctionDecl *deleteFD,
         getContext().toCharUnitsFromBits(getContext().getTypeAlignIfKnown(
             deleteTy, /*NeedsPreferredAlignment=*/true));
     cir::ConstantOp align = builder.getAlignment(
-        *currSrcLoc, convertType(alignValType), deleteTypeAlign);
+        getLoc(*currSrcLoc), convertType(alignValType), deleteTypeAlign);
     deleteArgs.add(RValue::get(align), alignValType);
   }
 
