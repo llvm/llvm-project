@@ -101,10 +101,10 @@ void ChunkCache::EraseRange(addr_t addr, addr_t size) {
     return;
   const addr_t end_addr = llvm::SaturatingAdd(addr, size - 1);
 
-  Collection::iterator pos = m_chunks.lower_bound(addr);
+  auto pos = m_chunks.lower_bound(addr);
   // A chunk starting below addr can still reach into the range.
   if (pos != m_chunks.begin()) {
-    const Collection::iterator prev = std::prev(pos);
+    auto prev = std::prev(pos);
     if (addr - prev->first < prev->second.size())
       m_chunks.erase(prev);
   }
