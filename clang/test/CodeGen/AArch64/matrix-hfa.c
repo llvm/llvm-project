@@ -27,6 +27,8 @@
 // unchanged.
 
 typedef float __attribute__((matrix_type(2, 2))) f2x2;
+typedef float __attribute__((matrix_type(1, 2))) f1x2;
+typedef _Float16 __attribute__((matrix_type(2, 2))) h2x2;
 typedef float __attribute__((matrix_type(3, 3))) f3x3;
 typedef double __attribute__((matrix_type(2, 2))) d2x2;
 typedef int __attribute__((matrix_type(2, 2))) i2x2;
@@ -54,6 +56,22 @@ struct IntMatrixStruct {
 struct OverAlignedMatrixStruct {
   f2x2 m;
 } __attribute__((aligned(32)));
+
+struct ArrayOfOneMatrix {
+  f2x2 m[1];
+};
+
+struct HalfMatrixStruct {
+  h2x2 m;
+};
+
+struct ArrayOfTwoMatrices {
+  f1x2 m[2];
+};
+
+struct ArrayOfTwoLargeMatrices {
+  f2x2 m[2];
+};
 
 // f2x2 is four floats. As a scalar matrix it lowers to <4 x float> and is
 // passed in a SIMD register, not classified as an HFA.
@@ -128,3 +146,35 @@ void take_int_matrix_struct(struct IntMatrixStruct s) {}
 // indirectly (32-byte, 32-aligned). Same under compat 23.
 void take_overaligned_matrix_struct(struct OverAlignedMatrixStruct s) {}
 // CHECK-LABEL: define{{.*}} void @take_overaligned_matrix_struct(ptr nofreeobj noundef align 32 dead_on_return dereferenceable(32) %{{.*}})
+
+// Array of one f2x2: the array branch multiplies the matrix's 4 floats by 1,
+// so this is the same HFA as MatrixStruct. Compat 23 does not flatten the
+// matrix element, so the 16-byte struct is passed as [2 x i64].
+void take_array_of_one_matrix(struct ArrayOfOneMatrix s) {}
+// HFA-AAPCS: define{{.*}} void @take_array_of_one_matrix([4 x float] alignstack(8) %{{.*}})
+// HFA-DARWIN: define{{.*}} void @take_array_of_one_matrix([4 x float] %{{.*}})
+// COMPAT23: define{{.*}} void @take_array_of_one_matrix([2 x i64] %{{.*}})
+
+// One 2x2 of _Float16: four halves, no padding -> HFA of 4 half.
+// Compat 23 does not flatten the matrix, so the 8-byte struct is passed as
+// i64.
+void take_half_matrix_struct(struct HalfMatrixStruct s) {}
+// HFA-AAPCS: define{{.*}} void @take_half_matrix_struct([4 x half] alignstack(8) %{{.*}})
+// HFA-DARWIN: define{{.*}} void @take_half_matrix_struct([4 x half] %{{.*}})
+// COMPAT23: define{{.*}} void @take_half_matrix_struct(i64 %{{.*}})
+
+// Array of two f1x2: each matrix is two floats, so the array is four floats
+// and is an HFA. This would be rejected if arrays of matrices were limited
+// by the array length rather than the flattened member count. Compat 23
+// does not flatten the matrix element, so the 16-byte struct is passed as
+// [2 x i64].
+void take_array_of_two_matrices(struct ArrayOfTwoMatrices s) {}
+// HFA-AAPCS: define{{.*}} void @take_array_of_two_matrices([4 x float] alignstack(8) %{{.*}})
+// HFA-DARWIN: define{{.*}} void @take_array_of_two_matrices([4 x float] %{{.*}})
+// COMPAT23: define{{.*}} void @take_array_of_two_matrices([2 x i64] %{{.*}})
+
+// Array of two f2x2: eight floats, which exceeds the 4-member HFA limit, so
+// this is not an HFA. 32 bytes exceeds the 16-byte GPR limit, so it is
+// passed indirectly. Same under compat 23.
+void take_array_of_two_large_matrices(struct ArrayOfTwoLargeMatrices s) {}
+// CHECK-LABEL: define{{.*}} void @take_array_of_two_large_matrices(ptr nofreeobj noundef align 4 dead_on_return dereferenceable(32) %{{.*}})
