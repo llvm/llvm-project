@@ -37,43 +37,30 @@ using namespace llvm;
 namespace {
 
 class GCNCreateVOPD {
-private:
-  class VOPDCombineInfo {
-  public:
-    VOPDCombineInfo() = default;
-    VOPDCombineInfo(MachineInstr *First, MachineInstr *Second,
-                    bool VOPD3 = false)
-        : FirstMI(First), SecondMI(Second), IsVOPD3(VOPD3) {}
-
-    MachineInstr *FirstMI;
-    MachineInstr *SecondMI;
-    bool IsVOPD3;
-  };
-
 public:
   const GCNSubtarget *ST = nullptr;
 
-  bool doReplace(const SIInstrInfo *SII, VOPDCombineInfo &CI) {
-    auto *FirstMI = CI.FirstMI;
-    auto *SecondMI = CI.SecondMI;
-    unsigned Opc1 = FirstMI->getOpcode();
-    unsigned Opc2 = SecondMI->getOpcode();
+  bool doReplace(const SIInstrInfo *SII, VOPDMatchInfo &Match) {
+    MachineInstr *MIX = Match.getMIX();
+    MachineInstr *MIY = Match.getMIY();
+    unsigned Opc1 = MIX->getOpcode();
+    unsigned Opc2 = MIY->getOpcode();
     unsigned EncodingFamily =
         AMDGPU::getVOPDEncodingFamily(SII->getSubtarget());
-    int NewOpcode = AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1, CI.IsVOPD3),
-                                        AMDGPU::getVOPDOpcode(Opc2, CI.IsVOPD3),
-                                        EncodingFamily, CI.IsVOPD3);
+    int NewOpcode =
+        AMDGPU::getVOPDFull(AMDGPU::getVOPDOpcode(Opc1, Match.IsVOPD3),
+                            AMDGPU::getVOPDOpcode(Opc2, Match.IsVOPD3),
+                            EncodingFamily, Match.IsVOPD3);
     assert(NewOpcode != -1 &&
            "Should have previously determined this as a possible VOPD\n");
 
-    auto VOPDInst = BuildMI(*FirstMI->getParent(), FirstMI,
-                            FirstMI->getDebugLoc(), SII->get(NewOpcode))
-                        .setMIFlags(FirstMI->getFlags() | SecondMI->getFlags());
+    auto VOPDInst =
+        BuildMI(*MIX->getParent(), MIX, MIX->getDebugLoc(), SII->get(NewOpcode))
+            .setMIFlags(MIX->getFlags() | MIY->getFlags());
 
     namespace VOPD = AMDGPU::VOPD;
-    MachineInstr *MI[] = {FirstMI, SecondMI};
-    auto InstInfo =
-        AMDGPU::getVOPDInstInfo(FirstMI->getDesc(), SecondMI->getDesc());
+    MachineInstr *MI[] = {MIX, MIY};
+    auto InstInfo = AMDGPU::getVOPDInstInfo(MIX->getDesc(), MIY->getDesc());
 
     for (auto CompIdx : VOPD::COMPONENTS) {
       auto MCOprIdx = InstInfo[CompIdx].getIndexOfDstInMCOperands();
@@ -103,11 +90,12 @@ public:
             InstInfo[CompIdx].getIndexOfSrcInMCOperands(CompSrcIdx, IsVOP3);
         VOPDInst.add(MI[CompIdx]->getOperand(MCOprIdx));
       }
-      if (MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e32 && CI.IsVOPD3)
+      if (MI[CompIdx]->getOpcode() == AMDGPU::V_CNDMASK_B32_e32 &&
+          Match.IsVOPD3)
         VOPDInst.addReg(AMDGPU::VCC_LO);
     }
 
-    if (CI.IsVOPD3) {
+    if (Match.IsVOPD3) {
       if (unsigned BitOp2 = AMDGPU::getBitOp2(Opc2))
         VOPDInst.addImm(BitOp2);
     }
@@ -116,8 +104,8 @@ public:
     for (auto CompIdx : VOPD::COMPONENTS)
       VOPDInst.copyImplicitOps(*MI[CompIdx]);
 
-    LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: "
-                      << *CI.FirstMI << "\tY: " << *CI.SecondMI << "\n");
+    LLVM_DEBUG(dbgs() << "VOPD Fused: " << *VOPDInst << " from\tX: " << *MIX
+                      << "\tY: " << *MIY << "\n");
 
     for (auto CompIdx : VOPD::COMPONENTS)
       MI[CompIdx]->eraseFromParent();
@@ -135,7 +123,7 @@ public:
     const SIInstrInfo *SII = ST->getInstrInfo();
     bool Changed = false;
 
-    SmallVector<VOPDCombineInfo> ReplaceCandidates;
+    SmallVector<VOPDMatchInfo> ReplaceCandidates;
 
     for (auto &MBB : MF) {
       auto MII = MBB.begin(), E = MBB.end();
@@ -148,16 +136,25 @@ public:
           continue;
         auto *SecondMI = &*MII;
 
-        if (auto Match = tryMatchVOPDPair(*SII, *FirstMI, *SecondMI)) {
-          ReplaceCandidates.push_back(
-              VOPDCombineInfo(Match->MIX, Match->MIY, Match->IsVOPD3));
-          ++MII;
-        }
+        if (std::optional<VOPDMatchInfo> Match =
+                tryMatchVOPDPair(*SII, *FirstMI, *SecondMI))
+          ReplaceCandidates.push_back(std::move(*Match));
       }
     }
-    for (auto &CI : ReplaceCandidates) {
-      Changed |= doReplace(SII, CI);
+
+    SmallVector<VOPDMatchInfo *> Selected;
+    // An instruction can be the second MI of one candidate and the first MI of
+    // the next. Remember the second MI of the last selected candidate to reject
+    // that overlap.
+    MachineInstr *LastSelectedSecond = nullptr;
+    for (VOPDMatchInfo &Match : ReplaceCandidates) {
+      if (Match.InOrder[0] == LastSelectedSecond)
+        continue;
+      Selected.push_back(&Match);
+      LastSelectedSecond = Match.InOrder[1];
     }
+    for (VOPDMatchInfo *Match : Selected)
+      Changed |= doReplace(SII, *Match);
 
     return Changed;
   }
