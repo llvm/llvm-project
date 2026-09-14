@@ -1051,6 +1051,72 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::BOZLiteralConstant &x) {
 }
 
 // Names and named constants
+static void WarnForNumericStorageSize(
+    semantics::SemanticsContext &context, const parser::Name &name) {
+  const semantics::Symbol *associated{name.symbol};
+  const semantics::UseDetails *use{nullptr};
+  bool isNumericStorageSize{false};
+  while (associated) {
+    if (const auto *host{
+            associated->detailsIf<semantics::HostAssocDetails>()}) {
+      associated = &host->symbol();
+    } else if (const auto *nextUse{
+                   associated->detailsIf<semantics::UseDetails>()}) {
+      if (!use) {
+        use = nextUse;
+      }
+      const semantics::Symbol &used{nextUse->symbol()};
+      const semantics::Symbol &module{semantics::GetUsedModule(*nextUse)};
+      isNumericStorageSize |= used.name() == "numeric_storage_size" &&
+          module.name() == "iso_fortran_env" &&
+          module.attrs().test(semantics::Attr::INTRINSIC);
+      associated = &used;
+    } else {
+      break;
+    }
+  }
+  if (!isNumericStorageSize) {
+    return;
+  }
+  const auto &defaults{context.defaultKinds()};
+  const auto &targetCharacteristics{context.targetCharacteristics()};
+  auto intKind{defaults.GetDefaultKind(TypeCategory::Integer)};
+  auto realKind{defaults.GetDefaultKind(TypeCategory::Real)};
+  auto intBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Integer, intKind)};
+  auto realBytes{
+      targetCharacteristics.GetByteSize(TypeCategory::Real, realKind)};
+  if (intBytes != realBytes) {
+    if (auto *message{context.messages().Warn(
+            /*isInModuleFile=*/false, context.languageFeatures(),
+            common::UsageWarning::FoldingValueChecks, name.source,
+            "NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=%d) and REAL(KIND=%d) have different storage sizes (%zu and %zu bytes, respectively)"_warn_en_US,
+            intKind, realKind, intBytes, realBytes)}) {
+      if (use) {
+        message->Attach(use->location(), "USE-associated here"_en_US);
+      }
+    }
+  }
+}
+
+class NumericStorageSizeWarningVisitor {
+public:
+  explicit NumericStorageSizeWarningVisitor(
+      semantics::SemanticsContext &context)
+      : context_{context} {}
+  template <typename A> bool Pre(const A &) { return true; }
+  bool Pre(const parser::Name &name) {
+    if (!context_.HasError(name.symbol)) {
+      WarnForNumericStorageSize(context_, name);
+    }
+    return false;
+  }
+  template <typename A> void Post(const A &) {}
+
+private:
+  semantics::SemanticsContext &context_;
+};
+
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   auto restorer{GetContextualMessages().SetLocation(n.source)};
   if (std::optional<int> kind{IsImpliedDo(n.source)}) {
@@ -1060,6 +1126,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Name &n) {
   if (context_.HasError(n.symbol)) { // includes case of no symbol
     return std::nullopt;
   } else {
+    WarnForNumericStorageSize(context_, n);
     const Symbol &ultimate{n.symbol->GetUltimate()};
     if (ultimate.has<semantics::TypeParamDetails>()) {
       // A bare reference to a derived type parameter within a parameterized
@@ -4649,6 +4716,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
   MaybeExpr result;
   if (useSavedTypedExprs_) {
     if (expr.typedExpr) {
+      NumericStorageSizeWarningVisitor visitor{context_};
+      parser::Walk(expr, visitor);
       return expr.typedExpr->v;
     }
     if (!wasIterativelyAnalyzing) {

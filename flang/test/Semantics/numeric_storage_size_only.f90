@@ -8,6 +8,8 @@
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/homonym %t/homonym/test.f90 2>&1 | FileCheck --allow-empty --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: not %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/rejected %t/rejected/test.f90 2>&1 | FileCheck --check-prefix=REJECTED --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/reexport %t/reexport/test.f90 2>&1 | FileCheck --check-prefix=ONE --implicit-check-not=NUMERIC_STORAGE_SIZE %s
+! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/separate %t/separate/a.f90 2>&1 | FileCheck --allow-empty --implicit-check-not=NUMERIC_STORAGE_SIZE %s
+! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -I %t/separate -module-dir %t/separate %t/separate/b.f90 2>&1 | FileCheck --check-prefix=ONE --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 
 ! ONE: warning: NUMERIC_STORAGE_SIZE from ISO_FORTRAN_ENV is not well-defined because compiler options make default INTEGER(KIND=8) and REAL(KIND=4) have different storage sizes (8 and 4 bytes, respectively) [-Wfolding-value-checks]
 ! ONE: USE-associated here
@@ -90,3 +92,21 @@ subroutine import_from_reexport
   use reexported_nss, only: numeric_storage_size
   integer, parameter :: nss = numeric_storage_size
 end subroutine import_from_reexport
+
+!--- separate/a.f90
+module separate_parent
+  use, intrinsic :: iso_fortran_env
+  implicit none
+  interface
+    module subroutine separate_foo
+    end subroutine
+  end interface
+end module
+
+!--- separate/b.f90
+submodule (separate_parent) separate_child
+contains
+  module subroutine separate_foo
+    integer, parameter :: nss = numeric_storage_size
+  end subroutine
+end submodule
