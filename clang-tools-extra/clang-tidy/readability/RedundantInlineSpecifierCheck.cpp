@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantInlineSpecifierCheck.h"
+#include "../utils/FileExtensionsUtils.h"
 #include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
@@ -47,6 +48,28 @@ AST_POLYMORPHIC_MATCHER_P(isInternalLinkage,
     return VD->isInAnonymousNamespace();
   llvm_unreachable("Not a valid polymorphic type");
 }
+
+/// Matches a non-member declaration that is spelled ``static`` and does not
+/// live in a header file, where ``inline`` therefore buys nothing over plain
+/// ``static``.
+AST_MATCHER_P2(NamedDecl, isStaticInlineOutsideHeader, bool,
+               DiagnoseStaticInline, FileExtensionsSet, HeaderFileExtensions) {
+  // 'static' on a member means something unrelated to linkage.
+  if (!DiagnoseStaticInline || Node.isCXXClassMember())
+    return false;
+  if (const auto *FD = dyn_cast<FunctionDecl>(&Node)) {
+    if (FD->getStorageClass() != SC_Static)
+      return false;
+  } else if (const auto *VD = dyn_cast<VarDecl>(&Node)) {
+    if (VD->getStorageClass() != SC_Static)
+      return false;
+  } else {
+    return false;
+  }
+  return !utils::isPresumedLocInHeaderFile(
+      Node.getLocation(), Finder->getASTContext().getSourceManager(),
+      HeaderFileExtensions);
+}
 } // namespace
 
 static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
@@ -71,14 +94,26 @@ static SourceLocation getInlineTokenLocation(SourceRange RangeLocation,
   return {};
 }
 
+void RedundantInlineSpecifierCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "StrictMode", StrictMode);
+  Options.store(Opts, "DiagnoseStaticInline", DiagnoseStaticInline);
+}
+
 void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
   const auto IsPartOfRecordDecl = hasAncestor(recordDecl());
+  const auto IsStaticInlineOutsideHeader =
+      namedDecl(isStaticInlineOutsideHeader(DiagnoseStaticInline,
+                                            getHeaderFileExtensions()))
+          .bind("static_inline");
+
   Finder->addMatcher(
       functionDecl(isInlineSpecified(),
                    anyOf(isConstexpr(), isDeleted(),
                          allOf(isDefaulted(), IsPartOfRecordDecl),
                          isInternalLinkage(StrictMode),
-                         allOf(isDefinition(), IsPartOfRecordDecl)))
+                         allOf(isDefinition(), IsPartOfRecordDecl),
+                         IsStaticInlineOutsideHeader))
           .bind("fun_decl"),
       this);
 
@@ -96,7 +131,8 @@ void RedundantInlineSpecifierCheck::registerMatchers(MatchFinder *Finder) {
             anyOf(allOf(isInternalLinkage(StrictMode),
                         unless(allOf(hasInitializer(expr()), IsPartOfRecordDecl,
                                      isStaticStorageClass()))),
-                  allOf(isConstexpr(), IsPartOfRecordDecl)))
+                  allOf(isConstexpr(), IsPartOfRecordDecl),
+                  IsStaticInlineOutsideHeader))
             .bind("var_decl"),
         this);
   }
@@ -115,17 +151,25 @@ void RedundantInlineSpecifierCheck::handleMatchedDecl(
 void RedundantInlineSpecifierCheck::check(
     const MatchFinder::MatchResult &Result) {
   const SourceManager &Sources = *Result.SourceManager;
+  const bool IsStaticInline =
+      Result.Nodes.getNodeAs<Decl>("static_inline") != nullptr;
 
   if (const auto *MatchedDecl =
           Result.Nodes.getNodeAs<FunctionDecl>("fun_decl")) {
-    handleMatchedDecl(
-        MatchedDecl, Sources, Result,
-        "function %0 has inline specifier but is implicitly inlined");
+    handleMatchedDecl(MatchedDecl, Sources, Result,
+                      IsStaticInline
+                          ? "function %0 is declared 'static inline' outside "
+                            "of a header; use 'static' instead"
+                          : "function %0 has inline specifier but is "
+                            "implicitly inlined");
   } else if (const auto *MatchedDecl =
                  Result.Nodes.getNodeAs<VarDecl>("var_decl")) {
-    handleMatchedDecl(
-        MatchedDecl, Sources, Result,
-        "variable %0 has inline specifier but is implicitly inlined");
+    handleMatchedDecl(MatchedDecl, Sources, Result,
+                      IsStaticInline
+                          ? "variable %0 is declared 'static inline' outside "
+                            "of a header; use 'static' instead"
+                          : "variable %0 has inline specifier but is "
+                            "implicitly inlined");
   } else if (const auto *MatchedDecl =
                  Result.Nodes.getNodeAs<FunctionTemplateDecl>("templ_decl")) {
     handleMatchedDecl(

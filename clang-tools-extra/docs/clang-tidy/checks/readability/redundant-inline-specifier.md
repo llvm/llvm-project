@@ -29,3 +29,9 @@ defined entirely inside a class/struct/union definition are implicitly inlined.
 When `true`, the check will also flag functions and variables that
 already have internal linkage as redundant. Default is `false`.
 ```
+
+```{option} DiagnoseStaticInline
+
+If set to `true`, the check will flag `static inline` symbols declared
+outside of header files and suggest dropping the `inline` specifier.
+Default is `true`.
