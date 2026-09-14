@@ -51,11 +51,6 @@ class GlobalsAAResult : public AAResultBase {
   /// For each function, keep track of what globals are modified or read.
   DenseMap<const Function *, FunctionInfo> FunctionInfos;
 
-  /// A map of functions to SCC. The SCCs are described by a simple integer
-  /// ID that is only useful for comparing for equality (are two functions
-  /// in the same SCC or not?)
-  DenseMap<const Function *, unsigned> FunctionToSCCMap;
-
   /// Handle to clear this analysis on deletion of values.
   struct LLVM_ABI DeletionCallbackHandle final : CallbackVH {
     GlobalsAAResult *GAR;
@@ -119,7 +114,6 @@ private:
                             SmallPtrSetImpl<Function *> *Writers = nullptr,
                             GlobalValue *OkayStoreDest = nullptr);
   bool AnalyzeIndirectGlobalMemory(GlobalVariable *GV);
-  void CollectSCCMembership(CallGraph &CG);
 
   bool isNonEscapingGlobalNoAlias(const GlobalValue *GV, const Value *V,
                                   const Instruction *CtxI);

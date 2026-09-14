@@ -472,21 +472,6 @@ bool GlobalsAAResult::AnalyzeIndirectGlobalMemory(GlobalVariable *GV) {
   return true;
 }
 
-void GlobalsAAResult::CollectSCCMembership(CallGraph &CG) {
-  // We do a bottom-up SCC traversal of the call graph.  In other words, we
-  // visit all callees before callers (leaf-first).
-  unsigned SCCID = 0;
-  for (scc_iterator<CallGraph *> I = scc_begin(&CG); !I.isAtEnd(); ++I) {
-    const std::vector<CallGraphNode *> &SCC = *I;
-    assert(!SCC.empty() && "SCC with no functions?");
-
-    for (auto *CGN : SCC)
-      if (Function *F = CGN->getFunction())
-        FunctionToSCCMap[F] = SCCID;
-    ++SCCID;
-  }
-}
-
 /// AnalyzeCallGraph - At this point, we know the functions where globals are
 /// immediately stored to and read from.  Propagate this information up the call
 /// graph to all callers and compute the mod/ref info for all memory for each
@@ -994,9 +979,6 @@ GlobalsAAResult::~GlobalsAAResult() = default;
     CallGraph &CG) {
   GlobalsAAResult Result(M.getDataLayout(), GetTLI);
 
-  // Discover which functions aren't recursive, to feed into AnalyzeGlobals.
-  Result.CollectSCCMembership(CG);
-
   // Find non-addr taken globals.
   Result.AnalyzeGlobals(M);
 
@@ -1027,9 +1009,7 @@ PreservedAnalyses RecomputeGlobalsAAPass::run(Module &M,
     G->IndirectGlobals.clear();
     G->AllocsForIndirectGlobals.clear();
     G->FunctionInfos.clear();
-    G->FunctionToSCCMap.clear();
     G->Handles.clear();
-    G->CollectSCCMembership(CG);
     G->AnalyzeGlobals(M);
     G->AnalyzeCallGraph(CG, M);
   }
