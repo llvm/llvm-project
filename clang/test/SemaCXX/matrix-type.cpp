@@ -43,5 +43,5 @@ void matrix_unsupported_bit_int() {
 void matrix_logical_op() {
   matrix_int_t a;
   matrix_int_t b;
-  matrix_int_t c = a && b;  // expected-error{{matix logical operations are not supported on the current target}}
+  matrix_int_t c = a && b;  // expected-error{{matix logical operations are only supported for HLSL}}
 }

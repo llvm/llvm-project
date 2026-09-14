@@ -13866,7 +13866,7 @@ QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
                                           BinaryOperatorKind Opc) {
 
   if (!getLangOpts().HLSL) {
-    SemaRef.Diag(Loc, diag::err_matrix_logical_operations_unsupported);
+    SemaRef.Diag(Loc, diag::err_matrix_logical_operations_supported_for_hlsl);
     return QualType();
   }
 
