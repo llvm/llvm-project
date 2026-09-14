@@ -748,33 +748,18 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
   return MD;
 }
 
-// Read a !tbaa.struct field entry (an offset or a size) into Out as a 64-bit
-// value. Returns false if it is not a constant integer that fits in 64 bits.
-static bool getTBAAStructFieldAsInt64(const MDOperand &Op, uint64_t &Out) {
+// Read a !tbaa.struct field entry (an offset or a size) as a 64-bit value.
+// Returns std::nullopt if it is not a constant integer that fits in 64 bits.
+static std::optional<uint64_t> getTBAAStructFieldAsInt64(const MDOperand &Op) {
   auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
-  if (!CI)
-    return false;
-  std::optional<uint64_t> Val = CI->getValue().tryZExtValue();
-  if (!Val)
-    return false;
-  Out = *Val;
-  return true;
+  return CI ? CI->getValue().tryZExtValue() : std::nullopt;
 }
 
-// Return true if Tag is a struct-path TBAA access tag: two type nodes (base
-// and access) followed by constant integer fields (offset, and an optional
-// size and/or immutability flag). A !tbaa.struct field operand need not be
-// such a tag, so validate before reusing it as !tbaa.
-static bool isValidTBAAAccessTag(const MDNode *Tag) {
-  unsigned NumOps = Tag->getNumOperands();
-  if (NumOps < 3 || NumOps > 5)
-    return false;
-  if (!isa_and_nonnull<MDNode>(Tag->getOperand(0)) ||
-      !isa_and_nonnull<MDNode>(Tag->getOperand(1)))
-    return false;
-  return all_of(drop_begin(Tag->operands(), 2), [](const MDOperand &Op) {
-    return mdconst::dyn_extract_or_null<ConstantInt>(Op) != nullptr;
-  });
+static bool isScalarAccessTag(const MDNode *Tag) {
+  TBAAStructTagNode T(Tag);
+  const MDNode *AccessType;
+  return Tag->getNumOperands() >= 3 && (AccessType = T.getAccessType()) &&
+         AccessType == T.getBaseType();
 }
 
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
@@ -848,18 +833,19 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
     return New;
   MDNode *CommonTag = nullptr;
   uint64_t Offset = 0;
-  for (size_t I = 0, E = M->getNumOperands(); I + 2 < E; I += 3) {
-    uint64_t FieldOffset, FieldSize;
+  for (size_t I = 0, E = M->getNumOperands(); I + 2 < E && Offset < AccessSize;
+       I += 3) {
+    std::optional<uint64_t> FieldOffset =
+        getTBAAStructFieldAsInt64(M->getOperand(I));
+    std::optional<uint64_t> FieldSize =
+        getTBAAStructFieldAsInt64(M->getOperand(I + 1));
     MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
-    if (!getTBAAStructFieldAsInt64(M->getOperand(I), FieldOffset) ||
-        !getTBAAStructFieldAsInt64(M->getOperand(I + 1), FieldSize) ||
-        !FieldTag || !isValidTBAAAccessTag(FieldTag) || FieldOffset != Offset ||
+    if (!FieldOffset || !FieldSize || !FieldTag ||
+        !isScalarAccessTag(FieldTag) || *FieldOffset != Offset ||
         (CommonTag && FieldTag != CommonTag))
       break;
     CommonTag = FieldTag;
-    Offset += FieldSize;
-    if (Offset >= AccessSize)
-      break;
+    Offset += *FieldSize;
   }
   if (Offset == AccessSize)
     New.TBAA = CommonTag;
