@@ -3284,15 +3284,12 @@ private:
       assert(S && "Split nodes must have operations.");
       Last->setOperations(S);
       SmallPtrSet<Value *, 4> Processed;
-      for (Value *V : VL) {
-        auto *I = dyn_cast<Instruction>(V);
-        if (!I)
-          continue;
-        auto It = ScalarsInSplitNodes.find(V);
+      for (Instruction *I : make_isa_range<Instruction>(VL)) {
+        auto It = ScalarsInSplitNodes.find(I);
         if (It == ScalarsInSplitNodes.end()) {
-          ScalarsInSplitNodes.try_emplace(V).first->getSecond().push_back(Last);
-          (void)Processed.insert(V);
-        } else if (Processed.insert(V).second) {
+          ScalarsInSplitNodes.try_emplace(I).first->getSecond().push_back(Last);
+          (void)Processed.insert(I);
+        } else if (Processed.insert(I).second) {
           assert(!is_contained(It->getSecond(), Last) &&
                  "Value already associated with the node.");
           It->getSecond().push_back(Last);
@@ -4374,10 +4371,7 @@ private:
           if (IsNonSchedulableWithParentPhiNode) {
             SmallPtrSet<Value *, 4> ParentsUniqueUsers;
             const TreeEntry *ParentTE = TE->UserTreeIndex.UserTE;
-            for (Value *V : ParentTE->Scalars) {
-              auto *PHI = dyn_cast<PHINode>(V);
-              if (!PHI)
-                continue;
+            for (PHINode *PHI : make_isa_range<PHINode>(ParentTE->Scalars)) {
               if (ParentsUniqueUsers.insert(PHI).second &&
                   is_contained(PHI->incoming_values(), User))
                 ++Inc;
@@ -4917,10 +4911,8 @@ private:
               TreeEntry *TE = Bundle->getTreeEntry();
               if (!TE->hasReassocScalars())
                 continue;
-              for (Value *V : TE->getReassocScalars()) {
-                auto *OpI = dyn_cast<Instruction>(V);
-                if (!OpI)
-                  continue;
+              for (Instruction *OpI :
+                   make_isa_range<Instruction>(TE->getReassocScalars())) {
                 auto UseIt = OperandsUses.find(OpI);
                 if (UseIt == OperandsUses.end() || UseIt->second == 0)
                   continue;
@@ -8273,10 +8265,7 @@ static void gatherPossiblyVectorizableLoads(
     return;
   SmallVector<SmallVector<std::pair<LoadInst *, int64_t>>> ClusteredLoads;
   SmallVector<DenseMap<int64_t, LoadInst *>> ClusteredDistToLoad;
-  for (Value *V : VL) {
-    auto *LI = dyn_cast<LoadInst>(V);
-    if (!LI)
-      continue;
+  for (LoadInst *LI : make_isa_range<LoadInst>(VL)) {
     if (R.isDeleted(LI) || R.isVectorized(LI) || !LI->isSimple())
       continue;
     bool IsFound = false;
@@ -9282,10 +9271,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     if (VL0->getNumOperands() > MaxPHINumOperands)
       return TreeEntry::NeedToGather;
     // Check for terminator values (e.g. invoke).
-    for (Value *V : VL) {
-      auto *PHI = dyn_cast<PHINode>(V);
-      if (!PHI)
-        continue;
+    for (PHINode *PHI : make_isa_range<PHINode>(VL)) {
       for (Value *Incoming : PHI->incoming_values()) {
         Instruction *Term = dyn_cast<Instruction>(Incoming);
         if (Term && Term->isTerminator()) {
@@ -9557,10 +9543,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::Vectorize;
   case Instruction::GetElementPtr: {
     // We don't combine GEPs with complicated (nested) indexing.
-    for (Value *V : VL) {
-      auto *I = dyn_cast<GetElementPtrInst>(V);
-      if (!I)
-        continue;
+    for (GetElementPtrInst *I : make_isa_range<GetElementPtrInst>(VL)) {
       if (I->getNumOperands() != 2) {
         LLVM_DEBUG(dbgs() << "SLP: not-vectorizable GEP (nested indexes).\n");
         return TreeEntry::NeedToGather;
@@ -9570,10 +9553,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     // We can't combine several GEPs into one vector if they operate on
     // different types.
     Type *Ty0 = cast<GEPOperator>(VL0)->getSourceElementType();
-    for (Value *V : VL) {
-      auto *GEP = dyn_cast<GEPOperator>(V);
-      if (!GEP)
-        continue;
+    for (GEPOperator *GEP : make_isa_range<GEPOperator>(VL)) {
       Type *CurTy = GEP->getSourceElementType();
       if (Ty0 != CurTy) {
         LLVM_DEBUG(dbgs() << "SLP: not-vectorizable GEP (different types).\n");
@@ -9583,17 +9563,14 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
 
     // We don't combine GEPs with non-constant indexes.
     Type *Ty1 = VL0->getOperand(1)->getType();
-    for (Value *V : VL) {
-      auto *I = dyn_cast<GetElementPtrInst>(V);
-      if (!I)
-        continue;
+    for (GetElementPtrInst *I : make_isa_range<GetElementPtrInst>(VL)) {
       auto *Op = I->getOperand(1);
       if ((!IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
           (Op->getType() != Ty1 &&
            ((IsScatterVectorizeUserTE && !isa<ConstantInt>(Op)) ||
             Op->getType()->getScalarSizeInBits() >
                 DL->getIndexSizeInBits(
-                    V->getType()->getPointerAddressSpace())))) {
+                    I->getType()->getPointerAddressSpace())))) {
         LLVM_DEBUG(
             dbgs() << "SLP: not-vectorizable GEP (non-constant indexes).\n");
         return TreeEntry::NeedToGather;
@@ -12886,10 +12863,7 @@ FixedVectorType *BoUpSLP::getInsertBuildVectorSrcTy(const TreeEntry *E) const {
   assert(E->getOpcode() == Instruction::InsertValue &&
          "Expected InsertElement or InsertValue node.");
   unsigned MaxIdx = E->Scalars.size() - 1;
-  for (Value *V : E->Scalars) {
-    auto *I = dyn_cast<InsertValueInst>(V);
-    if (!I)
-      continue;
+  for (InsertValueInst *I : make_isa_range<InsertValueInst>(E->Scalars)) {
     MaxIdx = std::max(MaxIdx, I->getIndices().front());
   }
   return cast<FixedVectorType>(
@@ -13457,10 +13431,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                  const InstructionsState &S) {
     FastMathFlags FMF;
     FMF.set();
-    for (Value *V : VL) {
-      auto *I = dyn_cast<Instruction>(V);
-      if (!I)
-        continue;
+    for (Instruction *I : make_isa_range<Instruction>(VL)) {
       if (S.isCopyableElement(I))
         continue;
       Instruction *MatchingI = S.getMatchingMainOpOrAltOp(I);
@@ -13523,10 +13494,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
            TTI.getArithmeticInstrCost(Instruction::FNeg, I->getType(), CostKind,
                                       TTI::getOperandInfo(I->getOperand(0)));
   };
-  for (Value *V : VL) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
+  for (Instruction *I : make_isa_range<Instruction>(VL)) {
     const bool IsCopyable = S.isCopyableElement(I);
     if (!IsCopyable)
       if (auto *FPCI = dyn_cast<FPMathOperator>(I))
@@ -13786,10 +13754,7 @@ bool BoUpSLP::matchesInversedZExtSelect(
       *TTI, SLPReVec, Cmp->getType(), cast<VectorType>(CmpTy),
       APInt::getAllOnes(CmpTE->getVectorFactor()),
       /*Insert=*/true, /*Extract=*/false, CostKind);
-  for (Value *V : CmpTE->Scalars) {
-    auto *I = dyn_cast<Instruction>(V);
-    if (!I)
-      continue;
+  for (Instruction *I : make_isa_range<Instruction>(CmpTE->Scalars)) {
     BVCost += TTI->getInstructionCost(I, CostKind);
   }
   return VecCost < BVCost;
@@ -14458,14 +14423,11 @@ void BoUpSLP::transformNodes() {
                                            !isDeleted(cast<Instruction>(V));
                                   }))) &&
         !isSplat(E.Scalars)) {
-      for (Value *V : E.Scalars) {
-        auto *LI = dyn_cast<LoadInst>(V);
-        if (!LI)
-          continue;
+      for (LoadInst *LI : make_isa_range<LoadInst>(E.Scalars)) {
         if (isDeleted(LI) || isVectorized(LI) || !LI->isSimple())
           continue;
         gatherPossiblyVectorizableLoads(
-            *this, V, *DL, *SE, *TTI,
+            *this, LI, *DL, *SE, *TTI,
             GatheredLoads[std::make_tuple(
                 LI->getParent(),
                 getUnderlyingObject(LI->getPointerOperand(), RecursionMaxDepth),
@@ -16074,11 +16036,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // Count reused scalars.
     InstructionCost ScalarCost = 0;
     SmallPtrSet<const TreeEntry *, 4> CountedOps;
-    for (Value *V : UniqueValues) {
-      auto *PHI = dyn_cast<PHINode>(V);
-      if (!PHI)
-        continue;
-
+    for (PHINode *PHI : make_isa_range<PHINode>(UniqueValues)) {
       ValueList Operands(PHI->getNumIncomingValues(), nullptr);
       for (unsigned I = 0, N = PHI->getNumIncomingValues(); I < N; ++I) {
         Value *Op = PHI->getIncomingValue(I);
@@ -18107,11 +18065,8 @@ InstructionCost BoUpSLP::getSpillCost() {
         OpParent = cast<PHINode>(Entry->getMainOp())
                        ->getIncomingBlock(Op->UserTreeIndex.EdgeIdx);
         OpLastInst = OpParent->getTerminator();
-        for (Value *V : Op->Scalars) {
-          auto *Inst = dyn_cast<Instruction>(V);
-          if (!Inst)
-            continue;
-          if (isVectorized(V)) {
+        for (Instruction *Inst : make_isa_range<Instruction>(Op->Scalars)) {
+          if (isVectorized(Inst)) {
             OpParent = Inst->getParent();
             OpLastInst = Inst;
             break;
@@ -21068,10 +21023,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   auto FindLastInst = [&]() {
     Instruction *LastInst = Front;
-    for (Value *V : E->Scalars) {
-      auto *I = dyn_cast<Instruction>(V);
-      if (!I)
-        continue;
+    for (Instruction *I : make_isa_range<Instruction>(E->Scalars)) {
       if (E->isCopyableElement(I))
         continue;
       if (LastInst->getParent() == I->getParent()) {
@@ -21110,10 +21062,7 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 
   auto FindFirstInst = [&]() {
     Instruction *FirstInst = Front;
-    for (Value *V : E->Scalars) {
-      auto *I = dyn_cast<Instruction>(V);
-      if (!I)
-        continue;
+    for (Instruction *I : make_isa_range<Instruction>(E->Scalars)) {
       if (E->isCopyableElement(I))
         continue;
       if (FirstInst->getParent() == I->getParent()) {
@@ -22856,10 +22805,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                               ArrayRef<Value *> VL = {}) -> Value * {
     ArrayRef<Value *> Scalars = VL.empty() ? E->Scalars : VL;
     SmallSetVector<Value *, 4> UniqueInsts;
-    for (Value *Scalar : Scalars) {
-      auto *I = dyn_cast<Instruction>(Scalar);
-      if (!I)
-        continue;
+    for (Instruction *I : make_isa_range<Instruction>(Scalars)) {
       if (E->hasCopyableElements() && E->isCopyableElement(I))
         continue;
       UniqueInsts.insert(I);
@@ -24578,10 +24524,7 @@ bool BoUpSLP::canVersionForRuntimeChecks() {
   for (Instruction &I : *BB) {
     if (isa<PHINode>(&I) || I.isTerminator())
       continue;
-    for (Value *Op : I.operands()) {
-      auto *OpI = dyn_cast<Instruction>(Op);
-      if (!OpI)
-        continue;
+    for (Instruction *OpI : make_isa_range<Instruction>(I.operands())) {
       bool DefinedInBody =
           OpI->getParent() == BB && !isa<PHINode>(OpI) && !OpI->isTerminator();
       if (!DefinedInBody && isVectorized(OpI))
@@ -26032,10 +25975,8 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         if (isa<PoisonValue>(V) || S.isCopyableElement(V))
           return false;
         if (isUsedOutsideBlock(V)) {
-          for (Value *Op : cast<Instruction>(V)->operands()) {
-            auto *I = dyn_cast<Instruction>(Op);
-            if (!I)
-              continue;
+          for (Instruction *I :
+               make_isa_range<Instruction>(cast<Instruction>(V)->operands())) {
             return SLP->isVectorized(I) && I->getNextNode() == V;
           }
         }
@@ -27202,10 +27143,8 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
       }
       if (Bundle->getTreeEntry()->hasCopyableElements()) {
         Instruction *MainOp = Bundle->getTreeEntry()->getMainOp();
-        for (Value *V : Bundle->getTreeEntry()->Scalars) {
-          auto *I = dyn_cast<Instruction>(V);
-          if (!I)
-            continue;
+        for (Instruction *I :
+             make_isa_range<Instruction>(Bundle->getTreeEntry()->Scalars)) {
           if (!I->hasOneUse() && Bundle->getTreeEntry()->isCopyableElement(I) &&
               I->getParent() == MainOp->getParent() &&
               doesNotNeedToBeScheduled(I) &&
@@ -27433,10 +27372,8 @@ bool BoUpSLP::collectValuesToDemote(
       // Check possible extractelement instructions bases and final vector
       // length.
       SmallPtrSet<Value *, 4> UniqueBases;
-      for (Value *V : E.Scalars) {
-        auto *EE = dyn_cast<ExtractElementInst>(V);
-        if (!EE)
-          continue;
+      for (ExtractElementInst *EE :
+           make_isa_range<ExtractElementInst>(E.Scalars)) {
         UniqueBases.insert(EE->getVectorOperand());
       }
       const unsigned VF = E.Scalars.size();
