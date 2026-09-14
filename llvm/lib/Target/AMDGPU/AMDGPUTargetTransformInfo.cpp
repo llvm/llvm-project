@@ -1229,7 +1229,7 @@ bool GCNTTIImpl::isSourceOfDivergence(const Value *V) const {
   if (auto *CastI = dyn_cast<AddrSpaceCastInst>(V)) {
     return CastI->getSrcAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS &&
            CastI->getDestAddressSpace() == AMDGPUAS::FLAT_ADDRESS &&
-           ST->hasGloballyAddressableScratch();
+           ST->hasGloballyAddressableScratchSupport();
   }
 
   return false;
