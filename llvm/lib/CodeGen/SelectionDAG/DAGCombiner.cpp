@@ -3970,6 +3970,13 @@ static SDValue combineOrOfSetCCToUSUBOCarry(SDNode *N, SelectionDAG &DAG,
                                                     *DAG.getContext(), IntVT)))
     return SDValue();
 
+  // USUBO_CARRY's carry-in must be 0 or 1, which the matched pattern does not
+  // guarantee.
+  if (!DAG.MaskedValueIsZero(
+          CarryIn,
+          APInt::getBitsSetFrom(CarryIn.getScalarValueSizeInBits(), 1)))
+    return SDValue();
+
   SDLoc DL(N);
   SDVTList VTs = DAG.getVTList(IntVT, N->getValueType(0));
   return DAG.getNode(ISD::USUBO_CARRY, DL, VTs, A, B, CarryIn).getValue(1);
@@ -14980,8 +14987,8 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
   // If C0 is a mask or shifted mask and the shift amt (C1) isolates the
   // remaining bits (i.e something like `(x64 & UINT32_MAX) == (x64 >> 32)`)
   // Then:
-  // If C1 is a power of 2, then the rotate and shift+and versions are
-  // equivilent, so we can interchange them depending on target preference.
+  // If C1 divides the bit width, then the rotate and shift+and versions are
+  // equivalent, so we can interchange them depending on target preference.
   // Otherwise, if we have the shift+and version we can interchange srl/shl
   // which inturn affects the constant C0. We can use this to get better
   // constants again determined by target preference.
@@ -15048,9 +15055,13 @@ SDValue DAGCombiner::visitSETCC(SDNode *N) {
               ShiftOpc == ISD::SHL ? (~*AndCMask).isMask() : AndCMask->isMask();
         }
 
+        // The rotate and shift+and forms are only equivalent if the shift
+        // amount divides the bit width.
+        bool MayTransformRotate =
+            !ShiftCAmt->isZero() && NumBits % ShiftCAmt->getZExtValue() == 0;
         // See if target prefers another shift/rotate opcode.
         unsigned NewShiftOpc = TLI.preferedOpcodeForCmpEqPiecesOfOperand(
-            OpVT, ShiftOpc, ShiftCAmt->isPowerOf2(), *ShiftCAmt, AndCMask);
+            OpVT, ShiftOpc, MayTransformRotate, *ShiftCAmt, AndCMask);
         // Transform is valid and we have a new preference.
         if (CanTransform && NewShiftOpc != ShiftOpc) {
           SDValue NewShiftOrRotate =
