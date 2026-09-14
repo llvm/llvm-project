@@ -16,6 +16,7 @@ add_entrypoint_object(
   HDRS ../fclose.h
   DEPENDS
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
     libc.src.__support.macros.config
 )
 
@@ -26,6 +27,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
@@ -38,6 +40,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
@@ -49,6 +52,7 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.errno_macros
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
@@ -61,6 +65,7 @@ add_entrypoint_object(
     libc.hdr.errno_macros
     libc.hdr.stdio_macros
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.errno.errno
 )
