@@ -7891,7 +7891,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Handle exception personalities
   Arg *A = Args.getLastArg(
       options::OPT_fsjlj_exceptions, options::OPT_fseh_exceptions,
-      options::OPT_fdwarf_exceptions, options::OPT_fwasm_exceptions);
+      options::OPT_fdwarf_exceptions, options::OPT_fwasm_exceptions,
+      options::OPT_femscripten_exceptions);
   if (A) {
     const Option &Opt = A->getOption();
     if (Opt.matches(options::OPT_fsjlj_exceptions))
@@ -7902,6 +7903,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-exception-model=dwarf");
     if (Opt.matches(options::OPT_fwasm_exceptions))
       CmdArgs.push_back("-exception-model=wasm");
+    if (Opt.matches(options::OPT_femscripten_exceptions))
+      CmdArgs.push_back("-exception-model=emscripten");
   } else {
     switch (TC.GetExceptionModel(Args)) {
     default:
@@ -8526,6 +8529,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_keep_static_consts);
   Args.addOptInFlag(CmdArgs, options::OPT_fkeep_persistent_storage_variables,
                     options::OPT_fno_keep_persistent_storage_variables);
+  Args.addOptInFlag(CmdArgs, options::OPT_fkeep_inline_functions,
+                    options::OPT_fno_keep_inline_functions);
   Args.addOptInFlag(CmdArgs, options::OPT_fcomplete_member_pointers,
                     options::OPT_fno_complete_member_pointers);
   if (Arg *A = Args.getLastArg(options::OPT_cxx_static_destructors_EQ))
