@@ -326,6 +326,11 @@ bool TargetTransformInfo::isNoopAddrSpaceCast(unsigned FromAS,
   return TTIImpl->isNoopAddrSpaceCast(FromAS, ToAS);
 }
 
+std::optional<APInt>
+TargetTransformInfo::getNullPointerValue(unsigned AS) const {
+  return TTIImpl->getNullPointerValue(AS);
+}
+
 std::pair<KnownBits, KnownBits>
 TargetTransformInfo::computeKnownBitsAddrSpaceCast(unsigned ToAS,
                                                    const Value &PtrOp) const {

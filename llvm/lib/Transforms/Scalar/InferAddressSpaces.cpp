@@ -246,6 +246,11 @@ class InferAddressSpacesImpl {
 
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
 
+  bool isKnownNotNullPointer(const Value &PtrOp, const APInt &Null,
+                             const SimplifyQuery &SQ) const;
+
+  static bool maskPreservesNull(const APInt &Null, const KnownBits &MaskBits);
+
   Value *clonePtrMaskWithNewAddressSpace(
       IntrinsicInst *I, unsigned NewAddrSpace,
       const ValueToValueMapTy &ValueWithNewAddrSpace,
@@ -777,7 +782,8 @@ static Value *phiNodeOperandWithNewAddressSpace(AddrSpaceCastInst *NewI,
 
 // A helper function for cloneInstructionWithNewAddressSpace. Returns the clone
 // of OperandUse.get() in the new address space. If the clone is not ready yet,
-// returns poison in the new address space as a placeholder.
+// returns poison in the new address space as a placeholder, or null when
+// PoisonUsesToFix is null.
 static Value *operandWithNewAddressSpaceOrCreatePoison(
     const Use &OperandUse, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace,
@@ -809,8 +815,47 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
     return NewI;
   }
 
+  if (!PoisonUsesToFix)
+    return nullptr;
+
   PoisonUsesToFix->push_back(&OperandUse);
   return PoisonValue::get(NewPtrTy);
+}
+
+// Returns the operand in NewAddrSpace, or null if only a poison placeholder is
+// available. A placeholder is patched up at a single operand position, so a
+// caller using the operand more than once needs the real value.
+static Value *getAvailableNewAddressSpaceOperand(
+    const Use &OperandUse, unsigned NewAddrSpace,
+    const ValueToValueMapTy &ValueWithNewAddrSpace,
+    const PredicatedAddrSpaceMapTy &PredicatedAS) {
+  // Postorder puts a ptrmask before the addrspacecast it feeds on, so the cast
+  // is not in ValueWithNewAddrSpace yet.
+  if (AddrSpaceCastInst *ASC = dyn_cast<AddrSpaceCastInst>(OperandUse.get()))
+    if (ASC->getSrcAddressSpace() == NewAddrSpace)
+      return ASC->getPointerOperand();
+
+  return operandWithNewAddressSpaceOrCreatePoison(
+      OperandUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
+      /*PoisonUsesToFix=*/nullptr);
+}
+
+// Returns true if PtrOp is known not to be the null pointer of its address
+// space, whose bit pattern is Null.
+bool InferAddressSpacesImpl::isKnownNotNullPointer(
+    const Value &PtrOp, const APInt &Null, const SimplifyQuery &SQ) const {
+  if (Null.isZero())
+    return isKnownNonZero(&PtrOp, SQ);
+  return KnownBits::ne(computeKnownBits(&PtrOp, SQ),
+                       KnownBits::makeConstant(Null))
+      .value_or(false);
+}
+
+// Returns true if masking the null pointer with bit pattern Null by a mask with
+// the given known bits leaves it unchanged.
+bool InferAddressSpacesImpl::maskPreservesNull(const APInt &Null,
+                                               const KnownBits &MaskBits) {
+  return Null.isSubsetOf(MaskBits.One.zextOrTrunc(Null.getBitWidth()));
 }
 
 // A helper function for cloneInstructionWithNewAddressSpace. Handles the
@@ -833,30 +878,53 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
         TTI->computeKnownBitsAddrSpaceCast(NewAddrSpace, *PtrOpUse.get());
   }
 
-  bool KnownNonZero = OldPtrBits.isNonZero();
+  bool CanCommuteWithCast = IsNoopCast;
+  // Set when the fold needs an explicit guard for the null pointer, which the
+  // cast maps to a different bit pattern.
+  Value *GuardedNewPtr = nullptr;
+  std::optional<APInt> NewNull;
+  if (!IsNoopCast) {
+    const SimplifyQuery SQ(*DL, DT, &AC, I);
+    KnownBits MaskBits = computeKnownBits(MaskOp, SQ);
 
-  // If narrower, check the mask only clears low bits that fit in it.
-  bool MaskFits = true;
-  if (OldPtrBits.getBitWidth() > NewPtrBits.getBitWidth()) {
-    KnownBits MaskBits =
-        computeKnownBits(MaskOp, *DL, /*AssumptionCache=*/nullptr, I);
-    // Set all unknown bits of the old ptr to 1, so that we are conservative in
-    // checking which bits are cleared by the mask.
-    OldPtrBits.One |= ~OldPtrBits.Zero;
-    // Check which bits are cleared by the mask in the old ptr.
-    KnownBits ClearedBits = KnownBits::sub(OldPtrBits, OldPtrBits & MaskBits);
-    MaskFits =
-        ClearedBits.countMaxActiveBits() <= NewPtrBits.countMaxActiveBits();
+    // If narrower, check the mask only clears low bits that fit in it.
+    bool MaskFits = true;
+    if (OldPtrBits.getBitWidth() > NewPtrBits.getBitWidth()) {
+      // Set all unknown bits of the old ptr to 1, so that we are conservative
+      // in checking which bits are cleared by the mask.
+      OldPtrBits.One |= ~OldPtrBits.Zero;
+      // Check which bits are cleared by the mask in the old ptr.
+      KnownBits ClearedBits = KnownBits::sub(OldPtrBits, OldPtrBits & MaskBits);
+      MaskFits =
+          ClearedBits.countMaxActiveBits() <= NewPtrBits.countMaxActiveBits();
+    }
+
+    // A non-noop addrspacecast maps the null pointer of one address space to
+    // the null pointer of the other, and those need not share a bit pattern,
+    // so a mask applied on one side of the cast is not generally applicable on
+    // the other.
+    std::optional<APInt> OldNull = TTI->getNullPointerValue(OldAddrSpace);
+    NewNull = TTI->getNullPointerValue(NewAddrSpace);
+    // Masking a null pointer leaves it unchanged, so a null input still
+    // produces null on that side of the cast.
+    bool MaskKeepsOldNull = OldNull && maskPreservesNull(*OldNull, MaskBits);
+    bool MaskKeepsNewNull = NewNull && maskPreservesNull(*NewNull, MaskBits);
+    bool KnownNonNull =
+        OldNull && isKnownNotNullPointer(*PtrOpUse.get(), *OldNull, SQ);
+
+    // The masked pointer never is the old null pointer, or masking null gives
+    // null on either side. Either way the mask applies as is.
+    CanCommuteWithCast =
+        MaskFits && (KnownNonNull || (MaskKeepsOldNull && MaskKeepsNewNull));
+
+    // Otherwise the null case still folds if it is guarded explicitly, which
+    // needs the new address space operand up front.
+    if (!CanCommuteWithCast && MaskFits && MaskKeepsOldNull && NewNull)
+      GuardedNewPtr = getAvailableNewAddressSpaceOperand(
+          PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS);
   }
 
-  // Commuting past a non-noop cast is unsound for a maybe-null pointer,
-  // since the cast may not preserve null.
-  if (!IsNoopCast && MaskFits && !KnownNonZero)
-    KnownNonZero =
-        isKnownNonZero(PtrOpUse.get(), SimplifyQuery(*DL, DT, &AC, I));
-  bool CanCommuteWithCast = IsNoopCast || (MaskFits && KnownNonZero);
-
-  if (!CanCommuteWithCast) {
+  if (!CanCommuteWithCast && !GuardedNewPtr) {
     std::optional<BasicBlock::iterator> InsertPoint =
         I->getInsertionPointAfterDef();
     assert(InsertPoint && "insertion after ptrmask should be possible");
@@ -872,11 +940,21 @@ Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
     MaskTy = MaskTy->getWithNewBitWidth(NewPtrBits.getBitWidth());
     MaskOp = B.CreateTrunc(MaskOp, MaskTy);
   }
-  Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
-      PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
-      PoisonUsesToFix);
-  return B.CreateIntrinsic(Intrinsic::ptrmask, {NewPtr->getType(), MaskTy},
-                           {NewPtr, MaskOp});
+  Value *NewPtr = GuardedNewPtr
+                      ? GuardedNewPtr
+                      : operandWithNewAddressSpaceOrCreatePoison(
+                            PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace,
+                            PredicatedAS, PoisonUsesToFix);
+  Value *Masked = B.CreateIntrinsic(
+      Intrinsic::ptrmask, {NewPtr->getType(), MaskTy}, {NewPtr, MaskOp});
+  if (!GuardedNewPtr)
+    return Masked;
+
+  // The cast is injective and maps the new null pointer to the old one, so the
+  // null test is equivalent here. Spell null out as its bit pattern, which a
+  // target may define to be nonzero.
+  Constant *NewNullPtr = Constant::getIntegerValue(NewPtr->getType(), *NewNull);
+  return B.CreateSelect(B.CreateICmpEQ(NewPtr, NewNullPtr), NewNullPtr, Masked);
 }
 
 // Returns a clone of `I` with its operands converted to those specified in

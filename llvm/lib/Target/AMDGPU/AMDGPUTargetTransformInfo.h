@@ -201,6 +201,11 @@ public:
     return AMDGPU::addrspacesMayAlias(AS0, AS1);
   }
 
+  std::optional<APInt> getNullPointerValue(unsigned AS) const override {
+    return APInt(getDataLayout().getPointerSizeInBits(AS),
+                 AMDGPU::getNullPointerValue(AS), /*isSigned=*/true);
+  }
+
   unsigned getFlatAddressSpace() const override {
     // Don't bother running InferAddressSpaces pass on graphics shaders which
     // don't use flat addressing.
