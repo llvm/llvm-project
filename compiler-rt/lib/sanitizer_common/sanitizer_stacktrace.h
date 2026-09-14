@@ -22,12 +22,12 @@ struct BufferedStackTrace;
 
 static const u32 kStackTraceMax = 255;
 
-#if SANITIZER_LINUX && defined(__mips__)
-# define SANITIZER_CAN_FAST_UNWIND 0
+#if SANITIZER_LINUX && (defined(__mips__) || defined(__alpha__))
+#  define SANITIZER_CAN_FAST_UNWIND 0
 #elif SANITIZER_WINDOWS
-# define SANITIZER_CAN_FAST_UNWIND 0
+#  define SANITIZER_CAN_FAST_UNWIND 0
 #else
-# define SANITIZER_CAN_FAST_UNWIND 1
+#  define SANITIZER_CAN_FAST_UNWIND 1
 #endif
 
 // Fast unwind is the only option on Mac for now; we will need to

@@ -140,6 +140,14 @@ LLVM_LIBC_FUNCTION(long, sysconf, (int name)) {
     return get_nprocessors_onln();
   case _SC_THREADS:
     return _POSIX_THREADS;
+  case _SC_GETGR_R_SIZE_MAX:
+    // No recommended buffer size for getgrgid_r/getgrnam_r, as they work
+    // with any user-supplied buffer.
+    return -1;
+  case _SC_GETPW_R_SIZE_MAX:
+    // No recommended buffer size for getpwuid_r/getpwnam_r, as they work
+    // with any user-supplied buffer.
+    return -1;
   case _SC_OPEN_MAX:
     return get_open_max();
   case _SC_PHYS_PAGES:

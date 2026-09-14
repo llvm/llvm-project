@@ -844,6 +844,21 @@ def CIR_LoadOp : CIR_Op<"load", [
     $addr `:` qualified(type($addr)) `,` type($result) attr-dict
   }];
 
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$addr), [{
+      build($_builder, $_state, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>,
+    OpBuilder<(ins "mlir::Type":$result, "mlir::Value":$addr), [{
+      build($_builder, $_state, result, addr, /*isDeref=*/false,
+            /*is_volatile=*/false, /*is_nontemporal=*/false,
+            /*alignment=*/mlir::IntegerAttr{}, cir::SyncScopeKindAttr{},
+            cir::MemOrderAttr{}, /*invariant=*/false);
+    }]>
+  ];
+
   // FIXME: add verifier.
 }
 
@@ -5017,6 +5032,49 @@ def CIR_CoroPromiseOp : CIR_CoroIntrinsicOp<"promise",
   }];
 
   let llvmOp = "CoroPromiseOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic ResumeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroResumeOp : CIR_CoroIntrinsicOp<"resume",
+    (ins CIR_VoidPtrType:$handle), (outs )> {
+  let summary = "Represents llvm.coro.resume";
+  let description = [{
+    Resumes a suspended coroutine identified by `handle`. Resuming a
+    coroutine that is not currently suspended is undefined behavior.
+  }];
+  let llvmOp = "CoroResumeOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DestroyOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDestroyOp : CIR_CoroIntrinsicOp<"destroy",
+    (ins CIR_VoidPtrType:$handle), (outs )> {
+  let summary = "Represents llvm.coro.destroy";
+  let description = [{
+    Destroys a suspended coroutine identified by `handle`. Destroying a
+    coroutine that is not currently suspended is undefined behavior.
+  }];
+  let llvmOp = "CoroDestroyOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Coroutine intrinsic DoneOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CoroDoneOp : CIR_CoroIntrinsicOp<"done", (ins CIR_VoidPtrType:$handle),
+    (outs CIR_BoolType:$done)> {
+  let summary = "Represents llvm.coro.done";
+  let description = [{
+    Checks whether the coroutine identified by `handle` is currently
+    suspended at its final suspend point. `handle` must be a handle to a
+    suspended coroutine.
+  }];
+  let llvmOp = "CoroDoneOp";
 }
 
 //===----------------------------------------------------------------------===//

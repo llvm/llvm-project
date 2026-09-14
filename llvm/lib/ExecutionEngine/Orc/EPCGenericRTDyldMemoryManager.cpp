@@ -8,6 +8,7 @@
 
 #include "llvm/ExecutionEngine/Orc/EPCGenericRTDyldMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/Shared/SPSCI/SimpleNativeMemoryMapSPSCI.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -23,11 +24,10 @@ EPCGenericRTDyldMemoryManager::CreateWithDefaultBootstrapSymbols(
     ExecutorProcessControl &EPC) {
   SymbolAddrs SAs;
   if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::SimpleExecutorMemoryManagerInstanceName},
-           {SAs.Reserve, rt::SimpleExecutorMemoryManagerReserveWrapperName},
-           {SAs.Initialize,
-            rt::SimpleExecutorMemoryManagerInitializeWrapperName},
-           {SAs.Release, rt::SimpleExecutorMemoryManagerReleaseWrapperName},
+          {{SAs.Instance, rt::sps_ci::SimpleNativeMemoryMapInstanceName},
+           {SAs.Reserve, rt::sps_ci::MemMgrReserve::Name},
+           {SAs.Initialize, rt::sps_ci::MemMgrInitialize::Name},
+           {SAs.Release, rt::sps_ci::MemMgrRelease::Name},
            {SAs.RegisterEHFrame, rt::RegisterEHFrameSectionAllocActionName},
            {SAs.DeregisterEHFrame,
             rt::DeregisterEHFrameSectionAllocActionName}}))
@@ -47,8 +47,7 @@ EPCGenericRTDyldMemoryManager::~EPCGenericRTDyldMemoryManager() {
     errs() << "Destroying with existing errors:\n" << ErrMsg << "\n";
 
   Error Err = Error::success();
-  if (auto Err2 = EPC.callSPSWrapper<
-                  rt::SPSSimpleExecutorMemoryManagerReleaseSignature>(
+  if (auto Err2 = EPC.callSPSWrapper<rt::sps_ci::MemMgrRelease::SPSSig>(
           SAs.Reserve, Err, SAs.Instance, FinalizedAllocs)) {
     // FIXME: Report errors through EPC once that functionality is available.
     logAllUnhandledErrors(std::move(Err2), errs(), "");
@@ -128,8 +127,7 @@ void EPCGenericRTDyldMemoryManager::reserveAllocationSpace(
   });
 
   Expected<ExecutorAddr> TargetAllocAddr((ExecutorAddr()));
-  if (auto Err = EPC.callSPSWrapper<
-                 rt::SPSSimpleExecutorMemoryManagerReserveSignature>(
+  if (auto Err = EPC.callSPSWrapper<rt::sps_ci::MemMgrReserve::SPSSig>(
           SAs.Reserve, TargetAllocAddr, SAs.Instance, TotalSize)) {
     std::lock_guard<std::mutex> Lock(M);
     ErrMsg = toString(std::move(Err));
@@ -268,8 +266,7 @@ bool EPCGenericRTDyldMemoryManager::finalizeMemory(std::string *ErrMsg) {
     // We'll also need to make an extra allocation for the eh-frame wrapper call
     // arguments.
     Expected<ExecutorAddr> InitializeKey((ExecutorAddr()));
-    if (auto Err = EPC.callSPSWrapper<
-                   rt::SPSSimpleExecutorMemoryManagerInitializeSignature>(
+    if (auto Err = EPC.callSPSWrapper<rt::sps_ci::MemMgrInitialize::SPSSig>(
             SAs.Initialize, InitializeKey, SAs.Instance, std::move(FR))) {
       std::lock_guard<std::mutex> Lock(M);
       this->ErrMsg = toString(std::move(Err));

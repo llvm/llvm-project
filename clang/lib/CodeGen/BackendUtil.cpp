@@ -388,22 +388,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
     break;
   }
 
-  // Set FP fusion mode.
-  switch (LangOpts.getDefaultFPContractMode()) {
-  case LangOptions::FPM_Off:
-    // Preserve any contraction performed by the front-end.  (Strict performs
-    // splitting of the muladd intrinsic in the backend.)
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
-    break;
-  case LangOptions::FPM_On:
-  case LangOptions::FPM_FastHonorPragmas:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Standard;
-    break;
-  case LangOptions::FPM_Fast:
-    Options.AllowFPOpFusion = llvm::FPOpFusion::Fast;
-    break;
-  }
-
   Options.MCOptions.BinutilsVersion =
       llvm::MCTargetOptions::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
   Options.UseInitArray = CodeGenOpts.UseInitArray;
@@ -1243,7 +1227,8 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   TimeCodegenPasses([&]() {
     Error CodeGenError = runCodeGenPipeline(
         *TM, *TheModule, *OS, DwoOS, CGFT, PrintPipelinePasses.has_value(),
-        !CodeGenOpts.VerifyModule, CI.getVirtualFileSystemPtr());
+        !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
+        CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });
