@@ -81,6 +81,11 @@ endif()
 function(compiler_rt_test_runtime runtime)
   cmake_parse_arguments(ARG "NO_COMPILER_RT_HAS_GUARD" "" "" ${ARGN})
 
+  # GPU UBSan tests run as part of the host test suite.
+  if(COMPILER_RT_GPU_BUILD AND runtime STREQUAL "ubsan")
+    return()
+  endif()
+
   # Validate that the test suite name is known.
   if(NOT "${runtime}" IN_LIST COMPILER_RT_KNOWN_TEST_SUITES)
     message(FATAL_ERROR "'${runtime}' is not a known test suite. Known test suites are: ${COMPILER_RT_KNOWN_TEST_SUITES}")
@@ -136,10 +141,7 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
     compiler_rt_test_runtime(interception)
 
     compiler_rt_test_runtime(lsan)
-    # The GPU UBSan tests are handled by the host.
-    if(NOT COMPILER_RT_GPU_BUILD)
-      compiler_rt_test_runtime(ubsan)
-    endif()
+    compiler_rt_test_runtime(ubsan)
     compiler_rt_test_runtime(sanitizer_common)
 
     # GNU/Hurd and OpenBSD not supporting asan, cannot run the tests
