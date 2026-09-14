@@ -134,4 +134,21 @@ F:
   ret i32 4
 }
 
+; GH220954 - A constant index wider than 64 bits is truncated to the pointer
+; width when folded into the address mode; it used to assert in
+; APInt::getSExtValue.
+define void @test8() nounwind {
+; X32-LABEL: test8:
+; X32:    movl {{-?[0-9]*}}(%esp), %eax
+; X32:    ret
+
+; X64-LABEL: test8:
+; X64:    movl {{-?[0-9]*}}(%rsp), %eax
+; X64:    ret
+  %alloc = alloca i32, align 4
+  %gep = getelementptr i32, ptr %alloc, i128 18446744073709551616 ; 2^64
+  %v = load volatile i32, ptr %gep, align 1
+  ret void
+}
+
 declare i32 @__gxx_personality_v0(...)
