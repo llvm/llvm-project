@@ -13,7 +13,6 @@
 #ifndef DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 #define DIALECT_TOSA_UTILS_COVERSION_UTILS_H_
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
@@ -85,8 +84,6 @@ LogicalResult EqualizeRanks(PatternRewriter &rewriter, Location loc,
 LogicalResult EqualizeRanks(ImplicitLocOpBuilder &builder, Value &input1,
                             Value &input2);
 
-namespace {
-
 // Creates a TOSA operation and performs shape inference on the individual
 // op. This allows shape inference when lowering down to TOSA.
 template <typename TosaOp, typename... Args>
@@ -113,7 +110,7 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   // different bit-width types and does not have a TypeAttr to define the
   // target type.
   auto result = op->getResult(0);
-  auto predictedShape = returnedShapes[0];
+  const auto &predictedShape = returnedShapes[0];
   auto currentKnowledge = ValueKnowledge::getKnowledgeFromType(resultTy);
 
   // Compute the knowledge based on the inferred type.
@@ -136,8 +133,6 @@ TosaOp createOpAndInferShape(ImplicitLocOpBuilder &builder, Type resultTy,
   result.setType(newTy);
   return op;
 }
-
-} // namespace
 
 // Creates a TOSA operation by:
 //   - first equalize ranks for ops with SameOperandsAndResultRank trait

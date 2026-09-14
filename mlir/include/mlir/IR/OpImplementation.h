@@ -68,7 +68,7 @@ private:
   /// The type of the resource referenced.
   TypeID opaqueID;
   /// The dialect owning the given resource.
-  Dialect *dialect;
+  Dialect *dialect = nullptr;
 };
 
 /// This class represents a CRTP base class for dialect resource handles. It

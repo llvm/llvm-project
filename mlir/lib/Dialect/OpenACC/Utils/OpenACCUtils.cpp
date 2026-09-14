@@ -8,13 +8,16 @@
 
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Intrinsics.h"
@@ -125,9 +128,13 @@ std::string mlir::acc::getVariableName(mlir::Value v) {
       return varNameAttr.getName().str();
 
     // If it is a data entry operation, get name via getVarName
-    if (isa<ACC_DATA_ENTRY_OPS>(definingOp))
+    if (isa<ACC_DATA_ENTRY_OPS, MapInfoOp>(definingOp))
       if (auto name = acc::getVarName(definingOp))
         return name->str();
+
+    // A global goes by the symbol it is addressed through.
+    if (auto addressOf = dyn_cast<AddressOfGlobalOpInterface>(definingOp))
+      return addressOf.getSymbol().getLeafReference().str();
 
     // If it's a view operation, continue to the source
     if (auto viewOp = dyn_cast<ViewLikeOpInterface>(definingOp)) {
@@ -189,9 +196,34 @@ mlir::Value mlir::acc::getBaseEntity(mlir::Value val) {
   return val;
 }
 
+/// Look up `symbol` in the `gpu.module`s of the enclosing module. A
+/// `gpu.module` is its own symbol table, so `lookupNearestSymbolFrom` from a
+/// user outside of it does not find definitions placed inside.
+static mlir::Operation *lookupSymbolInGPUModules(mlir::Operation *user,
+                                                 mlir::SymbolRefAttr symbol) {
+  auto moduleOp = user->getParentOfType<mlir::ModuleOp>();
+  if (!moduleOp)
+    return nullptr;
+  for (auto gpuModule : moduleOp.getOps<mlir::gpu::GPUModuleOp>()) {
+    if (mlir::Operation *op = mlir::SymbolTable::lookupSymbolIn(
+            gpuModule, symbol.getRootReference()))
+      return op;
+  }
+  return nullptr;
+}
+
 bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
                                  mlir::SymbolRefAttr symbol,
                                  mlir::Operation **definingOpPtr) {
+  // A pass may prepare the device-side definition of a symbol inside a
+  // `gpu.module` while the use is still a reference from host IR. Such a
+  // symbol is meant to be used on device, so the use is valid.
+  if (mlir::Operation *gpuOp = lookupSymbolInGPUModules(user, symbol)) {
+    if (definingOpPtr)
+      *definingOpPtr = gpuOp;
+    return true;
+  }
+
   mlir::Operation *definingOp =
       mlir::SymbolTable::lookupNearestSymbolFrom(user, symbol);
 
@@ -203,11 +235,10 @@ bool mlir::acc::isValidSymbolUse(mlir::Operation *user,
   if (definingOpPtr)
     *definingOpPtr = definingOp;
 
-  // Check if the defining op is a recipe (private, reduction, firstprivate).
+  // Check if the defining op is a recipe.
   // Recipes are valid as they get materialized before being offloaded to
   // device. They are only instructions for how to materialize.
-  if (mlir::isa<mlir::acc::PrivateRecipeOp, mlir::acc::ReductionRecipeOp,
-                mlir::acc::FirstprivateRecipeOp>(definingOp))
+  if (mlir::isa<mlir::accomp::RecipeInterface>(definingOp))
     return true;
 
   // Check if the defining op is a global variable that is device data.
@@ -307,6 +338,16 @@ bool mlir::acc::isValidValueUse(mlir::Value val, mlir::Region &region) {
   // If this is device data, it is valid.
   if (isDeviceValue(val))
     return true;
+
+  // Arguments of an enclosing acc routine are already on the device.
+  if (mlir::Operation *parent = region.getParentOp()) {
+    if (auto func = parent->getParentOfType<mlir::FunctionOpInterface>()) {
+      if ((mlir::acc::isAccRoutine(func) ||
+           mlir::acc::isSpecializedAccRoutine(func)) &&
+          llvm::is_contained(func.getArguments(), val))
+        return true;
+    }
+  }
 
   return false;
 }

@@ -1830,6 +1830,24 @@ std::optional<DWARFUnit *> BinaryContext::getDWOCU(uint64_t DWOId) {
   return DWOCU;
 }
 
+void BinaryContext::openSharedDWOContext() {
+  if (!UsesDWP)
+    return;
+  DWARFContext *DWOCtx = nullptr;
+  for (auto &KV : DWOIdToSkeletonCU)
+    if (std::optional<DWARFUnit *> DWOCU = getDWOCU(KV.first))
+      DWOCtx = &(*DWOCU)->getContext();
+  if (!DWOCtx)
+    return;
+  // Avoid dwp races on type units needing abbreviations
+  // (buildDWPTypeUnitsForUnit) by making sure all abbreviations are set up.
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_info_section_units())
+    U->getAbbreviations();
+  // DWARF4-equivalent, which keeps split type units in .debug_types.dwo
+  for (const std::unique_ptr<DWARFUnit> &U : DWOCtx->dwo_types_section_units())
+    U->getAbbreviations();
+}
+
 void BinaryContext::releaseDWOCU(uint64_t DWOId) {
   // With a .dwp package every split CU aliases one shared DWARFContext
   if (UsesDWP)

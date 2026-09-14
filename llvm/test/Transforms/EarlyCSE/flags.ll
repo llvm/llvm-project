@@ -112,3 +112,47 @@ define i32 @load_undef_noundef(ptr %p) {
   %v = load i32, ptr %p, !noundef !{}
   ret i32 %v
 }
+
+define void @addrspacecast_both_nonnull(ptr addrspace(1) %p) {
+; CHECK-LABEL: @addrspacecast_both_nonnull(
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast nonnull ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[C1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[C1]])
+; CHECK-NEXT:    ret void
+;
+  %c1 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 0, ptr %c1)
+  %c2 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 1, ptr %c2)
+  ret void
+}
+
+define void @addrspacecast_first_nonnull(ptr addrspace(1) %p) {
+; CHECK-LABEL: @addrspacecast_first_nonnull(
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast ptr addrspace(1) [[P:%.*]] to ptr
+; CHECK-NEXT:    call void @use.ptr(i32 0, ptr [[C1]])
+; CHECK-NEXT:    call void @use.ptr(i32 1, ptr [[C1]])
+; CHECK-NEXT:    ret void
+;
+  %c1 = addrspacecast nonnull ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 0, ptr %c1)
+  %c2 = addrspacecast ptr addrspace(1) %p to ptr
+  call void @use.ptr(i32 1, ptr %c2)
+  ret void
+}
+
+define void @addrspacecast_vector_first_nonnull(<2 x ptr addrspace(1)> %p) {
+; CHECK-LABEL: @addrspacecast_vector_first_nonnull(
+; CHECK-NEXT:    [[C1:%.*]] = addrspacecast <2 x ptr addrspace(1)> [[P:%.*]] to <2 x ptr>
+; CHECK-NEXT:    call void @use.vec(i32 0, <2 x ptr> [[C1]])
+; CHECK-NEXT:    call void @use.vec(i32 1, <2 x ptr> [[C1]])
+; CHECK-NEXT:    ret void
+;
+  %c1 = addrspacecast nonnull <2 x ptr addrspace(1)> %p to <2 x ptr>
+  call void @use.vec(i32 0, <2 x ptr> %c1)
+  %c2 = addrspacecast <2 x ptr addrspace(1)> %p to <2 x ptr>
+  call void @use.vec(i32 1, <2 x ptr> %c2)
+  ret void
+}
+
+declare void @use.vec(i32, <2 x ptr>) memory(read)

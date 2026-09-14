@@ -2300,6 +2300,9 @@ bool VectorCombine::scalarizeLoadBitcast(LoadInst *LI, VectorType *VecTy,
       TTI.getMemoryOpCost(Instruction::Load, VecTy, LI->getAlign(),
                           LI->getPointerAddressSpace(), CostKind);
 
+  if (!isa<FixedVectorType>(VecTy))
+    return false;
+
   Type *TargetScalarType = nullptr;
   unsigned VecBitWidth = DL->getTypeSizeInBits(VecTy);
 
@@ -6153,11 +6156,13 @@ bool VectorCombine::foldDeinterleaveInterleavePair(Instruction &I) {
       return false;
 
     unsigned ChainOperand = CurrentUses.front()->getOperandNo();
-    if (any_of(CurrentUses, [&](Use *U) {
-          auto *Inst = cast<Instruction>(U->getUser());
-          return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
-                                       !FirstInst->isSameOperationAs(Inst));
-        }))
+    bool MismatchedUse = any_of(CurrentUses, [&](Use *U) {
+      auto *Inst = cast<Instruction>(U->getUser());
+      return Inst != FirstInst && (U->getOperandNo() != ChainOperand ||
+                                   !FirstInst->isSameOperationAs(
+                                       Inst, Instruction::CompareCallTargets));
+    });
+    if (MismatchedUse)
       return false;
 
     auto GetSplatOrScalar = [](Value *V) {

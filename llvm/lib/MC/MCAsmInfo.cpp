@@ -47,6 +47,8 @@ MCAsmInfo::MCAsmInfo(const MCTargetOptions &Options) : TargetOptions(Options) {
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::boolOrDefault::BOU_UNSET)
     HasLEB128Directives = UseLEB128Directives == cl::boolOrDefault::BOU_TRUE;
+  if (Options.BinutilsVersion.first > 0)
+    BinutilsVersion = Options.BinutilsVersion;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;

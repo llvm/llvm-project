@@ -784,7 +784,7 @@ def AMDGPU_DPPOp : AMDGPU_Op<"dpp",
   }];
   let results = (outs AnyType:$result);
   let assemblyFormat = [{
-    $old $src $kind (`(` $permArgument^ `)`)?
+    $old $src enum($kind) (`(` $permArgument^ `)`)?
     oilist (`row_mask` `(` $row_mask `)`
           | `bank_mask` `(` $bank_mask `)`
           | `bound_ctrl` `(` $bound_ctrl `)`)
@@ -944,7 +944,7 @@ def AMDGPU_SchedBarrierOp :
     defined by the ROCDL scheduling group mask enum.
   }];
   let assemblyFormat = [{
-    `allow` `=` $opts attr-dict
+    `allow` `=` enum($opts) attr-dict
   }];
 }
 
@@ -1101,7 +1101,7 @@ def AMDGPU_MFMAOp :
     (`blocks` `(` $blocks^ `)`)?
     custom<MNKDimensionList>($m, $n, $k) $sourceA `*` $sourceB `+` $destC
     oilist (`abid` `(` $abid `)`
-          | `blgp` `(` $blgp `)`
+          | `blgp` `(` enum($blgp) `)`
           | `cbsz` `(` $cbsz `)`
           | `reducePrecision` $reducePrecision
           | `negateA` $negateA
@@ -2297,7 +2297,8 @@ def AMDGPU_GlobalPrefetchOp :
   }];
 
   let assemblyFormat = [{
-    $src `[` $indices `]` $temporalHint $cacheScope (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
+    $src `[` $indices `]` enum($temporalHint) enum($cacheScope)
+    (`speculative` $speculative^)? attr-dict `:` qualified(type($src))
   }];
 
   let hasVerifier = 1;
