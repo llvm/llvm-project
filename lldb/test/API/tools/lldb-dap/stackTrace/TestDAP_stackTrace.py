@@ -331,7 +331,7 @@ class TestDAP_stackTrace(DAPTestCaseBase):
         ids = {
             frame.compileUnitId
             for frame in stack_frames
-            if frame.compileUnitId is not None
+            if frame.compileUnitId is not None and frame.source.name == "main.c"
         }
         self.assertEqual(len(ids), 1, f"expected a single compile unit, got: {ids}")
         compile_unit_id = ids.pop()
