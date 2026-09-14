@@ -1680,7 +1680,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
     LLT Ty = MRI.getType(Val).getScalarType();
     const fltSemantics &FltSem = getFltSemanticForLLT(Ty);
     DenormalMode Mode = MF->getDenormalMode(FltSem);
-    Known = KnownFPClass::log(KnownSrc, Mode);
+    bool IsKnownNeverMultiUnitFPType = &FltSem != &APFloat::PPCDoubleDouble();
+    Known = KnownFPClass::log(KnownSrc, Mode, IsKnownNeverMultiUnitFPType);
     break;
   }
   case TargetOpcode::G_FPOW: {
