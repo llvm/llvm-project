@@ -68,10 +68,17 @@ static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   return nameArray;
 }
 
+/// Prefix identifiers that start with a digit to make them valid C++ names.
+static std::string legalizeCppName(StringRef name) {
+  if (!name.empty() && llvm::isDigit(name.front()))
+    return ("_" + name).str();
+  return name.str();
+}
+
 /// Generates the C++ type name for a TypeOp
 static std::string typeToCppName(irdl::TypeOp type) {
-  return llvm::formatv("{0}Type",
-                       convertToCamelFromSnakeCase(type.getSymName(), true));
+  return llvm::formatv("{0}Type", legalizeCppName(convertToCamelFromSnakeCase(
+                                      type.getSymName(), true)));
 }
 
 /// Generates the C++ class name for an OperationOp
@@ -81,14 +88,20 @@ static std::string opToCppName(irdl::OperationOp op) {
   const auto nameSubstr = periodIndex == std::string::npos
                               ? opName
                               : opName.substr(periodIndex + 1);
-  return llvm::formatv("{0}Op", convertToCamelFromSnakeCase(nameSubstr, true));
+  return llvm::formatv(
+      "{0}Op", legalizeCppName(convertToCamelFromSnakeCase(nameSubstr, true)));
+}
+
+/// Generates the C++ namespace components for an OperationOp.
+static SmallVector<std::string> opToCppNamespaces(irdl::OperationOp op) {
+  auto parts = SmallVector<StringRef>(llvm::split(op.getSymName(), "."));
+  parts.pop_back();
+  return llvm::map_to_vector(parts, legalizeCppName);
 }
 
 // Generates the C++ class name for an OperationOp, scoped to the namespace
 static std::string opToScopedCppName(irdl::OperationOp op) {
-  auto names =
-      llvm::SmallVector<std::string>(llvm::split(op.getSymName(), "."));
-  names.pop_back();
+  auto names = opToCppNamespaces(op);
   names.push_back(opToCppName(op));
   return llvm::join(names, "::");
 }
@@ -108,10 +121,8 @@ static OpStrings getStrings(irdl::OperationOp op) {
   auto regionsOp = op.getOp<irdl::RegionsOp>();
 
   OpStrings strings;
-  auto opNameParts = SmallVector<StringRef>(llvm::split(op.getSymName(), "."));
   strings.opName = op.getSymName();
-  opNameParts.pop_back();
-  strings.opNameSpaces = llvm::map_to_vector(opNameParts, &StringRef::str);
+  strings.opNameSpaces = opToCppNamespaces(op);
   strings.opCppName = opToCppName(op);
   strings.opScopedCppName = opToScopedCppName(op);
 
