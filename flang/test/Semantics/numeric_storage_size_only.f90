@@ -3,6 +3,7 @@
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-real-8 -module-dir %t/only-input %t/only-input/test.f90 2>&1 | FileCheck --allow-empty --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/unused %t/unused/test.f90 2>&1 | FileCheck --allow-empty --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/direct %t/direct/test.f90 2>&1 | FileCheck --check-prefix=TWO --implicit-check-not=NUMERIC_STORAGE_SIZE %s
+! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/nonconstant %t/nonconstant/test.f90 2>&1 | FileCheck --check-prefix=ONE --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/repeated %t/repeated/test.f90 2>&1 | FileCheck --check-prefix=TWO --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/renamed-twice %t/renamed-twice/test.f90 2>&1 | FileCheck --check-prefix=TWO --implicit-check-not=NUMERIC_STORAGE_SIZE %s
 ! RUN: %flang_fc1 -fsyntax-only -fdefault-integer-8 -module-dir %t/homonym %t/homonym/test.f90 2>&1 | FileCheck --allow-empty --implicit-check-not=NUMERIC_STORAGE_SIZE %s
@@ -44,6 +45,14 @@ subroutine renamed_numeric_storage_size
   implicit none
   integer, parameter :: nss = local_nss
 end subroutine renamed_numeric_storage_size
+
+!--- nonconstant/test.f90
+subroutine nonconstant_subexpression(n)
+  use, intrinsic :: iso_fortran_env, only: numeric_storage_size
+  implicit none
+  integer :: n
+  n = n + 2 * numeric_storage_size
+end subroutine nonconstant_subexpression
 
 !--- repeated/test.f90
 subroutine repeated_same_import
