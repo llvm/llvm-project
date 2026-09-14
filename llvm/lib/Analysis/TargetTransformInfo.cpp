@@ -237,6 +237,10 @@ TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
 }
 
+bool TargetTransformInfo::allowSizeGrowth(const CallBase &Call) const {
+  return TTIImpl->allowSizeGrowth(Call);
+}
+
 unsigned TargetTransformInfo::getCallerAllocaCost(const CallBase *CB,
                                                   const AllocaInst *AI) const {
   return TTIImpl->getCallerAllocaCost(CB, AI);

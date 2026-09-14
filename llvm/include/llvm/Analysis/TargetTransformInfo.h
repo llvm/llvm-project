@@ -452,6 +452,10 @@ public:
   /// \returns A value to be added to the inlining threshold.
   LLVM_ABI unsigned adjustInliningThreshold(const CallBase *CB) const;
 
+  /// \return true if size growth is allowed when inlining the callee at \p
+  /// Call.
+  LLVM_ABI bool allowSizeGrowth(const CallBase &Call) const;
+
   /// \returns The cost of having an Alloca in the caller if not inlined, to be
   /// added to the threshold
   LLVM_ABI unsigned getCallerAllocaCost(const CallBase *CB,
