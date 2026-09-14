@@ -112,9 +112,6 @@ bool SuperHExpandPseudo::storeToFrame(Block &MBB, BlockIt MBBI, int Scale) {
   const MachineFunction &MF = *MBB.getParent();
   MachineInstr &MI = *MBBI;
 
-  MI.dump();
-  dbgs() << "\n";
-
   auto SrcReg = MI.getOperand(0).getReg();
   bool SrcIsKill = MI.getOperand(0).isKill();
   auto FrameReg = MI.getOperand(1).getReg();
