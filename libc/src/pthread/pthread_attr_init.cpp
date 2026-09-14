@@ -21,6 +21,7 @@ LLVM_LIBC_FUNCTION(int, pthread_attr_init, (pthread_attr_t * attr)) {
   *attr = pthread_attr_t{
       PTHREAD_CREATE_JOINABLE,   // Not detached
       SCHED_OTHER,               // Default scheduling policy
+      {},                        // Default scheduling parameters
       nullptr,                   // Let the thread manage its stack
       Thread::DEFAULT_STACKSIZE, // stack size.
       Thread::DEFAULT_GUARDSIZE, // Default page size for the guard size.
