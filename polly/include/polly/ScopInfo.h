@@ -31,6 +31,7 @@
 #include <cassert>
 #include <cstddef>
 #include <forward_list>
+#include <list>
 #include <optional>
 
 namespace polly {

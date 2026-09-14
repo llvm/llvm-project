@@ -335,7 +335,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getCouldNotCompute();
             return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
           })
-          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
             const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
@@ -1365,4 +1365,45 @@ void vputils::detail::pullOutPermutationsImpl(
           Res, [&Res](VPUser &U, unsigned _) { return &U != Res; });
     }
   }
+}
+
+// Implements the algorithm described in "Simple and Efficient Construction of
+// Static Single Assignment Form" by Braun et al.
+VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
+                                 DenseMap<VPBasicBlock *, VPValue *> &Defs) {
+  assert(!Defs.empty() && "Defs shouldn't be empty");
+  assert(
+      is_contained(vp_depth_first_shallow(VPBB->getPlan()->getEntry()), VPBB) &&
+      "VPBB isn't reachable from entry");
+  if (VPValue *Def = Defs.lookup(VPBB))
+    return Def;
+  // If the entry block is reached and there's still no def, then Defs is
+  // missing a definition that covers this path.
+  assert(VPBB->getNumPredecessors() && "Not all paths have def");
+
+  if (VPBlockBase *Pred = VPBB->getSinglePredecessor())
+    return reconstructSSA(cast<VPBasicBlock>(Pred), Defs);
+
+  // Multiple predecessors, create a join.
+  Type *Ty = Defs.begin()->second->getScalarType();
+  VPPhi *Phi = VPBuilder(VPBB, VPBB->getFirstNonPhi())
+                   .createScalarPhi({}, DebugLoc::getUnknown(), "", {}, Ty);
+  Defs[VPBB] = Phi;
+  for (auto *Pred : VPBB->predecessors())
+    Phi->addIncoming(reconstructSSA(cast<VPBasicBlock>(Pred), Defs));
+
+  // Fold away trivial phis.
+  // TODO: Remove phi users which have become trivial too.
+  if (all_equal(Phi->incoming_values())) {
+    VPValue *Common = Phi->getIncomingValue(0);
+    Phi->replaceAllUsesWith(Common);
+    for (auto &[_, V] : Defs)
+      if (V == Phi)
+        V = Common;
+    Defs[VPBB] = Common;
+    Phi->eraseFromParent();
+    return Common;
+  }
+
+  return Phi;
 }

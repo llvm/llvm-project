@@ -9,7 +9,7 @@
 #ifndef MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
 #define MLIR_CONVERSION_ARITHCOMMON_ATTRTOLLVMCONVERTER_H
 
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/IR/ArithAttributes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 
 //===----------------------------------------------------------------------===//
