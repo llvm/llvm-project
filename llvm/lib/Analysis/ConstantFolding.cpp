@@ -2152,6 +2152,9 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
   case LibFunc_exp2f_finite:
   case LibFunc_fabs:
   case LibFunc_fabsf:
+  case LibFunc_fdim:
+  case LibFunc_fdimf:
+  case LibFunc_fdiml:
   case LibFunc_floor:
   case LibFunc_floorf:
   case LibFunc_fmod:
@@ -3398,6 +3401,19 @@ static Constant *ConstantFoldLibCall2(StringRef Name, Type *Ty,
   case LibFunc_powf_finite:
     if (TLI->has(Func))
       return ConstantFoldBinaryFP(pow, Op1V, Op2V, Ty);
+    break;
+  case LibFunc_fdim:
+  case LibFunc_fdimf:
+  case LibFunc_fdiml:
+    if (TLI->has(Func)) {
+        // C99 fdim(x, y) = (x > y) ? x - y : +0.
+      if (!Op1V.isNaN() && !Op2V.isNaN() &&
+          Op1V.compare(Op2V) != APFloat::cmpGreaterThan)
+        return ConstantFP::getZero(Ty);
+      APFloat Difference = Op1V;
+      Difference.subtract(Op2V, RoundingMode::NearestTiesToEven);
+      return ConstantFP::get(Ty, Difference);
+    }
     break;
   case LibFunc_fmod:
   case LibFunc_fmodf:
@@ -4910,7 +4926,10 @@ bool llvm::isMathLibCallNoop(const CallBase *Call,
         }
         break;
       }
-
+      case LibFunc_fdim:
+      case LibFunc_fdimf:
+      case LibFunc_fdiml:
+        return true;
       case LibFunc_fmodl:
       case LibFunc_fmod:
       case LibFunc_fmodf:
