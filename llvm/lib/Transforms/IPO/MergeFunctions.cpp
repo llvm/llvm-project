@@ -443,10 +443,8 @@ static bool hasDistinctMetadataIntrinsic(const Function &F) {
       if (!isa<IntrinsicInst>(&I))
         continue;
 
-      for (Value *Op : I.operands()) {
-        auto *MDL = dyn_cast<MetadataAsValue>(Op);
-        if (!MDL)
-          continue;
+      for (MetadataAsValue *MDL :
+           make_isa_range<MetadataAsValue>(I.operands())) {
         if (MDNode *N = dyn_cast<MDNode>(MDL->getMetadata()))
           if (N->isDistinct())
             return true;

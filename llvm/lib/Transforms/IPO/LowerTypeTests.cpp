@@ -2556,10 +2556,7 @@ bool LowerTypeTestsModule::lower() {
     if (NamedMDNode *AliasesMD = M.getNamedMetadata("aliases")) {
       for (auto *AliasMD : AliasesMD->operands()) {
         SmallVector<Function *> Aliases;
-        for (Metadata *MD : AliasMD->operands()) {
-          auto *MDS = dyn_cast<MDString>(MD);
-          if (!MDS)
-            continue;
+        for (MDString *MDS : make_isa_range<MDString>(AliasMD->operands())) {
           StringRef AliasName = MDS->getString();
           if (!ExportedFunctions.count(AliasName))
             continue;
