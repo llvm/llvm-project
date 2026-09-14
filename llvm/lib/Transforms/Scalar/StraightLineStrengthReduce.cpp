@@ -71,6 +71,7 @@
 #include "llvm/Transforms/Scalar/StraightLineStrengthReduce.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -110,6 +111,8 @@ using namespace llvm;
 using namespace PatternMatch;
 
 #define DEBUG_TYPE "slsr"
+#define DEBUG_SLSR_RP(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp", X)
+#define DEBUG_SLSR_RP_DETAIL(X) DEBUG_WITH_TYPE(DEBUG_TYPE "-rp-detail", X)
 
 static const unsigned UnknownAddressSpace =
     std::numeric_limits<unsigned>::max();
@@ -122,8 +125,29 @@ static cl::opt<bool>
     EnablePoisonReuseGuard("enable-poison-reuse-guard", cl::init(true),
                            cl::desc("Enable poison-reuse guard"));
 
+static cl::opt<bool> EnableRPFilter(
+    "slsr-rp-filter", cl::init(true), cl::Hidden,
+    cl::desc("SLSR: skip rewrites that would raise register pressure"));
+
+// RPFilter targets one pathological shape: a block holding many distinct
+// bases. Each basis contributes one extended live range no matter how many
+// candidates are rewritten against it, so it is the number of distinct bases,
+// not the number of candidates, that tracks how many new concurrent live
+// ranges SLSR would create. Below this count the block
+// the liveness and pressure analyses are skipped entirely.
+static constexpr unsigned MinDistinctBasesToFilter = 16;
+
+// Percentage by which rewriting a block's candidates may raise its peak
+// register pressure before the rewrites are skipped. Peak pressure is what
+// tells us whether the extended live ranges actually overlap.
+static constexpr unsigned PeakIncreaseRatioPercent = 15;
+
 STATISTIC(NumSCEVCandidateBasisDifferences,
           "Number of candidate-basis SCEV differences computed by SLSR");
+STATISTIC(NumRPFilteredBlocks,
+          "Number of blocks where SLSR skipped rewrites for register pressure");
+STATISTIC(NumRPFilteredCandidates,
+          "Number of candidates SLSR skipped for register pressure");
 
 namespace {
 
@@ -1411,11 +1435,340 @@ bool StraightLineStrengthReduceLegacyPass::runOnFunction(Function &F) {
   return StraightLineStrengthReduce(DL, DT, SE, TTI).runOnFunction(F);
 }
 
+namespace {
+
+// TODO: Currently, I am considering (Basis, Cand) pair that are both in the
+// same BB.
+//       The restriction may not be needed.
+class RPFilter {
+public:
+  using Candidate = StraightLineStrengthReduce::Candidate;
+
+  RPFilter(const Function *F,
+           DenseMap<const Instruction *, Candidate *> &PickedCandidateMap)
+      : F(F), PickedCandidateMap(PickedCandidateMap) {}
+
+  DenseSet<const Instruction *> run() {
+    DenseSet<const Instruction *> InstsToSkip;
+    if (!EnableRPFilter || PickedCandidateMap.empty())
+      return InstsToSkip;
+
+    buildBBToNumCandsAndBasises(PickedCandidateMap);
+    if (MaxNumBasisesInBB <= MinDistinctBasesToFilter)
+      return InstsToSkip;
+
+    // Compute live-in and live-out of each BB in CFG
+    buildBBToLiveness(*F);
+
+    DEBUG_SLSR_RP(dbgs() << "-- MaxRP of BBs -- \n");
+    SmallPtrSet<const BasicBlock *, 8> BBsToSkip;
+    for (auto &BB : *F) {
+
+      // Check only the BB with more than MinDistinctBasesToFilter Basises.
+      // Notice than the number of distinct Basises matters. One basis can
+      // correspond to multiple candidates.
+      if (BBToNumCandsAndBasises[&BB].second <= MinDistinctBasesToFilter)
+        continue;
+
+      auto [MaxRP, MaxRPWithSLSR] = maxPressureInBlockBackward(
+          BB, BBToLiveness[&BB].LiveIn, BBToLiveness[&BB].LiveOut);
+      DEBUG_SLSR_RP(dbgs() << "MaxRP:" << BB.getName() << ": (" << MaxRP << ", "
+                           << MaxRPWithSLSR << ") bases "
+                           << BBToNumCandsAndBasises[&BB].second << " cands "
+                           << BBToNumCandsAndBasises[&BB].first << "\n");
+
+      // Compare 100 * increase against RatioPercent * MaxRP so the threshold is
+      // exact and independent of host floating point.
+      if (MaxRPWithSLSR <= MaxRP ||
+          100 * (MaxRPWithSLSR - MaxRP) <= PeakIncreaseRatioPercent * MaxRP)
+        continue;
+
+      DEBUG_SLSR_RP(dbgs() << "Skipping BB from SLSR: " << BB.getName()
+                           << "\n");
+      ++NumRPFilteredBlocks;
+      BBsToSkip.insert(&BB);
+    } // Done with BBs
+
+    // One pass over the candidates rather than over the instructions of every
+    // skipped block. A skipped block holds more than MinDistinctBasesToFilter
+    // bases, so it is one of the larger blocks in the function, while the
+    // candidate map is small by comparison.
+    for (const auto &It : PickedCandidateMap)
+      if (BBsToSkip.contains(It.first->getParent()) &&
+          InstsToSkip.insert(It.first).second)
+        ++NumRPFilteredCandidates;
+
+    return InstsToSkip;
+  }
+
+private:
+  const Function *F;
+  DenseMap<const Instruction *, Candidate *> &PickedCandidateMap;
+
+  DenseMap<const BasicBlock *, std::pair<unsigned, unsigned>>
+      BBToNumCandsAndBasises;
+  unsigned MaxNumBasisesInBB = 0;
+
+  // TODO: Use DenseSet instead of SmallPtrSet for ValueSet.
+  using ValueSet = SmallPtrSet<const Value *, 32>;
+  struct BlockLiveness {
+    ValueSet LiveIn;
+    ValueSet LiveOut;
+  };
+
+  DenseMap<const BasicBlock *, BlockLiveness> BBToLiveness;
+
+  std::pair<unsigned, unsigned> countCandsAndBasisesInBB(
+      const BasicBlock *BB,
+      const DenseMap<const Instruction *, Candidate *> &PickedCandidateMap) {
+    unsigned NumCands = 0;
+    SmallPtrSet<const Candidate *, 8> UniqueBasises;
+    for (const Instruction &Inst : *BB) {
+      auto It = PickedCandidateMap.find(&Inst);
+      if (It != PickedCandidateMap.end()) {
+        NumCands++;
+        assert(It->second->Basis);
+        UniqueBasises.insert(It->second->Basis);
+      }
+    }
+    MaxNumBasisesInBB = std::max(MaxNumBasisesInBB, UniqueBasises.size());
+    DEBUG_WITH_TYPE("slsr-rp", {
+      dbgs() << "BB: " << BB->getName() << " - NumCands: " << NumCands
+             << " UniqueBasises: " << UniqueBasises.size() << "\n";
+    });
+    return {NumCands, UniqueBasises.size()};
+  }
+
+  void buildBBToNumCandsAndBasises(
+      const DenseMap<const Instruction *, Candidate *> &PickedCandidateMap) {
+    for (auto &InstCand : PickedCandidateMap) {
+      const BasicBlock *BB = InstCand.first->getParent();
+      auto [It, Inserted] = BBToNumCandsAndBasises.try_emplace(BB);
+      if (Inserted)
+        It->second = countCandsAndBasisesInBB(It->first, PickedCandidateMap);
+    }
+  }
+
+  static bool isRegisterLike(const Value *V) {
+    return isa<Instruction>(V) || isa<Argument>(V);
+  }
+
+  // The pressure scan asks for the weight of every live value at every
+  // instruction, so memoize on the type, which is all the weight depends on.
+  mutable DenseMap<Type *, unsigned> RegWeightCache;
+
+  unsigned regWeight(const Value *V) const {
+    Type *Ty = V->getType();
+    if (Ty->isVoidTy() || Ty->isTokenTy())
+      return 0;
+
+    auto [It, Inserted] = RegWeightCache.try_emplace(Ty);
+    if (Inserted)
+      It->second = computeRegWeight(Ty);
+    return It->second;
+  }
+
+  unsigned computeRegWeight(Type *Ty) const {
+    const DataLayout &DL = F->getDataLayout();
+
+    // Default logic to compute RP. TTI->getRegUsageForType() is less accurate
+    // than the default logic for certain targets like AMDGPU.
+    return divideCeil(DL.getTypeSizeInBits(Ty).getFixedValue(), 32);
+  }
+
+  void buildBBToLiveness(const Function &F) {
+    DenseMap<const BasicBlock *, ValueSet> UpExposed, Defs;
+    DenseMap<std::pair<const BasicBlock *, const BasicBlock *>, ValueSet>
+        PhiEdges;
+
+    // Fill in per-block information
+    for (const BasicBlock &BB : F) {
+      ValueSet &UE = UpExposed[&BB];
+      ValueSet &D = Defs[&BB];
+
+      for (const Instruction &I : BB) {
+        if (const auto *PN = dyn_cast<PHINode>(&I)) {
+          for (unsigned i = 0, e = PN->getNumIncomingValues(); i < e; ++i)
+            if (isRegisterLike(PN->getIncomingValue(i)))
+              PhiEdges[{PN->getIncomingBlock(i), &BB}].insert(
+                  PN->getIncomingValue(i));
+        } else {
+          for (const Value *Op : I.operand_values())
+            if (isRegisterLike(Op) && !D.contains(Op))
+              UE.insert(Op);
+        }
+
+        if (!I.getType()->isVoidTy())
+          D.insert(&I);
+      }
+      DEBUG_SLSR_RP_DETAIL({
+        dbgs() << "BB-fill: " << BB.getName()
+               << " UpExposed: " << UpExposed[&BB].size();
+        dbgs() << " Defs: " << Defs[&BB].size() << "\n";
+      });
+    }
+
+    // Block Live-in/out fixed-point loop
+    bool Changed = true;
+    while (Changed) {
+      Changed = false;
+      for (const BasicBlock *BB : post_order(&F.getEntryBlock())) {
+        ValueSet Out;
+        for (const BasicBlock *S : successors(BB)) {
+          // Out = Out + BBToLiveness[S].LiveIn
+          for (const Value *V : BBToLiveness[S].LiveIn)
+            Out.insert(V);
+          auto It = PhiEdges.find({BB, S});
+          if (It != PhiEdges.end())
+            // Out = Out + It->second
+            for (const Value *V : It->second)
+              Out.insert(V);
+        }
+        ValueSet In = UpExposed[BB];
+        // live-throughs are live-ins
+        for (const Value *V : Out)
+          if (!Defs[BB].contains(V))
+            In.insert(V);
+
+        if (In.size() != BBToLiveness[BB].LiveIn.size() ||
+            Out.size() != BBToLiveness[BB].LiveOut.size())
+          Changed = true;
+
+        DEBUG_SLSR_RP_DETAIL({
+          dbgs() << "BB-update: " << BB->getName() << " In: " << In.size()
+                 << " Out: " << Out.size() << "\n";
+        });
+
+        BBToLiveness[BB].LiveIn = std::move(In);
+        BBToLiveness[BB].LiveOut = std::move(Out);
+      }
+    }
+
+    DEBUG_WITH_TYPE("slsr-rp", {
+      dbgs() << "-- Live Ins/Outs of BBs -- \n";
+      for (const BasicBlock &BB : F) {
+        dbgs() << BB.getName() << ": ";
+        dbgs() << BBToLiveness[&BB].LiveIn.size() << ", ";
+        dbgs() << BBToLiveness[&BB].LiveOut.size() << "\n";
+      }
+    });
+  }
+
+  // Return true if I is a candidate and its basis is in the same bb, false
+  // otherwise.
+  bool insertBasisIfCand(const Instruction *I, ValueSet &LiveSetWithSLSR,
+                         DenseSet<const Value *> &SeenLastUse) const {
+    auto It = PickedCandidateMap.find(I);
+    if (It == PickedCandidateMap.end())
+      return false;
+
+    // I is a Candidate
+    const Instruction *Basis = It->second->Basis->Ins;
+    // if (Basis->getParent() == I->getParent()) {
+    LiveSetWithSLSR.insert(Basis);
+    // I and its Basis are in the same bb.
+
+    SeenLastUse.insert(Basis);
+    return true;
+    //}
+
+    // return false;
+  }
+
+  std::pair<unsigned, unsigned>
+  maxPressureInBlockBackward(const BasicBlock &BB, const ValueSet &LiveIn,
+                             const ValueSet &LiveOut) const {
+
+    // TODO: ValueSet is a SmallPtrSet, which is supposedly smaller than 33.
+    //       Could be a better-fitting data structure.
+    ValueSet LiveSet = LiveOut;
+    unsigned MaxW = 0;
+    for (const Value *V : LiveSet)
+      MaxW += regWeight(V);
+
+    // Initial LiveSetWithSLSR is the same as LiveOut.
+    // SLSR changes
+    // Basis = ..
+    // ..
+    // Cand = f(op1, op2, ..)
+    //
+    // to
+    // Basis = ..
+    // Cand = f(Basis, Delta, // possibly some of the original operands ..)
+    //
+    // We consider here only the case both Cand and Basis are in the same BB.
+    // Therefore, if an original operand of Cand is a liveout, it means it was
+    // used outside the BB, and will stay so. Likewise, if a Basis is a liveout,
+    // it means it was used outside the BB, and will stay so. SLSR does not
+    // delete existing defs or create new defs.
+    ValueSet LiveSetWithSLSR = LiveOut;
+    unsigned MaxWWithSLSR = MaxW;
+
+    // This is required for calculating LiveSetWithSLSR without updating IR.
+    // IR is still in the original form.
+    // Intialize it with LiveOut. LiveOuts are never removed from
+    // LiveSetWithSLSR.
+    DenseSet<const Value *> SeenLastUse(LiveOut.begin(), LiveOut.end());
+
+    // Scan BB backward
+    for (const Instruction &I : reverse(BB)) {
+      if (I.isDebugOrPseudoInst() || isa<PHINode>(&I))
+        continue;
+
+      bool IsCand = insertBasisIfCand(&I, LiveSetWithSLSR, SeenLastUse);
+      for (const Value *Op : I.operand_values())
+        if (isRegisterLike(Op)) {
+          LiveSet.insert(Op);
+          if (IsCand && !SeenLastUse.contains(Op)) {
+            // Op is the last use. It will be replaced by Basis, so it is
+            // removed from LiveSetWithSLSR. As a heuristic, we don't dicern
+            // which Op of I is replaced by Basis. When IsCand is true, there is
+            // only one reg-like Op in practice.
+            // TODO: Can further restrict by Candidate's type and DeltaKind.
+            LiveSetWithSLSR.erase(Op);
+            DEBUG_SLSR_RP_DETAIL(dbgs() << "Removed Op from LiveSetWithSLSR: "
+                                        << *Op << " in inst " << I << "\n");
+          } else {
+            LiveSetWithSLSR.insert(Op);
+          }
+          // Op's insertion happens only if Op was not there before.
+          // Therefore, SeenLastUse keeps the last use of Op as
+          // BB is scanned backward.
+          SeenLastUse.insert(Op);
+        }
+
+      // Compute RP reaching for this instruction.
+      unsigned W = 0;
+      for (const Value *V : LiveSet) {
+        auto RW = regWeight(V);
+        W += RW;
+      }
+      MaxW = std::max(MaxW, W);
+      W = 0;
+      for (const Value *V : LiveSetWithSLSR) {
+        auto RW = regWeight(V);
+        W += RW;
+      }
+      MaxWWithSLSR = std::max(MaxWWithSLSR, W);
+
+      // Remove the def (Instruction) from LiveSet for the next upward
+      // instruction.
+      if (!I.getType()->isVoidTy()) {
+        LiveSet.erase(&I);
+        LiveSetWithSLSR.erase(&I);
+      }
+    }
+
+    return {MaxW, MaxWWithSLSR};
+  }
+};
+} // end of anonymous namespace
+
 bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "SLSR on Function: " << F.getName() << "\n");
   // Traverse the dominator tree in the depth-first order. This order makes sure
   // all bases of a candidate are in Candidates when we process it.
-  for (const auto Node : depth_first(DT))
+  for (auto *const Node : depth_first(DT))
     for (auto &I : *(Node->getBlock()))
       allocateCandidatesAndFindBasis(&I);
 
@@ -1427,11 +1780,22 @@ bool StraightLineStrengthReduce::runOnFunction(Function &F) {
   }
   sortCandidateInstructions();
 
+  DenseMap<const Instruction *, Candidate *> PickedCandidateMap;
+  for (Instruction *I : SortedCandidateInsts)
+    if (Candidate *C = pickRewriteCandidate(I))
+      PickedCandidateMap[I] = C;
+
+  RPFilter RPFilter(&F, PickedCandidateMap);
+  DenseSet<const Instruction *> InstsToSkip = RPFilter.run();
+
   // Rewrite candidates in the topological order that rewrites a Candidate
   // always before rewriting its Basis
-  for (Instruction *I : reverse(SortedCandidateInsts))
-    if (Candidate *C = pickRewriteCandidate(I))
-      rewriteCandidate(*C);
+  for (Instruction *I : reverse(SortedCandidateInsts)) {
+    auto It = PickedCandidateMap.find(I);
+    if (It != PickedCandidateMap.end())
+      if (!InstsToSkip.contains(It->first))
+        rewriteCandidate(*It->second);
+  }
 
   for (auto *DeadIns : DeadInstructions)
     // A dead instruction may be another dead instruction's op,
