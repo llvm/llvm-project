@@ -20,12 +20,19 @@ class Processor:
 
     def process_file(self, fpath: Path, version: packaging.version.Version) -> None:
         self.version = version
-        self.major, self.minor, self.patch, self.suffix = (
+        self.major, self.minor, self.patch, pre = (
             version.major,
             version.minor,
             version.micro,
             version.pre,
         )
+
+        # Convert version.pre tuple (e.g. ('rc', 1)) to a proper string (e.g. '-rc1').
+        # version.pre is None for final releases.
+        if pre is not None:
+            self.suffix = f"-{pre[0]}{pre[1]}"
+        else:
+            self.suffix = None
 
         if self.args.rc:
             self.suffix = f"-rc{self.args.rc}"
