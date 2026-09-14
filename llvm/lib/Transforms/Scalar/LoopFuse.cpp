@@ -49,7 +49,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/DependenceAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
@@ -89,8 +88,6 @@ STATISTIC(
     NonEmptyPreheader,
     "Loop has a non-empty preheader with instructions that cannot be moved");
 STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
-STATISTIC(FusionTooLarge, "Fusion exceeds the combined-body cost budget");
-STATISTIC(UnknownFusionSize, "Fusion body cost could not be computed");
 STATISTIC(InsufficientReuse,
           "Fusion has insufficient cross-loop reused values");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
@@ -109,15 +106,12 @@ namespace {
 
 enum class FusionProfitabilityResult {
   Profitable,
-  TooLarge,
-  UnknownSize,
   InsufficientReuse,
 };
 
 struct FusionProfitabilityInfo {
   FusionProfitabilityResult Result =
       FusionProfitabilityResult::Profitable;
-  std::optional<unsigned> CombinedCost;
   unsigned ReusedValueCount = 0;
 };
 
@@ -689,21 +683,6 @@ private:
     }
   }
 
-  std::optional<unsigned>
-  estimateLoopCodeSize(const FusionCandidate &FC) const {
-    SmallPtrSet<const Value *, 32> EphValues;
-    CodeMetrics::collectEphemeralValues(FC.L, &AC, EphValues);
-
-    CodeMetrics Metrics;
-    for (BasicBlock *BB : FC.L->blocks())
-      Metrics.analyzeBasicBlock(BB, TTI, EphValues, false, FC.L);
-
-    if (!Metrics.NumInsts.isValid())
-      return std::nullopt;
-
-    return static_cast<unsigned>(Metrics.NumInsts.getValue());
-  }
-
   /// Determine if it is beneficial to fuse two loops.
   bool isBeneficialFusion(const FusionCandidate &FC0,
                           const FusionCandidate &FC1,
@@ -713,24 +692,6 @@ private:
 
     if (Info.ReusedValueCount < Opts.loop_fusion_min_reused_values) {
       Info.Result = FusionProfitabilityResult::InsufficientReuse;
-      return false;
-    }
-
-    std::optional<unsigned> Size0 = estimateLoopCodeSize(FC0);
-    std::optional<unsigned> Size1 = estimateLoopCodeSize(FC1);
-    if (!Size0 || !Size1) {
-      Info.Result = FusionProfitabilityResult::UnknownSize;
-      return false;
-    }
-
-    Info.CombinedCost = *Size0 + *Size1;
-    LLVM_DEBUG(dbgs() << "\tEstimated combined loop-body cost: "
-                      << *Info.CombinedCost << " (maximum: "
-                      << Opts.loop_fusion_max_code_size << ")\n");
-
-    if (Opts.loop_fusion_max_code_size &&
-        *Info.CombinedCost > Opts.loop_fusion_max_code_size) {
-      Info.Result = FusionProfitabilityResult::TooLarge;
       return false;
     }
 
@@ -1023,16 +984,6 @@ private:
           case FusionProfitabilityResult::InsufficientReuse:
             ++InsufficientReuse;
             reportFusionInsufficientReuse(FC0, FC1, ProfitabilityInfo);
-            break;
-          case FusionProfitabilityResult::TooLarge:
-            ++FusionTooLarge;
-            reportFusionTooLarge(FC0, FC1, ProfitabilityInfo);
-            break;
-          case FusionProfitabilityResult::UnknownSize:
-            ++UnknownFusionSize;
-            reportLoopFusion<OptimizationRemarkMissed>(
-                FC0, FC1, "UnknownFusionSize",
-                "Fusion body cost could not be computed");
             break;
           case FusionProfitabilityResult::Profitable:
             llvm_unreachable("Unexpected profitable fusion result");
@@ -1834,24 +1785,6 @@ private:
              << " cross-loop reused values; configured minimum is "
              << NV("MinimumReusedValues",
                    unsigned(Opts.loop_fusion_min_reused_values)));
-  }
-
-  void reportFusionTooLarge(const FusionCandidate &FC0,
-                            const FusionCandidate &FC1,
-                            const FusionProfitabilityInfo &Info) {
-    assert(Info.CombinedCost && "Expected a valid combined cost");
-
-    using namespace ore;
-    ORE.emit(OptimizationRemarkMissed(DEBUG_TYPE, "FusionTooLarge",
-                                      FC0.L->getStartLoc(), FC0.Preheader)
-             << "[" << FC0.Preheader->getParent()->getName()
-             << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
-             << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
-             << ": estimated combined loop-body cost "
-             << NV("CombinedCost", *Info.CombinedCost)
-             << " exceeds the configured maximum "
-             << NV("MaximumCost",
-                   unsigned(Opts.loop_fusion_max_code_size)));
   }
 
   /// Fuse two guarded fusion candidates, creating a new fused loop.

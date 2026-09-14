@@ -3,19 +3,9 @@
 ; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model \
 ; RUN:   -loop-fusion-min-reused-values=0 -disable-output -stats < %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=MODEL
-; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model \
-; RUN:   -loop-fusion-min-reused-values=0 -loop-fusion-max-code-size=1 \
-; RUN:   -disable-output -stats < %s 2>&1 | FileCheck %s --check-prefix=LIMIT
-; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model \
-; RUN:   -loop-fusion-min-reused-values=0 -loop-fusion-max-code-size=1 \
-; RUN:   -pass-remarks-missed=loop-fusion -disable-output < %s 2>&1 | \
-; RUN:   FileCheck %s --check-prefix=REMARK
 
 ; DEFAULT: 1 loop-fusion - Loops fused
 ; MODEL: 1 loop-fusion - Loops fused
-; LIMIT: 1 loop-fusion - Fusion exceeds the combined-body cost budget
-; LIMIT-NOT: Loops fused
-; REMARK: estimated combined loop-body cost {{[0-9]+}} exceeds the configured maximum 1
 
 ; C source:
 ; for (i = 0; i < n; ++i)
@@ -23,7 +13,7 @@
 ; for (i = 0; i < n; ++i)
 ;   A[i] += y;
 
-define void @size_guard(ptr noalias %A, float %x, float %y, i64 %n) {
+define void @cost_model(ptr noalias %A, float %x, float %y, i64 %n) {
 entry:
   br label %loop1
 
