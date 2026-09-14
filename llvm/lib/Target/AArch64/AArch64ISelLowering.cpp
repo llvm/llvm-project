@@ -28326,11 +28326,10 @@ static SDValue performMSTORECombine(SDNode *N,
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
 
-  EVT VT = MST->getValue().getValueType();
-
   // If MST is a compressing store and VECTOR_COMPRESS can be lowered for the VT
   // expand the store early. This allows type promotion to apply to unpacked
   // SVE float types.
+  EVT VT = MST->getValue().getValueType();
   if (MST->isCompressingStore() && VT.isScalableVector() &&
       TLI.isOperationLegalOrCustomOrPromote(ISD::VECTOR_COMPRESS, VT))
     return expandScalableCompressingStore(MST, DAG);
