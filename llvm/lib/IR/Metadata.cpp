@@ -551,15 +551,13 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(From != To && "Expected changed value");
   assert(&From->getContext() == &To->getContext() && "Expected same context");
 
-  LLVMContext &Context = From->getType()->getContext();
-  auto &Store = Context.pImpl->ValuesAsMetadata;
+  auto &Store = From->getContext().pImpl->ValuesAsMetadata;
   auto I = Store.find(From);
   if (I == Store.end()) {
     assert(!From->IsUsedByMD && "Expected From not to be used by metadata");
     return;
   }
 
-  // Remove old entry from the map.
   assert(From->IsUsedByMD && "Expected From to be used by metadata");
   From->IsUsedByMD = false;
   ValueAsMetadata *MD = I->second;
@@ -567,40 +565,19 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(MD->getValue() == From && "Expected valid mapping");
   Store.erase(I);
 
-  if (isa<LocalAsMetadata>(MD)) {
-    if (auto *C = dyn_cast<Constant>(To)) {
-      // Local became a constant.
-      MD->replaceAllUsesWith(ConstantAsMetadata::get(C));
-      delete MD;
-      return;
-    }
-    if (getLocalFunctionMetadata(From) && getLocalFunctionMetadata(To) &&
-        getLocalFunctionMetadata(From) != getLocalFunctionMetadata(To)) {
-      // DISubprogram changed.
-      MD->replaceAllUsesWith(nullptr);
-      delete MD;
-      return;
-    }
-  } else if (!isa<Constant>(To)) {
-    // Changed to function-local value.
-    MD->replaceAllUsesWith(nullptr);
-    delete MD;
-    return;
+  // Move the uses to To's node. Uses of a function-local value are dropped if
+  // it becomes a local of another function or replaces a constant.
+  Metadata *New = nullptr;
+  if (isa<Constant>(To)) {
+    New = ValueAsMetadata::get(To);
+  } else if (isa<LocalAsMetadata>(MD)) {
+    DISubprogram *FromSP = getLocalFunctionMetadata(From);
+    DISubprogram *ToSP = FromSP ? getLocalFunctionMetadata(To) : nullptr;
+    if (!FromSP || !ToSP || FromSP == ToSP)
+      New = ValueAsMetadata::get(To);
   }
-
-  auto *&Entry = Store[To];
-  if (Entry) {
-    // The target already exists.
-    MD->replaceAllUsesWith(Entry);
-    delete MD;
-    return;
-  }
-
-  // Update MD in place (and update the map entry).
-  assert(!To->IsUsedByMD && "Expected this to be the only metadata use");
-  To->IsUsedByMD = true;
-  MD->V = To;
-  Entry = MD;
+  MD->replaceAllUsesWith(New);
+  delete MD;
 }
 
 //===----------------------------------------------------------------------===//
