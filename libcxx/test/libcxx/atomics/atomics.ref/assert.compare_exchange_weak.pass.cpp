@@ -10,6 +10,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // ADDITIONAL_COMPILE_FLAGS: -Wno-user-defined-warnings
 
+// Failing on linux: undefined reference to symbol '__atomic_compare_exchange@@LIBATOMIC_1.0'
+// XFAIL: target={{.*}}-linux{{.*}} && libcpp-hardening-mode={{extensive|debug}}
+
 // <atomic>
 
 // bool compare_exchange_weak(T& expected, T desired, memory_order success, memory_order failure) const noexcept;
