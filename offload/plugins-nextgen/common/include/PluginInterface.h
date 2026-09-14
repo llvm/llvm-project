@@ -16,6 +16,7 @@
 #include <deque>
 #include <list>
 #include <map>
+#include <optional>
 #include <shared_mutex>
 #include <variant>
 #include <vector>
@@ -54,6 +55,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/KernelArgInfo.h"
 
 using namespace llvm::offload::debug;
 
@@ -627,6 +629,9 @@ private:
 
   /// The kernel name.
   std::string Name;
+
+  /// The kernel argument type info.
+  std::optional<std::vector<KernelArgInfo>> ArgTypes;
 
   /// The image that contains this kernel.
   DeviceImageTy *ImagePtr = nullptr;
