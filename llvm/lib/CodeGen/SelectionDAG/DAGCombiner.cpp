@@ -18814,22 +18814,26 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
       //   P3 = FMA A3, B3, (FMA C, D, E3)
       if (FMul.getOpcode() == ISD::FMUL &&
           all_of(FMul->uses(), [&](SDUse &Use) {
-            if (Use.getOperandNo() != 2)
+            SDNode *F = Use.getUser();
+            if (Use.getOperandNo() != 2 ||
+                (F->getOpcode() != ISD::FMA && F->getOpcode() != ISD::FMAD) ||
+                !F->hasOneUse())
               return false;
-            const SDValue FusedOp(Use.getUser(), 0);
-            if (!isFusedOp(FusedOp) || !FusedOp.hasOneUse())
-              return false;
-            const SDValue FAdd(*FusedOp->user_begin(), 0);
-            SDValue Addend;
-            if (!sd_match(FAdd, m_FAdd(m_Specific(FusedOp), m_Value(Addend))) ||
+
+            SDNode *FAdd = *F->user_begin();
+            if (FAdd->getOpcode() != ISD::FADD ||
                 !FAdd->getFlags().hasAllowReassociation() ||
                 (!AllowFusionGlobally && !FAdd->getFlags().hasAllowContract()))
               return false;
-            return !FMul->isPredecessorOf(Addend.getNode());
+
+            SDNode *E = FAdd->getOperand(0).getNode() == F
+                            ? FAdd->getOperand(1).getNode()
+                            : FAdd->getOperand(0).getNode();
+            return !FMul->isPredecessorOf(E);
           })) {
-        const SDValue C = FMul.getOperand(0);
-        const SDValue D = FMul.getOperand(1);
-        const SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
+        SDValue C = FMul.getOperand(0);
+        SDValue D = FMul.getOperand(1);
+        SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
         DAG.UpdateNodeOperands(TmpFMA.getNode(), TmpFMA->getOperand(0),
                                TmpFMA->getOperand(1), CDE);
         return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue(N, 0) : FMA;
