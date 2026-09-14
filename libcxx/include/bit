@@ -84,6 +84,13 @@ namespace std {
 #    include <__bit/byteswap.h>
 #  endif
 
+#  if _LIBCPP_STD_VER >= 29
+#    include <__bit/bit_compress.h>
+#    include <__bit/bit_expand.h>
+#    include <__bit/bit_repeat.h>
+#    include <__bit/bit_reverse.h>
+#  endif
+
 #  include <version>
 
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
