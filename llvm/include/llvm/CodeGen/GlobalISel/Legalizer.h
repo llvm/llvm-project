@@ -50,7 +50,7 @@ LegalizerMFResult legalizeMachineFunction(
     LostDebugLocObserver &LocObserver, MachineIRBuilder &MIRBuilder,
     const LibcallLoweringInfo *Libcalls, GISelValueTracking *VT);
 
-class LLVM_ABI LegalizerLegacy : public MachineFunctionPass {
+class LLVM_ABI_NOT_EXPORTED LegalizerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 

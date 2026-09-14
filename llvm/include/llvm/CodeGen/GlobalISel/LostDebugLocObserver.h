@@ -17,7 +17,7 @@
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
-class LLVM_ABI LostDebugLocObserver : public GISelChangeObserver {
+class LLVM_ABI_NOT_EXPORTED LostDebugLocObserver : public GISelChangeObserver {
   StringRef DebugType;
   SmallSet<DebugLoc, 4> LostDebugLocs;
   SmallPtrSet<MachineInstr *, 4> PotentialMIsForDebugLocs;

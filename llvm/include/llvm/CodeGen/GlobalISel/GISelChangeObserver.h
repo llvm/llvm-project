@@ -53,11 +53,11 @@ public:
   /// For convenience, finishedChangingAllUsesOfReg() will report the completion
   /// of the changes. The use list may change between this call and
   /// finishedChangingAllUsesOfReg().
-  LLVM_ABI void changingAllUsesOfReg(const MachineRegisterInfo &MRI,
+  LLVM_ABI_NOT_EXPORTED void changingAllUsesOfReg(const MachineRegisterInfo &MRI,
                                      Register Reg);
   /// All instructions reported as changing by changingAllUsesOfReg() have
   /// finished being changed.
-  LLVM_ABI void finishedChangingAllUsesOfReg();
+  LLVM_ABI_NOT_EXPORTED void finishedChangingAllUsesOfReg();
 };
 
 /// Simple wrapper observer that takes several observers, and calls
@@ -113,9 +113,9 @@ class RAIIDelegateInstaller {
   MachineFunction::Delegate *Delegate;
 
 public:
-  LLVM_ABI RAIIDelegateInstaller(MachineFunction &MF,
+  LLVM_ABI_NOT_EXPORTED RAIIDelegateInstaller(MachineFunction &MF,
                                  MachineFunction::Delegate *Del);
-  LLVM_ABI ~RAIIDelegateInstaller();
+  LLVM_ABI_NOT_EXPORTED ~RAIIDelegateInstaller();
 };
 
 /// A simple RAII based Observer installer.
@@ -125,9 +125,9 @@ class RAIIMFObserverInstaller {
   MachineFunction &MF;
 
 public:
-  LLVM_ABI RAIIMFObserverInstaller(MachineFunction &MF,
+  LLVM_ABI_NOT_EXPORTED RAIIMFObserverInstaller(MachineFunction &MF,
                                    GISelChangeObserver &Observer);
-  LLVM_ABI ~RAIIMFObserverInstaller();
+  LLVM_ABI_NOT_EXPORTED ~RAIIMFObserverInstaller();
 };
 
 /// Class to install both of the above.
@@ -146,10 +146,10 @@ public:
 /// it at the end of the scope.
 class RAIITemporaryObserverInstaller {
 public:
-  LLVM_ABI
+  LLVM_ABI_NOT_EXPORTED
   RAIITemporaryObserverInstaller(GISelObserverWrapper &Observers,
                                  GISelChangeObserver &TemporaryObserver);
-  LLVM_ABI ~RAIITemporaryObserverInstaller();
+  LLVM_ABI_NOT_EXPORTED ~RAIITemporaryObserverInstaller();
 
 private:
   GISelObserverWrapper &Observers;

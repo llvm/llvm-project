@@ -43,7 +43,7 @@ struct MachinePointerInfo;
 class MachineRegisterInfo;
 class TargetLowering;
 
-class LLVM_ABI CallLowering {
+class LLVM_ABI_NOT_EXPORTED CallLowering {
   const TargetLowering *TLI;
 
   virtual void anchor();
@@ -173,7 +173,7 @@ public:
   ///
   /// ValueAssigner should not depend on any specific function state, and
   /// only determine the types and locations for arguments.
-  struct LLVM_ABI ValueAssigner {
+  struct LLVM_ABI_NOT_EXPORTED ValueAssigner {
     ValueAssigner(bool IsIncoming, CCAssignFn *AssignFn_,
                   CCAssignFn *AssignFnVarArg_ = nullptr)
         : AssignFn(AssignFn_), AssignFnVarArg(AssignFnVarArg_),
@@ -240,7 +240,7 @@ public:
         : ValueAssigner(false, AssignFn_, AssignFnVarArg_) {}
   };
 
-  struct LLVM_ABI ValueHandler {
+  struct LLVM_ABI_NOT_EXPORTED ValueHandler {
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
     const bool IsIncomingArgumentHandler;
@@ -330,7 +330,7 @@ public:
 
   /// Base class for ValueHandlers used for arguments coming into the current
   /// function, or for return values received from a call.
-  struct LLVM_ABI IncomingValueHandler : public ValueHandler {
+  struct LLVM_ABI_NOT_EXPORTED IncomingValueHandler : public ValueHandler {
     IncomingValueHandler(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI)
         : ValueHandler(/*IsIncoming*/ true, MIRBuilder, MRI) {}
 
@@ -631,12 +631,12 @@ public:
   virtual bool isTypeIsValidForThisReturn(EVT Ty) const { return false; }
 };
 
-extern template LLVM_ABI void
+extern template LLVM_ABI_NOT_EXPORTED void
 CallLowering::setArgFlags<Function>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
                                     const Function &FuncInfo) const;
 
-extern template LLVM_ABI void
+extern template LLVM_ABI_NOT_EXPORTED void
 CallLowering::setArgFlags<CallBase>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
                                     const CallBase &FuncInfo) const;
