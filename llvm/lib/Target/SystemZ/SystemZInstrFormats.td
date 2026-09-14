@@ -683,7 +683,8 @@ class InstRXE<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   let Inst{35-32} = X2;
   let Inst{31-28} = B2;
   let Inst{27-16} = D2;
-  let Inst{15-12} = M3;
+  // Allow M3 to be sourced from enc operand in the .insn directive
+  let Inst{15-12} = !if(!ne(op, 0), M3, enc{15-12});
   let Inst{11-8}  = 0;
   let Inst{7-0}   = !if(!ne(op, 0), op{7-0}, enc{7-0});
 

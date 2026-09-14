@@ -61,4 +61,10 @@ label.START:
 #CHECK: e7 12 30 00 00 62      vlvgp %v1, %r2, %r3
       .insn vrr_f,0xe70000000062,%v1,%r2,%r3
 
+# Tested here because the resulting lcbb instruction
+# requires the vector extension. Tests M3 passing in
+# the enc field for the RXE format.
+#CHECK: e7 13 f0 a0 60 27      lcbb %r1, 160(%r3,%r15), 6
+  .insn rxe,0xe70000006027,%r1,160(%r3,%r15)
+
 

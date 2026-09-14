@@ -2415,8 +2415,8 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
                         ".insn rx_b,$enc,$M1,$XBD2", []>;
   def InsnRXE : InstRXE<0, (outs),
                         (ins imm64zx48:$enc, AnyReg:$R1,
-                             (bdxaddr12only $B2, $D2, $X2):$XBD2, imm32zx4:$M3),
-                        ".insn rxe,$enc,$R1,$XBD2,$M3", []>;
+                             (bdxaddr12only $B2, $D2, $X2):$XBD2),
+                        ".insn rxe,$enc,$R1,$XBD2", []>;
   def InsnRXY : InstRXYa<0, (outs),
                          (ins imm64zx48:$enc, AnyReg:$R1,
                               (bdxaddr20only $B2, $D2, $X2):$XBD2),
