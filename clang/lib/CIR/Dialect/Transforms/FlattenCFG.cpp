@@ -2036,6 +2036,24 @@ public:
 } // namespace
 
 void CIRFlattenCFGPass::runOnOperation() {
+  // Flattening of dynamic exception specifications is not implemented yet.
+  // Diagnose it up front rather than from the rewrite pattern, which the
+  // driver below may run more than once for the same operation.
+  if (getOperation()
+          ->walk([&](cir::TryOp tryOp) {
+            mlir::ArrayAttr handlerTypes = tryOp.getHandlerTypesAttr();
+            if (!handlerTypes ||
+                llvm::none_of(handlerTypes, [](mlir::Attribute typeAttr) {
+                  return mlir::isa<cir::EhFilterAttr>(typeAttr);
+                }))
+              return mlir::WalkResult::advance();
+            tryOp.emitError(
+                "NYI: flattening of a dynamic exception specification handler");
+            return mlir::WalkResult::interrupt();
+          })
+          .wasInterrupted())
+    return signalPassFailure();
+
   RewritePatternSet patternList(&getContext());
   populateFlattenCFGPatterns(patternList);
   FrozenRewritePatternSet patterns(std::move(patternList));

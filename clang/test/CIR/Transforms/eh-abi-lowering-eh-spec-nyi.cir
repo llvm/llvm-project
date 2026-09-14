@@ -1,0 +1,62 @@
+// RUN: cir-opt %s -cir-eh-abi-lowering -split-input-file -verify-diagnostics
+
+!u8i = !cir.int<u, 8>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @_Z8externalv()
+
+cir.func @dispatch_with_filter() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  // expected-error@+1 {{NYI: EH ABI lowering of a 'filter' handler}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  // expected-error@+1 {{NYI: EH ABI lowering of 'cir.eh.unexpected'}}
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.resume %eh_token.2 : !cir.eh_token
+}
+
+}
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @_Z8externalv()
+
+// An empty filter list still needs lowering support.
+cir.func @dispatch_with_empty_filter() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.br ^bb5
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  cir.br ^bb3(%0 : !cir.eh_token)
+^bb3(%eh_token: !cir.eh_token):
+  // expected-error@+1 {{NYI: EH ABI lowering of a 'filter' handler}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    filter() : ^bb4,
+    unwind : ^bb6
+  ]
+^bb4(%eh_token.1: !cir.eh_token):
+  // expected-error@+1 {{NYI: EH ABI lowering of 'cir.eh.unexpected'}}
+  cir.eh.unexpected %eh_token.1 : !cir.eh_token
+^bb5:
+  cir.return
+^bb6(%eh_token.2: !cir.eh_token):
+  cir.unreachable
+}
+
+}
