@@ -46,9 +46,9 @@ first_non_whitespace(const CharType *__restrict src,
 // plus sign, minus sign, or neither.
 template <typename CharType>
 LIBC_INLINE static int get_sign(const CharType *__restrict src) {
-  if (is_char_or_wchar(src[0], '+', L'+'))
+  if (src[0] == char_constant_v<CharType, '+'>)
     return 1;
-  if (is_char_or_wchar(src[0], '-', L'-'))
+  if (src[0] == char_constant_v<CharType, '-'>)
     return -1;
   return 0;
 }
@@ -60,9 +60,10 @@ LIBC_INLINE static bool is_hex_start(const CharType *__restrict src,
                                      size_t src_len) {
   if (src_len < 3)
     return false;
-  return is_char_or_wchar(src[0], '0', L'0') &&
-         is_char_or_wchar(tolower(src[1]), 'x', L'x') && isalnum(src[2]) &&
-         b36_char_to_int(src[2]) < 16;
+  return src[0] == char_constant_v<CharType, '0'> &&
+         (src[1] == char_constant_v<CharType, 'x'> ||
+          src[1] == char_constant_v<CharType, 'X'>) &&
+         isalnum(src[2]) && b36_char_to_int(src[2]) < 16;
 }
 
 // checks if the next 3 characters of the string pointer are the start of a
@@ -72,9 +73,10 @@ LIBC_INLINE static bool is_binary_start(const CharType *__restrict src,
                                         size_t src_len) {
   if (src_len < 3)
     return false;
-  return is_char_or_wchar(src[0], '0', L'0') &&
-         is_char_or_wchar(tolower(src[1]), 'b', L'b') && isalnum(src[2]) &&
-         b36_char_to_int(src[2]) < 2;
+  return src[0] == char_constant_v<CharType, '0'> &&
+         (src[1] == char_constant_v<CharType, 'b'> ||
+          src[1] == char_constant_v<CharType, 'B'>) &&
+         isalnum(src[2]) && b36_char_to_int(src[2]) < 2;
 }
 
 // Takes the address of the string pointer and parses the base from the start of
@@ -94,7 +96,7 @@ LIBC_INLINE static int infer_base(const CharType *__restrict src,
   // An octal number is defined as "the prefix 0 optionally followed by a
   // sequence of the digits 0 through 7 only" (C standard 6.4.4.1) and so any
   // number that starts with 0, including just 0, is an octal number.
-  if (src_len > 0 && is_char_or_wchar(src[0], '0', L'0')) {
+  if (src_len > 0 && src[0] == char_constant_v<CharType, '0'>) {
     return 8;
   }
   // A decimal number is defined as beginning "with a nonzero digit and

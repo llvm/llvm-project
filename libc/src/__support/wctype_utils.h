@@ -13,6 +13,7 @@
 #include "src/__support/CPP/bit.h"
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/properties/types.h"
 
 #define LIBC_WCTYPE_MODE_ASCII 0
 #define LIBC_WCTYPE_MODE_UTF8 1
@@ -790,12 +791,21 @@ LIBC_INLINE static constexpr wchar_t int_to_b36_wchar(int num) {
   }
 }
 
-// An overload which provides a way to compare input with specific character
-// values, when input can be of a regular or a wide character type.
-LIBC_INLINE static constexpr bool
-is_char_or_wchar(wchar_t ch, [[maybe_unused]] char, wchar_t wc_value) {
-  return (ch == wc_value);
-}
+template <typename CharT, char ascii_value> struct CharConstant {};
+
+template <char ascii_value> struct CharConstant<char, ascii_value> {
+  LIBC_INLINE_VAR static constexpr char value = ascii_value;
+};
+
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+template <char ascii_value> struct CharConstant<wchar_t, ascii_value> {
+  LIBC_INLINE_VAR static constexpr wchar_t value = ascii_value;
+};
+#endif // LIBC_TYPES_WCHAR_T_IS_UTF32
+
+template <typename CharT, char ascii_value>
+LIBC_INLINE_VAR constexpr CharT char_constant_v =
+    CharConstant<CharT, ascii_value>::value;
 
 // Returns a three-way comparison between two wide character code points.
 LIBC_INLINE int threeway_cmp_single(wchar_t left, wchar_t right) {

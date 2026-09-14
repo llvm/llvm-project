@@ -860,8 +860,9 @@ LIBC_INLINE FloatConvertReturn<T> binary_exp_to_float(ExpandedFloat<T> init_num,
 // hexadecimal floating point number. Does not advance the string pointer.
 template <typename CharType>
 LIBC_INLINE static bool is_float_hex_start(const CharType *__restrict src) {
-  if (!is_char_or_wchar(src[0], '0', L'0') ||
-      !is_char_or_wchar(tolower(src[1]), 'x', L'x')) {
+  if (src[0] != char_constant_v<CharType, '0'> ||
+      (src[1] != char_constant_v<CharType, 'x'> &&
+       src[1] != char_constant_v<CharType, 'X'>)) {
     return false;
   }
   size_t first_digit = 2;
@@ -1182,12 +1183,13 @@ strtofloatingpoint(const CharType *__restrict src) {
     // this handles the case of `NaN(n-character-sequence)`, where the
     // n-character-sequence is made of 0 or more letters, numbers, or
     // underscore characters in any order.
-    if (is_char_or_wchar(src[index], '(', L'(')) {
+    if (src[index] == char_constant_v<CharType, '('>) {
       size_t left_paren = index;
       ++index;
-      while (isalnum(src[index]) || is_char_or_wchar(src[index], '_', L'_'))
+      while (isalnum(src[index]) ||
+             src[index] == char_constant_v<CharType, '_'>)
         ++index;
-      if (is_char_or_wchar(src[index], ')', L')')) {
+      if (src[index] == char_constant_v<CharType, ')'>) {
         ++index;
         nan_mantissa = nan_mantissa_from_ncharseq<T>(src + (left_paren + 1),
                                                      index - left_paren - 2);

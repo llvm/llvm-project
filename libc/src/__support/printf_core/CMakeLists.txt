@@ -85,7 +85,7 @@ add_header_library(
     libc.include.inttypes
     libc.src.__support.CPP.string_view
     libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.properties.types
+    libc.src.__support.wctype_utils
     libc.hdr.errno_macros
 )
 
@@ -104,6 +104,7 @@ add_header_library(
     libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
     libc.src.__support.common
+    libc.src.__support.wctype_utils
     ${parser_wchar_deps}
 )
 
