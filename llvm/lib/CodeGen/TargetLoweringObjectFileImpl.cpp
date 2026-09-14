@@ -2882,11 +2882,11 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
                    GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0, 0},
       static_cast<MCSectionGOFF *>(TextSection)->getParent());
   WSA->setAlignment(Align(4)); // Fullword
-  return getContext().getGOFFSection(SectionKind::getData(), Name,
-                                     GOFF::PRAttr{true, GOFF::ESD_EXE_DATA,
-                                                  GOFF::ESD_LT_XPLink,
-                                                  GOFF::ESD_BSC_Section, 0},
-                                     WSA);
+  return getContext().getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                   GOFF::ESD_AMODE_64, GOFF::ESD_BSC_Section, 0},
+      WSA);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
@@ -2917,11 +2917,11 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                      GOFF::ESD_LB_Deferred, GOFF::ESD_RQ_0, 0},
         SD);
     ED->setAlignment(Alignment.value_or(llvm::Align(8)));
-    return getContext().getGOFFSection(Kind, Symbol->getName(),
-                                       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA,
-                                                    GOFF::ESD_LT_XPLink,
-                                                    PRBindingScope, 0},
-                                       ED);
+    return getContext().getGOFFSection(
+        Kind, Symbol->getName(),
+        GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                     GOFF::ESD_AMODE_64, PRBindingScope, 0},
+        ED);
   }
   return TextSection;
 }
@@ -2953,7 +2953,7 @@ TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
   MCSectionGOFF *Xtor = Ctx.getGOFFSection(
       SectionKind::getData(), Name,
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
-                   GOFF::ESD_BSC_Section, Prio},
+                   GOFF::ESD_AMODE_64, GOFF::ESD_BSC_Section, Prio},
       SInit);
   return Xtor;
 }

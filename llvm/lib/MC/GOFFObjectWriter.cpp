@@ -266,6 +266,7 @@ public:
     SymbolFlags.setRenameable(Attr.IsRenamable);
     BehavAttrs.setExecutable(Attr.Executable);
     BehavAttrs.setLinkageType(Attr.Linkage);
+    BehavAttrs.setAmode(Attr.Amode);
     BehavAttrs.setBindingScope(Attr.BindingScope);
     BehavAttrs.setAlignment(Alignment);
   }
@@ -401,8 +402,8 @@ void GOFFWriter::defineExtern(const MCSymbolGOFF &Symbol) {
     GOFFSymbol PR(Symbol.getExternalName(), Symbol.getIndex(), ED->getOrdinal(),
                   ED->getEDAttributes(), ED->getEDAlignment(),
                   GOFF::PRAttr{/*IsRenamable*/ false, Symbol.getCodeData(),
-                               Symbol.getLinkage(), Symbol.getBindingScope(),
-                               0});
+                               Symbol.getLinkage(), GOFF::ESD_AMODE_64,
+                               Symbol.getBindingScope(), 0});
     writeSymbol(PR);
   } else {
     GOFFSymbol ER(Symbol.getExternalName(), Symbol.getIndex(),
