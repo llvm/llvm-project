@@ -16,9 +16,11 @@ define double @test(i32 %0) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = or <2 x i64> zeroinitializer, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <2 x i64> [[TMP2]] to <2 x i32>
 ; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> [[TMP2]])
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> [[TMP5]])
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP4]] to i64
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RET:%.*]] = uitofp i64 [[TMP3]] to double
