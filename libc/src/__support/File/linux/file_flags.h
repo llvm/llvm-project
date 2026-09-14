@@ -42,7 +42,7 @@ public:
     return (flag & O_ACCMODE) == O_WRONLY;
   }
 
-  static constexpr int file_has_append_flag(int flag) {
+  LIBC_INLINE constexpr int file_has_append_flag(int flag) {
     return flag & O_APPEND;
   }
 };
