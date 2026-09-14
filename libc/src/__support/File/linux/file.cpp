@@ -177,6 +177,7 @@ ErrorOr<LinuxFile *> create_file_from_fd(int fd, const char *mode) {
 }
 
 int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
+  flush_unlocked();
   const FileMode file_mode(mode);
 
   if (path != nullptr) {
