@@ -998,11 +998,19 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
           AliasTemplate->getInstantiatedFromMemberTemplate())
     AdjustDepth = PrimaryTemplate->getTemplateDepth();
 
+  // FIXME: We're rebuilding the synthesized template parameter list again
+  // Consider reuse the template parameter from its caller.
+
   // We rebuild all template parameters with the uninstantiated depth, and
   // build template arguments refer to them.
-  SmallVector<TemplateArgument> AdjustedAliasTemplateArgs;
+  SmallVector<TemplateArgument> AdjustedAliasTemplateArgs(
+      AliasTemplate->getTemplateParameters()->size());
 
-  for (auto *TP : *AliasTemplate->getTemplateParameters()) {
+  unsigned N = 0;
+  for (unsigned Index = 0; Index != AdjustedAliasTemplateArgs.size(); ++Index) {
+    if (DeduceResults[Index].isNull())
+      continue;
+    auto *TP = AliasTemplate->getTemplateParameters()->getParam(Index);
     // Rebuild any internal references to earlier parameters and reindex
     // as we go.
     MultiLevelTemplateArgumentList Args;
@@ -1010,21 +1018,22 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     Args.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
     NamedDecl *NewParam = transformTemplateParameter(
         SemaRef, AliasTemplate->getDeclContext(), TP, Args,
-        /*NewIndex=*/AdjustedAliasTemplateArgs.size(),
-        getDepthAndIndex(TP).first + AdjustDepth);
+        /*NewIndex=*/N++, getDepthAndIndex(TP).first + AdjustDepth);
 
     TemplateArgument NewTemplateArgument =
         Context.getInjectedTemplateArg(NewParam);
-    AdjustedAliasTemplateArgs.push_back(NewTemplateArgument);
+    AdjustedAliasTemplateArgs[Index] = NewTemplateArgument;
   }
+  assert(FirstUndeducedParamIdx == N);
+
   // Template arguments used to transform the template arguments in
   // DeducedResults.
   SmallVector<TemplateArgument> TemplateArgsForBuildingRC(
       F->getTemplateParameters()->size());
   // Transform the transformed template args
-  MultiLevelTemplateArgumentList Args;
-  Args.setKind(TemplateSubstitutionKind::Rewrite);
-  Args.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
+  MultiLevelTemplateArgumentList ArgsForDeducedParams;
+  ArgsForDeducedParams.setKind(TemplateSubstitutionKind::Rewrite);
+  ArgsForDeducedParams.addOuterTemplateArguments(AdjustedAliasTemplateArgs);
 
   for (unsigned Index = 0; Index < DeduceResults.size(); ++Index) {
     const auto &D = DeduceResults[Index];
@@ -1047,7 +1056,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
     TemplateArgumentLoc Input =
         SemaRef.getTrivialTemplateArgumentLoc(D, QualType(), SourceLocation{});
     TemplateArgumentLoc Output;
-    if (!SemaRef.SubstTemplateArgument(Input, Args, Output)) {
+    if (!SemaRef.SubstTemplateArgument(Input, ArgsForDeducedParams, Output)) {
       assert(TemplateArgsForBuildingRC[Index].isNull() &&
              "InstantiatedArgs must be null before setting");
       TemplateArgsForBuildingRC[Index] = Output.getArgument();
@@ -1119,7 +1128,7 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
 Expr *buildIsDeducibleConstraint(Sema &SemaRef,
                                  TypeAliasTemplateDecl *AliasTemplate,
                                  QualType ReturnType,
-                                 SmallVector<NamedDecl *> TemplateParams) {
+                                 ArrayRef<NamedDecl *> TemplateParams) {
   ASTContext &Context = SemaRef.Context;
   // Constraint AST nodes must use uninstantiated depth.
   if (auto *PrimaryTemplate =
