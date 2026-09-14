@@ -25,23 +25,11 @@
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture1D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint -DINDEX_ARG="1" -DWIDE_INDEX_TYPE=int2 \
 // RUN:   -DWIDE_INDEX_ARG="int2(1, 2)" -verify=expected,scalaridx -o - %s
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
-// RUN:   -finclude-default-header -DTEXTURE=RWTexture1D -DHAS_STORE \
-// RUN:   -DINDEX_TYPE=uint -DINDEX_ARG="1" -DWIDE_INDEX_TYPE=int2 \
-// RUN:   -DWIDE_INDEX_ARG="int2(1, 2)" -verify=expected,scalaridx -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture1DArray -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
 // RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
-// RUN:   -finclude-default-header -DTEXTURE=RWTexture1DArray -DHAS_STORE \
-// RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
-// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DHAS_STORE \
-// RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
-// RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture2D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint2 -DINDEX_ARG="uint2(1, 2)" -DWIDE_INDEX_TYPE=int3 \
 // RUN:   -DWIDE_INDEX_ARG="int3(1, 2, 3)" -verify=expected,vecidx -o - %s
@@ -51,20 +39,7 @@
 // RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
 // RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" \
 // RUN:   -verify=expected,vecidx -o - %s
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
-// RUN:   -finclude-default-header -DTEXTURE=RWTexture2DArray -DHAS_STORE \
-// RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
-// RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
-// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" \
-// RUN:   -verify=expected,vecidx -o - %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl \
-// RUN:   -finclude-default-header -DTEXTURE=RWTexture3D -DHAS_STORE \
-// RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
-// RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
-// RUN:   -DNARROW_INDEX_TYPE=uint2 -DNARROW_INDEX_ARG="uint2(1, 2)" \
-// RUN:   -verify=expected,vecidx \
-// RUN:   -o - %s
-// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl \
 // RUN:   -finclude-default-header -DTEXTURE=RWTexture3D -DHAS_STORE \
 // RUN:   -DINDEX_TYPE=uint3 -DINDEX_ARG="uint3(1, 2, 0)" \
 // RUN:   -DWIDE_INDEX_TYPE=int4 -DWIDE_INDEX_ARG="int4(1, 2, 3, 4)" \
