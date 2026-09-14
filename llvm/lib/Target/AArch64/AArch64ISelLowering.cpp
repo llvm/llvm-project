@@ -24705,6 +24705,41 @@ static SDValue performAddWithSBCCombine(SDNode *N, SelectionDAG &DAG) {
                      DAG.getNegative(C, DL, VT), SBC.getOperand(2));
 }
 
+// Reuse both results of the comparison in a conditional subtraction:
+//   sub x, (csel q, 0, cc, (subs x, q):1)
+//     -> csel (subs x, q):0, x, cc, (subs x, q):1
+// Also handle a zero true operand. Keep the original flags and condition so
+// that other comparison users are unaffected.
+static SDValue performConditionalSubCombine(SDNode *N, SelectionDAG &DAG) {
+  if (N->getOpcode() != ISD::SUB)
+    return SDValue();
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDValue X = N->getOperand(0), Sel = N->getOperand(1);
+  if (Sel.getOpcode() != AArch64ISD::CSEL || !Sel.hasOneUse())
+    return SDValue();
+
+  // Reuse the wrapping difference computed by SUBS. Keeping the original
+  // NZCV flags and condition makes this valid for any condition code.
+  SDValue Flags = Sel.getOperand(3);
+  if (Flags.getOpcode() != AArch64ISD::SUBS || Flags.getOperand(0) != X)
+    return SDValue();
+
+  // Match select(C, 0, Q) or select(C, Q, 0).
+  SDValue Q = Flags.getOperand(1);
+  bool ZeroOnTrue = isNullConstant(Sel.getOperand(0)) && Sel.getOperand(1) == Q;
+  bool ZeroOnFalse =
+      isNullConstant(Sel.getOperand(1)) && Sel.getOperand(0) == Q;
+  if (!ZeroOnTrue && !ZeroOnFalse)
+    return SDValue();
+
+  SDValue Diff = Flags.getValue(0);
+  return DAG.getNode(AArch64ISD::CSEL, SDLoc(N), VT, ZeroOnTrue ? X : Diff,
+                     ZeroOnTrue ? Diff : X, Sel.getOperand(2), Flags);
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   // Try to change sum of two reductions.
@@ -24731,6 +24766,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performAddSubIntoVectorOp(N, DCI.DAG))
     return Val;
   if (SDValue Val = performSubWithBorrowCombine(N, DCI.DAG))
+    return Val;
+  if (SDValue Val = performConditionalSubCombine(N, DCI.DAG))
     return Val;
   if (SDValue Val = performAddTruncShiftCombine(N, DCI.DAG))
     return Val;
