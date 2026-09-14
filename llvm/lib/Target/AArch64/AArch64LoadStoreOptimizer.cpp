@@ -217,6 +217,10 @@ struct AArch64LoadStoreOpt {
   // Find and pair ldr/str instructions.
   bool tryToPairLdStInst(MachineBasicBlock::iterator &MBBI);
 
+  // Reduce offsets of an ldr/str sequence that starts with MBBI by
+  // materializing the base register + common offset.
+  bool tryToReduceSequenceOffset(MachineBasicBlock::iterator MBBI);
+
   // Find and promote load instructions which read directly from store.
   bool tryToPromoteLoadFromStore(MachineBasicBlock::iterator &MBBI);
 
@@ -1927,6 +1931,16 @@ static bool canRenameUntilSecondLoad(
   return Success;
 }
 
+// Checks if any sub- or super-register of PR is callee saved.
+static bool anySubOrSuperRegCalleePreserved(MCPhysReg PR,
+                                            const MachineFunction &MF,
+                                            const TargetRegisterInfo *TRI) {
+  return any_of(TRI->sub_and_superregs_inclusive(PR),
+                [&MF, TRI](MCPhysReg SubOrSuper) {
+                  return TRI->isCalleeSavedPhysReg(SubOrSuper, MF);
+                });
+}
+
 // Check if we can find a physical register for renaming \p Reg. This register
 // must:
 // * not be defined already in \p DefinedInBB; DefinedInBB must contain all
@@ -1941,14 +1955,6 @@ static std::optional<MCPhysReg> tryToFindRegisterToRename(
     const TargetRegisterInfo *TRI) {
   const MachineRegisterInfo &RegInfo = MF.getRegInfo();
 
-  // Checks if any sub- or super-register of PR is callee saved.
-  auto AnySubOrSuperRegCalleePreserved = [&MF, TRI](MCPhysReg PR) {
-    return any_of(TRI->sub_and_superregs_inclusive(PR),
-                  [&MF, TRI](MCPhysReg SubOrSuper) {
-                    return TRI->isCalleeSavedPhysReg(SubOrSuper, MF);
-                  });
-  };
-
   // Check if PR or one of its sub- or super-registers can be used for all
   // required register classes.
   auto CanBeUsedForAllClasses = [&RequiredClasses, TRI](MCPhysReg PR) {
@@ -1962,7 +1968,8 @@ static std::optional<MCPhysReg> tryToFindRegisterToRename(
   auto *RegClass = TRI->getMinimalPhysRegClass(Reg);
   for (const MCPhysReg &PR : *RegClass) {
     if (DefinedInBB.available(PR) && UsedInBetween.available(PR) &&
-        !RegInfo.isReserved(PR) && !AnySubOrSuperRegCalleePreserved(PR) &&
+        !RegInfo.isReserved(PR) &&
+        !anySubOrSuperRegCalleePreserved(PR, MF, TRI) &&
         CanBeUsedForAllClasses(PR)) {
       DefinedInBB.addReg(PR);
       LLVM_DEBUG(dbgs() << "Found rename register " << printReg(PR, TRI)
@@ -2843,6 +2850,167 @@ bool AArch64LoadStoreOpt::tryToMergeZeroStInst(
   return false;
 }
 
+struct LdStPair {
+  MachineInstr *MI[2];
+  int Offset[2];
+  bool Skip;
+};
+
+bool AArch64LoadStoreOpt::tryToReduceSequenceOffset(
+    MachineBasicBlock::iterator MBBI) {
+  MachineInstr &RootMI = *MBBI;
+  MachineFunction &MF = *RootMI.getMF();
+  MachineBasicBlock &BB = *RootMI.getParent();
+  MachineBasicBlock::iterator E = BB.end();
+
+  // Find a sequence of pairable store instructions.
+  SmallVector<LdStPair, 32> Sequence;
+  int MinOffset = INT_MAX;
+  Register BaseReg = 0;
+
+  LiveRegUnits UsedInBetween;
+  UsedInBetween.init(*TRI);
+
+  MachineBasicBlock::iterator It = MBBI;
+  int MaxSeqLength = 16;
+  for (int i = 0; i < MaxSeqLength; ++i) {
+    // Iterate over pairs of instructions
+    if (It == E)
+      break;
+    MachineInstr &FirstMI = *It;
+    ++It;
+
+    if (It == E)
+      break;
+    MachineInstr &SecondMI = *It;
+    ++It;
+
+    // MachineScheduler tries to make a continuous sequence of
+    // loads/stores. Stop early if the sequence interrupted.
+    unsigned Opcode = FirstMI.getOpcode();
+    if (Opcode != SecondMI.getOpcode())
+      break;
+
+    // Only match basic 64 bit loads and stores. We must avoid
+    // changing instructions, unless they are definitely going to be
+    // paired later. Pairing logic is complicated, so by limiting
+    // scope to STRXui and LDRXui we avoid most of this complexity.
+    if (Opcode != AArch64::STRXui && Opcode != AArch64::LDRXui)
+      break;
+
+    Register FirstReg = AArch64InstrInfo::getLdStBaseOp(FirstMI).getReg();
+    Register SecondReg = AArch64InstrInfo::getLdStBaseOp(SecondMI).getReg();
+
+    // All load/store instructions in the sequence must have the same
+    // base register.
+
+    if (FirstReg != SecondReg)
+      break;
+
+    if (!BaseReg) {
+      BaseReg = FirstReg;
+    } else {
+      if (BaseReg != FirstReg)
+        break;
+    }
+
+    int FirstOffset = AArch64InstrInfo::getLdStOffsetOp(FirstMI).getImm();
+    int SecondOffset = AArch64InstrInfo::getLdStOffsetOp(SecondMI).getImm();
+
+    // Offsets of STRXui and LDRXui must be adjecent to pair them.
+    if (std::abs(FirstOffset - SecondOffset) != 1)
+      break;
+
+    assert(FirstOffset >= 0 && SecondOffset >= 0 &&
+           "offset of STRXui and LDRXui is unsigned");
+
+    MinOffset = std::min(FirstOffset, MinOffset);
+    MinOffset = std::min(SecondOffset, MinOffset);
+
+    UsedInBetween.accumulate(FirstMI);
+    UsedInBetween.accumulate(SecondMI);
+
+    Sequence.push_back(
+        LdStPair{{&FirstMI, &SecondMI}, {FirstOffset, SecondOffset}, false});
+  }
+
+  // Bail out if the sequence already starts with 0 offset.
+  if (!MinOffset)
+    return false;
+
+  // Reduce offsets by MinOffset for all pairs. Check that the
+  // remaining offsets fit the paired instruction.
+  unsigned Count = 0;
+  for (LdStPair &Pair : Sequence) {
+    Pair.Offset[0] -= MinOffset;
+    Pair.Offset[1] -= MinOffset;
+
+    // Skip pairs that do not fit.
+    int HeadOffset = std::min(Pair.Offset[0], Pair.Offset[1]);
+    if (!inBoundsForPair(/*IsUnscaled=*/false, HeadOffset,
+                         /*OffsetStride=*/1)) {
+      Pair.Skip = true;
+      continue;
+    }
+    ++Count;
+  }
+
+  // Not profitable to change short sequences.
+  if (Count < 3)
+    return false;
+
+  // Avoid changing sequences that do not start with a pair we can
+  // handle. Otherwise we make a useless change here and it may goes
+  // out of sync with tryToPairLdStInst that actually folds the
+  // sequence.
+  if (Sequence[0].Skip)
+    return false;
+
+  // Find a free register to materialize the new base.
+  auto *RegClass = TRI->getRegClass(AArch64::GPR64spRegClassID);
+  if (!RegClass->contains(BaseReg))
+    return false;
+  const MachineRegisterInfo &RegInfo = MF.getRegInfo();
+  MCPhysReg NewBaseReg = 0;
+  for (const MCPhysReg &PR : *RegClass) {
+    if (DefinedInBB.available(PR) && UsedInBetween.available(PR) &&
+        !RegInfo.isReserved(PR) &&
+        !anySubOrSuperRegCalleePreserved(PR, MF, TRI)) {
+      DefinedInBB.addReg(PR);
+      NewBaseReg = PR;
+      break;
+    }
+  }
+
+  if (!NewBaseReg)
+    return false;
+
+  // Scaled offset must fit into 12 bit immediate of ADDXri.
+  int ScaledMinOffset = TII->getMemScale(RootMI) * MinOffset;
+  if (ScaledMinOffset > 4095)
+    return false;
+  assert(ScaledMinOffset > 0 && "inconsistent offset");
+
+  // Materialize the new base: old base + scaled minimum (common) offset.
+  BuildMI(BB, MBBI, RootMI.getDebugLoc(), TII->get(AArch64::ADDXri), NewBaseReg)
+      .addReg(BaseReg)
+      .addImm(ScaledMinOffset)
+      .addImm(0);
+
+  // Update all pairs to use the new base and offset.
+  for (LdStPair &Pair : Sequence) {
+    if (Pair.Skip)
+      continue;
+
+    for (unsigned i = 0; i < 2; ++i) {
+      Pair.MI[i]->getOperand(1).setReg(NewBaseReg);
+      Pair.MI[i]->getOperand(2).setImm(Pair.Offset[i]);
+    }
+  }
+
+  return true;
+}
+
 // Find loads and stores that can be merged into a single load or store pair
 // instruction.
 bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
@@ -2869,8 +3037,20 @@ bool AArch64LoadStoreOpt::tryToPairLdStInst(MachineBasicBlock::iterator &MBBI) {
   // Allow one more for offset.
   if (Offset > 0)
     Offset -= OffsetStride;
-  if (!inBoundsForPair(IsUnscaled, Offset, OffsetStride))
-    return false;
+  if (!inBoundsForPair(IsUnscaled, Offset, OffsetStride)) {
+    // Try to materialize (Base + Offset) to reduce the offset.
+    if (!tryToReduceSequenceOffset(MBBI))
+      return false;
+
+    // Check the offset again
+    Offset = AArch64InstrInfo::getLdStOffsetOp(MI).getImm();
+    if (Offset > 0)
+      Offset -= OffsetStride;
+    if (!inBoundsForPair(IsUnscaled, Offset, OffsetStride)) {
+      assert(0 && "useless materialization");
+      return false;
+    }
+  }
 
   // Look ahead up to LdStLimit instructions for a pairable instruction.
   LdStPairFlags Flags;
