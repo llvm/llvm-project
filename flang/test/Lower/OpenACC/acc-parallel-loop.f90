@@ -686,9 +686,10 @@ subroutine acc_parallel_loop_firstprivate_scalar
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_scalar
-! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
+! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) name("v") -> !fir.ref<i32>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
-! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: %[[DECL_V:.*]]:2 = hlfir.declare %[[FP_V]] {uniq_name = {{.*}}} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr(%[[DECL_V]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("v") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) independent
 
