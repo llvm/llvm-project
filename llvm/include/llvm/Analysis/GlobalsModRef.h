@@ -23,6 +23,7 @@
 namespace llvm {
 class CallGraph;
 class Function;
+class LazyCallGraph;
 
 /// An alias analysis result set for globals.
 ///
@@ -86,6 +87,11 @@ public:
                 std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
                 CallGraph &CG);
 
+  LLVM_ABI static GlobalsAAResult
+  analyzeModule(Module &M,
+                std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
+                LazyCallGraph &LCG);
+
   //------------------------------------------------
   // Implement the AliasAnalysis API
   //
@@ -109,6 +115,7 @@ private:
 
   void AnalyzeGlobals(Module &M);
   void AnalyzeCallGraph(CallGraph &CG, Module &M);
+  void AnalyzeCallGraph(LazyCallGraph &LCG, Module &M);
   static bool maySyncOrCallIntoModule(const Function &F);
   static bool addFunctionAttributeInfo(const Function &F, FunctionInfo &FI);
   static void scanFunctionBodyForModRef(Function &F, FunctionInfo &FI);

@@ -100,7 +100,6 @@
 ; CHECK-O23-NEXT: Running pass: PostOrderFunctionAttrsPass on (foo)
 ; CHECK-O23-NEXT: Running pass: RequireAnalysisPass<{{.*}}GlobalsAA
 ; CHECK-O23-NEXT: Running analysis: GlobalsAA on [module]
-; CHECK-O23-NEXT: Running analysis: CallGraphAnalysis on [module]
 ; CHECK-O23-NEXT: Running pass: InvalidateAnalysisPass<{{.*}}AAManager
 ; CHECK-O23-NEXT: Invalidating analysis: AAManager on foo
 ; CHECK-O23-NEXT: Running pass: OpenMPOptCGSCCPass on (foo)

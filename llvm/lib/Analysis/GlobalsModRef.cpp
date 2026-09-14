@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -621,6 +622,137 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
   }
 }
 
+void GlobalsAAResult::AnalyzeCallGraph(LazyCallGraph &LCG, Module &M) {
+  // LCG has no declaration nodes; model direct calls from attributes.
+  for (Function &F : M) {
+    if (!F.isDeclaration())
+      continue;
+
+    FunctionInfo &FI = FunctionInfos[&F];
+    if (!addFunctionAttributeInfo(F, FI)) {
+      FunctionInfos.erase(&F);
+      continue;
+    }
+
+    Handles.emplace_front(*this, &F);
+    Handles.front().I = Handles.begin();
+  }
+
+  // We do a bottom-up SCC traversal of the call graph.  In other words, we
+  // visit all callees before callers (leaf-first).
+  for (LazyCallGraph::RefSCC &RC : LCG.postorder_ref_sccs()) {
+    for (LazyCallGraph::SCC &C : RC) {
+      assert(C.size() > 0 && "SCC with no functions?");
+      Function *FirstF = &C.begin()->getFunction();
+      if (!FirstF->isDefinitionExact()) {
+        for (LazyCallGraph::Node &N : C)
+          FunctionInfos.erase(&N.getFunction());
+        continue;
+      }
+
+      FunctionInfo &FI = FunctionInfos[FirstF];
+      Handles.emplace_front(*this, FirstF);
+      Handles.front().I = Handles.begin();
+      bool KnowNothing = false;
+
+      // Collect the mod/ref properties due to called functions.  We only
+      // compute one mod-ref set.
+      for (LazyCallGraph::Node &N : C) {
+        if (KnowNothing)
+          break;
+        Function &NF = N.getFunction();
+        if (NF.hasOptNone()) {
+          if (!addFunctionAttributeInfo(NF, FI)) {
+            KnowNothing = true;
+            break;
+          }
+          continue;
+        }
+
+        // Only call edges need propagation; ref edges (incl. callbacks) can
+        // fire solely via indirect calls or non-nocallback decls, both poisoned
+        // below.
+        for (LazyCallGraph::Edge &E : N->calls()) {
+          if (KnowNothing)
+            break;
+          Function &Callee = E.getFunction();
+          if (FunctionInfo *CalleeFI = getFunctionInfo(&Callee)) {
+            // Propagate function effect up.
+            FI.addFunctionInfo(*CalleeFI);
+          } else {
+            // Can't say anything about it.  However, if it is inside our
+            // SCC, then nothing needs to be done.
+            LazyCallGraph::Node *CalleeN = LCG.lookup(Callee);
+            assert(CalleeN && "Call edge target must have a node");
+            if (LCG.lookupSCC(*CalleeN) != &C)
+              KnowNothing = true;
+          }
+        }
+
+        // Decls/indirect have no LCG edges; reuse the decl attribute logic.
+        if (!KnowNothing) {
+          if (N.hasIndirectCalls()) {
+            KnowNothing = true;
+            break;
+          }
+
+          for (Function *DeclCallee : N.getDeclarationCallees()) {
+            if (FunctionInfo *CalleeFI = getFunctionInfo(DeclCallee)) {
+              FI.addFunctionInfo(*CalleeFI);
+            } else {
+              // Unknown declaration; be conservative.
+              KnowNothing = true;
+              break;
+            }
+          }
+        }
+      }
+
+      // If we can't say anything useful about this SCC, remove all SCC
+      // functions from the FunctionInfos map.
+      if (KnowNothing) {
+        for (LazyCallGraph::Node &N : C)
+          FunctionInfos.erase(&N.getFunction());
+        continue;
+      }
+
+      // Scan the function bodies for explicit loads or stores.
+      for (LazyCallGraph::Node &N : C) {
+        if (isModAndRefSet(FI.getModRefInfo()))
+          break; // The mod/ref lattice saturates here.
+
+        // Don't prove any properties based on the implementation of an optnone
+        // function. Function attributes were already used as a best
+        // approximation above.
+        Function &NF = N.getFunction();
+        if (NF.hasOptNone())
+          continue;
+
+        scanFunctionBodyForModRef(NF, FI);
+      }
+
+      if (!isModSet(FI.getModRefInfo()))
+        ++NumReadMemFunctions;
+      if (!isModOrRefSet(FI.getModRefInfo()))
+        ++NumNoMemFunctions;
+
+      // Finally, now that we know the full effect on this SCC, clone the
+      // information to each function in the SCC.
+      // FI is a reference into FunctionInfos, so copy it now so that it doesn't
+      // get invalidated if DenseMap decides to re-hash.
+      FunctionInfo CachedFI = FI;
+      bool First = true;
+      for (LazyCallGraph::Node &N : C) {
+        if (First) {
+          First = false;
+          continue; // Skip the first function (already has FI).
+        }
+        FunctionInfos[&N.getFunction()] = CachedFI;
+      }
+    }
+  }
+}
+
 // GV is a non-escaping global. V is a pointer address that has been loaded from.
 // If we can prove that V must escape, we can conclude that a load from V cannot
 // alias GV.
@@ -997,6 +1129,20 @@ GlobalsAAResult::~GlobalsAAResult() = default;
   return Result;
 }
 
+/*static*/ GlobalsAAResult GlobalsAAResult::analyzeModule(
+    Module &M, std::function<const TargetLibraryInfo &(Function &F)> GetTLI,
+    LazyCallGraph &LCG) {
+  GlobalsAAResult Result(M.getDataLayout(), GetTLI);
+
+  // Find non-addr taken globals.
+  Result.AnalyzeGlobals(M);
+
+  // Propagate on LCG.
+  Result.AnalyzeCallGraph(LCG, M);
+
+  return Result;
+}
+
 AnalysisKey GlobalsAA::Key;
 
 GlobalsAAResult GlobalsAA::run(Module &M, ModuleAnalysisManager &AM) {
@@ -1005,14 +1151,16 @@ GlobalsAAResult GlobalsAA::run(Module &M, ModuleAnalysisManager &AM) {
   auto GetTLI = [&FAM](Function &F) -> TargetLibraryInfo & {
     return FAM.getResult<TargetLibraryAnalysis>(F);
   };
-  return GlobalsAAResult::analyzeModule(M, GetTLI,
-                                        AM.getResult<CallGraphAnalysis>(M));
+  auto &LCG = AM.getResult<LazyCallGraphAnalysis>(M);
+  LCG.buildRefSCCs();
+  return GlobalsAAResult::analyzeModule(M, GetTLI, LCG);
 }
 
 PreservedAnalyses RecomputeGlobalsAAPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
   if (auto *G = AM.getCachedResult<GlobalsAA>(M)) {
-    auto &CG = AM.getResult<CallGraphAnalysis>(M);
+    auto &LCG = AM.getResult<LazyCallGraphAnalysis>(M);
+    LCG.buildRefSCCs();
     G->NonAddressTakenGlobals.clear();
     G->UnknownFunctionsWithLocalLinkage = false;
     G->IndirectGlobals.clear();
@@ -1020,7 +1168,7 @@ PreservedAnalyses RecomputeGlobalsAAPass::run(Module &M,
     G->FunctionInfos.clear();
     G->Handles.clear();
     G->AnalyzeGlobals(M);
-    G->AnalyzeCallGraph(CG, M);
+    G->AnalyzeCallGraph(LCG, M);
   }
   return PreservedAnalyses::all();
 }
