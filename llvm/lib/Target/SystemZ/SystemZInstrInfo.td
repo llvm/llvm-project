@@ -2273,6 +2273,18 @@ let hasSideEffects = 1 in {
 
 //===----------------------------------------------------------------------===//
 // .insn directive instructions
+//
+// Enables encoding of instructions not directly supported by the assembler:
+//    .insn <format>, <opcode encoding>, <operands>
+//
+// Rules for these definitions:
+// - Each subformat has its own .insn directive.
+// - Operands are ordered by index (e.g. V1, I2, V3 not V1, V3, I2), since
+//   individual instructions within a format may use a different order.
+// - When instructions in a format interpret the same immediate field with
+//   different signedness, the directive uses an 'X'-type immediate, whose
+//   range is the union of the signed and unsigned cases (e.g. -128..255
+//   for imm32xx8).
 //===----------------------------------------------------------------------===//
 let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
   def InsnE : InstE<0, (outs),
