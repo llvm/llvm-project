@@ -41,6 +41,7 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
   sys/posix/DynamicLibrary.cpp
   sys/posix/Memory.cpp
   sys/posix/PageSize.cpp
+  sys/posix/SocketHandle.cpp
 )
 
 set(ORC_RT_BEDROCK_DARWIN_SOURCES
@@ -54,7 +55,8 @@ set(ORC_RT_BEDROCK_LINUX_SOURCES
 )
 
 # TODO: Windows has no counterparts for the sys/posix/ sources yet
-# (DynamicLibrary, Memory, PageSize), so Windows builds are incomplete.
+# (DynamicLibrary, Memory, PageSize, SocketHandle), so Windows builds are
+# incomplete.
 set(ORC_RT_BEDROCK_WINDOWS_SOURCES
   sys/windows/CPUFeatures.cpp
   sys/windows/TargetTriple.cpp
@@ -90,7 +92,7 @@ target_compile_options(orc-rt-bedrock-objects PRIVATE ${ORC_RT_COMPILE_FLAGS})
 
 # The shipped library: Bedrock's objects plus Support's (Support is never
 # shipped on its own).
-add_library(orc-rt-bedrock STATIC)
+add_library(orc-rt-bedrock ${ORC_RT_BEDROCK_LIBRARY_TYPE})
 
 target_link_libraries(orc-rt-bedrock PUBLIC orc-rt-headers)
 
