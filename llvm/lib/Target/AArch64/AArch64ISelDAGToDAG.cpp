@@ -89,6 +89,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -763,6 +766,30 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
     OutOps.push_back(NewOp);
     return false;
   }
+  return true;
+}
+
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that exactly
+  // covers a narrow type, we can remove it.
+  // Note: do not strip ZERO_EXTEND/ANY_EXTEND here as that can cause
+  // register class mismatches (e.g. returning a 32-bit value for an i64 shift).
+  // Do not match ZERO_EXTEND or ANY_EXTEND — these are handled by existing
+  // patterns in the Shift multiclass (e.g. zext GPR32 → SUBREG_TO_REG).
+  if (N.getOpcode() == ISD::ZERO_EXTEND || N.getOpcode() == ISD::ANY_EXTEND)
+    return false;
+
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Only remove AND if it exactly masks a narrow type (byte, halfword, word).
+    if (Mask == 0xff || Mask == 0xffff || Mask == 0xffffffff)
+      N = N.getOperand(0);
+  }
+
+  ShAmt = N;
   return true;
 }
 
