@@ -54,32 +54,6 @@ using namespace mlir::transform;
 
 #define DEBUG_TYPE "linalg-transforms"
 
-/// Attempts to apply the pattern specified as template argument to the given
-/// operation. The pattern is expected to have a `returningMatchAndRewrite`
-/// function that returns the "main" result or failure. Returns failure if the
-/// pattern failed to apply. Extra arguments are forwarded to the pattern
-/// constructor.
-template <typename PatternTy, typename... Args>
-static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
-  // Check if the given operation has the type expected by the pattern.
-  using OpTy = typename llvm::function_traits<
-      decltype(&PatternTy::returningMatchAndRewrite)>::template arg_t<0>;
-  auto op = dyn_cast<OpTy>(operation);
-  if (!op)
-    return failure();
-
-  // Apply the pattern directly to the op.
-  PatternTy pattern(operation->getContext(), std::forward<Args>(args)...);
-  // We want to discourage direct use of PatternRewriter in APIs but In this
-  // very specific case, an IRRewriter is not enough.
-  PatternRewriter rewriter(operation->getContext());
-  rewriter.setInsertionPoint(operation);
-  auto result = pattern.returningMatchAndRewrite(op, rewriter);
-  if (failed(result))
-    return failure();
-  return cast<LinalgOp>(result->getOperation());
-}
-
 /// Assuming that `ofr` is an index attr or a param of index type
 /// or a transform dialect handle mapped to exactly one op
 /// with one index result, return that value.

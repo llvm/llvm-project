@@ -130,6 +130,8 @@ features cannot lower the translation-unit ABI level;
   As a result, the `__str__` representation of its return values changed.
   Like other libclang enums, it now follows the `CompletionChunkKind.VARIANT_NAME` scheme instead of `VariantName`.
 
+- `Cursor` instance's `enum_value` method now returns 1 instead of -1 for `true` bool enumeration values
+
 ### OpenCL Potentially Breaking Changes
 
 ## What's New in Clang {{env.config.release}}?
@@ -232,7 +234,7 @@ features cannot lower the translation-unit ABI level;
 - Clang now allows GNU computed `goto` extension in `constexpr` functions, matching the relaxed
   `constexpr` function body rules introduced in C++23.
 
-- Added support for the `__builtin_strlcat` builtin.
+- Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
 ### New Compiler Flags
 
@@ -271,8 +273,8 @@ features cannot lower the translation-unit ABI level;
 
 ### Improvements to Clang's diagnostics
 
-- `-Wfortify-source` now diagnoses when `strlcat` or `__builtin_strlcat` is called with a size
-  argument larger than the destination buffer.
+- `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
+  `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
@@ -483,7 +485,13 @@ features cannot lower the translation-unit ABI level;
   `int vla[n][0]`. (#GH28328)
 
 - Fixed a missing `-Wconstant-conversion` diagnostic for signed `char` arrays.
-  (#GH181730)
+
+- Clang now diagnoses passing wrong vector type as a mask to `__builtin_shufflevector`. (#GH218132)
+
+- `-Wdelete-abstract-non-virtual-dtor` and `-Wdelete-non-abstract-non-virtual-dtor`
+  no longer warn when the selected deallocation function is a destroying
+  `operator delete`, since such a delete expression never invokes the
+  destructor. (#GH65524)
 
 ### Improvements to Clang's time-trace
 
@@ -677,6 +685,9 @@ features cannot lower the translation-unit ABI level;
 - `FunctionDecl::getReturnTypeSourceRange()` now returns correct source
   location of a trailing return type. (#GH162649)
 
+- Added missed information to the AST node representing the member function
+  when calling a explicit object member function. (#GH218829)
+
 #### Miscellaneous Bug Fixes
 
 #### Miscellaneous Clang Crashes Fixed
@@ -745,6 +756,11 @@ features cannot lower the translation-unit ABI level;
 
 #### Windows Support
 
+- Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
+  stack pointer as it was on entry to the function, as the frame value the CRT
+  stores in the ``jmp_buf``. Clang now uses ``llvm.sponentry`` there, as it
+  already did on AArch64.
+
 - Fixed a bug where Clang did not match the MSVC ABI on Arm64 when an
   over-aligned base class is followed by another base class. MSVC on Arm64 (but
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
@@ -781,6 +797,11 @@ features cannot lower the translation-unit ABI level;
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
+
+- Clang now provides device-side definitions of `__cxa_pure_virtual()` and
+  `__cxa_deleted_virtual()`; previously, any (potential) call to a pure/deleted
+  virtual function that could not be optimised out would cause the program to
+  fail to assemble. This is now fixed. (#GH49183) (#GH67533)
 
 #### AIX Support
 

@@ -935,7 +935,7 @@ static void handleCFIBadIcall(CFICheckFailData *Data, ValueHandle Function,
 
 namespace __ubsan {
 
-#ifdef _WIN32
+#if defined(_WIN32) && (!defined(__GNUC__) || defined(__clang__))
 extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
                                                     ValueHandle Vtable,
                                                     bool ValidVtable,
@@ -944,6 +944,11 @@ extern "C" void __ubsan_handle_cfi_bad_type_default(CFICheckFailData *Data,
 }
 
 WIN_WEAK_ALIAS(__ubsan_handle_cfi_bad_type, __ubsan_handle_cfi_bad_type_default)
+void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
+                                 bool ValidVtable, ReportOptions Opts);
+#elif defined(_WIN32)
+// GNU ld does not support /alternatename. The real implementation lives in
+// ubsan_handlers_cxx.cpp.
 void __ubsan_handle_cfi_bad_type(CFICheckFailData *Data, ValueHandle Vtable,
                                  bool ValidVtable, ReportOptions Opts);
 #else
