@@ -236,6 +236,8 @@ features cannot lower the translation-unit ABI level;
 
 - Added support for the `__builtin_strlcat` and `__builtin_strlcpy` builtins.
 
+- Added support for the `__builtin_recv` and `__builtin_recvfrom` builtins.
+
 ### New Compiler Flags
 
 - New option `-fdefined-pointer-subtraction` added to preserve stable semantics
@@ -275,6 +277,9 @@ features cannot lower the translation-unit ABI level;
 
 - `-Wfortify-source` now diagnoses when `strlcat`, `__builtin_strlcat`, `strlcpy`, or
   `__builtin_strlcpy` is called with a size argument larger than the destination buffer.
+
+- `-Wfortify-source` now diagnoses when `recv`, `__builtin_recv`, `recvfrom`, or
+  `__builtin_recvfrom` is called with a size argument larger than the destination buffer.
 
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
