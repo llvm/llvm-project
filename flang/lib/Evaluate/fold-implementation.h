@@ -1367,8 +1367,8 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
         int newOrd{isNext ? static_cast<int>(*ordVal + 1)
                           : static_cast<int>(*ordVal - 1)};
         StructureConstructor ctor{*derived};
-        ctor.Add(
-            ordSym, Expr<SomeType>{Expr<SomeInteger>{Expr<CInteger>{newOrd}}});
+        ctor.Add(ordSym,
+            Expr<SomeType>{Expr<SomeInteger>{MakeCIntegerExpr(newOrd)}});
         return Expr<SomeDerived>{Constant<SomeDerived>{std::move(ctor)}};
       }
     }
@@ -1401,7 +1401,7 @@ static inline Expr<SomeDerived> FoldEnumerationNextOrPrevious(
                         : static_cast<int>(*ordVal - 1)};
       StructureConstructor ctor{*derived};
       ctor.Add(
-          ordSym, Expr<SomeType>{Expr<SomeInteger>{Expr<CInteger>{newOrd}}});
+          ordSym, Expr<SomeType>{Expr<SomeInteger>{MakeCIntegerExpr(newOrd)}});
       elements.emplace_back(std::move(ctor));
     }
     return Expr<SomeDerived>{Constant<SomeDerived>{

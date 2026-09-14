@@ -795,7 +795,7 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
           // Scalar: fold to the single ordinal.
           if (auto ordExpr{GetEnumerationOrdinal(*derivedExpr)}) {
             if (auto ordVal{ToInt64(*ordExpr)}) {
-              return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
+              return MakeConstantExpr<T>(kind, *ordVal);
             }
           } else if (const auto *constant{
                          UnwrapConstantValue<SomeDerived>(*derivedExpr)};
@@ -815,9 +815,9 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
                 for (const StructureConstructorValues &scv :
                     constant->values()) {
                   elements.emplace_back(
-                      *ToInt64(scv.find(ordSym)->second.value()));
+                      kind, *ToInt64(scv.find(ordSym)->second.value()));
                 }
-                return Expr<T>{Constant<T>{std::move(elements),
+                return Expr<T>{Constant<T>{kind, std::move(elements),
                     ConstantSubscripts{constant->shape()}}};
               }
             }
