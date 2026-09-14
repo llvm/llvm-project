@@ -1302,6 +1302,9 @@ LogicalResult spirv::FuncOp::verifyBody() {
                    "returns 1 value but enclosing function requires ")
                << fnType.getNumResults() << " results";
 
+      if (retOp->getNumOperands() == 0 || !retOp.getValue())
+        return retOp.emitOpError("return value is missing");
+
       auto retOperandType = retOp.getValue().getType();
       auto fnResultType = fnType.getResult(0);
       if (retOperandType != fnResultType)
