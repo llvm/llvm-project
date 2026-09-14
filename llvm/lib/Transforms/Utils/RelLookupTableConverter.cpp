@@ -107,13 +107,12 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
       return false;
 
     // If operand is mutable, do not generate a relative lookup table.
-    auto *GlovalVarOp = dyn_cast<GlobalVariable>(GVOp);
-    if (!GlovalVarOp || !GlovalVarOp->isConstant())
+    auto *GlobalVarOp = dyn_cast<GlobalVariable>(GVOp);
+    if (!GlobalVarOp || !GlobalVarOp->isConstant())
       return false;
 
-    if (!GlovalVarOp->hasLocalLinkage() ||
-        !GlovalVarOp->isDSOLocal() ||
-        !GlovalVarOp->isImplicitDSOLocal())
+    if (!GlobalVarOp->hasLocalLinkage() || !GlobalVarOp->isDSOLocal() ||
+        !GlobalVarOp->isImplicitDSOLocal())
       return false;
 
     // On AArch64 small code model, the text-to-data span can be up to 4GB,
@@ -121,12 +120,12 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     // target operand requires dynamic relocations (placing it in .data.rel.ro
     // in the data segment rather than .rodata in the text segment).
     if (TT.isAArch64() &&
-        (!GlovalVarOp->hasInitializer() ||
-         GlovalVarOp->getInitializer()->needsDynamicRelocation()))
+        (!GlobalVarOp->hasInitializer() ||
+         GlobalVarOp->getInitializer()->needsDynamicRelocation()))
       return false;
 
     if (ShouldDropUnnamedAddr)
-      GVOps.push_back(GlovalVarOp);
+      GVOps.push_back(GlobalVarOp);
 
     Info.Ptrs.push_back(C);
   }
