@@ -6316,6 +6316,62 @@ bool InstructionCombiningPass::runOnFunction(Function &F) {
                                          BFI, BPI, PSI, InstCombineOptions());
 }
 
+bool InstCombinerImpl::canReplaceWideOverflowIdiomUsers(Value *WideOp,
+                                                        unsigned NarrowWidth,
+                                                        User *Exclude) {
+  if (WideOp->hasNUsesOrMore(2)) {
+    for (User *U : WideOp->users()) {
+      if (U == Exclude)
+        continue;
+      if (auto *TI = dyn_cast<TruncInst>(U)) {
+        if (TI->getType()->getScalarSizeInBits() > NarrowWidth)
+          return false;
+      } else if (auto *BO = dyn_cast<BinaryOperator>(U)) {
+        if (BO->getOpcode() != Instruction::And)
+          return false;
+        if (auto *CI = dyn_cast<ConstantInt>(BO->getOperand(1))) {
+          const APInt &CVal = CI->getValue();
+          if (CVal.getBitWidth() - CVal.countl_zero() > NarrowWidth)
+            return false;
+        } else {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+void InstCombinerImpl::replaceWideOverflowIdiomUsers(Value *WideOp,
+                                                     unsigned NarrowWidth,
+                                                     Value *NarrowVal,
+                                                     User *Exclude) {
+  if (WideOp->hasNUsesOrMore(2)) {
+    for (User *U : llvm::make_early_inc_range(WideOp->users())) {
+      if (U == Exclude)
+        continue;
+      if (auto *TI = dyn_cast<TruncInst>(U)) {
+        if (TI->getType()->getScalarSizeInBits() == NarrowWidth)
+          replaceInstUsesWith(*TI, NarrowVal);
+        else
+          TI->setOperand(0, NarrowVal);
+        addToWorklist(TI);
+      } else if (auto *BO = dyn_cast<BinaryOperator>(U)) {
+        assert(BO->getOpcode() == Instruction::And);
+        // Replace (WideOp & mask) --> zext (NarrowVal & short_mask)
+        ConstantInt *CI = cast<ConstantInt>(BO->getOperand(1));
+        APInt ShortMask = CI->getValue().trunc(NarrowWidth);
+        Value *ShortAnd = Builder.CreateAnd(NarrowVal, ShortMask);
+        Value *Zext = Builder.CreateZExt(ShortAnd, BO->getType());
+        replaceInstUsesWith(*BO, Zext);
+        addToWorklist(BO);
+      }
+    }
+  }
+}
+
 char InstructionCombiningPass::ID = 0;
 
 InstructionCombiningPass::InstructionCombiningPass() : FunctionPass(ID) {}
