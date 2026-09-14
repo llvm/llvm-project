@@ -276,6 +276,11 @@ public:
     return true;
   }
 
+  bool VisitSizeOfPackExpr(SizeOfPackExpr *SizeOfPack) {
+    Check->addUsage(SizeOfPack->getPack(), SizeOfPack->getPackLoc(), SM);
+    return true;
+  }
+
   bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc Loc) {
     if (const NestedNameSpecifier Spec = Loc.getNestedNameSpecifier();
         Spec.getKind() == NestedNameSpecifier::Kind::Namespace) {

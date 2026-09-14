@@ -7,7 +7,7 @@ define double @fadd_nan_op0(double %x) {
 ; CHECK-LABEL: @fadd_nan_op0(
 ; CHECK-NEXT:    ret double +qnan
 ;
-  %r = fadd double 0x7FF8000000000000, %x
+  %r = fadd double +qnan, %x
   ret double %r
 }
 
@@ -17,7 +17,7 @@ define double @fadd_nan_op1(double %x) {
 ; CHECK-LABEL: @fadd_nan_op1(
 ; CHECK-NEXT:    ret double -qnan
 ;
-  %r = fadd double %x, 0xFFF8000000000000
+  %r = fadd double %x, -qnan
   ret double %r
 }
 
@@ -105,7 +105,7 @@ define <2 x float> @fmul_nan_op1(<2 x float> %x) {
 ; CHECK-LABEL: @fmul_nan_op1(
 ; CHECK-NEXT:    ret <2 x float> splat (float +qnan)
 ;
-  %r = fmul <2 x float> %x, <float 0x7FF8000000000000, float 0x7FF8000000000000>
+  %r = fmul <2 x float> %x, <float +qnan, float +qnan>
   ret <2 x float> %r
 }
 
@@ -113,7 +113,7 @@ define <vscale x 1 x double> @fmul_nan_op1_scalable_vec(<vscale x 1 x double> %x
 ; CHECK-LABEL: @fmul_nan_op1_scalable_vec(
 ; CHECK-NEXT:    ret <vscale x 1 x double> splat (double +qnan)
 ;
-  %r = fmul <vscale x 1 x double> %x, splat (double 0x7FF8000000000000)
+  %r = fmul <vscale x 1 x double> %x, splat (double +qnan)
   ret <vscale x 1 x double> %r
 }
 
@@ -188,7 +188,7 @@ define float @frem_nan_op1(float %x) {
 ; CHECK-LABEL: @frem_nan_op1(
 ; CHECK-NEXT:    ret float +qnan
 ;
-  %r = frem float %x, 0x7FF8000000000000
+  %r = frem float %x, +qnan
   ret float %r
 }
 
@@ -258,7 +258,7 @@ define float @fadd_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @fadd_nan_op0_nnan(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fadd nnan float 0x7FF8000000000000, %x
+  %r = fadd nnan float +qnan, %x
   ret float %r
 }
 
@@ -266,7 +266,7 @@ define float @fadd_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @fadd_nan_op1_fast(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fadd fast float %x, 0x7FF8000000000000
+  %r = fadd fast float %x, +qnan
   ret float %r
 }
 
@@ -274,7 +274,7 @@ define float @fsub_nan_op0_fast(float %x) {
 ; CHECK-LABEL: @fsub_nan_op0_fast(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fsub fast float 0x7FF8000000000000, %x
+  %r = fsub fast float +qnan, %x
   ret float %r
 }
 
@@ -282,7 +282,7 @@ define float @fsub_nan_op1_nnan(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1_nnan(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fsub nnan float %x, 0x7FF8000000000000
+  %r = fsub nnan float %x, +qnan
   ret float %r
 }
 
@@ -290,7 +290,7 @@ define float @fmul_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @fmul_nan_op0_nnan(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fmul nnan float 0x7FF8000000000000, %x
+  %r = fmul nnan float +qnan, %x
   ret float %r
 }
 
@@ -298,7 +298,7 @@ define float @fmul_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @fmul_nan_op1_fast(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fmul fast float %x, 0x7FF8000000000000
+  %r = fmul fast float %x, +qnan
   ret float %r
 }
 
@@ -306,7 +306,7 @@ define float @fdiv_nan_op0_fast(float %x) {
 ; CHECK-LABEL: @fdiv_nan_op0_fast(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fdiv fast float 0x7FF8000000000000, %x
+  %r = fdiv fast float +qnan, %x
   ret float %r
 }
 
@@ -314,7 +314,7 @@ define float @fdiv_nan_op1_nnan(float %x) {
 ; CHECK-LABEL: @fdiv_nan_op1_nnan(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = fdiv nnan float %x, 0x7FF8000000000000
+  %r = fdiv nnan float %x, +qnan
   ret float %r
 }
 
@@ -322,7 +322,7 @@ define float @frem_nan_op0_nnan(float %x) {
 ; CHECK-LABEL: @frem_nan_op0_nnan(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = frem nnan float 0x7FF8000000000000, %x
+  %r = frem nnan float +qnan, %x
   ret float %r
 }
 
@@ -330,7 +330,7 @@ define float @frem_nan_op1_fast(float %x) {
 ; CHECK-LABEL: @frem_nan_op1_fast(
 ; CHECK-NEXT:    ret float poison
 ;
-  %r = frem fast float %x, 0x7FF8000000000000
+  %r = frem fast float %x, +qnan
   ret float %r
 }
 

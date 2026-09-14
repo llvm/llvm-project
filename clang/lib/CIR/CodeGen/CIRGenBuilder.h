@@ -309,6 +309,8 @@ public:
 
   cir::VoidType getVoidTy() { return typeCache.voidTy; }
 
+  cir::IntType getBoolMemoryTy() { return getUInt8Ty(); }
+
   cir::IntType getSInt8Ty() { return typeCache.sInt8Ty; }
   cir::IntType getSInt16Ty() { return typeCache.sInt16Ty; }
   cir::IntType getSInt32Ty() { return typeCache.sInt32Ty; }
@@ -663,7 +665,13 @@ public:
   // GlobalViewAttr. Ideally we shouldn't deal with low-level offsets at all
   // but currently some parts of Clang AST, which we don't want to touch just
   // yet, return them.
-  void computeGlobalViewIndicesFromFlatOffset(
+  //
+  // Returns false if the offset doesn't designate a subelement of \p ty, which
+  // happens when it lands outside of the object or in the middle of a scalar
+  // member. In that case \p indices is left in an unspecified state and the
+  // caller must describe the address with a byte offset, using a
+  // GlobalOffsetAttr, instead.
+  [[nodiscard]] bool computeGlobalViewIndicesFromFlatOffset(
       int64_t offset, mlir::Type ty, cir::CIRDataLayout layout,
       llvm::SmallVectorImpl<int64_t> &indices);
 

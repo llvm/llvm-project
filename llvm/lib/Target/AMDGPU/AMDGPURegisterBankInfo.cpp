@@ -2530,7 +2530,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     // Special case for s_mul_u64. There is not a vector equivalent of
     // s_mul_u64. Hence, we have to break down s_mul_u64 into 32-bit vector
     // multiplications.
-    if (!Subtarget.hasVMulU64Inst() && Opc == AMDGPU::G_MUL &&
+    if (!Subtarget.useVMulU64Inst() && Opc == AMDGPU::G_MUL &&
         DstTy.getSizeInBits() == 64) {
       applyMappingSMULU64(B, OpdMapper);
       return;
@@ -3101,6 +3101,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE:
   case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT:
   case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16:
   case AMDGPU::G_AMDGPU_BUFFER_STORE:
@@ -4028,7 +4029,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         OpdsMapping[0] = getValueMappingSGPR64Only(AMDGPU::SGPRRegBankID, Size);
         OpdsMapping[1] = OpdsMapping[2] = OpdsMapping[0];
       } else {
-        if (MI.getOpcode() == AMDGPU::G_MUL && Subtarget.hasVMulU64Inst())
+        if (MI.getOpcode() == AMDGPU::G_MUL && Subtarget.useVMulU64Inst())
           OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, Size);
         else
           OpdsMapping[0] =
@@ -4080,7 +4081,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     if (isSALUMapping(MI)) {
       // There are no scalar 64-bit min and max, use vector instruction instead.
       if (MRI.getType(MI.getOperand(0).getReg()).getSizeInBits() == 64 &&
-          Subtarget.hasMinMaxI64Insts())
+          Subtarget.useMinMaxI64Insts())
         return getDefaultMappingVOP(MI);
       return getDefaultMappingSOP(MI);
     }
@@ -4500,6 +4501,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_TFE:
   case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16:
+  case AMDGPU::G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE:
   case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT:
   case AMDGPU::G_AMDGPU_TBUFFER_LOAD_FORMAT_D16:
   case AMDGPU::G_AMDGPU_TBUFFER_STORE_FORMAT:

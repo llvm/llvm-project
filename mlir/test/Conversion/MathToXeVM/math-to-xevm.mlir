@@ -67,6 +67,9 @@ module @test_module {
     // CHECK: llvm.call @_Z22__spirv_ocl_native_expd(%{{.*}}) {fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
     %exp_afn_f64 = math.exp %c1_f64 fastmath<afn> : f64
 
+    // CHECK: llvm.call @_Z22__spirv_ocl_native_expd(%{{.*}}) {aaa = 0 : i32, fastmathFlags = #llvm.fastmath<afn>} : (f64) -> f64
+    %exp_with_discardable_attr = math.exp %c1_f64 fastmath<afn> {aaa = 0 : i32} : f64
+
     // CHECK: math.exp
     %exp_none_f16 = math.exp %c1_f16 fastmath<none> : f16
     // CHECK: math.exp
