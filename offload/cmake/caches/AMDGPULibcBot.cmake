@@ -14,7 +14,8 @@ set(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR ON CACHE BOOL "")
 set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
 
 set(CLANG_DEFAULT_LINKER "lld" CACHE STRING "")
-set(CLANG_DEFAULT_RTLIB "compiler-rt" STRING "")
+set(CLANG_DEFAULT_RTLIB "compiler-rt" CACHE STRING "")
+set(CLANG_DEFAULT_UNWINDLIB "libgcc" CACHE STRING "")
 
 set(LLVM_RUNTIME_TARGETS default;amdgpu-amd-amdhsa CACHE STRING "")
 set(RUNTIMES_amdgpu-amd-amdhsa_CACHE_FILES "${CMAKE_SOURCE_DIR}/../compiler-rt/cmake/caches/AMDGPU.cmake;${CMAKE_SOURCE_DIR}/../libcxx/cmake/caches/AMDGPU.cmake" CACHE STRING "")

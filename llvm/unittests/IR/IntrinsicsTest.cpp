@@ -118,7 +118,7 @@ TEST(IntrinsicNameLookup, ClangBuiltinLookup) {
       {"__builtin_HEXAGON_A2_tfr", "hexagon", hexagon_A2_tfr},
       {"__builtin_lasx_xbz_w", "loongarch", loongarch_lasx_xbz_w},
       {"__builtin_mips_bitrev", "mips", mips_bitrev},
-      {"__nvvm_add_rn_d", "nvvm", nvvm_add_rn_d},
+      {"__nvvm_mul_rn_d", "nvvm", nvvm_mul_rn_d},
       {"__builtin_altivec_dss", "ppc", ppc_altivec_dss},
       {"__builtin_riscv_sha512sum1r", "riscv", riscv_sha512sum1r},
       {"__builtin_tend", "s390", s390_tend},

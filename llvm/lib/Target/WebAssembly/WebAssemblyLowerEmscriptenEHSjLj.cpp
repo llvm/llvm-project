@@ -402,9 +402,6 @@ ModulePass *llvm::createWebAssemblyLowerEmscriptenEHSjLjLegacyPass() {
 
 static bool canThrow(const Value *V) {
   if (const auto *F = dyn_cast<const Function>(V)) {
-    // Intrinsics cannot throw
-    if (F->isIntrinsic())
-      return false;
     StringRef Name = F->getName();
     // leave setjmp and longjmp (mostly) alone, we process them properly later
     if (Name == "setjmp" || Name == "longjmp" || Name == "emscripten_longjmp")
@@ -420,16 +417,16 @@ static bool canThrow(const Value *V) {
 // link time.
 static GlobalVariable *getGlobalVariable(Module &M, Type *Ty,
                                          const char *Name) {
-  auto *GV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(Name, Ty));
-  if (!GV)
-    report_fatal_error(Twine("unable to create global: ") + Name);
-
   // Variables created by this function are thread local. If the target does not
   // support TLS, we depend on CoalesceFeaturesAndStripAtomics to downgrade it
   // to non-thread-local ones, in which case we don't allow this object to be
   // linked with other objects using shared memory.
-  GV->setThreadLocalMode(GlobalValue::GeneralDynamicTLSModel);
-  return GV;
+  return M.getOrInsertGlobal(Name, Ty, [&]() {
+    return new GlobalVariable(
+        M, Ty, /*isConstant=*/false, GlobalVariable::ExternalLinkage,
+        /*Initializer=*/nullptr, Name,
+        /*InsertBefore=*/nullptr, GlobalValue::GeneralDynamicTLSModel);
+  });
 }
 
 // Simple function name mangler.
