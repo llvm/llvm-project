@@ -764,10 +764,7 @@ define i64 @srli_pack(i64 %x, i32 signext %lo) {
 ; RV64ZBKB-LABEL: srli_pack:
 ; RV64ZBKB:       # %bb.0: # %entry
 ; RV64ZBKB-NEXT:    srli a0, a0, 32
-; RV64ZBKB-NEXT:    slli a1, a1, 32
-; RV64ZBKB-NEXT:    slli a0, a0, 32
-; RV64ZBKB-NEXT:    srli a1, a1, 32
-; RV64ZBKB-NEXT:    or a0, a0, a1
+; RV64ZBKB-NEXT:    pack a0, a1, a0
 ; RV64ZBKB-NEXT:    ret
 entry:
   %and = and i64 %x, -4294967296
