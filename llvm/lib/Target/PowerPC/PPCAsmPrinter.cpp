@@ -2322,7 +2322,7 @@ uint16_t PPCAIXAsmPrinter::getNumberOfVRSaved() {
   // in the default ABI.
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
-      TM.getAIXExtendedAltivecABI()) {
+      Subtarget.isAIXExtendedAltivecABI()) {
     const MachineRegisterInfo &MRI = MF->getRegInfo();
     for (unsigned Reg = PPC::V20; Reg <= PPC::V31; ++Reg)
       if (MRI.isPhysRegModified(Reg))

@@ -200,7 +200,7 @@ PPCABI PPCTargetMachine::computeABI(const Triple &TT, StringRef ABIName) {
     return PPC_ABI_ELFv2;
 
   if (TT.isOSAIX())
-    return PPC_ABI_UNKNOWN;
+    return ABIName == "vec-extabi" ? PPC_ABI_AIX_EXTABI : PPC_ABI_UNKNOWN;
 
   switch (TT.getArch()) {
   case Triple::ppc64le:
