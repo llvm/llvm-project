@@ -1577,14 +1577,14 @@ def DISCARD_GLOBAL_L2 : DISCARD_L2_INTRS<"global">;
 //-----------------------------------
 
 let Predicates = [SM80] in {
-  class MBARRIER_INIT<string AddrSpace, Intrinsic Intrin> :
+  class MBARRIER_INIT<NVPTXAddressSpace as> :
             BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$count),
-            "mbarrier.init" # AddrSpace # ".b64",
-            [(Intrin addr:$addr, i32:$count)]>;
+            "mbarrier.init" # as.Suffix # ".b64",
+            [(IntrinsicInAS<int_nvvm_mbarrier_init, as>
+                  addr:$addr, i32:$count, (i32 0))]>;
 
-  def MBARRIER_INIT : MBARRIER_INIT<"", int_nvvm_mbarrier_init>;
-  def MBARRIER_INIT_SHARED : MBARRIER_INIT<".shared",
-                                            int_nvvm_mbarrier_init_shared>;
+  def MBARRIER_INIT : MBARRIER_INIT<AddrSpaceGeneric>;
+  def MBARRIER_INIT_SHARED : MBARRIER_INIT<AddrSpaceShared>;
 
   class MBARRIER_INVAL<string AddrSpace, Intrinsic Intrin> :
             BasicNVPTXInst<(outs), (ins ADDR:$addr),
@@ -1651,6 +1651,31 @@ let Predicates = [SM80] in {
             BasicNVPTXInst<(outs B32:$res), (ins B64:$state),
             "mbarrier.pending_count.b64",
             [(set i32:$res, (int_nvvm_mbarrier_pending_count i64:$state))]>;
+}
+
+let Predicates = [hasMBarrierLayoutSupport] in {
+  class MBARRIER_INIT_LAYOUT<NVPTXAddressSpace as> :
+            BasicNVPTXInst<(outs), (ins ADDR:$addr, B32:$count),
+            "mbarrier.init.layout::v1" # as.Suffix # ".b64",
+            [(IntrinsicInAS<int_nvvm_mbarrier_init, as>
+                  addr:$addr, i32:$count, (i32 1))]>;
+
+  def MBARRIER_INIT_LAYOUT : MBARRIER_INIT_LAYOUT<AddrSpaceGeneric>;
+  def MBARRIER_INIT_LAYOUT_SHARED : MBARRIER_INIT_LAYOUT<AddrSpaceShared>;
+
+  class MBARRIER_CHECK_LAYOUT<NVPTXAddressSpace as, int layout> :
+            BasicNVPTXInst<(outs B1:$res), (ins ADDR:$addr),
+            "mbarrier.check_layout.layout::v" # layout # as.Suffix # ".b64",
+            [(set i1:$res,
+              (IntrinsicInAS<int_nvvm_mbarrier_check_layout, as>
+                   addr:$addr, (i32 layout)))]>;
+
+  foreach layout = [0, 1] in {
+    def MBARRIER_CHECK_LAYOUT_V # layout :
+          MBARRIER_CHECK_LAYOUT<AddrSpaceGeneric, layout>;
+    def MBARRIER_CHECK_LAYOUT_V # layout # _SHARED :
+          MBARRIER_CHECK_LAYOUT<AddrSpaceShared, layout>;
+  }
 }
 
 class MBAR_UTIL<string op, string scope,

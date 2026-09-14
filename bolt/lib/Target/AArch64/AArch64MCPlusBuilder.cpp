@@ -158,16 +158,16 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
     case AArch64::ORRXri:
     case AArch64::ANDXri:
     case AArch64::EORXri:
-      if (I->Op1 == 0)
+      if (*I->Op1 == 0)
         Insts.emplace_back(
             MCInstBuilder(I->Opcode)
                 .addReg(DstReg)
                 .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
-                .addImm(I->Op2));
+                .addImm(*I->Op2));
       else
         Insts.emplace_back(
             MCInstBuilder(I->Opcode).addReg(DstReg).addReg(DstReg).addImm(
-                I->Op2));
+                *I->Op2));
       break;
     case AArch64::EORXrs:
     case AArch64::EONXrs:
@@ -177,23 +177,23 @@ static InstructionListType createMOVImm(MCPhysReg DstReg, unsigned BitSize,
                              .addReg(DstReg)
                              .addReg(DstReg)
                              .addReg(DstReg)
-                             .addImm(I->Op2));
+                             .addImm(*I->Op2));
       break;
     case AArch64::MOVNWi:
     case AArch64::MOVNXi:
     case AArch64::MOVZWi:
     case AArch64::MOVZXi:
       Insts.emplace_back(
-          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(I->Op1).addImm(
-              I->Op2));
+          MCInstBuilder(I->Opcode).addReg(DstReg).addImm(*I->Op1).addImm(
+              *I->Op2));
       break;
     case AArch64::MOVKWi:
     case AArch64::MOVKXi:
       Insts.emplace_back(MCInstBuilder(I->Opcode)
                              .addReg(DstReg)
                              .addReg(DstReg)
-                             .addImm(I->Op1)
-                             .addImm(I->Op2));
+                             .addImm(*I->Op1)
+                             .addImm(*I->Op2));
       break;
     default:
       llvm_unreachable("Unhandled! Please refer to expandMOVImm in llvm");
@@ -2658,7 +2658,7 @@ public:
            isAArch64ExclusiveStore(Inst);
   }
 
-  bool isCleanRegXOR(const MCInst &Inst) const override {
+  bool isCleanReg(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
     case AArch64::EORXrs:
     case AArch64::EORWrs:
@@ -3663,6 +3663,33 @@ public:
     setOperandToSymbolRef(Insts[1], /* OpNum */ 2, Target, Addend, Ctx,
                           ELF::R_AARCH64_ADD_ABS_LO12_NC);
     return Insts;
+  }
+
+  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    // Size in bytes that Inst loads from memory.
+    uint8_t DataSize = 0;
+    switch (Inst.getOpcode()) {
+    case AArch64::LDRWl:
+      DataSize = 4;
+      break;
+    case AArch64::LDRXl:
+      DataSize = 8;
+      break;
+    default:
+      return InstructionListType{};
+    }
+
+    if (Offset + DataSize > ConstantData.size())
+      return InstructionListType{};
+
+    DataExtractor DE(ConstantData, BC.AsmInfo->isLittleEndian());
+    const uint64_t Imm = DE.getUnsigned(&Offset, DataSize);
+
+    const MCPhysReg Dest = Inst.getOperand(0).getReg();
+
+    return createLoadImmediate(Dest, Imm);
   }
 
   std::optional<Relocation>

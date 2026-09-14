@@ -936,11 +936,10 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zalasr_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+zalasr", "+xventanacondops"));
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(), ElementsAre("+e", "+zalasr"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1634,7 +1633,6 @@ R"(All available -march extensions for RISC-V
     xtheadmempair        1.0
     xtheadsync           1.0
     xtheadvdot           1.0
-    xventanacondops      1.0
     xwchc                2.2
 
 Experimental extensions
@@ -1665,13 +1663,17 @@ Experimental extensions
     zvzip                0.1
     smcsps               0.20
     smehv                0.20
+    smidctrl             0.20
     smijt                0.20
     smip                 0.20
+    smnip                0.20
     smpmpmt              0.6
     sscsps               0.20
     ssehv                0.20
+    ssidctrl             0.20
     ssijt                0.20
     ssip                 0.20
+    ssnip                0.20
     svukte               1.0
     xqccmt               0.1
     xsfmclic             0.1

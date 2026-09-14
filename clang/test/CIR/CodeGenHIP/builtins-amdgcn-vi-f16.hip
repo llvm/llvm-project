@@ -122,6 +122,14 @@ __device__ void test_ldexp_f16(_Float16* out, _Float16 a, int b) {
     *out = __builtin_amdgcn_ldexph(a, b);
 }
 
+// CIR-LABEL: @_Z14test_fract_f16PDF16_DF16_
+// CIR: cir.call_llvm_intrinsic "amdgcn.fract" {{.*}} : (!cir.f16) -> !cir.f16
+// LLVM: define{{.*}} void @_Z14test_fract_f16PDF16_DF16_
+// LLVM: call{{.*}} half @llvm.amdgcn.fract.f16(half %{{.*}})
+__device__ void test_fract_f16(_Float16* out, _Float16 a) {
+  *out = __builtin_amdgcn_fracth(a);
+}
+
 // CIR-LABEL: @_Z14test_class_f16PbDF16_i
 // CIR: cir.call_llvm_intrinsic "amdgcn.class" {{.*}} : (!cir.f16, !s32i) -> !cir.bool
 // LLVM: define{{.*}} void @_Z14test_class_f16PbDF16_i

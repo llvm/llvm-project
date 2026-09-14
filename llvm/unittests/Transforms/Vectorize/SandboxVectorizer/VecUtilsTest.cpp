@@ -1129,6 +1129,146 @@ entry:
           .empty());
 }
 
+TEST_F(VecUtilsTest, DeadInstructionMorgueCollectScalar) {
+  parseIR(R"IR(
+define void @scalar(i8 %v) {
+entry:
+  %live = add i8 %v, 1
+  %dead0 = add i8 %v, 2
+  %dead1 = add i8 %v, 3
+  %use_live = add i8 %live, %live
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("scalar");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Live = cast<sandboxir::Instruction>(&*It++);
+  auto *Dead0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Dead1 = cast<sandboxir::Instruction>(&*It++);
+  auto *UseLive = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({Live, Dead0, Dead1});
+  Morgue.tryEraseDeadInstrs();
+
+  // %dead0 and %dead1 had no uses, so they should have been erased. %live is
+  // used by %use_live, so it (and %use_live) should survive.
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Live);
+  EXPECT_EQ(&*It++, UseLive);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueCollectLoad) {
+  parseIR(R"IR(
+define void @loadtest(ptr %p) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  %ld0 = load float, ptr %gep0
+  %ld1 = load float, ptr %gep1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("loadtest");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Gep0 = cast<sandboxir::Instruction>(&*It++);
+  It++; // %gep1, expected to be erased.
+  auto *Ld0 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ld1 = cast<sandboxir::LoadInst>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({Ld0, Ld1});
+  Morgue.tryEraseDeadInstrs();
+
+  // %ld0 and %ld1 are collected directly and have no uses, so they are
+  // erased. Only the pointer operand of the non-first lane (%gep1) is
+  // collected -- %gep0 (pointer of the first lane) is intentionally skipped,
+  // since it would be reused as the pointer of a replacement vector load --
+  // so %gep0 survives even though it is now dead.
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Gep0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueCollectStore) {
+  parseIR(R"IR(
+define void @storetest(ptr %p, float %v) {
+entry:
+  %gep0 = getelementptr float, ptr %p, i32 0
+  %gep1 = getelementptr float, ptr %p, i32 1
+  store float %v, ptr %gep0
+  store float %v, ptr %gep1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("storetest");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Gep0 = cast<sandboxir::Instruction>(&*It++);
+  It++; // %gep1, expected to be erased.
+  auto *St0 = cast<sandboxir::StoreInst>(&*It++);
+  auto *St1 = cast<sandboxir::StoreInst>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({St0, St1});
+  Morgue.tryEraseDeadInstrs();
+
+  // %st0 and %st1 are collected directly (stores are always "used" 0 times)
+  // and get erased. Only the pointer operand of the non-first lane (%gep1)
+  // is collected, so %gep0 survives even though it is now dead.
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Gep0);
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
+TEST_F(VecUtilsTest, DeadInstructionMorgueClearsCandidatesAfterErase) {
+  parseIR(R"IR(
+define void @clears(i8 %v) {
+entry:
+  %dead0 = add i8 %v, 1
+  ret void
+}
+)IR");
+  Function &LLVMF = *M->getFunction("clears");
+
+  sandboxir::Context Ctx(C);
+  auto &F = *Ctx.createFunction(&LLVMF);
+  auto &BB = *F.begin();
+  auto It = BB.begin();
+  auto *Dead0 = cast<sandboxir::Instruction>(&*It++);
+  auto *Ret = cast<sandboxir::Instruction>(&*It++);
+
+  sandboxir::VecUtils::DeadInstructionMorgue Morgue;
+  Morgue.collectPotentiallyDeadInstrs({Dead0});
+  Morgue.tryEraseDeadInstrs();
+  // The candidate set should have been cleared by the first call, so a
+  // second call must be a safe no-op rather than trying to dereference the
+  // now-erased %dead0 instruction again.
+  Morgue.tryEraseDeadInstrs();
+
+  It = BB.begin();
+  EXPECT_EQ(&*It++, Ret);
+  EXPECT_EQ(It, BB.end());
+}
+
 TEST_F(VecUtilsTest, GetNextUserBundle_VectorizedSeedUser) {
   parseIR(R"IR(
 define void @vectorized_seed_user(ptr %p) {
