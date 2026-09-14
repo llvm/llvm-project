@@ -1709,7 +1709,7 @@ bool InductionDescriptor::isInductionPHI(
 // latch:
 //   %latch_phi = phi [ %monotonic_phi, %loop_header ], [ %step, %step_bb ]
 //   br label %loop_header
-bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
+bool MonotonicDescriptor::isMonotonicPHI(PHINode *PN, const Loop *L,
                                          MonotonicDescriptor &Desc,
                                          ScalarEvolution &SE) {
   BasicBlock *Preheader = L->getLoopPreheader();
@@ -1717,30 +1717,29 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
     return false;
 
   BasicBlock *Latch = L->getLoopLatch();
-  if (!Latch || !HeaderPHI->getType()->isIntOrPtrTy() ||
-      HeaderPHI->getParent() != L->getHeader())
+  if (!Latch || !PN->getType()->isIntOrPtrTy() ||
+      PN->getParent() != L->getHeader())
     return false;
 
-  auto *BackedgePHI =
-      dyn_cast<PHINode>(HeaderPHI->getIncomingValueForBlock(Latch));
+  auto *BackedgePHI = dyn_cast<PHINode>(PN->getIncomingValueForBlock(Latch));
   if (!BackedgePHI)
     return false;
 
   // Ensure the only users of the backedge PHI are outside the loop or the
-  // header PHI.
+  // header PHI (PN).
   for (User *U : BackedgePHI->users()) {
     auto *UI = cast<Instruction>(U);
-    if (UI != HeaderPHI && L->contains(UI))
+    if (UI != PN && L->contains(UI))
       return false;
   }
 
   // Find the step operation used to increment the value of the monotonic PHI.
   // TODO: Support chains of PHIs.
-  Value *StepOp = find_singleton<Value>(
-      BackedgePHI->incoming_values(),
-      [&](Use &Incoming, bool /*AllowRepeats*/) {
-        return Incoming != HeaderPHI ? Incoming.get() : nullptr;
-      });
+  Value *StepOp =
+      find_singleton<Value>(BackedgePHI->incoming_values(),
+                            [&](Use &Incoming, bool /*AllowRepeats*/) {
+                              return Incoming != PN ? Incoming.get() : nullptr;
+                            });
   if (!StepOp || !StepOp->hasOneUse())
     return false;
 
@@ -1750,20 +1749,20 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
 
   Value *Step = nullptr;
   bool StepMatch =
-      HeaderPHI->getType()->isPointerTy()
-          ? match(StepInst, m_PtrAdd(m_Specific(HeaderPHI), m_Value(Step)))
-          : match(StepInst, m_c_Add(m_Specific(HeaderPHI), m_Value(Step)));
+      PN->getType()->isPointerTy()
+          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
   if (!StepMatch || !L->isLoopInvariant(Step))
     return false;
 
   // Ensure GEP offsets are extended to the size of the PHI.
   const SCEV *StepSCEV = SE.getTruncateOrSignExtend(
-      SE.getSCEV(Step), SE.getEffectiveSCEVType(HeaderPHI->getType()));
+      SE.getSCEV(Step), SE.getEffectiveSCEVType(PN->getType()));
 
   if (StepSCEV->isZero())
     return false;
 
-  Value *Start = HeaderPHI->getIncomingValueForBlock(Preheader);
+  Value *Start = PN->getIncomingValueForBlock(Preheader);
   const SCEV *StartSCEV = SE.getSCEV(Start);
 
   SCEV::NoWrapFlags NoWrapFlags = SCEV::FlagAnyWrap;
@@ -1780,10 +1779,10 @@ bool MonotonicDescriptor::isMonotonicPHI(PHINode *HeaderPHI, const Loop *L,
       NoWrapFlags = ScalarEvolution::setFlags(NoWrapFlags, SCEV::FlagNSW);
   }
 
-  LLVM_DEBUG(dbgs() << "LV: Found a monotonic phi: HeaderPHI: " << *HeaderPHI
+  LLVM_DEBUG(dbgs() << "LV: Found a monotonic phi: HeaderPHI: " << *PN
                     << ", StepInst: " << *StepInst << "\n");
 
-  Desc = MonotonicDescriptor(HeaderPHI, BackedgePHI, StepInst, StartSCEV,
-                             StepSCEV, to_underlying(NoWrapFlags));
+  Desc = MonotonicDescriptor(PN, BackedgePHI, StepInst, StartSCEV, StepSCEV,
+                             NoWrapFlags);
   return true;
 }

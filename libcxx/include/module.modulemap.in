@@ -2256,6 +2256,7 @@ module std {
   module utility {
     module as_const                        { header "__utility/as_const.h" }
     module as_lvalue                       { header "__utility/as_lvalue.h" }
+    module assume                          { header "__utility/assume.h" }
     module auto_cast                       {
       header "__utility/auto_cast.h"
       export std_core.type_traits.decay // the macro expansion uses that trait
