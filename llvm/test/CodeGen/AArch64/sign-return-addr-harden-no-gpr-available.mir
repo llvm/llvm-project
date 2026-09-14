@@ -63,7 +63,7 @@ body:             |
   ; CHECK:         AUTIASP
   ; CHECK-NEXT:    $x0 = frame-destroy ORRXrs $xzr, $lr, 0
   ; CHECK-NEXT:    $x0 = frame-destroy XPACI $x0
-  ; CHECK-NEXT:    $w0 = frame-destroy LDRWui $x0, 0
+  ; CHECK-NEXT:    $w0 = frame-destroy LDRWui $x0, 0 :: (volatile load (s32))
   ; CHECK-NEXT:    RET $lr
   ; CHECK-LABEL:   bb.1:
 

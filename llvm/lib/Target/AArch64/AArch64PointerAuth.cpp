@@ -625,7 +625,7 @@ bool AArch64PointerAuthImpl::emitSignReturnAddressHardening(
 
     // The XPACI instruction is only available with FEAT_PAUTH. So if the
     // subtarget does not have it, the alternative XPACLRI instruction must be
-    // used instead. The latter is in hint space, therefore can be present even
+    // used instead. The latter is in hint space, therefore can be used even
     // if FEAT_PAUTH is absent.
     if (Subtarget->hasPAuth()) {
       BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::XPACI), XReg)
@@ -637,6 +637,10 @@ bool AArch64PointerAuthImpl::emitSignReturnAddressHardening(
       BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::LDRWui), WReg)
           .addUse(XReg)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo(),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 4,
+              Align(4)))
           .setMIFlag(MachineInstr::FrameDestroy);
       EmitSEHNopIfRequired();
     } else {
@@ -650,6 +654,10 @@ bool AArch64PointerAuthImpl::emitSignReturnAddressHardening(
       BuildMI(MBB, InsertionPoint, DL, TII->get(AArch64::LDRWui), AArch64::W30)
           .addUse(AArch64::LR)
           .addImm(0)
+          .addMemOperand(MF.getMachineMemOperand(
+              MachinePointerInfo(),
+              MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile, 4,
+              Align(4)))
           .setMIFlag(MachineInstr::FrameDestroy);
       EmitSEHNopIfRequired();
       BuildMI(MBB, RetInstIter, DL, TII->get(AArch64::RET))
