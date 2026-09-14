@@ -343,13 +343,11 @@ mlir::Value Fortran::lower::genInitialDataTarget(
 
 static mlir::Value
 genCoarrayDefaultInitializerValue(Fortran::lower::AbstractConverter &converter,
-                                  mlir::Location loc, mlir::Type boxType,
-                                  unsigned allocator) {
+                                  mlir::Location loc, mlir::Type boxType) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   auto baseBoxType = mlir::cast<fir::BaseBoxType>(boxType);
   auto baseAddrType = baseBoxType.getBaseAddressType();
   auto type = fir::unwrapRefType(baseAddrType);
-  auto eleTy = fir::unwrapSequenceType(type);
   auto nullAddr = builder.createNullConstant(loc, baseAddrType);
   mlir::Value shape, slice;
   if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(type)) {
@@ -363,8 +361,6 @@ genCoarrayDefaultInitializerValue(Fortran::lower::AbstractConverter &converter,
   auto embox =
       fir::EmboxOp::create(builder, loc, baseBoxType, nullAddr, shape, slice,
                            /*lenParams=*/{}, /*typeSourceBox=*/{});
-  if (allocator != 0)
-    embox.setAllocatorIdx(allocator);
   return embox;
 }
 
@@ -608,9 +604,8 @@ fir::GlobalOp Fortran::lower::defineGlobal(
       });
     } else {
       createGlobalInitialization(builder, global, [&](fir::FirOpBuilder &b) {
-        unsigned allocatorIdx = Fortran::lower::getAllocatorIdx(sym);
-        mlir::Value box = genCoarrayDefaultInitializerValue(
-            converter, loc, symTy, allocatorIdx);
+        mlir::Value box =
+            genCoarrayDefaultInitializerValue(converter, loc, symTy);
         fir::HasValueOp::create(b, loc, box);
       });
     }

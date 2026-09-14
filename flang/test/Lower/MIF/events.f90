@@ -23,15 +23,15 @@ end program
 ! COARRAY: %[[VAL_0:.*]] = fir.alloca !fir.array<0xi64>
 ! COARRAY: %[[VAL_1:.*]] = fir.alloca !fir.array<1xi64>
 ! COARRAY: %[[VAL_2:.*]] = fir.dummy_scope : !fir.dscope
-! COARRAY: %[[VAL_3:.*]] = fir.address_of(@_QFEdata_ready) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
+! COARRAY: %[[VAL_3:.*]] = fir.address_of(@_QFEdata_ready) : !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
 ! COARRAY: %c1_i64 = arith.constant 1 : i64
 ! COARRAY: %c0 = arith.constant 0 : index
 ! COARRAY: %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_1]], %c0 : (!fir.ref<!fir.array<1xi64>>, index) -> !fir.ref<i64>
 ! COARRAY: fir.store %c1_i64 to %[[VAL_4]] : !fir.ref<i64>
 ! COARRAY: %[[VAL_5:.*]] = fir.embox %[[VAL_1]] : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
 ! COARRAY: %[[VAL_6:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-! COARRAY: mif.alloc_coarray %[[VAL_3]] lcobounds %[[VAL_5]] ucobounds %[[VAL_6]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
-! COARRAY: %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>) -> (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>)
+! COARRAY: mif.alloc_coarray %[[VAL_3]] lcobounds %[[VAL_5]] ucobounds %[[VAL_6]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
+! COARRAY: %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_3]] {uniq_name = "_QFEdata_ready"} : (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>, !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>)
 ! COARRAY: %[[VAL_8:.*]] = fir.alloca i32 {bindc_name = "me", uniq_name = "_QFEme"}
 ! COARRAY: %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_8]] {uniq_name = "_QFEme"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! COARRAY: %[[VAL_10:.*]] = mif.this_image : () -> i32
@@ -40,17 +40,21 @@ end program
 ! COARRAY: %c2_i32 = arith.constant 2 : i32
 ! COARRAY: %[[VAL_12:.*]] = arith.cmpi eq, %[[VAL_11]], %c2_i32 : i32
 ! COARRAY: fir.if %[[VAL_12]] {
-! COARRAY:   %[[VAL_13:.*]] = hlfir.designate %[[VAL_7]]#0   : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
-! COARRAY:   %[[VAL_14:.*]] = fir.embox %[[VAL_13]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>) -> !fir.box<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>, corank:1>
+! COARRAY:   %[[VAL_13:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
+! COARRAY:   %[[VAL_14:.*]] = fir.box_addr %[[VAL_13]] : (!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>) -> !fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
+! COARRAY:   %[[VAL_15:.*]] = hlfir.designate %[[VAL_14]]   : (!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
+! COARRAY:   %[[VAL_16:.*]] = fir.embox %[[VAL_15]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>) -> !fir.box<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>, corank:1>
 ! COARRAY:   %c1_i64_0 = arith.constant 1 : i64
-! COARRAY:   mif.event_post %[[VAL_14]][%c1_i64_0] : (!fir.box<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>, corank:1>, i64) -> ()
+! COARRAY:   mif.event_post %[[VAL_16:.*]][%c1_i64_0] : (!fir.box<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>, corank:1>, i64) -> ()
 ! COARRAY: } else {
 ! COARRAY:   %[[VAL_15:.*]] = fir.load %[[VAL_9]]#0 : !fir.ref<i32>
 ! COARRAY:   %c1_i32 = arith.constant 1 : i32
 ! COARRAY:   %[[VAL_16:.*]] = arith.cmpi eq, %[[VAL_15]], %c1_i32 : i32
 ! COARRAY:   fir.if %[[VAL_16]] {
 ! COARRAY:     %c1_i32_0 = arith.constant 1 : i32
-! COARRAY:     mif.event_wait %[[VAL_7]]#0 until_count %c1_i32_0 : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, i32) -> ()
+! COARRAY:     %15 = fir.load %7#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>>
+! COARRAY:     %16 = fir.box_addr %15 : (!fir.box<!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, corank:1>) -> !fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>
+! COARRAY:     mif.event_wait %16 until_count %c1_i32_0 : (!fir.heap<!fir.type<_QM__fortran_builtinsT__builtin_event_type{{.*}}>>, i32) -> ()
 ! COARRAY:   }
 ! COARRAY: }
 ! COARRAY: return

@@ -554,7 +554,7 @@ def mif_AllocCoarrayOp
   }];
 
   let arguments = (ins StrAttr:$uniq_name,
-      Arg<fir_ReferenceType, "", [MemRead, MemWrite]>:$box,
+      Arg<AnyReferenceLike, "", [MemRead, MemWrite]>:$box,
       AnyBoxedArray:$lcobounds, AnyBoxedArray:$ucobounds,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
@@ -608,7 +608,7 @@ def mif_EventPostOp : mif_Op<"event_post", [AttrSizedOperandSegments,
         type EVENT_TYPE from the intrinsic module ISO_FORTRAN_ENV.
   }];
 
-  let arguments = (ins AnyRefOrBoxType:$event,
+  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$event,
       Variadic<AnyInteger>:$cosubscripts,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);
@@ -631,7 +631,7 @@ def mif_EventWaitOp : mif_Op<"event_wait", [AttrSizedOperandSegments,
         the given event variable to be waited for.
   }];
 
-  let arguments = (ins AnyRefOrBoxType:$event,
+  let arguments = (ins Arg<AnyRefOrBoxType, "", [MemRead]>:$event,
       Optional<AnyIntegerType>:$until_count,
       Arg<Optional<AnyReferenceLike>, "", [MemWrite]>:$stat,
       Arg<Optional<AnyRefOrBoxType>, "", [MemWrite]>:$errmsg);

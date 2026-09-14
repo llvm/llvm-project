@@ -58,7 +58,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   fir.store %c2_i64 to %31 : !fir.ref<i64>
   %32 = fir.embox %12 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   mif.alloc_coarray %27 lcobounds %30 ucobounds %32 {uniq_name = "_QFEa"} : (!fir.ref<i32>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %33 = fir.declare %27 {uniq_name = "_QFEa"} : (!fir.ref<i32>) -> !fir.ref<i32>
   %34 = fir.address_of(@_QFEa2) : !fir.ref<!fir.box<!fir.heap<i32>, corank:2>>
   %35 = fir.declare %34 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>) -> !fir.ref<!fir.box<!fir.heap<i32>, corank:2>>
@@ -76,7 +76,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   fir.store %c5_i64 to %42 : !fir.ref<i64>
   %43 = fir.embox %10 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
   mif.alloc_coarray %36 lcobounds %40 ucobounds %43 {uniq_name = "_QFEb"} : (!fir.ref<f32>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %44 = fir.declare %36 {uniq_name = "_QFEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
   %45 = fir.address_of(@_QFEb2) : !fir.ref<!fir.box<!fir.heap<f32>, corank:3>>
   %46 = fir.declare %45 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>) -> !fir.ref<!fir.box<!fir.heap<f32>, corank:3>>
@@ -86,7 +86,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   %49 = fir.embox %9 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   %50 = fir.embox %8 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
   mif.alloc_coarray %47 lcobounds %49 ucobounds %50 {uniq_name = "_QFEc"} : (!fir.ref<!fir.char<1,10>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %51 = fir.declare %47 typeparams %c10 {uniq_name = "_QFEc"} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.ref<!fir.char<1,10>>
   %52 = fir.address_of(@_QFEc2) : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>
   %53 = fir.declare %52 {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>
@@ -115,7 +115,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   %73 = fir.embox %7 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
   %74 = fir.embox %6 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   mif.alloc_coarray %35 lcobounds %73 ucobounds %74 errmsg %68 {uniq_name = "_QFEa2"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.box<!fir.array<2xi64>>, !fir.box<!fir.array<1xi64>>, !fir.box<none>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %75 = fir.absent !fir.box<none>
   %76 = fir.convert %c3_i32 : (i32) -> i64
   %77 = fir.convert %c4_i32 : (i32) -> i64
@@ -133,7 +133,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   %84 = fir.embox %5 : (!fir.ref<!fir.array<3xi64>>) -> !fir.box<!fir.array<3xi64>>
   %85 = fir.embox %4 : (!fir.ref<!fir.array<2xi64>>) -> !fir.box<!fir.array<2xi64>>
   mif.alloc_coarray %46 lcobounds %84 ucobounds %85 errmsg %75 {uniq_name = "_QFEb2"} : (!fir.ref<!fir.box<!fir.heap<f32>, corank:3>>, !fir.box<!fir.array<3xi64>>, !fir.box<!fir.array<2xi64>>, !fir.box<none>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %86 = fir.absent !fir.box<none>
   %87 = fir.convert %53 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>) -> !fir.ref<!fir.box<none>>
   %88 = fir.convert %c100_i32 : (i32) -> i64
@@ -147,7 +147,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   %93 = fir.embox %3 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   %94 = fir.embox %2 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
   mif.alloc_coarray %53 lcobounds %93 ucobounds %94 errmsg %86 {uniq_name = "_QFEc2"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %95 = fir.absent !fir.box<none>
   %96 = fir.field_index z, !fir.type<_QFTmy_type{x:i32,y:!fir.box<!fir.heap<!fir.array<?xi32>>>,z:!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>}>
   %97 = fir.coordinate_of %55, z : (!fir.ref<!fir.type<_QFTmy_type{x:i32,y:!fir.box<!fir.heap<!fir.array<?xi32>>>,z:!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>}>>) -> !fir.ref<!fir.type<_QFTmy_type2{co:!fir.box<!fir.heap<i32>, corank:1>}>>
@@ -158,7 +158,7 @@ func.func @_QQmain() attributes {fir.bindc_name = "ALLOC_TEST"} {
   %101 = fir.embox %1 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   %102 = fir.embox %0 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
   mif.alloc_coarray %99 lcobounds %101 ucobounds %102 errmsg %95 {uniq_name = "_QFEd.z.co"} : (!fir.ref<!fir.box<!fir.heap<i32>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %103 = fir.absent !fir.box<none>
   %104 = fir.absent !fir.ref<i32>
   mif.dealloc_coarray %35 stat %104 errmsg %103 : (!fir.ref<!fir.box<!fir.heap<i32>, corank:2>>, !fir.ref<i32>, !fir.box<none>) -> ()
@@ -215,7 +215,7 @@ func.func @_QPtest_alloc2() {
   %20 = fir.embox %4 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   %21 = fir.embox %3 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
   mif.alloc_coarray %9 lcobounds %20 ucobounds %21 errmsg %16 {uniq_name = "_QFtest_alloc2Ea"} : (!fir.ref<!fir.class<!fir.heap<none>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.box<none>) -> ()
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   %22 = fir.absent !fir.box<none>
   %23 = fir.convert %13 : (!fir.ref<!fir.class<!fir.heap<none>, corank:1>>) -> !fir.ref<!fir.box<none>>
   fir.call @_FortranAAllocatableInitIntrinsicForAllocate(%23, %c2_i32, %c4_i32, %c0_i32, %c0_i32) fastmath<contract> : (!fir.ref<!fir.box<none>>, i32, i32, i32, i32) -> ()
@@ -224,7 +224,7 @@ func.func @_QPtest_alloc2() {
   fir.store %24 to %25 : !fir.ref<i64>
   %26 = fir.embox %1 : (!fir.ref<!fir.array<1xi64>>) -> !fir.box<!fir.array<1xi64>>
   %27 = fir.embox %0 : (!fir.ref<!fir.array<0xi64>>) -> !fir.box<!fir.array<0xi64>>
-// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ptr<none>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
+// CHECK: fir.call @_QMprifPprif_allocate_coarray({{.*}}) : (!fir.box<!fir.array<?xi64>>, !fir.box<!fir.array<?xi64>>, !fir.ref<i64>, !fir.ref<none>, !fir.ref<none>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.ref<i32>, !fir.box<!fir.char<1,?>>, !fir.box<!fir.char<1,?>>) -> ()
   mif.alloc_coarray %13 lcobounds %26 ucobounds %27 stat %2 errmsg %22 {uniq_name = "_QFtest_alloc2Eb"} : (!fir.ref<!fir.class<!fir.heap<none>, corank:1>>, !fir.box<!fir.array<1xi64>>, !fir.box<!fir.array<0xi64>>, !fir.ref<i32>, !fir.box<none>) -> ()
   %28 = fir.convert %2 : (!fir.ref<i32>) -> i32
   fir.store %28 to %15 : !fir.ref<i32>
