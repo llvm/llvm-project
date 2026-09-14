@@ -14,6 +14,7 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
@@ -1998,6 +1999,21 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
           simplifyAndSetOp);
       if (V)
         return *V;
+
+      // Trivially vectorizable intrinsics operate elementwise: each result lane
+      // uses only the matching lane of the (vector) operands, so the demand
+      // passes through unchanged to every vector operand.
+      Intrinsic::ID IID = II->getIntrinsicID();
+      if (isTriviallyVectorizable(IID)) {
+        for (Use &Arg : II->args()) {
+          unsigned OpNo = Arg.getOperandNo();
+          // Scalar operands do not carry per-lane demand.
+          if (isVectorIntrinsicWithScalarOpAtArg(IID, OpNo, /*TTI=*/nullptr))
+            continue;
+          APInt OpPoisonElts(VWidth, 0);
+          simplifyAndSetOp(II, OpNo, DemandedElts, OpPoisonElts);
+        }
+      }
       break;
     }
     } // switch on IntrinsicID
