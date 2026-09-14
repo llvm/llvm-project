@@ -276,6 +276,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* llvm-offload-binary can now compress packaged binaries using zstd or zlib.
+
 * llvm-mca no longer defaults -mcpu to "native"
 
 * llvm-rc now supports `/showIncludes` to report header and resource-file
