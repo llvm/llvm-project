@@ -253,16 +253,20 @@ void ReOp::getCanonicalizationPatterns(RewritePatternSet &results,
 OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   // complex.add(complex.sub(a, b), b) -> a
   // complex.add(b, complex.sub(a, b)) -> a
-  // The intermediate result is rounded, so this needs `reassoc`, and
-  // (-0.0 - b) + b is +0.0, so it also needs `nsz`.
+  // The intermediate result is rounded, so both ops need `reassoc`, and
+  // (-0.0 - b) + b is +0.0, so the add also needs `nsz`.
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc |
                                                    arith::FastMathFlags::nsz)) {
     if (auto sub = getLhs().getDefiningOp<SubOp>())
-      if (getRhs() == sub.getRhs())
+      if (getRhs() == sub.getRhs() &&
+          arith::bitEnumContainsAll(sub.getFastmath(),
+                                    arith::FastMathFlags::reassoc))
         return sub.getLhs();
 
     if (auto sub = getRhs().getDefiningOp<SubOp>())
-      if (getLhs() == sub.getRhs())
+      if (getLhs() == sub.getRhs() &&
+          arith::bitEnumContainsAll(sub.getFastmath(),
+                                    arith::FastMathFlags::reassoc))
         return sub.getLhs();
   }
 
@@ -284,12 +288,14 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   // complex.sub(complex.add(a, b), b) -> a
-  // The intermediate result is rounded, so this needs `reassoc`, and
-  // (-0.0 + b) - b is +0.0, so it also needs `nsz`.
+  // The intermediate result is rounded, so both ops need `reassoc`, and
+  // (-0.0 + b) - b is +0.0, so the sub also needs `nsz`.
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc |
                                                    arith::FastMathFlags::nsz))
     if (auto add = getLhs().getDefiningOp<AddOp>())
-      if (getRhs() == add.getRhs())
+      if (getRhs() == add.getRhs() &&
+          arith::bitEnumContainsAll(add.getFastmath(),
+                                    arith::FastMathFlags::reassoc))
         return add.getLhs();
 
   // complex.sub(a, complex.constant<0.0, 0.0>) -> a
@@ -322,11 +328,16 @@ OpFoldResult NegOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult ExpOp::fold(FoldAdaptor adaptor) {
   // complex.exp(complex.log(a)) -> a
-  // exp(log(a)) is only an approximation of a, and log(a) has no finite
-  // result for a zero or non-finite a, so this needs `reassoc`.
+  // exp(log(a)) is only an approximation of a, so both ops need `reassoc`.
+  // log(a) is not finite for a zero or non-finite a, and its result depends
+  // on the sign of a zero, so the log also needs `nnan`, `ninf` and `nsz`.
   if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::reassoc))
     if (auto logOp = getOperand().getDefiningOp<LogOp>())
-      return logOp.getOperand();
+      if (arith::bitEnumContainsAll(
+              logOp.getFastmath(),
+              arith::FastMathFlags::reassoc | arith::FastMathFlags::nnan |
+                  arith::FastMathFlags::ninf | arith::FastMathFlags::nsz))
+        return logOp.getOperand();
 
   return {};
 }
