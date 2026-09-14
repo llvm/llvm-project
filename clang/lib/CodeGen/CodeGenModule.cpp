@@ -411,6 +411,9 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     Opts.IsILP32 = T.getArch() == llvm::Triple::aarch64_32;
     Opts.IsMicrosoftCXXABI = getTarget().getCXXABI().isMicrosoft();
 
+    Opts.CompatInfo.IsMatrixHA =
+        getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver23;
+
     TheLLVMABITargetInfo = llvm::abi::createAArch64TargetInfo(TB, Opts);
     return *TheLLVMABITargetInfo;
   }
@@ -427,7 +430,7 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
         : ABI == "avx"  ? llvm::abi::X86AVXABILevel::AVX
                         : llvm::abi::X86AVXABILevel::None;
 
-    llvm::abi::ABICompatInfo CompatInfo;
+    llvm::abi::X86ABICompatInfo CompatInfo;
     LangOptions::ClangABI Compat = getLangOpts().getClangABICompat();
     CompatInfo.ClassifyIntegerMMXAsSSE =
         Compat > LangOptions::ClangABI::Ver3_8 && !T.isOSDarwin() &&

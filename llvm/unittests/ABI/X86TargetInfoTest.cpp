@@ -22,7 +22,6 @@ namespace {
 using namespace llvm;
 
 using ABIType = llvm::abi::Type;
-using llvm::abi::ABICompatInfo;
 using llvm::abi::ArgInfo;
 using llvm::abi::createX86_64TargetInfo;
 using llvm::abi::FieldInfo;
@@ -31,6 +30,7 @@ using llvm::abi::RecordFlags;
 using llvm::abi::StructPacking;
 using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
+using llvm::abi::X86ABICompatInfo;
 using llvm::abi::X86AVXABILevel;
 
 class X86TargetInfoTest : public ::testing::Test {
@@ -64,7 +64,8 @@ protected:
   std::unique_ptr<TargetInfo> target() const {
     return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB),
                                   X86AVXABILevel::None,
-                                  /*Has64BitPointers=*/true, ABICompatInfo());
+                                  /*Has64BitPointers=*/true,
+                                  X86ABICompatInfo());
   }
 
   const ABIType *unionOf(llvm::ArrayRef<FieldInfo> Fields, uint64_t SizeInBits,

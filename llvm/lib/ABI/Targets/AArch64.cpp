@@ -24,6 +24,10 @@ public:
   AArch64TargetInfo(TypeBuilder &TB, const AArch64ABIOptions &Opts)
       : TargetInfo(TB), Opts(Opts) {}
 
+  const ABICompatInfo &getABICompatInfo() const override {
+    return Opts.CompatInfo;
+  }
+
   void computeInfo(FunctionInfo &FI) const override {
     if (!maybeCommonClassifyReturnType(FI))
       FI.getReturnInfo() =
