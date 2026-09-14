@@ -380,8 +380,8 @@ public:
   SuperHFrameFixupPass() : MachineFunctionPass(ID) {}
 
   // Fixes up JSR instructions so that their return values don't 
-  // get clobbered by the implicit stores done by stack loads
-  // 
+  // get clobbered by the implicit uses of R0 and R1 done by stack 
+  // loads.
   bool fixupJSR(Block MBB, BlockIt MBII) {
     LLVM_DEBUG(dbgs() << " - Fixing up JSR instruction...\n");
     MachineInstr *MP = &*std::next(MBII);
