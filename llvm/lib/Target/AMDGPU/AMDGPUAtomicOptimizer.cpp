@@ -183,6 +183,12 @@ static bool isLegalCrossLaneType(Type *Ty) {
 }
 
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
+  // The uniform-value path multiplies by the lane count and reconstructs
+  // results with scalar casts, so it only handles scalar types. The
+  // divergent-value path rejects vectors in isLegalCrossLaneType.
+  if (I.getType()->isVectorTy())
+    return;
+
   // Early exit for unhandled address space atomic instructions.
   switch (I.getPointerAddressSpace()) {
   default:
