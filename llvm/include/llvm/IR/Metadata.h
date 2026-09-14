@@ -225,6 +225,8 @@ protected:
   // restructure the DbgVariableRecord class then we can template parameterize
   // this array size.
   std::array<Metadata *, 3> DebugValues;
+  // The slot holding the DIAssignID of a dbg_assign record.
+  static constexpr size_t AssignIDIdx = 2;
 
   ArrayRef<Metadata *> getDebugValues() const { return DebugValues; }
 

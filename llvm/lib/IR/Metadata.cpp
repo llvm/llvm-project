@@ -179,7 +179,7 @@ void DebugValueUser::trackDebugValue(size_t Idx) {
   if (!MD)
     return;
   MetadataTracking::track(&MD, *MD, *this);
-  if (auto *ID = Idx == 2 ? dyn_cast<DIAssignID>(MD) : nullptr)
+  if (auto *ID = Idx == AssignIDIdx ? dyn_cast<DIAssignID>(MD) : nullptr)
     ID->Records.push_back(getUser());
 }
 
@@ -194,7 +194,7 @@ void DebugValueUser::untrackDebugValue(size_t Idx) {
   if (!MD)
     return;
   MetadataTracking::untrack(MD);
-  if (auto *ID = Idx == 2 ? dyn_cast<DIAssignID>(MD) : nullptr)
+  if (auto *ID = Idx == AssignIDIdx ? dyn_cast<DIAssignID>(MD) : nullptr)
     ID->Records.erase(llvm::find(ID->Records, getUser()));
 }
 
@@ -208,7 +208,7 @@ void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
   for (const auto &[MD, XMD] : zip(DebugValues, X.DebugValues))
     if (XMD)
       MetadataTracking::retrack(XMD, MD);
-  if (auto *ID = dyn_cast_or_null<DIAssignID>(DebugValues[2]))
+  if (auto *ID = dyn_cast_or_null<DIAssignID>(DebugValues[AssignIDIdx]))
     *llvm::find(ID->Records, X.getUser()) = getUser();
   X.DebugValues.fill(nullptr);
 }
