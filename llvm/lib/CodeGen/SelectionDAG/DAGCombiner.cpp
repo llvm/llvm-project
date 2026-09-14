@@ -20546,8 +20546,8 @@ static SDValue foldFPToIntToFP(SDNode *N, const SDLoc &DL, SelectionDAG &DAG,
   return Result;
 }
 
-// Narrow an integer source that fits in half its width when the target finds
-// the wide type undesirable for the conversion.
+// Narrow an integer source to the smallest legal type that holds its value
+// when the target finds the wide type undesirable for the conversion.
 static SDValue narrowIntToFPSource(SDNode *N, const SDLoc &DL,
                                    SelectionDAG &DAG,
                                    const TargetLowering &TLI) {
@@ -20558,19 +20558,20 @@ static SDValue narrowIntToFPSource(SDNode *N, const SDLoc &DL,
       TLI.isTypeDesirableForOp(Opc, OpVT))
     return SDValue();
 
-  EVT HalfVT = OpVT.getHalfSizedIntegerVT(*DAG.getContext());
-  if (!TLI.isTypeDesirableForOp(Opc, HalfVT) ||
-      !TLI.isOperationLegalOrCustom(Opc, HalfVT))
-    return SDValue();
-
   unsigned SrcBits = Opc == ISD::SINT_TO_FP
                          ? DAG.ComputeMaxSignificantBits(N0)
                          : DAG.computeKnownBits(N0).countMaxActiveBits();
-  if (SrcBits > HalfVT.getSizeInBits())
-    return SDValue();
-
-  return DAG.getNode(Opc, DL, N->getValueType(0),
-                     DAG.getNode(ISD::TRUNCATE, DL, HalfVT, N0));
+  for (MVT NarrowVT : MVT::integer_valuetypes()) {
+    if (NarrowVT.getSizeInBits() >= OpVT.getSizeInBits())
+      break;
+    if (NarrowVT.getSizeInBits() < SrcBits || !TLI.isTypeLegal(NarrowVT) ||
+        !TLI.isTypeDesirableForOp(Opc, NarrowVT) ||
+        !TLI.isOperationLegalOrCustom(Opc, NarrowVT))
+      continue;
+    return DAG.getNode(Opc, DL, N->getValueType(0),
+                       DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0));
+  }
+  return SDValue();
 }
 
 SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
