@@ -91,6 +91,10 @@ bool containsIncompleteClassType(QualType Ty);
 /// pieces from \p Type.
 unsigned extractPBaseFlags(const ASTContext &Ctx, QualType &Type);
 
+/// Returns whether the type information for the given type exists in the
+/// standard library.
+bool isStandardLibraryRTTIDescriptor(QualType Ty);
+
 } // namespace clang::CodeGenUtils
 
 #endif // LLVM_CLANG_CODEGENUTILS_ITANIUMCXXABIUTILS_H

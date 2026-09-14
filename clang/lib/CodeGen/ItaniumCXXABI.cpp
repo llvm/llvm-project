@@ -3620,156 +3620,6 @@ ItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(QualType Ty) {
   return GV;
 }
 
-/// TypeInfoIsInStandardLibrary - Given a builtin type, returns whether the type
-/// info for that type is defined in the standard library.
-static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
-  // Itanium C++ ABI 2.9.2:
-  //   Basic type information (e.g. for "int", "bool", etc.) will be kept in
-  //   the run-time support library. Specifically, the run-time support
-  //   library should contain type_info objects for the types X, X* and
-  //   X const*, for every X in: void, std::nullptr_t, bool, wchar_t, char,
-  //   unsigned char, signed char, short, unsigned short, int, unsigned int,
-  //   long, unsigned long, long long, unsigned long long, float, double,
-  //   long double, char16_t, char32_t, and the IEEE 754r decimal and
-  //   half-precision floating point types.
-  //
-  // GCC also emits RTTI for __int128.
-  // FIXME: We do not emit RTTI information for decimal types here.
-
-  // Types added here must also be added to EmitFundamentalRTTIDescriptors.
-  switch (Ty->getKind()) {
-    case BuiltinType::Void:
-    case BuiltinType::NullPtr:
-    case BuiltinType::Bool:
-    case BuiltinType::WChar_S:
-    case BuiltinType::WChar_U:
-    case BuiltinType::Char_U:
-    case BuiltinType::Char_S:
-    case BuiltinType::UChar:
-    case BuiltinType::SChar:
-    case BuiltinType::Short:
-    case BuiltinType::UShort:
-    case BuiltinType::Int:
-    case BuiltinType::UInt:
-    case BuiltinType::Long:
-    case BuiltinType::ULong:
-    case BuiltinType::LongLong:
-    case BuiltinType::ULongLong:
-    case BuiltinType::Half:
-    case BuiltinType::Float:
-    case BuiltinType::Double:
-    case BuiltinType::LongDouble:
-    case BuiltinType::Float16:
-    case BuiltinType::Float128:
-    case BuiltinType::Ibm128:
-    case BuiltinType::Char8:
-    case BuiltinType::Char16:
-    case BuiltinType::Char32:
-    case BuiltinType::Int128:
-    case BuiltinType::UInt128:
-      return true;
-
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
-    case BuiltinType::Id:
-#include "clang/Basic/OpenCLImageTypes.def"
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
-    case BuiltinType::Id:
-#include "clang/Basic/OpenCLExtensionTypes.def"
-    case BuiltinType::OCLSampler:
-    case BuiltinType::OCLEvent:
-    case BuiltinType::OCLClkEvent:
-    case BuiltinType::OCLQueue:
-    case BuiltinType::OCLReserveID:
-#define SVE_TYPE(Name, Id, SingletonId) \
-    case BuiltinType::Id:
-#include "clang/Basic/AArch64ACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-    case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define WASM_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/WebAssemblyReferenceTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/HLSLIntangibleTypes.def"
-#define SPIRV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/SPIRVTypes.def"
-    case BuiltinType::ShortAccum:
-    case BuiltinType::Accum:
-    case BuiltinType::LongAccum:
-    case BuiltinType::UShortAccum:
-    case BuiltinType::UAccum:
-    case BuiltinType::ULongAccum:
-    case BuiltinType::ShortFract:
-    case BuiltinType::Fract:
-    case BuiltinType::LongFract:
-    case BuiltinType::UShortFract:
-    case BuiltinType::UFract:
-    case BuiltinType::ULongFract:
-    case BuiltinType::SatShortAccum:
-    case BuiltinType::SatAccum:
-    case BuiltinType::SatLongAccum:
-    case BuiltinType::SatUShortAccum:
-    case BuiltinType::SatUAccum:
-    case BuiltinType::SatULongAccum:
-    case BuiltinType::SatShortFract:
-    case BuiltinType::SatFract:
-    case BuiltinType::SatLongFract:
-    case BuiltinType::SatUShortFract:
-    case BuiltinType::SatUFract:
-    case BuiltinType::SatULongFract:
-    case BuiltinType::BFloat16:
-      return false;
-
-    case BuiltinType::Dependent:
-#define BUILTIN_TYPE(Id, SingletonId)
-#define PLACEHOLDER_TYPE(Id, SingletonId) \
-    case BuiltinType::Id:
-#include "clang/AST/BuiltinTypes.def"
-      llvm_unreachable("asking for RRTI for a placeholder type!");
-
-    case BuiltinType::ObjCId:
-    case BuiltinType::ObjCClass:
-    case BuiltinType::ObjCSel:
-      llvm_unreachable("FIXME: Objective-C types are unsupported!");
-  }
-
-  llvm_unreachable("Invalid BuiltinType Kind!");
-}
-
-static bool TypeInfoIsInStandardLibrary(const PointerType *PointerTy) {
-  QualType PointeeTy = PointerTy->getPointeeType();
-  const BuiltinType *BuiltinTy = dyn_cast<BuiltinType>(PointeeTy);
-  if (!BuiltinTy)
-    return false;
-
-  // Check the qualifiers.
-  Qualifiers Quals = PointeeTy.getQualifiers();
-  Quals.removeConst();
-
-  if (!Quals.empty())
-    return false;
-
-  return TypeInfoIsInStandardLibrary(BuiltinTy);
-}
-
-/// IsStandardLibraryRTTIDescriptor - Returns whether the type
-/// information for the given type exists in the standard library.
-static bool IsStandardLibraryRTTIDescriptor(QualType Ty) {
-  // Type info for builtin types is defined in the standard library.
-  if (const BuiltinType *BuiltinTy = dyn_cast<BuiltinType>(Ty))
-    return TypeInfoIsInStandardLibrary(BuiltinTy);
-
-  // Type info for some pointer types to builtin types is defined in the
-  // standard library.
-  if (const PointerType *PointerTy = dyn_cast<PointerType>(Ty))
-    return TypeInfoIsInStandardLibrary(PointerTy);
-
-  return false;
-}
-
 /// ShouldUseExternalRTTIDescriptor - Returns whether the type information for
 /// the given type exists somewhere else, and that we should not emit the type
 /// information in this translation unit.  Assumes that it is not a
@@ -4047,7 +3897,7 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(QualType Ty) {
   }
 
   // Check if there is already an external RTTI descriptor for this type.
-  if (IsStandardLibraryRTTIDescriptor(Ty) ||
+  if (CodeGenUtils::isStandardLibraryRTTIDescriptor(Ty) ||
       ShouldUseExternalRTTIDescriptor(CGM, Ty))
     return GetAddrOfExternalRTTIDescriptor(Ty);
 
@@ -4457,7 +4307,7 @@ llvm::Constant *ItaniumCXXABI::getAddrOfRTTIDescriptor(QualType Ty) {
 }
 
 void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
-  // Types added here must also be added to TypeInfoIsInStandardLibrary.
+  // Types added here must also be added to typeInfoIsInStandardLibrary.
   QualType FundamentalTypes[] = {
       getContext().VoidTy,             getContext().NullPtrTy,
       getContext().BoolTy,             getContext().WCharTy,
