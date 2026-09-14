@@ -11,8 +11,8 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_knownbits(ptr addrs
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:128
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[2:3] offset:128
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -22,8 +22,8 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_knownbits(ptr addrs
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v0, -1, 0
-; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:128 scale_offset
+; GFX1250-NEXT:    v_mbcnt_lo_u32_b32 v2, -1, 0
+; GFX1250-NEXT:    global_load_b64 v[0:1], v2, s[2:3] offset:128 scale_offset
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-NEXT:    ; return to shader part epilog
   %v = tail call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
@@ -39,8 +39,8 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_knownbits(ptr addrs
 define amdgpu_ps <2 x float> @global_load_scale_add_foldable_nowrap(ptr addrspace(1) inreg %sbase, i32 %v) {
 ; GFX12-LABEL: global_load_scale_add_foldable_nowrap:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3] offset:128
+; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[2:3] offset:128
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -63,9 +63,9 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_nowrap(ptr addrspac
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off offset:128
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v2, v0
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v3, vcc_lo
+; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v[4:5], off offset:128
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %mul = shl nsw nuw i32 %v, 3
@@ -80,8 +80,8 @@ define amdgpu_ps <2 x float> @global_load_scale_add_foldable_nowrap(ptr addrspac
 define amdgpu_ps <2 x float> @global_load_scale_add_unfoldable(ptr addrspace(1) inreg %sbase, i32 %v) {
 ; GFX12-LABEL: global_load_scale_add_unfoldable:
 ; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_lshl_add_u32 v0, v0, 3, 0x80
-; GFX12-NEXT:    global_load_b64 v[0:1], v0, s[2:3]
+; GFX12-NEXT:    v_lshl_add_u32 v2, v0, 3, 0x80
+; GFX12-NEXT:    global_load_b64 v[0:1], v2, s[2:3]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
@@ -94,8 +94,8 @@ define amdgpu_ps <2 x float> @global_load_scale_add_unfoldable(ptr addrspace(1) 
 ; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1250-SDAG-NEXT:    v_lshl_add_u32 v0, v0, 3, 0x80
 ; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], s[2:3], v[0:1]
-; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[2:3], s[2:3], v[0:1]
+; GFX1250-SDAG-NEXT:    global_load_b64 v[0:1], v[2:3], off
 ; GFX1250-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -108,9 +108,9 @@ define amdgpu_ps <2 x float> @global_load_scale_add_unfoldable(ptr addrspace(1) 
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_lshl_add_u32 v0, v0, 3, 0x80
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v3, vcc_lo
-; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v[0:1], off
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v4, vcc_lo, v2, v0
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v5, null, 0, v3, vcc_lo
+; GFX1250-GISEL-NEXT:    global_load_b64 v[0:1], v[4:5], off
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
   %mul = shl i32 %v, 3

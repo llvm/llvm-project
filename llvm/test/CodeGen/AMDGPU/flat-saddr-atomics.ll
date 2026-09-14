@@ -10445,11 +10445,11 @@ define amdgpu_ps float @flat_cmpxchg_saddr_i32_rtn(ptr inreg %sbase, i32 %voffse
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v5, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v4, v0
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v5, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    flat_atomic_cmpswap_b32 v0, v[6:7], v[2:3] th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
@@ -10515,11 +10515,11 @@ define amdgpu_ps float @flat_cmpxchg_saddr_i32_rtn_neg128(ptr inreg %sbase, i32 
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[2:3]
 ; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v3, v1
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v0
-; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v5, vcc_lo
+; GFX1250-GISEL-NEXT:    v_add_co_u32 v6, vcc_lo, v4, v0
+; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v7, null, 0, v5, vcc_lo
 ; GFX1250-GISEL-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
-; GFX1250-GISEL-NEXT:    flat_atomic_cmpswap_b32 v0, v[0:1], v[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    flat_atomic_cmpswap_b32 v0, v[6:7], v[2:3] offset:-128 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-GISEL-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX1250-GISEL-NEXT:    s_wait_loadcnt 0x0
