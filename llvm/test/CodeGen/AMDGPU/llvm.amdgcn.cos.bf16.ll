@@ -4,9 +4,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,REAL16 %s
 ; xUN: llc -global-isel=1 -mtriple=amdgpu12.50 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GCN,REAL16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-FAKE16 %s
-; xUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-REAL16 %s
-; xUN: llc -global-isel=1 -mtriple=amdgpu13.10 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX13,GFX13-REAL16 %s
 
 ; FIXME: GlobalISel does not work with bf16
 
