@@ -4933,6 +4933,7 @@ bool AArch64AsmParser::parseKeywordOperand(OperandVector &Operands) {
                 .Case("ph", "ph")
                 .Case("r", "r")
                 .Case("sm", "sm")
+                .Case("stshstrm", "stshstrm")
                 .Case("strm", "strm")
                 .Case("za", "za")
                 .Default(Keyword);
@@ -5046,7 +5047,8 @@ bool AArch64AsmParser::parseOperand(OperandVector &Operands, bool isCondCode,
     // operand as an identifier.
     if (Mnemonic == "brb" || Mnemonic == "smstart" || Mnemonic == "smstop" ||
         Mnemonic == "gcsb" || Mnemonic == "bti" || Mnemonic == "stshh" ||
-        Mnemonic == "psb" || Mnemonic == "tsb" || Mnemonic == "shuh")
+        Mnemonic == "psb" || Mnemonic == "tsb" || Mnemonic == "shuh" ||
+        Mnemonic == "srls")
       return parseKeywordOperand(Operands);
 
     // This was not a register so parse other operands that start with an
