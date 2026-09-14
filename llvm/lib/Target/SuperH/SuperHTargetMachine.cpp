@@ -49,7 +49,7 @@ public:
     : TargetPassConfig(TM, PM) {}
 
   bool addInstSelector() override;
-  void addPreSched2() override;
+  void addPostRegAlloc() override;
   void addPreEmitPass2() override;
   SuperHTargetMachine &getSuperHTargetMachine() const {
     return getTM<SuperHTargetMachine>();
@@ -61,7 +61,8 @@ bool SuperHPassConfig::addInstSelector() {
   return false;
 }
 
-void SuperHPassConfig::addPreSched2() {
+void SuperHPassConfig::addPostRegAlloc() {
+  addPass(createSuperHFrameFixupPass());
 }
 
 void SuperHPassConfig::addPreEmitPass2() {

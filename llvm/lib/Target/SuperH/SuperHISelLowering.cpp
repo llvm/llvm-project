@@ -21,6 +21,7 @@
 #include "SuperHRegisterInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -42,20 +43,6 @@ using namespace llvm;
 
 #define DEBUG_FN_PRINT() LLVM_DEBUG(dbgs() << " - " << __PRETTY_FUNCTION__ << "\n");
 
-static bool RetCC_SuperH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
-                               CCValAssign::LocInfo &LocInfo,
-                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
-  assert (ArgFlags.isSRet());
-
-  // Assign SRet argument.
-  State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
-                                         0,
-                                         LocVT, LocInfo));
-  return true;
-}
-
-
-#include "SuperHGenCallingConv.inc"
 
 SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
                                            const SuperHSubtarget &STI)
@@ -129,6 +116,31 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
   setMinStackArgumentAlignment(Align(4));
 }
 
+
+
+
+//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+//                            CALLING CONVENTIONS
+//===----------------------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
+
+static bool RetCC_SH_SRet(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
+                               CCValAssign::LocInfo &LocInfo,
+                               ISD::ArgFlagsTy &ArgFlags, CCState &State) {
+  assert (ArgFlags.isSRet());
+
+  // Assign SRet argument.
+  State.addLoc(CCValAssign::getCustomMem(ValNo, ValVT,
+                                         0,
+                                         LocVT, LocInfo));
+  return true;
+}
+
+#include "SuperHGenCallingConv.inc"
+
+
+
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 //                                LOWERING
@@ -143,8 +155,89 @@ SuperHTargetLowering::SuperHTargetLowering(const TargetMachine &TM,
 //                        CONDITIONAL BRANCH LOWERING
 //===----------------------------------------------------------------------===//
 SDValue SuperHTargetLowering::getSHCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                                       SelectionDAG &DAG, SDLoc DL) const {
-  return DAG.getNode(SHISD::CMP, DL, MVT::Glue, LHS, RHS, DAG.getCondCode(CC));
+                                       SDValue &OutCC, SelectionDAG &DAG, 
+                                       SDLoc DL) const {
+  SDValue InCC;
+  SHCC::CondCode SHcc = SHCC::COND_INVALID;
+  SHCC::CondCode SHocc = SHCC::COND_T;
+
+  switch(CC) {
+  default: break;
+  case ISD::SETEQ: {
+    SHcc = SHCC::COND_EQ;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETNE: {
+    SHcc = SHCC::COND_EQ;
+    SHocc = SHCC::COND_F;
+    break;
+  }
+  case ISD::SETLT: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
+    SHcc = SHCC::COND_GE;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETLE: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
+    SHcc = SHCC::COND_GT;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETGT: {
+    if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
+      switch (C->getSExtValue()) {
+      case -1: {
+        SHcc = SHCC::COND_PZ;
+        SHocc = SHCC::COND_T;
+        break;
+      }
+      case 0: {
+        SHcc = SHCC::COND_PL;
+        SHocc = SHCC::COND_T;
+        break;
+      }
+      }
+    }
+    break;
+  }
+  case ISD::SETGE: {
+    SHcc = SHCC::COND_GE;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETUGT: {
+    SHcc = SHCC::COND_HI;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETUGE: {
+    SHcc = SHCC::COND_HS;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETULT: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
+    SHcc = SHCC::COND_HS;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  case ISD::SETULE: {
+    // Swap operands and reverse the branching condition.
+    std::swap(LHS, RHS);
+    SHcc = SHCC::COND_HI;
+    SHocc = SHCC::COND_T;
+    break;
+  }
+  }
+
+  InCC = DAG.getTargetConstant(SHcc, DL, MVT::i8);
+  OutCC = DAG.getTargetConstant(SHocc, DL, MVT::i8);
+  return DAG.getNode(SHISD::CMP, DL, MVT::Glue, LHS, RHS, InCC);
 }
 
 SDValue SuperHTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
@@ -155,8 +248,8 @@ SDValue SuperHTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) cons
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
   SDLoc DL(Op);
 
-  SDValue Cmp = getSHCmp(LHS, RHS, CC, DAG, DL);
-  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i8);
+  SDValue TargetCC;
+  SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
 
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
   return DAG.getNode(SHISD::SELECT_CC, DL, Op.getValueType(), Ops);
@@ -168,12 +261,13 @@ SDValue SuperHTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
   SDLoc DL(Op);
 
-  SDValue Cmp = getSHCmp(LHS, RHS, CC, DAG, DL);
-  SDValue TargetCC = DAG.getConstant(CC, DL, MVT::i8);
+  SDValue TargetCC;
+  SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
 
   SDValue TrueV = DAG.getConstant(1, DL, Op.getValueType());
   SDValue FalseV = DAG.getConstant(0, DL, Op.getValueType());
   SDValue Ops[] = {TrueV, FalseV, TargetCC, Cmp};
+
   return DAG.getNode(SHISD::SELECT_CC, DL, Op.getValueType(), Ops);
 }
 
@@ -187,10 +281,11 @@ SDValue SuperHTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Dest = Op.getOperand(4);
   SDLoc DL(Op);
 
-  SDValue Cmp = getSHCmp(LHS, RHS, CC, DAG, DL);
-  SDValue TargetCC = DAG.getCondCode(CC);
+  SDValue TargetCC;
+  SDValue Cmp = getSHCmp(LHS, RHS, CC, TargetCC, DAG, DL);
+  SDValue Ops[] = {Chain, Dest, TargetCC, Cmp};
 
-  return DAG.getNode(SHISD::BRCOND, DL, MVT::Other, Chain, Dest, TargetCC, Cmp);
+  return DAG.getNode(SHISD::BRCOND, DL, MVT::Other, Ops);
 }
 
 
@@ -314,6 +409,7 @@ SDValue SuperHTargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) c
 //                             ARGUMENT LOWERING
 //===----------------------------------------------------------------------===//
 
+
 SDValue SuperHTargetLowering::LowerFormalArguments(SDValue Chain,
                        CallingConv::ID CallConv, bool IsVarArg,
                        const SmallVectorImpl<ISD::InputArg> &Ins,
@@ -362,16 +458,16 @@ SDValue SuperHTargetLowering::LowerFormalArguments(SDValue Chain,
       case CCValAssign::SExt:
         ArgValue = DAG.getNode(ISD::AssertSext, dl, RegVT, ArgValue,
                                DAG.getValueType(VA.getValVT()));
-        ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
         break;
       case CCValAssign::ZExt:
         ArgValue = DAG.getNode(ISD::AssertZext, dl, RegVT, ArgValue,
                                DAG.getValueType(VA.getValVT()));
-        ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
         break;
       }
 
-      InVals.push_back(ArgValue);
+      if (VA.isExtInLoc()) {
+        ArgValue = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), ArgValue);
+      }
     } else {
 
       // Only arguments passed on the stack should make it here.
@@ -385,9 +481,16 @@ SDValue SuperHTargetLowering::LowerFormalArguments(SDValue Chain,
       // Create the SelectionDAG nodes corresponding to a load
       // from this parameter.
       SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DL));
-      InVals.push_back(DAG.getLoad(LocVT, dl, Chain, FIN,
-                                   MachinePointerInfo::getFixedStack(MF, FI)));
+      ArgValue = DAG.getLoad(LocVT, dl, Chain, FIN, 
+                             MachinePointerInfo::getFixedStack(MF, FI));
     }
+
+    // If value is passed via pointer - do a load.
+    if (VA.getLocInfo() == CCValAssign::Indirect)
+      ArgValue =
+          DAG.getLoad(VA.getValVT(), dl, Chain, ArgValue, MachinePointerInfo());
+
+    InVals.push_back(ArgValue);
   }
 
   // TODO: Handle varargs.
@@ -494,6 +597,7 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
+  CCInfo.AnalyzeCallOperands(Outs, CC_SH);
 
   // Resolve the global value to jump to.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
@@ -501,7 +605,6 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     Callee = LowerExternalSymbol(SDValue(S, 0), DAG);
   }
-  CCInfo.AnalyzeCallOperands(Outs, CC_SH);
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
@@ -534,6 +637,16 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
     case CCValAssign::BCvt:
       Arg = DAG.getNode(ISD::BITCAST, DL, RegVT, Arg);
       break;
+    case CCValAssign::Indirect: {
+      // Store the argument.
+      SDValue SpillSlot = DAG.CreateStackTemporary(VA.getValVT());
+      int FI = cast<FrameIndexSDNode>(SpillSlot)->getIndex();
+      Chain = DAG.getStore(
+          Chain, DL, Arg, SpillSlot,
+          MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
+      Arg = SpillSlot;
+      break;
+    }
     }
 
     // Stop when we encounter a stack argument, we need to process them
@@ -566,7 +679,7 @@ SDValue SuperHTargetLowering::LowerCall(CallLoweringInfo &CLI, SmallVectorImpl<S
       SDValue PtrOff = DAG.getNode(
           ISD::ADD, DL, getPointerTy(DAG.getDataLayout()),
           DAG.getRegister(SH::R15, getPointerTy(DAG.getDataLayout())),
-          DAG.getIntPtrConstant(VA.getLocMemOffset() + 1, DL));
+          DAG.getIntPtrConstant(VA.getLocMemOffset() + 4, DL));
 
       MemOpChains.push_back(
           DAG.getStore(Chain, DL, Arg, PtrOff,
@@ -632,12 +745,32 @@ SDValue SuperHTargetLowering::LowerCallResult(
   CCInfo.AnalyzeCallResult(Ins, RetCC_SH);
 
   // Copy all of the result registers out of their specified physreg.
-  for (CCValAssign const &RVLoc : RVLocs) {
-    Chain = DAG.getCopyFromReg(Chain, dl, RVLoc.getLocReg(), RVLoc.getValVT(), InGlue)
-                .getValue(1);
-
+  for (CCValAssign const &VA : RVLocs) {
+    SDValue RV;
+    RV = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), VA.getValVT(), InGlue);
+    Chain = RV.getValue(1);
     InGlue = Chain.getValue(2);
-    InVals.push_back(Chain.getValue(0));
+
+    // The callee promoted the return value, so insert an Assert?ext SDNode so
+    // we won't promote the value again in this function.
+    switch (VA.getLocInfo()) {
+    case CCValAssign::SExt:
+      RV = DAG.getNode(ISD::AssertSext, dl, VA.getLocVT(), RV,
+                       DAG.getValueType(VA.getValVT()));
+      break;
+    case CCValAssign::ZExt:
+      RV = DAG.getNode(ISD::AssertZext, dl, VA.getLocVT(), RV,
+                       DAG.getValueType(VA.getValVT()));
+      break;
+    default:
+      break;
+    }
+
+    // Truncate the register down to the return value type.
+    if (VA.isExtInLoc())
+      RV = DAG.getNode(ISD::TRUNCATE, dl, VA.getValVT(), RV);
+
+    InVals.push_back(RV);
   }
 
   return Chain;
@@ -832,7 +965,7 @@ MachineBasicBlock *SuperHTargetLowering::insertSELECTCC(MachineInstr &MI,
 
   MachineOperand TrueV = MI.getOperand(0);
   MachineOperand FalseV = MI.getOperand(1);
-  ISD::CondCode CC = (ISD::CondCode)MI.getOperand(3).getImm();
+  SHCC::CondCode CC = (SHCC::CondCode)MI.getOperand(3).getImm();
 
   // Lower True-False selection
   if (TrueV.isImm() && FalseV.isImm()) {
@@ -883,7 +1016,7 @@ MachineBasicBlock *SuperHTargetLowering::insertSELECTCC(MachineInstr &MI,
                   std::next(MachineBasicBlock::iterator(MI)), MBB->end());
   trueMBB->transferSuccessorsAndUpdatePHIs(MBB);
 
-  BuildMI(MBB, DL, TII.getBrCond(CC)).addMBB(trueMBB);
+  BuildMI(MBB, DL, TII.getBrCond(CC, false)).addMBB(trueMBB);
   BuildMI(MBB, DL, TII.get(SH::BRA)).addMBB(falseMBB);
   MBB->addSuccessor(falseMBB);
   MBB->addSuccessor(trueMBB);

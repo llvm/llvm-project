@@ -50,8 +50,8 @@ def SHSDT_CallSeqEnd    : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 def SHSDT_Call          : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 def SHSDT_PICAdd        : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>,
                                           SDTCisPtrTy<1>, SDTCisVT<2, i32>]>;
-def SHSDT_Brcond        : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, OtherVT>]>;
-def SHSDT_Cmp           : SDTypeProfile<0, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, OtherVT>]>;
+def SHSDT_Brcond        : SDTypeProfile<0, 2, [SDTCisVT<0, OtherVT>, SDTCisVT<1, i8>]>;
+def SHSDT_Cmp           : SDTypeProfile<0, 3, [SDTCisSameAs<0, 1>, SDTCisVT<2, i8>]>;
 def SHSDT_SelectCC      : SDTypeProfile<1, 3, 
                           [SDTCisSameAs<0, 1>, SDTCisSameAs<1, 2>, SDTCisVT<3, i8>]>;
 
@@ -236,6 +236,8 @@ let WantsRoot = true in
 def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
 
 
+
+
 //===--------------------------------------------------------------------------===//
 // Predicates
 //===--------------------------------------------------------------------------===//
@@ -272,6 +274,26 @@ def HasSH4      : Predicate<"Subtarget->hasSH4Inst()">,
 
 def HasSH4A     : Predicate<"Subtarget->hasSH4AInst()">,
                   AssemblerPredicate<(all_of FeatureSH4A)>;  
+
+
+
+
+//===--------------------------------------------------------------------------===//
+// Condition Codes
+//===--------------------------------------------------------------------------===//
+// NOTE:  To assist codegen, condition codes are created 
+//        for pseudo instructions.
+//===--------------------------------------------------------------------------===//
+
+def SH_COND_EQ : PatLeaf<(i8 0)>;
+def SH_COND_GT : PatLeaf<(i8 1)>;
+def SH_COND_GE : PatLeaf<(i8 2)>;
+def SH_COND_HI : PatLeaf<(i8 3)>;
+def SH_COND_HS : PatLeaf<(i8 4)>;
+def SH_COND_PL : PatLeaf<(i8 5)>;
+def SH_COND_PZ : PatLeaf<(i8 6)>;
+
+
 
 
 //===--------------------------------------------------------------------------===//
@@ -1381,6 +1403,27 @@ include "SuperHInstrDSP.td"
 //===--------------------------------------------------------------------------===//
 
 //===--------------------------------------------------------------------------===//
+// Conditional Branching
+//===--------------------------------------------------------------------------===//
+// NOTE:  SuperH only has BT (Branch if True) and BF (Branch if False)
+//        as such we'll lower these to pseudo instructions instead, then
+//        later emit real machine code instructions from them.
+//        Additionally, conditional branch sequences can be multiple
+//        instructions long, which can wreak havoc with the LLVM branch
+//        handling.
+//===--------------------------------------------------------------------------===//
+
+let isBranch = 1, isTerminator = 1, Uses = [SR] in {
+def BRCC       : SHPseudo<(outs), (ins brtarget:$disp, i8imm:$cc),
+                          "! BREQ $disp, $cc",
+                          [/*(SHbrcond bb:$disp, i8:$cc)*/]>;
+}
+
+
+
+
+
+//===--------------------------------------------------------------------------===//
 // SelectCC & SetCC
 //===--------------------------------------------------------------------------===//
 
@@ -1388,52 +1431,61 @@ def Select8     : SHSelectPseudo<(outs GPR:$dst),
                                 (ins GPR:$src, GPR:$src2, i8imm:$cc),
                                 "; Select8 PSEUDO",
                                 [(set i8:$dst,
-                                 (SHselectcc i8:$src, i8:$src2, imm:$cc))]>;
+                                 (SHselectcc i8:$src, i8:$src2, timm:$cc))]>;
 
 def Select16    : SHSelectPseudo<(outs GPR:$dst),
                                 (ins GPR:$src, GPR:$src2, i8imm:$cc),
                                 "; Select16 PSEUDO",
                                 [(set i16:$dst,
-                                 (SHselectcc i16:$src, i16:$src2, imm:$cc))]>;
+                                 (SHselectcc i16:$src, i16:$src2, timm:$cc))]>;
 
 def Select32    : SHSelectPseudo<(outs GPR:$dst),
                                 (ins GPR:$src, GPR:$src2, i8imm:$cc),
                                 "; Select32 PSEUDO",
                                 [(set i32:$dst,
-                                 (SHselectcc i32:$src, i32:$src2, imm:$cc))]>;
+                                 (SHselectcc i32:$src, i32:$src2, timm:$cc))]>;
 
 //===--------------------------------------------------------------------------===//
 // Frame Load/Store
 //===--------------------------------------------------------------------------===//
 
 // LOAD FROM ADDRESS
-let mayLoad = 1, Defs = [R0, R1], Uses = [R0, R1] in {
+let mayLoad = 1, isReMaterializable = 1 in {
+
+let Defs = [R0, R1] in
 def MOVBLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                             "! MOVBLPtr $src, $Rn",
                             []>;
 
+let Defs = [R0, R1] in
 def MOVWLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                             "! MOVWLPtr $src, $Rn",
                             []>;
 
+let Defs = [R1] in
 def MOVLLPtr  : SHLoadPseudo<(outs GPR:$Rn), (ins (memri $Rm, $disp):$src),
                             "! MOVLLPtr $src, $Rn",
                             []>;
 }
 
 // STORE TO ADDRESS
-let mayStore = 1, Defs = [R0, R1], Uses = [R0, R1] in {
+let mayStore = 1, isReMaterializable = 1 in {
+
+let Defs = [R0, R1] in
 def MOVBSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVBSPtr $src, $dst",
                              [(truncstorei8 i32:$src, addr:$dst)]>;
 
+let Defs = [R0, R1] in
 def MOVWSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVWSPtr $src, $dst",
                              [(truncstorei16 i32:$src, addr:$dst)]>;
 
+let Defs = [R1] in
 def MOVLSPtr  : SHStorePseudo<(outs), (ins GPR:$src, (memri $Rm, $disp):$dst),
                              "! MOVLSPtr $src, $dst",
                              [(store i32:$src, addr:$dst)]>;
+
 }
 
 
