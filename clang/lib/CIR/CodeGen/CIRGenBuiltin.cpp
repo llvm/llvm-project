@@ -459,7 +459,8 @@ static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
         cir::SyncScopeKindAttr::get(&cgf.getMLIRContext(), syncScope));
   };
 
-  cgf.emitAtomicExprWithMemOrder(expr->getArg(0), /*isStore*/ false,
+  CIRGenFunction::EmittedOrderOrScope order(cgf, expr->getArg(0));
+  cgf.emitAtomicExprWithMemOrder(order, /*isStore*/ false,
                                  /*isLoad*/ false, /*isFence*/ true,
                                  emitAtomicOpCallBackFn);
 }
