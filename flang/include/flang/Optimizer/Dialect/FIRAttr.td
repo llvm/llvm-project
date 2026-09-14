@@ -189,6 +189,9 @@ def fir_ReduceAttr : fir_Attr<"Reduce"> {
 // mlir::SideEffects::Resource for modelling operations which add debugging information
 def DebuggingResource : Resource<"::fir::DebuggingResource">;
 
+// mlir::SideEffects::Resource for modelling Fortran runtime-owned state.
+def FortranRuntimeResource : Resource<"::fir::FortranRuntimeResource">;
+
 def fir_LowerBoundModifierAttribute : I32EnumAttr<
     "LowerBoundModifierAttribute",
     "Describes how to modify lower bounds",

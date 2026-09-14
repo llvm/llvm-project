@@ -76,6 +76,7 @@ contains
 
 ! CHECK-LABEL: func.func @_QMmod1Psub2(
 ! CHECK: %[[ARG0:.*]]:2 = hlfir.declare {{.*}}"_QMmod1Fsub2Ea"
+! CHECK: fir.allocmem !fir.array<?xi32>
 ! CHECK: %[[BOX:.*]] = fir.load %[[ARG0]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
 ! CHECK: %[[BOX_ADDR_PTR:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.heap<!fir.array<?xi32>>) -> i64

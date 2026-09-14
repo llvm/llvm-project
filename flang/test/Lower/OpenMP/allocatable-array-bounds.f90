@@ -8,6 +8,9 @@
 !HOST: %[[ALLOCA_2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "sp_write", uniq_name = "_QFread_write_sectionEsp_write"}
 !HOST: %[[DECLARE_2:.*]]:2 = hlfir.declare %[[ALLOCA_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFread_write_sectionEsp_write"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 
+!HOST: fir.allocmem !fir.array<?xi32>, %{{.*}}uniq_name = "_QFread_write_sectionEsp_read.alloc"}
+!HOST: fir.allocmem !fir.array<?xi32>, %{{.*}}uniq_name = "_QFread_write_sectionEsp_write.alloc"}
+
 !HOST: %[[LOAD_1:.*]] = fir.load %[[DECLARE_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[LOAD_2:.*]] = fir.load %[[DECLARE_1]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !HOST: %[[CONSTANT_1:.*]] = arith.constant 0 : index
