@@ -15,8 +15,7 @@ define i64 @add(ptr %a, i64 %n, i64 %start) {
 ; CHECK:  Cost of 0 for VF vscale x 4: WIDEN-INTRINSIC vp<[[VP9]]> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%evl>)
 ; CHECK:  Cost of 0 for VF vscale x 8: WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP2]]>, vp<[[VP9]]>
 ; CHECK:  Cost of 0 for VF vscale x 8: WIDEN-INTRINSIC vp<[[VP9]]> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%evl>)
-; CHECK-NOT:  Cost of {{.*}} for VF vscale x 16: WIDEN-REDUCTION-PHI ir<%rdx> = phi (add) vp<[[VP2]]>, vp<[[VP9]]>
-; CHECK-NOT:  Cost of {{.*}} for VF vscale x 16: WIDEN-INTRINSIC vp<[[VP9]]> = call llvm.vp.merge(ir<true>, ir<%add>, ir<%rdx>, vp<%evl>)
+; CHECK-NOT:  Cost of {{.*}} for VF vscale x 16
 ;
 entry:
   br label %loop

@@ -624,7 +624,7 @@ struct VPlanTransforms {
                                         VPCostContext &CostCtx);
 
   /// Trim the VFs in \p Plan that will generate vectors requiring splitting.
-  static void trimVFsCausingSplits(VPlan &Plan, VPCostContext &CostCtx);
+  static void trimVFsCausingSplits(VPlan &Plan, const TargetTransformInfo &TTI);
 };
 
 } // namespace llvm
