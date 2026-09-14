@@ -90,7 +90,7 @@ public:
   /// Convert variable location debugging information stored in DbgMarkers and
   /// DbgRecords into the dbg.value intrinsic representation. Sets
   /// IsNewDbgInfoFormat = false.
-  LLVM_ABI void convertFromNewDbgValues();
+  LLVM_ABI bool convertFromNewDbgValues();
 
   unsigned getNumber() const {
     assert(getParent() && "only basic blocks in functions have valid numbers");

@@ -42,7 +42,7 @@ struct C : public B, public A {
 };
 
 // LLVM-DAG: [[STRUCT_D:%.*]] = type { [[STRUCT_A]], [[STRUCT_A]], i8, [[STRUCT_A]] }
-// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !u8i, data ![[STRUCT_A]]}>
+// CIR-DAG: ![[STRUCT_D:.*]] = !cir.struct<"D" {data ![[STRUCT_A]], data ![[STRUCT_A]], empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 2, unnamed>]>, data ![[STRUCT_A]]}>
 struct D {
   A a;
   A b = A{2, 2.0};
@@ -75,7 +75,7 @@ struct G {
 
 // LLVM-DAG: [[UNION_U:%.*]] = type { [[STRUCT_A]] }
 // LLVM-DAG: [[STR:@.*]] = private {{.*}}constant [6 x i8] {{.*}}foo18{{.*}}, align 1
-// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !u8i, data ![[STRUCT_A]], data !s8i}>
+// CIR-DAG: ![[UNION_U:.*]] = !cir.union<"U" {empty !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 1, unnamed>]>, data ![[STRUCT_A]], data !s8i}>
 union U {
   unsigned : 1;
   A a;
@@ -145,7 +145,7 @@ constexpr C c1(b1, a1);
 constexpr U u1(A(1, 1));
 // LLVMCIR-DAG: [[D1:@.*d1.*]] = internal constant [[STRUCT_D]] { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, i8 0, [[STRUCT_A]] zeroinitializer }, align 8
 // OGCG-DAG:    [[D1:@.*d1.*]] = internal constant { [[STRUCT_A]], [[STRUCT_A]], [8 x i8], [[STRUCT_A]] } { [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [[STRUCT_A]] { i8 2, double 2.000000e+00 }, [8 x i8] {{.*}}, [[STRUCT_A]] zeroinitializer }, align 8
-// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : ![[STRUCT_A]]}> : !rec_D {alignment = 8 : i64} loc(#loc284)
+// CIR-DAG: cir.global "private" constant internal dso_local @_ZL2d1 = #cir.const_record<{#cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.const_record<{#cir.int<2> : !s8i, #cir.fp<2.000000e+00> : !cir.double}> : ![[STRUCT_A]], #cir.int<0> : !u8i, #cir.zero : ![[STRUCT_A]]}> : !rec_D {alignment = 8 : i64}
 constexpr D d1(A(2, 2));
 // LLVM-DAG: [[ARR1:@.*arr1.*]] = internal constant [3 x i32] [i32 1, i32 2, i32 0], align 4
 // CIR-DAG: cir.global "private" constant internal dso_local @_ZL4arr1 = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i], trailing_zeros> : !cir.array<!s32i x 3> {alignment = 4 : i64}
@@ -355,8 +355,11 @@ D foo8() {
 // CIR: %[[FP_2:.*]] = cir.const #cir.fp<2
 // CIR: cir.store align(8) %[[FP_2]], %[[GET_J]] : !cir.double, !cir.ptr<!cir.double>
 // CIR: %[[GET_C:.*]] = cir.get_member %[[D_ALLOCA]][3] {name = "c"} : !cir.ptr<![[STRUCT_D]]> -> !cir.ptr<![[STRUCT_A]]>
-// CIR: %[[ZERO:.*]] = cir.const #cir.zero : ![[STRUCT_A]]
-// CIR: cir.store align(8) %[[ZERO]], %[[GET_C]] : ![[STRUCT_A]], !cir.ptr<![[STRUCT_A]]>
+// CIR: %[[GET_C_PTR_I8:.*]] = cir.cast bitcast %12 : !cir.ptr<![[STRUCT_A]]> -> !cir.ptr<!u8i>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR: %[[CONST_16:.*]] = cir.const #cir.int<16> : !u64i
+// CIR: %[[GET_C_VOID_PTR:.*]] = cir.cast bitcast %[[GET_C_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void> 
+// CIR: cir.libc.memset %[[CONST_16]] bytes at %[[GET_C_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 void foo9() {
   D d(A(1, 1));
 }
