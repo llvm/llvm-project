@@ -15,6 +15,7 @@
 // size_type max_size() const noexcept;
 
 #include <cassert>
+#include <cstddef>
 #include <deque>
 #include <flat_map>
 #include <functional>
@@ -52,7 +53,7 @@ constexpr bool test() {
     LIBCPP_ASSERT(c.max_size() == 10);
   }
   {
-    using A = limited_allocator<int, (size_t)-1>;
+    using A = limited_allocator<int, (std::size_t)-1>;
     using C = std::flat_multimap<int, int, std::less<int>, std::vector<int, A>, std::vector<int, A>>;
     ASSERT_SAME_TYPE(C::difference_type, std::ptrdiff_t);
     ASSERT_SAME_TYPE(C::size_type, std::size_t);

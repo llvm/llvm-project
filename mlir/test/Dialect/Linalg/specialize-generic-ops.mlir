@@ -164,67 +164,67 @@ func.func @unary_ops(%A: tensor<?x?x?xf32>, %Out: tensor<?x?x?xf32>) -> tensor<?
 // NAMED-NOT: linalg.elementwise
 // NAMED: linalg.generic
 
-// CATEGORY: %[[RES4:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<floor>
+// CATEGORY: %[[RES4:.+]] = linalg.elementwise <floor>
 // CATEGORY-SAME: ins(%[[A]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES5:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<negf>
+// CATEGORY: %[[RES5:.+]] = linalg.elementwise <negf>
 // CATEGORY-SAME: ins(%[[RES4]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES6:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<reciprocal>
+// CATEGORY: %[[RES6:.+]] = linalg.elementwise <reciprocal>
 // CATEGORY-SAME: ins(%[[RES5]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES7:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<round>
+// CATEGORY: %[[RES7:.+]] = linalg.elementwise <round>
 // CATEGORY-SAME: ins(%[[RES6]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES8:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sqrt>
+// CATEGORY: %[[RES8:.+]] = linalg.elementwise <sqrt>
 // CATEGORY-SAME: ins(%[[RES7]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES9:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<rsqrt>
+// CATEGORY: %[[RES9:.+]] = linalg.elementwise <rsqrt>
 // CATEGORY-SAME: ins(%[[RES8]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES10:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<square>
+// CATEGORY: %[[RES10:.+]] = linalg.elementwise <square>
 // CATEGORY-SAME: ins(%[[RES9]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES11:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<tanh>
+// CATEGORY: %[[RES11:.+]] = linalg.elementwise <tanh>
 // CATEGORY-SAME: ins(%[[RES10]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES12:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<erf>
+// CATEGORY: %[[RES12:.+]] = linalg.elementwise <erf>
 // CATEGORY-SAME: ins(%[[RES11]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES13:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sin>
+// CATEGORY: %[[RES13:.+]] = linalg.elementwise <sin>
 // CATEGORY-SAME: ins(%[[RES12]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES14:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<cos>
+// CATEGORY: %[[RES14:.+]] = linalg.elementwise <cos>
 // CATEGORY-SAME: ins(%[[RES13]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES15:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<tan>
+// CATEGORY: %[[RES15:.+]] = linalg.elementwise <tan>
 // CATEGORY-SAME: ins(%[[RES14]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES16:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<acos>
+// CATEGORY: %[[RES16:.+]] = linalg.elementwise <acos>
 // CATEGORY-SAME: ins(%[[RES15]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES17:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<acosh>
+// CATEGORY: %[[RES17:.+]] = linalg.elementwise <acosh>
 // CATEGORY-SAME: ins(%[[RES16]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES18:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<asin>
+// CATEGORY: %[[RES18:.+]] = linalg.elementwise <asin>
 // CATEGORY-SAME: ins(%[[RES17]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES19:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<asinh>
+// CATEGORY: %[[RES19:.+]] = linalg.elementwise <asinh>
 // CATEGORY-SAME: ins(%[[RES18]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES20:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<atan>
+// CATEGORY: %[[RES20:.+]] = linalg.elementwise <atan>
 // CATEGORY-SAME: ins(%[[RES19]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES21:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<atanh>
+// CATEGORY: %[[RES21:.+]] = linalg.elementwise <atanh>
 // CATEGORY-SAME: ins(%[[RES20]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES22:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<log10>
+// CATEGORY: %[[RES22:.+]] = linalg.elementwise <log10>
 // CATEGORY-SAME: ins(%[[RES21]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES23:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<log1p>
+// CATEGORY: %[[RES23:.+]] = linalg.elementwise <log1p>
 // CATEGORY-SAME: ins(%[[RES22]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
-// CATEGORY: %[[RES24:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<log2>
+// CATEGORY: %[[RES24:.+]] = linalg.elementwise <log2>
 // CATEGORY-SAME: ins(%[[RES23]] : tensor<?x?x?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 
@@ -253,7 +253,7 @@ func.func @unary_ops_non_identity(%A: tensor<?xf32>, %Out: tensor<?x?xf32>) -> t
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.elementwise kind=#linalg.elementwise_kind<exp>
+// CATEGORY: linalg.elementwise <exp>
 // CATEGORY-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_TP]]]
 // CATEGORY-SAME: ins(%[[A]] : tensor<?xf32>)
 // CATEGORY-SAME: outs(%[[OUT]] : tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -328,22 +328,22 @@ func.func @binary_ops_int(%A: tensor<?x?xi32>, %B: tensor<?x?xi32>,
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: %[[RES1:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CATEGORY: %[[RES1:.+]] = linalg.elementwise <sub>
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES2:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CATEGORY: %[[RES2:.+]] = linalg.elementwise <mul>
 // CATEGORY-SAME: ins(%[[RES1]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES3:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div>
+// CATEGORY: %[[RES3:.+]] = linalg.elementwise <div>
 // CATEGORY-SAME: ins(%[[RES2]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES4:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div_unsigned>
+// CATEGORY: %[[RES4:.+]] = linalg.elementwise <div_unsigned>
 // CATEGORY-SAME: ins(%[[RES3]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES5:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+// CATEGORY: %[[RES5:.+]] = linalg.elementwise <max_signed>
 // CATEGORY-SAME: ins(%[[RES4]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES6:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+// CATEGORY: %[[RES6:.+]] = linalg.elementwise <min_signed>
 // CATEGORY-SAME: ins(%[[RES5]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
 
@@ -417,22 +417,22 @@ func.func @binary_ops_float(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: %[[RES1:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CATEGORY: %[[RES1:.+]] = linalg.elementwise <sub>
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES2:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CATEGORY: %[[RES2:.+]] = linalg.elementwise <mul>
 // CATEGORY-SAME: ins(%[[RES1]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES3:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div>
+// CATEGORY: %[[RES3:.+]] = linalg.elementwise <div>
 // CATEGORY-SAME: ins(%[[RES2]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES4:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+// CATEGORY: %[[RES4:.+]] = linalg.elementwise <max_signed>
 // CATEGORY-SAME: ins(%[[RES3]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES5:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<min_signed>
+// CATEGORY: %[[RES5:.+]] = linalg.elementwise <min_signed>
 // CATEGORY-SAME: ins(%[[RES4]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES6:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<powf>
+// CATEGORY: %[[RES6:.+]] = linalg.elementwise <powf>
 // CATEGORY-SAME: ins(%[[RES5]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
 
@@ -481,13 +481,13 @@ func.func @binary_ops_complex(%A: tensor<?x?xcomplex<f32>>,
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: %[[RES1:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CATEGORY: %[[RES1:.+]] = linalg.elementwise <sub>
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES2:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CATEGORY: %[[RES2:.+]] = linalg.elementwise <mul>
 // CATEGORY-SAME: ins(%[[RES1]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES3:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<div>
+// CATEGORY: %[[RES3:.+]] = linalg.elementwise <div>
 // CATEGORY-SAME: ins(%[[RES2]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
 
@@ -516,7 +516,7 @@ func.func @binary_ops_bool(%A: tensor<?x?xi1>, %B: tensor<?x?xi1>,
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: %[[RES1:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CATEGORY: %[[RES1:.+]] = linalg.elementwise <mul>
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
 
@@ -579,7 +579,7 @@ func.func @binary_ops_non_identity(%A: tensor<?xf32>, %B: tensor<?x?xf32>,
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CATEGORY: linalg.elementwise <sub>
 // CATEGORY-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_TP]], #[[MAP_ID]]]
 // CATEGORY-SAME: ins(%[[A]], %[[B]] : [[TTY1D]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
@@ -623,10 +623,10 @@ func.func @binary_ops_swapped(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>,
 // NAMED: linalg.generic
 
 // CATEGORY-NOT: linalg.generic
-// CATEGORY: %[[RES0:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+// CATEGORY: %[[RES0:.+]] = linalg.elementwise <mul>
 // CATEGORY-SAME: ins(%[[B]], %[[A]] : [[TTY]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
-// CATEGORY: %[[RES1:.+]] = linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CATEGORY: %[[RES1:.+]] = linalg.elementwise <sub>
 // CATEGORY-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_ID]], #[[MAP_ID]]]
 // CATEGORY-SAME: ins(%[[C]], %[[RES0]] : [[TTY1D]], [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
@@ -661,7 +661,7 @@ func.func @unary_op_with_scalar(%A: tensor<?xi32>, %Out: tensor<?xi32>)
 
 // CATEGORY-NOT: linalg.generic
 // CATEGORY: %[[CST:.+]] = arith.constant 123 : i32
-// CATEGORY: linalg.elementwise kind=#linalg.elementwise_kind<sub>
+// CATEGORY: linalg.elementwise <sub>
 // CATEGORY-SAME: indexing_maps = [#[[MAP_BC]], #[[MAP_ID]], #[[MAP_ID]]]
 // CATEGORY-SAME: ins(%[[CST]], %[[A]] : i32, [[TTY]])
 // CATEGORY-SAME: outs(%[[OUT]] : [[TTY]]) -> [[TTY]]
@@ -690,7 +690,7 @@ func.func @negative_unary_op_using_block_arg_twice(%A: tensor<?xi32>,
 // NAMED-NOT: linalg.add
 
 // There is no scalar operand to hoist -> expect no change.
-// CATEGORY-NOT: linalg.elementwise kind=#linalg.elementwise_kind<add>
+// CATEGORY-NOT: linalg.elementwise <add>
 
 // ALL: linalg.generic
 

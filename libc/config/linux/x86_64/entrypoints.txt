@@ -381,6 +381,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.stat.fchmod
     libc.src.sys.stat.fchmodat
     libc.src.sys.stat.fstat
+    libc.src.sys.stat.futimens
     libc.src.sys.stat.lstat
     libc.src.sys.stat.mkdir
     libc.src.sys.stat.mkdirat
@@ -503,6 +504,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # wchar.h entrypoints
     libc.src.wchar.btowc
+    libc.src.wchar.wcscasecmp
+    libc.src.wchar.wcsncasecmp
     libc.src.wchar.wcslen
     libc.src.wchar.wcsnlen
     libc.src.wchar.wctob

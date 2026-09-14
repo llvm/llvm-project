@@ -28,6 +28,9 @@ add_mlir_dialect_library(MLIRLLVMDialect
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/LLVMIR
 
+  PRECOMPILE_HEADERS
+  [["mlir/Dialect/LLVMIR/pch.h"]]
+
   DEPENDS
   MLIRLLVMDialectBytecodeIncGen
   MLIRLLVMInterfacesIncGen

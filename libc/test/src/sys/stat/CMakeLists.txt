@@ -153,3 +153,26 @@ add_libc_test(
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )
+
+add_libc_test(
+  futimens_test
+  SUITE
+    libc_sys_stat_unittests
+  SRCS
+    futimens_test.cpp
+  DEPENDS
+    libc.hdr.fcntl_macros
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_timespec
+    libc.hdr.sys_stat_macros
+    libc.hdr.types.struct_stat
+    libc.src.errno.errno
+    libc.src.sys.stat.futimens
+    libc.src.fcntl.open
+    libc.src.sys.stat.stat
+    libc.src.unistd.close
+    libc.src.stdio.remove    
+    libc.src.__support.CPP.scope
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+)

@@ -2859,7 +2859,7 @@ void TaskContextStructManager::generateTaskContextStruct() {
   llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(structTy);
 
   // Heap allocate the structure
-  structPtr = builder.CreateMalloc(intPtrTy, structTy, allocSize,
+  structPtr = builder.CreateMalloc(intPtrTy, allocSize,
                                    /*ArraySize=*/nullptr, /*MallocF=*/nullptr,
                                    "omp.task.context_ptr");
 }
@@ -3178,8 +3178,8 @@ buildDependData(OperandRange dependVars, std::optional<ArrayAttr> dependKinds,
   // dynamic-sized alloca outside the entry block (e.g. inside loops).
   llvm::Constant *allocSize = llvm::ConstantExpr::getSizeOf(dependInfoTy);
   llvm::Value *depArray =
-      builder.CreateMalloc(ompBuilder.SizeTy, dependInfoTy, allocSize,
-                           totalCount, /*MallocF=*/nullptr, ".dep.arr.addr");
+      builder.CreateMalloc(ompBuilder.SizeTy, allocSize, totalCount,
+                           /*MallocF=*/nullptr, ".dep.arr.addr");
 
   // Fill non-iterated entries at indices [0, numLocator).
   if (numLocator > 0) {

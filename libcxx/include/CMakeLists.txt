@@ -651,7 +651,6 @@ set(files
   __mutex/tag_types.h
   __mutex/unique_lock.h
   __new/align_val_t.h
-  __new/allocate.h
   __new/destroying_delete_t.h
   __new/exceptions.h
   __new/global_new_delete.h

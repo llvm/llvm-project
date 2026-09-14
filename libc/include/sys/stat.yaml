@@ -70,3 +70,8 @@ functions:
       - type: const char *
       - type: const struct timespec *
       - type: int
+  - name: futimens
+    return_type: int
+    arguments:
+      - type: int
+      - type: const struct timespec *
