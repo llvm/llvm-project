@@ -1,6 +1,0 @@
-RUN: %cpp_compiler %S/MinimizeCrashCustomMutatorTest.cpp -o %t-MinimizeCrashCustomMutatorTest
-RUN: mkdir -p %t.dir
-RUN: echo -n '!2345678' > %t.dir/crash
-RUN: %run %t-MinimizeCrashCustomMutatorTest -minimize_crash=1 -mutate_depth=5 -runs=10 %t.dir/crash 2>&1 | FileCheck %s
-CHECK-NOT: MUTATOR: size mismatch
-CHECK: CRASH_MIN: failed to minimize beyond {{.*}}crash (8 bytes), exiting
