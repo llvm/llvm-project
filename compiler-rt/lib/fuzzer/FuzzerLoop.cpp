@@ -921,13 +921,15 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
     return;
   while (!TimedOut() && TotalNumberOfRuns < Options.MaxNumberOfRuns) {
     MD.StartMutationSequence();
-    memcpy(CurrentUnitData, U.data(), U.size());
+    size_t Size = U.size();
+    memcpy(CurrentUnitData, U.data(), Size);
     for (int i = 0; i < Options.MutateDepth; i++) {
-      size_t NewSize = MD.Mutate(CurrentUnitData, U.size(), MaxMutationLen);
+      size_t NewSize = MD.Mutate(CurrentUnitData, Size, MaxMutationLen);
       assert(NewSize > 0 && NewSize <= MaxMutationLen);
-      ExecuteCallback(CurrentUnitData, NewSize);
-      PrintPulseAndReportSlowInput(CurrentUnitData, NewSize);
-      TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
+      Size = NewSize;
+      ExecuteCallback(CurrentUnitData, Size);
+      PrintPulseAndReportSlowInput(CurrentUnitData, Size);
+      TryDetectingAMemoryLeak(CurrentUnitData, Size,
                               /*DuringInitialCorpusExecution*/ false);
     }
   }
