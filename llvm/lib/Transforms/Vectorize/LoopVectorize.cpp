@@ -6195,10 +6195,8 @@ LoopVectorizationPlanner::tryToBuildVPlan1(LoopVectorizationCostModel &PlanCM) {
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
-  bool OptForSize =
-      !ForceVectorization &&
-      (PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
-       PlanCM.EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  bool OptForSize = !ForceVectorization && PlanCM.EpilogueLoweringStatus ==
+                                               CM_EpilogueNotAllowedOptSize;
   unsigned SCEVCheckThreshold = ForceVectorization
                                     ? Opts.pragma_vectorize_scev_check_threshold
                                     : Opts.vectorize_scev_check_threshold;
