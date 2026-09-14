@@ -71,23 +71,20 @@ private:
   static constexpr uintptr_t __CountMask = (1 << std::countr_zero(alignof(value_type))) - 1;
   static constexpr uintptr_t __PtrMask   = ~__CountMask;
 
-  union {
-    _Ptr __ptr_;
-    alignas(pointer) uintptr_t __data_;
-  };
+  alignas(pointer) uintptr_t __data_;
 
   size_t __count() const noexcept { return __data_ & __CountMask; }
 
   _Ptr __current() const noexcept { return reinterpret_cast<pointer>(__data_ & __PtrMask); }
 
   void __increment(difference_type __n) noexcept {
-    __ptr_ += __n;
-    __data_ += __n;
+    // Increment as if incrementing pointer, and the count
+    __data_ += (__n * sizeof(value_type)) + __n;
   }
 
-  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __ptr_(__p) {
-    _LIBCPP_ASSERT_INTERNAL((reinterpret_cast<uintptr_t>(__p) & __CountMask) == 0,
-                            "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
+  explicit __static_packed_bounded_iterator(_Ptr __p) noexcept : __data_(reinterpret_cast<uintptr_t>(__p)) {
+    _LIBCPP_ASSERT_INTERNAL(
+        (__data_ & __CountMask) == 0, "__static_packed_bounded_iterator: Expected alignment bits of ptr to be 0");
   }
 
   template <class _Ptr2, size_t _RangeCapacity2>
@@ -98,9 +95,7 @@ public:
   template <class _Ptr2, size_t _RangeCapacity2>
   friend auto __make_static_packed_bounded_iter(_Ptr2, size_t) noexcept;
 
-  __static_packed_bounded_iterator()
-    requires is_default_constructible_v<_Ptr>
-  = default;
+  __static_packed_bounded_iterator() = default;
 
   template <convertible_to<_Ptr> _Ptr2>
   __static_packed_bounded_iterator(const __static_packed_bounded_iterator<_Ptr2, _RangeCapacity>& __y)
