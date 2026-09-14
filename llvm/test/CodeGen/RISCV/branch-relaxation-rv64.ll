@@ -1848,5 +1848,6 @@ tail:
   ret void
 }
 
-;; CFBRANCH: !llvm.module.flags = !{!0}
+;; CFBRANCH: !llvm.module.flags = !{!0, !1}
 ;; CFBRANCH: !0 = !{i32 8, !"cf-protection-branch", i32 1}
+;; CFBRANCH: !1 = !{i32 1, !"cf-branch-label-scheme", !"unlabeled"}

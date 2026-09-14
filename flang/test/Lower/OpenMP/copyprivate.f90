@@ -14,11 +14,11 @@
 !CHECK-DAG: func private @_copy_ref_c16x8(%{{.*}}: !fir.ref<!fir.char<2,8>>, %{{.*}}: !fir.ref<!fir.char<2,8>>)
 
 !CHECK-DAG: func private @_copy_ref_box_Uxi32(%{{.*}}: !fir.ref<!fir.box<!fir.array<?xi32>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<?xi32>>>)
-!CHECK-DAG: func private @_copy_ref_box_10xi32(%{{.*}}: !fir.ref<!fir.box<!fir.array<10xi32>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<10xi32>>>)
-!CHECK-DAG: func private @_copy_ref_box_3x4xi32(%{{.*}}: !fir.ref<!fir.box<!fir.array<3x4xi32>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<3x4xi32>>>)
-!CHECK-DAG: func private @_copy_ref_box_10xf32(%{{.*}}: !fir.ref<!fir.box<!fir.array<10xf32>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<10xf32>>>)
-!CHECK-DAG: func private @_copy_ref_box_3x4xz32(%{{.*}}: !fir.ref<!fir.box<!fir.array<3x4xcomplex<f32>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<3x4xcomplex<f32>>>>)
-!CHECK-DAG: func private @_copy_ref_box_10xl32(%{{.*}}: !fir.ref<!fir.box<!fir.array<10x!fir.logical<4>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<10x!fir.logical<4>>>>)
+!CHECK-DAG: func private @_copy_ref_10xi32(%{{.*}}: !fir.ref<!fir.array<10xi32>>, %{{.*}}: !fir.ref<!fir.array<10xi32>>)
+!CHECK-DAG: func private @_copy_ref_3x4xi32(%{{.*}}: !fir.ref<!fir.array<3x4xi32>>, %{{.*}}: !fir.ref<!fir.array<3x4xi32>>)
+!CHECK-DAG: func private @_copy_ref_10xf32(%{{.*}}: !fir.ref<!fir.array<10xf32>>, %{{.*}}: !fir.ref<!fir.array<10xf32>>)
+!CHECK-DAG: func private @_copy_ref_3x4xz32(%{{.*}}: !fir.ref<!fir.array<3x4xcomplex<f32>>>, %{{.*}}: !fir.ref<!fir.array<3x4xcomplex<f32>>>)
+!CHECK-DAG: func private @_copy_ref_10xl32(%{{.*}}: !fir.ref<!fir.array<10x!fir.logical<4>>>, %{{.*}}: !fir.ref<!fir.array<10x!fir.logical<4>>>)
 !CHECK-DAG: func private @_copy_ref_box_3xc8x8(%{{.*}}: !fir.ref<!fir.box<!fir.array<3x!fir.char<1,8>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<3x!fir.char<1,8>>>>)
 !CHECK-DAG: func private @_copy_ref_box_3xc16x5(%{{.*}}: !fir.ref<!fir.box<!fir.array<3x!fir.char<2,5>>>>, %{{.*}}: !fir.ref<!fir.box<!fir.array<3x!fir.char<2,5>>>>)
 
@@ -104,7 +104,7 @@ end subroutine
 !CHECK:           %[[L1:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFtest_arrayEl1"}
 !CHECK:           %[[S1:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_arrayEs1"}
 !CHECK:           %[[S2:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFtest_arrayEs2"}
-!CHECK:           omp.single copyprivate(%[[A]]#0 -> @_copy_ref_box_Uxi32 : {{.*}}, %[[I1]]#0 -> @_copy_ref_box_10xi32 : {{.*}}, %[[I2]]#0 -> @_copy_ref_box_3x4xi32 : {{.*}}, %[[I3]]#0 -> @_copy_ref_box_Uxi32 : {{.*}}, %[[R1]]#0 -> @_copy_ref_box_10xf32 : {{.*}}, %[[C1]]#0 -> @_copy_ref_box_3x4xz32 : {{.*}}, %[[L1]]#0 -> @_copy_ref_box_10xl32 : {{.*}}, %[[S1]]#0 -> @_copy_ref_box_3xc8x8 : {{.*}}, %[[S2]]#0 -> @_copy_ref_box_3xc16x5 : {{.*}})
+!CHECK:           omp.single copyprivate(%[[A]]#0 -> @_copy_ref_box_Uxi32 : {{.*}}, %[[I1]]#0 -> @_copy_ref_10xi32 : {{.*}}, %[[I2]]#0 -> @_copy_ref_3x4xi32 : {{.*}}, %[[I3]]#0 -> @_copy_ref_box_Uxi32 : {{.*}}, %[[R1]]#0 -> @_copy_ref_10xf32 : {{.*}}, %[[C1]]#0 -> @_copy_ref_3x4xz32 : {{.*}}, %[[L1]]#0 -> @_copy_ref_10xl32 : {{.*}}, %[[S1]]#0 -> @_copy_ref_box_3xc8x8 : {{.*}}, %[[S2]]#0 -> @_copy_ref_box_3xc16x5 : {{.*}})
 subroutine test_array(a, n)
   integer :: a(:), n
   integer :: i1(10), i2(3, 4), i3(n)

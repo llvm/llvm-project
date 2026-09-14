@@ -242,7 +242,7 @@ def : Processor<"at697f", LEON2Itineraries,
 
 // LEON 3 FT generic
 def : Processor<"leon3", LEON3Itineraries,
-                [FeatureLeon, UMACSMACSupport]>;
+                [FeatureLeon, UMACSMACSupport, LeonCASA]>;
 
 // LEON 3 FT (UT699). Provides features for the UT699 processor
 // - covers all the erratum fixes for LEON3, but does not support the CASA instruction.
@@ -263,6 +263,10 @@ def : Processor<"leon4", LEON4Itineraries,
 def : Processor<"gr740", LEON4Itineraries,
                 [FeatureLeon, UMACSMACSupport, LeonCASA, LeonCycleCounter,
                  FeaturePWRPSR]>;
+
+// LEON 5 generic
+def : ProcessorModel<"leon5", NoSchedModel,
+                     [FeatureLeon, LeonCASA, LeonCycleCounter, FeaturePWRPSR]>;
 
 //===----------------------------------------------------------------------===//
 // Declare the target which we are implementing

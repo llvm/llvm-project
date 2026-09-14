@@ -4,6 +4,9 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=alderlake | FileCheck %s --check-prefix=ADL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=silvermont -mattr=+lzcnt,+bmi | FileCheck %s --check-prefix=SKL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=goldmont -mattr=+lzcnt,+bmi | FileCheck %s --check-prefix=SKL
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=znver4 | FileCheck %s --check-prefix=FAST
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=znver5 | FileCheck %s --check-prefix=ZEN5
+; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=znver6 | FileCheck %s --check-prefix=FAST
 
 ; This tests a fix for bugzilla 33869 https://bugs.llvm.org/show_bug.cgi?id=33869
 
@@ -42,6 +45,14 @@ ret:
 ;ADL-LABEL:@loopdep_popcnt32
 ;ADL-NOT: xor
 ;ADL: popcntl
+
+;ZEN5-LABEL:@loopdep_popcnt32
+;ZEN5-NOT: xor
+;ZEN5: popcntl
+
+;FAST-LABEL:@loopdep_popcnt32
+;FAST-NOT: xor
+;FAST: popcntl
 }
 
 define i64 @loopdep_popcnt64(ptr nocapture %x, ptr nocapture %y) nounwind {
@@ -72,6 +83,14 @@ ret:
 ;ADL-LABEL:@loopdep_popcnt64
 ;ADL-NOT: xor
 ;ADL: popcntq
+
+;ZEN5-LABEL:@loopdep_popcnt64
+;ZEN5-NOT: xor
+;ZEN5: popcntq
+
+;FAST-LABEL:@loopdep_popcnt64
+;FAST-NOT: xor
+;FAST: popcntq
 }
 
 define i32 @loopdep_tzct32(ptr nocapture %x, ptr nocapture %y) nounwind {
@@ -99,6 +118,14 @@ ret:
 ;SKL-LABEL:@loopdep_tzct32
 ;SKL-NOT: xor
 ;SKL: tzcntl
+
+;ZEN5-LABEL:@loopdep_tzct32
+;ZEN5: xorl [[GPR0:%e[a-d]x]], [[GPR0]]
+;ZEN5-NEXT: tzcntl {{.*}}, [[GPR0]]
+
+;FAST-LABEL:@loopdep_tzct32
+;FAST-NOT: xor
+;FAST: tzcntl
 }
 
 define i64 @loopdep_tzct64(ptr nocapture %x, ptr nocapture %y) nounwind {
@@ -126,6 +153,14 @@ ret:
 ;SKL-LABEL:@loopdep_tzct64
 ;SKL-NOT: xor
 ;SKL: tzcntq
+
+;ZEN5-LABEL:@loopdep_tzct64
+;ZEN5: xorl %e[[GPR0:[a-d]x]], %e[[GPR0]]
+;ZEN5-NEXT: tzcntq {{.*}}, %r[[GPR0]]
+
+;FAST-LABEL:@loopdep_tzct64
+;FAST-NOT: xor
+;FAST: tzcntq
 }
 
 define i32 @loopdep_lzct32(ptr nocapture %x, ptr nocapture %y) nounwind {
@@ -153,6 +188,14 @@ ret:
 ;SKL-LABEL:@loopdep_lzct32
 ;SKL-NOT: xor
 ;SKL: lzcntl
+
+;ZEN5-LABEL:@loopdep_lzct32
+;ZEN5-NOT: xor
+;ZEN5: lzcntl
+
+;FAST-LABEL:@loopdep_lzct32
+;FAST-NOT: xor
+;FAST: lzcntl
 }
 
 define i64 @loopdep_lzct64(ptr nocapture %x, ptr nocapture %y) nounwind {
@@ -180,4 +223,12 @@ ret:
 ;SKL-LABEL:@loopdep_lzct64
 ;SKL-NOT: xor
 ;SKL: lzcntq
+
+;ZEN5-LABEL:@loopdep_lzct64
+;ZEN5-NOT: xor
+;ZEN5: lzcntq
+
+;FAST-LABEL:@loopdep_lzct64
+;FAST-NOT: xor
+;FAST: lzcntq
 }

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=GCN %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck --check-prefix=GCN %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck --check-prefix=GCN %s
 
 ; Test with zero frame
 ; GCN-LABEL: {{^}}func1

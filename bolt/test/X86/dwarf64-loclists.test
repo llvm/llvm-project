@@ -1,0 +1,166 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
+# RUN: %clang %cflags -Wl,-q -Wl,-e,main %t.o -o %t.exe
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | \
+# RUN:   FileCheck --check-prefix=INPUT %s
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-addr --debug-loclists \
+# RUN:   --debug-info %t.bolt | FileCheck --check-prefix=BOLT %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+## Check that BOLT rewrites a DWARF64 v5 loclistx location list and that the
+## decoded PC range tracks the rewritten function address.
+
+# INPUT-LABEL: .debug_info contents:
+# INPUT: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# INPUT: DW_AT_loclists_base [DW_FORM_sec_offset] (0x0000000000000014)
+# INPUT: DW_TAG_variable
+# INPUT: DW_AT_location [DW_FORM_loclistx]
+# INPUT-SAME: loclist = 0x0000001c
+
+# BOLT-LABEL: .debug_info contents:
+# BOLT: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# BOLT: DW_AT_loclists_base [DW_FORM_sec_offset] (0x0000000000000014)
+# BOLT: DW_TAG_variable
+# BOLT: DW_AT_location [DW_FORM_loclistx]
+# BOLT-SAME: loclist = 0x0000001c
+# BOLT-NEXT: [
+# BOLT-SAME: 0x[[#%.16x,ADDR:]]
+# BOLT-SAME: 0x[[#ADDR + 3]]
+
+# BOLT-LABEL: .debug_loclists contents:
+# BOLT: locations list header: length = 0x{{[0-9a-f]+}}, format = DWARF64
+# BOLT: 0x0000001c:
+# BOLT-NEXT: DW_LLE_startx_length
+# BOLT-SAME: 0x0000000000000003
+# BOLT-SAME: DW_OP_reg0 RAX
+
+# BOLT-LABEL: .debug_addr contents:
+# BOLT: Address table header: length = 0x{{[0-9a-f]+}}, format = DWARF64
+# BOLT: Addrs: [
+# BOLT-NEXT: 0x[[#ADDR]]
+# BOLT-NEXT: 0x0000000000000000
+
+  .text
+  .globl main
+  .type main,@function
+main:
+.Lfunc_begin0:
+  .file 0 "." "dwarf64-loclists.s"
+  .loc 0 1 0
+  xorl %eax, %eax
+  .loc 0 2 0
+  retq
+.Lfunc_end0:
+  .size main, .Lfunc_end0-main
+
+  .section .debug_loclists,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Ldebug_list_end-.Ldebug_list_start
+.Ldebug_list_start:
+  .short 5                        # Version
+  .byte 8                         # Address size
+  .byte 0                         # Segment selector size
+  .long 1                         # Offset entry count
+.Lloclists_table_base0:
+  .quad .Ldebug_loc0-.Lloclists_table_base0
+.Ldebug_loc0:
+  .byte 4                         # DW_LLE_offset_pair
+  .uleb128 .Lfunc_begin0-.Lfunc_begin0
+  .uleb128 .Lfunc_end0-.Lfunc_begin0
+  .byte 1                         # Loc expr size
+  .byte 0x50                      # DW_OP_reg0
+  .byte 0                         # DW_LLE_end_of_list
+.Ldebug_list_end:
+
+  .section .debug_abbrev,"",@progbits
+.Labbrev:
+  .byte 1                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x10                      # DW_AT_stmt_list
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x73                      # DW_AT_addr_base
+  .byte 0x17                      # DW_FORM_sec_offset
+  .ascii "\214\001"               # DW_AT_loclists_base
+  .byte 0x17                      # DW_FORM_sec_offset
+  .byte 0
+  .byte 0
+  .byte 2                         # Abbrev code
+  .byte 0x2e                      # DW_TAG_subprogram
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x1b                      # DW_FORM_addrx
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x3f                      # DW_AT_external
+  .byte 0x19                      # DW_FORM_flag_present
+  .byte 0
+  .byte 0
+  .byte 3                         # Abbrev code
+  .byte 0x34                      # DW_TAG_variable
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x02                      # DW_AT_location
+  .byte 0x22                      # DW_FORM_loclistx
+  .byte 0
+  .byte 0
+  .byte 0
+
+  .section .debug_info,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Lcu_end-.Lcu_start       # DWARF64 unit length
+.Lcu_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .quad .Labbrev                  # Abbrev offset
+  .byte 1                         # DW_TAG_compile_unit
+  .quad .Lstr_file                # DW_AT_name
+  .quad .Lline_table_start0       # DW_AT_stmt_list
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
+  .quad .Laddr_table_base0        # DW_AT_addr_base
+  .quad .Lloclists_table_base0    # DW_AT_loclists_base
+  .byte 2                         # DW_TAG_subprogram
+  .quad .Lstr_main                # DW_AT_name
+  .byte 0                         # DW_AT_low_pc
+  .long .Lfunc_end0-.Lfunc_begin0 # DW_AT_high_pc
+  .byte 3                         # DW_TAG_variable
+  .quad .Lstr_x                   # DW_AT_name
+  .byte 0                         # DW_AT_location
+  .byte 0                         # End subprogram children
+  .byte 0                         # End CU children
+.Lcu_end:
+
+  .section .debug_addr,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Ldebug_addr_end-.Ldebug_addr_start
+.Ldebug_addr_start:
+  .short 5                        # Version
+  .byte 8                         # Address size
+  .byte 0                         # Segment selector size
+.Laddr_table_base0:
+  .quad .Lfunc_begin0
+.Ldebug_addr_end:
+
+  .section .debug_str,"MS",@progbits,1
+.Lstr_file:
+  .asciz "dwarf64-loclists.s"
+.Lstr_main:
+  .asciz "main"
+.Lstr_x:
+  .asciz "x"
+
+  .section .debug_line,"",@progbits
+.Lline_table_start0:

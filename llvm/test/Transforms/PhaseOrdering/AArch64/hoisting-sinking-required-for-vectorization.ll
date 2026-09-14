@@ -43,8 +43,8 @@ define void @loop(ptr %X, ptr %Y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X6:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[Y7:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X6]], [[Y7]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[Y7]], [[X6]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP0]], -32
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]

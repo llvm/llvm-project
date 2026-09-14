@@ -1,7 +1,7 @@
-; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode" -S | FileCheck %s
-; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<thinlto>" -S | FileCheck %s
-; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<emit-summary>" -S | FileCheck %s
-; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="embed-bitcode<thinlto;emit-summary>" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="assign-guid,embed-bitcode" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="assign-guid,embed-bitcode<thinlto>" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="assign-guid,embed-bitcode<emit-summary>" -S | FileCheck %s
+; RUN: opt --mtriple x86_64-unknown-linux-gnu < %s -passes="assign-guid,embed-bitcode<thinlto;emit-summary>" -S | FileCheck %s
 
 @a = global i32 1
 
@@ -13,6 +13,7 @@
 ; CHECK: @llvm.compiler.used = appending global [1 x ptr] [ptr @llvm.embedded.object], section "llvm.metadata"
 
 ;; Make sure the metadata correlates to the .llvm.lto section.
-; CHECK: !llvm.embedded.objects = !{!1}
-; CHECK: !0 = !{}
+;; !0 is the GUID for @a.
+; CHECK: !llvm.embedded.objects = !{!2}
+; CHECK: !1 = !{}
 ; CHECK: !{ptr @llvm.embedded.object, !".llvm.lto"}

@@ -129,6 +129,8 @@ struct FieldParser<{0}, {0}> {{
 ///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
 template<>
 struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+  static constexpr bool isKeyValueCompositional = false;
+
   template <typename ParserT>
   static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
     // Parse the keyword/string containing the enum.
@@ -157,6 +159,8 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
 
   template<>
   struct FieldParser<{0}, {0}> {{
+    static constexpr bool isKeyValueCompositional = {7};
+
     template <typename ParserT>
     static FailureOr<{0}> parse(ParserT &parser) {{
       {0} flags = {{};
@@ -185,6 +189,8 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
   ///    let parameters = (ins OptionalParameter<"std::optional<TheEnumName>">:$value);
   template<>
   struct FieldParser<std::optional<{0}>, std::optional<{0}>> {{
+    static constexpr bool isKeyValueCompositional = false;
+
     template <typename ParserT>
     static FailureOr<std::optional<{0}>> parse(ParserT &parser) {{
       {0} flags = {{};
@@ -233,7 +239,7 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
             .Default("error, enum separator must be '|' or ','");
     os << formatv(parsedAndPrinterStartUnquotedBitEnum, qualName, cppNamespace,
                   enumInfo.getSummary(), casesList, separator, parseSeparatorFn,
-                  casesInitList);
+                  casesInitList, separator.trim() == "," ? "false" : "true");
   } else {
     os << formatv(parsedAndPrinterStart, qualName, cppNamespace,
                   enumInfo.getSummary(), casesList, casesInitList);

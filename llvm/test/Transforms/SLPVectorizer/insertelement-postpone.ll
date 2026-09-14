@@ -8,9 +8,9 @@ define <4 x double> @test(ptr %p2, double %i1754, double %i1781, double %i1778) 
 ; X86-NEXT:    [[I1771:%.*]] = getelementptr inbounds double, ptr [[P2:%.*]], i64 54
 ; X86-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[I1771]], align 8
 ; X86-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 0>
-; X86-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> [[TMP4]], double [[I1754:%.*]], i32 0
-; X86-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[I1778:%.*]], i32 1
-; X86-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[I1781:%.*]], i32 2
+; X86-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP4]], double [[I1754:%.*]], i64 0
+; X86-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[I1778:%.*]], i64 1
+; X86-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP13]], double [[I1781:%.*]], i64 2
 ; X86-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; X86-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP2]], [[TMP10]]
 ; X86-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>
@@ -25,9 +25,9 @@ define <4 x double> @test(ptr %p2, double %i1754, double %i1781, double %i1778) 
 ; AARCH86-NEXT:    [[I1771:%.*]] = getelementptr inbounds double, ptr [[P2:%.*]], i64 54
 ; AARCH86-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[I1771]], align 8
 ; AARCH86-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 0>
-; AARCH86-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> [[TMP4]], double [[I1754:%.*]], i32 0
-; AARCH86-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> [[TMP0]], double [[I1778:%.*]], i32 1
-; AARCH86-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[I1781:%.*]], i32 2
+; AARCH86-NEXT:    [[TMP11:%.*]] = insertelement <4 x double> [[TMP4]], double [[I1754:%.*]], i64 0
+; AARCH86-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> [[TMP11]], double [[I1778:%.*]], i64 1
+; AARCH86-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP12]], double [[I1781:%.*]], i64 2
 ; AARCH86-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> zeroinitializer
 ; AARCH86-NEXT:    [[TMP5:%.*]] = fmul fast <4 x double> [[TMP2]], [[TMP10]]
 ; AARCH86-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 1>

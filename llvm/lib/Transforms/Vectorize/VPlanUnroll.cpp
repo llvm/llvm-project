@@ -25,6 +25,8 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
+#include <numeric>
 
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
@@ -78,7 +80,7 @@ public:
   void unrollBlock(VPBlockBase *VPB);
 
   VPValue *getValueForPart(VPValue *V, unsigned Part) {
-    if (Part == 0 || isa<VPIRValue, VPSymbolicValue, VPRegionValue>(V))
+    if (Part == 0 || isa<VPIRValue, VPSymbolicValue>(V))
       return V;
     assert((VPV2Parts.contains(V) && VPV2Parts[V].size() >= Part) &&
            "accessed value does not exist");
@@ -137,8 +139,8 @@ static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
         Instruction::Mul,
         {StartIndex, Plan.getConstantInt(StartIndex->getScalarType(), Part)});
   }
-  StartIndex = Builder.createScalarSExtOrTrunc(
-      StartIndex, IntStepTy, StartIndex->getScalarType(), Steps->getDebugLoc());
+  StartIndex = Builder.createScalarSExtOrTrunc(StartIndex, IntStepTy,
+                                               Steps->getDebugLoc());
 
   if (BaseIVTy->isFloatingPointTy())
     StartIndex = Builder.createScalarCast(Instruction::SIToFP, StartIndex,
@@ -179,8 +181,7 @@ void UnrollState::unrollWidenInductionByUF(
   VPIRFlags::WrapFlagsTy WrapFlags(false, false);
   if (auto *IntOrFPInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(IV)) {
     FMF = IntOrFPInd->getFastMathFlagsOrNone();
-    if (IntOrFPInd->hasNoWrapFlags())
-      WrapFlags = IntOrFPInd->getNoWrapFlags();
+    WrapFlags = IntOrFPInd->getNoWrapFlagsOrNone();
   }
 
   VPValue *ScalarStep = IV->getStepValue();
@@ -333,6 +334,12 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (match(&R, m_VPInstruction<VPInstruction::ExtractVectorForPart>(
+                      m_VPValue(Op), m_VPValue()))) {
+      Copy->setOperand(0, Op);
+      Copy->setOperand(1, Plan.getConstantInt(64, Part));
+      continue;
+    }
     if (isa<VPVectorPointerRecipe, VPWidenCanonicalIVRecipe>(R)) {
       VPBuilder Builder(&R);
       const DataLayout &DL = Plan.getDataLayout();
@@ -340,9 +347,8 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
           isa<VPWidenCanonicalIVRecipe>(R)
               ? Plan.getVectorLoopRegion()->getCanonicalIVType()
               : DL.getIndexType(R.getVPSingleValue()->getScalarType());
-      Type *VFTy = Plan.getVF().getScalarType();
-      VPValue *VF = Builder.createScalarZExtOrTrunc(
-          &Plan.getVF(), IndexTy, VFTy, DebugLoc::getUnknown());
+      VPValue *VF = Builder.createScalarZExtOrTrunc(&Plan.getVF(), IndexTy,
+                                                    DebugLoc::getUnknown());
       // VFxUF does not wrap, so VF * Part also cannot wrap.
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
@@ -473,6 +479,13 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
       continue;
     }
 
+    if (match(&R,
+              m_WideActiveLaneMask(m_VPValue(), m_VPValue(), m_VPValue()))) {
+      auto *ALM = cast<VPInstruction>(&R);
+      ALM->setOperand(2, getConstantInt(UF));
+      continue;
+    }
+
     auto *SingleDef = dyn_cast<VPSingleDefRecipe>(&R);
     if (SingleDef && vputils::isUniformAcrossVFsAndUFs(SingleDef)) {
       addUniformForAllParts(SingleDef);
@@ -559,11 +572,10 @@ static void addLaneToStartIndex(VPScalarIVStepsRecipe *Steps, unsigned Lane,
   // TODO: Retrieve the flags from Steps unconditionally.
   VPIRFlags Flags;
   if (BaseIVTy->isFloatingPointTy()) {
-    int SignedLane = static_cast<int>(Lane);
-    if (!OldStartIndex && Steps->getInductionOpcode() == Instruction::FSub)
-      SignedLane = -SignedLane;
-    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, SignedLane));
-    AddOpcode = Steps->getInductionOpcode();
+    // The start index counts upwards, so accumulate with FAdd regardless of the
+    // induction opcode; see VPScalarIVStepsRecipe.
+    LaneOffset = Plan.getOrAddLiveIn(ConstantFP::get(BaseIVTy, Lane));
+    AddOpcode = Instruction::FAdd;
     Flags = VPIRFlags(FastMathFlags());
   } else {
     unsigned BaseIVBits = BaseIVTy->getScalarSizeInBits();
@@ -663,6 +675,24 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
   return New;
 }
 
+/// Converts the frequency \p Freq with which a block is entered to branch
+/// weights for the branch guarding it, or nullptr if \p Freq is unknown or
+/// estimated.
+static MDNode *
+convertFrequencyToBranchWeights(std::optional<VPExecutionFrequency> Freq,
+                                LLVMContext &Ctx) {
+  if (!Freq || Freq->IsEstimated)
+    return nullptr;
+  BranchProbability P = vputils::getExecutionProbability(Freq->Freq);
+
+  // Use the numerators of P and its complement as weights and reduce them via
+  // gcd to keep them small. Neither is zero, as P is neither zero nor one.
+  uint32_t Taken = P.getNumerator();
+  uint32_t NotTaken = P.getCompl().getNumerator();
+  uint32_t GCD = std::gcd(Taken, NotTaken);
+  return MDBuilder(Ctx).createBranchWeights(Taken / GCD, NotTaken / GCD);
+}
+
 /// Convert recipes in region blocks to operate on a single lane 0.
 /// VPReplicateRecipes are converted to single-scalar ones, branch-on-mask is
 /// converted into BranchOnCond, PredInstPhi recipes are replaced by scalar phi
@@ -712,8 +742,12 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
         RepR->replaceAllUsesWith(NewR);
         RepR->eraseFromParent();
       } else if (auto *BranchOnMask = dyn_cast<VPBranchOnMaskRecipe>(&OldR)) {
-        Builder.createNaryOp(VPInstruction::BranchOnCond,
-                             {BranchOnMask->getOperand(0)}, OldDL);
+        // Turn the frequency of the predicated block into branch weights.
+        auto *BOC = Builder.createNaryOp(VPInstruction::BranchOnCond,
+                                         {BranchOnMask->getOperand(0)}, OldDL);
+        if (MDNode *Weights = convertFrequencyToBranchWeights(
+                BranchOnMask->getExecutionFrequency(), Plan.getContext()))
+          BOC->setMetadata(LLVMContext::MD_prof, Weights);
         BranchOnMask->eraseFromParent();
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
@@ -936,17 +970,12 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
   SmallVector<VPRecipeBase *> ToRemove;
   for (VPBasicBlock *VPBB : VPBBsToUnroll) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      if (!isa<VPInstruction, VPReplicateRecipe, VPScalarIVStepsRecipe>(&R) ||
-          (isa<VPReplicateRecipe>(&R) &&
-           cast<VPReplicateRecipe>(&R)->isSingleScalar()) ||
-          (isa<VPInstruction>(&R) &&
-           !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() &&
-           cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
+      if (!vputils::doesGeneratePerAllLanes(&R))
         continue;
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
-      if (DefR->getNumUsers() == 0) {
+      if (DefR->user_empty()) {
         // Create single-scalar version of DefR for all lanes.
         for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
           cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
@@ -963,7 +992,10 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.usesFirstLaneOnly(DefR);
+        if (U.usesFirstLaneOnly(DefR))
+          return true;
+        auto *VPI = dyn_cast<VPInstruction>(&U);
+        return VPI && Instruction::isCast(VPI->getOpcode());
       });
 
       // Update each build vector user that currently has DefR as its only

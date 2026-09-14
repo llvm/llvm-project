@@ -1284,6 +1284,31 @@ let Predicates = [HasBMI, NoEGPR] in
 let Predicates = [HasBMI, HasEGPR] in
   defm : Bls_Pats<"_EVEX">;
 
+// BLSI only has GR32/GR64 forms. For an i8 operand we any-extend into a
+// 32-bit register, isolate the lowest set bit with BLSI32, and extract
+// the low byte. Any-extend is safe because BLSI keeps only the lowest
+// set bit, so upper-bit garbage cannot affect the extracted byte.
+let Predicates = [HasBMI] in
+  def : Pat<(and GR8:$src, (ineg_su GR8:$src)),
+            (EXTRACT_SUBREG
+              (BLSI32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                       GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
+// BLSMSK only has GR32/GR64 forms. For an i8 operand we use INSERT_SUBREG
+// with IMPLICIT_DEF (any-extend) rather than SUBREG_TO_REG (zero-extend).
+// Although BLSMSK computes (src XOR (src-1)), dirty upper bits [31:8] cannot
+// corrupt bits [7:0] of the result: borrow from (src-1) only propagates
+// downward through contiguous zeros, and even when [7:0] is zero the
+// EXTRACT_SUBREG still yields the correct all-ones result. This matches the
+// same approach used for BLSI.
+let Predicates = [HasBMI] in
+  def : Pat<(xor GR8:$src, (add GR8:$src, -1)),
+            (EXTRACT_SUBREG
+              (BLSMSK32rr (INSERT_SUBREG (i32 (IMPLICIT_DEF)),
+                                         GR8:$src, sub_8bit)),
+              sub_8bit)>;
+
 multiclass Bmi4VOp3<bits<8> o, string m, X86TypeInfo t, SDPatternOperator node,
                     X86FoldableSchedWrite sched, string Suffix = ""> {
   let SchedRW = [sched], Form = MRMSrcReg4VOp3 in
@@ -1391,55 +1416,17 @@ multiclass PdepPext<string m, X86TypeInfo t, SDPatternOperator node,
 }
 
 let Predicates = [HasBMI2, NoEGPR] in {
-  defm PDEP32 : PdepPext<"pdep", Xi32, X86pdep>, XD, VEX;
-  defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep>, XD, REX_W, VEX;
-  defm PEXT32 : PdepPext<"pext", Xi32, X86pext>, XS, VEX;
-  defm PEXT64 : PdepPext<"pext", Xi64, X86pext>, XS, REX_W, VEX;
+  defm PDEP32 : PdepPext<"pdep", Xi32, pdep>, XD, VEX;
+  defm PDEP64 : PdepPext<"pdep", Xi64, pdep>, XD, REX_W, VEX;
+  defm PEXT32 : PdepPext<"pext", Xi32, pext>, XS, VEX;
+  defm PEXT64 : PdepPext<"pext", Xi64, pext>, XS, REX_W, VEX;
 }
 
 let Predicates = [HasBMI2, HasEGPR] in {
-  defm PDEP32 : PdepPext<"pdep", Xi32, X86pdep, "_EVEX">, XD, EVEX;
-  defm PDEP64 : PdepPext<"pdep", Xi64, X86pdep, "_EVEX">, XD, REX_W, EVEX;
-  defm PEXT32 : PdepPext<"pext", Xi32, X86pext, "_EVEX">, XS, EVEX;
-  defm PEXT64 : PdepPext<"pext", Xi64, X86pext, "_EVEX">, XS, REX_W, EVEX;
-}
-
-let Predicates = [HasBMI2, NoEGPR] in {
-  def : Pat<(i32 (pext GR32:$src, GR32:$mask)),
-            (PEXT32rr GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pext GR32:$src, (loadi32 addr:$mask))),
-            (PEXT32rm GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, GR64:$mask)),
-            (PEXT64rr GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, (loadi64 addr:$mask))),
-            (PEXT64rm GR64:$src, i64mem:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, GR32:$mask)),
-            (PDEP32rr GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, (loadi32 addr:$mask))),
-            (PDEP32rm GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, GR64:$mask)),
-            (PDEP64rr GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, (loadi64 addr:$mask))),
-            (PDEP64rm GR64:$src, i64mem:$mask)>;
-}
-
-let Predicates = [HasBMI2, HasEGPR] in {
-  def : Pat<(i32 (pext GR32:$src, GR32:$mask)),
-            (PEXT32rr_EVEX GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pext GR32:$src, (loadi32 addr:$mask))),
-            (PEXT32rm_EVEX GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, GR64:$mask)),
-            (PEXT64rr_EVEX GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pext GR64:$src, (loadi64 addr:$mask))),
-            (PEXT64rm_EVEX GR64:$src, i64mem:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, GR32:$mask)),
-            (PDEP32rr_EVEX GR32:$src, GR32:$mask)>;
-  def : Pat<(i32 (pdep GR32:$src, (loadi32 addr:$mask))),
-            (PDEP32rm_EVEX GR32:$src, i32mem:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, GR64:$mask)),
-            (PDEP64rr_EVEX GR64:$src, GR64:$mask)>;
-  def : Pat<(i64 (pdep GR64:$src, (loadi64 addr:$mask))),
-            (PDEP64rm_EVEX GR64:$src, i64mem:$mask)>;
+  defm PDEP32 : PdepPext<"pdep", Xi32, pdep, "_EVEX">, XD, EVEX;
+  defm PDEP64 : PdepPext<"pdep", Xi64, pdep, "_EVEX">, XD, REX_W, EVEX;
+  defm PEXT32 : PdepPext<"pext", Xi32, pext, "_EVEX">, XS, EVEX;
+  defm PEXT64 : PdepPext<"pext", Xi64, pext, "_EVEX">, XS, REX_W, EVEX;
 }
 
 //===----------------------------------------------------------------------===//

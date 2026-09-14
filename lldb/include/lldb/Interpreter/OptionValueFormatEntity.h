@@ -32,8 +32,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override;
-
   bool IsDefault() const override {
     return m_current_format == m_default_format;
   }
@@ -50,6 +48,8 @@ public:
   const FormatEntity::Entry &GetDefaultValue() const { return m_default_entry; }
 
 protected:
+  void ClearImpl() override;
+
   std::string m_current_format;
   std::string m_default_format;
   FormatEntity::Entry m_current_entry;

@@ -32,8 +32,15 @@ struct StdAllocatorCaller {
   explicit operator bool() { return Call; }
 };
 
+// FIXME: Create one for the "checking potential constant expression"
+// evaluation.
+enum class EvaluationKind : uint8_t {
+  None,
+  Dtor, /// We're checking for constant destruction of a global variable.
+};
+
 /// Interpreter context.
-class InterpState final : public State, public SourceMapper {
+class InterpState final : public State {
 public:
   InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
@@ -61,13 +68,7 @@ public:
   void deallocate(Block *B);
 
   /// Delegates source mapping to the mapper.
-  SourceInfo getSource(const Function *F, CodePtr PC) const override {
-    if (M)
-      return M->getSource(F, PC);
-
-    assert(F && "Function cannot be null");
-    return F->getSource(PC);
-  }
+  SourceInfo getSource(CodePtr PC) const { return M->getSource(PC); }
 
   Context &getContext() const { return Ctx; }
 
@@ -120,10 +121,40 @@ public:
     return reinterpret_cast<const CXXRecordDecl **>(
         this->allocate(Length * sizeof(CXXRecordDecl *)));
   }
+  PointerPathEntry *allocPointerPath(unsigned Length,
+                                     const PointerPathEntry *OldPP) {
+    assert(Length != 0);
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(Length * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * Length);
+    return PP;
+  }
+  /// Allocate a new pointer path of Length \c NewLength.
+  /// NewLength - 1 elements are copied form \c OldPP.
+  PointerPathEntry *extendPointerPath(unsigned NewLength,
+                                      const PointerPathEntry *OldPP,
+                                      PointerPathEntry NewEntry) {
+    auto *PP = reinterpret_cast<PointerPathEntry *>(
+        this->allocate(NewLength * sizeof(PointerPathEntry)));
+    if (OldPP)
+      std::memcpy(PP, OldPP, sizeof(PointerPathEntry) * (NewLength - 1));
+    PP[NewLength - 1] = NewEntry;
+    return PP;
+  }
 
   /// Note that a step has been executed. If there are no more steps remaining,
   /// diagnoses and returns \c false.
-  bool noteStep(CodePtr OpPC);
+  bool noteStep(CodePtr OpPC) {
+    if (InfiniteSteps)
+      return true;
+
+    --StepsLeft;
+    if (LLVM_LIKELY(StepsLeft != 0))
+      return true;
+
+    return diagnoseStepLimitExceeded(OpPC);
+  }
 
   bool initializingBlock(const Block *B) const {
     for (PtrView V : InitializingPtrs)
@@ -131,6 +162,33 @@ public:
         return true;
     return false;
   }
+
+  bool lifetimeStartedInEvaluation(const Block *B) const {
+    if (EvalKind == EvaluationKind::None)
+      return B->getEvalID() == EvalID;
+
+    if (EvalKind == EvaluationKind::Dtor) {
+      assert(EvaluatingDecl);
+      if (B->getDescriptor()->asVarDecl() == EvaluatingDecl)
+        return EvaluatingDecl->getType().isConstQualified();
+    }
+    return false;
+  }
+
+  /// Return if we're checking if a global variable has a constant destructor.
+  bool checkingConstantDestruction() const {
+    return EvalKind == EvaluationKind::Dtor;
+  }
+  /// Return if we're checking if a global variable has a constant destructor
+  /// and the given pointer is pointing to the variable we're checking that for.
+  bool checkingConstantDestruction(const Pointer &Ptr) const {
+    return checkingConstantDestruction(Ptr.getRootVarDecl());
+  }
+  bool checkingConstantDestruction(const VarDecl *VD) const {
+    return EvalKind == EvaluationKind::Dtor && VD == EvaluatingDecl;
+  }
+
+  unsigned newStringID() { return StringID++; }
 
 private:
   friend class EvaluationResult;
@@ -143,8 +201,11 @@ private:
   std::unique_ptr<DynamicAllocator> Alloc;
   /// Allocator for everything else, e.g. floating-point values.
   mutable std::optional<llvm::BumpPtrAllocator> Allocator;
+  /// Diagnose that we've reached the constexpr step limit.
+  bool diagnoseStepLimitExceeded(CodePtr OpPC);
 
 public:
+  CodePtr PC;
   /// Reference to the module containing all bytecode.
   Program &P;
   /// Temporary stack.
@@ -166,6 +227,10 @@ public:
   const bool InfiniteSteps = false;
   /// ID identifying this evaluation.
   const unsigned EvalID;
+
+  unsigned StringID = 0;
+
+  EvaluationKind EvalKind = EvaluationKind::None;
 
   /// Things needed to do speculative execution.
   SmallVectorImpl<PartialDiagnosticAt> *PrevDiags = nullptr;

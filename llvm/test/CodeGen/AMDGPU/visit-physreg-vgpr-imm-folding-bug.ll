@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
 
 ; Make sure the return value of the first call is not overwritten with
 ; a constant before the fadd use.

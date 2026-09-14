@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prologepilog %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64 -mattr=+mte -run-pass=prolog-epilog %s -verify-machineinstrs -o - | FileCheck %s
 
 # This test ensures that when register pressure is extremely high, the compiler
 # does not attempt to merge ST2Gi instructions into an STGloop. STGloop requires

@@ -652,13 +652,13 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // IOS versions.
   let Uses = [SP] in {
-    def tTAILJMPr : tPseudoExpand<(outs), (ins tcGPR:$dst),
+    def tTAILJMPr : tPseudoExpand<(outs), (ins GPR:$dst),
                      4, IIC_Br, [],
                      (tBX GPR:$dst, (ops 14, zero_reg))>,
                      Requires<[IsThumb]>, Sched<[WriteBr]>;
   }
-  // tTAILJMPd: MachO version uses a Thumb2 branch (no Thumb1 tail calls
-  // on MachO), so it's in ARMInstrThumb2.td.
+  // tTAILJMPd: MachO version uses a wide branch, so it's in
+  // ARMInstrThumb2.td.
   // Non-MachO version:
   let Uses = [SP] in {
     def tTAILJMPdND : tPseudoExpand<(outs),

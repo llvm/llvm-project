@@ -1,6 +1,6 @@
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc < %s -mtriple=amdgpu8.02--amdpal | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgpu8.10--amdpal | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgpu9.00--amdpal | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; A test case that originally failed in divergence calculation
 ; Implementation has to identify all formal args that can be a source of divergence

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -verify-machineinstrs -run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.0a -verify-machineinstrs -run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s
 
 # Regression for the gfx90a waterfall lane reader: when an inreg call
 # argument's source virtual register lives in an AV_* class (which

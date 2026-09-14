@@ -8,7 +8,10 @@
 
 #include "llvm/CAS/ObjectStore.h"
 #include "OnDiskCommonUtils.h"
+#include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/RandomNumberGenerator.h"
@@ -23,7 +26,7 @@ using namespace llvm::cas;
 using namespace llvm::unittest::cas;
 
 TEST_P(CASTest, PrintIDs) {
-  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
 
   std::optional<CASID> ID1, ID2;
   ASSERT_THAT_ERROR(CAS->createProxy({}, "1").moveInto(ID1), Succeeded());
@@ -41,7 +44,7 @@ TEST_P(CASTest, PrintIDs) {
 }
 
 TEST_P(CASTest, Blobs) {
-  std::unique_ptr<ObjectStore> CAS1 = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS1 = createObjectStore();
   StringRef ContentStrings[] = {
       "word",
       "some longer text std::string's local memory",
@@ -91,7 +94,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   }
 
   // Confirm these blobs don't exist in a fresh CAS instance.
-  std::unique_ptr<ObjectStore> CAS2 = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS2 = createObjectStore();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     std::optional<ObjectProxy> Proxy;
     EXPECT_THAT_ERROR(CAS2->getProxy(IDs[I]).moveInto(Proxy), Failed());
@@ -115,7 +118,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 
 TEST_P(CASTest, BlobsBig) {
   // A little bit of validation that bigger blobs are okay. Climb up to 1MB.
-  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
   SmallString<256> String1 = StringRef("a few words");
   SmallString<256> String2 = StringRef("others");
   while (String1.size() < 1024U * 1024U) {
@@ -153,7 +156,7 @@ TEST_P(CASTest, BlobsBig) {
 }
 
 TEST_P(CASTest, LeafNodes) {
-  std::unique_ptr<ObjectStore> CAS1 = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS1 = createObjectStore();
   StringRef ContentStrings[] = {
       "word",
       "some longer text std::string's local memory",
@@ -211,7 +214,7 @@ multiline text multiline text multiline text multiline text multiline text)",
   }
 
   // Confirm these blobs don't exist in a fresh CAS instance.
-  std::unique_ptr<ObjectStore> CAS2 = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS2 = createObjectStore();
   for (int I = 0, E = IDs.size(); I != E; ++I) {
     std::optional<ObjectProxy> Object;
     EXPECT_THAT_ERROR(CAS2->getProxy(IDs[I]).moveInto(Object), Failed());
@@ -236,7 +239,7 @@ multiline text multiline text multiline text multiline text multiline text)",
 }
 
 TEST_P(CASTest, NodesBig) {
-  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
 
   // Specifically check near 1MB for objects large enough they're likely to be
   // stored externally in an on-disk CAS, and such that one of them will be
@@ -274,7 +277,7 @@ TEST_P(CASTest, NodesBig) {
 }
 
 TEST_P(CASTest, FileAPIs) {
-  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
 
   auto runCommonTests =
       [&CAS](function_ref<std::unique_ptr<unittest::TempFile>(char)>
@@ -377,14 +380,14 @@ static void testBlobsParallel1(ObjectStore &CAS, uint64_t BlobSize) {
 }
 
 TEST_P(CASTest, BlobsParallel) {
-  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
   uint64_t Size = 1ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
 }
 
 #ifdef EXPENSIVE_CHECKS
 TEST_P(CASTest, BlobsBigParallel) {
-  std::unique_ptr<ObjectStore> CAS = createObjectStore();
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
   // 100k is large enough to be standalone files in our on-disk cas.
   uint64_t Size = 100ULL * 1024;
   ASSERT_NO_FATAL_FAILURE(testBlobsParallel1(*CAS, Size));
@@ -497,4 +500,151 @@ TEST_F(OnDiskCASTest, OnDiskCASDiskSize) {
   CheckFileSizes(/*Mapped=*/true);
   CAS.reset();
   CheckFileSizes(/*Mapped=*/false);
+}
+
+TEST_P(CASTest, StandaloneMemoryBufferOutlivesCAS) {
+  // The buffer has to stay readable after the last reference to the store is
+  // gone. Cover both sides of the size threshold that decides whether an
+  // on-disk CAS embeds an object in its shared data pool or gives it a file of
+  // its own, since only the latter can be mapped.
+  for (uint64_t Size : {uint64_t(64), uint64_t(100 * 1024)}) {
+    std::shared_ptr<ObjectStore> CAS = createObjectStore();
+    std::string Data(Size, '\a');
+    Data.front() = 'b';
+    Data.back() = 'e';
+
+    std::optional<ObjectProxy> Proxy;
+    ASSERT_THAT_ERROR(CAS->createProxy({}, Data).moveInto(Proxy), Succeeded());
+    std::unique_ptr<MemoryBuffer> Buffer =
+        Proxy->getStandaloneMemoryBuffer("name");
+    ASSERT_TRUE(Buffer);
+    EXPECT_EQ("name", Buffer->getBufferIdentifier());
+
+    Proxy.reset();
+    CAS.reset();
+
+    // Read every page, not just the ends, so a mapping that lost its backing
+    // store faults here rather than silently passing.
+    ASSERT_EQ(Size, Buffer->getBufferSize());
+    EXPECT_EQ(Data, Buffer->getBuffer());
+  }
+}
+
+TEST_P(CASTest, StandaloneMemoryBufferNullTerminated) {
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  // Cover both sides of the size threshold that decides whether an on-disk CAS
+  // gives an object a file of its own or embeds it in the shared data pool,
+  // and include exact multiples of the page size: a mapping ending on a page
+  // boundary has no zero-filled slack to serve as the terminator.
+  uint64_t PageSize = sys::Process::getPageSizeEstimate();
+  for (uint64_t Size : {uint64_t(64), uint64_t(60000), uint64_t(65535),
+                        uint64_t(100 * 1024), PageSize, 4 * PageSize}) {
+    std::string Data(Size, 'z');
+    std::optional<ObjectProxy> Proxy;
+    ASSERT_THAT_ERROR(CAS->createProxy({}, Data).moveInto(Proxy), Succeeded());
+    std::unique_ptr<MemoryBuffer> Buffer = Proxy->getStandaloneMemoryBuffer(
+        "name", /*RequiresNullTerminator=*/true);
+    ASSERT_TRUE(Buffer);
+    ASSERT_EQ(Size, Buffer->getBufferSize());
+    EXPECT_EQ('\0', *Buffer->getBufferEnd());
+    EXPECT_EQ(Data, Buffer->getBuffer());
+  }
+}
+
+TEST_P(CASTest, StandaloneMemoryBufferWithoutNullTerminator) {
+  std::shared_ptr<ObjectStore> CAS = createObjectStore();
+  uint64_t PageSize = sys::Process::getPageSizeEstimate();
+  for (uint64_t Size : {uint64_t(64), uint64_t(60000), uint64_t(65535),
+                        uint64_t(100 * 1024), PageSize, 4 * PageSize}) {
+    std::string Data(Size, 'q');
+    Data.front() = 'b';
+    Data.back() = 'e';
+    std::optional<ObjectProxy> Proxy;
+    ASSERT_THAT_ERROR(CAS->createProxy({}, Data).moveInto(Proxy), Succeeded());
+    std::unique_ptr<MemoryBuffer> Buffer = Proxy->getStandaloneMemoryBuffer(
+        "name", /*RequiresNullTerminator=*/false);
+    ASSERT_TRUE(Buffer);
+    ASSERT_EQ(Size, Buffer->getBufferSize());
+    EXPECT_EQ(Data, Buffer->getBuffer());
+  }
+}
+
+TEST_F(OnDiskCASTest, StandaloneMemoryBufferSurvivesDeletedCAS) {
+  // The point of a standalone buffer is that clients can drop the store,
+  // letting its lock go so the CAS can be pruned, and still read what they
+  // loaded. Deleting the whole directory is the strongest form of that: a
+  // mapping keeps the file alive until it is unmapped.
+  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
+
+  std::string SmallData(64, 's');
+  std::string BigData(100ULL * 1024, 'b');
+  BigData.back() = 'e';
+
+  std::unique_ptr<MemoryBuffer> SmallBuffer, BigBuffer;
+  {
+    std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
+    ASSERT_THAT_ERROR(
+        createOnDiskUnifiedCASDatabases(Temp.path()).moveInto(DBs),
+        Succeeded());
+    std::optional<ObjectProxy> Small, Big;
+    ASSERT_THAT_ERROR(DBs.first->createProxy({}, SmallData).moveInto(Small),
+                      Succeeded());
+    ASSERT_THAT_ERROR(DBs.first->createProxy({}, BigData).moveInto(Big),
+                      Succeeded());
+    SmallBuffer =
+        Small->getStandaloneMemoryBuffer("", /*RequiresNullTerminator=*/false);
+    BigBuffer =
+        Big->getStandaloneMemoryBuffer("", /*RequiresNullTerminator=*/false);
+    ASSERT_TRUE(SmallBuffer);
+    ASSERT_TRUE(BigBuffer);
+  }
+
+  // Windows refuses to delete a file while it is still mapped, so only check
+  // the deleted case where unlinking a mapped file is allowed.
+#ifndef _WIN32
+  ASSERT_EQ(std::error_code(), sys::fs::remove_directories(Temp.path()));
+  ASSERT_FALSE(sys::fs::exists(Temp.path()));
+#endif
+
+  EXPECT_EQ(SmallData, SmallBuffer->getBuffer());
+  EXPECT_EQ(BigData, BigBuffer->getBuffer());
+
+  // The big object gets a file of its own, so it should be mapped rather than
+  // copied -- that is the whole point of not holding the store open. (The
+  // small one is embedded in the shared data pool, which is always copied.)
+  EXPECT_EQ(MemoryBuffer::MemoryBuffer_MMap, BigBuffer->getBufferKind());
+  EXPECT_EQ(MemoryBuffer::MemoryBuffer_Malloc, SmallBuffer->getBufferKind());
+}
+
+TEST_F(OnDiskCASTest, StandaloneMemoryBufferRecordWithRefs) {
+  // An object with refs that is too big for the pool gets a file of its own
+  // too, but one holding a record: a header and the refs, then the data and a
+  // nul. It can still be mapped, at an offset, and the nul it already has
+  // means even a caller wanting a terminator does not force a copy.
+  unittest::TempDir Temp("on-disk-cas", /*Unique=*/true);
+
+  std::string Data(100ULL * 1024, 'r');
+  Data.back() = 'e';
+
+  std::unique_ptr<MemoryBuffer> Buffer;
+  {
+    std::pair<std::unique_ptr<ObjectStore>, std::unique_ptr<ActionCache>> DBs;
+    ASSERT_THAT_ERROR(
+        createOnDiskUnifiedCASDatabases(Temp.path()).moveInto(DBs),
+        Succeeded());
+    std::optional<ObjectProxy> Child, Parent;
+    ASSERT_THAT_ERROR(DBs.first->createProxy({}, "child").moveInto(Child),
+                      Succeeded());
+    ASSERT_THAT_ERROR(
+        DBs.first->createProxy({Child->getRef()}, Data).moveInto(Parent),
+        Succeeded());
+    Buffer = Parent->getStandaloneMemoryBuffer("name");
+    ASSERT_TRUE(Buffer);
+  }
+
+  EXPECT_EQ(MemoryBuffer::MemoryBuffer_MMap, Buffer->getBufferKind());
+  EXPECT_EQ("name", Buffer->getBufferIdentifier());
+  ASSERT_EQ(Data.size(), Buffer->getBufferSize());
+  EXPECT_EQ(Data, Buffer->getBuffer());
+  EXPECT_EQ('\0', *Buffer->getBufferEnd());
 }

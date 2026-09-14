@@ -5,6 +5,10 @@
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=core-avx2 -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX2
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skylake-avx512 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
 ; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=skylake-avx512 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m7 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=-prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX512
+; RUN: opt < %s -mtriple=x86_64-unknown -mcpu=c86-4g-m8 -mattr=+prefer-256-bit -passes=slp-vectorizer -S | FileCheck %s --check-prefixes=CHECK,AVX,AVX256
 
 @srcA64 = common global [8 x double] zeroinitializer, align 64
 @srcB64 = common global [8 x double] zeroinitializer, align 64

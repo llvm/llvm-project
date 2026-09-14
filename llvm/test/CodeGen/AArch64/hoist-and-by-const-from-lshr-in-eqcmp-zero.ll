@@ -286,8 +286,8 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v2.4s, #1
 ; CHECK-SD-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    cmtst v0.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -307,16 +307,27 @@ define <4 x i1> @vec_4xi32_splat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
 }
 
 define <4 x i1> @vec_4xi32_nonsplat_eq(<4 x i32> %x, <4 x i32> %y) nounwind {
-; CHECK-LABEL: vec_4xi32_nonsplat_eq:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI13_0
-; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
-; CHECK-NEXT:    ushl v1.4s, v2.4s, v1.4s
-; CHECK-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: vec_4xi32_nonsplat_eq:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    adrp x8, .LCPI13_0
+; CHECK-SD-NEXT:    neg v1.4s, v1.4s
+; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-SD-NEXT:    ushl v1.4s, v2.4s, v1.4s
+; CHECK-SD-NEXT:    cmtst v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
+; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: vec_4xi32_nonsplat_eq:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    adrp x8, .LCPI13_0
+; CHECK-GI-NEXT:    neg v1.4s, v1.4s
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-GI-NEXT:    ushl v1.4s, v2.4s, v1.4s
+; CHECK-GI-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-GI-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
+; CHECK-GI-NEXT:    ret
   %t0 = lshr <4 x i32> <i32 0, i32 1, i32 16776960, i32 2147483648>, %y
   %t1 = and <4 x i32> %t0, %x
   %res = icmp eq <4 x i32> %t1, <i32 0, i32 0, i32 0, i32 0>
@@ -328,8 +339,8 @@ define <4 x i1> @vec_4xi32_nonsplat_undef0_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    movi v2.4s, #1
 ; CHECK-SD-NEXT:    ushl v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    and v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    cmtst v0.4s, v0.4s, v2.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -353,8 +364,8 @@ define <4 x i1> @vec_4xi32_nonsplat_undef1_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; CHECK-SD-NEXT:    movi v2.4s, #1
 ; CHECK-SD-NEXT:    neg v1.4s, v1.4s
 ; CHECK-SD-NEXT:    ushl v1.4s, v2.4s, v1.4s
-; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    cmtst v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;
@@ -379,8 +390,8 @@ define <4 x i1> @vec_4xi32_nonsplat_undef2_eq(<4 x i32> %x, <4 x i32> %y) nounwi
 ; CHECK-SD-NEXT:    movi v2.4s, #1
 ; CHECK-SD-NEXT:    neg v1.4s, v1.4s
 ; CHECK-SD-NEXT:    ushl v1.4s, v2.4s, v1.4s
-; CHECK-SD-NEXT:    and v0.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-SD-NEXT:    cmtst v0.4s, v1.4s, v0.4s
+; CHECK-SD-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-SD-NEXT:    ret
 ;

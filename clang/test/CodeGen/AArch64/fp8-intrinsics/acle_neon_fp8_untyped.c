@@ -5,31 +5,8 @@
 
 // REQUIRES: aarch64-registered-target
 
-// CHECK-LABEL: define dso_local <8 x i8> @test_vset_lane_mf8(
-// CHECK-SAME: <1 x i8> [[A:%.*]], <8 x i8> [[B:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i8> [[A]] to i8
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <8 x i8> [[B]], i8 [[TMP0]], i32 7
-// CHECK-NEXT:    ret <8 x i8> [[VSET_LANE]]
-//
-mfloat8x8_t test_vset_lane_mf8(mfloat8_t a, mfloat8x8_t b) {
-  return vset_lane_mf8(a, b, 7);
-}
-
-// CHECK-LABEL: define dso_local <16 x i8> @test_vsetq_lane_mf8(
-// CHECK-SAME: <1 x i8> [[A:%.*]], <16 x i8> [[B:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x i8> [[A]] to i8
-// CHECK-NEXT:    [[VSET_LANE:%.*]] = insertelement <16 x i8> [[B]], i8 [[TMP0]], i32 15
-// CHECK-NEXT:    ret <16 x i8> [[VSET_LANE]]
-//
-mfloat8x16_t test_vsetq_lane_mf8(mfloat8_t a, mfloat8x16_t b) {
-  return vsetq_lane_mf8(a, b, 15);
-}
-
-
 // CHECK-LABEL: define dso_local <8 x i8> @test_vcreate_mf8(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast i64 [[A]] to <8 x i8>
 // CHECK-NEXT:    ret <8 x i8> [[TMP0]]

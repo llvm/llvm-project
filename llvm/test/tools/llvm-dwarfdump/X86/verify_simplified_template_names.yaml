@@ -1,0 +1,83 @@
+# RUN: yaml2obj %s | not llvm-dwarfdump --verify - 2>&1 | FileCheck %s
+
+## The --verify path reconstructs simplified template names via
+## DWARFTypePrinter to compare them against the original DW_AT_name. Template
+## parameters whose name cannot be recovered must be diagnosed as an
+## unreconstructable name rather than aborting the verifier with an assertion.
+## This covers both name lookups that used to assert:
+##   - a DW_TAG_template_value_parameter whose DW_AT_type resolves to a type
+##     with no DW_AT_name, and
+##   - a DW_TAG_GNU_template_template_param with no DW_AT_GNU_template_name.
+
+# CHECK-NOT: Assertion
+# CHECK: error: Simplified template DW_AT_name could not be reconstituted:
+# CHECK-NEXT: original: Foo<int>
+# CHECK-NEXT: reconstituted: Foo<>
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+DWARF:
+  debug_str:
+    - "clang"
+    - "_STN|Foo|<int>"
+  debug_abbrev:
+    - Table:
+        - Code:            0x0000000000000001
+          Tag:             DW_TAG_compile_unit
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+            - Attribute:       DW_AT_language
+              Form:            DW_FORM_data2
+        - Code:            0x0000000000000002
+          Tag:             DW_TAG_base_type
+          Children:        DW_CHILDREN_no
+          Attributes:      []
+        - Code:            0x0000000000000003
+          Tag:             DW_TAG_structure_type
+          Children:        DW_CHILDREN_yes
+          Attributes:
+            - Attribute:       DW_AT_name
+              Form:            DW_FORM_strp
+        - Code:            0x0000000000000004
+          Tag:             DW_TAG_template_value_parameter
+          Children:        DW_CHILDREN_no
+          Attributes:
+            - Attribute:       DW_AT_type
+              Form:            DW_FORM_ref4
+            - Attribute:       DW_AT_const_value
+              Form:            DW_FORM_sdata
+        - Code:            0x0000000000000005
+          Tag:             DW_TAG_GNU_template_template_param
+          Children:        DW_CHILDREN_no
+          Attributes:      []
+  debug_info:
+    - Version:         4
+      AbbrOffset:      0x0000000000000000
+      AddrSize:        8
+      Entries:
+        - AbbrCode:        0x00000001
+          Values:
+            - Value:           0x0000000000000000
+            - Value:           0x0000000000000004
+        - AbbrCode:        0x00000002
+          Values:          []
+        - AbbrCode:        0x00000003
+          Values:
+            - Value:           0x0000000000000006
+        - AbbrCode:        0x00000004
+          Values:
+            - Value:           0x0000000000000012
+            - Value:           0x0000000000000000
+        - AbbrCode:        0x00000005
+          Values:          []
+        - AbbrCode:        0x00000000
+          Values:          []
+        - AbbrCode:        0x00000000
+          Values:          []
+...

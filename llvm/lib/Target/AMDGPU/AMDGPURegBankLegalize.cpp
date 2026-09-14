@@ -23,15 +23,18 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "amdgpu-regbanklegalize"
+#define DEBUG_TYPE "amdgpu-reg-bank-legalize"
 
 using namespace llvm;
 using namespace AMDGPU;
@@ -46,12 +49,12 @@ m_GAMDGPUReadAnyLane(const SrcTy &Src) {
   return UnaryOp_match<SrcTy, AMDGPU::G_AMDGPU_READANYLANE>(Src);
 }
 
-class AMDGPURegBankLegalize : public MachineFunctionPass {
+class AMDGPURegBankLegalizeLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
 public:
-  AMDGPURegBankLegalize() : MachineFunctionPass(ID) {}
+  AMDGPURegBankLegalizeLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -63,6 +66,7 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addRequired<MachineUniformityAnalysisPass>();
+    AU.addRequired<GISelValueTrackingAnalysisLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -75,20 +79,21 @@ public:
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(AMDGPURegBankLegalize, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPURegBankLegalizeLegacy, DEBUG_TYPE,
                       "AMDGPU Register Bank Legalize", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
-INITIALIZE_PASS_END(AMDGPURegBankLegalize, DEBUG_TYPE,
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
+INITIALIZE_PASS_END(AMDGPURegBankLegalizeLegacy, DEBUG_TYPE,
                     "AMDGPU Register Bank Legalize", false, false)
 
-char AMDGPURegBankLegalize::ID = 0;
+char AMDGPURegBankLegalizeLegacy::ID = 0;
 
-char &llvm::AMDGPURegBankLegalizeID = AMDGPURegBankLegalize::ID;
+char &llvm::AMDGPURegBankLegalizeLegacyID = AMDGPURegBankLegalizeLegacy::ID;
 
-FunctionPass *llvm::createAMDGPURegBankLegalizePass() {
-  return new AMDGPURegBankLegalize();
+FunctionPass *llvm::createAMDGPURegBankLegalizeLegacyPass() {
+  return new AMDGPURegBankLegalizeLegacy();
 }
 
 const RegBankLegalizeRules &getRules(const GCNSubtarget &ST,
@@ -271,9 +276,7 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
     return false;
 
   Register RALDst = Src;
-  MachineInstr &SrcMI = *MRI.getVRegDef(Src);
-  if (SrcMI.getOpcode() == AMDGPU::G_BITCAST)
-    RALDst = SrcMI.getOperand(1).getReg();
+  bool IsBitcast = mi_match(Src, MRI, m_GBitcast(m_Reg(RALDst)));
 
   B.setInstrAndDebugLoc(Copy);
   SmallVector<Register> ReadAnyLaneSrcRegs = getReadAnyLaneSrcs(RALDst);
@@ -290,7 +293,7 @@ bool AMDGPURegBankLegalizeCombiner::tryEliminateReadAnyLane(
     ReadAnyLaneSrc = Merge.getReg(0);
   }
 
-  if (SrcMI.getOpcode() != AMDGPU::G_BITCAST) {
+  if (!IsBitcast) {
     // Src = READANYLANE RALSrc     Src = READANYLANE RALSrc
     // Dst = Copy Src               $Dst = Copy Src
     // ->                           ->
@@ -415,15 +418,19 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
   return {};
 }
 
-bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
+static bool
+runRegBankLegalize(MachineFunction &MF,
+                   function_ref<GISelCSEInfo *()> GetCSEInfo,
+                   function_ref<const MachineUniformityInfo *()> GetMUI,
+                   function_ref<GISelValueTracking *()> GetVT) {
   if (MF.getProperties().hasFailedISel())
     return false;
 
+  GISelCSEInfo &CSEInfo = *GetCSEInfo();
+  const MachineUniformityInfo &MUI = *GetMUI();
+  GISelValueTracking &VT = *GetVT();
+
   // Setup the instruction builder with CSE.
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  GISelCSEInfo &CSEInfo = Wrapper.get(TPC.getCSEConfig());
   GISelObserverWrapper Observer;
   Observer.addObserver(&CSEInfo);
 
@@ -437,14 +444,12 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
-  const MachineUniformityInfo &MUI =
-      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
 
   // RegBankLegalizeRules is initialized with assigning sets of IDs to opcodes.
   const RegBankLegalizeRules &RBLRules = getRules(ST, MRI);
 
   // Logic that does legalization based on IDs assigned to Opcode.
-  RegBankLegalizeHelper RBLHelper(B, MUI, RBI, RBLRules);
+  RegBankLegalizeHelper RBLHelper(B, MUI, &VT, RBI, RBLRules);
 
   SmallVector<MachineInstr *> AllInst;
 
@@ -505,4 +510,35 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
          "AMDGPURegBankLegalize. Should lower to sgpr S32");
 
   return true;
+}
+
+bool AMDGPURegBankLegalizeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runRegBankLegalize(
+      MF,
+      [&]() {
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(getAnalysis<TargetPassConfig>().getCSEConfig());
+      },
+      [&]() {
+        return &getAnalysis<MachineUniformityAnalysisPass>()
+                    .getUniformityInfo();
+      },
+      [&]() {
+        return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+      });
+}
+
+PreservedAnalyses
+AMDGPURegBankLegalizePass::run(MachineFunction &MF,
+                               MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (!runRegBankLegalize(
+          MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
+          [&]() { return &MFAM.getResult<MachineUniformityAnalysis>(MF); },
+          [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); }))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
 }

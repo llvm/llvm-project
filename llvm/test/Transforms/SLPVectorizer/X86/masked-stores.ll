@@ -5,30 +5,9 @@ define void @const_stride_2_i8(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @const_stride_2_i8(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i8>, ptr [[PL]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[L]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[L]], i32 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[L]], i32 2
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[L]], i32 3
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <8 x i8> [[L]], i32 4
-; CHECK-NEXT:    [[E5:%.*]] = extractelement <8 x i8> [[L]], i32 5
-; CHECK-NEXT:    [[E6:%.*]] = extractelement <8 x i8> [[L]], i32 6
-; CHECK-NEXT:    [[E7:%.*]] = extractelement <8 x i8> [[L]], i32 7
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 12
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 14
-; CHECK-NEXT:    store i8 [[E0]], ptr [[S0]], align 1
-; CHECK-NEXT:    store i8 [[E1]], ptr [[S1]], align 1
-; CHECK-NEXT:    store i8 [[E2]], ptr [[S2]], align 1
-; CHECK-NEXT:    store i8 [[E3]], ptr [[S3]], align 1
-; CHECK-NEXT:    store i8 [[E4]], ptr [[S4]], align 1
-; CHECK-NEXT:    store i8 [[E5]], ptr [[S5]], align 1
-; CHECK-NEXT:    store i8 [[E6]], ptr [[S6]], align 1
-; CHECK-NEXT:    store i8 [[E7]], ptr [[S7]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[L]], <8 x i8> poison, <15 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7>
+; CHECK-NEXT:    call void @llvm.masked.store.v15i8.p0(<15 x i8> [[TMP1]], ptr align 1 [[S0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i8>, ptr %pl, align 1
@@ -63,30 +42,9 @@ define void @const_stride_2_i32(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @const_stride_2_i32(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i32>, ptr [[PL]], align 4
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x i32> [[L]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x i32> [[L]], i32 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i32> [[L]], i32 2
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <8 x i32> [[L]], i32 3
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <8 x i32> [[L]], i32 4
-; CHECK-NEXT:    [[E5:%.*]] = extractelement <8 x i32> [[L]], i32 5
-; CHECK-NEXT:    [[E6:%.*]] = extractelement <8 x i32> [[L]], i32 6
-; CHECK-NEXT:    [[E7:%.*]] = extractelement <8 x i32> [[L]], i32 7
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 12
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 14
-; CHECK-NEXT:    store i32 [[E0]], ptr [[S0]], align 4
-; CHECK-NEXT:    store i32 [[E1]], ptr [[S1]], align 4
-; CHECK-NEXT:    store i32 [[E2]], ptr [[S2]], align 4
-; CHECK-NEXT:    store i32 [[E3]], ptr [[S3]], align 4
-; CHECK-NEXT:    store i32 [[E4]], ptr [[S4]], align 4
-; CHECK-NEXT:    store i32 [[E5]], ptr [[S5]], align 4
-; CHECK-NEXT:    store i32 [[E6]], ptr [[S6]], align 4
-; CHECK-NEXT:    store i32 [[E7]], ptr [[S7]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[L]], <8 x i32> poison, <15 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7>
+; CHECK-NEXT:    call void @llvm.masked.store.v15i32.p0(<15 x i32> [[TMP1]], ptr align 4 [[S0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i32>, ptr %pl, align 4
@@ -157,38 +115,10 @@ define void @const_stride_2_i32_zext_value(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @const_stride_2_i32_zext_value(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i8>, ptr [[PL]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[L]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[L]], i32 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[L]], i32 2
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[L]], i32 3
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <8 x i8> [[L]], i32 4
-; CHECK-NEXT:    [[E5:%.*]] = extractelement <8 x i8> [[L]], i32 5
-; CHECK-NEXT:    [[E6:%.*]] = extractelement <8 x i8> [[L]], i32 6
-; CHECK-NEXT:    [[E7:%.*]] = extractelement <8 x i8> [[L]], i32 7
-; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[E0]] to i32
-; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[E1]] to i32
-; CHECK-NEXT:    [[Z2:%.*]] = zext i8 [[E2]] to i32
-; CHECK-NEXT:    [[Z3:%.*]] = zext i8 [[E3]] to i32
-; CHECK-NEXT:    [[Z4:%.*]] = zext i8 [[E4]] to i32
-; CHECK-NEXT:    [[Z5:%.*]] = zext i8 [[E5]] to i32
-; CHECK-NEXT:    [[Z6:%.*]] = zext i8 [[E6]] to i32
-; CHECK-NEXT:    [[Z7:%.*]] = zext i8 [[E7]] to i32
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 12
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 14
-; CHECK-NEXT:    store i32 [[Z0]], ptr [[S0]], align 4
-; CHECK-NEXT:    store i32 [[Z1]], ptr [[S1]], align 4
-; CHECK-NEXT:    store i32 [[Z2]], ptr [[S2]], align 4
-; CHECK-NEXT:    store i32 [[Z3]], ptr [[S3]], align 4
-; CHECK-NEXT:    store i32 [[Z4]], ptr [[S4]], align 4
-; CHECK-NEXT:    store i32 [[Z5]], ptr [[S5]], align 4
-; CHECK-NEXT:    store i32 [[Z6]], ptr [[S6]], align 4
-; CHECK-NEXT:    store i32 [[Z7]], ptr [[S7]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[L]] to <8 x i32>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <15 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7>
+; CHECK-NEXT:    call void @llvm.masked.store.v15i32.p0(<15 x i32> [[TMP2]], ptr align 4 [[S0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i8>, ptr %pl, align 1
@@ -231,40 +161,12 @@ define void @const_stride_2_i32_add_value(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @const_stride_2_i32_add_value(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i8>, ptr [[PL]], align 1
+; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <8 x i8> [[L]] to <8 x i16>
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <8 x i16> [[TMP1]], splat (i16 5)
-; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 12
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 14
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i16> [[TMP2]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = zext i16 [[TMP3]] to i32
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S0]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i16> [[TMP2]], i32 1
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i16 [[TMP5]] to i32
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[S1]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i16> [[TMP2]], i32 2
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i16 [[TMP7]] to i32
-; CHECK-NEXT:    store i32 [[TMP8]], ptr [[S2]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i16> [[TMP2]], i32 3
-; CHECK-NEXT:    [[TMP10:%.*]] = zext i16 [[TMP9]] to i32
-; CHECK-NEXT:    store i32 [[TMP10]], ptr [[S3]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <8 x i16> [[TMP2]], i32 4
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i16 [[TMP11]] to i32
-; CHECK-NEXT:    store i32 [[TMP12]], ptr [[S4]], align 4
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <8 x i16> [[TMP2]], i32 5
-; CHECK-NEXT:    [[TMP14:%.*]] = zext i16 [[TMP13]] to i32
-; CHECK-NEXT:    store i32 [[TMP14]], ptr [[S5]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <8 x i16> [[TMP2]], i32 6
-; CHECK-NEXT:    [[TMP16:%.*]] = zext i16 [[TMP15]] to i32
-; CHECK-NEXT:    store i32 [[TMP16]], ptr [[S6]], align 4
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <8 x i16> [[TMP2]], i32 7
-; CHECK-NEXT:    [[TMP18:%.*]] = zext i16 [[TMP17]] to i32
-; CHECK-NEXT:    store i32 [[TMP18]], ptr [[S7]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = zext <8 x i16> [[TMP2]] to <8 x i32>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP3]], <8 x i32> poison, <15 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 7>
+; CHECK-NEXT:    call void @llvm.masked.store.v15i32.p0(<15 x i32> [[TMP4]], ptr align 4 [[S0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i8>, ptr %pl, align 1
@@ -315,31 +217,10 @@ define void @const_stride_2_i32_reverse_values(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @const_stride_2_i32_reverse_values(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i32>, ptr [[PL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[L]], splat (i32 1)
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 12
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 14
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[S0]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <8 x i32> [[TMP1]], i32 6
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[S1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 5
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i32> [[TMP1]], i32 4
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[S3]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    store i32 [[TMP6]], ptr [[S4]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <8 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    store i32 [[TMP7]], ptr [[S5]], align 4
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    store i32 [[TMP8]], ptr [[S6]], align 4
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <8 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    store i32 [[TMP9]], ptr [[S7]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <8 x i32> [[L]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> poison, <15 x i32> <i32 7, i32 poison, i32 6, i32 poison, i32 5, i32 poison, i32 4, i32 poison, i32 3, i32 poison, i32 2, i32 poison, i32 1, i32 poison, i32 0>
+; CHECK-NEXT:    call void @llvm.masked.store.v15i32.p0(<15 x i32> [[TMP2]], ptr align 4 [[S0]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i32>, ptr %pl, align 4
@@ -382,30 +263,9 @@ define void @non_const_stride_i32(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @non_const_stride_i32(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i32>, ptr [[PL]], align 4
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x i32> [[L]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x i32> [[L]], i32 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i32> [[L]], i32 2
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <8 x i32> [[L]], i32 3
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <8 x i32> [[L]], i32 4
-; CHECK-NEXT:    [[E5:%.*]] = extractelement <8 x i32> [[L]], i32 5
-; CHECK-NEXT:    [[E6:%.*]] = extractelement <8 x i32> [[L]], i32 6
-; CHECK-NEXT:    [[E7:%.*]] = extractelement <8 x i32> [[L]], i32 7
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 8
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 10
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 12
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 15
-; CHECK-NEXT:    store i32 [[E0]], ptr [[S0]], align 4
-; CHECK-NEXT:    store i32 [[E1]], ptr [[S1]], align 4
-; CHECK-NEXT:    store i32 [[E2]], ptr [[S2]], align 4
-; CHECK-NEXT:    store i32 [[E3]], ptr [[S3]], align 4
-; CHECK-NEXT:    store i32 [[E4]], ptr [[S4]], align 4
-; CHECK-NEXT:    store i32 [[E5]], ptr [[S5]], align 4
-; CHECK-NEXT:    store i32 [[E6]], ptr [[S6]], align 4
-; CHECK-NEXT:    store i32 [[E7]], ptr [[S7]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[L]], <8 x i32> poison, <16 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 2, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 5, i32 poison, i32 6, i32 poison, i32 poison, i32 7>
+; CHECK-NEXT:    call void @llvm.masked.store.v16i32.p0(<16 x i32> [[TMP1]], ptr align 4 [[S0]], <16 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i32>, ptr %pl, align 4
@@ -440,30 +300,9 @@ define void @irregular_gaps_i8(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @irregular_gaps_i8(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <8 x i8>, ptr [[PL]], align 1
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <8 x i8> [[L]], i32 0
-; CHECK-NEXT:    [[E1:%.*]] = extractelement <8 x i8> [[L]], i32 1
-; CHECK-NEXT:    [[E2:%.*]] = extractelement <8 x i8> [[L]], i32 2
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <8 x i8> [[L]], i32 3
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <8 x i8> [[L]], i32 4
-; CHECK-NEXT:    [[E5:%.*]] = extractelement <8 x i8> [[L]], i32 5
-; CHECK-NEXT:    [[E6:%.*]] = extractelement <8 x i8> [[L]], i32 6
-; CHECK-NEXT:    [[E7:%.*]] = extractelement <8 x i8> [[L]], i32 7
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 5
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 9
-; CHECK-NEXT:    [[S4:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 11
-; CHECK-NEXT:    [[S5:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 14
-; CHECK-NEXT:    [[S6:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 18
-; CHECK-NEXT:    [[S7:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 20
-; CHECK-NEXT:    store i8 [[E0]], ptr [[S0]], align 1
-; CHECK-NEXT:    store i8 [[E1]], ptr [[S1]], align 1
-; CHECK-NEXT:    store i8 [[E2]], ptr [[S2]], align 1
-; CHECK-NEXT:    store i8 [[E3]], ptr [[S3]], align 1
-; CHECK-NEXT:    store i8 [[E4]], ptr [[S4]], align 1
-; CHECK-NEXT:    store i8 [[E5]], ptr [[S5]], align 1
-; CHECK-NEXT:    store i8 [[E6]], ptr [[S6]], align 1
-; CHECK-NEXT:    store i8 [[E7]], ptr [[S7]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i8> [[L]], <8 x i8> poison, <21 x i32> <i32 0, i32 poison, i32 1, i32 poison, i32 poison, i32 2, i32 poison, i32 poison, i32 poison, i32 3, i32 poison, i32 4, i32 poison, i32 poison, i32 5, i32 poison, i32 poison, i32 poison, i32 6, i32 poison, i32 7>
+; CHECK-NEXT:    call void @llvm.masked.store.v21i8.p0(<21 x i8> [[TMP1]], ptr align 1 [[S0]], <21 x i1> <i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true, i1 false, i1 false, i1 true, i1 false, i1 false, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <8 x i8>, ptr %pl, align 1
@@ -498,19 +337,10 @@ define void @reordered_values_i32(ptr %pl, ptr %ps) {
 ; CHECK-LABEL: define void @reordered_values_i32(
 ; CHECK-SAME: ptr [[PL:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[L:%.*]] = load <4 x i32>, ptr [[PL]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[L]], splat (i32 1)
 ; CHECK-NEXT:    [[S0:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 2
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 4
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds i32, ptr [[PS]], i64 6
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 1
-; CHECK-NEXT:    store i32 [[TMP2]], ptr [[S0]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
-; CHECK-NEXT:    store i32 [[TMP3]], ptr [[S1]], align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i32 3
-; CHECK-NEXT:    store i32 [[TMP4]], ptr [[S2]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP1]], i32 2
-; CHECK-NEXT:    store i32 [[TMP5]], ptr [[S3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[L]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <7 x i32> <i32 1, i32 poison, i32 0, i32 poison, i32 3, i32 poison, i32 2>
+; CHECK-NEXT:    call void @llvm.masked.store.v7i32.p0(<7 x i32> [[TMP2]], ptr align 4 [[S0]], <7 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>)
 ; CHECK-NEXT:    ret void
 ;
   %l = load <4 x i32>, ptr %pl, align 4

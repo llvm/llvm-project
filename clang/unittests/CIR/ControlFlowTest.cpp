@@ -320,6 +320,32 @@ TEST_F(CIRControlFlowTest, SwitchOp) {
   verifyControlFlowInterfaceConsistency(switchOp);
 }
 
+TEST_F(CIRControlFlowTest, CaseOp) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    !s32i = !cir.int<s, 32>
+    cir.func @f(%val : !s32i) {
+      cir.switch (%val : !s32i) {
+        cir.case (equal, [#cir.int<1> : !s32i]) {
+          cir.yield
+        }
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto caseOp = findFirstOp<cir::CaseOp>(*module);
+
+  expectSuccessors(caseOp, RegionBranchPoint::parent(),
+                   {&caseOp.getCaseRegion()});
+  expectTerminatorSuccessors(caseOp.getCaseRegion(), {nullptr});
+
+  RegionBranchOpInterface caseBranch = asRegionBranch(caseOp);
+  EXPECT_FALSE(caseBranch.isRepetitiveRegion(0));
+  EXPECT_FALSE(caseBranch.hasLoop());
+
+  verifyControlFlowInterfaceConsistency(caseOp);
+}
+
 TEST_F(CIRControlFlowTest, WhileOp) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
     cir.func @f(%cond : !cir.bool) {
@@ -418,6 +444,136 @@ TEST_F(CIRControlFlowTest, DoWhileOp) {
   verifyControlFlowInterfaceConsistency(doWhileOp);
 }
 
+TEST_F(CIRControlFlowTest, WhileOpWithCleanup) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.while {
+        cir.condition(%cond)
+      } do {
+        cir.yield
+      } cleanup all {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto whileOp = findFirstOp<cir::WhileOp>(*module);
+  Region *cleanup = whileOp.maybeGetCleanup();
+  ASSERT_NE(cleanup, nullptr);
+
+  // Parent enters the condition region.
+  expectSuccessors(whileOp, RegionBranchPoint::parent(), {&whileOp.getCond()});
+
+  // Condition branches to the body or, on the false edge, the cleanup region.
+  expectTerminatorSuccessors(whileOp.getCond(), {&whileOp.getBody(), cleanup});
+
+  // Body routes through the cleanup region (there is no step region).
+  expectTerminatorSuccessors(whileOp.getBody(), {cleanup});
+
+  // Cleanup loops back to the condition or exits the loop.
+  expectTerminatorSuccessors(*cleanup, {&whileOp.getCond(), nullptr});
+
+  verifyControlFlowInterfaceConsistency(whileOp);
+}
+
+TEST_F(CIRControlFlowTest, ForOpWithCleanup) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f(%cond : !cir.bool) {
+      cir.for : cond {
+        cir.condition(%cond)
+      } body {
+        cir.yield
+      } step {
+        cir.yield
+      } cleanup all {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto forOp = findFirstOp<cir::ForOp>(*module);
+  Region *cleanup = forOp.maybeGetCleanup();
+  ASSERT_NE(cleanup, nullptr);
+
+  // Parent enters the condition region.
+  expectSuccessors(forOp, RegionBranchPoint::parent(), {&forOp.getCond()});
+
+  // Condition branches to the body or, on the false edge, the cleanup region.
+  expectTerminatorSuccessors(forOp.getCond(), {&forOp.getBody(), cleanup});
+
+  // Body goes to the step region.
+  expectTerminatorSuccessors(forOp.getBody(), {&forOp.getStep()});
+
+  // Step routes through the cleanup region.
+  expectTerminatorSuccessors(forOp.getStep(), {cleanup});
+
+  // Cleanup loops back to the condition or exits the loop.
+  expectTerminatorSuccessors(*cleanup, {&forOp.getCond(), nullptr});
+
+  verifyControlFlowInterfaceConsistency(forOp);
+}
+
+TEST_F(CIRControlFlowTest, CleanupScopeOp) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func @f() {
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup all {
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto cleanupScopeOp = findFirstOp<cir::CleanupScopeOp>(*module);
+
+  expectSuccessors(
+      cleanupScopeOp, RegionBranchPoint::parent(),
+      {&cleanupScopeOp.getBodyRegion(), &cleanupScopeOp.getCleanupRegion()});
+  expectTerminatorSuccessors(cleanupScopeOp.getBodyRegion(), {nullptr});
+  expectTerminatorSuccessors(cleanupScopeOp.getCleanupRegion(), {nullptr});
+
+  RegionBranchOpInterface cleanupBranch = asRegionBranch(cleanupScopeOp);
+  EXPECT_FALSE(cleanupBranch.isRepetitiveRegion(0));
+  EXPECT_FALSE(cleanupBranch.isRepetitiveRegion(1));
+  EXPECT_FALSE(cleanupBranch.hasLoop());
+
+  verifyControlFlowInterfaceConsistency(cleanupScopeOp);
+}
+
+TEST_F(CIRControlFlowTest, GlobalOpWithCtorAndDtor) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    !s32i = !cir.int<s, 32>
+    cir.global external @g = ctor : !s32i {
+      cir.yield
+    } dtor {
+      cir.yield
+    }
+  )CIR");
+  auto globalOp = findFirstOp<cir::GlobalOp>(*module);
+
+  expectSuccessors(globalOp, RegionBranchPoint::parent(),
+                   {&globalOp.getCtorRegion(), &globalOp.getDtorRegion()});
+  expectTerminatorSuccessors(globalOp.getCtorRegion(), {nullptr});
+  expectTerminatorSuccessors(globalOp.getDtorRegion(), {nullptr});
+
+  EXPECT_FALSE(asRegionBranch(globalOp).hasLoop());
+
+  verifyControlFlowInterfaceConsistency(globalOp);
+}
+
+TEST_F(CIRControlFlowTest, GlobalOpWithoutRegions) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    !s32i = !cir.int<s, 32>
+    cir.global external @g = #cir.int<0> : !s32i
+  )CIR");
+  auto globalOp = findFirstOp<cir::GlobalOp>(*module);
+
+  // A global with neither a ctor nor a dtor never enters a region, so it has
+  // no successors at all. verifyControlFlowInterfaceConsistency doesn't apply:
+  // it requires the parent to be reachable from some branch point.
+  expectSuccessors(globalOp, RegionBranchPoint::parent(), {});
+}
+
 TEST_F(CIRControlFlowTest, TryOpWithCatchAll) {
   OwningOpRef<ModuleOp> module = parse(R"CIR(
     !void = !cir.void
@@ -455,4 +611,72 @@ TEST_F(CIRControlFlowTest, TryOpWithCatchAll) {
 
   // TODO: TryOp::getSuccessorInputs returns empty for handler regions that
   // have block arguments, so verifyControlFlowInterfaceConsistency fails.
+}
+
+TEST_F(CIRControlFlowTest, CoroBodyOp) {
+  // A coroutine body must contain at least one cir.await.
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func coroutine @f(%arg0 : !cir.bool) {
+      cir.coro.body {
+        cir.await(user, ready : {
+          cir.condition(%arg0)
+        }, suspend : {
+          cir.yield
+        }, resume : {
+          cir.yield
+        },)
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto coroBodyOp = findFirstOp<cir::CoroBodyOp>(*module);
+
+  expectSuccessors(coroBodyOp, RegionBranchPoint::parent(),
+                   {&coroBodyOp.getBody()});
+  expectTerminatorSuccessors(coroBodyOp.getBody(), {nullptr});
+
+  RegionBranchOpInterface coroBranch = asRegionBranch(coroBodyOp);
+  EXPECT_FALSE(coroBranch.isRepetitiveRegion(0));
+  EXPECT_FALSE(coroBranch.hasLoop());
+
+  verifyControlFlowInterfaceConsistency(coroBodyOp);
+}
+
+TEST_F(CIRControlFlowTest, AwaitOp) {
+  OwningOpRef<ModuleOp> module = parse(R"CIR(
+    cir.func coroutine @f(%arg0 : !cir.bool) {
+      cir.coro.body {
+        cir.await(user, ready : {
+          cir.condition(%arg0)
+        }, suspend : {
+          cir.yield
+        }, resume : {
+          cir.yield
+        },)
+        cir.yield
+      }
+      cir.return
+    }
+  )CIR");
+  auto awaitOp = findFirstOp<cir::AwaitOp>(*module);
+
+  // Only the ready region is entered from the parent; suspend and resume are
+  // selected by the cir.condition terminating it.
+  expectSuccessors(awaitOp, RegionBranchPoint::parent(), {&awaitOp.getReady()});
+
+  RegionBranchTerminatorOpInterface readyTerm =
+      getTerminator(awaitOp.getReady());
+  ASSERT_TRUE(readyTerm);
+  expectSuccessors(awaitOp, RegionBranchPoint(readyTerm),
+                   {&awaitOp.getResume(), &awaitOp.getSuspend()});
+  expectTerminatorSuccessors(awaitOp.getReady(),
+                             {&awaitOp.getResume(), &awaitOp.getSuspend()});
+
+  expectTerminatorSuccessors(awaitOp.getSuspend(), {nullptr});
+  expectTerminatorSuccessors(awaitOp.getResume(), {nullptr});
+
+  EXPECT_FALSE(asRegionBranch(awaitOp).hasLoop());
+
+  verifyControlFlowInterfaceConsistency(awaitOp);
 }

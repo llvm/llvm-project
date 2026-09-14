@@ -7,6 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 declare void @llvm.assume(i1) #1
 declare ptr @get_ptr()
 declare void @use_i64(i64)
+declare void @use_i1(i1)
 
 ; Check that the assume has not been removed:
 
@@ -86,6 +87,8 @@ define void @align_with_offset_less_than_align(ptr %ptr) {
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -104,8 +107,9 @@ define void @align_with_offset_greater_than_align(ptr %ptr) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
-; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 2) ]
+; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -146,8 +150,7 @@ define void @align_with_constant_offset_0(ptr %ptr) {
 define void @align_with_constant_offset_1(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_1(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 9
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 1) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -159,8 +162,7 @@ define void @align_with_constant_offset_1(ptr %ptr) {
 define void @align_with_constant_offset_4(ptr %ptr) {
 ; CHECK-LABEL: @align_with_constant_offset_4(
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 16) ]
-; CHECK-NEXT:    [[PTR2:%.*]] = getelementptr i8, ptr [[PTR]], i64 4
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR2]], i64 8, i64 4) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR]], i64 8, i64 0) ]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 16) ]
@@ -198,6 +200,16 @@ define void @align_on_gep_keeping_alignment(ptr %ptr, i64 %offset) {
 ;
   %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8) ]
+  ret void
+}
+
+define void @align_on_gep_keeping_alignment_variable_offset(ptr %ptr, i64 %offset, i64 %offset2) {
+; CHECK-LABEL: @align_on_gep_keeping_alignment_variable_offset(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PTR:%.*]], i64 8, i64 [[OFFSET2:%.*]]) ]
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = getelementptr [8 x i8], ptr %ptr, i64 %offset
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr2, i64 8, i64 %offset2) ]
   ret void
 }
 
@@ -241,6 +253,22 @@ define void @non_power_of_two_align(ptr %ptr) {
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3) ]
+  ret void
+}
+
+define void @non_power_of_two_align_variable_offset(ptr %ptr, i64 %i) {
+; CHECK-LABEL: @non_power_of_two_align_variable_offset(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 3, i64 %i) ]
+  ret void
+}
+
+define void @align_1_variable_offset(ptr %ptr, i64 %i) {
+; CHECK-LABEL: @align_1_variable_offset(
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "align"(ptr %ptr, i64 1, i64 %i) ]
   ret void
 }
 
@@ -564,6 +592,25 @@ define i1 @nonnull5(ptr %a) {
   ret i1 %rval
 }
 
+define i1 @nonnullNotEq(ptr %a) {
+; CHECK-LABEL: @nonnullNotEq(
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[LOAD]], null
+; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
+; CHECK-NEXT:    tail call void @escape(ptr nonnull [[LOAD]])
+; CHECK-NEXT:    ret i1 false
+;
+  %load = load ptr, ptr %a
+  %cmp = icmp eq ptr %load, null
+  call void @use_i1(i1 %cmp)
+  %not = xor i1 %cmp, true
+  tail call void @llvm.assume(i1 %not)
+  tail call void @escape(ptr %load)
+  %rval = icmp eq ptr %load, null
+  ret i1 %rval
+}
+
 define void @redundant_nonnull1(ptr nonnull %ptr) {
 ; CHECK-LABEL: @redundant_nonnull1(
 ; CHECK-NEXT:    ret void
@@ -835,6 +882,24 @@ define void @nonnull_gep_not_inbounds(ptr %p, i64 %i) {
   ret void
 }
 
+define void @nonnull_move_fixpoint(ptr %ptr) {
+; CHECK-LABEL: @nonnull_move_fixpoint(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[PTR:%.*]]) ]
+; CHECK-NEXT:    br label [[BB:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    [[PTR2:%.*]] = load ptr, ptr [[PTR]], align 8
+; CHECK-NEXT:    store i32 0, ptr [[PTR2]], align 4
+; CHECK-NEXT:    ret void
+;
+  %ptr2 = load ptr, ptr %ptr, align 8
+  call void @llvm.assume(i1 true) [ "nonnull"(ptr %ptr) ]
+  br label %bb
+
+bb:
+  store i32 0, ptr %ptr2, align 4
+  ret void
+}
+
 define void @always_true_assumption() {
 ; CHECK-LABEL: @always_true_assumption(
 ; CHECK-NEXT:    ret void
@@ -1049,8 +1114,7 @@ exit:
 
 define void @canonicalize_assume(ptr %0) {
 ; CHECK-LABEL: @canonicalize_assume(
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP0:%.*]], i64 8
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0:%.*]], i64 16, i64 -8) ]
 ; CHECK-NEXT:    ret void
 ;
   %2 = getelementptr inbounds i32, ptr %0, i64 2

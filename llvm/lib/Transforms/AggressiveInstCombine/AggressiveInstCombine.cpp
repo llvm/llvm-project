@@ -43,10 +43,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
@@ -86,39 +82,11 @@ static cl::opt<unsigned>
 ///   %cttz_wide = call iN @llvm.cttz.iN(iN %val, i1 false)
 ///   %result = trunc iN %cttz_wide to i(N/2)
 /// Alive proof (for i64/i32):  https://alive2.llvm.org/ce/z/-s14-s
-static bool foldSelectSplitCTTZ(Instruction &I) {
-  Value *Cond, *TrueVal, *FalseVal;
-  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
-    return false;
-
-  Type *HalfTy = I.getType();
-  if (!HalfTy->isIntegerTy())
-    return false;
+// TrueVal/FalseVal are pre-normalized by the caller to the EQ/NE cases.
+static bool foldSelectSplitCTTZ(Instruction &I, Value *LoTrunc, Value *HiResult,
+                                Value *LoResult, Type *HalfTy) {
   unsigned HalfWidth = HalfTy->getIntegerBitWidth();
-
-  // Bail out on very small types (i1, i2): the full-width cttz can return
-  // values not representable in the half type (e.g., cttz.i4 can return 4,
-  // which doesn't fit in i2).
-  if (HalfWidth <= 2)
-    return false;
-
   unsigned FullWidth = HalfWidth * 2;
-
-  // select (icmp eq (trunc SrcVal to i(N/2)), 0), HiResult, LoResult
-  // Or select (icmp ne ...), LoResult, HiResult
-  Value *LoTrunc;
-  Value *HiResult, *LoResult;
-  if (match(Cond,
-            m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(LoTrunc), m_ZeroInt()))) {
-    HiResult = TrueVal;
-    LoResult = FalseVal;
-  } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(LoTrunc),
-                                        m_ZeroInt()))) {
-    HiResult = FalseVal;
-    LoResult = TrueVal;
-  } else {
-    return false;
-  }
 
   // LoTrunc: trunc iN SrcVal to i(N/2)
   Value *SrcVal;
@@ -171,51 +139,20 @@ static bool foldSelectSplitCTTZ(Instruction &I) {
 ///   %result = trunc iN %ctlz_wide to i(N/2)
 ///
 /// Alive proof (for i64/i32): https://alive2.llvm.org/ce/z/WfQepH
-static bool foldSelectSplitCTLZ(Instruction &I) {
-  Value *Cond, *TrueVal, *FalseVal;
-  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
-    return false;
-
-  Type *HalfTy = I.getType();
-  if (!HalfTy->isIntegerTy())
-    return false;
+// TrueVal/FalseVal are pre-normalized by the caller to the EQ/NE cases.
+static bool foldSelectSplitCTLZ(Instruction &I, Value *HiPart, Value *LoResult,
+                                Value *HiResult, Type *HalfTy) {
   unsigned HalfWidth = HalfTy->getIntegerBitWidth();
-
-  // Bail out on very small types (i1, i2): the full-width ctlz can return
-  // values not representable in the half type (e.g., ctlz.i4 can return 4,
-  // which doesn't fit in i2).
-  if (HalfWidth <= 2)
-    return false;
-
   unsigned FullWidth = HalfWidth * 2;
-
-  // select (icmp eq HiPart, 0), LoResult, HiResult
-  // HiPart could be (trunc (lshr SrcVal, N/2) to i(N/2)) or (lshr SrcVal, N/2)
-  Value *HiPart;
-  Value *LoResult, *HiResult;
-  if (match(Cond,
-            m_SpecificICmp(CmpInst::ICMP_EQ, m_Value(HiPart), m_ZeroInt()))) {
-    LoResult = TrueVal;  // upper is zero: count in lower + N/2
-    HiResult = FalseVal; // upper non-zero: count in upper
-  } else if (match(Cond, m_SpecificICmp(CmpInst::ICMP_NE, m_Value(HiPart),
-                                        m_ZeroInt()))) {
-    LoResult = FalseVal;
-    HiResult = TrueVal;
-  } else {
-    return false;
-  }
 
   // Extract SrcVal from HiPart: either trunc(lshr(SrcVal, N/2)) or
   // lshr(SrcVal, N/2)
   Value *SrcVal;
-  if (match(HiPart,
-            m_Trunc(m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth))))) {
-    // HiPart is trunc(lshr(SrcVal, N/2))
-  } else if (match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth)))) {
-    // HiPart is lshr(SrcVal, N/2)
-  } else {
+  if (match(HiPart, m_Trunc(m_Value(SrcVal))))
+    HiPart = SrcVal;
+
+  if (!match(HiPart, m_LShr(m_Value(SrcVal), m_SpecificInt(HalfWidth))))
     return false;
-  }
   if (!SrcVal->getType()->isIntegerTy(FullWidth))
     return false;
 
@@ -250,6 +187,38 @@ static bool foldSelectSplitCTLZ(Instruction &I) {
   I.replaceAllUsesWith(Trunc);
   ++NumSelectCTLZFolded;
   return true;
+}
+
+/// Common entry point for folding select-based split cttz/ctlz patterns.
+/// Performs the initial select and type matching shared by both transforms,
+/// then delegates to foldSelectSplitCTTZ and foldSelectSplitCTLZ.
+static bool foldSelectSplitCTLZCTTZ(Instruction &I) {
+  Value *Cond, *TrueVal, *FalseVal;
+  if (!match(&I, m_Select(m_Value(Cond), m_Value(TrueVal), m_Value(FalseVal))))
+    return false;
+
+  Type *Ty = I.getType();
+  if (!Ty->isIntegerTy())
+    return false;
+
+  // Bail out on very small types (i1, i2): the full-width cttz/ctlz can return
+  // values not representable in the half type (e.g., cttz.i4 can return 4,
+  // which doesn't fit in i2).
+  if (Ty->getIntegerBitWidth() <= 2)
+    return false;
+
+  CmpPredicate Pred;
+  Value *CmpOp;
+  if (!match(Cond, m_ICmp(Pred, m_Value(CmpOp), m_ZeroInt())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  // Canonicalize select operands.
+  if (Pred == CmpInst::ICMP_NE)
+    std::swap(TrueVal, FalseVal);
+
+  return foldSelectSplitCTTZ(I, CmpOp, TrueVal, FalseVal, Ty) ||
+         foldSelectSplitCTLZ(I, CmpOp, TrueVal, FalseVal, Ty);
 }
 
 /// Match a pattern for a bitwise funnel/rotate operation that partially guards
@@ -981,31 +950,14 @@ static bool isCTTZTable(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %0 = load i8, i8* %arrayidx, align 1, !tbaa !8
 //
 // All these can be lowered to @llvm.cttz.i32/64 intrinsics.
-static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
-  LoadInst *LI = dyn_cast<LoadInst>(&I);
-  if (!LI)
-    return false;
-
-  Type *AccessType = LI->getType();
-  if (!AccessType->isIntegerTy())
-    return false;
-
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
-    return false;
-
-  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
-    return false;
-
-  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  APInt ModOffset(BW, 0);
-  SmallMapVector<Value *, APInt, 4> VarOffsets;
-  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
-      VarOffsets.size() != 1 || ModOffset != 0)
-    return false;
-  auto [GepIdx, GEPScale] = VarOffsets.front();
-
+//
+// This shares its initial match (load from a GEP into a constant table with
+// a single variable index) with tryToRecognizeTableBasedLog2() below; see
+// tryToRecognizeTableBasedCttzOrLog2().
+static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
+                                         GlobalVariable *GVTable, Value *GepIdx,
+                                         const APInt &GEPScale,
+                                         const DataLayout &DL) {
   Value *X1;
   const APInt *MulConst, *ShiftConst, *AndCst = nullptr;
   // Check that the gep variable index is ((x & -x) * MulConst) >> ShiftConst.
@@ -1031,37 +983,34 @@ static bool tryToRecognizeTableBasedCttz(Instruction &I, const DataLayout &DL) {
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
-  bool DefinedForZero = ZeroTableElem->getZExtValue() == InputBits;
+  bool DefinedForZero = ZeroTableElem->equalsInt(InputBits);
 
   IRBuilder<> B(LI);
   ConstantInt *BoolConst = B.getInt1(!DefinedForZero);
   Type *XType = X1->getType();
   auto Cttz = B.CreateIntrinsic(Intrinsic::cttz, {XType}, {X1, BoolConst});
-  Value *ZExtOrTrunc = nullptr;
+  Value *Res = B.CreateZExtOrTrunc(Cttz, AccessType);
 
-  if (DefinedForZero) {
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Cttz, AccessType);
-  } else {
+  if (!DefinedForZero) {
     // If the value in elem 0 isn't the same as InputBits, we still want to
-    // produce the value from the table.
+    // produce the value from the table. Emit the select in AccessType with elem
+    // 0 unchanged, as the table's element type may be wider than the input
+    // type (and directly truncating ZeroTableElem into the input type could
+    // incorrectly drop bits).
     auto Cmp = B.CreateICmpEQ(X1, ConstantInt::get(XType, 0));
-    auto Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Cttz);
+    Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Res))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
-
-    ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
   }
 
-  LI->replaceAllUsesWith(ZExtOrTrunc);
+  LI->replaceAllUsesWith(Res);
 
   return true;
 }
@@ -1148,33 +1097,32 @@ static bool isLog2Table(Constant *Table, const APInt &Mul, const APInt &Shift,
 // %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr11
 // %0 = load i8, ptr %arrayidx, align 1
 //
+// CASE 3:
+// A variant where the most-significant set bit of the OR-cascade result is
+// isolated via subtraction before the multiply, i.e.
+// table[((v - (v >> 1)) * MulConst) >> ShiftConst], analogous to how the
+// cttz pattern isolates the least-significant set bit via `x & -x`:
+//
+// %shr = lshr i64 %v, 1
+// %or = or i64 %shr, %v
+// ... (rest of the OR-cascade, as above) ...
+// %shr11 = lshr i64 %or10, 1
+// %sub = sub i64 %or10, %shr11
+// %mul = mul i64 %sub, 571347909858961602
+// %shr12 = lshr i64 %mul, 58
+// %arrayidx = getelementptr inbounds i8, ptr @table, i64 %shr12
+// %0 = load i8, ptr %arrayidx, align 1
+//
 // All these can be lowered to @llvm.ctlz.i32/64 intrinsics and a subtract.
-static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
+//
+// This shares its initial match (load from a GEP into a constant table with
+// a single variable index) with tryToRecognizeTableBasedCttz() above; see
+// tryToRecognizeTableBasedCttzOrLog2().
+static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
+                                         GlobalVariable *GVTable, Value *GepIdx,
+                                         const APInt &GEPScale,
+                                         const DataLayout &DL,
                                          TargetTransformInfo &TTI) {
-  LoadInst *LI = dyn_cast<LoadInst>(&I);
-  if (!LI)
-    return false;
-
-  Type *AccessType = LI->getType();
-  if (!AccessType->isIntegerTy())
-    return false;
-
-  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
-  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
-    return false;
-
-  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
-    return false;
-
-  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
-  APInt ModOffset(BW, 0);
-  SmallMapVector<Value *, APInt, 4> VarOffsets;
-  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
-      VarOffsets.size() != 1 || ModOffset != 0)
-    return false;
-  auto [GepIdx, GEPScale] = VarOffsets.front();
-
   Value *X;
   const APInt *MulConst, *ShiftConst;
   // Check that the gep variable index is (x * MulConst) >> ShiftConst.
@@ -1182,6 +1130,18 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
       m_LShr(m_Mul(m_Value(X), m_APInt(MulConst)), m_APInt(ShiftConst));
   if (!match(GepIdx, m_CastOrSelf(MatchInner)))
     return false;
+
+  // The multiplied value may instead be the OR-cascade result with its
+  // most-significant set bit isolated first via `v - (v >> 1)`: since every
+  // bit below the MSB of an OR-cascade result is 1, this subtraction leaves
+  // just the MSB, mirroring how tryToRecognizeTableBasedCttz() isolates the
+  // least-significant set bit via `x & -x`.
+  bool IsolatedMSB = false;
+  Value *V;
+  if (match(X, m_Sub(m_Value(V), m_LShr(m_Deferred(V), m_SpecificInt(1))))) {
+    IsolatedMSB = true;
+    X = V;
+  }
 
   unsigned InputBits = X->getType()->getScalarSizeInBits();
   if (InputBits != 16 && InputBits != 32 && InputBits != 64 && InputBits != 128)
@@ -1201,10 +1161,24 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
     X = Y;
   }
 
-  if (!GEPScale.isIntN(InputBits) ||
-      !isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
-                   AccessType, InputBits, GEPScale.zextOrTrunc(InputBits), DL))
+  if (!GEPScale.isIntN(InputBits))
     return false;
+
+  if (IsolatedMSB) {
+    // With the MSB isolated, the multiplicand for an input whose MSB is at bit
+    // Idx is a single set bit rather than a run of low bits, which is exactly
+    // what isCTTZTable() checks for (there is no additional masking here, so
+    // pass an all-ones mask).
+    if (!isCTTZTable(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     APInt::getAllOnes(InputBits), AccessType, InputBits,
+                     GEPScale.zextOrTrunc(InputBits), DL))
+      return false;
+  } else {
+    if (!isLog2Table(GVTable->getInitializer(), *MulConst, *ShiftConst,
+                     AccessType, InputBits, GEPScale.zextOrTrunc(InputBits),
+                     DL))
+      return false;
+  }
 
   ConstantInt *ZeroTableElem = cast<ConstantInt>(
       ConstantFoldLoadFromConst(GVTable->getInitializer(), AccessType, DL));
@@ -1225,28 +1199,75 @@ static bool tryToRecognizeTableBasedLog2(Instruction &I, const DataLayout &DL,
   if (Cost > TargetTransformInfo::TCC_Basic)
     return false;
 
-  Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
-
   Constant *InputBitsM1 = ConstantInt::get(XType, InputBits - 1);
-  Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The table won't produce a sensible result for 0.
-  Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
-  Value *Select = B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+  Value *Result;
+  if (ZeroTableElem->getZExtValue() == InputBits - 1) {
+    Value *Ctlz =
+        B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, B.getFalse()});
+    Result = B.CreateAnd(B.CreateNot(Ctlz), InputBitsM1);
+  } else {
+    Value *Ctlz = B.CreateIntrinsic(Intrinsic::ctlz, {XType}, {X, BoolConst});
+    Value *Sub = B.CreateSub(InputBitsM1, Ctlz);
 
-  // The true branch of select handles the log2(0) case, which is rare.
-  if (!ProfcheckDisableMetadataFixes) {
+    // The table won't produce a sensible result for 0.
+    Value *Cmp = B.CreateICmpEQ(X, ConstantInt::get(XType, 0));
+    Value *Select =
+        B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
+
+    // The true branch of select handles the log2(0) case, which is rare.
     if (Instruction *SelectI = dyn_cast<Instruction>(Select))
       SelectI->setMetadata(
           LLVMContext::MD_prof,
           MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
+
+    Result = Select;
   }
 
-  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Select, AccessType);
+  Value *ZExtOrTrunc = B.CreateZExtOrTrunc(Result, AccessType);
 
   LI->replaceAllUsesWith(ZExtOrTrunc);
 
   return true;
+}
+
+// Match a table-based cttz or log2 implementation. These patterns share a
+// load from a global table pattern that we match first. Then we try the
+// specific matches for the cttz and log2 patterns.
+static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
+                                               const DataLayout &DL,
+                                               TargetTransformInfo &TTI) {
+  LoadInst *LI = dyn_cast<LoadInst>(&I);
+  if (!LI)
+    return false;
+
+  Type *AccessType = LI->getType();
+  if (!AccessType->isIntegerTy())
+    return false;
+
+  GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+  if (!GEP || !GEP->hasNoUnsignedSignedWrap())
+    return false;
+
+  GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
+  if (!GVTable || !GVTable->isConstant() ||
+      !GVTable->hasDefinitiveInitializer())
+    return false;
+
+  unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
+  APInt ModOffset(BW, 0);
+  SmallMapVector<Value *, APInt, 4> VarOffsets;
+  if (!GEP->collectOffset(DL, BW, VarOffsets, ModOffset) ||
+      VarOffsets.size() != 1 || ModOffset != 0)
+    return false;
+  auto [GepIdx, GEPScale] = VarOffsets.front();
+
+  if (tryToRecognizeTableBasedCttz(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                   DL))
+    return true;
+
+  return tryToRecognizeTableBasedLog2(LI, AccessType, GVTable, GepIdx, GEPScale,
+                                      DL, TTI);
 }
 
 /// This is used by foldLoadsRecursive() to capture a Root Load node which is
@@ -1392,6 +1413,12 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
   if ((ShAmt2 - ShAmt1) != ShiftDiff || (Offset2 - Offset1) != PrevSize)
     return false;
 
+  // Reject if the combined size of the loads exceeds the target type size.
+  // This avoids attempting to emit an invalid ZExt (from wider to narrower
+  // type) when out-of-bounds shifts lead to matching too many loads.
+  if (LoadSize1 + LoadSize2 > X->getType()->getScalarSizeInBits())
+    return false;
+
   // Update LOps
   AAMDNodes AATags1 = LOps.AATags;
   AAMDNodes AATags2 = LI2->getAAMetadata();
@@ -1428,9 +1455,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
-  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
-  // TTI based checks if we want to proceed with wider load
-  bool Allowed = TTI.isTypeLegal(WiderType);
+  // Allow a power of 2 number of bytes that fit in a legal integer type.
+  bool Allowed = LOps.LoadSize >= 16 && isPowerOf2_64(LOps.LoadSize) &&
+                 DL.fitsInLegalInteger(LOps.LoadSize);
   if (!Allowed)
     return false;
 
@@ -1451,6 +1478,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
@@ -1459,9 +1487,8 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     NewLoad->setAAMetadata(LOps.AATags);
 
   Value *NewOp = NewLoad;
-  // Check if zero extend needed.
-  if (LOps.ZextType)
-    NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
+  // Zero extend if needed.
+  NewOp = Builder.CreateZExt(NewOp, LOps.ZextType);
 
   // Check if shift needed. We need to shift with the amount of load1
   // shift if not zero.
@@ -1482,7 +1509,11 @@ struct PartStore {
   StoreInst *Store;
 
   bool isCompatibleWith(const PartStore &Other) const {
-    return PtrBase == Other.PtrBase && Val == Other.Val;
+    // Offset stripping looks through addrspacecasts, so an equal PtrBase does
+    // not imply an equal address space, and thus not an equal PtrOffset width.
+    return PtrBase == Other.PtrBase && Val == Other.Val &&
+           Store->getPointerAddressSpace() ==
+               Other.Store->getPointerAddressSpace();
   }
 
   bool operator<(const PartStore &Other) const {
@@ -1524,9 +1555,10 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   // FIXME: We could generate smaller stores if we can't produce a large one.
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
-  Type *NewTy = Type::getIntNTy(Ctx, Width);
   unsigned Fast = 0;
-  if (!TTI.isTypeLegal(NewTy) ||
+  bool Allowed =
+      Width >= 16 && isPowerOf2_64(Width) && DL.fitsInLegalInteger(Width);
+  if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||
@@ -1535,6 +1567,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
 
   // Generate the combined store.
   IRBuilder<> Builder(First.Store);
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
@@ -1953,8 +1986,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
 
       Function *F = CI->getFunction();
       assert(F && "Instruction does not belong to a function!");
-      std::optional<Function::ProfileCount> EC = F->getEntryCount();
-      if (EC && EC->getCount() > 0)
+      std::optional<uint64_t> EC = F->getEntryCount();
+      if (EC && *EC > 0)
         setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
     } else {
       B.CreateBr(BBNE);
@@ -2073,9 +2106,8 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   if (!CalledFunc)
     return false;
 
-  LibFunc LF;
-  if (!TLI.getLibFunc(*CalledFunc, LF) ||
-      !isLibFuncEmittable(CI->getModule(), &TLI, LF))
+  LibFunc LF = TLI.getLibFunc(*CalledFunc);
+  if (!isLibFuncEmittable(CI->getModule(), &TLI, LF))
     return false;
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
@@ -2449,14 +2481,12 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
     for (Instruction &I : make_early_inc_range(llvm::reverse(BB))) {
       MadeChange |= foldAnyOrAllBitsSet(I);
       MadeChange |= foldGuardedFunnelShift(I, DT);
-      MadeChange |= foldSelectSplitCTTZ(I);
-      MadeChange |= foldSelectSplitCTLZ(I);
+      MadeChange |= foldSelectSplitCTLZCTTZ(I);
       MadeChange |= tryToRecognizePopCount(I);
       MadeChange |= tryToRecognizePopCount1(I);
       MadeChange |= tryToRecognizePopCount2n3(I);
       MadeChange |= tryToFPToSat(I, TTI);
-      MadeChange |= tryToRecognizeTableBasedCttz(I, DL);
-      MadeChange |= tryToRecognizeTableBasedLog2(I, DL, TTI);
+      MadeChange |= tryToRecognizeTableBasedCttzOrLog2(I, DL, TTI);
       MadeChange |= foldConsecutiveLoads(I, DL, TTI, AA, DT);
       MadeChange |= foldPatternedLoads(I, DL);
       MadeChange |= foldICmpOrChain(I, DL, TTI, AA, DT);

@@ -1,5 +1,5 @@
 # XFAIL: *
-# RUN: not --crash llc -o - -mtriple=amdgcn-amd-amdhsa -run-pass=none -verify-machineinstrs %s
+# RUN: not --crash llc -o - -mtriple=amdgpu7.00-amd-amdhsa -run-pass=none -verify-machineinstrs %s
 
  # FIXME: This should catch the undefined use of %0
 

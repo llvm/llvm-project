@@ -7,13 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Semantics/scope.h"
-#include "flang/Parser/characters.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
-#include <memory>
 
 namespace Fortran::semantics {
 

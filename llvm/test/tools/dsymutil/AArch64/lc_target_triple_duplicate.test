@@ -1,0 +1,12 @@
+# lc_target_triple_duplicate.arm64 was created by taking lc_target_triple.arm64
+# (see lc_target_triple.test for how that was built) and duplicating its
+# LC_TARGET_TRIPLE load command via obj2yaml/yaml2obj, bumping the header's
+# ncmds and sizeofcmds accordingly.
+
+# RUN: not dsymutil -f %p/../Inputs/lc_target_triple_duplicate.arm64 -o - \
+# RUN:   -oso-prepend-path=%p/.. 2>&1 | FileCheck %s
+
+# RUN: not dsymutil --linker parallel -f %p/../Inputs/lc_target_triple_duplicate.arm64 -o - \
+# RUN:   -oso-prepend-path=%p/.. 2>&1 | FileCheck %s
+
+CHECK: error: Binary contains more than one Target Triple

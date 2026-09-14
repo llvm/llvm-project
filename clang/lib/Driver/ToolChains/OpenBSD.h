@@ -98,7 +98,7 @@ public:
   unsigned GetDefaultDwarfVersion() const override { return 2; }
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:

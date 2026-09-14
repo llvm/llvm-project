@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Concept>
+<Name>aaa</Name>
+<Abstract><Para>Aaa.</Para></Abstract>
+<TemplateParameters>
+  <Parameter>
+    <Name>T</Name>
+    <Index>0</Index>
+    <Discussion><Para>template parameter T</Para></Discussion>
+  </Parameter>
+</TemplateParameters>
+</Concept>

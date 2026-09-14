@@ -38,7 +38,7 @@
 using namespace llvm;
 
 static cl::opt<bool> UseDerefAtPointSemantics(
-    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(false),
+    "use-dereferenceable-at-point-semantics", cl::Hidden, cl::init(true),
     cl::desc("Deref attributes and metadata infer facts at definition only"));
 
 //===----------------------------------------------------------------------===//
@@ -861,11 +861,20 @@ bool Value::canBeFreed() const {
     // another pointer to the same allocation. Readonly implies nofree.
     if ((A->hasNoFreeAttr() || A->onlyReadsMemory()) && A->hasNoAliasAttr())
       return false;
+
+    // nofreeobj means that the underlying object cannot be freed, even
+    // through a different pointer.
+    if (A->hasAttribute(Attribute::NoFreeObj))
+      return false;
   }
 
   if (auto *ITP = dyn_cast<IntToPtrInst>(this);
-      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofreeobj))
     return false;
+
+  if (auto *CB = dyn_cast<CallBase>(this))
+    if (CB->hasRetAttr(Attribute::NoFreeObj))
+      return false;
 
   const Function *F = nullptr;
   if (auto *I = dyn_cast<Instruction>(this))

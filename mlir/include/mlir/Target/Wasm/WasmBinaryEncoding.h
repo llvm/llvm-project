@@ -174,6 +174,8 @@ struct WasmBinaryEncoding {
     static constexpr std::byte extendI648S{0xC2};
     static constexpr std::byte extendI6416S{0xC3};
     static constexpr std::byte extendI6432S{0xC4};
+
+    static constexpr std::byte saturatedTruncate{0xFC};
   };
 
   /// Byte encodings of types in Wasm binaries

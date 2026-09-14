@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --convert-math-to-apfloat | FileCheck %s
+// RUN: mlir-opt %s --convert-math-to-apfloat -split-input-file | FileCheck %s
 
 func.func @full_example() {
   %neg14fp8 = arith.constant -1.4 : f8E4M3FN
@@ -64,3 +64,17 @@ func.func @full_example() {
 // CHECK:           %[[VAL_5:.*]] = call @_mlir_apfloat_isfinite(%[[CONSTANT_9]], %[[EXTUI_7]]) : (i32, i64) -> i1
 // CHECK:           return
 // CHECK:         }
+
+// -----
+
+// Ensure the Vector dialect is registered.
+
+// CHECK-LABEL: func @test_vector(
+// CHECK:       vector.to_elements
+func.func @test_vector() {
+  %a1_vec = arith.constant dense<[2.0, 2.0, 2.0, 2.0]> : vector<4xf8E4M3FN>
+  %b1_vec = arith.constant dense<[4.0, 4.0, 4.0, 4.0]> : vector<4xf8E4M3FN>
+  %c1_vec = arith.constant dense<[8.0, 8.0, 8.0, 8.0]> : vector<4xf8E4M3FN>
+  %d1_vec = math.fma %a1_vec, %b1_vec, %c1_vec : vector<4xf8E4M3FN>
+  return
+}

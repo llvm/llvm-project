@@ -11,12 +11,39 @@ define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
 ; CHECK-NEXT:    [[I5:%.*]] = icmp sgt i64 [[I4]], [[I2]]
 ; CHECK-NEXT:    br i1 [[I5]], label [[BB10:%.*]], label [[BB6_PREHEADER:%.*]]
 ; CHECK:       bb6.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[I2]], [[I3]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[I2]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[I3]]
+; CHECK-NEXT:    [[XTRAITER:%.*]] = and i64 [[TMP0]], 7
+; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i64 [[XTRAITER]], 0
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[BB6_PROL_PREHEADER:%.*]], label [[BB6_PROL_LOOPEXIT:%.*]]
+; CHECK:       bb6.prol.preheader:
 ; CHECK-NEXT:    br label [[BB6:%.*]]
-; CHECK:       bb6:
-; CHECK-NEXT:    [[I7:%.*]] = phi i64 [ [[I8:%.*]], [[BB6]] ], [ [[I4]], [[BB6_PREHEADER]] ]
+; CHECK:       bb6.prol:
+; CHECK-NEXT:    [[I7:%.*]] = phi i64 [ [[I8:%.*]], [[BB6]] ], [ [[I4]], [[BB6_PROL_PREHEADER]] ]
+; CHECK-NEXT:    [[PROL_ITER:%.*]] = phi i64 [ 0, [[BB6_PROL_PREHEADER]] ], [ [[PROL_ITER_NEXT:%.*]], [[BB6]] ]
 ; CHECK-NEXT:    [[I8]] = add i64 [[I7]], 1
 ; CHECK-NEXT:    [[I9:%.*]] = icmp slt i64 [[I7]], [[I2]]
-; CHECK-NEXT:    br i1 [[I9]], label [[BB6]], label [[BB10_LOOPEXIT:%.*]]
+; CHECK-NEXT:    [[PROL_ITER_NEXT]] = add i64 [[PROL_ITER]], 1
+; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i64 [[PROL_ITER_NEXT]], [[XTRAITER]]
+; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[BB6]], label [[BB6_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       bb6.prol.loopexit.unr-lcssa:
+; CHECK-NEXT:    [[I7_UNR_PH:%.*]] = phi i64 [ [[I8]], [[BB6]] ]
+; CHECK-NEXT:    br label [[BB6_PROL_LOOPEXIT]]
+; CHECK:       bb6.prol.loopexit:
+; CHECK-NEXT:    [[I7_UNR:%.*]] = phi i64 [ [[I4]], [[BB6_PREHEADER]] ], [ [[I7_UNR_PH]], [[BB6_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i64 [[TMP2]], 7
+; CHECK-NEXT:    br i1 [[TMP3]], label [[BB10_LOOPEXIT:%.*]], label [[BB6_PREHEADER_NEW:%.*]]
+; CHECK:       bb6.preheader.new:
+; CHECK-NEXT:    br label [[BB7:%.*]]
+; CHECK:       bb6:
+; CHECK-NEXT:    [[I10:%.*]] = phi i64 [ [[I7_UNR]], [[BB6_PREHEADER_NEW]] ], [ [[I8_7:%.*]], [[BB7]] ]
+; CHECK-NEXT:    [[I8_6:%.*]] = add i64 [[I10]], 7
+; CHECK-NEXT:    [[I8_7]] = add i64 [[I10]], 8
+; CHECK-NEXT:    [[I9_7:%.*]] = icmp slt i64 [[I8_6]], [[I2]]
+; CHECK-NEXT:    br i1 [[I9_7]], label [[BB7]], label [[BB10_LOOPEXIT_UNR_LCSSA:%.*]]
+; CHECK:       bb10.loopexit.unr-lcssa:
+; CHECK-NEXT:    br label [[BB10_LOOPEXIT]]
 ; CHECK:       bb10.loopexit:
 ; CHECK-NEXT:    br label [[BB10]]
 ; CHECK:       bb10:

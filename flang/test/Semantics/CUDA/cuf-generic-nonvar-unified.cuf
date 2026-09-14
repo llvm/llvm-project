@@ -1,0 +1,49 @@
+! RUN: bbc -emit-hlfir -fcuda            %s -o - | FileCheck %s --check-prefix=NORM
+! RUN: bbc -emit-hlfir -fcuda -gpu=unified %s -o - | FileCheck %s --check-prefix=UNI
+
+! Under -gpu=mem:unified, a non-variable expression result (e.g. RESHAPE)
+! is a host temporary whose storage is not device-accessible. A device-
+! attributed dummy must not match such an actual even with the unified-
+! memory relaxation; the host specific should be selected instead.
+! A plain variable actual should still select the device specific under
+! unified (the relaxation applies to variables).
+
+module m
+  interface gen
+    module procedure sub_host
+    module procedure sub_device
+  end interface
+contains
+  subroutine sub_host(x)
+    real :: x(:)
+  end subroutine
+  subroutine sub_device(x)
+    real, device :: x(:)
+  end subroutine
+end module
+
+subroutine caller
+  use m
+  real, allocatable :: a(:,:)
+  real, allocatable :: v(:)
+  allocate(a(2,3), v(6))
+
+  ! Non-variable expression: host specific must win in both modes.
+  call gen(reshape(a, [6]))
+
+  ! Variable actual: host specific without unified, device with unified.
+  call gen(v)
+end subroutine
+
+! Without -gpu=mem:unified, unattributed actuals always match the host
+! specific (device gets INF distance).
+! NORM-LABEL: func.func @_QPcaller
+! NORM: fir.call @_QMmPsub_host
+! NORM: fir.call @_QMmPsub_host
+
+! Under -gpu=mem:unified, the non-variable reshape result still selects
+! the host specific, but the variable actual selects the device specific
+! (distance 2 < 3).
+! UNI-LABEL: func.func @_QPcaller
+! UNI: fir.call @_QMmPsub_host
+! UNI: fir.call @_QMmPsub_device

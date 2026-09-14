@@ -16,6 +16,7 @@
 #define LLVM_IR_INTRINSICS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TypeSize.h"
 #include <optional>
@@ -24,15 +25,16 @@
 
 namespace llvm {
 
-class Type;
-class FunctionType;
-class Function;
-class LLVMContext;
-class Module;
+class APInt;
 class AttributeList;
 class AttributeSet;
-class raw_ostream;
 class Constant;
+class Function;
+class FunctionType;
+class LLVMContext;
+class Module;
+class raw_ostream;
+class Type;
 
 /// This namespace contains an enum with a value for every intrinsic/builtin
 /// function known by LLVM. The enum values are returned by
@@ -62,6 +64,9 @@ LLVM_ABI StringRef getName(ID id);
 /// overloading, such as "llvm.ssa.copy".
 LLVM_ABI StringRef getBaseName(ID id);
 
+/// \returns the target feature expression required by an intrinsic.
+LLVM_ABI StringRef getRequiredTargetFeatures(ID id);
+
 /// Return the LLVM name for an intrinsic, such as "llvm.ppc.altivec.lvx" or
 /// "llvm.ssa.copy.p0s_s.1". Note, this version of getName supports overloads.
 /// This is less efficient than the StringRef version of this function.  If no
@@ -90,6 +95,15 @@ LLVM_ABI bool isTriviallyScalarizable(ID id);
 
 /// Returns true if the intrinsic has pretty printed immediate arguments.
 LLVM_ABI bool hasPrettyPrintedArgs(ID id);
+
+/// Returns the first default argument index and an ArrayRef of all
+/// default values for the trailing parameters of intrinsic IID.
+/// Returns {0, empty} if the intrinsic has no default arguments.
+///
+/// The defaults are stored contiguously starting at FirstDefault and
+/// extending to the last parameter (mirrors C++ default-argument
+/// rules).
+LLVM_ABI std::pair<unsigned, ArrayRef<uint64_t>> getAllDefaultArgValues(ID IID);
 
 /// isTargetIntrinsic - Returns true if IID is an intrinsic specific to a
 /// certain target. If it is a generic intrinsic false is returned.
@@ -177,6 +191,8 @@ struct IITDescriptor {
     AMX,
     PPCQuad,
     AArch64Svcount,
+    WasmExternref,
+    WasmFuncref,
 
     // Overloaded type.
     Overloaded, // AnyKind and overload index in OverloadInfo.
@@ -309,6 +325,13 @@ LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
 /// Print the argument info for the arguments with ArgInfo.
 LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                           const Constant *ImmArgVal);
+
+LLVM_ABI void printFPClassMask(raw_ostream &OS, const Constant *ImmArgVal);
+
+/// Returns true if \p Value satisfies the range constraints specified for
+/// argument \p ArgIdx of intrinsic \p IID.
+LLVM_ABI bool isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                      const APInt &Value);
 
 } // namespace Intrinsic
 

@@ -160,7 +160,8 @@ LLVM_ABI Constant *ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
 
 /// canConstantFoldCallTo - Return true if its even possible to fold a call to
 /// the specified function.
-LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F);
+LLVM_ABI bool canConstantFoldCallTo(const CallBase *Call, const Function *F,
+                                    const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldCall - Attempt to constant fold a call to the specified function
 /// with the specified arguments, returning null if unsuccessful.
@@ -169,11 +170,10 @@ LLVM_ABI Constant *ConstantFoldCall(const CallBase *Call, Function *F,
                                     const TargetLibraryInfo *TLI = nullptr,
                                     bool AllowNonDeterministic = true);
 
-LLVM_ABI Constant *ConstantFoldUnaryIntrinsic(Intrinsic::ID ID, Constant *Op,
-                                              Type *Ty);
-
-LLVM_ABI Constant *ConstantFoldBinaryIntrinsic(Intrinsic::ID ID, Constant *LHS,
-                                               Constant *RHS, Type *Ty);
+LLVM_ABI Constant *ConstantFoldIntrinsic(Intrinsic::ID ID,
+                                         ArrayRef<Constant *> Ops, Type *Ty,
+                                         const DataLayout &DL,
+                                         Function *CxtF = nullptr);
 
 /// ConstantFoldLoadThroughBitcast - try to cast constant to destination type
 /// returning null if unsuccessful. Can cast pointer to pointer or pointer to

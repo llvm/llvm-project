@@ -112,8 +112,7 @@ Trace::LoadPostMortemTraceFromFile(Debugger &debugger,
   }
 
   return Trace::FindPluginForPostMortemProcess(
-      debugger, *session_file,
-      trace_description_file.GetDirectory().GetStringRef());
+      debugger, *session_file, trace_description_file.GetDirectory());
 }
 
 Expected<lldb::TraceSP> Trace::FindPluginForPostMortemProcess(

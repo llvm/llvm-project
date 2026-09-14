@@ -281,4 +281,76 @@ entry:
   ret double %mul
 }
 
+define double @used_zdinx(double noundef %a, double noundef %b, float noundef %c) #1 "zero-call-used-regs"="used" {
+; 64-BITS-LABEL: used_zdinx:
+; 64-BITS:       # %bb.0: # %entry
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    fcvt.d.s a1, a2
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    li a1, 0
+; 64-BITS-NEXT:    li a2, 0
+; 64-BITS-NEXT:    ret
+;
+; 32-BITS-LABEL: used_zdinx:
+; 32-BITS:       # %bb.0: # %entry
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    fcvt.d.s a2, a4
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    li a2, 0
+; 32-BITS-NEXT:    li a3, 0
+; 32-BITS-NEXT:    li a4, 0
+; 32-BITS-NEXT:    ret
+
+entry:
+  %conv = fpext float %c to double
+  %mul1 = fmul double %a, %b
+  %mul2 = fmul double %mul1, %conv
+  ret double %mul2
+}
+
+define double @used_arg_zdinx(double noundef %a, double noundef %b, float noundef %c) #1 "zero-call-used-regs"="used-arg" {
+; 64-BITS-LABEL: used_arg_zdinx:
+; 64-BITS:       # %bb.0: # %entry
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    fcvt.d.s a1, a2
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    li a1, 0
+; 64-BITS-NEXT:    li a2, 0
+; 64-BITS-NEXT:    ret
+;
+; 32-BITS-LABEL: used_arg_zdinx:
+; 32-BITS:       # %bb.0: # %entry
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    fcvt.d.s a2, a4
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    li a2, 0
+; 32-BITS-NEXT:    li a3, 0
+; 32-BITS-NEXT:    li a4, 0
+; 32-BITS-NEXT:    ret
+
+entry:
+  %conv = fpext float %c to double
+  %mul1 = fmul double %a, %b
+  %mul2 = fmul double %mul1, %conv
+  ret double %mul2
+}
+
+define void @huge_stack() #0 "zero-call-used-regs"="used-gpr" {
+; CHECK-LABEL: huge_stack:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a0, 10
+; CHECK-NEXT:    addi a0, a0, -944
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa_offset 40016
+; CHECK-NEXT:    lui a0, 10
+; CHECK-NEXT:    addi a0, a0, -944
+; CHECK-NEXT:    add sp, sp, a0
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    ret
+  %1 = alloca [10000 x i32], align 4
+  ret void
+}
+
 attributes #0 = { "target-cpu"="generic" "target-features"="+m,+f,+d" }
+attributes #1 = { "target-cpu"="generic" "target-features"="+m,+zdinx" }

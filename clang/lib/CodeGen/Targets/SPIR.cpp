@@ -73,7 +73,7 @@ class AMDGCNSPIRVABIInfo : public SPIRVABIInfo {
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
   ABIArgInfo classifyKernelArgumentType(QualType Ty) const;
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, bool Variadic) const;
 
 public:
   AMDGCNSPIRVABIInfo(CodeGenTypes &CGT) : SPIRVABIInfo(CGT) {}
@@ -320,12 +320,19 @@ ABIArgInfo AMDGCNSPIRVABIInfo::classifyKernelArgumentType(QualType Ty) const {
   return ABIArgInfo::getDirect(LTy, 0, nullptr, false);
 }
 
-ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty) const {
+ABIArgInfo AMDGCNSPIRVABIInfo::classifyArgumentType(QualType Ty,
+                                                    bool Variadic) const {
   assert(NumRegsLeft <= MaxNumRegsForArgsRet && "register estimate underflow");
 
   Ty = useFirstFieldIfTransparentUnion(Ty);
 
-  // TODO: support for variadics.
+  if (Variadic) {
+    return ABIArgInfo::getDirect(/*T=*/nullptr,
+                                 /*Offset=*/0,
+                                 /*Padding=*/nullptr,
+                                 /*CanBeFlattened=*/false,
+                                 /*Align=*/0);
+  }
 
   if (!isAggregateTypeForABI(Ty)) {
     ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
@@ -396,12 +403,17 @@ void AMDGCNSPIRVABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
+  unsigned ArgumentIndex = 0;
+  const unsigned NumRequiredArgs = FI.getNumRequiredArgs();
+
   NumRegsLeft = MaxNumRegsForArgsRet;
   for (auto &I : FI.arguments()) {
-    if (CC == llvm::CallingConv::SPIR_KERNEL)
+    if (CC == llvm::CallingConv::SPIR_KERNEL) {
       I.info = classifyKernelArgumentType(I.type);
-    else
-      I.info = classifyArgumentType(I.type);
+    } else {
+      bool FixedArgument = ArgumentIndex++ < NumRequiredArgs;
+      I.info = classifyArgumentType(I.type, !FixedArgument);
+    }
   }
 }
 
@@ -465,7 +477,7 @@ void SPIRVTargetCodeGenInfo::setCUDAKernelCallingConvention(
 void CommonSPIRTargetCodeGenInfo::setOCLKernelStubCallingConvention(
     const FunctionType *&FT) const {
   FT = getABIInfo().getContext().adjustFunctionType(
-      FT, FT->getExtInfo().withCallingConv(CC_SpirFunction));
+      FT, FT->getExtInfo().withCallingConv(CC_C));
 }
 
 // LLVM currently assumes a null pointer has the bit pattern 0, but some GPU
@@ -542,8 +554,14 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
     return;
 
   unsigned N = M.getLangOpts().GPUMaxThreadsPerBlock;
-  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>())
+  if (auto FlatWGS = FD->getAttr<AMDGPUFlatWorkGroupSizeAttr>()) {
     N = FlatWGS->getMax()->EvaluateKnownConstInt(M.getContext()).getExtValue();
+  } else if (auto LB = FD->getAttr<CUDALaunchBoundsAttr>()) {
+    if (uint64_t MaxThreads = LB->getMaxThreads()
+                                  ->EvaluateKnownConstInt(M.getContext())
+                                  .getExtValue())
+      N = MaxThreads;
+  }
 
   // We encode the maximum flat WG size in the first component of the 3D
   // max_work_group_size attribute, which will get reverse translated into the
@@ -560,30 +578,8 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
 
 StringRef SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &, SyncScope Scope, llvm::AtomicOrdering) const {
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return "subgroup";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return "device";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
-  return "";
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(),
+                                       getAtomicScope(Scope));
 }
 
 void SPIRVTargetCodeGenInfo::setTargetAtomicMetadata(
@@ -890,6 +886,17 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
          "The element type for a SPIR-V resource must be a scalar integer or "
          "floating point type.");
 
+  assert((!SampledType->isIntegerTy(64) || NumChannels <= 2) &&
+         "A 64-bit SPIR-V resource element can have at most 2 components.");
+
+  // SPIR-V has no 64-bit multi-component image format, so pack a 2-component
+  // 64-bit typed buffer into a 4-component 32-bit image. The backend
+  // reinterprets it with OpBitcast on load and store.
+  if (SampledType->isIntegerTy(64) && NumChannels == 2) {
+    SampledType = llvm::Type::getInt32Ty(Ctx);
+    NumChannels = 4;
+  }
+
   // These parameters correspond to the operands to the OpTypeImage SPIR-V
   // instruction. See
   // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpTypeImage.
@@ -922,10 +929,10 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
   IntParams[1] = 2;
 
   // Arrayed
-  IntParams[2] = 0;
+  IntParams[2] = static_cast<unsigned>(attributes.IsArray);
 
   // MS
-  IntParams[3] = 0;
+  IntParams[3] = static_cast<unsigned>(attributes.isMultiSampled());
 
   // Sampled
   IntParams[4] =

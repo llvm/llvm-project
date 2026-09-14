@@ -233,7 +233,9 @@ if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
    AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
 
-  set(PROFILE_ROCM_SOURCES ${PROFILE_SOURCES} InstrProfilingPlatformROCm.cpp)
+  set(PROFILE_ROCM_SOURCES ${PROFILE_SOURCES}
+    InstrProfilingPlatformROCm.cpp
+    InstrProfilingPlatformROCmHSA.cpp)
 
   # Enables the device-collection call in InstrProfilingFile.c.
   set(PROFILE_ROCM_FLAGS ${EXTRA_FLAGS} -DCOMPILER_RT_BUILD_PROFILE_ROCM=1)
@@ -242,6 +244,28 @@ if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
   # exception personality (__gxx_personality_v0).
   append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions
                  PROFILE_ROCM_FLAGS)
+
+  # Optional build-time verification of the mirrored HSA ABI in
+  # InstrProfilingPlatformROCmHSA.cpp. HSA is dlopened (never linked), so the
+  # declarations are hand-mirrored; when the real ROCm headers happen to be
+  # available, compile the static_assert cross-checks against them. This is
+  # never a build requirement -- if the package is absent, the checks are simply
+  # skipped. Linux only, matching the supplemental HSA drain.
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
+    find_package(hsa-runtime64 QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
+    if(hsa-runtime64_FOUND)
+      get_target_property(_profile_hsa_inc hsa-runtime64::hsa-runtime64
+                          INTERFACE_INCLUDE_DIRECTORIES)
+      if(_profile_hsa_inc)
+        message(STATUS "clang_rt.profile_rocm: verifying HSA ABI against "
+                       "${_profile_hsa_inc}")
+        list(APPEND PROFILE_ROCM_FLAGS -DPROFILE_VERIFY_HSA_ABI=1)
+        foreach(_inc ${_profile_hsa_inc})
+          list(APPEND PROFILE_ROCM_FLAGS "-isystem${_inc}")
+        endforeach()
+      endif()
+    endif()
+  endif()
 
   # The interceptor path needs sanitizer_common symbols; merge the same object
   # libs as clang_rt.cfi so the archive stays self-contained.

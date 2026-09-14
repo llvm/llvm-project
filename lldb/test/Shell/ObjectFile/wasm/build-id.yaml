@@ -1,0 +1,55 @@
+# A Wasm module carries the identifier its linker gave it in a build_id custom
+# section, whose payload is the length of the identifier followed by its bytes.
+
+# RUN: yaml2obj %s --docnum=1 -o %t.16
+# RUN: lldb-test object-file %t.16 | FileCheck %s --check-prefix=UUID16
+
+# UUID16: Plugin name: wasm
+# UUID16: UUID: 01020304-0506-0708-090A-0B0C0D0E0F10
+
+# An identifier of any other length is just as good, since it is only ever
+# compared with another.
+# RUN: yaml2obj %s --docnum=2 -o %t.20
+# RUN: lldb-test object-file %t.20 | FileCheck %s --check-prefix=UUID20
+
+# UUID20: UUID: 01020304-0506-0708-090A-0B0C0D0E0F10-11121314
+
+# A module linked without the section has nothing that identifies it.
+# RUN: yaml2obj %s --docnum=3 -o %t.none
+# RUN: lldb-test object-file %t.none | FileCheck %s --check-prefix=NOUUID
+
+# NOUUID: UUID:{{ *$}}
+
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CUSTOM
+    Name:            build_id
+    Payload:         100102030405060708090A0B0C0D0E0F10
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CUSTOM
+    Name:            build_id
+    Payload:         140102030405060708090A0B0C0D0E0F1011121314
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B
+--- !WASM
+FileHeader:
+  Version:         0x00000001
+Sections:
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+        Body:            0B

@@ -178,8 +178,9 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   // at least once. For unknown (dynamic) or zero trip counts we cannot prove
   // the body executes, so hoisting a side-effectful op would change observable
   // program semantics. Pure (side-effect-free) ops may always be hoisted.
-  auto tripCount = getConstantTripCount(forOp);
-  bool guaranteedToExecute = tripCount.has_value() && *tripCount > 0;
+  auto tripCount = forOp.getStaticTripCount();
+  bool guaranteedToExecute =
+      tripCount.has_value() && tripCount->getZExtValue() > 0;
 
   for (Operation &op : *forOp.getBody()) {
     // Register op in the set of ops that have users. This set is used

@@ -389,9 +389,6 @@ class value(object):
     def __init__(self, sbvalue):
         self.sbvalue = sbvalue
 
-    def __nonzero__(self):
-        return self.sbvalue.__nonzero__()
-
     def __bool__(self):
         return self.sbvalue.__bool__()
 
@@ -453,9 +450,6 @@ class value(object):
 
     def __or__(self, other):
         return int(self) | int(other)
-
-    def __div__(self, other):
-        return int(self) / int(other)
 
     def __truediv__(self, other):
         return int(self) / int(other)
@@ -546,7 +540,10 @@ class value(object):
         return complex (int(self))
 
     def __int__(self):
-        is_num,is_sign = is_numeric_type(self.sbvalue.GetType().GetCanonicalType().GetBasicType())
+        ty = self.sbvalue.GetType().GetCanonicalType()
+        if ty.IsPointerType():
+            return self.sbvalue.GetValueAsUnsigned()
+        is_num,is_sign = is_numeric_type(ty.GetBasicType())
         if is_num and not is_sign: return self.sbvalue.GetValueAsUnsigned()
         return self.sbvalue.GetValueAsSigned()
 
@@ -555,12 +552,6 @@ class value(object):
 
     def __float__(self):
         return float (self.sbvalue.GetValueAsSigned())
-
-    def __oct__(self):
-        return '0%o' % self.sbvalue.GetValueAsUnsigned()
-
-    def __hex__(self):
-        return '0x%x' % self.sbvalue.GetValueAsUnsigned()
 
     def __len__(self):
         return self.sbvalue.GetNumChildren()
@@ -612,7 +603,8 @@ class SBSyntheticValueProvider(object):
 
     def __iter__(self):
       '''Iterate over all children in a lldb.SBSyntheticValueProvider object.'''
-      return lldb_iter(self, 'num_children', 'get_child_at_index')
+      for i in range(self.num_children()):
+          yield self.get_child_at_index(i)
 
 %}
 
