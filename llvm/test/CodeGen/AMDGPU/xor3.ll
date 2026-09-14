@@ -166,3 +166,25 @@ define amdgpu_ps float @xor3_uniform_vgpr(float inreg %a, float inreg %b, float 
   %bc = bitcast i32 %result to float
   ret float %bc
 }
+
+; v2i32 - i32 folding: (xor(a,b).lo ^ xor(a,b).hi) -> xor + v_xor3_b32
+define amdgpu_ps float @xor_lanes_xor(<2 x i32> %a, <2 x i32> %b) {
+; GFX9-LABEL: xor_lanes_xor:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v2
+; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v1
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: xor_lanes_xor:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX10-NEXT:    v_xor3_b32 v0, v0, v2, v1
+; GFX10-NEXT:    ; return to shader part epilog
+  %o = xor <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = xor i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}

@@ -286,6 +286,8 @@ def shl_oneuse : HasOneUseBinOp<shl>;
 
 def select_oneuse : HasOneUseTernaryOp<select>;
 
+def extractelt_oneuse : HasOneUseBinOp<extractelt>;
+
 def AMDGPUmul_u24_oneuse : HasOneUseBinOp<AMDGPUmul_u24>;
 def AMDGPUmul_i24_oneuse : HasOneUseBinOp<AMDGPUmul_i24>;
 

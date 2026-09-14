@@ -325,3 +325,31 @@ define amdgpu_ps <2 x i32> @s_or3_v2i32(<2 x i32> inreg %a, <2 x i32> inreg %b, 
   %result = or <2 x i32> %x, %c
   ret <2 x i32> %result
 }
+
+; v2i32 - i32 folding: (or(a,b).lo | or(a,b).hi) -> or + v_or3_b32
+define amdgpu_ps float @or_lanes_or(<2 x i32> %a, <2 x i32> %b) {
+; VI-LABEL: or_lanes_or:
+; VI:       ; %bb.0:
+; VI-NEXT:    v_or_b32_e32 v1, v1, v3
+; VI-NEXT:    v_or_b32_e32 v0, v0, v2
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
+; VI-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: or_lanes_or:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX9-NEXT:    v_or3_b32 v0, v0, v2, v1
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX10-LABEL: or_lanes_or:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_or_b32_e32 v1, v1, v3
+; GFX10-NEXT:    v_or3_b32 v0, v0, v2, v1
+; GFX10-NEXT:    ; return to shader part epilog
+  %o = or <2 x i32> %a, %b
+  %lo = extractelement <2 x i32> %o, i32 0
+  %hi = extractelement <2 x i32> %o, i32 1
+  %r = or i32 %lo, %hi
+  %bc = bitcast i32 %r to float
+  ret float %bc
+}
