@@ -5,9 +5,8 @@
 define <2 x i32> @factor2_extracts1(ptr %src) {
 ; CHECK-LABEL: define <2 x i32> @factor2_extracts1(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[WIDE:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVED:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> [[WIDE]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 0
+; CHECK-NEXT:    [[WIDE:%.*]] = load <3 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <3 x i32> [[WIDE]], <3 x i32> poison, <2 x i32> <i32 0, i32 2>
 ; CHECK-NEXT:    ret <2 x i32> [[FIELD0]]
 ;
   %wide = load <4 x i32>, ptr %src, align 4
@@ -20,9 +19,8 @@ define <2 x i32> @factor2_extracts2(ptr %src) {
 ; CHECK-LABEL: define <2 x i32> @factor2_extracts2(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[WIDE:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVED:%.*]] = call { <2 x i32>, <2 x i32> } @llvm.vector.deinterleave2.v4i32(<4 x i32> [[WIDE]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 0
-; CHECK-NEXT:    [[FIELD1:%.*]] = extractvalue { <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 1
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <4 x i32> [[WIDE]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[FIELD1:%.*]] = shufflevector <4 x i32> [[WIDE]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    [[SUM1:%.*]] = add <2 x i32> [[FIELD0]], [[FIELD1]]
 ; CHECK-NEXT:    ret <2 x i32> [[SUM1]]
 ;
@@ -37,9 +35,8 @@ define <2 x i32> @factor2_extracts2(ptr %src) {
 define <2 x i32> @factor3_extracts1(ptr %src) {
 ; CHECK-LABEL: define <2 x i32> @factor3_extracts1(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[WIDE:%.*]] = load <6 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVED:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave3.v6i32(<6 x i32> [[WIDE]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 0
+; CHECK-NEXT:    [[WIDE:%.*]] = load <4 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <4 x i32> [[WIDE]], <4 x i32> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    ret <2 x i32> [[FIELD0]]
 ;
   %wide = load <6 x i32>, ptr %src, align 4
@@ -171,9 +168,8 @@ define <2 x i32> @factor4_extracts4(ptr %src) {
 define <2 x i32> @factor5_extracts1(ptr %src) {
 ; CHECK-LABEL: define <2 x i32> @factor5_extracts1(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[WIDE:%.*]] = load <10 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVED:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave5.v10i32(<10 x i32> [[WIDE]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 0
+; CHECK-NEXT:    [[WIDE:%.*]] = load <6 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <6 x i32> [[WIDE]], <6 x i32> poison, <2 x i32> <i32 0, i32 5>
 ; CHECK-NEXT:    ret <2 x i32> [[FIELD0]]
 ;
   %wide = load <10 x i32>, ptr %src, align 4
@@ -281,9 +277,8 @@ define <2 x i32> @factor5_extracts5(ptr %src) {
 define <2 x i32> @factor6_extracts1(ptr %src) {
 ; CHECK-LABEL: define <2 x i32> @factor6_extracts1(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[WIDE:%.*]] = load <12 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVED:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave6.v12i32(<12 x i32> [[WIDE]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 0
+; CHECK-NEXT:    [[WIDE:%.*]] = load <7 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <7 x i32> [[WIDE]], <7 x i32> poison, <2 x i32> <i32 0, i32 6>
 ; CHECK-NEXT:    ret <2 x i32> [[FIELD0]]
 ;
   %wide = load <12 x i32>, ptr %src, align 4
@@ -425,9 +420,8 @@ define <2 x i32> @factor6_extracts6(ptr %src) {
 define <2 x i32> @factor7_extracts1(ptr %src) {
 ; CHECK-LABEL: define <2 x i32> @factor7_extracts1(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[WIDE:%.*]] = load <14 x i32>, ptr [[SRC]], align 4
-; CHECK-NEXT:    [[DEINTERLEAVED:%.*]] = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave7.v14i32(<14 x i32> [[WIDE]])
-; CHECK-NEXT:    [[FIELD0:%.*]] = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } [[DEINTERLEAVED]], 0
+; CHECK-NEXT:    [[WIDE:%.*]] = load <8 x i32>, ptr [[SRC]], align 4
+; CHECK-NEXT:    [[FIELD0:%.*]] = shufflevector <8 x i32> [[WIDE]], <8 x i32> poison, <2 x i32> <i32 0, i32 7>
 ; CHECK-NEXT:    ret <2 x i32> [[FIELD0]]
 ;
   %wide = load <14 x i32>, ptr %src, align 4
