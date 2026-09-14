@@ -547,8 +547,8 @@ void Fortran::lower::genEventPostStatement(
   // Handle EVENT-VAR and IMAGE_NUMBER
   auto eventExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::EventVariable>(stmt.t));
-  mlir::Value event =
-      fir::getBase(converter.genExprBox(loc, *eventExpr, stmtCtx));
+  mlir::Value event = fir::getBase(
+      converter.genExprBox(loc, *eventExpr, stmtCtx, /*allowCoarray=*/true));
   llvm::SmallVector<mlir::Value> cosubscripts;
   if (auto coref{evaluate::ExtractCoarrayRef(eventExpr)}) {
     cosubscripts =
@@ -601,8 +601,8 @@ void Fortran::lower::genEventWaitStatement(
   // Handle EVENT-VAR
   auto eventExpr = Fortran::semantics::GetExpr(
       std::get<Fortran::parser::EventVariable>(stmt.t));
-  mlir::Value eventVar =
-      fir::getBase(converter.genExprAddr(loc, *eventExpr, stmtCtx));
+  mlir::Value eventVar = fir::getBase(
+      converter.genExprAddr(loc, *eventExpr, stmtCtx, /*allowCoarray=*/true));
 
   mif::EventWaitOp::create(builder, loc, eventVar, untilCount, statAddr,
                            errMsgAddr);
