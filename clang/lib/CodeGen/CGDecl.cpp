@@ -1760,6 +1760,16 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
                                    emission.getAllocatedAddress());
   }
 
+  // Record amdgpu_pin_{vgpr,agpr} locals so stores to them get pinned.
+  if (D.hasAttr<AMDGPUPinVGPRAttr>() || D.hasAttr<AMDGPUPinAGPRAttr>()) {
+    bool IsAGPR = D.hasAttr<AMDGPUPinAGPRAttr>();
+    const Expr *RegE = IsAGPR ? D.getAttr<AMDGPUPinAGPRAttr>()->getReg()
+                              : D.getAttr<AMDGPUPinVGPRAttr>()->getReg();
+    unsigned Reg = RegE->EvaluateKnownConstInt(getContext()).getZExtValue();
+    AMDGPUPinnedLocals[emission.getAllocatedAddress().getBasePointer()] = {
+        IsAGPR, Reg};
+  }
+
   return emission;
 }
 

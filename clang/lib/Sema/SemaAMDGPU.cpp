@@ -741,6 +741,59 @@ void SemaAMDGPU::handleAMDGPUNumVGPRAttr(Decl *D, const ParsedAttr &AL) {
                  AMDGPUNumVGPRAttr(getASTContext(), AL, NumVGPR));
 }
 
+// Validate a pin register operand. Value-dependent expressions (e.g. template
+// parameters) are accepted as-is and re-checked at instantiation; otherwise the
+// expression must be a non-negative integer constant.
+static Expr *checkPinRegArg(Sema &S, const AttributeCommonInfo &CI, Expr *E) {
+  if (E->isValueDependent())
+    return E;
+  llvm::APSInt Val;
+  ExprResult R = S.VerifyIntegerConstantExpression(E, &Val);
+  if (R.isInvalid())
+    return nullptr;
+  if (Val.isNegative()) {
+    S.Diag(E->getExprLoc(), diag::err_attribute_requires_positive_integer)
+        << CI << /*non-negative*/ 1;
+    return nullptr;
+  }
+  return R.get();
+}
+
+void SemaAMDGPU::addAMDGPUPinVGPRAttr(Decl *D, const AttributeCommonInfo &CI,
+                                      Expr *RegExpr) {
+  if (Expr *E = checkPinRegArg(SemaRef, CI, RegExpr))
+    D->addAttr(::new (getASTContext())
+                   AMDGPUPinVGPRAttr(getASTContext(), CI, E));
+}
+
+void SemaAMDGPU::addAMDGPUPinAGPRAttr(Decl *D, const AttributeCommonInfo &CI,
+                                      Expr *RegExpr) {
+  if (Expr *E = checkPinRegArg(SemaRef, CI, RegExpr))
+    D->addAttr(::new (getASTContext())
+                   AMDGPUPinAGPRAttr(getASTContext(), CI, E));
+}
+
+// The pin is applied to stores of an automatic local (see EmitAutoVarAlloca),
+// so it is meaningless on globals, static locals, or parameters; ignore it
+// there.
+static bool isPinnableLocal(Sema &S, Decl *D, const ParsedAttr &AL) {
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (VD && VD->isLocalVarDecl() && VD->hasLocalStorage())
+    return true;
+  S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+  return false;
+}
+
+void SemaAMDGPU::handleAMDGPUPinVGPRAttr(Decl *D, const ParsedAttr &AL) {
+  if (isPinnableLocal(SemaRef, D, AL))
+    addAMDGPUPinVGPRAttr(D, AL, AL.getArgAsExpr(0));
+}
+
+void SemaAMDGPU::handleAMDGPUPinAGPRAttr(Decl *D, const ParsedAttr &AL) {
+  if (isPinnableLocal(SemaRef, D, AL))
+    addAMDGPUPinAGPRAttr(D, AL, AL.getArgAsExpr(0));
+}
+
 static bool
 checkAMDGPUMaxNumWorkGroupsArguments(Sema &S, Expr *XExpr, Expr *YExpr,
                                      Expr *ZExpr,
