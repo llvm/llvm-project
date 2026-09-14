@@ -28,12 +28,8 @@ static std::string_view getBackendName(backend Backend) {
   switch (Backend) {
   case backend::opencl:
     return "opencl";
-  case backend::level_zero:
+  case backend::ext_oneapi_level_zero:
     return "level_zero";
-  case backend::cuda:
-    return "cuda";
-  case backend::hip:
-    return "hip";
   }
 
   return "";
