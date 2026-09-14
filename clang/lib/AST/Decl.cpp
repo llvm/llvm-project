@@ -2258,6 +2258,9 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
+        !(getCanonicalDecl()->isInline() &&
+          getCanonicalDecl()->isConstexpr() &&
+          !getCanonicalDecl()->isOutOfLine()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
