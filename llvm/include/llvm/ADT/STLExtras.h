@@ -568,8 +568,7 @@ template <typename T, typename RangeT> auto make_isa_range(RangeT &&Range) {
   static_assert(std::is_reference_v<decltype(*adl_begin(Range))> ||
                     std::is_pointer_v<detail::ValueOfRange<RangeT>>,
                 "make_isa_range requires a range of pointers or references");
-  return map_range(make_filter_range(std::forward<RangeT>(Range), IsaPred<T>),
-                   CastTo<T>);
+  return map_range(make_filter_range(Range, IsaPred<T>), CastTo<T>);
 }
 
 /// A pseudo-iterator adaptor that is designed to implement "early increment"
