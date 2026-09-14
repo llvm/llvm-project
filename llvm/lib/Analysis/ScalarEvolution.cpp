@@ -2985,9 +2985,7 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Okay, it looks like we really DO need an add expr.  Check to see if we
   // already have one, otherwise create a new one.
-  assert((UseFlags == SCEV::FlagAnyWrap ||
-          std::is_permutation(OrigOps.begin(), OrigOps.end(), Ops.begin(),
-                              Ops.end())) &&
+  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOps, Ops)) &&
          "Tried to add SCEVUse flags after operands changed");
   return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
