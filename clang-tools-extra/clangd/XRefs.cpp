@@ -1016,13 +1016,17 @@ std::vector<DocumentLink> getDocumentLinks(ParsedAST &AST) {
 namespace {
 
 /// Returns the locations of the spelled tokens overlapping [Range.getBegin(),
-/// Range.getEnd()], in order. Both ends of \p Range must be file locations
-/// in the same file.
+/// Range.getEnd()], in order. Returns an empty list unless both ends of
+/// \p Range are file locations in the same file: unlike a spelling or
+/// expansion location, a macro location isn't something TokenBuffer (or the
+/// FileID/offset arithmetic below) can make sense of, e.g. if part of an
+/// operator name comes from a macro (`#define PLUS + ... operator PLUS(int)`).
 llvm::SmallVector<SourceLocation, 4>
 tokensSpelledInRange(const syntax::TokenBuffer &TB, const SourceManager &SM,
                      SourceRange Range) {
   llvm::SmallVector<SourceLocation, 4> Locs;
-  if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid())
+  if (Range.getBegin().isInvalid() || Range.getEnd().isInvalid() ||
+      !Range.getBegin().isFileID() || !Range.getEnd().isFileID())
     return Locs;
   FileID FID = SM.getFileID(Range.getBegin());
   if (FID != SM.getFileID(Range.getEnd()))

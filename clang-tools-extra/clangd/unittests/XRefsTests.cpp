@@ -180,6 +180,12 @@ TEST(HighlightsTest, All) {
           [[^operator]] [[int]]();
         };
       )cpp",
+      R"cpp(// Regression: an operator name coming from a macro expansion must not
+        // crash. Since a macro location isn't something we can safely treat
+        // as spelled tokens, we fall back to highlighting just `operator`.
+        #define PLUS +
+        struct S { void [[operator]] PLU^S(int); };
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
