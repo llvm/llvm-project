@@ -39,6 +39,6 @@ int main() {
   return 0;
 }
 //.
-// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// CHECK: attributes #[[ATTR1]] = { convergent nounwind }
+// CHECK: attributes #[[ATTR0]] = { convergent mustprogress noinline norecurse nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
+// CHECK: attributes #[[ATTR1]] = { convergent nounwind "uniform-work-group-size" }
 //.

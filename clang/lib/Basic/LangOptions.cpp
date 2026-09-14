@@ -74,6 +74,12 @@ unsigned LangOptions::getOpenCLCompatibleVersion() const {
   llvm_unreachable("Unknown OpenCL version");
 }
 
+bool LangOptions::defaultOffloadUniformBlock() const {
+  if (OpenCL)
+    return getOpenCLCompatibleVersion() <= 120;
+  return !HLSL;
+}
+
 void LangOptions::remapPathPrefix(SmallVectorImpl<char> &Path) const {
   for (const auto &Entry : MacroPrefixMap)
     if (llvm::sys::path::replace_path_prefix(Path, Entry.first, Entry.second))
