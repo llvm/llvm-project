@@ -799,7 +799,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::tanh:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!TM || !isa<ScalableVectorType>(Ty))
+        if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
@@ -814,7 +814,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::sincospi:
       Changed |= forEachCall(F, [&](CallInst *CI) {
         Type *Ty = CI->getArgOperand(0)->getType();
-        if (!TM || !isa<ScalableVectorType>(Ty))
+        if (!isa<ScalableVectorType>(Ty))
           return false;
         const TargetLowering *TL = TM->getSubtargetImpl(F)->getTargetLowering();
         unsigned Op = TL->IntrinsicIDToISD(F.getIntrinsicID());
