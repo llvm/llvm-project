@@ -3,6 +3,74 @@
 
 ! CHECK: error: Semantic errors in
 
+! A runtime condition can satisfy MATCH_ANY despite an unknown static trait.
+subroutine dynamic_unknown_traits(flag, n)
+  logical :: flag
+  integer :: n, i
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(bogus_vendor), extension(match_any)}, &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+  !$omp& user={condition(flag)}: simd collapse(2)) default(nothing)
+  do i = 1, n
+  end do
+  !$omp metadirective &
+  !$omp& when(device={arch(bogus_arch)}, &
+  !$omp& implementation={extension(match_any)}, &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+  !$omp& user={condition(flag)}: simd collapse(2)) default(nothing)
+  do i = 1, n
+  end do
+  !$omp metadirective &
+  !$omp& when(device={kind(bogus_kind)}, &
+  !$omp& implementation={extension(match_any)}, &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+  !$omp& user={condition(flag)}: simd collapse(2)) default(nothing)
+  do i = 1, n
+  end do
+end subroutine
+
+! Neither a false condition nor MATCH_ALL can rescue an unknown static trait.
+subroutine unknown_traits_unreachable(flag, n)
+  logical :: flag
+  integer :: n, i
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(bogus_vendor), extension(match_any)}, &
+  !$omp& user={condition(.false.)}: simd collapse(2)) default(nothing)
+  do i = 1, n
+  end do
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(bogus_vendor), extension(match_all)}, &
+  !$omp& user={condition(flag)}: simd collapse(2)) default(nothing)
+  do i = 1, n
+  end do
+end subroutine
+
+! Even without construct selectors, path depth changes device scores. CPU
+! ties NOTHING at depth 1 but wins at depth 2, keeping the invalid loop live.
+subroutine device_weight_paths(flag, n)
+  logical :: flag
+  integer :: n, i
+  !$omp parallel
+    !$omp begin metadirective &
+    !$omp& when(user={condition(flag)}: nothing) default(parallel)
+      !$omp metadirective &
+      !$omp& when(user={condition(score(2): .true.)}: nothing) &
+! CHECK: :[[@LINE+3]]:{{[0-9]+}}: error: This construct requires
+! CHECK-SAME: a nest of depth 2, but the associated nest is a nest of depth 1
+! CHECK: because: COLLAPSE clause was specified with argument 2
+      !$omp& when(device={kind(cpu)}: simd collapse(2)) default(nothing)
+      do i = 1, n
+      end do
+    !$omp end metadirective
+  !$omp end parallel
+end subroutine
+
 ! Matching the inner PARALLEL gives the construct candidate a score of 3.
 subroutine repeated_parallel(n)
   integer :: n, i
