@@ -758,6 +758,8 @@ static bool hasConstObjectParameter(const CXXMethodDecl *MD) {
   if (!MD->isExplicitObjectMemberFunction())
     return MD->isConst();
 
+  // An explicit object parameter has its own qualifiers instead of
+  // being described by the const-qualifier of the function type.
   QualType ObjTy = MD->getParamDecl(0)->getType();
   if (const auto *RT = ObjTy->getAs<ReferenceType>())
     return RT->getPointeeType().isConstQualified();
