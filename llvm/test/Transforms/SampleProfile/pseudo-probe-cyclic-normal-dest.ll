@@ -2,10 +2,10 @@
 ; RUN: opt < %s -passes=pseudo-probe -S | FileCheck %s
 
 ; getOriginalTerminator walks invoke normal destinations. If that chain is a
-; cycle (self-looping invoke), the walk must stop. This CFG hangs without
-; cycle detection.
-;
-; Matches clang++ -O2 -fexceptions on: try { for (;;) f1(); } catch (...) {}
+; cycle, the walk must stop. These CFGs hang without cycle detection.
+
+; Self-looping invoke: clang++ -O2 -fexceptions on
+;   try { for (;;) f1(); } catch (...) {}
 define void @self_looping_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define void @self_looping_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -13,7 +13,7 @@ define void @self_looping_invoke() personality ptr @__gxx_personality_v0 {
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 1782689716240936679, i64 2, i32 0, i64 -1)
-; CHECK-NEXT:    invoke void @may_throw()
+; CHECK-NEXT:    invoke void @f1()
 ; CHECK-NEXT:            to label %[[LOOP]] unwind label %[[LPAD:.*]]
 ; CHECK:       [[LPAD]]:
 ; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
@@ -24,14 +24,97 @@ entry:
   br label %loop
 
 loop:
-  invoke void @may_throw()
-          to label %loop unwind label %lpad
+  invoke void @f1()
+  to label %loop unwind label %lpad
 
 lpad:
   %eh = landingpad { ptr, i32 }
-          cleanup
+  cleanup
   ret void
 }
 
-declare void @may_throw()
+; Two-invoke cycle: clang++ -O2 -fexceptions on
+;   try { for (;;) { f1(); f2(); } } catch (...) {}
+define void @two_invoke_cycle() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @two_invoke_cycle() personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 8105103579929771406, i64 1, i32 0, i64 -1)
+; CHECK-NEXT:    br label %[[FOR_COND:.*]]
+; CHECK:       [[FOR_COND]]:
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 8105103579929771406, i64 2, i32 0, i64 -1)
+; CHECK-NEXT:    invoke void @f1()
+; CHECK-NEXT:            to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
+; CHECK:       [[INVOKE_CONT]]:
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 8105103579929771406, i64 4, i32 0, i64 -1)
+; CHECK-NEXT:    invoke void @f2()
+; CHECK-NEXT:            to label %[[FOR_COND]] unwind label %[[LPAD]]
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  invoke void @f1()
+  to label %invoke.cont unwind label %lpad
+
+invoke.cont:
+  invoke void @f2()
+  to label %for.cond unwind label %lpad
+
+lpad:
+  %eh = landingpad { ptr, i32 }
+  cleanup
+  ret void
+}
+
+; Three-invoke cycle.
+define void @three_invoke_cycle() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define void @three_invoke_cycle() personality ptr @__gxx_personality_v0 {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 3830051905911222256, i64 1, i32 0, i64 -1)
+; CHECK-NEXT:    br label %[[FOR_COND:.*]]
+; CHECK:       [[FOR_COND]]:
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 3830051905911222256, i64 2, i32 0, i64 -1)
+; CHECK-NEXT:    invoke void @f1()
+; CHECK-NEXT:            to label %[[CONT1:.*]] unwind label %[[LPAD:.*]]
+; CHECK:       [[CONT1]]:
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 3830051905911222256, i64 4, i32 0, i64 -1)
+; CHECK-NEXT:    invoke void @f2()
+; CHECK-NEXT:            to label %[[CONT2:.*]] unwind label %[[LPAD]]
+; CHECK:       [[CONT2]]:
+; CHECK-NEXT:    call void @llvm.pseudoprobe(i64 3830051905911222256, i64 6, i32 0, i64 -1)
+; CHECK-NEXT:    invoke void @f3()
+; CHECK-NEXT:            to label %[[FOR_COND]] unwind label %[[LPAD]]
+; CHECK:       [[LPAD]]:
+; CHECK-NEXT:    [[EH:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %for.cond
+
+for.cond:
+  invoke void @f1()
+  to label %cont1 unwind label %lpad
+
+cont1:
+  invoke void @f2()
+  to label %cont2 unwind label %lpad
+
+cont2:
+  invoke void @f3()
+  to label %for.cond unwind label %lpad
+
+lpad:
+  %eh = landingpad { ptr, i32 }
+  cleanup
+  ret void
+}
+
+declare void @f1()
+declare void @f2()
+declare void @f3()
 declare i32 @__gxx_personality_v0(...)

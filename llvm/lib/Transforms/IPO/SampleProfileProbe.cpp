@@ -219,6 +219,19 @@ void SampleProfileProber::findUnreachableBlocks(
   }
 }
 
+// True if following invoke normal destinations from BB revisits a block.
+// That is a cycle of invokes, not a split continuation from call-to-invoke.
+static bool isOnInvokeNormalDestCycle(const BasicBlock *BB) {
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  while (Visited.insert(BB).second) {
+    auto *II = dyn_cast<InvokeInst>(BB->getTerminator());
+    if (!II)
+      return false;
+    BB = II->getNormalDest();
+  }
+  return true;
+}
+
 // In call-to-invoke conversion, basic block can be split into multiple blocks,
 // only instrument probe in the head block, ignore the normal dests.
 void SampleProfileProber::findInvokeNormalDests(
@@ -227,8 +240,8 @@ void SampleProfileProber::findInvokeNormalDests(
     auto *TI = BB.getTerminator();
     if (auto *II = dyn_cast<InvokeInst>(TI)) {
       auto *ND = II->getNormalDest();
-      // instrument self-looping invoke in the original block
-      if (ND != &BB)
+      // instrument invoke blocks that form a normal-dest cycle
+      if (!isOnInvokeNormalDestCycle(ND))
         InvokeNormalDests.insert(ND);
 
       // The normal dest and the try/catch block are connected by an
@@ -254,8 +267,8 @@ const Instruction *SampleProfileProber::getOriginalTerminator(
     const BasicBlock *Head, const DenseSet<BasicBlock *> &BlocksToIgnore) {
   // This walk follows invoke normal destinations and ignored single-successor
   // blocks, which is a finite chain after call-to-invoke conversion. Valid IR
-  // can still contain a self-looping invoke (normal dest == this block). Track
-  // visited blocks so that case terminates instead of looping forever.
+  // can still contain a cycle of invokes. Track visited blocks so that case
+  // terminates instead of looping forever.
   SmallPtrSet<const BasicBlock *, 8> Visited;
   const BasicBlock *BB = Head;
   Visited.insert(BB);
