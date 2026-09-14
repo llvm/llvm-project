@@ -281,9 +281,10 @@ func.func private @negative_dynamic_shape(%dim : index,
   // CHECK:       %[[RC:.*]] = memref.reinterpret_cast %[[SRC]]
   %reinterpret_cast = memref.reinterpret_cast %src
     to offset: [0], sizes: [1, %dim], strides: [1, 1]
-    : memref<?xf32> to memref<1x?xf32>
+    : memref<?xf32> to memref<1x?xf32, strided<[1, 1]>>
   // CHECK:       memref.load %[[RC]]
-  %0 = memref.load %reinterpret_cast[%idx_1, %idx_2] : memref<1x?xf32>
+  %0 = memref.load %reinterpret_cast[%idx_1, %idx_2] :
+    memref<1x?xf32, strided<[1, 1]>>
   return
 }
 

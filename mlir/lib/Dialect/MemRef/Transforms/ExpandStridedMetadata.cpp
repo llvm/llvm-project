@@ -19,8 +19,8 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
@@ -197,10 +197,20 @@ public:
                                          "failed to resolve subview metadata");
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        subview, subview.getType(), stridedMetadata->basePtr,
+    MemRefType resultType = updateTypeFromMetadata(
+        subview.getType(), stridedMetadata->offset, stridedMetadata->sizes,
+        stridedMetadata->strides);
+    auto foldedSubview = memref::ReinterpretCastOp::create(
+        rewriter, subview.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
+    if (resultType == subview.getType()) {
+      rewriter.replaceOp(subview, foldedSubview);
+      return success();
+    }
+    // Preserve the original result type expected by existing users.
+    rewriter.replaceOpWithNewOp<memref::CastOp>(subview, subview.getType(),
+                                                foldedSubview);
     return success();
   }
 };
@@ -600,10 +610,22 @@ public:
                                          "failed to resolve reshape metadata");
     }
 
-    rewriter.replaceOpWithNewOp<memref::ReinterpretCastOp>(
-        reshape, reshape.getType(), stridedMetadata->basePtr,
+    MemRefType resultType = reshape.getResultType();
+    if (isa<memref::CollapseShapeOp>(reshape.getOperation()))
+      resultType = updateTypeFromMetadata(resultType, stridedMetadata->offset,
+                                          stridedMetadata->sizes,
+                                          stridedMetadata->strides);
+    auto foldedReshape = memref::ReinterpretCastOp::create(
+        rewriter, reshape.getLoc(), resultType, stridedMetadata->basePtr,
         stridedMetadata->offset, stridedMetadata->sizes,
         stridedMetadata->strides);
+    if (resultType == reshape.getResultType()) {
+      rewriter.replaceOp(reshape, foldedReshape);
+      return success();
+    }
+    // Preserve the original result type expected by existing users.
+    rewriter.replaceOpWithNewOp<memref::CastOp>(
+        reshape, reshape.getResultType(), foldedReshape);
     return success();
   }
 };
