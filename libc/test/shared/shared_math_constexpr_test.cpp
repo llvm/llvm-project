@@ -517,7 +517,8 @@ static_assert(0 == [] {
 }());
 static_assert(1 == [] {
   float128 setpayloadsig_x = float128(0.0);
-  return LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsig_x, float128(0.0));
+  return LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsig_x,
+                                                   float128(0.0));
 }());
 static_assert(0.0f ==
               LIBC_NAMESPACE::shared::fmulf128(float128(0.0), float128(0.0)));
@@ -636,7 +637,8 @@ static_assert(0 == [] {
 }());
 static_assert(1 == [] {
   bfloat16 setpayloadsig_x = bfloat16(0.0);
-  return LIBC_NAMESPACE::shared::setpayloadsigbf16(&setpayloadsig_x, bfloat16(0.0));
+  return LIBC_NAMESPACE::shared::setpayloadsigbf16(&setpayloadsig_x,
+                                                   bfloat16(0.0));
 }());
 static_assert(bfloat16(0.0) == [] {
   int exp{};
