@@ -9162,13 +9162,14 @@ def : Pat<(v2i64 (AArch64uaddlv (v2i32 V64:$Rn))),
           (v2i64 (INSERT_SUBREG (v2i64 (IMPLICIT_DEF)), (UADDLPv2i32_v1i64 V64:$Rn), dsub))>;
 
 // uaddlp from shuffle + zext
-def : Pat<(add (AArch64bici (v8i16 (bitconvert v16i8:$src)), (i32 255), (i32 8)),
-               (AArch64vlshr (v8i16 (AArch64NvCast v16i8:$src)), (i32 8))),
+def : Pat<(add (AArch64bici (v8i16 V128:$src), (i32 255), (i32 8)),
+               (AArch64vlshr (v8i16 V128:$src), (i32 8))),
           (UADDLPv16i8_v8i16 V128:$src)>;
 
-def : Pat<(add (and (v4i32 (bitconvert v8i16:$src)),
-                    (v4i32 (AArch64NvCast (v2i64 (AArch64movi_edit (i32 51)))))),
-               (AArch64vlshr (v4i32 (AArch64NvCast v8i16:$src)), (i32 16))),
+let Predicates = [IsLE] in
+def : Pat<(add (and (v4i32 V128:$src),
+                    (v4i32 (bitconvert (v2i64 (AArch64movi_edit (i32 51)))))),
+               (AArch64vlshr (v4i32 V128:$src), (i32 16))),
           (UADDLPv8i16_v4i32 V128:$src)>;
 
 def : Pat<(add (v2i64 (zext (v2i32 (AArch64zip1 (v2i32 (extract_subvector v4i32:$src, (i64 0))),
@@ -10033,7 +10034,7 @@ defm : CVTFRecipPat<v8f16, v8i16, V128, fixedpoint_recip_v8f16>;
 
 def VImm0080:         PatLeaf<(AArch64movi_shift (i32 128), (i32 0))>;
 def VImm00008000:     PatLeaf<(AArch64movi_shift (i32 128), (i32 8))>;
-def VImm0000000080000000: PatLeaf<(AArch64NvCast (v2f64 (fneg (AArch64NvCast (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
+def VImm0000000080000000: PatLeaf<(bitconvert (v2f64 (fneg (bitconvert (v4i32 (AArch64movi_shift (i32 128), (i32 24)))))))>;
 
 // RADDHN patterns for when RSHRN shifts by half the size of the vector element
 def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))),
@@ -10041,6 +10042,7 @@ def : Pat<(v8i8 (trunc (AArch64vlshr (add (v8i16 V128:$Vn), VImm0080), (i32 8)))
 def : Pat<(v4i16 (trunc (AArch64vlshr (add (v4i32 V128:$Vn), VImm00008000), (i32 16)))),
           (RADDHNv4i32_v4i16 V128:$Vn, (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
+let Predicates = [IsLE] in
 def : Pat<(v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))),
           (RADDHNv2i64_v2i32 V128:$Vn, (v2i64 (MOVIv2d_ns (i32 0))))>;
 def : Pat<(v8i8 (int_aarch64_neon_rshrn (v8i16 V128:$Vn), (i32 8))),
@@ -10064,6 +10066,7 @@ def : Pat<(v8i16 (concat_vectors
                  (INSERT_SUBREG (IMPLICIT_DEF), V64:$Vd, dsub), V128:$Vn,
                  (v4i32 (MOVIv2d_ns (i32 0))))>;
 let AddedComplexity = 5 in
+let Predicates = [IsLE] in
 def : Pat<(v4i32 (concat_vectors
                  (v2i32 V64:$Vd),
                  (v2i32 (trunc (AArch64vlshr (add (v2i64 V128:$Vn), VImm0000000080000000), (i32 32)))))),
