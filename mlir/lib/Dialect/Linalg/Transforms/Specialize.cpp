@@ -47,14 +47,17 @@ using namespace mlir::linalg;
 //         %0 = arith.subf %b, %a : f32
 //         linalg.yield %0: f32
 // Former is linalg.sub(a,b), latter is linalg.sub(b,a).
-static bool areBinOpsSwapped(GenericOp genericOp) {
+static bool areBinOpsSwapped(GenericOp genericOp, bool isTernary) {
   Block *body = genericOp.getBody();
   Operation *op = &body->front();
   bool swapped = false;
-  if (op->getOpOperand(0).get() != body->getArgument(0)) {
+  if (op->getOpOperand(0 + isTernary).get() !=
+      body->getArgument(0 + isTernary)) {
     swapped = true;
-    assert(op->getOpOperand(0).get() == body->getArgument(1) &&
-           op->getOpOperand(1).get() == body->getArgument(0) &&
+    assert(op->getOpOperand(0 + isTernary).get() ==
+               body->getArgument(1 + isTernary) &&
+           op->getOpOperand(1 + isTernary).get() ==
+               body->getArgument(0 + isTernary) &&
            "binary op uses just one block arg");
   }
   return swapped;
@@ -140,7 +143,7 @@ static std::optional<ElementwiseKind> getElementwiseKind(Operation *op) {
       .Default([](Operation *) { return std::nullopt; });
 }
 
-// Attempt to specialize unary or binary linalg.generic ops
+// Attempt to specialize unary/binary/ternary linalg.generic ops
 // to linalg.elementwise.
 //
 // Example:
@@ -172,12 +175,14 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
   unsigned arity = genericOp.getNumDpsInputs();
   bool isUnary = arity == 1;
   bool isBinary = arity == 2;
+  bool isTernary = arity == 3;
 
   // Will inspect the body operation to determine named op or elementwise kind.
   Operation *op = &genericOp.getBody()->front();
 
   // Detect variations from canonical forms.
-  bool hasSwappedOperands = isBinary && areBinOpsSwapped(genericOp);
+  bool hasSwappedOperands =
+      (isBinary || isTernary) && areBinOpsSwapped(genericOp, isTernary);
   int scalarOprIdx = -1;
   bool hasScalarOperand = isUnary && op->getNumOperands() == 2 &&
                           findIndexOfScalarOperand(genericOp, scalarOprIdx);
@@ -190,8 +195,11 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
     SmallVector<Value> inputs = genericOp.getDpsInputs();
     SmallVector<AffineMap> indexingMaps = genericOp.getIndexingMapsArray();
     if (hasSwappedOperands) {
-      std::swap(inputs[0], inputs[1]);
-      std::swap(indexingMaps[0], indexingMaps[1]);
+      // Ternary indices are +1, since the first is the boolean mask.
+      // If new ternary with non-booleans as first argument are created,
+      // we may need to calculate all combinations possible.
+      std::swap(inputs[0+isTernary], inputs[1+isTernary]);
+      std::swap(indexingMaps[0+isTernary], indexingMaps[1+isTernary]);
     }
 
     if (hasScalarOperand && mayHoistScalarOperand) {

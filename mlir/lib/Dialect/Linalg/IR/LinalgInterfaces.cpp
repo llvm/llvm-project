@@ -228,8 +228,7 @@ linalg::isaTransposeOpInterface(GenericOp op) {
 // Elementwise Single Unary/Binary-OpInterface implementation
 //===----------------------------------------------------------------------===//
 
-static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
-                                                      unsigned arity) {
+static bool isaElemwiseSingleOpInterface(linalg::GenericOp op, unsigned arity) {
   // Check all loops are parallel.
   if (!op.isAllParallelLoops() || op.getNumLoops() < 1)
     return false;
@@ -266,7 +265,7 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
 
 bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
   // All basic elemwise checks.
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 1))
+  if (!isaElemwiseSingleOpInterface(op, 1))
     return false;
 
   // Check input is actually used.
@@ -277,7 +276,7 @@ bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
 
 bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
   // All basic elemwise checks.
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 2))
+  if (!isaElemwiseSingleOpInterface(op, 2))
     return false;
 
   // Check both inputs are used (elementwise).
@@ -289,7 +288,15 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
 
 bool linalg::isaElemwiseSingleTernaryOpInterface(linalg::GenericOp op) {
   // All basic elemwise checks.
-  if (!isaElemwiseSingleUnaryOrBinaryOpInterface(op, 3))
+  if (!isaElemwiseSingleOpInterface(op, 3))
+    return false;
+
+  // The only ternary (select) has a boolean argument as its first operand.
+  // If we add more ternaries later, we need to change this check.
+  // But for now, it simplifies other checks, like checking for swapped
+  // operands.
+  if (!getElementTypeOrSelf(op.getDpsInputOperand(0)->get().getType())
+           .isInteger(1))
     return false;
 
   // Check all three inputs are used (elementwise).
