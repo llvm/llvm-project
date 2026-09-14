@@ -114,11 +114,18 @@ void DIEAttributeCloner::clone() {
     }
   }
 
-  // We convert source strings into the indexed form for DWARFv5.
-  // Check if original compile unit already has DW_AT_str_offsets_base
-  // attribute.
-  if (InputDieEntry->getTag() == dwarf::DW_TAG_compile_unit &&
-      InUnit.getVersion() >= 5 && !AttrInfo.HasStringOffsetBaseAttr) {
+  // Index 0 is the root DIE of the unit, whatever its tag. cloneStringAttr()
+  // rewrites strings into DW_FORM_strx for every DWARFv5 unit without
+  // consulting the root tag, and DWARFv5 section 7.26 resolves those indices
+  // only through DW_AT_str_offsets_base, so a DW_TAG_partial_unit or
+  // DW_TAG_skeleton_unit root needs the attribute on the same terms as a full
+  // compilation unit (DWARFv5 sections 3.1.1 and 3.1.2).
+  //
+  // The isCompileUnit() test is not redundant: index 0 can also reach the
+  // artificial type unit, where AttrOutOffset is DIE-relative rather than
+  // section-relative, so the patch registered below would be misplaced.
+  if (InputDIEIdx == 0 && InUnit.getVersion() >= 5 &&
+      !AttrInfo.HasStringOffsetBaseAttr && OutUnit.isCompileUnit()) {
     DebugInfoOutputSection.notePatchWithOffsetUpdate(
         DebugOffsetPatch{AttrOutOffset,
                          &OutUnit->getOrCreateSectionDescriptor(
