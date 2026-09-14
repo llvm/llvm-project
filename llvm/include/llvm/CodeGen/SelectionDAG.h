@@ -886,7 +886,7 @@ public:
   /// The operands must have the same type as (or, for integers, a type wider
   /// than) VT's element type.
   ///
-  /// If the vector elements are all POSION or UNDEF, return a ISD::POISON or
+  /// If the vector elements are all POISON or UNDEF, return a ISD::POISON or
   /// ISD::UNDEF node instead.
   SDValue getBuildVector(EVT VT, const SDLoc &DL, ArrayRef<SDValue> Ops) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
@@ -898,7 +898,7 @@ public:
   /// The operands must have the same type as (or, for integers, a type wider
   /// than) VT's element type.
   ///
-  /// If the vector elements are all POSION or UNDEF, return a ISD::POISON or
+  /// If the vector elements are all POISON or UNDEF, return a ISD::POISON or
   /// ISD::UNDEF node instead.
   SDValue getBuildVector(EVT VT, const SDLoc &DL, ArrayRef<SDUse> Ops) {
     // VerifySDNode (via InsertNode) checks BUILD_VECTOR later.
