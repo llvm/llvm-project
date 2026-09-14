@@ -2,6 +2,9 @@
 !
 ! REQUIRES: flang, libc
 
+! flang does not accept -foffload-lto.
+! UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+
 ! RUN: %libomptarget-compile-fortran-generic -fopenmp-version=51 && \
 ! RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 
