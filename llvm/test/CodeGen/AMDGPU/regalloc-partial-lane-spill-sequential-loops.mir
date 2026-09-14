@@ -50,15 +50,17 @@ body:             |
   ; CHECK-NEXT:   undef [[COPY:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY]].sub4_sub5:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE]].sub4_sub5
   ; CHECK-NEXT:     internal [[COPY]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE]].sub0
-  ; CHECK:   dead undef [[COPY1:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY]].sub2_sub3 {
+  ; CHECK:   undef [[COPY1:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY1]].sub0:sgpr_192 = lr-split COPY [[COPY]].sub0
-  ; CHECK:   [[SI_SPILL_S192_RESTORE1:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; CHECK:   SI_SPILL_S192_SAVE [[COPY1]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_S192_RESTORE1:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   undef [[COPY2:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE1]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY2]].sub4_sub5:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE1]].sub4_sub5
   ; CHECK-NEXT:     internal [[COPY2]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE1]].sub0
-  ; CHECK:   dead undef [[COPY3:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY2]].sub2_sub3 {
+  ; CHECK:   undef [[COPY3:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY2]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY3]].sub4_sub5:sgpr_192 = lr-split COPY [[COPY2]].sub4_sub5
   ; CHECK-NEXT:     internal [[COPY3]].sub0:sgpr_192 = lr-split COPY [[COPY2]].sub0
+  ; CHECK:   SI_SPILL_S192_SAVE [[COPY3]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
   ; CHECK: bb.1.loop1.header:
   ; CHECK:   [[SI_SPILL_S192_RESTORE2:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   undef [[COPY4:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE2]].sub2_sub3 {
@@ -69,14 +71,16 @@ body:             |
   ; CHECK-NEXT:   undef [[COPY5:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE3]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY5]].sub4_sub5:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE3]].sub4_sub5
   ; CHECK-NEXT:     internal [[COPY5]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE3]].sub0
-  ; CHECK:   dead undef [[COPY6:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY5]].sub2_sub3 {
+  ; CHECK:   undef [[COPY6:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY5]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY6]].sub0:sgpr_192 = lr-split COPY [[COPY5]].sub0
-  ; CHECK:   [[SI_SPILL_S192_RESTORE4:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; CHECK:   SI_SPILL_S192_SAVE [[COPY6]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_S192_RESTORE4:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   undef [[COPY7:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE4]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY7]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE4]].sub0
-  ; CHECK:   dead undef [[COPY8:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY7]].sub2_sub3 {
+  ; CHECK:   undef [[COPY8:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY7]].sub2_sub3 {
   ; CHECK-NEXT:     internal [[COPY8]].sub0:sgpr_192 = lr-split COPY [[COPY7]].sub0
-  ; CHECK:   [[SI_SPILL_S192_RESTORE5:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; CHECK:   SI_SPILL_S192_SAVE [[COPY8]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
+  ; CHECK-NEXT:   [[SI_SPILL_S192_RESTORE5:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; CHECK-NEXT:   dead [[COPY9:%[0-9]+]]:sreg_64 = COPY [[SI_SPILL_S192_RESTORE5]].sub2_sub3
   ; CHECK: bb.4.bridge:
   ;
@@ -88,15 +92,17 @@ body:             |
   ; SUBREG-NEXT:   undef [[COPY:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY]].sub4_sub5:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE]].sub4_sub5
   ; SUBREG-NEXT:     internal [[COPY]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE]].sub0
-  ; SUBREG:   dead undef [[COPY1:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY]].sub2_sub3 {
+  ; SUBREG:   undef [[COPY1:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY1]].sub0:sgpr_192 = lr-split COPY [[COPY]].sub0
-  ; SUBREG:   [[SI_SPILL_S192_RESTORE1:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; SUBREG:   SI_SPILL_S192_SAVE [[COPY1]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
+  ; SUBREG-NEXT:   [[SI_SPILL_S192_RESTORE1:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; SUBREG-NEXT:   undef [[COPY2:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE1]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY2]].sub4_sub5:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE1]].sub4_sub5
   ; SUBREG-NEXT:     internal [[COPY2]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE1]].sub0
-  ; SUBREG:   dead undef [[COPY3:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY2]].sub2_sub3 {
+  ; SUBREG:   undef [[COPY3:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY2]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY3]].sub4_sub5:sgpr_192 = lr-split COPY [[COPY2]].sub4_sub5
   ; SUBREG-NEXT:     internal [[COPY3]].sub0:sgpr_192 = lr-split COPY [[COPY2]].sub0
+  ; SUBREG:   SI_SPILL_S192_SAVE [[COPY3]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
   ; SUBREG: bb.1.loop1.header:
   ; SUBREG:   [[SI_SPILL_S192_RESTORE2:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; SUBREG-NEXT:   undef [[COPY4:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE2]].sub2_sub3 {
@@ -107,14 +113,16 @@ body:             |
   ; SUBREG-NEXT:   undef [[COPY5:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE3]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY5]].sub4_sub5:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE3]].sub4_sub5
   ; SUBREG-NEXT:     internal [[COPY5]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE3]].sub0
-  ; SUBREG:   dead undef [[COPY6:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY5]].sub2_sub3 {
+  ; SUBREG:   undef [[COPY6:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY5]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY6]].sub0:sgpr_192 = lr-split COPY [[COPY5]].sub0
-  ; SUBREG:   [[SI_SPILL_S192_RESTORE4:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; SUBREG:   SI_SPILL_S192_SAVE [[COPY6]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
+  ; SUBREG-NEXT:   [[SI_SPILL_S192_RESTORE4:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; SUBREG-NEXT:   undef [[COPY7:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE4]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY7]].sub0:sgpr_192 = lr-split COPY [[SI_SPILL_S192_RESTORE4]].sub0
-  ; SUBREG:   dead undef [[COPY8:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY7]].sub2_sub3 {
+  ; SUBREG:   undef [[COPY8:%[0-9]+]].sub2_sub3:sgpr_192 = lr-split COPY [[COPY7]].sub2_sub3 {
   ; SUBREG-NEXT:     internal [[COPY8]].sub0:sgpr_192 = lr-split COPY [[COPY7]].sub0
-  ; SUBREG:   [[SI_SPILL_S192_RESTORE5:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
+  ; SUBREG:   SI_SPILL_S192_SAVE [[COPY8]], %stack.0, implicit $exec, implicit $sgpr32 :: (store (s192) into %stack.0, align 4, addrspace 5)
+  ; SUBREG-NEXT:   [[SI_SPILL_S192_RESTORE5:%[0-9]+]]:sgpr_192 = SI_SPILL_S192_RESTORE %stack.0, implicit $exec, implicit $sgpr32 :: (load (s192) from %stack.0, align 4, addrspace 5)
   ; SUBREG-NEXT:   dead [[COPY9:%[0-9]+]]:sreg_64 = COPY [[SI_SPILL_S192_RESTORE5]].sub2_sub3
   ; SUBREG: bb.4.bridge:
   ;
