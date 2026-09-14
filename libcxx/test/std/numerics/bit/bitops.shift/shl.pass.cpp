@@ -17,7 +17,6 @@
 #include <cassert>
 #include <limits>
 #include <type_traits>
-#include <concepts>
 
 #include "test_macros.h"
 #include "type_algorithms.h"
@@ -56,8 +55,8 @@ static_assert(!can_shl_shift<A*>);
 static_assert(!can_shl_shift<E1>);
 static_assert(!can_shl_shift<E2>);
 
-template <std::signed_integral T>
-constexpr bool test() {
+template <class T>
+constexpr bool test_signed() {
   using U               = std::make_unsigned_t<T>;
   constexpr int width   = std::numeric_limits<U>::digits;
   constexpr U highbit_u = U(1) << (width - 1);
@@ -156,8 +155,8 @@ constexpr bool test() {
   return true;
 }
 
-template <std::unsigned_integral T>
-constexpr bool test() {
+template <class T>
+constexpr bool test_unsigned() {
   constexpr int width = std::numeric_limits<T>::digits;
   constexpr T highbit = T(1) << (width - 1);
 
@@ -250,8 +249,13 @@ constexpr bool test() {
 
 int main(int, char**) {
   constexpr auto test_type = []<class T> {
-    static_assert(test<T>());
-    test<T>();
+    if constexpr (std::is_signed_v<T>) {
+      static_assert(test_signed<T>());
+      test_signed<T>();
+    } else {
+      static_assert(test_unsigned<T>());
+      test_unsigned<T>();
+    }
   };
 
   types::for_each(types::unsigned_integer_types{}, test_type);
