@@ -545,15 +545,16 @@ public:
 
 protected:
   virtual Instruction *
-  allocateVar(IRBuilder<>::InsertPoint AllocaIP, Type *VarType,
+  allocateVar(IRBuilder<>::InsertPoint AllocaIP, DebugLoc DL, Type *VarType,
               const Twine &Name = Twine(""),
               AddrSpaceCastInst **CastedAlloc = nullptr) override {
-    return OMPBuilder.createOMPAllocShared(AllocaIP, VarType, Name);
+    return OMPBuilder.createOMPAllocShared({AllocaIP, DL}, VarType, Name);
   }
 
   virtual Instruction *deallocateVar(IRBuilder<>::InsertPoint DeallocIP,
-                                     Value *Var, Type *VarType) override {
-    return OMPBuilder.createOMPFreeShared(DeallocIP, Var, VarType);
+                                     DebugLoc DL, Value *Var,
+                                     Type *VarType) override {
+    return OMPBuilder.createOMPFreeShared({DeallocIP, DL}, Var, VarType);
   }
 };
 
@@ -2176,12 +2177,18 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
       Value *Ptr;
       if (UsesDeviceSharedMemory) {
         // Use device shared memory instead, if needed.
-        Ptr = createOMPAllocShared(OuterAllocIP, V.getType(),
+        Ptr = createOMPAllocShared(Builder, V.getType(),
                                    V.getName() + ".reloaded");
-        for (BasicBlock *DeallocBlock : OuterDeallocBlocks)
+        for (BasicBlock *DeallocBlock : OuterDeallocBlocks) {
+          assert(DeallocBlock->getParent() ==
+                     OuterAllocIP.getBlock()->getParent() &&
+                 "Dealloc block must be in the allocation's function to reuse "
+                 "its debug location");
           createOMPFreeShared(
-              InsertPointTy(DeallocBlock, DeallocBlock->getFirstInsertionPt()),
+              {InsertPointTy(DeallocBlock, DeallocBlock->getFirstInsertionPt()),
+               Builder.getCurrentDebugLocation()},
               Ptr, V.getType());
+        }
       } else {
         Ptr = Builder.CreateAlloca(V.getType(), nullptr,
                                    V.getName() + ".reloaded");

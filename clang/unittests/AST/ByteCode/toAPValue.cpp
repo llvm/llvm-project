@@ -102,6 +102,8 @@ TEST(ToAPValue, Pointers) {
     ASSERT_EQ(A.getLValuePath()[0].getAsArrayIndex(), 2u);
     ASSERT_EQ(A.getLValuePath()[1].getAsArrayIndex(), 4u);
     ASSERT_EQ(A.getLValueOffset().getQuantity(), 56u);
+    ASSERT_TRUE(
+        GP.atIndex(0).getFieldDesc()->getElemQualType()->isIntegerType());
   }
 }
 

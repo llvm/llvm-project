@@ -1850,6 +1850,8 @@ def LLVM_VPReduceFAddOp : LLVM_VPReductionF<"fadd">;
 def LLVM_VPReduceFMulOp : LLVM_VPReductionF<"fmul">;
 def LLVM_VPReduceFMaxOp : LLVM_VPReductionF<"fmax">;
 def LLVM_VPReduceFMinOp : LLVM_VPReductionF<"fmin">;
+def LLVM_VPReduceFMaximumOp : LLVM_VPReductionF<"fmaximum">;
+def LLVM_VPReduceFMinimumOp : LLVM_VPReductionF<"fminimum">;
 
 def LLVM_VPMergeMinOp  : LLVM_VPSelectBase<"merge">;
 

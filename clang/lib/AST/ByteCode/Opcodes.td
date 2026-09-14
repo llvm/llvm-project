@@ -55,7 +55,6 @@ def ArgFixedPoint : ArgType { let Name = "FixedPoint"; let AsRef = true; }
 def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
-def ArgCXXRecordDecl : ArgType { let Name = "const CXXRecordDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 def ArgFltSemantics : ArgType { let Name = "const llvm::fltSemantics *"; }
 def ArgRoundingMode : ArgType { let Name = "llvm::RoundingMode"; }
@@ -329,8 +328,6 @@ class OffsetOpcode : Opcode {
   let Args = [ArgUint32];
 }
 
-def AddrOf : Opcode;
-
 // [] -> [Pointer]
 def GetPtrLocal : OffsetOpcode {
   bit HasCustomEval = 1;
@@ -382,11 +379,11 @@ def GetPtrDerivedPop : Opcode { let Args = [ArgUint32, ArgBool, ArgTypePtr]; }
 // [Pointer] -> [Pointer]
 def GetPtrVirtBasePop : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgCXXRecordDecl];
+  let Args = [ArgRecordDecl];
 }
 def GetPtrVirtBase : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgCXXRecordDecl];
+  let Args = [ArgRecordDecl];
 }
 
 def IsBaseClass : SuccessOpcode;
@@ -400,7 +397,7 @@ def GetPtrThisBase : Opcode {
 // [] -> [Pointer]
 def GetPtrThisVirtBase : Opcode {
   // RecordDecl of base class.
-  let Args = [ArgCXXRecordDecl];
+  let Args = [ArgRecordDecl];
 }
 // [] -> [Pointer]
 def This : Opcode;

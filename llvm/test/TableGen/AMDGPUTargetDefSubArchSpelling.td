@@ -4,9 +4,7 @@
 
 include "llvm/Target/Target.td"
 def MyTarget : Target;
-class AMDGPUArchFeature<string spelling> { string Spelling = spelling; }
 class AMDGPUGPUInfo<list<int> isa = []> {
-  list<AMDGPUArchFeature> ArchFeatures = [];
   list<int> IsaVersion = isa;
   list<Processor> CoveredGPUs = [];
   bit IsPseudoTarget = false;
