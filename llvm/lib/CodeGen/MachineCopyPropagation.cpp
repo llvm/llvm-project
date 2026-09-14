@@ -505,7 +505,8 @@ private:
   void forwardUses(MachineInstr &MI);
   void propagateDefs(MachineInstr &MI);
   bool isForwardableRegClassCopy(const MachineInstr &Copy,
-                                 const MachineInstr &UseI, unsigned UseIdx);
+                                 const MachineInstr &UseI, unsigned UseIdx,
+                                 MCRegister ForwardedReg);
   bool isBackwardPropagatableRegClassCopy(const MachineInstr &Copy,
                                           const MachineInstr &UseI,
                                           unsigned UseIdx);
@@ -700,14 +701,57 @@ bool MachineCopyPropagation::isBackwardPropagatableCopy(
   return CopyOperands.Source->isRenamable() && CopyOperands.Source->isKill();
 }
 
+/// Return true if \p NewReg can replace \p OldReg in a COPY that the target
+/// may expand into one move per subregister.
+///
+/// Only an index that tiles the register together with a disjoint complement
+/// can take part in such an expansion, so indices like x86's sub_8bit_hi,
+/// which no copy is ever split into, are ignored. Artificial subregisters are
+/// ignored as well.
+static bool hasMatchingSubRegs(MCRegister OldReg, MCRegister NewReg,
+                               const TargetRegisterInfo &TRI) {
+  SmallVector<unsigned, 4> Missing;
+  for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI)
+    if (!TRI.isArtificial(SRI.getSubReg()) &&
+        !TRI.getSubReg(NewReg, SRI.getSubRegIndex()))
+      Missing.push_back(SRI.getSubRegIndex());
+  if (Missing.empty())
+    return true;
+
+  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(OldReg);
+  if (!RC)
+    return true;
+
+  SmallVector<LaneBitmask, 8> Masks;
+  for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI)
+    if (!TRI.isArtificial(SRI.getSubReg()))
+      Masks.push_back(TRI.getSubRegIndexLaneMask(SRI.getSubRegIndex()));
+
+  for (unsigned SubIdx : Missing)
+    if (is_contained(Masks, RC->LaneMask & ~TRI.getSubRegIndexLaneMask(SubIdx)))
+      return false;
+  return true;
+}
+
 /// Decide whether we should forward the source of \param Copy to its use in
 /// \param UseI based on the physical register class constraints of the opcode
-/// and avoiding introducing more cross-class COPYs.
-bool MachineCopyPropagation::isForwardableRegClassCopy(const MachineInstr &Copy,
-                                                       const MachineInstr &UseI,
-                                                       unsigned UseIdx) {
+/// and avoiding introducing more cross-class COPYs. \param ForwardedReg is the
+/// register that would replace the use operand.
+bool MachineCopyPropagation::isForwardableRegClassCopy(
+    const MachineInstr &Copy, const MachineInstr &UseI, unsigned UseIdx,
+    MCRegister ForwardedReg) {
   DestSourcePair CopyOperands = *isCopyInstr(Copy, *TII, UseCopyInstr);
   MCRegister CopySrc = getSrcMCReg(CopyOperands);
+
+  // If UseI is itself a COPY, the target may expand it into one move per
+  // subregister, and the new source may lack some of those subregisters.
+  Register UseReg = UseI.getOperand(UseIdx).getReg();
+  if (isCopyInstr(UseI, *TII, UseCopyInstr) &&
+      !hasMatchingSubRegs(UseReg.asMCReg(), ForwardedReg, *TRI)) {
+    LLVM_DEBUG(dbgs() << "MCP: Copy source is missing subregisters of "
+                      << printReg(UseReg, TRI) << '\n');
+    return false;
+  }
 
   // If the new register meets the opcode register constraints, then allow
   // forwarding.
@@ -821,35 +865,6 @@ bool MachineCopyPropagation::canUpdateSrcUsers(const MachineInstr &Copy,
   return true;
 }
 
-/// Return true if \p NewReg can replace \p OldReg in a COPY that the target
-/// may expand into one move per subregister.
-///
-/// Only an index that tiles the register together with a disjoint complement
-/// can take part in such an expansion, so indices like x86's sub_8bit_hi,
-/// which no copy is ever split into, are ignored. Artificial subregisters are
-/// ignored as well.
-static bool hasMatchingSubRegs(MCRegister OldReg, MCRegister NewReg,
-                               const TargetRegisterInfo &TRI) {
-  const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(OldReg);
-  if (!RC)
-    return true;
-
-  SmallVector<LaneBitmask, 8> Masks;
-  for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI)
-    if (!TRI.isArtificial(SRI.getSubReg()))
-      Masks.push_back(TRI.getSubRegIndexLaneMask(SRI.getSubRegIndex()));
-
-  for (MCSubRegIndexIterator SRI(OldReg, &TRI); SRI.isValid(); ++SRI) {
-    unsigned SubIdx = SRI.getSubRegIndex();
-    if (TRI.isArtificial(SRI.getSubReg()) || TRI.getSubReg(NewReg, SubIdx))
-      continue;
-    LaneBitmask Mask = TRI.getSubRegIndexLaneMask(SubIdx);
-    if (is_contained(Masks, RC->LaneMask & ~Mask))
-      return false;
-  }
-  return true;
-}
-
 /// Look for available copies whose destination register is used by \p MI and
 /// replace the use in \p MI with the copy's source register.
 void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
@@ -908,15 +923,7 @@ void MachineCopyPropagation::forwardUses(MachineInstr &MI) {
     if (MRI->isReserved(CopySrc) && !MRI->isConstantPhysReg(CopySrc))
       continue;
 
-    // The new source may lack subregs the copy is later split into.
-    if (isCopyInstr(MI, *TII, UseCopyInstr) &&
-        !hasMatchingSubRegs(MOUse.getReg().asMCReg(), ForwardedReg, *TRI)) {
-      LLVM_DEBUG(dbgs() << "MCP: Copy source is missing subregisters of "
-                        << printReg(MOUse.getReg(), TRI) << '\n');
-      continue;
-    }
-
-    if (!isForwardableRegClassCopy(*Copy, MI, OpIdx))
+    if (!isForwardableRegClassCopy(*Copy, MI, OpIdx, ForwardedReg))
       continue;
 
     if (hasImplicitOverlap(MI, MOUse))
