@@ -592,6 +592,82 @@ TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
   EXPECT_THAT(make_second_range(Pairs), ElementsAre(1, 2));
 }
 
+/// Utility classes to setup casting functionality.
+struct Shape {
+  enum ShapeKind { SK_Circle, SK_Square };
+  const ShapeKind Kind;
+  Shape(ShapeKind Kind) : Kind(Kind) {}
+};
+template <Shape::ShapeKind K> struct ShapeImpl : Shape {
+  ShapeImpl() : Shape(K) {}
+  static bool classof(const Shape *S) { return S->Kind == K; }
+};
+struct Circle : ShapeImpl<Shape::SK_Circle> {};
+struct Square : ShapeImpl<Shape::SK_Square> {};
+
+TEST(STLExtrasTest, MakeIsaRangePointers) {
+  Circle C0, C1;
+  Square S;
+  std::vector<Shape *> Shapes = {&C0, &S, &C1};
+
+  auto Circles = make_isa_range<Circle>(Shapes);
+  static_assert(std::is_same_v<decltype(*Circles.begin()), Circle *>);
+  EXPECT_THAT(Circles, ElementsAre(&C0, &C1));
+  EXPECT_THAT(make_isa_range<Square>(Shapes), ElementsAre(&S));
+
+  // Ranges without any element of the requested type are empty.
+  std::vector<Shape *> OnlyCircles = {&C0, &C1};
+  EXPECT_TRUE(make_isa_range<Square>(OnlyCircles).empty());
+
+  // Ranges dereferencing to `Shape *const &`, like ArrayRef, work as well.
+  ArrayRef<Shape *> ShapesRef = Shapes;
+  auto RefCircles = make_isa_range<Circle>(ShapesRef);
+  static_assert(std::is_same_v<decltype(*RefCircles.begin()), Circle *>);
+  EXPECT_THAT(RefCircles, ElementsAre(&C0, &C1));
+
+  // The same holds for ranges returning their elements by value.
+  auto ByValue = map_range(Shapes, [](Shape *S) { return S; });
+  auto ValueCircles = make_isa_range<Circle>(ByValue);
+  static_assert(std::is_same_v<decltype(*ValueCircles.begin()), Circle *>);
+  EXPECT_THAT(ValueCircles, ElementsAre(&C0, &C1));
+
+  // Constness of the elements is preserved.
+  std::vector<const Shape *> ConstShapes = {&C0, &S, &C1};
+  auto ConstCircles = make_isa_range<Circle>(ConstShapes);
+  static_assert(
+      std::is_same_v<decltype(*ConstCircles.begin()), const Circle *>);
+  EXPECT_THAT(ConstCircles, ElementsAre(&C0, &C1));
+}
+
+TEST(STLExtrasTest, MakeIsaRangeReferences) {
+  Circle C0, C1;
+  Square S;
+  std::vector<Shape *> Shapes = {&C0, &S, &C1};
+
+  auto Circles = make_isa_range<Circle>(make_pointee_range(Shapes));
+  static_assert(std::is_same_v<decltype(*Circles.begin()), Circle &>);
+  EXPECT_THAT(map_range(Circles, [](Circle &C) { return &C; }),
+              ElementsAre(&C0, &C1));
+
+  // Constness of the elements is preserved.
+  std::vector<const Shape *> ConstShapes = {&C0, &S, &C1};
+  auto ConstCircles = make_isa_range<Circle>(make_pointee_range(ConstShapes));
+  static_assert(
+      std::is_same_v<decltype(*ConstCircles.begin()), const Circle &>);
+  EXPECT_THAT(map_range(ConstCircles, [](const Circle &C) { return &C; }),
+              ElementsAre(&C0, &C1));
+}
+
+TEST(STLExtrasTest, MakeIsaRangeEarlyIncrement) {
+  Circle C0, C1;
+  Square S;
+  std::list<Shape *> Shapes = {&C0, &S, &C1};
+
+  for (Circle *C : make_early_inc_range(make_isa_range<Circle>(Shapes)))
+    Shapes.remove(C);
+  EXPECT_THAT(Shapes, ElementsAre(&S));
+}
+
 template <typename T> struct Iterator {
   int i = 0;
   T operator*() const { return i; }
