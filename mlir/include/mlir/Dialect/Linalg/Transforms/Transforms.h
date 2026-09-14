@@ -1923,15 +1923,6 @@ void populateLinalgGenericOpsSpecializationPatterns(
     RewritePatternSet &patterns,
     const GenericOpSpecializationOptions &options = {});
 
-/// Populates `patterns` that convert linalg named ops e.g. `linalg.add`
-/// to equivalent `linalg.elementwise`.
-void populateLinalgNamedToElementwisePatterns(RewritePatternSet &patterns);
-
-/// Populates `patterns` that convert linalg category ops (e.g.
-/// `linalg.elementwise`, `linalg.contract`) to equivalent linalg named ops
-/// (e.g. `linalg.add`, `linalg.matmul`).
-void populateLinalgCategoryToNamedPatterns(RewritePatternSet &patterns);
-
 /// Populates `patterns` with patterns that fold operations like
 /// `linalg.transform` into elementwise op map.
 void populateLinalgFoldIntoElementwisePatterns(RewritePatternSet &patterns);
@@ -2003,6 +1994,15 @@ using ControlFusionFn = std::function<bool(OpOperand *fusedOperand)>;
 void populateElementwiseOpsFusionPatterns(
     RewritePatternSet &patterns,
     const ControlFusionFn &controlElementwiseOpFusion);
+
+/// Patterns that split elementwise `linalg.generic` operations at the
+/// boundaries of compatible `tensor.concat` inputs, exposing more producer
+/// operations to elementwise fusion. Tensor elementwise operations are
+/// represented as `linalg.generic` after `-convert-elementwise-to-linalg`, so
+/// the patterns implement the elementwise/concat interchange in the Linalg
+/// fusion pipeline.
+void populateSplitElementwiseOpsWithConcatInputsPatterns(
+    RewritePatternSet &patterns);
 
 /// Function type which is used to control propagation of linalg.pack/unpack
 /// ops.

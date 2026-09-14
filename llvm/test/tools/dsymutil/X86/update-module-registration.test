@@ -1,0 +1,15 @@
+Update mode regenerates accelerator tables without linking DWARF, so clang module
+references are left unresolved. The parallel linker must not try to load the
+referenced .pcm files.
+
+RUN: dsymutil --update --linker parallel -oso-prepend-path=%p/../Inputs/modules \
+RUN:   -y %p/dummy-debug-map.map -o %t.parallel.dSYM 2>&1 \
+RUN:   | FileCheck %s --implicit-check-not="clang module"
+
+RUN: dsymutil --update --linker classic -oso-prepend-path=%p/../Inputs/modules \
+RUN:   -y %p/dummy-debug-map.map -o %t.classic.dSYM 2>&1 \
+RUN:   | FileCheck %s --implicit-check-not="clang module"
+
+The debug map names objects that are not part of this input directory.
+
+CHECK: warning: {{.*}}3.o

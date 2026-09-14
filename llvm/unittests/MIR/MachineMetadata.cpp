@@ -19,6 +19,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/FileCheck/FileCheck.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -49,20 +50,9 @@ protected:
   void SetUp() override { M = std::make_unique<Module>("Dummy", Context); }
 
   void addHooks(ModuleSlotTracker &MST, const MachineOperand &MO) {
-    // Setup hooks to assign slot numbers for the specified machine metadata.
-    MST.setProcessHook([&MO](AbstractSlotTrackerStorage *AST, const Module *M,
-                             bool ShouldInitializeAllMetadata) {
-      if (ShouldInitializeAllMetadata) {
-        if (MO.isMetadata())
-          AST->createMetadataSlot(MO.getMetadata());
-      }
-    });
-    MST.setProcessHook([&MO](AbstractSlotTrackerStorage *AST, const Function *F,
-                             bool ShouldInitializeAllMetadata) {
-      if (!ShouldInitializeAllMetadata) {
-        if (MO.isMetadata())
-          AST->createMetadataSlot(MO.getMetadata());
-      }
+    MST.setProcessHook([&MO](AbstractSlotTrackerStorage *AST, const Module *) {
+      if (MO.isMetadata())
+        AST->createMetadataSlot(MO.getMetadata());
     });
   }
 
@@ -140,9 +130,7 @@ TEST_F(MachineMetadataTest, TrivialHook) {
 }
 
 TEST_F(MachineMetadataTest, BasicHook) {
-  // Verify that post-process hook is invoked to assign slot numbers for
-  // machine metadata. When both LLVM IR and machine IR contain metadata,
-  // ensure that machine metadata is always assigned after LLVM IR.
+  // Verify that the post-process hook records machine metadata.
   ASSERT_TRUE(M);
 
   // Create a MachineOperand with a metadata and print it.
@@ -165,16 +153,16 @@ TEST_F(MachineMetadataTest, BasicHook) {
   addHooks(MST, MO);
 
   // Print a MachineOperand containing a metadata node.
-  EXPECT_EQ("!1", print([&](raw_ostream &OS) {
+  EXPECT_EQ("!0", print([&](raw_ostream &OS) {
               MO.print(OS, MST, LLT{}, /*OpIdx*/ ~0U, /*PrintDef=*/false,
                        /*IsStandalone=*/false,
                        /*ShouldPrintRegisterTies=*/false, /*TiedOperandIdx=*/0,
                        /*TRI=*/nullptr);
             }));
   // Print the definition of these unnamed metadata nodes.
-  EXPECT_EQ("!0 = !{!\"bar\"}",
+  EXPECT_EQ("!1 = !{!\"bar\"}",
             print([&](raw_ostream &OS) { Node->print(OS, MST); }));
-  EXPECT_EQ("!1 = !{!\"foo\"}",
+  EXPECT_EQ("!0 = !{!\"foo\"}",
             print([&](raw_ostream &OS) { MachineNode->print(OS, MST); }));
 }
 
@@ -252,10 +240,9 @@ body:             |
 
   MachineModuleSlotTracker MST(
       [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
-  // Print that MI with new machine metadata, which slot numbers should be
-  // assigned.
+  // Print the MI using the stored IDs of the new machine metadata.
   EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
-            "!alias.scope !0, !noalias !3)",
+            "!alias.scope !3, !noalias !4)",
             print([&](raw_ostream &OS) {
               MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
                        /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
@@ -342,10 +329,64 @@ body:             |
   auto *MF = MMI.getMachineFunction(*M->getFunction("test0"));
   auto *MBB = MF->getBlockNumbered(0);
 
+  MachineInstr *DbgValue = nullptr;
   for (auto It = MBB->begin(); It != MBB->end(); ++It) {
     MachineInstr &MI = *It;
     ASSERT_TRUE(MI.isMetaInstruction());
+    if (MI.isDebugValue())
+      DbgValue = &MI;
   }
+
+  ASSERT_NE(DbgValue, nullptr);
+  auto *IRVar = cast<DILocalVariable>(DbgValue->getOperand(2).getMetadata());
+  M->getOrInsertNamedMetadata("test.ir.variable")
+      ->addOperand(const_cast<DILocalVariable *>(IRVar));
+  // Leave gaps between reachable nodes to exercise sparse metadata IDs.
+  auto *UnusedModuleNode = MDNode::getDistinct(Context, {});
+  (void)UnusedModuleNode;
+  auto *ModuleNode =
+      MDNode::getDistinct(Context, MDString::get(Context, "module metadata"));
+  M->getOrInsertNamedMetadata("test.module.metadata")->addOperand(ModuleNode);
+  auto PrintMetadataID = [&](const MDNode *N) {
+    return print([&](raw_ostream &OS) { N->printAsOperand(OS, M.get()); });
+  };
+  std::string ModuleNodeID = PrintMetadataID(ModuleNode);
+  print([&](raw_ostream &OS) { printMIR(OS, *M); });
+  EXPECT_EQ(ModuleNodeID, PrintMetadataID(ModuleNode));
+
+  auto *UnusedMachineNode = MDNode::getDistinct(Context, {});
+  (void)UnusedMachineNode;
+  auto *MachineLoc =
+      DILocation::get(Context, 2, 1, DbgValue->getDebugLoc()->getScope());
+  auto *MachineNode =
+      MDNode::get(Context, {MDString::get(Context, "machine"), MachineLoc});
+  MBB->front().addOperand(*MF, MachineOperand::CreateMetadata(MachineNode));
+  auto *InlineMachineLoc =
+      DILocation::get(Context, 3, 1, DbgValue->getDebugLoc()->getScope());
+  DbgValue->setDebugLoc(DebugLoc(InlineMachineLoc));
+
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
+  MachineModuleSlotTracker::MachineMDNodeListType MDList;
+  MST.collectMachineMDNodes(MDList);
+  EXPECT_TRUE(llvm::any_of(
+      MDList, [&](const auto &MD) { return MD.second == MachineNode; }));
+  EXPECT_TRUE(llvm::any_of(
+      MDList, [&](const auto &MD) { return MD.second == MachineLoc; }));
+  EXPECT_FALSE(llvm::any_of(
+      MDList, [&](const auto &MD) { return MD.second == InlineMachineLoc; }));
+  EXPECT_FALSE(
+      llvm::any_of(MDList, [&](const auto &MD) { return MD.second == IRVar; }));
+
+  std::string MachineNodeID = PrintMetadataID(MachineNode);
+  std::string Output = print([&](raw_ostream &OS) {
+    printMIR(OS, *M);
+    printMIR(OS, MMI, *MF);
+  });
+  EXPECT_EQ(ModuleNodeID, PrintMetadataID(ModuleNode));
+  EXPECT_EQ(MachineNodeID, PrintMetadataID(MachineNode));
+  MachineModuleInfo RoundTripMMI(TM.get());
+  EXPECT_TRUE(parseMIR(*TM, Output, RoundTripMMI)) << Output;
 }
 
 TEST_F(MachineMetadataTest, MMSlotTrackerX64) {
@@ -403,14 +444,19 @@ body:             |
 
   MachineModuleSlotTracker MST(
       [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
-  // Print that MI with new machine metadata, which slot numbers should be
-  // assigned.
-  EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
-            "!alias.scope !0, !noalias !3)",
-            print([&](raw_ostream &OS) {
-              MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
-                       /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
-            }));
+  // Print the MI using the stored IDs of the new machine metadata.
+  std::string Set0ID =
+      print([&](raw_ostream &OS) { Set0->printAsOperand(OS, M.get()); });
+  std::string Set1ID =
+      print([&](raw_ostream &OS) { Set1->printAsOperand(OS, M.get()); });
+  EXPECT_EQ(
+      "%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
+      "!alias.scope " +
+          Set0ID + ", !noalias " + Set1ID + ")",
+      print([&](raw_ostream &OS) {
+        MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
+                 /*SkipDebugLoc=*/false, /*AddNewLine=*/false);
+      }));
 
   std::vector<const MDNode *> Generated{Domain, Scope0, Scope1, Set0, Set1};
   // Examine machine metadata collected. They should match ones
@@ -502,11 +548,15 @@ body:             |
 
   MachineModuleSlotTracker MST(
       [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
-  // Print that MI with new machine metadata, which slot numbers should be
-  // assigned.
+  // Print the MI using the stored IDs of the new machine metadata.
+  std::string Set0ID =
+      print([&](raw_ostream &OS) { Set0->printAsOperand(OS, M.get()); });
+  std::string Set1ID =
+      print([&](raw_ostream &OS) { Set1->printAsOperand(OS, M.get()); });
   EXPECT_EQ(
       "%5:vgpr_32 = FLAT_LOAD_DWORD killed %4, 0, 0, implicit $exec, implicit "
-      "$flat_scr :: (load (s32) from %ir.p, !alias.scope !0, !noalias !3)",
+      "$flat_scr :: (load (s32) from %ir.p, !alias.scope " +
+          Set0ID + ", !noalias " + Set1ID + ")",
       print([&](raw_ostream &OS) {
         MI.print(OS, MST, /*IsStandalone=*/false, /*SkipOpers=*/false,
                  /*SkipDebugLoc=*/false, /*AddNewLine=*/false);

@@ -41,7 +41,7 @@ enum class BlockType : unsigned {
   // 2. (catch_ref ...) clause in try_table instruction. Currently all tags we
   //    support (cpp_exception and c_longjmp) throws a single i32, so the
   //    multivalue signature for this case will be (i32, exnref).
-  // The real multivalue siganture will be added in MCInstLower.
+  // The real multivalue signature will be added in MCInstLower.
   Multivalue = 0xffff,
 };
 

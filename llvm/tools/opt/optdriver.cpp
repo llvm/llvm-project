@@ -44,7 +44,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/SystemUtils.h"
@@ -401,8 +400,6 @@ static bool shouldForceLegacyPM() {
 extern "C" int
 optMain(int argc, char **argv,
         ArrayRef<std::function<void(PassBuilder &)>> PassBuilderCallbacks) {
-  InitLLVM X(argc, argv);
-
   // Enable debug stream buffering.
   EnableDebugBuffering = true;
 
@@ -930,10 +927,11 @@ optMain(int argc, char **argv,
       BOS = std::make_unique<raw_svector_ostream>(Buffer);
       OS = BOS.get();
     }
-    if (OutputAssembly)
+    if (OutputAssembly) {
       Passes.add(createPrintModulePass(
-          *OS, "", /* ShouldPreserveAssemblyUseListOrder */ false));
-    else
+          *OS, "", /*ShouldPreserveAssemblyUseListOrder=*/false,
+          /*ShouldRenumberMetadata=*/true));
+    } else
       Passes.add(createBitcodeWriterPass(
           *OS, /* ShouldPreserveBitcodeUseListOrder */ true));
   }

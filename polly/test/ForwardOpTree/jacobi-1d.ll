@@ -74,8 +74,8 @@ for.end35:                                        ; preds = %for.inc33
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 { Stmt_for_body[i0] -> MemRef2__phi[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %.pre = load double, ptr %A, align 8, !tbaa !2
-; CHECK-NEXT:                   %.pre10 = load double, ptr %arrayidx6.phi.trans.insert, align 8, !tbaa !2
+; CHECK-NEXT:                   %.pre = load double, ptr %A, align 8, !tbaa !13
+; CHECK-NEXT:                   %.pre10 = load double, ptr %arrayidx6.phi.trans.insert, align 8, !tbaa !13
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_for_body3
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
@@ -96,10 +96,10 @@ for.end35:                                        ; preds = %for.inc33
 ; CHECK-NEXT:                   %0 = phi double [ %.pre10, %for.body ], [ %2, %for.body3 ]
 ; CHECK-NEXT:                   %1 = phi double [ %.pre, %for.body ], [ %0, %for.body3 ]
 ; CHECK-NEXT:                   %add = fadd double %1, %0
-; CHECK-NEXT:                   %2 = load double, ptr %arrayidx9, align 8, !tbaa !2
+; CHECK-NEXT:                   %2 = load double, ptr %arrayidx9, align 8, !tbaa !13
 ; CHECK-NEXT:                   %add10 = fadd double %add, %2
 ; CHECK-NEXT:                   %mul = fmul double %add10, 3.333300e-01
-; CHECK-NEXT:                   store double %mul, ptr %arrayidx12, align 8, !tbaa !2
+; CHECK-NEXT:                   store double %mul, ptr %arrayidx12, align 8, !tbaa !13
 ; CHECK-NEXT:                   %exitcond = icmp eq i64 %indvars.iv.next, 3
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

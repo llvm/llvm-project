@@ -1052,6 +1052,22 @@ Address ObjectFileELF::GetBaseAddress() {
   return Address();
 }
 
+FileSpecList ObjectFileELF::GetReExportedLibraries() {
+  FileSpecList filtees;
+  if (!ParseDynamicSymbols())
+    return filtees;
+  // Multiple DT_FILTER / DT_AUXILIARY entries are permitted; the dynamic
+  // linker searches the filtees in the order the entries appear in the
+  // dynamic section, so preserve that order here.
+  for (const auto &entry : m_dynamic_symbols) {
+    if (entry.symbol.d_tag != DT_FILTER && entry.symbol.d_tag != DT_AUXILIARY)
+      continue;
+    if (!entry.name.empty())
+      filtees.EmplaceBack(entry.name);
+  }
+  return filtees;
+}
+
 size_t ObjectFileELF::ParseDependentModules() {
   if (m_filespec_up)
     return m_filespec_up->GetSize();
@@ -1736,9 +1752,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
         const ELFSectionHeaderInfo &sheader = *I;
         const uint64_t section_size =
             sheader.sh_type == SHT_NOBITS ? 0 : sheader.sh_size;
-        ConstString name(shstr_data.PeekCStr(I->sh_name));
-
-        I->section_name = name;
+        llvm::StringRef name(shstr_data.PeekCStr(I->sh_name));
+        I->section_name = name.str();
 
         if (arch_spec.IsMIPS()) {
           uint32_t arch_flags = arch_spec.GetFlags();
@@ -1896,11 +1911,11 @@ ObjectFileELF::GetSectionHeaderByIndex(lldb::user_id_t id) {
   return nullptr;
 }
 
-lldb::user_id_t ObjectFileELF::GetSectionIndexByName(const char *name) {
-  if (!name || !name[0] || !ParseSectionHeaders())
+lldb::user_id_t ObjectFileELF::GetSectionIndexByName(llvm::StringRef name) {
+  if (name.empty() || !ParseSectionHeaders())
     return 0;
   for (size_t i = 1; i < m_section_headers.size(); ++i)
-    if (m_section_headers[i].section_name == ConstString(name))
+    if (m_section_headers[i].section_name == name)
       return i;
   return 0;
 }
@@ -1944,7 +1959,7 @@ SectionType ObjectFileELF::GetSectionType(const ELFSectionHeaderInfo &H) const {
   case SHT_DYNAMIC:
     return eSectionTypeELFDynamicLinkInfo;
   }
-  return GetSectionTypeFromName(H.section_name.GetStringRef());
+  return GetSectionTypeFromName(H.section_name);
 }
 
 static Permissions GetPermissions(const ELFSectionHeader &H) {
@@ -2150,7 +2165,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
        I != m_section_headers.end(); ++I) {
     const ELFSectionHeaderInfo &header = *I;
 
-    ConstString &name = I->section_name;
+    const std::string &name = I->section_name;
     const uint64_t file_size =
         header.sh_type == SHT_NOBITS ? 0 : header.sh_size;
 
@@ -2170,8 +2185,8 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         this,            // ObjectFile to which this section belongs and should
                          // read section data from.
         SectionIndex(I), // Section ID.
-        name,            // Section name.
-        sect_type,       // Section type.
+        ConstString(name),            // Section name.
+        sect_type,                    // Section type.
         InfoOr->Range.GetRangeBase(), // VM address.
         InfoOr->Range.GetByteSize(),  // VM size in bytes of this section.
         header.sh_offset,             // Offset of this section in the file.
@@ -3397,7 +3412,7 @@ void ObjectFileELF::RelocateSection(lldb_private::Section *section)
   for (SectionHeaderCollIter I = m_section_headers.begin();
        I != m_section_headers.end(); ++I) {
     if (I->sh_type == SHT_RELA || I->sh_type == SHT_REL) {
-      llvm::StringRef hay_name = I->section_name.GetStringRef();
+      llvm::StringRef hay_name(I->section_name);
       if (hay_name.empty())
         continue;
       if (needle == hay_name || needlea == hay_name) {
@@ -3744,8 +3759,8 @@ void ObjectFileELF::DumpELFSectionHeaders(Stream *s) {
        I != m_section_headers.end(); ++I, ++idx) {
     s->Printf("[%2u] ", idx);
     ObjectFileELF::DumpELFSectionHeader(s, *I);
-    const char *section_name = I->section_name.AsCString("");
-    if (section_name)
+    const std::string &section_name = I->section_name;
+    if (!section_name.empty())
       *s << ' ' << section_name << "\n";
   }
 }

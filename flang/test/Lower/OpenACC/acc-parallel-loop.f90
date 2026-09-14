@@ -509,43 +509,8 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc parallel loop gang(num: 8)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[GANGNUM1:%.*]] = arith.constant 8 : i32
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM1]] : i32})
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc parallel loop gang(num: gangNum)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[GANGNUM2:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} gang({num=[[GANGNUM2]] : i32})
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
- !$acc parallel loop gang(num: gangNum, static: gangStatic)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        acc.loop {{.*}} gang({num=%{{.*}} : i32, static=%{{.*}} : i32})
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
+! A GANG clause with a num argument is only allowed on a loop associated with
+! a kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop vector
   DO i = 1, n
@@ -559,32 +524,8 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc parallel loop vector(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[CONSTANT128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} vector([[CONSTANT128]] : i32) {{.*}} {
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
-
-  !$acc parallel loop vector(vectorLength)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}} {
-! CHECK:        [[VECTORLENGTH:%.*]] = fir.load %{{.*}} : !fir.ref<i32>
-! CHECK:        acc.loop {{.*}} vector([[VECTORLENGTH]] : i32) {{.*}} {
-! CHECK-NOT:      fir.do_loop
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
+! A VECTOR clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop worker
   DO i = 1, n
@@ -599,19 +540,8 @@ subroutine acc_parallel_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{.*}}
 
-  !$acc parallel loop worker(128)
-  DO i = 1, n
-    a(i) = b(i)
-  END DO
-
-! CHECK:      acc.parallel {{.*}}{
-! CHECK:        [[WORKER128:%.*]] = arith.constant 128 : i32
-! CHECK:        acc.loop {{.*}} worker([[WORKER128]] : i32) {{.*}} {
-! CHECK-NOT:      fir.do_loop
-! CHECK:          acc.yield
-! CHECK-NEXT:   } inclusiveUpperbound(array<i1: true>) independent
-! CHECK:        acc.yield
-! CHECK-NEXT: }{{.*}}
+! A WORKER clause with a value is only allowed on a loop associated with a
+! kernels construct, so it is covered by acc-kernels-loop.f90 instead.
 
   !$acc parallel loop collapse(2)
   DO i = 1, n

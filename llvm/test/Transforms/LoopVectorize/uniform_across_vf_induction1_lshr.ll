@@ -14,8 +14,7 @@ define void @ld_lshr0_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = lshr i64 [[INDEX]], 0
-; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; VF2-NEXT:    [[TMP2:%.*]] = add nsw <2 x i64> [[WIDE_LOAD]], splat (i64 42)
 ; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
@@ -36,8 +35,7 @@ define void @ld_lshr0_step1_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[TMP0:%.*]] = lshr i64 [[INDEX]], 0
-; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDEX]]
 ; VF4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; VF4-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[WIDE_LOAD]], splat (i64 42)
 ; VF4-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[INDEX]]
@@ -227,29 +225,24 @@ define void @ld_lshr0_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 2>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 2
-; VF2-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[VEC_IND]], zeroinitializer
-; VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
-; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
-; VF2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
-; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
-; VF2-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
-; VF2-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
-; VF2-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
-; VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
-; VF2-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[TMP10]], splat (i64 42)
-; VF2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; VF2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP11]], i64 0
-; VF2-NEXT:    store i64 [[TMP14]], ptr [[TMP12]], align 8
-; VF2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i64> [[TMP11]], i64 1
-; VF2-NEXT:    store i64 [[TMP15]], ptr [[TMP13]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP2]], align 8
+; VF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 8
+; VF2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
+; VF2-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP5]], i64 1
+; VF2-NEXT:    [[TMP8:%.*]] = add nsw <2 x i64> [[TMP7]], splat (i64 42)
+; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP8]], i64 0
+; VF2-NEXT:    store i64 [[TMP11]], ptr [[TMP9]], align 8
+; VF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP8]], i64 1
+; VF2-NEXT:    store i64 [[TMP12]], ptr [[TMP10]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i64> [[VEC_IND]], splat (i64 4)
-; VF2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF2-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF2-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br label [[EXIT:%.*]]
 ; VF2:       exit:
@@ -263,45 +256,38 @@ define void @ld_lshr0_step2_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 2, i64 4, i64 6>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = shl i64 [[INDEX]], 1
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 2
 ; VF4-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 4
 ; VF4-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 6
-; VF4-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[VEC_IND]], zeroinitializer
-; VF4-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP4]], i64 0
-; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
-; VF4-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP4]], i64 1
-; VF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP7]]
-; VF4-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP4]], i64 2
-; VF4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]
-; VF4-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP4]], i64 3
-; VF4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
-; VF4-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP6]], align 8
-; VF4-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP8]], align 8
-; VF4-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP10]], align 8
-; VF4-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP12]], align 8
-; VF4-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> poison, i64 [[TMP13]], i64 0
-; VF4-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP14]], i64 1
-; VF4-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i64 2
-; VF4-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP16]], i64 3
-; VF4-NEXT:    [[TMP21:%.*]] = add nsw <4 x i64> [[TMP20]], splat (i64 42)
-; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; VF4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
-; VF4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
-; VF4-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP21]], i64 0
-; VF4-NEXT:    store i64 [[TMP26]], ptr [[TMP22]], align 8
-; VF4-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP21]], i64 1
-; VF4-NEXT:    store i64 [[TMP27]], ptr [[TMP23]], align 8
-; VF4-NEXT:    [[TMP28:%.*]] = extractelement <4 x i64> [[TMP21]], i64 2
-; VF4-NEXT:    store i64 [[TMP28]], ptr [[TMP24]], align 8
-; VF4-NEXT:    [[TMP29:%.*]] = extractelement <4 x i64> [[TMP21]], i64 3
-; VF4-NEXT:    store i64 [[TMP29]], ptr [[TMP25]], align 8
+; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
+; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
+; VF4-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP4]], align 8
+; VF4-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP5]], align 8
+; VF4-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
+; VF4-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
+; VF4-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i64 0
+; VF4-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP12]], i64 [[TMP9]], i64 1
+; VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i64 2
+; VF4-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i64 3
+; VF4-NEXT:    [[TMP16:%.*]] = add nsw <4 x i64> [[TMP15]], splat (i64 42)
+; VF4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; VF4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
+; VF4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
+; VF4-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP16]], i64 0
+; VF4-NEXT:    store i64 [[TMP21]], ptr [[TMP17]], align 8
+; VF4-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP16]], i64 1
+; VF4-NEXT:    store i64 [[TMP22]], ptr [[TMP18]], align 8
+; VF4-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP16]], i64 2
+; VF4-NEXT:    store i64 [[TMP23]], ptr [[TMP19]], align 8
+; VF4-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP16]], i64 3
+; VF4-NEXT:    store i64 [[TMP24]], ptr [[TMP20]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 8)
-; VF4-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
-; VF4-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 500
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br label [[EXIT:%.*]]
 ; VF4:       exit:
@@ -417,29 +403,24 @@ define void @ld_lshr0_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF2:       vector.body:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 3>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VF2-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 3
-; VF2-NEXT:    [[TMP2:%.*]] = lshr <2 x i64> [[VEC_IND]], zeroinitializer
-; VF2-NEXT:    [[TMP3:%.*]] = extractelement <2 x i64> [[TMP2]], i64 0
-; VF2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
-; VF2-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP2]], i64 1
-; VF2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
-; VF2-NEXT:    [[TMP7:%.*]] = load i64, ptr [[TMP4]], align 8
-; VF2-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP6]], align 8
-; VF2-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> poison, i64 [[TMP7]], i64 0
-; VF2-NEXT:    [[TMP10:%.*]] = insertelement <2 x i64> [[TMP9]], i64 [[TMP8]], i64 1
-; VF2-NEXT:    [[TMP11:%.*]] = add nsw <2 x i64> [[TMP10]], splat (i64 42)
-; VF2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF2-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; VF2-NEXT:    [[TMP14:%.*]] = extractelement <2 x i64> [[TMP11]], i64 0
-; VF2-NEXT:    store i64 [[TMP14]], ptr [[TMP12]], align 8
-; VF2-NEXT:    [[TMP15:%.*]] = extractelement <2 x i64> [[TMP11]], i64 1
-; VF2-NEXT:    store i64 [[TMP15]], ptr [[TMP13]], align 8
+; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP4:%.*]] = load i64, ptr [[TMP2]], align 8
+; VF2-NEXT:    [[TMP5:%.*]] = load i64, ptr [[TMP3]], align 8
+; VF2-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
+; VF2-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP5]], i64 1
+; VF2-NEXT:    [[TMP8:%.*]] = add nsw <2 x i64> [[TMP7]], splat (i64 42)
+; VF2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; VF2-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP8]], i64 0
+; VF2-NEXT:    store i64 [[TMP11]], ptr [[TMP9]], align 8
+; VF2-NEXT:    [[TMP12:%.*]] = extractelement <2 x i64> [[TMP8]], i64 1
+; VF2-NEXT:    store i64 [[TMP12]], ptr [[TMP10]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; VF2-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i64> [[VEC_IND]], splat (i64 6)
-; VF2-NEXT:    [[TMP16:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF2-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF2-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF2-NEXT:    br i1 [[TMP13]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF2:       middle.block:
 ; VF2-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF2:       scalar.ph:
@@ -452,45 +433,38 @@ define void @ld_lshr0_step3_start0_ind1(ptr noalias %A, ptr noalias %B) {
 ; VF4-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VF4:       vector.body:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; VF4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 3, i64 6, i64 9>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 3
 ; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], 3
 ; VF4-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 6
 ; VF4-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 9
-; VF4-NEXT:    [[TMP4:%.*]] = lshr <4 x i64> [[VEC_IND]], zeroinitializer
-; VF4-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP4]], i64 0
-; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP5]]
-; VF4-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP4]], i64 1
-; VF4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP7]]
-; VF4-NEXT:    [[TMP9:%.*]] = extractelement <4 x i64> [[TMP4]], i64 2
-; VF4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]
-; VF4-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[TMP4]], i64 3
-; VF4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP11]]
-; VF4-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP6]], align 8
-; VF4-NEXT:    [[TMP14:%.*]] = load i64, ptr [[TMP8]], align 8
-; VF4-NEXT:    [[TMP15:%.*]] = load i64, ptr [[TMP10]], align 8
-; VF4-NEXT:    [[TMP16:%.*]] = load i64, ptr [[TMP12]], align 8
-; VF4-NEXT:    [[TMP17:%.*]] = insertelement <4 x i64> poison, i64 [[TMP13]], i64 0
-; VF4-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP17]], i64 [[TMP14]], i64 1
-; VF4-NEXT:    [[TMP19:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP15]], i64 2
-; VF4-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP19]], i64 [[TMP16]], i64 3
-; VF4-NEXT:    [[TMP21:%.*]] = add nsw <4 x i64> [[TMP20]], splat (i64 42)
-; VF4-NEXT:    [[TMP22:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
-; VF4-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
-; VF4-NEXT:    [[TMP24:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
-; VF4-NEXT:    [[TMP25:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
-; VF4-NEXT:    [[TMP26:%.*]] = extractelement <4 x i64> [[TMP21]], i64 0
-; VF4-NEXT:    store i64 [[TMP26]], ptr [[TMP22]], align 8
-; VF4-NEXT:    [[TMP27:%.*]] = extractelement <4 x i64> [[TMP21]], i64 1
-; VF4-NEXT:    store i64 [[TMP27]], ptr [[TMP23]], align 8
-; VF4-NEXT:    [[TMP28:%.*]] = extractelement <4 x i64> [[TMP21]], i64 2
-; VF4-NEXT:    store i64 [[TMP28]], ptr [[TMP24]], align 8
-; VF4-NEXT:    [[TMP29:%.*]] = extractelement <4 x i64> [[TMP21]], i64 3
-; VF4-NEXT:    store i64 [[TMP29]], ptr [[TMP25]], align 8
+; VF4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
+; VF4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; VF4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
+; VF4-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP4]], align 8
+; VF4-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP5]], align 8
+; VF4-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
+; VF4-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
+; VF4-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> poison, i64 [[TMP8]], i64 0
+; VF4-NEXT:    [[TMP13:%.*]] = insertelement <4 x i64> [[TMP12]], i64 [[TMP9]], i64 1
+; VF4-NEXT:    [[TMP14:%.*]] = insertelement <4 x i64> [[TMP13]], i64 [[TMP10]], i64 2
+; VF4-NEXT:    [[TMP15:%.*]] = insertelement <4 x i64> [[TMP14]], i64 [[TMP11]], i64 3
+; VF4-NEXT:    [[TMP16:%.*]] = add nsw <4 x i64> [[TMP15]], splat (i64 42)
+; VF4-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP0]]
+; VF4-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP1]]
+; VF4-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP2]]
+; VF4-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP3]]
+; VF4-NEXT:    [[TMP21:%.*]] = extractelement <4 x i64> [[TMP16]], i64 0
+; VF4-NEXT:    store i64 [[TMP21]], ptr [[TMP17]], align 8
+; VF4-NEXT:    [[TMP22:%.*]] = extractelement <4 x i64> [[TMP16]], i64 1
+; VF4-NEXT:    store i64 [[TMP22]], ptr [[TMP18]], align 8
+; VF4-NEXT:    [[TMP23:%.*]] = extractelement <4 x i64> [[TMP16]], i64 2
+; VF4-NEXT:    store i64 [[TMP23]], ptr [[TMP19]], align 8
+; VF4-NEXT:    [[TMP24:%.*]] = extractelement <4 x i64> [[TMP16]], i64 3
+; VF4-NEXT:    store i64 [[TMP24]], ptr [[TMP20]], align 8
 ; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[VEC_IND_NEXT]] = add nsw <4 x i64> [[VEC_IND]], splat (i64 12)
-; VF4-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
-; VF4-NEXT:    br i1 [[TMP30]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
+; VF4-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT]], 332
+; VF4-NEXT:    br i1 [[TMP25]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; VF4:       middle.block:
 ; VF4-NEXT:    br label [[SCALAR_PH:%.*]]
 ; VF4:       scalar.ph:

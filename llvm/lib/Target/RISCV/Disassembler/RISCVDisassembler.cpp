@@ -208,9 +208,9 @@ static DecodeStatus DecodeGPRPairCRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const void *Decoder) {
+static DecodeStatus DecodeGPRS07RegisterClass(MCInst &Inst, uint32_t RegNo,
+                                              uint64_t Address,
+                                              const void *Decoder) {
   if (RegNo >= 8)
     return MCDisassembler::Fail;
 
@@ -586,9 +586,6 @@ static constexpr DecoderListEntry DecoderList32[]{
     // Vendor Extensions
     {DecoderTableXCV32, XCVFeatureGroup, "CORE-V extensions"},
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
-    {DecoderTableXVentana32,
-     {RISCV::FeatureVendorXVentanaCondOps},
-     "XVentanaCondOps"},
     {DecoderTableXTHead32, XTHeadGroup, "T-Head extensions"},
     {DecoderTableXSfvector32, XSfVectorGroup, "SiFive vector extensions"},
     {DecoderTableXSfsystem32, XSfSystemGroup, "SiFive system extensions"},

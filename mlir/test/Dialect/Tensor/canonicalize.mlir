@@ -826,6 +826,56 @@ func.func @rank_reducing_insert_slice_canonicalize(%arg0 : tensor<?x?xf32>, %arg
 
 // -----
 
+// The trailing unit dimension is rank-reduced in the inserted op. When the
+// first dimension folds to unit, make sure that the rank-reduction pattern
+// is preserved.
+// CHECK-LABEL: func @rank_reducing_insert_slice_preserves_shapes
+//  CHECK-SAME:   %[[SRC:.+]]: tensor<?x2xf32>
+//  CHECK-SAME:   %[[DST:.+]]: tensor<?x2x1xf32>
+//       CHECK:   %[[CAST:.+]] = tensor.cast %[[SRC]] : tensor<?x2xf32> to tensor<1x2xf32>
+//       CHECK:   %[[RESULT:.+]] = tensor.insert_slice %[[CAST]] into %[[DST]][0, 0, 0] [1, 2, 1] [1, 1, 1]
+//  CHECK-SAME:     : tensor<1x2xf32> into tensor<?x2x1xf32>
+//       CHECK:   return %[[RESULT]]
+func.func @rank_reducing_insert_slice_preserves_shapes(
+    %src: tensor<?x2xf32>, %dst: tensor<?x2x1xf32>) -> tensor<?x2x1xf32> {
+  %c1 = arith.constant 1 : index
+  %r = tensor.insert_slice %src into %dst[0, 0, 0] [%c1, 2, 1] [1, 1, 1]
+      : tensor<?x2xf32> into tensor<?x2x1xf32>
+  return %r : tensor<?x2x1xf32>
+}
+
+// -----
+
+// A non-leading unit dimension is rank-reduced in the source op being inserted.
+// Verify that constant sizes are correctly folded through consecutive insert_slice
+// ops, preserving cast compatibility between all shapes.
+// CHECK-LABEL: func @rank_reducing_insert_slice_preserves_shapes_consecutive
+//  CHECK-SAME:   %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x2x2xf32>
+//  CHECK-SAME:   %[[INNER:[a-zA-Z0-9_]+]]: tensor<1x?x1x?xf32>
+//  CHECK-SAME:   %[[OUTER:[a-zA-Z0-9_]+]]: tensor<1x?x1x?xf32>
+//       CHECK:   %[[FIRST:.+]] = tensor.insert_slice %[[SRC]] into %[[INNER]][0, 0, 0, 0] [1, 2, 1, 2] [1, 1, 1, 1]
+//  CHECK-SAME:     : tensor<1x2x2xf32> into tensor<1x?x1x?xf32>
+//       CHECK:   %[[CAST:.+]] = tensor.cast %[[FIRST]] : tensor<1x?x1x?xf32> to tensor<1x2x1x2xf32>
+//       CHECK:   %[[SECOND:.+]] = tensor.insert_slice %[[CAST]] into %[[OUTER]][0, 0, 0, 0] [1, 2, 1, 2] [1, 1, 1, 1]
+//  CHECK-SAME:     : tensor<1x2x1x2xf32> into tensor<1x?x1x?xf32>
+//       CHECK:   return %[[SECOND]]
+func.func @rank_reducing_insert_slice_preserves_shapes_consecutive(
+    %src: tensor<1x2x2xf32>, %inner: tensor<1x?x1x?xf32>,
+    %outer: tensor<1x?x1x?xf32>) -> tensor<1x?x1x?xf32> {
+  %c2a = arith.constant 2 : index
+  %c2b = arith.constant 2 : index
+  %cast = tensor.cast %src : tensor<1x2x2xf32> to tensor<1x?x?xf32>
+  %first = tensor.insert_slice %cast into %inner[0, 0, 0, 0]
+      [1, %c2a, 1, %c2b] [1, 1, 1, 1]
+      : tensor<1x?x?xf32> into tensor<1x?x1x?xf32>
+  %second = tensor.insert_slice %first into %outer[0, 0, 0, 0]
+      [1, %c2a, 1, %c2b] [1, 1, 1, 1]
+      : tensor<1x?x1x?xf32> into tensor<1x?x1x?xf32>
+  return %second : tensor<1x?x1x?xf32>
+}
+
+// -----
+
 func.func @rank_reducing_slice_to_insert_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : index,
     %arg2 : index, %arg3 : tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
 {
@@ -959,8 +1009,8 @@ func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?
 
 // Verify that the constant-argument folder for insert_slice preserves the
 // source's encoding on the inserted cast, rather than silently picking up the
-// destination's encoding (which is `none` here) via the shape template used by
-// ExtractSliceOp::inferCanonicalRankReducedResultType.
+// destination's encoding (which is `none` here) while deriving the folded
+// source shape.
 // CHECK-LABEL: func @preserve_source_encoding_on_insert_slice_folding
 //  CHECK-SAME:     %[[SRC:[a-zA-Z0-9_]+]]: tensor<1x?x?x32xf16, "abc">
 //  CHECK-SAME:     %[[DST:[a-zA-Z0-9_]+]]: tensor<1x1280x32x32xf16>
@@ -2393,6 +2443,32 @@ func.func @canonicalize_parallel_insert_slice_indices(
     }
   }
   return %2 : tensor<?x?xf32>
+}
+
+// -----
+
+// The trailing unit dimension is rank-reduced in the inserted op. When the
+// first dimension folds to unit, make sure that the rank-reduction pattern
+// is preserved.
+// CHECK-LABEL: func @canonicalize_rank_reducing_parallel_insert_slice
+//  CHECK-SAME:   %[[SRC:.+]]: tensor<?x2xf32>
+//       CHECK:   scf.forall
+//       CHECK:     %[[CAST:.+]] = tensor.cast %[[SRC]] : tensor<?x2xf32> to tensor<1x2xf32>
+//  CHECK-NEXT:     scf.forall.in_parallel {
+//  CHECK-NEXT:       tensor.parallel_insert_slice %[[CAST]] into %{{.+}}[0, 0, 0] [1, 2, 1] [1, 1, 1]
+//  CHECK-SAME:         : tensor<1x2xf32> into tensor<?x2x1xf32>
+func.func @canonicalize_rank_reducing_parallel_insert_slice(
+    %src: tensor<?x2xf32>, %dst: tensor<?x2x1xf32>,
+    %num_threads: index) -> tensor<?x2x1xf32> {
+  %c1 = arith.constant 1 : index
+  %r = scf.forall (%tid) in (%num_threads) shared_outs(%o = %dst)
+      -> (tensor<?x2x1xf32>) {
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %src into %o[0, 0, 0] [%c1, 2, 1] [1, 1, 1]
+          : tensor<?x2xf32> into tensor<?x2x1xf32>
+    }
+  }
+  return %r : tensor<?x2x1xf32>
 }
 
 // -----

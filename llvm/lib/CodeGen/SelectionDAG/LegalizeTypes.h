@@ -15,7 +15,6 @@
 #ifndef LLVM_LIB_CODEGEN_SELECTIONDAG_LEGALIZETYPES_H
 #define LLVM_LIB_CODEGEN_SELECTIONDAG_LEGALIZETYPES_H
 
-#include "MatchContext.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -106,10 +105,6 @@ private:
   SmallDenseMap<TableId, TableId, 8> SoftenedFloats;
 
   /// For floating-point nodes that have a smaller precision than the smallest
-  /// supported precision, this map indicates what promoted value to use.
-  SmallDenseMap<TableId, TableId, 8> PromotedFloats;
-
-  /// For floating-point nodes that have a smaller precision than the smallest
   /// supported precision, this map indicates the converted value to use.
   SmallDenseMap<TableId, TableId, 8> SoftPromotedHalfs;
 
@@ -191,7 +186,6 @@ public:
         PromotedIntegers.erase(OldId);
         ExpandedIntegers.erase(OldId);
         SoftenedFloats.erase(OldId);
-        PromotedFloats.erase(OldId);
         SoftPromotedHalfs.erase(OldId);
         ExpandedFloats.erase(OldId);
         ScalarizedVectors.erase(OldId);
@@ -348,7 +342,6 @@ private:
   SDValue PromoteIntRes_VAARG(SDNode *N);
   SDValue PromoteIntRes_VSCALE(SDNode *N);
   SDValue PromoteIntRes_XMULO(SDNode *N, unsigned ResNo);
-  template <class MatchContextClass>
   SDValue PromoteIntRes_ADDSUBSHLSAT(SDNode *N);
   SDValue PromoteIntRes_MULFIX(SDNode *N);
   SDValue PromoteIntRes_DIVFIX(SDNode *N);
@@ -358,7 +351,6 @@ private:
   SDValue PromoteIntRes_ABS(SDNode *N);
   SDValue PromoteIntRes_Rotate(SDNode *N);
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
-  SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
   SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_PEXT(SDNode *N);
   SDValue PromoteIntRes_PDEP(SDNode *N);
@@ -396,7 +388,6 @@ private:
   SDValue PromoteIntOp_CMP(SDNode *N);
   SDValue PromoteIntOp_FunnelShift(SDNode *N);
   SDValue PromoteIntOp_SIGN_EXTEND(SDNode *N);
-  SDValue PromoteIntOp_VP_SIGN_EXTEND(SDNode *N);
   SDValue PromoteIntOp_SINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_STRICT_SINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_STORE(StoreSDNode *N, unsigned OpNo);
@@ -405,7 +396,6 @@ private:
   SDValue PromoteIntOp_STRICT_UINT_TO_FP(SDNode *N);
   SDValue PromoteIntOp_CONVERT_FROM_ARBITRARY_FP(SDNode *N);
   SDValue PromoteIntOp_ZERO_EXTEND(SDNode *N);
-  SDValue PromoteIntOp_VP_ZERO_EXTEND(SDNode *N);
   SDValue PromoteIntOp_MSTORE(MaskedStoreSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MLOAD(MaskedLoadSDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_MSCATTER(MaskedScatterSDNode *N, unsigned OpNo);
@@ -754,18 +744,6 @@ private:
                                 ISD::CondCode &CCCode, const SDLoc &dl,
                                 SDValue &Chain, bool IsSignaling = false);
 
-  //===--------------------------------------------------------------------===//
-  // Float promotion support: LegalizeFloatTypes.cpp
-  //===--------------------------------------------------------------------===//
-
-  SDValue GetPromotedFloat(SDValue Op) {
-    TableId &PromotedId = PromotedFloats[getTableId(Op)];
-    SDValue PromotedOp = getSDValue(PromotedId);
-    assert(PromotedOp.getNode() && "Operand wasn't promoted?");
-    return PromotedOp;
-  }
-  void SetPromotedFloat(SDValue Op, SDValue Result);
-
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
 
   //===--------------------------------------------------------------------===//
@@ -1111,6 +1089,7 @@ private:
   SDValue WidenVecRes_Unary(SDNode *N);
   SDValue WidenVecRes_InregOp(SDNode *N);
   SDValue WidenVecRes_UnaryOpWithTwoResults(SDNode *N, unsigned ResNo);
+  SDValue WidenVecRes_PARTIAL_REDUCE_MLA(SDNode *N);
   void ReplaceOtherWidenResults(SDNode *N, SDNode *WidenNode,
                                 unsigned WidenResNo);
 

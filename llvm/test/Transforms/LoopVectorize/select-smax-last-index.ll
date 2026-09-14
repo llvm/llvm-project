@@ -733,3 +733,47 @@ exit:
   ret i64 %res
 }
 
+define i64 @test_smax_idx_intermediate_smax_op(ptr %src, i64 %n, i64 %k) {
+; CHECK-LABEL: define i64 @test_smax_idx_intermediate_smax_op(
+; CHECK-SAME: ptr [[SRC:%.*]], i64 [[N:%.*]], i64 [[K:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_IDX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MAX_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MAX_VAL:%.*]] = phi i64 [ -2147483648, %[[ENTRY]] ], [ [[MAX_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP:%.*]] = call i64 @llvm.smax.i64(i64 [[K]], i64 [[MAX_VAL]])
+; CHECK-NEXT:    [[MAX_VAL_NEXT]] = call i64 @llvm.smax.i64(i64 [[L]], i64 [[TMP]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[MAX_VAL]], [[L]]
+; CHECK-NEXT:    [[MAX_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV]], i64 [[MAX_IDX]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[RES:%.*]] = phi i64 [ [[MAX_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %max.idx = phi i64 [ 0, %entry ], [ %max.idx.next, %loop ]
+  %max.val = phi i64 [ -2147483648, %entry ], [ %max.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %tmp = call i64 @llvm.smax.i64(i64 %k, i64 %max.val)
+  %max.val.next = call i64 @llvm.smax.i64(i64 %l, i64 %tmp)
+  %cmp = icmp sle i64 %max.val, %l
+  %max.idx.next = select i1 %cmp, i64 %iv, i64 %max.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, %n
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  %res = phi i64 [ %max.idx.next, %loop ]
+  ret i64 %res
+}
+

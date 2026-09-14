@@ -30,6 +30,7 @@
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
+#include "clang/Basic/OpenACCKinds.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
@@ -535,13 +536,14 @@ private:
 public:
   /// Use to track source locations across nested visitor traversals.
   /// Always use a `SourceLocRAIIObject` to change currSrcLoc.
-  std::optional<mlir::Location> currSrcLoc;
+  std::optional<SourceRange> currSrcLoc;
+
   class SourceLocRAIIObject {
     CIRGenFunction &cgf;
-    std::optional<mlir::Location> oldLoc;
+    std::optional<SourceRange> oldLoc;
 
   public:
-    SourceLocRAIIObject(CIRGenFunction &cgf, mlir::Location value) : cgf(cgf) {
+    SourceLocRAIIObject(CIRGenFunction &cgf, SourceRange value) : cgf(cgf) {
       if (cgf.currSrcLoc)
         oldLoc = cgf.currSrcLoc;
       cgf.currSrcLoc = value;
@@ -737,6 +739,9 @@ public:
     /// True if the variable was emitted as an offload recipe, and thus doesn't
     /// have the same sort of alloca initialization.
     bool emittedAsOffload = false;
+
+    /// True if lifetime op should be used.
+    bool useLifetimeMarkers = false;
 
     mlir::Value nrvoFlag{};
 
@@ -1365,8 +1370,8 @@ public:
     void operator=(const FullExprCleanupScope &) = delete;
   };
 
-  /// Captures the destructor cleanup for a loop's condition variable so that it
-  /// can be emitted into the loop op's per-iteration cleanup region.
+  /// Captures cleanups for a loop's condition variable so that they can be
+  /// emitted into the loop op's per-iteration cleanup region.
   class DeferredLoopConditionCleanup {
     CIRGenFunction &cgf;
     EHScopeStack::stable_iterator depth;
@@ -1386,8 +1391,8 @@ public:
     public:
       explicit CaptureScope(DeferredLoopConditionCleanup &scope)
           : ehStack(scope.cgf.ehStack) {
-        // Capturing wraps only the condition variable's own destructor push,
-        // which emits no nested code, so it can never already be active.
+        // Capture scopes deliberately wrap individual cleanup-producing
+        // operations, so they must never nest.
         assert(!ehStack.isCapturingLoopConditionCleanups() &&
                "loop condition cleanup capturing should not nest");
         if (scope.active)
@@ -1614,9 +1619,9 @@ public:
   void finishThunk();
 
   /// Generate code for a thunk function.
-  void generateThunk(cir::FuncOp fn, const CIRGenFunctionInfo &fnInfo,
-                     GlobalDecl gd, const ThunkInfo &thunk,
-                     bool isUnprototyped);
+  void generateThunk(cir::FuncOp fn, SourceRange fnLoc,
+                     const CIRGenFunctionInfo &fnInfo, GlobalDecl gd,
+                     const ThunkInfo &thunk, bool isUnprototyped);
 
   /// ----------------------
   /// CIR emit functions
@@ -1646,6 +1651,9 @@ public:
                                       SourceLocation assumptionLoc,
                                       int64_t alignment,
                                       mlir::Value offsetValue = nullptr);
+
+  bool emitLifetimeStartOp(mlir::Location loc, mlir::Value addr);
+  void emitLifetimeEndOp(mlir::Location loc, mlir::Value addr);
 
 private:
   void emitAndUpdateRetAlloca(clang::QualType type, mlir::Location loc,
@@ -1743,6 +1751,14 @@ public:
       mlir::Value *emittedArgValue = nullptr,
       cir::MemOrder ordering = cir::MemOrder::SequentiallyConsistent);
 
+  /// Emit `cir.atomic.cmpxchg`. Returns the old value, or the success flag
+  /// when `returnBool` is true.
+  mlir::Value emitAtomicCmpXchg(
+      const clang::CallExpr *expr, bool returnBool,
+      cir::MemOrder successOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::MemOrder failureOrder = cir::MemOrder::SequentiallyConsistent,
+      cir::SyncScopeKind scope = cir::SyncScopeKind::System);
+
   mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
 
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
@@ -1836,7 +1852,7 @@ public:
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, cir::CIRCallOpInterface *callOp,
-                  bool isMustTail, mlir::Location loc);
+                  bool isMustTail, SourceRange clangLoc);
   RValue emitCall(const CIRGenFunctionInfo &funcInfo,
                   const CIRGenCallee &callee, ReturnValueSlot returnValue,
                   const CallArgList &args, bool isMustTail,
@@ -1850,8 +1866,8 @@ public:
                   const clang::CallExpr *e, ReturnValueSlot returnValue);
 
   /// Emit the call and return for a thunk function.
-  void emitCallAndReturnForThunk(cir::FuncOp callee, const ThunkInfo *thunk,
-                                 bool isUnprototyped);
+  void emitCallAndReturnForThunk(cir::FuncOp callee, SourceRange fnLoc,
+                                 const ThunkInfo *thunk, bool isUnprototyped);
 
   void emitCallArg(CallArgList &args, const clang::Expr *e,
                    clang::QualType argType);
@@ -1900,6 +1916,10 @@ public:
   cir::CoroIdOp emitCoroIDBuiltinCall(const CallExpr *e);
   cir::CoroAllocOp emitCoroAllocBuiltinCall(const CallExpr *e);
   cir::CoroBeginOp emitCoroBeginBuiltinCall(const CallExpr *e);
+  cir::CoroPromiseOp emitCoroPromiseBuiltinCall(const CallExpr *e);
+  cir::CoroDoneOp emitCoroDoneBuiltinCall(const CallExpr *e);
+  cir::CoroResumeOp emitCoroResumeBuiltinCall(const CallExpr *e);
+  cir::CoroDestroyOp emitCoroDestroyBuiltinCall(const CallExpr *e);
 
   cir::CoroSizeOp emitCoroSizeBuiltinCall(const CallExpr *e);
   cir::CoroFreeOp emitCoroFreeBuiltin(const CallExpr *e);
@@ -2276,8 +2296,8 @@ public:
                                    clang::QualType dstType,
                                    clang::SourceLocation loc);
 
-  void emitScalarInit(const clang::Expr *init, mlir::Location loc,
-                      LValue lvalue, bool capturedByInit = false);
+  void emitScalarInit(const clang::Expr *init, LValue lvalue,
+                      bool capturedByInit = false);
 
   mlir::Value emitScalarOrConstFoldImmArg(unsigned iceArguments, unsigned idx,
                                           const Expr *argExpr);
@@ -2532,7 +2552,7 @@ public:
   Address
   maybeCastStackAddressSpace(Address alloca,
                              mlir::ptr::MemorySpaceAttrInterface destAddrSpace,
-                             mlir::Value arraySize);
+                             mlir::Value arraySize = nullptr);
   Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
                                        const Twine &name);
 
@@ -2819,6 +2839,15 @@ public:
 
 private:
   QualType getVarArgType(const Expr *arg);
+
+  bool shouldEmitLifetimeMarkers = false;
+  /// Set when the current function has a goto/switch that may bypass a local's
+  /// init; lifetime markers are then suppressed. See functionMightHaveBypass.
+  bool fnHasBypassStmt = false;
+
+  bool shouldEmitLifetimeMarkersForAutoVar() const {
+    return shouldEmitLifetimeMarkers && !fnHasBypassStmt;
+  }
 
   class InlinedInheritingConstructorScope {
   public:

@@ -702,7 +702,7 @@ def FeatureStdExtV
       RISCVExtensionBitmask<0, 21>;
 
 def FeatureStdExtZvabd
-    : RISCVExperimentalExtension<0, 7, "Vector Absolute Difference">;
+    : RISCVExperimentalExtension<0, 9, "Vector Absolute Difference">;
 def HasStdExtZvabd : Predicate<"Subtarget->hasStdExtZvabd()">,
                      AssemblerPredicate<(all_of FeatureStdExtZvabd),
                                         "'Zvabd' (Vector Absolute Difference)">;
@@ -1073,13 +1073,13 @@ def FeatureStdExtSmcntrpmf
     : RISCVExtension<1, 0, "Cycle and Instret Privilege Mode Filtering">;
 
 def FeatureStdExtSmcsps
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Conditional Stack Pointer Swap at Machine Level">;
 def HasStdExtSmcsps : Predicate<"Subtarget->hasStdExtSmcsps()">,
                       AssemblerPredicate<(all_of FeatureStdExtSmcsps),
                           "'Smcsps' (Conditional Stack Pointer Swap at Machine Level)">;
 def FeatureStdExtSscsps
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Conditional Stack Pointer Swap at Supervisor Level",
                                  [FeatureStdExtSmcsps]>;
 def HasStdExtSscsps : Predicate<"Subtarget->hasStdExtSscsps()">,
@@ -1099,21 +1099,54 @@ def FeatureStdExtSsdbltrp
 def FeatureStdExtSmepmp
     : RISCVExtension<1, 0, "Enhanced Physical Memory Protection">;
 
+def FeatureStdExtSmidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Machine Level",
+                                 [FeatureStdExtSmcsrind, FeatureStdExtSmaia]>;
+def FeatureStdExtSsidctrl
+    : RISCVExperimentalExtension<0, 20,
+                                 "Interrupt Domain Control Interface at Supervisor Level",
+                                 [FeatureStdExtSscsrind, FeatureStdExtSsaia]>;
+
 def FeatureStdExtSmijt
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Machine Level">;
 def FeatureStdExtSsijt
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Interrupt Jump Table at Supervisor Level">;
 
 def FeatureStdExtSmehv
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Synchronous Exception Hardware Vectoring at Machine Level",
                                  [FeatureStdExtSmijt]>;
 def FeatureStdExtSsehv
-    : RISCVExperimentalExtension<0, 19,
+    : RISCVExperimentalExtension<0, 20,
                                  "Synchronous Exception Hardware Vectoring at Supervisor Level",
                                  [FeatureStdExtSsijt]>;
+
+def FeatureStdExtSmip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Machine Level">;
+def HasStdExtSmip : Predicate<"Subtarget->hasStdExtSmip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSmip),
+                        "'Smip' (Support for Interrupt Handler Push/Pop at "
+                        "Machine Level)">;
+def FeatureStdExtSsip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Support for Interrupt Handler Push/Pop at Supervisor Level">;
+def HasStdExtSsip : Predicate<"Subtarget->hasStdExtSsip()">,
+                    AssemblerPredicate<(all_of FeatureStdExtSsip),
+                        "'Ssip' (Support for Interrupt Handler Push/Pop at "
+                        "Supervisor Level)">;
+
+def FeatureStdExtSmnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Machine Level",
+                                 [FeatureStdExtSmidctrl]>;
+def FeatureStdExtSsnip
+    : RISCVExperimentalExtension<0, 20,
+                                 "Nested Interrupt Preemption Support at Supervisor Level",
+                                 [FeatureStdExtSsidctrl]>;
 
 def FeatureStdExtSmpmpmt
     : RISCVExperimentalExtension<0, 6, "PMP-based Memory Types Extension">;
@@ -1131,6 +1164,17 @@ def FeatureStdExtSsccfg
 
 def FeatureStdExtSsccptr
     : RISCVExtension<1, 0, "Main memory supports page table reads">;
+
+def FeatureStdExtSspmp
+    : RISCVExtension<1, 0, "S-level Physical Memory Protection (SPMP)",
+                     [FeatureStdExtSscsrind]>;
+def FeatureStdExtSspmpen
+    : RISCVExtension<1, 0, "Optimizing Context Switching of SPMP Entries",
+                     [FeatureStdExtSspmp]>;
+
+def FeatureStdExtSmpmpdeleg
+    : RISCVExtension<1, 0, "Sharing Hardware Resources between PMP and SPMP",
+                     [FeatureStdExtSmcsrind, FeatureStdExtSspmp]>;
 
 def FeatureStdExtSscofpmf
     : RISCVExtension<1, 0, "Count Overflow and Mode-Based Filtering">;
@@ -1289,14 +1333,6 @@ def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
 //===----------------------------------------------------------------------===//
 // Vendor extensions
 //===----------------------------------------------------------------------===//
-
-// Ventana Extensions
-
-def FeatureVendorXVentanaCondOps
-    : RISCVExtension<1, 0, "Ventana Conditional Ops">;
-def HasVendorXVentanaCondOps : Predicate<"Subtarget->hasVendorXVentanaCondOps()">,
-                               AssemblerPredicate<(all_of FeatureVendorXVentanaCondOps),
-                                   "'XVentanaCondOps' (Ventana Conditional Ops)">;
 
 // T-Head Extensions
 
@@ -2223,7 +2259,3 @@ def TuneMIPSP8700
 
 def TuneSiFive7 : SubtargetFeature<"sifive7", "RISCVProcFamily", "SiFive7",
                                    "SiFive 7-Series processors", [], InlineIgnore>;
-
-def TuneVentanaVeyron : SubtargetFeature<"ventana-veyron", "RISCVProcFamily", "VentanaVeyron",
-                                         "Ventana Veyron-Series processors",
-                                         [], InlineIgnore>;

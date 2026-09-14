@@ -396,6 +396,17 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
   }
 
   switch (MI->getOpcode()) {
+  case RISCV::PseudoTAILX7: {
+    // Lower to PseudoTAILReg with X7 as the register operand.
+    MCOperand SymOp;
+    lowerOperand(MI->getOperand(0), SymOp);
+    MCInst TmpInst;
+    TmpInst.setOpcode(RISCV::PseudoTAILReg);
+    TmpInst.addOperand(SymOp);
+    TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    EmitToStreamer(*OutStreamer, TmpInst);
+    return;
+  }
   case RISCV::HWASAN_CHECK_MEMACCESS_SHORTGRANULES:
     LowerHWASAN_CHECK_MEMACCESS(*MI);
     return;
@@ -1330,7 +1341,7 @@ void RISCVAsmPrinter::emitMachineConstantPoolValue(
 MaybeAlign
 RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
-  if (!GV.getType()->isSized())
+  if (!GV.getValueType()->isSized())
     return std::nullopt;
 
   uint64_t Size = GV.getGlobalSize(getDataLayout());

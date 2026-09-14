@@ -293,6 +293,57 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_getattr_np_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_getattr_np_test.cpp
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_mman_macros
+    libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_attr_getdetachstate
+    libc.src.pthread.pthread_attr_getguardsize
+    libc.src.pthread.pthread_attr_getstack
+    libc.src.pthread.pthread_attr_init
+    libc.src.pthread.pthread_attr_setdetachstate
+    libc.src.pthread.pthread_attr_setstack
+    libc.src.pthread.pthread_barrier_init
+    libc.src.pthread.pthread_barrier_wait
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_detach
+    libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.sysconf
+)
+
+add_integration_test(
+  pthread_getstack_np_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_getstack_np_test.cpp
+  DEPENDS
+    libc.hdr.pthread_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.sys_mman_macros
+    libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_attr_init
+    libc.src.pthread.pthread_attr_setstack
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_getstack_np
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.sys.mman.mmap
+    libc.src.sys.mman.munmap
+    libc.src.unistd.sysconf
+)
+
+add_integration_test(
   pthread_setschedparam_test
   SUITE
     libc-pthread-integration-tests
@@ -313,4 +364,30 @@ add_integration_test(
     libc.src.pthread.pthread_mutex_unlock
     libc.src.pthread.pthread_self
     libc.src.pthread.pthread_setschedparam
+)
+
+add_integration_test(
+  pthread_kill_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_kill_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.signal_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.pthread_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.struct_sigaction
+    libc.src.__support.CPP.atomic
+    libc.src.__support.threads.futex_utils
+    libc.src.__support.threads.thread
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.signal.pthread_kill
+    libc.src.signal.pthread_sigmask
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigemptyset
 )

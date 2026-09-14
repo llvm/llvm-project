@@ -85,22 +85,22 @@ static std::string applySubstitutePaths(StringRef FileName) {
   if (SubstitutePaths.empty())
     return FileName.str();
 
+  // FileName is normalized by the caller, so the components split out of it are
+  // normalized too. Only the rules given on the command line still need it.
   StringRef BaseName = sys::path::filename(FileName);
-  SmallString<256> Directory(sys::path::parent_path(FileName));
-  normalizeSourcePath(Directory);
+  StringRef Directory = sys::path::parent_path(FileName);
 
   for (const auto &[From, To] : SubstitutePaths) {
     SmallString<256> FromPath(From);
     normalizeSourcePath(FromPath);
-    StringRef Dir = Directory;
-    if (!Dir.starts_with(FromPath))
+    if (!Directory.starts_with(FromPath))
       continue;
-    if (Dir.size() > FromPath.size() &&
-        !sys::path::is_separator(Dir[FromPath.size()]))
+    if (Directory.size() > FromPath.size() &&
+        !sys::path::is_separator(Directory[FromPath.size()]))
       continue;
 
     SmallString<256> NewDir(To);
-    StringRef Suffix = Dir.substr(FromPath.size());
+    StringRef Suffix = Directory.substr(FromPath.size());
     while (!Suffix.empty() && sys::path::is_separator(Suffix.front()))
       Suffix = Suffix.drop_front();
     if (!Suffix.empty())
@@ -111,7 +111,6 @@ static std::string applySubstitutePaths(StringRef FileName) {
       return BaseName.str();
     SmallString<256> Result(NewDir);
     sys::path::append(Result, BaseName);
-    normalizeSourcePath(Result);
     return std::string(Result);
   }
 
@@ -747,6 +746,11 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
       Symbolizer->symbolizeCode(*Obj, Address);
   if (ExpectedLineInfo) {
     LineInfo = *ExpectedLineInfo;
+    if (LineInfo.FileName != DILineInfo::BadString) {
+      SmallString<256> NormalizedName(LineInfo.FileName);
+      normalizeSourcePath(NormalizedName);
+      LineInfo.FileName = std::string(NormalizedName);
+    }
   } else if (!WarnedInvalidDebugInfo) {
     WarnedInvalidDebugInfo = true;
     // TODO Untested.
@@ -754,7 +758,8 @@ void SourcePrinter::printSourceLine(formatted_raw_ostream &OS,
                       toString(ExpectedLineInfo.takeError()),
                   ObjectFilename);
   }
-  if (!objdump::SubstitutePaths.empty())
+  if (!objdump::SubstitutePaths.empty() &&
+      LineInfo.FileName != DILineInfo::BadString)
     LineInfo.FileName = applySubstitutePaths(LineInfo.FileName);
 
   if (!objdump::Prefix.empty() &&

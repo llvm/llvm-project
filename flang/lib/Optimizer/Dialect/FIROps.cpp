@@ -1889,6 +1889,22 @@ mlir::OpFoldResult fir::ConvertOp::fold(FoldAdaptor adaptor) {
     if (auto cst = fir::getIntIfConstant(bitcast.getValue()))
       return mlir::IntegerAttr::get(getType(), cst->isZero() ? 0 : 1);
   }
+  // (convert 'cst : iA -> iB) ==> the constant in iB, converted by the same
+  // rules as a non-constant operand: truncate when narrowing, zero-extend an
+  // i1 or unsigned source, sign-extend otherwise. The result must be signless
+  // to materialize as an arith.constant.
+  if (auto fromTy = mlir::dyn_cast<mlir::IntegerType>(getValue().getType()))
+    if (auto toTy = mlir::dyn_cast<mlir::IntegerType>(getType()))
+      if (toTy.isSignless())
+        if (auto cst = fir::getIntIfConstant(getValue())) {
+          unsigned toBits = toTy.getWidth();
+          bool signExtend = toBits > fromTy.getWidth() &&
+                            fromTy.getWidth() != 1 &&
+                            !fromTy.isUnsignedInteger();
+          return mlir::IntegerAttr::get(toTy, signExtend
+                                                  ? cst->sextOrTrunc(toBits)
+                                                  : cst->zextOrTrunc(toBits));
+        }
   return {};
 }
 
@@ -2431,7 +2447,7 @@ void fir::TypeInfoOp::build(mlir::OpBuilder &builder,
                             llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addRegion();
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(type.getName()));
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
   if (parentType)
@@ -2803,15 +2819,18 @@ mlir::Type fir::GlobalOp::resultType() {
 
 mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
                                        mlir::OperationState &result) {
+  (void)mlir::impl::parseOptionalVisibilityKeyword(parser, result.attributes);
+
   // Parse the optional linkage
   llvm::StringRef linkage;
   auto &builder = parser.getBuilder();
   if (mlir::succeeded(parser.parseOptionalKeyword(&linkage))) {
     if (fir::GlobalOp::verifyValidLinkage(linkage))
-      return mlir::failure();
-    mlir::StringAttr linkAttr = builder.getStringAttr(linkage);
-    result.addAttribute(fir::GlobalOp::getLinkNameAttrName(result.name),
-                        linkAttr);
+      return parser.emitError(parser.getCurrentLocation())
+             << "invalid linkage '" << linkage << "'";
+    auto linkEnum = fir::symbolizeLinkageEnum(linkage);
+    result.addAttribute(fir::GlobalOp::getLinkageAttrName(result.name),
+                        fir::LinkageAttr::get(builder.getContext(), *linkEnum));
   }
 
   // Parse the name as a symbol reference attribute.
@@ -2820,7 +2839,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
                             fir::GlobalOp::getSymrefAttrName(result.name),
                             result.attributes))
     return mlir::failure();
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       nameAttr.getRootReference());
 
   bool simpleInitializer = false;
@@ -2866,18 +2885,20 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
 }
 
 void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
-  if (getLinkName())
-    p << ' ' << *getLinkName();
+  if (mlir::StringAttr visibility = getSymVisibilityAttr())
+    p << ' ' << visibility.getValue();
+  if (std::optional<fir::LinkageEnum> link = getLinkage())
+    p << ' ' << fir::stringifyLinkageEnum(*link);
   p << ' ';
   p.printAttributeWithoutType(getSymrefAttr());
   if (auto val = getValueOrNull())
     p << '(' << val << ')';
   // Print all other attributes that are not pretty printed here.
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elideAttrs=*/{
-                              getSymNameAttrName(), getSymrefAttrName(),
-                              getTypeAttrName(), getConstantAttrName(),
-                              getTargetAttrName(), getLinkNameAttrName(),
-                              getInitValAttrName()});
+  p.printOptionalAttrDict(
+      (*this)->getAttrs(), /*elideAttrs=*/{
+          getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
+          getConstantAttrName(), getTargetAttrName(), getLinkageAttrName(),
+          getInitValAttrName(), getSymVisibilityAttrName()});
   if (getOperation()->getAttr(getConstantAttrName()))
     p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
@@ -2899,11 +2920,11 @@ void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           bool isConstant, bool isTarget, mlir::Type type,
-                          mlir::Attribute initialVal, mlir::StringAttr linkage,
+                          mlir::Attribute initialVal, fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
   result.addAttribute(getTypeAttrName(result.name), mlir::TypeAttr::get(type));
-  result.addAttribute(mlir::SymbolTable::getSymbolAttrName(),
+  result.addAttribute(getSymNameAttrName(result.name),
                       builder.getStringAttr(name));
   result.addAttribute(getSymrefAttrName(result.name),
                       mlir::SymbolRefAttr::get(builder.getContext(), name));
@@ -2915,14 +2936,14 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
-    result.addAttribute(getLinkNameAttrName(result.name), linkage);
+    result.addAttribute(getLinkageAttrName(result.name), linkage);
   result.attributes.append(attrs.begin(), attrs.end());
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           mlir::Type type, mlir::Attribute initialVal,
-                          mlir::StringAttr linkage,
+                          fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
         {}, linkage, attrs);
@@ -2931,14 +2952,14 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           bool isConstant, bool isTarget, mlir::Type type,
-                          mlir::StringAttr linkage,
+                          fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   build(builder, result, name, isConstant, isTarget, type, {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          mlir::Type type, mlir::StringAttr linkage,
+                          mlir::Type type, fir::LinkageAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
         {}, linkage, attrs);
@@ -2948,7 +2969,7 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           bool isConstant, bool isTarget, mlir::Type type,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, isConstant, isTarget, type, mlir::StringAttr{},
+  build(builder, result, name, isConstant, isTarget, type, fir::LinkageAttr{},
         attrs);
 }
 
@@ -2961,10 +2982,8 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
 }
 
 mlir::ParseResult fir::GlobalOp::verifyValidLinkage(llvm::StringRef linkage) {
-  // Supporting only a subset of the LLVM linkage types for now
-  static const char *validNames[] = {"common", "internal", "linkonce",
-                                     "linkonce_odr", "weak"};
-  return mlir::success(llvm::is_contained(validNames, linkage));
+  // Supporting only a subset of the LLVM linkage types for now.
+  return mlir::success(fir::symbolizeLinkageEnum(linkage).has_value());
 }
 
 //===----------------------------------------------------------------------===//

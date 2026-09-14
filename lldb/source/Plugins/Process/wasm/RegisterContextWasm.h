@@ -60,6 +60,12 @@ public:
                      const RegisterValue &value) override;
 
 private:
+  /// The module whose code this context's frame is executing. Resolved on each
+  /// use rather than cached: the innermost frame's register context is the
+  /// thread's own and outlives a stop, so a cached id would go on naming the
+  /// module of a previous stop.
+  uint32_t GetModuleID();
+
   std::unordered_map<size_t, std::unique_ptr<WasmVirtualRegisterInfo>>
       m_register_map;
 };

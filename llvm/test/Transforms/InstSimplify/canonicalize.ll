@@ -245,7 +245,7 @@ define float @canonicalize_inf() {
 ; CHECK-LABEL: @canonicalize_inf(
 ; CHECK-NEXT:    ret float +inf
 ;
-  %ret = call float @llvm.canonicalize.f32(float 0x7FF0000000000000)
+  %ret = call float @llvm.canonicalize.f32(float +inf)
   ret float %ret
 }
 
@@ -253,7 +253,7 @@ define float @canonicalize_neg_inf() {
 ; CHECK-LABEL: @canonicalize_neg_inf(
 ; CHECK-NEXT:    ret float -inf
 ;
-  %ret = call float @llvm.canonicalize.f32(float 0xFFF0000000000000)
+  %ret = call float @llvm.canonicalize.f32(float -inf)
   ret float %ret
 }
 
@@ -262,7 +262,7 @@ define float @canonicalize_qnan() {
 ; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float +qnan)
 ; CHECK-NEXT:    ret float [[RET]]
 ;
-  %ret = call float @llvm.canonicalize.f32(float 0x7FF8000000000000)
+  %ret = call float @llvm.canonicalize.f32(float +qnan)
   ret float %ret
 }
 
@@ -379,7 +379,7 @@ define double @canonicalize_inf_f64() {
 ; CHECK-LABEL: @canonicalize_inf_f64(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %ret = call double @llvm.canonicalize.f64(double 0x7FF0000000000000)
+  %ret = call double @llvm.canonicalize.f64(double +inf)
   ret double %ret
 }
 
@@ -387,7 +387,7 @@ define double @canonicalize_ninf_f64() {
 ; CHECK-LABEL: @canonicalize_ninf_f64(
 ; CHECK-NEXT:    ret double -inf
 ;
-  %ret = call double @llvm.canonicalize.f64(double 0xFFF0000000000000)
+  %ret = call double @llvm.canonicalize.f64(double -inf)
   ret double %ret
 }
 

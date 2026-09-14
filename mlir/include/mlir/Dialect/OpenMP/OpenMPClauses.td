@@ -274,14 +274,15 @@ class OpenMP_CriticalNameClauseSkip<
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
-    Symbol
+    SymbolName, SymbolVisibility, Symbol
   ];
 
   let arguments = (ins
-    SymbolNameAttr:$sym_name
+    SymbolNameAttr:$sym_name,
+    OptionalAttr<StrAttr>:$sym_visibility
   );
 
-  let reqAssemblyFormat = "$sym_name";
+  let reqAssemblyFormat = "($sym_visibility^)? $sym_name";
 
   let description = [{
     The `sym_name` can be used in `omp.critical` constructs in the dialect.
@@ -395,7 +396,7 @@ class OpenMP_DoacrossClauseSkip<
   );
 
   let reqAssemblyFormat = [{
-    ( `depend_type` `` $doacross_depend_type^ )?
+    ( `depend_type` `(` enum($doacross_depend_type)^ `)` )?
     ( `depend_vec` `(` $doacross_depend_vars^ `:` type($doacross_depend_vars)
                    `)` )?
     ( `num_loops` `(` $doacross_num_loops^ `)` )?
@@ -1714,6 +1715,33 @@ class OpenMP_ThreadLimitClauseSkip<
 }
 
 def OpenMP_ThreadLimitClause : OpenMP_ThreadLimitClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
+// V6.0: [14.8] `threadset` clause
+//===----------------------------------------------------------------------===//
+
+class OpenMP_ThreadsetClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+  let arguments = (ins
+    OptionalAttr<ThreadsetPolicyAttr>:$threadset
+  );
+
+  let optAssemblyFormat = [{
+    `threadset` `(` custom<ClauseAttr>($threadset) `)`
+  }];
+
+  let description = [{
+    The `threadset` clause specifies the set of threads that may execute the
+    generated task. When the policy is `omp_pool`, the task is eligible to be
+    executed by a free-agent thread. When the policy is `omp_team`, the task
+    may only be executed by a thread in the current team.
+  }];
+}
+
+def OpenMP_ThreadsetClause : OpenMP_ThreadsetClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
 // V5.2: [9.1.1] `sizes` clause

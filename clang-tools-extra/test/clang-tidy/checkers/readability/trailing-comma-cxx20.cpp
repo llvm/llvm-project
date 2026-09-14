@@ -87,3 +87,122 @@ void with_array() {
     .count = 3,
   };
 }
+
+struct AnonUnion {
+  int x;
+  union { struct { int a; int b; }; };
+};
+
+void anonymous_union_members() {
+  AnonUnion w1 = {
+    .x = 1,
+    .a = 2,
+    .b = 3,
+  };
+
+  AnonUnion w2 = {
+    .x = 1,
+    .a = 2,
+    .b = 3
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: initializer list should have a trailing comma
+  // CHECK-FIXES: AnonUnion w2 = {
+  // CHECK-FIXES-NEXT:     .x = 1,
+  // CHECK-FIXES-NEXT:     .a = 2,
+  // CHECK-FIXES-NEXT:     .b = 3,
+  // CHECK-FIXES-NEXT:   };
+}
+
+struct Inner { int v; };
+struct Nested { Inner x; Inner y; };
+
+void nested_designator() {
+  Nested n1 = {
+    .x = {.v = 1},
+    .y.v = 2,
+  };
+
+  Nested n2 = {
+    .x = {.v = 1},
+    .y.v = 2
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:13: warning: initializer list should have a trailing comma
+  // CHECK-FIXES: Nested n2 = {
+  // CHECK-FIXES-NEXT:     .x = {.v = 1},
+  // CHECK-FIXES-NEXT:     .y.v = 2,
+  // CHECK-FIXES-NEXT:   };
+
+  Nested n3 = {
+    .x = {.v = 1},
+    .y = {.v = 2,},
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:17: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES: Nested n3 = {
+  // CHECK-FIXES-NEXT:     .x = {.v = 1},
+  // CHECK-FIXES-NEXT:     .y = {.v = 2},
+  // CHECK-FIXES-NEXT:   };
+}
+
+struct AnonStruct {
+  int x;
+  struct { int p; int q; };
+};
+
+void anonymous_struct_members() {
+  AnonStruct as1 = {
+    .x = 1,
+    .p = 2,
+    .q = 3,
+  };
+
+  AnonStruct as2 = { .x = 1, .p = 2, .q = 3, };
+  // CHECK-MESSAGES: :[[@LINE-1]]:44: warning: initializer list should not have a trailing comma
+  // CHECK-FIXES: AnonStruct as2 = { .x = 1, .p = 2, .q = 3 };
+}
+
+struct Deep { int c; };
+struct Mid { Deep b; };
+struct Top { Mid a; };
+
+void multi_level_designator() {
+  Top t1 = {
+    .a.b.c = 1,
+  };
+
+  Top t2 = {
+    .a.b.c = 1
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:15: warning: initializer list should have a trailing comma
+  // CHECK-FIXES: Top t2 = {
+  // CHECK-FIXES-NEXT:     .a.b.c = 1,
+  // CHECK-FIXES-NEXT:   };
+}
+
+struct TwoFields { int v; int w; };
+struct Holder { TwoFields y; };
+
+void repeated_subobject_designator() {
+  Holder h1 = {
+    .y.v = 1,
+    .y.w = 2,
+  };
+}
+
+struct WithArrayField { int vals[3]; int n; };
+
+void array_designator() {
+  WithArrayField wa1 = {
+    .vals[0] = 1,
+    .n = 1,
+  };
+
+  WithArrayField wa2 = {
+    .vals[0] = 1,
+    .n = 1
+  };
+  // CHECK-MESSAGES: :[[@LINE-2]]:11: warning: initializer list should have a trailing comma
+  // CHECK-FIXES: WithArrayField wa2 = {
+  // CHECK-FIXES-NEXT:     .vals[0] = 1,
+  // CHECK-FIXES-NEXT:     .n = 1,
+  // CHECK-FIXES-NEXT:   };
+}

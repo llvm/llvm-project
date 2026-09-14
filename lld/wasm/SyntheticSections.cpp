@@ -733,6 +733,9 @@ void LinkingSection::writeBody() {
             writeUleb128(sub.os, dataSym->getVA(), "data offset");
           }
           writeUleb128(sub.os, dataSym->getSize(), "data size");
+        } else if (auto *commonSym = dyn_cast<CommonSymbol>(sym)) {
+          writeUleb128(sub.os, commonSym->getSize(), "common size");
+          writeU8(sub.os, commonSym->getAlignment(), "common alignment");
         }
       } else {
         auto *s = cast<OutputSectionSymbol>(sym);
