@@ -134,6 +134,8 @@ struct ExtractSliceOpInterface
         cstr.bound(value)[dim] == extractSliceOp.getMixedSizes()[i];
         int64_t staticStride = extractSliceOp.getStaticStrides()[i];
         if (staticStride > 0) {
+          if (auto sizeValue = llvm::dyn_cast<Value>(extractSliceOp.getMixedSizes()[i]))
+            cstr.populateConstraints(sizeValue, std::nullopt);
           // Encode in-bounds slice constraint:
           OpFoldResult offset = extractSliceOp.getMixedOffsets()[i];
           AffineExpr offsetExpr = cstr.getExpr(offset);
