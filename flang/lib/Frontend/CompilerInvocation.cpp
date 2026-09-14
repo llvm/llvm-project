@@ -1824,10 +1824,10 @@ bool CompilerInvocation::createFromArgs(
                                             llvm::StringRef{"whole"});
 
   // -f[no-]openacc-combined-loop-firstprivate
-  invoc.loweringOpts.setOpenACCCombinedLoopFirstprivate(args.hasFlag(
-      clang::options::OPT_fopenacc_combined_loop_firstprivate,
-      clang::options::OPT_fno_openacc_combined_loop_firstprivate,
-      /*default=*/true));
+  invoc.loweringOpts.setOpenACCCombinedLoopFirstprivate(
+      args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
+                   clang::options::OPT_fno_openacc_combined_loop_firstprivate,
+                   /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
