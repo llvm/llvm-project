@@ -1248,47 +1248,6 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
   case Stmt::HLSLOutArgExprClass:
     return false;
 
-  // ParenExprs already handled.
-  case Stmt::ParenExprClass:
-    return false;
-
-  // GenericSelectionExprs already handled.
-  case Stmt::GenericSelectionExprClass:
-    return false;
-
-  // Cases that should never be evaluated simply because they shouldn't
-  // appear in the CFG.
-  case Stmt::BreakStmtClass:
-  case Stmt::CaseStmtClass:
-  case Stmt::CompoundStmtClass:
-  case Stmt::ContinueStmtClass:
-  case Stmt::CXXForRangeStmtClass:
-  case Stmt::DefaultStmtClass:
-  case Stmt::DoStmtClass:
-  case Stmt::ForStmtClass:
-  case Stmt::GotoStmtClass:
-  case Stmt::IfStmtClass:
-  case Stmt::IndirectGotoStmtClass:
-  case Stmt::LabelStmtClass:
-  case Stmt::NoStmtClass:
-  case Stmt::NullStmtClass:
-  case Stmt::SwitchStmtClass:
-  case Stmt::WhileStmtClass:
-  case Stmt::DeferStmtClass:
-  case Expr::MSDependentExistsStmtClass:
-    return false;
-
-  // These nodes are shared in the CFG and would case caching out.
-  // Moreover, no additional evaluation required for them, the
-  // analyzer can reconstruct these values from the AST.
-  case Stmt::ImplicitValueInitExprClass:
-    return false;
-
-  // These are handled by PseudoObjectExpr
-  case Stmt::ObjCSubscriptRefExprClass:
-  case Stmt::ObjCPropertyRefExprClass:
-    return false;
-
   // FIXME: Does not call checkers
   case Stmt::GNUNullExprClass:
     return false;
@@ -1300,14 +1259,6 @@ static bool shouldJustCallCheckers(const Stmt *S, VisitKind K) {
   // FIXME: They do not call checkers
   case Expr::ConstantExprClass:
   case Stmt::ExprWithCleanupsClass:
-    return false;
-
-  // Support for MatrixSingleSubscriptExprClass is not implemented.
-  case Stmt::MatrixSingleSubscriptExprClass:
-    return false;
-
-  // Support for MatrixSubscriptExpr is not implemented.
-  case Stmt::MatrixSubscriptExprClass:
     return false;
 
   // FIXME: Does not call checkers
