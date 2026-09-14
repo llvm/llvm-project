@@ -1210,12 +1210,12 @@ std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
     unsigned Lo = Possible.countr_zero();
     unsigned W = Possible.popcount();
     if (Info.FieldWidth == 0) {
-      if (BitWidth % W != 0)
+      if (W % 8 != 0 || BitWidth % W != 0)
         return std::nullopt;
       Info.FieldWidth = W;
       Info.LaneOfField.assign(BitWidth / W, BitPackInfo::NoLane);
     }
-    if (W != Info.FieldWidth || Lo % W != 0 || Lo < ShlAmts[Idx])
+    if (W != Info.FieldWidth || Lo % W != 0)
       return std::nullopt;
     unsigned Field = Lo / W;
     if (Info.LaneOfField[Field] != BitPackInfo::NoLane)
@@ -1223,7 +1223,7 @@ std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
     Info.LaneOfField[Field] = Idx;
     Info.LShrAmts[Idx] = Lo - ShlAmts[Idx];
   }
-  if (Info.FieldWidth == 0 || Info.FieldWidth % 8 != 0)
+  if (Info.FieldWidth == 0)
     return std::nullopt;
   return Info;
 }
@@ -1242,7 +1242,8 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
 }
 
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth) {
+                    unsigned ShiftWidth, unsigned &NumInsts) {
+  NumInsts = 0;
   auto *VecTy = cast<FixedVectorType>(X->getType());
   unsigned BitWidth = VecTy->getScalarSizeInBits();
   assert(BitWidth % 8 == 0 &&
@@ -1255,10 +1256,12 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
         Z && ShiftWidth == 8 &&
         Z->getSrcTy() == FixedVectorType::get(Builder.getInt8Ty(), NumElts))
       Y = Z->getOperand(0);
-    else
+    else {
       Y = Builder.CreateTrunc(
           Y, FixedVectorType::get(IntegerType::get(X->getContext(), ShiftWidth),
                                   NumElts));
+      ++NumInsts;
+    }
   }
   if (Info.needsShift()) {
     SmallVector<Constant *> Amts;
@@ -1266,28 +1269,32 @@ Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
       Amts.push_back(
           ConstantInt::get(IntegerType::get(X->getContext(), ShiftWidth), A));
     Y = Builder.CreateLShr(Y, ConstantVector::get(Amts));
+    ++NumInsts;
   }
   unsigned InBytes = NumElts * (ShiftWidth / 8);
   auto *ByteTy = FixedVectorType::get(Builder.getInt8Ty(), InBytes);
   SmallVector<int> Mask =
       getBitPackMask(Info, BitWidth / 8, NumElts, ShiftWidth / 8);
+  auto *IntTy = IntegerType::get(X->getContext(), BitWidth);
   // A plain byte reversal of the shifted lanes is a bswap.
-  if (ShuffleVectorInst::isReverseMask(Mask, InBytes))
-    return Builder.CreateUnaryIntrinsic(
-        Intrinsic::bswap,
-        Builder.CreateBitCast(Y, IntegerType::get(X->getContext(), BitWidth)));
+  if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
+    NumInsts += 2;
+    return Builder.CreateUnaryIntrinsic(Intrinsic::bswap,
+                                        Builder.CreateBitCast(Y, IntTy));
+  }
   // An identity byte order needs no shuffle.
-  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes))
-    return Builder.CreateBitCast(Y,
-                                 IntegerType::get(X->getContext(), BitWidth));
+  if (ShuffleVectorInst::isIdentityMask(Mask, InBytes)) {
+    ++NumInsts;
+    return Builder.CreateBitCast(Y, IntTy);
+  }
   Value *Packed = Builder.CreateShuffleVector(
       Builder.CreateBitCast(Y, ByteTy),
       is_contained(Info.LaneOfField, BitPackInfo::NoLane)
           ? Constant::getNullValue(ByteTy)
           : PoisonValue::get(ByteTy),
       Mask);
-  return Builder.CreateBitCast(Packed,
-                               IntegerType::get(X->getContext(), BitWidth));
+  NumInsts += 3;
+  return Builder.CreateBitCast(Packed, IntTy);
 }
 
 } // namespace llvm::slpvectorizer

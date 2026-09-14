@@ -2686,7 +2686,7 @@ private:
   std::optional<BitPackInfo> computeBitPackLayout(const TreeEntry &TE) const;
 
   /// Checks if the tree entry is the root of such a reduction, the tree nodes
-  /// are in the expected state and it is profitable to model as a bitcast.
+  /// are in the expected state and it is profitable to model as a bit pack.
   bool matchesBitPack(const TreeEntry &TE) const;
 
   /// True if the node's lanes are a zext from i8, so compacting them to bytes
@@ -13743,8 +13743,7 @@ BoUpSLP::computeBitPackLayout(const TreeEntry &TE) const {
          (TE.getOpcode() == Instruction::And ||
           TE.getOpcode() == Instruction::Shl) &&
          "Expected And or Shl node.");
-  Type *ScalarTy = TE.getMainOp()->getType();
-  const unsigned BitWidth = DL->getTypeSizeInBits(ScalarTy);
+  const unsigned BitWidth = DL->getTypeSizeInBits(TE.getMainOp()->getType());
   const TreeEntry *ShlTE = &TE;
   const TreeEntry *MaskTE = nullptr;
   if (TE.getOpcode() == Instruction::And) {
@@ -13837,7 +13836,7 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
   if (!Info)
     return false;
   auto *VecTy =
-      cast<VectorType>(getWidenedType(ScalarTy, TE.getVectorFactor()));
+      cast<FixedVectorType>(getWidenedType(ScalarTy, TE.getVectorFactor()));
   FastMathFlags FMF;
   InstructionCost VecCost =
       TTI->getArithmeticReductionCost(Instruction::Or, VecTy, FMF, CostKind) +
@@ -13852,8 +13851,8 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
   unsigned ShiftWidth;
   bool FreeByteTrunc = isByteZExtNode(*LhsTE);
   InstructionCost PackCost =
-      getBitPackCost(*TTI, cast<FixedVectorType>(VecTy), ScalarTy, *Info,
-                     FreeByteTrunc, CostKind, TLI, TE.getMainOp(), ShiftWidth);
+      getBitPackCost(*TTI, VecTy, ScalarTy, *Info, FreeByteTrunc, CostKind, TLI,
+                     TE.getMainOp(), ShiftWidth);
   return PackCost.isValid() && PackCost <= VecCost;
 }
 
@@ -19172,6 +19171,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         *TTI, SLPReVec, ScalarTy,
         cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
         ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
+    // Scale the extract cost to the subtree's execution frequency: the
+    // subtree and gather costs it is compared against are already loop-scaled.
+    if (KeepCost.isValid() && KeepCost != 0)
+      KeepCost *= getEntryEffectiveScale(*TE);
     // Add the cost of the subtree itself, computed before any trimming:
     // trimming of the subtree's own nodes would otherwise make it look
     // artificially cheap.
@@ -24542,8 +24545,9 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           *TTI, cast<FixedVectorType>(X->getType()), ScalarTy, *Info,
           FreeByteTrunc, CostKind, TLI, E->getMainOp(), ShiftWidth);
       assert(PackCost.isValid() && "Expected valid cost.");
-      Value *V = buildBitPack(Builder, X, *Info, ShiftWidth);
-      ++NumVectorInstructions;
+      unsigned NumInsts;
+      Value *V = buildBitPack(Builder, X, *Info, ShiftWidth, NumInsts);
+      NumVectorInstructions += NumInsts;
       E->VectorizedValue = V;
       return V;
     }

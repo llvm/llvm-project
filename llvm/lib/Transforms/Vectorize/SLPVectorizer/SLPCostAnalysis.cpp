@@ -320,12 +320,15 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
              [&](uint64_t A) { return A == Info.LShrAmts.front(); })
           ? TTI::OK_UniformConstantValue
           : TTI::OK_NonUniformConstantValue,
-      all_of(Info.LShrAmts, isPowerOf2_64) ? TTI::OP_PowerOf2 : TTI::OP_None};
+      all_of(Info.LShrAmts,
+             [](uint64_t A) { return A == 0 || isPowerOf2_64(A); })
+          ? TTI::OP_PowerOf2
+          : TTI::OP_None};
   // After the shift the field content of each lane sits in the low bits of
   // the lane, so the packing is a single byte shuffle of the shifted lanes.
   // Pick the cheapest shift width: the narrowest type still holding the field
   // content is not always the cheapest (e.g. missing narrow variable shifts).
-  Type *Int8Ty = IntegerType::get(SrcTy->getContext(), 8);
+  Type *Int8Ty = Type::getInt8Ty(SrcTy->getContext());
   assert(BitWidth % 8 == 0 &&
          "The byte-multiple field width divides the result bit width.");
   unsigned OutBytes = BitWidth / 8;

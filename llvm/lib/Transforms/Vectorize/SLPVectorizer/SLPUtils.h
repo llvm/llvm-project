@@ -449,8 +449,9 @@ SmallVector<int> getBitPackMask(const BitPackInfo &Info, unsigned NumBytes,
                                 unsigned NumElts, unsigned BytesPerLane);
 
 /// Builds the bitfield packing of X per the layout and the shift width.
+/// \p NumInsts returns the number of emitted instructions.
 Value *buildBitPack(IRBuilderBase &Builder, Value *X, const BitPackInfo &Info,
-                    unsigned ShiftWidth);
+                    unsigned ShiftWidth, unsigned &NumInsts);
 
 } // namespace llvm::slpvectorizer
 
