@@ -8702,6 +8702,7 @@ cc_library(
         ":ControlFlowDialect",
         ":ConversionPassIncGen",
         ":FuncDialect",
+        ":FunctionInterfaces",
         ":Pass",
         ":SCFDialect",
         ":TransformUtils",

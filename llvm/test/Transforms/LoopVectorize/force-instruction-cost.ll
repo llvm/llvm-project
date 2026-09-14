@@ -6,7 +6,7 @@
 define void @int_induction(ptr noalias %dst, i64 %n) {
 ; FORCED1-LABEL: 'int_induction'
 ; FORCED1:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; FORCED1:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
+; FORCED1:  Cost of 1 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; FORCED1:  Cost of 1 for VF 2: CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; FORCED1:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep>, ir<1>
 ; FORCED1:  Cost of 1 for VF 2: WIDEN store vp<[[VP5]]>, ir<%iv>
@@ -15,7 +15,7 @@ define void @int_induction(ptr noalias %dst, i64 %n) {
 ;
 ; FORCED3-LABEL: 'int_induction'
 ; FORCED3:  Cost of 3 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; FORCED3:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
+; FORCED3:  Cost of 3 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; FORCED3:  Cost of 3 for VF 2: CLONE ir<%gep> = getelementptr inbounds ir<%dst>, vp<[[VP4]]>
 ; FORCED3:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds i64, ir<%gep>, ir<1>
 ; FORCED3:  Cost of 3 for VF 2: WIDEN store vp<[[VP5]]>, ir<%iv>
@@ -40,8 +40,8 @@ exit:
 define void @fp_induction_scalar_users(ptr noalias %dst, i64 %n) {
 ; FORCED1-LABEL: 'fp_induction_scalar_users'
 ; FORCED1:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; FORCED1:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
-; FORCED1:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
+; FORCED1:  Cost of 1 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
+; FORCED1:  Cost of 1 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; FORCED1:  Cost of 1 for VF 2: WIDEN ir<%idx> = mul ir<%iv>, ir<3>
 ; FORCED1:  Cost of 1 for VF 2: REPLICATE ir<%gep> = getelementptr inbounds ir<%dst>, ir<%idx>
 ; FORCED1:  Cost of 1 for VF 2: REPLICATE store vp<[[VP6]]>, ir<%gep>
@@ -50,8 +50,8 @@ define void @fp_induction_scalar_users(ptr noalias %dst, i64 %n) {
 ;
 ; FORCED3-LABEL: 'fp_induction_scalar_users'
 ; FORCED3:  Cost of 3 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
-; FORCED3:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
-; FORCED3:  Cost of 0 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
+; FORCED3:  Cost of 3 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<0.000000e+00> + vp<[[VP4:%[0-9]+]]> * ir<1.000000e+00>
+; FORCED3:  Cost of 3 for VF 2: vp<[[VP6:%[0-9]+]]> = SCALAR-STEPS vp<[[VP5]]>, ir<1.000000e+00>, vp<[[VP0]]>
 ; FORCED3:  Cost of 3 for VF 2: WIDEN ir<%idx> = mul ir<%iv>, ir<3>
 ; FORCED3:  Cost of 3 for VF 2: REPLICATE ir<%gep> = getelementptr inbounds ir<%dst>, ir<%idx>
 ; FORCED3:  Cost of 3 for VF 2: REPLICATE store vp<[[VP6]]>, ir<%gep>

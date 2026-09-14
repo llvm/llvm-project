@@ -16,6 +16,7 @@
 #define _LIBSYCL___IMPL_QUEUE_HPP
 
 #include <sycl/__impl/async_handler.hpp>
+#include <sycl/__impl/context.hpp>
 #include <sycl/__impl/device.hpp>
 #include <sycl/__impl/event.hpp>
 #include <sycl/__impl/handler.hpp>

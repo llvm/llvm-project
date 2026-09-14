@@ -840,9 +840,19 @@ class Base(unittest.TestCase):
 
     def getBuildDirBasename(self):
         if self.SHARED_BUILD_TESTCASE:
-            return self.__class__.__module__
+            return self.__class__.__module__ + self._getVariantSuffix()
         else:
             return self.__class__.__module__ + "." + self.testMethodName
+
+    def _getVariantSuffix(self) -> str:
+        """Return a suffix identifying the active build variants."""
+        parts = []
+        if debug_info := self.getDebugInfo():
+            parts.append(debug_info)
+        for variant in _test_variants:
+            if value := self.getVariant(variant.name):
+                parts.append(value)
+        return "." + "_".join(parts) if parts else ""
 
     def getBuildDir(self):
         """Return the full path to the current test."""
@@ -2230,9 +2240,6 @@ class LLDBTestCaseFactory(type):
 
             else:
                 newattrs[attrname] = attrvalue
-
-        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-            newattrs["SHARED_BUILD_TESTCASE"] = False
 
         return super(LLDBTestCaseFactory, cls).__new__(cls, name, bases, newattrs)
 

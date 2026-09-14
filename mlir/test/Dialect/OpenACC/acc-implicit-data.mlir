@@ -256,7 +256,7 @@ func.func @test_device_global_in_parallel() {
 }
 
 // CHECK-LABEL: func.func @test_device_global_in_parallel
-// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) implicit(true) name("") -> memref<10xf32, #gpu.address_space<global>>
+// CHECK: acc.deviceptr varPtr({{.*}} : memref<10xf32, #gpu.address_space<global>>) implicit(true) name("device_global") -> memref<10xf32, #gpu.address_space<global>>
 // CHECK-NOT: acc.copyin
 // CHECK-NOT: acc.copyout
 

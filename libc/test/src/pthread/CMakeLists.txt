@@ -20,7 +20,10 @@ add_libc_test(
     libc.src.pthread.pthread_attr_setstack
     libc.src.pthread.pthread_attr_getschedpolicy
     libc.src.pthread.pthread_attr_setschedpolicy
+    libc.src.pthread.pthread_attr_getscope
+    libc.src.pthread.pthread_attr_setscope
     libc.hdr.errno_macros
+    libc.hdr.pthread_macros
     libc.hdr.sched_macros
 )
 
