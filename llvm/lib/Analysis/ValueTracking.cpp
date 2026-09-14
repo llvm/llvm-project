@@ -243,6 +243,35 @@ haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
   return NoCommonBitsSetResult::Unknown;
 }
 
+static bool haveNoCommonBitsSetFromAssume(const Value *LHS, const Value *RHS,
+                                           const SimplifyQuery &SQ) {
+  if (!SQ.AC || !SQ.CxtI)
+    return false;
+
+  for (AssumptionCache::ResultElem &Elem : SQ.AC->assumptionsFor(LHS)) {
+    if (!Elem.Assume || Elem.Index != AssumptionCache::ExprResultIdx)
+      continue;
+
+    AssumeInst *I = cast<AssumeInst>(Elem.Assume);
+    assert(I->getFunction() == SQ.CxtI->getFunction() &&
+           "Got assumption for the wrong function!");
+
+    CmpPredicate Pred;
+    Value *AndOp;
+    if (!match(I->getArgOperand(0), m_c_ICmp(Pred, m_Value(AndOp), m_Zero())) ||
+        Pred != ICmpInst::ICMP_EQ)
+      continue;
+
+    if (!match(AndOp, m_c_And(m_Specific(LHS), m_Specific(RHS))))
+      continue;
+
+    if (isValidAssumeForContext(I, SQ))
+      return true;
+  }
+
+  return false;
+}
+
 NoCommonBitsSetResult
 llvm::getNoCommonBitsSetResult(const WithCache<const Value *> &LHSCache,
                                const WithCache<const Value *> &RHSCache,
@@ -266,6 +295,9 @@ llvm::getNoCommonBitsSetResult(const WithCache<const Value *> &LHSCache,
 
   if (KnownBits::haveNoCommonBitsSet(LHSCache.getKnownBits(SQ),
                                      RHSCache.getKnownBits(SQ)))
+    return NoCommonBitsSetResult::Known;
+
+  if (haveNoCommonBitsSetFromAssume(LHS, RHS, SQ))
     return NoCommonBitsSetResult::Known;
 
   if (Result == NoCommonBitsSetResult::OnlyIfUndefIgnored ||

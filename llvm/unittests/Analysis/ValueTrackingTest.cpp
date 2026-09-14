@@ -3305,6 +3305,118 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
               getNoCommonBitsSetResult(RHS2, LHS2, DL));
   }
   {
+    // An assume proving (X & Y) == 0 is a relational fact between two
+    // non-constant values, so it cannot be derived from computeKnownBits on
+    // X and Y in isolation. Check that it is still recognized directly.
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+  define i32 @test(i32 %X, i32 %Y) {
+    %and = and i32 %Y, %X
+    %cmp = icmp eq i32 %and, 0
+    call void @llvm.assume(i1 %cmp)
+    %CxtI = add i32 %X, %Y
+    ret i32 %CxtI
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+    AssumptionCache AC(*F);
+
+    Value *LHS = F->getArg(0);
+    Value *RHS = F->getArg(1);
+    auto *CxtI = findInstructionByNameOrNull(F, "CxtI");
+
+    SimplifyQuery SQ(DL, /*DT=*/nullptr, &AC, CxtI);
+    EXPECT_TRUE(haveNoCommonBitsSet(LHS, RHS, SQ));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(LHS, RHS, SQ));
+    EXPECT_TRUE(haveNoCommonBitsSet(RHS, LHS, SQ));
+    EXPECT_EQ(NoCommonBitsSetResult::Known,
+              getNoCommonBitsSetResult(RHS, LHS, SQ));
+  }
+  {
+    // Without a context instruction the assume cannot be used at all.
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+  define i32 @test(i32 %X, i32 %Y) {
+    %and = and i32 %Y, %X
+    %cmp = icmp eq i32 %and, 0
+    call void @llvm.assume(i1 %cmp)
+    %CxtI = add i32 %X, %Y
+    ret i32 %CxtI
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+    AssumptionCache AC(*F);
+
+    Value *LHS = F->getArg(0);
+    Value *RHS = F->getArg(1);
+
+    SimplifyQuery SQ(DL, /*DT=*/nullptr, &AC, /*CxtI=*/nullptr);
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, SQ));
+    EXPECT_EQ(NoCommonBitsSetResult::Unknown,
+              getNoCommonBitsSetResult(LHS, RHS, SQ));
+  }
+  {
+    // The assume proves nothing about %Z, so it must not be used to justify
+    // that %X and %Z share no bits.
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+  define i32 @test(i32 %X, i32 %Y, i32 %Z) {
+    %and = and i32 %Y, %X
+    %cmp = icmp eq i32 %and, 0
+    call void @llvm.assume(i1 %cmp)
+    %CxtI = add i32 %X, %Z
+    ret i32 %CxtI
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+    AssumptionCache AC(*F);
+
+    Value *LHS = F->getArg(0);
+    Value *RHS = F->getArg(2);
+    auto *CxtI = findInstructionByNameOrNull(F, "CxtI");
+
+    SimplifyQuery SQ(DL, /*DT=*/nullptr, &AC, CxtI);
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, SQ));
+    EXPECT_EQ(NoCommonBitsSetResult::Unknown,
+              getNoCommonBitsSetResult(LHS, RHS, SQ));
+  }
+  {
+    // The assume does not dominate the context instruction (it's guarded by
+    // a branch that might not be taken), so it must not be used.
+    auto M = parseModule(R"(
+  declare void @llvm.assume(i1)
+  define i32 @test(i32 %X, i32 %Y, i1 %cond) {
+  entry:
+    br i1 %cond, label %assume_bb, label %add_bb
+  assume_bb:
+    %and = and i32 %Y, %X
+    %cmp = icmp eq i32 %and, 0
+    call void @llvm.assume(i1 %cmp)
+    br label %add_bb
+  add_bb:
+    %CxtI = add i32 %X, %Y
+    ret i32 %CxtI
+  })");
+
+    auto *F = M->getFunction("test");
+    const DataLayout &DL = M->getDataLayout();
+    AssumptionCache AC(*F);
+    DominatorTree DT(*F);
+
+    Value *LHS = F->getArg(0);
+    Value *RHS = F->getArg(1);
+    auto *CxtI = findInstructionByNameOrNull(F, "CxtI");
+
+    SimplifyQuery SQ(DL, &DT, &AC, CxtI);
+    EXPECT_FALSE(haveNoCommonBitsSet(LHS, RHS, SQ));
+    EXPECT_EQ(NoCommonBitsSetResult::Unknown,
+              getNoCommonBitsSetResult(LHS, RHS, SQ));
+  }
+  {
     // Check for (A & B) and ~(A | B) in vector version
     auto M = parseModule(R"(
   define void @test(<2 x i32> %A, <2 x i32> %B) {
