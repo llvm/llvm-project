@@ -21,7 +21,7 @@ struct PageAlignedInt {
 };
 
 TEST(LlvmLibcInlineAnyTest, LoadAndStore) {
-  LIBC_NAMESPACE::InlineAny<16> any;
+  LIBC_NAMESPACE::InlineAny<sizeof(UInt128), alignof(UInt128)> any;
 
   any.store(27);
   EXPECT_EQ(any.load<int>(), 27);
