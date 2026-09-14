@@ -148,7 +148,9 @@ struct ManuallyTriggeredTask {
   std::mutex M;
   std::condition_variable CV;
   bool Flag = false;
-  ol_event_handle_t CompleteEvent;
+  bool Enqueued = false;
+  bool Triggered = false;
+  ol_event_handle_t CompleteEvent = nullptr;
 
   ol_result_t enqueue(ol_queue_handle_t Queue) {
     if (auto Err = olLaunchHostFunction(
@@ -159,7 +161,17 @@ struct ManuallyTriggeredTask {
             this))
       return Err;
 
-    return olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &CompleteEvent);
+    if (auto Err = olCreateEvent(Queue, OL_EVENT_FLAGS_NONE, &CompleteEvent)) {
+      // The host callback is already waiting. Unblock it without treating the
+      // task as fully enqueued, since there is no completion event to sync.
+      Flag = true;
+      CV.notify_one();
+      CompleteEvent = nullptr;
+      return Err;
+    }
+
+    Enqueued = true;
+    return nullptr;
   }
 
   void wait() {
@@ -169,10 +181,22 @@ struct ManuallyTriggeredTask {
   }
 
   ol_result_t trigger() {
+    if (Triggered)
+      return nullptr;
+    Triggered = true;
     Flag = true;
     CV.notify_one();
 
+    if (!CompleteEvent)
+      return nullptr;
     return olSyncEvent(CompleteEvent);
+  }
+
+  /// ASSERT macros return from the test before later statements run. Release a
+  /// waiting host callback so teardown does not destroy it while still blocked.
+  ~ManuallyTriggeredTask() {
+    if (Enqueued && !Triggered)
+      (void)trigger();
   }
 };
 
