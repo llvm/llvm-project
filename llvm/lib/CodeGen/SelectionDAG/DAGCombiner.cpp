@@ -20644,7 +20644,7 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   // fold (uint_to_fp x) -> (uint_to_fp (trunc x)) when the value of x is known
   // to fit in a narrower type the target can convert from directly.
   LLVMContext &Ctx = *DAG.getContext();
-  unsigned ScalarBits = OpVT.getScalarType().getSizeInBits();
+  unsigned ScalarBits = OpVT.getScalarSizeInBits();
   unsigned ActiveBits = DAG.computeKnownBits(N0).countMaxActiveBits();
   // Narrowing to i1 turns the conversion into a select, which is not a win.
   for (unsigned Bits = bit_ceil(std::max(2u, ActiveBits)); Bits < ScalarBits;
