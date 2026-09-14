@@ -386,6 +386,7 @@ readability/*
 | {doc}`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>` |  |
 | {doc}`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>` | Yes |
 | {doc}`readability-avoid-unconditional-preprocessor-if <readability/avoid-unconditional-preprocessor-if>` |  |
+| {doc}`readability-block-size <readability/block-size>` |  |
 | {doc}`readability-braces-around-statements <readability/braces-around-statements>` | Yes |
 | {doc}`readability-const-return-type <readability/const-return-type>` | Yes |
 | {doc}`readability-container-contains <readability/container-contains>` | Yes |
