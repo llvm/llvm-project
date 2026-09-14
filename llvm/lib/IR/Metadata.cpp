@@ -557,6 +557,7 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(To && "Expected valid value");
   assert(From != To && "Expected changed value");
   assert(&From->getContext() == &To->getContext() && "Expected same context");
+  assert(!isa<ConstantData>(From) && "Cannot replace constant data");
 
   auto &Store = From->getContext().pImpl->ValuesAsMetadata;
   auto I = Store.find(From);
@@ -571,17 +572,6 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(MD && "Expected valid metadata");
   assert(MD->getValue() == From && "Expected valid mapping");
   Store.erase(I);
-
-  // The uses of a ConstantData node are not tracked, so the node can only be
-  // retyped in place.
-  if (isa<ConstantData>(From)) {
-    assert(isa<ConstantData>(To) && !Store.contains(To) &&
-           "Cannot merge or drop a ConstantData node");
-    To->IsUsedByMD = true;
-    MD->V = To;
-    Store[To] = MD;
-    return;
-  }
 
   // Move the uses to To's node. Uses of a function-local value are dropped if
   // it becomes a local of another function or replaces a constant.
