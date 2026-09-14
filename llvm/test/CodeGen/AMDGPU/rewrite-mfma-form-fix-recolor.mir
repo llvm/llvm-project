@@ -82,6 +82,8 @@ body: |
   bb.2:
     %acc.sub0 = AV_MOV_B32_IMM_PSEUDO 7, implicit $exec
     %ld:vgpr_32 = DS_READ_B32_gfx9 %acc.sub0, 0, 0, implicit $exec :: (load (s32), addrspace 3)
+    ; Full-register use of %acc: bb.2 only redefines sub0, so without this the
+    ; verifier reports "Multiple connected components in live interval".
     dead %conn:vreg_64_align2 = COPY %acc
     S_ENDPGM 0, implicit %ld, implicit %p0, implicit %p1, implicit %p2, implicit %p3, implicit %p4, implicit %p5, implicit %p6, implicit %p7, implicit %p8
 ...
