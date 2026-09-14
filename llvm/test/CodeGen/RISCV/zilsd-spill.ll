@@ -29,7 +29,7 @@ define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwi
   ; RV32I-NEXT:   frame-setup SW killed $x27, $x2, 12 :: (store (s32) into %stack.13)
   ; RV32I-NEXT:   SW killed renamable $x11, $x2, 0 :: (store (s32) into %ir.1, align 8)
   ; RV32I-NEXT:   SW killed renamable $x12, $x2, 4 :: (store (s32) into %ir.1 + 4, basealign 8)
-  ; RV32I-NEXT:   $x11 = ADDI $x2, 0
+  ; RV32I-NEXT:   $x11 = lr-split ADDI $x2, 0
   ; RV32I-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-NEXT:   $x14 = COPY $x0
@@ -75,7 +75,7 @@ define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwi
   ; RV32I-ZILSD-NEXT:   renamable $x17 = COPY $x12
   ; RV32I-ZILSD-NEXT:   renamable $x16 = COPY $x11
   ; RV32I-ZILSD-NEXT:   SD_RV32 killed renamable $x16_x17, $x2, 16 :: (store (s64) into %ir.1)
-  ; RV32I-ZILSD-NEXT:   $x11 = ADDI $x2, 16
+  ; RV32I-ZILSD-NEXT:   $x11 = lr-split ADDI $x2, 16
   ; RV32I-ZILSD-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-ZILSD-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-ZILSD-NEXT:   $x14 = COPY $x0
@@ -114,7 +114,7 @@ define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwi
   ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x17 = COPY $x12
   ; RV32I-ZILSD-UNALIGNED-NEXT:   renamable $x16 = COPY $x11
   ; RV32I-ZILSD-UNALIGNED-NEXT:   SD_RV32 killed renamable $x16_x17, $x2, 16 :: (store (s64) into %ir.1)
-  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x11 = ADDI $x2, 16
+  ; RV32I-ZILSD-UNALIGNED-NEXT:   $x11 = lr-split ADDI $x2, 16
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-ZILSD-UNALIGNED-NEXT:   $x14 = COPY $x0
@@ -153,7 +153,7 @@ define i64 @cmpxchg_i64_monotonic_monotonic(ptr %ptr, i64 %cmp, i64 %val) nounwi
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x17 = COPY $x12
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   renamable $x16 = COPY $x11
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   SD_RV32 killed renamable $x16_x17, $x2, 16 :: (store (s64) into %ir.1)
-  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x11 = ADDI $x2, 16
+  ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x11 = lr-split ADDI $x2, 16
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x12 = COPY killed renamable $x13
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x13 = COPY killed renamable $x14
   ; RV32I-ZILSD-4BYTEALIGN-NEXT:   $x14 = COPY $x0

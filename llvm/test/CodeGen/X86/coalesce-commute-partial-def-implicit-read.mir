@@ -23,18 +23,18 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
   ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   [[MOV64ri:%[0-9]+]]:gr64 = MOV64ri 204983918657971834
-  ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.6(0x3efbefbf), %bb.3(0x41041041)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-NEXT:   dead $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
+  ; CHECK-NEXT:   dead $edi = lr-split MOV32r0 implicit-def dead $eflags, implicit-def $rdi
   ; CHECK-NEXT:   $rsi = COPY [[MOV32r0_1]]
   ; CHECK-NEXT:   CALL64r [[MOV32r0_]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
@@ -47,7 +47,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr64_with_sub_8bit = MOV32ri64 1
   ; CHECK-NEXT:   CMP64rr [[COPY1]], [[MOV64ri]], implicit-def $eflags
-  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32ri 0
+  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32ri 0
   ; CHECK-NEXT:   JCC_1 %bb.5, 4, implicit killed $eflags
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -56,7 +56,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[MOV32r0_2:%[0-9]+]].sub_8bit:gr64_with_sub_8bit = MOV8rm $noreg, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr64_with_sub_8bit = COPY [[MOV32r0_2]]
-  ; CHECK-NEXT:   [[MOV32r0_2:%[0-9]+]]:gr64_with_sub_8bit = MOV32ri64 1
+  ; CHECK-NEXT:   [[MOV32r0_2:%[0-9]+]]:gr64_with_sub_8bit = lr-split MOV32ri64 1
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:

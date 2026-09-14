@@ -11,8 +11,8 @@ body: |
   ; CHECK-NEXT:   liveins: $sgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[V_PK_MOV_B32_:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[V_PK_MOV_B32_1:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
-  ; CHECK-NEXT:   [[V_PK_MOV_B32_2:%[0-9]+]]:vreg_64_align2 = V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[V_PK_MOV_B32_1:%[0-9]+]]:vreg_64_align2 = lr-split V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
+  ; CHECK-NEXT:   [[V_PK_MOV_B32_2:%[0-9]+]]:vreg_64_align2 = lr-split V_PK_MOV_B32 8, 0, 8, 0, 0, 0, 0, 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0
   ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
   ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec

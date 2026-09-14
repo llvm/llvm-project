@@ -28,7 +28,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[DEF:%[0-9]+]].sub0:sgpr_128 = IMPLICIT_DEF
-  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = IMPLICIT_DEF
+  ; CHECK-NEXT:   undef [[S_MOV_B32_:%[0-9]+]].sub0:sgpr_128 = lr-split IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   S_NOP 0, implicit [[DEF]]
@@ -75,7 +75,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[S_MOV_B32_1:%[0-9]+]].sub0:sgpr_128 = S_MOV_B32 123
-  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = S_MOV_B32 123
+  ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sgpr_32 = lr-split S_MOV_B32 123
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   S_NOP 0, implicit [[S_MOV_B32_1]]

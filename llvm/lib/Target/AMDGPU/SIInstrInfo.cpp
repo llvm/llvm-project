@@ -10444,7 +10444,7 @@ bool SIInstrInfo::canAddToBBProlog(const MachineInstr &MI) const {
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
 
-  // See if this is Liverange split instruction inserted for SGPR or
+  // See if this is a liverange split COPY or remat inserted for SGPR or
   // wwm-register. The implicit def inserted for wwm-registers should also be
   // included as they can appear at the bb begin.
   bool IsLRSplitInst = MI.getFlag(MachineInstr::LRSplit);
@@ -10452,8 +10452,11 @@ bool SIInstrInfo::canAddToBBProlog(const MachineInstr &MI) const {
     return false;
 
   Register Reg = MI.getOperand(0).getReg();
-  if (RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg)))
-    return IsLRSplitInst;
+  if (RI.isSGPRClass(RI.getRegClassForReg(MRI, Reg))) {
+    // sgpr-regalloc inserts these above any EXEC write at the bb begin; only
+    // exec independent instructions can be part of the prolog there.
+    return IsLRSplitInst && (MI.isCopy() || isSALU(MI) || isSMRD(MI));
+  }
 
   return MFI->isWWMReg(Reg);
 }

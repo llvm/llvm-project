@@ -57,7 +57,7 @@ body:             |
   ; CHECK-NEXT:   dead $edx = MOV32r0 implicit-def dead $eflags, implicit-def $rdx
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gr32 = lr-split COPY [[COPY]]
   ; CHECK-NEXT:   dead $ecx = MOV32r0 implicit-def dead $eflags, implicit-def $rcx
-  ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   undef [[MOV32r0_1:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags
   ; CHECK-NEXT:   CALL64r [[MOV32r0_1]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit killed $xmm0, implicit-def $rsp, implicit-def $ssp, implicit-def dead $rax
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gr64 = lr-split COPY [[COPY5]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr64 = lr-split COPY [[COPY6]]

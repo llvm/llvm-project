@@ -33,7 +33,7 @@ body:             |
     ; CHECK-NEXT: [[DEF2:%[0-9]+]]:gpr64 = IMPLICIT_DEF
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 16, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: undef [[DEF3:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def [[DEF3]]
+    ; CHECK-NEXT: undef [[DEF3:%[0-9]+]].sub_32:gpr64 = lr-split IMPLICIT_DEF implicit-def [[DEF3]]
     ; CHECK-NEXT: STRXui [[DEF3]], [[DEF]], 1 :: (store (s64) into stack + 8)
     ; CHECK-NEXT: BL 0, csr_darwin_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
     ; CHECK-NEXT: ADJCALLSTACKUP 16, 0, implicit-def dead $sp, implicit $sp
@@ -61,7 +61,7 @@ body:             |
     ; CHECK-NEXT: $x0 = COPY [[COPY1]]
     ; CHECK-NEXT: ADJCALLSTACKUP 8, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: ADJCALLSTACKDOWN 24, 0, implicit-def dead $sp, implicit $sp
-    ; CHECK-NEXT: undef [[DEF4:%[0-9]+]].sub_32:gpr64 = IMPLICIT_DEF implicit-def [[DEF4]]
+    ; CHECK-NEXT: undef [[DEF4:%[0-9]+]].sub_32:gpr64 = lr-split IMPLICIT_DEF implicit-def [[DEF4]]
     ; CHECK-NEXT: STRXui [[DEF4]], undef [[DEF]], 1 :: (store (s64) into stack + 8)
     ; CHECK-NEXT: ADJCALLSTACKUP 24, 0, implicit-def dead $sp, implicit $sp
     ; CHECK-NEXT: RET_ReallyLR

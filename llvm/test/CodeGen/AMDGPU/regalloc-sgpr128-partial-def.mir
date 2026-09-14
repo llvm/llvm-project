@@ -33,30 +33,30 @@ body: |
     S_NOP 0, implicit %2.sub1
 
     ; %1: both lanes used after barrier, rematerialized as S_MOV_B64, not shrunk.
-    ; CHECK: renamable $[[REG1LO:sgpr[0-9]+]]_[[REG1HI:sgpr[0-9]+]] = S_MOV_B64 180388627769
+    ; CHECK: renamable $[[REG1LO:sgpr[0-9]+]]_[[REG1HI:sgpr[0-9]+]] = lr-split S_MOV_B64 180388627769
     ; CHECK-NEXT: S_NOP 0, implicit renamable $[[REG1HI]]
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG1LO]]
     S_NOP 0, implicit %1.sub1
     S_NOP 0, implicit %1.sub0
 
     ; %3: only sub3 used - shrink to S_MOV_B32 with Hi_32(0x0000000700000065) = 7.
-    ; CHECK: renamable $[[REG3:sgpr[0-9]+]] = S_MOV_B32 7
+    ; CHECK: renamable $[[REG3:sgpr[0-9]+]] = lr-split S_MOV_B32 7
     ; CHECK-NEXT: S_NOP 0, implicit renamable $[[REG3]]
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG3]]
     S_NOP 0, implicit %3.sub3
     S_NOP 0, implicit %3.sub3
 
     ; %4: only sub2 used - shrink to S_MOV_B32 with Lo_32(0x0000002A00000539) = 1337.
-    ; CHECK: renamable $[[REG4:sgpr[0-9]+]] = S_MOV_B32 1337
+    ; CHECK: renamable $[[REG4:sgpr[0-9]+]] = lr-split S_MOV_B32 1337
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG4]]
     S_NOP 0, implicit %4.sub2
 
     ; %5: sub0_sub1 def, only sub1 used - shrink to S_MOV_B32 with Hi_32(0x0000002A00000539) = 42.
-    ; CHECK: renamable $[[REG5:sgpr[0-9]+]] = S_MOV_B32 42
+    ; CHECK: renamable $[[REG5:sgpr[0-9]+]] = lr-split S_MOV_B32 42
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG5]]
     S_NOP 0, implicit %5.sub1
 
-    ; CHECK: renamable $[[REG6:sgpr[0-9]+]] = S_MOV_B32 65536
+    ; CHECK: renamable $[[REG6:sgpr[0-9]+]] = lr-split S_MOV_B32 65536
     ; CHECK-NEXT: S_NOP 0, implicit killed renamable $[[REG6]]
     S_NOP 0, implicit %6.sub0
 

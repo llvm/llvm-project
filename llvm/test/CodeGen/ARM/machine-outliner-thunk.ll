@@ -96,28 +96,28 @@ entry:
 ; ARM-LABEL: name:            OUTLINED_FUNCTION_0
 ; ARM:        bb.0:
 ; ARM-NEXT:   liveins: $r10, $r9, $r8, $r7, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
-; ARM:        $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
-; ARM-NEXT:   $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
-; ARM-NEXT:   $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
-; ARM-NEXT:   $r3 = MOVi 4, 14 /* CC::al */, $noreg, $noreg
+; ARM:        $r0 = lr-split MOVi 1, 14 /* CC::al */, $noreg, $noreg
+; ARM-NEXT:   $r1 = lr-split MOVi 2, 14 /* CC::al */, $noreg, $noreg
+; ARM-NEXT:   $r2 = lr-split MOVi 3, 14 /* CC::al */, $noreg, $noreg
+; ARM-NEXT:   $r3 = lr-split MOVi 4, 14 /* CC::al */, $noreg, $noreg
 ; ARM-NEXT:   TAILJMPd @thunk_called_fn, implicit $sp
 
 ; THUMB-LABEL: name:            OUTLINED_FUNCTION_0
 ; THUMB:        bb.0:
 ; THUMB-NEXT:   liveins: $r11, $r10, $r9, $r8, $r6, $r5, $r4, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
-; THUMB:        $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
-; THUMB-NEXT:   $r1, dead $cpsr = tMOVi8 2, 14 /* CC::al */, $noreg
-; THUMB-NEXT:   $r2, dead $cpsr = tMOVi8 3, 14 /* CC::al */, $noreg
-; THUMB-NEXT:   $r3, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
+; THUMB:        $r0, dead $cpsr = lr-split tMOVi8 1, 14 /* CC::al */, $noreg
+; THUMB-NEXT:   $r1, dead $cpsr = lr-split tMOVi8 2, 14 /* CC::al */, $noreg
+; THUMB-NEXT:   $r2, dead $cpsr = lr-split tMOVi8 3, 14 /* CC::al */, $noreg
+; THUMB-NEXT:   $r3, dead $cpsr = lr-split tMOVi8 4, 14 /* CC::al */, $noreg
 ; THUMB-NEXT:   tTAILJMPdND @thunk_called_fn, 14 /* CC::al */, $noreg, implicit $sp
 
 ; MACHO-LABEL: name:            OUTLINED_FUNCTION_0
 ; MACHO:        bb.0:
 ; MACHO-NEXT:   liveins: $r7, $r6, $r5, $r4, $r11, $r10, $r8, $d15, $d14, $d13, $d12, $d11, $d10, $d9, $d8
-; MACHO:        $r0, dead $cpsr = tMOVi8 1, 14 /* CC::al */, $noreg
-; MACHO-NEXT:   $r1, dead $cpsr = tMOVi8 2, 14 /* CC::al */, $noreg
-; MACHO-NEXT:   $r2, dead $cpsr = tMOVi8 3, 14 /* CC::al */, $noreg
-; MACHO-NEXT:   $r3, dead $cpsr = tMOVi8 4, 14 /* CC::al */, $noreg
+; MACHO:        $r0, dead $cpsr = lr-split tMOVi8 1, 14 /* CC::al */, $noreg
+; MACHO-NEXT:   $r1, dead $cpsr = lr-split tMOVi8 2, 14 /* CC::al */, $noreg
+; MACHO-NEXT:   $r2, dead $cpsr = lr-split tMOVi8 3, 14 /* CC::al */, $noreg
+; MACHO-NEXT:   $r3, dead $cpsr = lr-split tMOVi8 4, 14 /* CC::al */, $noreg
 ; MACHO-NEXT:   tTAILJMPd @thunk_called_fn, 14 /* CC::al */, $noreg, implicit $sp
 
 attributes #0 = { minsize optsize }

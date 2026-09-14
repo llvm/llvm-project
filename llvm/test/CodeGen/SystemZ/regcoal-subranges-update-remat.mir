@@ -32,7 +32,7 @@ body:             |
     ; CHECK-LABEL: name: main
     ; CHECK: [[LGHI:%[0-9]+]]:gr64bit = LGHI 25
     ; CHECK-NEXT: CHIMux [[LGHI]].subreg_l32, 0, implicit-def $cc
-    ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = LGHI 25
+    ; CHECK-NEXT: [[LGHI1:%[0-9]+]]:gr64bit = lr-split LGHI 25
     ; CHECK-NEXT: undef [[LGHI1:%[0-9]+]].subreg_l32:gr64bit = MSFI [[LGHI1]].subreg_l32, -117440512
     ; CHECK-NEXT: Return implicit [[LGHI1]].subreg_l32
     %0:gr64bit = LGHI 25
@@ -51,7 +51,7 @@ body:             |
   bb.0:
     ; CHECK-LABEL: name: test_dead_at_remat_later_defined
     ; CHECK: undef [[LHI:%[0-9]+]].subreg_l32:gr128bit = LHI 0
-    ; CHECK-NEXT: [[LHI:%[0-9]+]].subreg_l64:gr128bit = LGHI 2
+    ; CHECK-NEXT: [[LHI:%[0-9]+]].subreg_l64:gr128bit = lr-split LGHI 2
     ; CHECK-NEXT: [[LHI1:%[0-9]+]]:gr32bit = LHI 1
     ; CHECK-NEXT: [[LHI:%[0-9]+]].subreg_lh32:gr128bit = COPY [[LHI1]]
     ; CHECK-NEXT: [[LGHI:%[0-9]+]]:gr64bit = LGHI 2

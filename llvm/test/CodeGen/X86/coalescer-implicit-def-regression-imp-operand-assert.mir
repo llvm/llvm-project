@@ -28,7 +28,7 @@ body:             |
   ; CHECK-NEXT:   JCC_1 %bb.5, 5, implicit killed undef $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
-  ; CHECK-NEXT:   dead $eax = MOV32r0 implicit-def dead $eflags, implicit-def $al
+  ; CHECK-NEXT:   dead $eax = lr-split MOV32r0 implicit-def dead $eflags, implicit-def $al
   ; CHECK-NEXT:   RET 0, killed undef $al
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:

@@ -91,6 +91,8 @@ SlotIndex LiveRangeEdit::rematerializeAt(
   // to false anyway in case the isDead flag of RM.OrigMI's dest register
   // is true.
   (*--MI).clearRegisterDeads(DestReg);
+  // Mark as RA inserted, like the split copies (see isBasicBlockPrologue).
+  MI->setFlag(MachineInstr::LRSplit);
   Rematted.insert(RM.ParentVNI);
   ++NumReMaterialization;
 

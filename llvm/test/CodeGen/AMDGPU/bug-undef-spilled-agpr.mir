@@ -36,7 +36,7 @@ body:             |
   ; GCN-NEXT:   $noreg = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; GCN-NEXT:   renamable $agpr0 = lr-split COPY killed renamable $vgpr62
   ; GCN-NEXT:   $exec = S_MOV_B64 killed $noreg
-  ; GCN-NEXT:   renamable $vgpr62 = IMPLICIT_DEF
+  ; GCN-NEXT:   renamable $vgpr62 = lr-split IMPLICIT_DEF
   ; GCN-NEXT:   dead renamable $vgpr62 = V_AND_B32_e32 1, killed $vgpr62, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:

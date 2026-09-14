@@ -93,10 +93,10 @@ define void @callThroughPtrWithArgs(ptr nocapture) {
 ; MIR32-DAG:  STW $r2, 20, $r1 :: (store (s32) into stack + 20)
 ; MIR32-DAG:  renamable $r11 = LWZ 8, renamable $r3 :: (dereferenceable invariant load (s32) from %ir.0 + 8)
 ; MIR32-DAG:  $r2 = LWZ 4, killed renamable $r3 :: (dereferenceable invariant load (s32) from %ir.0 + 4)
-; MIR32-DAG:  $r3 = LI 1
-; MIR32-DAG:  $r4 = LI 2
-; MIR32-DAG:  $r5 = LI 0
-; MIR32-DAG:  $r6 = LI 3
+; MIR32-DAG:  $r3 = lr-split LI 1
+; MIR32-DAG:  $r4 = lr-split LI 2
+; MIR32-DAG:  $r5 = lr-split LI 0
+; MIR32-DAG:  $r6 = lr-split LI 3
 ; MIR32-NEXT: BCTRL_LWZinto_toc 20, $r1, csr_aix32, implicit-def dead $lr, implicit-def dead $r2, implicit $ctr, implicit $rm, implicit $r11, implicit $r3, implicit $r4, implicit $r5, implicit $r6, implicit $r2, implicit-def $r1
 ; MIR32-NEXT: ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
@@ -107,9 +107,9 @@ define void @callThroughPtrWithArgs(ptr nocapture) {
 ; MIR64-DAG:  STD $x2, 40, $x1 :: (store (s64) into stack + 40)
 ; MIR64-DAG:  renamable $x11 = LD 16, renamable $x3 :: (dereferenceable invariant load (s64) from %ir.0 + 16)
 ; MIR64-DAG:  $x2 = LD 8, killed renamable $x3 :: (dereferenceable invariant load (s64) from %ir.0 + 8)
-; MIR64-DAG:  $x3 = LI8 1
-; MIR64-DAG:  $x4 = LI8 2
-; MIR64-DAG:  $x5 = LI8 3
+; MIR64-DAG:  $x3 = lr-split LI8 1
+; MIR64-DAG:  $x4 = lr-split LI8 2
+; MIR64-DAG:  $x5 = lr-split LI8 3
 ; MIR64-NEXT: BCTRL8_LDinto_toc 40, $x1, csr_ppc64, implicit-def dead $lr8, implicit-def dead $x2, implicit $ctr8, implicit $rm, implicit $x11, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1
 ; MIR64-NEXT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 

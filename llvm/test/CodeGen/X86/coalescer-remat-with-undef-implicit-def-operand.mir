@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]]
   ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_1]]
-  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def undef [[MOV32r0_2]].sub_32bit, implicit-def [[MOV32r0_2]]
+  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags, implicit-def undef [[MOV32r0_2]].sub_32bit, implicit-def [[MOV32r0_2]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
@@ -75,7 +75,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   undef [[MOV32r0_:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def [[MOV32r0_]]
   ; CHECK-NEXT:   [[MOV32r0_1:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags, implicit-def undef [[MOV32r0_1]].sub_8bit
-  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = MOV32r0 implicit-def dead $eflags, implicit-def undef [[MOV32r0_2]].sub_8bit, implicit-def [[MOV32r0_2]]
+  ; CHECK-NEXT:   undef [[MOV32r0_2:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = lr-split MOV32r0 implicit-def dead $eflags, implicit-def undef [[MOV32r0_2]].sub_8bit, implicit-def [[MOV32r0_2]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)

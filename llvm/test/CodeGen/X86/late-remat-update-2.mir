@@ -22,7 +22,7 @@
 # CHECK: bb.0.entry:
 # CHECK: $rax = MOV64ri32 -11
 # CHECK: bb.1:
-# CHECK: $rax = MOV64ri32 -11
+# CHECK: $rax = lr-split MOV64ri32 -11
 # CHECK: $rax = ADD64ri8 killed renamable $rax, 5
 # CHECK: CMP64ri8 renamable $rax
 # CHECK: RET 0, $rax
