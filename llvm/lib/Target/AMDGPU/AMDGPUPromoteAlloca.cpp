@@ -424,7 +424,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     Worklist.append(AA.Links);
     // Pull the information from links into the leader alloca.
     while (!Worklist.empty()) {
-      auto *CurLink = Worklist.pop_back_val();
+      AllocaInst *CurLink = Worklist.pop_back_val();
       auto LinkIter = AllocaAnalysisMap.find(CurLink);
       if (LinkIter != AllocaAnalysisMap.end()) {
         AllocaAnalysis &LinkAA = LinkIter->second;
@@ -460,7 +460,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
         return A->comesBefore(B);
       });
       LLVM_DEBUG({
-        for (auto *M : AA.Members)
+        for (AllocaInst *M : AA.Members)
           dbgs() << "  Members: " << *M << '\n';
       });
       Allocas.push_back(AA);
@@ -574,9 +574,10 @@ static Value *calculateVectorIndex(Value *Ptr, AllocaAnalysis &AA) {
     PHINode *IdxPhi = B.CreatePHI(B.getInt32Ty(), Phi->getNumIncomingValues(),
                                   "promotealloca.idx");
     AA.Vector.IndexCache[Ptr] = IdxPhi;
-    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
+    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
       IdxPhi->addIncoming(calculateVectorIndex(Phi->getIncomingValue(I), AA),
                           Phi->getIncomingBlock(I));
+    }
     return IdxPhi;
   }
 
