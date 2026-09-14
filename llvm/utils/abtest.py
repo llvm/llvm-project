@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Given a previous good compile narrow down miscompiles.
 # Expects two directories named "before" and "after" each containing a set of
