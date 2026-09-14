@@ -1273,6 +1273,30 @@ Expected<SimplifyCFGOptions> parseSimplifyCFGOptions(StringRef Params) {
   return Result;
 }
 
+Expected<unsigned> parseFloat2IntOptions(StringRef Params) {
+  unsigned MaxIntegerBW = 64;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("max-integer-bw=")) {
+      if (ParamName.getAsInteger(0, MaxIntegerBW)) {
+        return make_error<StringError>(
+            formatv("invalid argument to Float2Int pass max-integer-bw "
+                    "parameter: '{}'",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+      }
+    } else {
+      return make_error<StringError>(
+          formatv("invalid Float2Int pass parameter '{}'", ParamName).str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return MaxIntegerBW;
+}
+
 Expected<InstCombineOptions> parseInstCombineOptions(StringRef Params) {
   InstCombineOptions Result;
   // When specifying "instcombine" in -passes enable fix-point verification by
