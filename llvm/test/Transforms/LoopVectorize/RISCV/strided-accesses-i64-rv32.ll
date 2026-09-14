@@ -12,8 +12,8 @@ define void @single_constant_stride_int_scaled(ptr %p) vscale_range(2, 1024) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 1025, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 2, i1 true)
-; CHECK-NEXT:    [[TMP5:%.*]] = shl i32 [[INDEX]], 6
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[P]], i32 [[TMP5]]
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw i32 [[INDEX]], 6
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr nuw i8, ptr [[P]], i32 [[TMP2]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 2 x i64> @llvm.experimental.vp.strided.load.nxv2i64.p0.i32(ptr align 8 [[TMP6]], i32 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <vscale x 2 x i64> [[WIDE_MASKED_GATHER]], splat (i64 1)
 ; CHECK-NEXT:    call void @llvm.experimental.vp.strided.store.nxv2i64.p0.i32(<vscale x 2 x i64> [[TMP3]], ptr align 8 [[TMP6]], i32 64, <vscale x 2 x i1> splat (i1 true), i32 [[TMP1]])
