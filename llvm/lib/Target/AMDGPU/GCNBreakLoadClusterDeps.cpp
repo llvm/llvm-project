@@ -26,8 +26,8 @@
 /// dependencies are gone the existing load-cluster scheduler does the reorder.
 //===----------------------------------------------------------------------===//
 
-#include "GCNBreakLoadClusterDeps.h"
 #include "AMDGPU.h"
+#include "GCNBreakLoadClusterDeps.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
@@ -86,8 +86,8 @@ class GCNBreakLoadClusterDepsImpl {
     // per-coordinate VGPRs, not the reused address chain this pass targets, and
     // renaming them fights GCNNSAReassign, which deliberately picks the NSA
     // address-register layout (renaming forces the larger NSA encoding).
-    return SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isImage(MI) && MI.mayLoad() &&
-           MI.getOperand(0).isReg() &&
+    return SIInstrInfo::isVMEM(MI) && !SIInstrInfo::isImage(MI) &&
+           MI.mayLoad() && MI.getOperand(0).isReg() &&
            TRI->isVGPR(*MRI, MI.getOperand(0).getReg());
   }
 
@@ -119,8 +119,7 @@ public:
 
 // Return the set of 32-bit VGPR lanes covered by physical VGPR `Reg` (any
 // width), indexed by (lane - AMDGPU::VGPR0).
-BitVector
-GCNBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
+BitVector GCNBreakLoadClusterDepsImpl::getVGPR32Components(Register Reg) const {
   BitVector ToReturn(NumVGPR32);
   if (!TRI->isVGPR(*MRI, Reg))
     return ToReturn;
@@ -201,8 +200,7 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
       MachineInstr *NewKiller = KillerIns ? KillerIns : nullptr;
       Register OldOldReg = OldReg;
       for (MachineBasicBlock::iterator It = DefToRename->getIterator();
-           anyLanesOutside(OldRegClobbers, ClobberedSubregs) &&
-           It != MBB.end();
+           anyLanesOutside(OldRegClobbers, ClobberedSubregs) && It != MBB.end();
            ++It) {
         auto Subregs = getUsesAndDefsFor(*It);
         if (Subregs.second.anyCommon(OldRegClobbers))
@@ -314,7 +312,8 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
   // A candidate tuple occupies CandLanes 32-bit registers starting at its
   // hardware index, so its highest lane is index + CandLanes - 1.  Require the
   // whole tuple to fit under the budget, not just its first lane.
-  unsigned CandLanes = TRI->getRegSizeInBits(DefinedRegClass).getFixedValue() / 32;
+  unsigned CandLanes =
+      TRI->getRegSizeInBits(DefinedRegClass).getFixedValue() / 32;
   unsigned I;
   for (I = 0; I < DefinedRegClass.getRegisters().size(); I++) {
     if (TRI->getHWRegIndex(DefinedRegClass.getRegisters()[I]) + CandLanes >
@@ -353,9 +352,9 @@ bool GCNBreakLoadClusterDepsImpl::findReplaceRegisterOperand(
         if (RenameIt->getOperand(Op).isReg() &&
             TRI->regsOverlap(RenameIt->getOperand(Op).getReg(), OldReg) &&
             (RenameIt->getOperand(Op).isDef() ||
-             RedefinedRegs.anyCommon(getVGPR32Components(renameRegister(
-                 OldReg, DefinedRegClass.getRegisters()[I],
-                 RenameIt->getOperand(Op).getReg()))))) {
+             RedefinedRegs.anyCommon(getVGPR32Components(
+                 renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
+                                RenameIt->getOperand(Op).getReg()))))) {
           Register NewReg =
               renameRegister(OldReg, DefinedRegClass.getRegisters()[I],
                              RenameIt->getOperand(Op).getReg());
