@@ -150,7 +150,7 @@ Value::Value(const Interpreter *In, void *Ty) : Interp(In), OpaqueType(Ty) {
       if (auto *CXXRD = DtorTy->getAsCXXRecordDecl()) {
         if (llvm::Expected<llvm::orc::ExecutorAddr> Addr =
                 Interp.CompileDtorCall(CXXRD))
-          DtorF = reinterpret_cast<void *>(Addr->getValue());
+          DtorF = reinterpret_cast<void *>(Addr->toPtr<void(void*)>());
         else
           llvm::logAllUnhandledErrors(Addr.takeError(), llvm::errs());
       }
