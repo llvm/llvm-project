@@ -9,6 +9,7 @@ unittest("OrcJITTests") {
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
+    "//llvm/lib/ObjectYAML",
     "//llvm/lib/Support",
     "//llvm/lib/Target:NativeTarget",
     "//llvm/lib/TargetParser",
@@ -16,6 +17,7 @@ unittest("OrcJITTests") {
   ]
   sources = [
     "COFFAutoImportGeneratorTest.cpp",
+    "COFFStaticLibraryDefinitionGeneratorTest.cpp",
     "CoreAPIsTest.cpp",
     "EPCGenericDylibManagerTest.cpp",
     "EPCGenericJITLinkMemoryManagerTest.cpp",
