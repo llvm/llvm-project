@@ -1813,75 +1813,27 @@ getUnmaskedDivRemOpcode(Intrinsic::ID ID) {
   }
 }
 
-void VPlanTransforms::narrowScatters(VPlan &Plan, VPCostContext &Ctx,
-                                     VFRange &Range, bool FoldTailWithEVL) {
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
-    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-      // Convert an unmasked or header masked scatter with a uniform address
-      // into extract-last-lane + scalar store.
-      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
-      if (!WidenStoreR ||
-          !vputils::isUniformAcrossVFsAndUFs(WidenStoreR->getAddr()) ||
-          WidenStoreR->isConsecutive())
-        continue;
+/// Return true if we do not know how to (mechanically) hoist or sink a
+/// non-memory or memory recipe \p R out of a loop region. When sinking, passing
+/// \p Sinking = true ensures that assumes aren't sunk.
+static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
+                                    VPBasicBlock *LastBB,
+                                    bool Sinking = false) {
+  if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
+      match(&R, m_Intrinsic<Intrinsic::assume>()))
+    return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
-      // Convert the scatter to a scalar store if it is header masked.
-      VPValue *Mask = WidenStoreR->getMask();
-      if (!Mask || !match(Mask, m_HeaderMask()))
-        continue;
+  // Check that the memory operation doesn't alias between FirstBB and LastBB.
+  auto MemLoc = vputils::getMemoryLocation(R);
 
-      // If the body is header-masked, it guarantees each iteration has at
-      // least one active lane. So it is safe to convert the scatter to a
-      // scalar store.
-      if (!LoopVectorizationPlanner::getDecisionAndClampRange(
-              [&](ElementCount VF) {
-                InstructionCost ScatterCost = WidenStoreR->computeCost(VF, Ctx);
-                Type *ValTy = WidenStoreR->getStoredValue()->getScalarType();
-                Type *AddrTy = WidenStoreR->getAddr()->getScalarType();
-                Type *IndexTy = Plan.getDataLayout().getIndexType(AddrTy);
+  // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
+  // stores upfront, and constructing a full SinkStoreInfo.
+  auto SinkInfo =
+      Sinking ? std::make_optional(SinkStoreInfo(cast<VPReplicateRecipe>(R)))
+              : std::nullopt;
 
-                // ScalarCost = LastActiveLaneCost + ExtractLaneCost +
-                // ScalarStoreCost.
-                InstructionCost ScalarCost = 0;
-
-                // LastActiveLane can lower to EVL - 1 when folding tail with
-                // EVL.
-                ScalarCost +=
-                    FoldTailWithEVL
-                        ? VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                              Instruction::Sub, Type::getInt32Ty(Ctx.LLVMCtx),
-                              {}, nullptr, ElementCount::getFixed(1), Ctx) +
-                              VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                                  Instruction::ZExt, IndexTy,
-                                  {Type::getInt32Ty(Ctx.LLVMCtx)}, nullptr,
-                                  ElementCount::getFixed(1), Ctx)
-                        : VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                              VPInstruction::LastActiveLane, IndexTy,
-                              {Type::getInt1Ty(Ctx.LLVMCtx)}, nullptr, VF, Ctx);
-                ScalarCost += VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                    VPInstruction::ExtractLane, ValTy, {}, nullptr, VF, Ctx);
-                ScalarCost += VPInstruction::getCostForRecipeWithOpcodeAndTypes(
-                    Instruction::Store, nullptr, {ValTy, AddrTy},
-                    &WidenStoreR->getIngredient(), VF, Ctx);
-
-                return ScalarCost <= ScatterCost;
-              },
-              Range))
-        continue;
-      VPBuilder Builder(WidenStoreR);
-      VPInstruction *LastActiveLane = Builder.createLastActiveLane(Mask);
-      VPInstruction *Extract =
-          Builder.createNaryOp(VPInstruction::ExtractLane,
-                               {LastActiveLane, WidenStoreR->getStoredValue()});
-      auto *ScalarStore = new VPReplicateRecipe(
-          &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
-          /*IsSingleScalar*/ true, /*Mask*/ nullptr, {},
-          /*Metadata*/ *WidenStoreR);
-      ScalarStore->insertBefore(WidenStoreR);
-      WidenStoreR->eraseFromParent();
-    }
-  }
+  return !MemLoc ||
+         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
 }
 
 static void narrowToSingleScalarRecipes(VPlan &Plan) {
@@ -1892,8 +1844,41 @@ static void narrowToSingleScalarRecipes(VPlan &Plan) {
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
       if (!isa<VPWidenRecipe, VPWidenGEPRecipe, VPReplicateRecipe,
-               VPWidenIntrinsicRecipe>(&R))
+               VPWidenIntrinsicRecipe, VPWidenStoreRecipe>(&R))
         continue;
+
+      // Narrow header masked scatter to scalar store.
+      auto *WidenStoreR = dyn_cast<VPWidenStoreRecipe>(&R);
+      if (WidenStoreR) {
+        if (!vputils::isUniformAcrossVFsAndUFs(WidenStoreR->getAddr()) ||
+            WidenStoreR->isConsecutive())
+          continue;
+        VPValue *Mask = WidenStoreR->getMask();
+        if (!Mask || !match(Mask, m_HeaderMask()))
+          continue;
+
+        VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+        // If the narrowed store cannot sink to middle block, this
+        // transformation probably not profitable.
+        if (cannotHoistOrSinkRecipe(*WidenStoreR,
+                                    LoopRegion->getEntryBasicBlock(),
+                                    LoopRegion->getExitingBasicBlock(), true))
+          continue;
+
+        VPBuilder Builder(WidenStoreR);
+        VPInstruction *LastActiveLane = Builder.createLastActiveLane(Mask);
+        VPInstruction *Extract = Builder.createNaryOp(
+            VPInstruction::ExtractLane,
+            {LastActiveLane, WidenStoreR->getStoredValue()});
+        auto *ScalarStore = new VPReplicateRecipe(
+            &WidenStoreR->getIngredient(), {Extract, WidenStoreR->getAddr()},
+            /*IsSingleScalar*/ true, /*Mask*/ nullptr, {},
+            /*Metadata*/ *WidenStoreR);
+        ScalarStore->insertBefore(WidenStoreR);
+        WidenStoreR->eraseFromParent();
+        continue;
+      }
+
       auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
       if (RepR && (RepR->isSingleScalar() || RepR->isPredicated()))
         continue;
@@ -2480,29 +2465,6 @@ void VPlanTransforms::cse(VPlan &Plan) {
   }
 }
 
-/// Return true if we do not know how to (mechanically) hoist or sink a
-/// non-memory or memory recipe \p R out of a loop region. When sinking, passing
-/// \p Sinking = true ensures that assumes aren't sunk.
-static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
-                                    VPBasicBlock *LastBB,
-                                    bool Sinking = false) {
-  if (!isa<VPReplicateRecipe>(R) || !R.mayReadOrWriteMemory() ||
-      match(&R, m_Intrinsic<Intrinsic::assume>()))
-    return vputils::cannotHoistOrSinkRecipe(R, Sinking);
-
-  // Check that the memory operation doesn't alias between FirstBB and LastBB.
-  auto MemLoc = vputils::getMemoryLocation(R);
-
-  // TODO: Could make use of SinkStoreInfo::isNoAliasViaDistance by collecting
-  // stores upfront, and constructing a full SinkStoreInfo.
-  auto SinkInfo =
-      Sinking ? std::make_optional(SinkStoreInfo(cast<VPReplicateRecipe>(R)))
-              : std::nullopt;
-
-  return !MemLoc ||
-         !canHoistOrSinkWithNoAliasCheck(*MemLoc, FirstBB, LastBB, SinkInfo);
-}
-
 /// Move loop-invariant recipes out of the vector loop region in \p Plan.
 static void licm(VPlan &Plan) {
   VPBasicBlock *Preheader = Plan.getVectorPreheader();
@@ -2605,9 +2567,8 @@ static void licm(VPlan &Plan) {
 }
 
 void VPlanTransforms::truncateToMinimalBitwidths(
-    VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs,
-    VFRange &Range) {
-  if (Range.Start.isScalar())
+    VPlan &Plan, const MapVector<Instruction *, uint64_t> &MinBWs) {
+  if (Plan.hasScalarVFOnly())
     return;
   // Keep track of created truncates, so they can be re-used. Note that we
   // cannot use RAUW after creating a new truncate, as this would could make
