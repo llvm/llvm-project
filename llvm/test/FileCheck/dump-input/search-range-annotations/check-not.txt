@@ -1,4 +1,4 @@
-; Because -dump-input-filter=error includes a failed directive's search range,
+SAME Because -dump-input-filter=error includes a failed directive's search range,
 ; input lines 1 and 62 below are revealed, and -dump-input-context=2 reveals the
 ; surrounding lines.  Even with only line 1, it looks like the host list
 ; includes a GPU triple.  Line 62 and its context reveals we have an
@@ -12,7 +12,7 @@ RUN: split-file %s %t
 RUN: %ProtectFileCheckOutput \
 RUN: not FileCheck -dump-input-context=2 -v %t/check.txt < %t/input.txt \
 RUN:               -dump-input-filter=error 2>&1 | \
-RUN:   FileCheck %s -match-full-lines -check-prefix=DMP
+RUN:   FileCheck %s -match-full-lines -DCHK_FILE=%t/check.txt -check-prefix=DMP
 
      DMP:<<<<<<
 DMP-NEXT:         1: <triples kind="host"> 
@@ -27,6 +27,8 @@ DMP-NEXT:        42:  x86_64-amazon-linux
 DMP-NEXT:        43:  x86_64-linux-android 
 DMP-NEXT:        44:  nvptx64-nvidia-cuda 
 DMP-NEXT:not:2'1      !~~~~~~~~~~~~~~~~~~   error: no match expected
+DMP-NEXT:not:2'2                            for: CHECK-NOT: nvptx64-nvidia-cuda
+DMP-NEXT:not:2'3                            at: [[CHK_FILE]]:2
 DMP-NEXT:        45:  i686-linux-gnu 
 DMP-NEXT:        46:  i686-pc-linux-gnu 
 DMP-NEXT:         .
@@ -35,7 +37,7 @@ DMP-NEXT:         .
 DMP-NEXT:        59:  i486-gnu 
 DMP-NEXT:        60:  i586-gnu 
 DMP-NEXT:        61:  i686-gnu 
-DMP-NEXT:not:2'2               } search range end (exclusive)
+DMP-NEXT:not:2'4               } search range end (exclusive)
 DMP-NEXT:        62: </triples> 
 DMP-NEXT:check:3     ^~~~~~~~~~
 DMP-NEXT:        63: </triples> 
