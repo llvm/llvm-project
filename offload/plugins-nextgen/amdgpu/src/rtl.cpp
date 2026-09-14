@@ -30,6 +30,7 @@
 #include "Shared/Utils.h"
 #include "Utils/ELF.h"
 
+#include "AMDGPUMemoryPoolAllocate.h"
 #include "GlobalHandler.h"
 #include "OffloadAPI.h"
 #include "OpenMP/OMPT/Callback.h"
@@ -349,19 +350,19 @@ struct AMDGPUMemoryPoolTy {
     hsa_status_t Status =
         hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, PtrStorage);
 
-    if (Alignment > 0 && !isAddrAligned(Align(Alignment), *PtrStorage)) {
-      if (auto FreeErr = deallocate(*PtrStorage)) {
-        return Plugin::error(ErrorCode::UNKNOWN,
-                             "Failure in deallcation of the incorrectly "
-                             "aligned pointer; requested alignemnt: %lu",
-                             Alignment);
-      }
+    MemoryPoolAllocateOutcome Outcome = classifyMemoryPoolAllocate(
+        Status == HSA_STATUS_SUCCESS, PtrStorage, Alignment);
+    if (Outcome == MemoryPoolAllocateOutcome::AllocateFailed)
+      return Plugin::check(Status, "error in hsa_amd_memory_pool_allocate: %s");
 
+    if (Outcome == MemoryPoolAllocateOutcome::PointerMisaligned) {
+      if (auto FreeErr = deallocate(*PtrStorage))
+        return FreeErr;
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "unsupported alignment size");
     }
 
-    return Plugin::check(Status, "error in hsa_amd_memory_pool_allocate: %s");
+    return Plugin::success();
   }
 
   /// Return memory to the memory pool.
