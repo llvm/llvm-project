@@ -8,17 +8,18 @@
 define double @insert_into_constant_vector(double %x, double %y) vscale_range(2, 2) {
 ; CHECK-LABEL: @insert_into_constant_vector(
 ; CHECK-NEXT:    [[MUL0:%.*]] = fmul fast double [[X:%.*]], 0.000000e+00
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> <double poison, double poison, double 0.000000e+00, double 1.000000e+00>, double [[Y:%.*]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[X]], i64 1
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <4 x double> <double 0.000000e+00, double 1.000000e+00, double 0.000000e+00, double 0.000000e+00>, [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x double> <double 1.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, double [[X]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x double> <double 1.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, double [[Y]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <4 x double> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[MUL6:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = call reassoc nsz double @llvm.vector.reduce.fadd.v4f64(double 0.000000e+00, <4 x double> [[TMP3]])
-; CHECK-NEXT:    [[ADD8:%.*]] = fadd reassoc nsz double [[TMP8]], [[MUL0]]
+; CHECK-NEXT:    [[ADD0:%.*]] = fadd reassoc nsz double 0.000000e+00, [[MUL0]]
+; CHECK-NEXT:    [[MUL1:%.*]] = fmul fast double 0.000000e+00, [[Y:%.*]]
+; CHECK-NEXT:    [[ADD8:%.*]] = fadd reassoc nsz double [[ADD0]], [[MUL1]]
+; CHECK-NEXT:    [[MUL6:%.*]] = fmul fast double 1.000000e+00, [[X]]
 ; CHECK-NEXT:    [[ADD9:%.*]] = fadd reassoc nsz double [[ADD8]], [[MUL6]]
-; CHECK-NEXT:    ret double [[ADD9]]
+; CHECK-NEXT:    [[ADD3:%.*]] = fadd reassoc nsz double [[ADD9]], 0.000000e+00
+; CHECK-NEXT:    [[ADD4:%.*]] = fadd reassoc nsz double [[ADD3]], 1.000000e+00
+; CHECK-NEXT:    [[MUL5:%.*]] = fmul fast double [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD5:%.*]] = fadd reassoc nsz double [[ADD4]], [[MUL5]]
+; CHECK-NEXT:    [[ADD6:%.*]] = fadd reassoc nsz double [[ADD5]], 0.000000e+00
+; CHECK-NEXT:    [[ADD7:%.*]] = fadd reassoc nsz double [[ADD6]], 0.000000e+00
+; CHECK-NEXT:    ret double [[ADD7]]
 ;
   %mul0 = fmul fast double %x, 0.0
   %add0 = fadd reassoc nsz double 0.0, %mul0

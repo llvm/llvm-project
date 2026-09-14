@@ -4866,9 +4866,57 @@ InstructionCost AArch64TTIImpl::getScalarizationOverhead(
     TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
-  if (Ty->getElementType()->isFloatingPointTy())
-    return BaseT::getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind);
+  if (Ty->getElementType()->isFloatingPointTy()) {
+    InstructionCost Cost = BaseT::getScalarizationOverhead(
+        Ty, DemandedElts, Insert, Extract, CostKind);
+
+    if (!Insert || VL.empty())
+      return Cost;
+
+    auto LT = getTypeLegalizationCost(Ty);
+    if (!ST->isNeonAvailable() || !LT.second.isFixedLengthVector() ||
+        LT.second.getFixedSizeInBits() <= 128)
+      return Cost;
+
+    auto HasNonUniformConstants = [&VL]() -> bool {
+      Value *FirstConst = nullptr;
+      for (Value *V : VL) {
+        if (isa<UndefValue>(V) || !isa<Constant>(V) ||
+            isa<ConstantExpr, GlobalValue>(V))
+          continue;
+        if (!FirstConst)
+          FirstConst = V;
+        else if (V != FirstConst)
+          return true;
+      }
+      return false;
+    };
+
+    if (!HasNonUniformConstants())
+      return Cost;
+
+    // Conservatively assume each legalized vector part is assembled from
+    // 128-bit subvectors, requiring NumSubParts - 1 splices and one shared
+    // predicate.
+    unsigned Num128BitSubParts =
+        LT.second.getFixedSizeInBits() / AArch64::SVEBitsPerBlock;
+    InstructionCost InsertExtractCost = LT.first * Num128BitSubParts *
+                                        DemandedElts.popcount() *
+                                        (Insert + Extract);
+
+    auto *ContainerTy = ScalableVectorType::get(Ty->getElementType(),
+                                                AArch64::SVEBitsPerBlock /
+                                                    Ty->getScalarSizeInBits());
+    InstructionCost SpliceCost =
+        LT.first * (Num128BitSubParts - 1) *
+        getSpliceCost(ContainerTy, /*Index=*/0, CostKind);
+    Cost = InsertExtractCost + SpliceCost;
+    Cost += 1; // shared predicate cost
+    Cost += 2; // constant-pool address materialization.
+
+    return Cost;
+  }
+
   unsigned VecInstCost =
       CostKind == TTI::TCK_CodeSize ? 1 : ST->getVectorInsertExtractBaseCost();
   return DemandedElts.popcount() * (Insert + Extract) * VecInstCost;
