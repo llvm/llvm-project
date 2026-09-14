@@ -11,6 +11,13 @@
 // Older Clang doesn't implement __builtin_clear_padding
 // XFAIL: clang-21, apple-clang-21, clang-22
 
+// This test deliberately inspects object representations, padding included.
+#ifdef __clang__
+#  if __has_warning("-Wsuspicious-memcmp")
+#    pragma clang diagnostic ignored "-Wsuspicious-memcmp"
+#  endif
+#endif
+
 // atomic<T>::compare_exchange_weak
 // atomic<T>::compare_exchange_strong
 // CAS should work on types with padding bits

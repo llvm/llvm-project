@@ -11,6 +11,13 @@
 // Older versions of Clang don't support __builtin_clear_padding
 // UNSUPPORTED: clang-21, clang-22, apple-clang-21
 
+// This test deliberately inspects object representations, padding included.
+#ifdef __clang__
+#  if __has_warning("-Wsuspicious-memcmp")
+#    pragma clang diagnostic ignored "-Wsuspicious-memcmp"
+#  endif
+#endif
+
 // Older Clang doesn't handle __builtin_clear_padding correctly on Windows
 // (see https://github.com/llvm/llvm-project/issues/209787)
 // XFAIL: clang-23 && target={{.+}}-{{.+}}-windows-msvc
