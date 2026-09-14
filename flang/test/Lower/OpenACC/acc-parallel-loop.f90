@@ -672,9 +672,8 @@ subroutine acc_parallel_loop
 
 end subroutine acc_parallel_loop
 
-! Combined parallel loop firstprivate: scalar copies are also attached on the
-! independent acc.loop. Arrays, sections, derived/character/boxed types, seq
-! and auto loops, and non-combined loops are not.
+! Combined parallel loop firstprivate: copies are also attached on the
+! acc.loop, consistent with private and reduction on combined constructs.
 subroutine acc_parallel_loop_firstprivate_scalar
   integer :: i, n, v
   real :: a(10)
@@ -707,8 +706,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_seq
 ! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) seq
 
 subroutine acc_parallel_loop_firstprivate_auto
@@ -725,8 +724,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_auto
 ! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) auto_
 
 subroutine acc_parallel_loop_firstprivate_mixed
@@ -745,8 +744,8 @@ end subroutine
 ! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) name("b") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]], %[[FP_B]] : !fir.ref<i32>, !fir.ref<!fir.array<10xf32>>)
 ! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
-! CHECK-NOT: implicit(true) name("b")
-! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) recipe({{.*}}) implicit(true) name("b") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]], %[[FP_B_LOOP]] : !fir.ref<i32>, !fir.ref<!fir.array<10xf32>>)
 
 subroutine acc_parallel_firstprivate_sibling_loops
   integer :: i, j, n, v
@@ -970,7 +969,7 @@ end subroutine
 ! CHECK: %[[RED_R:.*]] = acc.reduction varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) name("r") -> !fir.ref<i32>
 ! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>) reduction(%[[RED_R]] : !fir.ref<i32>)
 
-! Character is not a scalar type category.
+! Character gets loop firstprivate too.
 subroutine acc_parallel_loop_firstprivate_character
   integer :: i, n
   character(len=8) :: s
@@ -986,10 +985,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_character
 ! CHECK: %[[FP_S:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.char<1,8>>) recipe({{.*}}) name("s") -> !fir.ref<!fir.char<1,8>>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_S]] : !fir.ref<!fir.char<1,8>>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: %[[FP_S_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.char<1,8>>) recipe({{.*}}) implicit(true) name("s") -> !fir.ref<!fir.char<1,8>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_S_LOOP]] : !fir.ref<!fir.char<1,8>>)
 
-! Derived type is composite, not scalar.
+! Derived type gets loop firstprivate too.
 subroutine acc_parallel_loop_firstprivate_derived
   type t
     integer :: x
@@ -1008,10 +1007,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_derived
 ! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) name("p")
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: acc.firstprivate varPtr({{.*}}) recipe({{.*}}) implicit(true) name("p")
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate
 
-! Pointer and allocatable scalars are boxed, so they stay compute-only.
+! Pointer and allocatable get loop firstprivate too.
 subroutine acc_parallel_loop_firstprivate_pointer
   integer, pointer :: p
   integer, target :: t
@@ -1029,8 +1028,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_pointer
 ! CHECK: %[[FP_P:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>) recipe({{.*}}) name("p") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_P]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: %[[FP_P_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.box<!fir.ptr<i32>>>) recipe({{.*}}) implicit(true) name("p") -> !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_P_LOOP]] : !fir.ref<!fir.box<!fir.ptr<i32>>>)
 
 subroutine acc_parallel_loop_firstprivate_allocatable
   integer, allocatable :: v
@@ -1048,8 +1047,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_allocatable
 ! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe({{.*}}) name("v") -> !fir.ref<!fir.box<!fir.heap<i32>>>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.box<!fir.heap<i32>>>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<!fir.box<!fir.heap<i32>>>)
 
 subroutine acc_parallel_loop_firstprivate_section
   integer :: i, n
@@ -1064,8 +1063,8 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_parallel_loop_firstprivate_section
 ! CHECK: %[[FP_B:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) bounds({{.*}}) recipe({{.*}}) name("b(1:5)") -> !fir.ref<!fir.array<10xf32>>
 ! CHECK: acc.parallel combined(loop) {{.*}}firstprivate(%[[FP_B]] : !fir.ref<!fir.array<10xf32>>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(parallel)
+! CHECK: %[[FP_B_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<!fir.array<10xf32>>) bounds({{.*}}) recipe({{.*}}) implicit(true) name("b(1:5)") -> !fir.ref<!fir.array<10xf32>>
+! CHECK: acc.loop combined(parallel) {{.*}}firstprivate(%[[FP_B_LOOP]] : !fir.ref<!fir.array<10xf32>>)
 
 ! Non-combined parallel with a single loop is left to a later pass.
 subroutine acc_parallel_firstprivate_one_loop

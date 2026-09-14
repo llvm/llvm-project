@@ -1723,29 +1723,22 @@ loopWillBeIndependent(Fortran::lower::AbstractConverter &converter,
   }
 }
 
-// Attach an implicit firstprivate on this combined loop in addition to the
-// compute clause (firstprivate is not a loop clause in the spec) when:
-//  1. Combined `parallel loop` — the region is that one loop. Not `serial
-//     loop` (seq by default), `kernels loop`, or a standalone `acc loop`.
-//  2. Independent (the `parallel loop` default). Not `seq`/`auto`, which
-//     must keep a carried firstprivate.
-//  3. Scalar. Nested loops reuse this copy via remap; they get no clause.
+// Attach an implicit firstprivate on a combined loop in addition to the
+// compute clause.  On a combined construct, private and reduction already
+// apply to both the compute region and the loop; firstprivate should too.
+// Controlled by -f[no-]openacc-combined-loop-firstprivate (default on).
+// Applies to parallel loop and serial loop (kernels cannot take
+// firstprivate), all types (scalars, arrays, derived, etc.), and all
+// parallelism modes (independent, seq, auto).
 static bool shouldAttachFirstprivateOnCombinedLoop(
     Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::AccClauseList &accClauseList,
-    std::optional<mlir::acc::CombinedConstructsType> combinedConstructs,
-    const Fortran::parser::AccObject &accObject) {
-  if (!combinedConstructs ||
-      *combinedConstructs != mlir::acc::CombinedConstructsType::ParallelLoop)
+    std::optional<mlir::acc::CombinedConstructsType> combinedConstructs) {
+  if (!combinedConstructs)
     return false;
-  if (!loopWillBeIndependent(converter, accClauseList,
-                             llvm::acc::ACCD_parallel_loop))
+  if (*combinedConstructs != mlir::acc::CombinedConstructsType::ParallelLoop &&
+      *combinedConstructs != mlir::acc::CombinedConstructsType::SerialLoop)
     return false;
-  mlir::Value var =
-      converter.getSymbolAddress(getSymbolFromAccObject(accObject));
-  return var &&
-         mlir::acc::bitEnumContainsAny(mlir::acc::getTypeCategory(var),
-                                       mlir::acc::VariableTypeCategory::scalar);
+  return converter.getLoweringOptions().getOpenACCCombinedLoopFirstprivate();
 }
 
 // Helper to visit Bounds of DO LOOP nest.
@@ -2528,21 +2521,20 @@ static mlir::acc::LoopOp createLoopOp(
     } else if (const auto *firstprivateClause =
                    std::get_if<Fortran::parser::AccClause::Firstprivate>(
                        &clause.u)) {
-      // Duplicate scalar firstprivate onto this combined independent loop.
-      // The compute construct already has the user-facing firstprivate (host
-      // seed). After that remap, getSymbolAddress is the compute copy, so the
-      // loop clause's varPtr chains from it. implicit=true: firstprivate is
-      // not a loop clause in the spec.
-      genDataOperandOperations<mlir::acc::FirstprivateOp>(
-          firstprivateClause->v, converter, semanticsContext, stmtCtx,
-          firstprivateOperands, mlir::acc::DataClause::acc_firstprivate,
-          /*structured=*/true, /*implicit=*/true,
-          /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
-          /*setDeclareAttr=*/false, &dataMap,
-          /*filter=*/[&](const Fortran::parser::AccObject &obj) {
-            return shouldAttachFirstprivateOnCombinedLoop(
-                converter, accClauseList, combinedConstructs, obj);
-          });
+      // Duplicate firstprivate onto this combined loop.  The compute
+      // construct already has the user-facing firstprivate (host seed).
+      // After that remap, getSymbolAddress is the compute copy, so the
+      // loop clause's varPtr chains from it.  implicit=true: firstprivate
+      // is not a loop clause in the spec.
+      if (shouldAttachFirstprivateOnCombinedLoop(converter,
+                                                 combinedConstructs)) {
+        genDataOperandOperations<mlir::acc::FirstprivateOp>(
+            firstprivateClause->v, converter, semanticsContext, stmtCtx,
+            firstprivateOperands, mlir::acc::DataClause::acc_firstprivate,
+            /*structured=*/true, /*implicit=*/true,
+            /*async=*/{}, /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
+            /*setDeclareAttr=*/false, &dataMap);
+      }
     } else if (const auto *reductionClause =
                    std::get_if<Fortran::parser::AccClause::Reduction>(
                        &clause.u)) {

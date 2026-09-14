@@ -602,8 +602,7 @@ subroutine acc_serial_loop
 
 end subroutine acc_serial_loop
 
-! serial loop defaults to seq, so scalar firstprivate stays on the compute
-! construct only.
+! serial loop now gets loop firstprivate too (consistent with private/reduction).
 subroutine acc_serial_loop_firstprivate_scalar
   integer :: i, n, v
   real :: a(10)
@@ -618,10 +617,10 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_scalar
 ! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
 ! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(serial)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 
-! serial loop is not combined parallel, even with independent.
+! serial loop with independent also gets loop firstprivate.
 subroutine acc_serial_loop_firstprivate_independent
   integer :: i, n, v
   real :: a(10)
@@ -636,6 +635,6 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPacc_serial_loop_firstprivate_independent
 ! CHECK: %[[FP_V:.*]] = acc.firstprivate varPtr(%{{.*}} : !fir.ref<i32>) recipe({{.*}}) name("v") -> !fir.ref<i32>
 ! CHECK: acc.serial combined(loop) {{.*}}firstprivate(%[[FP_V]] : !fir.ref<i32>)
-! CHECK-NOT: acc.firstprivate {{.*}} implicit(true)
-! CHECK: acc.loop combined(serial)
+! CHECK: %[[FP_V_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe({{.*}}) implicit(true) name("v") -> !fir.ref<i32>
+! CHECK: acc.loop combined(serial) {{.*}}firstprivate(%[[FP_V_LOOP]] : !fir.ref<i32>)
 ! CHECK: } inclusiveUpperbound(array<i1: true>) independent
