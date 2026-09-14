@@ -285,6 +285,11 @@ protected:
   virtual DwarfDebug *createDwarfDebug();
 
 public:
+  /// The attribute used for a pointer type's DWARF address space.
+  virtual dwarf::Attribute getTypeAddressSpaceAttribute() const {
+    return dwarf::DW_AT_address_class;
+  }
+
   ~AsmPrinter() override;
 
   DwarfDebug *getDwarfDebug() { return DD; }
