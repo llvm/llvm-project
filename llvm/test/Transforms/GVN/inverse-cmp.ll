@@ -131,8 +131,8 @@ define void @neg_inverse_fcmp_nnan_2(double %x,double %y) {
   ret void
 }
 
-define void @inverse_icmp_swaped(i32 %x,i32 %y) {
-; CHECK-LABEL: define void @inverse_icmp_swaped(
+define void @inverse_icmp_swapped(i32 %x,i32 %y) {
+; CHECK-LABEL: define void @inverse_icmp_swapped(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[UGT1:%.*]] = icmp ugt i32 [[X]], [[Y]]
 ; CHECK-NEXT:    call void @use(i1 [[UGT1]])

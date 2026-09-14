@@ -3452,12 +3452,12 @@ bool GVNPass::processInstruction(Instruction *I) {
   }
 
   // Perform fast-path value-number based elimination of values inherited from
-  // dominators, unless if the number we were assigned was a brand new VN, then
+  // dominators, unless the number we were assigned was a brand new VN, then
   // we don't need to do a lookup to see if the number already exists somewhere
   // in the domtree: it can't!
   Value *Repl = Num < NextNum ? findLeader(I->getParent(), Num) : nullptr;
   if (!Repl) {
-    // substitute cmp instruction with not if possible.
+    // Substitute cmp instruction with not if possible.
     if (CmpInst *Cmp = dyn_cast<CmpInst>(I)) {
       uint32_t NotNum =
           VN.lookupCmp(Cmp->getOpcode(), Cmp->getInversePredicate(),
@@ -3465,13 +3465,13 @@ bool GVNPass::processInstruction(Instruction *I) {
       if (NotNum != 0) {
         Value *NotRepl = findLeader(I->getParent(), NotNum);
         auto FlagCheck = [&]() {
-          if (auto *Icmp = dyn_cast<ICmpInst>(NotRepl))
-            return !Icmp->hasSameSign() ||
-                   Icmp->hasSameSign() == cast<ICmpInst>(I)->hasSameSign();
+          if (auto *ICmp = dyn_cast<ICmpInst>(NotRepl))
+            return !ICmp->hasSameSign() ||
+                   ICmp->hasSameSign() == cast<ICmpInst>(I)->hasSameSign();
           return cast<FPMathOperator>(NotRepl)->getFastMathFlags() ==
                  cast<FPMathOperator>(I)->getFastMathFlags();
         };
-        if (NotRepl && NotRepl != I && FlagCheck()) {
+        if (NotRepl && FlagCheck()) {
           BinaryOperator *Not = BinaryOperator::CreateNot(
               NotRepl, NotRepl->getName() + ".not", I->getIterator());
           Not->setDebugLoc(I->getDebugLoc());
