@@ -126,6 +126,12 @@ infrastructure are described first, followed by tool-specific sections.
 
   Detects malformed regex patterns defined in a single string literal.
 
+- New {doc}`modernize-use-if-consteval
+  <clang-tidy/checks/modernize/use-if-consteval>` check.
+
+  Replaces direct `std::is_constant_evaluated()` checks in `if` statements
+  with C++23's `if consteval` syntax.
+
 - New {doc}`modernize-use-to-underlying
   <clang-tidy/checks/modernize/use-to-underlying>` check.
 
