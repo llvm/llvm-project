@@ -26,8 +26,8 @@
 /// dependencies are gone the existing load-cluster scheduler does the reorder.
 //===----------------------------------------------------------------------===//
 
-#include "AMDGPU.h"
 #include "GCNBreakLoadClusterDeps.h"
+#include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
