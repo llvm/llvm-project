@@ -781,11 +781,12 @@ RFC](https://discourse.llvm.org/t/rfc-migrating-past-c-11/50943) and the
 (binutils-version)=
 ### Updating default binutils version
 
-On targets where binutils provides the system linker or assembler, care must
-be taken in unconditionally using features that require a recent version of
-binutils. Particularly if there is a fallback available that can be supported
-by older versions. LLVM provides a minimum binutils version that can be
-tested against before using a feature.
+Some distributions do not rely on a complete LLVM toolchain. On targets where
+binutils provides the system linker or assembler, care must be taken in
+unconditionally using features that require a recent version of
+binutils. If possible, fallback mechanisms allow graceful degradation to older
+releases. When using newer features, validate availability against the requested
+binutils compatibility.
 
 To update the default value on the minimum bintutils version we use a similar
 process to {ref}`Updating Toolchain Requirements <toolchain>`:
@@ -795,7 +796,8 @@ process to {ref}`Updating Toolchain Requirements <toolchain>`:
   binutils versions.
 - An RFC is sent to the [LLVM Discourse forums](https://discourse.llvm.org)
   - Detail upsides of the version increase (e.g. which binutils features become available).
-  - Detail downsides on important platforms (e.g. Ubuntu LTS status).
+  - Detail downsides on important platforms (i.e. LTS releases for popular Linux
+    distributions).
   - See the {doc}`RFC process <RFCProcess>` documentation for more
     details.
 - Once the RFC reaches consensus, update the default binutils version and
