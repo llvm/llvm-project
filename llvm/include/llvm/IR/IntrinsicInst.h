@@ -1809,23 +1809,20 @@ public:
     return make_range(op_begin() + 1, op_begin() + 1 + getNumIndices());
   }
 
+  static Type *getTypeAtIndex(Type *Ty, const Value *Index) {
+    if (ArrayType *AT = dyn_cast<ArrayType>(Ty))
+      return AT->getElementType();
+    if (VectorType *VT = dyn_cast<VectorType>(Ty))
+      return VT->getElementType();
+    if (StructType *ST = dyn_cast<StructType>(Ty))
+      return ST->getElementType(cast<ConstantInt>(Index)->getZExtValue());
+    llvm_unreachable("llvm.structured.gep only indexes aggregate types");
+  }
+
   Type *getResultElementType() const {
     Type *CurrentType = getBaseType();
-    for (unsigned I = 0; I < getNumIndices(); I++) {
-      if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
-        CurrentType = AT->getElementType();
-      } else if (VectorType *VT = dyn_cast<VectorType>(CurrentType)) {
-        CurrentType = VT->getElementType();
-      } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
-        ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
-        CurrentType = ST->getElementType(CI->getZExtValue());
-      } else {
-        // FIXME(Keenuts): add testing reaching those places once initial
-        // implementation has landed.
-        llvm_unreachable("unimplemented");
-      }
-    }
-
+    for (unsigned I = 0; I < getNumIndices(); I++)
+      CurrentType = getTypeAtIndex(CurrentType, getIndexOperand(I));
     return CurrentType;
   }
 };
