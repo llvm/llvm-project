@@ -1046,7 +1046,7 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough,
     SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
     llvm::CleanupPadInst *CPI = nullptr;
 
-    const EHPersonality &Personality = EHPersonality::get(*this);
+    const EHPersonality &Personality = getEHPersonality(*this);
     if (Personality.usesFuncletPads()) {
       llvm::Value *ParentPad = CurrentFuncletPad;
       if (!ParentPad)
