@@ -43,7 +43,7 @@
 # RELOC: BOLT-DEBUG: LongJmp layout: main fragment _start starts at 0x
 # RELOC: BOLT-DEBUG: LongJmp layout: main fragment next starts at 0x
 # RELOC: BOLT-DEBUG: LongJmp layout: main fragment nop_only starts at 0x
-# RELOC: BOLT-DEBUG: LongJmp layout: main fragment nop_only ends at 0x
+# RELOC-SAME: and ends at 0x
 
 # MAIN-SYMBOL: T nop_only
 

@@ -44,8 +44,8 @@
 
 # ALIGN: LongJmp layout: section .text starts at 0x[[TEXT:[0-9a-f]+]], alignment 0x1000
 # ALIGN: LongJmp layout: main fragment _start starts at 0x[[START:[0-9a-f]+]]
-# ALIGN: LongJmp layout: main fragment first starts at 0x[[FIRST:[0-9a-f]+]]
 # ALIGN: LongJmp layout: basic block {{.*}} in first starts at 0x{{[0-9a-f]+}}
+# ALIGN: LongJmp layout: main fragment first starts at 0x[[FIRST:[0-9a-f]+]]
 # ALIGN: LongJmp layout: main fragment second starts at 0x[[SECOND:[0-9a-f]+]]
 # ALIGN: _start T [[START]]
 # ALIGN: first T [[FIRST]]
@@ -67,10 +67,10 @@
 
 # NONRELOC: BOLT-WARNING: non-relocation mode for AArch64 is not fully supported
 # NONRELOC: BOLT-DEBUG: LongJmp layout starts at 0x
-# NONRELOC: BOLT-DEBUG: LongJmp layout: main fragment first starts at 0x[[FIRST:[0-9a-f]+]]
-# NONRELOC: BOLT-DEBUG: LongJmp layout: basic block {{.*}} in first starts at 0x[[FIRST]]
+# NONRELOC: BOLT-DEBUG: LongJmp layout: basic block {{.*}} in first starts at 0x[[FIRST:[0-9a-f]+]]
 # NONRELOC: BOLT-DEBUG: LongJmp layout: basic block {{.*}} in first starts at 0x{{[0-9a-f]+}}
 # NONRELOC: BOLT-DEBUG: LongJmp layout: basic block {{.*}} in first starts at 0x{{[0-9a-f]*[02468ace]0}}
+# NONRELOC: BOLT-DEBUG: LongJmp layout: main fragment first starts at 0x[[FIRST]]
 
   .text
   .p2align 6

@@ -394,6 +394,9 @@ void LongJmpPass::assignFunctionsToSections(
     if (!shouldEmitFunctionFragment(BC, *Func))
       continue;
 
+    assert((BC.HasRelocations || Func->getLayout().isHotColdSplit()) &&
+           "non-relocation mode supports only hot/cold splitting");
+
     // RewriteInstance ultimately excludes every code section with a
     // pre-assigned output address. At this point, those are the sections of
     // fixed-address injected functions.
@@ -419,8 +422,6 @@ void LongJmpPass::assignFunctionsToSections(
       assert((Layout.fragment_size() == 1 || Func->isSimple()) &&
              "only simple functions can have multiple fragments");
       for (const FunctionFragment &FF : Layout.getSplitFragments()) {
-        assert(FF.getFragmentNum() == FragmentNum::cold() &&
-               "LongJmp supports only main and cold function fragments");
         // BinaryEmitter::emitFunctions() skips an empty split fragment unless
         // the function carries a constant island.
         if (FF.empty() && !Func->hasConstantIsland())
@@ -492,11 +493,9 @@ uint64_t LongJmpPass::layoutFunctionFragment(const BinaryContext &BC,
                                              bool RecordAddresses) {
   assert(shouldEmitFunctionFragment(BC, Func) &&
          "attempting to lay out a function BinaryEmitter will not emit");
-
   const FragmentNum Fragment = FF.getFragmentNum();
-  assert((Fragment == FragmentNum::main() || Fragment == FragmentNum::cold()) &&
-         "LongJmp supports only main and cold function fragments");
-  const bool IsCold = Fragment == FragmentNum::cold();
+  const bool IsMain = FF.isMainFragment();
+  const bool IsSplit = FF.isSplitFragment();
 
   const bool HasFixedOutputAddress =
       Func.isInjected() && Func.getOutputAddress();
@@ -505,7 +504,7 @@ uint64_t LongJmpPass::layoutFunctionFragment(const BinaryContext &BC,
   const bool NeedsNonRelocInjectedAlignment =
       !BC.HasRelocations && Func.isInjected() && !HasFixedOutputAddress;
   const bool NeedsNonRelocColdAlignment =
-      !BC.HasRelocations && !Func.isInjected() && IsCold;
+      !BC.HasRelocations && !Func.isInjected() && IsSplit;
 
   // Apply the alignment that affects the fragment's mapped address.
   // Section-relative fragments mirror BinaryEmitter::emitFunction(); moved
@@ -515,7 +514,7 @@ uint64_t LongJmpPass::layoutFunctionFragment(const BinaryContext &BC,
   if (NeedsRelocationAlignment) {
     DotAddress = alignTo(DotAddress, Func.getMinAlignment());
     const uint16_t MaxAlignmentBytes =
-        IsCold ? Func.getMaxColdAlignmentBytes() : Func.getMaxAlignmentBytes();
+        IsSplit ? Func.getMaxColdAlignmentBytes() : Func.getMaxAlignmentBytes();
     if (MaxAlignmentBytes > 0)
       DotAddress =
           applyCodeAlignment(DotAddress, Func.getAlign(), MaxAlignmentBytes);
@@ -535,14 +534,8 @@ uint64_t LongJmpPass::layoutFunctionFragment(const BinaryContext &BC,
     DotAddress += opts::padFunctionBefore(Func);
 
   // BinaryEmitter::emitFunction() emits the fragment entry symbols here.
-  if (RecordAddresses) {
-    if (!IsCold)
-      HotAddresses[&Func] = DotAddress;
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: LongJmp layout: "
-                      << (IsCold ? "cold" : "main") << " fragment "
-                      << Func.getPrintName() << " starts at 0x"
-                      << Twine::utohexstr(DotAddress) << '\n');
-  }
+  if (RecordAddresses && IsMain)
+    HotAddresses[&Func] = DotAddress;
 
   // --break-funcs emits UD2 before the function body.
   DotAddress += opts::breakFunctionSize(Func);
@@ -557,10 +550,19 @@ uint64_t LongJmpPass::layoutFunctionFragment(const BinaryContext &BC,
   DotAddress += opts::markFunctionBytes(BC).size();
 
   LLVM_DEBUG({
-    if (RecordAddresses)
-      dbgs() << "BOLT-DEBUG: LongJmp layout: " << (IsCold ? "cold" : "main")
-             << " fragment " << Func.getPrintName() << " ends at 0x"
-             << Twine::utohexstr(DotAddress) << '\n';
+    if (RecordAddresses) {
+      const StringRef FragmentName =
+          IsMain                                                 ? "main"
+          : BC.HasWarmSection && Fragment == FragmentNum::warm() ? "warm"
+          : Fragment == FragmentNum::cold()                      ? "cold"
+                                                                 : "split";
+      dbgs() << "BOLT-DEBUG: LongJmp layout: " << FragmentName << " fragment "
+             << Func.getPrintName();
+      if (IsMain)
+        dbgs() << " starts at 0x" << Twine::utohexstr(HotAddresses.at(&Func))
+               << " and";
+      dbgs() << " ends at 0x" << Twine::utohexstr(DotAddress) << '\n';
+    }
   });
 
   return DotAddress;
@@ -597,35 +599,39 @@ uint64_t LongJmpPass::layoutSection(const BinaryContext &BC,
 
 uint64_t LongJmpPass::layoutSectionsForward(const BinaryContext &BC,
                                             uint64_t DotAddress) {
-  const bool AdjustMainSection =
+  const StringRef LastNonColdSectionName = BC.HasWarmSection
+                                               ? BC.getWarmCodeSectionName()
+                                               : BC.getMainCodeSectionName();
+  const bool AdjustLastNonColdSection =
       BC.HasRelocations &&
       (opts::HotText || (opts::Hugify && !BC.HasFixedLoadAddress));
-  std::optional<uint64_t> MainSectionEnd = std::nullopt;
+  std::optional<uint64_t> LastNonColdSectionEnd = std::nullopt;
 
   // Mirror allocateAt() in RewriteInstance::mapCodeSections().
   for (const SectionPlacement &Section : Sections) {
     DotAddress = alignTo(DotAddress, Section.Alignment);
     DotAddress = layoutSection(BC, Section, DotAddress);
 
-    if (AdjustMainSection &&
-        StringRef(Section.Name) == BC.getMainCodeSectionName()) {
+    if (AdjustLastNonColdSection &&
+        StringRef(Section.Name) == LastNonColdSectionName) {
       if (opts::HotText)
-        MainSectionEnd = DotAddress;
-      // LongJmp supports only main and cold fragments. Mirror the extra
-      // post-main alignment in allocateAt() for --hugify.
+        LastNonColdSectionEnd = DotAddress;
+      // Mirror the extra post-hot-text alignment in allocateAt() for
+      // --hugify. With CDSplit, warm code is part of hot text.
       if (opts::Hugify && !BC.HasFixedLoadAddress)
         DotAddress = alignTo(DotAddress, Section.Alignment);
     }
   }
 
   // Mirror RewriteInstance::mapCodeSections() padding used to accommodate
-  // hot-text huge-page mapping. LongJmp does not support warm fragments, so the
-  // hot-text end is the end of the main section. RewriteInstance applies this
-  // adjustment only in allocateAt() to advance the next free address;
-  // allocateBefore() starts from a fixed upper boundary and has no
-  // corresponding adjustment.
-  if (MainSectionEnd)
-    DotAddress = std::max(DotAddress, alignTo(*MainSectionEnd, BC.PageAlign));
+  // hot-text huge-page mapping. The hot-text end is the end of the warm
+  // section when one exists, and the end of the main section otherwise.
+  // RewriteInstance applies this adjustment only in allocateAt() to advance
+  // the next free address; allocateBefore() starts from a fixed upper boundary
+  // and has no corresponding adjustment.
+  if (LastNonColdSectionEnd)
+    DotAddress =
+        std::max(DotAddress, alignTo(*LastNonColdSectionEnd, BC.PageAlign));
 
   return DotAddress;
 }
@@ -714,8 +720,6 @@ void LongJmpPass::layoutFunctions(
                              Func.getAddress());
 
       if (Func.isSplit()) {
-        assert(Func.getLayout().isHotColdSplit() &&
-               "non-relocation mode supports only hot/cold splitting");
         ColdAddress = layoutFunctionFragment(
             BC, Func, Func.getLayout().getFragment(FragmentNum::cold()),
             ColdAddress);
@@ -1651,11 +1655,6 @@ void LongJmpPass::relaxCalls(BinaryContext &BC) {
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
-
-  assert((opts::CompactCodeModel || opts::ExperimentalRelaxation ||
-          opts::SplitStrategy != opts::SplitFunctionsStrategy::CDSplit) &&
-         "LongJmp cannot work with functions split in more than two fragments");
-
   DenseMap<BinaryFunction *, BranchLivenessInfo> BranchLiveness;
 
   if (opts::FixBranchesWithLiveness) {

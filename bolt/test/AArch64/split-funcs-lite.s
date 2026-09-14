@@ -24,4 +24,4 @@ foo:
 ## Force relocation mode.
 .reloc 0, R_AARCH64_NONE
 
-# CHECK: BOLT-DEBUG: LongJmp layout: cold fragment foo{{.*}} starts at 0x
+# CHECK: BOLT-DEBUG: LongJmp layout: cold fragment foo{{.*}} ends at 0x
