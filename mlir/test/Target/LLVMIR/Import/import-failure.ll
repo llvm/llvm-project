@@ -533,3 +533,37 @@ define i32 @metadata_ref_global_dtors() {
 }
 
 !0 = !{ptr @llvm.global_dtors}
+
+; // -----
+
+; CHECK: warning: expected string metadata value for key 'ProfileFormat'
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", i64 0}
+!3 = !{!"TotalCount", i64 1}
+!4 = !{!"MaxCount", i64 1}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1}
+!7 = !{!"NumCounts", i64 1}
+!8 = !{!"NumFunctions", i64 1}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11}
+!11 = !{i32 10000, i64 1, i32 1}
+
+; // -----
+
+; CHECK: warning: expected string metadata value for key 'ProfileFormat': null
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"ProfileSummary", !1}
+!1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
+!2 = !{!"ProfileFormat", null}
+!3 = !{!"TotalCount", i64 1}
+!4 = !{!"MaxCount", i64 1}
+!5 = !{!"MaxInternalCount", i64 1}
+!6 = !{!"MaxFunctionCount", i64 1}
+!7 = !{!"NumCounts", i64 1}
+!8 = !{!"NumFunctions", i64 1}
+!9 = !{!"DetailedSummary", !10}
+!10 = !{!11}
+!11 = !{i32 10000, i64 1, i32 1}

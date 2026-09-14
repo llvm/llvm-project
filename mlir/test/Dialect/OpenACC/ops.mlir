@@ -1021,27 +1021,27 @@ func.func @testdataop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
 // -----
 
 func.func @testdataopmodifiers(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> () {
-  %0 = acc.create varPtr(%a : memref<f32>) <{modifiers = #acc<data_clause_modifier capture,zero>}> -> memref<f32>
-  %1 = acc.copyin varPtr(%b : memref<f32>) <{modifiers = #acc<data_clause_modifier readonly,capture,always>}> -> memref<f32>
-  %2 = acc.copyin varPtr(%c : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}> -> memref<f32>
-  %3 = acc.create varPtr(%c : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}> -> memref<f32>
+  %0 = acc.create varPtr(%a : memref<f32>) <{modifiers = #acc.data_clause_modifier<capture,zero>}> -> memref<f32>
+  %1 = acc.copyin varPtr(%b : memref<f32>) <{modifiers = #acc.data_clause_modifier<readonly,capture,always>}> -> memref<f32>
+  %2 = acc.copyin varPtr(%c : memref<f32>) <{modifiers = #acc.data_clause_modifier<always>}> -> memref<f32>
+  %3 = acc.create varPtr(%c : memref<f32>) <{modifiers = #acc.data_clause_modifier<always>}> -> memref<f32>
   acc.data dataOperands(%0, %1, %2, %3 : memref<f32>, memref<f32>, memref<f32>, memref<f32>) {
   }
-  acc.copyout accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>) <{modifiers = #acc<data_clause_modifier zero,capture,always>}>
-  acc.delete accPtr(%2 : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}>
-  acc.copyout accPtr(%3 : memref<f32>) to varPtr(%c : memref<f32>) <{modifiers = #acc<data_clause_modifier always>}>
+  acc.copyout accPtr(%0 : memref<f32>) to varPtr(%a : memref<f32>) <{modifiers = #acc.data_clause_modifier<zero,capture,always>}>
+  acc.delete accPtr(%2 : memref<f32>) <{modifiers = #acc.data_clause_modifier<always>}>
+  acc.copyout accPtr(%3 : memref<f32>) to varPtr(%c : memref<f32>) <{modifiers = #acc.data_clause_modifier<always>}>
 
   func.return
 }
 
 // CHECK:      func @testdataopmodifiers(%[[ARGA:.*]]: memref<f32>, %[[ARGB:.*]]: memref<f32>, %[[ARGC:.*]]: memref<f32>) {
-// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) <modifiers = "zero,capture"> -> memref<f32>
-// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) <modifiers = "always,readonly,capture"> -> memref<f32>
-// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always"> -> memref<f32>
-// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always"> -> memref<f32>
-// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) <modifiers = "always,zero,capture">
-// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) <modifiers = "always">
-// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) <modifiers = "always">
+// CHECK:      %[[CREATEA:.*]] = acc.create varPtr(%[[ARGA]] : memref<f32>) <modifiers = [zero,capture]> -> memref<f32>
+// CHECK:      %[[COPYINB:.*]] = acc.copyin varPtr(%[[ARGB]] : memref<f32>) <modifiers = [always,readonly,capture]> -> memref<f32>
+// CHECK:      %[[COPYINC:.*]] = acc.copyin varPtr(%[[ARGC]] : memref<f32>) <modifiers = [always]> -> memref<f32>
+// CHECK:      %[[CREATEC:.*]] = acc.create varPtr(%[[ARGC]] : memref<f32>) <modifiers = [always]> -> memref<f32>
+// CHECK:      acc.copyout accPtr(%[[CREATEA]] : memref<f32>) to varPtr(%[[ARGA]] : memref<f32>) <modifiers = [always,zero,capture]>
+// CHECK:      acc.delete accPtr(%[[COPYINC]] : memref<f32>) <modifiers = [always]>
+// CHECK:      acc.copyout accPtr(%[[CREATEC]] : memref<f32>) to varPtr(%[[ARGC]] : memref<f32>) <modifiers = [always]>
 
 // -----
 
@@ -1420,6 +1420,13 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
   }
   acc.copyout accPtr(%copyinpartial : memref<10xf32>) bounds(%bounds1partial) to varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
 
+  // A slice of a larger array records how far apart consecutive slice elements
+  // are in the original array.
+  %bounds1source = acc.bounds lowerbound(%c4 : index) upperbound(%c9 : index) extent(%c4 : index) sourceExtent(%c10 : index) stride(%c1 : index) startIdx(%c0 : index)
+  %copyinsource = acc.copyin varPtr(%a : memref<10xf32>) varType(tensor<10xf32>) bounds(%bounds1source) -> memref<10xf32>
+  acc.parallel dataOperands(%copyinsource : memref<10xf32>) {
+  }
+
   return
 }
 
@@ -1462,6 +1469,7 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK-DAG: [[CON1:%.*]] = arith.constant 1 : index
 // CHECK-DAG: [[CON4:%.*]] = arith.constant 4 : index
 // CHECK-DAG: [[CON9:%.*]] = arith.constant 9 : index
+// CHECK-DAG: [[CON10:%.*]] = arith.constant 10 : index
 // CHECK-DAG: [[CON20:%.*]] = arith.constant 20 : index
 // CHECK: [[BOUNDS1F:%.*]] = acc.bounds lowerbound([[CON0]] : index) upperbound([[CON9]] : index) stride([[CON1]] : index)
 // CHECK-NEXT: [[COPYINF1:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1F]]) name("arrayA[0:9]") -> memref<10xf32>
@@ -1474,6 +1482,10 @@ func.func @teststructureddataclauseops(%a: memref<10xf32>, %b: memref<memref<10x
 // CHECK-NEXT: acc.parallel dataOperands([[COPYINPART]] : memref<10xf32>) {
 // CHECK-NEXT: }
 // CHECK-NEXT: acc.copyout accPtr([[COPYINPART]] : memref<10xf32>) bounds([[BOUNDS1P]]) to varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) dataClause(acc_copy)
+// CHECK-NEXT: [[BOUNDS1S:%.*]] = acc.bounds lowerbound([[CON4]] : index) upperbound([[CON9]] : index) extent([[CON4]] : index) sourceExtent([[CON10]] : index) stride([[CON1]] : index) startIdx([[CON0]] : index)
+// CHECK-NEXT: [[COPYINSRC:%.*]] = acc.copyin varPtr([[ARGA]] : memref<10xf32>) varType(tensor<10xf32>) bounds([[BOUNDS1S]]) -> memref<10xf32>
+// CHECK-NEXT: acc.parallel dataOperands([[COPYINSRC]] : memref<10xf32>) {
+// CHECK-NEXT: }
 
 // -----
 

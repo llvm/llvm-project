@@ -55,6 +55,8 @@ using namespace llvm::VPlanPatternMatch;
 
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
 } // namespace llvm
 
 /// @{
@@ -65,10 +67,6 @@ const char LLVMLoopVectorizeFollowupVectorized[] =
 const char LLVMLoopVectorizeFollowupEpilogue[] =
     "llvm.loop.vectorize.followup_epilogue";
 /// @}
-
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-
-extern cl::opt<unsigned> NumberOfStoresToPredicate;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
@@ -186,32 +184,6 @@ VPMultiDefValue::~VPMultiDefValue() {
   getDefiningRecipe()->removeDefinedValue(this);
 }
 
-// Get the top-most entry block of \p Start. This is the entry block of the
-// containing VPlan. This function is templated to support both const and non-const blocks
-template <typename T> static T *getPlanEntry(T *Start) {
-  T *Next = Start;
-  T *Current = Start;
-  while ((Next = Next->getParent()))
-    Current = Next;
-
-  SmallSetVector<T *, 8> WorkList;
-  WorkList.insert(Current);
-
-  for (unsigned i = 0; i < WorkList.size(); i++) {
-    T *Current = WorkList[i];
-    if (!Current->hasPredecessors())
-      return Current;
-    auto &Predecessors = Current->getPredecessors();
-    WorkList.insert_range(Predecessors);
-  }
-
-  llvm_unreachable("VPlan without any entry node without predecessors");
-}
-
-VPlan *VPBlockBase::getPlan() { return getPlanEntry(this)->Plan; }
-
-const VPlan *VPBlockBase::getPlan() const { return getPlanEntry(this)->Plan; }
-
 /// \return the VPBasicBlock that is the entry of Block, possibly indirectly.
 const VPBasicBlock *VPBlockBase::getEntryBasicBlock() const {
   const VPBlockBase *Block = this;
@@ -225,11 +197,6 @@ VPBasicBlock *VPBlockBase::getEntryBasicBlock() {
   while (VPRegionBlock *Region = dyn_cast<VPRegionBlock>(Block))
     Block = Region->getEntry();
   return cast<VPBasicBlock>(Block);
-}
-
-void VPBlockBase::setPlan(VPlan *ParentPlan) {
-  assert(ParentPlan->getEntry() == this && "Can only set plan on its entry.");
-  Plan = ParentPlan;
 }
 
 /// \return the VPBasicBlock that is the exit of Block, possibly indirectly.
@@ -818,17 +785,23 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
 
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
-    // Neglect the cost of canonical IV, matching the legacy cost model.
     InstructionCost Cost = 0;
     for (VPBlockBase *Block : vp_depth_first_shallow(getEntry()))
       Cost += Block->cost(VF, Ctx);
-    InstructionCost BackedgeCost =
-        ForceTargetInstructionCost.getNumOccurrences()
-            ? InstructionCost(ForceTargetInstructionCost)
-            : Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind);
-    LLVM_DEBUG(dbgs() << "Cost of " << BackedgeCost << " for VF " << VF
-                      << ": vector loop backedge\n");
-    Cost += BackedgeCost;
+    // Add the costs of the loop's backedge and canonical IV increment
+    auto AddCost = [&](InstructionCost C, const char *Name) {
+      if (ForceTargetInstructionCost.getNumOccurrences())
+        C = InstructionCost(ForceTargetInstructionCost);
+      LLVM_DEBUG(dbgs() << "Cost of " << C << " for VF " << VF << ": " << Name
+                        << "\n");
+      Cost += C;
+    };
+    AddCost(Ctx.TTI.getCFInstrCost(Instruction::UncondBr, Ctx.CostKind),
+            "vector loop backedge");
+    if (!VPCostContext::executesAtMostOnce(*getPlan(), VF))
+      AddCost(Ctx.TTI.getArithmeticInstrCost(
+                  Instruction::Add, getCanonicalIVType(), Ctx.CostKind),
+              "canonical IV increment");
     return Cost;
   }
 
@@ -1314,6 +1287,7 @@ VPlan *VPlan::duplicate() {
   unsigned NumBlocksAfterCloning = CreatedBlocks.size();
   for (unsigned I :
        seq<unsigned>(NumBlocksBeforeCloning, NumBlocksAfterCloning)) {
+    this->CreatedBlocks[I]->setPlan(NewPlan);
     this->CreatedBlocks[I]->setNumber(NewPlan->CreatedBlocks.size());
     NewPlan->CreatedBlocks.push_back(this->CreatedBlocks[I]);
   }
@@ -1331,6 +1305,7 @@ VPlan *VPlan::duplicate() {
 
 VPIRBasicBlock *VPlan::createEmptyVPIRBasicBlock(BasicBlock *IRBB) {
   auto *VPIRBB = new VPIRBasicBlock(IRBB);
+  VPIRBB->setPlan(this);
   VPIRBB->setNumber(CreatedBlocks.size());
   CreatedBlocks.push_back(VPIRBB);
   return VPIRBB;
@@ -1649,10 +1624,6 @@ std::string VPSlotTracker::getOrCreateName(const VPValue *V) const {
   // TODO: Update VPSlotTracker constructor to assign names to recipes &
   // VPValues not associated with a VPlan, instead of constructing names ad-hoc
   // here.
-  const VPRecipeBase *DefR = V->getDefiningRecipe();
-  (void)DefR;
-  assert((!DefR || !DefR->getParent() || !DefR->getParent()->getPlan()) &&
-         "VPValue defined by a recipe in a VPlan?");
 
   // Use the underlying value's name, if there is one.
   if (auto *UV = V->getUnderlyingValue()) {
@@ -1993,4 +1964,19 @@ bool VPCostContext::isFreeScalarIntrinsic(Intrinsic::ID ID) {
                        Intrinsic::pseudoprobe,
                        Intrinsic::experimental_noalias_scope_decl},
                       ID);
+}
+
+uint64_t VPCostContext::getReplicateRegionCostDivisor(
+    const VPRegionBlock *Region) const {
+  if (CostKind == TTI::TCK_CodeSize)
+    return 1;
+  std::optional<VPExecutionFrequency> Freq =
+      Region->getEntryBranchOnMask()->getExecutionFrequency();
+  if (!Freq)
+    return 1;
+  // A recorded frequency is neither zero nor always-executing, so the
+  // probability is non-zero and the division below is safe.
+  return divideNearest(
+      BranchProbability::getDenominator(),
+      vputils::getExecutionProbability(Freq->Freq).getNumerator());
 }

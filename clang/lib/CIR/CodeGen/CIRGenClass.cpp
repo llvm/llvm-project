@@ -20,6 +20,7 @@
 #include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -154,12 +155,6 @@ static void emitMemberInitializer(CIRGenFunction &cgf,
   cgf.emitInitializerForField(field, lhs, memberInit->getInit());
 }
 
-static bool isInitializerOfDynamicClass(const CXXCtorInitializer *baseInit) {
-  const Type *baseType = baseInit->getBaseClass();
-  const auto *baseClassDecl = baseType->castAsCXXRecordDecl();
-  return baseClassDecl->isDynamicClass();
-}
-
 namespace {
 /// Call the destructor for a direct base class.
 struct CallBaseDtor final : EHScopeStack::Cleanup {
@@ -178,8 +173,8 @@ struct CallBaseDtor final : EHScopeStack::Cleanup {
     QualType thisTy = d->getFunctionObjectParameterType();
     assert(cgf.currSrcLoc && "expected source location");
     Address addr = cgf.getAddressOfDirectBaseInCompleteClass(
-        *cgf.currSrcLoc, cgf.loadCXXThisAddress(), derivedClass, baseClass,
-        baseIsVirtual);
+        cgf.getLoc(*cgf.currSrcLoc), cgf.loadCXXThisAddress(), derivedClass,
+        baseClass, baseIsVirtual);
     cgf.emitCXXDestructorCall(d, Dtor_Base, baseIsVirtual,
                               /*delegating=*/false, addr, thisTy);
   }
@@ -344,7 +339,7 @@ void CIRGenFunction::emitCtorPrologue(const CXXConstructorDecl *cd,
   auto emitInitializer = [&](CXXCtorInitializer *baseInit) {
     if (cgm.getCodeGenOpts().StrictVTablePointers &&
         cgm.getCodeGenOpts().OptimizationLevel > 0 &&
-        isInitializerOfDynamicClass(baseInit)) {
+        CodeGenUtils::isInitializerOfDynamicClass(baseInit)) {
       // It's OK to continue after emitting the error here. The missing code
       // just "launders" the 'this' pointer.
       cgm.errorNYI(cd->getSourceRange(),
@@ -779,7 +774,7 @@ void CIRGenFunction::emitCXXAggrConstructorCall(
   CharUnits eltAlignment = arrayBase.getAlignment().alignmentOfArrayElement(
       getContext().getTypeSizeInChars(type));
 
-  mlir::Location loc = *currSrcLoc;
+  mlir::Location loc = getLoc(*currSrcLoc);
 
   mlir::Value dynamicElPtr;
   if (useDynamicArrayCtor)
@@ -952,9 +947,9 @@ void CIRGenFunction::emitForwardingCallToLambda(
         resultType->isObjCRetainableType())
       cgm.errorNYI(callOperator->getSourceRange(),
                    "emitForwardingCallToLambda: ObjCAutoRefCount");
-    emitReturnOfRValue(*currSrcLoc, rv, resultType);
+    emitReturnOfRValue(getLoc(*currSrcLoc), rv, resultType);
   } else {
-    cir::ReturnOp::create(builder, *currSrcLoc);
+    cir::ReturnOp::create(builder, getLoc(*currSrcLoc));
   }
 }
 
@@ -1542,7 +1537,7 @@ void CIRGenFunction::emitCXXConstructorCall(
   CIRGenCallee callee = CIRGenCallee::forDirect(calleePtr, GlobalDecl(d, type));
   cir::CIRCallOpInterface c;
   emitCall(info, callee, ReturnValueSlot(), args, &c, /*isMustTail=*/false,
-           getLoc(loc));
+           loc);
 
   if (cgm.getCodeGenOpts().OptimizationLevel != 0 && !crd->isDynamicClass() &&
       type != Ctor_Base && cgm.getCodeGenOpts().StrictVTablePointers)

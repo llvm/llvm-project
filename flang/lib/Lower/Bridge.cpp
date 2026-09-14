@@ -39,6 +39,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/Assign.h"
 #include "flang/Optimizer/Builder/Runtime/CUDA/Descriptor.h"
+#include "flang/Optimizer/Builder/Runtime/CUDA/Support.h"
 #include "flang/Optimizer/Builder/Runtime/Character.h"
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/EnvironmentDefaults.h"
@@ -52,6 +53,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/FatalError.h"
 #include "flang/Optimizer/Support/InternalNames.h"
@@ -1161,7 +1163,9 @@ public:
   static mlir::Location genLocation(Fortran::parser::SourcePosition pos,
                                     mlir::MLIRContext &ctx) {
     llvm::SmallString<256> path(*pos.path);
-    llvm::sys::fs::make_absolute(path);
+    // Preserve the file path as it was presented on the command line (matching
+    // Clang): relative paths stay relative and absolute paths stay absolute.
+    // Only normalize '.' components; do not force the path to be absolute.
     llvm::sys::path::remove_dots(path);
     return mlir::FileLineColLoc::get(&ctx, path.str(), pos.line, pos.column);
   }
@@ -2002,7 +2006,10 @@ private:
         mlir::Value active =
             fir::runtime::cuda::genDeviceIsActive(*builder, loc);
         builder->genIfThen(loc, active)
-            .genThen([&]() { bridge.cudaCleanupCtx().finalizeAndKeep(); })
+            .genThen([&]() {
+              fir::runtime::cuda::genCUDADeviceSynchronize(*builder, loc);
+              bridge.cudaCleanupCtx().finalizeAndKeep();
+            })
             .end();
       }
       bridge.fctCtx().finalizeAndKeep();
@@ -5963,6 +5970,11 @@ private:
                           ? eval.getFirstNestedEvaluation().block
                           : eval.block);
 
+    if (eval.skipNextLowering) {
+      eval.skipNextLowering = false;
+      return;
+    }
+
     // Add scope for constructs inside acc.loop to properly contain symbol
     // bindings (e.g., from cache directive) within the construct.
     bool needsAccScope =
@@ -6937,6 +6949,8 @@ Fortran::lower::LoweringBridge::LoweringBridge(
   fir::setIdent(*module, Fortran::common::getFlangFullVersion());
   fir::setRelocationModel(*module, cgOpts.getRelocationModel());
   fir::setIsPIE(*module, cgOpts.IsPIE);
+  fir::setAllocationPolicy(
+      *module, fir::getCommandLineAllocationPolicy(cgOpts.StackArrays));
   if (cgOpts.RecordCommandLine)
     fir::setCommandline(*module, *cgOpts.RecordCommandLine);
   // Under -gpu=mem:unified|managed, host heap allocations use the matching
