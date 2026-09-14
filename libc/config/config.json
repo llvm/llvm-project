@@ -98,6 +98,10 @@
       "value": "element",
       "doc": "Selects the implementation for string-length: 'element', 'word', 'clang_vector', or 'arch_vector'."
     },
+    "LIBC_CONF_STRING_COMPARE_IMPL": {
+      "value": "element",
+      "doc": "Implementation for strcmp/strcmpcase"
+    },
     "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
       "value": "element",
       "doc": "Selects the implementation for find-first-character-related functions: 'element', 'word', 'clang_vector', or 'arch_vector'."
