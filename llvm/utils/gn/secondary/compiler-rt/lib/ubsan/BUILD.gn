@@ -50,6 +50,7 @@ source_set("sources") {
     "ubsan_init.h",
     "ubsan_monitor.cpp",
     "ubsan_monitor.h",
+    "ubsan_offload_packet.h",
     "ubsan_platform.h",
     "ubsan_signals_standalone.h",
     "ubsan_type_hash.h",
