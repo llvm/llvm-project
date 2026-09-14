@@ -39,6 +39,9 @@ struct AttributesInfo {
 
   /// Does the DIE have a string offset attribute?
   bool HasStringOffsetBaseAttr = false;
+
+  /// Does the DIE have an address base attribute?
+  bool HasAddrBaseAttr = false;
 };
 
 /// This class creates clones of input DIE attributes.

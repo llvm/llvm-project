@@ -188,7 +188,18 @@ void DwarfStreamer::emitCompileUnitHeader(CompileUnit &Unit,
   Asm->emitInt16(DwarfVersion);
 
   if (DwarfVersion >= 5) {
-    Asm->emitInt8(dwarf::DW_UT_compile);
+    // The header has to agree with the root DIE that was actually cloned, or
+    // llvm-dwarfdump --verify rejects the unit with "Mismatched unit type".
+    // Reading the tag off the output root covers DW_TAG_partial_unit without
+    // plumbing the input unit type through the DwarfEmitter interface. DWARFv5
+    // section 7.5.1.1 gives full and partial units the same five-field header,
+    // so the size below is unchanged. Skeleton roots are deliberately not
+    // mapped to DW_UT_skeleton: section 7.5.1.2 adds an 8-byte dwo_id to that
+    // header, which the 12-byte constant here and in computeNextUnitOffset()
+    // does not account for.
+    dwarf::Tag RootTag = Unit.getOutputUnitDIE()->getTag();
+    Asm->emitInt8(RootTag == dwarf::DW_TAG_partial_unit ? dwarf::DW_UT_partial
+                                                        : dwarf::DW_UT_compile);
     Asm->emitInt8(Unit.getOrigUnit().getAddressByteSize());
     // We share one abbreviations table across all units so it's always at the
     // start of the section.
