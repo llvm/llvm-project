@@ -429,3 +429,13 @@ llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_perso
 ^bb2:  // 2 preds: ^bb0, ^bb1
   llvm.return %0 : i32
 }
+
+// -----
+
+// Test that llvm.call at module scope (outside any function) produces a proper
+// error instead of leaving a parentless CallInst that crashes the module
+// destructor during LLVM IR translation.
+llvm.func @barrier()
+// expected-error @+2 {{'llvm.call' op cannot be translated to LLVM IR without an active insertion point}}
+// expected-error @+1 {{LLVM Translation failed for operation: llvm.call}}
+llvm.call @barrier() : () -> ()

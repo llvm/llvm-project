@@ -442,6 +442,14 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // itself.  Otherwise, this is an indirect call and the callee is the first
   // operand, look it up as a normal value.
   if (auto callOp = dyn_cast<LLVM::CallOp>(opInst)) {
+    // A null insert block means the op is misplaced (e.g., at module scope),
+    // which would otherwise leave a parentless CallInst that crashes the
+    // llvm::Module destructor ("Uses remain when a value is destroyed").
+    if (!builder.GetInsertBlock())
+      return opInst.emitOpError(
+          "cannot be translated to LLVM IR without an active insertion "
+          "point; make sure the op is inside a function");
+
     auto operands = moduleTranslation.lookupValues(callOp.getCalleeOperands());
     SmallVector<llvm::OperandBundleDef> opBundles =
         convertOperandBundles(callOp.getOpBundleOperands(),
