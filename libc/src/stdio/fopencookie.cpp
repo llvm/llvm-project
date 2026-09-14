@@ -62,10 +62,9 @@ ErrorOr<off_t> CookieFile::cookie_seek(File *f, off_t offset, int whence) {
   if (cookie_file->ops.seek == nullptr) {
     return Error(EINVAL);
   }
-  off64_t offset64 = offset;
-  int result = cookie_file->ops.seek(cookie_file->cookie, &offset64, whence);
+  int result = cookie_file->ops.seek(cookie_file->cookie, &offset, whence);
   if (result == 0)
-    return offset64;
+    return offset;
   return -1;
 }
 
