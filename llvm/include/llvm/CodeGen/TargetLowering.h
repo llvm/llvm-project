@@ -541,6 +541,12 @@ public:
     return true;
   }
 
+  /// Return whether it is valid to fold a select of two loads into a load
+  /// through a select of their addresses in the given address space.
+  virtual bool shouldFoldSelectOfLoads(unsigned AddressSpace) const {
+    return true;
+  }
+
   /// Does the target have multiple (allocatable) condition registers that
   /// can be used to store the results of comparisons for use by selects
   /// and conditional branches. With multiple condition registers, the code
