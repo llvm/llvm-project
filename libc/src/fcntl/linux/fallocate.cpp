@@ -30,4 +30,5 @@ LLVM_LIBC_FUNCTION(int, fallocate,
   }
   return 0;
 }
+
 } // namespace LIBC_NAMESPACE_DECL

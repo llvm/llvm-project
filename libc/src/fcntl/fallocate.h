@@ -20,6 +20,7 @@
 namespace LIBC_NAMESPACE_DECL {
 
 int fallocate(int fd, int mode, off_t offset, off_t size);
+
 }
 
 #endif
