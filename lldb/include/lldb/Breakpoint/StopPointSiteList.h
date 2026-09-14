@@ -185,6 +185,9 @@ public:
   /// Find breakpoint sites that in any way overlap the range starting at
   /// \a lower_bound and ending at \a upper_bound (but not including it).
   /// Zero sized sites are treated as never overlapping.
+  ///
+  /// \return
+  ///   \b true if any sites were added to \a bp_site_list, \b false otherwise.
   bool FindInRange(lldb::addr_t lower_bound, lldb::addr_t upper_bound,
                    StopPointSiteList &bp_site_list) const {
     if (lower_bound > upper_bound)
@@ -215,7 +218,7 @@ public:
       if (pos->second->GetByteSize() != 0)
         bp_site_list.Add(pos->second);
 
-    return true;
+    return !bp_site_list.IsEmpty();
   }
 
   typedef void (*StopPointSiteSPMapFunc)(StopPointSite &site, void *baton);

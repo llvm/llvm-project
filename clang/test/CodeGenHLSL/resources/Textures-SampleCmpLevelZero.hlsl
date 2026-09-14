@@ -12,6 +12,12 @@
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
 // RUN:   --check-prefixes=CHECK,DXIL -DDXIL_TY=5 -DRW=0 -DDIM=3
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
+// RUN:   --check-prefixes=CHECK,DXIL -DDXIL_TY=9 -DRW=0 -DDIM=3
 // RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \
 // RUN:   -DOFFSET_ARG="int2(1, 2)" -DHAS_OFFSET -DTEXTURE=Texture2D \
@@ -27,6 +33,13 @@
 // RUN:   | llvm-cxxfilt \
 // RUN:   | FileCheck %s -DTEXTURE=TextureCube -DCOORD_DIM=3 \
 // RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=0 -DSAMPLED=1 -DIMG_FMT=0 \
+// RUN:   -DSPV_DIM=3 -DDIM=3
+// RUN: %clang_cc1 -triple spirv-vulkan-library -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -o - \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s -DTEXTURE=TextureCubeArray -DCOORD_DIM=4 \
+// RUN:   --check-prefixes=CHECK,SPIRV -DARRAYED=1 -DSAMPLED=1 -DIMG_FMT=0 \
 // RUN:   -DSPV_DIM=3 -DDIM=3
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -o - \

@@ -108,6 +108,17 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
+add_libc_test(
+  swap_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    swap_test.cpp
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.utility
+)
+
 
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)

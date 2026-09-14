@@ -99,6 +99,50 @@ using SSAContext = GenericSSAContext<Function>;
 template <typename T> class GenericUniformityInfo;
 using UniformityInfo = GenericUniformityInfo<SSAContext>;
 
+/// The key SelectionDAG uniques SDNodes by.  \p Tail carries the opcode
+/// specific data, which most opcodes do not have, still serialized; a lookup
+/// site appends it through the FoldingSetNodeID-shaped forwarders below.
+struct SDNodeKey {
+  unsigned Opcode;
+  const EVT *VTs;
+  ArrayRef<SDValue> Ops;
+  FoldingSetNodeID Tail;
+  /// Backs \p Ops when the key is built from a node; empty otherwise.  No
+  /// inline capacity: only that one path pays for the storage.
+  SmallVector<SDValue, 0> OpStorage;
+
+  SDNodeKey(unsigned Opcode, SDVTList VTList, ArrayRef<SDValue> Ops)
+      : Opcode(Opcode), VTs(VTList.VTs), Ops(Ops) {}
+  LLVM_ABI explicit SDNodeKey(const SDNode &N);
+
+  SDNodeKey(const SDNodeKey &) = delete;
+  SDNodeKey &operator=(const SDNodeKey &) = delete;
+
+  // Forward to FoldingSetNodeID's own overload set, so a lookup site resolves
+  // the same way it did when profiling into one.
+  template <typename T> void AddInteger(T I) { Tail.AddInteger(I); }
+  void AddBoolean(bool B) { Tail.AddBoolean(B); }
+  void AddPointer(const void *P) { Tail.AddPointer(P); }
+};
+
+struct SDNodeKeyInfo {
+  using KeyTy = SDNodeKey;
+
+  static KeyTy getKey(const SDNode &N) { return SDNodeKey(N); }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    unsigned H = detail::combineHashValue(
+        Key.Opcode, DenseMapInfo<const EVT *>::getHashValue(Key.VTs));
+    for (const SDValue &Op : Key.Ops)
+      H = detail::combineHashValue(H, DenseMapInfo<SDValue>::getHashValue(Op));
+    for (unsigned Word : Key.Tail.getRef())
+      H = detail::combineHashValue(H, Word);
+    return H;
+  }
+
+  LLVM_ABI static bool isEqual(const KeyTy &Key, const SDNode &N);
+};
+
 template <> struct ilist_alloc_traits<SDNode> {
   static void deleteNode(SDNode *) {
     llvm_unreachable("ilist_traits<SDNode> shouldn't see a deleteNode call!");
@@ -247,7 +291,7 @@ class SelectionDAG {
 
   /// This structure is used to memoize nodes, automatically performing
   /// CSE with existing nodes when a duplicate is requested.
-  FoldingSet<SDNode> CSEMap;
+  UniquingSet<SDNode, SDNodeKeyInfo> CSEMap;
 
   /// Pool allocation for machine-opcode SDNode operands.
   BumpPtrAllocator OperandAllocator;
@@ -1042,16 +1086,6 @@ public:
   LLVM_ABI SDValue getBitcastedAnyExtOrTrunc(SDValue Op, const SDLoc &DL,
                                              EVT VT);
 
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either sign-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedSExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
-  /// Convert Op, which must be of integer type, to the
-  /// integer type VT, by first bitcasting (from potential vector) to
-  /// corresponding scalar type then either zero-extending or truncating it.
-  LLVM_ABI SDValue getBitcastedZExtOrTrunc(SDValue Op, const SDLoc &DL, EVT VT);
-
   /// Return the expression required to zero extend the Op
   /// value assuming it was the smaller SrcTy value.
   LLVM_ABI SDValue getZeroExtendInReg(SDValue Op, const SDLoc &DL, EVT VT);
@@ -1712,7 +1746,8 @@ public:
 
   /// Return an AddrSpaceCastSDNode.
   LLVM_ABI SDValue getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
-                                    unsigned SrcAS, unsigned DestAS);
+                                    unsigned SrcAS, unsigned DestAS,
+                                    const SDNodeFlags Flags = SDNodeFlags());
 
   /// Return a freeze using the SDLoc of the value operand.
   LLVM_ABI SDValue getFreeze(SDValue V);
@@ -2057,6 +2092,13 @@ public:
   /// Create a stack temporary suitable for holding either of the specified
   /// value types.
   LLVM_ABI SDValue CreateStackTemporary(EVT VT1, EVT VT2);
+
+  /// Emit a store/load combination to the stack. This stores
+  /// SrcOp to a stack slot of type SlotVT, truncating it if needed. It then
+  /// does a load from the stack slot to DestVT, extending it if needed. The
+  /// resultant code need not be legal.
+  LLVM_ABI SDValue emitStackConvert(SDValue SrcOp, EVT SlotVT, EVT DestVT,
+                                    const SDLoc &DL, SDValue Chain);
 
   LLVM_ABI SDValue FoldSymbolOffset(unsigned Opcode, EVT VT,
                                     const GlobalAddressSDNode *GA,
@@ -2537,6 +2579,13 @@ public:
   LLVM_ABI bool areNonVolatileConsecutiveLoads(LoadSDNode *LD, LoadSDNode *Base,
                                                unsigned Bytes, int Dist) const;
 
+  /// Return true if stores are next to each other and can be merged. Check that
+  /// both are nonvolatile and if \p ST is storing \p Bytes bytes to a location
+  /// that is \p Dist units away from the location that \p Base is storing to.
+  LLVM_ABI bool areNonVolatileConsecutiveStores(StoreSDNode *ST,
+                                                StoreSDNode *Base,
+                                                unsigned Bytes, int Dist) const;
+
   /// Infer alignment of a load / store address. Return std::nullopt if it
   /// cannot be inferred.
   LLVM_ABI MaybeAlign InferPtrAlign(SDValue Ptr) const;
@@ -2737,6 +2786,16 @@ public:
   LLVM_ABI SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr,
                                          SDValue InChain, const SDLoc &DLoc);
 
+  /// Returns the maximum runtime number of elements in VT if known, or 0
+  /// otherwise.
+  unsigned getMaxRuntimeNumElements(EVT VT) const;
+
+  /// Returns a vector constructed from the scalar values in order. The number
+  /// of scalars must match the maximum runtime length of VT, but only the first
+  /// actual runtime length scalars are included in the result.
+  SDValue buildVectorFromUnrolledParts(EVT VT, const SDLoc &DL,
+                                       ArrayRef<SDValue> Scalars);
+
 private:
 #ifndef NDEBUG
   void verifyNode(SDNode *N) const;
@@ -2761,13 +2820,12 @@ private:
   /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
   /// subsequent insert. This overload is for nodes other than Constant or
   /// ConstantFP, use the other one for those.
-  SDNode *lookupNode(const FoldingSetNodeID &ID,
-                     FoldingSetInsertToken &InsertToken);
+  SDNode *lookupNode(const SDNodeKey &Key, FoldingSetInsertToken &InsertToken);
 
   /// Look up the node specified by ID in CSEMap. If it exists, return it and
   /// clear \p InsertToken; otherwise return null and set \p InsertToken for a
   /// subsequent insert. Performs additional processing for constant nodes.
-  SDNode *lookupNode(const FoldingSetNodeID &ID, const SDLoc &DL,
+  SDNode *lookupNode(const SDNodeKey &Key, const SDLoc &DL,
                      FoldingSetInsertToken &InsertToken);
 
   /// Maps to auto-CSE operations.

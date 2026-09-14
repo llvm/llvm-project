@@ -245,6 +245,37 @@ def TosaNarrowF64ToF32Pass : Pass<"tosa-narrow-f64-to-f32", "func::FuncOp"> {
   ];
 }
 
+def TosaNarrowF32ToF16Pass : Pass<"tosa-narrow-f32-to-f16", "func::FuncOp"> {
+  let summary = "Narrow F32 TOSA operations to F16";
+  let description = [{
+    This pass destructively narrows TOSA operations with 32-bit floating-point
+    tensor types to 16-bit floating-point tensor types. It can reduce model
+    size and improve execution time on backends with native F16 support.
+
+    This conversion is not correctness-preserving and does not perform range
+    analysis on graph inputs. Before applying this pass, users must verify that
+    all possible input values can be represented with the required range and
+    precision in F16. Otherwise, the conversion may reduce accuracy or produce
+    incorrect results.
+  }];
+
+  let options = [
+    Option<"aggressiveRewrite", "aggressive-rewrite", "bool", "false",
+      "If enabled, all TOSA operations are rewritten, regardless of whether the narrowing "
+      "is safe. This option may lead to data loss if not used carefully.">,
+    Option<"convertFunctionBoundaries", "convert-function-boundaries", "bool", "false",
+      "If enabled, the pass will convert function I/O types as well. Otherwise casts will "
+      "be inserted at the I/O boundaries.">,
+    Option<"convertAccumulatorType", "convert-accumulator-type", "bool", "false",
+      "If enabled, F32 accumulator type attributes are narrowed to F16. This "
+      "conversion may lose precision and is performed without range analysis.">
+  ];
+
+  let dependentDialects = [
+    "func::FuncDialect"
+  ];
+}
+
 def TosaInputShape : Pass<"tosa-experimental-input-shape", "func::FuncOp"> {
   let summary = "Override dynamic function arguments to specified static shapes.";
   let description = [{

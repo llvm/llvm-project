@@ -13,14 +13,17 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMP_H
 #define LLVM_FRONTEND_OPENMP_OMP_H
 
-#include "llvm/Frontend/OpenMP/OMP.h.inc"
 #include "llvm/Support/Compiler.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Bitset.h"
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
+
+#include "llvm/Frontend/OpenMP/OMP.h.inc"
 
 namespace llvm::omp {
 template <typename Enum, size_t Size> struct EnumSet;
@@ -187,7 +190,7 @@ static constexpr inline bool canHaveIterator(Clause C) {
 }
 
 // Can clause C create a private copy of a variable.
-static constexpr inline bool isPrivatizingClause(Clause C, unsigned Version) {
+static constexpr inline bool isPrivatizingClause(Clause C, Version V) {
   switch (C) {
   case OMPC_firstprivate:
   case OMPC_in_reduction:
@@ -201,17 +204,16 @@ static constexpr inline bool isPrivatizingClause(Clause C, unsigned Version) {
   case OMPC_induction:
   case OMPC_is_device_ptr:
   case OMPC_use_device_ptr:
-    return Version >= 60;
+    return V >= 60;
   default:
     return false;
   }
 }
 
-static constexpr inline bool isDataSharingAttributeClause(Clause C,
-                                                          unsigned Version) {
+static constexpr inline bool isDataSharingAttributeClause(Clause C, Version V) {
   // The "Version" parameter is in case the result is version-depenent
   // in the future.
-  (void)Version;
+  (void)V;
   switch (C) {
   case OMPC_detach:
   case OMPC_firstprivate:
@@ -244,12 +246,12 @@ static constexpr inline bool isEndClause(Clause C) {
   }
 }
 
-static constexpr unsigned FallbackVersion = 52;
-LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
+static constexpr Version FallbackVersion(52);
+LLVM_ABI ArrayRef<Version> getOpenMPVersions();
 
 /// Can directive D, under some circumstances, create a private copy
 /// of a variable in given OpenMP version?
-LLVM_ABI bool isPrivatizingConstruct(Directive D, unsigned Version);
+LLVM_ABI bool isPrivatizingConstruct(Directive D, Version V);
 
 LLVM_ABI ArrayRef<StringRef> getReservedLocatorNames();
 

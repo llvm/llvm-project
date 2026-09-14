@@ -897,7 +897,7 @@ public:
     return false;
   }
 
-  virtual bool isCleanRegXOR(const MCInst &Inst) const {
+  virtual bool isCleanReg(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
   }

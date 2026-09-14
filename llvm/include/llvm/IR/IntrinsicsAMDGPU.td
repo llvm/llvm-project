@@ -13,6 +13,7 @@
 def flat_ptr_ty : LLVMQualPointerType<0>;
 def global_ptr_ty : LLVMQualPointerType<1>;
 def local_ptr_ty : LLVMQualPointerType<3>;
+def barrier_ptr_ty : LLVMQualPointerType<15>;
 
 // The amdgpu-no-* attributes (ex amdgpu-no-workitem-id-z) typically inferred
 // by the backend cause whole-program undefined behavior when violated, such as
@@ -171,12 +172,12 @@ defm int_amdgcn_cluster_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_na
                                        <"__builtin_amdgcn_cluster_workgroup_id">;
 def int_amdgcn_cluster_workgroup_flat_id:
   ClangBuiltin<"__builtin_amdgcn_cluster_workgroup_flat_id">,
-  Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 defm int_amdgcn_cluster_workgroup_max_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                            <"__builtin_amdgcn_cluster_workgroup_max_id">;
 def int_amdgcn_cluster_workgroup_max_flat_id:
   ClangBuiltin<"__builtin_amdgcn_cluster_workgroup_max_flat_id">,
-  Intrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
+  DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrSpeculatable]>;
 
 def int_amdgcn_dispatch_ptr :
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
@@ -268,16 +269,16 @@ def int_amdgcn_reloc_constant : DefaultAttrsIntrinsic<
 // the second one is copied to m0
 def int_amdgcn_s_sendmsg : ClangBuiltin<"__builtin_amdgcn_s_sendmsg">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 def int_amdgcn_s_sendmsghalt : ClangBuiltin<"__builtin_amdgcn_s_sendmsghalt">,
   Intrinsic <[], [llvm_i32_ty, llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrNoCallback]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrNoCallback, IntrNoFree]>;
 
 
 // gfx11 intrinsic
 // The first parameter is s_sendmsg immediate (i16). Return type is i32 or i64.
 def int_amdgcn_s_sendmsg_rtn : Intrinsic <[llvm_anyint_ty], [llvm_i32_ty],
-  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback]>;
+  [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // Vanilla workgroup sync-barrier
 def int_amdgcn_s_barrier : ClangBuiltin<"__builtin_amdgcn_s_barrier">,
@@ -296,7 +297,7 @@ def int_amdgcn_s_barrier_signal : ClangBuiltin<"__builtin_amdgcn_s_barrier_signa
 // If %memberCnt is 0, the member count is retained from the previous
 // s_barrier_init or s_barrier_signal operation.
 def int_amdgcn_s_barrier_signal_var : ClangBuiltin<"__builtin_amdgcn_s_barrier_signal_var">,
-  Intrinsic<[], [local_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[], [barrier_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
 // bool @llvm.amdgcn.s.barrier.signal.isfirst(i32 %barrierType)
@@ -308,20 +309,20 @@ def int_amdgcn_s_barrier_signal_isfirst : ClangBuiltin<"__builtin_amdgcn_s_barri
 // void @llvm.amdgcn.s.barrier.init(ptr addrspace(3) %barrier, i32 %memberCnt)
 // The %barrier and %memberCnt argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_barrier_init : ClangBuiltin<"__builtin_amdgcn_s_barrier_init">,
-  Intrinsic<[], [local_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent,
+  Intrinsic<[], [barrier_ptr_ty, llvm_i32_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent,
                                 IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 // void @llvm.amdgcn.s.barrier.join(ptr addrspace(3) %barrier)
 // The %barrier argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_barrier_join : ClangBuiltin<"__builtin_amdgcn_s_barrier_join">,
-  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[], [barrier_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
 // void @llvm.amdgcn.s.wakeup.barrier(ptr addrspace(3) %barrier)
 // The %barrier argument must be uniform, otherwise behavior is undefined.
 let TargetFeatures = "s-wakeup-barrier-inst" in
 def int_amdgcn_s_wakeup_barrier : ClangBuiltin<"__builtin_amdgcn_s_wakeup_barrier">,
-  Intrinsic<[], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[], [barrier_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
 // void @llvm.amdgcn.s.barrier.wait(i16 %barrierType)
@@ -344,7 +345,7 @@ def int_amdgcn_s_get_barrier_state : ClangBuiltin<"__builtin_amdgcn_s_get_barrie
 // uint32_t @llvm.amdgcn.s.get.named.barrier.state(ptr addrspace(3) %barrier)
 // The %barrier argument must be uniform, otherwise behavior is undefined.
 def int_amdgcn_s_get_named_barrier_state : ClangBuiltin<"__builtin_amdgcn_s_get_named_barrier_state">,
-  Intrinsic<[llvm_i32_ty], [local_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
+  Intrinsic<[llvm_i32_ty], [barrier_ptr_ty], [IntrNoMem, IntrHasSideEffects, IntrConvergent, IntrWillReturn,
                                 IntrNoCallback, IntrNoFree]>;
 
 def int_amdgcn_wave_barrier : ClangBuiltin<"__builtin_amdgcn_wave_barrier">,
@@ -2250,7 +2251,7 @@ def int_amdgcn_s_sleep :
 def int_amdgcn_s_sleep_var
     : ClangBuiltin<"__builtin_amdgcn_s_sleep_var">,
       Intrinsic<[], [llvm_i32_ty],
-                [IntrNoMem, IntrHasSideEffects, IntrWillReturn]> {
+                [IntrNoMem, IntrHasSideEffects, IntrWillReturn, IntrNoCallback, IntrNoFree]> {
 }
 
 def int_amdgcn_s_nop :
@@ -2923,12 +2924,15 @@ def int_amdgcn_pops_exiting_wave_id :
 
 // Sets a marker in the stream of async requests. Modelled as InaccessibleMem.
 def int_amdgcn_asyncmark : ClangBuiltin<"__builtin_amdgcn_asyncmark">,
-  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects]>;
+  Intrinsic<[], [], [IntrNoMem, IntrHasSideEffects, IntrWillReturn,
+                     IntrNoCallback, IntrNoFree]>;
 
 // Waits until the Nth previous marker is completed, if it exists.
 def int_amdgcn_wait_asyncmark :
     ClangBuiltin<"__builtin_amdgcn_wait_asyncmark">,
-    Intrinsic<[], [llvm_i16_ty], [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects]>;
+    Intrinsic<[], [llvm_i16_ty],
+              [ImmArg<ArgIndex<0>>, IntrNoMem, IntrHasSideEffects,
+               IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
@@ -3179,7 +3183,7 @@ class AMDGPUSWmmacIntrinsicIdxReuse<LLVMType A, LLVMType B, LLVMType CD, LLVMTyp
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison,
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison,
      ImmArg<ArgIndex<4>>, ImmArg<ArgIndex<5>>]
 >;
 
@@ -3192,7 +3196,7 @@ class AMDGPUSWmmacIntrinsicIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Ind
       LLVMMatchType<0>, // %C
       Index             // %Sparsity index for A
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison]
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison]
 >;
 
 class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
@@ -3207,7 +3211,8 @@ class AMDGPUSWmmacIntrinsicIUIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType I
       Index,            // %Sparsity index for A
       llvm_i1_ty,       // %clamp
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison, ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>]
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison,
+     ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>]
 >;
 
 defset list<Intrinsic> AMDGPUWMMAIntrinsicsGFX12 = {
@@ -3847,13 +3852,14 @@ def int_amdgcn_ds_atomic_async_barrier_arrive_b64 :
   ClangBuiltin<"__builtin_amdgcn_ds_atomic_async_barrier_arrive_b64">,
   Intrinsic<[], [local_ptr_ty],
             // Atomically updates LDS and also ASYNC_CNT which is modeled as InaccessibleMem.
-            [IntrConvergent, IntrWillReturn, IntrInaccessibleMemOrArgMemOnly],
+            [IntrConvergent, IntrWillReturn, IntrInaccessibleMemOrArgMemOnly, IntrNoCallback, IntrNoFree],
             "", [SDNPMemOperand]>;
 
 def int_amdgcn_ds_atomic_barrier_arrive_rtn_b64 :
   ClangBuiltin<"__builtin_amdgcn_ds_atomic_barrier_arrive_rtn_b64">,
   Intrinsic<[llvm_i64_ty], [local_ptr_ty, llvm_i64_ty],
-            [IntrConvergent, IntrWillReturn, IntrArgMemOnly, NoCapture<ArgIndex<0>>],
+            [IntrConvergent, IntrWillReturn, IntrArgMemOnly, IntrNoCallback, IntrNoFree,
+             NoCapture<ArgIndex<0>>],
             "", [SDNPMemOperand]>;
 
 def int_amdgcn_s_monitor_sleep :
@@ -4250,10 +4256,13 @@ let TargetFeatures = "wmma-n16-insts" in {
   def int_amdgcn_wmma_f32_16x16x128_f8f6f4  : AMDGPUWmmaIntrinsicModsC_MatrixFMT;
   def int_amdgcn_wmma_scale_f32_16x16x128_f8f6f4   : AMDGPUWmmaScaleIntrinsicModsC<llvm_i32_ty>;
   def int_amdgcn_wmma_scale16_f32_16x16x128_f8f6f4 : AMDGPUWmmaScaleIntrinsicModsC<llvm_i64_ty>;
+} // End TargetFeatures = "wmma-n16-insts"
+
+let TargetFeatures = "wmma-f4-insts" in {
   def int_amdgcn_wmma_f32_32x16x128_f4       : AMDGPUWmmaIntrinsicF4ModsC<llvm_anyint_ty, llvm_anyint_ty, llvm_anyfloat_ty>;
   def int_amdgcn_wmma_scale_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i32_ty>;
   def int_amdgcn_wmma_scale16_f32_32x16x128_f4 : AMDGPUWmmaScaleF4IntrinsicModsC<llvm_i64_ty>;
-} // End TargetFeatures = "wmma-n16-insts"
+} // End TargetFeatures = "wmma-f4-insts"
 }
 
 class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType Index> :
@@ -4269,7 +4278,7 @@ class AMDGPUSWmmacIntrinsicABIdx<LLVMType A, LLVMType B, LLVMType CD, LLVMType I
       llvm_i1_ty,       // matrix_a_reuse
       llvm_i1_ty,       // matrix_b_reuse
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison,
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison,
      ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>]
 >;
 
@@ -4287,7 +4296,7 @@ class AMDGPUSWmmacIntrinsicABIdxClamp<LLVMType A, LLVMType B, LLVMType CD, LLVMT
       llvm_i1_ty,       // matrix_b_reuse
       llvm_i1_ty,       // %clamp
     ],
-    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCreateUndefOrPoison,
+    [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree, IntrNoCreateUndefOrPoison,
      ImmArg<ArgIndex<0>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<6>>, ImmArg<ArgIndex<7>>, ImmArg<ArgIndex<8>>]
 >;
 
@@ -4362,13 +4371,6 @@ def int_amdgcn_flat_load_monitor_b128   : AMDGPULoadMonitor<flat_ptr_ty>;
 def int_amdgcn_global_load_monitor_b32  : AMDGPULoadMonitor<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b64  : AMDGPULoadMonitor<global_ptr_ty>;
 def int_amdgcn_global_load_monitor_b128 : AMDGPULoadMonitor<global_ptr_ty>;
-
-/// Emit an addrspacecast without null pointer checking.
-/// Should only be inserted by a pass based on analysis of an addrspacecast's src.
-def int_amdgcn_addrspacecast_nonnull : DefaultAttrsIntrinsic<
-  [llvm_anyptr_ty], [llvm_anyptr_ty],
-  [IntrNoMem, IntrSpeculatable]
->;
 
 /// Make it clear to the backend that this value is really dead. For instance,
 /// when used as an input to a phi node, it will make it possible for the

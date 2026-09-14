@@ -1,3 +1,19 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_ARCHITECTURE}/tcb.h)
+  add_header_library(
+    tcb
+    HDRS
+      tcb.h
+      ${LIBC_TARGET_ARCHITECTURE}/tcb.h
+    DEPENDS
+      libc.hdr.offsetof_macros
+      libc.hdr.stdint_proxy
+      libc.src.__support.threads.thread_attributes
+      libc.src.__support.macros.attributes
+      libc.src.__support.macros.config
+      libc.src.__support.macros.properties.architectures
+  )
+endif()
+
 add_header_library(
   futex_word_type
   HDRS

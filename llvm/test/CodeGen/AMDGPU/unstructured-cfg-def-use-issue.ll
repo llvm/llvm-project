@@ -499,7 +499,7 @@ bb8:                                              ; preds = %bb4
   br i1 %tmp9, label %bb10, label %bb1
 
 bb10:                                             ; preds = %bb8
-  store float 0x7FF8000000000000, ptr addrspace(5) zeroinitializer, align 16
+  store float +qnan, ptr addrspace(5) zeroinitializer, align 16
   br label %bb18
 
 bb11:                                             ; preds = %bb6
@@ -512,7 +512,7 @@ bb14:                                             ; preds = %bb11
   br i1 %tmp15, label %bb17, label %bb16
 
 bb16:                                             ; preds = %bb14
-  store float 0x7FF8000000000000, ptr addrspace(5) zeroinitializer, align 16
+  store float +qnan, ptr addrspace(5) zeroinitializer, align 16
   br label %bb17
 
 bb17:                                             ; preds = %bb16, %bb14
@@ -520,7 +520,7 @@ bb17:                                             ; preds = %bb16, %bb14
   br label %bb18
 
 bb18:                                             ; preds = %bb17, %bb10
-  store float 0x7FF8000000000000, ptr addrspace(5) zeroinitializer, align 4
+  store float +qnan, ptr addrspace(5) zeroinitializer, align 4
   br label %bb2
 }
 

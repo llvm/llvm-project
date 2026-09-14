@@ -51,7 +51,7 @@ define fastcc ptr @test_function(i1 %0, ptr %_Fmtfl.i.i, i1 %1) personality ptr 
 ; CHECK-NEXT:    .seh_save_fplr_x 16
 ; CHECK-NEXT:    .seh_endprologue
 ; CHECK-NEXT:    adrp x0, .LBB0_2
-; CHECK-NEXT:    add x0, x0, .LBB0_2
+; CHECK-NEXT:    add x0, x0, :lo12:.LBB0_2
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_fplr_x 16

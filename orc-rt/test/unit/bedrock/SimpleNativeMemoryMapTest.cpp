@@ -15,6 +15,7 @@
 #include "orc-rt/support/sps/SPSAllocAction.h"
 
 #include "AllocActionTestUtils.h"
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 #include "gtest/gtest.h"
 

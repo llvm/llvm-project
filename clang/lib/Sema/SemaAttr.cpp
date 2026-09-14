@@ -1074,7 +1074,7 @@ void Sema::ActOnPragmaAttributeAttribute(
     //    variable(is_parameter).
     //  - a sub-rule and a sibling that's negated. E.g.
     //    variable(is_thread_local) and variable(unless(is_parameter))
-    llvm::SmallDenseMap<int, std::pair<int, SourceRange>, 2>
+    llvm::SmallDenseMap<int, attr::ParsedSubjectMatchRuleSet::value_type, 2>
         RulesToFirstSpecifiedNegatedSubRule;
     for (const auto &Rule : Rules) {
       attr::SubjectMatchRule MatchRule = attr::SubjectMatchRule(Rule.first);

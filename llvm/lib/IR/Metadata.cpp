@@ -61,10 +61,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 MetadataAsValue::MetadataAsValue(Type *Ty, Metadata *MD)
     : Value(Ty, MetadataAsValueVal), MD(MD) {
   track();
@@ -650,6 +646,8 @@ StringRef MDString::getString() const {
 void *MDNode::operator new(size_t Size, size_t NumOps, StorageType Storage) {
   // uint64_t is the most aligned type we need support (ensured by static_assert
   // above)
+  static_assert(sizeof(Header) == sizeof(size_t) + 2 * sizeof(uint32_t),
+                "MDNode header fields poorly packed");
   size_t AllocSize =
       alignTo(Header::getAllocSize(Storage, NumOps), alignof(uint64_t));
   char *Mem = reinterpret_cast<char *>(::operator new(AllocSize + Size));
@@ -667,6 +665,8 @@ void MDNode::operator delete(void *N) {
 MDNode::MDNode(LLVMContext &Context, unsigned ID, StorageType Storage,
                ArrayRef<Metadata *> Ops1, ArrayRef<Metadata *> Ops2)
     : Metadata(ID, Storage), Context(Context) {
+  getHeader().MetadataPrintID = Context.pImpl->allocateMetadataPrintID();
+
   unsigned Op = 0;
   for (Metadata *MD : Ops1)
     setOperand(Op++, MD);
@@ -781,6 +781,9 @@ void MDNode::countUnresolvedOperands() {
 void MDNode::makeUniqued() {
   assert(isTemporary() && "Expected this to be temporary");
   assert(!isResolved() && "Expected this to be unresolved");
+  bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+  assert(WasTracked && "Temporary node not tracked");
+  (void)WasTracked;
 
   // Enable uniquing callbacks.
   for (auto &Op : mutable_operands())
@@ -981,6 +984,11 @@ void MDNode::handleChangedOperand(void *Ref, Metadata *New) {
 }
 
 void MDNode::deleteAsSubclass() {
+  if (isTemporary()) {
+    bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+    assert(WasTracked && "Temporary node not tracked");
+    (void)WasTracked;
+  }
   switch (getMetadataID()) {
   default:
     llvm_unreachable("Invalid subclass of MDNode");
@@ -1066,6 +1074,11 @@ void MDNode::deleteTemporary(MDNode *N) {
 void MDNode::storeDistinctInContext() {
   assert(!Context.hasReplaceableUses() && "Unexpected replaceable uses");
   assert(!getNumUnresolved() && "Unexpected unresolved nodes");
+  if (isTemporary()) {
+    bool WasTracked = getContext().pImpl->TemporaryMDNodes.erase(this);
+    assert(WasTracked && "Temporary node not tracked");
+    (void)WasTracked;
+  }
   Storage = Distinct;
   assert(isResolved() && "Expected this to be resolved");
 
@@ -1270,7 +1283,7 @@ MDNode *MDNode::getMergedProfMetadata(MDNode *A, MDNode *B,
       BCall->getCalledFunction())
     return mergeDirectCallProfMetadata(A, B, AInstr, BInstr);
 
-  if (A == B && !ProfcheckDisableMetadataFixes)
+  if (A == B)
     return A;
 
   // The rest of the cases are not implemented but could be added

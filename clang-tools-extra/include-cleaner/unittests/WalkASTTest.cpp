@@ -579,6 +579,8 @@ TEST(WalkAST, CleanupAttr) {
            "void foo() { __attribute__((__cleanup__(^freep))) char* x = 0; }");
 }
 
+// Objective-C Tests
+
 TEST(WalkAST, ObjCInterfaceTypeLoc) {
   testWalk(R"objc(
     @interface $explicit^MyClass
@@ -600,6 +602,18 @@ TEST(WalkAST, ObjCImplementationDeclDependsOnInterface) {
            R"objc(
     @implementation ^MyClass
     @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCClassFunctionArg) {
+  testWalk(R"objc(
+    @interface $explicit^MyClass
+    @end
+  )objc",
+           R"objc(
+    void test(^MyClass *obj) {
+    }
   )objc",
            {"-x", "objective-c"});
 }
@@ -1000,6 +1014,18 @@ TEST(WalkAST, ObjCPropertyRefExprSuperNestedProtocolReceiver) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCInterfaceDeclInheritance) {
+  testWalk(R"objc(
+    @interface $explicit^BaseClass
+    @end
+  )objc",
+           R"objc(
+    @interface DerivedClass : ^BaseClass
+    @end
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCProtocolInType) {
   testWalk(R"objc(
     @protocol $explicit^MyProtocol
@@ -1132,6 +1158,28 @@ TEST(WalkAST, ObjCCompatibleAliasUsage) {
            {"-x", "objective-c"});
 }
 
+TEST(WalkAST, ObjCForwardClassDecl) {
+  testWalk(R"objc(
+    @interface MyClass
+    @end
+  )objc",
+           R"objc(
+    @class ^MyClass;
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCForwardProtocolDecl) {
+  testWalk(R"objc(
+    @protocol MyProtocol
+    @end
+  )objc",
+           R"objc(
+    @protocol ^MyProtocol;
+  )objc",
+           {"-x", "objective-c"});
+}
+
 TEST(WalkAST, ObjCIvarRefExprExplicit) {
   testWalk(R"objc(
     @interface MyClass {
@@ -1174,6 +1222,123 @@ TEST(WalkAST, ObjCSelectorExpr) {
            R"objc(
     void test() {
       SEL s = @selector(^doSomething);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprToObjC) {
+  testWalk(R"objc(
+    typedef const struct __CFString *CFStringRef;
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      NSString *s = (__bridge ^NSString *)cf;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprToCF) {
+  testWalk(R"objc(
+    typedef const struct __CFString * $explicit^CFStringRef;
+    @interface NSString
+    @end
+  )objc",
+           R"objc(
+    void test(NSString *s) {
+      CFStringRef cf = (__bridge ^CFStringRef)s;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprBridgeTransfer) {
+  testWalk(R"objc(
+    typedef const struct __CFString *CFStringRef;
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      NSString *s = (__bridge_transfer ^NSString *)cf;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprBridgeRetained) {
+  testWalk(R"objc(
+    typedef const struct __CFString * $explicit^CFStringRef;
+    @interface NSString
+    @end
+  )objc",
+           R"objc(
+    void test(NSString *s) {
+      CFStringRef cf = (__bridge_retained ^CFStringRef)s;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCTollFreeBridgeCStyleCast) {
+  testWalk(R"objc(
+    typedef const struct __attribute__((objc_bridge(NSString)))
+      __CFString * CFStringRef;
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      NSString *s = (^NSString *)cf;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBridgedCastExprToProtocol) {
+  // Note this test case is handled by TraverseObjCProtocolLoc instead of
+  // VisitCastExpr.
+  // It is here for completeness.
+  testWalk(R"objc(
+    typedef const struct __CFString *CFStringRef;
+    @protocol $explicit^MyProtocol
+    - (void)doSomething;
+    @end
+  )objc",
+           R"objc(
+    void test(CFStringRef cf) {
+      id<MyProtocol> p = (__bridge id<^MyProtocol>)cf;
+    }
+  )objc",
+           {"-x", "objective-c", "-fobjc-arc"});
+}
+
+TEST(WalkAST, ObjCImplicitVoidPointerCast) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+    void cast(NSString *p);
+  )objc",
+           R"objc(
+    void foo(void *p) {
+      cast(^p);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCImplicitIdPointerCast) {
+  testWalk(R"objc(
+    @interface $implicit^NSString
+    @end
+    void cast(NSString *p);
+  )objc",
+           R"objc(
+   void foo(id p) {
+      cast(^p);
     }
   )objc",
            {"-x", "objective-c"});
@@ -1423,6 +1588,81 @@ TEST(WalkAST, ObjCEncodeExpr) {
            R"objc(
     void test() {
       const char *enc = @encode(struct ^MyStruct);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBoxedExprInt) {
+  testWalk(R"objc(
+    @interface $explicit^NSNumber
+    + (id)numberWithInt:(int)val;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id x = ^@42;
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCBoxedExprStruct) {
+  testWalk(R"objc(
+    struct __attribute__((objc_boxable)) Point {
+      int x, y;
+    };
+    @interface $explicit^NSValue
+    + (id)valueWithBytes:(const void *)bytes objCType:(const char *)type;
+    @end
+  )objc",
+           R"objc(
+    void test() {
+    struct Point p = {1, 2};
+      id x = ^@(p);
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCArrayLiteral) {
+  testWalk(R"objc(
+    @interface $explicit^NSArray
+    + (id)arrayWithObjects:(const id *)objects count:(unsigned long)cnt;
+    @end
+  )objc",
+           R"objc(
+    void test(id a, id b) {
+      id arr = ^@[a, b];
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCDictionaryLiteral) {
+  testWalk(R"objc(
+    @interface $explicit^NSDictionary
+    + (id)dictionaryWithObjects:(const id *)objects
+                        forKeys:(const id *)keys
+                          count:(unsigned long)cnt;
+    @end
+  )objc",
+           R"objc(
+    void test(id k, id v) {
+      id dict = ^@{k: v};
+    }
+  )objc",
+           {"-x", "objective-c"});
+}
+
+TEST(WalkAST, ObjCStringLiteral) {
+  testWalk(R"objc(
+    @interface $explicit^NSString
+    @end
+  )objc",
+           R"objc(
+    void test() {
+      id s = ^@"hello";
     }
   )objc",
            {"-x", "objective-c"});

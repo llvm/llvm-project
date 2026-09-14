@@ -10701,3 +10701,185 @@ int64_t test_mqracc_w01_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
 int64_t test_mqracc_w11_i64(int64_t rd, int32x2_t rs1, int32x2_t rs2) {
   return __riscv_mqracc_w11_i64(rd, rs1, rs2);
 }
+
+/* Packed Element Extract */
+
+// RV32-LABEL: define dso_local signext i8 @test_pget_i8x4_i8(
+// RV32-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 24
+// RV32-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i8
+// RV32-NEXT:    ret i8 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local signext i8 @test_pget_i8x4_i8(
+// RV64-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 24
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i8
+// RV64-NEXT:    ret i8 [[VECEXT_I]]
+//
+int8_t test_pget_i8x4_i8(int8x4_t v) {
+  return __riscv_pget_i8x4_i8(v, 3);
+}
+
+// RV32-LABEL: define dso_local zeroext i8 @test_pget_u8x4_u8(
+// RV32-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 24
+// RV32-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i8
+// RV32-NEXT:    ret i8 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local zeroext i8 @test_pget_u8x4_u8(
+// RV64-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 24
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i8
+// RV64-NEXT:    ret i8 [[VECEXT_I]]
+//
+uint8_t test_pget_u8x4_u8(uint8x4_t v) {
+  return __riscv_pget_u8x4_u8(v, 3);
+}
+
+// RV32-LABEL: define dso_local signext i16 @test_pget_i16x2_i16(
+// RV32-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 16
+// RV32-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
+// RV32-NEXT:    ret i16 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local signext i16 @test_pget_i16x2_i16(
+// RV64-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 16
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
+// RV64-NEXT:    ret i16 [[VECEXT_I]]
+//
+int16_t test_pget_i16x2_i16(int16x2_t v) {
+  return __riscv_pget_i16x2_i16(v, 1);
+}
+
+// RV32-LABEL: define dso_local zeroext i16 @test_pget_u16x2_u16(
+// RV32-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 16
+// RV32-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
+// RV32-NEXT:    ret i16 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local zeroext i16 @test_pget_u16x2_u16(
+// RV64-SAME: i32 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i32 [[V_COERCE]], 16
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i32 [[EXTELT_OFFSET]] to i16
+// RV64-NEXT:    ret i16 [[VECEXT_I]]
+//
+uint16_t test_pget_u16x2_u16(uint16x2_t v) {
+  return __riscv_pget_u16x2_u16(v, 1);
+}
+
+// RV32-LABEL: define dso_local signext i8 @test_pget_i8x8_i8(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[VECEXT_I:%.*]] = extractelement <8 x i8> [[TMP0]], i64 7
+// RV32-NEXT:    ret i8 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local signext i8 @test_pget_i8x8_i8(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 56
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i8
+// RV64-NEXT:    ret i8 [[VECEXT_I]]
+//
+int8_t test_pget_i8x8_i8(int8x8_t v) {
+  return __riscv_pget_i8x8_i8(v, 7);
+}
+
+// RV32-LABEL: define dso_local zeroext i8 @test_pget_u8x8_u8(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <8 x i8>
+// RV32-NEXT:    [[VECEXT_I:%.*]] = extractelement <8 x i8> [[TMP0]], i64 7
+// RV32-NEXT:    ret i8 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local zeroext i8 @test_pget_u8x8_u8(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 56
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i8
+// RV64-NEXT:    ret i8 [[VECEXT_I]]
+//
+uint8_t test_pget_u8x8_u8(uint8x8_t v) {
+  return __riscv_pget_u8x8_u8(v, 7);
+}
+
+// RV32-LABEL: define dso_local signext i16 @test_pget_i16x4_i16(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[VECEXT_I:%.*]] = extractelement <4 x i16> [[TMP0]], i64 3
+// RV32-NEXT:    ret i16 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local signext i16 @test_pget_i16x4_i16(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 48
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i16
+// RV64-NEXT:    ret i16 [[VECEXT_I]]
+//
+int16_t test_pget_i16x4_i16(int16x4_t v) {
+  return __riscv_pget_i16x4_i16(v, 3);
+}
+
+// RV32-LABEL: define dso_local zeroext i16 @test_pget_u16x4_u16(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <4 x i16>
+// RV32-NEXT:    [[VECEXT_I:%.*]] = extractelement <4 x i16> [[TMP0]], i64 3
+// RV32-NEXT:    ret i16 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local zeroext i16 @test_pget_u16x4_u16(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 48
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i16
+// RV64-NEXT:    ret i16 [[VECEXT_I]]
+//
+uint16_t test_pget_u16x4_u16(uint16x4_t v) {
+  return __riscv_pget_u16x4_u16(v, 3);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_i32x2_i32(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[VECEXT_I:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
+// RV32-NEXT:    ret i32 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_pget_i32x2_i32(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 32
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
+// RV64-NEXT:    ret i32 [[VECEXT_I]]
+//
+int32_t test_pget_i32x2_i32(int32x2_t v) {
+  return __riscv_pget_i32x2_i32(v, 1);
+}
+
+// RV32-LABEL: define dso_local i32 @test_pget_u32x2_u32(
+// RV32-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = bitcast i64 [[V_COERCE]] to <2 x i32>
+// RV32-NEXT:    [[VECEXT_I:%.*]] = extractelement <2 x i32> [[TMP0]], i64 1
+// RV32-NEXT:    ret i32 [[VECEXT_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_pget_u32x2_u32(
+// RV64-SAME: i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[EXTELT_OFFSET:%.*]] = lshr i64 [[V_COERCE]], 32
+// RV64-NEXT:    [[VECEXT_I:%.*]] = trunc nuw i64 [[EXTELT_OFFSET]] to i32
+// RV64-NEXT:    ret i32 [[VECEXT_I]]
+//
+uint32_t test_pget_u32x2_u32(uint32x2_t v) {
+  return __riscv_pget_u32x2_u32(v, 1);
+}

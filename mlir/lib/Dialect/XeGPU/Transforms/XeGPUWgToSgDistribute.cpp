@@ -41,7 +41,7 @@ static xegpu::RangeAttr getRangeSpecAttr(Operation *op) {
   Operation *parent = op->getParentOfType<scf::IfOp>();
   while (parent) {
     if (auto attr = llvm::dyn_cast_if_present<xegpu::RangeAttr>(
-            parent->getAttr("sg_id_range")))
+            parent->getDiscardableAttr("sg_id_range")))
       return attr;
     parent = parent->getParentOfType<scf::IfOp>();
   }
@@ -489,7 +489,8 @@ struct WgToSgElementwiseOp : public ConversionPattern {
       OperationState state(op->getLoc(), op->getName());
       state.addOperands(opOperands);
       state.addTypes(newResultType);
-      state.addAttributes(op->getAttrs());
+      state.addAttributes(op->getDiscardableAttrDictionary().getValue());
+      state.propertiesAttr = op->getPropertiesAsAttribute();
       Operation *newOp = rewriter.create(state);
       xegpu::removeLayoutAttrs(newOp);
       newResults.push_back(newOp->getResult(0));

@@ -91,6 +91,23 @@ endif()
 set(LIBC_LINK_OPTIONS_DEFAULT "" CACHE STRING "Arguments used when linking.")
 set(LIBC_TEST_LINK_OPTIONS_DEFAULT "" CACHE STRING "Common link options for all the tests.")
 
+# Enable source-based code coverage using Clang's continuous profiling mode.
+option(LIBC_ENABLE_COVERAGE "Build libc with coverage instrumentation" OFF)
+if(LIBC_ENABLE_COVERAGE)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND LIBC_COMPILE_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%c%p.profraw"
+         "-fcoverage-mapping"
+         "-fprofile-continuous")
+    list(APPEND LIBC_TEST_LINK_OPTIONS_DEFAULT
+         "-fprofile-instr-generate=libc_cov_%c%p.profraw"
+         "-fprofile-continuous")
+  else()
+    message(FATAL_ERROR
+            "Coverage instrumentation is currently only supported with Clang")
+  endif()
+endif()
+
 set(LIBC_TEST_CMD "" CACHE STRING
   "The full test command in the form <command> binary=@BINARY@, if using another program to test (e.g. QEMU)")
 set(LIBC_TEST_HERMETIC_ONLY "" OFF CACHE BOOL "Only enable hermetic tests.")
@@ -156,6 +173,19 @@ if(LLVM_LIBC_FULL_BUILD)
   set(LLVM_LIBC_OVERLAY OFF)
 else()
   set(LLVM_LIBC_OVERLAY ON)
+endif()
+
+if(LIBC_ENABLE_COVERAGE)
+  if(LIBC_TARGET_OS_IS_GPU OR LIBC_TARGET_OS_IS_BAREMETAL)
+    message(FATAL_ERROR
+      "LIBC_ENABLE_COVERAGE is not supported on GPU or baremetal targets.")
+  endif()
+  if(LLVM_LIBC_FULL_BUILD)
+    message(FATAL_ERROR
+      "LIBC_ENABLE_COVERAGE is only supported in overlay mode "
+      "(LLVM_LIBC_FULL_BUILD=OFF). Full build mode uses hermetic tests "
+      "which cannot link the compiler-rt profiling runtime.")
+  endif()
 endif()
 option(LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR "Build LLVM libc tests assuming our implementation-defined behavior" ON)
 option(LLVM_LIBC_ENABLE_LINTING "Enables linting of libc source files" OFF)

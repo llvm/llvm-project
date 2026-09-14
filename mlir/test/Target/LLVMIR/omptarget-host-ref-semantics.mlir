@@ -3,7 +3,7 @@
 // Tests that we correctly lower the different variations of reference pointer
 // and attach semantics.
 
-module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.requires = #omp<clause_requires none>, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 61>} {
+module attributes {omp.is_gpu = false, omp.is_target_device = false, omp.requires = #omp.clause_requires<none>, omp.target_triples = ["amdgcn-amd-amdhsa"], omp.version = #omp.version<version = 61>} {
   llvm.func @attach_always_(%arg0: !llvm.ptr, %arg1: !llvm.ptr) {
     %map1 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%arg1 : !llvm.ptr, i32) name("") -> !llvm.ptr
     %map2 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, to) capture(ByRef) members(%map1 : [0] : !llvm.ptr) name("x") -> !llvm.ptr

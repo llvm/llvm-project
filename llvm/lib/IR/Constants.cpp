@@ -2130,34 +2130,27 @@ Value *DSOLocalEquivalent::handleOperandChangeImpl(Value *From, Value *To) {
   assert(From == getGlobalValue() && "Changing value does not match operand.");
   assert(isa<Constant>(To) && "Can only replace the operands with a constant");
 
-  // The replacement is with another global value.
-  if (const auto *ToObj = dyn_cast<GlobalValue>(To)) {
-    if (DSOLocalEquivalent *NewEquiv =
-            getContext().pImpl->DSOLocalEquivalents.lookup(ToObj))
-      return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
-  }
-
   // If the argument is replaced with a null value, just replace this constant
   // with a null value.
   if (isa<ConstantPointerNull>(To))
     return To;
 
-  // The replacement could be a bitcast or an alias to another function. We can
-  // replace it with a bitcast to the dso_local_equivalent of that function.
-  auto *Func = cast<Function>(To->stripPointerCastsAndAliases());
+  // The replacement could be a bitcast to another GlobalValue. We can
+  // replace it with a bitcast to the dso_local_equivalent of that GV.
+  GlobalValue *GV = cast<GlobalValue>(To->stripPointerCasts());
   if (DSOLocalEquivalent *NewEquiv =
-          getContext().pImpl->DSOLocalEquivalents.lookup(Func))
+          getContext().pImpl->DSOLocalEquivalents.lookup(GV))
     return llvm::ConstantExpr::getBitCast(NewEquiv, getType());
 
-  // erase invalidates iterators/references, hence the duplicate Func lookup.
+  // erase invalidates iterators/references, hence the duplicate GV lookup.
   getContext().pImpl->DSOLocalEquivalents.erase(getGlobalValue());
-  getContext().pImpl->DSOLocalEquivalents[Func] = this;
-  setOperand(0, Func);
+  getContext().pImpl->DSOLocalEquivalents[GV] = this;
+  setOperand(0, GV);
 
-  if (Func->getType() != getType()) {
+  if (GV->getType() != getType()) {
     // It is ok to mutate the type here because this constant should always
     // reflect the type of the function it's holding.
-    mutateType(Func->getType());
+    mutateType(GV->getType());
   }
   return nullptr;
 }

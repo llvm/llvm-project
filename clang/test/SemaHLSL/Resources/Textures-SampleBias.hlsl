@@ -3,6 +3,10 @@
 // RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int2 -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_TYPE=float2 %s
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim3 \
+// RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int3 -DTEXTURE=Texture3D \
+// RUN:   -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
 // RUN:   -finclude-default-header -fsyntax-only -verify=expected,offset,dim2 \
 // RUN:   -DHAS_OFFSET -DOFFSET_TYPE=int2 -DTEXTURE=Texture2DArray \
 // RUN:   -DCOORD_TYPE=float3 %s
@@ -10,6 +14,10 @@
 // RUN:   -finclude-default-header -fsyntax-only \
 // RUN:   -verify=expected,nooffset,dim3 -DOFFSET_TYPE=int3 \
 // RUN:   -DTEXTURE=TextureCube -DCOORD_TYPE=float3 %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library \
+// RUN:   -finclude-default-header -fsyntax-only \
+// RUN:   -verify=expected,nooffset,dim3 -DOFFSET_TYPE=int3 \
+// RUN:   -DTEXTURE=TextureCubeArray -DCOORD_TYPE=float4 %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.

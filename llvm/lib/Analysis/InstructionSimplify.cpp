@@ -4903,11 +4903,27 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
     auto isRotate =
         m_CombineOr(m_FShl(m_Value(X), m_Deferred(X), m_Value(ShAmt)),
                     m_FShr(m_Value(X), m_Deferred(X), m_Value(ShAmt)));
-    // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
-    // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
-    if (match(FalseVal, isRotate) && TrueVal == X && CmpLHS == ShAmt &&
-        Pred == ICmpInst::ICMP_EQ)
-      return FalseVal;
+    if (match(FalseVal, isRotate) && TrueVal == X) {
+      // (ShAmt == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+      // (ShAmt == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+      if (CmpLHS == ShAmt)
+        return FalseVal;
+      // Compute the bitwidth of the value being rotated.
+      unsigned BW = X->getType()->getScalarSizeInBits();
+      // Handle the cases where the expression to be checked for zero is not the
+      // shift amount but the `shAmt % bitwidth` which is equivalent to `shAmt &
+      // (bitwidth - 1)` provided the bitwidth is a power of 2.
+      //
+      // ((ShAmt & (BW-1)) == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+      // ((ShAmt & (BW-1)) == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+      if (isPowerOf2_32(BW) &&
+          match(CmpLHS, m_c_And(m_Specific(ShAmt), m_SpecificInt(BW - 1))))
+        return FalseVal;
+      // (ShAmt % BW == 0) ? X : fshl(X, X, ShAmt) --> fshl(X, X, ShAmt)
+      // (ShAmt % BW == 0) ? X : fshr(X, X, ShAmt) --> fshr(X, X, ShAmt)
+      if (match(CmpLHS, m_URem(m_Specific(ShAmt), m_SpecificInt(BW))))
+        return FalseVal;
+    }
 
     // X == 0 ? abs(X) : -abs(X) --> -abs(X)
     // X == 0 ? -abs(X) : abs(X) --> abs(X)
@@ -5679,9 +5695,13 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
     if (Op->getType() == Ty)
       return Op;
 
-  // ptrtoint (ptradd (Ptr, X - ptrtoint(Ptr))) -> X
+  // ptrtoaddr (ptradd (Ptr, X - ptrtoint/ptrtoaddr(Ptr))) -> X
+  // This is also valid for ptrtoint, but only if the (now unused) ptrtoint
+  // instruction is preserved for its provenance exposure side effect. As this
+  // is currently not the case, only fold ptrtoaddr, which does not expose
+  // provenance.
   Value *Ptr, *X;
-  if ((CastOpc == Instruction::PtrToInt || CastOpc == Instruction::PtrToAddr) &&
+  if (CastOpc == Instruction::PtrToAddr &&
       match(Op,
             m_PtrAdd(m_Value(Ptr),
                      m_Sub(m_Value(X), m_PtrToIntOrAddr(m_Deferred(Ptr))))) &&
@@ -5705,6 +5725,22 @@ static Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
 Value *llvm::simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                               const SimplifyQuery &Q) {
   return ::simplifyCastInst(CastOpc, Op, Ty, Q, RecursionLimit);
+}
+
+static Value *simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                        const SimplifyQuery &Q,
+                                        unsigned MaxRecurse) {
+  if (IsNonNull && isa<ConstantPointerNull>(Op) && Q.CxtI &&
+      !NullPointerIsDefined(Q.CxtI->getFunction(),
+                            Op->getType()->getPointerAddressSpace()))
+    return PoisonValue::get(Ty);
+
+  return ::simplifyCastInst(Instruction::AddrSpaceCast, Op, Ty, Q, MaxRecurse);
+}
+
+Value *llvm::simplifyAddrSpaceCastInst(Value *Op, Type *Ty, bool IsNonNull,
+                                       const SimplifyQuery &Q) {
+  return ::simplifyAddrSpaceCastInst(Op, Ty, IsNonNull, Q, RecursionLimit);
 }
 
 /// For the given destination element of a shuffle, peek through shuffles to
@@ -6151,10 +6187,10 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
       if (FMF.noSignedZeros())
         return ConstantFP::getZero(Op0->getType());
       // +normal number * (-)0.0 --> (-)0.0
-      if (Known.SignBit == false)
+      if (Known.getSignBit() == false)
         return Op1;
       // -normal number * (-)0.0 --> -(-)0.0
-      if (Known.SignBit == true)
+      if (Known.getSignBit() == true)
         return foldConstant(Instruction::FNeg, Op1, Q);
     }
   }
@@ -6609,7 +6645,7 @@ static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
   switch (IID) {
   case Intrinsic::fabs: {
     KnownFPClass KnownClass = computeKnownFPClass(Op0, fcAllFlags, Q);
-    if (KnownClass.SignBit == false)
+    if (KnownClass.getSignBit() == false)
       return Op0;
 
     if (KnownClass.cannotBeOrderedLessThanZero() &&
@@ -7597,7 +7633,7 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F))
+  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
@@ -7831,6 +7867,13 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
 #define HANDLE_CAST_INST(num, opc, clas) case Instruction::opc:
 #include "llvm/IR/Instruction.def"
 #undef HANDLE_CAST_INST
+    if (I->getOpcode() == Instruction::AddrSpaceCast) {
+      return simplifyAddrSpaceCastInst(
+          NewOps[0], I->getType(),
+          Q.IIQ.UseInstrInfo && cast<AddrSpaceCastInst>(I)->hasNonNull(), Q,
+          MaxRecurse);
+    }
+
     return simplifyCastInst(I->getOpcode(), NewOps[0], I->getType(), Q,
                             MaxRecurse);
   case Instruction::Alloca:

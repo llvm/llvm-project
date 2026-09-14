@@ -164,6 +164,17 @@ add_header_macro(
 )
 
 add_header_macro(
+  glob
+  ../libc/include/glob.yaml
+  glob.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.glob_macros
+    .llvm-libc-types.glob_t
+    .llvm-libc-types.size_t
+)
+
+add_header_macro(
   grp
   ../libc/include/grp.yaml
   grp.h
@@ -1044,6 +1055,15 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.struct_sockaddr_un
+)
+
+add_header_macro(
+  sys_user
+  ../libc/include/sys/user.yaml
+  sys/user.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.struct_user_regs_struct
 )
 
 add_header_macro(

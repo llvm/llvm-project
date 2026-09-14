@@ -1332,11 +1332,9 @@ public:
       mlir::Value rhs = Visit(e->getRHS());
 
       auto cmpOpKind = cir::CmpOpKind::ne;
-      mlir::Type resTy = cgf.convertType(e->getType());
-      lhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, lhs, zeroVec);
-      rhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, rhs, zeroVec);
-      mlir::Value vecOr = builder.createAnd(loc, lhs, rhs);
-      return builder.createIntCast(vecOr, resTy);
+      lhs = builder.createVecCompare(loc, cmpOpKind, lhs, zeroVec);
+      rhs = builder.createVecCompare(loc, cmpOpKind, rhs, zeroVec);
+      return builder.createAnd(loc, lhs, rhs);
     }
 
     assert(!cir::MissingFeatures::instrumentation());
@@ -1377,11 +1375,9 @@ public:
       mlir::Value rhs = Visit(e->getRHS());
 
       auto cmpOpKind = cir::CmpOpKind::ne;
-      mlir::Type resTy = cgf.convertType(e->getType());
-      lhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, lhs, zeroVec);
-      rhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, rhs, zeroVec);
-      mlir::Value vecOr = builder.createOr(loc, lhs, rhs);
-      return builder.createIntCast(vecOr, resTy);
+      lhs = builder.createVecCompare(loc, cmpOpKind, lhs, zeroVec);
+      rhs = builder.createVecCompare(loc, cmpOpKind, rhs, zeroVec);
+      return builder.createOr(loc, lhs, rhs);
     }
 
     assert(!cir::MissingFeatures::instrumentation());

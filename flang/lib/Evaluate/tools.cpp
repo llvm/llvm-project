@@ -1416,6 +1416,10 @@ struct HasConversionHelper : public AnyTraverse<HasConversionHelper> {
   using Base = AnyTraverse<HasConversionHelper>;
   HasConversionHelper() : Base{*this} {}
   using Base::operator();
+  // Subscript conversions belong to the array designator and are preserved
+  // when reassociating the surrounding numeric expression. In particular,
+  // implicit conversions to SubscriptInteger must not inhibit reassociation.
+  bool operator()(const Subscript &) const { return false; }
   template <typename TO, common::TypeCategory FROM>
   bool operator()(const Convert<TO, FROM> &) const {
     return true;
