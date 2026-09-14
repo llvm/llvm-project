@@ -33,7 +33,7 @@ static int getDevicePreference(const device &Device) {
   if (ProgramManager.hasCompatibleImage(*DeviceImpl))
     Score += CompatibleImageBonus;
 
-  if (DeviceImpl->getBackend() == backend::level_zero)
+  if (DeviceImpl->getBackend() == backend::ext_llvm_level_zero)
     Score += LevelZeroBonus;
 
   return Score;

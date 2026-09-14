@@ -21,14 +21,20 @@
 #include <string_view>
 #include <type_traits>
 
+// SYCL 2020 4.1.1. Backend macros.
+#define SYCL_EXT_LLVM_BACKEND_LEVEL_ZERO 1
+// The macros for backend::opencl, backend::ext_llvm_cuda and
+// backend::ext_llvm_hip are intentionally left undefined, as these backends are
+// not available yet.
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
-// SYCL 2020 4.1. Backends.
+// SYCL 2020 4.1. Backends and SYCL 2020 6.3.7. Adding a backend.
 enum class backend : unsigned char {
   opencl = 0,
-  level_zero,
-  cuda,
-  hip,
+  ext_llvm_level_zero,
+  ext_llvm_cuda,
+  ext_llvm_hip,
 };
 
 namespace detail {
