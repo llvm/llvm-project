@@ -675,7 +675,7 @@ features cannot lower the translation-unit ABI level;
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
 
-- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters.
+- Fixed a crash with generic lambdas in default arguments of functions with `auto` parameters. (#GH48768)
 
 #### Bug Fixes to AST Handling
 
