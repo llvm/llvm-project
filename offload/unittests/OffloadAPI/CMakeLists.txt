@@ -52,6 +52,7 @@ add_offload_unittest("program"
     program/olDestroyProgram.cpp)
 
 add_offload_unittest("queue"
+    queue/AMDGPUQueueUserCountTest.cpp
     queue/olCreateQueue.cpp
     queue/olSyncQueue.cpp
     queue/olDestroyQueue.cpp
@@ -60,6 +61,8 @@ add_offload_unittest("queue"
     queue/olWaitEvents.cpp
     queue/olLaunchHostFunction.cpp
     queue/olQueryQueue.cpp)
+target_include_directories("queue.unittests" PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../../plugins-nextgen/amdgpu/utils)
 
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp
