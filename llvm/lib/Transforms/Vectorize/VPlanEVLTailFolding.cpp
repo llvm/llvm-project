@@ -655,30 +655,48 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
 }
 
 void VPlanTransforms::trimVFsCausingSplits(VPlan &Plan,
-                                           VPCostContext &CostCtx) {
+                                           const TargetTransformInfo &TTI) {
   if (!Plan.hasScalableVF())
     return;
 
   // Get the widest type in the vector region.
-  unsigned WidestType = 8;
-  VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
+  unsigned WidestType = 1;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(VectorLoop->getEntry())))
-    for (VPRecipeBase &BaseR : make_range(VPBB->getFirstNonPhi(), VPBB->end()))
-      if (auto *R = dyn_cast<VPSingleDefRecipe>(&BaseR);
-          R && !vputils::onlyScalarValuesUsed(R)) {
-        // Skip the partial reduction since its VF is scaled down and can
-        // be calculated by its operands.
-        if (isa<VPExpressionRecipe>(R))
-          continue;
-        WidestType =
-            std::max(WidestType, R->getScalarType()->getScalarSizeInBits());
+           vp_depth_first_deep(Plan.getEntry())))
+    for (VPRecipeBase &BaseR :
+         make_range(VPBB->getFirstNonPhi(), VPBB->end())) {
+      auto GetTypeSizeInBits = [&](Type *T) {
+        return isa<PointerType>(T) ? Plan.getDataLayout().getPointerSizeInBits(
+                                         T->getPointerAddressSpace())
+                                   : T->getScalarSizeInBits();
+      };
+      if (auto *Store = dyn_cast<VPWidenStoreEVLRecipe>(&BaseR)) {
+        WidestType = std::max(
+            WidestType,
+            GetTypeSizeInBits(Store->getStoredValue()->getScalarType()));
+        continue;
       }
+      for (auto *V : BaseR.definedValues()) {
+        if (!vputils::onlyScalarValuesUsed(V)) {
+          // Skip the partial reduction since its VF is scaled down and can
+          // be calculated by its operands.
+          if (isa<VPExpressionRecipe>(V))
+            continue;
+          uint64_t Scale;
+          if (match(V, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                           m_VPValue(), m_VPValue(), m_ConstantInt(Scale))) &&
+              Scale != 1)
+            continue;
+          WidestType =
+              std::max(WidestType, GetTypeSizeInBits(V->getScalarType()));
+        }
+      }
+    }
 
   // Trim the VF that will generate vectors need to split.
   SmallVector<ElementCount, 4> VFs = to_vector(Plan.vectorFactors());
   for (auto VF : reverse(VFs)) {
-    if (CostCtx.TTI.getRegUsageForType(VectorType::get(
+    if (TTI.getRegUsageForType(VectorType::get(
             Type::getIntNTy(Plan.getContext(), WidestType), VF)) <= 8)
       break;
     Plan.removeVF(VF);

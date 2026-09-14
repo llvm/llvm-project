@@ -225,13 +225,7 @@ define void @mix_type_i8_i64(ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 8 registers
 ; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
 ; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-REGS-VP:  LV(REG): VF = vscale x 16
-; CHECK-REGS-VP:  LV(REG): Found max usage: 2 item
-; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 6 registers
-; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::VRRC, 16 registers
-; CHECK-REGS-VP:  LV(REG): Found invariant usage: 1 item
-; CHECK-REGS-VP:  LV(REG): RegisterClass: RISCV::GPRRC, 1 registers
-; CHECK-REGS-VP:  LV: Selecting VF: vscale x 16.
+; CHECK-REGS-VP:  LV: Selecting VF: vscale x 8.
 ;
 entry:
   br label %for.body

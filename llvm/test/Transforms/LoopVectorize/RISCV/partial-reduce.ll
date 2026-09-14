@@ -332,38 +332,38 @@ define i32 @chained_reduce_iv_derived_first_link(ptr %c, ptr %d, i64 %N) #0 {
 ; MAXBW-NEXT:  [[ENTRY:.*:]]
 ; MAXBW-NEXT:    br label %[[VECTOR_PH:.*]]
 ; MAXBW:       [[VECTOR_PH]]:
-; MAXBW-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i8> @llvm.stepvector.nxv16i8()
+; MAXBW-NEXT:    [[TMP0:%.*]] = call <vscale x 8 x i8> @llvm.stepvector.nxv8i8()
 ; MAXBW-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; MAXBW:       [[VECTOR_BODY]]:
 ; MAXBW-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE2:%.*]], %[[VECTOR_BODY]] ]
-; MAXBW-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 16 x i8> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; MAXBW-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 2 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE2:%.*]], %[[VECTOR_BODY]] ]
+; MAXBW-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 8 x i8> [ [[TMP0]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; MAXBW-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; MAXBW-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 16, i1 true)
+; MAXBW-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; MAXBW-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; MAXBW-NEXT:    [[TMP3:%.*]] = trunc i64 [[TMP2]] to i8
-; MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i8> poison, i8 [[TMP3]], i64 0
-; MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer
-; MAXBW-NEXT:    [[TMP4:%.*]] = sext <vscale x 16 x i8> [[VEC_IND]] to <vscale x 16 x i32>
-; MAXBW-NEXT:    [[TMP5:%.*]] = mul <vscale x 16 x i32> [[TMP4]], [[TMP4]]
-; MAXBW-NEXT:    [[TMP6:%.*]] = call <vscale x 16 x i32> @llvm.vp.merge.nxv16i32(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i32> [[TMP5]], <vscale x 16 x i32> zeroinitializer, i32 [[TMP1]])
-; MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP6]])
+; MAXBW-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 8 x i8> poison, i8 [[TMP3]], i64 0
+; MAXBW-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 8 x i8> [[BROADCAST_SPLATINSERT]], <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+; MAXBW-NEXT:    [[TMP4:%.*]] = sext <vscale x 8 x i8> [[VEC_IND]] to <vscale x 8 x i32>
+; MAXBW-NEXT:    [[TMP5:%.*]] = mul <vscale x 8 x i32> [[TMP4]], [[TMP4]]
+; MAXBW-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i32> [[TMP5]], <vscale x 8 x i32> zeroinitializer, i32 [[TMP1]])
+; MAXBW-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 2 x i32> [[VEC_PHI]], <vscale x 8 x i32> [[TMP6]])
 ; MAXBW-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[C]], i64 [[INDEX]]
-; MAXBW-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP7]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP1]])
+; MAXBW-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP7]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]])
 ; MAXBW-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i8, ptr [[D]], i64 [[INDEX]]
-; MAXBW-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 16 x i8> @llvm.vp.load.nxv16i8.p0(ptr align 1 [[TMP8]], <vscale x 16 x i1> splat (i1 true), i32 [[TMP1]])
-; MAXBW-NEXT:    [[TMP9:%.*]] = sext <vscale x 16 x i8> [[VP_OP_LOAD]] to <vscale x 16 x i32>
-; MAXBW-NEXT:    [[TMP10:%.*]] = sext <vscale x 16 x i8> [[VP_OP_LOAD1]] to <vscale x 16 x i32>
-; MAXBW-NEXT:    [[TMP11:%.*]] = mul <vscale x 16 x i32> [[TMP9]], [[TMP10]]
-; MAXBW-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i32> @llvm.vp.merge.nxv16i32(<vscale x 16 x i1> splat (i1 true), <vscale x 16 x i32> [[TMP11]], <vscale x 16 x i32> zeroinitializer, i32 [[TMP1]])
-; MAXBW-NEXT:    [[PARTIAL_REDUCE2]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP12]])
+; MAXBW-NEXT:    [[VP_OP_LOAD1:%.*]] = call <vscale x 8 x i8> @llvm.vp.load.nxv8i8.p0(ptr align 1 [[TMP8]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP1]])
+; MAXBW-NEXT:    [[TMP9:%.*]] = sext <vscale x 8 x i8> [[VP_OP_LOAD]] to <vscale x 8 x i32>
+; MAXBW-NEXT:    [[TMP10:%.*]] = sext <vscale x 8 x i8> [[VP_OP_LOAD1]] to <vscale x 8 x i32>
+; MAXBW-NEXT:    [[TMP11:%.*]] = mul <vscale x 8 x i32> [[TMP9]], [[TMP10]]
+; MAXBW-NEXT:    [[TMP12:%.*]] = call <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1> splat (i1 true), <vscale x 8 x i32> [[TMP11]], <vscale x 8 x i32> zeroinitializer, i32 [[TMP1]])
+; MAXBW-NEXT:    [[PARTIAL_REDUCE2]] = call <vscale x 2 x i32> @llvm.vector.partial.reduce.add.nxv2i32.nxv8i32(<vscale x 2 x i32> [[PARTIAL_REDUCE]], <vscale x 8 x i32> [[TMP12]])
 ; MAXBW-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP2]], [[INDEX]]
 ; MAXBW-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP2]]
-; MAXBW-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 16 x i8> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; MAXBW-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 8 x i8> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; MAXBW-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; MAXBW-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; MAXBW:       [[MIDDLE_BLOCK]]:
-; MAXBW-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE2]])
+; MAXBW-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv2i32(<vscale x 2 x i32> [[PARTIAL_REDUCE2]])
 ; MAXBW-NEXT:    br label %[[EXIT:.*]]
 ; MAXBW:       [[EXIT]]:
 ; MAXBW-NEXT:    ret i32 [[TMP14]]
