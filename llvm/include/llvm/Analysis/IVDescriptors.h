@@ -30,7 +30,6 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
-enum class SCEVNoWrapFlags;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -492,7 +491,7 @@ public:
   MonotonicDescriptor() = default;
 
   /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
-  /// is monotonic, the monotonic descriptor \p Desc will contain the data
+  /// is monotonic, the monotonic descriptor \p D will contain the data
   /// describing the PHI.
   LLVM_ABI static bool isMonotonicPHI(PHINode *PN, const Loop *L,
                                       MonotonicDescriptor &Desc,
@@ -516,12 +515,12 @@ public:
   const SCEV *getStepSCEV() const { return StepSCEV; }
 
   /// Returns the SCEV no-wrap flags that apply to StepInst.
-  SCEVNoWrapFlags getSCEVNoWrapFlags() const { return SCEVNoWrapFlags; }
+  unsigned getSCEVNoWrapFlags() const { return SCEVNoWrapFlags; }
 
 private:
   MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
                       Instruction *StepInst, const SCEV *StartSCEV,
-                      const SCEV *StepSCEV, SCEVNoWrapFlags SCEVNoWrapFlags)
+                      const SCEV *StepSCEV, unsigned SCEVNoWrapFlags)
       : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
         StartSCEV(StartSCEV), StepSCEV(StepSCEV),
         SCEVNoWrapFlags(SCEVNoWrapFlags) {}
@@ -542,7 +541,7 @@ private:
   const SCEV *StepSCEV = nullptr;
 
   /// The SCEV no-wrap flags that apply to StepInst.
-  SCEVNoWrapFlags SCEVNoWrapFlags{};
+  unsigned SCEVNoWrapFlags = 0;
 };
 
 } // end namespace llvm

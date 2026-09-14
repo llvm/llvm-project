@@ -500,7 +500,7 @@ for.end:
         auto *AR = cast<SCEVAddRecExpr>(OrigInSCEV);
         EXPECT_EQ(AR->getNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
         // Check the expressions and wrap flags for the monotonic induction.
-        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNSW);
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()), SCEV::FlagNSW);
         EXPECT_EQ(Desc.getStartSCEV(), AR->getStart());
         EXPECT_EQ(Desc.getStepSCEV(), AR->getStepRecurrence(SE));
       });
@@ -560,7 +560,7 @@ for.end:
         auto *StepSCEV = SE.getConstant(StartSCEV->getType(), 4);
         EXPECT_EQ(Desc.getStartSCEV(), StartSCEV);
         EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
-        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagNUW);
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()), SCEV::FlagNUW);
       });
 }
 
@@ -673,6 +673,7 @@ for.end:
         EXPECT_EQ(Desc.getStepSCEV(), StepSCEV);
 
         // Check we don't add `nuw` when we have a negative GEP step.
-        EXPECT_EQ(Desc.getSCEVNoWrapFlags(), SCEV::FlagAnyWrap);
+        EXPECT_EQ(SCEV::NoWrapFlags(Desc.getSCEVNoWrapFlags()),
+                  SCEV::FlagAnyWrap);
       });
 }
