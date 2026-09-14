@@ -63,10 +63,10 @@
 // For example:
 //   SANITIZER_INTERFACE_WEAK_DEF(bool, compare, int a, int b) { return a > b; }
 //
-#if SANITIZER_WINDOWS
-#include "sanitizer_win_defs.h"
-# define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...)                   \
-  WIN_WEAK_EXPORT_DEF(ReturnType, Name, __VA_ARGS__)
+#if SANITIZER_WINDOWS && (!defined(__GNUC__) || defined(__clang__))
+#  include "sanitizer_win_defs.h"
+#  define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...) \
+    WIN_WEAK_EXPORT_DEF(ReturnType, Name, __VA_ARGS__)
 #else
 # define SANITIZER_INTERFACE_WEAK_DEF(ReturnType, Name, ...)                   \
   extern "C" SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE            \

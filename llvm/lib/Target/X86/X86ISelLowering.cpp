@@ -3836,9 +3836,10 @@ unsigned X86TargetLowering::preferedOpcodeForCmpEqPiecesOfOperand(
     // best. Otherwise its not clear what the best so just don't make changed.
     PreferRotate = Subtarget.hasAVX512() && (VT.getScalarType() == MVT::i32 ||
                                              VT.getScalarType() == MVT::i64);
-  } else {
+  } else if (isTypeLegal(VT)) {
     // For scalar, if we have bmi prefer rotate for rorx. Otherwise prefer
-    // rotate unless we have a zext mask+shr.
+    // rotate unless we have a zext mask+shr. Rotates on illegal types are
+    // expanded to shifts, so never prefer them there.
     PreferRotate = Subtarget.hasBMI2();
     if (!PreferRotate) {
       unsigned MaskBits =
@@ -25794,7 +25795,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op1.getSimpleValueType();
   SDValue CC;
 
-  if (isSoftF16(VT, Subtarget)) {
+  // Select bf16/fp16 vectors as integers; there are no bf16/fp16 CMOV pseudos.
+  if (isBF16orSoftF16(VT, Subtarget)) {
     MVT NVT = VT.changeTypeToInteger();
     return DAG.getBitcast(VT, DAG.getNode(ISD::SELECT, DL, NVT, Cond,
                                           DAG.getBitcast(NVT, Op1),
@@ -59522,8 +59524,8 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
       Op0.getOpcode() == ISD::LOAD) {
     LoadSDNode *Ld = cast<LoadSDNode>(Op0.getNode());
 
-    // This transformation is not supported if the result type is f16 or f128.
-    if (VT == MVT::f16 || VT == MVT::f128)
+    // FILD does not support f16, bf16, or f128 results.
+    if (VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f128)
       return SDValue();
 
     // If we have AVX512DQ we can use packed conversion instructions unless

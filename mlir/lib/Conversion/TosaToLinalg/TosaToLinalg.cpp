@@ -35,6 +35,18 @@
 using namespace mlir;
 using namespace mlir::tosa;
 
+template <typename OpTy>
+static OpTy createWithDefaultProperties(OpBuilder &builder, Location loc,
+                                        TypeRange resultTypes,
+                                        ValueRange operands) {
+  typename OpTy::Properties properties{};
+  OpTy::populateDefaultProperties(
+      OperationName(OpTy::getOperationName(), builder.getContext()),
+      properties);
+  return OpTy::create(builder, loc, resultTypes, operands, properties,
+                      /*discardableAttributes=*/{});
+}
+
 // Helper function to materialize the semantically correct compare and select
 // operations given a binary operation with a specific NaN propagation mode.
 //
@@ -89,7 +101,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::AbsOp
   if (isa<tosa::AbsOp>(op) && isa<FloatType>(elementTy))
-    return math::AbsFOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<math::AbsFOp>(rewriter, loc, resultTypes,
+                                                     args);
 
   if (isa<tosa::AbsOp>(op) && isa<IntegerType>(elementTy)) {
     auto zero = arith::ConstantOp::create(rewriter, loc,
@@ -100,21 +113,26 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::AddOp
   if (isa<tosa::AddOp>(op) && isa<FloatType>(elementTy))
-    return arith::AddFOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::AddFOp>(rewriter, loc,
+                                                      resultTypes, args);
 
   if (isa<tosa::AddOp>(op) && isa<IntegerType>(elementTy))
-    return arith::AddIOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::AddIOp>(rewriter, loc,
+                                                      resultTypes, args);
 
   // tosa::SubOp
   if (isa<tosa::SubOp>(op) && isa<FloatType>(elementTy))
-    return arith::SubFOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::SubFOp>(rewriter, loc,
+                                                      resultTypes, args);
 
   if (isa<tosa::SubOp>(op) && isa<IntegerType>(elementTy))
-    return arith::SubIOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::SubIOp>(rewriter, loc,
+                                                      resultTypes, args);
 
   // tosa::IntDivOp
   if (isa<tosa::IntDivOp>(op) && isa<IntegerType>(elementTy))
-    return arith::DivSIOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::DivSIOp>(rewriter, loc,
+                                                       resultTypes, args);
 
   // tosa::ReciprocalOp
   if (isa<tosa::ReciprocalOp>(op) && isa<FloatType>(elementTy)) {
@@ -282,15 +300,18 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::LogicalLeftShiftOp
   if (isa<tosa::LogicalLeftShiftOp>(op) && isa<IntegerType>(elementTy))
-    return arith::ShLIOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::ShLIOp>(rewriter, loc,
+                                                      resultTypes, args);
 
   // tosa::LogicalRightShiftOp
   if (isa<tosa::LogicalRightShiftOp>(op) && isa<IntegerType>(elementTy))
-    return arith::ShRUIOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<arith::ShRUIOp>(rewriter, loc,
+                                                       resultTypes, args);
 
   // tosa::ArithmeticRightShiftOp
   if (isa<tosa::ArithmeticRightShiftOp>(op) && isa<IntegerType>(elementTy)) {
-    auto result = arith::ShRSIOp::create(rewriter, loc, resultTypes, args);
+    auto result = createWithDefaultProperties<arith::ShRSIOp>(
+        rewriter, loc, resultTypes, args);
     bool round = cast<tosa::ArithmeticRightShiftOp>(op).getRound();
     if (!round) {
       return result;
@@ -316,8 +337,8 @@ static Value createLinalgBodyCalculationForElementwiseOp(
     auto shifted =
         arith::ShRSIOp::create(rewriter, loc, resultTypes, args[0], subtract)
             ->getResults();
-    auto truncated = arith::TruncIOp::create(rewriter, loc, i1Ty, shifted,
-                                             ArrayRef<NamedAttribute>());
+    auto truncated = createWithDefaultProperties<arith::TruncIOp>(
+        rewriter, loc, TypeRange{i1Ty}, shifted);
     auto isInputOdd =
         arith::AndIOp::create(rewriter, loc, i1Ty, truncated, i1one);
     // shifted, truncated, isInputOdd can be poison when input2 is 0.
@@ -354,35 +375,43 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::PowOp
   if (isa<tosa::PowOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::PowFOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::PowFOp>(rewriter, loc,
+                                                           resultTypes, args);
 
   // tosa::RsqrtOp
   if (isa<tosa::RsqrtOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::RsqrtOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::RsqrtOp>(rewriter, loc,
+                                                            resultTypes, args);
 
   // tosa::LogOp
   if (isa<tosa::LogOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::LogOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::LogOp>(rewriter, loc,
+                                                          resultTypes, args);
 
   // tosa::ExpOp
   if (isa<tosa::ExpOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::ExpOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::ExpOp>(rewriter, loc,
+                                                          resultTypes, args);
 
   // tosa::SinOp
   if (isa<tosa::SinOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::SinOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::SinOp>(rewriter, loc,
+                                                          resultTypes, args);
 
   // tosa::CosOp
   if (isa<tosa::CosOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::CosOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::CosOp>(rewriter, loc,
+                                                          resultTypes, args);
 
   // tosa::TanhOp
   if (isa<tosa::TanhOp>(op) && isa<FloatType>(elementTy))
-    return mlir::math::TanhOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::TanhOp>(rewriter, loc,
+                                                           resultTypes, args);
 
   // tosa::ErfOp
   if (isa<tosa::ErfOp>(op) && llvm::isa<FloatType>(elementTy))
-    return mlir::math::ErfOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<mlir::math::ErfOp>(rewriter, loc,
+                                                          resultTypes, args);
 
   // tosa::GreaterOp
   if (isa<tosa::GreaterOp>(op) && isa<FloatType>(elementTy))
@@ -442,11 +471,13 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::CeilOp
   if (isa<tosa::CeilOp>(op) && isa<FloatType>(elementTy))
-    return math::CeilOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<math::CeilOp>(rewriter, loc, resultTypes,
+                                                     args);
 
   // tosa::FloorOp
   if (isa<tosa::FloorOp>(op) && isa<FloatType>(elementTy))
-    return math::FloorOp::create(rewriter, loc, resultTypes, args);
+    return createWithDefaultProperties<math::FloorOp>(rewriter, loc,
+                                                      resultTypes, args);
 
   // tosa::ClampOp
   if (isa<tosa::ClampOp>(op) && isa<FloatType>(elementTy)) {
@@ -558,21 +589,21 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return args.front();
 
     if (isa<FloatType>(srcTy) && isa<FloatType>(dstTy) && bitExtend)
-      return arith::ExtFOp::create(rewriter, loc, resultTypes, args,
-                                   ArrayRef<NamedAttribute>());
+      return createWithDefaultProperties<arith::ExtFOp>(rewriter, loc,
+                                                        resultTypes, args);
 
     if (isa<FloatType>(srcTy) && isa<FloatType>(dstTy) && !bitExtend)
-      return arith::TruncFOp::create(rewriter, loc, resultTypes, args,
-                                     ArrayRef<NamedAttribute>());
+      return createWithDefaultProperties<arith::TruncFOp>(rewriter, loc,
+                                                          resultTypes, args);
 
     // 1-bit integers need to be treated as signless.
     if (srcTy.isInteger(1) && arith::UIToFPOp::areCastCompatible(srcTy, dstTy))
-      return arith::UIToFPOp::create(rewriter, loc, resultTypes, args,
-                                     ArrayRef<NamedAttribute>());
+      return createWithDefaultProperties<arith::UIToFPOp>(rewriter, loc,
+                                                          resultTypes, args);
 
     if (srcTy.isInteger(1) && isa<IntegerType>(dstTy) && bitExtend)
-      return arith::ExtUIOp::create(rewriter, loc, resultTypes, args,
-                                    ArrayRef<NamedAttribute>());
+      return createWithDefaultProperties<arith::ExtUIOp>(rewriter, loc,
+                                                         resultTypes, args);
 
     // Unsigned integers need an unrealized cast so that they can be passed
     // to UIToFP.
@@ -1116,19 +1147,23 @@ static Value createLinalgBodyCalculationForReduceOp(Operation *op,
                                                     PatternRewriter &rewriter) {
   Location loc = op->getLoc();
   if (isa<tosa::ReduceSumOp>(op) && isa<FloatType>(elementTy)) {
-    return arith::AddFOp::create(rewriter, loc, args);
+    return createWithDefaultProperties<arith::AddFOp>(
+        rewriter, loc, TypeRange{elementTy}, args);
   }
 
   if (isa<tosa::ReduceSumOp>(op) && isa<IntegerType>(elementTy)) {
-    return arith::AddIOp::create(rewriter, loc, args);
+    return createWithDefaultProperties<arith::AddIOp>(
+        rewriter, loc, TypeRange{elementTy}, args);
   }
 
   if (isa<tosa::ReduceProductOp>(op) && isa<FloatType>(elementTy)) {
-    return arith::MulFOp::create(rewriter, loc, args);
+    return createWithDefaultProperties<arith::MulFOp>(
+        rewriter, loc, TypeRange{elementTy}, args);
   }
 
   if (isa<tosa::ReduceProductOp>(op) && isa<IntegerType>(elementTy)) {
-    return arith::MulIOp::create(rewriter, loc, args);
+    return createWithDefaultProperties<arith::MulIOp>(
+        rewriter, loc, TypeRange{elementTy}, args);
   }
 
   if (isa<tosa::ReduceMinOp>(op) && isa<FloatType>(elementTy)) {
@@ -1251,8 +1286,9 @@ static LogicalResult reduceMatchAndRewriteHelper(OpTy op, uint64_t axis,
 
         // If reduction type differs then extend (applicable to reduce_sum)
         if (binaryArgs[0].getType() != accTy)
-          binaryArgs[0] = arith::ExtFOp::create(nestedBuilder, nestedLoc, accTy,
-                                                binaryArgs[0]);
+          binaryArgs[0] = arith::ExtFOp::create(
+              nestedBuilder, nestedLoc, TypeRange{accTy},
+              ValueRange{binaryArgs[0]}, arith::ExtFOp::Properties{});
 
         auto result = createLinalgBodyCalculationForReduceOp(op, binaryArgs,
                                                              accTy, rewriter);

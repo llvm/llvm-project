@@ -1992,6 +1992,7 @@ cc_library(
         ":Core",
         ":MC",
         ":Support",
+        ":TargetParser",
     ],
 )
 
@@ -4992,11 +4993,11 @@ llvm_driver_cc_binary(
 cc_library(
     name = "llc-driver",
     srcs = [
-        "tools/llc/NewPMDriver.cpp",
-        "tools/llc/llcdriver.cpp",
+        "tools/llc/lib/NewPMDriver.cpp",
+        "tools/llc/lib/llcdriver.cpp",
     ],
     hdrs = glob([
-        "tools/llc/*.h",
+        "tools/llc/lib/*.h",
     ]),
     copts = llvm_copts,
     deps = [
