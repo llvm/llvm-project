@@ -544,7 +544,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
     QualType elemTy = refTy->getPointeeType();
     auto pointeeType = convertTypeForMem(elemTy);
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType = builder.getPointerTo(
+        pointeeType, getPointerAddressSpace(elemTy.getAddressSpace()));
     assert(resultType && "Cannot get pointer type?");
     break;
   }
@@ -556,7 +557,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     mlir::Type pointeeType = convertType(elemTy);
 
-    resultType = builder.getPointerTo(pointeeType, elemTy.getAddressSpace());
+    resultType = builder.getPointerTo(
+        pointeeType, getPointerAddressSpace(elemTy.getAddressSpace()));
     break;
   }
 
@@ -869,6 +871,21 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+mlir::ptr::MemorySpaceAttrInterface
+CIRGenTypes::getPointerAddressSpace(clang::LangAS pointeeAS) const {
+  // An explicit source address space is carried directly.
+  if (pointeeAS != LangAS::Default)
+    return cir::toCIRAddressSpaceAttr(getMLIRContext(), pointeeAS);
+
+  // Resolve a default-address-space pointee through the target address space
+  // map, as classic CodeGen does. This is only non-zero for languages that
+  // default to a non-default address space (e.g. generic for SYCL device).
+  unsigned targetAS = getASTContext().getTargetAddressSpace(LangAS::Default);
+  if (targetAS == 0)
+    return {};
+  return cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
 }
 
 unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {

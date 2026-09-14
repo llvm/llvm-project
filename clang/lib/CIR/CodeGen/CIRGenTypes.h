@@ -240,6 +240,13 @@ public:
   arrangeFreeFunctionType(CanQual<FunctionNoProtoType> fnpt);
 
   unsigned getTargetAddressSpace(QualType ty) const;
+
+  /// Returns the CIR address space for a pointer/reference whose pointee has
+  /// address space \p pointeeAS, or a null attribute for the default address
+  /// space. A LangAS::Default pointee is resolved through the target address
+  /// space map (e.g. generic for SYCL device), matching classic CodeGen.
+  mlir::ptr::MemorySpaceAttrInterface
+  getPointerAddressSpace(clang::LangAS pointeeAS) const;
 };
 
 } // namespace clang::CIRGen
