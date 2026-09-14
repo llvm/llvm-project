@@ -1262,8 +1262,7 @@ public:
   bool isDistinct() const { return Storage == Distinct; }
   bool isTemporary() const { return Storage == Temporary; }
 
-  bool isReplaceable() const { return isTemporary() || isAlwaysReplaceable(); }
-  bool isAlwaysReplaceable() const { return getMetadataID() == DIAssignIDKind; }
+  bool isReplaceable() const { return isTemporary(); }
 
   unsigned getNumTemporaryUses() const {
     assert(isTemporary() && "Only for temporaries");

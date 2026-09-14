@@ -176,27 +176,31 @@ void DebugValueUser::handleChangedValue(void *Old, Metadata *New) {
 void DebugValueUser::trackDebugValue(size_t Idx) {
   assert(Idx < 3 && "Invalid debug value index.");
   Metadata *&MD = DebugValues[Idx];
-  if (MD)
-    MetadataTracking::track(&MD, *MD, *this);
+  if (!MD)
+    return;
+  MetadataTracking::track(&MD, *MD, *this);
+  if (auto *ID = Idx == 2 ? dyn_cast<DIAssignID>(MD) : nullptr)
+    ID->Records.push_back(getUser());
 }
 
 void DebugValueUser::trackDebugValues() {
-  for (Metadata *&MD : DebugValues)
-    if (MD)
-      MetadataTracking::track(&MD, *MD, *this);
+  for (size_t I = 0, E = DebugValues.size(); I != E; ++I)
+    trackDebugValue(I);
 }
 
 void DebugValueUser::untrackDebugValue(size_t Idx) {
   assert(Idx < 3 && "Invalid debug value index.");
   Metadata *&MD = DebugValues[Idx];
-  if (MD)
-    MetadataTracking::untrack(MD);
+  if (!MD)
+    return;
+  MetadataTracking::untrack(MD);
+  if (auto *ID = Idx == 2 ? dyn_cast<DIAssignID>(MD) : nullptr)
+    ID->Records.erase(llvm::find(ID->Records, getUser()));
 }
 
 void DebugValueUser::untrackDebugValues() {
-  for (Metadata *&MD : DebugValues)
-    if (MD)
-      MetadataTracking::untrack(MD);
+  for (size_t I = 0, E = DebugValues.size(); I != E; ++I)
+    untrackDebugValue(I);
 }
 
 void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
@@ -204,6 +208,8 @@ void DebugValueUser::retrackDebugValues(DebugValueUser &X) {
   for (const auto &[MD, XMD] : zip(DebugValues, X.DebugValues))
     if (XMD)
       MetadataTracking::retrack(XMD, MD);
+  if (auto *ID = dyn_cast_or_null<DIAssignID>(DebugValues[2]))
+    *llvm::find(ID->Records, X.getUser()) = getUser();
   X.DebugValues.fill(nullptr);
 }
 
@@ -459,9 +465,7 @@ void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
 // conditional compilation to avoid a compile time regression.
 ReplaceableUses *ReplaceableUses::getOrCreate(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
-    return !N->isResolved() || N->isAlwaysReplaceable()
-               ? N->Context.getOrCreateReplaceableUses()
-               : nullptr;
+    return N->isResolved() ? nullptr : N->Context.getOrCreateReplaceableUses();
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
@@ -470,9 +474,7 @@ ReplaceableUses *ReplaceableUses::getOrCreate(Metadata &MD) {
 
 ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD)) {
-    return !N->isResolved() || N->isAlwaysReplaceable()
-               ? N->Context.getReplaceableUses()
-               : nullptr;
+    return N->isResolved() ? nullptr : N->Context.getReplaceableUses();
   }
   if (auto ArgList = dyn_cast<DIArgList>(&MD))
     return ArgList;
@@ -481,7 +483,7 @@ ReplaceableUses *ReplaceableUses::getIfExists(Metadata &MD) {
 
 bool ReplaceableUses::isReplaceable(const Metadata &MD) {
   if (auto *N = dyn_cast<MDNode>(&MD))
-    return !N->isResolved() || N->isAlwaysReplaceable();
+    return !N->isResolved();
   return isa<ValueAsMetadata>(&MD) || isa<DIArgList>(&MD);
 }
 
@@ -1748,34 +1750,14 @@ void Instruction::dropUnknownNonDebugMetadata(ArrayRef<unsigned> KnownIDs) {
 }
 
 void Instruction::updateDIAssignIDMapping(DIAssignID *ID) {
-  auto &IDToInstrs = getContext().pImpl->AssignmentIDToInstrs;
-  if (const DIAssignID *CurrentID =
+  if (auto *CurrentID =
           cast_or_null<DIAssignID>(getMetadata(LLVMContext::MD_DIAssignID))) {
-    // Nothing to do if the ID isn't changing.
     if (ID == CurrentID)
       return;
-
-    // Unmap this instruction from its current ID.
-    auto InstrsIt = IDToInstrs.find(CurrentID);
-    assert(InstrsIt != IDToInstrs.end() &&
-           "Expect existing attachment to be mapped");
-
-    auto &InstVec = InstrsIt->second;
-    auto *InstIt = llvm::find(InstVec, this);
-    assert(InstIt != InstVec.end() &&
-           "Expect instruction to be mapped to attachment");
-    // The vector contains a ptr to this. If this is the only element in the
-    // vector, remove the ID:vector entry, otherwise just remove the
-    // instruction from the vector.
-    if (InstVec.size() == 1)
-      IDToInstrs.erase(InstrsIt);
-    else
-      InstVec.erase(InstIt);
+    CurrentID->Instrs.erase(llvm::find(CurrentID->Instrs, this));
   }
-
-  // Map this instruction to the new ID.
   if (ID)
-    IDToInstrs[ID].push_back(this);
+    ID->Instrs.push_back(this);
 }
 
 void Instruction::setMetadata(unsigned KindID, MDNode *Node) {
