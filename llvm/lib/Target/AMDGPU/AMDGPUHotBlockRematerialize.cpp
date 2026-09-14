@@ -54,6 +54,12 @@ static cl::opt<int> DebugMBBIndex(
              "block with this number."),
     cl::init(-1), cl::Hidden);
 
+static cl::opt<unsigned> CloneGroupWindow(
+    "amdgpu-remat-clone-group-window",
+    cl::desc("Dominator-path window (in idom steps) for grouping clone sites "
+             "to reduce SGPR live-range explosion. 0 disables grouping."),
+    cl::init(3), cl::Hidden);
+
 namespace {
 
 using InstSet = DenseSet<MachineInstr *>;
@@ -725,6 +731,96 @@ static void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
   SlotIndexes->insertMachineInstrInMaps(*DefMI);
 }
 
+using PlacementGroup =
+    std::pair<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 8>>;
+
+// Groups use-site blocks that share an idom-path ancestor within
+// CloneGroupWindow steps, so one clone can serve the whole group. Returns the
+// placement blocks and the use-blocks each covers, ordered by RPO index for
+// deterministic clone emission. Ungrouped use-blocks fall back to per-use
+// placement (placement block == the use-block itself).
+static SmallVector<PlacementGroup, 8>
+groupCloneSites(BlockSet &UserMBBSet, MachineBasicBlock *DefBlock,
+                MachineDominatorTree *DT,
+                DenseMap<const MachineBasicBlock *, unsigned> &RPOTIndexMap) {
+  const unsigned N = CloneGroupWindow;
+
+  // Build each use-block's partial idom-path (N steps upward, stop at DefBlock).
+  DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 4>> Paths;
+  for (MachineBasicBlock *UseBB : UserMBBSet) {
+    SmallVector<MachineBasicBlock *, 4> Path;
+    MachineDomTreeNode *Cur = DT->getNode(UseBB);
+    if (!Cur)
+      continue;
+    Cur = Cur->getIDom();
+    for (unsigned Step = 0; Step < N && Cur; ++Step) {
+      MachineBasicBlock *AncBB = Cur->getBlock();
+      if (AncBB == DefBlock)
+        break;
+      Path.push_back(AncBB);
+      Cur = Cur->getIDom();
+    }
+    Paths[UseBB] = std::move(Path);
+  }
+
+  // For each ancestor node, collect the use-blocks whose path contains it.
+  // Inline size 8: use-block lists can be as large as |UserMBBSet|.
+  DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 8>> NodeToUses;
+  for (auto &[UseBB, Path] : Paths)
+    for (MachineBasicBlock *AncBB : Path)
+      NodeToUses[AncBB].push_back(UseBB);
+
+  // Largest-first greedy with claiming: repeatedly pick the ancestor covering
+  // the most still-unclaimed use-blocks (tie-break: deepest node, i.e. highest
+  // RPO index, for the shortest live range and deterministic selection), emit a
+  // group there, and claim its members. This yields a disjoint partition, so no
+  // use-block is redirected to more than one clone.
+  DenseMap<MachineBasicBlock *, SmallVector<MachineBasicBlock *, 8>> Groups;
+  DenseSet<MachineBasicBlock *> Claimed;
+  while (true) {
+    MachineBasicBlock *BestNode = nullptr;
+    SmallVector<MachineBasicBlock *, 8> BestMembers;
+    unsigned BestRPO = 0;
+    for (auto &[AncBB, Uses] : NodeToUses) {
+      SmallVector<MachineBasicBlock *, 8> Unclaimed;
+      for (MachineBasicBlock *UseBB : Uses)
+        if (!Claimed.count(UseBB))
+          Unclaimed.push_back(UseBB);
+      if (Unclaimed.size() < 2)
+        continue;
+      unsigned AncRPO = RPOTIndexMap.lookup(AncBB);
+      if (!BestNode || Unclaimed.size() > BestMembers.size() ||
+          (Unclaimed.size() == BestMembers.size() && AncRPO > BestRPO)) {
+        BestNode = AncBB;
+        BestMembers = std::move(Unclaimed);
+        BestRPO = AncRPO;
+      }
+    }
+    if (!BestNode)
+      break;
+    for (MachineBasicBlock *UseBB : BestMembers) {
+      Claimed.insert(UseBB);
+      Groups[BestNode].push_back(UseBB);
+    }
+  }
+
+  // Ungrouped use-blocks fall back to per-use placement. If an unclaimed block
+  // is already a group's placement ancestor, it merges into that group's clone.
+  for (MachineBasicBlock *UseBB : UserMBBSet)
+    if (!Claimed.count(UseBB))
+      Groups[UseBB].push_back(UseBB);
+
+  // Flatten to an RPO-ordered vector for deterministic clone emission.
+  SmallVector<PlacementGroup, 8> Result;
+  for (auto &[PlaceBB, Members] : Groups)
+    Result.emplace_back(PlaceBB, std::move(Members));
+  llvm::sort(Result, [&RPOTIndexMap](const PlacementGroup &A,
+                                     const PlacementGroup &B) {
+    return RPOTIndexMap.lookup(A.first) < RPOTIndexMap.lookup(B.first);
+  });
+  return Result;
+}
+
 void AMDGPUHotBlockRematerialize::applyCloneRemat(
     RematNode &Node, std::vector<BlockLiveInfo> &HotBlocks,
     MachineDominatorTree *DT, MachineRegisterInfo &MRI,
@@ -758,11 +854,14 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
   DenseMap<MachineBasicBlock *, BlockSet> DomMap =
       reduceCloneSites(Reg, UserMap, UserMBBSet, HotBlocks, DT, RPOTIndexMap);
 
-  for (auto &UseIt : UserMap) {
-    MachineBasicBlock *MBB = UseIt.first;
-    if (MBB == DefMI->getParent())
-      continue;
-    if (UserMBBSet.count(MBB) == 0)
+  // Group surviving use-blocks by shared partial idom-path ancestry so that
+  // blocks with a nearby common dominator share a single clone rather than each
+  // getting their own. Singletons fall back to per-use placement.
+  auto PlacementGroups =
+      groupCloneSites(UserMBBSet, DefMI->getParent(), DT, RPOTIndexMap);
+
+  for (auto &[PlaceBB, GroupMembers] : PlacementGroups) {
+    if (PlaceBB == DefMI->getParent())
       continue;
 
     Register NewReg = MRI.createVirtualRegister(RC);
@@ -774,29 +873,46 @@ void AMDGPUHotBlockRematerialize::applyCloneRemat(
     for (MachineMemOperand *MO : DefMI->memoperands())
       NewDef->addMemOperand(MF, MO);
 
-    MachineInstr *InsertPointMI = UseIt.second.front();
-    SlotIndex LastSlot = SlotIndexes->getInstructionIndex(*InsertPointMI);
-    for (MachineInstr *UseMI : UseIt.second) {
-      SlotIndex Slot = SlotIndexes->getInstructionIndex(*UseMI);
-      if (LastSlot > Slot) {
-        LastSlot = Slot;
-        InsertPointMI = UseMI;
+    // Insert point: earliest use in PlaceBB if it is itself a use-block;
+    // otherwise insert at the block terminator (PlaceBB is a group ancestor
+    // with no direct uses of its own).
+    MachineInstr *InsertPointMI = nullptr;
+    auto PlaceUseIt = UserMap.find(PlaceBB);
+    if (PlaceUseIt != UserMap.end()) {
+      InsertPointMI = PlaceUseIt->second.front();
+      SlotIndex Best = SlotIndexes->getInstructionIndex(*InsertPointMI);
+      for (MachineInstr *UseMI : PlaceUseIt->second) {
+        SlotIndex S = SlotIndexes->getInstructionIndex(*UseMI);
+        if (S < Best) {
+          Best = S;
+          InsertPointMI = UseMI;
+        }
       }
     }
 
     MachineBasicBlock::iterator InsertPoint =
-        adjustInsertPointToAvoidSccSmash(DefMI, InsertPointMI->getParent(),
-                                         InsertPointMI, MRI, SIRI, SIII, LIS);
+        InsertPointMI
+            ? adjustInsertPointToAvoidSccSmash(DefMI, PlaceBB,
+                                               InsertPointMI->getIterator(),
+                                               MRI, SIRI, SIII, LIS)
+            : adjustInsertPointToAvoidSccSmash(DefMI, PlaceBB,
+                                               PlaceBB->getFirstTerminator(),
+                                               MRI, SIRI, SIII, LIS);
 
-    MBB->insert(InsertPoint, NewDef);
+    PlaceBB->insert(InsertPoint, NewDef);
     SlotIndexes->insertMachineInstrInMaps(*NewDef);
 
-    updateUsers(Reg, NewReg, IsSubRegDef, UseIt.second);
-
-    auto DomMapIt = DomMap.find(MBB);
-    if (DomMapIt != DomMap.end()) {
-      for (MachineBasicBlock *UpdateMBB : DomMapIt->second)
-        updateUsers(Reg, NewReg, IsSubRegDef, UserMap[UpdateMBB]);
+    // Redirect uses in every member block (and their DomMap descendants) to
+    // the new register.
+    for (MachineBasicBlock *MemberBB : GroupMembers) {
+      auto MemberUseIt = UserMap.find(MemberBB);
+      if (MemberUseIt == UserMap.end())
+        continue;
+      updateUsers(Reg, NewReg, IsSubRegDef, MemberUseIt->second);
+      auto DomMapIt = DomMap.find(MemberBB);
+      if (DomMapIt != DomMap.end())
+        for (MachineBasicBlock *UpdateMBB : DomMapIt->second)
+          updateUsers(Reg, NewReg, IsSubRegDef, UserMap[UpdateMBB]);
     }
   }
 
