@@ -73,6 +73,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/InitializePasses.h"
@@ -2348,6 +2349,33 @@ static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
   return false;
 }
 
+/// Returns whether \p N has any operand from the set \p Operands.
+static bool
+hasAnyOperandsFrom(const MDNode *N,
+                   const SmallPtrSetImpl<const MDNode *> &Operands) {
+  return N && llvm::any_of(N->operands(), [&](const MDOperand &Op) {
+           return Operands.contains(cast<MDNode>(Op.get()));
+         });
+}
+
+/// Returns the alias scopes declared via llvm.experimental.noalias.scope.decl
+/// to be local to the loop \p L.
+static SmallPtrSet<const MDNode *, 4>
+collectLoopLocalAliasScopes(const Loop *L) {
+  Function *DeclFn = L->getHeader()->getModule()->getFunction(
+      Intrinsic::getName(Intrinsic::experimental_noalias_scope_decl));
+  if (!DeclFn || DeclFn->use_empty())
+    return {};
+
+  SmallPtrSet<const MDNode *, 4> LoopLocalScopes;
+  for (const BasicBlock *BB : L->blocks())
+    for (const Instruction &I : *BB)
+      if (const auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I))
+        for (const MDOperand &Op : Decl->getScopeList()->operands())
+          LoopLocalScopes.insert(cast<MDNode>(Op.get()));
+  return LoopLocalScopes;
+}
+
 /// Returns the potentially promotable stores with AA tags that are valid along
 /// all non-unwinding execution paths of the loop \p L, which allows for the AA
 /// tags to be used when deciding promotions.
@@ -2361,13 +2389,31 @@ collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
       StoresByLoc[MemoryLocation::get(SI)].push_back(SI);
   });
 
+  // A scope declared inside the loop denotes a different scope on each
+  // iteration, so it cannot support the cross-iteration check below.
+  std::optional<SmallPtrSet<const MDNode *, 4>> LoopLocalAliasScopes;
+  auto HasLoopLocalAliasScope = [&](const AAMDNodes &AATags) {
+    if (!AATags.Scope && !AATags.NoAlias)
+      return false;
+    if (!LoopLocalAliasScopes)
+      LoopLocalAliasScopes = collectLoopLocalAliasScopes(L);
+    return hasAnyOperandsFrom(AATags.Scope, *LoopLocalAliasScopes) ||
+           hasAnyOperandsFrom(AATags.NoAlias, *LoopLocalAliasScopes);
+  };
+
   // This only looks at explicit exiting blocks. If we ever start sinking
   // stores into unwind edges, this will break.
   SmallVector<BasicBlock *, 4> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
 
   SmallPtrSet<const StoreInst *, 8> StoresWithInvariantAATags;
-  for (const auto &Stores : llvm::make_second_range(StoresByLoc)) {
+  for (const auto &Pair : StoresByLoc) {
+    const MemoryLocation &Loc = Pair.first;
+    const SmallVector<const StoreInst *, 1> &Stores = Pair.second;
+
+    if (HasLoopLocalAliasScope(Loc.AATags))
+      continue;
+
     // Without exiting blocks the loop is never left, and promotion has no
     // exit block to insert a store into either.
     if (llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
