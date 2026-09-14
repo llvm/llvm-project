@@ -1213,7 +1213,8 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
       }
       if (DstReg == AMDGPU::SCC) {
         // Both lowerings below read the whole of SrcReg.
-        assert(!MI.getOperand(1).getSubReg() &&
+        const MachineOperand &Src = MI.getOperand(1);
+        assert(!Src.getSubReg() &&
                "cannot lower a copy of a subregister to SCC");
         MachineBasicBlock::iterator InsPt =
             std::next(MachineBasicBlock::iterator(MI));
@@ -1223,14 +1224,14 @@ void SIFixSGPRCopies::fixSCCCopies(MachineFunction &MF) {
           // needing a destination register.
           I = BuildMI(*MI.getParent(), InsPt, MI.getDebugLoc(),
                       TII->get(LMC.CmpLgOpc))
-                  .addReg(SrcReg)
+                  .add(Src)
                   .addImm(0);
         } else {
           Register Tmp = MRI->createVirtualRegister(TRI->getBoolRC());
           I = BuildMI(*MI.getParent(), InsPt, MI.getDebugLoc(),
                       TII->get(LMC.AndOpc))
                   .addReg(Tmp, getDefRegState(true))
-                  .addReg(SrcReg)
+                  .add(Src)
                   .addReg(LMC.ExecReg);
         }
         MI.eraseFromParent();

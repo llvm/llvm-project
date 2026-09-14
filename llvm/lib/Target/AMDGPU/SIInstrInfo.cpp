@@ -5073,7 +5073,7 @@ static bool isMaskedByExecImpl(const SIInstrInfo &TII,
   // themselves, such as V_CMPX, since those would be found by the caller's
   // scan for writes to EXEC.
   const MachineInstr *Def = MRI.getVRegDef(Reg);
-  if (Def->getParent() != MBB)
+  if (!Def || Def->getParent() != MBB)
     return false;
 
   size_t NumDefs = Defs.size();

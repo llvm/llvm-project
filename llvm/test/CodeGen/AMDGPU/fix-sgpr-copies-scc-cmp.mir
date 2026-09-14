@@ -57,3 +57,37 @@ body: |
     %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
     S_ENDPGM 0, implicit %1
 ...
+
+# Negative test: a register that is only ever read as undef has no defining
+# instruction at all, so nothing is known about the lane mask.
+---
+name: undef_mask_to_scc
+tracksRegLiveness: true
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: undef_mask_to_scc
+    ; CHECK: {{%[0-9]+}}:sreg_64 = S_AND_B64 undef %{{[0-9]+}}:sreg_64_xexec, $exec, implicit-def $scc
+    $scc = COPY undef %0:sreg_64_xexec
+    %1:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %1
+...
+
+# An undef operand of an AND is not masked by EXEC, but the other operand is,
+# which is enough.
+---
+name: undef_and_operand
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: undef_and_operand
+    ; CHECK: [[CMP:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:sreg_64_xexec = S_AND_B64 undef %{{[0-9]+}}:sreg_64_xexec, [[CMP]], implicit-def dead $scc
+    ; GFX9-NEXT: S_CMP_LG_U64 [[AND]], 0, implicit-def $scc
+    ; GFX7-NEXT: {{%[0-9]+}}:sreg_64 = S_AND_B64 [[AND]], $exec, implicit-def $scc
+    %0:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
+    %2:sreg_64_xexec = S_AND_B64 undef %1:sreg_64_xexec, %0, implicit-def dead $scc
+    $scc = COPY %2
+    %3:sreg_32 = S_CSELECT_B32 1, 0, implicit $scc
+    S_ENDPGM 0, implicit %3
+...
