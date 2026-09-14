@@ -68,20 +68,24 @@ void buildCommonPassPipeline(
 //===----------------------------------------------------------------------===//
 // GPUModule-specific stuff.
 //===----------------------------------------------------------------------===//
+/// Whether `chip`, the NVPTX target this pipeline serializes for (an "sm_NN"
+/// name, possibly with a suffix such as "sm_90a"), has redux.sync, which exists
+/// from sm_80. The chip is the only thing that decides it, so the pipeline does
+/// not ask for it as an option of its own.
+static bool chipHasRedux(StringRef chip) {
+  unsigned smVersion = 0;
+  if (chip.consume_front("sm_"))
+    chip.take_while(llvm::isDigit).getAsInteger(10, smVersion);
+  return smVersion >= 80;
+}
+
 void buildGpuPassPipeline(OpPassManager &pm,
                           const mlir::gpu::GPUToNVVMPipelineOptions &options) {
   ConvertGpuOpsToNVVMOpsOptions opt;
   opt.useBarePtrCallConv = options.kernelUseBarePtrCallConv;
   opt.indexBitwidth = options.indexBitWidth;
   opt.allowPatternRollback = options.allowPatternRollback;
-  // redux.sync exists from sm_80, and the chip this pipeline serializes for is
-  // the only thing that decides whether it may be used, so there is no reason
-  // to ask for it as an option of its own.
-  StringRef chip(options.cubinChip);
-  unsigned smVersion = 0;
-  if (chip.consume_front("sm_"))
-    chip.take_while(llvm::isDigit).getAsInteger(10, smVersion);
-  opt.hasRedux = smVersion >= 80;
+  opt.hasRedux = chipHasRedux(options.cubinChip);
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertGpuOpsToNVVMOps(opt));
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
