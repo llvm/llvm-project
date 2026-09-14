@@ -79,6 +79,39 @@ define i32 @incompatible_neon_intrinsic_caller(<4 x i32> %in) "aarch64_pstate_sm
   ret i32 %vscale
 }
 
+define i64 @intrinsic_with_scalable_type(ptr %p) alwaysinline {
+; CHECK-LABEL: define i64 @intrinsic_with_scalable_type(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[LD:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> [[LD]])
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %ld = load <vscale x 2 x i64>, ptr %p
+  %res = call i64 @llvm.vector.reduce.add(<vscale x 2 x i64> %ld)
+  ret i64 %res
+}
+
+define i64 @compatible_sve_intrinsic_caller(ptr %p) {
+; CHECK-LABEL: define i64 @compatible_sve_intrinsic_caller(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[LD_I:%.*]] = load <vscale x 2 x i64>, ptr [[P]], align 16
+; CHECK-NEXT:    [[RES_I:%.*]] = call i64 @llvm.vector.reduce.add.nxv2i64(<vscale x 2 x i64> [[LD_I]])
+; CHECK-NEXT:    ret i64 [[RES_I]]
+;
+  %res = call i64 @intrinsic_with_scalable_type(ptr %p)
+  ret i64 %res
+}
+
+define i64 @incompatible_sve_intrinsic_caller(ptr %p) "aarch64_pstate_sm_enabled" {
+; CHECK-LABEL: define i64 @incompatible_sve_intrinsic_caller(
+; CHECK-SAME: ptr [[P:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @intrinsic_with_scalable_type(ptr [[P]])
+; CHECK-NEXT:    ret i64 [[RES]]
+;
+  %res = call i64 @intrinsic_with_scalable_type(ptr %p)
+  ret i64 %res
+}
+
 ;
 ; Be cautious about inlining functions that contain calls to SME ABI routines (like __arm_get_current_vg())
 ;

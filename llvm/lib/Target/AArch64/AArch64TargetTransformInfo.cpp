@@ -275,6 +275,14 @@ static bool hasPossibleIncompatibleOps(const Function *F,
       if (cast<CallInst>(I).isInlineAsm())
         return true;
 
+      // Be conservative around operations on scalable types, as those may have
+      // different behaviour in/out of streaming mode.
+      if (ConsiderSM && (I.getType()->isScalableTy() ||
+                         any_of(I.operand_values(), [](const Value *V) {
+                           return V->getType()->isScalableTy();
+                         })))
+        return true;
+
       if (isSMEABIRoutineCall(cast<CallInst>(I), TLI))
         return true;
 
@@ -331,8 +339,9 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     CallAttrs.callee().set(SMEAttrs::SM_Enabled, true);
   }
 
-  bool ConsiderZA =
-      CallAttrs.requiresLazySave() || CallAttrs.requiresPreservingZT0();
+  bool ConsiderZA = CallAttrs.requiresLazySave() ||
+                    CallAttrs.requiresPreservingZT0() ||
+                    CallAttrs.requiresPreservingAllZAState();
   bool ConsiderSM = CallAttrs.requiresSMChange();
   if ((ConsiderZA || ConsiderSM) &&
       hasPossibleIncompatibleOps(Callee, *getTLI(), ConsiderZA, ConsiderSM))
