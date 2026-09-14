@@ -446,6 +446,12 @@ private:
   /// Only for intrinsic types. No coarrays, no polymorphism. No error recovery.
   void genInlinedAllocation(const Allocation &alloc,
                             const fir::MutableBoxValue &box) {
+    mlir::Value isNotAllocated =
+        fir::factory::genIsNotAllocatedOrAssociatedTest(builder, loc, box);
+    fir::AssertOp::create(builder, loc, isNotAllocated,
+                          "The object '" + alloc.getSymbol().name().ToString() +
+                              "' is already allocated");
+
     llvm::SmallVector<mlir::Value> lbounds;
     llvm::SmallVector<mlir::Value> extents;
     Fortran::lower::StatementContext stmtCtx;

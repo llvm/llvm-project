@@ -54,6 +54,14 @@ struct DebuggingResource
   bool isAddressable() const override { return false; }
 };
 
+/// Model interaction with Fortran runtime state that is not program memory
+/// (error reporting, abort, and similar runtime-owned resources).
+struct FortranRuntimeResource
+    : public mlir::SideEffects::Resource::Base<FortranRuntimeResource> {
+  mlir::StringRef getName() const final { return "FortranRuntimeResource"; }
+  bool isAddressable() const override { return false; }
+};
+
 /// Model operations which read from/write to volatile memory
 struct VolatileMemoryResource
     : public mlir::SideEffects::Resource::Base<VolatileMemoryResource> {

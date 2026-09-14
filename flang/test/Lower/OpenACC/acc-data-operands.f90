@@ -116,6 +116,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QMacc_data_operandPacc_operand_array_section_allocatable() {
 ! CHECK: %[[A:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = "a", uniq_name = "_QMacc_data_operandFacc_operand_array_section_allocatableEa"}
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]] {fortran_attrs = #fir.var_attrs<allocatable>
+! CHECK: fir.allocmem !fir.array<?xf32>
 ! CHECK: %[[LOAD_BOX_A_1:.*]] = fir.load %[[DECLA]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK: %[[C0:.*]] = arith.constant 0 : index
 ! CHECK: %[[DIMS0_0:.*]]:3 = fir.box_dims %[[LOAD_BOX_A_1]], %[[C0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
