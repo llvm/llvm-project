@@ -1023,34 +1023,42 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       getActionDefinitionsBuilder({G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
 
   if (ST.hasVOP3PInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypesPK16)
+    MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), FPTypesPK16)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, F16, 2)
         .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNumIeee.legalFor(FPTypes16).scalarize(0);
+    MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), FPTypes16)
+        .scalarize(0);
   } else {
-    MinNumMaxNumIeee.legalFor(FPTypesBase).scalarize(0);
+    MinNumMaxNumIeee.legalFor(!ST.hasIEEEMinimumMaximumInsts(), FPTypesBase)
+        .scalarize(0);
   }
 
   auto &MinNumMaxNum = getActionDefinitionsBuilder(
       {G_FMINNUM, G_FMAXNUM, G_FMINIMUMNUM, G_FMAXIMUMNUM});
 
   if (ST.hasAnyPackedFP64Ops()) {
-    MinNumMaxNum.customFor(FPTypesPK16_64)
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), FPTypesPK16_64)
+        .customFor(FPTypesPK16_64)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, F16, 2)
         .clampMaxNumElements(0, F64, 2)
         .scalarize(0);
   } else if (ST.hasVOP3PInsts()) {
-    MinNumMaxNum.customFor(FPTypesPK16)
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), FPTypesPK16)
+        .customFor(FPTypesPK16)
         .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
         .clampMaxNumElements(0, F16, 2)
         .scalarize(0);
   } else if (ST.has16BitInsts()) {
-    MinNumMaxNum.customFor(FPTypes16).scalarize(0);
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), FPTypes16)
+        .customFor(FPTypes16)
+        .scalarize(0);
   } else {
-    MinNumMaxNum.customFor(FPTypesBase).scalarize(0);
+    MinNumMaxNum.legalFor(ST.hasIEEEMinimumMaximumInsts(), FPTypesBase)
+        .customFor(FPTypesBase)
+        .scalarize(0);
   }
 
   if (!ST.has16BitInsts()) {
@@ -4421,7 +4429,7 @@ bool AMDGPULegalizerInfo::legalizeFFloor(MachineInstr &MI,
   // We don't need to concern ourselves with the snan handling difference, so
   // use the one which will directly select.
   const SIMachineFunctionInfo *MFI = B.getMF().getInfo<SIMachineFunctionInfo>();
-  if (MFI->getMode().IEEE)
+  if (MFI->getMode().IEEE && !ST.hasIEEEMinimumMaximumInsts())
     B.buildFMinNumIEEE(Min, Fract, Const, Flags);
   else
     B.buildFMinNum(Min, Fract, Const, Flags);
@@ -6229,12 +6237,13 @@ bool AMDGPULegalizerInfo::legalizeRsqClampIntrinsic(MachineInstr &MI,
   const bool UseIEEE = MFI->getMode().IEEE;
 
   auto MaxFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics));
-  auto ClampMax = UseIEEE ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags) :
-                            B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
+  auto ClampMax = UseIEEE && !ST.hasIEEEMinimumMaximumInsts()
+                      ? B.buildFMinNumIEEE(Ty, Rsq, MaxFlt, Flags)
+                      : B.buildFMinNum(Ty, Rsq, MaxFlt, Flags);
 
   auto MinFlt = B.buildFConstant(Ty, APFloat::getLargest(*FltSemantics, true));
 
-  if (UseIEEE)
+  if (UseIEEE && !ST.hasIEEEMinimumMaximumInsts())
     B.buildFMaxNumIEEE(Dst, ClampMax, MinFlt, Flags);
   else
     B.buildFMaxNum(Dst, ClampMax, MinFlt, Flags);

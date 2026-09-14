@@ -94,18 +94,16 @@ define <2 x double> @test_v2f64_fmul_fmul(<2 x double> %vec, double inreg %a) {
 ; GFX1251-GISEL:       ; %bb.0: ; %entry
 ; GFX1251-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1251-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[8:9], 0x40240000, s[0:1]
+; GFX1251-GISEL-NEXT:    v_mul_f64_e64 v[4:5], 0x40240000, s[0:1]
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v8
-; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v9
+; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s0, v4
+; GFX1251-GISEL-NEXT:    v_readfirstlane_b32 s1, v5
 ; GFX1251-GISEL-NEXT:    s_mov_b64 s[2:3], s[0:1]
 ; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
 ; GFX1251-GISEL-NEXT:    v_mov_b64_e32 v[6:7], s[2:3]
 ; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1251-GISEL-NEXT:    v_pk_add_f64 v[0:3], v[0:3], v[4:7]
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[8:9]
-; GFX1251-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1251-GISEL-NEXT:    v_max_num_f64_e32 v[2:3], v[2:3], v[8:9]
+; GFX1251-GISEL-NEXT:    v_pk_max_num_f64 v[0:3], v[0:3], v[4:7]
 ; GFX1251-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   ; mul0 is uniform but in vgpr
