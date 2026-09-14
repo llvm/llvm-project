@@ -27,7 +27,7 @@ body:             |
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 4
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG]].sub_32
-  ; CHECK-NEXT:   STLRW [[COPY2]], [[COPY]] :: (store release (s32))
+  ; CHECK-NEXT:   STLRW [[COPY2]], [[COPY]] :: (store release (i32))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -35,13 +35,13 @@ body:             |
     liveins: $w1, $x0
 
     %0:gpr(p0) = COPY $x0
-    %3:gpr(s32) = COPY $w1
+    %3:gpr(i32) = COPY $w1
     G_BRCOND %3, %bb.3
     G_BR %bb.2
 
   bb.2:
-    %8:gpr(s64) = G_CONSTANT i64 4
-    G_STORE %8(s64), %0(p0) :: (store release (s32))
+    %8:gpr(i64) = G_CONSTANT i64 4
+    G_STORE %8(i64), %0(p0) :: (store release (i32))
 
   bb.3:
     RET_ReallyLR
@@ -73,7 +73,7 @@ body:             |
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 4
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG]].sub_32
-  ; CHECK-NEXT:   STLRH [[COPY2]], [[COPY]] :: (store release (s16))
+  ; CHECK-NEXT:   STLRH [[COPY2]], [[COPY]] :: (store release (i16))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -81,13 +81,13 @@ body:             |
     liveins: $w1, $x0
 
     %0:gpr(p0) = COPY $x0
-    %3:gpr(s32) = COPY $w1
+    %3:gpr(i32) = COPY $w1
     G_BRCOND %3, %bb.3
     G_BR %bb.2
 
   bb.2:
-    %8:gpr(s64) = G_CONSTANT i64 4
-    G_STORE %8(s64), %0(p0) :: (store release (s16))
+    %8:gpr(i64) = G_CONSTANT i64 4
+    G_STORE %8(i64), %0(p0) :: (store release (i16))
 
   bb.3:
     RET_ReallyLR
@@ -119,7 +119,7 @@ body:             |
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 4
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32 = COPY [[SUBREG_TO_REG]].sub_32
-  ; CHECK-NEXT:   STLRB [[COPY2]], [[COPY]] :: (store release (s8))
+  ; CHECK-NEXT:   STLRB [[COPY2]], [[COPY]] :: (store release (i8))
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   RET_ReallyLR
@@ -127,13 +127,13 @@ body:             |
     liveins: $w1, $x0
 
     %0:gpr(p0) = COPY $x0
-    %3:gpr(s32) = COPY $w1
+    %3:gpr(i32) = COPY $w1
     G_BRCOND %3, %bb.3
     G_BR %bb.2
 
   bb.2:
-    %8:gpr(s64) = G_CONSTANT i64 4
-    G_STORE %8(s64), %0(p0) :: (store release (s8))
+    %8:gpr(i64) = G_CONSTANT i64 4
+    G_STORE %8(i64), %0(p0) :: (store release (i8))
 
   bb.3:
     RET_ReallyLR

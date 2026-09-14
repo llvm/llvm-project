@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
-; RUN: opt -S -mtriple=amdgcn-- -mcpu=fiji -passes=sroa,amdgpu-promote-alloca < %s | FileCheck -check-prefix=OPT %s
+; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
+; RUN: opt -S -mtriple=amdgpu8.03-- -passes=sroa,amdgpu-promote-alloca < %s | FileCheck -check-prefix=OPT %s
 
 ; GCN-LABEL: {{^}}float4_alloca_store4:
 ; OPT-LABEL: define amdgpu_kernel void @float4_alloca_store4

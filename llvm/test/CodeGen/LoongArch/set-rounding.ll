@@ -54,17 +54,16 @@ define void @set_rounding_dynamic(i32 %rm) nounwind {
 ; LA32-NEXT:    srli.w $a1, $a1, 1
 ; LA32-NEXT:    andi $a1, $a1, 1
 ; LA32-NEXT:    xor $a0, $a0, $a1
-; LA32-NEXT:    andi $a0, $a0, 3
 ; LA32-NEXT:    slli.w $a0, $a0, 8
 ; LA32-NEXT:    movgr2fcsr $fcsr3, $a0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: set_rounding_dynamic:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    nor $a1, $a0, $zero
-; LA64-NEXT:    bstrpick.d $a1, $a1, 1, 1
-; LA64-NEXT:    xor $a0, $a0, $a1
-; LA64-NEXT:    andi $a0, $a0, 3
+; LA64-NEXT:    bstrpick.d $a1, $a0, 31, 0
+; LA64-NEXT:    nor $a0, $a0, $zero
+; LA64-NEXT:    bstrpick.d $a0, $a0, 1, 1
+; LA64-NEXT:    xor $a0, $a1, $a0
 ; LA64-NEXT:    slli.d $a0, $a0, 8
 ; LA64-NEXT:    movgr2fcsr $fcsr3, $a0
 ; LA64-NEXT:    ret

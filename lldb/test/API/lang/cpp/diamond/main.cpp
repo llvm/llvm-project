@@ -20,9 +20,18 @@ struct Joiner2 : public Derived2 {
   long y = 2;
 };
 
+struct Extra {
+  short some_value = 3;
+};
+
+struct Joiner3 : public Extra, public virtual VBase, public Derived1 {
+  long z = 4;
+};
+
 int main(int argc, const char *argv[]) {
   Joiner1 j1;
   Joiner2 j2;
+  Joiner3 j3;
   Derived2 *d = &j1;
   d = &j2;  // breakpoint 1
   return 0; // breakpoint 2

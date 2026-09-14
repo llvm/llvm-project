@@ -15,6 +15,8 @@
 #ifndef MODULE_PASS
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
+MODULE_PASS("x86-asm-printer-begin", X86AsmPrinterBeginPass())
+MODULE_PASS("x86-asm-printer-end", X86AsmPrinterEndPass())
 MODULE_PASS("x86-winehstate", X86WinEHStatePass())
 #undef MODULE_PASS
 
@@ -30,6 +32,7 @@ FUNCTION_PASS("x86-partial-reduction", X86PartialReductionPass(this))
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
 MACHINE_FUNCTION_PASS("x86-argument-stack-slot", X86ArgumentStackSlotPass())
+MACHINE_FUNCTION_PASS("x86-asm-printer", X86AsmPrinterPass())
 MACHINE_FUNCTION_PASS("x86-avoid-sfb", X86AvoidStoreForwardingBlocksPass())
 MACHINE_FUNCTION_PASS("x86-avoid-trailing-call", X86AvoidTrailingCallPass())
 MACHINE_FUNCTION_PASS("x86-cf-opt", X86CallFrameOptimizationPass())

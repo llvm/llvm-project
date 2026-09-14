@@ -1,4 +1,4 @@
-# RUN: llvm-mc -assemble -triple=amdgcn--amdhsa -mcpu=gfx1100 -filetype=obj %s -o - | \
+# RUN: llvm-mc -assemble -triple=amdgpu11.00--amdhsa -filetype=obj %s -o - | \
 # RUN:   llvm-objdump -d - | FileCheck %s
 
 ; Make sure disassembling of this instruction does not cause any errors

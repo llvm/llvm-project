@@ -56,7 +56,7 @@ In this case, the interface is `DialectInlinerInterface`.
 
 ```c++
 /// This class defines the interface for handling inlining with Toy operations.
-/// We simplify inherit from the base interface class and override
+/// We simply inherit from the base interface class and override
 /// the necessary methods.
 struct ToyInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;

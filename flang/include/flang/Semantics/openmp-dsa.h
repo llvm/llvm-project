@@ -13,7 +13,11 @@
 
 namespace Fortran::semantics {
 
+Symbol::Flags GetDataSharingAttributeFlags();
+
 Symbol::Flags GetSymbolDSA(const Symbol &symbol);
+
+void SetSymbolDSA(Symbol &symbol, Symbol::Flags flags);
 
 } // namespace Fortran::semantics
 

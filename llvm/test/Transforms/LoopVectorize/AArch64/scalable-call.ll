@@ -230,7 +230,7 @@ attributes #3 = { "vector-function-abi-variant"="_ZGV_LLVM_N2v_llvm.sin.f64(sin_
 
 !1 = distinct !{!1, !2, !3}
 !2 = !{!"llvm.loop.vectorize.width", i32 2}
-!3 = !{!"llvm.loop.vectorize.scalable.enable", i1 true}
+!3 = !{!"llvm.loop.vectorize.scalable.enable"}
 
 !llvm.dbg.cu = !{!4}
 !llvm.module.flags = !{!7}

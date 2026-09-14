@@ -20,6 +20,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
+#include "llvm/Support/Error.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
@@ -47,6 +48,7 @@ enum OperandType : unsigned {
   OPERAND_UIMM6,
   OPERAND_UIMM6_PLUS1,
   OPERAND_UIMM6_LSB0,
+  OPERAND_UIMM6_LSB000,
   OPERAND_UIMM7,
   OPERAND_UIMM7_LSB00,
   OPERAND_UIMM7_LSB000,
@@ -144,13 +146,15 @@ enum OperandType : unsigned {
   OPERAND_BCC_OPCODE,
 
   OPERAND_VMASK,
+  OPERAND_SMTVType,
+  OPERAND_SMTI8,
 };
 } // namespace RISCVOp
 
 // RISCVII - This namespace holds all of the target specific flags that
 // instruction info tracks. All definitions must match RISCVInstrFormats.td.
 namespace RISCVII {
-enum {
+enum : uint64_t {
   InstFormatPseudo = 0,
   InstFormatR = 1,
   InstFormatR4 = 2,
@@ -280,6 +284,9 @@ enum {
 
   HasTKOpShift = HasTMOpShift + 1,
   HasTKOpMask = 1ULL << HasTKOpShift,
+
+  SMTConstraintShift = HasTKOpShift + 1,
+  SMTConstraintMask = 1ULL << SMTConstraintShift,
 };
 
 // Helper functions to read TSFlags.
@@ -553,6 +560,44 @@ inline static bool isValidRoundingMode(unsigned Mode) {
 }
 } // namespace RISCVFPRndMode
 
+namespace XSMTVTypeMode {
+enum SMTVTypeMode {
+  // Define the different SMT VType modes here
+  SMT_I4 = 2,
+  SMT_I8 = 3,
+  Invalid
+};
+
+inline static StringRef SMTVTypeModeToString(SMTVTypeMode TypeMode) {
+  switch (TypeMode) {
+  default:
+    llvm_unreachable("Unknown VType mode of SpacemiT Integer Matrix");
+  case XSMTVTypeMode::SMT_I4:
+    return "i4";
+  case XSMTVTypeMode::SMT_I8:
+    return "i8";
+  }
+}
+
+inline static SMTVTypeMode stringToSMTVTypeMode(StringRef Str) {
+  return StringSwitch<SMTVTypeMode>(Str)
+      .Case("i4", XSMTVTypeMode::SMT_I4)
+      .Case("i8", XSMTVTypeMode::SMT_I8)
+      .Default(XSMTVTypeMode::Invalid);
+}
+
+inline static bool isValidSMTVTypeMode(unsigned Mode) {
+  switch (Mode) {
+  default:
+    return false;
+  case XSMTVTypeMode::SMT_I4:
+  case XSMTVTypeMode::SMT_I8:
+    return true;
+  }
+}
+
+} // namespace XSMTVTypeMode
+
 namespace RISCVVXRndMode {
 enum RoundingMode {
   RNU = 0,
@@ -690,8 +735,8 @@ enum ABI {
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the subtargets triple and FeatureBits combination.
-ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
+// not supported for the subtarget's triple and FeatureBits combination.
+Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 

@@ -14,7 +14,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; A single 'catch (int)' clause.
 ; A wasm.catch() call, wasm.lsda() call, and personality call to generate a
-; selector should all be genereated after the catchpad.
+; selector should all be generated after the catchpad.
 ;
 ; void foo();
 ; void test0() {
@@ -46,7 +46,7 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK-NEXT:   store i32 0, ptr @__wasm_lpad_context
 ; CHECK-NEXT:   %[[LSDA:.*]] = call ptr @llvm.wasm.lsda()
 ; CHECK-NEXT:   store ptr %[[LSDA]], ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 1)
-; CHECK-NEXT:   call i32 @_Unwind_CallPersonality(ptr %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
+; CHECK-NEXT:   call i32 @__gxx_wasm_personality_v0(ptr %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
 ; CHECK-NEXT:   %[[SELECTOR:.*]] = load i32, ptr getelementptr inbounds ({ i32, ptr, i32 }, ptr @__wasm_lpad_context, i32 0, i32 2)
 ; CHECK:   icmp eq i32 %[[SELECTOR]]
 
@@ -103,7 +103,7 @@ catch.start:                                      ; preds = %catch.dispatch
 ; CHECK-NOT:   call void @llvm.wasm.landingpad.index
 ; CHECK-NOT:   store {{.*}} @__wasm_lpad_context
 ; CHECK-NOT:   call ptr @llvm.wasm.lsda()
-; CHECK-NOT:   call i32 @_Unwind_CallPersonality
+; CHECK-NOT:   call i32 @__gxx_wasm_personality_v0
 ; CHECK-NOT:   load {{.*}} @__wasm_lpad_context
 
 try.cont:                                         ; preds = %entry, %catch.start
@@ -257,7 +257,7 @@ merge:                                            ; preds = %bb.true.0, %bb.fals
 declare void @foo()
 declare void @bar(i32)
 declare ptr @_ZN4TempD2Ev(ptr returned)
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind
@@ -277,4 +277,4 @@ attributes #1 = { noreturn }
 
 ; CHECK-DAG: declare void @llvm.wasm.landingpad.index(token, i32 immarg)
 ; CHECK-DAG: declare ptr @llvm.wasm.lsda()
-; CHECK-DAG: declare i32 @_Unwind_CallPersonality(ptr)
+; CHECK-DAG: declare i32 @__gxx_wasm_personality_v0(ptr)

@@ -1,5 +1,5 @@
 RUN: rm -rf %t && mkdir %t
-RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-dir=%t
+RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-path=%t/
 RUN: llvm-objcopy --dump-section=DXIL=%t0.bc %t.dxbc
 RUN: %md5sum %t0.bc >%t0.bc.md5
 RUN: obj2yaml %t.dxbc >%t.yaml

@@ -89,8 +89,8 @@ void init() {
 // LLVM: define{{.*}} void @_Z4initv()
 // LLVM:   %[[S1:.*]] = alloca %struct.S
 // LLVM:   %[[S2:.*]] = alloca %struct.S
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S1]], ptr @[[INIT_S1:.*]], i64 12, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[S2]], ptr @[[INIT_S2:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S1]], ptr align 4 @[[INIT_S1:.*]], i64 12, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S2]], ptr align 4 @[[INIT_S2:.*]], i64 12, i1 false)
 
 // OGCG: @__const._Z4initv.s1 = private unnamed_addr constant %struct.S { i32 1, i32 2, i32 3 }
 // OGCG: @__const._Z4initv.s2 = private unnamed_addr constant %struct.S { i32 4, i32 5, i32 0 }
@@ -235,7 +235,7 @@ void cxx_default_init_with_struct_field() {
 // CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>{{.*}}) -> (!s32i {llvm.noundef})
 // CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
+// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, align 4
 // LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
 // LLVM: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
 // LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4

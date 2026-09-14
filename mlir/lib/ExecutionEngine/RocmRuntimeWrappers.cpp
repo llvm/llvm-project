@@ -13,12 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 #include <cassert>
-#include <numeric>
+#include <cstdint>
+#include <cstdio>
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
-#include "llvm/ADT/ArrayRef.h"
 
 #include "hip/hip_runtime.h"
+
+#ifdef _WIN32
+#define MLIR_ROCM_WRAPPERS_EXPORT __declspec(dllexport)
+#else
+#define MLIR_ROCM_WRAPPERS_EXPORT __attribute__((visibility("default")))
+#endif // _WIN32
 
 #define HIP_REPORT_IF_ERROR(expr)                                              \
   [](hipError_t result) {                                                      \
@@ -32,24 +38,25 @@
 
 thread_local static int32_t defaultDevice = 0;
 
-extern "C" hipModule_t mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT hipModule_t
+mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   hipModule_t module = nullptr;
   HIP_REPORT_IF_ERROR(hipModuleLoadData(&module, data));
   return module;
 }
 
-extern "C" hipModule_t mgpuModuleLoadJIT(void *data, int optLevel,
-                                         size_t /*assmeblySize*/) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT hipModule_t
+mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/) {
   assert(false && "This function is not available in HIP.");
   return nullptr;
 }
 
-extern "C" void mgpuModuleUnload(hipModule_t module) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuModuleUnload(hipModule_t module) {
   HIP_REPORT_IF_ERROR(hipModuleUnload(module));
 }
 
-extern "C" hipFunction_t mgpuModuleGetFunction(hipModule_t module,
-                                               const char *name) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT hipFunction_t
+mgpuModuleGetFunction(hipModule_t module, const char *name) {
   hipFunction_t function = nullptr;
   HIP_REPORT_IF_ERROR(hipModuleGetFunction(&function, module, name));
   return function;
@@ -58,12 +65,11 @@ extern "C" hipFunction_t mgpuModuleGetFunction(hipModule_t module,
 // The wrapper uses intptr_t instead of ROCM's unsigned int to match
 // the type of MLIR's index type. This avoids the need for casts in the
 // generated MLIR code.
-extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
-                                 intptr_t gridY, intptr_t gridZ,
-                                 intptr_t blockX, intptr_t blockY,
-                                 intptr_t blockZ, int32_t smem,
-                                 hipStream_t stream, void **params,
-                                 void **extra, size_t /*paramsCount*/) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuLaunchKernel(hipFunction_t function, intptr_t gridX, intptr_t gridY,
+                 intptr_t gridZ, intptr_t blockX, intptr_t blockY,
+                 intptr_t blockZ, int32_t smem, hipStream_t stream,
+                 void **params, void **extra, size_t /*paramsCount*/) {
   HIP_REPORT_IF_ERROR(hipModuleLaunchKernel(function, gridX, gridY, gridZ,
                                             blockX, blockY, blockZ, smem,
                                             stream, params, extra));
@@ -72,7 +78,7 @@ extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
 // Cooperative launch entry point. The cluster dimensions are accepted to
 // match the CUDA wrapper signature, but HIP does not support thread block
 // clusters; passing nonzero cluster dimensions is a usage error.
-extern "C" void mgpuLaunchKernelCooperative(
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuLaunchKernelCooperative(
     hipFunction_t function, intptr_t gridX, intptr_t gridY, intptr_t gridZ,
     intptr_t clusterX, intptr_t clusterY, intptr_t clusterZ, intptr_t blockX,
     intptr_t blockY, intptr_t blockZ, int32_t smem, hipStream_t stream,
@@ -89,67 +95,74 @@ extern "C" void mgpuLaunchKernelCooperative(
                                        blockY, blockZ, smem, stream, params));
 }
 
-extern "C" hipStream_t mgpuStreamCreate() {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT hipStream_t mgpuStreamCreate() {
   hipStream_t stream = nullptr;
   HIP_REPORT_IF_ERROR(hipStreamCreate(&stream));
   return stream;
 }
 
-extern "C" void mgpuStreamDestroy(hipStream_t stream) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuStreamDestroy(hipStream_t stream) {
   HIP_REPORT_IF_ERROR(hipStreamDestroy(stream));
 }
 
-extern "C" void mgpuStreamSynchronize(hipStream_t stream) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuStreamSynchronize(hipStream_t stream) {
   return HIP_REPORT_IF_ERROR(hipStreamSynchronize(stream));
 }
 
-extern "C" void mgpuStreamWaitEvent(hipStream_t stream, hipEvent_t event) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuStreamWaitEvent(hipStream_t stream, hipEvent_t event) {
   HIP_REPORT_IF_ERROR(hipStreamWaitEvent(stream, event, /*flags=*/0));
 }
 
-extern "C" hipEvent_t mgpuEventCreate() {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT hipEvent_t mgpuEventCreate() {
   hipEvent_t event = nullptr;
   HIP_REPORT_IF_ERROR(hipEventCreateWithFlags(&event, hipEventDisableTiming));
   return event;
 }
 
-extern "C" void mgpuEventDestroy(hipEvent_t event) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuEventDestroy(hipEvent_t event) {
   HIP_REPORT_IF_ERROR(hipEventDestroy(event));
 }
 
-extern "C" void mgpuEventSynchronize(hipEvent_t event) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuEventSynchronize(hipEvent_t event) {
   HIP_REPORT_IF_ERROR(hipEventSynchronize(event));
 }
 
-extern "C" void mgpuEventRecord(hipEvent_t event, hipStream_t stream) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuEventRecord(hipEvent_t event,
+                                                          hipStream_t stream) {
   HIP_REPORT_IF_ERROR(hipEventRecord(event, stream));
 }
 
-extern "C" void *mgpuMemAlloc(uint64_t sizeBytes, hipStream_t /*stream*/,
-                              bool /*isHostShared*/) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void *mgpuMemAlloc(uint64_t sizeBytes,
+                                                        hipStream_t /*stream*/,
+                                                        bool /*isHostShared*/) {
   void *ptr;
   HIP_REPORT_IF_ERROR(hipMalloc(&ptr, sizeBytes));
   return ptr;
 }
 
-extern "C" void mgpuMemFree(void *ptr, hipStream_t /*stream*/) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuMemFree(void *ptr,
+                                                      hipStream_t /*stream*/) {
   HIP_REPORT_IF_ERROR(hipFree(ptr));
 }
 
-extern "C" void mgpuMemcpy(void *dst, void *src, size_t sizeBytes,
-                           hipStream_t stream) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuMemcpy(void *dst, void *src, size_t sizeBytes, hipStream_t stream) {
   HIP_REPORT_IF_ERROR(
       hipMemcpyAsync(dst, src, sizeBytes, hipMemcpyDefault, stream));
 }
 
-extern "C" void mgpuMemset32(void *dst, int value, size_t count,
-                             hipStream_t stream) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuMemset32(void *dst, int value, size_t count, hipStream_t stream) {
   HIP_REPORT_IF_ERROR(hipMemsetD32Async(reinterpret_cast<hipDeviceptr_t>(dst),
                                         value, count, stream));
 }
 
-extern "C" void mgpuMemset16(void *dst, int short value, size_t count,
-                             hipStream_t stream) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuMemset16(void *dst, int short value, size_t count, hipStream_t stream) {
   HIP_REPORT_IF_ERROR(hipMemsetD16Async(reinterpret_cast<hipDeviceptr_t>(dst),
                                         value, count, stream));
 }
@@ -158,43 +171,39 @@ extern "C" void mgpuMemset16(void *dst, int short value, size_t count,
 
 // Allows to register byte array with the ROCM runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
+mgpuMemHostRegister(void *ptr, uint64_t sizeBytes) {
   HIP_REPORT_IF_ERROR(hipHostRegister(ptr, sizeBytes, /*flags=*/0));
 }
 
 // Allows to register a MemRef with the ROCm runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
 mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
                           int64_t elementSizeBytes) {
-
-  llvm::SmallVector<int64_t, 4> denseStrides(rank);
-  llvm::ArrayRef<int64_t> sizes(descriptor->sizes, rank);
-  llvm::ArrayRef<int64_t> strides(sizes.end(), rank);
-
-  std::partial_sum(sizes.rbegin(), sizes.rend(), denseStrides.rbegin(),
-                   std::multiplies<int64_t>());
-  auto sizeBytes = denseStrides.front() * elementSizeBytes;
-
+  int64_t *sizes = descriptor->sizes;
+  [[maybe_unused]] int64_t *strides = &sizes[rank];
+  int64_t runningStride = 1;
   // Only densely packed tensors are currently supported.
-  std::rotate(denseStrides.begin(), denseStrides.begin() + 1,
-              denseStrides.end());
-  denseStrides.back() = 1;
-  assert(strides == llvm::ArrayRef(denseStrides));
+  for (int64_t i = rank - 1; i >= 0; --i) {
+    assert(strides[i] == runningStride && "Mismatch in computed dense strides");
+    runningStride *= sizes[i];
+  }
+  uint64_t sizeBytes = runningStride * elementSizeBytes;
 
-  auto ptr = descriptor->data + descriptor->offset * elementSizeBytes;
+  auto *ptr = descriptor->data + descriptor->offset * elementSizeBytes;
   mgpuMemHostRegister(ptr, sizeBytes);
 }
 
 // Allows to unregister byte array with the ROCM runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void mgpuMemHostUnregister(void *ptr) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuMemHostUnregister(void *ptr) {
   HIP_REPORT_IF_ERROR(hipHostUnregister(ptr));
 }
 
 // Allows to unregister a MemRef with the ROCm runtime. Helpful until we have
 // transfer functions implemented.
-extern "C" void
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void
 mgpuMemHostUnregisterMemRef(int64_t rank,
                             StridedMemRefType<char, 1> *descriptor,
                             int64_t elementSizeBytes) {
@@ -209,7 +218,7 @@ void mgpuMemGetDevicePointer(T *hostPtr, T **devicePtr) {
       hipHostGetDevicePointer((void **)devicePtr, hostPtr, /*flags=*/0));
 }
 
-extern "C" StridedMemRefType<float, 1>
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT StridedMemRefType<float, 1>
 mgpuMemGetDeviceMemRef1dFloat(float *allocated, float *aligned, int64_t offset,
                               int64_t size, int64_t stride) {
   float *devicePtr = nullptr;
@@ -217,7 +226,7 @@ mgpuMemGetDeviceMemRef1dFloat(float *allocated, float *aligned, int64_t offset,
   return {devicePtr, devicePtr, offset, {size}, {stride}};
 }
 
-extern "C" StridedMemRefType<int32_t, 1>
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT StridedMemRefType<int32_t, 1>
 mgpuMemGetDeviceMemRef1dInt32(int32_t *allocated, int32_t *aligned,
                               int64_t offset, int64_t size, int64_t stride) {
   int32_t *devicePtr = nullptr;
@@ -225,7 +234,7 @@ mgpuMemGetDeviceMemRef1dInt32(int32_t *allocated, int32_t *aligned,
   return {devicePtr, devicePtr, offset, {size}, {stride}};
 }
 
-extern "C" void mgpuSetDefaultDevice(int32_t device) {
+extern "C" MLIR_ROCM_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
   HIP_REPORT_IF_ERROR(hipSetDevice(device));
 }

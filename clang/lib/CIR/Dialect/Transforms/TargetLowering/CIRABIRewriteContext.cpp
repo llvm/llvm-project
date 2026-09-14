@@ -7,10 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRABIRewriteContext.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Dominance.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/STLExtras.h"
+#include <algorithm>
+#include <utility>
 
 using namespace cir;
 using namespace mlir;
@@ -18,12 +24,20 @@ using namespace mlir::abi;
 
 // This rewrite context supports the Direct (with or without coercion),
 // Extend, Ignore, Indirect-return (sret), Indirect-argument (byval and
-// byref), and Expand (struct flattening) classifications.
+// non-byval), and Expand (struct flattening) classifications.
 //
-// For byval (ArgClassification::byVal == true) the callee gets
-// llvm.byval + llvm.noalias + llvm.noundef; for byref (byVal == false)
-// the callee gets llvm.byref without the ownership attrs.  Both pass
-// through an alloca+store at the call site.
+// An Indirect argument is byval or not, following its classification's
+// byVal flag.  byval is a by-value parameter the ABI passes in memory rather
+// than registers, usually for its size.  Non-byval is a by-value parameter
+// whose type cannot be copied freely, because it has a non-trivial copy
+// constructor, move constructor, or destructor, so the callee works on the
+// caller's own object rather than a copy.
+//
+// At the call site byval copies into a fresh alloca while a non-byval
+// argument forwards the caller's storage.  At the callee, byval loads the
+// incoming pointer (a local copy), while non-byval rewires the CIRGen
+// param-slot alloca to the incoming pointer so the body mutates the caller's
+// storage in place.
 //
 // For Expand, the single struct argument is replaced by N scalar arguments
 // (one per field).  At the callee, the N field block arguments are stored
@@ -40,19 +54,6 @@ using namespace mlir::abi;
 // each field as a separate call argument.
 
 namespace {
-
-bool needsRewrite(const FunctionClassification &fc) {
-  // Direct without coercion is a true pass-through; any other kind (or a
-  // coerced Direct) means the rewriter must touch the IR.  Extend is
-  // technically attribute-only at the IR level but still counts because the
-  // attribute attachment changes observable behavior.
-  if ((fc.returnInfo.kind != ArgKind::Direct) || fc.returnInfo.coercedType)
-    return true;
-  for (const ArgClassification &ac : fc.argInfos)
-    if ((ac.kind != ArgKind::Direct) || ac.coercedType)
-      return true;
-  return false;
-}
 
 /// Return the coerced RecordType for a Direct classification that should be
 /// flattened into individual scalar arguments, or a null type if the
@@ -76,7 +77,7 @@ cir::RecordType getFlattenedCoercedType(const ArgClassification &ac) {
 
 /// Build the new argument-type list for a function whose ABI classification
 /// is \p fc.  Handles Direct (with or without coercion), Extend, Ignore,
-/// Indirect (byval and byref), and Expand (struct flattening) arguments.
+/// Indirect (byval and non-byval), and Expand (struct flattening) arguments.
 /// The sret return pointer, when present, is prepended by
 /// rewriteFunctionDefinition rather than here.
 mlir::LogicalResult
@@ -128,11 +129,6 @@ buildNewArgTypes(ArrayRef<mlir::Type> oldArgTypes,
       newArgTypes.push_back(origTy);
       break;
     case ArgKind::Indirect:
-      // byval and byref both use a pointer wire type.  The attribute
-      // distinction (llvm.byval vs llvm.byref) is applied in updateArgAttrs;
-      // the call-site rewrite guards against byref separately because passing
-      // a byref pointer from a CIR value requires the original alloca address,
-      // which the rewriter does not yet track.
       newArgTypes.push_back(cir::PointerType::get(origTy));
       break;
     }
@@ -185,14 +181,15 @@ mlir::Value createIgnoredValue(mlir::OpBuilder &builder, mlir::Location loc,
 }
 
 /// Build an updated arg_attrs ArrayAttr that drops Ignore'd args, adds
-/// llvm.signext / llvm.zeroext on Extend args, and adds llvm.byval /
-/// llvm.align on Indirect args.  Preserves any existing arg attributes on
+/// llvm.signext / llvm.zeroext on Extend args, and adds the pointer
+/// attributes for Indirect args.  Preserves any existing arg attributes on
 /// retained arg slots.  \p origArgTypes provides the pre-rewrite type for
-/// each arg slot (needed to compute the llvm.byval pointee type).
+/// each arg slot.
 mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
                                ArrayRef<mlir::Type> origArgTypes,
                                mlir::ArrayAttr existingArgAttrs,
-                               const FunctionClassification &fc) {
+                               const FunctionClassification &fc,
+                               const mlir::DataLayout &dl) {
   mlir::Builder builder(ctx);
   SmallVector<mlir::Attribute> newArgAttrs;
   newArgAttrs.reserve(fc.argInfos.size());
@@ -213,41 +210,45 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       auto recTy = cast<cir::RecordType>(origArgTypes[oldIdx]);
       newArgAttrs.append(recTy.getNumElements(), builder.getDictionaryAttr({}));
     } else if (ac.kind == ArgKind::Extend) {
-      StringRef attrName = ac.signExtend ? "llvm.signext" : "llvm.zeroext";
-      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
-      attrs.push_back(builder.getNamedAttr(attrName, builder.getUnitAttr()));
-      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+      StringRef attrName = ac.signExtend
+                               ? mlir::LLVM::LLVMDialect::getSExtAttrName()
+                               : mlir::LLVM::LLVMDialect::getZExtAttrName();
+      mlir::NamedAttrList attrs(existing);
+      attrs.set(attrName, builder.getUnitAttr());
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval: caller-allocated copy; callee receives pointer to copy.
-      // byref: callee receives pointer to the caller's original storage.
-      // Both use llvm.align(A).  The ownership flag differs: llvm.byval(T)
-      // vs llvm.byref(T).  Both are typed attributes carrying the pointee
-      // type T (the pre-rewrite arg type); T is recorded explicitly because
-      // it cannot be recovered from the opaque LLVM pointer after lowering.
+      // byval hands the callee its own copy.  Without byval it gets a pointer
+      // to the caller's own object.  Both state llvm.align and llvm.noundef,
+      // which constrains the pointer operand, not the pointee's contents.
       //
-      // For byval, two additional attributes match classic CodeGen:
-      //   llvm.noundef -- the copy is always fully defined (the caller's
-      //     original must be defined or UB has already occurred, and the
-      //     copy inherits that property).
-      //   llvm.noalias -- the copy is a fresh caller-allocated alloca that
-      //     no other pointer in the function can alias.  Classic CodeGen
-      //     emits this when -fpass-by-value-is-noalias is set; here we
-      //     emit it unconditionally because our call-site rewrite always
-      //     produces a fresh alloca+store.
+      // llvm.byval(T) records the pre-rewrite arg type because the opaque
+      // LLVM pointer cannot carry it.  llvm.nofreeobj says the object cannot
+      // be freed while the callee runs, which holds because the caller owns it
+      // across the call.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
-      StringRef ownershipAttr = ac.byVal ? "llvm.byval" : "llvm.byref";
-      SmallVector<mlir::NamedAttribute> attrs(existing.begin(), existing.end());
-      attrs.push_back(builder.getNamedAttr(
-          "llvm.align", builder.getI64IntegerAttr(ac.indirectAlign.value())));
-      attrs.push_back(
-          builder.getNamedAttr(ownershipAttr, mlir::TypeAttr::get(pointeeTy)));
+      mlir::NamedAttrList attrs(existing);
+      attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
+                builder.getI64IntegerAttr(ac.indirectAlign.value()));
+      attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
+                builder.getUnitAttr());
       if (ac.byVal) {
-        attrs.push_back(
-            builder.getNamedAttr("llvm.noalias", builder.getUnitAttr()));
-        attrs.push_back(
-            builder.getNamedAttr("llvm.noundef", builder.getUnitAttr()));
+        // Classic adds llvm.noalias under -fpass-by-value-is-noalias, which
+        // CIR does not plumb through.
+        assert(!cir::MissingFeatures::noaliasOnByvalAttr());
+        attrs.set(mlir::LLVM::LLVMDialect::getByValAttrName(),
+                  mlir::TypeAttr::get(pointeeTy));
+      } else {
+        // Classic adds llvm.dead_on_return when the object's lifetime ends in
+        // the callee, which needs the destructor's triviality from
+        // cir.record_layout's has_trivial_dtor.
+        assert(!cir::MissingFeatures::deadOnReturnAttr());
+        attrs.set(mlir::LLVM::LLVMDialect::getNoFreeObjAttrName(),
+                  builder.getUnitAttr());
+        attrs.set(mlir::LLVM::LLVMDialect::getDereferenceableAttrName(),
+                  builder.getI64IntegerAttr(
+                      dl.getTypeSize(pointeeTy).getFixedValue()));
       }
-      newArgAttrs.push_back(builder.getDictionaryAttr(attrs));
+      newArgAttrs.push_back(attrs.getDictionary(ctx));
     } else {
       newArgAttrs.push_back(existing);
     }
@@ -275,6 +276,22 @@ mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
   return mlir::ArrayAttr::get(ctx, {mlir::DictionaryAttr::get(ctx, attrs)});
 }
 
+/// The number of bytes a coercion memory slot needs to hold a value of type
+/// \p ty without truncating it. For most types this is the ordinary storage
+/// size. For a _BitInt it is deliberately the value's own literal byte
+/// footprint (ceil(width/8)) rather than the wider, ABI-alignment-padded
+/// footprint a _BitInt gets as a record member (see
+/// cir::IntType::getStorageTypeWidth): this coercion is about how many bytes
+/// the *value* needs to round-trip, not how a record would lay it out, and
+/// those are genuinely different questions for a _BitInt (e.g. _BitInt(33)
+/// only needs 5 bytes here, even though it occupies 8 padded bytes as a
+/// record member).
+static uint64_t coercionByteSize(mlir::Type ty, const mlir::DataLayout &dl) {
+  if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
+    return llvm::divideCeil(intTy.getWidth(), 8);
+  return dl.getTypeSize(ty);
+}
+
 /// Coerce \p src into a temporary memory slot typed for \p dstTy at the
 /// current builder insertion point, and return the destination-typed pointer
 /// to that slot without loading the value back out.  This is the shared
@@ -292,19 +309,25 @@ mlir::ArrayAttr updateResAttrs(mlir::MLIRContext *ctx,
 /// is written through a source-typed view and returned as a destination-typed
 /// view.
 ///
-/// The temporary alloca is placed at the start of the enclosing function's
-/// entry block so that it composes correctly with the HoistAllocas pass
-/// regardless of pipeline ordering.
+/// The temporary alloca is placed at the start of \p slotBlock, which must
+/// dominate every use of the coerced value and must be a block that ends up
+/// inside the enclosing function's entry block after any later outlining.
+///
+/// \p offset is where the coerced value sits within the larger of the two
+/// types, non-zero when the ABI passes a value in a register read from
+/// partway into its storage.  The coerced type must be the smaller of the
+/// two, so one that can exceed the value it coerces, such as a multi-field
+/// register tuple, must not be given an offset.
 ///
 /// Any operations the helper creates are appended to \p createdOps so the
 /// caller can pass them to replaceAllUsesExcept and avoid clobbering the
 /// store's value operand when later rewiring the source value.
-mlir::Value
-emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
-                     mlir::Type dstTy, mlir::Value src,
-                     mlir::FunctionOpInterface funcOp,
-                     const mlir::DataLayout &dl,
-                     SmallPtrSetImpl<mlir::Operation *> &createdOps) {
+mlir::Value emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
+                                 mlir::Type dstTy, mlir::Value src,
+                                 mlir::Block *slotBlock,
+                                 const mlir::DataLayout &dl,
+                                 SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                                 unsigned offset) {
   mlir::Type srcTy = src.getType();
   assert(srcTy != dstTy &&
          "emitCoercion callers must pre-check that the types differ");
@@ -312,8 +335,22 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   uint64_t srcAlign = dl.getTypeABIAlignment(srcTy);
   uint64_t dstAlign = dl.getTypeABIAlignment(dstTy);
   uint64_t allocaAlign = std::max(srcAlign, dstAlign);
-  mlir::Type slotTy =
-      dl.getTypeSize(srcTy) >= dl.getTypeSize(dstTy) ? srcTy : dstTy;
+  mlir::Type slotTy = coercionByteSize(srcTy, dl) >= coercionByteSize(dstTy, dl)
+                          ? srcTy
+                          : dstTy;
+
+  // Sizes are compared two ways on purpose: relative size in
+  // coercionByteSize terms, which is how slotTy was picked, and capacity in
+  // getTypeSize terms, which is what the alloca is given.
+  [[maybe_unused]] mlir::Type coercedTy = ((slotTy == srcTy) ? dstTy : srcTy);
+  assert((offset == 0 ||
+          coercionByteSize(coercedTy, dl) < coercionByteSize(slotTy, dl)) &&
+         "a direct offset must land on the coerced side, the smaller one");
+  assert((offset == 0 ||
+          offset + dl.getTypeSize(coercedTy) <= dl.getTypeSize(slotTy)) &&
+         "coerce slot too small for offset access");
+  assert((offset == 0 || offset % dl.getTypeABIAlignment(coercedTy) == 0) &&
+         "a direct offset must be aligned for the coerced access");
 
   auto slotPtrTy = cir::PointerType::get(slotTy);
   auto srcPtrTy = cir::PointerType::get(srcTy);
@@ -322,33 +359,49 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
   cir::AllocaOp alloca;
   {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    mlir::Block &entry = funcOp->getRegion(0).front();
-    builder.setInsertionPointToStart(&entry);
+    builder.setInsertionPointToStart(slotBlock);
     alloca = cir::AllocaOp::create(builder, loc, slotPtrTy,
                                    builder.getStringAttr("coerce"),
                                    builder.getI64IntegerAttr(allocaAlign));
   }
   createdOps.insert(alloca);
 
+  // The alloca already has slotTy, so asking for that type returns it
+  // unchanged.  Any other type is reached by a bitcast, preceded by a byte
+  // stride when the coerced value lives at an offset.
+  auto slotView = [&](mlir::Type wantTy,
+                      cir::PointerType wantPtrTy) -> mlir::Value {
+    if (wantTy == slotTy)
+      return alloca;
+    mlir::Value base = alloca;
+    if (offset != 0) {
+      auto u8Ty =
+          cir::IntType::get(builder.getContext(), 8, /*isSigned=*/false);
+      auto u8PtrTy = cir::PointerType::get(u8Ty);
+      auto u8Base = cir::CastOp::create(builder, loc, u8PtrTy,
+                                        cir::CastKind::bitcast, alloca);
+      createdOps.insert(u8Base);
+      auto strideTy =
+          cir::IntType::get(builder.getContext(), 64, /*isSigned=*/true);
+      auto strideVal = cir::ConstantOp::create(
+          builder, loc, cir::IntAttr::get(strideTy, offset));
+      createdOps.insert(strideVal);
+      base = cir::PtrStrideOp::create(builder, loc, u8PtrTy, u8Base, strideVal);
+      createdOps.insert(base.getDefiningOp());
+    }
+    auto cast = cir::CastOp::create(builder, loc, wantPtrTy,
+                                    cir::CastKind::bitcast, base);
+    createdOps.insert(cast);
+    return cast;
+  };
+
   // Store through a source-typed view of the slot.
-  mlir::Value srcSlot = alloca;
-  if (slotTy != srcTy) {
-    auto srcCast = cir::CastOp::create(builder, loc, srcPtrTy,
-                                       cir::CastKind::bitcast, alloca);
-    createdOps.insert(srcCast);
-    srcSlot = srcCast;
-  }
+  mlir::Value srcSlot = slotView(srcTy, srcPtrTy);
   auto store = cir::StoreOp::create(builder, loc, src, srcSlot);
   createdOps.insert(store);
 
   // Return a destination-typed view of the slot.
-  if (slotTy != dstTy) {
-    auto dstCast = cir::CastOp::create(builder, loc, dstPtrTy,
-                                       cir::CastKind::bitcast, alloca);
-    createdOps.insert(dstCast);
-    return dstCast;
-  }
-  return alloca;
+  return slotView(dstTy, dstPtrTy);
 }
 
 /// Coerce \p src to type \p dstTy by going through memory and load the whole
@@ -356,11 +409,11 @@ emitCoercionToMemory(mlir::OpBuilder &builder, mlir::Location loc,
 /// load of the destination-typed view.
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
-                         mlir::FunctionOpInterface funcOp,
-                         const mlir::DataLayout &dl,
-                         SmallPtrSetImpl<mlir::Operation *> &createdOps) {
-  mlir::Value dstSlot =
-      emitCoercionToMemory(builder, loc, dstTy, src, funcOp, dl, createdOps);
+                         mlir::Block *slotBlock, const mlir::DataLayout &dl,
+                         SmallPtrSetImpl<mlir::Operation *> &createdOps,
+                         unsigned offset) {
+  mlir::Value dstSlot = emitCoercionToMemory(builder, loc, dstTy, src,
+                                             slotBlock, dl, createdOps, offset);
   auto load = cir::LoadOp::create(builder, loc, dstSlot);
   createdOps.insert(load);
   return load;
@@ -370,18 +423,40 @@ mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
 /// (e.g. call-site coercion where we don't replaceAllUsesExcept).
 mlir::Value emitCoercion(mlir::OpBuilder &builder, mlir::Location loc,
                          mlir::Type dstTy, mlir::Value src,
-                         mlir::FunctionOpInterface funcOp,
-                         const mlir::DataLayout &dl) {
+                         mlir::Block *slotBlock, const mlir::DataLayout &dl,
+                         unsigned offset) {
   SmallPtrSet<mlir::Operation *, 4> ignored;
-  return emitCoercion(builder, loc, dstTy, src, funcOp, dl, ignored);
+  return emitCoercion(builder, loc, dstTy, src, slotBlock, dl, ignored, offset);
+}
+
+/// The block a coercion slot's alloca belongs at the start of.
+///
+/// Normally the enclosing function's entry block, where HoistAllocas expects
+/// allocas to be.  A body carrying a call is not always inside a function
+/// when this pass runs, though, because LoweringPrepare runs after it: a
+/// namespace-scope `T g = makeT();` is still in its cir.global ctor region,
+/// and an OpenACC recipe's init and destroy bodies are in regions the module
+/// owns.  Those take the outermost region below the module, which dominates
+/// the whole body and travels with it when the body is outlined.
+mlir::Block *coercionSlotBlock(mlir::Operation *op) {
+  if (auto funcOp = op->getParentOfType<mlir::FunctionOpInterface>())
+    return &funcOp->getRegion(0).front();
+  mlir::Region *region = op->getParentRegion();
+  while (mlir::Region *outer = region->getParentRegion()) {
+    if (mlir::isa<mlir::ModuleOp>(outer->getParentOp()))
+      break;
+    region = outer;
+  }
+  assert(!region->empty() && "coercion slot needs a block to hold the alloca");
+  return &region->front();
 }
 
 /// Insert coercion before each cir.return so the returned value matches the
 /// new (coerced) return type.
 void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
                           mlir::Type origRetTy, mlir::Type coercedRetTy,
-                          mlir::OpBuilder &builder,
-                          const mlir::DataLayout &dl) {
+                          mlir::OpBuilder &builder, const mlir::DataLayout &dl,
+                          unsigned offset) {
   SmallVector<cir::ReturnOp> returns;
   funcOp.walk([&](cir::ReturnOp r) { returns.push_back(r); });
   for (cir::ReturnOp r : returns) {
@@ -392,42 +467,78 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
       continue;
     builder.setInsertionPoint(r);
     mlir::Value coerced =
-        emitCoercion(builder, r.getLoc(), coercedRetTy, origVal, funcOp, dl);
+        emitCoercion(builder, r.getLoc(), coercedRetTy, origVal,
+                     &funcOp->getRegion(0).front(), dl, offset);
     r->setOperand(0, coerced);
   }
 }
 
+/// \p val's defining load, if it is simple, meaning neither volatile nor
+/// atomic.  Null otherwise: a non-simple load's access has to survive as
+/// written, and a call result or any other first-class value has no defining
+/// load at all.
+static cir::LoadOp maybeGetSimpleLoad(mlir::Value val) {
+  cir::LoadOp load = val.getDefiningOp<cir::LoadOp>();
+  if (!load || load.getIsVolatile() || load.getMemOrder())
+    return {};
+  return load;
+}
+
+/// \p recordVal's defining load, if it is simple and its address resolves to
+/// an alloca.  Null otherwise.
+static cir::LoadOp getWholeRecordLoad(mlir::Value recordVal) {
+  cir::LoadOp load = maybeGetSimpleLoad(recordVal);
+  if (!load || !cir::getUnderlyingAlloca(load.getAddr()))
+    return {};
+  return load;
+}
+
+/// Whether a non-byval indirect argument may name \p addr, given the callee is
+/// told the argument is \p minAlign aligned.  A slot allocated here qualifies,
+/// reached through storage-preserving casts, and so does the enclosing
+/// function's own non-byval parameter: its slot stands until
+/// finalizeParameterSlots, and states the alignment the parameter promises
+/// rather than the one CIRGen chose for a local copy.
+///
+/// The slot must already state that alignment.  Raising it here would not
+/// survive one that stands in for a parameter, since finalizeParameterSlots
+/// replaces it with the incoming pointer, which would discard the raise and
+/// leave the callee over-promised.
+static bool forwardableNonByvalStorage(mlir::Value addr, uint64_t minAlign) {
+  cir::AllocaOp slot = cir::getUnderlyingAlloca(addr);
+  return slot && slot.getAlignment() >= minAlign;
+}
+
 /// Decompose a struct value into one scalar call argument per field of \p
 /// recTy, appending the field values to \p newArgs.  When \p structVal is a
-/// plain (non-volatile, non-atomic) load straight from an alloca, read each
-/// field with cir.get_member + cir.load from that alloca, emitted at the
-/// original load's position so they observe the same memory state, and record
-/// the now-dead whole-struct load in \p replacedWholeLoads for later erasure.
-/// Otherwise (a call result, compound literal, or qualified load) extract each
-/// field from the value with cir.extract_member.  Loading the members from the
-/// alloca rather than extracting from a whole-struct value keeps the result in
+/// simple load from an alloca, read each field with cir.get_member +
+/// cir.load from the address the load used, emitted at the original load's
+/// position so they observe the same memory state, and record the now-dead
+/// whole-struct load in \p deadRecordLoads for later erasure.  Otherwise (a
+/// call result, compound literal, or a volatile or atomic load) extract each
+/// field from the value with cir.extract_member.  Loading the members from
+/// memory rather than extracting from a whole-struct value keeps the result in
 /// a form SROA can promote (it does not reason about extractvalue).  Shared by
 /// the Expand and Direct+canFlatten argument paths.
-static void
-emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
-                    mlir::Value structVal, cir::RecordType recTy,
-                    SmallVectorImpl<mlir::Value> &newArgs,
-                    SmallVectorImpl<cir::LoadOp> &replacedWholeLoads) {
-  cir::LoadOp wholeLoad = structVal.getDefiningOp<cir::LoadOp>();
-  cir::AllocaOp srcAlloca;
-  if (wholeLoad && !wholeLoad.getIsVolatile() && !wholeLoad.getMemOrder())
-    srcAlloca = wholeLoad.getAddr().getDefiningOp<cir::AllocaOp>();
+static void emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
+                                mlir::Value structVal, cir::RecordType recTy,
+                                SmallVectorImpl<mlir::Value> &newArgs,
+                                SmallVectorImpl<cir::LoadOp> &deadRecordLoads) {
+  cir::LoadOp srcLoad = getWholeRecordLoad(structVal);
 
-  if (srcAlloca) {
+  if (srcLoad) {
     mlir::OpBuilder::InsertionGuard guard(builder);
-    builder.setInsertionPoint(wholeLoad);
+    builder.setInsertionPoint(srcLoad);
+    cir::PointerType baseTy = srcLoad.getAddr().getType();
     for (auto [f, fieldTy] : llvm::enumerate(recTy.getMembers())) {
-      mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
+      mlir::Type fieldPtrTy =
+          cir::PointerType::get(fieldTy, baseTy.getAddrSpace());
       mlir::Value fieldPtr = cir::GetMemberOp::create(
-          builder, loc, fieldPtrTy, srcAlloca, /*name=*/"", /*index=*/f);
+          builder, loc, fieldPtrTy, srcLoad.getAddr(), /*name=*/"",
+          /*index=*/f);
       newArgs.push_back(cir::LoadOp::create(builder, loc, fieldPtr));
     }
-    replacedWholeLoads.push_back(wholeLoad);
+    deadRecordLoads.push_back(srcLoad);
   } else {
     for (unsigned f = 0; f < recTy.getNumElements(); ++f)
       newArgs.push_back(
@@ -435,24 +546,58 @@ emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
   }
 }
 
+/// Erase the loads that a rewritten call left unused.  The old call must
+/// already be erased, since until then it still counts as a user.  One load can
+/// feed two operands of the same call, as in f(s, s), so \p loads can hold the
+/// same load twice.  A load that another op still reads is left alone.
+static void eraseDeadRecordLoads(ArrayRef<cir::LoadOp> loads) {
+  llvm::SmallSetVector<mlir::Operation *, 4> uniqueLoads(llvm::from_range,
+                                                         loads);
+  for (mlir::Operation *load : uniqueLoads)
+    if (load->use_empty())
+      load->erase();
+}
+
+/// The store that spills non-byval indirect parameter \p blockArg, and the
+/// slot it spills into.  CIRGen spills every by-value parameter into a local
+/// alloca with a single store before any other use, and this pass runs on that
+/// CIRGen output before any alloca-promoting or splitting pass, so the block
+/// argument has exactly that one use.  Both results are null when DCE already
+/// removed a dead spill.
+static std::pair<cir::StoreOp, cir::AllocaOp>
+findParamSpill(mlir::BlockArgument blockArg) {
+  if (blockArg.use_empty())
+    return {};
+  assert(blockArg.hasOneUse() &&
+         "non-byval arg must have exactly one use (the CIRGen param spill)");
+  auto store = cast<cir::StoreOp>(*blockArg.user_begin());
+  assert(store.getValue() == blockArg &&
+         "non-byval arg's use must be the value operand of its store");
+  return {store, cast<cir::AllocaOp>(store.getAddr().getDefiningOp())};
+}
+
 /// For each Direct arg with a coerced type, change the block argument's type
 /// to the coerced type and insert a coercion at function entry that maps it
-/// back to the original type for body uses.  For each Indirect (byval/byref)
-/// arg, change the block argument's type to a pointer and insert a load at
-/// entry so the body sees the original value type.  For each Expand arg,
-/// replace the single struct block argument with N scalar block arguments (one
-/// per field) and store each field directly into the parameter's own alloca
-/// (the CIRGen spill slot), erasing the original whole-struct store.
+/// back to the original type for body uses.  For each Indirect byval arg,
+/// change the block argument's type to a pointer and insert a load at entry
+/// so the body sees a local copy of the original value type.  For each
+/// Indirect non-byval arg, change the block argument to a pointer and queue
+/// the CIRGen param-slot alloca to be replaced by it (no entry load /
+/// byte-copy) so the body operates on the caller's storage in place.  For each
+/// Expand arg, replace the single struct block argument with N scalar block
+/// arguments (one per field) and store each field directly into the parameter's
+/// own alloca (the CIRGen spill slot), erasing the original whole-struct store.
 ///
 /// \p hasSRetArg is true when the function has an sret return (a hidden return
 /// pointer is prepended as block argument 0).  Expand arguments expand the
 /// block argument count, so a running index tracks the current block argument
 /// position rather than computing the classification index + \p hasSRetArg
 /// directly.
-void insertArgCoercion(mlir::FunctionOpInterface funcOp,
-                       const FunctionClassification &fc,
-                       mlir::OpBuilder &builder, const mlir::DataLayout &dl,
-                       bool hasSRetArg) {
+void insertArgCoercion(
+    mlir::FunctionOpInterface funcOp, const FunctionClassification &fc,
+    mlir::OpBuilder &builder, const mlir::DataLayout &dl, bool hasSRetArg,
+    SmallVectorImpl<std::pair<cir::AllocaOp, mlir::BlockArgument>>
+        &pendingParamSlots) {
   mlir::Region &body = funcOp->getRegion(0);
   if (body.empty())
     return;
@@ -586,8 +731,11 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
       Value finalVal = flatLoaded;
       if (origTy != flatTy) {
         SmallPtrSet<Operation *, 4> coercionOps;
-        finalVal = emitCoercion(builder, loc, origTy, flatLoaded, funcOp, dl,
-                                coercionOps);
+        assert(!ac.directOffset &&
+               "each field is read from slot offset 0 here, so a flattened "
+               "coercion cannot honor a direct offset");
+        finalVal = emitCoercion(builder, loc, origTy, flatLoaded, &entry, dl,
+                                coercionOps, /*offset=*/0);
         flattenOps.insert(coercionOps.begin(), coercionOps.end());
       }
 
@@ -610,8 +758,9 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
 
       builder.setInsertionPointToStart(&entry);
       SmallPtrSet<mlir::Operation *, 4> coercionOps;
-      mlir::Value adapted = emitCoercion(builder, funcOp.getLoc(), oldArgTy,
-                                         blockArg, funcOp, dl, coercionOps);
+      mlir::Value adapted =
+          emitCoercion(builder, funcOp.getLoc(), oldArgTy, blockArg, &entry, dl,
+                       coercionOps, ac.directOffset);
 
       // Replace blockArg uses with the adapted value, except inside the
       // helper ops we just created.  This is critical: the StoreOp's value
@@ -619,19 +768,44 @@ void insertArgCoercion(mlir::FunctionOpInterface funcOp,
       // to adapted (now of the original type != the alloca's pointee type).
       blockArg.replaceAllUsesExcept(adapted, coercionOps);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval and byref: the wire type is !cir.ptr<T>.  Change the block arg
-      // to the pointer type and insert a load so the body sees the original
-      // T.  The body transformation is the same for both; the distinction
-      // between byval (llvm.byval) and byref (llvm.byref) is in the arg
-      // attributes applied by updateArgAttrs.
-      mlir::Type origTy = blockArg.getType();
-      auto ptrTy = cir::PointerType::get(origTy);
-      blockArg.setType(ptrTy);
+      // byval and non-byval both lower to !cir.ptr<T>, and which it is shows
+      // up only in the attrs updateArgAttrs applies.  Body lowering differs:
+      // byval copies into the callee (load at entry), while non-byval must
+      // operate on the caller's storage in place.
+      auto ptrTy = cir::PointerType::get(blockArg.getType());
 
-      builder.setInsertionPointToStart(&entry);
-      auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
-      SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
-      blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+      if (!ac.byVal) {
+        // Without byval, drop the spill store and let the slot's uses read the
+        // incoming pointer, so the body operates on the caller's storage in
+        // place.  A byte-copy would be wrong for non-trivially-copyable
+        // aggregates (e.g. libstdc++ SSO std::string, where it would leave
+        // `_M_p` aliasing the source's `_M_local_buf`).
+        auto [paramStore, destAlloca] = findParamSpill(blockArg);
+
+        if (paramStore)
+          paramStore->erase();
+
+        // Update the block argument to point to its original type.
+        blockArg.setType(ptrTy);
+
+        // Pointing the slot's uses at the incoming pointer waits until every
+        // call site has been rewritten.  A call that hands this parameter
+        // straight on recognises it by the slot its operand was loaded from,
+        // and collapsing the slot here would leave that call reading a block
+        // argument with no defining operation to inspect.  A dead spill DCE
+        // already removed leaves nothing to collapse.
+        if (destAlloca)
+          pendingParamSlots.emplace_back(destAlloca, blockArg);
+      } else {
+        // byval: load the incoming pointer so the body sees a T value (and
+        // any CIRGen param-slot store becomes a local copy of that value).
+        blockArg.setType(ptrTy);
+
+        builder.setInsertionPointToStart(&entry);
+        auto loadOp = cir::LoadOp::create(builder, funcOp.getLoc(), blockArg);
+        SmallPtrSet<mlir::Operation *, 1> loadOps = {loadOp};
+        blockArg.replaceAllUsesExcept(loadOp.getResult(), loadOps);
+      }
     }
     // Ignore, Extend, and Direct-without-coerce need no block-level changes.
 
@@ -756,6 +930,38 @@ void applySretSlotAttrs(cir::CallOp newCall, mlir::ArrayAttr argAttrs,
   newCall->setAttr("arg_attrs", mlir::ArrayAttr::get(ctx, newArgAttrs));
 }
 
+/// For an indirect call, prepend the callee function pointer as operand 0 so
+/// CallOp::create rebuilds it as an indirect call, bitcasting it to a function
+/// pointer whose signature matches the rewritten operands and return type.
+/// No-op for direct calls.
+static void prependIndirectCallee(cir::CallOp call,
+                                  SmallVectorImpl<mlir::Value> &args,
+                                  mlir::Type retTy, mlir::OpBuilder &builder) {
+  if (!call.isIndirect())
+    return;
+  mlir::Value calleePtr = call.getIndirectCall();
+  SmallVector<mlir::Type> paramTypes;
+  paramTypes.reserve(args.size());
+  llvm::transform(args, std::back_inserter(paramTypes),
+                  [](mlir::Value v) { return v.getType(); });
+  // Lowering builds an indirect call's LLVM function type from the callee
+  // pointer's pointee and takes the call's result from that type, so the
+  // pointee's return type has to track the rewrite: an sret return would
+  // leave a result the call no longer produces, and a coerced return one of
+  // the wrong type.  The ellipsis has to survive for the same reason: the
+  // rebuilt pointee is what makes the lowered call variadic, and only a
+  // variadic call gets the vector-register count that the x86_64 SysV ABI
+  // passes in AL and that the callee's va_arg reads back.
+  auto calleeFnTy = cast<cir::FuncType>(
+      cast<cir::PointerType>(calleePtr.getType()).getPointee());
+  auto newPtrTy = cir::PointerType::get(
+      cir::FuncType::get(paramTypes, retTy, calleeFnTy.isVarArg()));
+  if (calleePtr.getType() != newPtrTy)
+    calleePtr = cir::CastOp::create(builder, call.getLoc(), newPtrTy,
+                                    cir::CastKind::bitcast, calleePtr);
+  args.insert(args.begin(), calleePtr);
+}
+
 /// Rewrite an indirect-return (sret) call site: prepend a return-slot
 /// pointer as operand 0, make the call return void, and either reuse a
 /// dominating single-use store destination as the slot (so construction
@@ -768,7 +974,8 @@ void rewriteIndirectReturnCall(cir::CallOp call,
                                ArrayRef<mlir::Value> newArgs,
                                mlir::Type origRetTy,
                                ArrayRef<mlir::Type> origCallArgTypes,
-                               mlir::OpBuilder &builder) {
+                               mlir::OpBuilder &builder,
+                               const mlir::DataLayout &dl) {
   mlir::MLIRContext *ctx = call->getContext();
   auto ptrTy = cir::PointerType::get(origRetTy);
   builder.setInsertionPoint(call);
@@ -810,6 +1017,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   sretArgs.append(newArgs.begin(), newArgs.end());
 
   mlir::Type sretVoidTy = cir::VoidType::get(ctx);
+  prependIndirectCallee(call, sretArgs, sretVoidTy, builder);
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
   for (mlir::NamedAttribute attr : call->getAttrs())
@@ -829,7 +1037,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
                getFlattenedCoercedType(ac);
       });
   if (needsArgAttrUpdate)
-    argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc);
+    argAttrs = updateArgAttrs(ctx, origCallArgTypes, argAttrs, fc, dl);
   applySretSlotAttrs(newCall, argAttrs, origRetTy, sretAlign, builder);
 
   if (reuseStore) {
@@ -854,6 +1062,37 @@ void rewriteIndirectReturnCall(cir::CallOp call,
 
 } // namespace
 
+void CIRABIRewriteContext::normalizeParameterSlotAlignments(
+    cir::FuncOp funcOp, const FunctionClassification &fc) {
+  if (!funcOp.isDefinition())
+    return;
+  mlir::Region &body = funcOp->getRegion(0);
+  if (body.empty())
+    return;
+  mlir::Block &entry = body.front();
+
+  // No signature has been rewritten yet, so no sret pointer has been prepended
+  // and no Expand argument has been split into its fields.  Every
+  // classification therefore still maps to the entry block argument at its own
+  // index.
+  for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
+    if (ac.kind != ArgKind::Indirect || ac.byVal)
+      continue;
+    assert(idx < entry.getNumArguments() &&
+           "classification count must not exceed entry block arguments");
+    if (cir::AllocaOp slot = findParamSpill(entry.getArgument(idx)).second)
+      slot.setAlignment(ac.indirectAlign.value());
+  }
+}
+
+void CIRABIRewriteContext::finalizeParameterSlots() {
+  for (auto [slot, incoming] : pendingParamSlots) {
+    slot.getResult().replaceAllUsesWith(incoming);
+    slot->erase();
+  }
+  pendingParamSlots.clear();
+}
+
 mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     mlir::FunctionOpInterface funcOpInterface, const FunctionClassification &fc,
     mlir::OpBuilder &builder) {
@@ -864,7 +1103,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
   // CIRGlobalValueInterface).
   cir::FuncOp funcOp = mlir::cast<cir::FuncOp>(funcOpInterface);
 
-  if (!needsRewrite(fc))
+  if (!fc.needsRewrite())
     return mlir::success();
 
   ArrayRef<mlir::Type> oldArgTypes = funcOp.getArgumentTypes();
@@ -920,7 +1159,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       // in-body cir.call operands) through the recovered value.  Done before
       // the Ignore-drop below so the entry block argument indices used here
       // still refer to the original positions.
-      insertArgCoercion(funcOp, fc, builder, dl, hasSRet);
+      insertArgCoercion(funcOp, fc, builder, dl, hasSRet, pendingParamSlots);
 
       // Direct return with coerced type: insert a coercion at every
       // cir.return so the returned value matches the (coerced) return
@@ -928,7 +1167,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       if (fc.returnInfo.kind == ArgKind::Direct && fc.returnInfo.coercedType &&
           !oldResultTypes.empty() && fc.returnInfo.coercedType != origRetTy)
         insertReturnCoercion(funcOp, origRetTy, fc.returnInfo.coercedType,
-                             builder, dl);
+                             builder, dl, fc.returnInfo.directOffset);
 
       mlir::Block &entry = body.front();
 
@@ -989,9 +1228,9 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
 
   // Rebuild arg_attrs when the function has an sret slot (slot 0 needs the
   // sret attribute set) or any arg is Ignore (dropped from the output array),
-  // Extend (needs llvm.signext / llvm.zeroext), Indirect (needs
-  // llvm.byval / llvm.align), Expand or Direct+canFlatten (both change the
-  // argument count).
+  // Extend (needs llvm.signext / llvm.zeroext), Indirect (gains the pointer
+  // attributes updateArgAttrs applies), Expand or Direct+canFlatten (both
+  // change the argument count).
   bool needsArgAttrUpdate =
       hasSRet || llvm::any_of(fc.argInfos, [](const ArgClassification &ac) {
         return ac.kind == ArgKind::Ignore || ac.kind == ArgKind::Extend ||
@@ -1000,7 +1239,8 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
       });
   if (needsArgAttrUpdate) {
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
-    mlir::ArrayAttr updated = updateArgAttrs(ctx, oldArgTypes, existing, fc);
+    mlir::ArrayAttr updated =
+        updateArgAttrs(ctx, oldArgTypes, existing, fc, dl);
     if (hasSRet) {
       // Prepend the sret slot's attribute dict (slot 0); the per-argument
       // dicts shift to slots 1..N.  noalias is valid only on the callee's
@@ -1031,7 +1271,26 @@ mlir::LogicalResult
 CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                       const FunctionClassification &fc,
                                       mlir::OpBuilder &builder) {
-  if (!needsRewrite(fc))
+  // The classification covers exactly the callee's declared parameters, and
+  // the rewrite below pairs it with the call's operands one for one.  Both
+  // directions of a mismatch have to be reported before the pass-through early
+  // return, or a call whose declared parameters happen to be pass-through is
+  // left as written with its surplus operands never classified.
+  //
+  // A surplus operand went through an ellipsis.  A shortfall means the callee
+  // was declared no_proto, which turns off the verifier's argument-count check
+  // altogether.
+  unsigned numOperands =
+      mlir::cast<cir::CIRCallOpInterface>(callOp).getNumArgOperands();
+  if (numOperands > fc.argInfos.size())
+    return callOp->emitOpError()
+           << "variadic arguments not yet implemented in CallConvLowering";
+  if (numOperands < fc.argInfos.size())
+    return callOp->emitOpError()
+           << "call passes fewer arguments than the callee declares, which is "
+              "not yet implemented in CallConvLowering";
+
+  if (!fc.needsRewrite())
     return mlir::success();
 
   if (mlir::isa<cir::TryCallOp>(callOp))
@@ -1039,12 +1298,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
            << "TryCallOp not yet implemented in CallConvLowering";
 
   auto call = mlir::cast<cir::CallOp>(callOp);
-  if (call.isIndirect())
-    return call.emitOpError()
-           << "indirect call not yet implemented in CallConvLowering";
-
   mlir::MLIRContext *ctx = callOp->getContext();
-  auto enclosingFunc = call->getParentOfType<mlir::FunctionOpInterface>();
+  mlir::Block *slotBlock = coercionSlotBlock(call);
 
   builder.setInsertionPoint(call);
 
@@ -1052,21 +1307,17 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   mlir::ValueRange argOperands = call.getArgOperands();
   newArgs.reserve(argOperands.size());
 
-  // Whole-struct loads replaced by direct member loads for Expand operands.
-  // They can only be erased once the original call (their remaining user) is
-  // gone, so collect them and erase the dead ones at the end.
-  SmallVector<cir::LoadOp> replacedWholeLoads;
+  // Loads that the new call leaves unused: Expand and Direct+canFlatten read
+  // the fields out of the source alloca, and a non-byval argument passes the
+  // address the load read from.  The old call still uses them, so erase them
+  // only after it is gone.
+  SmallVector<cir::LoadOp> deadRecordLoads;
 
   // Capture original arg types before building newArgs (byval slots change
   // the wire argument from T to !cir.ptr<T>, so we save the pre-rewrite
   // types here for use in updateArgAttrs).
   SmallVector<mlir::Type> origCallArgTypes;
   llvm::append_range(origCallArgTypes, argOperands.getTypes());
-  if (argOperands.size() > fc.argInfos.size())
-    return call.emitOpError()
-           << "variadic arguments not yet implemented in CallConvLowering";
-  assert(fc.argInfos.size() == argOperands.size() &&
-         "call operand count must match classified arg count");
   for (auto [idx, ac] : llvm::enumerate(fc.argInfos)) {
     if (ac.kind == ArgKind::Ignore)
       continue;
@@ -1080,9 +1331,12 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       // alloca when possible).
       if (arg.getType() != flatTy) {
         SmallPtrSet<mlir::Operation *, 4> coercionOps;
+        assert(!ac.directOffset &&
+               "each field is read from slot offset 0 here, so a flattened "
+               "coercion cannot honor a direct offset");
         mlir::Value coercedPtr =
-            emitCoercionToMemory(builder, call.getLoc(), flatTy, arg,
-                                 enclosingFunc, dl, coercionOps);
+            emitCoercionToMemory(builder, call.getLoc(), flatTy, arg, slotBlock,
+                                 dl, coercionOps, /*offset=*/0);
         for (auto [f, fieldTy] : llvm::enumerate(flatTy.getMembers())) {
           mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
           auto fieldPtr =
@@ -1093,7 +1347,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
         }
       } else {
         emitStructFieldArgs(builder, call.getLoc(), arg, flatTy, newArgs,
-                            replacedWholeLoads);
+                            deadRecordLoads);
       }
     } else if (ac.kind == ArgKind::Expand) {
       // Decompose the struct value into its constituent scalar fields and
@@ -1102,28 +1356,43 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       assert(recTy.isStruct() &&
              "Expand classification requires a struct type, not a union");
       emitStructFieldArgs(builder, call.getLoc(), arg, recTy, newArgs,
-                          replacedWholeLoads);
+                          deadRecordLoads);
     } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
                arg.getType() != ac.coercedType) {
-      arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg,
-                         enclosingFunc, dl);
+      arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg, slotBlock,
+                         dl, ac.directOffset);
       newArgs.push_back(arg);
     } else if (ac.kind == ArgKind::Indirect) {
-      // byval and byref: allocate a stack slot, copy the value in, and pass
-      // the pointer.  The alloca+store pattern is identical for both; the
-      // attribute distinction (llvm.byval vs llvm.byref) is applied by
-      // updateArgAttrs.  byref does not receive llvm.noalias or llvm.noundef
-      // because it does not assert exclusive ownership of the storage.
-      mlir::Type argTy = arg.getType();
-      auto ptrTy = cir::PointerType::get(argTy);
-      uint64_t align = ac.indirectAlign.value();
-      StringRef slotName = ac.byVal ? "byval" : "byref";
-      auto slot = cir::AllocaOp::create(builder, call.getLoc(), ptrTy,
-                                        builder.getStringAttr(slotName),
-                                        builder.getI64IntegerAttr(align));
+      // byval hands the callee its own copy.  Without byval the argument must
+      // name the caller's storage instead, so that the object the callee
+      // operates on is the one the caller destroys.  That means forwarding
+      // the address the operand was loaded from rather than the loaded value,
+      // so a store to that storage after the load is visible to the callee.
+      if (!ac.byVal) {
+        // The rewritten parameter is a pointer to the argument type in the
+        // default address space, so an operand read through an address-space
+        // cast cannot be handed on as it stands.  cir.load already pins the
+        // pointee type, so only the address space can differ.
+        cir::LoadOp srcLoad = maybeGetSimpleLoad(arg);
+        if (!srcLoad ||
+            srcLoad.getAddr().getType() !=
+                cir::PointerType::get(arg.getType()) ||
+            !forwardableNonByvalStorage(srcLoad.getAddr(),
+                                        ac.indirectAlign.value()))
+          return call->emitOpError()
+                 << "non-byval indirect argument that does not name the "
+                    "caller's storage is not yet implemented in "
+                    "CallConvLowering";
+        newArgs.push_back(srcLoad.getAddr());
+        deadRecordLoads.push_back(srcLoad);
+        continue;
+      }
+      auto ptrTy = cir::PointerType::get(arg.getType());
+      auto slot = cir::AllocaOp::create(
+          builder, call.getLoc(), ptrTy, builder.getStringAttr("byval"),
+          builder.getI64IntegerAttr(ac.indirectAlign.value()));
       cir::StoreOp::create(builder, call.getLoc(), arg, slot);
-      arg = slot;
-      newArgs.push_back(arg);
+      newArgs.push_back(slot);
     } else {
       newArgs.push_back(arg);
     }
@@ -1139,7 +1408,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   // dedicated helper for it; everything below handles the by-value returns.
   if (fc.returnInfo.kind == ArgKind::Indirect && hasResult) {
     rewriteIndirectReturnCall(call, fc, newArgs, origRetTy, origCallArgTypes,
-                              builder);
+                              builder, dl);
+    eraseDeadRecordLoads(deadRecordLoads);
     return mlir::success();
   }
 
@@ -1153,6 +1423,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     callRetTy = fc.returnInfo.coercedType;
 
   builder.setInsertionPoint(call);
+  prependIndirectCallee(call, newArgs, callRetTy, builder);
   auto newCall = cir::CallOp::create(builder, call.getLoc(),
                                      call.getCalleeAttr(), callRetTy, newArgs);
   for (mlir::NamedAttribute attr : call->getAttrs())
@@ -1165,7 +1436,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     builder.setInsertionPointAfter(newCall);
     mlir::Value coercedBack =
         emitCoercion(builder, call.getLoc(), origRetTy, newCall.getResult(),
-                     enclosingFunc, dl);
+                     slotBlock, dl, fc.returnInfo.directOffset);
     call.getResult().replaceAllUsesWith(coercedBack);
   }
 
@@ -1182,7 +1453,7 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   if (needsArgAttrUpdate) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("arg_attrs");
     newCall->setAttr("arg_attrs",
-                     updateArgAttrs(ctx, origCallArgTypes, existing, fc));
+                     updateArgAttrs(ctx, origCallArgTypes, existing, fc, dl));
   }
   if (fc.returnInfo.kind == ArgKind::Extend) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("res_attrs");
@@ -1206,16 +1477,33 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   }
 
   call->erase();
-
-  // Now that the original call is gone, drop any whole-struct loads whose
-  // members we read directly from the source alloca, if nothing else uses
-  // them.  A single load can feed several Expand operands (e.g. after CSE
-  // merges identical loads), so dedupe before erasing to avoid touching a
-  // freed op twice.
-  SmallPtrSet<mlir::Operation *, 4> erased;
-  for (cir::LoadOp wholeLoad : replacedWholeLoads)
-    if (erased.insert(wholeLoad).second && wholeLoad.use_empty())
-      wholeLoad->erase();
+  eraseDeadRecordLoads(deadRecordLoads);
 
   return mlir::success();
+}
+
+void CIRABIRewriteContext::rewriteFunctionAddress(cir::GetGlobalOp addrOp,
+                                                  cir::FuncOp funcOp,
+                                                  mlir::OpBuilder &builder) {
+  auto oldPtrTy = mlir::cast<cir::PointerType>(addrOp.getAddr().getType());
+  cir::FuncType newFuncTy = funcOp.getFunctionType();
+  // An extension rides on an argument attribute and leaves the signature
+  // alone, so such a callee still matches the written type.
+  if (newFuncTy == oldPtrTy.getPointee())
+    return;
+
+  // The verifier requires the retype even when nothing reads the address.
+  addrOp.getAddr().setType(cir::PointerType::get(newFuncTy));
+  if (addrOp.getAddr().use_empty())
+    return;
+
+  // A later indirect call through the written type stays correct, since it
+  // reclassifies from that type and coerces to the signature funcOp was
+  // rewritten to.  Ellipsis arguments are the exception the indirect-call
+  // path reports rather than lowers.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointAfter(addrOp);
+  auto bitcast = cir::CastOp::create(builder, addrOp.getLoc(), oldPtrTy,
+                                     cir::CastKind::bitcast, addrOp.getAddr());
+  addrOp.getAddr().replaceAllUsesExcept(bitcast.getResult(), bitcast);
 }

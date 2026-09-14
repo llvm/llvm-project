@@ -249,7 +249,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @isfinite_d_strictfp(double %x) {
+define i1 @isfinite_d_strictfp(double %x) strictfp {
 ; CHECK-SD-LABEL: isfinite_d_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov x8, d0
@@ -278,7 +278,7 @@ entry:
   ret i1 %0
 }
 
-define i1 @not_isfinite_d_strictfp(double %x) {
+define i1 @not_isfinite_d_strictfp(double %x) strictfp {
 ; CHECK-SD-LABEL: not_isfinite_d_strictfp:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov x8, d0
@@ -395,15 +395,10 @@ define <4 x i1> @isfinite_v4h(<4 x half> %x) {
 ;
 ; CHECK-GI-LABEL: isfinite_v4h:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    mvni v2.4h, #128, lsl #8
-; CHECK-GI-NEXT:    movi v3.4h, #124, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    mov v1.h[1], wzr
-; CHECK-GI-NEXT:    cmhi v0.4h, v3.4h, v0.4h
-; CHECK-GI-NEXT:    mov v1.h[2], wzr
-; CHECK-GI-NEXT:    mov v1.h[3], wzr
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-GI-NEXT:    movi v2.4h, #124, lsl #8
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmhi v0.4h, v2.4h, v0.4h
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: isfinite_v4h:
@@ -436,16 +431,11 @@ define <4 x i1> @not_isfinite_v4h(<4 x half> %x) {
 ;
 ; CHECK-GI-LABEL: not_isfinite_v4h:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    mvni v2.4h, #128, lsl #8
-; CHECK-GI-NEXT:    movi v3.4h, #124, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v2.8b
-; CHECK-GI-NEXT:    mov v1.h[1], wzr
-; CHECK-GI-NEXT:    cmeq v2.4h, v0.4h, v3.4h
-; CHECK-GI-NEXT:    cmhi v0.4h, v0.4h, v3.4h
-; CHECK-GI-NEXT:    mov v1.h[2], wzr
-; CHECK-GI-NEXT:    orr v0.8b, v2.8b, v0.8b
-; CHECK-GI-NEXT:    mov v1.h[3], wzr
+; CHECK-GI-NEXT:    mvni v1.4h, #128, lsl #8
+; CHECK-GI-NEXT:    movi v2.4h, #124, lsl #8
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    cmeq v1.4h, v0.4h, v2.4h
+; CHECK-GI-NEXT:    cmhi v0.4h, v0.4h, v2.4h
 ; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 ;
@@ -477,23 +467,17 @@ define <4 x i1> @isfinite_v4f(<4 x float> %x) {
 ; CHECK-SD-NEXT:    fneg v1.4s, v1.4s
 ; CHECK-SD-NEXT:    fcmgt v2.4s, v0.4s, v1.4s
 ; CHECK-SD-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NEXT:    addhn v0.4h, v0.4s, v2.4s
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_v4f:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    mvni v2.4s, #127, msl #16
-; CHECK-GI-NEXT:    mvni v3.4s, #128, lsl #24
-; CHECK-GI-NEXT:    fneg v2.4s, v2.4s
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    mov v1.h[1], wzr
-; CHECK-GI-NEXT:    cmhi v0.4s, v2.4s, v0.4s
-; CHECK-GI-NEXT:    mov v1.h[2], wzr
+; CHECK-GI-NEXT:    mvni v1.4s, #127, msl #16
+; CHECK-GI-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-GI-NEXT:    fneg v1.4s, v1.4s
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    cmhi v0.4s, v1.4s, v0.4s
 ; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    mov v1.h[3], wzr
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: isfinite_v4f:
@@ -527,20 +511,13 @@ define <4 x i1> @not_isfinite_v4f(<4 x float> %x) {
 ;
 ; CHECK-GI-LABEL: not_isfinite_v4f:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi d1, #0000000000000000
-; CHECK-GI-NEXT:    mvni v2.4s, #127, msl #16
-; CHECK-GI-NEXT:    mvni v3.4s, #128, lsl #24
-; CHECK-GI-NEXT:    fneg v2.4s, v2.4s
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    mov v1.h[1], wzr
-; CHECK-GI-NEXT:    cmeq v3.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    cmhi v0.4s, v0.4s, v2.4s
-; CHECK-GI-NEXT:    mov v1.h[2], wzr
-; CHECK-GI-NEXT:    xtn v3.4h, v3.4s
-; CHECK-GI-NEXT:    xtn v0.4h, v0.4s
-; CHECK-GI-NEXT:    mov v1.h[3], wzr
-; CHECK-GI-NEXT:    orr v1.8b, v1.8b, v3.8b
-; CHECK-GI-NEXT:    orr v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    mvni v1.4s, #127, msl #16
+; CHECK-GI-NEXT:    mvni v2.4s, #128, lsl #24
+; CHECK-GI-NEXT:    fneg v1.4s, v1.4s
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    cmeq v2.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    cmhi v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    addhn v0.4h, v2.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v4f:
@@ -571,8 +548,7 @@ define <2 x i1> @isfinite_v2d(<2 x double> %x) {
 ; CHECK-SD-NEXT:    dup v1.2d, x8
 ; CHECK-SD-NEXT:    fcmgt v2.2d, v0.2d, v1.2d
 ; CHECK-SD-NEXT:    fcmgt v0.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SD-NEXT:    addhn v0.2s, v0.2d, v2.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: isfinite_v2d:
@@ -619,8 +595,7 @@ define <2 x i1> @not_isfinite_v2d(<2 x double> %x) {
 ; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
 ; CHECK-GI-NEXT:    cmeq v2.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    cmhi v0.2d, v0.2d, v1.2d
-; CHECK-GI-NEXT:    orr v0.16b, v2.16b, v0.16b
-; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    addhn v0.2s, v2.2d, v0.2d
 ; CHECK-GI-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: not_isfinite_v2d:

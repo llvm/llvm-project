@@ -1103,6 +1103,7 @@ public:
   }
   std::unique_ptr<MemoryBuffer> getHybridObjectView() const;
   std::optional<MemoryBufferRef> findHybridObjectSection() const;
+  std::unique_ptr<MemoryBuffer> stripHybridSection() const;
 
   import_directory_iterator import_directory_begin() const;
   import_directory_iterator import_directory_end() const;

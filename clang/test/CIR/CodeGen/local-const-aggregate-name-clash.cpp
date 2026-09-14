@@ -23,22 +23,22 @@ void f(bool which) {
   }
 }
 
-// CIR-DAG: cir.global "private" constant cir_private @[[GV0:.*]] = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4>
-// CIR-DAG: cir.global "private" constant cir_private @[[GV1:.*]] = #cir.const_array<[#cir.int<50> : !s32i, #cir.int<60> : !s32i]> : !cir.array<!s32i x 2>
+// CIR-DAG: cir.global "private" constant cir_private @[[GV0:.*]] = #cir.const_array<[#cir.int<10> : !s32i, #cir.int<20> : !s32i, #cir.int<30> : !s32i, #cir.int<40> : !s32i]> : !cir.array<!s32i x 4> {alignment = 16 : i64}
+// CIR-DAG: cir.global "private" constant cir_private @[[GV1:.*]] = #cir.const_array<[#cir.int<50> : !s32i, #cir.int<60> : !s32i]> : !cir.array<!s32i x 2> {alignment = 4 : i64}
 
 // CIR: cir.func{{.*}} @_Z1fb
 // CIR:   cir.get_global @[[GV0]] : !cir.ptr<!cir.array<!s32i x 4>>
 // CIR:   cir.get_global @[[GV1]] : !cir.ptr<!cir.array<!s32i x 2>>
 
-// LLVM-DAG: @[[GV0:.*]] = private constant [4 x i32] [i32 10, i32 20, i32 30, i32 40]
-// LLVM-DAG: @[[GV1:.*]] = private constant [2 x i32] [i32 50, i32 60]
+// LLVM-DAG: @[[GV0:.*]] = private constant [4 x i32] [i32 10, i32 20, i32 30, i32 40], align 16
+// LLVM-DAG: @[[GV1:.*]] = private constant [2 x i32] [i32 50, i32 60], align 4
 
 // LLVM: define{{.*}} @_Z1fb
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr @[[GV0]], i64 16, i1 false)
-// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr @[[GV1]], i64 8, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr align 4 @[[GV0]], i64 16, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr align 4 @[[GV1]], i64 8, i1 false)
 
-// OGCG-DAG: @[[GV0:.*]] = private unnamed_addr constant [4 x i32] [i32 10, i32 20, i32 30, i32 40]
-// OGCG-DAG: @[[GV1:.*]] = private unnamed_addr constant [2 x i32] [i32 50, i32 60]
+// OGCG-DAG: @[[GV0:.*]] = private unnamed_addr constant [4 x i32] [i32 10, i32 20, i32 30, i32 40], align 16
+// OGCG-DAG: @[[GV1:.*]] = private unnamed_addr constant [2 x i32] [i32 50, i32 60], align 4
 
 // OGCG: define{{.*}} @_Z1fb
 // OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr {{[^,]+}}, ptr {{[^,]+}}@[[GV0]], i64 16, i1 false)

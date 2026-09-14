@@ -15,8 +15,8 @@ void foo() {
 // CIR: %[[RES_VAL:.*]] = cir.const #cir.int<3> : !s32i
 // CIR: cir.store{{.*}} %[[RES_VAL]], %[[RES]] : !s32i, !cir.ptr<!s32i>
 
-// LLVM: %[[A:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[RES:.*]] = alloca i32, i64 1, align 4
+// LLVM: %[[A:.*]] = alloca i32, align 4
+// LLVM: %[[RES:.*]] = alloca i32, align 4
 // LLVM: store i32 3, ptr %[[RES]], align 4
 
 // OGCG: %[[A:.*]] = alloca i32, align 4

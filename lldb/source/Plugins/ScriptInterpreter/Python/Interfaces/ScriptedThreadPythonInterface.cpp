@@ -8,6 +8,7 @@
 
 #include "../lldb-python.h"
 
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/Log.h"
@@ -156,4 +157,15 @@ ScriptedThreadPythonInterface::GetScriptedFramePluginName() {
 lldb::ScriptedFrameInterfaceSP
 ScriptedThreadPythonInterface::CreateScriptedFrameInterface() {
   return m_interpreter.CreateScriptedFrameInterface();
+}
+
+void ScriptedThreadPythonInterface::Initialize() {
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), "Provide thread state for a scripted process.",
+      CreateInstance, eScriptedExtensionScriptedThread, eScriptLanguagePython,
+      {});
+}
+
+void ScriptedThreadPythonInterface::Terminate() {
+  PluginManager::UnregisterPlugin(CreateInstance);
 }

@@ -79,6 +79,19 @@ bool ErrataWorkaround::isDivSqrt(MachineBasicBlock::iterator I) {
   return false;
 }
 
+bool ErrataWorkaround::isAtomic(MachineBasicBlock::iterator I) {
+  switch (I->getOpcode()) {
+  case SP::SWAPrr:
+  case SP::SWAPri:
+  case SP::CASArr:
+  case SP::LDSTUBrr:
+  case SP::LDSTUBri:
+  case SP::LDSTUBArr:
+    return true;
+  }
+  return false;
+}
+
 // Prevents the following code sequence from being generated:
 // (stb/sth/st/stf) -> (single non-store/load instruction) -> (any store)
 // If the sequence is detected a NOP instruction is inserted after
@@ -155,7 +168,7 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
     return false;
 
   // Check for branch to atomic instruction with load in delay slot
-  if (I->isBranch()) {
+  if (I->isBranch() && I->getOperand(0).isMBB()) {
     MachineBasicBlock *TargetMBB = I->getOperand(0).getMBB();
     MachineBasicBlock::iterator MI = TargetMBB->begin();
 
@@ -165,15 +178,8 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
     if (MI == TargetMBB->end())
       return false;
 
-    switch (MI->getOpcode()) {
-    case SP::SWAPrr:
-    case SP::SWAPri:
-    case SP::CASArr:
+    if (isAtomic(MI))
       insertNop(MI);
-      break;
-    default:
-      break;
-    }
   }
 
   // Check for load followed by atomic instruction
@@ -181,14 +187,8 @@ bool ErrataWorkaround::checkSeqTN0010(MachineBasicBlock::iterator I) {
   if (!moveNext(MI))
     return false;
 
-  switch (MI->getOpcode()) {
-  case SP::SWAPrr:
-  case SP::SWAPri:
-  case SP::CASArr:
-    break;
-  default:
+  if (!isAtomic(MI))
     return false;
-  }
   insertNop(MI);
   return true;
 }
@@ -198,14 +198,10 @@ bool ErrataWorkaround::checkSeqTN0010First(MachineBasicBlock &MBB) {
   MachineBasicBlock::iterator I = MBB.begin();
   while (I != MBB.end() && I->isMetaInstruction())
     I++;
-  switch (I->getOpcode()) {
-  case SP::SWAPrr:
-  case SP::SWAPri:
-  case SP::CASArr:
-    break;
-  default:
+  if (I == MBB.end())
     return false;
-  }
+  if (!isAtomic(I))
+    return false;
   insertNop(I);
   return true;
 }

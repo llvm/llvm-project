@@ -278,14 +278,15 @@ def SparseTensor_ToPositionsOp : SparseTensor_Op<"positions",
     Example:
 
     ```mlir
-    %1 = sparse_tensor.positions %0 { level = 1 : index }
+    %1 = sparse_tensor.positions %0 level = 1
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
 
   let arguments = (ins AnySparseTensor:$tensor, LevelAttr:$level);
   let results = (outs AnyNon0RankedMemRef:$result);
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let assemblyFormat =
+      "$tensor `level` `=` $level attr-dict `:` type($tensor) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -307,14 +308,15 @@ def SparseTensor_ToCoordinatesOp : SparseTensor_Op<"coordinates",
     Example:
 
     ```mlir
-    %1 = sparse_tensor.coordinates %0 { level = 1 : index }
+    %1 = sparse_tensor.coordinates %0 level = 1
        : tensor<64x64xf64, #CSR> to memref<?xindex>
     ```
   }];
 
   let arguments = (ins AnySparseTensor:$tensor, LevelAttr:$level);
   let results = (outs AnyNon0RankedMemRef:$result);
-  let assemblyFormat = "$tensor attr-dict `:` type($tensor) `to` type($result)";
+  let assemblyFormat =
+      "$tensor `level` `=` $level attr-dict `:` type($tensor) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -417,7 +419,7 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
      Example:
 
      ```mlir
-     %0 = sparse_tensor.concatenate %1, %2 { dimension = 0 : index }
+     %0 = sparse_tensor.concatenate %1, %2 dimension = 0
        : tensor<64x64xf64, #CSR>, tensor<64x64xf64, #CSR> to tensor<128x64xf64, #CSR>
      ```
    }];
@@ -430,7 +432,8 @@ def SparseTensor_ConcatenateOp : SparseTensor_Op<"concatenate",
 
   let arguments = (ins Variadic<AnyRankedTensor>:$inputs, DimensionAttr:$dimension);
   let results = (outs AnyRankedTensor:$result);
-  let assemblyFormat = "$inputs attr-dict `:` type($inputs) `to` type($result)";
+  let assemblyFormat =
+      "$inputs `dimension` `=` $dimension attr-dict `:` type($inputs) `to` type($result)";
 
   let hasVerifier = 1;
 }
@@ -561,7 +564,7 @@ def SparseTensor_GetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.get"
                    SparseTensorStorageSpecifierKindAttr:$specifierKind,
                    OptionalAttr<LevelAttr>:$level);
   let results = (outs Index:$result);
-  let assemblyFormat = "$specifier $specifierKind (`at` $level^)? attr-dict"
+  let assemblyFormat = "$specifier enum($specifierKind) (`at` $level^)? attr-dict"
                        "`:` qualified(type($specifier))";
 
   let hasVerifier = 1;
@@ -588,7 +591,7 @@ def SparseTensor_SetStorageSpecifierOp : SparseTensor_Op<"storage_specifier.set"
                    OptionalAttr<LevelAttr>:$level,
                    Index:$value);
   let results = (outs SparseTensorStorageSpecifier:$result);
-  let assemblyFormat = "$specifier $specifierKind (`at` $level^)? `with` $value"
+  let assemblyFormat = "$specifier enum($specifierKind) (`at` $level^)? `with` $value"
                        " attr-dict `:` qualified(type($result))";
 
   let hasVerifier = 1;
@@ -672,7 +675,8 @@ def SparseTensor_CrdTranslateOp : SparseTensor_Op<"crd_translate", [Pure]> {
                    SparseTensorCrdTransDirectionAttr:$direction,
                    SparseTensorEncodingAttr:$encoder);
   let results = (outs Variadic<Index>:$out_crds);
-  let assemblyFormat = "$direction `[` $in_crds `]` `as` $encoder attr-dict `:` type($out_crds)";
+  let assemblyFormat = "enum($direction) `[` $in_crds `]` `as` $encoder "
+                       "attr-dict `:` type($out_crds)";
 
   let hasVerifier = 1;
   let hasFolder = 1;
@@ -922,7 +926,7 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort"> {
     Example:
 
     ```mlir
-    sparse_tensor.sort insertion_sort_stable %n, %x { perm_map = affine_map<(i,j) -> (j,i)> }
+    sparse_tensor.sort insertion_sort_stable %n, %x perm_map = affine_map<(i,j) -> (j,i)>
       : memref<?xindex>
     ```
   }];
@@ -932,8 +936,9 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort"> {
                        Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
                        AffineMapAttr:$perm_map, OptionalAttr<IndexAttr>:$ny,
                        SparseTensorSortKindAttr:$algorithm);
-  let assemblyFormat = "$algorithm $n"
-                       "`,`$xy (`jointly` $ys^)? attr-dict"
+  let assemblyFormat = "enum($algorithm) $n"
+                       "`,`$xy (`jointly` $ys^)? `perm_map` `=` $perm_map"
+                       " (`ny` `=` $ny^)? attr-dict"
                        "`:` type($xy) (`jointly` type($ys)^)?";
   let hasVerifier = 1;
 }
@@ -961,7 +966,7 @@ def SparseTensor_ReorderCOOOp : SparseTensor_Op<"reorder_coo", [Pure]> {
   let arguments = (ins AnySparseTensor: $input_coo,
                        SparseTensorSortKindAttr:$algorithm);
   let results = (outs AnySparseTensor: $result_coo);
-  let assemblyFormat = "$algorithm $input_coo attr-dict"
+  let assemblyFormat = "enum($algorithm) $input_coo attr-dict"
                        "`:` type($input_coo) `to` type($result_coo)";
 
   let hasFolder = 1;
@@ -1418,7 +1423,7 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
      }
 
      // foreach on a row-major dense tensor but visit column first
-     sparse_tensor.foreach in %0 {order=affine_map<(i,j)->(j,i)>}: tensor<2x3xf64> do {
+     sparse_tensor.foreach in %0 order = affine_map<(i,j)->(j,i)> : tensor<2x3xf64> do {
       ^bb0(%row: index, %col: index, %arg3: f64):
          // [%row, %col] -> [0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1]
      }
@@ -1451,7 +1456,8 @@ def SparseTensor_ForeachOp : SparseTensor_Op<"foreach",
                        Variadic<AnyType>:$initArgs,
                        OptionalAttr<AffineMapAttr>:$order);
   let results = (outs Variadic<AnyType>:$results);
-  let assemblyFormat = "`in` $tensor (`init``(`$initArgs^`)`)? attr-dict"
+  let assemblyFormat = "`in` $tensor (`init``(`$initArgs^`)`)?"
+                       " (`order` `=` $order^)? attr-dict"
                        "    `:` type($tensor) (`,` type($initArgs)^)?"
                        "  (`->` type($results)^)?  `do` $region";
   let hasVerifier = 1;

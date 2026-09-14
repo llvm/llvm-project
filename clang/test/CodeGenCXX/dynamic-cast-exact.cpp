@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - -O1 -disable-llvm-passes | FileCheck %s --implicit-check-not='call {{.*}} @__dynamic_cast'
+// RUN: %clang_cc1 -I%S %s -triple x86_64-unknown-linux-gnu -emit-llvm -fcxx-exceptions -fexceptions -std=c++11 -o - -O1 -disable-llvm-passes | FileCheck %s --implicit-check-not='call {{.*}} @__dynamic_cast'
 struct Offset { virtual ~Offset(); };
 struct A { virtual ~A(); };
 struct B final : Offset, A { };
@@ -138,4 +138,18 @@ namespace GH198511 {
   struct B final : A { };
   template<class T> B *A::cast() { return dynamic_cast<B*>(this); }
   template B *A::cast<int>();
+}
+
+namespace GH198511Ref {
+  // Ensure we mark the B vtable as used here, because we're going to emit a
+  // reference to it.
+  // CHECK: define {{.*}} @_ZN11GH198511Ref1BD0
+  struct B;
+  struct A {
+    virtual ~A() = default;
+    template<class T> B &cast();
+  };
+  struct B final : A { };
+  template<class T> B &A::cast() { return dynamic_cast<B&>(*this); }
+  template B &A::cast<int>();
 }

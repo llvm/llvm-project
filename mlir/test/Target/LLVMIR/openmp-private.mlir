@@ -240,7 +240,7 @@ omp.declare_reduction @reducer.part : !llvm.ptr alloc {
 llvm.func @_QPequivalence() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.alloca %0 x !llvm.array<4 x i8> : (i64) -> !llvm.ptr
-  %2 = llvm.mlir.constant(0 : index) : i64
+  %2 = llvm.mlir.constant(0 : i64) : i64
   %3 = llvm.getelementptr %1[0, %2] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<4 x i8>
   omp.parallel private(@_QFequivalenceEx_firstprivate_ptr_f32 %3 -> %arg0 : !llvm.ptr) {
     %4 = llvm.mlir.constant(3.140000e+00 : f32) : f32

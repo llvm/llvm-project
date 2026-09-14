@@ -1,4 +1,5 @@
 add_flang_library(FIRSupport
+  AllocationPolicy.cpp
   DataLayout.cpp
   InitFIR.cpp
   InternalNames.cpp
@@ -24,7 +25,6 @@ add_flang_library(FIRSupport
   MLIR_LIBS
   MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
-  MLIROpenACCToLLVMIRTranslation
   MLIROpenMPToLLVMIRTranslation
   MLIRRegisterAllDialects
   MLIRRegisterAllExtensions

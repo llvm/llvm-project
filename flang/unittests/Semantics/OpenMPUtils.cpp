@@ -46,7 +46,6 @@ protected:
   std::error_code ec;
 
   CompilerInstance compInst;
-  std::shared_ptr<CompilerInvocation> invoc;
 
   void SetUp() override {
     // Generate a unique test file name.
@@ -68,19 +67,15 @@ protected:
     inputFilePath = cwd.c_str();
     inputFilePath += "/" + inputFileName;
 
-    // Prepare the compiler (CompilerInvocation + CompilerInstance)
-    compInst.createDiagnostics();
-    invoc = std::make_shared<CompilerInvocation>();
-
     // Set-up default target triple and initialize LLVM Targets so that the
     // target data layout can be passed to the frontend.
-    invoc->getTargetOpts().triple =
+    compInst.getInvocation().getTargetOpts().triple =
         llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
-    invoc->getLangOpts().OpenMPVersion = 60;
+    compInst.getInvocation().getLangOpts().OpenMPVersion = 60;
     llvm::InitializeAllTargets();
     llvm::InitializeAllTargetMCs();
 
-    compInst.setInvocation(std::move(invoc));
+    compInst.createDiagnostics();
     compInst.getFrontendOpts().inputs.push_back(
         FrontendInputFile(inputFilePath, Language::Fortran));
     compInst.getFrontendOpts().features.Enable(common::LanguageFeature::OpenMP);
@@ -99,6 +94,53 @@ protected:
     compInst.clearOutputFiles(/*EraseFiles=*/false);
   }
 };
+
+class ContextSelectorFinder {
+public:
+  template <typename T> bool Pre(const T &) { return true; }
+  template <typename T> void Post(const T &) {}
+
+  bool Pre(
+      const parser::traits::OmpContextSelectorSpecification &contextSelector) {
+    selector = &contextSelector;
+    return false;
+  }
+
+  const parser::traits::OmpContextSelectorSpecification *selector{nullptr};
+};
+
+TEST_F(OpenMPUtilsTest, MayVariantBeSelectedMatchAnyWithoutTargetTriple) {
+  *inputFileOs << R"(
+      integer :: i
+      !$omp metadirective when(implementation={vendor(gnu), extension(match_any)}: do) otherwise(nothing)
+      do i = 1, 10
+      end do
+      end
+  )";
+  inputFileOs.reset();
+
+  compInst.getInvocation().getFrontendOpts().programAction = ParseSyntaxOnly;
+
+  bool success{executeCompilerInvocation(&compInst)};
+  ASSERT_TRUE(success);
+
+  std::optional<parser::Program> &parseTree{compInst.getParsing().parseTree()};
+  ASSERT_TRUE(parseTree.has_value());
+
+  ContextSelectorFinder finder;
+  parser::Walk(*parseTree, finder);
+  ASSERT_NE(finder.selector, nullptr);
+
+  semantics::SemanticsContext &semanticsContext{compInst.getSemanticsContext()};
+  semantics::omp::OmpVariantMatchContext matchContext{semanticsContext};
+  EXPECT_FALSE(semantics::omp::MayVariantBeSelected(
+      finder.selector, semanticsContext, matchContext));
+
+  semanticsContext.set_targetTriple("");
+  semantics::omp::OmpVariantMatchContext noTargetMatchContext{semanticsContext};
+  EXPECT_TRUE(semantics::omp::MayVariantBeSelected(
+      finder.selector, semanticsContext, noTargetMatchContext));
+}
 
 TEST_F(OpenMPUtilsTest, AffectedNestDepthNoClauses) {
   // Populate the input file with the pre-defined input and flush it.
@@ -154,7 +196,8 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthNoClauses) {
     auto &body = std::get<parser::ExecutionPart>(mainProgram.t).v;
     auto &omp = parser::UnwrapRef<parser::OpenMPLoopConstruct>(body.front());
     auto [depth, mustBePerfect] =
-        semantics::omp::GetAffectedNestDepthWithReason(omp.BeginDir(), 60);
+        semantics::omp::GetAffectedNestDepthWithReason(
+            omp.BeginDir(), llvm::omp::Version(60));
     EXPECT_TRUE(depth.value.has_value());
     if (depth) {
       EXPECT_EQ(*depth.value, 1);
@@ -198,7 +241,8 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthCollapse) {
     auto &body = std::get<parser::ExecutionPart>(mainProgram.t).v;
     auto &omp = parser::UnwrapRef<parser::OpenMPLoopConstruct>(body.front());
     auto [depth, mustBePerfect] =
-        semantics::omp::GetAffectedNestDepthWithReason(omp.BeginDir(), 60);
+        semantics::omp::GetAffectedNestDepthWithReason(
+            omp.BeginDir(), llvm::omp::Version(60));
     EXPECT_TRUE(depth.value.has_value());
     if (depth) {
       EXPECT_EQ(*depth.value, 2);
@@ -246,7 +290,8 @@ TEST_F(OpenMPUtilsTest, AffectedNestDepthCollapseOrdered) {
     auto &body = std::get<parser::ExecutionPart>(mainProgram.t).v;
     auto &omp = parser::UnwrapRef<parser::OpenMPLoopConstruct>(body.front());
     auto [depth, mustBePerfect] =
-        semantics::omp::GetAffectedNestDepthWithReason(omp.BeginDir(), 60);
+        semantics::omp::GetAffectedNestDepthWithReason(
+            omp.BeginDir(), llvm::omp::Version(60));
     EXPECT_TRUE(depth.value.has_value());
     if (depth) {
       EXPECT_EQ(*depth.value, 3);

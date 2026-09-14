@@ -33,6 +33,9 @@ attributes(host) attributes(device) integer function fct_host_device; end
 attributes(device) attributes(host) integer function fct_device_host; end
 ! CHECK: func.func @_QPfct_device_host() -> i32 attributes {cuf.proc_attr = #cuf.cuda_proc<host_device>}
 
+attributes(global) launch_bounds(1) subroutine sub_lbounds0(); end
+! CHECK: func.func @_QPsub_lbounds0() attributes {cuf.launch_bounds = #cuf.launch_bounds<maxTPB = 1 : i64>, cuf.proc_attr = #cuf.cuda_proc<global>}
+
 attributes(global) launch_bounds(1, 2) subroutine sub_lbounds1(); end
 ! CHECK: func.func @_QPsub_lbounds1() attributes {cuf.launch_bounds = #cuf.launch_bounds<maxTPB = 1 : i64, minBPM = 2 : i64>, cuf.proc_attr = #cuf.cuda_proc<global>}
 

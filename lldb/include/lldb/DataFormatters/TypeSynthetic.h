@@ -83,6 +83,8 @@ public:
   // display purposes
   virtual ConstString GetSyntheticTypeName() { return ConstString(); }
 
+  virtual void *GetImplementation() { return nullptr; }
+
   typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
   typedef std::unique_ptr<SyntheticChildrenFrontEnd> UniquePointer;
 
@@ -469,12 +471,13 @@ public:
 
     ConstString GetSyntheticTypeName() override;
 
+    void *GetImplementation() override;
+
     typedef std::shared_ptr<SyntheticChildrenFrontEnd> SharedPointer;
 
   private:
     std::string m_python_class;
-    StructuredData::ObjectSP m_wrapper_sp;
-    ScriptInterpreter *m_interpreter;
+    lldb::ScriptedSyntheticChildrenInterfaceSP m_interface_sp;
 
     FrontEnd(const FrontEnd &) = delete;
     const FrontEnd &operator=(const FrontEnd &) = delete;

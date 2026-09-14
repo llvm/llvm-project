@@ -30,16 +30,15 @@
 using namespace clang;
 using namespace ento;
 
-void ExprEngine::CreateCXXTemporaryObject(const MaterializeTemporaryExpr *ME,
-                                          ExplodedNode *Pred,
-                                          ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  const Expr *tempExpr = ME->getSubExpr()->IgnoreParens();
-  ProgramStateRef state = Pred->getState();
+void ExprEngine::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *MTE, ExplodedNode *Pred,
+    ExplodedNodeSet &Dst) {
+  const Expr *TempExpr = MTE->getSubExpr()->IgnoreParens();
+  ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
-  state = createTemporaryRegionIfNeeded(state, SF, tempExpr, ME);
-  Bldr.generateNode(ME, Pred, state);
+  State = createTemporaryRegionIfNeeded(State, SF, TempExpr, MTE);
+  Dst.insert(Engine.makePostStmtNode(MTE, State, Pred));
 }
 
 void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
@@ -106,13 +105,9 @@ void ExprEngine::performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
 SVal ExprEngine::makeElementRegion(ProgramStateRef State, SVal LValue,
                                    QualType &Ty, bool &IsArray, unsigned Idx) {
   SValBuilder &SVB = State->getStateManager().getSValBuilder();
-  ASTContext &Ctx = SVB.getContext();
 
-  if (const ArrayType *AT = Ctx.getAsArrayType(Ty)) {
-    while (AT) {
-      Ty = AT->getElementType();
-      AT = dyn_cast<ArrayType>(AT->getElementType());
-    }
+  if (Ty->isArrayType()) {
+    Ty = SVB.getContext().getBaseElementType(Ty);
     LValue = State->getLValue(Ty, SVB.makeArrayIndex(Idx), LValue);
     IsArray = true;
   }
@@ -255,8 +250,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
       // also sets the CallOpts flags for us.
       // If the elided copy/move constructor is not supported, there's still
       // benefit in trying to model the non-elided constructor.
-      // Stash our state before trying to elide, as it'll get overwritten.
-      ProgramStateRef PreElideState = State;
+      // Stash the call options before trying to elide, as they'll get
+      // overwritten.
       EvalCallOptions PreElideCallOpts = CallOpts;
 
       SVal V = computeObjectUnderConstruction(
@@ -523,9 +518,8 @@ bindRequiredArrayElementToEnvironment(ProgramStateRef State,
   return State->BindExpr(Ctor->getArg(0), SF, loc::MemRegionVal(ElementRegion));
 }
 
-void ExprEngine::handleConstructor(const Expr *E,
-                                   ExplodedNode *Pred,
-                                   ExplodedNodeSet &destNodes) {
+void ExprEngine::handleConstructor(const Expr *E, ExplodedNode *Pred,
+                                   ExplodedNodeSet &Dst) {
   const auto *CE = dyn_cast<CXXConstructExpr>(E);
   const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(E);
   assert(CE || CIE);
@@ -542,11 +536,10 @@ void ExprEngine::handleConstructor(const Expr *E,
       // it in fact constructs into the correct target. This constructor can
       // therefore be skipped.
       Target = *ElidedTarget;
-      NodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
       State = finishObjectConstruction(State, CE, SF);
       if (auto L = Target.getAs<Loc>())
         State = State->BindExpr(CE, SF, State->getSVal(*L, CE->getType()));
-      Bldr.generateNode(CE, Pred, State);
+      Dst.insert(Engine.makePostStmtNode(CE, State, Pred));
       return;
     }
   }
@@ -583,10 +576,10 @@ void ExprEngine::handleConstructor(const Expr *E,
 
       // No element construction will happen in a 0 size array.
       if (isZeroSizeArray()) {
-        NodeBuilder Bldr(Pred, destNodes, *currBldrCtx);
         static SimpleProgramPointTag T{"ExprEngine",
                                        "Skipping 0 size array construction"};
-        Bldr.generateNode(CE, Pred, State, &T);
+        PostStmt Loc(CE, Pred->getStackFrame(), &T);
+        Dst.insert(Engine.makeNode(Loc, State, Pred));
         return;
       }
 
@@ -605,8 +598,8 @@ void ExprEngine::handleConstructor(const Expr *E,
     }
 
     // The target region is found from construction context.
-    std::tie(State, Target) = handleConstructionContext(CE, State, currBldrCtx,
-                                                        SF, CC, CallOpts, Idx);
+    std::tie(State, Target) =
+        handleConstructionContext(CE, State, SF, CC, CallOpts, Idx);
     break;
   }
   case CXXConstructionKind::VirtualBase: {
@@ -664,10 +657,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   if (State != Pred->getState()) {
     static SimpleProgramPointTag T("ExprEngine",
                                    "Prepare for object construction");
-    ExplodedNodeSet DstPrepare;
-    NodeBuilder BldrPrepare(Pred, DstPrepare, *currBldrCtx);
-    Pred =
-        BldrPrepare.generateNode(E, Pred, State, &T, ProgramPoint::PreStmtKind);
+    Pred = Engine.makeNode(PreStmt(E, SF, &T), State, Pred);
     if (!Pred)
       return;
   }
@@ -686,7 +676,6 @@ void ExprEngine::handleConstructor(const Expr *E,
   ExplodedNodeSet PreInitialized;
   if (CE) {
     // FIXME: Is it possible and/or useful to do this before PreStmt?
-    NodeBuilder Bldr(DstPreVisit, PreInitialized, *currBldrCtx);
     for (ExplodedNode *N : DstPreVisit) {
       ProgramStateRef State = N->getState();
       if (CE->requiresZeroInitialization()) {
@@ -709,8 +698,8 @@ void ExprEngine::handleConstructor(const Expr *E,
           State = State->bindDefaultZero(Target, SF);
       }
 
-      Bldr.generateNode(CE, N, State, /*tag=*/nullptr,
-                        ProgramPoint::PreStmtKind);
+      PreStmt P(CE, N->getStackFrame(), /*tag=*/nullptr);
+      PreInitialized.insert(Engine.makeNode(P, State, N));
     }
   } else {
     PreInitialized = DstPreVisit;
@@ -743,7 +732,6 @@ void ExprEngine::handleConstructor(const Expr *E,
   // later (for life-time extended temporaries) -- but avoids infeasible
   // paths when no-return temporary destructors are used for assertions.
   ExplodedNodeSet DstEvaluatedPostProcessed;
-  NodeBuilder Bldr(DstEvaluated, DstEvaluatedPostProcessed, *currBldrCtx);
   const AnalysisDeclContext *ADC = SF->getAnalysisDeclContext();
   if (!ADC->getCFGBuildOptions().AddTemporaryDtors) {
     if (llvm::isa_and_nonnull<CXXTempObjectRegion,
@@ -763,7 +751,7 @@ void ExprEngine::handleConstructor(const Expr *E,
              "We should not have inlined this constructor!");
 
       for (ExplodedNode *N : DstEvaluated) {
-        Bldr.generateSink(E, N, N->getState());
+        Engine.makePostStmtNode(E, N->getState(), N, /*MarkAsSink=*/true);
       }
 
       // There is no need to run the PostCall and PostStmt checker
@@ -773,6 +761,7 @@ void ExprEngine::handleConstructor(const Expr *E,
     }
   }
 
+  DstEvaluatedPostProcessed.insert(DstEvaluated);
   ExplodedNodeSet DstPostArgumentCleanup;
   for (ExplodedNode *I : DstEvaluatedPostProcessed)
     finishArgumentConstruction(DstPostArgumentCleanup, I, *Call);
@@ -783,7 +772,7 @@ void ExprEngine::handleConstructor(const Expr *E,
   getCheckerManager().runCheckersForPostCall(DstPostCall,
                                              DstPostArgumentCleanup,
                                              *Call, *this);
-  getCheckerManager().runCheckersForPostStmt(destNodes, DstPostCall, E, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, E, *this);
 }
 
 void ExprEngine::VisitCXXConstructExpr(const CXXConstructExpr *CE,
@@ -821,8 +810,7 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
     // FIXME: PostImplicitCall with a null decl may crash elsewhere anyway.
     PostImplicitCall PP(/*Decl=*/nullptr, S->getEndLoc(), SF,
                         getCFGElementRef(), &T);
-    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-    Bldr.generateNode(PP, Pred->getState(), Pred);
+    Dst.insert(Engine.makeNode(PP, Pred->getState(), Pred));
     return;
   }
 
@@ -837,9 +825,8 @@ void ExprEngine::VisitCXXDestructor(QualType ObjectType,
       Dest = MRMgr.getCXXTempObjectRegion(E, Pred->getStackFrame());
     } else {
       static SimpleProgramPointTag T("ExprEngine", "SkipInvalidDestructor");
-      NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-      Bldr.generateSink(Pred->getLocation().withTag(&T),
-                        Pred->getState(), Pred);
+      Engine.makeNode(Pred->getLocation().withTag(&T), Pred->getState(), Pred,
+                      /*MarkAsSink=*/true);
       return;
     }
   }
@@ -897,7 +884,6 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
   // Store return value of operator new() for future use, until the actual
   // CXXNewExpr gets processed.
   ExplodedNodeSet DstPostValue;
-  NodeBuilder ValueBldr(DstPostCall, DstPostValue, *currBldrCtx);
   for (ExplodedNode *I : DstPostCall) {
     // FIXME: Because CNE serves as the "call site" for the allocator (due to
     // lack of a better expression in the AST), the conjured return value symbol
@@ -930,8 +916,8 @@ void ExprEngine::VisitCXXNewAllocatorCall(const CXXNewExpr *CNE,
           State = State->assume(RetVal.castAs<DefinedOrUnknownSVal>(), true);
     }
 
-    ValueBldr.generateNode(CNE, I,
-                           addObjectUnderConstruction(State, CNE, SF, RetVal));
+    DstPostValue.insert(Engine.makePostStmtNode(
+        CNE, addObjectUnderConstruction(State, CNE, SF, RetVal), I));
   }
 
   ExplodedNodeSet DstPostPostCallCallback;
@@ -1003,8 +989,6 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
           State = State->assume(*dSymVal, true);
   }
 
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-
   SVal Result = symVal;
 
   if (CNE->isArray()) {
@@ -1027,23 +1011,19 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
       // If the array is list initialized, we bind the initializer list to the
       // memory region here, otherwise we would lose it.
       if (isInitList) {
-        Bldr.takeNodes(Pred);
-        Pred = Bldr.generateNode(CNE, Pred, State);
+        Pred = Engine.makePostStmtNode(CNE, State, Pred);
 
         SVal V = State->getSVal(Init, SF);
-        ExplodedNodeSet evaluated;
-        evalBind(evaluated, CNE, Pred, Result, V, true);
+        ExplodedNodeSet Evaluated;
+        evalBind(Evaluated, CNE, Pred, Result, V, true);
 
-        Bldr.takeNodes(Pred);
-        Bldr.addNodes(evaluated);
-
-        Pred = *evaluated.begin();
-        State = Pred->getState();
+        for (ExplodedNode *N : Evaluated)
+          Dst.insert(Engine.makeNodeWithBinding(N, CNE, Result));
+        return;
       }
     }
 
-    State = State->BindExpr(CNE, Pred->getStackFrame(), Result);
-    Bldr.generateNode(CNE, Pred, State);
+    Dst.insert(Engine.makeNodeWithBinding(Pred, CNE, Result, State));
     return;
   }
 
@@ -1059,8 +1039,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   }
 
   // Bind the address of the object, then check to see if we cached out.
-  State = State->BindExpr(CNE, SF, Result);
-  ExplodedNode *NewN = Bldr.generateNode(CNE, Pred, State);
+  ExplodedNode *NewN = Engine.makeNodeWithBinding(Pred, CNE, Result, State);
+  Dst.insert(NewN);
   if (!NewN)
     return;
 
@@ -1068,8 +1048,8 @@ void ExprEngine::VisitCXXNewExpr(const CXXNewExpr *CNE, ExplodedNode *Pred,
   // initializer. Copy the value over.
   if (const Expr *Init = CNE->getInitializer()) {
     if (!isa<CXXConstructExpr>(Init)) {
-      assert(Bldr.getResults().size() == 1);
-      Bldr.takeNodes(NewN);
+      assert(Dst.size() == 1);
+      Dst.erase(NewN);
       evalBind(Dst, CNE, NewN, Result, State->getSVal(Init, SF),
                /*FirstInit=*/IsStandardGlobalOpNewFunction);
     }
@@ -1115,14 +1095,17 @@ void ExprEngine::VisitCXXCatchStmt(const CXXCatchStmt *CS, ExplodedNode *Pred,
   ProgramStateRef state = Pred->getState();
   state = state->bindLoc(state->getLValue(VD, SF), V, SF);
 
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-  Bldr.generateNode(CS, Pred, state);
+  Dst.insert(Engine.makePostStmtNode(CS, state, Pred));
+}
+
+void ExprEngine::VisitCXXParenListInitExpr(const CXXParenListInitExpr *E,
+                                           ExplodedNode *Pred,
+                                           ExplodedNodeSet &Dst) {
+  ConstructInitList(E, E->getInitExprs(), /*IsTransparent*/ false, Pred, Dst);
 }
 
 void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
-                                    ExplodedNodeSet &Dst) {
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-
+                                  ExplodedNodeSet &Dst) {
   // Get the this object region from StoreManager.
   const StackFrame *SF = Pred->getStackFrame();
   const MemRegion *R = svalBuilder.getRegionManager().getCXXThisRegion(
@@ -1130,11 +1113,19 @@ void ExprEngine::VisitCXXThisExpr(const CXXThisExpr *TE, ExplodedNode *Pred,
 
   ProgramStateRef state = Pred->getState();
   SVal V = state->getSVal(loc::MemRegionVal(R));
-  Bldr.generateNode(TE, Pred, state->BindExpr(TE, SF, V));
+  Dst.insert(Engine.makeNodeWithBinding(Pred, TE, V));
 }
 
 void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
                                  ExplodedNodeSet &Dst) {
+
+  if (!AMgr.options.ShouldInlineLambdas) {
+    const ExplodedNode *Node = Engine.makePostStmtNode(
+        LE, Pred->getState(), Pred, /*MarkAsSink=*/true);
+    Engine.addAbortedBlock(Node, getCurrBlock());
+    return;
+  }
+
   const StackFrame *SF = Pred->getStackFrame();
 
   // Get the region of the lambda itself.
@@ -1195,41 +1186,31 @@ void ExprEngine::VisitLambdaExpr(const LambdaExpr *LE, ExplodedNode *Pred,
   // to be an RValue.
   SVal LambdaRVal = State->getSVal(R);
 
-  ExplodedNodeSet Tmp;
-  NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
   // FIXME: is this the right program point kind?
-  Bldr.generateNode(LE, Pred, State->BindExpr(LE, SF, LambdaRVal), nullptr,
-                    ProgramPoint::PostLValueKind);
+  ExplodedNode *N = Engine.makeNodeWithBinding(Pred, LE, LambdaRVal, State,
+                                               ProgramPoint::PostLValueKind);
 
   // FIXME: Move all post/pre visits to ::Visit().
-  getCheckerManager().runCheckersForPostStmt(Dst, Tmp, LE, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, N, LE, *this);
 }
 
 void ExprEngine::VisitAttributedStmt(const AttributedStmt *A,
                                      ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   const StackFrame *SF = Pred->getStackFrame();
-  ExplodedNodeSet CheckerPreStmt;
-  getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, A, *this);
+  ProgramStateRef State = Pred->getState();
 
-  ExplodedNodeSet EvalSet;
-
-  for (ExplodedNode *N : CheckerPreStmt) {
-    ProgramStateRef State = N->getState();
-    for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-      SVal AssumedVal = State->getSVal(Attr->getAssumption(), SF);
-      // This code ignores assumptions that evaluate to UndefinedVal.
-      // Perhaps there should be a checker that reports this situation.
-      if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
-        State = State->assume(*ValidAssumedVal, true);
-      }
-
-      if (!State)
-        break;
+  for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
+    SVal AssumedVal = State->getSVal(Attr->getAssumption(), SF);
+    // This code ignores assumptions that evaluate to UndefinedVal.
+    // Perhaps there should be a checker that reports this situation.
+    if (auto ValidAssumedVal = AssumedVal.getAs<DefinedOrUnknownSVal>()) {
+      State = State->assume(*ValidAssumedVal, true);
     }
 
-    if (State)
-      EvalSet.insert(Engine.makePostStmtNode(A, State, N));
+    if (!State)
+      break;
   }
 
-  getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, A, *this);
+  if (State)
+    Dst.insert(Engine.makePostStmtNode(A, State, Pred));
 }

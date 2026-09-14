@@ -9,6 +9,7 @@
 extern "C" {
 #include "InstrProfiling.h"
 #include "InstrProfilingPort.h"
+#include "InstrProfilingUtil.h"
 }
 
 #include "interception/interception.h"
@@ -303,6 +304,7 @@ int __prof_rocm::memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
   return hipMemcpy(Dst, Src, Size, 2 /* DToH */);
 }
 
+[[maybe_unused]]
 static int hipModuleGetGlobal(void **DevPtr, size_t *Bytes, void *Module,
                               const char *Name) {
   ensureHipLoaded();
@@ -1410,11 +1412,44 @@ INTERCEPTOR(int, hipGraphLaunch_spt, HipGraphExec GraphExec, HipStream Stream) {
                                Stream);
 }
 
+static void registerDynamicModuleFromFile(int Rc, void **Module,
+                                          const char *Filename) {
+  if (Rc)
+    return;
+
+  FILE *File = fopen(Filename, "rb");
+  if (!File) {
+    PROF_WARN("failed to open dynamic module file %s\n", Filename);
+    return;
+  }
+
+  if (fseek(File, 0, SEEK_END) != 0) {
+    PROF_WARN("failed to seek dynamic module file %s\n", Filename);
+    fclose(File);
+    return;
+  }
+  long FileSize = ftell(File);
+  if (FileSize <= 0 || fseek(File, 0, SEEK_SET) != 0) {
+    PROF_WARN("failed to get size of dynamic module file %s\n", Filename);
+    fclose(File);
+    return;
+  }
+
+  ManagedMemory Image;
+  lprofGetFileContentBuffer(File, (uint64_t)FileSize, &Image);
+  fclose(File);
+  if (Image.Status == MS_INVALID) {
+    PROF_WARN("failed to read dynamic module file %s\n", Filename);
+    return;
+  }
+
+  __llvm_profile_offload_register_dynamic_module(Rc, Module, Image.Addr);
+  lprofReleaseBuffer(&Image, (size_t)FileSize);
+}
+
 INTERCEPTOR(int, hipModuleLoad, void **module, const char *fname) {
   int rc = REAL(hipModuleLoad)(module, fname);
-  /* Pass NULL image: no in-memory ELF is available for filename loads,
-   * so the register hook skips symbol enumeration. */
-  __llvm_profile_offload_register_dynamic_module(rc, module, nullptr);
+  registerDynamicModuleFromFile(rc, module, fname);
   return rc;
 }
 

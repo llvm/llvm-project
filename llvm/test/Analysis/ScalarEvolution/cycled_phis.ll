@@ -35,13 +35,13 @@ exit:
 define void @test_02(ptr %p, ptr %q) {
 ; CHECK-LABEL: 'test_02'
 ; CHECK-NEXT:  Classifying expressions for: @test_02
-; CHECK-NEXT:    %start = load i32, ptr %p, align 4, !range !0
+; CHECK-NEXT:    %start = load i32, ptr %p, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %start U: [0,1000) S: [0,1000)
 ; CHECK-NEXT:    %outer_phi = phi i32 [ %start, %entry ], [ %inner_lcssa, %outer_backedge ]
 ; CHECK-NEXT:    --> %outer_phi U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }
 ; CHECK-NEXT:    %inner_phi = phi i32 [ %outer_phi, %outer_loop ], [ %inner_load, %inner_loop ]
 ; CHECK-NEXT:    --> %inner_phi U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
-; CHECK-NEXT:    %inner_load = load i32, ptr %q, align 4, !range !1
+; CHECK-NEXT:    %inner_load = load i32, ptr %q, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %inner_load U: [2000,3000) S: [2000,3000) Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
 ; CHECK-NEXT:    %inner_cond = call i1 @cond()
 ; CHECK-NEXT:    --> %inner_cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %inner_loop: Variant, %outer_loop: Variant }
@@ -84,9 +84,9 @@ exit:
 define void @test_03(ptr %p, ptr %q) {
 ; CHECK-LABEL: 'test_03'
 ; CHECK-NEXT:  Classifying expressions for: @test_03
-; CHECK-NEXT:    %start_1 = load i32, ptr %p, align 4, !range !0
+; CHECK-NEXT:    %start_1 = load i32, ptr %p, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %start_1 U: [0,1000) S: [0,1000)
-; CHECK-NEXT:    %start_2 = load i32, ptr %q, align 4, !range !1
+; CHECK-NEXT:    %start_2 = load i32, ptr %q, align 4, !range !{{[0-9]+}}
 ; CHECK-NEXT:    --> %start_2 U: [2000,3000) S: [2000,3000)
 ; CHECK-NEXT:    %outer_phi = phi i32 [ %start_1, %entry ], [ %inner_lcssa, %outer_backedge ]
 ; CHECK-NEXT:    --> %outer_phi U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %outer_loop: Variant, %inner_loop: Invariant }

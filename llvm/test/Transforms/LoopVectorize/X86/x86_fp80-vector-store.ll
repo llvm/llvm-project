@@ -92,7 +92,7 @@ define void @test_replicating_store_x86_fp80_cost(i32 %n, ptr %dst) #0 {
 ; FORCED-NEXT:    [[TMP3:%.*]] = icmp ugt i64 [[TMP2]], 4294967295
 ; FORCED-NEXT:    br i1 [[TMP3]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; FORCED:       [[VECTOR_PH]]:
-; FORCED-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP0]], 2
+; FORCED-NEXT:    [[N_MOD_VF:%.*]] = and i32 [[TMP0]], 1
 ; FORCED-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP0]], [[N_MOD_VF]]
 ; FORCED-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; FORCED:       [[VECTOR_BODY]]:

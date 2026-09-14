@@ -181,7 +181,7 @@ public:
                             SmallVectorImpl<MDNode *> &MDs) const;
   /// @}
 
-  LLVM_ABI bool hasMetadataOtherThanDebugLoc() const;
+  LLVM_ABI bool hasMetadataOtherThanDebugLocAndGuid() const;
 
   /// Copy metadata from Src, adjusting offsets by Offset.
   LLVM_ABI void copyMetadata(const GlobalObject *Src, unsigned Offset);

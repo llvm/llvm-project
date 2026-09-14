@@ -51,25 +51,24 @@ static bool shouldIgnoreRef(const DeclRefExpr *DRE, const Decl *ParentD) {
         if (ParentLambda)
           return true;
         ParentLambda = LambdaE;
-      } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(E)) {
+      } else if (const auto *OpCallE = dyn_cast<CXXOperatorCallExpr>(E);
+                 OpCallE && ParentLambda &&
+                 OpCallE->getOperator() == OverloadedOperatorKind::OO_Call &&
+                 OpCallE->getCalleeDecl() == ParentLambda->getCallOperator()) {
         // Check if the last found lambda is called with this 'operator ()'.
-        if (ParentLambda &&
-            OpCallE->getOperator() == OverloadedOperatorKind::OO_Call &&
-            OpCallE->getCalleeDecl() == ParentLambda->getCallOperator())
-          ParentLambda = nullptr;
+        ParentLambda = nullptr;
       }
-    } else if (const Decl *D = Parents[0].get<Decl>()) {
+    } else if (const Decl *D = Parents[0].get<Decl>(); D && [D, ParentD]() {
+                 if (const auto *ParentF = dyn_cast<FunctionDecl>(ParentD)) {
+                   if (const auto *FD = dyn_cast<FunctionDecl>(D))
+                     return FD == ParentF->getDefinition();
+                   return false;
+                 }
+                 return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
+               }()) {
       // Check if we reached the root of the context (variable or function
       // declaration) to check.
-      if ([D, ParentD]() {
-            if (const auto *ParentF = dyn_cast<FunctionDecl>(ParentD)) {
-              if (const auto *FD = dyn_cast<FunctionDecl>(D))
-                return FD == ParentF->getDefinition();
-              return false;
-            }
-            return D->getCanonicalDecl() == ParentD->getCanonicalDecl();
-          }())
-        return ParentLambda != nullptr;
+      return ParentLambda != nullptr;
     }
     Parents = PMC.getParents(Parents[0]);
   }
@@ -199,21 +198,19 @@ public:
   }
 
   bool VisitDeclRefExpr(DeclRefExpr *DRE) override {
-    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl())) {
-      if (!shouldIgnoreRef(DRE, Node->getDecl()) &&
-          (VarD->hasGlobalStorage() || VarD->isStaticLocal()))
-        Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
-    }
+    if (const auto *VarD = dyn_cast<VarDecl>(DRE->getDecl());
+        VarD && (!shouldIgnoreRef(DRE, Node->getDecl()) &&
+                 (VarD->hasGlobalStorage() || VarD->isStaticLocal())))
+      Node->Uses.emplace_back(DRE, G.addNode(VarD->getCanonicalDecl()));
     return true;
   }
 
   bool VisitCallExpr(CallExpr *CE) override {
-    if (const FunctionDecl *F = CE->getDirectCallee()) {
-      if (F->isGlobal() || F->isStatic()) {
-        const FunctionDecl *Def = F->getDefinition();
-        if (Def)
-          Node->Uses.emplace_back(CE, G.addNode(Def));
-      }
+    if (const FunctionDecl *F = CE->getDirectCallee();
+        F && (F->isGlobal() || F->isStatic())) {
+      const FunctionDecl *Def = F->getDefinition();
+      if (Def)
+        Node->Uses.emplace_back(CE, G.addNode(Def));
     }
     return true;
   }
@@ -310,7 +307,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
              clang::tidy::misc::StaticInitializationCycleCheck &Chk) {
   // Check if the SCC contains any variable, otherwise it is a function
   // recursion.
-  auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
+  const auto NodeIsVar = [](const VarUseNode *N) { return N->isVar(); };
   const auto *VarNode = llvm::find_if(SCC, NodeIsVar);
   if (VarNode == SCC.end())
     return;
@@ -362,7 +359,7 @@ reportCycles(ArrayRef<const VarUseNode *> SCC,
 
     CycleOs << *N->getDecl() << " -> ";
   }
-  CycleOs << *(FoundPath.front()->getDecl());
+  CycleOs << *FoundPath.front()->getDecl();
 
   Chk.diag((*VarNode)->getDecl()->getLocation(),
            "possible cyclical initialization: %0", DiagnosticIDs::Note)

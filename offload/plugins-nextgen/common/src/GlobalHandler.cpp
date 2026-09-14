@@ -30,17 +30,20 @@ using namespace plugin;
 using namespace error;
 using namespace llvm::offload::debug;
 
-// Windows/MSVC doesn't support weak symbols properly, so provide a stub
-// implementation that will be used if compiler-rt is not linked.
-#ifdef _WIN32
-extern "C" int __llvm_write_custom_profile(
-    const char *Target, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
-    const char *CountersEnd, const char *NamesBegin, const char *NamesEnd,
-    const uint64_t *VersionOverride) {
-  // Return error code indicating profiling is not available
+// Windows (MSVC/clang, but not MinGW) does not support __attribute__((weak)),
+// so provide a fallback stub via /alternatename. The linker picks compiler-rt's
+// strong definition when clang_rt.profile is linked; otherwise the stub is
+// used.
+#if defined(_WIN32) && !defined(__MINGW32__)
+extern "C" int __llvm_write_custom_profile_default(
+    const char *, const __llvm_profile_data *, const __llvm_profile_data *,
+    const char *, const char *, const char *, const char *, const char *,
+    const char *, const uint64_t *) {
   return -1;
 }
+#pragma comment(                                                               \
+    linker,                                                                    \
+    "/alternatename:__llvm_write_custom_profile=__llvm_write_custom_profile_default")
 #endif
 
 Expected<std::unique_ptr<ObjectFile>>
@@ -190,6 +193,55 @@ Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
   return Plugin::success();
 }
 
+bool GenericGlobalHandlerTy::isExportedSymbol(uint32_t Flags) {
+  uint32_t Ignored = SymbolRef::SF_Undefined | SymbolRef::SF_Hidden |
+                     SymbolRef::SF_FormatSpecific;
+  return (Flags & SymbolRef::SF_Global) && !(Flags & Ignored);
+}
+
+std::optional<StringRef>
+GenericGlobalHandlerTy::matchSymbol(const ELFSymbolRef &Symbol, StringRef Name,
+                                    SymbolKindTy Kind) {
+  uint8_t Type = Kind == SymbolKindTy::Kernel ? ELF::STT_FUNC : ELF::STT_OBJECT;
+  if (Symbol.getELFType() != Type)
+    return std::nullopt;
+  return Name;
+}
+
+Error GenericGlobalHandlerTy::iterateSymbols(
+    DeviceImageTy &Image, SymbolKindTy Kind,
+    function_ref<bool(StringRef)> Callback) {
+  auto ELFObjOrErr = getELFObjectFile(Image);
+  if (!ELFObjOrErr)
+    return ELFObjOrErr.takeError();
+
+  auto &ELFObj = cast<ELFObjectFileBase>(**ELFObjOrErr);
+  auto Symbols = ELFObj.symbols();
+  if (Symbols.empty())
+    Symbols = ELFObj.getDynamicSymbolIterators();
+
+  for (ELFSymbolRef Symbol : Symbols) {
+    auto FlagsOrErr = Symbol.getFlags();
+    if (!FlagsOrErr)
+      return Plugin::error(ErrorCode::INVALID_BINARY, FlagsOrErr.takeError(),
+                           "error reading ELF symbol");
+
+    if (!isExportedSymbol(*FlagsOrErr))
+      continue;
+
+    auto NameOrErr = Symbol.getName();
+    if (!NameOrErr)
+      return Plugin::error(ErrorCode::INVALID_BINARY, NameOrErr.takeError(),
+                           "error reading ELF symbol name");
+
+    if (auto Name = matchSymbol(Symbol, *NameOrErr, Kind))
+      if (!Callback(*Name))
+        break;
+  }
+
+  return Plugin::success();
+}
+
 Expected<GPUProfGlobals>
 GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
                                              DeviceImageTy &Image) {
@@ -275,11 +327,14 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
+#if !defined(_WIN32) || defined(__MINGW32__)
+  // On Windows (non-MinGW) the /alternatename stub above is never null.
   if (!__llvm_write_custom_profile)
     return Plugin::error(ErrorCode::INVALID_BINARY,
                          "could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
+#endif
 
   // Lay out as [Data][Counters][Names] to match the raw profile format order.
   // TODO: Move this interface to compiler-rt.

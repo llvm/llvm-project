@@ -15,7 +15,7 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v32i8_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v32i8_param_0];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    prmt.b32 %r5, %r4, 0, 0x7770U;
 ; SM90-NEXT:    cvt.u16.u32 %rs1, %r5;
@@ -42,7 +42,7 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; SM90-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; SM90-NEXT:    cvt.u32.u16 %r17, %rs15;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r17;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r17;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v32i8(
@@ -52,7 +52,7 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v32i8_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v32i8_param_0];
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    prmt.b32 %r9, %r8, 0, 0x7770U;
 ; SM100-NEXT:    cvt.u16.u32 %rs1, %r9;
@@ -78,7 +78,7 @@ define i8 @ld_global_v32i8(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; SM100-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; SM100-NEXT:    cvt.u32.u16 %r17, %rs15;
-; SM100-NEXT:    st.param.b32 [func_retval0], %r17;
+; SM100-NEXT:    st.param::func.b32 [func_retval0], %r17;
 ; SM100-NEXT:    ret;
   %a = load <32 x i8>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <32 x i8> %a, i32 0
@@ -107,7 +107,7 @@ define i16 @ld_global_v16i16(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v16i16_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v16i16_param_0];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    mov.b32 {%rs1, _}, %r4;
 ; SM90-NEXT:    mov.b32 {%rs2, _}, %r3;
@@ -126,7 +126,7 @@ define i16 @ld_global_v16i16(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; SM90-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; SM90-NEXT:    cvt.u32.u16 %r9, %rs15;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r9;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v16i16(
@@ -136,7 +136,7 @@ define i16 @ld_global_v16i16(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v16i16_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v16i16_param_0];
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    mov.b32 {%rs1, _}, %r8;
 ; SM100-NEXT:    mov.b32 {%rs2, _}, %r7;
@@ -154,7 +154,7 @@ define i16 @ld_global_v16i16(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.s16 %rs14, %rs11, %rs12;
 ; SM100-NEXT:    add.s16 %rs15, %rs13, %rs14;
 ; SM100-NEXT:    cvt.u32.u16 %r9, %rs15;
-; SM100-NEXT:    st.param.b32 [func_retval0], %r9;
+; SM100-NEXT:    st.param::func.b32 [func_retval0], %r9;
 ; SM100-NEXT:    ret;
   %a = load <16 x i16>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <16 x i16> %a, i32 0
@@ -183,7 +183,7 @@ define half @ld_global_v16f16(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v16f16_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v16f16_param_0];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    mov.b32 {%rs1, _}, %r4;
 ; SM90-NEXT:    mov.b32 {%rs2, _}, %r3;
@@ -201,7 +201,7 @@ define half @ld_global_v16f16(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.rn.f16 %rs13, %rs9, %rs10;
 ; SM90-NEXT:    add.rn.f16 %rs14, %rs11, %rs12;
 ; SM90-NEXT:    add.rn.f16 %rs15, %rs13, %rs14;
-; SM90-NEXT:    st.param.b16 [func_retval0], %rs15;
+; SM90-NEXT:    st.param::func.b16 [func_retval0], %rs15;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v16f16(
@@ -211,7 +211,7 @@ define half @ld_global_v16f16(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v16f16_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v16f16_param_0];
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    mov.b32 {%rs1, _}, %r8;
 ; SM100-NEXT:    mov.b32 {%rs2, _}, %r7;
@@ -228,7 +228,7 @@ define half @ld_global_v16f16(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.rn.f16 %rs13, %rs9, %rs10;
 ; SM100-NEXT:    add.rn.f16 %rs14, %rs11, %rs12;
 ; SM100-NEXT:    add.rn.f16 %rs15, %rs13, %rs14;
-; SM100-NEXT:    st.param.b16 [func_retval0], %rs15;
+; SM100-NEXT:    st.param::func.b16 [func_retval0], %rs15;
 ; SM100-NEXT:    ret;
   %a = load <16 x half>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <16 x half> %a, i32 0
@@ -257,7 +257,7 @@ define bfloat @ld_global_v16bf16(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v16bf16_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v16bf16_param_0];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    mov.b32 {%rs1, _}, %r4;
 ; SM90-NEXT:    mov.b32 {%rs2, _}, %r3;
@@ -275,7 +275,7 @@ define bfloat @ld_global_v16bf16(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.rn.bf16 %rs13, %rs9, %rs10;
 ; SM90-NEXT:    add.rn.bf16 %rs14, %rs11, %rs12;
 ; SM90-NEXT:    add.rn.bf16 %rs15, %rs13, %rs14;
-; SM90-NEXT:    st.param.b16 [func_retval0], %rs15;
+; SM90-NEXT:    st.param::func.b16 [func_retval0], %rs15;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v16bf16(
@@ -285,7 +285,7 @@ define bfloat @ld_global_v16bf16(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v16bf16_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v16bf16_param_0];
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    mov.b32 {%rs1, _}, %r8;
 ; SM100-NEXT:    mov.b32 {%rs2, _}, %r7;
@@ -302,7 +302,7 @@ define bfloat @ld_global_v16bf16(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.rn.bf16 %rs13, %rs9, %rs10;
 ; SM100-NEXT:    add.rn.bf16 %rs14, %rs11, %rs12;
 ; SM100-NEXT:    add.rn.bf16 %rs15, %rs13, %rs14;
-; SM100-NEXT:    st.param.b16 [func_retval0], %rs15;
+; SM100-NEXT:    st.param::func.b16 [func_retval0], %rs15;
 ; SM100-NEXT:    ret;
   %a = load <16 x bfloat>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <16 x bfloat> %a, i32 0
@@ -330,7 +330,7 @@ define i32 @ld_global_v8i32(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v8i32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v8i32_param_0];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
 ; SM90-NEXT:    add.s32 %r9, %r5, %r6;
@@ -340,7 +340,7 @@ define i32 @ld_global_v8i32(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.s32 %r13, %r9, %r10;
 ; SM90-NEXT:    add.s32 %r14, %r11, %r12;
 ; SM90-NEXT:    add.s32 %r15, %r13, %r14;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r15;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r15;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v8i32(
@@ -349,7 +349,7 @@ define i32 @ld_global_v8i32(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v8i32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v8i32_param_0];
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    add.s32 %r9, %r1, %r2;
 ; SM100-NEXT:    add.s32 %r10, %r3, %r4;
@@ -358,7 +358,7 @@ define i32 @ld_global_v8i32(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.s32 %r13, %r9, %r10;
 ; SM100-NEXT:    add.s32 %r14, %r11, %r12;
 ; SM100-NEXT:    add.s32 %r15, %r13, %r14;
-; SM100-NEXT:    st.param.b32 [func_retval0], %r15;
+; SM100-NEXT:    st.param::func.b32 [func_retval0], %r15;
 ; SM100-NEXT:    ret;
   %a = load <8 x i32>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <8 x i32> %a, i32 0
@@ -387,7 +387,7 @@ define float @ld_global_v8f32(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<2>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v8f32_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v8f32_param_0];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1+16];
 ; SM90-NEXT:    ld.global.nc.v4.b32 {%r5, %r6, %r7, %r8}, [%rd1];
 ; SM90-NEXT:    add.rn.f32 %r9, %r5, %r6;
@@ -397,7 +397,7 @@ define float @ld_global_v8f32(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    add.rn.f32 %r13, %r9, %r10;
 ; SM90-NEXT:    add.rn.f32 %r14, %r11, %r12;
 ; SM90-NEXT:    add.rn.f32 %r15, %r13, %r14;
-; SM90-NEXT:    st.param.b32 [func_retval0], %r15;
+; SM90-NEXT:    st.param::func.b32 [func_retval0], %r15;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v8f32(
@@ -406,7 +406,7 @@ define float @ld_global_v8f32(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<2>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v8f32_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v8f32_param_0];
 ; SM100-NEXT:    ld.global.nc.v8.b32 {%r1, %r2, %r3, %r4, %r5, %r6, %r7, %r8}, [%rd1];
 ; SM100-NEXT:    add.rn.f32 %r9, %r1, %r2;
 ; SM100-NEXT:    add.rn.f32 %r10, %r3, %r4;
@@ -415,7 +415,7 @@ define float @ld_global_v8f32(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    add.rn.f32 %r13, %r9, %r10;
 ; SM100-NEXT:    add.rn.f32 %r14, %r11, %r12;
 ; SM100-NEXT:    add.rn.f32 %r15, %r13, %r14;
-; SM100-NEXT:    st.param.b32 [func_retval0], %r15;
+; SM100-NEXT:    st.param::func.b32 [func_retval0], %r15;
 ; SM100-NEXT:    ret;
   %a = load <8 x float>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <8 x float> %a, i32 0
@@ -443,13 +443,13 @@ define i64 @ld_global_v4i64(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<9>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v4i64_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v4i64_param_0];
 ; SM90-NEXT:    ld.global.nc.v2.b64 {%rd2, %rd3}, [%rd1+16];
 ; SM90-NEXT:    ld.global.nc.v2.b64 {%rd4, %rd5}, [%rd1];
 ; SM90-NEXT:    add.s64 %rd6, %rd4, %rd5;
 ; SM90-NEXT:    add.s64 %rd7, %rd2, %rd3;
 ; SM90-NEXT:    add.s64 %rd8, %rd6, %rd7;
-; SM90-NEXT:    st.param.b64 [func_retval0], %rd8;
+; SM90-NEXT:    st.param::func.b64 [func_retval0], %rd8;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v4i64(
@@ -457,12 +457,12 @@ define i64 @ld_global_v4i64(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<9>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v4i64_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v4i64_param_0];
 ; SM100-NEXT:    ld.global.nc.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
 ; SM100-NEXT:    add.s64 %rd6, %rd2, %rd3;
 ; SM100-NEXT:    add.s64 %rd7, %rd4, %rd5;
 ; SM100-NEXT:    add.s64 %rd8, %rd6, %rd7;
-; SM100-NEXT:    st.param.b64 [func_retval0], %rd8;
+; SM100-NEXT:    st.param::func.b64 [func_retval0], %rd8;
 ; SM100-NEXT:    ret;
   %a = load <4 x i64>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <4 x i64> %a, i32 0
@@ -481,13 +481,13 @@ define double @ld_global_v4f64(ptr addrspace(1) %ptr) {
 ; SM90-NEXT:    .reg .b64 %rd<9>;
 ; SM90-EMPTY:
 ; SM90-NEXT:  // %bb.0:
-; SM90-NEXT:    ld.param.b64 %rd1, [ld_global_v4f64_param_0];
+; SM90-NEXT:    ld.param::func.b64 %rd1, [ld_global_v4f64_param_0];
 ; SM90-NEXT:    ld.global.nc.v2.b64 {%rd2, %rd3}, [%rd1+16];
 ; SM90-NEXT:    ld.global.nc.v2.b64 {%rd4, %rd5}, [%rd1];
 ; SM90-NEXT:    add.rn.f64 %rd6, %rd4, %rd5;
 ; SM90-NEXT:    add.rn.f64 %rd7, %rd2, %rd3;
 ; SM90-NEXT:    add.rn.f64 %rd8, %rd6, %rd7;
-; SM90-NEXT:    st.param.b64 [func_retval0], %rd8;
+; SM90-NEXT:    st.param::func.b64 [func_retval0], %rd8;
 ; SM90-NEXT:    ret;
 ;
 ; SM100-LABEL: ld_global_v4f64(
@@ -495,12 +495,12 @@ define double @ld_global_v4f64(ptr addrspace(1) %ptr) {
 ; SM100-NEXT:    .reg .b64 %rd<9>;
 ; SM100-EMPTY:
 ; SM100-NEXT:  // %bb.0:
-; SM100-NEXT:    ld.param.b64 %rd1, [ld_global_v4f64_param_0];
+; SM100-NEXT:    ld.param::func.b64 %rd1, [ld_global_v4f64_param_0];
 ; SM100-NEXT:    ld.global.nc.v4.b64 {%rd2, %rd3, %rd4, %rd5}, [%rd1];
 ; SM100-NEXT:    add.rn.f64 %rd6, %rd2, %rd3;
 ; SM100-NEXT:    add.rn.f64 %rd7, %rd4, %rd5;
 ; SM100-NEXT:    add.rn.f64 %rd8, %rd6, %rd7;
-; SM100-NEXT:    st.param.b64 [func_retval0], %rd8;
+; SM100-NEXT:    st.param::func.b64 [func_retval0], %rd8;
 ; SM100-NEXT:    ret;
   %a = load <4 x double>, ptr addrspace(1) %ptr, !invariant.load !0
   %v1 = extractelement <4 x double> %a, i32 0

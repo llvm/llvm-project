@@ -33,13 +33,12 @@
 using namespace clang;
 using namespace clang::interp;
 
-template <typename T>
-inline static std::string printArg(Program &P, CodePtr &OpPC) {
+template <typename T> inline static std::string printArg(CodePtr &OpPC) {
   if constexpr (std::is_pointer_v<T>) {
-    uint32_t ID = OpPC.read<uint32_t>();
+    uintptr_t Ptr = OpPC.read<uintptr_t>();
     std::string Result;
     llvm::raw_string_ostream SS(Result);
-    SS << reinterpret_cast<T>(P.getNativePointer(ID));
+    SS << reinterpret_cast<void *>(Ptr);
     return Result;
   } else {
     std::string Result;
@@ -63,7 +62,7 @@ inline static std::string printArg(Program &P, CodePtr &OpPC) {
   }
 }
 
-template <> inline std::string printArg<Floating>(Program &P, CodePtr &OpPC) {
+template <> inline std::string printArg<Floating>(CodePtr &OpPC) {
   auto Sem = Floating::deserializeSemantics(*OpPC);
 
   unsigned BitWidth = llvm::APFloatBase::semanticsSizeInBits(
@@ -81,8 +80,7 @@ template <> inline std::string printArg<Floating>(Program &P, CodePtr &OpPC) {
   return S;
 }
 
-template <>
-inline std::string printArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
+template <> inline std::string printArg<IntegralAP<false>>(CodePtr &OpPC) {
   using T = IntegralAP<false>;
   uint32_t BitWidth = T::deserializeSize(*OpPC);
   auto Memory =
@@ -99,8 +97,7 @@ inline std::string printArg<IntegralAP<false>>(Program &P, CodePtr &OpPC) {
   return Str;
 }
 
-template <>
-inline std::string printArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
+template <> inline std::string printArg<IntegralAP<true>>(CodePtr &OpPC) {
   using T = IntegralAP<true>;
   uint32_t BitWidth = T::deserializeSize(*OpPC);
   auto Memory =
@@ -117,7 +114,7 @@ inline std::string printArg<IntegralAP<true>>(Program &P, CodePtr &OpPC) {
   return Str;
 }
 
-template <> inline std::string printArg<FixedPoint>(Program &P, CodePtr &OpPC) {
+template <> inline std::string printArg<FixedPoint>(CodePtr &OpPC) {
   auto F = FixedPoint::deserialize(*OpPC);
   OpPC += align(F.bytesToSerialize());
 
@@ -152,9 +149,8 @@ LLVM_DUMP_METHOD void Function::dump(llvm::raw_ostream &OS,
   {
     ColorScope SC(OS, true, {llvm::raw_ostream::BRIGHT_GREEN, true});
     if (const FunctionDecl *FD = getDecl()) {
-      FD->getNameForDiagnostic(
-          OS, P.getContext().getASTContext().getPrintingPolicy(),
-          /*Qualified=*/true);
+      FD->getNameForDiagnostic(OS, FD->getASTContext().getPrintingPolicy(),
+                               /*Qualified=*/true);
     } else {
       OS << getName();
     }
@@ -353,8 +349,7 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
 
     // All Records.
     for (const Record *R : Records.values()) {
-      Bytes += sizeof(Record) + R->BaseMap.getMemorySize() +
-               R->VirtualBaseMap.getMemorySize();
+      Bytes += sizeof(Record) + R->BaseMap.getMemorySize();
       Bytes += R->Fields.capacity_in_bytes() + R->Bases.capacity_in_bytes() +
                R->VirtualBases.capacity_in_bytes();
     }
@@ -476,16 +471,13 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
   OS.indent(Spaces);
   dump(OS);
   OS << '\n';
-  OS.indent(Spaces) << "Metadata: " << getMetadataSize() << " bytes\n";
   OS.indent(Spaces) << "Size: " << getSize() << " bytes\n";
   OS.indent(Spaces) << "AllocSize: " << getAllocSize() << " bytes\n";
-  Offset += getMetadataSize();
   if (isCompositeArray()) {
     OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
     unsigned FO = Offset;
     for (unsigned I = 0; I != getNumElems(); ++I) {
       FO += sizeof(InlineDescriptor);
-      assert(ElemDesc->getMetadataSize() == 0);
       OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
       ElemDesc->dumpFull(FO, Indent + 1);
 
@@ -644,6 +636,7 @@ LLVM_DUMP_METHOD void Block::dump(llvm::raw_ostream &OS) const {
   OS << "  Weak: " << isWeak() << "\n";
   OS << "  Dummy: " << isDummy() << '\n';
   OS << "  Dynamic: " << isDynamic() << "\n";
+  OS << "  Metadata: " << MDSize << '\n';
 }
 
 LLVM_DUMP_METHOD void EvaluationResult::dump() const {

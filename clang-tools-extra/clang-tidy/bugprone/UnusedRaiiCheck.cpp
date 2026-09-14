@@ -72,8 +72,9 @@ void UnusedRaiiCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   // Emit a warning.
-  auto D = diag(E->getBeginLoc(), "object destroyed immediately after "
-                                  "creation; did you mean to name the object?");
+  const auto D =
+      diag(E->getBeginLoc(), "object destroyed immediately after "
+                             "creation; did you mean to name the object?");
 
   if (const auto *Node = dyn_cast<CXXConstructExpr>(E))
     reportDiagnostic(D, Node, Node->getParenOrBraceRange(),

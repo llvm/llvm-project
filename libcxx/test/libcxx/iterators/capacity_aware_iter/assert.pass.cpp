@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none
+// REQUIRES: can-test-hardening-assertions-fast
 
 // template <class _Iterator, class _Container, class _ContainerMaxElements>
 // struct __capacity_aware_iterator;

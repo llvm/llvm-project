@@ -34,9 +34,9 @@ struct WasmVirtualRegisterInfo : public RegisterInfo {
 class RegisterContextWasm
     : public process_gdb_remote::GDBRemoteRegisterContext {
 public:
-  RegisterContextWasm(
-      process_gdb_remote::ThreadGDBRemote &thread, uint32_t concrete_frame_idx,
-      process_gdb_remote::GDBRemoteDynamicRegisterInfoSP reg_info_sp);
+  RegisterContextWasm(process_gdb_remote::ThreadGDBRemote &thread,
+                      uint32_t concrete_frame_idx,
+                      lldb::DynamicRegisterInfoSP reg_info_sp);
 
   ~RegisterContextWasm() override;
 
@@ -60,6 +60,12 @@ public:
                      const RegisterValue &value) override;
 
 private:
+  /// The module whose code this context's frame is executing. Resolved on each
+  /// use rather than cached: the innermost frame's register context is the
+  /// thread's own and outlives a stop, so a cached id would go on naming the
+  /// module of a previous stop.
+  uint32_t GetModuleID();
+
   std::unordered_map<size_t, std::unique_ptr<WasmVirtualRegisterInfo>>
       m_register_map;
 };

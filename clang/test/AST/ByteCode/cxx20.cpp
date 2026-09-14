@@ -119,8 +119,8 @@ static_assert(!b2);
 constexpr auto name1() { return "name1"; }
 constexpr auto name2() { return "name2"; }
 
-constexpr auto b3 = name1() == name1(); // ref-error {{must be initialized by a constant expression}} \
-                                        // ref-note {{comparison of addresses of potentially overlapping literals}}
+constexpr auto b3 = name1() == name1(); // both-error {{must be initialized by a constant expression}} \
+                                        // both-note {{comparison of addresses of potentially overlapping literals}}
 constexpr auto b4 = name1() == name2();
 static_assert(!b4);
 
@@ -1099,8 +1099,7 @@ namespace Virtual {
   static_assert(d.b == 'B');
   static_assert(d.c == 'C');
   // During the construction of C, the dynamic type of B's A is B.
-  static_assert(d.ba == 'B'); // expected-error {{failed}} \
-                              // expected-note {{expression evaluates to}}
+  static_assert(d.ba == 'B');
   static_assert(d.d == 'D');
   static_assert(d.f() == 'D');
   constexpr const A &a = (B&)d;

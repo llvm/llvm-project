@@ -62,6 +62,13 @@ public:
   /// similar to ELF's "protected";  Apple Mach-O requires a "weak" attribute on
   /// declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
+
+  /// Apple Mach-O can autohide a vague-linkage vtable so that each image gets
+  /// its own copy, so such a vtable may have more than one address in a
+  /// program. A strong (key-function) vtable still has a unique address.
+  VTableUniquenessKind getVTableUniqueness() const override {
+    return VTableUniquenessKind::UniqueIfStrongLinkage;
+  }
 };
 
 template <typename Target>
@@ -103,6 +110,27 @@ public:
       // No TLS on DriverKit.
     } else if (Triple.isXROS())
       this->TLSSupported = true;
+    else if (Triple.isAppleFirmware()) {
+      if (Triple.isAArch64() || Triple.isARM())
+        this->TLSSupported = true;
+      else if (Triple.isThumb()) {
+        switch (Triple.getSubArch()) {
+        case llvm::Triple::NoSubArch:
+        case llvm::Triple::ARMSubArch_v4t:
+        case llvm::Triple::ARMSubArch_v5:
+        case llvm::Triple::ARMSubArch_v5te:
+        case llvm::Triple::ARMSubArch_v6:
+        case llvm::Triple::ARMSubArch_v6k:
+        case llvm::Triple::ARMSubArch_v6m:
+          // Thumb-1 doesn't support TLS.
+          break;
+
+        default:
+          this->TLSSupported = true;
+          break;
+        }
+      }
+    }
 
     this->MCountName = "\01mcount";
   }

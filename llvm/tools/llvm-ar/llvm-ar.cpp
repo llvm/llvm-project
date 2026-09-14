@@ -83,6 +83,7 @@ static void printArHelp(StringRef ToolName) {
     =darwin             -   darwin
     =bsd                -   bsd
     =bigarchive         -   big archive (AIX OS)
+    =zos                -   zos archive (z/OS OS)
     =coff               -   coff
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
@@ -195,7 +196,16 @@ static SmallVector<const char *, 256> PositionalArgs;
 static bool MRI;
 
 namespace {
-enum Format { Default, GNU, COFF, BSD, DARWIN, BIGARCHIVE, Unknown };
+enum Format {
+  Default,
+  GNU,
+  COFF,
+  BSD,
+  DARWIN,
+  BIGARCHIVE,
+  ZOSARCHIVE,
+  Unknown
+};
 }
 
 static Format FormatType = Default;
@@ -1079,6 +1089,11 @@ static void performWriteOperation(ArchiveOperation Operation,
       fail("only the gnu format has a thin mode");
     Kind = object::Archive::K_AIXBIG;
     break;
+  case ZOSARCHIVE:
+    if (Thin)
+      fail("only the gnu format has a thin mode");
+    Kind = object::Archive::K_ZOS;
+    break;
   case Unknown:
     llvm_unreachable("");
   }
@@ -1397,6 +1412,7 @@ static int ar_main(int argc, char **argv) {
                        .Case("bsd", BSD)
                        .Case("bigarchive", BIGARCHIVE)
                        .Case("coff", COFF)
+                       .Case("zos", ZOSARCHIVE)
                        .Default(Unknown);
       if (FormatType == Unknown)
         fail(std::string("Invalid format ") + Match);

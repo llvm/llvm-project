@@ -5,22 +5,22 @@
 // CHECK: CXXRecordDecl {{.*}} ConstantBuffer definition
 // CHECK: FinalAttr {{.*}} Implicit final
 // CHECK-NEXT: FieldDecl {{.*}} implicit __handle '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 
 // CHECK: CXXConstructorDecl {{.*}} ConstantBuffer<element_type> 'void ()' inline
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' '='
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::ConstantBuffer<element_type>' lvalue implicit this
 // CHECK-NEXT: CStyleCastExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' <Dependent>
 // CHECK-NEXT: CallExpr {{.*}} '<dependent type>'
@@ -29,16 +29,16 @@
 // CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::ConstantBuffer<element_type> &'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' '='
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::ConstantBuffer<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::ConstantBuffer<element_type>' lvalue ParmVar {{.*}} 'other' 'const hlsl::ConstantBuffer<element_type> &'
@@ -47,16 +47,16 @@
 // CHECK-NEXT: ParmVarDecl {{.*}} other 'const hlsl::ConstantBuffer<element_type> &'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: BinaryOperator {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' '='
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::ConstantBuffer<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} '__hlsl_resource_t
-// CHECK-SAME{LITERAL}: [[hlsl::resource_class(CBuffer)]]
+// CHECK-SAME{LITERAL}: [[hlsl::resource_class("CBuffer")]]
 // CHECK-SAME{LITERAL}: [[hlsl::contained_type(element_type)]]
 // CHECK-SAME: ' lvalue .__handle
 // CHECK-NEXT: DeclRefExpr {{.*}} 'const hlsl::ConstantBuffer<element_type>' lvalue ParmVar {{.*}} 'other' 'const hlsl::ConstantBuffer<element_type> &'
@@ -71,6 +71,7 @@ ConstantBuffer<S> cb;
 struct Nested {
   S s;
   float b;
+  float getA() const { return s.a; }
 };
 ConstantBuffer<Nested> cb_nested;
 
@@ -147,5 +148,17 @@ float main() {
   // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue Var {{.*}} 'cb' 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>'
   takes_s(cb);
 
-  return f1 + f2 + f3;
+  // CHECK: VarDecl {{.*}} a 'float'
+  // CHECK-NEXT: ExprWithCleanups {{.*}} 'float'
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'float'
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .getA
+  // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'const Nested' lvalue
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const Nested' <LValueToRValue>
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant Nested' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant Nested &
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<Nested>' lvalue <NoOp>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>' lvalue Var {{.*}} 'cb_nested' 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>'
+  float a = cb_nested.getA();
+
+  return f1 + f2 + f3 + a;
 }

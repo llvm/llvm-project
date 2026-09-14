@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -triple r600 -cl-std=CL1.2 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-mesa-mesa3d -cl-std=CL1.2 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL1.2 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL2.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-mesa-mesa3d -cl-std=CL1.2 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL1.2 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL2.0 %s -emit-llvm -o - | FileCheck %s
 
 // RUN: %clang_cc1 -triple r600 -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-mesa-mesa3d -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-mesa-mesa3d -cl-ext=+__opencl_c_generic_address_space -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-ext=+__opencl_c_generic_address_space -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdpal -cl-ext=+__opencl_c_generic_address_space -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-mesa-mesa3d -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-mesa-mesa3d -cl-ext=+__opencl_c_generic_address_space -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-ext=+__opencl_c_generic_address_space -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdpal -cl-ext=+__opencl_c_generic_address_space -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -triple r600 -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-mesa-mesa3d -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-mesa-mesa3d -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -cl-ext=+cl_khr_fp64,+__opencl_c_fp64 -cl-std=CL3.0 %s -emit-llvm -o - | FileCheck %s
 
 #ifdef __AMDGCN__
 #define PTSIZE 8

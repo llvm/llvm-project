@@ -71,27 +71,20 @@
 #  define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER
 #  define _LIBCPP_ABI_OPTIMIZED_FUNCTION
 #  define _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
+#  define _LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED
 #  define _LIBCPP_ABI_STRING_OPTIMIZED_EXTERNAL_INSTANTIATION
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_ARRAY
 #  define _LIBCPP_ABI_USE_WRAP_ITER_IN_STD_STRING_VIEW
 #  define _LIBCPP_ABI_VARIANT_INDEX_TYPE_OPTIMIZATION
 #  define _LIBCPP_ABI_TRIVIALLY_COPYABLE_BIT_ITERATOR
 #  define _LIBCPP_ABI_USE_SMALL_DEQUE_BLOCK_SIZE
+#  define _LIBCPP_ABI_VECTORIZED_MERSENNE_TWISTER_ENGINE
 
 #elif _LIBCPP_ABI_VERSION == 1
 // Feature macros for disabling pre ABI v1 features. All of these options
 // are deprecated.
 #  if defined(__FreeBSD__)
 #    define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
-#  endif
-#endif
-
-// TODO(LLVM 22): Remove this check
-#if defined(_LIBCPP_ABI_NO_ITERATOR_BASES) && !defined(_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER)
-#  ifndef _LIBCPP_ONLY_NO_ITERATOR_BASES
-#    error "You probably want to define _LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER. This has been split out from"   \
- " _LIBCPP_ABI_NO_ITERATOR_BASES to allow only removing the second iterator member, since they aren't really related." \
- "If you actually want this ABI configuration, please define _LIBCPP_ONLY_NO_ITERATOR_BASES instead."
 #  endif
 #endif
 
@@ -103,7 +96,7 @@
 //
 // To fix the bug we had to change the ABI of some classes to remove [[no_unique_address]] under certain conditions.
 // The macro below is used for all classes whose ABI have changed as part of fixing these bugs.
-#define _LIBCPP_ABI_LLVM18_NO_UNIQUE_ADDRESS __attribute__((__abi_tag__("llvm18_nua")))
+#define _LIBCPP_LLVM18_NO_UNIQUE_ADDRESS_ABI_TAG __attribute__((__abi_tag__("llvm18_nua")))
 
 // [[msvc::no_unique_address]] seems to mostly affect empty classes, so the padding scheme for Itanium doesn't work.
 #if defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING)

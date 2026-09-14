@@ -194,8 +194,7 @@ public:
   using PassConceptT =
       detail::PassConcept<MachineFunction, MachineFunctionAnalysisManager>;
 
-  explicit FunctionToMachineFunctionPassAdaptor(
-      std::unique_ptr<PassConceptT> Pass)
+  explicit FunctionToMachineFunctionPassAdaptor(PassConceptT::unique_ptr Pass)
       : Pass(std::move(Pass)) {}
 
   /// Runs the function pass across every function in the function.
@@ -205,7 +204,7 @@ public:
                 function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
-  std::unique_ptr<PassConceptT> Pass;
+  PassConceptT::unique_ptr Pass;
 };
 
 template <typename MachineFunctionPassT>
@@ -213,11 +212,8 @@ FunctionToMachineFunctionPassAdaptor
 createFunctionToMachineFunctionPassAdaptor(MachineFunctionPassT &&Pass) {
   using PassModelT = detail::PassModel<MachineFunction, MachineFunctionPassT,
                                        MachineFunctionAnalysisManager>;
-  // Do not use make_unique, it causes too many template instantiations,
-  // causing terrible compile times.
   return FunctionToMachineFunctionPassAdaptor(
-      std::unique_ptr<FunctionToMachineFunctionPassAdaptor::PassConceptT>(
-          new PassModelT(std::forward<MachineFunctionPassT>(Pass))));
+      PassModelT::create(std::move(Pass)));
 }
 
 template <>

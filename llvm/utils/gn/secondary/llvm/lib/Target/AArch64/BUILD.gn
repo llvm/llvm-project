@@ -154,6 +154,7 @@ static_library("LLVMAArch64CodeGen") {
     "AArch64MachineScheduler.cpp",
     "AArch64MacroFusion.cpp",
     "AArch64PBQPRegAlloc.cpp",
+    "AArch64PTrueCoalescing.cpp",
     "AArch64PerfectShuffle.cpp",
     "AArch64PointerAuth.cpp",
     "AArch64PostCoalescerPass.cpp",
@@ -187,7 +188,6 @@ static_library("LLVMAArch64CodeGen") {
     "GISel/AArch64RegisterBankInfo.cpp",
     "MachineSMEABIPass.cpp",
     "SMEPeepholeOpt.cpp",
-    "SVEIntrinsicOpts.cpp",
     "SVEShuffleOpts.cpp",
   ]
 }

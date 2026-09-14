@@ -13,7 +13,7 @@
 // class set
 
 //    template<typename K>
-//        constexpr size_type count(const K& x) const;        // C++14 // constexpr since C++26
+//        constexpr size_type count(const K& x) const;        // C++14, constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -41,6 +41,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
 
   return true;
 }
+
 int main(int, char**) {
   test();
 #if TEST_STD_VER >= 26

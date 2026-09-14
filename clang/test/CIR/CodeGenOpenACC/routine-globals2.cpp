@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fopenacc -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenacc -triple x86_64-linux-gnu -Wno-openacc-self-if-potential-conflict -emit-cir -fclangir %s -o - | FileCheck %s
 
 #pragma acc routine seq
 void GlobalFunc4();
@@ -29,9 +29,9 @@ void force_emit() {
 // CHECK: cir.func{{.*}} @[[G7_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G7_R_NAME:.*]]]>{{.*}}}
 
 // CHECK: cir.func{{.*}} @[[G4_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G4_R_NAME:.*]], @[[G4_R2_NAME:.*]]]>{{.*}}}
+// CHECK: acc.routine @[[G4_R_NAME]] func(@[[G4_NAME]]) seq
 // CHECK: cir.func{{.*}} @[[G5_NAME:[^\(]*]]({{.*}}){{.*}} attributes {acc.routine_info = #acc.routine_info<[@[[G5_R_NAME:.*]], @[[G5_R1_NAME:.*]], @[[G5_R2_NAME:.*]], @[[G5_R3_NAME:.*]]]>{{.*}}}
 
-// CHECK: acc.routine @[[G4_R_NAME]] func(@[[G4_NAME]]) seq
 // CHECK: acc.routine @[[G5_R_NAME]] func(@[[G5_NAME]]) seq
 // CHECK: acc.routine @[[G5_R1_NAME]] func(@[[G5_NAME]]) seq
 //

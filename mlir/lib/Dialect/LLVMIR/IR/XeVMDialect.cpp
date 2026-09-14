@@ -358,29 +358,89 @@ LogicalResult MMAMxOp::verify() {
   return success();
 }
 
+/// Number of bits one narrow float value occupies. The narrow values of a
+/// `xevm.truncf` destination, or a `xevm.extf` source, are packed into whole
+/// bytes, so a sub-byte format fits several values per byte.
+static int64_t getNarrowFloatBitWidth(TruncfDstElemTypes etype) {
+  return etype == TruncfDstElemTypes::E2M1 ? 4 : 8;
+}
+static int64_t getNarrowFloatBitWidth(ExtfSrcElemTypes etype) {
+  return etype == ExtfSrcElemTypes::E2M1 ? 4 : 8;
+}
+
+/// Number of values `ty` holds: its length if it is a vector, and one
+/// otherwise. SPIR-V has no vector of length one and uses a scalar instead, so
+/// a conversion of two fp4 values, which pack into a single byte, has a scalar
+/// on its packed side.
+static int64_t getNumValues(Type ty) {
+  if (auto vecTy = dyn_cast<VectorType>(ty))
+    return vecTy.getNumElements();
+  return 1;
+}
+
+/// Total bit width of `ty`, which is a scalar or a vector of a scalar.
+static int64_t getPackedBitWidth(Type ty) {
+  if (auto vecTy = dyn_cast<VectorType>(ty))
+    return vecTy.getNumElements() * vecTy.getElementTypeBitWidth();
+  return ty.getIntOrFloatBitWidth();
+}
+
+/// Verifies that `packedTy` is exactly wide enough to hold `numValues` values
+/// of `narrowBits` bits each, rounded up to whole bytes.
+static LogicalResult verifyPackedWidth(Operation *op, StringRef packedName,
+                                       Type packedTy, int64_t numValues,
+                                       int64_t narrowBits) {
+  int64_t expected = llvm::alignTo(numValues * narrowBits, 8);
+  int64_t actual = getPackedBitWidth(packedTy);
+  if (actual != expected)
+    return op->emitOpError()
+           << packedName << " should be " << expected << " bits wide to hold "
+           << numValues << " value(s) of " << narrowBits << " bits, but it is "
+           << actual;
+  return success();
+}
+
 LogicalResult TruncfOp::verify() {
   Type srcTy = getSrc().getType();
   Type dstTy = getDst().getType();
-  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
-    return emitOpError("both src and dst should be vector types or both should "
-                       "be scalar types");
   if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() <=
       getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
     return emitError(
         "dst element bitwidth should be less than src element bitwidth");
-  return success();
+  return verifyPackedWidth(*this, "dst", dstTy, getNumValues(srcTy),
+                           getNarrowFloatBitWidth(getDstEtype().getEtype()));
 }
 
 LogicalResult ExtfOp::verify() {
   Type srcTy = getSrc().getType();
   Type dstTy = getDst().getType();
-  if (isa<VectorType>(srcTy) != isa<VectorType>(dstTy))
-    return emitOpError("both src and dst should be vector types or both should "
-                       "be scalar types");
   if (getElementTypeOrSelf(srcTy).getIntOrFloatBitWidth() >=
       getElementTypeOrSelf(dstTy).getIntOrFloatBitWidth())
     return emitError(
         "dst element bitwidth should be greater than src element bitwidth");
+  return verifyPackedWidth(*this, "src", srcTy, getNumValues(dstTy),
+                           getNarrowFloatBitWidth(getSrcEtype().getEtype()));
+}
+
+LogicalResult BitcastShuffleOp::verify() {
+  Type srcTy = getSrc().getType();
+  Type resTy = getRes().getType();
+  auto srcVecTy = dyn_cast<VectorType>(srcTy);
+  auto resVecTy = dyn_cast<VectorType>(resTy);
+  // Only a pack (vector -> scalar) and an unpack (scalar -> vector) are
+  // supported, so exactly one side is a vector.
+  if (static_cast<bool>(srcVecTy) == static_cast<bool>(resVecTy))
+    return emitOpError("expected exactly one of src and res to be a vector: a "
+                       "pack takes a vector and returns a scalar, an unpack "
+                       "takes a scalar and returns a vector");
+
+  auto getTotalBitWidth = [](Type ty) -> unsigned {
+    if (auto vecTy = dyn_cast<VectorType>(ty))
+      return vecTy.getNumElements() * vecTy.getElementTypeBitWidth();
+    return ty.getIntOrFloatBitWidth();
+  };
+  if (getTotalBitWidth(srcTy) != getTotalBitWidth(resTy))
+    return emitOpError("src and res types must have the same total bit width");
   return success();
 }
 

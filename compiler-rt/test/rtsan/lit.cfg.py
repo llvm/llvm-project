@@ -4,7 +4,9 @@ import os
 config.name = "RTSAN" + config.name_suffix
 
 
-default_rtsan_opts = "atexit_sleep_ms=0"
+# This is unimportant, just a "dummy" variable so we can append nicely
+# to it in the lines below
+default_rtsan_opts = "verbosity=1"
 
 if config.target_os == "Darwin":
     # On Darwin, we default to `abort_on_error=1`, which would make tests run

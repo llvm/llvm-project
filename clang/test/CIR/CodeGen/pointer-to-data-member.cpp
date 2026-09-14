@@ -373,12 +373,12 @@ auto test_null() -> int Point::* {
   return nullptr;
 }
 
-// CIR: cir.func {{.*}} @_Z9test_nullv() -> !cir.data_member<!s32i in !rec_Point> {
-// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
-// CIR:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
-// CIR:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
-// CIR:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
-// CIR:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE: cir.func {{.*}} @_Z9test_nullv() -> !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
+// CIR-BEFORE:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
+// CIR-BEFORE:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
+// CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
+// CIR-BEFORE:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>
 
 // LLVM: define {{.*}} i64 @_Z9test_nullv()
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca i64
@@ -393,12 +393,12 @@ auto test_null_incomplete() -> int Incomplete::* {
   return nullptr;
 }
 
-// CIR: cir.func {{.*}} @_Z20test_null_incompletev() -> !cir.data_member<!s32i in !rec_Incomplete> {
-// CIR:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>
-// CIR:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Incomplete>
-// CIR:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
-// CIR:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
-// CIR:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Incomplete>
+// CIR-BEFORE: cir.func {{.*}} @_Z20test_null_incompletev() -> !cir.data_member<!s32i in !rec_Incomplete>
+// CIR-BEFORE:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>
+// CIR-BEFORE:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Incomplete>
+// CIR-BEFORE:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
+// CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
+// CIR-BEFORE:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Incomplete>
 
 // LLVM: define {{.*}} i64 @_Z20test_null_incompletev()
 // LLVM:   %[[RETVAL_ADDR:.*]] = alloca i64
@@ -408,3 +408,75 @@ auto test_null_incomplete() -> int Incomplete::* {
 
 // OGCG: define {{.*}} i64 @_Z20test_null_incompletev()
 // OGCG:   ret i64 -1
+
+struct hasField { unsigned field; };
+struct hasField;
+template< unsigned hasField::*ptr>
+void changeFieldPtr(hasField &hf) {
+  hf.*ptr = 1;
+}
+
+// OGCG-LABEL: define dso_local void @_Z11useHasFieldv()
+// OGCG:   %[[X:.*]] = alloca ptr
+// OGCG:   store ptr @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_, ptr %[[X]]
+// OGCG:   %[[LOAD_X:.*]] = load ptr, ptr %[[X]]
+// OGCG:   call void %[[LOAD_X]]({{.*}})
+
+// OGCG-LABEL: define linkonce_odr void @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// OGCG: %[[ARG:.*]] = alloca ptr
+// OGCG: %[[LOAD_ARG:.*]] = load ptr, ptr %[[ARG]]
+// OGCG: %[[GET_MEM:.*]] = getelementptr inbounds i8, ptr %[[LOAD_ARG]], i64 0
+// OGCG: store i32 1, ptr %[[GET_MEM]]
+
+using ptrTy = void (*)(hasField&);
+void useHasField() {
+  auto x = ptrTy(changeFieldPtr<&hasField::field>);
+
+  hasField hf;
+  x(hf);
+}
+
+// CIR-BEFORE-LABEL: cir.func {{.*}}@_Z11useHasFieldv()
+// CIR-BEFORE: %[[X:.*]] = cir.alloca "x" {{.*}}: !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>>
+// CIR-BEFORE: %[[GET_FUNC:.*]] = cir.get_global @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_ : !cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>
+// CIR-BEFORE: cir.store {{.*}} %[[GET_FUNC]], %[[X]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>>
+// CIR-BEFORE: %[[LOAD_X:.*]] = cir.load {{.*}}%[[X]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>
+// CIR-BEFORE: cir.call %[[LOAD_X]](%{{.*}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>, !cir.ptr<!rec_hasField> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef}) -> ()
+
+// CIR-AFTER-LABEL: cir.func {{.*}}@_Z11useHasFieldv()
+// CIR-AFTER: %[[X:.*]] = cir.alloca "x" {{.*}}: !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>>
+// CIR-AFTER: %[[GET_FUNC:.*]] = cir.get_global @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_ : !cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>
+// CIR-AFTER: cir.store {{.*}} %[[GET_FUNC]], %[[X]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>>
+// CIR-AFTER: %[[LOAD_X:.*]] = cir.load {{.*}}%[[X]] : !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>>, !cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>
+// CIR-AFTER: cir.call %[[LOAD_X]](%{{.*}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_hasField>)>>, !cir.ptr<!rec_hasField> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nonnull, llvm.noundef}) -> ()
+
+// LLVM-LABEL: define dso_local void @_Z11useHasFieldv()
+// LLVM:   %[[X:.*]] = alloca ptr
+// LLVM:   store ptr @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_, ptr %[[X]]
+// LLVM:   %[[LOAD_X:.*]] = load ptr, ptr %[[X]]
+// LLVM:   call void %[[LOAD_X]]({{.*}})
+
+// CIR-BEFORE-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// CIR-BEFORE: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
+// CIR-BEFORE: %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-BEFORE: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
+// CIR-BEFORE: %[[GET_DM:.*]] = cir.const #cir.data_member<[0]> : !cir.data_member<!u32i in !rec_hasField>
+// CIR-BEFORE: %[[GET_MEM:.*]] = cir.get_runtime_member %[[LOAD_ARG]][%[[GET_DM]] : !cir.data_member<!u32i in !rec_hasField>] : !cir.ptr<!rec_hasField> -> !cir.ptr<!u32i>
+// CIR-BEFORE: cir.store {{.*}}%[[ONE]], %[[GET_MEM]] : !u32i, !cir.ptr<!u32i>
+
+// CIR-AFTER-LABEL: cir.func {{.*}}_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// CIR-AFTER: %[[ARG:.*]] = cir.alloca "hf" {{.*}} : !cir.ptr<!cir.ptr<!rec_hasField>>
+// CIR-AFTER: %[[ONE:.*]] = cir.const #cir.int<1>
+// CIR-AFTER: %[[LOAD_ARG:.*]] = cir.load %[[ARG]] : !cir.ptr<!cir.ptr<!rec_hasField>>, !cir.ptr<!rec_hasField>
+// CIR-AFTER: %[[ZERO:.*]] = cir.const #cir.int<0> : !s64i
+// CIR-AFTER: %[[ARG_AS_PTR:.*]] = cir.cast bitcast %[[LOAD_ARG]] : !cir.ptr<!rec_hasField> -> !cir.ptr<!s8i>
+// CIR-AFTER: %[[STRIDE:.*]] = cir.ptr_stride %[[ARG_AS_PTR]], %[[ZERO]] : (!cir.ptr<!s8i>, !s64i) -> !cir.ptr<!s8i>
+// CIR-AFTER: %[[GET_MEM:.*]] = cir.cast bitcast %[[STRIDE]] : !cir.ptr<!s8i> -> !cir.ptr<!u32i>
+// CIR-AFTER: cir.store {{.*}}%[[ONE]], %[[GET_MEM]] : !u32i, !cir.ptr<!u32i>
+
+// LLVM-LABEL: define linkonce_odr void @_Z14changeFieldPtrIXadL_ZN8hasField5fieldEEEEvRS0_
+// LLVM: %[[ARG:.*]] = alloca ptr
+// LLVM: %[[LOAD_ARG:.*]] = load ptr, ptr %[[ARG]]
+// LLVM: %[[GET_MEM:.*]] = getelementptr i8, ptr %[[LOAD_ARG]], i64 0
+// LLVM: store i32 1, ptr %[[GET_MEM]]
+
