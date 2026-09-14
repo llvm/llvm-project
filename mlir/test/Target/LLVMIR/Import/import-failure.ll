@@ -175,7 +175,7 @@ end:
 ; // -----
 
 ; CHECK:      <unknown>
-; CHECK-SAME: warning: expected metadata node llvm.loop.vectorize.followup_all to hold an MDNode
+; CHECK-SAME: warning: expected all loop properties to be either debug locations or metadata nodes
 ; CHECK:      <unknown>
 ; CHECK-SAME: warning: unhandled metadata: ![[FOLLOWUP_LOOP:[0-9]+]] = distinct !{![[FOLLOWUP_LOOP]], ![[FOLLOWUP_PROP:[0-9]+]]}
 define void @unsupported_loop_annotation(i64 %n, ptr %A) {
@@ -187,6 +187,42 @@ end:
 
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.followup_all", i32 42}
+
+; // -----
+
+; A whole LoopID is not a named property in a followup's direct attribute list.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: cannot import loop property without a name
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[WRAPPED_LOOP:[0-9]+]] = distinct !{![[WRAPPED_LOOP]], ![[WRAPPED_PROP:[0-9]+]]}
+define void @followup_with_loop_id() {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = !{!"llvm.loop.unroll.followup_unrolled", !2}
+!2 = distinct !{!2, !3}
+!3 = !{!"llvm.loop.mustprogress"}
+
+; // -----
+
+; Reject recursive followup metadata instead of recursing indefinitely.
+; CHECK:      <unknown>
+; CHECK-SAME: warning: cannot import cyclic loop annotation
+; CHECK:      <unknown>
+; CHECK-SAME: warning: unhandled metadata: ![[CYCLIC_LOOP:[0-9]+]] = distinct !{![[CYCLIC_LOOP]], ![[CYCLIC_PROP:[0-9]+]]}
+define void @cyclic_followup() {
+entry:
+  br label %end, !llvm.loop !0
+end:
+  ret void
+}
+
+!0 = distinct !{!0, !1}
+!1 = distinct !{!"llvm.loop.unroll.followup_unrolled", !1}
 
 ; // -----
 
