@@ -360,6 +360,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    CLONE ir<%lv> = load ir<%A>
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
@@ -370,7 +371,6 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = WIDEN-CANONICAL-INDUCTION nuw vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp ule vp<[[VP6]]>, vp<[[VP3]]>
 ; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = DERIVED-IV ir<21> + vp<[[VP4]]> * ir<1>
-; CHECK-NEXT:      CLONE ir<%lv> = load ir<%A>
 ; CHECK-NEXT:      WIDEN ir<%cmp> = icmp uge ir<%iv>, ir<%k>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = logical-and vp<[[VP7]]>, ir<%cmp>
 ; CHECK-NEXT:    Successor(s): pred.store
