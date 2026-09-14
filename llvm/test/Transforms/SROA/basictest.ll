@@ -1330,10 +1330,10 @@ define void @PR15674(ptr %data, ptr %src, i32 %size) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP_SROA_0:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    switch i32 [[SIZE:%.*]], label [[END:%.*]] [
-; CHECK-NEXT:    i32 4, label [[BB4:%.*]]
-; CHECK-NEXT:    i32 3, label [[BB3:%.*]]
-; CHECK-NEXT:    i32 2, label [[BB2:%.*]]
-; CHECK-NEXT:    i32 1, label [[BB1:%.*]]
+; CHECK-NEXT:      i32 4, label [[BB4:%.*]]
+; CHECK-NEXT:      i32 3, label [[BB3:%.*]]
+; CHECK-NEXT:      i32 2, label [[BB2:%.*]]
+; CHECK-NEXT:      i32 1, label [[BB1:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[SRC_GEP3:%.*]] = getelementptr inbounds i8, ptr [[SRC:%.*]], i32 3
@@ -1794,17 +1794,11 @@ entry:
 define void @PR25873(ptr %outData) {
 ; CHECK-LABEL: @PR25873(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 1123418112, ptr [[OUTDATA:%.*]], align 4
-; CHECK-NEXT:    [[OUTDATA_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA]], i64 4
-; CHECK-NEXT:    store i32 1139015680, ptr [[OUTDATA_SROA_IDX]], align 4
+; CHECK-NEXT:    [[TMPDATA_SROA_0_0_VEC_INSERT:%.*]] = insertelement <2 x float> undef, float 1.230000e+02, i64 0
+; CHECK-NEXT:    [[TMPDATA_SROA_0_4_VEC_INSERT:%.*]] = insertelement <2 x float> [[TMPDATA_SROA_0_0_VEC_INSERT]], float 4.560000e+02, i64 1
+; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT:%.*]] = bitcast <2 x float> [[TMPDATA_SROA_0_4_VEC_INSERT]] to i64
+; CHECK-NEXT:    store <2 x float> [[TMPDATA_SROA_0_4_VEC_INSERT]], ptr [[OUTDATA:%.*]], align 4
 ; CHECK-NEXT:    [[TMPDATA_SROA_6_0_OUTDATA_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[OUTDATA]], i64 8
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT:%.*]] = zext i32 1139015680 to i64
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_SHIFT:%.*]] = shl i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_EXT]], 32
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_MASK:%.*]] = and i64 undef, 4294967295
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_4_0_INSERT_INSERT:%.*]] = or i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_MASK]], [[TMPDATA_SROA_6_SROA_4_0_INSERT_SHIFT]]
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_EXT:%.*]] = zext i32 1123418112 to i64
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_MASK:%.*]] = and i64 [[TMPDATA_SROA_6_SROA_4_0_INSERT_INSERT]], -4294967296
-; CHECK-NEXT:    [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT:%.*]] = or i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_MASK]], [[TMPDATA_SROA_6_SROA_0_0_INSERT_EXT]]
 ; CHECK-NEXT:    store i64 [[TMPDATA_SROA_6_SROA_0_0_INSERT_INSERT]], ptr [[TMPDATA_SROA_6_0_OUTDATA_SROA_IDX]], align 4
 ; CHECK-NEXT:    ret void
 ;
