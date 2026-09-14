@@ -2275,9 +2275,11 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
         OMPX_UseMultipleSdmaEngines(
             "LIBOMPTARGET_AMDGPU_USE_MULTIPLE_SDMA_ENGINES", false),
-        OMPX_ApuMaps("OMPX_APU_MAPS", false), AMDGPUStreamManager(*this, Agent),
-        AMDGPUEventManager(*this), AMDGPUSignalManager(*this), Agent(Agent),
-        HostDevice(HostDevice) {}
+        OMPX_ApuMaps("OMPX_APU_MAPS", false),
+        OMPX_EnableDevice2DeviceMemAccess(
+            "LIBOMPTARGET_AMDGPU_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS", false),
+        AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
+        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
 
@@ -3690,6 +3692,12 @@ private:
   /// automatic zero-copy behavior on non-APU GPUs.
   BoolEnvar OMPX_ApuMaps;
 
+  /// Determines whether we call the HSA API to make device memory allocations
+  /// accessible from other agents, so that device-to-device memory copies are
+  /// possible. Host and shared allocations are always made accessible from all
+  /// agents. Default is disabled.
+  BoolEnvar OMPX_EnableDevice2DeviceMemAccess;
+
   /// Stream manager for AMDGPU streams.
   AMDGPUStreamManagerTy AMDGPUStreamManager;
 
@@ -4528,10 +4536,12 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
   if (auto Err = MemoryPool->allocate(Size, &Alloc, Alignment))
     return std::move(Err);
 
-  if (Alloc) {
+  if (Alloc && (Kind == TARGET_ALLOC_HOST || Kind == TARGET_ALLOC_SHARED ||
+                OMPX_EnableDevice2DeviceMemAccess)) {
     // Get a list of agents that can access this memory pool. Inherently
-    // necessary for host or shared allocations Also enabled for device memory
-    // to allow device to device memcpy
+    // necessary for host or shared allocations. Also enabled for device memory
+    // to allow device to device memcpy, but only when
+    // LIBOMPTARGET_AMDGPU_ENABLE_DEVICE_TO_DEVICE_MEM_ACCESS is set.
     llvm::SmallVector<hsa_agent_t> Agents;
     llvm::copy_if(static_cast<AMDGPUPluginTy &>(Plugin).getKernelAgents(),
                   std::back_inserter(Agents), [&](hsa_agent_t Agent) {
