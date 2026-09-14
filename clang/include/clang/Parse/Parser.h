@@ -661,6 +661,7 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
+  IdentifierInfo *Ident__except_single;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -670,6 +671,8 @@ private:
   bool CalledSignatureHelp = false;
 
   IdentifierInfo *getSEHExceptKeyword();
+
+  bool isTokenSEHExcept();
 
   /// Whether to skip parsing of function bodies.
   ///

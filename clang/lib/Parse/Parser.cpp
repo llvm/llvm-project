@@ -56,6 +56,24 @@ IdentifierInfo *Parser::getSEHExceptKeyword() {
   return Ident__except;
 }
 
+bool Parser::isTokenSEHExcept() {
+  if (!Tok.is(tok::identifier))
+    return false;
+
+  const IdentifierInfo *Identifier = Tok.getIdentifierInfo();
+  if (Identifier == getSEHExceptKeyword())
+    return true;
+
+  if (getLangOpts().MSVCCompat) {
+    if (!Ident__except_single)
+      Ident__except_single = PP.getIdentifierInfo("_except");
+    if (Identifier == Ident__except_single)
+      return true;
+  }
+
+  return false;
+}
+
 Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
     : PP(pp),
       PreferredType(&actions.getASTContext(), pp.isCodeCompletionEnabled()),
@@ -548,6 +566,7 @@ void Parser::Initialize() {
       nullptr;
 
   Ident__except = nullptr;
+  Ident__except_single = nullptr;
 
   Ident__exception_code = Ident__exception_info = nullptr;
   Ident__abnormal_termination = Ident___exception_code = nullptr;
