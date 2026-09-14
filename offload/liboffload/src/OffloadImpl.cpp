@@ -716,6 +716,12 @@ Error olMemAllocImplHelper(ol_device_handle_t Device, ol_alloc_type_t Type,
     if (!NewAlloc)
       return NewAlloc.takeError();
 
+    // Check word-size alignment only when no explicit alignment was requested
+    // (olMemAlloc and olMemAllocHost pass zero for the default alignment).
+    if (Alignment == 0)
+      assert(reinterpret_cast<uintptr_t>(*NewAlloc) % alignof(uintptr_t) == 0 &&
+             "allocation does not meet word-size alignment");
+
     void *NewEnd = &static_cast<char *>(*NewAlloc)[Size];
     auto &AllocBases = OffloadContext::get().AllocBases;
     auto &AllocInfoMap = OffloadContext::get().AllocInfoMap;

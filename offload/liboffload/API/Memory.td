@@ -37,6 +37,7 @@ def olMemAlloc : Function {
   let desc = "Creates a memory allocation on the specified device.";
   let details = [
       "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "The returned pointer has word-size alignment (`alignof(uintptr_t)`), regardless of allocation size.",
       "This function can only be used to create device or managed allocations. To create a host allocation use `olMemAllocHost`."
   ];
   let params = [
@@ -58,7 +59,8 @@ def olMemAlloc : Function {
 def olMemAllocHost : Function {
   let desc = "Creates a host memory allocation accessible from the specified device.";
   let details = [
-      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory."
+      "All liboffload allocations share a single virtual address range. There is no risk of multiple devices returning equal pointers to different memory.",
+      "The returned pointer has word-size alignment (`alignof(uintptr_t)`), regardless of allocation size."
   ];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device to allocate on", PARAM_IN>,
