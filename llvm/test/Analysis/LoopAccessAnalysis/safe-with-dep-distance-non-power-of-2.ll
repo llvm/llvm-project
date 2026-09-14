@@ -43,7 +43,7 @@ exit:
 define void @test_may_clobber1(ptr %p) {
 ; CHECK-LABEL: 'test_may_clobber1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 6400 bits, with a maximum safe store-load forward width of 256 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 100, with a maximum safe store-load forward number of elements to operate on equal to 4
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %v = load i64, ptr %a1, align 32 ->
@@ -114,7 +114,7 @@ exit:
 define void @test_may_clobber3(ptr %p) {
 ; CHECK-LABEL: 'test_may_clobber3'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 640 bits, with a maximum safe store-load forward width of 128 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 10, with a maximum safe store-load forward number of elements to operate on equal to 2
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %v = load i64, ptr %a1, align 32 ->
@@ -182,7 +182,7 @@ exit:
 define void @no_high_lmul_or_interleave(ptr %p) {
 ; CHECK-LABEL: 'no_high_lmul_or_interleave'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with a maximum safe vector width of 65536 bits
+; CHECK-NEXT:      Memory dependences are safe with a maximum safe number of elements to operate on equal to 1024
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        BackwardVectorizable:
 ; CHECK-NEXT:            %v = load i64, ptr %a1, align 32 ->
