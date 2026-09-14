@@ -139,7 +139,6 @@ public:
 
   const char *getBitIntBitCountPointer() const {
     DCHECK(isBitIntTy());
-    DCHECK(isSignedBitIntTy());
     // Scan Name for zero and return the next address
     const char *p = getTypeName();
     while (*p != '\0')
@@ -150,7 +149,7 @@ public:
 
   unsigned getIntegerBitCount() const {
     DCHECK(isIntegerTy());
-    if (isSignedBitIntTy()) {
+    if (isBitIntTy()) {
       u32 BitCountValue;
       internal_memcpy(&BitCountValue, getBitIntBitCountPointer(),
                       sizeof(BitCountValue));
@@ -188,7 +187,7 @@ class Value {
   bool isInlineInt() const {
     CHECK(getType().isIntegerTy());
     const unsigned InlineBits = sizeof(ValueHandle) * 8;
-    const unsigned Bits = getType().getIntegerBitWidth();
+    const unsigned Bits = getType().getIntegerBitCount();
     return Bits <= InlineBits;
   }
 

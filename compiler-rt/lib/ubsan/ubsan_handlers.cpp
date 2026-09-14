@@ -336,7 +336,7 @@ static void handleShiftOutOfBoundsImpl(ShiftOutOfBoundsData *Data,
 
   ErrorType ET;
   if (RHSVal.isNegative() ||
-      RHSVal.getPositiveIntValue() >= Data->LHSType.getIntegerBitWidth())
+      RHSVal.getPositiveIntValue() >= Data->LHSType.getIntegerBitCount())
     ET = ErrorType::InvalidShiftExponent;
   else
     ET = ErrorType::InvalidShiftBase;
@@ -352,7 +352,7 @@ static void handleShiftOutOfBoundsImpl(ShiftOutOfBoundsData *Data,
     else
       Diag(Loc, DL_Error, ET,
            "shift exponent %0 is too large for %1-bit type %2")
-          << RHSVal << Data->LHSType.getIntegerBitWidth() << Data->LHSType;
+          << RHSVal << Data->LHSType.getIntegerBitCount() << Data->LHSType;
   } else {
     if (LHSVal.isNegative())
       Diag(Loc, DL_Error, ET, "left shift of negative value %0") << LHSVal;
@@ -621,16 +621,16 @@ static void handleImplicitConversion(ImplicitConversionData *Data,
     Diag(Loc, DL_Error, ET,
          "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
          "type %4 changed the value to %5 (%6-bit bitfield, %7signed)")
-        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitCount()
         << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
         << Data->BitfieldBits << (DstSigned ? "" : "un");
   else
     Diag(Loc, DL_Error, ET,
          "implicit conversion from type %0 of value %1 (%2-bit, %3signed) to "
          "type %4 changed the value to %5 (%6-bit, %7signed)")
-        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitWidth()
+        << SrcTy << Value(SrcTy, Src) << SrcTy.getIntegerBitCount()
         << (SrcSigned ? "" : "un") << DstTy << Value(DstTy, Dst)
-        << DstTy.getIntegerBitWidth() << (DstSigned ? "" : "un");
+        << DstTy.getIntegerBitCount() << (DstSigned ? "" : "un");
 }
 
 void __ubsan::__ubsan_handle_implicit_conversion(ImplicitConversionData *Data,
