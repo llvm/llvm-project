@@ -20,7 +20,10 @@
 #include "clang/AST/Type.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/ConvertUTF.h"
 #include <numeric>
 
 namespace clang {
@@ -107,26 +110,52 @@ public:
     SmallVector<size_t, 16> ElementIndicies(NumElements);
     std::iota(ElementIndicies.begin(), ElementIndicies.end(), 0);
 
+    // Precompute the UTF-16 form of each string key. The runtime stores keys as
+    // UTF-16 and looks them up by UTF-16 code-unit order, so we must sort by the
+    // same order here. Sorting by the raw UTF-8 bytes instead would diverge for
+    // keys mixing characters in U+E000..U+FFFF with astral characters
+    // (U+10000..U+10FFFF), because UTF-16 encodes the latter with lead
+    // surrogates (0xD800..0xDBFF) that sort *below* 0xE000 -- causing the
+    // runtime's lookup to miss keys that are actually present.
+    //
+    // A key need not be well-formed UTF-8: string literals with invalid or
+    // partial sequences are legal in the AST (Sema warns about them separately;
+    // see warn_objc_dictionary_ill_formed_utf8_key). We deliberately mirror the
+    // constant CFString emitter (CodeGenModule::GetConstantCFStringEntry), which
+    // runs ConvertUTF8toUTF16 with strictConversion and keeps whatever prefix
+    // converts successfully, so we sort by exactly the code units the string is
+    // stored and looked up as. Any trailing bytes that fail to convert are
+    // dropped from the sort key; this cannot crash and yields a valid
+    // strict-weak ordering regardless of well-formedness.
+    SmallVector<SmallVector<llvm::UTF16, 16>, 16> KeysUTF16(NumElements);
+    for (size_t I = 0; I < NumElements; ++I) {
+      Expr *const K = E->getKeyValueElement(I).Key->IgnoreImpCasts();
+      auto *SL = dyn_cast<ObjCStringLiteral>(K);
+      assert(SL && "Non-constant literals should not be sorted to "
+                   "maintain existing behavior");
+      // NOTE: Using the `StringLiteral->getString()` since it checks that
+      //       `chars` are 1 byte
+      StringRef KS = SL->getString()->getString();
+      SmallVectorImpl<llvm::UTF16> &Dst = KeysUTF16[I];
+      Dst.resize(KS.size()); // UTF-16 needs <= as many code units as UTF-8.
+      const llvm::UTF8 *SrcPtr = reinterpret_cast<const llvm::UTF8 *>(KS.data());
+      llvm::UTF16 *DstPtr = Dst.data();
+      llvm::ConvertUTF8toUTF16(&SrcPtr, SrcPtr + KS.size(), &DstPtr,
+                               DstPtr + Dst.size(), llvm::strictConversion);
+      // ConvertUTF8toUTF16 advances DstPtr to the end of the converted prefix.
+      Dst.truncate(DstPtr - Dst.data());
+    }
+
     // Now perform the sorts and shift the indicies as needed
-    std::stable_sort(
-        ElementIndicies.begin(), ElementIndicies.end(),
-        [E, O](size_t LI, size_t RI) {
-          Expr *const LK = E->getKeyValueElement(LI).Key->IgnoreImpCasts();
-          Expr *const RK = E->getKeyValueElement(RI).Key->IgnoreImpCasts();
-
-          if (!isa<ObjCStringLiteral>(LK) || !isa<ObjCStringLiteral>(RK))
-            llvm_unreachable("Non-constant literals should not be sorted to "
-                             "maintain existing behavior");
-
-          // NOTE: Using the `StringLiteral->getString()` since it checks that
-          //       `chars` are 1 byte
-          StringRef LKS = cast<ObjCStringLiteral>(LK)->getString()->getString();
-          StringRef RKS = cast<ObjCStringLiteral>(RK)->getString()->getString();
-
-          // Do an alpha sort to aid in with de-dupe at link time
-          // `O(log n)` worst case lookup at runtime supported by `Foundation`
+    llvm::stable_sort(
+        ElementIndicies, [O, &KeysUTF16](size_t LI, size_t RI) {
+          // Sort by UTF-16 code unit to match the runtime's lookup order. This
+          // is a deterministic total order, so it still aids link-time de-dupe,
+          // and it supports the runtime's `O(log n)` worst-case lookup.
+          // ArrayRef::operator< is a lexicographic code-unit comparison.
           if (O == Options::Sorted)
-            return LKS < RKS;
+            return ArrayRef<llvm::UTF16>(KeysUTF16[LI]) <
+                   ArrayRef<llvm::UTF16>(KeysUTF16[RI]);
           llvm_unreachable("Unexpected `NSDictionaryBuilder::Options given");
         });
 
