@@ -496,12 +496,16 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
     // If only one of the two is known, the higher one is unknown, so the
     // result must be unknown too.
     VPBranchOnMaskRecipe *Guard2 = Region2->getEntryBranchOnMask();
-    std::optional<BlockFrequency> Freq1 =
+    std::optional<VPExecutionFrequency> Freq1 =
         Region1->getEntryBranchOnMask()->getExecutionFrequency();
-    std::optional<BlockFrequency> Freq2 = Guard2->getExecutionFrequency();
+    std::optional<VPExecutionFrequency> Freq2 = Guard2->getExecutionFrequency();
     if (Freq1 && Freq2) {
-      if (*Freq2 < *Freq1)
+      if (Freq2->Freq < Freq1->Freq) {
+        // Freq1's frequency is taken, but it is only as trustworthy as the
+        // less trustworthy of the two.
+        Freq1.emplace(Freq1->Freq, Freq1->IsEstimated || Freq2->IsEstimated);
         Guard2->setExecutionFrequency(Freq1, Plan.getContext());
+      }
     } else if (Freq2) {
       Guard2->clearExecutionFrequency();
     }
@@ -790,7 +794,8 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *Def = dyn_cast<VPRecipeWithIRFlags>(U);
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
-      if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
+      if (!Def ||
+          !isa<VPReplicateRecipe, VPWidenRecipe, VPWidenGEPRecipe>(Def) ||
           Def->user_empty() || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
@@ -1258,6 +1263,12 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
       Def->getScalarType() == A->getScalarType())
     return A;
 
+  // Shifting by zero is a no-op.
+  if (match(Def, m_CombineOr(m_Shl(m_VPValue(A), m_ZeroInt()),
+                             m_CombineOr(m_LShr(m_VPValue(A), m_ZeroInt()),
+                                         m_AShr(m_VPValue(A), m_ZeroInt())))))
+    return A;
+
   if (match(Def, m_Trunc(m_ZExtOrSExt(m_VPValue(A)))))
     if (Def->getScalarType() == A->getScalarType())
       return A;
@@ -1364,6 +1375,13 @@ static VPValue *simplifyRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
     return A;
 
   return nullptr;
+}
+
+/// Returns true if \p V is available at the end of \p VPBB, i.e. it either is a
+/// live-in from the original IR or defined in \p VPBB.
+static bool isAvailableAtEndOf(VPValue *V, const VPBasicBlock *VPBB) {
+  VPRecipeBase *DefR = V->getDefiningRecipe();
+  return DefR ? DefR->getParent() == VPBB : isa<VPIRValue>(V);
 }
 
 /// Combine \p Def into a simpler recipe. May modify or create new recipes.
@@ -1664,20 +1682,20 @@ static VPSingleDefRecipe *combineRecipe(VPlan &Plan, VPSingleDefRecipe *Def) {
   VPValue *IVInc;
   if (match(Def, m_Add(m_VPValue(IVInc, m_Add(m_VPValue(X), m_VPValue())),
                        m_VPValue(Y))) &&
-      isa<VPIRValue>(Y) && match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc)))) {
+      match(X, m_VPPhi(m_ZeroInt(), m_Specific(IVInc))) &&
+      IVInc->getNumUsers() == 2) {
     auto *Phi = cast<VPPhi>(X);
-    if (IVInc->getNumUsers() == 2) {
-      // If Phi has a second user (besides IVInc's defining recipe), it must
-      // be Inc = Phi + Y for the fold to apply.
-      auto *Inc = dyn_cast_or_null<VPSingleDefRecipe>(
-          findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
-      if (Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) {
-        Def->replaceAllUsesWith(IVInc);
-        if (Inc)
-          Inc->replaceAllUsesWith(Phi);
-        Phi->setOperand(0, Y);
-        return Def;
-      }
+    // If Phi has a second user (besides IVInc's defining recipe), it must be
+    // Inc = Phi + Y for the fold to apply.
+    auto *Inc = dyn_cast_if_present<VPSingleDefRecipe>(
+        findUserOf(Phi, m_Add(m_Specific(Phi), m_Specific(Y))));
+    if ((Phi->getNumUsers() == 1 || (Phi->getNumUsers() == 2 && Inc)) &&
+        isAvailableAtEndOf(Y, Phi->getIncomingBlock(0))) {
+      Def->replaceAllUsesWith(IVInc);
+      if (Inc)
+        Inc->replaceAllUsesWith(Phi);
+      Phi->setOperand(0, Y);
+      return Def;
     }
   }
 
@@ -2541,17 +2559,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
              "Only ICmps should not need extending the result.");
       assert(!isa<VPWidenStoreRecipe>(&R) && "stores cannot be narrowed");
 
-      // For loads/intrinsics we don't recreate the recipe; just wrap the
-      // original wide result in a ZExt to OldResTy.
-      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R)) {
-        if (OldResSizeInBits != NewResSizeInBits) {
-          auto *Ext = VPBuilder::getToInsertAfter(&R).createWidenCast(
-              Instruction::ZExt, ResultVPV, OldResTy);
-          ResultVPV->replaceAllUsesWith(Ext);
-          Ext->setOperand(0, ResultVPV);
-        }
+      // Loads/intrinsics are not recreated; they keep producing their original
+      // wide result and narrowed users will truncate it as needed below.
+      if (isa<VPWidenLoadRecipe, VPWidenIntrinsicRecipe>(&R))
         continue;
-      }
 
       // Shrink operands by introducing truncates as needed.
       unsigned StartIdx =
@@ -2579,9 +2590,10 @@ void VPlanTransforms::truncateToMinimalBitwidths(
       NWR->insertBefore(&R);
 
       // Wrap NWR in a ZExt to preserve the original wide type for downstream
-      // users (unless this is an ICmp, which produces i1 regardless).
+      // users. Not needed for ICmps, whose result type is i1 irrespective of
+      // the narrowing of their operands.
       VPValue *Replacement = NWR->getVPSingleValue();
-      if (OldResSizeInBits != NewResSizeInBits)
+      if (Replacement->getScalarType() != OldResTy)
         Replacement =
             VPBuilder::getToInsertAfter(NWR)
                 .createWidenCast(Instruction::ZExt, Replacement, OldResTy)
@@ -2998,7 +3010,7 @@ void VPlanTransforms::createInterleaveGroups(
 /// the addresses (in GEP/PtrAdd form) of any (non-masked) load used in
 /// generating the values for the comparison. The recipes are stored in
 /// \p Recipes.
-static std::optional<VPValue *>
+static VPValue *
 getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
                              VPBasicBlock *LatchVPBB) {
   // Given a plain CFG VPlan loop with countable latch exiting block
@@ -3055,7 +3067,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
   if (!match(LatchVPBB->getTerminator(),
              m_BranchOnTwoConds(m_AnyOf(m_VPValue(UncountableCondition)),
                                 m_VPValue())))
-    return std::nullopt;
+    return nullptr;
 
   SmallVector<VPValue *, 4> Worklist;
   Worklist.push_back(UncountableCondition);
@@ -3070,7 +3082,7 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
     //        starting with the simplest set of loops we can, and multiple
     //        users means needing to add PHI nodes in the transform.
     if (V->getNumUsers() > 1)
-      return std::nullopt;
+      return nullptr;
 
     VPValue *Op1, *Op2;
     // Walk back through recipes until we find at least one load from memory.
@@ -3082,11 +3094,11 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
       VPRecipeBase *GepR = Op1->getDefiningRecipe();
       // Only matching base + single offset term for now.
       if (GepR->getNumOperands() != 2)
-        return std::nullopt;
+        return nullptr;
       // Matching a GEP with a loop-invariant base ptr.
       if (!match(GepR, m_VPInstruction<Instruction::GetElementPtr>(
                            m_LiveIn(), m_VPValue())))
-        return std::nullopt;
+        return nullptr;
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
       Recipes.push_back(cast<VPInstruction>(GepR));
     } else if (match(V, m_VPInstruction<VPInstruction::MaskedCond>(
@@ -3094,14 +3106,14 @@ getRecipesForUncountableExit(SmallVectorImpl<VPInstruction *> &Recipes,
       Worklist.push_back(Op1);
       Recipes.push_back(cast<VPInstruction>(V->getDefiningRecipe()));
     } else
-      return std::nullopt;
+      return nullptr;
   }
 
   // If we couldn't match anything, don't return the condition. It may be
   // defined outside the loop.
   if (Recipes.empty() ||
       none_of(Recipes, match_fn(m_VPInstruction<Instruction::GetElementPtr>())))
-    return std::nullopt;
+    return nullptr;
 
   return UncountableCondition;
 }
@@ -3176,8 +3188,7 @@ static bool handleUncountableExitsWithSideEffects(
   // version of the loop.
   SmallVector<VPInstruction *, 8> ConditionRecipes;
 
-  std::optional<VPValue *> Cond =
-      getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
+  VPValue *Cond = getRecipesForUncountableExit(ConditionRecipes, LatchVPBB);
   if (!Cond)
     return false;
 
@@ -3244,7 +3255,7 @@ static bool handleUncountableExitsWithSideEffects(
   // Create a mask to represent all lanes that fully execute in the vector loop,
   // stopping short of any early exit.
   VPBuilder MaskBuilder(HeaderVPBB, InsertIt);
-  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(*Cond);
+  VPValue *FirstActive = MaskBuilder.createFirstActiveLane(Cond);
   Type *IVScalarTy = IV->getScalarType();
   VPValue *Zero = Plan.getZero(IVScalarTy);
   FirstActive =

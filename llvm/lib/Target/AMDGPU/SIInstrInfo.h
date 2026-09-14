@@ -234,6 +234,7 @@ protected:
                            AMDGPU::OpName Src1OpName) const;
   bool isLegalToSwap(const MachineInstr &MI, unsigned fromIdx,
                      unsigned toIdx) const;
+  bool isNonCommutableDPP(const MachineInstr &MI) const;
   MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx0,
                                        unsigned OpIdx1) const override;
@@ -1189,14 +1190,6 @@ public:
   static bool isGFX12CacheInvOrWBInst(unsigned Opc) {
     return Opc == AMDGPU::GLOBAL_INV || Opc == AMDGPU::GLOBAL_WB ||
            Opc == AMDGPU::GLOBAL_WBINV;
-  }
-
-  static bool isF16PseudoScalarTrans(unsigned Opcode) {
-    return Opcode == AMDGPU::V_S_EXP_F16_e64 ||
-           Opcode == AMDGPU::V_S_LOG_F16_e64 ||
-           Opcode == AMDGPU::V_S_RCP_F16_e64 ||
-           Opcode == AMDGPU::V_S_RSQ_F16_e64 ||
-           Opcode == AMDGPU::V_S_SQRT_F16_e64;
   }
 
   static bool doesNotReadTiedSource(const MachineInstr &MI) {
