@@ -950,6 +950,13 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                    clang::options::OPT_fno_openacc_multiple_names_in_routine,
                    true));
 
+  // -f{no-}openacc-combined-loop-firstprivate
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenACCCombinedLoopFirstprivate,
+      args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
+                   clang::options::OPT_fno_openacc_combined_loop_firstprivate,
+                   true));
+
   // -f{no-}prefer-intrinsic-module-use-association
   if (const auto *arg = args.getLastArg(
           clang::options::OPT_fprefer_intrinsic_module_use_association,
@@ -1822,12 +1829,6 @@ bool CompilerInvocation::createFromArgs(
           args.getLastArg(clang::options::OPT_frepack_arrays_contiguity_EQ))
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
-
-  // -f[no-]openacc-combined-loop-firstprivate
-  invoc.loweringOpts.setOpenACCCombinedLoopFirstprivate(
-      args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
-                   clang::options::OPT_fno_openacc_combined_loop_firstprivate,
-                   /*default=*/true));
 
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
