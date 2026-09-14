@@ -754,8 +754,8 @@ def : SchedAlias<WriteST, V1Write_1c_1L01_1D>;
 // Store register, immed offset, index
 def : SchedAlias<WriteSTIdx, V1Write_1c_1L01_1D>;
 
-// Store register, register offset, extend, scale by 2
-// Store register, register offset, extend
+// Store register, register offset, scaled by 2
+// Store register, register offset, extend, scale by 1
 def V1WriteSTRH : SchedWriteVariant<[
   SchedVar<NeoverseScaledIdxPred, [V1Write_1c_1I_1L01_1D]>,
   SchedVar<NoSchedPred,	  [V1Write_1c_1L01_1D]>]>;
