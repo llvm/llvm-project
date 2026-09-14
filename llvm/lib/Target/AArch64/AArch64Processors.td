@@ -362,7 +362,8 @@ def TuneA64FX : SubtargetFeature<"a64fx", "ARMProcFamily", "A64FX",
                                  FeatureStorePairSuppress,
                                  FeaturePredictableSelectIsExpensive,
                                  FeatureDisableUnpredicatedLdStLower,
-                                 FeatureMaxInterleaveFactor4]>;
+                                 FeatureMaxInterleaveFactor4,
+                                 FeatureUseReciprocalFDivCombineThreshold2]>;
 
 def TuneMONAKA : SubtargetFeature<"fujitsu-monaka", "ARMProcFamily", "MONAKA",
                                  "Fujitsu FUJITSU-MONAKA processors", [
@@ -424,7 +425,6 @@ def TuneAppleA14 : SubtargetFeature<"apple-a14", "ARMProcFamily", "AppleA14",
                                     FeatureAggressiveFMA,
                                     FeatureAlignCmpCSelPairs,
                                     FeatureFastLD1Single,
-                                    FeatureFuseAddress,
                                     FeatureFuseArithmeticLogic,
                                     FeatureFuseCmpCSel,
                                     FeatureFuseLiterals,

@@ -30,4 +30,7 @@ struct sigevent {
 #endif
 };
 
+// Self-define for compatibility with code assuming a macro.
+#define sigev_notify_thread_id sigev_notify_thread_id
+
 #endif // LLVM_LIBC_TYPES_STRUCT_SIGEVENT_H

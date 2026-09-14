@@ -206,6 +206,7 @@ LLVMInitializeHexagonTarget() {
   RegisterTargetMachine<HexagonTargetMachine> X(getTheHexagonTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeHexagonAlignGlobalArraysPass(PR);
   initializeHexagonAsmPrinterPass(PR);
   initializeHexagonBitSimplifyPass(PR);
   initializeHexagonConstExtendersPass(PR);
@@ -389,6 +390,11 @@ void HexagonPassConfig::addIRPasses() {
   bool NoOpt = (getOptLevel() == CodeGenOptLevel::None);
 
   if (!NoOpt) {
+    // Raise the alignment of global integer arrays to 8 bytes. At -O1/-O2,
+    // reduce .rodata size by keeping byte/half-word arrays at their natural
+    // alignment; apply full 8-byte alignment at -O3.
+    addPass(createHexagonAlignGlobalArrays(getOptLevel() !=
+                                           CodeGenOptLevel::Aggressive));
     if (EnableInstSimplify)
       addPass(createInstSimplifyLegacyPass());
     addPass(createDeadCodeEliminationPass());

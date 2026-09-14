@@ -343,14 +343,17 @@ struct ExpandShapeOpInterface
                           const BufferizationOptions &options,
                           BufferizationState &state) const {
     auto expandShapeOp = cast<tensor::ExpandShapeOp>(op);
-    auto tensorResultType = expandShapeOp.getResultType();
+    FailureOr<BufferLikeType> maybeResultType =
+        bufferization::getBufferType(expandShapeOp.getResult(), options, state);
+    if (failed(maybeResultType))
+      return failure();
     FailureOr<Value> buffer =
         getBuffer(rewriter, expandShapeOp.getSrc(), options, state);
     if (failed(buffer))
       return failure();
 
     auto memrefExpandShape = memref::ExpandShapeOp::create(
-        rewriter, op->getLoc(), tensorResultType.getShape(), *buffer,
+        rewriter, op->getLoc(), *maybeResultType, *buffer,
         expandShapeOp.getReassociationIndices(),
         expandShapeOp.getMixedOutputShape());
     replaceOpWithBufferizedValues(rewriter, op,

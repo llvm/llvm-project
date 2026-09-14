@@ -11,6 +11,7 @@
 
 #include "AArch64TargetMachine.h"
 #include "AArch64.h"
+#include "AArch64AsmPrinter.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64MachineScheduler.h"
 #include "AArch64MacroFusion.h"
@@ -295,7 +296,10 @@ bool AArch64TargetMachine::isGlobalISelOptNone() const {
           !GlobalISelFlag);
 }
 
-void AArch64TargetMachine::reset() { SubtargetMap.clear(); }
+void AArch64TargetMachine::reset() {
+  SubtargetMap.clear();
+  LastSubtarget = nullptr;
+}
 
 //===----------------------------------------------------------------------===//
 // AArch64 Lowering public interface.
@@ -435,6 +439,12 @@ AArch64TargetMachine::~AArch64TargetMachine() = default;
 
 const AArch64Subtarget *
 AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
+  // Constructing the subtarget key is not cheap, avoid rebuilding it for
+  // repeated queries with the same function attributes.
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  if (LastSubtarget && LastSubtargetAttrs == FnAttrs)
+    return LastSubtarget;
+
   Attribute CPUAttr = F.getFnAttribute("target-cpu");
   Attribute TuneAttr = F.getFnAttribute("tune-cpu");
   Attribute FSAttr = F.getFnAttribute("target-features");
@@ -502,7 +512,9 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
   if (IsStreaming && !I->hasSME())
     reportFatalUsageError("streaming SVE functions require SME");
 
-  return I.get();
+  LastSubtargetAttrs = FnAttrs;
+  LastSubtarget = I.get();
+  return LastSubtarget;
 }
 
 // Encourage placing FORM_TRANSPOSED_REG immediately before the instruction that

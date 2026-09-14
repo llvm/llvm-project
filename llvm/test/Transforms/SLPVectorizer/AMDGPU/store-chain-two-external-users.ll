@@ -4,32 +4,29 @@
 ; Use a negative threshold to test whether the store chain reaches costing,
 ; independently of the target cost model.
 ;
-; A store chain is rejected when every stored value has more than one user
-; outside the chain. The cases below cover that early reject and IR shapes a
-; refined outside-user heuristic will handle in a follow-up change.
+; A store chain is rejected when every stored value has either more than two
+; users outside the chain, or exactly two outside users with at least one that
+; is not a benign carry dependence. A benign outside user is a cmp, binop, or
+; select (in any block), or a phi with exactly two incoming values.
 
 declare void @use(i32)
 
-; Two outside users (cmp and add) keep the store chain scalar under the >1
-; heuristic. Independent arithmetic may still be vectorized before the scalar
-; stores.
+; Two benign outside users let the store chain reach costing. This distinguishes
+; the refined heuristic from the previous >1 limit and covers values used by
+; both a compare and a dependent add.
 define void @store_chain_two_benign_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1) {
 ; CHECK-LABEL: define void @store_chain_two_benign_users(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[TMP4]], [[TMP3]]
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = zext <2 x i1> [[TMP5]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    store i32 [[TMP10]], ptr [[DST]], align 4
-; CHECK-NEXT:    store i32 [[TMP11]], ptr [[DST1]], align 4
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i32> [[TMP7]], i64 0
 ; CHECK-NEXT:    call void @use(i32 [[TMP8]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP7]], i64 1
@@ -53,8 +50,9 @@ entry:
   ret void
 }
 
-; Two non-benign call users keep the store chain scalar under the >1 heuristic.
-; Independent arithmetic may still be vectorized before the scalar stores.
+; Two non-benign call users keep the store chain scalar.
+; Independent arithmetic may still be vectorized before the scalar
+; stores.
 define void @store_chain_two_call_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1) {
 ; CHECK-LABEL: define void @store_chain_two_call_users(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]]) {
@@ -88,7 +86,7 @@ entry:
   ret void
 }
 
-; More than two outside users keep the store chain scalar under the >1 heuristic.
+; Three benign outside users keep the store chain scalar.
 define void @store_chain_three_benign_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
 ; CHECK-LABEL: define void @store_chain_three_benign_users(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
@@ -147,7 +145,7 @@ entry:
   ret void
 }
 
-; One outside user is still allowed: the store chain reaches costing.
+; One non-benign outside user is still allowed, matching the original >1 heuristic.
 define void @store_chain_one_call_user(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1) {
 ; CHECK-LABEL: define void @store_chain_one_call_user(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]]) {
@@ -175,8 +173,9 @@ entry:
   ret void
 }
 
-; Each stored value has two outside users in another block. The entry-block add
-; pair still vectorizes and the stores are merged.
+; Two outside users that are cmp/binop/select but live in a *different* block are
+; still benign: the heuristic is block-agnostic. Each stored value has exactly
+; two cross-block add users, so the chain reaches costing.
 define void @store_chain_two_cross_block_benign(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
 ; CHECK-LABEL: define void @store_chain_two_cross_block_benign(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
@@ -230,14 +229,12 @@ exit:
   ret void
 }
 
-; Each stored value has two outside users (a two-incoming phi and an add), so
-; the >1 heuristic keeps the store chain scalar. Loop arithmetic may still
-; vectorize before the scalar stores.
+; A two-incoming phi is a benign outside user. Each incremented limb feeds one
+; two-incoming phi plus one add, so the store chain reaches costing.
 define void @store_chain_two_incoming_phi(ptr %state, i32 %init0, i32 %init1, i32 %n) {
 ; CHECK-LABEL: define void @store_chain_two_incoming_phi(
 ; CHECK-SAME: ptr [[STATE:%.*]], i32 [[INIT0:%.*]], i32 [[INIT1:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds i32, ptr [[STATE]], i64 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[INIT0]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[INIT1]], i64 1
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -245,10 +242,7 @@ define void @store_chain_two_incoming_phi(ptr %state, i32 %init0, i32 %init1, i3
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi <2 x i32> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP3:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3]] = add <2 x i32> [[TMP2]], splat (i32 1)
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
-; CHECK-NEXT:    store i32 [[TMP9]], ptr [[STATE]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
-; CHECK-NEXT:    store i32 [[TMP10]], ptr [[S1]], align 4
+; CHECK-NEXT:    store <2 x i32> [[TMP3]], ptr [[STATE]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[IV]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[TMP3]], [[TMP5]]
@@ -284,8 +278,8 @@ exit:
   ret void
 }
 
-; Two outside users keep the store chain scalar under the >1 heuristic even when
-; they live in another block.
+; Two non-benign outside users keep the store chain scalar even when they live in
+; a different block: block placement does not make a call benign.
 define void @store_chain_two_cross_block_calls(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
 ; CHECK-LABEL: define void @store_chain_two_cross_block_calls(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
@@ -327,7 +321,9 @@ exit:
   ret void
 }
 
-; Two outside users keep the store chain scalar under the >1 heuristic.
+; Exactly two outside users where one is benign (add) and one is non-benign
+; (call) keeps the store chain scalar: a single non-benign user among the two is
+; enough to reject.
 define void @store_chain_two_mixed_users(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1) {
 ; CHECK-LABEL: define void @store_chain_two_mixed_users(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]]) {
@@ -366,34 +362,31 @@ entry:
   ret void
 }
 
-; Each stored value has two outside users (two two-incoming phis), so the >1
-; heuristic keeps the store chain scalar. Join PHI users may still vectorize
-; before the scalar stores.
+; Two two-incoming join phis are benign. Each stored value has exactly two such
+; outside users, so the store chain reaches costing.
 define void @store_chain_two_join_phis(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i1 %cond) {
 ; CHECK-LABEL: define void @store_chain_two_join_phis(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
-; CHECK-NEXT:    [[A0:%.*]] = add i32 [[X0]], [[Y0]]
-; CHECK-NEXT:    [[A1:%.*]] = add i32 [[X1]], [[Y1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = add <2 x i32> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
 ; CHECK:       [[LEFT]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x i32> poison, i32 [[A0]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i32> poison, i32 [[A1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP4]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    br label %[[MERGE:.*]]
 ; CHECK:       [[RIGHT]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[Y0]], i64 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i32> [[TMP2]], i32 [[X0]], i64 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i32> poison, i32 [[Y1]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[X1]], i64 1
 ; CHECK-NEXT:    br label %[[MERGE]]
 ; CHECK:       [[MERGE]]:
 ; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ [[TMP5]], %[[LEFT]] ], [ [[TMP7]], %[[RIGHT]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP3]], %[[LEFT]] ], [ [[TMP9]], %[[RIGHT]] ]
-; CHECK-NEXT:    store i32 [[A0]], ptr [[DST]], align 4
-; CHECK-NEXT:    store i32 [[A1]], ptr [[DST1]], align 4
+; CHECK-NEXT:    [[TMP11:%.*]] = phi <2 x i32> [ [[TMP6]], %[[LEFT]] ], [ [[TMP9]], %[[RIGHT]] ]
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP10]], i64 0
 ; CHECK-NEXT:    call void @use(i32 [[TMP12]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP10]], i64 1
@@ -427,8 +420,8 @@ merge:
   ret void
 }
 
-; Each stored value has two outside users (three-incoming phis). The >1
-; heuristic keeps the store chain scalar.
+; Three-incoming phis are not benign. Exactly two such outside users keep the
+; store chain scalar.
 define void @store_chain_two_three_incoming_phis(ptr %dst, i32 %x0, i32 %x1, i32 %y0, i32 %y1, i32 %sel) {
 ; CHECK-LABEL: define void @store_chain_two_three_incoming_phis(
 ; CHECK-SAME: ptr [[DST:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i32 [[SEL:%.*]]) {

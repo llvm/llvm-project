@@ -46,9 +46,6 @@ std::string guard(llvm::StringRef Code) {
   return "#pragma once\n" + Code.str();
 }
 
-MATCHER_P2(FileRange, File, Range, "") {
-  return Location{URIForFile::canonicalize(File, testRoot()), Range} == arg;
-}
 MATCHER(declRange, "") {
   const LocatedSymbol &Sym = ::testing::get<0>(arg);
   const Range &Range = ::testing::get<1>(arg);

@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <limits>
+#include <list>
 
 namespace llvm::ubi {
 
@@ -1518,7 +1519,9 @@ public:
     case Intrinsic::vector_reduce_fadd:
     case Intrinsic::vector_reduce_fmul:
     case Intrinsic::vector_reduce_fmaximum:
-    case Intrinsic::vector_reduce_fminimum: {
+    case Intrinsic::vector_reduce_fminimum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+    case Intrinsic::vector_reduce_fminimumnum: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
       const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
                             IID == Intrinsic::vector_reduce_fmul;
@@ -1558,6 +1561,12 @@ public:
           break;
         case Intrinsic::vector_reduce_fminimum:
           *Res = minimum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fmaximumnum:
+          *Res = maximumnum(*Res, Op);
+          break;
+        case Intrinsic::vector_reduce_fminimumnum:
+          *Res = minimumnum(*Res, Op);
           break;
         default:
           llvm_unreachable("Unexpected intrinsic ID");
@@ -2465,6 +2474,7 @@ public:
   void visitIntToFPInst(Instruction &I, bool IsSigned) {
     const fltSemantics &DstSem =
         I.getType()->getScalarType()->getFltSemantics();
+    FastMathFlags FMF = cast<FPMathOperator>(I).getFastMathFlags();
 
     visitUnOp(I, [&](const AnyValue &Operand) -> AnyValue {
       if (Operand.isPoison())
@@ -2480,7 +2490,8 @@ public:
       Res.convertFromAPInt(Operand.asInteger(), /*IsSigned=*/IsSigned,
                            Ctx.getCurrentRoundingMode());
 
-      return AnyValue(Res);
+      // We need IsInput=true here because the nsz flag applies to the output.
+      return handleFMFFlags(Res, FMF, /*IsInput=*/true);
     });
   }
 
@@ -2625,7 +2636,7 @@ public:
   }
 
   void visitAllocaInst(AllocaInst &AI) {
-    uint64_t AllocSize = Ctx.getEffectiveTypeAllocSize(AI.getAllocatedType());
+    uint64_t AllocSize = Ctx.getEffectiveTypeSize(AI.getAllocationBaseSize(DL));
     if (AI.isArrayAllocation()) {
       auto &Size = getValue(AI.getArraySize());
       if (Size.isPoison()) {

@@ -22,9 +22,9 @@
 // CHECK:           %[[VAL_8:.*]] = llvm.alloca %[[VAL_7]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK:           %[[VAL_9:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_10:.*]] = llvm.alloca %[[VAL_9]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-// CHECK:           %[[VAL_11:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK:           %[[VAL_13:.*]] = llvm.mlir.constant(4 : index) : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK:           %[[VAL_13:.*]] = llvm.mlir.constant(4 : i64) : i64
 // CHECK:           %[[VAL_14:.*]] = llvm.mlir.constant(72 : i32) : i32
 // CHECK:           "llvm.intr.memcpy"(%[[VAL_10]], %[[VAL_0]], %[[VAL_14]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_15:.*]] = llvm.getelementptr %[[VAL_10]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>
@@ -116,8 +116,8 @@ func.func @test_char4(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?x?x!fir.cha
 // CHECK:           %[[VAL_8:.*]] = llvm.alloca %[[VAL_7]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
 // CHECK:           %[[VAL_9:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:           %[[VAL_10:.*]] = llvm.alloca %[[VAL_9]] x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
-// CHECK:           %[[VAL_11:.*]] = llvm.mlir.constant(0 : index) : i64
-// CHECK:           %[[VAL_12:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:           %[[VAL_11:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:           %[[VAL_12:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK:           %[[VAL_13:.*]] = llvm.mlir.constant(72 : i32) : i32
 // CHECK:           "llvm.intr.memcpy"(%[[VAL_10]], %[[VAL_0]], %[[VAL_13]]) <{arg_attrs = [{{.*}}], isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
 // CHECK:           %[[VAL_14:.*]] = llvm.getelementptr %[[VAL_10]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<2 x array<3 x i64>>)>

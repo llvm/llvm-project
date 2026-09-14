@@ -169,10 +169,6 @@ bool shouldPrint(const BinaryFunction &Function) {
 namespace llvm {
 namespace bolt {
 
-template <typename R> static bool emptyRange(const R &Range) {
-  return Range.begin() == Range.end();
-}
-
 /// Gets debug line information for the instruction located at the given
 /// address in the original binary. Returns an optional DebugLineTableRowRef
 /// that references the corresponding row in the DWARF line table. Since binary
@@ -1330,13 +1326,6 @@ Error BinaryFunction::disassemble() {
   // basic block.
   Labels[0] = Ctx->createNamedTempSymbol("BB0");
 
-  // Map offsets in the function to a label that should always point to the
-  // corresponding instruction. This is used for labels that shouldn't point to
-  // the start of a basic block but always to a specific instruction. This is
-  // used, for example, on RISC-V where %pcrel_lo relocations point to the
-  // corresponding %pcrel_hi.
-  LabelsMapType InstructionLabels;
-
   uint64_t Size = 0; // instruction size
   for (uint64_t Offset = 0; Offset < getSize(); Offset += Size) {
     MCInst Instruction;
@@ -1423,7 +1412,8 @@ Error BinaryFunction::disassemble() {
 
     if (MIB->isBranch(Instruction) || MIB->isCall(Instruction)) {
       uint64_t TargetAddress = 0;
-      if (MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
+      if (!MIB->isIndirectBranch(Instruction) &&
+          MIB->evaluateBranch(Instruction, AbsoluteInstrAddr, Size,
                               TargetAddress)) {
         // Check if the target is within the same function. Otherwise it's
         // a call, possibly a tail call.
@@ -1501,42 +1491,6 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isRISCV()) {
-      // Check if there's a relocation associated with this instruction.
-      for (auto Itr = Relocations.lower_bound(Offset),
-                ItrE = Relocations.lower_bound(Offset + Size);
-           Itr != ItrE; ++Itr) {
-        const Relocation &Relocation = Itr->second;
-        MCSymbol *Symbol = Relocation.Symbol;
-
-        if (Relocation::isInstructionReference(Relocation.Type)) {
-          uint64_t RefOffset = Relocation.Value - getAddress();
-          LabelsMapType::iterator LI = InstructionLabels.find(RefOffset);
-
-          if (LI == InstructionLabels.end()) {
-            Symbol = BC.Ctx->createNamedTempSymbol();
-            InstructionLabels.emplace(RefOffset, Symbol);
-          } else {
-            Symbol = LI->second;
-          }
-        }
-
-        uint64_t Addend = Relocation.Addend;
-
-        // For GOT relocations, create a reference against GOT entry ignoring
-        // the relocation symbol.
-        if (Relocation::isGOT(Relocation.Type)) {
-          assert(Relocation::isPCRelative(Relocation.Type) &&
-                 "GOT relocation must be PC-relative on RISC-V");
-          Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
-          Addend = Relocation.Value + Relocation.Offset + getAddress();
-        }
-        int64_t Value = Relocation.Value;
-        const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
-        (void)Result;
-        assert(Result && "cannot replace immediate with relocation");
-      }
     }
 
 add_instruction:
@@ -1577,13 +1531,6 @@ add_instruction:
 
   // Scope-boundary markers are only consulted while assigning offsets above.
   DebugScopeBoundaryOffsets.clear();
-
-  for (auto [Offset, Label] : InstructionLabels) {
-    InstrMapType::iterator II = Instructions.find(Offset);
-    assert(II != Instructions.end() && "reference to non-existing instruction");
-
-    BC.MIB->setInstLabel(II->second, Label);
-  }
 
   // Reset symbolizer for the disassembler.
   BC.SymbolicDisAsm->setSymbolizer(nullptr);

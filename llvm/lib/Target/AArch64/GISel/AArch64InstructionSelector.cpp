@@ -481,19 +481,23 @@ private:
   ComplexRendererFns selectArithExtendedRegister(MachineOperand &Root) const;
 
   ComplexRendererFns selectExtractHigh(MachineOperand &Root) const;
-
+  template <unsigned Width>
+  ComplexRendererFns selectCVTFixedPoint(MachineOperand &Root) const;
+  ComplexRendererFns selectCVTFixedPointBase(const MachineOperand &Root,
+                                             unsigned width,
+                                             bool isReciprocal = false) const;
   ComplexRendererFns selectCVTFixedPointVec(MachineOperand &Root) const;
   ComplexRendererFns
   selectCVTFixedPosRecipOperandVec(MachineOperand &Root) const;
-  ComplexRendererFns
-  selectCVTFixedPointVecBase(const MachineOperand &Root,
-                             bool isReciprocal = false) const;
   void renderFixedPointScalarXForm(MachineInstrBuilder &MIB,
                                    const MachineInstr &MI, int OpIdx) const;
+  unsigned getFixedPointWidthFromOperand(const MachineOperand &Root) const;
   void renderFixedPointXForm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                              int OpIdx = -1) const;
   void renderFixedPointRecipXForm(MachineInstrBuilder &MIB,
                                   const MachineInstr &MI, int OpIdx = -1) const;
+  void renderFixedPointImm(MachineInstrBuilder &MIB, const MachineOperand &Root,
+                           unsigned Width, bool isReciprocal) const;
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
                       int OpIdx = -1) const;
   void renderLogicalImm32(MachineInstrBuilder &MIB, const MachineInstr &I,
@@ -876,38 +880,6 @@ static bool copySubReg(MachineInstr &I, MachineRegisterInfo &MRI,
   return true;
 }
 
-/// Helper function to get the source and destination register classes for a
-/// copy. Returns a std::pair containing the source register class for the
-/// copy, and the destination register class for the copy. If a register class
-/// cannot be determined, then it will be nullptr.
-static std::pair<const TargetRegisterClass *, const TargetRegisterClass *>
-getRegClassesForCopy(MachineInstr &I, const TargetInstrInfo &TII,
-                     MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
-                     const RegisterBankInfo &RBI) {
-  Register DstReg = I.getOperand(0).getReg();
-  Register SrcReg = I.getOperand(1).getReg();
-  const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
-  const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
-
-  TypeSize DstSize = RBI.getSizeInBits(DstReg, MRI, TRI);
-  TypeSize SrcSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
-
-  // Special casing for cross-bank copies of s1s. We can technically represent
-  // a 1-bit value with any size of register. The minimum size for a GPR is 32
-  // bits. So, we need to put the FPR on 32 bits as well.
-  //
-  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
-  // then we can pull it into the helpers that get the appropriate class for a
-  // register bank. Or make a new helper that carries along some constraint
-  // information.
-  if (SrcRegBank != DstRegBank &&
-      (DstSize == TypeSize::getFixed(1) && SrcSize == TypeSize::getFixed(1)))
-    SrcSize = DstSize = TypeSize::getFixed(32);
-
-  return {getMinClassForRegBank(SrcRegBank, SrcSize, true),
-          getMinClassForRegBank(DstRegBank, DstSize, true)};
-}
-
 // FIXME: We need some sort of API in RBI/TRI to allow generic code to
 // constrain operands of simple instructions given a TargetRegisterClass
 // and LLT
@@ -948,15 +920,73 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   const RegisterBank &DstRegBank = *RBI.getRegBank(DstReg, MRI, TRI);
   const RegisterBank &SrcRegBank = *RBI.getRegBank(SrcReg, MRI, TRI);
 
+  TypeSize DstRegSize = RBI.getSizeInBits(DstReg, MRI, TRI);
+  TypeSize SrcRegSize = RBI.getSizeInBits(SrcReg, MRI, TRI);
+
+  // Special casing for cross-bank copies of s1s. We can technically represent
+  // a 1-bit value with any size of register. The minimum size for a GPR is 32
+  // bits. So, we need to put the FPR on 32 bits as well.
+  //
+  // FIXME: I'm not sure if this case holds true outside of copies. If it does,
+  // then we can pull it into the helpers that get the appropriate class for a
+  // register bank. Or make a new helper that carries along some constraint
+  // information.
+  if (SrcRegBank != DstRegBank && (DstRegSize == TypeSize::getFixed(1) &&
+                                   SrcRegSize == TypeSize::getFixed(1)))
+    SrcRegSize = DstRegSize = TypeSize::getFixed(32);
+
   // Find the correct register classes for the source and destination registers.
-  const TargetRegisterClass *SrcRC;
-  const TargetRegisterClass *DstRC;
-  std::tie(SrcRC, DstRC) = getRegClassesForCopy(I, TII, MRI, TRI, RBI);
+  const TargetRegisterClass *SrcRC =
+      getMinClassForRegBank(SrcRegBank, SrcRegSize, true);
+  const TargetRegisterClass *DstRC =
+      getMinClassForRegBank(DstRegBank, DstRegSize, true);
 
   if (!DstRC) {
     LLVM_DEBUG(dbgs() << "Unexpected dest size "
                       << RBI.getSizeInBits(DstReg, MRI, TRI) << '\n');
     return false;
+  }
+
+  if (I.getOpcode() == TargetOpcode::G_BITCAST &&
+      RBI.getSizeInBits(DstReg, MRI, TRI) == TypeSize::getFixed(16)) {
+    if (DstRegBank.getID() == AArch64::FPRRegBankID &&
+        SrcRegBank.getID() == AArch64::GPRRegBankID) {
+      if (!SrcReg.isPhysical() &&
+          !RBI.constrainGenericRegister(SrcReg, AArch64::GPR32RegClass, MRI))
+        return false;
+      if (!DstReg.isPhysical() &&
+          !RBI.constrainGenericRegister(DstReg, AArch64::FPR16RegClass, MRI))
+        return false;
+
+      Register FPR32 = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(AArch64::FMOVWSr))
+          .addDef(FPR32)
+          .addUse(SrcReg);
+      I.setDesc(TII.get(TargetOpcode::COPY));
+      I.getOperand(1).setReg(FPR32);
+      I.getOperand(1).setSubReg(AArch64::hsub);
+      return true;
+    }
+
+    if (DstRegBank.getID() == AArch64::GPRRegBankID &&
+        SrcRegBank.getID() == AArch64::FPRRegBankID) {
+      if (!SrcReg.isPhysical() &&
+          !RBI.constrainGenericRegister(SrcReg, AArch64::FPR16RegClass, MRI))
+        return false;
+      if (!DstReg.isPhysical() &&
+          !RBI.constrainGenericRegister(DstReg, AArch64::GPR32RegClass, MRI))
+        return false;
+
+      Register FPR32 = MRI.createVirtualRegister(&AArch64::FPR32RegClass);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(),
+              TII.get(TargetOpcode::SUBREG_TO_REG))
+          .addDef(FPR32)
+          .addUse(SrcReg)
+          .addImm(AArch64::hsub);
+      I.setDesc(TII.get(AArch64::FMOVSWr));
+      I.getOperand(1).setReg(FPR32);
+      return true;
+    }
   }
 
   // Is this a copy? If so, then we may need to insert a subregister copy.
@@ -7961,24 +7991,29 @@ AArch64InstructionSelector::selectExtractHigh(MachineOperand &Root) const {
 }
 
 InstructionSelector::ComplexRendererFns
-AArch64InstructionSelector::selectCVTFixedPointVecBase(
-    const MachineOperand &Root, bool isReciprocal) const {
+AArch64InstructionSelector::selectCVTFixedPointBase(const MachineOperand &Root,
+                                                    unsigned DstElemWidth,
+                                                    bool isReciprocal) const {
   if (!Root.isReg())
     return std::nullopt;
   const MachineRegisterInfo &MRI =
       Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  MachineInstr *Dup = getDefIgnoringCopies(Root.getReg(), MRI);
-  if (Dup->getOpcode() != AArch64::G_DUP)
-    return std::nullopt;
+  Register Reg = Root.getReg();
+  MachineInstr *Dup = getDefIgnoringCopies(Reg, MRI);
+
+  if (Dup && Dup->getOpcode() == AArch64::G_DUP)
+    Reg = Dup->getOperand(1).getReg();
+
   std::optional<ValueAndVReg> CstVal =
-      getAnyConstantVRegValWithLookThrough(Dup->getOperand(1).getReg(), MRI);
+      getAnyConstantVRegValWithLookThrough(Reg, MRI);
+
   if (!CstVal)
     return std::nullopt;
 
-  unsigned RegWidth = MRI.getType(Root.getReg()).getScalarSizeInBits();
+  unsigned CstElemWidth = MRI.getType(Reg).getScalarSizeInBits();
   APFloat FVal(0.0);
-  switch (RegWidth) {
+  switch (CstElemWidth) {
   case 16:
     FVal = APFloat(APFloat::IEEEhalf(), CstVal->Value);
     break;
@@ -7992,21 +8027,38 @@ AArch64InstructionSelector::selectCVTFixedPointVecBase(
     return std::nullopt;
   };
   if (unsigned FBits =
-          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal))
+          CheckFixedPointOperandConstant(FVal, DstElemWidth, isReciprocal))
     return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(FBits); }}};
 
   return std::nullopt;
 }
 
+unsigned AArch64InstructionSelector::getFixedPointWidthFromOperand(
+    const MachineOperand &Root) const {
+  return Root.getParent()
+      ->getMF()
+      ->getRegInfo()
+      .getType(Root.getReg())
+      .getScalarSizeInBits();
+}
+
+template <unsigned Width>
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectCVTFixedPoint(MachineOperand &Root) const {
+  return selectCVTFixedPointBase(Root, Width, /*isReciprocal*/ false);
+}
+
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPointVec(MachineOperand &Root) const {
-  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ false);
+  return selectCVTFixedPointBase(Root, getFixedPointWidthFromOperand(Root),
+                                 /*isReciprocal*/ false);
 }
 
 InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectCVTFixedPosRecipOperandVec(
     MachineOperand &Root) const {
-  return selectCVTFixedPointVecBase(Root, /*isReciprocal*/ true);
+  return selectCVTFixedPointBase(Root, getFixedPointWidthFromOperand(Root),
+                                 /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderFixedPointScalarXForm(
@@ -8016,26 +8068,33 @@ void AArch64InstructionSelector::renderFixedPointScalarXForm(
   MIB.addImm(MI.getOperand(OpIdx).getImm());
 }
 
+void AArch64InstructionSelector::renderFixedPointImm(MachineInstrBuilder &MIB,
+                                                     const MachineOperand &Root,
+                                                     unsigned Width,
+                                                     bool isReciprocal) const {
+  // FIXME: This is only needed to satisfy the type checking in tablegen, and
+  // should be able to reuse the Renderers already calculated by
+  // selectCVTFixedPointBase.
+  InstructionSelector::ComplexRendererFns Renderer =
+      selectCVTFixedPointBase(Root, Width, isReciprocal);
+  assert((Renderer && Renderer->size() == 1) &&
+         "Expected selectCVTFixedPointBase to provide a function\n");
+  (Renderer->front())(MIB);
+}
+
 void AArch64InstructionSelector::renderFixedPointXForm(MachineInstrBuilder &MIB,
                                                        const MachineInstr &MI,
                                                        int OpIdx) const {
-  // FIXME: This is only needed to satisfy the type checking in tablegen, and
-  // should be able to reuse the Renderers already calculated by
-  // selectCVTFixedPointVecBase.
-  InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ false);
-  assert((Renderer && Renderer->size() == 1) &&
-         "Expected selectCVTFixedPointVec to provide a function\n");
-  (Renderer->front())(MIB);
+  const MachineOperand &Root = MI.getOperand(OpIdx);
+  renderFixedPointImm(MIB, Root, getFixedPointWidthFromOperand(Root),
+                      /*isReciprocal*/ false);
 }
 
 void AArch64InstructionSelector::renderFixedPointRecipXForm(
     MachineInstrBuilder &MIB, const MachineInstr &MI, int OpIdx) const {
-  InstructionSelector::ComplexRendererFns Renderer =
-      selectCVTFixedPointVecBase(MI.getOperand(OpIdx), /*isReciprocal*/ true);
-  assert((Renderer && Renderer->size() == 1) &&
-         "Expected selectCVTFixedPosRecipOperandVec to provide a function\n");
-  (Renderer->front())(MIB);
+  const MachineOperand &Root = MI.getOperand(OpIdx);
+  renderFixedPointImm(MIB, Root, getFixedPointWidthFromOperand(Root),
+                      /*isReciprocal*/ true);
 }
 
 void AArch64InstructionSelector::renderTruncImm(MachineInstrBuilder &MIB,

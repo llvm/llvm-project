@@ -22,8 +22,10 @@
 
 #include "llvm/Support/Debug.h"
 
+#include <array>
 #include <iterator>
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -445,8 +447,8 @@ mlir::intrange::inferRemS(ArrayRef<ConstantIntRanges> argRanges) {
         APInt minRem = lhsMin.srem(maxDivisor);
         APInt maxRem = lhsMax.srem(maxDivisor);
         if (minRem.sle(maxRem)) {
-          smin = minRem;
-          smax = maxRem;
+          smin = std::move(minRem);
+          smax = std::move(maxRem);
         }
       }
     }
@@ -476,8 +478,8 @@ mlir::intrange::inferRemU(ArrayRef<ConstantIntRanges> argRanges) {
         APInt minRem = lhsMin.urem(rhsMax);
         APInt maxRem = lhsMax.urem(rhsMax);
         if (minRem.ule(maxRem)) {
-          umin = minRem;
-          umax = maxRem;
+          umin = std::move(minRem);
+          umax = std::move(maxRem);
         }
       }
     }
@@ -550,8 +552,9 @@ mlir::intrange::inferAnd(ArrayRef<ConstantIntRanges> argRanges) {
   auto andi = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a & b;
   };
-  return minMaxBy(andi, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  std::array<APInt, 2> lhsBounds = {std::move(lhsZeros), std::move(lhsOnes)};
+  std::array<APInt, 2> rhsBounds = {std::move(rhsZeros), std::move(rhsOnes)};
+  return minMaxBy(andi, lhsBounds, rhsBounds, /*isSigned=*/false);
 }
 
 ConstantIntRanges
@@ -561,8 +564,9 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
   auto ori = [](const APInt &a, const APInt &b) -> std::optional<APInt> {
     return a | b;
   };
-  return minMaxBy(ori, {lhsZeros, lhsOnes}, {rhsZeros, rhsOnes},
-                  /*isSigned=*/false);
+  std::array<APInt, 2> lhsBounds = {std::move(lhsZeros), std::move(lhsOnes)};
+  std::array<APInt, 2> rhsBounds = {std::move(rhsZeros), std::move(rhsOnes)};
+  return minMaxBy(ori, lhsBounds, rhsBounds, /*isSigned=*/false);
 }
 
 /// Get bitmask of all bits which can change while iterating in
@@ -570,7 +574,8 @@ mlir::intrange::inferOr(ArrayRef<ConstantIntRanges> argRanges) {
 static APInt getVaryingBitsMask(const ConstantIntRanges &bound) {
   APInt leftVal = bound.umin(), rightVal = bound.umax();
   unsigned bitwidth = leftVal.getBitWidth();
-  unsigned differingBits = bitwidth - (leftVal ^ rightVal).countl_zero();
+  unsigned differingBits =
+      bitwidth - (std::move(leftVal) ^ rightVal).countl_zero();
   return APInt::getLowBitsSet(bitwidth, differingBits);
 }
 
@@ -578,11 +583,11 @@ ConstantIntRanges
 mlir::intrange::inferXor(ArrayRef<ConstantIntRanges> argRanges) {
   // Construct mask of varying bits for both ranges, xor values and then replace
   // masked bits with 0s and 1s to get min and max values respectively.
-  ConstantIntRanges lhs = argRanges[0], rhs = argRanges[1];
+  const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
   APInt mask = getVaryingBitsMask(lhs) | getVaryingBitsMask(rhs);
   APInt res = lhs.umin() ^ rhs.umin();
   APInt min = res & ~mask;
-  APInt max = res | mask;
+  APInt max = std::move(res) | mask;
   return ConstantIntRanges::fromUnsigned(min, max);
 }
 
@@ -811,7 +816,9 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    return inferAdd({lhs, rhs}, OverflowFlags::Nsw);
+    std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
+                                                 std::move(rhs)};
+    return inferAdd(operands, OverflowFlags::Nsw);
   }
   case AffineExprKind::Mul: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
@@ -819,7 +826,9 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    return inferMul({lhs, rhs}, OverflowFlags::Nsw);
+    std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
+                                                 std::move(rhs)};
+    return inferMul(operands, OverflowFlags::Nsw);
   }
   case AffineExprKind::Mod: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
@@ -839,10 +848,8 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
     if (rhsMax.isZero())
       return ConstantIntRanges::maxRange(width);
 
-    APInt zero = APInt::getZero(width);
-
     // For Euclidean mod, result is in [0, max(rhs)-1].
-    APInt umin = zero;
+    APInt umin = APInt::getZero(width);
     APInt umax = rhsMax - 1;
 
     // Special case: if dividend is already in [0, min(rhs)), result equals
@@ -880,7 +887,9 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
     // Affine floordiv requires strictly positive divisor (> 0).
     // Clamp divisor lower bound to 1 for tighter range inference.
     ConstantIntRanges clampedRhs = clampToPositive(rhs);
-    return inferFloorDivS({lhs, clampedRhs});
+    std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
+                                                 std::move(clampedRhs)};
+    return inferFloorDivS(operands);
   }
   case AffineExprKind::CeilDiv: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
@@ -891,7 +900,9 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
     // Affine ceildiv requires strictly positive divisor (> 0).
     // Clamp divisor lower bound to 1 for tighter range inference.
     ConstantIntRanges clampedRhs = clampToPositive(rhs);
-    return inferCeilDivS({lhs, clampedRhs});
+    std::array<ConstantIntRanges, 2> operands = {std::move(lhs),
+                                                 std::move(clampedRhs)};
+    return inferCeilDivS(operands);
   }
   }
   llvm_unreachable("unknown affine expression kind");

@@ -13,14 +13,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef FORTRAN_LOWER_RUNTIME_H
-#define FORTRAN_LOWER_RUNTIME_H
+#ifndef FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INTRINSICS_H
+#define FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INTRINSICS_H
 
 #include <optional>
 
 namespace mlir {
 class Location;
-class Type;
 class Value;
 } // namespace mlir
 
@@ -32,12 +31,6 @@ namespace runtime {
 
 mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
                           mlir::Value pointer, mlir::Value target);
-
-void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
-                         mlir::Value pointer, mlir::Value target);
-void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
-                                  mlir::Value pointer, mlir::Value target,
-                                  mlir::Value bounds, bool isMonomorphic);
 
 mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
 void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
@@ -126,4 +119,4 @@ void genShowDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
 } // namespace runtime
 } // namespace fir
 
-#endif // FORTRAN_LOWER_RUNTIME_H
+#endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_INTRINSICS_H

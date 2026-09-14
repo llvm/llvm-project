@@ -1065,7 +1065,7 @@ the external storage will not be freed). If you need this ability, consider
 using `std::function`. `function_ref` is small enough that it should always
 be passed by value.
 
-(DEBUG)=
+(debug)=
 
 ### The `LDBG` and `LLVM_DEBUG()` macros and `-debug` option
 
@@ -2058,8 +2058,8 @@ building composite data structures.
 #### llvm/ADT/FoldingSet.h
 
 `FoldingSet` is an aggregate class that is really good at uniquing
-expensive-to-create or polymorphic objects.  It is a combination of a chained
-hash table with intrusive links (uniqued objects are required to inherit from
+expensive-to-create or polymorphic objects.  It is a linear-probed hash table
+whose buckets point to the uniqued objects (which are required to inherit from
 `FoldingSetNode`) that uses {ref}`SmallVector <dss_smallvector>` as part of its ID
 process.
 
@@ -2076,11 +2076,46 @@ element that we want to query for.  The query either returns the element
 matching the ID or it returns an opaque ID that indicates where insertion should
 take place.  Construction of the ID usually does not require heap traffic.
 
-Because `FoldingSet` uses intrusive links, it can support polymorphic objects in
+Because the buckets are pointers, `FoldingSet` can support polymorphic objects in
 the set (for example, you can have `SDNode` instances mixed with `LoadSDNodes`).
 Because the elements are individually allocated, pointers to the elements are
 stable: inserting or removing elements does not invalidate any pointers to other
-elements.
+elements.  The iterators, however, are invalidated whenever an insertion or
+erasure occurs, as in `DenseMap` and `StringMap`.
+
+See {ref}`UniquingSet <dss_uniquingset>` for a variant keyed on a typed key.
+
+(dss_uniquingset)=
+
+#### UniquingSet (llvm/ADT/FoldingSet.h)
+
+`UniquingSet` is a {ref}`FoldingSet <dss_FoldingSet>` whose nodes are compared
+against a typed key instead of a serialized `FoldingSetNodeID`.  Each node
+supplies its key through `getKey()`; a lookup builds the same key from what it
+already holds and hashes it inline with `DenseMapInfo`, and `lookup` returns the
+matching node or an insertion token for `insert`.  Growth and removal use the
+hash cached in each node and never call `getKey`.  An `Info` template argument
+can override the key type (`getKey`), the hash (`getHashValue`), or the
+comparison (`isEqual`).
+
+```cpp
+std::tuple<unsigned, const Value *, const Value *> FooNode::getKey() const {
+  return {Opcode, LHS, RHS};
+}
+
+UniquingSet<FooNode> Pool;
+FoldingSetInsertToken Token;
+if (FooNode *N = Pool.lookup({Opcode, LHS, RHS}, Token))
+  return N;
+Pool.insert(new (Allocator) FooNode(Opcode, LHS, RHS), Token);
+```
+
+Prefer `UniquingSet` when a node can yield its key in O(1), or when a key can
+cheaply alias storage owned by the node (such as an `ArrayRef` or `StringRef`).
+Keep `FoldingSet` when nodes are polymorphic, or when keys must be assembled
+from recursive data structures.  `getKey` and a lookup site are two
+hand-maintained sides that can disagree, though `insert` asserts that a node
+hashes as its lookup did.
 
 (dss_set)=
 

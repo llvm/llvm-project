@@ -157,7 +157,7 @@ void MCWasmStreamer::emitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
 }
 
 void MCWasmStreamer::emitIdent(StringRef IdentString) {
-  // TODO(sbc): Add the ident section once we support mergable strings
+  // TODO(sbc): Add the ident section once we support mergeable strings
   // sections in the object format
 }
 

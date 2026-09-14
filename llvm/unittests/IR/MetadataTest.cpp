@@ -44,7 +44,8 @@ TEST(ContextAndReplaceableUsesTest, FromContext) {
 
 TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
   LLVMContext Context;
-  ContextAndReplaceableUses CRU(std::make_unique<ReplaceableMetadataImpl>(Context));
+  ContextAndReplaceableUses CRU(
+      std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -53,7 +54,7 @@ TEST(ContextAndReplaceableUsesTest, FromReplaceableUses) {
 TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
   LLVMContext Context;
   ContextAndReplaceableUses CRU(Context);
-  CRU.makeReplaceable(std::make_unique<ReplaceableMetadataImpl>(Context));
+  CRU.makeReplaceable(std::make_unique<ReplaceableUsesWithContext>(Context));
   EXPECT_EQ(&Context, &CRU.getContext());
   EXPECT_TRUE(CRU.hasReplaceableUses());
   EXPECT_TRUE(CRU.getReplaceableUses());
@@ -61,7 +62,7 @@ TEST(ContextAndReplaceableUsesTest, makeReplaceable) {
 
 TEST(ContextAndReplaceableUsesTest, takeReplaceableUses) {
   LLVMContext Context;
-  auto ReplaceableUses = std::make_unique<ReplaceableMetadataImpl>(Context);
+  auto ReplaceableUses = std::make_unique<ReplaceableUsesWithContext>(Context);
   auto *Ptr = ReplaceableUses.get();
   ContextAndReplaceableUses CRU(std::move(ReplaceableUses));
   ReplaceableUses = CRU.takeReplaceableUses();
@@ -282,15 +283,11 @@ TEST_F(MDNodeTest, Print) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "<" << (void *)N << "> = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null";
-    MDNode *Nodes[] = {N0, N1, N2};
-    for (auto *Node : Nodes)
-      OS << ", <" << (void *)Node << ">";
-    OS << "}";
+    OS << ", null, !0, !1, !2}";
   }
 
   std::string Actual;
@@ -319,9 +316,9 @@ TEST_F(MDNodeTest, PrintTemporary) {
   NamedMDNode *NMD = M.getOrInsertNamedMetadata("named");
   NMD->addOperand(N);
 
-  EXPECT_PRINTER_EQ("!0 = !{!1}", N->print(OS, &M));
-  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!2}", Temp->print(OS, &M));
-  EXPECT_PRINTER_EQ("!2 = !{}", Arg->print(OS, &M));
+  EXPECT_PRINTER_EQ("!2 = !{!1}", N->print(OS, &M));
+  EXPECT_PRINTER_EQ("!1 = <temporary!> !{!0}", Temp->print(OS, &M));
+  EXPECT_PRINTER_EQ("!0 = !{}", Arg->print(OS, &M));
 
   // Cleanup.
   Temp->replaceAllUsesWith(Arg);
@@ -343,11 +340,11 @@ TEST_F(MDNodeTest, PrintFromModule) {
   std::string Expected;
   {
     raw_string_ostream OS(Expected);
-    OS << "!0 = !{";
+    OS << "!3 = !{";
     C->printAsOperand(OS);
     OS << ", ";
     S->printAsOperand(OS);
-    OS << ", null, !1, !2, !3}";
+    OS << ", null, !0, !1, !2}";
   }
 
   EXPECT_PRINTER_EQ(Expected, N->print(OS, &M));
@@ -5054,6 +5051,48 @@ TEST_F(DIObjCPropertyTest, get) {
                                    getBasicType("other")));
 
   TempDIObjCProperty Temp = N->clone();
+  EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
+}
+
+typedef MetadataTest DIPropertyTest;
+
+TEST_F(DIPropertyTest, get) {
+  // The data member holding a property's backing storage.
+  auto GetMember = [&](StringRef Name) {
+    return DIDerivedType::getDistinct(
+        Context, dwarf::DW_TAG_member, Name, nullptr, 0, nullptr,
+        getBasicType("basictype"), 8, 8, 0, std::nullopt, {}, DINode::FlagZero);
+  };
+
+  StringRef Name = "x";
+  DIFile *File = getFile();
+  unsigned Line = 5;
+  DIType *Type = getBasicType("basic");
+  DIDerivedType *BackingStorage = GetMember("_x");
+
+  auto *N = DIProperty::get(Context, Name, File, Line, Type, BackingStorage);
+
+  EXPECT_EQ(dwarf::DW_TAG_property, N->getTag());
+  EXPECT_EQ(Name, N->getName());
+  EXPECT_EQ(File, N->getFile());
+  EXPECT_EQ(Line, N->getLine());
+  EXPECT_EQ(Type, N->getType());
+  EXPECT_EQ(BackingStorage, N->getBackingStorage());
+  EXPECT_EQ(N,
+            DIProperty::get(Context, Name, File, Line, Type, BackingStorage));
+
+  EXPECT_NE(
+      N, DIProperty::get(Context, "other", File, Line, Type, BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, getFile(), Line, Type, BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, File, Line + 1, Type, BackingStorage));
+  EXPECT_NE(N, DIProperty::get(Context, Name, File, Line, getBasicType("other"),
+                               BackingStorage));
+  EXPECT_NE(
+      N, DIProperty::get(Context, Name, File, Line, Type, GetMember("_other")));
+
+  TempDIProperty Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));
 }
 

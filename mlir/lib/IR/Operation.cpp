@@ -1270,7 +1270,8 @@ LogicalResult OpTrait::impl::verifyValueSizeAttr(Operation *op,
                                                  StringRef attrName,
                                                  StringRef valueGroupName,
                                                  size_t expectedCount) {
-  auto sizeAttr = op->getAttrOfType<DenseI32ArrayAttr>(attrName);
+  auto sizeAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(attrName).value_or(Attribute{}));
   if (!sizeAttr)
     return op->emitOpError("requires dense i32 array attribute '")
            << attrName << "'";

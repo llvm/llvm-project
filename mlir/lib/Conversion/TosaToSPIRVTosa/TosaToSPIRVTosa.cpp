@@ -26,7 +26,7 @@ void copyFuncAttrsToGraph(func::FuncOp funcOp, func::FuncOpAdaptor adaptor,
                           spirv::GraphARMOp graphOp) {
   for (NamedAttribute attr : adaptor.getAttributes()) {
     StringRef attrName = attr.getName().getValue();
-    if (llvm::is_contained({SymbolTable::getSymbolAttrName(),
+    if (llvm::is_contained({funcOp.getSymNameAttrName().getValue(),
                             funcOp.getFunctionTypeAttrName().getValue(),
                             funcOp.getArgAttrsAttrName().getValue(),
                             funcOp.getResAttrsAttrName().getValue(),
@@ -135,9 +135,9 @@ public:
     auto entryPointAttr = BoolAttr::get(context, true);
     auto graphTy = GraphType::get(
         context, signatureConverter.getConvertedTypes(), newResultTypes);
-    auto graphOp =
-        spirv::GraphARMOp::create(rewriter, funcOp.getLoc(), graphTy, argAttrs,
-                                  resAttrs, entryPointAttr, name);
+    auto graphOp = spirv::GraphARMOp::create(
+        rewriter, funcOp.getLoc(), graphTy, argAttrs, resAttrs, entryPointAttr,
+        name, funcOp.getSymVisibilityAttr());
     copyFuncAttrsToGraph(funcOp, adaptor, graphOp);
 
     rewriter.inlineRegionBefore(funcOp.getBody(), graphOp.getBody(),

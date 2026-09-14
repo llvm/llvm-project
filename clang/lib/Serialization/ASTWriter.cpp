@@ -4317,11 +4317,16 @@ static bool isModuleLocalDecl(NamedDecl *D) {
       Parent && !D->getNonTransparentDeclContext()->isFileContext())
     return isModuleLocalDecl(Parent);
 
-  // Deduction Guide are special here. Since their logical parent context are
-  // not their actual parent.
+  // Deduction guides are not found by name lookup. Keep them in the general
+  // lookup table so that Sema can consider all reachable deduction guides,
+  // including when instantiating an exported template that uses a
+  // non-exported class template.
+  if (isa<CXXDeductionGuideDecl>(D))
+    return false;
+
   if (auto *FTD = dyn_cast<FunctionTemplateDecl>(D))
-    if (auto *CDGD = dyn_cast<CXXDeductionGuideDecl>(FTD->getTemplatedDecl()))
-      return isModuleLocalDecl(CDGD->getDeducedTemplate());
+    if (isa<CXXDeductionGuideDecl>(FTD->getTemplatedDecl()))
+      return false;
 
   if (D->getFormalLinkage() != Linkage::Module)
     return false;
@@ -8077,11 +8082,16 @@ void OMPClauseWriter::VisitOMPFinalClause(OMPFinalClause *C) {
 }
 
 void OMPClauseWriter::VisitOMPNumThreadsClause(OMPNumThreadsClause *C) {
+  Record.push_back(C->varlist_size());
+  Record.writeEnum(C->getPrescriptivenessModifier());
+  Record.AddSourceLocation(C->getPrescriptivenessModifierLoc());
+  Record.writeEnum(C->getDimsModifier());
+  Record.AddSourceLocation(C->getDimsModifierLoc());
+  Record.AddStmt(C->getDimsModifierExpr());
   VisitOMPClauseWithPreInit(C);
-  Record.writeEnum(C->getModifier());
-  Record.AddStmt(C->getNumThreads());
-  Record.AddSourceLocation(C->getModifierLoc());
   Record.AddSourceLocation(C->getLParenLoc());
+  for (auto *VE : C->varlist())
+    Record.AddStmt(VE);
 }
 
 void OMPClauseWriter::VisitOMPSafelenClause(OMPSafelenClause *C) {
