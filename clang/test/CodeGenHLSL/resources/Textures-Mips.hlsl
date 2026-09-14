@@ -2,14 +2,20 @@
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture2D -DCOORD_DIM=2 -o - %s \
 // RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,NOARRAY -DTEXTURE=Texture2D \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,COORD2 -DTEXTURE=Texture2D \
 // RUN:   -DCOORD_DIM=2 -DLOAD_DIM=3 -DDXIL_TY=2 -DDIM=2
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
 // RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
 // RUN:   -DTEXTURE=Texture2DArray -DCOORD_DIM=3 -o - %s \
 // RUN:   | llvm-cxxfilt \
-// RUN:   | FileCheck %s --check-prefixes=CHECK,ARRAY -DTEXTURE=Texture2DArray \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,COORD3 -DTEXTURE=Texture2DArray \
 // RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 -DDXIL_TY=7 -DDIM=2
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-pixel -x hlsl -emit-llvm \
+// RUN:   -disable-llvm-passes -finclude-default-header -hlsl-entry test_mips \
+// RUN:   -DTEXTURE=Texture3D -DCOORD_DIM=3 -o - %s \
+// RUN:   | llvm-cxxfilt \
+// RUN:   | FileCheck %s --check-prefixes=CHECK,COORD3 -DTEXTURE=Texture3D \
+// RUN:   -DCOORD_DIM=3 -DLOAD_DIM=4 -DDXIL_TY=4 -DDIM=3
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -22,8 +28,9 @@
 //                      location)
 //
 // Check prefixes:
-//   NOARRAY            the resource has no array slice
-//   ARRAY              the resource has an array slice
+//   COORD2             the coordinate has two components
+//   COORD3             the coordinate has three components (an
+//                      array slice or a third resource dimension)
 
 TEXTURE<float4> t;
 
@@ -92,13 +99,13 @@ float4 test_mips(vector<float, COORD_DIM> loc : LOC) : SV_Target {
 // CHECK: %[[COORD_VAL2:.*]] = load <[[COORD_DIM]] x i32>, ptr %[[VEC_TMP]]
 // CHECK: %[[VECEXT2:.*]] = extractelement <[[COORD_DIM]] x i32> %[[COORD_VAL2]], i32 1
 // CHECK: %[[VECINIT3:.*]] = insertelement <[[LOAD_DIM]] x i32> %[[VECINIT]], i32 %[[VECEXT2]], i32 1
-// ARRAY: %[[COORD_VAL3:.*]] = load <3 x i32>, ptr %[[VEC_TMP]]
-// ARRAY: %[[VECEXT3:.*]] = extractelement <3 x i32> %[[COORD_VAL3]], i32 2
-// ARRAY: %[[VECINIT3B:.*]] = insertelement <4 x i32> %[[VECINIT3]], i32 %[[VECEXT3]], i32 2
+// COORD3: %[[COORD_VAL3:.*]] = load <3 x i32>, ptr %[[VEC_TMP]]
+// COORD3: %[[VECEXT3:.*]] = extractelement <3 x i32> %[[COORD_VAL3]], i32 2
+// COORD3: %[[VECINIT3B:.*]] = insertelement <4 x i32> %[[VECINIT3]], i32 %[[VECEXT3]], i32 2
 // CHECK: %[[LEVEL_PTR:.*]] = getelementptr {{.*}} %"struct.hlsl::[[TEXTURE]]<>::mips_slice_type", ptr %[[THIS1]], i32 0, i32 1
 // CHECK: %[[LEVEL_VAL:.*]] = load i32, ptr %[[LEVEL_PTR]]
-// NOARRAY: %[[VECINITL:.*]] = insertelement <3 x i32> %[[VECINIT3]], i32 %[[LEVEL_VAL]], i32 2
-// ARRAY: %[[VECINITL:.*]] = insertelement <4 x i32> %[[VECINIT3B]], i32 %[[LEVEL_VAL]], i32 3
+// COORD2: %[[VECINITL:.*]] = insertelement <3 x i32> %[[VECINIT3]], i32 %[[LEVEL_VAL]], i32 2
+// COORD3: %[[VECINITL:.*]] = insertelement <4 x i32> %[[VECINIT3B]], i32 %[[LEVEL_VAL]], i32 3
 // CHECK: %[[COORD_X:.*]] = shufflevector <[[LOAD_DIM]] x i32> %[[VECINITL]], <[[LOAD_DIM]] x i32> poison, <[[COORD_DIM]] x i32> {{.*}}
 // CHECK: %[[LOD:.*]] = extractelement <[[LOAD_DIM]] x i32> %[[VECINITL]], i64 [[COORD_DIM]]
 // CHECK: %[[RES:.*]] = call {{.*}} <4 x float> @llvm.dx.resource.load.level.v4f32.tdx.Texture_v4f32_0_0_0_[[DXIL_TY]]t.v[[COORD_DIM]]i32.i32.v[[DIM]]i32(target("dx.Texture", <4 x float>, 0, 0, 0, [[DXIL_TY]]) %[[HANDLE]], <[[COORD_DIM]] x i32> %[[COORD_X]], i32 %[[LOD]], <[[DIM]] x i32> zeroinitializer)

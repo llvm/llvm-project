@@ -123,9 +123,9 @@ bool X86FrameLowering::needsFrameIndexResolution(
 /// allocas or if frame pointer elimination is disabled.
 bool X86FrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          TRI->hasStackRealignment(MF) || MFI.hasVarSizedObjects() ||
-          MFI.isFrameAddressTaken() || MFI.hasOpaqueSPAdjustment() ||
+  return (MF.disableFramePointerElim() || TRI->hasStackRealignment(MF) ||
+          MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
+          MFI.hasOpaqueSPAdjustment() ||
           MF.getInfo<X86MachineFunctionInfo>()->getForceFramePointer() ||
           MF.getInfo<X86MachineFunctionInfo>()->hasPreallocatedCall() ||
           MF.callsUnwindInit() || MF.hasEHFunclets() || MF.callsEHReturn() ||

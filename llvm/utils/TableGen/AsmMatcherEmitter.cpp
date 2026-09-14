@@ -140,8 +140,9 @@ class AsmMatcherInfo;
 // when generating its data structures. This means that the order of two
 // RegisterSets can be seen in the outputted AsmMatcher tables occasionally, and
 // can even affect compiler output (at least seen in diagnostics produced when
-// all matches fail). So we use a type that sorts them consistently.
-using RegisterSet = std::set<const Record *, LessRecordByID>;
+// all matches fail). So they must be sorted consistently (see LessRegisterSet).
+// Each bit in the BitVector represents the presence of a physical register.
+using RegisterSet = BitVector;
 
 class AsmMatcherEmitter {
   const RecordKeeper &Records;
@@ -251,12 +252,7 @@ public:
       if (!isRegisterClass() || !RHS.isRegisterClass())
         return false;
 
-      std::vector<const Record *> Tmp;
-      std::set_intersection(Registers.begin(), Registers.end(),
-                            RHS.Registers.begin(), RHS.Registers.end(),
-                            std::back_inserter(Tmp), LessRecordByID());
-
-      return !Tmp.empty();
+      return Registers.anyCommon(RHS.Registers);
     }
 
     if (isRegisterClassByHwMode() || RHS.isRegisterClassByHwMode())
@@ -369,8 +365,8 @@ public:
     } else if (isRegisterClass()) {
       // For register sets, sort by number of registers. This guarantees that
       // a set will always sort before all of it's strict supersets.
-      if (Registers.size() != RHS.Registers.size())
-        return Registers.size() < RHS.Registers.size();
+      if (Registers.count() != RHS.Registers.count())
+        return Registers.count() < RHS.Registers.count();
     } else if (isRegisterClassByHwMode()) {
       // Ensure the MCK enum entries are in the same order as RegClassIDs. The
       // lookup table to from RegByHwMode to concrete class relies on it.
@@ -1268,21 +1264,59 @@ ClassInfo *AsmMatcherInfo::getOperandClass(const Record *Rec, int SubOpIdx) {
   PrintFatalError(Rec->getLoc(), "operand has no match class!");
 }
 
+// Comparator for RegisterSets (BitVectors). Lexicographically compares the
+// sorted sequence of register IDs present in each set to ensure deterministic
+// ordering of RegisterSets in std::set and std::map.
 struct LessRegisterSet {
   bool operator()(const RegisterSet &LHS, const RegisterSet &RHS) const {
-    // std::set<T> defines its own compariso "operator<", but it
-    // performs a lexicographical comparison by T's innate comparison
-    // for some reason. We don't want non-deterministic pointer
-    // comparisons so use this instead.
-    return std::lexicographical_compare(LHS.begin(), LHS.end(), RHS.begin(),
-                                        RHS.end(), LessRecordByID());
+    int L = LHS.find_first();
+    int R = RHS.find_first();
+    while (L != -1 && R != -1) {
+      if (L != R)
+        return L < R;
+      L = LHS.find_next(L);
+      R = RHS.find_next(R);
+    }
+    return L == -1 && R != -1;
   }
 };
+
+// Map each register to a dense bit index ordered by LessRecordByID so that
+// bit index order matches LessRecordByID order in LessRegisterSet.
+static DenseMap<const Record *, unsigned>
+createRegisterIndexMap(const std::deque<CodeGenRegister> &Registers) {
+  std::vector<const Record *> AllRegDefs;
+  AllRegDefs.reserve(Registers.size());
+  for (const CodeGenRegister &CGR : Registers)
+    AllRegDefs.push_back(CGR.TheDef);
+  llvm::sort(AllRegDefs, LessRecordByID());
+
+  DenseMap<const Record *, unsigned> IndexMap;
+  IndexMap.reserve(AllRegDefs.size());
+  for (const auto &[I, RegDef] : llvm::enumerate(AllRegDefs))
+    IndexMap[RegDef] = I;
+  return IndexMap;
+}
 
 void AsmMatcherInfo::buildRegisterClasses(
     SmallPtrSetImpl<const Record *> &SingletonRegisters) {
   const auto &Registers = Target.getRegBank().getRegisters();
   auto &RegClassList = Target.getRegBank().getRegClasses();
+
+  const DenseMap<const Record *, unsigned> RegIndexMap =
+      createRegisterIndexMap(Registers);
+
+  // Helper to build a BitVector representing a set of register records.
+  unsigned NumRegs = Registers.size();
+  auto MakeRegisterSet = [&](ArrayRef<const Record *> Regs) {
+    BitVector BS(NumRegs);
+    for (const Record *Rec : Regs) {
+      auto It = RegIndexMap.find(Rec);
+      assert(It != RegIndexMap.end() && "Unknown register record");
+      BS.set(It->second);
+    }
+    return BS;
+  };
 
   using RegisterSetSet = std::set<RegisterSet, LessRegisterSet>;
 
@@ -1291,13 +1325,11 @@ void AsmMatcherInfo::buildRegisterClasses(
 
   // Gather the defined sets.
   for (const CodeGenRegisterClass &RC : RegClassList)
-    RegisterSets.insert(
-        RegisterSet(RC.getOrder().begin(), RC.getOrder().end()));
+    RegisterSets.insert(MakeRegisterSet(RC.getOrder()));
 
   // Add any required singleton sets.
-  for (const Record *Rec : SingletonRegisters) {
-    RegisterSets.insert(RegisterSet(&Rec, &Rec + 1));
-  }
+  for (const Record *Rec : SingletonRegisters)
+    RegisterSets.insert(MakeRegisterSet({Rec}));
 
   // Introduce derived sets where necessary (when a register does not determine
   // a unique register set class), and build the mapping of registers to the set
@@ -1306,9 +1338,10 @@ void AsmMatcherInfo::buildRegisterClasses(
   for (const CodeGenRegister &CGR : Registers) {
     // Compute the intersection of all sets containing this register.
     RegisterSet ContainingSet;
+    unsigned RegIdx = RegIndexMap.lookup(CGR.TheDef);
 
     for (const RegisterSet &RS : RegisterSets) {
-      if (!RS.count(CGR.TheDef))
+      if (!RS.test(RegIdx))
         continue;
 
       if (ContainingSet.empty()) {
@@ -1316,14 +1349,10 @@ void AsmMatcherInfo::buildRegisterClasses(
         continue;
       }
 
-      RegisterSet Tmp;
-      std::set_intersection(ContainingSet.begin(), ContainingSet.end(),
-                            RS.begin(), RS.end(),
-                            std::inserter(Tmp, Tmp.begin()), LessRecordByID());
-      ContainingSet = std::move(Tmp);
+      ContainingSet &= RS;
     }
 
-    if (!ContainingSet.empty()) {
+    if (ContainingSet.any()) {
       RegisterSets.insert(ContainingSet);
       RegisterMap.try_emplace(CGR.TheDef, ContainingSet);
     }
@@ -1356,7 +1385,7 @@ void AsmMatcherInfo::buildRegisterClasses(
   for (const RegisterSet &RS : RegisterSets) {
     ClassInfo *CI = RegisterSetClasses[RS];
     for (const RegisterSet &RS2 : RegisterSets)
-      if (RS != RS2 && llvm::includes(RS2, RS, LessRecordByID()))
+      if (RS != RS2 && RS.subsetOf(RS2))
         CI->SuperClasses.push_back(RegisterSetClasses[RS2]);
   }
 
@@ -1366,8 +1395,7 @@ void AsmMatcherInfo::buildRegisterClasses(
     const Record *Def = RC.getDef();
     if (!Def)
       continue;
-    ClassInfo *CI = RegisterSetClasses[RegisterSet(RC.getOrder().begin(),
-                                                   RC.getOrder().end())];
+    ClassInfo *CI = RegisterSetClasses[MakeRegisterSet(RC.getOrder())];
     if (CI->ValueName.empty()) {
       CI->ClassName = RC.getName();
       CI->Name = "MCK_" + RC.getName();
@@ -1660,7 +1688,7 @@ void AsmMatcherInfo::buildInfo() {
       // Check for singleton registers.
       if (const Record *RegRecord = Op.SingletonReg) {
         Op.Class = RegisterClasses[RegRecord];
-        assert(Op.Class && Op.Class->Registers.size() == 1 &&
+        assert(Op.Class && Op.Class->Registers.count() == 1 &&
                "Unexpected class for singleton register");
         continue;
       }

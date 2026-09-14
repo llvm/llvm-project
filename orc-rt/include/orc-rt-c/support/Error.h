@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This file defines the C interface to LLVM's Error class.                   *|
+|* This file defines the C interface to the ORC runtime's Error class.        *|
 |*                                                                            *|
 |* TODO: Explain ownership model.                                             *|
 |*                                                                            *|
@@ -18,22 +18,22 @@
 
 #include "orc-rt-c/support/Compiler.h"
 #include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/support/RTTI.h"
 
 ORC_RT_C_EXTERN_C_BEGIN
 
+/**
+ * Opaque reference to an error instance. Null serves as the 'success' value.
+ */
+typedef struct orc_rt_OpaqueError *orc_rt_ErrorRef;
+
 #define orc_rt_ErrorSuccess ((orc_rt_ErrorRef)0)
 
-/**
- * Error type identifier.
- */
-typedef const void *orc_rt_Error_TypeId;
+ORC_RT_RTTI_PARTICIPANT(Error)
 
-/**
- * Returns the type id for the given error instance, which must be a failure
- * value (i.e. non-null).
- */
-ORC_RT_C_EXPORT orc_rt_Error_TypeId orc_rt_Error_getTypeId(orc_rt_ErrorRef Err)
-    ORC_RT_C_NOTHROW;
+typedef struct orc_rt_OpaqueStringError *orc_rt_StringErrorRef;
+
+ORC_RT_RTTI_PARTICIPANT(StringError)
 
 /**
  * Dispose of the given error without handling it. This operation consumes the
@@ -69,12 +69,6 @@ ORC_RT_C_EXPORT void
 orc_rt_Error_freeErrorMessage(char *ErrMsg) ORC_RT_C_NOTHROW;
 
 /**
- * Returns the type id for llvm StringError.
- */
-ORC_RT_C_EXPORT orc_rt_Error_TypeId orc_rt_StringError_getTypeId(void)
-    ORC_RT_C_NOTHROW;
-
-/**
  * Create a StringError.
  */
 ORC_RT_C_EXPORT orc_rt_ErrorRef orc_rt_StringError_create(const char *ErrMsg)
@@ -82,4 +76,4 @@ ORC_RT_C_EXPORT orc_rt_ErrorRef orc_rt_StringError_create(const char *ErrMsg)
 
 ORC_RT_C_EXTERN_C_END
 
-#endif // ORC_RT_C_SUPPORT_ERROR_H
+#endif /* ORC_RT_C_SUPPORT_ERROR_H */

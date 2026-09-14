@@ -587,8 +587,7 @@ void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
       LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
-  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
-                                                        : drop_end(KnownIDs)));
+  append_range(KeepIDs, KnownIDs);
   append_range(KeepIDs, Keep);
   dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }

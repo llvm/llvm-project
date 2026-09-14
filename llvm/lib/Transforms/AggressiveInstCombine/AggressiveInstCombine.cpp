@@ -43,10 +43,6 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "aggressive-instcombine"
 
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-}
-
 STATISTIC(NumAnyOrAllBitsSet, "Number of any/all-bits-set patterns folded");
 STATISTIC(NumGuardedRotates,
           "Number of guarded rotates transformed into funnel shifts");
@@ -1005,12 +1001,10 @@ static bool tryToRecognizeTableBasedCttz(LoadInst *LI, Type *AccessType,
     Res = B.CreateSelect(Cmp, ZeroTableElem, Res);
 
     // The true branch of select handles the cttz(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Res))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Res))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     // NOTE: If the table[0] is 0, but the cttz(0) is defined by the Target
     // it should be handled as: `cttz(x) & (typeSize - 1)`.
@@ -1222,12 +1216,10 @@ static bool tryToRecognizeTableBasedLog2(LoadInst *LI, Type *AccessType,
         B.CreateSelect(Cmp, B.CreateZExt(ZeroTableElem, XType), Sub);
 
     // The true branch of select handles the log2(0) case, which is rare.
-    if (!ProfcheckDisableMetadataFixes) {
-      if (Instruction *SelectI = dyn_cast<Instruction>(Select))
-        SelectI->setMetadata(
-            LLVMContext::MD_prof,
-            MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
-    }
+    if (Instruction *SelectI = dyn_cast<Instruction>(Select))
+      SelectI->setMetadata(
+          LLVMContext::MD_prof,
+          MDBuilder(SelectI->getContext()).createUnlikelyBranchWeights());
 
     Result = Select;
   }
@@ -1258,7 +1250,8 @@ static bool tryToRecognizeTableBasedCttzOrLog2(Instruction &I,
     return false;
 
   GlobalVariable *GVTable = dyn_cast<GlobalVariable>(GEP->getPointerOperand());
-  if (!GVTable || !GVTable->hasInitializer() || !GVTable->isConstant())
+  if (!GVTable || !GVTable->isConstant() ||
+      !GVTable->hasDefinitiveInitializer())
     return false;
 
   unsigned BW = DL.getIndexTypeSizeInBits(GEP->getType());
@@ -1462,9 +1455,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
-  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
-  // TTI based checks if we want to proceed with wider load
-  bool Allowed = TTI.isTypeLegal(WiderType);
+  // Allow a power of 2 number of bytes that fit in a legal integer type.
+  bool Allowed = LOps.LoadSize >= 16 && isPowerOf2_64(LOps.LoadSize) &&
+                 DL.fitsInLegalInteger(LOps.LoadSize);
   if (!Allowed)
     return false;
 
@@ -1485,6 +1478,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     Load1Ptr = Builder.CreatePtrAdd(Load1Ptr, Builder.getInt(Offset1));
   }
   // Generate wider load.
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   NewLoad = Builder.CreateAlignedLoad(WiderType, Load1Ptr, LI1->getAlign(),
                                       LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
@@ -1561,9 +1555,10 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
   // FIXME: We could generate smaller stores if we can't produce a large one.
   const PartStore &First = Parts.front();
   LLVMContext &Ctx = First.Store->getContext();
-  Type *NewTy = Type::getIntNTy(Ctx, Width);
   unsigned Fast = 0;
-  if (!TTI.isTypeLegal(NewTy) ||
+  bool Allowed =
+      Width >= 16 && isPowerOf2_64(Width) && DL.fitsInLegalInteger(Width);
+  if (!Allowed ||
       !TTI.allowsMisalignedMemoryAccesses(Ctx, Width,
                                           First.Store->getPointerAddressSpace(),
                                           First.Store->getAlign(), &Fast) ||
@@ -1572,6 +1567,7 @@ static bool mergeConsecutivePartStores(ArrayRef<PartStore> Parts,
 
   // Generate the combined store.
   IRBuilder<> Builder(First.Store);
+  Type *NewTy = Type::getIntNTy(Ctx, Width);
   Value *Val = First.Val;
   if (First.ValOffset != 0)
     Val = Builder.CreateLShr(Val, First.ValOffset);
