@@ -188,9 +188,9 @@ const StackFrame *CallEvent::getCalleeStackFrame(unsigned BlockCount) const {
   return ADC->getStackFrame(SF, nullptr, E, B, BlockCount, Idx);
 }
 
-const ParamVarRegion
-*CallEvent::getParameterLocation(std::optional<unsigned> DeclParamIdx,
-                                 unsigned BlockCount) const {
+const ParamVarRegion *
+CallEvent::getParameterLocation(std::optional<unsigned> DeclParamIdx,
+                                unsigned BlockCount) const {
   if (!DeclParamIdx)
     return nullptr;
 
