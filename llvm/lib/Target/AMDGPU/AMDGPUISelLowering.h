@@ -96,6 +96,7 @@ protected:
   SDValue LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG, EVT FP16Ty) const;
   SDValue LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerINT_TO_FP64(SDValue Op, SelectionDAG &DAG, bool Signed) const;
+  SDValue lowerINT_TO_FPImpl(SDValue Op, SelectionDAG &DAG, bool Signed) const;
   SDValue LowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
 
