@@ -3144,6 +3144,17 @@ static void checkNewAttributesAfterDef(Sema &S, Decl *New, const Decl *Old) {
       continue; // regular attr merging will take care of validating this.
     }
 
+    if (NewAttribute->getLocation().isInvalid()) {
+      // An attribute with no source location was not written by the user. API
+      // notes, in particular, are matched against whichever declaration the
+      // compiler reaches, which can be a redeclaration that follows the
+      // definition, possibly in a different module. There is nothing for the
+      // user to correct, and erasing the attribute would silently change what
+      // the annotated API means.
+      ++I;
+      continue;
+    }
+
     if (isa<C11NoReturnAttr>(NewAttribute)) {
       // C's _Noreturn is allowed to be added to a function after it is defined.
       ++I;
@@ -7760,6 +7771,8 @@ void Sema::CheckAsmLabel(Scope *S, Expr *E, StorageClass SC,
   StringLiteral *SE = cast<StringLiteral>(E);
   StringRef Label = SE->getString();
   QualType R = TInfo->getType();
+  if (R->isIncompleteType())
+    return;
   if (S->getFnParent() != nullptr) {
     switch (SC) {
     case SC_None:

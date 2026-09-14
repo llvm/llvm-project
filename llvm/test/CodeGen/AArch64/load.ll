@@ -247,6 +247,81 @@ define <2 x i8> @load_v2i8(ptr %ptr, <2 x i8> %b) {
   ret <2 x i8> %a
 }
 
+; Check that when SVE is available it uses SVE's extending loads for v2i8.
+define <2 x i8> @load_v2i8_sve(ptr %ptr) "target-features"="+sve" {
+; CHECK-SD-LABEL: load_v2i8_sve:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ptrue p0.s, vl2
+; CHECK-SD-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $z0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_v2i8_sve:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ld1 { v0.b }[0], [x0]
+; CHECK-GI-NEXT:    ldr b1, [x0, #1]
+; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    ret
+  %a = load <2 x i8>, ptr %ptr
+  ret <2 x i8> %a
+}
+
+; Check that when SVE is available it uses SVE's extending loads for v2i8.
+define <2 x i64> @load_v2i8_v2u8_sve(ptr %ptr) "target-features"="+sve" {
+; CHECK-SD-LABEL: load_v2i8_v2u8_sve:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ptrue p0.d, vl2
+; CHECK-SD-NEXT:    ld1b { z0.d }, p0/z, [x0]
+; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_v2i8_v2u8_sve:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ld1 { v1.b }[0], [x0]
+; CHECK-GI-NEXT:    ldr b2, [x0, #1]
+; CHECK-GI-NEXT:    movi d0, #0x0000ff000000ff
+; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
+; CHECK-GI-NEXT:    and v0.8b, v1.8b, v0.8b
+; CHECK-GI-NEXT:    fmov w9, s0
+; CHECK-GI-NEXT:    mov w8, v0.s[1]
+; CHECK-GI-NEXT:    and x9, x9, #0xffff
+; CHECK-GI-NEXT:    fmov d0, x9
+; CHECK-GI-NEXT:    and x8, x8, #0xffff
+; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    ret
+  %a = load <2 x i8>, ptr %ptr
+  %a.zext = zext <2 x i8> %a to <2 x i64>
+  ret <2 x i64> %a.zext
+}
+
+; Check that when SVE is available it uses SVE's extending loads for v2i8.
+define <2 x i64> @load_v2i8_v2s8_sve(ptr %ptr) "target-features"="+sve" {
+; CHECK-SD-LABEL: load_v2i8_v2s8_sve:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    ptrue p0.d, vl2
+; CHECK-SD-NEXT:    ld1sb { z0.d }, p0/z, [x0]
+; CHECK-SD-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: load_v2i8_v2s8_sve:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    ldrb w8, [x0]
+; CHECK-GI-NEXT:    ldrb w9, [x0, #1]
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov v0.h[1], w9
+; CHECK-GI-NEXT:    shl v0.4h, v0.4h, #8
+; CHECK-GI-NEXT:    sshr v0.4h, v0.4h, #8
+; CHECK-GI-NEXT:    smov x8, v0.h[0]
+; CHECK-GI-NEXT:    smov x9, v0.h[1]
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    mov v0.d[1], x9
+; CHECK-GI-NEXT:    ret
+  %a = load <2 x i8>, ptr %ptr
+  %a.sext = sext <2 x i8> %a to <2 x i64>
+  ret <2 x i64> %a.sext
+}
+
 define i32 @load_v4i8(ptr %ptr, <4 x i8> %b) {
 ; CHECK-LABEL: load_v4i8:
 ; CHECK:       // %bb.0:

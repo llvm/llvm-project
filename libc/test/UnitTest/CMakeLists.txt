@@ -101,6 +101,7 @@ add_unittest_framework_library(
   COMPILE_OPTIONS
     ${test_logger_compile_options}
   DEPENDS
+    .string_utils
     libc.hdr.stdint_proxy
     libc.src.__support.big_int
     libc.src.__support.c_string
@@ -109,8 +110,6 @@ add_unittest_framework_library(
     libc.src.__support.CPP.type_traits
     libc.src.__support.fixed_point.fx_rep
     libc.src.__support.macros.properties.compiler
-    libc.src.__support.macros.properties.types
-    libc.src.__support.wchar.string_converter
     libc.src.__support.uint128
     ${test_logger_osutil}
 )
@@ -169,7 +168,9 @@ add_unittest_framework_library(
   SRCS
     ${libc_hermetic_test_support_srcs}
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
+    libc.src.__support.libc_errno
 )
 
 add_header_library(
@@ -179,7 +180,10 @@ add_header_library(
   DEPENDS
     libc.src.__support.big_int
     libc.src.__support.CPP.string
+    libc.src.__support.CPP.string_view
     libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.properties.types
+    libc.src.__support.wchar.string_converter
 )
 
 add_unittest_framework_library(
@@ -236,6 +240,7 @@ add_unittest_framework_library(
     .LibcTest
     .string_utils
     libc.hdr.stdint_proxy
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.printf_core.core_structs
     libc.src.__support.printf_core.printf_config
@@ -253,6 +258,15 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
+)
+
+add_header_library(
+  CharLiteralUtils
+  HDRS
+    CharLiteralUtils.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
 )
 
 add_header_library(

@@ -748,8 +748,12 @@ void SafeStack::TryInlinePointerAddress() {
   if (!ShouldInlinePointerAddress(*CI))
     return;
 
+  // InlineFunction can modify the callers CFG, but it has no DomTreeUpdater
+  // hook. Since SafeStack preserves the DominatorTree, we must rebuild it
+  // after a successful inline instead of leaving the cached tree stale.
   InlineFunctionInfo IFI;
-  InlineFunction(*CI, IFI);
+  if (InlineFunction(*CI, IFI).isSuccess() && DTU)
+    DTU->recalculate(F);
 }
 
 bool SafeStack::run() {

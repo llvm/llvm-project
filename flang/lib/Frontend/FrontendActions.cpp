@@ -638,6 +638,11 @@ void CodeGenAction::lowerHLFIRToFIR() {
       ci.getInvocation().getLoweringOpts().getFPMaxminBehavior();
   if (ci.getInvocation().getLangOpts().OpenMPIsTargetDevice)
     config.EnableOpenMPIsTargetDevice = true;
+  // Parser options, not frontend options: they are seeded from the frontend
+  // ones and additionally get CUDA enabled for a .cuf/.CUF input.
+  if (ci.getInvocation().getFortranOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::CUDA))
+    config.EnableCUDA = true;
   // Create the pass pipeline
   fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config);
   (void)mlir::applyPassManagerCLOptions(pm);
@@ -829,6 +834,9 @@ void CodeGenAction::generateLLVMIR() {
       llvmModule->setPIELevel(
           static_cast<llvm::PIELevel::Level>(opts.PICLevel));
   }
+
+  if (opts.getFramePointer() != llvm::FramePointerKind::None)
+    llvmModule->setFramePointer(opts.getFramePointer());
 
   const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   const llvm::Triple triple(targetOpts.triple);
