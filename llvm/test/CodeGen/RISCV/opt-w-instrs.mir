@@ -282,11 +282,10 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr = COPY $x11
-    ; CHECK-NEXT: [[ADD_UW:%[0-9]+]]:gpr = ADD_UW [[COPY]], $x0
+    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 0
     ; CHECK-NEXT: [[LW:%[0-9]+]]:gpr = LW [[COPY1]], 0
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[ADD_UW]], [[LW]]
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[OR]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[ADDIW]], [[LW]]
+    ; CHECK-NEXT: $x10 = COPY [[OR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
