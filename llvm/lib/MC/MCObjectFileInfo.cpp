@@ -587,7 +587,8 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   ADASection = Ctx->getGOFFSection(
       SectionKind::getData(), "#S",
       GOFF::PRAttr{false, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_XPLink, GOFF::ESD_BSC_Section, 0},
+                   GOFF::ESD_LT_XPLink, GOFF::ESD_AMODE_None,
+                   GOFF::ESD_BSC_Section, 0},
       ADAEDSection);
 
   TextSection = Ctx->getGOFFSection(
@@ -608,7 +609,8 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   PPA2ListSection = Ctx->getGOFFSection(
       SectionKind::getData(), ".&ppa2",
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
-                   GOFF::ESD_LT_OS, GOFF::ESD_BSC_Section, 0},
+                   GOFF::ESD_LT_OS, GOFF::ESD_AMODE_None,
+                   GOFF::ESD_BSC_Section, 0},
       PPA2ListEDSection);
 
   IDRLSection = Ctx->getGOFFSection(
