@@ -1643,7 +1643,7 @@ multiclass VOP1_Real_vi <bits<10> op> {
       VOP1_DPPe<op{7-0}, !cast<VOP1_DPP_Pseudo>(NAME#"_dpp")> {
         let AssemblerPredicate =
             !if(!cast<VOP1_Pseudo>(NAME#"_e32").Pfl.HasExt64BitDPP,
-                isGFX8GFX9WithDPALU_DPP, isGFX8GFX9);
+                HasGCN3DPALU_DPP, isGFX8GFX9);
       }
 }
 

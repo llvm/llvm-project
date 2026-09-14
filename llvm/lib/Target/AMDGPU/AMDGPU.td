@@ -2878,12 +2878,6 @@ def isGFX8GFX9 :
             "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9">,
   AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding)>;
 
-def isGFX8GFX9WithDPALU_DPP :
-  Predicate<"(Subtarget->getGeneration() == AMDGPUSubtarget::VOLCANIC_ISLANDS ||"
-            "Subtarget->getGeneration() == AMDGPUSubtarget::GFX9) &&"
-            "Subtarget->hasDPALU_DPP()">,
-  AssemblerPredicate<(all_of FeatureGFX8Insts, FeatureGCN3Encoding, FeatureDPALU_DPP)>;
-
 def isGFX10Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX10">,
   AssemblerPredicate<(all_of FeatureGFX10Insts, (not FeatureGFX11Insts))>;
@@ -3075,6 +3069,10 @@ def HasSDWA10 :
 
 def HasDPP : Predicate<"Subtarget->hasDPP()">,
   AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureDPP)>;
+
+def HasGCN3DPALU_DPP :
+  Predicate<"Subtarget->isGCN3Encoding() && Subtarget->hasDPALU_DPP()">,
+  AssemblerPredicate<(all_of FeatureGCN3Encoding, FeatureDPALU_DPP)>;
 
 def HasDPP8 : Predicate<"Subtarget->hasDPP8()">,
   AssemblerPredicate<(all_of (not FeatureGCN3Encoding), FeatureGFX10Insts, FeatureDPP8)>;
