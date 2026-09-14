@@ -94,42 +94,6 @@ static llvm::FunctionCallee getCatchallRethrowFn(CodeGenModule &CGM,
   return CGM.CreateRuntimeFunction(FTy, Name);
 }
 
-const EHPersonality EHPersonality::GNU_C = { "__gcc_personality_v0", nullptr };
-const EHPersonality
-EHPersonality::GNU_C_SJLJ = { "__gcc_personality_sj0", nullptr };
-const EHPersonality
-EHPersonality::GNU_C_SEH = { "__gcc_personality_seh0", nullptr };
-const EHPersonality
-EHPersonality::NeXT_ObjC = { "__objc_personality_v0", nullptr };
-const EHPersonality
-EHPersonality::GNU_CPlusPlus = { "__gxx_personality_v0", nullptr };
-const EHPersonality
-EHPersonality::GNU_CPlusPlus_SJLJ = { "__gxx_personality_sj0", nullptr };
-const EHPersonality
-EHPersonality::GNU_CPlusPlus_SEH = { "__gxx_personality_seh0", nullptr };
-const EHPersonality
-EHPersonality::GNU_ObjC = {"__gnu_objc_personality_v0", "objc_exception_throw"};
-const EHPersonality
-EHPersonality::GNU_ObjC_SJLJ = {"__gnu_objc_personality_sj0", "objc_exception_throw"};
-const EHPersonality
-EHPersonality::GNU_ObjC_SEH = {"__gnu_objc_personality_seh0", "objc_exception_throw"};
-const EHPersonality
-EHPersonality::GNU_ObjCXX = { "__gnustep_objcxx_personality_v0", nullptr };
-const EHPersonality
-EHPersonality::GNUstep_ObjC = { "__gnustep_objc_personality_v0", nullptr };
-const EHPersonality
-EHPersonality::MSVC_except_handler = { "_except_handler3", nullptr };
-const EHPersonality
-EHPersonality::MSVC_C_specific_handler = { "__C_specific_handler", nullptr };
-const EHPersonality
-EHPersonality::MSVC_CxxFrameHandler3 = { "__CxxFrameHandler3", nullptr };
-const EHPersonality
-EHPersonality::GNU_Wasm_CPlusPlus = { "__gxx_wasm_personality_v0", nullptr };
-const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
-                                                   nullptr};
-const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
-                                                    nullptr};
-
 static const EHPersonality &getCPersonality(const TargetInfo &Target,
                                             const CodeGenOptions &CGOpts) {
   const llvm::Triple &T = Target.getTriple();
@@ -242,8 +206,10 @@ static const EHPersonality &getSEHPersonalityMSVC(const llvm::Triple &T) {
   return EHPersonality::MSVC_C_specific_handler;
 }
 
-const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
-                                        const FunctionDecl *FD) {
+namespace clang::CodeGen {
+
+const EHPersonality &getEHPersonality(CodeGenModule &CGM,
+                                      const FunctionDecl *FD) {
   const llvm::Triple &T = CGM.getTarget().getTriple();
   const CodeGenOptions &CGOpts = CGM.getCodeGenOpts();
   const LangOptions &L = CGM.getLangOpts();
@@ -260,14 +226,16 @@ const EHPersonality &EHPersonality::get(CodeGenModule &CGM,
                      : getCPersonality(Target, CGOpts);
 }
 
-const EHPersonality &EHPersonality::get(CodeGenFunction &CGF) {
+const EHPersonality &getEHPersonality(CodeGenFunction &CGF) {
   const auto *FD = CGF.CurCodeDecl;
   // For outlined finallys and filters, use the SEH personality in case they
   // contain more SEH. This mostly only affects finallys. Filters could
   // hypothetically use gnu statement expressions to sneak in nested SEH.
   FD = FD ? FD : CGF.CurSEHParent.getDecl();
-  return get(CGF.CGM, dyn_cast_or_null<FunctionDecl>(FD));
+  return getEHPersonality(CGF.CGM, dyn_cast_or_null<FunctionDecl>(FD));
 }
+
+} // namespace clang::CodeGen
 
 static llvm::FunctionCallee getPersonalityFn(CodeGenModule &CGM,
                                              const EHPersonality &Personality) {
@@ -358,7 +326,7 @@ void CodeGenModule::SimplifyPersonality() {
   if (!LangOpts.ObjCRuntime.isNeXTFamily())
     return;
 
-  const EHPersonality &ObjCXX = EHPersonality::get(*this, /*FD=*/nullptr);
+  const EHPersonality &ObjCXX = getEHPersonality(*this, /*FD=*/nullptr);
   const EHPersonality &CXX = getCXXPersonality(getTarget(), CodeGenOpts);
   if (&ObjCXX == &CXX)
     return;
@@ -686,7 +654,7 @@ void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
 
 llvm::BasicBlock *
 CodeGenFunction::getEHDispatchBlock(EHScopeStack::stable_iterator si) {
-  if (EHPersonality::get(*this).usesFuncletPads())
+  if (getEHPersonality(*this).usesFuncletPads())
     return getFuncletEHDispatchBlock(si);
 
   // The dispatch block for the end of the scope chain is a block that
@@ -812,7 +780,7 @@ llvm::BasicBlock *CodeGenFunction::getInvokeDestImpl() {
   llvm::BasicBlock *LP = EHStack.begin()->getCachedLandingPad();
   if (LP) return LP;
 
-  const EHPersonality &Personality = EHPersonality::get(*this);
+  const EHPersonality &Personality = getEHPersonality(*this);
 
   if (!CurFn->hasPersonalityFn())
     CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
@@ -1005,7 +973,7 @@ static void emitCatchPadBlock(CodeGenFunction &CGF, EHCatchScope &CatchScope) {
 
     CGF.Builder.SetInsertPoint(Handler.Block);
 
-    if (EHPersonality::get(CGF).isMSVCXXPersonality()) {
+    if (getEHPersonality(CGF).isMSVCXXPersonality()) {
       CGF.Builder.CreateCatchPad(
           CatchSwitch, {TypeInfo.RTTI, CGF.Builder.getInt32(TypeInfo.Flags),
                         llvm::Constant::getNullValue(CGF.VoidPtrTy)});
@@ -1132,9 +1100,9 @@ static void emitWasmCatchPadBlock(CodeGenFunction &CGF,
 /// It is an invariant that the dispatch block already exists.
 static void emitCatchDispatchBlock(CodeGenFunction &CGF,
                                    EHCatchScope &catchScope) {
-  if (EHPersonality::get(CGF).isWasmPersonality())
+  if (getEHPersonality(CGF).isWasmPersonality())
     return emitWasmCatchPadBlock(CGF, catchScope);
-  if (EHPersonality::get(CGF).usesFuncletPads())
+  if (getEHPersonality(CGF).usesFuncletPads())
     return emitCatchPadBlock(CGF, catchScope);
 
   llvm::BasicBlock *dispatchBlock = catchScope.getCachedEHDispatchBlock();
@@ -1279,7 +1247,7 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   // each catch handler.
   SaveAndRestore RestoreCurrentFuncletPad(CurrentFuncletPad);
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
-  if (EHPersonality::get(*this).isWasmPersonality()) {
+  if (getEHPersonality(*this).isWasmPersonality()) {
     auto *CatchSwitch =
         cast<llvm::CatchSwitchInst>(DispatchBlock->getFirstNonPHIIt());
     WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
@@ -1343,7 +1311,7 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
       Builder.CreateBr(ContBB);
   }
 
-  if (EHPersonality::get(*this).isWasmPersonality() && !HasCatchAll) {
+  if (getEHPersonality(*this).isWasmPersonality() && !HasCatchAll) {
     WasmEmitFallthroughRethrow(WasmCatchStartBlock);
   }
 
@@ -1553,7 +1521,7 @@ llvm::BasicBlock *CodeGenFunction::getTerminateLandingPad() {
   Builder.SetInsertPoint(TerminateLandingPad);
 
   // Tell the backend that this is a landing pad.
-  const EHPersonality &Personality = EHPersonality::get(*this);
+  const EHPersonality &Personality = getEHPersonality(*this);
 
   if (!CurFn->hasPersonalityFn())
     CurFn->setPersonalityFn(getOpaquePersonalityFn(CGM, Personality));
@@ -1601,7 +1569,7 @@ llvm::BasicBlock *CodeGenFunction::getTerminateHandler() {
 }
 
 llvm::BasicBlock *CodeGenFunction::getTerminateFunclet() {
-  assert(EHPersonality::get(*this).usesFuncletPads() &&
+  assert(getEHPersonality(*this).usesFuncletPads() &&
          "use getTerminateLandingPad for non-funclet EH");
 
   llvm::BasicBlock *&TerminateFunclet = TerminateFunclets[CurrentFuncletPad];
@@ -1644,7 +1612,7 @@ llvm::BasicBlock *CodeGenFunction::getEHResumeBlock(bool isCleanup) {
   EHResumeBlock = createBasicBlock("eh.resume");
   Builder.SetInsertPoint(EHResumeBlock);
 
-  const EHPersonality &Personality = EHPersonality::get(*this);
+  const EHPersonality &Personality = getEHPersonality(*this);
 
   // This can always be a call because we necessarily didn't find
   // anything on the EH stack which needs our help.
