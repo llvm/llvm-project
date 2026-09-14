@@ -1538,7 +1538,10 @@ bool PreRARematStage::initGCNSchedStage() {
   // Collect candidates. We have more restrictions on what we can track here
   // compared to the rematerializer.
   SmallVector<ScoredRemat, 8> Candidates;
-  DenseMap<Register, unsigned> DefRegToCandIdx;
+  // Map registers to candidate indices. Use ~0u as null value
+  // since 0 is a valid index.
+  IndexedMap<unsigned, VirtReg2IndexFunctor> DefRegToCandIdx(~0u);
+  DefRegToCandIdx.reserve(DAG.MRI.getNumVirtRegs());
   const unsigned NumRegions = DAG.Regions.size();
 
   for (unsigned RegIdx = 0, E = Remater.getNumRegs(); RegIdx < E; ++RegIdx) {
@@ -1596,6 +1599,7 @@ bool PreRARematStage::initGCNSchedStage() {
 
     Register DefReg = CandReg.getDefReg();
     MarkedRegs.insert(DefReg);
+    DefRegToCandIdx.grow(DefReg);
     DefRegToCandIdx[DefReg] = Candidates.size();
     Candidates.emplace_back(RegIdx, NumRegions);
   }
@@ -1606,13 +1610,19 @@ bool PreRARematStage::initGCNSchedStage() {
   // separately in ScoredRemat::init.
   for (unsigned I = 0; I < NumRegions; ++I) {
     for (const auto &[Reg, Mask] : DAG.LiveIns[I]) {
-      if (auto It = DefRegToCandIdx.find(Reg); It != DefRegToCandIdx.end())
-        Candidates[It->second].LiveIn.set(I);
+      if (DefRegToCandIdx.inBounds(Reg)) {
+        unsigned CandIdx = DefRegToCandIdx[Reg];
+        if (CandIdx != ~0u)
+          Candidates[CandIdx].LiveIn.set(I);
+      }
     }
     for (const auto &[Reg, Mask] :
          DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I)) {
-      if (auto It = DefRegToCandIdx.find(Reg); It != DefRegToCandIdx.end())
-        Candidates[It->second].LiveOut.set(I);
+      if (DefRegToCandIdx.inBounds(Reg)) {
+        unsigned CandIdx = DefRegToCandIdx[Reg];
+        if (CandIdx != ~0u)
+          Candidates[CandIdx].LiveOut.set(I);
+      }
     }
   }
 
