@@ -203,9 +203,6 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_div_fmasf:
     return emitBuiltinWithOneOverloadedType<4>(expr, "amdgcn.div.fmas")
         .getValue();
-  case AMDGPU::BI__builtin_amdgcn_ds_swizzle:
-    return emitBuiltinWithOneOverloadedType<2>(expr, "amdgcn.ds.swizzle")
-        .getValue();
   case AMDGPU::BI__builtin_amdgcn_mov_dpp8:
   case AMDGPU::BI__builtin_amdgcn_mov_dpp:
   case AMDGPU::BI__builtin_amdgcn_update_dpp: {

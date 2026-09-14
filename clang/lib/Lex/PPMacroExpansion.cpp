@@ -131,11 +131,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
                                           MacroInfo *Macro,
                                           ArrayRef<ModuleMacro *> Overrides,
                                           bool &New) {
-  llvm::FoldingSetNodeID ID;
-  ModuleMacro::Profile(ID, Mod, II);
-
   llvm::FoldingSetInsertToken InsertToken;
-  if (auto *MM = ModuleMacros.lookup(ID, InsertToken)) {
+  if (auto *MM = ModuleMacros.lookup({Mod, II}, InsertToken)) {
     New = false;
     return MM;
   }
@@ -168,11 +165,8 @@ ModuleMacro *Preprocessor::addModuleMacro(Module *Mod, IdentifierInfo *II,
 
 ModuleMacro *Preprocessor::getModuleMacro(Module *Mod,
                                           const IdentifierInfo *II) {
-  llvm::FoldingSetNodeID ID;
-  ModuleMacro::Profile(ID, Mod, II);
-
   llvm::FoldingSetInsertToken InsertToken;
-  return ModuleMacros.lookup(ID, InsertToken);
+  return ModuleMacros.lookup({Mod, II}, InsertToken);
 }
 
 void Preprocessor::updateModuleMacroInfo(const IdentifierInfo *II,
