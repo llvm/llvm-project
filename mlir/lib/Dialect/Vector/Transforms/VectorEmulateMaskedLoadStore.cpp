@@ -56,6 +56,9 @@ struct VectorMaskedLoadOpConverter final
     if (maskVType.getShape().size() != 1)
       return rewriter.notifyMatchFailure(
           maskedLoadOp, "expected vector.maskedstore with 1-D mask");
+    if (maskVType.isScalable())
+      return rewriter.notifyMatchFailure(
+          maskedLoadOp, "cannot unroll a scalable mask");
 
     Location loc = maskedLoadOp.getLoc();
     int64_t maskLength = maskVType.getShape()[0];
@@ -125,6 +128,9 @@ struct VectorMaskedStoreOpConverter final
     if (maskVType.getShape().size() != 1)
       return rewriter.notifyMatchFailure(
           maskedStoreOp, "expected vector.maskedstore with 1-D mask");
+    if (maskVType.isScalable())
+      return rewriter.notifyMatchFailure(
+          maskedStoreOp, "cannot unroll a scalable mask");
 
     Location loc = maskedStoreOp.getLoc();
     int64_t maskLength = maskVType.getShape()[0];
