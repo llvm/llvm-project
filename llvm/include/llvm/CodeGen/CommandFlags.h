@@ -44,7 +44,7 @@ LLVM_ABI std::vector<std::string> getMAttrs();
 LLVM_ABI Reloc::Model getRelocModel();
 LLVM_ABI std::optional<Reloc::Model> getExplicitRelocModel();
 
-LLVM_ABI ThreadModel::Model getThreadModel();
+LLVM_ABI ThreadModel getThreadModel();
 
 LLVM_ABI CodeModel::Model getCodeModel();
 LLVM_ABI std::optional<CodeModel::Model> getExplicitCodeModel();
@@ -63,11 +63,7 @@ LLVM_ABI FramePointerKind getFramePointerUsage();
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFPMath();
 LLVM_ABI DenormalMode::DenormalModeKind getDenormalFP32Math();
 
-LLVM_ABI bool getEnableHonorSignDependentRoundingFPMath();
-
 LLVM_ABI llvm::FloatABI::ABIType getFloatABIForCalls();
-
-LLVM_ABI llvm::FPOpFusion::FPOpFusionMode getFuseFPOps();
 
 LLVM_ABI SwiftAsyncFramePointerMode getSwiftAsyncFramePointer();
 

@@ -325,6 +325,7 @@ add_libc_test(
 
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(pwd)
 add_subdirectory(printf_core)
 add_subdirectory(RPC)
 add_subdirectory(OSUtil)

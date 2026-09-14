@@ -57,6 +57,31 @@ option(ORC_RT_ENABLE_ASSERTIONS "Enable assertions independent of build mode." O
 option(ORC_RT_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(ORC_RT_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 
+option(ORC_RT_ENABLE_PIC "Build position-independent code." ON)
+if(NOT ORC_RT_ENABLE_PIC AND
+   "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} ${CMAKE_ASM_FLAGS}" MATCHES "-fPIC")
+  message(WARNING
+    "ORC_RT_ENABLE_PIC is OFF, but -fPIC is already in CMAKE_C_FLAGS, "
+    "CMAKE_CXX_FLAGS or CMAKE_ASM_FLAGS, so the build will still be "
+    "position-independent.")
+endif()
+
+# --- Bedrock Library Type: SHARED / STATIC ---
+set(orc_rt_bedrock_library_types SHARED STATIC)
+set(ORC_RT_BEDROCK_LIBRARY_TYPE "STATIC" CACHE STRING
+  "Build Bedrock as SHARED or STATIC")
+set_property(CACHE ORC_RT_BEDROCK_LIBRARY_TYPE PROPERTY STRINGS
+  ${orc_rt_bedrock_library_types})
+string(TOUPPER "${ORC_RT_BEDROCK_LIBRARY_TYPE}" ORC_RT_BEDROCK_LIBRARY_TYPE)
+if(NOT ORC_RT_BEDROCK_LIBRARY_TYPE IN_LIST orc_rt_bedrock_library_types)
+  message(FATAL_ERROR "ORC_RT_BEDROCK_LIBRARY_TYPE must be one of: "
+      "${orc_rt_bedrock_library_types}")
+endif()
+if(ORC_RT_BEDROCK_LIBRARY_TYPE STREQUAL "SHARED" AND NOT ORC_RT_ENABLE_PIC)
+  message(WARNING
+    "ORC_RT_BEDROCK_LIBRARY_TYPE is SHARED, but ORC_RT_ENABLE_PIC is OFF.")
+endif()
+
 # --- Language runtime (RTTI / exceptions) ---
 option(ORC_RT_ENABLE_RTTI "Enable RTTI." ON)
 option(ORC_RT_ENABLE_EXCEPTIONS "Enable exceptions." ON)
