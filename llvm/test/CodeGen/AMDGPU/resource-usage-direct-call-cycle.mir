@@ -55,7 +55,6 @@
 
 #--- header.mir
 --- |
-  target triple = "amdgpu9.08-amd-amdhsa"
 #--- a.ir
   define hidden void @a() norecurse { ret void }
 #--- b.ir

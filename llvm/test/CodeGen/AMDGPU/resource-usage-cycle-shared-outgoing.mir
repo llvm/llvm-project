@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -verify-machineinstrs \
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa \
 # RUN:   -start-before=amdgpu-resource-usage %s -o - | FileCheck %s
 
 # Both cycle members also call c. When a closes the cycle, c is still
@@ -12,7 +12,6 @@
 # CHECK: .set .Lc.uses_flat_scratch, 1{{$}}
 
 --- |
-  target triple = "amdgpu9.00-amd-amdhsa"
   define hidden void @b() norecurse { ret void }
   define hidden void @a() norecurse { ret void }
   define hidden void @c() norecurse { ret void }

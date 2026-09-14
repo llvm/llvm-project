@@ -300,13 +300,13 @@ static bool evaluateResourceExpr(const AMDGPUMCExpr *Root, MCValue &Res,
     Phase Step = Phase::Visit;
     MCSymbol *ResolvingSymbol = nullptr;
   };
-  SmallVector<WorkItem, 16> WorkList{{Root}};
+  SmallVector<WorkItem, 16> WorkList = {{Root}};
   DenseMap<const MCExpr *, MCValue> Values;
   SmallPtrSet<const MCExpr *, 16> Active;
   SmallVector<MCSymbol *, 8> ResolvingSymbols;
   // Match MCExpr's resolution guard, including on failure. Cache values only
   // for this query: symbol definitions and assembler layout can change later.
-  auto ClearResolving = scope_exit([&] {
+  scope_exit ClearResolving([&] {
     for (MCSymbol *Sym : ResolvingSymbols)
       Sym->setIsResolving(false);
   });
@@ -333,14 +333,16 @@ static bool evaluateResourceExpr(const AMDGPUMCExpr *Root, MCValue &Res,
       if (MCSymbol *Sym = Item.ResolvingSymbol) {
         MCValue Value = Values.lookup(Sym->getVariableValue());
         Sym->setIsResolving(false);
-        if (Value.isAbsolute())
+        if (Value.isAbsolute()) {
           Values.try_emplace(Expr, Value);
-        // The normal resolver preserves the identity of relocatable aliases.
-        // Clear our guard first so it does not diagnose a spurious cycle.
-        else if (!EvaluateLeaf(Expr))
+        } else if (!EvaluateLeaf(Expr)) {
+          // The normal resolver preserves the identity of relocatable aliases.
+          // Clear our guard first so it does not diagnose a spurious cycle.
           return false;
+        }
         continue;
       }
+
       if (const auto *Binary = dyn_cast<MCBinaryExpr>(Expr)) {
         MCValue LHS = Values.lookup(Binary->getLHS());
         MCValue RHS = Values.lookup(Binary->getRHS());
@@ -390,6 +392,7 @@ static bool evaluateResourceExpr(const AMDGPUMCExpr *Root, MCValue &Res,
       WorkList.push_back({Binary->getLHS()});
       continue;
     }
+
     if (const auto *Ref = dyn_cast<MCSymbolRefExpr>(Expr)) {
       MCSymbol &Sym = const_cast<MCSymbol &>(Ref->getSymbol());
       if (!Ref->getKind() && Sym.isVariable() && !Sym.isWeakExternal() &&
