@@ -586,6 +586,10 @@ private:
   /// fragment of the function.
   SmallVector<MCSymbol *, 0> LSDASymbols;
 
+  /// Marking for the @TType base of the function. All fragments share a single
+  /// type table, hence this symbol is not fragment-specific.
+  MCSymbol *LSDATypeTableBaseSymbol = nullptr;
+
   /// Each function fragment may have another fragment containing all landing
   /// pads for it. If that's the case, the LP fragment will be stored in the
   /// vector below with indexing starting with the main fragment.
@@ -2115,6 +2119,21 @@ public:
     LSDASymbols[F.get()] = BC.Ctx->getOrCreateSymbol(SymbolName);
 
     return LSDASymbols[F.get()];
+  }
+
+  /// Return symbol pointing to the @TType base of the function's LSDA,
+  /// creating it if necessary. The type table is emitted once for the whole
+  /// function, and the LSDA of every fragment references this symbol.
+  MCSymbol *getOrCreateLSDATypeTableBaseSymbol() {
+    if (!LSDATypeTableBaseSymbol)
+      LSDATypeTableBaseSymbol = BC.Ctx->createTempSymbol("TTBase");
+    return LSDATypeTableBaseSymbol;
+  }
+
+  /// Return symbol pointing to the @TType base of the function's LSDA, or
+  /// nullptr if no LSDA referencing it was emitted.
+  MCSymbol *getLSDATypeTableBaseSymbol() const {
+    return LSDATypeTableBaseSymbol;
   }
 
   /// If all landing pads for the function fragment \p F are located in fragment
