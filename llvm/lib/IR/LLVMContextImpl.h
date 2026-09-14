@@ -360,9 +360,9 @@ template <> struct MDNodeKeyImpl<DISubrange> {
       ConstantAsMetadata *MD1 = dyn_cast_or_null<ConstantAsMetadata>(Node1);
       ConstantAsMetadata *MD2 = dyn_cast_or_null<ConstantAsMetadata>(Node2);
       if (MD1 && MD2) {
-        ConstantInt *CV1 = cast<ConstantInt>(MD1->getValue());
-        ConstantInt *CV2 = cast<ConstantInt>(MD2->getValue());
-        if (CV1->getSExtValue() == CV2->getSExtValue())
+        ConstantInt *CV1 = dyn_cast<ConstantInt>(MD1->getValue());
+        ConstantInt *CV2 = dyn_cast<ConstantInt>(MD2->getValue());
+        if (CV1 && CV2 && CV1->getSExtValue() == CV2->getSExtValue())
           return true;
       }
       return false;
@@ -377,8 +377,9 @@ template <> struct MDNodeKeyImpl<DISubrange> {
   unsigned getHashValue() const {
     if (CountNode)
       if (auto *MD = dyn_cast<ConstantAsMetadata>(CountNode))
-        return hash_combine(cast<ConstantInt>(MD->getValue())->getSExtValue(),
-                            LowerBound, UpperBound, Stride);
+        if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+          return hash_combine(CV->getSExtValue(), LowerBound, UpperBound,
+                              Stride);
     return hash_combine(CountNode, LowerBound, UpperBound, Stride);
   }
 };
@@ -407,8 +408,8 @@ template <> struct MDNodeKeyImpl<DIGenericSubrange> {
   unsigned getHashValue() const {
     auto *MD = dyn_cast_or_null<ConstantAsMetadata>(CountNode);
     if (CountNode && MD)
-      return hash_combine(cast<ConstantInt>(MD->getValue())->getSExtValue(),
-                          LowerBound, UpperBound, Stride);
+      if (auto *CV = dyn_cast<ConstantInt>(MD->getValue()))
+        return hash_combine(CV->getSExtValue(), LowerBound, UpperBound, Stride);
     return hash_combine(CountNode, LowerBound, UpperBound, Stride);
   }
 };
@@ -676,9 +677,9 @@ template <> struct MDNodeKeyImpl<DISubrangeType> {
       ConstantAsMetadata *MD1 = dyn_cast_or_null<ConstantAsMetadata>(Node1);
       ConstantAsMetadata *MD2 = dyn_cast_or_null<ConstantAsMetadata>(Node2);
       if (MD1 && MD2) {
-        ConstantInt *CV1 = cast<ConstantInt>(MD1->getValue());
-        ConstantInt *CV2 = cast<ConstantInt>(MD2->getValue());
-        if (CV1->getSExtValue() == CV2->getSExtValue())
+        ConstantInt *CV1 = dyn_cast<ConstantInt>(MD1->getValue());
+        ConstantInt *CV2 = dyn_cast<ConstantInt>(MD2->getValue());
+        if (CV1 && CV2 && CV1->getSExtValue() == CV2->getSExtValue())
           return true;
       }
       return false;
@@ -699,8 +700,8 @@ template <> struct MDNodeKeyImpl<DISubrangeType> {
     unsigned val = 0;
     auto HashBound = [&](Metadata *Node) -> void {
       ConstantAsMetadata *MD = dyn_cast_or_null<ConstantAsMetadata>(Node);
-      if (MD) {
-        ConstantInt *CV = cast<ConstantInt>(MD->getValue());
+      ConstantInt *CV = MD ? dyn_cast<ConstantInt>(MD->getValue()) : nullptr;
+      if (CV) {
         val = hash_combine(val, CV->getSExtValue());
       } else {
         val = hash_combine(val, Node);
