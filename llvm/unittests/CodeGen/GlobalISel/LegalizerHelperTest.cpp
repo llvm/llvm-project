@@ -4490,4 +4490,52 @@ TEST_F(AArch64GISelMITest, LowerFMinimumExtLLT) {
   LLT::setUseExtended(false);
 }
 
+// Check that narrowScalarFPTOI only narrows conversions from IEEE half:
+// bfloat is also 16 bits wide but has float's exponent range, so swapping in
+// a narrower result could produce poison. Untyped 16-bit sources still match
+// LLT::float16() through the ANY_SCALAR wildcard.
+TEST_F(AArch64GISelMITest, NarrowFPTOIExtLLT) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  LLT::setUseExtended(true);
+
+  DefineLegalizerInfo(A, {});
+  LLT S64 = LLT::integer(64);
+  LLT S32 = LLT::integer(32);
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+
+  // Bfloat sources must be rejected.
+  Register BFloat16 = MRI->createGenericVirtualRegister(LLT::bfloat16());
+  auto FPTOSIBF16 = B.buildInstr(TargetOpcode::G_FPTOSI, {S64}, {BFloat16});
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::UnableToLegalize,
+            Helper.narrowScalar(*FPTOSIBF16, 0, S32));
+
+  // Every finite half fits in an i32, so the conversion can be narrowed.
+  Register Half = MRI->createGenericVirtualRegister(LLT::float16());
+  auto FPTOSIF16 = B.buildInstr(TargetOpcode::G_FPTOSI, {S64}, {Half});
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*FPTOSIF16, 0, S32));
+
+  // Untyped 16-bit sources (e.g. parsed from MIR) still match.
+  Register Untyped16 = MRI->createGenericVirtualRegister(LLT::scalar(16));
+  auto FPTOSIS16 = B.buildInstr(TargetOpcode::G_FPTOSI, {S64}, {Untyped16});
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.narrowScalar(*FPTOSIS16, 0, S32));
+
+  const char *CheckStr = R"(
+  CHECK-DAG: %[[CONV:.*]]:_(i32) = G_FPTOSI %[[SRC:.*]]:_(f16)
+  CHECK-DAG: %[[DST:.*]]:_(i64) = G_SEXT %[[CONV]]
+  CHECK-DAG: %{{[0-9]+}}:_(i64) = G_FPTOSI %{{[0-9]+}}:_(bf16)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+
+  LLT::setUseExtended(false);
+}
+
 } // namespace
