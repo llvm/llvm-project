@@ -9,6 +9,7 @@
 #include "../common/Fixtures.hpp"
 #include <OffloadAPI.h>
 #include <array>
+#include <cstring>
 #include <gtest/gtest.h>
 #include <vector>
 
@@ -73,6 +74,62 @@ TEST_P(olMemFillTest, Success16NotMultiple4Enqueue) {
 TEST_P(olMemFillTest, Success32) { test_body<uint32_t, 0xDEADBEEF, 1024>(); }
 TEST_P(olMemFillTest, Success32Enqueue) {
   test_body<uint32_t, 0xDEADBEEF, 1024, true>();
+}
+
+// The AMDGPU plugin chooses a synchronous HSA fill when the queue is idle and
+// a host-callback fill when work is already pending. Those two paths used to
+// be collapsed because Expected<bool> was tested for "has a value" instead of
+// "has pending work".
+TEST_P(olMemFillTest, Success32IdleQueueCompletesWithoutSync) {
+  if (getPlatformBackend() != OL_PLATFORM_BACKEND_AMDGPU)
+    GTEST_SKIP() << "Idle-queue synchronous fill is AMDGPU-specific";
+
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+
+  uint32_t Pattern = 0xDEADBEEF;
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
+
+  bool IsQueueWorkCompleted = false;
+  ASSERT_SUCCESS(olQueryQueue(Queue, &IsQueueWorkCompleted));
+  ASSERT_TRUE(IsQueueWorkCompleted);
+
+  auto *AllocPtr = reinterpret_cast<uint32_t *>(Alloc);
+  for (size_t i = 0; i < Size / sizeof(Pattern); ++i)
+    ASSERT_EQ(AllocPtr[i], Pattern);
+
+  olMemFree(Alloc);
+}
+
+TEST_P(olMemFillTest, Success32EnqueueStaysPendingUntilHostTask) {
+  if (getPlatformBackend() != OL_PLATFORM_BACKEND_AMDGPU)
+    GTEST_SKIP() << "Pending-work asynchronous fill is AMDGPU-specific";
+
+  ManuallyTriggeredTask Manual;
+  ASSERT_SUCCESS(Manual.enqueue(Queue));
+
+  constexpr size_t Size = 1024;
+  void *Alloc;
+  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_MANAGED, Size, &Alloc));
+  std::memset(Alloc, 0, Size);
+
+  uint32_t Pattern = 0xDEADBEEF;
+  ASSERT_SUCCESS(olMemFill(Queue, Alloc, sizeof(Pattern), &Pattern, Size));
+
+  bool IsQueueWorkCompleted = false;
+  ASSERT_SUCCESS(olQueryQueue(Queue, &IsQueueWorkCompleted));
+  ASSERT_FALSE(IsQueueWorkCompleted);
+
+  auto *AllocPtr = reinterpret_cast<uint32_t *>(Alloc);
+  ASSERT_EQ(AllocPtr[0], 0u);
+
+  ASSERT_SUCCESS(Manual.trigger());
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+  for (size_t i = 0; i < Size / sizeof(Pattern); ++i)
+    ASSERT_EQ(AllocPtr[i], Pattern);
+
+  olMemFree(Alloc);
 }
 
 TEST_P(olMemFillTest, SuccessLarge) {
