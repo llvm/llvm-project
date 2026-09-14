@@ -1,7 +1,7 @@
-.. title:: clang-tidy - readability-trailing-comma
+```{title} clang-tidy - readability-trailing-comma
+```
 
-readability-trailing-comma
-==========================
+# readability-trailing-comma
 
 Checks for presence or absence of trailing commas in enum definitions and
 initializer lists.
@@ -17,52 +17,48 @@ Trailing commas in multi-line constructs offer several benefits:
 - Formatters may change code to a more desired style.
 - Code generators avoid the need for special handling of the last element.
 
-.. code-block:: c++
+```c++
+// Without trailing commas - adding "Yellow" requires modifying the "Blue" line
+enum Color {
+  Red,
+  Green,
+  Blue
+};
 
-  // Without trailing commas - adding "Yellow" requires modifying the "Blue" line
-  enum Color {
-    Red,
-    Green,
-    Blue
-  };
+// With trailing commas - adding "Yellow" is a clean, single-line change
+enum Color {
+  Red,
+  Green,
+  Blue,
+};
+```
 
-  // With trailing commas - adding "Yellow" is a clean, single-line change
-  enum Color {
-    Red,
-    Green,
-    Blue,
-  };
-
-
-Limitations
------------
+## Limitations
 
 The check currently doesn't analyze code inside macros.
 
+## Options
 
-Options
--------
+```{option} SingleLineCommaPolicy
+Controls whether to add, remove, or ignore trailing commas in single-line
+enum definitions and initializer lists.
+Valid values are:
 
-.. option:: SingleLineCommaPolicy
+- `Append`: Add trailing commas where missing.
+- `Remove`: Remove trailing commas where present.
+- `Ignore`: Do not check single-line constructs.
 
-  Controls whether to add, remove, or ignore trailing commas in single-line
-  enum definitions and initializer lists.
-  Valid values are:
+Default is `Remove`.
+```
 
-  - `Append`: Add trailing commas where missing.
-  - `Remove`: Remove trailing commas where present.
-  - `Ignore`: Do not check single-line constructs.
+```{option} MultiLineCommaPolicy
+Controls whether to add, remove, or ignore trailing commas in multi-line
+enum definitions and initializer lists.
+Valid values are:
 
-  Default is `Remove`.
+- `Append`: Add trailing commas where missing.
+- `Remove`: Remove trailing commas where present.
+- `Ignore`: Do not check multi-line constructs.
 
-.. option:: MultiLineCommaPolicy
-
-  Controls whether to add, remove, or ignore trailing commas in multi-line
-  enum definitions and initializer lists.
-  Valid values are:
-
-  - `Append`: Add trailing commas where missing.
-  - `Remove`: Remove trailing commas where present.
-  - `Ignore`: Do not check multi-line constructs.
-
-  Default is `Append`.
+Default is `Append`.
+```
