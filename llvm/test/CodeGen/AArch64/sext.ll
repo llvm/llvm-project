@@ -264,15 +264,16 @@ define <3 x i64> @sext_v3i8_v3i64(<3 x i8> %a) {
 ; CHECK-SD-LABEL: sext_v3i8_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    fmov s1, w2
-; CHECK-SD-NEXT:    mov v0.s[1], w1
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    shl v2.2d, v1.2d, #56
-; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-SD-NEXT:    ushll2 v2.2d, v0.4s, #0
+; CHECK-SD-NEXT:    shl v1.2d, v1.2d, #56
+; CHECK-SD-NEXT:    shl v2.2d, v2.2d, #56
+; CHECK-SD-NEXT:    sshr v0.2d, v1.2d, #56
 ; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #56
-; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #56
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
@@ -423,15 +424,16 @@ define <3 x i64> @sext_v3i10_v3i64(<3 x i10> %a) {
 ; CHECK-SD-LABEL: sext_v3i10_v3i64:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    fmov s0, w0
-; CHECK-SD-NEXT:    fmov s1, w2
-; CHECK-SD-NEXT:    mov v0.s[1], w1
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    shl v2.2d, v1.2d, #54
-; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v0.2s, #0
+; CHECK-SD-NEXT:    ushll2 v2.2d, v0.4s, #0
+; CHECK-SD-NEXT:    shl v1.2d, v1.2d, #54
+; CHECK-SD-NEXT:    shl v2.2d, v2.2d, #54
+; CHECK-SD-NEXT:    sshr v0.2d, v1.2d, #54
 ; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #54
-; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #54
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #54
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-SD-NEXT:    ret
@@ -1140,50 +1142,58 @@ entry:
 define <16 x i64> @sext_v16i10_v16i64(<16 x i10> %a) {
 ; CHECK-SD-LABEL: sext_v16i10_v16i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov s0, w6
-; CHECK-SD-NEXT:    fmov s2, w4
-; CHECK-SD-NEXT:    ldr s1, [sp]
-; CHECK-SD-NEXT:    fmov s3, w2
-; CHECK-SD-NEXT:    fmov s4, w0
-; CHECK-SD-NEXT:    add x8, sp, #8
-; CHECK-SD-NEXT:    ldr s5, [sp, #16]
-; CHECK-SD-NEXT:    ldr s6, [sp, #32]
-; CHECK-SD-NEXT:    ldr s7, [sp, #48]
-; CHECK-SD-NEXT:    ld1 { v1.s }[1], [x8]
-; CHECK-SD-NEXT:    mov v2.s[1], w5
-; CHECK-SD-NEXT:    mov v0.s[1], w7
-; CHECK-SD-NEXT:    mov v4.s[1], w1
-; CHECK-SD-NEXT:    mov v3.s[1], w3
-; CHECK-SD-NEXT:    add x8, sp, #24
-; CHECK-SD-NEXT:    add x9, sp, #40
-; CHECK-SD-NEXT:    add x10, sp, #56
-; CHECK-SD-NEXT:    ld1 { v5.s }[1], [x8]
-; CHECK-SD-NEXT:    ld1 { v6.s }[1], [x9]
-; CHECK-SD-NEXT:    ld1 { v7.s }[1], [x10]
-; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
-; CHECK-SD-NEXT:    ushll v2.2d, v2.2s, #0
+; CHECK-SD-NEXT:    ldr w9, [sp]
+; CHECK-SD-NEXT:    ldr w10, [sp, #32]
+; CHECK-SD-NEXT:    fmov s0, w0
+; CHECK-SD-NEXT:    fmov s1, w4
+; CHECK-SD-NEXT:    ldr w8, [sp, #40]
+; CHECK-SD-NEXT:    ldr w11, [sp, #8]
+; CHECK-SD-NEXT:    fmov s2, w9
+; CHECK-SD-NEXT:    fmov s3, w10
+; CHECK-SD-NEXT:    ldr w9, [sp, #48]
+; CHECK-SD-NEXT:    mov v0.h[1], w1
+; CHECK-SD-NEXT:    mov v1.h[1], w5
+; CHECK-SD-NEXT:    mov v2.h[1], w11
+; CHECK-SD-NEXT:    mov v3.h[1], w8
+; CHECK-SD-NEXT:    ldr w8, [sp, #16]
+; CHECK-SD-NEXT:    mov v0.h[2], w2
+; CHECK-SD-NEXT:    mov v1.h[2], w6
+; CHECK-SD-NEXT:    mov v2.h[2], w8
+; CHECK-SD-NEXT:    mov v3.h[2], w9
+; CHECK-SD-NEXT:    ldr w8, [sp, #24]
+; CHECK-SD-NEXT:    ldr w9, [sp, #56]
+; CHECK-SD-NEXT:    mov v0.h[3], w3
+; CHECK-SD-NEXT:    mov v1.h[3], w7
+; CHECK-SD-NEXT:    mov v2.h[3], w8
+; CHECK-SD-NEXT:    mov v3.h[3], w9
+; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
+; CHECK-SD-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-SD-NEXT:    ushll v3.4s, v3.4h, #0
+; CHECK-SD-NEXT:    ushll2 v4.2d, v0.4s, #0
 ; CHECK-SD-NEXT:    ushll v0.2d, v0.2s, #0
-; CHECK-SD-NEXT:    ushll v4.2d, v4.2s, #0
+; CHECK-SD-NEXT:    ushll2 v5.2d, v1.4s, #0
+; CHECK-SD-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-SD-NEXT:    ushll v6.2d, v2.2s, #0
+; CHECK-SD-NEXT:    ushll2 v2.2d, v2.4s, #0
+; CHECK-SD-NEXT:    ushll2 v7.2d, v3.4s, #0
 ; CHECK-SD-NEXT:    ushll v3.2d, v3.2s, #0
-; CHECK-SD-NEXT:    ushll v5.2d, v5.2s, #0
-; CHECK-SD-NEXT:    ushll v6.2d, v6.2s, #0
-; CHECK-SD-NEXT:    ushll v7.2d, v7.2s, #0
-; CHECK-SD-NEXT:    shl v16.2d, v1.2d, #54
-; CHECK-SD-NEXT:    shl v2.2d, v2.2d, #54
-; CHECK-SD-NEXT:    shl v17.2d, v0.2d, #54
 ; CHECK-SD-NEXT:    shl v4.2d, v4.2d, #54
-; CHECK-SD-NEXT:    shl v3.2d, v3.2d, #54
+; CHECK-SD-NEXT:    shl v0.2d, v0.2d, #54
 ; CHECK-SD-NEXT:    shl v5.2d, v5.2d, #54
+; CHECK-SD-NEXT:    shl v16.2d, v1.2d, #54
 ; CHECK-SD-NEXT:    shl v6.2d, v6.2d, #54
+; CHECK-SD-NEXT:    shl v17.2d, v2.2d, #54
 ; CHECK-SD-NEXT:    shl v7.2d, v7.2d, #54
-; CHECK-SD-NEXT:    sshr v2.2d, v2.2d, #54
-; CHECK-SD-NEXT:    sshr v0.2d, v4.2d, #54
-; CHECK-SD-NEXT:    sshr v1.2d, v3.2d, #54
-; CHECK-SD-NEXT:    sshr v4.2d, v16.2d, #54
-; CHECK-SD-NEXT:    sshr v3.2d, v17.2d, #54
-; CHECK-SD-NEXT:    sshr v5.2d, v5.2d, #54
-; CHECK-SD-NEXT:    sshr v6.2d, v6.2d, #54
+; CHECK-SD-NEXT:    shl v18.2d, v3.2d, #54
+; CHECK-SD-NEXT:    sshr v1.2d, v4.2d, #54
+; CHECK-SD-NEXT:    sshr v0.2d, v0.2d, #54
+; CHECK-SD-NEXT:    sshr v3.2d, v5.2d, #54
+; CHECK-SD-NEXT:    sshr v2.2d, v16.2d, #54
+; CHECK-SD-NEXT:    sshr v4.2d, v6.2d, #54
+; CHECK-SD-NEXT:    sshr v5.2d, v17.2d, #54
 ; CHECK-SD-NEXT:    sshr v7.2d, v7.2d, #54
+; CHECK-SD-NEXT:    sshr v6.2d, v18.2d, #54
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sext_v16i10_v16i64:

@@ -1011,30 +1011,20 @@ define void @masked_store_v8f32(ptr %dst, <8 x i1> %mask) {
 ; CHECK-LABEL: masked_store_v8f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
-; CHECK-NEXT:    mov z1.b, z0.b[7]
-; CHECK-NEXT:    mov z2.b, z0.b[6]
-; CHECK-NEXT:    mov x8, #4 // =0x4
-; CHECK-NEXT:    mov z3.b, z0.b[5]
-; CHECK-NEXT:    mov z4.b, z0.b[4]
-; CHECK-NEXT:    mov z5.b, z0.b[3]
-; CHECK-NEXT:    mov z6.b, z0.b[2]
-; CHECK-NEXT:    mov z7.b, z0.b[1]
 ; CHECK-NEXT:    ptrue p0.s, vl4
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z2.h, z4.h, z3.h
-; CHECK-NEXT:    zip1 z3.h, z6.h, z5.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z7.h
-; CHECK-NEXT:    zip1 z1.s, z2.s, z1.s
-; CHECK-NEXT:    zip1 z0.s, z0.s, z3.s
-; CHECK-NEXT:    uunpklo z1.s, z1.h
+; CHECK-NEXT:    mov x8, #4 // =0x4
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    lsl z1.s, z1.s, #31
+; CHECK-NEXT:    uunpklo z1.s, z1.h
 ; CHECK-NEXT:    lsl z0.s, z0.s, #31
-; CHECK-NEXT:    asr z1.s, z1.s, #31
+; CHECK-NEXT:    lsl z1.s, z1.s, #31
 ; CHECK-NEXT:    asr z0.s, z0.s, #31
+; CHECK-NEXT:    asr z1.s, z1.s, #31
+; CHECK-NEXT:    cmpne p2.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
 ; CHECK-NEXT:    mov z1.s, #0 // =0x0
-; CHECK-NEXT:    cmpne p2.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    st1w { z1.s }, p1, [x0, x8, lsl #2]
 ; CHECK-NEXT:    st1w { z1.s }, p2, [x0]
 ; CHECK-NEXT:    ret

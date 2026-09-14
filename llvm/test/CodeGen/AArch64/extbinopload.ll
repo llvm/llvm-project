@@ -1367,8 +1367,8 @@ define <4 x i32> @atomic(ptr %p) {
 ; CHECK-NEXT:    ldar w8, [x0]
 ; CHECK-NEXT:    ldr s0, [x0, #4]
 ; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    zip1 v1.8b, v1.8b, v0.8b
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    zip1 v1.8b, v1.8b, v1.8b
 ; CHECK-NEXT:    ushll v0.4s, v0.4h, #3
 ; CHECK-NEXT:    bic v1.4h, #255, lsl #8
 ; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h

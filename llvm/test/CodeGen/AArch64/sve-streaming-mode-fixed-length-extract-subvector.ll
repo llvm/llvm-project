@@ -10,13 +10,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <4 x i1> @extract_subvector_v8i1(<8 x i1> %op) {
 ; CHECK-LABEL: extract_subvector_v8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, z0.b[7]
-; CHECK-NEXT:    mov z2.b, z0.b[6]
-; CHECK-NEXT:    mov z3.b, z0.b[5]
-; CHECK-NEXT:    mov z0.b, z0.b[4]
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v8i1:
@@ -43,13 +38,8 @@ define <4 x i1> @extract_subvector_v8i1(<8 x i1> %op) {
 define <4 x i8> @extract_subvector_v8i8(<8 x i8> %op) {
 ; CHECK-LABEL: extract_subvector_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, z0.b[7]
-; CHECK-NEXT:    mov z2.b, z0.b[6]
-; CHECK-NEXT:    mov z3.b, z0.b[5]
-; CHECK-NEXT:    mov z0.b, z0.b[4]
-; CHECK-NEXT:    zip1 z1.h, z2.h, z1.h
-; CHECK-NEXT:    zip1 z0.h, z0.h, z3.h
-; CHECK-NEXT:    zip1 z0.s, z0.s, z1.s
+; CHECK-NEXT:    uunpklo z0.h, z0.b
+; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: extract_subvector_v8i8:
