@@ -281,7 +281,7 @@ void ConvertMathToXeVMPass::runOnOperation() {
   LLVMTypeConverter converter(ctx, options);
   ConversionTarget target(getContext());
 
-  // Simplify algebric expressions where possible.
+  // Simplify algebraic expressions where possible.
   populateMathAlgebraicSimplificationPatterns(patterns);
   (void)applyPatternsGreedily(getOperation(), std::move(patterns));
   // The native (`afn`) patterns must outrank the precise OCL patterns: an op
