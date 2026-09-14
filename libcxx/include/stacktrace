@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef _LIBCPP_STACKTRACE
-#define _LIBCPP_STACKTRACE
+#  define _LIBCPP_STACKTRACE
 
 /*
   Header <stacktrace> synopsis
@@ -165,6 +165,10 @@ namespace std {
 
 */
 
+// include mandated by [stacktrace.syn]:
+#  include <compare>
+#endif
+
 #if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 #  include <__cxx03/__config>
 #else
@@ -173,25 +177,11 @@ namespace std {
 #  if _LIBCPP_STD_VER >= 23
 #    include <__stacktrace/basic_stacktrace.h>
 #    include <__stacktrace/stacktrace_entry.h>
-// standard-mandated includes
-
-// [iterator.range]
-#    include <__iterator/access.h>
-#    include <__iterator/data.h>
-#    include <__iterator/empty.h>
-#    include <__iterator/reverse_access.h>
-#    include <__iterator/size.h>
-
-#    include <version>
 
 #    if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #      pragma GCC system_header
 #    endif
 
 #  endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-
-// [stacktrace.syn]
-#  include <compare>
-#endif
 
 #endif // _LIBCPP_STACKTRACE
