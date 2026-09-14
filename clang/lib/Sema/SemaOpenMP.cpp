@@ -4673,19 +4673,7 @@ static OMPCapturedExprDecl *buildCaptureDecl(Sema &S, IdentifierInfo *Id,
   QualType Ty = Init->getType();
   if (CaptureExpr->getObjectKind() == OK_Ordinary && CaptureExpr->isGLValue()) {
     if (S.getLangOpts().CPlusPlus) {
-      // For class types (iterators), capture by value to avoid dangling
-      // references to temporaries from expressions like vec.begin() or
-      // vec.end(). Use references for simple variable references
-      // (DeclRefExpr, MemberExpr) to maintain compatibility.
-      bool ShouldCaptureByValue = false;
-      if (CaptureExpr->getType()->isRecordType()) {
-        const Expr *InnerExpr = CaptureExpr->IgnoreParenImpCasts();
-        ShouldCaptureByValue =
-            !isa<DeclRefExpr>(InnerExpr) && !isa<MemberExpr>(InnerExpr);
-      }
-      if (!ShouldCaptureByValue) {
-        Ty = C.getLValueReferenceType(Ty);
-      }
+      Ty = C.getLValueReferenceType(Ty);
     } else {
       Ty = C.getPointerType(Ty);
       ExprResult Res =
@@ -4721,12 +4709,7 @@ static DeclRefExpr *buildCapture(Sema &S, ValueDecl *D, Expr *CaptureExpr,
 
 static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref,
                                StringRef Name) {
-  // For class types (like iterators), capture the object value directly
-  // without lvalue conversion to avoid dangling references to temporaries.
-  const bool IsClassType = CaptureExpr->getType()->isRecordType();
-  if (!IsClassType)
-    CaptureExpr = S.DefaultLvalueConversion(CaptureExpr).get();
-
+  CaptureExpr = S.DefaultLvalueConversion(CaptureExpr).get();
   if (!Ref) {
     OMPCapturedExprDecl *CD = buildCaptureDecl(
         S, &S.getASTContext().Idents.get(Name), CaptureExpr,
@@ -4742,9 +4725,6 @@ static ExprResult buildCapture(Sema &S, Expr *CaptureExpr, DeclRefExpr *&Ref,
     if (!Res.isUsable())
       return ExprError();
   }
-  // For class types, return the object directly without lvalue conversion
-  if (IsClassType)
-    return Res;
   return S.DefaultLvalueConversion(Res.get());
 }
 
@@ -10848,12 +10828,15 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
 
       // Build final: IS.CounterVar = IS.Start + IS.NumIters * IS.Step
-      // Range-based for loops manage their own iterators internally, so skip
-      // explicit finalization for them.
+      // For iterator-based loops (range-based for or explicit iterator loops)
+      // in loop transformation directives, skip finalization entirely.
       ExprResult Final;
-      if (IS.IsRangeFor && isOpenMPLoopTransformationDirective(DKind)) {
-        // Range-based for loops have hidden iterators managed by
-        // compiler-generated machinery, no explicit finalization needed.
+      bool IsIteratorLoop =
+          IS.IsRangeFor || (!IS.CounterVar->getType()->isArithmeticType() &&
+                            !IS.CounterVar->getType()->isPointerType());
+      if (IsIteratorLoop && isOpenMPLoopTransformationDirective(DKind)) {
+        // Iterator-based loops in transformation directives don't need
+        // explicit finalization - the iterator is already at the end.
         Final = nullptr;
       } else {
         Final =
@@ -15023,11 +15006,6 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
     Stmt *TransformedStmt = LoopTransform->getTransformedStmt();
     unsigned NumGeneratedTopLevelLoops =
         LoopTransform->getNumGeneratedTopLevelLoops();
-    // Propagate this transformation's Finals (if any) to the enclosing
-    // directive. The enclosing directive will emit them so they execute at
-    // the right point (right after the transformed loops complete).
-    if (Stmt *InnerFinal = LoopTransform->getFinals())
-      SeqAnalysis.InnerFinals.push_back(InnerFinal);
     // Handle the case where transformed statement is not available due to
     // dependent contexts
     if (!TransformedStmt) {
@@ -15056,6 +15034,12 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
       // given that they are not bounded to a particular loop nest
       // so they need to be treated independently
       updatePreInits(LoopTransform, SeqAnalysis.LoopSequencePreInits);
+      // The generated loops become individual entries in SeqAnalysis.Loops,
+      // so the enclosing directive can decide per-loop where to emit their
+      // finalization. But the transformation's own Finals aren't attached
+      // to any specific generated loop; propagate to the enclosing directive.
+      if (Stmt *InnerFinal = LoopTransform->getFinals())
+        SeqAnalysis.InnerFinals.push_back(InnerFinal);
       return analyzeLoopSequence(TransformedStmt, SeqAnalysis, Context, Kind);
     }
     // Vast majority: (Tile, Unroll, Stripe, Reverse, Interchange, Fuse all)
@@ -15071,6 +15055,7 @@ bool SemaOpenMP::analyzeLoopSequence(Stmt *LoopSeqStmt,
 
     StoreLoopStatements(NewTransformedSingleLoop, TransformedStmt);
     updatePreInits(LoopTransform, NewTransformedSingleLoop.TransformsPreInits);
+    NewTransformedSingleLoop.TransformFinals = LoopTransform->getFinals();
 
     SeqAnalysis.LoopSeqSize++;
     return true;
@@ -17211,14 +17196,25 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
     }
   }
 
-  // Build Finals for this fuse and combine with any Finals propagated from
-  // inner loop transformations. This ensures nested transformations'
-  // finalizations are not lost.
+  // Build Finals for this fuse and combine with:
+  //   - Finals from inner sequence-generating transformations (looprange
+  //     fuse, split) that produced our SeqAnalysis.Loops entries.
+  //   - Finals from inner single-loop transformations (reverse, tile, ...)
+  //     whose loops are in-range and thus consumed by this fuse.
+  // Out-of-range loops carry their own Finals inline; see the FinalLoops
+  // assembly below.
   Stmt *OwnFinals = buildLoopFinalization(Context, FusedLoopHelpers);
   SmallVector<Stmt *, 4> AllFinalsStmts;
-  for (Stmt *InnerFinal : SeqAnalysis.InnerFinals)
-    if (InnerFinal)
-      AllFinalsStmts.push_back(InnerFinal);
+  for (Stmt *InnerFinal : SeqAnalysis.InnerFinals) {
+    assert(InnerFinal && "null Finals should never be pushed");
+    AllFinalsStmts.push_back(InnerFinal);
+  }
+  for (unsigned I : llvm::seq<unsigned>(SeqAnalysis.LoopSeqSize)) {
+    if (LRC && (I < FirstVal - 1 || I >= FirstVal + CountVal - 1))
+      continue;
+    if (Stmt *F = SeqAnalysis.Loops[I].TransformFinals)
+      AllFinalsStmts.push_back(F);
+  }
   if (OwnFinals)
     AllFinalsStmts.push_back(OwnFinals);
   Stmt *CombinedFinals = nullptr;
@@ -17270,7 +17266,15 @@ StmtResult SemaOpenMP::ActOnOpenMPFuseDirective(ArrayRef<OMPClause *> Clauses,
           llvm::append_range(PreInits, TransformPreInit);
       }
 
-      FinalLoops.push_back(SeqAnalysis.Loops[I].TheForStmt);
+      // For out-of-range loop-transformations, emit their finalization inline
+      // right after the transformed loop so that IVs are restored as if the
+      // transformation had not been present (OpenMP 6.0 finalization rule).
+      Stmt *LoopStmt = SeqAnalysis.Loops[I].TheForStmt;
+      if (Stmt *LoopFinals = SeqAnalysis.Loops[I].TransformFinals)
+        LoopStmt = CompoundStmt::Create(Context, {LoopStmt, LoopFinals},
+                                        FPOptionsOverride(), SourceLocation(),
+                                        SourceLocation());
+      FinalLoops.push_back(LoopStmt);
     }
 
     // Insert the fused loop and record its position. Codegen uses this index

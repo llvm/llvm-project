@@ -1572,6 +1572,10 @@ private:
     SmallVector<Stmt *> OriginalInits;
     /// Initialization statements required after transformation of this loop.
     SmallVector<Stmt *> TransformsPreInits;
+    /// Finals from a nested loop-transformation (e.g. `omp reverse`); must
+    /// run right after this loop when it is not consumed by an enclosing
+    /// transformation.
+    Stmt *TransformFinals = nullptr;
 
     explicit LoopAnalysis(Stmt *S) : AStmt(S) {}
 
@@ -1595,10 +1599,10 @@ private:
     SmallVector<LoopAnalysis, 2> Loops;
     /// Additional code required before entering the transformed loop sequence.
     SmallVector<Stmt *> LoopSequencePreInits;
-    /// Finalization statements collected from inner loop transformations
-    /// encountered while analyzing this sequence. The enclosing directive
-    /// must execute these to restore loop variables to their loop-exit values
-    /// so that downstream code observes correct values.
+    /// Finalization statements from inner loop-sequence-generating
+    /// transformations (e.g., looprange fuse) whose emitted loops are not
+    /// bound to individual `Loops[i]` entries. The enclosing directive must
+    /// execute these to restore loop-exit values.
     SmallVector<Stmt *, 2> InnerFinals;
 
     // Convenience function used when building the LoopSequenceAnalysis.

@@ -262,6 +262,24 @@ void test_fuse(void) {
   // spec).
 }
 
+void test_fuse_looprange_reverse(void) {
+  // CHECK-LABEL: define {{.*}} @test_fuse_looprange_reverse
+  int i, j, k;
+  #pragma omp fuse looprange(1, 2)
+  {
+    for (i = 0; i < 10; i++) ;
+    for (j = 0; j < 15; j++) ;
+    #pragma omp reverse
+    for (k = 0; k < 5; k++) ;
+  }
+  // CHECK: store i32 10, ptr %i
+  // CHECK: store i32 15, ptr %j
+  // CHECK: store i32 5, ptr %k
+  // After fuse: i=10, j=15, k=5. The k-loop is outside the fuse looprange
+  // and is itself an `omp reverse` transformation; its finalization must be
+  // emitted inline right after the reversed loop (per OpenMP 6.0 spec).
+}
+
 void test_for_tile(void) {
   // CHECK-LABEL: define {{.*}} @test_for_tile
   int i;
