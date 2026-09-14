@@ -56080,38 +56080,34 @@ static bool isCFMulFromFMSUBADD(SDValue N, SelectionDAG &DAG, SDValue &A,
   SDValue Op0 = N.getOperand(0);
   SDValue Op1 = N.getOperand(1);
   SDValue Op2 = N.getOperand(2);
-  SmallVector<SDValue, 2> Inputs;
 
-  auto matchShufflePattern = [&DAG, &Inputs](SDValue V,
-                                             ArrayRef<int> Pat) -> bool {
+  auto matchShufflePattern = [&DAG](SDValue V, ArrayRef<int> Pat) {
+    SmallVector<SDValue, 2> Inputs;
     SmallVector<int, 32> Mask;
     SmallVector<int, 8> RepeatedMask;
-    Inputs.clear();
-    if (!getTargetShuffleInputs(V, Inputs, Mask, DAG))
-      return false;
     MVT VT = V.getSimpleValueType();
-    return is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask) &&
-           isShuffleEquivalent(RepeatedMask, Pat, Inputs[0]);
+    if (getTargetShuffleInputs(V, Inputs, Mask, DAG) &&
+        is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask) &&
+        isShuffleEquivalent(RepeatedMask, Pat, Inputs[0]))
+      return Inputs[0];
+    return SDValue();
   };
-
-  auto matchFMSUBADDPattern = [&](SDValue X, SDValue OpA) -> bool {
-    if (!matchShufflePattern(X, {0, 0, 2, 2, 4, 4, 6, 6}))
+  auto matchFMSUBADDPattern = [&](SDValue X, SDValue OpA) {
+    B = matchShufflePattern(X, {0, 0, 2, 2, 4, 4, 6, 6});
+    if (!B)
       return false;
-    B = Inputs[0];
     A = OpA;
-    if (Op2.getOpcode() != ISD::FMUL)
-      return false;
     SDValue P = Op2.getOperand(0);
     SDValue Q = Op2.getOperand(1);
     auto matchFMulPattern = [&](SDValue P, SDValue Q) {
-      return matchShufflePattern(P, {1, 0, 3, 2, 5, 4, 7, 6}) &&
-             Inputs[0] == A &&
-             matchShufflePattern(Q, {1, 1, 3, 3, 5, 5, 7, 7}) && Inputs[0] == B;
+      return matchShufflePattern(P, {1, 0, 3, 2, 5, 4, 7, 6}) == A &&
+             matchShufflePattern(Q, {1, 1, 3, 3, 5, 5, 7, 7}) == B;
     };
     return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
   };
   // First 2 operands of FMSUBADD are commutable.
-  return matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0);
+  return Op2.getOpcode() == ISD::FMUL &&
+         (matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0));
 }
 
 //  Try to combine the following nodes:
