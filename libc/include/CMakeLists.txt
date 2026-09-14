@@ -725,6 +725,15 @@ add_header_macro(
 )
 
 add_header_macro(
+  sys_file
+  ../libc/include/sys/file.yaml
+  sys/file.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_file_macros
+)
+
+add_header_macro(
   sys_ioctl
   ../libc/include/sys/ioctl.yaml
   sys/ioctl.h

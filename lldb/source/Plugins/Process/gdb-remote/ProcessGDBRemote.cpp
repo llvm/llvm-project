@@ -1838,18 +1838,25 @@ bool ProcessGDBRemote::GetThreadStopInfoFromJSON(
 
 bool ProcessGDBRemote::CalculateThreadStopInfo(ThreadGDBRemote *thread) {
   // See if we got thread stop infos for all threads via the "jThreadsInfo"
-  // packet
+  // packet (we're at a public stop).
   if (GetThreadStopInfoFromJSON(thread, m_jthreadsinfo_sp))
     return true;
 
-  // See if we got thread stop info for any threads valid stop info reasons
-  // threads via the "jstopinfo" packet stop reply packet key/value pair?
+  // See if the stop-reply packet (T05 etc) included a `jstopinfo` key
+  // with a mach exception description for any thread that has a stop reason.
   if (m_jstopinfo_sp) {
-    // If we have "jstopinfo" then we have stop descriptions for all threads
-    // that have stop reasons, and if there is no entry for a thread, then it
-    // has no stop reason.
-    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp))
+    // Any thread not described in `jstopinfo` has no stop reason.
+    // If a no-stop-reason thread is stopped at a breakpoint site (but
+    // hasn't yet hit the breakpoint instruction), note that in the
+    // Thread state so we will hit the breakpoint when we resume execution.
+    if (!GetThreadStopInfoFromJSON(thread, m_jstopinfo_sp)) {
+      addr_t pc = thread->GetRegisterContext()->GetPC();
+      BreakpointSiteSP bp_site_sp =
+          thread->GetProcess()->GetBreakpointSiteList().FindByAddress(pc);
+      if (bp_site_sp && IsBreakpointSitePhysicallyEnabled(*bp_site_sp))
+        thread->SetThreadStoppedAtUnexecutedBP(pc);
       thread->SetStopInfo(StopInfoSP());
+    }
     return true;
   }
 

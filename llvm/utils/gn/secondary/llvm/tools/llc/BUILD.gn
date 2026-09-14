@@ -22,6 +22,7 @@ executable("llc") {
   sources = [
     "NewPMDriver.cpp",
     "llc.cpp",
+    "llcdriver.cpp",
   ]
 
   # Support plugins.
