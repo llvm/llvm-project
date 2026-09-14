@@ -50,11 +50,8 @@ class RewritePatternSet;
 /// When applying the pattern a second time, the existing alloca() operation
 /// is reused and only a second vector.type_cast is added.
 ///
-/// For progressive lowering, data and mask buffers are allocated in the nearest
-/// automatic allocation scope outside enclosing scf.for and affine.for loops,
-/// when such a scope exists. Other allocation scopes, including parallel and
-/// explicit allocation scopes, are preserved. Only storage is hoisted;
-/// initialization remains at the transfer operation.
+/// For progressive lowering, allocate transfer buffers outside enclosing serial
+/// loops when possible, while preserving other allocation scopes.
 struct VectorTransferToSCFOptions {
   /// Minimal rank to which vector transfer are lowered.
   unsigned targetRank = 1;

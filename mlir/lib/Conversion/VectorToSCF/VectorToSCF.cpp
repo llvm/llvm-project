@@ -283,14 +283,12 @@ struct BufferAllocs {
   Value maskBuffer;
 };
 
-/// Skip sequential loop allocation scopes when an enclosing scope is available.
-/// Lowering these loops to control flow can leave stack allocations live across
-/// iterations. Preserve other scopes: parallel iterations need private buffers,
-/// and explicit scopes bound the lifetime of their allocations.
+/// Skip serial loop scopes when an enclosing allocation scope is available.
 static Operation *getAutomaticAllocationScope(Operation *op) {
   Operation *scope =
       op->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
   assert(scope && "Expected op to be inside automatic allocation scope");
+  // Only serial loops are skipped; parallel and explicit scopes are preserved.
   while (isa<scf::ForOp, affine::AffineForOp>(scope)) {
     Operation *parent =
         scope->getParentWithTrait<OpTrait::AutomaticAllocationScope>();
