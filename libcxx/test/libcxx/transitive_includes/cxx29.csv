@@ -445,6 +445,7 @@ generator cstring
 generator initializer_list
 generator limits
 generator new
+generator stdexcept
 generator tuple
 generator typeinfo
 generator version
