@@ -10822,7 +10822,7 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     return SDValue();
 
   // If the active bits are not at the low end, shift them down
-  if (ShiftedActiveBits < Len && TZ > 0) {
+  if (EffectiveLen < Len && TZ > 0) {
     Op = DAG.getNode(ISD::SRL, dl, VT, Op,
                      DAG.getShiftAmountConstant(TZ, VT, dl));
   }
