@@ -36,7 +36,6 @@ public:
 } // namespace
 
 void GpuModuleToBinaryPass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
   auto targetFormat =
       llvm::StringSwitch<std::optional<CompilationTarget>>(compilationTarget)
           .Cases({"offloading", "llvm"}, CompilationTarget::Offload)
