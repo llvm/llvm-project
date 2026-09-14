@@ -11,9 +11,10 @@
 //===----------------------------------------------------------------------===//
 //
 // The policy controlling where array allocations should live: on the stack
-// (fir.alloca) or on the heap (fir.allocmem). Lowering records it on the module
-// so that policy-aware passes can make consistent decisions and dumped IR
-// replays with the policy it was compiled with.
+// (fir.alloca) or on the heap (fir.allocmem). Lowering records it on the module,
+// and on the functions that need a narrower one, so that policy-aware passes can
+// make consistent decisions and dumped IR replays with the policy it was
+// compiled with.
 //
 //===----------------------------------------------------------------------===//
 
@@ -104,10 +105,10 @@ AllocationPlacement decideAllocationPlacement(const AllocationInfo &info,
                                               const AllocationPolicy &policy,
                                               std::size_t stackBytesUsed);
 
-/// Let a pass option override one field of the policy recorded on the module.
+/// Let a pass option override one field of the policy in effect.
 /// Only an option that was set explicitly (in a pass pipeline string or on the
 /// command line) overrides it; an option left at its default value does not, so
-/// that the module attribute stays authoritative in a normal compilation and
+/// that the recorded attribute stays authoritative in a normal compilation and
 /// tests can still pin a single field without restating the whole policy.
 template <typename FieldT, typename OptionT>
 void overrideIfExplicitlySet(FieldT &field, const OptionT &option) {
