@@ -10,24 +10,161 @@
 
 define <8 x half> @insert_v8f16_idx(<8 x half> %v, half %e, i32 %idx) nounwind {
 ;
+; MIPS32-LABEL: insert_v8f16_idx:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    insert.w $w0[0], $6
+; MIPS32-NEXT:    insert.w $w0[1], $7
+; MIPS32-NEXT:    lw $1, 16($sp)
+; MIPS32-NEXT:    insert.w $w0[2], $1
+; MIPS32-NEXT:    lw $1, 20($sp)
+; MIPS32-NEXT:    insert.w $w0[3], $1
+; MIPS32-NEXT:    lhu $1, 24($sp)
+; MIPS32-NEXT:    lw $2, 28($sp)
+; MIPS32-NEXT:    sll $2, $2, 1
+; MIPS32-NEXT:    sld.b $w0, $w0[$2]
+; MIPS32-NEXT:    insert.h $w0[0], $1
+; MIPS32-NEXT:    neg $1, $2
+; MIPS32-NEXT:    sld.b $w0, $w0[$1]
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    st.h $w0, 0($4)
+;
+; MIPS64-LABEL: insert_v8f16_idx:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    insert.d $w0[0], $4
+; MIPS64-NEXT:    insert.d $w0[1], $5
+; MIPS64-NEXT:    dext $1, $7, 0, 32
+; MIPS64-NEXT:    sll $2, $6, 0
+; MIPS64-NEXT:    dsll $1, $1, 1
+; MIPS64-NEXT:    sld.b $w0, $w0[$1]
+; MIPS64-NEXT:    insert.h $w0[0], $2
+; MIPS64-NEXT:    dneg $1, $1
+; MIPS64-NEXT:    sld.b $w0, $w0[$1]
+; MIPS64-NEXT:    copy_s.d $2, $w0[0]
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    copy_s.d $3, $w0[1]
   %r = insertelement <8 x half> %v, half %e, i32 %idx
   ret <8 x half> %r
 }
 
 define <8 x half> @insert_v8f16_imm(<8 x half> %v, half %e) nounwind {
 ;
+; MIPS32-LABEL: insert_v8f16_imm:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    insert.w $w0[0], $6
+; MIPS32-NEXT:    insert.w $w0[1], $7
+; MIPS32-NEXT:    lw $1, 16($sp)
+; MIPS32-NEXT:    insert.w $w0[2], $1
+; MIPS32-NEXT:    lw $1, 20($sp)
+; MIPS32-NEXT:    insert.w $w0[3], $1
+; MIPS32-NEXT:    lhu $1, 24($sp)
+; MIPS32-NEXT:    insert.h $w0[3], $1
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    st.h $w0, 0($4)
+;
+; MIPS64-LABEL: insert_v8f16_imm:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    insert.d $w0[0], $4
+; MIPS64-NEXT:    insert.d $w0[1], $5
+; MIPS64-NEXT:    sll $1, $6, 0
+; MIPS64-NEXT:    insert.h $w0[3], $1
+; MIPS64-NEXT:    copy_s.d $2, $w0[0]
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    copy_s.d $3, $w0[1]
   %r = insertelement <8 x half> %v, half %e, i32 3
   ret <8 x half> %r
 }
 
 define <4 x half> @insert_v4f16_idx(<4 x half> %v, half %e, i32 %idx) nounwind {
 ;
+; MIPS32-LABEL: insert_v4f16_idx:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    addiu $sp, $sp, -32
+; MIPS32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $fp, $sp
+; MIPS32-NEXT:    addiu $1, $zero, -16
+; MIPS32-NEXT:    and $sp, $sp, $1
+; MIPS32-NEXT:    sw $7, 4($sp)
+; MIPS32-NEXT:    sw $6, 0($sp)
+; MIPS32-NEXT:    lhu $1, 48($fp)
+; MIPS32-NEXT:    lw $2, 52($fp)
+; MIPS32-NEXT:    ld.h $w0, 0($sp)
+; MIPS32-NEXT:    sll $2, $2, 1
+; MIPS32-NEXT:    sld.b $w0, $w0[$2]
+; MIPS32-NEXT:    insert.h $w0[0], $1
+; MIPS32-NEXT:    neg $1, $2
+; MIPS32-NEXT:    sld.b $w0, $w0[$1]
+; MIPS32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS32-NEXT:    copy_s.w $2, $w0[1]
+; MIPS32-NEXT:    sw $2, 4($4)
+; MIPS32-NEXT:    sw $1, 0($4)
+; MIPS32-NEXT:    move $sp, $fp
+; MIPS32-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS64-LABEL: insert_v4f16_idx:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    daddiu $sp, $sp, -16
+; MIPS64-NEXT:    sd $4, 0($sp)
+; MIPS64-NEXT:    dext $1, $6, 0, 32
+; MIPS64-NEXT:    sll $2, $5, 0
+; MIPS64-NEXT:    ld.h $w0, 0($sp)
+; MIPS64-NEXT:    dsll $1, $1, 1
+; MIPS64-NEXT:    sld.b $w0, $w0[$1]
+; MIPS64-NEXT:    insert.h $w0[0], $2
+; MIPS64-NEXT:    dneg $1, $1
+; MIPS64-NEXT:    sld.b $w0, $w0[$1]
+; MIPS64-NEXT:    copy_s.d $2, $w0[0]
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    daddiu $sp, $sp, 16
   %r = insertelement <4 x half> %v, half %e, i32 %idx
   ret <4 x half> %r
 }
 
 define <2 x half> @insert_v2f16_idx(<2 x half> %v, half %e, i32 %idx) nounwind {
 ;
+; MIPS32-LABEL: insert_v2f16_idx:
+; MIPS32:       # %bb.0:
+; MIPS32-NEXT:    addiu $sp, $sp, -32
+; MIPS32-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    sw $fp, 24($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    move $fp, $sp
+; MIPS32-NEXT:    addiu $1, $zero, -16
+; MIPS32-NEXT:    and $sp, $sp, $1
+; MIPS32-NEXT:    sw $5, 0($sp)
+; MIPS32-NEXT:    ld.h $w0, 0($sp)
+; MIPS32-NEXT:    sll $1, $7, 1
+; MIPS32-NEXT:    sld.b $w0, $w0[$1]
+; MIPS32-NEXT:    insert.h $w0[0], $6
+; MIPS32-NEXT:    neg $1, $1
+; MIPS32-NEXT:    sld.b $w0, $w0[$1]
+; MIPS32-NEXT:    copy_s.w $1, $w0[0]
+; MIPS32-NEXT:    sw $1, 0($4)
+; MIPS32-NEXT:    move $sp, $fp
+; MIPS32-NEXT:    lw $fp, 24($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    addiu $sp, $sp, 32
+;
+; MIPS64-LABEL: insert_v2f16_idx:
+; MIPS64:       # %bb.0:
+; MIPS64-NEXT:    daddiu $sp, $sp, -16
+; MIPS64-NEXT:    sll $1, $5, 0
+; MIPS64-NEXT:    sw $1, 0($sp)
+; MIPS64-NEXT:    dext $1, $7, 0, 32
+; MIPS64-NEXT:    sll $2, $6, 0
+; MIPS64-NEXT:    ld.h $w0, 0($sp)
+; MIPS64-NEXT:    dsll $1, $1, 1
+; MIPS64-NEXT:    sld.b $w0, $w0[$1]
+; MIPS64-NEXT:    insert.h $w0[0], $2
+; MIPS64-NEXT:    dneg $1, $1
+; MIPS64-NEXT:    sld.b $w0, $w0[$1]
+; MIPS64-NEXT:    copy_s.w $1, $w0[0]
+; MIPS64-NEXT:    sw $1, 0($4)
+; MIPS64-NEXT:    jr $ra
+; MIPS64-NEXT:    daddiu $sp, $sp, 16
   %r = insertelement <2 x half> %v, half %e, i32 %idx
   ret <2 x half> %r
 }
