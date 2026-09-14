@@ -898,6 +898,30 @@ Expected<bool> parseInstCountOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
 }
 
+Expected<unsigned> parseCallSiteSplittingOptions(StringRef Params) {
+  unsigned DuplicationThreshold = 5;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName.consume_front("duplication-threshold=")) {
+      if (ParamName.getAsInteger(0, DuplicationThreshold))
+        return make_error<StringError>(
+            formatv("invalid argument to CallSiteSplitting pass "
+                    "duplication-threshold parameter: '{}'",
+                    ParamName)
+                .str(),
+            inconvertibleErrorCode());
+    } else {
+      return make_error<StringError>(
+          formatv("invalid CallSiteSplitting pass parameter '{}'", ParamName)
+              .str(),
+          inconvertibleErrorCode());
+    }
+  }
+  return DuplicationThreshold;
+}
+
 /// Parser of parameters for LoopUnroll pass.
 Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   LoopUnrollOptions UnrollOpts;

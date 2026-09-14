@@ -417,7 +417,6 @@ FUNCTION_PASS("assume-simplify", AssumeSimplifyPass())
 FUNCTION_PASS("atomic-expand", AtomicExpandPass(*TM))
 FUNCTION_PASS("bdce", BDCEPass())
 FUNCTION_PASS("break-crit-edges", BreakCriticalEdgesPass())
-FUNCTION_PASS("callsite-splitting", CallSiteSplittingPass())
 FUNCTION_PASS("cfguard", CFGuardPass())
 FUNCTION_PASS("chr", ControlHeightReductionPass())
 FUNCTION_PASS("codegenprepare", CodeGenPreparePass(*TM))
@@ -581,6 +580,12 @@ FUNCTION_PASS("wasm-eh-prepare", WasmEHPreparePass())
 #ifndef FUNCTION_PASS_WITH_PARAMS
 #define FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER, PARAMS)
 #endif
+FUNCTION_PASS_WITH_PARAMS(
+    "callsite-splitting", "CallSiteSplittingPass",
+    [](unsigned DuplicationThreshold) {
+      return CallSiteSplittingPass(DuplicationThreshold);
+    },
+    parseCallSiteSplittingOptions, "duplication-threshold=N")
 FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },

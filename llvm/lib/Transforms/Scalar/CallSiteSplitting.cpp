@@ -62,7 +62,6 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -73,15 +72,6 @@ using namespace PatternMatch;
 #define DEBUG_TYPE "callsite-splitting"
 
 STATISTIC(NumCallSiteSplit, "Number of call-site split");
-
-/// Only allow instructions before a call, if their CodeSize cost is below
-/// DuplicationThreshold. Those instructions need to be duplicated in all
-/// split blocks.
-static cl::opt<unsigned>
-    DuplicationThreshold("callsite-splitting-duplication-threshold", cl::Hidden,
-                         cl::desc("Only allow instructions before a call, if "
-                                  "their cost is below DuplicationThreshold"),
-                         cl::init(5));
 
 static void addNonNullAttribute(CallBase &CB, Value *Op) {
   unsigned ArgNo = 0;
@@ -181,7 +171,8 @@ static SmallVector<BasicBlock *, 2> getTwoPredecessors(BasicBlock *BB) {
   return Preds;
 }
 
-static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI) {
+static bool canSplitCallSite(CallBase &CB, TargetTransformInfo &TTI,
+                             unsigned DuplicationThreshold) {
   if (CB.isConvergent() || CB.cannotDuplicate())
     return false;
 
@@ -485,9 +476,10 @@ static PredsWithCondsTy shouldSplitOnPredicatedArgument(CallBase &CB,
 }
 
 static bool tryToSplitCallSite(CallBase &CB, TargetTransformInfo &TTI,
-                               DomTreeUpdater &DTU) {
+                               DomTreeUpdater &DTU,
+                               unsigned DuplicationThreshold) {
   // Check if we can split the call site.
-  if (!CB.arg_size() || !canSplitCallSite(CB, TTI))
+  if (!CB.arg_size() || !canSplitCallSite(CB, TTI, DuplicationThreshold))
     return false;
 
   auto PredsWithConds = shouldSplitOnPredicatedArgument(CB, DTU);
@@ -501,7 +493,8 @@ static bool tryToSplitCallSite(CallBase &CB, TargetTransformInfo &TTI,
 }
 
 static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
-                                TargetTransformInfo &TTI, DominatorTree &DT) {
+                                TargetTransformInfo &TTI, DominatorTree &DT,
+                                unsigned DuplicationThreshold) {
 
   DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
@@ -525,7 +518,7 @@ static bool doCallSiteSplitting(Function &F, TargetLibraryInfo &TLI,
       // Check if such path is possible before attempting the splitting.
       bool IsMustTail = CB->isMustTailCall();
 
-      Changed |= tryToSplitCallSite(*CB, TTI, DTU);
+      Changed |= tryToSplitCallSite(*CB, TTI, DTU, DuplicationThreshold);
 
       // There're no interesting instructions after this. The call site
       // itself might have been erased on splitting.
@@ -542,9 +535,18 @@ PreservedAnalyses CallSiteSplittingPass::run(Function &F,
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  if (!doCallSiteSplitting(F, TLI, TTI, DT))
+  if (!doCallSiteSplitting(F, TLI, TTI, DT, DuplicationThreshold))
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
+}
+
+void CallSiteSplittingPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
+  static_cast<PassInfoMixin<CallSiteSplittingPass> *>(this)->printPipeline(
+      OS, MapClassName2PassName);
+  OS << '<';
+  OS << "duplication-threshold=" << DuplicationThreshold;
+  OS << '>';
 }
