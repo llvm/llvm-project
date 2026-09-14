@@ -33822,11 +33822,11 @@ bool AArch64TargetLowering::shouldLocalize(
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case TargetOpcode::G_GLOBAL_VALUE: {
-    // On Darwin, TLS global vars get selected into function calls, which
-    // we don't want localized, as they can get moved into the middle of a
-    // another call sequence.
+    // Don't localize TLS global vars on Mach-O and ELF, as doing so can move
+    // TLS-related instructions into a call sequence.
     const GlobalValue &GV = *MI.getOperand(1).getGlobal();
-    if (GV.isThreadLocal() && Subtarget->isTargetMachO())
+    if (GV.isThreadLocal() &&
+        (Subtarget->isTargetMachO() || Subtarget->isTargetELF()))
       return false;
     return true; // Always localize G_GLOBAL_VALUE to avoid high reg pressure.
   }
