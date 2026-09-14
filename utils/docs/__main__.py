@@ -2,46 +2,51 @@
 
 """Command-line entrypoint to utils/docs
 
-Use this as e.g. `python utils/docs --test` to run docs smoke tests.
+Use this as e.g. `python utils/docs --test` to run all docs smoke tests.
 """
 
-import sys
 import argparse
 import subprocess
+import sys
 from pathlib import Path
+from typing import List
 
 from llvm_sphinx.ext import absolute_links, ghlinks
-from typing import List
+
+
+TEST_COMPONENTS = {
+    "absolute-links": absolute_links.run_tests,
+    "ghlinks": ghlinks.run_tests,
+}
 
 
 def main(argv: List[str]) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--test", action="store_true", help="run sphinx self-tests")
     parser.add_argument(
-        "--test-component",
-        choices=("absolute-links", "ghlinks"),
-        help=argparse.SUPPRESS,
+        "--test",
+        choices=TEST_COMPONENTS,
+        metavar="COMPONENT",
+        nargs="*",
+        help="run selected Sphinx smoke tests (default: all components)",
     )
     args = parser.parse_args(argv)
 
-    if args.test:
+    if args.test is None:
+        parser.print_help(sys.stderr)
+        return 0
+
+    test_components = args.test or tuple(TEST_COMPONENTS)
+    if len(test_components) > 1:
         script = Path(__file__).resolve()
-        for component in ("absolute-links", "ghlinks"):
+        for component in test_components:
             subprocess.run(
-                [sys.executable, str(script), "--test-component", component],
+                [sys.executable, str(script), "--test", component],
                 check=True,
+                stdout=subprocess.DEVNULL,
             )
-        print("llvm_sphinx: tests passed; next, rebuild the affected project docs")
-        return 0
-
-    if args.test_component == "absolute-links":
-        absolute_links.run_tests()
-        return 0
-    if args.test_component == "ghlinks":
-        ghlinks.run_tests()
-        return 0
-
-    parser.print_help(sys.stderr)
+    else:
+        TEST_COMPONENTS[test_components[0]]()
+    print("llvm_sphinx: tests passed; next, rebuild the affected project docs")
     return 0
 
 

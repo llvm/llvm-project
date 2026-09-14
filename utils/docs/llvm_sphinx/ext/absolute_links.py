@@ -2,11 +2,13 @@
 
 """Check for absolute links to documents in the current Sphinx project."""
 
+from __future__ import annotations
+
 import io
 import sys
 import tempfile
 from pathlib import Path
-from typing import Collection, Dict, Optional, Sequence, Tuple
+from typing import Collection, Dict, Sequence
 from urllib.parse import unquote, urlsplit
 
 from llvm_sphinx.help import venv_help
@@ -34,7 +36,7 @@ def setup(app: Sphinx) -> Dict[str, object]:
     }
 
 
-def _url_prefix_parts(prefix: str) -> Optional[Tuple[str, str]]:
+def _url_prefix_parts(prefix: str) -> tuple[str, str] | None:
     try:
         parsed = urlsplit(prefix)
         port = parsed.port
@@ -52,7 +54,7 @@ def _url_prefix_parts(prefix: str) -> Optional[Tuple[str, str]]:
 
 def _docname_from_url(
     uri: str, prefixes: Sequence[str], found_docs: Collection[str]
-) -> Optional[str]:
+) -> str | None:
     try:
         parsed = urlsplit(uri)
         port = parsed.port
