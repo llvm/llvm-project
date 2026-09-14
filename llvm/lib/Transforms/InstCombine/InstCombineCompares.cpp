@@ -5124,6 +5124,16 @@ static Instruction *foldICmpXNegX(ICmpInst &I,
     return ICmpInst::Create(Instruction::ICmp, Pred, X,
                             Constant::getNullValue(X->getType()), I.getName());
   }
+  // Without nsw, x sgt -x --> x sgt 0 and x sle -x --> x sle 0 still hold:
+  // 0 and INT_MIN equal their wrapping negation (so the strict comparison is
+  // false there), and every other value has the opposite sign from its
+  // negation. slt/sge are not valid without nsw: they differ at INT_MIN.
+  if (match(&I, m_c_ICmp(Pred, m_Neg(m_Value(X)), m_Deferred(X))) &&
+      (Pred == ICmpInst::ICMP_SLT || Pred == ICmpInst::ICMP_SGE)) {
+    Pred = ICmpInst::getSwappedPredicate(Pred);
+    return ICmpInst::Create(Instruction::ICmp, Pred, X,
+                            Constant::getNullValue(X->getType()), I.getName());
+  }
 
   // A value is not equal to its negation unless that value is 0 or
   // MinSignedValue, ie: a != -a --> (a & MaxSignedVal) != 0
