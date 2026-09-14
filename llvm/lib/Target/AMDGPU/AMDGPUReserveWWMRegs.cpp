@@ -108,7 +108,7 @@ bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
   // The renamable flag can't be set for reserved registers. Reset the flag for
   // MOs involving wwm-regs as they will be reserved during vgpr-regalloc
   // pipeline.
-  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
   for (Register Reg : MFI->getWWMReservedRegs()) {
     for (MachineOperand &MO : MRI.reg_operands(Reg))
       MO.setIsRenamable(false);
@@ -117,11 +117,14 @@ bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
   // Now clear the PerLaneVGPRMask earlier set during wwm-regalloc.
   MFI->clearPerLaneVGPRAllocMask();
 
-  // Reserving WWM registers and clearing the per-lane mask both change
-  // getReservedRegs(). Update MRI and the shared RegisterClassInfo; the
-  // following register allocator refreshes only its private instance.
-  MRI.freezeReservedRegs();
-  RCI.updateReservedRegs(MRI.getReservedRegs());
+  // reserveWWMRegister() and clearPerLaneVGPRAllocMask() both feed
+  // getReservedRegs(): the WWM registers are now reserved, the per-lane VGPRs
+  // no longer are. Refresh the shared RegisterClassInfo, as the register
+  // allocator refreshes only its own copy. Do not freeze the set into MRI:
+  // LiveIntervals does not extend a reserved register's unit ranges to its
+  // uses, so unreserving the per-lane VGPRs here would fail verification.
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  RCI.updateReservedRegs(TRI->getReservedRegs(MF));
 
   return Changed;
 }
