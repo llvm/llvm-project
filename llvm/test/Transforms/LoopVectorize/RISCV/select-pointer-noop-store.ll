@@ -8,22 +8,29 @@
 define void @select_ptr_load_store(ptr noalias %q, ptr noalias readonly %p, ptr noalias readonly %c, i64 %n) {
 ; CHECK-LABEL: define void @select_ptr_load_store(
 ; CHECK-SAME: ptr noalias [[Q:%.*]], ptr noalias readonly [[P:%.*]], ptr noalias readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[LOOP]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[LOOP]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]
-; CHECK-NEXT:    [[CV:%.*]] = load float, ptr [[GEP_C]], align 4
-; CHECK-NEXT:    [[COND:%.*]] = fcmp une float [[CV]], 0.000000e+00
-; CHECK-NEXT:    [[GEP_Q1:%.*]] = getelementptr inbounds float, ptr [[Q]], i64 [[IV]]
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[GEP_C]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = fcmp une <vscale x 4 x float> [[VP_OP_LOAD]], zeroinitializer
 ; CHECK-NEXT:    [[GEP_SEL1:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
-; CHECK-NEXT:    [[GEP_SEL_SEL:%.*]] = select i1 [[COND]], ptr [[GEP_SEL1]], ptr [[GEP_Q1]]
-; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[GEP_SEL_SEL]], align 4
-; CHECK-NEXT:    store float [[V]], ptr [[GEP_Q1]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[Q]], i64 [[IV]]
+; CHECK-NEXT:    [[VP_OP_LOAD2:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[GEP_SEL1]], <vscale x 4 x i1> [[TMP2]], i32 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP_LOAD2]], ptr align 4 [[TMP4]], <vscale x 4 x i1> [[TMP2]], i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP5]], [[IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[EXIT:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -53,21 +60,53 @@ exit:
 define void @select_ptr_load_store_runtime_check(ptr %q, ptr %p, ptr noalias readonly %c, i64 %n) {
 ; CHECK-LABEL: define void @select_ptr_load_store_runtime_check(
 ; CHECK-SAME: ptr [[Q:%.*]], ptr [[P:%.*]], ptr noalias readonly [[C:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[SCALAR_PH:.*]]:
+; CHECK-NEXT:  [[SCALAR_PH:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[N]], 2
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[Q]], i64 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[P_FR:%.*]] = freeze ptr [[P]]
+; CHECK-NEXT:    [[SCEVGEP2_FR:%.*]] = freeze ptr [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[Q]], [[SCEVGEP2_FR]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[P_FR]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH1:.*]], label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV]]
-; CHECK-NEXT:    [[CV:%.*]] = load float, ptr [[GEP_C]], align 4
+; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[GEP_C]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp une <vscale x 4 x float> [[VP_OP_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[Q]], i64 [[IV]]
+; CHECK-NEXT:    [[VP_OP_LOAD3:%.*]] = call <vscale x 4 x float> @llvm.vp.load.nxv4f32.p0(ptr align 4 [[TMP4]], <vscale x 4 x i1> [[TMP3]], i32 [[TMP1]])
+; CHECK-NEXT:    call void @llvm.vp.store.nxv4f32.p0(<vscale x 4 x float> [[VP_OP_LOAD3]], ptr align 4 [[TMP5]], <vscale x 4 x i1> [[TMP3]], i32 [[TMP1]]), !alias.scope [[META3:![0-9]+]], !noalias [[META6:![0-9]+]]
+; CHECK-NEXT:    [[TMP6:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[CURRENT_ITERATION_NEXT]] = add i64 [[TMP6]], [[IV]]
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SCALAR_PH1]]:
+; CHECK-NEXT:    br label %[[LOOP1:.*]]
+; CHECK:       [[LOOP1]]:
+; CHECK-NEXT:    [[IV1:%.*]] = phi i64 [ 0, %[[SCALAR_PH1]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; CHECK-NEXT:    [[GEP_C1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 [[IV1]]
+; CHECK-NEXT:    [[CV:%.*]] = load float, ptr [[GEP_C1]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = fcmp une float [[CV]], 0.000000e+00
-; CHECK-NEXT:    [[GEP_Q:%.*]] = getelementptr inbounds float, ptr [[Q]], i64 [[IV]]
-; CHECK-NEXT:    [[GEP_SEL1:%.*]] = getelementptr float, ptr [[P]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_Q:%.*]] = getelementptr inbounds float, ptr [[Q]], i64 [[IV1]]
+; CHECK-NEXT:    [[GEP_SEL1:%.*]] = getelementptr float, ptr [[P]], i64 [[IV1]]
 ; CHECK-NEXT:    [[GEP_SEL_SEL:%.*]] = select i1 [[COND]], ptr [[GEP_SEL1]], ptr [[GEP_Q]]
 ; CHECK-NEXT:    [[V:%.*]] = load float, ptr [[GEP_SEL_SEL]], align 4
 ; CHECK-NEXT:    store float [[V]], ptr [[GEP_Q]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV1]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP1]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -347,3 +386,15 @@ loop:
 exit:
   ret void
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[META3]] = !{[[META4:![0-9]+]]}
+; CHECK: [[META4]] = distinct !{[[META4]], [[META5:![0-9]+]]}
+; CHECK: [[META5]] = distinct !{[[META5]], !"LVerDomain"}
+; CHECK: [[META6]] = !{[[META7:![0-9]+]]}
+; CHECK: [[META7]] = distinct !{[[META7]], [[META5]]}
+; CHECK: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]], [[META2]]}
+; CHECK: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]]}
+;.

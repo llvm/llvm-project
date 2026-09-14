@@ -3996,6 +3996,177 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
   }
 }
 
+/// Return the recipe defining \p V if it is an unpredicated GEP with an
+/// underlying GetElementPtrInst, i.e. a VPWidenGEPRecipe or a replicating GEP.
+static VPRecipeWithIRFlags *getGEPRecipe(VPValue *V) {
+  auto *R = dyn_cast_or_null<VPRecipeWithIRFlags>(V->getDefiningRecipe());
+  if (!R)
+    return nullptr;
+  if (isa<VPWidenGEPRecipe>(R))
+    return R;
+  auto *RepR = dyn_cast<VPReplicateRecipe>(R);
+  if (RepR && RepR->getOpcode() == Instruction::GetElementPtr &&
+      !RepR->isPredicated())
+    return RepR;
+  return nullptr;
+}
+
+/// Return true if \p A and \p B are GEPs with loop-invariant base pointers
+/// that only differ in their base pointer, i.e. they compute addresses with the
+/// same stride.
+static bool areGEPsWithSameIndices(VPRecipeWithIRFlags *A,
+                                   VPRecipeWithIRFlags *B) {
+  auto *GEPA = cast<GetElementPtrInst>(A->getUnderlyingInstr());
+  auto *GEPB = cast<GetElementPtrInst>(B->getUnderlyingInstr());
+  if (GEPA->getSourceElementType() != GEPB->getSourceElementType() ||
+      A->getNumOperands() != B->getNumOperands())
+    return false;
+  if (!A->getOperand(0)->isDefinedOutsideLoopRegions() ||
+      !B->getOperand(0)->isDefinedOutsideLoopRegions())
+    return false;
+  return std::equal(std::next(A->op_begin()), A->op_end(),
+                    std::next(B->op_begin()));
+}
+
+void VPlanTransforms::convertSelectPtrLoadStoreToMasked(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  // Look for
+  //   %v = load (select %c, %p, %q)
+  //   store %v, %q
+  // where %p and %q are consecutive addresses with the same stride. For lanes
+  // with %c == false, the store writes back the value just loaded from %q,
+  // which is a no-op. Hence, the pair is equivalent to a masked load from %p
+  // and a masked store to %q, both using %c as mask.
+
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(LoopRegion->getEntry()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      auto *StoreR = dyn_cast<VPWidenStoreRecipe>(&R);
+      if (!StoreR || !StoreR->isConsecutive()) // Should also check if reversed?
+        continue;
+
+      auto *Store = cast<StoreInst>(&StoreR->getIngredient());
+      auto *StoreVecPtr = dyn_cast<VPVectorPointerRecipe>(StoreR->getAddr());
+      if (!StoreVecPtr || !Store->isSimple())
+        continue;
+
+      VPValue *QPtr = StoreVecPtr->getOperand(0);
+
+      // The stored value must be a load that is not used otherwise, in the same
+      // block, and either a gather or a replicated, unpredicated load.
+      VPValue *StoredVal = StoreR->getStoredValue();
+      VPRecipeBase *LoadR = StoredVal->getDefiningRecipe();
+      if (!LoadR || StoredVal->getNumUsers() != 1 || LoadR->getParent() != VPBB)
+        continue;
+
+      VPValue *LoadAddr;
+      VPValue *LoadMask = nullptr;
+      const VPIRMetadata *LoadMD;
+      LoadInst *Load;
+      if (auto *WidenLoadR = dyn_cast<VPWidenLoadRecipe>(LoadR)) {
+        if (WidenLoadR->isConsecutive())
+          continue;
+
+        LoadAddr = WidenLoadR->getAddr();
+        LoadMask = WidenLoadR->getMask();
+        LoadMD = WidenLoadR;
+        Load = cast<LoadInst>(&WidenLoadR->getIngredient());
+      } else if (auto *RepR = dyn_cast<VPReplicateRecipe>(LoadR)) {
+        if (RepR->getOpcode() != Instruction::Load || RepR->isPredicated() ||
+            RepR->isSingleScalar())
+          continue;
+
+        LoadAddr = RepR->getOperand(0);
+        LoadMD = RepR;
+        Load = cast<LoadInst>(RepR->getUnderlyingInstr());
+      } else {
+        continue;
+      }
+      if (!Load->isSimple() || LoadMask != StoreR->getMask())
+        continue;
+
+      // The load address must select between the store address and another
+      // address with the same stride.
+      VPValue *Cond, *TrueAddr, *FalseAddr;
+      if (!match(LoadAddr, m_Select(m_VPValue(Cond), m_VPValue(TrueAddr),
+                                    m_VPValue(FalseAddr))))
+        continue;
+
+      VPRecipeWithIRFlags *QGEP = getGEPRecipe(QPtr);
+      if (!QGEP)
+        continue;
+
+      VPRecipeWithIRFlags *TrueGEP = getGEPRecipe(TrueAddr);
+      VPRecipeWithIRFlags *FalseGEP = getGEPRecipe(FalseAddr);
+      auto MatchesQ = [&](VPValue *V, VPRecipeWithIRFlags *R) {
+        return V == QPtr ||
+               (R && R->getUnderlyingInstr() &&
+                R->getUnderlyingInstr() == QGEP->getUnderlyingInstr());
+      };
+
+      bool NegateCond = MatchesQ(TrueAddr, TrueGEP);
+      if (!NegateCond && !MatchesQ(FalseAddr, FalseGEP))
+        continue;
+
+      VPRecipeWithIRFlags *PGEP = NegateCond ? FalseGEP : TrueGEP;
+      if (!PGEP || !areGEPsWithSameIndices(PGEP, QGEP))
+        continue;
+
+      // Any write in between could be overwritten by the store of the loaded
+      // value.
+      if (any_of(make_range(std::next(LoadR->getIterator()),
+                            StoreR->getIterator()),
+                 [](VPRecipeBase &R) { return R.mayWriteToMemory(); }))
+        continue;
+
+      Type *Ty = Load->getType();
+      DebugLoc DL = LoadR->getDebugLoc();
+      // Create single-scalar GEPs for the addresses, as only the first lane is
+      // needed. The address of %p is not computed in the original loop when %c
+      // is false, so it must not generate poison for masked-off lanes.
+      auto CreateScalarGEP = [&](VPRecipeWithIRFlags *GEP,
+                                 bool DropPoisonFlags) -> VPValue * {
+        auto *RepR = dyn_cast<VPReplicateRecipe>(GEP);
+        if (RepR && RepR->isSingleScalar() && !DropPoisonFlags)
+          return RepR;
+
+        auto *Clone = new VPReplicateRecipe(
+            GEP->getUnderlyingInstr(), GEP->operands(),
+            /*IsSingleScalar=*/true,
+            /*Mask=*/nullptr, *GEP, {}, GEP->getDebugLoc());
+        if (DropPoisonFlags)
+          Clone->dropPoisonGeneratingFlags();
+        Clone->insertBefore(LoadR);
+        return Clone;
+      };
+      VPValue *PScalar = CreateScalarGEP(PGEP, /*DropPoisonFlags=*/true);
+      VPValue *QScalar = CreateScalarGEP(QGEP, /*DropPoisonFlags=*/false);
+      VPBuilder Builder(LoadR);
+      StoreVecPtr->setOperand(0, QScalar);
+      auto *LoadVecPtr = Builder.createConsecutiveVectorPointer(
+          PScalar, Ty, /*Reverse=*/false, DL);
+
+      VPValue *Mask = NegateCond ? Builder.createNot(Cond, DL) : Cond;
+      if (LoadMask)
+        Mask = Builder.createLogicalAnd(LoadMask, Mask, DL);
+
+      auto *NewLoadR =
+          Builder.createWidenLoad(*Load, LoadVecPtr, Mask,
+                                  /*Consecutive=*/true, *LoadMD, DL);
+      LoadR->getVPSingleValue()->replaceAllUsesWith(NewLoadR);
+      Builder.setInsertPoint(StoreR);
+      LoadR->eraseFromParent();
+      Builder.createWidenStore(*Store, StoreVecPtr, NewLoadR, Mask,
+                               /*Consecutive=*/true, *StoreR,
+                               StoreR->getDebugLoc());
+      StoreR->eraseFromParent();
+    }
+  }
+}
+
 /// Returns true if \p V is VPWidenLoadRecipe or VPInterleaveRecipe that can be
 /// converted to a narrower recipe. \p V is used by a wide recipe that feeds a
 /// store interleave group at index \p Idx, \p WideMember0 is the recipe feeding

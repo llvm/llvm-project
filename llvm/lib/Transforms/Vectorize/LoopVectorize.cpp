@@ -4481,6 +4481,27 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
          TTI.getOperandsScalarizationOverhead(Tys, Config.CostKind, OperandVIC);
 }
 
+/// Returns true if \p LI loads through a select of two addresses and its value
+/// is only stored back to one of them, i.e. `q[i] = c ? p[i] : q[i]`, which
+/// VPlanTransforms::convertSelectPtrLoadStoreToMasked turns into a masked load
+/// and store.
+static bool isSelectPtrNoopStoreLoad(LoadInst *LI, const Loop *L) {
+  if (!LI->isSimple() || !LI->hasOneUse())
+    return false;
+  auto *SI = dyn_cast<StoreInst>(LI->user_back());
+  if (!SI || !SI->isSimple() || SI->getValueOperand() != LI ||
+      SI->getParent() != LI->getParent())
+    return false;
+  auto *Sel = dyn_cast<SelectInst>(LI->getPointerOperand());
+  if (!Sel || !L->contains(Sel))
+    return false;
+  Value *StPtr = SI->getPointerOperand();
+  if (Sel->getTrueValue() != StPtr && Sel->getFalseValue() != StPtr)
+    return false;
+  return none_of(make_range(std::next(LI->getIterator()), SI->getIterator()),
+                 [](Instruction &I) { return I.mayWriteToMemory(); });
+}
+
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   if (VF.isScalar())
     return;
@@ -4624,10 +4645,18 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
   for (BasicBlock *BB : TheLoop->blocks())
     for (Instruction &I : *BB) {
       Instruction *PtrDef =
-        dyn_cast_or_null<Instruction>(getLoadStorePointerOperand(&I));
-      if (PtrDef && TheLoop->contains(PtrDef) &&
-          getWideningDecision(&I, VF) != CM_GatherScatter)
-        AddrDefs.insert(PtrDef);
+          dyn_cast_or_null<Instruction>(getLoadStorePointerOperand(&I));
+      if (!PtrDef || !TheLoop->contains(PtrDef) ||
+          getWideningDecision(&I, VF) == CM_GatherScatter)
+        continue;
+      // The select of a load matching `q[i] = c ? p[i] : q[i]` becomes the
+      // mask of a masked load (see
+      // VPlanTransforms::convertSelectPtrLoadStoreToMasked), so its operands
+      // are not used as scalar addresses.
+      if (auto *LI = dyn_cast<LoadInst>(&I);
+          LI && isSelectPtrNoopStoreLoad(LI, TheLoop))
+        continue;
+      AddrDefs.insert(PtrDef);
     }
 
   // Add all instructions used to generate the addresses.
@@ -6476,6 +6505,8 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     // Now optimize the initial VPlan.
     RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE, OrigLoop);
     RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE, OrigLoop);
+    RUN_VPLAN_PASS(VPlanTransforms::convertSelectPtrLoadStoreToMasked, *Plan);
+
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
@@ -7678,6 +7709,88 @@ static void connectEpilogueVectorLoop(VPlan &EpiPlan, Loop *L,
       Phi.eraseFromParent();
 }
 
+/// Look for loads through a GEP whose base is a select between two pointers,
+/// with the loaded value only being stored back to the same GEP using one of
+/// the selected pointers as base, i.e. `q[i] = c ? p[i] : q[i]`:
+///
+///   %sel = select i1 %c, ptr %p, ptr %q
+///   %ld.addr = getelementptr T, ptr %sel, <idx>
+///   %v = load %ld.addr
+///   %st.addr = getelementptr T, ptr %q, <idx>
+///   store %v, ptr %st.addr
+///
+/// Rewrite the load address to `select i1 %c, (getelementptr T, ptr %p, <idx>),
+/// %st.addr`, making both possible addresses explicit. This allows LAA to
+/// analyze the load as separate accesses through both addresses, and the
+/// planner to turn the load and store into a masked load and store
+/// (VPlanTransforms::convertSelectPtrLoadStoreToMasked).
+static bool splitSelectBaseLoadStorePairs(Loop *L, ScalarEvolution &SE,
+                                          DominatorTree &DT) {
+  bool Changed = false;
+  for (BasicBlock *BB : L->blocks()) {
+    for (Instruction &I : make_early_inc_range(*BB)) {
+      auto *LI = dyn_cast<LoadInst>(&I);
+      if (!LI || !LI->isSimple() || !LI->hasOneUse())
+        continue;
+      auto *SI = dyn_cast<StoreInst>(LI->user_back());
+      if (!SI || !SI->isSimple() || SI->getParent() != BB ||
+          SI->getValueOperand() != LI)
+        continue;
+
+      auto *LdGEP = dyn_cast<GetElementPtrInst>(LI->getPointerOperand());
+      auto *StGEP = dyn_cast<GetElementPtrInst>(SI->getPointerOperand());
+      if (!LdGEP || !StGEP || !LdGEP->hasOneUse() || !L->contains(LdGEP) ||
+          LdGEP->getSourceElementType() != StGEP->getSourceElementType() ||
+          LdGEP->getNumOperands() != StGEP->getNumOperands() ||
+          !all_of(zip_equal(LdGEP->indices(), StGEP->indices()),
+                  [](const auto &P) {
+                    return std::get<0>(P).get() == std::get<1>(P).get();
+                  }))
+        continue;
+      auto *Sel = dyn_cast<SelectInst>(LdGEP->getPointerOperand());
+      if (!Sel || !L->contains(Sel))
+        continue;
+      Value *QPtr = StGEP->getPointerOperand();
+      if (Sel->getTrueValue() != QPtr && Sel->getFalseValue() != QPtr)
+        continue;
+
+      // The store of the loaded value must not overwrite any other write.
+      if (any_of(make_range(std::next(LI->getIterator()), SI->getIterator()),
+                 [](Instruction &I) { return I.mayWriteToMemory(); }))
+        continue;
+
+      // The store address must be available at the load address. It can be
+      // moved up in the same block, as its operands are the same as those of
+      // the load address.
+      if (StGEP->getParent() == LdGEP->getParent()) {
+        if (!StGEP->comesBefore(LdGEP))
+          StGEP->moveBefore(LdGEP->getIterator());
+      } else if (!DT.dominates(StGEP, LdGEP)) {
+        continue;
+      }
+
+      bool IsTrueArm = Sel->getTrueValue() == QPtr;
+      Value *PPtr = IsTrueArm ? Sel->getFalseValue() : Sel->getTrueValue();
+      IRBuilder<> Builder(LdGEP);
+      Value *PGEP = Builder.CreateGEP(LdGEP->getSourceElementType(), PPtr,
+                                      SmallVector<Value *>(LdGEP->indices()),
+                                      LdGEP->getName(), GEPNoWrapFlags::none());
+      Value *NewSel = Builder.CreateSelect(
+          Sel->getCondition(), IsTrueArm ? StGEP : PGEP,
+          IsTrueArm ? PGEP : StGEP, LdGEP->getName() + ".sel");
+      LI->setOperand(LI->getPointerOperandIndex(), NewSel);
+      SE.forgetValue(LdGEP);
+      LdGEP->eraseFromParent();
+      if (Sel->use_empty()) {
+        SE.forgetValue(Sel);
+        Sel->eraseFromParent();
+      }
+      Changed = true;
+    }
+  }
+  return Changed;
+}
+
 bool LoopVectorizePass::processLoop(Loop *L) {
   assert((EnableVPlanNativePath || L->isInnermost()) &&
          "VPlan-native path is not enabled. Only process inner loops.");
@@ -8233,6 +8346,13 @@ LoopVectorizeResult LoopVectorizePass::runImpl(Function &F) {
     // For the inner loops we actually process, form LCSSA to simplify the
     // transform.
     Changed |= formLCSSARecursively(*L, *DT, LI, SE);
+
+    // Make both addresses of loads through a select of pointers explicit, so
+    // they can be analyzed by LAA. Cached access info may be stale afterwards.
+    if (splitSelectBaseLoadStorePairs(L, *SE, *DT)) {
+      Changed = true;
+      LAIs->clear();
+    }
 
     Changed |= CFGChanged |= processLoop(L);
 
