@@ -410,8 +410,8 @@ def CIR_CUDADeviceSurfaceType :
   let summary = "CUDA device surface reference type";
   let description = [{
     `!cir.cuda_surface` represents a CUDA built-in surface reference in CIR.
-    The type preserves surface semantics at the CIR level and is lowered to
-    the target device representation during lowering to LLVM IR.
+    The type preserves surface semantics at the CIR level and lowers to the NVPTX
+    device-side handle representation (`i64`) during lowering to LLVM IR.
   }];
 }
 
