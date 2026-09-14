@@ -12,6 +12,23 @@
 
 namespace clang::CodeGenUtils {
 
+bool hasUnwindExceptions(const LangOptions &LangOpts) {
+  // If exceptions are completely disabled, obviously this is false.
+  if (!LangOpts.Exceptions)
+    return false;
+
+  // If C++ exceptions are enabled, this is true.
+  if (LangOpts.CXXExceptions)
+    return true;
+
+  // If ObjC exceptions are enabled, this depends on the ABI.
+  if (LangOpts.ObjCExceptions) {
+    return LangOpts.ObjCRuntime.hasUnwindExceptions();
+  }
+
+  return true;
+}
+
 bool isVarDeclStrongDefinition(const ASTContext &Ctx, const VarDecl *D,
                                bool NoCommon) {
   // Don't give variables common linkage if -fno-common was specified unless it

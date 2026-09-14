@@ -30,8 +30,8 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/ExprUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include <optional>
 
 using namespace clang;
