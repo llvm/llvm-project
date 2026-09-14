@@ -67,6 +67,7 @@ public:
   const SuperHSelectionDAGInfo *getSelectionDAGInfo() const override { return &TSInfo; }
   const SuperHTargetLowering *getTargetLowering() const override { return &TLInfo; }
 
+  bool isLittleEndian() const { return getTargetTriple().isLittleEndian(); }
   bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
   bool isPositionIndependent() const { return TM.isPositionIndependent(); }
 

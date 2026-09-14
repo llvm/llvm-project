@@ -15,6 +15,7 @@
 #define LLVM_LIB_TARGET_SUPERH_SUPERHINSTRINFO_H
 
 #include "SuperHRegisterInfo.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
@@ -23,6 +24,27 @@
 #include "SuperHGenInstrInfo.inc"
 
 namespace llvm {
+class SuperHSubtarget;
+
+namespace SHCC {
+
+/// SuperH specific condition codes.
+/// These correspond to `SH_*_COND` in `SuperHInstrInfo.td`.
+/// They must be kept in sync.
+enum CondCode {
+  COND_EQ, //!< Equal
+  COND_GT, //!< Greater than
+  COND_GE, //!< Greater than or equal
+  COND_HI, //!< Higher than
+  COND_HS, //!< Higher than or same
+  COND_PL, //!< Greater than 0
+  COND_PZ, //!< Greater than or equal to 0
+  COND_T,  //!< True
+  COND_F,  //!< False
+  COND_INVALID
+};
+
+} // end of namespace SHCC
 
 class SuperHInstrInfo : public SuperHGenInstrInfo {
   const SuperHRegisterInfo RI;
@@ -43,9 +65,9 @@ public:
   /// in a delay slot, nor does it allow instructions with delay slots
   /// to be chained together.
   bool canFillDelaySlot(unsigned Opcode) const;
-  ISD::CondCode getCondFromBranchOp(unsigned Op) const;
-  ISD::CondCode getOppositeCondCode(ISD::CondCode CC) const;
-  const MCInstrDesc &getBrCond(ISD::CondCode CC) const;
+  SHCC::CondCode getCondFromBranchOp(unsigned Op) const;
+  SHCC::CondCode getOppositeCondCode(SHCC::CondCode CC) const;
+  const MCInstrDesc &getBrCond(SHCC::CondCode CC, bool delaySlot) const;
 
   // Instruction Info
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
@@ -75,6 +97,7 @@ public:
                                int &FrameIndex) const override;
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
+
 
   // Branch Analysis
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,

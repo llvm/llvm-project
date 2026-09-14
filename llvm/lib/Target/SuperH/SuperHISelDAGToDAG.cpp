@@ -15,6 +15,7 @@
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "SuperH.h"
 #include "SuperHConstantPoolValue.h"
+#include "SuperHInstrInfo.h"
 #include "SuperHMachineFunctionInfo.h"
 #include "SuperHSubtarget.h"
 #include "SuperHTargetMachine.h"
@@ -37,31 +38,6 @@ CBranchForceDelaySlot("sh-cbranch-force-delay-slot", cl::Hidden, cl::init(false)
 using namespace llvm;
 
 namespace {
-
-struct SHAddressWrapper {
-  enum SHAddrType {
-    GLOBAL_VALUE,
-    CONSTANT,
-    BLOCK,
-    SYM_LOCAL,
-    SYM_EXTERNAL,
-  };
-  SHAddrType Type;
-  SDValue BaseReg;
-  int64_t Disp;
-
-  // Max size of displacement.
-  unsigned DispSize;
-
-  const GlobalValue *GV;
-  const Constant *CP;
-  const BlockAddress *BlockAddr;
-  const char *ES;
-  MCSymbol *MCSym;
-  SHRefClass SymbolFlags; // SHII::MO_*
-
-  SHAddressWrapper(unsigned DS) : DispSize(DS) { }
-};
 
 /// Lowers LLVM IR (in DAG form) to SuperH MC instructions (in DAG form).
 class SuperHDAGToDAGISel : public SelectionDAGISel {
@@ -135,22 +111,39 @@ bool SuperHDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
 
 bool SuperHDAGToDAGISel::SelectAddr(SDNode *Op, SDValue N, SDValue &Base,
                                     SDValue &Disp) {
-  SDLoc dl(Op);
   auto DL = CurDAG->getDataLayout();
   MVT PtrVT = getTargetLowering()->getPointerTy(DL);
-  MachineFunction &MF = CurDAG->getMachineFunction();
-  SuperHMachineFunctionInfo *SFI = MF.getInfo<SuperHMachineFunctionInfo>();
 
   // if the address is a frame index get the TargetFrameIndex.
   if (const FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(N)) {
     Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), PtrVT);
-    Disp = CurDAG->getTargetConstant(0, dl, MVT::i8);
+    Disp = CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i8);
     return true;
+  }
+
+  if (const ConstantSDNode *RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
+
+    // Handle frame index + offset
+    if (N.getOperand(0).getOpcode() == ISD::FrameIndex) {
+      int RHSC = (int)RHS->getZExtValue();
+      int FI = cast<FrameIndexSDNode>(N.getOperand(0))->getIndex();
+
+      Base = CurDAG->getTargetFrameIndex(FI, PtrVT);
+      Disp = CurDAG->getTargetConstant(RHSC, SDLoc(Op), MVT::i32);
+      return true;
+    }
+
+    // Handle reg + offset
+    if (N.getOpcode() == ISD::ADD) {
+      Base = N.getOperand(0);
+      Disp = CurDAG->getTargetConstant(RHS->getZExtValue(), SDLoc(Op), MVT::i32);
+      return true;
+    }
   }
 
   // if the address is a wrapper, get the underlying data.
   if (N.getOpcode() == SHISD::WRAPPER) {
-    Base = N->getOperand(0);
+    Base = N.getOperand(0);
     Disp = N;
     return true;
   }
@@ -225,7 +218,7 @@ template<>
 bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
   SDLoc DL(N);
 
   // NOTE:  The comparisons just set the T bit, it's up to later instructions
@@ -233,8 +226,7 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
   SDNode *Res = nullptr;
   switch(CC) {
   default: break;
-  case ISD::SETEQ:
-  case ISD::SETNE: {
+  case SHCC::COND_EQ: {
 
     // TST would be faster in this case.
     if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(RHS)) {
@@ -246,24 +238,28 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::CMP>(SDNode *N) {
     Res = CurDAG->getMachineNode(SH::CMPEQ, DL, MVT::Glue, LHS, RHS);
     break;
   }
-  case ISD::SETUGE:
-  case ISD::SETULT: {
-    Res = CurDAG->getMachineNode(SH::CMPHS, DL, MVT::Glue, LHS, RHS);
-    break;
-  }
-  case ISD::SETOGE:
-  case ISD::SETOLT: {
-    Res = CurDAG->getMachineNode(SH::CMPGE, DL, MVT::Glue, LHS, RHS);
-    break;
-  }
-  case ISD::SETUGT:
-  case ISD::SETULE: {
+  case SHCC::COND_GT: {
     Res = CurDAG->getMachineNode(SH::CMPGT, DL, MVT::Glue, LHS, RHS);
     break;
   }
-  case ISD::SETOGT:
-  case ISD::SETOLE: {
+  case SHCC::COND_GE: {
+    Res = CurDAG->getMachineNode(SH::CMPGE, DL, MVT::Glue, LHS, RHS);
+    break;
+  }
+  case SHCC::COND_HI: {
     Res = CurDAG->getMachineNode(SH::CMPHI, DL, MVT::Glue, LHS, RHS);
+    break;
+  }
+  case SHCC::COND_HS: {
+    Res = CurDAG->getMachineNode(SH::CMPHS, DL, MVT::Glue, LHS, RHS);
+    break;
+  }
+  case SHCC::COND_PL: {
+    Res = CurDAG->getMachineNode(SH::CMPPL, DL, MVT::Glue, LHS, RHS);
+    break;
+  }
+  case SHCC::COND_PZ: {
+    Res = CurDAG->getMachineNode(SH::CMPPZ, DL, MVT::Glue, LHS, RHS);
     break;
   }
   }
@@ -281,7 +277,7 @@ template<>
 bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   SDValue Chain = N->getOperand(0);
   SDValue Dest = N->getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
   SDValue Cmp = N->getOperand(3);
   SDLoc DL(N);
 
@@ -290,19 +286,11 @@ bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   MachineSDNode *Res = nullptr;
   switch(CC) {
   default: break;
-  case ISD::SETEQ:
-  case ISD::SETUGE:
-  case ISD::SETOGE:
-  case ISD::SETUGT:
-  case ISD::SETOGT:
+  case SHCC::COND_T:
     Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BTS : SH::BT, 
           DL, MVT::Other, Dest, Chain, Cmp);
     break;
-  case ISD::SETNE:
-  case ISD::SETULE:
-  case ISD::SETOLE:
-  case ISD::SETULT:
-  case ISD::SETOLT:
+  case SHCC::COND_F:
     Res = CurDAG->getMachineNode(CBranchForceDelaySlot ? SH::BFS : SH::BF, 
           DL, MVT::Other, Dest, Chain, Cmp);
     break;

@@ -17,10 +17,12 @@ def CC_SH : CallingConv<[
   // All lower size parameters are promoted to 32-bit
   CCIfType<[i1, i8, i16],  CCPromoteToType<i32>>,
   CCIfType<[i32], CCAssignToReg<[R4, R5, R6, R7]>>,
+
+  CCAssignToStack<4, 4>
 ]>;
 
 def RetCC_SH : CallingConv<[
-  CCIfSRet<CCCustom<"RetCC_SuperH_SRet">>,
+  CCIfSRet<CCCustom<"RetCC_SH_SRet">>,
 
   // All lower size parameters are promoted to 32-bit
   CCIfType<[i1, i8, i16],  CCPromoteToType<i32>>,
@@ -31,6 +33,8 @@ def RetCC_SH : CallingConv<[
 //===----------------------------------------------------------------------===//
 // Callee-saved register lists.
 //===----------------------------------------------------------------------===//
+
+def CSR_NoRegs : CalleeSavedRegs<(add)>;
 
 def CSR_SH : CalleeSavedRegs<(add R8, R9, R10, R11, R12, 
 										R13, R14, R15)>;
