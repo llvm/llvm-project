@@ -874,7 +874,32 @@ TEST_F(AArch64GISelMITest, TestFPClassFLogNeg) {
 
   KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
 
-  EXPECT_EQ(fcNan | fcNegInf | fcPosZero | fcNormal, Known.getKnownFPClasses());
+  EXPECT_EQ(fcQNan | fcNegInf | fcPosZero | fcNormal,
+            Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+}
+
+TEST_F(AArch64GISelMITest, TestFPClassFLogDeduceSubnormalOrNegativeZero) {
+  StringRef MIRString = R"(
+    %ptr:_(p0) = G_IMPLICIT_DEF
+    %val:_(s32) = G_LOAD %ptr(p0) :: (load (s32))
+    %flog:_(s32) = G_FLOG %val
+    %copy_flog:_(s32) = COPY %flog
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known =
+      Info.computeKnownFPClass(SrcReg, fcNegZero | fcSubnormal);
+
+  EXPECT_EQ(~(fcNegZero | fcSubnormal), Known.getKnownFPClasses());
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
