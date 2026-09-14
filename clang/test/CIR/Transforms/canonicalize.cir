@@ -323,4 +323,86 @@ module {
   // CHECK-NEXT:   cir.return %[[P]] : !s32i
   // CHECK-NEXT: }
 
+  cir.func @add_int() -> !s32i {
+    %0 = cir.const #cir.int<3> : !s32i
+    %1 = cir.const #cir.int<4> : !s32i
+    %2 = cir.add %0, %1 : !s32i
+    cir.return %2 : !s32i
+  }
+  // CHECK:      @add_int()
+  // CHECK-NEXT:   %[[C:.+]] = cir.const #cir.int<7> : !s32i
+  // CHECK-NEXT:   cir.return %[[C]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @sub_int() -> !s32i {
+    %0 = cir.const #cir.int<10> : !s32i
+    %1 = cir.const #cir.int<4> : !s32i
+    %2 = cir.sub %0, %1 : !s32i
+    cir.return %2 : !s32i
+  }
+  // CHECK:      @sub_int()
+  // CHECK-NEXT:   %[[C:.+]] = cir.const #cir.int<6> : !s32i
+  // CHECK-NEXT:   cir.return %[[C]] : !s32i
+  // CHECK-NEXT: }
+
+  // Without wrap flags the result wraps in two's complement.
+  cir.func @add_wrap() -> !s8i {
+    %0 = cir.const #cir.int<127> : !s8i
+    %1 = cir.const #cir.int<1> : !s8i
+    %2 = cir.add %0, %1 : !s8i
+    cir.return %2 : !s8i
+  }
+  // CHECK:      @add_wrap()
+  // CHECK-NEXT:   %[[C:.+]] = cir.const #cir.int<-128> : !s8i
+  // CHECK-NEXT:   cir.return %[[C]] : !s8i
+  // CHECK-NEXT: }
+
+  // nsw overflow folds to poison.
+  cir.func @add_nsw_overflow() -> !s8i {
+    %0 = cir.const #cir.int<127> : !s8i
+    %1 = cir.const #cir.int<1> : !s8i
+    %2 = cir.add nsw %0, %1 : !s8i
+    cir.return %2 : !s8i
+  }
+  // CHECK:      @add_nsw_overflow()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s8i
+  // CHECK-NEXT:   cir.return %[[P]] : !s8i
+  // CHECK-NEXT: }
+
+  // Saturated add clamps to the signed maximum.
+  cir.func @add_sat_signed() -> !s8i {
+    %0 = cir.const #cir.int<127> : !s8i
+    %1 = cir.const #cir.int<10> : !s8i
+    %2 = cir.add sat %0, %1 : !s8i
+    cir.return %2 : !s8i
+  }
+  // CHECK:      @add_sat_signed()
+  // CHECK-NEXT:   %[[C:.+]] = cir.const #cir.int<127> : !s8i
+  // CHECK-NEXT:   cir.return %[[C]] : !s8i
+  // CHECK-NEXT: }
+
+  // A poison operand propagates to the result.
+  cir.func @add_poison() -> !s32i {
+    %0 = cir.const #cir.poison : !s32i
+    %1 = cir.const #cir.int<1> : !s32i
+    %2 = cir.add %0, %1 : !s32i
+    cir.return %2 : !s32i
+  }
+  // CHECK:      @add_poison()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !s32i
+  // CHECK-NEXT:   cir.return %[[P]] : !s32i
+  // CHECK-NEXT: }
+
+  // nuw overflow on subtraction folds to poison.
+  cir.func @sub_nuw_overflow() -> !u8i {
+    %0 = cir.const #cir.int<0> : !u8i
+    %1 = cir.const #cir.int<1> : !u8i
+    %2 = cir.sub nuw %0, %1 : !u8i
+    cir.return %2 : !u8i
+  }
+  // CHECK:      @sub_nuw_overflow()
+  // CHECK-NEXT:   %[[P:.+]] = cir.const #cir.poison : !u8i
+  // CHECK-NEXT:   cir.return %[[P]] : !u8i
+  // CHECK-NEXT: }
+
 }

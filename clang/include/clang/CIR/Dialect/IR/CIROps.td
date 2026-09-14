@@ -2771,9 +2771,10 @@ def CIR_AddOp
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively. The optional `sat` (saturated) attribute
-    clamps the result to the type's representable range instead of wrapping.
-    The `nsw`/`nuw` flags and `sat` are mutually exclusive.
+    overflow occurs, respectively. `nsw` requires a signed type, while `nuw`
+    requires an unsigned type. The optional `sat` (saturated) attribute clamps
+    the result to the type's representable range instead of wrapping. The
+    `nsw`, `nuw`, and `sat` flags are mutually exclusive.
 
     Example:
 
@@ -2785,6 +2786,8 @@ def CIR_AddOp
     %4 = cir.add %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2801,9 +2804,10 @@ def CIR_SubOp
 
     The optional `nsw` (no signed wrap) and `nuw` (no unsigned wrap) unit
     attributes indicate that the result is poison if signed or unsigned
-    overflow occurs, respectively. The optional `sat` (saturated) attribute
-    clamps the result to the type's representable range. The `nsw`/`nuw`
-    flags and `sat` are mutually exclusive.
+    overflow occurs, respectively. `nsw` requires a signed type, while `nuw`
+    requires an unsigned type. The optional `sat` (saturated) attribute clamps
+    the result to the type's representable range. The `nsw`, `nuw`, and `sat`
+    flags are mutually exclusive.
 
     Example:
 
@@ -2814,6 +2818,8 @@ def CIR_SubOp
     %3 = cir.sub %va, %vb : !cir.vector<4 x !s32i>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
