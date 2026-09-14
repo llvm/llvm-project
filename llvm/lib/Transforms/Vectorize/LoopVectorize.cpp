@@ -6464,10 +6464,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
   // Add surviving induction predicates to PSE and check constraints.
   bool ForceVectorization =
       Config.getHints().getForce() == LoopVectorizeHints::FK_Enabled;
-  bool OptForSize =
-      !ForceVectorization &&
-      (CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize ||
-       CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedLowTripLoop);
+  bool OptForSize = !ForceVectorization &&
+                    CM->EpilogueLoweringStatus == CM_EpilogueNotAllowedOptSize;
   unsigned SCEVCheckThreshold = ForceVectorization
                                     ? PragmaVectorizeSCEVCheckThreshold
                                     : VectorizeSCEVCheckThreshold;
