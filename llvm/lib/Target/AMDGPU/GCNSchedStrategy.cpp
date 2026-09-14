@@ -1600,14 +1600,10 @@ bool PreRARematStage::initGCNSchedStage() {
     Candidates.emplace_back(RegIdx, NumRegions);
   }
 
-  // Initialize the LiveIn and LiveOut sets of all
-  // candidates.
-  //
-  // This used to be part of ScoredRemat::init, but this choice
-  // implied iterating all regions for each candidate. The runtime of
-  // the initialization was O(NumCandidates * NumRegions) whereas this
-  // way it is O(NumRegions + NumLiveIns + NumLiveOuts) (assuming
-  // constant time map lookups).
+  // Initialize the LiveIn and LiveOut sets of all candidates.
+  // Iterating all regions and their live regs once is considerably
+  // more efficient than querying those structures for each candidate
+  // separately in ScoredRemat::init.
   for (unsigned I = 0; I < NumRegions; ++I) {
     for (const auto &[Reg, Mask] : DAG.LiveIns[I]) {
       if (auto It = DefRegToCandIdx.find(Reg); It != DefRegToCandIdx.end())
