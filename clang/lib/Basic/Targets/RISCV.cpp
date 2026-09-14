@@ -651,7 +651,7 @@ bool RISCVTargetInfo::checkCFBranchLabelSchemeSupported(
   // implements it
   switch (Scheme) {
   case CFBranchLabelSchemeKind::Default:
-   return true;
+    return true;
   case CFBranchLabelSchemeKind::Unlabeled:
     return true;
   case CFBranchLabelSchemeKind::FuncSig:
