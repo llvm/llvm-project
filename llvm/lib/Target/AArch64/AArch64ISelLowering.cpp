@@ -14034,8 +14034,8 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
       for (unsigned I = 0; I + 1 < Insn.size(); ++I) {
         const AArch64_IMM::ImmInsnModel &First = Insn[I];
         const AArch64_IMM::ImmInsnModel &Second = Insn[I + 1];
-        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2, Second.Opcode,
-                                       Second.Op2)) {
+        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2.value_or(0),
+                                       Second.Opcode, Second.Op2.value_or(0))) {
           ++Limit;
           // An instruction can only be fused once, so the 2nd one of the pair
           // cannot start another pair and is skipped.

@@ -770,7 +770,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     Delimited,
     Explicit,
     LoopNest,
-    LoopSeq,
+    LoopSequence,
     Separating,
     FromLeaves,
     Invalid,
@@ -785,7 +785,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
         .Case("AS_Delimited", Association::Delimited)
         .Case("AS_Explicit", Association::Explicit)
         .Case("AS_LoopNest", Association::LoopNest)
-        .Case("AS_LoopSeq", Association::LoopSeq)
+        .Case("AS_LoopSeq", Association::LoopSequence)
         .Case("AS_None", Association::None)
         .Case("AS_Separating", Association::Separating)
         .Case("AS_FromLeaves", Association::FromLeaves)
@@ -820,7 +820,7 @@ static void generateGetDirectiveAssociation(const DirectiveLanguage &DirLang,
     if (A == Association::None || A == B)
       return B;
     if (A == Association::Block &&
-        (B == Association::LoopNest || B == Association::LoopSeq))
+        (B == Association::LoopNest || B == Association::LoopSequence))
       return B;
     return Association::Invalid;
   };
