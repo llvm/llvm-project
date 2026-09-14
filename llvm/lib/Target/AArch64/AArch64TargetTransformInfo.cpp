@@ -626,6 +626,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return HistCost;
     break;
   }
+  case Intrinsic::experimental_vector_histogram_uadd_sat:
+  case Intrinsic::experimental_vector_histogram_umax:
+  case Intrinsic::experimental_vector_histogram_umin:
+    // No hardware support for these histogram variants on AArch64.
+    return InstructionCost::getInvalid();
   case Intrinsic::clmul: {
     auto LT = getTypeLegalizationCost(RetTy);
 

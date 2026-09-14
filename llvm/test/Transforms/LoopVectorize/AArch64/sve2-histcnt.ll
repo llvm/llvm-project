@@ -860,6 +860,81 @@ for.exit:
 
 attributes #0 = { "target-features"="+sve2" vscale_range(1,16) }
 
+;; Verify that uadd_sat/umax/umin histograms are NOT generated on SVE2
+;; because the target has no hardware support for these histogram variants.
+
+define void @histogram_uadd_sat_no_hw(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @histogram_uadd_sat_no_hw(
+; CHECK-NOT: llvm.experimental.vector.histogram
+; CHECK: for.exit:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.uadd.sat.i32(i32 %l.bucket, i32 1)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @histogram_umax_no_hw(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @histogram_umax_no_hw(
+; CHECK-NOT: llvm.experimental.vector.histogram
+; CHECK: for.exit:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.umax.i32(i32 %l.bucket, i32 120)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
+define void @histogram_umin_no_hw(ptr noalias %buckets, ptr readonly %indices, i64 %N) #0 {
+; CHECK-LABEL: define void @histogram_umin_no_hw(
+; CHECK-NOT: llvm.experimental.vector.histogram
+; CHECK: for.exit:
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.indices = getelementptr inbounds i32, ptr %indices, i64 %iv
+  %l.idx = load i32, ptr %gep.indices, align 4
+  %idxprom1 = zext i32 %l.idx to i64
+  %gep.bucket = getelementptr inbounds i32, ptr %buckets, i64 %idxprom1
+  %l.bucket = load i32, ptr %gep.bucket, align 4
+  %inc = call i32 @llvm.umin.i32(i32 %l.bucket, i32 99)
+  store i32 %inc, ptr %gep.bucket, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %N
+  br i1 %exitcond, label %for.exit, label %for.body
+
+for.exit:
+  ret void
+}
+
 !0 = distinct !{!0, !1}
 !1 = !{!"llvm.loop.interleave.count", i32 2}
 !2 = distinct !{!2, !3}

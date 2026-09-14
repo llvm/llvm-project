@@ -28,6 +28,7 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/LoopAccessAnalysis.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -242,9 +243,12 @@ struct HistogramInfo {
   LoadInst *Load;
   Instruction *Update;
   StoreInst *Store;
+  /// The update operation applied to the histogram buckets.
+  HistogramUpdateKind UpdateKind;
 
-  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store)
-      : Load(Load), Update(Update), Store(Store) {}
+  HistogramInfo(LoadInst *Load, Instruction *Update, StoreInst *Store,
+                HistogramUpdateKind UpdateKind)
+      : Load(Load), Update(Update), Store(Store), UpdateKind(UpdateKind) {}
 };
 
 /// Indicates the characteristics of a loop with an uncountable exit.

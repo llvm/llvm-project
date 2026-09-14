@@ -132,6 +132,16 @@ namespace Intrinsic {
 typedef unsigned ID;
 }
 
+/// The kind of update operation performed on the buckets of a histogram, i.e.
+/// buckets[indices[i]] = UpdateOp(buckets[indices[i]], Val).
+enum class HistogramUpdateKind {
+  Add,
+  Sub,
+  UAddSat,
+  UMax,
+  UMin,
+};
+
 /// Identify if the intrinsic is trivially vectorizable.
 /// This method returns true if the intrinsic's argument types are all scalars
 /// for the scalar form of the intrinsic and all vectors (or scalars handled by
