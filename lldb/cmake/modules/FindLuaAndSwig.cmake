@@ -6,6 +6,7 @@
 
 if(LUA_LIBRARIES AND LUA_INCLUDE_DIR AND LLDB_ENABLE_SWIG)
   set(LUAANDSWIG_FOUND TRUE)
+  set(LuaAndSwig_FOUND TRUE)
 else()
   if (LLDB_ENABLE_SWIG)
     find_package(Lua 5.3)

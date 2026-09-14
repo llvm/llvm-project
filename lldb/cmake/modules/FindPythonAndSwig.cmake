@@ -38,6 +38,7 @@ endmacro()
 
 if(Python3_LIBRARIES AND Python3_INCLUDE_DIRS AND Python3_EXECUTABLE AND LLDB_ENABLE_SWIG)
   set(PYTHONANDSWIG_FOUND TRUE)
+  set(PythonAndSwig_FOUND TRUE)
 else()
   if (LLDB_ENABLE_SWIG)
     FindPython3()
