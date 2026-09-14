@@ -34,7 +34,7 @@ __find_if(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
   do {
     if (std::__invoke(__pred, std::__invoke(__proj, *__first)))
       break;
-    ++__first
+    ++__first;
   } while (__first != __last);
   return __first;
 }
