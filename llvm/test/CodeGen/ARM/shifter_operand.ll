@@ -461,18 +461,19 @@ define void @test_mutateddag(i32 %b, i32 %c, i32 %d, i1 %cc) {
 ; CHECK-THUMB-NEXT:    movt r5, :upper16:arr_9
 ; CHECK-THUMB-NEXT:    movt r2, #64028
 ; CHECK-THUMB-NEXT:    lsls r3, r3, #31
+; CHECK-THUMB-NEXT:    cmp r3, #0
 ; CHECK-THUMB-NEXT:    add.w r0, r0, r4, lsl #1
 ; CHECK-THUMB-NEXT:    add r0, r5
 ; CHECK-THUMB-NEXT:    add r2, r0
 ; CHECK-THUMB-NEXT:    movw r0, #25756
 ; CHECK-THUMB-NEXT:    movt r0, #26
-; CHECK-THUMB-NEXT:    muls r0, r1, r0
+; CHECK-THUMB-NEXT:    mul r0, r1, r0
 ; CHECK-THUMB-NEXT:    movw r1, #24420
 ; CHECK-THUMB-NEXT:    movt r1, #19356
 ; CHECK-THUMB-NEXT:    add.w r0, r0, r4, lsl #1
 ; CHECK-THUMB-NEXT:    add r0, r5
 ; CHECK-THUMB-NEXT:    add r1, r0
-; CHECK-THUMB-NEXT:    movs r0, #0
+; CHECK-THUMB-NEXT:    mov.w r0, #0
 ; CHECK-THUMB-NEXT:    b .LBB19_2
 ; CHECK-THUMB-NEXT:  .LBB19_1: @ %for.cond1.for.cond.cleanup_crit_edge
 ; CHECK-THUMB-NEXT:    @ in Loop: Header=BB19_2 Depth=1
@@ -481,18 +482,17 @@ define void @test_mutateddag(i32 %b, i32 %c, i32 %d, i1 %cc) {
 ; CHECK-THUMB-NEXT:  .LBB19_2: @ %for.cond
 ; CHECK-THUMB-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-THUMB-NEXT:    @ Child Loop BB19_3 Depth 2
-; CHECK-THUMB-NEXT:    movs r4, #0
-; CHECK-THUMB-NEXT:  .LBB19_3: @ %for.cond2.preheader
-; CHECK-THUMB-NEXT:    @ Parent Loop BB19_2 Depth=1
-; CHECK-THUMB-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-THUMB-NEXT:    cmp r3, #0
+; CHECK-THUMB-NEXT:    mov.w r4, #0
 ; CHECK-THUMB-NEXT:    str r0, [r2, r4]
 ; CHECK-THUMB-NEXT:    bne .LBB19_1
-; CHECK-THUMB-NEXT:  @ %bb.4: @ %for.cond2.preheader.2
-; CHECK-THUMB-NEXT:    @ in Loop: Header=BB19_3 Depth=2
+; CHECK-THUMB-NEXT:  .LBB19_3: @ %for.cond2.preheader.2
+; CHECK-THUMB-NEXT:    @ Parent Loop BB19_2 Depth=1
+; CHECK-THUMB-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-THUMB-NEXT:    str r0, [r1, r4]
 ; CHECK-THUMB-NEXT:    add r4, r12
-; CHECK-THUMB-NEXT:    b .LBB19_3
+; CHECK-THUMB-NEXT:    str r0, [r2, r4]
+; CHECK-THUMB-NEXT:    beq .LBB19_3
+; CHECK-THUMB-NEXT:    b .LBB19_1
 entry:
   %0 = add i32 %d, -4
   %1 = mul i32 %c, 864846

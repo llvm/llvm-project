@@ -19,10 +19,10 @@ define i16 @basic(ptr %p) {
 define void @crash(i1 %cond, ptr %p) {
 ; CHECK-LABEL: crash:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    testb $1, %dil
 ; CHECK-NEXT:    jne .LBB1_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    retq
