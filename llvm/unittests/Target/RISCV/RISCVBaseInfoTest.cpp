@@ -115,10 +115,18 @@ TEST(ComputeTargetABI, ReportsInvalidExplicitABI) {
   EXPECT_EQ(
       computeTargetABIError("riscv64", "+experimental-y,+f,+d", "il32pc64f"),
       "32-bit ABIs are not supported for 64-bit targets");
+  EXPECT_EQ(computeTargetABIError("riscv32", "", "il32pc64"),
+            "'il32pc64' ABI is only supported for RVY targets");
   EXPECT_EQ(computeTargetABIError("riscv64", "+f,+d", "l64pc128d"),
             "'l64pc128d' ABI is only supported for RVY targets");
+  // With RVY in integer mode, integer ABIs are selected by default.
+  EXPECT_EQ(computeTargetABI("riscv32", "+experimental-y,+rvy-int-mode"),
+            RISCVABI::ABI_ILP32);
+  EXPECT_EQ(computeTargetABI("riscv64", "+experimental-y,+f,+d,+rvy-int-mode"),
+            RISCVABI::ABI_LP64D);
+
   EXPECT_EQ(computeTargetABIError(
-                "riscv64", "+experimental-y,+f,+d,+xllvmrvyipm", "l64pc128d"),
+                "riscv64", "+experimental-y,+f,+d,+rvy-int-mode", "l64pc128d"),
             "'l64pc128d' ABI is only supported for RVY targets");
 }
 

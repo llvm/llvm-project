@@ -759,6 +759,8 @@ void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
 parseFeatureBits(const MCSubtargetInfo &STI);
 
+bool hasStdExtYCapMode(const FeatureBitset &FeatureBits);
+
 } // namespace RISCVFeatures
 
 namespace RISCVRVC {

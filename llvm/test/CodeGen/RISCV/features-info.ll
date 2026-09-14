@@ -152,6 +152,7 @@
 ; CHECK-NEXT:   rvb23u64                         - RISC-V rvb23u64 profile.
 ; CHECK-NEXT:   rvi20u32                         - RISC-V rvi20u32 profile.
 ; CHECK-NEXT:   rvi20u64                         - RISC-V rvi20u64 profile.
+; CHECK-NEXT:   rvy-int-mode                     - For internal testing only: Using RVY Base ISA with Integral Pointer (Compatibility) Mode.
 ; CHECK-NEXT:   save-restore                     - Enable save/restore.
 ; CHECK-NEXT:   sdext                            - 'Sdext' (External debugger).
 ; CHECK-NEXT:   sdtrig                           - 'Sdtrig' (Debugger triggers).
@@ -232,7 +233,6 @@
 ; CHECK-NEXT:   xcvmac                           - 'XCVmac' (CORE-V Multiply-Accumulate).
 ; CHECK-NEXT:   xcvmem                           - 'XCVmem' (CORE-V Post-incrementing Load & Store).
 ; CHECK-NEXT:   xcvsimd                          - 'XCVsimd' (CORE-V SIMD ALU).
-; CHECK-NEXT:   xllvmrvyipm                      - 'XLLVMRVYIPM' (For internal testing only: Using RVY Base ISA with Integral Pointer (Compatibility) Mode).
 ; CHECK-NEXT:   xmipscbop                        - 'XMIPSCBOP' (MIPS Software Prefetch).
 ; CHECK-NEXT:   xmipscmov                        - 'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov)).
 ; CHECK-NEXT:   xmipsexectl                      - 'XMIPSEXECTL' (MIPS execution control).
@@ -294,7 +294,6 @@
 ; CHECK-NEXT:   xtheadmempair                    - 'XTHeadMemPair' (T-Head two-GPR Memory Operations).
 ; CHECK-NEXT:   xtheadsync                       - 'XTHeadSync' (T-Head multicore synchronization instructions).
 ; CHECK-NEXT:   xtheadvdot                       - 'XTHeadVdot' (T-Head Vector Extensions for Dot).
-; CHECK-NEXT:   xventanacondops                  - 'XVentanaCondOps' (Ventana Conditional Ops).
 ; CHECK-NEXT:   xwchc                            - 'Xwchc' (WCH/QingKe additional compressed opcodes).
 ; CHECK-NEXT:   za128rs                          - 'Za128rs' (Reservation Set Size of at Most 128 Bytes).
 ; CHECK-NEXT:   za64rs                           - 'Za64rs' (Reservation Set Size of at Most 64 Bytes).

@@ -1337,7 +1337,7 @@ RISCVAsmPrinter::getRequiredGlobalAlignmentGranule(const GlobalVariable &GV) {
   if (MCSTI.hasFeature(RISCV::FeatureVendorXCheriot))
     return CHERIoTCapabilityFormat::getRequiredAlignment(Size);
 
-  if (MCSTI.hasFeature(RISCV::FeatureStdExtY)) {
+  if (RISCVFeatures::hasStdExtYCapMode(MCSTI.getFeatureBits())) {
     if (MCSTI.hasFeature(RISCV::Feature64Bit))
       return RV64YCapabilityFormat::getRequiredAlignment(Size);
     else

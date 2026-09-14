@@ -68,6 +68,11 @@ public:
   LLVM_ABI std::string toString() const;
   LLVM_ABI StringRef computeDefaultABI() const;
 
+  bool isRVYIntMode() const { return IsRVYIntMode; }
+  bool hasStdExtYCapMode() const {
+    return Exts.count("y") != 0 && !IsRVYIntMode;
+  }
+
   LLVM_ABI static bool isSupportedExtensionFeature(StringRef Ext);
   LLVM_ABI static bool isSupportedExtension(StringRef Ext);
   LLVM_ABI static bool isSupportedExtensionWithVersion(StringRef Ext);
@@ -97,6 +102,7 @@ private:
   unsigned MaxELen = 0, MaxELenFp = 0;
 
   RISCVISAUtils::OrderedExtensionMap Exts;
+  bool IsRVYIntMode = false;
 
   Error checkDependency();
 

@@ -10624,18 +10624,24 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int FPDiff = 0;
+  const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
   if (IsTailCall && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
-
-    // Since callee will pop argument stack as a tail call, we must keep the
-    // popped size 16-byte aligned.
-    NumBytes = alignTo(NumBytes, 16);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
     // can actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
+
+    // Since callee will pop the argument stack as a tail call, we must keep the
+    // popped size aligned to the stack alignment. Either or both of NumBytes
+    // and NumReusableBytes may not have been aligned, so we further increase by
+    // the amount needed to keep FPDiff aligned, and therefore preserve the
+    // required alignment going into the callee.
+    uint64_t Realign = offsetToAlignment(FPDiff, StackAlign);
+    FPDiff -= Realign;
+    NumBytes += Realign;
 
     // Update the required reserved area if this is the tail call requiring the
     // most argument stack space.

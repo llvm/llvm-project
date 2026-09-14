@@ -936,11 +936,10 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
               ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zalasr_xventanacondops", true, false);
+  auto MaybeISAInfo2 =
+      RISCVISAInfo::parseArchString("rv32e_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
-  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+zalasr", "+xventanacondops"));
+  EXPECT_THAT((*MaybeISAInfo2)->toFeatures(), ElementsAre("+e", "+zalasr"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1275,7 +1274,8 @@ TEST(ComputeDefaultABI, SelectsExpectedABI) {
             "l64pc128d");
 
   // Integral pointer mode defaults to the base RVI ABI.
-  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+xllvmrvyipm"}), "lp64");
+  EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+rvy-int-mode"}),
+            "lp64");
 
   // There is no l64pc128e ABI, so RV64E+Y still defaults to the integer ABI.
   EXPECT_EQ(GetABIFromFeatures(64, {"+experimental-y", "+e"}), "lp64e");
@@ -1593,7 +1593,6 @@ R"(All available -march extensions for RISC-V
     xcvmac               1.0
     xcvmem               1.0
     xcvsimd              1.0
-    xllvmrvyipm          1.0
     xmipscbop            1.0
     xmipscmov            1.0
     xmipsexectl          1.0
@@ -1655,7 +1654,6 @@ R"(All available -march extensions for RISC-V
     xtheadmempair        1.0
     xtheadsync           1.0
     xtheadvdot           1.0
-    xventanacondops      1.0
     xwchc                2.2
 
 Experimental extensions
@@ -1762,8 +1760,8 @@ ISA String: rv64i2p1_zicfilp1p0_zicsr2p0
   EXPECT_EQ(CapturedOutput, ExpectedOutput);
 }
 
-TEST(ParseFeatures, AllowZcfZclsdWithRVYIfXLLVMRVYIPM) {
-  // rv32y + zcf/zclsd and rv64y + zcd is incompatible.
+TEST(ParseFeatures, AllowZcfZclsdWithRVYIfRVYIntMode) {
+  // Normally Zcf/Zcd/Zclsd are incompatible with RVY.
   EXPECT_EQ(
       toString(RISCVISAInfo::parseFeatures(32, {"+experimental-y", "+zcf"})
                    .takeError()),
@@ -1780,12 +1778,12 @@ TEST(ParseFeatures, AllowZcfZclsdWithRVYIfXLLVMRVYIPM) {
   // However, when running in RVI/RVE compatibility mode they can be enabled
   // since the underlying opcodes are no longer used for capability load/store.
   ASSERT_THAT_EXPECTED(RISCVISAInfo::parseFeatures(
-                           32, {"+experimental-y", "+zcf", "+xllvmrvyipm"}),
+                           32, {"+experimental-y", "+zcf", "+rvy-int-mode"}),
                        Succeeded());
   ASSERT_THAT_EXPECTED(RISCVISAInfo::parseFeatures(
-                           32, {"+experimental-y", "+zclsd", "+xllvmrvyipm"}),
+                           32, {"+experimental-y", "+zclsd", "+rvy-int-mode"}),
                        Succeeded());
   ASSERT_THAT_EXPECTED(RISCVISAInfo::parseFeatures(
-                           64, {"+experimental-y", "+zcd", "+xllvmrvyipm"}),
+                           64, {"+experimental-y", "+zcd", "+rvy-int-mode"}),
                        Succeeded());
 }

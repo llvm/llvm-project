@@ -85,18 +85,18 @@ createRISCVMCObjectFileInfo(MCContext &Ctx, bool PIC,
 }
 
 void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
+  bool HasYCapMode = RISCVFeatures::hasStdExtYCapMode(STI.getFeatureBits());
+
   // Add Zcd if C and D are enabled and we aren't targeting 64-bit RVY.
   if (STI.hasFeature(RISCV::FeatureStdExtC) &&
       STI.hasFeature(RISCV::FeatureStdExtD) &&
       !STI.hasFeature(RISCV::FeatureStdExtZcd) &&
-      !(STI.hasFeature(RISCV::Feature64Bit) &&
-        STI.hasFeature(RISCV::FeatureStdExtY)))
+      !(STI.hasFeature(RISCV::Feature64Bit) && HasYCapMode))
     STI.ToggleFeature(RISCV::FeatureStdExtZcd);
 
   // Add Zcf if F and C or Zce are enabled on RV32 and Y is not enabled.
   if (!STI.hasFeature(RISCV::FeatureStdExtZcf) &&
-      !STI.hasFeature(RISCV::Feature64Bit) &&
-      !STI.hasFeature(RISCV::FeatureStdExtY) &&
+      !STI.hasFeature(RISCV::Feature64Bit) && !HasYCapMode &&
       STI.hasFeature(RISCV::FeatureStdExtF) &&
       (STI.hasFeature(RISCV::FeatureStdExtC) ||
        STI.hasFeature(RISCV::FeatureStdExtZce)))
@@ -118,12 +118,10 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
     if (!STI.hasFeature(RISCV::Feature64Bit))
       ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
                     STI.hasFeature(RISCV::FeatureStdExtZcd)) &&
-                   (STI.hasFeature(RISCV::FeatureStdExtY) ||
-                    !STI.hasFeature(RISCV::FeatureStdExtF) ||
+                   (HasYCapMode || !STI.hasFeature(RISCV::FeatureStdExtF) ||
                     STI.hasFeature(RISCV::FeatureStdExtZcf));
     else
-      ShouldAddC = STI.hasFeature(RISCV::FeatureStdExtY) ||
-                   !STI.hasFeature(RISCV::FeatureStdExtD) ||
+      ShouldAddC = HasYCapMode || !STI.hasFeature(RISCV::FeatureStdExtD) ||
                    STI.hasFeature(RISCV::FeatureStdExtZcd);
     if (ShouldAddC)
       STI.ToggleFeature(RISCV::FeatureStdExtC);
@@ -141,8 +139,7 @@ void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
       STI.hasFeature(RISCV::FeatureStdExtZcb) &&
       STI.hasFeature(RISCV::FeatureStdExtZcmp) &&
       STI.hasFeature(RISCV::FeatureStdExtZcmt)) {
-    if (STI.hasFeature(RISCV::Feature64Bit) ||
-        STI.hasFeature(RISCV::FeatureStdExtY) ||
+    if (STI.hasFeature(RISCV::Feature64Bit) || HasYCapMode ||
         !STI.hasFeature(RISCV::FeatureStdExtF) ||
         STI.hasFeature(RISCV::FeatureStdExtZcf))
       STI.ToggleFeature(RISCV::FeatureStdExtZce);

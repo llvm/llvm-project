@@ -183,7 +183,6 @@
 // CHECK-NEXT:     xcvmac               1.0       'XCVmac' (CORE-V Multiply-Accumulate)
 // CHECK-NEXT:     xcvmem               1.0       'XCVmem' (CORE-V Post-incrementing Load & Store)
 // CHECK-NEXT:     xcvsimd              1.0       'XCVsimd' (CORE-V SIMD ALU)
-// CHECK-NEXT:     xllvmrvyipm          1.0       'XLLVMRVYIPM' (For internal testing only: Using RVY Base ISA with Integral Pointer (Compatibility) Mode)
 // CHECK-NEXT:     xmipscbop            1.0       'XMIPSCBOP' (MIPS Software Prefetch)
 // CHECK-NEXT:     xmipscmov            1.0       'XMIPSCMov' (MIPS conditional move instruction (mips.ccmov))
 // CHECK-NEXT:     xmipsexectl          1.0       'XMIPSEXECTL' (MIPS execution control)
@@ -245,7 +244,6 @@
 // CHECK-NEXT:     xtheadmempair        1.0       'XTHeadMemPair' (T-Head two-GPR Memory Operations)
 // CHECK-NEXT:     xtheadsync           1.0       'XTHeadSync' (T-Head multicore synchronization instructions)
 // CHECK-NEXT:     xtheadvdot           1.0       'XTHeadVdot' (T-Head Vector Extensions for Dot)
-// CHECK-NEXT:     xventanacondops      1.0       'XVentanaCondOps' (Ventana Conditional Ops)
 // CHECK-NEXT:     xwchc                2.2       'Xwchc' (WCH/QingKe additional compressed opcodes)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions

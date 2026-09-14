@@ -63,30 +63,29 @@ Expected<ABI> computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName) {
     return createStringError(Twine("'") + ABIName +
                              "' is not a recognized ABI for this target");
   }
-  if ((ABIName.starts_with("ilp32") || ABIName.starts_with("il32pc64")) &&
-      IsRV64) {
+  if (IsRV64 &&
+      (ABIName.starts_with("ilp32") || ABIName.starts_with("il32pc64"))) {
     return createStringError(
         "32-bit ABIs are not supported for 64-bit targets");
   }
-  if ((ABIName.starts_with("lp64") || ABIName.starts_with("l64pc128")) &&
-      !IsRV64) {
+  if (!IsRV64 &&
+      (ABIName.starts_with("lp64") || ABIName.starts_with("l64pc128"))) {
     return createStringError(
         "64-bit ABIs are not supported for 32-bit targets");
   }
-  if (ABIName.ends_with("f") && !FeatureBits[RISCV::FeatureStdExtF]) {
+  if (ABIName.ends_with('f') && !FeatureBits[RISCV::FeatureStdExtF]) {
     return createStringError(
         "hard-float 'f' ABI can't be used for a target that doesn't "
         "support the F instruction set extension");
   }
-  if (ABIName.ends_with("d") && !FeatureBits[RISCV::FeatureStdExtD]) {
+  if (ABIName.ends_with('d') && !FeatureBits[RISCV::FeatureStdExtD]) {
     return createStringError(
         "hard-float 'd' ABI can't be used for a target that doesn't "
         "support the D instruction set extension");
   }
-  if ((ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128")) &&
-      (!FeatureBits[RISCV::FeatureStdExtY] ||
-       FeatureBits[RISCV::FeatureVendorXLLVMRVYIPM])) {
-    // RVY ABIs are rejected without RVY base ISA or when targetting the
+  if (!RISCVFeatures::hasStdExtYCapMode(FeatureBits) &&
+      (ABIName.starts_with("il32pc64") || ABIName.starts_with("l64pc128"))) {
+    // RVY ABIs are rejected without RVY base ISA or when targeting the
     // integral pointer (RVI compatibility) mode of RVY.
     return createStringError(Twine('\'') + ABIName +
                              "' ABI is only supported for RVY targets");
@@ -171,10 +170,18 @@ parseFeatureBits(const MCSubtargetInfo &STI) {
   // Convert FeatureBitset to FeatureVector.
   for (const auto &Feature : STI.getAllProcessorFeatures()) {
     if (FeatureBits[Feature.Value] &&
-        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+        (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()) ||
+         // Pass through internal rvy-int-mode feature so RISCVISAInfo knows
+         // whether RVY is in capability or integral pointer mode.
+         Feature.Value == RISCV::FeatureRVYIntMode))
       FeatureVector.push_back(std::string("+") + Feature.key());
   }
   return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
+}
+
+bool hasStdExtYCapMode(const FeatureBitset &FeatureBits) {
+  return FeatureBits[RISCV::FeatureStdExtY] &&
+         !FeatureBits[RISCV::FeatureRVYIntMode];
 }
 
 } // namespace RISCVFeatures

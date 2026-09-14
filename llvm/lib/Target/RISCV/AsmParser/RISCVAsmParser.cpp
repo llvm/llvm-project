@@ -1465,27 +1465,14 @@ static bool regClassIsYGPR(const MCRegisterClass &RC) {
   return getRISCVMCRegisterClass(RISCV::YGPRRegClassID).contains(*RC.begin());
 }
 
-static MatchClassKind remapRegClassByHwMode(MatchClassKind Kind, bool Purecap) {
-  // TODO: Generate this mapping automatically from TableGen.
-  switch (Kind) {
-  case MCK_RegByHwMode_BasePtrRegClass:
-    return Purecap ? MCK_YGPRNoX0 : MCK_GPR;
-  case MCK_RegByHwMode_BasePtrCRegClass:
-    return Purecap ? MCK_YGPRC : MCK_GPRC;
-  case MCK_RegByHwMode_SP:
-    return Purecap ? MCK_SP_Y : MCK_SP_X;
-  default:
-    llvm_unreachable("Unhandled RegClassByHwMode");
-  }
-}
-
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned MatchKind) {
-  // Convert to enum for improved debugger output.
-  MatchClassKind Kind = static_cast<MatchClassKind>(MatchKind);
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
   if (!Op.isReg())
     return Match_InvalidOperand;
+
+  // If this is a ByHwMode kind, resolve it to the real MCK_
+  MatchClassKind Kind = remapRegClassByHwMode(MatchKind, *STI);
 
   MCRegister Reg = Op.getReg();
   bool IsRegFPR64 =
@@ -1496,16 +1483,10 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
 
   // In RVY mode, classes such as BasePtrRC register class should select
   // capability registers for the base pointer operands, otherwise we use GPRs.
-  // This is not currently handled automatically by tablegen so we have to
-  // manually remap the MCK_ values and also manually handle the register
-  // restrictions (such as NoX0) for ByHwMode classes.
-  // TODO: Is there any way we could do this in tablegen automatically?
+  // YGPR and GPR use the same register names in assembly, so we have to
+  // manually convert GPR operands to YGPR and check register restrictions
+  // (such as NoX0) for ByHwMode classes.
   bool NeedManualRegClassCheck = false;
-  if (Kind > MCK_LAST_REGISTER && Kind <= MCK_LAST_REGCLASS_BY_HWMODE) {
-    bool Purecap = STI->hasFeature(RISCV::FeatureStdExtY) &&
-                   !STI->hasFeature(RISCV::FeatureVendorXLLVMRVYIPM);
-    Kind = remapRegClassByHwMode(Kind, Purecap);
-  }
   const MCRegisterClass *CheckRC = getRegClassFromMatchKind(Kind);
   // YGPR and GPR use the same names, remap and check them if necessary.
   if (!Op.isYGPR() && CheckRC && regClassIsYGPR(*CheckRC)) {

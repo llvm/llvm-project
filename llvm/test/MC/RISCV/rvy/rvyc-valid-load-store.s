@@ -1,18 +1,18 @@
-// RUN: llvm-mc --triple=riscv32 --mattr=+zca,+zcb,+zcf,+zcd,+f,+d,+zfh,+xllvmrvyipm --riscv-no-aliases --show-encoding --show-inst < %s \
+// RUN: llvm-mc --triple=riscv32 --mattr=+zca,+zcb,+zcf,+zcd,+f,+d,+zfh,+rvy-int-mode --riscv-no-aliases --show-encoding --show-inst < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-INT,CHECK-INT-32,CHECK-INT-ASM-AND-OBJ,CHECK-INT-32-ASM-AND-OBJ %s
 // RUN: llvm-mc --triple=riscv32 --mattr=+zca,+zcb,+zcd,+f,+d,+zfh,+experimental-y --defsym=RVY=1 --riscv-no-aliases --show-encoding --show-inst < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-CAP,CHECK-CAP-32,CHECK-CAP-ASM-AND-OBJ,CHECK-CAP-32-ASM-AND-OBJ %s
-// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+zca,+zcb,+zcf,+zcd,+f,+d,+zfh,+xllvmrvyipm --riscv-add-build-attributes < %s \
-// RUN:   | llvm-objdump --mattr=+xllvmrvyipm -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-32-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
+// RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+zca,+zcb,+zcf,+zcd,+f,+d,+zfh,+rvy-int-mode --riscv-add-build-attributes < %s \
+// RUN:   | llvm-objdump --mattr=+rvy-int-mode -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-32-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
 // RUN: llvm-mc --filetype=obj --triple=riscv32 --mattr=+zca,+zcb,+zcd,+f,+d,+zfh,+experimental-y --defsym=RVY=1 --riscv-add-build-attributes < %s \
 // RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-CAP-32-ASM-AND-OBJ,CHECK-CAP-ASM-AND-OBJ
 
-// RUN: llvm-mc --triple=riscv64 --mattr=+zca,+zcb,+zcd,+f,+d,+zfh,+xllvmrvyipm --defsym=RV64=1 --riscv-no-aliases --show-encoding --show-inst < %s \
+// RUN: llvm-mc --triple=riscv64 --mattr=+zca,+zcb,+zcd,+f,+d,+zfh,+rvy-int-mode --defsym=RV64=1 --riscv-no-aliases --show-encoding --show-inst < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-INT,CHECK-INT-64,CHECK-INT-64-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ %s
 // RUN: llvm-mc --triple=riscv64 --mattr=+zca,+zcb,+f,+d,+zfh,+experimental-y --defsym=RVY=1 --defsym=RV64=1 --defsym=RV64_CAP=1 --riscv-no-aliases --show-encoding --show-inst < %s \
 // RUN:   | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-ASM,CHECK-CAP,CHECK-CAP-64,CHECK-CAP-ASM-AND-OBJ %s
-// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+zca,+zcb,+zcd,+f,+d,+zfh,+xllvmrvyipm --defsym=RV64=1 --riscv-add-build-attributes < %s \
-// RUN:   | llvm-objdump --mattr=+xllvmrvyipm -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-64-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
+// RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+zca,+zcb,+zcd,+f,+d,+zfh,+rvy-int-mode --defsym=RV64=1 --riscv-add-build-attributes < %s \
+// RUN:   | llvm-objdump --mattr=+rvy-int-mode -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-INT-64-ASM-AND-OBJ,CHECK-INT-ASM-AND-OBJ
 // RUN: llvm-mc --filetype=obj --triple=riscv64 --mattr=+zca,+zcb,+f,+d,+zfh,+experimental-y --defsym=RVY=1 --defsym=RV64=1 --defsym=RV64_CAP=1 --riscv-add-build-attributes < %s \
 // RUN:   | llvm-objdump -M no-aliases -d --no-print-imm-hex - | FileCheck %s --check-prefixes=CHECK-ASM-AND-OBJ,CHECK-CAP-ASM-AND-OBJ
 
