@@ -718,6 +718,99 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
       Succeeded());
 }
 
+// Check that a function renamed by LTO after it was profiled can still be
+// found by its GUID. This used to need !PGOFuncName metadata.
+TEST_F(InstrProfTest, test_symtab_lookup_renamed_function_by_guid) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+  auto *F =
+      Function::Create(FTy, Function::InternalLinkage, "InternalFoo", M.get());
+
+  // Assign the GUID while the function still has its original name.
+  const std::string ProfiledName = getIRPGOObjectName(*F);
+  EXPECT_EQ(ProfiledName, "MyModule.cpp;InternalFoo");
+  const uint64_t GUID = Function::getGUIDAssumingExternalLinkage(ProfiledName);
+  F->setMetadata(LLVMContext::MD_guid,
+                 MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt64Ty(Ctx), GUID))}));
+
+  // Promote and rename the function the way ThinLTO would.
+  F->setName("InternalFoo.llvm.9999");
+  F->setLinkage(Function::ExternalLinkage);
+  ASSERT_NE(getIRPGOObjectName(*F, /*InLTO=*/true), ProfiledName);
+
+  // The original name is gone from the IR, but the GUID still finds the
+  // function.
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M, /*InLTO=*/true), Succeeded());
+  EXPECT_EQ(Symtab.getFunction(GUID), F);
+}
+
+// Check that a function with a GUID can still be found by the hash of its
+// deprecated PGO name, which is what profiles from older compilers use.
+TEST_F(InstrProfTest, test_symtab_lookup_deprecated_name_with_assigned_guid) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+  auto *F =
+      Function::Create(FTy, Function::InternalLinkage, "InternalFoo", M.get());
+  // Needs a body: declarations always have a GUID, even without !guid.
+  IRBuilder<> Builder(BasicBlock::Create(Ctx, "entry", F));
+  Builder.CreateRetVoid();
+
+  const uint64_t GUID =
+      Function::getGUIDAssumingExternalLinkage(getIRPGOObjectName(*F));
+  const uint64_t DeprecatedNameHash =
+      Function::getGUIDAssumingExternalLinkage(getPGOFuncName(*F));
+
+  InstrProfSymtab WithoutGUID;
+  EXPECT_THAT_ERROR(WithoutGUID.create(*M), Succeeded());
+  EXPECT_EQ(WithoutGUID.getFunction(GUID), F) << "IRPGO name lookup, no !guid";
+  EXPECT_EQ(WithoutGUID.getFunction(DeprecatedNameHash), F)
+      << "deprecated name lookup, no !guid";
+
+  F->setMetadata(LLVMContext::MD_guid,
+                 MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt64Ty(Ctx), GUID))}));
+
+  InstrProfSymtab WithGUID;
+  EXPECT_THAT_ERROR(WithGUID.create(*M), Succeeded());
+  EXPECT_EQ(WithGUID.getFunction(GUID), F) << "IRPGO name lookup, with !guid";
+  EXPECT_EQ(WithGUID.getFunction(DeprecatedNameHash), F)
+      << "deprecated name lookup, with !guid";
+}
+
+// Check that a vtable renamed by LTO can be found by its GUID, and by the
+// hashes of its current and canonical names.
+TEST_F(InstrProfTest, test_symtab_lookup_vtable_with_assigned_guid) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
+  auto *GV = new GlobalVariable(
+      *M, Int32Ty, /*isConstant=*/true, GlobalValue::ExternalLinkage,
+      ConstantInt::get(Int32Ty, 0), "_ZTV3Foo.llvm.7");
+  // Only vtables with type metadata are added to the symtab.
+  GV->addTypeMetadata(16, MDString::get(Ctx, "_ZTS3Foo"));
+
+  // The GUID from before LTO promoted and renamed the vtable.
+  const uint64_t GUID =
+      GlobalValue::getGUIDAssumingExternalLinkage("MyModule.cpp;_ZTV3Foo");
+  GV->setMetadata(LLVMContext::MD_guid,
+                  MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt64Ty(Ctx), GUID))}));
+
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M), Succeeded());
+  EXPECT_EQ(Symtab.getGlobalVariable(GUID), GV);
+  EXPECT_EQ(Symtab.getGlobalVariable(
+                GlobalValue::getGUIDAssumingExternalLinkage("_ZTV3Foo.llvm.7")),
+            GV);
+  EXPECT_EQ(Symtab.getGlobalVariable(
+                GlobalValue::getGUIDAssumingExternalLinkage("_ZTV3Foo")),
+            GV);
+}
+
 // callee1 to callee6 are from vtable1 to vtable6 respectively.
 static const char callee1[] = "callee1";
 static const char callee2[] = "callee2";

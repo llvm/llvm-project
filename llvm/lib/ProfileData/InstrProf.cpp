@@ -511,20 +511,28 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
 
 Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
                                          StringRef VTablePGOName) {
+  // Key each name by its own hash, so profiles that recorded that name can find
+  // the vtable.
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addSymbolName(Name))
       return E;
 
     bool Inserted = true;
-    uint64_t GUID = VTable.getGUIDIfAssigned().value_or(
-        GlobalValue::getGUIDAssumingExternalLinkage(Name));
-    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(GUID, &VTable);
+    std::tie(std::ignore, Inserted) = MD5VTableMap.try_emplace(
+        GlobalValue::getGUIDAssumingExternalLinkage(Name), &VTable);
     if (!Inserted)
       LLVM_DEBUG(dbgs() << "GUID conflict within one module");
     return Error::success();
   };
   if (Error E = NameToGUIDMap(VTablePGOName))
     return E;
+
+  // Also key the vtable by its GUID, so it can still be found if LTO has
+  // renamed it. See addFuncWithName.
+  if (auto GUID = VTable.getGUIDIfAssigned();
+      GUID &&
+      *GUID != GlobalValue::getGUIDAssumingExternalLinkage(VTablePGOName))
+    MD5VTableMap.try_emplace(*GUID, &VTable);
 
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
   if (!CanonicalName.empty() && CanonicalName != VTablePGOName)
@@ -623,22 +631,31 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
                                        bool AddCanonical) {
-  if (Error E = addFuncName(PGOFuncName))
+  // Key each name by its own hash, so profiles that recorded that name can find
+  // the function. This is called once per name, e.g. a second time with the
+  // deprecated PGO name, for profiles from older compilers.
+  auto NameToGUIDMap = [&](StringRef Name) -> Error {
+    if (Error E = addFuncName(Name))
+      return E;
+    MD5FuncMap.emplace_back(Function::getGUIDAssumingExternalLinkage(Name), &F);
+    return Error::success();
+  };
+  if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
-  uint64_t GUID = F.getGUIDIfAssigned().value_or(
-      Function::getGUIDAssumingExternalLinkage(PGOFuncName));
-  MD5FuncMap.emplace_back(GUID, &F);
+
+  // Also key the function by its GUID, if it has one. The GUID is the hash of
+  // the function's name when the GUID was assigned, so this still finds the
+  // function if LTO has renamed it since. This used to need !PGOFuncName.
+  if (auto GUID = F.getGUIDIfAssigned();
+      GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
+    MD5FuncMap.emplace_back(*GUID, &F);
 
   if (!AddCanonical)
     return Error::success();
 
   StringRef CanonicalFuncName = getCanonicalName(PGOFuncName);
-  if (!CanonicalFuncName.empty() && CanonicalFuncName != PGOFuncName) {
-    if (Error E = addFuncName(CanonicalFuncName))
-      return E;
-    MD5FuncMap.emplace_back(
-        Function::getGUIDAssumingExternalLinkage(CanonicalFuncName), &F);
-  }
+  if (!CanonicalFuncName.empty() && CanonicalFuncName != PGOFuncName)
+    return NameToGUIDMap(CanonicalFuncName);
 
   return Error::success();
 }

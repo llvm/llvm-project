@@ -548,7 +548,9 @@ private:
   // map entries:
   // name-set = {PGOFuncName} union {getCanonicalName(PGOFuncName)}
   // - In MD5NameMap: <MD5Hash(name), name> for name in name-set
-  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set
+  // - In MD5FuncMap: <MD5Hash(name), &F> for name in name-set, and
+  //   <GUID, &F> if \c F has a GUID that differs from MD5Hash(PGOFuncName),
+  //   e.g. because LTO renamed \c F.
   // The canonical name is only added if \c AddCanonical is true.
   Error addFuncWithName(Function &F, StringRef PGOFuncName, bool AddCanonical);
 
@@ -556,7 +558,9 @@ private:
   // map entries:
   // name-set = {PGOName} union {getCanonicalName(PGOName)}
   // - In MD5NameMap:  <MD5Hash(name), name> for name in name-set
-  // - In MD5VTableMap: <MD5Hash(name), name> for name in name-set
+  // - In MD5VTableMap: <MD5Hash(name), &V> for name in name-set, and
+  //   <GUID, &V> if \c V has been assigned a GUID that differs from
+  //   MD5Hash(PGOVTableName).
   Error addVTableWithName(GlobalVariable &V, StringRef PGOVTableName);
 
   // If the symtab is created by a series of calls to \c addFuncName, \c
