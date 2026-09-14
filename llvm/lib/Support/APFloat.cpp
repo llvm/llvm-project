@@ -3569,9 +3569,11 @@ APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   }
   std::fill(words_iter, words.end(), uint64_t{0});
   constexpr size_t last_word = words.size() - 1;
-  uint64_t shifted_sign = static_cast<uint64_t>(sign & 1)
-                          << ((S.sizeInBits - 1) % 64);
-  words[last_word] |= shifted_sign;
+  if constexpr (S.hasSignedRepr) {
+    uint64_t shifted_sign = static_cast<uint64_t>(sign & 1)
+                            << ((S.sizeInBits - 1) % 64);
+    words[last_word] |= shifted_sign;
+  }
   uint64_t shifted_exponent = (myexponent & exponent_mask)
                               << (trailing_significand_bits % 64);
   words[last_word] |= shifted_exponent;
