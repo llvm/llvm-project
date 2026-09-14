@@ -17,6 +17,11 @@
 
 #include <sycl/__impl/version.hpp>
 
+// SYCL 2020 6.2. Requirements for an extension.
+// SYCL_IMPLEMENTATION_ONEAPI is left undefined until libsycl provides the
+// oneapi extensions that applications expect when it is defined.
+// #define SYCL_IMPLEMENTATION_ONEAPI
+
 #define _LIBSYCL_BEGIN_UNVERSIONED_NAMESPACE_SYCL namespace sycl {
 #define _LIBSYCL_END_UNVERSIONED_NAMESPACE_SYCL }
 

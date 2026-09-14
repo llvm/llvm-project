@@ -13,11 +13,11 @@ std::string BackendToString(sycl::backend Backend) {
   switch (Backend) {
   case sycl::backend::opencl:
     return "opencl";
-  case sycl::backend::level_zero:
+  case sycl::backend::ext_oneapi_level_zero:
     return "level_zero";
-  case sycl::backend::cuda:
+  case sycl::backend::ext_oneapi_cuda:
     return "cuda";
-  case sycl::backend::hip:
+  case sycl::backend::ext_oneapi_hip:
     return "hip";
   default:
     return "unknown";

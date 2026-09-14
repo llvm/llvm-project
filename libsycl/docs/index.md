@@ -91,6 +91,11 @@ which doesn't currently support Windows.
 
 - `exception`: methods with context are not implemented, to add once context is ready
 
+- `backend`:
+
+  - `ext_oneapi_cuda` and `ext_oneapi_hip` backends are not available, their macros are not defined
+  - `ext_oneapi_level_zero`: version 1 of the [sycl_ext_oneapi_backend_level_zero](https://github.com/intel/llvm/blob/sycl/sycl/doc/extensions/supported/sycl_ext_oneapi_backend_level_zero.md) extension is not fully implemented, so `SYCL_EXT_ONEAPI_BACKEND_LEVEL_ZERO` is not defined. Missing: backend selection through `ONEAPI_DEVICE_SELECTOR` and the filter selector (section 3), interoperability with the Level Zero API (section 4), `info::device::backend_version` (section 5)
+
 - `platform`: deprecated info descriptor is not implemented (`info::platform::extensions`), to implement on RT level with `device::get_info<info::device::aspects>()`
 
 - `device`:
