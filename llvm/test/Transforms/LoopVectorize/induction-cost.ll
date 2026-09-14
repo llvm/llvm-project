@@ -800,3 +800,48 @@ loop:
 exit:
   ret void
 }
+
+; Test case where %ptr.iv remains a wide pointer induction, while %arr.iv is scalarized.
+define void @ptr_induction_widened(ptr noalias %dst, ptr noalias %arr, ptr %end) {
+; VF2-LABEL: 'ptr_induction_widened'
+; VF2:  Cost of 0 for VF 2: induction instruction %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
+; VF2:  Cost of 1 for VF 2: induction instruction %ptr.iv = phi ptr [ %dst, %entry ], [ %ptr.iv.next, %loop ]
+; VF2:  Cost of 0 for VF 2: induction instruction %arr.iv.next = getelementptr inbounds ptr, ptr %arr.iv, i64 1
+; VF2:  Cost of 1 for VF 2: induction instruction %arr.iv = phi ptr [ %arr, %entry ], [ %arr.iv.next, %loop ]
+; VF2:  Cost of 0 for VF 2: EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION ir<%dst>, ir<8>, vp<[[VP1:%[0-9]+]]>
+; VF2:  Cost of 1 for VF 2: vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6:%[0-9]+]]> * ir<8>
+; VF2:  Cost of 0 for VF 2: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<8>, vp<[[VP0:%[0-9]+]]>
+; VF2:  Cost of 1 for VF 2: canonical IV increment
+; VF2:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<%dst> + vp<[[VP2:%[0-9]+]]> * ir<8>
+; VF2:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<%arr> + vp<[[VP2]]> * ir<8>
+; VF2:  Cost for VF 2: 8 (Estimated cost per lane: 4)
+;
+; VF4-LABEL: 'ptr_induction_widened'
+; VF4:  Cost of 0 for VF 4: induction instruction %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
+; VF4:  Cost of 1 for VF 4: induction instruction %ptr.iv = phi ptr [ %dst, %entry ], [ %ptr.iv.next, %loop ]
+; VF4:  Cost of 0 for VF 4: induction instruction %arr.iv.next = getelementptr inbounds ptr, ptr %arr.iv, i64 1
+; VF4:  Cost of 1 for VF 4: induction instruction %arr.iv = phi ptr [ %arr, %entry ], [ %arr.iv.next, %loop ]
+; VF4:  Cost of 0 for VF 4: EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION ir<%dst>, ir<8>, vp<[[VP1:%[0-9]+]]>
+; VF4:  Cost of 1 for VF 4: vp<[[VP7:%[0-9]+]]> = DERIVED-IV ir<0> + vp<[[VP6:%[0-9]+]]> * ir<8>
+; VF4:  Cost of 0 for VF 4: vp<[[VP8:%[0-9]+]]> = SCALAR-STEPS vp<[[VP7]]>, ir<8>, vp<[[VP0:%[0-9]+]]>
+; VF4:  Cost of 1 for VF 4: canonical IV increment
+; VF4:  Cost of 0 for VF 4: vp<[[VP4:%[0-9]+]]> = DERIVED-IV ir<%dst> + vp<[[VP2:%[0-9]+]]> * ir<8>
+; VF4:  Cost of 0 for VF 4: vp<[[VP5:%[0-9]+]]> = DERIVED-IV ir<%arr> + vp<[[VP2]]> * ir<8>
+; VF4:  Cost for VF 4: 8 (Estimated cost per lane: 2)
+;
+entry:
+  br label %loop
+
+loop:
+  %ptr.iv = phi ptr [ %dst, %entry ], [ %ptr.iv.next, %loop ]
+  %arr.iv = phi ptr [ %arr, %entry ], [ %arr.iv.next, %loop ]
+  store ptr %ptr.iv, ptr %arr.iv, align 8
+  store i64 0, ptr %ptr.iv, align 8
+  %ptr.iv.next = getelementptr inbounds i64, ptr %ptr.iv, i64 1
+  %arr.iv.next = getelementptr inbounds ptr, ptr %arr.iv, i64 1
+  %ec = icmp eq ptr %ptr.iv.next, %end
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
