@@ -330,7 +330,10 @@ struct KnownFPClass {
   LLVM_ABI static KnownFPClass
   log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
-  /// Report known values for exp, exp2 and exp10
+  /// Report known values for exp, exp2 and exp10.
+  /// This function assumes that exp10(-1.0) = +0.1 and exp10(+1.0) = +10.0 are
+  /// both finite normal values, which holds for formats with a corresponding
+  /// LLVM IR type (e.g. does not hold for Float4E2M1FN).
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);
 
   /// Report known values for sin
