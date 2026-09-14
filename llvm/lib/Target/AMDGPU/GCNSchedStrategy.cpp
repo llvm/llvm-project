@@ -1622,8 +1622,7 @@ bool PreRARematStage::initGCNSchedStage() {
 
   // Finish initializing candidates.
   SmallVector<unsigned> CandidateOrder;
-  for (unsigned CandIdx = 0; CandIdx < Candidates.size(); ++CandIdx) {
-    ScoredRemat &Cand = Candidates[CandIdx];
+  for (auto [CandIdx, Cand] : enumerate(Candidates)) {
     Cand.init(FreqInfo, Remater, DAG);
     Cand.update(TargetRegions, RPTargets, FreqInfo, !TargetOcc);
     if (!Cand.hasNullScore())
