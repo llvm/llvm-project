@@ -34,6 +34,11 @@ ContextImpl::ContextImpl(std::vector<DeviceImpl *> &&DeviceList,
 
 ContextImpl::~ContextImpl() {
   assert(MOffloadContext && "Context must be created in ctor");
+  // liboffload does not reference-count contexts: every resource tied to a
+  // context must be released before olDestroyContext, otherwise it is left in
+  // an undefined state. MPrograms is a member, so it would be destroyed only
+  // after this destructor body has run.
+  releaseAllPrograms();
   std::ignore = olDestroyContext(MOffloadContext);
 }
 
@@ -48,6 +53,47 @@ void ContextImpl::iterateDevices(
 }
 
 backend ContextImpl::getBackend() const { return MDevices[0]->getBackend(); }
+
+ol_symbol_handle_t
+ContextImpl::getOrCreateKernel(const DeviceImageManager &DeviceImage,
+                               ol_device_handle_t DeviceHandle,
+                               std::string_view KernelName) {
+  std::lock_guard<std::mutex> Guard(MProgramCacheMutex);
+
+  auto ImageIt = MPrograms.try_emplace(&DeviceImage).first;
+  ProgramsByDeviceT &ProgramsForImage = ImageIt->second;
+
+  auto ProgramIt = ProgramsForImage.find(DeviceHandle);
+  if (ProgramIt == ProgramsForImage.end()) {
+    // Constructing a ProgramWrapper calls olCreateProgram, so try_emplace is
+    // used rather than emplace: the latter would build a program even when one
+    // is already cached, only to destroy it again.
+    try {
+      ProgramIt = ProgramsForImage
+                      .try_emplace(DeviceHandle, MOffloadContext, DeviceHandle,
+                                   DeviceImage)
+                      .first;
+    } catch (...) {
+      // Do not leave an empty entry behind if program creation failed.
+      if (ProgramsForImage.empty())
+        MPrograms.erase(ImageIt);
+      throw;
+    }
+  }
+
+  return ProgramIt->second.getOrCreateKernel(KernelName);
+}
+
+void ContextImpl::releaseProgramsForImage(
+    const DeviceImageManager &DeviceImage) {
+  std::lock_guard<std::mutex> Guard(MProgramCacheMutex);
+  MPrograms.erase(&DeviceImage);
+}
+
+void ContextImpl::releaseAllPrograms() {
+  std::lock_guard<std::mutex> Guard(MProgramCacheMutex);
+  MPrograms.clear();
+}
 
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL

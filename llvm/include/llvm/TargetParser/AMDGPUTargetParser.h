@@ -73,43 +73,6 @@ struct IsaVersion {
   bool operator!=(const IsaVersion &Other) const { return !(*this == Other); }
 };
 
-// This isn't comprehensive for now, just things that are needed from the
-// frontend driver.
-enum R600FeatureKind : uint32_t {
-  R600_FEATURE_NONE = 0,
-
-  // Has fma instructions.
-  R600_FEATURE_FMA = 1 << 0,
-};
-
-// GFX6+ features. This isn't comprehensive for now, just things that are needed
-// from the frontend driver.
-enum ArchFeatureKind : uint32_t {
-  FEATURE_NONE = 0,
-
-  // Common features.
-  FEATURE_FAST_FMA_F32 = 1 << 0,
-  FEATURE_FAST_DENORMAL_F32 = 1 << 1,
-
-  // Wavefront 32 is available.
-  FEATURE_WAVE32 = 1 << 2,
-
-  // Xnack is available.
-  FEATURE_XNACK = 1 << 3,
-
-  // Sram-ecc is available.
-  FEATURE_SRAMECC = 1 << 4,
-
-  // WGP mode is supported.
-  FEATURE_WGP = 1 << 5,
-
-  // Xnack on/off modes are supported.
-  FEATURE_XNACK_ON_OFF_MODES = 1 << 6,
-
-  // VI SGPR initialization bug requiring a fixed SGPR allocation size.
-  FEATURE_SGPR_INIT_BUG = 1 << 7
-};
-
 enum FeatureError : uint32_t {
   NO_ERROR = 0,
   INVALID_FEATURE_COMBINATION,
@@ -176,13 +139,6 @@ LLVM_ABI StringRef getCanonicalArchName(const Triple &T, StringRef Arch);
 LLVM_ABI GPUKind parseArchAMDGCN(StringRef CPU);
 LLVM_ABI GPUKind parseArchR600(StringRef CPU);
 LLVM_ABI GPUKind getGPUKindFromSubArch(Triple::SubArchType SubArch);
-/// \deprecated Use getFeatureBitset and test the relevant FEAT_* bits instead.
-/// The legacy ArchFeatureKind bitfield is being removed.
-LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
-LLVM_ABI unsigned getArchAttrAMDGCN(GPUKind AK);
-LLVM_DEPRECATED("use getFeatureBitset instead", "getFeatureBitset")
-LLVM_ABI unsigned getArchAttrAMDGCN(Triple::SubArchType SubArch);
-LLVM_ABI R600FeatureKind getArchAttrR600(GPUKind AK);
 
 /// Returns \p AK's feature bitset, or an empty bitset if unknown.
 LLVM_ABI const AMDGPUFeatureBitset &getFeatureBitset(GPUKind AK);

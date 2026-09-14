@@ -169,7 +169,9 @@ add_unittest_framework_library(
   SRCS
     ${libc_hermetic_test_support_srcs}
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.stdint_proxy
+    libc.src.__support.libc_errno
 )
 
 add_header_library(
@@ -253,6 +255,15 @@ add_unittest_framework_library(
     libc.hdr.stdint_proxy
     libc.src.__support.FPUtil.fp_bits
     libc.src.stdio.scanf_core.core_structs
+)
+
+add_header_library(
+  CharLiteralUtils
+  HDRS
+    CharLiteralUtils.h
+  DEPENDS
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.macros.config
 )
 
 add_header_library(
