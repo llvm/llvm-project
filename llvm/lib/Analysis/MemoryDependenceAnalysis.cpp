@@ -323,7 +323,8 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
 
   for (const Use &Us : LoadOperand->uses()) {
     auto *U = dyn_cast<Instruction>(Us.getUser());
-    if (!U || U == LI || !DT.dominates(U, LI))
+    if (!U || U == LI || U->getFunction() != LI->getFunction() ||
+        !DT.dominates(U, LI))
       continue;
 
     // If we hit load/store with the same invariant.group metadata (and the
