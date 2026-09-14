@@ -198,8 +198,8 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
       // Ternary indices are +1, since the first is the boolean mask.
       // If new ternary with non-booleans as first argument are created,
       // we may need to calculate all combinations possible.
-      std::swap(inputs[0+isTernary], inputs[1+isTernary]);
-      std::swap(indexingMaps[0+isTernary], indexingMaps[1+isTernary]);
+      std::swap(inputs[0 + isTernary], inputs[1 + isTernary]);
+      std::swap(indexingMaps[0 + isTernary], indexingMaps[1 + isTernary]);
     }
 
     if (hasScalarOperand && mayHoistScalarOperand) {
