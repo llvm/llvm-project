@@ -342,25 +342,24 @@ getI1ReductionCost(RecurKind Kind, const TargetTransformInfo &TTI,
   }
   assert(Kind == RecurKind::Add && !ScalarTy->isIntegerTy(1) &&
          "Expected add reduction of zexted i1 values");
-  // The extended reduction form.
-  InstructionCost ExtRdxCost =
-      TTI.getExtendedReductionCost(RdxOpcode, /*IsUnsigned=*/true, ScalarTy,
-                                   VectorTy, std::nullopt, CostKind);
-  // The ctpop form is estimated as the cheaper of the scalar bitcast+ctpop
-  // and the vector ctpop on the mask type; it is emitted as bitcast+ctpop.
-  // The zext/trunc of the ctpop result to the destination type is absorbed by
-  // the legalization of the ctpop itself.
+  // The bitcast+ctpop form is estimated as the cheaper of the extended
+  // reduction cost, which models it for the zexted i1 add reduction, and the
+  // explicitly priced components.
   auto *IntTy =
       IntegerType::get(VectorTy->getContext(), getNumElements(VectorTy));
   InstructionCost CtpopCost = std::min(
+      TTI.getExtendedReductionCost(RdxOpcode, /*IsUnsigned=*/true, ScalarTy,
+                                   VectorTy, std::nullopt, CostKind),
       TTI.getCastInstrCost(Instruction::BitCast, IntTy, VectorTy, Ctx,
                            CostKind) +
           TTI.getIntrinsicInstrCost(
               IntrinsicCostAttributes(Intrinsic::ctpop, IntTy, {IntTy}),
-              CostKind),
-      TTI.getIntrinsicInstrCost(
-          IntrinsicCostAttributes(Intrinsic::ctpop, VectorTy, {VectorTy}),
-          CostKind));
+              CostKind));
+  // The plain form is the zext to the wide vector type plus the reduction.
+  auto *ExtTy = VectorType::get(ScalarTy, VectorTy);
+  InstructionCost ExtRdxCost =
+      TTI.getCastInstrCost(Instruction::ZExt, ExtTy, VectorTy, Ctx, CostKind) +
+      TTI.getArithmeticReductionCost(RdxOpcode, ExtTy, std::nullopt, CostKind);
   return {std::min(ExtRdxCost, CtpopCost), CtpopCost <= ExtRdxCost};
 }
 

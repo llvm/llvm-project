@@ -14,9 +14,8 @@ define i32 @test(i32 %a, i8 %b, i8 %c) {
 ; X86-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
 ; X86-NEXT:    [[TMP6:%.*]] = sext <4 x i8> [[TMP4]] to <4 x i16>
 ; X86-NEXT:    [[TMP7:%.*]] = icmp sle <4 x i16> [[TMP5]], [[TMP6]]
-; X86-NEXT:    [[TMP8:%.*]] = bitcast <4 x i1> [[TMP7]] to i4
-; X86-NEXT:    [[TMP10:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP8]])
-; X86-NEXT:    [[TMP9:%.*]] = zext i4 [[TMP10]] to i32
+; X86-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP7]] to <4 x i32>
+; X86-NEXT:    [[TMP9:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
 ; X86-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP9]], [[A]]
 ; X86-NEXT:    ret i32 [[OP_RDX]]
 ;
@@ -31,9 +30,8 @@ define i32 @test(i32 %a, i8 %b, i8 %c) {
 ; AARCH64-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[TMP2]] to <4 x i16>
 ; AARCH64-NEXT:    [[TMP6:%.*]] = sext <4 x i8> [[TMP4]] to <4 x i16>
 ; AARCH64-NEXT:    [[TMP7:%.*]] = icmp sle <4 x i16> [[TMP5]], [[TMP6]]
-; AARCH64-NEXT:    [[TMP8:%.*]] = bitcast <4 x i1> [[TMP7]] to i4
-; AARCH64-NEXT:    [[TMP9:%.*]] = call i4 @llvm.ctpop.i4(i4 [[TMP8]])
-; AARCH64-NEXT:    [[TMP10:%.*]] = zext i4 [[TMP9]] to i32
+; AARCH64-NEXT:    [[TMP8:%.*]] = zext <4 x i1> [[TMP7]] to <4 x i32>
+; AARCH64-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP8]])
 ; AARCH64-NEXT:    [[OP_RDX:%.*]] = add i32 [[TMP10]], [[A]]
 ; AARCH64-NEXT:    ret i32 [[OP_RDX]]
 ;
