@@ -5246,7 +5246,7 @@ WebAssemblyCXXABI::emitTerminateForUnexpectedException(CodeGenFunction &CGF,
   // and call __clang_call_terminate only in Emscripten EH.
   // TODO Consider code transformation that makes calling __clang_call_terminate
   // in Wasm EH possible.
-  if (Exn && !EHPersonality::get(CGF).isWasmPersonality()) {
+  if (Exn && !getEHPersonality(CGF).isWasmPersonality()) {
     assert(CGF.CGM.getLangOpts().CPlusPlus);
     return CGF.EmitNounwindRuntimeCall(getClangCallTerminateFn(CGF.CGM), Exn);
   }

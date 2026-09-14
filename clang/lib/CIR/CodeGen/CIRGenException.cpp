@@ -21,42 +21,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-const EHPersonality EHPersonality::GNU_C = {"__gcc_personality_v0", nullptr};
-const EHPersonality EHPersonality::GNU_C_SJLJ = {"__gcc_personality_sj0",
-                                                 nullptr};
-const EHPersonality EHPersonality::GNU_C_SEH = {"__gcc_personality_seh0",
-                                                nullptr};
-const EHPersonality EHPersonality::NeXT_ObjC = {"__objc_personality_v0",
-                                                nullptr};
-const EHPersonality EHPersonality::GNU_CPlusPlus = {"__gxx_personality_v0",
-                                                    nullptr};
-const EHPersonality EHPersonality::GNU_CPlusPlus_SJLJ = {
-    "__gxx_personality_sj0", nullptr};
-const EHPersonality EHPersonality::GNU_CPlusPlus_SEH = {
-    "__gxx_personality_seh0", nullptr};
-const EHPersonality EHPersonality::GNU_ObjC = {"__gnu_objc_personality_v0",
-                                               "objc_exception_throw"};
-const EHPersonality EHPersonality::GNU_ObjC_SJLJ = {
-    "__gnu_objc_personality_sj0", "objc_exception_throw"};
-const EHPersonality EHPersonality::GNU_ObjC_SEH = {
-    "__gnu_objc_personality_seh0", "objc_exception_throw"};
-const EHPersonality EHPersonality::GNU_ObjCXX = {
-    "__gnustep_objcxx_personality_v0", nullptr};
-const EHPersonality EHPersonality::GNUstep_ObjC = {
-    "__gnustep_objc_personality_v0", nullptr};
-const EHPersonality EHPersonality::MSVC_except_handler = {"_except_handler3",
-                                                          nullptr};
-const EHPersonality EHPersonality::MSVC_C_specific_handler = {
-    "__C_specific_handler", nullptr};
-const EHPersonality EHPersonality::MSVC_CxxFrameHandler3 = {
-    "__CxxFrameHandler3", nullptr};
-const EHPersonality EHPersonality::GNU_Wasm_CPlusPlus = {
-    "__gxx_wasm_personality_v0", nullptr};
-const EHPersonality EHPersonality::XL_CPlusPlus = {"__xlcxx_personality_v1",
-                                                   nullptr};
-const EHPersonality EHPersonality::ZOS_CPlusPlus = {"__zos_cxx_personality_v2",
-                                                    nullptr};
-
 static const EHPersonality &getCPersonality(const TargetInfo &target,
                                             const CodeGenOptions &cgOpts) {
   const llvm::Triple &triple = target.getTriple();
@@ -158,8 +122,10 @@ static const EHPersonality &getSEHPersonalityMSVC(const llvm::Triple &triple) {
              : EHPersonality::MSVC_C_specific_handler;
 }
 
-const EHPersonality &EHPersonality::get(CIRGenModule &cgm,
-                                        const FunctionDecl *fd) {
+namespace clang::CIRGen {
+
+const EHPersonality &getEHPersonality(CIRGenModule &cgm,
+                                      const FunctionDecl *fd) {
   const llvm::Triple &triple = cgm.getTarget().getTriple();
   const LangOptions &langOpts = cgm.getLangOpts();
   const CodeGenOptions &cgOpts = cgm.getCodeGenOpts();
@@ -177,14 +143,16 @@ const EHPersonality &EHPersonality::get(CIRGenModule &cgm,
                             : getCPersonality(target, cgOpts);
 }
 
-const EHPersonality &EHPersonality::get(CIRGenFunction &cgf) {
+const EHPersonality &getEHPersonality(CIRGenFunction &cgf) {
   const auto *fg = cgf.curCodeDecl;
   // For outlined finallys and filters, use the SEH personality in case they
   // contain more SEH. This mostly only affects finallys. Filters could
   // hypothetically use gnu statement expressions to sneak in nested SEH.
   fg = fg ? fg : cgf.curSEHParent.getDecl();
-  return get(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
+  return getEHPersonality(cgf.cgm, dyn_cast_or_null<FunctionDecl>(fg));
 }
+
+} // namespace clang::CIRGen
 
 static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
                                         const EHPersonality &personality) {
@@ -193,7 +161,7 @@ static llvm::StringRef getPersonalityFn(CIRGenModule &cgm,
   auto funcTy = cir::FuncType::get({}, i32Ty, /*isVarArg=*/true);
 
   cir::FuncOp personalityFn = cgm.createRuntimeFunction(
-      funcTy, personality.personalityFn, {}, /*isLocal=*/true);
+      funcTy, personality.PersonalityFn, {}, /*isLocal=*/true);
 
   return personalityFn.getSymName();
 }
@@ -502,7 +470,7 @@ CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
   // Set personality function if not already set
   auto funcOp = mlir::cast<cir::FuncOp>(curFn);
   if (!funcOp.getPersonality())
-    funcOp.setPersonality(getPersonalityFn(cgm, EHPersonality::get(*this)));
+    funcOp.setPersonality(getPersonalityFn(cgm, getEHPersonality(*this)));
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.restoreInsertionPoint(scopeIP);
