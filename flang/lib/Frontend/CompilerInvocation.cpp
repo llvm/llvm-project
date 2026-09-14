@@ -1586,6 +1586,9 @@ static bool parseFloatingPointArgs(CompilerInvocation &invoc,
       opts.FastRealMod = false;
   }
 
+  if (args.getLastArg(clang::options::OPT_fcheck_integer_mod_zero))
+    opts.CheckIntegerModZero = true;
+
   // Set the initial IEEE floating point modes
   setIEEEFPModesArgs(opts, args);
 

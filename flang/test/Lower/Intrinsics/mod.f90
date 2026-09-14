@@ -1,4 +1,5 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
+! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero %s -o - | FileCheck %s --check-prefix=CHECK-MOD-ZERO
 
 ! CHECK-LABEL: func @_QPmod_testr4(
 subroutine mod_testr4(r, a, p)
@@ -37,36 +38,39 @@ subroutine mod_testr16(r, a, p)
   r = mod(a, p)
 end subroutine
 
-! A divisor that is not a known nonzero constant is tested, and a fatal
-! error is reported instead of the inlined remainder yielding an undefined value.
+! By default, integer MOD remains an unchecked inlined remainder.
 ! CHECK-LABEL: func @_QPmod_testi4(
+! CHECK-NOT: fir.call @_FortranAReportFatalUserError
+! CHECK: arith.remsi %{{.*}}, %{{.*}} : i32
+
+! With -fcheck-integer-mod-zero, a divisor that is not a known nonzero
+! constant is tested and a fatal error is reported.
+! CHECK-MOD-ZERO-LABEL: func @_QPmod_testi4(
 subroutine mod_testi4(r, a, p)
   integer(4) :: r, a, p
-! CHECK: %[[A:.*]] = fir.declare{{.*}}a"
-! CHECK: %[[P:.*]] = fir.declare{{.*}}p"
-! CHECK: %[[A_LOAD:.*]] = fir.load %[[A]]
-! CHECK: %[[P_LOAD:.*]] = fir.load %[[P]]
-! CHECK: %[[ISZERO:.*]] = arith.cmpi eq, %[[P_LOAD]], %c0{{.*}} : i32
-! CHECK: fir.if %[[ISZERO]] {
-! CHECK:   fir.call @_FortranAReportFatalUserError
-! CHECK: }
-! CHECK: arith.remsi %[[A_LOAD]], %[[P_LOAD]] : i32
+! CHECK-MOD-ZERO: %[[A:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK-MOD-ZERO: %[[P:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK-MOD-ZERO: %[[ISZERO:.*]] = arith.cmpi eq, %[[P]], %c0{{.*}} : i32
+! CHECK-MOD-ZERO: fir.if %[[ISZERO]] {
+! CHECK-MOD-ZERO:   fir.call @_FortranAReportFatalUserError
+! CHECK-MOD-ZERO: }
+! CHECK-MOD-ZERO: arith.remsi %[[A]], %[[P]] : i32
   r = mod(a, p)
 end subroutine
 
-! CHECK-LABEL: func @_QPmod_testi8(
+! CHECK-MOD-ZERO-LABEL: func @_QPmod_testi8(
 subroutine mod_testi8(r, a, p)
   integer(8) :: r, a, p
-! CHECK: fir.call @_FortranAReportFatalUserError
-! CHECK: arith.remsi %{{.*}}, %{{.*}} : i64
+! CHECK-MOD-ZERO: fir.call @_FortranAReportFatalUserError
+! CHECK-MOD-ZERO: arith.remsi %{{.*}}, %{{.*}} : i64
   r = mod(a, p)
 end subroutine
 
 ! A constant nonzero divisor keeps the inlined remainder with no test.
-! CHECK-LABEL: func @_QPmod_testi4_constant(
+! CHECK-MOD-ZERO-LABEL: func @_QPmod_testi4_constant(
 subroutine mod_testi4_constant(r, a)
   integer(4) :: r, a
-! CHECK-NOT: fir.call @_FortranAReportFatalUserError
-! CHECK: arith.remsi %{{.*}}, %c8{{.*}} : i32
+! CHECK-MOD-ZERO-NOT: fir.call @_FortranAReportFatalUserError
+! CHECK-MOD-ZERO: arith.remsi %{{.*}}, %c8{{.*}} : i32
   r = mod(a, 8)
 end subroutine

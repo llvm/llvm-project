@@ -1,4 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefix=NO-MOD-ZERO
 
 ! Test dummy procedures
 
@@ -186,6 +187,10 @@ end subroutine
   ! CHECK: }
   ! CHECK: %[[res:.*]] = arith.remsi %[[aload]], %[[pload]] : i32
   ! CHECK: return %[[res]] : i32
+
+! NO-MOD-ZERO-LABEL: func.func private @fir.mod.i32.ref_i32.ref_i32(
+  ! NO-MOD-ZERO-NOT: fir.call @_FortranAReportFatalUserError
+  ! NO-MOD-ZERO: arith.remsi
 
 !CHECK-LABEL: func.func private @fir.aimag.f32.ref_z32(%arg0: !fir.ref<complex<f32>>)
   !CHECK: %[[load:.*]] = fir.load %arg0

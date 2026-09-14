@@ -292,6 +292,14 @@ bool CodeGenAction::beginSourceFileAction() {
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
+  if (ci.getInvocation().getLangOpts().CheckIntegerModZero) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              llvm::Twine{"fir.check_integer_mod_zero"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
   // Create a parse tree and lower it to FIR
   parseAndLowerTree(ci, lb);
 
