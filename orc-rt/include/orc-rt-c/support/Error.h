@@ -7,7 +7,7 @@
 |*                                                                            *|
 |*===----------------------------------------------------------------------===*|
 |*                                                                            *|
-|* This file defines the C interface to LLVM's Error class.                   *|
+|* This file defines the C interface to the ORC runtime's Error class.        *|
 |*                                                                            *|
 |* TODO: Explain ownership model.                                             *|
 |*                                                                            *|
@@ -82,4 +82,4 @@ ORC_RT_C_EXPORT orc_rt_ErrorRef orc_rt_StringError_create(const char *ErrMsg)
 
 ORC_RT_C_EXTERN_C_END
 
-#endif // ORC_RT_C_SUPPORT_ERROR_H
+#endif /* ORC_RT_C_SUPPORT_ERROR_H */

@@ -6603,7 +6603,7 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // so carry bits aren't needed.
   LLT ShiftAmtTy = MRI.getType(ShiftAmt);
   auto ZeroConst = MIRBuilder.buildConstant(ShiftAmtTy, 0);
-  LLT BoolTy = LLT::scalar(1);
+  LLT BoolTy = LLT::integer(1);
   auto IsZeroBitShift =
       MIRBuilder.buildICmp(ICmpInst::ICMP_EQ, BoolTy, ShiftAmt, ZeroConst);
 
@@ -6727,7 +6727,7 @@ LegalizerHelper::narrowScalarShiftMultiway(MachineInstr &MI, LLT TargetTy) {
 
   // Shifting by zero should be a no-op.
   auto ZeroAmtConst = MIRBuilder.buildConstant(ShiftAmtTy, 0);
-  LLT BoolTy = LLT::scalar(1);
+  LLT BoolTy = LLT::integer(1);
   auto IsZeroShift =
       MIRBuilder.buildICmp(ICmpInst::ICMP_EQ, BoolTy, AmtReg, ZeroAmtConst);
 

@@ -21,6 +21,7 @@
 
 namespace llvm {
 class AssumptionCache;
+class BasicBlock;
 class DataLayout;
 class DominatorTree;
 class FixedVectorType;
@@ -89,6 +90,14 @@ bool isMaskedStoreCompress(ArrayRef<Value *> VL, ArrayRef<Value *> PointerOps,
                            ScalarEvolution &SE, Align CommonAlignment,
                            SmallVectorImpl<int> &ReuseShuffleIndices,
                            FixedVectorType *&StoreVecTy);
+
+/// Clusters \p VL pointers by (basic block, underlying object) pair and sorts
+/// each cluster by offset. Returns false and leaves \p SortedIndices empty if
+/// the accesses are not worth reordering.
+bool clusterSortPtrAccesses(ArrayRef<Value *> VL, ArrayRef<BasicBlock *> BBs,
+                            Type *ElemTy, const DataLayout &DL,
+                            ScalarEvolution &SE, unsigned MaxDepth,
+                            SmallVectorImpl<unsigned> &SortedIndices);
 
 } // namespace llvm::slpvectorizer
 

@@ -824,6 +824,49 @@ function(add_libc_hermetic test_name)
     list(APPEND fq_deps_list libc.src.time.clock)
   endif()
 
+  if(LIBC_ENABLE_COVERAGE)
+     set(coverage_deps
+      libc.src.stdio.fclose
+      libc.src.stdio.fdopen
+      libc.src.stdio.feof
+      libc.src.stdio.fflush
+      libc.src.stdio.fileno
+      libc.src.stdio.fopen
+      libc.src.stdio.fprintf
+      libc.src.stdio.fread
+      libc.src.stdio.fseek
+      libc.src.stdio.ftell
+      libc.src.stdio.fwrite
+      libc.src.stdio.snprintf
+      libc.src.stdio.stderr
+      libc.src.stdio.vfprintf
+      libc.src.stdio.vsnprintf
+      libc.src.fcntl.fcntl
+      libc.src.fcntl.open
+      libc.src.stdlib.getenv
+      libc.src.stdlib.setenv
+      libc.src.stdlib.strtol
+      libc.src.string.strchr
+      libc.src.string.strcmp
+      libc.src.string.strdup
+      libc.src.string.strerror
+      libc.src.string.strlen
+      libc.src.string.strncpy
+      libc.src.string.strrchr
+      libc.src.sys.mman.madvise
+      libc.src.sys.mman.mmap
+      libc.src.sys.mman.munmap
+      libc.src.sys.prctl.prctl
+      libc.src.sys.stat.mkdir
+      libc.src.sys.utsname.uname
+      libc.src.unistd.fork
+      libc.src.unistd.ftruncate
+      libc.src.unistd.getpagesize
+      libc.src.unistd.getpid
+    )
+    list(APPEND fq_deps_list ${coverage_deps})
+  endif()
+
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # TODO: Instead of gathering internal object files from entrypoints,
@@ -839,6 +882,18 @@ function(add_libc_hermetic test_name)
     return()
   endif()
   list(REMOVE_DUPLICATES link_object_files)
+
+  if(LIBC_ENABLE_COVERAGE)
+    foreach(cov_dep IN LISTS coverage_deps)
+      get_target_property(is_alias ${cov_dep} "IS_ALIAS")
+      if(is_alias)
+        get_target_property(real_target ${cov_dep} "DEPS")
+      else()
+        set(real_target ${cov_dep})
+      endif()
+      string(REPLACE "${real_target}.__internal__" "${real_target}" link_object_files "${link_object_files}")
+    endforeach()
+  endif()
 
   # Make a library of all deps
   add_library(
@@ -905,6 +960,12 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
   else()
     # Older version of gcc does not support `nostdlib++` flag.  We use
@@ -916,15 +977,31 @@ function(add_libc_hermetic test_name)
       ${LIBC_LINK_OPTIONS_DEFAULT}
       ${LIBC_TEST_LINK_OPTIONS_DEFAULT}
     )
+    if(LIBC_ENABLE_COVERAGE)
+      list(APPEND link_options
+        -noprofilelib
+        -u__llvm_profile_runtime
+      )
+    endif()
     target_link_options(${fq_build_target_name} PRIVATE ${link_options})
     list(APPEND compiler_runtime ${LIBGCC_S_LOCATION})
   endif()
+
+  set(coverage_link_libs "")
+  if(LIBC_ENABLE_COVERAGE)
+    set(coverage_link_libs
+      "${LIBC_CLANG_PROFILE_LIB}"
+       ${fq_target_name}.__libc__
+    )
+  endif()
+
   target_link_libraries(
     ${fq_build_target_name}
     PRIVATE
       libc.startup.${LIBC_TARGET_OS}.crt1
       ${HERMETIC_TEST_LINK_LIBRARIES}
       ${fq_target_name}.__libc__
+      ${coverage_link_libs}
       ${compiler_runtime}
   )
   add_dependencies(${fq_build_target_name} ${fq_deps_list})

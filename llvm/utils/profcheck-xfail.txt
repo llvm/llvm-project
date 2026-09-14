@@ -47,13 +47,6 @@ Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
 Transforms/InstCombine/logical-select.ll
 Transforms/InstCombine/lshr.ll
-Transforms/InstCombine/memchr-11.ll
-Transforms/InstCombine/memchr-2.ll
-Transforms/InstCombine/memchr-3.ll
-Transforms/InstCombine/memchr-6.ll
-Transforms/InstCombine/memchr-7.ll
-Transforms/InstCombine/memchr-9.ll
-Transforms/InstCombine/memchr.ll
 Transforms/InstCombine/memrchr-3.ll
 Transforms/InstCombine/memrchr-4.ll
 Transforms/InstCombine/minmax-fold.ll
@@ -74,9 +67,6 @@ Transforms/InstCombine/shift.ll
 Transforms/InstCombine/simplify-demanded-fpclass.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-and.ll
 Transforms/InstCombine/sink-not-into-another-hand-of-logical-or.ll
-Transforms/InstCombine/strchr-1.ll
-Transforms/InstCombine/strchr-3.ll
-Transforms/InstCombine/strlen-1.ll
 Transforms/InstCombine/strrchr-3.ll
 Transforms/InstCombine/truncating-saturate.ll
 Transforms/InstCombine/unordered-fcmp-select.ll
@@ -116,5 +106,4 @@ Transforms/TailCallElim/debugloc.ll
 Transforms/TailCallElim/dropping_debugloc_acc_rec_inst_rnew.ll
 Transforms/TailCallElim/inf-recursion.ll
 Transforms/Util/control-flow-hub-finalize-same-succ-crash.ll
-Transforms/Util/libcalls-opt-remarks.ll
 Transforms/Util/lowerswitch.ll

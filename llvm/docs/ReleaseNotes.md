@@ -244,6 +244,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 * Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
+* Removed veyron-v1 processor definition and tuning model.
 
 ### Changes to the WebAssembly Backend
 
@@ -277,6 +278,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the LLVM tools
 
 * llvm-mca no longer defaults -mcpu to "native"
+
+* llvm-rc now supports `/showIncludes` to report header and resource-file
+  dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
 ### Changes to LLDB
 

@@ -1155,13 +1155,26 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     return;
   }
 
+  // Returns true if Dst and Src are in Opc's HwMode-resolved destination and
+  // source operand classes.
+  auto CanCopyWith = [&](unsigned Opc, MCRegister Dst, MCRegister Src,
+                         unsigned SrcOp = 1) {
+    const MCInstrDesc &Desc = get(Opc);
+    const TargetRegisterClass *DstOpRC = getRegClass(Desc, 0);
+    const TargetRegisterClass *SrcOpRC = getRegClass(Desc, SrcOp);
+    return DstOpRC && SrcOpRC && DstOpRC->contains(Dst) &&
+           SrcOpRC->contains(Src);
+  };
+
   if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
-    if (ST.hasVMovB64Inst()) {
+    if (ST.hasVMovB64Inst() &&
+        CanCopyWith(AMDGPU::V_MOV_B64_e32, DestReg, SrcReg)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc));
       return;
     }
-    if (ST.hasPkMovB32()) {
+    if (ST.hasPkMovB32() &&
+        CanCopyWith(AMDGPU::V_PK_MOV_B32, DestReg, SrcReg, /*SrcOp=*/2)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), DestReg)
         .addImm(SISrcMods::OP_SEL_1)
         .addReg(SrcReg)
