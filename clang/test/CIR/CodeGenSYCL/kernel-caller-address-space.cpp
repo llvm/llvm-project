@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM-OGCG
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -fsycl-is-device -triple spirv64-unknown-unknown -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM-OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // SYCL uses the "generic as default address space" deduction mode: unlike
 // OpenCL, the address space is not deduced in Sema, so an unqualified pointer
@@ -43,6 +43,6 @@ void test(int *p) {
 
 // The captured pointer field and the store through it use address space 4,
 // matching classic CodeGen.
-// LLVM-OGCG: %class.anon{{.*}} = type { ptr addrspace(4) }
-// LLVM-OGCG-LABEL: define {{.*}}@_ZZ4testPiENKUlvE_clEv(ptr addrspace(4)
-// LLVM-OGCG:         store i32 42, ptr addrspace(4)
+// LLVM: %class.anon{{.*}} = type { ptr addrspace(4) }
+// LLVM-LABEL: define {{.*}}@_ZZ4testPiENKUlvE_clEv(ptr addrspace(4)
+// LLVM:         store i32 42, ptr addrspace(4)
