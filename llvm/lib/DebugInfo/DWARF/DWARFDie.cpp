@@ -92,8 +92,8 @@ static void dumpDWARFAddressSpace(raw_ostream &OS,
   FormValue.dump(OS, DumpOpts);
 
   std::optional<uint64_t> AddressSpace = FormValue.getAsUnsignedConstant();
-  if (DumpOpts.GetNameForDWARFAddressSpace && AddressSpace) {
-    StringRef ASName = DumpOpts.GetNameForDWARFAddressSpace(*AddressSpace);
+  if (AddressSpace) {
+    StringRef ASName = DumpOpts.getNameForDWARFAddressSpace(*AddressSpace);
     if (!ASName.empty())
       OS << " \"" << ASName << "\"";
   }

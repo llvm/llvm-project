@@ -15,6 +15,7 @@
 #define LLVM_DEBUGINFO_DICONTEXT_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -215,7 +216,12 @@ struct DIDumpOptions {
   llvm::SmallVector<unsigned, 0> FilterChildTag;
   std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
       GetNameForDWARFReg;
-  std::function<llvm::StringRef(uint64_t AS)> GetNameForDWARFAddressSpace;
+  /// The target of the object being dumped.
+  Triple TT;
+
+  StringRef getNameForDWARFAddressSpace(uint64_t AS) const {
+    return dwarf::AddressSpaceString(AS, TT);
+  }
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {

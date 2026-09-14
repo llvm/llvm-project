@@ -401,6 +401,9 @@ static DIDumpOptions getDumpOpts(DWARFContext &C) {
   DumpOpts.Verbose = Verbose;
   DumpOpts.DumpNonSkeleton = DumpNonSkeleton;
   DumpOpts.RecoverableErrorHandler = C.getRecoverableErrorHandler();
+  // Address space names are target-dependent.
+  if (const object::ObjectFile *Obj = C.getDWARFObj().getFile())
+    DumpOpts.TT = Obj->makeTriple();
   // In -verify mode, print DIEs without children in error messages.
   if (Verify) {
     DumpOpts.Verbose = ErrorDetails != NoDetailsOnlySummary &&
@@ -447,11 +450,9 @@ using HandlerFn = std::function<bool(ObjectFile &, DWARFContext &DICtx,
 /// Print only DIEs that have a certain name.
 static bool filterByName(
     const StringSet<> &Names, DWARFDie Die, StringRef NameRef, raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg,
-    function_ref<StringRef(uint64_t AS)> GetNameForDWARFAddressSpace) {
+    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   DIDumpOptions DumpOpts = getDumpOpts(Die.getDwarfUnit()->getContext());
   DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
-  DumpOpts.GetNameForDWARFAddressSpace = GetNameForDWARFAddressSpace;
   std::string Name =
       (IgnoreCase && !UseRegex) ? NameRef.lower() : NameRef.str();
   if (UseRegex) {
@@ -480,18 +481,15 @@ static bool filterByName(
 static void filterByName(
     const StringSet<> &Names, DWARFContext::unit_iterator_range CUs,
     raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg,
-    function_ref<StringRef(uint64_t AS)> GetNameForDWARFAddressSpace) {
+    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   auto filterDieNames = [&](DWARFUnit *Unit) {
     for (const auto &Entry : Unit->dies()) {
       DWARFDie Die = {Unit, &Entry};
       if (const char *Name = Die.getName(DINameKind::ShortName))
-        if (filterByName(Names, Die, Name, OS, GetNameForDWARFReg,
-                         GetNameForDWARFAddressSpace))
+        if (filterByName(Names, Die, Name, OS, GetNameForDWARFReg))
           continue;
       if (const char *Name = Die.getName(DINameKind::LinkageName))
-        filterByName(Names, Die, Name, OS, GetNameForDWARFReg,
-                     GetNameForDWARFAddressSpace);
+        filterByName(Names, Die, Name, OS, GetNameForDWARFReg);
     }
   };
   for (const auto &CU : CUs) {
@@ -558,8 +556,7 @@ static void getDies(DWARFContext &DICtx, const DWARFDebugNames &Accel,
 /// Print only DIEs that have a certain name.
 static void filterByAccelName(
     ArrayRef<std::string> Names, DWARFContext &DICtx, raw_ostream &OS,
-    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg,
-    function_ref<StringRef(uint64_t AS)> GetNameForDWARFAddressSpace) {
+    function_ref<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
   SmallVector<DWARFDie, 4> Dies;
   for (const auto &Name : Names) {
     getDies(DICtx, DICtx.getAppleNames(), Name, Dies);
@@ -572,7 +569,6 @@ static void filterByAccelName(
 
   DIDumpOptions DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetNameForDWARFReg;
-  DumpOpts.GetNameForDWARFAddressSpace = GetNameForDWARFAddressSpace;
   for (DWARFDie Die : Dies)
     Die.dump(OS, 0, DumpOpts);
 }
@@ -756,10 +752,6 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     return {};
   };
 
-  auto GetASName = [&TT](uint64_t AS) -> StringRef {
-    return dwarf::AddressSpaceString(AS, TT);
-  };
-
   // The UUID dump already contains all the same information.
   if (!(DumpType & DIDT_UUID) || DumpType == DIDT_All)
     OS << Filename << ":\tfile format " << Obj.getFileFormatName() << '\n';
@@ -774,14 +766,14 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
     for (const auto &name : Name)
       Names.insert((IgnoreCase && !UseRegex) ? StringRef(name).lower() : name);
 
-    filterByName(Names, DICtx.normal_units(), OS, GetRegName, GetASName);
-    filterByName(Names, DICtx.dwo_units(), OS, GetRegName, GetASName);
+    filterByName(Names, DICtx.normal_units(), OS, GetRegName);
+    filterByName(Names, DICtx.dwo_units(), OS, GetRegName);
     return true;
   }
 
   // Handle the --find option and lower it to --debug-info=<offset>.
   if (!Find.empty()) {
-    filterByAccelName(Find, DICtx, OS, GetRegName, GetASName);
+    filterByAccelName(Find, DICtx, OS, GetRegName);
     return true;
   }
 
@@ -794,7 +786,6 @@ static bool dumpObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   // Dump the complete DWARF structure.
   auto DumpOpts = getDumpOpts(DICtx);
   DumpOpts.GetNameForDWARFReg = GetRegName;
-  DumpOpts.GetNameForDWARFAddressSpace = GetASName;
   DICtx.dump(OS, DumpOpts, DumpOffsets);
   return true;
 }
