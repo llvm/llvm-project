@@ -97,6 +97,10 @@ class ModulePass;
   InstructionSelector *
   createPPCInstructionSelector(const PPCTargetMachine &, const PPCSubtarget &,
                                const PPCRegisterBankInfo &);
+
+  /// The PowerPC ABI variant.
+  enum PPCABI { PPC_ABI_UNKNOWN, PPC_ABI_ELFv1, PPC_ABI_ELFv2 };
+
   namespace PPCII {
 
   /// Target Operand Flag enum.
