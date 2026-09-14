@@ -1,14 +1,13 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model \
-; RUN:   -loop-fusion-max-code-size=0 -disable-output -stats \
-; RUN:   -pass-remarks-missed=loop-fusion < %s 2>&1 | \
+; RUN:   -disable-output -stats -pass-remarks-missed=loop-fusion < %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=MIN1
 ; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model \
-; RUN:   -loop-fusion-max-code-size=0 -loop-fusion-min-reused-values=2 \
+; RUN:   -loop-fusion-min-reused-values=2 \
 ; RUN:   -disable-output -stats -pass-remarks-missed=loop-fusion < %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=MIN2
 ; RUN: opt -passes=loop-simplify,loop-fusion -loop-fusion-cost-model \
-; RUN:   -loop-fusion-max-code-size=0 -loop-fusion-min-reused-values=3 \
+; RUN:   -loop-fusion-min-reused-values=3 \
 ; RUN:   -disable-output -pass-remarks-missed=loop-fusion < %s 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=MIN3
 
