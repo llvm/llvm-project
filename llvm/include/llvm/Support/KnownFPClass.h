@@ -327,8 +327,12 @@ struct KnownFPClass {
   sqrt(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
 
   /// Propagate known class for log/log2/log10
+  ///
+  /// IsKnownNeverMultiUnitFPType if this is known to never be for a multi-unit
+  /// floating-point type.
   LLVM_ABI static KnownFPClass
-  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic());
+  log(const KnownFPClass &Src, DenormalMode Mode = DenormalMode::getDynamic(),
+      bool IsKnownNeverMultiUnitFPType = false);
 
   /// Report known values for exp, exp2 and exp10
   LLVM_ABI static KnownFPClass exp(const KnownFPClass &Src);

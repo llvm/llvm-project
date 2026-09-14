@@ -3173,12 +3173,24 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::log:
     case Intrinsic::log2:
     case Intrinsic::log10: {
+      Type *EltTy = VTy->getScalarType();
+      bool IsKnownNeverMultiUnitFPType = !EltTy->isMultiUnitFPType();
+
       FPClassTest DemandedSrcMask = DemandedMask & (fcNan | fcPosInf);
       if (DemandedMask & fcNan)
         DemandedSrcMask |= fcNan;
 
-      Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
+
+      // log(x) can be negative zero or subnormal if x is close to +1.0 for the
+      // PPCDoubleDouble type.
+      if (!IsKnownNeverMultiUnitFPType &&
+          (DemandedMask & (fcNegZero | fcSubnormal))) {
+        DemandedSrcMask |= fcPosNormal;
+        // Note that DoubleAPFloat::isDenormal considers 1.0 + DBL_TRUE_MIN to
+        // be denormal, which APFloat::classify treats as fcSubnormal.
+        DemandedSrcMask |= fcPosSubnormal;
+      }
 
       // log(x < 0) = nan
       if (DemandedMask & fcNan)
@@ -3188,7 +3200,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (DemandedMask & fcNegInf) {
         DemandedSrcMask |= fcZero;
 
-        // No value produces subnormal result.
+        // Subnormals may be treated as logical zero.
         if (Mode.inputsMayBeZero())
           DemandedSrcMask |= fcSubnormal;
       }
@@ -3205,7 +3217,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      Known = KnownFPClass::log(KnownSrc, Mode);
+      Known = KnownFPClass::log(KnownSrc, Mode, IsKnownNeverMultiUnitFPType);
       Known.knownNot(~DemandedMask);
 
       return simplifyDemandedFPClassResult(CI, FMF, DemandedMask, Known,
