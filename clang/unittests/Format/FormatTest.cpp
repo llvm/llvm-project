@@ -7694,6 +7694,16 @@ TEST_F(FormatTest, BreakingBeforeNonAssignmentOperators) {
                Style);
 }
 
+TEST_F(FormatTest, EnumAssignmentContinuationIndentation) {
+  FormatStyle Style = getLLVMStyleWithColumns(30);
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  verifyFormat("enum Flag {\n"
+               "  VeryLongFlagNameThatForcesBreak =\n"
+               "          1 << 2 << 3,\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, AllowBinPackingInsideArguments) {
   FormatStyle Style = getLLVMStyleWithColumns(40);
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;

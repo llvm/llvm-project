@@ -1387,8 +1387,8 @@ unsigned ContinuationIndenter::addTokenOnNewLine(LineState &State,
         !PreviousNonComment->ClosesRequiresClause) ||
        Current.NestingLevel != 0) &&
       PreviousNonComment->isNoneOf(
-          TT_BinaryOperator, TT_FunctionAnnotationRParen, TT_JavaAnnotation,
-          TT_LeadingJavaAnnotation) &&
+          TT_BinaryOperator, TT_EnumEqual, TT_FunctionAnnotationRParen,
+          TT_JavaAnnotation, TT_LeadingJavaAnnotation) &&
       Current.isNot(TT_BinaryOperator) && !PreviousNonComment->opensScope() &&
       // We don't want to enforce line breaks for subsequent arguments just
       // because we have been forced to break before a lambda body.
