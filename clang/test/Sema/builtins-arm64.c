@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios -fsyntax-only -verify %s
 // RUN: %clang_cc1 -triple arm64-apple-ios -DTEST1 -fsyntax-only -verify %s
 
+#include <arm_acle.h>
+
 #ifdef TEST1
 void __clear_cache(void *start, void *end);
 #endif
@@ -63,15 +65,15 @@ void test_atomic_store_hint(char *c_ptr, __int128 *inv_ptr, float *f_ptr,
   __builtin_arm_atomic_store_with_hint(c_ptr, f_data, 0, 0); // expected-error {{arguments are of different types ('char' vs 'float')}}
   __builtin_arm_atomic_store_with_hint(inv_ptr, inv_data, 0, 0); // expected-error {{address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits}}
 
-  __builtin_arm_atomic_store_with_hint(const_c_ptr, c_data, __ATOMIC_RELAXED, 0); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const char' invalid)}}
+  __builtin_arm_atomic_store_with_hint(const_c_ptr, c_data, __ATOMIC_RELAXED, HINT_STSHH_KEEP); // expected-error {{address argument to atomic operation must be a pointer to non-const type ('const char' invalid)}}
 
-  __builtin_arm_atomic_store_with_hint(bit_ptr, bit_data, __ATOMIC_RELAXED, 0); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
+  __builtin_arm_atomic_store_with_hint(bit_ptr, bit_data, __ATOMIC_RELAXED, HINT_STSHH_STRM); // expected-error {{argument to atomic builtin of type '_BitInt' is not supported}}
 
+  __builtin_arm_atomic_store_with_hint(c_ptr, c_data, __ATOMIC_RELAXED, HINT_STSHH_INVALID); // expected-error {{use of undeclared identifier 'HINT_STSHH_INVALID'}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, inv_int, 0); // expected-error {{invalid memory order argument to atomic hint operation ('int' invalid)}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 2, 0); // expected-error {{invalid memory order argument to atomic hint operation (2 invalid)}}
 
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, 3); // expected-warning {{unrecognised hint type argument to atomic hint operation (3)}}
-
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, inv_int); // expected-error {{invalid hint type argument to atomic hint operation ('int')}}
   __builtin_arm_atomic_store_with_hint(c_ptr, c_data, 0, "h"); // expected-error {{invalid hint type argument to atomic hint operation ('char *')}}
 }

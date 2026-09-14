@@ -744,6 +744,8 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 
 /* Atomic store with hints */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+#define HINT_STSHH_KEEP 0
+#define HINT_STSHH_STRM 1
 #define __arm_atomic_store_with_hint(ptr, data, memory_order, hint)            \
   __builtin_arm_atomic_store_with_hint(ptr, data, memory_order, hint)
 #endif
