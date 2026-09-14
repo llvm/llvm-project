@@ -7221,13 +7221,16 @@ AMDGPUInstructionSelector::selectVOP3PMadMixModsImpl(MachineOperand &Root,
       // Src is now the 32-bit source and op_sel picks its high half.
       Mods |= SISrcMods::OP_SEL_0;
       CheckAbsNeg();
-    } else {
-      // op_sel already picks the low half, so use the 32-bit source directly if
-      // the 16-bit value is the low half of one. Otherwise Src is genuinely 16
-      // bits wide and widenSrcIfVGPR16 widens it when the operand is
-      // rendered.
-      isExtractLoElt(*MRI, Src, Src);
+    } else if (isExtractLoElt(*MRI, Src, Src)) {
+      // op_sel already picks the low half, so the 32-bit source can be used
+      // directly. Unlike the high half, only an fneg/fabs that acts on each
+      // 16-bit element can be folded here: one that acts on the 32-bit value
+      // touches bit 31 and leaves the low half alone.
+      if (MRI->getType(Src) == LLT::fixed_vector(2, 16))
+        CheckAbsNeg();
     }
+    // Otherwise Src is genuinely 16 bits wide and widenSrcIfVGPR16 widens it
+    // when the operand is rendered.
 
     Matched = true;
   }
