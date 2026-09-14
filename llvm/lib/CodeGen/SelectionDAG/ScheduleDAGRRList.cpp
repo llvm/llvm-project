@@ -2345,10 +2345,10 @@ static unsigned closestSucc(const SUnit *SU) {
 }
 
 unsigned RegReductionPQBase::getClosestSucc(const SUnit *SU) {
-  auto It = ClosestSuccs.find(SU);
-  if (It != ClosestSuccs.end())
-    return It->second;
-  return ClosestSuccs.try_emplace(SU, closestSucc(SU)).first->second;
+  auto [It, Inserted] = ClosestSuccs.try_emplace(SU);
+  if (Inserted)
+    It->second = closestSucc(SU);
+  return It->second;
 }
 
 /// calcMaxScratches - Returns an cost estimate of the worse case requirement
