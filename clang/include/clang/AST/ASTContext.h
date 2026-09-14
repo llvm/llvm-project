@@ -345,7 +345,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// Internal storage for NestedNameSpecifiers.
   ///
   /// This set is managed by the NestedNameSpecifier class.
-  mutable llvm::FoldingSet<NamespaceAndPrefixStorage>
+  mutable llvm::UniquingSet<NamespaceAndPrefixStorage>
       NamespaceAndPrefixStorages;
 
   /// A cache mapping from RecordDecls to ASTRecordLayouts.
