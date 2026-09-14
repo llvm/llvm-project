@@ -1,3 +1,10 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
 // REQUIRES: any-device
 // RUN: %clangxx -fsycl %s -o %t.out
 // RUN: %t.out
@@ -9,9 +16,9 @@
 int main() {
   sycl::queue Q;
   runTests<unsigned char>(
-      Q, [&](void *Ptr, int Pattern) { Q.memset(Ptr, Pattern, DataSize); });
+      Q, [&](void *Ptr, int Pattern) { Q.memset(Ptr, Pattern, ElementCount); });
   // Check that the pattern is truncated to an unsigned char.
   runTests<unsigned char>(
-      Q, [&](void *Ptr, int Pattern) { Q.memset(Ptr, Pattern, DataSize); },
+      Q, [&](void *Ptr, int Pattern) { Q.memset(Ptr, Pattern, ElementCount); },
       CHAR_MAX + 42);
 }

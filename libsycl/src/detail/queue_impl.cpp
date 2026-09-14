@@ -155,14 +155,12 @@ std::shared_ptr<EventImpl>
 QueueImpl::memcpy(void *Dest, const void *Src, std::size_t NumBytes,
                   const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
-  if (NumBytes == 0) {
+  if (NumBytes == 0)
     return submitWait(DepEvents);
-  }
 
-  if (!Dest || !Src) {
+  if (!Dest || !Src)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in memcpy operation");
-  }
 
   ol_device_handle_t DestOLDevice = getAllocDevice(Dest);
   ol_device_handle_t SrcOLDevice = getAllocDevice(Src);
@@ -178,20 +176,16 @@ EventImplPtr QueueImpl::fill(void *Ptr, const void *Pattern,
                              const std::vector<EventImplPtr> &DepEvents) {
   assert(PatternSize > 0 && "Pattern size has to be greater than zero");
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
-  if (Count == 0) {
-    handleEventDependencies(DepEvents);
-    return createEvent();
-  }
+  if (Count == 0)
+    return submitWait(DepEvents);
 
-  if (!Ptr) {
+  if (!Ptr)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in fill/memset operation");
-  }
-  if (Count > SIZE_MAX / PatternSize) {
+  if (Count > SIZE_MAX / PatternSize)
     throw sycl::exception(
         sycl::make_error_code(sycl::errc::invalid),
         "Total number of bytes to be filled exceeds SIZE_MAX");
-  }
 
   handleEventDependencies(DepEvents);
   callAndThrow(olMemFill, MOffloadQueue, Ptr, PatternSize, Pattern,
@@ -203,14 +197,11 @@ EventImplPtr QueueImpl::prefetch(void *Ptr, std::size_t NumBytes,
                                  const std::vector<EventImplPtr> &DepEvents) {
   checkEventsPlatformMatch(DepEvents, MDevice.getPlatformImpl());
 
-  if (NumBytes == 0) {
-    handleEventDependencies(DepEvents);
-    return createEvent();
-  }
-  if (!Ptr) {
+  if (NumBytes == 0)
+    return submitWait(DepEvents);
+  if (!Ptr)
     throw sycl::exception(sycl::make_error_code(sycl::errc::invalid),
                           "Nullptr argument in prefetch operation");
-  }
 
   constexpr std::size_t Count = 1;
   const void *Mems[] = {Ptr};
