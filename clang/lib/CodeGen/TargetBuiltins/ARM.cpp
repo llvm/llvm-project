@@ -16,6 +16,7 @@
 #include "TargetInfo.h"
 #include "clang/Basic/AArch64CodeGenUtils.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/IntrinsicsARM.h"
@@ -2065,38 +2066,6 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
                             Ops);
 }
 
-/// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
-/// argument that specifies the vector type. The additional argument is meant
-/// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
-/// should be kept consistent with the logic in Sema.
-/// TODO: Make this return false for SISD builtins.
-static bool HasExtraNeonArgument(unsigned BuiltinID) {
-  // Required by the headers included below, but not in this particular
-  // function.
-  [[maybe_unused]] int PtrArgNum = -1;
-  [[maybe_unused]] bool HasConstPtr = false;
-
-  // The mask encodes the type. We don't care about the actual value. Instead,
-  // we just check whether its been set.
-  uint64_t mask = 0;
-  switch (BuiltinID) {
-#define GET_NEON_OVERLOAD_CHECK
-#include "clang/Basic/arm_fp16.inc"
-#include "clang/Basic/arm_neon.inc"
-#undef GET_NEON_OVERLOAD_CHECK
-  // Non-neon builtins for controling VFP that take extra argument for
-  // discriminating the type.
-  case ARM::BI__builtin_arm_vcvtr_f:
-  case ARM::BI__builtin_arm_vcvtr_d:
-    mask = 1;
-  }
-
-  if (mask)
-    return true;
-
-  return false;
-}
-
 Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
                                            const CallExpr *E,
                                            ReturnValueSlot ReturnValue,
@@ -2481,7 +2450,7 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
   Address PtrOp0 = Address::invalid();
   Address PtrOp1 = Address::invalid();
   SmallVector<Value*, 4> Ops;
-  bool HasExtraArg = HasExtraNeonArgument(BuiltinID);
+  bool HasExtraArg = CodeGenUtils::hasExtraNeonArgument(BuiltinID);
   unsigned NumArgs = E->getNumArgs() - (HasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = NumArgs; i != e; i++) {
     if (i == 0) {
@@ -5315,7 +5284,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   // Note the assumption that SISD intrinsics do not contain extra arguments.
   // TODO: Fold this into a single function call instead of, effectively, two
   // separate checks.
-  bool HasExtraArg = !IsSISD && HasExtraNeonArgument(BuiltinID);
+  bool HasExtraArg = !IsSISD && CodeGenUtils::hasExtraNeonArgument(BuiltinID);
   unsigned NumArgs = E->getNumArgs() - (HasExtraArg ? 1 : 0);
   for (unsigned i = 0, e = NumArgs; i != e; i++) {
     if (i == 0) {

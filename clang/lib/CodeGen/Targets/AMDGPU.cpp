@@ -9,6 +9,7 @@
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -324,20 +325,6 @@ public:
 };
 }
 
-static bool requiresAMDGPUProtectedVisibility(const Decl *D,
-                                              llvm::GlobalValue *GV) {
-  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
-    return false;
-
-  return !D->hasAttr<OMPDeclareTargetDeclAttr>() &&
-         (D->hasAttr<DeviceKernelAttr>() ||
-          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
-          (isa<VarDecl>(D) &&
-           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinSurfaceType() ||
-            cast<VarDecl>(D)->getType()->isCUDADeviceBuiltinTextureType())));
-}
-
 void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
     const FunctionDecl *FD, llvm::Function *F, CodeGenModule &M) const {
   const auto *ReqdWGS =
@@ -453,7 +440,8 @@ void AMDGPUTargetCodeGenInfo::setFunctionDeclAttributes(
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  if (CodeGenUtils::requiresAMDGPUProtectedVisibility(
+          D, GV->getVisibility() == llvm::GlobalValue::HiddenVisibility)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }
