@@ -99,9 +99,9 @@ static FloatAttr convertFloatAttr(FloatAttr srcAttr, FloatType dstType,
   return builder.getF32FloatAttr(dstVal.convertToFloat());
 }
 
-/// Gets an IntegerAttr from a FloatAttr while preserving the bits. If `dstType`
-/// is wider than the float (e.g. i8 emulated as i32), the bits are widened
-/// like an integer constant of the float's width.
+// Gets an IntegerAttr from a FloatAttr while preserving the bits. If `dstType`
+// is wider than the float (e.g. i8 emulated as i32), the bits are widened
+// like an integer constant of the float's width.
 static IntegerAttr getIntegerAttrFromFloatAttr(FloatAttr floatAttr,
                                                IntegerType dstType,
                                                Builder builder) {
