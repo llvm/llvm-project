@@ -2730,6 +2730,10 @@ unsigned GISelValueTracking::computeNumSignBits(Register R,
     Register InVec = Extract.getVectorReg();
     Register EltNo = Extract.getIndexReg();
     LLT VecVT = MRI.getType(InVec);
+    // A result wider than the element is any-extended and a narrower one is
+    // truncated; the element's sign bits say nothing about either.
+    if (VecVT.getScalarSizeInBits() != TyBits)
+      break;
     if (VecVT.isScalableVector())
       return computeNumSignBits(InVec, APInt(1, 1), Depth + 1);
     unsigned NumSrcElts = VecVT.getNumElements();
