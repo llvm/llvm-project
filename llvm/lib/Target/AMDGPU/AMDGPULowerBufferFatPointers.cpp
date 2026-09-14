@@ -268,12 +268,12 @@ using GetSEFn = function_ref<ScalarEvolution *(Function &)>;
 
 static constexpr unsigned BufferOffsetWidth = 32;
 
-// Prototype: rely on the "atomicity" operand bundle alone to keep generic
-// transforms from reordering across an atomic buffer access, instead of
-// bracketing the access with explicit fences.
-static cl::opt<bool> NoAtomicityFences(
-    "amdgpu-buffer-atomicity-no-fences", cl::Hidden, cl::init(false),
-    cl::desc("Do not emit fences around atomic buffer memory intrinsics"));
+// The "atomicity" operand bundle alone keeps generic transforms from
+// reordering across an atomic buffer access. This escape hatch restores the
+// old belt-and-braces fences for debugging a suspected reordering.
+static cl::opt<bool> InsertAtomicityFences(
+    "amdgpu-buffer-debug-insert-atomic-fences", cl::Hidden, cl::init(false),
+    cl::desc("Bracket atomic buffer memory intrinsics with explicit fences"));
 
 namespace {
 /// Recursively replace instances of ptr addrspace(7) and vector<Nxptr
@@ -1929,7 +1929,7 @@ SplitPtrStructs::getAtomicityBundle(AtomicOrdering Order, SyncScope::ID SSID) {
 
 void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
                                           SyncScope::ID SSID) {
-  if (NoAtomicityFences)
+  if (!InsertAtomicityFences)
     return;
   switch (Order) {
   case AtomicOrdering::Release:
@@ -1944,7 +1944,7 @@ void SplitPtrStructs::insertPreMemOpFence(AtomicOrdering Order,
 
 void SplitPtrStructs::insertPostMemOpFence(AtomicOrdering Order,
                                            SyncScope::ID SSID) {
-  if (NoAtomicityFences)
+  if (!InsertAtomicityFences)
     return;
   switch (Order) {
   case AtomicOrdering::Acquire:

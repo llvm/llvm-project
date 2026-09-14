@@ -3468,17 +3468,17 @@ string naming a synchronization scope, where the empty string denotes system
 scope.
 
 ```llvm
-call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %val, ptr addrspace(8) %rsrc,
-    i32 %off, i32 0, i32 0)
+call void @store_release(ptr %p, i32 %val)
     [ "atomicity"(metadata !"release", metadata !"agent") ]
 ```
 
 A call carrying the bundle reports `true` from `Instruction::isAtomic`, so
 generic transforms treat it like any other atomic operation. The bundle
 carries no memory effects of its own, so it does not make an
-otherwise-analyzable call opaque. See
-{ref}`AMDGPUUsage <amdgpu-buffer-intrinsic-atomicity>` for the AMDGPU buffer
-intrinsic use of it.
+otherwise-analyzable call opaque.
+
+A target lowers the bundle onto the selected instruction. Targets are
+expected to document the orderings and scope names they accept.
 
 (moduleasm)=
 

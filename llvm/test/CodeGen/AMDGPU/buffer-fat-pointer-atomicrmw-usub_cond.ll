@@ -20,8 +20,6 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fine_grained_memory:
@@ -35,17 +33,15 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, v5, v2
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
@@ -74,8 +70,6 @@ define void @buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_fine_grained_memory:
@@ -90,14 +84,12 @@ define void @buffer_fat_ptr_agent_atomic_usub_cond_noret_u32__offset__amdgpu_no_
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v1, v2, v0
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v2, v0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc_lo
 ; GFX11-NEXT:    v_dual_mov_b32 v5, v2 :: v_dual_mov_b32 v4, v1
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[4:5], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v4, v2
@@ -127,8 +119,6 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_rem
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_remote_memory:
@@ -142,17 +132,15 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_rem
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, v5, v2
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
@@ -181,8 +169,6 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_DEV
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_DEV
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
@@ -196,17 +182,15 @@ define i32 @buffer_fat_ptr_agent_atomic_usub_cond_ret_u32__offset__amdgpu_no_fin
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, v5, v2
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5
@@ -237,11 +221,7 @@ define i32 @buffer_fat_ptr_system_atomic_usub_cond_ret_u32__offset__amdgpu_no_fi
 ; GFX12-NEXT:    v_mov_b32_e32 v1, s16
 ; GFX12-NEXT:    global_wb scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_wb scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    buffer_atomic_cond_sub_u32 v0, v1, s[0:3], null offen offset:1024 th:TH_ATOMIC_RETURN scope:SCOPE_SYS
-; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
@@ -257,17 +237,15 @@ define i32 @buffer_fat_ptr_system_atomic_usub_cond_ret_u32__offset__amdgpu_no_fi
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v5, v0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_nc_u32_e32 v0, v5, v2
 ; GFX11-NEXT:    v_cmp_ge_u32_e32 vcc_lo, v5, v2
 ; GFX11-NEXT:    v_cndmask_b32_e32 v4, v5, v0, vcc_lo
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v1, v5 :: v_dual_mov_b32 v0, v4
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    buffer_atomic_cmpswap_b32 v[0:1], v3, s[0:3], 0 offen offset:1024 glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    buffer_gl1_inv
 ; GFX11-NEXT:    buffer_gl0_inv
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v5

@@ -1645,7 +1645,8 @@ A call to a buffer memory intrinsic (``llvm.amdgcn.{raw,struct}.ptr.buffer.{load
 ``llvm.amdgcn.{raw,struct}.ptr.buffer.{load,store}.format``,
 ``llvm.amdgcn.{raw,struct}.ptr.atomic.buffer.load`` or
 ``llvm.amdgcn.{raw,struct}.ptr.buffer.atomic.*``) may carry an
-``"atomicity"`` operand bundle recording the atomicity of the access:
+:ref:`"atomicity" <atomicity>` operand bundle recording the atomicity of the
+access:
 
 .. code-block:: llvm
 

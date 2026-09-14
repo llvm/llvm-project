@@ -1478,17 +1478,6 @@ static SyncScope::ID parseSyncscopeMDArg(const CallBase &CI, unsigned ArgIdx) {
       cast<MDString>(ScopeMD->getOperand(0))->getString());
 }
 
-// A buffer instruction is identical whether or not the access is atomic, so
-// the "atomicity" bundle is the only record of it.
-static void applyBufferAtomicityBundle(const CallBase &CI,
-                                       TargetLowering::IntrinsicInfo &Info) {
-  if (std::optional<AtomicityBundleInfo> Atomicity =
-          CI.getAtomicityBundleInfo()) {
-    Info.order = Atomicity->Order;
-    Info.ssid = Atomicity->SSID;
-  }
-}
-
 void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                                           const CallBase &CI,
                                           MachineFunction &MF,
@@ -1540,7 +1529,13 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.ptrVal = RsrcArg;
     }
 
-    applyBufferAtomicityBundle(CI, Info);
+    // A buffer instruction is identical whether or not the access is atomic,
+    // so the "atomicity" bundle is the only record of it.
+    if (std::optional<AtomicityBundleInfo> Atomicity =
+            CI.getAtomicityBundleInfo()) {
+      Info.order = Atomicity->Order;
+      Info.ssid = Atomicity->SSID;
+    }
 
     if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
