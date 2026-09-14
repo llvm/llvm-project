@@ -233,23 +233,56 @@ static bool isSMEABIRoutineCall(const CallInst &CI,
          SMEAttrs(F->getName(), TLI.getRuntimeLibcallsInfo()).isSMEABIRoutine();
 }
 
+static bool isPossiblyIncompatibleIntrinsic(const Instruction *I,
+                                            bool ConsiderZA, bool ConsiderSM) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+
+  StringRef Name = II->getCalledFunction()->getName();
+  if (ConsiderZA && Name.starts_with("llvm.aarch64.sme."))
+    return true;
+
+  if (ConsiderSM) {
+    if (Name.starts_with("llvm.aarch64.neon") ||
+        Name.starts_with("llvm.aarch64.sve") ||
+        Name.starts_with("llvm.aarch64.sme") ||
+        Name.starts_with("llvm.vscale") ||
+        Name.starts_with("llvm.masked.gather") ||
+        Name.starts_with("llvm.masked.scatter")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 /// Returns true if the function has explicit operations that can only be
 /// lowered using incompatible instructions for the selected mode. This also
 /// returns true if the function F may use or modify ZA state.
 static bool hasPossibleIncompatibleOps(const Function *F,
-                                       const AArch64TargetLowering &TLI) {
+                                       const AArch64TargetLowering &TLI,
+                                       bool ConsiderZA, bool ConsiderSM) {
+  assert((ConsiderZA || ConsiderSM) && "No SME state to consider");
   for (const BasicBlock &BB : *F) {
     for (const Instruction &I : BB) {
-      // Be conservative for now and assume that any call to inline asm or to
-      // intrinsics could could result in non-streaming ops (e.g. calls to
-      // @llvm.aarch64.* or @llvm.gather/scatter intrinsics). We can assume that
-      // all native LLVM instructions can be lowered to compatible instructions.
-      if (isa<CallInst>(I) && !I.isDebugOrPseudoInst() &&
-          (cast<CallInst>(I).isInlineAsm() || isa<IntrinsicInst>(I) ||
-           isSMEABIRoutineCall(cast<CallInst>(I), TLI)))
+      // We can assume that all native LLVM instructions can be lowered to
+      // compatible instructions.
+      if (!isa<CallInst>(I) || I.isDebugOrPseudoInst())
+        continue;
+      // Be conservative for now and assume that any call to inline asm could
+      // result in different behaviour.
+      if (cast<CallInst>(I).isInlineAsm())
+        return true;
+
+      if (isSMEABIRoutineCall(cast<CallInst>(I), TLI))
+        return true;
+
+      if (isPossiblyIncompatibleIntrinsic(&I, ConsiderZA, ConsiderSM))
         return true;
     }
   }
+
   return false;
 }
 
@@ -288,6 +321,9 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       CallAttrs.callee().hasStreamingInterfaceOrBody())
     return false;
 
+  if (CallAttrs.callee().isNewZA() || CallAttrs.callee().isNewZT0())
+    return false;
+
   // When inlining, we should consider the body of the function, not the
   // interface.
   if (CallAttrs.callee().hasStreamingBody()) {
@@ -295,15 +331,12 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
     CallAttrs.callee().set(SMEAttrs::SM_Enabled, true);
   }
 
-  if (CallAttrs.callee().isNewZA() || CallAttrs.callee().isNewZT0())
+  bool ConsiderZA =
+      CallAttrs.requiresLazySave() || CallAttrs.requiresPreservingZT0();
+  bool ConsiderSM = CallAttrs.requiresSMChange();
+  if ((ConsiderZA || ConsiderSM) &&
+      hasPossibleIncompatibleOps(Callee, *getTLI(), ConsiderZA, ConsiderSM))
     return false;
-
-  if (CallAttrs.requiresLazySave() || CallAttrs.requiresSMChange() ||
-      CallAttrs.requiresPreservingZT0() ||
-      CallAttrs.requiresPreservingAllZAState()) {
-    if (hasPossibleIncompatibleOps(Callee, *getTLI()))
-      return false;
-  }
 
   return BaseT::areInlineCompatible(Caller, Callee);
 }
