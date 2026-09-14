@@ -627,6 +627,10 @@ def FeatureCFLT : ExtensionWithMArch<"cflt", "CFLT", "FEAT_CFLT",
 def FeatureLSC64B : ExtensionWithMArch<"lsc64b", "LSC64B", "FEAT_LSC64B",
   "Enable Armv9.8-A Single-copy atomic 64-byte load/store consistency extension", [FeatureLSCP]>;
 
+def FeatureSVE_LRCPC: ExtensionWithMArch<"sve-lrcpc", "SVE_LRCPC", "FEAT_SVE_LRCPC",
+  "Enable Armv9.8-A SVE weaker Release Consistency processor consistent (RCpc) model",
+   [FeatureSVE2, FeatureRCPC3]>;
+
 //===----------------------------------------------------------------------===//
 //  Future Architecture Technologies
 //===----------------------------------------------------------------------===//
