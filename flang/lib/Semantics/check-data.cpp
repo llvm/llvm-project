@@ -266,7 +266,13 @@ void DataChecker::Leave(const parser::EntityDecl &decl) {
         std::get_if<std::list<common::Indirection<parser::DataStmtValue>>>(
             &init->u)};
     if (name && list && !exprAnalyzer_.context().HasError(*name)) {
-      AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+      if (IsProcedure(*name) && !IsProcedurePointer(*name)) {
+        exprAnalyzer_.context().Say(std::get<parser::Name>(decl.t).source,
+            "Procedure '%s' may not have a DATA-style initializer"_err_en_US,
+            name->name());
+      } else {
+        AccumulateDataInitializations(inits_, exprAnalyzer_, *name, *list);
+      }
     }
   }
 }
