@@ -1687,44 +1687,29 @@ struct CUDAPluginContextTy final : public PluginContextTy {
 
     CUdeviceptr CUPtr = reinterpret_cast<CUdeviceptr>(Ptr);
 
+    CUpointer_attribute Attrs[] = {
+        CU_POINTER_ATTRIBUTE_MEMORY_TYPE,
+        CU_POINTER_ATTRIBUTE_IS_MANAGED,
+        CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL,
+        CU_POINTER_ATTRIBUTE_RANGE_START_ADDR,
+        CU_POINTER_ATTRIBUTE_RANGE_SIZE,
+    };
     unsigned MemType = 0;
-    if (CUresult Res = cuPointerGetAttribute(
-            &MemType, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, CUPtr))
-      return Plugin::error(error::ErrorCode::NOT_FOUND,
-                           "cuPointerGetAttribute(MEMORY_TYPE) failed: %d",
-                           Res);
-
     int IsManaged = 0;
-    if (CUresult Res = cuPointerGetAttribute(
-            &IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED, CUPtr))
+    int Ordinal = -1;
+    CUdeviceptr RangeStart = 0;
+    size_t RangeSize = 0;
+    void *Data[] = {&MemType, &IsManaged, &Ordinal, &RangeStart, &RangeSize};
+    if (CUresult Res = cuPointerGetAttributes(sizeof(Attrs) / sizeof(Attrs[0]),
+                                              Attrs, Data, CUPtr))
       return Plugin::error(error::ErrorCode::NOT_FOUND,
-                           "cuPointerGetAttribute(IS_MANAGED) failed: %d", Res);
+                           "cuPointerGetAttributes failed: %d", Res);
 
     TargetAllocTy Kind = TARGET_ALLOC_DEVICE;
     if (IsManaged)
       Kind = TARGET_ALLOC_SHARED;
     else if (MemType == CU_MEMORYTYPE_HOST)
       Kind = TARGET_ALLOC_HOST;
-
-    int Ordinal = -1;
-    if (CUresult Res = cuPointerGetAttribute(
-            &Ordinal, CU_POINTER_ATTRIBUTE_DEVICE_ORDINAL, CUPtr))
-      return Plugin::error(error::ErrorCode::NOT_FOUND,
-                           "cuPointerGetAttribute(DEVICE_ORDINAL) failed: %d",
-                           Res);
-
-    CUdeviceptr RangeStart = 0;
-    if (CUresult Res = cuPointerGetAttribute(
-            &RangeStart, CU_POINTER_ATTRIBUTE_RANGE_START_ADDR, CUPtr))
-      return Plugin::error(error::ErrorCode::NOT_FOUND,
-                           "cuPointerGetAttribute(RANGE_START_ADDR) failed: %d",
-                           Res);
-
-    size_t RangeSize = 0;
-    if (CUresult Res = cuPointerGetAttribute(
-            &RangeSize, CU_POINTER_ATTRIBUTE_RANGE_SIZE, CUPtr))
-      return Plugin::error(error::ErrorCode::NOT_FOUND,
-                           "cuPointerGetAttribute(RANGE_SIZE) failed: %d", Res);
 
     // Ordinal is the CUDA driver ordinal (matches CUdevice); compare against
     // that rather than the offload-side device index, which can differ under

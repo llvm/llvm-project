@@ -500,6 +500,8 @@ typedef enum CUpointer_attribute_enum {
 } CUpointer_attribute;
 
 CUresult cuPointerGetAttribute(void *, CUpointer_attribute, CUdeviceptr);
+CUresult cuPointerGetAttributes(unsigned int, CUpointer_attribute *, void **,
+                                CUdeviceptr);
 
 CUresult cuModuleGetFunction(CUfunction *, CUmodule, const char *);
 CUresult cuModuleGetGlobal(CUdeviceptr *, size_t *, CUmodule, const char *);
