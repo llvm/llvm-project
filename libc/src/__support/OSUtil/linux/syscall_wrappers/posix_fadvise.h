@@ -35,18 +35,18 @@ LIBC_INLINE ErrorOr<int> posix_fadvise(int fd, int64_t offset, int64_t len,
     long offset_low = static_cast<long>(offset_bits & UINT32_MAX);
     long offset_high = static_cast<long>(offset_bits >> 32);
 
-#if defined(SYS_fadvise64_64) || defined(SYS_arm_fadvise64_64)
+#if defined(SYS_arm_fadvise64_64) || defined(SYS_fadvise64_64)
     uint64_t len_bits = cpp::bit_cast<uint64_t>(len);
     long len_low = static_cast<long>(len_bits & UINT32_MAX);
     long len_high = static_cast<long>(len_bits >> 32);
 #endif
 
-#if defined(SYS_fadvise64_64)
-    return syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
-                                len_low, len_high, advice);
-#elif defined(SYS_arm_fadvise64_64)
+#if defined(SYS_arm_fadvise64_64)
     return syscall_checked<int>(SYS_arm_fadvise64_64, fd, advice, offset_low,
                                 offset_high, len_low, len_high);
+#elif defined(SYS_fadvise64_64)
+    return syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
+                                len_low, len_high, advice);
 #elif defined(SYS_fadvise64)
     if (len < 0 ||
         static_cast<uint64_t>(len) > cpp::numeric_limits<size_t>::max())

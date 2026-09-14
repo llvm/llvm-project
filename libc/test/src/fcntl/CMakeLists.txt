@@ -96,4 +96,5 @@ add_libc_test(
     libc.src.unistd.unlink
     libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
 )
