@@ -733,12 +733,12 @@ class VOP3_CVT_SR_F8_ByteSel_Profile<ValueType SrcVT, bit _HasClamp = 0> :
 }
 
 def IsPow2Plus1: PatLeaf<(i32 imm), [{
-  uint32_t V = N->getZExtValue();
+  uint32_t V = static_cast<uint32_t>(N->getZExtValue());
   return isPowerOf2_32(V - 1);
 }]>;
 
 def Log2_32: SDNodeXForm<imm, [{
-  uint32_t V = N->getZExtValue();
+  uint32_t V = static_cast<uint32_t>(N->getZExtValue());
   return CurDAG->getTargetConstant(Log2_32(V - 1), SDLoc(N), MVT::i32);
 }]>;
 
@@ -1145,7 +1145,7 @@ def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
 
 class SrcAndDstSelToOpSelXForm<int modifier_idx, bit dest_sel> : SDNodeXForm<timm, [{
-  unsigned Val = N->getZExtValue();
+  unsigned Val = static_cast<unsigned>(N->getZExtValue());
   unsigned New = 0;
   if (}] # modifier_idx # [{ == 0) {
     New = (}] # dest_sel # [{ == 1) ? ((Val & 0x1) ? (SISrcMods::OP_SEL_0 | SISrcMods::DST_OP_SEL) : SISrcMods::DST_OP_SEL)
@@ -1195,7 +1195,7 @@ def gi_SrcSelToOpSelXForm : GICustomOperandRenderer<"renderSrcSelToOpSelXForm">,
   GISDNodeXFormEquiv<SrcSelToOpSelXForm>;
 
 def DstSelToOpSel3XForm : SDNodeXForm<timm, [{
-  uint32_t V = N->getZExtValue();
+  uint32_t V = static_cast<uint32_t>(N->getZExtValue());
   return CurDAG->getTargetConstant(
       (V & 0x2) ? SISrcMods::DST_OP_SEL : SISrcMods::NONE,
       SDLoc(N), MVT::i32);
