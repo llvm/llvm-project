@@ -3,6 +3,10 @@
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGCNSPIRV %s
 // RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
 // RUN:   -o - %s | FileCheck --check-prefix=AMDGPU %s
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
+// RUN:   -fexperimental-abi-lowering -o - %s | FileCheck --check-prefix=AMDGCNSPIRV %s
+// RUN: %clang_cc1 -triple amdgpu9.06-amd-amdhsa -x hip -emit-llvm -fcuda-is-device -O3 \
+// RUN:   -fexperimental-abi-lowering -o - %s | FileCheck --check-prefix=AMDGPU %s
 
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))

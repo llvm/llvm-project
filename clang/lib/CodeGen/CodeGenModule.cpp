@@ -346,6 +346,12 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+/// AMDGCN, and the AMDGCN-flavoured SPIR-V that lowers to it, share one
+/// classifier.
+static bool usesAMDGPUABI(const llvm::Triple &T) {
+  return T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD);
+}
+
 bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
@@ -357,6 +363,9 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
       T.getArch() == llvm::Triple::aarch64_be)
+    return true;
+
+  if (usesAMDGPUABI(T))
     return true;
 
   if (T.getArch() == llvm::Triple::x86_64 && !T.isOSWindows() && !T.isUEFI() &&
@@ -389,6 +398,26 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
+
+  if (usesAMDGPUABI(T)) {
+    ASTContext &Ctx = getContext();
+    const bool IsSPIRV = T.isSPIRV();
+    llvm::abi::AMDGPUABIOptions Opts;
+    Opts.KernelCC = IsSPIRV ? llvm::CallingConv::SPIR_KERNEL
+                            : llvm::CallingConv::AMDGPU_KERNEL;
+    Opts.AllocaAddrSpace = getDataLayout().getAllocaAddrSpace();
+    Opts.PrivateAddrSpace = Ctx.getTargetAddressSpace(LangAS::opencl_private);
+    Opts.ConstantAddrSpace = Ctx.getTargetAddressSpace(LangAS::opencl_constant);
+    Opts.GenericAddrSpace = Ctx.getTargetAddressSpace(LangAS::Default);
+    // Pre-existing divergences between the two classifiers, kept deliberately.
+    Opts.KernelArgAddrSpace = Ctx.getTargetAddressSpace(
+        IsSPIRV ? LangAS::opencl_global : LangAS::cuda_device);
+    Opts.CoerceKernelPointerArgs =
+        IsSPIRV ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
+    Opts.HasInt128 = Ctx.getTargetInfo().hasInt128Type();
+    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
+    return *TheLLVMABITargetInfo;
+  }
 
   switch (T.getArch()) {
   default:

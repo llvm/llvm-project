@@ -1,6 +1,7 @@
 // REQUIRES: amdgpu-registered-target
 // RUN: %clang_cc1 -triple amdgpu-unknown-unknown -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple r600-unknown-unknown -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple amdgpu-unknown-unknown -fexperimental-abi-lowering -emit-llvm -o - %s | FileCheck %s
 
 typedef __attribute__(( ext_vector_type(2) )) char char2;
 typedef __attribute__(( ext_vector_type(3) )) char char3;

@@ -976,6 +976,9 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
       CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
       CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
                   "DirectOffset");
+      if (Res.isDirect())
+        CheckSimple(Target.getCanBeFlattened(), Res.getCanBeFlattened(),
+                    "CanBeFlattened");
       break;
     case ABIArgInfo::Indirect:
       CheckSimple(Target.getIndirectByVal(), Res.getIndirectByVal(),
@@ -1023,7 +1026,9 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
       CoercedType = AbiReverseMapper->convertType(AbiInfo.getCoerceToType());
     if (!CoercedType)
       CoercedType = getTypes().ConvertType(Type);
-    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset());
+    return ABIArgInfo::getDirect(CoercedType, AbiInfo.getDirectOffset(),
+                                 /*Padding=*/nullptr,
+                                 AbiInfo.getCanBeFlattened());
   }
   case llvm::abi::ArgInfo::Extend: {
     llvm::Type *CoercedType = nullptr;
@@ -1048,6 +1053,13 @@ ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
     return ABIArgInfo::getIndirect(Alignment, AbiInfo.getIndirectAddrSpace(),
                                    AbiInfo.getIndirectByVal(),
                                    AbiInfo.getIndirectRealign());
+  }
+  case llvm::abi::ArgInfo::IndirectAliased: {
+    CharUnits Alignment =
+        CharUnits::fromQuantity(AbiInfo.getIndirectAlign().value());
+    return ABIArgInfo::getIndirectAliased(Alignment,
+                                          AbiInfo.getIndirectAddrSpace(),
+                                          AbiInfo.getIndirectRealign());
   }
   case llvm::abi::ArgInfo::Ignore:
     return ABIArgInfo::getIgnore();

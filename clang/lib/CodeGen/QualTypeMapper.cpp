@@ -128,8 +128,9 @@ const llvm::abi::Type *QualTypeMapper::convertTypeImpl(QualType QT) {
                                  ASTCtx.getTypeSize(QT), getTypeAlign(QT));
   }
   case Type::BlockPointer:
-  case Type::Pipe:
     return createPointerTypeForPointee(ASTCtx.VoidPtrTy);
+  case Type::Pipe:
+    return createOpenCLOpaqueType(QT.getTypePtr());
   case Type::ConstantMatrix: {
     const auto *MT = cast<ConstantMatrixType>(QT);
     return Builder.getArrayType(convertType(MT->getElementType()),
@@ -262,7 +263,7 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
   case BuiltinType::OCLClkEvent:
   case BuiltinType::OCLQueue:
   case BuiltinType::OCLReserveID:
-    return createPointerTypeForPointee(QT);
+    return createOpenCLOpaqueType(BT);
 
   // Objective-C builtin types are represented as opaque pointers.
   case BuiltinType::ObjCId:
@@ -605,11 +606,25 @@ llvm::Align QualTypeMapper::getTypeAlign(QualType QT) const {
 }
 
 const llvm::abi::Type *
+QualTypeMapper::createPointerType(LangAS AddrSpace,
+                                  std::optional<unsigned> TargetAddrSpace) {
+  const clang::TargetInfo &TI = ASTCtx.getTargetInfo();
+  return Builder.getPointerType(
+      TI.getPointerWidth(AddrSpace),
+      llvm::Align(TI.getPointerAlign(AddrSpace) / 8),
+      TargetAddrSpace.value_or(TI.getTargetAddressSpace(AddrSpace)));
+}
+
+const llvm::abi::Type *
+QualTypeMapper::createOpenCLOpaqueType(const clang::Type *T) {
+  // Mirrors CGOpenCLRuntime::getPointerType: the address space comes from the
+  // target hook, not from a qualifier on the type.
+  return createPointerType(ASTCtx.getOpenCLTypeAddrSpace(T));
+}
+
+const llvm::abi::Type *
 QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
-  auto AddrSpace = PointeeType.getAddressSpace();
-  auto PointerSize = ASTCtx.getTargetInfo().getPointerWidth(AddrSpace);
-  llvm::Align Alignment =
-      llvm::Align(ASTCtx.getTargetInfo().getPointerAlign(AddrSpace));
+  LangAS AddrSpace = PointeeType.getAddressSpace();
   // Function types without an explicit address space qualifier use the program
   // address space, which may differ from the default data address space on
   // targets like AMDGPU.
@@ -617,8 +632,7 @@ QualTypeMapper::createPointerTypeForPointee(QualType PointeeType) {
       PointeeType->isFunctionType() && !PointeeType.hasAddressSpace()
           ? DL.getProgramAddressSpace()
           : ASTCtx.getTargetInfo().getTargetAddressSpace(AddrSpace);
-  return Builder.getPointerType(PointerSize, llvm::Align(Alignment.value() / 8),
-                                TargetAddrSpace);
+  return createPointerType(AddrSpace, TargetAddrSpace);
 }
 
 /// Processes the fields of a record (struct/class/union) and populates
