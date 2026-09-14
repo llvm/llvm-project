@@ -183,9 +183,6 @@ static bool isLegalCrossLaneType(Type *Ty) {
 }
 
 void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
-  // The uniform-value path multiplies by the lane count and reconstructs
-  // results with scalar casts, so it only handles scalar types. The
-  // divergent-value path rejects vectors in isLegalCrossLaneType.
   if (I.getType()->isVectorTy())
     return;
 
@@ -257,6 +254,9 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
+  if (I.getType()->isVectorTy())
+    return;
+
   AtomicRMWInst::BinOp Op;
 
   switch (I.getIntrinsicID()) {
