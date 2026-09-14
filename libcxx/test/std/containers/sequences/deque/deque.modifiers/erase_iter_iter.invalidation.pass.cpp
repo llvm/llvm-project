@@ -21,7 +21,7 @@
 #include "test_macros.h"
 
 template <typename C>
-void del_at_start(C c, std::size_t num) {
+TEST_CONSTEXPR_CXX26 void del_at_start(C c, std::size_t num) {
   typename C::iterator first = c.begin();
   typename C::iterator last  = first + num;
   typename C::iterator it1   = last;
@@ -41,7 +41,7 @@ void del_at_start(C c, std::size_t num) {
 }
 
 template <typename C>
-void del_at_end(C c, std::size_t num) {
+TEST_CONSTEXPR_CXX26 void del_at_end(C c, std::size_t num) {
   typename C::iterator last  = c.end();
   typename C::iterator first = last - num;
   typename C::iterator it1   = c.begin();
@@ -60,7 +60,7 @@ void del_at_end(C c, std::size_t num) {
   LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   std::deque<int> queue;
   for (int i = 0; i < 20; ++i)
     queue.push_back(i);
@@ -72,6 +72,14 @@ int main(int, char**) {
     }
     queue.pop_back();
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

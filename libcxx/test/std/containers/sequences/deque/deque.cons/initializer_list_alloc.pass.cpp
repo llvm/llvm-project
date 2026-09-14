@@ -20,7 +20,7 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::deque<int, test_allocator<int>> d({3, 4, 5, 6}, test_allocator<int>(3));
     assert(d.get_allocator() == test_allocator<int>(3));
@@ -41,6 +41,14 @@ int main(int, char**) {
     assert(d[3] == 6);
     LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
   }
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }
