@@ -77,11 +77,10 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
   if (in.empty())
     return loc->emitError("name of ") << label << " is empty";
 
-  bool allowUnderscore = false;
-  auto prev = '\0';
-  for (auto &elem : in) {
+  char prev = '_'; // treat the initial as _ to eliminate leading underscores
+  for (const auto &elem : in) {
     if (elem == '_') {
-      if (!allowUnderscore)
+      if (prev == '_')
         return loc->emitError("name of ")
                << label << " should not contain leading or double underscores";
     } else {
@@ -101,7 +100,6 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
       }
     }
 
-    allowUnderscore = elem != '_';
     prev = elem;
   }
 
