@@ -351,15 +351,12 @@ public:
     return (Imm & 0x780) ? nullptr : DelayAlu;
   }
 
-  static bool isFastForwardProducer(const MachineInstr &MI,
-                                    const MachineOperand &MO) {
+  bool isFastForwardProducer(const MachineInstr &MI, const MachineOperand &MO) {
     assert((MO.isReg() && MO.isDef()) && "Expected a register definition");
 
     if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
       return false;
 
-    const TargetRegisterInfo *TRI =
-        MI.getMF()->getSubtarget().getRegisterInfo();
     Register Reg = MO.getReg();
     if (AMDGPU::isSGPR(Reg, TRI)) {
       switch (MI.getOpcode()) {
@@ -388,20 +385,16 @@ public:
     return false;
   }
 
-  static unsigned int getVOPDComponentOpCode(const MachineInstr &MI,
-                                             unsigned OpNo,
-                                             const MachineOperand &MO) {
+  unsigned int getVOPDComponentOpCode(const MachineInstr &MI, unsigned OpNo,
+                                      const MachineOperand &MO) {
     Register Reg = MO.getReg();
     auto MIOpCode = MI.getOpcode();
     // Get the component instruction descriptors for VOPD.
     auto [OpX, OpY] = AMDGPU::getVOPDComponents(MIOpCode);
-    const MCInstrInfo *MCII = MI.getMF()->getTarget().getMCInstrInfo();
 
     if (MO.isImplicit()) {
-      const TargetRegisterInfo *TRI =
-          MI.getMF()->getSubtarget().getRegisterInfo();
       for (unsigned CompOp : {OpX, OpY}) {
-        const MCInstrDesc &CompDesc = MCII->get(CompOp);
+        const MCInstrDesc &CompDesc = SII->get(CompOp);
         bool UsesReg = any_of(CompDesc.implicit_uses(), [&](MCPhysReg R) {
           return TRI->regsOverlap(R, Reg);
         });
@@ -414,7 +407,7 @@ public:
       // Explicit source: identify which component/source THIS operand is by
       // matching its operand index (OpNo). The same register can appear in
       // multiple slots, so matching by register value is not reliable.
-      const auto &InstInfo = AMDGPU::getVOPDInstInfo(MIOpCode, MCII);
+      const auto &InstInfo = AMDGPU::getVOPDInstInfo(MIOpCode, SII);
 
       // Map a parsed source index (0/1/2) to the matching named operand for a
       // standalone component opcode.
@@ -450,16 +443,13 @@ public:
     return MIOpCode;
   }
 
-  static bool isFastForwardConsumer(const MachineInstr &MI,
-                                    const MachineOperand &MO, Register VccReg,
-                                    Register ExecReg, unsigned OpNo) {
+  bool isFastForwardConsumer(const MachineInstr &MI, const MachineOperand &MO,
+                             Register VccReg, Register ExecReg, unsigned OpNo) {
     assert((MO.isReg() && MO.isUse()) && "Expected a register use");
 
     if (!SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
       return false;
 
-    const TargetRegisterInfo *TRI =
-        MI.getMF()->getSubtarget().getRegisterInfo();
     Register Reg = MO.getReg();
     auto MIOpCode = MI.getOpcode();
 
