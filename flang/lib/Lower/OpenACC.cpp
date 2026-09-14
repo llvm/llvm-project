@@ -1738,8 +1738,7 @@ static bool shouldAttachFirstprivateOnCombinedLoop(
   if (*combinedConstructs != mlir::acc::CombinedConstructsType::ParallelLoop &&
       *combinedConstructs != mlir::acc::CombinedConstructsType::SerialLoop)
     return false;
-  return converter.getFoldingContext().languageFeatures().IsEnabled(
-      Fortran::common::LanguageFeature::OpenACCCombinedLoopFirstprivate);
+  return converter.getLoweringOptions().getOpenACCCombinedLoopFirstprivate();
 }
 
 // Helper to visit Bounds of DO LOOP nest.
