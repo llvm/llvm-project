@@ -8097,13 +8097,33 @@ MDNode *TBAAVerifier::getFieldNodeFromTBAABaseNode(const Instruction *I,
   return cast<MDNode>(BaseNode->getOperand(LastIdx));
 }
 
-static bool isNewFormatTBAATypeNode(llvm::MDNode *Type) {
+static bool isNewFormatTBAATypeNode(const MDNode *Type) {
   if (!Type || Type->getNumOperands() < 3)
     return false;
 
   // In the new format type nodes shall have a reference to the parent type as
   // its first operand.
   return isa_and_nonnull<MDNode>(Type->getOperand(0));
+}
+
+bool llvm::isWellFormedTBAAAccessTagShape(const MDNode *MD) {
+  // Base and access type nodes.
+  const MDNode *AccessType = nullptr;
+  if (MD->getNumOperands() < 3 ||
+      !dyn_cast_or_null<MDNode>(MD->getOperand(0)) ||
+      !(AccessType = dyn_cast_or_null<MDNode>(MD->getOperand(1))))
+    return false;
+
+  // Operand count is format-dependent: the new format carries a size field the
+  // old one lacks; both allow a trailing immutability flag.
+  unsigned MinOps = isNewFormatTBAATypeNode(AccessType) ? 4 : 3;
+  if (MD->getNumOperands() < MinOps || MD->getNumOperands() > MinOps + 1)
+    return false;
+
+  // Offset, size, and the immutability flag are constant integers.
+  return all_of(drop_begin(MD->operands(), 2), [](const MDOperand &Op) {
+    return mdconst::dyn_extract_or_null<ConstantInt>(Op) != nullptr;
+  });
 }
 
 bool TBAAVerifier::visitTBAAMetadata(const Instruction *I, const MDNode *MD) {

@@ -36,6 +36,11 @@ class Module;
 class raw_ostream;
 struct VerifierSupport;
 
+/// Return true if MD is a well-formed struct-path TBAA access tag shape. This
+/// is a structural check only; TBAAVerifier additionally applies semantic
+/// checks.
+LLVM_ABI bool isWellFormedTBAAAccessTagShape(const MDNode *MD);
+
 /// Verify that the TBAA Metadatas are valid.
 class TBAAVerifier {
   VerifierSupport *Diagnostic = nullptr;

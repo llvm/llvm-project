@@ -110,6 +110,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
@@ -752,29 +753,12 @@ MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
 // value. Returns false if it is not a constant integer that fits in 64 bits.
 static bool getTBAAStructFieldAsInt64(const MDOperand &Op, uint64_t &Out) {
   auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(Op);
-  if (!CI)
-    return false;
-  std::optional<uint64_t> Val = CI->getValue().tryZExtValue();
+  std::optional<uint64_t> Val =
+      CI ? CI->getValue().tryZExtValue() : std::nullopt;
   if (!Val)
     return false;
   Out = *Val;
   return true;
-}
-
-// Return true if Tag is a struct-path TBAA access tag: two type nodes (base
-// and access) followed by constant integer fields (offset, and an optional
-// size and/or immutability flag). A !tbaa.struct field operand need not be
-// such a tag, so validate before reusing it as !tbaa.
-static bool isValidTBAAAccessTag(const MDNode *Tag) {
-  unsigned NumOps = Tag->getNumOperands();
-  if (NumOps < 3 || NumOps > 5)
-    return false;
-  if (!isa_and_nonnull<MDNode>(Tag->getOperand(0)) ||
-      !isa_and_nonnull<MDNode>(Tag->getOperand(1)))
-    return false;
-  return all_of(drop_begin(Tag->operands(), 2), [](const MDOperand &Op) {
-    return mdconst::dyn_extract_or_null<ConstantInt>(Op) != nullptr;
-  });
 }
 
 MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
@@ -853,8 +837,8 @@ AAMDNodes AAMDNodes::adjustForAccess(unsigned AccessSize) {
     MDNode *FieldTag = dyn_cast_or_null<MDNode>(M->getOperand(I + 2));
     if (!getTBAAStructFieldAsInt64(M->getOperand(I), FieldOffset) ||
         !getTBAAStructFieldAsInt64(M->getOperand(I + 1), FieldSize) ||
-        !FieldTag || !isValidTBAAAccessTag(FieldTag) || FieldOffset != Offset ||
-        (CommonTag && FieldTag != CommonTag))
+        !FieldTag || !isWellFormedTBAAAccessTagShape(FieldTag) ||
+        FieldOffset != Offset || (CommonTag && FieldTag != CommonTag))
       break;
     CommonTag = FieldTag;
     Offset += FieldSize;
