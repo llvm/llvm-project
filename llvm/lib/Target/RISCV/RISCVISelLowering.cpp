@@ -136,21 +136,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     : TargetLowering(TM, STI), Subtarget(STI) {
 
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
+  // Note: Hard-float ABIs that don't match the F/D extensions are already
+  // rejected/ by RISCVABI::computeTargetABI() during subtarget construction.
   assert(ABI != RISCVABI::ABI_Unknown && "Improperly initialised target ABI");
-
-  if ((ABI == RISCVABI::ABI_ILP32F || ABI == RISCVABI::ABI_LP64F) &&
-      !Subtarget.hasStdExtF()) {
-    errs() << "Hard-float 'f' ABI can't be used for a target that "
-                "doesn't support the F instruction set extension (ignoring "
-                          "target-abi)\n";
-    ABI = Subtarget.is64Bit() ? RISCVABI::ABI_LP64 : RISCVABI::ABI_ILP32;
-  } else if ((ABI == RISCVABI::ABI_ILP32D || ABI == RISCVABI::ABI_LP64D) &&
-             !Subtarget.hasStdExtD()) {
-    errs() << "Hard-float 'd' ABI can't be used for a target that "
-              "doesn't support the D instruction set extension (ignoring "
-              "target-abi)\n";
-    ABI = Subtarget.is64Bit() ? RISCVABI::ABI_LP64 : RISCVABI::ABI_ILP32;
-  }
 
   switch (ABI) {
   default:
@@ -907,6 +895,13 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                         ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
                        MVT::i32, Custom);
     setOperationAction(ISD::LROUND, MVT::i32, Custom);
+  } else if (Subtarget.hasStdExtZfhminOrZhinxmin()) {
+    // i64 is not a legal type on RV32, so these are custom expanded in
+    // ReplaceNodeResults: f16 sources are converted to i32 and extended, other
+    // FP sources fall back to the default libcall expansion.
+    setOperationAction({ISD::FP_TO_UINT, ISD::FP_TO_SINT,
+                        ISD::STRICT_FP_TO_UINT, ISD::STRICT_FP_TO_SINT},
+                       MVT::i64, Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
@@ -4808,7 +4803,7 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
   SDLoc DL(Op);
 
-  if (Subtarget.isRV32() && Subtarget.hasStdExtP()) {
+  if (!Subtarget.is64Bit() && Subtarget.hasStdExtP()) {
     if (VT == MVT::v2i16) {
       SDValue Lo = DAG.getBitcast(
           MVT::v2i16,
@@ -10368,10 +10363,10 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(ISD::OR, DL, VT, Neg, DAG.getFreeze(TrueV));
     }
 
-    const bool HasCZero = VT.isScalarInteger() && Subtarget.hasCZEROLike();
+    const bool HasZicond = VT.isScalarInteger() && Subtarget.hasStdExtZicond();
 
     // (select c, 0, y) -> (c-1) & y
-    if (isNullConstant(TrueV) && (!HasCZero || isSimm12Constant(FalseV))) {
+    if (isNullConstant(TrueV) && (!HasZicond || isSimm12Constant(FalseV))) {
       SDValue Neg =
           DAG.getNode(ISD::ADD, DL, VT, CondV, DAG.getAllOnesConstant(DL, VT));
       return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(FalseV));
@@ -10395,7 +10390,7 @@ static SDValue lowerSelectToBinOp(SDNode *N, SelectionDAG &DAG,
         }
       }
       // (select c, y, 0) -> -c & y
-      if (!HasCZero || isSimm12Constant(TrueV)) {
+      if (!HasZicond || isSimm12Constant(TrueV)) {
         SDValue Neg = DAG.getNegative(CondV, DL, VT);
         return DAG.getNode(ISD::AND, DL, VT, Neg, DAG.getFreeze(TrueV));
       }
@@ -10580,11 +10575,11 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getBitcast(VT, ResultInt);
   }
 
-  // When Zicond or XVentanaCondOps is present, emit CZERO_EQZ and CZERO_NEZ
+  // When Zicond is present, emit CZERO_EQZ and CZERO_NEZ
   // nodes to implement the SELECT. Performing the lowering here allows for
   // greater control over when CZERO_{EQZ/NEZ} are used vs another branchless
   // sequence or RISCVISD::SELECT_CC node (branch-based select).
-  if (Subtarget.hasCZEROLike() && VT.isScalarInteger()) {
+  if (Subtarget.hasStdExtZicond() && VT.isScalarInteger()) {
 
     // (select c, t, 0) -> (czero_eqz t, c)
     if (isNullConstant(FalseV))
@@ -16498,12 +16493,38 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::STRICT_FP_TO_UINT:
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT: {
-    assert(N->getValueType(0) == MVT::i32 && Subtarget.is64Bit() &&
-           "Unexpected custom legalisation");
     bool IsStrict = N->isStrictFPOpcode();
     bool IsSigned = N->getOpcode() == ISD::FP_TO_SINT ||
                     N->getOpcode() == ISD::STRICT_FP_TO_SINT;
     SDValue Op0 = IsStrict ? N->getOperand(1) : N->getOperand(0);
+
+    // On RV32 only f16 is handled here: it is the only FP type whose finite
+    // values always fit in an i32 after truncation towards zero, so convert in
+    // i32 and extend instead of calling __fix(un)hfdi, which compiler-rt does
+    // not provide. Out of range values and NaN are poison, so the fcvt clamping
+    // is acceptable. Without Zfh/Zhinx the i32 conversion promotes f16 to f32.
+    if (!Subtarget.is64Bit()) {
+      assert(N->getValueType(0) == MVT::i64 &&
+             "Unexpected custom legalisation");
+      if (Op0.getValueType() != MVT::f16)
+        return;
+      SDValue Cvt;
+      if (IsStrict) {
+        Cvt = DAG.getNode(IsSigned ? ISD::STRICT_FP_TO_SINT
+                                   : ISD::STRICT_FP_TO_UINT,
+                          DL, {MVT::i32, MVT::Other}, {N->getOperand(0), Op0});
+      } else {
+        Cvt = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT, DL,
+                          MVT::i32, Op0);
+      }
+      Results.push_back(DAG.getNode(
+          IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND, DL, MVT::i64, Cvt));
+      if (IsStrict)
+        Results.push_back(Cvt.getValue(1));
+      return;
+    }
+
+    assert(N->getValueType(0) == MVT::i32 && "Unexpected custom legalisation");
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
       if (!isTypeLegal(Op0.getValueType()))
@@ -18262,7 +18283,7 @@ static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
 
   if (!Subtarget.hasConditionalMoveFusion()) {
     // (select cond, x, (and x, c)) has custom lowering with Zicond.
-    if (!Subtarget.hasCZEROLike() || N->getOpcode() != ISD::AND)
+    if (!Subtarget.hasStdExtZicond() || N->getOpcode() != ISD::AND)
       return SDValue();
 
     // Maybe harmful when condition code has multiple use.
@@ -18638,6 +18659,84 @@ static SDValue combinePExtWideningAddSub(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combinePExtWideningAddAcc(SDNode *N, SelectionDAG &DAG,
+                                         const RISCVSubtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
+  if (!Subtarget.hasStdExtP() || !Subtarget.is64Bit())
+    return SDValue();
+
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  MVT VT = N->getSimpleValueType(0);
+  if (VT != MVT::v4i16 && VT != MVT::v2i32)
+    return SDValue();
+
+  auto MatchExtend = [](SDValue V, unsigned ExtendOpcode, MVT SrcVT,
+                        SDValue &Src) {
+    return sd_match(
+        V, m_OneUse(m_Node(ExtendOpcode, m_Value(Src, m_SpecificVT(SrcVT)))));
+  };
+
+  auto Match = [&](SDValue Ext, SDValue Add, SDValue &Acc, SDValue &A,
+                   SDValue &B, bool &IsSExt) {
+    MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+    unsigned ExtendOpcode = Ext.getOpcode();
+    if (ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND)
+      return false;
+
+    if (!MatchExtend(Ext, ExtendOpcode, SrcVT, B))
+      return false;
+
+    if (!sd_match(Add, m_OneUse(m_Add(m_Value(), m_Value()))))
+      return false;
+
+    if (MatchExtend(Add.getOperand(0), ExtendOpcode, SrcVT, A))
+      Acc = Add.getOperand(1);
+    else if (MatchExtend(Add.getOperand(1), ExtendOpcode, SrcVT, A))
+      Acc = Add.getOperand(0);
+    else
+      return false;
+
+    if (Acc.getValueType() != VT)
+      return false;
+
+    IsSExt = ExtendOpcode == ISD::SIGN_EXTEND;
+    return true;
+  };
+
+  SDValue Acc, A, B;
+  bool IsSExt;
+  if (!Match(N->getOperand(0), N->getOperand(1), Acc, A, B, IsSExt) &&
+      !Match(N->getOperand(1), N->getOperand(0), Acc, A, B, IsSExt))
+    return SDValue();
+
+  if (VT == MVT::v4i16 && !IsSExt)
+    return SDValue();
+
+  SDLoc DL(N);
+  MVT LegalSrcVT = VT == MVT::v4i16 ? MVT::v8i8 : MVT::v4i16;
+  MVT SrcVT = VT == MVT::v4i16 ? MVT::v4i8 : MVT::v2i16;
+  A = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, A, DAG.getUNDEF(SrcVT));
+  B = DAG.getNode(ISD::CONCAT_VECTORS, DL, LegalSrcVT, B, DAG.getUNDEF(SrcVT));
+
+  SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, LegalSrcVT, A, B);
+  if (VT == MVT::v4i16) {
+    SDValue ZipAsVT = DAG.getBitcast(VT, Zip);
+    SDValue Low = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, VT, ZipAsVT,
+                              DAG.getValueType(MVT::v4i8));
+    SDValue High = DAG.getNode(RISCVISD::PSRA, DL, VT, ZipAsVT,
+                               DAG.getConstant(8, DL, MVT::i64));
+    return DAG.getNode(ISD::ADD, DL, VT,
+                       DAG.getNode(ISD::ADD, DL, VT, Acc, Low), High);
+  }
+
+  SDValue Ones = DAG.getConstant(1, DL, LegalSrcVT);
+  unsigned Opc = IsSExt ? RISCVISD::PM2ADDA_H : RISCVISD::PM2ADDAU_H;
+  return DAG.getNode(Opc, DL, VT, Acc, Zip, Ones);
+}
+
 static SDValue performADDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const RISCVSubtarget &Subtarget) {
@@ -18655,6 +18754,8 @@ static SDValue performADDCombine(SDNode *N,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+  if (SDValue V = combinePExtWideningAddAcc(N, DAG, Subtarget))
     return V;
   if (SDValue V = combinePExtWideningAddSub(N, DAG, Subtarget))
     return V;
@@ -22638,7 +22739,7 @@ static SDValue useInversedSetcc(SDNode *N, SelectionDAG &DAG,
   // Replace (setcc eq (and x, C)) with (setcc ne (and x, C))) to generate
   // BEXTI, where C is power of 2.
   if (Subtarget.hasBEXTILike() && VT.isScalarInteger() &&
-      (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())) {
+      (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXTHeadCondMov())) {
     SDValue LHS = Cond.getOperand(0);
     SDValue RHS = Cond.getOperand(1);
     ISD::CondCode CC = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
@@ -27921,14 +28022,19 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Emit the call.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  // Use software guarded branch for large code model non-indirect calls
-  // Tail call to external symbol will have a null CLI.CB and we need another
-  // way to determine the callsite type
-  bool NeedSWGuarded = false;
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
-      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol))
-    NeedSWGuarded = true;
+  // Tail calls need software guarded branch (X7) when cf-protection-branch is
+  // active: PseudoTAIL expands to JALR X0, X6, 0 which lpad rejects, while
+  // PseudoTAILX7 expands to JALR X0, X7, 0 which lpad accepts.
+  // Non-tail calls only need SW_GUARDED in Large code model: in non-Large,
+  // PseudoCALL uses X1 (JALR X1, X1, 0) which lpad accepts as a return address.
+  bool NeedSWGuardedTail = false;
+  bool NeedSWGuardedCall = false;
+  if (MF.getInfo<RISCVMachineFunctionInfo>()->hasCFProtectionBranch() &&
+      ((CLI.CB && !CLI.CB->isIndirectCall()) || CalleeIsLargeExternalSymbol)) {
+    NeedSWGuardedTail = true;
+    if (getTargetMachine().getCodeModel() == CodeModel::Large)
+      NeedSWGuardedCall = true;
+  }
 
   // Use special pseudo for returns_twice calls (e.g., setjmp) when
   // cf-protection-branch is enabled, to ensure LPAD is inserted after the call.
@@ -27939,7 +28045,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
     unsigned CallOpc =
-        NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
+        NeedSWGuardedTail ? RISCVISD::SW_GUARDED_TAIL : RISCVISD::TAIL;
     SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
@@ -27951,7 +28057,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   unsigned CallOpc;
   // FIXME: Large Code Model + Zicfilp: SW_GUARDED_CALL takes priority over
   // LPAD_CALL for returns_twice calls, breaking LPAD alignment.
-  if (NeedSWGuarded)
+  if (NeedSWGuardedCall)
     CallOpc = RISCVISD::SW_GUARDED_CALL;
   else if (NeedLpadCall && CLI.CB->isIndirectCall())
     CallOpc = RISCVISD::LPAD_CALL_INDIRECT;
@@ -29604,7 +29710,7 @@ RISCVTargetLowering::BuildSDIVPow2(SDNode *N, const APInt &Divisor,
 
 bool RISCVTargetLowering::shouldFoldSelectWithSingleBitTest(
     EVT VT, const APInt &AndMask) const {
-  if (Subtarget.hasCZEROLike() || Subtarget.hasVendorXTHeadCondMov())
+  if (Subtarget.hasStdExtZicond() || Subtarget.hasVendorXTHeadCondMov())
     return !Subtarget.hasBEXTILike() && AndMask.ugt(1024);
   return TargetLowering::shouldFoldSelectWithSingleBitTest(VT, AndMask);
 }
