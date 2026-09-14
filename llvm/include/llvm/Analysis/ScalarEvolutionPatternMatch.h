@@ -332,6 +332,11 @@ template <typename Op0_t, typename Op1_t> struct SCEVURem_match {
       // (SomeExpr + (-(SomeExpr / B) * B)).
       if (Expr == SE.getURemExpr(A, B))
         return Op0.match(A) && Op1.match(B);
+      // Power-of-two B: (A + (-B) * (A u/ B)).
+      const auto *BC = dyn_cast<SCEVConstant>(B);
+      if (BC && BC->getAPInt().isPowerOf2() &&
+          Mul == SE.getMulExpr(SE.getNegativeSCEV(B), SE.getUDivExpr(A, B)))
+        return Op0.match(A) && Op1.match(B);
       return false;
     };
 
