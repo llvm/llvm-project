@@ -511,9 +511,8 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
 
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
-      builder, initiateOp.getLoc(),
-      /*cleanup=*/initiateOp.getCleanup() || reachesCleanup,
-      /*catch_all=*/catchAll, catchTypeList,
+      builder, initiateOp.getLoc(), initiateOp.getCleanup() || reachesCleanup,
+      catchAll, catchTypeList,
       /*filter_type_list=*/mlir::ArrayAttr{});
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),

@@ -20,7 +20,6 @@ cir.func @dispatch_with_filter() {
     unwind : ^bb6
   ]
 ^bb4(%eh_token.1: !cir.eh_token):
-  // expected-error@+1 {{NYI: EH ABI lowering of 'cir.eh.unexpected'}}
   cir.eh.unexpected %eh_token.1 : !cir.eh_token
 ^bb5:
   cir.return
@@ -51,12 +50,32 @@ cir.func @dispatch_with_empty_filter() {
     unwind : ^bb6
   ]
 ^bb4(%eh_token.1: !cir.eh_token):
-  // expected-error@+1 {{NYI: EH ABI lowering of 'cir.eh.unexpected'}}
   cir.eh.unexpected %eh_token.1 : !cir.eh_token
 ^bb5:
   cir.return
 ^bb6(%eh_token.2: !cir.eh_token):
   cir.unreachable
+}
+
+}
+
+// -----
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+cir.func private @_Z8externalv()
+
+// The dispatch of a dynamic exception specification is diagnosed before its
+// 'cir.eh.unexpected' is reached, so the diagnostic for the operation itself
+// needs a function that has no 'filter' handler.
+cir.func @unexpected_without_dispatch() {
+  cir.try_call @_Z8externalv() ^bb1, ^bb2 : () -> ()
+^bb1:
+  cir.return
+^bb2:
+  %0 = cir.eh.initiate : !cir.eh_token
+  // expected-error@+1 {{NYI: EH ABI lowering of 'cir.eh.unexpected'}}
+  cir.eh.unexpected %0 : !cir.eh_token
 }
 
 }
