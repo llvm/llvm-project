@@ -1908,9 +1908,7 @@ multiclass VPseudoILoad<bit Ordered> {
                                     !gt(idxEMULOctuple, 8),
                                     !ne(dataEEW, idxEEW));
           defvar TypeConstraints =
-            !cond(!not(EarlyClobber) : 1,
-                  !gt(dataEEW, idxEEW) : !if(!ge(idxEMULOctuple, 8), 3, 1),
-                  true : 2);
+            !if(!eq(dataEEW, idxEEW), 1, !if(!gt(dataEEW, idxEEW), !if(!ge(idxEMULOctuple, 8), 3, 1), 2));
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, EarlyClobber, TypeConstraints>,
