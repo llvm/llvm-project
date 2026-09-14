@@ -17,7 +17,7 @@ int f() { return getS().x; }
 // CIR: cir.func {{.*}}@_Z1fv()
 // CIR:   %[[RET:.*]] = cir.alloca "__retval"
 // CIR:   %[[TMP:.*]] = cir.alloca "temp.lvalue"
-// CIR:   cir.call @_Z4getSv(%[[TMP]]) : (!cir.ptr<!rec_S> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_S, llvm.writable}) -> ()
+// CIR:   cir.call @_Z4getSv(%[[TMP]]) : (!cir.ptr<!rec_S> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_S, llvm.writable}) -> ()
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[X:.*]] = cir.get_member %[[TMP]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
 // CIR:     %[[VAL:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i

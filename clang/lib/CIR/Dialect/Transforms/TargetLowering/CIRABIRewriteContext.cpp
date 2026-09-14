@@ -227,6 +227,12 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
       // across the call.
       mlir::Type pointeeTy = origArgTypes[oldIdx];
       mlir::NamedAttrList attrs(existing);
+      // Record that the ABI introduced this pointer, and which kind of slot
+      // it is.
+      attrs.set(CIRDialect::getABISlotAttrName(),
+                cir::ABISlotKindAttr::get(
+                    ctx, ac.byVal ? cir::ABISlotKind::Byval
+                                  : cir::ABISlotKind::NonByval));
       attrs.set(mlir::LLVM::LLVMDialect::getAlignAttrName(),
                 builder.getI64IntegerAttr(ac.indirectAlign.value()));
       attrs.set(mlir::LLVM::LLVMDialect::getNoUndefAttrName(),
@@ -889,6 +895,9 @@ SmallVector<mlir::NamedAttribute> buildSretSlotAttrs(mlir::OpBuilder &builder,
                                                      uint64_t align,
                                                      bool withNoalias) {
   SmallVector<mlir::NamedAttribute> attrs;
+  attrs.push_back(builder.getNamedAttr(
+      CIRDialect::getABISlotAttrName(),
+      cir::ABISlotKindAttr::get(builder.getContext(), cir::ABISlotKind::Sret)));
   // The sret type must be carried explicitly: LLVM's sret attribute requires
   // it, and once the CIR `!cir.ptr<retTy>` lowers to an opaque LLVM `ptr` the
   // pointee type can no longer be recovered from the pointer.

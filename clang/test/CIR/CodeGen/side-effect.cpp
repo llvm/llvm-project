@@ -7,6 +7,10 @@
 
 struct Big { long a, b, c, d; };
 struct Small { int x; };
+struct WithDtor { int x; ~WithDtor(); };
+struct Empty {};
+struct SmallPair { int a, b; };
+struct TwoLong { long a, b; };
 
 extern "C" {
 
@@ -19,6 +23,10 @@ __attribute__((const)) int const_ptr(const int *p);
 __attribute__((const)) int const_variadic_decl(int n, ...);
 __attribute__((const)) int const_byval2(int n, Big b);
 __attribute__((const)) int const_bigref(const Big &b);
+__attribute__((const)) int const_non_byval(WithDtor w);
+__attribute__((const)) int const_ignore(Empty e);
+__attribute__((const)) int const_coerced(SmallPair p);
+__attribute__((const)) int const_flattened(TwoLong t);
 
 // FIXME: We should figure out how to better print this on functions in the
 // future.
@@ -82,8 +90,24 @@ void use() {
 
   // A reference is a direct pointer slot that still carries align, so neither
   // align nor a record pointee can stand in for an indirect slot.
-  // CIR: cir.call @const_bigref({{.*}}) side_effect(const)
+  // CIR: cir.call @const_bigref({{.*}}) side_effect(const) : (!cir.ptr<!rec_Big> {llvm.align{{.*}}) -> !s32i
   const_bigref(b);
+
+  // A non-trivially-destructible class passes indirectly without byval, and
+  // its slot carries no LLVM attribute that names it as the ABI's own.
+  WithDtor w{};
+  // CIR: cir.call @const_non_byval({{.*}}) side_effect(const) : (!cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>{{.*}}}) -> !s32i
+  const_non_byval(w);
+
+  // An argument the ABI rewrites without handing over memory keeps
+  // memory(none): the slot is dropped, coerced into a register, or flattened
+  // into registers.  No argument dictionary means no slot mark.
+  // CIR: cir.call @const_ignore() side_effect(const) : () -> !s32i
+  const_ignore(Empty{});
+  // CIR: cir.call @const_coerced(%{{.+}}) side_effect(const) : (!u64i) -> !s32i
+  const_coerced(SmallPair{});
+  // CIR: cir.call @const_flattened(%{{.+}}, %{{.+}}) side_effect(const) : (!s64i, !s64i) -> !s32i
+  const_flattened(TwoLong{});
 }
 
 }
@@ -114,6 +138,10 @@ void use() {
 // LLVM: call i32 @const_byval2(i32 noundef 1, ptr noundef byval(%struct.Big) align 8 %{{.+}}) #[[ARGMEM_CALL]]
 // LLVM: call void @const_sret_def(ptr dead_on_unwind writable sret(%struct.Big) align 8 %{{.+}}) #[[ARGMEM_CALL]]
 // LLVM: call i32 @const_bigref(ptr noundef nonnull align 8 dereferenceable(32) %{{.+}}) #[[NONE_CALL]]
+// LLVM: call i32 @const_non_byval(ptr nofreeobj noundef align 4 dereferenceable(4) %{{.+}}) #[[ARGMEM_CALL]]
+// LLVM: call i32 @const_ignore() #[[NONE_CALL]]
+// LLVM: call i32 @const_coerced(i64 %{{.+}}) #[[NONE_CALL]]
+// LLVM: call i32 @const_flattened(i64 %{{.+}}, i64 %{{.+}}) #[[NONE_CALL]]
 
 // Declarations.
 // LLVM: declare void @const_sret(ptr dead_on_unwind writable sret(%struct.Big) align 8) #[[ARGMEM_DECL:[0-9]+]]
@@ -125,6 +153,10 @@ void use() {
 // LLVM: declare i32 @const_variadic_decl(i32 noundef, ...) #[[ARGMEM_DECL]]
 // LLVM: declare i32 @const_byval2(i32 noundef, ptr noundef byval(%struct.Big) align 8) #[[ARGMEM_DECL]]
 // LLVM: declare i32 @const_bigref(ptr noundef nonnull align 8 dereferenceable(32)) #[[NONE_DECL]]
+// LLVM: declare i32 @const_non_byval(ptr nofreeobj noundef align 4 dereferenceable(4)) #[[ARGMEM_DECL]]
+// LLVM: declare i32 @const_ignore() #[[NONE_DECL]]
+// LLVM: declare i32 @const_coerced(i64) #[[NONE_DECL]]
+// LLVM: declare i32 @const_flattened(i64, i64) #[[NONE_DECL]]
 
 // The trailing wildcard covers target-features and the other codegen-option
 // strings, which differ between the emits.

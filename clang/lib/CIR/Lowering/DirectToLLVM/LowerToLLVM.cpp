@@ -420,19 +420,16 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
   return value;
 }
 
-/// Whether the ABI hands the callee memory through a pointer argument: an
-/// sret slot for an indirect return, or byval / byref for an indirect
-/// argument.  Such a function reaches argument memory no matter what its
-/// source-level attributes say, so `const` and `pure` cannot lower to a
-/// memory effect that excludes it.
-static bool hasABIIndirectMemoryArg(mlir::ArrayAttr argAttrs) {
+/// Whether any argument is a pointer slot the ABI introduced, which
+/// CallConvLowering marks with cir.abi_slot.  Such a callee reaches that
+/// memory whatever its source-level attributes say, so `const` and `pure`
+/// cannot lower to a memory effect that excludes argument memory.
+static bool hasABISlotArg(mlir::ArrayAttr argAttrs) {
   if (!argAttrs)
     return false;
   return llvm::any_of(argAttrs, [](mlir::Attribute a) {
-    auto dict = mlir::cast<mlir::DictionaryAttr>(a);
-    return dict.contains(mlir::LLVM::LLVMDialect::getStructRetAttrName()) ||
-           dict.contains(mlir::LLVM::LLVMDialect::getByValAttrName()) ||
-           dict.contains(mlir::LLVM::LLVMDialect::getByRefAttrName());
+    return mlir::cast<mlir::DictionaryAttr>(a).contains(
+        CIRDialect::getABISlotAttrName());
   });
 }
 
@@ -471,9 +468,8 @@ void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
                               bool &noUnwind, bool &willReturn,
                               bool &noReturn) {
-  bool accessesArgMemory =
-      hasABIIndirectMemoryArg(callOp->getAttrOfType<mlir::ArrayAttr>(
-          CIRDialect::getArgAttrsAttrName()));
+  bool accessesArgMemory = hasABISlotArg(callOp->getAttrOfType<mlir::ArrayAttr>(
+      CIRDialect::getArgAttrsAttrName()));
   memoryEffect =
       buildMemoryEffects(callOp->getContext(), sideEffect, accessesArgMemory);
 
@@ -2121,15 +2117,13 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
-/// The `llvm.byval`, `llvm.sret`, and `llvm.byref` argument attributes carry
-/// the pointee type as a TypeAttr.  After the CallConvLowering pass that type
-/// is still a CIR record; remap it to the lowered LLVM type so translation to
-/// LLVM IR does not encounter a CIR type in an attribute.  Returns the input
-/// unchanged when there is nothing to convert.
-static mlir::ArrayAttr
-convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
-                     const mlir::TypeConverter &converter,
-                     mlir::MLIRContext *ctx) {
+/// `llvm.byval` and `llvm.sret` carry their pointee type as a TypeAttr, which
+/// arrives as a CIR record, so remap it to the lowered type.
+/// cir.abi_slot has no LLVM counterpart and is dropped.  The memory-effect
+/// sites read it from the CIR op, which this leaves untouched.
+static mlir::ArrayAttr lowerArgAttrs(mlir::ArrayAttr argAttrs,
+                                     const mlir::TypeConverter &converter,
+                                     mlir::MLIRContext *ctx) {
   if (!argAttrs)
     return argAttrs;
   bool changed = false;
@@ -2137,21 +2131,29 @@ convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
   loweredArgAttrs.reserve(argAttrs.size());
   for (mlir::Attribute a : argAttrs) {
     auto dict = cast<mlir::DictionaryAttr>(a);
-    SmallVector<mlir::NamedAttribute> entries(dict.begin(), dict.end());
-    for (mlir::NamedAttribute &entry : entries) {
+    SmallVector<mlir::NamedAttribute> entries;
+    entries.reserve(dict.size());
+    for (mlir::NamedAttribute entry : dict) {
       StringRef name = entry.getName().strref();
-      if (name != mlir::LLVM::LLVMDialect::getByValAttrName() &&
-          name != mlir::LLVM::LLVMDialect::getStructRetAttrName() &&
-          name != mlir::LLVM::LLVMDialect::getByRefAttrName())
-        continue;
-      auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue());
-      if (!typeAttr)
-        continue;
-      mlir::Type lowered = converter.convertType(typeAttr.getValue());
-      if (lowered && lowered != typeAttr.getValue()) {
-        entry.setValue(mlir::TypeAttr::get(lowered));
+      if (name == CIRDialect::getABISlotAttrName()) {
         changed = true;
+        continue;
       }
+      if (name == mlir::LLVM::LLVMDialect::getByValAttrName() ||
+          name == mlir::LLVM::LLVMDialect::getStructRetAttrName()) {
+        if (auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue())) {
+          mlir::Type lowered = converter.convertType(typeAttr.getValue());
+          if (lowered && lowered != typeAttr.getValue()) {
+            entry.setValue(mlir::TypeAttr::get(lowered));
+            changed = true;
+          }
+        }
+      }
+      // MLIR routes attribute verification to the dialect named by the prefix,
+      // so no verifier is ever asked about a surviving `cir.` key.
+      assert(!name.starts_with("cir.") &&
+             "CIR argument attribute leaked into the LLVM dialect");
+      entries.push_back(entry);
     }
     loweredArgAttrs.push_back(mlir::DictionaryAttr::get(ctx, entries));
   }
@@ -2174,9 +2176,8 @@ static void lowerCallAttributes(cir::CIRCallOpInterface op,
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     if (attr.getName() == CIRDialect::getArgAttrsAttrName()) {
       auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
-      result.emplace_back(
-          attr.getName(),
-          convertTypedArgAttrs(argAttrs, converter, op->getContext()));
+      result.emplace_back(attr.getName(),
+                          lowerArgAttrs(argAttrs, converter, op->getContext()));
       continue;
     }
     result.push_back(attr);
@@ -2715,7 +2716,7 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
       auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
       result.emplace_back(
           attr.getName(),
-          convertTypedArgAttrs(argAttrs, *getTypeConverter(), getContext()));
+          lowerArgAttrs(argAttrs, *getTypeConverter(), getContext()));
       continue;
     }
     result.push_back(attr);
@@ -2802,8 +2803,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       sideEffectKind && *sideEffectKind != cir::SideEffect::All) {
     // A variadic callee's declared parameters do not cover every argument, so
     // its argument memory widens too.
-    bool accessesArgMemory = hasABIIndirectMemoryArg(op.getArgAttrsAttr()) ||
-                             op.getFunctionType().isVarArg();
+    bool accessesArgMemory =
+        hasABISlotArg(op.getArgAttrsAttr()) || op.getFunctionType().isVarArg();
     fn.setMemoryEffectsAttr(buildMemoryEffects(fn.getContext(), *sideEffectKind,
                                                accessesArgMemory));
     fn.setNoUnwind(true);

@@ -30,7 +30,7 @@ module attributes {
     cir.return %2 : !s64i
   }
 
-  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
+  // CHECK: cir.func{{.*}} @take_big(%arg0: !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s64i
   // CHECK:   %[[VAL:.*]] = cir.load %arg0 : !cir.ptr<!rec_Big>, !rec_Big
   // CHECK:   %[[LOCAL:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_Big>
   // CHECK:   cir.store %[[VAL]], %[[LOCAL]] : !rec_Big, !cir.ptr<!rec_Big>
@@ -44,7 +44,7 @@ module attributes {
     cir.return %1 : !rec_Big
   }
 
-  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable})
+  // CHECK: cir.func{{.*}} @ret_big(%arg0: !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable})
 
   // A small struct that cannot pass in registers (non-trivial for ABI) is
   // passed indirectly even though its size would otherwise fit a register.
@@ -52,7 +52,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nofreeobj, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_noregs(%arg0: !cir.ptr<!rec_NoRegs> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 8 : i64, llvm.nofreeobj, llvm.noundef})
 
   // {__int128, char} spans more than two eightbytes, so it does not fit in
   // registers: the argument is byval and the return uses sret.
@@ -60,7 +60,7 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @take_big128(%arg0: !cir.ptr<!rec_Big128> {llvm.align = 16 : i64, llvm.byval = !rec_Big128, llvm.noundef})
+  // CHECK: cir.func{{.*}} @take_big128(%arg0: !cir.ptr<!rec_Big128> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 16 : i64, llvm.byval = !rec_Big128, llvm.noundef})
 
   cir.func @ret_big128() -> !rec_Big128 {
     %0 = cir.alloca "r" align(16) : !cir.ptr<!rec_Big128>
@@ -68,5 +68,5 @@ module attributes {
     cir.return %1 : !rec_Big128
   }
 
-  // CHECK: cir.func{{.*}} @ret_big128(%arg0: !cir.ptr<!rec_Big128> {llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big128, llvm.writable})
+  // CHECK: cir.func{{.*}} @ret_big128(%arg0: !cir.ptr<!rec_Big128> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 16 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big128, llvm.writable})
 }

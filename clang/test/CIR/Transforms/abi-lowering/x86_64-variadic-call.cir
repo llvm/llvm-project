@@ -28,7 +28,7 @@ module attributes {
 
   // A rewritten variadic declaration keeps its ellipsis.
   // CHECK: cir.func private @variadic_pair(!u64i, ...) -> !s32i
-  // CHECK: cir.func private @variadic_big(!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !cir.ptr<!s8i>, ...)
+  // CHECK: cir.func private @variadic_big(!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !cir.ptr<!s8i>, ...)
 
   // Passing nothing through the ellipsis leaves the call at the callee's
   // declared parameters.
@@ -86,7 +86,7 @@ module attributes {
 
   // CHECK: cir.func{{.*}} @pass_two_exhausted(%arg0: !cir.ptr<!s8i>, %arg1: !s32i, %arg2: !s64i, %arg3: !s64i)
   // CHECK:   %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Two>
-  // CHECK:   cir.call @variadic(%arg0, %arg1, %arg1, %arg1, %arg1, %arg1, %[[SLOT]]) : (!cir.ptr<!s8i>, !s32i, !s32i, !s32i, !s32i, !s32i, !cir.ptr<!rec_Two> {llvm.align = 8 : i64, llvm.byval = !rec_Two, llvm.noundef}) -> !s32i
+  // CHECK:   cir.call @variadic(%arg0, %arg1, %arg1, %arg1, %arg1, %arg1, %[[SLOT]]) : (!cir.ptr<!s8i>, !s32i, !s32i, !s32i, !s32i, !s32i, !cir.ptr<!rec_Two> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Two, llvm.noundef}) -> !s32i
 
   // A record larger than two eightbytes is memory class no matter how many
   // registers are free.
@@ -95,9 +95,9 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @pass_big(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
+  // CHECK: cir.func{{.*}} @pass_big(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef})
   // CHECK:   %[[BSLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
-  // CHECK:   cir.call @variadic(%arg0, %[[BSLOT]]) : (!cir.ptr<!s8i>, !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
+  // CHECK:   cir.call @variadic(%arg0, %[[BSLOT]]) : (!cir.ptr<!s8i>, !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> !s32i
 
   // An empty record occupies no register and is dropped, without displacing
   // the argument behind it.
@@ -129,8 +129,8 @@ module attributes {
     cir.return
   }
 
-  // CHECK: cir.func{{.*}} @pass_wide_vector(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!cir.vector<8 x !cir.float>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noundef})
-  // CHECK:   cir.call @variadic(%arg0, %{{.*}}) : (!cir.ptr<!s8i>, !cir.ptr<!cir.vector<8 x !cir.float>> {llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noundef}) -> !s32i
+  // CHECK: cir.func{{.*}} @pass_wide_vector(%arg0: !cir.ptr<!s8i>, %arg1: !cir.ptr<!cir.vector<8 x !cir.float>> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noundef})
+  // CHECK:   cir.call @variadic(%arg0, %{{.*}}) : (!cir.ptr<!s8i>, !cir.ptr<!cir.vector<8 x !cir.float>> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 32 : i64, llvm.byval = !cir.vector<8 x !cir.float>, llvm.noundef}) -> !s32i
 
   // A declared parameter is coerced the same way whether or not the call also
   // passes ellipsis arguments.
@@ -149,8 +149,8 @@ module attributes {
     cir.return %0 : !rec_Big
   }
 
-  // CHECK: cir.func{{.*}} @pass_sret_return(%arg0: !cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable}, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
-  // CHECK:   cir.call @variadic_big(%arg0, %arg1, %arg2) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !cir.ptr<!s8i>, !s32i) -> ()
+  // CHECK: cir.func{{.*}} @pass_sret_return(%arg0: !cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_Big, llvm.writable}, %arg1: !cir.ptr<!s8i>, %arg2: !s32i)
+  // CHECK:   cir.call @variadic_big(%arg0, %arg1, %arg2) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}, !cir.ptr<!s8i>, !s32i) -> ()
 
   // An indirect variadic call whose ellipsis arguments all pass as written
   // needs no rewrite, and the callee pointer keeps its ellipsis.

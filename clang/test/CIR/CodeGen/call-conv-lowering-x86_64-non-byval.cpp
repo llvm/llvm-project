@@ -36,7 +36,7 @@ void callNonByval() {
 // CIR:         %[[TMP:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_WithDtor>
 // CIR:         cir.copy %[[T]] align(4) to %[[TMP]] align(4) : !cir.ptr<!rec_WithDtor>
 // CIR-NOT:     cir.load
-// CIR:         cir.call @_Z12takeNonByval8WithDtor(%[[TMP]]) : (!cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z12takeNonByval8WithDtor(%[[TMP]]) : (!cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:         cir.call @_ZN8WithDtorD1Ev(%[[TMP]])
 // CIR:         cir.call @_ZN8WithDtorD1Ev(%[[T]])
 
@@ -58,7 +58,7 @@ void callTwoNonByval() {
 // CIR:         %[[TMP_A:.*]] = cir.alloca "agg.tmp0" align(4) : !cir.ptr<!rec_WithDtor>
 // CIR:         %[[TMP_B:.*]] = cir.alloca "agg.tmp1" align(4) : !cir.ptr<!rec_WithDtor>
 // CIR-NOT:     cir.load
-// CIR:         cir.call @_Z15takeTwoNonByval8WithDtorS_(%[[TMP_A]], %[[TMP_B]]) : (!cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}, !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z15takeTwoNonByval8WithDtorS_(%[[TMP_A]], %[[TMP_B]]) : (!cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}, !cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR:         cir.call @_ZN8WithDtorD1Ev(%[[TMP_B]])
 // CIR:         cir.call @_ZN8WithDtorD1Ev(%[[TMP_A]])
 
@@ -84,7 +84,7 @@ void callCopyCtorNonByval() {
 // CIR:         cir.call @_ZN12WithCopyCtorC1Ev(%[[C]])
 // CIR:         cir.call @_ZN12WithCopyCtorC1ERKS_(%[[TMP]], %[[C]])
 // CIR-NOT:     cir.load
-// CIR:         cir.call @_Z20takeCopyCtorNonByval12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z20takeCopyCtorNonByval12WithCopyCtor(%[[TMP]]) : (!cir.ptr<!rec_WithCopyCtor> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z20callCopyCtorNonByvalv()
 // LLVM:         call void @_ZN12WithCopyCtorC1Ev(ptr noundef nonnull align 4 dereferenceable(4) %[[C:[^)]+]])
@@ -103,7 +103,7 @@ void callByval() {
 // CIR:         %[[V:.*]] = cir.load align(8) %[[TMP]] : !cir.ptr<!rec_Big>, !rec_Big
 // CIR:         %[[SLOT:.*]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
 // CIR:         cir.store %[[V]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR:         cir.call @_Z9takeByval3Big(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
+// CIR:         cir.call @_Z9takeByval3Big(%[[SLOT]]) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z9callByvalv()
 // LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP:[^,]+]], ptr align 8 %{{[^,]+}}, i64 32, i1 false)
@@ -136,12 +136,12 @@ void callInheritedCtor(WithDtor t) { Derived d(t); }
 
 // Both inheriting constructor variants hand their own parameter on unchanged.
 // CIR-LABEL: cir.func {{.*}}@_ZN7DerivedCI14BaseE8WithDtor
-// CIR-SAME:      %[[CI1ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
+// CIR-SAME:      %[[CI1ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
 // CIR-NOT:     cir.copy
 // CIR:         cir.call @_ZN7DerivedCI24BaseE8WithDtor(%{{.*}}, %[[CI1ARG]])
 
 // CIR-LABEL: cir.func {{.*}}@_ZN7DerivedCI24BaseE8WithDtor
-// CIR-SAME:      %[[ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
+// CIR-SAME:      %[[ARG:[^:]*]]: !cir.ptr<!rec_WithDtor> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 4 : i64, llvm.dereferenceable = 4 : i64, llvm.nofreeobj, llvm.noundef}
 // CIR-NOT:     cir.copy
 // CIR:         cir.call @_ZN4BaseC2E8WithDtor(%{{.*}}, %[[ARG]])
 

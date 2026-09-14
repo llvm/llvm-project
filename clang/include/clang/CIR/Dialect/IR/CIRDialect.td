@@ -83,6 +83,7 @@ def CIR_Dialect : Dialect {
     static llvm::StringRef getUniformWorkGroupSizeAttrName() { return "uniform_work_group_size"; }
     static llvm::StringRef getResAttrsAttrName() { return "res_attrs"; }
     static llvm::StringRef getArgAttrsAttrName() { return "arg_attrs"; }
+    static llvm::StringRef getABISlotAttrName() { return "cir.abi_slot"; }
     static llvm::StringRef getRecordLayoutsAttrName() { return "cir.record_layouts"; }
     static llvm::StringRef getTargetCPUAttrName() { return "cir.target-cpu"; }
     static llvm::StringRef getTuneCPUAttrName() { return "cir.tune-cpu"; }

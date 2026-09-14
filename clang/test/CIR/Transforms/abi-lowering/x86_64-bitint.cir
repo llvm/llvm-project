@@ -762,7 +762,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @take_o(
-  // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64
+  // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_O, llvm.noundef})
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_O>, !rec_O
   // CHECK-NEXT:    cir.return
@@ -783,7 +783,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @ret_o(
-  // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {llvm.align = 8 : i64
+  // CHECK-SAME:    %arg0: !cir.ptr<!rec_O> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_O
   // CHECK-SAME:    , llvm.writable})
   // CHECK-NEXT:    %[[Z:[0-9]+]] = cir.const #cir.zero : !rec_O
@@ -803,7 +803,7 @@ module attributes {
   }
 
   // CHECK-LABEL: cir.func{{.*}} @take_arr(
-  // CHECK-SAME:    %arg0: !cir.ptr<!rec_Arr> {llvm.align = 8 : i64
+  // CHECK-SAME:    %arg0: !cir.ptr<!rec_Arr> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64
   // CHECK-SAME:    , llvm.byval = !rec_Arr, llvm.noundef})
   // CHECK-NEXT:    %{{[0-9]+}} = cir.load %arg0 : !cir.ptr<!rec_Arr>, !rec_Arr
   // CHECK-NEXT:    cir.return

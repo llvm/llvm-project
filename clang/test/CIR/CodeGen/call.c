@@ -75,7 +75,7 @@ void f7(void) {
 // CIR:         %[[B:.+]] = cir.load align(4) %{{.+}} : !cir.ptr<!rec_Big>, !rec_Big
 // CIR-NEXT:    %[[SLOT:.+]] = cir.alloca "byval" align(8) : !cir.ptr<!rec_Big>
 // CIR-NEXT:    cir.store %[[B]], %[[SLOT]] : !rec_Big, !cir.ptr<!rec_Big>
-// CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
+// CIR-NEXT:    cir.call @f5(%[[SLOT]]) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<byval>, llvm.align = 8 : i64, llvm.byval = !rec_Big, llvm.noundef}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f7(){{.*}} {
 // LLVM:         %[[B:.+]] = load %struct.Big, ptr %{{.+}}, align 4
@@ -93,7 +93,7 @@ void f8(void) {
 
 // CIR-LABEL: cir.func{{.*}} @f8(){{.*}} {
 // CIR:         %[[B:.+]] = cir.alloca "b" align(4) init : !cir.ptr<!rec_Big>
-// CIR-NEXT:    cir.call @f6(%[[B]]) : (!cir.ptr<!rec_Big> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
+// CIR-NEXT:    cir.call @f6(%[[B]]) : (!cir.ptr<!rec_Big> {cir.abi_slot = #cir.abi_slot<sret>, llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
 
 // LLVM-LABEL: define{{.*}} void @f8(){{.*}} {
 // LLVM:        %[[B:.+]] = alloca %struct.Big, align 4

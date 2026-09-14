@@ -206,7 +206,7 @@ void TempInArray() {
 // CIR:        cir.do {
 // CIR-NEXT:     %[[CURRENT:.*]] = cir.load %[[ITER:.*]] : !cir.ptr<!cir.ptr<!rec_CausesTemp>>, !cir.ptr<!rec_CausesTemp>
 // CIR-NEXT:     cir.cleanup.scope {
-// CIR-NEXT:       cir.call @_ZN10CausesTempC1E4Temp(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR-NEXT:       cir.call @_ZN10CausesTempC1E4Temp(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR-NEXT:       cir.yield
 // CIR-NEXT:     } cleanup normal {
 // CIR-NEXT:       cir.call @_ZN4TempD1Ev(%[[TMP]]) nothrow
@@ -291,7 +291,7 @@ void Temp2InArray() {
 // CIR-NEXT:     %[[CURRENT:.*]] = cir.load %[[ITER:.*]] : !cir.ptr<!cir.ptr<!rec_CausesTemp2>>, !cir.ptr<!rec_CausesTemp2>
 // CIR-NEXT:     cir.call @_ZN5Temp2C1Ev(%[[TMP]])
 // CIR-NEXT:     cir.cleanup.scope {
-// CIR-NEXT:         cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
+// CIR-NEXT:         cir.call @_ZN11CausesTemp2C1E5Temp2(%[[CURRENT]], %[[TMP]]) : ({{.*}}, !cir.ptr<!rec_Temp2> {cir.abi_slot = #cir.abi_slot<non_byval>, llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nofreeobj, llvm.noundef}) -> ()
 // CIR-NEXT:         cir.yield
 // CIR-NEXT:       } cleanup normal {
 // CIR-NEXT:         cir.call @_ZN5Temp2D1Ev(%[[TMP]]) nothrow
