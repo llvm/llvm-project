@@ -3413,7 +3413,7 @@ def StrictFP : InheritableAttr {
   // This attribute has no spellings as it is only ever created implicitly.
   // Function uses strict floating point operations.
   let Spellings = [];
-  let Subjects = SubjectList<[Function]>;
+  let Subjects = SubjectList<[Function, ObjCMethod, Block]>;
   let Documentation = [InternalOnly];
 }
 
