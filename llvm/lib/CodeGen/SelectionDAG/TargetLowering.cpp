@@ -10806,12 +10806,6 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   unsigned TZ = Known.countMinTrailingZeros();
   unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
 
-  // If the active bits are not at the low end, shift them down
-  if (ShiftedActiveBits < Len && TZ > 0) {
-    Op = DAG.getNode(ISD::SRL, dl, VT, Op,
-                     DAG.getShiftAmountConstant(TZ, VT, dl));
-  }
-
   // Round up to 8-bit boundary for byte-oriented SWAR algorithm
   unsigned EffectiveLen = Len;
   if (ShiftedActiveBits > 0 && ShiftedActiveBits < Len)
@@ -10826,6 +10820,12 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   // Only expand vector types if we have the appropriate vector bit operations.
   if (VT.isVector() && !canExpandVectorCTPOP(*this, VT))
     return SDValue();
+
+  // If the active bits are not at the low end, shift them down
+  if (ShiftedActiveBits < Len && TZ > 0) {
+    Op = DAG.getNode(ISD::SRL, dl, VT, Op,
+                     DAG.getShiftAmountConstant(TZ, VT, dl));
+  }
 
   // This is the "best" algorithm from
   // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
