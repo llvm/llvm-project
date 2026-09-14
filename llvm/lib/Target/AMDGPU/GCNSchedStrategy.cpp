@@ -2447,9 +2447,8 @@ bool RewriteMFMAFormStage::initHeuristics(
   SmallPtrSet<MachineInstr *, 16> RewriteSet;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isRewriteCandidate(&MI))
-        continue;
-      RewriteSet.insert(&MI);
+      if (isRewriteCandidate(&MI))
+        RewriteSet.insert(&MI);
     }
   }
 
