@@ -1221,6 +1221,37 @@ static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     invalidateAndEraseMI(GR, MI);
 }
 
+// Returns the value of the switch case operand defined by Def. For G_CONSTANTs,
+// this is in operand 1. For SPIR-V constants, this is in the literal operands
+// after the type.
+static const ConstantInt *getSwitchCaseValue(const MachineInstr *Def,
+                                             const MachineRegisterInfo &MRI) {
+  if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
+    return Def->getOperand(1).getCImm();
+
+  LLVMContext &Ctx = Def->getMF()->getFunction().getContext();
+  LLT Ty = MRI.getType(Def->getOperand(0).getReg());
+  assert(Ty.isValid() && "Expected a typed switch case value");
+  unsigned BitWidth = Ty.getScalarSizeInBits();
+
+  switch (Def->getOpcode()) {
+  case SPIRV::OpConstantNull:
+  case SPIRV::OpConstantI:
+    break;
+  default:
+    llvm_unreachable("Unexpected definition of a switch case value");
+  }
+
+  // Operands after the type are 32-bit literal words, least significant
+  // first, as written by addNumImm().
+  APInt Val(BitWidth, 0);
+  for (unsigned I = 2, E = Def->getNumExplicitOperands(); I != E; ++I) {
+    uint32_t Word = static_cast<uint32_t>(Def->getOperand(I).getImm());
+    Val |= APInt(BitWidth, Word).shl((I - 2) * 32);
+  }
+  return ConstantInt::get(Ctx, Val);
+}
+
 // LLVM allows the switches to use registers as cases, while SPIR-V required
 // those to be immediate values. This function replaces such operands with the
 // equivalent immediate constant.
@@ -1241,7 +1272,7 @@ static void processSwitchesConstants(MachineFunction &MF,
         Register Reg = MI.getOperand(i).getReg();
         MachineInstr *ConstInstr = getDefInstrMaybeConstant(Reg, &MRI);
         NewOperands.push_back(
-            MachineOperand::CreateCImm(ConstInstr->getOperand(1).getCImm()));
+            MachineOperand::CreateCImm(getSwitchCaseValue(ConstInstr, MRI)));
 
         NewOperands.push_back(MI.getOperand(i + 1));
       }

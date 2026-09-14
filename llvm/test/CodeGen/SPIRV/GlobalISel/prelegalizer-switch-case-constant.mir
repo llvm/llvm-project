@@ -1,0 +1,33 @@
+# RUN: llc -O0 -verify-machineinstrs -mtriple=spirv64-unknown-unknown -run-pass=spirv-prelegalizer %s -o - | FileCheck %s
+
+# No LLVM IR produces a case value wider than 32 bits, or a zero one, that the
+# module has already emitted, so both constants are written here directly. The
+# four literal words 1, 2, 3, 4 decode low word first.
+
+--- |
+  define void @case_constants() {
+  entry:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+---
+name:            case_constants
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: case_constants
+  ; CHECK: intrinsic(@llvm.spv.switch), {{.*}}, i128 316912650112397582603894390785, {{.*}}, i128 0
+
+  bb.0.entry:
+    %0:type(s64) = OpTypeInt 128, 0
+    %1:iid(s128) = OpConstantI %0(s64), 1, 2, 3, 4
+    %2:iid(s128) = OpConstantNull %0(s64)
+    %3:_(s128) = G_IMPLICIT_DEF
+    %4:_(p0) = G_BLOCK_ADDR blockaddress(@case_constants, %ir-block.exit)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.switch), %3(s128), %4(p0), %1(s128), %4(p0), %2(s128), %4(p0)
+    G_BRINDIRECT %4(p0)
+
+  bb.1.exit (ir-block-address-taken %ir-block.exit):
+    OpReturn
+...
