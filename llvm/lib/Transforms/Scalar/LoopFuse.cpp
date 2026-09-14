@@ -87,7 +87,6 @@ STATISTIC(NonEqualTripCount, "Loop trip counts are not the same");
 STATISTIC(
     NonEmptyPreheader,
     "Loop has a non-empty preheader with instructions that cannot be moved");
-STATISTIC(FusionNotBeneficial, "Fusion is not beneficial");
 STATISTIC(InsufficientReuse,
           "Fusion has insufficient cross-loop reused values");
 STATISTIC(NonIdenticalGuards, "Candidates have different guards");
@@ -103,17 +102,6 @@ STATISTIC(NumSunkInsts, "Number of sunk preheader instructions.");
 STATISTIC(NumDA, "DA checks passed");
 
 namespace {
-
-enum class FusionProfitabilityResult {
-  Profitable,
-  InsufficientReuse,
-};
-
-struct FusionProfitabilityInfo {
-  FusionProfitabilityResult Result =
-      FusionProfitabilityResult::Profitable;
-  unsigned ReusedValueCount = 0;
-};
 
 using ReusedValueSet = SmallPtrSet<const Instruction *, 4>;
 
@@ -684,19 +672,11 @@ private:
   }
 
   /// Determine if it is beneficial to fuse two loops.
-  bool isBeneficialFusion(const FusionCandidate &FC0,
-                          const FusionCandidate &FC1,
-                          FusionProfitabilityInfo &Info) const {
+  bool isBeneficialFusion(unsigned ReusedValueCount) const {
     if (!Opts.loop_fusion_cost_model)
       return true;
 
-    if (Info.ReusedValueCount < Opts.loop_fusion_min_reused_values) {
-      Info.Result = FusionProfitabilityResult::InsufficientReuse;
-      return false;
-    }
-
-    Info.Result = FusionProfitabilityResult::Profitable;
-    return true;
+    return ReusedValueCount >= Opts.loop_fusion_min_reused_values;
   }
 
   /// Computes the integer difference in trip counts:
@@ -975,23 +955,16 @@ private:
           }
         }
 
-        FusionProfitabilityInfo ProfitabilityInfo;
-        ProfitabilityInfo.ReusedValueCount = ReusedValues.size();
-        bool BeneficialToFuse =
-            isBeneficialFusion(FC0, FC1, ProfitabilityInfo);
+        unsigned ReusedValueCount = ReusedValues.size();
+        bool BeneficialToFuse = isBeneficialFusion(ReusedValueCount);
+        LLVM_DEBUG(dbgs() << "\tFusion appears to be "
+                          << (BeneficialToFuse ? "" : "un")
+                          << "profitable!\n");
         if (!BeneficialToFuse) {
-          switch (ProfitabilityInfo.Result) {
-          case FusionProfitabilityResult::InsufficientReuse:
-            ++InsufficientReuse;
-            reportFusionInsufficientReuse(FC0, FC1, ProfitabilityInfo);
-            break;
-          case FusionProfitabilityResult::Profitable:
-            llvm_unreachable("Unexpected profitable fusion result");
-          }
+          ++InsufficientReuse;
+          reportFusionInsufficientReuse(FC0, FC1, ReusedValueCount);
           continue;
         }
-
-        LLVM_DEBUG(dbgs() << "\tFusion appears to be profitable!\n");
 
         // All analysis has completed and has determined that fusion is legal
         // and profitable. At this point, start transforming the code and
@@ -1770,8 +1743,8 @@ private:
 
   void reportFusionInsufficientReuse(
       const FusionCandidate &FC0, const FusionCandidate &FC1,
-      const FusionProfitabilityInfo &Info) {
-    assert(Info.ReusedValueCount < Opts.loop_fusion_min_reused_values &&
+      unsigned ReusedValueCount) {
+    assert(ReusedValueCount < Opts.loop_fusion_min_reused_values &&
            "Expected insufficient reuse");
 
     using namespace ore;
@@ -1781,7 +1754,7 @@ private:
              << "]: " << NV("Cand1", StringRef(FC0.Preheader->getName()))
              << " and " << NV("Cand2", StringRef(FC1.Preheader->getName()))
              << ": found "
-             << NV("ReusedValueCount", Info.ReusedValueCount)
+             << NV("ReusedValueCount", ReusedValueCount)
              << " cross-loop reused values; configured minimum is "
              << NV("MinimumReusedValues",
                    unsigned(Opts.loop_fusion_min_reused_values)));
