@@ -131,6 +131,11 @@ struct SymInitScope {
 } // namespace
 
 void _Trace::__windows_impl(size_t skip, size_t max_depth) {
+#  if defined(_M_IX86)
+  // Not supported on 32-bit x86
+  return;
+#  endif
+
   static BOOL loadedDLLFuncs = loadFuncs();
   if (!loadedDLLFuncs) {
     return;
