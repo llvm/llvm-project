@@ -16,6 +16,7 @@
 #include "mlir/IR/BlockSupport.h"
 #include "mlir/IR/Visitors.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 
 namespace llvm {
@@ -206,26 +207,11 @@ public:
   /// Recomputes the ordering of child operations within the block.
   void recomputeOpOrder();
 
-  /// This class provides iteration over the held operations of a block for a
-  /// specific operation type.
-  template <typename OpT>
-  using op_iterator = detail::op_iterator<OpT, iterator>;
-
   /// Return an iterator range over the operations within this block that are of
   /// 'OpT'.
   template <typename OpT>
-  iterator_range<op_iterator<OpT>> getOps() {
-    auto endIt = end();
-    return {detail::op_filter_iterator<OpT, iterator>(begin(), endIt),
-            detail::op_filter_iterator<OpT, iterator>(endIt, endIt)};
-  }
-  template <typename OpT>
-  op_iterator<OpT> op_begin() {
-    return detail::op_filter_iterator<OpT, iterator>(begin(), end());
-  }
-  template <typename OpT>
-  op_iterator<OpT> op_end() {
-    return detail::op_filter_iterator<OpT, iterator>(end(), end());
+  auto getOps() {
+    return llvm::make_isa_range<OpT>(*this);
   }
 
   /// Return an iterator range over the operation within this block excluding
