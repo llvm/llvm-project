@@ -16,6 +16,7 @@ end module m_coarray_test
 
 program test
   use m_coarray_test
+  module_coarray = 1.0
 end program
 
 ! LLVM: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @__mif_save_coarrays_allocate, ptr null }]
