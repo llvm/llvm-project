@@ -100,9 +100,15 @@ TEST(AllocatorTest, TestAlignment) {
 }
 
 TEST(AllocatorTest, TestPlacementNew) {
-  struct S24 { uint64_t X[3]; };
-  struct alignas(16) S32 { uint64_t X[4]; };
-  struct S48 { uint64_t X[6]; };
+  struct S24 {
+    uint64_t X[3];
+  };
+  struct alignas(16) S32 {
+    uint64_t X[4];
+  };
+  struct S48 {
+    uint64_t X[6];
+  };
   BumpPtrAllocator Alloc;
   Alloc.setRedZoneSize(0);
   auto *A0 = new (Alloc) S24;
