@@ -1607,3 +1607,93 @@ define <4 x i1> @no_subcarry_vector(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %y0,
   ret <4 x i1> %br
 }
 
+; Negative test: %c is not known to be 0/1 and cannot be a borrow-in.
+; See https://github.com/llvm/llvm-project/issues/222839.
+define i8 @no_subcarry_carry_in_not_bool(i64 %a, i64 %b, i8 %c) nounwind {
+; X64-LABEL: no_subcarry_carry_in_not_bool:
+; X64:       # %bb.0:
+; X64-NEXT:    cmpq %rsi, %rdi
+; X64-NEXT:    setb %cl
+; X64-NEXT:    sete %al
+; X64-NEXT:    andb %dl, %al
+; X64-NEXT:    orb %cl, %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: no_subcarry_carry_in_not_bool:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl 24(%esp), %eax
+; X86-NEXT:    movl 28(%esp), %ecx
+; X86-NEXT:    movl 16(%esp), %edx
+; X86-NEXT:    movl 20(%esp), %esi
+; X86-NEXT:    cmpl %eax, %edx
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    sbbl %ecx, %edi
+; X86-NEXT:    setb %bl
+; X86-NEXT:    xorl %ecx, %esi
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    sete %al
+; X86-NEXT:    andb 32(%esp), %al
+; X86-NEXT:    orb %bl, %al
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+  %ult = icmp ult i64 %a, %b
+  %ultz = zext i1 %ult to i8
+  %eq = icmp eq i64 %a, %b
+  %eqz = zext i1 %eq to i8
+  %and = and i8 %eqz, %c
+  %or = or i8 %ultz, %and
+  ret i8 %or
+}
+
+; %c is known to be 0/1 here, so the borrow chain is still rebuilt. Deliberately
+; not an i1 carry: that would pass the check trivially and would not catch a
+; regression to a structural test for the carry-in.
+define i8 @subcarry_carry_in_known_bool(i64 %a, i64 %b, i8 %c) nounwind {
+; X64-LABEL: subcarry_carry_in_known_bool:
+; X64:       # %bb.0:
+; X64-NEXT:    shrb $7, %dl
+; X64-NEXT:    addb $-1, %dl
+; X64-NEXT:    sbbq %rsi, %rdi
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+;
+; X86-LABEL: subcarry_carry_in_known_bool:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl 24(%esp), %eax
+; X86-NEXT:    movl 28(%esp), %ecx
+; X86-NEXT:    movl 16(%esp), %edx
+; X86-NEXT:    movl 20(%esp), %esi
+; X86-NEXT:    movzbl 32(%esp), %ebx
+; X86-NEXT:    shrb $7, %bl
+; X86-NEXT:    cmpl %eax, %edx
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    sbbl %ecx, %edi
+; X86-NEXT:    setb %bh
+; X86-NEXT:    xorl %ecx, %esi
+; X86-NEXT:    xorl %eax, %edx
+; X86-NEXT:    orl %esi, %edx
+; X86-NEXT:    sete %al
+; X86-NEXT:    andb %bl, %al
+; X86-NEXT:    orb %bh, %al
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
+; X86-NEXT:    retl
+  %cin = lshr i8 %c, 7
+  %ult = icmp ult i64 %a, %b
+  %ultz = zext i1 %ult to i8
+  %eq = icmp eq i64 %a, %b
+  %eqz = zext i1 %eq to i8
+  %and = and i8 %eqz, %cin
+  %or = or i8 %ultz, %and
+  ret i8 %or
+}
