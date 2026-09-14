@@ -1043,6 +1043,7 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   auto newCall = cir::CallOp::create(
       builder, call.getLoc(), call.getCalleeAttr(), sretVoidTy, sretArgs);
   carryCallAttrs(call, newCall);
+  newCall->removeAttr("res_attrs");
 
   // Shape the per-argument attrs exactly as the non-sret path does
   // (signext / zeroext for Extend, drop Ignore slots, byval / align for
@@ -1277,9 +1278,10 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
     }
   }
 
-  // Rebuild res_attrs: layer llvm.signext / llvm.zeroext onto an Extend
-  // return.
-  if (fc.returnInfo.kind == ArgKind::Extend) {
+  if (mlir::isa<cir::VoidType>(newRetTy)) {
+    funcOp->removeAttr("res_attrs");
+  } else if (fc.returnInfo.kind == ArgKind::Extend) {
+    // Layer llvm.signext / llvm.zeroext onto an Extend return.
     auto existing = funcOp->getAttrOfType<mlir::ArrayAttr>("res_attrs");
     funcOp->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
   }
@@ -1476,6 +1478,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
   if (fc.returnInfo.kind == ArgKind::Extend) {
     auto existing = call->getAttrOfType<mlir::ArrayAttr>("res_attrs");
     newCall->setAttr("res_attrs", updateResAttrs(ctx, existing, fc.returnInfo));
+  } else if (hasResult && mlir::isa<cir::VoidType>(callRetTy)) {
+    newCall->removeAttr("res_attrs");
   }
 
   if (hasResult && fc.returnInfo.kind == ArgKind::Ignore) {

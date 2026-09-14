@@ -4070,16 +4070,22 @@ foldICmpIntrinsicWithIntrinsic(ICmpInst &Cmp,
     //  -> rotate(X, AmtX - AmtY) == Y
     // Do this if either both rotates have one use or if only one has one use
     // and AmtX/AmtY are constants.
+    const unsigned BW = IIOp0->getType()->getScalarSizeInBits();
     unsigned OneUses = IIOp0->hasOneUse() + IIOp1->hasOneUse();
     if (OneUses == 2 ||
         (OneUses == 1 && match(IIOp0->getOperand(2), m_ImmConstant()) &&
          match(IIOp1->getOperand(2), m_ImmConstant()))) {
-      Value *SubAmt =
-          Builder.CreateSub(IIOp0->getOperand(2), IIOp1->getOperand(2));
-      Value *CombinedRotate = Builder.CreateIntrinsic(
-          Op0->getType(), IIOp0->getIntrinsicID(),
-          {IIOp0->getOperand(0), IIOp0->getOperand(0), SubAmt});
-      return new ICmpInst(Pred, IIOp1->getOperand(0), CombinedRotate);
+
+      // Only valid assuming (2**BW) % BW == 0, which only holds for powers
+      // of two.
+      if (isPowerOf2_32(BW)) {
+        Value *SubAmt =
+            Builder.CreateSub(IIOp0->getOperand(2), IIOp1->getOperand(2));
+        Value *CombinedRotate = Builder.CreateIntrinsic(
+            Op0->getType(), IIOp0->getIntrinsicID(),
+            {IIOp0->getOperand(0), IIOp0->getOperand(0), SubAmt});
+        return new ICmpInst(Pred, IIOp1->getOperand(0), CombinedRotate);
+      }
     }
   } break;
   default:

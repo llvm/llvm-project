@@ -619,7 +619,9 @@ public:
     // we can safely erase it.
     if (rc.getResult().hasOneUse())
       rewriter.eraseOp(rc);
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, rcInput, rcInputIdxs);
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(
+        op, rcInput, rcInputIdxs, op.getNontemporalAttr(),
+        op.getAlignmentAttr(), op.getInvariantAttr());
     return success();
   }
 };
