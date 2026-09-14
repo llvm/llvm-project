@@ -91,6 +91,7 @@ private:
   bool HasHIPStdParLibrary = false;
   bool HasRocThrustLibrary = false;
   bool HasRocPrimLibrary = false;
+  bool HasHIPRuntimeAsan = false;
 
   // Default version if not detected or specified.
   const unsigned DefaultVersionMajor = 3;
@@ -196,6 +197,10 @@ public:
 
   /// Check whether we detected a valid HIP STDPAR Acceleration library.
   bool hasHIPStdParLibrary() const { return HasHIPStdParLibrary; }
+
+  /// Check whether the detected HIP runtime was built with the address
+  /// sanitizer enabled.
+  bool hasHIPRuntimeAsan() const { return HasHIPRuntimeAsan; }
 
   /// Print information about the detected ROCm installation.
   void print(raw_ostream &OS) const;

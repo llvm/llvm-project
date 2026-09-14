@@ -44,6 +44,8 @@ public:
 
   void addOffloadRTLibs(unsigned ActiveKinds, const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;
+  bool hipRuntimeRequiresAddressSanitizer(
+      const llvm::opt::ArgList &Args) const override;
   RuntimeLibType GetDefaultRuntimeLibType() const override;
   unsigned GetDefaultDwarfVersion() const override;
   CXXStdlibType GetDefaultCXXStdlibType() const override;
