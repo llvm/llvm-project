@@ -1314,14 +1314,12 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
           Fortran::semantics::IsAllocatable(*sym);
       Fortran::lower::StatementContext &cudaCleanupCtx =
           converter.getCudaCleanupCtx();
-      if (!Fortran::semantics::IsFunctionResult(*sym)) {
-        cudaCleanupCtx.attachCleanup([builder, loc, exv, sym]() {
-          cuf::DataAttributeAttr dataAttr =
-              Fortran::lower::translateSymbolCUFDataAttribute(
-                  builder->getContext(), *sym);
-          cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
-        });
-      }
+      cudaCleanupCtx.attachCleanup([builder, loc, exv, sym]() {
+        cuf::DataAttributeAttr dataAttr =
+            Fortran::lower::translateSymbolCUFDataAttribute(
+                builder->getContext(), *sym);
+        cuf::FreeOp::create(*builder, loc, fir::getBase(exv), dataAttr);
+      });
     }
   }
 

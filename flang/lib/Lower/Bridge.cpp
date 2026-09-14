@@ -2079,6 +2079,21 @@ private:
                 loc, resultRefType, resultRef);
           return fir::LoadOp::create(*builder, loc, resultRef);
         });
+    // CUDA function-result descriptors are allocated with cuf.alloc and freed
+    // on exit. Abstract-result rewrites `return %v` into a store to the hidden
+    // result argument at the return point, which would run after that free if
+    // %v is still a load or rebox of the CUDA descriptor. Spill %v to a stack
+    // temporary first so the rewrite stores to the hidden argument before the
+    // free.
+    if (bridge.cudaCleanupCtx().hasCode() &&
+        mlir::isa<fir::BaseBoxType>(resultVal.getType()))
+      if (std::optional<Fortran::common::CUDADataAttr> cudaAttr =
+              Fortran::semantics::GetCUDADataAttr(&resultSym.GetUltimate()))
+        if (*cudaAttr != Fortran::common::CUDADataAttr::Shared) {
+          mlir::Value tmp = builder->createTemporary(loc, resultVal.getType());
+          fir::StoreOp::create(*builder, loc, resultVal, tmp);
+          resultVal = fir::LoadOp::create(*builder, loc, tmp);
+        }
     genExitRoutine(false, resultVal);
   }
 
