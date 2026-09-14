@@ -192,6 +192,7 @@ add_header_library(
   HDRS
     wctype_utils.h
   DEPENDS
+    libc.src.__support.macros.properties.types
     ${wctype_utils_deps}
 )
 
