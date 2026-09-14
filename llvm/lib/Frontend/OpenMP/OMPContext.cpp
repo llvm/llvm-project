@@ -18,6 +18,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <algorithm>
 
 #define DEBUG_TYPE "openmp-ir-builder"
 
@@ -332,16 +333,27 @@ bool llvm::omp::isVariantApplicableInContext(
 static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
                                   const OMPContext &Ctx,
                                   SmallVectorImpl<unsigned> &ConstructMatches) {
-  APInt Score(64, 1);
+  APInt Score(1, 1);
 
-  unsigned NoConstructTraits = VMI.ConstructTraits.size();
+  // A sum of valid scores can exceed the width of any individual score.
+  // Retain all active bits and allow one more bit for each addition's carry.
+  auto AddScore = [&](const APInt &Value) {
+    unsigned Width = std::max(Score.getActiveBits(), Value.getActiveBits()) + 1;
+    Score = Score.zextOrTrunc(Width);
+    Score += Value.zextOrTrunc(Width);
+  };
+  auto AddPowerOfTwo = [&](unsigned Exponent) {
+    AddScore(APInt::getOneBitSet(Exponent + 1, Exponent));
+  };
+
+  unsigned NoConstructTraits = Ctx.ConstructTraits.size();
   for (unsigned Bit : VMI.RequiredTraits.set_bits()) {
     TraitProperty Property = TraitProperty(Bit);
     // If there is a user score attached, use it.
     if (VMI.ScoreMap.count(Property)) {
       const APInt &UserScore = VMI.ScoreMap.lookup(Property);
       assert(UserScore.uge(0) && "Expect non-negative user scores!");
-      Score += UserScore.getZExtValue();
+      AddScore(UserScore);
       continue;
     }
 
@@ -376,33 +388,27 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
 
     switch (getOpenMPContextTraitSelectorForProperty(Property)) {
     case TraitSelector::device_kind:
-      Score += (1ULL << (NoConstructTraits + 0));
+    case TraitSelector::target_device_kind:
+      AddPowerOfTwo(NoConstructTraits);
       continue;
     case TraitSelector::device_arch:
-      Score += (1ULL << (NoConstructTraits + 1));
+    case TraitSelector::target_device_arch:
+      AddPowerOfTwo(NoConstructTraits + 1);
       continue;
     case TraitSelector::device_isa:
-      Score += (1ULL << (NoConstructTraits + 2));
-      continue;
-    case TraitSelector::target_device_kind:
-      Score += (1ULL << (NoConstructTraits + 0));
-      continue;
-    case TraitSelector::target_device_arch:
-      Score += (1ULL << (NoConstructTraits + 1));
-      continue;
     case TraitSelector::target_device_isa:
-      Score += (1ULL << (NoConstructTraits + 2));
+      AddPowerOfTwo(NoConstructTraits + 2);
       continue;
     default:
       continue;
     }
   }
 
-  assert(NoConstructTraits >= ConstructMatches.size() &&
+  assert(VMI.ConstructTraits.size() >= ConstructMatches.size() &&
          "Mismatch in the construct traits!");
   for (unsigned Match : ConstructMatches) {
     // ConstructMatches is the position p - 1 and we need 2^(p-1).
-    Score += (1ULL << Match);
+    AddPowerOfTwo(Match);
   }
 
   LLVM_DEBUG(dbgs() << "[" << DEBUG_TYPE << "] Variant has a score of " << Score
@@ -413,7 +419,7 @@ static APInt getVariantMatchScore(const VariantMatchInfo &VMI,
 int llvm::omp::getBestVariantMatchForContext(
     const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx) {
 
-  APInt BestScore(64, 0);
+  APInt BestScore(1, 0);
   int BestVMIIdx = -1;
   const VariantMatchInfo *BestVMI = nullptr;
 
@@ -428,6 +434,10 @@ int llvm::omp::getBestVariantMatchForContext(
       continue;
     // Check if its clearly not the best.
     APInt Score = getVariantMatchScore(VMI, Ctx, ConstructMatches);
+    // Candidates can accumulate scores of different widths.
+    unsigned Width = std::max(Score.getBitWidth(), BestScore.getBitWidth());
+    Score = Score.zext(Width);
+    BestScore = BestScore.zext(Width);
     if (Score.ult(BestScore))
       continue;
     // Equal score need subset checks.

@@ -2392,9 +2392,8 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
+      // Record unknown non-ISA properties as inactive traits. Whether an
+      // inactive trait excludes the variant depends on the matching mode.
       vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
     }
   }
@@ -2623,9 +2622,7 @@ std::optional<MetadirectiveCandidateSet> BuildMetadirectiveCandidateSet(
         // Only match_any can remain applicable when the static traits do not
         // match, because a true runtime condition may satisfy the selector.
         if (!isStaticVMIApplicable) {
-          if (!hasMatchAny ||
-              staticVMI.RequiredTraits.test(
-                  unsigned(llvm::omp::TraitProperty::invalid))) {
+          if (!hasMatchAny) {
             continue;
           }
 

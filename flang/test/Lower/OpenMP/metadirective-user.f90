@@ -5,6 +5,53 @@
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=52 -cpp -DOMP_52 %s -o - | FileCheck %s
 
 !===----------------------------------------------------------------------===!
+! An unknown vendor does not veto a runtime MATCH_ANY condition or its score.
+! CHECK-LABEL: func.func @_QPtest_dynamic_unknown_vendor(
+! CHECK: fir.if
+! CHECK-NEXT: omp.barrier
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.taskyield
+! CHECK: return
+subroutine test_dynamic_unknown_vendor(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(bogus_vendor), extension(match_any)}, &
+  !$omp& user={condition(score(5): flag)}: barrier) &
+  !$omp& when(user={condition(.true.)}: taskyield)
+end subroutine
+
+! The same rule applies to unknown device traits and implicit NOTHING.
+! CHECK-LABEL: func.func @_QPtest_dynamic_unknown_arch_implicit(
+! CHECK: fir.if
+! CHECK-NEXT: } else {
+! CHECK-NEXT: omp.barrier
+! CHECK: return
+subroutine test_dynamic_unknown_arch_implicit(flag)
+  logical :: flag
+  !$omp metadirective &
+  !$omp& when(device={arch(bogus_arch)}, &
+  !$omp& implementation={extension(match_any)}, &
+  !$omp& user={condition(score(10): flag)}:) &
+  !$omp& when(user={condition(score(5): .true.)}: barrier)
+end subroutine
+
+! Large non-negative scores must not wrap their sum to zero.
+! CHECK-LABEL: func.func @_QPtest_wide_score()
+! CHECK: omp.parallel
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.barrier
+! CHECK-NOT: omp.taskyield
+! CHECK: return
+subroutine test_wide_score()
+  !$omp parallel
+    !$omp metadirective &
+    !$omp& when(user={condition(score(9223372036854775807_8): .true.)}, &
+    !$omp& implementation={vendor(score(9223372036854775807_8): llvm)}, &
+    !$omp& construct={parallel}: barrier) &
+    !$omp& when(user={condition(.true.)}: taskyield)
+  !$omp end parallel
+end subroutine
+
 ! Scored implicit NOTHING competes with explicit replacements by score.
 !===----------------------------------------------------------------------===!
 

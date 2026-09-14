@@ -448,4 +448,77 @@ TEST_F(OpenMPContextTest, ScoringHighestOrderedMatch) {
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
 }
 
+TEST_F(OpenMPContextTest, ScoringDeviceWeights) {
+  struct ISAContext : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef) const override { return true; }
+  };
+  const TraitProperty Properties[] = {TraitProperty::device_kind_cpu,
+                                      TraitProperty::device_arch_arm,
+                                      TraitProperty::device_isa___ANY,
+                                      TraitProperty::target_device_kind_cpu,
+                                      TraitProperty::target_device_arch_arm,
+                                      TraitProperty::target_device_isa___ANY};
+  for (unsigned Depth : {0u, 1u, 2u, 63u, 64u, 65u}) {
+    ISAContext Context(false, Triple("arm-unknown-linux"), Triple(), -1);
+    for (unsigned I = 0; I < Depth; ++I)
+      Context.addTrait(TraitProperty::construct_parallel_parallel);
+    for (unsigned I = 0; I < 6; ++I) {
+      SCOPED_TRACE(Depth);
+      SCOPED_TRACE(I);
+      APInt Weight = APInt::getOneBitSet(128, Depth + I % 3);
+      APInt Score = Weight - 1;
+      VariantMatchInfo Scored, Device;
+      Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+      Device.addTrait(Properties[I], "test-isa");
+      SmallVector<VariantMatchInfo, 2> Candidates{Scored, Device};
+      // The device score is exactly 1 + 2^(context depth + trait offset).
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+      Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Weight);
+      EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+    }
+  }
+}
+
+TEST_F(OpenMPContextTest, ScoringWideTotals) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  for (unsigned Bits : {63u, 64u, 127u}) {
+    SCOPED_TRACE(Bits);
+    APInt Score = APInt::getLowBitsSet(Bits + 1, Bits);
+    VariantMatchInfo Large, Small;
+    Large.addTrait(TraitProperty::user_condition_true, "", &Score);
+    Large.addTrait(TraitProperty::implementation_vendor_llvm, "", &Score);
+    Large.addTrait(TraitProperty::construct_parallel_parallel, "");
+    APInt SmallScore(32, 20);
+    Small.addTrait(TraitProperty::user_condition_true, "", &SmallScore);
+    SmallVector<VariantMatchInfo, 2> Candidates{Large, Small};
+    // The sum is 2^(Bits + 1), not zero after fixed-width overflow.
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+    std::swap(Candidates[0], Candidates[1]);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    // Overflow to a nonzero value must not silently reverse the ranking.
+    Candidates[1].addTrait(TraitProperty::device_kind_cpu, "");
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+  }
+}
+
+TEST_F(OpenMPContextTest, ScoringDeepConstructs) {
+  for (unsigned Depth : {63u, 64u, 65u}) {
+    SCOPED_TRACE(Depth);
+    OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+    for (unsigned I = 0; I < Depth; ++I)
+      Context.addTrait(TraitProperty::construct_parallel_parallel);
+    APInt Weight = APInt::getOneBitSet(128, Depth - 1);
+    APInt Score = Weight - 1;
+    VariantMatchInfo Scored, Parallel;
+    Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+    Parallel.addTrait(TraitProperty::construct_parallel_parallel, "");
+    SmallVector<VariantMatchInfo, 2> Candidates{Scored, Parallel};
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Weight);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
+}
+
 } // namespace

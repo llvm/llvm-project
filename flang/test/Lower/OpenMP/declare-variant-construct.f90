@@ -10,6 +10,31 @@ contains
   subroutine base_tt
     !$omp declare variant (base_tt:vsub_tt) match (construct={target teams})
   end subroutine base_tt
+
+  subroutine base_device_weight
+    !$omp declare variant (vsub_cpu) match(device={kind(cpu)})
+    !$omp declare variant (vsub_parallel) match(construct={parallel})
+  end subroutine
+  subroutine vsub_cpu
+  end subroutine
+  subroutine vsub_parallel
+  end subroutine
+
+  ! CPU scores 5 in this context, beating PARALLEL's score of 3.
+  ! CHECK-LABEL: func.func @_QMmPtest_device_weight()
+  ! CHECK: omp.parallel
+  ! CHECK: omp.parallel
+  ! CHECK-NOT: fir.call @_QMmPvsub_parallel
+  ! CHECK: fir.call @_QMmPvsub_cpu()
+  ! CHECK-NOT: fir.call @_QMmPvsub_parallel
+  ! CHECK: return
+  subroutine test_device_weight
+    !$omp parallel
+      !$omp parallel
+        call base_device_weight()
+      !$omp end parallel
+    !$omp end parallel
+  end subroutine
   subroutine vsub_tt
   end subroutine vsub_tt
 

@@ -777,14 +777,6 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
     return paths;
   }
 
-  // Selected directive paths are observed only by construct selectors on
-  // nested metadirectives. If there are none in this program unit, every path
-  // is equivalent for this analysis.
-  if (metadirectiveConstructSelectors_.empty()) {
-    paths.resize(1);
-    return paths;
-  }
-
   auto getSignature = [&](const EffectiveDirectivePath &path) {
     ConstructTraitSequence contextTraits{GetConstructTraitsForPath(path)};
 
@@ -792,6 +784,7 @@ OmpStructureChecker::GetUniqueEffectiveDirectivePaths(
     // matches after a failure for match_any scoring, as well as successful
     // prefixes for matching after inner directives are appended.
     std::vector<unsigned> signature;
+    // Device scores depend on context depth even without construct selectors.
     signature.push_back(contextTraits.size());
     for (const ConstructTraitSequence &selector :
         metadirectiveConstructSelectors_) {
