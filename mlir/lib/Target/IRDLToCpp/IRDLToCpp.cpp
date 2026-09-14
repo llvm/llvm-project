@@ -78,14 +78,16 @@ static std::string typeToCppName(irdl::TypeOp type) {
 static std::string opToCppName(irdl::OperationOp op) {
   const auto opName = op.getSymName();
   const auto periodIndex = opName.find_last_of(".");
-  const auto nameSubstr = periodIndex == std::string::npos ? opName : opName.substr(periodIndex + 1);
-  return llvm::formatv("{0}Op",
-                       convertToCamelFromSnakeCase(nameSubstr, true));
+  const auto nameSubstr = periodIndex == std::string::npos
+                              ? opName
+                              : opName.substr(periodIndex + 1);
+  return llvm::formatv("{0}Op", convertToCamelFromSnakeCase(nameSubstr, true));
 }
 
 // Generates the C++ class name for an OperationOp, scoped to the namespace
 static std::string opToScopedCppName(irdl::OperationOp op) {
-  auto names = llvm::SmallVector<std::string>(llvm::split(op.getSymName(), "."));
+  auto names =
+      llvm::SmallVector<std::string>(llvm::split(op.getSymName(), "."));
   names.pop_back();
   names.push_back(opToCppName(op));
   return llvm::join(names, "::");
@@ -160,9 +162,15 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
   dict["OP_RESULT_INITIALIZER_LIST"] =
       resultCount ? joinNameList(strings.opResultNames) : "{\"\"}";
   dict["OP_REGION_COUNT"] = std::to_string(regionCount);
-  dict["NAMESPACE_OPEN"] = (dict["NAMESPACE_OPEN"] + llvm::join(llvm::map_range(strings.opNameSpaces, [](llvm::StringRef ref) -> std::string {
-    return llvm::formatv("namespace {0} {{", ref);
-  }), "\n")).str();
+  dict["NAMESPACE_OPEN"] =
+      (dict["NAMESPACE_OPEN"] +
+       llvm::join(llvm::map_range(strings.opNameSpaces,
+                                  [](llvm::StringRef ref) -> std::string {
+                                    return llvm::formatv("namespace {0} {{",
+                                                         ref);
+                                  }),
+                  "\n"))
+          .str();
   dict["NAMESPACE_PATH"] =
       (dict["NAMESPACE_PATH"] +
        llvm::join(llvm::map_range(strings.opNameSpaces,
@@ -171,9 +179,15 @@ static void fillDict(irdl::detail::dictionary &dict, const OpStrings &strings) {
                                   }),
                   ""))
           .str();
-  dict["NAMESPACE_CLOSE"] = (llvm::join(llvm::map_range(llvm::reverse(strings.opNameSpaces), [](llvm::StringRef ref) -> std::string {
-    return llvm::formatv("} // namespace {0}\n", ref);
-  }), "") + dict["NAMESPACE_CLOSE"]).str();
+  dict["NAMESPACE_CLOSE"] =
+      (llvm::join(llvm::map_range(llvm::reverse(strings.opNameSpaces),
+                                  [](llvm::StringRef ref) -> std::string {
+                                    return llvm::formatv("} // namespace {0}\n",
+                                                         ref);
+                                  }),
+                  "") +
+       dict["NAMESPACE_CLOSE"])
+          .str();
 }
 
 /// Fills a dictionary with values from DialectStrings
@@ -314,9 +328,9 @@ static SmallVector<std::string> generateTraits(irdl::OperationOp op,
   return cppTraitNames;
 }
 
-static LogicalResult generateOperationInclude(irdl::OperationOp op,
-                                              raw_ostream &output,
-                                              const irdl::detail::dictionary &dict) {
+static LogicalResult
+generateOperationInclude(irdl::OperationOp op, raw_ostream &output,
+                         const irdl::detail::dictionary &dict) {
   static const auto perOpDeclTemplate = irdl::detail::Template(
 #include "Templates/PerOperationDecl.txt"
   );
@@ -329,7 +343,7 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
     opDict["OP_TEMPLATE_ARGS"] = opStrings.opCppName;
   else
     opDict["OP_TEMPLATE_ARGS"] = llvm::formatv("{0}, {1}", opStrings.opCppName,
-                                             llvm::join(traitNames, ", "));
+                                               llvm::join(traitNames, ", "));
 
   generateOpGetterDeclarations(opDict, opStrings);
   generateOpBuilderDeclarations(opDict, opStrings);

@@ -88,18 +88,16 @@ static llvm::LogicalResult isValidName(llvm::StringRef in, mlir::Operation *loc,
       if (elem == '.') {
         if (prev == '.')
           return loc->emitError("empty namespace not allowed");
-      }
-      else
-      {
-      if (!isalnum(elem))
-        return loc->emitError("name of ")
-               << label
-               << " must contain only lowercase letters, digits and "
-                  "underscores";
+      } else {
+        if (!isalnum(elem))
+          return loc->emitError("name of ")
+                 << label
+                 << " must contain only lowercase letters, digits and "
+                    "underscores";
 
-      if (llvm::isUpper(elem))
-        return loc->emitError("name of ")
-               << label << " should not contain uppercase letters";
+        if (llvm::isUpper(elem))
+          return loc->emitError("name of ")
+                 << label << " should not contain uppercase letters";
       }
     }
 
