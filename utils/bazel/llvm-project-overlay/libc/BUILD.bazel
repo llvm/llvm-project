@@ -10887,20 +10887,6 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "canonicalize",
-    additional_deps = [
-        ":__support_math_canonicalize",
-    ],
-)
-
-libc_math_function(
-    name = "canonicalizebf16",
-    additional_deps = [
-        ":__support_math_canonicalizebf16",
-    ],
-)
-
-libc_math_function(
     name = "bf16divf",
     additional_deps = [
         ":__support_math_bf16divf",
@@ -10915,9 +10901,23 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "canonicalize",
+    additional_deps = [
+        ":__support_math_canonicalize",
+    ],
+)
+
+libc_math_function(
     name = "canonicalizef",
     additional_deps = [
         ":__support_math_canonicalizef",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
     ],
 )
 
