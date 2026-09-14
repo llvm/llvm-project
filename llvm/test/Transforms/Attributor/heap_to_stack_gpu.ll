@@ -304,7 +304,7 @@ define void @test9() {
 ; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
 ; CHECK-NEXT:    tail call void @no_sync_func(ptr nofree captures(none) [[I]])
 ; CHECK-NEXT:    store i32 10, ptr [[I]], align 4
-; CHECK-NEXT:    tail call void @foo_nounw(ptr nofree nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR8:[0-9]+]]
+; CHECK-NEXT:    tail call void @foo_nounw(ptr nofree nonnull align 4 dereferenceable(4) [[I]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    tail call void @free(ptr nonnull align 4 captures(none) dereferenceable(4) [[I]])
 ; CHECK-NEXT:    ret void
 ;
@@ -345,7 +345,7 @@ define void @test11() {
 ; CHECK-LABEL: define {{[^@]+}}@test11() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
-; CHECK-NEXT:    tail call void @sync_will_return(ptr [[I]]) #[[ATTR8]]
+; CHECK-NEXT:    tail call void @sync_will_return(ptr [[I]]) #[[ATTR9]]
 ; CHECK-NEXT:    tail call void @free(ptr captures(none) [[I]])
 ; CHECK-NEXT:    ret void
 ;
@@ -599,7 +599,7 @@ define void @test16c(i8 %v, ptr %P) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @malloc(i64 noundef 4)
 ; CHECK-NEXT:    store ptr [[I]], ptr [[P]], align 8
-; CHECK-NEXT:    tail call void @no_sync_func(ptr nofree captures(none) [[I]]) #[[ATTR8]]
+; CHECK-NEXT:    tail call void @no_sync_func(ptr nofree captures(none) [[I]]) #[[ATTR9]]
 ; CHECK-NEXT:    tail call void @free(ptr captures(none) [[I]])
 ; CHECK-NEXT:    ret void
 ;
@@ -633,7 +633,7 @@ define void @test17() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
-; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -647,7 +647,7 @@ define void @test17b() {
 ; CHECK-LABEL: define {{[^@]+}}@test17b() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @__kmpc_alloc_shared(i64 noundef 4)
-; CHECK-NEXT:    tail call void @usei8(ptr nofree [[I]]) #[[ATTR9]]
+; CHECK-NEXT:    tail call void @usei8(ptr nofree [[I]]) #[[ATTR10]]
 ; CHECK-NEXT:    tail call void @__kmpc_free_shared(ptr captures(none) [[I]], i64 noundef 4)
 ; CHECK-NEXT:    ret void
 ;
@@ -665,7 +665,7 @@ define void @move_alloca() {
 ; CHECK-NEXT:    br label [[NOT_ENTRY:%.*]]
 ; CHECK:       not_entry:
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
-; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9]]
+; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -686,7 +686,7 @@ define void @test16e(i8 %v) norecurse {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @__kmpc_alloc_shared(i64 noundef 4)
 ; CHECK-NEXT:    store ptr [[I]], ptr @G, align 8
-; CHECK-NEXT:    call void @usei8(ptr nofree captures(none) [[I]]) #[[ATTR10:[0-9]+]]
+; CHECK-NEXT:    call void @usei8(ptr nofree captures(none) [[I]]) #[[ATTR11:[0-9]+]]
 ; CHECK-NEXT:    tail call void @__kmpc_free_shared(ptr noalias captures(none) [[I]], i64 noundef 4)
 ; CHECK-NEXT:    ret void
 ;
@@ -708,7 +708,7 @@ define void @test16f(i8 %v) norecurse {
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
 ; CHECK-NEXT:    store ptr [[MALLOC_CAST]], ptr @Gtl, align 8
-; CHECK-NEXT:    call void @usei8(ptr nofree captures(none) [[MALLOC_CAST]]) #[[ATTR10]]
+; CHECK-NEXT:    call void @usei8(ptr nofree captures(none) [[MALLOC_CAST]]) #[[ATTR11]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -725,13 +725,35 @@ define void @convert_large_kmpc_alloc_shared() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 256, align 1, addrspace(5)
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
-; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9]]
+; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %i = tail call noalias ptr @__kmpc_alloc_shared(i64 256)
   tail call void @usei8(ptr nocapture nofree %i) nosync nounwind willreturn
   tail call void @__kmpc_free_shared(ptr %i, i64 256)
+  ret void
+}
+
+; A globalized-local allocator with no allocsize, which is what
+; DeadArgumentElimination leaves behind once it deletes a dead size argument.
+; The size is not recoverable, so the allocation has to stay on the heap even
+; though globalized locals are exempt from the size cap.
+
+declare ptr @__kmpc_alloc_shared_no_size() allockind("alloc,uninitialized") "alloc-family"="__kmpc_alloc_shared"
+
+define void @no_allocsize_kmpc_alloc_shared() {
+; CHECK-LABEL: define {{[^@]+}}@no_allocsize_kmpc_alloc_shared() {
+; CHECK-NEXT:  bb:
+; CHECK-NEXT:    [[I:%.*]] = tail call noalias ptr @__kmpc_alloc_shared_no_size()
+; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[I]]) #[[ATTR10]]
+; CHECK-NEXT:    tail call void @__kmpc_free_shared(ptr noalias captures(none) [[I]], i64 noundef 4)
+; CHECK-NEXT:    ret void
+;
+bb:
+  %i = tail call noalias ptr @__kmpc_alloc_shared_no_size()
+  tail call void @usei8(ptr nocapture nofree %i) nosync nounwind willreturn
+  tail call void @__kmpc_free_shared(ptr %i, i64 4)
   ret void
 }
 
@@ -745,9 +767,10 @@ bb:
 ; CHECK: attributes #[[ATTR5:[0-9]+]] = { allockind("alloc,uninitialized") allocsize(0) "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR6:[0-9]+]] = { allockind("free") "alloc-family"="__kmpc_alloc_shared" }
 ; CHECK: attributes #[[ATTR7]] = { norecurse }
-; CHECK: attributes #[[ATTR8]] = { nounwind }
-; CHECK: attributes #[[ATTR9]] = { nosync nounwind willreturn }
-; CHECK: attributes #[[ATTR10]] = { nocallback nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR8:[0-9]+]] = { allockind("alloc,uninitialized") "alloc-family"="__kmpc_alloc_shared" }
+; CHECK: attributes #[[ATTR9]] = { nounwind }
+; CHECK: attributes #[[ATTR10]] = { nosync nounwind willreturn }
+; CHECK: attributes #[[ATTR11]] = { nocallback nosync nounwind willreturn }
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CGSCC: {{.*}}
