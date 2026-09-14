@@ -35,15 +35,15 @@ define amdgpu_kernel void @store_lds_v4i32(ptr addrspace(3) %out, <4 x i32> %x) 
 ;
 ; GFX6-LABEL: store_lds_v4i32:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
-; GFX6-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s3
-; GFX6-NEXT:    v_mov_b32_e32 v4, s4
-; GFX6-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s1
+; GFX6-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX6-NEXT:    ds_write2_b64 v4, v[2:3], v[0:1] offset1:1
 ; GFX6-NEXT:    s_endpgm
 ;
@@ -543,13 +543,13 @@ define amdgpu_kernel void @store_lds_v4i32_align8(ptr addrspace(3) %out, <4 x i3
 ;
 ; GFX6-LABEL: store_lds_v4i32_align8:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
-; GFX6-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s1
-; GFX6-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX6-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX6-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
@@ -558,12 +558,12 @@ define amdgpu_kernel void @store_lds_v4i32_align8(ptr addrspace(3) %out, <4 x i3
 ; GFX10-LABEL: store_lds_v4i32_align8:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_clause 0x1
-; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; GFX10-NEXT:    s_load_dword s6, s[4:5], 0x0
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x10
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s1
-; GFX10-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX10-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX10-NEXT:    v_mov_b32_e32 v3, s3
 ; GFX10-NEXT:    ds_write2_b64 v4, v[0:1], v[2:3] offset1:1
@@ -614,15 +614,15 @@ define amdgpu_kernel void @store_lds_v4i32_align16(ptr addrspace(3) %out, <4 x i
 ;
 ; GFX6-LABEL: store_lds_v4i32_align16:
 ; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_load_dword s6, s[4:5], 0x0
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x4
-; GFX6-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX6-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX6-NEXT:    v_mov_b32_e32 v1, s3
-; GFX6-NEXT:    v_mov_b32_e32 v4, s4
-; GFX6-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX6-NEXT:    v_mov_b32_e32 v3, s1
+; GFX6-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX6-NEXT:    ds_write2_b64 v4, v[2:3], v[0:1] offset1:1
 ; GFX6-NEXT:    s_endpgm
 ;
