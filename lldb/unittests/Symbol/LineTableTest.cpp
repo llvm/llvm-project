@@ -35,10 +35,22 @@ public:
   /// \}
 
   static void Initialize() {
-    PluginManager::RegisterPlugin("FakeSymbolFile", "", CreateInstance,
-                                  DebuggerInitialize);
+    PluginManager::RegisterPlugin("LineTableFakeSymbolFile", "",
+                                  CreateLineTableInstance, DebuggerInitialize);
+    PluginManager::RegisterPlugin("SymbolOnlyFakeSymbolFile", "",
+                                  CreateSymbolOnlyInstance, DebuggerInitialize);
   }
-  static void Terminate() { PluginManager::UnregisterPlugin(CreateInstance); }
+  static void Terminate() {
+    PluginManager::UnregisterPlugin(CreateSymbolOnlyInstance);
+    PluginManager::UnregisterPlugin(CreateLineTableInstance);
+  }
+
+  static void SetLineTableAbilities(uint32_t abilities) {
+    g_line_table_abilities = abilities;
+  }
+  static void SetSymbolAbilities(uint32_t abilities) {
+    g_symbol_abilities = abilities;
+  }
 
   void InjectCompileUnit(std::unique_ptr<CompileUnit> cu_up) {
     m_cu_sp = std::move(cu_up);
@@ -48,14 +60,19 @@ private:
   /// LLVM RTTI support.
   static char ID;
 
-  static SymbolFile *CreateInstance(ObjectFileSP objfile_sp) {
-    return new FakeSymbolFile(std::move(objfile_sp));
+  static SymbolFile *CreateLineTableInstance(ObjectFileSP objfile_sp) {
+    return new FakeSymbolFile(std::move(objfile_sp), "LineTableFakeSymbolFile",
+                              g_line_table_abilities);
+  }
+  static SymbolFile *CreateSymbolOnlyInstance(ObjectFileSP objfile_sp) {
+    return new FakeSymbolFile(std::move(objfile_sp), "SymbolOnlyFakeSymbolFile",
+                              g_symbol_abilities);
   }
   static void DebuggerInitialize(Debugger &) {}
 
-  StringRef GetPluginName() override { return "FakeSymbolFile"; }
-  uint32_t GetAbilities() override { return UINT32_MAX; }
-  uint32_t CalculateAbilities() override { return UINT32_MAX; }
+  StringRef GetPluginName() override { return m_plugin_name; }
+  uint32_t GetAbilities() override { return m_abilities; }
+  uint32_t CalculateAbilities() override { return m_abilities; }
   uint32_t GetNumCompileUnits() override { return 1; }
   CompUnitSP GetCompileUnitAtIndex(uint32_t) override { return m_cu_sp; }
   Symtab *GetSymtab(bool can_create = true) override { return nullptr; }
@@ -109,11 +126,17 @@ private:
   }
   TypeSP CopyType(const TypeSP &) override { return nullptr; }
 
-  FakeSymbolFile(ObjectFileSP objfile_sp)
-      : m_objfile_sp(std::move(objfile_sp)) {}
+  FakeSymbolFile(ObjectFileSP objfile_sp, StringRef plugin_name,
+                 uint32_t abilities)
+      : m_objfile_sp(std::move(objfile_sp)), m_plugin_name(plugin_name),
+        m_abilities(abilities) {}
 
   ObjectFileSP m_objfile_sp;
   CompUnitSP m_cu_sp;
+  StringRef m_plugin_name;
+  uint32_t m_abilities;
+  inline static uint32_t g_line_table_abilities = CompileUnits | LineTables;
+  inline static uint32_t g_symbol_abilities = Symbols;
 };
 
 struct FakeModuleFixture {
@@ -124,6 +147,14 @@ struct FakeModuleFixture {
 };
 
 class LineTableTest : public testing::Test {
+protected:
+  void SetUp() override {
+    FakeSymbolFile::SetLineTableAbilities(SymbolFile::CompileUnits |
+                                          SymbolFile::LineTables);
+    FakeSymbolFile::SetSymbolAbilities(SymbolFile::Symbols);
+  }
+
+private:
   SubsystemRAII<ObjectFileELF, FakeSymbolFile> subsystems;
 };
 
@@ -188,6 +219,32 @@ Sections:
 
   return FakeModuleFixture{std::move(*file), std::move(module_sp),
                            std::move(text_sp), line_table};
+}
+
+TEST_F(LineTableTest, FindPluginPrefersLineTablesWithCompileUnits) {
+  llvm::Expected<FakeModuleFixture> fixture = CreateFakeModule({});
+  ASSERT_THAT_EXPECTED(fixture, llvm::Succeeded());
+
+  SymbolFile *symbol_file = fixture->module_sp->GetSymbolFile();
+  ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetPluginName(), "LineTableFakeSymbolFile");
+  EXPECT_EQ(
+      symbol_file->GetAbilities(),
+      static_cast<uint32_t>(SymbolFile::CompileUnits | SymbolFile::LineTables));
+}
+
+TEST_F(LineTableTest, FindPluginPrefersLineTablesOverCompileUnits) {
+  FakeSymbolFile::SetSymbolAbilities(SymbolFile::Symbols |
+                                     SymbolFile::CompileUnits);
+  llvm::Expected<FakeModuleFixture> fixture = CreateFakeModule({});
+  ASSERT_THAT_EXPECTED(fixture, llvm::Succeeded());
+
+  SymbolFile *symbol_file = fixture->module_sp->GetSymbolFile();
+  ASSERT_NE(symbol_file, nullptr);
+  EXPECT_EQ(symbol_file->GetPluginName(), "LineTableFakeSymbolFile");
+  EXPECT_EQ(
+      symbol_file->GetAbilities(),
+      static_cast<uint32_t>(SymbolFile::CompileUnits | SymbolFile::LineTables));
 }
 
 TEST_F(LineTableTest, lower_bound) {

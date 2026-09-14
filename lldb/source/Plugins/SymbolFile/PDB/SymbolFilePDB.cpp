@@ -233,7 +233,6 @@ SymbolFilePDB::SymbolFilePDB(lldb::ObjectFileSP objfile_sp)
 SymbolFilePDB::~SymbolFilePDB() = default;
 
 uint32_t SymbolFilePDB::CalculateAbilities() {
-  uint32_t abilities = 0;
   if (!m_objfile_sp)
     return 0;
 
@@ -266,7 +265,15 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
   auto enum_tables_up = m_session_up->getEnumTables();
   if (!enum_tables_up)
     return 0;
-  while (auto table_up = enum_tables_up->getNext()) {
+
+  return CalculateAbilitiesFromPDBTables(*enum_tables_up);
+}
+
+uint32_t
+SymbolFilePDB::CalculateAbilitiesFromPDBTables(IPDBEnumTables &tables) {
+  uint32_t abilities = 0;
+  bool has_line_tables = false;
+  while (auto table_up = tables.getNext()) {
     if (table_up->getItemCount() == 0)
       continue;
     auto type = table_up->getTableType();
@@ -278,12 +285,17 @@ uint32_t SymbolFilePDB::CalculateAbilities() {
                     LocalVariables | VariableTypes);
       break;
     case PDB_TableType::LineNumbers:
-      abilities |= LineTables;
+      has_line_tables = true;
       break;
     default:
       break;
     }
   }
+
+  // A line table is usable only when there are compile units to attach it to.
+  if (has_line_tables && (abilities & CompileUnits))
+    abilities |= LineTables;
+
   return abilities;
 }
 
