@@ -8,6 +8,132 @@
 
 #include <riscv_packed_simd.h>
 
+/* Scalar Bitmanip */
+
+// RV32-LABEL: define dso_local i32 @test_rev_32(
+// RV32-SAME: i32 noundef [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[A]])
+// RV32-NEXT:    ret i32 [[TMP0]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_rev_32(
+// RV64-SAME: i32 noundef signext [[A:%.*]]) #[[ATTR0:[0-9]+]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bitreverse.i32(i32 [[A]])
+// RV64-NEXT:    ret i32 [[TMP0]]
+//
+uint32_t test_rev_32(uint32_t a) {
+  return __riscv_rev_32(a);
+}
+
+#if __riscv_xlen == 64
+// RV64-LABEL: define dso_local i64 @test_rev_64(
+// RV64-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[TMP0:%.*]] = call i64 @llvm.bitreverse.i64(i64 [[A]])
+// RV64-NEXT:    ret i64 [[TMP0]]
+//
+uint64_t test_rev_64(uint64_t a) {
+  return __riscv_rev_64(a);
+}
+#endif
+
+/* Scalar Saturating Addition and Subtraction */
+
+// RV32-LABEL: define dso_local i32 @test_sadd_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_sadd_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.sadd.sat.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+int32_t test_sadd_i32(int32_t a, int32_t b) {
+  return __riscv_sadd_i32(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_saddu_u32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_saddu_u32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+uint32_t test_saddu_u32(uint32_t a, uint32_t b) {
+  return __riscv_saddu_u32(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_ssub_i32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_ssub_i32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.ssub.sat.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+int32_t test_ssub_i32(int32_t a, int32_t b) {
+  return __riscv_ssub_i32(a, b);
+}
+
+// RV32-LABEL: define dso_local i32 @test_ssubu_u32(
+// RV32-SAME: i32 noundef [[A:%.*]], i32 noundef [[B:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 [[B]])
+// RV32-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_ssubu_u32(
+// RV64-SAME: i32 noundef signext [[A:%.*]], i32 noundef signext [[B:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[ELT_SAT_I:%.*]] = call i32 @llvm.usub.sat.i32(i32 [[A]], i32 [[B]])
+// RV64-NEXT:    ret i32 [[ELT_SAT_I]]
+//
+uint32_t test_ssubu_u32(uint32_t a, uint32_t b) {
+  return __riscv_ssubu_u32(a, b);
+}
+
+/* Scalar Absolute Value */
+
+// RV32-LABEL: define dso_local i32 @test_abs_u32(
+// RV32-SAME: i32 noundef [[A:%.*]]) #[[ATTR0]] {
+// RV32-NEXT:  [[ENTRY:.*:]]
+// RV32-NEXT:    [[ELT_ABS_I:%.*]] = call i32 @llvm.abs.i32(i32 [[A]], i1 false)
+// RV32-NEXT:    ret i32 [[ELT_ABS_I]]
+//
+// RV64-LABEL: define dso_local signext i32 @test_abs_u32(
+// RV64-SAME: i32 noundef signext [[A:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[ELT_ABS_I:%.*]] = call i32 @llvm.abs.i32(i32 [[A]], i1 false)
+// RV64-NEXT:    ret i32 [[ELT_ABS_I]]
+//
+uint32_t test_abs_u32(int32_t a) {
+  return __riscv_abs_u32(a);
+}
+
+#if __riscv_xlen == 64
+// RV64-LABEL: define dso_local i64 @test_abs_u64(
+// RV64-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
+// RV64-NEXT:  [[ENTRY:.*:]]
+// RV64-NEXT:    [[ELT_ABS_I:%.*]] = call i64 @llvm.abs.i64(i64 [[A]], i1 false)
+// RV64-NEXT:    ret i64 [[ELT_ABS_I]]
+//
+uint64_t test_abs_u64(int64_t a) {
+  return __riscv_abs_u64(a);
+}
+#endif
+
 /* Packed Splat (32-bit) */
 
 // RV32-LABEL: define dso_local i32 @test_pmv_s_u8x4(

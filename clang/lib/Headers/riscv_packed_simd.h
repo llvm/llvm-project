@@ -365,6 +365,24 @@ typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 // clang-format off: macro call sites have no trailing semicolons, which
 // confuses clang-format into a deeply nested expression.
 
+/* Scalar Bitmanip */
+__packed_unary_builtin(rev_32, uint32_t, __builtin_bitreverse32)
+#if __riscv_xlen == 64
+__packed_unary_builtin(rev_64, uint64_t, __builtin_bitreverse64)
+#endif
+
+/* Scalar Saturating Addition and Subtraction */
+__packed_binary_builtin(sadd_i32, int32_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(saddu_u32, uint32_t, __builtin_elementwise_add_sat)
+__packed_binary_builtin(ssub_i32, int32_t, __builtin_elementwise_sub_sat)
+__packed_binary_builtin(ssubu_u32, uint32_t, __builtin_elementwise_sub_sat)
+
+/* Scalar Absolute Value */
+__packed_pabs(abs_u32, int32_t, uint32_t)
+#if __riscv_xlen == 64
+__packed_pabs(abs_u64, int64_t, uint64_t)
+#endif
+
 /* Packed Splat (32-bit) */
 __packed_splat(pmv_s_u8x4, uint8x4_t, uint8_t, __packed_splat4)
 __packed_splat(pmv_s_i8x4, int8x4_t, int8_t, __packed_splat4)
