@@ -1756,6 +1756,18 @@ TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
   expectKnownFPClass(fcPosZero | fcPosNormal | fcNan, false);
 }
 
+TEST_F(ComputeKnownFPClassTest, LogDeduceSubnormalOrNegativeZero) {
+  parseAssembly("declare float @llvm.log.f32(float)\n"
+                "define float @test(float %x) {\n"
+                "  %A = call float @llvm.log.f32(float %x)\n"
+                "  ret float %A\n"
+                "}\n");
+
+  KnownFPClass Known =
+      computeKnownFPClass(A, M->getDataLayout(), fcNegZero | fcSubnormal);
+  EXPECT_EQ(~(fcNegZero | fcSubnormal), Known.getKnownFPClasses());
+}
+
 TEST_F(ComputeKnownFPClassTest, UIToFP) {
   parseAssembly(
       "define float @test(i32 %arg0, i16 %arg1) {\n"
@@ -3183,6 +3195,27 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPOnlyIndexBits) {
   KnownBits Known = computeKnownBits(A, M->getDataLayout());
   EXPECT_EQ(0x7fff, Known.Zero);
   EXPECT_EQ(0, Known.One);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIFabs) {
+  // fptosi(fabs(x)) is never negative.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %fabs = call float @llvm.fabs.f32(float %a)\n"
+                "  %A = fptosi float %fabs to i32\n"
+                "  ret i32 %A\n"
+                "}\n"
+                "declare float @llvm.fabs.f32(float)\n");
+  expectKnownBits(/*Zero*/ 0x80000000u, /*One*/ 0u);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFPToSIUnknownSign) {
+  // Without any knowledge of the sign of the source, nothing is known about
+  // the sign of the result.
+  parseAssembly("define i32 @test(float %a) {\n"
+                "  %A = fptosi float %a to i32\n"
+                "  ret i32 %A\n"
+                "}\n");
+  expectKnownBits(/*Zero*/ 0u, /*One*/ 0u);
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
