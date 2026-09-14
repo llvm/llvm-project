@@ -208,7 +208,7 @@ private:
   CostType ModuleCost;
   DenseSet<const Function *> EntryFuncs;
   StringSet<> OriginalExternals;
-  DenseMap<const Function *, bool> externalFunction;
+  DenseMap<const Function *, bool> ExternalFunction;
   DenseMap<const Function *, CostType> FuncsCosts;
   SmallVector<FunctionWithDependencies> FWDWorkList;
 
@@ -235,6 +235,9 @@ private:
   /// is sorted by (TotalCost desc, Name asc) so the most expensive roots
   /// are assigned first during partitioning.
   void createWorkList();
+
+  /// Sorts FWDWorkList by total cost (descending) and then by function name.
+  void sortWorkList();
 };
 
 } // end namespace llvm
