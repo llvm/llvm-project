@@ -137,6 +137,34 @@ namespace llvm {
   }
   } // namespace FloatABI
 
+  /// The threading model to assume for lowering, e.g. of atomics.
+  enum class ThreadModel {
+    POSIX,  // POSIX Threads
+    Single, // Single Threaded Environment
+  };
+
+  /// Parse the string spelling used by the "thread-model" IR module flag into a
+  /// ThreadModel.
+  inline std::optional<ThreadModel> parseThreadModel(StringRef S) {
+    if (S == "posix")
+      return ThreadModel::POSIX;
+    if (S == "single")
+      return ThreadModel::Single;
+    return std::nullopt;
+  }
+
+  /// Returns the string spelling used by the "thread-model" IR module flag for
+  /// a ThreadModel.
+  inline StringRef getThreadModelName(ThreadModel TM) {
+    switch (TM) {
+    case ThreadModel::POSIX:
+      return "posix";
+    case ThreadModel::Single:
+      return "single";
+    }
+    return "";
+  }
+
   enum class EABI {
     Unknown,
     Default, // Default means not specified

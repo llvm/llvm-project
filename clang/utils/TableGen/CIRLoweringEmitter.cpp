@@ -222,14 +222,19 @@ void GenerateLLVMLoweringPattern(
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
+    std::string Properties =
+        "cir::getDefaultProperties<mlir::LLVM::" + LLVMOp.str() +
+        ">(op.getContext())";
     if (HasZeroResult) {
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-           << ">(op, mlir::TypeRange{}, adaptor.getOperands());\n";
+           << ">(op, mlir::TypeRange{}, adaptor.getOperands(), " << Properties
+           << ");\n";
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
-           << ">(op, resTy, adaptor.getOperands());\n";
+           << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
+           << Properties << ");\n";
     }
     Code << "    return mlir::success();\n";
     Code << "  }\n";
