@@ -1681,7 +1681,7 @@ static bool hostNeedsUbsanOffloadRt(Compilation &C, const ToolChain &HostTC) {
       const ToolChain *DevTC = Entry.second;
       // FIXME: CUDA/HIPSPV copy the host mask and ignore device sanitizers.
       const llvm::Triple &TT = DevTC->getTriple();
-      if (!TT.isAMDGCN() || TT.getOS() != llvm::Triple::AMDHSA)
+      if (!TT.isAMDGCN())
         continue;
 
       for (BoundArch BA :
