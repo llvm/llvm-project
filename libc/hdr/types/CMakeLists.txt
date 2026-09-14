@@ -482,6 +482,17 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  off64_t
+  HDRS
+    off64_t.h
+  DEPENDS
+    libc.hdr.fcntl_overlay
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.off64_t
+    libc.include.fcntl
+)
+
+add_proxy_header_library(
   cookie_io_functions_t
   HDRS
     cookie_io_functions_t.h
