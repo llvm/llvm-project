@@ -9,13 +9,15 @@
 ; in the test case, and leave the check under CHECK-SPIRV-NOT to track
 ; the issue and follow-up its final resolution when ready.
 ; CHECK-SPIRV-NOT: OpCapability StorageImageReadWithoutFormat
+; CHECK-SPIRV: OpCapability Float16
+; CHECK-SPIRV-NOT: OpCapability StorageImageReadWithoutFormat
 
 ; CHECK-SPIRV: %[[#IntTy:]] = OpTypeInt
-; CHECK-SPIRV: %[[#IVecTy:]] = OpTypeVector %[[#IntTy]]
+; CHECK-SPIRV: %[[#IVecTy:]] = OpTypeVector %[[#IntTy]] 4
 ; CHECK-SPIRV: %[[#FloatTy:]] = OpTypeFloat 32
-; CHECK-SPIRV: %[[#FVecTy:]] = OpTypeVector %[[#FloatTy]]
+; CHECK-SPIRV: %[[#FVecTy:]] = OpTypeVector %[[#FloatTy]] 4
 ; CHECK-SPIRV: %[[#HalfTy:]] = OpTypeFloat 16
-; CHECK-SPIRV: %[[#HVecTy:]] = OpTypeVector %[[#HalfTy]]
+; CHECK-SPIRV: %[[#HVecTy:]] = OpTypeVector %[[#HalfTy]] 4
 ; CHECK-SPIRV: OpImageRead %[[#IVecTy]]
 ; CHECK-SPIRV: OpImageRead %[[#FVecTy]]
 ; CHECK-SPIRV: OpImageRead %[[#HVecTy]]
