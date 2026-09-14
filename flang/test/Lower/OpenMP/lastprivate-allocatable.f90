@@ -49,6 +49,7 @@ end program
 ! CHECK:            omp.sections {
 ! CHECK:              omp.section {
 ! CHECK:                fir.load
+! CHECK:                fir.allocmem !fir.array<?xcomplex<f32>>
 ! CHECK:                %[[TEMP:.*]] = fir.load %[[A_PRIV:.*]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>
 ! CHECK:                hlfir.assign %[[TEMP]] to %[[A]]#0 realloc : !fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>,
 ! CHECK-SAME:             !fir.ref<!fir.box<!fir.heap<!fir.array<?xcomplex<f32>>>>>

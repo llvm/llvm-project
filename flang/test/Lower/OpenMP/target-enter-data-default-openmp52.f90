@@ -10,8 +10,8 @@ contains
   subroutine initialize()
   allocate(A)
   !$omp target enter data map(A)
-  !CHECK-52: omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.box<!fir.heap<f32>>) map_clauses(to) capture(ByRef) var_ptr_ptr(%5 : !fir.llvm_ptr<!fir.ref<f32>>, f32) name("") -> !fir.llvm_ptr<!fir.ref<f32>>
-  !CHECK-52: omp.map.info var_ptr(%2 : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.box<!fir.heap<f32>>) map_clauses(always, to) capture(ByRef) members(%6 : [0] : !fir.llvm_ptr<!fir.ref<f32>>) name("a") -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  !CHECK-52: %[[MEMBER:.*]] = omp.map.info var_ptr(%[[A:.*]] : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.box<!fir.heap<f32>>) map_clauses(to) capture(ByRef) var_ptr_ptr(%{{[0-9]+}} : !fir.llvm_ptr<!fir.ref<f32>>, f32) name("") -> !fir.llvm_ptr<!fir.ref<f32>>
+  !CHECK-52: omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.box<!fir.heap<f32>>>, !fir.box<!fir.heap<f32>>) map_clauses(always, to) capture(ByRef) members(%[[MEMBER]] : [0] : !fir.llvm_ptr<!fir.ref<f32>>) name("a") -> !fir.ref<!fir.box<!fir.heap<f32>>>
   !CHECK-51: to and alloc map types are permitted
 
   end subroutine initialize

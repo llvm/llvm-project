@@ -80,7 +80,7 @@ subroutine char_deferred(n)
   character(:), allocatable :: c
   ! CHECK: %[[cAddrVar:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {{{.*}}uniq_name = "_QFchar_deferredEc"}
   allocate(character(10):: c)
-  ! CHECK: %[[c10:.]] = fir.convert %c10_i32 : (i32) -> index
+  ! CHECK: %[[c10:.*]] = fir.convert %c10_i32 : (i32) -> index
   ! CHECK: %[[alloc:.*]] = fir.allocmem !fir.char<1,?>(%[[c10]] : index) {{{.*}}uniq_name = "_QFchar_deferredEc.alloc"}
   ! CHECK: %[[box:.*]] = fir.embox %[[alloc]] typeparams %[[c10]]
   ! CHECK: fir.store %[[box]] to %{{.*}}

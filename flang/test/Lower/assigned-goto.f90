@@ -40,6 +40,7 @@
     integer :: V
  13 V = 1
     allocate(L)
+    ! CHECK: fir.allocmem i32
     ! CHECK: %[[N0:.+]] = fir.box_addr %{{.+}}
     ! CHECK: fir.store %c31{{.*}} to %[[N0]]
     assign 31 to L
