@@ -4,8 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 # Build libxml2 for Linux release binaries without ICU or iconv dependencies.
-# Additional CMake arguments can select the compiler, ABI, PIC, or zlib settings.
-# The defaults match the Linux release configuration (PIC and zlib enabled).
+# Additional CMake arguments can select the compiler, ABI, or zlib settings.
+# Zlib is enabled to match the Linux release configuration.
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then
@@ -34,13 +34,11 @@ cmake -G Ninja -S "libxml2-$version" -B build \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$install_dir" \
   -DCMAKE_INSTALL_LIBDIR=lib \
-  -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
   -DBUILD_SHARED_LIBS=OFF \
   -DLIBXML2_WITH_ICU=OFF \
   -DLIBXML2_WITH_ICONV=OFF \
   -DLIBXML2_WITH_MODULES=OFF \
   -DLIBXML2_WITH_PROGRAMS=OFF \
-  -DLIBXML2_WITH_PYTHON=OFF \
   -DLIBXML2_WITH_TESTS=OFF \
   -DLIBXML2_WITH_ZLIB=ON \
   "$@"

@@ -62,7 +62,6 @@ jobs:
       ref: ${{ steps.vars.outputs.ref }}
       upload: ${{ steps.vars.outputs.upload }}
       target-cmake-flags: ${{ steps.vars.outputs.target-cmake-flags }}
-      bootstrap-prefix: ${{ steps.vars.outputs.bootstrap-prefix }}
       build-flang: ${{ steps.vars.outputs.build-flang }}
       release-binary-basename: ${{ steps.vars.outputs.release-binary-basename }}
       release-binary-filename: ${{ steps.vars.outputs.release-binary-filename }}
@@ -208,7 +207,6 @@ jobs:
         target_cmake_flags="$target_cmake_flags -D${bootstrap_prefix}_CPACK_PACKAGE_FILE_NAME=$release_binary_basename"
 
         echo "target-cmake-flags=$target_cmake_flags" >> $GITHUB_OUTPUT
-        echo "bootstrap-prefix=$bootstrap_prefix" >> $GITHUB_OUTPUT
         echo "build-runs-on=$build_runs_on" >> $GITHUB_OUTPUT
         echo "test-runs-on=$test_runs_on" >> $GITHUB_OUTPUT
         echo "attestation-name=$RUNNER_OS-$RUNNER_ARCH-release-binary-attestation" >> $GITHUB_OUTPUT
@@ -274,7 +272,6 @@ jobs:
       env:
         BUILD_PREFIX: ${{ steps.setup-stage.outputs.build-prefix }}
         TARGET_CMAKE_FLAGS: ${{ needs.prepare.outputs.target-cmake-flags }}
-        BOOTSTRAP_PREFIX: ${{ needs.prepare.outputs.bootstrap-prefix }}
       shell: bash
       run: |
         libxml2_cmake_flags=()
@@ -286,9 +283,6 @@ jobs:
               "-D${stage}LIBXML2_LIBRARY=$libxml2_prefix/lib/libxml2.a"
               "-D${stage}LIBXML2_STATIC_LIBRARY=$libxml2_prefix/lib/libxml2.a"
             )
-            if [ "${stage%_}" = "$BOOTSTRAP_PREFIX" ]; then
-              break
-            fi
           done
         fi
         # There were some issues on the ARM64 MacOS runners with trying to build x86 object,
