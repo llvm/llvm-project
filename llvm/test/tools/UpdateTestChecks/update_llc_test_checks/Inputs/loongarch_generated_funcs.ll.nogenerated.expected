@@ -13,9 +13,9 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    .cfi_offset 22, -8
 ; CHECK-NEXT:    addi.w $fp, $sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    st.w $zero, $fp, -12
-; CHECK-NEXT:    st.w $zero, $fp, -16
 ; CHECK-NEXT:    ori $a0, $zero, 1
+; CHECK-NEXT:    st.w $zero, $fp, -16
+; CHECK-NEXT:    st.w $zero, $fp, -12
 ; CHECK-NEXT:    st.w $a0, $fp, -16
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
@@ -39,9 +39,9 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    ori $a0, $zero, 4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
 ; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    addi.w $sp, $sp, 32
 ; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
@@ -91,25 +91,25 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    .cfi_offset 22, -8
 ; CHECK-NEXT:    addi.w $fp, $sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    st.w $zero, $fp, -12
+; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:  .Lpcadd_hi0:
 ; CHECK-NEXT:    pcaddu12i $a0, %pcadd_hi20(x)
-; CHECK-NEXT:    ori $a1, $zero, 1
-; CHECK-NEXT:    st.w $a1, $fp, -16
 ; CHECK-NEXT:    ori $a2, $zero, 2
-; CHECK-NEXT:    st.w $a2, $fp, -20
 ; CHECK-NEXT:    ori $a3, $zero, 3
-; CHECK-NEXT:    st.w $a3, $fp, -24
 ; CHECK-NEXT:    ori $a4, $zero, 4
-; CHECK-NEXT:    st.w $a4, $fp, -28
+; CHECK-NEXT:    st.w $zero, $fp, -12
 ; CHECK-NEXT:    st.w $a1, $a0, %pcadd_lo12(.Lpcadd_hi0)
+; CHECK-NEXT:    st.w $a1, $fp, -16
+; CHECK-NEXT:    st.w $a2, $fp, -20
+; CHECK-NEXT:    st.w $a3, $fp, -24
+; CHECK-NEXT:    st.w $a4, $fp, -28
+; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    st.w $a1, $fp, -16
 ; CHECK-NEXT:    st.w $a2, $fp, -20
 ; CHECK-NEXT:    st.w $a3, $fp, -24
 ; CHECK-NEXT:    st.w $a4, $fp, -28
-; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi.w $sp, $sp, 32

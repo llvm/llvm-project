@@ -74,12 +74,12 @@ define i64 @ashr_i64(i64 %x, i64 %y) {
 ; LA32-NEXT:    srai.w $a1, $a1, 31
 ; LA32-NEXT:    ret
 ; LA32-NEXT:  .LBB4_2:
-; LA32-NEXT:    srl.w $a0, $a0, $a2
-; LA32-NEXT:    xori $a3, $a2, 31
 ; LA32-NEXT:    slli.w $a4, $a1, 1
+; LA32-NEXT:    xori $a3, $a2, 31
+; LA32-NEXT:    srl.w $a0, $a0, $a2
+; LA32-NEXT:    sra.w $a1, $a1, $a2
 ; LA32-NEXT:    sll.w $a3, $a4, $a3
 ; LA32-NEXT:    or $a0, $a0, $a3
-; LA32-NEXT:    sra.w $a1, $a1, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: ashr_i64:
@@ -154,8 +154,8 @@ define i64 @ashr_i64_3(i64 %x) {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    slli.w $a2, $a1, 29
 ; LA32-NEXT:    srli.w $a0, $a0, 3
-; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    srai.w $a1, $a1, 3
+; LA32-NEXT:    or $a0, $a0, $a2
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: ashr_i64_3:

@@ -13,13 +13,13 @@ define <16 x i8> @test_bitreverse_v16i8(<16 x i8> %a) nounwind {
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 4
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vandi.b $vr1, $vr0, 51
-; LA32-NEXT:    vslli.b $vr1, $vr1, 2
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 2
+; LA32-NEXT:    vslli.b $vr1, $vr1, 2
 ; LA32-NEXT:    vandi.b $vr0, $vr0, 51
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vandi.b $vr1, $vr0, 85
-; LA32-NEXT:    vslli.b $vr1, $vr1, 1
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 1
+; LA32-NEXT:    vslli.b $vr1, $vr1, 1
 ; LA32-NEXT:    vandi.b $vr0, $vr0, 85
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    ret
@@ -118,13 +118,13 @@ define <2 x i64> @test_bitreverse_v2i64(<2 x i64> %a) nounwind {
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 4
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vandi.b $vr1, $vr0, 51
-; LA32-NEXT:    vslli.b $vr1, $vr1, 2
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 2
+; LA32-NEXT:    vslli.b $vr1, $vr1, 2
 ; LA32-NEXT:    vandi.b $vr0, $vr0, 51
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    vandi.b $vr1, $vr0, 85
-; LA32-NEXT:    vslli.b $vr1, $vr1, 1
 ; LA32-NEXT:    vsrli.b $vr0, $vr0, 1
+; LA32-NEXT:    vslli.b $vr1, $vr1, 1
 ; LA32-NEXT:    vandi.b $vr0, $vr0, 85
 ; LA32-NEXT:    vor.v $vr0, $vr0, $vr1
 ; LA32-NEXT:    ret

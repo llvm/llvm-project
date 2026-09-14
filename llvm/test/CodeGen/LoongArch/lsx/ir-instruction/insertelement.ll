@@ -94,9 +94,9 @@ define void @insert_16xi8_idx(ptr %src, ptr %dst, i8 %ins, i32 %idx) nounwind {
 ; LA32-LABEL: insert_16xi8_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI6_0)
-; LA32-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI6_0)
 ; LA32-NEXT:    vld $vr1, $a0, 0
 ; LA32-NEXT:    vreplgr2vr.b $vr2, $a3
+; LA32-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI6_0)
 ; LA32-NEXT:    vseq.b $vr0, $vr2, $vr0
 ; LA32-NEXT:    vreplgr2vr.b $vr2, $a2
 ; LA32-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
@@ -106,9 +106,9 @@ define void @insert_16xi8_idx(ptr %src, ptr %dst, i8 %ins, i32 %idx) nounwind {
 ; LA64-LABEL: insert_16xi8_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI6_0)
-; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI6_0)
 ; LA64-NEXT:    vld $vr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI6_0)
 ; LA64-NEXT:    vreplgr2vr.b $vr2, $a0
 ; LA64-NEXT:    vseq.b $vr0, $vr2, $vr0
 ; LA64-NEXT:    vreplgr2vr.b $vr2, $a2
@@ -125,9 +125,9 @@ define void @insert_8xi16_idx(ptr %src, ptr %dst, i16 %ins, i32 %idx) nounwind {
 ; LA32-LABEL: insert_8xi16_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI7_0)
-; LA32-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI7_0)
 ; LA32-NEXT:    vld $vr1, $a0, 0
 ; LA32-NEXT:    vreplgr2vr.h $vr2, $a3
+; LA32-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI7_0)
 ; LA32-NEXT:    vseq.h $vr0, $vr2, $vr0
 ; LA32-NEXT:    vreplgr2vr.h $vr2, $a2
 ; LA32-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
@@ -137,9 +137,9 @@ define void @insert_8xi16_idx(ptr %src, ptr %dst, i16 %ins, i32 %idx) nounwind {
 ; LA64-LABEL: insert_8xi16_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI7_0)
-; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI7_0)
 ; LA64-NEXT:    vld $vr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI7_0)
 ; LA64-NEXT:    vreplgr2vr.h $vr2, $a0
 ; LA64-NEXT:    vseq.h $vr0, $vr2, $vr0
 ; LA64-NEXT:    vreplgr2vr.h $vr2, $a2
@@ -156,9 +156,9 @@ define void @insert_4xi32_idx(ptr %src, ptr %dst, i32 %ins, i32 %idx) nounwind {
 ; LA32-LABEL: insert_4xi32_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI8_0)
-; LA32-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI8_0)
 ; LA32-NEXT:    vld $vr1, $a0, 0
 ; LA32-NEXT:    vreplgr2vr.w $vr2, $a3
+; LA32-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI8_0)
 ; LA32-NEXT:    vseq.w $vr0, $vr2, $vr0
 ; LA32-NEXT:    vreplgr2vr.w $vr2, $a2
 ; LA32-NEXT:    vbitsel.v $vr0, $vr1, $vr2, $vr0
@@ -168,9 +168,9 @@ define void @insert_4xi32_idx(ptr %src, ptr %dst, i32 %ins, i32 %idx) nounwind {
 ; LA64-LABEL: insert_4xi32_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI8_0)
-; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI8_0)
 ; LA64-NEXT:    vld $vr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI8_0)
 ; LA64-NEXT:    vreplgr2vr.w $vr2, $a0
 ; LA64-NEXT:    vseq.w $vr0, $vr2, $vr0
 ; LA64-NEXT:    vreplgr2vr.w $vr2, $a2
@@ -187,14 +187,14 @@ define void @insert_2xi64_idx(ptr %src, ptr %dst, i64 %ins, i32 %idx) nounwind {
 ; LA32-LABEL: insert_2xi64_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a5, %pc_hi20(.LCPI9_0)
-; LA32-NEXT:    vld $vr0, $a5, %pc_lo12(.LCPI9_0)
-; LA32-NEXT:    slli.w $a4, $a4, 1
 ; LA32-NEXT:    vld $vr1, $a0, 0
-; LA32-NEXT:    vreplgr2vr.w $vr2, $a4
-; LA32-NEXT:    vseq.w $vr2, $vr2, $vr0
+; LA32-NEXT:    slli.w $a4, $a4, 1
 ; LA32-NEXT:    vreplgr2vr.w $vr3, $a2
-; LA32-NEXT:    vbitsel.v $vr1, $vr1, $vr3, $vr2
+; LA32-NEXT:    vld $vr0, $a5, %pc_lo12(.LCPI9_0)
+; LA32-NEXT:    vreplgr2vr.w $vr2, $a4
 ; LA32-NEXT:    addi.w $a0, $a4, 1
+; LA32-NEXT:    vseq.w $vr2, $vr2, $vr0
+; LA32-NEXT:    vbitsel.v $vr1, $vr1, $vr3, $vr2
 ; LA32-NEXT:    vreplgr2vr.w $vr2, $a0
 ; LA32-NEXT:    vseq.w $vr0, $vr2, $vr0
 ; LA32-NEXT:    vreplgr2vr.w $vr2, $a3
@@ -205,9 +205,9 @@ define void @insert_2xi64_idx(ptr %src, ptr %dst, i64 %ins, i32 %idx) nounwind {
 ; LA64-LABEL: insert_2xi64_idx:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    pcalau12i $a4, %pc_hi20(.LCPI9_0)
-; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI9_0)
 ; LA64-NEXT:    vld $vr1, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a3, 31, 0
+; LA64-NEXT:    vld $vr0, $a4, %pc_lo12(.LCPI9_0)
 ; LA64-NEXT:    vreplgr2vr.d $vr2, $a0
 ; LA64-NEXT:    vseq.d $vr0, $vr2, $vr0
 ; LA64-NEXT:    vreplgr2vr.d $vr2, $a2
@@ -224,26 +224,26 @@ define void @insert_4xfloat_idx(ptr %src, ptr %dst, float %ins, i32 %idx) nounwi
 ; LA32-LABEL: insert_4xfloat_idx:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI10_0)
-; LA32-NEXT:    vld $vr1, $a3, %pc_lo12(.LCPI10_0)
-; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vld $vr2, $a0, 0
+; LA32-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA32-NEXT:    vreplgr2vr.w $vr3, $a2
-; LA32-NEXT:    vseq.w $vr1, $vr3, $vr1
+; LA32-NEXT:    vld $vr1, $a3, %pc_lo12(.LCPI10_0)
 ; LA32-NEXT:    vreplvei.w $vr0, $vr0, 0
+; LA32-NEXT:    vseq.w $vr1, $vr3, $vr1
 ; LA32-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: insert_4xfloat_idx:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
 ; LA64-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI10_0)
-; LA64-NEXT:    vld $vr1, $a3, %pc_lo12(.LCPI10_0)
 ; LA64-NEXT:    vld $vr2, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
+; LA64-NEXT:    # kill: def $f0 killed $f0 def $vr0
+; LA64-NEXT:    vld $vr1, $a3, %pc_lo12(.LCPI10_0)
 ; LA64-NEXT:    vreplgr2vr.w $vr3, $a0
-; LA64-NEXT:    vseq.w $vr1, $vr3, $vr1
 ; LA64-NEXT:    vreplvei.w $vr0, $vr0, 0
+; LA64-NEXT:    vseq.w $vr1, $vr3, $vr1
 ; LA64-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -256,29 +256,29 @@ define void @insert_4xfloat_idx(ptr %src, ptr %dst, float %ins, i32 %idx) nounwi
 define void @insert_2xdouble_idx(ptr %src, ptr %dst, double %ins, i32 %idx) nounwind {
 ; LA32-LABEL: insert_2xdouble_idx:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA32-NEXT:    vld $vr1, $a0, 0
 ; LA32-NEXT:    pcalau12i $a0, %pc_hi20(.LCPI11_0)
-; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI11_0)
 ; LA32-NEXT:    vrepli.b $vr3, 0
+; LA32-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA32-NEXT:    vld $vr2, $a0, %pc_lo12(.LCPI11_0)
 ; LA32-NEXT:    vinsgr2vr.w $vr3, $a2, 0
+; LA32-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr3, $a2, 2
 ; LA32-NEXT:    vseq.d $vr2, $vr3, $vr2
-; LA32-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; LA32-NEXT:    vbitsel.v $vr0, $vr1, $vr0, $vr2
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: insert_2xdouble_idx:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
 ; LA64-NEXT:    pcalau12i $a3, %pc_hi20(.LCPI11_0)
-; LA64-NEXT:    vld $vr1, $a3, %pc_lo12(.LCPI11_0)
 ; LA64-NEXT:    vld $vr2, $a0, 0
 ; LA64-NEXT:    bstrpick.d $a0, $a2, 31, 0
+; LA64-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
+; LA64-NEXT:    vld $vr1, $a3, %pc_lo12(.LCPI11_0)
 ; LA64-NEXT:    vreplgr2vr.d $vr3, $a0
-; LA64-NEXT:    vseq.d $vr1, $vr3, $vr1
 ; LA64-NEXT:    vreplvei.d $vr0, $vr0, 0
+; LA64-NEXT:    vseq.d $vr1, $vr3, $vr1
 ; LA64-NEXT:    vbitsel.v $vr0, $vr2, $vr0, $vr1
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret

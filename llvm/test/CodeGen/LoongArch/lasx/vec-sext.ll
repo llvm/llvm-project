@@ -142,8 +142,8 @@ define void @load_sext_16i8_to_16i32(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vext2xv.h.b $xr0, $xr0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vext2xv.w.h $xr1, $xr1
 ; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
+; CHECK-NEXT:    vext2xv.w.h $xr1, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    xvst $xr1, $a1, 32
 ; CHECK-NEXT:    ret
@@ -160,15 +160,15 @@ define void @load_sext_16i8_to_16i64(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vext2xv.h.b $xr0, $xr0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vext2xv.w.h $xr1, $xr1
-; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 1
-; CHECK-NEXT:    vext2xv.d.w $xr2, $xr2
 ; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
+; CHECK-NEXT:    vext2xv.w.h $xr1, $xr1
 ; CHECK-NEXT:    xvpermi.q $xr3, $xr0, 1
+; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    xvpermi.q $xr2, $xr1, 1
 ; CHECK-NEXT:    vext2xv.d.w $xr3, $xr3
 ; CHECK-NEXT:    vext2xv.d.w $xr1, $xr1
-; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
+; CHECK-NEXT:    vext2xv.d.w $xr2, $xr2
 ; CHECK-NEXT:    xvst $xr1, $a1, 64
 ; CHECK-NEXT:    xvst $xr3, $a1, 32
 ; CHECK-NEXT:    xvst $xr2, $a1, 96
@@ -200,8 +200,8 @@ define void @load_sext_8i16_to_8i64(ptr %ptr, ptr %dst) {
 ; CHECK-NEXT:    vld $vr0, $a0, 0
 ; CHECK-NEXT:    vext2xv.w.h $xr0, $xr0
 ; CHECK-NEXT:    xvpermi.q $xr1, $xr0, 1
-; CHECK-NEXT:    vext2xv.d.w $xr1, $xr1
 ; CHECK-NEXT:    vext2xv.d.w $xr0, $xr0
+; CHECK-NEXT:    vext2xv.d.w $xr1, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a1, 0
 ; CHECK-NEXT:    xvst $xr1, $a1, 32
 ; CHECK-NEXT:    ret

@@ -74,8 +74,8 @@ define i64 @alsl_i64(i64 signext %a, i64 signext %b) nounwind {
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    srli.w $a4, $a0, 28
 ; LA32R-NEXT:    slli.w $a1, $a1, 4
-; LA32R-NEXT:    or $a1, $a1, $a4
 ; LA32R-NEXT:    slli.w $a0, $a0, 4
+; LA32R-NEXT:    or $a1, $a1, $a4
 ; LA32R-NEXT:    add.w $a0, $a2, $a0
 ; LA32R-NEXT:    sltu $a2, $a0, $a2
 ; LA32R-NEXT:    add.w $a1, $a3, $a1
@@ -86,8 +86,8 @@ define i64 @alsl_i64(i64 signext %a, i64 signext %b) nounwind {
 ; LA32S:       # %bb.0: # %entry
 ; LA32S-NEXT:    srli.w $a4, $a0, 28
 ; LA32S-NEXT:    slli.w $a1, $a1, 4
-; LA32S-NEXT:    or $a1, $a1, $a4
 ; LA32S-NEXT:    alsl.w $a0, $a0, $a2, 4
+; LA32S-NEXT:    or $a1, $a1, $a4
 ; LA32S-NEXT:    sltu $a2, $a0, $a2
 ; LA32S-NEXT:    add.w $a1, $a3, $a1
 ; LA32S-NEXT:    add.w $a1, $a1, $a2
@@ -267,8 +267,8 @@ define i64 @mul_add_i64(i64 signext %a, i64 signext %b) nounwind {
 ; LA32R-LABEL: mul_add_i64:
 ; LA32R:       # %bb.0: # %entry
 ; LA32R-NEXT:    ori $a4, $zero, 15
-; LA32R-NEXT:    mulh.wu $a4, $a0, $a4
 ; LA32R-NEXT:    slli.w $a5, $a1, 4
+; LA32R-NEXT:    mulh.wu $a4, $a0, $a4
 ; LA32R-NEXT:    sub.w $a1, $a5, $a1
 ; LA32R-NEXT:    add.w $a1, $a4, $a1
 ; LA32R-NEXT:    slli.w $a4, $a0, 4
@@ -282,8 +282,8 @@ define i64 @mul_add_i64(i64 signext %a, i64 signext %b) nounwind {
 ; LA32S-LABEL: mul_add_i64:
 ; LA32S:       # %bb.0: # %entry
 ; LA32S-NEXT:    ori $a4, $zero, 15
-; LA32S-NEXT:    mulh.wu $a4, $a0, $a4
 ; LA32S-NEXT:    slli.w $a5, $a1, 4
+; LA32S-NEXT:    mulh.wu $a4, $a0, $a4
 ; LA32S-NEXT:    sub.w $a1, $a5, $a1
 ; LA32S-NEXT:    add.w $a1, $a4, $a1
 ; LA32S-NEXT:    slli.w $a4, $a0, 4

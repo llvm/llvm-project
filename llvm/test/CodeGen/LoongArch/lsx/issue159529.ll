@@ -5,11 +5,11 @@
 define <64 x i32> @test1(<64 x i32> %0) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr12, $sp, 112
 ; CHECK-NEXT:    vld $vr8, $sp, 0
 ; CHECK-NEXT:    vld $vr9, $sp, 16
 ; CHECK-NEXT:    vld $vr10, $sp, 32
 ; CHECK-NEXT:    vld $vr11, $sp, 48
-; CHECK-NEXT:    vld $vr12, $sp, 112
 ; CHECK-NEXT:    vld $vr13, $sp, 96
 ; CHECK-NEXT:    vld $vr14, $sp, 80
 ; CHECK-NEXT:    vld $vr15, $sp, 64
