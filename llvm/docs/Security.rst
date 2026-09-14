@@ -32,8 +32,7 @@ Security Response Group Members
 
 The members of the group represent a wide cross-section of the community, and
 meet the criteria for inclusion below. The list is in the format
-`* ${full_name} (${affiliation}) [${github_username}]`. If a github
-username for an individual isn't available, the brackets will be empty.
+`* ${full_name} (${affiliation}) [${github_username}]`.
 
 * Abhay Kanhere (Apple) [@AbhayKanhere]
 * Ahmed Bougacha (Apple) [@ahmedbougacha]
@@ -80,13 +79,18 @@ Criteria
 
     + Represents an organization or company which ships products that include their own copy of LLVM. Due to their position in the organization, the nominee has a reasonable need to know about security issues and disclosure embargoes.
 
+  - Vendor observer:
+
+    + As Vendor contacts, but participates only for the purpose of being aware of security issues that may include their own copy of LLVM. The observer has fewer responsibilities than the other groups, but does not have a formal vote.
+
 * Additionally, the following are necessary but not sufficient criteria for membership in the LLVM Security Response Group:
 
   - If already in the LLVM Security Response Group, has actively participated in one (if any) security issue in the last year.
   - If already in the LLVM Security Response Group, has actively participated in most membership discussions in the last year.
   - If already in the LLVM Security Response Group, has actively participated in writing or reviewing a transparency report in the last year.
   - When employed by a company or other entity, the parent entity has no more than three members already in the LLVM Security Response Group.
-  - When nominated as a vendor contact, their position with that vendor remains the same as when originally nominated.
+  - When nominated as a vendor contact or observer, their position with that vendor remains the same as when originally nominated.
+  - When nominated as a vendor observer, the vendor has no existing vendor observers, i.e. each vendor can have at most one vendor observer.
   - Nominees are trusted by existing LLVM Security Response Group members to keep communications embargoed while still active.
 
 Nomination process
@@ -148,13 +152,19 @@ Following the process below, the LLVM Security Response Group decides on embargo
 Collaboration
 -------------
 
-Members of the LLVM Security Response Group are expected to:
+Vendor observer members of the LLVM Security Response Group are expected to:
 
 * Promptly share any LLVM vulnerabilities they become aware of.
+* Respond to issues if they wish to take part in embargo negotiations.
+
+Members in all other groups have the following additional expectations:
+
 * Volunteer to drive issues forward.
+* Be on the rota for issue response.
 * Help evaluate the severity of incoming issues.
 * Help write and review patches to address security issues.
 * Participate in the member nomination and removal processes.
+* Have a GitHub account published in `Security Response Group Members`_.
 
 .. _security-group-discussion-medium:
 
@@ -174,7 +184,7 @@ We also occasionally need to discuss logistics of the LLVM Security Response Gro
 * Propose member removal.
 * Suggest policy changes.
 
-We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on the Discourse forums.  For internal or confidential discussions, we also use a private mailing list.
+We often have these discussions publicly, in our :ref:`monthly public sync-up call <online-sync-ups>` and on the Discourse forums.  For internal or confidential discussions, we also use a private mailing list. Meeting minutes are available in the `LLVM Security Response Group public sync-ups meeting minutes`_ Discourse forums thread.
 
 Process
 =======
@@ -276,3 +286,4 @@ in the report, as well as update this document through the above process.
 .. _Discourse forums: https://discourse.llvm.org
 .. _MITRE: https://cve.mitre.org
 .. _example nomination is available here: https://github.com/llvm/llvm-project/pull/92174
+.. _LLVM Security Response Group public sync-ups meeting minutes: https://discourse.llvm.org/t/llvm-security-response-group-public-sync-ups-meeting-minutes/62735
