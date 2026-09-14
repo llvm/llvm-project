@@ -55,9 +55,6 @@ namespace interp {
 using APSInt = llvm::APSInt;
 using FixedPointSemantics = llvm::FixedPointSemantics;
 
-/// Checks if the variable has externally defined storage.
-bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
-
 /// Checks if a pointer is null.
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                CheckSubobjectKind CSK);

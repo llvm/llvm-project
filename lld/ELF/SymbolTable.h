@@ -88,7 +88,6 @@ private:
 
   llvm::StringMap<SmallVector<Symbol *, 0>> &getDemangledSyms();
   bool assignExactVersion(SymbolVersion ver, uint16_t versionId);
-  void assignWildcardVersion(SymbolVersion ver, uint16_t versionId);
 
   Ctx &ctx;
 
