@@ -2738,6 +2738,7 @@ class PHINode : public Instruction, public FastMathFlagsStorage {
                    InsertPosition InsertBefore = nullptr)
       : Instruction(Ty, Instruction::PHI, AllocMarker, InsertBefore),
         ReservedSpace(NumReservedValues) {
+    assert(!isInvalidType(Ty) && "Invalid type for PHI node");
     setName(NameStr);
     allocHungoffUses(ReservedSpace);
   }
@@ -2764,6 +2765,10 @@ public:
     return new (AllocMarker)
         PHINode(Ty, NumReservedValues, NameStr, InsertBefore);
   }
+
+  /// Return a string if the specified type is invalid for a PHI node,
+  /// otherwise return null.
+  LLVM_ABI static const char *isInvalidType(Type *Ty);
 
   /// Provide fast operand accessors
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
