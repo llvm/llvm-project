@@ -15,9 +15,22 @@ namespace llvm {
 
 class Function;
 
-struct CallSiteSplittingPass : OptionalPassInfoMixin<CallSiteSplittingPass> {
+class CallSiteSplittingPass
+    : public OptionalPassInfoMixin<CallSiteSplittingPass> {
+  /// Only allow instructions before a call, if their cost is below
+  /// DuplicationThreshold.
+  const unsigned DuplicationThreshold;
+
+public:
+  CallSiteSplittingPass(unsigned DuplicationThreshold = 5)
+      : DuplicationThreshold(DuplicationThreshold) {}
+
   /// Run the pass over the function.
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 };
 } // end namespace llvm
 
