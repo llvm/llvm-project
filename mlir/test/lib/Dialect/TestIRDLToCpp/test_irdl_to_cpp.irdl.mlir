@@ -11,6 +11,15 @@ irdl.dialect @test_irdl_to_cpp {
     // CHECK: class FooType
     irdl.type @foo
 
+    // CHECK: class BarOp;
+    // CHECK-NEXT: namespace nested {
+    // CHECK-NEXT: class NamespacedOp;
+    // CHECK-NEXT: }
+    // CHECK-NEXT: namespace nested::namespaced {
+    // CHECK-NEXT: class MoreOp;
+    // CHECK-NEXT: }
+    // CHECK-NEXT: class BeefOp;
+
     // CHECK: class BarOp
     // CHECK: ::mlir::Value getRes()
     irdl.operation @bar {

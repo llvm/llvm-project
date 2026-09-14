@@ -381,10 +381,16 @@ static LogicalResult generateInclude(irdl::DialectOp dialect,
     return failure();
 
   auto classDeclarations =
-      llvm::join(llvm::map_range(opNames,
-                                 [](llvm::StringRef name) -> std::string {
-                                   return llvm::formatv("class {0};", name);
-                                 }),
+      llvm::join(llvm::map_range(
+                     opNames,
+                     [](llvm::StringRef name) -> std::string {
+                       if (name.contains("::")) {
+                         auto [scope, className] = name.rsplit("::");
+                         return llvm::formatv("namespace {0} {{\nclass {1};\n}",
+                                              scope, className);
+                       }
+                       return llvm::formatv("class {0};", name);
+                     }),
                  "\n");
   const auto forwardDeclarations = llvm::formatv(
       "{1}\n{0}\n{2}", std::move(classDeclarations),
