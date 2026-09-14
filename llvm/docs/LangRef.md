@@ -8631,6 +8631,21 @@ via a volatile memory access, I/O, or other synchronization. If such a loop is
 not found to interact with the environment in an observable way, the loop may
 be removed. This corresponds to the `mustprogress` function attribute.
 
+#### '`llvm.loop.align`' Metadata
+
+This metadata suggests an alignment (in bytes) for the loop to the backend. The
+first operand is the string `llvm.loop.align` and the second operand is a
+positive power-of-two integer constant of type `i32` specifying the alignment.
+For example:
+
+```llvm
+!0 = !{!"llvm.loop.align", i32 64}
+```
+
+The backend aligns the loop to the maximum of this value and the target's
+preferred loop alignment. This corresponds to the Clang `[[clang::code_align(N)]]`
+statement attribute.
+
 #### '`irr_loop`' Metadata
 
 `irr_loop` metadata may be attached to the terminator instruction of a basic
@@ -9487,6 +9502,35 @@ conflicting floating-point ABIs is rejected. For example:
 ```
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"float-abi", !"hard"}
+```
+
+### Thread Model Module Flags Metadata
+
+This module flag describes the threading model that the module was
+compiled for, which may influence how atomic operations are
+lowered. The value is a string and must be one of:
+
+```{list-table}
+:header-rows: 1
+:widths: 30 70
+* - Value
+  - Meaning
+
+* - `"posix"`
+  - The POSIX threading model: the module may run in a multi-threaded
+    environment.
+
+* - `"single"`
+  - The single-threaded model: the module runs in a known single-threaded
+    environment, so atomic operations may be lowered to their non-atomic
+    equivalents.
+```
+
+When the flag is absent, the target's default thread model is used. The flag
+must use the `error` merge behavior. For example:
+```
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"thread-model", !"single"}
 ```
 
 ### Target ABI Module Flags Metadata
@@ -13282,7 +13326,8 @@ If `value` is of the {ref}`byte type <t_byte>`:
 ##### Syntax:
 
 ```
-<result> = addrspacecast <pty> <ptrval> to <pty2>       ; yields pty2
+<result> = addrspacecast <pty> <ptrval> to <pty2>          ; yields pty2
+<result> = addrspacecast nonnull <pty> <ptrval> to <pty2>  ; yields pty2
 ```
 
 ##### Overview:
@@ -13318,6 +13363,10 @@ should yield the original bit pattern).
 
 Which address space casts are supported depends on the target. Unsupported
 address space casts return {ref}`poison <poisonvalues>`.
+
+The optional `nonnull` flag asserts that `ptrval` is not the null value of
+its source address space; if it is, the result is
+{ref}`poison <poisonvalues>`.
 
 ##### Example:
 

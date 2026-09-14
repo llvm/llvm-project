@@ -111,6 +111,9 @@ bool isCXXABIAttributeLegal(const mlir::TypeConverter &tc,
         return tc.isLegal(gva.getType()) &&
                isCXXABIAttributeLegal(tc, gva.getIndices());
       })
+      .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
+        return tc.isLegal(goa.getType());
+      })
       .Case<cir::VTableAttr>([&tc](cir::VTableAttr vta) {
         return tc.isLegal(vta.getType()) &&
                isCXXABIAttributeLegal(tc, vta.getData());
@@ -208,6 +211,10 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
             tc.convertType(gva.getType()), gva.getSymbol(),
             mlir::cast<mlir::ArrayAttr>(
                 rewriteAttribute(tc, ctx, gva.getIndices())));
+      })
+      .Case<cir::GlobalOffsetAttr>([&tc](cir::GlobalOffsetAttr goa) {
+        return cir::GlobalOffsetAttr::get(tc.convertType(goa.getType()),
+                                          goa.getSymbol(), goa.getOffset());
       })
       .Case<cir::VTableAttr>([&tc, ctx](cir::VTableAttr vta) {
         return cir::VTableAttr::get(
@@ -491,6 +498,10 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
     if (auto gva = mlir::dyn_cast_if_present<cir::GlobalViewAttr>(initVal))
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
                                       gva.getIndices());
+
+    if (auto goa = mlir::dyn_cast_if_present<cir::GlobalOffsetAttr>(initVal))
+      return cir::GlobalOffsetAttr::get(convertedTy, goa.getSymbol(),
+                                        goa.getOffset());
 
     if (auto blockAddr =
             mlir::dyn_cast_if_present<cir::BlockAddrInfoAttr>(initVal)) {

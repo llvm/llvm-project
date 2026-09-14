@@ -654,7 +654,7 @@ define float @test_maxnum_neg_inf_nnan(float %x, float %y) nounwind {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps %xmm1, %xmm0
 ; AVX-NEXT:    retq
-  %r = call nnan float @llvm.maxnum.f32(float %y, float 0xfff0000000000000)
+  %r = call nnan float @llvm.maxnum.f32(float %y, float -inf)
   ret float %r
 }
 

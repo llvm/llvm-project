@@ -454,3 +454,29 @@ define double @nested_fma_subtraction(double %acc, double %a, double %b, double 
   ret double %result
 }
 
+
+define float @multi_use_fmul_addend(float %a, float %c, float %d, float %e, float %f) {
+; CHECK-LABEL: define float @multi_use_fmul_addend(
+; CHECK-SAME: float [[A:%.*]], float [[C:%.*]], float [[D:%.*]], float [[E:%.*]], float [[F:%.*]]) {
+; CHECK-NEXT:    [[AC:%.*]] = fmul fast float [[C]], [[A]]
+; CHECK-NEXT:    [[AD:%.*]] = fmul fast float [[D]], [[A]]
+; CHECK-NEXT:    [[AE:%.*]] = fmul fast float [[E]], [[A]]
+; CHECK-NEXT:    [[E_SUM:%.*]] = fadd fast float [[AD]], [[AC]]
+; CHECK-NEXT:    [[T1:%.*]] = fmul fast float [[E_SUM]], [[E]]
+; CHECK-NEXT:    [[F_SUM0:%.*]] = fadd fast float [[AD]], [[AC]]
+; CHECK-NEXT:    [[F_SUM:%.*]] = fadd fast float [[F_SUM0]], [[AE]]
+; CHECK-NEXT:    [[T2:%.*]] = fmul fast float [[F_SUM]], [[F]]
+; CHECK-NEXT:    [[R:%.*]] = fadd fast float [[T2]], [[T1]]
+; CHECK-NEXT:    ret float [[R]]
+;
+  %ac = fmul fast float %a, %c
+  %ad = fmul fast float %a, %d
+  %ae = fmul fast float %a, %e
+  %e.sum = fadd fast float %ad, %ac
+  %t1 = fmul fast float %e.sum, %e
+  %f.sum0 = fadd fast float %ae, %ad
+  %f.sum = fadd fast float %f.sum0, %ac
+  %t2 = fmul fast float %f.sum, %f
+  %r = fadd fast float %t1, %t2
+  ret float %r
+}

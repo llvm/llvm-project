@@ -1801,9 +1801,11 @@ enum class MSVCSetJmpKind {
 };
 }
 
-/// MSVC handles setjmp a bit differently on different platforms. On every
-/// architecture except 32-bit x86, the frame address is passed. On x86, extra
-/// parameters can be passed as variadic arguments, but we always pass none.
+/// MSVC handles setjmp a bit differently on different platforms. On 32-bit x86
+/// extra parameters can be passed as variadic arguments, but we always pass
+/// none. Everywhere else a frame value is passed: the stack pointer as it was
+/// on entry to the function for AArch64 and 32-bit Arm, and the frame address
+/// for the rest.
 static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
                                const CallExpr *E) {
   llvm::Value *Arg1 = nullptr;
@@ -1818,7 +1820,8 @@ static RValue EmitMSVCRTSetJmp(CodeGenFunction &CGF, MSVCSetJmpKind SJKind,
   } else {
     Name = SJKind == MSVCSetJmpKind::_setjmp ? "_setjmp" : "_setjmpex";
     Arg1Ty = CGF.Int8PtrTy;
-    if (CGF.getTarget().getTriple().getArch() == llvm::Triple::aarch64) {
+    const llvm::Triple &T = CGF.getTarget().getTriple();
+    if (T.getArch() == llvm::Triple::aarch64 || T.isARM() || T.isThumb()) {
       Arg1 = CGF.Builder.CreateCall(
           CGF.CGM.getIntrinsic(Intrinsic::sponentry, CGF.AllocaInt8PtrTy));
     } else
@@ -4146,11 +4149,17 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     EmitTrapCall(Intrinsic::trap);
     return RValue::get(nullptr);
   case Builtin::BI__builtin_verbose_trap: {
-    llvm::DILocation *TrapLocation = Builder.getCurrentDebugLocation();
+    llvm::DebugLoc CallLocation = Builder.getCurrentDebugLocation();
+    llvm::DILocation *TrapLocation = CallLocation;
     if (getDebugInfo()) {
       TrapLocation = getDebugInfo()->CreateTrapFailureMessageFor(
           TrapLocation, *E->getArg(0)->tryEvaluateString(getContext()),
           *E->getArg(1)->tryEvaluateString(getContext()));
+      // Keep the trap on the builtin's source line. A line-zero location would
+      // leave the trap attributed to the preceding line in the line table.
+      TrapLocation = llvm::DILocation::get(
+          getLLVMContext(), CallLocation.getLine(), CallLocation.getCol(),
+          TrapLocation->getScope(), TrapLocation->getInlinedAt());
     }
     ApplyDebugLocation ApplyTrapDI(*this, TrapLocation);
     // Currently no attempt is made to prevent traps from being merged.
@@ -4404,11 +4413,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
-          Op1, nullptr, "elt.max");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smax
+                                               : Intrinsic::umax,
+          Op0, Op1, nullptr, "elt.max");
     } else
       Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
     return RValue::get(Result);
@@ -4419,11 +4427,10 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Result;
     if (Op0->getType()->isIntOrIntVectorTy()) {
       QualType Ty = E->getArg(0)->getType();
-      if (auto *VecTy = Ty->getAs<VectorType>())
-        Ty = VecTy->getElementType();
       Result = Builder.CreateBinaryIntrinsic(
-          Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
-          Op1, nullptr, "elt.min");
+          Ty->hasSignedIntegerRepresentation() ? Intrinsic::smin
+                                               : Intrinsic::umin,
+          Op0, Op1, nullptr, "elt.min");
     } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
     return RValue::get(Result);

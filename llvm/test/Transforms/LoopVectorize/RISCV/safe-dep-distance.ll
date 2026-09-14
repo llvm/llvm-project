@@ -7,7 +7,7 @@ target triple = "riscv64"
 ; Dependence distance between read and write is greater than the trip
 ; count of the loop.  Thus, values written are never read for any
 ; valid vectorization of the loop.
-define void @test(ptr %p) {
+define void @test(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -52,7 +52,7 @@ exit:
 
 ; Dependence distance is less than trip count, thus we must prove that
 ; chosen VF guaranteed to be less than dependence distance.
-define void @test_may_clobber(ptr %p) {
+define void @test_may_clobber(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @test_may_clobber(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -92,7 +92,7 @@ exit:
 }
 
 ; Trviailly no overlap due to maximum possible value of VLEN and LMUL
-define void @trivial_due_max_vscale(ptr %p) {
+define void @trivial_due_max_vscale(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @trivial_due_max_vscale(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -136,7 +136,7 @@ exit:
 }
 
 ; Dependence distance could be violated via LMUL>=2 or interleaving
-define void @no_high_lmul_or_interleave(ptr %p) {
+define void @no_high_lmul_or_interleave(ptr %p) vscale_range(2, 1024) {
 ; CHECK-LABEL: @no_high_lmul_or_interleave(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -182,7 +182,7 @@ exit:
 @a = external global [10 x [12 x i16]]
 
 ; Test case for https://github.com/llvm/llvm-project/issues/134696.
-define void @safe_load_store_distance_not_pow_of_2(i64 %N) {
+define void @safe_load_store_distance_not_pow_of_2(i64 %N) vscale_range(2, 1024) {
 ; CHECK-LABEL: @safe_load_store_distance_not_pow_of_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[N:%.*]], i64 1)

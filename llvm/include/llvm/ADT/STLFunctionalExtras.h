@@ -70,10 +70,6 @@ public:
   }
 
   explicit operator bool() const { return callback; }
-
-  bool operator==(const function_ref<Ret(Params...)> &Other) const {
-    return callable == Other.callable;
-  }
 };
 
 } // end namespace llvm
