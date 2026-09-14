@@ -59522,8 +59522,8 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
       Op0.getOpcode() == ISD::LOAD) {
     LoadSDNode *Ld = cast<LoadSDNode>(Op0.getNode());
 
-    // This transformation is not supported if the result type is f16 or f128.
-    if (VT == MVT::f16 || VT == MVT::f128)
+    // FILD does not support f16, bf16, or f128 results.
+    if (VT == MVT::f16 || VT == MVT::bf16 || VT == MVT::f128)
       return SDValue();
 
     // If we have AVX512DQ we can use packed conversion instructions unless

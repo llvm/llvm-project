@@ -493,3 +493,19 @@ static_assert(count_if_v_bad_2<L, double> == 111);
 static_assert(count_if_v_bad_2<L, char> == 111);
 
 }
+
+namespace GH209632 {
+
+template <class A, class B> concept same_as = __is_same(A, B);
+
+template <class NR> void f(NR) {
+  using N = NR;
+  auto inner = [](same_as<N> auto) {};
+  inner(N{});
+}
+
+void main() {
+  f(0);
+}
+
+}
