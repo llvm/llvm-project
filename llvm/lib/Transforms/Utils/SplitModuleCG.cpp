@@ -22,18 +22,6 @@ static cl::opt<bool>
 
 using PartitionID = unsigned;
 
-static void externalize(GlobalValue *GV) {
-  if (GV->hasLocalLinkage()) {
-    GV->setLinkage(GlobalValue::ExternalLinkage);
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV->hasName())
-    GV->setName("__llvmsplit_unnamed");
-}
-
 /// Returns whether duplicate definitions of \p F across partitions may be
 /// downgraded to available_externally. This is safe for external functions
 /// (either originally external or promoted by externalize), and for
@@ -121,15 +109,15 @@ void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I) {
     if (PartFunc.isDeclaration())
       continue;
     // Look up the corresponding function in the original module M to check
-    // its externalFunction status.
+    // its ExternalFunction status.
     auto *OrigFn = M.getFunction(PartFunc.getName());
-    if (!externalFunction.contains(OrigFn))
+    if (!ExternalFunction.contains(OrigFn))
       continue;
-    if (!externalFunction[OrigFn]) {
+    if (!ExternalFunction[OrigFn]) {
       PartFunc.setLinkage(GlobalValue::AvailableExternallyLinkage);
       PartFunc.setComdat(nullptr);
     } else {
-      externalFunction[OrigFn] = false;
+      ExternalFunction[OrigFn] = false;
     }
   }
 
@@ -152,7 +140,7 @@ void SplitModuleCG::dealWithMpart(Module &MPart, unsigned I) {
     // keep the original name to stay consistent.
     auto *Fn = dyn_cast<Function>(&GV);
     if (Fn && Fn->isDeclaration() &&
-        !externalFunction.contains(M.getFunction(Fn->getName())))
+        !ExternalFunction.contains(M.getFunction(Fn->getName())))
       continue;
     GV.setName((GV.getName() + ".llvm" + Suffix).str());
   }
@@ -195,9 +183,11 @@ void SplitModuleCG::createWorkList() {
     EntryFuncs.insert(&F);
     SeenFunctions.insert(Fwd.Dependencies.begin(), Fwd.Dependencies.end());
   }
+}
 
+void SplitModuleCG::sortWorkList() {
   // Sort the worklist so the most expensive roots are seen first.
-  sort(FWDWorkList, [&](auto &A, auto &B) {
+  sort(FWDWorkList, [](const auto &A, const auto &B) {
     // Sort by total cost, and if the total cost is identical, sort
     // alphabetically
     if (A.TotalCost == B.TotalCost)
@@ -210,12 +200,12 @@ void SplitModuleCG::createWorkList() {
                     << "\n");
   LLVM_DEBUG(dbgs() << "callgraphs: \n");
 #ifndef NDEBUG
-  for (auto Fwd : FWDWorkList)
+  for (auto &Fwd : FWDWorkList)
     LLVM_DEBUG(dbgs() << "[root] " << Fwd.F->getName()
                       << " (totalCost:" << Fwd.TotalCost
                       << ";   root function cost: " << FuncsCosts[Fwd.F]
                       << ";   has dependency: " << Fwd.Dependencies.size()
-                      << "\n");
+                      << ")\n");
 #endif
 }
 
@@ -224,18 +214,21 @@ void SplitModuleCG::SplitModule(ModuleCreationCallback ModuleCallback,
   for (Function &F : M) {
     if (F.hasLocalLinkage() && F.hasOneUse() && !F.hasAddressTaken())
       continue;
-    externalize(&F);
+    F.externalize();
     // Record functions that may be defined in multiple partitions so that
     // dealWithMpart can downgrade duplicates to available_externally.
     if (canDowngradeToAvailableExternally(F))
-      externalFunction[&F] = true;
+      ExternalFunction[&F] = true;
   }
   for (GlobalVariable &GV : M.globals())
-    externalize(&GV);
+    GV.externalize();
   for (GlobalAlias &GA : M.aliases())
-    externalize(&GA);
+    GA.externalize();
   for (GlobalIFunc &GI : M.ifuncs())
-    externalize(&GI);
+    GI.externalize();
+
+  // Sort the worklist here, after all potential renaming has occurred.
+  sortWorkList();
 
   // Assign callgraphs into N partitions.
   auto Partitions = doPartitioning();
