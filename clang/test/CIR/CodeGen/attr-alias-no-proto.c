@@ -5,14 +5,10 @@
 // RUN: %clang_cc1 -std=c11 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// LLVM: @noproto_used = alias i32 (), ptr @noproto_used_target
-// LLVM: @noproto_args = alias i32 (), ptr @noproto_args_target
+// LLVM: @noproto_used = alias i32 (...), ptr @noproto_used_target
+// LLVM: @noproto_args = alias i32 (...), ptr @noproto_args_target
 // LLVM: @noproto_args2 = alias i32 (i32, i32, i32), ptr @noproto_args_target2
 
-// FIXME(cir): we list no-proto for the alias in CIR, but perhaps lowering is
-// missing it? We should be able to combine LLVM/OGCG check lines in this file.
-// Filed: https://github.com/llvm/llvm-project/issues/213024
-//
 // OGCG: @noproto_used = alias i32 (...), ptr @noproto_used_target
 // OGCG: @noproto_args = alias i32 (...), ptr @noproto_args_target
 // OGCG: @noproto_args2 = alias i32 (i32, i32, i32), ptr @noproto_args_target2
@@ -30,7 +26,7 @@ int noproto_used() __attribute__((alias("noproto_used_target")));
 // CIR:  cir.call %[[GET_USED]]() : (!cir.ptr<!cir.func<() -> !s32i>>) -> !s32i
 
 // LLVM-LABEL: define dso_local i32 @noproto_use_it()
-// LLVM: call i32 @noproto_used()
+// LLVM: call i32 (...) @noproto_used()
 // OGCG: define dso_local i32 @noproto_use_it()
 // OGCG: call i32 (...) @noproto_used()
 
@@ -53,7 +49,7 @@ int noproto_args() __attribute__((alias("noproto_args_target")));
 // CIR: cir.call %[[TO_TYPED]](%{{.*}}, %{{.*}}, %{{.*}}) : (!cir.ptr<!cir.func<(!s32i, !s32i, !s32i) -> !s32i>>, !s32i {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 //
 // LLVM-LABEL: define dso_local i32 @noproto_args_use()
-// LLVM: call i32 @noproto_args(i32 noundef 1, i32 noundef 2, i32 noundef 3)
+// LLVM: call i32 (i32, i32, i32, ...) @noproto_args(i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // OGCG-LABEL: define dso_local i32 @noproto_args_use()
 // OGCG: call i32 (i32, i32, i32, ...) @noproto_args(i32 noundef 1, i32 noundef 2, i32 noundef 3)
 
@@ -76,7 +72,7 @@ int noproto_args2(int, int, int) __attribute__((alias("noproto_args_target2")));
 // CIR: cir.call %4(%{{.*}}, %{{.*}}, %{{.*}}) : (!cir.ptr<!cir.func<(!s32i, !s32i, !s32i) -> !s32i>>, !s32i {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> !s32i
 //
 // LLVM-LABEL: define dso_local i32 @noproto_args_use2()
-// LLVM: call i32 @noproto_args2(i32 noundef 1, i32 noundef 2, i32 noundef 3)
+// LLVM: call i32 (i32, i32, i32, ...) @noproto_args2(i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // OGCG-LABEL: define dso_local i32 @noproto_args_use2()
 // OGCG: call i32 (i32, i32, i32, ...) @noproto_args2(i32 noundef 1, i32 noundef 2, i32 noundef 3)
 
