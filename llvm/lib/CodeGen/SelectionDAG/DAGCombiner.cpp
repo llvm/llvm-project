@@ -20641,6 +20641,28 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   if (SDValue FTrunc = foldFPToIntToFP(N, DL, DAG, TLI))
     return FTrunc;
 
+  // fold (uint_to_fp x) -> (uint_to_fp (trunc x)) when the value of x is known
+  // to fit in a narrower type the target can convert from directly.
+  LLVMContext &Ctx = *DAG.getContext();
+  unsigned ScalarBits = OpVT.getScalarType().getSizeInBits();
+  unsigned ActiveBits = DAG.computeKnownBits(N0).countMaxActiveBits();
+  // Narrowing to i1 turns the conversion into a select, which is not a win.
+  for (unsigned Bits = bit_ceil(std::max(2u, ActiveBits)); Bits < ScalarBits;
+       Bits *= 2) {
+    EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
+
+    // Vector int-to-fp is unrolled to scalars, but the truncate is not.
+    if (!hasOperation(ISD::UINT_TO_FP, NarrowVT.getScalarType()) ||
+        !TLI.isTruncateFree(OpVT, NarrowVT))
+      continue;
+
+    if (LegalTypes && !TLI.isTypeLegal(NarrowVT))
+      continue;
+
+    SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);
+    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, Trunc);
+  }
+
   // fold (uint_to_fp (trunc nuw x)) -> (uint_to_fp x)
   if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoUnsignedWrap() &&
       TLI.isTypeDesirableForOp(ISD::UINT_TO_FP,
