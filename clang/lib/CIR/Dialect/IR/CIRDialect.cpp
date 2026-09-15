@@ -2597,6 +2597,7 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
   mlir::StringAttr lambdaNameAttr = getLambdaAttrName(state.name);
   mlir::StringAttr noProtoNameAttr = getNoProtoAttrName(state.name);
   mlir::StringAttr comdatNameAttr = getComdatAttrName(state.name);
+  mlir::StringAttr alignmentNameAttr = getAlignmentAttrName(state.name);
   mlir::StringAttr visNameAttr = getSymVisibilityAttrName(state.name);
   mlir::StringAttr dsoLocalNameAttr = getDsoLocalAttrName(state.name);
   mlir::StringAttr funcInfoNameAttr = getFuncInfoAttrName(state.name);
@@ -2621,6 +2622,19 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
 
   if (parser.parseOptionalKeyword(comdatNameAttr).succeeded())
     state.addAttribute(comdatNameAttr, parser.getBuilder().getUnitAttr());
+
+  if (parser.parseOptionalKeyword(alignmentNameAttr).succeeded()) {
+    int64_t value;
+    if (parser.parseLParen().failed() || parser.parseInteger(value).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    if (value <= 0)
+      return parser.emitError(loc,
+                              "function alignment must be a positive integer");
+
+    state.addAttribute(alignmentNameAttr, builder.getI64IntegerAttr(value));
+  }
 
   // Default to external linkage if no keyword is provided.
   state.addAttribute(getLinkageAttrNameString(),
@@ -2932,6 +2946,9 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
 
   if (getComdat())
     p << " comdat";
+
+  if (getAlignment())
+    p << " alignment(" << *getAlignment() << ')';
 
   if (getLinkage() != GlobalLinkageKind::ExternalLinkage)
     p << ' ' << stringifyGlobalLinkageKind(getLinkage());

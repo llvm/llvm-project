@@ -62,3 +62,30 @@ module {
 module {
   cir.func private @l0(!rec_U) // expected-error {{expected all types in the function signature to be CIR types}}
 }
+
+// -----
+
+module {
+  cir.func comdat align(2) @f() { // expected-error {{custom op 'cir.func' expected valid '@'-identifier for symbol name}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat alignment(-1) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+
+// -----
+
+module {
+  cir.func comdat alignment(0) @f() { // expected-error {{custom op 'cir.func' function alignment must be a positive integer}}
+    cir.return
+}
+// -----
+
+module {
+  cir.func comdat alignment 0 @f() { // expected-error {{expected '('}}
+    cir.return
+}
