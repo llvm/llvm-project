@@ -217,8 +217,16 @@ public:
 
   bool storeOfVectorConstantIsCheap(bool IsZero, EVT MemVT, unsigned NumElem,
                                     unsigned AddrSpace) const override {
-    // If we can replace 4 or more scalar stores, there will be a reduction
-    // in instructions even after we add a vector constant load.
+    // A zero splat is free to materialize, so merging is a win once it
+    // covers 4 or more elements.  MemVT may already be a vector, since
+    // memset lowers to LMUL1 stores that we want to merge into a larger
+    // LMUL, so use the total element count.
+    unsigned NumMemElts = MemVT.isVector() ? MemVT.getVectorNumElements() : 1;
+    if (IsZero)
+      return NumElem * NumMemElts >= 4;
+
+    // Non-zero vector constants aren't always cheap to materialize; only
+    // merge when replacing 4 or more scalar stores.
     return NumElem >= 4;
   }
 
