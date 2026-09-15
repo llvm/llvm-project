@@ -10,7 +10,7 @@ import subprocess
 import sys
 from fnmatch import fnmatch
 from pathlib import Path, PurePosixPath
-from typing import Optional, Set
+from typing import Set
 
 BAZEL_REPOSITORY = "@llvm-project"
 SUBTREES = [
@@ -20,17 +20,17 @@ SUBTREES = [
     "lld",
 ]
 IGNORED_GLOBS = [
-    "**/*.md",
-    "**/*.txt",
-    "**/*.TXT",  # Both cases are used
-    "**/.clang-format",
-    "**/.clang-tidy",
-    "**/.gitignore",
-    "**/cmake/**",
-    "**/CMakeLists.txt",
-    "**/docs/**",
-    "**/utils/**",
-    "clang/www/**",
+    "*.md",
+    "*.txt",
+    "*.TXT",  # Both cases are used
+    "*/.clang-format",
+    "*/.clang-tidy",
+    "*/.gitignore",
+    "*/cmake/*",
+    "*/CMakeLists.txt",
+    "*/docs/*",
+    "*/utils/*",
+    "clang/www/*",
     "lld/test/Unit/lit.cfg.py",  # cmake shims
     "lld/test/Unit/lit.site.cfg.py.in",  # cmake shims
 ]
@@ -52,14 +52,14 @@ def source_files(project_root: Path) -> Set[str]:
     return files
 
 
-def label_to_source_path(label: str) -> Optional[str]:
+def label_to_source_path(label: str) -> str:
     repository, separator, remainder = label.partition("//")
     if not separator or repository != BAZEL_REPOSITORY:
-        return None
+        raise RuntimeError(f"unexpected Bazel label: {label}")
 
     package, separator, target = remainder.partition(":")
     if not separator:
-        return None
+        raise RuntimeError(f"unexpected Bazel label: {label}")
     return str(PurePosixPath(package, target))
 
 
@@ -67,7 +67,10 @@ def bazel_input_files(bazel_workspace: Path) -> Set[str]:
     target_patterns = " union ".join(
         f"{BAZEL_REPOSITORY}//{subtree}/..." for subtree in SUBTREES
     )
-    query = f'kind("source file", deps({target_patterns}))'
+    query = (
+        f'kind("source file", {BAZEL_REPOSITORY}//...:* '
+        f"intersect deps({target_patterns}))"
+    )
     result = subprocess.run(
         ["bazel", "query", "--output=label", query],
         cwd=bazel_workspace,
@@ -79,11 +82,7 @@ def bazel_input_files(bazel_workspace: Path) -> Set[str]:
         sys.stderr.write(result.stderr)
         raise RuntimeError(f"bazel query failed with exit code {result.returncode}")
 
-    return {
-        path
-        for label in result.stdout.splitlines()
-        if (path := label_to_source_path(label)) is not None
-    }
+    return {label_to_source_path(label) for label in result.stdout.splitlines()}
 
 
 def main() -> int:
