@@ -104,11 +104,44 @@ bool isUnselectedRootStmtCandidate(const Node *N) {
   return N->ASTNode.get<DeclStmt>() || N->ASTNode.get<CXXOperatorCallExpr>();
 }
 
+// Whether Child is the condition, init-statement, increment, or
+// condition-variable declaration of a control-flow Parent, as opposed to its
+// "body" (then/else/loop-body/switch-body) -- the only slot(s) that behave
+// like genuine statement positions. The value of a condition (or the side
+// effect of an init/increment clause) is consumed by the construct itself,
+// so treating it as a discardable statement and replacing it with a call to
+// an extracted function would either not compile (if a value is expected,
+// e.g. an `if` condition) or silently change what the code does.
+bool isConditionOrInitClause(const Stmt *Parent, const Stmt *Child) {
+  if (const auto *If = llvm::dyn_cast<IfStmt>(Parent))
+    return Child == If->getCond() || Child == If->getInit() ||
+           Child == If->getConditionVariableDeclStmt();
+  if (const auto *For = llvm::dyn_cast<ForStmt>(Parent))
+    return Child == For->getCond() || Child == For->getInit() ||
+           Child == For->getInc() ||
+           Child == For->getConditionVariableDeclStmt();
+  if (const auto *While = llvm::dyn_cast<WhileStmt>(Parent))
+    return Child == While->getCond() ||
+           Child == While->getConditionVariableDeclStmt();
+  if (const auto *Do = llvm::dyn_cast<DoStmt>(Parent))
+    return Child == Do->getCond();
+  if (const auto *Switch = llvm::dyn_cast<SwitchStmt>(Parent))
+    return Child == Switch->getCond() || Child == Switch->getInit() ||
+           Child == Switch->getConditionVariableDeclStmt();
+  if (const auto *ForRange = llvm::dyn_cast<CXXForRangeStmt>(Parent))
+    return Child == ForRange->getInit() || Child == ForRange->getCond() ||
+           Child == ForRange->getInc() || Child == ForRange->getBeginStmt() ||
+           Child == ForRange->getEndStmt() ||
+           Child == ForRange->getLoopVarStmt();
+  return false;
+}
+
 // A RootStmt is a statement that's fully selected including all its children
 // and its parent is unselected.
 // Check if a node is a root statement.
 bool isRootStmt(const Node *N) {
-  if (!N->ASTNode.get<Stmt>())
+  const Stmt *S = N->ASTNode.get<Stmt>();
+  if (!S)
     return false;
   // Root statement cannot be partially selected.
   if (N->Selected == SelectionTree::Partial)
@@ -116,6 +149,9 @@ bool isRootStmt(const Node *N) {
   if (N->Selected == SelectionTree::Unselected &&
       !isUnselectedRootStmtCandidate(N))
     return false;
+  if (const Stmt *Parent = N->Parent ? N->Parent->ASTNode.get<Stmt>() : nullptr)
+    if (isConditionOrInitClause(Parent, S))
+      return false;
   return true;
 }
 
@@ -337,8 +373,6 @@ bool validSingleChild(const Node *Child, const FunctionDecl *EnclosingFunc) {
   return true;
 }
 
-// FIXME: Check we're not extracting from the initializer/condition of a control
-// flow structure.
 std::optional<ExtractionZone> findExtractionZone(const Node *CommonAnc,
                                                  const SourceManager &SM,
                                                  const LangOptions &LangOpts) {
