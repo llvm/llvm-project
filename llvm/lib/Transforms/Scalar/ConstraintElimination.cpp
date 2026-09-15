@@ -796,6 +796,40 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                         IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(), *this,
                         IsSigned, DL);
+
+  // For relational comparisons where an operand is an exact right shift
+  // (e.g. X < (Sub >> k)), scale the comparison by multiplying the opposite
+  // side by (1 << k), yielding (1 << k) * X < Sub. If both operands share the
+  // same exact right shift, decompose the unshifted sub-expressions directly.
+  Value *Sub0 = nullptr, *Sub1 = nullptr;
+  ConstantInt *Shift0 = nullptr, *Shift1 = nullptr;
+  bool IsShift0 =
+      match(Op0, m_Exact(m_Shr(m_Value(Sub0), m_ConstantInt(Shift0)))) &&
+      canUseSExt(Shift0);
+  bool IsShift1 =
+      match(Op1, m_Exact(m_Shr(m_Value(Sub1), m_ConstantInt(Shift1)))) &&
+      canUseSExt(Shift1);
+  if (IsShift0 && IsShift1 && Shift0->getValue() == Shift1->getValue()) {
+    ADec = decompose(Sub0->stripPointerCastsSameRepresentation(), *this,
+                     IsSigned, DL);
+    BDec = decompose(Sub1->stripPointerCastsSameRepresentation(), *this,
+                     IsSigned, DL);
+  } else if (IsShift1 && Shift1->getSExtValue() > 0 &&
+             Shift1->getSExtValue() < 63) {
+    int64_t Factor = int64_t(1) << Shift1->getSExtValue();
+    if (BDec.Vars.size() <= 1 && !ADec.mul(Factor)) {
+      BDec = decompose(Sub1->stripPointerCastsSameRepresentation(), *this,
+                       IsSigned, DL);
+    }
+  } else if (IsShift0 && Shift0->getSExtValue() > 0 &&
+             Shift0->getSExtValue() < 63) {
+    int64_t Factor = int64_t(1) << Shift0->getSExtValue();
+    if (ADec.Vars.size() <= 1 && !BDec.mul(Factor)) {
+      ADec = decompose(Sub0->stripPointerCastsSameRepresentation(), *this,
+                       IsSigned, DL);
+    }
+  }
+
   int64_t Offset1 = ADec.Offset;
   int64_t Offset2 = BDec.Offset;
   if (MulOverflow(Offset1, int64_t(-1), Offset1))
