@@ -11,8 +11,8 @@
 ; In any case we shouldn't hoist the `and` and the `icmp`, in order
 ; to not separate them from the `br`
 
-define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
-; MAX-DEPTH3-LABEL: @f(
+define i32 @test_hoist_limit(i1 %c, i32 %a, i32 %b, i32 %d) {
+; MAX-DEPTH3-LABEL: @test_hoist_limit(
 ; MAX-DEPTH3-NEXT:  entry:
 ; MAX-DEPTH3-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; MAX-DEPTH3:       if.then:
@@ -47,7 +47,7 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ; MAX-DEPTH3-NEXT:    [[R:%.*]] = add i32 [[OR]], [[S]]
 ; MAX-DEPTH3-NEXT:    ret i32 [[R]]
 ;
-; MAX-DEPTH4-LABEL: @f(
+; MAX-DEPTH4-LABEL: @test_hoist_limit(
 ; MAX-DEPTH4-NEXT:  entry:
 ; MAX-DEPTH4-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; MAX-DEPTH4:       if.then:
@@ -82,7 +82,7 @@ define i32 @f(i1 %c, i32 %a, i32 %b, i32 %d) {
 ; MAX-DEPTH4-NEXT:    [[R:%.*]] = add i32 [[OR]], [[S]]
 ; MAX-DEPTH4-NEXT:    ret i32 [[R]]
 ;
-; MAX-DEPTH5-LABEL: @f(
+; MAX-DEPTH5-LABEL: @test_hoist_limit(
 ; MAX-DEPTH5-NEXT:  entry:
 ; MAX-DEPTH5-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; MAX-DEPTH5:       if.then:

@@ -2,9 +2,7 @@
 ; RUN: opt --passes=gvn -S %s | FileCheck %s
 ; RUN: opt --passes="gvn<memoryssa>" -S %s | FileCheck %s
 
-target triple = "aarch64-unknown-linux"
-
-define dso_local i32 @everything_hoisted(i1 %cc, i32 %a, i32 %b, i32 %c) {
+define i32 @everything_hoisted(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @everything_hoisted(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -26,24 +24,24 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = call i32 @barrier(i32 %a)
-  %1 = add i32 %0, %b
-  %2 = sdiv i32 %1, %c
+  %x = call i32 @barrier(i32 %a)
+  %y = add i32 %x, %b
+  %z = sdiv i32 %y, %c
   br label %if.end
 
 if.else:
-  %3 = call i32 @barrier(i32 %a)
-  %4 = add i32 %3, %b
-  %5 = sdiv i32 %4, %c
+  %u = call i32 @barrier(i32 %a)
+  %v = add i32 %u, %b
+  %w = sdiv i32 %v, %c
   br label %if.end
 
 if.end:
-  %r = phi i32 [%2, %if.then], [%5, %if.else]
+  %r = phi i32 [%z, %if.then], [%w, %if.else]
   ret i32 %r
 }
 
 ; speculation barrier on the short(collect) side
-define dso_local i32 @spec_barrier_short_side(i1 %cc, i32 %a, i32 %b, i32 %c) {
+define i32 @spec_barrier_short_side(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @spec_barrier_short_side(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -66,25 +64,25 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = call i32 @barrier(i32 %a)
-  %1 = add nsw i32 %a, %b
-  %2 = sdiv i32 %c, %1
+  %x = call i32 @barrier(i32 %a)
+  %y = add nsw i32 %a, %b
+  %z = sdiv i32 %c, %y
   br label %if.end
 
 if.else:
-  %3 = add nsw i32 %a, %b
-  %4 = sdiv i32 %c, %3
-  %5 = add i32 %4, 1
-  %6 = add i32 %5, 2
+  %u = add nsw i32 %a, %b
+  %v = sdiv i32 %c, %u
+  %w = add i32 %v, 1
+  %g = add i32 %w, 2
   br label %if.end
 
 if.end:
-  %r = phi i32 [%2, %if.then], [%6, %if.else]
+  %r = phi i32 [%z, %if.then], [%g, %if.else]
   ret i32 %r
 }
 
 ; speculation barrier on the long(match) side
-define dso_local i32 @spec_barrier_long_side(i1 %cc, i32 %a, i32 %b, i32 %c) {
+define i32 @spec_barrier_long_side(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @spec_barrier_long_side(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -107,24 +105,24 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = add nsw i32 %a, %b
-  %1 = sdiv i32 %c, %0
+  %x = add nsw i32 %a, %b
+  %y = sdiv i32 %c, %x
   br label %if.end
 
 if.else:
-  %2 = call i32 @barrier(i32 %a)
-  %3 = add nsw i32 %a, %b
-  %4 = sdiv i32 %c, %3
-  %5 = add i32 %4, 1
-  %6 = add i32 %5, 2
+  %z = call i32 @barrier(i32 %a)
+  %u = add nsw i32 %a, %b
+  %v = sdiv i32 %c, %u
+  %w = add i32 %v, 1
+  %g = add i32 %w, 2
   br label %if.end
 
 if.end:
-  %r = phi i32 [%1, %if.then], [%6, %if.else]
+  %r = phi i32 [%y, %if.then], [%g, %if.else]
   ret i32 %r
 }
 
-define dso_local i32 @no_reorder_across_volatile(i1 %cc, i32 %a, i32 %b, i32 %c, ptr %p) {
+define i32 @no_reorder_across_volatile(i1 %cc, i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: @no_reorder_across_volatile(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -145,22 +143,22 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = add nsw i32 %a, %b
-  %1 = sdiv i32 %c, %0
+  %x = add nsw i32 %a, %b
+  %y = sdiv i32 %c, %x
   br label %if.end
 
 if.else:
   store volatile i32 0, ptr %p
-  %2 = add nsw i32 %a, %b
-  %3 = sdiv i32 %c, %2
+  %z = add nsw i32 %a, %b
+  %u = sdiv i32 %c, %z
   br label %if.end
 
 if.end:
-  %r = phi i32 [%1, %if.then], [%3, %if.else]
+  %r = phi i32 [%y, %if.then], [%u, %if.else]
   ret i32 %r
 }
 
-define dso_local i32 @no_barrier_call(i1 %cc, i32 %a, i32 %b, i32 %c) {
+define i32 @no_barrier_call(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @no_barrier_call(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -183,22 +181,22 @@ entry:
 
 if.then:
   call void @will_return()
-  %0 = sdiv i32 %a, %b
-  %1 = add nsw i32 %c, %0
+  %x = sdiv i32 %a, %b
+  %y = add nsw i32 %c, %x
   br label %if.end
 
 if.else:
   call void @will_return()
-  %2 = sdiv i32 %a, %b
-  %3 = add nsw i32 %c, %2
+  %z = sdiv i32 %a, %b
+  %u = add nsw i32 %c, %z
   br label %if.end
 
 if.end:
-  %r = phi i32 [%1, %if.then], [%3, %if.else]
+  %r = phi i32 [%y, %if.then], [%u, %if.else]
   ret i32 %r
 }
 
-define dso_local i32 @no_reorder_atomic(i1 %cc, i32 %a, i32 %b, i32 %c, ptr %p) {
+define i32 @no_reorder_atomic(i1 %cc, i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: @no_reorder_atomic(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -222,25 +220,25 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = load atomic volatile i32, ptr %p acquire, align 4
-  %1 = sdiv i32 %a, %b
-  %2 = add nsw i32 %c, %1
-  %3 = mul nsw i32 %0, %2
+  %x = load atomic volatile i32, ptr %p acquire, align 4
+  %y = sdiv i32 %a, %b
+  %z = add nsw i32 %c, %y
+  %u = mul nsw i32 %x, %z
   br label %if.end
 
 if.else:
-  %4 = load atomic volatile i32, ptr %p acquire, align 4
-  %5 = sdiv i32 %a, %b
-  %6 = add nsw i32 %c, %5
-  %7 = mul nsw i32 %4, %6
+  %v = load atomic volatile i32, ptr %p acquire, align 4
+  %w = sdiv i32 %a, %b
+  %g = add nsw i32 %c, %w
+  %h = mul nsw i32 %v, %g
   br label %if.end
 
 if.end:
-  %r = phi i32 [%3, %if.then], [%7, %if.else]
+  %r = phi i32 [%u, %if.then], [%h, %if.else]
   ret i32 %r
 }
 
-define dso_local i32 @multiple_use(i1 %cc, i32 %a, i32 %b, i32 %c) {
+define i32 @multiple_use(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @multiple_use(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -262,24 +260,24 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = add nsw i32 %a, %b
-  %1 = mul nsw i32 %0, %c
-  %2 = add nsw i32 %0, %1
+  %x = add nsw i32 %a, %b
+  %y = mul nsw i32 %x, %c
+  %z = add nsw i32 %x, %y
   br label %if.end
 
 if.else:
-  %3 = add nsw i32 %a, %b
-  %4 = mul nsw i32 %3, %c
-  %5 = add nsw i32 %3, %4
+  %u = add nsw i32 %a, %b
+  %v = mul nsw i32 %u, %c
+  %w = add nsw i32 %u, %v
   br label %if.end
 
 if.end:
-  %r = phi i32 [%2, %if.then], [%5, %if.else]
+  %r = phi i32 [%z, %if.then], [%w, %if.else]
   ret i32 %r
 }
 
 ; Different operand order in commutative operations
-define dso_local i32 @commutative_ops(i1 %cc, i32 %a, i32 %b, i32 %c) {
+define i32 @commutative_ops(i1 %cc, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: @commutative_ops(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -301,23 +299,23 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = add nsw i32 %a, %b
-  %1 = add nsw i32 %0, %c
-  %2 = sdiv i32 %0, %1
+  %x = add nsw i32 %a, %b
+  %y = add nsw i32 %x, %c
+  %z = sdiv i32 %x, %y
   br label %if.end
 
 if.else:
-  %3 = add nsw i32 %a, %b
-  %4 = add nsw i32 %c, %3
-  %5 = sdiv i32 %3, %4
+  %u = add nsw i32 %a, %b
+  %v = add nsw i32 %c, %u
+  %w = sdiv i32 %u, %v
   br label %if.end
 
 if.end:
-  %r = phi i32 [%2, %if.then], [%5, %if.else]
+  %r = phi i32 [%z, %if.then], [%w, %if.else]
   ret i32 %r
 }
 
-define dso_local i32 @no_hoist_mem(i1 %cc, ptr %p) {
+define i32 @no_hoist_mem(i1 %cc, ptr %p) {
 ; CHECK-LABEL: @no_hoist_mem(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CC:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -337,21 +335,21 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = load i32, ptr %p
-  %1 = add nsw i32 %0, 1
+  %x = load i32, ptr %p
+  %y = add nsw i32 %x, 1
   br label %if.end
 
 if.else:
-  %2 = load i32, ptr %p
-  %3 = add nsw i32 %2, 1
+  %z = load i32, ptr %p
+  %u = add nsw i32 %z, 1
   br label %if.end
 
 if.end:
-  %r = phi i32 [%1, %if.then], [%3, %if.else]
+  %r = phi i32 [%y, %if.then], [%u, %if.else]
   ret i32 %r
 }
 
-define dso_local i32 @no_hoist_musttail(i1 %cc, i32 %x, ptr %p) {
+define i32 @no_hoist_musttail(i1 %cc, i32 %x, ptr %p) {
 ; CHECK-LABEL: @no_hoist_musttail(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
@@ -370,12 +368,12 @@ entry:
   br i1 %cc, label %if.then, label %if.else
 
 if.then:
-  %0 = musttail call i32 @will_return(i1 %cc, i32 %w, ptr %p)
-  ret i32 %0
+  %r.0 = musttail call i32 @will_return(i1 %cc, i32 %w, ptr %p)
+  ret i32 %r.0
 
 if.else:
-  %1 = musttail call i32 @will_return(i1 %cc, i32 %w, ptr %p)
-  ret i32 %1
+  %r.1 = musttail call i32 @will_return(i1 %cc, i32 %w, ptr %p)
+  ret i32 %r.1
 }
 
 declare i32 @barrier(i32) memory(none)
