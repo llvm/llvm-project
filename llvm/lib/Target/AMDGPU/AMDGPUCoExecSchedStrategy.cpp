@@ -546,8 +546,9 @@ CandidateHeuristics::getHWUIFromFlavor(InstructionFlavor Flavor) {
 
 unsigned CandidateHeuristics::getHWUICyclesForInst(SUnit *SU) {
   assert(SchedModel && SchedModel->hasInstrSchedModel());
+
   MachineInstr *MI = SU->getInstr();
-  if (SII->isDS(*MI))
+  if (MI->mayLoadOrStore())
     return SchedModel->computeInstrLatency(MI);
 
   unsigned ReleaseAtCycle = 0;
