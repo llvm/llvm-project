@@ -1,13 +1,15 @@
 #ifndef LLDB_TEST_API_COMMON_H
 #define LLDB_TEST_API_COMMON_H
 
-#include <condition_variable>
 #include <chrono>
+#include <condition_variable>
+#include <cstdint>
+#include <cstring>
 #include <exception>
 #include <iostream>
 #include <mutex>
-#include <string>
 #include <queue>
+#include <string>
 
 #include <unistd.h>
 
@@ -19,6 +21,31 @@ struct Exception : public std::exception
   virtual ~Exception() throw () { }
   const char* what() const throw() { return s.c_str(); }
 };
+
+/// Throws an Exception with the given message if 'condition' is false.
+inline void expect(bool condition, const std::string &message) {
+  if (!condition)
+    throw Exception(message);
+}
+
+/// Throws an Exception describing 'what' if 'actual' is null or doesn't equal
+/// the string 'expected'.
+inline void expect_string(const char *actual, const char *expected,
+                          const std::string &what) {
+  if (!actual)
+    throw Exception(what + ": expected '" + expected + "' but got no string");
+  if (std::strcmp(actual, expected) != 0)
+    throw Exception(what + ": expected '" + expected + "' but got '" + actual +
+                    "'");
+}
+
+/// Throws an Exception describing 'what' if 'actual' doesn't equal 'expected'.
+inline void expect_int(int64_t actual, int64_t expected,
+                       const std::string &what) {
+  if (actual != expected)
+    throw Exception(what + ": expected " + std::to_string(expected) +
+                    " but got " + std::to_string(actual));
+}
 
 // Synchronized data structure for listener to send events through
 template<typename T>

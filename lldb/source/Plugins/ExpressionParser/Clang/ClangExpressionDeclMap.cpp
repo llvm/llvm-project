@@ -140,6 +140,18 @@ bool ClangExpressionDeclMap::WillParse(ExecutionContext &exe_ctx,
       return false;
   }
 
+  // Parsing looks up types in the Objective-C runtime (see
+  // ClangASTSource::FindDeclInObjCRuntime), and the runtime fetches its class
+  // information by running code in the process. Do that here, before parsing
+  // starts, because the lookups happen while clang holds an ASTContext's lock
+  // and running the process from under that lock deadlocks with the threads
+  // that report the stop. This is a no-op unless the process ran since the
+  // information was last fetched.
+  if (Process *process = exe_ctx.GetProcessPtr()) {
+    if (ObjCLanguageRuntime *objc_runtime = ObjCLanguageRuntime::Get(*process))
+      objc_runtime->UpdateISAToDescriptorMap();
+  }
+
   m_parser_vars->m_target_info = GetTargetInfo();
   m_parser_vars->m_materializer = materializer;
 

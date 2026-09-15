@@ -97,7 +97,26 @@ class SBBreakpointCallbackCase(TestBase):
             inferior_source="deep_stack.cpp",
         )
 
-    def build_and_test(self, sources, test_name, inferior_source="inferior.cpp"):
+    @skipIfRemote
+    # clang-cl does not support throw or catch (llvm.org/pr24538)
+    @skipIfWindows
+    @skipIfHostIncompatibleWithTarget
+    def test_concurrent_expressions_shared_module(self):
+        """Test that expressions for the same module can be evaluated and their
+        results inspected from several threads at the same time.
+        """
+        self.build_and_test(
+            "driver.cpp test_concurrent_expressions.cpp",
+            "test_concurrent_expressions_shared_module",
+            inferior_source="global_struct.cpp",
+        )
+
+    def build_and_test(
+        self,
+        sources,
+        test_name,
+        inferior_source="inferior.cpp",
+    ):
         """Build LLDB test from sources, and run expecting 0 exit code"""
 
         # These tests link against host lldb API.
