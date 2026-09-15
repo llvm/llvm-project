@@ -888,8 +888,29 @@ define i8 @volatile_select(ptr %p, i1 %b) {
   ret i8 %v2
 }
 
+define void @store_invariant_group_to_select(i1 %cond, i32 %value,
+                                             ptr %other) {
+; CHECK-MODIFY-CFG-LABEL: @store_invariant_group_to_select(
+; CHECK-MODIFY-CFG-NEXT:  entry:
+; CHECK-MODIFY-CFG-NEXT:    br i1 [[COND:%.*]], label [[ENTRY_THEN:%.*]], label [[ENTRY_ELSE:%.*]]
+; CHECK-MODIFY-CFG:       entry.then:
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT:%.*]]
+; CHECK-MODIFY-CFG:       entry.else:
+; CHECK-MODIFY-CFG-NEXT:    store i32 [[VALUE:%.*]], ptr [[OTHER:%.*]], align 4{{$}}
+; CHECK-MODIFY-CFG-NEXT:    br label [[ENTRY_CONT]]
+; CHECK-MODIFY-CFG:       entry.cont:
+; CHECK-MODIFY-CFG-NEXT:    ret void
+;
+entry:
+  %a = alloca i32, align 4
+  %ptr = select i1 %cond, ptr %a, ptr %other
+  store i32 %value, ptr %ptr, align 4, !invariant.group !2
+  ret void
+}
+
 !0 = !{!"function_entry_count", i32 10}
 !1 = !{!"branch_weights", i32 3, i32 5}
+!2 = !{}
 ;.
 ; CHECK-PRESERVE-CFG: attributes #[[ATTR0:[0-9]+]] = { sanitize_address }
 ;.
