@@ -1791,25 +1791,20 @@ void PGOUseFunc::setBlockUniformityAttribute() {
   // Annotate uniformity on each instrumented IR basic block so later codegen
   // passes (MachineFunction) can consume it without relying on fragile block
   // numbering heuristics.
-  //
-  // Metadata kind: LLVMContext::MD_block_uniformity_profile
-  // Payload: i1 (true = uniform, false = divergent)
+  // Metadata presence means uniform; divergent blocks have no metadata.
 
   std::vector<BasicBlock *> InstrumentBBs;
   FuncInfo.getInstrumentBBs(InstrumentBBs);
 
   LLVMContext &Ctx = F.getContext();
-  Type *Int1Ty = Type::getInt1Ty(Ctx);
-
   for (size_t I = 0, E = InstrumentBBs.size(); I < E; ++I) {
     BasicBlock *BB = InstrumentBBs[I];
     if (!BB || !BB->getTerminator())
       continue;
-    bool IsUniform = ProfileRecord.isBlockUniform(I);
-    auto *MD = MDNode::get(
-        Ctx, ConstantAsMetadata::get(ConstantInt::get(Int1Ty, IsUniform)));
+    if (!ProfileRecord.isBlockUniform(I))
+      continue;
     BB->getTerminator()->setMetadata(LLVMContext::MD_block_uniformity_profile,
-                                     MD);
+                                     MDNode::get(Ctx, {}));
   }
 
   LLVM_DEBUG({
