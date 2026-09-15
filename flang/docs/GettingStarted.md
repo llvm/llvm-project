@@ -87,6 +87,13 @@ ninja
 ```
 
 :::{note}
+  Linking LLVM statically into Flang can use a lot of RAM. If the build
+  fails during linking, add `-DBUILD_SHARED_LIBS=ON` to CMake. That option
+  is intended for development builds; see
+  <https://llvm.org/docs/GettingStarted.html#common-problems>.
+:::
+
+:::{note}
   Contributions to Flang are expected not to produce any new compiler warnings.
   This is enforced by post-commit buildbots. To do the same locally, add
   `-DFLANG_ENABLE_WERROR=ON` to the above `cmake` command.
