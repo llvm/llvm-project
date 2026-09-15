@@ -56,6 +56,7 @@
 #include "mlir/Interfaces/SubsetOpInterface.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/DebugLog.h"
 
 MLIR_DEFINE_EXPLICIT_TYPE_ID(mlir::bufferization::OneShotAnalysisState)
@@ -267,16 +268,27 @@ static bool isInplaceMemoryWrite(OpOperand &opOperand,
   return state.isInPlace(opOperand);
 }
 
-/// Return true if `a` happens before `b`, i.e., `a` or one of its ancestors
-/// properly dominates `b` and `b` is not inside `a`.
-static bool happensBefore(Operation *a, Operation *b,
-                          const DominanceInfo &domInfo) {
+/// Return true if `a` cannot happen after `b`.
+/// True if `a` properly dominates `b` and `b` is not inside `a`, or if they
+/// are in the same region with no CFG path from `b` to `a`.
+/// `extraBarriers` are extra blocks a path must not cross (bbArg defs:
+/// re-entering the block is a new definition).
+static bool cannotHappenAfter(Operation *a, Operation *b,
+                              const DominanceInfo &domInfo,
+                              SmallPtrSet<Block *, 16> extraBarriers = {}) {
   do {
     // TODO: Instead of isProperAncestor + properlyDominates, we should use
     // properlyDominatesImpl(a, b, /*enclosingOpOk=*/false)
     if (a->isProperAncestor(b))
       return false;
+    // Dominance is a stronger condition than reachability. Prefer using it
+    // since it is cached.
     if (domInfo.properlyDominates(a, b))
+      return true;
+    Block *aBlock = a->getBlock();
+    Block *bBlock = b->getBlock();
+    if (aBlock != bBlock && aBlock->getParent() == bBlock->getParent() &&
+        !bBlock->isReachable(aBlock, SmallPtrSet<Block *, 16>(extraBarriers)))
       return true;
   } while ((a = a->getParentOp()));
   return false;
@@ -296,7 +308,7 @@ static bool happensBefore(Operation *a, Operation *b,
 /// %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>  // WRITE
 ///
 /// This is no longer true inside loops (or repetitive regions). In such cases,
-/// there may not be a meaningful `happensBefore` relationship because ops
+/// there may not be a meaningful `cannotHappenAfter` relationship because ops
 /// could be executed multiple times. E.g.:
 ///
 /// Example 2:
@@ -354,8 +366,9 @@ static bool happensBefore(Operation *a, Operation *b,
 ///    out RaW conflict due to the ordering of ops.
 /// 2. Otherwise: There are no loops that interfere with our analysis; for
 ///    analysis purposes, we can assume that there are no loops/repetitive
-///    regions. I.e., we can rule out a RaW conflict if READ happensBefore WRITE
-///    or WRITE happensBefore DEF. (Checked in `hasReadAfterWriteInterference`.)
+///    regions. I.e., we can rule out a RaW conflict if READ cannot happen after
+///    WRITE or WRITE cannot happen after DEF. (Checked in
+///    `hasReadAfterWriteInterference`.)
 ///
 static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
                                           const SetVector<Value> &definitions,
@@ -366,8 +379,8 @@ static bool canUseOpDominanceDueToRegions(OpOperand *uRead, OpOperand *uWrite,
         state.getEnclosingRepetitiveRegion(uRead->getOwner(), options);
     Region *rDef = state.getEnclosingRepetitiveRegion(def, options);
 
-    // READ and DEF are in the same repetitive region. `happensBefore` can be
-    // used to rule out RaW conflicts due to op ordering.
+    // READ and DEF are in the same repetitive region. `cannotHappenAfter` can
+    // be used to rule out RaW conflicts due to op ordering.
     if (rRead == rDef)
       continue;
 
@@ -658,6 +671,13 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       continue;
     }
 
+    // Re-entering a bbArg's block is a new definition, not read-after-write
+    // of the previous one.
+    SmallPtrSet<Block *, 16> bbArgDefBlocks;
+    for (Value def : definitions)
+      if (isa<BlockArgument>(def))
+        bbArgDefBlocks.insert(def.getParentBlock());
+
     // Look for conflicting memory writes. Potential conflicts are writes to an
     // alias that have been decided to bufferize inplace.
     for (OpOperand *uConflictingWrite : usesWrite) {
@@ -679,14 +699,15 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       // Inside of repetitive regions, ops may be executed multiple times and op
       // dominance cannot be used to rule out conflicts.
       if (useDominance) {
-        // No conflict if the readingOp dominates conflictingWritingOp, i.e.,
-        // the write is not visible when reading.
+        // No conflict if the readingOp cannot happen after
+        // conflictingWritingOp, i.e., the write is not visible when reading.
         //
         // Note: If ops are executed multiple times (e.g., because they are
-        //       inside a loop), there may be no meaningful `happensBefore`
+        //       inside a loop), there may be no meaningful `cannotHappenAfter`
         //       relationship.
-        if (happensBefore(readingOp, conflictingWritingOp, domInfo)) {
-          LDBG() << "  no conflict: read happens before write";
+        if (cannotHappenAfter(readingOp, conflictingWritingOp, domInfo,
+                              bbArgDefBlocks)) {
+          LDBG() << "  no conflict: read cannot happen after write";
           continue;
         }
 
@@ -762,11 +783,11 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
       for (Value definition : definitions) {
         LDBG() << "  * definition = " << definition;
 
-        // No conflict if the conflicting write happens before the definition.
+        // No conflict if the conflicting write cannot happen after the
+        // definition.
         if (Operation *defOp = definition.getDefiningOp()) {
-          if (happensBefore(conflictingWritingOp, defOp, domInfo)) {
-            // conflictingWritingOp happens before defOp. No conflict.
-            LDBG() << "    no conflict: write happens before definition";
+          if (cannotHappenAfter(conflictingWritingOp, defOp, domInfo)) {
+            LDBG() << "    no conflict: write cannot happen after definition";
             continue;
           }
           // No conflict if conflictingWritingOp is contained in defOp.
@@ -775,13 +796,17 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
             continue;
           }
         } else {
-          auto bbArg = cast<BlockArgument>(definition);
-          Block *block = bbArg.getOwner();
-          if (!block->findAncestorOpInBlock(*conflictingWritingOp)) {
-            LDBG() << "    no conflict: definition is bbArg "
-                      "and write happens outside of block";
-            // conflictingWritingOp happens outside of the block. No
-            // conflict.
+          // A bbArg is defined at block entry. The write happens after that
+          // only if it is in the same block or in a reachable block (e.g. a
+          // successor).
+          Block *defBlock = cast<BlockArgument>(definition).getOwner();
+          Operation *writeOp = conflictingWritingOp;
+          while (writeOp && writeOp->getParentRegion() != defBlock->getParent())
+            writeOp = writeOp->getParentOp();
+          if (!writeOp || (writeOp->getBlock() != defBlock &&
+                           !defBlock->isReachable(writeOp->getBlock()))) {
+            LDBG() << "    no conflict: definition is bbArg and write cannot "
+                      "happen after def";
             continue;
           }
         }
