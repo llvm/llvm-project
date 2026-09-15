@@ -30145,8 +30145,7 @@ static SDValue performDUPCombine(SDNode *N,
       if (!Subtarget->noPredicatedLD1R() &&
           Subtarget->isSVEorStreamingSVEAvailable() && Op->hasOneUse() &&
           VT.getScalarType().isInteger() &&
-          VT.getScalarType() != LD->getMemoryVT().getScalarType() &&
-          !Subtarget->useSVEForFixedLengthVectors(VT)) {
+          VT.getScalarType() != LD->getMemoryVT().getScalarType()) {
         EVT ScalableVT = getContainerForFixedLengthVector(DCI.DAG, VT);
         SDValue SplatNode =
             DCI.DAG.getNode(ISD::SPLAT_VECTOR, DL, ScalableVT, Op);
