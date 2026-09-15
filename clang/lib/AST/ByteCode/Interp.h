@@ -3188,40 +3188,8 @@ static inline bool FnPtrCast(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
-static inline bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr) {
-  const auto &Ptr = S.Stk.peek<Pointer>();
-
-  if (SrcIsVoidPtr && S.getLangOpts().CPlusPlus) {
-    bool HasValidResult = !Ptr.isZero();
-
-    if (HasValidResult) {
-      if (S.getStdAllocatorCaller("allocate"))
-        return true;
-
-      const auto &E = cast<CastExpr>(S.Current->getExpr(OpPC));
-      if (S.getLangOpts().CPlusPlus26 &&
-          S.getASTContext().hasSimilarType(Ptr.getType(),
-                                           E->getType()->getPointeeType()))
-        return true;
-
-      S.CCEDiag(E, diag::note_constexpr_invalid_void_star_cast)
-          << E->getSubExpr()->getType() << S.getLangOpts().CPlusPlus26
-          << Ptr.getType().getCanonicalType() << E->getType()->getPointeeType();
-    } else if (!S.getLangOpts().CPlusPlus26) {
-      const SourceInfo &E = S.Current->getSource(OpPC);
-      S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-          << diag::ConstexprInvalidCastKind::CastFrom << "'void *'"
-          << S.Current->getRange(OpPC);
-    }
-  } else {
-    const SourceInfo &E = S.Current->getSource(OpPC);
-    S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << diag::ConstexprInvalidCastKind::ThisConversionOrReinterpret
-        << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
-  }
-
-  return true;
-}
+bool PtrPtrCast(InterpState &S, CodePtr OpPC, bool SrcIsVoidPtr,
+                const Type *TargetType);
 
 //===----------------------------------------------------------------------===//
 // Zero, Nullptr

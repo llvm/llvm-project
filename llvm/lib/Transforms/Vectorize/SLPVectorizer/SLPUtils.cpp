@@ -1200,9 +1200,7 @@ std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
   BitPackInfo Info;
   Info.LShrAmts.assign(NumElts, 0);
   for (unsigned Idx : seq(NumElts)) {
-    APInt Possible = PossibleBits[Idx];
-    Possible <<= ShlAmts[Idx];
-    Possible &= Masks[Idx];
+    APInt Possible = PossibleBits[Idx].shl(ShlAmts[Idx]) & Masks[Idx];
     if (Possible.isZero())
       continue;
     unsigned Lo, W;

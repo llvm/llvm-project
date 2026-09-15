@@ -13788,7 +13788,10 @@ BoUpSLP::computeBitPackLayout(const TreeEntry &TE) const {
 }
 
 bool BoUpSLP::isByteZExtNode(const TreeEntry &TE) const {
-  return TE.hasState() && TE.getOpcode() == Instruction::ZExt &&
+  // Copyable lanes force a blend after the extend, so the vectorized value is
+  // not a plain zext and the byte compaction is not free.
+  return TE.hasState() && !TE.hasCopyableElements() &&
+         TE.getOpcode() == Instruction::ZExt &&
          cast<ZExtInst>(TE.getMainOp())->getSrcTy()->isIntegerTy(8);
 }
 
@@ -18976,6 +18979,14 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
       Worklist.pop();
       continue;
     }
+    // A byte zext feeding a bit pack is priced as part of the pack: its
+    // vectorized form makes the byte compaction free, so keep it.
+    if (TE->UserTreeIndex && TE->UserTreeIndex.EdgeIdx == 0 &&
+        TE->UserTreeIndex.UserTE->CombinedOp == TreeEntry::ReducedBitPack &&
+        isByteZExtNode(*TE)) {
+      Worklist.pop();
+      continue;
+    }
 
     // Calculate the gather cost of the root node.
     InstructionCost TotalSubtreeCost = std::get<0>(Worklist.top().second);
@@ -21425,6 +21436,17 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   auto *Front = E->getMainOp();
   Instruction *LastInst = &getLastInstructionInBundle(E);
+  // Struct-call extractvalue entries may have scalars in different basic
+  // blocks. The vector extractvalue depends only on the vectorized call, so
+  // use the call bundle to set the insert point and dominate all uses.
+  const bool UseCallBundleInsertPoint =
+      E->getOpcode() == Instruction::ExtractValue &&
+      !E->StructEVIndices.empty() &&
+      any_of(E->Scalars, [BB = Front->getParent()](Value *V) {
+        return cast<Instruction>(V)->getParent() != BB;
+      });
+  if (UseCallBundleInsertPoint)
+    LastInst = &getLastInstructionInBundle(getOperandEntry(E, 0));
   assert(LastInst && "Failed to find last instruction in bundle");
   BasicBlock::iterator LastInstIt = LastInst->getIterator();
   // If the instruction is PHI, set the insert point after all the PHIs.
@@ -21437,6 +21459,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
+       !UseCallBundleInsertPoint &&
        (E->doesNotNeedToSchedule() ||
         (E->hasCopyableElements() && !E->isCopyableElement(LastInst) &&
          isUsedOutsideBlock(LastInst)))) ||

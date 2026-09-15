@@ -317,10 +317,8 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
   uint64_t MaxAmt = *max_element(Info.LShrAmts);
   // The shift amounts form a constant vector.
   TTI::OperandValueInfo ShiftAmtInfo = {
-      all_of(Info.LShrAmts,
-             [&](uint64_t A) { return A == Info.LShrAmts.front(); })
-          ? TTI::OK_UniformConstantValue
-          : TTI::OK_NonUniformConstantValue,
+      all_equal(Info.LShrAmts) ? TTI::OK_UniformConstantValue
+                               : TTI::OK_NonUniformConstantValue,
       all_of(Info.LShrAmts,
              [](uint64_t A) { return A == 0 || isPowerOf2_64(A); })
           ? TTI::OP_PowerOf2
