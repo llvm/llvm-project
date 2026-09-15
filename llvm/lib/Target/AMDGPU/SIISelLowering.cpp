@@ -19195,10 +19195,10 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
     BuildVectorSDNode *BV =
         dyn_cast<BuildVectorSDNode>(peekThroughBitcasts(Operand));
 
-    if (!C && !FPC && !BV)
+    if (!C && !FPC && !BV && !Operand->isUndef())
       return SDValue();
 
-    APInt Elt;
+    APInt Elt(EltSize, 0);
     if (BV) {
       BitVector Undef;
       SmallVector<APInt> Elts;
@@ -19207,10 +19207,8 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
         return SDValue();
       assert(Elts.size() == 1 &&
              "BuildVector constant value retrieval expected 1 element");
-      if (Undef.any())
-        return SDValue();
       Elt = Elts[0];
-    } else {
+    } else if (C || FPC) {
       Elt = C ? C->getAPIntValue().trunc(EltSize)
               : FPC->getValueAPF().bitcastToAPInt();
     }
@@ -19222,8 +19220,6 @@ SITargetLowering::performBuildVectorCombine(SDNode *N,
   BuildVectorSDNode::recastRawBits(/*IsLittleEndian=*/true,
                                    /*DstEltSizeInBits=*/64, RawBits, SrcBits,
                                    UndefElts, SrcUndef);
-  if (UndefElts.any())
-    return SDValue();
 
   for (const APInt &Bits : RawBits)
     if (!isUInt<32>(Bits.getZExtValue()))
