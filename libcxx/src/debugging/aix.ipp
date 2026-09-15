@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___DEBUGGING_SUPPORT_AIX_H
-#define _LIBCPP___DEBUGGING_SUPPORT_AIX_H
-
 #include <__config>
 #include <charconv>
 #include <cstring>
@@ -20,15 +17,11 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
+[[gnu::weak]] bool is_debugger_present() noexcept {
   // Get the status information of a process by memory mapping the file /proc/PID/status.
   // https://www.ibm.com/docs/en/aix/7.3?topic=files-proc-file
   char __filename[] = "/proc/4294967295/status";
@@ -57,8 +50,6 @@ _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
   return false;
 }
 
-#endif // _LIBCPP_STD_VER >= 26
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP___DEBUGGING_SUPPORT_AIX_H

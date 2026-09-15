@@ -7,24 +7,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___DEBUGGING_SUPPORT_LINUX_H
-#define _LIBCPP___DEBUGGING_SUPPORT_LINUX_H
-
 #include <__config>
 #include <array>
+#include <debugging>
 #include <fcntl.h>
 #include <string_view>
 #include <unistd.h>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
+[[gnu::weak]] bool is_debugger_present() noexcept {
   // https://docs.kernel.org/filesystems/proc.html
   alignas(8) array<char, 256 + 1> __buffer{};
   constexpr std::string_view __tracer_key("\nTracerPid:\t"); // Linux >= 2.6.0
@@ -86,8 +80,6 @@ _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
   return false;
 }
 
-#endif // _LIBCPP_STD_VER >= 26
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP___DEBUGGING_SUPPORT_LINUX_H

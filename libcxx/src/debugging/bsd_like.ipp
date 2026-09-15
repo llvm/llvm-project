@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___DEBUGGING_SUPPORT_BSD_LIKE_H
-#define _LIBCPP___DEBUGGING_SUPPORT_BSD_LIKE_H
-
 #include <__config>
 
 #if defined(__FreeBSD__) // Include order matters.
@@ -19,19 +16,16 @@
 #  include <sys/user.h>
 #endif // defined(__FreeBSD__)
 #include <array>
+#include <debugging>
 #include <sys/sysctl.h>
 #include <sys/types.h>
 #include <unistd.h>
 
-#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#  pragma GCC system_header
-#endif
-
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 26
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
-_LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
+[[gnu::weak]] bool is_debugger_present() noexcept {
   // Technical Q&A QA1361: Detecting the Debugger
   // https://developer.apple.com/library/archive/qa/qa1361/_index.html
 
@@ -56,17 +50,15 @@ _LIBCPP_HIDE_FROM_ABI inline bool __libcpp_is_debugger_present() noexcept {
   // The process is being debugged if the 'P_TRACED' flag is set.
   // https://github.com/freebsd/freebsd-src/blob/7f3184ba797452703904d33377dada5f0f8eae96/sys/sys/proc.h#L822
 
-#  if defined(__FreeBSD__)
+#if defined(__FreeBSD__)
   const auto __p_flag = __info.ki_flag;
-#  else // __APPLE__
+#else // __APPLE__
   const auto __p_flag = __info.kp_proc.p_flag;
-#  endif
+#endif
 
   return ((__p_flag & P_TRACED) != 0);
 }
 
-#endif // _LIBCPP_STD_VER >= 26
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 _LIBCPP_END_NAMESPACE_STD
-
-#endif // _LIBCPP___DEBUGGING_SUPPORT_BSD_LIKE_H

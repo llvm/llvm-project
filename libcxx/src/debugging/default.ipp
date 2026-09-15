@@ -1,3 +1,4 @@
+// -*- C++ -*-
 //===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -6,17 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <__assert>
 #include <__config>
+#include <debugging>
 
-#if defined(__linux__)
-#  include "debugging/linux.ipp"
-#elif defined(__FREEBSD__) || defined(__APPLE__)
-#  include "debugging/bsd_like.ipp"
-#elif defined(_WIN32)
-#  include "debugging/windows.ipp"
-#elif defined(_AIX)
-#  include "debugging/aix.ipp"
-#else
-#  include "debugging/default.ipp"
-#endif
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
+[[gnu::weak]] bool is_debugger_present() noexcept { return false; }
+
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
+_LIBCPP_END_NAMESPACE_STD
