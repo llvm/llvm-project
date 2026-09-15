@@ -409,8 +409,10 @@ private:
 // Data-sharing and Data-mapping attributes for data-refs in OpenMP construct
 class OmpAttributeVisitor : DirectiveAttributeVisitor<llvm::omp::Directive> {
 public:
-  explicit OmpAttributeVisitor(SemanticsContext &context)
-      : DirectiveAttributeVisitor(context) {}
+  explicit OmpAttributeVisitor(
+      SemanticsContext &context, bool warnNonDeclareTargetDeviceUses = false)
+      : DirectiveAttributeVisitor(context),
+        warnNonDeclareTargetDeviceUses_{warnNonDeclareTargetDeviceUses} {}
 
   static bool HasStaticStorageDuration(const Symbol &symbol) {
     auto &ultSym = symbol.GetUltimate();
@@ -1007,6 +1009,8 @@ private:
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
   UnorderedSymbolSet stmtFunctionExprSymbols_;
+  UnorderedSymbolSet warnedNonDeclareTargetDeviceUseSymbols_;
+  bool warnNonDeclareTargetDeviceUses_{false};
 
   enum class PartKind : int {
     // There are also other "parts", such as internal-subprogram-part, etc,
@@ -1047,6 +1051,8 @@ private:
       const std::optional<common::OmpMemoryOrderType> &);
 
   void CreateImplicitSymbols(const parser::Name &, const Symbol *symbol);
+  const Symbol *GetEnclosingNonHostDeclareTargetSubprogram(parser::CharBlock);
+  void WarnIfNonDeclareTargetDeviceUse(const parser::Name &);
 
   void AddToContextObjectWithExplicitDSA(Symbol &symbol, Symbol::Flag flag) {
     AddToContextObjectWithDSA(symbol, flag);
@@ -1072,8 +1078,10 @@ void ResolveOmpParts(
       // sequential loop (2.15.1.1) can only be determined when visiting
       // the corresponding DoConstruct, a second walk is to adjust the
       // symbols for all the data-refs of that loop iteration variable
-      // prior to the DoConstruct.
-      OmpAttributeVisitor{context}.Walk(node);
+      // prior to the DoConstruct. Emit diagnostics that require completed
+      // directive attribution during this second walk.
+      OmpAttributeVisitor{context, /*warnNonDeclareTargetDeviceUses=*/true}
+          .Walk(node);
     }
   }
 }
@@ -2933,6 +2941,22 @@ static bool IsOpenMPScalar(const Symbol &symbol) {
   return false;
 }
 
+static bool IsHostOnlyDeclareTarget(const Symbol &symbol) {
+  const Symbol &ultimate{symbol.GetUltimate()};
+  bool isHostOnly{false};
+  common::visit(
+      [&](auto &&details) {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          if (const auto &deviceType{details.ompDeclTargetDeviceType()}) {
+            isHostOnly = *deviceType == common::OmpDeviceType::Host;
+          }
+        }
+      },
+      ultimate.details());
+  return isHostOnly;
+}
+
 static bool DefaultMapCategoryMatchesSymbol(
     parser::OmpVariableCategory::Value category, const Symbol &symbol) {
   using VarCat = parser::OmpVariableCategory::Value;
@@ -2951,10 +2975,65 @@ static bool DefaultMapCategoryMatchesSymbol(
   return false;
 }
 
+// Return the enclosing subprogram if it is a declare target routine that can
+// execute on the device. Host-only declare target routines are intentionally
+// ignored.
+const Symbol *OmpAttributeVisitor::GetEnclosingNonHostDeclareTargetSubprogram(
+    parser::CharBlock source) {
+  const Scope &scope{context_.FindScope(source)};
+  if (scope.IsTopLevel()) {
+    return nullptr;
+  }
+
+  const Scope &programUnit{GetProgramUnitContaining(scope)};
+  const Symbol *symbol{programUnit.symbol()};
+  if (!symbol || !symbol->IsSubprogram()) {
+    return nullptr;
+  }
+
+  const Symbol &ultimate{symbol->GetUltimate()};
+  if (!ultimate.test(Symbol::Flag::OmpDeclareTarget) ||
+      IsHostOnlyDeclareTarget(ultimate)) {
+    return nullptr;
+  }
+
+  return &ultimate;
+}
+
+void OmpAttributeVisitor::WarnIfNonDeclareTargetDeviceUse(
+    const parser::Name &name) {
+  if (!warnNonDeclareTargetDeviceUses_ || !name.symbol) {
+    return;
+  }
+
+  const Symbol *declareTargetSubprogram{
+      GetEnclosingNonHostDeclareTargetSubprogram(name.source)};
+  if (!declareTargetSubprogram) {
+    return;
+  }
+
+  const Symbol &symbol{name.symbol->GetUltimate()};
+  if (&symbol == declareTargetSubprogram ||
+      !warnedNonDeclareTargetDeviceUseSymbols_.insert(symbol).second ||
+      symbol.test(Symbol::Flag::OmpDeclareTarget) ||
+      symbol.test(Symbol::Flag::OmpThreadprivate) ||
+      symbol.test(Symbol::Flag::CompilerCreated) || symbol.IsSubprogram() ||
+      !symbol.has<ObjectEntityDetails>() || IsNamedConstant(symbol) ||
+      IsDummy(symbol) || symbol.owner().kind() != Scope::Kind::Module) {
+    return;
+  }
+
+  context_.Warn(common::UsageWarning::OpenMPUsage, name.source,
+      "Variable '%s' is referenced from an OpenMP DECLARE TARGET procedure but is not marked DECLARE TARGET"_warn_en_US,
+      symbol.name());
+}
+
 // For OpenMP constructs, check all the data-refs within the constructs
 // and adjust the symbol for each Name if necessary
 void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
+
+  WarnIfNonDeclareTargetDeviceUse(name);
 
   if (symbol && WithinConstruct()) {
     if (omp::IsPrivatizable(*symbol) && !IsObjectWithDSA(*symbol) &&
