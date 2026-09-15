@@ -187,6 +187,10 @@ features cannot lower the translation-unit ABI level;
   them to an enumeration type with a fixed `bool` underlying type. This
   resolves [CWG1094](https://wg21.link/cwg1094).
 
+- Implemented [CWG2900](https://wg21.link/cwg2900), removing a spurious
+  ambiguity when partial ordering constant template parameters declared
+  with placeholder types.
+
 ### C Language Changes
 
 #### C2y Feature Support
@@ -690,6 +694,9 @@ features cannot lower the translation-unit ABI level;
 - Fixed an assertion when a defaulted comparison operator was synthesized for a
   class with an invalid non-static data member, such as one qualified with an
   address space. (#GH194605)
+
+- Fixed deduction of the template parameters appearing in the type of a
+  constant template parameter of reference type. (#GH40328)
 
 #### Bug Fixes to AST Handling
 

@@ -5544,6 +5544,14 @@ convertTypeTemplateArgumentToTemplate(ASTContext &Context, TypeLoc TLoc) {
                              TagLoc.getQualifierLoc(), TagLoc.getNameLoc());
 }
 
+/// Determine whether \p T is an undeduced 'decltype(auto)', or an undeduced
+/// placeholder of the form 'type-constraint_opt auto'.
+static bool isUndeducedAuto(QualType T, bool DecltypeAuto) {
+  const AutoType *AT = T->getContainedAutoType();
+  return AT && AT->isDecltypeAuto() == DecltypeAuto &&
+         AT->getDeducedType().isNull();
+}
+
 bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
                                  NamedDecl *Template,
                                  SourceLocation TemplateLoc,
@@ -5565,6 +5573,17 @@ bool Sema::CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &ArgLoc,
     QualType NTTPType = NTTP->getType();
     if (NTTP->isParameterPack() && NTTP->isExpandedParameterPack())
       NTTPType = NTTP->getExpansionType(ArgumentPackIndex);
+
+    // C++26 [dcl.type.auto.deduct]p3:
+    //   If the placeholder-type-specifier is of the form type-constraint_opt
+    //   auto, [...] If E is a value synthesized for a constant template
+    //   parameter of type decltype(auto) ([temp.func.order]), the declaration
+    //   is ill-formed.
+    if (CTAI.PartialOrdering &&
+        isUndeducedAuto(NTTPType, /*DecltypeAuto=*/false) &&
+        isUndeducedAuto(getTypeOfConstantTemplateParameter(Arg),
+                        /*DecltypeAuto=*/true))
+      return true;
 
     if (NTTPType->isInstantiationDependentType()) {
       // Do substitution on the type of the non-type template parameter.
