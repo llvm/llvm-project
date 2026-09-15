@@ -49,10 +49,10 @@ jobs:
       - name: Clear apt-get lock
         if: runner.arch == 'ARM64'
         run: |
-          ps aux | grep apt
-          sudo rm -rf /var/lib/dpkg/lock*
-          sudo rm /var/cache/apt/archives/lock
-          sudo dpkg --configure -a
+          while pgrep "apt-get" > /dev/null; do
+            echo "Waiting for apt-get to finish"
+            sleep 1
+          done
 
       - name: Build Container
         uses: ./.github/actions/build-container
