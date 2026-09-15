@@ -15,13 +15,13 @@
 
 #include <cassert>
 #include <level_zero/ze_api.h>
-#include <list>
 #include <map>
 #include <memory>
 #include <mutex>
 
 #include "L0Defs.h"
 #include "L0Trace.h"
+#include "PluginInterface.h"
 
 namespace llvm::omp::target::plugin {
 
@@ -457,7 +457,7 @@ public:
   ~StagingBufferTy() = default;
 
   Error clear() {
-    for (auto Ptr : Buffers)
+    for (auto *Ptr : Buffers)
       CALL_ZE_RET_ERROR(zeMemFree, Context, Ptr);
     Context = nullptr;
     return Plugin::success();

@@ -6,8 +6,8 @@
 // UNSUPPORTED: system-windows
 
 // RUN: %clang++ -g -O0 %s -o %t
-// RUN: %dexter --fail-lt 1.0 -w \
-// RUN:     --binary %t %dexter_lldb_args -v -- %s
+// RUN: %dexter -w \
+// RUN:     --binary %t %dexter_lldb_args -v -- %s | FileCheck %s
 
 #include <stdio.h>
 
@@ -16,9 +16,16 @@ const int ape = 32;
 }
 
 int main() {
-  printf("hello %d\n", monkey::ape); // DexLabel('main')
+  printf("hello %d\n", monkey::ape); // !dex_label main
   return 0;
 }
 
-// DexExpectWatchValue('monkey::ape', 32, on_line=ref('main'))
+// CHECK-DAG: seen_values: 1
+// CHECK-DAG: correct_step_coverage: 100.0%
 
+/*
+---
+!where {lines: !label main}:
+  !value "monkey::ape": 32
+...
+*/

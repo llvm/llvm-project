@@ -3,6 +3,7 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!u64i = !cir.int<u, 64>
 
 module {
   cir.func @shouldFlatSwitchWithDefault(%arg0: !s8i) {
@@ -313,4 +314,56 @@ module {
 // CHECK:  ^bb[[#RET_BB]]:  // pred: ^bb[[#EXIT]]
 // CHECK:    cir.return
 // CHECK:  }
+
+  // A large unsigned 64-bit range with a high-bit upper bound must lower at the
+  // operand width (not a hardcoded i32) and use an unsigned compare with no
+  // sign cast.
+  cir.func @bigRangeU64(%arg0: !u64i) {
+    cir.switch (%arg0 : !u64i) {
+      cir.case(range, [#cir.int<1000000000000000000> : !u64i,
+                       #cir.int<9999999999999999999> : !u64i]) {
+        cir.break
+      }
+      cir.case(default, []) {
+        cir.break
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func{{.*}} @bigRangeU64(%arg0: !u64i) {
+// CHECK:    cir.switch.flat %[[COND:.*]] : !u64i, ^bb[[#RANGE_BR:]] [
+// CHECK:    ]
+// CHECK:  ^bb[[#RANGE_BR]]:
+// CHECK:    %[[LO:.*]] = cir.const #cir.int<1000000000000000000> : !u64i
+// CHECK:    %[[SUB:.*]] = cir.sub %[[COND]], %[[LO]] : !u64i
+// CHECK-NOT: cir.cast
+// CHECK:    %[[LEN:.*]] = cir.const #cir.int<8999999999999999999> : !u64i
+// CHECK:    %[[CMP:.*]] = cir.cmp le %[[SUB]], %[[LEN]] : !u64i
+// CHECK:    cir.brcond %[[CMP]]
+
+  // A small range at the top of the signed domain expands to individual cases.
+  // The expansion cursor must stop at the upper bound instead of incrementing
+  // past INT_MAX, which would wrap and make the expansion loop run forever.
+  cir.func @flatCaseRangeTopExpand(%arg0: !s32i) {
+    cir.switch (%arg0 : !s32i) {
+      cir.case(range, [#cir.int<2147483645> : !s32i,
+                       #cir.int<2147483647> : !s32i]) {
+        cir.break
+      }
+      cir.case(default, []) {
+        cir.break
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func{{.*}} @flatCaseRangeTopExpand(%arg0: !s32i) {
+// CHECK:    cir.switch.flat %{{.*}} : !s32i, ^bb[[#DEFAULT:]] [
+// CHECK-NEXT:      2147483645: ^bb[[#CASE:]],
+// CHECK-NEXT:      2147483646: ^bb[[#CASE]],
+// CHECK-NEXT:      2147483647: ^bb[[#CASE]]
+// CHECK-NEXT:    ]
 }

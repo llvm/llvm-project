@@ -84,7 +84,7 @@ namespace type_requirement {
   template<typename T>
   struct a {
       template<typename U> requires (requires { typename T::a::a; }, false)
-      // expected-note@-1{{because 'requires { <<error-type>>; } , false' evaluated to false}}
+      // expected-note@-1{{because 'requires { <<error-type>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -126,7 +126,7 @@ namespace expr_requirement {
 
   template<typename T>
   struct a {
-      template<typename U> requires (requires { sizeof(T::a); }, false) // expected-note{{because 'requires { <<error-expression>>; } , false' evaluated to false}}
+      template<typename U> requires (requires { sizeof(T::a); }, false) // expected-note{{because 'requires { <<error-expression>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -151,7 +151,7 @@ namespace expr_requirement {
 
   template<typename T>
   struct b {
-      template<typename U> requires (requires { { 0 } -> C1<typename T::a>; }, false) // expected-note{{because 'requires { { 0 } -> <<error-type>>; } , false' evaluated to false}}
+      template<typename U> requires (requires { { 0 } -> C1<typename T::a>; }, false) // expected-note{{because 'requires { { 0 } -> <<error-type>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -190,7 +190,7 @@ namespace nested_requirement {
   template<typename T>
   struct a {
       template<typename U> requires
-      (requires { requires sizeof(T::a) == 0; }, false) // expected-note{{because 'requires { requires <<error-expression>>; } , false' evaluated to false}}
+      (requires { requires sizeof(T::a) == 0; }, false) // expected-note{{because 'requires { requires <<error-expression>>; }, false' evaluated to false}}
       struct r {};
   };
 
@@ -235,6 +235,7 @@ template <class T> requires(T{})
 constexpr bool e_v = true;
 
 static_assert(e_v<bool>);
+// expected-error@-1 {{constraints not satisfied for variable template 'e_v'}}
 
 } // namespace GH73885
 
@@ -326,7 +327,7 @@ namespace SusbtitutionFailureInArguments1 {
   template void g<int>();
   // expected-error@-1 {{does not refer to a function template}}
 
-  // FIXME: static_assert should gain support for explaining non-satisfied requirements.
   static_assert(requires { { 0 } -> C; });
   // expected-error@-1 {{static assertion failed due to requirement 'requires { { <<error-expression>> } -> C; }'}}
+  // expected-note@-2 {{because 'C<expr-type>' would be invalid}}
 } // namespace SubstitutionFailureInArguments1

@@ -19,7 +19,6 @@ class ValueAPITestCase(TestBase):
         # Find the line number to of function 'c'.
         self.line = line_number("main.c", "// Break at this line")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Exercise some SBValue APIs."""
         d = {"EXE": self.exe_name}
@@ -274,6 +273,22 @@ class ValueAPITestCase(TestBase):
         a_null_int_ptr = frame0.FindVariable("a_null_int_ptr")
         self.assertEqual(a_null_int_ptr.GetValue(), "0x0")
 
+        a_val: lldb.SBValue = frame0.FindVariable("a_val")
+        self.assertTrue(a_val)
+        self.assertEqual(a_val.value, "10")
+        self.assertEqual(a_val.GetValue(), "10")
+
+        a_val.SetFormat(lldb.eFormatBoolean)
+        self.assertEqual(a_val.format, lldb.eFormatBoolean)
+        self.assertEqual(a_val.GetFormat(), lldb.eFormatBoolean)
+        self.assertEqual(a_val.value.lower(), "true")
+
+        # Verify the setter.
+        a_val.format = lldb.eFormatHex
+        self.assertEqual(a_val.format, lldb.eFormatHex)
+        self.assertEqual(a_val.GetFormat(), lldb.eFormatHex)
+        self.assertEqual(a_val.value.lower(), "0xa")
+
         # Check that dereferencing a null pointer produces reasonable results
         # (does not crash).
         self.assertEqual(
@@ -282,3 +297,88 @@ class ValueAPITestCase(TestBase):
         self.assertEqual(
             a_null_int_ptr.Dereference().GetLoadAddress(), lldb.LLDB_INVALID_ADDRESS
         )
+
+    @no_debug_info_test
+    def test_register(self):
+        """
+        Test SBValue APIs when the values are backed by registers.
+        """
+        d = {"EXE": self.exe_name}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        exe = self.getBuildArtifact(self.exe_name)
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
+        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+
+        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint condition",
+        )
+        frame = thread.GetFrameAtIndex(0)
+
+        register_sets = frame.GetRegisters()
+        for set_idx in range(register_sets.GetSize()):
+            reg_set = register_sets.GetValueAtIndex(set_idx)
+            num_registers = reg_set.GetNumChildren()
+
+            for child_idx in range(num_registers):
+                reg_value = reg_set.GetChildAtIndex(child_idx)
+                self.assertTrue(reg_value.IsValid())
+                reg_name = reg_value.GetName()
+
+                if (
+                    self.getArchitecture() in ["amd64", "i386", "x86_64"]
+                    and reg_name == "sp"
+                ):
+                    # x86 has "rsp", and "sp" which is a subset of "rsp". Then there is
+                    # the ABI name "sp", which LLDB resolves to "rsp", not to the
+                    # architectural register "sp".
+                    # See https://github.com/llvm/llvm-project/issues/212778.
+                    sp_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
+                    self.assertTrue(sp_with_name_index < num_registers)
+                    rsp_with_name_index = reg_set.GetIndexOfChildWithName("rsp")
+                    self.assertTrue(rsp_with_name_index < num_registers)
+                    self.assertEqual(sp_with_name_index, rsp_with_name_index)
+
+                    continue
+
+                # GetIndexOfChildWithName should return the same index.
+                child_with_name_index = reg_set.GetIndexOfChildWithName(reg_name)
+                self.assertTrue(child_with_name_index < num_registers)
+                self.assertEqual(child_idx, child_with_name_index)
+
+                # GetChildMemberWithName should return a value with a matching name.
+                child_member = reg_set.GetChildMemberWithName(reg_name)
+                self.assertTrue(child_member.IsValid())
+                self.assertEqual(reg_name, child_member.GetName())
+
+                # That lookup should be case insensitive.
+                child_member = reg_set.GetChildMemberWithName(reg_name.swapcase())
+                self.assertTrue(child_member.IsValid())
+                # Note that the value's name is the one lldb uses, not the
+                # differently cased one used to get it.
+                self.assertEqual(reg_name, child_member.GetName())
+
+        if self.isAArch64():
+            # Name lookup also checks register aliases and is case insensitive.
+            gpr = register_sets.GetValueAtIndex(0)
+
+            # x30 is the link register. LLDB has lr as the primary name and x30
+            # as the alias.
+            lr = gpr.GetChildMemberWithName("lR")
+            self.assertTrue(lr.IsValid())
+            self.assertEqual("lr", lr.GetName())
+
+            x30 = gpr.GetChildMemberWithName("X30")
+            self.assertTrue(x30.IsValid())
+            # Note that the SBValue's name is primary name not the alias.
+            self.assertEqual("lr", x30.GetName())

@@ -1,8 +1,5 @@
 # Garbage Collection with LLVM
 
-```{contents}
-:local:
-```
 
 ## Abstract
 

@@ -197,3 +197,32 @@ namespace GH131342 {
   template <class T> using AA = A<T, val<T>>;
   AA a{0};
 } // namespace GH131342
+
+namespace GH124715_2 {
+
+template <class F, class... Args>
+using invoke_result_t = decltype(F()(Args()...));
+
+template <class F, class... Args>
+invoke_result_t<F, Args...> invoke(F f, Args... args);
+
+template <class F, class... Args>
+concept invocable = requires(F f, Args... args) {
+    invoke(f, args...);
+};
+
+template <class Ret, class... Args>
+struct A {
+    A(auto&&...) {}
+};
+
+template <class Lambda, class... Args>
+    requires invocable<Lambda, Args...>
+A(Lambda, Args...) -> A<invoke_result_t<Lambda, Args...>, Args...>;
+
+template <class T, class... Ts>
+using AliasName = A<T, Ts...>;
+
+AliasName aa([](int){}, 0);
+
+}

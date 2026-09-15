@@ -18,7 +18,9 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constant.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
 
 using namespace llvm;
 
@@ -59,11 +61,34 @@ public:
     } else if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
       if (mlir::failed(amendModule(mod, attribute, moduleTranslation)))
         return mlir::failure();
+    } else if (attribute.getName() == "cir.riscv_nontemporal_domain") {
+      if (mlir::failed(amendRISCVNontemporalDomain(op, instructions, attribute,
+                                                   moduleTranslation)))
+        return mlir::failure();
     }
     return mlir::success();
   }
 
 private:
+  mlir::LogicalResult amendRISCVNontemporalDomain(
+      mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
+      mlir::NamedAttribute attribute,
+      mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto domain = mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue());
+    if (!domain)
+      return op->emitError()
+             << "expected cir.riscv_nontemporal_domain to be an integer";
+
+    llvm::LLVMContext &llvmContext = moduleTranslation.getLLVMContext();
+    llvm::MDNode *node = llvm::MDNode::get(
+        llvmContext, llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                         llvm::Type::getInt32Ty(llvmContext),
+                         domain.getValue().getZExtValue())));
+    for (llvm::Instruction *inst : instructions)
+      inst->setMetadata("riscv-nontemporal-domain", node);
+    return mlir::success();
+  }
+
   // Translate CIR function attributes to LLVM function attributes.
   mlir::LogicalResult
   amendFunction(mlir::LLVM::LLVMFuncOp func,
@@ -103,6 +128,22 @@ private:
             llvm::MDString::get(llvmContext, strAttr.getValue());
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu_printf_kind",
                                   mdStr);
+      }
+    }
+
+    if (attribute.getName() == "cir.amdgpu_xnack") {
+      if (auto intAttr =
+              mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.xnack",
+                                  static_cast<uint32_t>(intAttr.getInt()));
+      }
+    }
+
+    if (attribute.getName() == "cir.amdgpu_sramecc") {
+      if (auto intAttr =
+              mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
+        llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.sramecc",
+                                  static_cast<uint32_t>(intAttr.getInt()));
       }
     }
 

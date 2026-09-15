@@ -328,21 +328,6 @@ static ValueType getValueType(u8 c) { return static_cast<ValueType>(c & 0x3); }
 
 static int getValuePos(u8 c) { return c >> kValueSizeSizeBits; }
 
-// Checks the consistency of the value types at the given type pointer.
-// If the value is inconsistent, returns ValueType::kUnknown. Else, return the
-// consistent type.
-template <typename FT>
-static bool checkValueConsistency(const u8 *shadow_type) {
-  const int pos = getValuePos(*shadow_type);
-  // Check that all bytes from the start of the value are ordered.
-  for (uptr i = 0; i < sizeof(FT); ++i) {
-    const u8 T = *(shadow_type - pos + i);
-    if (!(getValueType(T) == FTInfo<FT>::kValueType && getValuePos(T) == i))
-      return false;
-  }
-  return true;
-}
-
 // The instrumentation automatically appends `shadow_value_type_ids`, see
 // maybeAddSuffixForNsanInterface.
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void

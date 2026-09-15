@@ -2,9 +2,6 @@
 
 LLVM welcomes contributions of all kinds. To get started, please review the following topics:
 
-```{contents}
-:local:
-```
 
 ```{toctree}
 :hidden:
@@ -17,7 +14,6 @@ SphinxQuickstartTemplate
 HowToSubmitABug
 BugLifeCycle
 CodingStandards
-GitHub
 GitBisecting
 GitRepositoryPolicy
 ```
@@ -257,6 +253,14 @@ what to add to your calendar invite.
      - [ics](https://calendar.google.com/calendar/ical/2d77f9a2624d18cd46e5299d15cc0fa0c90dca53fd68802261d52121d21a0573%40group.calendar.google.com/public/basic.ics)
        [gcal](https://calendar.google.com/calendar/u/0?cid=MmQ3N2Y5YTI2MjRkMThjZDQ2ZTUyOTlkMTVjYzBmYTBjOTBkY2E1M2ZkNjg4MDIyNjFkNTIxMjFkMjFhMDU3M0Bncm91cC5jYWxlbmRhci5nb29nbGUuY29t)
      - [Meeting notes](https://docs.google.com/document/d/1DkCik6BTnO-cox_9y_BTKzPaJJOo_hBxiNFP3lInvOM/edit?tab=t.nvvd6cfloi81)
+   * - [HLSL Working Group](https://github.com/llvm/wg-hlsl)
+     - Every week on Thursday
+     -
+     - [Meeting notes](https://github.com/llvm/wg-hlsl/tree/main/meetings)
+   * - BOLT
+     - Monthly, 2nd Wednesday of the month at 11:00am PT
+     - [gcal](https://calendar.google.com/calendar/u/0/event?eid=ZjIzMGRsOTFpdWZ0MWkxYjB0M2QzamxtcmRfMjAyNjA5MDlUMTgwMDAwWiBjYWxlbmRhckBsbHZtLm9yZw)
+     - [Meeting notes/agenda](https://docs.google.com/document/d/17Ivx8tyvUkRT3h78RJSQdDabAtBvpbtGQI-atdPmXE8/edit?usp=sharing)
 ```
 
 For event owners, our Discord bot also supports sending automated announcements
@@ -337,8 +341,10 @@ The {doc}`CodeOfConduct` applies to all office hours.
       [gcal](https://calendar.google.com/calendar/embed?src=c_pm6e7160iq7n5fcm1s6m3rjhh4%40group.calendar.google.com)
     - [GoogleMeet](https://meet.google.com/hhk-xpdj-gvx)
     - English, Romanian
-  * - Aaron Ballman (he/him)
-    - Clang internals; frontend attributes; clang-tidy; clang-query; AST matchers
+  * - Clang Maintainers (chaired by Aaron Ballman)
+    - Maintainers with various backgrounds attend, so anything related to Clang
+      internals. If you have a specific topic, reach out to Aaron in advance and
+      he can try to have the correct experts attend.
     - Monthly, 2nd Monday and 3rd Friday of the month at 10:00am Eastern and again at 2:00pm Eastern, for 60 minutes.
       [ics](https://calendar.google.com/calendar/ical/npgke5dug0uliud0qapptmps58%40group.calendar.google.com/public/basic.ics)
       [gcal](https://calendar.google.com/calendar/embed?src=npgke5dug0uliud0qapptmps58%40group.calendar.google.com)
@@ -359,11 +365,6 @@ The {doc}`CodeOfConduct` applies to all office hours.
     - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
     - [GoogleMeet](https://meet.google.com/pdz-xhns-uus)
-    - English, Russian
-  * - Maksim Panchenko
-    - BOLT internals, IR, new passes, proposals, etc.
-    - Monthly, 2nd Wednesday of the month at 11:00am PT, for 30 minutes.
-    - [Zoom](https://fb.zoom.us/j/97065697120?pwd=NTFaUWJjZW9uVkJuaVlPTE9qclE3dz09)
     - English, Russian
   * - Quentin Colombet (he/him)
     - LLVM/MLIR; Codegen (Instruction selection (GlobalISel/SDISel), Machine IR,
@@ -518,7 +519,6 @@ can be better.
 :hidden:
 
 Proposals/GitHubMove
-BugpointRedesign
 Proposals/TestSuite
 Proposals/VariableNames
 Proposals/VectorPredication
@@ -527,10 +527,6 @@ Proposals/VectorPredication
 * {doc}`Proposals/GitHubMove`
 
   Proposal to move from SVN/Git to GitHub.
-
-* {doc}`BugpointRedesign`
-
-  Design doc for a redesign of the Bugpoint tool.
 
 * {doc}`Proposals/TestSuite`
 

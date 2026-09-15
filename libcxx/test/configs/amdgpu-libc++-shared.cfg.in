@@ -1,5 +1,3 @@
-lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
-
 config.substitutions.append(('%{flags}',
   f'--target={config.target_triple} -Wno-multi-gpu -flto -mcpu=native'))
 config.substitutions.append(('%{compile_flags}',

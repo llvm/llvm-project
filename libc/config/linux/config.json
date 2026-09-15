@@ -1,4 +1,9 @@
 {
+  "scanf": {
+    "LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES": {
+      "value": "${LLVM_LIBC_OVERLAY}"
+    }
+  },
   "string": {
     "LIBC_CONF_STRING_LENGTH_IMPL": {
       "value": "clang_vector"

@@ -1504,9 +1504,11 @@ static Operation *widenOp(Operation *op, VectorizationState &state) {
   // name that works both in scalar mode and vector mode.
   // TODO: Is it worth considering an Operation.clone operation which
   // changes the type so we can promote an Operation with less boilerplate?
-  Operation *vecOp =
-      state.builder.create(op->getLoc(), op->getName().getIdentifier(),
-                           vectorOperands, vectorTypes, op->getAttrs());
+  OperationState vecState(op->getLoc(), op->getName(), vectorOperands,
+                          vectorTypes,
+                          op->getDiscardableAttrDictionary().getValue());
+  vecState.propertiesAttr = op->getPropertiesAsAttribute();
+  Operation *vecOp = state.builder.create(vecState);
   state.registerOpVectorReplacement(op, vecOp);
   return vecOp;
 }
@@ -1841,6 +1843,17 @@ void affine::vectorizeChildAffineLoops(
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
   func::FuncOp f = getOperation();
+  if (vectorSizes.empty()) {
+    f.emitError("The 'virtual-vector-size' option must be specified.");
+    return signalPassFailure();
+  }
+
+  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
+    f.emitError(
+        "The 'virtual-vector-size' option must contain only positive values.");
+    return signalPassFailure();
+  }
+
   if (!fastestVaryingPattern.empty() &&
       fastestVaryingPattern.size() != vectorSizes.size()) {
     f.emitRemark("Fastest varying pattern specified with different size than "
@@ -1850,11 +1863,6 @@ void Vectorize::runOnOperation() {
 
   if (vectorizeReductions && vectorSizes.size() != 1) {
     f.emitError("Vectorizing reductions is supported only for 1-D vectors.");
-    return signalPassFailure();
-  }
-
-  if (llvm::any_of(vectorSizes, [](int64_t size) { return size <= 0; })) {
-    f.emitError("Vectorization factor must be greater than zero.");
     return signalPassFailure();
   }
 

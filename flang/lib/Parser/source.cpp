@@ -10,13 +10,10 @@
 #include "flang/Common/idioms.h"
 #include "flang/Parser/char-buffer.h"
 #include "flang/Parser/characters.h"
-#include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <cstring>
-#include <memory>
 #include <string>
 #include <vector>
 

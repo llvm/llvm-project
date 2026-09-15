@@ -50,6 +50,10 @@ protected:
   virtual bool visitDeclAndReturn(const VarDecl *VD, const Expr *Init,
                                   bool ConstantContext) = 0;
   virtual bool visitDtorCall(const VarDecl *VD, const APValue &) = 0;
+  virtual bool visitWithSubstitutions(const FunctionDecl *Callee,
+                                      ArrayRef<const Expr *> Args,
+                                      const Expr *This,
+                                      const Expr *Condition) = 0;
   virtual bool visit(const Expr *E) = 0;
   virtual bool emitBool(bool V, const Expr *E) = 0;
 
@@ -66,7 +70,7 @@ protected:
   bool checkingForUndefinedBehavior() const { return false; }
 
   /// Callback for local registration.
-  Local createLocal(Descriptor *D);
+  Local createLocal(const Descriptor *D);
 
   /// Parameter indices.
   llvm::DenseMap<const ParmVarDecl *, FuncParam> Params;

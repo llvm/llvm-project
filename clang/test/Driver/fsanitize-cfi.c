@@ -96,3 +96,32 @@
 
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=kcfi,function %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-FUNCTION
 // CHECK-KCFI-FUNCTION: error: invalid argument '-fsanitize=kcfi' not allowed with '-fsanitize=function'
+
+// -fsanitize-kcfi-arity is forwarded to cc1 when KCFI is enabled.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-arity %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY
+// CHECK-KCFI-ARITY: "-fsanitize-kcfi-arity"
+
+// Without -fsanitize=kcfi, -fsanitize-kcfi-arity is unused.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-arity %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-ARITY-UNUSED
+// CHECK-KCFI-ARITY-UNUSED: warning: argument unused during compilation: '-fsanitize-kcfi-arity'
+
+// -fsanitize-kcfi-hash= is forwarded to cc1 when KCFI is enabled.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-FNV
+// CHECK-KCFI-HASH-FNV: "-fsanitize-kcfi-hash=FNV-1a"
+
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=xxHash64 %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-XXHASH
+// CHECK-KCFI-HASH-XXHASH: "-fsanitize-kcfi-hash=xxHash64"
+
+// If -fsanitize-kcfi-hash= is given more than once, the last value wins.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash=xxHash64 -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-LAST
+// CHECK-KCFI-HASH-LAST:     "-fsanitize-kcfi-hash=FNV-1a"
+// CHECK-KCFI-HASH-LAST-NOT: "-fsanitize-kcfi-hash=xxHash64"
+
+// An explicitly empty value is still forwarded (not dropped) so cc1 can
+// diagnose it.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize-kcfi-hash= %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-EMPTY
+// CHECK-KCFI-HASH-EMPTY: "-fsanitize-kcfi-hash="
+
+// Without -fsanitize=kcfi, -fsanitize-kcfi-hash= is unused.
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize-kcfi-hash=FNV-1a %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-HASH-UNUSED
+// CHECK-KCFI-HASH-UNUSED: warning: argument unused during compilation: '-fsanitize-kcfi-hash=FNV-1a'

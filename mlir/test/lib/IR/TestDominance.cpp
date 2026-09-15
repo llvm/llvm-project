@@ -51,12 +51,13 @@ public:
 
     // Helper function that annotates the IR with block IDs.
     auto annotateBlockId = [&](Operation *op, int64_t blockId) {
-      auto idAttr = op->getAttrOfType<DenseI64ArrayAttr>(kBlockIdsAttrName);
+      auto idAttr =
+          op->getDiscardableAttrOfType<DenseI64ArrayAttr>(kBlockIdsAttrName);
       SmallVector<int64_t> ids;
       if (idAttr)
         ids = llvm::to_vector(idAttr.asArrayRef());
       ids.push_back(blockId);
-      op->setAttr(kBlockIdsAttrName, b.getDenseI64ArrayAttr(ids));
+      op->setDiscardableAttr(kBlockIdsAttrName, b.getDenseI64ArrayAttr(ids));
     };
 
     // Create unique IDs for each block.

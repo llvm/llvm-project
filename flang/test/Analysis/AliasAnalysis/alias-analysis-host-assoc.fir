@@ -409,3 +409,68 @@ fir.global @_QMglobalsEg target : !fir.array<10xi32> {
   %0 = fir.undefined !fir.array<10xi32>
   fir.has_value %0 : !fir.array<10xi32>
 }
+
+// -----
+
+// subroutine test12
+//   integer, allocatable :: a(:), b(:)
+//   allocate(a(1), b(1))
+// contains
+//   subroutine inner()
+//     a(1) = b(1)
+//   end subroutine inner
+// end subroutine test12
+
+// Distinct host-associated allocatables cannot overlap through EQUIVALENCE.
+// CHECK: test12_a(1)#0 <-> test12_b(1)#0: NoAlias
+func.func @_QFtest12Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+  %c0_i32 = arith.constant 0 : i32
+  %0 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
+  %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
+  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable, host_assoc>, uniq_name = "_QFtest12Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %3 = fir.load %2#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %c1 = arith.constant 1 : index
+  %4 = hlfir.designate %3 (%c1) {test.ptr = "test12_a(1)"} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+
+  %c1_i32 = arith.constant 1 : i32
+  %5 = fir.coordinate_of %arg0, %c1_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
+  %6 = fir.load %5 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
+  %7:2 = hlfir.declare %6 {fortran_attrs = #fir.var_attrs<allocatable, host_assoc>, uniq_name = "_QFtest12Eb"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %8 = fir.load %7#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %c1_0 = arith.constant 1 : index
+  %9 = hlfir.designate %8 (%c1_0) {test.ptr = "test12_b(1)"} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+  return
+}
+
+// -----
+
+// subroutine test13
+//   integer, allocatable, target :: a(:)
+//   integer, pointer :: p(:)
+//   allocate(a(10))
+//   p => a
+// contains
+//   subroutine inner()
+//     a(1) = p(1)
+//   end subroutine inner
+// end subroutine test13
+
+// CHECK: test13_a(1)#0 <-> test13_p(1)#0: MayAlias
+func.func @_QFtest13Pinner(%arg0: !fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>> {fir.host_assoc}) attributes {fir.internal_proc} {
+  %c0_i32 = arith.constant 0 : i32
+  %0 = fir.coordinate_of %arg0, %c0_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
+  %1 = fir.load %0 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>>
+  %2:2 = hlfir.declare %1 {fortran_attrs = #fir.var_attrs<allocatable, target, host_assoc>, uniq_name = "_QFtest13Ea"} : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
+  %3 = fir.load %2#0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+  %c1 = arith.constant 1 : index
+  %4 = hlfir.designate %3 (%c1) {test.ptr = "test13_a(1)"} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+
+  %c1_i32 = arith.constant 1 : i32
+  %5 = fir.coordinate_of %arg0, %c1_i32 : (!fir.ref<tuple<!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
+  %6 = fir.load %5 : !fir.llvm_ptr<!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>>
+  %7:2 = hlfir.declare %6 {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QFtest13Ep"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
+  %8 = fir.load %7#0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+  %c1_0 = arith.constant 1 : index
+  %9 = hlfir.designate %8 (%c1_0) {test.ptr = "test13_p(1)"} : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> !fir.ref<i32>
+  return
+}

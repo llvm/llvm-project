@@ -17,6 +17,7 @@
 
 #include "benchmark/benchmark.h"
 #include "common.h"
+#include "test_macros.h"
 
 int main(int argc, char** argv) {
   // Benchmark std::make_heap on various types of data
@@ -27,7 +28,7 @@ int main(int argc, char** argv) {
     auto bm = []<class Container>(std::string name, auto generate_data, auto pred) {
       benchmark::RegisterBenchmark(
           name,
-          [generate_data, pred](auto& st) {
+          [generate_data, pred](auto& st) TEST_ALIGN_BENCHMARK {
             std::size_t const size          = st.range(0);
             constexpr std::size_t BatchSize = 32;
             using ValueType                 = typename Container::value_type;

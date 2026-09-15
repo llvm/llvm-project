@@ -13,10 +13,11 @@
 #include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Analysis/ArraySectionAnalyzer.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
+#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
-#include "flang/Optimizer/Dialect/FIROps.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "flang/Optimizer/OpenMP/Passes.h"
@@ -39,6 +40,19 @@ static llvm::cl::opt<bool> inlineAllocatableExprAssignFlag(
     llvm::cl::desc("Enable inlining of allocatable assignments when RHS is an "
                    "hlfir.expr (e.g., from hlfir.elemental)"),
     llvm::cl::init(false));
+
+/// Returns true if \p op is CUDA Fortran device code. attributes(host,device)
+/// counts: this pass runs before the device copy is outlined, so the one
+/// func.func here becomes both copies.
+static bool isCUDADeviceCode(mlir::Operation *op) {
+  if (cuf::isCUDADeviceContext(op))
+    return true;
+  if (auto func = op->getParentOfType<mlir::func::FuncOp>())
+    if (auto procAttr =
+            func->getAttrOfType<cuf::ProcAttributeAttr>(cuf::getProcAttrName()))
+      return procAttr.getValue() == cuf::ProcAttribute::HostDevice;
+  return false;
+}
 
 namespace {
 /// Expand hlfir.assign of array RHS to array LHS into a loop nest
@@ -66,10 +80,13 @@ namespace {
 class InlineHLFIRAssignConversion
     : public mlir::OpRewritePattern<hlfir::AssignOp> {
   bool onlyScalarRHS;
+  bool onlyCUDADeviceContext;
 
 public:
-  InlineHLFIRAssignConversion(mlir::MLIRContext *context, bool onlyScalarRHS)
-      : OpRewritePattern(context), onlyScalarRHS(onlyScalarRHS) {}
+  InlineHLFIRAssignConversion(mlir::MLIRContext *context, bool onlyScalarRHS,
+                              bool onlyCUDADeviceContext)
+      : OpRewritePattern(context), onlyScalarRHS(onlyScalarRHS),
+        onlyCUDADeviceContext(onlyCUDADeviceContext) {}
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
@@ -89,6 +106,11 @@ public:
       return rewriter.notifyMatchFailure(
           assign, "onlyScalarRHS: skipping array-to-array assignment");
 
+    // Host code keeps the runtime call so that a breakpoint on the assignment
+    // fires once, not once per element.
+    if (onlyCUDADeviceContext && !isCUDADeviceCode(assign))
+      return rewriter.notifyMatchFailure(assign, "skipping host code");
+
     mlir::Type rhsEleTy = rhs.getFortranElementType();
     if (!fir::isa_trivial(rhsEleTy))
       return rewriter.notifyMatchFailure(
@@ -104,8 +126,8 @@ public:
                                          "RHS/LHS element types mismatch");
 
     bool rhsNeedsTemporary = false;
-
-    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType())) {
+    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType()) &&
+        !assign.getTemporaryLhs()) {
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
@@ -162,9 +184,25 @@ public:
       builder.genIfThenElse(loc, *disjoint)
           .genThen([&]() { emitAssignFrom(rhs); })
           .genElse([&]() {
-            mlir::Value tempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
-            emitAssignFrom(hlfir::Entity{tempExpr});
-            hlfir::DestroyOp::create(builder, loc, tempExpr);
+            auto [temp, isHeapAlloc] =
+                hlfir::createTempFromMold(loc, builder, lhs);
+            hlfir::genNoAliasArrayAssignment(
+                loc, builder, rhs, temp, useWorkshare,
+                /*temporaryLHS=*/true, nullptr, accessGroups);
+            emitAssignFrom(temp);
+            if (isHeapAlloc) {
+              auto seqTy = mlir::cast<fir::SequenceType>(
+                  hlfir::getFortranElementOrSequenceType(lhs.getType()));
+              auto heapTy = fir::HeapType::get(seqTy);
+              mlir::Value heapAddr;
+              if (mlir::isa<fir::BaseBoxType>(temp.getType())) {
+                mlir::Value addr = fir::BoxAddrOp::create(builder, loc, temp);
+                heapAddr = fir::ConvertOp::create(builder, loc, heapTy, addr);
+              } else {
+                heapAddr = fir::ConvertOp::create(builder, loc, heapTy, temp);
+              }
+              fir::FreeMemOp::create(builder, loc, heapAddr);
+            }
           })
           .end();
       rewriter.eraseOp(assign);
@@ -341,13 +379,29 @@ public:
   void runOnOperation() override {
     mlir::MLIRContext *context = &getContext();
 
+    // Bail out before the greedy driver runs: it folds and removes dead ops
+    // as it walks, which would perturb host code at O0 even though the
+    // pattern rewrites nothing there.
+    if (onlyCUDADeviceContext) {
+      bool anyDeviceAssign = false;
+      getOperation()->walk([&](hlfir::AssignOp assign) {
+        if (!isCUDADeviceCode(assign))
+          return mlir::WalkResult::advance();
+        anyDeviceAssign = true;
+        return mlir::WalkResult::interrupt();
+      });
+      if (!anyDeviceAssign)
+        return;
+    }
+
     mlir::GreedyRewriteConfig config;
     // Prevent the pattern driver from merging blocks.
     config.setRegionSimplificationLevel(
         mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<InlineHLFIRAssignConversion>(context, onlyScalarRHS);
+    patterns.insert<InlineHLFIRAssignConversion>(context, onlyScalarRHS,
+                                                 onlyCUDADeviceContext);
 
     // Optionally add the allocatable expr assignment pattern
     if (inlineAllocatableExprAssignFlag) {

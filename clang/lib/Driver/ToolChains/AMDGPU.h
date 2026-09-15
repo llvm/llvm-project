@@ -18,6 +18,7 @@
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <map>
+#include <string>
 
 namespace clang {
 namespace driver {
@@ -38,7 +39,8 @@ public:
 
 void getAMDGPUTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                              const llvm::opt::ArgList &Args,
-                             std::vector<StringRef> &Features);
+                             std::vector<StringRef> &Features,
+                             bool ForAS = false);
 
 void addFullLTOPartitionOption(const Driver &D, const llvm::opt::ArgList &Args,
                                llvm::opt::ArgStringList &CmdArgs);
@@ -49,7 +51,17 @@ namespace toolchains {
 
 class LLVM_LIBRARY_VISIBILITY AMDGPUToolChain : public Generic_ELF {
 protected:
-  const std::map<options::ID, const StringRef> OptionsDefault;
+  const std::map<options::ID, StringRef> OptionsDefault;
+
+  // Optional host toolchain for offloading modes.
+  const ToolChain *HostTC = nullptr;
+
+  /// FIXME: Should merge 2 linkers.
+  const bool UseHIPLinker = false;
+
+  // Whether to link device libraries (for standalone OpenCL/LLVM IR
+  // compilation)
+  bool ShouldLinkDeviceLibs = false;
 
   Tool *buildLinker() const override;
   StringRef getOptionDefault(options::ID OptID) const {
@@ -60,7 +72,10 @@ protected:
 
 public:
   AMDGPUToolChain(const Driver &D, const llvm::Triple &Triple,
-                  const llvm::opt::ArgList &Args);
+                  const llvm::opt::ArgList &Args,
+                  const ToolChain *HostTC = nullptr,
+                  Action::OffloadKind Kind = Action::OFK_None,
+                  bool ShouldLinkDeviceLibs = false);
   unsigned GetDefaultDwarfVersion() const override { return 5; }
 
   bool IsMathErrnoDefault() const override { return false; }
@@ -108,23 +123,57 @@ public:
   virtual Expected<SmallVector<std::string>>
   getSystemGPUArchs(const llvm::opt::ArgList &Args) const override;
 
-protected:
-  /// The struct type returned by getParsedTargetID.
-  struct ParsedTargetIDType {
-    std::optional<std::string> OptionalTargetID;
-    std::optional<std::string> OptionalGPUArch;
-    std::optional<llvm::StringMap<bool>> OptionalFeatureMap;
-  };
+  const llvm::Triple *getAuxTriple() const override {
+    return HostTC ? &HostTC->getTriple() : nullptr;
+  }
 
-  /// Check and diagnose invalid target ID specified by -mcpu.
-  /// Returns the parsed target ID.
-  virtual ParsedTargetIDType
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  getDeviceLibs(const llvm::opt::ArgList &Args, BoundArch BA,
+                Action::OffloadKind DeviceOffloadKind) const override;
+
+  CXXStdlibType GetCXXStdlibType(const llvm::opt::ArgList &Args) const override;
+
+  void AddClangCXXStdlibIncludeArgs(
+      const llvm::opt::ArgList &Args,
+      llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddIAMCUIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                           llvm::opt::ArgStringList &CC1Args) const override;
+
+  void AddHIPIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                         llvm::opt::ArgStringList &CC1Args) const override;
+
+  VersionTuple
+  computeMSVCVersion(const Driver *D,
+                     const llvm::opt::ArgList &Args) const override;
+
+  LTOKind getDefaultLTOMode() const override;
+
+  /// We need to adjust the LTO mode based on user arguments.
+  LTOKind
+  getLTOMode(const llvm::opt::ArgList &Args,
+             Action::OffloadKind Kind = Action::OFK_None) const override;
+
+  // Returns a list of device library names shared by different languages
+  llvm::SmallVector<BitCodeLibraryInfo, 12>
+  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
+                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
+                          Action::OffloadKind DeviceOffloadingKind) const;
+
+protected:
+  /// Check and diagnose an invalid target ID specified by -mcpu. Returns the
+  /// parsed target ID, or std::nullopt if -mcpu is absent or invalid
+  virtual std::optional<llvm::AMDGPU::TargetID>
   checkTargetID(const llvm::opt::ArgList &DriverArgs) const;
 
-  /// Get target ID, GPU arch, and target ID features if the target ID is
-  /// specified and valid.
-  ParsedTargetIDType
+  /// Parse the target ID specified by -mcpu. Returns the parsed target ID, or
+  /// std::nullopt if -mcpu is absent or invalid.
+  std::optional<llvm::AMDGPU::TargetID>
   getParsedTargetID(const llvm::opt::ArgList &DriverArgs) const;
+
+  /// Get the raw target ID string from -mcpu, or an empty string if -mcpu is
+  /// absent or the target is not AMDGCN.
+  StringRef getTargetIDArg(const llvm::opt::ArgList &DriverArgs) const;
 
   /// Get GPU arch from -mcpu without checking.
   StringRef getGPUArch(const llvm::opt::ArgList &DriverArgs) const;
@@ -136,27 +185,6 @@ protected:
   SanitizerMask
   getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
-};
-
-class LLVM_LIBRARY_VISIBILITY ROCMToolChain : public AMDGPUToolChain {
-public:
-  ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
-                const llvm::opt::ArgList &Args);
-
-  llvm::opt::DerivedArgList *
-  TranslateArgs(const llvm::opt::DerivedArgList &Args, BoundArch BA,
-                Action::OffloadKind DeviceOffloadKind) const override;
-
-  void
-  addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
-                        Action::OffloadKind DeviceOffloadKind) const override;
-
-  // Returns a list of device library names shared by different languages
-  llvm::SmallVector<BitCodeLibraryInfo, 12>
-  getCommonDeviceLibNames(const llvm::opt::ArgList &DriverArgs,
-                          llvm::StringRef TargetID, llvm::StringRef GPUArch,
-                          Action::OffloadKind DeviceOffloadingKind) const;
 };
 
 } // end namespace toolchains

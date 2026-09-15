@@ -2,19 +2,21 @@
 ; support on/off modes (no FeatureXNACKOnOffModes). The target ID should not
 ; include xnack modifiers regardless of -mattr settings.
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 < %s | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic < %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa < %s | FileCheck --check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %s | FileCheck --check-prefix=GFX1251 %s
+; RUN: llc -mtriple=amdgpu12.5-amd-amdhsa < %s | FileCheck --check-prefix=GFX125GEN %s
 
-; Even with -mattr=+xnack or -mattr=-xnack, the target ID doesn't change
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=+xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 -mattr=-xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=+xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1251 -mattr=-xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic -mattr=+xnack < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic -mattr=-xnack < %s | FileCheck %s
+; Even with --amdgpu-xnack=true or --amdgpu-xnack=false, the target ID doesn't change
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa --amdgpu-xnack=true < %s | FileCheck --check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa --amdgpu-xnack=false < %s | FileCheck --check-prefix=GFX1250 %s
+; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa --amdgpu-xnack=true < %s | FileCheck --check-prefix=GFX1251 %s
+; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa --amdgpu-xnack=false < %s | FileCheck --check-prefix=GFX1251 %s
+; RUN: llc -mtriple=amdgpu12.5-amd-amdhsa --amdgpu-xnack=true < %s | FileCheck --check-prefix=GFX125GEN %s
+; RUN: llc -mtriple=amdgpu12.5-amd-amdhsa --amdgpu-xnack=false < %s | FileCheck --check-prefix=GFX125GEN %s
 
-; CHECK: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx{{1250|1251|12-5-generic}}"
+; GFX1250: .amdgcn_target "amdgpu12.50-amd-amdhsa-unknown-gfx1250"
+; GFX1251: .amdgcn_target "amdgpu12.51-amd-amdhsa-unknown-gfx1251"
+; GFX125GEN: .amdgcn_target "amdgpu12.5-amd-amdhsa-unknown-gfx12-5-generic"
 
 define void @func0() {
 entry:

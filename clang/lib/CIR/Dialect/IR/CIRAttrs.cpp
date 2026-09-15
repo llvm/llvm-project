@@ -45,26 +45,6 @@ parseFloatLiteral(mlir::AsmParser &parser,
                   mlir::FailureOr<llvm::APFloat> &value,
                   cir::FPTypeInterface fpType);
 
-//===----------------------------------------------------------------------===//
-// AddressSpaceAttr
-//===----------------------------------------------------------------------===//
-
-mlir::ParseResult parseAddressSpaceValue(mlir::AsmParser &p,
-                                         cir::LangAddressSpace &addrSpace) {
-  llvm::SMLoc loc = p.getCurrentLocation();
-  mlir::FailureOr<cir::LangAddressSpace> result =
-      mlir::FieldParser<cir::LangAddressSpace>::parse(p);
-  if (mlir::failed(result))
-    return p.emitError(loc, "expected address space keyword");
-  addrSpace = result.value();
-  return mlir::success();
-}
-
-void printAddressSpaceValue(mlir::AsmPrinter &p,
-                            cir::LangAddressSpace addrSpace) {
-  p << cir::stringifyEnum(addrSpace);
-}
-
 static mlir::ParseResult parseConstPtr(mlir::AsmParser &parser,
                                        mlir::IntegerAttr &value);
 
@@ -173,6 +153,41 @@ bool TargetAddressSpaceAttr::isValidPtrIntCast(
 }
 
 //===----------------------------------------------------------------------===//
+// PtrSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult PtrSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                  uint32_t size, uint32_t abi,
+                                  uint32_t preferred, uint32_t index) {
+  constexpr unsigned kBitsInByte = 8;
+  if (size % kBitsInByte != 0)
+    return emitError() << "size entry must be divisible by 8";
+  if (abi % kBitsInByte != 0)
+    return emitError() << "abi entry must be divisible by 8";
+  if (preferred % kBitsInByte != 0)
+    return emitError() << "preferred entry must be divisible by 8";
+  if (index != kOptionalSpecValue && index % kBitsInByte != 0)
+    return emitError() << "index entry must be divisible by 8";
+  if (abi > preferred)
+    return emitError() << "preferred alignment is expected to be at least "
+                          "as large as ABI alignment";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// BitFieldDeclAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+BitFieldDeclAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         mlir::Type declaredType, uint64_t width,
+                         bool isUnnamed) {
+  if (width == 0 && !isUnnamed)
+    return emitError() << "zero-width bit-field cannot be named";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // General CIR parsing / printing
 //===----------------------------------------------------------------------===//
 
@@ -214,18 +229,67 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type";
 
-  if (sTy.getMembers().size() != members.size())
+  // union record initializer is just a single element that has to match one of
+  // the fields in the union (the new active member).
+  if (sTy.isUnion()) {
+    if (members.size() != 1)
+      return emitError() << "union constant must have exactly one element, got "
+                         << members.size();
+    auto m = mlir::cast<mlir::TypedAttr>(members[0]);
+    // A bit-field variant is initialized as the access unit it owns.
+    if (!llvm::any_of(sTy.getMembers(), [&](mlir::Type memberTy) {
+          return cir::memberStorageType(memberTy) == m.getType();
+        }))
+      return emitError() << "union element type " << m.getType()
+                         << " is not a member of " << sTy;
+    return success();
+  }
+
+  // A member that owns no bytes is not stored, so it takes no element. A
+  // bit-field's bits are packed into the element of the member that owns its
+  // access unit, and a zero-width bit-field has no bits to store at all.
+  llvm::SmallVector<mlir::Type> storedMembers;
+  for (mlir::Type memberTy : sTy.getMembers())
+    if (cir::memberOwnsBytes(memberTy))
+      storedMembers.push_back(cir::memberStorageType(memberTy));
+
+  if (storedMembers.size() != members.size())
     return emitError() << "number of elements must match";
 
-  unsigned attrIdx = 0;
-  for (auto &member : sTy.getMembers()) {
+  for (const auto &[attrIdx, member] : llvm::enumerate(storedMembers)) {
     auto m = mlir::cast<mlir::TypedAttr>(members[attrIdx]);
+
+    // As a special case, we allow a flexible array member. This can only be the
+    // last element, the rest of the array type has to match (that is, the
+    // element type has to match), and the array member must be size zero.
+    if (attrIdx == storedMembers.size() - 1) {
+      auto memArrayTy = dyn_cast<cir::ArrayType>(member);
+      if (memArrayTy && memArrayTy.getSize() == 0) {
+
+        // The FAM must only match another array type initializer.
+        if (!isa<cir::ArrayType>(m.getType()))
+          return emitError()
+                 << "element at index " << attrIdx << " has type "
+                 << m.getType() << " but the expected type for this element is "
+                 << member;
+
+        cir::ArrayType initArrayTy = cast<cir::ArrayType>(m.getType());
+        // The FAM only matches an equivalent array type.
+        if (initArrayTy.getElementType() != memArrayTy.getElementType())
+          return emitError()
+                 << "flexible array member at index " << attrIdx << " has type "
+                 << m.getType()
+                 << " which doesn't match the expected element type of member "
+                 << member;
+        continue;
+      }
+    }
+
     if (member != m.getType())
       return emitError() << "element at index " << attrIdx << " has type "
                          << m.getType()
                          << " but the expected type for this element is "
                          << member;
-    attrIdx++;
   }
 
   return success();
@@ -293,45 +357,30 @@ static void printDataMemberPath(AsmPrinter &p,
 // IntAttr definitions
 //===----------------------------------------------------------------------===//
 
-template <typename IntT>
-static bool isTooLargeForType(const mlir::APInt &value, IntT expectedValue) {
-  if constexpr (std::is_signed_v<IntT>) {
-    return value.getSExtValue() != expectedValue;
-  } else {
-    return value.getZExtValue() != expectedValue;
-  }
-}
-
-template <typename IntT>
-static mlir::ParseResult parseIntLiteralImpl(mlir::AsmParser &p,
-                                             llvm::APInt &value,
-                                             cir::IntTypeInterface ty) {
-  IntT ivalue;
-  const bool isSigned = ty.isSigned();
-  if (p.parseInteger(ivalue))
-    return p.emitError(p.getCurrentLocation(), "expected integer value");
-
-  value = mlir::APInt(ty.getWidth(), ivalue, isSigned, /*implicitTrunc=*/true);
-  if (isTooLargeForType(value, ivalue))
-    return p.emitError(p.getCurrentLocation(),
-                       "integer value too large for the given type");
-
-  return success();
-}
-
 mlir::ParseResult parseIntLiteral(mlir::AsmParser &parser, llvm::APInt &value,
                                   cir::IntTypeInterface ty) {
-  if (ty.isSigned())
-    return parseIntLiteralImpl<int64_t>(parser, value, ty);
-  return parseIntLiteralImpl<uint64_t>(parser, value, ty);
+  llvm::SMLoc loc = parser.getCurrentLocation();
+  llvm::APInt parsed;
+  mlir::OptionalParseResult result = parser.parseOptionalInteger(parsed);
+  if (!result.has_value() || failed(*result))
+    return parser.emitError(loc, "expected integer value");
+
+  const unsigned width = ty.getWidth();
+  const bool fits =
+      ty.isSigned() ? parsed.getSignificantBits() <= width
+                    : !parsed.isNegative() && parsed.getActiveBits() <= width;
+  if (!fits)
+    return parser.emitError(loc, "integer value too large for the given type");
+
+  value = ty.isSigned() ? parsed.sextOrTrunc(width) : parsed.zextOrTrunc(width);
+  return success();
 }
 
 void printIntLiteral(mlir::AsmPrinter &p, llvm::APInt value,
                      cir::IntTypeInterface ty) {
-  if (ty.isSigned())
-    p << value.getSExtValue();
-  else
-    p << value.getZExtValue();
+  llvm::SmallString<40> str;
+  value.toString(str, /*radix=*/10, /*isSigned=*/ty.isSigned());
+  p << str;
 }
 
 LogicalResult IntAttr::verify(function_ref<InFlightDiagnostic()> emitError,
@@ -875,12 +924,20 @@ LogicalResult DynamicCastInfoAttr::verify(
 // RecordLayout lookup
 //===----------------------------------------------------------------------===//
 
-RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp module,
-                                      mlir::StringAttr name) {
-  auto dict = module->getAttrOfType<mlir::DictionaryAttr>(
+RecordLayoutAttr cir::tryGetRecordLayout(mlir::ModuleOp mod,
+                                         mlir::StringAttr name) {
+  if (!name)
+    return {};
+  auto dict = mod->getAttrOfType<mlir::DictionaryAttr>(
       CIRDialect::getRecordLayoutsAttrName());
-  assert(dict && "module missing cir.record_layouts attribute");
-  auto attr = dict.getAs<RecordLayoutAttr>(name);
+  if (!dict)
+    return {};
+  return dict.getAs<RecordLayoutAttr>(name);
+}
+
+RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
+                                      mlir::StringAttr name) {
+  RecordLayoutAttr attr = tryGetRecordLayout(mod, name);
   assert(attr && "record layout entry missing for named record");
   return attr;
 }

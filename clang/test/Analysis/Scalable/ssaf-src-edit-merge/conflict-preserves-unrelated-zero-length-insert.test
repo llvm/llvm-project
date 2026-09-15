@@ -1,0 +1,44 @@
+# A zero-length insertion at the same offset as an
+# unrelated conflict cluster must survive drop-all filtering.
+#
+# Three inputs target foo.cpp offset 10: a zero-length insertion
+# ('.data()', out of scope for drop-all per spec) plus two conflicting
+# length-3 replacements ('X' and 'Y'). The insertion never overlaps
+# either replacement (zero-length ranges never overlap under
+# Range::overlapsWith), so it is not part of the {X, Y} conflict cluster
+# and must be preserved in the merged output even though it shares the
+# cluster's (file, offset) coordinate.
+#
+# Drop-all filtering must key removal on the full replacement identity
+# (file, offset, length, text), not just (file, offset), or it will
+# collaterally delete this unrelated insertion.
+
+# RUN: rm -rf %t.dir
+# RUN: mkdir -p %t.dir
+# RUN: printf '%%80s' '' > %t.dir/foo.cpp
+
+# RUN: cp %S/Inputs/single-zero-length-insert.tpl.yaml %t.dir/a.yaml
+# RUN: cp %S/Inputs/single-replacement.tpl.yaml %t.dir/b.yaml
+# RUN: cp %S/Inputs/conflict-text-y.tpl.yaml %t.dir/c.yaml
+# RUN: sed -i'' -e "s|@FOO@|%/t.dir/foo.cpp|g" \
+# RUN:           %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml
+
+# RUN: clang-ssaf-src-edit-merge \
+# RUN:     -o %t.dir/merged.yaml %t.dir/a.yaml %t.dir/b.yaml %t.dir/c.yaml \
+# RUN:   2> %t.dir/stderr.txt
+
+# The zero-length '.data()' insertion survives; the conflicting X/Y
+# replacements are both dropped.
+# RUN: FileCheck --input-file=%t.dir/merged.yaml %s
+# CHECK: Replacements:
+# CHECK: Length:          0
+# CHECK-NEXT: ReplacementText: '.data()'
+# CHECK-NOT: ReplacementText:
+# CHECK: ...
+
+# Cluster summary line still reports the X/Y conflict at foo.cpp:10.
+# RUN: FileCheck --input-file=%t.dir/stderr.txt --check-prefix=CONFLICT %s
+# CONFLICT: conflict:
+# CONFLICT-SAME: skipped
+# CONFLICT-SAME: 2
+# CONFLICT-SAME: foo.cpp:10

@@ -10,17 +10,17 @@ define <4 x i32> @f1(<4 x i32> %x, i64 %y) {
 ; CHECK-CODE-LABEL: f1:
 ; CHECK-CODE:       # %bb.0:
 ; CHECK-CODE-NEXT:    larl %r1, .LCPI0_0
-; CHECK-CODE-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-CODE-NEXT:    vlvgf %v1, %r2, 0
-; CHECK-CODE-NEXT:    vperm %v24, %v24, %v1, %v0
+; CHECK-CODE-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-CODE-NEXT:    vlvgf %v0, %r2, 0
+; CHECK-CODE-NEXT:    vperm %v24, %v24, %v0, %v1
 ; CHECK-CODE-NEXT:    br %r14
 ;
 ; CHECK-VECTOR-LABEL: f1:
 ; CHECK-VECTOR:       # %bb.0:
 ; CHECK-VECTOR-NEXT:    larl %r1, .LCPI0_0
-; CHECK-VECTOR-NEXT:    vl %v0, 0(%r1), 3
-; CHECK-VECTOR-NEXT:    vlvgf %v1, %r2, 0
-; CHECK-VECTOR-NEXT:    vperm %v24, %v24, %v1, %v0
+; CHECK-VECTOR-NEXT:    vl %v1, 0(%r1), 3
+; CHECK-VECTOR-NEXT:    vlvgf %v0, %r2, 0
+; CHECK-VECTOR-NEXT:    vperm %v24, %v24, %v0, %v1
 ; CHECK-VECTOR-NEXT:    br %r14
 
 

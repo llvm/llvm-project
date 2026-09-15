@@ -449,6 +449,9 @@ bool ContinuationIndenter::canBreak(const LineState &State) {
       // enabled.
       (!Style.BraceWrapping.BeforeLambdaBody ||
        Current.isNot(TT_LambdaLBrace)) &&
+      // Same for the opening brace of requires expressions.
+      (!Style.BraceWrapping.AfterRequiresExpression ||
+       Current.isNot(TT_RequiresExpressionLBrace)) &&
       CurrentState.NoLineBreakInOperand) {
     return false;
   }
@@ -476,6 +479,11 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       Current.is(TT_LambdaLBrace) && Previous.isNot(TT_LineComment)) {
     auto LambdaBodyLength = getLengthToMatchingParen(Current, State.Stack);
     return LambdaBodyLength > getColumnLimit(State);
+  }
+  if (Style.BraceWrapping.AfterRequiresExpression && Current.CanBreakBefore &&
+      Current.is(TT_RequiresExpressionLBrace) &&
+      getLengthToMatchingParen(Current, State.Stack) > getColumnLimit(State)) {
+    return true;
   }
   if (Current.MustBreakBefore ||
       (Current.is(TT_InlineASMColon) &&
@@ -1506,6 +1514,13 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
                           ? CurrentState.Indent
                           : State.FirstIndent;
     return From + Style.IndentWidth;
+  }
+
+  // Align the wrapped opening brace of a requires expression with its
+  // closing brace.
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Current.is(TT_RequiresExpressionLBrace)) {
+    return CurrentState.NestedBlockIndent;
   }
 
   if ((NextNonComment->is(tok::l_brace) && NextNonComment->is(BK_Block)) ||

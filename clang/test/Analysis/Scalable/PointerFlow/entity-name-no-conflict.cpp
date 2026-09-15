@@ -4,7 +4,7 @@
 // RUN:   --ssaf-extract-summaries=PointerFlow \
 // RUN:   --ssaf-tu-summary-file=%t/tu.summary.json \
 // RUN:   --ssaf-compilation-unit-id="tu-1" \
-// RUN:   -mllvm -debug-only=ssaf-analyses 2>&1 | FileCheck %s
+// RUN:   -mllvm -debug-only=ssaf-analyses 2>&1 | FileCheck %s --allow-empty
 
 
 // The two `Holder<decltype([]{})>` instantiations are distinct types
@@ -12,8 +12,7 @@
 // currently fails to distinguish them.
 
 
-// CHECK: dropping duplicate PointerFlow summary
-// FIXME: change to CHECK-NOT once the bug gets fixed
+// CHECK-NOT: dropping duplicate PointerFlow summary
 
 template <class T>
 struct Holder {

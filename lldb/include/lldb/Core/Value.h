@@ -11,6 +11,7 @@
 
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/DataBufferHeap.h"
+#include "lldb/Utility/RegisterInfo.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-enumerations.h"

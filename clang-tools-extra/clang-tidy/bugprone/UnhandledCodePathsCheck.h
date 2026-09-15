@@ -29,7 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
 private:
-  void handleSwitchWithDefault(const SwitchStmt *Switch, std::size_t CaseCount);
   void handleSwitchWithoutDefault(
       const SwitchStmt *Switch, std::size_t CaseCount,
       const ast_matchers::MatchFinder::MatchResult &Result);

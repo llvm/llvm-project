@@ -1,14 +1,22 @@
 #include "sanitizer_common/sanitizer_atomic.h"
 
 #include <stdint.h>
+
+#if !SANITIZER_GPU
 #include <stdlib.h>
 #include <string.h>
+#endif
 
 #if defined(KERNEL_USE)
 extern "C" void ubsan_message(const char *msg);
 static void message(const char *msg) { ubsan_message(msg); }
 #elif SANITIZER_AMDGPU || SANITIZER_NVPTX
-#include <stdio.h>
+// Manually declared until we hook up the C headers correctly.
+extern "C" {
+struct FILE;
+extern FILE *stderr;
+int fprintf(FILE *stream, const char *fmt, ...);
+}
 template <typename... Args>
 static void message(const char *msg, Args &&...args) {
   fprintf(stderr, msg, args...);
@@ -75,7 +83,7 @@ static void format_msg(const char *kind, uintptr_t caller, char *buf,
 }
 
 static void format(const char *kind, uintptr_t caller) {
-#if SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
+#if SANITIZER_GPU
   (void)format_msg;
   message("ubsan: %s by %p\n", kind, reinterpret_cast<void *>(caller));
 #else
@@ -144,6 +152,14 @@ SANITIZER_INTERFACE_WEAK_DEF(void, __ubsan_report_error_fatal, const char *kind,
   __ubsan_report_error(kind, caller);
 }
 
+static void NORETURN die() {
+#if SANITIZER_GPU
+  __builtin_verbose_trap("ubsan", "unrecoverable error");
+#else
+  abort();
+#endif
+}
+
 #if defined(__ANDROID__)
 extern "C" __attribute__((weak)) void android_set_abort_message(const char *);
 static void abort_with_message(const char *kind, uintptr_t caller) {
@@ -151,14 +167,10 @@ static void abort_with_message(const char *kind, uintptr_t caller) {
   format_msg(kind, caller, msg_buf, msg_buf + sizeof(msg_buf));
   if (&android_set_abort_message)
     android_set_abort_message(msg_buf);
-  abort();
-}
-#elif SANITIZER_AMDGPU || SANITIZER_NVPTX || SANITIZER_SPIRV
-static void abort_with_message(const char *kind, uintptr_t caller) {
-  __builtin_verbose_trap("ubsan", "unrecoverable error");
+  die();
 }
 #else
-static void abort_with_message(const char *kind, uintptr_t caller) { abort(); }
+static void abort_with_message(const char *, uintptr_t) { die(); }
 #endif
 
 #if SANITIZER_DEBUG
@@ -169,7 +181,7 @@ void NORETURN CheckFailed(const char *file, int, const char *cond, u64, u64) {
   message(file);
   message(":?? : "); // FIXME: Show line number.
   message(cond);
-  abort();
+  die();
 }
 } // namespace __sanitizer
 #endif

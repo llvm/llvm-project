@@ -299,7 +299,7 @@ declare ptr @_ZN4TempD2Ev(ptr %this) #2
 declare i32 @setjmp(ptr) #0
 ; Function Attrs: noreturn
 declare void @longjmp(ptr, i32) #1
-declare i32 @__gxx_wasm_personality_v0(...)
+declare i32 @__gxx_wasm_personality_v0(ptr)
 ; Function Attrs: nounwind
 declare ptr @llvm.wasm.get.exception(token) #2
 ; Function Attrs: nounwind

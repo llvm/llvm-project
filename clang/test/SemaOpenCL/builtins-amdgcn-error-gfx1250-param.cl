@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgcn-- -target-cpu gfx1250 -verify -S -o - %s
+// RUN: %clang_cc1 -cl-std=CL2.0 -triple amdgpu12.50-- -verify -S -o - %s
 
 typedef unsigned int uint;
 typedef unsigned short int ushort;

@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++23
+// REQUIRES: std-at-least-c++29
 
 // constexpr bool has_error() const noexcept;
 
 #include <cassert>
 #include <concepts>
 #include <expected>
-#include <type_traits>
-#include <utility>
 
 #include "../../types.h"
 

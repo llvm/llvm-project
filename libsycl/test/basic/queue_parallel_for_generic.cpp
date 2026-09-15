@@ -47,14 +47,32 @@ int main() {
     A[i.get_linear_id()]++;
   });
 
-  // TODO: add kernel with offset and kernel with nd_range once they
-  // are implemented.
+  sycl::nd_range<1> NDR(sycl::range<1>{N}, sycl::range<1>{2});
+  Q.parallel_for<class NdRange1D>(NDR, [=](auto nd_i) {
+    static_assert(std::is_same<decltype(nd_i), sycl::nd_item<1>>::value,
+                  "lambda arg type is unexpected");
+    A[nd_i.get_global_id()]++;
+  });
+
+  sycl::nd_range<2> NDR2D(sycl::range<2>{4, 2}, sycl::range<2>{2, 1});
+  Q.parallel_for<class NdRange2D>(NDR2D, [=](auto nd_i) {
+    static_assert(std::is_same<decltype(nd_i), sycl::nd_item<2>>::value,
+                  "lambda arg type is unexpected");
+    A[nd_i.get_global_linear_id()]++;
+  });
+
+  sycl::nd_range<3> NDR3D(sycl::range<3>{2, 2, 2}, sycl::range<3>{1, 2, 2});
+  Q.parallel_for<class NdRange3D>(NDR3D, [=](auto nd_i) {
+    static_assert(std::is_same<decltype(nd_i), sycl::nd_item<3>>::value,
+                  "lambda arg type is unexpected");
+    A[nd_i.get_global_linear_id()]++;
+  });
 
   Q.wait();
 
   bool Fail{};
   for (int i = 0; i < N; i++) {
-    Fail |= !(A[i] == 5);
+    Fail |= !(A[i] == 8);
   }
   sycl::free(A, Ctx);
   return Fail;

@@ -87,8 +87,9 @@ static bool isKeywordWithCondition(const FormatToken &Tok) {
 static bool isCppAttribute(bool IsCpp, const FormatToken &Tok) {
   if (!IsCpp || !Tok.startsSequence(tok::l_square, tok::l_square))
     return false;
-  // The first square bracket is part of an ObjC array literal
-  if (Tok.Previous && Tok.Previous->is(tok::at))
+  // The first square bracket belongs to an ObjC array literal or malformed
+  // nested-bracket input.
+  if (Tok.Previous && Tok.Previous->isOneOf(tok::at, tok::l_square))
     return false;
   const FormatToken *AttrTok = Tok.Next->Next;
   if (!AttrTok)
@@ -449,7 +450,7 @@ private:
       } else if (PrevNonComment->isOneOf(TT_TypenameMacro, tok::kw_decltype,
                                          tok::kw_typeof,
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
-#include "clang/Basic/TransformTypeTraits.def"
+#include "clang/Basic/BuiltinTraits.inc"
                                          tok::kw__Atomic)) {
         OpeningParen.setType(TT_TypeDeclarationParen);
         // decltype() and typeof() usually contain expressions.
@@ -2307,7 +2308,8 @@ private:
           }
           if (Previous->opensScope())
             break;
-          if (Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
+          if (!Previous->isTypeFinalized() &&
+              Previous->isOneOf(TT_BinaryOperator, TT_UnaryOperator) &&
               Previous->isPointerOrReference() && Previous->Previous &&
               Previous->Previous->isNot(tok::equal)) {
             Previous->setType(TT_PointerOrReference);
@@ -2500,6 +2502,8 @@ private:
         Current.setType(TT_Unknown);
       } else {
         Current.setType(TT_ConditionalExpr);
+        if (IsCpp)
+          Contexts.back().IsExpression = true;
       }
     } else if (Current.isBinaryOperator() &&
                (!Current.Previous || Current.Previous->isNot(tok::l_square)) &&
@@ -2542,6 +2546,8 @@ private:
     } else if (Current.is(tok::r_paren)) {
       if (rParenEndsCast(Current))
         Current.setType(TT_CastRParen);
+      if (Current.MatchingParen && Current.MatchingParen->is(TT_InlineASMParen))
+        Current.setType(TT_InlineASMParen);
       if (Current.MatchingParen && Current.Next &&
           !Current.Next->isBinaryOperator() &&
           Current.Next->isNoneOf(
@@ -2817,7 +2823,7 @@ private:
       // If there is an identifier (or with a few exceptions a keyword) right
       // before the parentheses, this is unlikely to be a cast.
       if (LeftOfParens->Tok.getIdentifierInfo() &&
-          LeftOfParens->isNoneOf(Keywords.kw_in, tok::kw_return, tok::kw_case,
+          LeftOfParens->isNoneOf(TT_ObjCForIn, tok::kw_return, tok::kw_case,
                                  tok::kw_delete, tok::kw_throw)) {
         return false;
       }
@@ -3039,14 +3045,6 @@ private:
     // && in C# must be a binary operator.
     if (Style.isCSharp() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
-
-    // The keyword `and` (tok::ampamp) is always binary, never a declarator.
-    // Not extended to `bitand` (tok::amp), which can be a reference.
-    if (Tok.is(tok::ampamp)) {
-      const auto *Info = Tok.Tok.getIdentifierInfo();
-      if (Info && Info->isCPlusPlusOperatorKeyword())
-        return TT_BinaryOperator;
-    }
 
     if (Style.isVerilog()) {
       // In Verilog, `*` can only be a binary operator.  `&` can be either unary
@@ -6724,6 +6722,11 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
   if (Left.is(tok::r_square) && Right.is(TT_AttributeRSquare)) {
     assert(Left.isNot(TT_AttributeRSquare));
     return false;
+  }
+
+  if (Style.BraceWrapping.AfterRequiresExpression &&
+      Right.is(TT_RequiresExpressionLBrace)) {
+    return true;
   }
 
   auto ShortLambdaOption = Style.AllowShortLambdasOnASingleLine;

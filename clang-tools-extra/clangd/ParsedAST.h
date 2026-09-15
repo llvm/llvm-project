@@ -27,6 +27,7 @@
 #include "Preamble.h"
 #include "clang-include-cleaner/Record.h"
 #include "support/Path.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Syntax/Tokens.h"

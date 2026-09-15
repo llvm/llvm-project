@@ -15,5 +15,3 @@ define i1 @f(i2 %0) {
   %3 = extractvalue { i2, i1 } %2, 1
   ret i1 %3
 }
-
-declare { i2, i1 } @llvm.smul.with.overflow.i2(i2, i2)

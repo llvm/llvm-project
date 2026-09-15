@@ -73,6 +73,10 @@
     "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
       "value": false,
       "doc": "Disable index mode in the scanf format string."
+    },
+    "LIBC_CONF_SCANF_PROVIDE_ISOC99_ALIASES": {
+      "value": false,
+      "doc": "Add __isoc99_* aliases for scanf's functions."
     }
   },
   "str_to_float": {
@@ -102,8 +106,8 @@
       "value": false,
       "doc": "Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled."
     },
-    "LIBC_CONF_COPT_MEMCPY_X86_USE_NTA_STORES": {
-      "value": false,
+    "LIBC_CONF_MEMCPY_X86_USE_NTA_STORES": {
+      "value": true,
       "doc": "Use Non-temporal stores in memcpy on x86 to improve performance of large copies."
     },
     "LIBC_CONF_USE_MEM_BUILTINS": {
@@ -189,6 +193,10 @@
     "LIBC_COPT_USE_C_ASSERT": {
       "value": false,
       "doc": "Use the system assert macro for LIBC_ASSERT."
+    },
+    "LIBC_COPT_HARDENING_MODE": {
+      "value": "LIBC_HARDENING_MODE_NONE",
+      "doc": "Hardening mode for the library."
     }
   }
 }

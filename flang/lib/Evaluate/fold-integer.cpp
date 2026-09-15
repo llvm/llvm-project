@@ -761,6 +761,44 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
   } else if (name == "int" || name == "int2" || name == "int8" ||
       name == "uint") {
     if (auto *expr{UnwrapExpr<Expr<SomeType>>(args[0])}) {
+      // Check for enumeration type argument first — extract __ordinal
+      if (auto *derivedExpr{std::get_if<Expr<SomeDerived>>(&expr->u)}) {
+        if (const auto *derived{
+                GetEnumerationTypeSpec(derivedExpr->GetType())}) {
+          // Scalar: fold to the single ordinal.
+          if (auto ordExpr{GetEnumerationOrdinal(*derivedExpr)}) {
+            if (auto ordVal{ToInt64(*ordExpr)}) {
+              return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
+            }
+          } else if (const auto *constant{
+                         UnwrapConstantValue<SomeDerived>(*derivedExpr)};
+              constant && constant->Rank() > 0) {
+            // Array constant: fold elementwise into a constant array of
+            // ordinals.  Reaching here means the whole constructor already
+            // folded to a constant, so every element's __ordinal is a
+            // constant integer.
+            if (const auto *scope{derived->GetScope()}) {
+              auto ordIter{scope->find(semantics::SourceName{
+                  semantics::DerivedTypeDetails::ordinalComponentName,
+                  sizeof(semantics::DerivedTypeDetails::ordinalComponentName) -
+                      1})};
+              if (ordIter != scope->end()) {
+                const semantics::Symbol &ordSym{*ordIter->second};
+                std::vector<Scalar<T>> elements;
+                for (const StructureConstructorValues &scv :
+                    constant->values()) {
+                  elements.emplace_back(
+                      *ToInt64(scv.find(ordSym)->second.value()));
+                }
+                return Expr<T>{Constant<T>{std::move(elements),
+                    ConstantSubscripts{constant->shape()}}};
+              }
+            }
+          }
+          // Non-constant enumeration argument — leave unfolded
+          return Expr<T>{std::move(funcRef)};
+        }
+      }
       return common::visit(
           [&](auto &&x) -> Expr<T> {
             using From = std::decay_t<decltype(x)>;
@@ -1552,6 +1590,20 @@ Expr<TypeParamInquiry::Result> FoldOperation(
     }
   }
   return AsExpr(std::move(inquiry));
+}
+
+Expr<RankOneBoundElement::Result> FoldOperation(
+    FoldingContext &context, RankOneBoundElement &&x) {
+  using ResultType = RankOneBoundElement::Result;
+  auto folded{Fold(context, Expr<ResultType>{x.base()})};
+  if (auto *c{UnwrapConstantValue<ResultType>(folded)}) {
+    // Base is a constant array; extract the element at dimension_ (0-based).
+    ConstantSubscripts at{c->lbounds()};
+    at[0] = c->lbounds()[0] + x.dimension();
+    return Expr<ResultType>{Constant<ResultType>{c->At(at)}};
+  }
+  return Expr<ResultType>{
+      RankOneBoundElement{std::move(folded), x.dimension()}};
 }
 
 std::optional<std::int64_t> ToInt64(const Expr<SomeInteger> &expr) {

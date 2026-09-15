@@ -135,7 +135,7 @@ public:
   /// Return the section name specified by '#pragma clang section' or the
   /// section attribute.
   static StringRef getCustomSectionName(const GlobalObject *GO,
-                                        SectionKind Kind);
+                                        const TargetMachine &TM);
 
   /// This method computes the appropriate section to emit the specified global
   /// variable or function definition. This should not be passed external (or

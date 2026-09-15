@@ -77,7 +77,7 @@ public:
   iterator end() { return Frontiers.end(); }
   const_iterator end() const { return Frontiers.end(); }
   iterator find(BlockT *B) { return Frontiers.find(B); }
-  const_iterator find(BlockT *B) const { return Frontiers.find(B); }
+  const_iterator find(const BlockT *B) const { return Frontiers.find(B); }
 
   /// print - Convert to human readable form
   ///
@@ -90,6 +90,10 @@ public:
 
   void analyze(const DomTreeT &DT);
 };
+
+extern template class LLVM_TEMPLATE_ABI
+    DominanceFrontierBase<BasicBlock, false>;
+extern template class LLVM_TEMPLATE_ABI DominanceFrontierBase<BasicBlock, true>;
 
 class DominanceFrontier : public DominanceFrontierBase<BasicBlock, false> {
 public:
@@ -125,10 +129,6 @@ public:
 
   void dump() const;
 };
-
-extern template class LLVM_TEMPLATE_ABI
-    DominanceFrontierBase<BasicBlock, false>;
-extern template class LLVM_TEMPLATE_ABI DominanceFrontierBase<BasicBlock, true>;
 
 /// Analysis pass which computes a \c DominanceFrontier.
 class DominanceFrontierAnalysis

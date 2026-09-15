@@ -198,18 +198,18 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
-  %1 = arith.divui %arg1, %arg1: vector<4xi64>
+  %1 = arith.divui %arg2, %arg3: vector<4xi64>
   return
 }
 
 // CHECK-LABEL: @index_vector
-func.func @index_vector(%arg0: vector<4xindex>) {
+func.func @index_vector(%arg0: vector<4xindex>, %arg1: vector<4xindex>) {
   // CHECK: spirv.UMod %{{.*}}, %{{.*}}: vector<4xi32>
-  %0 = arith.remui %arg0, %arg0: vector<4xindex>
+  %0 = arith.remui %arg0, %arg1: vector<4xindex>
   return
 }
 
@@ -1494,15 +1494,9 @@ func.func @float32_minimumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
 }
 
 // CHECK-LABEL: @float32_minnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: f32, %[[RHS:.+]]: f32
 func.func @float32_minnumf_scalar(%arg0 : f32, %arg1 : f32) -> f32 {
-  // CHECK: %[[MIN:.+]] = spirv.GL.FMin %arg0, %arg1 : f32
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : f32
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : f32
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MIN]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMin %arg0, %arg1 : f32
   %0 = arith.minnumf %arg0, %arg1 : f32
-  // CHECK: return %[[SELECT2]]
   return %0: f32
 }
 
@@ -1520,25 +1514,19 @@ func.func @float32_maximumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>)
 }
 
 // CHECK-LABEL: @float32_maxnumf_scalar
-// CHECK-SAME: %[[LHS:.+]]: vector<2xf32>, %[[RHS:.+]]: vector<2xf32>
 func.func @float32_maxnumf_scalar(%arg0 : vector<2xf32>, %arg1 : vector<2xf32>) -> vector<2xf32> {
-  // CHECK: %[[MAX:.+]] = spirv.GL.FMax %arg0, %arg1 : vector<2xf32>
-  // CHECK: %[[LHS_NAN:.+]] = spirv.IsNan %[[LHS]] : vector<2xf32>
-  // CHECK: %[[RHS_NAN:.+]] = spirv.IsNan %[[RHS]] : vector<2xf32>
-  // CHECK: %[[SELECT1:.+]] = spirv.Select %[[LHS_NAN]], %[[RHS]], %[[MAX]]
-  // CHECK: %[[SELECT2:.+]] = spirv.Select %[[RHS_NAN]], %[[LHS]], %[[SELECT1]]
+  // CHECK: spirv.GL.NMax %arg0, %arg1 : vector<2xf32>
   %0 = arith.maxnumf %arg0, %arg1 : vector<2xf32>
-  // CHECK: return %[[SELECT2]]
   return %0: vector<2xf32>
 }
 
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
-func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {
+func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<4xi64>, %arg3: vector<4xi64>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi8>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.UDiv %{{.*}}, %{{.*}}: vector<4xi64>
-  %1 = arith.divui %arg1, %arg1: vector<4xi64>
+  %1 = arith.divui %arg2, %arg3: vector<4xi64>
   return
 }
 
@@ -1582,11 +1570,11 @@ module attributes {
 } {
 
 // CHECK-LABEL: @int_vector23
-func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<3xi16>) {
+func.func @int_vector23(%arg0: vector<2xi8>, %arg1: vector<2xi8>, %arg2: vector<3xi16>, %arg3: vector<3xi16>) {
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<2xi32>
-  %0 = arith.divsi %arg0, %arg0: vector<2xi8>
+  %0 = arith.divsi %arg0, %arg1: vector<2xi8>
   // CHECK: spirv.SDiv %{{.*}}, %{{.*}}: vector<3xi32>
-  %1 = arith.divsi %arg1, %arg1: vector<3xi16>
+  %1 = arith.divsi %arg2, %arg3: vector<3xi16>
   return
 }
 

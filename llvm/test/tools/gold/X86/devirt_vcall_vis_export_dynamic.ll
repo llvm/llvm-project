@@ -8,7 +8,7 @@
 ;; Index based WPD
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
 ; RUN: opt -thinlto-bc -o %t2.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -18,7 +18,7 @@
 ;; Hybrid WPD
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -26,8 +26,8 @@
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
-; RUN: opt -o %t4.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: opt -passes=assign-guid -o %t4.o %s
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -40,7 +40,7 @@
 ;; Check that all WPD fails with --export-dynamic.
 
 ;; Index based WPD
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -49,7 +49,7 @@
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Hybrid WPD
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -58,7 +58,7 @@
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Regular LTO WPD
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=save-temps \
 ; RUN:   --plugin-opt=-pass-remarks=. \
@@ -73,9 +73,9 @@
 
 ;; Index based WPD
 ; RUN: opt -relocation-model=pic --thinlto-bc -o %t5.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN: 	 %t5.o -o %t5.so -shared
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t5.o %t5.so -o %t5 \
@@ -83,19 +83,19 @@
 
 ;; Hybrid WPD
 ; RUN: opt -relocation-model=pic --thinlto-bc --thinlto-split-lto-unit -o %t5.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN: 	 %t5.o -o %t5.so -shared
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t5.o %t5.so -o %t5 \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 
 ;; Regular LTO WPD
-; RUN: opt -relocation-model=pic -o %t5.o %s
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: opt -passes=assign-guid -relocation-model=pic -o %t5.o %s
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN: 	 %t5.o -o %t5.so -shared
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:   --plugin-opt=whole-program-visibility \
 ; RUN:   --plugin-opt=-pass-remarks=. \
 ; RUN:   %t5.o %t5.so -o %t5 \
