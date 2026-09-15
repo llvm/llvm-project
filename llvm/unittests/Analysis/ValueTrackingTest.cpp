@@ -3412,6 +3412,40 @@ TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {
   }
 }
 
+TEST_F(ValueTrackingTest, willNotFreeBetweenMultiPredecessor) {
+  StringRef Assembly = R"(
+    declare void @llvm.assume(i1)
+    declare void @may_free()
+    declare void @no_free() nofree
+    define void @test(i1 %cond, ptr %p) {
+    entry:
+      %A = call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %p, i64 16) ]
+      br i1 %cond, label %if.then, label %if.else
+    if.then:
+      call void @no_free()
+      br label %merge
+    if.else:
+      br label %merge
+    merge:
+      %CxtI = load i32, ptr %p
+      br i1 %cond, label %if.then2, label %if.else2
+    if.then2:
+      call void @may_free()
+      br label %merge2
+    if.else2:
+      br label %merge2
+    merge2:
+      %CxtI2 = load i32, ptr %p
+      ret void
+    }
+  )";
+  parseAssembly(Assembly);
+  // Both paths from %A to %CxtI only call nofree functions -> should return true.
+  EXPECT_TRUE(willNotFreeBetween(A, CxtI));
+  // One path from %A to %CxtI2 calls @may_free() -> should return false.
+  EXPECT_FALSE(willNotFreeBetween(A, CxtI2));
+}
+
 class IsBytewiseValueTest : public ValueTrackingTest,
                             public ::testing::WithParamInterface<
                                 std::pair<const char *, const char *>> {

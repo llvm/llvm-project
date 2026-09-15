@@ -761,22 +761,30 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
     return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
   }
 
-  // Handle chain of single-predecessor blocks.
-  const BasicBlock *CurBB = CtxBB;
-  while (true) {
-    if (CurBB == AssumeBB)
-      return hasNoFreeInRange(
-          make_range(Assume->getIterator(), AssumeBB->end()));
-
-    const BasicBlock *PredBB = CurBB->getSinglePredecessor();
-    if (!PredBB)
-      return false;
-
-    if (!hasNoFreeInRange(make_range(CurBB->begin(),
-                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
-      return false;
-    CurBB = PredBB;
+  // Multi-predecessor worklist.
+  SmallVector<const BasicBlock *, 8> Worklist;
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  Worklist.push_back(CtxBB);
+  Visited.insert(CtxBB);
+  while (!Worklist.empty()) {
+      const BasicBlock *CurBB = Worklist.pop_back_val();
+      if (CurBB == AssumeBB) {
+        if (!hasNoFreeInRange(
+			      make_range(Assume->getIterator(), AssumeBB->end())))
+          return false;
+        continue;
+      }
+      if (!hasNoFreeInRange(make_range(
+				       CurBB->begin(), CurBB == CtxBB ? CtxIter : CurBB->end())))
+        return false;
+      if (pred_empty(CurBB))
+        return false;
+      for (const BasicBlock *Pred : predecessors(CurBB)) {
+        if (Visited.insert(Pred).second)
+          Worklist.push_back(Pred);
+      }
   }
+  return true;
 }
 
 // TODO: cmpExcludesZero misses many cases where `RHS` is non-constant but
