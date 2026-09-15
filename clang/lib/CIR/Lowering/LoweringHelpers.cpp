@@ -498,6 +498,8 @@ static mlir::Type adjustGlobalStructTypeForInit(
       break;
     mlir::Type adjusted =
         adjustGlobalTypeForInit(origBody[idx], member, converter, dataLayout);
+    if (!adjusted)
+      return {};
     unsigned adjustedAlign = dataLayout.getTypeABIAlignment(adjusted);
 
     if (adjusted != origBody[idx]) {
@@ -550,6 +552,8 @@ static mlir::Type adjustGlobalStructTypeForInit(
       newBody.back() =
           adjustGlobalTypeForInit(converter.convertType(lastInitType),
                                   initMembers.back(), converter, dataLayout);
+      if (!newBody.back())
+        return {};
       packed = packed || shouldPackFAMStruct(dataLayout, newBody);
       widenedFAM = true;
       changed = true;
@@ -599,6 +603,8 @@ static mlir::Type adjustGlobalUnionTypeForInit(
   // The active member may itself need adjusting (e.g. it is a nested union, or
   // a struct containing one), so recurse before using its type below.
   memberTy = adjustGlobalTypeForInit(memberTy, member, converter, dataLayout);
+  if (!memberTy)
+    return {};
 
   // The converted union type is { storage, [padding] }, where storage is the
   // union's most-aligned member. When the active member IS that storage type,
@@ -643,6 +649,8 @@ static mlir::Type adjustGlobalArrayTypeForInit(
   for (auto [idx, elt] : llvm::enumerate(elts)) {
     mlir::Type adjusted =
         adjustGlobalTypeForInit(origEltTy, elt, converter, dataLayout);
+    if (!adjusted)
+      return {};
 
     if (idx >= arrayTy.getNumElements()) {
       adjustedElts.push_back(adjusted);
@@ -671,6 +679,8 @@ adjustGlobalTypeForInit(mlir::Type llvmType, mlir::Attribute init,
                         const mlir::TypeConverter &converter,
                         const mlir::DataLayout &dataLayout,
                         llvm::SmallVectorImpl<unsigned> &paddingAddedIndexes) {
+  if (!llvmType)
+    return {};
   if (auto arrayInit = mlir::dyn_cast_if_present<cir::ConstArrayAttr>(init)) {
     auto arrayTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(llvmType);
     if (!arrayTy)
@@ -744,6 +754,8 @@ std::optional<mlir::Attribute> lowerConstRecordAttr(
   mlir::Type adjustedTy = adjustGlobalTypeForInit(
       converter->convertType(constRecord.getType()), constRecord, *converter,
       mlir::DataLayout(moduleOp), paddingAddedIndexes);
+  if (!adjustedTy)
+    return std::nullopt;
 
   // This handles #3 from above. adjustGlobalTypeForInit ensures the
   // indexes are in increasing order, so we can insert 'backwards' without
