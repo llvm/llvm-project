@@ -262,8 +262,6 @@ define void @extract_v4i8_v8i8(<8 x i8> %a, ptr %p) {
 ; CHECK-LABEL: extract_v4i8_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v0.16b
-; CHECK-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-NEXT:    str s0, [x0]
 ; CHECK-NEXT:    ret
   %c = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
