@@ -1610,6 +1610,10 @@ defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   /*GenPredicate=*/1
 >;
 
+defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
+  "Has v_wave_match_b32 instruction"
+>;
+
 //===----------------------------------------------------------------------===//
 
 class GCNSubtargetFeatureGeneration <string Value,
@@ -2576,6 +2580,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
 def FeatureISAVersion13 : FeatureSet<
   [FeatureGFX13,
    FeatureGFX1250Insts,
+   FeatureWaveMatchInsts,
    FeatureAddressableLocalMemorySize196608,
    Feature64BitLiterals,
    FeatureLDSBankCount32,
