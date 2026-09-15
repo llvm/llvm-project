@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s -o - | llvm-dis - | FileCheck %s
+; RUN: llvm-as < %s -o - -disable-debug-info-type-map | llvm-dis - -disable-debug-info-type-map | FileCheck %s
 
 ; The loop metadata in this test is similar to the output from clang for
 ; code like the this:
