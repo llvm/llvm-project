@@ -230,7 +230,7 @@ body: |
   ; CHECK-NEXT: %s:_ KnownBits:???????????????????????????????? SignBits:25 IsKnownNeverZero:0
   ; CHECK-NEXT: %v:_ KnownBits:???????????????????????????????? SignBits:25 IsKnownNeverZero:0
   ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
-  ; CHECK-NEXT: %e:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:0
+  ; CHECK-NEXT: %e:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
     %w0:_(i32) = COPY $w0
     %a:_(i8) = G_TRUNC %w0
     %s:_(i32) = G_SEXT %a
@@ -258,4 +258,37 @@ body: |
     %v:_(<vscale x 16 x i8>) = G_SPLAT_VECTOR %s
     %idx:_(i64) = G_CONSTANT i64 0
     %e:_(i16) = G_EXTRACT_VECTOR_ELT %v, %idx
+...
+---
+# computeKnownBits and isKnownNeverZero: a result narrower than the element is
+# truncated. 256 truncates to 0, so the result is not known never zero, and the
+# known bits must be reported at the result width, not the element width.
+name: narrowed_result_const
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @narrowed_result_const
+  ; CHECK-NEXT: %c:_ KnownBits:00000000000000000000000100000000 SignBits:23 IsKnownNeverZero:1
+  ; CHECK-NEXT: %v:_ KnownBits:00000000000000000000000100000000 SignBits:23 IsKnownNeverZero:1
+  ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %e:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
+    %c:_(i32) = G_CONSTANT i32 256
+    %v:_(<2 x i32>) = G_BUILD_VECTOR %c, %c
+    %idx:_(i64) = G_CONSTANT i64 0
+    %e:_(i8) = G_EXTRACT_VECTOR_ELT %v, %idx
+...
+---
+# isKnownNeverZero: a result wider than the element is any-extended, but a
+# nonzero low part still makes the whole value nonzero.
+name: neverzero_widened_result_const
+body: |
+  bb.0:
+  ; CHECK-LABEL: name: @neverzero_widened_result_const
+  ; CHECK-NEXT: %c:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
+  ; CHECK-NEXT: %v:_ KnownBits:00000011 SignBits:6 IsKnownNeverZero:1
+  ; CHECK-NEXT: %idx:_ KnownBits:0000000000000000000000000000000000000000000000000000000000000000 SignBits:64 IsKnownNeverZero:0
+  ; CHECK-NEXT: %e:_ KnownBits:???????????????????????????????? SignBits:1 IsKnownNeverZero:1
+    %c:_(i8) = G_CONSTANT i8 3
+    %v:_(<2 x i8>) = G_BUILD_VECTOR %c, %c
+    %idx:_(i64) = G_CONSTANT i64 0
+    %e:_(i32) = G_EXTRACT_VECTOR_ELT %v, %idx
 ...

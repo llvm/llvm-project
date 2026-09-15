@@ -136,6 +136,11 @@ bool GISelValueTracking::isKnownNeverZero(Register R, const APInt &DemandedElts,
     LLT VecTy = MRI.getType(InVec);
     if (VecTy.isScalableVector())
       break;
+    // A result narrower than the element is truncated, which can turn a
+    // nonzero element into zero. A wider result is any-extended and keeps the
+    // element's nonzero low bits.
+    if (MRI.getType(R).getScalarSizeInBits() < VecTy.getScalarSizeInBits())
+      break;
     unsigned NumSrcElts = VecTy.getNumElements();
     // An out-of-range constant index produces poison. Keep all lanes demanded,
     // which is poison-safe and matches SelectionDAG's conservative behavior.
@@ -1013,8 +1018,10 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     const unsigned EltBitWidth = VecVT.getScalarSizeInBits();
     const unsigned NumSrcElts = VecVT.getNumElements();
     // A return type different from the vector's element type may lead to
-    // issues with pattern selection. Bail out to avoid that.
-    if (BitWidth > EltBitWidth)
+    // issues with pattern selection. Bail out to avoid that. A narrower result
+    // is truncated; reporting the element's bits for it would also give a
+    // result of the wrong width.
+    if (BitWidth != EltBitWidth)
       break;
 
     Known.Zero.setAllBits();
