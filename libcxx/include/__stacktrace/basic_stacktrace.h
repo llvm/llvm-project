@@ -161,15 +161,18 @@ public:
   // Creation and assignment [stacktrace.basic.cons]
 
   // Omit this function from the trace
-   [[nodiscard]] _LIBCPP_ALWAYS_INLINE static basic_stacktrace current(const allocator_type& __alloc = allocator_type()) noexcept {
+  [[nodiscard]] _LIBCPP_ALWAYS_INLINE static basic_stacktrace
+  current(const allocator_type& __alloc = allocator_type()) noexcept {
     return current(0, __default_max_depth, __alloc);
   }
 
-   [[nodiscard]] _LIBCPP_ALWAYS_INLINE static basic_stacktrace current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
+  [[nodiscard]] _LIBCPP_ALWAYS_INLINE static basic_stacktrace
+  current(size_type __skip, const allocator_type& __alloc = allocator_type()) noexcept {
     return current(__skip, __default_max_depth, __alloc);
   }
 
-   [[nodiscard]] _LIBCPP_ALWAYS_INLINE static basic_stacktrace current(size_type __skip, size_type __max_depth, const allocator_type& __alloc = allocator_type()) noexcept {
+  [[nodiscard]] _LIBCPP_ALWAYS_INLINE static basic_stacktrace
+  current(size_type __skip, size_type __max_depth, const allocator_type& __alloc = allocator_type()) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __skip <= __skip + __max_depth, "sum of skip and max_depth overflows size_type");
     basic_stacktrace __ret{__alloc};
