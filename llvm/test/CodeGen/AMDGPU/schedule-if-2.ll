@@ -18,7 +18,7 @@ main_body:
 
 IF:                                               ; preds = %main_body
   %11 = call float @llvm.fabs.f32(float %2)
-  %12 = fcmp ueq float %11, 0x7FF0000000000000
+  %12 = fcmp ueq float %11, +inf
   %13 = select i1 %12, float 1.000000e+00, float 0.000000e+00
   %14 = fsub float -0.000000e+00, %13
   %15 = fptosi float %14 to i32

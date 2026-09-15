@@ -2828,7 +2828,9 @@ def AVRSystemLibrary
                              AVR_BUILTIN>,
               __divmodsi4, __udivmodsi4,
               // Trigonometric rtlib functions
-              avr_sin, avr_cos)>;
+              avr_sin, avr_cos,
+
+              __stack_chk_fail, __stack_chk_guard)>;
 
 //===----------------------------------------------------------------------===//
 // DXIL Runtime Libcalls
@@ -4576,6 +4578,7 @@ defset list<RuntimeLibcallImpl> AMDLIBM_VECFUNCS = {
   def amd_vrs8_acosf : RuntimeLibcallImpl<ACOS_V8F32>;
   def amd_vrs8_asinf : RuntimeLibcallImpl<ASIN_V8F32>;
   def amd_vrs8_atanf : RuntimeLibcallImpl<ATAN_V8F32>;
+  def amd_vrs8_cbrtf : RuntimeLibcallImpl<CBRT_V8F32>;
   def amd_vrs8_cosf : RuntimeLibcallImpl<COS_V8F32>;
   def amd_vrs8_coshf : RuntimeLibcallImpl<COSH_V8F32>;
   def amd_vrs8_erff : RuntimeLibcallImpl<ERF_V8F32>;

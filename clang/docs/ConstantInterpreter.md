@@ -1,8 +1,5 @@
 # Constant Interpreter
 
-```{contents}
-:local: true
-```
 
 ## Introduction
 

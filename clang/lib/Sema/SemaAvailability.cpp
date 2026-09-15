@@ -1065,7 +1065,11 @@ ExtractedAvailabilityExpr extractAvailabilityExpr(const Expr *IfCond) {
 }
 
 bool DiagnoseUnguardedAvailability::TraverseIfStmt(IfStmt *If) {
-  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(If->getCond());
+  Expr *Cond = If->getCond();
+  if (!Cond)
+    return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
+
+  ExtractedAvailabilityExpr IfCond = extractAvailabilityExpr(Cond);
   if (!IfCond.E) {
     // This isn't an availability checking 'if', we can just continue.
     return DynamicRecursiveASTVisitor::TraverseIfStmt(If);

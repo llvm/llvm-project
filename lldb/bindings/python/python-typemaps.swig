@@ -359,6 +359,12 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   $1 = (void *)malloc($2);
 }
 
+// typecheck so overloaded methods taking a buffer (e.g. SBProcess::ReadMemory)
+// can participate in overload resolution.
+%typemap(typecheck, precedence=SWIG_TYPECHECK_INTEGER) (void *buf, size_t size) {
+  $1 = PyLong_Check($input) ? 1 : 0;
+}
+
 // Return the buffer.  Discarding any previous return result
 // See also SBProcess::ReadMemory.
 %typemap(argout) (void *buf, size_t size) {
