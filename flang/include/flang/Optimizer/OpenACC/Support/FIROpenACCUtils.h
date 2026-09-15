@@ -27,7 +27,10 @@ namespace acc {
 /// FIR operations and looking for variable names.
 /// \param v The value to extract the variable name from
 /// \param preferDemangledName If true, prefers demangled/bindc names over
-///        mangled/unique names. If false, prefers mangled names.
+///        mangled/unique names. If false, prefers mangled names. A component
+///        or an element is named through a path whose root is the variable
+///        that holds it; only that root is uniqued, so only it is spelled
+///        differently by the two.
 /// Returns empty string if no name is found.
 std::string getVariableName(mlir::Value v, bool preferDemangledName = true);
 

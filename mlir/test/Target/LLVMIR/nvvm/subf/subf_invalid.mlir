@@ -55,13 +55,3 @@ llvm.func @subf_invalid_bf16_sat_ftz(%a : bf16, %b : bf16) -> bf16 {
   %f1 = nvvm.subf %a, %b sat = <sat> ftz = true : bf16
   llvm.return %f1 : bf16
 }
-
-// -----
-
-// FIXME: Remove this test once intrinsics for f16 addition (with FTZ only) are 
-// available.
-llvm.func @subf_invalid_f16_ftz_no_sat(%a : f16, %b : f16) -> f16 {
-  // expected-error@+1 {{FTZ with no saturation is not supported for f16 and vector<2xf16> additions/subtractions}}
-  %f1 = nvvm.subf %a, %b ftz = true : f16
-  llvm.return %f1 : f16
-}
