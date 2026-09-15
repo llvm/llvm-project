@@ -13,6 +13,7 @@
 #include <cerrno>
 #include <cfenv>
 #include <cmath>
+#include <limits>
 
 // std::type_identity is C++20 (we need to support C++17 here)
 template <class T>
@@ -84,6 +85,28 @@ void check_range_error(Func f) {
   if (math_errhandling & MATH_ERREXCEPT)
     assert(std::fetestexcept(FE_OVERFLOW) != 0);
 #endif
+}
+
+// Distance between `value` and `expected` in units of the last place of `expected`.
+//
+// Not a bit comparison: `long double` is not portably bit-castable. On x86-64 it occupies
+// 128 bits of which only 80 carry the value, and the padding is indeterminate, so two equal
+// values need not have equal object representations; std::bit_cast also needs C++20. Not a
+// std::nextafter loop either -- that costs an iteration per ulp. std::frexp gives the
+// exponent of the binade holding `expected`, whose last place is 2^(exponent - digits).
+//
+// Immediately below a power of two the spacing halves, so a step of one place there is
+// reported as half of one. The tolerances allow for it.
+//
+// A NaN or infinite result propagates through the subtraction, so it compares false against
+// any tolerance and the caller's assert fires, which is what a broken result should do.
+template <class Float>
+Float ulp_distance(Float value, type_identity_t<Float> expected) {
+  assert(std::isfinite(expected) && expected != 0);
+  int exponent = 0;
+  std::frexp(expected, &exponent);
+  const Float last_place = std::ldexp(Float(1), exponent - std::numeric_limits<Float>::digits);
+  return std::abs(value - expected) / last_place;
 }
 
 #endif // TEST_SF_CMATH_COMMON_H

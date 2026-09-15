@@ -26,8 +26,31 @@
 #include <limits>
 #include <type_traits>
 
+#include "assoc_laguerre_data.h"
 #include "common.h"
 #include "type_algorithms.h"
+
+// How far a result may sit from its reference value, in units of the last place.
+//
+// Boost.Math promotes `float` to `double` and `double` to `long double` before running the
+// recurrence. The widest type has nothing to promote to and loses digits to cancellation.
+// Worst measured over assoc_laguerre_data.h, conversion of the reference values included:
+// 0 ulp for `float`, 1 for `double` with a wider `long double`, 114 for `double` without
+// one, 55 for x87 `long double`, 48 for binary128. The margin over those is for codegen the
+// measurement cannot model, such as -ffp-contract folding a step into an fma.
+//
+// The tight tiers rely on the promotion defaults in
+// libcxx/src/mathematical_special_functions.cpp. A double-double `long double` (PowerPC)
+// takes the tight branch but has no uniform ulp, and is not known to run this test.
+template <class Float>
+constexpr Float tolerance_ulp() {
+  if constexpr (std::is_same_v<Float, float>)
+    return 4;
+  else if constexpr (std::is_same_v<Float, double>)
+    return std::numeric_limits<long double>::digits > std::numeric_limits<double>::digits ? 4 : 256;
+  else
+    return 256;
+}
 
 // Tests a fixed-precision overload (assoc_laguerre / assoc_laguerref / assoc_laguerrel),
 // whose argument and return type are both `Float`.
@@ -79,6 +102,17 @@ void test_floating_point(Func assoc_laguerre) {
     test_nan(std::numeric_limits<Float>::quiet_NaN());
   if constexpr (std::numeric_limits<Float>::has_signaling_NaN)
     test_nan(std::numeric_limits<Float>::signaling_NaN());
+
+  // Generated reference values. Every row is a finite argument inside the domain, so the
+  // NaN, infinity and negative-argument branches must all be missed and errno left alone.
+  // A structured binding would not do here: C++17 forbids capturing one in a lambda.
+  for (const AssocLaguerreTestCase& test_case : assoc_laguerre_test_data) {
+    const Float x        = static_cast<Float>(test_case.x);
+    const Float expected = static_cast<Float>(test_case.expected);
+    check_no_domain_error([&] {
+      assert(ulp_distance(assoc_laguerre(test_case.n, test_case.m, x), expected) <= tolerance_ulp<Float>());
+    });
+  }
 }
 
 // Tests the integer-argument overload: it promotes the argument to double and returns double.

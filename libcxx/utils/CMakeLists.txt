@@ -51,6 +51,13 @@ add_custom_target(libcxx-indic-conjunct-break-table
         "${LIBCXX_SOURCE_DIR}/include/__format/indic_conjunct_break_table.h"
     COMMENT "Generate the Indic Conjunct Break header")
 
+add_custom_target(libcxx-generate-sf-cmath-test-data
+    COMMAND
+        "${Python3_EXECUTABLE}"
+        "${LIBCXX_SOURCE_DIR}/utils/generate_sf_cmath_test_data.py"
+        "${LIBCXX_SOURCE_DIR}/test/std/numerics/c.math/sf.cmath/assoc_laguerre_data.h"
+    COMMENT "Generate the mathematical special function reference data.")
+
 add_custom_target(libcxx-generate-files
     DEPENDS libcxx-generate-feature-test-macros
             libcxx-generate-std-cppm-in-file
@@ -60,4 +67,5 @@ add_custom_target(libcxx-generate-files
             libcxx-generate-escaped-output-table
             libcxx-generate-width-estimation-table
             libcxx-indic-conjunct-break-table
+            libcxx-generate-sf-cmath-test-data
     COMMENT "Create all the auto-generated files in libc++ and its tests.")
