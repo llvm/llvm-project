@@ -390,15 +390,21 @@ HIPSPVToolChain::getDeviceLibs(
         getDriver().Diag(diag::err_drv_no_such_file) << BCName;
     }
   } else {
-    // Search device library named as 'hipspv-<triple>.bc'.
+    // Search device library named as 'hipspv-<triple>.bc'. For a
+    // "<arch>-unknown-unknown" triple also try 'hipspv-<arch>.bc'.
     auto TT = getTriple().normalize();
-    std::string BCName = "hipspv-" + TT + ".bc";
+    SmallVector<std::string, 2> BCNames{"hipspv-" + TT + ".bc"};
+    if (getTriple().getVendorName() == "unknown" &&
+        getTriple().getOSName() == "unknown")
+      BCNames.push_back(("hipspv-" + getTriple().getArchName() + ".bc").str());
     for (auto *LibPath : LibraryPaths) {
-      SmallString<128> Path(LibPath);
-      llvm::sys::path::append(Path, BCName);
-      if (llvm::sys::fs::exists(Path)) {
-        BCLibs.emplace_back(Path.str().str());
-        return BCLibs;
+      for (StringRef BCName : BCNames) {
+        SmallString<128> Path(LibPath);
+        llvm::sys::path::append(Path, BCName);
+        if (llvm::sys::fs::exists(Path)) {
+          BCLibs.emplace_back(Path.str().str());
+          return BCLibs;
+        }
       }
     }
     getDriver().Diag(diag::err_drv_no_hipspv_device_lib)
