@@ -925,6 +925,13 @@ public:
         TT.setOS(llvm::Triple::AMDHSA);
       return;
     }
+
+    // Expand short spellings like "spirv64" and "spirv64-unknown" to
+    // "spirv64-unknown-unknown". A named vendor, as in "spirv64-intel", and a
+    // named OS, as in "spirv64-unknown-chipstar", are kept.
+    if (TT.isSPIRV() && TT.getVendor() == llvm::Triple::UnknownVendor &&
+        TT.getOSName().empty())
+      TT = llvm::Triple(TT.normalize(llvm::Triple::CanonicalForm::THREE_IDENT));
   }
 
   static llvm::Triple normalizeOffloadTriple(llvm::StringRef OrigTT) {
