@@ -266,6 +266,11 @@ protected:
     return hlfir::Entity{reductionResults[0]};
   }
 
+  /// Overridden by MinMaxlocAsElementalConverter to use the cached result.
+  virtual std::optional<mlir::Value> getEqualityMaskTargetForMask() const {
+    return std::nullopt;
+  }
+
   /// Return mlir::success(), if the operation can be converted.
   /// The default implementation always returns mlir::success().
   /// The derived type may override the default implementation
@@ -529,8 +534,24 @@ private:
     return isTotalReduction() ? getSourceRank() : 1;
   }
 
+  std::optional<mlir::Value> getEqualityMaskTarget() const {
+    if (!cachedEqualityTarget.has_value())
+      cachedEqualityTarget = hlfir::getEqualityMaskTarget(
+          this->getMask(), mlir::cast<T>(this->op).getArray());
+    return *cachedEqualityTarget;
+  }
+
+  std::optional<mlir::Value> getEqualityMaskTargetForMask() const final {
+    return getEqualityMaskTarget();
+  }
+
   void
   checkReductions(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
+    if (getEqualityMaskTarget()) {
+      assert(reductions.size() == getNumCoors() + 1 &&
+             "invalid number of reductions for equality mask MINLOC/MAXLOC");
+      return;
+    }
     if (!useIsFirst())
       assert(reductions.size() == getNumCoors() + 1 &&
              "invalid number of reductions for MINLOC/MAXLOC");
@@ -542,6 +563,8 @@ private:
   mlir::Value
   getCurrentMinMax(const llvm::SmallVectorImpl<mlir::Value> &reductions) const {
     checkReductions(reductions);
+    assert(!getEqualityMaskTarget() &&
+           "equality mask reductions have no minmax slot");
     return reductions[getNumCoors()];
   }
 
@@ -572,6 +595,7 @@ private:
   // this control into account, though, we need to define what
   // this means exactly.
   [[maybe_unused]] Fortran::common::FPMaxminBehavior fpMaxminBehavior;
+  mutable std::optional<std::optional<mlir::Value>> cachedEqualityTarget;
 };
 
 template <typename T>
@@ -579,6 +603,16 @@ llvm::SmallVector<mlir::Value>
 MinMaxlocAsElementalConverter<T>::genReductionInitValues(
     mlir::ValueRange oneBasedIndices,
     const llvm::SmallVectorImpl<mlir::Value> &extents) {
+  // Equality-mask path only track coordinates and firstHit flag.
+  if (auto targetVal = getEqualityMaskTarget()) {
+    unsigned rank = getNumCoors();
+    mlir::Type resElemTy = getResultElementType();
+    mlir::Value zeroVal = builder.createIntegerConstant(loc, resElemTy, 0);
+    llvm::SmallVector<mlir::Value> result(rank, zeroVal);
+    result.push_back(builder.createBool(loc, true));
+    return result;
+  }
+
   fir::IfOp ifOp;
   if (!useIsFirst() && honorNans()) {
     // Check if we can load the value of the first element in the array
@@ -641,6 +675,23 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
     const llvm::SmallVectorImpl<mlir::Value> &currentValue, hlfir::Entity array,
     mlir::ValueRange oneBasedIndices) {
   checkReductions(currentValue);
+
+  if (getEqualityMaskTarget()) {
+    int64_t dim = 1;
+    if (!isTotalReduction()) {
+      auto dimVal = getConstDim();
+      assert(mlir::succeeded(dimVal) &&
+             "partial MINLOC/MAXLOC reduction with invalid DIM");
+      dim = *dimVal;
+    }
+    llvm::SmallVector<mlir::Value> newValues;
+    for (unsigned i = 0; i < getNumCoors(); ++i)
+      newValues.push_back(builder.createConvert(loc, currentValue[i].getType(),
+                                                oneBasedIndices[i + dim - 1]));
+    newValues.push_back(builder.createBool(loc, false));
+    return newValues;
+  }
+
   hlfir::Entity elementValue =
       hlfir::loadElementAt(loc, builder, array, oneBasedIndices);
   mlir::Value cmp = genMinMaxComparison<isMax>(loc, builder, elementValue,
@@ -690,6 +741,30 @@ MinMaxlocAsElementalConverter<T>::reduceOneElement(
 template <typename T>
 hlfir::Entity MinMaxlocAsElementalConverter<T>::genFinalResult(
     const llvm::SmallVectorImpl<mlir::Value> &reductionResults) {
+  // Drop the firstHit bool and pack coordinates into the result array.
+  if (getEqualityMaskTarget()) {
+    if (getResultRank() == 0 || !isTotalReduction()) {
+      assert(getNumCoors() == 1 &&
+             "unexpected coordinate count for scalar result");
+      return hlfir::Entity{reductionResults[0]};
+    }
+
+    unsigned rank = getNumCoors();
+    mlir::Type indexType = builder.getIndexType();
+    mlir::Value tempArray = builder.createTemporary(
+        loc, fir::SequenceType::get(rank, getResultElementType()));
+    for (unsigned i = 0; i < rank; ++i) {
+      mlir::Value coor = reductionResults[i];
+      mlir::Value idx = builder.createIntegerConstant(loc, indexType, i + 1);
+      mlir::Value resultElement =
+          hlfir::getElementAt(loc, builder, hlfir::Entity{tempArray}, {idx});
+      hlfir::AssignOp::create(builder, loc, coor, resultElement);
+    }
+    mlir::Value tempExpr = hlfir::AsExprOp::create(
+        builder, loc, tempArray, builder.createBool(loc, false));
+    return hlfir::Entity{tempExpr};
+  }
+
   // Identification of the final result of MINLOC/MAXLOC:
   //   * If DIM is absent, the result is rank-one array.
   //   * If DIM is present:
@@ -1220,6 +1295,9 @@ mlir::LogicalResult ReductionAsElementalConverter::convert() {
         }
         mlir::Value isUnmasked = fir::ConvertOp::create(
             builder, loc, builder.getI1Type(), maskValue);
+        if (getEqualityMaskTargetForMask())
+          isUnmasked = mlir::arith::AndIOp::create(builder, loc, isUnmasked,
+                                                   reductionValues.back());
         ifOp = fir::IfOp::create(builder, loc, reductionTypes, isUnmasked,
                                  /*withElseRegion=*/true);
         // In the 'else' block return the current reduction value.
