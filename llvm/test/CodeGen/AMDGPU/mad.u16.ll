@@ -262,12 +262,9 @@ define amdgpu_ps i16 @s_mad_u16(i16 inreg %arg0, i16 inreg %arg1, i16 inreg %arg
 ;
 ; GFX11-TRUE16-LABEL: s_mad_u16:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, s0, s1
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -306,13 +303,11 @@ define amdgpu_ps i32 @s_mad_u16_zext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg
 ;
 ; GFX11-TRUE16-LABEL: s_mad_u16_zext:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, s0, s1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -356,14 +351,12 @@ define amdgpu_ps i64 @s_mad_u16_zext64(i16 inreg %arg0, i16 inreg %arg1, i16 inr
 ;
 ; GFX11-TRUE16-LABEL: s_mad_u16_zext64:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, s0, s1
 ; GFX11-TRUE16-NEXT:    s_mov_b32 s1, 0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -405,13 +398,11 @@ define amdgpu_ps i32 @s_mad_u16_sext(i16 inreg %arg0, i16 inreg %arg1, i16 inreg
 ;
 ; GFX11-TRUE16-LABEL: s_mad_u16_sext:
 ; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, v0, v1
-; GFX11-TRUE16-NEXT:    v_mov_b32_e32 v1, s2
-; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, v0, v1
+; GFX11-TRUE16-NEXT:    v_mul_lo_u32 v0, s0, s1
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    v_add_nc_u32_e32 v0, s2, v0
 ; GFX11-TRUE16-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
