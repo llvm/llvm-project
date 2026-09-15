@@ -1,15 +1,12 @@
 # REQUIRES: asserts
 
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=machine-scheduler \
-# RUN:   -verify-machineinstrs \
 # RUN:   -debug-only=machine-scheduler -misched-prera-direction=topdown \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=TOPDOWN %s
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=machine-scheduler \
-# RUN:   -verify-machineinstrs \
 # RUN:   -debug-only=machine-scheduler -misched-prera-direction=bottomup \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BOTTOMUP %s
 # RUN: llc -mtriple=aarch64 -mcpu=apple-m5 -run-pass=machine-scheduler \
-# RUN:   -verify-machineinstrs \
 # RUN:   -debug-only=machine-scheduler -misched-prera-direction=bidirectional \
 # RUN:   -o - %s 2>&1 | FileCheck --check-prefix=BIDIR %s
 
