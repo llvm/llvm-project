@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInst.h"
@@ -152,15 +153,11 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
 
   MCRegister CachedOpTypeVoidReg;
 
-  // OpTypeInt <width> 0 ids for this module.
-  SmallDenseMap<unsigned, MCRegister, 2> CachedOpTypeIntRegs;
+  MCRegister CachedOpTypeInt32Reg;
 
   // Cache of already-emitted i32 constants, keyed by value. Prevents
   // duplicate OpConstant instructions for the same integer value.
   DenseMap<uint32_t, MCRegister> I32ConstantCache;
-
-  // Same, for size and offset operands that do not fit in 32 bits.
-  DenseMap<uint64_t, MCRegister> I64ConstantCache;
 
   // Cache of already-emitted DebugTypeFunction instructions, keyed by operand
   // ids (flags, return type, parameters).
@@ -311,11 +308,10 @@ private:
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
 
-  MCRegister emitOpConstantI64(uint64_t Value, SPIRV::ModuleAnalysisInfo &MAI);
+  MCRegister emitOpConstantI32Checked(uint64_t Value, const Twine &OperandName,
+                                      MCRegister I32TypeReg,
+                                      SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Size and offset operands accept a 32-bit or a 64-bit integer OpConstant.
-  MCRegister emitOpConstantSizeOrOffset(uint64_t Value, MCRegister I32TypeReg,
-                                        SPIRV::ModuleAnalysisInfo &MAI);
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
@@ -331,23 +327,16 @@ private:
   /// Return OpTypeVoid id for this module (lazy lookup / emit, then cache).
   MCRegister getOrEmitOpTypeVoidReg(SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Return OpTypeInt \p Width 0 id for this module (lazy lookup / emit, then
-  /// cache). Only widths whose capability is already required are valid.
-  MCRegister getOrEmitOpTypeIntReg(unsigned Width,
-                                   SPIRV::ModuleAnalysisInfo &MAI);
-
-  /// Whether any size or offset operand needs a 64-bit OpConstant. Must stay in
-  /// sync with the emitOpConstantSizeOrOffset() call sites.
-  bool needsI64SizeOrOffsetConstants() const;
+  /// Return OpTypeInt 32 0 id for this module (lazy lookup / emit, then cache).
+  MCRegister getOrEmitOpTypeInt32Reg(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Find OpTypeVoid in the already-emitted TypeConstVars section, or emit one
   /// if the module does not contain it (e.g. no void-returning functions).
   MCRegister findOrEmitOpTypeVoid(SPIRV::ModuleAnalysisInfo &MAI);
 
-  /// Find OpTypeInt \p Width 0 in the already-emitted TypeConstVars section,
-  /// or emit one if absent.
-  MCRegister findOrEmitOpTypeInt(unsigned Width,
-                                 SPIRV::ModuleAnalysisInfo &MAI);
+  /// Find OpTypeInt 32 0 in the already-emitted TypeConstVars section, or emit
+  /// one if the module does not contain it.
+  MCRegister findOrEmitOpTypeInt32(SPIRV::ModuleAnalysisInfo &MAI);
 
   /// Emit \c DebugTypePointer for pointer metadata \p PT.
   ///
