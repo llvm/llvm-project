@@ -18,6 +18,9 @@ struct S {
   static char *const g = 0; // expected-error {{requires 'constexpr' specifier}}
   static const NonLit h = NonLit(); // expected-error {{must be initialized out of line}}
 
+  static const char *aaa = "aaa"; // expected-error {{requires 'constexpr' specifier}}
+  static int *i2 = 0; // expected-error {{non-const static data member must be initialized out of line}}
+
   static inline int i; // expected-note {{previous}} expected-warning 0-1{{extension}}
   static inline int j; // expected-note {{previous}} expected-warning 0-1{{extension}}
   static constexpr int k = 0;

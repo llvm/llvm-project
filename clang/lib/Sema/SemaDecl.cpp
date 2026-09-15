@@ -14333,7 +14333,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     } else if (VDecl->isConstexpr()) {
 
     // Require constness.
-    } else if (!DclT.isConstQualified()) {
+    } else if (!DclT.isConstQualified() &&
+               !(DclT->isPointerType() &&
+                 DclT->getPointeeType().isConstQualified())) {
       Diag(VDecl->getLocation(), diag::err_in_class_initializer_non_const)
         << Init->getSourceRange();
       VDecl->setInvalidDecl();
