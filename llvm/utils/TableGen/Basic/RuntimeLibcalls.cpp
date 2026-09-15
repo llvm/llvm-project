@@ -69,14 +69,6 @@ RuntimeLibcalls::RuntimeLibcalls(const RecordKeeper &Records) {
 
     const RuntimeLibcallImpl &LibCallImpl = RuntimeLibcallImplDefList.back();
     Def2RuntimeLibcallImpl[LibCallImplDef] = &LibCallImpl;
-
-    if (LibCallImpl.isDefault()) {
-      const RuntimeLibcall *Provides = LibCallImpl.getProvides();
-      if (!Provides)
-        PrintFatalError(LibCallImplDef->getLoc(),
-                        "default implementations must provide a libcall");
-      LibCallToDefaultImpl[Provides] = &LibCallImpl;
-    }
   }
 }
 

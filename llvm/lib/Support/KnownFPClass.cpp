@@ -241,6 +241,23 @@ KnownFPClass KnownFPClass::bitcast(const fltSemantics &FltSemantics,
   if (Bits.hasConflict())
     return Known;
 
+  // Return unknown for types we have not validated.
+  auto IsSupported = [](const fltSemantics &Semantics) {
+    switch (APFloat::SemanticsToEnum(Semantics)) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (!IsSupported(FltSemantics))
+    return Known;
+
   // Transfer information from the sign bit.
   if (Bits.isNonNegative())
     Known.signBitMustBeZero();
@@ -302,6 +319,23 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
 
   // Return unknown if poison.
   if (FPClasses == fcNone)
+    return Known;
+
+  // Return unknown for types we have not validated.
+  auto IsSupported = [](const fltSemantics &Semantics) {
+    switch (APFloat::SemanticsToEnum(Semantics)) {
+    case APFloatBase::S_IEEEhalf:
+    case APFloatBase::S_BFloat:
+    case APFloatBase::S_IEEEsingle:
+    case APFloatBase::S_IEEEdouble:
+    case APFloatBase::S_IEEEquad:
+    case APFloatBase::S_x87DoubleExtended:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (!IsSupported(FltSemantics))
     return Known;
 
   if (isKnownNever(fcNormal | fcSubnormal | fcNan)) {
@@ -377,6 +411,8 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS,
        Mode.Output == DenormalMode::PositiveZero))
     Known.knownNot(fcNegZero);
 
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
   return Known;
 }
 
@@ -406,6 +442,8 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
                                 const KnownFPClass &KnownRHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
+
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
 
   // +X * +Y or -X * -Y => +Q
   // +X * -Y or -X * +Y => -Q
@@ -468,6 +506,8 @@ KnownFPClass KnownFPClass::fdiv(const KnownFPClass &KnownLHS,
                                 DenormalMode Mode) {
   KnownFPClass Known;
 
+  Known.propagateNonSNaN(KnownLHS, KnownRHS);
+
   // Only 0/0, Inf/Inf produce NaN.
   if (KnownLHS.isKnownNeverNaN() && KnownRHS.isKnownNeverNaN() &&
       (KnownLHS.isKnownNeverInfinity() || KnownRHS.isKnownNeverInfinity()) &&
@@ -509,10 +549,10 @@ KnownFPClass KnownFPClass::fdiv_self(const KnownFPClass &KnownSrc,
   // X / X is always exactly 1.0 or a NaN.
   KnownFPClass Known(fcNan | fcPosNormal);
 
+  Known.propagateNonSNaN(KnownSrc);
+
   if (KnownSrc.isKnownNeverInfOrNaN() && KnownSrc.isKnownNeverLogicalZero(Mode))
     Known.knownNot(fcNan);
-  else if (KnownSrc.isKnownNever(fcSNan))
-    Known.knownNot(fcSNan);
 
   return Known;
 }
@@ -570,7 +610,14 @@ KnownFPClass KnownFPClass::fma(const KnownFPClass &KnownLHS,
   //
   // If the multiply is a -0 due to rounding, the final -0 + 0 will be -0,
   // unlike for a separate fadd.
-  return fadd_impl(Mul, KnownAddend, Mode);
+  KnownFPClass Known = fadd_impl(Mul, KnownAddend, Mode);
+
+  // propagateNonSNaN for 3 arguments.
+  if (KnownLHS.isKnownNever(fcSNan) && KnownRHS.isKnownNever(fcSNan) &&
+      KnownAddend.isKnownNever(fcSNan))
+    Known.knownNot(fcSNan);
+
+  return Known;
 }
 
 KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
@@ -587,6 +634,8 @@ KnownFPClass KnownFPClass::fma_square(const KnownFPClass &KnownSquared,
   // prove that without a known range.
   if (KnownAddend.isKnownNever(fcNegInf | fcNan) && Squared.isKnownNever(fcNan))
     Known.knownNot(fcNan);
+
+  Known.propagateNonSNaN(KnownSquared, KnownAddend);
 
   return Known;
 }
@@ -798,12 +847,28 @@ KnownFPClass KnownFPClass::atan2(const KnownFPClass &KnownY,
   Known.propagateNonNaN(KnownY, KnownX);
 
   // Negative subnormals could be treated like positive zero.
-  const bool XCannotHavePositiveValue = KnownX.isKnownNever(fcPositive) &&
+  const bool XCannotHavePositiveInput = KnownX.isKnownNever(fcPositive) &&
                                         KnownX.isKnownNeverLogicalPosZero(Mode);
+  const bool YCannotHavePositiveInput = KnownY.isKnownNever(fcPositive) &&
+                                        KnownY.isKnownNeverLogicalPosZero(Mode);
 
   // If x <= -0.0, then |atan2(y, x)| >= pi/2
-  if (XCannotHavePositiveValue)
+  if (XCannotHavePositiveInput)
     Known.knownNot(fcZero | fcSubnormal);
+
+  // If y >= +0.0, then atan2(y, x) >= +0.0
+  if (KnownY.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  // If y <= -0.0, then atan2(y, x) <= -0.0
+  // We do this deduction last in case we were able to rule out a negative
+  // subnormal result earlier.
+  if (YCannotHavePositiveInput) {
+    Known.knownNot(fcPosSubnormal | fcPosNormal | fcPosInf);
+    // Negative subnormal results can flush to +0.0.
+    if (Known.isKnownNever(fcNegSubnormal) || !Mode.outputsMayBePositiveZero())
+      Known.knownNot(fcPosZero);
+  }
 
   return Known;
 }

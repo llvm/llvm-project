@@ -460,6 +460,11 @@ public:
   calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals = {},
                                         Instruction *RdxRoot = nullptr);
 
+  /// Finds i1 and/or nodes whose operand nodes are booleanized wide leaves
+  /// (one-use truncs of wide values or zero-tests of values from [0, 1]) and
+  /// registers them in MinBWs to be emitted in the wide leaf type.
+  void detectBooleanizedNodes();
+
   /// \returns the vectorization cost of the subtree that starts at \p VL.
   /// A negative number means that this is profitable.
   InstructionCost getTreeCost(InstructionCost TreeCost,
@@ -4581,12 +4586,20 @@ private:
               .insert(CD);
           // Remove extra deps for users, becoming non-immediate users of the
           // instruction. It may happen, if the chain of same copyable elements
-          // appears in the tree.
+          // appears in the tree. With the self-operand modeling (op(V, V)) the
+          // user node has the value on more than one operand column, so its
+          // copyable data releases the instruction's schedule data directly
+          // and must stay a counted user.
           if (In == I) {
-            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
-            if (ScheduleCopyableData *UserCD =
-                    getScheduleCopyableData(UserEI, In))
-              ScheduleCopyableDataMapByUsers[I].remove(UserCD);
+            unsigned NumCols = 0;
+            for (unsigned OpIdx : seq<unsigned>(EI.UserTE->getNumOperands()))
+              NumCols += EI.UserTE->getOperand(OpIdx)[Lane] == I;
+            if (NumCols <= 1) {
+              EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
+              if (ScheduleCopyableData *UserCD =
+                      getScheduleCopyableData(UserEI, In))
+                ScheduleCopyableDataMapByUsers[I].remove(UserCD);
+            }
           }
           It = find(make_range(std::next(It), Op.end()), I);
         } while (It != Op.end());
@@ -5352,6 +5365,14 @@ private:
   /// value must be signed-extended, rather than zero-extended, back to its
   /// original width.
   DenseMap<const TreeEntry *, std::pair<uint64_t, bool>> MinBWs;
+
+  /// A booleanized node is an i1 node registered in MinBWs to be emitted in
+  /// the wide leaf type. Genuine demoted nodes never have i1 scalars (i1
+  /// cannot be demoted), so an i1 node in MinBWs is always a booleanized one.
+  bool isBooleanizedNode(const TreeEntry *E) const {
+    auto It = MinBWs.find(E);
+    return It != MinBWs.end() && E->Scalars.front()->getType()->isIntegerTy(1);
+  }
 
   /// Final size of the reduced vector, if the current graph represents the
   /// input for the reduction and it was possible to narrow the size of the
@@ -10484,8 +10505,11 @@ class InstructionsCompatibilityAnalysis {
   /// Returns the value and operands for the \p V, considering if it is original
   /// instruction and its actual operands should be returned, or it is a
   /// copyable element and its should be represented as idempotent instruction.
-  SmallVector<Value *> getOperands(const InstructionsState &S, Value *V) const {
-    if (isa<PoisonValue>(V))
+  /// \p SelfOp selects the op(V, V) modeling for a copyable lane instead of
+  /// op(V, identity).
+  SmallVector<Value *> getOperands(const InstructionsState &S, Value *V,
+                                   bool SelfOp) const {
+    if (isa<PoisonValue>(V) || SelfOp)
       return {V, V};
     if (!S.isCopyableElement(V))
       return convertTo(cast<Instruction>(V), S).second;
@@ -10509,6 +10533,60 @@ class InstructionsCompatibilityAnalysis {
     }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     return {V, selectBestIdempotentValue()};
+  }
+
+  /// Returns the copyable lanes of an idempotent binop to be modeled as
+  /// op(V, V) == V instead of op(V, identity): when the operand column the
+  /// lane joins also holds a constant lane, the reorder would align that
+  /// column as constants and move the lane out, breaking the opcode-peer
+  /// node, while the symmetric form is reorder-proof. The other column must
+  /// be an instruction node so the lane is absorbed there as a copyable
+  /// rather than breaking a constant column. A lane is modeled this way only
+  /// when it has a strong opcode-peer pair of its own.
+  SmallPtrSet<const Value *, 4> findSelfOpLanes(const InstructionsState &S,
+                                                ArrayRef<Value *> VL,
+                                                const BoUpSLP &R) const {
+    SmallPtrSet<const Value *, 4> SelfOpLanes;
+    if (!Instruction::isIdempotent(MainOpcode) ||
+        !S.areInstructionsWithCopyableElements() || none_of(VL, [&](Value *V) {
+          if (isa<PoisonValue>(V))
+            return false;
+          if (S.isCopyableElement(V))
+            return isa<Constant>(V);
+          return isa<Constant>(cast<Instruction>(V)->getOperand(0));
+        }))
+      return SelfOpLanes;
+    // Index the instruction operands of the non-copyable lanes by opcode
+    // and block, so the copyable lanes find their opcode peers without a
+    // quadratic scan.
+    SmallDenseMap<std::pair<unsigned, BasicBlock *>, SmallVector<Value *>>
+        PeerOps;
+    for (Value *RV : VL) {
+      if (isa<PoisonValue>(RV) || S.isCopyableElement(RV))
+        continue;
+      auto *RI = cast<Instruction>(RV);
+      assert(RI->getNumOperands() == 2 && "Expected binary operation.");
+      for (unsigned OpIdx : seq<unsigned>(RI->getNumOperands())) {
+        auto *OpI = dyn_cast<Instruction>(RI->getOperand(OpIdx));
+        if (OpI &&
+            isa<Instruction>(RI->getOperand(RI->getNumOperands() - 1 - OpIdx)))
+          PeerOps[{OpI->getOpcode(), OpI->getParent()}].push_back(OpI);
+      }
+    }
+    for (Value *V : VL) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I || !S.isCopyableElement(I))
+        continue;
+      auto It = PeerOps.find({I->getOpcode(), I->getParent()});
+      if (It == PeerOps.end())
+        continue;
+      SmallVector<std::pair<Value *, Value *>> Candidates;
+      for (Value *OpI : It->second)
+        Candidates.emplace_back(V, OpI);
+      if (R.findBestRootPair(Candidates).first)
+        SelfOpLanes.insert(V);
+    }
+    return SelfOpLanes;
   }
 
   /// Builds operands for the original instructions.
@@ -10816,7 +10894,7 @@ class InstructionsCompatibilityAnalysis {
       SmallVector<BoUpSLP::ValueList> VOps;
       buildOriginalOperands(S, I == SMain ? MainOp : I, VOps);
       SmallVector<Value *> CopyableOps =
-          getOperands(CopyableS, I == MainOp ? SMain : I);
+          getOperands(CopyableS, I == MainOp ? SMain : I, /*SelfOp=*/false);
       if (CopyableOps.size() == VOps.size() &&
           all_of(zip(CopyableOps, VOps), [&](const auto &P) {
             return std::get<0>(P) == std::get<1>(P)[0];
@@ -10983,7 +11061,7 @@ public:
     if (RecurrenceDescriptor::isFMulAddIntrinsic(MainOp) &&
         AbsorbCopyableFMulOrFAdds)
       S.setAbsorbCopyableFMulOrFAdd(true);
-    SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL);
+    SmallVector<BoUpSLP::ValueList> Operands = buildOperands(S, VL, R);
     auto BuildCandidates =
         [](SmallVectorImpl<std::pair<Value *, Value *>> &Candidates, Value *V1,
            Value *V2) {
@@ -11143,7 +11221,7 @@ public:
         return OrigS;
       // Retry with the copyable modeled as the first multiplicand.
       S.setCopyableOpIdx(0);
-      Operands = buildOperands(S, VL);
+      Operands = buildOperands(S, VL, R);
       if (!CheckOperand(Operands[S.getCopyableOpIdx()]))
         return OrigS;
     }
@@ -11152,7 +11230,8 @@ public:
   }
 
   SmallVector<BoUpSLP::ValueList> buildOperands(const InstructionsState &S,
-                                                ArrayRef<Value *> VL) {
+                                                ArrayRef<Value *> VL,
+                                                const BoUpSLP &R) {
     assert(S && "Invalid state!");
     SmallVector<BoUpSLP::ValueList> Operands;
     if (S.areInstructionsWithCopyableElements()) {
@@ -11176,9 +11255,11 @@ public:
           isCommutative(MainOp) && NumMainOpOperands == 2;
       Operands.assign(NumMainOpOperands,
                       BoUpSLP::ValueList(VL.size(), nullptr));
+      SmallPtrSet<const Value *, 4> SelfOpLanes = findSelfOpLanes(S, VL, R);
       // Populate operands for every lane.
       for (auto [Idx, V] : enumerate(VL)) {
-        SmallVector<Value *> OperandsForValue = getOperands(S, V);
+        SmallVector<Value *> OperandsForValue =
+            getOperands(S, V, SelfOpLanes.contains(V));
         for (auto [OperandIdx, Operand] : enumerate(OperandsForValue))
           Operands[OperandIdx][Idx] = Operand;
       }
@@ -11697,7 +11778,7 @@ static void scanAssociativeOperands(
     }
     BoUpSLP::ValueList Column = std::move(Columns[Idx].Col);
     SmallVector<BoUpSLP::ValueList> SubOperands =
-        Analysis.buildOperands(ColS, Column);
+        Analysis.buildOperands(ColS, Column, R);
     assert(SubOperands.size() == 2 && "Expected 2 operand columns.");
     // Poison and copyable lanes have no real instruction left to erase
     // later: a copyable V is used as-is, not subsumed by the flattened
@@ -12121,7 +12202,7 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
     return;
   }
   InstructionsCompatibilityAnalysis Analysis(*DT, *DL, *TTI, *TLI);
-  SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL);
+  SmallVector<ValueList> Operands = Analysis.buildOperands(S, VL, *this);
   // Flatten associative binary chains into operand columns. Only the peeled
   // chain links are required to be single-use (they are erased); the root
   // being flattened may have other uses. Skip lanes that are neither chain
@@ -12913,7 +12994,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind);
+                                       const BoUpSLP &R);
 
 uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
   uint64_t Total = 0;
@@ -12994,7 +13075,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
                      I->getOpcode() != Instruction::FSub))
             continue;
           if (canConvertToFMA(I, InstructionsState(I, I), *DT, *DL, *TTI, *TLI,
-                              CostKind)
+                              *this)
                   .isValid()) {
             assert(Count > 0 && "Underflow in scalar inst count (fma)");
             --Count;
@@ -13362,7 +13443,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
                                        DominatorTree &DT, const DataLayout &DL,
                                        TargetTransformInfo &TTI,
                                        const TargetLibraryInfo &TLI,
-                                       const TTI::TargetCostKind CostKind) {
+                                       const BoUpSLP &R) {
   assert(all_of(VL,
                 [](Value *V) {
                   return V->getType()->getScalarType()->isFloatingPointTy();
@@ -13370,6 +13451,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
          "Can only convert to FMA for floating point types");
   assert(S.isAddSubOrFNegLikeOp() &&
          "Can only convert to FMA for add/sub or fneg chain links");
+  const TTI::TargetCostKind CostKind = R.getCostKind();
 
   auto CheckForContractable = [](ArrayRef<Value *> VL,
                                  const InstructionsState &S) {
@@ -13393,7 +13475,7 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
     return InstructionCost::getInvalid();
   // fmul also should be contractable
   InstructionsCompatibilityAnalysis Analysis(DT, DL, TTI, TLI);
-  SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL);
+  SmallVector<BoUpSLP::ValueList> Operands = Analysis.buildOperands(S, VL, R);
 
   InstructionsState OpS = getSameOpcode(Operands.front(), TLI);
   if (!OpS.valid())
@@ -14264,7 +14346,7 @@ void BoUpSLP::transformNodes() {
            !IsOneUseVectorFMulOperand(RHS)))
         break;
       if (!canConvertToFMA(E.Scalars, E.getOperations(), *DT, *DL, *TTI, *TLI,
-                           CostKind)
+                           *this)
                .isValid())
         break;
       // This node is a fmuladd node.
@@ -15984,8 +16066,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   };
   auto GetFMulAddCost = [&, &TTI = *TTI](const InstructionsState &S,
                                          Instruction *VI) {
-    InstructionCost Cost =
-        canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, CostKind);
+    InstructionCost Cost = canConvertToFMA(VI, S, *DT, *DL, TTI, *TLI, *this);
     return Cost;
   };
   switch (ShuffleOrOp) {
@@ -16379,6 +16460,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return ScalarCost;
     };
     auto GetVectorCost = [&](InstructionCost CommonCost) {
+      // An absorbed boolean zero-test leaf emits no conversion; only the
+      // reorder shuffle (in CommonCost) may remain.
+      if (isBooleanizedNode(E))
+        return CommonCost;
       // For selects, the condition type may differ from the result type
       // (e.g. condition is <N x i1> while result is <N x i32>). For
       // compares, the result type IS the mask (i1/vNi1). Construct the
@@ -18222,6 +18307,133 @@ static T *performExtractsShuffleAction(
   return Prev;
 }
 
+void BoUpSLP::detectBooleanizedNodes() {
+  // An absorbable boolean leaf is a one-use trunc of a wide value or a
+  // one-use zero-test of a value from [0, 1]; bit 0 of the wide value is the
+  // i1 lane value in both cases.
+  auto GetBoolLeafWideTy = [&](const TreeEntry *OpE) -> Type * {
+    if (OpE->State != TreeEntry::Vectorize || OpE->isAltShuffle() ||
+        OpE->hasCopyableElements() || !OpE->ReuseShuffleIndices.empty() ||
+        OpE->CombinedOp != TreeEntry::NotCombinedOp)
+      return nullptr;
+    unsigned WideOpIdx;
+    bool IsZeroTest = OpE->getOpcode() == Instruction::ICmp;
+    if (OpE->getOpcode() == Instruction::Trunc) {
+      if (!all_of(OpE->Scalars, [](Value *V) {
+            return match(V, m_OneUse(m_Trunc(m_Value())));
+          }))
+        return nullptr;
+      WideOpIdx = 0;
+    } else if (IsZeroTest) {
+      if (!all_of(OpE->Scalars, [](Value *V) {
+            auto *CI = dyn_cast<ICmpInst>(V);
+            return CI && CI->hasOneUse() &&
+                   CI->getPredicate() == ICmpInst::ICMP_NE;
+          }))
+        return nullptr;
+      if (all_of(OpE->getOperand(0),
+                 [](Value *V) { return match(V, m_Zero()); }))
+        WideOpIdx = 1;
+      else if (all_of(OpE->getOperand(1),
+                      [](Value *V) { return match(V, m_Zero()); }))
+        WideOpIdx = 0;
+      else
+        return nullptr;
+    } else {
+      return nullptr;
+    }
+    Type *WideTy = OpE->getOperand(WideOpIdx).front()->getType();
+    if (!WideTy->isIntegerTy())
+      return nullptr;
+    for (Value *W : OpE->getOperand(WideOpIdx)) {
+      if (W->getType() != WideTy || !isGuaranteedNotToBePoison(W) ||
+          (IsZeroTest && computeKnownBits(W, *DL).getMaxValue() != 1))
+        return nullptr;
+    }
+    return WideTy;
+  };
+  // The wide value of a booleanized node is valid only in bit 0, so every
+  // tree user must consume it as an i1 vector: either a booleanized and/or
+  // node (which uses the wide value directly) or a node whose emission
+  // truncates the operand back to the i1 vector type.
+  auto IsSafeBoolUser = [&](const TreeEntry *UserTE, unsigned EdgeIdx) {
+    if (!UserTE->hasState() || UserTE->isAltShuffle())
+      return false;
+    if (Instruction::isBinaryOp(UserTE->getOpcode()))
+      return true;
+    switch (UserTE->getOpcode()) {
+    case Instruction::Store:
+      return EdgeIdx == 0;
+    case Instruction::InsertElement:
+      return EdgeIdx == 1;
+    case Instruction::Select:
+      return EdgeIdx != 0;
+    case Instruction::Freeze:
+    case Instruction::PHI:
+      return true;
+    default:
+      return false;
+    }
+  };
+  // Visit operand nodes before their users so that booleanized and/or nodes
+  // chain: an and/or node whose operand is itself a booleanized and/or node
+  // consumes the wide value directly.
+  for (const std::unique_ptr<TreeEntry> &TE : reverse(VectorizableTree)) {
+    // Logical and/or on i1 with booleanized wide leaves is emitted in the
+    // wide type: bit 0 of a bitwise and/or is the and/or of the operands'
+    // bit 0. The leaf conversions are absorbed and a single trunc of the
+    // wide vector result restores the i1 lanes. Wide leaves must be
+    // non-poison: and/or may mask poison in the i1 type, which the wide ops
+    // would propagate instead.
+    if (TE->State != TreeEntry::Vectorize || TE->isAltShuffle() ||
+        (TE->getOpcode() != Instruction::And &&
+         TE->getOpcode() != Instruction::Or) ||
+        !TE->getMainOp()->getType()->isIntegerTy(1) ||
+        !TE->ReuseShuffleIndices.empty() || TE->hasCopyableElements() ||
+        TE->CombinedOp != TreeEntry::NotCombinedOp ||
+        // The i1 flags (e.g. disjoint) do not apply to the wide op.
+        any_of(TE->Scalars,
+               [](Value *V) {
+                 auto *I = dyn_cast<Instruction>(V);
+                 return !I || I->hasPoisonGeneratingFlags();
+               }) ||
+        any_of(TE->getReassocScalars(),
+               [](Value *V) {
+                 return cast<Instruction>(V)->hasPoisonGeneratingFlags();
+               }) ||
+        // Reduction trees are handled by the reduction's own booleanization.
+        UserIgnoreList ||
+        (TE->UserTreeIndex.UserTE &&
+         !IsSafeBoolUser(TE->UserTreeIndex.UserTE,
+                         TE->UserTreeIndex.EdgeIdx)) ||
+        !all_of(TE->Scalars,
+                [&](Value *V) { return getTreeEntries(V).size() == 1; }))
+      continue;
+    Type *WideTy = nullptr;
+    bool Bail = false;
+    for (unsigned I : seq<unsigned>(TE->getNumOperands())) {
+      const TreeEntry *OpE = getOperandEntry(TE.get(), I);
+      Type *ColTy = GetBoolLeafWideTy(OpE);
+      if (!ColTy && isBooleanizedNode(OpE) &&
+          (OpE->getOpcode() == Instruction::And ||
+           OpE->getOpcode() == Instruction::Or))
+        ColTy = IntegerType::get(F->getContext(), MinBWs.lookup(OpE).first);
+      if (!ColTy || (WideTy && ColTy != WideTy)) {
+        Bail = true;
+        break;
+      }
+      WideTy = ColTy;
+    }
+    if (Bail || !WideTy)
+      continue;
+    unsigned WideBW = WideTy->getIntegerBitWidth();
+    MinBWs.try_emplace(TE.get(), WideBW, /*IsSigned=*/false);
+    for (unsigned I : seq<unsigned>(TE->getNumOperands()))
+      MinBWs.try_emplace(getOperandEntry(TE.get(), I), WideBW,
+                         /*IsSigned=*/false);
+  }
+}
+
 InstructionCost
 BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
                                                Instruction *RdxRoot) {
@@ -18757,6 +18969,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         *TTI, SLPReVec, ScalarTy,
         cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
         ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
+    // Scale the extract cost to the subtree's execution frequency: the
+    // subtree and gather costs it is compared against are already loop-scaled.
+    if (KeepCost.isValid() && KeepCost != 0)
+      KeepCost *= getEntryEffectiveScale(*TE);
     // Add the cost of the subtree itself, computed before any trimming:
     // trimming of the subtree's own nodes would otherwise make it look
     // artificially cheap.
@@ -20991,6 +21207,17 @@ Instruction &BoUpSLP::getLastInstructionInBundle(const TreeEntry *E) {
 void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   auto *Front = E->getMainOp();
   Instruction *LastInst = &getLastInstructionInBundle(E);
+  // Struct-call extractvalue entries may have scalars in different basic
+  // blocks. The vector extractvalue depends only on the vectorized call, so
+  // use the call bundle to set the insert point and dominate all uses.
+  const bool UseCallBundleInsertPoint =
+      E->getOpcode() == Instruction::ExtractValue &&
+      !E->StructEVIndices.empty() &&
+      any_of(E->Scalars, [BB = Front->getParent()](Value *V) {
+        return cast<Instruction>(V)->getParent() != BB;
+      });
+  if (UseCallBundleInsertPoint)
+    LastInst = &getLastInstructionInBundle(getOperandEntry(E, 0));
   assert(LastInst && "Failed to find last instruction in bundle");
   BasicBlock::iterator LastInstIt = LastInst->getIterator();
   // If the instruction is PHI, set the insert point after all the PHIs.
@@ -21003,6 +21230,7 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   }
   if (IsPHI ||
       (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
+       !UseCallBundleInsertPoint &&
        (E->doesNotNeedToSchedule() ||
         (E->hasCopyableElements() && !E->isCopyableElement(LastInst) &&
          isUsedOutsideBlock(LastInst)))) ||
@@ -23141,8 +23369,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
       }
 
-      Value *V = Builder.CreateCmp(P0, L, R);
-      V = PropagateIRFlags(V);
+      // A booleanized zero-test leaf emits no comparison: its value is the
+      // wide operand vector, and the i1 lanes are restored by the trunc at
+      // the booleanized user node. (Trunc leaves are no-ops after the generic
+      // MinBWs cast processing.)
+      bool IsBooleanized = isBooleanizedNode(E);
+      Value *V = IsBooleanized
+                     ? (all_of(E->getOperand(0),
+                               [](Value *V) { return match(V, m_Zero()); })
+                            ? R
+                            : L)
+                     : Builder.CreateCmp(P0, L, R);
+      if (!IsBooleanized)
+        V = PropagateIRFlags(V);
       // Do not cast for cmps.
       VecTy = cast<FixedVectorType>(V->getType());
       V = FinalShuffle(V, E);
@@ -26172,6 +26411,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
           const auto *It = find(Op, I);
           assert(It != Op.end() && "Lane not set");
           SmallPtrSet<Instruction *, 4> Visited;
+          bool HadSelfUse = false;
           do {
             int Lane = std::distance(Op.begin(), It);
             assert(Lane >= 0 && "Lane not set");
@@ -26183,16 +26423,23 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             auto *In = cast<Instruction>(EI.UserTE->Scalars[Lane]);
             if (!Visited.insert(In).second) {
               It = find(make_range(std::next(It), Op.end()), I);
-              break;
+              continue;
             }
+            HadSelfUse |= In == I;
             ScheduleCopyableDataMapByInstUser
                 [std::make_pair(std::make_pair(In, EI.EdgeIdx), I)]
                     .pop_back();
             It = find(make_range(std::next(It), Op.end()), I);
           } while (It != Op.end());
-          EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
-          if (ScheduleCopyableData *UserCD = getScheduleCopyableData(UserEI, I))
-            ScheduleCopyableDataMapByUsers[I].insert(UserCD);
+          // Restore the parent-edge copyable data as a user of I only if the
+          // cancelled data displaced it at creation (chained copyable
+          // self-use); otherwise the extra user dependency is never released.
+          if (HadSelfUse) {
+            EdgeInfo UserEI = EI.UserTE->UserTreeIndex;
+            if (ScheduleCopyableData *UserCD =
+                    getScheduleCopyableData(UserEI, I))
+              ScheduleCopyableDataMapByUsers[I].insert(UserCD);
+          }
         }
         if (ScheduleCopyableDataMapByUsers[I].empty())
           ScheduleCopyableDataMapByUsers.erase(I);
@@ -27491,6 +27738,10 @@ bool BoUpSLP::collectValuesToDemote(
 static RecurKind getRdxKind(Value *V);
 
 void BoUpSLP::computeMinimumValueSizes() {
+  // Detect booleanized i1 and/or nodes first: they are registered in MinBWs
+  // like the demoted nodes and processed the same way.
+  detectBooleanizedNodes();
+
   // We only attempt to truncate integer expressions.
   bool IsStoreOrInsertElt =
       getRootNode().hasState() &&
@@ -30177,10 +30428,84 @@ public:
           ReducedValsCandidates = std::move(NewCandidates);
         }
       }
+      // Cap on the number of reduced values, including booleanized leaves.
+      constexpr unsigned ReducedValsLimit = 1024;
+      // Logical and/or reductions on i1 may have booleanized wide leaves:
+      // truncs of same-op chains or zero-tests of values from [0, 1].
+      // Reducing in the wide type and taking bit 0 of the result is
+      // equivalent, since trunc of a bitwise and/or is the bitwise and/or of
+      // the truncs, and it exposes the underlying (usually consecutive) wide
+      // values to the tree. All final leaves must be non-poison: the logical
+      // select/and/or ops may mask poison, which the wide reduction would
+      // propagate instead.
+      if ((RdxKind == RecurKind::And || RdxKind == RecurKind::Or) &&
+          RK == ReductionOrdering::Unordered && !IsCmpSelMinMax &&
+          Ty->isIntegerTy(1) && any_of(ReducedValsCandidates, [](Value *V) {
+            return isa<TruncInst, ICmpInst>(V);
+          })) {
+        unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
+        auto BooleanizeLeaves = [&]() {
+          Type *WideTy = nullptr;
+          SmallVector<Value *> NewCandidates;
+          SmallVector<Instruction *> ChainInsts;
+          for (Value *Cand : ReducedValsCandidates) {
+            SmallVector<Instruction *> RdxOps = ReducedValsToOps.lookup(Cand);
+            SmallVector<Value *> Worklist(1, Cand);
+            while (!Worklist.empty()) {
+              Value *V = Worklist.pop_back_val();
+              if (V->getType()->isIntegerTy(1)) {
+                Value *X;
+                // trunc iN to i1: bit 0 of the wide value.
+                if (match(V, m_OneUse(m_Trunc(m_Value(X))))) {
+                  ChainInsts.push_back(cast<Instruction>(V));
+                  Worklist.push_back(X);
+                  continue;
+                }
+                // Zero-test of a value from [0, 1]: same as bit 0 of the
+                // value.
+                CmpPredicate Pred;
+                if (match(V, m_OneUse(m_c_ICmp(Pred, m_Value(X), m_Zero()))) &&
+                    Pred == ICmpInst::ICMP_NE && X->getType()->isIntegerTy() &&
+                    computeKnownBits(X, DL).getMaxValue() == 1) {
+                  ChainInsts.push_back(cast<Instruction>(V));
+                  Worklist.push_back(X);
+                  continue;
+                }
+                return;
+              }
+              if (!V->getType()->isIntegerTy())
+                return;
+              // Same-op chain node: bit 0 of a bitwise and/or is the and/or
+              // of the operands' bit 0.
+              if (auto *BO = dyn_cast<BinaryOperator>(V);
+                  BO && BO->getOpcode() == RdxOpcode && BO->hasOneUse() &&
+                  !BO->hasPoisonGeneratingFlags()) {
+                ChainInsts.push_back(BO);
+                Worklist.push_back(BO->getOperand(1));
+                Worklist.push_back(BO->getOperand(0));
+                continue;
+              }
+              if (!isGuaranteedNotToBePoison(V) ||
+                  (WideTy && V->getType() != WideTy))
+                return;
+              if (!WideTy)
+                WideTy = V->getType();
+              NewCandidates.push_back(V);
+              ReducedValsToOps[V].append(RdxOps);
+              if (NewCandidates.size() > ReducedValsLimit)
+                return;
+            }
+          }
+          if (WideTy) {
+            NarrowedChainInsts.append(ChainInsts);
+            ReducedValsCandidates = std::move(NewCandidates);
+          }
+        };
+        BooleanizeLeaves();
+      }
       // Too many integer reduced values candidates for the ordered
       // reductions after adjustements - try to switch to unordered
       // reductions instead.
-      constexpr unsigned ReducedValsLimit = 1024;
       if (ReducedValsCandidates.size() > ReducedValsLimit &&
           AdjustedToOrdered &&
           ReducedValsCandidates.front()->getType()->isIntOrIntVectorTy())
@@ -31151,10 +31476,35 @@ public:
       return VectorizedTree;
     }
 
+    // A booleanized logical and/or reduction has an i1 root and wide integer
+    // reduced values; it is performed in the wide type and bit 0 of the
+    // result is the final value.
+    Type *BoolReduxWideTy =
+        getBoolReduxWideTy(RdxKind, ReductionRoot->getType(),
+                           ReducedVals.front().front()->getType());
     if (!VectorValuesAndScales.empty()) {
       Builder.setFastMathFlags(GroupRdxFMF);
-      auto [Res, ResNegated] =
-          emitReduction(Builder, *TTI, ReductionRoot->getType());
+      Value *Res = nullptr;
+      bool ResNegated = false;
+      const ReductionVectorPart &P = VectorValuesAndScales.front();
+      // A single fully vectorized booleanized reduction without scalar
+      // remainders can be emitted as trunc+bitcast+cmp, if cheaper.
+      if (BoolReduxWideTy && !VectorizedTree &&
+          VectorValuesAndScales.size() == 1 && !P.ReducedInTree && !P.Negated &&
+          isa<FixedVectorType>(P.Vec->getType()) &&
+          none_of(ReducedVals, [&](ArrayRef<Value *> Candidates) {
+            return any_of(Candidates, [&](Value *RdxVal) {
+              return VectorizedVals.lookup(RdxVal) <
+                     ReducedValsToOps.at(RdxVal).size();
+            });
+          }))
+        Res = tryEmitBoolReduxBitcastCmp(Builder, *TTI, RdxKind, P.Vec,
+                                         ReductionRoot, GroupRdxFMF,
+                                         V.getCostKind());
+      if (!Res)
+        std::tie(Res, ResNegated) = emitReduction(
+            Builder, *TTI,
+            BoolReduxWideTy ? BoolReduxWideTy : ReductionRoot->getType());
       Builder.setFastMathFlags(RdxFMF);
       // The reduction result of the all-negated parts is subtracted in the
       // final combine.
@@ -31334,6 +31684,10 @@ public:
       VectorizedTree = Op;
     }
 
+    if (BoolReduxWideTy &&
+        VectorizedTree->getType() != ReductionRoot->getType())
+      VectorizedTree =
+          Builder.CreateTrunc(VectorizedTree, ReductionRoot->getType());
     ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
     // The original scalar reduction is expected to have no remaining
@@ -31771,8 +32125,8 @@ private:
                                                ? getSameOpcode(RdxOp, TLI)
                                                : InstructionsState::invalid();
                 if (RdxOpS && RdxOpS.isAddSubOrFNegLikeOp()) {
-                  InstructionCost FMACost = canConvertToFMA(
-                      RdxOp, RdxOpS, DT, DL, *TTI, TLI, CostKind);
+                  InstructionCost FMACost =
+                      canConvertToFMA(RdxOp, RdxOpS, DT, DL, *TTI, TLI, R);
                   if (FMACost.isValid()) {
                     LLVM_DEBUG(dbgs() << "FMA cost: " << FMACost << "\n");
                     if (auto *I = dyn_cast<Instruction>(RdxVal)) {
@@ -31815,6 +32169,8 @@ private:
     case RecurKind::FAdd:
     case RecurKind::FMul: {
       unsigned RdxOpcode = RecurrenceDescriptor::getOpcode(RdxKind);
+      Type *BoolReduxWideTy =
+          getBoolReduxWideTy(RdxKind, ReductionRoot->getType(), ScalarTy);
       if (!AllConsts) {
         if (!NarrowedLeafShifts.empty()) {
           Type *WideTy = ReductionRoot->getType();
@@ -31865,7 +32221,20 @@ private:
             Type *RedTy = VectorTy->getElementType();
             auto [RType, IsSigned] = R.getRootNodeTypeWithNoCast().value_or(
                 std::make_pair(RedTy, true));
-            if (RType == RedTy) {
+            if (BoolReduxWideTy) {
+              auto *WideVecTy = cast<FixedVectorType>(
+                  getWidenedType(BoolReduxWideTy, ReduxWidth));
+              VectorCost = getBoolReduxWideRdxCost(
+                  *TTI, RdxKind, WideVecTy, ReductionRoot, FMF, CostKind);
+              // The trunc+bitcast+cmp form applies only when the whole
+              // reduction is a single vector part, without scalar remainders.
+              if (this->ReducedVals.size() == 1 &&
+                  ReducedVals.size() == this->ReducedVals.front().size())
+                VectorCost = std::min(
+                    VectorCost, getBoolReduxBitcastCmpCost(
+                                    *TTI, RdxKind, WideVecTy, ReductionRoot,
+                                    NarrowedChainInsts, CostKind));
+            } else if (RType == RedTy) {
               VectorCost = TTI->getArithmeticReductionCost(RdxOpcode, VectorTy,
                                                            FMF, CostKind);
             } else {
@@ -31899,7 +32268,7 @@ private:
             if (!Ops.empty()) {
               InstructionsState S = getSameOpcode(Ops, TLI);
               if (S && S.isAddSubOrFNegLikeOp())
-                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, CostKind);
+                FMACost = canConvertToFMA(Ops, S, DT, DL, *TTI, TLI, R);
               if (FMACost.isValid()) {
                 // Calculate actual FMAD cost.
                 IntrinsicCostAttributes ICA(Intrinsic::fmuladd, RVecTy,
@@ -32742,8 +33111,7 @@ bool SLPVectorizerPass::tryToVectorize(
   if (!AllowFMACandidates &&
       (I->getOpcode() == Instruction::FAdd ||
        I->getOpcode() == Instruction::FSub) &&
-      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI,
-                      R.getCostKind())
+      canConvertToFMA(I, getSameOpcode(I, *TLI), *DT, *DL, *TTI, *TLI, R)
           .isValid()) {
     FMACandidates.insert(I);
     return false;
@@ -33446,10 +33814,10 @@ bool SLPVectorizerPass::vectorizeNonVectorizableInsts(
   }
   if (Operands.size() <= 1)
     return Changed;
-  constexpr unsigned Limit = 32;
   Changed |= tryToVectorizeSequence<Value>(
       Operands, OperandSorter, AreCompatibleOperands,
-      [this, &R, Limit](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+      [this, &R](ArrayRef<Value *> Candidates, bool MaxVFOnly) {
+        constexpr unsigned Limit = 32;
         // Limit to StandaloneSeeds if !MaxVFOnly to avoid quadratic scan for
         // large set of candidates.
         return tryToVectorizeList(Candidates, R, MaxVFOnly,
@@ -34047,8 +34415,7 @@ bool SLPVectorizerPass::vectorizeOnceUsedSeeds(BasicBlock *BB, BoUpSLP &R) {
       auto *U = cast<Instruction>(I.user_back());
       if (InstructionsState S = getSameOpcode(U, *TLI);
           S && S.isAddSubLikeOp() &&
-          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R.getCostKind())
-              .isValid())
+          canConvertToFMA(U, S, *DT, *DL, *TTI, *TLI, R).isValid())
         continue;
     }
     // The keys are hashes, so the groups are numbered by the first seed to
