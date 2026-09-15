@@ -370,14 +370,16 @@ bool ARMTargetInfo::isBranchProtectionSupportedArch(StringRef Arch) const {
   return a.isArmT32() && (Profile == llvm::ARM::ProfileKind::M);
 }
 
-bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
+bool ARMTargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                              BranchProtectionInfo &BPI,
                                              const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple()))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple()))
     return false;
 
+  StringRef Arch = Attr.CPU.empty() ? getTargetOpts().CPU : Attr.CPU;
   if (!isBranchProtectionSupportedArch(Arch))
     return false;
 
