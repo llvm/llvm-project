@@ -1325,6 +1325,17 @@ public:
   /// \return the number of registers in the target-provided register class.
   LLVM_ABI unsigned getNumberOfRegisters(unsigned ClassID) const;
 
+  /// \return The number of registers available to \p F before the register
+  /// allocator is forced to spill, or std::nullopt if the target cannot
+  /// provide a meaningful bound.
+  ///
+  /// Unlike getNumberOfRegisters(), which some targets deliberately
+  /// under-report to tune vectorization and interleaving, this is meant to be
+  /// a real budget usable by register-pressure heuristics. Targets with
+  /// several register files report the budget for the file that dominates
+  /// pressure.
+  LLVM_ABI std::optional<unsigned> getRegisterBudget(const Function &F) const;
+
   /// \return true if the target supports load/store that enables fault
   /// suppression of memory operands when the source condition is false.
   LLVM_ABI bool hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const;
