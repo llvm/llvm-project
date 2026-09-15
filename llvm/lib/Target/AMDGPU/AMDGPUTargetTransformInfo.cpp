@@ -225,8 +225,9 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
             (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
              !isa<Argument>(GEP->getPointerOperand())))
           continue;
-        LLVM_DEBUG(dbgs() << "Gating unroll runtime by local knob for loop:\n"
-                          << *L << " due to LDS use.\n");
+        if (UP.Runtime && !UnrollRuntimeLocal)
+          LLVM_DEBUG(dbgs() << "Gating unroll runtime by local knob for loop:\n"
+                            << *L << " due to LDS use.\n");
         UP.Runtime &= UnrollRuntimeLocal;
       }
 

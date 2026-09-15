@@ -10,8 +10,21 @@
 @global_smem = external addrspace(3) global [0 x i8], align 16
 
 ; CHECK-LABEL: @gemm_k_loop(
-; DEFAULT: loop.epil:
-; NOLOCAL-NOT: loop.epil
+;
+; With the knob on (default), the LDS loop is runtime unrolled: the body is
+; replicated (mfma.1 .. mfma.7) and a remainder epilogue is emitted.
+; DEFAULT:       loop:
+; DEFAULT:         %mfma = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(
+; DEFAULT:         %mfma.7 = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(
+; DEFAULT:       loop.epil:
+;
+; With the knob off, the LDS loop is left intact: one mfma per iteration and a
+; single latch branch back to itself, no unrolled copies and no epilogue.
+; NOLOCAL:       loop:
+; NOLOCAL:         %mfma = tail call <4 x float> @llvm.amdgcn.mfma.f32.16x16x32.bf16(
+; NOLOCAL-NEXT:    %iv.next = add nuw nsw i32 %iv, 1
+; NOLOCAL-NEXT:    %exit = icmp eq i32 %iv.next, %n
+; NOLOCAL-NEXT:    br i1 %exit, label %end, label %loop
 define amdgpu_kernel void @gemm_k_loop(<8 x bfloat> %a, i32 %n) {
 entry:
   br label %loop
