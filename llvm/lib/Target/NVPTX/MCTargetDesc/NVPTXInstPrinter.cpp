@@ -496,26 +496,20 @@ void NVPTXInstPrinter::printSPQualifier(const MCInst *MI, int OpNum,
 
   unsigned Imm = MI->getOperand(OpNum).getImm();
   if (Modifier == "elem_size") {
-    StringRef ElemSize =
-        nvvm::getSPElemSizeName(static_cast<nvvm::SPElemSize>(Imm));
-    assert(!ElemSize.empty() && "invalid SP elem_size");
-    O << ElemSize;
+    assert(nvvm::isValidSPElemSize(Imm) && "invalid SP elem_size");
+    O << ".b" << Imm;
     return;
   }
 
   if (Modifier == "idx_size") {
-    StringRef IdxSize =
-        nvvm::getSPIdxSizeName(static_cast<nvvm::SPIdxSize>(Imm));
-    assert(!IdxSize.empty() && "invalid SP idx_size");
-    O << IdxSize;
+    assert(nvvm::isValidSPIdxSize(Imm) && "invalid SP idx_size");
+    O << ".b" << Imm;
     return;
   }
 
   if (Modifier == "repeat_factor") {
-    StringRef RepeatFactor =
-        nvvm::getSPRepeatFactorName(static_cast<nvvm::SPRepeatFactor>(Imm));
-    assert(!RepeatFactor.empty() && "invalid SP repeat_factor");
-    O << RepeatFactor;
+    assert(nvvm::isValidSPRepeatFactor(Imm) && "invalid SP repeat_factor");
+    O << ".x" << Imm;
     return;
   }
 

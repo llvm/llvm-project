@@ -15,15 +15,16 @@
 #ifndef LLVM_IR_NVVMINTRINSICUTILS_H
 #define LLVM_IR_NVVMINTRINSICUTILS_H
 
+#include <optional>
 #include <stdint.h>
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -194,26 +195,8 @@ enum class MBarrierLayout : uint8_t {
   V1 = 1,
 };
 
-enum class SPElemSize : uint64_t {
-  B8 = 8,
-  B16 = 16,
-};
-
-enum class SPIdxSize : uint64_t {
-  B2 = 2,
-  B4 = 4,
-};
-
-enum class SPRepeatFactor : uint64_t {
-  X1 = 1,
-  X2 = 2,
-  X4 = 4,
-  X8 = 8,
-  X16 = 16,
-  X32 = 32,
-  X64 = 64,
-};
-
+// Sparse intrinsic layouts are shared by the IR verifier and the NVPTX
+// instruction printer.
 struct SPOperandLayout {
   unsigned MetadataSize;
   unsigned CompressedDataSize;
@@ -224,40 +207,16 @@ struct SPOperandLayout {
 // of spcompress and spdecompress to 253 32-bit registers.
 inline constexpr unsigned MaxSPOperandRegisters = 253;
 
-inline StringRef getSPElemSizeName(SPElemSize ElemSize) {
-  static constexpr EnumStringDef<SPElemSize> SPElemSizeNameDefs[] = {
-      {{".b8"}, SPElemSize::B8},
-      {{".b16"}, SPElemSize::B16},
-  };
-  static constexpr auto SPElemSizeNames =
-      BUILD_ENUM_STRINGS(SPElemSizeNameDefs);
-  return EnumStrings(SPElemSizeNames).toString(ElemSize);
+inline bool isValidSPElemSize(unsigned ElemSize) {
+  return ElemSize == 8 || ElemSize == 16;
 }
 
-inline StringRef getSPIdxSizeName(SPIdxSize IdxSize) {
-  static constexpr EnumStringDef<SPIdxSize> SPIdxSizeNameDefs[] = {
-      {{".b2"}, SPIdxSize::B2},
-      {{".b4"}, SPIdxSize::B4},
-  };
-  static constexpr auto SPIdxSizeNames = BUILD_ENUM_STRINGS(SPIdxSizeNameDefs);
-  return EnumStrings(SPIdxSizeNames).toString(IdxSize);
-}
-
-inline StringRef getSPRepeatFactorName(SPRepeatFactor RepeatFactor) {
-  static constexpr EnumStringDef<SPRepeatFactor> SPRepeatFactorNameDefs[] = {
-      {{".x1"}, SPRepeatFactor::X1},   {{".x2"}, SPRepeatFactor::X2},
-      {{".x4"}, SPRepeatFactor::X4},   {{".x8"}, SPRepeatFactor::X8},
-      {{".x16"}, SPRepeatFactor::X16}, {{".x32"}, SPRepeatFactor::X32},
-      {{".x64"}, SPRepeatFactor::X64},
-  };
-  static constexpr auto SPRepeatFactorNames =
-      BUILD_ENUM_STRINGS(SPRepeatFactorNameDefs);
-  return EnumStrings(SPRepeatFactorNames).toString(RepeatFactor);
+inline bool isValidSPIdxSize(unsigned IdxSize) {
+  return IdxSize == 2 || IdxSize == 4;
 }
 
 inline bool isValidSPRepeatFactor(unsigned RepeatFactor) {
-  return !getSPRepeatFactorName(static_cast<SPRepeatFactor>(RepeatFactor))
-              .empty();
+  return isPowerOf2_32(RepeatFactor) && RepeatFactor <= 64;
 }
 
 inline bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
@@ -276,16 +235,12 @@ inline bool isValidSPDecompressFactor(unsigned NumSrc, unsigned NumTgt) {
 inline std::optional<SPOperandLayout>
 getSPCompressLayout(unsigned ElemSize, unsigned IdxSize,
                     unsigned RepeatFactor) {
-  if (getSPElemSizeName(static_cast<SPElemSize>(ElemSize)).empty() ||
-      getSPIdxSizeName(static_cast<SPIdxSize>(IdxSize)).empty() ||
+  if (!isValidSPElemSize(ElemSize) || !isValidSPIdxSize(IdxSize) ||
       !isValidSPRepeatFactor(RepeatFactor))
     return std::nullopt;
 
-  SPOperandLayout Layout = {
-      divideCeil(RepeatFactor * IdxSize, ElemSize),
-      RepeatFactor,
-      RepeatFactor * 2,
-  };
+  SPOperandLayout Layout = {divideCeil(RepeatFactor * IdxSize, ElemSize),
+                            RepeatFactor, RepeatFactor * 2};
   if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
       MaxSPOperandRegisters)
     return std::nullopt;
@@ -296,22 +251,18 @@ inline std::optional<SPOperandLayout>
 getSPDecompressLayout(unsigned NumSrc, unsigned NumTgt, unsigned ElemSize,
                       unsigned IdxSize, unsigned RepeatFactor) {
   if (!isValidSPDecompressFactor(NumSrc, NumTgt) ||
-      getSPElemSizeName(static_cast<SPElemSize>(ElemSize)).empty() ||
-      getSPIdxSizeName(static_cast<SPIdxSize>(IdxSize)).empty() ||
-      !isValidSPRepeatFactor(RepeatFactor))
-    return std::nullopt;
-  if (NumSrc * ElemSize > 32 || (IdxSize == 2 && NumTgt > 4))
+      !isValidSPElemSize(ElemSize) || !isValidSPIdxSize(IdxSize) ||
+      !isValidSPRepeatFactor(RepeatFactor) || NumSrc * ElemSize > 32 ||
+      (IdxSize == 2 && NumTgt > 4))
     return std::nullopt;
 
   unsigned DataBits = NumTgt * ElemSize * RepeatFactor;
   if (DataBits < 32 || DataBits > 4096)
     return std::nullopt;
 
-  SPOperandLayout Layout = {
-      divideCeil(NumSrc * IdxSize * RepeatFactor, 32),
-      divideCeil(NumSrc * ElemSize * RepeatFactor, 32),
-      divideCeil(DataBits, 32),
-  };
+  SPOperandLayout Layout = {divideCeil(NumSrc * IdxSize * RepeatFactor, 32),
+                            divideCeil(NumSrc * ElemSize * RepeatFactor, 32),
+                            divideCeil(DataBits, 32)};
   if (Layout.MetadataSize + Layout.CompressedDataSize + Layout.DataSize >
       MaxSPOperandRegisters)
     return std::nullopt;
@@ -335,7 +286,6 @@ LLVM_ABI void printTcgen05CollectorUsageOp(raw_ostream &OS,
 LLVM_ABI void printTcgen05MMACollectorBBuffer(raw_ostream &OS,
                                               const Constant *ImmArgVal);
 
-LLVM_ABI void printSPIdxSize(raw_ostream &OS, const Constant *ImmArgVal);
 LLVM_ABI void printTensormapElemType(raw_ostream &OS,
                                      const Constant *ImmArgVal);
 LLVM_ABI void printTensormapInterleaveLayout(raw_ostream &OS,
