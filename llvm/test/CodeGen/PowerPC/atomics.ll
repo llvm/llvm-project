@@ -488,11 +488,36 @@ define half @load_atomic_f16__seq_cst(ptr %ptr) {
   ret half %val
 }
 
-; FIXME: bf16_to_fp fails to select
-; define bfloat @load_atomic_bf16__seq_cst(ptr %ptr) {
-;   %val = load atomic bfloat, ptr %ptr seq_cst, align 2
-;   ret bfloat %val
-; }
+define bfloat @load_atomic_bf16__seq_cst(ptr %ptr) {
+; PPC32-LABEL: load_atomic_bf16__seq_cst:
+; PPC32:       # %bb.0:
+; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    .cfi_def_cfa_offset 16
+; PPC32-NEXT:    sync
+; PPC32-NEXT:    lhz r3, 0(r3)
+; PPC32-NEXT:    cmpw cr7, r3, r3
+; PPC32-NEXT:    slwi r3, r3, 16
+; PPC32-NEXT:    bne- cr7, .+4
+; PPC32-NEXT:    isync
+; PPC32-NEXT:    stw r3, 12(r1)
+; PPC32-NEXT:    lfs f1, 12(r1)
+; PPC32-NEXT:    addi r1, r1, 16
+; PPC32-NEXT:    blr
+;
+; PPC64-LABEL: load_atomic_bf16__seq_cst:
+; PPC64:       # %bb.0:
+; PPC64-NEXT:    sync
+; PPC64-NEXT:    lhz r3, 0(r3)
+; PPC64-NEXT:    cmpd cr7, r3, r3
+; PPC64-NEXT:    slwi r3, r3, 16
+; PPC64-NEXT:    bne- cr7, .+4
+; PPC64-NEXT:    isync
+; PPC64-NEXT:    stw r3, -4(r1)
+; PPC64-NEXT:    lfs f1, -4(r1)
+; PPC64-NEXT:    blr
+  %val = load atomic bfloat, ptr %ptr seq_cst, align 2
+  ret bfloat %val
+}
 
 define float @load_atomic_f32__seq_cst(ptr %ptr) {
 ; PPC32-LABEL: load_atomic_f32__seq_cst:
@@ -565,11 +590,34 @@ define void @store_atomic_f16__seq_cst(ptr %ptr, half %val1) {
   ret void
 }
 
-; FIXME: bf16_to_fp fails to select
-; define void @store_atomic_bf16__seq_cst(ptr %ptr, bfloat %val1) {
-;   store atomic bfloat %val1, ptr %ptr seq_cst, align 2
-;   ret void
-; }
+define void @store_atomic_bf16__seq_cst(ptr %ptr, bfloat %val1) {
+; PPC32-LABEL: store_atomic_bf16__seq_cst:
+; PPC32:       # %bb.0:
+; PPC32-NEXT:    stwu r1, -16(r1)
+; PPC32-NEXT:    .cfi_def_cfa_offset 16
+; PPC32-NEXT:    lis r4, .LCPI21_0@ha
+; PPC32-NEXT:    lfs f0, .LCPI21_0@l(r4)
+; PPC32-NEXT:    fmuls f0, f1, f0
+; PPC32-NEXT:    stfs f0, 12(r1)
+; PPC32-NEXT:    lhz r4, 12(r1)
+; PPC32-NEXT:    sync
+; PPC32-NEXT:    sth r4, 0(r3)
+; PPC32-NEXT:    addi r1, r1, 16
+; PPC32-NEXT:    blr
+;
+; PPC64-LABEL: store_atomic_bf16__seq_cst:
+; PPC64:       # %bb.0:
+; PPC64-NEXT:    addis r4, r2, .LCPI21_0@toc@ha
+; PPC64-NEXT:    lfs f0, .LCPI21_0@toc@l(r4)
+; PPC64-NEXT:    fmuls f0, f1, f0
+; PPC64-NEXT:    stfs f0, -4(r1)
+; PPC64-NEXT:    lhz r4, -4(r1)
+; PPC64-NEXT:    sync
+; PPC64-NEXT:    sth r4, 0(r3)
+; PPC64-NEXT:    blr
+  store atomic bfloat %val1, ptr %ptr seq_cst, align 2
+  ret void
+}
 
 define void @store_atomic_f32__seq_cst(ptr %ptr, float %val1) {
 ; PPC32-LABEL: store_atomic_f32__seq_cst:
