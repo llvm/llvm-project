@@ -46,7 +46,7 @@ jobs:
       # TODO(boomanaiden154): This is a temporary work-around for AArch64 that
       # we should remove once the depot images no longer have the lock in them
       # by default.
-      - name: Clear apt-get lock
+      - name: Wait for apt-get to finish
         if: runner.arch == 'ARM64'
         run: |
           while pgrep "apt-get" > /dev/null; do
