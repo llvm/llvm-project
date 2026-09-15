@@ -9,19 +9,38 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 define void @func_34(ptr %dst) {
 ; CHECK-LABEL: define void @func_34(
 ; CHECK-SAME: ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[SEXT:%.*]] = shl i32 [[IV]], 16
-; CHECK-NEXT:    [[STEP:%.*]] = ashr exact i32 [[SEXT]], 16
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[STEP]], ptr [[GEP]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[STEP]], 1
-; CHECK-NEXT:    [[IV_NEXT_TRUNC:%.*]] = trunc i32 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[EC:%.*]] = icmp slt i16 [[IV_NEXT_TRUNC]], 3
-; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2:.*]]
+; CHECK:       [[PRED_STORE_IF1]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 1
+; CHECK-NEXT:    store i32 1, ptr [[TMP0]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
+; CHECK:       [[PRED_STORE_CONTINUE2]]:
+; CHECK-NEXT:    br i1 true, label %[[PRED_STORE_IF3:.*]], label %[[PRED_STORE_CONTINUE4:.*]]
+; CHECK:       [[PRED_STORE_IF3]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 2
+; CHECK-NEXT:    store i32 2, ptr [[TMP1]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE4]]
+; CHECK:       [[PRED_STORE_CONTINUE4]]:
+; CHECK-NEXT:    br i1 false, label %[[PRED_STORE_IF5:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
+; CHECK:       [[PRED_STORE_IF5]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 3
+; CHECK-NEXT:    store i32 3, ptr [[TMP2]], align 4
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
