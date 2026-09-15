@@ -26,6 +26,7 @@
 namespace clang {
 
 class ASTContext;
+class ASTContextStateRecovery;
 class CXXRecordDecl;
 
 /// ASTRecordLayout -
@@ -60,6 +61,7 @@ public:
 
 private:
   friend class ASTContext;
+  friend class ASTContextStateRecovery;
 
   /// Size - Size of record in characters.
   CharUnits Size;

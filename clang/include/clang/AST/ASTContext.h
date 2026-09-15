@@ -85,6 +85,7 @@ template <> struct DenseMapInfo<ScalableVecTyKey> {
 namespace clang {
 
 class APValue;
+class ASTContextStateRecovery;
 class ASTMutationListener;
 class ASTRecordLayout;
 class AtomicExpr;
@@ -240,6 +241,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
   mutable SmallVector<Type *, 0> Types;
+
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
   mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
@@ -608,6 +610,7 @@ private:
   template <class> friend class serialization::AbstractTypeReader;
   friend class CXXRecordDecl;
   friend class IncrementalParser;
+  friend class ASTContextStateRecovery;
 
   /// A mapping to contain the template or declaration that
   /// a variable declaration describes or was instantiated from,
@@ -1352,6 +1355,10 @@ public:
       TraversalScope = {NewTUDecl};
     if (TUDecl)
       NewTUDecl->setPreviousDecl(TUDecl);
+    TUDecl = NewTUDecl;
+  }
+
+  void setTranslationUnitDecl(TranslationUnitDecl *NewTUDecl) {
     TUDecl = NewTUDecl;
   }
 

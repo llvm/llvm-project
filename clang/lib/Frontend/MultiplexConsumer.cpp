@@ -130,6 +130,7 @@ public:
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,
                                NamespaceDecl *AnonNamespace) override;
+  void AddedTagDeclType(const TagDecl *TD, const Type *T) override;
 
 private:
   std::vector<ASTMutationListener*> Listeners;
@@ -277,6 +278,10 @@ void MultiplexASTMutationListener::AddedAnonymousNamespace(
     const TranslationUnitDecl *TU, NamespaceDecl *AnonNamespace) {
   for (auto *L : Listeners)
     L->AddedAnonymousNamespace(TU, AnonNamespace);
+}
+void MultiplexASTMutationListener::AddedTagDeclType(const TagDecl *TD, const Type *T) {
+  for (auto *L : Listeners)
+    L->AddedTagDeclType(TD, T);
 }
 
 }  // end namespace clang

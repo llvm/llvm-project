@@ -5516,6 +5516,10 @@ CanQualType ASTContext::getCanonicalTagType(const TagDecl *TD) const {
       /*OwnsTag=*/false, /*IsInjected=*/false, /*CanonicalType=*/nullptr,
       /*WithFoldingSetNode=*/false);
   TD->TypeForDecl = CanonicalType;
+
+  if (ASTMutationListener *L = getASTMutationListener())
+    L->AddedTagDeclType(TD, TD->TypeForDecl);
+
   return CanQualType::CreateUnsafe(QualType(CanonicalType, 0));
 }
 
@@ -5541,7 +5545,12 @@ QualType ASTContext::getTagType(ElaboratedTypeKeyword Keyword,
                            /*Qualifier=*/std::nullopt, NonInjectedTD,
                            /*OwnsTag=*/false, IsInjected, CanonicalType,
                            /*WithFoldingSetNode=*/false);
+
     TD->TypeForDecl = T;
+
+    if (ASTMutationListener *L = getASTMutationListener())
+      L->AddedTagDeclType(TD, TD->TypeForDecl);
+
     return QualType(T, 0);
   }
 

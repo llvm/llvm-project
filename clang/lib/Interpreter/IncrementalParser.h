@@ -63,6 +63,9 @@ public:
 
   void CleanUpPTU(TranslationUnitDecl *MostRecentTU);
 
+  template <typename decl_type>
+  void RepairRedeclChain(decl_type *D, TranslationUnitDecl *PTU);
+
   /// Register a PTU produced by Parse.
   PartialTranslationUnit &RegisterPTU(TranslationUnitDecl *TU,
                                       std::unique_ptr<llvm::Module> M = {});

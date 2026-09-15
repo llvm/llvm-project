@@ -57,6 +57,7 @@
 namespace clang {
 
 class ASTContext;
+class ASTStateReader;
 struct ASTTemplateArgumentListInfo;
 class CompoundStmt;
 class DependentFunctionTemplateSpecializationInfo;
@@ -3648,6 +3649,7 @@ public:
 class TypeDecl : public NamedDecl {
   friend class ASTContext;
   friend class ASTReader;
+  friend class ASTStateReader;
 
   /// This indicates the Type object that represents
   /// this TypeDecl.  It is a cache maintained by
@@ -3914,6 +3916,7 @@ protected:
 
 public:
   friend class ASTDeclReader;
+  friend class ASTStateReader;
   friend class ASTDeclWriter;
 
   using redecl_range = redeclarable_base::redecl_range;
