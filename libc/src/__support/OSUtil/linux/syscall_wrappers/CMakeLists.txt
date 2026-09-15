@@ -605,6 +605,20 @@ add_header_library(
 )
 
 add_header_library(
+  mknodat
+  HDRS
+    mknodat.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.dev_t
+    libc.hdr.types.mode_t
+    libc.include.sys_syscall
+)
+
+add_header_library(
   chmod
   HDRS
     chmod.h
