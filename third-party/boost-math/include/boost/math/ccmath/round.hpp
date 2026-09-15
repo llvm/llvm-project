@@ -31,11 +31,11 @@ inline constexpr T round_impl(T arg) noexcept
     const T x = boost::math::ccmath::modf(arg, &iptr);
     constexpr T half = T(1)/2;
 
-    if(x >= half && iptr > 0)
+    if(x >= half && iptr >= 0)
     {
         return iptr + 1;
     }
-    else if(boost::math::ccmath::abs(x) >= half && iptr < 0)
+    else if(boost::math::ccmath::abs(x) >= half && iptr <= 0)
     {
         return iptr - 1;
     }

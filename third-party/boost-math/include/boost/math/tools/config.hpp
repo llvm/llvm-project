@@ -11,7 +11,7 @@
 #pragma once
 #endif
 
-#ifndef __CUDACC_RTC__
+#if !(defined(__CUDACC_RTC__) && defined(BOOST_MATH_ENABLE_NVRTC))
 
 #include <boost/math/tools/is_standalone.hpp>
 
@@ -84,6 +84,10 @@
 
 #else // Things from boost/config that are required, and easy to replicate
 
+#if __has_include(<version>)
+#include <version>
+#endif
+
 #define BOOST_MATH_PREVENT_MACRO_SUBSTITUTION
 #define BOOST_MATH_NO_REAL_CONCEPT_TESTS
 #define BOOST_MATH_NO_DISTRIBUTION_CONCEPT_TESTS
@@ -102,9 +106,9 @@
 #if ((__cplusplus > 201700L) || (defined(_MSVC_LANG) && (_MSVC_LANG > 201700L)))
 #define BOOST_MATH_IF_CONSTEXPR if constexpr
 
-// Clang on mac provides the execution header with none of the functionality. TODO: Check back on this
+// libc++ currently provides the execution header with none of the functionality.
 // https://en.cppreference.com/w/cpp/compiler_support "Standardization of Parallelism TS"
-#  if !__has_include(<execution>) || (defined(__APPLE__) && defined(__clang__))
+#  if !__has_include(<execution>) || !defined(__cpp_lib_execution) || (__cpp_lib_execution < 201603L)
 #  define BOOST_MATH_NO_CXX17_HDR_EXECUTION
 #  endif
 #else
@@ -164,7 +168,7 @@
 #    define BOOST_MATH_NOINLINE __declspec(noinline)
 #  elif defined(__GNUC__) && __GNUC__ > 3
      // Clang also defines __GNUC__ (as 4)
-#    if defined(__CUDACC__)
+#    if defined(__CUDACC__) && defined(BOOST_MATH_ENABLE_CUDA)
        // nvcc doesn't always parse __noinline__,
        // see: https://svn.boost.org/trac/boost/ticket/9392
 #      define BOOST_MATH_NOINLINE __attribute__ ((noinline))
@@ -674,7 +678,7 @@ namespace boost{ namespace math{
 // CUDA support:
 //
 
-#ifdef __CUDACC__
+#if defined(__CUDACC__) && defined(BOOST_MATH_ENABLE_CUDA)
 
 // We have to get our include order correct otherwise you get compilation failures
 #include <cuda.h>
@@ -702,14 +706,10 @@ namespace boost{ namespace math{
 #  undef BOOST_MATH_FORCEINLINE
 #  define BOOST_MATH_FORCEINLINE __forceinline__
 
-#elif defined(SYCL_LANGUAGE_VERSION)
+#elif defined(BOOST_MATH_ENABLE_SYCL)
 
 #  define BOOST_MATH_SYCL_ENABLED SYCL_EXTERNAL
 #  define BOOST_MATH_HAS_GPU_SUPPORT
-
-#  ifndef BOOST_MATH_ENABLE_SYCL
-#    define BOOST_MATH_ENABLE_SYCL
-#  endif
 
 #  ifndef BOOST_MATH_NO_EXCEPTIONS
 #    define BOOST_MATH_NO_EXCEPTIONS
@@ -774,7 +774,7 @@ BOOST_MATH_GPU_ENABLED constexpr T gpu_safe_max(const T& a, const T& b) { return
 #    define BOOST_MATH_STATIC_LOCAL_VARIABLE
 #  else
 #    define BOOST_MATH_INLINE_CONSTEXPR constexpr
-#    define BOOST_MATH_STATIC constexpr
+#    define BOOST_MATH_STATIC static
 #    define BOOST_MATH_STATIC_LOCAL_VARIABLE static
 #  endif
 #endif
