@@ -661,7 +661,7 @@ Default make(const parser::OmpClause::Default &inp,
   using wrapped = parser::OmpDefaultClause;
 
   CLAUSET_ENUM_CONVERT( //
-      convert, wrapped::DataSharingAttribute, Default::DataSharingAttribute,
+      convert1, wrapped::DataSharingAttribute, Default::DataSharingAttribute,
       // clang-format off
       MS(Firstprivate, Firstprivate)
       MS(None,         None)
@@ -670,7 +670,24 @@ Default make(const parser::OmpClause::Default &inp,
       // clang-format on
   );
 
-  return Default{/*DataSharingAttribute=*/convert(inp.v.v)};
+  CLAUSET_ENUM_CONVERT( //
+      convert2, parser::OmpVariableCategory::Value, Default::VariableCategory,
+      // clang-format off
+        MS(Aggregate,    Aggregate)
+        MS(All,          All)
+        MS(Allocatable,  Allocatable)
+        MS(Pointer,      Pointer)
+        MS(Scalar,       Scalar)
+      // clang-format on
+  );
+
+  auto &mods = semantics::OmpGetModifiers(inp.v);
+  auto &t0 = std::get<wrapped::DataSharingAttribute>(inp.v.t);
+  auto *t1 = semantics::OmpGetUniqueModifier<parser::OmpVariableCategory>(mods);
+
+  auto category = t1 ? convert2(t1->v) : Default::VariableCategory::All;
+
+  return Default{/*DataSharingAttribute=*/{convert1(t0), category}};
 }
 
 // Lower the DefaultVariant (specific to OpenMP 5.0 and 5.1) directly to
