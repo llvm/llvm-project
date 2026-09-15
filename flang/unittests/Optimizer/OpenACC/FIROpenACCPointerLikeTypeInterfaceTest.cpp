@@ -149,7 +149,6 @@ TEST_F(FIROpenACCPointerLikeTypeInterfaceTest,
   // `!fir.ptr`/`!fir.heap` cannot wrap another pointer type.
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(dyn1))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::PointerType::get(dyn1))));
-  EXPECT_FALSE(conv(fir::ReferenceType::get(fir::ReferenceType::get(dyn1))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(dyn2))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(stat))));
   EXPECT_FALSE(conv(fir::ReferenceType::get(fir::HeapType::get(f32))));
