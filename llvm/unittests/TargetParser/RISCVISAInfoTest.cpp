@@ -631,7 +631,7 @@ TEST(ParseArchString,
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
   EXPECT_EQ(Exts.count("zibi"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izibi0p1", true);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izibi0p7", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
@@ -659,7 +659,7 @@ TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64izibi9p9", true).takeError()),
       "unsupported version number 9.9 for experimental extension 'zibi' "
-      "(this compiler supports 0.1)");
+      "(this compiler supports 0.7)");
   EXPECT_EQ(
       toString(RISCVISAInfo::parseArchString("rv64y0p97", true).takeError()),
       "unsupported version number 0.97 for experimental extension 'y' "
@@ -1640,7 +1640,7 @@ R"(All available -march extensions for RISC-V
 Experimental extensions
     p                    0.21
     y                    0.98
-    zibi                 0.1
+    zibi                 0.7
     zicfilp              1.0       This is a long dummy description
     zilx                 0.1
     zvabd                0.9

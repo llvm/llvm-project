@@ -250,7 +250,7 @@
 // CHECK-NEXT: Experimental extensions
 // CHECK-NEXT:     p                    0.21      'P' ('Base P' (Packed SIMD))
 // CHECK-NEXT:     y                    0.98      'Y' ('Base Y' (CHERI))
-// CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
+// CHECK-NEXT:     zibi                 0.7       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zilx                 0.1       'Zilx' (Indexed Integer Load Instructions)
 // CHECK-NEXT:     zvabd                0.9       'Zvabd' (Vector Absolute Difference)

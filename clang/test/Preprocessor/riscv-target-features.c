@@ -873,10 +873,10 @@
 // CHECK-ZHINXMIN-EXT: __riscv_zhinxmin 1000000{{$}}
 
 // RUN: %clang --target=riscv32 -menable-experimental-extensions \
-// RUN:   -march=rv32i_zibi0p1 -E -dM %s \
+// RUN:   -march=rv32i_zibi0p7 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZIBI-EXT %s
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
-// RUN:   -march=rv64i_zibi0p1 -E -dM %s \
+// RUN:   -march=rv64i_zibi0p7 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZIBI-EXT %s
 // CHECK-ZIBI-EXT: __riscv_zibi
 
