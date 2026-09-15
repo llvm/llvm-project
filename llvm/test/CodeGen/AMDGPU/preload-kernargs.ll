@@ -1263,10 +1263,8 @@ define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) inreg %out,
 ; GFX942-NEXT:    .p2align 8
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:  .LBB25_0:
-; GFX942-NEXT:    v_mov_b32_e32 v0, s6
-; GFX942-NEXT:    v_mov_b32_e32 v1, s7
-; GFX942-NEXT:    v_mov_b32_e32 v2, s8
-; GFX942-NEXT:    v_mov_b32_e32 v3, s9
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
+; GFX942-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; GFX942-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX942-NEXT:    global_store_dwordx4 v4, v[0:3], s[2:3]
 ; GFX942-NEXT:    s_endpgm
@@ -1293,8 +1291,8 @@ define amdgpu_kernel void @fp128_kernel_preload_arg(ptr addrspace(1) inreg %out,
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_dual_mov_b32 v0, s6 :: v_dual_mov_b32 v1, s7
-; GFX1250-NEXT:    v_dual_mov_b32 v2, s8 :: v_dual_mov_b32 v3, s9
+; GFX1250-NEXT:    v_mov_b64_e32 v[0:1], s[6:7]
+; GFX1250-NEXT:    v_mov_b64_e32 v[2:3], s[8:9]
 ; GFX1250-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX1250-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX1250-NEXT:    s_endpgm

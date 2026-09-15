@@ -9,7 +9,7 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64(<2 x double> %A, <2 x double> %
 ; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[10:25], v[0:3], v[4:7], 1.0
+; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[10:25], v[0:3], v[4:7], 0
 ; GFX1251-NEXT:    s_clause 0x3
 ; GFX1251-NEXT:    global_store_b128 v[8:9], v[22:25], off offset:48
 ; GFX1251-NEXT:    global_store_b128 v[8:9], v[18:21], off offset:32
@@ -43,15 +43,15 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_non_splat(<2 x double> %A, <2 x
 ; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v11, 0x3ff00000
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1251-NEXT:    v_dual_mov_b32 v15, 2.0 :: v_dual_mov_b32 v12, v10
-; GFX1251-NEXT:    v_dual_mov_b32 v13, v11 :: v_dual_mov_b32 v14, v10
-; GFX1251-NEXT:    v_dual_mov_b32 v16, v10 :: v_dual_mov_b32 v17, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v18, v10 :: v_dual_mov_b32 v19, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v20, v10 :: v_dual_mov_b32 v21, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v22, v10 :: v_dual_mov_b32 v23, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v24, v10 :: v_dual_mov_b32 v25, v11
+; GFX1251-NEXT:    v_mov_b64_e32 v[10:11], 1.0
+; GFX1251-NEXT:    v_mov_b64_e32 v[14:15], 2.0
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1251-NEXT:    v_mov_b64_e32 v[12:13], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[16:17], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[18:19], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[20:21], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[22:23], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[24:25], v[10:11]
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[10:25], v[0:3], v[4:7], v[10:25]
 ; GFX1251-NEXT:    s_clause 0x3
@@ -104,15 +104,15 @@ define amdgpu_ps void @test_wmma_f64_16x16x4_f64_non_inlineable(<2 x double> %A,
 ; GFX1251-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1251-NEXT:    v_nop
 ; GFX1251-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1251-NEXT:    v_dual_mov_b32 v10, 0 :: v_dual_mov_b32 v11, 0x40080000
+; GFX1251-NEXT:    v_mov_b64_e32 v[10:11], 0x4008000000000000
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1251-NEXT:    v_dual_mov_b32 v12, v10 :: v_dual_mov_b32 v13, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v14, v10 :: v_dual_mov_b32 v15, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v16, v10 :: v_dual_mov_b32 v17, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v18, v10 :: v_dual_mov_b32 v19, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v20, v10 :: v_dual_mov_b32 v21, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v22, v10 :: v_dual_mov_b32 v23, v11
-; GFX1251-NEXT:    v_dual_mov_b32 v24, v10 :: v_dual_mov_b32 v25, v11
+; GFX1251-NEXT:    v_mov_b64_e32 v[12:13], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[14:15], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[16:17], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[18:19], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[20:21], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[22:23], v[10:11]
+; GFX1251-NEXT:    v_mov_b64_e32 v[24:25], v[10:11]
 ; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1251-NEXT:    v_wmma_f64_16x16x4_f64 v[10:25], v[0:3], v[4:7], v[10:25]
 ; GFX1251-NEXT:    s_clause 0x3
