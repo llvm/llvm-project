@@ -1205,10 +1205,9 @@ std::optional<BitPackInfo> computeBitPackInfo(unsigned BitWidth,
     Possible &= Masks[Idx];
     if (Possible.isZero())
       continue;
-    if (!Possible.isShiftedMask())
+    unsigned Lo, W;
+    if (!Possible.isShiftedMask(Lo, W))
       return std::nullopt;
-    unsigned Lo = Possible.countr_zero();
-    unsigned W = Possible.popcount();
     if (Info.FieldWidth == 0) {
       if (W % 8 != 0 || BitWidth % W != 0)
         return std::nullopt;

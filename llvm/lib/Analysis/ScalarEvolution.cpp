@@ -3128,10 +3128,13 @@ static bool containsConstantInAddMulChain(const SCEV *StartExpr) {
 }
 
 /// Get a canonical multiply expression, or something simpler if possible.
-const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                        SCEV::NoWrapFlags OrigFlags,
-                                        unsigned Depth) {
+SCEVUse ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
+                                    SCEVFlags Flags, unsigned Depth) {
+  SCEV::NoWrapFlags OrigFlags = Flags.ExprFlags;
+  SCEV::NoWrapFlags UseFlags = Flags.UseFlags;
   assert(OrigFlags == maskFlags(OrigFlags, SCEV::FlagNUW | SCEV::FlagNSW) &&
+         "only nuw or nsw allowed");
+  assert(UseFlags == maskFlags(UseFlags, SCEV::FlagNUW | SCEV::FlagNSW) &&
          "only nuw or nsw allowed");
   assert(!Ops.empty() && "Cannot get empty mul!");
   if (Ops.size() == 1) return Ops[0];
@@ -3151,6 +3154,12 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
   if (Folded)
     return Folded;
 
+#ifndef NDEBUG
+  // Keep track of operands after constant folding, for verification when adding
+  // use-specific flags.
+  const SmallVector<SCEVUse, 8> OrigOps(Ops.begin(), Ops.end());
+#endif
+
   // Delay expensive flag strengthening until necessary.
   auto ComputeFlags = [this, OrigFlags](const ArrayRef<SCEVUse> Ops) {
     return StrengthenNoWrapFlags(this, scMulExpr, Ops, OrigFlags);
@@ -3158,14 +3167,14 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Limit recursion calls depth.
   if (Depth > MaxArithDepth || hasHugeExpression(Ops))
-    return getOrCreateMulExpr(Ops, ComputeFlags(Ops));
+    return {getOrCreateMulExpr(Ops, ComputeFlags(Ops)), UseFlags};
 
   if (SCEV *S = findExistingSCEVInCache(scMulExpr, Ops)) {
     // Don't strengthen flags if we have no new information.
     SCEVMulExpr *Mul = static_cast<SCEVMulExpr *>(S);
     if (Mul->getNoWrapFlags(OrigFlags) != OrigFlags)
       Mul->setNoWrapFlags(ComputeFlags(Ops));
-    return S;
+    return {S, UseFlags};
   }
 
   if (const SCEVConstant *LHSC = dyn_cast<SCEVConstant>(Ops[0])) {
@@ -3232,7 +3241,8 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
             hasFlags(StrengthenNoWrapFlags(this, scMulExpr, {NarrowC, InnerAdd},
                                            SCEV::FlagAnyWrap),
                      SCEV::FlagNUW)) {
-          auto *Res = getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
+          const SCEV *Res =
+              getMulExpr(NarrowC, InnerAdd, SCEV::FlagNUW, Depth + 1);
           return getZeroExtendExpr(Res, Ops[1]->getType(), Depth + 1);
         };
       }
@@ -3428,7 +3438,9 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Okay, it looks like we really DO need an mul expr.  Check to see if we
   // already have one, otherwise create a new one.
-  return getOrCreateMulExpr(Ops, ComputeFlags(Ops));
+  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOps, Ops)) &&
+         "Tried to add SCEVUse flags after operands changed");
+  return {getOrCreateMulExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
 
 /// Represents an unsigned remainder expression based on unsigned division.
@@ -7998,7 +8010,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
               SmallVector<SCEVUse, 4> MulOps;
               MulOps.push_back(getConstant(OpC->getAPInt().ashr(GCD)));
               append_range(MulOps, LHSMul->operands().drop_front());
-              auto *NewMul = getMulExpr(MulOps, LHSMul->getNoWrapFlags());
+              const SCEV *NewMul = getMulExpr(MulOps, LHSMul->getNoWrapFlags());
               ShiftedLHS = getUDivExpr(NewMul, getConstant(DivAmt));
             }
           }
@@ -13431,11 +13443,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
 
   const SCEV *Stride = IV->getStepRecurrence(*this);
-
-  bool PositiveStride = isKnownPositive(Stride);
+  const SCEV *GuardedStride = Stride;
 
   // Whether the IV may reach the maximum value before the exit is taken.
   bool IVMayOverflow = true;
+
+  bool PositiveStride = isKnownPositive(Stride);
+  // A dominating guard may prove the stride positive.
+  if (!PositiveStride) {
+    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, L);
+    if (isKnownPositive(LoopGuardedStride)) {
+      GuardedStride = LoopGuardedStride;
+      PositiveStride = true;
+      // Encode the context-sensitive stride > 0 fact into the expression
+      Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+    }
+  }
 
   // Avoid negative or zero stride values.
   if (!PositiveStride) {
@@ -13509,7 +13532,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    IVMayOverflow = canIVOverflowOnLT(RHS, GuardedStride, IsSigned);
     if (IVMayOverflow && !NoWrap)
       return getCouldNotCompute();
   }

@@ -70,13 +70,11 @@ CGOPT(std::string, MCPU)
 CGOPT(std::string, MTune)
 CGLIST(std::string, MAttrs)
 CGOPT_EXP(Reloc::Model, RelocModel)
-CGOPT(ThreadModel, ThreadModel)
 CGOPT_EXP(CodeModel::Model, CodeModel)
 CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFP32Math)
 CGOPT(FloatABI::ABIType, FloatABIForCalls)
@@ -156,15 +154,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(Reloc::ROPI_RWPI, "ropi-rwpi",
                      "Combination of ropi and rwpi")));
   CGBINDOPT(RelocModel);
-
-  static cl::opt<ThreadModel> ThreadModel(
-      "thread-model", cl::desc("Choose threading model"),
-      cl::init(llvm::ThreadModel::POSIX),
-      cl::values(
-          clEnumValN(llvm::ThreadModel::POSIX, "posix", "POSIX thread model"),
-          clEnumValN(llvm::ThreadModel::Single, "single",
-                     "Single thread model")));
-  CGBINDOPT(ThreadModel);
 
   static cl::opt<CodeModel::Model> CodeModel(
       "code-model", cl::desc("Choose code model"),
@@ -284,11 +273,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::desc("Don't place zero-initialized symbols into bss section"),
       cl::init(false));
   CGBINDOPT(DontPlaceZerosInBSS);
-
-  static cl::opt<bool> EnableAIXExtendedAltivecABI(
-      "vec-extabi", cl::desc("Enable the AIX Extended Altivec ABI."),
-      cl::init(false));
-  CGBINDOPT(EnableAIXExtendedAltivecABI);
 
   static cl::opt<bool> EnableGuaranteedTailCallOpt(
       "tailcallopt",
@@ -554,7 +538,6 @@ codegen::getBBSectionsMode(llvm::TargetOptions &Options) {
 TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
-  Options.EnableAIXExtendedAltivecABI = getEnableAIXExtendedAltivecABI();
   Options.NoZerosInBSS = getDontPlaceZerosInBSS();
   Options.GuaranteedTailCallOpt = getEnableGuaranteedTailCallOpt();
   Options.StackSymbolOrdering = getStackSymbolOrdering();
@@ -592,7 +575,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.ThreadModel = getThreadModel();
   Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();

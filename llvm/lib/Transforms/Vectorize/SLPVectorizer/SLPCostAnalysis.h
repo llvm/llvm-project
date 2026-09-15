@@ -125,10 +125,12 @@ getExtractWithExtendCost(const TargetTransformInfo &TTI, bool ReVec,
 /// Returns the cost of the bitfield packing of \p SrcTy into \p ResultTy,
 /// picking the cheapest shift width. The packing is a trunc, an lshr, a byte
 /// shuffle and a bitcast. \p FreeByteTrunc marks the lanes as a zext from i8,
-/// so compacting them to bytes is free.
+/// so compacting them to bytes is free. \p CCH is the context of the pack's
+/// source operand.
 InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                FixedVectorType *SrcTy, Type *ResultTy,
                                const BitPackInfo &Info, bool FreeByteTrunc,
+                               TargetTransformInfo::CastContextHint CCH,
                                TargetTransformInfo::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
                                const Instruction *CxtI, unsigned &ShiftWidth);

@@ -308,6 +308,7 @@ InstructionCost getBoolReduxBitcastCmpCost(const TargetTransformInfo &TTI,
 InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
                                FixedVectorType *SrcTy, Type *ResultTy,
                                const BitPackInfo &Info, bool FreeByteTrunc,
+                               TTI::CastContextHint CCH,
                                TTI::TargetCostKind CostKind,
                                const TargetLibraryInfo *TLI,
                                const Instruction *CxtI, unsigned &ShiftWidth) {
@@ -345,9 +346,8 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
     unsigned InBytes = NumElts * BytesPerLane;
     SmallVector<int> Mask =
         getBitPackMask(Info, OutBytes, NumElts, BytesPerLane);
-    InstructionCost C =
-        TTI.getCastInstrCost(Instruction::BitCast, ResultTy, PackTy,
-                             TTI::CastContextHint::None, CostKind);
+    InstructionCost C = TTI.getCastInstrCost(Instruction::BitCast, ResultTy,
+                                             PackTy, CCH, CostKind);
     // A plain byte reversal of the shifted lanes is a bswap, no shuffle.
     if (ShuffleVectorInst::isReverseMask(Mask, InBytes)) {
       IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ResultTy, {ResultTy});
@@ -361,8 +361,8 @@ InstructionCost getBitPackCost(const TargetTransformInfo &TTI,
           /*Index=*/0, /*SubTp=*/nullptr, /*Args=*/{}, CxtI);
     }
     if (W2 != BitWidth && !(W2 == 8 && FreeByteTrunc))
-      C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy,
-                                TTI::CastContextHint::None, CostKind);
+      C += TTI.getCastInstrCost(Instruction::Trunc, ShiftTy, SrcTy, CCH,
+                                CostKind);
     if (Info.needsShift())
       C += TTI.getArithmeticInstrCost(Instruction::LShr, ShiftTy, CostKind,
                                       /*Opd1Info=*/{}, ShiftAmtInfo,

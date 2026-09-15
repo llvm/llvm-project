@@ -13788,7 +13788,7 @@ BoUpSLP::computeBitPackLayout(const TreeEntry &TE) const {
 }
 
 bool BoUpSLP::isByteZExtNode(const TreeEntry &TE) const {
-  return TE.getOpcode() == Instruction::ZExt &&
+  return TE.hasState() && TE.getOpcode() == Instruction::ZExt &&
          cast<ZExtInst>(TE.getMainOp())->getSrcTy()->isIntegerTy(8);
 }
 
@@ -13828,7 +13828,10 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
   const TreeEntry *LhsTE = getOperandEntry(ShlTE, 0);
   if (!ShiftTE->isGather() || (MaskTE && !MaskTE->isGather()))
     return false;
-  if (LhsTE->State != TreeEntry::Vectorize || LhsTE->isAltShuffle() ||
+  // The operand must be emitted as a plain vector in lane order: a vectorized
+  // node or a simple gather.
+  if ((!LhsTE->isGather() && LhsTE->State != TreeEntry::Vectorize) ||
+      (LhsTE->hasState() && LhsTE->isAltShuffle()) ||
       !LhsTE->ReorderIndices.empty() || !LhsTE->ReuseShuffleIndices.empty() ||
       MinBWs.contains(LhsTE))
     return false;
@@ -13850,9 +13853,9 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
         getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
   unsigned ShiftWidth;
   bool FreeByteTrunc = isByteZExtNode(*LhsTE);
-  InstructionCost PackCost =
-      getBitPackCost(*TTI, VecTy, ScalarTy, *Info, FreeByteTrunc, CostKind, TLI,
-                     TE.getMainOp(), ShiftWidth);
+  InstructionCost PackCost = getBitPackCost(
+      *TTI, VecTy, ScalarTy, *Info, FreeByteTrunc, getCastContextHint(*LhsTE),
+      CostKind, TLI, TE.getMainOp(), ShiftWidth);
   return PackCost.isValid() && PackCost <= VecCost;
 }
 
@@ -16835,13 +16838,26 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
         return InstructionCost::getInvalid();
       unsigned ShiftWidth;
       bool FreeByteTrunc = isByteZExtNode(*LhsTE);
-      return getBitPackCost(
-                 TTI,
-                 cast<FixedVectorType>(getWidenedType(
-                     LhsTE->getMainOp()->getType(), LhsTE->getVectorFactor())),
-                 ScalarTy, *Info, FreeByteTrunc, CostKind, TLI, E->getMainOp(),
-                 ShiftWidth) +
-             CommonCost;
+      // The pack works on the vectorized operand in its own (possibly
+      // demoted) type.
+      Type *SrcScalarTy = LhsTE->Scalars.front()->getType();
+      if (auto It = MinBWs.find(LhsTE); It != MinBWs.end())
+        SrcScalarTy = IntegerType::get(F->getContext(), It->second.first);
+      InstructionCost PackCost = getBitPackCost(
+          TTI,
+          cast<FixedVectorType>(
+              getWidenedType(SrcScalarTy, LhsTE->getVectorFactor())),
+          SrcScalarTy, *Info, FreeByteTrunc, getCastContextHint(*LhsTE),
+          CostKind, TLI, E->getMainOp(), ShiftWidth);
+      // A demoted result is re-extended to the reduction type.
+      if (SrcScalarTy != OrigScalarTy) {
+        auto It = MinBWs.find(E);
+        PackCost += TTI.getCastInstrCost(
+            It != MinBWs.end() && It->second.second ? Instruction::SExt
+                                                    : Instruction::ZExt,
+            OrigScalarTy, SrcScalarTy, getCastContextHint(*LhsTE), CostKind);
+      }
+      return PackCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -24541,9 +24557,11 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       unsigned ShiftWidth;
       const TreeEntry *LhsTE = getOperandEntry(ShlTE, /*Idx=*/0);
       bool FreeByteTrunc = isByteZExtNode(*LhsTE);
-      InstructionCost PackCost = getBitPackCost(
-          *TTI, cast<FixedVectorType>(X->getType()), ScalarTy, *Info,
-          FreeByteTrunc, CostKind, TLI, E->getMainOp(), ShiftWidth);
+      InstructionCost PackCost =
+          getBitPackCost(*TTI, cast<FixedVectorType>(X->getType()),
+                         X->getType()->getScalarType(), *Info, FreeByteTrunc,
+                         getCastContextHint(*LhsTE), CostKind, TLI,
+                         E->getMainOp(), ShiftWidth);
       assert(PackCost.isValid() && "Expected valid cost.");
       unsigned NumInsts;
       Value *V = buildBitPack(Builder, X, *Info, ShiftWidth, NumInsts);
