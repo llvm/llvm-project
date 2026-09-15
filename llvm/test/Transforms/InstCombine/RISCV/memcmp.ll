@@ -5,7 +5,7 @@ declare signext i32 @memcmp(ptr, ptr, i64)
 ; Make sure we use signext attribute for the bcmp result.
 define signext i32 @test_bcmp(ptr %mem1, ptr %mem2, i64 %size) {
 ; CHECK-LABEL: define {{[^@]+}}@test_bcmp(
-; CHECK-NEXT:    [[BCMP:%.*]] = call i32 @bcmp(ptr [[MEM1:%.*]], ptr [[MEM2:%.*]], i64 [[SIZE:%.*]])
+; CHECK-NEXT:    [[BCMP:%.*]] = call signext i32 @bcmp(ptr [[MEM1:%.*]], ptr [[MEM2:%.*]], i64 [[SIZE:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[BCMP]], 0
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP]] to i32
 ; CHECK-NEXT:    ret i32 [[ZEXT]]
