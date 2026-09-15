@@ -1377,6 +1377,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
   // not skipped by the -ffast-math fast path in addFloatingPointOptions().
   addIEEEFPModesOptions(D, Args, CmdArgs, Triple);
 
+  // Integer MOD/MODULO zero-divisor check. Forwarded here with -ffpe-trap=
+  // rather than in addFloatingPointOptions() so -ffast-math does not drop it.
+  Args.AddLastArg(CmdArgs, options::OPT_fcheck_integer_mod_zero_divisor);
+
   // Add target args, features, etc.
   addTargetOptions(Args, CmdArgs, JA.getOffloadingArch(),
                    JA.getOffloadingDeviceKind());
