@@ -277,19 +277,13 @@ end
   need not begin with a comment marker (!).
 * Classic C-style `/*comments*/` are skipped, so multi-language header
   files are easier to write and use.
-* Classic C-style `/*comments*/` can cause an otherwise valid Fortran program
-  to be rejected. For example:
+* Classic C-style `/*comments*/` in fixed source form label fields are
+  skipped only when preprocessing is enabled. Otherwise, valid Fortran
+  programs could be rejected. For example:
 ```fortran
-      write(*,10) n, n+1, n+2
-   10 format(1x,i2/*(i3))
-      print *, 'tail */'
-```
-  The last two lines become `10 format(1x,i2'` after prescan. This issue can
-  be avoided by not omitting the commas around the first slash, as in:
-```fortran
-      write(*,10) n, n+1, n+2
-   10 format(1x,i2,/,*(i3))
-      print *, 'tail */'
+      x = x
+     /* 2
+      print *, x, 'tail */ text'
 ```
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
