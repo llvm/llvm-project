@@ -14044,10 +14044,8 @@ bool ScalarEvolution::containsErasedValue(const SCEV *S) const {
 const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
   if (!isa<LoadInst, StoreInst>(Inst))
     return nullptr;
-  Type *Ty = getLoadStoreType(Inst);
-  Type *PtrTy =
-      getEffectiveSCEVType(getLoadStorePointerOperand(Inst)->getType());
-  return getSizeOfExpr(PtrTy, Ty);
+  Type *ETy = getEffectiveSCEVType(getLoadStorePointerOperand(Inst)->getType());
+  return getSizeOfExpr(ETy, getLoadStoreType(Inst));
 }
 
 //===----------------------------------------------------------------------===//
