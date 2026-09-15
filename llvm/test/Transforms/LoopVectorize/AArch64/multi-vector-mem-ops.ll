@@ -603,3 +603,57 @@ for.body:
 exit:
   ret void
 }
+
+define void @store_address(ptr noalias %x, ptr noalias %y, i64 %n) {
+; UNMASKED-SVE2P1-LABEL: define void @store_address(
+; UNMASKED-SVE2P1-SAME: ptr noalias [[X:%.*]], ptr noalias [[Y:%.*]], i64 [[N:%.*]]) #[[ATTR0]] {
+; UNMASKED-SVE2P1-NEXT:  [[ENTRY:.*:]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP0:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
+; UNMASKED-SVE2P1-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
+; UNMASKED-SVE2P1-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 3
+; UNMASKED-SVE2P1-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP2]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[MIN_ITERS_CHECK]], [[SCALAR_PH:label %.*]], label %[[VECTOR_PH:.*]]
+; UNMASKED-SVE2P1:       [[VECTOR_PH]]:
+; UNMASKED-SVE2P1-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP1]], 1
+; UNMASKED-SVE2P1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP3]], i64 0
+; UNMASKED-SVE2P1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; UNMASKED-SVE2P1-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], [[TMP2]]
+; UNMASKED-SVE2P1-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP4:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; UNMASKED-SVE2P1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; UNMASKED-SVE2P1:       [[VECTOR_BODY]]:
+; UNMASKED-SVE2P1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; UNMASKED-SVE2P1-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[TMP4]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD:%.*]] = add nuw <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
+; UNMASKED-SVE2P1-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <vscale x 2 x i64> [[STEP_ADD_2]], [[BROADCAST_SPLAT]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[VEC_IND]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 2 x ptr> [[WIDE_GEP]], i64 0
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP1:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP2:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_2]]
+; UNMASKED-SVE2P1-NEXT:    [[WIDE_GEP3:%.*]] = getelementptr inbounds i64, ptr [[X]], <vscale x 2 x i64> [[STEP_ADD_3]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP6:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> poison, <vscale x 2 x ptr> [[WIDE_GEP]], i64 0)
+; UNMASKED-SVE2P1-NEXT:    [[TMP7:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP6]], <vscale x 2 x ptr> [[WIDE_GEP1]], i64 2)
+; UNMASKED-SVE2P1-NEXT:    [[TMP8:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP7]], <vscale x 2 x ptr> [[WIDE_GEP2]], i64 4)
+; UNMASKED-SVE2P1-NEXT:    [[TMP9:%.*]] = call <vscale x 8 x ptr> @llvm.vector.insert.nxv8p0.nxv2p0(<vscale x 8 x ptr> [[TMP8]], <vscale x 2 x ptr> [[WIDE_GEP3]], i64 6)
+; UNMASKED-SVE2P1-NEXT:    store <vscale x 8 x ptr> [[TMP9]], ptr [[TMP5]], align 8
+; UNMASKED-SVE2P1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
+; UNMASKED-SVE2P1-NEXT:    [[VEC_IND_NEXT]] = add nuw <vscale x 2 x i64> [[STEP_ADD_3]], [[BROADCAST_SPLAT]]
+; UNMASKED-SVE2P1-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; UNMASKED-SVE2P1-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP23:![0-9]+]]
+; UNMASKED-SVE2P1:       [[MIDDLE_BLOCK]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %px = getelementptr inbounds i64, ptr %x, i64 %iv
+  store ptr %px, ptr %px, align 8
+  %next = add nuw i64 %iv, 1
+  %cmp = icmp ult i64 %next, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}

@@ -3992,11 +3992,9 @@ void VPlanTransforms::sinkPredicatedStores(VPlan &Plan,
 void VPlanTransforms::scaleMemoryAccessesByUF(VPlan &Plan, ElementCount VF,
                                               unsigned UF,
                                               const TargetTransformInfo &TTI) {
-  if (UF == 1)
-    return;
+  assert(UF > 1 && "Expected plan to have an UF > 1");
 
   Type *IVTy = Plan.getVectorLoopRegion()->getCanonicalIVType();
-
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {

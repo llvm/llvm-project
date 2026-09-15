@@ -422,6 +422,11 @@ public:
     return false;
   }
 
+  virtual unsigned getMaximumVFMultipleForMemoryOp(ElementCount VF,
+                                                   unsigned UF) const {
+    return 1;
+  }
+
   virtual unsigned getPreferredVFMultipleForMemoryOp(
       unsigned Opcode, Type *DataType, ElementCount VF, unsigned UF,
       bool IsMasked, std::optional<Instruction::CastOps> CastHint) const {

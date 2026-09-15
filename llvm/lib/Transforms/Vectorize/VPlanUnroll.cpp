@@ -294,8 +294,9 @@ void UnrollState::unrollHeaderPHIByUF(VPHeaderPHIRecipe *R,
 }
 
 void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
-  assert(VPI->getOpcode() == VPInstruction::VFMultipleLoad ||
-         VPI->getOpcode() == VPInstruction::VFMultipleStore);
+  assert((VPI->getOpcode() == VPInstruction::VFMultipleLoad ||
+          VPI->getOpcode() == VPInstruction::VFMultipleStore) &&
+         "expected a vf-multiple load/store");
 
   unsigned VFMultiple = cast<VPConstantInt>(VPI->getOperand(0))->getZExtValue();
   assert(VFMultiple > 1 && UF % VFMultiple == 0 &&
@@ -331,16 +332,12 @@ void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
     return;
   }
 
-  assert(VPI->getOpcode() == VPInstruction::VFMultipleLoad &&
-         "Expected a VFMultipleLoad instruction");
   // We need to extract each unroll part as a subvector.
-  auto *ExtractPart0 =
-      Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
-                           {Groups[0]->getVPSingleValue(), getConstantInt(0)});
+  auto *ExtractPart0 = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                            {Groups[0], getConstantInt(0)});
   // First VPI with an extract of the first unroll part (ExtractPart0).
-  VPI->getVPSingleValue()->replaceUsesWithIf(
+  VPI->replaceUsesWithIf(
       ExtractPart0, [&](VPUser &U, unsigned) { return &U != ExtractPart0; });
-  ToSkip.insert(ExtractPart0);
 
   // Create extracts for the remaining unroll parts and remap later uses of
   // ExtractPart0 to the correct unrolled part.
@@ -351,7 +348,6 @@ void UnrollState::unrollMemOpWithVFMultiple(VPInstruction *VPI) {
         VPInstruction::ExtractVectorForPart,
         {Group->getVPSingleValue(), getConstantInt(IndexInGroup)});
     addRecipeForPart(ExtractPart0, Extract, Part);
-    ToSkip.insert(Extract);
   }
 }
 
@@ -372,7 +368,6 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       return;
     }
   }
-
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
     if (isa<StoreInst>(RepR->getUnderlyingValue()) &&
         RepR->getOperand(1)->isDefinedOutsideLoopRegions()) {

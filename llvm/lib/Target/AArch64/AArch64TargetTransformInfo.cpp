@@ -5859,6 +5859,18 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
+unsigned AArch64TTIImpl::getMaximumVFMultipleForMemoryOp(ElementCount VF,
+                                                         unsigned UF) const {
+  if (!ST->enableSubRegLiveness())
+    return 1;
+
+  if (!ST->hasSVE2p1() || !VF.isScalable() || !isPowerOf2_32(UF))
+    return 1;
+
+  // +sve2p1 multi-vector loads/stores can handle up to four vectors.
+  return std::min(4U, UF);
+}
+
 unsigned AArch64TTIImpl::getPreferredVFMultipleForMemoryOp(
     unsigned Opcode, Type *DataTy, ElementCount VF, unsigned UF, bool IsMasked,
     std::optional<Instruction::CastOps> CastHint) const {
@@ -5872,12 +5884,6 @@ unsigned AArch64TTIImpl::getPreferredVFMultipleForMemoryOp(
   // truncating stores when the store vector-width is < a full SVE vector.
   if (Opcode == Instruction::Load &&
       (CastHint == Instruction::ZExt || CastHint == Instruction::SExt))
-    return 1;
-
-  if (!ST->enableSubRegLiveness())
-    return 1;
-
-  if (!ST->hasSVE2p1() || !VF.isScalable() || !isPowerOf2_32(UF))
     return 1;
 
   unsigned VectorWidth = VF.getKnownMinValue() * DL.getTypeSizeInBits(DataTy);
