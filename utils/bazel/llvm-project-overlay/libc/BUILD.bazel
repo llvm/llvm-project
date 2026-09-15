@@ -7546,8 +7546,8 @@ libc_support_library(
     name = "__support_math_modff128",
     hdrs = ["src/__support/math/modff128.h"],
     deps = [
-        ":__support_fputil_manipulation_functions",
         ":__support_fputil_float128",
+        ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
     ],
 )
