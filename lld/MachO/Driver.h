@@ -49,6 +49,9 @@ void parseLCLinkerOption(llvm::SmallVectorImpl<StringRef> &LCLinkerOptions,
                          InputFile *f, unsigned argc, StringRef data);
 void resolveLCLinkerOptions();
 
+std::vector<StringRef> getRerootedSearchPaths(StringRef path,
+                                              ArrayRef<StringRef> roots);
+
 std::string createResponseFile(const llvm::opt::InputArgList &args);
 
 // Check for both libfoo.dylib and libfoo.tbd (in that order).
