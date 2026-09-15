@@ -3548,6 +3548,19 @@ public:
   ///
   ///{
 
+  /// Create (or update) the '<kernel>_kernel_environment' global describing
+  /// the launch configuration of the kernel at the current insertion point,
+  ///
+  /// \param Loc The insert and source location description.
+  /// \param Attrs Structure containing the default attributes, including
+  ///        numbers of threads and teams to launch the kernel with.
+  ///
+  /// \returns the (possibly address-space-cast) kernel environment constant,
+  ///          or nullptr if \p Loc has no valid insertion point.
+  LLVM_ABI Constant *emitKernelEnvironment(
+      const LocationDescription &Loc,
+      const llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &Attrs);
+
   /// Create a runtime call for kmpc_target_init
   ///
   /// \param Loc The insert and source location description.

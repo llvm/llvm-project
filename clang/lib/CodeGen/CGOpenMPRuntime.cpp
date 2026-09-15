@@ -6256,11 +6256,14 @@ namespace {
 /// Cleanup action for uses_allocators support.
 class OMPUsesAllocatorsActionTy final : public PrePostActionTy {
   ArrayRef<std::pair<const Expr *, const Expr *>> Allocators;
+  const OMPExecutableDirective &D;
+  bool IsOffloadEntry;
 
 public:
   OMPUsesAllocatorsActionTy(
-      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators)
-      : Allocators(Allocators) {}
+      ArrayRef<std::pair<const Expr *, const Expr *>> Allocators,
+      const OMPExecutableDirective &D, bool IsOffloadEntry)
+      : Allocators(Allocators), D(D), IsOffloadEntry(IsOffloadEntry) {}
   void Enter(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
       return;
@@ -6268,6 +6271,12 @@ public:
       CGF.CGM.getOpenMPRuntime().emitUsesAllocatorsInit(
           CGF, AllocatorData.first, AllocatorData.second);
     }
+    // This kernel does not go through the device-side runtime
+    // init/deinit sequence (that is GPU-only), but the runtime still
+    // needs a '<kernel>_kernel_environment' global to know how the
+    // kernel was configured, so emit it directly here.
+    if (IsOffloadEntry)
+      CGF.CGM.getOpenMPRuntime().emitHostKernelEnvironment(D, CGF);
   }
   void Exit(CodeGenFunction &CGF) override {
     if (!CGF.HaveInsertPoint())
@@ -6279,6 +6288,14 @@ public:
   }
 };
 } // namespace
+
+void CGOpenMPRuntime::emitHostKernelEnvironment(const OMPExecutableDirective &D,
+                                                CodeGenFunction &CGF) {
+  llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs Attrs;
+  Attrs.ExecFlags = llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_GENERIC;
+  computeMinAndMaxThreadsAndTeams(D, CGF, Attrs);
+  OMPBuilder.emitKernelEnvironment(CGF.Builder, Attrs);
+}
 
 void CGOpenMPRuntime::emitTargetOutlinedFunction(
     const OMPExecutableDirective &D, StringRef ParentName,
@@ -6295,7 +6312,7 @@ void CGOpenMPRuntime::emitTargetOutlinedFunction(
       Allocators.emplace_back(D.Allocator, D.AllocatorTraits);
     }
   }
-  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators);
+  OMPUsesAllocatorsActionTy UsesAllocatorAction(Allocators, D, IsOffloadEntry);
   CodeGen.setAction(UsesAllocatorAction);
   emitTargetOutlinedFunctionHelper(D, ParentName, OutlinedFn, OutlinedFnID,
                                    IsOffloadEntry, CodeGen);

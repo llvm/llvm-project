@@ -3170,7 +3170,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP3:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC1:%.*]] = add nsw i32 [[TMP3]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC1]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP1:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP2:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[R]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load ptr, ptr @R, align 8
@@ -3224,7 +3224,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP3:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3296,7 +3296,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP4:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3330,7 +3330,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP5:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3364,7 +3364,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP6:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3474,7 +3474,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP7:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3546,7 +3546,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP8:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3580,7 +3580,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP9:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3614,7 +3614,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP10:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3648,7 +3648,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP11:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3682,7 +3682,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP12:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3716,7 +3716,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP13:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -3750,7 +3750,7 @@ int bar(int a){
 // SIMD-ONLY2-NEXT:    [[TMP4:%.*]] = load i32, ptr [[I]], align 4
 // SIMD-ONLY2-NEXT:    [[INC:%.*]] = add nsw i32 [[TMP4]], 1
 // SIMD-ONLY2-NEXT:    store i32 [[INC]], ptr [[I]], align 4
-// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP14:![0-9]+]]
+// SIMD-ONLY2-NEXT:    br label [[FOR_COND]], !llvm.loop [[LOOP15:![0-9]+]]
 // SIMD-ONLY2:       for.end:
 // SIMD-ONLY2-NEXT:    [[TMP5:%.*]] = load i32, ptr [[A]], align 4
 // SIMD-ONLY2-NEXT:    [[TMP6:%.*]] = load ptr, ptr @R, align 8
@@ -4242,7 +4242,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2:[0-9]+]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1:[0-9]+]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -4266,7 +4266,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SCC1Ev_l148.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4292,7 +4292,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1:[0-9]+]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2:[0-9]+]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -4331,7 +4331,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4459,7 +4459,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -4483,7 +4483,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SDD1Ev_l174.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4509,7 +4509,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -4548,7 +4548,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4638,7 +4638,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -4662,7 +4662,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SEC1Ev_l192.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4688,7 +4688,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -4727,7 +4727,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4789,7 +4789,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -4813,7 +4813,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SED1Ev_l199.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4839,7 +4839,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -4878,7 +4878,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -4968,7 +4968,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -4992,7 +4992,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EEC1Ev_l218.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5018,7 +5018,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -5057,7 +5057,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5119,7 +5119,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5143,7 +5143,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EED1Ev_l225.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5169,7 +5169,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -5208,7 +5208,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5298,7 +5298,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5322,7 +5322,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EEC1Ev_l218.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5348,7 +5348,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -5387,7 +5387,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5449,7 +5449,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5473,7 +5473,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EED1Ev_l225.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5499,7 +5499,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -5538,7 +5538,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5607,7 +5607,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP22]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP23:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP23]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = icmp ne i32 [[TMP24]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP25]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5698,7 +5698,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5828,7 +5828,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5899,7 +5899,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store [3 x i32] zeroinitializer, ptr [[TMP23]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP24:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 12
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[TMP24]], align 4
-// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB2]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
+// OMP-DEfAULT-NEXT:    [[TMP25:%.*]] = call i32 @__tgt_target_kernel(ptr @[[GLOB1]], i64 -1, i32 1, i32 0, ptr @.{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.region_id, ptr [[KERNEL_ARGS]])
 // OMP-DEfAULT-NEXT:    [[TMP26:%.*]] = icmp ne i32 [[TMP25]], 0
 // OMP-DEfAULT-NEXT:    br i1 [[TMP26]], label [[OMP_OFFLOAD_FAILED:%.*]], label [[OMP_OFFLOAD_CONT:%.*]]
 // OMP-DEfAULT:       omp_offload.failed:
@@ -5923,7 +5923,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[R_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[R_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[R_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3bari_l267.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -5949,7 +5949,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -5988,7 +5988,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6003,7 +6003,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SB3fooEv_l122.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6029,7 +6029,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -6068,12 +6068,12 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
 // OMP-DEfAULT-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185
-// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR3]] {
+// OMP-DEfAULT-SAME: (i32 noundef [[A:%.*]], ptr noalias noundef [[DYN_PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 // OMP-DEfAULT-NEXT:  entry:
 // OMP-DEfAULT-NEXT:    [[A_ADDR:%.*]] = alloca i32, align 4
 // OMP-DEfAULT-NEXT:    [[DYN_PTR_ADDR:%.*]] = alloca ptr, align 4
@@ -6083,7 +6083,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2SE3fooEv_l185.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6109,7 +6109,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -6148,7 +6148,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6163,7 +6163,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi100EE3fooEv_l211.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6189,7 +6189,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -6228,7 +6228,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6243,7 +6243,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A_ADDR]], align 4
 // OMP-DEfAULT-NEXT:    store i32 [[TMP0]], ptr [[A_CASTED]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A_CASTED]], align 4
-// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB2]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.omp_outlined, i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__ZN2STILi1000EE3fooEv_l211.omp_outlined, i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
@@ -6269,7 +6269,7 @@ int bar(int a){
 // OMP-DEfAULT-NEXT:    store i32 0, ptr [[DOTOMP_IS_LAST]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 4
 // OMP-DEfAULT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[TMP0]], align 4
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB1]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_init_4(ptr @[[GLOB2]], i32 [[TMP1]], i32 34, ptr [[DOTOMP_IS_LAST]], ptr [[DOTOMP_LB]], ptr [[DOTOMP_UB]], ptr [[DOTOMP_STRIDE]], i32 1, i32 1)
 // OMP-DEfAULT-NEXT:    [[TMP2:%.*]] = load i32, ptr [[DOTOMP_UB]], align 4
 // OMP-DEfAULT-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP2]], 9
 // OMP-DEfAULT-NEXT:    br i1 [[CMP]], label [[COND_TRUE:%.*]], label [[COND_FALSE:%.*]]
@@ -6308,7 +6308,7 @@ int bar(int a){
 // OMP-DEfAULT:       omp.inner.for.end:
 // OMP-DEfAULT-NEXT:    br label [[OMP_LOOP_EXIT:%.*]]
 // OMP-DEfAULT:       omp.loop.exit:
-// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB1]], i32 [[TMP1]])
+// OMP-DEfAULT-NEXT:    call void @__kmpc_for_static_fini(ptr @[[GLOB2]], i32 [[TMP1]])
 // OMP-DEfAULT-NEXT:    ret void
 //
 //
