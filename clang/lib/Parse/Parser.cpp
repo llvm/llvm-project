@@ -48,26 +48,21 @@ public:
 };
 } // end anonymous namespace
 
-IdentifierInfo *Parser::getSEHExceptKeyword() {
-  // __except is accepted as a (contextual) keyword
-  if (!Ident__except && (getLangOpts().MicrosoftExt || getLangOpts().Borland))
-    Ident__except = PP.getIdentifierInfo("__except");
-
-  return Ident__except;
-}
-
 bool Parser::isTokenSEHExcept() {
   if (!Tok.is(tok::identifier))
     return false;
 
+  if (!Ident__except && (getLangOpts().MicrosoftExt || getLangOpts().Borland))
+    Ident__except = PP.getIdentifierInfo("__except");
+
   const IdentifierInfo *Identifier = Tok.getIdentifierInfo();
-  if (Identifier == getSEHExceptKeyword())
+  if (Identifier == Ident__except)
     return true;
 
   if (getLangOpts().MSVCCompat) {
-    if (!Ident__except_single)
-      Ident__except_single = PP.getIdentifierInfo("_except");
-    if (Identifier == Ident__except_single)
+    if (!Ident_except)
+      Ident_except = PP.getIdentifierInfo("_except");
+    if (Identifier == Ident_except)
       return true;
   }
 
@@ -566,7 +561,7 @@ void Parser::Initialize() {
       nullptr;
 
   Ident__except = nullptr;
-  Ident__except_single = nullptr;
+  Ident_except = nullptr;
 
   Ident__exception_code = Ident__exception_info = nullptr;
   Ident__abnormal_termination = Ident___exception_code = nullptr;

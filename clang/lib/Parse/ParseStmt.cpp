@@ -2685,8 +2685,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
     if (isTokenSEHExcept()) {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHExceptBlock(Loc);
-    }
-    else {
+    } else {
       SourceLocation Loc = ConsumeToken();
       Handler = ParseSEHFinallyBlock(Loc);
     }
@@ -2697,8 +2696,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
                                     TryLoc,
                                     TryBlock.get(),
                                     Handler.get());
-  }
-  else {
+  } else {
     StmtVector Handlers;
 
     // C++11 attributes can't appear here, despite this context seeming

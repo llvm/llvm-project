@@ -661,7 +661,7 @@ private:
 
   /// Contextual keywords for Microsoft extensions.
   IdentifierInfo *Ident__except;
-  IdentifierInfo *Ident__except_single;
+  IdentifierInfo *Ident_except;
 
   std::unique_ptr<CommentHandler> CommentSemaHandler;
 
@@ -669,8 +669,6 @@ private:
   /// workaround to make sure ProduceSignatureHelp is only called at the deepest
   /// function call.
   bool CalledSignatureHelp = false;
-
-  IdentifierInfo *getSEHExceptKeyword();
 
   bool isTokenSEHExcept();
 
