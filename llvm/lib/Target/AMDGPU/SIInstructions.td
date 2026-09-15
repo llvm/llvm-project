@@ -542,6 +542,7 @@ def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
 
 def SCHED_BARRIER : SPseudoInstSI<(outs), (ins i32imm:$mask),
   [(int_amdgcn_sched_barrier (i32 timm:$mask))]> {
+  let usesCustomInserter = 1;
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
@@ -557,6 +558,7 @@ def SCHED_GROUP_BARRIER : SPseudoInstSI<
   (outs),
   (ins i32imm:$mask, i32imm:$size, i32imm:$syncid),
   [(int_amdgcn_sched_group_barrier (i32 timm:$mask), (i32 timm:$size), (i32 timm:$syncid))]> {
+  let usesCustomInserter = 1;
   let SchedRW = [];
   let hasNoSchedulingInfo = 1;
   let hasSideEffects = 1;
@@ -2758,11 +2760,6 @@ def : GCNPat <(i1 imm:$imm),
 /********** ================== **********/
 
 def : GCNPat <
-  (f32 (fpow (VOP3Mods f32:$src0, i32:$src0_mods), (VOP3Mods f32:$src1, i32:$src1_mods))),
-  (V_EXP_F32_e64 SRCMODS.NONE, (V_MUL_LEGACY_F32_e64 $src1_mods, $src1, SRCMODS.NONE, (V_LOG_F32_e64 $src0_mods, $src0), 0, 0))
->;
-
-def : GCNPat <
   (i32 (sext i1:$src0)),
   (V_CNDMASK_B32_e64 /*src0mod*/(i32 0), /*src0*/(i32 0),
                      /*src1mod*/(i32 0), /*src1*/(i32 -1), i1:$src0)
@@ -4770,6 +4767,7 @@ def G_AMDGPU_BUFFER_LOAD_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_BUFFER_LOAD_FORMAT_D16 : BufferLoadGenericInstruction;
+def G_AMDGPU_BUFFER_LOAD_FORMAT_D16_TFE : BufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT : TBufferLoadGenericInstruction;
 def G_AMDGPU_TBUFFER_LOAD_FORMAT_D16 : TBufferLoadGenericInstruction;
 

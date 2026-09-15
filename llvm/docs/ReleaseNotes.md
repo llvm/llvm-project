@@ -170,6 +170,12 @@ Makes programs 10x faster by doing Special New Thing.
   `LLVM_ALL_EXPERIMENTAL_TARGETS` to `LLVM_ALL_TARGETS`. It is now built by
   default and no longer requires `LLVM_EXPERIMENTAL_TARGETS_TO_BUILD`.
 
+* Clang and MLIR projects enabled implicitly as Flang dependencies now omit
+  unrelated build and test targets. Installation retains the dependency
+  libraries, headers, resources, and CMake targets needed by Flang. Explicitly
+  enabling Clang or MLIR retains the project's complete build, test, and
+  install behavior.
+
 ### Changes to TableGen
 
 * `!cond` operator short-circuits at the first `true` condition.  Subsequent
@@ -226,19 +232,19 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the RISC-V Backend
 
-* Added experimental MC support for the `Smcsps` and `Sscsps`
-  conditional stack pointer swap extensions.
+* Added experimental MC support for the ACLIC v0.20 extensions: `Smidctrl`,
+  `Ssidctrl`, `Smnip`, `Ssnip`, `Smijt`, `Ssijt`, `Smehv`, `Ssehv`, `Smcsps`,
+  `Sscsps`, `Smip`, and `Ssip`.
 * Adds experimental assembler/CodeGen support for the `Zilx` (Indexed Integer
   Load) extension.
-* Added experimental MC support for the `Smijt` and `Ssijt` interrupt jump
-  table extensions and the `Smehv` and `Ssehv` synchronous exception hardware
-  vectoring extensions.
-* Added experimental MC support for the `Smip` and `Ssip` interrupt handler
-  push/pop extensions.
 * Bump Svukte extension to 1.0.
 * Remove experimental from Zicfiss.
 * Added support for `Sspmp`, `Sspmpen` and `Smpmpdeleg` extensions.
 * Bumped the supported version of the experimental `Zibi` extension from 0.1 to 0.7.
+* Removed veyron-v1 processor definition and tuning model.
+* Removed support for the `Ventana Conditional Operations` extension.
+* Added support for `tail symbol, rt` form that takes an address (materialisation)
+  register, that is used when software guarded branch is needed.
 
 ### Changes to the WebAssembly Backend
 
@@ -272,6 +278,9 @@ Makes programs 10x faster by doing Special New Thing.
 ### Changes to the LLVM tools
 
 * llvm-mca no longer defaults -mcpu to "native"
+
+* llvm-rc now supports `/showIncludes` to report header and resource-file
+  dependencies in a format compatible with Ninja's `deps = msvc` mode.
 
 ### Changes to LLDB
 

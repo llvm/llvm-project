@@ -970,27 +970,6 @@ static const SCEV *BinomialCoefficient(const SCEV *It, unsigned K,
                        SE.getTruncateOrZeroExtend(DivResult, ResultTy));
 }
 
-/// Attach \p UseFlags to \p Res as use-specific flags, but only if \p Res
-/// really is the two-operand \p ExprT over \p LHS and \p RHS - in either order,
-/// as operands get sorted by complexity.
-///
-/// Flags established for that operation say nothing about any other expression:
-/// a folded-away operand, a flattened nested expression or a distributed
-/// constant all give a different computation. They must not be attached to it,
-/// because an n-ary expression's no-wrap flags have to hold for all subsets and
-/// orders of its operands, and SCEVExpander relies on that when it stamps them
-/// on every partial sum or product it builds.
-template <typename ExprT>
-static SCEVUse withUseFlagsIfNotFolded(const SCEV *Res, SCEVUse LHS,
-                                       SCEVUse RHS,
-                                       SCEV::NoWrapFlags UseFlags) {
-  auto *E = dyn_cast<ExprT>(Res);
-  if (E && (equal(E->operands(), ArrayRef<SCEVUse>({LHS, RHS})) ||
-            equal(E->operands(), ArrayRef<SCEVUse>({RHS, LHS}))))
-    return {Res, UseFlags};
-  return Res;
-}
-
 /// Return the value of this chain of recurrences at the specified iteration
 /// number.  We can evaluate this recurrence by multiplying each element in the
 /// chain by the binomial coefficient corresponding to it.  In other words, we
@@ -1020,8 +999,7 @@ SCEVUse SCEVAddRecExpr::evaluateAtIteration(ArrayRef<SCEVUse> Operands,
       return Coeff;
 
     const SCEV *Mul = SE.getMulExpr(Operands[i].getPointer(), Coeff);
-    Result = withUseFlagsIfNotFolded<SCEVAddExpr>(SE.getAddExpr(Result, Mul),
-                                                  Result, Mul, UseFlags);
+    Result = SE.getAddExpr(Result, Mul, {SCEV::FlagAnyWrap, UseFlags});
   }
   return Result;
 }
@@ -2320,21 +2298,18 @@ static bool CollectAddOperandsWithScales(SmallDenseMap<SCEVUse, APInt, 16> &M,
 bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
                                       const SCEV *LHS, const SCEV *RHS,
                                       const Instruction *CtxI) {
-  const SCEV *(ScalarEvolution::*Operation)(SCEVUse, SCEVUse, SCEV::NoWrapFlags,
-                                            unsigned);
-  switch (BinOp) {
-  default:
-    llvm_unreachable("Unsupported binary op");
-  case Instruction::Add:
-    Operation = &ScalarEvolution::getAddExpr;
-    break;
-  case Instruction::Sub:
-    Operation = &ScalarEvolution::getMinusSCEV;
-    break;
-  case Instruction::Mul:
-    Operation = &ScalarEvolution::getMulExpr;
-    break;
-  }
+  auto Operation = [this, BinOp](SCEVUse L, SCEVUse R) -> const SCEV * {
+    switch (BinOp) {
+    default:
+      llvm_unreachable("Unsupported binary op");
+    case Instruction::Add:
+      return getAddExpr(L, R);
+    case Instruction::Sub:
+      return getMinusSCEV(L, R);
+    case Instruction::Mul:
+      return getMulExpr(L, R);
+    }
+  };
 
   const SCEV *(ScalarEvolution::*Extension)(SCEVUse, Type *, unsigned) =
       Signed ? &ScalarEvolution::getSignExtendExpr
@@ -2345,11 +2320,10 @@ bool ScalarEvolution::willNotOverflow(Instruction::BinaryOps BinOp, bool Signed,
   auto *WideTy =
       IntegerType::get(NarrowTy->getContext(), NarrowTy->getBitWidth() * 2);
 
-  const SCEV *A = (this->*Extension)(
-      (this->*Operation)(LHS, RHS, SCEV::FlagAnyWrap, 0), WideTy, 0);
+  const SCEV *A = (this->*Extension)(Operation(LHS, RHS), WideTy, 0);
   const SCEV *LHSB = (this->*Extension)(LHS, WideTy, 0);
   const SCEV *RHSB = (this->*Extension)(RHS, WideTy, 0);
-  const SCEV *B = (this->*Operation)(LHSB, RHSB, SCEV::FlagAnyWrap, 0);
+  const SCEV *B = Operation(LHSB, RHSB);
   if (A == B)
     return true;
   // Can we use context to prove the fact we need?
@@ -2539,10 +2513,13 @@ bool ScalarEvolution::isAvailableAtLoopEntry(const SCEV *S, const Loop *L) {
 }
 
 /// Get a canonical add expression, or something simpler if possible.
-const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                        SCEV::NoWrapFlags OrigFlags,
-                                        unsigned Depth) {
+SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
+                                    SCEVFlags Flags, unsigned Depth) {
+  SCEV::NoWrapFlags OrigFlags = Flags.ExprFlags;
+  SCEV::NoWrapFlags UseFlags = Flags.UseFlags;
   assert(!(OrigFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
+         "only nuw or nsw allowed");
+  assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
          "only nuw or nsw allowed");
   assert(!Ops.empty() && "Cannot get empty add!");
   if (Ops.size() == 1) return Ops[0];
@@ -2564,6 +2541,12 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
   if (Folded)
     return Folded;
 
+#ifndef NDEBUG
+  // Keep track of operands after constant folding, for verification when adding
+  // use-specific flags.
+  const SmallVector<SCEVUse, 8> OrigOps(Ops.begin(), Ops.end());
+#endif
+
   unsigned Idx = isa<SCEVConstant>(Ops[0]) ? 1 : 0;
 
   // Delay expensive flag strengthening until necessary.
@@ -2573,14 +2556,14 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Limit recursion calls depth.
   if (Depth > MaxArithDepth || hasHugeExpression(Ops))
-    return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
+    return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 
   if (SCEV *S = findExistingSCEVInCache(scAddExpr, Ops)) {
     // Don't strengthen flags if we have no new information.
     SCEVAddExpr *Add = static_cast<SCEVAddExpr *>(S);
     if (Add->getNoWrapFlags(OrigFlags) != OrigFlags)
       Add->setNoWrapFlags(ComputeFlags(Ops));
-    return S;
+    return {S, UseFlags};
   }
 
   // Okay, check to see if the same value occurs in the operand list more than
@@ -3002,7 +2985,9 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
 
   // Okay, it looks like we really DO need an add expr.  Check to see if we
   // already have one, otherwise create a new one.
-  return getOrCreateAddExpr(Ops, ComputeFlags(Ops));
+  assert((UseFlags == SCEV::FlagAnyWrap || equal(OrigOps, Ops)) &&
+         "Tried to add SCEVUse flags after operands changed");
+  return {getOrCreateAddExpr(Ops, ComputeFlags(Ops)), UseFlags};
 }
 
 const SCEV *ScalarEvolution::getOrCreateAddExpr(ArrayRef<SCEVUse> Ops,
@@ -3854,7 +3839,7 @@ const SCEV *ScalarEvolution::getGEPExpr(SCEVUse BaseExpr,
   bool NUW = NW.hasNoUnsignedWrap() ||
              (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Offset));
   SCEV::NoWrapFlags BaseWrap = NUW ? SCEV::FlagNUW : SCEV::FlagAnyWrap;
-  auto *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
+  const SCEV *GEPExpr = getAddExpr(BaseExpr, Offset, BaseWrap);
   assert(BaseExpr->getType() == GEPExpr->getType() &&
          "GEP should not change type mid-flight.");
   return GEPExpr;
@@ -5693,6 +5678,24 @@ bool PredicatedScalarEvolution::areAddRecsEqualWithPreds(
   return true;
 }
 
+static SCEV::NoWrapFlags
+getNoWrapFlagsForGEP(GEPOperator *GEP, const SCEV *Accum, ScalarEvolution &SE) {
+  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  GEPNoWrapFlags NW = GEP->getNoWrapFlags();
+  // If the increment has any nowrap flags, then we know the address
+  // space cannot be wrapped around.
+  if (NW != GEPNoWrapFlags::none())
+    Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNW);
+  // If the GEP is nuw or nusw with non-negative offset, we know that
+  // no unsigned wrap occurs. We cannot set the nsw flag as only the
+  // offset is treated as signed, while the base is unsigned.
+  if (NW.hasNoUnsignedWrap() ||
+      (NW.hasNoUnsignedSignedWrap() && SE.isKnownNonNegative(Accum)))
+    Flags = ScalarEvolution::setFlags(Flags, SCEV::FlagNUW);
+
+  return Flags;
+}
+
 /// A helper function for createAddRecFromPHI to handle simple cases.
 ///
 /// This function tries to find an AddRec expression for the simplest (yet most
@@ -5706,27 +5709,39 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   assert(L && L->getHeader() == PN->getParent());
   assert(BEValueV && StartValueV);
 
-  auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN);
-  if (!BO)
-    return nullptr;
-
-  if (BO->Opcode != Instruction::Add)
-    return nullptr;
-
   const SCEV *Accum = nullptr;
-  if (BO->LHS == PN && L->isLoopInvariant(BO->RHS))
-    Accum = getSCEV(BO->RHS);
-  else if (BO->RHS == PN && L->isLoopInvariant(BO->LHS))
-    Accum = getSCEV(BO->LHS);
-
-  if (!Accum)
-    return nullptr;
-
   SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
-  if (BO->IsNUW)
-    Flags = setFlags(Flags, SCEV::FlagNUW);
-  if (BO->IsNSW)
-    Flags = setFlags(Flags, SCEV::FlagNSW);
+  if (auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN)) {
+    if (BO->Opcode != Instruction::Add)
+      return nullptr;
+
+    if (BO->LHS == PN && L->isLoopInvariant(BO->RHS))
+      Accum = getSCEV(BO->RHS);
+    else if (BO->RHS == PN && L->isLoopInvariant(BO->LHS))
+      Accum = getSCEV(BO->LHS);
+
+    if (!Accum)
+      return nullptr;
+
+    if (BO->IsNUW)
+      Flags = setFlags(Flags, SCEV::FlagNUW);
+    if (BO->IsNSW)
+      Flags = setFlags(Flags, SCEV::FlagNSW);
+  } else {
+    // Handle pointer induction variable: PN = PHI(Start, gep PN,
+    // LoopInvariant).
+    auto *GEP = dyn_cast<GEPOperator>(BEValueV);
+    if (!GEP || GEP->getPointerOperand() != PN || GEP->getNumIndices() != 1)
+      return nullptr;
+    Value *Idx = *GEP->idx_begin();
+    if (!L->isLoopInvariant(Idx))
+      return nullptr;
+
+    Type *IntIdxTy = getEffectiveSCEVType(GEP->getType());
+    Accum = getMulExpr(getTruncateOrSignExtend(getSCEV(Idx), IntIdxTy),
+                       getSizeOfExpr(IntIdxTy, GEP->getSourceElementType()));
+    Flags = getNoWrapFlagsForGEP(GEP, Accum, *this);
+  }
 
   const SCEV *StartVal = getSCEV(StartValueV);
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
@@ -5832,19 +5847,8 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
               Flags = setFlags(Flags, SCEV::FlagNSW);
           }
         } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
-          if (GEP->getOperand(0) == PN) {
-            GEPNoWrapFlags NW = GEP->getNoWrapFlags();
-            // If the increment has any nowrap flags, then we know the address
-            // space cannot be wrapped around.
-            if (NW != GEPNoWrapFlags::none())
-              Flags = setFlags(Flags, SCEV::FlagNW);
-            // If the GEP is nuw or nusw with non-negative offset, we know that
-            // no unsigned wrap occurs. We cannot set the nsw flag as only the
-            // offset is treated as signed, while the base is unsigned.
-            if (NW.hasNoUnsignedWrap() ||
-                (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Accum)))
-              Flags = setFlags(Flags, SCEV::FlagNUW);
-          }
+          if (GEP->getOperand(0) == PN)
+            Flags = getNoWrapFlagsForGEP(GEP, Accum, *this);
 
           // We cannot transfer nuw and nsw flags from subtraction
           // operations -- sub nuw X, Y is not the same as add nuw X, -Y
@@ -13427,11 +13431,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
 
   const SCEV *Stride = IV->getStepRecurrence(*this);
-
-  bool PositiveStride = isKnownPositive(Stride);
+  const SCEV *GuardedStride = Stride;
 
   // Whether the IV may reach the maximum value before the exit is taken.
   bool IVMayOverflow = true;
+
+  bool PositiveStride = isKnownPositive(Stride);
+  // A dominating guard may prove the stride positive.
+  if (!PositiveStride) {
+    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, L);
+    if (isKnownPositive(LoopGuardedStride)) {
+      GuardedStride = LoopGuardedStride;
+      PositiveStride = true;
+      // Encode the context-sensitive stride > 0 fact into the expression
+      Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+    }
+  }
 
   // Avoid negative or zero stride values.
   if (!PositiveStride) {
@@ -13505,7 +13520,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    IVMayOverflow = canIVOverflowOnLT(RHS, GuardedStride, IsSigned);
     if (IVMayOverflow && !NoWrap)
       return getCouldNotCompute();
   }
@@ -13538,8 +13553,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       return RHS;
   }
 
-  const SCEV *End = nullptr, *BECount = nullptr,
-             *BECountIfBackedgeTaken = nullptr;
+  const SCEV *End = nullptr, *BECount = getCouldNotCompute(),
+             *BECountIfBackedgeTaken = getCouldNotCompute();
   if (!isLoopInvariant(RHS, L)) {
     const auto *RHSAddRec = dyn_cast<SCEVAddRecExpr>(RHS);
     if (PositiveStride && RHSAddRec != nullptr && RHSAddRec->getLoop() == L &&
@@ -13583,27 +13598,94 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         }
       }
     }
-    if (BECount == nullptr) {
-      // If we cannot calculate ExactBECount, we can calculate the MaxBECount,
-      // given the start, stride and max value for the end bound of the
-      // loop (RHS), and the fact that IV does not overflow (which is
-      // checked above).
-      const SCEV *MaxBECount = computeMaxBECountForLT(
-          Start, Stride, RHS, getTypeSizeInBits(LHS->getType()), IsSigned);
-      return ExitLimit(getCouldNotCompute() /* ExactNotTaken */, MaxBECount,
-                       MaxBECount, false /*MaxOrZero*/, Predicates);
-    }
   } else {
     // Let End = max(RHS,Start).  We use the expression (End-Start)/Stride to
     // describe the backedge count: if the backedge is taken at least once then
     // End is RHS, and if not End is Start so we get a backedge count of zero.
+    //
+    // AddingStrideMinusOneMayOverflow has the following preconditions:
+    //
+    // 1. If IsSigned, Start <=s End; otherwise, Start <=u End
+    // 2. The index variable doesn't overflow.
+    //
+    // Therefore, we know N exists such that
+    // (Start + Stride * N) >= End, and computing "(Start + Stride * N)"
+    // doesn't overflow.
+    //
+    // Using this information, try to prove whether the addition in
+    // "(End - Start) + (Stride - 1)" has unsigned overflow.
+    //
+    // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
+    // value, so the distance End - Start is at most UMAX - (Stride - 1) and
+    // the (Stride - 1) addition below cannot overflow.
+    const SCEV *One = getOne(Stride->getType());
+    bool AddingStrideMinusOneMayOverflow = IVMayOverflow && [&] {
+      if (isKnownToBeAPowerOfTwo(Stride)) {
+        // Suppose Stride is a power of two, and Start/End are unsigned
+        // integers.  Let UMAX be the largest representable unsigned
+        // integer.
+        //
+        // By the preconditions of this function, we know
+        // "(Start + Stride * N) >= End", and this doesn't overflow.
+        // As a formula:
+        //
+        //   End <= (Start + Stride * N) <= UMAX
+        //
+        // Subtracting Start from all the terms:
+        //
+        //   End - Start <= Stride * N <= UMAX - Start
+        //
+        // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
+        //
+        //   End - Start <= Stride * N <= UMAX
+        //
+        // Stride * N is a multiple of Stride. Therefore,
+        //
+        //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
+        //
+        // Since Stride is a power of two, UMAX + 1 is divisible by
+        // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
+        // write:
+        //
+        //   End - Start <= Stride * N <= UMAX - Stride - 1
+        //
+        // Dropping the middle term:
+        //
+        //   End - Start <= UMAX - Stride - 1
+        //
+        // Adding Stride - 1 to both sides:
+        //
+        //   (End - Start) + (Stride - 1) <= UMAX
+        //
+        // In other words, the addition doesn't have unsigned overflow.
+        //
+        // A similar proof works if we treat Start/End as signed values.
+        // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
+        // to use signed max instead of unsigned max. Note that we're
+        // trying to prove a lack of unsigned overflow in either case.
+        return false;
+      }
+      if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
+        // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
+        // - 1. If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1
+        // <u End. If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End -
+        // 1 <s End.
+        //
+        // If Start is equal to Stride - 1, (End - Start) + Stride - 1 ==
+        // End.
+        return false;
+      }
+      return true;
+    }();
+
     auto *OrigStartMinusStride = getMinusSCEV(OrigStart, Stride);
     assert(isAvailableAtLoopEntry(OrigStartMinusStride, L) && "Must be!");
     assert(isAvailableAtLoopEntry(OrigStart, L) && "Must be!");
     assert(isAvailableAtLoopEntry(OrigRHS, L) && "Must be!");
     // Can we prove Start - Stride < RHS, and either Start - Stride < Start or
-    // (via !IVMayOverflow) that RHS + Stride - 1 does not overflow?
-    if ((!IVMayOverflow ||
+    // (via !AddingStrideMinusOneMayOverflow) that (RHS - Start) + (Stride - 1)
+    // does not overflow?
+    if ((!AddingStrideMinusOneMayOverflow ||
          isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigStart)) &&
         isLoopEntryGuardedByCond(L, Cond, OrigStartMinusStride, OrigRHS)) {
       // In this case, we can use a refined formula for computing backedge
@@ -13629,19 +13711,18 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
       //   "RHS - (Start - Stride) - 1" does not overflow, which is the
       //   reassociated numerator.
       //
-      //   Otherwise !IVMayOverflow guarantees "RHS + (Stride - 1) <= MaxV",
-      //   where MaxV is the maximum signed/unsigned value. Let MinV be the
-      //   matching minimum value. "Start >= MinV" gives
-      //   "RHS + (Stride - 1) - Start <= MaxV - MinV", and as "MaxV - MinV" is
-      //   the largest unsigned value, the reassociated numerator does not
-      //   overflow.
+      //   Otherwise !AddingStrideMinusOneMayOverflow guarantees that
+      //   "(End - Start) + (Stride - 1)" does not overflow unsigned. Here
+      //   "End" is "RHS", as "RHS > Start", so this is the reassociated
+      //   numerator. Neither sub-term wraps unsigned: "RHS - Start"
+      //   due to "RHS > Start", and "Stride - 1", as Stride is non-zero.
       const SCEV *MinusOne = getMinusOne(Stride->getType());
       const SCEV *Numerator =
           getMinusSCEV(getAddExpr(RHS, MinusOne), getMinusSCEV(Start, Stride));
       BECount = getUDivExpr(Numerator, Stride);
     }
 
-    if (!BECount) {
+    if (isa<SCEVCouldNotCompute>(BECount)) {
       auto canProveRHSGreaterThanEqualStart = [&]() {
         auto CondGE = IsSigned ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_UGE;
         const SCEV *GuardedRHS = applyLoopGuards(OrigRHS, L);
@@ -13661,7 +13742,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
         //
         // FIXME: Should isLoopEntryGuardedByCond do this for us?
         auto CondGT = IsSigned ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
-        auto *StartMinusOne =
+        const SCEV *StartMinusOne =
             getAddExpr(OrigStart, getMinusOne(OrigStart->getType()));
         return isLoopEntryGuardedByCond(L, CondGT, OrigRHS, StartMinusOne);
       };
@@ -13687,83 +13768,8 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
             getUDivCeilSCEV(getMinusSCEV(RHS, Start), Stride);
       }
 
-      // At this point, we know:
-      //
-      // 1. If IsSigned, Start <=s End; otherwise, Start <=u End
-      // 2. The index variable doesn't overflow.
-      //
-      // Therefore, we know N exists such that
-      // (Start + Stride * N) >= End, and computing "(Start + Stride * N)"
-      // doesn't overflow.
-      //
-      // Using this information, try to prove whether the addition in
-      // "(Start - End) + (Stride - 1)" has unsigned overflow.
-      //
-      // If the IV cannot overflow, RHS is at least Stride - 1 below the maximum
-      // value, so the distance End - Start is at most UMAX - (Stride - 1) and
-      // the (Stride - 1) addition below cannot overflow.
-      const SCEV *One = getOne(Stride->getType());
-      bool MayAddOverflow = IVMayOverflow && [&] {
-        if (isKnownToBeAPowerOfTwo(Stride)) {
-          // Suppose Stride is a power of two, and Start/End are unsigned
-          // integers.  Let UMAX be the largest representable unsigned
-          // integer.
-          //
-          // By the preconditions of this function, we know
-          // "(Start + Stride * N) >= End", and this doesn't overflow.
-          // As a formula:
-          //
-          //   End <= (Start + Stride * N) <= UMAX
-          //
-          // Subtracting Start from all the terms:
-          //
-          //   End - Start <= Stride * N <= UMAX - Start
-          //
-          // Since Start is unsigned, UMAX - Start <= UMAX.  Therefore:
-          //
-          //   End - Start <= Stride * N <= UMAX
-          //
-          // Stride * N is a multiple of Stride. Therefore,
-          //
-          //   End - Start <= Stride * N <= UMAX - (UMAX mod Stride)
-          //
-          // Since Stride is a power of two, UMAX + 1 is divisible by
-          // Stride. Therefore, UMAX mod Stride == Stride - 1.  So we can
-          // write:
-          //
-          //   End - Start <= Stride * N <= UMAX - Stride - 1
-          //
-          // Dropping the middle term:
-          //
-          //   End - Start <= UMAX - Stride - 1
-          //
-          // Adding Stride - 1 to both sides:
-          //
-          //   (End - Start) + (Stride - 1) <= UMAX
-          //
-          // In other words, the addition doesn't have unsigned overflow.
-          //
-          // A similar proof works if we treat Start/End as signed values.
-          // Just rewrite steps before "End - Start <= Stride * N <= UMAX"
-          // to use signed max instead of unsigned max. Note that we're
-          // trying to prove a lack of unsigned overflow in either case.
-          return false;
-        }
-        if (Start == Stride || Start == getMinusSCEV(Stride, One)) {
-          // If Start is equal to Stride, (End - Start) + (Stride - 1) == End
-          // - 1. If !IsSigned, 0 <u Stride == Start <=u End; so 0 <u End - 1
-          // <u End. If IsSigned, 0 <s Stride == Start <=s End; so 0 <s End -
-          // 1 <s End.
-          //
-          // If Start is equal to Stride - 1, (End - Start) + Stride - 1 ==
-          // End.
-          return false;
-        }
-        return true;
-      }();
-
       const SCEV *Delta = getMinusSCEV(End, Start);
-      if (!MayAddOverflow) {
+      if (!AddingStrideMinusOneMayOverflow) {
         // floor((D + (S - 1)) / S)
         // We prefer this formulation if it's legal because it's fewer
         // operations.
@@ -13779,8 +13785,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   bool MaxOrZero = false;
   if (isa<SCEVConstant>(BECount)) {
     ConstantMaxBECount = BECount;
-  } else if (BECountIfBackedgeTaken &&
-             isa<SCEVConstant>(BECountIfBackedgeTaken)) {
+  } else if (isa<SCEVConstant>(BECountIfBackedgeTaken)) {
     // If we know exactly how many times the backedge will be taken if it's
     // taken at least once, then the backedge count will either be that or
     // zero.

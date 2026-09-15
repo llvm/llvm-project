@@ -1498,6 +1498,13 @@ getNVVMFAddUpgrade(StringRef Name) {
   return std::make_pair(IID, *RoundingMode);
 }
 
+static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
+  if (Name != "mbarrier.init" && Name != "mbarrier.init.shared")
+    return Intrinsic::not_intrinsic;
+
+  return Intrinsic::nvvm_mbarrier_init;
+}
+
 static bool consumeNVVMPtrAddrSpace(StringRef &Name) {
   return Name.consume_front("local") || Name.consume_front("shared") ||
          Name.consume_front("global") || Name.consume_front("constant") ||
@@ -2086,6 +2093,15 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
       if (IID != Intrinsic::not_intrinsic) {
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return NewFn != F;
+      }
+
+      // Upgrade mbarrier.init intrinsics missing the layout operand.
+      IID = shouldUpgradeNVPTXMBarrierInitIntrinsic(Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        rename(F);
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
+                                                  F->getArg(0)->getType());
+        return true;
       }
 
       // The following nvvm intrinsics correspond exactly to an LLVM idiom, but
@@ -6201,6 +6217,15 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
         Builder.CreateCall(NewFn, {CI->getArgOperand(0), CI->getArgOperand(1),
                                    Builder.getFalse()});
     break;
+  case Intrinsic::nvvm_mbarrier_init: {
+    SmallVector<Value *, 3> Args(CI->args());
+    // The .shared variant folded into the overloaded form without gaining an
+    // operand, so only the pre-layout two-argument form needs one appended.
+    if (Args.size() == 2)
+      Args.push_back(Builder.getInt32(0)); // layout = default(0)
+    NewCall = Builder.CreateCall(NewFn, Args);
+    break;
+  }
   case Intrinsic::riscv_sha256sig0:
   case Intrinsic::riscv_sha256sig1:
   case Intrinsic::riscv_sha256sum0:
@@ -7757,6 +7782,14 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.replace(Res.find(OldP8), OldP8.size(), "-p8:128:128:128:48-");
       if (!DL.contains("-p9") && !DL.starts_with("p9"))
         Res.append("-p9:192:256:256:32");
+
+      // Add sizing for address space 10 through 15.
+      // AS 10-14 are reserved and defaulted to 32:32
+      // AS 15 is in use and is 32:32.
+      for (StringRef AS : {"p10", "p11", "p12", "p13", "p14", "p15"}) {
+        if (!DL.contains(("-" + AS).str()) && !DL.starts_with(AS))
+          Res.append(("-" + AS + ":32:32").str());
+      }
     }
 
     // Upgrade the ELF mangling mode.
