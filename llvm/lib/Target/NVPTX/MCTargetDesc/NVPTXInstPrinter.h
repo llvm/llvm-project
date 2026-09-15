@@ -67,6 +67,8 @@ public:
                              const MCSubtargetInfo &STI, raw_ostream &O);
   void printCTAGroup(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                      raw_ostream &O);
+  void printTMAValidateDataFlags(const MCInst *MI, int OpNum,
+                                 const MCSubtargetInfo &STI, raw_ostream &O);
   void printEvictPolicy(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                         raw_ostream &O, StringRef Modifier = {});
   void printCallOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,

@@ -11,7 +11,7 @@
 
 func.func @single_expression(%arg0: i32, %arg1: i32, %arg2: i32) -> i1 {
   %e = emitc.expression %arg0, %arg1, %arg2 : (i32, i32, i32) -> i1 {
-    %c42 = "emitc.constant"(){value = 42 : i32} : () -> i32
+    %c42 = "emitc.constant"() <{value = 42 : i32}> : () -> i32
     %a = emitc.mul %arg0, %c42 : (i32, i32) -> i32
     %b = emitc.sub %a, %arg1 : (i32, i32) -> i32
     %c = emitc.cmp lt, %b, %arg2 :(i32, i32) -> i1
@@ -56,7 +56,7 @@ func.func @single_use(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 {
     %d = emitc.cmp lt, %c, %arg1 :(i32, i32) -> i1
     emitc.yield %d : i1
   }
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.if %e {
     emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
     emitc.yield
@@ -119,7 +119,7 @@ func.func @parentheses_for_low_precedence(%arg0: i32, %arg1: i32, %arg2: i32) ->
 
 func.func @inline_cast_pure(%arg0: i32) -> f32 {
   %0 = emitc.expression %arg0 : (i32) -> f32 {
-    %1 = cast %arg0 {pure} : i32 to f32
+    %1 = cast %arg0 pure : i32 to f32
     yield %1 : f32
   }
   return %0 : f32
@@ -201,7 +201,7 @@ func.func @parentheses_for_same_precedence(%arg0: i32, %arg1: i32, %arg2: i32) -
 // CPP-DECLTOP-NEXT:   return [[VAL_3]] / ([[VAL_1]] * [[VAL_2]]);
 // CPP-DECLTOP-NEXT: }
 func.func @user_with_expression_trait(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
-  %c0 = "emitc.constant"() {value = 0 : i32} : () -> i32
+  %c0 = "emitc.constant"() <{value = 0 : i32}> : () -> i32
   %e0 = emitc.expression %arg0, %arg1, %arg2 : (i32, i32, i32) -> i32 {
       %0 = emitc.mul %arg0, %arg1 : (i32, i32) -> i32
       %1 = emitc.div %arg2, %0 : (i32, i32) -> i32
@@ -236,7 +236,7 @@ func.func @user_with_expression_trait(%arg0: i32, %arg1: i32, %arg2: i32) -> i32
   %add = emitc.add %e1, %c0 : (i32, i32) -> i32
   %call = emitc.call_opaque "bar" (%e2, %c0) : (i32, i32) -> (i32)
   %cond = emitc.conditional %cast, %e3, %c0 : i32
-  %var = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  %var = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.assign %e4 : i32 to %var : !emitc.lvalue<i32>
   return %e5 : i32
 }
@@ -281,7 +281,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
     %d = emitc.cmp lt, %c, %arg3 :(i32, i32) -> i1
     emitc.yield %d : i1
   }
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.if %e {
     emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
     emitc.yield
@@ -289,7 +289,7 @@ func.func @multiple_uses(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32) -> i32 
     emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
     emitc.yield
   }
-  %q = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i1>
+  %q = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i1>
   emitc.assign %e : i1 to %q : !emitc.lvalue<i1>
   %v_load = emitc.load %v : !emitc.lvalue<i32>
   return %v_load : i32
@@ -340,7 +340,7 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
     %d = emitc.cmp lt, %c, %arg1 :(i32, i32) -> i1
     emitc.yield %d : i1
   }
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   emitc.if %e3 {
     emitc.assign %arg0 : i32 to %v : !emitc.lvalue<i32>
     emitc.yield
@@ -364,7 +364,7 @@ func.func @different_expressions(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32)
 // CPP-DECLTOP-NEXT: }
 
 func.func @expression_with_address_taken(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
-  %a = "emitc.variable"(){value = 42 : i32} : () -> !emitc.lvalue<i32>
+  %a = "emitc.variable"() <{value = 42 : i32}> : () -> !emitc.lvalue<i32>
   %c = emitc.expression %arg1, %arg2, %a : (i32, !emitc.ptr<i32>, !emitc.lvalue<i32>) -> i1 {
     %d = emitc.address_of %a : !emitc.lvalue<i32>
     %e = emitc.sub %d, %arg1 : (!emitc.ptr<i32>, i32) -> !emitc.ptr<i32>
@@ -410,7 +410,7 @@ func.func @expression_with_subscript(%arg0: !emitc.array<4x8xi32>, %arg1: i32, %
 // CPP-DECLTOP-NEXT:   return [[VAL_4]];
 
 func.func @expression_with_subscript_user(%arg0: !emitc.ptr<!emitc.opaque<"void">>) -> i32 {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %0 = emitc.expression %arg0 : (!emitc.ptr<!emitc.opaque<"void">>) -> !emitc.ptr<i32> {
     %0 = emitc.cast %arg0 : !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<i32>
     emitc.yield %0 : !emitc.ptr<i32>
@@ -433,7 +433,7 @@ func.func @expression_with_subscript_user(%arg0: !emitc.ptr<!emitc.opaque<"void"
 // CPP-DECLTOP-NEXT:   return [[VAL_5]] + [[VAL_2]] < [[VAL_3]][[[VAL_4]]] + [[VAL_1]];
 
 emitc.func @expression_with_load(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>) -> i1 {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
   %ptr = emitc.subscript %arg2[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %result = emitc.expression %arg0, %arg1, %0, %ptr : (i32, i32, !emitc.lvalue<i32>, !emitc.lvalue<i32>) -> i1 {
@@ -457,7 +457,7 @@ emitc.func @expression_with_load(%arg0: i32, %arg1: i32, %arg2: !emitc.ptr<i32>)
 // CPP-DECLTOP-NEXT:   return [[VAL_1]][[[VAL_2]]] + bar([[VAL_1]][[[VAL_2]]]) < [[VAL_1]][[[VAL_2]]];
 
 emitc.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %ptr = emitc.subscript %arg0[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %result = emitc.expression %ptr : (!emitc.lvalue<i32>) -> i1 {
     %a = emitc.load %ptr : !emitc.lvalue<i32>
@@ -486,7 +486,7 @@ emitc.func @expression_with_load_and_call(%arg0: !emitc.ptr<i32>) -> i1 {
 emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
   %2 = expression %0, %1 : (i32, i32) -> i1 {
     %3 = cmp lt, %0, %1 : (i32, i32) -> i1
-    %4 = emitc.call_opaque "f"(%3) {args = [0: index]} : (i1) -> i1
+    %4 = emitc.call_opaque "f"(%3) <{args = [0: index]}> : (i1) -> i1
     yield %4 : i1
   }
   return
@@ -509,7 +509,7 @@ emitc.func @expression_with_call_opaque_with_args_array(%0 : i32, %1 : i32) {
 // CPP-DECLTOP-NEXT: }
 
 emitc.func @inline_side_effects_into_assign(%arg0: i32, %arg1: !emitc.ptr<i32>) {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
   %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %result = emitc.expression %arg0, %0, %ptr : (i32, !emitc.lvalue<i32>, !emitc.lvalue<i32>) -> i32 {
@@ -543,7 +543,7 @@ emitc.func @inline_side_effects_into_assign(%arg0: i32, %arg1: !emitc.ptr<i32>) 
 // CPP-DECLTOP-NEXT: }
 
 emitc.func @do_not_inline_side_effects_into_assign(%arg0: i32, %arg1: !emitc.ptr<i32>) {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
   %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %result = emitc.expression %arg0, %0 : (i32, !emitc.lvalue<i32>) -> i32 {
@@ -575,7 +575,7 @@ emitc.func @do_not_inline_side_effects_into_assign(%arg0: i32, %arg1: !emitc.ptr
 // CPP-DECLTOP-NEXT: }
 
 emitc.func @do_not_inline_non_preceding_side_effects(%arg0: i32, %arg1: !emitc.ptr<i32>) -> i32 {
-  %c0 = "emitc.constant"() {value = 0 : i64} : () -> i64
+  %c0 = "emitc.constant"() <{value = 0 : i64}> : () -> i64
   %0 = "emitc.variable"() <{value = #emitc.opaque<"42">}> : () -> !emitc.lvalue<i32>
   %ptr = emitc.subscript %arg1[%c0] : (!emitc.ptr<i32>, i64) -> !emitc.lvalue<i32>
   %result = emitc.expression %arg0, %0 : (i32, !emitc.lvalue<i32>) -> i32 {
@@ -612,7 +612,7 @@ emitc.func @do_not_inline_non_preceding_side_effects(%arg0: i32, %arg1: !emitc.p
 // CPP-DECLTOP-NEXT: }
 
 func.func @inline_side_effects_into_if(%arg0: i32, %arg1: i32, %arg2: i32) -> i32 {
-  %v = "emitc.variable"(){value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
+  %v = "emitc.variable"() <{value = #emitc.opaque<"">}> : () -> !emitc.lvalue<i32>
   %cond = emitc.expression %arg0, %arg1, %arg2 : (i32, i32, i32) -> i1 {
     %a = emitc.call_opaque "bar" (%arg0, %arg1) : (i32, i32) -> (i32)
     %b = emitc.cmp lt, %a, %arg2 :(i32, i32) -> i1
@@ -686,7 +686,7 @@ func.func @inline_side_effects_into_switch(%arg0: i32, %arg1: i32, %arg2: i32) {
     emitc.yield
   }
   default {
-    %3 = "emitc.constant"(){value = 42.0 : f32} : () -> f32
+    %3 = "emitc.constant"() <{value = 42.0 : f32}> : () -> f32
     emitc.call_opaque "func2" (%3) : (f32) -> ()
     emitc.yield
   }
@@ -839,7 +839,7 @@ func.func @expression_with_literal(%arg0: f32) -> f32 {
 
 func.func @expression_tree(%arg0: !emitc.array<2000xi32>, %arg1: i32, %arg2: i32, %arg4: index) -> i1 {
   %e1 = emitc.expression %arg0, %arg4 : (!emitc.array<2000xi32>, index) -> !emitc.lvalue<i32> {
-    %c42 = "emitc.constant"(){value = 42 : index} : () -> index
+    %c42 = "emitc.constant"() <{value = 42 : index}> : () -> index
     %i = mul %arg4, %c42 : (index, index) -> index
     %k = subscript %arg0[%i] : (!emitc.array<2000xi32>, index) -> !emitc.lvalue<i32>
     yield %k : !emitc.lvalue<i32>

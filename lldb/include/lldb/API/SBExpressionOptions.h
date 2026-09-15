@@ -115,6 +115,10 @@ public:
 
   SBError SetBooleanLanguageOption(const char *option_name, bool value);
 
+  bool GetTryDILFirst();
+
+  void SetTryDILFirst(bool b = true);
+
 protected:
   lldb_private::EvaluateExpressionOptions *get() const;
 

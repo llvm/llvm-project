@@ -37,6 +37,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/Statistic.h"
@@ -52,6 +53,7 @@
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/MustExecute.h"
@@ -168,10 +170,6 @@ cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
              "effect. When MSSA in LICM is enabled, then this is the maximum "
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
-
-namespace llvm {
-extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-} // end namespace llvm
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
 static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
@@ -872,8 +870,7 @@ public:
     HoistTarget->getTerminator()->eraseFromParent();
     // md_prof should also come from the original branch - since the
     // condition was hoisted, the branch probabilities shouldn't change.
-    if (!ProfcheckDisableMetadataFixes)
-      NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
+    NewBI->copyMetadata(*BI, {LLVMContext::MD_prof});
     // FIXME: Issue #152767: debug info should also be the same as the
     // original branch, **if** the user explicitly indicated that.
     NewBI->setDebugLoc(HoistTarget->getTerminator()->getDebugLoc());
@@ -1427,7 +1424,6 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
                                       const LoopSafetyInfo *SafetyInfo,
                                       TargetTransformInfo *TTI,
                                       bool &FoldableInLoop, bool LoopNestMode) {
-  const auto &BlockColors = SafetyInfo->getBlockColors();
   bool IsFoldable = isFoldableInLoop(I, CurLoop, TTI);
   for (const User *U : I.users()) {
     const Instruction *UI = cast<Instruction>(U);
@@ -1439,10 +1435,12 @@ static bool isNotUsedOrFoldableInLoop(const Instruction &I, const Loop *CurLoop,
 
       // We need to sink a callsite to a unique funclet.  Avoid sinking if the
       // phi use is too muddled.
-      if (isa<CallInst>(I))
+      if (isa<CallInst>(I)) {
+        const auto &BlockColors = SafetyInfo->getBlockColors();
         if (!BlockColors.empty() &&
             BlockColors.find(const_cast<BasicBlock *>(BB))->second.size() != 1)
           return false;
+      }
 
       if (LoopNestMode) {
         while (isa<PHINode>(UI) && UI->hasOneUser() &&
@@ -1678,7 +1676,8 @@ static bool sink(Instruction &I, LoopInfo *LI, DominatorTree *DT,
   // Iterate over users to be ready for actual sinking. Replace users via
   // unreachable blocks with undef and make all user PHIs trivially replaceable.
   SmallPtrSet<Instruction *, 8> VisitedUsers;
-  for (Value::user_iterator UI = I.user_begin(), UE = I.user_end(); UI != UE;) {
+  for (Instruction::user_iterator UI = I.user_begin(), UE = I.user_end();
+       UI != UE;) {
     auto *User = cast<Instruction>(*UI);
     Use &U = UI.getUse();
     ++UI;
@@ -2331,6 +2330,56 @@ static void foreachMemoryAccess(MemorySSA *MSSA, Loop *L,
           Fn(MUD->getMemoryInst());
 }
 
+/// Returns whether \p I is a memory access that may be a candidate for
+/// promotion out of the loop \p L.
+static bool isPotentiallyPromotable(const Instruction *I, const Loop *L) {
+  if (const auto *SI = dyn_cast<StoreInst>(I)) {
+    const Value *PtrOp = SI->getPointerOperand();
+    if (isStrongerThanMonotonic(SI->getOrdering()))
+      return false;
+    return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+  }
+  if (const auto *LI = dyn_cast<LoadInst>(I)) {
+    const Value *PtrOp = LI->getPointerOperand();
+    if (isStrongerThanMonotonic(LI->getOrdering()))
+      return false;
+    return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
+  }
+  return false;
+}
+
+/// Returns the potentially promotable stores with AA tags that are valid along
+/// all non-unwinding execution paths of the loop \p L, which allows for the AA
+/// tags to be used when deciding promotions.
+static SmallPtrSet<const StoreInst *, 8>
+collectStoresWithInvariantAATags(MemorySSA *MSSA, DominatorTree *DT, Loop *L) {
+  SmallDenseMap<MemoryLocation, SmallVector<const StoreInst *, 1>, 4>
+      StoresByLoc;
+  foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
+    const auto *SI = dyn_cast<StoreInst>(I);
+    if (SI && SI->getAAMetadata() && isPotentiallyPromotable(SI, L))
+      StoresByLoc[MemoryLocation::get(SI)].push_back(SI);
+  });
+
+  // This only looks at explicit exiting blocks. If we ever start sinking
+  // stores into unwind edges, this will break.
+  SmallVector<BasicBlock *, 4> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  SmallPtrSet<const StoreInst *, 8> StoresWithInvariantAATags;
+  for (const auto &Stores : llvm::make_second_range(StoresByLoc)) {
+    // Without exiting blocks the loop is never left, and promotion has no
+    // exit block to insert a store into either.
+    if (llvm::all_of(ExitingBlocks, [&](BasicBlock *ExitingBB) {
+          return llvm::any_of(Stores, [&](const StoreInst *SI) {
+            return DT->dominates(SI->getParent(), ExitingBB);
+          });
+        }))
+      StoresWithInvariantAATags.insert_range(Stores);
+  }
+  return StoresWithInvariantAATags;
+}
+
 // The bool indicates whether there might be reads outside the set, in which
 // case only loads may be promoted.
 static SmallVector<PointersAndHasReadsOutsideSet, 0>
@@ -2340,39 +2389,29 @@ collectPromotionCandidates(MemorySSA *MSSA, AliasAnalysis *AA,
   BatchAAResults BatchAA(*AA);
   AliasSetTracker AST(BatchAA);
 
-  auto IsPotentiallyPromotable = [L](const Instruction *I) {
-    if (const auto *SI = dyn_cast<StoreInst>(I)) {
-      const Value *PtrOp = SI->getPointerOperand();
-      if (isStrongerThanMonotonic(SI->getOrdering()))
-        return false;
-      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
-    }
-    if (const auto *LI = dyn_cast<LoadInst>(I)) {
-      const Value *PtrOp = LI->getPointerOperand();
-      if (isStrongerThanMonotonic(LI->getOrdering()))
-        return false;
-      return !isa<ConstantData>(PtrOp) && L->isLoopInvariant(PtrOp);
-    }
-    return false;
+  // Only conditionally executed stores need this, so compute it on demand to
+  // keep the common case free.
+  std::optional<SmallPtrSet<const StoreInst *, 8>> StoresWithInvariantAATags;
+  auto HasInvariantAATags = [&](const StoreInst *SI) {
+    if (!StoresWithInvariantAATags)
+      StoresWithInvariantAATags = collectStoresWithInvariantAATags(MSSA, DT, L);
+    return StoresWithInvariantAATags->contains(SI);
   };
 
   // Populate AST with potentially promotable accesses.
   SmallPtrSet<Value *, 16> AttemptingPromotion;
   foreachMemoryAccess(MSSA, L, [&](Instruction *I) {
-    if (IsPotentiallyPromotable(I)) {
+    if (isPotentiallyPromotable(I, L)) {
       AttemptingPromotion.insert(I);
       if (StoreInst *SI = dyn_cast<StoreInst>(I);
-          SI && !SafetyInfo->isGuaranteedToExecute(*SI, DT)) {
+          SI && SI->getAAMetadata() &&
+          !SafetyInfo->isGuaranteedToExecute(*SI, DT) &&
+          !HasInvariantAATags(SI)) {
         // Promotion requires inserting a new store at the loop exits; we need
         // to prove that store doesn't alias anything, in addition to proving
         // aliasing for the stores we're removing. The new store is executed
         // unconditionally, so when we're proving aliasing for that store, we
-        // can't rely on AA tags for stores which are conditionally executed.
-        //
-        // As a future improvement, we could avoid stripping AA tags in more
-        // cases. isGuaranteedToExecute() is stronger than what we need.
-        // We only need to prove that every exit from the loop is dominated
-        // by a store to the same location with the same AA tag.
+        // can only rely on AA tags that likewise hold unconditionally.
         AST.addWithoutAATags(SI);
       } else {
         AST.add(I);

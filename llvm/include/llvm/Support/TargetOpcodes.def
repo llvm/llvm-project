@@ -862,6 +862,9 @@ HANDLE_TARGET_OPCODE(G_BITREVERSE)
 // Generic carry-less multiply instruction.
 HANDLE_TARGET_OPCODE(G_CLMUL)
 
+// Generic carry-less multiply high instruction.
+HANDLE_TARGET_OPCODE(G_CLMULH)
+
 /// Floating point ceil.
 HANDLE_TARGET_OPCODE(G_FCEIL)
 
