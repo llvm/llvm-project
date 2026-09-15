@@ -273,6 +273,17 @@ public:
       ArrayRef<const Value *> Args = {},
       const Instruction *CxtI = nullptr) const override;
 
+  unsigned getNumberOfParts(Type *Tp) const override {
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
+    if (!LT.first.isValid() || !LT.second.isVector())
+      return BaseT::getNumberOfParts(Tp);
+    InstructionCost LMULCost = TLI->getLMULCost(LT.second);
+    if (!LMULCost.isValid())
+      return BaseT::getNumberOfParts(Tp);
+    InstructionCost TotalCost = LT.first * LMULCost;
+    return TotalCost.getValue();
+  }
+
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
   }
