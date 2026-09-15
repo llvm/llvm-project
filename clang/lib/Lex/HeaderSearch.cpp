@@ -970,8 +970,10 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   if (SuggestedModule)
     *SuggestedModule = ModuleMap::KnownHeader();
 
-  // If 'Filename' is absolute, check to see if it exists and no searching.
-  if (llvm::sys::path::is_absolute(Filename)) {
+  // If 'Filename' is absolute under GNU rules, check it directly without
+  // searching in paths. Paths with leading native separator are treated as
+  // absolute, including '//' and Windows UNC paths.
+  if (llvm::sys::path::is_absolute_gnu(Filename)) {
     CurDir = nullptr;
 
     // If this was an #include_next "/absolute/file", fail.
