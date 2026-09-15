@@ -160,6 +160,8 @@ public:
                       LiveIntervals &LIS) const override;
 
   int getSEHRegNum(unsigned i) const { return getEncodingValue(i); }
+
+  bool isIgnoredCVReg(MCRegister LLVMReg) const override;
 };
 
 } // end namespace llvm
