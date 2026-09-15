@@ -6822,14 +6822,8 @@ public:
 
   SplitQualType getSplitUnqualifiedType() const;
 
-  void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, UnderlyingType, BehaviorKind);
-  }
-
-  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
-                      OverflowBehaviorKind Kind) {
-    ID.AddPointer(Underlying.getAsOpaquePtr());
-    ID.AddInteger((int)Kind);
+  std::pair<QualType, OverflowBehaviorKind> getKey() const {
+    return {UnderlyingType, BehaviorKind};
   }
 
   static bool classof(const Type *T) {

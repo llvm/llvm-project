@@ -315,7 +315,7 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable llvm::ContextualFoldingSet<DependentBitIntType, ASTContext &>
       DependentBitIntTypes;
   mutable llvm::FoldingSet<BTFTagAttributedType> BTFTagAttributedTypes;
-  mutable llvm::FoldingSet<OverflowBehaviorType> OverflowBehaviorTypes;
+  mutable llvm::UniquingSet<OverflowBehaviorType> OverflowBehaviorTypes;
   mutable llvm::ContextualFoldingSet<HLSLAttributedResourceType, ASTContext &>
       HLSLAttributedResourceTypes;
   llvm::FoldingSet<HLSLInlineSpirvType> HLSLInlineSpirvTypes;

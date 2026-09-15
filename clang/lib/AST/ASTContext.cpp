@@ -5811,11 +5811,9 @@ QualType ASTContext::getOverflowBehaviorType(
   assert(!Underlying->isOverflowBehaviorType() &&
          "Cannot have underlying types that are themselves OBTs");
 
-  llvm::FoldingSetNodeID ID;
-  OverflowBehaviorType::Profile(ID, Underlying, Kind);
   llvm::FoldingSetInsertToken Token;
-
-  if (OverflowBehaviorType *OBT = OverflowBehaviorTypes.lookup(ID, Token)) {
+  if (OverflowBehaviorType *OBT =
+          OverflowBehaviorTypes.lookup({Underlying, Kind}, Token)) {
     return QualType(OBT, 0);
   }
 
@@ -5824,7 +5822,7 @@ QualType ASTContext::getOverflowBehaviorType(
     SplitQualType canonSplit = getCanonicalType(Underlying).split();
     Canonical = getOverflowBehaviorType(Kind, QualType(canonSplit.Ty, 0));
     Canonical = getQualifiedType(Canonical, canonSplit.Quals);
-    assert(!OverflowBehaviorTypes.lookup(ID, Token) &&
+    assert(!OverflowBehaviorTypes.lookup({Underlying, Kind}, Token) &&
            "Shouldn't be in the map");
   }
 
