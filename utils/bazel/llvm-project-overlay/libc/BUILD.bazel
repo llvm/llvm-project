@@ -11671,6 +11671,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "atan2l",
+    additional_deps = [
+        ":__support_fputil_cast",
+        ":__support_math_atan2",
+        ":__support_math_atan2f128",
+    ],
+)
+
+libc_math_function(
     name = "atanhf",
     additional_deps = [":__support_math_atanhf"],
 )
@@ -11838,6 +11847,13 @@ libc_math_function(
     name = "canonicalizef16",
     additional_deps = [
         ":__support_math_canonicalizef16",
+    ],
+)
+
+libc_math_function(
+    name = "canonicalizebf16",
+    additional_deps = [
+        ":__support_math_canonicalizebf16",
     ],
 )
 
@@ -13427,6 +13443,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "getpayloadbf16",
+    additional_deps = [
+        ":__support_math_getpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "hypot",
     additional_deps = [
         ":__support_math_hypot",
@@ -14538,6 +14561,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "setpayloadbf16",
+    additional_deps = [
+        ":__support_math_setpayloadbf16",
+    ],
+)
+
+libc_math_function(
     name = "setpayloadsig",
     additional_deps = [
         ":__support_math_setpayloadsig",
@@ -14576,6 +14606,13 @@ libc_math_function(
     name = "setpayloadsigf16",
     additional_deps = [
         ":__support_math_setpayloadsigf16",
+    ],
+)
+
+libc_math_function(
+    name = "setpayloadsigbf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigbf16",
     ],
 )
 
