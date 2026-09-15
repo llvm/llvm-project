@@ -21,8 +21,8 @@ define void @test_inbounds_gep_used_in_predicated_block(ptr %A, i64 %n) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
-; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
 ; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -70,8 +70,8 @@ define void @test_inbounds_gep_used_in_predicated_block_stored_value_operand(ptr
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
-; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
 ; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -121,8 +121,8 @@ define void @test_inbounds_gep_used_in_predicated_block_non_memop_user(ptr %A, i
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %A High: (-4611686018427387705 + %A))
-; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
 ; CHECK-NEXT:            Member: {%A,+,4611686018427387905}<%loop.header>
+; CHECK-NEXT:            Member: {%A,+,4611686018427387906}<%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -179,8 +179,8 @@ define i32 @test_nusw_gep_with_load_user_outside_loop(ptr %A) {
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: (-392 + %A) High: (8 + %A))
-; CHECK-NEXT:            Member: {(4 + %A),+,-4}<nw><%loop.header>
 ; CHECK-NEXT:            Member: %A
+; CHECK-NEXT:            Member: {(4 + %A),+,-4}<nw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
