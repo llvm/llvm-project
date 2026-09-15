@@ -219,8 +219,9 @@ void SampleProfileProber::findUnreachableBlocks(
 }
 
 // Follow invoke normal-dest edges and record blocks that sit on a cycle.
-static void findInvokeNormalDestCycles(
-    const Function &F, DenseSet<const BasicBlock *> &CycleBlocks) {
+static void
+findInvokeNormalDestCycles(const Function &F,
+                           DenseSet<const BasicBlock *> &CycleBlocks) {
   DenseSet<const BasicBlock *> Processed;
   DenseSet<const BasicBlock *> OnCurrentPath;
   std::vector<const BasicBlock *> CurrentPath;
