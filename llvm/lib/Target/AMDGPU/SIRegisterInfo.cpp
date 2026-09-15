@@ -3925,6 +3925,10 @@ SIRegisterInfo::getEquivalentVGPRClass(const TargetRegisterClass *SRC) const {
   switch (SRC->getID()) {
   default:
     break;
+  case AMDGPU::VS_16_Lo128RegClassID:
+    return getAllocatableClass(&AMDGPU::VGPR_16_Lo128RegClass);
+  case AMDGPU::VS_32_Lo128RegClassID:
+    return getAllocatableClass(&AMDGPU::VGPR_32_Lo128RegClass);
   case AMDGPU::VS_32_Lo256RegClassID:
   case AMDGPU::VS_64_Lo256RegClassID:
     return getAllocatableClass(getAlignedLo256VGPRClassForBitWidth(Size));
