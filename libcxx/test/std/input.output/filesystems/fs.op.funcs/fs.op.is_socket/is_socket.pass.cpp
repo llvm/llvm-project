@@ -67,6 +67,29 @@ static void test_exist_not_found()
     assert(is_socket(p) == false);
 }
 
+static void test_is_socket_for_real_socket()
+{
+    // Some platforms don't support creating socket files.
+#if !defined(__FreeBSD__) && !defined(__APPLE__)
+    scoped_test_env env;
+    const path sock = env.create_socket("socket");
+
+    // A bound AF_UNIX socket file must be reported as a socket, without error.
+    // On Windows this is a regression test: the socket file is a reparse point
+    // that cannot be opened by following it, which previously made status()
+    // throw filesystem_error instead of reporting file_type::socket.
+    std::error_code ec = GetTestEC();
+    assert(is_socket(sock, ec) == true);
+    assert(!ec);
+
+    assert(is_socket(sock) == true);
+
+    assert(is_regular_file(sock) == false);
+    assert(is_directory(sock) == false);
+    assert(exists(sock) == true);
+#endif
+}
+
 static void test_is_socket_fails()
 {
     scoped_test_env env;
@@ -94,6 +117,7 @@ int main(int, char**) {
     signature_test();
     is_socket_status_test();
     test_exist_not_found();
+    test_is_socket_for_real_socket();
     test_is_socket_fails();
 
     return 0;
