@@ -199,8 +199,7 @@ entry:
   %0 = call ptr @llvm.aarch64.ldg(ptr nonnull %arrayidx, ptr nonnull %arrayidx)
   call void @llvm.lifetime.end.p0(i64 8192, ptr nonnull %s)
   ret ptr %0
-; CHECK: mov [[T0:x[0-9]+]], sp
-; CHECK: add x0, [[T0]], #16
+; CHECK: add x0, sp, #16
 ; CHECK: ldg x0, [sp, #16]
 }
 
@@ -224,8 +223,7 @@ entry:
   %0 = call ptr @llvm.aarch64.ldg(ptr nonnull %arrayidx, ptr nonnull %arrayidx)
   call void @llvm.lifetime.end.p0(i64 8192, ptr nonnull %s)
   ret ptr %0
-; CHECK: mov [[T0:x[0-9]+]], sp
-; CHECK: add x0, [[T0]], #4080
+; CHECK: add x0, sp, #4080
 ; CHECK: ldg x0, [sp, #4080]
 }
 
@@ -273,8 +271,7 @@ entry:
   %0 = call ptr @llvm.aarch64.ldg(ptr nonnull %arrayidx, ptr nonnull %arrayidx)
   call void @llvm.lifetime.end.p0(i64 8192, ptr nonnull %s)
   ret ptr %0
-; CHECK: mov [[T0:x[0-9]+]], sp
-; CHECK: add x[[T1:[0-9]+]], [[T0]], #20
+; CHECK: add x[[T1:[0-9]+]], sp, #20
 ; CHECK-NEXT: ldg x[[T1]], [x[[T1]]]
 }
 
