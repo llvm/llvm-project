@@ -5,8 +5,14 @@
 ; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s --check-prefix=EMULATED
 ; RUN: not lli -no-process-syms -lljit-platform=Inactive -emulated-tls=false \
 ; RUN:   -jit-kind=orc-lazy %s 2>&1 | FileCheck %s --check-prefix=NATIVE
+; RUN: %if system-linux %{ not lli -no-process-syms -lljit-platform=Inactive \
+; RUN:   -emulated-tls=false -jit-kind=orc-lazy -jit-linker=rtdyld %s 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=RTDYLD %}
 ;
-; Test that emulated-tls does not generate any unexpected errors.
+; Test that emulated and native TLS lowering produce the expected errors.
+;
+; TODO: Replace this test with positive tests of successful TLS execution using
+; the new ORC runtime once it supports them.
 ;
 ; Unfortunately we cannot test successful execution of JIT'd code with
 ; emulated-tls as this would require the JIT itself, in this case lli, to be
@@ -20,6 +26,8 @@
 ; EMULATED: JIT session error: Symbols not found: [ {{[^,]*}}__emutls_get_address ]
 ; NATIVE-NOT: __emutls_get_address
 ; NATIVE: JIT session error:
+; NATIVE-NOT: __emutls_get_address
+; RTDYLD: JIT session error: Unable to allocate TLS section memory
 
 @x = thread_local global i32 42, align 4
 
