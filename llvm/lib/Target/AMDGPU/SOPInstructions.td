@@ -1726,13 +1726,13 @@ def S_WAITCNT_lds_direct : SPseudoInstSI<(outs), (ins)> {
 }
 
 let SubtargetPredicate = HasAsyncMark in {
-def ASYNCMARK : SPseudoInstSI<(outs), (ins),
-  [(int_amdgcn_asyncmark)]> {
+def ASYNCMARK : SPseudoInstSI<(outs), (ins i32imm:$stage),
+  [(int_amdgcn_asyncmark timm:$stage)]> {
    let maybeAtomic = 0;
    let isMeta = 1;
 }
-def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16), "$simm16",
-    [(int_amdgcn_wait_asyncmark timm:$simm16)]> {
+def WAIT_ASYNCMARK : SOPP_Pseudo <"", (ins s16imm:$simm16, i32imm:$stage),
+    "$simm16", [(int_amdgcn_wait_asyncmark timm:$simm16, timm:$stage)]> {
     let maybeAtomic = 0;
     let Size = 0;
     let isMeta = 1;
