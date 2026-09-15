@@ -839,6 +839,14 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
   if (!result.hasOffsetApplied)
     value = applyOffset(result).value;
 
+  // CIR does not yet support signing constant lvalue initializers with pointer
+  // authentication. Classic CodeGen signs the offset-adjusted pointer here
+  // before the final pointer cast or ptrtoint conversion.
+  if (PointerAuthQualifier pointerAuth = destType.getPointerAuth()) {
+    cgm.errorNYI("ConstantLValueEmitter: pointer authentication");
+    return {};
+  }
+
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
   if (auto attr = mlir::dyn_cast<mlir::Attribute>(value)) {
