@@ -24,7 +24,7 @@ namespace math {
 
 using LIBC_NAMESPACE::fputil::Float128;
 
-LIBC_INLINE int setpayloadsigf128(Float128 *res, Float128 pl) {
+LIBC_INLINE constexpr int setpayloadsigf128(Float128 *res, Float128 pl) {
   return static_cast<int>(fputil::setpayload</*IsSignaling=*/true>(*res, pl));
 }
 

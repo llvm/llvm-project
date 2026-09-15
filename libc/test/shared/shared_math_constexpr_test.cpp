@@ -449,6 +449,11 @@ static_assert(0 == [] {
   Float128 setpayload_x = Float128(0.0);
   return LIBC_NAMESPACE::shared::setpayloadf128(&setpayload_x, Float128(0.0));
 }());
+static_assert(1 == [] {
+  Float128 setpayloadsigf128_x = Float128(0.0);
+  return LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_x,
+                                                   Float128(0.0));
+}());
 
 //===----------------------------------------------------------------------===//
 //                       Native Float128 Tests
