@@ -1,29 +1,29 @@
-//===-- ubsan_offload_symbolize.cpp -----------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Snapshot loaded device code objects so llvm-symbolizer can name GPU PCs.
+//
+//===----------------------------------------------------------------------===//
 
-#include "ubsan_offload_symbolize.h"
+#include "sanitizer_common.h"
+#include "sanitizer_file.h"
+#include "sanitizer_libc.h"
+#include "sanitizer_mutex.h"
+#include "sanitizer_offload.h"
+#include "sanitizer_posix.h"
 
-#include "sanitizer_common/sanitizer_common.h"
-#include "sanitizer_common/sanitizer_file.h"
-#include "sanitizer_common/sanitizer_libc.h"
-#include "sanitizer_common/sanitizer_mutex.h"
-#include "sanitizer_common/sanitizer_posix.h"
-
-using namespace __sanitizer;
-
-namespace __ubsan {
+namespace __sanitizer {
 namespace {
 
-// The symbolizer requires a file path and offset.
 struct DeviceImage {
   uptr LoadBase;
   uptr LoadSize;
-  void *Bytes;
+  void* Bytes;
   uptr BytesSize;
   char Path[256];
 };
@@ -31,9 +31,9 @@ struct DeviceImage {
 Mutex ImageMutex;
 InternalMmapVectorNoCtor<DeviceImage> Images;
 
-DeviceImage *ImageFor(uptr PC) {
+DeviceImage* ImageFor(uptr PC) {
   for (uptr I = 0; I < Images.size(); ++I) {
-    DeviceImage &Img = Images[I];
+    DeviceImage& Img = Images[I];
     if (PC >= Img.LoadBase && PC < Img.LoadBase + Img.LoadSize)
       return &Img;
   }
@@ -41,7 +41,7 @@ DeviceImage *ImageFor(uptr PC) {
 }
 
 void Drop(uptr I) {
-  DeviceImage &Img = Images[I];
+  DeviceImage& Img = Images[I];
   if (Img.Path[0])
     internal_unlink(Img.Path);
   if (Img.Bytes)
@@ -51,16 +51,15 @@ void Drop(uptr I) {
   Images.pop_back();
 }
 
-// Device images are written to disk so they can be passed to 'llvm-symbolizer'.
-const char *PathFor(DeviceImage &Img) {
+const char* PathFor(DeviceImage& Img) {
   if (Img.Path[0])
     return Img.Path;
   if (!Img.Bytes)
     return nullptr;
 
-  const char *Tmp = GetEnv("TMPDIR");
+  const char* Tmp = GetEnv("TMPDIR");
   char Binary[256];
-  const char *Name = "ubsan";
+  const char* Name = SanitizerToolName ? SanitizerToolName : "sanitizer";
   if (ReadBinaryNameCached(Binary, sizeof(Binary)))
     Name = StripModuleName(Binary);
   internal_snprintf(Img.Path, sizeof(Img.Path), "%s/%s.%d.%zx.elf",
@@ -81,11 +80,24 @@ const char *PathFor(DeviceImage &Img) {
   return Img.Path;
 }
 
-} // namespace
+// True if Addr is in a tracked image. Path is null when the ELF could not
+// be written.
+bool SnapshotImage(uptr Addr, char** Path, uptr* Offset) {
+  *Path = nullptr;
+  Lock L(&ImageMutex);
+  DeviceImage* Img = ImageFor(Addr);
+  if (!Img)
+    return false;
+  *Offset = Addr - Img->LoadBase;
+  if (const char* P = PathFor(*Img))
+    *Path = internal_strdup(P);
+  return true;
+}
 
-// Make a local copy of the device image to use for future symbolization.
-void TrackDeviceImage(uptr LoadBase, uptr LoadSize, const void *Storage,
-                      uptr StorageSize) {
+}  // namespace
+
+void Offload::TrackImage(uptr LoadBase, uptr LoadSize, const void* Storage,
+                         uptr StorageSize) {
   Lock L(&ImageMutex);
   if (ImageFor(LoadBase))
     return;
@@ -93,14 +105,14 @@ void TrackDeviceImage(uptr LoadBase, uptr LoadSize, const void *Storage,
   Img.LoadBase = LoadBase;
   Img.LoadSize = LoadSize;
   if (Storage && StorageSize) {
-    Img.Bytes = MmapOrDie(StorageSize, "ubsan device image");
+    Img.Bytes = MmapOrDie(StorageSize, "offload device image");
     internal_memcpy(Img.Bytes, Storage, StorageSize);
     Img.BytesSize = StorageSize;
   }
   Images.push_back(Img);
 }
 
-void ForgetDeviceImage(uptr LoadBase) {
+void Offload::UntrackImage(uptr LoadBase) {
   Lock L(&ImageMutex);
   for (uptr I = 0; I < Images.size(); ++I) {
     if (Images[I].LoadBase != LoadBase)
@@ -110,39 +122,27 @@ void ForgetDeviceImage(uptr LoadBase) {
   }
 }
 
-void ForgetDeviceImages() {
+void Offload::UntrackImages() {
   Lock L(&ImageMutex);
-  while (Images.size())
-    Drop(0);
+  while (Images.size()) Drop(0);
 }
 
-// The custom symbolizer function we use for the device image, returns nullptr
-// if the given program counter is not owned by any known device image.
-SymbolizedStack *SymbolizeOffloadPc(uptr PC) {
+SymbolizedStack* Offload::Symbolize(uptr PC) {
   if (!PC)
     return nullptr;
 
-  // Get a file path for the image containing the program counter so we can pass
-  // it to the LLVM symbolizer interface.
-  char Path[256];
+  char* Path = nullptr;
   uptr Offset = 0;
-  {
-    Lock L(&ImageMutex);
-    DeviceImage *Img = ImageFor(PC);
-    if (!Img)
-      return nullptr;
-    const char *P = PathFor(*Img);
-    if (!P)
-      return SymbolizedStack::New(PC);
-    internal_strlcpy(Path, P, sizeof(Path));
-    Offset = PC - Img->LoadBase;
-  }
+  if (!SnapshotImage(PC, &Path, &Offset))
+    return nullptr;
+  if (!Path)
+    return SymbolizedStack::New(PC);
 
-  SymbolizedStack *Frames = Symbolizer::GetOrInit()->SymbolizeModuleOffset(
+  SymbolizedStack* Frames = Symbolizer::GetOrInit()->SymbolizeModuleOffset(
       Path, Offset ? Offset - 1 : Offset);
-  for (SymbolizedStack *F = Frames; F; F = F->next)
-    F->info.address = PC;
+  InternalFree(Path);
+  for (SymbolizedStack* F = Frames; F; F = F->next) F->info.address = PC;
   return Frames;
 }
 
-} // namespace __ubsan
+}  // namespace __sanitizer

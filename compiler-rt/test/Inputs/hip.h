@@ -4,8 +4,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef UBSAN_TEST_HIP_H
-#define UBSAN_TEST_HIP_H
+#ifndef COMPILER_RT_TEST_HIP_H
+#define COMPILER_RT_TEST_HIP_H
 
 #define __global__ __attribute__((global))
 #define __device__ __attribute__((device))
@@ -45,4 +45,4 @@ int printf(const char *, ...);
     }                                                                          \
   } while (0)
 
-#endif // UBSAN_TEST_HIP_H
+#endif // COMPILER_RT_TEST_HIP_H
