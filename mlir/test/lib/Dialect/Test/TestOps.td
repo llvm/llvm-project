@@ -27,6 +27,7 @@ include "mlir/Interfaces/DataLayoutInterfaces.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
 include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
+include "mlir/Interfaces/InferUniformityOpInterface.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/Interfaces/MemorySlotInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -3580,6 +3581,108 @@ def TestReflectBoundsOp : TEST_Op<"reflect_bounds",
   let results = (outs InferIntRangeType:$result);
 
   let assemblyFormat = "attr-dict $value `:` type($result)";
+}
+
+//===----------------------------------------------------------------------===//
+// Test InferUniformityOpInterface
+//===----------------------------------------------------------------------===//
+
+def TestWithUniformityOp : TEST_Op<"with_uniformity",
+    [DeclareOpInterfaceMethods<InferUniformityOpInterface>, NoMemoryEffect]> {
+  let description = [{
+    Defines a value of the given uniformity scope, for uniformity analysis
+    tests.
+
+    Example:
+
+    ```mlir
+    %0 = test.with_uniformity {scope = "workgroup"} : index
+    ```
+  }];
+  let arguments = (ins StrAttr:$scope);
+  let results = (outs AnyType:$result);
+  let assemblyFormat = "attr-dict `:` type($result)";
+  let hasVerifier = 1;
+}
+
+def TestUniformityOfOp : TEST_Op<"uniformity_of",
+    [DeclareOpInterfaceMethods<InferUniformityOpInterface>, NoMemoryEffect,
+     AllTypesMatch<["value", "same", "other"]>]> {
+  let description = [{
+    Defines two values from one: `same` has the uniformity of the operand and
+    `other` is divergent, like the value and the validity flag of a shuffle.
+    Says nothing about `same` while the operand is uninitialized.
+
+    Example:
+
+    ```mlir
+    %same, %other = test.uniformity_of %0 : index
+    ```
+  }];
+  let arguments = (ins AnyType:$value);
+  let results = (outs AnyType:$same, AnyType:$other);
+  let assemblyFormat = "$value attr-dict `:` type($value)";
+}
+
+def TestUniformityLaunchOp : TEST_Op<"uniformity_launch",
+    [DeclareOpInterfaceMethods<InferUniformityOpInterface,
+                               ["isLaunchBoundary"]>,
+     SingleBlock, NoTerminator, RecursiveMemoryEffects]> {
+  let description = [{
+    A launch boundary: its region is executed by the threads of a launch
+    whatever control flow encloses the operation, and the entry block arguments
+    of the region have the uniformity scopes listed.
+
+    Example:
+
+    ```mlir
+    test.uniformity_launch ["workgroup", "divergent"] {
+    ^bb0(%block: index, %thread: index):
+      ...
+    }
+    ```
+  }];
+  let arguments = (ins StrArrayAttr:$scopes);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = "$scopes attr-dict-with-keyword $body";
+  let hasVerifier = 1;
+}
+
+def TestUniformityRegionOp : TEST_Op<"uniformity_region",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                               ["getEntrySuccessorOperands",
+                                "getSuccessorInputs"]>,
+     DeclareOpInterfaceMethods<InferUniformityOpInterface>, SingleBlock,
+     RecursiveMemoryEffects]> {
+  let description = [{
+    A region branch that describes its successor inputs itself, like
+    `gpu.warp_execute_on_lane_0`: `cond` steers the branch, `inits` are
+    forwarded to the arguments of the body and the operands of its
+    `test.region_if_yield` terminator to the results. `arg_scopes` (`result_scopes`), when present, lists in
+    order the uniformity scope the operation declares for every body argument
+    (result); an empty string leaves that value undescribed. When absent, the
+    operation says nothing about that successor.
+
+    Example:
+
+    ```mlir
+    %r = test.uniformity_region %cond(%a) args ["uniform"] results ["subgroup"]
+        : (index) -> index {
+    ^bb0(%x: index):
+      test.region_if_yield %x : index
+    }
+    ```
+  }];
+  let arguments = (ins I1:$cond, Variadic<AnyType>:$inits,
+                       OptionalAttr<StrArrayAttr>:$arg_scopes,
+                       OptionalAttr<StrArrayAttr>:$result_scopes);
+  let results = (outs Variadic<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $cond `(` $inits `)` (`args` $arg_scopes^)? (`results` $result_scopes^)?
+    `:` functional-type($inits, $results) $body attr-dict
+  }];
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
