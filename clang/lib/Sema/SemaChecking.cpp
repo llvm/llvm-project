@@ -1467,6 +1467,18 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BIrecv:
+  case Builtin::BI__builtin_recv:
+  case Builtin::BIrecvfrom:
+  case Builtin::BI__builtin_recvfrom: {
+    if (TheCall->getNumArgs() < 3)
+      return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    SourceSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    DestinationSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
   case Builtin::BImemcpy:
