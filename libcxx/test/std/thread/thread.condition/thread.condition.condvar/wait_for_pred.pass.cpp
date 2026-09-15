@@ -155,5 +155,20 @@ int main(int, char**) {
     t1.join();
   }
 
+  // Regression test for LWG 3504: wait_for() with a floating-point
+  {
+    std::condition_variable cv;
+    std::mutex mutex;
+    std::unique_lock<std::mutex> lock(mutex);
+
+    auto start   = std::chrono::steady_clock::now();
+    bool result  = cv.wait_for(lock, std::chrono::duration<float>(0.25f), [] { return false; });
+    auto elapsed = std::chrono::steady_clock::now() - start;
+
+    assert(result == false);
+    assert(elapsed > std::chrono::milliseconds(200));
+    assert(elapsed < std::chrono::milliseconds(600));
+  }
+
   return 0;
 }
