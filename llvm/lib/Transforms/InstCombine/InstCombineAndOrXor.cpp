@@ -5491,8 +5491,8 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Xor;
 
   WithCache<const Value *> Op0Cache(Op0), Op1Cache(Op1);
-  switch (getNoCommonBitsSetResult(Op0Cache, Op1Cache,
-                                    SQ.getWithInstruction(&I))) {
+  switch (
+      getNoCommonBitsSetResult(Op0Cache, Op1Cache, SQ.getWithInstruction(&I))) {
   case NoCommonBitsSetResult::Known:
     return BinaryOperator::CreateDisjointOr(Op0, Op1);
   case NoCommonBitsSetResult::OnlyIfUndefIgnored:

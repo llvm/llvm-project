@@ -244,7 +244,7 @@ haveNoCommonBitsSetSpecialCases(const Value *LHS, const Value *RHS,
 }
 
 static bool haveNoCommonBitsSetFromAssume(const Value *LHS, const Value *RHS,
-                                           const SimplifyQuery &SQ) {
+                                          const SimplifyQuery &SQ) {
   if (!SQ.AC || !SQ.CxtI)
     return false;
 
