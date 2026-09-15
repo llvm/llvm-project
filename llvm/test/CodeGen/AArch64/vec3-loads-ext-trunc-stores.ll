@@ -897,11 +897,10 @@ define void @store_trunc_v3i64_to_v3i8(ptr %p, <3 x i64> %x) {
 ; CHECK-NEXT:    xtn.2s v0, v0
 ; CHECK-NEXT:    stur b1, [x0, #2]
 ; CHECK-NEXT:    mov.s w8, v0[1]
-; CHECK-NEXT:    mov.h v0[1], w8
+; CHECK-NEXT:    mov.b v0[1], w8
 ; CHECK-NEXT:    mov.s w8, v1[1]
-; CHECK-NEXT:    mov.h v0[2], v1[0]
-; CHECK-NEXT:    mov.h v0[3], w8
-; CHECK-NEXT:    xtn.8b v0, v0
+; CHECK-NEXT:    mov.b v0[2], v1[0]
+; CHECK-NEXT:    mov.b v0[3], w8
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
@@ -919,11 +918,10 @@ define void @store_trunc_v3i64_to_v3i8(ptr %p, <3 x i64> %x) {
 ; BE-NEXT:    xtn v0.2s, v0.2d
 ; BE-NEXT:    stur b1, [x0, #2]
 ; BE-NEXT:    mov w8, v0.s[1]
-; BE-NEXT:    mov v0.h[1], w8
+; BE-NEXT:    mov v0.b[1], w8
 ; BE-NEXT:    mov w8, v1.s[1]
-; BE-NEXT:    mov v0.h[2], v1.h[0]
-; BE-NEXT:    mov v0.h[3], w8
-; BE-NEXT:    xtn v0.8b, v0.8h
+; BE-NEXT:    mov v0.b[2], v1.b[0]
+; BE-NEXT:    mov v0.b[3], w8
 ; BE-NEXT:    rev32 v0.16b, v0.16b
 ; BE-NEXT:    rev32 v0.4h, v0.4h
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0

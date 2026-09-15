@@ -24045,6 +24045,13 @@ static SDValue performTruncateCombine(SDNode *N, SelectionDAG &DAG,
                        DAG.getVectorIdxConstant(ExtractIndex * 2, DL));
   }
 
+  // truncate(buildvector) -> buildvector if we still have it late in the
+  // pipeline. We do not truncate the operand types as the buildvector
+  // implicitly truncates.
+  if (!DCI.isBeforeLegalizeOps() && N0.getOpcode() == ISD::BUILD_VECTOR &&
+      N0.hasOneUse() && (VT == MVT::v8i8 || VT == MVT::v4i16))
+    return DAG.getBuildVector(VT, DL, N0->ops());
+
   return SDValue();
 }
 
