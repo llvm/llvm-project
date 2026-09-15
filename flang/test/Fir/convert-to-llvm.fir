@@ -142,6 +142,31 @@ fir.global internal @_QEmultiarray : !fir.array<32xi32> {
 
 // -----
 
+// Test global where a few leading elements are set and the rest are set by a
+// partial insert_on_range. It must be folded to a constant array instead of a
+// long (and very expensive to fold) insertvalue chain.
+
+fir.global internal @_QEpartial_init : !fir.array<8xi32> {
+  %c7_i32 = arith.constant 7 : i32
+  %c77_i32 = arith.constant 77 : i32
+  %c0_i32 = arith.constant 0 : i32
+  %0 = fir.undefined !fir.array<8xi32>
+  %1 = fir.insert_value %0, %c7_i32, [0 : index] : (!fir.array<8xi32>, i32) -> !fir.array<8xi32>
+  %2 = fir.insert_value %1, %c77_i32, [1 : index] : (!fir.array<8xi32>, i32) -> !fir.array<8xi32>
+  %3 = fir.insert_on_range %2, %c0_i32 from (2) to (7) : (!fir.array<8xi32>, i32) -> !fir.array<8xi32>
+  fir.has_value %3 : !fir.array<8xi32>
+}
+
+// CHECK:          llvm.mlir.global internal @_QEpartial_init()
+// GENERIC-SAME: {addr_space = 0 : i32}
+// AMDGPU-SAME: {addr_space = 1 : i32}
+// CHECK-SAME: : !llvm.array<8 x i32> {
+// CHECK:            %[[CST:.*]] = llvm.mlir.constant(dense<[7, 77, 0, 0, 0, 0, 0, 0]> : tensor<8xi32>) : !llvm.array<8 x i32>
+// CHECK:            llvm.return %[[CST]] : !llvm.array<8 x i32>
+// CHECK:          }
+
+// -----
+
 // Test global with box
 
 fir.global internal @_QFEx : !fir.box<!fir.ptr<i32>> {
