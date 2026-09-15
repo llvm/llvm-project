@@ -20646,9 +20646,7 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
   LLVMContext &Ctx = *DAG.getContext();
   unsigned ScalarBits = OpVT.getScalarSizeInBits();
   unsigned ActiveBits = DAG.computeKnownBits(N0).countMaxActiveBits();
-  // Narrowing to i1 turns the conversion into a select, which is not a win.
-  for (unsigned Bits = bit_ceil(std::max(2u, ActiveBits)); Bits < ScalarBits;
-       Bits *= 2) {
+  for (unsigned Bits = bit_ceil(ActiveBits); Bits < ScalarBits; Bits *= 2) {
     EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
 
     // Vector conversion is unrolled to scalars, but truncate is not.
@@ -20656,10 +20654,11 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
         !TLI.isTruncateFree(OpVT, NarrowVT))
       continue;
 
-    if (LegalTypes && !TLI.isTypeLegal(NarrowVT))
+    // Avoid creating an illegal vector type before type legalization.
+    if ((LegalTypes || OpVT.isVector()) && !TLI.isTypeLegal(NarrowVT))
       continue;
 
-    // Avoid undoing target combines that widen vector integer to fp operands.
+    // Avoid undoing a target combine that widened the source operand.
     if (N0.getOpcode() == ISD::ZERO_EXTEND &&
         NarrowVT == N0.getOperand(0).getValueType())
       continue;
