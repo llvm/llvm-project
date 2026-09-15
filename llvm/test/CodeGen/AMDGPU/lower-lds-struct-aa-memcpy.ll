@@ -35,13 +35,13 @@ define protected amdgpu_kernel void @test(ptr addrspace(1) nocapture %ptr.coerce
 ; CHECK-LABEL: define protected amdgpu_kernel void @test(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[PTR_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1, !noalias !4
-; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !6, !noalias !7
-; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !4, !noalias !1
+; CHECK-NEXT:    store i8 3, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1
+; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T:%.*]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !6
 ; CHECK-NEXT:    [[CMP_I_I:%.*]] = icmp eq i8 [[TMP0]], 3
-; CHECK-NEXT:    store i8 2, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1, !noalias !4
-; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !6, !noalias !7
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !4, !noalias !1
+; CHECK-NEXT:    store i8 2, ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, align 4, !alias.scope !1
+; CHECK-NEXT:    tail call void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noundef align 1 dereferenceable(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), ptr addrspace(3) noundef align 1 dereferenceable(3) @llvm.amdgcn.kernel.test.lds, i64 3, i1 false), !alias.scope !4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr addrspace(3) getelementptr inbounds ([[LLVM_AMDGCN_KERNEL_TEST_LDS_T]], ptr addrspace(3) @llvm.amdgcn.kernel.test.lds, i32 0, i32 2), align 4, !alias.scope !6
 ; CHECK-NEXT:    [[CMP_I_I19:%.*]] = icmp eq i8 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[CMP_I_I19]], [[CMP_I_I]]
 ; CHECK-NEXT:    [[FROMBOOL8:%.*]] = zext i1 [[TMP2]] to i8
@@ -71,9 +71,8 @@ declare void @llvm.memcpy.p3.p3.i64(ptr addrspace(3) noalias nocapture writeonly
 ; CHECK: [[META0:![0-9]+]] = !{i32 0, i32 1}
 ; CHECK: [[META1:![0-9]+]] = !{!2}
 ; CHECK: [[META2:![0-9]+]] = distinct !{!2, !3}
-; CHECK: [[META3:![0-9]+]] = distinct !{!3, i1 false}
-; CHECK: [[META4:![0-9]+]] = !{!5}
+; CHECK: [[META3:![0-9]+]] = distinct !{!3, i1 true}
+; CHECK: [[META4:![0-9]+]] = !{!2, !5}
 ; CHECK: [[META5:![0-9]+]] = distinct !{!5, !3}
-; CHECK: [[META6:![0-9]+]] = !{!5, !2}
-; CHECK: [[META7:![0-9]+]] = !{}
+; CHECK: [[META6:![0-9]+]] = !{!5}
 ;.
