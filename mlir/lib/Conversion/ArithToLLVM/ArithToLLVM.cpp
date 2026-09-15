@@ -559,9 +559,10 @@ LogicalResult AddUIExtendedOpLowering::matchAndRewrite(
 
   // Handle the scalar and 1D vector cases.
   if (!isa<LLVM::LLVMArrayType>(operandType)) {
+    Type newSumType = typeConverter->convertType(sumResultType);
     Type newOverflowType = typeConverter->convertType(overflowResultType);
     Type structType =
-        LLVM::LLVMStructType::getLiteral(ctx, {sumResultType, newOverflowType});
+        LLVM::LLVMStructType::getLiteral(ctx, {newSumType, newOverflowType});
     Value addOverflow = LLVM::UAddWithOverflowOp::create(
         rewriter, loc, structType, adaptor.getLhs(), adaptor.getRhs());
     Value sumExtracted =
