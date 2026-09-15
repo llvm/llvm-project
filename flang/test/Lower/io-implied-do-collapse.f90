@@ -502,3 +502,22 @@ subroutine write_optional_subscript(b, n, k)
   write(10) (b(k, i), i=1,n)
 end subroutine
 
+! CHECK-LABEL: func @_QPread_optional_base(
+subroutine read_optional_base(a, n)
+  integer :: n
+  real, optional :: a(n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioInputDescriptor
+  read(10) (a(i), i=1,n)
+end subroutine
+
+! CHECK-LABEL: func @_QPread_optional_subscript(
+subroutine read_optional_subscript(b, n, k)
+  integer :: n
+  integer, optional :: k
+  real :: b(10, n)
+  ! CHECK: fir.do_loop
+  ! CHECK: fir.call @_FortranAioInputDescriptor
+  read(10) (b(k, i), i=1,n)
+end subroutine
+
