@@ -191,11 +191,11 @@ define amdgpu_cs void @no_extract_hi16_uniform_sgpr(<2 x half> inreg %v, ptr add
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s3, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s2, s1
 ; GFX12-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GFX12-TRUE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, 0
 ; GFX12-TRUE16-NEXT:    s_cmp_eq_f16 s0, s1
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-TRUE16-NEXT:    s_cselect_b32 s0, -1, 0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_cndmask_b16 v0.l, s1, v0.l, s0
 ; GFX12-TRUE16-NEXT:    global_store_b16 v1, v0, s[2:3]
 ; GFX12-TRUE16-NEXT:    s_endpgm
