@@ -14,6 +14,7 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
+
 namespace math {
 
 using LIBC_NAMESPACE::fputil::Float128;
