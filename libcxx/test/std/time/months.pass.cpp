@@ -27,6 +27,7 @@ int main(int, char**)
     static_assert(std::is_integral<Rep>::value, "");
     static_assert(std::numeric_limits<Rep>::digits >= 20, "");
     static_assert(std::is_same_v<Period, std::ratio_divide<std::chrono::years::period, std::ratio<12>>>, "");
+    static_assert(Period::num == 2629746 && Period::den == 1, "");
 
   return 0;
 }
