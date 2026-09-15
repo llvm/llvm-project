@@ -379,14 +379,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   const auto &TargetOpts = CI.getTargetOpts();
   const auto &LangOpts = CI.getLangOpts();
   const auto &HSOpts = CI.getHeaderSearchOpts();
-  switch (LangOpts.getThreadModel()) {
-  case LangOptions::ThreadModelKind::POSIX:
-    Options.ThreadModel = llvm::ThreadModel::POSIX;
-    break;
-  case LangOptions::ThreadModelKind::Single:
-    Options.ThreadModel = llvm::ThreadModel::Single;
-    break;
-  }
 
   Options.MCOptions.BinutilsVersion =
       llvm::MCTargetOptions::parseBinutilsVersion(CodeGenOpts.BinutilsVersion);
