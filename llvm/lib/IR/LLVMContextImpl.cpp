@@ -68,6 +68,10 @@ LLVMContextImpl::~LLVMContextImpl() {
          "Values with metadata have been leaked");
 #endif
 
+  // Clear MetadataUseMap in one batch; subsequent dropRef calls will skip map
+  // lookups when the map is empty.
+  MetadataUseMap.clear();
+
   // Drop references for MDNodes.  Do this before Values get deleted to avoid
   // unnecessary RAUW when nodes are still unresolved.
   for (auto *I : DistinctMDNodes)
