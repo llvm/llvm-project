@@ -4140,10 +4140,8 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
   case SVE::BI__builtin_sve_svdup_n_b16:
   case SVE::BI__builtin_sve_svdup_n_b32:
   case SVE::BI__builtin_sve_svdup_n_b64: {
-    Value *CmpNE =
-        Builder.CreateICmpNE(Ops[0], Constant::getNullValue(Ops[0]->getType()));
     llvm::ScalableVectorType *OverloadedTy = getSVEType(TypeFlags);
-    Value *Dup = EmitSVEDupX(CmpNE, OverloadedTy);
+    Value *Dup = EmitSVEDupX(Ops[0], OverloadedTy);
     return EmitSVEPredicateCast(Dup, cast<llvm::ScalableVectorType>(Ty));
   }
 

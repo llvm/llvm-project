@@ -8962,16 +8962,29 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
       }
     }
 
-    // Special case: clmul(X, ~0) is equivalent to a "parallel prefix XOR" or
-    // "bitwise parity" operation.
-    if (isAllOnesOrAllOnesSplat(Y)) {
-      SDValue R = X;
-      for (unsigned I = 1; I < BW; I <<= 1) {
-        SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
-        SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
-        R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+    // Special case: clmul(X, Y) where Y is a known constant (splat) that forms
+    // a contiguous block of trailing ones whose length N is a power of two
+    // (e.g. i8 0xFF, i8 0x0F, ...) or equal to the operand width. In this
+    // special case, clmul(X, Y) is equivalent to a "parallel prefix XOR" or
+    // "bitwise parity" operation on X.
+    //
+    // Note: This special currently dose NOT apply when the mask is neither a
+    // power of two nor equal to the operand width because the loop inside
+    // behaves as if the mask was bit-ceiled, and "undoing" the XOR with parts
+    // of that CLMUL is a recursive problem (e.g. CLMUL with a 20-bit mask
+    // requires correction XOR with CLMUL with 12-bit mask).
+    if (auto *C = isConstOrConstSplat(Y, /*AllowUndefs=*/true)) {
+      const APInt &YVal = C->getAPIntValue();
+      unsigned N = YVal.countr_one();
+      if (YVal.isAllOnes() || (YVal.isMask() && isPowerOf2_32(N))) {
+        SDValue R = X;
+        for (unsigned I = 1; I < N; I <<= 1) {
+          SDValue ShAmt = DAG.getShiftAmountConstant(I, VT, DL);
+          SDValue Shifted = DAG.getNode(ISD::SHL, DL, VT, R, ShAmt);
+          R = DAG.getNode(ISD::XOR, DL, VT, R, Shifted);
+        }
+        return R;
       }
-      return R;
     }
 
     // NOTE: If you change this expansion, please update the cost model
@@ -10798,6 +10811,19 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   EVT ShVT = getShiftAmountTy(VT, DAG.getDataLayout());
   SDValue Op = Node->getOperand(0);
   unsigned Len = VT.getScalarSizeInBits();
+
+  // Compute effective bit width from known bits, allowing us to shift the
+  // active bits down if necessary to fit into smaller specialized expansions.
+  KnownBits Known = DAG.computeKnownBits(Op);
+  unsigned LZ = Known.countMinLeadingZeros();
+  unsigned TZ = Known.countMinTrailingZeros();
+  unsigned ShiftedActiveBits = Known.getBitWidth() - (LZ + TZ);
+
+  // Round up to 8-bit boundary for byte-oriented SWAR algorithm
+  unsigned EffectiveLen = Len;
+  if (ShiftedActiveBits > 0 && ShiftedActiveBits < Len)
+    EffectiveLen = std::min(alignTo(ShiftedActiveBits, 8), Len);
+
   assert(VT.isInteger() && "CTPOP not implemented for this type.");
 
   // TODO: Add support for irregular type lengths.
@@ -10807,6 +10833,12 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
   // Only expand vector types if we have the appropriate vector bit operations.
   if (VT.isVector() && !canExpandVectorCTPOP(*this, VT))
     return SDValue();
+
+  // If the active bits are not at the low end, shift them down
+  if (EffectiveLen < Len && TZ > 0) {
+    Op = DAG.getNode(ISD::SRL, dl, VT, Op,
+                     DAG.getShiftAmountConstant(TZ, VT, dl));
+  }
 
   // This is the "best" algorithm from
   // http://graphics.stanford.edu/~seander/bithacks.html#CountBitsSetParallel
@@ -10836,13 +10868,13 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
                                            DAG.getConstant(4, dl, ShVT))),
                    Mask0F);
 
-  if (Len <= 8)
+  if (EffectiveLen <= 8)
     return Op;
 
   // Avoid the multiply if we only have 2 bytes to add.
   // TODO: Only doing this for scalars because vectors weren't as obviously
   // improved.
-  if (Len == 16 && !VT.isVector()) {
+  if (EffectiveLen == 16 && !VT.isVector()) {
     // v = (v + (v >> 8)) & 0x00FF;
     return DAG.getNode(ISD::AND, dl, VT,
                      DAG.getNode(ISD::ADD, dl, VT, Op,
@@ -10860,7 +10892,7 @@ SDValue TargetLowering::expandCTPOP(SDNode *Node, SelectionDAG &DAG) const {
     V = DAG.getNode(ISD::MUL, dl, VT, Op, Mask01);
   } else {
     V = Op;
-    for (unsigned Shift = 8; Shift < Len; Shift *= 2) {
+    for (unsigned Shift = 8; Shift < EffectiveLen; Shift *= 2) {
       SDValue ShiftC = DAG.getShiftAmountConstant(Shift, VT, dl);
       V = DAG.getNode(ISD::ADD, dl, VT, V,
                       DAG.getNode(ISD::SHL, dl, VT, V, ShiftC));

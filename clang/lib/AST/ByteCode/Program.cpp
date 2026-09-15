@@ -325,7 +325,8 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     const bool IsMutable = FD->isMutable();
     const bool IsVolatile = FT.isVolatileQualified();
     const Descriptor *Desc;
-    if (OptPrimType T = Ctx.classify(FT)) {
+    OptPrimType T = Ctx.classify(FT);
+    if (T) {
       Desc = createDescriptor(FD, *T, nullptr, IsConst,
                               /*IsTemporary=*/false, IsMutable, IsVolatile);
       HasPtrField = HasPtrField || (T == PT_Ptr);
@@ -339,7 +340,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     } else {
       Desc = allocateDescriptor(FD);
     }
-    Fields.emplace_back(FD, Desc, BaseSize);
+    Fields.emplace_back(FD, Desc, BaseSize, T);
     BaseSize += align(Desc->getAllocSize());
   }
 

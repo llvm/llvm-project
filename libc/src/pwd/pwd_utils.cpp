@@ -17,7 +17,7 @@
 #include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/attributes.h"
-#include "src/pwd/flat_file_db.h"
+#include "src/__support/pwd/flat_file_db.h"
 #include "src/string/string_utils.h"
 
 #ifndef LIBC_COPT_PWD_FILE_PATH
@@ -91,6 +91,26 @@ ErrorOr<bool> find_by_uid(uid_t uid, struct passwd *pwd, cpp::span<char> buffer,
     return entry.pw_uid == uid;
   };
   return local_db.lookup(matcher, pwd, buffer);
+}
+
+ErrorOr<struct passwd *> find_by_name(cpp::string_view name) {
+  auto res = find_by_name(name, &pwd_entry, line_buffer);
+  if (!res.has_value())
+    return Error(res.error());
+  bool found = res.value();
+  if (!found)
+    return nullptr;
+  return &pwd_entry;
+}
+
+ErrorOr<struct passwd *> find_by_uid(uid_t uid) {
+  auto res = find_by_uid(uid, &pwd_entry, line_buffer);
+  if (!res.has_value())
+    return Error(res.error());
+  bool found = res.value();
+  if (!found)
+    return nullptr;
+  return &pwd_entry;
 }
 
 } // namespace pwd

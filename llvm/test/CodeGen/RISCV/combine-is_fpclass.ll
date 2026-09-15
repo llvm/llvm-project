@@ -277,7 +277,7 @@ define i1 @copysign_nan_mag_is_finite_or_inf(float %y) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
-  %r = call float @llvm.copysign.f32(float 0x7FF8000000000000, float %y)
+  %r = call float @llvm.copysign.f32(float +qnan, float %y)
   %res = call i1 @llvm.is.fpclass.f32(float %r, i32 1020) ; 0x3FC = finite | inf
   ret i1 %res
 }

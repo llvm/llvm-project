@@ -2228,6 +2228,24 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
       return llvm::createStringError("unimplemented opcode %s",
                                      DW_OP_value_to_name(opcode));
 
+    case DW_OP_LLVM_user:
+      if (op->getSubCode() == DW_OP_LLVM_piece_end) {
+        if (op->getEndOffset() != expr_data.size())
+          return llvm::createStringError(
+              "DW_OP_LLVM_piece_end is only supported at the end of an "
+              "expression");
+
+        // LLDB already constructs one composite in `pieces`, so a terminal
+        // DW_OP_LLVM_piece_end is a no-op. TODO: Support multiple composites
+        // and DW_OP_piece_end once LLVM implements DWARF 6 locations on the
+        // stack.
+        // Extension:
+        // https://llvm.org/docs/AMDGPUDwarfExtensionsForHeterogeneousDebugging.html
+        // Standard: https://dwarfstd.org/issues/230524.1-orig.html
+        break;
+      }
+      [[fallthrough]];
+
     default:
       if (eval_ctx.dwarf_cu) {
         const uint64_t operands_offset = op_offset + 1;

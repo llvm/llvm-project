@@ -309,6 +309,37 @@ cir::CoroSizeOp CIRGenFunction::emitCoroSizeBuiltinCall(const CallExpr *e) {
   return cir::CoroSizeOp::create(cgm.getBuilder(), loc);
 }
 
+cir::CoroPromiseOp
+CIRGenFunction::emitCoroPromiseBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+
+  llvm::SmallVector<mlir::Value, 3> args;
+  for (const Expr *arg : e->arguments())
+    args.push_back(emitScalarExpr(arg));
+
+  auto coroPromise = cir::CoroPromiseOp::create(cgm.getBuilder(), loc, args);
+  return coroPromise;
+}
+
+cir::CoroDoneOp CIRGenFunction::emitCoroDoneBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroDoneOp::create(cgm.getBuilder(), loc,
+                                 emitScalarExpr(e->getArg(0)));
+}
+
+cir::CoroResumeOp CIRGenFunction::emitCoroResumeBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroResumeOp::create(cgm.getBuilder(), loc,
+                                   emitScalarExpr(e->getArg(0)));
+}
+
+cir::CoroDestroyOp
+CIRGenFunction::emitCoroDestroyBuiltinCall(const CallExpr *e) {
+  mlir::Location loc = getLoc(e->getBeginLoc());
+  return cir::CoroDestroyOp::create(cgm.getBuilder(), loc,
+                                    emitScalarExpr(e->getArg(0)));
+}
+
 static mlir::LogicalResult
 coroutineBodyExceptionHelper(CIRGenFunction &cgf, const CoroutineBodyStmt &s) {
 

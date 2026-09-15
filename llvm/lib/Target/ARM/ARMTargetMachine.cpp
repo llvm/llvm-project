@@ -197,8 +197,8 @@ MachineFunctionInfo *ARMBaseTargetMachine::createMachineFunctionInfo(
     BumpPtrAllocator &Allocator, const Function &F,
     const TargetSubtargetInfo *STI) const {
   const auto *ARMSTI = static_cast<const ARMSubtarget *>(STI);
-  bool FPRegsUnavailable = !ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only();
-  if (FPRegsUnavailable) {
+  if (!ARMSTI->hasFPRegs() || ARMSTI->isThumb1Only() ||
+      ARMSTI->useSoftFloat()) {
     const StringRef FPRegsUnavailableMsg =
         ", but floating-point registers are unavailable";
     const ARMTargetLowering *TLI = ARMSTI->getTargetLowering();
@@ -287,8 +287,8 @@ ARMBaseTargetMachine::getSubtargetImpl(const Function &F) const {
     Key += "denormal-fp-math=" + DM.str();
 
   FloatABI::ABIType FloatABI = getFloatABI(*F.getParent());
-  // It is legal to have FloatABI::Hard with +soft-float for targets with SIMD
-  // registers, but no floating-point hardware (mve+nofp)
+  // It is legal to have FloatABI::Hard for targets with SIMD registers
+  // but no floating-point hardware (mve+nofp).
   Key += FloatABI == FloatABI::Hard ? "+hard-float-abi" : "+soft-float-abi";
 
   ARM::ARMABI ABI = getEffectiveABI(*F.getParent());

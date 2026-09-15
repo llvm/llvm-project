@@ -36,6 +36,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -135,6 +136,15 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
     theModule->setAttr(
         cir::CIRDialect::getSourceLanguageAttrName(),
         cir::SourceLanguageAttr::get(&mlirContext, *sourceLanguage));
+  if (langOpts.OpenCL || (langOpts.CUDAIsDevice && getTriple().isSPIRV())) {
+    // CUDA and HIP use OpenCL 2.0 metadata when targeting SPIR-V.
+    unsigned version =
+        langOpts.OpenCL ? langOpts.getOpenCLCompatibleVersion() : 200;
+    setOpenCLVersionAttr(cir::CIRDialect::getOpenCLVersionAttrName(), version);
+    if (langOpts.OpenCLCPlusPlus)
+      setOpenCLVersionAttr(cir::CIRDialect::getOpenCLCXXVersionAttrName(),
+                           langOpts.OpenCLCPlusPlusVersion);
+  }
   theModule->setAttr(cir::CIRDialect::getTripleAttrName(),
                      builder.getStringAttr(getTriple().str()));
   // TODO(CIR): These attributes should eventually be replaced by
@@ -197,6 +207,12 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+void CIRGenModule::setOpenCLVersionAttr(StringRef attrName, unsigned version) {
+  theModule->setAttr(
+      attrName, cir::OpenCLVersionAttr::get(&getMLIRContext(), version / 100,
+                                            (version % 100) / 10));
+}
 
 void CIRGenModule::createCUDARuntime() {
   cudaRuntime.reset(createNVCUDARuntime(*this));
@@ -332,10 +348,12 @@ const TargetCIRGenInfo &CIRGenModule::getTargetCIRGenInfo() {
     theTargetCIRGenInfo = createAMDGPUTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
+  case llvm::Triple::spir:
+  case llvm::Triple::spir64:
   case llvm::Triple::spirv:
   case llvm::Triple::spirv32:
   case llvm::Triple::spirv64:
-    theTargetCIRGenInfo = createSPIRVTargetCIRGenInfo(genTypes);
+    theTargetCIRGenInfo = createCommonSPIRTargetCIRGenInfo(genTypes);
     return *theTargetCIRGenInfo;
   }
 }
@@ -1276,10 +1294,19 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // at creation time, matching the logic used in emitCXXGlobalVarDeclInit.
   bool isConstant = false;
   if (d) {
+    QualType declType = d->getType();
+
+    // Classic codegen doesn't try to exclude ctor or dtor here, but has a FIXME
+    // to try to do a better job. So this bit of code does slightly more effort
+    // to get a more accurate answer.  We can try to exclude ctor, but only when
+    // the type is complete, as otherwise we have to check for
+    // fields(particularly whether they are mutable).
+    bool excludeCtor = !declType->isIncompleteType();
     bool needsDtor =
         d->needsDestruction(astContext) == QualType::DK_cxx_destructor;
-    isConstant = d->getType().isConstantStorage(
-        astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/!needsDtor);
+
+    isConstant = declType.isConstantStorage(astContext, excludeCtor,
+                                            /*ExcludeDtor=*/!needsDtor);
   }
 
   mlir::ptr::MemorySpaceAttrInterface declCIRAS =
@@ -3231,11 +3258,7 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 
-  // TODO(cir): Set the calling convention computed by constructAttributeList
-  // on the function. FuncOp supports calling_conv, but target-specific
-  // CodeGen is needed to set it correctly (e.g., AMDGPU kernel functions
-  // should be marked with AMDGPUKernel).
-  assert(!cir::MissingFeatures::opFuncCallingConv());
+  func.setCallingConv(callingConv);
 }
 
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
@@ -3277,30 +3300,12 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   }
 }
 
-/// Determines whether the language options require us to model
-/// unwind exceptions.  We treat -fexceptions as mandating this
-/// except under the fragile ObjC ABI with only ObjC exceptions
-/// enabled.  This means, for example, that C with -fexceptions
-/// enables this.
-static bool hasUnwindExceptions(const LangOptions &langOpts) {
-  // If exceptions are completely disabled, obviously this is false.
-  if (!langOpts.Exceptions)
-    return false;
-  // If C++ exceptions are enabled, this is true.
-  if (langOpts.CXXExceptions)
-    return true;
-  // If ObjC exceptions are enabled, this depends on the ABI.
-  if (langOpts.ObjCExceptions)
-    return langOpts.ObjCRuntime.hasUnwindExceptions();
-  return true;
-}
-
 void CIRGenModule::setCIRFunctionAttributesForDefinition(
     const clang::FunctionDecl *decl, cir::FuncOp f) {
   assert(!cir::MissingFeatures::opFuncUnwindTablesAttr());
   assert(!cir::MissingFeatures::stackProtector());
 
-  if (!hasUnwindExceptions(langOpts))
+  if (!CodeGenUtils::hasUnwindExceptions(langOpts))
     f->setAttr(cir::CIRDialect::getNoThrowAttrName(),
                mlir::UnitAttr::get(&getMLIRContext()));
 
@@ -3862,32 +3867,6 @@ CIRGenModule::getMLIRVisibilityFromCIRLinkage(cir::GlobalLinkageKind glk) {
   }
   }
   llvm_unreachable("linkage should be handled above!");
-}
-
-cir::VisibilityKind CIRGenModule::getGlobalVisibilityKindFromClangVisibility(
-    clang::VisibilityAttr::VisibilityType visibility) {
-  switch (visibility) {
-  case clang::VisibilityAttr::VisibilityType::Default:
-    return cir::VisibilityKind::Default;
-  case clang::VisibilityAttr::VisibilityType::Hidden:
-    return cir::VisibilityKind::Hidden;
-  case clang::VisibilityAttr::VisibilityType::Protected:
-    return cir::VisibilityKind::Protected;
-  }
-  llvm_unreachable("unexpected visibility value");
-}
-
-cir::VisibilityAttr
-CIRGenModule::getGlobalVisibilityAttrFromDecl(const Decl *decl) {
-  const clang::VisibilityAttr *va = decl->getAttr<clang::VisibilityAttr>();
-  cir::VisibilityAttr cirVisibility =
-      cir::VisibilityAttr::get(&getMLIRContext());
-  if (va) {
-    cirVisibility = cir::VisibilityAttr::get(
-        &getMLIRContext(),
-        getGlobalVisibilityKindFromClangVisibility(va->getVisibility()));
-  }
-  return cirVisibility;
 }
 
 void CIRGenModule::release() {

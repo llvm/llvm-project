@@ -105,6 +105,69 @@ static void expectDirectFloat(const ArgInfo &Info,
   EXPECT_EQ(FT->getSemantics(), &Sem);
 }
 
+// A scalar atomic has its underlying type's scalar evaluation kind. Although
+// the SysV classifier assigns it Memory, it remains a direct LLVM argument.
+TEST_F(X86TargetInfoTest, AtomicFloatScalarIsDirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *AtomicF32 = TB.getAtomicType(F32, 32, llvm::Align(4));
+  const ArgInfo &Info = classifyArg(AtomicF32, FI, TI);
+
+  EXPECT_TRUE(Info.isDirect());
+  EXPECT_EQ(Info.getCoerceToType(), nullptr);
+}
+
+// An atomic whose value type has aggregate evaluation kind remains aggregate
+// for the indirect-result decision.
+TEST_F(X86TargetInfoTest, AtomicRecordIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Value = TB.getRecordType(
+      {FieldInfo(I32, 0)}, llvm::TypeSize::getFixed(32), llvm::Align(4),
+      StructPacking::Default, {}, {}, RecordFlags::CanPassInRegisters);
+  const ABIType *Atomic = TB.getAtomicType(Value, 32, llvm::Align(4));
+  const ArgInfo &Info = classifyArg(Atomic, FI, TI);
+
+  ASSERT_TRUE(Info.isIndirect());
+  EXPECT_TRUE(Info.getIndirectByVal());
+  EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+}
+
+// Atomic fields classify Memory rather than inheriting the underlying float's
+// SSE class, forcing the containing record to the stack.
+TEST_F(X86TargetInfoTest, RecordOfAtomicFloatsIsIndirect) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *AtomicF32 = TB.getAtomicType(F32, 32, llvm::Align(4));
+  const ABIType *Record = TB.getRecordType(
+      {FieldInfo(AtomicF32, 0), FieldInfo(AtomicF32, 32)},
+      llvm::TypeSize::getFixed(64), llvm::Align(4), StructPacking::Default, {},
+      {}, RecordFlags::CanPassInRegisters);
+  const ArgInfo &Info = classifyArg(Record, FI, TI);
+
+  ASSERT_TRUE(Info.isIndirect());
+  EXPECT_TRUE(Info.getIndirectByVal());
+  EXPECT_EQ(Info.getIndirectAlign(), llvm::Align(8));
+}
+
+// Without the atomic wrappers, the same record is passed in an SSE register.
+TEST_F(X86TargetInfoTest, RecordOfFloatsIsDirectSSE) {
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+  const ABIType *Record = TB.getRecordType(
+      {FieldInfo(F32, 0), FieldInfo(F32, 32)}, llvm::TypeSize::getFixed(64),
+      llvm::Align(4), StructPacking::Default, {}, {},
+      RecordFlags::CanPassInRegisters);
+  const ArgInfo &Info = classifyArg(Record, FI, TI);
+
+  ASSERT_TRUE(Info.isDirect());
+  const auto *Vector =
+      llvm::dyn_cast_or_null<llvm::abi::VectorType>(Info.getCoerceToType());
+  ASSERT_NE(Vector, nullptr);
+  EXPECT_EQ(Vector->getNumElements().getFixedValue(), 2u);
+  EXPECT_EQ(Vector->getElementType(), F32);
+}
+
 // An empty member supplies no bytes, so the int is the storage the coercion is
 // built from and the union coerces to its width.
 TEST_F(X86TargetInfoTest, UnionWithEmptyMemberCoercesToDataMember) {

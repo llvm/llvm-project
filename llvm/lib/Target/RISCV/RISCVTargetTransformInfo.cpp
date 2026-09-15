@@ -262,8 +262,7 @@ InstructionCost RISCVTTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
     if (Imm == UINT64_C(0xffff) && ST->hasStdExtZbb())
       return TTI::TCC_Free;
     // zext.w
-    if (Imm == UINT64_C(0xffffffff) &&
-        ((ST->hasStdExtZba() && ST->isRV64()) || ST->isRV32()))
+    if (Imm == UINT64_C(0xffffffff) && (!ST->is64Bit() || ST->hasStdExtZba()))
       return TTI::TCC_Free;
     // bclri
     if (ST->hasStdExtZbs() && (~Imm).isPowerOf2())
@@ -442,12 +441,6 @@ bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   case Intrinsic::vector_reduce_fmul:
     return true;
   }
-}
-
-std::optional<unsigned> RISCVTTIImpl::getMaxVScale() const {
-  if (ST->hasVInstructions())
-    return ST->getRealMaxVLen() / RISCV::RVVBitsPerBlock;
-  return BaseT::getMaxVScale();
 }
 
 std::optional<unsigned> RISCVTTIImpl::getVScaleForTuning() const {
@@ -3070,11 +3063,9 @@ void RISCVTTIImpl::getUnrollingPreferences(
         return;
 
       if (isa<CallInst>(I) || isa<InvokeInst>(I)) {
-        if (const Function *F = cast<CallBase>(I).getCalledFunction()) {
-          if (!isLoweredToCall(F))
-            continue;
-        }
-        return;
+        const Function *F = cast<CallBase>(I).getCalledFunction();
+        if (!F || isLoweredToCall(F))
+          return;
       }
 
       SmallVector<const Value *> Operands(I.operand_values());

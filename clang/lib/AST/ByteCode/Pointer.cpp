@@ -26,11 +26,13 @@ using namespace clang;
 using namespace clang::interp;
 
 // Helper to check if a Type can be passed to
-// ASTContext::getRecordLayout().
+// ASTContext::getTypeSize().
 static bool validType(QualType T) {
   if (const RecordDecl *RD = T->getAsRecordDecl())
     return ASTContext::hasLayout(RD);
-  return true;
+  return !T->isDependentType() && !T->isUndeducedAutoType() &&
+         !T->isSpecificBuiltinType(BuiltinType::UnknownAny) &&
+         !T->isIncompleteType();
 }
 
 Pointer::Pointer(Block *Pointee)
@@ -204,6 +206,49 @@ Pointer &Pointer::operator=(Pointer &&P) {
   return *this;
 }
 
+bool Pointer::operator==(const Pointer &P) const {
+  if (StorageKind != P.StorageKind)
+    return false;
+
+  switch (StorageKind) {
+  case Storage::Int:
+    return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty && P.Offset == Offset;
+  case Storage::Block:
+    return P.view() == view();
+  case Storage::Fn:
+    return P.Fn.Func == Fn.Func && P.Offset == Offset;
+  case Storage::Typeid:
+    llvm_unreachable("typeid in operator==?");
+  case Storage::String:
+    return Str.Base == P.Str.Base && Offset == P.Offset;
+  case Storage::Opaque:
+    if (P.Opaque.Base != Opaque.Base ||
+        P.Opaque.PathLength != Opaque.PathLength || P.Offset != Offset)
+      return false;
+
+    for (unsigned I = 0; I != Opaque.PathLength; ++I) {
+      if (Opaque.Path[I].Kind != P.Opaque.Path[I].Kind)
+        return false;
+      switch (Opaque.Path[I].Kind) {
+      case PointerPathEntry::Base:
+        if (Opaque.Path[I].RD != P.Opaque.Path[I].RD)
+          return false;
+        break;
+      case PointerPathEntry::Array:
+      case PointerPathEntry::NegativeArray:
+        if (Opaque.Path[I].Index != P.Opaque.Path[I].Index)
+          return false;
+        break;
+      case PointerPathEntry::Field:
+        if (Opaque.Path[I].FD != P.Opaque.Path[I].FD)
+          return false;
+        break;
+      }
+    }
+  }
+  return true;
+}
+
 APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
   llvm::SmallVector<APValue::LValuePathEntry, 5> Path;
 
@@ -242,9 +287,38 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
     return APValue(APValue::LValueBase(Str.Base),
                    CharUnits::fromQuantity(Offset * elemSize()), Path,
                    /*OnePastTheEnd=*/false, /*IsNull=*/false);
-  case Storage::Opaque:
-    return APValue(APValue::LValueBase(Opaque.Base), CharUnits::Zero(), Path,
-                   /*IsOnePastEnd=*/Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
+  case Storage::Opaque: {
+    if (!Opaque.Base->getType()->isPointerType()) {
+      for (const PointerPathEntry &Entry : Opaque.path()) {
+        switch (Entry.Kind) {
+        case PointerPathEntry::Field:
+          Path.push_back(APValue::LValuePathEntry({Entry.FD, false}));
+          break;
+        case PointerPathEntry::Base:
+          Path.push_back(APValue::LValuePathEntry(
+              {Entry.RD.getPointer(), Entry.RD.getInt()}));
+          break;
+        case PointerPathEntry::Array:
+          Path.push_back(APValue::LValuePathEntry::ArrayIndex(Entry.Index));
+          break;
+        case PointerPathEntry::NegativeArray:
+          Path.push_back(APValue::LValuePathEntry::ArrayIndex(-Entry.Index));
+          break;
+        }
+      }
+    }
+    size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+    auto Offset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue Result =
+        APValue(Opaque.Base, Offset, Path,
+                /*IsOnePastEnd=*/Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
+    Result.setConstexprUnknown(Opaque.isConstexprUnknown());
+    return Result;
+  }
   }
 
   assert(isBlockPointer());
@@ -446,7 +520,7 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   case Storage::String:
     return reinterpret_cast<uintptr_t>(Str.getLiteral()) + Offset;
   case Storage::Opaque:
-    return reinterpret_cast<uintptr_t>(asOpaquePointer().Base) + Offset;
+    return computeLayoutOffset(ASTCtx);
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -527,7 +601,13 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   case Storage::String:
     return Offset * Str.getLiteral()->getCharByteWidth();
   case Storage::Opaque:
-    return Opaque.computeLayoutOffset(ASTCtx);
+    if (auto O = Opaque.computeLayoutOffset(ASTCtx)) {
+      size_t TypeSize = 0;
+      if (QualType FT = Opaque.getFieldType(); validType(FT))
+        TypeSize = ASTCtx.getTypeSizeInChars(FT).getQuantity();
+      return *O + (Offset * TypeSize);
+    }
+    return std::nullopt;
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -876,17 +956,39 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
   if (A.isZero() && B.isZero())
     return true;
 
-  if (A.isIntegralPointer() && B.isIntegralPointer())
-    return true;
-  if (A.isFunctionPointer() && B.isFunctionPointer())
-    return true;
-  if (A.isTypeidPointer() && B.isTypeidPointer())
-    return A.asTypeidPointer().TypePtr == B.asTypeidPointer().TypePtr;
-  if (A.isStringPointer() && B.isStringPointer())
-    return A.Str.ID == B.Str.ID && A.Str.getLiteral() == B.Str.getLiteral();
+  // We allow comparisons between opaque pointers and block pointers, provided
+  // they have the same declaration as base.
+  if (A.StorageKind != B.StorageKind) {
+    if (A.isOpaquePointer() && B.isBlockPointer()) {
+      if (const VarDecl *BDecl = B.block()->getDescriptor()->asVarDecl())
+        return BDecl == A.Opaque.Base->getMostRecentDecl();
 
-  if (A.StorageKind != B.StorageKind)
+      return false;
+    }
+    if (B.isOpaquePointer() && A.isBlockPointer()) {
+      if (const VarDecl *ADecl = A.block()->getDescriptor()->asVarDecl())
+        return ADecl == B.Opaque.Base->getMostRecentDecl();
+      return false;
+    }
     return false;
+  }
+
+  switch (A.StorageKind) {
+  case Storage::Int:
+    return true;
+  case Storage::Block:
+    // See below.
+    break;
+  case Storage::Fn:
+    return true;
+  case Storage::Typeid:
+    return A.asTypeidPointer().TypePtr == B.asTypeidPointer().TypePtr;
+  case Storage::String:
+    return A.Str.ID == B.Str.ID && A.Str.getLiteral() == B.Str.getLiteral();
+  case Storage::Opaque:
+    return A.asOpaquePointer().Base->getMostRecentDecl() ==
+           B.asOpaquePointer().Base->getMostRecentDecl();
+  }
 
   return A.asBlockPointer().Pointee == B.asBlockPointer().Pointee;
 }
@@ -1292,7 +1394,12 @@ OpaquePointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
         return std::nullopt;
 
       const ASTRecordLayout &Layout = ASTCtx.getASTRecordLayout(RD);
-      Offset += Layout.getBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+      if (Entry.RD.getInt())
+        Offset +=
+            Layout.getVBaseClassOffset(Entry.RD.getPointer()).getQuantity();
+      else
+        Offset +=
+            Layout.getBaseClassOffset(Entry.RD.getPointer()).getQuantity();
 
       CurType = ASTCtx.getCanonicalTagType(Entry.RD.getPointer());
     } break;
