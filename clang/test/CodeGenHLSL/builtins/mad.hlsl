@@ -16,56 +16,56 @@
 
 #ifdef __HLSL_ENABLE_16_BIT
 
-// CHECK-LABEL: test_mad_uint16_t
+// NATIVE_HALF-LABEL: test_mad_uint16_t
 // DXIL_NATIVE_HALF: %dx.umad = call i16 @llvm.dx.umad.i16(i16 %[[#]], i16 %[[#]], i16 %[[#]])
 // DXIL_NATIVE_HALF: ret i16 %dx.umad
 // SPIR_NATIVE_HALF: mul nuw i16 %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw i16 %{{.*}}, %{{.*}}
 uint16_t test_mad_uint16_t(uint16_t p0, uint16_t p1, uint16_t p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_uint16_t2
+// NATIVE_HALF-LABEL: test_mad_uint16_t2
 // DXIL_NATIVE_HALF: %dx.umad = call <2 x i16>  @llvm.dx.umad.v2i16(<2 x i16> %[[#]], <2 x i16> %[[#]], <2 x i16> %[[#]])
 // DXIL_NATIVE_HALF: ret <2 x i16> %dx.umad
 // SPIR_NATIVE_HALF: mul nuw <2 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw <2 x i16>  %{{.*}}, %{{.*}}
 uint16_t2 test_mad_uint16_t2(uint16_t2 p0, uint16_t2 p1, uint16_t2 p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_uint16_t3
+// NATIVE_HALF-LABEL: test_mad_uint16_t3
 // DXIL_NATIVE_HALF: %dx.umad = call <3 x i16>  @llvm.dx.umad.v3i16(<3 x i16> %[[#]], <3 x i16> %[[#]], <3 x i16> %[[#]])
 // DXIL_NATIVE_HALF: ret <3 x i16> %dx.umad
 // SPIR_NATIVE_HALF: mul nuw <3 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw <3 x i16>  %{{.*}}, %{{.*}}
 uint16_t3 test_mad_uint16_t3(uint16_t3 p0, uint16_t3 p1, uint16_t3 p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_uint16_t4
+// NATIVE_HALF-LABEL: test_mad_uint16_t4
 // DXIL_NATIVE_HALF: %dx.umad = call <4 x i16>  @llvm.dx.umad.v4i16(<4 x i16> %[[#]], <4 x i16> %[[#]], <4 x i16> %[[#]])
 // DXIL_NATIVE_HALF: ret <4 x i16> %dx.umad
 // SPIR_NATIVE_HALF: mul nuw <4 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nuw <4 x i16>  %{{.*}}, %{{.*}}
 uint16_t4 test_mad_uint16_t4(uint16_t4 p0, uint16_t4 p1, uint16_t4 p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_int16_t
+// NATIVE_HALF-LABEL: test_mad_int16_t
 // DXIL_NATIVE_HALF: %dx.imad = call i16 @llvm.dx.imad.i16(i16 %[[#]], i16 %[[#]], i16 %[[#]])
 // DXIL_NATIVE_HALF: ret i16 %dx.imad
 // SPIR_NATIVE_HALF: mul nsw i16 %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw i16 %{{.*}}, %{{.*}}
 int16_t test_mad_int16_t(int16_t p0, int16_t p1, int16_t p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_int16_t2
+// NATIVE_HALF-LABEL: test_mad_int16_t2
 // DXIL_NATIVE_HALF: %dx.imad = call <2 x i16>  @llvm.dx.imad.v2i16(<2 x i16> %[[#]], <2 x i16> %[[#]], <2 x i16> %[[#]])
 // DXIL_NATIVE_HALF: ret <2 x i16> %dx.imad
 // SPIR_NATIVE_HALF: mul nsw <2 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw <2 x i16>  %{{.*}}, %{{.*}}
 int16_t2 test_mad_int16_t2(int16_t2 p0, int16_t2 p1, int16_t2 p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_int16_t3
+// NATIVE_HALF-LABEL: test_mad_int16_t3
 // DXIL_NATIVE_HALF: %dx.imad = call <3 x i16>  @llvm.dx.imad.v3i16(<3 x i16> %[[#]], <3 x i16> %[[#]], <3 x i16> %[[#]])
 // DXIL_NATIVE_HALF: ret <3 x i16> %dx.imad
 // SPIR_NATIVE_HALF: mul nsw <3 x i16>  %{{.*}}, %{{.*}}
 // SPIR_NATIVE_HALF: add nsw <3 x i16>  %{{.*}}, %{{.*}}
 int16_t3 test_mad_int16_t3(int16_t3 p0, int16_t3 p1, int16_t3 p2) { return mad(p0, p1, p2); }
 
-// CHECK-LABEL: test_mad_int16_t4
+// NATIVE_HALF-LABEL: test_mad_int16_t4
 // DXIL_NATIVE_HALF: %dx.imad = call <4 x i16>  @llvm.dx.imad.v4i16(<4 x i16> %[[#]], <4 x i16> %[[#]], <4 x i16> %[[#]])
 // DXIL_NATIVE_HALF: ret <4 x i16> %dx.imad
 // SPIR_NATIVE_HALF: mul nsw <4 x i16>  %{{.*}}, %{{.*}}
