@@ -10,14 +10,16 @@
 
 # By default config is disabled, so the .clangd file's CompileFlags.Add is not
 # applied and the #error below must fire.
-# RUN: env XDG_CONFIG_HOME=%t clangd-indexer %t.dir/test.cpp 2>&1 \
-# RUN:     | FileCheck --check-prefix=DISABLED %s
+# RUN: env XDG_CONFIG_HOME=%t clangd-indexer %t.dir/test.cpp \
+# RUN:     > %t.dir/disabled.idx 2> %t.dir/disabled.log
+# RUN: FileCheck --check-prefix=DISABLED --input-file=%t.dir/disabled.log %s
 # DISABLED: error: "FROM_CLANGD_FILE not defined - .clangd file was not applied"
 
 # With config enabled, the .clangd file's CompileFlags.Add should define
 # FROM_CLANGD_FILE, so the #error below must not fire.
-# RUN: env XDG_CONFIG_HOME=%t clangd-indexer --enable-config %t.dir/test.cpp 2>&1 \
-# RUN:     | FileCheck --check-prefix=ENABLED %s
+# RUN: env XDG_CONFIG_HOME=%t clangd-indexer --enable-config %t.dir/test.cpp \
+# RUN:     > %t.dir/enabled.idx 2> %t.dir/enabled.log
+# RUN: FileCheck --check-prefix=ENABLED --input-file=%t.dir/enabled.log %s
 # ENABLED-NOT: error: "FROM_CLANGD_FILE not defined
 
 #--- .clangd
