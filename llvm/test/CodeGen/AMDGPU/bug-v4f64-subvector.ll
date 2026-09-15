@@ -4,8 +4,8 @@
 ; This caused failure in infinite cycle in Selection DAG (combine) due to missing insert_subvector.
 ;
 ; CHECK-LABEL: name: test1
-; CHECK: GLOBAL_LOAD_DWORDX4
-; CHECK: GLOBAL_LOAD_DWORDX4
+; CHECK: GLOBAL_LOAD_DWORDX2
+; CHECK: GLOBAL_LOAD_DWORDX2
 ; CHECK: GLOBAL_STORE_DWORDX4
 define protected amdgpu_kernel void @test1(ptr addrspace(4) %ptr) local_unnamed_addr !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2 !kernel_arg_base_type !2 !kernel_arg_type_qual !3 !kernel_arg_name !4 {
 entry:

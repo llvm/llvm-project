@@ -339,10 +339,10 @@ define amdgpu_kernel void @test_readlane_vregs_i64(ptr addrspace(1) %out, ptr ad
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; CHECK-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    flat_load_dwordx3 v[0:2], v[0:1]
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v4, s1
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; CHECK-SDAG-NEXT:    s_nop 3
 ; CHECK-SDAG-NEXT:    v_readlane_b32 s1, v1, s0
@@ -399,10 +399,10 @@ define amdgpu_kernel void @test_readlane_vregs_f64(ptr addrspace(1) %out, ptr ad
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-SDAG-NEXT:    v_add_u32_e32 v0, vcc, s2, v0
 ; CHECK-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; CHECK-SDAG-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
-; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
+; CHECK-SDAG-NEXT:    flat_load_dwordx3 v[0:2], v[0:1]
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s0
 ; CHECK-SDAG-NEXT:    v_mov_b32_e32 v4, s1
+; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s0, v2
 ; CHECK-SDAG-NEXT:    s_nop 3
 ; CHECK-SDAG-NEXT:    v_readlane_b32 s1, v1, s0
