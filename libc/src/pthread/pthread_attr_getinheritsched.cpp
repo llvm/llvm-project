@@ -7,20 +7,25 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation header for pthread_attr_init.
+/// Implementation of pthread_attr_getinheritsched.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
-#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
-
-#include "hdr/types/pthread_attr_t.h"
+#include "src/pthread/pthread_attr_getinheritsched.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-int pthread_attr_init(pthread_attr_t *attr);
+LLVM_LIBC_FUNCTION(int, pthread_attr_getinheritsched,
+                   (const pthread_attr_t *__restrict attr,
+                    int *__restrict inheritsched)) {
+  LIBC_CRASH_ON_NULLPTR(attr);
+  LIBC_CRASH_ON_NULLPTR(inheritsched);
+
+  *inheritsched = attr->__inheritsched;
+  return 0;
+}
 
 } // namespace LIBC_NAMESPACE_DECL
-
-#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H

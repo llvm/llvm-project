@@ -7,20 +7,21 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Implementation header for pthread_attr_init.
+/// Implementation header for pthread_attr_setinheritsched.
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
-#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
+#ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETINHERITSCHED_H
+#define LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETINHERITSCHED_H
 
 #include "hdr/types/pthread_attr_t.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-int pthread_attr_init(pthread_attr_t *attr);
+/// Set the inherit scheduler attribute in \p attr.
+int pthread_attr_setinheritsched(pthread_attr_t *attr, int inheritsched);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_INIT_H
+#endif // LLVM_LIBC_SRC_PTHREAD_PTHREAD_ATTR_SETINHERITSCHED_H
