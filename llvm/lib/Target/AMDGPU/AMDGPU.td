@@ -196,8 +196,9 @@ defm FmaLegacy32Insts : AMDGPUSubtargetFeature<"fma-legacy32-insts",
 >;
 
 defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-insts",
-  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and"
-  "v_pk_minimum/maximum_f16 instructions"
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32,"
+  "v_pk_minmax/maxmin_num_f16, v_min/max_num_f16/f32/f64 and"
+  "v_pk_min/max_num_f16 instructions"
 >;
 
 defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
@@ -269,9 +270,9 @@ defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
   /*GenPredicate=*/0
 >;
 
-// Set for gfx10/11/12 where a work-group can address only half of the physical
-// LDS block. So the physical block is twice the addressable size, for example
-// 128k physical and 64k addressable.
+// Set where a work-group can address only half of the physical LDS block:
+// gfx6 has 64 KiB physical and 32 KiB addressable, while gfx10/11/12 have
+// 128 KiB physical and 64 KiB addressable.
 defm HalfAddressablePhysicalLocalMemory : AMDGPUSubtargetFeature<"half-addressable-physical-local-memory",
   "A work-group can address only half of the physical LDS block",
   /*GenPredicate=*/0
@@ -1618,7 +1619,8 @@ class GCNSubtargetFeatureGeneration <string Value,
 
 def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
     "southern-islands",
-  [FeatureFP64, FeatureAddressableLocalMemorySize32768, FeatureMIMG_R128,
+  [FeatureFP64, FeatureAddressableLocalMemorySize32768,
+  FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureSupportsWave64, FeatureSMemTimeInst,
   FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
@@ -1795,7 +1797,6 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   Feature32BitNumRecordsBufferResource,
    FeatureMaxWavesPerEU16
   ]
 >;
@@ -2297,6 +2298,7 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   Feature32BitNumRecordsBufferResource,
    FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
@@ -2442,7 +2444,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureSupportsXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
@@ -2483,6 +2484,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2513,6 +2515,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2547,6 +2550,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2566,6 +2570,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<

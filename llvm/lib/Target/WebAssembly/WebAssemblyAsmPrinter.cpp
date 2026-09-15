@@ -166,6 +166,7 @@ MCSymbolWasm *WebAssemblyAsmPrinter::getMCSymbolForFunction(
   MCSymbolWasm *WasmSym = nullptr;
 
   const bool EnableEmEH =
+      TM.Options.ExceptionModel == ExceptionHandling::Emscripten ||
       WebAssembly::WasmEnableEmEH || WebAssembly::WasmEnableEmSjLj;
   if (EnableEmEH && isEmscriptenInvokeName(F->getName())) {
     assert(Sig);

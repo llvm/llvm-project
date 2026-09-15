@@ -44,9 +44,9 @@ def GFX88F : ProcessorModel<"gfx88f", NoSchedModel, []>,
 
 // The GPU table: both the base GPU and the variant share the gfx8 family; the
 // variant uses its own AMDGPUSubArch888A from the spelling.
-// CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], [[#]], [[#]], [[#]]},
-// CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]], [[#]], [[#]]},
-// CHECK: {[[#]], Triple::AMDGPUSubArch88F, {{.*}}, {8, 8, 15}, [[#]], [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch888, {{.*}}, {8, 8, 8}, [[FAM:[0-9]+]], [[#]], [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch888A, {{.*}}, {8, 8, 8}, [[FAM]], [[#]], [[#]], [[#]], [[#]]},
+// CHECK: {[[#]], Triple::AMDGPUSubArch88F, {{.*}}, {8, 8, 15}, [[#]], [[#]], [[#]], [[#]], [[#]]},
 
 // The subarch-name table maps the variant's own subarch to its triple name.
 // CHECK: {Triple::AMDGPUSubArch888A, [[#]], [[#]]},
