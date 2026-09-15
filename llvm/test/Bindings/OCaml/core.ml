@@ -1255,7 +1255,7 @@ let test_builder () =
   end;
 
   group "malloc/free"; begin
-      (* CHECK: call{{.*}}@malloc(i32 ptrtoint
+      (* CHECK: call{{.*}}@malloc(i32 4
        * CHECK: call{{.*}}@free(ptr
        * CHECK: call{{.*}}@malloc(i32 %
        *)
