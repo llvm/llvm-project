@@ -258,6 +258,31 @@ resolveMapperId(Fortran::lower::AbstractConverter &converter,
                 mlir::omp::ClauseMapFlags mapTypeBits,
                 llvm::omp::Directive directive, bool hasParentObj);
 
+struct IteratorMapInfo {
+  hlfir::Entity entity;
+  llvm::SmallVector<mlir::Value> bounds;
+};
+
+/// Properties needed to validate an iterator map locator without lowering it.
+/// Unsupported DataRef forms are classified without evaluating their bases.
+struct IteratorMapObjectAnalysis {
+  const semantics::Symbol *rootSym = nullptr;
+  bool isDerivedTypeMember = false;
+  // Own the validated reference so lowering can reuse it after analysis.
+  std::optional<evaluate::ArrayRef> arrayRef;
+};
+
+/// Classify a locator and retain its array reference if supported.
+IteratorMapObjectAnalysis analyzeIteratorMapObject(const omp::Object &object);
+
+/// Lower a locator to its array base and iterator-dependent map bounds.
+/// \p arrayRef must be the supported reference returned by locator analysis.
+IteratorMapInfo genIteratorMapInfo(
+    Fortran::lower::AbstractConverter &converter, fir::FirOpBuilder &builder,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx, const omp::Object &object,
+    const evaluate::ArrayRef &arrayRef, mlir::Location loc);
+
 std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);

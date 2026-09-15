@@ -2760,9 +2760,9 @@ private:
 /// IteratorInfo extracts and prepares loop bounds information from an
 /// mlir::omp::IteratorOp for lowering to LLVM IR.
 ///
-/// It computes the per-dimension trip counts and the total linearized trip
-/// count, casted to i64. These are used to build a canonical loop and to
-/// reconstruct the physical induction variables inside the loop body.
+/// It retains the source-width bounds and steps used to reconstruct physical
+/// induction variables. Per-dimension trip counts are converted to i64 for
+/// runtime list sizes and the linearized iterator loop.
 class IteratorInfo {
 private:
   llvm::SmallVector<llvm::Value *> lowerBounds;
@@ -2772,16 +2772,12 @@ private:
   unsigned dims;
   llvm::Value *totalTrips;
 
-  llvm::Value *lookUpAsI64(mlir::Value val, const LLVM::ModuleTranslation &mt,
-                           llvm::IRBuilderBase &builder) {
+  llvm::Value *lookUpInteger(mlir::Value val,
+                             const LLVM::ModuleTranslation &mt) {
     llvm::Value *v = mt.lookupValue(val);
-    if (!v)
+    if (!v || !v->getType()->isIntegerTy())
       return nullptr;
-    if (v->getType()->isIntegerTy(64))
-      return v;
-    if (v->getType()->isIntegerTy())
-      return builder.CreateSExtOrTrunc(v, builder.getInt64Ty());
-    return nullptr;
+    return v;
   }
 
 public:
@@ -2794,15 +2790,19 @@ public:
     steps.resize(dims);
     trips.resize(dims);
 
+    llvm::OpenMPIRBuilder &ompBuilder = *moduleTranslation.getOpenMPBuilder();
+    llvm::OpenMPIRBuilder::LocationDescription loc(builder);
     for (unsigned d = 0; d < dims; ++d) {
-      llvm::Value *lb = lookUpAsI64(itersOp.getLoopLowerBounds()[d],
-                                    moduleTranslation, builder);
-      llvm::Value *ub = lookUpAsI64(itersOp.getLoopUpperBounds()[d],
-                                    moduleTranslation, builder);
+      llvm::Value *lb =
+          lookUpInteger(itersOp.getLoopLowerBounds()[d], moduleTranslation);
+      llvm::Value *ub =
+          lookUpInteger(itersOp.getLoopUpperBounds()[d], moduleTranslation);
       llvm::Value *st =
-          lookUpAsI64(itersOp.getLoopSteps()[d], moduleTranslation, builder);
+          lookUpInteger(itersOp.getLoopSteps()[d], moduleTranslation);
       assert(lb && ub && st &&
              "Expect lowerBounds, upperBounds, and steps in IteratorOp");
+      assert(lb->getType() == ub->getType() && lb->getType() == st->getType() &&
+             "Expect matching iterator range types");
       assert((!llvm::isa<llvm::ConstantInt>(st) ||
               !llvm::cast<llvm::ConstantInt>(st)->isZero()) &&
              "Expect non-zero step in IteratorOp");
@@ -2811,11 +2811,10 @@ public:
       upperBounds[d] = ub;
       steps[d] = st;
 
-      // trips = ((ub - lb) / step) + 1  (inclusive ub, assume positive step)
-      llvm::Value *diff = builder.CreateSub(ub, lb);
-      llvm::Value *div = builder.CreateSDiv(diff, st);
-      trips[d] = builder.CreateAdd(
-          div, llvm::ConstantInt::get(builder.getInt64Ty(), 1));
+      llvm::Value *tripCount = ompBuilder.calculateCanonicalLoopTripCount(
+          loc, lb, ub, st, /*IsSigned=*/true, itersOp.getLoopInclusive(),
+          "iterator");
+      trips[d] = builder.CreateZExtOrTrunc(tripCount, builder.getInt64Ty());
     }
 
     totalTrips = llvm::ConstantInt::get(builder.getInt64Ty(), 1);
@@ -2952,12 +2951,21 @@ convertIteratorRegion(llvm::Value *linearIV, IteratorInfo &iterInfo,
   llvm::Value *tmp = linearIV;
   for (int d = (int)iterInfo.getDims() - 1; d >= 0; --d) {
     llvm::Value *trip = iterInfo.getTrips()[d];
-    // idx_d = tmp % trip_d
-    llvm::Value *idx = builder.CreateURem(tmp, trip);
-    // tmp = tmp / trip_d
-    tmp = builder.CreateUDiv(tmp, trip);
+    llvm::Value *zero = llvm::ConstantInt::get(trip->getType(), 0);
+    llvm::Value *one = llvm::ConstantInt::get(trip->getType(), 1);
+    // A zero trip count makes the linearized loop empty. Use one in its
+    // unreachable IV decoder so the generated IR contains no division by zero.
+    llvm::Value *divisor =
+        builder.CreateSelect(builder.CreateICmpEQ(trip, zero), one, trip);
+    // idx_d = tmp % divisor_d
+    llvm::Value *idx = builder.CreateURem(tmp, divisor);
+    // tmp = tmp / divisor_d
+    tmp = builder.CreateUDiv(tmp, divisor);
 
-    // physIV_d = lb_d + idx_d * step_d
+    // physIV_d = lb_d + idx_d * step_d. Reconstruct it at the range's
+    // original width so translating the iterator body cannot lose IV bits.
+    idx =
+        builder.CreateZExtOrTrunc(idx, iterInfo.getLowerBounds()[d]->getType());
     llvm::Value *physIV = builder.CreateAdd(
         iterInfo.getLowerBounds()[d],
         builder.CreateMul(idx, iterInfo.getSteps()[d]), "omp.it.phys_iv");

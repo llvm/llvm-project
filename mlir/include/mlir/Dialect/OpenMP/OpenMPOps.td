@@ -2705,6 +2705,12 @@ def IteratorOp : OpenMP_Op<"iterator", [AttrSizedOperandSegments, SingleBlock],
     can be directly consumed by OpenMP clauses that accept iterator modifiers,
     such as `affinity`, `map`, `to`, `from`, or `depend`.
 
+    Each range has a nonzero step and an exclusive upper bound unless
+    `inclusive` is specified. A range is empty when its lower bound is beyond
+    its upper bound in the direction of the step (or equal to an exclusive
+    upper bound). If any range is empty, the result is an empty list and the
+    region is not evaluated.
+
     Example:
       %it = omp.iterator(%i, %j) =
         (%lb_i to %ub_i step %st_i, %lb_j to %ub_j step %st_j) {
