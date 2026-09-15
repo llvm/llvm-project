@@ -323,6 +323,15 @@ public:
       : Variable(var), Fragment(Fragment), dl(std::move(L)), leader(this),
         locInts(alloc) {}
 
+  /// Append every SlotIndex this value holds.
+  void appendReferencedIndexes(SmallVectorImpl<SlotIndex> &Indexes) const {
+    for (LocMap::const_iterator I = locInts.begin(); I.valid(); ++I) {
+      Indexes.push_back(I.start());
+      Indexes.push_back(I.stop());
+    }
+    llvm::append_range(Indexes, trimmedDefs);
+  }
+
   /// Get the leader of this value's equivalence class.
   UserValue *getLeader() {
     UserValue *l = leader;
@@ -510,6 +519,8 @@ public:
   UserLabel(const DILabel *label, DebugLoc L, SlotIndex Idx)
       : Label(label), dl(std::move(L)), loc(Idx) {}
 
+  SlotIndex getIndex() const { return loc; }
+
   /// Does this UserLabel match the parameters?
   bool matches(const DILabel *L, const DILocation *IA,
              const SlotIndex Index) const {
@@ -667,6 +678,18 @@ public:
 
   /// Recreate DBG_VALUE instruction from data structures.
   void emitDebugValues(VirtRegMap *VRM);
+
+  /// Append every SlotIndex held anywhere in this analysis.
+  void appendReferencedIndexes(SmallVectorImpl<SlotIndex> &Indexes) const {
+    for (const auto &UV : userValues)
+      UV->appendReferencedIndexes(Indexes);
+    for (const auto &UL : userLabels)
+      Indexes.push_back(UL->getIndex());
+    for (const auto &[InstrNum, Pos] : PHIValToPos)
+      Indexes.push_back(Pos.SI);
+    for (const InstrPos &Stashed : StashedDebugInstrs)
+      Indexes.push_back(Stashed.Idx);
+  }
 
   void print(raw_ostream&);
 };
@@ -1999,6 +2022,12 @@ void LiveDebugVariables::LDVImpl::emitDebugValues(VirtRegMap *VRM) {
 void LiveDebugVariables::emitDebugValues(VirtRegMap *VRM) {
   if (PImpl)
     PImpl->emitDebugValues(VRM);
+}
+
+void LiveDebugVariables::appendReferencedIndexes(
+    SmallVectorImpl<SlotIndex> &Indexes) const {
+  if (PImpl)
+    PImpl->appendReferencedIndexes(Indexes);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

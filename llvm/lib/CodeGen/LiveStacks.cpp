@@ -43,6 +43,15 @@ void LiveStacks::releaseMemory() {
   S2RCMap.clear();
 }
 
+void LiveStacks::appendReferencedIndexes(
+    SmallVectorImpl<SlotIndex> &Indexes) const {
+  for (const auto &[Slot, LI] : S2IMap)
+    for (const LiveRange::Segment &S : LI) {
+      Indexes.push_back(S.start);
+      Indexes.push_back(S.end);
+    }
+}
+
 void LiveStacks::init(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
   // FIXME: No analysis is being done right now. We are relying on the

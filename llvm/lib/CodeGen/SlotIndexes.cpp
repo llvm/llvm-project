@@ -46,6 +46,8 @@ INITIALIZE_PASS(SlotIndexesWrapperPass, DEBUG_TYPE, "Slot index numbering",
                 false, false)
 
 STATISTIC(NumLocalRenum,  "Number of local renumberings");
+STATISTIC(NumDeadEntriesErased,
+          "Number of index list entries erased for deleted instructions");
 
 void SlotIndexesWrapperPass::getAnalysisUsage(AnalysisUsage &au) const {
   au.setPreservesAll();
@@ -291,6 +293,52 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
 void SlotIndexes::packIndexes() {
   for (auto [Index, Entry] : enumerate(indexList))
     Entry.setIndex(Index * SlotIndex::InstrDist);
+}
+
+unsigned SlotIndexes::compactIndexes(ArrayRef<SlotIndex> Referenced) {
+  if (indexList.empty())
+    return 0;
+
+  SmallPtrSet<const IndexListEntry *, 32> Keep;
+
+  // The first and last entries anchor getZeroIndex() and getLastIndex().
+  Keep.insert(&indexList.front());
+  Keep.insert(&indexList.back());
+
+  for (const auto &Range : MBBRanges) {
+    if (Range.first.isValid())
+      Keep.insert(Range.first.listEntry());
+    if (Range.second.isValid())
+      Keep.insert(Range.second.listEntry());
+  }
+  for (SlotIndex Idx : Referenced)
+    if (Idx.isValid())
+      Keep.insert(Idx.linkedEntry());
+
+  // Unlinking is the only option: an entry's slots have to stay ordered against
+  // its neighbours, so a zero-width index would break getNextSlot().
+  SmallVector<IndexListEntry *, 16> Erased;
+  unsigned Index = 0;
+  for (auto It = indexList.begin(), E = indexList.end(); It != E;) {
+    IndexListEntry &Entry = *It++;
+    if (Entry.getInstr() || Keep.contains(&Entry)) {
+      Entry.setIndex(Index);
+      Index += SlotIndex::InstrDist;
+      continue;
+    }
+    // Take the index of the surviving entry behind, so that a stale SlotIndex
+    // still compares inside the function and in program order.
+    assert(Index != 0 && "First entry is always kept");
+    Entry.setIndex(Index - SlotIndex::InstrDist);
+    Erased.push_back(&Entry);
+    indexList.remove(Entry);
+  }
+
+  for (IndexListEntry *Entry : Erased)
+    Entry->setErased();
+
+  NumDeadEntriesErased += Erased.size();
+  return Erased.size();
 }
 
 void SlotIndexes::print(raw_ostream &OS) const {

@@ -89,6 +89,11 @@ public:
 
   VNInfo::Allocator &getVNInfoAllocator() { return VNInfoAllocator; }
 
+  /// Append every SlotIndex reachable from the stack slot intervals, which
+  /// outlive the allocator run that created them.
+  LLVM_ABI void
+  appendReferencedIndexes(SmallVectorImpl<SlotIndex> &Indexes) const;
+
   LLVM_ABI void releaseMemory();
   /// init - analysis entry point
   LLVM_ABI void init(MachineFunction &MF);
