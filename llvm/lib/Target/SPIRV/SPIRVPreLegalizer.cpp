@@ -567,8 +567,8 @@ static bool isWidthSensitiveBitCountOp(unsigned Opcode) {
 // Collect ops whose semantics depend on the operand width along with their
 // pre-widening widths, before later passes retype those vregs to pow2 LLTs
 // and the original width is no longer recoverable.
-static NarrowWideningInfo recordNarrowOperandWidths(MachineFunction &MF,
-                                                    MachineRegisterInfo &MRI) {
+static NarrowWideningInfo
+recordNarrowOperandWidths(MachineFunction &MF, const MachineRegisterInfo &MRI) {
   NarrowWideningInfo Info;
   auto RecordIfNarrow = [&](Register Reg) {
     std::optional<unsigned> W = getNarrowScalarWidth(Reg, MRI);
