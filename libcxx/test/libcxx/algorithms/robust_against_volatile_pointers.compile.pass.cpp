@@ -8,10 +8,8 @@
 
 // Ensure that the algorithms can be instantiated with volatile pointers.
 //
-// A pointer to volatile is a valid Cpp17InputIterator, so algorithms that only require an input iterator are
-// required by the Standard to work with one. It is however not a valid Cpp17ForwardIterator, since its
-// reference type (volatile T&) is neither value_type& nor const value_type&. Supporting the algorithms that
-// require a forward iterator or better is an extension, which we provide on a best-effort basis.
+// The C++ Standard is not always clear about whether volatile pointers are supported in algorithms,
+// however libc++ supports that everywhere on a best-effort basis.
 
 // UNSUPPORTED: c++03
 
