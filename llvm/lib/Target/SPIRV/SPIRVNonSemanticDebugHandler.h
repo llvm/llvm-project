@@ -161,10 +161,12 @@ class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
   // ids (flags, return type, parameters).
   DenseMap<SmallVector<MCRegister, 8>, MCRegister> DebugTypeFunctionCache;
 
+  static constexpr unsigned DebugOperationMaxOperands = 4;
+
   // Cache of already-emitted DebugOperation instructions, keyed by NonSemantic
-  // opcode followed by the 32-bit operation arguments. Inline size 3 is the
-  // spec maximum (opcode plus at most two operands: BitPiece, Fragment).
-  DenseMap<SmallVector<uint32_t, 3>, MCRegister> DebugOperationCache;
+  // opcode followed by the 32-bit operation arguments.
+  DenseMap<SmallVector<uint32_t, DebugOperationMaxOperands>, MCRegister>
+      DebugOperationCache;
 
   // Cache of already-emitted DebugExpression instructions, keyed by the
   // DebugOperation result ids in operand order. Useful for debug values
