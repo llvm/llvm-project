@@ -2975,7 +2975,7 @@ bool IntrinsicProcTable::Implementation::IsIntrinsicFunction(
   // special cases
   return name == "__builtin_c_loc" || name == "__builtin_c_devloc" ||
       name == IntrinsicProcTable::BuiltinRank1BoundElementName ||
-      name == "null";
+      name == "null" || name == "next" || name == "previous";
 }
 bool IntrinsicProcTable::Implementation::IsIntrinsicSubroutine(
     const std::string &name0) const {
