@@ -990,11 +990,9 @@ int d_noninline;
     def test_unaryop(self):
         tu = get_tu(
             """
-                void func(void) {
+            void prefix_func(void) {
                 int a = 0;
-                a++;
                 ++a;
-                a--;
                 --a;
                 *(&a);
                 +a;
@@ -1005,35 +1003,40 @@ int d_noninline;
                 __real b;
                 __imag b;
                 __extension__ a;
+            }
+            void postfix_func(void) {
+                int a = 0;
+                a++;
+                a--;
             }""",
             lang="cpp",
         )
 
         operators = {
-            "&": UnaryOperator.AddrOf,
-            "*": UnaryOperator.Deref,
-            "+": UnaryOperator.Plus,
-            "-": UnaryOperator.Minus,
-            "~": UnaryOperator.Not,
-            "!": UnaryOperator.LNot,
-            "__real": UnaryOperator.Real,
-            "__imag": UnaryOperator.Imag,
-            "__extension__": UnaryOperator.Extension,
+            "prefix": {
+                "&": UnaryOperator.AddrOf,
+                "*": UnaryOperator.Deref,
+                "+": UnaryOperator.Plus,
+                "-": UnaryOperator.Minus,
+                "~": UnaryOperator.Not,
+                "!": UnaryOperator.LNot,
+                "++": UnaryOperator.PreInc,
+                "--": UnaryOperator.PreDec,
+                "__real": UnaryOperator.Real,
+                "__imag": UnaryOperator.Imag,
+                "__extension__": UnaryOperator.Extension,
+            },
+            "postfix": {
+                "++": UnaryOperator.PostInc,
+                "--": UnaryOperator.PostDec,
+            }
         }
 
-        for op, typ in operators.items():
-            c = get_cursor(tu, op)
-            assert c.unary_operator == typ
-
-        shoulds = (
-            UnaryOperator.PostInc,
-            UnaryOperator.PreInc,
-            UnaryOperator.PostDec,
-            UnaryOperator.PreDec,
-        )
-        haves = list(next(tu.cursor.get_children()).get_children())[1:]
-        for should_be, has in zip(shoulds, haves):
-            assert should_be == has
+        for operator_type, ops in operators.items():
+            root = get_cursor(tu, f"{operator_type}_func")
+            for spelling, operator in ops.items():
+                c = get_cursor(root, spelling)
+                assert c is not None and c.unary_operator == operator
 
     def test_from_result_null(self):
         tu = get_tu("int a = 1+2;", lang="cpp")

@@ -2044,10 +2044,10 @@ class Cursor(Structure):
         :return:
         """
 
-        if not hasattr(self, "_binopcode"):
+        if not hasattr(self, "_unopcode"):
             self._binopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
 
-        return UnaryOperator.from_id(self._binopcode)
+        return UnaryOperator.from_id(self._unopcode)
 
     @property
     @cursor_null_guard
@@ -2513,7 +2513,7 @@ class UnaryOperator(BaseEnumeration):
     Real = 11
     Imag = 12
     Extension = 13
-    CoAwait = 14
+    Coawait = 14
 
 
 class StorageClass(BaseEnumeration):
