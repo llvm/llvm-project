@@ -18,6 +18,7 @@
 #include "src/__support/OSUtil/linux/auxv.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/threads/linux/futex_utils.h"
 #include "src/__support/threads/thread.h"
 #include "src/errno/program_invocation_name.h"
 #include "src/errno/program_invocation_short_name.h"
@@ -76,6 +77,7 @@ static void call_fini_array_callbacks() {
 }
 
 static ThreadAttributes main_thread_attrib;
+static Futex main_thread_clear_tid(1);
 static TLSDescriptor tls;
 
 [[noreturn]] void do_start() {
@@ -83,6 +85,10 @@ static TLSDescriptor tls;
   if (tid <= 0)
     syscall_impl<long>(SYS_exit, 1);
   main_thread_attrib.tid = static_cast<int>(tid);
+  main_thread_attrib.platform_data = &main_thread_clear_tid;
+  main_thread_attrib.detach_state =
+      static_cast<uint32_t>(DetachState::JOINABLE);
+  syscall_impl<long>(SYS_set_tid_address, &main_thread_clear_tid.val);
 
   // After the argv array, is a 8-byte long NULL value before the array of env
   // values. The end of the env values is marked by another 8-byte long NULL
