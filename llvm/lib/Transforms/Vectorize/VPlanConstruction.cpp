@@ -1695,7 +1695,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   }
 
   VPValue *AnyNaNLane =
-      LatchBuilder.createNaryOp(VPInstruction::AnyOf, AllNaNLanes);
+      LatchBuilder.createNaryOp(VPInstruction::AnyOf, {AllNaNLanes});
   // Freeze to prevent immediate UB from branching on poison.
   AnyNaNLane = LatchBuilder.createFreeze(AnyNaNLane);
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
