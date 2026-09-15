@@ -18,7 +18,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#include <string_view>
+
 #if _LIBCPP_HAS_LOCALIZATION
 #  include <__fwd/ostream.h>
 #endif // _LIBCPP_HAS_LOCALIZATION
@@ -41,26 +41,6 @@ namespace __stacktrace {
 
 struct _Image;
 
-struct StringWrapper {
-  // XXX FIXME TODO:
-  // Figure out a solution for creating strings while respecting
-  // the caller's allocator they provided:
-  //   1. properly typeerase basic_strings' allocator types
-  //   2. move all code into headers (seems like a bad idea)
-  //   3. leave these as oversized char arrays, seems suboptimal
-  //   4. just use std::string, which is just plain wrong
-  //   5. ...?
-
-  std::string __str_;
-
-  _LIBCPP_HIDE_FROM_ABI std::string_view __view() const { return __str_; }
-
-  _LIBCPP_HIDE_FROM_ABI StringWrapper& __assign(std::string_view __view) {
-    __str_ = __view;
-    return *this;
-  }
-};
-
 struct _Entry {
 #  if defined(PATH_MAX)
   constexpr static size_t __max_file_len = PATH_MAX;
@@ -71,10 +51,10 @@ struct _Entry {
 #  endif
 
   uintptr_t __addr_{};
-  StringWrapper __desc_{};
-  StringWrapper __file_{};
   uint_least32_t __line_{};
   _Image const* __image_{};
+  std::pmr::string __desc_;
+  std::pmr::string __file_;
 
 #  if _LIBCPP_HAS_LOCALIZATION
   _LIBCPP_EXPORTED_FROM_ABI std::ostream& __write_to(std::ostream& __os) const;
@@ -86,6 +66,8 @@ struct _Entry {
   _LIBCPP_HIDE_FROM_ABI static _Entry const& __entry_base(stacktrace_entry const& __entry);
 
   _LIBCPP_HIDE_FROM_ABI uintptr_t __adjusted_addr() const;
+
+  _LIBCPP_HIDE_FROM_ABI explicit _Entry(std::pmr::memory_resource* __res) : __desc_(__res), __file_(__res) {}
 
   _LIBCPP_HIDE_FROM_ABI ~_Entry()                                  = default;
   _LIBCPP_HIDE_FROM_ABI constexpr _Entry()                         = default;
@@ -114,13 +96,15 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr stacktrace_entry& operator=(const stacktrace_entry&) noexcept = default;
 
   // (19.6.3.3) [stacktrace.entry.obs], observers
-   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept { return __base_.__addr_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr native_handle_type native_handle() const noexcept {
+    return __base_.__addr_;
+  }
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return native_handle() != 0; }
 
   // (19.6.3.4) [stacktrace.entry.query], query
-   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_.__view()); }
-   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_.__view()); }
-   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string description() const { return string(__base_.__desc_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI string source_file() const { return string(__base_.__file_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI uint_least32_t source_line() const { return __base_.__line_; }
 
   // (19.6.3.5) [stacktrace.entry.cmp], comparison
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool
@@ -139,7 +123,7 @@ public:
 
 #  if _LIBCPP_HAS_LOCALIZATION
 
- [[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline string to_string(const std::stacktrace_entry& __entry) {
   return __stacktrace::_Entry::__entry_base(__entry).__to_string();
 }
 
@@ -158,7 +142,7 @@ _LIBCPP_HIDE_FROM_ABI inline ostream& operator<<(ostream& __os, const stacktrace
 
 template <>
 struct hash<stacktrace_entry> {
-   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const stacktrace_entry& __entry) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(const stacktrace_entry& __entry) const noexcept {
     return __stacktrace::_Entry::__entry_base(__entry).__hash_code();
   }
 };

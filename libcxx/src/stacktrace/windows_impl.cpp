@@ -254,7 +254,7 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
     IMAGEHLP_MODULE mod_info{};
     mod_info.SizeOfStruct = sizeof(mod_info);
     if (SymGetModuleInfo(proc, frame.AddrPC.Offset, &mod_info)) {
-      entry.__file_.__assign(mod_info.LoadedImageName);
+      entry.__file_ = mod_info.LoadedImageName;
     }
 
     --max_depth;
@@ -282,13 +282,13 @@ void _Trace::__windows_impl(size_t skip, size_t max_depth) {
 #  endif
     IMAGEHLP_LINE line;
     if (SymGetSymFromAddr(proc, entry.__addr_, &symdisp, sym)) {
-      entry.__desc_.__assign(sym->Name);
+      entry.__desc_ = sym->Name;
     }
 
     DWORD linedisp{};
     line.SizeOfStruct = sizeof(IMAGEHLP_LINE);
     if (SymGetLineFromAddr(proc, entry.__addr_, &linedisp, &line)) {
-      entry.__file_.__assign(line.FileName);
+      entry.__file_ = line.FileName;
       entry.__line_ = line.LineNumber;
     }
   }

@@ -64,9 +64,11 @@ struct _Trace {
   using _EntryIters _LIBCPP_NODEBUG = _Iters<stacktrace_entry, _Entry>;
   function<_EntryIters()> __entry_iters_;
   function<_Entry&()> __entry_append_;
+  std::pmr::memory_resource* __resource_;
 
-  _LIBCPP_HIDE_FROM_ABI _Trace(function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append)
-      : __entry_iters_(__entry_iters), __entry_append_(__entry_append) {}
+  _LIBCPP_HIDE_FROM_ABI _Trace(
+      function<_EntryIters()> __entry_iters, function<_Entry&()> __entry_append, std::pmr::memory_resource* __resource)
+      : __entry_iters_(__entry_iters), __entry_append_(__entry_append), __resource_(__resource) {}
 
   _LIBCPP_EXPORTED_FROM_ABI ostream& __write_to(ostream& __os) const;
   _LIBCPP_EXPORTED_FROM_ABI string __to_string() const;
@@ -97,12 +99,40 @@ template <class _Allocator>
 class basic_stacktrace : private __stacktrace::_Trace {
   friend struct __stacktrace::_Trace;
 
+  struct _Resource : std::pmr::memory_resource {
+    basic_stacktrace* __owner_;
+
+    _LIBCPP_HIDE_FROM_ABI explicit _Resource(basic_stacktrace* __owner) noexcept : __owner_(__owner) {}
+
+    _LIBCPP_HIDE_FROM_ABI void* do_allocate(size_t __bytes, size_t) override {
+      using _Value = typename allocator_traits<_Allocator>::value_type;
+      size_t __n   = (__bytes + sizeof(_Value) - 1) / sizeof(_Value);
+      _Allocator __a(__owner_->__entries_.get_allocator());
+      return static_cast<void*>(std::to_address(allocator_traits<_Allocator>::allocate(__a, __n)));
+    }
+
+    _LIBCPP_HIDE_FROM_ABI void do_deallocate(void* __p, size_t __bytes, size_t) override {
+      using _Value = typename allocator_traits<_Allocator>::value_type;
+      size_t __n   = (__bytes + sizeof(_Value) - 1) / sizeof(_Value);
+      _Allocator __a(__owner_->__entries_.get_allocator());
+      allocator_traits<_Allocator>::deallocate(__a, static_cast<_Value*>(__p), __n);
+    }
+
+    _LIBCPP_HIDE_FROM_ABI bool do_is_equal(const std::pmr::memory_resource& __other) const noexcept override {
+      return this == &__other;
+    }
+  };
+
   vector<stacktrace_entry, _Allocator> __entries_;
+  _Resource __resource_{this};
 
   _LIBCPP_HIDE_FROM_ABI _EntryIters __entry_iters() { return {__entries_.data(), __entries_.size()}; }
 
   _LIBCPP_HIDE_FROM_ABI __stacktrace::_Entry& __entry_append() {
-    return (__stacktrace::_Entry&)__entries_.emplace_back();
+    __stacktrace::_Entry& __e = (__stacktrace::_Entry&)__entries_.emplace_back();
+    __e.~_Entry();
+    ::new (static_cast<void*>(&__e)) __stacktrace::_Entry(&__resource_);
+    return __e;
   }
 
   _LIBCPP_HIDE_FROM_ABI auto __entry_iters_fn() {
@@ -160,23 +190,24 @@ public:
       : basic_stacktrace(allocator_type()) {}
 
   _LIBCPP_HIDE_FROM_ABI explicit basic_stacktrace(const allocator_type& __alloc) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn()), __entries_(__alloc) {}
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_), __entries_(__alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other)
-      : _Trace(__entry_iters_fn(), __entry_append_fn()) {
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_) {
     __entries_ = __other.__entries_;
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other) noexcept
-      : _Trace(__entry_iters_fn(), __entry_append_fn()) {
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_) {
     __entries_ = std::move(__other.__entries_);
   }
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(const basic_stacktrace& __other, const allocator_type& __alloc)
-      : _Trace(__entry_iters_fn(), __entry_append_fn()), __entries_(__other.__entries_, __alloc) {}
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_), __entries_(__other.__entries_, __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace(basic_stacktrace&& __other, const allocator_type& __alloc)
-      : _Trace(__entry_iters_fn(), __entry_append_fn()), __entries_(std::move(__other.__entries_), __alloc) {}
+      : _Trace(__entry_iters_fn(), __entry_append_fn(), &__resource_),
+        __entries_(std::move(__other.__entries_), __alloc) {}
 
   _LIBCPP_HIDE_FROM_ABI basic_stacktrace& operator=(const basic_stacktrace& __other) {
     __entries_ = __other.__entries_;

@@ -37,12 +37,12 @@ ostream& _Entry::__write_to(ostream& __os) const {
   }
   __os << ubuf;
 
-  if (__desc_.__view().size()) {
-    __os << ": " << __desc_.__view();
+  if (__desc_.size()) {
+    __os << ": " << __desc_;
   }
 
-  if (__file_.__view().size()) {
-    __os << ": " << __file_.__view();
+  if (__file_.size()) {
+    __os << ": " << __file_;
   }
 
   if (__line_) {
