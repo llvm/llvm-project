@@ -338,6 +338,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   DebugSourceRegByFileStr.clear();
   OpStringContentCache.clear();
   I32ConstantCache.clear();
+  I64ConstantCache.clear();
   DebugTypeFunctionCache.clear();
   DebugOperationCache.clear();
   DebugExpressionCache.clear();
@@ -350,7 +351,7 @@ void SPIRVNonSemanticDebugHandler::beginModule(Module *M) {
   CachedDebugInfoNoneReg = MCRegister();
   CachedEmptyStringReg = MCRegister();
   CachedOpTypeVoidReg = MCRegister();
-  CachedOpTypeInt32Reg = MCRegister();
+  CachedOpTypeIntRegs.clear();
 
   // Collect compile-unit info: file paths and source languages.
   for (const DICompileUnit *CU : M->debug_compile_units()) {
@@ -441,6 +442,30 @@ void SPIRVNonSemanticDebugHandler::prepareModuleOutput(
   // fresh result ID for it now; the same ID is used in emitExtInst() operands.
   if (!MAI.ExtInstSetMap.count(NSSet))
     MAI.ExtInstSetMap[NSSet] = MAI.getNextIDRegister();
+
+  // Capabilities are output before the debug info, so settle Int64 here.
+  if (needsI64SizeOrOffsetConstants())
+    MAI.Reqs.addCapability(SPIRV::Capability::Int64);
+}
+
+bool SPIRVNonSemanticDebugHandler::needsI64SizeOrOffsetConstants() const {
+  for (const DIBasicType *BT : BasicTypes)
+    if (!isUInt<32>(BT->getSizeInBits()))
+      return true;
+
+  for (const DICompositeType *CT : CompositeTypes) {
+    if (!CT->isForwardDecl() && !isUInt<32>(CT->getSizeInBits()))
+      return true;
+    for (const DINode *Element : CT->getElements()) {
+      const auto *M = dyn_cast<DIDerivedType>(Element);
+      if (!M || M->getTag() != dwarf::DW_TAG_member)
+        continue;
+      if (!isUInt<32>(M->getOffsetInBits()) || !isUInt<32>(M->getSizeInBits()))
+        return true;
+    }
+  }
+
+  return false;
 }
 
 void SPIRVNonSemanticDebugHandler::emitMCInst(MCInst &Inst) {
@@ -526,6 +551,34 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI32(
   return Reg;
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI64(
+    uint64_t Value, SPIRV::ModuleAnalysisInfo &MAI) {
+  MCRegister I64TypeReg = getOrEmitOpTypeIntReg(64, MAI);
+
+  auto [It, Inserted] = I64ConstantCache.try_emplace(Value);
+  if (!Inserted)
+    return It->second;
+
+  MCRegister Reg = MAI.getNextIDRegister();
+  It->second = Reg;
+  MCInst Inst;
+  Inst.setOpcode(SPIRV::OpConstantI);
+  Inst.addOperand(MCOperand::createReg(Reg));
+  Inst.addOperand(MCOperand::createReg(I64TypeReg));
+  // SPIR-V encodes a 64-bit literal as two 32-bit words, low word first.
+  Inst.addOperand(MCOperand::createImm(Lo_32(Value)));
+  Inst.addOperand(MCOperand::createImm(Hi_32(Value)));
+  emitMCInst(Inst);
+  return Reg;
+}
+
+MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantSizeOrOffset(
+    uint64_t Value, MCRegister I32TypeReg, SPIRV::ModuleAnalysisInfo &MAI) {
+  if (isUInt<32>(Value))
+    return emitOpConstantI32(static_cast<uint32_t>(Value), I32TypeReg, MAI);
+  return emitOpConstantI64(Value, MAI);
+}
+
 MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
     SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
     MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
@@ -564,11 +617,18 @@ MCRegister SPIRVNonSemanticDebugHandler::getOrEmitOpTypeVoidReg(
   return CachedOpTypeVoidReg;
 }
 
-MCRegister SPIRVNonSemanticDebugHandler::getOrEmitOpTypeInt32Reg(
-    SPIRV::ModuleAnalysisInfo &MAI) {
-  if (!CachedOpTypeInt32Reg.isValid())
-    CachedOpTypeInt32Reg = findOrEmitOpTypeInt32(MAI);
-  return CachedOpTypeInt32Reg;
+MCRegister SPIRVNonSemanticDebugHandler::getOrEmitOpTypeIntReg(
+    unsigned Width, SPIRV::ModuleAnalysisInfo &MAI) {
+  assert((Width == 32 || llvm::is_contained(MAI.Reqs.getMinimalCapabilities(),
+                                            SPIRV::Capability::Int64)) &&
+         "OpTypeInt emitted for a width whose capability was not requested in "
+         "prepareModuleOutput()");
+  MCRegister Reg = CachedOpTypeIntRegs.lookup(Width);
+  if (!Reg.isValid()) {
+    Reg = findOrEmitOpTypeInt(Width, MAI);
+    CachedOpTypeIntRegs[Width] = Reg;
+  }
+  return Reg;
 }
 
 MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeVoid(
@@ -585,19 +645,19 @@ MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeVoid(
   return Reg;
 }
 
-MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt32(
-    SPIRV::ModuleAnalysisInfo &MAI) {
+MCRegister SPIRVNonSemanticDebugHandler::findOrEmitOpTypeInt(
+    unsigned Width, SPIRV::ModuleAnalysisInfo &MAI) {
   for (const MachineInstr *MI : MAI.getMSInstrs(SPIRV::MB_TypeConstVars)) {
     if (MI->getOpcode() == SPIRV::OpTypeInt &&
-        MI->getOperand(1).getImm() == 32 && MI->getOperand(2).getImm() == 0)
+        MI->getOperand(1).getImm() == Width && MI->getOperand(2).getImm() == 0)
       return MAI.getRegisterAlias(MI->getMF(), MI->getOperand(0).getReg());
   }
   MCRegister Reg = MAI.getNextIDRegister();
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpTypeInt);
   Inst.addOperand(MCOperand::createReg(Reg));
-  Inst.addOperand(MCOperand::createImm(32)); // width
-  Inst.addOperand(MCOperand::createImm(0));  // signedness (unsigned)
+  Inst.addOperand(MCOperand::createImm(Width));
+  Inst.addOperand(MCOperand::createImm(0)); // signedness (unsigned)
   emitMCInst(Inst);
   return Reg;
 }
@@ -611,7 +671,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypePointer(
     return std::nullopt;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeIntReg(32, MAI);
   MCRegister DebugTypePointerFlagsReg =
       emitOpConstantI32(transDebugFlags(PT), I32TypeReg, MAI);
 
@@ -646,7 +706,7 @@ SPIRVNonSemanticDebugHandler::emitDebugTypeFunctionForSubroutineType(
     const DISubroutineType *ST, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeIntReg(32, MAI);
   MCRegister DebugTypeFunctionFlagsReg =
       emitOpConstantI32(transDebugFlags(ST), I32TypeReg, MAI);
   DITypeArray TA = ST->getTypeArray();
@@ -1081,11 +1141,13 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeVector(
     return std::nullopt;
   const auto *SR = cast<DISubrange>(Elements[0]);
   const auto *CI = dyn_cast_if_present<ConstantInt *>(SR->getCount());
-  if (!CI)
+  // Component Count is a 32-bit OpConstant, so a wider count cannot be
+  // encoded. Truncating it would silently describe a different vector.
+  if (!CI || CI->getValue().getActiveBits() > 32)
     return std::nullopt;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeIntReg(32, MAI);
   MCRegister CountReg = emitOpConstantI32(
       static_cast<uint32_t>(CI->getZExtValue()), I32TypeReg, MAI);
   return emitExtInst(SPIRV::NonSemanticExtInst::DebugTypeVector, VoidTypeReg,
@@ -1102,7 +1164,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeArray(
     return std::nullopt;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeIntReg(32, MAI);
 
   SmallVector<MCRegister> Ops;
   Ops.push_back(*BaseRegOpt);
@@ -1150,10 +1212,10 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
 
   // DIDerivedType members carry no column, so emit 0.
   MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
-  MCRegister OffsetReg = emitOpConstantI32(
-      static_cast<uint32_t>(M->getOffsetInBits()), I32TypeReg, MAI);
-  MCRegister SizeReg = emitOpConstantI32(
-      static_cast<uint32_t>(M->getSizeInBits()), I32TypeReg, MAI);
+  MCRegister OffsetReg =
+      emitOpConstantSizeOrOffset(M->getOffsetInBits(), I32TypeReg, MAI);
+  MCRegister SizeReg =
+      emitOpConstantSizeOrOffset(M->getSizeInBits(), I32TypeReg, MAI);
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(M), I32TypeReg, MAI);
 
   // In NonSemantic.Shader.DebugInfo a DebugTypeMember has no Parent operand:
@@ -1196,8 +1258,7 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
   // A forward declaration has no known size or members: Size is DebugInfoNone.
   MCRegister SizeReg = CachedDebugInfoNoneReg;
   if (!CT->isForwardDecl())
-    SizeReg = emitOpConstantI32(static_cast<uint32_t>(CT->getSizeInBits()),
-                                I32TypeReg, MAI);
+    SizeReg = emitOpConstantSizeOrOffset(CT->getSizeInBits(), I32TypeReg, MAI);
 
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(CT), I32TypeReg, MAI);
 
@@ -1737,7 +1798,7 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
   CurrentMAI = &MAI;
 
   MCRegister VoidTypeReg = getOrEmitOpTypeVoidReg(MAI);
-  MCRegister I32TypeReg = getOrEmitOpTypeInt32Reg(MAI);
+  MCRegister I32TypeReg = getOrEmitOpTypeIntReg(32, MAI);
 
   CachedDebugInfoNoneReg = emitExtInst(SPIRV::NonSemanticExtInst::DebugInfoNone,
                                        VoidTypeReg, ExtInstSetReg, {}, MAI);
@@ -1785,8 +1846,8 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   for (const DIBasicType *BT : BasicTypes) {
     MCRegister NameReg = getCachedOpStringReg(BT->getName());
-    MCRegister SizeReg = emitOpConstantI32(
-        static_cast<uint32_t>(BT->getSizeInBits()), I32TypeReg, MAI);
+    MCRegister SizeReg =
+        emitOpConstantSizeOrOffset(BT->getSizeInBits(), I32TypeReg, MAI);
 
     // Map DWARF base type encodings to NSDI encoding codes per
     // NonSemantic.Shader.DebugInfo.100 specification, section 4.5.

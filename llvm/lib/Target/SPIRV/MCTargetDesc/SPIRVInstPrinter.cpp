@@ -81,7 +81,7 @@ void SPIRVInstPrinter::printOpConstantVarOps(const MCInst *MI,
 
   // Handle 64 bit literals.
   if (NumVarOps == 2) {
-    Imm |= (MI->getOperand(StartIndex + 1).getImm() << 32);
+    Imm = Make_64(MI->getOperand(StartIndex + 1).getImm(), Imm);
   }
 
   // Format and print float values.
