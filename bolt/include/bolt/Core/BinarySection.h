@@ -368,7 +368,7 @@ public:
   void addDynamicRelocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type,
                             uint64_t Addend, uint64_t Value = 0,
                             bool IsRELR = false,
-                            uint64_t JmpRelocationIndex =
+                            uint32_t JmpRelocationIndex =
                                 Relocation::NoJmpRelocationIndex) {
     addDynamicRelocation(
         Relocation{Offset, Symbol, Type, Addend, Value, IsRELR,

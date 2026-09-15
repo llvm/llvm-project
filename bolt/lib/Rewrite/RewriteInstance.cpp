@@ -65,7 +65,6 @@
 #include <memory>
 #include <optional>
 #include <system_error>
-#include <tuple>
 
 #undef  DEBUG_TYPE
 #define DEBUG_TYPE "bolt"
@@ -2968,6 +2967,13 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
   });
 
   for (const RelocationRef &Rel : Section.relocations()) {
+    uint32_t JmpRelocationIndex = Relocation::NoJmpRelocationIndex;
+    if (IsJmpRel) {
+      assert(NumJmpRelocations < Relocation::NoJmpRelocationIndex &&
+             "too many DT_JMPREL relocations");
+      JmpRelocationIndex = NumJmpRelocations++;
+    }
+
     const uint32_t RType = Relocation::getType(Rel);
     if (Relocation::isNone(RType))
       continue;
@@ -2987,11 +2993,12 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
       (void)SymbolAddress;
     }
 
+    const uint64_t RelOffset = Rel.getOffset();
     LLVM_DEBUG(
       SmallString<16> TypeName;
       Rel.getTypeName(TypeName);
       dbgs() << "BOLT-DEBUG: dynamic relocation at 0x"
-             << Twine::utohexstr(Rel.getOffset()) << " : " << TypeName
+             << Twine::utohexstr(RelOffset) << " : " << TypeName
              << " : " << SymbolName << " : " <<  Twine::utohexstr(SymbolAddress)
              << " : + 0x" << Twine::utohexstr(Addend) << '\n'
     );
@@ -3008,13 +3015,10 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
                       "relocation type\n";
         exit(1);
       }
-      handleRelativeDynamicRelocation(Rel.getOffset(), ReferencedAddress);
+      handleRelativeDynamicRelocation(RelOffset, ReferencedAddress);
     }
 
-    const uint64_t JmpRelocationIndex =
-        IsJmpRel ? NumJmpRelocations++
-                 : Relocation::NoJmpRelocationIndex;
-    BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend,
+    BC->addDynamicRelocation(RelOffset, Symbol, RType, Addend,
                              /*Value=*/0, /*IsRELR=*/false,
                              JmpRelocationIndex);
   }
@@ -6227,12 +6231,12 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
 
   DynamicRelativeRelocationsCount = 0;
 
-  auto writeRela = [&OS](const Elf_Rela *RelA, uint64_t &Offset) {
+  auto writeRela = [&OS](const Elf_Rela *RelA, uint64_t Offset) {
     safePWrite(OS, reinterpret_cast<const char *>(RelA), sizeof(*RelA), Offset);
-    Offset += sizeof(*RelA);
   };
 
-  auto writeRelocation = [&](BinarySection &Section, const Relocation &Rel) {
+  auto writeRelocation = [&](BinarySection &Section, const Relocation &Rel,
+                             uint64_t Offset, uint64_t EndOffset) {
     const uint64_t SectionInputAddress = Section.getAddress();
     uint64_t SectionAddress = Section.getOutputAddress();
     if (!SectionAddress)
@@ -6259,15 +6263,12 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
     NewRelA.r_offset = RelOffset;
     NewRelA.r_addend = Addend;
 
-    const bool IsJmpRel = Rel.isJmpRelocation();
-    uint64_t &Offset = IsJmpRel ? RelPltOffset : RelDynOffset;
-    const uint64_t &EndOffset = IsJmpRel ? RelPltEndOffset : RelDynEndOffset;
     if (!Offset || !EndOffset) {
       BC->errs() << "BOLT-ERROR: Invalid offsets for dynamic relocation\n";
       exit(1);
     }
 
-    if (Offset + sizeof(NewRelA) > EndOffset) {
+    if (Offset > EndOffset || EndOffset - Offset < sizeof(NewRelA)) {
       BC->errs() << "BOLT-ERROR: Offset overflow for dynamic relocation\n";
       exit(1);
     }
@@ -6287,7 +6288,8 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
 
         if (IsRelative)
           ++DynamicRelativeRelocationsCount;
-        writeRelocation(Section, Rel);
+        writeRelocation(Section, Rel, RelDynOffset, RelDynEndOffset);
+        RelDynOffset += sizeof(Elf_Rela);
       }
     }
   };
@@ -6297,24 +6299,7 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
   writeDynRelocations(/* PatchRelative */ true);
   writeDynRelocations(/* PatchRelative */ false);
 
-  using OrderedJmpRel = std::tuple<uint64_t, BinarySection *, const Relocation *>;
-  std::vector<OrderedJmpRel> JmpRelocations;
-  for (BinarySection &Section : BC->allocatableSections()) {
-    for (const Relocation &Rel : Section.dynamicRelocations()) {
-      if (!Rel.isJmpRelocation())
-        continue;
-      assert(!Rel.isRELR() && "RELR relocation cannot belong to DT_JMPREL");
-      JmpRelocations.emplace_back(Rel.getJmpRelocationIndex(), &Section, &Rel);
-    }
-  }
-  llvm::sort(JmpRelocations, [](const OrderedJmpRel &A,
-                                const OrderedJmpRel &B) {
-    return std::get<0>(A) < std::get<0>(B);
-  });
-  for (const OrderedJmpRel &Entry : JmpRelocations)
-    writeRelocation(*std::get<1>(Entry), *std::get<2>(Entry));
-
-  auto fillNone = [&](uint64_t &Offset, uint64_t EndOffset) {
+  auto fillNone = [&](uint64_t Offset, uint64_t EndOffset) {
     if (!Offset)
       return;
 
@@ -6322,15 +6307,32 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
     RelA.setSymbolAndType(0, Relocation::getNone(), EF.isMips64EL());
     RelA.r_offset = 0;
     RelA.r_addend = 0;
-    while (Offset < EndOffset)
+    while (Offset < EndOffset) {
       writeRela(&RelA, Offset);
+      Offset += sizeof(Elf_Rela);
+    }
 
     assert(Offset == EndOffset && "Unexpected section overflow");
   };
 
-  // Fill the rest of the sections with R_*_NONE relocations
   fillNone(RelDynOffset, RelDynEndOffset);
+
+  // Start with an empty DT_JMPREL table and patch relocations
+  // back into their original slots.
   fillNone(RelPltOffset, RelPltEndOffset);
+
+  for (BinarySection &Section : BC->allocatableSections()) {
+    for (const Relocation &Rel : Section.dynamicRelocations()) {
+      if (!Rel.isJmpRelocation())
+        continue;
+      assert(!Rel.isRELR() && "RELR relocation cannot belong to DT_JMPREL");
+
+      const uint64_t Offset =
+          RelPltOffset + Rel.getJmpRelocationIndex() * sizeof(Elf_Rela);
+
+      writeRelocation(Section, Rel, Offset, RelPltEndOffset);
+    }
+  }
 }
 
 template <typename ELFT>

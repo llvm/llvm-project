@@ -544,7 +544,7 @@ private:
   uint64_t PLTRelocationsSize{0};
 
   /// Number of relocations read from DT_JMPREL.
-  uint64_t NumJmpRelocations{0};
+  uint32_t NumJmpRelocations{0};
 
   /// Index of specified symbol in the dynamic symbol table. NOTE Currently it
   /// is filled and used only with the relocations-related symbols.

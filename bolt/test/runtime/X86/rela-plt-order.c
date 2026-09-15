@@ -6,13 +6,19 @@
 // RUN: %clang %cflags -fno-pie -no-pie -fuse-ld=bfd \
 // RUN:   -Wl,--emit-relocs -Wl,-rpath,\$ORIGIN -o %t/main %t/main.c \
 // RUN:   -L%t -lexample
+// RUN: llvm-readelf --dyn-relocations %t/main | \
+// RUN:   sed -n "/'PLT' relocation section/,/^$/p" | \
+// RUN:   awk '/^0/ { print $3, $5 }' > %t/main.plt
+// RUN: FileCheck %s --check-prefix=PLT-KINDS < %t/main.plt
 // RUN: llvm-bolt %t/main -o %t/main.bolt
-// RUN: llvm-readelf --dyn-relocations %t/main.bolt | FileCheck %s
+// RUN: llvm-readelf --dyn-relocations %t/main.bolt | \
+// RUN:   sed -n "/'PLT' relocation section/,/^$/p" | \
+// RUN:   awk '/^0/ { print $3, $5 }' > %t/main.bolt.plt
+// RUN: diff %t/main.plt %t/main.bolt.plt
 // RUN: %t/main.bolt
 
-// CHECK-LABEL: 'PLT' relocation section
-// CHECK:      R_X86_64_JUMP_SLOT{{.*}}long_name
-// CHECK-NEXT: R_X86_64_IRELATIVE
+// PLT-KINDS-DAG: R_X86_64_JUMP_SLOT long_name
+// PLT-KINDS-DAG: R_X86_64_IRELATIVE
 
 //--- main.c
 extern int long_name(void);
