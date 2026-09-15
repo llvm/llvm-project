@@ -50,6 +50,8 @@ public:
   const TargetRegisterClass *
   getConstrainedRegClassForReg(Register Reg,
                                const MachineRegisterInfo &MRI) const override;
+
+  const Triple &getTargetTriple() const { return TT; }
 };
 
 } // end namespace llvm

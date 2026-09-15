@@ -94,6 +94,12 @@ PPCInstrInfo::PPCInstrInfo(const PPCSubtarget &STI)
                       STI.isPPC64() ? PPC::BLR8 : PPC::BLR),
       Subtarget(STI), RI(STI.getTargetMachine()) {}
 
+const TargetRegisterClass *PPCInstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  return Subtarget.isPPC64() ? &PPC::G8RC_NOX0RegClass
+                             : &PPC::GPRC_NOR0RegClass;
+}
+
 /// CreateTargetHazardRecognizer - Return the hazard recognizer to use for
 /// this target when scheduling the DAG.
 ScheduleHazardRecognizer *

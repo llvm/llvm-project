@@ -61,6 +61,11 @@ public:
   ///
   const VERegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *getInlineAsmMemoryOperandRegClass(
+      InlineAsm::ConstraintCode C) const override {
+    return &VE::I64RegClass;
+  }
+
   /// Branch Analysis & Modification {
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,

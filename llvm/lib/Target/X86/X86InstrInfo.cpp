@@ -113,6 +113,17 @@ const TargetRegisterClass *X86InstrInfo::getRegClass(const MCInstrDesc &MCID,
   return RI->constrainRegClassToNonRex2(RC);
 }
 
+const TargetRegisterClass *X86InstrInfo::getInlineAsmMemoryOperandRegClass(
+    InlineAsm::ConstraintCode C) const {
+  if (Subtarget.isTarget64BitLP64())
+    return &X86::GR64RegClass;
+  // If the target is 64bit but we have been told to use 32bit addresses, we can
+  // still use 64-bit register as long as we know the high bits are zeros.
+  // Reflect that in the returned register class.
+  return Subtarget.is64Bit() ? &X86::LOW32_ADDR_ACCESSRegClass
+                             : &X86::GR32RegClass;
+}
+
 bool X86InstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
                                          Register &SrcReg, Register &DstReg,
                                          unsigned &SubIdx) const {
