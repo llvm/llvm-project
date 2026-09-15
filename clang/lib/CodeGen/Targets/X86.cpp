@@ -3586,12 +3586,10 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
             Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
             /*ByVal=*/false);
 
-      // Mingw64 GCC returns i128 in XMM0. Coerce to v2i64 to handle that.
-      // Clang matches them for compatibility.
       if (BT->getKind() == BuiltinType::Int128 ||
           BT->getKind() == BuiltinType::UInt128)
-        return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
-            llvm::Type::getInt64Ty(getVMContext()), 2));
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
 
       // Mingw64 GCC returns f128 via sret, and Clang matches that for
       // compatibility. This mirrors the X86 backend's CanLowerReturn logic.
@@ -3669,6 +3667,10 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() =
         classify(FI.getReturnType(), FreeSSERegs, ClassifyKind::Return, CC);
+
+  if (FI.getReturnInfo().isIndirect() && FI.isInstanceMethod() &&
+      getCXXABI().isSRetParameterAfterThis())
+    FI.getReturnInfo().setSRetAfterThis(true);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.

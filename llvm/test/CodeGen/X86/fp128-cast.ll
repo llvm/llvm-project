@@ -518,13 +518,15 @@ define dso_local void @TestFPToSIF128_I128() nounwind {
 ;
 ; WIN64-SSE-LABEL: TestFPToSIF128_I128:
 ; WIN64-SSE:       # %bb.0: # %entry
-; WIN64-SSE-NEXT:    subq $56, %rsp
+; WIN64-SSE-NEXT:    subq $72, %rsp
 ; WIN64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; WIN64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-SSE-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-SSE-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-SSE-NEXT:    callq __fixtfti
+; WIN64-SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN64-SSE-NEXT:    movaps %xmm0, vi128(%rip)
-; WIN64-SSE-NEXT:    addq $56, %rsp
+; WIN64-SSE-NEXT:    addq $72, %rsp
 ; WIN64-SSE-NEXT:    retq
 ;
 ; X86-LABEL: TestFPToSIF128_I128:
@@ -584,13 +586,15 @@ define dso_local void @TestFPToUIF128_U128() nounwind {
 ;
 ; WIN64-SSE-LABEL: TestFPToUIF128_U128:
 ; WIN64-SSE:       # %bb.0: # %entry
-; WIN64-SSE-NEXT:    subq $56, %rsp
+; WIN64-SSE-NEXT:    subq $72, %rsp
 ; WIN64-SSE-NEXT:    movaps vf128(%rip), %xmm0
 ; WIN64-SSE-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; WIN64-SSE-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; WIN64-SSE-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; WIN64-SSE-NEXT:    callq __fixunstfti
+; WIN64-SSE-NEXT:    movaps {{[0-9]+}}(%rsp), %xmm0
 ; WIN64-SSE-NEXT:    movaps %xmm0, vu128(%rip)
-; WIN64-SSE-NEXT:    addq $56, %rsp
+; WIN64-SSE-NEXT:    addq $72, %rsp
 ; WIN64-SSE-NEXT:    retq
 ;
 ; X86-LABEL: TestFPToUIF128_U128:
