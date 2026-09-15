@@ -24,7 +24,8 @@ using namespace Fortran::runtime;
 void fir::runtime::genMain(
     fir::FirOpBuilder &builder, mlir::Location loc,
     const std::vector<Fortran::lower::EnvironmentDefault> &defs, bool initCuda,
-    bool initCoarrayEnv, unsigned fpExceptionTraps) {
+    bool enableOpenMPAllocator, bool initCoarrayEnv,
+    unsigned fpExceptionTraps) {
   auto *context = builder.getContext();
   auto argcTy = builder.getDefaultIntegerType();
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(context);
@@ -71,6 +72,13 @@ void fir::runtime::genMain(
   }
   if (initCoarrayEnv)
     mif::InitOp::create(builder, loc);
+
+  if (enableOpenMPAllocator) {
+    auto registerFn =
+        builder.createFunction(loc, RTNAME_STRING(OpenMPRegisterAllocator),
+                               mlir::FunctionType::get(context, {}, {}));
+    fir::CallOp::create(builder, loc, registerFn);
+  }
 
   if (fpExceptionTraps != 0) {
     auto i32Ty = builder.getI32Type();
