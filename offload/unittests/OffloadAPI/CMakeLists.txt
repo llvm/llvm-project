@@ -32,7 +32,6 @@ add_offload_unittest("kernel"
     kernel/olLaunchKernelCooperative.cpp)
 
 add_offload_unittest("memory"
-    memory/AMDGPUMemoryPoolAllocateTest.cpp
     memory/olMemAlloc.cpp
     memory/olMemAllocAligned.cpp
     memory/olMemFill.cpp
@@ -42,8 +41,6 @@ add_offload_unittest("memory"
     memory/olGetMemInfo.cpp
     memory/olGetMemInfoSize.cpp
     memory/olMemRegister.cpp)
-target_include_directories("memory.unittests" PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../../plugins-nextgen/amdgpu/utils)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp

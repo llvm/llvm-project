@@ -9,6 +9,7 @@
 #include "../common/Properties.hpp"
 #include <OffloadAPI.h>
 #include <gtest/gtest.h>
+#include <limits>
 
 using olMemAllocAlignedTest = OffloadDeviceTest;
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olMemAllocAlignedTest);
@@ -102,6 +103,31 @@ TEST_P(olMemAllocAlignedTest, CudaExceedDefaultAlignment) {
   ASSERT_ERROR(OL_ERRC_UNSUPPORTED,
                olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
                                  1024 * 64 * 64 * 64, &Alloc));
+  ASSERT_EQ(Alloc, nullptr);
+}
+
+TEST_P(olMemAllocAlignedTest, AmdgpuExceedPoolAlignment) {
+  if (getPlatformBackend() != OL_PLATFORM_BACKEND_AMDGPU)
+    GTEST_SKIP() << "Test intended for AMDGPU backend";
+
+  void *Alloc = nullptr;
+  ASSERT_ERROR(OL_ERRC_UNSUPPORTED,
+               olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE, 1024,
+                                 1024 * 64 * 64 * 64, &Alloc));
+  ASSERT_EQ(Alloc, nullptr);
+}
+
+TEST_P(olMemAllocAlignedTest, AmdgpuFailedAllocateDoesNotInspectPointer) {
+  if (getPlatformBackend() != OL_PLATFORM_BACKEND_AMDGPU)
+    GTEST_SKIP() << "Test intended for AMDGPU backend";
+
+  // A failed hsa_amd_memory_pool_allocate may leave the output pointer
+  // undefined. With a non-zero alignment the old code inspected and freed
+  // that pointer before checking Status.
+  void *Alloc = nullptr;
+  ASSERT_ANY_ERROR(olMemAllocAligned(Device, OL_ALLOC_TYPE_DEVICE,
+                                     std::numeric_limits<size_t>::max(),
+                                     DefaultAlignment, &Alloc));
   ASSERT_EQ(Alloc, nullptr);
 }
 
