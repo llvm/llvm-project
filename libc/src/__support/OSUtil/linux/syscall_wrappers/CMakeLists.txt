@@ -466,7 +466,6 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
-    libc.hdr.types.off_t
     libc.include.sys_syscall
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits

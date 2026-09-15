@@ -1130,8 +1130,9 @@ static unsigned getMaxHWAddressableLocalMemorySize(const MCSubtargetInfo &STI) {
 
 // Total physical size of LDS on the block, in bytes. On targets with
 // FeatureHalfAddressablePhysicalLocalMemory the physical block is twice the
-// addressable size (gfx10/11/12, 128k physical and 64k addressable). On other
-// targets it is equal to the addressable size.
+// addressable size (gfx6: 64 KiB physical and 32 KiB addressable;
+// gfx10/11/12: 128 KiB physical and 64 KiB addressable). On other targets it is
+// equal to the addressable size.
 static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
   unsigned Addressable = getMaxHWAddressableLocalMemorySize(STI);
   if (STI.getFeatureBits().test(FeatureHalfAddressablePhysicalLocalMemory))
@@ -1140,7 +1141,7 @@ static unsigned getPhysicalLocalMemorySize(const MCSubtargetInfo &STI) {
 }
 
 // Sizes in use, by generation (addressable / physical block):
-//   gfx6              :  32 KiB
+//   gfx6              :  32 KiB addressable, 64 KiB physical block
 //   gfx7 / gfx8 / gfx9:  64 KiB
 //   gfx9.5 (gfx950)   : 160 KiB
 //   gfx10 / 11 / 12   :  64 KiB addressable, 128 KiB physical block

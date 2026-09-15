@@ -69,6 +69,8 @@ void Initialize() {
   if (UNLIKELY(!GetHsa().Ready()))                                             \
     return REAL(name)(__VA_ARGS__);
 
+// PPC cannot transparently tail-call an indirect dlsym target for RTLD_NEXT.
+#if !SANITIZER_PPC
 #define UBSAN_HSA_WRAPS(X)                                                     \
   X(hsa_init)                                                                  \
   X(hsa_shut_down)                                                             \
@@ -133,6 +135,7 @@ static void BindRealDlsym() {
   Report("ERROR: %s: cannot bind dlsym\n", SanitizerToolName);
   Die();
 }
+#endif
 
 INTERCEPTOR(hsa_status_t, hsa_init, void) {
   UBSAN_HSA_ENTER(hsa_init);
