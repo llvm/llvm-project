@@ -13,7 +13,7 @@
 #include "OffloadImpl.hpp"
 #include "llvm/Support/raw_ostream.h"
 #include <OffloadAPI.h>
-#include <OffloadPrint.hpp>
+#include <OffloadPrintRaw.hpp>
 
 llvm::StringSet<> &errorStrs() {
   static llvm::StringSet<> ErrorStrs;
