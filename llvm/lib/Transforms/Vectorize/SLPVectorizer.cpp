@@ -22601,10 +22601,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
       for (const auto &TE : VectorizableTree) {
         if (DeletedNodes.contains(TE.get()))
           continue;
-        if (!TE->isGather() || !E->isSame(TE->Scalars))
+        if (!(TE->isGather() || TransformedToGatherNodes.contains(TE.get())) ||
+            !E->isSame(TE->Scalars))
           continue;
         auto *UserTE = TE->UserTreeIndex.UserTE;
-        if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle())
+        if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
+            TransformedToGatherNodes.contains(UserTE))
           return false;
         UserOps.emplace_back(UserTE->getOpcode(), TE->UserTreeIndex.EdgeIdx);
       }

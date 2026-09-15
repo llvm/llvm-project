@@ -738,13 +738,6 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
     TTI::TargetCostKind CostKind, ArrayRef<int> Mask, int Index,
     VectorType *SubTp, ArrayRef<const Value *> Args, const Instruction *CxtI,
     TTI::VectorInstrContext VIC) const {
-  assert((improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp) ==
-              TTI::SK_Broadcast ||
-          VIC != TTI::VectorInstrContext::SplatOpFolded) &&
-         "Must be SK_Broadcast if a splat operation");
-  if (VIC == TTI::VectorInstrContext::SplatOpFolded && ST->sinkSplatOperands())
-    return TTI::TCC_Free;
-
   assert((Mask.empty() || DstTy->isScalableTy() ||
           Mask.size() == DstTy->getElementCount().getKnownMinValue()) &&
          "Expected the Mask to match the return size if given");
@@ -752,6 +745,13 @@ InstructionCost RISCVTTIImpl::getShuffleCost(
          "Expected the same scalar types");
 
   Kind = improveShuffleKindFromMask(Kind, Mask, SrcTy, Index, SubTp);
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded &&
+      ST->sinkSplatOperands()) {
+    assert(Kind == TTI::SK_Broadcast &&
+           "Must be SK_Broadcast if a splat operation");
+    if (Kind == TTI::SK_Broadcast)
+      return TTI::TCC_Free;
+  }
 
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
   // For now, skip all fixed vector cost analysis when P extension is available
