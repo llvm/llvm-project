@@ -1,8 +1,5 @@
 # Standard C++ Modules
 
-```{contents}
-:local:
-```
 
 ## Introduction
 

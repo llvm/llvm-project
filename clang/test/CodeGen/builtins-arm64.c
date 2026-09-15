@@ -5,7 +5,7 @@
 
 void f0(void *a, void *b) {
 	__clear_cache(a,b);
-// CHECK: call {{.*}} @__clear_cache
+// CHECK: call {{.*}} @llvm.clear_cache.p0
 }
 
 void *tp (void) {

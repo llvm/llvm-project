@@ -205,7 +205,10 @@ emitNeonCallToOp(CIRGenModule &cgm, CIRGenBuilderTy &builder,
                              funcResTy, args)
         .getResult();
   } else {
-    return Operation::create(builder, loc, funcResTy, args).getResult();
+    return Operation::create(
+               builder, loc, mlir::TypeRange{funcResTy}, args,
+               cir::getDefaultProperties<Operation>(builder.getContext()))
+        .getResult();
   }
 }
 
@@ -318,15 +321,19 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
   // `ArgAsWidenedRetType`. When set, wrap every non-immediate data operand
   // that has the same scalar type as arg0. Checking the ICE bitmap prevents
   // an i32 immediate from being vectorized when it has the same type as a
-  // data operand (e.g. vqshrns_n_s32).
+  // data operand (e.g. vqshrns_n_s32). `VectorizeImmArg` marks the entries
+  // whose trailing immediate must be widened as well.
+  const bool widenTrailingImm = vecArgTy && ops.size() == 2 &&
+                                (modifier & VectorizeImmArg) &&
+                                (iceArguments & (1U << 1));
   llvm::SmallVector<mlir::Type> argTypes;
   argTypes.reserve(ops.size());
   for (unsigned i = 0, e = ops.size(); i != e; ++i) {
     bool isImmediate = iceArguments & (1U << i);
-    if (vecArgTy && !isImmediate && matchesArg0Ty(ops[i].getType()))
-      argTypes.push_back(vecArgTy);
-    else
-      argTypes.push_back(ops[i].getType());
+    bool asVector =
+        vecArgTy && ((!isImmediate && matchesArg0Ty(ops[i].getType())) ||
+                     (widenTrailingImm && i == 1));
+    argTypes.push_back(asVector ? mlir::Type(vecArgTy) : ops[i].getType());
   }
 
   return {funcResTy, std::move(argTypes)};
@@ -579,6 +586,23 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
   case NEON::BI__builtin_neon_vqrshrnh_n_u16:
   case NEON::BI__builtin_neon_vqrshruns_n_s32:
   case NEON::BI__builtin_neon_vqrshrunh_n_s16:
+  case NEON::BI__builtin_neon_vqshlb_s8:
+  case NEON::BI__builtin_neon_vqshlb_u8:
+  case NEON::BI__builtin_neon_vqshlh_s16:
+  case NEON::BI__builtin_neon_vqshlh_u16:
+  case NEON::BI__builtin_neon_vqshls_s32:
+  case NEON::BI__builtin_neon_vqshls_u32:
+  case NEON::BI__builtin_neon_vqshld_s64:
+  case NEON::BI__builtin_neon_vqshld_u64:
+  case NEON::BI__builtin_neon_vqshlb_n_s8:
+  case NEON::BI__builtin_neon_vqshlb_n_u8:
+  case NEON::BI__builtin_neon_vqshlh_n_s16:
+  case NEON::BI__builtin_neon_vqshlh_n_u16:
+  case NEON::BI__builtin_neon_vqshls_n_s32:
+  case NEON::BI__builtin_neon_vqshls_n_u32:
+  case NEON::BI__builtin_neon_vqshlub_n_s8:
+  case NEON::BI__builtin_neon_vqshluh_n_s16:
+  case NEON::BI__builtin_neon_vqshlus_n_s32:
     break;
   }
 
@@ -1198,10 +1222,24 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vqdmulh_laneq_v:
   case NEON::BI__builtin_neon_vqrdmulhq_laneq_v:
   case NEON::BI__builtin_neon_vqrdmulh_laneq_v:
+    cgf.cgm.errorNYI(expr->getSourceRange(),
+                     std::string("unimplemented AArch64 builtin call: ") +
+                         ctx.BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
   case NEON::BI__builtin_neon_vqshl_n_v:
-  case NEON::BI__builtin_neon_vqshlq_n_v:
+  case NEON::BI__builtin_neon_vqshlq_n_v: {
+    llvm::StringRef intrName =
+        usgn ? "aarch64.neon.uqshl" : "aarch64.neon.sqshl";
+    return emitNeonCall(cgf.cgm, cgf.getBuilder(), {ty, ty}, ops, intrName, ty,
+                        loc, /*isConstrainedFPIntrinsic=*/false, /*shift=*/1,
+                        /*rightshift=*/false);
+  }
   case NEON::BI__builtin_neon_vqshlu_n_v:
   case NEON::BI__builtin_neon_vqshluq_n_v:
+    return emitNeonCall(cgf.cgm, cgf.getBuilder(), {ty, ty}, ops,
+                        "aarch64.neon.sqshlu", ty, loc,
+                        /*isConstrainedFPIntrinsic=*/false, /*shift=*/1,
+                        /*rightshift=*/false);
   case NEON::BI__builtin_neon_vrecpe_v:
   case NEON::BI__builtin_neon_vrecpeq_v:
   case NEON::BI__builtin_neon_vrsqrte_v:
@@ -1389,7 +1427,9 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vshl_v:
   case NEON::BI__builtin_neon_vshlq_v:
   case NEON::BI__builtin_neon_vraddhn_v:
-  case NEON::BI__builtin_neon_vrsubhn_v: {
+  case NEON::BI__builtin_neon_vrsubhn_v:
+  case NEON::BI__builtin_neon_vqshl_v:
+  case NEON::BI__builtin_neon_vqshlq_v: {
     // Pick the signed/unsigned intrinsic when the builtin has both
     // (UnsignedAlts); otherwise there is a single intrinsic.
     unsigned intrinsic =

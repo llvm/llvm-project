@@ -171,7 +171,7 @@ class ConcurrentEventsBase(TestBase):
             # only report this as 1 hit for all threads, because they all wrote
             # the same value.  The testsuite needs "write" style watchpoints to
             # get the correct number of hits reported.
-            self.runCmd("watchpoint set variable -w write g_watchme")
+            self.runCmd("watchpoint set variable -w write g_watchme.data")
             for w in self.inferior_target.watchpoint_iter():
                 self.thread_watchpoint = w
                 self.assertTrue(

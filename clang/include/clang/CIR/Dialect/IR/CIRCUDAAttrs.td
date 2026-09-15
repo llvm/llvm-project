@@ -72,9 +72,9 @@ def CIR_CUDABinaryHandleAttr : CIR_Attr<
 // CIR_CUDAVarRegistrationInfoAttr's own assembly format.
 def CIR_CUDADeviceVarKind : CIR_I32Enum<"CUDADeviceVarKind",
     "CUDA device variable kind", [
-  I32EnumAttrCase<"Variable", 0>,
-  I32EnumAttrCase<"Surface", 1>,   // Future
-  I32EnumAttrCase<"Texture", 2>,   // Future
+  I32EnumCase<"Variable", 0>,
+  I32EnumCase<"Surface", 1>,   // Future
+  I32EnumCase<"Texture", 2>,   // Future
 ]>;
 
 // Attribute carrying device variable registration flags
