@@ -16,6 +16,15 @@
 include "llvm/Target/Target.td"
 
 //===----------------------------------------------------------------------===//
+// Retired feature names or system registers, which cannot be reused
+//===----------------------------------------------------------------------===//
+defvar AArch64RetiredSubtargetFeatureNames = ["mpamv2", "tme"];
+defvar AArch64RetiredArchFeatureNames =
+    ["FEAT_MPAMv2", "FEAT_MPAMv2_VID", "FEAT_TME"];
+defvar AArch64RetiredSystemRegisterNames =
+    ["MPAMVIDCR_EL2", "MPAMVIDSR_EL2", "MPAMVIDSR_EL3"];
+
+//===----------------------------------------------------------------------===//
 // Subtarget features.
 //===----------------------------------------------------------------------===//
 include "AArch64Features.td"
@@ -209,3 +218,6 @@ def AArch64 : Target {
 //===----------------------------------------------------------------------===//
 
 include "AArch64PfmCounters.td"
+
+// This must remain after all AArch64 records have been instantiated.
+include "AArch64ValidateRetiredNames.td"
