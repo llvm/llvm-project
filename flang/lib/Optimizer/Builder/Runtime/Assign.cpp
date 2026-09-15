@@ -96,6 +96,46 @@ void fir::runtime::genCopyOutAssign(fir::FirOpBuilder &builder,
   fir::CallOp::create(builder, loc, func, args);
 }
 
+mlir::Value fir::runtime::genCopyOutReadOnlyMode(fir::FirOpBuilder &builder,
+                                                 mlir::Location loc) {
+  auto func =
+      fir::runtime::getRuntimeFunc<mkRTKey(CopyOutReadOnlyMode)>(loc, builder);
+  return fir::CallOp::create(builder, loc, func).getResult(0);
+}
+
+mlir::Value
+fir::runtime::genCopyOutReadOnlyCandidate(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Value box) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(CopyOutReadOnlyCandidate)>(
+      loc, builder);
+  auto fTy = func.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, box);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
+}
+
+mlir::Value fir::runtime::genCopyOutReadOnlyConfirm(fir::FirOpBuilder &builder,
+                                                    mlir::Location loc,
+                                                    mlir::Value box) {
+  auto func = fir::runtime::getRuntimeFunc<mkRTKey(CopyOutReadOnlyConfirm)>(
+      loc, builder);
+  auto fTy = func.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, box);
+  return fir::CallOp::create(builder, loc, func, args).getResult(0);
+}
+
+void fir::runtime::genNoteSkippedCopyOut(fir::FirOpBuilder &builder,
+                                         mlir::Location loc) {
+  auto func =
+      fir::runtime::getRuntimeFunc<mkRTKey(NoteSkippedCopyOut)>(loc, builder);
+  auto fTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, fTy.getInput(1));
+  auto args =
+      fir::runtime::createArguments(builder, loc, fTy, sourceFile, sourceLine);
+  fir::CallOp::create(builder, loc, func, args);
+}
+
 void fir::runtime::genAssignSimple(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Value destBox,
                                    mlir::Value sourceBox) {

@@ -10,7 +10,14 @@
 #include "CrashHandlerFixture.h"
 #include "tools.h"
 #include "gtest/gtest.h"
+#include "flang-rt/runtime/environment.h"
+#include <cstdint>
+#include <cstring>
 #include <vector>
+#if defined(__unix__) || defined(__APPLE__)
+#include <sys/mman.h>
+#include <unistd.h>
+#endif
 
 using namespace Fortran::runtime;
 using Fortran::common::TypeCategory;
@@ -446,3 +453,229 @@ TEST(AssignSimpleCrash, NonAllocatableElementCountMismatch) {
   ASSERT_DEATH(RTNAME(AssignSimple)(dest, source, __FILE__, __LINE__),
       "AssignSimple: mismatching element counts");
 }
+
+TEST(Assign, RTNAME(CopyOutAssign)) {
+  // Copy-out writes back the elements the callee modified through the
+  // temporary (when nothing was modified, it performs no stores at all;
+  // see the read-only test below).
+  // Discontiguous var: stride-2 view (elements 1,3,5,7) of an 8-element
+  // backing array, as copy-in/copy-out creates for a non-contiguous actual.
+  int data[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+  TypeCode intType{TypeCategory::Integer, 4};
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(intType, sizeof(int), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(int) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+  ASSERT_TRUE(temp.IsContiguous());
+
+  // The "callee" modifies the first and third elements of the temporary.
+  *temp.OffsetElement<int>(0 * sizeof(int)) = 100;
+  *temp.OffsetElement<int>(2 * sizeof(int)) = 300;
+
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+
+  int expected[8] = {100, 2, 3, 4, 300, 6, 7, 8};
+  EXPECT_EQ(std::memcmp(data, expected, 8 * sizeof(int)), 0);
+}
+
+#if defined(__unix__) || defined(__APPLE__)
+TEST(Assign, RTNAME(CopyOutAssignReadOnlyUnmodified)) {
+  // An unmodified copy-out must perform no stores at all: the original may
+  // live in read-only memory (e.g. a named constant's storage). The array
+  // includes a NaN element to verify that the comparison is bitwise — a
+  // value comparison would consider the unmodified NaN element "changed"
+  // and store to it, faulting on the read-only page.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(page, MAP_FAILED);
+  double *data{static_cast<double *>(page)};
+  for (int j{0}; j < 8; ++j) {
+    data[j] = j + 1;
+  }
+  std::uint64_t quietNaN{0x7FF8000000000000ULL};
+  std::memcpy(&data[2], &quietNaN, sizeof(double));
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ), 0);
+
+  // Discontiguous read-only var: stride-2 view (elements 1,NaN,5,7).
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+
+  // The "callee" only reads the temporary; copying out into the read-only
+  // original must not fault.
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+
+  std::uint64_t elem2Bits;
+  std::memcpy(&elem2Bits, &data[2], sizeof(double));
+  EXPECT_EQ(elem2Bits, quietNaN);
+  EXPECT_EQ(data[0], 1.0);
+  EXPECT_EQ(data[4], 5.0);
+  ASSERT_EQ(munmap(page, pageSize), 0);
+}
+#endif
+
+#if defined(__unix__) || defined(__APPLE__)
+#if defined(__unix__) || defined(__APPLE__)
+TEST(Assign, RTNAME(CopyOutAssignEnvVarParsing)) {
+  // Exercise the FLANG_RT_COPYOUT_MODIFIED_ONLY parsing path in
+  // ExecutionEnvironment::Configure(), rather than setting the field
+  // directly: "0" disables, "1" enables, an invalid value warns and leaves
+  // the default (enabled), and an absent variable leaves the default.
+  bool saved{executionEnvironment.copyOutModifiedOnly};
+
+  ASSERT_EQ(setenv("FLANG_RT_COPYOUT_MODIFIED_ONLY", "0", 1), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_FALSE(executionEnvironment.copyOutModifiedOnly);
+
+  ASSERT_EQ(setenv("FLANG_RT_COPYOUT_MODIFIED_ONLY", "1", 1), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(executionEnvironment.copyOutModifiedOnly);
+
+  // Invalid value: warns, leaves the default (enabled).
+  ASSERT_EQ(setenv("FLANG_RT_COPYOUT_MODIFIED_ONLY", "2", 1), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(executionEnvironment.copyOutModifiedOnly);
+
+  // Absent: default (enabled).
+  ASSERT_EQ(unsetenv("FLANG_RT_COPYOUT_MODIFIED_ONLY"), 0);
+  executionEnvironment.Configure(0, nullptr, nullptr, nullptr);
+  EXPECT_TRUE(executionEnvironment.copyOutModifiedOnly);
+
+  executionEnvironment.copyOutModifiedOnly = saved;
+}
+#endif
+
+TEST(Assign, RTNAME(CopyOutAssignUnconditionalEnvVar)) {
+  // With FLANG_RT_COPYOUT_MODIFIED_ONLY=0 semantics (unconditional copy-out),
+  // even an unmodified copy-out stores every element, so a read-only original
+  // faults. This proves the environment control selects the legacy path.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(page, MAP_FAILED);
+  double *data{static_cast<double *>(page)};
+  for (int j{0}; j < 8; ++j) {
+    data[j] = j + 1;
+  }
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ), 0);
+
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+
+  executionEnvironment.copyOutModifiedOnly = false;
+  EXPECT_DEATH(RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__), "");
+  executionEnvironment.copyOutModifiedOnly = true;
+
+  // The parent's temp is still allocated (the death happened in the child);
+  // clean it up through the default path.
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+  ASSERT_EQ(munmap(page, pageSize), 0);
+}
+
+TEST(Assign, RTNAME(CopyOutAssignSkipsUnmodifiedPrefix)) {
+  // When the first modification lies beyond a read-only prefix, copy-out
+  // must not store into the unmodified prefix: two adjacent pages, the first
+  // read-only, the second writable; the variable spans both; the callee
+  // modifies only an element on the second page. Copy-out must not fault and
+  // must deliver the modification.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *pages{mmap(nullptr, 2 * pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(pages, MAP_FAILED);
+  // Element stride 2*sizeof(double); place 'count' elements so that the
+  // first ones sit on page 1 and the last ones on page 2.
+  std::size_t perPage{pageSize / (2 * sizeof(double))};
+  std::size_t count{perPage + 4};
+  double *data{static_cast<double *>(pages)};
+  for (std::size_t j{0}; j < 2 * count; ++j) {
+    data[j] = static_cast<double>(j);
+  }
+  ASSERT_EQ(mprotect(pages, pageSize, PROT_READ), 0); // page 1 read-only
+
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{static_cast<SubscriptValue>(count)};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+  // Modify only the last element; its storage is on the writable page 2.
+  *temp.OffsetElement<double>((count - 1) * sizeof(double)) = -123.0;
+
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__); // must not fault
+  EXPECT_EQ(data[2 * (count - 1)], -123.0);
+  EXPECT_EQ(data[0], 0.0);
+
+  ASSERT_EQ(mprotect(pages, pageSize, PROT_READ | PROT_WRITE), 0);
+  ASSERT_EQ(munmap(pages, 2 * pageSize), 0);
+}
+
+TEST(Assign, RTNAME(CopyOutAssignReadOnlyModifiedDies)) {
+  // When the callee DID modify the temporary, copy-out falls back to the
+  // whole-object copy; storing into a read-only original then faults, which
+  // is the intended behavior for a program that modifies a non-definable
+  // actual argument.
+  std::size_t pageSize{static_cast<std::size_t>(sysconf(_SC_PAGESIZE))};
+  void *page{mmap(nullptr, pageSize, PROT_READ | PROT_WRITE,
+      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0)};
+  ASSERT_NE(page, MAP_FAILED);
+  double *data{static_cast<double *>(page)};
+  for (int j{0}; j < 8; ++j) {
+    data[j] = j + 1;
+  }
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ), 0);
+
+  StaticDescriptor<1> staticVar;
+  Descriptor &var{staticVar.descriptor()};
+  SubscriptValue extent[1]{4};
+  var.Establish(
+      TypeCode{TypeCategory::Real, 8}, sizeof(double), data, 1, extent);
+  var.GetDimension(0).SetLowerBound(1);
+  var.GetDimension(0).SetByteStride(sizeof(double) * 2);
+
+  StaticDescriptor<1> staticTemp;
+  Descriptor &temp{staticTemp.descriptor()};
+  RTNAME(CopyInAssign)(temp, var, __FILE__, __LINE__);
+  ASSERT_TRUE(temp.IsAllocated());
+  *temp.OffsetElement<double>(1 * sizeof(double)) = -1.0;
+
+  EXPECT_DEATH(RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__), "");
+
+  // Clean up the parent's still-allocated temp against writable storage.
+  ASSERT_EQ(mprotect(page, pageSize, PROT_READ | PROT_WRITE), 0);
+  RTNAME(CopyOutAssign)(&var, temp, __FILE__, __LINE__);
+  ASSERT_EQ(munmap(page, pageSize), 0);
+}
+#endif
