@@ -2252,6 +2252,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_READSTEADYCOUNTER).legalFor({S64});
 
+  if (ST.hasDebuggingEnabledQuery())
+    getActionDefinitionsBuilder(G_IS_DEBUGGING_ENABLED).customFor({S1});
+  else
+    getActionDefinitionsBuilder(G_IS_DEBUGGING_ENABLED).lower();
+
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
 
@@ -2428,6 +2433,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(Helper, MI);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
+  case TargetOpcode::G_IS_DEBUGGING_ENABLED:
+    return legalizeIsDebuggingEnabled(MI, MRI, B);
   default:
     return false;
   }
@@ -8331,6 +8338,17 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeIsDebuggingEnabled(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
+                  .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
+  Bits->setFlag(MachineInstr::NoMerge);
+  B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
+              B.buildConstant(LLT::scalar(32), 0));
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -8339,15 +8357,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::is_debugging_enabled: {
-    auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
-                    .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
-    Bits->setFlag(MachineInstr::NoMerge);
-    B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
-                B.buildConstant(LLT::scalar(32), 0));
-    MI.eraseFromParent();
-    return true;
-  }
   case Intrinsic::sponentry:
     if (B.getMF().getInfo<SIMachineFunctionInfo>()->isBottomOfStack()) {
       // FIXME: The imported pattern checks for i32 instead of p5; if we fix

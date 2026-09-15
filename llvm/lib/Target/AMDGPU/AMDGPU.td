@@ -176,9 +176,9 @@ defm TrapHandler: AMDGPUSubtargetFeature<"trap-handler",
   /*GenPredicate=*/0, /*GenAssemblerPredicate=*/1, [], InlineIgnore
 >;
 
-defm CDBGSysOrUserBranch : AMDGPUSubtargetFeature<
-  "cdbg-sys-or-user-branch",
-  "Support querying debugging state with s_cbranch_cdbgsys_or_user",
+defm DebuggingEnabledQuery : AMDGPUSubtargetFeature<
+  "debugging-enabled-query",
+  "Support observing debugging state through register reads and CDBG branch fusion",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/0
 >;
 
@@ -2344,7 +2344,7 @@ def FeatureISAVersion11_0_3 : FeatureSet<
 def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureVOPDInterlockHazard,
-     FeatureCDBGSysOrUserBranch,
+     FeatureDebuggingEnabledQuery,
      FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      FeatureRequiredExportPriority,
@@ -2389,7 +2389,7 @@ def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
    Feature32BitNumRecordsBufferResource,
    FeatureSupportsWave64, FeatureSupportsWGP,
-   FeatureCDBGSysOrUserBranch,
+   FeatureDebuggingEnabledQuery,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
    FeatureLDSAllocGranularity1024,
@@ -2460,7 +2460,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
-   FeatureCDBGSysOrUserBranch,
+   FeatureDebuggingEnabledQuery,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
    FeatureCuMode,
@@ -2687,7 +2687,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureGFX1250Insts,
    FeatureWaveMatchInsts,
    FeatureExclusiveScanInsts,
-   FeatureCDBGSysOrUserBranch,
+   FeatureDebuggingEnabledQuery,
    FeatureAddressableLocalMemorySize196608,
    FeatureLDSAllocGranularity1024,
    FeatureLDSEncodingGranularity1024,
