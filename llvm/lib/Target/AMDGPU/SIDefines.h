@@ -77,12 +77,9 @@ enum : uint64_t {
   SALU = 1 << 7,
   VALU = 1 << 8,
 
-  // Remaining modifiers that layer on top of a base format.
   TRANS = 1 << 9,
-  VOP3P = 1 << 10,
-  VINTERP = 1 << 11,
 
-  // Bits 30-12 are free.
+  // Bits 30-10 are free.
 
   // High bits - other information.
   VM_CNT = UINT64_C(1) << 32,
@@ -189,6 +186,8 @@ enum class InstFormat : uint64_t {
   VOP2,
   VOPC,
   VOP3,
+  VOP3P,
+  VINTERP,
   VINTRP,
   VOPD3,
   LDSDIR,
@@ -261,10 +260,13 @@ template <typename... T> constexpr bool isVOP3(const T &...O) {
   return getFormat(O...) == InstFormat::VOP3;
 }
 template <typename... T> constexpr bool isVOP3P(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VOP3P;
+  return getFormat(O...) == InstFormat::VOP3P;
+}
+template <typename... T> constexpr bool isVINTERP(const T &...O) {
+  return getFormat(O...) == InstFormat::VINTERP;
 }
 template <typename... T> constexpr bool isVOP3Like(const T &...O) {
-  return isVOP3(O...) || isVOP3P(O...);
+  return isVOP3(O...) || isVOP3P(O...) || isVINTERP(O...);
 }
 template <typename... T> constexpr bool isVINTRP(const T &...O) {
   return getFormat(O...) == InstFormat::VINTRP;
@@ -281,13 +283,13 @@ template <typename... T> constexpr bool isSDWA(const T &...O) {
 }
 template <typename... T> constexpr bool isDPP(const T &...O) {
   bool R = getFormatModifier(O...) == FormatModifier::DPP;
-  // DPP layers on VOP3 and VOPC (VOP3P instructions carry Format::VOP3 here).
-  // The VOP1/VOP2 e32 dpp forms currently carry Format::NONE instead of their
-  // base format.
+  // DPP layers on VOP3, VOPC and VOP3P. The VOP1/VOP2 e32 dpp forms currently
+  // carry Format::NONE instead of their base format.
   // TODO: tag VOP1/VOP2 e32 dpp forms with VOP1/VOP2 (see VOP_DPP_Pseudo) so
-  //       NONE can be dropped from this assert.
+  //       Format::NONE can be dropped from this assert.
   assert((!R || getFormat(O...) == InstFormat::VOP3 ||
           getFormat(O...) == InstFormat::VOPC ||
+          getFormat(O...) == InstFormat::VOP3P ||
           getFormat(O...) == InstFormat::NONE) &&
          "unexpected base format for DPP");
   return R;
@@ -330,9 +332,6 @@ template <typename... T> constexpr bool isSpill(const T &...O) {
 }
 template <typename... T> constexpr bool isLDSDIR(const T &...O) {
   return getFormat(O...) == InstFormat::LDSDIR;
-}
-template <typename... T> constexpr bool isVINTERP(const T &...O) {
-  return getTSFlags(O...) & DontUseRawTSFlags::VINTERP;
 }
 template <typename... T> constexpr bool isWQM(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::WQM;

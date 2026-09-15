@@ -112,7 +112,7 @@ static bool nodesHaveSameOperandValue(SDNode *N0, SDNode *N1,
 static bool canRemat(const MachineInstr &MI) {
 
   if (SIInstrInfo::isVOP1(MI) || SIInstrInfo::isVOP2(MI) ||
-      SIInstrInfo::isVOP3(MI) || SIInstrInfo::isSDWA(MI) ||
+      SIInstrFlags::isVOP3Like(MI) || SIInstrInfo::isSDWA(MI) ||
       SIInstrInfo::isSALU(MI))
     return true;
 
@@ -5063,7 +5063,7 @@ bool SIInstrInfo::isLiteralOperandLegal(const MCInstrDesc &InstDesc,
   if (!RI.opCanUseLiteralConstant(OpInfo.OperandType))
     return false;
 
-  if (!isVOP3(InstDesc) || !AMDGPU::isSISrcOperand(OpInfo))
+  if (!SIInstrFlags::isVOP3Like(InstDesc) || !AMDGPU::isSISrcOperand(OpInfo))
     return true;
 
   return ST.hasVOP3Literal();
@@ -5743,7 +5743,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
             UsesLiteral = true;
             LiteralVal = &MO;
           } else if (!MO.isIdenticalTo(*LiteralVal)) {
-            assert(isVOP2(MI) || isVOP3(MI));
+            assert(isVOP2(MI) || SIInstrFlags::isVOP3Like(MI));
             ErrInfo = "VOP2/VOP3 instruction uses more than one literal";
             return false;
           }
@@ -5770,7 +5770,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
 
-    if (isVOP3(MI) && UsesLiteral && !ST.hasVOP3Literal()) {
+    if (SIInstrFlags::isVOP3Like(MI) && UsesLiteral && !ST.hasVOP3Literal()) {
       ErrInfo = "VOP3 instruction uses literal";
       return false;
     }
@@ -6716,7 +6716,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     const MachineOperand *UsedLiteral = nullptr;
 
     int ConstantBusLimit = ST.getConstantBusLimit(MI.getOpcode());
-    int LiteralLimit = !isVOP3(MI) || ST.hasVOP3Literal() ? 1 : 0;
+    int LiteralLimit =
+        !SIInstrFlags::isVOP3Like(MI) || ST.hasVOP3Literal() ? 1 : 0;
 
     // TODO: Be more permissive with frame indexes.
     if (!MO->isReg() && !isInlineConstant(*MO, OpInfo)) {
@@ -7716,7 +7717,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
   }
 
   // Legalize VOP3
-  if (isVOP3(MI)) {
+  if (SIInstrFlags::isVOP3Like(MI)) {
     legalizeOperandsVOP3(MRI, MI);
     return CreatedBB;
   }

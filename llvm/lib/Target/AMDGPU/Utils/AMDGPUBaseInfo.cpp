@@ -914,7 +914,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
   HasSrc2Acc = TiedIdx != -1;
   Opcode = OpDesc.getOpcode();
 
-  IsVOP3 = VOP3Layout || SIInstrFlags::isVOP3(OpDesc);
+  IsVOP3 = VOP3Layout || SIInstrFlags::isVOP3Like(OpDesc);
   SrcOperandsNum = AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2)   ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::imm)  ? 3
                    : AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1) ? 2
@@ -943,7 +943,7 @@ ComponentProps::ComponentProps(const MCInstrDesc &OpDesc, bool VOP3Layout) {
       --NumVOPD3Mods;
   }
 
-  if (SIInstrFlags::isVOP3(OpDesc))
+  if (SIInstrFlags::isVOP3Like(OpDesc))
     return;
 
   auto OperandsNum = OpDesc.getNumOperands();

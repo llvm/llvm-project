@@ -495,7 +495,7 @@ bool SIFoldOperandsImpl::canUseImmWithOpSel(const MachineInstr *MI,
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
     // VOP3 packed instructions ignore op_sel source modifiers, we cannot encode
     // two different constants.
-    if (SIInstrFlags::isVOP3(*MI) && !SIInstrFlags::isVOP3P(*MI) &&
+    if (SIInstrFlags::isVOP3(*MI) &&
         static_cast<uint16_t>(ImmVal) != static_cast<uint16_t>(ImmVal >> 16))
       return false;
     break;

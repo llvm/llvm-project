@@ -262,7 +262,7 @@ public:
 
     for (auto CompIdx : VOPD::COMPONENTS) {
       auto CompSrcOprNum = InstInfo[CompIdx].getCompSrcOperandsNum();
-      bool IsVOP3 = SII->isVOP3(*MI[CompIdx]);
+      bool IsVOP3 = SIInstrFlags::isVOP3Like(*MI[CompIdx]);
       for (unsigned CompSrcIdx = 0; CompSrcIdx < CompSrcOprNum; ++CompSrcIdx) {
         if (AMDGPU::hasNamedOperand(VOPDOpc, Mods[CompIdx][CompSrcIdx])) {
           const MachineOperand *Mod =

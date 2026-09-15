@@ -3686,8 +3686,8 @@ ParseStatus AMDGPUAsmParser::parseVReg32OrOff(OperandVector &Operands) {
 }
 
 unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
-  if ((getForcedEncodingSize() == 32 && SIInstrFlags::isVOP3(MII, Inst)) ||
-      (getForcedEncodingSize() == 64 && !SIInstrFlags::isVOP3(MII, Inst)) ||
+  if ((getForcedEncodingSize() == 32 && SIInstrFlags::isVOP3Like(MII, Inst)) ||
+      (getForcedEncodingSize() == 64 && !SIInstrFlags::isVOP3Like(MII, Inst)) ||
       (isForcedDPP() && !SIInstrFlags::isDPP(MII, Inst)) ||
       (isForcedSDWA() && !SIInstrFlags::isSDWA(MII, Inst)))
     return Match_InvalidOperand;
@@ -4904,8 +4904,7 @@ bool AMDGPUAsmParser::validateBF16InlineConst(const MCInst &Inst,
 
   const unsigned Opc = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opc);
-  const bool IsVOP3 =
-      SIInstrFlags::isVOP3(Desc) && !SIInstrFlags::isVOP3P(Desc);
+  const bool IsVOP3 = SIInstrFlags::isVOP3(Desc);
   if (!SIInstrFlags::isVOP1(Desc) && !IsVOP3)
     return true;
 
@@ -5025,7 +5024,7 @@ bool AMDGPUAsmParser::validateOpSel(const MCInst &Inst) {
 
   // op_sel[0:1] must be 0 for v_dot2_bf16_bf16 and v_dot2_f16_f16 (VOP3 Dot).
   if (isGFX11Plus() && SIInstrFlags::isDOT(MII, Inst) &&
-      SIInstrFlags::isVOP3(MII, Inst) && !SIInstrFlags::isVOP3P(MII, Inst)) {
+      SIInstrFlags::isVOP3(MII, Inst)) {
     int OpSelIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::op_sel);
     unsigned OpSel = Inst.getOperand(OpSelIdx).getImm();
     if (OpSel & 3)
@@ -10634,7 +10633,7 @@ void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
 
   if (SIInstrFlags::isVOP3P(Desc))
     cvtVOP3P(Inst, Operands, OptionalIdx);
-  else if (SIInstrFlags::isVOP3(Desc))
+  else if (SIInstrFlags::isVOP3Like(Desc))
     cvtVOP3OpSel(Inst, Operands, OptionalIdx);
   else if (AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::op_sel)) {
     addOptionalImmOperand(Inst, Operands, OptionalIdx,
