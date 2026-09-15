@@ -35,7 +35,9 @@ lli = os.path.join(config.llvm_tools_dir, "lli")
 
 # Add host JIT triple feature & substitutions
 try:
-    host_jit_triple = subprocess.check_output([lli, "-host-jit-triple"], text=True).strip()
+    host_jit_triple = subprocess.check_output(
+        [lli, "-host-jit-triple"], text=True
+    ).strip()
     config.available_features.add("host-jit-triple=" + host_jit_triple)
 except (OSError, subprocess.CalledProcessError):
     lit_config.warning("could not determine host JIT triple from lli")
