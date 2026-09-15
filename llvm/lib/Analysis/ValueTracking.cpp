@@ -733,49 +733,55 @@ bool llvm::isValidAssumeForContext(const Instruction *Inv,
   return false;
 }
 
+static bool hasNoFreeInRange(BasicBlock::const_iterator Begin,
+                             BasicBlock::const_iterator End,
+                             unsigned &NumChecked) {
+  for (const Instruction &I : make_range(Begin, End)) {
+    if (NumChecked++ > MaxInstrsToCheckForFree)
+      return false;
+    if (auto *CB = dyn_cast<CallBase>(&I)) {
+      if (!CB->hasFnAttr(Attribute::NoFree))
+        return false;
+    } else if (I.maySynchronize())
+      return false;
+  }
+  return true;
+}
+
 bool llvm::willNotFreeBetween(const Instruction *Assume,
                               const Instruction *CtxI) {
-  // Helper to check if there are any calls in the range that may free memory.
   unsigned NumChecked = 0;
-  auto hasNoFreeInRange = [&NumChecked](auto Range) {
-    for (const Instruction &I : Range) {
-      if (NumChecked++ > MaxInstrsToCheckForFree)
-        return false;
-
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (!CB->hasFnAttr(Attribute::NoFree))
-          return false;
-      } else if (I.maySynchronize())
-        return false;
-    }
-    return true;
-  };
-
   const BasicBlock *CtxBB = CtxI->getParent();
   const BasicBlock *AssumeBB = Assume->getParent();
   BasicBlock::const_iterator CtxIter = CtxI->getIterator();
   if (CtxBB == AssumeBB) {
-    // Same block case: check that Assume comes before CtxI.
     if (Assume != CtxI && !Assume->comesBefore(CtxI))
       return false;
-    return hasNoFreeInRange(make_range(Assume->getIterator(), CtxIter));
+    return hasNoFreeInRange(Assume->getIterator(), CtxIter, NumChecked);
   }
-
-  // Multi-predecessor worklist.
+  // Check instructions before CtxI in CtxBB.
+  if (!hasNoFreeInRange(CtxBB->begin(), CtxIter, NumChecked))
+    return false;
+  if (pred_empty(CtxBB))
+    return false;
   SmallVector<const BasicBlock *, 8> Worklist;
   SmallPtrSet<const BasicBlock *, 8> Visited;
-  Worklist.push_back(CtxBB);
-  Visited.insert(CtxBB);
+  for (const BasicBlock *Pred : predecessors(CtxBB)) {
+    if (Visited.insert(Pred).second)
+      Worklist.push_back(Pred);
+  }
   while (!Worklist.empty()) {
     const BasicBlock *CurBB = Worklist.pop_back_val();
     if (CurBB == AssumeBB) {
-      if (!hasNoFreeInRange(make_range(Assume->getIterator(), AssumeBB->end())))
+      if (!hasNoFreeInRange(Assume->getIterator(), AssumeBB->end(), NumChecked))
         return false;
       continue;
     }
-    if (!hasNoFreeInRange(make_range(CurBB->begin(),
-                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+    if (!hasNoFreeInRange(CurBB == CtxBB ? CtxIter : CurBB->begin(),
+                          CurBB->end(), NumChecked))
       return false;
+    if (CurBB == CtxBB)
+      continue;
     if (pred_empty(CurBB))
       return false;
     for (const BasicBlock *Pred : predecessors(CurBB)) {

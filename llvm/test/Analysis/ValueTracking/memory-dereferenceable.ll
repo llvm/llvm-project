@@ -411,6 +411,49 @@ declare ptr addrspace(1) @func1(ptr addrspace(1) returned) nounwind argmemonly
 ; Can free any object accessible in memory
 declare void @mayfree()
 
+; CHECK-LABEL: 'dereferenceable_arg_multi_pred_nofree'
+; CHECK: %a
+define void @dereferenceable_arg_multi_pred_nofree(ptr dereferenceable(16) %a, i1 %cond) {
+entry:
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  call void @mayfree() nofree
+  br label %merge
+if.else:
+  br label %merge
+merge:
+  %v = load i32, ptr %a
+  ret void
+}
+; CHECK-LABEL: 'dereferenceable_arg_multi_pred_freed'
+; GLOBAL: %a
+; POINT-NOT: %a
+define void @dereferenceable_arg_multi_pred_freed(ptr dereferenceable(16) %a, i1 %cond) {
+entry:
+  br i1 %cond, label %if.then, label %if.else
+if.then:
+  call void @mayfree()
+  br label %merge
+if.else:
+  br label %merge
+merge:
+  %v = load i32, ptr %a
+  ret void
+}
+; CHECK-LABEL: 'dereferenceable_arg_loop_backedge_freed'
+; GLOBAL: %a
+; POINT-NOT: %a
+define void @dereferenceable_arg_loop_backedge_freed(ptr dereferenceable(16) %a, i1 %again) {
+entry:
+  br label %loop
+loop:
+  %v = load i32, ptr %a
+  call void @mayfree()
+  br i1 %again, label %loop, label %exit
+exit:
+  ret void
+}
+
 !0 = !{i64 4}
 !1 = !{i64 2}
 !2 = !{}
