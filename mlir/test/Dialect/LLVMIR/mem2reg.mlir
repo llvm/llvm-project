@@ -557,6 +557,22 @@ llvm.func @trivial_get_element_ptr() {
 
 // -----
 
+// inrange is defined relative to the GEP result, so a zero-index GEP is not a
+// no-op. mem2reg must not forward the GEP to the alloca.
+// CHECK-LABEL: llvm.func @inrange_get_element_ptr
+llvm.func @inrange_get_element_ptr() {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: = llvm.alloca
+  %2 = llvm.alloca %0 x i8 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  // CHECK: llvm.getelementptr inrange <i32, -4, 4>
+  %4 = llvm.getelementptr inrange <i32, -4, 4> %2[0] : (!llvm.ptr) -> !llvm.ptr, i8
+  llvm.intr.lifetime.start %2 : !llvm.ptr
+  llvm.intr.lifetime.start %4 : !llvm.ptr
+  llvm.return
+}
+
+// -----
+
 // CHECK-LABEL: llvm.func @nontrivial_get_element_ptr
 llvm.func @nontrivial_get_element_ptr() {
   %0 = llvm.mlir.constant(1 : i32) : i32

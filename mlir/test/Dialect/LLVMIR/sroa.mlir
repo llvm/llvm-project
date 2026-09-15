@@ -463,3 +463,20 @@ llvm.func @empty_struct_not_destructured() -> !llvm.struct<()> {
   %2 = llvm.load %1 : !llvm.ptr -> !llvm.struct<()>
   llvm.return %2 : !llvm.struct<()>
 }
+
+// -----
+
+// inrange is defined relative to the GEP result, so SROA must keep it on the
+// rewritten GEP even when the new GEP would otherwise fold (offset 0).
+// CHECK-LABEL: llvm.func @sroa_preserves_inrange
+llvm.func @sroa_preserves_inrange() -> i32 {
+  %0 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCA:.*]] = llvm.alloca %{{.*}} x i32
+  %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, f64, i32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
+  %2 = llvm.getelementptr inbounds inrange <i32, -4, 4> %1[0, 2] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"foo", (i32, f64, i32)>
+  // CHECK: %[[GEP:.*]] = llvm.getelementptr inbounds inrange <i32, -4, 4> %[[ALLOCA]][0] : (!llvm.ptr) -> !llvm.ptr, i8
+  // CHECK: %[[RES:.*]] = llvm.load %[[GEP]]
+  %3 = llvm.load %2 : !llvm.ptr -> i32
+  // CHECK: llvm.return %[[RES]] : i32
+  llvm.return %3 : i32
+}
