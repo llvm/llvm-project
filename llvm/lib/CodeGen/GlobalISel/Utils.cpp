@@ -838,21 +838,18 @@ llvm::ConstantFoldVectorFPBinop(unsigned Opcode, const Register Op1,
                                 const MachineRegisterInfo &MRI) {
   auto *SrcVec2 = getBuildVectorLikeDef(Op2, MRI);
   if (!SrcVec2)
-    return SmallVector<APFloat>();
+    return {};
 
   auto *SrcVec1 = getBuildVectorLikeDef(Op1, MRI);
   if (!SrcVec1)
-    return SmallVector<APFloat>();
-
-  if (SrcVec1->getNumSources() != SrcVec2->getNumSources())
-    return SmallVector<APFloat>();
+    return {};
 
   SmallVector<APFloat> FoldedElements;
   for (unsigned Idx = 0, E = SrcVec1->getNumSources(); Idx < E; ++Idx) {
     auto MaybeCst = ConstantFoldFPBinOp(Opcode, SrcVec1->getSourceReg(Idx),
                                         SrcVec2->getSourceReg(Idx), MRI);
     if (!MaybeCst)
-      return SmallVector<APFloat>();
+      return {};
     FoldedElements.push_back(*MaybeCst);
   }
   return FoldedElements;

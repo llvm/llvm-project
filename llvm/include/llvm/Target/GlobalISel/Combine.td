@@ -1809,10 +1809,10 @@ def constant_fold_binop_frags : GICombinePatFrag<
            (pattern (op $dst, $src0, $src1)))>;
 
 def constant_fold_binop : GICombineRule<
-  (defs root:$d, apint_matchinfo:$matchinfo),
+  (defs root:$d, build_fn_matchinfo:$matchinfo),
   (match (constant_fold_binop_frags $d):$mi,
    [{ return Helper.matchConstantFoldBinOp(*${mi}, ${matchinfo}); }]),
-  (apply [{ Helper.replaceInstWithConstant(*${mi}, ${matchinfo}); }])> {
+  (apply [{ Helper.applyBuildFn(*${mi}, ${matchinfo}); }])> {
   // 18 opcode alternatives exceed the default 16-permutation cap, so lift it.
   // A single frag (one rule id) keeps the rule name valid for --disable-rule.
   let MaxPermutations = -1;
