@@ -310,7 +310,7 @@ swap(basic_stacktrace<_Allocator>& __a, basic_stacktrace<_Allocator>& __b) noexc
 #  if _LIBCPP_HAS_LOCALIZATION
 
 template <class _Allocator>
-_LIBCPP_HIDE_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI string to_string(const basic_stacktrace<_Allocator>& __stacktrace) {
   return ((__stacktrace::_Trace const&)__stacktrace).__to_string();
 }
 
@@ -326,7 +326,7 @@ _LIBCPP_HIDE_FROM_ABI ostream& operator<<(ostream& __os, const basic_stacktrace<
 
 template <class _Allocator>
 struct hash<basic_stacktrace<_Allocator>> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI size_t operator()(basic_stacktrace<_Allocator> const& __trace) const noexcept {
     return __stacktrace::_Trace::__trace_base(__trace).__hash_code();
   }
 };

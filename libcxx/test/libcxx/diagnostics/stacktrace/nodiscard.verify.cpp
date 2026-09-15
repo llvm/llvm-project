@@ -64,8 +64,12 @@ void test() {
 #if _LIBCPP_HAS_LOCALIZATION
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::to_string(entry);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(st);
 #endif
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   std::hash<std::stacktrace_entry>{}(entry);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::hash<std::stacktrace>{}(st);
 }
