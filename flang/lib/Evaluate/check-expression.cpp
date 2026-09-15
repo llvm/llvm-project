@@ -1643,6 +1643,40 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
+static bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
+  if (auto dataRef{ExtractDataRef(
+          expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
+    return semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate());
+  }
+  return false;
+}
+
+bool AnyNamedConstantActualArguments(const ActualArguments &arguments) {
+  for (const auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void FoldNamedConstantActualArguments(
+    FoldingContext &context, ActualArguments &arguments) {
+  for (auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
+}
+
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
@@ -1657,8 +1691,21 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           : nullptr};
   const bool forCopyIn{!forCopyOut};
   if (!evaluate::IsVariable(*actual)) {
-    // Expressions are copy-in, but not copy-out.
-    return forCopyIn;
+    // A designator whose base object is a named constant is not a variable,
+    // but it still designates an object with storage.  It never needs
+    // copy-out, since a named constant is not definable; whether it needs
+    // copy-in depends on its contiguity, like a variable, so fall through
+    // to the analysis below.  Other expressions are copy-in, but not
+    // copy-out.
+    const auto dataRef{ExtractDataRef(
+        *actual, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
+    if (!dataRef ||
+        !semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate())) {
+      return forCopyIn;
+    }
+    if (forCopyOut) {
+      return false;
+    }
   }
   if (forCopyOut) {
     // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
@@ -1675,7 +1722,11 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
       }
     }
   }
-  auto maybeContigActual{IsContiguous(*actual, fc)};
+  // Copy decisions depend on the actual argument's physical contiguity,
+  // so do not let sections of named constants be presumed contiguous here
+  // (they are for IS_CONTIGUOUS(), but their storage is what it is).
+  auto maybeContigActual{
+      IsContiguous(*actual, fc, /*namedConstantSectionsAreContiguous=*/false)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {

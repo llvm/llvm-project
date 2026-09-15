@@ -706,9 +706,67 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         } else if (actualRank == 0) {
           if (evaluate::IsArrayElement(actual)) {
             // Actual argument is a scalar array element
+            std::optional<std::int64_t> namedConstElements;
+            if (auto dataRef{evaluate::ExtractDataRef(actual)}) {
+              // A named constant has no storage offsets, so FoldDesignator
+              // below cannot measure it; compute the remaining storage
+              // sequence from the constant subscripts of a whole-symbol
+              // array element reference instead.
+              if (const auto *aRef{
+                      std::get_if<evaluate::ArrayRef>(&dataRef->u)}) {
+                const Symbol &ncBase{aRef->base().GetLastSymbol()};
+                if (IsNamedConstant(ncBase.GetUltimate()) &&
+                    aRef->base().IsSymbol()) {
+                  if (auto extents{evaluate::GetConstantExtents(
+                          foldingContext, &ncBase)}) {
+                    evaluate::Shape lbShape{evaluate::GetLBOUNDs(aRef->base())};
+                    std::int64_t linear{0}, stride{1}, total{1};
+                    bool ok{extents->size() == aRef->subscript().size() &&
+                        extents->size() == lbShape.size()};
+                    for (std::size_t d{0}; ok && d < extents->size(); ++d) {
+                      auto lb{lbShape[d]
+                              ? evaluate::ToInt64(evaluate::Fold(
+                                    foldingContext, std::move(*lbShape[d])))
+                              : std::nullopt};
+                      const auto *ssExpr{
+                          std::get_if<evaluate::IndirectSubscriptIntegerExpr>(
+                              &aRef->subscript()[d].u)};
+                      auto ss{ssExpr
+                              ? evaluate::ToInt64(evaluate::Fold(foldingContext,
+                                    common::Clone(ssExpr->value())))
+                              : std::nullopt};
+                      if (lb && ss) {
+                        linear += (*ss - *lb) * stride;
+                        stride *= (*extents)[d];
+                        total *= (*extents)[d];
+                      } else {
+                        ok = false;
+                      }
+                    }
+                    if (ok && linear >= 0 && linear < total) {
+                      namedConstElements = total - linear;
+                    }
+                  }
+                }
+              }
+            }
             evaluate::DesignatorFolder folder{
                 context.foldingContext(), /*getLastComponent=*/true};
-            if (auto actualOffset{folder.FoldDesignator(actual)}) {
+            if (namedConstElements) {
+              if (*namedConstElements < *dummySize) {
+                if (extentErrors) {
+                  messages.Say(
+                      "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_err_en_US,
+                      static_cast<std::intmax_t>(*namedConstElements),
+                      dummyName, static_cast<std::intmax_t>(*dummySize));
+                } else {
+                  foldingContext.Warn(common::UsageWarning::ShortArrayActual,
+                      "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_warn_en_US,
+                      static_cast<std::intmax_t>(*namedConstElements),
+                      dummyName, static_cast<std::intmax_t>(*dummySize));
+                }
+              }
+            } else if (auto actualOffset{folder.FoldDesignator(actual)}) {
               std::optional<std::int64_t> actualElements;
               if (IsAllocatableOrPointer(actualOffset->symbol())) {
                 // don't use actualOffset->symbol().size()!
@@ -2557,7 +2615,14 @@ bool CheckArgumentIsConstantExprInRange(
   // for the intrinsic's argument should have been check prior. This is just
   // a conversion so that we can read the constant value.
   auto scalarValue{evaluate::ToInt64(argExpr)};
-  CHECK(scalarValue.has_value());
+  if (!scalarValue) {
+    // A constant expression whose value is not statically known here (e.g.
+    // a designator that was not folded); diagnose rather than crash.
+    messages.Say(
+        "Actual argument #%d must be a constant integer expression"_err_en_US,
+        index + 1);
+    return false;
+  }
 
   if (*scalarValue < lowerBound || *scalarValue > upperBound) {
     messages.Say(
