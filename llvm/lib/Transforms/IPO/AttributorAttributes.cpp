@@ -12359,14 +12359,13 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
-    auto *MD = getCtxI()->getMetadata(LLVMContext::MD_callees);
-    if (!MD && !A.isClosedWorldModule())
+    SmallVector<Function *, 4> Callees;
+    bool HasCalleesMD = cast<CallBase>(getCtxI())->getCalleesMetadata(Callees);
+    if (!HasCalleesMD && !A.isClosedWorldModule())
       return;
 
-    if (MD) {
-      for (const auto &Op : MD->operands())
-        if (Function *Callee = mdconst::dyn_extract_or_null<Function>(Op))
-          PotentialCallees.insert(Callee);
+    if (HasCalleesMD) {
+      PotentialCallees.insert_range(Callees);
     } else if (A.isClosedWorldModule()) {
       ArrayRef<Function *> IndirectlyCallableFunctions =
           A.getInfoCache().getIndirectlyCallableFunctions(A);
@@ -12663,7 +12662,7 @@ private:
   /// Map to remember filter results.
   DenseMap<Function *, std::optional<bool>> FilterResults;
 
-  /// If the !callee metadata was present, this set will contain all potential
+  /// If !callees metadata was present, this set will contain all potential
   /// callees (superset).
   SmallSetVector<Function *, 4> PotentialCallees;
 
