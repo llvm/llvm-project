@@ -141,6 +141,39 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   return IC.replaceOperand(Sel, IsEq ? 1 : 2, FoldedVal);
 }
 
+/// Fold a select whose condition proves that one 'or' operand is redundant:
+///   select (icmp ne (and A, B), B), (or A, B), A  -->  or A, B
+///   select (icmp eq (and A, B), B), A, (or A, B)  -->  or A, B
+/// When (A & B) == B, every set bit of B is already set in A, so A | B == A and
+/// the select yields A; otherwise the select already yields A | B. Either way
+/// the result is A | B.
+///
+/// The matched 'or' may be 'disjoint', a flag the select did not carry, so a
+/// fresh flag-free 'or' is built to avoid introducing poison on the path where
+/// the 'A' arm was selected.
+static Value *foldSelectAndOrSubset(SelectInst &SI,
+                                    InstCombiner::BuilderTy &Builder) {
+  // Match '(and A, B)' compared for equality against 'B' (a test that B's bits
+  // are a subset of A's). B is bound from the non-'and' side first so that the
+  // commutative 'and' matcher can find it in either operand position.
+  CmpPredicate Pred;
+  Value *A, *B;
+  if (!match(SI.getCondition(),
+             m_c_ICmp(Pred, m_Value(B), m_c_And(m_Value(A), m_Deferred(B)))) ||
+      !ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  // The arm selected when (A & B) == B must be 'A' (which equals 'A | B' under
+  // that condition); the other arm must be 'or A, B'.
+  bool IsNE = Pred == ICmpInst::ICMP_NE;
+  Value *OrArm = IsNE ? SI.getTrueValue() : SI.getFalseValue();
+  Value *SubsetArm = IsNE ? SI.getFalseValue() : SI.getTrueValue();
+  if (SubsetArm != A || !match(OrArm, m_c_Or(m_Specific(A), m_Specific(B))))
+    return nullptr;
+
+  return Builder.CreateOr(A, B);
+}
+
 /// This folds:
 ///  select (icmp eq (and X, C1)), TC, FC
 ///    iff C1 is a power 2 and the difference between TC and FC is a power-of-2.
@@ -4981,6 +5014,14 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (auto *FalseGep = dyn_cast<GetElementPtrInst>(FalseVal))
     if (auto *NewGep = SelectGepWithBase(FalseGep, TrueVal, true))
       return NewGep;
+
+  // Fold a select that is equivalent to a bitwise 'or' identity, e.g.
+  //   select (icmp ne (and A, B), B), (or A, B), A --> or A, B
+  // Run this before folding the select into an operand below, which would
+  // otherwise obscure the pattern.
+  if (SelType->isIntOrIntVectorTy())
+    if (Value *V = foldSelectAndOrSubset(SI, Builder))
+      return replaceInstUsesWith(SI, V);
 
   // See if we can fold the select into one of our operands.
   if (SelType->isIntOrIntVectorTy() || SelType->isFPOrFPVectorTy()) {
