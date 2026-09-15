@@ -335,7 +335,7 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getCouldNotCompute();
             return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
           })
-          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) -> const SCEV * {
             const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
             const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
             const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
@@ -1372,7 +1372,9 @@ void vputils::detail::pullOutPermutationsImpl(
 VPValue *vputils::reconstructSSA(VPBasicBlock *VPBB,
                                  DenseMap<VPBasicBlock *, VPValue *> &Defs) {
   assert(!Defs.empty() && "Defs shouldn't be empty");
-  assert(VPBB->getPlan() && "VPBB isn't reachable from entry");
+  assert(
+      is_contained(vp_depth_first_shallow(VPBB->getPlan()->getEntry()), VPBB) &&
+      "VPBB isn't reachable from entry");
   if (VPValue *Def = Defs.lookup(VPBB))
     return Def;
   // If the entry block is reached and there's still no def, then Defs is

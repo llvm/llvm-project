@@ -322,6 +322,16 @@ bool diagnoseShiftFailure(InterpState &S, CodePtr OpPC, ShiftFailure Failure,
   return S.noteUndefinedBehavior();
 }
 
+bool diagnoseArrayIndex(InterpState &S, CodePtr OpPC, const APSInt &Index,
+                        std::optional<uint64_t> NumElems, bool IsArray) {
+  if (IsArray)
+    assert(NumElems);
+
+  S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+      << Index << /*non-array=*/!IsArray << NumElems.value_or(0u);
+  return false;
+}
+
 void cleanupAfterFunctionCall(InterpState &S, const Function *Func) {
   assert(S.Current);
   assert(Func);
@@ -461,7 +471,7 @@ bool CheckActive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return false;
 }
 
-bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
 
@@ -478,6 +488,12 @@ bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isConstexprUnknown() || !S.checkingPotentialConstantExpression())
     diagnoseNonConstVariable(S, OpPC, VD);
   return false;
+}
+
+static bool CheckExtern(InterpState &S, CodePtr OpPC, const Block *B) {
+  if (!B->isExtern())
+    return true;
+  return CheckExtern(S, OpPC, Pointer(const_cast<Block *>(B)));
 }
 
 bool CheckArray(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
@@ -874,7 +890,7 @@ static bool CheckWeak(InterpState &S, CodePtr OpPC, const Block *B) {
 bool CheckGlobalLoad(InterpState &S, CodePtr OpPC, const Block *B) {
   const auto &Desc = B->getBlockDesc<GlobalInlineDescriptor>();
   if (!B->isAccessible()) {
-    if (!CheckExtern(S, OpPC, Pointer(const_cast<Block *>(B))))
+    if (!CheckExtern(S, OpPC, B))
       return false;
     if (!CheckDummy(S, OpPC, B, AK_Read))
       return false;
@@ -3430,6 +3446,18 @@ bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     ElemType = ArrTy;
 
   if (ArrTy->isArrayType()) {
+    unsigned IndexBits = std::max(Index.getBitWidth(), 32u) + 1;
+    APSInt NewIndex =
+        Index.extend(IndexBits) +
+        APSInt(APInt(IndexBits, Ptr.getIndex()), Index.isUnsigned());
+
+    if (NewIndex > Ptr.getNumElems() || NewIndex.isNegative())
+      diagnoseArrayIndex(S, OpPC, NewIndex, Ptr.getNumElems(),
+                         OP.isArrayElement());
+
+    if (NewIndex.getActiveBits() > 64)
+      return false;
+
     unsigned NewPathLength;
     if (AllowReplace && OP.isArrayElement()) {
       // This is what happens after an array-to-pointer-decay. We don't enter
@@ -3453,15 +3481,21 @@ bool arrayElemPtrOpaque(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
         Ptr.getByteOffset());
 
   } else {
-    if (!validType(ElemType))
-      return false;
-    unsigned ElemSize =
-        S.getASTContext().getTypeSizeInChars(ElemType).getQuantity();
-    size_t NewOffset = Ptr.getByteOffset() + (Index.getZExtValue() * ElemSize);
-    bool PastEnd = Index != 0;
+    unsigned IndexBits = std::max(Index.getBitWidth(), 64u) + 1;
+    size_t CurrentIndex = Ptr.getByteOffset();
+    APSInt NewOffset =
+        Index.extend(IndexBits) +
+        APSInt(APInt(IndexBits, CurrentIndex), Index.isUnsigned());
+    if (NewOffset > 1 || NewOffset.isNegative())
+      diagnoseArrayIndex(S, OpPC, NewOffset, 0, false);
 
+    if (NewOffset.getActiveBits() > 64)
+      return false;
+
+    size_t NewByteOffset = CurrentIndex + Index.getZExtValue();
+    bool PastEnd = NewByteOffset != 0;
     S.Stk.push<Pointer>(OP.withFieldType(ElemType.getTypePtr(), PastEnd),
-                        NewOffset);
+                        NewByteOffset);
   }
   return true;
 }
@@ -3492,21 +3526,32 @@ std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
     return std::nullopt;
   }
 
-  if (Offset > NumElems) {
-    if (Op == ArithOp::Add)
-      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << Offset << /*non-array*/ !OP.isArrayElement() << NumElems;
-    else
-      S.CCEDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
-          << -Offset << /*non-array*/ !OP.isArrayElement() << NumElems;
-  }
-
   if (!validType(ElemTy) || !validType(ArrTy)) {
     Invalid(S, OpPC);
     return std::nullopt;
   }
 
-  if (Offset.getActiveBits() > 64)
+  APSInt NewIndex;
+  if (Op == ArithOp::Add) {
+    if (OP.isArrayElement()) {
+      NewIndex = Ptr.getIndex() + (Offset.extend(Offset.getBitWidth() + 2));
+    } else {
+      NewIndex =
+          (Ptr.getByteOffset()) + (Offset.extend(Offset.getBitWidth() + 2));
+    }
+  } else {
+    if (OP.isArrayElement()) {
+      NewIndex = Ptr.getIndex() - (Offset.extend(Offset.getBitWidth() + 2));
+    } else {
+      NewIndex =
+          (Ptr.getByteOffset()) - (Offset.extend(Offset.getBitWidth() + 2));
+    }
+  }
+
+  if (NewIndex > NumElems || NewIndex < 0)
+    diagnoseArrayIndex(S, OpPC, NewIndex, NumElems, OP.isArrayElement());
+
+  if (NewIndex.getActiveBits() > 64)
     return std::nullopt;
 
   // If the pointer is an array element, advance that index.
@@ -3521,17 +3566,7 @@ std::optional<Pointer> addSubOffsetOpaque(InterpState &S, CodePtr OpPC,
     return OP.withPath(NewPath, NewPathLength, OP.FieldType.getPointer());
   }
 
-  unsigned ElemSize =
-      S.getASTContext().getTypeSizeInChars(ElemTy).getQuantity();
-  unsigned NewOffset;
-  if (Op == ArithOp::Add)
-    NewOffset = Ptr.getByteOffset() + (ElemSize * Offset.getZExtValue());
-  else
-    NewOffset = Ptr.getByteOffset() - (ElemSize * Offset.getZExtValue());
-
-  // We already checked offset != before, so this is a non-array type being
-  // offset by > 0.
-  return Pointer(OP.withPastEnd(true), NewOffset);
+  return Pointer(OP.withPastEnd(true), NewIndex.getZExtValue());
 }
 
 bool virtBaseHelper(InterpState &S, const CXXRecordDecl *Decl,

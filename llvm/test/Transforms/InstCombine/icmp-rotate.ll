@@ -233,3 +233,17 @@ define i1 @wrong_pred2(i8 %x) {
   %r = icmp ugt i8 %f, 2
   ret i1 %r
 }
+
+; negative test - non-power-of-two bit width
+define i1 @rol_eq_npot_bw(i6 %x, i6 %y, i6 %z, i6 %w) {
+; CHECK-LABEL: @rol_eq_npot_bw(
+; CHECK-NEXT:    [[F:%.*]] = tail call i6 @llvm.fshl.i6(i6 [[X:%.*]], i6 [[X]], i6 [[Z:%.*]])
+; CHECK-NEXT:    [[F2:%.*]] = tail call i6 @llvm.fshl.i6(i6 [[Y:%.*]], i6 [[Y]], i6 [[W:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i6 [[F]], [[F2]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = tail call i6 @llvm.fshl.i6(i6 %x, i6 %x, i6 %z)
+  %f2 = tail call i6 @llvm.fshl.i6(i6 %y, i6 %y, i6 %w)
+  %r = icmp eq i6 %f, %f2
+  ret i1 %r
+}
