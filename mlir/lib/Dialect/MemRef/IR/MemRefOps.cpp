@@ -3035,12 +3035,15 @@ LogicalResult ReshapeOp::verify() {
   if (resultMemRefType) {
     if (!resultMemRefType.getLayout().isIdentity())
       return emitOpError("result memref type should have identity affine map");
-    if (shapeSize == ShapedType::kDynamic)
+    if (ShapedType::isDynamic(shapeSize))
       return emitOpError("cannot use shape operand with dynamic length to "
                          "reshape to statically-ranked memref type");
     if (shapeSize != resultMemRefType.getRank())
       return emitOpError(
           "length of shape operand differs from the result's memref rank");
+  } else if (ShapedType::isStatic(shapeSize)) {
+    return emitOpError("cannot use shape operand with static length to "
+                       "reshape to unranked memref type");
   }
   return success();
 }
