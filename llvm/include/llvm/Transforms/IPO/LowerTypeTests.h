@@ -228,7 +228,7 @@ LLVM_ABI SetVector<uint64_t> findCfiTypeIds(const Module &M);
 /// for CFI functions in \p CfiFunctions from source module \p SrcM.
 LLVM_ABI void createCfiMetadata(
     Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
-    function_ref<const BlockFrequencyInfo *(Function &)> BFIGetter = nullptr);
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter);
 
 /// Specifies how to drop type tests.
 enum class DropTestKind {
