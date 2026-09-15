@@ -2045,7 +2045,7 @@ class Cursor(Structure):
         """
 
         if not hasattr(self, "_unopcode"):
-            self._binopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
+            self._unopcode = conf.lib.clang_getCursorUnaryOperatorKind(self)
 
         return UnaryOperator.from_id(self._unopcode)
 
