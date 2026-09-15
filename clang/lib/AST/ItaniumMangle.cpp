@@ -45,7 +45,8 @@ namespace UnsupportedItaniumManglingKind =
 namespace {
 
 static bool isLocalContainerContext(const DeclContext *DC) {
-  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl>(DC);
+  return isa<FunctionDecl, ObjCMethodDecl, BlockDecl, CXXExpansionStmtDecl,
+             TopLevelStmtDecl>(DC);
 }
 
 static const FunctionDecl *getStructor(const FunctionDecl *fn) {
@@ -516,6 +517,7 @@ private:
                        ArrayRef<StringRef> AdditionalAbiTags = {});
   void mangleBlockForPrefix(const BlockDecl *Block);
   void mangleUnqualifiedBlock(const BlockDecl *Block);
+  void mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D);
   void mangleTemplateParamDecl(const NamedDecl *Decl);
   void mangleTemplateParameterList(const TemplateParameterList *Params);
   void mangleTypeConstraint(const TemplateDecl *Concept,
@@ -1899,6 +1901,8 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
       mangleObjCMethodName(MD);
     } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
       mangleBlockForPrefix(BD);
+    } else if (const auto *TLSD = dyn_cast<TopLevelStmtDecl>(DC)) {
+      mangleTopLevelStmtEncoding(TLSD);
     } else {
       mangleFunctionEncoding(getParentOfLocalEntity(DC));
     }
@@ -2034,6 +2038,13 @@ void CXXNameMangler::mangleUnqualifiedBlock(const BlockDecl *Block) {
   if (Number > 0)
     Out << Number - 1;
   Out << '_';
+}
+
+void CXXNameMangler::mangleTopLevelStmtEncoding(const TopLevelStmtDecl *D) {
+  // Numbered internal function, like Ub_ for blocks: locals get <local-name>s.
+  SmallString<16> Name("__stmt__");
+  Name += llvm::utostr(D->getOrdinal());
+  Out << 'L' << Name.size() << Name << 'v';
 }
 
 // <template-param-decl>

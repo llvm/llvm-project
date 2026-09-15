@@ -4772,6 +4772,8 @@ class TopLevelStmtDecl : public Decl, public DeclContext {
 
   Stmt *Statement = nullptr;
   bool IsSemiMissing = false;
+  /// Position among all top-level statements of the session, in parse order.
+  unsigned Ordinal = 0;
 
   TopLevelStmtDecl(DeclContext *DC, SourceLocation L, Stmt *S)
       : Decl(TopLevelStmt, DC, L), DeclContext(TopLevelStmt), Statement(S) {}
@@ -4788,6 +4790,7 @@ public:
   void setStmt(Stmt *S);
   bool isSemiMissing() const { return IsSemiMissing; }
   void setSemiMissing(bool Missing = true) { IsSemiMissing = Missing; }
+  unsigned getOrdinal() const { return Ordinal; }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == TopLevelStmt; }
