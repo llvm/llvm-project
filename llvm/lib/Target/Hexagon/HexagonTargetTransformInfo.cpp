@@ -458,10 +458,17 @@ bool HexagonTTIImpl::shouldBuildLookupTables() const {
 
 bool HexagonTTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
-  // Inlining across the boundary would defeat the attribute in both
-  // directions: HVX code moved into an HMX function can take a vector unit
-  // the HMX thread needs, and an HMX body moved into a non-HMX function
-  // becomes a candidate for auto-vectorization again.
+  // The hardware provides a fixed number of HVX contexts. Software that mixes
+  // the two engines dedicates some threads to HVX, and those threads hold the
+  // contexts for as long as they run. A thread dedicated to HMX needs no
+  // context at all, until HVX code reaches it. Then it has to wait for one
+  // that the HVX threads are still holding, and if the two groups later meet
+  // at a barrier, neither side can make progress.
+  //
+  // Inlining is one way HVX code reaches a thread that was never meant to run
+  // it, in either direction: an HVX body merged into an HMX function, or an
+  // HMX body merged into a function whose other callers are HVX threads. So
+  // the attribute has to match on both sides.
   if (Caller->hasFnAttribute("hexagon_hmx") !=
       Callee->hasFnAttribute("hexagon_hmx"))
     return false;

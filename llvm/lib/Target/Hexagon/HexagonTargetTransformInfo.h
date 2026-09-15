@@ -38,10 +38,9 @@ class HexagonTTIImpl final : public BasicTTIImplBase<HexagonTTIImpl> {
 
   const HexagonSubtarget &ST;
   const HexagonTargetLowering &TLI;
-  // Functions running on the HMX (matrix) unit must not acquire an HVX
-  // context: the two share a limited pool of vector units, so an HVX
-  // instruction reaching the HMX thread can block behind a barrier the
-  // HVX threads are themselves waiting on.
+  // Set when the function is annotated `hexagon_hmx`, meaning it is intended
+  // to run on a thread dedicated to HMX work. See areInlineCompatible for why
+  // HVX must be kept out of such a function.
   const bool IsHMX;
 
   const HexagonSubtarget *getST() const { return &ST; }
