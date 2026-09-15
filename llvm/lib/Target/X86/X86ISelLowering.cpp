@@ -32287,8 +32287,12 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
 
   // If expanding the funnel shift is required OR the value type is unsupported
   if (VT == MVT::i8 || ExpandFunnel) {
-    // Proceed if one operand is the result of an ISD::SHL or the node is
-    // MVT::i8
+    // DAG Combiner would combine an OR on a masked value and a shifted value
+    // into a shift followed by a funnel shift. The following fold reverses that
+    // operation in case `ExpandFunnel` is set, i.e., if we are not optimizing
+    // for size and if funnel-shift is slow. The fold applies if one operand is
+    // the result of an ISD::SHL or the node is MVT::i8, for which X86 does not
+    // have a funnel-shift instruction.
     if (Op1.getOpcode() == ISD::SHL && isa<ConstantSDNode>(Amt.getNode())) {
 
       auto *C = dyn_cast<ConstantSDNode>(Amt.getNode());
