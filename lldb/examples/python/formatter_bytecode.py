@@ -1075,13 +1075,13 @@ class Compiler(ast.NodeVisitor):
                 "unsupported attribute access (only self.attr is supported)", node
             )
         pick_idx = self._attr_index(node.attr, node)
-        self._output(f"{pick_idx}u pick")  # "# self.{node.attr}"
+        self._output(f"{pick_idx} pick")  # "# self.{node.attr}"
 
     def visit_Name(self, node: ast.Name) -> None:
         idx = self._local_index(node)
         if idx is None:
             raise CompilerError(f"unknown local variable: {node.id}", node)
-        self._output(f"{idx}u pick")  # "# {node.id}"
+        self._output(f"{idx} pick")  # "# {node.id}"
 
     def _visit_each(self, nodes: Sequence[ast.AST]) -> None:
         for child in nodes:
