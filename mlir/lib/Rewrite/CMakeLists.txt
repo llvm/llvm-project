@@ -1,5 +1,10 @@
 set(LLVM_OPTIONAL_SOURCES ByteCode.cpp)
 
+set(pdl_header_libraries)
+if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
+  set(pdl_header_libraries MLIRPDLInterpDialect)
+endif()
+
 add_mlir_library(MLIRRewrite
   FrozenRewritePatternSet.cpp
   PatternApplicator.cpp
@@ -10,6 +15,11 @@ add_mlir_library(MLIRRewrite
   DEPENDS
   mlir-generic-headers
   MLIRConversionPassIncGen
+
+  # FrozenRewritePatternSet.cpp includes PDLInterp and PDL when enabled.
+  # PDLInterp's public interface also provides the PDL generated headers.
+  HEADER_LIBS
+  ${pdl_header_libraries}
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -40,4 +50,3 @@ if(MLIR_ENABLE_PDL_IN_PATTERNMATCH)
     MLIRPDLToPDLInterp
     MLIRRewritePDL)
 endif()
-
