@@ -124,6 +124,10 @@ public:
   // increasing ILP and preserving VGPRs.
   bool KnownExcessRP = false;
 
+  // Whether resource heuristics may favor pending nodes in the current region.
+  // Pressure and physical-register preferences remain enabled.
+  bool AllowPendingResourceHeuristics = true;
+
   // An error margin is necessary because of poor performance of the generic RP
   // tracker and can be adjusted up for tuning heuristics to try and more
   // aggressively reduce register pressure.
