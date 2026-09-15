@@ -6,6 +6,11 @@ load("//libc:libc_build_rules.bzl", "libc_startup_library")
 
 package(
     default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
 )
 
 libc_startup_library(

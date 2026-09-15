@@ -4377,7 +4377,7 @@ def CIR_FuncOp : CIR_Op<"func", [
   let extraLLVMLoweringPatternDecl = [{
     static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
 
-    void lowerFuncAttributes(
+    mlir::LogicalResult lowerFuncAttributes(
         cir::FuncOp func, bool includeFunctionOnlyAttrs,
         mlir::SmallVectorImpl<mlir::NamedAttribute> &result) const;
 
