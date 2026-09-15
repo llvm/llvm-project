@@ -652,7 +652,11 @@ EXTERN void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
   if (!PM)
     return;
 
-  for (auto &Plugin : PM->plugins())
-    if (Plugin.is_initialized() && Plugin.getNumDevices() > 0)
-      Plugin.getRPCServer().registerCallback(Callback);
+  olIteratePlatforms(
+      [](ol_platform_handle_t Platform, void *Data) {
+        olPlatformRegisterRPCCallback(
+            Platform, reinterpret_cast<ol_platform_rpc_cb_t>(Data));
+        return true;
+      },
+      reinterpret_cast<void *>(Callback));
 }
