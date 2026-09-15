@@ -370,9 +370,9 @@ define void @test_pipelined_loop(ptr addrspace(1) %foo, ptr addrspace(3) %lds, p
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:    global_load_dword v[0:1], off lds
-; SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; SDAG-NEXT:    s_mov_b32 s6, 2
 ; SDAG-NEXT:    s_mov_b64 s[4:5], 0
+; SDAG-NEXT:    v_mov_b32_e32 v5, 0
 ; SDAG-NEXT:    ; asyncmark
 ; SDAG-NEXT:  .LBB4_1: ; %loop_body
 ; SDAG-NEXT:    ; =>This Inner Loop Header: Depth=1

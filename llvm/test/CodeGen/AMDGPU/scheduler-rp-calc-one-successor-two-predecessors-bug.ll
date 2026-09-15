@@ -46,7 +46,7 @@ define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-NEXT:    s_mov_b64 exec, 0
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0
-; GFX900-NEXT:    v_mov_b32_e32 v2, v1
+; GFX900-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX900-NEXT:  .LBB0_5: ; %bb6
 ; GFX900-NEXT:    s_or_b64 exec, exec, s[0:1]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
