@@ -884,6 +884,27 @@ def testElementwiseOp():
         print(module)
 
 
+# CHECK-LABEL: TEST: testElementwiseOpView
+@run
+def testElementwiseOpView():
+    with Context(), Location.unknown():
+        module = Module.parse(
+            """
+            func.func @f(%c: tensor<4x4xf32>) {
+              %0 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+                   ins(%c, %c : tensor<4x4xf32>, tensor<4x4xf32>)
+                   outs(%c : tensor<4x4xf32>) -> tensor<4x4xf32>
+              return
+            }
+            """
+        )
+        func_op = module.body.operations[0]
+        op = func_op.regions[0].blocks[0].operations[0]
+        # The op view reconstructed from the registry must be an instance of the
+        # publicly exported class.
+        assert isinstance(op.opview, linalg.ElementwiseOp)
+
+
 @run
 def testReduceOp():
     with Context(), Location.unknown():
