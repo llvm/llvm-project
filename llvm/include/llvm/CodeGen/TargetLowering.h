@@ -5995,6 +5995,9 @@ public:
   bool expandMULO(SDNode *Node, SDValue &Result, SDValue &Overflow,
                   SelectionDAG &DAG) const;
 
+  // Expand ISD::MULH[SU]. Can expand to MUL_LOHI or wide MUL if available.
+  SDValue expandMULH(SDNode *Node, SelectionDAG &DAG) const;
+
   /// Calculate the product twice the width of LHS and RHS. If HiLHS/HiRHS are
   /// non-null they will be included in the multiplication. The expansion works
   /// by splitting the 2 inputs into 4 pieces that we can multiply and add
