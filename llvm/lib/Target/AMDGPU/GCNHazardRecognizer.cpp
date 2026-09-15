@@ -74,6 +74,16 @@ static cl::opt<bool> EnableWMMAVnopHoisting(
 static bool shouldRunLdsBranchVmemWARHazardFixup(const MachineFunction &MF,
                                                  const GCNSubtarget &ST);
 
+/// An empty inline asm emits nothing, so it has no hazard of its own. A hazard
+/// on its tied operand is still found at the instruction that produced it.
+static bool isEmptyInlineAsm(const MachineInstr &MI) {
+  if (!MI.isInlineAsm())
+    return false;
+  return StringRef(MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName())
+      .trim()
+      .empty();
+}
+
 GCNHazardRecognizer::GCNHazardRecognizer(
     const MachineFunction &MF, GCNHazardRecognizer::OperatingMode Mode,
     MachineLoopInfo *MLI)
@@ -833,7 +843,9 @@ void GCNHazardRecognizer::AdvanceCycle() {
   }
 
   unsigned NumWaitStates = TII.getNumWaitStates(*CurrCycleInstr);
-  if (!NumWaitStates) {
+  // An empty inline asm emits nothing, so it must not take a slot in the
+  // lookahead window either.
+  if (!NumWaitStates || isEmptyInlineAsm(*CurrCycleInstr)) {
     CurrCycleInstr = nullptr;
     return;
   }
@@ -927,8 +939,8 @@ hasHazard(StateT InitialState,
   for (;;) {
     bool Expired = false;
     for (auto E = MBB->instr_rend(); I != E; ++I) {
-      // No need to look at parent BUNDLE instructions.
-      if (I->isBundle())
+      // No need to look at parent BUNDLE instructions, or at empty inline asm.
+      if (I->isBundle() || isEmptyInlineAsm(*I))
         continue;
 
       auto Result = IsHazard(State, *I);
@@ -982,8 +994,9 @@ getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
                    GCNHazardRecognizer::GetNumWaitStatesFn GetNumWaitStates =
                        SIInstrInfo::getNumWaitStates) {
   for (auto E = MBB->instr_rend(); I != E; ++I) {
-    // Don't add WaitStates for parent BUNDLE instructions.
-    if (I->isBundle())
+    // Don't add WaitStates for parent BUNDLE instructions. An empty inline asm
+    // emits nothing, so it can't be a hazard either.
+    if (I->isBundle() || isEmptyInlineAsm(*I))
       continue;
 
     if (IsHazard(*I))
@@ -1666,6 +1679,10 @@ int GCNHazardRecognizer::checkInlineAsmHazards(MachineInstr *IA) const {
   // see checkVALUHazards()
   if (!ST.has12DWordStoreHazard() && !ST.hasDstSelForwardingHazard() &&
       !ST.hasCvtScaleForwardingHazard())
+    return 0;
+
+  // An empty inline asm executes nothing, so it cannot consume a hazard.
+  if (isEmptyInlineAsm(*IA))
     return 0;
 
   const MachineRegisterInfo &MRI = MF.getRegInfo();
