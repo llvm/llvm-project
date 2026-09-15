@@ -2497,7 +2497,10 @@ class UnaryOperator(BaseEnumeration):
         return self.value != 0
 
     def is_postfix(self):
-        return self == UnaryOperator.PostDec or self == UnaryOperator.PostInc
+        return self in {
+            UnaryOperator.PostDec,
+            UnaryOperator.PostInc,
+        }
 
     Invalid = 0
     PostInc = 1

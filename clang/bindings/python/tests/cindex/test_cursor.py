@@ -1038,6 +1038,11 @@ int d_noninline;
                 c = get_cursor(root, spelling)
                 assert c is not None and c.unary_operator == operator
 
+        for prefix in operators["prefix"].values():
+            assert not prefix.is_postfix()
+        for postfix in operators["postfix"].values():
+            assert postfix.is_postfix()
+
     def test_from_result_null(self):
         tu = get_tu("int a = 1+2;", lang="cpp")
         op = next(next(tu.cursor.get_children()).get_children())
