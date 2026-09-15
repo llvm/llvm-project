@@ -45,8 +45,6 @@ using common::LanguageFeature;
 using common::NumericOperator;
 using common::TypeCategory;
 
-static void FoldNamedConstantActuals(FoldingContext &, ActualArguments &);
-
 static inline std::string ToUpperCase(std::string_view str) {
   return parser::ToUpperCaseLetters(str);
 }
@@ -3482,7 +3480,6 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
               CallCharacteristics{name.source.ToString(), isSubroutine},
               localArguments, GetFoldingContext())}) {
         CheckBadExplicitType(*specificCall, *symbol);
-        FoldNamedConstantActuals(GetFoldingContext(), specificCall->arguments);
         return CalleeAndArguments{
             ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
             std::move(specificCall->arguments)};
@@ -3491,6 +3488,12 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
+        // The PowerPC intrinsic checks and PowerPC lowering require constant
+        // values for some arguments; now that the call is committed to this
+        // resolution, fold any named-constant designators that were retained
+        // for storage association.
+        evaluate::FoldNamedConstantActualArguments(
+            GetFoldingContext(), arguments);
         semantics::CheckPPCIntrinsic(
             *symbol, *resolution, arguments, GetFoldingContext());
       }
@@ -3513,7 +3516,6 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
             CallCharacteristics{name.ToString(), isSubroutine}, arguments,
             GetFoldingContext())}) {
       CheckBadExplicitType(*specificCall, *symbol);
-      FoldNamedConstantActuals(GetFoldingContext(), specificCall->arguments);
       return CalleeAndArguments{
           ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
           std::move(specificCall->arguments)};
@@ -4929,34 +4931,11 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(parser::CharBlock callSite,
   return std::nullopt;
 }
 
-// Fold actual arguments that were retained in named-constant designator form
-// (see ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray) once the callee
-// has resolved to an intrinsic procedure.  Intrinsic argument checking and
-// intrinsic folding inspect constant values structurally, and the storage
-// identity of a named constant is irrelevant to an intrinsic procedure.
-static void FoldNamedConstantActuals(
-    FoldingContext &context, ActualArguments &arguments) {
-  for (auto &arg : arguments) {
-    if (arg && !arg->isAlternateReturn()) {
-      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
-        if (auto dataRef{ExtractDataRef(
-                *expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
-            dataRef &&
-            semantics::IsNamedConstant(
-                dataRef->GetFirstSymbol().GetUltimate())) {
-          *expr = Fold(context, std::move(*expr));
-        }
-      }
-    }
-  }
-}
-
 MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
     parser::CharBlock intrinsic, ActualArguments &&arguments) {
   if (std::optional<SpecificCall> specificCall{
           context_.intrinsics().Probe(CallCharacteristics{intrinsic.ToString()},
               arguments, GetFoldingContext())}) {
-    FoldNamedConstantActuals(GetFoldingContext(), specificCall->arguments);
     return MakeFunctionRef(intrinsic,
         ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
         std::move(specificCall->arguments));
@@ -5896,7 +5875,9 @@ MaybeExpr ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray(
   if (isProcedureCall_ && result) {
     // Look only at an expression that is itself a designator: a
     // parenthesized designator is a primary, i.e. an expression
-    // (F'2023 R1001), and must keep its folded value.
+    // (F'2023 R1001), and must keep its folded value.  Substring actual
+    // arguments (the F'2023 15.5.2.12 p4 form of character sequence
+    // association) are not retained here and keep their folded values.
     if (const auto *designator{
             std::get_if<common::Indirection<parser::Designator>>(&expr.u)}) {
       if (const auto *name{parser::Unwrap<parser::Name>(designator->value())}) {

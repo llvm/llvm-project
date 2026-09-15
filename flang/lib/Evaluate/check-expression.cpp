@@ -1643,6 +1643,40 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
+static bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
+  if (auto dataRef{ExtractDataRef(
+          expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
+    return semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate());
+  }
+  return false;
+}
+
+bool AnyNamedConstantActualArguments(const ActualArguments &arguments) {
+  for (const auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void FoldNamedConstantActualArguments(
+    FoldingContext &context, ActualArguments &arguments) {
+  for (auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
+}
+
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
