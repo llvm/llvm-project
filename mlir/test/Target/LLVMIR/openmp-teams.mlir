@@ -311,3 +311,26 @@ llvm.func @teams_if_with_num_teams(%condition: i1, %numTeamsLower: i32, %numTeam
     llvm.call @afterTeams() : () -> ()
     llvm.return
 }
+
+// -----
+
+// Check that the thread and bound id arguments of the outlined function are
+// generic pointers even when allocas are created in a non-zero address space.
+module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>} {
+    llvm.func @foo()
+
+    // CHECK-LABEL: @omp_teams_alloca_addrspace
+    // CHECK: call void {{.*}} @__kmpc_fork_teams(ptr @{{.+}}, i32 0, ptr @[[OUTLINED_FN:.+]])
+    llvm.func @omp_teams_alloca_addrspace() {
+        omp.teams {
+            llvm.call @foo() : () -> ()
+            omp.terminator
+        }
+        llvm.return
+    }
+
+    // CHECK:      define internal void @[[OUTLINED_FN]]
+    // CHECK-SAME: (ptr %global.tid.ptr, ptr %bound.tid.ptr)
+    // CHECK:   call void @foo()
+    // CHECK:   ret void
+}
