@@ -26,11 +26,13 @@ using namespace clang;
 using namespace clang::interp;
 
 // Helper to check if a Type can be passed to
-// ASTContext::getRecordLayout().
+// ASTContext::getTypeSize().
 static bool validType(QualType T) {
   if (const RecordDecl *RD = T->getAsRecordDecl())
     return ASTContext::hasLayout(RD);
-  return true;
+  return !T->isDependentType() && !T->isUndeducedAutoType() &&
+         !T->isSpecificBuiltinType(BuiltinType::UnknownAny) &&
+         !T->isIncompleteType();
 }
 
 Pointer::Pointer(Block *Pointee)
@@ -306,8 +308,12 @@ APValue Pointer::toAPValue(const ASTContext &ASTCtx) const {
       }
     }
     size_t LayoutOffset = Opaque.computeLayoutOffset(ASTCtx).value_or(0);
-    auto Offset = CharUnits::fromQuantity(LayoutOffset + getByteOffset());
-    auto Result =
+    size_t ElemSize = 0;
+    if (validType(Opaque.getFieldType()))
+      ElemSize = ASTCtx.getTypeSizeInChars(Opaque.getFieldType()).getQuantity();
+    auto Offset =
+        CharUnits::fromQuantity(LayoutOffset + (this->Offset * ElemSize));
+    APValue Result =
         APValue(Opaque.Base, Offset, Path,
                 /*IsOnePastEnd=*/Opaque.isOnePastEnd(), /*IsNullPtr=*/false);
     Result.setConstexprUnknown(Opaque.isConstexprUnknown());
@@ -514,9 +520,7 @@ Pointer::computeOffsetForComparison(const ASTContext &ASTCtx) const {
   case Storage::String:
     return reinterpret_cast<uintptr_t>(Str.getLiteral()) + Offset;
   case Storage::Opaque:
-    if (auto O = Opaque.computeLayoutOffset(ASTCtx))
-      return *O + Offset;
-    return std::nullopt;
+    return computeLayoutOffset(ASTCtx);
   }
 
   auto getTypeSize = [&](QualType T) -> std::optional<size_t> {
@@ -597,8 +601,12 @@ Pointer::computeLayoutOffset(const ASTContext &ASTCtx) const {
   case Storage::String:
     return Offset * Str.getLiteral()->getCharByteWidth();
   case Storage::Opaque:
-    if (auto O = Opaque.computeLayoutOffset(ASTCtx))
-      return *O + Offset;
+    if (auto O = Opaque.computeLayoutOffset(ASTCtx)) {
+      size_t TypeSize = 0;
+      if (QualType FT = Opaque.getFieldType(); validType(FT))
+        TypeSize = ASTCtx.getTypeSizeInChars(FT).getQuantity();
+      return *O + (Offset * TypeSize);
+    }
     return std::nullopt;
   }
 

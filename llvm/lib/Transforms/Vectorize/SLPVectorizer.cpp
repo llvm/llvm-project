@@ -18969,6 +18969,10 @@ BoUpSLP::calculateTreeCostAndTrimNonProfitable(ArrayRef<Value *> VectorizedVals,
         *TTI, SLPReVec, ScalarTy,
         cast<VectorType>(getWidenedType(ScalarTy, TE->getVectorFactor())),
         ExtractElts, /*Insert=*/false, /*Extract=*/true, CostKind);
+    // Scale the extract cost to the subtree's execution frequency: the
+    // subtree and gather costs it is compared against are already loop-scaled.
+    if (KeepCost.isValid() && KeepCost != 0)
+      KeepCost *= getEntryEffectiveScale(*TE);
     // Add the cost of the subtree itself, computed before any trimming:
     // trimming of the subtree's own nodes would otherwise make it look
     // artificially cheap.

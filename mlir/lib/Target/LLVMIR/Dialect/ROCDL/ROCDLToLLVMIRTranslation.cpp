@@ -149,6 +149,24 @@ public:
       else
         llvmFunc->removeFnAttr("uniform-work-group-size");
     }
+
+    bool isXnack =
+        dialect->getXnackAttrHelper().getName() == attribute.getName();
+    bool isSramecc =
+        dialect->getSrameccAttrHelper().getName() == attribute.getName();
+    if (isXnack || isSramecc) {
+      auto value = dyn_cast<BoolAttr>(attribute.getValue());
+      if (!value)
+        return op->emitOpError(Twine(attribute.getName()) +
+                               " must be a boolean");
+      StringRef key = isXnack
+                          ? ROCDL::ROCDLDialect::getModuleFlagKeyXnackName()
+                          : ROCDL::ROCDLDialect::getModuleFlagKeySramEccName();
+      moduleTranslation.getLLVMModule()->addModuleFlag(
+          llvm::Module::Error, key,
+          llvm::ConstantInt::get(llvm::Type::getInt32Ty(llvmContext),
+                                 value.getValue()));
+    }
     if (dialect->getUnsafeFpAtomicsAttrHelper().getName() ==
         attribute.getName()) {
       auto func = dyn_cast<LLVM::LLVMFuncOp>(op);

@@ -299,10 +299,14 @@ alignas(16) void *__bolt_instr_longjmp_buf[16];
 // Thread that installed the recovery point above, or 0 when there is none.
 uint64_t __bolt_instr_recovery_tid = 0;
 
-bool __bolt_instr_dump_failed = false;
+// Set the first time any runtime operation fails and will never be cleared.
+// Once set, every instrumentation entry point (setup, indirect-call handler,
+// profile dumping, counter clearing) turns into a no-op, so any profiling
+// related runtime error just fails profiling but won't kill the host app.
+bool __bolt_runtime_error = false;
 
 void boltHandleFatalAndRecover() {
-  __atomic_store_n(&__bolt_instr_dump_failed, true, __ATOMIC_RELAXED);
+  __atomic_store_n(&__bolt_runtime_error, true, __ATOMIC_RELAXED);
   if (__atomic_load_n(&__bolt_instr_recovery_tid, __ATOMIC_RELAXED) ==
       __gettid()) {
     __atomic_store_n(&__bolt_instr_recovery_tid, 0, __ATOMIC_RELAXED);

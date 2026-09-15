@@ -27115,6 +27115,74 @@ None.
 This intrinsic actually does nothing, but optimizers must assume that it
 has externally observable side effects.
 
+(llvm_pseudoprobe)=
+
+#### '`llvm.pseudoprobe`' Intrinsic
+
+##### Syntax:
+
+```
+declare void @llvm.pseudoprobe(i64 <guid>, i64 <index>, i32 <attributes>, i64 <factor>) nounwind willreturn memory(inaccessiblemem: readwrite)
+```
+
+##### Overview:
+
+The `llvm.pseudoprobe` intrinsic identifies a basic block in a function before
+the module was optimized, so that samples collected from an optimized binary
+can be attributed back to it. It is emitted for sample-based profile-guided
+optimization.
+
+Probes are inserted in the first pass of the pipeline and indexed by walking a
+function, so a probe keeps naming the same original block however that block is
+later inlined, cloned or rearranged. It is a pseudo intrinsic: it performs no
+operation and lowers to no machine instruction, only to a label recorded in the
+`.pseudo_probe` section.
+
+##### Arguments:
+
+The first argument is the GUID of the function the probe was created for, which
+after inlining need not be the function that contains it. It names an entry in
+the module-level `!llvm.pseudo_probe_desc` metadata pairing the GUID with that
+function's name and a hash of its pre-optimized CFG. The second argument is the
+index of the probe, unique within that function.
+
+The third argument is a bit mask of probe attributes, at most three bits wide,
+shared with the encoding of probe records in the object file:
+
+| Value | Name | Meaning |
+| --- | --- | --- |
+| `0x1` | reserved | Not currently used. |
+| `0x2` | sentinel | Not a block probe; anchors the records of a function placed in a separate section, carrying its GUID and an absolute address. |
+| `0x4` | discriminator | The record carries a DWARF discriminator, used by flow-sensitive sample profiling. |
+
+Neither is set on the intrinsic; both are attached when the records are written
+to the object file, so LLVM emits zero here.
+
+The fourth argument is a distribution factor, expressed as a fraction of
+`UINT64_MAX`, recording the share of the original block's executions that this
+copy of the probe accounts for. All four arguments must be constant integers.
+
+##### Semantics:
+
+This intrinsic does nothing, but optimizers must assume that it has memory
+side effects. Without them nothing would stop a pass from deleting the probe or
+sinking it out of its block, and a probe that disappears silently loses the
+correspondence to the original block.
+
+These memory side effects are a default, not a hard rule. A pass should not
+give up a useful optimization just to keep a probe: passes that know about
+probes may update or remove them instead, and the sample profile loader can
+infer a count for a probe that is gone. A pass duplicating a probed block
+should scale the distribution factor of each copy so that the copies sum to
+the original, and may drop a probe when keeping it would misattribute samples.
+Merging blocks with different probes is where the two goals conflict;
+machine-level tail merging currently declines such merges. Otherwise a probe
+should not affect generated code, so cost models and legality checks should
+see through probes rather than account for them.
+
+Only block probes are represented by this intrinsic. A probe for a call site
+is encoded in the DWARF discriminator of the call instruction instead.
+
 #### '`llvm.is.constant.*`' Intrinsic
 
 ##### Syntax:

@@ -16,6 +16,7 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/StringExtras.h"
 #include <optional>
 
 using namespace llvm;
@@ -25,6 +26,13 @@ using namespace lldb_private;
 LLDB_PLUGIN_DEFINE(ObjectFileJSON)
 
 char ObjectFileJSON::ID;
+
+/// Returns the JSON text in the buffer, which is not NULL terminated and may
+/// be zero padded past the end of the file.
+static StringRef GetText(const lldb_private::DataExtractor &data) {
+  StringRef text = toStringRef(data.GetData());
+  return text.substr(0, text.find('\0'));
+}
 
 void ObjectFileJSON::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
@@ -66,7 +74,7 @@ ObjectFile *ObjectFileJSON::CreateInstance(const ModuleSP &module_sp,
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text = llvm::StringRef((const char *)extractor_sp->GetData().data());
+  StringRef text = GetText(*extractor_sp);
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
@@ -125,7 +133,7 @@ ObjectFileJSON::GetModuleSpecifications(const FileSpec &file,
 
   Log *log = GetLog(LLDBLog::Symbols);
 
-  auto text = llvm::StringRef((const char *)extractor_sp->GetData().data());
+  StringRef text = GetText(*extractor_sp);
 
   Expected<json::Value> json = json::parse(text);
   if (!json) {
