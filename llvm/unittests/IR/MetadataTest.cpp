@@ -5209,9 +5209,12 @@ TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
   EXPECT_TRUE(MD->getValue() == GV0.get());
   ASSERT_TRUE(GV0->use_empty());
 
+  TrackingMDRef Ref(MD);
   std::unique_ptr<GlobalVariable> GV1(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
+  // RAUW updates `Ref`.
   GV0->replaceAllUsesWith(GV1.get());
+  MD = cast<ValueAsMetadata>(Ref.get());
   EXPECT_TRUE(MD->getValue() == GV1.get());
 }
 
@@ -5224,11 +5227,13 @@ TEST_F(ValueAsMetadataTest, handleRAUWWithTypeChange) {
   auto *I32Poison = PoisonValue::get(Type::getInt32Ty(Context));
   auto *I64Poison = PoisonValue::get(Type::getInt64Ty(Context));
   auto *MD = ConstantAsMetadata::get(I32Poison);
+  TrackingMDRef Ref(MD);
 
   EXPECT_EQ(MD->getValue(), I32Poison);
   EXPECT_NE(MD->getValue(), I64Poison);
 
   ValueAsMetadata::handleRAUW(I32Poison, I64Poison);
+  MD = cast<ConstantAsMetadata>(Ref.get());
 
   EXPECT_NE(MD->getValue(), I32Poison);
   EXPECT_EQ(MD->getValue(), I64Poison);
