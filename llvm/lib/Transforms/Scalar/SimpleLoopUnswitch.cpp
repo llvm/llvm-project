@@ -256,21 +256,32 @@ static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
   }
 }
 
-/// Check that all the LCSSA PHI nodes in the loop exit block have trivial
-/// incoming values along this edge.
-static bool areLoopExitPHIsLoopInvariant(const Loop &L,
-                                         const BasicBlock &ExitingBB,
-                                         const BasicBlock &ExitBB) {
+/// Check that all the LCSSA PHI nodes in \p ExitBB have trivial incoming values
+/// along the edge from \p ExitingBB, i.e. values that are still correct if the
+/// loop is not entered.
+///
+/// Only loop invariant values are trivial by default. If \p UsedHeaderPHI is
+/// non-null, a PHI in the loop header counts as trivial too, and
+/// *UsedHeaderPHI is set to true when one is found.
+static bool areLoopExitPHIsTrivial(const Loop &L, const BasicBlock &ExitingBB,
+                                   const BasicBlock &ExitBB,
+                                   bool *UsedHeaderPHI = nullptr) {
   for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
       // No more PHIs to check.
       return true;
 
-    // If the incoming value for this edge isn't loop invariant the unswitch
-    // won't be trivial.
-    if (!L.isLoopInvariant(PN->getIncomingValueForBlock(&ExitingBB)))
+    const Value *V = PN->getIncomingValueForBlock(&ExitingBB);
+    if (L.isLoopInvariant(V))
+      continue;
+
+    if (!UsedHeaderPHI)
       return false;
+    const auto *HeaderPN = dyn_cast<PHINode>(V);
+    if (!HeaderPN || HeaderPN->getParent() != L.getHeader())
+      return false;
+    *UsedHeaderPHI = true;
   }
   llvm_unreachable("Basic blocks should never be empty!");
 }
@@ -598,7 +609,7 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   // Redirecting the latch edge to the exit block will cause us to skip latch
   // instructions. This can only be done if the latch instructions don't have
   // side effects and don't have any convergent instructions.
-  if (LatchIdx && areLoopExitPHIsLoopInvariant(L, *LoopLatch, *ULExit) &&
+  if (LatchIdx && areLoopExitPHIsTrivial(L, *LoopLatch, *ULExit) &&
       !llvm::any_of(*LoopLatch, [](Instruction &I) {
         if (const auto *CB = dyn_cast<CallBase>(&I))
           if (CB->isConvergent())
@@ -647,8 +658,14 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
   }
   auto *ContinueBB = BI.getSuccessor(1 - LoopExitSuccIdx);
   auto *ParentBB = BI.getParent();
+
+  // If the exit incomings aren't loop-invariant, the unswitch is still trivial
+  // when branch dominates the latch and every non-invariant incoming is a
+  // header PHI. Those incomings are repaired after unswitching.
+  // Branch always dominates the latch as guaranteed by the caller.
+  bool TrivialFromHeader = false;
   if (!ModifiedBranch &&
-      !areLoopExitPHIsLoopInvariant(L, *ParentBB, *LoopExitBB)) {
+      !areLoopExitPHIsTrivial(L, *ParentBB, *LoopExitBB, &TrivialFromHeader)) {
     LLVM_DEBUG(dbgs() << "   Loop exit PHI's aren't loop-invariant!\n");
     return false;
   }
@@ -790,6 +807,18 @@ static bool unswitchTrivialBranch(Loop &L, CondBrInst &BI, DominatorTree &DT,
     rewritePHINodesForExitAndUnswitchedBlocks(*LoopExitBB, *UnswitchedBB,
                                               *ParentBB, *OldPH, FullUnswitch);
 
+  // OldPH branches here without entering the loop, so a header PHI is still
+  // its entry value. Read it from NewPH, the preheader created by the split.
+  if (TrivialFromHeader)
+    for (PHINode &PN : UnswitchedBB->phis())
+      for (unsigned I = 0, E = PN.getNumIncomingValues(); I != E; ++I) {
+        if (PN.getIncomingBlock(I) != OldPH)
+          continue;
+        auto *HeaderPN = dyn_cast<PHINode>(PN.getIncomingValue(I));
+        if (HeaderPN && HeaderPN->getParent() == L.getHeader())
+          PN.setIncomingValue(I, HeaderPN->getIncomingValueForBlock(NewPH));
+      }
+
   // The constant we can replace all of our invariants with inside the loop
   // body. If any of the invariants have a value other than this the loop won't
   // be entered.
@@ -864,7 +893,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     if (L.contains(&BBToCheck))
       return false;
     // BBToCheck is not trivial to unswitch if its phis aren't loop invariant.
-    if (!areLoopExitPHIsLoopInvariant(L, *ParentBB, BBToCheck))
+    if (!areLoopExitPHIsTrivial(L, *ParentBB, BBToCheck))
       return false;
     // We do not unswitch a block that only has an unreachable statement, as
     // it's possible this is a previously unswitched block. Only unswitch if
