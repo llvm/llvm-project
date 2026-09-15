@@ -124,6 +124,30 @@ TemplateName getReferencedTemplateName(const Type *T) {
   return TemplateName();
 }
 
+// If `T` is a template parameter with a default argument, return that default
+// argument, otherwise return a null QualType.
+// We can't do anything useful with a template parameter itself (e.g. we cannot
+// look up member names inside it), so where one turns up, using its default
+// argument is a reasonable heuristic: it's what the parameter will be bound to
+// unless the instantiation site says otherwise.
+// Note that `T` must not be canonicalized: a canonical TemplateTypeParmType
+// does not retain its TemplateTypeParmDecl, and so has no default argument to
+// offer.
+QualType getDefaultTemplateArgument(QualType T) {
+  // Use getAs() rather than a dyn_cast, so that we see through sugar such as a
+  // member typedef naming the parameter (e.g. `typedef A allocator_type;`).
+  const auto *TTPT = T.isNull() ? nullptr : T->getAs<TemplateTypeParmType>();
+  if (!TTPT)
+    return QualType();
+  const auto *TTPD = TTPT->getDecl();
+  if (!TTPD || !TTPD->hasDefaultArgument())
+    return QualType();
+  const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+  if (DefaultArg.getKind() != TemplateArgument::Type)
+    return QualType();
+  return DefaultArg.getAsType();
+}
+
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
@@ -136,8 +160,22 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
   T = T->getCanonicalTypeInternal().getTypePtr();
 
   if (const auto *DNT = T->getAs<DependentNameType>()) {
-    T = resolveDeclsToType(resolveDependentNameType(DNT), Ctx)
-            .getTypePtrOrNull();
+    auto Decls = resolveDependentNameType(DNT);
+    QualType Resolved = resolveDeclsToType(Decls, Ctx);
+    // `Resolved` is canonical, so if the name refers to a member typedef of a
+    // template parameter (as `vector<T>::allocator_type` does), it has lost the
+    // TemplateTypeParmDecl we would need to fall back to the parameter's
+    // default argument. Consult the typedef's underlying type as written
+    // instead.
+    if (Decls.size() == 1) {
+      if (const auto *TND = dyn_cast<TypedefNameDecl>(Decls[0])) {
+        if (QualType Default =
+                getDefaultTemplateArgument(TND->getUnderlyingType());
+            !Default.isNull())
+          Resolved = Default;
+      }
+    }
+    T = Resolved.getTypePtrOrNull();
     if (!T)
       return nullptr;
     T = T->getCanonicalTypeInternal().getTypePtr();
@@ -246,19 +284,9 @@ QualType HeuristicResolverImpl::simplifyType(QualType Type, const Expr *E,
         }
       }
     }
-    if (const auto *TTPT = dyn_cast_if_present<TemplateTypeParmType>(T.Type)) {
-      // We can't do much useful with a template parameter (e.g. we cannot look
-      // up member names inside it). However, if the template parameter has a
-      // default argument, as a heuristic we can replace T with the default
-      // argument type.
-      if (const auto *TTPD = TTPT->getDecl()) {
-        if (TTPD->hasDefaultArgument()) {
-          const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
-          if (DefaultArg.getKind() == TemplateArgument::Type) {
-            return {DefaultArg.getAsType()};
-          }
-        }
-      }
+    if (QualType Default = getDefaultTemplateArgument(T.Type);
+        !Default.isNull()) {
+      return {Default};
     }
 
     // Similarly, heuristically replace a template template parameter with its

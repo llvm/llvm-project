@@ -580,6 +580,53 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_Recursive) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_MemberTypedef) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    template <typename T, typename A = Default>
+    struct S {
+      typedef A type;
+    };
+    template <typename T>
+    void bar() {
+      typename S<T>::type t;
+      t.foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "t.foo()", where the type of "t" resolves
+  // to the template parameter "A" via the member typedef "type".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_ReturnType) {
+  std::string Code = R"cpp(
+    struct Default {
+      void foo();
+    };
+    template <typename T, typename A = Default>
+    struct S {
+      typedef A type;
+      type get();
+    };
+    template <typename T>
+    void bar(S<T> s) {
+      s.get().foo();
+    }
+  )cpp";
+  // Test resolution of "foo" in "s.get().foo()", where the return type of
+  // "get()" resolves to the template parameter "A" via the member typedef
+  // "type".
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
+      cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
 TEST(HeuristicResolver, MemberExpr_DefaultTemplateTemplateArgument) {
   std::string Code = R"cpp(
     template <typename T>
