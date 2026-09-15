@@ -2386,3 +2386,68 @@ define i32 @signum_i32_or_wrong_ext(i32 %x) {
   %r = or i32 %signbit, %sgt0ext
   ret i32 %r
 }
+
+; An assume that (x & y) == 0 proves x and y share no common bits, even
+; though neither is a constant, so the existing or should get the disjoint
+; flag.
+define i32 @or_disjoint_via_assume(i32 %x, i32 %y) {
+; CHECK-LABEL: @or_disjoint_via_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %or = or i32 %y, %x
+  ret i32 %or
+}
+
+; Negative test: the assume proves nothing about %z, so no disjoint flag.
+define i32 @or_no_fold_wrong_operand_assume(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @or_no_fold_wrong_operand_assume(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Z:%.*]], [[X]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  %or = or i32 %z, %x
+  ret i32 %or
+}
+
+; Negative test: the assume does not dominate the or (it's in a
+; not-always-executed sibling block), so no disjoint flag.
+define i32 @or_no_fold_non_dominating_assume(i32 %x, i32 %y, i1 %cond) {
+; CHECK-LABEL: @or_no_fold_non_dominating_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[COND:%.*]], label [[ASSUME_BB:%.*]], label [[OR_BB:%.*]]
+; CHECK:       assume_bb:
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    br label [[OR_BB]]
+; CHECK:       or_bb:
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i32 [[OR]]
+;
+entry:
+  br i1 %cond, label %assume_bb, label %or_bb
+
+assume_bb:
+  %and = and i32 %y, %x
+  %cmp = icmp eq i32 %and, 0
+  call void @llvm.assume(i1 %cmp)
+  br label %or_bb
+
+or_bb:
+  %or = or i32 %y, %x
+  ret i32 %or
+}
+
+declare void @llvm.assume(i1)
