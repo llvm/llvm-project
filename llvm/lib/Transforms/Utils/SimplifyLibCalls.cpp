@@ -2489,6 +2489,51 @@ Value *LibCallSimplifier::replacePowWithSqrt(CallInst *Pow, IRBuilderBase &B) {
   return Sqrt;
 }
 
+/// Use cube root in place of pow(x, 2/3).
+Value *LibCallSimplifier::replacePowWithCbrt(CallInst *Pow, IRBuilderBase &B) {
+  Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
+  Module *Mod = Pow->getModule();
+  Type *Ty = Pow->getType();
+
+  if (!(Ty->isFloatTy() || Ty->isDoubleTy() || Ty->isFP128Ty()))
+    return nullptr;
+
+  // pow(-0.0, 2/3) = +0.0; cbrt(-0.0) * cbrt(-0.0) = +0.0.
+  // pow(-inf, 2/3) = +inf; cbrt(-inf) * cbrt(-inf) = +inf.
+  // pow(-val, 2/3) =  nan; cbrt(-val) * cbrt(-val) = num.
+  // For regular numbers, rounding may cause the results to differ.
+  // Therefore, we require { nnan ninf nsz afn } for this transform.
+  if (!Pow->hasNoNaNs() || !Pow->hasNoInfs() || !Pow->hasNoSignedZeros() ||
+      !Pow->hasApproxFunc())
+    return nullptr;
+
+  const APFloat *ExpoF;
+  if (!match(Expo, m_APFloat(ExpoF)))
+    return nullptr;
+
+  // Compare against 2/3 evaluated in the exponent's own semantics so long
+  // double fp128 matches 2.0L/3.0L
+  APFloat TwoThirds(ExpoF->getSemantics(), 2);
+  APFloat Three(ExpoF->getSemantics(), 3);
+  TwoThirds.divide(Three, APFloat::rmNearestTiesToEven);
+  if (!ExpoF->bitwiseIsEqual(TwoThirds))
+    return nullptr;
+
+  // Do not create a cbrt() libcall if the target does not have it.
+  if (!hasFloatFn(Mod, TLI, Ty, LibFunc_cbrt, LibFunc_cbrtf, LibFunc_cbrtl))
+    return nullptr;
+
+  Value *Cbrt = emitUnaryFloatFnCall(Base, TLI, LibFunc_cbrt, LibFunc_cbrtf,
+                                     LibFunc_cbrtl, B, AttributeList());
+  MDNode *FPMath = Pow->getMetadata(LLVMContext::MD_fpmath);
+  cast<Instruction>(Cbrt)->setMetadata(LLVMContext::MD_fpmath, FPMath);
+
+  // pow(X, 2/3) --> cbrt(X) * cbrt(X)
+  Value *Mul = B.CreateFMul(Cbrt, Cbrt);
+  cast<Instruction>(Mul)->setMetadata(LLVMContext::MD_fpmath, FPMath);
+  return copyFlags(*Pow, Mul);
+}
+
 static Value *createPowWithIntegerExponent(Value *Base, Value *Expo, Module *M,
                                            IRBuilderBase &B) {
   Value *Args[] = {Base, Expo};
@@ -2538,6 +2583,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilderBase &B) {
 
   if (Value *Sqrt = replacePowWithSqrt(Pow, B))
     return Sqrt;
+
+  if (Value *Cbrt = replacePowWithCbrt(Pow, B))
+    return Cbrt;
 
   // If we can approximate pow:
   // pow(x, n) -> powi(x, n) * sqrt(x) if n has exactly a 0.5 fraction
