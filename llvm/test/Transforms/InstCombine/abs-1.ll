@@ -989,3 +989,257 @@ define <2 x i32> @abs_unary_shuffle_ops(<2 x i32> %x) {
   %r = call <2 x i32> @llvm.abs(<2 x i32> %a, i1 false)
   ret <2 x i32> %r
 }
+
+; sext + sgt: (A > B) ? (sext(A) - sext(B)) : (sext(B) - sext(A)) --> abs
+define i32 @abs_diff_sext_sgt(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_sext_sgt(
+; CHECK-NEXT:    [[SEXT_A:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[SEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 true)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sext_a = sext i8 %a to i32
+  %sext_b = sext i8 %b to i32
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ab = sub i32 %sext_a, %sext_b
+  %sub_ba = sub i32 %sext_b, %sext_a
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %sub_ba
+  ret i32 %cond
+}
+
+; zext + ugt: (A >u B) ? (zext(A) - zext(B)) : (zext(B) - zext(A)) --> abs
+define i32 @abs_diff_zext_ugt(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_zext_ugt(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 true)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %zext_a = zext i8 %a to i32
+  %zext_b = zext i8 %b to i32
+  %cmp = icmp ugt i8 %a, %b
+  %sub_ab = sub i32 %zext_a, %zext_b
+  %sub_ba = sub i32 %zext_b, %zext_a
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %sub_ba
+  ret i32 %cond
+}
+
+; vector zext + ugt: (A >u B) ? (zext(A) - zext(B)) : (zext(B) - zext(A)) --> abs
+define <8 x i16> @abs_diff_zext_ugt_vec(<8 x i8> %a, <8 x i8> %b) {
+; CHECK-LABEL: @abs_diff_zext_ugt_vec(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext <8 x i8> [[A:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext <8 x i8> [[B:%.*]] to <8 x i16>
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw <8 x i16> [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call <8 x i16> @llvm.abs.v8i16(<8 x i16> [[SUB_AB]], i1 true)
+; CHECK-NEXT:    ret <8 x i16> [[COND]]
+;
+  %zext_a = zext <8 x i8> %a to <8 x i16>
+  %zext_b = zext <8 x i8> %b to <8 x i16>
+  %cmp = icmp ugt <8 x i8> %a, %b
+  %sub_ab = sub <8 x i16> %zext_a, %zext_b
+  %sub_ba = sub <8 x i16> %zext_b, %zext_a
+  %cond = select <8 x i1> %cmp, <8 x i16> %sub_ab, <8 x i16> %sub_ba
+  ret <8 x i16> %cond
+}
+
+; sext + sgt: (A > B) ? (sext(A) - sext(B)) : (0 - (sext(A) - sext(B))) --> abs
+define i32 @abs_diff_sext_sgt_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_sext_sgt_neg(
+; CHECK-NEXT:    [[SEXT_A:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[SEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sext_a = sext i8 %a to i32
+  %sext_b = sext i8 %b to i32
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ab = sub nsw i32 %sext_a, %sext_b
+  %neg = sub i32 0, %sub_ab
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %neg
+  ret i32 %cond
+}
+
+; zext + ugt: (A >u B) ? (zext(A) - zext(B)) : (0 - (zext(A) - zext(B))) --> abs
+define i32 @abs_diff_zext_ugt_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_zext_ugt_neg(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %zext_a = zext i8 %a to i32
+  %zext_b = zext i8 %b to i32
+  %cmp = icmp ugt i8 %a, %b
+  %sub_ab = sub nsw i32 %zext_a, %zext_b
+  %neg = sub i32 0, %sub_ab
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %neg
+  ret i32 %cond
+}
+
+; sext + slt: (A < B) ? (0 - (sext(A) - sext(B))) : (sext(A) - sext(B)) --> abs
+define i32 @abs_diff_sext_slt_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_sext_slt_neg(
+; CHECK-NEXT:    [[SEXT_A:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[SEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sext_a = sext i8 %a to i32
+  %sext_b = sext i8 %b to i32
+  %cmp = icmp slt i8 %a, %b
+  %sub_ab = sub nsw i32 %sext_a, %sext_b
+  %neg = sub i32 0, %sub_ab
+  %cond = select i1 %cmp, i32 %neg, i32 %sub_ab
+  ret i32 %cond
+}
+
+; zext + ult: (A <u B) ? (0 - (zext(A) - zext(B))) : (zext(A) - zext(B)) --> abs
+define i32 @abs_diff_zext_ult_neg(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_zext_ult_neg(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_AB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %zext_a = zext i8 %a to i32
+  %zext_b = zext i8 %b to i32
+  %cmp = icmp ult i8 %a, %b
+  %sub_ab = sub nsw i32 %zext_a, %zext_b
+  %neg = sub i32 0, %sub_ab
+  %cond = select i1 %cmp, i32 %neg, i32 %sub_ab
+  ret i32 %cond
+}
+
+; sext + sgt: (A > B) ? (0 - (sext(B) - sext(A))) : (sext(B) - sext(A)) --> abs
+define i32 @abs_diff_sext_sgt_neg_ba(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_sext_sgt_neg_ba(
+; CHECK-NEXT:    [[SEXT_A:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[SEXT_B]], [[SEXT_A]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_BA]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sext_a = sext i8 %a to i32
+  %sext_b = sext i8 %b to i32
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ba = sub nsw i32 %sext_b, %sext_a
+  %neg = sub i32 0, %sub_ba
+  %cond = select i1 %cmp, i32 %neg, i32 %sub_ba
+  ret i32 %cond
+}
+
+; zext + ugt: (A >u B) ? (0 - (zext(B) - zext(A))) : (zext(B) - zext(A)) --> abs
+define i32 @abs_diff_zext_ugt_neg_ba(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_zext_ugt_neg_ba(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[ZEXT_B]], [[ZEXT_A]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_BA]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %zext_a = zext i8 %a to i32
+  %zext_b = zext i8 %b to i32
+  %cmp = icmp ugt i8 %a, %b
+  %sub_ba = sub nsw i32 %zext_b, %zext_a
+  %neg = sub i32 0, %sub_ba
+  %cond = select i1 %cmp, i32 %neg, i32 %sub_ba
+  ret i32 %cond
+}
+
+; sext + slt: (A < B) ? (sext(B) - sext(A)) : (0 - (sext(B) - sext(A))) --> abs
+define i32 @abs_diff_sext_slt_ba(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_sext_slt_ba(
+; CHECK-NEXT:    [[SEXT_A:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[SEXT_B]], [[SEXT_A]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_BA]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sext_a = sext i8 %a to i32
+  %sext_b = sext i8 %b to i32
+  %cmp = icmp slt i8 %a, %b
+  %sub_ba = sub nsw i32 %sext_b, %sext_a
+  %neg = sub i32 0, %sub_ba
+  %cond = select i1 %cmp, i32 %sub_ba, i32 %neg
+  ret i32 %cond
+}
+
+; zext + ult: (A <u B) ? (zext(B) - zext(A)) : (0 - (zext(B) - zext(A))) --> abs
+define i32 @abs_diff_zext_ult_ba(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_zext_ult_ba(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[ZEXT_B]], [[ZEXT_A]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB_BA]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %zext_a = zext i8 %a to i32
+  %zext_b = zext i8 %b to i32
+  %cmp = icmp ult i8 %a, %b
+  %sub_ba = sub nsw i32 %zext_b, %zext_a
+  %neg = sub i32 0, %sub_ba
+  %cond = select i1 %cmp, i32 %sub_ba, i32 %neg
+  ret i32 %cond
+}
+
+; negative test - ugt with bare operands (no zext) - should not fold to abs
+define i32 @abs_diff_ugt_no_zext(i32 %a, i32 %b) {
+; CHECK-LABEL: @abs_diff_ugt_no_zext(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[B]], [[A]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB_AB]], i32 [[SUB_BA]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %cmp = icmp ugt i32 %a, %b
+  %sub_ab = sub nsw i32 %a, %b
+  %sub_ba = sub nsw i32 %b, %a
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %sub_ba
+  ret i32 %cond
+}
+
+; negative test - sext + ugt (mismatched pairing) - should not fold to abs
+define i32 @abs_diff_sext_ugt_mismatch(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_sext_ugt_mismatch(
+; CHECK-NEXT:    [[SEXT_A:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[SEXT_B:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[SEXT_A]], [[SEXT_B]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[SEXT_B]], [[SEXT_A]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB_AB]], i32 [[SUB_BA]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sext_a = sext i8 %a to i32
+  %sext_b = sext i8 %b to i32
+  %cmp = icmp ugt i8 %a, %b
+  %sub_ab = sub nsw i32 %sext_a, %sext_b
+  %sub_ba = sub nsw i32 %sext_b, %sext_a
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %sub_ba
+  ret i32 %cond
+}
+
+; negative test - zext + sgt (mismatched pairing) - should not fold to abs
+define i32 @abs_diff_zext_sgt_mismatch(i8 %a, i8 %b) {
+; CHECK-LABEL: @abs_diff_zext_sgt_mismatch(
+; CHECK-NEXT:    [[ZEXT_A:%.*]] = zext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    [[ZEXT_B:%.*]] = zext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[A]], [[B]]
+; CHECK-NEXT:    [[SUB_AB:%.*]] = sub nsw i32 [[ZEXT_A]], [[ZEXT_B]]
+; CHECK-NEXT:    [[SUB_BA:%.*]] = sub nsw i32 [[ZEXT_B]], [[ZEXT_A]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB_AB]], i32 [[SUB_BA]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %zext_a = zext i8 %a to i32
+  %zext_b = zext i8 %b to i32
+  %cmp = icmp sgt i8 %a, %b
+  %sub_ab = sub nsw i32 %zext_a, %zext_b
+  %sub_ba = sub nsw i32 %zext_b, %zext_a
+  %cond = select i1 %cmp, i32 %sub_ab, i32 %sub_ba
+  ret i32 %cond
+}
