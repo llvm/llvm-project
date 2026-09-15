@@ -1005,8 +1005,14 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameSetup);
 
-  // Emit prologue for shadow call stack.
-  emitSCSPrologue(MF, MBB, MBBI, DL);
+  bool HasHWShadowStack = MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
+                          STI.hasStdExtZimop();
+  const auto &CSI = MFI.getCalleeSavedInfo();
+
+  // Emit prologue for shadow call stack except with save-restore (in which case
+  // that is deferred to the save-restore library routines).
+  if (!HasHWShadowStack || getLibCallID(MF, CSI) == -1)
+    emitSCSPrologue(MF, MBB, MBBI, DL);
 
   // We keep track of the first instruction because it might be a
   // `(QC.)CM.PUSH(FP)`, and we may need to adjust the immediate rather than
@@ -1019,8 +1025,6 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
   // Determine the correct frame layout
   determineFrameLayout(MF);
-
-  const auto &CSI = MFI.getCalleeSavedInfo();
 
   // Skip to before the spills of scalar callee-saved registers
   // FIXME: assumes exactly one instruction is used to restore each
@@ -1415,8 +1419,13 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
       deallocateStack(MF, MBB, MBBI, DL, StackSize,
                       RVFI->getLibCallStackSize());
 
-    // Emit epilogue for shadow call stack.
-    emitSCSEpilogue(MF, MBB, MBBI, DL);
+    bool HasHWShadowStack =
+        MF.getFunction().hasFnAttribute("hw-shadow-stack") &&
+        STI.hasStdExtZimop();
+    // Emit epilogue for SW shadow call stack. For HW shadow stack, it is up to
+    // the library routines to perform these.
+    if (!HasHWShadowStack)
+      emitSCSEpilogue(MF, MBB, MBBI, DL);
     return;
   }
 

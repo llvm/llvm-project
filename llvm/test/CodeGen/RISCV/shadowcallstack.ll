@@ -13,8 +13,12 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-NOZCMOP
 ; RUN: llc -mtriple=riscv32 -mattr=+zimop,+zcmop < %s -M no-aliases \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-ZICFISS,RV32-ZCMOP
+; RUN: llc -mtriple=riscv32 -mattr=+zimop,+zcmop,+save-restore < %s -M no-aliases \
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV32-SR
 ; RUN: llc -mtriple=riscv64 -mattr=+zimop,+zcmop < %s -M no-aliases \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=RV64-ZICFISS,RV64-ZCMOP
+; RUN: llc -mtriple=riscv64 -mattr=+zimop,+zcmop,+save-restore < %s -M no-aliases \
+; RUN:   -verify-machineinstrs | FileCheck %s --check-prefix=RV64-SR
 
 define void @f1() shadowcallstack {
 ; RV32-LABEL: f1:
@@ -45,9 +49,17 @@ define void @f1() shadowcallstack {
 ; RV32-ZCMOP:       # %bb.0:
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f1:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    c.jr ra
+;
 ; RV64-ZCMOP-LABEL: f1:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f1:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    c.jr ra
   ret void
 }
 
@@ -77,6 +89,14 @@ define void @f2() shadowcallstack {
 ; RV64-ZICFISS-LABEL: f2:
 ; RV64-ZICFISS:       # %bb.0:
 ; RV64-ZICFISS-NEXT:    tail foo
+;
+; RV32-SR-LABEL: f2:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    tail foo
+;
+; RV64-SR-LABEL: f2:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    tail foo
   tail call void @foo()
   ret void
 }
@@ -209,6 +229,20 @@ define i32 @f3() shadowcallstack {
 ; RV32-ZCMOP-NEXT:    .cfi_restore gp
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f3:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    c.addi gp, 4
+; RV32-SR-NEXT:    sw ra, -4(gp)
+; RV32-SR-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-SR-NEXT:    call t0, __riscv_save_0
+; RV32-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SR-NEXT:    .cfi_offset ra, -4
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    lw ra, -4(gp)
+; RV32-SR-NEXT:    c.addi gp, -4
+; RV32-SR-NEXT:    .cfi_restore gp
+; RV32-SR-NEXT:    tail __riscv_restore_0
+;
 ; RV64-ZCMOP-LABEL: f3:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.addi gp, 8
@@ -227,6 +261,20 @@ define i32 @f3() shadowcallstack {
 ; RV64-ZCMOP-NEXT:    c.addi gp, -8
 ; RV64-ZCMOP-NEXT:    .cfi_restore gp
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f3:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    c.addi gp, 8
+; RV64-SR-NEXT:    sd ra, -8(gp)
+; RV64-SR-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-SR-NEXT:    call t0, __riscv_save_0
+; RV64-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV64-SR-NEXT:    .cfi_offset ra, -8
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    ld ra, -8(gp)
+; RV64-SR-NEXT:    c.addi gp, -8
+; RV64-SR-NEXT:    .cfi_restore gp
+; RV64-SR-NEXT:    tail __riscv_restore_0
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -487,6 +535,32 @@ define i32 @f4() shadowcallstack {
 ; RV32-ZCMOP-NEXT:    .cfi_restore gp
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f4:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    c.addi gp, 4
+; RV32-SR-NEXT:    sw ra, -4(gp)
+; RV32-SR-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
+; RV32-SR-NEXT:    call t0, __riscv_save_3
+; RV32-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SR-NEXT:    .cfi_offset ra, -4
+; RV32-SR-NEXT:    .cfi_offset s0, -8
+; RV32-SR-NEXT:    .cfi_offset s1, -12
+; RV32-SR-NEXT:    .cfi_offset s2, -16
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s0, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s1, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s2, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.add s0, s1
+; RV32-SR-NEXT:    c.add a0, s2
+; RV32-SR-NEXT:    c.add a0, s0
+; RV32-SR-NEXT:    lw ra, -4(gp)
+; RV32-SR-NEXT:    c.addi gp, -4
+; RV32-SR-NEXT:    .cfi_restore gp
+; RV32-SR-NEXT:    tail __riscv_restore_3
+;
 ; RV64-ZCMOP-LABEL: f4:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.addi gp, 8
@@ -526,6 +600,32 @@ define i32 @f4() shadowcallstack {
 ; RV64-ZCMOP-NEXT:    c.addi gp, -8
 ; RV64-ZCMOP-NEXT:    .cfi_restore gp
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f4:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    c.addi gp, 8
+; RV64-SR-NEXT:    sd ra, -8(gp)
+; RV64-SR-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
+; RV64-SR-NEXT:    call t0, __riscv_save_3
+; RV64-SR-NEXT:    .cfi_def_cfa_offset 32
+; RV64-SR-NEXT:    .cfi_offset ra, -8
+; RV64-SR-NEXT:    .cfi_offset s0, -16
+; RV64-SR-NEXT:    .cfi_offset s1, -24
+; RV64-SR-NEXT:    .cfi_offset s2, -32
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s0, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s1, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s2, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.add s0, s1
+; RV64-SR-NEXT:    c.add a0, s2
+; RV64-SR-NEXT:    c.addw a0, s0
+; RV64-SR-NEXT:    ld ra, -8(gp)
+; RV64-SR-NEXT:    c.addi gp, -8
+; RV64-SR-NEXT:    .cfi_restore gp
+; RV64-SR-NEXT:    tail __riscv_restore_3
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
   %res3 = call i32 @bar()
@@ -624,6 +724,16 @@ define i32 @f5() shadowcallstack nounwind {
 ; RV32-ZCMOP-NEXT:    c.addi gp, -4
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f5:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    c.addi gp, 4
+; RV32-SR-NEXT:    sw ra, -4(gp)
+; RV32-SR-NEXT:    call t0, __riscv_save_0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    lw ra, -4(gp)
+; RV32-SR-NEXT:    c.addi gp, -4
+; RV32-SR-NEXT:    tail __riscv_restore_0
+;
 ; RV64-ZCMOP-LABEL: f5:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.addi gp, 8
@@ -636,6 +746,16 @@ define i32 @f5() shadowcallstack nounwind {
 ; RV64-ZCMOP-NEXT:    ld ra, -8(gp)
 ; RV64-ZCMOP-NEXT:    c.addi gp, -8
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f5:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    c.addi gp, 8
+; RV64-SR-NEXT:    sd ra, -8(gp)
+; RV64-SR-NEXT:    call t0, __riscv_save_0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    ld ra, -8(gp)
+; RV64-SR-NEXT:    c.addi gp, -8
+; RV64-SR-NEXT:    tail __riscv_restore_0
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -670,9 +790,17 @@ define void @f1_hw() "hw-shadow-stack" {
 ; RV32-ZCMOP:       # %bb.0:
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f1_hw:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    c.jr ra
+;
 ; RV64-ZCMOP-LABEL: f1_hw:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f1_hw:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    c.jr ra
   ret void
 }
 
@@ -700,6 +828,14 @@ define void @f2_hw() "hw-shadow-stack" {
 ; RV64-ZICFISS-LABEL: f2_hw:
 ; RV64-ZICFISS:       # %bb.0:
 ; RV64-ZICFISS-NEXT:    tail foo
+;
+; RV32-SR-LABEL: f2_hw:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    tail foo
+;
+; RV64-SR-LABEL: f2_hw:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    tail foo
   tail call void @foo()
   ret void
 }
@@ -798,6 +934,14 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ; RV32-ZCMOP-NEXT:    sspopchk ra
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f3_hw:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    call t0, __riscv_save_0
+; RV32-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SR-NEXT:    .cfi_offset ra, -4
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    tail __riscv_restore_0
+;
 ; RV64-ZCMOP-LABEL: f3_hw:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.sspush ra
@@ -812,6 +956,14 @@ define i32 @f3_hw() "hw-shadow-stack" {
 ; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-ZCMOP-NEXT:    sspopchk ra
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f3_hw:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    call t0, __riscv_save_0
+; RV64-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV64-SR-NEXT:    .cfi_offset ra, -8
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    tail __riscv_restore_0
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -1040,6 +1192,26 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ; RV32-ZCMOP-NEXT:    sspopchk ra
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f4_hw:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    call t0, __riscv_save_3
+; RV32-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SR-NEXT:    .cfi_offset ra, -4
+; RV32-SR-NEXT:    .cfi_offset s0, -8
+; RV32-SR-NEXT:    .cfi_offset s1, -12
+; RV32-SR-NEXT:    .cfi_offset s2, -16
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s0, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s1, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s2, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.add s0, s1
+; RV32-SR-NEXT:    c.add a0, s2
+; RV32-SR-NEXT:    c.add a0, s0
+; RV32-SR-NEXT:    tail __riscv_restore_3
+;
 ; RV64-ZCMOP-LABEL: f4_hw:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.sspush ra
@@ -1075,6 +1247,26 @@ define i32 @f4_hw() "hw-shadow-stack" {
 ; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-ZCMOP-NEXT:    sspopchk ra
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f4_hw:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    call t0, __riscv_save_3
+; RV64-SR-NEXT:    .cfi_def_cfa_offset 32
+; RV64-SR-NEXT:    .cfi_offset ra, -8
+; RV64-SR-NEXT:    .cfi_offset s0, -16
+; RV64-SR-NEXT:    .cfi_offset s1, -24
+; RV64-SR-NEXT:    .cfi_offset s2, -32
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s0, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s1, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s2, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.add s0, s1
+; RV64-SR-NEXT:    c.add a0, s2
+; RV64-SR-NEXT:    c.addw a0, s0
+; RV64-SR-NEXT:    tail __riscv_restore_3
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
   %res3 = call i32 @bar()
@@ -1155,6 +1347,12 @@ define i32 @f5_hw() "hw-shadow-stack" nounwind {
 ; RV32-ZCMOP-NEXT:    sspopchk ra
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f5_hw:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    call t0, __riscv_save_0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    tail __riscv_restore_0
+;
 ; RV64-ZCMOP-LABEL: f5_hw:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.sspush ra
@@ -1165,6 +1363,12 @@ define i32 @f5_hw() "hw-shadow-stack" nounwind {
 ; RV64-ZCMOP-NEXT:    c.addi sp, 16
 ; RV64-ZCMOP-NEXT:    sspopchk ra
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f5_hw:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    call t0, __riscv_save_0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    tail __riscv_restore_0
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -1199,9 +1403,17 @@ define void @f1_both() "hw-shadow-stack" shadowcallstack {
 ; RV32-ZCMOP:       # %bb.0:
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f1_both:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    c.jr ra
+;
 ; RV64-ZCMOP-LABEL: f1_both:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f1_both:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    c.jr ra
   ret void
 }
 
@@ -1229,6 +1441,14 @@ define void @f2_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-ZICFISS-LABEL: f2_both:
 ; RV64-ZICFISS:       # %bb.0:
 ; RV64-ZICFISS-NEXT:    tail foo
+;
+; RV32-SR-LABEL: f2_both:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    tail foo
+;
+; RV64-SR-LABEL: f2_both:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    tail foo
   tail call void @foo()
   ret void
 }
@@ -1339,6 +1559,14 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ; RV32-ZCMOP-NEXT:    sspopchk ra
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f3_both:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    call t0, __riscv_save_0
+; RV32-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SR-NEXT:    .cfi_offset ra, -4
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    tail __riscv_restore_0
+;
 ; RV64-ZCMOP-LABEL: f3_both:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.sspush ra
@@ -1353,6 +1581,14 @@ define i32 @f3_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-ZCMOP-NEXT:    sspopchk ra
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f3_both:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    call t0, __riscv_save_0
+; RV64-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV64-SR-NEXT:    .cfi_offset ra, -8
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    tail __riscv_restore_0
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
@@ -1593,6 +1829,26 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ; RV32-ZCMOP-NEXT:    sspopchk ra
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f4_both:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    call t0, __riscv_save_3
+; RV32-SR-NEXT:    .cfi_def_cfa_offset 16
+; RV32-SR-NEXT:    .cfi_offset ra, -4
+; RV32-SR-NEXT:    .cfi_offset s0, -8
+; RV32-SR-NEXT:    .cfi_offset s1, -12
+; RV32-SR-NEXT:    .cfi_offset s2, -16
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s0, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s1, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.mv s2, a0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    c.add s0, s1
+; RV32-SR-NEXT:    c.add a0, s2
+; RV32-SR-NEXT:    c.add a0, s0
+; RV32-SR-NEXT:    tail __riscv_restore_3
+;
 ; RV64-ZCMOP-LABEL: f4_both:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.sspush ra
@@ -1628,6 +1884,26 @@ define i32 @f4_both() "hw-shadow-stack" shadowcallstack {
 ; RV64-ZCMOP-NEXT:    .cfi_def_cfa_offset 0
 ; RV64-ZCMOP-NEXT:    sspopchk ra
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f4_both:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    call t0, __riscv_save_3
+; RV64-SR-NEXT:    .cfi_def_cfa_offset 32
+; RV64-SR-NEXT:    .cfi_offset ra, -8
+; RV64-SR-NEXT:    .cfi_offset s0, -16
+; RV64-SR-NEXT:    .cfi_offset s1, -24
+; RV64-SR-NEXT:    .cfi_offset s2, -32
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s0, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s1, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.mv s2, a0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    c.add s0, s1
+; RV64-SR-NEXT:    c.add a0, s2
+; RV64-SR-NEXT:    c.addw a0, s0
+; RV64-SR-NEXT:    tail __riscv_restore_3
   %res1 = call i32 @bar()
   %res2 = call i32 @bar()
   %res3 = call i32 @bar()
@@ -1716,6 +1992,12 @@ define i32 @f5_both() "hw-shadow-stack" shadowcallstack nounwind {
 ; RV32-ZCMOP-NEXT:    sspopchk ra
 ; RV32-ZCMOP-NEXT:    c.jr ra
 ;
+; RV32-SR-LABEL: f5_both:
+; RV32-SR:       # %bb.0:
+; RV32-SR-NEXT:    call t0, __riscv_save_0
+; RV32-SR-NEXT:    call bar
+; RV32-SR-NEXT:    tail __riscv_restore_0
+;
 ; RV64-ZCMOP-LABEL: f5_both:
 ; RV64-ZCMOP:       # %bb.0:
 ; RV64-ZCMOP-NEXT:    c.sspush ra
@@ -1726,6 +2008,12 @@ define i32 @f5_both() "hw-shadow-stack" shadowcallstack nounwind {
 ; RV64-ZCMOP-NEXT:    c.addi sp, 16
 ; RV64-ZCMOP-NEXT:    sspopchk ra
 ; RV64-ZCMOP-NEXT:    c.jr ra
+;
+; RV64-SR-LABEL: f5_both:
+; RV64-SR:       # %bb.0:
+; RV64-SR-NEXT:    call t0, __riscv_save_0
+; RV64-SR-NEXT:    call bar
+; RV64-SR-NEXT:    tail __riscv_restore_0
   %res = call i32 @bar()
   %res1 = add i32 %res, 1
   ret i32 %res
