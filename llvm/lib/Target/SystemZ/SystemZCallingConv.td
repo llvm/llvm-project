@@ -167,6 +167,9 @@ def CSR_SystemZ_XPLINK64_Vector : CalleeSavedRegs<(add CSR_SystemZ_XPLINK64,
 // z/OS XPLINK64 return value calling convention
 //===----------------------------------------------------------------------===//
 def RetCC_SystemZ_XPLINK64 : CallingConv<[
+  // Convert an i128 value to vector
+  CCIfType<[i128], CCCustom<"CC_XPLINK_Int128">>,
+
   // XPLINK64 ABI compliant code widens integral types smaller than i64
   // to i64.
   CCIfType<[i32], CCPromoteToType<i64>>,
@@ -225,6 +228,10 @@ def CC_SystemZ_XPLINK64 : CallingConv<[
   CCIfPtr<CCCustom<"CC_XPLINK64_Pointer">>,
   // long double, can only be passed in GPR2 and GPR3, if available,
   // hence R2Q
+
+  // Convert an i128 value to vector
+  CCIfType<[i128], CCCustom<"CC_XPLINK_Int128">>,
+
   CCIfType<[f128], CCIfArgVarArg<CCCustom<"CC_XPLINK64_Allocate128BitVararg">>>,
   // Non fixed vector arguments are treated in the same way as long
   // doubles.

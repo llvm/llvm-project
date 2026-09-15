@@ -53,7 +53,8 @@ std::string systemz::getSystemZTargetCPU(const ArgList &Args,
   return CLANG_SYSTEMZ_DEFAULT_ARCH;
 }
 
-void systemz::getSystemZTargetFeatures(const Driver &D, const ArgList &Args,
+void systemz::getSystemZTargetFeatures(const Driver &D, const llvm::Triple &T,
+                                       const ArgList &Args,
                                        std::vector<llvm::StringRef> &Features) {
   // -m(no-)htm overrides use of the transactional-execution facility.
   if (Arg *A = Args.getLastArg(options::OPT_mhtm, options::OPT_mno_htm)) {
@@ -62,11 +63,26 @@ void systemz::getSystemZTargetFeatures(const Driver &D, const ArgList &Args,
     else
       Features.push_back("-transactional-execution");
   }
+
   // -m(no-)vx overrides use of the vector facility.
   if (Arg *A = Args.getLastArg(options::OPT_mvx, options::OPT_mno_vx)) {
-    if (A->getOption().matches(options::OPT_mvx))
+
+    // The -mvx requires at least -march=arch11/z13 on z/OS.
+    if (A->getOption().matches(options::OPT_mvx)) {
+      auto Arch = getSystemZTargetCPU(Args, T);
+      if (T.isOSzOS() && llvm::StringSwitch<bool>(Arch)
+                             .Case("arch8", true)
+                             .Case("z10", true)
+                             .Case("arch9", true)
+                             .Case("z196", true)
+                             .Case("arch10", true)
+                             .Case("zEC12", true)
+                             .Default(false)) {
+        D.Diag(diag::err_drv_incompatible_arch)
+            << "-mvx" << "-march=arch11" << Arch;
+      }
       Features.push_back("+vector");
-    else
+    } else
       Features.push_back("-vector");
   }
 
