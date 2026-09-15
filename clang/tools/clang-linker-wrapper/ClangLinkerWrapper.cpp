@@ -487,10 +487,14 @@ fatbinary(ArrayRef<std::tuple<StringRef, StringRef, StringRef>> InputFiles,
     CmdArgs.push_back(
         Args.MakeArgString(Twine("-compression-level=") + Arg->getValue()));
 
+  // The bundle entry ID of the host entry must be a four component triple,
+  // just like the device entries, because `clang-offload-bundler` parses every
+  // entry as `<kind>-<arch>-<vendor>-<os>-<env>`.
   llvm::Triple HostTriple(
       Args.getLastArgValue(OPT_host_triple_EQ, sys::getDefaultTargetTriple()));
   SmallVector<StringRef> Targets = {
-      Saver.save("-targets=host-" + HostTriple.normalize())};
+      Saver.save("-targets=host-" +
+                 normalizeForBundler(HostTriple, /*HasTargetID=*/false))};
   for (const auto &[File, TripleRef, Arch] : InputFiles) {
     std::string NormalizedTriple =
         normalizeForBundler(Triple(TripleRef), !Arch.empty());
