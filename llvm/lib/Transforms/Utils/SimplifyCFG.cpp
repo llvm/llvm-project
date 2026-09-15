@@ -2420,10 +2420,106 @@ static void sinkLastInstruction(ArrayRef<BasicBlock*> Blocks) {
   }
 }
 
+/// Estimate whether commoning \p NumMemOps loads or stores like \p I, which
+/// access distinct addresses, penalizes a later vectorizer. Commoning needs a
+/// pointer PHI, so the result can only be widened as a gather or scatter, while
+/// separate blocks allow one independent masked load or store each.
+static bool sinkingMemOpsPenalizesVectorization(const TargetTransformInfo &TTI,
+                                                Instruction *I,
+                                                unsigned NumMemOps) {
+  bool IsLoad = isa<LoadInst>(I);
+  assert((IsLoad || isa<StoreInst>(I)) && "Expected a load or store");
+  Type *ScalarTy = getLoadStoreType(I);
+  Align Alignment = getLoadStoreAlignment(I);
+  unsigned AS = getLoadStoreAddressSpace(I);
+  Intrinsic::ID MaskedID =
+      IsLoad ? Intrinsic::masked_load : Intrinsic::masked_store;
+  Intrinsic::ID GatherScatterID =
+      IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
+
+  // There is nothing to preserve unless the operations can be widened in place.
+  if (!VectorType::isValidElementType(ScalarTy) ||
+      !(IsLoad ? TTI.isLegalMaskedLoad(ScalarTy, Alignment, AS)
+               : TTI.isLegalMaskedStore(ScalarTy, Alignment, AS)))
+    return false;
+
+  // Without a gather or scatter the commoned operation cannot be widened.
+  if (!(IsLoad ? TTI.isLegalMaskedGather(ScalarTy, Alignment)
+               : TTI.isLegalMaskedScatter(ScalarTy, Alignment)))
+    return true;
+
+  TypeSize EltWidth = I->getDataLayout().getTypeSizeInBits(ScalarTy);
+  if (EltWidth.isScalable() || EltWidth.isZero())
+    return true;
+
+  auto PenalizesForVF = [&](ElementCount VF) {
+    auto *VecTy = VectorType::get(ScalarTy, VF);
+    Value *Ptr = getLoadStorePointerOperand(I);
+    auto *PtrVecTy = VectorType::get(Ptr->getType(), VF);
+    constexpr TargetTransformInfo::TargetCostKind CostKind =
+        TargetTransformInfo::TCK_RecipThroughput;
+
+    InstructionCost GatherScatterCost =
+        TTI.getAddressComputationCost(PtrVecTy, nullptr, nullptr, CostKind) +
+        TTI.getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(GatherScatterID, VecTy, Ptr,
+                                       /*VariableMask=*/true, Alignment, I),
+            CostKind);
+    InstructionCost MaskedCost =
+        TTI.getMemIntrinsicInstrCost(
+            MemIntrinsicCostAttributes(MaskedID, VecTy, Alignment, AS),
+            CostKind) *
+        NumMemOps;
+
+    if (!GatherScatterCost.isValid())
+      return true;
+    if (!MaskedCost.isValid())
+      return false;
+
+    LLVM_DEBUG(dbgs() << "SINK: " << (VF.isScalable() ? "scalable" : "fixed")
+                      << " VF " << VF.getKnownMinValue() << ": "
+                      << (IsLoad ? "gather" : "scatter") << " cost "
+                      << GatherScatterCost << " vs " << NumMemOps << " masked "
+                      << (IsLoad ? "loads " : "stores ") << MaskedCost << "\n");
+    return GatherScatterCost >= MaskedCost;
+  };
+
+  // One vector register's worth of elements, at vscale=1 for scalable vectors.
+  auto VFFrom = [&](TargetTransformInfo::RegisterKind RK,
+                    bool Scalable) -> std::optional<ElementCount> {
+    TypeSize RegWidth = TTI.getRegisterBitWidth(RK);
+    if (RegWidth.isScalable() != Scalable || RegWidth.isZero())
+      return std::nullopt;
+    unsigned NumElts = RegWidth.getKnownMinValue() / EltWidth.getFixedValue();
+    if (NumElts < (Scalable ? 1u : 2u))
+      return std::nullopt;
+    return ElementCount::get(NumElts, Scalable);
+  };
+
+  std::optional<ElementCount> FixedVF =
+      VFFrom(TargetTransformInfo::RGK_FixedWidthVector, /*Scalable=*/false);
+  std::optional<ElementCount> ScalableVF =
+      VFFrom(TargetTransformInfo::RGK_ScalableVector, /*Scalable=*/true);
+
+  // Both forms are legal but no vector factor can be formed, so the target
+  // vectorizes in a way this cannot reason about. Keep the operations separate.
+  if (!FixedVF && !ScalableVF)
+    return true;
+
+  // A vectorizer may pick either kind of vector, so keep the operations
+  // separate if commoning them does not pay off for one of them.
+  bool Penalizes = false;
+  if (FixedVF)
+    Penalizes |= PenalizesForVF(*FixedVF);
+  if (ScalableVF)
+    Penalizes |= PenalizesForVF(*ScalableVF);
+  return Penalizes;
+}
+
 /// Check whether BB's predecessors end with unconditional branches. If it is
 /// true, sink any common code from the predecessors to BB.
-static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
-                                           DomTreeUpdater *DTU) {
+static bool sinkCommonCodeFromPredecessors(BasicBlock *BB, DomTreeUpdater *DTU,
+                                           const TargetTransformInfo &TTI) {
   // We support two situations:
   //   (1) all incoming arcs are unconditional
   //   (2) there are non-unconditional incoming arcs
@@ -2523,10 +2619,29 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
       return false;
     };
 
+    // Check whether the memory operations in \p Insts all access the same
+    // address, so that commoning them needs no PHI for the pointer operand.
+    auto HaveSameMemAddress = [](ArrayRef<Instruction *> Insts) {
+      Value *Ptr = getLoadStorePointerOperand(Insts.front());
+      auto *PtrI = dyn_cast<Instruction>(Ptr);
+      return all_of(drop_begin(Insts), [&](Instruction *I) {
+        Value *OtherPtr = getLoadStorePointerOperand(I);
+        if (OtherPtr == Ptr)
+          return true;
+        auto *OtherPtrI = dyn_cast<Instruction>(OtherPtr);
+        return PtrI && OtherPtrI && PtrI->isIdenticalTo(OtherPtrI);
+      });
+    };
+
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
     auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
+      ArrayRef<Instruction *> Insts = *LRI;
+      if (isa<LoadInst, StoreInst>(Insts[0]) && !HaveSameMemAddress(Insts) &&
+          sinkingMemOpsPenalizesVectorization(TTI, Insts[0], Insts.size()))
+        return false;
+
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
@@ -9319,7 +9434,7 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     return true;
 
   if (SinkCommon && Options.SinkCommonInsts) {
-    if (sinkCommonCodeFromPredecessors(BB, DTU) ||
+    if (sinkCommonCodeFromPredecessors(BB, DTU, TTI) ||
         mergeCompatibleInvokes(BB, DTU)) {
       // sinkCommonCodeFromPredecessors() does not automatically CSE PHI's,
       // so we may now how duplicate PHI's.
