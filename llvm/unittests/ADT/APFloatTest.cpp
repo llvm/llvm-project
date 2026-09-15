@@ -3973,9 +3973,9 @@ TEST(APFloatTest, multiply) {
     {MaxQuad, MaxQuad, "inf", OverflowStatus, APFloat::fcInfinity,
      APFloat::rmTowardPositive},
     {MaxQuad, MaxQuad, "0x1.ffffffffffffffffffffffffffffp+16383",
-     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardNegative},
+     OverflowStatus, APFloat::fcNormal, APFloat::rmTowardNegative},
     {MaxQuad, MaxQuad, "0x1.ffffffffffffffffffffffffffffp+16383",
-     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardZero},
+     OverflowStatus, APFloat::fcNormal, APFloat::rmTowardZero},
     {MaxQuad, MaxQuad, "inf", OverflowStatus, APFloat::fcInfinity,
      APFloat::rmNearestTiesToAway},
 
@@ -4253,11 +4253,11 @@ TEST(APFloatTest, divide) {
     {MaxQuad, NMinQuad, "-inf", OverflowStatus, APFloat::fcInfinity,
      APFloat::rmNearestTiesToEven},
     {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp+16383",
-     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardPositive},
+     OverflowStatus, APFloat::fcNormal, APFloat::rmTowardPositive},
     {MaxQuad, NMinQuad, "-inf", OverflowStatus, APFloat::fcInfinity,
      APFloat::rmTowardNegative},
     {MaxQuad, NMinQuad, "-0x1.ffffffffffffffffffffffffffffp+16383",
-     APFloat::opInexact, APFloat::fcNormal, APFloat::rmTowardZero},
+     OverflowStatus, APFloat::fcNormal, APFloat::rmTowardZero},
     {MaxQuad, NMinQuad, "-inf", OverflowStatus, APFloat::fcInfinity,
      APFloat::rmNearestTiesToAway},
 
@@ -8361,9 +8361,9 @@ TEST(APFloatTest, Float8E4M3FNAdd) {
       {QNaN, FromStr("-448"), "NaN", APFloat::opOK, APFloat::fcNaN},
       {FromStr("448"), FromStr("-32"), "416", APFloat::opOK, APFloat::fcNormal},
       {FromStr("448"), FromStr("0"), "448", APFloat::opOK, APFloat::fcNormal},
-      {FromStr("448"), FromStr("32"), "448", APFloat::opInexact,
+      {FromStr("448"), FromStr("32"), "448", APFloat::opOverflow | APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
-      {FromStr("448"), FromStr("448"), "448", APFloat::opInexact,
+      {FromStr("448"), FromStr("448"), "448", APFloat::opOverflow | APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
   };
 
@@ -8706,7 +8706,7 @@ TEST(APFloatTest, Float8E5M2FNUZAdd) {
        APFloat::fcNormal},
       {FromStr("57344"), FromStr("4096"), "57344", APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
-      {FromStr("57344"), FromStr("57344"), "57344", APFloat::opInexact,
+      {FromStr("57344"), FromStr("57344"), "57344", APFloat::opOverflow | APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
   };
 
@@ -8902,9 +8902,9 @@ TEST(APFloatTest, Float8E4M3FNUZAdd) {
       {QNaN, FromStr("-240"), "NaN", APFloat::opOK, APFloat::fcNaN},
       {FromStr("240"), FromStr("-16"), "224", APFloat::opOK, APFloat::fcNormal},
       {FromStr("240"), FromStr("0"), "240", APFloat::opOK, APFloat::fcNormal},
-      {FromStr("240"), FromStr("32"), "240", APFloat::opInexact,
+      {FromStr("240"), FromStr("32"), "240", APFloat::opOverflow | APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
-      {FromStr("240"), FromStr("240"), "240", APFloat::opInexact,
+      {FromStr("240"), FromStr("240"), "240", APFloat::opOverflow | APFloat::opInexact,
        APFloat::fcNormal, APFloat::rmTowardZero},
   };
 
