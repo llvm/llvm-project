@@ -64283,6 +64283,14 @@ bool X86TargetLowering::isTypeDesirableForOp(unsigned Opc, EVT VT) const {
   if ((Opc == ISD::MUL || Opc == ISD::SHL) && VT == MVT::i8)
     return false;
 
+  // There is no 8-bit CMOV, so with CMOV available LowerSELECT widens an i8
+  // select to i32 through ANY_EXTENDs, which are not free (they lower to MOVZX
+  // to avoid partial register stalls). Narrowing a select to i8 therefore only
+  // adds instructions. Without CMOV the select becomes a branch instead and i8
+  // operands are fine, so keep it desirable there.
+  if (Opc == ISD::SELECT && VT == MVT::i8 && Subtarget.canUseCMOV())
+    return false;
+
   // i16 instruction encodings are longer and some i16 instructions are slow,
   // so those are not desirable.
   if (VT == MVT::i16) {

@@ -17772,8 +17772,15 @@ SDValue DAGCombiner::visitTRUNCATE(SDNode *N) {
   }
 
   // trunc (select c, a, b) -> select c, (trunc a), (trunc b)
+  // Do not narrow to a legal type the target considers undesirable for a
+  // select (e.g. i8 on X86, which has no 8-bit CMOV and would widen it again),
+  // unless both select operands are constants: then no truncate of a computed
+  // value is introduced and the narrow select is never worse.
   if (N0.getOpcode() == ISD::SELECT && N0.hasOneUse() &&
-      TLI.isTruncateFree(SrcVT, VT)) {
+      TLI.isTruncateFree(SrcVT, VT) &&
+      (!TLI.isTypeLegal(VT) || TLI.isTypeDesirableForOp(ISD::SELECT, VT) ||
+       (isConstantOrConstantVector(N0.getOperand(1), /*NoOpaques=*/true) &&
+        isConstantOrConstantVector(N0.getOperand(2), /*NoOpaques=*/true)))) {
     if (!LegalOperations ||
         (TLI.isOperationLegal(ISD::SELECT, SrcVT) &&
          TLI.isNarrowingProfitable(N0.getNode(), SrcVT, VT))) {

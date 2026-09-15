@@ -16,11 +16,10 @@ define i8 @trunc_select_add_i64(i64 %x, i64 %y) nounwind {
 ; X64-NEXT:    xorl $63, %ecx
 ; X64-NEXT:    bsrq %rsi, %rax
 ; X64-NEXT:    xorl $63, %eax
-; X64-NEXT:    orb $64, %al
+; X64-NEXT:    orl $64, %eax
 ; X64-NEXT:    testq %rdi, %rdi
-; X64-NEXT:    movzbl %al, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
-; X64-NEXT:    # kill: def $al killed $al killed $eax
+; X64-NEXT:    cmovneq %rcx, %rax
+; X64-NEXT:    # kill: def $al killed $al killed $rax
 ; X64-NEXT:    retq
 ;
 ; X86-CMOV-LABEL: trunc_select_add_i64:
@@ -114,24 +113,22 @@ define i8 @trunc_select_add_i32(i32 %x, i32 %y) nounwind {
 ; X64-NEXT:    xorl $31, %ecx
 ; X64-NEXT:    bsrl %esi, %eax
 ; X64-NEXT:    xorl $31, %eax
-; X64-NEXT:    orb $32, %al
+; X64-NEXT:    orl $32, %eax
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-CMOV-LABEL: trunc_select_add_i32:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-CMOV-NEXT:    bsrl %eax, %ecx
-; X86-CMOV-NEXT:    xorl $31, %ecx
-; X86-CMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %edx
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-CMOV-NEXT:    bsrl %ecx, %edx
 ; X86-CMOV-NEXT:    xorl $31, %edx
-; X86-CMOV-NEXT:    orb $32, %dl
-; X86-CMOV-NEXT:    testl %eax, %eax
-; X86-CMOV-NEXT:    movzbl %dl, %eax
-; X86-CMOV-NEXT:    cmovnel %ecx, %eax
+; X86-CMOV-NEXT:    bsrl {{[0-9]+}}(%esp), %eax
+; X86-CMOV-NEXT:    xorl $31, %eax
+; X86-CMOV-NEXT:    orl $32, %eax
+; X86-CMOV-NEXT:    testl %ecx, %ecx
+; X86-CMOV-NEXT:    cmovnel %edx, %eax
 ; X86-CMOV-NEXT:    # kill: def $al killed $al killed $eax
 ; X86-CMOV-NEXT:    retl
 ;
@@ -198,20 +195,18 @@ define i8 @trunc_select_constants(i32 %x) nounwind {
 define i8 @trunc_select_one_constant(i32 %x, i32 %y) nounwind {
 ; X64-LABEL: trunc_select_one_constant:
 ; X64:       # %bb.0:
-; X64-NEXT:    orb $64, %sil
+; X64-NEXT:    orl $64, %esi
 ; X64-NEXT:    testl %edi, %edi
-; X64-NEXT:    movzbl %sil, %ecx
 ; X64-NEXT:    movl $11, %eax
-; X64-NEXT:    cmovnel %ecx, %eax
+; X64-NEXT:    cmovnel %esi, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;
 ; X86-CMOV-LABEL: trunc_select_one_constant:
 ; X86-CMOV:       # %bb.0:
-; X86-CMOV-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-CMOV-NEXT:    orb $64, %al
+; X86-CMOV-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-CMOV-NEXT:    orl $64, %ecx
 ; X86-CMOV-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
-; X86-CMOV-NEXT:    movzbl %al, %ecx
 ; X86-CMOV-NEXT:    movl $11, %eax
 ; X86-CMOV-NEXT:    cmovnel %ecx, %eax
 ; X86-CMOV-NEXT:    # kill: def $al killed $al killed $eax
