@@ -268,12 +268,21 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
                               /*IsMutable=*/false, /*IsVolatile=*/false);
   };
 
+  bool HasPtrField = false;
   // Reserve space for base classes.
-  Record::BaseList Bases;
-  Record::VirtualBaseList VirtBases;
+  unsigned NumBases = 0;
+  Record::Base *Bases = nullptr;
+  unsigned NumVBases = 0;
+  Record::Base *VBases = nullptr;
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
-    Bases.reserve(CD->getNumBases());
+    NumBases = CD->getNumBases();
+    // NB: This overallocates by all explicitly specified virtual bases.
+    if (NumBases != 0)
+      Bases = Allocate<Record::Base>(NumBases);
+
+    unsigned I = 0;
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
+      assert(I <= NumBases);
       if (Spec.isVirtual())
         continue;
 
@@ -288,11 +297,20 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       BaseSize += align(sizeof(InlineDescriptor));
-      Bases.emplace_back(BD, Desc, BR, BaseSize);
+      new (&Bases[I]) Record::Base(BD, Desc, BR, BaseSize);
       BaseSize += align(BR->getSize());
+      HasPtrField |= BR->hasPtrField();
+      ++I;
     }
+    // Make sure we don't include the virtual base specifiers we skipped above.
+    NumBases = I;
 
+    I = 0;
+    NumVBases = CD->getNumVBases();
+    if (NumVBases != 0)
+      VBases = Allocate<Record::Base>(NumVBases);
     for (const CXXBaseSpecifier &Spec : CD->vbases()) {
+      assert(I <= NumVBases);
       const auto *BD = Spec.getType()->castAsCXXRecordDecl();
       const Record *BR = getOrCreateRecord(BD);
 
@@ -301,15 +319,20 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       VirtSize += align(sizeof(InlineDescriptor));
-      VirtBases.emplace_back(BD, Desc, BR, VirtSize);
+      new (&VBases[I]) Record::Base(BD, Desc, BR, VirtSize);
       VirtSize += align(BR->getSize());
+      HasPtrField |= BR->hasPtrField();
+      ++I;
     }
+    assert(I == NumVBases);
   }
 
   // Reserve space for fields.
-  Record::FieldList Fields;
-  Fields.reserve(RD->getNumFields());
-  bool HasPtrField = false;
+  unsigned NumFields = RD->getNumFields();
+  Record::Field *Fields = nullptr;
+  if (NumFields != 0)
+    Fields = Allocate<Record::Field>(NumFields);
+  unsigned I = 0;
   for (const FieldDecl *FD : RD->fields()) {
     FD = FD->getFirstDecl();
     // Note that we DO create fields and descriptors
@@ -340,12 +363,18 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     } else {
       Desc = allocateDescriptor(FD);
     }
-    Fields.emplace_back(FD, Desc, BaseSize, T);
+    assert(Desc);
+    new (&Fields[I]) Record::Field(FD, Desc, BaseSize, T);
     BaseSize += align(Desc->getAllocSize());
+    ++I;
   }
 
+  // Adjust virtual base offsets to account for base size.
+  for (unsigned I = 0; I != NumVBases; ++I)
+    VBases[I].Offset += BaseSize;
+
   Record *R = new (Allocator)
-      Record(RD, std::move(Bases), std::move(Fields), std::move(VirtBases),
+      Record(RD, {Bases, NumBases}, {Fields, NumFields}, {VBases, NumVBases},
              VirtSize, BaseSize, HasPtrField);
   Records[RD] = R;
   return R;
