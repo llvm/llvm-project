@@ -29,21 +29,30 @@ public:
 
   AddedStructorArgCounts
   buildStructorSignature(GlobalDecl gd,
-                         llvm::SmallVectorImpl<CanQualType> &argTys) override {
+                         SmallVectorImpl<CanQualType> &argTys) override {
+    cgm.errorNYI(gd.getDecl()->getSourceRange(),
+                 "buildStructorSignature: MSVC ABI");
     return AddedStructorArgCounts{};
   }
 
   void addImplicitStructorParams(CIRGenFunction &cgf, QualType &resTy,
-                                 FunctionArgList &params) override {}
+                                 FunctionArgList &params) override {
+    cgf.cgm.errorNYI(cgf.curGD.getDecl()->getSourceRange(),
+                     "addImplicitStructorParams: MSVC ABI");
+  }
 
   void emitInstanceFunctionProlog(SourceLocation loc,
-                                  CIRGenFunction &cgf) override {}
+                                  CIRGenFunction &cgf) override {
+    cgf.cgm.errorNYI(loc, "emitInstanceFunctionProlog: MSVC ABI");
+  }
 
   AddedStructorArgs getImplicitConstructorArgs(CIRGenFunction &cgf,
                                                const CXXConstructorDecl *d,
                                                CXXCtorType type,
                                                bool forVirtualBase,
                                                bool delegating) override {
+    cgf.cgm.errorNYI(d->getSourceRange(),
+                     "getImplicitConstructorArgs: MSVC ABI");
     return AddedStructorArgs{};
   }
 
@@ -52,6 +61,8 @@ public:
                                             CXXDtorType type,
                                             bool forVirtualBase,
                                             bool delegating) override {
+    cgf.cgm.errorNYI(dd->getSourceRange(),
+                     "getCXXDestructorImplicitParam: MSVC ABI");
     return nullptr;
   }
 
@@ -91,6 +102,7 @@ public:
 
   size_t getSrcArgforCopyCtor(const CXXConstructorDecl *cd,
                               FunctionArgList &args) const override {
+    cgm.errorNYI(cd->getSourceRange(), "getSrcArgforCopyCtor: MSVC ABI");
     assert(args.size() >= 2 &&
            "expected the arglist to have at least two args!");
     // The 'most_derived' parameter goes second if the ctor is variadic and
@@ -103,6 +115,8 @@ public:
 
   const CXXRecordDecl *
   getThisArgumentTypeForMethod(const CXXMethodDecl *md) override {
+    cgm.errorNYI(md->getSourceRange(),
+                 "getThisArgumentTypeForMethod: MSVC ABI");
     return md->getParent();
   }
 
@@ -110,11 +124,14 @@ public:
                                                    GlobalDecl gd,
                                                    Address thisAddr,
                                                    bool virtualCall) override {
+    cgf.cgm.errorNYI(gd.getDecl()->getSourceRange(),
+                     "adjustThisArgumentForVirtualFunctionCall: MSVC ABI");
     return thisAddr;
   }
 
   bool isVirtualOffsetNeededForVTableField(CIRGenFunction &cgf,
                                            CIRGenFunction::VPtr vptr) override {
+    cgf.cgm.errorNYI("isVirtualOffsetNeededForVTableField: MSVC ABI");
     return false;
   }
 
@@ -152,18 +169,15 @@ public:
   }
 
   void emitVirtualInheritanceTables(const CXXRecordDecl *rd) override {
-    if (rd->getNumVBases())
-      cgm.errorNYI(rd->getSourceRange(),
-                   "emitVirtualInheritanceTables: MSVC VBTables");
+    cgm.errorNYI(rd->getSourceRange(),
+                 "emitVirtualInheritanceTables: MSVC ABI");
   }
 
   void
   initializeHiddenVirtualInheritanceMembers(CIRGenFunction &cgf,
                                             const CXXRecordDecl *rd) override {
-    if (rd->getNumVBases())
-      cgf.cgm.errorNYI(
-          rd->getSourceRange(),
-          "initializeHiddenVirtualInheritanceMembers: vbptr stores");
+    cgf.cgm.errorNYI(rd->getSourceRange(),
+                     "initializeHiddenVirtualInheritanceMembers: MSVC ABI");
   }
 
   mlir::Value
@@ -183,12 +197,14 @@ public:
   mlir::Value performThisAdjustment(CIRGenFunction &cgf, Address thisAddr,
                                     const CXXRecordDecl *unadjustedClass,
                                     const ThunkInfo &ti) override {
+    cgf.cgm.errorNYI("performThisAdjustment: MSVC ABI");
     return thisAddr.emitRawPointer();
   }
 
   mlir::Value performReturnAdjustment(CIRGenFunction &cgf, Address ret,
                                       const CXXRecordDecl *unadjustedClass,
                                       const ReturnAdjustment &ra) override {
+    cgf.cgm.errorNYI("performReturnAdjustment: MSVC ABI");
     return ret.emitRawPointer();
   }
 
@@ -197,6 +213,8 @@ public:
   }
 
   bool doStructorsInitializeVPtrs(const CXXRecordDecl *vtableClass) override {
+    cgm.errorNYI(vtableClass->getSourceRange(),
+                 "doStructorsInitializeVPtrs: MSVC ABI");
     return false;
   }
 
@@ -204,24 +222,31 @@ public:
 
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
                               CXXDtorType dt) const override {
+    cgm.errorNYI(dtor->getSourceRange(), "useThunkForDtorVariant: MSVC ABI");
     return false;
   }
 
   void setThunkLinkage(cir::FuncOp thunk, bool forVTable, GlobalDecl gd,
                        bool returnAdjustment) override {
-    thunk.setLinkage(cir::GlobalLinkageKind::LinkOnceODRLinkage);
+    cgm.errorNYI(gd.getDecl()->getSourceRange(),
+                 "setThunkLinkage: MSVC ABI");
   }
 
-  llvm::StringRef getPureVirtualCallName() override { return "_purecall"; }
-  llvm::StringRef getDeletedVirtualCallName() override { return "_purecall"; }
+  StringRef getPureVirtualCallName() override { return "_purecall"; }
+  StringRef getDeletedVirtualCallName() override { return "_purecall"; }
 
   bool isZeroInitializable(const MemberPointerType *mpt) override {
+    cgm.errorNYI("isZeroInitializable: MSVC ABI");
     return true;
   }
 
-  bool requiresArrayCookie(const CXXNewExpr *e) override { return false; }
+  bool requiresArrayCookie(const CXXNewExpr *e) override {
+    cgm.errorNYI(e->getSourceRange(), "requiresArrayCookie: MSVC ABI");
+    return false;
+  }
 
   CharUnits getArrayCookieSizeImpl(QualType elementType) override {
+    cgm.errorNYI("getArrayCookieSizeImpl: MSVC ABI");
     return CharUnits::Zero();
   }
 
@@ -232,7 +257,10 @@ public:
     return newPtr;
   }
 
-  bool shouldTypeidBeNullChecked(QualType srcTy) override { return false; }
+  bool shouldTypeidBeNullChecked(QualType srcTy) override {
+    cgm.errorNYI("shouldTypeidBeNullChecked: MSVC ABI");
+    return false;
+  }
 
   mlir::Value emitTypeid(CIRGenFunction &cgf, QualType srcTy, Address thisPtr,
                          mlir::Type typeInfoPtrTy) override {
@@ -265,6 +293,7 @@ public:
   }
 
   CatchTypeInfo getCatchAllTypeInfo() override {
+    cgm.errorNYI("getCatchAllTypeInfo: MSVC ABI");
     return CatchTypeInfo{nullptr, 0};
   }
 
@@ -284,7 +313,9 @@ public:
   }
 
   void registerGlobalDtor(const VarDecl *vd, cir::FuncOp dtor,
-                          mlir::Value addr) override {}
+                          mlir::Value addr) override {
+    cgm.errorNYI(vd->getSourceRange(), "registerGlobalDtor: MSVC ABI");
+  }
 };
 
 } // namespace
