@@ -1,7 +1,7 @@
 ; RUN: opt -thinlto-bc -thinlto-split-lto-unit -o %t %s
 ; RUN: llvm-modextract -b -n 1 -o - %t | llvm-dis | FileCheck %s
 
-; TODO: Check that cfi.functions metadata encodes log2 of counters in the upper 6 bits
+; Check that cfi.functions metadata encodes log2 of counters in the upper 6 bits
 ; of the linkage operand, including CFG block frequency hotness.
 ; Note: i8 -2 ((63 << 2) | 2) and i8 126 ((31 << 2) | 2) are unreachable because
 ; WeakDeclaration (2) requires extern_weak which cannot have profile data.
@@ -9,17 +9,17 @@
 ; linkage 3 is unused.
 
 ; CHECK: !"f_nocount", i8 0
-; CHECK: !"f_entry_count", i8 0
-; CHECK: !"f_cfg_hot", i8 0
+; CHECK: !"f_entry_count", i8 36
+; CHECK: !"f_cfg_hot", i8 52
 ; CHECK: !"f_zero", i8 0
 ; CHECK: !"f_one", i8 0
-; CHECK: !"f_two", i8 0
-; CHECK: !"f_125", i8 1
-; CHECK: !"f_128", i8 0
-; CHECK: !"f_max", i8 0
-; CHECK: !"f_non_canonical_max", i8 1
-; CHECK: !"f_hot_attr", i8 0
-; CHECK: !"f_non_canonical_hot", i8 1
+; CHECK: !"f_two", i8 4
+; CHECK: !"f_125", i8 125
+; CHECK: !"f_128", i8 -128
+; CHECK: !"f_max", i8 -4
+; CHECK: !"f_non_canonical_max", i8 -3
+; CHECK: !"f_hot_attr", i8 -8
+; CHECK: !"f_non_canonical_hot", i8 -7
 ; CHECK: !"f_unknown", i8 0
 ; CHECK: !"f_decl", i8 1
 ; CHECK: !"f_weak_decl", i8 2

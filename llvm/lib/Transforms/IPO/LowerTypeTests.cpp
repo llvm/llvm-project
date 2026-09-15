@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
+#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -367,8 +368,48 @@ enum class CfiFunctionLinkage : uint8_t {
 
 } // namespace
 
-static void createCfiFunctionsMetadata(Module &DestM,
-                                       ArrayRef<GlobalValue *> CfiFunctions) {
+static CfiFunctionLinkage decodeCfiFunctionLinkage(uint8_t Encoded) {
+  return static_cast<CfiFunctionLinkage>(Encoded & 0x3);
+}
+
+static uint64_t decodeCfiFunctionCount(uint8_t Encoded) {
+  uint8_t Log2 = Encoded >> 2;
+  return Log2 ? (uint64_t(1) << Log2) : 0;
+}
+
+static uint8_t encodeCfiFunctionLinkage(CfiFunctionLinkage Linkage,
+                                        uint64_t MaxCount) {
+  uint8_t Log2 = MaxCount ? std::min<unsigned>(63, Log2_64(MaxCount)) : 0;
+  uint8_t Encoded = (Log2 << 2) | (static_cast<uint8_t>(Linkage) & 0x3);
+  assert(decodeCfiFunctionLinkage(Encoded) == Linkage);
+  assert(decodeCfiFunctionCount(Encoded) == (Log2 ? (uint64_t(1) << Log2) : 0));
+  return Encoded;
+}
+
+// Returns the maximum execution count for F across its entry count and basic
+// block counts. Placing the hottest function (i.e. the function with the
+// hottest basic block) as the last jump table entry makes it more likely to
+// benefit from the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks
+// the jump table into the target's section, which is likely hot.
+static uint64_t
+getMaxCount(Function &F,
+            function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  if (F.hasFnAttribute(Attribute::Hot))
+    return std::numeric_limits<int64_t>::max();
+  uint64_t MaxCount = F.getEntryCount().value_or(0);
+  if (!F.isDeclaration()) {
+    const BlockFrequencyInfo &BFI = BFIGetter(F);
+    for (const BasicBlock &BB : F) {
+      if (auto Count = BFI.getBlockProfileCount(&BB))
+        MaxCount = std::max(MaxCount, *Count);
+    }
+  }
+  return MaxCount;
+}
+
+static void createCfiFunctionsMetadata(
+    Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
   auto &Ctx = DestM.getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
@@ -383,8 +424,12 @@ static void createCfiFunctionsMetadata(Module &DestM,
       Linkage = CfiFunctionLinkage::Definition;
     else if (F.hasExternalWeakLinkage())
       Linkage = CfiFunctionLinkage::WeakDeclaration;
-    Elts.push_back(ConstantAsMetadata::get(llvm::ConstantInt::get(
-        Type::getInt8Ty(Ctx), static_cast<uint8_t>(Linkage))));
+
+    uint8_t EncodedLinkage =
+        encodeCfiFunctionLinkage(Linkage, getMaxCount(F, BFIGetter));
+
+    Elts.push_back(ConstantAsMetadata::get(
+        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), EncodedLinkage)));
     GlobalValue::GUID GUID = V->getGUID();
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
@@ -442,9 +487,10 @@ static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
   }
 }
 
-void lowertypetests::createCfiMetadata(Module &DestM, const Module &SrcM,
-                                       ArrayRef<GlobalValue *> CfiFunctions) {
-  createCfiFunctionsMetadata(DestM, CfiFunctions);
+void lowertypetests::createCfiMetadata(
+    Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
+  createCfiFunctionsMetadata(DestM, CfiFunctions, BFIGetter);
   createCfiAliasesMetadata(DestM, SrcM);
   createCfiSymversMetadata(DestM, SrcM);
 }
@@ -2438,7 +2484,7 @@ bool LowerTypeTestsModule::lower() {
         assert(FuncMD->getNumOperands() >= 2);
         StringRef FunctionName =
             cast<MDString>(FuncMD->getOperand(0))->getString();
-        CfiFunctionLinkage Linkage = static_cast<CfiFunctionLinkage>(
+        CfiFunctionLinkage Linkage = decodeCfiFunctionLinkage(
             cast<ConstantAsMetadata>(FuncMD->getOperand(1))
                 ->getValue()
                 ->getUniqueInteger()
