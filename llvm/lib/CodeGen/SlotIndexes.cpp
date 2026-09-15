@@ -174,7 +174,7 @@ void SlotIndexes::removeMBBFromMaps(MachineBasicBlock &MBB) {
   SlotIndex EndIdx = MBBRanges[Num].second;
 
   // Give MBB's slot range to its layout predecessor so blocks stay contiguous.
-  auto PrevMBB = std::prev(MachineFunction::iterator(&MBB));
+  auto PrevMBB = std::prev(MBB.getIterator());
   MBBRanges[PrevMBB->getAnalysisNumber()].second = EndIdx;
 
   // Drop MBB's index -> MBB entry, which would dangle once MBB is erased.
