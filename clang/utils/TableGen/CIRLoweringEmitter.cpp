@@ -239,6 +239,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
     } else {
       Code << "    mlir::Type resTy = "
               "typeConverter->convertType(op.getType());\n";
+      Code << "    if (!resTy)\n";
+      Code << "      return mlir::failure();\n";
       Code << "    rewriter.replaceOpWithNewOp<mlir::LLVM::" << LLVMOp
            << ">(op, mlir::TypeRange{resTy}, adaptor.getOperands(), "
            << Properties << ");\n";
