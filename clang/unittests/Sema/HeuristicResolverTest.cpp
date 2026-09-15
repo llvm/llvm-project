@@ -627,6 +627,27 @@ TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgument_ReturnType) {
       cxxMethodDecl(hasName("foo")).bind("output"));
 }
 
+TEST(HeuristicResolver, MemberExpr_MemberTypedefWithoutDefaultArgument) {
+  std::string Code = R"cpp(
+    template <typename T>
+    struct S {
+      typedef T type;
+    };
+    template <typename T>
+    void bar() {
+      typename S<T>::type t;
+      t.foo();
+    }
+  )cpp";
+  // Test that "foo" in "t.foo()" does not resolve: "S<T>::type" names S's own
+  // parameter T, which has no default argument to fall back on, and nothing
+  // else says what T will be. This is the member-typedef analogue of
+  // `std::vector<T>::value_type`.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
+}
+
 TEST(HeuristicResolver, MemberExpr_CallOfUsingDeclFromDependentBase) {
   std::string Code = R"cpp(
     struct Result {
@@ -652,6 +673,41 @@ TEST(HeuristicResolver, MemberExpr_CallOfUsingDeclFromDependentBase) {
       Code, &HeuristicResolver::resolveMemberExpr,
       cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"),
       cxxMethodDecl(hasName("foo")).bind("output"));
+}
+
+TEST(HeuristicResolver, MemberExpr_DefaultTemplateArgumentNotSeenByBase) {
+  std::string Code = R"cpp(
+    struct Result {
+      void foo();
+    };
+    template <typename T, typename A>
+    struct Base {
+      typedef A type;
+      type get();
+    };
+    template <typename T, typename A = Result>
+    struct Derived : Base<T, A> {
+      typedef Base<T, A> _Base;
+      using _Base::get;
+    };
+    template <typename T>
+    void bar(Derived<T> d) {
+      d.get().foo();
+    }
+  )cpp";
+  // Test that "foo" in "d.get().foo()" does not resolve. Looking "get" up in
+  // Base's primary template discards the arguments Derived passes to Base, so
+  // the return type is Base's own "A", which -- unlike Derived's -- has no
+  // default argument to fall back on. Resolving this would require propagating
+  // template arguments to base classes, which this file's "look the name up in
+  // the primary template" approach does not do.
+  //
+  // This mirrors libstdc++, where vector's allocator parameter is defaulted but
+  // _Vector_base's is not, and is why completion after `v.get_allocator().`
+  // does not work even though `vector<T>::allocator_type` itself resolves.
+  expectResolution(
+      Code, &HeuristicResolver::resolveMemberExpr,
+      cxxDependentScopeMemberExpr(hasMemberName("foo")).bind("input"));
 }
 
 TEST(HeuristicResolver, MemberExpr_DefaultTemplateTemplateArgument) {
