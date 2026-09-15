@@ -458,11 +458,11 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       ScStart = Start;
       // The highest address for the type saturates; adding EltSize to it would
       // wrap to the start of the address space.
-      ScEnd =
-          LastAddr
-              ? SE->getAddExpr(LastAddr, EltSizeSCEV)
-              : SE->getSCEV(ConstantExpr::getIntToPtr(
-                    Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
+      if (LastAddr)
+        ScEnd = SE->getAddExpr(LastAddr, EltSizeSCEV);
+      else
+        ScEnd = SE->getSCEV(ConstantExpr::getIntToPtr(
+            Constant::getAllOnesValue(DL.getIndexType(PtrTy)), PtrTy));
     } else {
       if (!LastAddr)
         return {SE->getCouldNotCompute(), SE->getCouldNotCompute()};
@@ -1220,7 +1220,8 @@ static void findForkedSCEVs(
     return get<1>(S);
   };
 
-  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L, const SCEV *R) {
+  auto GetBinOpExpr = [&SE](unsigned Opcode, const SCEV *L,
+                            const SCEV *R) -> const SCEV * {
     switch (Opcode) {
     case Instruction::Add:
       return SE->getAddExpr(L, R);
@@ -2393,8 +2394,20 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // Negative distances are not plausible dependencies.
   if (SE.isKnownNonPositive(Dist)) {
     if (SE.isKnownNonNegative(Dist)) {
-      if (HasSameSize) {
-        // Write to the same location with the same size.
+      // Equal-sized accesses to the same location are forward.
+      if (HasSameSize)
+        return Dependence::Forward;
+
+      if (CommonStride) {
+        // For mixed sizes, CommonStride is asserted to cover both accesses when
+        // computed in getDependenceDistanceStrideAndSize, so different
+        // iterations cannot overlap.
+        [[maybe_unused]] uint64_t ASz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[AIdx]));
+        [[maybe_unused]] uint64_t BSz =
+            DL.getTypeAllocSize(getLoadStoreType(InstMap[BIdx]));
+        assert(*CommonStride >= std::max(ASz, BSz) &&
+               "Invariant from getDependenceDistanceStrideAndSize broken!");
         return Dependence::Forward;
       }
       LLVM_DEBUG(dbgs() << "LAA: possibly zero dependence difference but "

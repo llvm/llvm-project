@@ -13,6 +13,15 @@
 ! RUN: %flang -c -fdo-concurrent-to-openmp=host %s 2>&1 \
 ! RUN: | FileCheck %s --check-prefix=OPT
 
+! RUN: %flang -c -fno-openmp -fdo-concurrent-to-openmp=host %s 2>&1 \
+! RUN: | FileCheck %s --check-prefix=OPT
+
+! RUN: %flang -c -fopenmp-simd -fdo-concurrent-to-openmp=host %s 2>&1 \
+! RUN: | FileCheck %s --check-prefix=OPT
+
+! RUN: %flang -c -fno-openmp -fopenmp-simd -fdo-concurrent-to-openmp=host %s 2>&1 \
+! RUN: | FileCheck %s --check-prefix=OPT
+
 ! OPT: warning: OpenMP is required for lowering `do concurrent` loops to OpenMP.
 ! OPT-SAME:     Enable OpenMP using `-fopenmp`.
 

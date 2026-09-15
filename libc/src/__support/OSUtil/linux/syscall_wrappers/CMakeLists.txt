@@ -410,10 +410,12 @@ add_header_library(
   DEPENDS
     libc.src.__support.OSUtil.osutil
     libc.src.__support.OSUtil.linux.syscall_wrappers.rt_sigprocmask
+    libc.src.__support.OSUtil.linux.syscall_wrappers.tgkill
     libc.src.__support.common
     libc.src.__support.error_or
     libc.src.__support.macros.config
     libc.hdr.signal_macros
+    libc.hdr.types.pid_t
     libc.hdr.types.sigset_t
     libc.include.sys_syscall
 )
@@ -464,7 +466,6 @@ add_header_library(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.stdint_proxy
-    libc.hdr.types.off_t
     libc.include.sys_syscall
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
@@ -1257,6 +1258,19 @@ add_header_library(
     setpriority.h
   DEPENDS
     libc.hdr.types.id_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.include.sys_syscall
+)
+
+add_header_library(
+  tgkill
+  HDRS
+    tgkill.h
+  DEPENDS
+    libc.hdr.types.pid_t
     libc.src.__support.OSUtil.osutil
     libc.src.__support.common
     libc.src.__support.error_or

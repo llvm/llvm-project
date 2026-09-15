@@ -455,7 +455,6 @@ FUNCTION_PASS("gvn-hoist", GVNHoistPass())
 FUNCTION_PASS("gvn-sink", GVNSinkPass())
 FUNCTION_PASS("helloworld", HelloWorldPass())
 FUNCTION_PASS("indirectbr-expand", IndirectBrExpandPass(*TM))
-FUNCTION_PASS("infer-address-spaces", InferAddressSpacesPass())
 FUNCTION_PASS("infer-alignment", InferAlignmentPass())
 FUNCTION_PASS("inject-tli-mappings", InjectTLIMappings())
 FUNCTION_PASS("inline-asm-prepare", InlineAsmPreparePass())
@@ -585,6 +584,12 @@ FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
+FUNCTION_PASS_WITH_PARAMS(
+    "infer-address-spaces", "InferAddressSpacesPass",
+    [](bool AssumeDefaultIsFlatAddressSpace) {
+      return InferAddressSpacesPass(AssumeDefaultIsFlatAddressSpace);
+    },
+    parseInferAddressSpacesPassOptions, "assume-default-is-flat-addrspace")
 FUNCTION_PASS_WITH_PARAMS(
     "drop-unnecessary-assumes", "DropUnnecessaryAssumesPass",
     [](bool DropDereferenceable) { return DropUnnecessaryAssumesPass(DropDereferenceable); },
