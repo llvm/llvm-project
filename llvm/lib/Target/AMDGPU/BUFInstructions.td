@@ -114,7 +114,7 @@ class MTBUF_Pseudo <string opName, dag outs, dag ins,
   BUF_Pseudo <opName, outs, ins, asmOps, pattern> {
 
   Instruction BaseOpcode = !cast<Instruction>(MTBUFGetBaseOpcode<NAME>.ret);
-  let MTBUF = 1;
+  let Format = AMDGPUInstrFormat.MTBUF;
 }
 
 class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
@@ -125,7 +125,6 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   let VM_CNT = 1;
   let EXP_CNT = 1;
-  let MTBUF = 1;
 
   // copy relevant pseudo op flags
   let UseNamedOperandTable = ps.UseNamedOperandTable;
@@ -133,6 +132,8 @@ class MTBUF_Real <MTBUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let OtherPredicates    = ps.OtherPredicates;
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let Constraints        = ps.Constraints;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let SchedRW            = ps.SchedRW;
   let mayLoad            = ps.mayLoad;
@@ -329,7 +330,7 @@ class MUBUF_Pseudo <string opName, dag outs, dag ins,
   BUF_Pseudo <opName, outs, ins, asmOps, pattern> {
 
   Instruction BaseOpcode = !cast<Instruction>(MUBUFGetBaseOpcode<NAME>.ret);
-  let MUBUF = 1;
+  let Format = AMDGPUInstrFormat.MUBUF;
   let AsmMatchConverter = "cvtMubuf";
   let usesCustomInserter = 1;
 }
@@ -342,13 +343,14 @@ class MUBUF_Real <MUBUF_Pseudo ps, string real_name = ps.Mnemonic> :
 
   let VM_CNT = 1;
   let EXP_CNT = 1;
-  let MUBUF = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate   = ps.SubtargetPredicate;
   let AsmMatchConverter    = ps.AsmMatchConverter;
   let OtherPredicates      = ps.OtherPredicates;
   let Constraints          = ps.Constraints;
+  let Format               = ps.Format;
+  let FormatModifier       = ps.FormatModifier;
   let TSFlags              = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW              = ps.SchedRW;
@@ -2640,6 +2642,8 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let OtherPredicates    = ps.OtherPredicates;
   let Constraints        = ps.Constraints;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let SchedRW            = ps.SchedRW;
@@ -2649,8 +2653,6 @@ class VBUFFER_Real <bits<8> op, BUF_Pseudo ps, string real_name> :
   let IsAtomicNoRet      = ps.IsAtomicNoRet;
   let VALU               = ps.VALU;
   let LGKM_CNT           = ps.LGKM_CNT;
-  let MUBUF              = ps.MUBUF;
-  let MTBUF              = ps.MTBUF;
   let Uses               = ps.Uses;
   let Defs               = ps.Defs;
   let isConvergent       = ps.isConvergent;

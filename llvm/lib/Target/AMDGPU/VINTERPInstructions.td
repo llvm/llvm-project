@@ -58,12 +58,12 @@ class VINTERP_Pseudo <string OpName, VOPProfile P, list<dag> pattern = []> :
   let mayRaiseFPException = 0;
 
   let VOP3_OPSEL = 1;
-  let VINTERP = 1;
+  let Format = AMDGPUInstrFormat.VINTERP;
 }
 
 class VINTERP_Real <VOP_Pseudo ps, int EncodingFamily, string asmName> :
   VOP3_Real <ps, EncodingFamily, asmName> {
-  let VINTERP = 1;
+  let Format = AMDGPUInstrFormat.VINTERP;
   let IsSingle = 1;
 }
 

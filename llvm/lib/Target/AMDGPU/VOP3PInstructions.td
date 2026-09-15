@@ -80,7 +80,7 @@ multiclass VOP3PInst<string OpName, VOPProfile P,
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
     def _dpp : VOP3_DPP_Pseudo<OpName, P> {
-      let VOP3P = 1;
+      let Format = AMDGPUInstrFormat.VOP3P;
       let PseudoInstr = OpName #"_dpp";
     }
   } // end SubtargetPredicate = isGFX11Plus
@@ -97,7 +97,7 @@ multiclass VOP3PInstDotWithDual<string OpName, VOPProfile P,
   let SubtargetPredicate = isGFX11Plus in {
   if P.HasExtVOP3DPP then
     def _dpp : VOP3_DPP_Pseudo<OpName, P> {
-      let VOP3P = 1;
+      let Format = AMDGPUInstrFormat.VOP3P;
       let PseudoInstr = OpName #"_dpp";
     }
   } // end SubtargetPredicate = isGFX11Plus
@@ -112,7 +112,7 @@ multiclass VOP3_VOP3PInst<string OpName, VOP3P_Mix_Profile P> {
   let SubtargetPredicate = isGFX11Plus in {
     if P.HasExtVOP3DPP then
       def _dpp : VOP3_DPP_Pseudo<OpName, P> {
-        let VOP3P = 1;
+        let Format = AMDGPUInstrFormat.VOP3P;
         let PseudoInstr = OpName#"_dpp";
         let Constraints = !if(P.UseTiedOutput, "$vdst = $vdst_in", "");
       }
@@ -124,7 +124,7 @@ multiclass VOP3_VOP3PInst_t16<string OpName, VOP3P_Mix_Profile P> {
 
   if P.HasExtVOP3DPP then
     def _dpp : VOP3_DPP_Pseudo<OpName, P> {
-      let VOP3P = 1;
+      let Format = AMDGPUInstrFormat.VOP3P;
       let PseudoInstr = OpName#"_dpp";
     }
 }
@@ -2922,7 +2922,7 @@ multiclass VOP3P_Real_vi<bits<7> op> {
             VOP3Pe_vi <op, !cast<VOP3_Pseudo>(NAME).Pfl> {
     let AssemblerPredicate = HasVOP3PInsts;
     let DecoderNamespace = "GFX8";
-    let VOP3P = 1;
+    let Format = AMDGPUInstrFormat.VOP3P;
   }
 }
 
@@ -3258,12 +3258,12 @@ defm V_PK_MOV_B32 : VOP3P_Real_vi <0x33>;
 // GFX10, GFX11, GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
-let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1 in {
+let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", Format = AMDGPUInstrFormat.VOP3P in {
   multiclass VOP3P_Real_gfx10<bits<8> op> {
     def _gfx10 : VOP3P_Real<!cast<VOP3P_Pseudo>(NAME), SIEncodingFamily.GFX10>,
                  VOP3Pe_gfx10 <op, !cast<VOP3P_Pseudo>(NAME).Pfl>;
   }
-} // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", VOP3P = 1
+} // End AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10", Format = AMDGPUInstrFormat.VOP3P
 
 multiclass VOP3P_Real_gfx10_gfx11<bits<8> op> :
   VOP3P_Real_gfx10<op>, VOP3P_Real_Base<GFX11Gen, op>;

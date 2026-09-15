@@ -16,7 +16,7 @@ class EXPCommon<bit _row, bit _done, string asm = ""> : InstSI<
        ExpSrc0:$src0, ExpSrc1:$src1, ExpSrc2:$src2, ExpSrc3:$src3,
        exp_vm:$vm, exp_compr:$compr, i32imm:$en),
   asm> {
-  let EXP = 1;
+  let Format = AMDGPUInstrFormat.EXP;
   let EXP_CNT = 1;
   let mayLoad = _done;
   let mayStore = 1;
