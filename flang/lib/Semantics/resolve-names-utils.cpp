@@ -560,9 +560,11 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   }
   // For rank-1 bounds, emit N ShapeSpecs each wrapping a scalar
   // RankOneBoundElement that extracts element [dim] from the rank-1
-  // expression, then fold: a constant rank-1 base collapses to a scalar
-  // constant (as if written dims(1),dims(2),...), while a non-constant base
-  // keeps the RankOneBoundElement for lowering and mod-file round-tripping.
+  // expression.  The wrapper is intentionally left unfolded: consumers that
+  // need a concrete per-dimension value fold their own copy (a constant base
+  // then collapses to a scalar, as if written dims(1),dims(2),...), while the
+  // stored, unfolded wrapper lets the mod-file writer round-trip the original
+  // whole-array bound.
   int numDims = static_cast<int>(result->numDims);
   if (numDims == 0) {
     // A zero-size bounds array declares a scalar (rank 0); leave arraySpec_
@@ -582,9 +584,8 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
     MaybeSubscriptIntExpr ubExpr;
     if (auto &ubOrig = result->ubound.GetExplicit()) {
       if (ubOrig->Rank() > 0) {
-        ubExpr = evaluate::Fold(context_.foldingContext(),
-            SubscriptIntExpr{
-                evaluate::RankOneBoundElement{common::Clone(*ubOrig), dim}});
+        ubExpr = SubscriptIntExpr{
+            evaluate::RankOneBoundElement{common::Clone(*ubOrig), dim}};
       } else {
         ubExpr = common::Clone(*ubOrig);
       }
@@ -594,9 +595,8 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
     if (result->lbound) {
       if (auto &lbOrig = result->lbound->GetExplicit()) {
         if (lbOrig->Rank() > 0) {
-          lbExpr = evaluate::Fold(context_.foldingContext(),
-              SubscriptIntExpr{
-                  evaluate::RankOneBoundElement{common::Clone(*lbOrig), dim}});
+          lbExpr = SubscriptIntExpr{
+              evaluate::RankOneBoundElement{common::Clone(*lbOrig), dim}};
         } else {
           lbExpr = common::Clone(*lbOrig);
         }

@@ -10,7 +10,7 @@
 
 subroutine s(n)
   integer, intent(in) :: n(3)
-  !SYMBOLS: a {{.*}}: ObjectEntity type: REAL(4) shape: 1_8:rank1BoundElement(__builtin_int(n,kind=8),dim=1),1_8:rank1BoundElement(__builtin_int(n,kind=8),dim=2),1_8:rank1BoundElement(__builtin_int(n,kind=8),dim=3)
+  !SYMBOLS: a {{.*}}: ObjectEntity type: REAL(4) shape: 1_8:__builtin_rank1_bound_element(__builtin_int(n,kind=8),dim=1),1_8:__builtin_rank1_bound_element(__builtin_int(n,kind=8),dim=2),1_8:__builtin_rank1_bound_element(__builtin_int(n,kind=8),dim=3)
   real :: a(n)
   a = 0.0
 end subroutine

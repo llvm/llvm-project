@@ -3699,6 +3699,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::FunctionReference &funcRef,
   if (analyzer.fatalErrors()) {
     return std::nullopt;
   }
+  // A mod file renders a RankOneBoundElement (a single element extracted from a
+  // rank-1 array bound) as a call to the synthetic builtin
+  // __builtin_rank1_bound_element(base, dim=N).  It has no true Fortran surface
+  // syntax and no backing intrinsic, so rebuild the node here when the mod file
+  // is read back in.
+  if (const auto *name{std::get_if<parser::Name>(
+          &std::get<parser::ProcedureDesignator>(call.t).u)};
+      name &&
+      name->source.ToString() ==
+          IntrinsicProcTable::BuiltinRank1BoundElementName) {
+    return AnalyzeRankOneBoundElement(funcRef.source, analyzer.GetActuals());
+  }
   bool mightBeStructureConstructor{structureConstructor != nullptr};
   if (std::optional<CalleeAndArguments> callee{GetCalleeAndArguments(
           std::get<parser::ProcedureDesignator>(call.t), analyzer.GetActuals(),
@@ -4889,6 +4901,29 @@ MaybeExpr ExpressionAnalyzer::MakeFunctionRef(
   } else {
     return std::nullopt;
   }
+}
+
+// Rebuild a RankOneBoundElement from a mod file's
+// __builtin_rank1_bound_element(base, dim=N) call.  N is one-based in the
+// rendered form; the node stores a zero-based dimension.
+MaybeExpr ExpressionAnalyzer::AnalyzeRankOneBoundElement(
+    parser::CharBlock source, ActualArguments &&arguments) {
+  if (arguments.size() == 2 && arguments[0] && arguments[1]) {
+    if (Expr<SomeType> * base{arguments[0]->UnwrapExpr()}) {
+      if (Expr<SomeType> * dim{arguments[1]->UnwrapExpr()}) {
+        if (auto *intBase{UnwrapExpr<Expr<SomeInteger>>(*base)}) {
+          if (std::optional<std::int64_t> dimValue{ToInt64(*dim)}) {
+            return AsGenericExpr(Expr<SubscriptInteger>{RankOneBoundElement{
+                ConvertToType<SubscriptInteger>(std::move(*intBase)),
+                static_cast<int>(*dimValue - 1)}});
+          }
+        }
+      }
+    }
+  }
+  Say(source, "Invalid use of compiler builtin '%s'"_err_en_US,
+      IntrinsicProcTable::BuiltinRank1BoundElementName);
+  return std::nullopt;
 }
 
 MaybeExpr ExpressionAnalyzer::AnalyzeComplex(

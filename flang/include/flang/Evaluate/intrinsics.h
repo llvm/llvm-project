@@ -117,6 +117,14 @@ public:
   // Name of intrinsics used in various locations.
   static inline const char *const BuiltinIntName{"__builtin_int"};
 
+  // Name of the synthetic wrapper used to render a RankOneBoundElement (a
+  // single element extracted from a rank-1 array bound) in a form that
+  // round-trips through a mod file.  It must be spelled in all lower case so
+  // that it still matches after names are folded to lower case when the mod
+  // file is read back in.
+  static inline const char *const BuiltinRank1BoundElementName{
+      "__builtin_rank1_bound_element"};
+
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
 
 private:
