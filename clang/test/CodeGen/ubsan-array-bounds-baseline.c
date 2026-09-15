@@ -205,6 +205,12 @@ void c_deref_plus_store(int i) { *(a + i) = 1; }
 // CHECK: icmp ult i64 {{.*}}, 4
 void c_deref_plus_load(int i) { v = *(a + i); }
 
+// The pointer need not be the left operand (C99 6.5.6p2), so this must agree
+// with c_deref_plus_store.
+// CHECK-LABEL: define {{.*}}@c_deref_plus_commuted(
+// CHECK: icmp ult i64 {{.*}}, 4
+void c_deref_plus_commuted(int i) { *(i + a) = 1; }
+
 // CHECK-LABEL: define {{.*}}@c_counted(
 // CHECK: icmp ult i32 {{.*}}
 void c_counted(struct CB *s, int i) { s->fam[i] = 1; }
@@ -268,3 +274,15 @@ void ctl_struct_addr(int i) { q = &sa[i]; }
 // CHECK-LABEL: define {{.*}}@ctl_addr_deref(
 // CHECK: icmp ule i64 {{.*}}, 4
 void ctl_addr_deref(int i) { p = &*&a[i]; }
+
+// CHECK-LABEL: define {{.*}}@ctl_plus_neg_store(
+// CHECK: icmp ule i64 {{.*}}, 4
+void ctl_plus_neg_store(int i) { *(&a[i] + -1) = 1; }
+
+// CHECK-LABEL: define {{.*}}@ctl_minus_one_load(
+// CHECK: icmp ule i64 {{.*}}, 4
+void ctl_minus_one_load(int i) { v = *(&a[i] - 1); }
+
+// CHECK-LABEL: define {{.*}}@ctl_plus_neg_addr(
+// CHECK: icmp ule i64 {{.*}}, 4
+void ctl_plus_neg_addr(int i) { p = &a[i] + -1; }

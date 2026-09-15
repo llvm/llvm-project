@@ -1430,14 +1430,6 @@ public:
       visitWith(E->getRHS(), ObjectMustExist);
       return;
     }
-    if (E->isAdditiveOp() && E->getType()->isPointerType()) {
-      // `a[i]` is `*(a + i)` (C99 6.5.2.1p2), and a check is emitted here too.
-      record(E);
-      bool LHSIsPointer = E->getLHS()->getType()->isPointerType();
-      visitWith(LHSIsPointer ? E->getLHS() : E->getRHS(), ObjectMustExist);
-      visitWith(LHSIsPointer ? E->getRHS() : E->getLHS(), /*MustExist=*/false);
-      return;
-    }
     if (E->isPtrMemOp()) {
       // `E1.*E2` designates a member of the object E1 designates
       // ([expr.mptr.oper]p4), the same rule as MemberExpr's base.
@@ -1445,6 +1437,11 @@ public:
       visitWith(E->getRHS(), /*MustExist=*/false);
       return;
     }
+    // `a[i]` is `*(a + i)` (C99 6.5.2.1p2); EmitPointerArithmetic emits the
+    // check for this node and reads the answer recorded here.
+    if (E->isAdditiveOp() && E->getType()->isPointerType())
+      record(E);
+
     visitWith(E->getLHS(), /*MustExist=*/false);
     visitWith(E->getRHS(), /*MustExist=*/false);
   }
