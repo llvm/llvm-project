@@ -20651,12 +20651,17 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
        Bits *= 2) {
     EVT NarrowVT = OpVT.changeElementType(Ctx, EVT::getIntegerVT(Ctx, Bits));
 
-    // Vector int-to-fp is unrolled to scalars, but the truncate is not.
+    // Vector conversion is unrolled to scalars, but truncate is not.
     if (!hasOperation(ISD::UINT_TO_FP, NarrowVT.getScalarType()) ||
         !TLI.isTruncateFree(OpVT, NarrowVT))
       continue;
 
     if (LegalTypes && !TLI.isTypeLegal(NarrowVT))
+      continue;
+
+    // Avoid undoing target combines that widen vector integer to fp operands.
+    if (N0.getOpcode() == ISD::ZERO_EXTEND &&
+        NarrowVT == N0.getOperand(0).getValueType())
       continue;
 
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, N0);
