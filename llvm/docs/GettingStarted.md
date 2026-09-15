@@ -726,7 +726,7 @@ Generates system build files.
   ORC JIT APIs interact with other parts of LLVM. It also teaches how to
   recombine them to build a custom JIT that is suited to your use-case.
 
-[BuildingAJIT tutorial]: project:tutorial/BuildingAJIT1.md
+[BuildingAJIT tutorial]: tutorial/BuildingAJIT1.md
 
 ### `llvm/include`
 

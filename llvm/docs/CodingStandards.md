@@ -54,7 +54,7 @@ code and avoid unnecessary vendor-specific extensions.
 
 Nevertheless, we restrict ourselves to features which are available in the
 major toolchains supported as host compilers (see {doc}`GettingStarted` page,
-section [Software](project:GettingStarted.md#software)).
+section [Software](GettingStarted.md#software)).
 
 Each toolchain provides a good reference for what it accepts:
 
@@ -106,7 +106,7 @@ subjects is available in the {doc}`ProgrammersManual`.
 For more information about LLVM's data structures and the tradeoffs they make,
 please consult [that section of the programmer's manual].
 
-[that section of the programmer's manual]: project:ProgrammersManual.md#picking-the-right-data-structure-for-a-task
+[that section of the programmer's manual]: ProgrammersManual.md#picking-the-right-data-structure-for-a-task
 
 ### Python version and Source Code Formatting
 
@@ -579,7 +579,7 @@ or RTTI ([runtime type information], for example,
 [runtime type information]: https://en.wikipedia.org/wiki/Run-time_type_information
 
 That said, LLVM does make extensive use of a hand-rolled form of RTTI that use
-templates like [isa<>, cast<>, and dyn_cast<>](project:ProgrammersManual.md#the-isa-cast-and-dyn-cast-templates).
+templates like [isa<>, cast<>, and dyn_cast<>](ProgrammersManual.md#the-isa-cast-and-dyn-cast-templates).
 This form of RTTI is opt-in and can be
 {doc}`added to any class <HowToSetUpLLVMStyleRTTI>`.
 
