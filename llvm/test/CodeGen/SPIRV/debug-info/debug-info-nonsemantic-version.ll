@@ -11,16 +11,16 @@
 ; is not emitted.
 
 ; CHECK-100: OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-100-DAG: [[I32T100:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-100-DAG: [[C100:%[0-9]+]] = OpConstant [[I32T100]] 100{{ *$}}
+; CHECK-100-DAG: %[[#I32T100:]] = OpTypeInt 32 0
+; CHECK-100-DAG: %[[#C100:]] = OpConstant %[[#I32T100]] 100{{ *$}}
 ; CHECK-100: OpExtInst %{{.*}} %{{.*}} DebugSource
-; CHECK-100: OpExtInst {{.*}} DebugCompilationUnit [[C100]]
+; CHECK-100: OpExtInst {{.*}} DebugCompilationUnit %[[#C100]]
 
 ; CHECK-200: OpExtInstImport "NonSemantic.Shader.DebugInfo.200"
-; CHECK-200-DAG: [[I32T200:%[0-9]+]] = OpTypeInt 32 0
-; CHECK-200-DAG: [[C200:%[0-9]+]] = OpConstant [[I32T200]] 200{{ *$}}
+; CHECK-200-DAG: %[[#I32T200:]] = OpTypeInt 32 0
+; CHECK-200-DAG: %[[#C200:]] = OpConstant %[[#I32T200]] 200{{ *$}}
 ; CHECK-200: OpExtInst %{{.*}} %{{.*}} DebugSource
-; CHECK-200: OpExtInst {{.*}} DebugCompilationUnit [[C200]]
+; CHECK-200: OpExtInst {{.*}} DebugCompilationUnit %[[#C200]]
 ; CHECK-200-NOT: UNKNOWN_EXT_INST
 
 target triple = "spirv64-unknown-unknown"
