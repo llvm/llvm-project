@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -1331,6 +1332,24 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_AddCImm(OutMIs[" << InsnID
                              << "], TypeID=" << TypeID << ", Imm=" << Imm
                              << ")\n");
+      break;
+    }
+
+    case GIR_AddCFPImm: {
+      uint64_t InsnID = readULEB();
+      int TypeID = readS8();
+      uint64_t Imm = readU64();
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+
+      LLT Ty = ExecInfo.TypeObjects[TypeID];
+      unsigned Width = Ty.getScalarSizeInBits();
+      LLVMContext &Ctx = MF->getFunction().getContext();
+      APFloat APF(getFltSemanticForLLT(Ty.getScalarType()), APInt(Width, Imm));
+      OutMIs[InsnID].addFPImm(ConstantFP::get(Ctx, APF));
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddCFPImm(OutMIs["
+                             << InsnID << "], TypeID=" << TypeID
+                             << ", Imm=" << Imm << ")\n");
       break;
     }
 
