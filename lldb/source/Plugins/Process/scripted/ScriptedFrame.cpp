@@ -128,8 +128,7 @@ ScriptedFrame::Create(ThreadSP thread_sp,
 ScriptedFrame::ScriptedFrame(ThreadSP thread_sp,
                              ScriptedFrameInterfaceSP interface_sp,
                              lldb::user_id_t id, lldb::addr_t pc,
-                             lldb::addr_t cfa,
-                             SymbolContext &sym_ctx,
+                             lldb::addr_t cfa, SymbolContext &sym_ctx,
                              StructuredData::GenericSP script_object_sp)
     : StackFrame(thread_sp, /*frame_idx=*/id,
                  /*concrete_frame_idx=*/id, /*reg_context_sp=*/nullptr,
@@ -340,13 +339,14 @@ lldb::ValueObjectSP ScriptedFrame::GetValueForVariableExpressionPath(
       var_expr, options, error);
 }
 
-llvm::Expected<lldb::ThreadPlanSP> ScriptedFrame::GetThreadPlanForStepType(
-    lldb::StepType step_type) {
+llvm::Expected<lldb::ThreadPlanSP>
+ScriptedFrame::GetThreadPlanForStepType(lldb::StepType step_type) {
   llvm::Expected<ScriptedMetadata> metadata =
-      m_scripted_frame_interface_sp->GetThreadPlanMetadataForStepType(step_type);
+      m_scripted_frame_interface_sp->GetThreadPlanMetadataForStepType(
+          step_type);
   if (auto error = metadata.takeError()) {
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
-        llvm::toString(std::move(error)));
+                                   llvm::toString(std::move(error)));
   }
   // Returning a ScriptedMetadata with an empty class name means that the
   // scripted frame doesn't know how to step.  That's not an error, but don't
@@ -355,8 +355,8 @@ llvm::Expected<lldb::ThreadPlanSP> ScriptedFrame::GetThreadPlanForStepType(
 
   ThreadSP thread_sp = GetThread();
   if (*metadata && thread_sp && !metadata->GetClassName().empty()) {
-    lldb::ThreadPlanSP new_plan_sp(new ScriptedThreadPlan(*thread_sp.get(),
-          *metadata));
+    lldb::ThreadPlanSP new_plan_sp(
+        new ScriptedThreadPlan(*thread_sp.get(), *metadata));
     return new_plan_sp;
   }
 

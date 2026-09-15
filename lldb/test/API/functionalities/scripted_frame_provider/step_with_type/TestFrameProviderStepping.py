@@ -28,7 +28,6 @@ class TestFrameProviderStepping(TestBase):
         archs=["arm$"],
         bugnumber="github.com/llvm/llvm-project/issues/191859",
     )
-
     def test_step_with_errors_api(self):
         """Test that errors in creating the step plan are reported"""
         self.do_test_with_errors(False)
@@ -36,7 +35,7 @@ class TestFrameProviderStepping(TestBase):
     def test_step_with_errors_command(self):
         """Test that errors in creating the step plan are reported"""
         self.do_test_with_errors(True)
-        
+
     def test_step_with_type_api(self):
         """
         Test that a provider can alter the meaning of step in a
@@ -53,7 +52,7 @@ class TestFrameProviderStepping(TestBase):
 
     def test_with_no_step(self):
         """Test that a returning an empty class name falls back to the
-           standard stepping algorithms"""
+        standard stepping algorithms"""
         self.common_startup("frame_provider.NoStepProvider")
         # Just do this for the API:
         error = lldb.SBError()
@@ -88,7 +87,7 @@ class TestFrameProviderStepping(TestBase):
         self.g_counter = target.FindFirstGlobalVariable("g_counter")
         self.assertSuccess(self.g_counter.error, "Got g_counter value")
         self.assertEqual(self.g_counter.signed, 0, "Starts at 0")
-        
+
     def do_test_with_errors(self, use_command):
         self.common_startup("frame_provider.BadStepProvider")
         expected_error = "'frame_provider.Oops' that does not exist"
@@ -100,10 +99,10 @@ class TestFrameProviderStepping(TestBase):
             self.thread.StepOver(lldb.eOnlyDuringStepping, step_error)
             self.assertTrue(step_error.fail, "Got a failure as expected")
             self.assertIn(expected_error, step_error.description, "Right error")
-        
+
     def do_test(
-            self,
-            use_command,
+        self,
+        use_command,
     ):
         self.common_startup("frame_provider.CorrectStepProvider")
 
@@ -127,7 +126,7 @@ class TestFrameProviderStepping(TestBase):
         self.assertEqual(frame_0.name, "bar", "Stepped in twice")
         # We haven't run the increment the counter yet, so it's still 2:
         self.assertEqual(self.g_counter.signed, 2, "We stepped twice")
-        
+
         # Now do a step out and make sure it goes back to main:
         if use_command:
             self.runCmd("thread step-out")
@@ -137,6 +136,3 @@ class TestFrameProviderStepping(TestBase):
         frame_0 = self.thread.frames[0]
         self.assertEqual(frame_0.name, "main", "Stepped out twice")
         self.assertEqual(self.g_counter.signed, 3, "Step out twice updated counter")
-        
-        
-        

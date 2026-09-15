@@ -566,8 +566,8 @@ public:
   // Return a ThreadPlanSP or an error.  Returning an empty ThreadPlanSP means
   // the frame doesn't have a custom step plan, only return an error if the
   // frame intended to provide a plan but there was an error in doing so.
-  virtual llvm::Expected<lldb::ThreadPlanSP> GetThreadPlanForStepType(lldb::StepType step_type)
-  {
+  virtual llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) {
     return lldb::ThreadPlanSP();
   }
 

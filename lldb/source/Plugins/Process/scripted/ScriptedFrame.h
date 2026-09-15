@@ -24,8 +24,7 @@ class ScriptedFrame : public lldb_private::StackFrame {
 public:
   ScriptedFrame(lldb::ThreadSP thread_sp,
                 lldb::ScriptedFrameInterfaceSP interface_sp,
-                lldb::user_id_t frame_idx, lldb::addr_t pc,
-                lldb::addr_t cfa,
+                lldb::user_id_t frame_idx, lldb::addr_t pc, lldb::addr_t cfa,
                 SymbolContext &sym_ctx,
                 StructuredData::GenericSP script_object_sp = nullptr);
 
@@ -83,7 +82,8 @@ public:
       uint32_t options, lldb::VariableSP &var_sp, Status &error,
       lldb::DILMode mode = lldb::eDILModeFull) override;
 
-  llvm::Expected<lldb::ThreadPlanSP> GetThreadPlanForStepType(lldb::StepType step_type) override;
+  llvm::Expected<lldb::ThreadPlanSP>
+  GetThreadPlanForStepType(lldb::StepType step_type) override;
 
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || StackFrame::isA(ClassID);

@@ -208,7 +208,8 @@ ScriptedFramePythonInterface::GetValueObjectForVariableExpression(
 }
 
 llvm::Expected<ScriptedMetadata>
-ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(lldb::StepType step_type) {
+ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(
+    lldb::StepType step_type) {
   Status error;
   Log *log = GetLog(LLDBLog::Script);
 
@@ -224,30 +225,32 @@ ScriptedFramePythonInterface::GetThreadPlanMetadataForStepType(lldb::StepType st
     if (err_str.contains("object has no attribute 'get_plan_for_step_type'"))
       return no_plan_return;
     else
-      return llvm::createStringError("error dispatching get_plan_for_step_type: %s", error.AsCString());
+      return llvm::createStringError(
+          "error dispatching get_plan_for_step_type: %s", error.AsCString());
   }
 
   // The return value is an StructuredData::Dictionary with the class name and
   // the extra args for the call:
   if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION,
                                                     dict_sp, error))
-    return llvm::createStringError("return from get_plan_for_step_type not a valid object: %s",
+    return llvm::createStringError(
+        "return from get_plan_for_step_type not a valid object: %s",
         error.AsCString());
-
 
   StructuredData::ObjectSP obj = dict_sp->GetValueForKey("class_name");
   if (!obj)
     return llvm::createStringError("Required 'class_name' field not provided.");
 
   std::string class_string = obj->GetStringValue().str();
-  // Passing out an empty class name is they way to say the frame provider doesn't
-  // know how to step from here, and the regular method should be tried instead.
-  // So we only need to make sure the class exists if we were given a string:
+  // Passing out an empty class name is they way to say the frame provider
+  // doesn't know how to step from here, and the regular method should be tried
+  // instead. So we only need to make sure the class exists if we were given a
+  // string:
   if (!class_string.empty()) {
     const char *class_str = class_string.c_str();
     if (!m_interpreter.CheckObjectExists(class_str))
-      return llvm::createStringError("class_name specified a class: '%s' that does not exist.",
-          class_str);
+      return llvm::createStringError(
+          "class_name specified a class: '%s' that does not exist.", class_str);
   }
 
   // Look for extra args, this is optional:

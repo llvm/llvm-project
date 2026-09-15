@@ -67,9 +67,9 @@ public:
 
   virtual llvm::Expected<ScriptedMetadata>
   GetThreadPlanMetadataForStepType(lldb::StepType step_type) {
-    return llvm::createStringError("the current interpreter doesn't support scripted stepping");
+    return llvm::createStringError(
+        "the current interpreter doesn't support scripted stepping");
   }
-
 };
 } // namespace lldb_private
 

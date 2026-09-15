@@ -10,6 +10,7 @@ from lldb.plugins.scripted_process import ScriptedFrame
 from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
 from lldb.plugins.scripted_thread_plan import ScriptedThreadPlan
 
+
 class BaseStepFrame(ScriptedFrame):
     """A frame that wraps a real frame but changes the meaning of stepping."""
 
@@ -30,7 +31,7 @@ class BaseStepFrame(ScriptedFrame):
 
     def get_cfa(self):
         return self.orig_frame.GetCFA()
-        
+
     def get_pc(self):
         pc = self.orig_frame.GetPC()
         return pc
@@ -56,7 +57,7 @@ class BaseStepFrame(ScriptedFrame):
             return None
 
         info = self.get_register_info()["registers"]
-        
+
         def read(entry):
             # A register set reports a register under the name LLDB displays,
             # which can be an alias of the architectural name the register info
@@ -80,29 +81,33 @@ class BaseStepFrame(ScriptedFrame):
 
         return struct.pack(struct_format, *struct_data)
 
-class StepTypeFrame (BaseStepFrame):
+
+class StepTypeFrame(BaseStepFrame):
     def get_plan_for_step_type(self, step_type):
         dict = {
-            "class_name" : "frame_provider.StepTwice",
-            "extra_args" : {"step_type" : str(step_type)},
+            "class_name": "frame_provider.StepTwice",
+            "extra_args": {"step_type": str(step_type)},
         }
         return dict
 
-class BadStepFrame (BaseStepFrame):
+
+class BadStepFrame(BaseStepFrame):
     def get_plan_for_step_type(self, step_type):
         dict = {
-            "class_name" : "frame_provider.Oops",
-            "extra_args" : {"step_type" : str(step_type)},
+            "class_name": "frame_provider.Oops",
+            "extra_args": {"step_type": str(step_type)},
         }
         return dict
 
-class NoStepFrame (BaseStepFrame):
+
+class NoStepFrame(BaseStepFrame):
     def get_plan_for_step_type(self, step_type):
         dict = {
-            "class_name" : "",
-            "extra_args" : {"step_type" : str(step_type)},
+            "class_name": "",
+            "extra_args": {"step_type": str(step_type)},
         }
         return dict
+
 
 class BaseFrameProvider(ScriptedFrameProvider):
     """
@@ -122,6 +127,7 @@ class BaseFrameProvider(ScriptedFrameProvider):
     def get_description():
         return "Provider that prefixes all function names with 'my_custom_'"
 
+
 class CorrectStepProvider(BaseFrameProvider):
     def get_frame_at_index(self, idx):
         if idx < len(self.input_frames):
@@ -133,6 +139,7 @@ class CorrectStepProvider(BaseFrameProvider):
             return returned_frame
         return None
 
+
 class NoStepProvider(BaseFrameProvider):
     def get_frame_at_index(self, idx):
         if idx < len(self.input_frames):
@@ -143,7 +150,8 @@ class NoStepProvider(BaseFrameProvider):
                 print(f"Got err: {str(err)}")
             return returned_frame
         return None
-    
+
+
 class BadStepProvider(BaseFrameProvider):
     def get_frame_at_index(self, idx):
         if idx < len(self.input_frames):
@@ -154,12 +162,13 @@ class BadStepProvider(BaseFrameProvider):
                 print(f"Got err: {str(err)}")
             return returned_frame
         return None
-    
+
 
 class StepTwice(ScriptedThreadPlan):
-    """ This thread plan does whatever it is asked to do twice. """
+    """This thread plan does whatever it is asked to do twice."""
+
     def __init__(
-            self, thread_plan: lldb.SBThreadPlan, extra_args: lldb.SBStructuredData
+        self, thread_plan: lldb.SBThreadPlan, extra_args: lldb.SBStructuredData
     ):
         super().__init__(thread_plan)
         self.counter = 1
@@ -168,7 +177,7 @@ class StepTwice(ScriptedThreadPlan):
         if not step_type.IsValid():
             thread_plan.SetPlanComplete(False)
             return
-        
+
         step_str = step_type.GetStringValue()
         self.step_val = int(step_str)
         self.queue_thread_plan()
@@ -179,18 +188,23 @@ class StepTwice(ScriptedThreadPlan):
         error = lldb.SBError()
         self.curr_plan = None
 
-        line_entry = stop_frame.GetSymbolContext(lldb.eSymbolContextEverything).line_entry
+        line_entry = stop_frame.GetSymbolContext(
+            lldb.eSymbolContextEverything
+        ).line_entry
         curr_addr = stop_frame.addr.GetLoadAddress(target)
         pc_addr = stop_frame.GetPC()
 
         length = line_entry.end_addr.GetLoadAddress(target) - curr_addr
-        
-        
+
         if self.step_val == lldb.eStepTypeOver:
-            self.curr_plan = self.thread_plan.QueueThreadPlanForStepOverRange(stop_frame.addr, length, error)
-            
+            self.curr_plan = self.thread_plan.QueueThreadPlanForStepOverRange(
+                stop_frame.addr, length, error
+            )
+
         if self.step_val == lldb.eStepTypeInto:
-            self.curr_plan = self.thread_plan.QueueThreadPlanForStepInRange(stop_frame.addr, length, error)
+            self.curr_plan = self.thread_plan.QueueThreadPlanForStepInRange(
+                stop_frame.addr, length, error
+            )
 
         if self.step_val == lldb.eStepTypeOut:
             self.curr_plan = self.thread_plan.QueueThreadPlanForStepOut(0, False, error)

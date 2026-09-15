@@ -668,10 +668,11 @@ protected:
 
     // First see if the frame has a custom step plan for us:
     if (frame) {
-      llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
-        = frame->GetThreadPlanForStepType(m_step_type);
+      llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+          frame->GetThreadPlanForStepType(m_step_type);
       if (auto llvm_err = frame_plan_result.takeError()) {
-        result.AppendErrorWithFormat("scripted frame provider got an error "
+        result.AppendErrorWithFormat(
+            "scripted frame provider got an error "
             "while constructing step plan: \"%s\"",
             llvm::toString(std::move(llvm_err)).c_str());
         return;
@@ -688,8 +689,8 @@ protected:
           AddressRange range;
           SymbolContext sc = frame->GetSymbolContext(eSymbolContextEverything);
           if (m_options.m_end_line != LLDB_INVALID_LINE_NUMBER) {
-            llvm::Error err =
-                sc.GetAddressRangeFromHereToEndLine(m_options.m_end_line, range);
+            llvm::Error err = sc.GetAddressRangeFromHereToEndLine(
+                m_options.m_end_line, range);
             if (err) {
               result.AppendErrorWithFormatv("invalid end-line option: {0}.",
                                             llvm::toString(std::move(err)));
@@ -731,11 +732,13 @@ protected:
           if (new_plan_sp && !m_options.m_avoid_regexp.empty()) {
             ThreadPlanStepInRange *step_in_range_plan =
                 static_cast<ThreadPlanStepInRange *>(new_plan_sp.get());
-            step_in_range_plan->SetAvoidRegexp(m_options.m_avoid_regexp.c_str());
+            step_in_range_plan->SetAvoidRegexp(
+                m_options.m_avoid_regexp.c_str());
           }
         } else
           new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-              false, abort_other_plans, bool_stop_other_threads, new_plan_status);
+              false, abort_other_plans, bool_stop_other_threads,
+              new_plan_status);
       } else if (m_step_type == eStepTypeOver) {
 
         if (frame->HasDebugInformation())
@@ -747,7 +750,8 @@ protected:
               m_options.m_step_out_avoid_no_debug);
         else
           new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
-              true, abort_other_plans, bool_stop_other_threads, new_plan_status);
+              true, abort_other_plans, bool_stop_other_threads,
+              new_plan_status);
       } else if (m_step_type == eStepTypeTrace) {
         new_plan_sp = thread->QueueThreadPlanForStepSingleInstruction(
             false, abort_other_plans, bool_stop_other_threads, new_plan_status);
@@ -756,8 +760,8 @@ protected:
             true, abort_other_plans, bool_stop_other_threads, new_plan_status);
       } else if (m_step_type == eStepTypeOut) {
         new_plan_sp = thread->QueueThreadPlanForStepOut(
-            abort_other_plans, nullptr, false, bool_stop_other_threads, eVoteYes,
-            eVoteNoOpinion,
+            abort_other_plans, nullptr, false, bool_stop_other_threads,
+            eVoteYes, eVoteNoOpinion,
             thread->GetSelectedFrameIndex(DoNoSelectMostRelevantFrame),
             new_plan_status, m_options.m_step_out_avoid_no_debug);
       } else if (m_step_type == eStepTypeScripted) {

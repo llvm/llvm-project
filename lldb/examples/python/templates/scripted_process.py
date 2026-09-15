@@ -518,7 +518,7 @@ class ScriptedFrame(metaclass=ABCMeta):
         return None
 
     def get_cfa(self) -> int:
-        """ Get the Call Frame Address for this frame.
+        """Get the Call Frame Address for this frame.
         By default pass the ID of this frame so the CFA's and the
         ID's order the same way on this stop.  This won't support
         step-in and step-out, for those the frames have to have a
@@ -651,8 +651,8 @@ class ScriptedFrame(metaclass=ABCMeta):
     #    algorithm.  However, the method is commented out in the base class,
     #    since if you really don't intend to provide stepping support,
     #    it's simpler to just not implement this API."""
-    #    
-    #dict = {"class_name" : "", extra_args : {"step_type" : str(step_type)}
+    #
+    # dict = {"class_name" : "", extra_args : {"step_type" : str(step_type)}
     #    return dict
 
 class PassthroughScriptedProcess(ScriptedProcess):

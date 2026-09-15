@@ -293,7 +293,7 @@ lldb::StepType
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StepType>(
     python::PythonObject &p, Status &error) {
   lldb::StepType ret_val = lldb::eStepTypeNone;
-  
+
   llvm::Expected<unsigned long long> unsigned_or_err = p.AsUnsignedLongLong();
   if (!unsigned_or_err) {
     error = (Status::FromError(unsigned_or_err.takeError()));

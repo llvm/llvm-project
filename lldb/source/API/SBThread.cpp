@@ -505,13 +505,15 @@ void SBThread::StepOver(lldb::RunMode stop_other_threads, SBError &error) {
   ThreadPlanSP new_plan_sp;
   lldb::StepType step_type =
       frame_sp->HasDebugInformation() || frame_sp->IsSynthetic()
-          ? eStepTypeOver : eStepTypeTraceOver;
+          ? eStepTypeOver
+          : eStepTypeTraceOver;
 
   if (frame_sp) {
-    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
-      = frame_sp->GetThreadPlanForStepType(step_type);
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+        frame_sp->GetThreadPlanForStepType(step_type);
     if (auto llvm_err = frame_plan_result.takeError()) {
-      error.SetErrorStringWithFormat("scripted frame provider got an error "
+      error.SetErrorStringWithFormat(
+          "scripted frame provider got an error "
           "while constructing step plan: \"%s\"",
           llvm::toString(std::move(llvm_err)).c_str());
       return;
@@ -584,10 +586,11 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
 
   // First see if the Frame has some special way to do this step:
   if (frame_sp) {
-    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
-      = frame_sp->GetThreadPlanForStepType(step_type);
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+        frame_sp->GetThreadPlanForStepType(step_type);
     if (auto llvm_err = frame_plan_result.takeError()) {
-      error.SetErrorStringWithFormat("scripted frame provider got an error "
+      error.SetErrorStringWithFormat(
+          "scripted frame provider got an error "
           "while constructing step plan: \"%s\"",
           llvm::toString(std::move(llvm_err)).c_str());
       return;
@@ -606,7 +609,8 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
       else {
         llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
         if (err) {
-          error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
+          error =
+              Status::FromErrorString(llvm::toString(std::move(err)).c_str());
           return;
         }
       }
@@ -661,10 +665,11 @@ void SBThread::StepOut(SBError &error) {
   Thread *thread = exe_ctx->GetThreadPtr();
   StackFrameSP frame_sp(thread->GetStackFrameAtIndex(0));
   if (frame_sp) {
-    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
-      = frame_sp->GetThreadPlanForStepType(eStepTypeOut);
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+        frame_sp->GetThreadPlanForStepType(eStepTypeOut);
     if (auto llvm_err = frame_plan_result.takeError()) {
-      error.SetErrorStringWithFormat("scripted frame provider got an error "
+      error.SetErrorStringWithFormat(
+          "scripted frame provider got an error "
           "while constructing step plan: \"%s\"",
           llvm::toString(std::move(llvm_err)).c_str());
       return;
@@ -767,10 +772,11 @@ void SBThread::StepInstruction(bool step_over, SBError &error) {
   ThreadPlanSP new_plan_sp;
 
   if (frame_sp) {
-    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result
-      = frame_sp->GetThreadPlanForStepType(step_type);
+    llvm::Expected<lldb::ThreadPlanSP> frame_plan_result =
+        frame_sp->GetThreadPlanForStepType(step_type);
     if (auto llvm_err = frame_plan_result.takeError()) {
-      error.SetErrorStringWithFormat("scripted frame provider got an error "
+      error.SetErrorStringWithFormat(
+          "scripted frame provider got an error "
           "while constructing step plan: \"%s\"",
           llvm::toString(std::move(llvm_err)).c_str());
       return;
