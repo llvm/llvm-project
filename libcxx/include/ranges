@@ -26,6 +26,7 @@ namespace std::ranges {
 
     inline constexpr unspecified size = unspecified;
     inline constexpr unspecified ssize = unspecified;
+    inline constexpr unspecified reserve_hint = unspecified; // Since C++26
   }
 
   // [range.range], ranges
@@ -51,6 +52,10 @@ namespace std::ranges {
     using range_rvalue_reference_t = iter_rvalue_reference_t<iterator_t<R>>;
   template <range R>
     using range_common_reference_t = iter_common_reference_t<iterator_t<R>>;
+
+  // [range.approximately.sized], approximately sized ranges
+  template<class T>
+    concept approximately_sized_range = ...;
 
   // [range.sized], sized ranges
   template<class>
@@ -526,6 +531,7 @@ namespace std {
 
 #  if _LIBCPP_STD_VER >= 26
 #    include <__ranges/concat_view.h>
+#    include <__ranges/reserve_hint.h>
 #  endif
 
 #  include <version>
