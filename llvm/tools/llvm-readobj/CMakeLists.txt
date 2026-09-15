@@ -9,26 +9,12 @@ set(LLVM_LINK_COMPONENTS
   TargetParser
   )
 
-set(LLVM_TARGET_DEFINITIONS Opts.td)
-tablegen(LLVM Opts.inc -gen-opt-parser-defs)
-add_public_tablegen_target(ReadobjOptsTableGen)
-
 add_llvm_tool(llvm-readobj
-  ARMWinEHPrinter.cpp
-  COFFDumper.cpp
-  COFFImportDumper.cpp
-  ELFDumper.cpp
-  llvm-readobj.cpp
-  MachODumper.cpp
-  ObjDumper.cpp
-  WasmDumper.cpp
-  Win64EHDumper.cpp
-  WindowsResourceDumper.cpp
-  XCOFFDumper.cpp
-  DEPENDS
-  ReadobjOptsTableGen
   GENERATE_DRIVER
   )
+
+add_subdirectory(lib)
+target_link_libraries(llvm-readobj PRIVATE LLVMReadobjDriver)
 
 setup_host_tool(llvm-readobj LLVM_READOBJ llvm_readobj_exe llvm_readobj_target)
 

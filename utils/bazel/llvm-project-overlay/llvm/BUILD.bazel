@@ -6315,18 +6315,18 @@ binary_alias(
 
 gentbl_cc_library(
     name = "ReadobjOptsTableGen",
-    strip_include_prefix = "tools/llvm-readobj",
-    tbl_outs = {"tools/llvm-readobj/Opts.inc": ["-gen-opt-parser-defs"]},
+    strip_include_prefix = "tools/llvm-readobj/lib",
+    tbl_outs = {"tools/llvm-readobj/lib/Opts.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
-    td_file = "tools/llvm-readobj/Opts.td",
+    td_file = "tools/llvm-readobj/lib/Opts.td",
     deps = [":OptParserTdFiles"],
 )
 
 cc_library(
     name = "llvm-readobj-lib",
     srcs = glob([
-        "tools/llvm-readobj/*.cpp",
-        "tools/llvm-readobj/*.h",
+        "tools/llvm-readobj/lib/*.cpp",
+        "tools/llvm-readobj/lib/*.h",
     ]),
     copts = llvm_copts,
     deps = [
