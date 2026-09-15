@@ -926,11 +926,11 @@ void Fuzzer::MinimizeCrashLoop(const Unit &U) {
     for (int i = 0; i < Options.MutateDepth; i++) {
       size_t NewSize = MD.Mutate(CurrentUnitData, Size, MaxMutationLen);
       assert(NewSize > 0 && NewSize <= MaxMutationLen);
-      Size = NewSize;
-      ExecuteCallback(CurrentUnitData, Size);
-      PrintPulseAndReportSlowInput(CurrentUnitData, Size);
-      TryDetectingAMemoryLeak(CurrentUnitData, Size,
+      ExecuteCallback(CurrentUnitData, NewSize);
+      PrintPulseAndReportSlowInput(CurrentUnitData, NewSize);
+      TryDetectingAMemoryLeak(CurrentUnitData, NewSize,
                               /*DuringInitialCorpusExecution*/ false);
+      Size = NewSize;
     }
   }
 }
