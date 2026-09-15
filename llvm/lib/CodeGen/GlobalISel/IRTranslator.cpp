@@ -2674,8 +2674,9 @@ void IRTranslatorImpl::getStackGuard(Register DstReg,
     return;
   }
 
-  const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  MRI->setRegClass(DstReg, TRI->getPointerRegClass());
+  const TargetInstrInfo &TII = *MF->getSubtarget().getInstrInfo();
+  MRI->setRegClass(DstReg,
+                   TII.getRegClass(TII.get(TargetOpcode::LOAD_STACK_GUARD), 0));
   auto MIB =
       MIRBuilder.buildInstr(TargetOpcode::LOAD_STACK_GUARD, {DstReg}, {});
 
