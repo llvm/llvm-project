@@ -447,19 +447,16 @@ LogicalResult foldDynamicIndexList(SmallVectorImpl<OpFoldResult> &ofrs,
   for (OpFoldResult &ofr : ofrs) {
     if (isa<Attribute>(ofr))
       continue;
-    Attribute attr;
-    if (matchPattern(cast<Value>(ofr), m_Constant(&attr))) {
-      std::optional<int64_t> mayIntVal = getConstantIntValue(attr);
-      if (!mayIntVal)
-        continue;
-      // Note: All ofrs have index type.
-      if (onlyNonNegative && *mayIntVal < 0)
-        continue;
-      if (onlyNonZero && *mayIntVal == 0)
-        continue;
-      ofr = attr;
-      valuesChanged = true;
-    }
+    // Note: All ofrs have index type.
+    std::optional<int64_t> intVal = getConstantIntValue(ofr);
+    if (!intVal)
+      continue;
+    if (onlyNonNegative && *intVal < 0)
+      continue;
+    if (onlyNonZero && *intVal == 0)
+      continue;
+    ofr = getAsIndexOpFoldResult(cast<Value>(ofr).getContext(), *intVal);
+    valuesChanged = true;
   }
   return success(valuesChanged);
 }
