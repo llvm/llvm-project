@@ -7684,9 +7684,8 @@ PerformConstructorInitialization(Sema &S,
 
     CurInit = S.CheckForImmediateInvocation(
         CXXTemporaryObjectExpr::Create(
-            S.Context, CalleeDecl,
-            Entity.getType().getNonLValueExprType(S.Context), TSInfo,
-            ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
+            S.Context, CalleeDecl, Entity.getType().getNonReferenceType(),
+            TSInfo, ConstructorArgs, ParenOrBraceRange, HadMultipleCandidates,
             IsListInitialization, IsStdInitListInitialization,
             ConstructorInitRequiresZeroInit),
         CalleeDecl);
