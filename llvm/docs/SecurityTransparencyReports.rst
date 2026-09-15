@@ -58,8 +58,8 @@ We believe that with the publishing of this first annual transparency report,
 the security group now has implemented all necessary processes for the group to
 operate as promised. The group's processes can be improved further, and we do
 expect further improvements to get implemented in 2022. Many of the potential
-improvements end up being discussed on the :doc:`monthly public call on LLVM's
-security group <GettingInvolved>`.
+improvements end up being discussed on the :ref:`monthly public call on LLVM's
+security group <online-sync-ups>`.
 
 
 2022

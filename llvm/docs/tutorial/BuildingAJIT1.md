@@ -292,4 +292,4 @@ Here is the code:
     | LLVMContext.h              | Provides the LLVMContext class.                       |
 
 [^footnote-3]: See the ErrorHandling section in the LLVM Programmer's Manual
-    ([Error handling](project:../ProgrammersManual.md#error-handling))
+    ([Error handling](../ProgrammersManual.md#error-handling))

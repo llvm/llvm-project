@@ -32,15 +32,15 @@ The reader should be familiar with common compiler-engineering principles and
 LLVM code fundamentals. In this article, we assume the reader is familiar with
 [Single Static Assignment](http://en.wikipedia.org/wiki/Static_single_assignment_form)
 concept and has an understanding of
-[IR structure](project:LangRef.md#high-level-structure).
+[IR structure](LangRef.md#high-level-structure).
 
 We will use terms such as
-"[module](project:LangRef.md#high-level-structure)",
-"[function](project:ProgrammersManual.md#the-function-class)",
+"[module](LangRef.md#high-level-structure)",
+"[function](ProgrammersManual.md#the-function-class)",
 "[basic block](http://en.wikipedia.org/wiki/Basic_block)",
-"[user](project:ProgrammersManual.md#the-user-class)",
-"[value](project:ProgrammersManual.md#the-value-class)",
-"[instruction](project:ProgrammersManual.md#the-instruction-class)".
+"[user](ProgrammersManual.md#the-user-class)",
+"[value](ProgrammersManual.md#the-value-class)",
+"[instruction](ProgrammersManual.md#the-instruction-class)".
 
 As a good starting point, the Kaleidoscope tutorial can be used:
 

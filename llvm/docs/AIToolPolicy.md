@@ -105,7 +105,7 @@ the industry.  We therefore automatically post a greeting comment to pull
 requests from new contributors and encourage maintainers to spend their time to
 help new contributors learn.
 
-[commit-access]: project:DeveloperPolicy.md#obtaining-commit-access
+[commit-access]: DeveloperPolicy.md#obtaining-commit-access
 
 ## Handling Violations
 

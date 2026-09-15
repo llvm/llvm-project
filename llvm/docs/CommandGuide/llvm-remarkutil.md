@@ -217,8 +217,8 @@ compiling a **fixed source** with **differing compilers** or
 **differing optimization settings**.
 
 {program}`llvm-remarkutil size-diff` handles both
-[YAML](project:../Remarks.md#yaml-remarks) and
-[bitstream](project:../Remarks.md#llvm-bitstream-remarks)
+[YAML](../Remarks.md#yaml-remarks) and
+[bitstream](../Remarks.md#llvm-bitstream-remarks)
 remarks.
 
 #### Options

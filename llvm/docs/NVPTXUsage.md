@@ -4604,7 +4604,7 @@ The following sets the ftz flag to 1.
 ```
 
 (`i32 4` indicates that the value set here overrides the value in another
-module we link with. See the [LangRef](project:LangRef.md#module-flags-metadata)
+module we link with. See the [LangRef](LangRef.md#module-flags-metadata)
 for details.)
 
 ## Executing PTX
