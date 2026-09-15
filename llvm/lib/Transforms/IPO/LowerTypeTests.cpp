@@ -387,22 +387,21 @@ static uint8_t encodeCfiFunctionLinkage(CfiFunctionLinkage Linkage,
 }
 
 // Returns the maximum execution count for F across its entry count and basic
-// block counts. Placing the hottest function as the last jump table entry makes
-// it more likely to benefit from the SHT_LLVM_CFI_JUMP_TABLE last-entry
-// optimization and locks the jump table into the target's section, which is
-// likely hot.
+// block counts. Placing the hottest function (i.e. the function with the
+// hottest basic block) as the last jump table entry makes it more likely to
+// benefit from the SHT_LLVM_CFI_JUMP_TABLE last-entry optimization and locks
+// the jump table into the target's section, which is likely hot.
 static uint64_t
 getMaxCount(Function &F,
-            function_ref<const BlockFrequencyInfo *(Function &)> BFIGetter) {
+            function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
   if (F.hasFnAttribute(Attribute::Hot))
     return std::numeric_limits<int64_t>::max();
   uint64_t MaxCount = F.getEntryCount().value_or(0);
-  if (!F.isDeclaration() && BFIGetter) {
-    if (const BlockFrequencyInfo *BFI = BFIGetter(F)) {
-      for (const BasicBlock &BB : F) {
-        if (auto Count = BFI->getBlockProfileCount(&BB))
-          MaxCount = std::max(MaxCount, *Count);
-      }
+  if (!F.isDeclaration()) {
+    const BlockFrequencyInfo &BFI = BFIGetter(F);
+    for (const BasicBlock &BB : F) {
+      if (auto Count = BFI.getBlockProfileCount(&BB))
+        MaxCount = std::max(MaxCount, *Count);
     }
   }
   return MaxCount;
@@ -410,7 +409,7 @@ getMaxCount(Function &F,
 
 static void createCfiFunctionsMetadata(
     Module &DestM, ArrayRef<GlobalValue *> CfiFunctions,
-    function_ref<const BlockFrequencyInfo *(Function &)> BFIGetter) {
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
   auto &Ctx = DestM.getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
   for (auto *V : CfiFunctions) {
@@ -490,7 +489,7 @@ static void createCfiSymversMetadata(Module &DestM, const Module &SrcM) {
 
 void lowertypetests::createCfiMetadata(
     Module &DestM, const Module &SrcM, ArrayRef<GlobalValue *> CfiFunctions,
-    function_ref<const BlockFrequencyInfo *(Function &)> BFIGetter) {
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter) {
   createCfiFunctionsMetadata(DestM, CfiFunctions, BFIGetter);
   createCfiAliasesMetadata(DestM, SrcM);
   createCfiSymversMetadata(DestM, SrcM);

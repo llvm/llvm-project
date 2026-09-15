@@ -298,7 +298,7 @@ bool mustEmitToMergedModule(const GlobalValue *GV) {
 void splitAndWriteThinLTOBitcode(
     raw_ostream &OS, raw_ostream *ThinLinkOS,
     function_ref<AAResults &(Function &)> AARGetter,
-    function_ref<const BlockFrequencyInfo *(Function &)> BFIGetter, Module &M,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter, Module &M,
     const bool ShouldPreserveUseListOrder) {
   std::string ModuleId = getUniqueModuleId(&M);
   if (ModuleId.empty()) {
@@ -482,7 +482,7 @@ bool requiresSplit(Module &M) {
 bool writeThinLTOBitcode(
     raw_ostream &OS, raw_ostream *ThinLinkOS,
     function_ref<AAResults &(Function &)> AARGetter,
-    function_ref<const BlockFrequencyInfo *(Function &)> BFIGetter, Module &M,
+    function_ref<const BlockFrequencyInfo &(Function &)> BFIGetter, Module &M,
     const ModuleSummaryIndex *Index, const bool ShouldPreserveUseListOrder) {
   std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
   // See if this module needs to be split. If so, we try to split it
@@ -540,9 +540,8 @@ llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
       [&FAM](Function &F) -> AAResults & {
         return FAM.getResult<AAManager>(F);
       },
-      [&FAM](Function &F) -> const BlockFrequencyInfo * {
-        return F.isDeclaration() ? nullptr
-                                 : &FAM.getResult<BlockFrequencyAnalysis>(F);
+      [&FAM](Function &F) -> const BlockFrequencyInfo & {
+        return FAM.getResult<BlockFrequencyAnalysis>(F);
       },
       M, &AM.getResult<ModuleSummaryIndexAnalysis>(M),
       ShouldPreserveUseListOrder);
