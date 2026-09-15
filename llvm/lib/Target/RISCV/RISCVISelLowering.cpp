@@ -2709,6 +2709,10 @@ bool RISCVTargetLowering::hasAndNot(SDValue Y) const {
   if (!VT.isVector())
     return hasAndNotCompare(Y);
 
+  // vmandn.mm
+  if (VT.getVectorElementType() == MVT::i1)
+    return Subtarget.hasVInstructions();
+
   return Subtarget.hasStdExtZvkb();
 }
 
