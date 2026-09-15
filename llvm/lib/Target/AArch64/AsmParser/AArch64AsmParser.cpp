@@ -3770,6 +3770,7 @@ constexpr EnumStringDef<FeatureBitset> ExtensionDefs[] = {
     {{"lsc64b"}, {AArch64::FeatureLSC64B}},
     {{"sve-lrcpc"}, {AArch64::FeatureSVE_LRCPC}},
     {{"sve-perm256"}, {AArch64::FeatureSVE_PERM256}},
+    {{"sme-f16f8f16"}, {AArch64::FeatureSMEF16F8F16}},
 };
 constexpr auto ExtensionMap = BUILD_ENUM_STRINGS(ExtensionDefs);
 
@@ -6331,6 +6332,9 @@ bool AArch64AsmParser::showMatchError(SMLoc Loc, unsigned ErrCode,
   case Match_InvalidZPR_K0:
     return Error(Loc, "invalid restricted vector register, expected register "
                       "in z20..z23 or z28..z31");
+  case Match_InvalidZPR_K8:
+    return Error(Loc, "invalid restricted vector register, expected register "
+                      "in z20.b..z23.b or z28.b..z31.b");
   case Match_InvalidSVEPattern:
     return Error(Loc, "invalid predicate pattern");
   case Match_InvalidSVEPPRorPNRAnyReg:
@@ -7053,6 +7057,7 @@ bool AArch64AsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidZPRMul2_Lo64:
   case Match_InvalidZPRMul2_Hi64:
   case Match_InvalidZPR_K0:
+  case Match_InvalidZPR_K8:
   case Match_InvalidSVEVectorList2x8Mul2:
   case Match_InvalidSVEVectorList2x16Mul2:
   case Match_InvalidSVEVectorList2x32Mul2:

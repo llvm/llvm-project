@@ -650,6 +650,10 @@ def FeatureS1POE2: ExtensionWithMArch<"poe2", "POE2", "FEAT_S1POE2",
 def FeatureTEV: ExtensionWithMArch<"tev", "TEV", "FEAT_TEV",
   "Enable TIndex Exception-like Vector instructions">;
 
+def FeatureSMEF16F8F16 : ExtensionWithMArch<"sme-f16f8f16", "SME_F16F8F16", "FEAT_SME_F16F8F16",
+  "Enable SME half-precision and FP8 sum-of-products accumulating to half-precision instructions",
+  [FeatureSME2, FeatureFP8]>;
+
 //===----------------------------------------------------------------------===//
 //  Other Features
 //===----------------------------------------------------------------------===//
