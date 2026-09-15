@@ -24,6 +24,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_llvm_target_unittest(AMDGPUTests
   AMDGPUMCExprTest.cpp
+  AMDGPUOptimizeVGPREncodingTest.cpp
   AMDGPUUnitTests.cpp
   CSETest.cpp
   DwarfRegMappings.cpp
