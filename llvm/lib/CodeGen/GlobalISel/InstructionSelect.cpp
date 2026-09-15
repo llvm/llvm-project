@@ -327,18 +327,19 @@ bool InstructionSelectImpl::selectMachineFunction(MachineFunction &MF) {
     return false;
   }
 
-  // Determine if there are any calls in this machine function. Ported from
-  // SelectionDAG.
+  // Determine if there are any calls in this machine function, and which
+  // blocks directly contain inline asm. Ported from SelectionDAG -- see the
+  // comment there on why this can no longer bail out early once
+  // MFI.hasCalls() && MF.hasInlineAsm() are both known true.
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  for (const auto &MBB : MF) {
-    if (MFI.hasCalls() && MF.hasInlineAsm())
-      break;
-
+  for (auto &MBB : MF) {
     for (const auto &MI : MBB) {
       if ((MI.isCall() && !MI.isReturn()) || MI.isStackAligningInlineAsm())
         MFI.setHasCalls(true);
-      if (MI.isInlineAsm())
+      if (MI.isInlineAsm()) {
         MF.setHasInlineAsm(true);
+        MBB.setHasInlineAsm(true);
+      }
     }
   }
 

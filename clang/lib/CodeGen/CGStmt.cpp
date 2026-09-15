@@ -2977,7 +2977,41 @@ void AsmConstraintsInfo::HandleOutputConstraints() {
         CodeGenFunction::hasScalarEvaluationKind(QTy) ||
         CodeGenFunction::hasAggregateEvaluationKind(QTy);
 
-    if (!Info.allowsMemory() && IsScalarOrAggregate) {
+    // A plain "rm"/"mr" constraint (register-or-memory, no other
+    // alternatives) also takes the by-value path above -O0, mirroring
+    // TargetLowering::MayFoldRegister on the backend: the backend now
+    // prefers a register for exactly this constraint shape and falls back
+    // to memory under pressure on its own (see RegAllocFast's inline asm
+    // folding), so there's no need to pessimistically commit to memory here
+    // the way a plain "m" (or a broader multi-alternative constraint like
+    // "g") still must. This check is deliberately conservative -- an exact
+    // 2-character match after stripping a leading early-clobber '&' --
+    // rather than trying to replicate the backend's full constraint-code
+    // parser here: anything it doesn't recognize (e.g. a commutative '%'
+    // modifier, which isn't tracked on TargetInfo::ConstraintInfo) simply
+    // falls through to the existing, always-safe indirect path below.
+    //
+    // getTargetHooks().supportsRegMemInlineAsmFolding() must agree with the
+    // backend's own gate
+    // (llvm::TargetLowering::supportsRegMemInlineAsmFolding()): taking the
+    // by-value path commits to the backend being able to fall back to memory if
+    // a register genuinely isn't available, and only one target has that
+    // fallback implemented today. Getting this wrong is not a missed
+    // optimization -- it turns ordinary, previously-working inline asm on every
+    // other target into a hard compile error.
+    bool IsExactRegMem = false;
+    if (CGM.getCodeGenOpts().OptimizationLevel != 0 && Info.allowsRegister() &&
+        Info.allowsMemory() &&
+        getTargetHooks().supportsRegMemInlineAsmFolding()) {
+      StringRef Codes = OutputConstraint;
+      if (Info.earlyClobber() && Codes.starts_with("&"))
+        Codes = Codes.drop_front();
+      IsExactRegMem =
+          Codes.size() == 2 && ((Codes[0] == 'r' && Codes[1] == 'm') ||
+                                (Codes[0] == 'm' && Codes[1] == 'r'));
+    }
+
+    if ((!Info.allowsMemory() || IsExactRegMem) && IsScalarOrAggregate) {
       Constraints += "=" + OutputConstraint;
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
