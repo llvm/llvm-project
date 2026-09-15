@@ -19259,10 +19259,12 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 // but any mask is fine.
 static SDValue combineVMNOTOfSetCC(SDNode *N, SelectionDAG &DAG) {
   SDValue Cmp = N->getOperand(0);
+  if (Cmp.getOpcode() != RISCVISD::VMSET_VL &&
+      N->getOperand(1).getOpcode() != RISCVISD::VMSET_VL)
+    return SDValue();
+
   if (Cmp.getOpcode() == RISCVISD::VMSET_VL)
     Cmp = N->getOperand(1);
-  else if (N->getOperand(1).getOpcode() != RISCVISD::VMSET_VL)
-    return SDValue();
 
   if (Cmp.getOpcode() != RISCVISD::SETCC_VL || !Cmp.hasOneUse() ||
       !Cmp.getOperand(0).getValueType().isInteger() ||
