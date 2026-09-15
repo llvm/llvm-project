@@ -502,6 +502,20 @@ private:
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 } // namespace
 
+/// Find the first nested DoConstruct evaluation directly under \p eval,
+/// skipping over any other sibling evaluations (e.g. a CompilerDirective
+/// such as !DIR$ IVDEP) that may appear between loop levels of a collapsed
+/// or tiled loop nest. Returns nullptr if none is found.
+static Fortran::lower::pft::Evaluation *
+findNestedDoConstructEvaluation(Fortran::lower::pft::Evaluation &eval) {
+  if (!eval.hasNestedEvaluations())
+    return nullptr;
+  for (Fortran::lower::pft::Evaluation &child : eval.getNestedEvaluations())
+    if (child.getIf<Fortran::parser::DoConstruct>())
+      return &child;
+  return nullptr;
+}
+
 //===----------------------------------------------------------------------===//
 // FirConverter
 //===----------------------------------------------------------------------===//
@@ -3659,9 +3673,11 @@ private:
         const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
         if (!(outerDo && outerDo->IsDoConcurrent()))
           for (uint64_t i = 1; i < loopCount; i++) {
-            if (!curEval->hasNestedEvaluations())
+            Fortran::lower::pft::Evaluation *nextDo =
+                findNestedDoConstructEvaluation(*curEval);
+            if (!nextDo)
               break;
-            curEval = &*std::next(curEval->getNestedEvaluations().begin());
+            curEval = nextDo;
           }
       }
     }
@@ -4004,8 +4020,12 @@ private:
 
         ivTypes.push_back(idxTy);
         ivLocs.push_back(crtLoc);
-        if (i < nestedLoops - 1)
-          loopEval = &*std::next(loopEval->getNestedEvaluations().begin());
+        if (i < nestedLoops - 1) {
+          Fortran::lower::pft::Evaluation *nextDo =
+              findNestedDoConstructEvaluation(*loopEval);
+          assert(nextDo && "expected a nested DO CONSTRUCT");
+          loopEval = nextDo;
+        }
       }
     }
 
@@ -4033,8 +4053,13 @@ private:
     if (crtEval->lowerAsStructured()) {
       crtEval = &crtEval->getFirstNestedEvaluation();
       if (!outerDoConstruct->IsDoConcurrent())
-        for (int64_t i = 1; i < nestedLoops; i++)
-          crtEval = &*std::next(crtEval->getNestedEvaluations().begin());
+        for (int64_t i = 1; i < nestedLoops; i++) {
+          Fortran::lower::pft::Evaluation *nextDo =
+              findNestedDoConstructEvaluation(*crtEval);
+          if (!nextDo)
+            break;
+          crtEval = nextDo;
+        }
     }
 
     // Generate loop body
