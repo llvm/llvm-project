@@ -160,7 +160,7 @@ public:
     __ns_rep __now_count_ns = std::__safe_nanosecond_cast(system_clock::now().time_since_epoch()).count();
 #  endif
 
-    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(__ceil<steady_clock::duration>(__d)).count();
+    __ns_rep __d_ns_count = std::__safe_nanosecond_cast(chrono::__ceil<steady_clock::duration>(__d)).count();
 
     if (__now_count_ns > numeric_limits<__ns_rep>::max() - __d_ns_count) {
       __do_timed_wait(__lk, __clock_tp_ns::max());
