@@ -534,6 +534,7 @@ math_mpfr_test(
     deps = [
         "//libc:__support_fputil_bfloat16",
         "//libc:__support_cpp_array",
+        "//libc:__support_fputil_bfloat16",
     ],
 )
 
