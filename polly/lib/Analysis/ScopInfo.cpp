@@ -1686,9 +1686,29 @@ void Scop::removeStmts(function_ref<bool(ScopStmt &)> ShouldDelete,
 void Scop::removeStmtNotInDomainMap() {
   removeStmts([this](ScopStmt &Stmt) -> bool {
     isl::set Domain = DomainMap.lookup(Stmt.getEntryBlock());
-    if (Domain.is_null())
-      return true;
-    return Domain.is_empty();
+    if (!Domain.is_null() && !Domain.is_empty())
+      return false;
+
+    // Since the ScopStmt is about to be removed. Hence for any constituent
+    // MemoryAcess which is a must_write & is of kind "Sacalor" i.e.
+    // a MemoryKind::Value must be preserved via SAI registration since
+    // we want the codegen to handle this in a way that it creates necessary
+    // merge phi and fix the associated use locations
+    // for such a scalar/value as due to versioning these values have
+    // been pruned away[the whole BB/Scopstsmt has been removed] since it was
+    // proved to have invalid/null domain
+    // This eventually saves polly to generate a "Bad-IR" due to broken
+    // dominance
+    for (MemoryAccess *MA : Stmt) {
+      if (!MA->isMustWrite() || !MA->isOriginalValueKind())
+        continue;
+      auto *Inst = dyn_cast_or_null<Instruction>(MA->getAccessValue());
+      if (!Inst || !contains(Inst) || isa<PHINode>(Inst) || !isEscaping(Inst))
+        continue;
+      getOrCreateScopArrayInfo(Inst, Inst->getType(), {}, MemoryKind::Value);
+    }
+
+    return true;
   });
 }
 
