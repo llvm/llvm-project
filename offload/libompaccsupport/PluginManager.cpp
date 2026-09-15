@@ -520,6 +520,7 @@ static int loadImagesOntoDevice(DeviceTy &Device) {
                   ? std::max(Cfg.MinThreads,
                              int32_t(GenericDevice.getDefaultNumThreads()))
                   : GenericDevice.getDefaultNumThreads();
+          LaunchInfo.StaticBlockMemSize = Kernel->getStaticBlockMemSize();
 
           Device.setKernelLaunchInfo(DeviceEntry.Address, LaunchInfo);
         }
