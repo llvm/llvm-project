@@ -939,20 +939,6 @@ VPValue *VPSCEVExpander::expand(const SCEV *S) {
   }
   case scMulExpr: {
     auto *MulE = cast<SCEVMulExpr>(S);
-
-    // mul(PowerOf2C, udiv(X, PowerOf2C)) == (X >> C) << C -> X & (-1 << C),
-    // matching SCEVExpander::visitMulExpr.
-    const SCEVConstant *C1, *C2;
-    const SCEV *Val;
-    if (match(S, m_scev_Mul(m_SCEVConstant(C1),
-                            m_scev_UDiv(m_SCEV(Val), m_SCEVConstant(C2)))) &&
-        C1 == C2 && C1->getAPInt().isPowerOf2()) {
-      VPValue *LHS = expand(Val);
-      APInt Mask = APInt::getBitsSetFrom(MulE->getType()->getScalarSizeInBits(),
-                                         C1->getAPInt().logBase2());
-      return Builder.createAnd(LHS, Builder.getPlan().getConstantInt(Mask), DL);
-    }
-
     VPIRFlags::WrapFlagsTy WrapFlags(MulE->hasNoUnsignedWrap(),
                                      MulE->hasNoSignedWrap());
     SmallVector<VPValue *, 2> Ops;

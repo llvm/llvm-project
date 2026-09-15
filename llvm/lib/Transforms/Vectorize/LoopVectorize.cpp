@@ -6962,14 +6962,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
-/// Return true if \p CG's bounds can be expanded in the check block.
-/// VPSCEVExpander only expands AddRecs of loops enclosing the plan's scope.
-static bool boundsAreVPlanExpandable(const RuntimeCheckingPtrGroup &CG,
-                                     ScalarEvolution &SE) {
-  return !SE.containsAddRecurrence(CG.Low) &&
-         !SE.containsAddRecurrence(CG.High);
-}
-
 /// Return true if \p RtPtrChecking's memory checks for \p OrigLoop can be
 /// modelled as VPlan recipes.
 static bool
@@ -6983,10 +6975,17 @@ canModelMemChecksInVPlan(const RuntimePointerChecking &RtPtrChecking,
   if (OrigLoop.getParentLoop())
     return false;
 
+  // Return true if \p CG's bounds can be expanded in the check block.
+  // VPSCEVExpander only expands AddRecs of loops enclosing the plan's scope.
+  auto BoundsAreVPlanExpandable = [&SE](const RuntimeCheckingPtrGroup &CG) {
+    return !SE.containsAddRecurrence(CG.Low) &&
+           !SE.containsAddRecurrence(CG.High);
+  };
+
   ArrayRef<RuntimePointerCheck> Checks = RtPtrChecking.getChecks();
-  return !Checks.empty() && all_of(Checks, [&SE](const RuntimePointerCheck &C) {
-    return boundsAreVPlanExpandable(*C.first, SE) &&
-           boundsAreVPlanExpandable(*C.second, SE);
+  return !Checks.empty() && all_of(Checks, [&](const RuntimePointerCheck &C) {
+    return BoundsAreVPlanExpandable(*C.first) &&
+           BoundsAreVPlanExpandable(*C.second);
   });
 }
 
