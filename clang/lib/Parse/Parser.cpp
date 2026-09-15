@@ -48,6 +48,58 @@ public:
 };
 } // end anonymous namespace
 
+class Parser::TokenInjectionHandlerImpl : public sema::TokenInjectionHandler {
+  Parser &P;
+
+public:
+  explicit TokenInjectionHandlerImpl(Parser &P) : P{P} {}
+
+  ExprResult ParseAsExpression(StringRef Code,
+                               const llvm::StringMap<Token> &Replacements,
+                               SourceLocation InjectionLoc) override {
+    // Collect tokens.
+    SmallVector<Token> Tokens;
+    if (P.PP.LexTokensInString(Tokens, Code, InjectionLoc))
+      return ExprError();
+
+    // Apply replacements.
+    for (Token &T : Tokens) {
+      if (T.is(tok::identifier)) {
+        auto It = Replacements.find(T.getIdentifierInfo()->getName());
+        if (It != Replacements.end())
+          T = It->getValue();
+      }
+    }
+
+    // The lexer should have added an EOF marker to the token list.
+    assert(Tokens.back().is(tok::eof));
+    char EofMarker{};
+    Tokens.back().setEofData(&EofMarker);
+
+    // Start parsing the tokens; we need to save the current token so we
+    // don't lose it, and consume it since EnterTokenStream() doesn't change
+    // the current token.
+    //
+    // Disable macro expansion since that was already done as part of the call
+    // to LexTokensInString() above; 'IsReinjected' is for phase 4 tokens, so
+    // we don't want that either here.
+    SaveAndRestore SaveCurTok{P.Tok};
+    P.PP.EnterTokenStream(Tokens, /*DisableMacroExpansion=*/true,
+                          /*IsReinjected=*/false);
+    P.ConsumeAnyToken();
+    ExprResult Res = P.ParseExpression();
+
+    // We should have parsed exactly one expression; if we still have tokens
+    // left, then there was probably an error; don't diagnose this and just
+    // skip them.
+    while (P.Tok.isNot(tok::eof))
+      P.ConsumeAnyToken();
+
+    assert(P.Tok.getEofData() == &EofMarker);
+    return Res;
+  }
+};
+
 IdentifierInfo *Parser::getSEHExceptKeyword() {
   // __except is accepted as a (contextual) keyword
   if (!Ident__except && (getLangOpts().MicrosoftExt || getLangOpts().Borland))
@@ -74,6 +126,8 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   // destructor.
   initializePragmaHandlers();
 
+  Actions.setTokenInjectionHandler(
+      std::make_unique<TokenInjectionHandlerImpl>(*this));
   CommentSemaHandler.reset(new ActionCommentHandler(actions));
   PP.addCommentHandler(CommentSemaHandler.get());
 
@@ -481,7 +535,7 @@ Parser::~Parser() {
   resetPragmaHandlers();
 
   PP.removeCommentHandler(CommentSemaHandler.get());
-
+  Actions.setTokenInjectionHandler(nullptr);
   PP.clearCodeCompletionHandler();
 
   DestroyTemplateIds();

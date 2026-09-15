@@ -118,27 +118,25 @@ struct String {
 template <__SIZE_TYPE__ n>
 String(const char (&str)[n]) -> String<n>;
 
-// Note: Remove this test once we do support them.
-int iterating_expansion_stmts_unsupported() {
+int iterating_expansion_stmts() {
   static constexpr String s{"abcd"};
   int count = 0;
-  template for (constexpr auto x : s) count++; // expected-error {{iterating expansion statements are not yet supported}}
+  template for (constexpr auto x : s) count++;
   return count;
 }
 
 template <typename T>
-int iterating_expansion_stmts_unsupported_dependent() {
+int iterating_expansion_stmts_dependent() {
   static constexpr String s{"abcd"};
   int count = 0;
-  template for (auto x : T(s)) count++; // expected-error {{iterating expansion statements are not yet supported}}
+  template for (auto x : T(s)) count++;
   return count;
 }
 
-void iterating_expansion_stmts_unsupported_dependent_instantiate() {
-  iterating_expansion_stmts_unsupported_dependent<String<5>>(); // expected-note {{in instantiation of}}
+void iterating_expansion_stmts_dependent_instantiate() {
+  iterating_expansion_stmts_dependent<String<5>>();
 }
 
-#if 0 // Disabled until we support iterating expansion statements.
 constexpr int f3() {
   static constexpr String s{"abcd"};
   int count = 0;
@@ -182,6 +180,7 @@ void negative_size() {
                                      expected-note {{in call to}}
   template for (constexpr auto x : n) g(x); // expected-error {{expansion statement size is not a constant expression}} \
                                                old-interp-note {{constexpr evaluation hit maximum step limit}} \
+                                               old-interp-note {{use -fconstexpr-steps}} \
                                                new-interp-note {{cannot refer to element 5 of array of 4 elements in a constant expression}} \
                                                expected-note {{in call to}}
 }
@@ -201,8 +200,7 @@ struct NotInt {
 
 void not_int() {
   static constexpr NotInt ni;
-  template for (auto x : ni) g(x); // expected-error {{invalid operands to binary expression}} \
-                                      expected-note {{while attempting to construct 'begin - begin' with iterator type 'iterator'}}
+  template for (auto x : ni) g(x); // expected-error {{invalid operands to binary expression}}
 }
 
 static constexpr Array<int, 3> integers{1, 2, 3};
@@ -314,8 +312,7 @@ void missing_funcs() {
 
   template for (auto x : s2) g(x); // expected-error {{invalid operands to binary expression}}
   template for (auto x : s3) g(x); // expected-error {{indirection requires pointer operand ('iterator' invalid)}}
-  template for (auto x : s4) g(x); // expected-error {{invalid operands to binary expression ('iterator' and 'iterator')}} \
-                                      expected-note {{while attempting to construct 'begin - begin' with iterator type 'iterator'}}
+  template for (auto x : s4) g(x); // expected-error {{invalid operands to binary expression ('iterator' and 'iterator')}}
 }
 
 namespace adl {
@@ -381,7 +378,6 @@ constexpr int adl_both_test() {
 }
 
 static_assert(adl_both_test() == 15);
-#endif // 0
 
 struct A {};
 struct B { int x = 1; };
@@ -614,7 +610,6 @@ constexpr int complex() {
 
 static_assert(complex() == 3);
 
-#if 0 // Disabled until we support iterating expansion statements.
 struct BeginOnly {
   int x{1};
   constexpr const int* begin() const { return nullptr; }
@@ -733,7 +728,6 @@ void unpaired_begin_end() {
   template for (auto x : end_deleted) {} // expected-error {{call to deleted function 'end'}} \
                                             expected-note {{when looking up 'end' function for range expression of type 'const adl10::EndDeleted'}}
 }
-#endif // 0
 
 // Examples taken from [stmt.expand].
 namespace stmt_expand_examples {
@@ -748,7 +742,6 @@ constexpr int c1[] = {1, 2, 3};
 constexpr int c2[] = {4, 3, 2, 1};
 static_assert(f(c1, c2) == 5);
 
-#if 0 // Disabled until we support iterating expansion statements.
 // TODO: This entire example should work without issuing any diagnostics once
 // we have full support for references to constexpr variables (P2686).
 consteval int f() {
@@ -774,7 +767,6 @@ consteval int f() {
   return result;
 }
 static_assert(f() == 6); // old-interp-error {{static assertion failed due to requirement 'f() == 6'}} old-interp-note {{expression evaluates to '0 == 6'}}
-#endif // 0
 
 struct S {
   int i;
@@ -1181,19 +1173,15 @@ void init_list_bad() {
 // Test that the init statement is evaluated even if the expansion statement
 // expands to nothing.
 constexpr int init_stmt_empty_expansion() {
-#if 0 // Disabled until we support iterating expansion statements.
   static constexpr String empty{""};
-#endif // 0
   int x = 0;
   template for (int _ = x += 1; auto i : {}) {}
-#if 0 // Disabled until we support iterating expansion statements.
   template for (int _ = x += 2; auto i : empty) {}
-#endif // 0
   template for (int _ = x += 3; auto i : Empty()) {}
   return x;
 }
 
-static_assert(init_stmt_empty_expansion() == 4);
+static_assert(init_stmt_empty_expansion() == 6);
 
 void vla(int n) {
   int a[n];
@@ -1231,7 +1219,6 @@ void lambda_template_call() {
   lambda_template([]{}); // expected-note {{in instantiation of function template specialization}}
 }
 
-#if 0 // Disabled until we support iterating expansion statements.
 // CWG 3131 makes it possible to expand over non-constexpr ranges.
 namespace cwg3131 {
 constexpr int f1() {
@@ -1243,9 +1230,7 @@ constexpr int f1() {
 constexpr int f2() {
   Array<int, 3> a{1, 2, 3};
   int j = 0;
-  template for (auto i : a) j +=i; // new-interp-error {{expansion statement size is not a constant expression}} \
-                                      new-interp-note {{initializer of '__range1' is not a constant expression}} \
-                                      new-interp-note {{declared here}}
+  template for (auto i : a) j += i; // new-interp-error {{expansion statement size is not a constant expression}}
   return j;
 }
 
@@ -1352,7 +1337,6 @@ constexpr int f() {
 
 static_assert(f() == 20);
 }
-#endif // 0
 
 namespace cwg3149 {
 struct NotCopyable {
@@ -1454,7 +1438,6 @@ void f2(int q) {
 }
 }
 
-#if 0 // Disabled until we support iterating expansion statements.
 // Check that we apply lifetime extension to iterating expansions statements.
 //
 // The new constant interpreter erroring on this is likely https://github.com/llvm/llvm-project/issues/187775.
@@ -1474,9 +1457,7 @@ constexpr T g(int& x) noexcept { return T(x); }
 constexpr int lifetime_extension_iterating() {
   int x = 5;
   int sum  = 0;
-  // new-interp-error@+3 {{expansion statement size is not a constant expression}}
-  // new-interp-note@+2 {{initializer of '__range1' is not a constant expression}}
-  // new-interp-note@+1 {{declared here}}
+  // new-interp-error@+1 {{expansion statement size is not a constant expression}}
   template for (auto e : f(g(x))) {
     sum += x;
   }
@@ -1487,9 +1468,7 @@ template <typename T>
 constexpr int lifetime_extension_iterating_dependent() {
   int x = 5;
   int sum  = 0;
-  // new-interp-error@+3 {{expansion statement size is not a constant expression}}
-  // new-interp-note@+2 {{initializer of '__range0' is not a constant expression}}
-  // new-interp-note@+1 {{declared here}}
+  // new-interp-error@+1 {{expansion statement size is not a constant expression}}
   template for (auto e : T(f(g(x)))) {
     sum += x;
   }
@@ -1500,9 +1479,7 @@ template <typename T>
 constexpr int lifetime_extension_iterating_instantiation() {
   int x = 5;
   int sum  = 0;
-  // new-interp-error@+3 {{expansion statement size is not a constant expression}}
-  // new-interp-note@+2 {{initializer of '__range2' is not a constant expression}}
-  // new-interp-note@+1 {{declared here}}
+  // new-interp-error@+1 {{expansion statement size is not a constant expression}}
   template for (auto e : f(g(x))) {
     sum += x;
   }
@@ -1513,7 +1490,6 @@ static_assert(lifetime_extension_iterating() == 47); // new-interp-error {{stati
 static_assert(lifetime_extension_iterating_dependent<const T&>() == 47); // new-interp-error {{static assertion expression is not an integral constant expression}} new-interp-note {{in instantiation of}}
 static_assert(lifetime_extension_iterating_instantiation<void>() == 47); // new-interp-error {{static assertion expression is not an integral constant expression}} new-interp-note {{in instantiation of}}
 }
-#endif // 0
 
 // Tests that make sure that certain parts of an expansion statement end up in
 // the right DeclContext.

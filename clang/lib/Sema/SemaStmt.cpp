@@ -2350,7 +2350,8 @@ StmtResult Sema::ActOnForEachLValueExpr(Expr *E) {
 /// Finish building a variable declaration for a for-range statement.
 /// \return true if an error occurs.
 static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
-                                  SourceLocation Loc, int DiagID) {
+                                  SourceLocation Loc,
+                                  bool AccessibleViaNameLookup, int DiagID) {
   if (Decl->getType()->isUndeducedType()) {
     ExprResult Res = Init;
     if (!Res.isUsable()) {
@@ -2389,7 +2390,10 @@ static bool FinishForRangeVarDecl(Sema &SemaRef, VarDecl *Decl, Expr *Init,
 
   SemaRef.AddInitializerToDecl(Decl, Init, /*DirectInit=*/false);
   SemaRef.FinalizeDeclaration(Decl);
-  SemaRef.CurContext->addHiddenDecl(Decl);
+  if (AccessibleViaNameLookup)
+    SemaRef.PushOnScopeChains(Decl, SemaRef.getCurScope());
+  else
+    SemaRef.CurContext->addHiddenDecl(Decl);
   return false;
 }
 
@@ -2463,6 +2467,7 @@ StmtResult Sema::BuildCXXForRangeRangeVar(Scope *S, Expr *Range, QualType Type,
   SourceLocation RangeLoc = Range->getBeginLoc();
   VarDecl *RangeVar = BuildForRangeVarDecl(RangeLoc, Type, Name, IsConstexpr);
   if (FinishForRangeVarDecl(*this, RangeVar, Range, RangeLoc,
+                            /*AccessibleViaNameLookup=*/false,
                             diag::err_for_range_deduction_failure))
 
     return StmtError();
@@ -2551,7 +2556,8 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
                       QualType RangeType, VarDecl *BeginVar, VarDecl *EndVar,
                       SourceLocation ColonLoc, SourceLocation CoawaitLoc,
                       OverloadCandidateSet *CandidateSet, ExprResult *BeginExpr,
-                      ExprResult *EndExpr, BeginEndFunction *BEF) {
+                      ExprResult *EndExpr, BeginEndFunction *BEF,
+                      bool AccessibleViaNameLookup) {
   DeclarationNameInfo BeginNameInfo(
       &SemaRef.PP.getIdentifierTable().get("begin"), ColonLoc);
   DeclarationNameInfo EndNameInfo(&SemaRef.PP.getIdentifierTable().get("end"),
@@ -2584,6 +2590,7 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
         return Sema::FRS_DiagnosticIssued;
     }
     if (FinishForRangeVarDecl(SemaRef, BeginVar, BeginExpr->get(), ColonLoc,
+                              AccessibleViaNameLookup,
                               diag::err_for_range_iter_deduction_failure)) {
       NoteForRangeBeginEndFunction(SemaRef, BeginExpr->get(), *BEF);
       return Sema::FRS_DiagnosticIssued;
@@ -2604,6 +2611,7 @@ BuildNonArrayForRange(Sema &SemaRef, Expr *BeginRange, Expr *EndRange,
       return RangeStatus;
     }
     if (FinishForRangeVarDecl(SemaRef, EndVar, EndExpr->get(), ColonLoc,
+                              AccessibleViaNameLookup,
                               diag::err_for_range_iter_deduction_failure)) {
       NoteForRangeBeginEndFunction(SemaRef, EndExpr->get(), *BEF);
       return Sema::FRS_DiagnosticIssued;
@@ -2731,7 +2739,8 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
     Scope *S, VarDecl *RangeVar, SourceLocation ColonLoc,
     SourceLocation CoawaitLoc,
     ArrayRef<MaterializeTemporaryExpr *> LifetimeExtendTemps,
-    BuildForRangeKind Kind, bool IsConstexpr, StmtResult *RebuildResult,
+    BuildForRangeKind Kind, bool IsConstexpr, bool AccessibleViaNameLookup,
+    StmtResult *RebuildResult,
     llvm::function_ref<StmtResult()> RebuildWithDereference,
     IdentifierInfo *BeginName, IdentifierInfo *EndName) {
   QualType RangeVarType = RangeVar->getType();
@@ -2786,6 +2795,7 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
         return {};
     }
     if (FinishForRangeVarDecl(*this, BeginVar, BeginRangeRef.get(), ColonLoc,
+                              AccessibleViaNameLookup,
                               diag::err_for_range_iter_deduction_failure)) {
       NoteForRangeBeginEndFunction(*this, BeginExpr.get(), BEF_begin);
       return {};
@@ -2858,6 +2868,7 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
     if (EndExpr.isInvalid())
       return {};
     if (FinishForRangeVarDecl(*this, EndVar, EndExpr.get(), ColonLoc,
+                              AccessibleViaNameLookup,
                               diag::err_for_range_iter_deduction_failure)) {
       NoteForRangeBeginEndFunction(*this, EndExpr.get(), BEF_end);
       return {};
@@ -2866,10 +2877,10 @@ Sema::ForRangeBeginEndInfo Sema::BuildCXXForRangeBeginEndVars(
     OverloadCandidateSet CandidateSet(RangeLoc,
                                       OverloadCandidateSet::CSK_Normal);
     BeginEndFunction BEFFailure;
-    ForRangeStatus RangeStatus =
-        BuildNonArrayForRange(*this, BeginRangeRef.get(), EndRangeRef.get(),
-                              RangeType, BeginVar, EndVar, ColonLoc, CoawaitLoc,
-                              &CandidateSet, &BeginExpr, &EndExpr, &BEFFailure);
+    ForRangeStatus RangeStatus = BuildNonArrayForRange(
+        *this, BeginRangeRef.get(), EndRangeRef.get(), RangeType, BeginVar,
+        EndVar, ColonLoc, CoawaitLoc, &CandidateSet, &BeginExpr, &EndExpr,
+        &BEFFailure, AccessibleViaNameLookup);
 
     if (Kind == BFRK_Build && RangeStatus == FRS_NoViableFunction &&
         BEFFailure == BEF_begin) {
@@ -2977,7 +2988,8 @@ StmtResult Sema::BuildCXXForRangeStmt(
 
     ForRangeBeginEndInfo ForRangeInfo = BuildCXXForRangeBeginEndVars(
         S, RangeVar, ColonLoc, CoawaitLoc, LifetimeExtendTemps, Kind,
-        /*Constexpr=*/false, &RebuildResult, RebuildWithDereference);
+        /*Constexpr=*/false, /*AccessibleViaNameLookup=*/false, &RebuildResult,
+        RebuildWithDereference);
 
     if (!RebuildResult.isUnset())
       return RebuildResult;
