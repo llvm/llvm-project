@@ -549,6 +549,36 @@ static Constant *getKnownConstant(Value *Val, ConstantPreference Preference) {
   return dyn_cast<ConstantInt>(Val);
 }
 
+/// If the edge PredBB->BB is controlled by a conditional branch whose condition
+/// implies `icmp Pred LHS, RHS`, return that compare's value on the edge (else
+/// std::nullopt). LHS/RHS are the operands as seen on the edge and must be
+/// available there -- a compare operand defined in BB does not exist on the
+/// edge. Most useful when both compare operands are PHIs in BB and PredBB
+/// already branched on the same compare:
+///
+///   PredBB: br (C = icmp <pred> A, B), T, BB   ; here BB is the false arm
+///                                          \
+///                                           v
+///   BB: L = phi [A, PredBB], ...   ; L -> A on the PredBB edge
+///       R = phi [B, PredBB], ...   ; R -> B on the PredBB edge
+///       br (icmp <pred> L, R)      ; == C, false => thread past it
+static std::optional<bool> isImpliedByEdgeBranch(BasicBlock *PredBB,
+                                                 BasicBlock *BB,
+                                                 CmpInst::Predicate Pred,
+                                                 Value *LHS, Value *RHS,
+                                                 const DataLayout &DL) {
+  auto DefinedInBB = [&](Value *V) {
+    auto *I = dyn_cast<Instruction>(V);
+    return I && I->getParent() == BB;
+  };
+  auto *PredBI = dyn_cast<CondBrInst>(PredBB->getTerminator());
+  if (!PredBI || PredBI->getSuccessor(0) == PredBI->getSuccessor(1) ||
+      DefinedInBB(LHS) || DefinedInBB(RHS))
+    return std::nullopt;
+  return isImpliedCondition(PredBI->getCondition(), Pred, LHS, RHS, DL,
+                            /*LHSIsTrue=*/PredBI->getSuccessor(0) == BB);
+}
+
 /// computeValueKnownInPredecessors - Given a basic block BB and a value V, see
 /// if we can infer that the value is a known ConstantInt/BlockAddress or undef
 /// in any of our predecessors.  If so, return the known list of value and pred
@@ -767,6 +797,14 @@ bool JumpThreadingPass::computeValueKnownInPredecessorsImpl(
           RHS = PN->getIncomingValue(i);
         }
         Value *Res = simplifyCmpInst(Pred, LHS, RHS, {DL});
+
+        // If it doesn't fold, the compare may still be known on this edge when
+        // PredBB's branch condition implies it (see isImpliedByEdgeBranch).
+        if (!Res && isa<ICmpInst>(Cmp) && !CmpType->isVectorTy())
+          if (std::optional<bool> Implied =
+                  isImpliedByEdgeBranch(PredBB, BB, Pred, LHS, RHS, DL))
+            Res = ConstantInt::getBool(Cmp->getContext(), *Implied);
+
         if (!Res) {
           if (!isa<Constant>(RHS))
             continue;
