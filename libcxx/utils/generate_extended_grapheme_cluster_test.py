@@ -157,8 +157,6 @@ cpp_template = """// -*- C++ -*-
 
 #include "test_macros.h"
 
-using namespace std::literals;
-
 template <class CharT>
 struct data {{
   /// The input to parse.
@@ -202,7 +200,7 @@ cpp_test_data_line_template = "     {{{}, {{{}}}, {{{}}}}}"
 
 def lineToCppDataLineUtf8(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
-        f'"{line.encoded}"sv',
+        f'"{line.encoded}"',
         ", ".join([str(x) for x in line.code_points]),
         ", ".join([str(x) for x in line.breaks_utf8]),
     )
@@ -210,7 +208,7 @@ def lineToCppDataLineUtf8(line: BreakTestItem) -> str:
 
 def lineToCppDataLineUtf16(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
-        f'L"{line.encoded}"sv',
+        f'L"{line.encoded}"',
         ", ".join([str(x) for x in line.code_points]),
         ", ".join([str(x) for x in line.breaks_utf16]),
     )
@@ -218,7 +216,7 @@ def lineToCppDataLineUtf16(line: BreakTestItem) -> str:
 
 def lineToCppDataLineUtf32(line: BreakTestItem) -> str:
     return cpp_test_data_line_template.format(
-        f'L"{line.encoded}"sv',
+        f'L"{line.encoded}"',
         ", ".join([str(x) for x in line.code_points]),
         ", ".join([str(x) for x in line.breaks_utf32]),
     )
@@ -227,7 +225,7 @@ def lineToCppDataLineUtf32(line: BreakTestItem) -> str:
 """
 Generate test data from "GraphemeBreakText.txt"
 This file can be downloaded from:
-https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakTest.txt
+https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakTest.txt
 This script looks for GraphemeBreakTest.txt in same directory as this script
 """
 
