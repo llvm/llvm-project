@@ -3580,7 +3580,7 @@ public:
 
   /// A cache of the flags available in enumerations with the flag_enum
   /// attribute.
-  llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
+  mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
   /// A cache of enumerator values for enums checked by -Wassign-enum.
   llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
@@ -9348,16 +9348,12 @@ public:
     void setKind(Kind K) { Pair.setInt(K); }
   };
 
-  class SpecialMemberOverloadResultEntry : public llvm::FastFoldingSetNode,
-                                           public SpecialMemberOverloadResult {
-  public:
-    SpecialMemberOverloadResultEntry(const llvm::FoldingSetNodeID &ID)
-        : FastFoldingSetNode(ID) {}
-  };
+  using SpecialMemberCacheKey = std::pair<const CXXRecordDecl *, unsigned>;
 
   /// A cache of special member function overload resolution results
   /// for C++ records.
-  llvm::FoldingSet<SpecialMemberOverloadResultEntry> SpecialMemberCache;
+  llvm::DenseMap<SpecialMemberCacheKey, SpecialMemberOverloadResult>
+      SpecialMemberCache;
 
   enum class AcceptableKind { Visible, Reachable };
 

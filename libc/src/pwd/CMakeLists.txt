@@ -43,6 +43,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpwnam
+  SRCS
+    getpwnam.cpp
+  HDRS
+    getpwnam.h
+  DEPENDS
+    libc.hdr.types.struct_passwd
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
+add_entrypoint_object(
   getpwnam_r
   SRCS
     getpwnam_r.cpp
@@ -56,6 +71,21 @@ add_entrypoint_object(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
+add_entrypoint_object(
+  getpwuid
+  SRCS
+    getpwuid.cpp
+  HDRS
+    getpwuid.h
+  DEPENDS
+    libc.hdr.types.struct_passwd
+    libc.hdr.types.uid_t
+    libc.src.errno.errno
+    libc.src.__support.common
+    libc.src.__support.macros.config
     .pwd_utils
 )
 
@@ -79,8 +109,6 @@ add_entrypoint_object(
 add_object_library(
   pwd_utils
   HDRS
-    field_tokenizer.h
-    flat_file_db.h
     pwd_utils.h
   SRCS
     pwd_utils.cpp
@@ -100,6 +128,8 @@ add_object_library(
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
     libc.src.__support.error_or
+    libc.src.__support.pwd.field_tokenizer
+    libc.src.__support.pwd.flat_file_db
     libc.src.__support.str_to_integer
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config

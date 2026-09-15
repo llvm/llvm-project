@@ -192,6 +192,21 @@ template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 
 using SCEVUse = SCEVUseT<const SCEV *>;
 
+/// The no-wrap flags to apply when creating a SCEV expression, to the
+/// expression and use respectively.
+struct SCEVFlags {
+  /// Flags applied directly to a SCEV expression, must be valid wherever the
+  /// expression is valid.
+  SCEVNoWrapFlags ExprFlags;
+
+  /// Flags only applied to a SCEVUse.
+  SCEVNoWrapFlags UseFlags;
+
+  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagAnyWrap,
+                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagAnyWrap)
+      : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
+};
+
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
 template <> struct PointerLikeTypeTraits<SCEVUse> {
@@ -711,7 +726,6 @@ public:
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
-  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
   /// Return true if the SCEV expression contains an undef value.
@@ -750,33 +764,27 @@ public:
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, SCEVUse Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(SCEVUse Op, Type *Ty);
 
-  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                                  unsigned Depth = 0);
-  const SCEV *getAddExpr(SCEVUse LHS, SCEVUse RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  LLVM_ABI SCEVUse getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
+                              SCEVFlags Flags = {}, unsigned Depth = 0);
+  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                     unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getAddExpr(Ops, Flags, Depth);
   }
-  const SCEV *getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  SCEVUse getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
+                     SCEVFlags Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                                  unsigned Depth = 0);
-  const SCEV *getMulExpr(SCEVUse LHS, SCEVUse RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  LLVM_ABI SCEVUse getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
+                              SCEVFlags Flags = {}, unsigned Depth = 0);
+  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                     unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getMulExpr(Ops, Flags, Depth);
   }
-  const SCEV *getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  SCEVUse getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
+                     SCEVFlags Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
@@ -1152,6 +1160,10 @@ public:
   /// in a way that may effect its value, or which may disconnect it from a
   /// def-use chain linking it to a loop.
   LLVM_ABI void forgetValue(Value *V);
+
+  /// Batched forgetValue: invalidates all \p Values in one shared def-use walk,
+  /// avoiding the redundant re-traversal of overlapping users.
+  LLVM_ABI void forgetValues(ArrayRef<Value *> Values);
 
   /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
   /// such that it may no longer be trivial.

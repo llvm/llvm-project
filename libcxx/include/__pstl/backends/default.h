@@ -66,7 +66,7 @@ namespace __pstl {
 //
 // is_heap_until family
 // --------------
-// No other algorithms based on is_heap_until
+// - is_heap
 //
 // find_if family
 // --------------
@@ -77,6 +77,14 @@ namespace __pstl {
 // - none_of
 // - is_partitioned
 // - find_first_of
+//
+// min_element family
+// ---------------
+// - max_element
+//
+// minmax_element family
+// -------------------
+// No other algorithms based on minmax_element
 //
 // mismatch family
 // ---------------
@@ -255,6 +263,26 @@ struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
 };
 
 //////////////////////////////////////////////////////////////
+// min_element family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __max_element<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Compare>
+  optional<_ForwardIterator>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Compare __comp) const noexcept {
+    using _MinElement = __dispatch<__min_element, __current_configuration, _ExecutionPolicy>;
+    using _Ref        = __iterator_reference<_ForwardIterator>;
+    // Express max_element via min_element by replacing the comparison
+    // "lhs OP rhs" with "rhs OP lhs".
+    return _MinElement()(
+        __policy, std::move(__first), std::move(__last), [__comp = std::move(__comp)](_Ref __lhs, _Ref __rhs) {
+          return __comp(__rhs, __lhs);
+        });
+  }
+};
+
+//////////////////////////////////////////////////////////////
 // mismatch family
 //////////////////////////////////////////////////////////////
 
@@ -352,6 +380,20 @@ struct __adjacent_find<__default_backend_tag, _ExecutionPolicy> {
       // Currently anything outside bidirectional iterators has to be processed serially
       return std::adjacent_find(std::move(__first), std::move(__last), std::move(__predicate));
     }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_heap<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _RandomAccessIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool> operator()(
+      _Policy&& __policy, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp&& __comp) const noexcept {
+    using _IsHeapUntil = __dispatch<__is_heap_until, __current_configuration, _ExecutionPolicy>;
+    auto __res         = _IsHeapUntil()(__policy, std::move(__first), __last, std::forward<_Comp>(__comp));
+    if (!__res) {
+      return nullopt; // Failed to run the algorithm, propagate the error.
+    }
+    return *__res == __last; // is_heap_until returns the last iterator when no heap violations are found in the range.
   }
 };
 
