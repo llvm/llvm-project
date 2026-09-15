@@ -709,6 +709,9 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveIntervalsAnalysis>();
+  // LiveVariables is only used and maintained when LiveIntervals is absent.
+  if (!LIS)
+    PA.preserve<LiveVariablesAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
