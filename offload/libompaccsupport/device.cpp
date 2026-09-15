@@ -389,6 +389,152 @@ static void resolveKernelLaunchParams(void **const TgtArgs,
   LaunchArgs.Args = &Ptrs[0];
 }
 
+namespace {
+/// Configuration of dynamic block memory needed for launching a kernel.
+struct DynBlockMemConfTy {
+  /// The size of the dynamic block memory buffer.
+  uint32_t Size = 0;
+  /// The size of dynamic shared memory natively provided by the device.
+  uint32_t NativeSize = 0;
+  /// The fallback that was triggered (if any).
+  DynCGroupMemFallbackType Fallback = DynCGroupMemFallbackType::None;
+  /// The fallback pointer if global memory was used as alternative.
+  void *FallbackPtr = nullptr;
+};
+} // namespace
+
+/// Prepare the block memory buffer requested for the kernel and execute the
+/// specified fallback if necessary.
+static llvm::Expected<DynBlockMemConfTy>
+prepareBlockMemory(GenericDeviceTy &GenericDevice,
+                   const KernelLaunchInfoTy &KernelEnv, uint32_t DynCGroupMem,
+                   DynCGroupMemFallbackType DynCGroupMemFallback,
+                   uint32_t NumBlocks) {
+  uint32_t MaxBlockMemSize = GenericDevice.getMaxBlockSharedMemSize();
+  uint32_t DynBlockMemSize = DynCGroupMem;
+  uint32_t TotalBlockMemSize = KernelEnv.StaticBlockMemSize + DynBlockMemSize;
+  uint32_t DynNativeBlockMemSize = DynBlockMemSize;
+  void *DynFallbackPtr = nullptr;
+
+  // No enough block memory to cover the static one. Cannot run the kernel.
+  if (KernelEnv.StaticBlockMemSize > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Static block memory size exceeds maximum");
+  // No enough block memory to cover dynamic one, and the fallback is aborting.
+  if (DynCGroupMemFallback == DynCGroupMemFallbackType::Abort &&
+      TotalBlockMemSize > MaxBlockMemSize)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_ARGUMENT,
+        "Requested block memory size (static + dynamic) exceeds maximum");
+
+  DynCGroupMemFallbackType DynFallback = DynCGroupMemFallbackType::None;
+  if (DynBlockMemSize && TotalBlockMemSize > MaxBlockMemSize) {
+    // Launch without native dynamic block memory.
+    DynNativeBlockMemSize = 0;
+    DynFallback = DynCGroupMemFallback;
+    if (DynFallback != DynCGroupMemFallbackType::DefaultMem) {
+      // Do not provide any memory as fallback.
+      DynBlockMemSize = 0;
+    } else {
+      // Get global memory as fallback.
+      auto AllocOrErr = GenericDevice.dataAlloc(
+          NumBlocks * DynBlockMemSize,
+          /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+      if (!AllocOrErr)
+        return AllocOrErr.takeError();
+      DynFallbackPtr = *AllocOrErr;
+    }
+  }
+  return DynBlockMemConfTy{DynBlockMemSize, DynNativeBlockMemSize, DynFallback,
+                           DynFallbackPtr};
+}
+
+static void freeAfterSynchronization(GenericDeviceTy &GenericDevice,
+                                     AsyncInfoTy &AsyncInfo, void *Ptr,
+                                     TargetAllocTy Kind) {
+  AsyncInfo.addPostProcessingFunction([&GenericDevice, Ptr, Kind]() -> int {
+    if (auto Err = GenericDevice.dataDelete(Ptr, Kind)) {
+      REPORT() << "Failure to free device memory " << Ptr << ": "
+               << toString(std::move(Err));
+      return OFFLOAD_FAIL;
+    }
+    return OFFLOAD_SUCCESS;
+  });
+}
+
+/// Return a device pointer to a new kernel launch environment, or null if
+/// this launch has no reserved dyn_ptr slot to store one in. \p NumBlocks0 is
+/// the number of blocks for this launch and is used to size the reduction
+/// buffer.
+static llvm::Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
+    GenericDeviceTy &GenericDevice, const KernelLaunchArgsTy &LaunchArgs,
+    const KernelLaunchInfoTy &KernelEnv,
+    const DynBlockMemConfTy &DynBlockMemConf, uint32_t DynCGroupMem,
+    void **DynPtrSlot, AsyncInfoTy &AsyncInfo, uint32_t NumBlocks0) {
+  // Ctor/Dtor have no arguments, replaying uses the original kernel launch
+  // environment, and launches with no reserved dyn_ptr slot (e.g. older
+  // compiler versions, or non-OpenMP launches) have nowhere to store one.
+  if ((GenericDevice.getRecordReplay() &&
+       GenericDevice.getRecordReplay()->isReplaying()) ||
+      !DynPtrSlot)
+    return nullptr;
+
+  const bool NeedsReductionBuffer = KernelEnv.ReductionDataSize != 0;
+  if (NeedsReductionBuffer && LaunchArgs.OmpABIVersion < OMP_KERNEL_ARG_VERSION)
+    return error::createOffloadError(
+        error::ErrorCode::INVALID_BINARY,
+        "kernel was built against an older OpenMP kernel-launch-environment "
+        "ABI (v%u); current runtime requires v%u for cross-team reductions",
+        LaunchArgs.OmpABIVersion, OMP_KERNEL_ARG_VERSION);
+  if (!NeedsReductionBuffer && !DynCGroupMem)
+    return reinterpret_cast<KernelLaunchEnvironmentTy *>(~0);
+
+  auto AllocOrErr = GenericDevice.dataAlloc(
+      sizeof(KernelLaunchEnvironmentTy),
+      /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+  if (!AllocOrErr)
+    return AllocOrErr.takeError();
+
+  // Remember to free the memory later.
+  freeAfterSynchronization(GenericDevice, AsyncInfo, *AllocOrErr,
+                           TARGET_ALLOC_DEVICE);
+
+  // Use the KLE in the __tgt_async_info to ensure a stable address for the
+  // async data transfer.
+  auto &LocalKLE =
+      static_cast<__tgt_async_info *>(AsyncInfo)->KernelLaunchEnvironment;
+  LocalKLE = KernelLaunchEnvironmentTy{};
+  LocalKLE.DynCGroupMemSize = DynBlockMemConf.Size;
+  LocalKLE.DynCGroupMemFbPtr = DynBlockMemConf.FallbackPtr;
+  LocalKLE.DynCGroupMemFb = DynBlockMemConf.Fallback;
+  LocalKLE.ReductionBuffer = nullptr;
+
+  if (NeedsReductionBuffer) {
+    // Use number of teams many buffer elements.
+    auto ReductionAllocOrErr = GenericDevice.dataAlloc(
+        uint64_t(KernelEnv.ReductionDataSize) * NumBlocks0,
+        /*HostPtr=*/nullptr, TARGET_ALLOC_DEVICE, /*Alignment=*/0);
+    if (!ReductionAllocOrErr)
+      return ReductionAllocOrErr.takeError();
+    LocalKLE.ReductionBuffer = *ReductionAllocOrErr;
+    // Remember to free the memory later.
+    freeAfterSynchronization(GenericDevice, AsyncInfo, *ReductionAllocOrErr,
+                             TARGET_ALLOC_DEVICE);
+  }
+
+  INFO(OMP_INFOTYPE_DATA_TRANSFER, GenericDevice.getDeviceId(),
+       "Copying data from host to device, HstPtr=" DPxMOD ", TgtPtr=" DPxMOD
+       ", Size=%" PRId64 ", Name=KernelLaunchEnv\n",
+       DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
+       sizeof(KernelLaunchEnvironmentTy));
+
+  if (auto Err = GenericDevice.dataSubmit(
+          *AllocOrErr, &LocalKLE, sizeof(KernelLaunchEnvironmentTy), AsyncInfo))
+    return Err;
+  return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
+}
+
 /// Get the effective number of threads for the kernel based on the
 /// user-defined number of threads.
 static uint32_t getEffectiveNumThreads(GenericDeviceTy &GenericDevice,
@@ -505,32 +651,27 @@ getEffectiveNumBlocks(GenericDeviceTy &GenericDevice, uint32_t UserNumBlocks,
                   GenericDevice.getBlockLimit(EffectiveNumThreads));
 }
 
-// Run region on device
-int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
-                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
-                               KernelReplayOutcomeTy *ReplayOutcome,
-                               AsyncInfoTy &AsyncInfo) {
-  llvm::SmallVector<void *> Args, Ptrs;
-  llvm::SmallVector<int64_t> ArgSizes;
-
+/// Build the base KernelLaunchArgsTy for a launch from the public
+/// KernelArgsTy and the kernel's cached launch-geometry properties.
+static KernelLaunchArgsTy buildLaunchArgs(const KernelArgsTy &KernelArgs,
+                                          KernelReplayOutcomeTy *ReplayOutcome,
+                                          const KernelLaunchInfoTy &KernelEnv) {
   KernelLaunchArgsTy LaunchArgs;
   LaunchArgs.OmpABIVersion = KernelArgs.Version;
   LaunchArgs.ReplayOutcome = ReplayOutcome;
   LaunchArgs.ArgSizes = KernelArgs.ArgSizes;
   LaunchArgs.Tripcount = KernelArgs.Tripcount;
-  LaunchArgs.DynCGroupMem = KernelArgs.DynCGroupMem;
   llvm::copy(KernelArgs.UserNumBlocks, LaunchArgs.UserNumBlocks);
   llvm::copy(KernelArgs.UserThreadLimit, LaunchArgs.UserThreadLimit);
   LaunchArgs.Flags.Cooperative = KernelArgs.Flags.Cooperative;
-  LaunchArgs.Flags.DynCGroupMemFallback = KernelArgs.Flags.DynCGroupMemFallback;
+  LaunchArgs.MaxNumThreads = KernelEnv.MaxNumThreads;
+  return LaunchArgs;
+}
 
-  KernelLaunchInfoTy KernelEnv = getKernelLaunchInfo(TgtEntryPtr);
-  LaunchArgs.KernelEnvironment.ReductionDataSize = KernelEnv.ReductionDataSize;
-  LaunchArgs.KernelEnvironment.MaxNumThreads = KernelEnv.MaxNumThreads;
-
-  const bool StrictBlocks = KernelArgs.Flags.StrictBlocks;
-  const bool StrictThreads = KernelArgs.Flags.StrictThreads;
-
+/// Assert the launch geometry invariants expected by the plugin layer.
+static void checkLaunchInvariants(const KernelLaunchArgsTy &LaunchArgs,
+                                  const KernelArgsTy &KernelArgs,
+                                  const KernelLaunchInfoTy &KernelEnv) {
   // Multidimensional is only supported with bare mode for now.
   assert(KernelEnv.isBareMode() ||
          LaunchArgs.UserThreadLimit[1] == 1 &&
@@ -540,41 +681,58 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
              "Non-bare mode should only use the first thread and block "
              "dimensions");
 
-  assert(!StrictBlocks ||
+  assert(!KernelArgs.Flags.StrictBlocks ||
          LaunchArgs.UserNumBlocks[0] > 0 && LaunchArgs.UserNumBlocks[1] > 0 &&
              LaunchArgs.UserNumBlocks[2] > 0 &&
              "Strict requires number of blocks greater than zero");
-  assert(!StrictThreads ||
+  assert(!KernelArgs.Flags.StrictThreads ||
          LaunchArgs.UserThreadLimit[0] > 0 &&
              LaunchArgs.UserThreadLimit[1] > 0 &&
              LaunchArgs.UserThreadLimit[2] > 0 &&
              "Strict requires number of threads greater than zero");
+}
+
+/// Calculate or adjust, in place, the effective number of threads and blocks
+/// for the first dimension, unless the caller requested strict counts.
+static void adjustEffectiveGeometry(GenericDeviceTy &GenericDevice,
+                                    KernelLaunchArgsTy &LaunchArgs,
+                                    const KernelArgsTy &KernelArgs,
+                                    const KernelLaunchInfoTy &KernelEnv) {
+  const bool StrictBlocks = KernelArgs.Flags.StrictBlocks;
+  const bool StrictThreads = KernelArgs.Flags.StrictThreads;
+  if (StrictThreads && StrictBlocks)
+    return;
+
+  assert(!KernelEnv.isBareMode() &&
+         "bare kernel launches must request strict thread/block counts");
 
   // Record whether the user actually requested a thread limit (thread_limit
   // clause) before possibly overwriting UserThreadLimit[0] below with the
   // computed effective value.
   const bool ThreadLimitFromUser = LaunchArgs.UserThreadLimit[0] > 0;
 
-  // Calculate or adjust the effective number of threads and blocks for the
-  // first dimension, if the caller didn't request strict counts.
-  if (!StrictThreads || !StrictBlocks) {
-    assert(!KernelEnv.isBareMode() &&
-           "bare kernel launches must request strict thread/block counts");
+  uint32_t EffectiveNumThreads = LaunchArgs.UserThreadLimit[0];
+  if (!StrictThreads)
+    EffectiveNumThreads =
+        getEffectiveNumThreads(GenericDevice, EffectiveNumThreads, KernelEnv);
 
-    GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
-    uint32_t EffectiveNumThreads = LaunchArgs.UserThreadLimit[0];
-    if (!StrictThreads)
-      EffectiveNumThreads =
-          getEffectiveNumThreads(GenericDevice, EffectiveNumThreads, KernelEnv);
+  if (!StrictBlocks)
+    LaunchArgs.UserNumBlocks[0] = getEffectiveNumBlocks(
+        GenericDevice, LaunchArgs.UserNumBlocks[0], LaunchArgs.Tripcount,
+        EffectiveNumThreads, StrictThreads, ThreadLimitFromUser, KernelEnv);
 
-    if (!StrictBlocks)
-      LaunchArgs.UserNumBlocks[0] = getEffectiveNumBlocks(
-          GenericDevice, LaunchArgs.UserNumBlocks[0], LaunchArgs.Tripcount,
-          EffectiveNumThreads, StrictThreads, ThreadLimitFromUser, KernelEnv);
+  LaunchArgs.UserThreadLimit[0] = EffectiveNumThreads;
+}
 
-    LaunchArgs.UserThreadLimit[0] = EffectiveNumThreads;
-  }
-
+/// Flatten the kernel arguments into \p LaunchArgs.Args. Returns the address
+/// of the element reserved for the kernel launch environment (dyn_ptr), or
+/// null if this launch has no such slot.
+static void **resolveArgsAndDynPtrSlot(KernelArgsTy &KernelArgs,
+                                       void **TgtVarsPtr, ptrdiff_t *TgtOffsets,
+                                       llvm::SmallVector<void *> &Args,
+                                       llvm::SmallVector<void *> &Ptrs,
+                                       llvm::SmallVector<int64_t> &ArgSizes,
+                                       KernelLaunchArgsTy &LaunchArgs) {
   if (KernelArgs.Flags.IsCUDA) {
     // Kernel languages (CUDA/HIP) pass an already-flattened argument-pointer
     // array through KernelArgs.ArgPtrs instead of using the OpenMP
@@ -583,34 +741,106 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
         reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
     LaunchArgs.NumArgs = LaunchParams->NumArgs;
     LaunchArgs.Args = LaunchParams->Args;
-  } else {
-    resolveKernelLaunchParams(TgtVarsPtr, TgtOffsets, KernelArgs.NumArgs, Args,
-                              Ptrs, LaunchArgs);
-    // The dyn_ptr slot is reserved by the host (version >= 4) or by
-    // upgradeKernelArgs (version 3) as the last element of the argument
-    // array. Version 3 device kernels expect it first instead, so rotate it
-    // to the front to match that ABI.
-    if (KernelArgs.NumArgs > 0 &&
-        KernelArgs.Version >= OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
-      if (KernelArgs.Version == OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR) {
-        std::rotate(Args.begin(), Args.end() - 1, Args.end());
-        LaunchArgs.DynPtrSlot = &Args[0];
+    return nullptr;
+  }
 
-        // Keep ArgSizes in sync with the rotated Args, if present.
-        if (LaunchArgs.ArgSizes) {
-          ArgSizes.assign(LaunchArgs.ArgSizes,
-                          LaunchArgs.ArgSizes + KernelArgs.NumArgs);
-          std::rotate(ArgSizes.begin(), ArgSizes.end() - 1, ArgSizes.end());
-          LaunchArgs.ArgSizes = ArgSizes.data();
-        }
-      } else {
-        LaunchArgs.DynPtrSlot = &Args[KernelArgs.NumArgs - 1];
-      }
-    }
+  resolveKernelLaunchParams(TgtVarsPtr, TgtOffsets, KernelArgs.NumArgs, Args,
+                            Ptrs, LaunchArgs);
+
+  if (KernelArgs.NumArgs == 0 ||
+      KernelArgs.Version < OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+    return nullptr;
+
+  // The dyn_ptr slot is reserved by the host (version >= 4) or by
+  // upgradeKernelArgs (version 3) as the last element of the argument array.
+  // Version 3 device kernels expect it first instead, so rotate it to the
+  // front to match that ABI.
+  if (KernelArgs.Version != OMP_KERNEL_ARG_MIN_VERSION_WITH_DYN_PTR)
+    return &Args[KernelArgs.NumArgs - 1];
+
+  std::rotate(Args.begin(), Args.end() - 1, Args.end());
+
+  // Keep ArgSizes in sync with the rotated Args, if present.
+  if (LaunchArgs.ArgSizes) {
+    ArgSizes.assign(LaunchArgs.ArgSizes,
+                    LaunchArgs.ArgSizes + KernelArgs.NumArgs);
+    std::rotate(ArgSizes.begin(), ArgSizes.end() - 1, ArgSizes.end());
+    LaunchArgs.ArgSizes = ArgSizes.data();
+  }
+  return &Args[0];
+}
+
+/// Compute the dynamic block-memory configuration for this launch, filling in
+/// \p LaunchArgs.DynCGroupMem with the native size to request, and, if this
+/// launch has a reserved dyn_ptr slot (\p DynPtrSlot), the device-side kernel
+/// launch environment.
+static llvm::Error
+prepareDynamicLaunchState(GenericDeviceTy &GenericDevice,
+                          const KernelLaunchInfoTy &KernelEnv,
+                          KernelLaunchArgsTy &LaunchArgs, uint32_t DynCGroupMem,
+                          DynCGroupMemFallbackType DynCGroupMemFallback,
+                          void **DynPtrSlot, AsyncInfoTy &AsyncInfo) {
+  uint32_t NumBlocksTotal = LaunchArgs.UserNumBlocks[0] *
+                            LaunchArgs.UserNumBlocks[1] *
+                            LaunchArgs.UserNumBlocks[2];
+  auto DynBlockMemConfOrErr =
+      prepareBlockMemory(GenericDevice, KernelEnv, DynCGroupMem,
+                         DynCGroupMemFallback, NumBlocksTotal);
+  if (!DynBlockMemConfOrErr)
+    return DynBlockMemConfOrErr.takeError();
+
+  DynBlockMemConfTy &DynBlockMemConf = *DynBlockMemConfOrErr;
+  LaunchArgs.DynCGroupMem = DynBlockMemConf.NativeSize;
+  if (DynBlockMemConf.FallbackPtr)
+    freeAfterSynchronization(GenericDevice, AsyncInfo,
+                             DynBlockMemConf.FallbackPtr, TARGET_ALLOC_DEVICE);
+
+  auto KernelLaunchEnvOrErr = getKernelLaunchEnvironment(
+      GenericDevice, LaunchArgs, KernelEnv, DynBlockMemConf, DynCGroupMem,
+      DynPtrSlot, AsyncInfo, LaunchArgs.UserNumBlocks[0]);
+  if (!KernelLaunchEnvOrErr)
+    return KernelLaunchEnvOrErr.takeError();
+
+  // Fill in the kernel launch environment (dyn_ptr) if this launch has a
+  // reserved slot for it. When replaying, getKernelLaunchEnvironment()
+  // returns null so the recorded value already in the slot is preserved.
+  if (DynPtrSlot && *KernelLaunchEnvOrErr)
+    *DynPtrSlot = *KernelLaunchEnvOrErr;
+
+  return llvm::Error::success();
+}
+
+// Run region on device
+int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
+                               ptrdiff_t *TgtOffsets, KernelArgsTy &KernelArgs,
+                               KernelReplayOutcomeTy *ReplayOutcome,
+                               AsyncInfoTy &AsyncInfo) {
+  llvm::SmallVector<void *> Args, Ptrs;
+  llvm::SmallVector<int64_t> ArgSizes;
+
+  GenericDeviceTy &GenericDevice = RTL->getDevice(RTLDeviceID);
+  KernelLaunchInfoTy KernelEnv = getKernelLaunchInfo(TgtEntryPtr);
+  KernelLaunchArgsTy LaunchArgs =
+      buildLaunchArgs(KernelArgs, ReplayOutcome, KernelEnv);
+
+  checkLaunchInvariants(LaunchArgs, KernelArgs, KernelEnv);
+  adjustEffectiveGeometry(GenericDevice, LaunchArgs, KernelArgs, KernelEnv);
+
+  void **DynPtrSlot = resolveArgsAndDynPtrSlot(
+      KernelArgs, TgtVarsPtr, TgtOffsets, Args, Ptrs, ArgSizes, LaunchArgs);
+
+  auto DynCGroupMemFallback = static_cast<DynCGroupMemFallbackType>(
+      KernelArgs.Flags.DynCGroupMemFallback);
+  if (auto Err = prepareDynamicLaunchState(
+          GenericDevice, KernelEnv, LaunchArgs, KernelArgs.DynCGroupMem,
+          DynCGroupMemFallback, DynPtrSlot, AsyncInfo)) {
+    REPORT() << "Failure to prepare launch state for kernel " << TgtEntryPtr
+             << ": " << toString(std::move(Err));
+    return OFFLOAD_FAIL;
   }
 
   auto *Kernel = reinterpret_cast<GenericKernelTy *>(TgtEntryPtr);
-  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, RTL->getDevice(RTLDeviceID).getDeviceId(),
+  INFO(OMP_INFOTYPE_PLUGIN_KERNEL, GenericDevice.getDeviceId(),
        "Launching kernel %s with [%u,%u,%u] blocks and [%u,%u,%u] threads in "
        "%s mode\n",
        Kernel->getName(), LaunchArgs.UserNumBlocks[0],
