@@ -7754,6 +7754,16 @@ void Parser::ParseParameterDeclarationClause(
           DelayTemplateIdDestructionRAII DontDestructTemplateIds(
               *this, /*DelayTemplateIdDestruction=*/true);
 
+          // Include the template level introduced by 'auto' parameters:
+          //   void f(auto x, int = []<auto N = sizeof(x)>() { return N; }());
+          // The type parameter for x has depth 0, so N starts at depth 1.
+          // Otherwise, instantiation would reduce N's depth to -1.
+          TemplateParameterDepthRAII CurTemplateDepthTracker(
+              TemplateParameterDepth);
+          unsigned Depth = Actions.getTemplateDepth(getCurScope());
+          if (Depth > TemplateParameterDepth)
+            CurTemplateDepthTracker.addDepth(Depth - TemplateParameterDepth);
+
           // The argument isn't actually potentially evaluated unless it is
           // used.
           EnterExpressionEvaluationContext Eval(
