@@ -63,7 +63,7 @@ def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [Pure]> {
   );
 
   let results = (outs
-    SPIRV_Composite:$result
+    SPIRV_CompositeOrPtrVector:$result
   );
 
   let assemblyFormat = [{
