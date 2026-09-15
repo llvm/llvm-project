@@ -6033,6 +6033,15 @@ static void __kmp_taskgraph_free(kmp_int32 gtid, kmp_taskgraph_record_t *rec,
                                  bool keep_rec = false) {
   kmp_info_t *thread = __kmp_threads[gtid];
 
+  if (__kmp_taskgraph_check_lifetime()) {
+    int users = KMP_ATOMIC_LD_ACQ(&rec->replay_users);
+    if (users != 0)
+      fprintf(stderr,
+              "taskgraph lifetime check: tearing down record %p with %d "
+              "replay user(s) still attached\n",
+              rec, users);
+  }
+
   if (rec->root)
     __kmp_taskgraph_free_region_metadata(
         thread, rec->root, keep_rec ? &rec->recycled_deps : nullptr);
@@ -6139,6 +6148,11 @@ static kmp_taskgraph_record_t *__kmp_expire_taskgraph_records(
   while (*expiring_p) {
     kmp_taskgraph_record_t *expiring = *expiring_p;
     if (KMP_ATOMIC_LD_ACQ(&expiring->replay_users) != 0) {
+      if (__kmp_taskgraph_check_lifetime())
+        fprintf(stderr,
+                "taskgraph lifetime check: deferring record %p with %d "
+                "replay user(s)\n",
+                expiring, KMP_ATOMIC_LD_ACQ(&expiring->replay_users));
       expiring_p = &expiring->next;
       continue;
     }

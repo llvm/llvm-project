@@ -2761,6 +2761,14 @@ bool __kmp_taskgraph_trace() {
   return trace_enabled;
 }
 
+bool __kmp_taskgraph_check_lifetime() {
+  static int check_enabled = -1;
+  if (check_enabled == -1) {
+    check_enabled = getenv("KMP_TASKGRAPH_CHECK_LIFETIME") != nullptr;
+  }
+  return check_enabled;
+}
+
 /// Build a nested region structure from a "raw" recorded taskgraph, and mark
 /// the taskgraph ready for replay.
 //
