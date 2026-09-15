@@ -4,10 +4,10 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+zimop < %s \
 # RUN:     | llvm-objdump --mattr=+zimop -d -r - \
-# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+zimop < %s \
 # RUN:     | llvm-objdump --mattr=+zimop -d -r - \
-# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefix=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: mop.r.0 a2, a1
 # CHECK-ASM: encoding: [0x73,0xc6,0xc5,0x81]
@@ -173,19 +173,16 @@ mop.rr.7 a3, a2, a1
 # respectively (see RISCVInstrInfoZicfiss.td), which are also gated solely
 # on Zimop. sspopchk/sspush only accept x1 or x5 for their free register,
 # and ssrdp rejects x0. When those constraints aren't met, the disassembler
-# currently fails to fall back to the generic mop.r.28/mop.rr.7 instruction
-# and reports the instruction as unknown, even though it assembles fine.
-# CHECK-ASM: mop.r.28 zero, gp
-# CHECK-OBJ: <unknown>
+# falls back to decoding the generic mop.r.28/mop.rr.7 instruction instead
+# (via hasCompleteDecoder = 0 on GPRX1X5/GPRNoX0Zicfiss).
+# CHECK-ASM-AND-OBJ: mop.r.28 zero, gp
 # CHECK-ASM: encoding: [0x73,0xc0,0xc1,0xcd]
 mop.r.28 x0, x3
 
-# CHECK-ASM: mop.r.28 zero, zero
-# CHECK-OBJ: <unknown>
+# CHECK-ASM-AND-OBJ: mop.r.28 zero, zero
 # CHECK-ASM: encoding: [0x73,0x40,0xc0,0xcd]
 mop.r.28 x0, x0
 
-# CHECK-ASM: mop.rr.7 zero, zero, gp
-# CHECK-OBJ: <unknown>
+# CHECK-ASM-AND-OBJ: mop.rr.7 zero, zero, gp
 # CHECK-ASM: encoding: [0x73,0x40,0x30,0xce]
 mop.rr.7 x0, x0, x3
