@@ -23,13 +23,13 @@ func.func @fc_relu(%lhs: tensor<512x512xf32>, %rhs: tensor<512x512xf32>,
   // Elementwise addition.
 
   // expected-note @below {{ancestor payload op}}
-  %biased = linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %biased = linalg.elementwise <add>
     ins(%matmul, %bias : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
 
   // Elementwise max with 0 (ReLU).
   %c0f = arith.constant dense<0.0> : tensor<512x512xf32>
-  %relued = linalg.elementwise kind=#linalg.elementwise_kind<max_signed>
+  %relued = linalg.elementwise <max_signed>
     ins(%biased, %c0f : tensor<512x512xf32>, tensor<512x512xf32>)
     outs(%output : tensor<512x512xf32>) -> tensor<512x512xf32>
   func.return %relued : tensor<512x512xf32>
@@ -91,7 +91,7 @@ module attributes {transform.with_named_sequence} {
       : (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
 
   // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates all handles to payload IR entities associated with this operand and entities nested in them}}
-  %func, %call = transform.loop.outline %outline_target {func_name = "outlined"}
+  %func, %call = transform.loop.outline %outline_target func_name = "outlined"
       : (!transform.any_op) -> (!transform.any_op, !transform.op<"func.call">)
 
   // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
