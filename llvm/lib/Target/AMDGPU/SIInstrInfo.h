@@ -522,19 +522,6 @@ public:
     return isComputeVALU(Opcode) && !isWMMA(Opcode) && !isSWMMAC(Opcode);
   }
 
-  /// LDSDMA instructions act as both VALU and memory instructions, thus
-  /// we also tag them as VALU. However, in many places, we do not actually want
-  /// to include LDSDMA instructions in this query. By setting \p AllowLDSDMA to
-  /// false, this will return false for LDSDMA instructions.
-  /// This will be removed once call sites are migrated to the new API.
-  static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
-    return AllowLDSDMA ? isVALU(MI) : isComputeVALU(MI);
-  }
-
-  bool isVALU(uint32_t Opcode, bool AllowLDSDMA) const {
-    return AllowLDSDMA ? isVALU(Opcode) : isComputeVALU(Opcode);
-  }
-
   static bool isImage(const MachineInstr &MI) {
     return SIInstrFlags::isImage(MI);
   }
