@@ -45,12 +45,6 @@ MipsRegisterInfo::MipsRegisterInfo(const MipsSubtarget &STI)
 
 unsigned MipsRegisterInfo::getPICCallReg() { return Mips::T9; }
 
-const TargetRegisterClass *
-MipsRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "this should only be used for default case");
-  return ArePtrs64bit ? &Mips::GPR64RegClass : &Mips::GPR32RegClass;
-}
-
 unsigned
 MipsRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                       MachineFunction &MF) const {

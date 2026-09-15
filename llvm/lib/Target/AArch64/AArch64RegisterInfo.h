@@ -106,8 +106,6 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                        MCRegister PhysReg) const override;
   const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
-  const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 
   bool requiresRegisterScavenging(const MachineFunction &MF) const override;

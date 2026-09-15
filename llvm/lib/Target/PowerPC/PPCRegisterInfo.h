@@ -76,11 +76,6 @@ public:
     return It->second;
   }
 
-  /// getPointerRegClass - Return the register class to use to hold pointers.
-  /// This is used for addressing modes.
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
-
   const TargetRegisterClass *
   getCrossCopyRegClass(const TargetRegisterClass *RC) const override;
 

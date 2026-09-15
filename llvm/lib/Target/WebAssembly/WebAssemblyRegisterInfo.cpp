@@ -149,13 +149,6 @@ WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return Regs[TFI->hasFP(MF)][TT.isArch64Bit()];
 }
 
-const TargetRegisterClass *
-WebAssemblyRegisterInfo::getPointerRegClass(unsigned Kind) const {
-  assert(Kind == 0 && "Only one kind of pointer on WebAssembly");
-  return TT.getArch() == Triple::wasm64 ? &WebAssembly::I64RegClass
-                                        : &WebAssembly::I32RegClass;
-}
-
 static const TargetRegisterClass &getRegClassForBank(const RegisterBank &RB) {
   switch (RB.getID()) {
   case WebAssembly::I32RegBankID:
