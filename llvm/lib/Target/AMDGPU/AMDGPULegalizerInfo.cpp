@@ -559,32 +559,6 @@ static bool isLoadStoreLegal(const GCNSubtarget &ST, const LegalityQuery &Query)
          !hasBufferRsrcWorkaround(Ty) && !loadStoreBitcastWorkaround(Ty);
 }
 
-// Whether the VGPR ("as memory") lowering handles a MemSize-bit access
-// producing a ValSize-bit value at this alignment: whole-dword when dword
-// aligned, and 8-/16-bit when naturally aligned, including extending loads.
-//
-// A sub-dword access is a bit-field extract from the dword containing it, so it
-// must not straddle a dword boundary; natural alignment guarantees that. A
-// whole-dword access indexes by pointer >> 2, so an under-aligned one would
-// silently reach the containing dword.
-static bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
-                                     Align Alignment) {
-  if (MemSize == 8 || MemSize == 16) {
-    if (Alignment < Align(MemSize / 8))
-      return false;
-    if (ValSize == MemSize)
-      return true;
-    if (ValSize > MemSize && (ValSize == 16 || ValSize == 32))
-      return true;
-    return false;
-  }
-  if (MemSize != ValSize)
-    return false;
-  if (Alignment < Align(4))
-    return false;
-  return AMDGPUMI::VLoadIdxInst::tryGetOpcodeForBitWidth(MemSize) != -1;
-}
-
 /// Return true if a load or store of the type should be lowered with a bitcast
 /// to a different type.
 static bool shouldBitcastLoadStoreType(const GCNSubtarget &ST, const LLT Ty,
@@ -3546,7 +3520,7 @@ static bool lowerLoadStoreVGPR(LegalizerHelper &Helper, MachineInstr &MI) {
   const LLT I32 = LLT::integer(32);
 
   // Diagnose an unsupported access rather than failing to legalize.
-  if (!isVGPRLoadStoreSupported(MemSize, ValSize, MMO.getAlign())) {
+  if (!AMDGPU::isVGPRLoadStoreSupported(MemSize, ValSize, MMO.getAlign())) {
     const Function &F = B.getMF().getFunction();
     F.getContext().diagnose(DiagnosticInfoUnsupported(
         F,

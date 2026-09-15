@@ -13,10 +13,10 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Alignment.h"
 
 namespace llvm {
 
-struct Align;
 class AAResults;
 class AllocaInst;
 class DataLayout;
@@ -130,6 +130,21 @@ public:
 
   static bool classof(const MDNode *N);
 };
+
+/// Whether the VGPR ("as memory") address space implements a \p MemSize-bit
+/// access producing a \p ValSize-bit value at \p Alignment: whole-dword when
+/// dword aligned, and 8-/16-bit when naturally aligned, including extending
+/// loads.
+///
+/// A sub-dword access is a bit-field extract from the dword containing it, so
+/// it must not straddle a dword boundary; natural alignment guarantees that. A
+/// whole-dword access indexes by pointer >> 2, so an under-aligned one would
+/// silently reach the containing dword.
+///
+/// Lowering diagnoses an access this rejects, so anything deciding to put an
+/// object in this address space has to agree with it.
+bool isVGPRLoadStoreSupported(unsigned MemSize, unsigned ValSize,
+                              Align Alignment);
 
 } // end namespace AMDGPU
 
