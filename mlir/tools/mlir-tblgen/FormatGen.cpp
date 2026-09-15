@@ -180,6 +180,7 @@ FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
           .Case("attr-dict-with-keyword", FormatToken::kw_attr_dict_w_keyword)
           .Case("prop-dict", FormatToken::kw_prop_dict)
           .Case("custom", FormatToken::kw_custom)
+          .Case("enum", FormatToken::kw_enum)
           .Case("functional-type", FormatToken::kw_functional_type)
           .Case("oilist", FormatToken::kw_oilist)
           .Case("operands", FormatToken::kw_operands)
@@ -405,13 +406,17 @@ FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
                           "or within a `struct` directive");
   }
 
-  FailureOr<FormatToken> nameTok;
   if (failed(parseToken(FormatToken::less,
-                        "expected '<' before custom directive name")) ||
-      failed(nameTok =
-                 parseToken(FormatToken::identifier,
-                            "expected custom directive name identifier")) ||
-      failed(parseToken(FormatToken::greater,
+                        "expected '<' before custom directive name")))
+    return failure();
+  // Preserve `custom<enum>` now that `enum` is also a directive keyword.
+  if (!curToken.is(FormatToken::identifier) &&
+      !curToken.is(FormatToken::kw_enum))
+    return emitError(curToken.getLoc(),
+                     "expected custom directive name identifier");
+  FormatToken nameTok = curToken;
+  consumeToken();
+  if (failed(parseToken(FormatToken::greater,
                         "expected '>' after custom directive name")) ||
       failed(parseToken(FormatToken::l_paren,
                         "expected '(' before custom directive parameters")))
@@ -435,7 +440,7 @@ FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
 
   if (failed(verifyCustomDirectiveArguments(loc, arguments)))
     return failure();
-  return create<CustomDirective>(nameTok->getSpelling(), std::move(arguments));
+  return create<CustomDirective>(nameTok.getSpelling(), std::move(arguments));
 }
 
 FailureOr<FormatElement *> FormatParser::parseRefDirective(SMLoc loc,

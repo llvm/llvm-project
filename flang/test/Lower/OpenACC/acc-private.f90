@@ -11,7 +11,8 @@
 ! CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[CONSTANT_1:.*]] = arith.constant 1 : index
 ! CHECK:           %[[CONSTANT_2:.*]] = arith.constant 10 : index
-! CHECK:           acc.yield %[[ALLOCA_0]] : !fir.ref<!fir.array<10xf32>>
+! CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[ALLOCA_0]] : (!fir.ref<!fir.array<10xf32>>) -> !fir.ptr<!fir.array<10xf32>>
+! CHECK:           acc.yield %[[CONVERT_0]] : !fir.ptr<!fir.array<10xf32>>
 ! CHECK:         }
 
 ! CHECK-LABEL:   acc.firstprivate.recipe @firstprivatization_box_UxUx2xi32 : !fir.box<!fir.array<?x?x2xi32>> init {
@@ -425,7 +426,8 @@ program acc_private
 
 ! CHECK: %[[FP_C:.*]] = acc.firstprivate varPtr(%[[DECLC]]#0 : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) name("c") -> !fir.ref<i32>
 ! CHECK: acc.parallel {{.*}} firstprivate(%[[FP_C]] : !fir.ref<i32>)
-! CHECK: acc.yield
+! CHECK: %[[FP_C_LOOP:.*]] = acc.firstprivate varPtr({{.*}} : !fir.ref<i32>) recipe(@firstprivatization_ref_i32) implicit(true) name("c") -> !fir.ref<i32>
+! CHECK: acc.loop {{.*}}firstprivate(%[[FP_C_LOOP]] : !fir.ref<i32>)
 
   !$acc parallel loop firstprivate(b)
   DO i = 1, n

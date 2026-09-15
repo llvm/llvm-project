@@ -163,7 +163,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Pie || StaticPie)
     CmdArgs.push_back("-pie");
   if (Nopie || Profiling)
-    CmdArgs.push_back("-nopie");
+    CmdArgs.push_back("-no-pie");
 
   if (Triple.isLoongArch64() || Triple.isRISCV64()) {
     CmdArgs.push_back("-X");
@@ -206,7 +206,7 @@ void openbsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (auto LTO = ToolChain.getLTOMode(Args); LTO != LTOK_None)
     addLTOOptions(ToolChain, Args, CmdArgs, Output, Inputs, LTO == LTOK_Thin);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 

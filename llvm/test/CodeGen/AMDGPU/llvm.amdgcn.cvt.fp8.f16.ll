@@ -647,10 +647,8 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_lshrrev_b32 v0, 16, v0
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v4, v3
-; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1
+; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.h, v1
 ; GFX1250-SDAG-REAL16-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
@@ -673,10 +671,8 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_dual_lshrrev_b32 v0, 16, v0 :: v_dual_mov_b32 v6, v3
-; GFX1250-GISEL-REAL16-NEXT:    v_mov_b32_e32 v7, v4
-; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1
+; GFX1250-GISEL-REAL16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.h, v1
 ; GFX1250-GISEL-REAL16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
@@ -695,9 +691,7 @@ define amdgpu_ps void @test_cvt_sr_bf8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ;
 ; GFX13-REAL16-LABEL: test_cvt_sr_bf8_f16_hi_byte0:
 ; GFX13-REAL16:       ; %bb.0:
-; GFX13-REAL16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.l, v1
+; GFX13-REAL16-NEXT:    v_cvt_sr_bf8_f16 v2, v0.h, v1
 ; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
 ; GFX13-REAL16-NEXT:    s_endpgm
 ;
@@ -998,10 +992,8 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-SDAG-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SDAG-REAL16-NEXT:    v_nop
 ; GFX1250-SDAG-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_lshrrev_b32 v0, 16, v0
-; GFX1250-SDAG-REAL16-NEXT:    v_mov_b32_e32 v4, v3
-; GFX1250-SDAG-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1
+; GFX1250-SDAG-REAL16-NEXT:    v_dual_mov_b32 v5, v4 :: v_dual_mov_b32 v4, v3
+; GFX1250-SDAG-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.h, v1
 ; GFX1250-SDAG-REAL16-NEXT:    global_store_b32 v[4:5], v2, off
 ; GFX1250-SDAG-REAL16-NEXT:    s_endpgm
 ;
@@ -1024,10 +1016,8 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ; GFX1250-GISEL-REAL16-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-GISEL-REAL16-NEXT:    v_nop
 ; GFX1250-GISEL-REAL16-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-REAL16-NEXT:    v_dual_lshrrev_b32 v0, 16, v0 :: v_dual_mov_b32 v6, v3
-; GFX1250-GISEL-REAL16-NEXT:    v_mov_b32_e32 v7, v4
-; GFX1250-GISEL-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX1250-GISEL-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1
+; GFX1250-GISEL-REAL16-NEXT:    v_dual_mov_b32 v6, v3 :: v_dual_mov_b32 v7, v4
+; GFX1250-GISEL-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.h, v1
 ; GFX1250-GISEL-REAL16-NEXT:    global_store_b32 v[6:7], v2, off
 ; GFX1250-GISEL-REAL16-NEXT:    s_endpgm
 ;
@@ -1046,9 +1036,7 @@ define amdgpu_ps void @test_cvt_sr_fp8_f16_hi_byte0(<2 x half> %a, i32 %sr, i32 
 ;
 ; GFX13-REAL16-LABEL: test_cvt_sr_fp8_f16_hi_byte0:
 ; GFX13-REAL16:       ; %bb.0:
-; GFX13-REAL16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX13-REAL16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.l, v1
+; GFX13-REAL16-NEXT:    v_cvt_sr_fp8_f16 v2, v0.h, v1
 ; GFX13-REAL16-NEXT:    global_store_b32 v[3:4], v2, off
 ; GFX13-REAL16-NEXT:    s_endpgm
 ;

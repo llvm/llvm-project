@@ -555,9 +555,8 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, ptr addrspace(1) %a
 ; GFX10-NEXT:  .LBB7_2: ; %A
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    global_load_dword v6, v[2:3], off
-; GFX10-NEXT:    s_mov_b32 s5, exec_lo
 ; GFX10-NEXT:    s_andn2_b32 s4, s4, exec_lo
-; GFX10-NEXT:    s_and_b32 s5, exec_lo, s5
+; GFX10-NEXT:    s_and_b32 s5, exec_lo, exec_lo
 ; GFX10-NEXT:    s_andn2_b32 s3, s3, exec_lo
 ; GFX10-NEXT:    s_and_b32 s6, exec_lo, exec_lo
 ; GFX10-NEXT:    s_or_b32 s4, s4, s5

@@ -26,6 +26,30 @@ define <4 x float> @complex_mul_fmuladd(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %r
 }
 
+define <4 x float> @complex_mul_fma_neg(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: complex_mul_fma_neg:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #180
+; CHECK-NEXT:    fcmla v2.4s, v0.4s, v1.4s, #270
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+  %a.re = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %a.im = shufflevector <4 x float> %a, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+  %b.re = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 0, i32 2>
+  %b.im = shufflevector <4 x float> %b, <4 x float> poison, <2 x i32> <i32 1, i32 3>
+
+  %neg0 = fneg fast <2 x float> %a.re
+  %t0 = fmul fast <2 x float> %a.im, %b.im
+  %re = call fast <2 x float> @llvm.fma.v2f32(<2 x float> %neg0, <2 x float> %b.re, <2 x float> %t0)
+  %neg1 = fneg fast <2 x float> %a.re
+  %t1 = fmul fast <2 x float> %a.im, %b.re
+  %neg2 = fneg fast <2 x float> %t1
+  %im = call fast <2 x float> @llvm.fma.v2f32(<2 x float> %neg1, <2 x float> %b.im, <2 x float> %neg2)
+  %r = shufflevector <2 x float> %re, <2 x float> %im, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  ret <4 x float> %r
+}
+
 ; Expected not to transform
 define <4 x float> @complex_mul_fmuladd_no_fmf(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: complex_mul_fmuladd_no_fmf:

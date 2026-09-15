@@ -16,6 +16,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include <string>
 
@@ -26,7 +27,10 @@ namespace acc {
 /// FIR operations and looking for variable names.
 /// \param v The value to extract the variable name from
 /// \param preferDemangledName If true, prefers demangled/bindc names over
-///        mangled/unique names. If false, prefers mangled names.
+///        mangled/unique names. If false, prefers mangled names. A component
+///        or an element is named through a path whose root is the variable
+///        that holds it; only that root is uniqued, so only it is spelled
+///        differently by the two.
 /// Returns empty string if no name is found.
 std::string getVariableName(mlir::Value v, bool preferDemangledName = true);
 
@@ -98,6 +102,16 @@ createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
 /// \param stripDeclare If true (default), also strips declare operations
 /// \return The original value after stripping all intermediate operations
 mlir::Value getOriginalDef(mlir::Value value, bool stripDeclare = true);
+
+/// Returns true if \p symbol, used by \p user, is valid in an OpenACC offload
+/// region for FIR. When \p definingOpPtr is provided, it is set to the
+/// defining operation of \p symbol if one is found.
+bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
+                      mlir::Operation **definingOpPtr = nullptr);
+
+/// Returns true if \p val may be used from OpenACC region \p region without
+/// further implicit data mapping.
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
 
 } // namespace acc
 } // namespace fir

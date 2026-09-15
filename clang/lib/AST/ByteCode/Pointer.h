@@ -42,7 +42,6 @@ struct PtrView {
 
   bool isZero() const { return !Pointee; }
   bool isLive() const { return Pointee && !Pointee->isDead(); }
-  bool isDummy() const { return Pointee && Pointee->isDummy(); }
   bool isActive() const { return isRoot() || getInlineDesc()->IsActive; }
   bool isArrayRoot() const { return inArray() && Offset == Base; }
   bool isElementPastEnd() const { return Offset == PastEndMark; }
@@ -392,7 +391,112 @@ struct StringPointer {
   }
 };
 
-enum class Storage { Int, Block, Fn, Typeid, String };
+struct PointerPathEntry {
+  enum { Base, Field, Array, NegativeArray } Kind;
+  union {
+    uint64_t Index;
+    const FieldDecl *FD;
+    llvm::PointerIntPair<const CXXRecordDecl *, 1, bool> RD = {};
+  };
+
+  static PointerPathEntry base(const CXXRecordDecl *RD, bool Virtual = false) {
+    PointerPathEntry E;
+    E.Kind = Base;
+    E.RD = {RD, Virtual};
+    return E;
+  }
+
+  static PointerPathEntry array(int64_t Index) {
+    PointerPathEntry E;
+    E.Kind = Array;
+    E.Index = Index;
+    return E;
+  }
+
+  static PointerPathEntry negativeArray(int64_t Index) {
+    PointerPathEntry E;
+    E.Kind = NegativeArray;
+    E.Index = Index;
+    return E;
+  }
+
+  static PointerPathEntry field(const FieldDecl *FD) {
+    PointerPathEntry E;
+    E.Kind = Field;
+    E.FD = FD;
+    return E;
+  }
+};
+
+struct OpaquePointer {
+  DeclOrExpr Base;
+  // FieldType and IsOnePastEnd/IsConstexprUnknown bits.
+  llvm::PointerIntPair<const Type *, 2, unsigned> FieldType = {};
+  const PointerPathEntry *Path = nullptr;
+  unsigned PathLength = 0;
+
+  ArrayRef<PointerPathEntry> path() const { return ArrayRef(Path, PathLength); }
+  const VarDecl *getBaseDecl() const { return Base.asVarDecl(); }
+  const Expr *getBaseExpr() const { return Base.asExpr(); }
+
+  OpaquePointer
+  withFieldType(const Type *FieldTy,
+                std::optional<bool> PastEnd = std::nullopt) const {
+    unsigned NewBitFieldValue = FieldType.getInt();
+    if (PastEnd)
+      NewBitFieldValue =
+          (isConstexprUnknown() ? 2u : 0u) + static_cast<unsigned>(*PastEnd);
+    return OpaquePointer{Base, {FieldTy, NewBitFieldValue}, Path, PathLength};
+  }
+
+  OpaquePointer withPath(const PointerPathEntry *Path, unsigned PathLength,
+                         const Type *FieldTy,
+                         std::optional<bool> PastEnd = std::nullopt) const {
+    unsigned NewBitFieldValue = FieldType.getInt();
+    if (PastEnd)
+      NewBitFieldValue =
+          (isConstexprUnknown() ? 2u : 0u) + static_cast<unsigned>(*PastEnd);
+    return OpaquePointer{Base, {FieldTy, NewBitFieldValue}, Path, PathLength};
+  }
+
+  OpaquePointer withPastEnd(bool PastEnd) const {
+    return OpaquePointer{Base,
+                         {FieldType.getPointer(),
+                          FieldType.getInt() | static_cast<unsigned>(PastEnd)},
+                         Path,
+                         PathLength};
+  }
+
+  QualType getObjectType() const {
+    QualType T = Base.getType();
+    if (T->isPointerOrReferenceType())
+      return T->getPointeeType();
+    return T;
+  }
+
+  QualType getFieldType() const {
+    if (FieldType.getPointer()->isPointerOrReferenceType() && Base.isDecl())
+      return FieldType.getPointer()->getPointeeType();
+    return QualType(FieldType.getPointer(), 0);
+  }
+
+  bool isArrayElement() const {
+    return PathLength != 0 &&
+           Path[PathLength - 1].Kind == PointerPathEntry::Array;
+  }
+
+  std::optional<size_t> computeLayoutOffset(const ASTContext &ASTCtx) const;
+  /// If this is pointing to an array element, return the array.
+  QualType getSurroundingArray() const;
+
+  bool isOnePastEnd() const { return FieldType.getInt() & 1u; }
+  bool isOnePastEndOrElementPastEnd() const;
+  bool isConstexprUnknown() const { return FieldType.getInt() & 2u; }
+  bool isUnknownSizeArray() const;
+  bool isRoot() const;
+};
+
+enum class Storage { Int, Block, Fn, Typeid, String, Opaque };
 
 /// A pointer to a memory block, live or dead.
 ///
@@ -447,6 +551,16 @@ public:
   Pointer(StringPointer Str, uint64_t Offset = 0)
       : Offset(Offset), StorageKind(Storage::String), Str(Str) {}
 
+  Pointer(DeclOrExpr DOE, bool ConstexprUnknown = false)
+      : Offset(0), StorageKind(Storage::Opaque) {
+    Opaque.Base = DOE;
+    Opaque.FieldType = {DOE.getType().getTypePtr(), ConstexprUnknown ? 2u : 0u};
+    Opaque.Path = nullptr;
+    Opaque.PathLength = 0;
+  }
+  Pointer(OpaquePointer OP, uint64_t Offset = 0)
+      : Offset(Offset), StorageKind(Storage::Opaque), Opaque(OP) {}
+
   Pointer(Block *Pointee, unsigned Base, uint64_t Offset);
   explicit Pointer(PtrView V) : Pointer(V.Pointee, V.Base, V.Offset) {}
   ~Pointer();
@@ -454,22 +568,7 @@ public:
   Pointer &operator=(const Pointer &P);
   Pointer &operator=(Pointer &&P);
 
-  /// Equality operators are just for tests.
-  bool operator==(const Pointer &P) const {
-    if (P.StorageKind != StorageKind)
-      return false;
-    if (isIntegralPointer())
-      return P.Int.Value == Int.Value && P.Int.Ty == Int.Ty &&
-             P.Offset == Offset;
-
-    if (isFunctionPointer())
-      return P.Fn.Func == Fn.Func && P.Offset == Offset;
-    if (isStringPointer())
-      return Str.Base == P.Str.Base && Offset == P.Offset;
-
-    return P.view() == view();
-  }
-
+  bool operator==(const Pointer &P) const;
   bool operator!=(const Pointer &P) const { return !(P == *this); }
 
   /// Converts the pointer to an APValue.
@@ -549,6 +648,7 @@ public:
       return !Fn.Func;
     case Storage::Typeid:
     case Storage::String:
+    case Storage::Opaque:
       return false;
     }
     llvm_unreachable("Unknown clang::interp::Storage enum");
@@ -597,7 +697,7 @@ public:
 
   /// Accessors for information about the innermost field.
   const Descriptor *getFieldDesc() const {
-    if (isIntegralPointer())
+    if (!isBlockPointer())
       return nullptr;
 
     if (isRoot())
@@ -623,6 +723,8 @@ public:
             ->getAsArrayTypeUnsafe()
             ->getElementType();
       return Str.getLiteral()->getType();
+    case Storage::Opaque:
+      return Opaque.getFieldType();
     }
     llvm_unreachable("Unhandled StorageKind");
   }
@@ -681,9 +783,11 @@ public:
   }
   /// Checks if the structure is an array of unknown size.
   bool isUnknownSizeArray() const {
-    if (!isBlockPointer())
-      return false;
-    return getFieldDesc()->isUnknownSizeArray();
+    if (isBlockPointer())
+      return getFieldDesc()->isUnknownSizeArray();
+    if (isOpaquePointer())
+      return Opaque.isUnknownSizeArray();
+    return false;
   }
   /// Checks if the pointer points to an array.
   bool isArrayElement() const {
@@ -694,9 +798,13 @@ public:
   }
   /// Pointer points directly to a block.
   bool isRoot() const {
-    if (isZero() || !isBlockPointer())
+    if (isZero())
       return true;
-    return view().isRoot();
+    if (isBlockPointer())
+      return view().isRoot();
+    if (isOpaquePointer())
+      return Opaque.isRoot();
+    return true;
   }
   /// If this pointer has an InlineDescriptor we can use to initialize.
   bool canBeInitialized() const {
@@ -726,12 +834,17 @@ public:
     assert(isStringPointer());
     return Str;
   }
+  [[nodiscard]] const OpaquePointer &asOpaquePointer() const {
+    assert(isOpaquePointer());
+    return Opaque;
+  }
 
   bool isBlockPointer() const { return StorageKind == Storage::Block; }
   bool isIntegralPointer() const { return StorageKind == Storage::Int; }
   bool isFunctionPointer() const { return StorageKind == Storage::Fn; }
   bool isTypeidPointer() const { return StorageKind == Storage::Typeid; }
   bool isStringPointer() const { return StorageKind == Storage::String; }
+  bool isOpaquePointer() const { return StorageKind == Storage::Opaque; }
 
   /// Returns the record descriptor of a class.
   const Record *getRecord() const {
@@ -794,6 +907,12 @@ public:
 
       return Fn.Func->getDecl()->isWeak();
     }
+
+    if (isOpaquePointer()) {
+      if (const VarDecl *BaseDecl = Opaque.getBaseDecl())
+        return BaseDecl->isWeak();
+      return false;
+    }
     if (!isBlockPointer())
       return false;
 
@@ -811,11 +930,7 @@ public:
   bool isVirtualBaseClass() const { return view().isVirtualBaseClass(); }
 
   /// Checks if the pointer points to a dummy value.
-  bool isDummy() const {
-    if (!isBlockPointer())
-      return false;
-    return view().isDummy();
-  }
+  bool isDummy() const { return isOpaquePointer(); }
 
   /// Checks if an object or a subfield is mutable.
   bool isConst() const {
@@ -823,6 +938,8 @@ public:
       return true;
     if (isStringPointer())
       return true;
+    if (!isBlockPointer())
+      return false;
     return view().isConst();
   }
   bool isConstInMutable() const {
@@ -849,21 +966,21 @@ public:
 
   /// Returns the byte offset from the start.
   uint64_t getByteOffset() const {
-    if (isIntegralPointer())
-      return Int.Value + Offset;
-    if (isTypeidPointer())
-      return reinterpret_cast<uintptr_t>(Typeid.TypePtr) + Offset;
-    if (isOnePastEnd())
-      return PtrView::PastEndMark;
+    if (isBlockPointer())
+      return isOnePastEnd() ? PtrView::PastEndMark : Offset;
     return Offset;
   }
-
-  uint64_t getRawOffset() const { return Offset; }
 
   /// Returns the number of elements.
   unsigned getNumElems() const {
     if (isStringPointer())
       return Str.getLiteral()->getLength() + 1;
+    if (isOpaquePointer()) {
+      const ArrayType *AT =
+          Opaque.getSurroundingArray()->getAsArrayTypeUnsafe();
+      if (const auto *CAT = dyn_cast_if_present<ConstantArrayType>(AT))
+        return CAT->getZExtSize();
+    }
     if (!isBlockPointer())
       return ~0u;
     return view().getNumElems();
@@ -887,6 +1004,11 @@ public:
   int64_t getIndex() const {
     if (isStringPointer())
       return Offset;
+    if (isOpaquePointer()) {
+      if (Opaque.isArrayElement())
+        return Opaque.Path[Opaque.PathLength - 1].Index;
+      return 0;
+    }
     if (!isBlockPointer())
       return getIntegerRepresentation();
 
@@ -897,6 +1019,9 @@ public:
   bool isOnePastEnd() const {
     if (isStringPointer())
       return Offset == (Str.getLiteral()->getLength() + 1);
+    if (isOpaquePointer())
+      return Opaque.isOnePastEndOrElementPastEnd();
+
     if (!isBlockPointer())
       return false;
 
@@ -923,6 +1048,8 @@ public:
   bool isZeroSizeArray() const {
     if (isFunctionPointer())
       return false;
+    if (isOpaquePointer())
+      return false; // FIXME: Can actually happen I think?
     if (const auto *Desc = getFieldDesc())
       return Desc->isZeroSizeArray();
     return false;
@@ -1029,9 +1156,11 @@ public:
   }
 
   bool isConstexprUnknown() const {
-    if (!isBlockPointer())
-      return false;
-    return getDeclDesc()->IsConstexprUnknown;
+    if (isOpaquePointer())
+      return Opaque.isConstexprUnknown();
+    if (isBlockPointer())
+      return getDeclDesc()->IsConstexprUnknown;
+    return false;
   }
 
   /// Whether this block can be read from at all. This is only true for
@@ -1150,9 +1279,7 @@ public:
   bool pointsToLabel() const;
   /// Returns the AddrLabelExpr the Pointer points to, if any.
   const AddrLabelExpr *getPointedToLabel() const {
-    if (const Descriptor *Desc = getDeclDesc())
-      return dyn_cast_if_present<AddrLabelExpr>(Desc->asExpr());
-    return nullptr;
+    return dyn_cast_if_present<AddrLabelExpr>(getRootExpr());
   }
 
   /// Prints the pointer.
@@ -1209,6 +1336,7 @@ private:
     FunctionPointer Fn;
     TypeidPointer Typeid;
     StringPointer Str;
+    OpaquePointer Opaque;
   };
 };
 
@@ -1238,7 +1366,7 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   } else if (P.isBlockPointer() && P.isArrayRoot())
     OS << " arrayroot";
 
-  if (P.isBlockPointer() && P.block() && P.block()->isDummy())
+  if (P.isDummy())
     OS << " dummy";
   if (!P.isLive())
     OS << " dead";

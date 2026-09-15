@@ -5,7 +5,7 @@
 // CHECK:      Sections [
 // CHECK:        Section {
 // CHECK:          Name: .xdata
-// CHECK:          RawDataSize: 8
+// CHECK:          RawDataSize: 0x8
 // CHECK:          RelocationCount: 0
 // CHECK:          Characteristics [
 // CHECK-NEXT:       ALIGN_4BYTES
@@ -20,7 +20,7 @@
 // CHECK-NEXT:   }
 // CHECK:        Section {
 // CHECK:          Name: .pdata
-// CHECK:          RawDataSize: 12
+// CHECK:          RawDataSize: 0xC
 // CHECK:          RelocationCount: 3
 // CHECK:          Characteristics [
 // CHECK-NEXT:       IMAGE_SCN_ALIGN_4BYTES
