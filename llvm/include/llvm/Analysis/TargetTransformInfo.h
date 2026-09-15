@@ -1413,6 +1413,14 @@ public:
   /// \return The size of a cache line in bytes.
   LLVM_ABI unsigned getCacheLineSize() const;
 
+  /// \return The penalty for a store-to-load forwarding (STLF) hazard involving
+  /// the vector memory operation \p VecTy inside a loop. This may be a widened
+  /// store straddled by a nearby loop-carried load, or a widened load that
+  /// straddles recent scalar or narrower stores. Targets return the modeled
+  /// per-occurrence penalty, or 0 if they do not model this hazard.
+  LLVM_ABI InstructionCost getStoreLoadForwardingConflictCost(
+      Type *VecTy, TargetCostKind CostKind) const;
+
   /// The possible cache levels
   enum class CacheLevel {
     L1D, // The L1 data cache
