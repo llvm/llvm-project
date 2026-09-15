@@ -12,6 +12,13 @@
 #include <stacktrace>
 
 void test() {
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stacktrace::current();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stacktrace::current(0);
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::stacktrace::current(0, 10);
+
   std::stacktrace st = std::stacktrace::current();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
@@ -42,4 +49,23 @@ void test() {
   st[0];
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st.at(0);
+
+  std::stacktrace_entry entry = st[0];
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  entry.native_handle();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  entry.description();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  entry.source_file();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  entry.source_line();
+
+#if _LIBCPP_HAS_LOCALIZATION
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::to_string(entry);
+#endif
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::hash<std::stacktrace_entry>{}(entry);
 }
