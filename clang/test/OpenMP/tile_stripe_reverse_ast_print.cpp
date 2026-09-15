@@ -65,4 +65,15 @@ void stripe_over_inner_reverse() {
   }
 }
 
+// PRINT-LABEL: void for_collapse_then_reverse(
+void for_collapse_then_reverse() {
+  // PRINT: #pragma omp for collapse(2)
+  // PRINT: #pragma omp reverse
+#pragma omp for collapse(2)
+#pragma omp reverse
+  for (int j = 0; j < 20; j += 2)
+    for (int i = 0; i < 20; i += 3)
+      body(j, i);
+}
+
 #endif
