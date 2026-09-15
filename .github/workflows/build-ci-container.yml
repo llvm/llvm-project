@@ -49,7 +49,7 @@ jobs:
       - name: Clear apt-get lock
         if: runner.arch == 'ARM64'
         run: |
-          sudo rm -rf /var/lib/dpkg/lock-frontend
+          sudo rm -rf /var/lib/dpkg/lock*
 
       - name: Build Container
         uses: ./.github/actions/build-container
