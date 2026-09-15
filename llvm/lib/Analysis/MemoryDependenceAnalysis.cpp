@@ -351,39 +351,6 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
   return MemDepResult::getNonLocal();
 }
 
-// Check if SI that may alias with MemLoc can be safely skipped. This is
-// possible in case if SI can only must alias or no alias with MemLoc (no
-// partial overlapping possible) and it writes the same value that MemLoc
-// contains now (it was loaded before this store and was not modified in
-// between).
-static bool canSkipClobberingStore(const StoreInst *SI,
-                                   const MemoryLocation &MemLoc,
-                                   Align MemLocAlign, BatchAAResults &BatchAA,
-                                   unsigned ScanLimit) {
-  if (!MemLoc.Size.hasValue())
-    return false;
-  if (MemoryLocation::get(SI).Size != MemLoc.Size)
-    return false;
-  if (MemLoc.Size.isScalable())
-    return false;
-  if (std::min(MemLocAlign, SI->getAlign()).value() <
-      MemLoc.Size.getValue().getKnownMinValue())
-    return false;
-
-  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || LI->getParent() != SI->getParent())
-    return false;
-  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
-    return false;
-  unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
-    if (++NumVisitedInsts > ScanLimit ||
-        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
-      return false;
-
-  return true;
-}
-
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
@@ -598,7 +565,8 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         return MemDepResult::getDef(Inst);
       if (isInvariantLoad)
         continue;
-      if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
+      if (isStorePreservingMemoryLocation(SI, MemLoc, MemLocAlign, BatchAA,
+                                          *Limit))
         continue;
       return MemDepResult::getClobber(Inst);
     }

@@ -813,6 +813,36 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA,
   return Available;
 }
 
+bool llvm::isStorePreservingMemoryLocation(const StoreInst *SI,
+                                           const MemoryLocation &MemLoc,
+                                           Align MemLocAlign,
+                                           BatchAAResults &AA,
+                                           unsigned ScanLimit) {
+  // Ensure no partial overlap is possible, and that the stored value is the
+  // current content of MemLoc.
+  if (!MemLoc.Size.hasValue() || MemLoc.Size.isScalable())
+    return false;
+  if (MemoryLocation::get(SI).Size != MemLoc.Size)
+    return false;
+  if (std::min(MemLocAlign, SI->getAlign()).value() <
+      MemLoc.Size.getValue().getFixedValue())
+    return false;
+
+  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
+  if (!LI || LI->getParent() != SI->getParent())
+    return false;
+  if (AA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
+    return false;
+
+  // No memory operation in between may modify MemLoc.
+  unsigned NumVisited = 0;
+  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
+    if (++NumVisited > ScanLimit || isModSet(AA.getModRefInfo(I, MemLoc)))
+      return false;
+
+  return true;
+}
+
 // Returns true if a use is either in an ICmp/PtrToInt or a Phi/Select that only
 // feeds into them.
 static bool isPointerUseReplaceable(const Use &U, bool HasNonAddressBits) {
