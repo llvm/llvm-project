@@ -164,6 +164,7 @@ private:
   bool shrinkLoadForShuffles(Instruction &I);
   bool shrinkPhiOfShuffles(Instruction &I);
   bool foldDeinterleaveInterleavePair(Instruction &I);
+  bool foldPartialDeinterleave(Instruction &I);
 
   void replaceValue(Instruction &Old, Value &New, bool Erase = true) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -6032,6 +6033,101 @@ bool VectorCombine::foldInsExtVectorToShuffle(Instruction &I) {
   return true;
 }
 
+static unsigned getAlignedNumElements(unsigned MaxIdx, FixedVectorType *LoadTy,
+                                      const TargetTransformInfo &TTI,
+                                      const DataLayout &DL);
+
+/// Replace a partially used deinterleaved load with load + shuffles,
+/// when it is profitable.
+bool VectorCombine::foldPartialDeinterleave(Instruction &I) {
+  auto *Deinterleave = dyn_cast<IntrinsicInst>(&I);
+  if (!Deinterleave)
+    return false;
+
+  unsigned Factor =
+      getDeinterleaveIntrinsicFactor(Deinterleave->getIntrinsicID());
+  if (!Factor)
+    return false;
+
+  auto *Load = dyn_cast<LoadInst>(Deinterleave->getArgOperand(0));
+  auto *LoadTy = dyn_cast<FixedVectorType>(Load->getType());
+  if (!LoadTy || !Load->hasOneUse() || !Load->isSimple())
+    return false;
+
+  auto *ResultTy = dyn_cast<FixedVectorType>(
+      Deinterleave->getType()->getStructElementType(0));
+
+  SmallVector<ExtractValueInst *, 8> Extracts;
+  SmallVector<unsigned, 8> UsedIndices;
+  for (User *U : Deinterleave->users()) {
+    auto *Extract = dyn_cast<ExtractValueInst>(U);
+    if (!Extract || Extract->getNumIndices() != 1)
+      return false;
+    unsigned Index = *Extract->idx_begin();
+    Extracts.push_back(Extract);
+    if (!is_contained(UsedIndices, Index))
+      UsedIndices.push_back(Index);
+  }
+
+  if (Extracts.empty())
+    return false;
+  llvm::sort(UsedIndices);
+
+  SmallVector<SmallVector<int, 8>, 8> Masks(Factor);
+  for (unsigned Index : UsedIndices)
+    for (unsigned Lane = 0; Lane != ResultTy->getNumElements(); ++Lane)
+      Masks[Index].push_back(Index + Lane * Factor);
+
+  // shrink the load size when possible
+  unsigned MaxUsedIndex =
+      UsedIndices.back() + (ResultTy->getNumElements() - 1) * Factor;
+  unsigned NewNumElements =
+      std::min(LoadTy->getNumElements(),
+               getAlignedNumElements(MaxUsedIndex, LoadTy, TTI, *DL));
+  auto *NewLoadTy =
+      FixedVectorType::get(LoadTy->getElementType(), NewNumElements);
+
+  SmallVector<unsigned, 8> AllIndices(Factor);
+  std::iota(AllIndices.begin(), AllIndices.end(), 0);
+  InstructionCost OldCost = TTI.getInterleavedMemoryOpCost(
+      Instruction::Load, LoadTy, Factor, AllIndices, Load->getAlign(),
+      Load->getPointerAddressSpace(), CostKind);
+
+  InstructionCost NewCost =
+      TTI.getMemoryOpCost(Instruction::Load, NewLoadTy, Load->getAlign(),
+                          Load->getPointerAddressSpace(), CostKind);
+  for (unsigned Index : UsedIndices)
+    NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, ResultTy, NewLoadTy,
+                                  CostKind, Masks[Index]);
+
+  LLVM_DEBUG(dbgs() << "VC: Found partially used deinterleave: " << I
+                    << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
+                    << "\n");
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost > OldCost)
+    return false;
+
+  Value *ShuffleInput = Load;
+  if (NewLoadTy != LoadTy) {
+    IRBuilder<> LoadBuilder(Load);
+    LoadBuilder.SetCurrentDebugLocation(Load->getDebugLoc());
+    auto *NewLoad = cast<LoadInst>(LoadBuilder.CreateAlignedLoad(
+        NewLoadTy, Load->getPointerOperand(), Load->getAlign()));
+    NewLoad->copyMetadata(*Load);
+    NewLoad->takeName(Load);
+    ShuffleInput = NewLoad;
+  }
+
+  IRBuilder<> ShuffleBuilder(Deinterleave);
+  ShuffleBuilder.SetCurrentDebugLocation(Deinterleave->getDebugLoc());
+  SmallVector<Value *, 8> Shuffles(Factor);
+  for (unsigned Index : UsedIndices)
+    Shuffles[Index] =
+        ShuffleBuilder.CreateShuffleVector(ShuffleInput, Masks[Index]);
+  for (ExtractValueInst *Extract : Extracts)
+    replaceValue(*Extract, *Shuffles[*Extract->idx_begin()], false);
+  return true;
+}
+
 /// Fold away a matched pair of vector.deinterleave/interleave intrinsics
 /// with a chain of elementwise operations on each between the
 /// deinterleave and interleave.
@@ -6334,6 +6430,8 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
 /// %merge1 = bitcast <vscale x 16 x i16> %f1 to <vscale x 8 x i32>
 /// ```
 bool VectorCombine::foldDeinterleaveIntrinsics(Instruction &I) {
+  if (foldPartialDeinterleave(I))
+    return true;
   if (foldDeinterleaveInterleavePair(I))
     return true;
 
