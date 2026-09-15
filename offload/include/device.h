@@ -50,6 +50,7 @@ struct DeviceTy {
   GenericPluginTy *RTL;
   int32_t RTLDeviceID;
   ol_device_handle_t DeviceHandle;
+  ol_context_handle_t Context;
 
   DeviceTy(GenericPluginTy *RTL, int32_t DeviceID, int32_t RTLDeviceID,
            ol_device_handle_t DeviceHandle);
@@ -61,6 +62,9 @@ struct DeviceTy {
 
   /// Try to initialize the device and return any failure.
   llvm::Error init();
+
+  /// Deinitialize the OpenMP device.
+  llvm::Error deinit();
 
   /// Provide access to the mapping handler.
   MappingInfoTy &getMappingInfo() { return MappingInfo; }
@@ -97,9 +101,6 @@ struct DeviceTy {
                        AsyncInfoTy &AsyncInfo,
                        HostDataToTargetTy *Entry = nullptr,
                        MappingInfoTy::HDTTMapAccessorTy *HDTTMapPtr = nullptr);
-
-  // Return true if data can be copied to DstDevice directly
-  bool isDataExchangable(const DeviceTy &DstDevice);
 
   // Copy data from current device to destination device directly
   int32_t dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
@@ -188,9 +189,6 @@ struct DeviceTy {
   }
 
 private:
-  /// Deinitialize the device (and plugin).
-  void deinit();
-
   /// All offload entries available on this device.
   using DeviceOffloadEntriesMapTy =
       llvm::DenseMap<llvm::StringRef, OffloadEntryTy>;
