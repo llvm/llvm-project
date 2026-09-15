@@ -183,11 +183,16 @@ define void @f3(ptr %a, ptr %b) nounwind {
 define void @f6(ptr %a, ptr %b) nounwind {
 ; GISEL_X86-LABEL: f6:
 ; GISEL_X86:       # %bb.0:
+; GISEL_X86-NEXT:    pushl %eax
 ; GISEL_X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; GISEL_X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; GISEL_X86-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}
-; GISEL_X86-NEXT:    fadds (%eax)
-; GISEL_X86-NEXT:    fstps (%ecx)
+; GISEL_X86-NEXT:    flds (%eax)
+; GISEL_X86-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}
+; GISEL_X86-NEXT:    faddp %st, %st(1)
+; GISEL_X86-NEXT:    fstps (%esp)
+; GISEL_X86-NEXT:    movl (%esp), %eax
+; GISEL_X86-NEXT:    movl %eax, (%ecx)
+; GISEL_X86-NEXT:    popl %eax
 ; GISEL_X86-NEXT:    retl
 ;
 ; SDAG_X86-LABEL: f6:
@@ -201,9 +206,12 @@ define void @f6(ptr %a, ptr %b) nounwind {
 ;
 ; GISEL_X64-LABEL: f6:
 ; GISEL_X64:       # %bb.0:
-; GISEL_X64-NEXT:    flds {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
-; GISEL_X64-NEXT:    fadds (%rdi)
-; GISEL_X64-NEXT:    fstps (%rsi)
+; GISEL_X64-NEXT:    flds (%rdi)
+; GISEL_X64-NEXT:    fldt {{\.?LCPI[0-9]+_[0-9]+}}(%rip)
+; GISEL_X64-NEXT:    faddp %st, %st(1)
+; GISEL_X64-NEXT:    fstps -{{[0-9]+}}(%rsp)
+; GISEL_X64-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; GISEL_X64-NEXT:    movl %eax, (%rsi)
 ; GISEL_X64-NEXT:    retq
 ;
 ; SDAG_X64-LABEL: f6:
