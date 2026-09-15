@@ -5,7 +5,14 @@
 # Check that if the register pressure is too high, the schedule is rejected, II is incremented, and scheduling continues.
 # The specific value of II is not important.
 
+# Also check that a register unit is not mistaken for a physical register when
+# their numeric IDs coincide. Register unit 19 is F3, but physical register 19
+# is the reserved base pointer $bp8, so converting the unit ID to a Register
+# made the detector treat F3 as reserved and drop it from pressure accounting.
+# $f3 is defined in the loop below to keep that unit live.
+
 # CHECK: {{^ *}}Try to schedule with {{[0-9]+$}}
+# CHECK: insert F3
 # CHECK: {{^ *}}Rejected the schedule because of too high register pressure{{$}}
 # CHECK: {{^ *}}Try to schedule with {{[0-9]+$}}
 # CHECK: {{^ *}}Schedule Found? 1 (II={{[0-9]+}}){{$}}
@@ -137,7 +144,7 @@ body:             |
     %5:g8rc_and_g8rc_nox0 = PHI %2, %bb.2, %6, %bb.4
     %18:f8rc, %19:g8rc_and_g8rc_nox0 = LFDU 8, killed %5 :: (load (s64) from %ir.3)
     %6:g8rc = COPY killed %19
-    %20:vsfrc = nofpexcept XSMADDADP %0, %0, %18, implicit $rm
+    %20:vsfrc = nofpexcept XSMADDADP %0, %0, %18, implicit $rm, implicit-def $f3
     %21:vsfrc = nofpexcept XSMADDADP %20, %20, %18, implicit $rm
     %22:vsfrc = nofpexcept XSMADDADP %21, %21, %18, implicit $rm
     %23:vsfrc = nofpexcept XSMADDADP %22, %22, %18, implicit $rm
