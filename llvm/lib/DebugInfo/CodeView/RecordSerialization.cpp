@@ -96,6 +96,28 @@ Error llvm::codeview::consume(BinaryStreamReader &Reader, APSInt &Num) {
     Num = APSInt(APInt(64, N, false), true);
     return Error::success();
   }
+  case LF_OCTWORD: {
+    ArrayRef<uint8_t> Data;
+    if (auto EC = Reader.readBytes(Data, 16))
+      return EC;
+    uint64_t N[2];
+    std::memcpy(N, Data.data(), sizeof(N));
+    Num = APSInt(APInt(128, {N, 2}), false);
+    if constexpr (endianness::native == endianness::big)
+      Num = Num.byteSwap();
+    return Error::success();
+  }
+  case LF_UOCTWORD: {
+    ArrayRef<uint8_t> Data;
+    if (auto EC = Reader.readBytes(Data, 16))
+      return EC;
+    uint64_t N[2];
+    std::memcpy(N, Data.data(), sizeof(N));
+    Num = APSInt(APInt(128, {N, 2}), true);
+    if constexpr (endianness::native == endianness::big)
+      Num = Num.byteSwap();
+    return Error::success();
+  }
   }
   return make_error<CodeViewError>(cv_error_code::corrupt_record,
                                    "Buffer contains invalid APSInt type");
