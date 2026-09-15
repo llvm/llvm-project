@@ -2101,13 +2101,16 @@ protected:
   /// another pointer.
   mutable Decl *LastDecl = nullptr;
 
+  /// The declaration corresponding to this context.
+  Decl *const CorrespondingDecl;
+
   /// Build up a chain of declarations.
   ///
   /// \returns the first/last pair of declarations.
   static std::pair<Decl *, Decl *>
   BuildDeclChain(ArrayRef<Decl*> Decls, bool FieldsAlreadyLoaded);
 
-  DeclContext(Decl::Kind K);
+  DeclContext(Decl::Kind K, Decl *D);
 
 public:
   ~DeclContext();
@@ -2122,10 +2125,13 @@ public:
 
   const char *getDeclKindName() const;
 
+  /// Return the declaration containing this context.
+  Decl *getAsDecl() { return CorrespondingDecl; }
+
+  const Decl *getAsDecl() const { return CorrespondingDecl; }
+
   /// getParent - Returns the containing DeclContext.
-  DeclContext *getParent() {
-    return cast<Decl>(this)->getDeclContext();
-  }
+  DeclContext *getParent() { return getAsDecl()->getDeclContext(); }
   const DeclContext *getParent() const {
     return const_cast<DeclContext*>(this)->getParent();
   }
@@ -2140,7 +2146,7 @@ public:
   ///                   // getLexicalParent() == translation unit
   ///
   DeclContext *getLexicalParent() {
-    return cast<Decl>(this)->getLexicalDeclContext();
+    return getAsDecl()->getLexicalDeclContext();
   }
   const DeclContext *getLexicalParent() const {
     return const_cast<DeclContext*>(this)->getLexicalParent();
@@ -2830,11 +2836,11 @@ template <class ToTy,
           bool IsKnownSubtype = ::std::is_base_of<DeclContext, ToTy>::value>
 struct cast_convert_decl_context {
   static const ToTy *doit(const DeclContext *Val) {
-    return static_cast<const ToTy*>(Decl::castFromDeclContext(Val));
+    return static_cast<const ToTy *>(Val->getAsDecl());
   }
 
   static ToTy *doit(DeclContext *Val) {
-    return static_cast<ToTy*>(Decl::castFromDeclContext(Val));
+    return static_cast<ToTy *>(Val->getAsDecl());
   }
 };
 
