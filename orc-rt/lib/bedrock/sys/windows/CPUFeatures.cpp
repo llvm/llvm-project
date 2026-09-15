@@ -1,9 +1,7 @@
-#include "orc-rt/bedrock/ExecutorProcessInfo.h"
+#include "orc-rt-internal/bedrock/sys/CPUFeatures.h"
 
-namespace orc_rt {
+namespace orc_rt::sys {
 
-std::vector<std::string_view> ExecutorProcessInfo::detectTargetCPUFeatures() {
-  return {};
-}
+std::vector<std::string_view> detectTargetCPUFeatures() { return {}; }
 
-} // namespace orc_rt
+} // namespace orc_rt::sys

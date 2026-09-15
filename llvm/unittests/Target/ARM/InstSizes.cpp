@@ -145,12 +145,12 @@ TEST(InstSizes, PseudoInst) {
   runChecks(TM.get(), II, "",
             "    Int_eh_sjlj_longjmp $r0, $r1, implicit-def $r7,"
             " implicit-def $lr, implicit-def $sp\n",
-            16u, cmpInstSize);
+            20u, cmpInstSize);
 
   runChecks(TM.get(), II, "",
             "    tInt_eh_sjlj_longjmp $r0, $r1, implicit-def $r7,"
             " implicit-def $lr, implicit-def $sp\n",
-            10u, cmpInstSize);
+            12u, cmpInstSize);
 
   runChecks(TM.get(), II, "",
             "    tInt_WIN_eh_sjlj_longjmp $r0, $r1, implicit-def $r11,"

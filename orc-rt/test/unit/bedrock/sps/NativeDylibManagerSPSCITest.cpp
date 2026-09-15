@@ -15,6 +15,7 @@
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 
+#include "BedrockTestUtils.h"
 #include "CommonTestUtils.h"
 #include "DirectCaller.h"
 #include "gtest/gtest.h"
@@ -72,6 +73,8 @@ constexpr auto Weak = NativeDylibManager::WeaklyReferencedSymbol;
     "NDM_TEST_LIB_PATH must be defined to the path of the test shared library"
 #endif
 
+static DirectCaller caller(orc_rt_WrapperFunction Fn) { return {nullptr, Fn}; }
+
 class NativeDylibManagerSPSCITest : public ::testing::Test {
 protected:
   void SetUp() override {
@@ -80,16 +83,11 @@ protected:
     NDM = cantFail(NativeDylibManager::Create(*S, CI));
   }
 
-  DirectCaller caller(const char *Name) {
-    return DirectCaller(nullptr, reinterpret_cast<orc_rt_WrapperFunction>(
-                                     const_cast<void *>(CI.at(Name))));
-  }
-
   template <typename OnCompleteFn>
   void spsLoad(OnCompleteFn &&OnComplete, std::string Path) {
     using SPSSig = SPSExpected<SPSExecutorAddr>(SPSExecutorAddr, SPSString);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_ci_sps_NativeDylibManager_load"),
+        caller(orc_rt_ci_sps_NativeDylibManager_load),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), std::move(Path));
   }
 
@@ -100,7 +98,7 @@ protected:
         SPSExecutorAddr, SPSExecutorAddr,
         SPSSequence<SPSTuple<SPSString, bool>>);
     SPSWrapperFunction<SPSSig>::call(
-        caller("orc_rt_ci_sps_NativeDylibManager_lookup"),
+        caller(orc_rt_ci_sps_NativeDylibManager_lookup),
         std::forward<OnCompleteFn>(OnComplete), NDM.get(), Handle,
         std::move(Symbols));
   }
@@ -111,8 +109,10 @@ protected:
 };
 
 TEST_F(NativeDylibManagerSPSCITest, Registration) {
-  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_load"));
-  EXPECT_TRUE(CI.count("orc_rt_ci_sps_NativeDylibManager_lookup"));
+  EXPECT_TRUE(
+      CI.count(SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_load")));
+  EXPECT_TRUE(
+      CI.count(SymbolNameSpec::c("orc_rt_ci_sps_NativeDylibManager_lookup")));
 }
 
 TEST_F(NativeDylibManagerSPSCITest, Load) {

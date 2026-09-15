@@ -192,6 +192,21 @@ template <typename SCEVPtrT> SCEVUseT(SCEVPtrT) -> SCEVUseT<SCEVPtrT>;
 
 using SCEVUse = SCEVUseT<const SCEV *>;
 
+/// The no-wrap flags to apply when creating a SCEV expression, to the
+/// expression and use respectively.
+struct SCEVFlags {
+  /// Flags applied directly to a SCEV expression, must be valid wherever the
+  /// expression is valid.
+  SCEVNoWrapFlags ExprFlags;
+
+  /// Flags only applied to a SCEVUse.
+  SCEVNoWrapFlags UseFlags;
+
+  constexpr SCEVFlags(SCEVNoWrapFlags ExprFlags = SCEVNoWrapFlags::FlagAnyWrap,
+                      SCEVNoWrapFlags UseFlags = SCEVNoWrapFlags::FlagAnyWrap)
+      : ExprFlags(ExprFlags), UseFlags(UseFlags) {}
+};
+
 /// Provide PointerLikeTypeTraits for SCEVUse, so it can be used with
 /// SmallPtrSet, among others.
 template <> struct PointerLikeTypeTraits<SCEVUse> {
@@ -347,8 +362,7 @@ public:
 template <> struct FoldingSetTrait<SCEV> : DefaultFoldingSetTrait<SCEV> {
   static void Profile(const SCEV &X, FoldingSetNodeID &ID) { ID = X.FastID; }
 
-  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID,
-                     FoldingSetNodeID &TempID) {
+  static bool Equals(const SCEV &X, const FoldingSetNodeID &ID) {
     return ID == X.FastID;
   }
 };
@@ -426,8 +440,7 @@ struct FoldingSetTrait<SCEVPredicate> : DefaultFoldingSetTrait<SCEVPredicate> {
     ID = X.FastID;
   }
 
-  static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID,
-                     FoldingSetNodeID &TempID) {
+  static bool Equals(const SCEVPredicate &X, const FoldingSetNodeID &ID) {
     return ID == X.FastID;
   }
 };
@@ -713,7 +726,6 @@ public:
   getStrengthenedNoWrapFlagsFromBinOp(const OverflowingBinaryOperator *OBO);
 
   /// Notify this ScalarEvolution that \p User directly uses SCEVs in \p Ops.
-  LLVM_ABI void registerUser(const SCEV *User, ArrayRef<const SCEV *> Ops);
   LLVM_ABI void registerUser(const SCEV *User, ArrayRef<SCEVUse> Ops);
 
   /// Return true if the SCEV expression contains an undef value.
@@ -752,45 +764,39 @@ public:
   LLVM_ABI const SCEV *getCastExpr(SCEVTypes Kind, SCEVUse Op, Type *Ty);
   LLVM_ABI const SCEV *getAnyExtendExpr(SCEVUse Op, Type *Ty);
 
-  LLVM_ABI const SCEV *getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                                  unsigned Depth = 0);
-  const SCEV *getAddExpr(SCEVUse LHS, SCEVUse RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  LLVM_ABI SCEVUse getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
+                              SCEVFlags Flags = {}, unsigned Depth = 0);
+  SCEVUse getAddExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                     unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getAddExpr(Ops, Flags, Depth);
   }
-  const SCEV *getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  SCEVUse getAddExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
+                     SCEVFlags Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getAddExpr(Ops, Flags, Depth);
   }
-  LLVM_ABI const SCEV *getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
-                                  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                                  unsigned Depth = 0);
-  const SCEV *getMulExpr(SCEVUse LHS, SCEVUse RHS,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  LLVM_ABI SCEVUse getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
+                              SCEVFlags Flags = {}, unsigned Depth = 0);
+  SCEVUse getMulExpr(SCEVUse LHS, SCEVUse RHS, SCEVFlags Flags = {},
+                     unsigned Depth = 0) {
     SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
     return getMulExpr(Ops, Flags, Depth);
   }
-  const SCEV *getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
-                         SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap,
-                         unsigned Depth = 0) {
+  SCEVUse getMulExpr(SCEVUse Op0, SCEVUse Op1, SCEVUse Op2,
+                     SCEVFlags Flags = {}, unsigned Depth = 0) {
     SmallVector<SCEVUse, 3> Ops = {Op0, Op1, Op2};
     return getMulExpr(Ops, Flags, Depth);
   }
   LLVM_ABI const SCEV *getUDivExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getUDivExactExpr(SCEVUse LHS, SCEVUse RHS);
   LLVM_ABI const SCEV *getURemExpr(SCEVUse LHS, SCEVUse RHS);
-  LLVM_ABI const SCEV *getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
-                                     SCEV::NoWrapFlags Flags);
-  LLVM_ABI const SCEV *getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
-                                     const Loop *L, SCEV::NoWrapFlags Flags);
-  const SCEV *getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands,
-                            const Loop *L, SCEV::NoWrapFlags Flags) {
+  LLVM_ABI SCEVUse getAddRecExpr(SCEVUse Start, SCEVUse Step, const Loop *L,
+                                 SCEVFlags Flags);
+  LLVM_ABI SCEVUse getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
+                                 const Loop *L, SCEVFlags Flags);
+  SCEVUse getAddRecExpr(const SmallVectorImpl<SCEVUse> &Operands, const Loop *L,
+                        SCEVFlags Flags) {
     SmallVector<SCEVUse, 4> NewOp(Operands.begin(), Operands.end());
     return getAddRecExpr(NewOp, L, Flags);
   }
@@ -954,10 +960,13 @@ public:
   ///
   /// In the case that a relevant loop exit value cannot be computed, the
   /// original value V is returned.
-  LLVM_ABI const SCEV *getSCEVAtScope(const SCEV *S, const Loop *L);
+  ///
+  /// The result may carry use-specific no-wrap flags. Those hold only in
+  /// contexts reached via \p L's exit.
+  LLVM_ABI SCEVUse getSCEVAtScope(const SCEV *S, const Loop *L);
 
   /// This is a convenience function which does getSCEVAtScope(getSCEV(V), L).
-  LLVM_ABI const SCEV *getSCEVAtScope(Value *V, const Loop *L);
+  LLVM_ABI SCEVUse getSCEVAtScope(Value *V, const Loop *L);
 
   /// Test whether entry to the loop is protected by a conditional between LHS
   /// and RHS.  This is used to help avoid max expressions in loop trip
@@ -1151,6 +1160,10 @@ public:
   /// in a way that may effect its value, or which may disconnect it from a
   /// def-use chain linking it to a loop.
   LLVM_ABI void forgetValue(Value *V);
+
+  /// Batched forgetValue: invalidates all \p Values in one shared def-use walk,
+  /// avoiding the redundant re-traversal of overlapping users.
+  LLVM_ABI void forgetValues(ArrayRef<Value *> Values);
 
   /// Forget LCSSA phi node V of loop L to which a new predecessor was added,
   /// such that it may no longer be trivial.
@@ -1916,7 +1929,7 @@ private:
   /// This map contains entries for all the expressions that we attempt to
   /// compute getSCEVAtScope information for, which can be expensive in
   /// extreme cases.
-  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, const SCEV *>, 2>>
+  DenseMap<const SCEV *, SmallVector<std::pair<const Loop *, SCEVUse>, 2>>
       ValuesAtScopes;
 
   /// Reverse map for invalidation purposes: Stores of which SCEV and which
@@ -2078,7 +2091,7 @@ private:
 
   /// Implementation code for getSCEVAtScope; called at most once for each
   /// SCEV+Loop pair.
-  const SCEV *computeSCEVAtScope(const SCEV *S, const Loop *L);
+  SCEVUse computeSCEVAtScope(const SCEV *S, const Loop *L);
 
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
