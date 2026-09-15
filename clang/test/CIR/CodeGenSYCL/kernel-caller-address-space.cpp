@@ -46,3 +46,17 @@ void test(int *p) {
 // LLVM: %class.anon{{.*}} = type { ptr addrspace(4) }
 // LLVM-LABEL: define {{.*}}@_ZZ4testPiENKUlvE_clEv(ptr addrspace(4)
 // LLVM:         store i32 42, ptr addrspace(4)
+
+struct FPKN;
+void callee();
+
+void test_fp() {
+  kernel_single_task<FPKN>([]() { void (*fp)() = callee; fp(); });
+}
+
+// Unlike data pointers, function pointers use the program address space (0),
+// not the generic address space: the pointee is a function type.
+// CIR-LABEL: cir.func {{.*}}@_ZZ7test_fpvENKUlvE_clEv
+// CIR:         cir.alloca {{.*}}"fp"{{.*}}: !cir.ptr<!cir.ptr<!cir.func<()>>>
+// LLVM-LABEL: define {{.*}}@_ZZ7test_fpvENKUlvE_clEv
+// LLVM:         store ptr @_Z6calleev, ptr

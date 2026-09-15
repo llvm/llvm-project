@@ -241,12 +241,13 @@ public:
 
   unsigned getTargetAddressSpace(QualType ty) const;
 
-  /// Returns the CIR address space for a pointer/reference whose pointee has
-  /// address space \p pointeeAS, or a null attribute for the default address
-  /// space. A LangAS::Default pointee is resolved through the target address
-  /// space map (e.g. generic for SYCL device), matching classic CodeGen.
+  /// Returns the CIR address space for a pointer/reference to \p pointeeTy, or
+  /// a null attribute for the default address space. A default-address-space
+  /// pointee is resolved through getTargetAddressSpace (e.g. generic for SYCL
+  /// device data, program address space for functions), matching classic
+  /// CodeGen.
   mlir::ptr::MemorySpaceAttrInterface
-  getPointerAddressSpace(clang::LangAS pointeeAS) const;
+  getPointerAddressSpace(clang::QualType pointeeTy) const;
 };
 
 } // namespace clang::CIRGen

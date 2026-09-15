@@ -544,8 +544,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     const ReferenceType *refTy = cast<ReferenceType>(ty);
     QualType elemTy = refTy->getPointeeType();
     auto pointeeType = convertTypeForMem(elemTy);
-    resultType = builder.getPointerTo(
-        pointeeType, getPointerAddressSpace(elemTy.getAddressSpace()));
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     assert(resultType && "Cannot get pointer type?");
     break;
   }
@@ -557,8 +557,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
     mlir::Type pointeeType = convertType(elemTy);
 
-    resultType = builder.getPointerTo(
-        pointeeType, getPointerAddressSpace(elemTy.getAddressSpace()));
+    resultType =
+        builder.getPointerTo(pointeeType, getPointerAddressSpace(elemTy));
     break;
   }
 
@@ -874,15 +874,17 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
 }
 
 mlir::ptr::MemorySpaceAttrInterface
-CIRGenTypes::getPointerAddressSpace(clang::LangAS pointeeAS) const {
+CIRGenTypes::getPointerAddressSpace(clang::QualType pointeeTy) const {
   // An explicit source address space is carried directly.
-  if (pointeeAS != LangAS::Default)
-    return cir::toCIRAddressSpaceAttr(getMLIRContext(), pointeeAS);
+  if (pointeeTy.getAddressSpace() != LangAS::Default)
+    return cir::toCIRAddressSpaceAttr(getMLIRContext(),
+                                      pointeeTy.getAddressSpace());
 
-  // Resolve a default-address-space pointee through the target address space
-  // map, as classic CodeGen does. This is only non-zero for languages that
-  // default to a non-default address space (e.g. generic for SYCL device).
-  unsigned targetAS = getASTContext().getTargetAddressSpace(LangAS::Default);
+  // Resolve a default-address-space pointee through getTargetAddressSpace, as
+  // classic CodeGen does. This is only non-zero for languages that default to
+  // a non-default address space (e.g. generic for SYCL device data), and uses
+  // the program address space for functions.
+  unsigned targetAS = getTargetAddressSpace(pointeeTy);
   if (targetAS == 0)
     return {};
   return cir::TargetAddressSpaceAttr::get(&getMLIRContext(), targetAS);
