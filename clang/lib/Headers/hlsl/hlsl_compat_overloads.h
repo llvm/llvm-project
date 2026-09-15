@@ -28,6 +28,10 @@ namespace hlsl {
   [[deprecated("In 202x mismatched vector/scalar lowering for " #fn " is "     \
                "deprecated. Explicitly cast parameters.")]]
 
+#define _DXC_DEPRECATED_SCALAR_FN(ty1, ty2, fn)                                \
+  [[deprecated("In 202x mismatched " #ty1 "/" #ty2 " lowering for " #fn " is " \
+               "deprecated. Explicitly cast parameters.")]]
+
 #define _DXC_COMPAT_UNARY_DOUBLE_OVERLOADS(fn)                                 \
   _DXC_DEPRECATED_64BIT_FN(fn)                                                 \
   constexpr float fn(double V) { return fn((float)V); }                        \
@@ -517,6 +521,12 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> max(
   return max((vector<T, N>)p0, p1);
 }
 
+_DXC_DEPRECATED_SCALAR_FN(float, int, max)
+constexpr float max(float p0, int p1) { return max(p0, (float)p1); }
+
+_DXC_DEPRECATED_SCALAR_FN(int, float, max)
+constexpr float max(int p0, float p1) { return max((float)p0, p1); }
+
 //===----------------------------------------------------------------------===//
 // min builtins overloads
 //===----------------------------------------------------------------------===//
@@ -534,6 +544,12 @@ constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>> min(
     T p0, vector<T, N> p1) {
   return min((vector<T, N>)p0, p1);
 }
+
+_DXC_DEPRECATED_SCALAR_FN(float, int, max)
+constexpr float min(float p0, int p1) { return min(p0, (float)p1); }
+
+_DXC_DEPRECATED_SCALAR_FN(int, float, max)
+constexpr float min(int p0, float p1) { return min((float)p0, p1); }
 
 //===----------------------------------------------------------------------===//
 // normalize builtins overloads
