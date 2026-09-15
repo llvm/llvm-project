@@ -60,7 +60,7 @@ the OpenMP standard. The default value is `-fopenmp-version=51` for `Clang`.
 :::{option} -fopenmp-targets
 Specify which OpenMP offloading targets should be supported. For example, you
 may specify `-fopenmp-targets=amdgcn-amd-amdhsa,nvptx64`. This option is
-often optional when {ref}`--offload-arch <offload_arch>` is provided.
+often optional when {option}`--offload-arch` is provided.
 
 It is also possible to offload to CPU architectures, for instance with
 `-fopenmp-targets=x86_64-pc-linux-gnu`.
@@ -119,8 +119,8 @@ Pass an argument `<arg>` to the offloading toolchain for the target
 `<triple>`. That is especially useful when an argument must differ for each
 triple. For instance `-Xopenmp-target=nvptx64 --offload-arch=sm_80
 -Xopenmp-target=amdgcn --offload-arch=gfx90a` to specify the device
-architecture. Alternatively, {ref}`-Xarch_host <Xarch_host>` and
-{ref}`-Xarch_device <Xarch_device>` can
+architecture. Alternatively, {option}`-Xarch_host` and
+{option}`-Xarch_device` can
 pass an argument to the host and device compilation toolchain.
 :::
 
