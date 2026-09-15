@@ -2127,7 +2127,7 @@ FieldDecl *Sema::BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
         // before buildCapturedStmtCaptureList. Use the DecompositionDecl
         // type.
         Var = DD;
-        FieldType = DD->getType();
+        FieldType = DD->getType().getNonReferenceType();
         if (Capture.isReferenceCapture())
           FieldType = Context.getLValueReferenceType(DD->getType());
       }

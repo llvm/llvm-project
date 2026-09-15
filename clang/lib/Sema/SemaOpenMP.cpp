@@ -3952,6 +3952,7 @@ static bool checkDecompositionCaptureConflict(
     break;
   case OMPC_firstprivate:
   case OMPC_private:
+  case OMPC_lastprivate:
     // These are by-copy.
     IsByRef = false;
     break;
@@ -3997,7 +3998,7 @@ static bool checkClausesForDecompositionConflicts(Sema &SemaRef,
     }
     OpenMPClauseKind CK = C->getClauseKind();
     if (CK != OMPC_map && CK != OMPC_firstprivate && CK != OMPC_private &&
-        CK != OMPC_shared)
+        CK != OMPC_shared && CK != OMPC_lastprivate)
       continue;
     ArrayRef<Expr *> Varlist;
     if (auto *MPC = dyn_cast<OMPMapClause>(C))
@@ -4008,6 +4009,8 @@ static bool checkClausesForDecompositionConflicts(Sema &SemaRef,
       Varlist = PC->varlist();
     else if (auto *SC = dyn_cast<OMPSharedClause>(C))
       Varlist = SC->varlist();
+    else if (auto *LPC = dyn_cast<OMPLastprivateClause>(C))
+      Varlist = LPC->varlist();
 
     for (Expr *VE : Varlist) {
       if (auto *DRE = dyn_cast<DeclRefExpr>(VE->IgnoreParenImpCasts())) {
