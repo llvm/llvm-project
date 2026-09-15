@@ -14,8 +14,8 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/Symbol.h"
 #include "lldb/Target/ExecutionContext.h"
-#include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -25,6 +25,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include <deque>
 
@@ -38,17 +39,18 @@ LLDB_PLUGIN_DEFINE(UnwindAssemblyInstEmulation)
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, Thread &thread, UnwindPlan &unwind_plan) {
   std::vector<uint8_t> function_text(range.GetByteSize());
-  ProcessSP process_sp(thread.GetProcess());
-  if (process_sp) {
+  TargetSP target_sp(thread.CalculateTarget());
+  if (target_sp) {
     Status error;
-    if (process_sp->GetTarget().ReadMemory(
-            range.GetBaseAddress(), function_text.data(), range.GetByteSize(),
-            error) != range.GetByteSize()) {
+    if (target_sp->ReadMemory(range.GetBaseAddress(), function_text.data(),
+                              range.GetByteSize(),
+                              error) != range.GetByteSize()) {
       return false;
     }
   }
-  return GetNonCallSiteUnwindPlanFromAssembly(
-      range, function_text.data(), function_text.size(), unwind_plan);
+  return GetNonCallSiteUnwindPlanFromAssembly(range, function_text.data(),
+                                              function_text.size(),
+                                              target_sp.get(), unwind_plan);
 }
 
 static void DumpUnwindRowsToLog(Log *log, AddressRange range,
@@ -80,13 +82,16 @@ static void DumpInstToLog(Log *log, Instruction &inst,
 
 bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     AddressRange &range, uint8_t *opcode_data, size_t opcode_size,
-    UnwindPlan &unwind_plan) {
+    Target *target, UnwindPlan &unwind_plan) {
   if (opcode_data == nullptr || opcode_size == 0)
     return false;
 
   if (range.GetByteSize() == 0 || !range.GetBaseAddress().IsValid() ||
       !m_inst_emulator_up)
     return false;
+
+  m_target = target;
+  llvm::scope_exit clear_target([this] { m_target = nullptr; });
 
   // The instruction emulation subclass setup the unwind plan for the first
   // instruction.
@@ -166,6 +171,7 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
     m_curr_row_modified = false;
     m_branch_offset = 0;
+    m_branch_is_call = false;
 
     lldb::addr_t current_offset =
         inst.GetAddress().GetFileAddress() - base_addr;
@@ -207,22 +213,30 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
     m_inst_emulator_up->EvaluateInstruction(
         eEmulateInstructionOptionIgnoreConditions);
 
-    // If the current instruction is a branch forward then save the current
-    // CFI information for the offset where we are branching.
     Address branch_address = inst.GetAddress();
     branch_address.Slide(m_branch_offset);
-    if (m_branch_offset != 0 &&
-        range.ContainsFileAddress(branch_address.GetFileAddress())) {
-      if (auto [it, inserted] = saved_unwind_states.emplace(
-              current_offset + m_branch_offset, m_state);
-          inserted) {
-        it->second.row.SetOffset(current_offset + m_branch_offset);
-        if (std::size_t dest_instr_index =
-                inst_list.GetIndexOfInstructionAtAddress(branch_address);
-            dest_instr_index < inst_list.GetSize()) {
-          to_visit.push_front(dest_instr_index);
-          enqueued.insert(dest_instr_index);
+    if (m_branch_offset != 0) {
+      if (range.ContainsFileAddress(branch_address.GetFileAddress())) {
+        // The current instruction is a branch: save the current CFI information
+        // for the offset where we are branching.
+        if (auto [it, inserted] = saved_unwind_states.emplace(
+                current_offset + m_branch_offset, m_state);
+            inserted) {
+          it->second.row.SetOffset(current_offset + m_branch_offset);
+          if (std::size_t dest_instr_index =
+                  inst_list.GetIndexOfInstructionAtAddress(branch_address);
+              dest_instr_index < inst_list.GetSize()) {
+            to_visit.push_front(dest_instr_index);
+            enqueued.insert(dest_instr_index);
+          }
         }
+      } else if (m_branch_is_call) {
+        // The current instruction is a function call: this might be a call to
+        // outlined instructions that used to belong to this function, so try
+        // emulate the callee.
+        assert(!range.ContainsFileAddress(branch_address.GetFileAddress()) &&
+               "function call to instruction inside current function!");
+        EmulateOutlinedFunction(branch_address);
       }
     }
 
@@ -254,6 +268,62 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
 
   DumpUnwindRowsToLog(log, range, unwind_plan);
   return unwind_plan.GetRowCount() > 0;
+}
+
+bool UnwindAssemblyInstEmulation::EmulateOutlinedFunction(Address func_addr) {
+  if (!m_target)
+    return false;
+
+  Symbol *symbol = func_addr.CalculateSymbolContextSymbol();
+  if (!symbol)
+    return false;
+
+  // The machine outliner names every outlined function OUTLINED_FUNCTION_<n>.
+  if (!symbol->GetName().GetStringRef().starts_with("OUTLINED_FUNCTION_"))
+    return false;
+
+  // Only a call to the helper's entry can be followed; the symbol lookup above
+  // also matches addresses inside it.
+  Address helper_addr = symbol->GetAddress();
+  if (helper_addr.GetFileAddress() != func_addr.GetFileAddress())
+    return false;
+
+  const size_t byte_size = symbol->GetByteSize();
+  std::vector<uint8_t> text(byte_size);
+  Status error;
+  if (m_target->ReadMemory(helper_addr, text.data(), byte_size, error) !=
+      byte_size)
+    return false;
+
+  DisassemblerSP disasm_sp(Disassembler::DisassembleBytes(
+      m_arch, nullptr, nullptr, nullptr, nullptr, helper_addr, text.data(),
+      text.size(), 99999, /*data_from_file=*/true));
+  if (!disasm_sp)
+    return false;
+  InstructionList &insts = disasm_sp->GetInstructionList();
+  const size_t num_insts = insts.GetSize();
+  if (num_insts == 0)
+    return false;
+
+  // Only straight-line outlined functions are supported.
+  for (size_t i = 0; i + 1 < num_insts; ++i)
+    if (insts.GetInstructionAtIndex(i)->DoesBranch())
+      return false;
+  // The last instruction should be a return back to the caller.
+  if (!insts.GetInstructionAtIndex(num_insts - 1)->DoesBranch())
+    return false;
+
+  for (size_t i = 0; i + 1 < num_insts; ++i) {
+    Instruction &inst = *insts.GetInstructionAtIndex(i);
+    m_inst_emulator_up->SetInstruction(inst.GetOpcode(), inst.GetAddress(),
+                                       nullptr);
+    m_inst_emulator_up->EvaluateInstruction(
+        eEmulateInstructionOptionIgnoreConditions);
+  }
+
+  LLDB_LOGF(GetLog(LLDBLog::Unwind), "followed outlined function %s",
+            symbol->GetName().AsCString(""));
+  return true;
 }
 
 bool UnwindAssemblyInstEmulation::AugmentUnwindPlanFromCallSite(
@@ -404,14 +474,20 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
     assert(context.GetInfoType() ==
                EmulateInstruction::eInfoTypeRegisterToRegisterPlusOffset &&
            "unhandled case, add code to handle this!");
+    const RegisterInfo &data_reg =
+        context.info.RegisterToRegisterPlusOffset.data_reg;
     const uint32_t unwind_reg_kind = m_unwind_plan_ptr->GetRegisterKind();
-    reg_num = context.info.RegisterToRegisterPlusOffset.data_reg
-                  .kinds[unwind_reg_kind];
-    generic_regnum = context.info.RegisterToRegisterPlusOffset.data_reg
-                         .kinds[eRegisterKindGeneric];
+    reg_num = data_reg.kinds[unwind_reg_kind];
+    generic_regnum = data_reg.kinds[eRegisterKindGeneric];
+
+    // Only a register that still holds the value it had on entry to the
+    // function should be saved, otherwise we would be recording the location of
+    // a local.
+    const bool holds_entry_value =
+        m_state.register_values.count(MakeRegisterKindValuePair(data_reg)) == 0;
 
     if (reg_num != LLDB_INVALID_REGNUM &&
-        generic_regnum != LLDB_REGNUM_GENERIC_SP) {
+        generic_regnum != LLDB_REGNUM_GENERIC_SP && holds_entry_value) {
       if (m_pushed_regs.try_emplace(reg_num, addr).second) {
         const int32_t offset = addr - m_initial_cfa;
         m_state.row.SetRegisterLocationToAtCFAPlusOffset(reg_num, offset,
@@ -532,6 +608,10 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
 
   case EmulateInstruction::eContextAbsoluteBranchRegister:
   case EmulateInstruction::eContextRelativeBranchImmediate: {
+    // If the instruction writes to the return address register, this is a
+    // function call.
+    if (reg_info->kinds[eRegisterKindGeneric] == LLDB_REGNUM_GENERIC_RA)
+      m_branch_is_call = true;
     if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
         context.info.ISAAndImmediate.unsigned_data32 != 0) {
       m_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
