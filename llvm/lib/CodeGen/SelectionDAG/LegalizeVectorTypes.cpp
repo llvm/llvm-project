@@ -83,6 +83,8 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
     R = ScalarizeVecRes_ATOMIC_LOAD(cast<AtomicSDNode>(N));
     break;
   case ISD::LOAD:           R = ScalarizeVecRes_LOAD(cast<LoadSDNode>(N));break;
+  case ISD::INTRINSIC_WO_CHAIN:
+    R = ScalarizeVecRes_INTRINSIC_WO_CHAIN(N); break;
   case ISD::SCALAR_TO_VECTOR:  R = ScalarizeVecRes_SCALAR_TO_VECTOR(N); break;
   case ISD::VECTOR_DEINTERLEAVE:
   case ISD::VECTOR_INTERLEAVE:
@@ -584,6 +586,33 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_LOAD(LoadSDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), Result.getValue(1));
   return Result;
+}
+
+SDValue DAGTypeLegalizer::ScalarizeVecRes_INTRINSIC_WO_CHAIN(SDNode *N) {
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Unexpected vector type");
+
+  SDLoc DL(N);
+  SmallVector<SDValue, 4> Ops{N->getOperand(0)};
+  for (unsigned I = 1; I < N->getNumOperands(); ++I) {
+    SDValue Operand = N->getOperand(I);
+    EVT OperandVT = Operand.getValueType();
+    if (OperandVT.isVector()) {
+      assert(OperandVT.getVectorNumElements() == 1 &&
+             "Unexpected vector operand type");
+      if (getTypeAction(OperandVT) == TargetLowering::TypeScalarizeVector) {
+        Operand = GetScalarizedVector(Operand);
+      } else {
+        Operand = DAG.getExtractVectorElt(DL, OperandVT.getVectorElementType(),
+                                          Operand, 0);
+      }
+    }
+    Ops.push_back(Operand);
+  }
+
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL,
+                     N->getValueType(0).getVectorElementType(), Ops,
+                     N->getFlags());
 }
 
 SDValue DAGTypeLegalizer::ScalarizeVecRes_UnaryOp(SDNode *N) {

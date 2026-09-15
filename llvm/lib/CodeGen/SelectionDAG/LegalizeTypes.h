@@ -826,6 +826,7 @@ private:
   SDValue ScalarizeVecRes_TernaryOp(SDNode *N);
   SDValue ScalarizeVecRes_UnaryOp(SDNode *N);
   SDValue ScalarizeVecRes_StrictFPOp(SDNode *N);
+  SDValue ScalarizeVecRes_INTRINSIC_WO_CHAIN(SDNode *N);
   SDValue ScalarizeVecRes_OverflowOp(SDNode *N, unsigned ResNo);
   SDValue ScalarizeVecRes_InregOp(SDNode *N);
   SDValue ScalarizeVecRes_VecInregOp(SDNode *N);

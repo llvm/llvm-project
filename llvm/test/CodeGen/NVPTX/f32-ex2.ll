@@ -5,6 +5,8 @@ target triple = "nvptx-nvidia-cuda"
 
 declare float @llvm.nvvm.ex2.approx.f32(float)
 declare float @llvm.nvvm.ex2.approx.ftz.f32(float)
+declare <1 x float> @llvm.nvvm.ex2.approx.v1f32(<1 x float>)
+declare <1 x float> @llvm.nvvm.ex2.approx.ftz.v1f32(<1 x float>)
 
 ; CHECK-LABEL: ex2_float
 define float @ex2_float(float %0) {
@@ -34,4 +36,22 @@ define float @ex2_float_ftz(float %0) {
 ; CHECK-NEXT:    ret;
   %res = call float @llvm.nvvm.ex2.approx.ftz.f32(float %0)
   ret float %res
+}
+
+; CHECK-LABEL: ex2_float_v1
+define <1 x float> @ex2_float_v1(<1 x float> %0) {
+; CHECK-LABEL: ex2_float_v1(
+; CHECK:       {
+; CHECK:         ex2.approx.f32
+  %res = call <1 x float> @llvm.nvvm.ex2.approx.v1f32(<1 x float> %0)
+  ret <1 x float> %res
+}
+
+; CHECK-LABEL: ex2_float_v1_ftz
+define <1 x float> @ex2_float_v1_ftz(<1 x float> %0) {
+; CHECK-LABEL: ex2_float_v1_ftz(
+; CHECK:       {
+; CHECK:         ex2.approx.ftz.f32
+  %res = call <1 x float> @llvm.nvvm.ex2.approx.ftz.v1f32(<1 x float> %0)
+  ret <1 x float> %res
 }
