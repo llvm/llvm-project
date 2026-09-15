@@ -1741,15 +1741,9 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return Op == getOperand(1) || Op == getOperand(2);
   case Instruction::PHI:
     return true;
-  case Instruction::Select:
-    if (Op == getOperand(0) && Op != getOperand(1) && Op != getOperand(2) &&
-        vputils::isSingleScalar(Op))
-      // TODO: Relax for other opcodes.
-      if (match(Op, m_Freeze(m_VPValue())))
-        return true;
-    [[fallthrough]];
   case Instruction::FCmp:
   case Instruction::ICmp:
+  case Instruction::Select:
   case Instruction::Or:
   case Instruction::Freeze:
   case VPInstruction::Not:
