@@ -121,7 +121,7 @@ public:
         ValueTrackingVariableLocations(false), ForceDwarfFrameSection(false),
         XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
-        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
+        XCOFFReadOnlyPointers(false), VerifyArgABICompliance(false) {}
 
   /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
   /// specified. The code generator is then able to use both volatile and
@@ -293,9 +293,8 @@ public:
   unsigned XCOFFReadOnlyPointers : 1;
 
   /// When set to true, call/return argument extensions of narrow integers
-  /// are verified in the target backend if it cares about them. This is
-  /// not done with internal tools like llc that run many tests that ignore
-  /// (lack) these extensions.
+  /// are verified in the target backend if it cares about them. This is off
+  /// by default and enabled explicitly by each front-end separately.
   unsigned VerifyArgABICompliance : 1;
 
   /// Name of the stack usage file (i.e., .su file) if user passes
