@@ -1818,6 +1818,7 @@ def : GCNPat <
   (EXTRACT_SUBREG (i32 (COPY_TO_REGCLASS $src, VGPR_32)), hi16)
 >;
 
+def : GCNPat <
   (i16 (trunc i64:$src)),
   (EXTRACT_SUBREG $src, lo16)
 >;
