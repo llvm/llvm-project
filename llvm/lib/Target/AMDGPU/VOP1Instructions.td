@@ -53,7 +53,7 @@ class VOP1_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], bit VOP1On
 
   let mayRaiseFPException = ReadsModeReg;
 
-  let VOP1 = 1;
+  let Format = AMDGPUInstrFormat.VOP1;
   let VALU = 1;
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 
@@ -66,7 +66,6 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   SIMCInstr <ps.PseudoInstr, EncodingFamily> {
 
   let VALU = 1;
-  let VOP1 = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
 
@@ -79,6 +78,8 @@ class VOP1_Real <VOP1_Pseudo ps, int EncodingFamily, string real_name = ps.Mnemo
   let AsmMatchConverter  = ps.AsmMatchConverter;
   let AsmVariantName     = ps.AsmVariantName;
   let Constraints        = ps.Constraints;
+  let Format             = ps.Format;
+  let FormatModifier     = ps.FormatModifier;
   let TSFlags            = ps.TSFlags;
   let UseNamedOperandTable = ps.UseNamedOperandTable;
   let Uses                 = ps.Uses;
@@ -1729,7 +1730,7 @@ defm V_CVT_NORM_U16_F16  : VOP1_Real_vi<0x4e>;
 
 defm V_ACCVGPR_MOV_B32   : VOP1Only_Real_vi<0x52>;
 
-let VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0], Size = V_MOV_B32_e32.Size in {
+let Format = AMDGPUInstrFormat.VOP1, SubtargetPredicate = isGFX8GFX9, Uses = [EXEC, M0], Size = V_MOV_B32_e32.Size in {
 
 // Copy of v_mov_b32 with $vdst as a use operand for use with VGPR
 // indexing mode. vdst can't be treated as a def for codegen purposes,
@@ -1747,7 +1748,7 @@ def V_MOV_B32_indirect_read : VPseudoInstSI<
   PseudoInstExpansion<(V_MOV_B32_e32_vi getVALUDstForVT<i32>.ret:$vdst,
                                         getVOPSrc0ForVT<i32, 0>.ret:$src0)>;
 
-} // End VOP1 = 1, SubtargetPredicate = isGFX8GFX9, Uses = [M0]
+} // End Format = AMDGPUInstrFormat.VOP1, SubtargetPredicate = isGFX8GFX9, Uses = [M0]
 
 let OtherPredicates = [isGFX8Plus] in {
 
