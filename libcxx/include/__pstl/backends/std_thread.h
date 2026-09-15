@@ -29,6 +29,7 @@
 #include <__pstl/cpu_algos/search_n.h>
 #include <__pstl/cpu_algos/stable_sort.h>
 #include <__pstl/cpu_algos/transform.h>
+#include <__pstl/cpu_algos/transform_inclusive_scan_init.h>
 #include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/move.h>
@@ -65,6 +66,25 @@ struct __cpu_traits<__std_thread_backend_tag> {
   _LIBCPP_HIDE_FROM_ABI static optional<_Tp>
   __transform_reduce(_Index __first, _Index __last, _UnaryOp, _Tp __init, _BinaryOp, _Reduce __reduce) {
     return __reduce(std::move(__first), std::move(__last), std::move(__init));
+  }
+
+  template <class _RandomAccessIterator1,
+            class _RandomAccessIterator2,
+            class _Value,
+            class _Reduction,
+            class _Accumulation,
+            class _Scan>
+  _LIBCPP_HIDE_FROM_ABI static optional<__empty>
+  __scan(_RandomAccessIterator1 __first,
+         _RandomAccessIterator1 __last,
+         _RandomAccessIterator2 __result,
+         _Value __init,
+         _Reduction /*__reduction*/,
+         _Accumulation /*__accumulation*/,
+         _Scan __scan) {
+    if (__first != __last)
+      __scan(__first, __last, __result, std::move(__init));
+    return __empty{};
   }
 
   template <class _RandomAccessIterator, class _Compare, class _LeafSort>
@@ -152,6 +172,10 @@ struct __transform<__std_thread_backend_tag, _ExecutionPolicy>
 template <class _ExecutionPolicy>
 struct __transform_binary<__std_thread_backend_tag, _ExecutionPolicy>
     : __cpu_parallel_transform_binary<__std_thread_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_inclusive_scan_init<__std_thread_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_inclusive_scan_init<__std_thread_backend_tag, _ExecutionPolicy> {};
 
 template <class _ExecutionPolicy>
 struct __transform_reduce<__std_thread_backend_tag, _ExecutionPolicy>
