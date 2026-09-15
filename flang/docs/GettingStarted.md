@@ -318,6 +318,10 @@ One may provide optional CMake variables to customize the build. Available optio
   `quadmath.h` must be available to the build compiler.
   [More details](Real16MathSupport.md).
 
+* `-DFLANG_RUNTIME_F128_MATH_LIB=libm`: the same `REAL(16)` math APIs, taken
+  from the `*f128` entry points that glibc 2.26 and later export from `libm`.
+  This needs no third-party library. [More details](Real16MathSupport.md).
+
 ## Supported C++ compilers
 
 Flang is written in C++17.
