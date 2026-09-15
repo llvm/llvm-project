@@ -15,6 +15,11 @@ assoc_laguerre(n, m, x) is a Fraction. No external library, no extended-precisio
 library and no approximation is involved: the value below is the exact one, rounded
 once to the requested number of decimal digits.
 
+That value is computed with the same three-term recurrence Boost.Math evaluates, so a
+mistake in it would agree with the implementation under test and go unnoticed. Every
+value is therefore also computed from the closed form, which shares no arithmetic with
+the recurrence, and the two are required to agree exactly.
+
 That only works for the polynomial members of [sf.cmath] (assoc_laguerre, laguerre,
 assoc_legendre, legendre, hermite). The transcendental ones (beta, the elliptic
 integrals, expint, the Bessel family, riemann_zeta) have no such closed form and
@@ -119,6 +124,21 @@ def assoc_laguerre_exact(n, m, x):
     return current, largest / abs(current)
 
 
+def assoc_laguerre_explicit(n, m, x):
+    """Returns the exact L^m_n(x) from the closed form, independently of the recurrence.
+
+    L^m_n(x) = sum over k of (-1)^k * C(n + m, n - k) * x^k / k!
+    """
+    total = Fraction(0)
+    power = Fraction(1)
+    factorial = 1
+    for k in range(n + 1):
+        total += Fraction((-1) ** k * math.comb(n + m, n - k), factorial) * power
+        power *= x
+        factorial *= k + 1
+    return total
+
+
 def nearest_float(value):
     """Rounds a Fraction to the nearest `float`, exactly representable everywhere."""
     return Fraction(struct.unpack("f", struct.pack("f", float(value)))[0])
@@ -199,6 +219,7 @@ def generate_rows():
         for m in ORDERS:
             for x in sample_points(n, m, rng):
                 value, condition = assoc_laguerre_exact(n, m, x)
+                assert value == assoc_laguerre_explicit(n, m, x), f"L^{m}_{n}({x})"
 
                 # A zero has no meaningful relative error, a value outside the range
                 # of `float` would overflow the narrowest overload (the dedicated
@@ -234,6 +255,8 @@ HEADER_TEMPLATE = """// -*- C++ -*-
 // L^m_n(x) is a polynomial in x with rational coefficients and every binary
 // floating-point number is a rational, so `expected` is the exact mathematical value
 // rounded once to {digits} decimal digits -- enough to round-trip through IEEE binary128.
+// Each value is computed twice, by the three-term recurrence and by the closed form, and
+// the generator requires the two to agree exactly.
 // `x` is a `float` written out exactly, so both literals are exact in every format the
 // overloads use.
 //

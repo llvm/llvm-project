@@ -20,6 +20,8 @@
 // L^m_n(x) is a polynomial in x with rational coefficients and every binary
 // floating-point number is a rational, so `expected` is the exact mathematical value
 // rounded once to 36 decimal digits -- enough to round-trip through IEEE binary128.
+// Each value is computed twice, by the three-term recurrence and by the closed form, and
+// the generator requires the two to agree exactly.
 // `x` is a `float` written out exactly, so both literals are exact in every format the
 // overloads use.
 //
