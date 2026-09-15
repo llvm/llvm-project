@@ -1,4 +1,5 @@
 // RUN: mlir-opt -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -split-input-file --test-data-layout-query %s | FileCheck %s --check-prefix=BUILTIN
 
 
 // CHECK:      module attributes {
@@ -252,3 +253,90 @@ module attributes {
 // CHECK: }) {dlti.map = #dlti.map<i32 = 42 : i64>}
 "test.op_with_dlti_map"() ({
 }) { dlti.map = #dlti.map<#dlti.dl_entry<i32, 42>> } : () -> ()
+
+// -----
+
+// BUILTIN-LABEL: module @builtin_integer_entries
+module @builtin_integer_entries attributes { dlti.dl_spec = #dlti.dl_spec<
+  i32 = dense<32> : vector<2xi64>
+>} {
+  func.func @query() {
+    "test.op_with_data_layout"() ({
+        // BUILTIN: alignment = 4
+        "test.data_layout_query"() : () -> i32
+        // BUILTIN: alignment = 8
+        "test.data_layout_query"() : () -> i64
+        "test.maybe_terminator"() : () -> ()
+      }) { dlti.dl_spec = #dlti.dl_spec<
+        i32 = dense<32> : vector<2xi64>,
+        i64 = dense<64> : vector<2xi64>
+      >} : () -> ()
+    return
+  }
+}
+
+// -----
+
+// BUILTIN-LABEL: module @builtin_integer_compatible_abi
+module @builtin_integer_compatible_abi attributes { dlti.dl_spec = #dlti.dl_spec<
+  i32 = dense<64> : vector<2xi64>
+>} {
+  func.func @query() {
+    "test.op_with_data_layout"() ({
+      // BUILTIN: alignment = 4
+      "test.data_layout_query"() : () -> i32
+      "test.maybe_terminator"() : () -> ()
+    }) { dlti.dl_spec = #dlti.dl_spec<
+      i32 = dense<32> : vector<2xi64>
+    >} : () -> ()
+    return
+  }
+}
+
+// -----
+
+// BUILTIN-LABEL: module @builtin_index_entry
+module @builtin_index_entry attributes { dlti.dl_spec = #dlti.dl_spec<
+  index = 32
+>} {
+  func.func @query() {
+    "test.op_with_data_layout"() ({
+      // BUILTIN: bitsize = 32
+      // BUILTIN: index = 32
+      "test.data_layout_query"() : () -> index
+      "test.maybe_terminator"() : () -> ()
+    }) { dlti.dl_spec = #dlti.dl_spec<
+      index = 32
+    >} : () -> ()
+    return
+  }
+}
+
+// -----
+
+module attributes { dlti.dl_spec = #dlti.dl_spec<
+  i32 = dense<0> : vector<2xi64>
+>} {
+  module attributes { dlti.dl_spec = #dlti.dl_spec<
+    i32 = dense<0> : vector<2xi64>
+  >} {
+  }
+}
+
+// -----
+
+// BUILTIN-LABEL: module @builtin_float_entry
+module @builtin_float_entry attributes { dlti.dl_spec = #dlti.dl_spec<
+  f32 = dense<32> : vector<2xi64>
+>} {
+  func.func @query() {
+    "test.op_with_data_layout"() ({
+      // BUILTIN: alignment = 4
+      "test.data_layout_query"() : () -> f32
+      "test.maybe_terminator"() : () -> ()
+    }) { dlti.dl_spec = #dlti.dl_spec<
+      f32 = dense<32> : vector<2xi64>
+    >} : () -> ()
+    return
+  }
+}
