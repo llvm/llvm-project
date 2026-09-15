@@ -178,6 +178,8 @@ std::string macho::createResponseFile(const InputArgList &args) {
       break;
     case OPT_F:
     case OPT_L:
+    case OPT_non_global_symbols_strip_list:
+    case OPT_non_global_symbols_no_strip_list:
     case OPT_bundle_loader:
     case OPT_exported_symbols_list:
     case OPT_order_file:
