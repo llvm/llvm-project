@@ -245,6 +245,8 @@ def HasSVE_RCPC      : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasS
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_RCPC), "sve-rcpc">;
 def HasSVE_PERM256     : Predicate<"Subtarget->hasSVE_PERM256()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE_PERM256), "sve-perm256">;
+def HasSMEF16F8F16   : Predicate<"Subtarget->isStreaming() && Subtarget->hasSMEF16F8F16()">,
+                                 AssemblerPredicateWithAll<(all_of FeatureSMEF16F8F16), "sme-f16f8f16">;
 
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
