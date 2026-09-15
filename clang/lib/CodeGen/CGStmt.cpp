@@ -855,6 +855,16 @@ void CodeGenFunction::EmitGotoStmt(const GotoStmt &S) {
   if (HaveInsertPoint())
     EmitStopPoint(&S);
 
+  // Reinitialize the variables this goto bypasses, whose scope it re-enters.
+  // Backward gotos reinit here while forward gotos are recorded for
+  // EmitAutoVarAlloca to patch once the alloca exists. Skip when jump sources
+  // are unknown (computed goto); EmitAutoVarAlloca then uses function-scope
+  // init.
+  if (HaveInsertPoint() && !Bypasses.isAlwaysBypassed()) {
+    emitBypassedVarInitsForSource(&S);
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+  }
+
   ApplyAtomGroup Grp(getDebugInfo());
   EmitBranchThroughCleanup(getJumpDestForLabel(S.getLabel()));
 }
@@ -2442,6 +2452,17 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // explicit case ranges tests can have a place to jump to on
   // failure.
   llvm::BasicBlock *DefaultBlock = createBasicBlock("sw.default");
+
+  // The dispatch is the jump that bypasses any declarations sitting between the
+  // switch and its case labels, so the initialization goes here, ahead of the
+  // switch instruction -- not at the case labels. A case label is also reached
+  // by falling through from the case above it, and that edge bypasses nothing;
+  // initializing there would clobber a variable the previous case had written.
+  // The declarations are inside the body and so have no alloca yet, hence the
+  // patch-it-in-later handling in EmitAutoVarAlloca.
+  if (!Bypasses.isAlwaysBypassed())
+    BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+
   SwitchInsn = Builder.CreateSwitch(CondV, DefaultBlock);
   addInstToNewSourceAtom(SwitchInsn, CondV);
 
