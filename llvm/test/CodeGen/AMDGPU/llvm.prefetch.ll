@@ -134,9 +134,7 @@ define amdgpu_ps void @prefetch_data_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    v_nop
 ; GFX1250-SPREFETCH-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_mov_b64 s[2:3], 0xffffffffff800000
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0xffffffffff800000
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_prefetch_data s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_endpgm
 ;
@@ -646,9 +644,7 @@ define amdgpu_ps void @prefetch_inst_sgpr_min_offset(ptr addrspace(4) inreg %ptr
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    v_nop
 ; GFX1250-SPREFETCH-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_mov_b64 s[2:3], 0xffffffffff800000
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; GFX1250-SPREFETCH-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 0xffffffffff800000
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_prefetch_inst s[0:1], 0x0, null, 0
 ; GFX1250-SPREFETCH-SDAG-NEXT:    s_endpgm
 ;
