@@ -552,9 +552,18 @@ Value *PredicateInfoBuilder::materializeStack(unsigned int &Counter,
       auto *PAssume = dyn_cast<PredicateAssume>(ValInfo);
       assert(PAssume &&
              "Should not have gotten here without it being an assume");
-      // Insert the predicate directly after the assume. While it also holds
-      // directly before it, assume(i1 true) is not a useful fact.
-      BitCastInst *PIC = CreateSSACopy(PAssume->AssumeInst->getNextNode(), Op);
+      // Insert the predicate directly after the assume. While the predicate
+      // also holds directly before the assume, assume(i1 true) is not a useful
+      // fact.
+      // When there are multiple predicates from the same assume, insert after
+      // the previous one so the copy does not appear before its operand's
+      // definition.
+      Instruction *InsertPt = PAssume->AssumeInst;
+      if (auto *OpI = dyn_cast<BitCastInst>(Op))
+        if (OpI->getParent() == InsertPt->getParent() &&
+            InsertPt->comesBefore(OpI))
+          InsertPt = OpI;
+      BitCastInst *PIC = CreateSSACopy(InsertPt->getNextNode(), Op);
       PI.PredicateMap.insert({PIC, ValInfo});
       Result.Def = PIC;
     }
