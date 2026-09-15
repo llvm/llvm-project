@@ -1,2 +1,2 @@
-OpenMP Target Offloading --- SPMD Mode
-======================================
+# OpenMP Target Offloading --- SPMD Mode
+

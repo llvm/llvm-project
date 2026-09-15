@@ -1,11 +1,11 @@
-OpenMP in LLVM --- Offloading Design
-====================================
+# OpenMP in LLVM --- Offloading Design
 
-.. toctree::
-   :glob:
-   :hidden:
-   :maxdepth: 1
+:::{toctree}
+:glob: true
+:hidden: true
+:maxdepth: 1
 
-   GPUSPMDMode
-   GPUGenericMode
+GPUSPMDMode
+GPUGenericMode
+:::
 

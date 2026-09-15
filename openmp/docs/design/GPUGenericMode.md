@@ -1,2 +1,2 @@
-OpenMP Target Offloading --- Generic Mode
-=========================================
+# OpenMP Target Offloading --- Generic Mode
+
