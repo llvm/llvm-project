@@ -65,7 +65,7 @@ LIBC_INLINE float log10f(float x) {
   using namespace common_constants_internal;
   constexpr double LOG10_2 = 0x1.34413509f79ffp-2;
   // Lookup table for -log10(r) where r is defined in common_constants.cpp.
-  constexpr double LOG10_R[128] = {
+  static constexpr double LOG10_R[128] = {
       0x0.0000000000000p+0, 0x1.be76bd77b4fc3p-9, 0x1.c03a80ae5e054p-8,
       0x1.51824c7587ebp-7,  0x1.c3d0837784c41p-7, 0x1.1b85d6044e9aep-6,
       0x1.559bd2406c3bap-6, 0x1.902c31d62a843p-6, 0x1.cb38fccd8bfdbp-6,
