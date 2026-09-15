@@ -295,10 +295,10 @@ SmallVectorImpl<MCRegister> *SIMachineFunctionInfo::addPreloadedKernArg(
   return &Regs;
 }
 
-void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
+void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register Reg,
                                              uint64_t Size, Align Alignment) {
   // Skip if it is an entry function or the register is already added.
-  if (isEntryFunction() || WWMSpills.count(VGPR))
+  if (isEntryFunction() || WWMSpills.count(Reg))
     return;
 
   // Skip if this is a function with the amdgpu_cs_chain or
@@ -311,12 +311,12 @@ void SIMachineFunctionInfo::allocateWWMSpill(MachineFunction &MF, Register VGPR,
   // llvm.amdgcn.init.whole.wave (since in that case there are no inactive lanes
   // when entering the function).
   if (isChainFunction() &&
-      (SIRegisterInfo::isChainScratchRegister(VGPR) ||
+      (SIRegisterInfo::isChainScratchRegister(Reg) ||
        !MF.getFrameInfo().hasTailCall() || hasInitWholeWave()))
     return;
 
   WWMSpills.insert(std::make_pair(
-      VGPR, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
+      Reg, MF.getFrameInfo().CreateSpillStackObject(Size, Alignment)));
 }
 
 // Separate out the callee-saved and scratch registers.
@@ -361,6 +361,21 @@ void SIMachineFunctionInfo::shiftWwmVGPRsToLowestRange(
     WWMVGPRs[I] = NewReg;
     WWMReservedRegs.remove(Reg);
     WWMReservedRegs.insert(NewReg);
+
+    // Keep any spill slot allocated before PEI associated with the register
+    // after compaction. Rebuild the MapVector to preserve spill/restore order.
+    if (WWMSpills.contains(Reg)) {
+      assert(!WWMSpills.contains(NewReg) &&
+             "replacement WWM register already has a spill slot");
+      auto Spills = WWMSpills.takeVector();
+      auto Spill = llvm::find_if(
+          Spills, [Reg](const auto &Entry) { return Entry.first == Reg; });
+      assert(Spill != Spills.end() && "missing WWM spill entry");
+      Spill->first = NewReg;
+      for (auto &Entry : Spills)
+        WWMSpills.insert(std::move(Entry));
+    }
+
     MRI.reserveReg(NewReg, TRI);
 
     // Replace the register in SpillPhysVGPRs. This is needed to look for free

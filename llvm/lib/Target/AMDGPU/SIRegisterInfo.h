@@ -105,7 +105,7 @@ public:
   // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve calling
   // conventions are free to use certain VGPRs without saving and restoring any
   // lanes (not even inactive ones).
-  static bool isChainScratchRegister(Register VGPR);
+  static bool isChainScratchRegister(Register Reg);
 
   unsigned getCSRFirstUseCost(const MachineFunction &) const override {
     // The cost of 27 balances multiple factors that influence CSR cost:
