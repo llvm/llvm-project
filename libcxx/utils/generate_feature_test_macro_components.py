@@ -897,9 +897,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_is_within_lifetime",
-            "values": {
-                "c++26": 202603,
-            },
+            "values": {"c++26": 202603},
             "headers": ["type_traits"],
             "test_suite_guard": "__has_builtin(__builtin_is_within_lifetime)",
             "libcxx_guard": "__has_builtin(__builtin_is_within_lifetime)",
