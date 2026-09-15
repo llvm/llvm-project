@@ -17,6 +17,7 @@
 #include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/Support/Verifier.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Passes/Pipelines.h"
@@ -289,6 +290,14 @@ bool CodeGenAction::beginSourceFileAction() {
     mod.getOperation()->setAttr(
         mlir::StringAttr::get(mod.getContext(),
                               llvm::Twine{"fir.fast_real_mod"}),
+        mlir::BoolAttr::get(mod.getContext(), true));
+  }
+
+  if (ci.getInvocation().getLangOpts().CheckIntegerModZeroDivisor) {
+    mlir::ModuleOp mod = lb.getModule();
+    mod.getOperation()->setAttr(
+        mlir::StringAttr::get(mod.getContext(),
+                              fir::getCheckIntegerModZeroDivisorAttrName()),
         mlir::BoolAttr::get(mod.getContext(), true));
   }
 
