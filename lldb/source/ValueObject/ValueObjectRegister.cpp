@@ -128,8 +128,7 @@ ValueObject *ValueObjectRegisterSet::CreateChildAtIndex(size_t idx) {
 
 bool ValueObjectRegisterSet::IsSameRegister(const RegisterInfo *a,
                                             const RegisterInfo *b) {
-  return a && b &&
-         a->kinds[eRegisterKindLLDB] == b->kinds[eRegisterKindLLDB];
+  return a && b && a->kinds[eRegisterKindLLDB] == b->kinds[eRegisterKindLLDB];
 }
 
 std::optional<std::pair<size_t, const RegisterInfo *>>
