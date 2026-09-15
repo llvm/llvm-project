@@ -364,7 +364,7 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
-    name = "frexp",
+    name = "8frexp",
     hdrs = ["FrexpTest.h"],
 )
 
@@ -372,12 +372,12 @@ math_mpfr_test(
     name = "frexpf",
     hdrs = ["FrexpTest.h"],
 )
-
+math_mpfr_test(name = "fmaxl")
+math_mpfr_test(name = "fminl")
 math_mpfr_test(
     name = "frexpf16",
     hdrs = ["FrexpTest.h"],
 )
-
 math_mpfr_test(
     name = "frexpbf16",
     hdrs = ["FrexpTest.h"],
