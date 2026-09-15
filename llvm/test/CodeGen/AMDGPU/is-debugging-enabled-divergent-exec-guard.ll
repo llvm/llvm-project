@@ -1,16 +1,16 @@
 ; s_cbranch_cdbgsys_or_user and s_trap are scalar and ignore EXEC, so divergent
 ; control flow around them needs an EXEC guard.
 ;
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGPRIV
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGPRIV
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 < %s | FileCheck %s --check-prefix=FUSED
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=FUSED
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O1 < %s | FileCheck %s --check-prefix=FUSED
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O1 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=FUSED
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGPRIV
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGPRIV
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefixes=GCN,DBGSTATUS
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 < %s | FileCheck %s --check-prefix=FUSED
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=FUSED
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O1 < %s | FileCheck %s --check-prefix=FUSED
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O1 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=FUSED
 
 declare noundef i1 @llvm.is.debugging.enabled()
 declare i1 @llvm.expect.i1(i1, i1 immarg)

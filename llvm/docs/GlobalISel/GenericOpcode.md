@@ -1118,6 +1118,16 @@ It should always be safe to
 
 ## Miscellaneous
 
+### G_IS_DEBUGGING_ENABLED
+
+Observe whether debugging is enabled for the current execution context, with
+the semantics of the llvm.is.debugging.enabled intrinsic.
+This instruction has one scalar boolean result and no inputs:
+
+```text
+%enabled:_(i1) = nomerge G_IS_DEBUGGING_ENABLED
+```
+
 ### G_CONSTANT_FOLD_BARRIER
 
 This operation is used as an opaque barrier to prevent constant folding. Combines

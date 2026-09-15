@@ -3383,6 +3383,10 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_TRAP);
   case Intrinsic::debugtrap:
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_DEBUGTRAP);
+  case Intrinsic::is_debugging_enabled:
+    MIRBuilder.buildInstr(TargetOpcode::G_IS_DEBUGGING_ENABLED,
+                          {getOrCreateVReg(CI)}, {}, MachineInstr::NoMerge);
+    return true;
   case Intrinsic::ubsantrap:
     return translateTrap(CI, MIRBuilder, TargetOpcode::G_UBSANTRAP);
   case Intrinsic::allow_runtime_check:
