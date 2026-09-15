@@ -40,6 +40,8 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <type_traits>
+
 namespace {
 #include "flang/Optimizer/Dialect/CanonicalizationPatterns.inc"
 } // namespace
@@ -58,11 +60,27 @@ static void propagateAttributes(mlir::Operation *fromOp,
   if (!fromOp || !toOp)
     return;
 
-  for (mlir::NamedAttribute attr : fromOp->getAttrs()) {
+  for (mlir::NamedAttribute attr :
+       fromOp->getDiscardableAttrDictionary().getValue()) {
     if (attr.getName().getValue().starts_with(
             mlir::acc::OpenACCDialect::getDialectNamespace()))
-      toOp->setAttr(attr.getName(), attr.getValue());
+      toOp->setDiscardableAttr(attr.getName(), attr.getValue());
   }
+}
+
+static llvm::SmallVector<mlir::NamedAttribute>
+collectAttrsForPrinting(mlir::Operation *op,
+                        llvm::ArrayRef<mlir::StringAttr> inherentAttrNames) {
+  llvm::SmallVector<mlir::NamedAttribute> attrs(
+      op->getDiscardableAttrDictionary().getValue());
+  for (mlir::StringAttr name : inherentAttrNames)
+    if (std::optional<mlir::Attribute> value = op->getInherentAttr(name);
+        value && *value)
+      attrs.emplace_back(name, *value);
+  llvm::sort(attrs, [](mlir::NamedAttribute lhs, mlir::NamedAttribute rhs) {
+    return lhs.getName().strref() < rhs.getName().strref();
+  });
+  return attrs;
 }
 
 /// Return true if a sequence type is of some incomplete size or a record type
@@ -176,7 +194,14 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
     p << ", ";
     p.printOperand(sh);
   }
-  p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
+  llvm::SmallVector<mlir::StringAttr> inherentAttrNames = {
+      op.getUniqNameAttrName(), op.getBindcNameAttrName()};
+  if constexpr (std::is_same_v<OP, fir::AllocMemOp>)
+    inherentAttrNames.push_back(op.getAlignmentAttrName());
+  else
+    inherentAttrNames.push_back(op.getPinnedAttrName());
+  p.printOptionalAttrDict(collectAttrsForPrinting(op, inherentAttrNames),
+                          {"in_type", "operandSegmentSizes"});
 }
 
 bool fir::mayBeAbsentBox(mlir::Value val) {
@@ -1509,10 +1534,12 @@ void fir::CallOp::print(mlir::OpAsmPrinter &p) {
     p.printStrippedAttrOrType(fmfAttr);
   }
 
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          {fir::CallOp::getCalleeAttrNameStr(),
-                           getFastmathAttrName(), getProcedureAttrsAttrName(),
-                           getArgAttrsAttrName(), getResAttrsAttrName()});
+  p.printOptionalAttrDict(
+      collectAttrsForPrinting(
+          *this, {getInlineAttrAttrName(), getAccessGroupsAttrName()}),
+      {fir::CallOp::getCalleeAttrNameStr(), getFastmathAttrName(),
+       getProcedureAttrsAttrName(), getArgAttrsAttrName(),
+       getResAttrsAttrName()});
   p << " : ";
   mlir::call_interface_impl::printFunctionSignature(
       p, getArgs().drop_front(isDirect ? 0 : 1).getTypes(), getArgAttrsAttr(),
@@ -1687,8 +1714,9 @@ static void printCmpOp(mlir::OpAsmPrinter &p, OPTY op) {
   p.printOperand(op.getLhs());
   p << ", ";
   p.printOperand(op.getRhs());
-  p.printOptionalAttrDict(op->getAttrs(),
-                          /*elidedAttrs=*/{OPTY::getPredicateAttrName()});
+  p.printOptionalAttrDict(
+      collectAttrsForPrinting(op, {op.getFastmathAttrName()}),
+      /*elidedAttrs=*/{OPTY::getPredicateAttrName()});
   p << " : " << op.getLhs().getType();
 }
 
@@ -2404,7 +2432,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
     }
   }
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      (*this)->getDiscardableAttrDictionary().getValue(),
       /*elideAttrs=*/{getBaseTypeAttrName(), getFieldIndicesAttrName()});
   p << " : ";
   p.printFunctionalType(getOperandTypes(), (*this)->getResultTypes());
@@ -2947,7 +2975,8 @@ mlir::ParseResult fir::TypeDescOp::parse(mlir::OpAsmParser &parser,
 
 void fir::TypeDescOp::print(mlir::OpAsmPrinter &p) {
   p << ' ' << getOperation()->getAttr("in_type");
-  p.printOptionalAttrDict(getOperation()->getAttrs(), {"in_type"});
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue());
 }
 
 llvm::LogicalResult fir::TypeDescOp::verify() {
@@ -3046,10 +3075,12 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
     p << '(' << val << ')';
   // Print all other attributes that are not pretty printed here.
   p.printOptionalAttrDict(
-      (*this)->getAttrs(), /*elideAttrs=*/{
-          getSymNameAttrName(), getSymrefAttrName(), getTypeAttrName(),
-          getConstantAttrName(), getTargetAttrName(), getLinkageAttrName(),
-          getInitValAttrName(), getSymVisibilityAttrName()});
+      collectAttrsForPrinting(*this,
+                              {getDataAttrAttrName(), getAlignmentAttrName()}),
+      /*elideAttrs=*/{getSymNameAttrName(), getSymrefAttrName(),
+                      getTypeAttrName(), getConstantAttrName(),
+                      getTargetAttrName(), getLinkageAttrName(),
+                      getInitValAttrName(), getSymVisibilityAttrName()});
   if (getOperation()->getAttr(getConstantAttrName()))
     p << " " << getConstantAttrName().strref();
   if (getOperation()->getAttr(getTargetAttrName()))
@@ -3598,8 +3629,8 @@ void fir::IterWhileOp::print(mlir::OpAsmPrinter &p) {
   } else if (getFinalValue()) {
     p << " -> (" << getResultTypes() << ')';
   }
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {getFinalValueAttrNameStr()});
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getDiscardableAttrDictionary().getValue());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/true);
@@ -3762,7 +3793,9 @@ mlir::ParseResult fir::LoadOp::parse(mlir::OpAsmParser &parser,
 void fir::LoadOp::print(mlir::OpAsmPrinter &p) {
   p << ' ';
   p.printOperand(getMemref());
-  p.printOptionalAttrDict(getOperation()->getAttrs(), {});
+  p.printOptionalAttrDict(collectAttrsForPrinting(
+      getOperation(), {getTbaaAttrName(), getNontemporalAttrName(),
+                       getInvariantAttrName(), getAccessGroupsAttrName()}));
   p << " : " << getMemref().getType();
 }
 
@@ -4029,7 +4062,7 @@ void fir::DoLoopOp::print(mlir::OpAsmPrinter &p) {
   if (!getInductionVar().getType().isIndex())
     p << " : " << getInductionVar().getType();
   p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(),
+      collectAttrsForPrinting(*this, {getLoopAnnotationAttrName()}),
       {"unordered", "finalValue", "reduceAttrs", "operandSegmentSizes"});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
@@ -4509,9 +4542,10 @@ static void printIntegralSwitchTerminator(OpT op, mlir::OpAsmPrinter &p) {
     op.printSuccessorAtIndex(p, i);
   }
   p << ']';
-  p.printOptionalAttrDict(
-      op->getAttrs(), {op.getCasesAttr(), getCompareOffsetAttr(),
-                       getTargetOffsetAttr(), op.getOperandSegmentSizeAttr()});
+  p.printOptionalAttrDict(op->getDiscardableAttrDictionary().getValue(),
+                          {op.getCasesAttr(), getCompareOffsetAttr(),
+                           getTargetOffsetAttr(),
+                           op.getOperandSegmentSizeAttr()});
 }
 
 //===----------------------------------------------------------------------===//
@@ -4748,9 +4782,10 @@ void fir::SelectCaseOp::print(mlir::OpAsmPrinter &p) {
     printSuccessorAtIndex(p, i);
   }
   p << ']';
-  p.printOptionalAttrDict(getOperation()->getAttrs(),
-                          {getCasesAttr(), getCompareOffsetAttr(),
-                           getTargetOffsetAttr(), getOperandSegmentSizeAttr()});
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue(),
+      {getCasesAttr(), getCompareOffsetAttr(), getTargetOffsetAttr(),
+       getOperandSegmentSizeAttr()});
 }
 
 unsigned fir::SelectCaseOp::compareOffsetSize() {
@@ -5034,10 +5069,10 @@ void fir::SelectTypeOp::print(mlir::OpAsmPrinter &p) {
     printSuccessorAtIndex(p, i);
   }
   p << ']';
-  p.printOptionalAttrDict(getOperation()->getAttrs(),
-                          {getCasesAttr(), getCompareOffsetAttr(),
-                           getTargetOffsetAttr(),
-                           fir::SelectTypeOp::getOperandSegmentSizeAttr()});
+  p.printOptionalAttrDict(
+      getOperation()->getDiscardableAttrDictionary().getValue(),
+      {getCasesAttr(), getCompareOffsetAttr(), getTargetOffsetAttr(),
+       fir::SelectTypeOp::getOperandSegmentSizeAttr()});
 }
 
 llvm::LogicalResult fir::SelectTypeOp::verify() {
@@ -5320,7 +5355,9 @@ void fir::StoreOp::print(mlir::OpAsmPrinter &p) {
   p.printOperand(getValue());
   p << " to ";
   p.printOperand(getMemref());
-  p.printOptionalAttrDict(getOperation()->getAttrs(), {});
+  p.printOptionalAttrDict(collectAttrsForPrinting(
+      getOperation(), {getTbaaAttrName(), getNontemporalAttrName(),
+                       getAccessGroupsAttrName()}));
   p << " : " << getMemref().getType();
 }
 
@@ -5773,8 +5810,7 @@ void fir::IfOp::print(mlir::OpAsmPrinter &p) {
     p.printRegion(otherReg, /*printEntryBlockArgs=*/false,
                   printBlockTerminators);
   }
-  p.printOptionalAttrDict((*this)->getAttrs(),
-                          /*elideAttrs=*/{getRegionWeightsAttrName()});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
@@ -6019,6 +6055,14 @@ valueCheckFirAttributes(mlir::Value value,
 
     return true;
   };
+  auto testOperationAttributes = [&](mlir::Operation *op) {
+    auto hasAttribute = [&](llvm::StringRef name) {
+      return op->hasDiscardableAttr(name);
+    };
+    if (checkAny)
+      return llvm::any_of(attributeNames, hasAttribute);
+    return llvm::all_of(attributeNames, hasAttribute);
+  };
   // If this is a fir.box that was loaded, the fir attributes will be on the
   // related fir.ref<fir.box> creation.
   if (mlir::isa<fir::BoxType>(value.getType()))
@@ -6043,18 +6087,18 @@ valueCheckFirAttributes(mlir::Value value,
     // If this is an allocated value, look at the allocation attributes.
     if (mlir::isa<fir::AllocMemOp>(definingOp) ||
         mlir::isa<fir::AllocaOp>(definingOp))
-      return testAttributeSets(definingOp->getAttrs(), attributeNames);
+      return testOperationAttributes(definingOp);
     // If this is an imported global, look at AddrOfOp and GlobalOp attributes.
     // Both operations are looked at because use/host associated variable (the
     // AddrOfOp) can have ASYNCHRONOUS/VOLATILE attributes even if the ultimate
     // entity (the globalOp) does not have them.
     if (auto addressOfOp = mlir::dyn_cast<fir::AddrOfOp>(definingOp)) {
-      if (testAttributeSets(addressOfOp->getAttrs(), attributeNames))
+      if (testOperationAttributes(addressOfOp))
         return true;
       if (auto module = definingOp->getParentOfType<mlir::ModuleOp>())
         if (auto globalOp =
                 module.lookupSymbol<fir::GlobalOp>(addressOfOp.getSymbol()))
-          return testAttributeSets(globalOp->getAttrs(), attributeNames);
+          return testOperationAttributes(globalOp);
     }
   }
   // TODO: Construct associated entities attributes. Decide where the fir
@@ -6888,7 +6932,7 @@ void fir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false);
   p.printOptionalAttrDict(
-      (*this)->getAttrs(),
+      collectAttrsForPrinting(*this, {getLoopAnnotationAttrName()}),
       /*elidedAttrs=*/{DoConcurrentLoopOp::getOperandSegmentSizeAttr(),
                        DoConcurrentLoopOp::getLocalSymsAttrName(),
                        DoConcurrentLoopOp::getReduceSymsAttrName(),
