@@ -49,7 +49,9 @@ jobs:
       - name: Clear apt-get lock
         if: runner.arch == 'ARM64'
         run: |
+          ps aux | grep apt
           sudo rm -rf /var/lib/dpkg/lock*
+          sudo rm /var/cache/apt/archives/lock
           sudo dpkg --configure -a
 
       - name: Build Container
