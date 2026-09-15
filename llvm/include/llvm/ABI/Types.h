@@ -74,6 +74,10 @@ public:
     return alignTo(getTypeStoreSize(), getAlignment().value());
   }
 
+  /// Unlike getSizeInBits this includes trailing padding, matching Clang
+  /// ASTContext::getTypeSize.
+  TypeSize getTypeAllocSizeInBits() const { return getTypeAllocSize() * 8; }
+
   bool isVoid() const { return Kind == TypeKind::Void; }
   bool isAtomic() const { return Kind == TypeKind::Atomic; }
   bool isInteger() const { return Kind == TypeKind::Integer; }
