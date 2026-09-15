@@ -77,6 +77,4 @@ std::vector<ArchSpec> PlatformEmscripten::GetSupportedArchitectures(
   return m_supported_architectures;
 }
 
-bool PlatformEmscripten::CanDebugProcess() {
-  return false;
-}
+bool PlatformEmscripten::CanDebugProcess() { return false; }
