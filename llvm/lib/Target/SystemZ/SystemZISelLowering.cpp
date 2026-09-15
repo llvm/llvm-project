@@ -11519,6 +11519,10 @@ bool SystemZTargetLowering::isInternal(const Function *Fn) const {
 }
 
 bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
+#ifdef NDEBUG
+  return false;
+#endif
+
   if (!Subtarget.isTargetELF())
     return false;
 
