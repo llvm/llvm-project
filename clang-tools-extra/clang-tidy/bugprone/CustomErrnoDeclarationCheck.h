@@ -26,7 +26,9 @@ public:
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return !LangOpts.ObjC;
   }
-  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
+
 private:
   utils::IncludeInserter Inserter;
 };
