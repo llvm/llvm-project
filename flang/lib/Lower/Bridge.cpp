@@ -502,20 +502,6 @@ private:
 using IncrementLoopNestInfo = llvm::SmallVector<IncrementLoopInfo, 8>;
 } // namespace
 
-/// Find the first nested DoConstruct evaluation directly under \p eval,
-/// skipping over any other sibling evaluations (e.g. a CompilerDirective
-/// such as !DIR$ IVDEP) that may appear between loop levels of a collapsed
-/// or tiled loop nest. Returns nullptr if none is found.
-static Fortran::lower::pft::Evaluation *
-findNestedDoConstructEvaluation(Fortran::lower::pft::Evaluation &eval) {
-  if (!eval.hasNestedEvaluations())
-    return nullptr;
-  for (Fortran::lower::pft::Evaluation &child : eval.getNestedEvaluations())
-    if (child.getIf<Fortran::parser::DoConstruct>())
-      return &child;
-  return nullptr;
-}
-
 //===----------------------------------------------------------------------===//
 // FirConverter
 //===----------------------------------------------------------------------===//
@@ -3496,6 +3482,21 @@ private:
     attachToDoStmt(e);
   }
 
+  /// Warn about each compiler directive (e.g. !DIR$ IVDEP) found in
+  /// \p skipped. These are evaluations that were skipped over while
+  /// descending a collapsed or tiled loop nest to find the next inner
+  /// DO CONSTRUCT (see findNestedDoConstructEvaluation): since the
+  /// directive is neither part of the collapsed loop's body nor attached
+  /// to a DO statement that is separately lowered, it has no effect.
+  void warnAboutSkippedDirectives(
+      llvm::ArrayRef<Fortran::lower::pft::Evaluation *> skipped) {
+    for (Fortran::lower::pft::Evaluation *e : skipped)
+      if (e->isDirective())
+        mlir::emitWarning(genLocation(e->position),
+                          "compiler directive ignored: it appears between "
+                          "loop levels of a collapsed or tiled loop nest");
+  }
+
   void markCurrentFuncAsAlwaysInline(
       const Fortran::parser::CompilerDirective::InlineAlways &dir) {
     mlir::func::FuncOp func = builder->getFunction();
@@ -3673,8 +3674,11 @@ private:
         const auto *outerDo = curEval->getIf<Fortran::parser::DoConstruct>();
         if (!(outerDo && outerDo->IsDoConcurrent()))
           for (uint64_t i = 1; i < loopCount; i++) {
+            llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
             Fortran::lower::pft::Evaluation *nextDo =
-                findNestedDoConstructEvaluation(*curEval);
+                Fortran::lower::findNestedDoConstructEvaluation(*curEval,
+                                                                &skipped);
+            warnAboutSkippedDirectives(skipped);
             if (!nextDo)
               break;
             curEval = nextDo;
@@ -4021,8 +4025,11 @@ private:
         ivTypes.push_back(idxTy);
         ivLocs.push_back(crtLoc);
         if (i < nestedLoops - 1) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
           Fortran::lower::pft::Evaluation *nextDo =
-              findNestedDoConstructEvaluation(*loopEval);
+              Fortran::lower::findNestedDoConstructEvaluation(*loopEval,
+                                                              &skipped);
+          warnAboutSkippedDirectives(skipped);
           assert(nextDo && "expected a nested DO CONSTRUCT");
           loopEval = nextDo;
         }
@@ -4054,8 +4061,11 @@ private:
       crtEval = &crtEval->getFirstNestedEvaluation();
       if (!outerDoConstruct->IsDoConcurrent())
         for (int64_t i = 1; i < nestedLoops; i++) {
+          llvm::SmallVector<Fortran::lower::pft::Evaluation *> skipped;
           Fortran::lower::pft::Evaluation *nextDo =
-              findNestedDoConstructEvaluation(*crtEval);
+              Fortran::lower::findNestedDoConstructEvaluation(*crtEval,
+                                                              &skipped);
+          warnAboutSkippedDirectives(skipped);
           if (!nextDo)
             break;
           crtEval = nextDo;
