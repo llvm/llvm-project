@@ -6530,6 +6530,43 @@ in the IR. If the MDNode contains multiple constants, the code generator
 will use the one that corresponds to the line of the asm that the error
 occurs on.
 
+An optional final nested node describes source locations within the inline
+assembly template. It starts with the string `"inlineasm.dbg.offset"`, followed
+by one or more triples of `i32` values: a byte offset, a source line number,
+and a source column number. Offsets are zero-based, strictly increasing, and
+refer to bytes in the decoded LLVM IR template string, **before** operand
+substitution and dialect-alternative selection. For example, `\0A` counts as
+one byte and `$0` counts as two bytes. Offsets must lie within the template.
+
+Each entry supplies the source location from its offset up to the next entry,
+or the end of the template for the last entry. Positions before the first
+entry have no per-instruction source location. Source lines and columns are
+one-based; line zero means no source location is available, and column zero
+means the column is unknown. The scope and inlining context come from the
+call instruction's `!dbg` attachment, which is required to use these entries.
+Locations must refer to the source file associated with that scope.
+
+The code generator maps parsed instructions back to template positions,
+accounting for operand substitution, escaped characters, dialect alternatives,
+and any synthetic assembly syntax directives. Thus, instructions separated
+by `;` can have different source locations even without a newline in the
+template. The preceding location cookies keep their diagnostic meaning and
+are indexed by assembly line, independently of this nested node. Existing
+`!srcloc` nodes containing only cookies remain supported.
+
+```llvm
+call void asm sideeffect "nop;nop", ""(), !dbg !40, !srcloc !42
+...
+!42 = !{i64 1234567, !43}
+!43 = !{!"inlineasm.dbg.offset", i32 0, i32 10, i32 5,
+                              i32 4, i32 11, i32 5}
+```
+
+This representation is independent of the source assembly syntax and debug
+information format. Currently, CodeView consumes these locations when the
+integrated assembler parses inline assembly. Other debug information formats
+continue to use the call instruction's ordinary debug location.
+
 (metadata)=
 
 ## Metadata
