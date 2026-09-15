@@ -166,10 +166,27 @@ s64 MemMapLinux::getResidentPagesImpl(uptr From, uptr Size) {
 }
 
 bool ReservedMemoryLinux::createImpl(uptr Addr, uptr Size, const char *Name,
-                                     uptr Flags) {
+                                     uptr Flags, uptr AlignmentPages) {
+  constexpr uptr CreateFlags = MAP_NOACCESS | MAP_ALLOWNOMEM;
   ReservedMemoryLinux::MemMapT MemMap;
-  if (!MemMap.map(Addr, Size, Name, Flags | MAP_NOACCESS))
-    return false;
+  if (LIKELY(AlignmentPages == 1)) {
+    if (!MemMap.map(Addr, Size, Name, Flags | CreateFlags))
+      return false;
+  } else {
+    const uptr Alignment = AlignmentPages << getPageSizeLogCached();
+    uptr MapSize = Size + Alignment;
+    if (!MemMap.map(Addr, MapSize, Name, Flags | CreateFlags))
+      return false;
+    uptr Offset = MemMap.getBase() % Alignment;
+    if (Offset != 0) {
+      Offset = Alignment - Offset;
+      MemMap.unmap(MemMap.getBase(), Offset);
+    }
+    MemMap.unmap(MemMap.getBase() + Size, MemMap.getCapacity() - Size);
+
+    DCHECK_EQ(MemMap.getBase() % Alignment, 0);
+    DCHECK_EQ(MemMap.getCapacity(), Size);
+  }
 
   MapBase = MemMap.getBase();
   MapCapacity = MemMap.getCapacity();

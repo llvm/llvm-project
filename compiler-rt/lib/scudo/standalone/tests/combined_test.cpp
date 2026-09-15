@@ -184,84 +184,143 @@ namespace scudo {
 struct TestConditionVariableConfig {
   static const bool MaySupportMemoryTagging = true;
   template <class A>
-  using TSDRegistryT =
-      scudo::TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
+  using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
 
   struct Primary {
-    using SizeClassMap = scudo::AndroidSizeClassMap;
+    using SizeClassMap = AndroidSizeClassMap;
 #if SCUDO_CAN_USE_PRIMARY64
-    static const scudo::uptr RegionSizeLog = 28U;
-    typedef scudo::u32 CompactPtrT;
-    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
-    static const scudo::uptr GroupSizeLog = 20U;
+    static const uptr RegionSizeLog = 28U;
+    typedef u32 CompactPtrT;
+    static const uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const uptr GroupSizeLog = 20U;
     static const bool EnableRandomOffset = true;
-    static const scudo::uptr MapSizeIncrement = 1UL << 18;
+    static const uptr MapSizeIncrement = 1UL << 18;
 #else
-    static const scudo::uptr RegionSizeLog = 18U;
-    static const scudo::uptr GroupSizeLog = 18U;
-    typedef scudo::uptr CompactPtrT;
+    static const uptr RegionSizeLog = 18U;
+    static const uptr GroupSizeLog = 18U;
+    typedef uptr CompactPtrT;
 #endif
-    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
-    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+    static const s32 MinReleaseToOsIntervalMs = 1000;
+    static const s32 MaxReleaseToOsIntervalMs = 1000;
+#if SCUDO_LINUX
+    using ConditionVariableT = ConditionVariableLinux;
+#else
+    using ConditionVariableT = ConditionVariableDummy;
+#endif
+  };
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
+#else
+  template <typename Config> using PrimaryT = SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config> using CacheT = MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = MapAllocator<Config>;
+};
+
+struct TestNoCacheConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <class A>
+  using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
+
+  struct Primary {
+    using SizeClassMap = AndroidSizeClassMap;
+#if SCUDO_CAN_USE_PRIMARY64
+    static const uptr RegionSizeLog = 28U;
+    typedef u32 CompactPtrT;
+    static const uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+    static const uptr GroupSizeLog = 20U;
+    static const bool EnableRandomOffset = true;
+    static const uptr MapSizeIncrement = 1UL << 18;
+#else
+    static const uptr RegionSizeLog = 18U;
+    static const uptr GroupSizeLog = 18U;
+    typedef uptr CompactPtrT;
+#endif
+    static const bool EnableBlockCache = false;
+    static const s32 MinReleaseToOsIntervalMs = 1000;
+    static const s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+
+#if SCUDO_CAN_USE_PRIMARY64
+  template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
+#else
+  template <typename Config> using PrimaryT = SizeClassAllocator32<Config>;
+#endif
+
+  struct Secondary {
+    template <typename Config> using CacheT = MapAllocatorNoCache<Config>;
+  };
+  template <typename Config> using SecondaryT = MapAllocator<Config>;
+};
+
+struct TestMultiRegionConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <class A> using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = AndroidSizeClassMap;
+    static const bool EnableMultiRegions = true;
+    static const bool EnableRandomOffset = false;
+    static const uptr RegionSizeLog = 18U;
+    static const uptr GroupSizeLog = 18U;
+    static const uptr MapSizeIncrement = 1UL << 18;
+    static const s32 MinReleaseToOsIntervalMs = 1000;
+    static const s32 MaxReleaseToOsIntervalMs = 1000;
+  };
+  template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
+
+  struct Secondary {
+    struct Cache {
+      static const u32 EntriesArraySize = 256U;
+      static const u32 QuarantineSize = 32U;
+      static const u32 DefaultMaxEntriesCount = 32U;
+      static const uptr DefaultMaxEntrySize = 2UL << 20;
+      static const s32 MinReleaseToOsIntervalMs = 0;
+      static const s32 MaxReleaseToOsIntervalMs = 1000;
+    };
+    template <typename Config> using CacheT = MapAllocatorCache<Config>;
+  };
+
+  template <typename Config> using SecondaryT = MapAllocator<Config>;
+};
+
+struct TestMultiRegionCVConfig {
+  static const bool MaySupportMemoryTagging = true;
+  template <class A> using TSDRegistryT = TSDRegistrySharedT<A, 8U, 4U>;
+
+  struct Primary {
+    using SizeClassMap = AndroidSizeClassMap;
+    static const bool EnableMultiRegions = true;
+    static const bool EnableRandomOffset = false;
+    static const uptr RegionSizeLog = 18U;
+    static const uptr GroupSizeLog = 18U;
+    static const uptr MapSizeIncrement = 1UL << 18;
+    static const s32 MinReleaseToOsIntervalMs = 1000;
+    static const s32 MaxReleaseToOsIntervalMs = 1000;
 #if SCUDO_LINUX
     using ConditionVariableT = scudo::ConditionVariableLinux;
 #else
     using ConditionVariableT = scudo::ConditionVariableDummy;
 #endif
   };
-#if SCUDO_CAN_USE_PRIMARY64
-  template <typename Config>
-  using PrimaryT = scudo::SizeClassAllocator64<Config>;
-#else
-  template <typename Config>
-  using PrimaryT = scudo::SizeClassAllocator32<Config>;
-#endif
+  template <typename Config> using PrimaryT = SizeClassAllocator64<Config>;
 
   struct Secondary {
-    template <typename Config>
-    using CacheT = scudo::MapAllocatorNoCache<Config>;
-  };
-  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
-};
-
-struct TestNoCacheConfig {
-  static const bool MaySupportMemoryTagging = true;
-  template <class A>
-  using TSDRegistryT =
-      scudo::TSDRegistrySharedT<A, 8U, 4U>; // Shared, max 8 TSDs.
-
-  struct Primary {
-    using SizeClassMap = scudo::AndroidSizeClassMap;
-#if SCUDO_CAN_USE_PRIMARY64
-    static const scudo::uptr RegionSizeLog = 28U;
-    typedef scudo::u32 CompactPtrT;
-    static const scudo::uptr CompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
-    static const scudo::uptr GroupSizeLog = 20U;
-    static const bool EnableRandomOffset = true;
-    static const scudo::uptr MapSizeIncrement = 1UL << 18;
-#else
-    static const scudo::uptr RegionSizeLog = 18U;
-    static const scudo::uptr GroupSizeLog = 18U;
-    typedef scudo::uptr CompactPtrT;
-#endif
-    static const bool EnableBlockCache = false;
-    static const scudo::s32 MinReleaseToOsIntervalMs = 1000;
-    static const scudo::s32 MaxReleaseToOsIntervalMs = 1000;
+    struct Cache {
+      static const u32 EntriesArraySize = 256U;
+      static const u32 QuarantineSize = 32U;
+      static const u32 DefaultMaxEntriesCount = 32U;
+      static const uptr DefaultMaxEntrySize = 2UL << 20;
+      static const s32 MinReleaseToOsIntervalMs = 0;
+      static const s32 MaxReleaseToOsIntervalMs = 1000;
+    };
+    template <typename Config> using CacheT = MapAllocatorCache<Config>;
   };
 
-#if SCUDO_CAN_USE_PRIMARY64
-  template <typename Config>
-  using PrimaryT = scudo::SizeClassAllocator64<Config>;
-#else
-  template <typename Config>
-  using PrimaryT = scudo::SizeClassAllocator32<Config>;
-#endif
-
-  struct Secondary {
-    template <typename Config>
-    using CacheT = scudo::MapAllocatorNoCache<Config>;
-  };
-  template <typename Config> using SecondaryT = scudo::MapAllocator<Config>;
+  template <typename Config> using SecondaryT = MapAllocator<Config>;
 };
 
 } // namespace scudo
@@ -274,7 +333,9 @@ struct TestNoCacheConfig {
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, DefaultConfig)                          \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, AndroidConfig)                          \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConditionVariableConfig)            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestNoCacheConfig)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestNoCacheConfig)                      \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestMultiRegionConfig)                  \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestMultiRegionCVConfig)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -2257,3 +2318,62 @@ SCUDO_TYPED_TEST(ScudoCombinedTest, AllocAfterFork) {
   }
 }
 #endif
+
+template <class Config> void TestMultiRegionStress() {
+  using AllocatorT = TestAllocator<Config>;
+  auto Allocator = std::unique_ptr<AllocatorT>(new AllocatorT());
+
+  constexpr size_t MaxNumThreads = 4;
+  constexpr size_t MaxNumLoops = 3;
+  constexpr size_t MaxNumAllocations = 100000;
+  constexpr size_t Size = 128;
+
+  std::vector<std::thread *> Threads;
+  std::atomic_bool StartRunning = {};
+  for (size_t I = 0; I < MaxNumThreads; I++) {
+    Threads.emplace_back(new std::thread([&StartRunning, &Allocator] {
+      while (!StartRunning)
+        ;
+
+      for (size_t Loops = 0; Loops < MaxNumLoops; Loops++) {
+        std::vector<void *> Ptrs;
+        for (size_t J = 0; J < MaxNumAllocations; J++) {
+          void *P = Allocator->allocate(Size, Origin);
+          EXPECT_NE(P, nullptr);
+          if (P == nullptr) {
+            Loops = MaxNumLoops;
+            break;
+          }
+          Ptrs.push_back(P);
+        }
+        for (auto P : Ptrs) {
+          Allocator->deallocate(P, Origin);
+        }
+      }
+    }));
+  }
+
+  // Kick all threads to start running at once.
+  StartRunning = true;
+
+  for (auto Thread : Threads) {
+    Thread->join();
+    delete Thread;
+  }
+}
+
+TEST(ScudoCombinedTest, MultiRegionStress) {
+#if !SCUDO_CAN_USE_PRIMARY64
+  TEST_SKIP("Only primary64 supported.");
+#endif
+
+  TestMultiRegionStress<scudo::TestMultiRegionConfig>();
+}
+
+TEST(ScudoCombinedTest, MultiRegionWithCVStress) {
+#if !SCUDO_CAN_USE_PRIMARY64
+  TEST_SKIP("Only primary64 supported.");
+#endif
+
+  TestMultiRegionStress<scudo::TestMultiRegionCVConfig>();
+}
