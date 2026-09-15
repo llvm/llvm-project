@@ -151,3 +151,29 @@ main:
   store i32 %add, ptr %ptr0, align 4
   ret void
 }
+
+; CHECK-LABEL: updatecounter_handle_phi(
+; CHECK-SAME:   i1 %[[COND:.*]])
+define void @updatecounter_handle_phi(i1 %cond) {
+; CHECK-NOT: phi target(
+; CHECK:     exit:
+; CHECK-NEXT:  %[[IDX:.*]] = phi i32 [ 0, %entry ], [ 1, %loop ]
+; CHECK-NEXT:  %[[HANDLE:.*]] = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 %[[IDX]], ptr nonnull @OutArr.str)
+; CHECK-NEXT:  %[[COUNT:.*]] = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i8 1)
+; CHECK-NEXT:  call void @llvm.dx.resource.store.rawbuffer.tdx.RawBuffer_i32_1_0t.i32(target("dx.RawBuffer", i32, 1, 0) %[[HANDLE]], i32 0, i32 0, i32 %[[COUNT]])
+; CHECK-NEXT:  ret void
+entry:
+  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 0, ptr nonnull @OutArr.str)
+  br i1 %cond, label %exit, label %loop
+
+loop:
+  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefromimplicitbinding.tdx.RawBuffer_i32_1_0t(i32 2, i32 0, i32 -1, i32 1, ptr nonnull @OutArr.str)
+  br label %exit
+
+exit:
+  %handle = phi target("dx.RawBuffer", i32, 1, 0) [ %handle0, %entry ], [ %handle1, %loop ]
+  %count = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %handle, i8 1)
+  %ptr = call ptr @llvm.dx.resource.getpointer.p0.tdx.RawBuffer_i32_1_0t.i32(target("dx.RawBuffer", i32, 1, 0) %handle, i32 0)
+  store i32 %count, ptr %ptr, align 4
+  ret void
+}
