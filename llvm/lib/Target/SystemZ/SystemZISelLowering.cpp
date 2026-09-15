@@ -11433,7 +11433,7 @@ SDValue SystemZTargetLowering::lowerVECREDUCE_ADD(SDValue Op,
       DAG.getConstant(OpVT.getVectorNumElements() - 1, DL, MVT::i32));
 }
 
-static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {
+static void printFunctionArgExts(const Function *F, raw_ostream &OS) {
   FunctionType *FT = F->getFunctionType();
   const AttributeList &Attrs = F->getAttributes();
   if (Attrs.hasRetAttrs())
@@ -11461,14 +11461,25 @@ bool SystemZTargetLowering::isInternal(const Function *Fn) const {
   return Itr->second;
 }
 
+bool SystemZTargetLowering::enableNarrowIntArgsVerification() const {
+#ifdef NDEBUG
+  return false;
+#endif
+
+  if (!Subtarget.isTargetELF())
+    return false;
+
+  if (EnableIntArgExtCheck.getNumOccurrences())
+    return EnableIntArgExtCheck;
+
+  return getTargetMachine().Options.VerifyArgABICompliance;
+}
+
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                              const Function *F, SDValue Callee) const {
-  // Temporarily only do the check when explicitly requested, until it can be
-  // enabled by default.
-  if (!EnableIntArgExtCheck)
+  if (!enableNarrowIntArgsVerification())
     return;
-
   bool IsInternal = false;
   const Function *CalleeFn = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
@@ -11485,37 +11496,30 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
     printFunctionArgExts(F, errs());
     llvm_unreachable("");
   }
+  LLVM_DEBUG(dbgs() << "Outgoing call arguments verified as ABI compliant: ";
+             if (CalleeFn != nullptr) printFunctionArgExts(CalleeFn, dbgs());
+             else dbgs() << "-\n";);
 }
 
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
                             const Function *F) const {
-  // Temporarily only do the check when explicitly requested, until it can be
-  // enabled by default.
-  if (!EnableIntArgExtCheck)
+  if (!enableNarrowIntArgsVerification())
     return;
-
   if (!isInternal(F) && !verifyNarrowIntegerArgs(Outs)) {
     errs() << "ERROR: Missing extension attribute of returned "
            << "value from function:\n";
     printFunctionArgExts(F, errs());
     llvm_unreachable("");
   }
+  LLVM_DEBUG(dbgs() << "Return argument verified as ABI compliant        : ";
+             printFunctionArgExts(F, dbgs()));
 }
 
 // Verify that narrow integer arguments are extended as required by the ABI.
 // Return false if an error is found.
 bool SystemZTargetLowering::verifyNarrowIntegerArgs(
     const SmallVectorImpl<ISD::OutputArg> &Outs) const {
-  if (!Subtarget.isTargetELF())
-    return true;
-
-  if (EnableIntArgExtCheck.getNumOccurrences()) {
-    if (!EnableIntArgExtCheck)
-      return true;
-  } else if (!getTargetMachine().Options.VerifyArgABICompliance)
-    return true;
-
   for (unsigned i = 0; i < Outs.size(); ++i) {
     MVT VT = Outs[i].VT;
     ISD::ArgFlagsTy Flags = Outs[i].Flags;
