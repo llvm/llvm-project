@@ -239,3 +239,27 @@ func.func @test_block_arg_no_hoist(%arg0: !fir.ref<i32>) {
   }
   return
 }
+
+// -----
+
+// Test: bounds computed inside the offload region - must not be hoisted, as the
+// bounds would no longer dominate the hoisted operation.
+
+// CHECK-LABEL: func.func @test_bounds_defined_inside_region
+func.func @test_bounds_defined_inside_region(%arg0: !fir.ref<!fir.box<!fir.array<?xf32>>>, %n: index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  // CHECK: acc.parallel
+  acc.parallel {
+    %box = fir.load %arg0 : !fir.ref<!fir.box<!fir.array<?xf32>>>
+    %dims:3 = fir.box_dims %box, %c0 : (!fir.box<!fir.array<?xf32>>, index) -> (index, index, index)
+    %ub = arith.subi %n, %c1 : index
+    // CHECK: %[[BOUNDS:.*]] = acc.bounds
+    %b = acc.bounds lowerbound(%c0 : index) upperbound(%ub : index) extent(%n : index) stride(%dims#2 : index) startIdx(%c1 : index) strideInBytes(true)
+    // CHECK: acc.firstprivate_map varPtr(%{{.*}}) bounds(%[[BOUNDS]])
+    %fp = acc.firstprivate_map varPtr(%arg0 : !fir.ref<!fir.box<!fir.array<?xf32>>>) bounds(%b) name("a(:)") -> !fir.ref<!fir.box<!fir.array<?xf32>>>
+    %v = fir.load %fp : !fir.ref<!fir.box<!fir.array<?xf32>>>
+    acc.yield
+  }
+  return
+}

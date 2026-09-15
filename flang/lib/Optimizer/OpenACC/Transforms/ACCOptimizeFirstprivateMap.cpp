@@ -143,6 +143,13 @@ public:
           // uses and erase.
           firstprivateInitOp.getAccVar().replaceAllUsesWith(var);
           opsToErase.push_back(firstprivateInitOp);
+        } else if (llvm::any_of(
+                       firstprivateInitOp.getBounds(), [&](Value bound) {
+                         return isDefinedInsideRegion(bound, offloadOp);
+                       })) {
+          // Bounds computed inside the region would not dominate the hoisted
+          // op, so leave it in place.
+          continue;
         } else {
           // Variable is defined outside - hoist the op out of the region,
           // then apply optimization.
