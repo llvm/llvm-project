@@ -8629,9 +8629,15 @@ void Sema::CheckShadow(NamedDecl *D, NamedDecl *ShadowedDecl,
   if (FieldDecl *FD = dyn_cast<FieldDecl>(ShadowedDecl)) {
     DeclContext *FnDC = getFunctionLevelDeclContext();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(FnDC)) {
+      // Fields aren't shadowed in C++ static members or in member functions
+      // with an explicit object parameter.
       if (MD->isStatic() || MD->isExplicitObjectMemberFunction())
         return;
     } else if (isa<FunctionDecl>(FnDC)) {
+      // A FunctionDecl here (not a CXXMethodDecl) can only be an
+      // inline-defined friend function, since that's the only way to
+      // introduce a non-member function inside a class body. Friends have
+      // no implicit `this`, so nothing here can shadow a field.
       return;
     }
     // Fields shadowed by constructor parameters are a special case. Usually

@@ -106,6 +106,13 @@ struct NSDMILambda {
     return a;
   }();
 };
+
+class PlainFriendFunction {
+  int x;
+  friend void plainFriend(int x) {
+  }
+};
+
 struct path {
   using value_type = char;
   typedef char value_type2;
