@@ -4692,7 +4692,11 @@ public:
   Expr *getSelectedExpr() const {
     UnsignedOrNone Index = getSelectedIndex();
     assert(Index && "extracting the indexed expression of a dependant pack");
-    return getTrailingObjects()[*Index];
+    // Resolved nodes store only the selected expansion; unresolved nodes store
+    // the full list and are indexed by the evaluated index.
+    return getTrailingObjects()[PackIndexingExprBits.TransformedExpressions == 1
+                                    ? 0
+                                    : *Index];
   }
 
   /// Return the trailing expressions, regardless of the expansion.
