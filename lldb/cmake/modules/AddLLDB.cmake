@@ -540,7 +540,7 @@ endfunction()
 # sits beside it. A framework build moves liblldb into the bundle, so the plugin
 # must move with it and carry an rpath that reaches liblldb from its new
 # location.
-function(lldb_add_scriptinterpreter_plugin_to_framework name)
+function(lldb_add_scriptinterpreter_plugin_to_buildtree_framework name)
   if(NOT LLDB_BUILD_FRAMEWORK)
     return()
   endif()
@@ -567,6 +567,32 @@ function(lldb_add_scriptinterpreter_plugin_to_framework name)
     COMMENT "Removing ${name} from LLDB.framework")
   add_dependencies(lldb-framework-cleanup ${name}-framework-cleanup)
 endfunction()
+
+function(lldb_add_scriptinterpreter_dynamic_library name wrapper_fn)
+  if (LLDB_BUILD_FRAMEWORK)
+    set(framework_arg INSTALL_PREFIX "${LLDB_FRAMEWORK_INSTALL_DIR}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/")
+  endif()
+
+
+  # ScriptInterpreter shared libraries are loaded at runtime by PluginManager.
+  # Private lldb symbols are resolved via liblldb's re-exports, so we
+  # explicitly cannot link against any lldb_private libraries.
+  # FIXME: Add a mechanism to enforce this. We already have
+  # `ALLOWED_INTERNAL_DEPENDENCIES`, but it is not fine-grained enough to
+  # distinguish between link dependencies and header dependencies.
+  add_lldb_library(${name} SHARED
+    ${framework_arg}
+    ${ARGN}
+  )
+
+  cmake_language(CALL ${wrapper_fn} ${name})
+
+  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
+    lldb_record_dynamic_script_interpreter_exports(${name})
+  endif()
+
+  lldb_add_scriptinterpreter_plugin_to_buildtree_framework(${name})
+endfunction(lldb_add_scriptinterpreter_dynamic_library)
 
 # Add extra install steps for dSYM creation and stripping for the given target.
 function(lldb_add_post_install_steps_darwin name install_prefix)
