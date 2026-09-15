@@ -270,6 +270,9 @@ static Value padOperand(OpBuilder &builder, TilingInterface opToPad,
 /// of `linalgOp`
 static bool isReducedOperand(linalg::LinalgOp linalgOp, OpOperand *operand,
                              ArrayRef<utils::IteratorType> iterTypes) {
+  assert(operand->getOwner() == linalgOp.getOperation() &&
+         "expected operand to belong to the LinalgOp");
+
   AffineMap map = linalgOp.getMatchingIndexingMap(operand);
   return llvm::any_of(llvm::enumerate(iterTypes), [&](auto it) {
     return it.value() == utils::IteratorType::reduction &&
@@ -277,14 +280,13 @@ static bool isReducedOperand(linalg::LinalgOp linalgOp, OpOperand *operand,
   });
 }
 
-/// Returns `defaults` with the entry of every input of `linalgOp` that is
-/// indexed along a reduction dimension replaced by its padding value. Fails if
-/// the body of `linalgOp` is not contraction-like, or if its
+/// On success, returns a vector with pad values for every operand of linalgOp.
+/// Fails if the body of `linalgOp` is not contraction-like, or if its
 /// `elemwise`/`reduce` pair admits no padding value.
 static FailureOr<SmallVector<Attribute>>
 inferContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp linalgOp,
                               ArrayRef<utils::IteratorType> iterTypes,
-                              ArrayRef<Attribute> defaults) {
+                              ArrayRef<Attribute> defaultPadVals) {
   // NOTE: For contraction-like Ops, we infer the padding value by looking at
   // both elemwise and reduce Ops, where (see isContractionBody for details):
   //   %0 = <elemwise>(permutation-of(cu(block-argument-0),
@@ -318,7 +320,8 @@ inferContractionPaddingValues(OpBuilder &builder, linalg::LinalgOp linalgOp,
     return {};
   };
 
-  SmallVector<Attribute> paddingValues(defaults.begin(), defaults.end());
+  SmallVector<Attribute> paddingValues(defaultPadVals.begin(),
+                                       defaultPadVals.end());
   for (OpOperand *input : linalgOp.getDpsInputOperands()) {
     if (!isReducedOperand(linalgOp, input, iterTypes))
       continue;

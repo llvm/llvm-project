@@ -128,8 +128,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-// Only the reduced input takes the neutral (-inf); the non-reduced init operand
-// keeps zero. Both dims are padded so the init is padded along the parallel dim.
+// Only the reduced input takes `-inf`, the reduction Op neutral value (`maximumf`), 
+// as the pad value; the non-reduced init operand keeps zero.
+// Both dims are padded so the init is padded along the parallel dim.
 
 // CHECK-LABEL: @pad_reduce_init_stays_zero
 func.func @pad_reduce_init_stays_zero(%in: tensor<8x30xf32>, %init: tensor<8xf32>)
