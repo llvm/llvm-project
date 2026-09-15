@@ -72,7 +72,7 @@ LLD_HAS_DRIVER(mingw)
 LLD_HAS_DRIVER(macho)
 LLD_HAS_DRIVER(wasm)
 
-int lld_main(int argc, char **argv, const llvm::ToolContext &) {
+int lld_main(int argc, char **argv, const llvm::ToolContext &ToolContext) {
   sys::Process::UseANSIEscapeCodes(true);
 
   if (::getenv("FORCE_LLD_DIAGNOSTICS_CRASH")) {
@@ -83,9 +83,12 @@ int lld_main(int argc, char **argv, const llvm::ToolContext &) {
 
   ArrayRef<const char *> args(argv, argv + argc);
 
-  // Not running in lit tests, just take the shortest codepath with global
-  // exception handling and no memory cleanup on exit.
-  if (!inTestVerbosity()) {
+  unsigned Iterations = inTestVerbosity();
+
+  // Standalone LLD can take the shortest code path and let the process reclaim
+  // its resources. An in-process invocation must instead clean up before
+  // returning to its host.
+  if (!ToolContext.isInProcess() && !Iterations) {
     int r =
         lld::unsafeLldMain(args, llvm::outs(), llvm::errs(), LLD_ALL_DRIVERS,
                            /*exitEarly=*/true);
@@ -95,7 +98,10 @@ int lld_main(int argc, char **argv, const llvm::ToolContext &) {
   std::optional<int> mainRet;
   CrashRecoveryContext::Enable();
 
-  for (unsigned i = inTestVerbosity(); i > 0; --i) {
+  if (!Iterations)
+    Iterations = 1;
+
+  for (unsigned i = Iterations; i > 0; --i) {
     // Disable stdout/stderr for all iterations but the last one.
     inTestOutputDisabled = (i != 1);
 
