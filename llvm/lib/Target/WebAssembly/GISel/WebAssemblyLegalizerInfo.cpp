@@ -221,6 +221,16 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
                                  {p0, p0, p0, 1}})
       .clampScalar(0, s32, s64)
       .lowerIfMemSizeNotByteSizePow2();
+
+  getActionDefinitionsBuilder(G_PHI)
+      .legalFor({i32, i64, f32, f64, p0})
+      .widenScalarToNextPow2(0)
+      .clampScalar(0, s32, s64);
+  getActionDefinitionsBuilder(G_BR).alwaysLegal();
+  getActionDefinitionsBuilder(G_BRCOND).legalFor({i32}).clampScalar(0, s32,
+                                                                    s32);
+  getActionDefinitionsBuilder(G_BRJT).legalFor({{p0, p0i}});
+  getActionDefinitionsBuilder(G_JUMP_TABLE).legalFor({p0});
 }
 
 bool WebAssemblyLegalizerInfo::legalizeCustom(
