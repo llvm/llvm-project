@@ -6,9 +6,9 @@ module {
 
   llvm.func @main(%arg0: i32, %arg1: !llvm.ptr) -> i32 {
     omp.parallel   {
-      %0 = llvm.mlir.constant(1 : index) : i64
-      %1 = llvm.mlir.constant(10 : index) : i64
-      %2 = llvm.mlir.constant(0 : index) : i64
+      %0 = llvm.mlir.constant(1 : i64) : i64
+      %1 = llvm.mlir.constant(10 : i64) : i64
+      %2 = llvm.mlir.constant(0 : i64) : i64
       %4 = llvm.mlir.constant(0 : i32) : i32
       %12 = llvm.alloca %0 x i64 : (i64) -> !llvm.ptr
       omp.wsloop {

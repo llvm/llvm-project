@@ -123,7 +123,8 @@ ol_result_t (*olIterateDevices)(ol_device_iterate_cb_t Callback,
 ol_result_t (*olIsValidBinary)(ol_device_handle_t Device, const void *ProgData,
                                size_t ProgDataSize, bool *Valid);
 
-ol_result_t (*olCreateProgram)(ol_device_handle_t Device, const void *ProgData,
+ol_result_t (*olCreateProgram)(ol_context_handle_t Context,
+                               ol_device_handle_t Device, const void *ProgData,
                                size_t ProgDataSize,
                                ol_program_handle_t *Program);
 

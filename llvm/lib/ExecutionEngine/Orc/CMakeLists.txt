@@ -44,10 +44,10 @@ add_llvm_component_library(LLVMOrcJIT
   LinkGraphLinkingLayer.cpp
   LoadLinkableFile.cpp
   LookupAndApply.cpp
-  LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachO.cpp
   MachOPlatform.cpp
+  Mangler.cpp
   MapperJITLinkMemoryManager.cpp
   MemoryMapper.cpp
   ELFNixPlatform.cpp

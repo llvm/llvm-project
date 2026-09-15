@@ -4,7 +4,7 @@
 ! Keep lowering coverage for the supported constructs so that this limitation
 ! does not hide failures to compile them.
 
-! CHECK: omp.declare_reduction @[[BOX_RED:add_reduction_byref_box_4xi32]] : !fir.ref<!fir.box<!fir.array<4xi32>>>
+! CHECK: omp.declare_reduction @[[BOX_RED:add_reduction_byref_box_4xi32]] byref_element_type({{.*}}) : !fir.ref<!fir.box<!fir.array<4xi32>>>
 
 subroutine reduction_literal(a, n)
   integer :: a(4), n

@@ -549,8 +549,8 @@ class TileUsingForOp(TileUsingForOp):
         loop_types: Union[Type, List[Type]],
         target: Union[Operation, Value],
         *,
-        sizes: MixedValues = None,
-        interchange: MixedValues = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
@@ -561,8 +561,8 @@ class TileUsingForOp(TileUsingForOp):
         self,
         target: Union[Operation, Value, OpView],
         *,
-        sizes: MixedValues = None,
-        interchange: MixedValues = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):
@@ -573,8 +573,8 @@ class TileUsingForOp(TileUsingForOp):
         loop_types_or_target: Union[Type, List[Type], Operation, Value],
         target_or_none: Optional[Union[Operation, Value, OpView]] = None,
         *,
-        sizes: MixedValues = None,
-        interchange: MixedValues = None,
+        sizes: MixedValues | DynamicIndexList | None = None,
+        interchange: MixedValues | None = None,
         loc=None,
         ip=None,
     ):

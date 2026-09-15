@@ -1,5 +1,6 @@
 // RUN: fir-opt --add-debug-info --mlir-print-debuginfo %s | FileCheck %s
-// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=LINETABLE
+// RUN: fir-opt --add-debug-info="debug-level=LineTablesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=MINIMAL
+// RUN: fir-opt --add-debug-info="debug-level=DebugDirectivesOnly" --mlir-print-debuginfo %s | FileCheck %s --check-prefix=MINIMAL
 
 module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
   func.func @_QQmain() attributes {fir.bindc_name = "test"} {
@@ -12,8 +13,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
     %1 = fircg.ext_declare %0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc1)
     %2 = fir.alloca i32 {bindc_name = "y", uniq_name = "_QFEy"} loc(#loc2)
     %3 = fircg.ext_declare %2 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc2)
-    %4 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "x"}
-    %5 = omp.map.info var_ptr(%3 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "y"}
+    %4 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("x") -> !fir.ref<i32>
+    %5 = omp.map.info var_ptr(%3 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) name("y") -> !fir.ref<i32>
     omp.target kernel_type(generic) map_entries(%4 -> %arg0, %5 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
       %16 = fircg.ext_declare %arg0 {uniq_name = "_QFEx"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc3)
       %17 = fircg.ext_declare %arg1 {uniq_name = "_QFEy"} : (!fir.ref<i32>) -> !fir.ref<i32> loc(#loc4)
@@ -35,6 +36,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK: #llvm.di_local_variable<scope = #[[SP1]], name = "x"{{.*}}line = 7, type = #[[TY]]>
 // CHECK: #llvm.di_local_variable<scope = #[[SP1]], name = "y"{{.*}}line = 8, type = #[[TY]]>
 
-// LINETABLE: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}>
-// LINETABLE: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "__omp_offloading_{{.*}}_QQmain_l6"{{.*}}line = 6{{.*}}subprogramFlags = "LocalToUnit|Definition"{{.*}}>
-// LINETABLE-NOT: #llvm.di_local_variable
+// MINIMAL-NOT: #llvm.di_basic_type
+// MINIMAL-NOT: #llvm.di_composite_type
+// MINIMAL-NOT: #llvm.di_derived_type
+// MINIMAL-NOT: #llvm.di_string_type
+// MINIMAL-NOT: #llvm.di_null_type
+// MINIMAL: #[[SPTY:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_program>
+// MINIMAL: #[[SPTY1:.*]] = #llvm.di_subroutine_type<callingConvention = DW_CC_normal>
+// MINIMAL: #[[SP:.*]] = #llvm.di_subprogram<{{.*}}name = "test"{{.*}}type = #[[SPTY]]>
+// MINIMAL: #[[SP1:.*]] = #llvm.di_subprogram<{{.*}}name = "__omp_offloading_{{.*}}_QQmain_l6"{{.*}}line = 6{{.*}}subprogramFlags = "LocalToUnit|Definition", type = #[[SPTY1]]>
+// MINIMAL-NOT: #llvm.di_local_variable

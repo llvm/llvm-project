@@ -242,6 +242,7 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::Pipe:
     case Type::BitInt:
     case Type::DependentBitInt:
+    case Type::OverflowBehavior:
     case Type::BTFTagAttributed:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
@@ -286,7 +287,6 @@ bool TypePrinter::canPrefixQualifiers(const Type *T,
     case Type::PackExpansion:
     case Type::SubstTemplateTypeParm:
     case Type::MacroQualified:
-    case Type::OverflowBehavior:
     case Type::CountAttributed:
     case Type::LateParsedAttr:
       CanPrefixQualifiers = false;
@@ -1412,12 +1412,16 @@ void TypePrinter::printAutoBefore(const AutoType *T, raw_ostream &OS) {
     if (T->isConstrained()) {
       // FIXME: Track a TypeConstraint as type sugar, so that we can print the
       // type as it was written.
-      T->getTypeConstraintConcept()->getDeclName().print(OS, Policy);
+      TemplateName Concept = T->getTypeConstraintConcept();
+      Concept.print(OS, Policy, TemplateName::Qualified::None);
       auto Args = T->getTypeConstraintArguments();
-      if (!Args.empty())
-        printTemplateArgumentList(
-            OS, Args, Policy,
-            T->getTypeConstraintConcept()->getTemplateParameters());
+      if (!Args.empty()) {
+        const TemplateDecl *TD = Concept.getAsTemplateDecl();
+        if (!TD)
+          TD = Concept.getAsTemplateTemplateParmDecl();
+        printTemplateArgumentList(OS, Args, Policy,
+                                  TD->getTemplateParameters());
+      }
       OS << ' ';
     }
     switch (T->getKeyword()) {
@@ -2210,7 +2214,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << " [[hlsl::is_counter]]";
   if (Attrs.IsArray)
     OS << " [[hlsl::is_array]]";
-  if (Attrs.IsMultiSampled)
+  if (Attrs.isMultiSampled())
     OS << " [[hlsl::is_ms]]";
 
   QualType ContainedTy = T->getContainedType();

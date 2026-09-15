@@ -16,8 +16,8 @@
 
 func.func @block_redundant_vector_no_predicate(%arg0: memref<32xi32>) {
   %c32 = arith.constant 32 : index
-  %par_bx = acc.par_width %c32 {par_dim = #acc.par_dim<block_x>}
-  %par_tx = acc.par_width %c32 {par_dim = #acc.par_dim<thread_x>}
+  %par_bx = acc.par_width %c32 par_dim(#acc.par_dim<block_x>)
+  %par_tx = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
   acc.kernel_environment {
     acc.compute_region launch(%grid = %par_bx, %block = %par_tx)
         ins(%arg10 = %arg0) : (memref<32xi32>) {
@@ -32,7 +32,7 @@ func.func @block_redundant_vector_no_predicate(%arg0: memref<32xi32>) {
         scf.reduce
       } {acc.par_dims = #acc<par_dims[thread_x]>, acc.gpu_block_redundant = #acc.gpu_block_redundant}
       acc.yield
-    } {origin = "acc.parallel"}
+    } <{origin = "acc.parallel"}>
   }
   return
 }

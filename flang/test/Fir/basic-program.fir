@@ -110,6 +110,7 @@ func.func @_QQmain() {
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
 
 // PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   CudaHeapAllocPromotion
 // PASSES-NEXT:   MemoryAllocationOpt
 
 // PASSES-NEXT: Inliner
@@ -117,6 +118,9 @@ func.func @_QQmain() {
 // PASSES-NEXT: CSE
 // PASSES-NEXT:   (S) 0 num-cse'd - Number of operations CSE'd
 // PASSES-NEXT:   (S) 0 num-dce'd - Number of operations DCE'd
+
+// PASSES-NEXT: 'func.func' Pipeline
+// PASSES-NEXT:   LoopInvariantCodeMotion
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: 'func.func' Pipeline

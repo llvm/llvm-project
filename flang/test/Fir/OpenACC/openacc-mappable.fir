@@ -11,19 +11,19 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
     %2 = fir.declare %0(%1) {uniq_name = "_QFsubEarr"} : (!fir.ref<!fir.array<10xf32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<10xf32>>
     %3 = fir.embox %2(%1) : (!fir.ref<!fir.array<10xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.array<10xf32>>
     %4 = fir.box_addr %3 : (!fir.box<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>>
-    %5 = acc.copyin var(%3 : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "arr", structured = false}
-    %6 = acc.copyin varPtr(%4 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr", structured = false}
+    %5 = acc.copyin var(%3 : !fir.box<!fir.array<10xf32>>) structured(false) name("arr") -> !fir.box<!fir.array<10xf32>>
+    %6 = acc.copyin varPtr(%4 : !fir.ref<!fir.array<10xf32>>) structured(false) name("arr") -> !fir.ref<!fir.array<10xf32>>
     acc.enter_data dataOperands(%5, %6 : !fir.box<!fir.array<10xf32>>, !fir.ref<!fir.array<10xf32>>)
     return
   }
 
-  // CHECK: Visiting: %{{.*}} = acc.copyin var(%{{.*}} : !fir.box<!fir.array<10xf32>>) -> !fir.box<!fir.array<10xf32>> {name = "arr", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin var(%{{.*}} : !fir.box<!fir.array<10xf32>>) structured(false) name("arr") -> !fir.box<!fir.array<10xf32>>
   // CHECK: Mappable: !fir.box<!fir.array<10xf32>>
   // CHECK: Type category: array
   // CHECK: Size: 40
   // CHECK: Has unknown dimensions: false
 
-  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("arr") -> !fir.ref<!fir.array<10xf32>>
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<10xf32>>
   // CHECK: Type category: array
   // CHECK: Size: 40
@@ -54,14 +54,14 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
     %13 = arith.select %12, %11, %c0 : index
     %14 = fir.shape_shift %c2, %13 : (index, index) -> !fir.shapeshift<1>
     %15:2 = hlfir.declare %arg1(%14) dummy_scope %0 {uniq_name = "_QFacc_explicit_shapeEarr2"} : (!fir.ref<!fir.array<?xf32>>, !fir.shapeshift<1>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>)
-    %16 = acc.copyin var(%10#1 : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr1", structured = false}
-    %17 = acc.copyin var(%15#1 : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr2", structured = false}
-    %18 = acc.copyin varPtr(%4#0 : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr3", structured = false}
+    %16 = acc.copyin var(%10#1 : !fir.ref<!fir.array<?xf32>>) structured(false) name("arr1") -> !fir.ref<!fir.array<?xf32>>
+    %17 = acc.copyin var(%15#1 : !fir.ref<!fir.array<?xf32>>) structured(false) name("arr2") -> !fir.ref<!fir.array<?xf32>>
+    %18 = acc.copyin varPtr(%4#0 : !fir.ref<!fir.array<10xf32>>) structured(false) name("arr3") -> !fir.ref<!fir.array<10xf32>>
     acc.enter_data dataOperands(%16, %17, %18 : !fir.ref<!fir.array<?xf32>>, !fir.ref<!fir.array<?xf32>>, !fir.ref<!fir.array<10xf32>>)
     return
   }
 
-  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr1", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) structured(false) name("arr1") -> !fir.ref<!fir.array<?xf32>>
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: true
@@ -70,7 +70,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Lower bound: %[[LB1]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB1]] = arith.subi %[[EXTENT1]], %c1{{.*}} : index
 
-  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>> {name = "arr2", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?xf32>>) structured(false) name("arr2") -> !fir.ref<!fir.array<?xf32>>
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: true
@@ -79,7 +79,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // CHECK: Lower bound: %[[LB2]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB2]] = arith.subi %[[EXTENT2]], %c1{{.*}} : index
 
-  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) -> !fir.ref<!fir.array<10xf32>> {name = "arr3", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<10xf32>>) structured(false) name("arr3") -> !fir.ref<!fir.array<10xf32>>
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<10xf32>>
   // CHECK: Type category: array
   // CHECK: Size: 40
@@ -94,39 +94,39 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   func.func @_QPtest_opaque_box_hlfir(%arg0: !fir.box<!fir.array<?x?xf32>> {fir.bindc_name = "x"}) {
     %0 = fir.dummy_scope : !fir.dscope
     %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_opaque_boxEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
-    %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "x", structured = false}
+    %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?x?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?x?xf32>>
     acc.enter_data dataOperands(%2 : !fir.box<!fir.array<?x?xf32>>)
     return
   }
-  // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?x?xf32>>) -> !fir.box<!fir.array<?x?xf32>> {name = "x", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?x?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?x?xf32>>
   // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {uniq_name = "_QFtest_opaque_boxEx"} : (!fir.box<!fir.array<?x?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?x?xf32>>, !fir.box<!fir.array<?x?xf32>>)
   // CHECK: Mappable: !fir.box<!fir.array<?x?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: false
   // CHECK: Shape: <<NULL VALUE>>
   // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[LB0:.*]] : index) upperbound(%[[UB0:.*]] : index) extent(%[[DIM0:.*]]#1 : index)
-  // CHECK-SAME: stride(%[[DIM0]]#2 : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
+  // CHECK-SAME: stride(%[[DIM0]]#2 : index) startIdx(%c1{{.*}} : index) strideInBytes(true)
   // CHECK: Lower bound: %[[LB0]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB0]] = arith.subi %[[DIM0]]#1, %c1{{.*}} : index
   // CHECK: Bound[1]: %{{.*}} = acc.bounds lowerbound(%[[LB1:.*]] : index) upperbound(%[[UB1:.*]] : index) extent(%[[DIM1:.*]]#1 : index)
-  // CHECK-SAME: stride(%{{.*}} : index) startIdx(%c1{{.*}} : index) {strideInBytes = true}
+  // CHECK-SAME: stride(%{{.*}} : index) startIdx(%c1{{.*}} : index) strideInBytes(true)
   // CHECK: Lower bound: %[[LB1]] = arith.constant 0 : index
   // CHECK: Upper bound: %[[UB1]] = arith.subi %[[DIM1]]#1, %c1{{.*}} : index
 
   func.func @_QPtest_optional(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x", fir.optional}) {
     %0 = fir.dummy_scope : !fir.dscope
     %1:2 = hlfir.declare %arg0 dummy_scope %0 arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-    %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "x", structured = false}
+    %2 = acc.copyin var(%1#0 : !fir.box<!fir.array<?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?xf32>>
     acc.enter_data dataOperands(%2 : !fir.box<!fir.array<?xf32>>)
     return
   }
-  // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>> {name = "x", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin var(%[[VAR:.*]]#0 : !fir.box<!fir.array<?xf32>>) structured(false) name("x") -> !fir.box<!fir.array<?xf32>>
   // CHECK: Var: %[[VAR]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} arg 1 {fortran_attrs = #fir.var_attrs<optional>, uniq_name = "_QFtest_optionalEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
   // CHECK: Mappable: !fir.box<!fir.array<?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: false
   // CHECK: Shape: <<NULL VALUE>>
-  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[IF:.*]]#0 : index) upperbound(%[[IF]]#1 : index) extent(%[[IF]]#2 : index) stride(%[[IF]]#3 : index) startIdx(%[[IF]]#4 : index) {strideInBytes = true}
+  // CHECK: Bound[0]: %{{.*}} = acc.bounds lowerbound(%[[IF:.*]]#0 : index) upperbound(%[[IF]]#1 : index) extent(%[[IF]]#2 : index) stride(%[[IF]]#3 : index) startIdx(%[[IF]]#4 : index) strideInBytes(true)
   // CHECK: Lower bound: %[[IF]]:5 = fir.if %[[PRESENT:.*]] -> (index, index, index, index, index) {
   // CHECK: %[[ONE:.*]] = arith.constant 1 : index
   // CHECK: %[[ZERO1:.*]] = arith.constant 0 : index
@@ -147,11 +147,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<f16 = dense<16> : vector<2xi64>,
   // (so no shape is recoverable). It must produce no bounds.
   func.func @_QPassumed_size_no_descriptor(%arg0: !fir.ref<!fir.array<?x?xf32>> {fir.bindc_name = "a"}) {
     %0 = fir.convert %arg0 : (!fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
-    %1 = acc.copyin varPtr(%0 : !fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> {name = "a", structured = false}
+    %1 = acc.copyin varPtr(%0 : !fir.ref<!fir.array<?x?xf32>>) structured(false) name("a") -> !fir.ref<!fir.array<?x?xf32>>
     acc.enter_data dataOperands(%1 : !fir.ref<!fir.array<?x?xf32>>)
     return
   }
-  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>> {name = "a", structured = false}
+  // CHECK: Visiting: %{{.*}} = acc.copyin varPtr(%{{.*}} : !fir.ref<!fir.array<?x?xf32>>) structured(false) name("a") -> !fir.ref<!fir.array<?x?xf32>>
   // CHECK: Pointer-like and Mappable: !fir.ref<!fir.array<?x?xf32>>
   // CHECK: Type category: array
   // CHECK: Has unknown dimensions: true

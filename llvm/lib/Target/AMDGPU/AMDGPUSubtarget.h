@@ -54,8 +54,9 @@ protected:
   bool HasSMulHi = false;
   bool HasFminFmaxLegacy = true;
 
-  unsigned EUsPerCU = 4;
-  unsigned MaxWavesPerEU = 10;
+  unsigned NumWorkGroupSIMDs = 4;
+  // Set from TableGen subtarget features; R600Subtarget sets it directly.
+  unsigned MaxWavesPerEU = 0;
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   unsigned LDSAllocationGranularity = 0;
@@ -237,10 +238,9 @@ public:
     return AddressableLocalMemorySize;
   }
 
-  /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
-  /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
-  /// CU mode into account.
-  unsigned getEUsPerCU() const { return EUsPerCU; }
+  /// \returns Number of SIMDs a work-group's waves run on: all of the block's
+  /// SIMDs in full-SIMD mode, half of them otherwise.
+  unsigned getNumWorkGroupSIMDs() const { return NumWorkGroupSIMDs; }
 
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);

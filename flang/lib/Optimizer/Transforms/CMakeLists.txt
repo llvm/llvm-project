@@ -26,6 +26,7 @@ add_flang_library(FIRTransforms
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
   ConvertComplexPow.cpp
+  CudaHeapAllocPromotion.cpp
   DebugTypeGenerator.cpp
   EmitMIFGlobalCtors.cpp
   ExternalNameConversion.cpp

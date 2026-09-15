@@ -1975,6 +1975,11 @@ void UnwrappedLineParser::parseStructuralElement(
       // Block return type.
       if (FormatTok->Tok.isAnyIdentifier() || FormatTok->isTypeName(LangOpts)) {
         nextToken();
+        // Return types: ObjC generics and protocol qualifiers are ok too.
+        if (FormatTok->is(tok::less)) {
+          nextToken();
+          parseBracedList(/*IsAngleBracket=*/true);
+        }
         // Return types: pointers are ok too.
         while (FormatTok->is(tok::star))
           nextToken();
@@ -2675,7 +2680,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
   bool SeenComma = false;
   bool SeenEqual = false;
   bool MightBeFoldExpr = false;
-  auto ExcessLess = 0;
+  unsigned ExcessLess = 0;
   nextToken();
   const bool MightBeStmtExpr = FormatTok->is(tok::l_brace);
   if (!InMacroCall && Prev && Prev->is(TT_FunctionLikeMacro))
@@ -2804,7 +2809,7 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
       parseRequiresExpression();
       break;
     case tok::less:
-      // We have here no clue wether this is a less, or a template opener, opt
+      // We have here no clue whether this is a less, or a template opener, opt
       // out of the predefined StarAndAmpTokenType.
       ++ExcessLess;
       nextToken();
@@ -3311,6 +3316,11 @@ void UnwrappedLineParser::parseNamespace() {
 }
 
 void UnwrappedLineParser::parseCppExportBlock() {
+  if (FormatTok->is(tok::l_brace)) {
+    FormatTok->setFinalizedType(TT_ExportLBrace);
+    if (Style.BraceWrapping.AfterExportBlock)
+      addUnwrappedLine();
+  }
   parseNamespaceOrExportBlock(/*AddLevels=*/Style.IndentExportBlock ? 1 : 0);
 }
 
@@ -4145,7 +4155,9 @@ void UnwrappedLineParser::parseRecord(bool ParseAsExpr, bool IsJavaRecord) {
                             tok::kw_alignas, tok::l_square) ||
          FormatTok->isAttribute() ||
          ((Style.isJava() || Style.isJavaScript()) &&
-          FormatTok->isOneOf(tok::period, tok::comma))) {
+          FormatTok->isOneOf(tok::period, tok::comma)) ||
+         (Style.isVerilog() &&
+          FormatTok->isOneOf(tok::kw_signed, tok::kw_unsigned))) {
     if (Style.isJavaScript() &&
         FormatTok->isOneOf(Keywords.kw_extends, Keywords.kw_implements)) {
       JSPastExtendsOrImplements = true;
@@ -5125,7 +5137,8 @@ void UnwrappedLineParser::readToken(int LevelDifference) {
         Args.reset();
         UnexpandedLine->Tokens.resize(1);
         Tokens->setPosition(Position);
-        nextToken();
+        // Not nextToken(), which would push the stale FormatTok onto the line.
+        FormatTok = Tokens->getNextToken();
         assert(!Args && Macros.objectLike(ID->TokenText));
       }
       if ((!Args && Macros.objectLike(ID->TokenText)) ||

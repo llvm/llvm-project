@@ -77,7 +77,7 @@ static bool isUnsigned(SValBuilder &SVB, NonLoc Value) {
 std::pair<ProgramStateRef, ProgramStateRef>
 bounds::compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB,
                                 NonLoc Value, NonLoc Threshold,
-                                bool CheckEquality) {
+                                Comparison CmpKind) {
   if (auto ConcreteThreshold = Threshold.getAs<nonloc::ConcreteInt>()) {
     std::tie(Value, Threshold) =
         getSimplifiedOffsets(Value, *ConcreteThreshold, SVB);
@@ -91,16 +91,16 @@ bounds::compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB,
   // To avoid automatic conversions, we evaluate the "obvious" cases without
   // calling `evalBinOpNN`:
   if (isNegative(SVB, State, Value) && isUnsigned(SVB, Threshold)) {
-    if (CheckEquality) {
-      // negative_value == unsigned_threshold is always false
+    if (CmpKind == Comparison::EQ) {
+      // negative == unsigned is always false
       return {nullptr, State};
     }
-    // negative_value < unsigned_threshold is always true
+    // negative < unsigned and negative <= unsigned are always true
     return {State, nullptr};
   }
   if (isUnsigned(SVB, Value) && isNegative(SVB, State, Threshold)) {
-    // unsigned_value == negative_threshold and
-    // unsigned_value < negative_threshold are both always false
+    // unsigned == negative, unsigned < negative and unsigned <= negative are
+    // all always false
     return {nullptr, State};
   }
   // FIXME: These special cases are sufficient for handling real-world
@@ -114,7 +114,7 @@ bounds::compareValueToThreshold(ProgramStateRef State, SValBuilder &SVB,
   // evaluate these "mathematical" comparisons through a separate pathway would
   // be a step backwards in this sense.
 
-  const BinaryOperatorKind OpKind = CheckEquality ? BO_EQ : BO_LT;
+  const BinaryOperatorKind OpKind = asOpcode(CmpKind);
   auto BelowThreshold =
       SVB.evalBinOpNN(State, OpKind, Value, Threshold, SVB.getConditionType())
           .getAs<NonLoc>();
@@ -134,8 +134,8 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
   // CHECK LOWER BOUND
   if (Flags.CheckUnderflow) {
-    auto [PrecedesLowerBound, WithinLowerBound] =
-        compareValueToThreshold(State, SVB, Offset, SVB.makeZeroArrayIndex());
+    auto [PrecedesLowerBound, WithinLowerBound] = compareValueToThreshold(
+        State, SVB, Offset, SVB.makeZeroArrayIndex(), Comparison::LT);
 
     if (PrecedesLowerBound) {
       // The analyzer thinks that the offset may be invalid (negative)...
@@ -183,14 +183,9 @@ bounds::CheckResult bounds::checkBounds(ProgramStateRef State, SValBuilder &SVB,
 
   // CHECK UPPER BOUND
   if (Extent) {
-    // In a situation where both underflow and overflow are possible (but the
-    // index is either tainted or known to be invalid), the logic of this
-    // checker will first assume that the offset is non-negative, and then
-    // (with this additional assumption) it will detect an overflow error.
-    // In this situation the warning message should mention both possibilities.
-
+    Comparison CK = Flags.AlsoAcceptEquality ? Comparison::LE : Comparison::LT;
     auto [WithinUpperBound, ExceedsUpperBound] =
-        compareValueToThreshold(State, SVB, Offset, *Extent);
+        compareValueToThreshold(State, SVB, Offset, *Extent, /*CmpKind=*/CK);
 
     if (ExceedsUpperBound) {
       // The offset may be invalid (>= Size)...

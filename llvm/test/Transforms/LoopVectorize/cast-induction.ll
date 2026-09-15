@@ -276,16 +276,16 @@ define void @cast_induction_tail_folding(ptr %A) {
 ; IC2-NEXT:    [[INDEX1:%.*]] = add i32 [[INDEX]], 1
 ; IC2-NEXT:    [[TMP2:%.*]] = icmp ule i32 [[INDEX]], 2
 ; IC2-NEXT:    [[TMP3:%.*]] = icmp ule i32 [[INDEX1]], 2
-; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
-; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
 ; IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; IC2:       [[PRED_STORE_IF]]:
+; IC2-NEXT:    [[TMP4:%.*]] = sext i32 [[INDEX]] to i64
 ; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP4]]
 ; IC2-NEXT:    store i32 [[INDEX]], ptr [[TMP5]], align 4
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; IC2:       [[PRED_STORE_CONTINUE]]:
 ; IC2-NEXT:    br i1 [[TMP3]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; IC2:       [[PRED_STORE_IF1]]:
+; IC2-NEXT:    [[TMP6:%.*]] = sext i32 [[INDEX1]] to i64
 ; IC2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP6]]
 ; IC2-NEXT:    store i32 [[INDEX1]], ptr [[TMP7]], align 4
 ; IC2-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
@@ -422,10 +422,8 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; VF4-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[MASK]], 1
 ; VF4-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MASK]], 2
 ; VF4-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
-; VF4-NEXT:    [[TMP21:%.*]] = lshr i64 [[MASK_INIT]], 32
-; VF4-NEXT:    [[TMP22:%.*]] = mul i64 [[TMP21]], -4294967296
 ; VF4-NEXT:    [[TMP23:%.*]] = add i64 [[TMP2]], -1
-; VF4-NEXT:    [[TMP1:%.*]] = add i64 [[TMP23]], [[TMP22]]
+; VF4-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP23]], [[MASK]]
 ; VF4-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 4
 ; VF4-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; VF4:       [[VECTOR_SCEVCHECK]]:
@@ -492,10 +490,8 @@ define i64 @induction_cast_chain_cleared_by_dce(i64 %n, i64 %mask.init) {
 ; IC2-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[MASK]], 1
 ; IC2-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[MASK]], 2
 ; IC2-NEXT:    [[TMP2:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
-; IC2-NEXT:    [[TMP23:%.*]] = lshr i64 [[MASK_INIT]], 32
-; IC2-NEXT:    [[TMP24:%.*]] = mul i64 [[TMP23]], -4294967296
 ; IC2-NEXT:    [[TMP25:%.*]] = add i64 [[TMP2]], -1
-; IC2-NEXT:    [[TMP1:%.*]] = add i64 [[TMP25]], [[TMP24]]
+; IC2-NEXT:    [[TMP1:%.*]] = sub i64 [[TMP25]], [[MASK]]
 ; IC2-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP1]], 2
 ; IC2-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; IC2:       [[VECTOR_SCEVCHECK]]:

@@ -634,7 +634,7 @@ void ResourceTypeInfo::print(raw_ostream &OS, const DataLayout &DL) const {
 GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
   assert(!Symbol && "Symbol has already been created");
   Type *ResTy = Ty;
-  int64_t Size = Binding.Size;
+  int64_t Size = getSize();
   if (Size != 1)
     // unbounded arrays are represented as zero-sized arrays in LLVM IR
     ResTy = ArrayType::get(Ty, Size == ~0u ? 0 : Size);
@@ -646,6 +646,9 @@ GlobalVariable *ResourceInfo::createSymbol(Module &M, StructType *Ty) {
 
 MDTuple *ResourceInfo::getAsMetadata(Module &M,
                                      dxil::ResourceTypeInfo &RTI) const {
+  assert(hasBinding() && "Resource must not be from heap to get metadata");
+  const ResourceBinding &Binding = getBinding();
+
   LLVMContext &Ctx = M.getContext();
   const DataLayout &DL = M.getDataLayout();
 
@@ -773,11 +776,16 @@ void ResourceInfo::print(raw_ostream &OS, dxil::ResourceTypeInfo &RTI,
     OS << "\n";
   }
 
-  OS << "  Binding:\n"
-     << "    Binding ID: " << Binding.BindingID << "\n"
-     << "    Space: " << Binding.Space << "\n"
-     << "    Lower Bound: " << Binding.LowerBound << "\n"
-     << "    Size: " << Binding.Size << "\n";
+  if (hasBinding()) {
+    const ResourceBinding &Binding = getBinding();
+    OS << "  Binding:\n"
+       << "    Binding ID: " << Binding.BindingID << "\n"
+       << "    Space: " << Binding.Space << "\n"
+       << "    Lower Bound: " << Binding.LowerBound << "\n"
+       << "    Size: " << Binding.Size << "\n";
+  } else {
+    OS << "  HeapIndexID: " << getHeapID() << "\n";
+  }
 
   OS << "  Globally Coherent: " << GloballyCoherent << "\n";
   OS << "  Has Atomic64 Use: " << HasAtomic64Use << "\n";
@@ -839,6 +847,12 @@ void DXILResourceMap::populateResourceInfos(Module &M,
                                             DXILResourceTypeMap &DRTM) {
   SmallVector<std::tuple<CallInst *, ResourceInfo, ResourceTypeInfo>> CIToInfos;
 
+  // We need to assign a unique ID to each resource that is created
+  // from a heap. The ID must be unique for each unique Index value so
+  // we can differentiate between resources instances of the same type.
+  SmallDenseMap<Value *, uint32_t, 8> IndexToHeapResID;
+  uint32_t NextHeapResID = 0;
+
   for (Function &F : M.functions()) {
     if (!F.isDeclaration())
       continue;
@@ -868,6 +882,28 @@ void DXILResourceMap::populateResourceInfos(Module &M,
           CIToInfos.emplace_back(CI, RI, RTI);
         }
 
+      break;
+    }
+    case Intrinsic::dx_resource_handlefromheap: {
+      auto *HandleTy = cast<TargetExtType>(F.getReturnType());
+      ResourceTypeInfo &RTI = DRTM[HandleTy];
+
+      for (User *U : F.users()) {
+        if (CallInst *CI = dyn_cast<CallInst>(U)) {
+          LLVM_DEBUG(dbgs() << "  Visiting: " << *U << "\n");
+          Value *Index = CI->getArgOperand(0);
+          uint32_t HeapResID;
+          auto Pos = IndexToHeapResID.find(Index);
+          if (Pos == IndexToHeapResID.end()) {
+            HeapResID = NextHeapResID++;
+            IndexToHeapResID[Index] = HeapResID;
+          } else {
+            HeapResID = Pos->second;
+          }
+          ResourceInfo RI = ResourceInfo{HeapResID, HandleTy};
+          CIToInfos.emplace_back(CI, RI, RTI);
+        }
+      }
       break;
     }
     }
@@ -912,8 +948,8 @@ void DXILResourceMap::populateResourceInfos(Module &M,
     FirstCBuffer = std::min({FirstCBuffer, FirstSampler});
     FirstUAV = std::min({FirstUAV, FirstCBuffer});
 
-    // Adjust the resource binding to use the next ID.
-    RI.setBindingID(NextID++);
+    if (RI.hasBinding())
+      RI.setBindingID(NextID++);
   }
 }
 
@@ -1020,9 +1056,11 @@ SmallVector<dxil::ResourceInfo *> DXILResourceMap::findByUse(const Value *Key) {
 
   switch (CI->getIntrinsicID()) {
   // Found the create, return the binding
-  case Intrinsic::dx_resource_handlefrombinding: {
+  case Intrinsic::dx_resource_handlefrombinding:
+  case Intrinsic::dx_resource_handlefromheap: {
     auto Pos = CallMap.find(CI);
-    assert(Pos != CallMap.end() && "HandleFromBinding must be in resource map");
+    assert(Pos != CallMap.end() &&
+           "handle initialization call must be in resource map");
     return {&Infos[Pos->second]};
   }
   default:

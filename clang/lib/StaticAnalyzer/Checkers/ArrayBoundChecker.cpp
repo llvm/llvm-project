@@ -200,6 +200,14 @@ static bool isDeterminedByInterestingSymbol(SVal SV,
   return false;
 }
 
+static int64_t getElementSize(const ElementRegion *ER, SValBuilder &SVB) {
+  QualType ElemType = ER->getElementType();
+
+  assert(!ElemType->isIncompleteType() && "ElemType cannot be incomplete");
+
+  return SVB.getContext().getTypeSizeInChars(ElemType).getQuantity();
+}
+
 /// For a given \p CurRegion that can be represented as a symbolic expression
 /// Arr[Idx] (or perhaps Arr[Idx1][Idx2] etc.), return the parent memory block
 /// Arr and the distance of Location from the beginning of Arr (expressed in a
@@ -222,17 +230,8 @@ computeOffset(ProgramStateRef State, SValBuilder &SVB,
     if (!Index)
       return std::nullopt;
 
-    QualType ElemType = CurRegion->getElementType();
-
-    // FIXME: The following early return was presumably added to safeguard the
-    // getTypeSizeInChars() call (which doesn't accept an incomplete type), but
-    // it seems that `ElemType` cannot be incomplete at this point.
-    if (ElemType->isIncompleteType())
-      return std::nullopt;
-
     // Calculate Delta = Index * sizeof(ElemType).
-    NonLoc Size = SVB.makeArrayIndex(
-        SVB.getContext().getTypeSizeInChars(ElemType).getQuantity());
+    NonLoc Size = SVB.makeArrayIndex(getElementSize(CurRegion, SVB));
     auto Delta = EvalBinOp(BO_Mul, *Index, Size);
     if (!Delta)
       return std::nullopt;
@@ -278,6 +277,8 @@ static StringRef getPreposition(const bounds::CheckResult &R) {
 
 static BugDescription describeInvalidAccess(bounds::CheckResult Res,
                                             StringRef RegName, SizeUnit SU) {
+  assert(Res.mayBeInvalid());
+
   std::optional<int64_t> OffsetN = getConcreteValue(Res.getOffset());
   std::optional<int64_t> ExtentN =
       getConcreteValue(Res.getExtentIfMayOverflow());
@@ -322,7 +323,7 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
 
     Out << ' ' << SU.asElementName();
 
-    if (*ExtentN > 1)
+    if (*ExtentN != 1)
       Out << "s";
   }
 
@@ -331,13 +332,16 @@ static BugDescription describeInvalidAccess(bounds::CheckResult Res,
           std::string(Buf)};
 }
 
-static BugDescription describeTaintBug(StringRef RegName, StringRef OffsetName,
-                                       bool AlsoMentionUnderflow) {
+static BugDescription describeTaintBug(bounds::CheckResult Res,
+                                       StringRef RegName,
+                                       StringRef OffsetName) {
+  assert(Res.mayBeInvalid());
   return {formatv("Potential out of bound access to {0} with tainted {1}",
                   RegName, OffsetName),
-          formatv("Access of {0} with a tainted {1} that may be {2}too large",
-                  RegName, OffsetName,
-                  AlsoMentionUnderflow ? "negative or " : "")};
+          formatv("Access of {0} with a tainted {1} that may be{2}{3}{4}",
+                  RegName, OffsetName, Res.mayUnderflow() ? " negative" : "",
+                  (Res.mayUnderflow() && Res.mayOverflow()) ? " or" : "",
+                  Res.mayOverflow() ? " too large" : "")};
 }
 
 /// When the access was ambiguous (that is, mayBeInBounds() && mayBeInvalid()),
@@ -447,7 +451,8 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
   bounds::CheckFlags Flags = {
       /*CheckUnderflow=*/!(isa<SymbolicRegion>(Reg) &&
                            isa<UnknownSpaceRegion>(Space)),
-      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C)};
+      /*OffsetObviouslyNonnegative=*/isOffsetObviouslyNonnegative(E, C),
+      /*AlsoAcceptEquality=*/(getElementSize(AccessedER, SVB) == 0)};
 
   bounds::CheckResult Res = checkBounds(State, SVB, ByteOffset, Extent, Flags);
 
@@ -467,7 +472,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         // forms the past-the-end pointer without actually dereferencing it.
         auto [EqualsToThreshold, NotEqualToThreshold] =
             bounds::compareValueToThreshold(State, SVB, ByteOffset, *Extent,
-                                            /*CheckEquality=*/true);
+                                            bounds::Comparison::EQ);
         if (EqualsToThreshold && !NotEqualToThreshold) {
           C.addTransition(EqualsToThreshold);
           return;
@@ -480,10 +485,7 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
       return;
     }
 
-    // FIXME: Remove `Res.mayOverflow()` and provide diagnostics for the case
-    // when the tainted access operation cannot overflow but can underflow.
-    // (This is an NFC commit, so I cannot include this improvement.)
-    if (Res.mayOverflow() && isTainted(State, ByteOffset)) {
+    if (isTainted(State, ByteOffset)) {
       // Diagnostic detail: saying "tainted offset" is always correct, but
       // the common case is that 'idx' is tainted in 'arr[idx]' and then it's
       // nicer to say "tainted index".
@@ -492,9 +494,9 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
         if (isTainted(State, ASE->getIdx(), C.getStackFrame()))
           OffsetName = "index";
 
-      BugDescription Desc =
-          describeTaintBug(RegName, OffsetName, Res.mayUnderflow());
-      reportOOB(C, State, Desc, ByteOffset, Extent, /*IsTaintBug=*/true);
+      BugDescription Desc = describeTaintBug(Res, RegName, OffsetName);
+      reportOOB(C, State, Desc, ByteOffset, Res.getExtentIfMayOverflow(),
+                /*IsTaintBug=*/true);
       return;
     }
 

@@ -88,7 +88,8 @@ TEST(InstSizes, PseudoInst) {
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false,
-                  TM->getTargetTriple().getDefaultFloatABI());
+                  TM->getTargetTriple().getDefaultFloatABI(),
+                  ARM::computeTargetABI(TM->getTargetTriple()));
   const ARMBaseInstrInfo *II = ST.getInstrInfo();
 
   auto cmpInstSize = [](const ARMBaseInstrInfo &II, MachineFunction &MF,
@@ -144,12 +145,12 @@ TEST(InstSizes, PseudoInst) {
   runChecks(TM.get(), II, "",
             "    Int_eh_sjlj_longjmp $r0, $r1, implicit-def $r7,"
             " implicit-def $lr, implicit-def $sp\n",
-            16u, cmpInstSize);
+            20u, cmpInstSize);
 
   runChecks(TM.get(), II, "",
             "    tInt_eh_sjlj_longjmp $r0, $r1, implicit-def $r7,"
             " implicit-def $lr, implicit-def $sp\n",
-            10u, cmpInstSize);
+            12u, cmpInstSize);
 
   runChecks(TM.get(), II, "",
             "    tInt_WIN_eh_sjlj_longjmp $r0, $r1, implicit-def $r11,"

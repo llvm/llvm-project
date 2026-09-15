@@ -150,6 +150,7 @@ static bool parseDebugArgs(Fortran::frontend::CodeGenOptions &opts,
     }
     opts.setDebugInfo(val.value());
     if (val != llvm::codegenoptions::DebugLineTablesOnly &&
+        val != llvm::codegenoptions::DebugDirectivesOnly &&
         val != llvm::codegenoptions::FullDebugInfo &&
         val != llvm::codegenoptions::NoDebugInfo) {
       const auto debugWarning = diags.getCustomDiagID(
@@ -317,11 +318,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
     opts.EnableSafeTrampoline = 1;
 
   if (args.hasFlag(clang::options::OPT_ffp_sum_reassociation,
-                   clang::options::OPT_fno_fp_sum_reassociation, false))
+                   clang::options::OPT_fno_fp_sum_reassociation, true))
     opts.SplitSumExpressionTree = 1;
 
-  if (args.getLastArg(clang::options::OPT_floop_interchange))
-    opts.InterchangeLoops = 1;
+  // Match the LLVM pipeline default (PipelineTuningOptions::LoopInterchange),
+  // which enables the pass whenever the optimization pipeline runs.
+  opts.InterchangeLoops =
+      args.hasFlag(clang::options::OPT_floop_interchange,
+                   clang::options::OPT_fno_loop_interchange, true);
 
   if (args.getLastArg(clang::options::OPT_fexperimental_loop_fusion))
     opts.FuseLoops = 1;
@@ -497,8 +501,15 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
       opts.IsPIE = 1;
   }
 
-  if (args.hasArg(clang::options::OPT_fprofile_generate)) {
+  if (const llvm::opt::Arg *a =
+          args.getLastArg(clang::options::OPT_fprofile_generate,
+                          clang::options::OPT_fprofile_generate_EQ)) {
     opts.setProfileInstr(llvm::driver::ProfileInstrKind::ProfileIRInstr);
+    if (a->getOption().matches(clang::options::OPT_fprofile_generate_EQ)) {
+      llvm::SmallString<128> path(a->getValue());
+      llvm::sys::path::append(path, "default_%m.profraw");
+      opts.InstrProfileOutput = std::string(path);
+    }
   }
 
   if (auto A = args.getLastArg(clang::options::OPT_fprofile_use_EQ)) {
@@ -601,14 +612,14 @@ static void parseTargetArgs(TargetOptions &opts, llvm::opt::ArgList &args) {
     opts.disabledIntegerKinds.push_back(16);
 
   if (const llvm::opt::Arg *a = args.getLastArg(clang::options::OPT_mabi_EQ)) {
-    opts.abi = a->getValue();
     llvm::StringRef V = a->getValue();
-    if (V == "vec-extabi") {
-      opts.EnableAIXExtendedAltivecABI = true;
-    } else if (V == "vec-default") {
-      opts.EnableAIXExtendedAltivecABI = false;
-    }
+    // Normalize "vec-default" to an empty ABI name; the AIX extended Altivec
+    // ABI is carried to the backend as the "vec-extabi" target-abi module flag.
+    opts.abi = V == "vec-default" ? "" : V.str();
   }
+
+  opts.SplitMachineFunctions =
+      args.hasArg(clang::options::OPT_fsplit_machine_functions);
 
   opts.asmVerbose = args.hasFlag(clang::options::OPT_fverbose_asm,
                                  clang::options::OPT_fno_verbose_asm, false);
@@ -905,6 +916,12 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                        args.hasFlag(clang::options::OPT_funsigned,
                                     clang::options::OPT_fno_unsigned, false));
 
+  // -f{no-}out-of-bounds-subscripts
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OutOfBoundsSubscripts,
+      args.hasFlag(clang::options::OPT_fout_of_bounds_subscripts,
+                   clang::options::OPT_fno_out_of_bounds_subscripts, true));
+
   // -f{no-}enumeration-type (experimental; FIR lowering is incomplete)
   opts.features.Enable(Fortran::common::LanguageFeature::EnumerationType,
                        args.hasFlag(clang::options::OPT_fenumeration_type,
@@ -929,6 +946,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
                    clang::options::OPT_fno_openacc_multiple_names_in_routine,
                    true));
+
+  // -f{no-}prefer-intrinsic-module-use-association
+  if (const auto *arg = args.getLastArg(
+          clang::options::OPT_fprefer_intrinsic_module_use_association,
+          clang::options::OPT_fno_prefer_intrinsic_module_use_association)) {
+    opts.features.Enable(
+        Fortran::common::LanguageFeature::PreferIntrinsicModuleUseAssociation,
+        arg->getOption().matches(
+            clang::options::OPT_fprefer_intrinsic_module_use_association));
+  }
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -1284,7 +1311,10 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
   res.getFrontendOpts().features.Enable(
       Fortran::common::LanguageFeature::OpenMP);
   if (auto *arg = args.getLastArg(clang::options::OPT_fopenmp_version_EQ)) {
-    llvm::ArrayRef<unsigned> ompVersions = llvm::omp::getOpenMPVersions();
+    llvm::SmallVector<unsigned> ompVersions;
+    for (llvm::omp::Version v : llvm::omp::getOpenMPVersions()) {
+      ompVersions.push_back(static_cast<unsigned>(v));
+    }
     unsigned oldVersions[] = {11, 20, 25, 30};
     unsigned version = 0;
 
@@ -1790,6 +1820,12 @@ bool CompilerInvocation::createFromArgs(
     invoc.loweringOpts.setRepackArraysWhole(arg->getValue() ==
                                             llvm::StringRef{"whole"});
 
+  // -f[no-]openacc-combined-loop-firstprivate
+  invoc.loweringOpts.setOpenACCCombinedLoopFirstprivate(
+      args.hasFlag(clang::options::OPT_fopenacc_combined_loop_firstprivate,
+                   clang::options::OPT_fno_openacc_combined_loop_firstprivate,
+                   /*default=*/true));
+
   if (auto *arg = args.getLastArg(clang::options::OPT_ffp_maxmin_behavior_EQ)) {
     auto value = Fortran::common::parseFPMaxminBehavior(arg->getValue());
     invoc.getCodeGenOpts().setFPMaxminBehavior(value);
@@ -1933,8 +1969,9 @@ void CompilerInvocation::setDefaultPredefinitions() {
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {
-    Fortran::common::setOpenMPMacro(getLangOpts().OpenMPVersion,
-                                    fortranOptions.predefinitions);
+    Fortran::common::setOpenMPMacro(
+        static_cast<unsigned>(getLangOpts().getOpenMPVersion()),
+        fortranOptions.predefinitions);
   }
 
   if (frontendOptions.features.IsEnabled(
@@ -1969,6 +2006,10 @@ void CompilerInvocation::setDefaultPredefinitions() {
   case llvm::Triple::ArchType::aarch64:
     fortranOptions.predefinitions.emplace_back("__aarch64__", "1");
     fortranOptions.predefinitions.emplace_back("__aarch64", "1");
+    break;
+  case llvm::Triple::ArchType::systemz:
+    fortranOptions.predefinitions.emplace_back("__s390x__", "1");
+    fortranOptions.predefinitions.emplace_back("__s390x", "1");
     break;
   }
 }

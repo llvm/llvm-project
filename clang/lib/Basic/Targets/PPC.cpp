@@ -843,6 +843,9 @@ void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
   if (getTriple().isOSAIX() && Opts.EnableAIXQuadwordAtomicsABI &&
       HasQuadwordAtomics)
     MaxAtomicInlineWidth = 128;
+
+  if (getTriple().isOSAIX() && Opts.EnableAIXExtendedAltivecABI)
+    ABI = "vec-extabi";
 }
 
 llvm::SmallVector<Builtin::InfosShard>

@@ -779,8 +779,9 @@ void StmtPrinter::VisitOMPCanonicalLoop(OMPCanonicalLoop *Node) {
 
 void StmtPrinter::PrintOMPExecutableDirective(OMPExecutableDirective *S,
                                               bool ForceNoStmt) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   OMPClausePrinter Printer(OS, Policy, OpenMPVersion);
   ArrayRef<OMPClause *> Clauses = S->clauses();
   for (auto *Clause : Clauses)
@@ -1025,16 +1026,18 @@ void StmtPrinter::VisitOMPTeamsDirective(OMPTeamsDirective *Node) {
 
 void StmtPrinter::VisitOMPCancellationPointDirective(
     OMPCancellationPointDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancellation point "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
 }
 
 void StmtPrinter::VisitOMPCancelDirective(OMPCancelDirective *Node) {
-  unsigned OpenMPVersion =
-      Context ? Context->getLangOpts().OpenMP : llvm::omp::FallbackVersion;
+  llvm::omp::Version OpenMPVersion =
+      Context ? Context->getLangOpts().getOpenMPVersion()
+              : llvm::omp::FallbackVersion;
   Indent() << "#pragma omp cancel "
            << getOpenMPDirectiveName(Node->getCancelRegion(), OpenMPVersion);
   PrintOMPExecutableDirective(Node);
@@ -1375,7 +1378,8 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
   bool CleanUglifiedParameter = Policy.CleanUglifiedParameters &&
                                 isa<ParmVarDecl, NonTypeTemplateParmDecl>(VD);
 
-  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter) {
+  if (Policy.FullyQualifiedName && !ForceAnonymous && !CleanUglifiedParameter &&
+      !VD->isTemplateParameter()) {
     VD->printQualifiedName(OS, Policy);
   } else {
     Node->getQualifier().print(OS, Policy);
@@ -2672,7 +2676,7 @@ void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
 }
 
 void StmtPrinter::VisitDependentTemplateIdExpr(DependentTemplateIdExpr *Node) {
-  OS << Node->getNameInfo();
+  Node->getTemplateName().print(OS, Policy, TemplateName::Qualified::None);
   printTemplateArgumentList(OS, Node->template_arguments(), Policy,
                             Node->getParameter()->getTemplateParameters());
 }
@@ -2793,7 +2797,7 @@ void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
   OS << E->getFoundDecl()->getName();
   printTemplateArgumentList(OS, E->getTemplateArgsAsWritten()->arguments(),
                             Policy,
-                            E->getNamedConcept()->getTemplateParameters());
+                            E->getConceptDecl()->getTemplateParameters());
 }
 
 void StmtPrinter::VisitRequiresExpr(RequiresExpr *E) {

@@ -2609,6 +2609,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOrigin(&I, getOrigin(&I, 0));
   }
 
+  void visitPtrToAddrInst(PtrToAddrInst &I) {
+    IRBuilder<> IRB(&I);
+    setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
+                                    "_msprop_ptrtoaddr"));
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   void visitIntToPtrInst(IntToPtrInst &I) {
     IRBuilder<> IRB(&I);
     setShadow(&I, IRB.CreateIntCast(getShadow(&I, 0), getShadowTy(&I), false,
@@ -5088,6 +5095,16 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  void handleModfOrSincos(IntrinsicInst &I) {
+    IRBuilder<> IRB(&I);
+    Value *ArgShadow = getShadow(&I, 0);
+    Value *Shadow = PoisonValue::get(getShadowTy(&I));
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 0);
+    Shadow = IRB.CreateInsertValue(Shadow, ArgShadow, 1);
+    setShadow(&I, Shadow);
+    setOrigin(&I, getOrigin(&I, 0));
+  }
+
   Value *extractLowerShadow(IRBuilder<> &IRB, Value *V) {
     assert(isa<FixedVectorType>(V->getType()));
     assert(cast<FixedVectorType>(V->getType())->getNumElements() > 0);
@@ -5871,6 +5888,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::umul_with_overflow:
     case Intrinsic::smul_with_overflow:
       handleArithmeticWithOverflow(I);
+      break;
+    case Intrinsic::modf:
+    case Intrinsic::sincos:
+    case Intrinsic::sincospi:
+      handleModfOrSincos(I);
       break;
     case Intrinsic::abs:
       handleAbsIntrinsic(I);
@@ -7539,8 +7561,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         visitInstruction(CB);
       return;
     }
-    LibFunc LF;
-    if (TLI->getLibFunc(CB, LF)) {
+    LibFunc LF = TLI->getLibFunc(CB);
+    if (LF != NotLibFunc) {
       // libatomic.a functions need to have special handling because there isn't
       // a good way to intercept them or compile the library with
       // instrumentation.
@@ -7605,7 +7627,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       unsigned Size = 0;
       const DataLayout &DL = F.getDataLayout();
 
-      bool ByVal = CB.paramHasAttr(i, Attribute::ByVal);
+      bool ByVal = CB.isByValArgument(i);
       bool NoUndef = CB.paramHasAttr(i, Attribute::NoUndef);
       bool EagerCheck = MayCheckCall && !ByVal && NoUndef;
 
@@ -8293,7 +8315,7 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
 
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         // ByVal arguments always go to the overflow area.
         // Fixed arguments passed through the overflow area will be stepped
@@ -8722,7 +8744,7 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
     const DataLayout &DL = F.getDataLayout();
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -8852,7 +8874,7 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
     unsigned IntptrSize = DL.getTypeStoreSize(MS.IntptrTy);
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);
@@ -9098,7 +9120,7 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
       // SystemZABIInfo does not produce ByVal parameters.
-      assert(!CB.paramHasAttr(ArgNo, Attribute::ByVal));
+      assert(!CB.isByValArgument(ArgNo));
       Type *T = A->getType();
       ArgKind AK = classifyArgument(T);
       if (AK == ArgKind::Indirect) {
@@ -9315,7 +9337,7 @@ struct VarArgI386Helper : public VarArgHelperBase {
     unsigned VAArgOffset = 0;
     for (const auto &[ArgNo, A] : llvm::enumerate(CB.args())) {
       bool IsFixed = ArgNo < CB.getFunctionType()->getNumParams();
-      bool IsByVal = CB.paramHasAttr(ArgNo, Attribute::ByVal);
+      bool IsByVal = CB.isByValArgument(ArgNo);
       if (IsByVal) {
         assert(A->getType()->isPointerTy());
         Type *RealTy = CB.getParamByValType(ArgNo);

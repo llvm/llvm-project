@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -134,12 +135,6 @@ namespace {
     GroupInfo() = default;
   };
 } // end anonymous namespace.
-
-static bool beforeThanCompare(const Record *LHS, const Record *RHS) {
-  assert(!LHS->getLoc().empty() && !RHS->getLoc().empty());
-  return
-    LHS->getLoc().front().getPointer() < RHS->getLoc().front().getPointer();
-}
 
 static bool diagGroupBeforeByName(const Record *LHS, const Record *RHS) {
   return LHS->getValueAsString("GroupName") <
@@ -599,8 +594,7 @@ struct DiagnosticTextBuilder {
     }
   }
 
-  std::vector<std::string> buildForDocumentation(StringRef Role,
-                                                 const Record *R);
+  std::string buildForDocumentation(StringRef Role, const Record *R);
   std::string buildForDefinition(const Record *R);
   llvm::SmallVector<std::pair<
       std::string, llvm::SmallVector<std::pair<unsigned, std::string>>>>
@@ -767,150 +761,216 @@ protected:
   ModifierMappingsType ModifierMappings;
 };
 
-void escapeRST(StringRef Str, std::string &Out) {
-  for (auto K : Str) {
-    if (StringRef("`*|_[]\\").count(K))
-      Out.push_back('\\');
-    Out.push_back(K);
-  }
-}
-
-template <typename It> void padToSameLength(It Begin, It End) {
-  size_t Width = 0;
-  for (It I = Begin; I != End; ++I)
-    Width = std::max(Width, I->size());
-  for (It I = Begin; I != End; ++I)
-    (*I) += std::string(Width - I->size(), ' ');
-}
-
-template <typename It> void makeTableRows(It Begin, It End) {
-  if (Begin == End)
-    return;
-  padToSameLength(Begin, End);
-  for (It I = Begin; I != End; ++I)
-    *I = "|" + *I + "|";
-}
-
-void makeRowSeparator(std::string &Str) {
-  for (char &K : Str)
-    K = (K == '|' ? '+' : '-');
-}
+/// Markers written in front of a table cell. Nested tables are distinguished
+/// by indentation rather than by fence length: openCell indents the
+/// continuation lines of a cell by the width of the marker written here, which
+/// puts an inner fence exactly one marker to the right of its parent's. The
+/// two markers must therefore stay the same width.
+constexpr StringRef RowMarker = "* - ";
+constexpr StringRef ColumnMarker = "  - ";
+static_assert(RowMarker.size() == ColumnMarker.size());
 
 struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
   using BaseTy = DiagTextVisitor<DiagTextDocPrinter>;
-  DiagTextDocPrinter(DiagnosticTextBuilder &Builder,
-                     std::vector<std::string> &RST)
-      : BaseTy(Builder), RST(RST) {}
+  DiagTextDocPrinter(DiagnosticTextBuilder &Builder, std::string &Result)
+      : BaseTy(Builder), Result(Result) {}
 
-  void gatherNodes(
-      Piece *OrigP, const ModifierMappingsType &CurrentMappings,
-      std::vector<std::pair<Piece *, ModifierMappingsType>> &Pieces) const {
-    if (auto *Sub = dyn_cast<SubstitutionPiece>(OrigP)) {
-      ModifierMappingsType NewMappings =
-          getSubstitutionMappings(Sub, CurrentMappings);
-      return gatherNodes(Builder.getSubstitution(Sub), NewMappings, Pieces);
+  bool containsTablePiece(Piece *P) const {
+    if (isa<SelectPiece, DiffPiece>(P))
+      return true;
+    if (auto *Multi = dyn_cast<MultiPiece>(P))
+      return any_of(Multi->Pieces,
+                    [this](Piece *Child) { return containsTablePiece(Child); });
+    if (auto *Substitution = dyn_cast<SubstitutionPiece>(P))
+      return containsTablePiece(Builder.getSubstitution(Substitution));
+    return false;
+  }
+
+  /// Append \p P without letting it open a table of its own: a MultiPiece is
+  /// spliced in piece by piece and a substitution is replaced by its
+  /// expansion. Only pieces that contain no table belong here.
+  void appendInline(Piece *P) {
+    assert(!containsTablePiece(P));
+    if (auto *Multi = dyn_cast<MultiPiece>(P)) {
+      for (Piece *Child : Multi->Pieces)
+        appendInline(Child);
+    } else if (auto *Substitution = dyn_cast<SubstitutionPiece>(P)) {
+      SubstitutionContext Guard(*this, Substitution);
+      appendInline(Guard.Substitution);
+    } else {
+      Visit(P);
     }
-    if (auto *MD = dyn_cast<MultiPiece>(OrigP)) {
-      for (Piece *Node : MD->Pieces)
-        gatherNodes(Node, CurrentMappings, Pieces);
+  }
+
+  /// Append \p P as the body of a cell, using a table for it only if it needs
+  /// one.
+  void appendCellBody(Piece *P) {
+    if (containsTablePiece(P))
+      Visit(P);
+    else
+      appendInline(P);
+  }
+
+  void VisitSubstitution(SubstitutionPiece *P) {
+    SubstitutionContext Guard(*this, P);
+    appendCellBody(Guard.Substitution);
+  }
+
+  /// Start a new line, indenting it to the depth of the enclosing cells. A
+  /// blank line is left blank rather than padded out with spaces.
+  void newLine(bool Blank = false) {
+    Result += '\n';
+    if (!Blank)
+      Result.append(Indent, ' ');
+  }
+
+  /// The cells of the table currently being written. Cells are written
+  /// straight into \p Result, so the only state a table needs is how many
+  /// cells it has so far and, while a cell is open, where in \p Result that
+  /// cell began.
+  struct TableState {
+    /// Whether every cell starts a row of its own, rather than the first cell
+    /// starting a row that the rest extend.
+    bool OnePiecePerRow;
+    unsigned NumCells = 0;
+    bool CellOpen = false;
+    /// Offsets of the open cell's marker and of the body following it.
+    size_t MarkerStart = 0;
+    size_t BodyStart = 0;
+  };
+
+  void startTable() {
+    Result += ":::{list-table}";
+    newLine();
+    Result += ":widths: auto";
+    newLine(/*Blank=*/true);
+  }
+
+  void endTable() {
+    newLine();
+    Result += ":::";
+  }
+
+  /// Open a cell, unless one is already open, by writing its marker. The
+  /// body's continuation lines line up just past the marker.
+  void openCell(TableState &T) {
+    if (T.CellOpen)
       return;
+    T.MarkerStart = Result.size();
+    newLine();
+    Result += (T.OnePiecePerRow || T.NumCells == 0) ? RowMarker : ColumnMarker;
+    T.BodyStart = Result.size();
+    T.CellOpen = true;
+    Indent += RowMarker.size();
+  }
+
+  /// Close the open cell. A cell whose body turned out to be empty is dropped
+  /// entirely when \p DropIfEmpty, and otherwise keeps its marker, minus the
+  /// trailing space that would be left dangling.
+  void closeCell(TableState &T, bool DropIfEmpty) {
+    assert(T.CellOpen);
+    T.CellOpen = false;
+    Indent -= RowMarker.size();
+    if (Result.size() != T.BodyStart) {
+      ++T.NumCells;
+    } else if (DropIfEmpty) {
+      Result.resize(T.MarkerStart);
+    } else {
+      Result.pop_back();
+      ++T.NumCells;
     }
-    Pieces.push_back(std::make_pair(OrigP, CurrentMappings));
+  }
+
+  /// Distribute \p Pieces over the cells of the table \p T is writing. A cell
+  /// is either inline text or a nested table, never a mixture, so inline
+  /// pieces extend the open cell while a piece that needs a table of its own
+  /// closes it and takes a cell to itself.
+  void appendPiecesToCells(ArrayRef<Piece *> Pieces, TableState &T) {
+    for (Piece *Child : Pieces) {
+      if (auto *Substitution = dyn_cast<SubstitutionPiece>(Child);
+          Substitution &&
+          isa<MultiPiece>(Builder.getSubstitution(Substitution))) {
+        SubstitutionContext Guard(*this, Substitution);
+        appendPiecesToCells(cast<MultiPiece>(Guard.Substitution)->Pieces, T);
+        continue;
+      }
+      if (!containsTablePiece(Child)) {
+        openCell(T);
+        appendInline(Child);
+        continue;
+      }
+      if (T.CellOpen)
+        closeCell(T, /*DropIfEmpty=*/true);
+      openCell(T);
+      Visit(Child);
+      closeCell(T, /*DropIfEmpty=*/true);
+    }
   }
 
   void VisitMulti(MultiPiece *P) {
-    if (P->Pieces.empty()) {
-      RST.push_back("");
+    if (P->Pieces.empty())
+      return;
+    if (P->Pieces.size() == 1 && containsTablePiece(P->Pieces.front())) {
+      Visit(P->Pieces.front());
       return;
     }
 
-    if (P->Pieces.size() == 1)
-      return Visit(P->Pieces[0]);
-
-    // Flatten the list of nodes, replacing any substitution pieces with the
-    // recursively flattened substituted node.
-    std::vector<std::pair<Piece *, ModifierMappingsType>> Pieces;
-    gatherNodes(P, ModifierMappings, Pieces);
-
-    std::string EmptyLinePrefix;
-    size_t Start = RST.size();
-    bool HasMultipleLines = true;
-    for (const std::pair<Piece *, ModifierMappingsType> &NodePair : Pieces) {
-      std::vector<std::string> Lines;
-      DiagTextDocPrinter Visitor{Builder, Lines};
-      Visitor.ModifierMappings = NodePair.second;
-      Visitor.Visit(NodePair.first);
-
-      if (Lines.empty())
-        continue;
-
-      // We need a vertical separator if either this or the previous piece is a
-      // multi-line piece, or this is the last piece.
-      const char *Separator = (Lines.size() > 1 || HasMultipleLines) ? "|" : "";
-      HasMultipleLines = Lines.size() > 1;
-
-      if (Start + Lines.size() > RST.size())
-        RST.resize(Start + Lines.size(), EmptyLinePrefix);
-
-      padToSameLength(Lines.begin(), Lines.end());
-      for (size_t I = 0; I != Lines.size(); ++I)
-        RST[Start + I] += Separator + Lines[I];
-      std::string Empty(Lines[0].size(), ' ');
-      for (size_t I = Start + Lines.size(); I != RST.size(); ++I)
-        RST[I] += Separator + Empty;
-      EmptyLinePrefix += Separator + Empty;
-    }
-    for (size_t I = Start; I != RST.size(); ++I)
-      RST[I] += "|";
-    EmptyLinePrefix += "|";
-
-    makeRowSeparator(EmptyLinePrefix);
-    RST.insert(RST.begin() + Start, EmptyLinePrefix);
-    RST.insert(RST.end(), EmptyLinePrefix);
+    startTable();
+    TableState T{/*OnePiecePerRow=*/false};
+    appendPiecesToCells(P->Pieces, T);
+    if (T.CellOpen)
+      closeCell(T, /*DropIfEmpty=*/true);
+    endTable();
   }
 
   void VisitText(TextPiece *P) {
-    RST.push_back("");
-    auto &S = RST.back();
+    StringRef Text = P->Text;
+    while (Text.consume_front(" "))
+      Result += "&nbsp;";
 
-    StringRef T = P->Text;
-    while (T.consume_front(" "))
-      RST.back() += " |nbsp| ";
+    unsigned TrailingSpaces = 0;
+    while (Text.consume_back(" "))
+      ++TrailingSpaces;
 
-    std::string Suffix;
-    while (T.consume_back(" "))
-      Suffix += " |nbsp| ";
-
-    if (!T.empty()) {
-      S += ':';
-      S += P->Role;
-      S += ":`";
-      escapeRST(T, S);
-      S += '`';
+    bool HasText = !Text.empty();
+    if (HasText && !P->Role.empty()) {
+      Result += "{";
+      Result += P->Role;
+      Result += "}`";
     }
-
-    S += Suffix;
+    for (char C : Text) {
+      if (C == '`')
+        Result += "&#96;";
+      else {
+        if (C == '\\')
+          Result += '\\';
+        Result += C;
+      }
+    }
+    if (HasText && !P->Role.empty())
+      Result += '`';
+    for (unsigned I = 0; I != TrailingSpaces; ++I)
+      Result += "&nbsp;";
   }
 
   void VisitPlaceholder(PlaceholderPiece *P) {
-    RST.push_back(std::string(":placeholder:`") +
-                  char('A' + mapIndex(P->Index)) + "`");
+    // Use a role rather than plain `*A*` emphasis: two adjacent placeholders
+    // would render as `*A**B*`, which CommonMark parses as a single emphasis
+    // run containing literal asterisks.
+    Result += "{placeholder}`";
+    Result += char('A' + mapIndex(P->Index));
+    Result += '`';
   }
 
   void VisitSelect(SelectPiece *P) {
-    std::vector<size_t> SeparatorIndexes;
-    SeparatorIndexes.push_back(RST.size());
-    RST.emplace_back();
-    for (auto *O : P->Options) {
-      Visit(O);
-      SeparatorIndexes.push_back(RST.size());
-      RST.emplace_back();
+    startTable();
+    TableState T{/*OnePiecePerRow=*/true};
+    for (Piece *Option : P->Options) {
+      openCell(T);
+      appendCellBody(Option);
+      closeCell(T, /*DropIfEmpty=*/false);
     }
-
-    makeTableRows(RST.begin() + SeparatorIndexes.front(),
-                  RST.begin() + SeparatorIndexes.back() + 1);
-    for (size_t I : SeparatorIndexes)
-      makeRowSeparator(RST[I]);
+    endTable();
   }
 
   void VisitEnumSelect(EnumSelectPiece *P) {
@@ -941,7 +1001,10 @@ struct DiagTextDocPrinter : DiagTextVisitor<DiagTextDocPrinter> {
     VisitSelect(&Select);
   }
 
-  std::vector<std::string> &RST;
+  std::string &Result;
+  /// Number of spaces every new line is indented by, one marker per enclosing
+  /// cell.
+  unsigned Indent = 0;
 };
 
 struct DiagEnumPrinter : DiagTextVisitor<DiagEnumPrinter> {
@@ -1280,9 +1343,8 @@ Piece *DiagnosticTextBuilder::DiagText::parseDiagText(StringRef &Text,
   return New<MultiPiece>(Parsed);
 }
 
-std::vector<std::string>
-DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
-                                             const Record *R) {
+std::string DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
+                                                         const Record *R) {
   EvaluatingRecordGuard Guard(&EvaluatingRecord, R);
   StringRef Text = R->getValueAsString("Summary");
 
@@ -1296,8 +1358,11 @@ DiagnosticTextBuilder::buildForDocumentation(StringRef Severity,
     D.Root = MP;
   }
   MP->Pieces.insert(MP->Pieces.begin(), Prefix);
-  std::vector<std::string> Result;
+  std::string Result;
   DiagTextDocPrinter{*this, Result}.Visit(D.Root);
+  // The printer indents the line it is on rather than the line it just wrote,
+  // so it leaves the last line unterminated.
+  Result += '\n';
   return Result;
 }
 
@@ -2260,8 +2325,14 @@ std::set<std::string> getDefaultSeverities(const Record *DiagGroup,
   return States;
 }
 
-void writeHeader(StringRef Str, raw_ostream &OS, char Kind = '-') {
-  OS << Str << "\n" << std::string(Str.size(), Kind) << "\n";
+/// Write the heading for a diagnostic flag, preceded by an explicit
+/// cross-reference target. Naming the target keeps intra-page links working
+/// without depending on how Sphinx slugifies heading text, which is a docutils
+/// implementation detail that LLVM additionally overrides via
+/// `myst_heading_slug_func`.
+void writeHeader(StringRef Prefix, StringRef GroupName, raw_ostream &OS) {
+  OS << "(" << Prefix << GroupName << ")=\n\n### " << Prefix << GroupName
+     << "\n\n";
 }
 
 void writeDiagnosticText(DiagnosticTextBuilder &Builder, const Record *R,
@@ -2269,16 +2340,25 @@ void writeDiagnosticText(DiagnosticTextBuilder &Builder, const Record *R,
   StringRef Text = R->getValueAsString("Summary");
   if (Text == "%0")
     OS << "The text of this diagnostic is not controlled by Clang.\n\n";
-  else {
-    std::vector<std::string> Out = Builder.buildForDocumentation(Role, R);
-    for (auto &Line : Out)
-      OS << Line << "\n";
-    OS << "\n";
-  }
+  else
+    OS << Builder.buildForDocumentation(Role, R) << '\n';
 }
 
-}  // namespace
-}  // namespace docs
+void writeDocumentation(StringRef Documentation, raw_ostream &OS) {
+  SmallVector<StringRef> Lines;
+  Documentation.trim("\n").split(Lines, '\n');
+
+  size_t Indent = StringRef::npos;
+  for (StringRef Line : Lines)
+    if (size_t I = Line.find_first_not_of(" \t"); I != StringRef::npos)
+      Indent = std::min(Indent, I);
+
+  for (StringRef Line : Lines)
+    OS << Line.drop_front(std::min(Indent, Line.size())) << '\n';
+}
+
+} // namespace
+} // namespace docs
 
 void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
   using namespace docs;
@@ -2309,18 +2389,16 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
   // Compute the set of diagnostics that are in -Wpedantic.
   {
-    RecordSet DiagsInPedanticSet;
-    RecordSet GroupsInPedanticSet;
+    // Collect into vectors rather than sets: InferPedantic fills a vector by
+    // marching the records in source order, so the result is deterministic
+    // without a sort. A set would have to be sorted back into order, and
+    // source location alone is not a total order because every record from a
+    // multiclass reports the location of the `def` inside it.
+    RecordVec DiagsInPedantic;
+    RecordVec GroupsInPedantic;
     InferPedantic inferPedantic(DGParentMap, Diags, DiagGroups, DiagsInGroup);
-    inferPedantic.compute(&DiagsInPedanticSet, &GroupsInPedanticSet);
+    inferPedantic.compute(&DiagsInPedantic, &GroupsInPedantic);
     auto &PedDiags = DiagsInGroup["pedantic"];
-    // Put the diagnostics into a deterministic order.
-    RecordVec DiagsInPedantic(DiagsInPedanticSet.begin(),
-                              DiagsInPedanticSet.end());
-    RecordVec GroupsInPedantic(GroupsInPedanticSet.begin(),
-                               GroupsInPedanticSet.end());
-    sort(DiagsInPedantic, beforeThanCompare);
-    sort(GroupsInPedantic, beforeThanCompare);
     PedDiags.DiagsInGroup.insert(PedDiags.DiagsInGroup.end(),
                                  DiagsInPedantic.begin(),
                                  DiagsInPedantic.end());
@@ -2333,13 +2411,13 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
   // Write out the diagnostic groups.
   for (const Record *G : DiagGroups) {
     bool IsRemarkGroup = isRemarkGroup(G, DiagsInGroup);
-    auto &GroupInfo = DiagsInGroup[G->getValueAsString("GroupName")];
-    bool IsSynonym = GroupInfo.DiagsInGroup.empty() &&
-                     GroupInfo.SubGroups.size() == 1;
+    StringRef GroupName = G->getValueAsString("GroupName");
+    StringRef Prefix = IsRemarkGroup ? "-R" : "-W";
+    auto &GroupInfo = DiagsInGroup[GroupName];
+    bool IsSynonym =
+        GroupInfo.DiagsInGroup.empty() && GroupInfo.SubGroups.size() == 1;
 
-    writeHeader(((IsRemarkGroup ? "-R" : "-W") +
-                    G->getValueAsString("GroupName")).str(),
-                OS);
+    writeHeader(Prefix, GroupName, OS);
 
     if (!IsSynonym) {
       // FIXME: Ideally, all the diagnostics in a group should have the same
@@ -2349,9 +2427,8 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
         bool AnyNonErrors = DefaultSeverities.count("Warning") ||
                             DefaultSeverities.count("Remark");
         if (!AnyNonErrors)
-          OS << "This diagnostic is an error by default, but the flag ``-Wno-"
-             << G->getValueAsString("GroupName") << "`` can be used to disable "
-             << "the error.\n\n";
+          OS << "This diagnostic is an error by default, but the flag `-Wno-"
+             << GroupName << "` can be used to disable the error.\n\n";
         else
           OS << "This diagnostic is enabled by default.\n\n";
       } else if (DefaultSeverities.size() > 1) {
@@ -2370,8 +2447,10 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
       sort(GroupInfo.SubGroups);
       ListSeparator LS;
+      // writeHeader emits an explicit target named after the flag, so a `{ref}`
+      // with no explicit title links to it and renders as the flag name.
       for (StringRef Name : GroupInfo.SubGroups)
-        OS << LS << "`" << (IsRemarkGroup ? "-R" : "-W") << Name << "`_";
+        OS << LS << "{ref}`" << Prefix << Name << "`";
       OS << ".\n\n";
     }
 
@@ -2389,7 +2468,7 @@ void clang::EmitClangDiagDocs(const RecordKeeper &Records, raw_ostream &OS) {
 
     auto Doc = G->getValueAsString("Documentation");
     if (!Doc.empty())
-      OS << Doc;
+      writeDocumentation(Doc, OS);
     else if (GroupInfo.SubGroups.empty() && GroupInfo.DiagsInGroup.empty())
       OS << "This diagnostic flag exists for GCC compatibility, and has no "
             "effect in Clang.\n";

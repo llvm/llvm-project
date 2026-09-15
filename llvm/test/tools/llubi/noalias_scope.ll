@@ -11,6 +11,6 @@ entry:
 !1 = distinct !{!1, !2, !"func: %agg.result"}
 !2 = distinct !{!2, !"func"}
 ; CHECK: Entering function: main
-; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !0)
+; CHECK-NEXT:   tail call void @llvm.experimental.noalias.scope.decl(metadata !{{[0-9]+}})
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

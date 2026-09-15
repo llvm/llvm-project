@@ -41,7 +41,7 @@ jobs:
       # job.  The depot containers are running on VMs, so we can use a
       # container.  This helps ensure the build environment is as close
       # as possible on both the depot runners and the llvm-premerge runners.
-      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04',github.repository_owner) ) || null }}
+      image: ${{ (startsWith(matrix.runs-on, 'depot-ubuntu-24.04-arm') && format('ghcr.io/{0}/arm64v8/ci-ubuntu-24.04:24942433bc8a',github.repository_owner) ) || null }}
       # --privileged is needed to run the lldb tests that disable aslr.
       # The SCCACHE environment variables are need to be copied from the host
       # to the container to make sure it is configured correctly to use the

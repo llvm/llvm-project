@@ -88,11 +88,13 @@
 #include "llvm/CodeGen/BranchRelaxation.h"
 #include "llvm/CodeGen/BreakFalseDeps.h"
 #include "llvm/CodeGen/CFIFixup.h"
+#include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/ComplexDeinterleavingPass.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/DwarfEHPrepare.h"
+#include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
 #include "llvm/CodeGen/EdgeBundles.h"
 #include "llvm/CodeGen/ExpandIRInsts.h"
@@ -101,14 +103,17 @@
 #include "llvm/CodeGen/FEntryInserter.h"
 #include "llvm/CodeGen/FinalizeISel.h"
 #include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "llvm/CodeGen/FuncletLayout.h"
 #include "llvm/CodeGen/GCEmptyBasicBlocks.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/LoadStoreOpt.h"
 #include "llvm/CodeGen/GlobalISel/Localizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
@@ -146,6 +151,7 @@
 #include "llvm/CodeGen/MachineLICM.h"
 #include "llvm/CodeGen/MachineLateInstrsCleanup.h"
 #include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachinePipeliner.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegionInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -209,6 +215,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/Passes/OptimizationLevel.h"
+#include "llvm/Passes/TriggerCrashPasses.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -403,7 +410,6 @@
 #include "llvm/Transforms/Utils/StripGCRelocates.h"
 #include "llvm/Transforms/Utils/StripNonLineTableDebugInfo.h"
 #include "llvm/Transforms/Utils/SymbolRewriter.h"
-#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Utils/UnifyLoopExits.h"
 #include "llvm/Transforms/Vectorize/LoadStoreVectorizer.h"
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
@@ -890,6 +896,11 @@ Expected<bool> parseFunctionPropertiesStatisticsOptions(StringRef Params) {
 /// Parser of parameters for InstCount pass.
 Expected<bool> parseInstCountOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "pre-opt", "InstCountPass");
+}
+
+Expected<bool> parseInferAddressSpacesPassOptions(StringRef Params) {
+  return PassBuilder::parseSinglePassOption(
+      Params, "assume-default-is-flat-addrspace", "InferAddressSpacesPass");
 }
 
 /// Parser of parameters for LoopUnroll pass.

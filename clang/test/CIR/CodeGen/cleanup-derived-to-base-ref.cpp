@@ -1,8 +1,6 @@
-// TODO(cir): drop -fno-clangir-call-conv-lowering once CallConvLowering
-// supports parameters of an empty or tag class.
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -fcxx-exceptions -fexceptions -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fno-clangir-call-conv-lowering -fcxx-exceptions -fexceptions -emit-llvm %s -o %t-cir.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fcxx-exceptions -fexceptions -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 
 struct Base {};
@@ -20,7 +18,7 @@ void bind_base_ref_to_derived_temp() {
 // CIR:   %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Derived>
 // CIR:   %[[R:.*]] = cir.alloca "r" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Base>>
 // CIR:   %[[SPILL:.*]] = cir.alloca "tmp.exprcleanup" {{.*}} : !cir.ptr<!cir.ptr<!rec_Base>>
-// CIR:   cir.call @_Z12make_derivedv()
+// CIR:   cir.call @_Z12make_derivedv(%[[REF_TMP]]) : (!cir.ptr<!rec_Derived> {{.*}}llvm.sret = !rec_Derived{{.*}}) -> ()
 // CIR:   cir.cleanup.scope {
 // CIR:     %[[BASE:.*]] = cir.base_class_addr %[[REF_TMP]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
 // CIR:     cir.store {{.*}} %[[BASE]], %[[SPILL]]

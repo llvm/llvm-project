@@ -199,9 +199,9 @@ void PathDiagnosticConsumer::HandlePathDiagnostic(
   // Profile the node to see if we already have something matching it
   llvm::FoldingSetNodeID profile;
   D->Profile(profile);
-  void *InsertPos = nullptr;
+  llvm::FoldingSetInsertToken InsertToken;
 
-  if (PathDiagnostic *orig = Diags.FindNodeOrInsertPos(profile, InsertPos)) {
+  if (PathDiagnostic *orig = Diags.lookup(profile, InsertToken)) {
     // Keep the PathDiagnostic with the shorter path.
     // Note, the enclosing routine is called in deterministic order, so the
     // results will be consistent between runs (no reason to break ties if the
@@ -212,11 +212,11 @@ void PathDiagnosticConsumer::HandlePathDiagnostic(
       return;
 
     assert(orig != D.get());
-    Diags.RemoveNode(orig);
+    Diags.erase(orig);
     delete orig;
   }
 
-  Diags.InsertNode(D.release());
+  Diags.insert(D.release());
 }
 
 static std::optional<bool> comparePath(const PathPieces &X,
@@ -437,12 +437,12 @@ void PathDiagnosticConsumer::FilesMade::addDiagnostic(const PathDiagnostic &PD,
                                                       StringRef FileName) {
   llvm::FoldingSetNodeID NodeID;
   NodeID.Add(PD);
-  void *InsertPos;
-  PDFileEntry *Entry = Set.FindNodeOrInsertPos(NodeID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  PDFileEntry *Entry = Set.lookup(NodeID, InsertToken);
   if (!Entry) {
     Entry = Alloc.Allocate<PDFileEntry>();
     Entry = new (Entry) PDFileEntry(NodeID);
-    Set.InsertNode(Entry, InsertPos);
+    Set.insert(Entry, InsertToken);
   }
 
   // Allocate persistent storage for the file name.
@@ -458,8 +458,8 @@ PathDiagnosticConsumer::PDFileEntry::ConsumerFiles *
 PathDiagnosticConsumer::FilesMade::getFiles(const PathDiagnostic &PD) {
   llvm::FoldingSetNodeID NodeID;
   NodeID.Add(PD);
-  void *InsertPos;
-  PDFileEntry *Entry = Set.FindNodeOrInsertPos(NodeID, InsertPos);
+  llvm::FoldingSetInsertToken InsertToken;
+  PDFileEntry *Entry = Set.lookup(NodeID, InsertToken);
   if (!Entry)
     return nullptr;
   return &Entry->files;

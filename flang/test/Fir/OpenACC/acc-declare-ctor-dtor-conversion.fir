@@ -43,28 +43,28 @@ module attributes {gpu.container_module} {
   }
   acc.global_ctor @_QMmmEarr_acc_ctor {
     %0 = fir.address_of(@_QMmmEarr) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<7xf32>>
-    %1 = acc.create varPtr(%0 : !fir.ref<!fir.array<7xf32>>) -> !fir.ref<!fir.array<7xf32>> {name = "arr", structured = false}
+    %1 = acc.create varPtr(%0 : !fir.ref<!fir.array<7xf32>>) structured(false) name("arr") -> !fir.ref<!fir.array<7xf32>>
     %2 = acc.declare_enter dataOperands(%1 : !fir.ref<!fir.array<7xf32>>)
     acc.terminator
   }
   acc.global_ctor @_QMmmEotherEarr_acc_ctor {
     %0 = fir.address_of(@_QMmmEotherEarr) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<3xf32>>
-    %1 = acc.create varPtr(%0 : !fir.ref<!fir.array<3xf32>>) -> !fir.ref<!fir.array<3xf32>> {name = "other_arr", structured = false}
+    %1 = acc.create varPtr(%0 : !fir.ref<!fir.array<3xf32>>) structured(false) name("other_arr") -> !fir.ref<!fir.array<3xf32>>
     %2 = acc.declare_enter dataOperands(%1 : !fir.ref<!fir.array<3xf32>>)
     acc.terminator
   }
   acc.global_dtor @_QMmmEarr_acc_dtor {
     %0 = fir.address_of(@_QMmmEarr) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<7xf32>>
-    %1 = acc.getdeviceptr varPtr(%0 : !fir.ref<!fir.array<7xf32>>) -> !fir.ref<!fir.array<7xf32>> {dataClause = #acc<data_clause acc_create>, name = "arr", structured = false}
+    %1 = acc.getdeviceptr varPtr(%0 : !fir.ref<!fir.array<7xf32>>) dataClause(acc_create) structured(false) name("arr") -> !fir.ref<!fir.array<7xf32>>
     acc.declare_exit dataOperands(%1 : !fir.ref<!fir.array<7xf32>>)
-    acc.delete accPtr(%1 : !fir.ref<!fir.array<7xf32>>) {dataClause = #acc<data_clause acc_create>, name = "arr", structured = false}
+    acc.delete accPtr(%1 : !fir.ref<!fir.array<7xf32>>) dataClause(acc_create) structured(false) name("arr")
     acc.terminator
   }
   acc.global_dtor @_QMmmEotherEarr_acc_dtor {
     %0 = fir.address_of(@_QMmmEotherEarr) {acc.declare = #acc.declare<dataClause =  acc_create>} : !fir.ref<!fir.array<3xf32>>
-    %1 = acc.getdeviceptr varPtr(%0 : !fir.ref<!fir.array<3xf32>>) -> !fir.ref<!fir.array<3xf32>> {dataClause = #acc<data_clause acc_create>, name = "other_arr", structured = false}
+    %1 = acc.getdeviceptr varPtr(%0 : !fir.ref<!fir.array<3xf32>>) dataClause(acc_create) structured(false) name("other_arr") -> !fir.ref<!fir.array<3xf32>>
     acc.declare_exit dataOperands(%1 : !fir.ref<!fir.array<3xf32>>)
-    acc.delete accPtr(%1 : !fir.ref<!fir.array<3xf32>>) {dataClause = #acc<data_clause acc_create>, name = "other_arr", structured = false}
+    acc.delete accPtr(%1 : !fir.ref<!fir.array<3xf32>>) dataClause(acc_create) structured(false) name("other_arr")
     acc.terminator
   }
   func.func private @_FortranAProgramEndStatement()

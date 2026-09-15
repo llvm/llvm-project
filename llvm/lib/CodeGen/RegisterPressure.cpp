@@ -232,13 +232,6 @@ void LiveRegSet::clear() {
   Regs.clear();
 }
 
-static const LiveRange *getLiveRange(const LiveIntervals &LIS,
-                                     VirtRegOrUnit VRegOrUnit) {
-  if (VRegOrUnit.isVirtualReg())
-    return &LIS.getInterval(VRegOrUnit.asVirtualReg());
-  return LIS.getCachedRegUnit(VRegOrUnit.asMCRegUnit());
-}
-
 void RegPressureTracker::reset() {
   MBB = nullptr;
   LIS = nullptr;
@@ -479,18 +472,23 @@ class RegisterOperandsCollector {
     for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperand(*OperI);
 
-    // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.Defs)
-      removeRegLanes(RegOpers.DeadDefs, P);
+    // An instruction can have overlapping defs where only some carry the dead
+    // flag, for example a dead super-register def alongside a live sub-register
+    // def. A register unit is dead if any def covering it is dead, so subtract
+    // the dead defs from the live defs.
+    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
+      removeRegLanes(RegOpers.Defs, P);
   }
 
   void collectInstrLanes(const MachineInstr &MI) const {
     for (ConstMIBundleOperands OperI(MI); OperI.isValid(); ++OperI)
       collectOperandLanes(*OperI);
 
-    // Remove redundant physreg dead defs.
-    for (const VRegMaskOrUnit &P : RegOpers.Defs)
-      removeRegLanes(RegOpers.DeadDefs, P);
+    // A register unit is dead if any def covering it is dead; subtract the
+    // dead defs from the live defs so overlapping defs do not leave a unit
+    // counted as live. See collectInstr.
+    for (const VRegMaskOrUnit &P : RegOpers.DeadDefs)
+      removeRegLanes(RegOpers.Defs, P);
   }
 
   /// Push this operand's register onto the correct vectors.
@@ -577,61 +575,83 @@ void RegisterOperands::collect(const MachineInstr &MI,
 }
 
 void RegisterOperands::detectDeadDefs(const MachineInstr &MI,
-                                      const LiveIntervals &LIS) {
-  SlotIndex SlotIdx = LIS.getInstructionIndex(MI);
-  for (auto *RI = Defs.begin(); RI != Defs.end(); /*empty*/) {
-    const LiveRange *LR = getLiveRange(LIS, RI->VRegOrUnit);
-    if (LR != nullptr) {
-      LiveQueryResult LRQ = LR->Query(SlotIdx);
-      if (LRQ.isDeadDef()) {
-        // LiveIntervals knows this is a dead even though it's MachineOperand is
-        // not flagged as such.
-        DeadDefs.push_back(*RI);
-        RI = Defs.erase(RI);
-        continue;
-      }
-    }
-    ++RI;
+                                      const LiveIntervals &LIS,
+                                      const MachineRegisterInfo &MRI) {
+  SlotIndex DeadSlotIdx = LIS.getInstructionIndex(MI).getDeadSlot();
+  for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
+    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/false,
+                                           I->VRegOrUnit, DeadSlotIdx);
+    I = adjustDef(*I, LiveAfter);
   }
 }
 
 void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
                                           const MachineRegisterInfo &MRI,
-                                          SlotIndex Pos,
-                                          MachineInstr *AddFlagsMI) {
-  for (auto *I = Defs.begin(); I != Defs.end();) {
-    LaneBitmask LiveAfter =
-        getLiveLanesAt(LIS, MRI, true, I->VRegOrUnit, Pos.getDeadSlot());
+                                          SlotIndex Pos) {
+  for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
+    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
+                                           I->VRegOrUnit, Pos.getDeadSlot());
+    I = adjustDef(*I, LiveAfter);
+  }
+  adjustUses(LIS, MRI, Pos.getBaseIndex());
+}
+
+void RegisterOperands::adjustLaneLiveness(const LiveIntervals &LIS,
+                                          const MachineRegisterInfo &MRI,
+                                          MachineInstr &MI) {
+  SlotIndex Pos = LIS.getInstructionIndex(MI);
+  for (auto *I = Defs.begin(); I != Defs.end(); /*empty*/) {
+    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
+                                           I->VRegOrUnit, Pos.getDeadSlot());
     // If the def is all that is live after the instruction, then in case
     // of a subregister def we need a read-undef flag.
     VirtRegOrUnit VRegOrUnit = I->VRegOrUnit;
-    if (VRegOrUnit.isVirtualReg() && AddFlagsMI != nullptr &&
-        (LiveAfter & ~I->LaneMask).none())
-      AddFlagsMI->setRegisterDefReadUndef(VRegOrUnit.asVirtualReg());
-
-    LaneBitmask ActualDef = I->LaneMask & LiveAfter;
-    if (ActualDef.none()) {
-      I = Defs.erase(I);
-    } else {
-      I->LaneMask = ActualDef;
-      ++I;
-    }
+    if (VRegOrUnit.isVirtualReg() && (LiveAfter & ~I->LaneMask).none())
+      MI.setRegisterDefReadUndef(VRegOrUnit.asVirtualReg());
+    I = adjustDef(*I, LiveAfter);
   }
 
-  // For uses just copy the information from LIS.
-  for (auto &[VRegOrUnit, LaneMask] : Uses)
-    LaneMask = getLiveLanesAt(LIS, MRI, true, VRegOrUnit, Pos.getBaseIndex());
+  adjustUses(LIS, MRI, Pos);
 
-  if (AddFlagsMI != nullptr) {
-    for (const VRegMaskOrUnit &P : DeadDefs) {
-      VirtRegOrUnit VRegOrUnit = P.VRegOrUnit;
-      if (!VRegOrUnit.isVirtualReg())
-        continue;
-      LaneBitmask LiveAfter =
-          getLiveLanesAt(LIS, MRI, true, VRegOrUnit, Pos.getDeadSlot());
-      if (LiveAfter.none())
-        AddFlagsMI->setRegisterDefReadUndef(VRegOrUnit.asVirtualReg());
-    }
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+  for (const VRegMaskOrUnit &P : DeadDefs) {
+    VirtRegOrUnit VRegOrUnit = P.VRegOrUnit;
+    if (!VRegOrUnit.isVirtualReg())
+      continue;
+    Register VReg = VRegOrUnit.asVirtualReg();
+    LaneBitmask LiveAfter = getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true,
+                                           VRegOrUnit, Pos.getDeadSlot());
+    if (!LiveAfter.none())
+      continue;
+    // The register's read value doesn't matter if none of its lanes are live
+    // after the def.
+    MI.setRegisterDefReadUndef(VReg);
+
+    // The register's last definition should be marked dead.
+    const LiveInterval &LI = LIS.getInterval(VReg);
+    if (LI.segments.back().end == Pos.getDeadSlot())
+      MI.addRegisterDead(VReg, TRI, /*AddIfNotFound=*/false);
+  }
+}
+
+VRegMaskOrUnit *RegisterOperands::adjustDef(VRegMaskOrUnit &Def,
+                                            LaneBitmask LiveAfterDef) {
+  LaneBitmask ActualDef = Def.LaneMask & LiveAfterDef;
+  if (ActualDef.none()) {
+    DeadDefs.push_back(Def);
+    return Defs.erase(&Def);
+  }
+
+  Def.LaneMask = ActualDef;
+  return &Def + 1;
+}
+
+void RegisterOperands::adjustUses(const LiveIntervals &LIS,
+                                  const MachineRegisterInfo &MRI,
+                                  SlotIndex Pos) {
+  for (auto &[VRegOrUnit, LaneMask] : Uses) {
+    LaneMask =
+        getLiveLanesAt(LIS, MRI, /*TrackLaneMasks=*/true, VRegOrUnit, Pos);
   }
 }
 
@@ -875,7 +895,7 @@ void RegPressureTracker::recede(SmallVectorImpl<VRegMaskOrUnit> *LiveUses) {
     SlotIndex SlotIdx = LIS->getInstructionIndex(*CurrPos).getRegSlot();
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
   } else if (RequireIntervals) {
-    RegOpers.detectDeadDefs(MI, *LIS);
+    RegOpers.detectDeadDefs(MI, *LIS, *MRI);
   }
 
   recede(RegOpers, LiveUses);
@@ -1042,7 +1062,7 @@ void RegPressureTracker::bumpUpwardPressure(const MachineInstr *MI) {
   if (TrackLaneMasks)
     RegOpers.adjustLaneLiveness(*LIS, *MRI, SlotIdx);
   else if (RequireIntervals)
-    RegOpers.detectDeadDefs(*MI, *LIS);
+    RegOpers.detectDeadDefs(*MI, *LIS, *MRI);
 
   // Boost max pressure for all dead defs together.
   // Since CurrSetPressure and MaxSetPressure
