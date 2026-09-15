@@ -2458,4 +2458,103 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
 #endif
   });
 }
+
+TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i32 %a, i32 %b, i32 %c) {
+      entry:
+        br label %loop
+
+      loop:
+        %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+        %iv.next = add i32 %iv, 1
+        %cond = icmp ult i32 %iv.next, 10
+        br i1 %cond, label %loop, label %exit
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *B = SE.getSCEV(getArgByName(F, "b"));
+    const SCEV *Cc = SE.getSCEV(getArgByName(F, "c"));
+    const SCEV *IV = SE.getSCEV(getInstructionByName(F, "iv"));
+    ASSERT_TRUE(isa<SCEVAddRecExpr>(IV));
+    Type *I32 = A->getType();
+    const SCEV *Two = SE.getConstant(I32, 2);
+    const SCEV *Three = SE.getConstant(I32, 3);
+
+    // The product is built as-is, use carries the requested flags.
+    SCEVUse Prod = SE.getMulExpr(A, B, {SCEV::FlagAnyWrap, SCEV::FlagNUW});
+    EXPECT_TRUE(Prod.hasUseFlags());
+    EXPECT_EQ(Prod.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+
+    // Same as Prod, but without NUW use flags.
+    const SCEV *BareProd = SE.getMulExpr(A, B);
+    EXPECT_EQ(Prod.getPointer(), BareProd);
+    EXPECT_EQ(cast<SCEVMulExpr>(BareProd)->getNoWrapFlags(SCEV::FlagNUW),
+              SCEV::FlagAnyWrap);
+    EXPECT_EQ(Prod.getCanonical(), BareProd);
+    EXPECT_FALSE(SCEVUse(BareProd).hasUseFlags());
+
+    // Operands get sorted by complexity, so their order does not matter.
+    EXPECT_EQ(SE.getMulExpr(B, A, {SCEV::FlagAnyWrap, SCEV::FlagNUW}), Prod);
+
+    // The same holds for products of more than two operands.
+    SmallVector<SCEVUse, 3> Ops = {Cc, B, A};
+    SCEVUse Prod3 = SE.getMulExpr(Ops, {SCEV::FlagAnyWrap, SCEV::FlagNSW});
+    EXPECT_EQ(Prod3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Prod3.getCanonical(), SE.getMulExpr(A, B, Cc));
+
+    // Flags the expression already carries add nothing to the use.
+    SCEVUse NUWProd = SE.getMulExpr(A, Cc, {SCEV::FlagNUW, SCEV::FlagNUW});
+    ASSERT_TRUE(cast<SCEVMulExpr>(NUWProd.getPointer())->hasNoUnsignedWrap());
+    EXPECT_FALSE(NUWProd.hasUseFlags());
+
+    // A product folded to a single operand, a flattened nested product and a
+    // constant distributed over a sum or into a recurrence all describe a
+    // different computation than the requested product, so none of them may
+    // carry its flags.
+    auto CheckNoUseFlags = [](SCEVUse U) {
+      EXPECT_FALSE(U.hasUseFlags());
+      EXPECT_EQ(U.getUseNoWrapFlags(), SCEV::FlagAnyWrap);
+    };
+    CheckNoUseFlags(
+        SE.getMulExpr(Two, Three, {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    CheckNoUseFlags(
+        SE.getMulExpr(A, SE.getOne(I32), {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    CheckNoUseFlags(
+        SE.getMulExpr(A, SE.getZero(I32), {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    CheckNoUseFlags(SE.getMulExpr(A, SE.getMulExpr(B, Cc),
+                                  {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    CheckNoUseFlags(SE.getMulExpr(Two, SE.getAddExpr(SE.getOne(I32), A),
+                                  {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+    CheckNoUseFlags(SE.getMulExpr(Two, IV, {SCEV::FlagAnyWrap, SCEV::FlagNUW}));
+
+    // SCEV flags are valid for all subsets and orders of the operands, so
+    // use-specific flags can be preserved when folding constants.
+    SmallVector<SCEVUse, 3> FoldedOps = {Two, Three, A};
+    SCEVUse FoldedProd = SE.getMulExpr(
+        FoldedOps, {SCEV::FlagAnyWrap, SCEV::FlagNUW | SCEV::FlagNSW});
+    EXPECT_EQ(FoldedProd.getCanonical(),
+              SE.getMulExpr(SE.getConstant(I32, 6), A));
+    EXPECT_EQ(FoldedProd.getUseNoWrapFlags(),
+              SCEV::FlagNUW | SCEV::FlagNSW | SCEV::FlagNW);
+
+#ifndef NDEBUG
+    EXPECT_DEATH((void)SE.getMulExpr(A, B, {SCEV::FlagAnyWrap, SCEV::FlagNW}),
+                 "only nuw or nsw allowed");
+#endif
+  });
+}
 }  // end namespace llvm
