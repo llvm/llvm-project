@@ -80,6 +80,25 @@ entry:
   ret void
 }
 
+define void @range_0_1_value_profile_double_zero(ptr %dst, i8 %value, i64 %n) !prof !0 {
+; CHECK-LABEL: define void @range_0_1_value_profile_double_zero(
+; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i64 [[N:%.*]]) !prof [[PROF0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LEN:%.*]] = and i64 [[N]], 1
+; CHECK-NEXT:    [[MEMSET_NOTZERO:%.*]] = icmp ne i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[MEMSET_NOTZERO]], label %[[BB0:.*]], label %[[BB1:.*]], !prof [[PROF1]]
+; CHECK:       [[BB0]]:
+; CHECK-NEXT:    store i8 [[VALUE]], ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[BB1]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %len = and i64 %n, 1
+  call void @llvm.memset.p0.i64(ptr align 1 %dst, i8 %value, i64 %len, i1 false), !prof !4
+  ret void
+}
+
 define void @range_0_1_zext(ptr %dst, i8 %value, i32 %n) {
 ; CHECK-LABEL: define void @range_0_1_zext(
 ; CHECK-SAME: ptr [[DST:%.*]], i8 [[VALUE:%.*]], i32 [[N:%.*]]) {
@@ -171,6 +190,7 @@ entry:
 !1 = !{!"VP", i32 1, i64 5, i64 0, i64 2, i64 1, i64 3}
 !2 = !{!"VP", i32 1, i64 5, i64 1, i64 5}
 !3 = !{!"VP", i32 1, i64 5, i64 2, i64 4, i64 3, i64 1}
+!4 = !{!"VP", i32 1, i64 5, i64 0, i64 0, i64 1, i64 0}
 
 ;.
 ; CHECK: [[PROF0]] = !{!"function_entry_count", i32 10}

@@ -71,6 +71,10 @@ static cl::opt<unsigned>
                           cl::desc("The maximum length of a constant string to "
                                    "inline a memchr call."));
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 /// Try to fold a select-based split cttz pattern into a single full-width cttz.
 ///
 ///   %lo = trunc iN %val to i(N/2)
@@ -2505,7 +2509,8 @@ static bool foldMemSetZeroOrOneLength(Instruction &I, const DataLayout &DL,
       /*BranchWeights=*/nullptr, &DTU);
 
   Instruction &IsNonZeroBranch = *HeadBlock->getTerminator();
-  if (OneCount.has_value() && ZeroCount.has_value())
+  if (!ProfcheckDisableMetadataFixes && OneCount.has_value() &&
+      ZeroCount.has_value() && (*OneCount + *ZeroCount > 0))
     setFittedBranchWeights(IsNonZeroBranch, {*OneCount, *ZeroCount}, false);
   else
     setExplicitlyUnknownBranchWeightsIfProfiled(IsNonZeroBranch, DEBUG_TYPE);
