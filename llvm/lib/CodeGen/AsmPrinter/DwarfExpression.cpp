@@ -862,6 +862,50 @@ void DwarfExpression::emitLegacyZExt(unsigned FromBits) {
   emitOp(dwarf::DW_OP_and);
 }
 
+bool DwarfExpression::addGlobalAddress(const GlobalValue *GV, int64_t Offset) {
+  DwarfDebug &DD = CU.getDwarfDebug();
+
+  // This is an implicit location, and finalize() spells that with
+  // DW_OP_stack_value, which DWARF 4 introduced. Before it, the expression
+  // would read as the address the variable lives at rather than as its value,
+  // and there is no older spelling to fall back on.
+  if (DwarfVersion < 4)
+    return false;
+
+  // Prefer the address pool, whose index is plain data and so can be emitted
+  // into either output form. Before DWARF 5 the pool is only available under
+  // split DWARF, leaving a relocated DW_OP_addr as the only spelling -- which
+  // only a DIE can carry.
+  bool UsePool = DwarfVersion >= 5 || DD.useSplitDwarf();
+  if (!UsePool && !supportsRelocatedAddress())
+    return false;
+
+  assert(isImplicitLocation() || isUnknownLocation());
+  LocationKind = Implicit;
+
+  const MCSymbol *Sym = CU.getAsmPrinter()->getSymbol(GV);
+  if (UsePool) {
+    emitOp(DwarfVersion >= 5 ? dwarf::DW_OP_addrx
+                             : dwarf::DW_OP_GNU_addr_index);
+    emitUnsigned(DD.getAddressPool().getIndex(Sym));
+  } else {
+    emitOp(dwarf::DW_OP_addr);
+    emitRelocatedAddress(Sym);
+  }
+
+  // The displacement cannot be folded into the address itself: a pool entry is
+  // keyed on the symbol alone, and a DW_FORM_addr label carries no addend. Let
+  // the expression apply it instead.
+  if (Offset > 0) {
+    emitOp(dwarf::DW_OP_plus_uconst);
+    emitUnsigned(Offset);
+  } else if (Offset < 0) {
+    addSignedConstant(Offset);
+    emitOp(dwarf::DW_OP_plus);
+  }
+  return true;
+}
+
 void DwarfExpression::addWasmLocation(unsigned Index, uint64_t Offset) {
   emitOp(dwarf::DW_OP_WASM_location);
   emitUnsigned(Index == 4/*TI_LOCAL_INDIRECT*/ ? 0/*TI_LOCAL*/ : Index);

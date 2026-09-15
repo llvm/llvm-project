@@ -921,6 +921,19 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       addConstantFPValue(VariableDie, Entry->getConstantFP());
     } else if (Entry->isConstantInt()) {
       addConstantValue(VariableDie, Entry->getConstantInt(), DV.getType());
+    } else if (Entry->isGlobalAddress()) {
+      auto *Expr = Single.getExpr();
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
+      DwarfExpr.addFragmentOffset(Expr);
+      if (!DwarfExpr.addGlobalAddress(Entry->getGlobalAddress(),
+                                      Entry->getGlobalOffset()))
+        return;
+      DwarfExpr.addExpression(Expr);
+      addBlock(VariableDie, dwarf::DW_AT_location, DwarfExpr.finalize());
+      if (DwarfExpr.TagOffset)
+        addUInt(VariableDie, dwarf::DW_AT_LLVM_tag_offset, dwarf::DW_FORM_data1,
+                *DwarfExpr.TagOffset);
     } else if (Entry->isTargetIndexLocation()) {
       DIELoc *Loc = new (DIEValueAllocator) DIELoc;
       DIEDwarfExpression DwarfExpr(*Asm, *this, *Loc);
@@ -974,6 +987,10 @@ void DwarfCompileUnit::applyConcreteDbgVariableAttributes(
       // only the WebAssembly-specific encoding is supported.
       assert(Asm->TM.getTargetTriple().isWasm());
       DwarfExpr.addWasmLocation(Loc.Index, static_cast<uint64_t>(Loc.Offset));
+    } else if (Entry.isGlobalAddress()) {
+      if (!DwarfExpr.addGlobalAddress(Entry.getGlobalAddress(),
+                                      Entry.getGlobalOffset()))
+        return false;
     } else {
       llvm_unreachable("Unsupported Entry type.");
     }
