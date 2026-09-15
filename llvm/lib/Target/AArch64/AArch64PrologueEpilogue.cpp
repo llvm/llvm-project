@@ -702,7 +702,8 @@ void AArch64PrologueEmitter::emitPrologue() {
   // function, including the funclet.
   int64_t NumBytes =
       IsFunclet ? AFL.getWinEHFuncletFrameSize(MF) : MFI.getStackSize();
-  if (!AFI->hasStackFrame() && !AFL.windowsRequiresStackProbe(MF, NumBytes))
+  if (!AFI->hasStackFrame() && !AFL.windowsRequiresStackProbe(MF, NumBytes) &&
+      !AFL.darwinRequiresStackProbe(MF, NumBytes))
     return emitEmptyStackFramePrologue(NumBytes, PrologueBeginI, DL);
 
   bool IsWin64 = Subtarget.isCallingConvWin64(F.getCallingConv(), F.isVarArg());
@@ -791,6 +792,8 @@ void AArch64PrologueEmitter::emitPrologue() {
 
   if (AFL.windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding))
     emitWindowsStackProbe(AfterGPRSavesI, DL, NumBytes, RealignmentPadding);
+  else if (AFL.darwinRequiresStackProbe(MF, NumBytes + RealignmentPadding))
+    emitDarwinStackProbe(AfterGPRSavesI, DL, NumBytes + RealignmentPadding);
 
   StackOffset NonSVELocalsSize = StackOffset::getFixed(NumBytes);
   SVEAllocs.AfterZPRs += NonSVELocalsSize;
@@ -1790,6 +1793,40 @@ void AArch64EpilogueEmitter::finalizeEpilogue() const {
     if (!HasWinCFI)
       MBB.erase(SEHEpilogueStartI);
   }
+}
+
+void AArch64PrologueEmitter::emitDarwinStackProbe(
+    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
+    uint64_t NumBytes) const {
+  constexpr StringLiteral ChkStk = "__chkstk_darwin";
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::STRXpre))
+      .addReg(AArch64::SP, RegState::Define)
+      .addReg(AArch64::LR)
+      .addReg(AArch64::SP)
+      .addImm(-16)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVi64imm), AArch64::X9)
+      .addImm(NumBytes)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::LOADgot), AArch64::X16)
+      .addExternalSymbol(ChkStk.data(), AArch64II::MO_GOT)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  BuildMI(MBB, MBBI, DL, TII->get(getBLRCallOpcode(MF)))
+      .addReg(AArch64::X16, RegState::Kill)
+      .addReg(AArch64::X9, RegState::Implicit)
+      .addRegMask(RegInfo.getDarwinStackProbePreservedMask())
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXpost))
+      .addReg(AArch64::SP, RegState::Define)
+      .addReg(AArch64::LR, RegState::Define)
+      .addReg(AArch64::SP)
+      .addImm(16)
+      .setMIFlag(MachineInstr::FrameSetup);
 }
 
 } // namespace llvm
