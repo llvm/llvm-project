@@ -1,19 +1,19 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
 ; At -O0 the DAG combiner never rewrites the inverted condition into a setcc, so
 ; these runs cover the bare-xor form of the query reaching branch lowering.
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 < %s | FileCheck %s --check-prefix=GCN
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
-; RUN: opt -passes=lower-expect -S %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 | FileCheck %s --check-prefix=EXPECT
-; RUN: opt -passes=lower-expect -S %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=EXPECT
-; RUN: opt -passes=lower-expect -S %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -stop-after=finalize-isel | FileCheck %s --check-prefix=MIR
-; RUN: opt -passes=lower-expect -S %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 -stop-after=finalize-isel | FileCheck %s --check-prefix=MIR
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefix=LOC
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=LOC
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1310 -O0 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: opt -passes=lower-expect -S %s | llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 | FileCheck %s --check-prefix=EXPECT
+; RUN: opt -passes=lower-expect -S %s | llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 | FileCheck %s --check-prefix=EXPECT
+; RUN: opt -passes=lower-expect -S %s | llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -stop-after=finalize-isel | FileCheck %s --check-prefix=MIR
+; RUN: opt -passes=lower-expect -S %s | llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 -stop-after=finalize-isel | FileCheck %s --check-prefix=MIR
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 < %s | FileCheck %s --check-prefix=LOC
+; RUN: llc -verify-machineinstrs -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1150 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=LOC
 
 declare noundef i1 @llvm.is.debugging.enabled()
 declare i1 @llvm.expect.i1(i1, i1 immarg)

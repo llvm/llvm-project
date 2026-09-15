@@ -813,6 +813,9 @@ def readcyclecounter : SDNode<"ISD::READCYCLECOUNTER", SDTIntLeaf,
 def readsteadycounter : SDNode<"ISD::READSTEADYCOUNTER", SDTIntLeaf,
                      [SDNPHasChain, SDNPSideEffect]>;
 
+def is_debugging_enabled : SDNode<"ISD::IS_DEBUGGING_ENABLED", SDTIntLeaf,
+                                 [SDNPHasChain, SDNPSideEffect]>;
+
 def membarrier : SDNode<"ISD::MEMBARRIER", SDTNone,
                         [SDNPHasChain, SDNPSideEffect]>;
 

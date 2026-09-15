@@ -190,7 +190,10 @@ void DAGTypeLegalizer::PromoteIntegerResult(SDNode *N, unsigned ResNo) {
   case ISD::STRICT_FP_TO_FP16:
     Res = PromoteIntRes_STRICT_FP_TO_FP16_BF16(N);
     break;
-  case ISD::GET_ROUNDING: Res = PromoteIntRes_GET_ROUNDING(N); break;
+  case ISD::GET_ROUNDING:
+  case ISD::IS_DEBUGGING_ENABLED:
+    Res = PromoteIntRes_GET_ROUNDING(N);
+    break;
 
   case ISD::AND:
   case ISD::OR:

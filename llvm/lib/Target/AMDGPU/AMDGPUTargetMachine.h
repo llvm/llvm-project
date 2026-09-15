@@ -99,8 +99,6 @@ public:
 
   bool useIPRA() const override { return true; }
 
-  bool canLowerIsDebuggingEnabled() const override { return true; }
-
   Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
                              raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,

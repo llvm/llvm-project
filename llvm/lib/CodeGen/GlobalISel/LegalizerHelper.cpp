@@ -4651,6 +4651,10 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFConstant(MI);
   case TargetOpcode::G_BITCAST:
     return lowerBitcast(MI);
+  case TargetOpcode::G_IS_DEBUGGING_ENABLED:
+    MIRBuilder.buildConstant(MI.getOperand(0), 0);
+    MI.eraseFromParent();
+    return Legalized;
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_UREM: {
     LLT Ty = MRI.getType(MI.getOperand(0).getReg());

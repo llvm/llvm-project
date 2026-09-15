@@ -525,6 +525,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::READSTEADYCOUNTER, MVT::i64, Legal);
   setOperationAction({ISD::TRAP, ISD::DEBUGTRAP}, MVT::Other, Custom);
 
+  if (Subtarget->hasDebuggingEnabledQuery())
+    setOperationAction(ISD::IS_DEBUGGING_ENABLED, MVT::i1, Custom);
+
   if (Subtarget->has16BitInsts()) {
     setOperationAction({ISD::FPOW, ISD::FPOWI}, MVT::f16, Promote);
     setOperationAction({ISD::FLOG, ISD::FEXP, ISD::FLOG10}, MVT::f16, Custom);
@@ -7692,6 +7695,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerCONVERT_TO_ARBITRARY_FP(Op, DAG);
   case ISD::INTRINSIC_W_CHAIN:
     return LowerINTRINSIC_W_CHAIN(Op, DAG);
+  case ISD::IS_DEBUGGING_ENABLED:
+    return LowerIS_DEBUGGING_ENABLED(Op, DAG);
   case ISD::INTRINSIC_VOID:
     return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ADDRSPACECAST:
@@ -8713,6 +8718,23 @@ bool SITargetLowering::shouldUseLDSConstAddress(const GlobalValue *GV) const {
   return OS == Triple::AMDHSA || OS == Triple::AMDPAL;
 }
 
+SDValue SITargetLowering::LowerIS_DEBUGGING_ENABLED(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue GetReg = DAG.getNode(
+      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(MVT::i32, MVT::Other),
+      Op.getOperand(0),
+      DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, DL, MVT::i32),
+      DAG.getTargetConstant(
+          AMDGPU::Hwreg::getDebuggingEnabledHwregImm(*Subtarget), DL,
+          MVT::i32));
+  DAG.addNoMergeSiteInfo(GetReg.getNode(), true);
+
+  SDValue Enabled = DAG.getSetCC(DL, Op.getValueType(), GetReg,
+                                 DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
+  return DAG.getMergeValues({Enabled, GetReg.getValue(1)}, DL);
+}
+
 /// Fuses a debugging-state query from \p Match into a single
 /// S_CBRANCH_CDBGSYS_OR_USER, which branches when debugging is enabled.
 /// Returns a null SDValue if the condition does not test such a query, or if
@@ -8724,8 +8746,7 @@ static SDValue lowerDebuggingEnabledBRCOND(const BRCONDMatch &Match,
     return SDValue();
 
   SDValue Cond = Match.Condition;
-  if (Cond.getOpcode() != ISD::INTRINSIC_W_CHAIN ||
-      Cond.getConstantOperandVal(1) != Intrinsic::is_debugging_enabled)
+  if (Cond.getOpcode() != ISD::IS_DEBUGGING_ENABLED)
     return SDValue();
 
   if (!Match.CondBr.getOperand(0).reachesChainWithoutSideEffects(
@@ -8753,8 +8774,10 @@ SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND, SelectionDAG &DAG) const {
   if (!Match)
     return BRCOND;
 
-  if (SDValue V = lowerDebuggingEnabledBRCOND(*Match, DAG))
-    return V;
+  if (Subtarget->hasDebuggingEnabledQuery()) {
+    if (SDValue V = lowerDebuggingEnabledBRCOND(*Match, DAG))
+      return V;
+  }
 
   SDLoc DL(Match->CondBr);
   SDNode *Intr = Match->Condition.getNode();
@@ -12490,21 +12513,6 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     EVT VT = Op->getValueType(0);
     return DAG.getAtomicLoad(ISD::NON_EXTLOAD, DL, MII->getMemoryVT(), VT,
                              Chain, Ptr, MII->getMemOperand());
-  }
-  case Intrinsic::is_debugging_enabled: {
-    SDValue GetReg = DAG.getNode(
-        ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(MVT::i32, MVT::Other),
-        Op.getOperand(0),
-        DAG.getTargetConstant(Intrinsic::amdgcn_s_getreg, DL, MVT::i32),
-        DAG.getTargetConstant(
-            AMDGPU::Hwreg::getDebuggingEnabledHwregImm(*Subtarget), DL,
-            MVT::i32));
-    DAG.addNoMergeSiteInfo(GetReg.getNode(), true);
-
-    SDValue Enabled =
-        DAG.getSetCC(DL, Op.getValueType(), GetReg,
-                     DAG.getConstant(0, DL, MVT::i32), ISD::SETNE);
-    return DAG.getMergeValues({Enabled, GetReg.getValue(1)}, DL);
   }
   case Intrinsic::amdgcn_av_load_b128: {
     MemIntrinsicSDNode *MII = cast<MemIntrinsicSDNode>(Op);

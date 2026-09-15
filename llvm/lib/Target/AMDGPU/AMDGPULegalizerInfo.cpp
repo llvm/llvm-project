@@ -2239,6 +2239,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder(G_READSTEADYCOUNTER).legalFor({S64});
 
+  if (ST.hasDebuggingEnabledQuery())
+    getActionDefinitionsBuilder(G_IS_DEBUGGING_ENABLED).customFor({S1});
+  else
+    getActionDefinitionsBuilder(G_IS_DEBUGGING_ENABLED).lower();
+
   getActionDefinitionsBuilder(G_FENCE)
     .alwaysLegal();
 
@@ -2415,6 +2420,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(
     return legalizeTrap(MI, MRI, B);
   case TargetOpcode::G_DEBUGTRAP:
     return legalizeDebugTrap(MI, MRI, B);
+  case TargetOpcode::G_IS_DEBUGGING_ENABLED:
+    return legalizeIsDebuggingEnabled(MI, MRI, B);
   default:
     return false;
   }
@@ -8207,6 +8214,45 @@ bool AMDGPULegalizerInfo::legalizeSetFPEnv(MachineInstr &MI,
   return true;
 }
 
+bool AMDGPULegalizerInfo::legalizeIsDebuggingEnabled(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
+  auto Match = matchCFIntrinsicBranchUse(MI, MRI);
+  bool CannotFuse =
+      !Match || any_of(make_range(std::next(MI.getIterator()),
+                                  Match->CondBr->getIterator()),
+                       [](const MachineInstr &Between) {
+                         return !Between.isMetaInstruction() &&
+                                (Between.mayLoadOrStore() ||
+                                 Between.hasUnmodeledSideEffects());
+                       });
+  if (CannotFuse) {
+    auto Bits = B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
+                    .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
+    Bits->setFlag(MachineInstr::NoMerge);
+    B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
+                B.buildConstant(LLT::scalar(32), 0));
+    MI.eraseFromParent();
+    return true;
+  }
+
+  B.setInsertPt(*Match->CondBr->getParent(), Match->CondBr->getIterator());
+  B.setDebugLoc(Match->CondBr->getDebugLoc());
+  MachineInstrBuilder CDBGBranch =
+      B.buildInstr(AMDGPU::S_CBRANCH_CDBGSYS_OR_USER)
+          .addMBB(Match->ConditionTrueTarget);
+  CDBGBranch->setFlag(MachineInstr::NoMerge);
+
+  if (Match->isNegated())
+    Match->redirectFallthroughEdge(B, *Match->ConditionFalseTarget);
+
+  Register Cond = MI.getOperand(0).getReg();
+  MRI.markUsesInDebugValueAsUndef(Cond);
+  Match->eraseDeadNegation(MRI);
+  MI.eraseFromParent();
+  Match->CondBr->eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                             MachineInstr &MI) const {
   MachineIRBuilder &B = Helper.MIRBuilder;
@@ -8215,44 +8261,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   // Replace the use G_BRCOND with the exec manipulate and branch pseudos.
   auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   switch (IntrID) {
-  case Intrinsic::is_debugging_enabled: {
-    auto Match = matchCFIntrinsicBranchUse(MI, MRI);
-    bool CannotFuse =
-        !Match || any_of(make_range(std::next(MI.getIterator()),
-                                    Match->CondBr->getIterator()),
-                         [](const MachineInstr &Between) {
-                           return !Between.isMetaInstruction() &&
-                                  (Between.mayLoadOrStore() ||
-                                   Between.hasUnmodeledSideEffects());
-                         });
-    if (CannotFuse) {
-      auto Bits =
-          B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {LLT::scalar(32)})
-              .addImm(AMDGPU::Hwreg::getDebuggingEnabledHwregImm(ST));
-      Bits->setFlag(MachineInstr::NoMerge);
-      B.buildICmp(CmpInst::ICMP_NE, MI.getOperand(0).getReg(), Bits.getReg(0),
-                  B.buildConstant(LLT::scalar(32), 0));
-      MI.eraseFromParent();
-      return true;
-    }
-
-    B.setInsertPt(*Match->CondBr->getParent(), Match->CondBr->getIterator());
-    B.setDebugLoc(Match->CondBr->getDebugLoc());
-    MachineInstrBuilder CDBGBranch =
-        B.buildInstr(AMDGPU::S_CBRANCH_CDBGSYS_OR_USER)
-            .addMBB(Match->ConditionTrueTarget);
-    CDBGBranch->setFlag(MachineInstr::NoMerge);
-
-    if (Match->isNegated())
-      Match->redirectFallthroughEdge(B, *Match->ConditionFalseTarget);
-
-    Register Cond = MI.getOperand(0).getReg();
-    MRI.markUsesInDebugValueAsUndef(Cond);
-    Match->eraseDeadNegation(MRI);
-    MI.eraseFromParent();
-    Match->CondBr->eraseFromParent();
-    return true;
-  }
   case Intrinsic::amdgcn_icmp: {
     // amdgcn.icmp(i1 src0, i1 0, NE) -> ballot(src0)
     // This is the only valid form of amdgcn.icmp with i1 inputs.

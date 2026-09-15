@@ -1713,8 +1713,14 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
   :ref:`llvm.set.fpenv<int_set_fpenv>`             Sets the floating point environment to the specified state.
 
   |is-debugging-enabled|
-                                                   Supported on GFX11.5, GFX12, and GFX13 targets. Other
-                                                   subtargets lower the result to ``false``.
+                                                   Supported when the ``debugging-enabled-query``
+                                                   feature is enabled, by default on GFX11.5, GFX12,
+                                                   and GFX13 targets. This feature controls both CDBG
+                                                   branch fusion and register-based value materialization.
+                                                   Other subtargets, including supported targets with
+                                                   this feature disabled, lower the result to ``false``
+                                                   without reading debugging state. The feature does not
+                                                   control CDBG instruction availability in the assembler.
 
                                                    The target-defined execution context is the current wave.
                                                    The result is uniform across the active lanes of that

@@ -7445,6 +7445,14 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     DAG.setRoot(Res.getValue(1));
     return;
   }
+  case Intrinsic::is_debugging_enabled: {
+    Res = DAG.getNode(ISD::IS_DEBUGGING_ENABLED, sdl,
+                      DAG.getVTList(MVT::i1, MVT::Other), getRoot());
+    DAG.addNoMergeSiteInfo(Res.getNode(), true);
+    setValue(&I, Res);
+    DAG.setRoot(Res.getValue(1));
+    return;
+  }
   case Intrinsic::readsteadycounter: {
     SDValue Op = getRoot();
     Res = DAG.getNode(ISD::READSTEADYCOUNTER, sdl,
