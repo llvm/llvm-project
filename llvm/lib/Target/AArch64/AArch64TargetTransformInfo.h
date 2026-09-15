@@ -348,8 +348,7 @@ public:
 
   bool isLegalMaskedCompressStore(Type *DataType,
                                   Align Alignment) const override {
-    if (!(ST->isSVEAvailable() ||
-          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2())))
+    if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
     if (isa<FixedVectorType>(DataType) &&
