@@ -372,6 +372,13 @@ bool DataSharingProcessor::needBarrier() {
   // initialization of firstprivate variables and post-update of lastprivate
   // variables.
   // Emit implicit barrier for linear clause in the OpenMPIRBuilder.
+  // Skip for taskloop: the write-back only happens after the reads are done.
+
+  const auto *ompEval = eval.getIf<parser::OpenMPConstruct>();
+  if (ompEval && llvm::omp::allTaskloopSet.test(
+                     parser::omp::GetOmpDirectiveName(*ompEval).v))
+    return false;
+
   for (const semantics::Symbol *sym : allPrivatizedSymbols) {
     if (sym->test(semantics::Symbol::Flag::OmpLastPrivate) &&
         (sym->test(semantics::Symbol::Flag::OmpFirstPrivate) ||
