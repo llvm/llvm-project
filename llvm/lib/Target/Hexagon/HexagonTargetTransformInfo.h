@@ -187,6 +187,9 @@ public:
 
   // Hexagon specific decision to generate a lookup table.
   bool shouldBuildLookupTables() const override;
+
+  bool areInlineCompatible(const Function *Caller,
+                           const Function *Callee) const override;
 };
 
 } // end namespace llvm
