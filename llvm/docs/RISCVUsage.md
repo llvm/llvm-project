@@ -83,7 +83,14 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
+- `rva23p1s64`
+- `rvb23p1s64`
 - `rvm23u32`
+
+The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
+as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
+must be requested explicitly, for example
+`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
 
 (riscv-extensions)=
 
