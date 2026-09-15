@@ -1,10 +1,10 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1 -pedantic
 subroutine foo(A, B, P)
   interface
-    real elemental function foo_elemental(x)
+    simple elemental real function foo_elemental(x)
       real, intent(in) :: x
     end function
-    pure real function foo_pure(x)
+    simple real function foo_simple(x)
       real, intent(in) :: x
     end function
     real function foo_nonelemental(x)
@@ -18,7 +18,7 @@ subroutine foo(A, B, P)
   A = P(B)
   !ERROR: Procedure pointer 'p' associated with incompatible procedure designator 'foo_elemental': incompatible procedure attributes: Elemental
   P => foo_elemental
-  P => foo_pure ! ok
+  P => foo_simple ! ok
   !ERROR: PURE procedure pointer 'p' may not be associated with non-PURE procedure designator 'foo_nonelemental'
   P => foo_nonelemental
 end subroutine
