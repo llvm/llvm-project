@@ -5559,8 +5559,8 @@ Error OpenMPIRBuilder::emitScanBasedDirectiveDeclsIR(
         Builder.CreateAdd(ScanRedInfo->Span, Builder.getInt32(1));
     for (size_t i = 0; i < ScanVars.size(); i++) {
       Type *IntPtrTy = Builder.getInt32Ty();
-      Constant *Allocsize = ConstantExpr::getSizeOf(ScanVarsType[i]);
-      Allocsize = ConstantExpr::getTruncOrBitCast(Allocsize, IntPtrTy);
+      Value *Allocsize = Builder.CreateTypeSize(
+          IntPtrTy, M.getDataLayout().getTypeAllocSize(ScanVarsType[i]));
       Value *Buff =
           Builder.CreateMalloc(IntPtrTy, Allocsize, AllocSpan, nullptr, "arr");
       Builder.CreateStore(Buff, (*(ScanRedInfo->ScanBuffPtrs))[ScanVars[i]]);
@@ -11517,10 +11517,10 @@ Expected<std::pair<Value *, Value *>> OpenMPIRBuilder::emitAtomicUpdate(
   if (emitRMWOp) {
     AtomicRMWInst *RMWInst =
         Builder.CreateAtomicRMW(RMWOp, X, Expr, llvm::MaybeAlign(), AO);
+    if (IsIgnoreDenormalMode)
+      RMWInst->setMetadata(llvm::LLVMContext::MD_atomic_ignore_denormal_mode,
+                           llvm::MDNode::get(Builder.getContext(), {}));
     if (T.isAMDGPU()) {
-      if (IsIgnoreDenormalMode)
-        RMWInst->setMetadata("amdgpu.ignore.denormal.mode",
-                             llvm::MDNode::get(Builder.getContext(), {}));
       if (!IsFineGrainedMemory)
         RMWInst->setMetadata("amdgpu.no.fine.grained.memory",
                              llvm::MDNode::get(Builder.getContext(), {}));

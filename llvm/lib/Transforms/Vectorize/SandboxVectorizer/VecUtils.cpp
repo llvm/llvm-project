@@ -159,6 +159,15 @@ template <typename T> static void dumpImpl(ArrayRef<T *> Bndl) {
 }
 void VecUtils::dump(ArrayRef<Value *> Bndl) { dumpImpl(Bndl); }
 void VecUtils::dump(ArrayRef<Instruction *> Bndl) { dumpImpl(Bndl); }
+
+template <typename T> void BndlRef<T>::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+// Explicit instantiation for commonly used types.
+template class BndlRef<Instruction *>;
+template class BndlRef<Value *>;
+
 #endif // NDEBUG
 
 } // namespace llvm::sandboxir
