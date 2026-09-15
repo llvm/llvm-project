@@ -3788,8 +3788,9 @@ add_header_library(
   HDRS
     frexpf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -3973,9 +3974,9 @@ add_header_library(
   HDRS
     ilogbf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(
@@ -4052,9 +4053,9 @@ add_header_library(
   HDRS
     llogbf128.h
   DEPENDS
-    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
-    libc.include.llvm-libc-types.float128
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -5181,6 +5182,7 @@ add_header_library(
   HDRS
     logbf128.h
   DEPENDS
+    libc.src.__support.FPUtil.float128
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.properties.types
 )
