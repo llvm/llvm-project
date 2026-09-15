@@ -30234,4 +30234,11 @@
 {"__alloc_token_123__ZnwmRKSt9nothrow_t", "operator new(unsigned long, std::nothrow_t const&) (.alloc_token)"},
 {"__alloc_token__Znwm.llvm.1234", "operator new(unsigned long) (.llvm.1234) (.alloc_token)"},
 {"__alloc_token_123__Z3foov", "foo() (.alloc_token)"},
+
+{"_ZZ1fvENK3barclIiEEvT_", "void f()::bar::operator()<int>(int) const"},
+{"_ZZ1fvEN3$_0clIiEEvT_", "void f()::$_0::operator()<int>(int)"},
+{"_ZZ1fvENK3$_01gIiEEvT_", "void f()::$_0::g<int>(int) const"},
+{"_ZZ1fvENK3$_0clIiEEDaT_", "auto f()::$_0::operator()<int>(int) const"},
+{"_ZZL17isSafeToIgnoreCWDRKN5clang21CowCompilerInvocationEENK3$_0clINSt3__112basic_stringIcNS5_11char_traitsIcEENS5_9allocatorIcEEEEEEDaRKT_", "auto isSafeToIgnoreCWD(clang::CowCompilerInvocation const&)::$_0::operator()<std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>>(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>> const&) const"},
+{"_Z3fooIZN3BarC1EvE3$_0EvT_", "void foo<Bar::Bar()::$_0>(Bar::Bar()::$_0)"},
     // clang-format on
