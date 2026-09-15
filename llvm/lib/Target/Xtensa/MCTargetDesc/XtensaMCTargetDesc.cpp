@@ -283,7 +283,8 @@ static MCTargetStreamer *createXtensaNullTargetStreamer(MCStreamer &S) {
   return new XtensaTargetStreamer(S);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaTargetMC() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeXtensaTargetMC() {
   // Register the MCAsmInfo.
   TargetRegistry::RegisterMCAsmInfo(getTheXtensaTarget(),
                                     createXtensaMCAsmInfo);

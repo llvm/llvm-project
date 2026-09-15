@@ -54,7 +54,8 @@ static MCDisassembler *createXtensaDisassembler(const Target &T,
   return new XtensaDisassembler(STI, Ctx, true);
 }
 
-extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeXtensaDisassembler() {
+extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
+LLVMInitializeXtensaDisassembler() {
   TargetRegistry::RegisterMCDisassembler(getTheXtensaTarget(),
                                          createXtensaDisassembler);
 }
