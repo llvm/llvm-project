@@ -3962,22 +3962,6 @@ static bool CheckAtomicDefineAndRef(FoldingContext &context,
 // Applies any semantic checks peculiar to an intrinsic.
 // TODO: Move the rest of these checks to Semantics/check-call.cpp.
 static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
-  // Actual arguments may have been retained in named-constant designator
-  // form for the benefit of nonintrinsic calls (storage association); the
-  // checks below inspect constant values structurally, so fold such
-  // arguments back to their values first.
-  for (auto &arg : call.arguments) {
-    if (arg && !arg->isAlternateReturn()) {
-      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
-        if (auto dataRef{ExtractDataRef(
-                *expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)};
-            dataRef &&
-            IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate())) {
-          *expr = Fold(context, std::move(*expr));
-        }
-      }
-    }
-  }
   bool ok{true};
   const std::string &name{call.specificIntrinsic.name};
   if (name == "allocated") {
@@ -4495,6 +4479,22 @@ std::string IntrinsicProcTable::GetGenericIntrinsicName(
 std::optional<SpecificCall> IntrinsicProcTable::Probe(
     const CallCharacteristics &call, ActualArguments &arguments,
     FoldingContext &context) const {
+  // Actual arguments may retain designators of named constants for the
+  // benefit of storage association in nonintrinsic calls (see
+  // ArgumentAnalyzer::AnalyzeExprOrWholeAssumedSizeArray).  Intrinsic
+  // matching, argument checking, and the special handlers inspect constant
+  // values structurally, so probe with a folded copy of such arguments.
+  // On success the SpecificCall carries the folded arguments; on failure
+  // the caller's original arguments are left untouched for subsequent
+  // nonintrinsic resolution.  (Note a pre-existing quirk, unchanged here:
+  // Match() moves arguments while rearranging them and can still fail late,
+  // so a failed match can leave a probe's working vector partially moved
+  // from; using a copy confines that to the copy.)
+  if (AnyNamedConstantActualArguments(arguments)) {
+    ActualArguments folded{arguments};
+    FoldNamedConstantActualArguments(context, folded);
+    return DEREF(impl_.get()).Probe(call, folded, context);
+  }
   return DEREF(impl_.get()).Probe(call, arguments, context);
 }
 
