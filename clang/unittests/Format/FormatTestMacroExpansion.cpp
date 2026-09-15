@@ -301,11 +301,7 @@ TEST_F(FormatTestMacroExpansion, IndentChildrenWithinMacroCall) {
 
 TEST_F(FormatTestMacroExpansion, PPDirectiveInDiscardedMacroArgs) {
   FormatStyle Style = getLLVMStyle();
-  Style.Macros.push_back("A=a");
-  Style.Macros.push_back("ID(x)=x");
-  Style.Macros.push_back("PAIR(x, y)=x y");
-  Style.Macros.push_back("STMT=f();");
-  Style.Macros.push_back("EMPTY=");
+  Style.Macros = {"A=a", "ID(x)=x", "PAIR(x, y)=x y", "STMT=f();", "EMPTY="};
 
   verifyIncompleteFormat("A(\n"
                          "#endif",

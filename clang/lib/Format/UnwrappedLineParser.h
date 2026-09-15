@@ -39,7 +39,7 @@ struct UnwrappedLine {
   /// The indent level of the \c UnwrappedLine.
   unsigned Level = 0;
 
-  /// The \c PPBranchLevel (adjusted for header guards) if this line is a
+  /// The \c PPState::BranchLevel (adjusted for header guards) if this line is a
   /// \c InMacroBody line, and 0 otherwise.
   unsigned PPLevel = 0;
 
@@ -215,8 +215,6 @@ private:
   // Skip things that can precede the keywords like module.
   void skipVerilogQualifiers();
   struct PPState;
-  PPState savePPState() const;
-  void restorePPState(const PPState &State);
   std::optional<llvm::SmallVector<llvm::SmallVector<FormatToken *, 8>, 1>>
   parseMacroCall(const PPState &SavedPPState);
 
@@ -314,9 +312,6 @@ private:
 
   FormatToken *FormatTok = nullptr;
 
-  // Has just finished parsing a preprocessor line.
-  bool AtEndOfPPLine;
-
   // The parsed lines. Only added to through \c CurrentLines.
   SmallVector<UnwrappedLine, 8> Lines;
 
@@ -372,30 +367,6 @@ private:
     size_t Line;
   };
 
-  // Keeps a stack of currently active preprocessor branching directives.
-  SmallVector<PPBranch, 16> PPStack;
-
-  // The \c UnwrappedLineParser re-parses the code for each combination
-  // of preprocessor branches that can be taken.
-  // To that end, we take the same branch (#if, #else, or one of the #elif
-  // branches) for each nesting level of preprocessor branches.
-  // \c PPBranchLevel stores the current nesting level of preprocessor
-  // branches during one pass over the code.
-  int PPBranchLevel;
-
-  // Contains the current branch (#if, #else or one of the #elif branches)
-  // for each nesting level.
-  SmallVector<int, 8> PPLevelBranchIndex;
-
-  // Contains the maximum number of branches at each nesting level.
-  SmallVector<int, 8> PPLevelBranchCount;
-
-  // Contains the number of branches per nesting level we are currently
-  // in while parsing a preprocessor branch sequence.
-  // This is used to update PPLevelBranchCount at the end of a branch
-  // sequence.
-  std::stack<int> PPChainBranchIndex;
-
   // Include guard search state. Used to fixup preprocessor indent levels
   // so that include guards do not participate in indentation.
   enum IncludeGuardState {
@@ -406,9 +377,6 @@ private:
     IG_Rejected, // Search failed or never started.
   };
 
-  // Current state of include guard search.
-  IncludeGuardState IncludeGuard;
-
   IncludeGuardState
   getIncludeGuardState(FormatStyle::PPDirectiveIndentStyle Style) const {
     return Style == FormatStyle::PPDIS_None || Style == FormatStyle::PPDIS_Leave
@@ -416,23 +384,47 @@ private:
                : IG_Inited;
   }
 
-  // Points to the #ifndef condition for a potential include guard. Null unless
-  // IncludeGuardState == IG_IfNdefed.
-  FormatToken *IncludeGuardToken;
-
   // The preprocessor bookkeeping that is rolled back when the token stream is
   // rewound over preprocessor directives, which happens if the speculatively
   // parsed arguments of a macro call are discarded. See readToken().
   struct PPState {
-    SmallVector<PPBranch, 16> PPStack;
-    int PPBranchLevel;
-    SmallVector<int, 8> PPLevelBranchIndex;
-    SmallVector<int, 8> PPLevelBranchCount;
-    std::stack<int> PPChainBranchIndex;
+    explicit PPState(IncludeGuardState IncludeGuard)
+        : IncludeGuard(IncludeGuard) {}
+
+    // Keeps a stack of currently active preprocessor branching directives.
+    SmallVector<PPBranch, 16> Stack;
+
+    // The \c UnwrappedLineParser re-parses the code for each combination
+    // of preprocessor branches that can be taken.
+    // To that end, we take the same branch (#if, #else, or one of the #elif
+    // branches) for each nesting level of preprocessor branches.
+    // \c BranchLevel stores the current nesting level of preprocessor
+    // branches during one pass over the code.
+    int BranchLevel = -1;
+
+    // Contains the current branch (#if, #else or one of the #elif branches)
+    // for each nesting level.
+    SmallVector<int, 8> LevelBranchIndex;
+
+    // Contains the maximum number of branches at each nesting level.
+    SmallVector<int, 8> LevelBranchCount;
+
+    // Contains the number of branches per nesting level we are currently
+    // in while parsing a preprocessor branch sequence.
+    // This is used to update LevelBranchCount at the end of a branch
+    // sequence.
+    std::stack<int> ChainBranchIndex;
+
+    // Current state of include guard search.
     IncludeGuardState IncludeGuard;
-    FormatToken *IncludeGuardToken;
-    bool AtEndOfPPLine;
-  };
+
+    // Points to the #ifndef condition for a potential include guard. Null
+    // unless IncludeGuardState == IG_IfNdefed.
+    FormatToken *IncludeGuardToken = nullptr;
+
+    // Has just finished parsing a preprocessor line.
+    bool AtEndOfPPLine = false;
+  } PP;
 
   // The hash tokens of the parsed preprocessor directives. The lines of a
   // directive are kept when the token stream is rewound over it, so it is then
