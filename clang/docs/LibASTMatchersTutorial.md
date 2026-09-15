@@ -14,8 +14,8 @@ AST <IntroductionToTheClangAST>`
 
 As Clang is part of the LLVM project, you'll need to download LLVM's
 source code first. Both Clang and LLVM are in the same git repository,
-under different directories. For further information, see the [getting
-started guide](https://llvm.org/docs/GettingStarted.html).
+under different directories. For further information, see the
+{external+llvm:doc}`getting started guide <GettingStarted>`.
 
 ```console
 mkdir ~/clang-llvm && cd ~/clang-llvm

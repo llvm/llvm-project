@@ -211,7 +211,7 @@ features added. Some tips for getting your testcase approved:
   [llvm/utils/update_llc_test_checks.py](https://github.com/llvm/llvm-project/blob/main/llvm/utils/update_llc_test_checks.py)
 - Some subprojects such as `clang` and `clangd` have project specific testing
   tools, like the `clang -verify` flag
-  ([docs](https://clang.llvm.org/docs/InternalsManual.html#verifying-diagnostics))
+  ({external+clang:ref}`docs <verifying-diagnostics>`)
   and the `clangd -lit-test` flag, which are preferred over `FileCheck`.
 - Changes to libraries, such as Support, which are not directly observable
   through tool invocations, are often best tested with unit tests. Unit tests

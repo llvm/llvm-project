@@ -609,7 +609,7 @@ you will want to know whether the function or the corpus can be improved further
 One easy to use metric is, of course, code coverage.
 
 We recommend to use
-[Clang Coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html),
+{external+clang:doc}`Clang Coverage <SourceBasedCodeCoverage>`,
 to visualize and study your code coverage
 ([example](https://github.com/google/fuzzer-test-suite/blob/master/tutorial/libFuzzerTutorial.md#visualizing-coverage)).
 
@@ -846,19 +846,18 @@ this may be fixed in future.
 [pcre2]: http://www.pcre.org/
 [AFL]: http://lcamtuf.coredump.cx/afl/
 [Radamsa]: https://github.com/aoh/radamsa
-[SanitizerCoverage]: https://clang.llvm.org/docs/SanitizerCoverage.html
+[SanitizerCoverage]: inv:clang:std:doc#SanitizerCoverage
 [SanitizerCoverageTraceDataFlow]: https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
-[AddressSanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html
-[LeakSanitizer]: https://clang.llvm.org/docs/LeakSanitizer.html
+[AddressSanitizer]: inv:clang:std:doc#AddressSanitizer
+[LeakSanitizer]: inv:clang:std:doc#LeakSanitizer
 [Heartbleed]: http://en.wikipedia.org/wiki/Heartbleed
 [FuzzerInterface.h]: https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerInterface.h
 [3.7.0]: https://llvm.org/releases/3.7.0/docs/LibFuzzer.html
 [building Clang from trunk]: https://clang.llvm.org/get_started.html
-[MemorySanitizer]: https://clang.llvm.org/docs/MemorySanitizer.html
-[UndefinedBehaviorSanitizer]: https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html
+[MemorySanitizer]: inv:clang:std:doc#MemorySanitizer
+[UndefinedBehaviorSanitizer]: inv:clang:std:doc#UndefinedBehaviorSanitizer
 [coverage counters]: https://clang.llvm.org/docs/SanitizerCoverage.html#coverage-counters
 [value profile]: #value-profile
 [caller-callee pairs]: https://clang.llvm.org/docs/SanitizerCoverage.html#caller-callee-coverage
 [BoringSSL]: https://boringssl.googlesource.com/boringssl/
 [Centipede]: https://github.com/google/centipede
-

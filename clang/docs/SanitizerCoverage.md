@@ -272,7 +272,7 @@ around comparison instructions and switch statements.
 Similarly, with `-fsanitize-coverage=trace-div` the compiler will instrument
 integer division instructions (to capture the right argument of division)
 and with `-fsanitize-coverage=trace-gep` --
-the [LLVM GEP instructions](https://llvm.org/docs/GetElementPtr.html)
+the {external+llvm:doc}`LLVM GEP instructions <GetElementPtr>`
 (to capture array indices).
 Similarly, with `-fsanitize-coverage=trace-loads` and `-fsanitize-coverage=trace-stores`
 the compiler will instrument loads and stores, respectively.

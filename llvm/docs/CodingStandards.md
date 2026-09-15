@@ -60,7 +60,7 @@ Each toolchain provides a good reference for what it accepts:
 
 * Clang: https://clang.llvm.org/cxx_status.html
 
-  * libc++: https://libcxx.llvm.org/Status/Cxx17.html
+  * libc++: {external+libcxx:doc}`C++17 status <Status/Cxx17>`
 
 * GCC: https://gcc.gnu.org/projects/cxx-status.html#cxx17
 
@@ -537,9 +537,8 @@ llvm::Constant *Mask[] = {
 ```
 
 This formatting scheme also makes it particularly easy to get predictable,
-consistent, and automatic formatting with tools like [Clang Format].
-
-[Clang Format]: https://clang.llvm.org/docs/ClangFormat.html
+consistent, and automatic formatting with tools like
+{external+clang:doc}`Clang Format <ClangFormat>`.
 
 ### Language and Compiler Issues
 

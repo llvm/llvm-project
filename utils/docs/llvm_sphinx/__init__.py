@@ -19,12 +19,26 @@ call to `common_conf`, they should be modified/appended to, as in:
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Iterable, Optional, Tuple
 from enum import Enum, auto
 from sphinx.util.tags import Tags
 from llvm_sphinx.help import venv_help
 
 _SHARED_STATIC_DIR = Path(__file__).parent / "_static"
+
+_LLVM_PROJECT_DOCS = {
+    "llvm": "https://llvm.org/docs/",
+    "clang": "https://clang.llvm.org/docs/",
+    "clang-tools-extra": "https://clang.llvm.org/extra/",
+    "mlir": "https://mlir.llvm.org/docs/",
+    "libc": "https://libc.llvm.org/",
+    "libcxx": "https://libcxx.llvm.org/",
+    "lld": "https://lld.llvm.org/",
+    "lldb": "https://lldb.llvm.org/",
+    "openmp": "https://openmp.llvm.org/",
+    "flang": "https://flang.llvm.org/docs/",
+    "polly": "https://polly.llvm.org/docs/",
+}
 
 
 class Markdown(Enum):
@@ -66,6 +80,11 @@ def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
     numfig = False
 
     return locals()
+
+
+def get_llvm_intersphinx_mapping(*projects: str) -> Dict[str, Tuple[str, None]]:
+    """Return intersphinx mappings for published LLVM project documentation."""
+    return {project: (_LLVM_PROJECT_DOCS[project], None) for project in projects}
 
 
 def _append_unique(target, entries):

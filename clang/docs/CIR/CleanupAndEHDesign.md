@@ -1211,8 +1211,8 @@ methods for use with the exception handling ABI.
 For each supported exception handling ABI, the operations and function
 calls used will have a direct correspondence to the LLVM IR instructions
 and runtime library functions used for that ABI. The LLVM IR exception
-handling model is described in detail here: [LLVM Exception
-Handling](https://llvm.org/docs/ExceptionHandling.html).
+handling model is described in detail here:
+{external+llvm:doc}`LLVM Exception Handling <ExceptionHandling>`.
 
 A personality function attribute will be added to functions that require
 it during the ABI lowering phase.

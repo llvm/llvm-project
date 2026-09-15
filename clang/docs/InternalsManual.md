@@ -13,7 +13,7 @@ and does not describe any of the clients of the libraries.
 ## LLVM Support Library
 
 The LLVM `libSupport` library provides many underlying libraries and
-[data-structures](https://llvm.org/docs/ProgrammersManual.html), including
+{external+llvm:doc}`data-structures <ProgrammersManual>`, including
 command line option processing, various containers, and a system abstraction
 layer, which is used for file system access.
 
@@ -691,7 +691,7 @@ The clang Driver and library are documented {doc}`here <DriverInternals>`.
 
 Clang supports precompiled headers ({doc}`PCH <PCHInternals>`), which uses a
 serialized representation of Clang's internal data structures, encoded with the
-[LLVM bitstream format](https://llvm.org/docs/BitCodeFormat.html).
+{external+llvm:doc}`LLVM bitstream format <BitCodeFormat>`.
 
 ## The Frontend Library
 
@@ -2908,7 +2908,7 @@ diagnostics purpose, and inject that in the `ConstraintSatisfaction`.
 
 ## The CodeGen Library
 
-CodeGen takes an {ref}`AST <AST>` as input and produces [LLVM IR code](https://llvm.org/docs/LangRef.html) from it.
+CodeGen takes an {ref}`AST <AST>` as input and produces {external+llvm:doc}`LLVM IR code <LangRef>` from it.
 
 ## How to change Clang
 
@@ -3381,7 +3381,7 @@ are similar.
      to introduce a cleanup. You shouldn't have to deal with
      exception-handling directly.
    - Testing is extremely important in IR generation. Use `clang -cc1
-     -emit-llvm` and [FileCheck](https://llvm.org/docs/CommandGuide/FileCheck.html) to verify that you're
+     -emit-llvm` and {external+llvm:doc}`FileCheck <CommandGuide/FileCheck>` to verify that you're
      generating the right IR.
 
 6. Teach template instantiation how to cope with your AST node, which requires
@@ -3434,13 +3434,13 @@ the change in behavior. There are four kinds of tests:
   provisions for tests for C++ defect reports are described in
   {ref}`"C++ Defect Report Tests" <cxx-defect-report-tests>` section.
 - AST dump tests: such tests pass printable AST output to the
-  [FileCheck](https://llvm.org/docs/CommandGuide/FileCheck.html) utility,
+  {external+llvm:doc}`FileCheck <CommandGuide/FileCheck>` utility,
   which check presence of certain patterns (or lack of thereof).
 - LLVM IR tests: in such tests, the LLVM IR output of Clang is checked, which
   is needed in cases when checking diagnostics is not sufficient (e.g. when
   testing exception handling or object lifetime). Such tests pass LLVM IR
   output to the
-  [FileCheck](https://llvm.org/docs/CommandGuide/FileCheck.html) utility,
+  {external+llvm:doc}`FileCheck <CommandGuide/FileCheck>` utility,
   which check the presence of certain IR patterns (or lack of thereof).
 
 (verifying-diagnostics)=

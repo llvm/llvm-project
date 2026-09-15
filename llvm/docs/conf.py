@@ -22,7 +22,17 @@ globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo", "llvm_sphinx.ext.checks"]
+extensions += [
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.todo",
+    "llvm_sphinx.ext.absolute_links",
+    "llvm_sphinx.ext.checks",
+]
+
+llvm_sphinx_doc_url_prefixes = (
+    "https://llvm.org/docs/",
+    "https://www.llvm.org/docs/",
+)
 
 myst_enable_extensions += ["deflist"]
 myst_url_schemes = {
@@ -250,7 +260,9 @@ for name in os.listdir(command_guide_path):
 # man_show_urls = False
 
 # FIXME: Define intersphinx configuration.
-intersphinx_mapping = {}
+intersphinx_mapping = get_llvm_intersphinx_mapping(
+    "clang", "libcxx", "openmp", "flang"
+)
 
 # Pygment lexer are sometimes out of date (when parsing LLVM for example) or
 # wrong. Suppress the warning so the build doesn't abort.

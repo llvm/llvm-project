@@ -149,7 +149,7 @@ the configuration (without a prefix: `Auto`).
   Possible values:
 
   - `LLVM`
-    A style complying with the [LLVM coding standards](https://llvm.org/docs/CodingStandards.html)
+    A style complying with the {external+llvm:doc}`LLVM coding standards <CodingStandards>`
   - `Google`
     A style complying with [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html)
   - `Chromium`

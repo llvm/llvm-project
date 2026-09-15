@@ -26,11 +26,19 @@ myst_enable_extensions += ["attrs_inline", "deflist"]
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions += [
+    "sphinx.ext.intersphinx",
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.graphviz",
+    "llvm_sphinx.ext.absolute_links",
     "llvm_sphinx.ext.ghlinks",
 ]
+
+intersphinx_mapping = get_llvm_intersphinx_mapping(
+    "llvm", "clang-tools-extra", "libcxx", "openmp"
+)
+
+llvm_sphinx_doc_url_prefixes = ("https://clang.llvm.org/docs/",)
 
 import sphinx
 

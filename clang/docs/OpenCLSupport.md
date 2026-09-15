@@ -386,7 +386,7 @@ Feel free to contact us on [the Discourse forums (Clang Frontend category)](http
 
 ### C++ libraries for OpenCL
 
-There is ongoing work to support C++ standard libraries from [LLVM's libcxx](https://libcxx.llvm.org/) in OpenCL kernel code using C++ for OpenCL mode.
+There is ongoing work to support C++ standard libraries from {external+libcxx:doc}`LLVM's libcxx <index>` in OpenCL kernel code using C++ for OpenCL mode.
 
 It is currently possible to include `type_traits` from C++17 in the kernel
 sources when the following clang extensions are enabled

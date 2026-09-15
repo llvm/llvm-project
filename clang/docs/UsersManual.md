@@ -5174,7 +5174,7 @@ $ clang --target=spirv64 test1.cl test2.cl
 ```
 
 More information about the SPIR-V target settings and supported versions of SPIR-V
-format can be found in [the SPIR-V target guide](https://llvm.org/docs/SPIRVUsage.html).
+format can be found in {external+llvm:doc}`the SPIR-V target guide <SPIRVUsage>`.
 
 (clang-cl)=
 

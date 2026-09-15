@@ -21,7 +21,7 @@ The checks have small runtime cost and no impact on address space layout or ABI.
 
 ## How to build
 
-Build LLVM/Clang with [CMake](https://llvm.org/docs/CMake.html).
+Build LLVM/Clang with {external+llvm:doc}`CMake <CMake>`.
 
 ## Usage
 

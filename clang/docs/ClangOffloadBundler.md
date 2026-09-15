@@ -405,11 +405,10 @@ Target-specific information is available for the following:
 
 *AMD GPU*
 
-: AMD GPU supports target ID and target features. See [User Guide for AMDGPU
-  Backend](https://llvm.org/docs/AMDGPUUsage.html) which defines the
-  [processors](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-processors) and
-  [target
-  features](https://llvm.org/docs/AMDGPUUsage.html#amdgpu-target-features)
+: AMD GPU supports target ID and target features. See
+  {external+llvm:doc}`User Guide for AMDGPU Backend <AMDGPUUsage>` which defines
+  the {external+llvm:ref}`processors <amdgpu-processors>` and
+  {external+llvm:ref}`target features <amdgpu-target-features>`
   supported.
 
 Most other targets do not support target IDs.

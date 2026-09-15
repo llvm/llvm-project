@@ -13,7 +13,7 @@ it combines:
   during compilation to help you update your code to encapsulate and propagate
   the bounds information associated with pointers;
 - runtime assertions implemented as part of
-  ([libc++ hardening modes](https://libcxx.llvm.org/Hardening.html))
+  ({external+libcxx:doc}`libc++ hardening modes <Hardening>`)
   that eliminate undefined behavior as long as the coding convention
   is followed and the bounds information is therefore available and correct.
 
@@ -37,7 +37,7 @@ In order to achieve bounds safety, your codebase needs to have access to
 well-encapsulated bounds-safe container, view, and iterator types.
 If your project uses libc++, standard container and view types such as
 `std::vector` and `std::span` can be made bounds-safe by enabling
-the "fast" [hardening mode](https://libcxx.llvm.org/Hardening.html)
+the "fast" {external+libcxx:doc}`hardening mode <Hardening>`
 (passing `-D_LIBCPP_HARDENING_MODE=_LIBCPP_HARDENING_MODE_FAST`) to your
 compiler) or any of the stricter hardening modes.
 
