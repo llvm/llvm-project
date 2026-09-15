@@ -256,6 +256,13 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the X86 Backend
 
+* Fixed a miscompile
+  ([#222714](https://github.com/llvm/llvm-project/issues/222714)) where a
+  redundant 32-bit `and` was dropped during instruction selection after its
+  `zext` user had already been selected to rely on the `and` zeroing the upper
+  32 bits, letting the upper half of the wider value leak into an address
+  computation.
+
 ### Changes to the OCaml bindings
 
 ### Changes to the Python bindings
