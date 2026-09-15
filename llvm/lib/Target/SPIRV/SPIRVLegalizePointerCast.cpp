@@ -770,6 +770,37 @@ class SPIRVLegalizePointerCastImpl {
     DeadInstructions.push_back(IllegalStore);
   }
 
+  void transformAtomicRMW(IRBuilder<> &B, AtomicRMWInst *RMW,
+                          Value *OriginalOperand) {
+    B.SetInsertPoint(RMW);
+    Type *AccessTy = RMW->getValOperand()->getType();
+    Value *AtomicPtr = OriginalOperand;
+
+    if (shouldReinterpretByteWise(B, AccessTy, OriginalOperand)) {
+      auto *ResourcePtr = getResourceGetPointer(OriginalOperand);
+      if (!ResourcePtr)
+        llvm_unreachable(
+            "Atomic byte layout pointer must come from resource.getpointer.");
+      AtomicPtr = B.Insert(ResourcePtr->clone());
+      GR->buildAssignPtr(B, AccessTy, AtomicPtr);
+    } else {
+      auto ResultOpt = getPointerToFirstCompatibleType(
+          B, OriginalOperand, RMW->getPointerOperand()->getType(), AccessTy,
+          false);
+      if (!ResultOpt || ResultOpt->second != AccessTy)
+        llvm_unreachable("Failed to legalize atomic pointer.");
+      AtomicPtr = ResultOpt->first;
+    }
+
+    AtomicRMWInst *NewRMW = B.CreateAtomicRMW(
+        RMW->getOperation(), AtomicPtr, RMW->getValOperand(), RMW->getAlign(),
+        RMW->getOrdering(), RMW->getSyncScopeID());
+    NewRMW->setVolatile(RMW->isVolatile());
+    NewRMW->copyMetadata(*RMW);
+    GR->replaceAllUsesWith(RMW, NewRMW, /* DeleteOld= */ true);
+    DeadInstructions.push_back(RMW);
+  }
+
   void legalizePointerCast(IntrinsicInst *II) {
     Value *CastedOperand = II;
     Value *OriginalOperand = II->getOperand(0);
@@ -788,6 +819,11 @@ class SPIRVLegalizePointerCastImpl {
       if (StoreInst *SI = dyn_cast<StoreInst>(User)) {
         transformStore(B, SI, SI->getValueOperand(), OriginalOperand,
                        CastedOperand, SI->getAlign());
+        continue;
+      }
+
+      if (AtomicRMWInst *RMW = dyn_cast<AtomicRMWInst>(User)) {
+        transformAtomicRMW(B, RMW, OriginalOperand);
         continue;
       }
 
