@@ -3440,7 +3440,8 @@ TEST_F(ValueTrackingTest, willNotFreeBetweenMultiPredecessor) {
     }
   )";
   parseAssembly(Assembly);
-  // Both paths from %A to %CxtI only call nofree functions -> should return true.
+  // Both paths from %A to %CxtI only call nofree functions -> should return
+  // true.
   EXPECT_TRUE(willNotFreeBetween(A, CxtI));
   // One path from %A to %CxtI2 calls @may_free() -> should return false.
   EXPECT_FALSE(willNotFreeBetween(A, CxtI2));

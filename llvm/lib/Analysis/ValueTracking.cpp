@@ -767,22 +767,21 @@ bool llvm::willNotFreeBetween(const Instruction *Assume,
   Worklist.push_back(CtxBB);
   Visited.insert(CtxBB);
   while (!Worklist.empty()) {
-      const BasicBlock *CurBB = Worklist.pop_back_val();
-      if (CurBB == AssumeBB) {
-        if (!hasNoFreeInRange(
-			      make_range(Assume->getIterator(), AssumeBB->end())))
-          return false;
-        continue;
-      }
-      if (!hasNoFreeInRange(make_range(
-				       CurBB->begin(), CurBB == CtxBB ? CtxIter : CurBB->end())))
+    const BasicBlock *CurBB = Worklist.pop_back_val();
+    if (CurBB == AssumeBB) {
+      if (!hasNoFreeInRange(make_range(Assume->getIterator(), AssumeBB->end())))
         return false;
-      if (pred_empty(CurBB))
-        return false;
-      for (const BasicBlock *Pred : predecessors(CurBB)) {
-        if (Visited.insert(Pred).second)
-          Worklist.push_back(Pred);
-      }
+      continue;
+    }
+    if (!hasNoFreeInRange(make_range(CurBB->begin(),
+                                     CurBB == CtxBB ? CtxIter : CurBB->end())))
+      return false;
+    if (pred_empty(CurBB))
+      return false;
+    for (const BasicBlock *Pred : predecessors(CurBB)) {
+      if (Visited.insert(Pred).second)
+        Worklist.push_back(Pred);
+    }
   }
   return true;
 }
