@@ -64,6 +64,9 @@ FIELD(Abstract, 1, NO_MERGE)
 /// language rules (including DRs).
 FIELD(IsStandardLayout, 1, NO_MERGE)
 
+/// True when this class appears as a member of some standard-layout union.
+FIELD(IsStandardLayoutUnionMember, 1, MERGE_OR)
+
 /// True when this class was standard-layout under the C++11
 /// definition.
 ///

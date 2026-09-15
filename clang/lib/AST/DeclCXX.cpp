@@ -76,7 +76,8 @@ void LazyASTUnresolvedSet::getFromExternalSource(ASTContext &C) const {
 CXXRecordDecl::DefinitionData::DefinitionData(CXXRecordDecl *D)
     : UserDeclaredConstructor(false), UserDeclaredSpecialMembers(0),
       Aggregate(true), PlainOldData(true), Empty(true), Polymorphic(false),
-      Abstract(false), IsStandardLayout(true), IsCXX11StandardLayout(true),
+      Abstract(false), IsStandardLayout(true),
+      IsStandardLayoutUnionMember(false), IsCXX11StandardLayout(true),
       HasBasesWithFields(false), HasBasesWithNonStaticDataMembers(false),
       HasPrivateFields(false), HasProtectedFields(false),
       HasPublicFields(false), HasMutableFields(false), HasVariantMembers(false),
@@ -2269,6 +2270,50 @@ static bool hasPureVirtualFinalOverrider(
   return false;
 }
 
+static void annotateStandardLayoutUnionMembers(const CXXRecordDecl *RD);
+
+static void annotateStandardLayoutUnionType(QualType QT) {
+  const auto *RT = QT->getAs<RecordType>();
+  if (!RT)
+    return;
+
+  auto *CRD = dyn_cast<CXXRecordDecl>(RT->getDecl()->getDefinitionOrSelf());
+  if (!CRD || !CRD->hasDefinition())
+    return;
+
+  // We checked at the root that this is a standard-layout type, which
+  // requires all its members / base types to be standard-layout.
+  assert(CRD->isStandardLayout());
+
+  // If we already annotated this type as part of a standard layout union, we
+  // don't need to do it again.
+  if (CRD->isStandardLayoutUnionMember())
+    return;
+
+  CRD->setIsStandardLayoutUnionMember(true);
+  annotateStandardLayoutUnionMembers(CRD);
+}
+
+// Recursively marks all field and base class types of this union as members of
+// a standard layout union. This is meant to capture all types which may be
+// fungible via inspection of a member of a union.
+static void annotateStandardLayoutUnionMembers(const CXXRecordDecl *RD) {
+  for (const CXXBaseSpecifier &BS : RD->bases()) {
+    annotateStandardLayoutUnionType(BS.getType());
+  }
+  for (const FieldDecl *FD : RD->fields()) {
+    // Invalid declarations are skipped when determining the field layout of
+    // unions. This will of course cause a compiler error, but skip these
+    // fields anyway to avoid triggering the `isStandardLayout()` assertion in
+    // annotateStandardLayoutUnionType.
+    if (FD->isInvalidDecl())
+      continue;
+    annotateStandardLayoutUnionType(FD->getType()
+                                        ->getBaseElementTypeUnsafe()
+                                        ->getCanonicalTypeUnqualified());
+  }
+}
+
 void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
   RecordDecl::completeDefinition();
 
@@ -2321,6 +2366,9 @@ void CXXRecordDecl::completeDefinition(CXXFinalOverriderMap *FinalOverriders) {
     data().IsStandardLayout = false;
     data().IsCXX11StandardLayout = false;
   }
+
+  if (isUnion() && isStandardLayout())
+    annotateStandardLayoutUnionMembers(this);
 }
 
 bool CXXRecordDecl::mayBeAbstract() const {
