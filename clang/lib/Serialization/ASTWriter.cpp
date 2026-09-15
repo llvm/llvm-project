@@ -2063,10 +2063,15 @@ static unsigned CreateSLocExpansionAbbrev(llvm::BitstreamWriter &Stream) {
 
   auto Abbrev = std::make_shared<BitCodeAbbrev>();
   Abbrev->Add(BitCodeAbbrevOp(SM_SLOC_EXPANSION_ENTRY));
+  // The static ordering of the four fields below is critical to getting good
+  // compression from the delta encoding. Specifically:
+  //   Offset -> End location -> Start location -> Spelling location.
+  // Ordered this way, the delta between Offset and End location is usually
+  // small, and so is the delta between End location and Start location.
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Offset
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 8)); // Spelling location
-  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Start location
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // End location
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Start location
+  Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Spelling location
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::Fixed, 1)); // Is token range
   Abbrev->Add(BitCodeAbbrevOp(BitCodeAbbrevOp::VBR, 6)); // Token length
   return Stream.EmitAbbrev(std::move(Abbrev));
@@ -2465,13 +2470,20 @@ void ASTWriter::WriteSourceManagerBlock(SourceManager &SourceMgr) {
       const SrcMgr::ExpansionInfo &Expansion = SLoc->getExpansion();
       SLocEntryOffsets.push_back(Offset);
       // Starting offset of this entry within this module, so skip the dummy.
-      Record.push_back(getAdjustedOffset(SLoc->getOffset()) - 2);
-      AddSourceLocation(Expansion.getSpellingLoc(), Record);
-      AddSourceLocation(Expansion.getExpansionLocStart(), Record);
-      AddSourceLocation(Expansion.isMacroArgExpansion()
-                            ? SourceLocation()
-                            : Expansion.getExpansionLocEnd(),
-                        Record);
+      SourceLocation::UIntTy EntryOffset =
+          getAdjustedOffset(SLoc->getOffset()) - 2;
+      Record.push_back(EntryOffset);
+
+      SourceLocationEncoding::Chain Chain(
+          SourceLocationEncoding::Chain::getSeedFrom(EntryOffset));
+      auto EmitLoc = [&](SourceLocation Loc) {
+        Record.push_back(Chain.deltaEncode(
+            getRawSourceLocationEncoding(getAdjustedLocation(Loc))));
+      };
+      EmitLoc(Expansion.isMacroArgExpansion() ? SourceLocation()
+                                              : Expansion.getExpansionLocEnd());
+      EmitLoc(Expansion.getExpansionLocStart());
+      EmitLoc(Expansion.getSpellingLoc());
       Record.push_back(Expansion.isExpansionTokenRange());
 
       // Compute the token length for this macro expansion.
