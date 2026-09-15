@@ -808,6 +808,11 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
         MD.ModuleMapFileDeps.emplace_back(*ResolvedFilenameAsRequested);
       });
 
+  MD.DirectoryDeps = MF->DirectoryDependencies;
+  llvm::sort(MD.DirectoryDeps);
+  MD.DirectoryDeps.erase(llvm::unique(MD.DirectoryDeps),
+                         MD.DirectoryDeps.end());
+
   bool IgnoreCWD = false;
   CowCompilerInvocation CI =
       MDC.getInvocationAdjustedForModuleBuildWithoutOutputs(
