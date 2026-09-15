@@ -311,8 +311,11 @@ static MachineOperand *findSingleRegDef(const MachineOperand *Reg,
 /// Combine an SDWA source instruction's existing source selection \p Sel
 /// with the SDWA selection \p OperandSel of its operand. If the selections
 /// are compatible, return the combined selection, otherwise return a
-/// nullopt. Destination selections are never combined this way, see
-/// SDWADstOperand::canCombineSelections.
+/// nullopt.
+/// This applies to src_sel only. Extracting from an already extracted field
+/// is again a single field, but dst_sel writes a field and leaves the rest to
+/// dst_unused, so two of them do not fold into one.
+/// See SDWADstOperand::canCombineSelections.
 /// For example, if we have Sel = BYTE_0 Sel and OperandSel = WORD_1:
 ///     BYTE_0 Sel (WORD_1 Sel (%X)) -> BYTE_2 Sel (%X)
 static std::optional<SdwaSel> combineSdwaSrcSel(SdwaSel Sel,
