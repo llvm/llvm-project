@@ -246,13 +246,13 @@ def push_freeze_to_prevent_poison_from_propagating : GICombineRule<
          [{ return !isGuaranteedNotToBePoison(${src}.getReg(), MRI) && Helper.matchFreezeOfSingleMaybePoisonOperand(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
-def extending_loads_frags : GICombinePatFrag<
+def load_sextload_zextload_frags : GICombinePatFrag<
   (outs root:$dst), (ins),
   !foreach(op, [G_LOAD, G_SEXTLOAD, G_ZEXTLOAD],
            (pattern (op $dst, $ptr)))>;
 def extending_loads : GICombineRule<
   (defs root:$root, extending_load_matchdata:$matchinfo),
-  (match (extending_loads_frags $root):$mi,
+  (match (load_sextload_zextload_frags $root):$mi,
          [{ return Helper.matchCombineExtendingLoads(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineExtendingLoads(*${mi}, ${matchinfo}); }])>;
 
@@ -297,13 +297,9 @@ def combine_extracted_vector_load : GICombineRule<
         [{ return Helper.matchCombineExtractedVectorLoad(*${root}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
-def combine_indexed_load_frags : GICombinePatFrag<
-  (outs root:$dst), (ins),
-  !foreach(op, [G_LOAD, G_SEXTLOAD, G_ZEXTLOAD],
-           (pattern (op $dst, $ptr)))>;
 def combine_indexed_load : GICombineRule<
   (defs root:$root, indexed_load_store_matchdata:$matchinfo),
-  (match (combine_indexed_load_frags $root):$mi,
+  (match (load_sextload_zextload_frags $root):$mi,
          [{ return Helper.matchCombineIndexedLoadStore(*${mi}, ${matchinfo}); }]),
   (apply [{ Helper.applyCombineIndexedLoadStore(*${mi}, ${matchinfo}); }])>;
 def combine_indexed_store : GICombineRule<
@@ -660,20 +656,20 @@ def select_constant_cmp_true : GICombineRule<
 
 def select_constant_cmp_general_false: GICombineRule<
   (defs root:$dst),
-  (match (G_SELECT $dst, $cond, $tval, $fval):$root,
+  (match (G_SELECT $dst, $cond, $tval, $fval),
     [{
       auto C = isConstantOrConstantSplatVector(${cond}.getReg(), MRI);
       return C && C->isZero();
     }]),
-  (apply (COPY $dst, $fval))>;
+  (apply (GIReplaceReg $dst, $fval))>;
 def select_constant_cmp_general_true: GICombineRule<
   (defs root:$dst),
-  (match (G_SELECT $dst, $cond, $tval, $fval):$root,
+  (match (G_SELECT $dst, $cond, $tval, $fval),
     [{
       auto C = isConstantOrConstantSplatVector(${cond}.getReg(), MRI);
       return C && !C->isZero();
     }]),
-  (apply (COPY $dst, $tval))>;
+  (apply (GIReplaceReg $dst, $tval))>;
 def select_constant_cmp : GICombineGroup<[select_constant_cmp_false,
                                           select_constant_cmp_true,
                                           select_constant_cmp_general_false,
@@ -1423,12 +1419,15 @@ def xor_of_and_with_same_reg: GICombineRule <
 >;
 
 // Transform scalar (ptr_add 0, x) -> (int_to_ptr x).
+// Skip a constant offset so const_ptradd_to_i2p / constant_fold_binop can fold
+// (ptr_add 0, C) to a pointer G_CONSTANT instead of G_INTTOPTR of an integer.
 def ptr_add_with_zero_scalar: GICombineRule<
   (defs root:$root),
   (match (G_PTR_ADD $dst, 0, $offset):$root,
          [{
            LLT Ty = MRI.getType(${dst}.getReg());
            return Ty.isPointer() &&
+                  !isConstantOrConstantSplatVector(${offset}.getReg(), MRI) &&
                   !${root}->getMF()->getDataLayout().isNonIntegralAddressSpace(
                       Ty.getAddressSpace());
          }]),
@@ -2083,9 +2082,12 @@ def combine_fsub_fpext_fneg_fmul_to_fmad_or_fma: GICombineRule<
 // Fold minnum/maxnum/minimum/maximum with a NaN operand.
 // G_FMINNUM/G_FMAXNUM discard NaN (keep the other operand).
 // G_FMINIMUM/G_FMAXIMUM return the NaN (IEEE 754-2019).
-// Opcode fan is a patfrag; $lhs/$rhs are ins (uses), not outs (L4).
-// Split by family × which operand is NaN (L7). When both operands are NaN,
-// only the LHS rule fires so the two sides do not compete.
+// When both operands are NaN, only the left-NaN rule fires so the two sides
+// do not compete.
+//
+// PatFrags fan the opcodes. Each alternative is
+//   (op $dst, $lhs, $rhs)
+// with $dst the single root def (outs) and $lhs/$rhs the two uses (ins).
 class combine_minmax_nan_frags<list<Instruction> ops> : GICombinePatFrag<
   (outs root:$dst), (ins $lhs, $rhs),
   !foreach(op, ops, (pattern (op $dst, $lhs, $rhs)))>;
@@ -2094,6 +2096,8 @@ def minmax_nan_num_frags
 def minmax_nan_ieee_frags
     : combine_minmax_nan_frags<[G_FMINIMUM, G_FMAXIMUM]>;
 
+// Match:  (frags $dst, $lhs, $rhs), $lhs is NaN
+// Apply:  GIReplaceReg $dst, $rhs
 class minmax_nan_lhs_keep_rhs<GICombinePatFrag frags> : GICombineRule<
   (defs root:$dst),
   (match (frags $dst, $lhs, $rhs),
@@ -2103,6 +2107,8 @@ class minmax_nan_lhs_keep_rhs<GICombinePatFrag frags> : GICombineRule<
          }]),
   (apply (GIReplaceReg $dst, $rhs))>;
 
+// Match:  (frags $dst, $lhs, $rhs), $rhs is NaN and $lhs is not
+// Apply:  GIReplaceReg $dst, $lhs
 class minmax_nan_rhs_keep_lhs<GICombinePatFrag frags> : GICombineRule<
   (defs root:$dst),
   (match (frags $dst, $lhs, $rhs),
@@ -2114,6 +2120,8 @@ class minmax_nan_rhs_keep_lhs<GICombinePatFrag frags> : GICombineRule<
          }]),
   (apply (GIReplaceReg $dst, $lhs))>;
 
+// Match:  (frags $dst, $lhs, $rhs), $lhs is NaN
+// Apply:  GIReplaceReg $dst, $lhs
 class minmax_nan_lhs_keep_lhs<GICombinePatFrag frags> : GICombineRule<
   (defs root:$dst),
   (match (frags $dst, $lhs, $rhs),
@@ -2123,6 +2131,8 @@ class minmax_nan_lhs_keep_lhs<GICombinePatFrag frags> : GICombineRule<
          }]),
   (apply (GIReplaceReg $dst, $lhs))>;
 
+// Match:  (frags $dst, $lhs, $rhs), $rhs is NaN and $lhs is not
+// Apply:  GIReplaceReg $dst, $rhs
 class minmax_nan_rhs_keep_rhs<GICombinePatFrag frags> : GICombineRule<
   (defs root:$dst),
   (match (frags $dst, $lhs, $rhs),
@@ -2134,9 +2144,13 @@ class minmax_nan_rhs_keep_rhs<GICombinePatFrag frags> : GICombineRule<
          }]),
   (apply (GIReplaceReg $dst, $rhs))>;
 
+// (G_FMINNUM|G_FMAXNUM $dst, NaN, $rhs) -> $rhs
 def minmax_nan_num_lhs : minmax_nan_lhs_keep_rhs<minmax_nan_num_frags>;
+// (G_FMINNUM|G_FMAXNUM $dst, $lhs, NaN) -> $lhs
 def minmax_nan_num_rhs : minmax_nan_rhs_keep_lhs<minmax_nan_num_frags>;
+// (G_FMINIMUM|G_FMAXIMUM $dst, NaN, $rhs) -> $lhs
 def minmax_nan_ieee_lhs : minmax_nan_lhs_keep_lhs<minmax_nan_ieee_frags>;
+// (G_FMINIMUM|G_FMAXIMUM $dst, $lhs, NaN) -> $rhs
 def minmax_nan_ieee_rhs : minmax_nan_rhs_keep_rhs<minmax_nan_ieee_frags>;
 
 def combine_minmax_nan: GICombineGroup<[

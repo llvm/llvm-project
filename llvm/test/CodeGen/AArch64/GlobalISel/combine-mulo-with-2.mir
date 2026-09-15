@@ -115,3 +115,55 @@ body:             |
     $w0 = COPY %overflow_ext(i32)
     RET_ReallyLR implicit $w0
 ...
+---
+name:            umulo_i128
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: umulo_i128
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo:_(i64) = COPY $x0
+    ; CHECK-NEXT: %hi:_(i64) = COPY $x1
+    ; CHECK-NEXT: %copy:_(i128) = G_MERGE_VALUES %lo(i64), %hi(i64)
+    ; CHECK-NEXT: %mul:_(i128), %o:_(i1) = G_UADDO %copy, %copy
+    ; CHECK-NEXT: %overflow_ext:_(i32) = G_ZEXT %o(i1)
+    ; CHECK-NEXT: $w0 = COPY %overflow_ext(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %lo:_(i64) = COPY $x0
+    %hi:_(i64) = COPY $x1
+    %copy:_(i128) = G_MERGE_VALUES %lo, %hi
+    %two:_(i128) = G_CONSTANT i128 2
+    %mul:_(i128), %o:_(i1) = G_UMULO %copy, %two
+    %overflow_ext:_(i32) = G_ZEXT %o(i1)
+    $w0 = COPY %overflow_ext(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+name:            smulo_i128
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: smulo_i128
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo:_(i64) = COPY $x0
+    ; CHECK-NEXT: %hi:_(i64) = COPY $x1
+    ; CHECK-NEXT: %copy:_(i128) = G_MERGE_VALUES %lo(i64), %hi(i64)
+    ; CHECK-NEXT: %mul:_(i128), %o:_(i1) = G_SADDO %copy, %copy
+    ; CHECK-NEXT: %overflow_ext:_(i32) = G_ZEXT %o(i1)
+    ; CHECK-NEXT: $w0 = COPY %overflow_ext(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %lo:_(i64) = COPY $x0
+    %hi:_(i64) = COPY $x1
+    %copy:_(i128) = G_MERGE_VALUES %lo, %hi
+    %two:_(i128) = G_CONSTANT i128 2
+    %mul:_(i128), %o:_(i1) = G_SMULO %copy, %two
+    %overflow_ext:_(i32) = G_ZEXT %o(i1)
+    $w0 = COPY %overflow_ext(i32)
+    RET_ReallyLR implicit $w0
+...
