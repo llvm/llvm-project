@@ -257,11 +257,27 @@ CaptureComponents EarliestEscapeAnalysis::getCapturesBefore(
       return isNotInCycle(I, &DT, LI, CI);
     }
 
-    return !isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI);
+    if (isPotentiallyReachable(CaptureInst, I, nullptr, &DT, LI, CI))
+      return false;
+
+    // A `longjmp` may re-enter the function at any `returns_twice` call
+    // (e.g. `setjmp`), If the function contains such a call, conservatively
+    // treat the object as captured.
+    if (containsReturnsTwiceCall())
+      return false;
+
+    return true;
   };
   if (IsNotCapturedBefore())
     return CaptureComponents::None;
   return Iter.first->second.second.WithoutRet;
+}
+
+bool EarliestEscapeAnalysis::containsReturnsTwiceCall() {
+  if (!ContainsReturnsTwiceCall)
+    ContainsReturnsTwiceCall =
+        DT.getRoot()->getParent()->callsFunctionThatReturnsTwice();
+  return *ContainsReturnsTwiceCall;
 }
 
 void EarliestEscapeAnalysis::removeInstruction(Instruction *I) {
