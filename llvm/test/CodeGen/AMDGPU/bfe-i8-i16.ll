@@ -93,9 +93,8 @@ define amdgpu_ps i16 @bfe_i16_uniform(i16 inreg %a) {
 ;
 ; GFX12-TRUE16-LABEL: bfe_i16_uniform:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v0, v0, 4, 4
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v0, s0, 4, 4
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
@@ -112,9 +111,8 @@ define amdgpu_ps i8 @bfe_i8_uniform(i8 inreg %a) {
 ;
 ; GFX12-TRUE16-LABEL: bfe_i8_uniform:
 ; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v0, s0
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_bfe_u32 v0, v0, 4, 4
+; GFX12-TRUE16-NEXT:    v_bfe_u32 v0, s0, 4, 4
+; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-TRUE16-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-TRUE16-NEXT:    ; return to shader part epilog
