@@ -1313,10 +1313,17 @@ InstructionCost ARMTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     // instructions for, for example REV.
     if (!Mask.empty()) {
       std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
+      unsigned Unused;
       if (LT.second.isVector() &&
           Mask.size() <= LT.second.getVectorNumElements() &&
           (isVREVMask(Mask, LT.second, 16) || isVREVMask(Mask, LT.second, 32) ||
-           isVREVMask(Mask, LT.second, 64)))
+           isVREVMask(Mask, LT.second, 64) ||
+           isVTRNMask(Mask, LT.second, Unused) ||
+           isVTRN_v_undef_Mask(Mask, LT.second, Unused) ||
+           isVZIPMask(Mask, LT.second, Unused) ||
+           isVZIP_v_undef_Mask(Mask, LT.second, Unused) ||
+           isVUZPMask(Mask, LT.second, Unused) ||
+           isVUZP_v_undef_Mask(Mask, LT.second, Unused)))
         return LT.first;
     }
   }

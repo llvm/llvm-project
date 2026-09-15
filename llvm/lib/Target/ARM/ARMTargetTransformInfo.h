@@ -364,6 +364,236 @@ inline bool isVREVMask(ArrayRef<int> M, EVT VT, unsigned BlockSize) {
   return true;
 }
 
+inline unsigned SelectPairHalf(unsigned Elements, ArrayRef<int> Mask,
+                               unsigned Index) {
+  if (Mask.size() == Elements * 2)
+    return Index / Elements;
+  return Mask[Index] == 0 ? 0 : 1;
+}
+
+// Checks whether the shuffle mask represents a vector transpose (VTRN) by
+// checking that pairs of elements in the shuffle mask represent the same index
+// in each vector, incrementing the expected index by 2 at each step.
+// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 4, 2, 6]
+//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,e,c,g}
+//  v2={e,f,g,h}
+// WhichResult gives the offset for each element in the mask based on which
+// of the two results it belongs to.
+//
+// The transpose can be represented either as:
+// result1 = shufflevector v1, v2, result1_shuffle_mask
+// result2 = shufflevector v1, v2, result2_shuffle_mask
+// where v1/v2 and the shuffle masks have the same number of elements
+// (here WhichResult (see below) indicates which result is being checked)
+//
+// or as:
+// results = shufflevector v1, v2, shuffle_mask
+// where both results are returned in one vector and the shuffle mask has twice
+// as many elements as v1/v2 (here WhichResult will always be 0 if true) here we
+// want to check the low half and high half of the shuffle mask as if it were
+// the other case
+inline bool isVTRNMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  // If the mask is twice as long as the input vector then we need to check the
+  // upper and lower parts of the mask with a matching value for WhichResult
+  // FIXME: A mask with only even values will be rejected in case the first
+  // element is undefined, e.g. [-1, 4, 2, 6] will be rejected, because only
+  // M[0] is used to determine WhichResult
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != j + WhichResult) ||
+          (M[i + j + 1] >= 0 &&
+           (unsigned)M[i + j + 1] != j + NumElts + WhichResult))
+        return false;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  return true;
+}
+
+/// isVTRN_v_undef_Mask - Special case of isVTRNMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 2, 2> instead of <0, 4, 2, 6>.
+inline bool isVTRN_v_undef_Mask(ArrayRef<int> M, EVT VT,
+                                unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != j + WhichResult) ||
+          (M[i + j + 1] >= 0 && (unsigned)M[i + j + 1] != j + WhichResult))
+        return false;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  return true;
+}
+
+// Checks whether the shuffle mask represents a vector unzip (VUZP) by checking
+// that the mask elements are either all even and in steps of size 2 or all odd
+// and in steps of size 2.
+// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 2, 4, 6]
+//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,c,e,g}
+//  v2={e,f,g,h}
+// Requires similar checks to that of isVTRNMask with
+// respect the how results are returned.
+inline bool isVUZPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (M.size() != NumElts && M.size() != NumElts * 2)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; ++j) {
+      if (M[i + j] >= 0 && (unsigned)M[i + j] != 2 * j + WhichResult)
+        return false;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VUZP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
+/// isVUZP_v_undef_Mask - Special case of isVUZPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 2, 0, 2> instead of <0, 2, 4, 6>,
+inline bool isVUZP_v_undef_Mask(ArrayRef<int> M, EVT VT,
+                                unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if (M.size() != NumElts && M.size() != NumElts * 2)
+    return false;
+
+  unsigned Half = NumElts / 2;
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    for (unsigned j = 0; j < NumElts; j += Half) {
+      unsigned Idx = WhichResult;
+      for (unsigned k = 0; k < Half; ++k) {
+        int MIdx = M[i + j + k];
+        if (MIdx >= 0 && (unsigned)MIdx != Idx)
+          return false;
+        Idx += 2;
+      }
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VUZP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
+// Checks whether the shuffle mask represents a vector zip (VZIP) by checking
+// that pairs of elements of the shufflemask represent the same index in each
+// vector incrementing sequentially through the vectors.
+// e.g. For v1,v2 of type v4i32 a valid shuffle mask is: [0, 4, 1, 5]
+//  v1={a,b,c,d} => x=shufflevector v1, v2 shufflemask => x={a,e,b,f}
+//  v2={e,f,g,h}
+// Requires similar checks to that of isVTRNMask with respect the how results
+// are returned.
+inline bool isVZIPMask(ArrayRef<int> M, EVT VT, unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    unsigned Idx = WhichResult * NumElts / 2;
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != Idx) ||
+          (M[i + j + 1] >= 0 && (unsigned)M[i + j + 1] != Idx + NumElts))
+        return false;
+      Idx += 1;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VZIP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
+/// isVZIP_v_undef_Mask - Special case of isVZIPMask for canonical form of
+/// "vector_shuffle v, v", i.e., "vector_shuffle v, undef".
+/// Mask is e.g., <0, 0, 1, 1> instead of <0, 4, 1, 5>.
+inline bool isVZIP_v_undef_Mask(ArrayRef<int> M, EVT VT,
+                                unsigned &WhichResult) {
+  unsigned EltSz = VT.getScalarSizeInBits();
+  if (EltSz == 64)
+    return false;
+
+  unsigned NumElts = VT.getVectorNumElements();
+  if ((M.size() != NumElts && M.size() != NumElts * 2) || NumElts % 2 != 0)
+    return false;
+
+  for (unsigned i = 0; i < M.size(); i += NumElts) {
+    WhichResult = SelectPairHalf(NumElts, M, i);
+    unsigned Idx = WhichResult * NumElts / 2;
+    for (unsigned j = 0; j < NumElts; j += 2) {
+      if ((M[i + j] >= 0 && (unsigned)M[i + j] != Idx) ||
+          (M[i + j + 1] >= 0 && (unsigned)M[i + j + 1] != Idx))
+        return false;
+      Idx += 1;
+    }
+  }
+
+  if (M.size() == NumElts * 2)
+    WhichResult = 0;
+
+  // VZIP.32 for 64-bit vectors is a pseudo-instruction alias for VTRN.32.
+  if (VT.is64BitVector() && EltSz == 32)
+    return false;
+
+  return true;
+}
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMTARGETTRANSFORMINFO_H
