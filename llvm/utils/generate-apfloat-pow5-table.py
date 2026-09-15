@@ -48,7 +48,7 @@ def main():
         print(f"// 5^{exponent}")
         for word in value_words:
             print(f"UINT64_C(0x{word:016X}),")
-    print("// clang-format on")
+    print("    // clang-format on")
 
 
 if __name__ == "__main__":
