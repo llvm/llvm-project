@@ -17,10 +17,10 @@ namespace hlsl {
   __attribute__((availability(platform, introduced = version)))
 
 _HLSL_AVAILABILITY(shadermodel, 6.6)
-static __detail::__resource_descriptor_heap_struct ResourceDescriptorHeap;
+static __detail::resource_descriptor_heap_struct ResourceDescriptorHeap;
 
 _HLSL_AVAILABILITY(shadermodel, 6.6)
-static __detail::__sampler_descriptor_heap_struct SamplerDescriptorHeap;
+static __detail::sampler_descriptor_heap_struct SamplerDescriptorHeap;
 
 } // namespace hlsl
 #endif //_HLSL_HLSL_RESOURCES_H_

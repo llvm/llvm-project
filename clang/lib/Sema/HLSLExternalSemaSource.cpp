@@ -249,7 +249,7 @@ void HLSLExternalSemaSource::defineTrivialHLSLTypes() {
 void HLSLExternalSemaSource::defineHeapResourceInfoTypes() {
   ASTContext &AST = SemaPtr->getASTContext();
   CXXRecordDecl *ResDecl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace,
-                                                  "__heap_resource_info")
+                                                  "heap_resource_info")
                                .finalizeForwardDeclaration();
   if (!ResDecl->isCompleteDefinition())
     BuiltinTypeDeclBuilder(*SemaPtr, ResDecl)
@@ -257,8 +257,7 @@ void HLSLExternalSemaSource::defineHeapResourceInfoTypes() {
         .completeDefinition();
 
   CXXRecordDecl *SampDecl =
-      BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace,
-                             "__heap_sampler_info")
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLDetailNamespace, "heap_sampler_info")
           .finalizeForwardDeclaration();
   if (!SampDecl->isCompleteDefinition())
     BuiltinTypeDeclBuilder(*SemaPtr, SampDecl)

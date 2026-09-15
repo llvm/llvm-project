@@ -70,15 +70,15 @@ template <typename T, int R, int C> struct elem_type<matrix<T, R, C>> {
 };
 template <typename T> using elem_type_t = typename elem_type<T>::Type;
 
-struct __resource_descriptor_heap_struct {
-  __heap_resource_info operator[](uint32_t Index) {
-    return __heap_resource_info{Index};
+struct resource_descriptor_heap_struct {
+  heap_resource_info operator[](uint32_t Index) {
+    return heap_resource_info{Index};
   }
 };
 
-struct __sampler_descriptor_heap_struct {
-  __heap_sampler_info operator[](uint32_t Index) {
-    return __heap_sampler_info{Index};
+struct sampler_descriptor_heap_struct {
+  heap_sampler_info operator[](uint32_t Index) {
+    return heap_sampler_info{Index};
   }
 };
 

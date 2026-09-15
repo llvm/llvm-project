@@ -141,8 +141,8 @@ RESOURCE<float> Buffer;
 
 // Heap info constructor
 
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (hlsl::__detail::__heap_resource_info)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__detail::__heap_resource_info'
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (hlsl::__detail::heap_resource_info)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__detail::heap_resource_info'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: BinaryOperator {{.*}} '='
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
@@ -153,7 +153,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__detail::__heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__detail::__heap_resource_info'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__detail::heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__detail::heap_resource_info'
 // CHECK-COUNTER-HANDLE-NEXT: BinaryOperator {{.*}} '='
 // CHECK-COUNTER-HANDLE-NEXT: MemberExpr {{.*}} lvalue .__counter_handle
 // CHECK-COUNTER-HANDLE-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this

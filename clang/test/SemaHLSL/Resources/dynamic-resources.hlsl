@@ -15,30 +15,30 @@ export void test(unsigned Index) {
   Sampler = SamplerDescriptorHeap[Index + 1];
   useSampler(SamplerDescriptorHeap[Index + 2]);
 
-  // expected-error@+3 {{no viable conversion from '__heap_sampler_info' to 'RWBuffer<int>'}}
-  // expected-note@*:* {{candidate constructor not viable: no known conversion from '__heap_sampler_info' to 'const hlsl::RWBuffer<int> &' for 1st argument}}
-  // expected-note@*:* {{candidate constructor not viable: no known conversion from '__heap_sampler_info' to 'hlsl::__detail::__heap_resource_info' for 1st argument}}
+  // expected-error@+3 {{no viable conversion from 'heap_sampler_info' to 'RWBuffer<int>'}}
+  // expected-note@*:* {{candidate constructor not viable: no known conversion from 'heap_sampler_info' to 'const hlsl::RWBuffer<int> &' for 1st argument}}
+  // expected-note@*:* {{candidate constructor not viable: no known conversion from 'heap_sampler_info' to 'hlsl::__detail::heap_resource_info' for 1st argument}}
   RWBuffer<int> Buf2 = SamplerDescriptorHeap[Index];
 
-  // expected-error@+3 {{no viable conversion from '__heap_resource_info' to 'SamplerState'}}
-  // expected-note@*:* {{candidate constructor not viable: no known conversion from '__heap_resource_info' to 'const hlsl::SamplerState &' for 1st argument}}
-  // expected-note@*:* {{candidate constructor not viable: no known conversion from '__heap_resource_info' to 'hlsl::__detail::__heap_sampler_info' for 1st argument}}
+  // expected-error@+3 {{no viable conversion from 'heap_resource_info' to 'SamplerState'}}
+  // expected-note@*:* {{candidate constructor not viable: no known conversion from 'heap_resource_info' to 'const hlsl::SamplerState &' for 1st argument}}
+  // expected-note@*:* {{candidate constructor not viable: no known conversion from 'heap_resource_info' to 'hlsl::__detail::heap_sampler_info' for 1st argument}}
   SamplerState Sampler2 = ResourceDescriptorHeap[Index];
   
   // expected-error@+2 {{no viable overloaded '='}}
-  // expected-note@*:* {{candidate function not viable: no known conversion from '__heap_sampler_info' to 'RWBuffer<int>' for 1st argument}}
+  // expected-note@*:* {{candidate function not viable: no known conversion from 'heap_sampler_info' to 'RWBuffer<int>' for 1st argument}}
   Buf2 = SamplerDescriptorHeap[Index];
   
   // expected-error@+2 {{no viable overloaded '='}}
-  // expected-note@*:* {{candidate function not viable: no known conversion from '__heap_resource_info' to 'SamplerState' for 1st argument}}
+  // expected-note@*:* {{candidate function not viable: no known conversion from 'heap_resource_info' to 'SamplerState' for 1st argument}}
   Sampler2 = ResourceDescriptorHeap[Index];
   
   // expected-error@+2 {{no matching function for call to 'useBuffer'}}
-  // expected-note@*:* {{candidate function not viable: no known conversion from '__heap_sampler_info' to 'const hlsl::RWBuffer<int>' for 1st argument}}
+  // expected-note@*:* {{candidate function not viable: no known conversion from 'heap_sampler_info' to 'const hlsl::RWBuffer<int>' for 1st argument}}
   useBuffer(SamplerDescriptorHeap[Index]);
   
   // expected-error@+2 {{no matching function for call to 'useSampler'}}
-  // expected-note@*:* {{candidate function not viable: no known conversion from '__heap_resource_info' to 'const hlsl::SamplerState' for 1st argument}}
+  // expected-note@*:* {{candidate function not viable: no known conversion from 'heap_resource_info' to 'const hlsl::SamplerState' for 1st argument}}
   useSampler(ResourceDescriptorHeap[Index]);
   
   // expected-error@+1 {{no member named 'Load'}}

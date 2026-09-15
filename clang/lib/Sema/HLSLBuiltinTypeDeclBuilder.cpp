@@ -1237,8 +1237,8 @@ BuiltinTypeDeclBuilder::addDefaultHandleConstructor(AccessSpecifier Access) {
       .finalize(Access);
 }
 
-// Adds constructor that takes hlsl::__detail::__heap_resource_info:
-// Resource::Resource(hlsl::__detail::__heap_resource_info info) {
+// Adds constructor that takes hlsl::__detail::heap_resource_info:
+// Resource::Resource(hlsl::__detail::heap_resource_info info) {
 //   __handle = __builtin_hlsl_resource_handlefromheap(__handle, info.Index);
 // }
 BuiltinTypeDeclBuilder &
@@ -1253,7 +1253,7 @@ BuiltinTypeDeclBuilder::addHeapResourceInfoConstructor(bool HasCounter) {
   NamespaceDecl *HLSLDetailNS =
       lookupBuiltinNamespace(SemaRef, "__detail", Record->getDeclContext());
   QualType HeapResInfoType =
-      lookupBuiltinType(SemaRef, "__heap_resource_info", HLSLDetailNS);
+      lookupBuiltinType(SemaRef, "heap_resource_info", HLSLDetailNS);
   CXXRecordDecl *HeapResInfoDecl = HeapResInfoType->getAsCXXRecordDecl();
 
   FieldDecl *IndexField = *HeapResInfoDecl->field_begin();
@@ -1276,8 +1276,8 @@ BuiltinTypeDeclBuilder::addHeapResourceInfoConstructor(bool HasCounter) {
   return MB.finalize();
 }
 
-// Adds constructor that takes hlsl::__detail::__heap_sampler_info:
-// Resource::Resource(hlsl::__detail::__heap_sampler_info info) {
+// Adds constructor that takes hlsl::__detail::heap_sampler_info:
+// Resource::Resource(hlsl::__detail::heap_sampler_info info) {
 //   __handle = __builtin_hlsl_resource_handlefromheap(__handle, info.Index);
 // }
 BuiltinTypeDeclBuilder &
@@ -1292,7 +1292,7 @@ BuiltinTypeDeclBuilder::addHeapSamplerInfoConstructor() {
   NamespaceDecl *HLSLDetailNS =
       lookupBuiltinNamespace(SemaRef, "__detail", Record->getDeclContext());
   QualType HeapResInfoType =
-      lookupBuiltinType(SemaRef, "__heap_sampler_info", HLSLDetailNS);
+      lookupBuiltinType(SemaRef, "heap_sampler_info", HLSLDetailNS);
   CXXRecordDecl *HeapResInfoDecl = HeapResInfoType->getAsCXXRecordDecl();
 
   FieldDecl *IndexField = *HeapResInfoDecl->field_begin();
