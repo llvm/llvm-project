@@ -75,7 +75,8 @@ struct alignas(16) Overaligned {
 
 int main(int, char**) {
   test<int>();
-  test<double>(); // not trivially equality comparable
+  // not trivially equality comparable
+  test<double>();
   test<Overaligned>();
 
   return 0;
