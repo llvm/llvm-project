@@ -347,6 +347,7 @@ Register HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
     case Hexagon::STriw_pred:
     case Hexagon::STriw_ctr:
     case Hexagon::PS_vstorerq_ai:
+    case Hexagon::PS_vstorerv_ai:
     case Hexagon::PS_vstorerw_ai: {
       const MachineOperand &OpFI = MI.getOperand(0);
       if (!OpFI.isFI())
