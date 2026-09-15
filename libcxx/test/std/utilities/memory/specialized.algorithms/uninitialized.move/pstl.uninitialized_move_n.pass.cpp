@@ -16,9 +16,9 @@
 //           class InputIterator,
 //           class Size,
 //           class ForwardIterator>
-//   ForwardIterator uninitialized_move_n(ExecutionPolicy&& exec,
-//                                        InputIterator first, Size n,
-//                                        ForwardIterator result);
+//   pair<InputIterator, ForwardIterator> uninitialized_move_n(ExecutionPolicy&& exec,
+//                                                             InputIterator first, Size n,
+//                                                             ForwardIterator result);
 
 #include <atomic>
 #include <algorithm>
