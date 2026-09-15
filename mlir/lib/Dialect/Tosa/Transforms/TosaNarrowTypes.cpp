@@ -751,18 +751,21 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
         });
   }
 
+  auto hasLegalTypes = [&typeConverter](Operation *op) {
+    return typeConverter.isLegal(op->getOperandTypes()) &&
+           typeConverter.isLegal(op->getResultTypes());
+  };
+
   ConversionTarget target(*context);
-  target.addDynamicallyLegalDialect<tosa::TosaDialect>(
-      [&typeConverter, convertAccumulatorType](Operation *op) {
-        if (!typeConverter.isLegal(op->getResultTypes()) ||
-            !typeConverter.isLegal(op->getOperandTypes()))
-          return false;
-        if (!convertAccumulatorType)
-          return true;
-        const auto accumulatorType = op->getAttrOfType<TypeAttr>("acc_type");
-        return !accumulatorType ||
-               !typeNeedsConversion<Kind>(accumulatorType.getValue());
-      });
+  target.addDynamicallyLegalDialect<tosa::TosaDialect>([&](Operation *op) {
+    if (!hasLegalTypes(op))
+      return false;
+    if (!convertAccumulatorType)
+      return true;
+    const auto accumulatorType = op->getAttrOfType<TypeAttr>("acc_type");
+    return !accumulatorType ||
+           !typeNeedsConversion<Kind>(accumulatorType.getValue());
+  });
   if (convertFunctionBoundaries) {
     target.addDynamicallyLegalOp<func::FuncOp>(
         [&typeConverter](func::FuncOp op) {
@@ -780,6 +783,7 @@ LogicalResult runTosaNarrowing(Operation *op, bool aggressiveRewrite,
     target.addDynamicallyLegalOp<func::ReturnOp>(
         [](func::ReturnOp) { return true; });
   }
+  target.markUnknownOpDynamicallyLegal(hasLegalTypes);
 
   RewritePatternSet patterns(context);
   if (convertFunctionBoundaries) {
