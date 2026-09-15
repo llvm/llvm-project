@@ -152,6 +152,7 @@ _LIBCPP_DIAGNOSTIC_POP
 } // namespace __locale
 _LIBCPP_END_NAMESPACE_STD
 
+#include <__locale_dir/support/get_c_locale.h>
 #include <__locale_dir/support/no_locale/characters.h>
 #include <__locale_dir/support/no_locale/strtonum.h>
 
