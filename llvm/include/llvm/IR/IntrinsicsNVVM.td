@@ -1338,8 +1338,7 @@ class NVVMPureIntrinsic<list<LLVMType> ret_types,
 class NVVM_SP_IDX_ARGPROPS<ArgIndex IdxSizeIdx> {
   list<IntrinsicProperty> Prop = [
     RangeList<IdxSizeIdx, [2, 4]>,
-    ArgInfo<IdxSizeIdx, [ArgName<"idx_size">,
-                         ImmArgPrinter<"printSPIdxSize">]>
+    ArgInfo<IdxSizeIdx, [ArgName<"idx_size">]>
   ];
 }
 
@@ -4232,7 +4231,7 @@ def int_nvvm_tensormap_replace_fill_mode :
 
 class SPCompress :
   DefaultAttrsIntrinsicFlags<
-    [llvm_anyint_ty,  // mdata
+    [llvm_anyint_ty,          // mdata
      llvm_any_vector_int_ty], // cdata
     [llvm_any_vector_int_ty,  // data
      llvm_i32_ty],            // spdesc
@@ -4252,7 +4251,7 @@ def int_nvvm_spcompress : SPCompress;
 class SPDecompress :
   DefaultAttrsIntrinsicFlags<
     [llvm_any_vector_int_ty], // data
-    [llvm_anyint_ty,  // mdata
+    [llvm_anyint_ty,          // mdata
      llvm_any_vector_int_ty], // cdata
     [llvm_i32_ty,             // idx_size
      llvm_i32_ty],            // num_tgt
