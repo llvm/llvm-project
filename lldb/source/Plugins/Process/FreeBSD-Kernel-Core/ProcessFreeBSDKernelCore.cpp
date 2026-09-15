@@ -540,9 +540,6 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
 void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
   kssize_t displacement = kvm_kerndisp(m_kvm);
 
-  if (displacement == 0)
-    return;
-
   Target &target = GetTarget();
   lldb::ModuleSP kernel_module_sp = target.GetExecutableModule();
   if (!kernel_module_sp)
