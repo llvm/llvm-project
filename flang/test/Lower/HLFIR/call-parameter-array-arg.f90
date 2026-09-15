@@ -13,6 +13,9 @@ contains
   subroutine expl(x)
     integer, intent(in) :: x(4)
   end subroutine
+  subroutine expl3(x)
+    integer, intent(in) :: x(3)
+  end subroutine
   subroutine asmd(x)
     integer, intent(in) :: x(:)
   end subroutine
@@ -52,17 +55,19 @@ subroutine whole_assumed_shape()
 end subroutine
 
 ! Named-constant array element to an explicit-shape dummy (sequence
-! association): the element's address is passed; no scalar temporary.
+! association, F'2023 15.5.2.12): the element's address is passed; no scalar
+! temporary.  The dummy extent (3) matches the sequence remaining from gp(2)
+! per 15.5.2.12 p6.
 ! CHECK-LABEL: func.func @_QPelement_seq_assoc
 ! CHECK: %[[EADDR:.*]] = fir.address_of(@_QMmECgp)
 ! CHECK: %[[EDECL:.*]]:2 = hlfir.declare %[[EADDR]]
 ! CHECK: %[[ELT:.*]] = hlfir.designate %[[EDECL]]#0 (%{{.*}}) : (!fir.ref<!fir.array<4xi32>>, i64) -> !fir.ref<i32>
 ! CHECK-NOT: hlfir.as_expr
-! CHECK: %[[ECAST:.*]] = fir.convert %[[ELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<4xi32>>
-! CHECK: fir.call @_QMmPexpl(%[[ECAST]])
+! CHECK: %[[ECAST:.*]] = fir.convert %[[ELT]] : (!fir.ref<i32>) -> !fir.ref<!fir.array<3xi32>>
+! CHECK: fir.call @_QMmPexpl3(%[[ECAST]])
 subroutine element_seq_assoc()
   use m
-  call expl(gp(2))
+  call expl3(gp(2))
 end subroutine
 
 ! Polymorphic assumed-shape dummy: no contiguity requirement, so no copy is
