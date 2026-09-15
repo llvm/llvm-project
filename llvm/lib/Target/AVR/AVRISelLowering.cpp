@@ -50,6 +50,8 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
+  setOperationAction(ISD::FRAMEADDR, MVT::i16, Custom);
+  setOperationAction(ISD::RETURNADDR, MVT::i16, Custom);
 
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
@@ -961,9 +963,92 @@ SDValue AVRTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerDivRem(Op, DAG);
   case ISD::INLINEASM:
     return LowerINLINEASM(Op, DAG);
+  case ISD::FRAMEADDR:
+    return LowerFRAMEADDR(Op, DAG);
+  case ISD::RETURNADDR:
+    return LowerRETURNADDR(Op, DAG);
   }
 
   return SDValue();
+}
+
+SDValue AVRTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
+  // The frame pointer (Y = r29:r28) is set up to contain the stack pointer
+  // *after* the frame has been allocated, i.e. Y == SP_entry - StackSize,
+  // which means it points to the lowest address of the frame: it is really a
+  // frame *base* rather than the canonical frame address. The slot holding the
+  // caller's Y therefore sits at a function dependent offset (the frame size)
+  // above it. Walking the frame chain is only possible for the current frame.
+  //
+  // This is also what avr-gcc returns for __builtin_frame_address(0).
+  if (Op.getConstantOperandVal(0) > 0)
+    // Use the legalizer's default expansion, which is to return 0 (what this
+    // function is documented to do).
+    return SDValue();
+
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+
+  // Note that AVRRegisterInfo::getFrameRegister returns R28, which is only
+  // the low half of the frame pointer: use the full 16-bit register pair.
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), AVR::R29R28,
+                            Op.getValueType());
+}
+
+SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  // AVR has no link register: the return address is pushed onto the stack by
+  // the call instruction. The stack pointer always points at the first free
+  // byte, so the pushed return address ends up right below the local area (the
+  // incoming stack arguments), which starts at SP_entry + 3.
+  //
+  // The return address is pushed most significant byte first, hence it is
+  // stored big-endian: [SP_entry + 1] is the high byte and [SP_entry + 2] the
+  // low byte. This is why avr-gcc has to swap the two bytes it reads for
+  // __builtin_return_address(0).
+  //
+  // Walking the frame chain is not possible, because the distance between the
+  // frame base and the slot holding the caller's return address depends on the
+  // caller's frame size, which is not known here. This is also what avr-gcc
+  // does for __builtin_return_address(1), which returns zero.
+  if (Op.getConstantOperandVal(0) > 0)
+    // Use the legalizer's default expansion, which is to return 0 (what this
+    // function is documented to do).
+    return SDValue();
+
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setReturnAddressIsTaken(true);
+
+  SDLoc DL(Op);
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  // A call pushes as many bytes as the program counter is wide: three on
+  // devices with a 22-bit PC (the ones providing EIJMP/EICALL), two elsewhere.
+  // Only the two low bytes of the return address are returned, so on the former
+  // they are found one byte higher up.
+  int PCWidth = Subtarget.hasEIJMPCALL() ? 3 : 2;
+
+  // A fixed object at offset N is located at SP_entry + N + 3, so the two low
+  // bytes of the return address are the fixed object at offset PCWidth - 4.
+  // Note that a frame index can only be referenced through Y, so taking the
+  // return address forces the function to have a frame pointer (see
+  // AVRFrameLowering::hasFPImpl).
+  int FI = MFI.CreateFixedObject(2, PCWidth - 4, true);
+  SDValue Addr = DAG.getFrameIndex(FI, PtrVT);
+
+  // Load the two bytes separately and put them in the right halves of the
+  // result, which is cheaper than loading a word and byte swapping it.
+  SDValue Hi = DAG.getLoad(MVT::i8, DL, DAG.getEntryNode(), Addr,
+                           MachinePointerInfo::getFixedStack(MF, FI));
+  SDValue Lo =
+      DAG.getLoad(MVT::i8, DL, DAG.getEntryNode(),
+                  DAG.getObjectPtrOffset(DL, Addr, TypeSize::getFixed(1)),
+                  MachinePointerInfo::getFixedStack(MF, FI, 1));
+
+  SDValue Res = DAG.getTargetInsertSubreg(AVR::sub_lo, DL, MVT::i16,
+                                          DAG.getUNDEF(MVT::i16), Lo);
+  return DAG.getTargetInsertSubreg(AVR::sub_hi, DL, MVT::i16, Res, Hi);
 }
 
 /// Replace a node with an illegal result type
