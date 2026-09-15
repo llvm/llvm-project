@@ -5168,6 +5168,7 @@ add_header_library(
     log2f.h
   DEPENDS
     .common_constants
+    libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.except_value_utils
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fma
