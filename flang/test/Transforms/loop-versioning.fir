@@ -1,5 +1,8 @@
 // RUN: fir-opt --loop-versioning %s | FileCheck %s
-
+// Repeat the existing checks with slice support disabled to ensure the option
+// preserves established slice-free transformation behavior.
+// RUN: fir-opt '--loop-versioning=enable-slices=false' %s | \
+// RUN:   FileCheck %s
 
 //  subroutine sum1d(a, n)
 //    real*8 :: a(:)
