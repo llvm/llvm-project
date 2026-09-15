@@ -138,7 +138,7 @@ define i32 @divceil_i16_var_divisor_zext(i16 range(i16 0, 101) %x, i16 range(i16
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i16 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i16 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i16 [[TMP2]], [[Y]]
-; CHECK-NEXT:    [[RESULT:%.*]] = zext i16 [[TMP3]] to i32
+; CHECK-NEXT:    [[RESULT:%.*]] = zext nneg i16 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
   %q = udiv i16 %x, %y
