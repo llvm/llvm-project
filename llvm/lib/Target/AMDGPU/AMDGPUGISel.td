@@ -292,6 +292,8 @@ def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
 def : GINodeEquiv<G_AMDGPU_REG_LOAD,  SIreg_load>;
 def : GINodeEquiv<G_AMDGPU_REG_STORE, SIreg_store>;
+def : GINodeEquiv<G_AMDGPU_REG_LOAD_BITS,  SIreg_load_bits>;
+def : GINodeEquiv<G_AMDGPU_REG_STORE_BITS, SIreg_store_bits>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
 def : GINodeEquiv<G_AMDGPU_BUFFER_LOAD, SIbuffer_load>;

@@ -1399,6 +1399,12 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_AMDGPU_REG_STORE})
       .Any({{BRC}, {{}, {VgprBRC, Sgpr32_WF}}});
 
+  addRulesForGOpcs({G_AMDGPU_REG_LOAD_BITS})
+      .Any({{BRC}, {{VgprBRC}, {Sgpr32_WF, Sgpr32, Vgpr32, Sgpr32}}});
+
+  addRulesForGOpcs({G_AMDGPU_REG_STORE_BITS})
+      .Any({{BRC}, {{}, {VgprBRC, Sgpr32_WF, Vgpr32}}});
+
   addRulesForGOpcs({G_PTR_ADD})
       .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32, Sgpr32}}})
       .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32, Vgpr32}}})
