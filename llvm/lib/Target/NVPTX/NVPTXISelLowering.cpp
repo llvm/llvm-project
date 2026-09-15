@@ -65,6 +65,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -3199,6 +3200,186 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   }
 }
 
+static EVT getSPVectorPartType(EVT VT) {
+  assert(VT.isVector() && "expected a vector type");
+  EVT EltVT = VT.getVectorElementType();
+  if (EltVT == MVT::i8)
+    return MVT::v4i8;
+  if (EltVT == MVT::i16)
+    return MVT::v2i16;
+  return EltVT;
+}
+
+static unsigned getSPVectorNumParts(EVT VT) {
+  EVT PartVT = getSPVectorPartType(VT);
+  unsigned PartElts = PartVT.isVector() ? PartVT.getVectorNumElements() : 1;
+  return divideCeil(VT.getVectorNumElements(), PartElts);
+}
+
+static void splitSPVector(SDValue Vector, SmallVectorImpl<SDValue> &Parts,
+                          SelectionDAG &DAG) {
+  EVT VT = Vector.getValueType();
+  EVT PartVT = getSPVectorPartType(VT);
+  if (!PartVT.isVector()) {
+    DAG.ExtractVectorElements(Vector, Parts);
+    return;
+  }
+
+  unsigned NumParts = getSPVectorNumParts(VT);
+  unsigned PartElts = PartVT.getVectorNumElements();
+  unsigned PaddedElts = NumParts * PartElts;
+  if (PaddedElts != VT.getVectorNumElements()) {
+    EVT PaddedVT = EVT::getVectorVT(*DAG.getContext(),
+                                    VT.getVectorElementType(), PaddedElts);
+    Vector = DAG.getNode(ISD::INSERT_SUBVECTOR, SDLoc(Vector), PaddedVT,
+                         DAG.getUNDEF(PaddedVT), Vector,
+                         DAG.getVectorIdxConstant(0, SDLoc(Vector)));
+  }
+  for (unsigned I : llvm::seq(NumParts))
+    Parts.push_back(
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, SDLoc(Vector), PartVT, Vector,
+                    DAG.getVectorIdxConstant(I * PartElts, SDLoc(Vector))));
+}
+
+static SDValue joinSPVector(EVT VT, ArrayRef<SDValue> Parts, const SDLoc &DL,
+                            SelectionDAG &DAG) {
+  assert(Parts.size() == getSPVectorNumParts(VT) &&
+         "incorrect number of SP vector parts");
+  EVT PartVT = getSPVectorPartType(VT);
+  SmallVector<SDValue> TypedParts;
+  for (SDValue Part : Parts)
+    TypedParts.push_back(
+        Part.getValueType() == PartVT ? Part : DAG.getBitcast(PartVT, Part));
+  Parts = TypedParts;
+
+  if (Parts.size() == 1 && Parts.front().getValueType() == VT)
+    return Parts.front();
+  if (Parts.front().getValueType().isVector()) {
+    EVT JoinedVT =
+        EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
+                         Parts.size() * PartVT.getVectorNumElements());
+    SDValue Joined = Parts.size() == 1 ? Parts.front()
+                                       : DAG.getNode(ISD::CONCAT_VECTORS, DL,
+                                                     JoinedVT, Parts);
+    if (JoinedVT == VT)
+      return Joined;
+    return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Joined,
+                       DAG.getVectorIdxConstant(0, DL));
+  }
+  return DAG.getBuildVector(VT, DL, Parts);
+}
+
+static void appendSplitSPOperands(ArrayRef<SDUse> Input,
+                                  SmallVectorImpl<SDValue> &Output,
+                                  SelectionDAG &DAG) {
+  for (const SDValue &Operand : Input) {
+    if (!Operand.getValueType().isVector()) {
+      Output.push_back(Operand);
+      continue;
+    }
+
+    SmallVector<SDValue> Parts;
+    splitSPVector(Operand, Parts, DAG);
+    for (SDValue Part : Parts)
+      Output.push_back(Part.getValueType() == MVT::i32
+                           ? Part
+                           : DAG.getBitcast(MVT::i32, Part));
+  }
+}
+
+static SDValue lowerSPIntrinsic(SDValue Op, ArrayRef<SDValue> Qualifiers,
+                                SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  SmallVector<SDValue, 16> Ops;
+  llvm::append_range(Ops, Qualifiers);
+  appendSplitSPOperands(N->ops().slice(1, 2), Ops, DAG);
+
+  SmallVector<EVT, 16> ResultTys;
+  for (const EVT VT : N->values()) {
+    if (VT.isVector())
+      ResultTys.append(getSPVectorNumParts(VT), MVT::i32);
+    else
+      ResultTys.push_back(VT);
+  }
+
+  auto IID = static_cast<Intrinsic::ID>(N->getConstantOperandVal(0));
+  assert((IID == Intrinsic::nvvm_spcompress ||
+          IID == Intrinsic::nvvm_spdecompress) &&
+         "unexpected SP intrinsic");
+  unsigned Opcode = IID == Intrinsic::nvvm_spcompress ? NVPTXISD::SPCOMPRESS
+                                                      : NVPTXISD::SPDECOMPRESS;
+  SDValue Lowered = DAG.getNode(Opcode, DL, ResultTys, Ops);
+
+  SmallVector<SDValue, 2> Retvals;
+  unsigned NewI = 0;
+  for (unsigned I : llvm::seq(N->getNumValues())) {
+    if (EVT VT = N->getValueType(I); VT.isVector()) {
+      SmallVector<SDValue> Parts;
+      for (unsigned Part : llvm::seq(getSPVectorNumParts(VT)))
+        Parts.push_back(Lowered.getValue(NewI + Part));
+      NewI += Parts.size();
+      Retvals.push_back(joinSPVector(VT, Parts, DL, DAG));
+    } else {
+      Retvals.push_back(Lowered.getValue(NewI));
+      ++NewI;
+    }
+  }
+
+  return DAG.getMergeValues(Retvals, DL);
+}
+
+static SDValue lowerSPCompress(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+  EVT DataVT = N->getOperand(1).getValueType();
+  unsigned ElemSize = DataVT.getScalarSizeInBits();
+  unsigned IdxSize = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  unsigned DataSize = getSPVectorNumParts(DataVT);
+  assert(DataSize % 2 == 0 && "invalid spcompress data size");
+  unsigned RepeatFactor = DataSize / 2;
+  assert(nvvm::isValidSPRepeatFactor(RepeatFactor) &&
+         "invalid spcompress repeat factor");
+
+  SmallVector<SDValue, 3> Qualifiers = {
+      DAG.getTargetConstant(ElemSize, DL, MVT::i32),
+      DAG.getTargetConstant(IdxSize, DL, MVT::i32),
+      DAG.getTargetConstant(RepeatFactor, DL, MVT::i32)};
+  return lowerSPIntrinsic(Op, Qualifiers, DAG);
+}
+
+static SDValue lowerSPDecompress(SDValue Op, SelectionDAG &DAG) {
+  SDNode *N = Op.getNode();
+  SDLoc DL(N);
+
+  EVT ResVT0 = N->getValueType(0);
+  EVT CDataVT = N->getOperand(2).getValueType();
+  assert(ResVT0.isVector() && CDataVT.isVector() &&
+         "invalid spdecompress types");
+
+  unsigned NumTgt = cast<ConstantSDNode>(N->getOperand(4))->getZExtValue();
+  unsigned DataElts = ResVT0.getVectorNumElements();
+  assert(NumTgt != 0 && DataElts % NumTgt == 0 &&
+         "invalid spdecompress target group size");
+  unsigned RepeatFactor = DataElts / NumTgt;
+  unsigned CDataElts = CDataVT.getVectorNumElements();
+  assert(nvvm::isValidSPRepeatFactor(RepeatFactor) &&
+         CDataElts % RepeatFactor == 0 &&
+         "invalid spdecompress source group size");
+  unsigned NumSrc = CDataElts / RepeatFactor;
+
+  unsigned ElemSize = ResVT0.getScalarSizeInBits();
+  unsigned IdxSize = cast<ConstantSDNode>(N->getOperand(3))->getZExtValue();
+  SmallVector<SDValue, 5> Qualifiers = {
+      DAG.getTargetConstant(ElemSize, DL, MVT::i32),
+      DAG.getTargetConstant(IdxSize, DL, MVT::i32),
+      DAG.getTargetConstant(RepeatFactor, DL, MVT::i32),
+      DAG.getTargetConstant(NumSrc, DL, MVT::i32),
+      DAG.getTargetConstant(NumTgt, DL, MVT::i32)};
+  return lowerSPIntrinsic(Op, Qualifiers, DAG);
+}
+
 static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(0)) {
   default:
@@ -3227,6 +3408,12 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite:
   case Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite:
     return lowerCvtRSIntrinsics(Op, DAG);
+
+  case Intrinsic::nvvm_spcompress:
+    return lowerSPCompress(Op, DAG);
+
+  case Intrinsic::nvvm_spdecompress:
+    return lowerSPDecompress(Op, DAG);
   }
 }
 
@@ -7321,6 +7508,10 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
       return diagnoseUnsupportedFAdd(N, DCI.DAG, IID, RoundingMode);
     return combineFAddWithNeg(N, DCI.DAG, IID, RoundingMode);
   }
+  case Intrinsic::nvvm_spcompress:
+    return lowerSPCompress(SDValue(N, 0), DCI.DAG);
+  case Intrinsic::nvvm_spdecompress:
+    return lowerSPDecompress(SDValue(N, 0), DCI.DAG);
   }
   return SDValue();
 }
