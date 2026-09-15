@@ -6,7 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass tries to fuse DS instructions with close by immediate offsets.
+// This pass tries to:
+// 1. fuse DS instructions with close by immediate offsets.
+// 2. fuse dword load + sign/zero extension into a subword load.
+// Optimization #1 (fusion) must be done before optimization #2 (subword loads).
+// The additional sign/zero-extension functionality in subword loads prevents
+// them from being fused with adjacent DS instructions.
+//
+// Optimization #1, fuse DS instructions
 // This will fuse operations such as
 //  ds_read_b32 v0, v2 offset:16
 //  ds_read_b32 v1, v2 offset:32
@@ -55,6 +62,17 @@
 //   offsets, but are close enough to fit in the 8 bits, we can add to the base
 //   pointer and use the new reduced offsets.
 //
+// Optimization #2, fuse dword load + extension into subword load
+// This will transform patterns like:
+//   s_load_dword s0, ...
+//   s_and_b32 s1, s0, 0xff
+// into:
+//   s_load_u8 s1, ...
+//
+// The optimization recognizes dword loads followed by either zero-extension
+// (via AND with 0xff or 0xffff) or sign-extension (via S_SEXT_I32_I8/I16)
+// and replaces both instructions with a single subword load instruction.
+// This is only available on GFX12+ via the hasScalarSubwordLoads() feature.
 //===----------------------------------------------------------------------===//
 
 #include "SILoadStoreOptimizer.h"
@@ -310,6 +328,8 @@ private:
   bool optimizeInstsWithSameBaseAddr(std::list<CombineInfo> &MergeList,
                                      bool &OptimizeListAgain);
   bool optimizeBlock(std::list<std::list<CombineInfo> > &MergeableInsts);
+
+  bool optimizeDwordLoadExtension(MachineBasicBlock &MBB);
 
 public:
   SILoadStoreOptimizer(AliasAnalysis *AA) : AA(AA) {}
@@ -2868,6 +2888,118 @@ bool SILoadStoreOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
       .run(MF);
 }
 
+enum SubwordExtensionType {
+  EXT_U8 = 0,
+  EXT_U16 = 1,
+  EXT_I8 = 2,
+  EXT_I16 = 3,
+  EXT_NONE = -1
+};
+
+// Determine the extension type based on the use instruction.
+// Returns EXT_NONE if the use pattern doesn't match a subword load.
+static SubwordExtensionType getExtensionType(const MachineInstr *UseInst) {
+  switch (UseInst->getOpcode()) {
+  case AMDGPU::S_AND_B32: {
+    // Check if it's masking with 0xff or 0xffff
+    const MachineOperand &MaskOp = UseInst->getOperand(2);
+    if (!MaskOp.isImm())
+      return EXT_NONE;
+
+    int64_t Mask = MaskOp.getImm();
+    if (Mask == 0xff)
+      return EXT_U8;
+    if (Mask == 0xffff)
+      return EXT_U16;
+    return EXT_NONE;
+  }
+  case AMDGPU::S_SEXT_I32_I8:
+    return EXT_I8;
+  case AMDGPU::S_SEXT_I32_I16:
+    return EXT_I16;
+  }
+  return EXT_NONE;
+}
+
+// Optimize a dword load + mask/extend by fusing the two instructions
+// into a subword load instruction.
+//
+// Patterns:
+//   s_load_dword + s_and_b32 ... 0xff    -> s_load_u8
+//   s_load_dword + s_and_b32 ... 0xffff  -> s_load_u16
+//   s_load_dword + s_sext_i32_i8         -> s_load_i8
+//   s_load_dword + s_sext_i32_i16        -> s_load_i16
+//
+// Same patterns for s_buffer_load_dword -> s_buffer_load_u8/i8/u16/i16
+bool SILoadStoreOptimizer::optimizeDwordLoadExtension(MachineBasicBlock &MBB) {
+  if (!STM->hasScalarSubwordLoads())
+    return false;
+
+  // Opcode tables for subword loads indexed by SubwordExtensionType
+  static const unsigned S_LOAD_IMM_TABLE[] = {
+      AMDGPU::S_LOAD_U8_IMM, AMDGPU::S_LOAD_U16_IMM, AMDGPU::S_LOAD_I8_IMM,
+      AMDGPU::S_LOAD_I16_IMM};
+  static const unsigned S_LOAD_SGPR_TABLE[] = {
+      AMDGPU::S_LOAD_U8_SGPR, AMDGPU::S_LOAD_U16_SGPR, AMDGPU::S_LOAD_I8_SGPR,
+      AMDGPU::S_LOAD_I16_SGPR};
+  static const unsigned S_BUFFER_LOAD_IMM_TABLE[] = {
+      AMDGPU::S_BUFFER_LOAD_U8_IMM, AMDGPU::S_BUFFER_LOAD_U16_IMM,
+      AMDGPU::S_BUFFER_LOAD_I8_IMM, AMDGPU::S_BUFFER_LOAD_I16_IMM};
+  static const unsigned S_BUFFER_LOAD_SGPR_TABLE[] = {
+      AMDGPU::S_BUFFER_LOAD_U8_SGPR, AMDGPU::S_BUFFER_LOAD_U16_SGPR,
+      AMDGPU::S_BUFFER_LOAD_I8_SGPR, AMDGPU::S_BUFFER_LOAD_I16_SGPR};
+  static const unsigned S_BUFFER_LOAD_SGPR_IMM_TABLE[] = {
+      AMDGPU::S_BUFFER_LOAD_U8_SGPR_IMM, AMDGPU::S_BUFFER_LOAD_U16_SGPR_IMM,
+      AMDGPU::S_BUFFER_LOAD_I8_SGPR_IMM, AMDGPU::S_BUFFER_LOAD_I16_SGPR_IMM};
+
+  // Map from dword load opcode to subword load opcode table
+  static const DenseMap<unsigned, const unsigned *> DwordLoadToSubwordOpcodes =
+      {{AMDGPU::S_LOAD_DWORD_IMM, S_LOAD_IMM_TABLE},
+       {AMDGPU::S_LOAD_DWORD_SGPR, S_LOAD_SGPR_TABLE},
+       {AMDGPU::S_BUFFER_LOAD_DWORD_IMM, S_BUFFER_LOAD_IMM_TABLE},
+       {AMDGPU::S_BUFFER_LOAD_DWORD_SGPR, S_BUFFER_LOAD_SGPR_TABLE},
+       {AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM, S_BUFFER_LOAD_SGPR_IMM_TABLE}};
+
+  bool Modified = false;
+
+  for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;
+       ++I) {
+    MachineInstr &MI = *I;
+
+    // Find the subword load opcodes for this dword load opcode
+    auto It = DwordLoadToSubwordOpcodes.find(MI.getOpcode());
+    if (It == DwordLoadToSubwordOpcodes.end())
+      continue;
+    const unsigned *SubwordOpcodes =
+        It->second; // Array indexed by SubwordExtensionType
+
+    Register LoadReg = MI.getOperand(0).getReg();
+    MachineInstr *UseInst = MRI->getOneNonDBGUser(LoadReg);
+    if (!UseInst)
+      continue;
+
+    SubwordExtensionType ExtType = getExtensionType(UseInst);
+    if (ExtType == EXT_NONE)
+      continue;
+
+    assert(UseInst->getOperand(1).isReg() &&
+           UseInst->getOperand(1).getReg() == LoadReg &&
+           "Extension source operand should be the load result");
+
+    unsigned NewOpcode = SubwordOpcodes[ExtType];
+    Register UseDestReg = UseInst->getOperand(0).getReg();
+
+    MI.setDesc(TII->get(NewOpcode));
+    MI.getOperand(0).setReg(UseDestReg);
+
+    UseInst->eraseFromParent();
+
+    Modified = true;
+  }
+
+  return Modified;
+}
+
 bool SILoadStoreOptimizer::run(MachineFunction &MF) {
   this->MF = &MF;
   STM = &MF.getSubtarget<GCNSubtarget>();
@@ -2907,6 +3039,9 @@ bool SILoadStoreOptimizer::run(MachineFunction &MF) {
         Modified |= optimizeBlock(MergeableInsts);
       } while (OptimizeAgain);
     }
+
+    // Optimize subword loads after fusion has been completed
+    Modified |= optimizeDwordLoadExtension(MBB);
 
     Visited.clear();
     AnchorList.clear();

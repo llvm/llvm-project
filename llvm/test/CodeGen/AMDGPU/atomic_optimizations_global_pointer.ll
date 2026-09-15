@@ -11639,7 +11639,7 @@ define amdgpu_kernel void @uniform_xchg_i8(ptr addrspace(1) %result, ptr addrspa
 ; GFX1264:       ; %bb.0:
 ; GFX1264-NEXT:    s_clause 0x1
 ; GFX1264-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1264-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX1264-NEXT:    s_load_u8 s6, s[4:5], 0x34
 ; GFX1264-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX1264-NEXT:    s_wait_kmcnt 0x0
 ; GFX1264-NEXT:    s_and_b32 s4, s2, -4
@@ -11647,7 +11647,7 @@ define amdgpu_kernel void @uniform_xchg_i8(ptr addrspace(1) %result, ptr addrspa
 ; GFX1264-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1264-NEXT:    s_load_b32 s5, s[4:5], 0x0
 ; GFX1264-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1264-NEXT:    s_and_b32 s6, s6, 0xff
+; GFX1264-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1264-NEXT:    s_lshl_b32 s7, 0xff, s2
 ; GFX1264-NEXT:    s_lshl_b32 s11, s6, s2
 ; GFX1264-NEXT:    s_not_b32 s10, s7
@@ -11682,7 +11682,7 @@ define amdgpu_kernel void @uniform_xchg_i8(ptr addrspace(1) %result, ptr addrspa
 ; GFX1232:       ; %bb.0:
 ; GFX1232-NEXT:    s_clause 0x1
 ; GFX1232-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1232-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX1232-NEXT:    s_load_u8 s6, s[4:5], 0x34
 ; GFX1232-NEXT:    s_mov_b32 s9, 0
 ; GFX1232-NEXT:    s_wait_kmcnt 0x0
 ; GFX1232-NEXT:    s_and_b32 s4, s2, -4
@@ -11690,7 +11690,7 @@ define amdgpu_kernel void @uniform_xchg_i8(ptr addrspace(1) %result, ptr addrspa
 ; GFX1232-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1232-NEXT:    s_load_b32 s5, s[4:5], 0x0
 ; GFX1232-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1232-NEXT:    s_and_b32 s6, s6, 0xff
+; GFX1232-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1232-NEXT:    s_lshl_b32 s7, 0xff, s2
 ; GFX1232-NEXT:    s_lshl_b32 s10, s6, s2
 ; GFX1232-NEXT:    s_not_b32 s8, s7
@@ -11724,14 +11724,14 @@ define amdgpu_kernel void @uniform_xchg_i8(ptr addrspace(1) %result, ptr addrspa
 ; GFX1364:       ; %bb.0:
 ; GFX1364-NEXT:    s_clause 0x1
 ; GFX1364-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1364-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX1364-NEXT:    s_load_u8 s6, s[4:5], 0x34 nv
 ; GFX1364-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
 ; GFX1364-NEXT:    s_and_b64 s[4:5], s[2:3], -4
 ; GFX1364-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1364-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX1364-NEXT:    s_lshl_b32 s8, s2, 3
-; GFX1364-NEXT:    s_and_b32 s6, s6, 0xff
+; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1364-NEXT:    s_lshl_b32 s2, 0xff, s8
 ; GFX1364-NEXT:    s_lshl_b32 s10, s6, s8
 ; GFX1364-NEXT:    s_not_b32 s9, s2
@@ -11765,14 +11765,14 @@ define amdgpu_kernel void @uniform_xchg_i8(ptr addrspace(1) %result, ptr addrspa
 ; GFX1332:       ; %bb.0:
 ; GFX1332-NEXT:    s_clause 0x1
 ; GFX1332-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1332-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX1332-NEXT:    s_load_u8 s6, s[4:5], 0x34 nv
 ; GFX1332-NEXT:    s_mov_b32 s9, 0
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
 ; GFX1332-NEXT:    s_and_b64 s[4:5], s[2:3], -4
 ; GFX1332-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1332-NEXT:    s_load_b32 s7, s[4:5], 0x0
 ; GFX1332-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1332-NEXT:    s_and_b32 s6, s6, 0xff
+; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1332-NEXT:    s_lshl_b32 s3, 0xff, s2
 ; GFX1332-NEXT:    s_lshl_b32 s8, s6, s2
 ; GFX1332-NEXT:    s_not_b32 s3, s3
@@ -14074,7 +14074,7 @@ define amdgpu_kernel void @uniform_xchg_i16(ptr addrspace(1) %result, ptr addrsp
 ; GFX1264:       ; %bb.0:
 ; GFX1264-NEXT:    s_clause 0x1
 ; GFX1264-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1264-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX1264-NEXT:    s_load_u16 s6, s[4:5], 0x34
 ; GFX1264-NEXT:    s_mov_b64 s[8:9], 0
 ; GFX1264-NEXT:    s_wait_kmcnt 0x0
 ; GFX1264-NEXT:    s_and_b32 s4, s2, -4
@@ -14082,7 +14082,7 @@ define amdgpu_kernel void @uniform_xchg_i16(ptr addrspace(1) %result, ptr addrsp
 ; GFX1264-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1264-NEXT:    s_load_b32 s5, s[4:5], 0x0
 ; GFX1264-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1264-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX1264-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1264-NEXT:    s_lshl_b32 s7, 0xffff, s2
 ; GFX1264-NEXT:    s_lshl_b32 s11, s6, s2
 ; GFX1264-NEXT:    s_not_b32 s10, s7
@@ -14117,7 +14117,7 @@ define amdgpu_kernel void @uniform_xchg_i16(ptr addrspace(1) %result, ptr addrsp
 ; GFX1232:       ; %bb.0:
 ; GFX1232-NEXT:    s_clause 0x1
 ; GFX1232-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX1232-NEXT:    s_load_b32 s6, s[4:5], 0x34
+; GFX1232-NEXT:    s_load_u16 s6, s[4:5], 0x34
 ; GFX1232-NEXT:    s_mov_b32 s9, 0
 ; GFX1232-NEXT:    s_wait_kmcnt 0x0
 ; GFX1232-NEXT:    s_and_b32 s4, s2, -4
@@ -14125,7 +14125,7 @@ define amdgpu_kernel void @uniform_xchg_i16(ptr addrspace(1) %result, ptr addrsp
 ; GFX1232-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1232-NEXT:    s_load_b32 s5, s[4:5], 0x0
 ; GFX1232-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1232-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX1232-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1232-NEXT:    s_lshl_b32 s7, 0xffff, s2
 ; GFX1232-NEXT:    s_lshl_b32 s10, s6, s2
 ; GFX1232-NEXT:    s_not_b32 s8, s7
@@ -14159,14 +14159,14 @@ define amdgpu_kernel void @uniform_xchg_i16(ptr addrspace(1) %result, ptr addrsp
 ; GFX1364:       ; %bb.0:
 ; GFX1364-NEXT:    s_clause 0x1
 ; GFX1364-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1364-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX1364-NEXT:    s_load_u16 s6, s[4:5], 0x34 nv
 ; GFX1364-NEXT:    s_mov_b32 s7, 0x31016000
 ; GFX1364-NEXT:    s_wait_kmcnt 0x0
 ; GFX1364-NEXT:    s_and_b64 s[4:5], s[2:3], -4
 ; GFX1364-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1364-NEXT:    s_load_b32 s3, s[4:5], 0x0
 ; GFX1364-NEXT:    s_lshl_b32 s8, s2, 3
-; GFX1364-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1364-NEXT:    s_lshl_b32 s2, 0xffff, s8
 ; GFX1364-NEXT:    s_lshl_b32 s10, s6, s8
 ; GFX1364-NEXT:    s_not_b32 s9, s2
@@ -14200,14 +14200,14 @@ define amdgpu_kernel void @uniform_xchg_i16(ptr addrspace(1) %result, ptr addrsp
 ; GFX1332:       ; %bb.0:
 ; GFX1332-NEXT:    s_clause 0x1
 ; GFX1332-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24 nv
-; GFX1332-NEXT:    s_load_b32 s6, s[4:5], 0x34 nv
+; GFX1332-NEXT:    s_load_u16 s6, s[4:5], 0x34 nv
 ; GFX1332-NEXT:    s_mov_b32 s9, 0
 ; GFX1332-NEXT:    s_wait_kmcnt 0x0
 ; GFX1332-NEXT:    s_and_b64 s[4:5], s[2:3], -4
 ; GFX1332-NEXT:    s_and_b32 s2, s2, 3
 ; GFX1332-NEXT:    s_load_b32 s7, s[4:5], 0x0
 ; GFX1332-NEXT:    s_lshl_b32 s2, s2, 3
-; GFX1332-NEXT:    s_and_b32 s6, s6, 0xffff
+; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1332-NEXT:    s_lshl_b32 s3, 0xffff, s2
 ; GFX1332-NEXT:    s_lshl_b32 s8, s6, s2
 ; GFX1332-NEXT:    s_not_b32 s3, s3
