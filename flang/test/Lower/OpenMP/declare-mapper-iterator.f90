@@ -74,7 +74,7 @@ end
 ! CHECK:     %[[IV_IDX:.*]] = fir.convert %[[IV_I64]] : (i64) -> index
 ! CHECK:     %[[LB:.*]] = arith.subi %[[IV_IDX]], %{{.*}} : index
 ! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%[[LB]] : index) upper_bound(%[[LB]] : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
 ! CHECK:     omp.yield(%[[MAP]] : !llvm.ptr)
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
@@ -87,9 +87,9 @@ end
 ! CHECK:     %[[BOX:.*]] = fir.load %[[BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:     %[[DIMS0:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
 ! CHECK:     %[[DIMS1:.*]]:3 = fir.box_dims %[[BOX]], %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK:     %[[BOUNDS2:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%[[DIMS0]]#0 : index) {stride_in_bytes = true}
+! CHECK:     %[[BOUNDS2:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%[[DIMS1]]#1 : index) stride(%[[DIMS1]]#2 : index) start_idx(%[[DIMS0]]#0 : index) stride_in_bytes(true)
 ! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:     %[[MAP2:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS2]]) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP2:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS2]]) name("") -> !llvm.ptr
 ! CHECK:     omp.yield(%[[MAP2]] : !llvm.ptr)
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT2]] : !omp.iterated<!llvm.ptr>)
@@ -101,7 +101,7 @@ end
 ! CHECK:     %[[BOX_REF:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:     %[[BOX:.*]] = fir.load %[[BOX_REF]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ptr<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ptr<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("") -> !llvm.ptr
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
@@ -173,7 +173,7 @@ end
 ! CHECK:     %[[A:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.ref<!fir.array<10xi32>>
 ! CHECK:     %{{.*}} = arith.addi %{{.*}}, %{{.*}} : i32
 ! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index)
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
@@ -182,11 +182,11 @@ end
 ! CHECK:   %[[DECL:.*]]:2 = hlfir.declare %[[ARG]] {uniq_name = "_QFdeclare_mapper_multiEv"}
 ! CHECK:   %[[IT_A:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}}) {
 ! CHECK:     %[[A:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.ref<!fir.array<10xi32>>
-! CHECK:     %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP_A:.*]] = omp.map.info var_ptr(%[[A]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("") -> !llvm.ptr
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   %[[IT_B:.*]] = omp.iterator(%{{.*}}: index) = ({{.*}}) {
 ! CHECK:     %[[B:.*]] = hlfir.designate %[[DECL]]#0{"b"}{{.*}} -> !fir.ref<!fir.array<10xi32>>
-! CHECK:     %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP_B:.*]] = omp.map.info var_ptr(%[[B]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%{{.*}}) name("") -> !llvm.ptr
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT_A]], %[[IT_B]] : !omp.iterated<!llvm.ptr>, !omp.iterated<!llvm.ptr>)
 
@@ -197,9 +197,9 @@ end
 ! CHECK:     %[[BOX_REF:.*]] = hlfir.designate %[[DECL]]#0{"a"}{{.*}} -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:     %[[BOX:.*]] = fir.load %[[BOX_REF]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 ! CHECK:     %{{.*}} = arith.addi %{{.*}}, %{{.*}} : i32
-! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) {stride_in_bytes = true}
+! CHECK:     %[[BOUNDS:.*]] = omp.map.bounds lower_bound(%{{.*}} : index) upper_bound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) start_idx(%{{.*}} : index) stride_in_bytes(true)
 ! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.heap<!fir.array<?xi32>>, i32) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
 
@@ -234,8 +234,8 @@ end
 ! CHECK-SAME: extent(%[[DIMS]]#1 : index)
 ! CHECK-SAME: stride(%[[DIMS]]#2 : index)
 ! CHECK-SAME: start_idx(%[[START]] : index)
-! CHECK-SAME: {stride_in_bytes = true}
+! CHECK-SAME: stride_in_bytes(true)
 ! CHECK:     %[[BASE:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
-! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !llvm.ptr {name = ""}
+! CHECK:     %[[MAP:.*]] = omp.map.info var_ptr(%[[BASE]] : !fir.ref<!fir.array<10xi32>>, !fir.array<10xi32>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) name("") -> !llvm.ptr
 ! CHECK:   } -> !omp.iterated<!llvm.ptr>
 ! CHECK:   omp.declare_mapper.info map_iterated(%[[IT]] : !omp.iterated<!llvm.ptr>)
