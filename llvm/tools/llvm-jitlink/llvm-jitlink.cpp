@@ -33,6 +33,7 @@
 #include "llvm/ExecutionEngine/Orc/JITLinkReentryTrampolines.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/ExecutionEngine/Orc/LookupAndApply.h"
 #include "llvm/ExecutionEngine/Orc/MachO.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
@@ -779,12 +780,18 @@ createSimpleRemoteMemoryManager(ExecutorProcessControl &EPC) {
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
 createSharedMemoryManager(ExecutorProcessControl &EPC) {
   SharedMemoryMapper::SymbolAddrs SAs;
-  if (auto Err = EPC.getBootstrapSymbols(
-          {{SAs.Instance, rt::sps_ci::SharedMemoryMapperInstanceName},
-           {SAs.Reserve, rt::sps_ci::SharedMemoryMapperReserve::Name},
-           {SAs.Initialize, rt::sps_ci::SharedMemoryMapperInitialize::Name},
-           {SAs.Deinitialize, rt::sps_ci::SharedMemoryMapperDeinitialize::Name},
-           {SAs.Release, rt::sps_ci::SharedMemoryMapperRelease::Name}}))
+  if (auto Err = lookupAndApply(
+          EPC.getExecutionSession().getBootstrapJITDylib(),
+          {recordAddr(rt::sps_ci::SharedMemoryMapperInstanceName,
+                      &SAs.Instance),
+           recordAddr(rt::sps_ci::SharedMemoryMapperReserve::Name,
+                      &SAs.Reserve),
+           recordAddr(rt::sps_ci::SharedMemoryMapperInitialize::Name,
+                      &SAs.Initialize),
+           recordAddr(rt::sps_ci::SharedMemoryMapperDeinitialize::Name,
+                      &SAs.Deinitialize),
+           recordAddr(rt::sps_ci::SharedMemoryMapperRelease::Name,
+                      &SAs.Release)}))
     return std::move(Err);
 
 #ifdef _WIN32

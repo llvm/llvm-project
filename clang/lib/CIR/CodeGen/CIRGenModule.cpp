@@ -1294,10 +1294,19 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   // at creation time, matching the logic used in emitCXXGlobalVarDeclInit.
   bool isConstant = false;
   if (d) {
+    QualType declType = d->getType();
+
+    // Classic codegen doesn't try to exclude ctor or dtor here, but has a FIXME
+    // to try to do a better job. So this bit of code does slightly more effort
+    // to get a more accurate answer.  We can try to exclude ctor, but only when
+    // the type is complete, as otherwise we have to check for
+    // fields(particularly whether they are mutable).
+    bool excludeCtor = !declType->isIncompleteType();
     bool needsDtor =
         d->needsDestruction(astContext) == QualType::DK_cxx_destructor;
-    isConstant = d->getType().isConstantStorage(
-        astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/!needsDtor);
+
+    isConstant = declType.isConstantStorage(astContext, excludeCtor,
+                                            /*ExcludeDtor=*/!needsDtor);
   }
 
   mlir::ptr::MemorySpaceAttrInterface declCIRAS =

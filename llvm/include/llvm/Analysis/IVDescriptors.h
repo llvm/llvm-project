@@ -30,6 +30,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVPredicate;
 class StoreInst;
+enum class SCEVNoWrapFlags;
 
 /// These are the kinds of recurrences that we support.
 enum class RecurKind {
@@ -491,7 +492,7 @@ public:
   MonotonicDescriptor() = default;
 
   /// Returns true if \p PN is a monotonic variable in the loop \p L. If \p PN
-  /// is monotonic, the monotonic descriptor \p D will contain the data
+  /// is monotonic, the monotonic descriptor \p Desc will contain the data
   /// describing the PHI.
   LLVM_ABI static bool isMonotonicPHI(PHINode *PN, const Loop *L,
                                       MonotonicDescriptor &Desc,
@@ -515,15 +516,14 @@ public:
   const SCEV *getStepSCEV() const { return StepSCEV; }
 
   /// Returns the SCEV no-wrap flags that apply to StepInst.
-  unsigned getSCEVNoWrapFlags() const { return SCEVNoWrapFlags; }
+  SCEVNoWrapFlags getSCEVNoWrapFlags() const { return NoWrapFlags; }
 
 private:
   MonotonicDescriptor(PHINode *HeaderPHI, PHINode *BackedgePHI,
                       Instruction *StepInst, const SCEV *StartSCEV,
-                      const SCEV *StepSCEV, unsigned SCEVNoWrapFlags)
+                      const SCEV *StepSCEV, SCEVNoWrapFlags NoWrapFlags)
       : HeaderPHI(HeaderPHI), BackedgePHI(BackedgePHI), StepInst(StepInst),
-        StartSCEV(StartSCEV), StepSCEV(StepSCEV),
-        SCEVNoWrapFlags(SCEVNoWrapFlags) {}
+        StartSCEV(StartSCEV), StepSCEV(StepSCEV), NoWrapFlags(NoWrapFlags) {}
 
   /// The header PHI (this is the PHI described by the descriptor).
   PHINode *HeaderPHI = nullptr;
@@ -541,7 +541,7 @@ private:
   const SCEV *StepSCEV = nullptr;
 
   /// The SCEV no-wrap flags that apply to StepInst.
-  unsigned SCEVNoWrapFlags = 0;
+  SCEVNoWrapFlags NoWrapFlags{};
 };
 
 } // end namespace llvm
