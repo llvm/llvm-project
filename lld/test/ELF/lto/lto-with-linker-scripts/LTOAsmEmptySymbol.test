@@ -1,0 +1,51 @@
+# REQUIRES: aarch64
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-as %t/1.ll -o %t/1.o
+# RUN: llvm-as %t/2.ll -o %t/2.o
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-linux-gnu %t/3.s -o %t/3.o
+# RUN: ld.lld -m aarch64elf --lto-linker-scripts --gc-sections -e main -T %t/script.t \
+# RUN:   %t/1.o %t/2.o %t/3.o -o %t/out
+# RUN: llvm-readelf -s -W %t/out | FileCheck %s
+
+# CHECK: FUNC GLOBAL DEFAULT {{.*}} foo
+
+#--- 1.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+module asm ".xword ."
+
+define i32 @foo(i32 %x) nounwind section ".text.foo" {
+  %r = add i32 %x, 2
+  ret i32 %r
+}
+
+#--- 2.ll
+target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "aarch64-unknown-linux-gnu"
+
+module asm ".xword ."
+module asm ".weak foo"
+module asm ".equ foo,bar"
+
+@llvm.compiler.used = appending global [1 x ptr] [ptr @bar], section "llvm.metadata"
+
+define internal i32 @bar(i32 %x) nounwind section ".text.bar" {
+  %r = add i32 %x, 1
+  ret i32 %r
+}
+
+#--- 3.s
+.text
+.section .text.main,"ax",@progbits
+.globl main
+.type main,@function
+main:
+  .xword foo
+  ret
+.size main, .-main
+
+#--- script.t
+SECTIONS {
+  .text : { *(.text.*) }
+}
