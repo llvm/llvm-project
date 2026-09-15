@@ -13883,12 +13883,43 @@ SDValue DAGCombiner::visitMSCATTER(SDNode *N) {
   return SDValue();
 }
 
+/// Check if Mask defines a known constant set of enabled lanes, where only the
+/// first N lanes are enabled. N is returned if so.
+static uint64_t calculateConstantLowMaskLanes(SDValue Mask) {
+  if (Mask.getOpcode() == ISD::BUILD_VECTOR) {
+    unsigned NumOnes = 0;
+    auto Op = Mask->op_begin();
+    for (; Op != Mask->op_end(); ++Op) {
+      if (!isOneConstant(*Op))
+        break;
+      ++NumOnes;
+    }
+
+    if (NumOnes == 0)
+      return 0;
+
+    for (; Op != Mask->op_end(); ++Op)
+      if (!isNullConstant(*Op))
+        return 0;
+    return NumOnes;
+  }
+
+  if (Mask.getOpcode() == ISD::GET_ACTIVE_LANE_MASK &&
+      isNullConstant(Mask.getOperand(0)) &&
+      isa<ConstantSDNode>(Mask.getOperand(1)) &&
+      Mask.getOperand(1).getValueType().getSizeInBits() <= 64)
+    return Mask.getConstantOperandVal(1);
+
+  return 0;
+}
+
 SDValue DAGCombiner::visitMSTORE(SDNode *N) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Mask = MST->getMask();
   SDValue Chain = MST->getChain();
   SDValue Value = MST->getValue();
   SDValue Ptr = MST->getBasePtr();
+  EVT VT = Value.getValueType();
 
   // Zap masked stores with a zero mask.
   if (ISD::isConstantSplatVectorAllZeros(Mask.getNode()))
@@ -13911,21 +13942,45 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     }
   }
 
-  // If this is a masked load with an all ones mask, we can use a unmasked load.
+  // If this is a masked store with an all ones mask, we can use a unmasked
+  // store.
   // FIXME: Can we do this for indexed, compressing, or truncating stores?
-  if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()) && MST->isUnindexed() &&
-      !MST->isCompressingStore() && !MST->isTruncatingStore())
-    return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
-                        MST->getBasePtr(), MST->getPointerInfo(),
-                        MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
-                        MST->getAAInfo());
+  if (MST->isUnindexed() && !MST->isCompressingStore() &&
+      !MST->isTruncatingStore()) {
+    if (ISD::isConstantSplatVectorAllOnes(Mask.getNode()))
+      return DAG.getStore(MST->getChain(), SDLoc(N), MST->getValue(),
+                          MST->getBasePtr(), MST->getPointerInfo(),
+                          MST->getBaseAlign(), MST->getMemOperand()->getFlags(),
+                          MST->getAAInfo());
+
+    // Convert a masked_store with constant getactivelanemask input mask to a
+    // standard store.
+    if (uint64_t Lanes = calculateConstantLowMaskLanes(Mask)) {
+      if (Lanes < VT.getVectorMinNumElements() && isPowerOf2_32(Lanes)) {
+        EVT SubVT = EVT::getVectorVT(*DAG.getContext(),
+                                     VT.getVectorElementType(), Lanes);
+        unsigned IsFast = 0;
+        if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(),
+                                   SubVT, MST->getAddressSpace(),
+                                   MST->getBaseAlign(),
+                                   MST->getMemOperand()->getFlags(), &IsFast) &&
+            IsFast) {
+          SDLoc DL(N);
+          SDValue Ext = DAG.getExtractSubvector(DL, SubVT, MST->getValue(), 0);
+          return DAG.getStore(MST->getChain(), DL, Ext, MST->getBasePtr(),
+                              MST->getPointerInfo(), MST->getBaseAlign(),
+                              MST->getMemOperand()->getFlags(),
+                              MST->getAAInfo());
+        }
+      }
+    }
+  }
 
   // Try transforming N to an indexed store.
   if (CombineToPreIndexedLoadStore(N) || CombineToPostIndexedLoadStore(N))
     return SDValue(N, 0);
 
-  if (MST->isTruncatingStore() && MST->isUnindexed() &&
-      Value.getValueType().isInteger() &&
+  if (MST->isTruncatingStore() && MST->isUnindexed() && VT.isInteger() &&
       (!isa<ConstantSDNode>(Value) ||
        !cast<ConstantSDNode>(Value)->isOpaque())) {
     APInt TruncDemandedBits =

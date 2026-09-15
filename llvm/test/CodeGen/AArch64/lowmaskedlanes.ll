@@ -139,14 +139,7 @@ define <vscale x 8 x i16> @load_low4_nxv8i16(ptr %p) {
 define void @store_low2_v4f64(ptr %p, <4 x double> %a) vscale_range(2, 2) {
 ; CHECK-LABEL: store_low2_v4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q1 killed $q1 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    ptrue p0.d, vl2
-; CHECK-NEXT:    ptrue p1.h, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0_z1 def $z0_z1
-; CHECK-NEXT:    splice z0.d, p0, { z0.d, z1.d }
-; CHECK-NEXT:    punpklo p0.h, p1.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %m = tail call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 2)
   tail call void @llvm.masked.store(<4 x double> %a, ptr align 1 %p, <4 x i1> %m)
@@ -156,13 +149,7 @@ define void @store_low2_v4f64(ptr %p, <4 x double> %a) vscale_range(2, 2) {
 define void @store_low2_v4i32(ptr %p, <4 x i32> %a) vscale_range(1, 1) {
 ; CHECK-LABEL: store_low2_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl2
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    mov z1.h, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    sshll v1.4s, v1.4h, #0
-; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %m = tail call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 0, i32 2)
   tail call void @llvm.masked.store(<4 x i32> %a, ptr align 1 %p, <4 x i1> %m)
@@ -172,12 +159,7 @@ define void @store_low2_v4i32(ptr %p, <4 x i32> %a) vscale_range(1, 1) {
 define void @store_low2c_v4i32(ptr %p, <4 x i32> %a) vscale_range(1, 1) {
 ; CHECK-LABEL: store_low2c_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI12_0
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI12_0]
-; CHECK-NEXT:    cmpne p1.s, p0/z, z1.s, #0
-; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   tail call void @llvm.masked.store(<4 x i32> %a, ptr align 1 %p, <4 x i1> <i1 true, i1 true, i1 false, i1 false>)
   ret void
@@ -186,11 +168,7 @@ define void @store_low2c_v4i32(ptr %p, <4 x i32> %a) vscale_range(1, 1) {
 define void @store_low2_nxv4f64(ptr %p, <vscale x 4 x double> %a) {
 ; CHECK-LABEL: store_low2_nxv4f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s, vl2
-; CHECK-NEXT:    punpkhi p1.h, p0.b
-; CHECK-NEXT:    punpklo p0.h, p0.b
-; CHECK-NEXT:    st1d { z1.d }, p1, [x0, #1, mul vl]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0]
+; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
   %m = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i32(i32 0, i32 2)
   tail call void @llvm.masked.store(<vscale x 4 x double> %a, ptr align 1 %p, <vscale x 4 x i1> %m)
@@ -225,13 +203,10 @@ define void @store_low4_nxv4f64(ptr %p, <vscale x 4 x double> %a) {
 define void @store_low2_v8i16(ptr %p, <8 x i16> %a) vscale_range(2, 2) {
 ; CHECK-LABEL: store_low2_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b, vl2
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    mov z1.b, p0/z, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    ptrue p0.h, vl8
-; CHECK-NEXT:    sshll v1.8h, v1.8b, #0
-; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
-; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
+; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
   %m = tail call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 0, i32 2)
   tail call void @llvm.masked.store(<8 x i16> %a, ptr align 1 %p, <8 x i1> %m)
@@ -241,8 +216,9 @@ define void @store_low2_v8i16(ptr %p, <8 x i16> %a) vscale_range(2, 2) {
 define void @store_low2_nxv8i16(ptr %p, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: store_low2_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl2
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    mov z1.h, z0.h[1]
+; CHECK-NEXT:    str h0, [x0]
+; CHECK-NEXT:    str h1, [x0, #2]
 ; CHECK-NEXT:    ret
   %m = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 0, i32 2)
   tail call void @llvm.masked.store(<vscale x 8 x i16> %a, ptr align 1 %p, <vscale x 8 x i1> %m)
@@ -263,8 +239,7 @@ define void @store_low2_nxv2i16(ptr %p, <vscale x 2 x i16> %a) {
 define void @store_low4_nxv8i16(ptr %p, <vscale x 8 x i16> %a) {
 ; CHECK-LABEL: store_low4_nxv8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h, vl4
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0]
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   %m = tail call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i32(i32 0, i32 4)
   tail call void @llvm.masked.store(<vscale x 8 x i16> %a, ptr align 1 %p, <vscale x 8 x i1> %m)
