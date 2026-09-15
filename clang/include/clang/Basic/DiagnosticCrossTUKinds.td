@@ -46,4 +46,8 @@ def remark_ctu_import_threshold_reached: Remark<
 def warn_ctu_incompat_lang : Warning<
   "imported AST from '%0' had been generated for a different language, "
   "current: %1, imported: %2">, InGroup<CrossTU>;
+
+def warn_multiple_def_index : Warning<
+  "multiple definitions are found for the same key during generating index, "
+  "previous definition found in '%0'">;
 }
