@@ -6,7 +6,7 @@
 ! RUN: bbc -fcuda -emit-hlfir %t/use.cuf -o - -I %t | FileCheck %s
 
 //--- mod.cuf
-module m
+module cuda_module_with_acc_routine_bind
   interface
     attributes(host,device) function my_device_func(x) bind(c) result(res)
       integer(4), value :: x
@@ -27,7 +27,7 @@ end module
 
 //--- use.cuf
 attributes(device) subroutine test
-  use m
+  use cuda_module_with_acc_routine_bind
   implicit none
   integer(4) :: a, b
 
