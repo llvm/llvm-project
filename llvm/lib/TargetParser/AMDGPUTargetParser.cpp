@@ -479,7 +479,7 @@ AMDGPU::getMaxHWAddressableLocalMemorySize(Triple::SubArchType SubArch) {
 }
 
 unsigned AMDGPU::getLocalMemorySize(GPUKind AK, bool FullSIMDMode) {
-  // gfx10/11/12 address half of the physical block, e.g. 64 KiB of 128 KiB.
+  // gfx6 and gfx10/11/12 address half of the physical block.
   unsigned Size = getMaxHWAddressableLocalMemorySize(AK);
   if (getFeatureBitset(AK).test(FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY))
     Size *= 2;
@@ -828,8 +828,11 @@ std::optional<TargetID> TargetID::parse(const Triple &TT,
   if (!TT.isAMDGCN())
     return std::nullopt;
 
-  // Filter out unrecognized subarch suffixes.
-  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn")
+  // Filter out unrecognized subarch suffixes. The bare arch may be spelled
+  // either "amdgcn" (legacy) or "amdgpu" (new subarch triples); anything else
+  // with no recognized subarch is a stray suffix.
+  if (TT.getSubArch() == Triple::NoSubArch && TT.getArchName() != "amdgcn" &&
+      TT.getArchName() != "amdgpu")
     return std::nullopt;
 
   // A named processor (i.e. not the empty/generic wildcard, which is resolved
@@ -914,7 +917,7 @@ void TargetID::printCanonicalTargetIDString(raw_ostream &OS) const {
                         isXnackHardwiredOn(Arch));
 }
 
-std::string TargetID::getCanonicalFeatureString() const {
+std::string TargetID::getCanonicalTargetIDString() const {
   std::string Str;
   raw_string_ostream OS(Str);
   printCanonicalTargetIDString(OS);

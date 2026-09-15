@@ -199,6 +199,9 @@ defm openacc_default_none_scalars_strict : OptOutFC1FFlag<"openacc-default-none-
 defm openacc_multiple_names_in_routine : OptOutFC1FFlag<"openacc-multiple-names-in-routine",
   "Accept multiple names in OpenACC ROUTINE directive (extension)",
   "Do not accept multiple names in OpenACC ROUTINE directive">;
+defm openacc_combined_loop_firstprivate : OptOutFC1FFlag<"openacc-combined-loop-firstprivate",
+  "Attach firstprivate on combined loop in addition to compute construct (extension)",
+  "Keep firstprivate only on the compute construct for combined loop">;
 defm prefer_intrinsic_module_use_association : OptOutFC1FFlag<"prefer-intrinsic-module-use-association",
   "Resolve a USE association conflict in favor of an intrinsic module generic (extension)",
   "Diagnose a USE association conflict with an intrinsic module generic">;

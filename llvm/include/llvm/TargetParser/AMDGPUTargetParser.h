@@ -209,12 +209,13 @@ LLVM_ABI unsigned getAddressableNumVGPRs(Triple::SubArchType SubArch,
 ///   min(getMaxHWAddressableLocalMemorySize(), getLocalMemorySize())
 ///
 /// The physical LDS block belongs to a WGP on gfx10/11/12 and to a CU
-/// otherwise. On gfx10/11/12, the block is twice the address limit, so a
-/// work-group cannot address the entire block in full-SIMD mode.
+/// otherwise. On gfx6 and gfx10/11/12, the block is twice the address limit, so
+/// a work-group cannot address the entire block in full-SIMD mode.
 ///
 /// The mode columns below show local/addressable LDS, in KiB:
 ///
 ///   GPU      address limit   full-SIMD   half-SIMD
+///   gfx600              32        64/32   n/a (always full-SIMD)
 ///   gfx900              64        64/64   n/a (always full-SIMD)
 ///   gfx1030             64       128/64   64/64
 ///   gfx1250            320      320/320   n/a (always full-SIMD)
@@ -398,7 +399,7 @@ public:
   /// \returns the canonical processor name followed by any explicit xnack and
   /// sramecc feature modifiers order (e.g.  "gfx908:sramecc-:xnack+"), without
   /// the triple prefix.
-  std::string getCanonicalFeatureString() const;
+  std::string getCanonicalTargetIDString() const;
 
   bool operator==(const TargetID &Other) const;
   bool operator!=(const TargetID &Other) const { return !(*this == Other); }

@@ -349,8 +349,8 @@ int main(int argc, const char **argv) {
   unsigned HostTargetNum = 0u;
   bool HIPOnly = true;
   llvm::DenseSet<StringRef> ParsedTargets;
-  // Map {offload-kind}-{triple} to target IDs.
-  std::map<std::string, std::set<StringRef>> TargetIDs;
+  // Map {offload-kind}-{triple} to its device triple and target IDs.
+  std::map<std::string, std::pair<llvm::Triple, std::set<StringRef>>> TargetIDs;
   // Standardize target names to include env field
   std::vector<std::string> StandardizedTargetNames;
   for (StringRef Target : TargetNames) {
@@ -385,8 +385,10 @@ int main(int argc, const char **argv) {
       return reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
 
-    TargetIDs[OffloadInfo.OffloadKind.str() + "-" + OffloadInfo.Triple.str()]
-        .insert(OffloadInfo.TargetID);
+    auto &Entry = TargetIDs[OffloadInfo.OffloadKind.str() + "-" +
+                            OffloadInfo.Triple.str()];
+    Entry.first = OffloadInfo.Triple;
+    Entry.second.insert(OffloadInfo.TargetID);
     if (KindIsValid && OffloadInfo.hasHostKind()) {
       ++HostTargetNum;
       // Save the index of the input that refers to the host.
@@ -402,14 +404,17 @@ int main(int argc, const char **argv) {
   BundlerConfig.TargetNames.assign(StandardizedTargetNames.begin(),
                                    StandardizedTargetNames.end());
 
-  for (const auto &TargetID : TargetIDs) {
-    if (auto ConflictingTID =
-            clang::getConflictTargetIDCombination(TargetID.second)) {
+  for (const auto &[Key, TripleAndIDs] : TargetIDs) {
+    const auto &[Triple, IDs] = TripleAndIDs;
+    llvm::SmallVector<clang::TargetIDEntry> Entries;
+    for (StringRef ID : IDs)
+      Entries.emplace_back(Triple, ID);
+    if (auto ConflictingTID = clang::getConflictTargetIDCombination(Entries)) {
       SmallVector<char, 128u> Buf;
       raw_svector_ostream Msg(Buf);
       Msg << "Cannot bundle inputs with conflicting targets: '"
-          << TargetID.first + "-" + ConflictingTID->first << "' and '"
-          << TargetID.first + "-" + ConflictingTID->second << "'";
+          << Key + "-" + ConflictingTID->first << "' and '"
+          << Key + "-" + ConflictingTID->second << "'";
       return reportError(createStringError(errc::invalid_argument, Msg.str()));
     }
   }

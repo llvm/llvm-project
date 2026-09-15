@@ -1218,6 +1218,23 @@ RValue CIRGenFunction::emitCall(const CIRGenFunctionInfo &funcInfo,
   SmallVector<mlir::Value, 16> cirCallArgs(args.size());
 
   const Decl *targetDecl = callee.getAbstractInfo().getCalleeDecl().getDecl();
+
+  if (const FunctionDecl *fd = dyn_cast_or_null<FunctionDecl>(targetDecl)) {
+    // We can only guarantee that a function is called from the correct
+    // context/function based on the appropriate target attributes,
+    // so only check in the case where we have both always_inline and target
+    // since otherwise we could be making a conditional call after a check for
+    // the proper cpu features (and it won't cause code generation issues due to
+    // function based code generation).
+    if ((targetDecl->hasAttr<AlwaysInlineAttr>() &&
+         (targetDecl->hasAttr<TargetAttr>() ||
+          (curFuncDecl && curFuncDecl->hasAttr<TargetAttr>()))) ||
+        (curFuncDecl && curFuncDecl->hasAttr<FlattenAttr>() &&
+         (curFuncDecl->hasAttr<TargetAttr>() ||
+          targetDecl->hasAttr<TargetAttr>())))
+      checkTargetFeatures(clangLoc.getBegin(), fd);
+  }
+
   const FunctionDecl *callerDecl = dyn_cast_or_null<FunctionDecl>(curCodeDecl);
   const FunctionDecl *calleeDecl = dyn_cast_or_null<FunctionDecl>(targetDecl);
 
