@@ -60,38 +60,6 @@ public:
 
 } // namespace
 
-namespace {
-
-thread_local Module *g_kvm_kernel_module;
-
-int ResolveKVMSymbol(const char *name, kvaddr_t *value) {
-  if (!g_kvm_kernel_module)
-    return 1;
-
-  const Symbol *symbol =
-      g_kvm_kernel_module->FindFirstSymbolWithNameAndType(ConstString(name));
-  if (!symbol)
-    return 1;
-
-  lldb::addr_t address = symbol->GetFileAddress();
-  if (address == LLDB_INVALID_ADDRESS)
-    return 1;
-
-  *value = address;
-  return 0;
-}
-
-kvm_t *OpenKVM(const ModuleSP &kernel_module, const FileSpec &core_file,
-               int flags, char *errbuf) {
-  llvm::SaveAndRestore resolver_module(g_kvm_kernel_module,
-                                       kernel_module.get());
-  return kvm_open2(kernel_module->GetFileSpec().GetPath().c_str(),
-                   core_file.GetPath().c_str(), flags, errbuf,
-                   ResolveKVMSymbol);
-}
-
-} // namespace
-
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
@@ -567,6 +535,34 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   ModuleSP mod_sp = GetTarget().GetExecutableModule();
   const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
+}
+
+int ProcessFreeBSDKernelCore::ResolveKVMSymbol(const char *name,
+                                               kvaddr_t *value) {
+  if (!g_kvm_kernel_module)
+    return 1;
+
+  const Symbol *symbol =
+      g_kvm_kernel_module->FindFirstSymbolWithNameAndType(ConstString(name));
+  if (!symbol)
+    return 1;
+
+  lldb::addr_t address = symbol->GetFileAddress();
+  if (address == LLDB_INVALID_ADDRESS)
+    return 1;
+
+  *value = address;
+  return 0;
+}
+
+kvm_t *ProcessFreeBSDKernelCore::OpenKVM(const ModuleSP &kernel_module,
+                                         const FileSpec &core_file, int flags,
+                                         char *errbuf) {
+  llvm::SaveAndRestore resolver_module(g_kvm_kernel_module,
+                                       kernel_module.get());
+  return kvm_open2(kernel_module->GetFileSpec().GetPath().c_str(),
+                   core_file.GetPath().c_str(), flags, errbuf,
+                   ResolveKVMSymbol);
 }
 
 void ProcessFreeBSDKernelCore::SetKernelDisplacement() {
