@@ -42,6 +42,8 @@
       parameter(omp_allocator_handle_kind=int_ptr_kind())
       integer omp_memspace_handle_kind
       parameter(omp_memspace_handle_kind=int_ptr_kind())
+      integer omp_access_kind
+      parameter(omp_access_kind=omp_integer_kind)
       integer omp_alloctrait_key_kind
       parameter(omp_alloctrait_key_kind=omp_integer_kind)
       integer omp_alloctrait_val_kind
@@ -272,6 +274,11 @@
       parameter(llvm_omp_target_shared_mem_space=101)
       integer(omp_memspace_handle_kind)llvm_omp_target_device_mem_space
       parameter(llvm_omp_target_device_mem_space=102)
+
+      integer(kind=omp_access_kind)omp_access_cgroup
+      parameter(omp_access_cgroup=0)
+      integer(kind=omp_access_kind)omp_access_pteam
+      parameter(omp_access_pteam=1)
 
       integer(kind=omp_pause_resource_kind)omp_pause_resume
       parameter(omp_pause_resume=0)
@@ -979,6 +986,44 @@
           integer, intent(in) :: num_resources
           integer, intent(in) :: resources(*)
         end function omp_get_submemspace
+
+        function omp_get_dyn_gprivate_ptr(offset, access_group)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          import
+          type (c_ptr) omp_get_dyn_gprivate_ptr
+          integer (kind=c_size_t), value, optional :: offset
+          integer(omp_access_kind), value, optional :: access_group
+        end function omp_get_dyn_gprivate_ptr
+
+        function omp_get_dyn_gprivate_nofb_ptr(offset, access_group)
+          use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+          import
+          type (c_ptr) omp_get_dyn_gprivate_nofb_ptr
+          integer (kind=c_size_t), value, optional :: offset
+          integer(omp_access_kind), value, optional :: access_group
+        end function omp_get_dyn_gprivate_nofb_ptr
+
+        function omp_get_dyn_gprivate_size(access_group)
+          use, intrinsic :: iso_c_binding, only : c_size_t
+          import
+          integer (kind=c_size_t) omp_get_dyn_gprivate_size
+          integer(omp_access_kind), value, optional :: access_group
+        end function omp_get_dyn_gprivate_size
+
+        function omp_get_dyn_gprivate_memspace(access_group)
+          import
+          integer(omp_memspace_handle_kind)
+     &      omp_get_dyn_gprivate_memspace
+          integer(omp_access_kind), value, optional :: access_group
+        end function omp_get_dyn_gprivate_memspace
+
+        function omp_get_gprivate_limit(device_num, access_group)
+          use, intrinsic :: iso_c_binding, only : c_size_t, c_int
+          import
+          integer (kind=c_size_t) omp_get_gprivate_limit
+          integer (kind=c_int), value :: device_num
+          integer(omp_access_kind), value, optional :: access_group
+        end function omp_get_gprivate_limit
 
 
 !       ***
