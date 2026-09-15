@@ -2062,8 +2062,13 @@ void populateFoldAddIntoDestPatterns(RewritePatternSet &patterns);
 
 /// Pattern to fuse a `tensor.pad` operation with the producer of its source,
 /// if the producer is a `linalg` operation with all parallel iterator types.
+///
+/// If `fillBoundaryOnly` is set, static pads whose producer overwrites the
+/// interior fill only the padding instead of the whole destination.
+/// Otherwise, including when boundary-only filling is inapplicable, fill the
+/// whole destination.
 void populateFuseTensorPadWithProducerLinalgOpPatterns(
-    RewritePatternSet &patterns);
+    RewritePatternSet &patterns, bool fillBoundaryOnly = false);
 
 /// Patterns to simplify depthwise convolutions.
 void populateSimplifyDepthwiseConvPatterns(RewritePatternSet &patterns);

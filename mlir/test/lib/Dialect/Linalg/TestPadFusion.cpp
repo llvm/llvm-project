@@ -24,6 +24,16 @@ struct TestPadFusionPass
     : public PassWrapper<TestPadFusionPass, OperationPass<>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestPadFusionPass)
 
+  TestPadFusionPass() = default;
+  TestPadFusionPass(const TestPadFusionPass &pass) : PassWrapper(pass) {}
+
+  Option<bool> fillBoundaryOnly{
+      *this, "fill-boundary-only",
+      llvm::cl::desc("Fill only the padded boundary instead of the whole "
+                     "result, for static pads whose producer overwrites the "
+                     "interior"),
+      llvm::cl::init(false)};
+
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect, linalg::LinalgDialect,
                     tensor::TensorDialect>();
@@ -35,7 +45,8 @@ struct TestPadFusionPass
   void runOnOperation() override {
     MLIRContext *context = &getContext();
     RewritePatternSet patterns(context);
-    linalg::populateFuseTensorPadWithProducerLinalgOpPatterns(patterns);
+    linalg::populateFuseTensorPadWithProducerLinalgOpPatterns(patterns,
+                                                              fillBoundaryOnly);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
