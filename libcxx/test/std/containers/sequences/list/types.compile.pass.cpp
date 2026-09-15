@@ -49,9 +49,10 @@ struct A {
   std::list<A> v;
 }; // incomplete type support
 
-int main(int, char**) {
+void test() {
   {
     typedef std::list<int> C;
+
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::allocator_type, std::allocator<int> >::value), "");
     static_assert((std::is_same<C::reference, std::allocator_traits<std::allocator<int> >::value_type&>::value), "");
@@ -70,10 +71,10 @@ int main(int, char**) {
                                 typename std::iterator_traits<typename C::const_iterator>::difference_type>::value),
                   "");
   }
-
 #if TEST_STD_VER >= 11
   {
     typedef std::list<int, min_allocator<int>> C;
+
     static_assert((std::is_same<C::value_type, int>::value), "");
     static_assert((std::is_same<C::allocator_type, min_allocator<int> >::value), "");
     static_assert((std::is_same<C::reference, int&>::value), "");
@@ -91,6 +92,4 @@ int main(int, char**) {
                   "");
   }
 #endif
-
-  return 0;
 }
