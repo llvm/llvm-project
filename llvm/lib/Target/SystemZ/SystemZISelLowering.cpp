@@ -1900,11 +1900,15 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, const SDLoc &DL,
   if (VA.isExtInLoc())
     Value = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Value);
   else if (VA.getLocInfo() == CCValAssign::BCvt) {
-    // If this is a short vector argument loaded from the stack,
-    // extend from i64 to full vector size and then bitcast.
-    assert(VA.getLocVT() == MVT::i64);
-    assert(VA.getValVT().isVector());
-    Value = DAG.getBuildVector(MVT::v2i64, DL, {Value, DAG.getUNDEF(MVT::i64)});
+    // If the argument is a short vector loaded from the stack,
+    // extend it from i64 to the full vector size and then perform a bitcast.
+    // Alternatively, if the argument is an int128,
+    // directly bitcast it into a vector of v16i8.
+    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::v16i8);
+    assert(VA.getValVT().isVector() || VA.getValVT() == MVT::i128);
+    if (VA.getLocVT() == MVT::i64)
+      Value =
+          DAG.getBuildVector(MVT::v2i64, DL, {Value, DAG.getUNDEF(MVT::i64)});
     Value = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Value);
   } else
     assert(VA.getLocInfo() == CCValAssign::Full && "Unsupported getLocInfo");
@@ -1924,9 +1928,11 @@ static SDValue convertValVTToLocVT(SelectionDAG &DAG, const SDLoc &DL,
   case CCValAssign::AExt:
     return DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Value);
   case CCValAssign::BCvt: {
-    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128);
+    assert(VA.getLocVT() == MVT::i64 || VA.getLocVT() == MVT::i128 ||
+           VA.getLocVT() == MVT::v16i8);
     assert(VA.getValVT().isVector() || VA.getValVT() == MVT::f32 ||
-           VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128);
+           VA.getValVT() == MVT::f64 || VA.getValVT() == MVT::f128 ||
+           VA.getValVT() == MVT::i128);
     // For an f32 vararg we need to first promote it to an f64 and then
     // bitcast it to an i64.
     if (VA.getValVT() == MVT::f32 && VA.getLocVT() == MVT::i64)
@@ -2608,9 +2614,12 @@ bool SystemZTargetLowering::CanLowerReturn(
     const Type *RetTy) const {
   // Special case that we cannot easily detect in RetCC_SystemZ since
   // i128 may not be a legal type.
-  for (auto &Out : Outs)
-    if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
-      return false;
+  // On z/OS we need to skip the convention of passing the return value on
+  // the stack used on zLinux.
+  if (Subtarget.isTargetLinux())
+    for (auto &Out : Outs)
+      if (Out.ArgVT.isScalarInteger() && Out.ArgVT.getSizeInBits() > 64)
+        return false;
 
   SmallVector<CCValAssign, 16> RetLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RetLocs, Context);
