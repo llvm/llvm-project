@@ -7874,8 +7874,8 @@ bool AMDGPULegalizerInfo::legalizeTrap(LegalizerHelper &Helper,
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(Helper, MI);
 
-  return ST.supportsGetDoorbellID() ?
-         legalizeTrapHsa(MI, MRI, B) : legalizeTrapHsaQueuePtr(MI, MRI, B);
+  return ST.supportsGetDoorbellID() ? legalizeTrapHsa(Helper, MI, MRI)
+                                    : legalizeTrapHsaQueuePtr(MI, MRI, B);
 }
 
 bool AMDGPULegalizerInfo::legalizeTrapEndpgm(LegalizerHelper &Helper,
@@ -7980,14 +7980,29 @@ bool AMDGPULegalizerInfo::legalizeTrapHsaQueuePtr(
   return true;
 }
 
-bool AMDGPULegalizerInfo::legalizeTrapHsa(MachineInstr &MI,
-                                          MachineRegisterInfo &MRI,
-                                          MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeTrapHsa(LegalizerHelper &Helper,
+                                          MachineInstr &MI,
+                                          MachineRegisterInfo &MRI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+
   // We need to simulate the 's_trap 2' instruction on targets that run in
   // PRIV=1 (where it is treated as a nop).
   if (ST.hasPrivEnabledTrap2NopBug()) {
-    ST.getInstrInfo()->insertSimulatedTrap(MRI, B.getMBB(), MI,
-                                           MI.getDebugLoc());
+    // insertSimulatedTrap may split the block. An instruction's parent block is
+    // part of its CSE profile, so notify observers about the moved
+    // instructions.
+    GISelChangeObserver &Observer = Helper.Observer;
+    MachineBasicBlock &BB = B.getMBB();
+    SmallVector<MachineInstr *, 8> MovedInstrs;
+    MachineBasicBlock::iterator SplitPoint(&MI);
+    ++SplitPoint;
+    for (auto I = SplitPoint, E = BB.end(); I != E; ++I) {
+      Observer.changingInstr(*I);
+      MovedInstrs.push_back(&*I);
+    }
+    ST.getInstrInfo()->insertSimulatedTrap(MRI, BB, MI, MI.getDebugLoc());
+    for (MachineInstr *MovedMI : MovedInstrs)
+      Observer.changedInstr(*MovedMI);
     MI.eraseFromParent();
     return true;
   }

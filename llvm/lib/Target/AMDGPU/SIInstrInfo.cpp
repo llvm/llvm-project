@@ -1166,7 +1166,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
            SrcOpRC->contains(Src);
   };
 
-  if (RC == RI.getVGPR64Class() && (SrcRC == RC || RI.isSGPRClass(SrcRC))) {
+  if (isSingleMoveCopy(RC, SrcRC)) {
     if (ST.hasVMovB64Inst() &&
         CanCopyWith(AMDGPU::V_MOV_B64_e32, DestReg, SrcReg)) {
       BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B64_e32), DestReg)
@@ -5368,6 +5368,13 @@ static bool isSubRegOf(const SIRegisterInfo &TRI,
          SubReg.getReg() == SuperVec.getReg();
 }
 
+bool SIInstrInfo::isSingleMoveCopy(const TargetRegisterClass *DstRC,
+                                   const TargetRegisterClass *SrcRC) const {
+  return DstRC == RI.getVGPR64Class() &&
+         (SrcRC == DstRC || RI.isSGPRClass(SrcRC)) &&
+         (ST.hasVMovB64Inst() || ST.hasPkMovB32());
+}
+
 // Verify the illegal copy from vector register to SGPR for generic opcode COPY
 bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
                              const MachineRegisterInfo &MRI,
@@ -5379,6 +5386,26 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
     ErrInfo = "illegal copy from vector register to SGPR";
     return false;
   }
+
+  if (!DstReg.isPhysical() || !SrcReg.isPhysical())
+    return true;
+
+  const TargetRegisterClass *RC = RI.getPhysRegBaseClass(DstReg);
+  const TargetRegisterClass *SrcRC = RI.getPhysRegBaseClass(SrcReg);
+  if (!RC || !SrcRC || RI.isSGPRClass(RC) || RI.getRegSizeInBits(*RC) <= 32)
+    return true;
+
+  if (isSingleMoveCopy(RC, SrcRC))
+    return true;
+
+  // Other wide vector copies split into per-subregister moves.
+  for (int16_t SubIdx : RI.getRegSplitParts(RC, 4)) {
+    if (!RI.getSubReg(DstReg, SubIdx) || !RI.getSubReg(SrcReg, SubIdx)) {
+      ErrInfo = "cannot decompose copy into subregister moves";
+      return false;
+    }
+  }
+
   return true;
 }
 
