@@ -21,7 +21,7 @@ extern "C" {
 
 // Should be called at the very beginning of the process before any instrumented
 // code executes.
-SANITIZER_INTERFACE_ATTRIBUTE void __copyprof_init();
+SANITIZER_INTERFACE_ATTRIBUTE void __copyprof_init_once();
 
 // Runtime callbacks that update the CopyProf state machine and shadow memory
 // when entering or leaving special member functions.

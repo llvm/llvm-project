@@ -62,8 +62,8 @@ struct PerThreadState {
 // The runtime is always linked into the main executable, so the state can be
 // reached with the initial-exec model instead of paying for a __tls_get_addr
 // call on every access.
-__attribute__((tls_model("initial-exec")))
-extern THREADLOCAL PerThreadState __copyprof_state;
+__attribute__((tls_model(
+    "initial-exec"))) extern THREADLOCAL PerThreadState __copyprof_state;
 
 }  // namespace __copyprof
 
