@@ -16983,6 +16983,37 @@ void Sema::DiscardMisalignedMemberAddress(const Type *T, Expr *E) {
   }
 }
 
+/// Return the maximum alignment record layout allows for \p FD, if packing or
+/// a typedef with a lowered alignment limits it. Mirrors RecordLayoutBuilder.
+static std::optional<CharUnits> getFieldAlignmentLimit(const ASTContext &Ctx,
+                                                       const FieldDecl *FD) {
+  std::optional<CharUnits> Limit;
+  const RecordDecl *RD = FD->getParent();
+  const auto *MFAA = RD->getAttr<MaxFieldAlignmentAttr>();
+  // The Microsoft layout ignores #pragma pack wider than a pointer.
+  if (MFAA && Ctx.getTargetInfo().hasMicrosoftRecordLayout() &&
+      MFAA->getAlignment() >
+          Ctx.getTargetInfo().getPointerWidth(LangAS::Default))
+    MFAA = nullptr;
+
+  if (FD->hasAttr<PackedAttr>() || RD->hasAttr<PackedAttr>())
+    Limit = CharUnits::One();
+  else if (RD->hasAttr<AlignMac68kAttr>())
+    Limit = CharUnits::fromQuantity(2);
+  else if (MFAA)
+    Limit = Ctx.toCharUnitsFromBits(MFAA->getAlignment());
+  else if (unsigned PackStruct = Ctx.getLangOpts().PackStruct)
+    Limit = CharUnits::fromQuantity(PackStruct);
+
+  QualType T = FD->getType();
+  if (!T.isCanonical()) {
+    CharUnits TypeAlignment = Ctx.getTypeAlignInChars(T);
+    if (TypeAlignment < Ctx.getTypeAlignInChars(T.getCanonicalType()))
+      Limit = Limit ? std::min(*Limit, TypeAlignment) : TypeAlignment;
+  }
+  return Limit;
+}
+
 void Sema::RefersToMemberWithReducedAlignment(
     Expr *E,
     llvm::function_ref<void(Expr *, RecordDecl *, FieldDecl *, CharUnits)>
@@ -16999,7 +17030,7 @@ void Sema::RefersToMemberWithReducedAlignment(
   // will keep FieldDecl's like [d, c, b].
   SmallVector<FieldDecl *, 4> ReverseMemberChain;
   const MemberExpr *TopME = nullptr;
-  bool AnyIsPacked = false;
+  bool AnyIsLimited = false;
   do {
     QualType BaseType = ME->getBase()->getType();
     if (BaseType->isDependentType())
@@ -17016,8 +17047,8 @@ void Sema::RefersToMemberWithReducedAlignment(
     if (!FD || FD->isInvalidDecl())
       return;
 
-    AnyIsPacked =
-        AnyIsPacked || (RD->hasAttr<PackedAttr>() || MD->hasAttr<PackedAttr>());
+    AnyIsLimited =
+        AnyIsLimited || getFieldAlignmentLimit(Context, FD).has_value();
     ReverseMemberChain.push_back(FD);
 
     TopME = ME;
@@ -17026,7 +17057,7 @@ void Sema::RefersToMemberWithReducedAlignment(
   assert(TopME && "We did not compute a topmost MemberExpr!");
 
   // Not the scope of this diagnostic.
-  if (!AnyIsPacked)
+  if (!AnyIsLimited)
     return;
 
   const Expr *TopBase = TopME->getBase()->IgnoreParenImpCasts();
@@ -17073,21 +17104,25 @@ void Sema::RefersToMemberWithReducedAlignment(
     // type) but some packed attribute in that chain has reduced the alignment.
     // It may happen that another packed structure increases it again. But if
     // we are here such increase has not been enough. So pointing the first
-    // FieldDecl that either is packed or else its RecordDecl is,
-    // seems reasonable.
+    // FieldDecl whose alignment was reduced seems reasonable.
     FieldDecl *FD = nullptr;
-    CharUnits Alignment;
+    // An outer link may reduce the alignment further than the culprit did.
+    CharUnits Alignment = ExpectedAlignment;
     for (FieldDecl *FDI : ReverseMemberChain) {
-      if (FDI->hasAttr<PackedAttr>() ||
-          FDI->getParent()->hasAttr<PackedAttr>()) {
-        FD = FDI;
-        Alignment = std::min(Context.getTypeAlignInChars(FD->getType()),
-                             Context.getTypeAlignInChars(
-                                 Context.getCanonicalTagType(FD->getParent())));
-        break;
+      CharUnits FieldAlignment =
+          Context.getTypeAlignInChars(FDI->getType().getCanonicalType());
+      std::optional<CharUnits> Limit = getFieldAlignmentLimit(Context, FDI);
+      if (Limit && *Limit < FieldAlignment) {
+        if (!FD)
+          FD = FDI;
+        FieldAlignment =
+            std::min(Context.getTypeAlignInChars(FDI->getType()),
+                     Context.getTypeAlignInChars(
+                         Context.getCanonicalTagType(FDI->getParent())));
       }
+      Alignment = std::min(Alignment, FieldAlignment);
     }
-    assert(FD && "We did not find a packed FieldDecl!");
+    assert(FD && "We did not find a FieldDecl with reduced alignment!");
     Action(E, FD->getParent(), FD, Alignment);
   }
 }

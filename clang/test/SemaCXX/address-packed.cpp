@@ -121,3 +121,31 @@ struct S2 {
   Incomplete *e() const;
 } __attribute__((packed));
 Incomplete *S2::e() const { return (Incomplete *)&d; } // no-warning
+
+#pragma pack(push, 1)
+struct PragmaPacked {
+  char c;
+  int x;
+  int *get() { return &x; } // expected-warning {{packed member 'x' of class or structure 'PragmaPacked'}}
+};
+#pragma pack(pop)
+
+void g2(PragmaPacked *p) {
+  f1(&p->x); // expected-warning {{packed member 'x' of class or structure 'PragmaPacked'}}
+  f2(&p->c); // no-warning
+}
+
+// #pragma pack caps the base subobject too, so alignof(DerivedFromUnpacked)
+// is one and &p->x really is a one-aligned int *. Not diagnosed: the chain
+// has a link per member access and none for the derived-to-base conversion.
+struct Unpacked {
+  char c;
+  int x;
+};
+#pragma pack(push, 1)
+struct DerivedFromUnpacked : Unpacked {};
+#pragma pack(pop)
+
+void g3(DerivedFromUnpacked *p) {
+  f1(&p->x); // no-warning
+}

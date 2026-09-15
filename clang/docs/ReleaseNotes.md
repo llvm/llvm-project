@@ -418,6 +418,10 @@ features cannot lower the translation-unit ABI level;
 
 - Clang now diagnoses more details when a constraint evaluates to false.
 
+- `-Waddress-of-packed-member` now also diagnoses members packed by
+  `#pragma pack`, `#pragma options align=mac68k`, or `-fpack-struct`, and
+  members whose typedef lowers their alignment. (#GH97091)
+
 ### Improvements to Clang's time-trace
 
 ### Improvements to Coverage Mapping
