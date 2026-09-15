@@ -308,38 +308,6 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
-  if (Subtarget.hasSSE2()) {
-    // Custom lowering for saturating float to int conversions.
-    // We handle promotion to larger result types manually.
-    for (MVT VT : { MVT::i8, MVT::i16, MVT::i32 }) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Custom);
-    }
-  }
-  if (Subtarget.hasAVX10_2()) {
-    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
-    }
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
-    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
-    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
-    for (MVT VT : {MVT::i32, MVT::v4i32, MVT::v8i32, MVT::v16i32, MVT::v2i64,
-                   MVT::v4i64}) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
-    }
-    if (Subtarget.is64Bit()) {
-      setOperationAction(ISD::FP_TO_UINT_SAT, MVT::i64, Legal);
-      setOperationAction(ISD::FP_TO_SINT_SAT, MVT::i64, Legal);
-    }
-  }
-
   // Handle address space casts between mixed sized pointers.
   setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
   setOperationAction(ISD::ADDRSPACECAST, MVT::i64, Custom);
@@ -1285,6 +1253,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FP_TO_UINT,        VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Custom);
       setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Custom);
+    }
+
+    // Custom lowering for saturating float to int conversions.
+    // We handle promotion to larger result types manually.
+    for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::FP_TO_UINT_SAT,    VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT,    VT, Custom);
     }
 
     setOperationAction(ISD::SINT_TO_FP,         MVT::v4i32, Custom);
@@ -2619,6 +2596,22 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasAVX10_2()) {
+    for (MVT VT : {MVT::v8i8, MVT::v16i8, MVT::v32i8}) {
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
+    }
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v2i32, Custom);
+    setOperationAction(ISD::FP_TO_UINT_SAT, MVT::v8i64, Legal);
+    setOperationAction(ISD::FP_TO_SINT_SAT, MVT::v8i64, Legal);
+    for (MVT VT : {MVT::i32, MVT::i64, MVT::v4i32, MVT::v8i32, MVT::v16i32,
+                   MVT::v2i64, MVT::v4i64}) {
+      if (VT == MVT::i64 && !Subtarget.is64Bit())
+        continue;
+      setOperationAction(ISD::FP_TO_UINT_SAT, VT, Legal);
+      setOperationAction(ISD::FP_TO_SINT_SAT, VT, Legal);
+    }
+
     // Lower scalar bf16 arithmetic by widening to a vector op and extracting
     // the low element.
     setOperationAction(ISD::FADD, MVT::bf16, Custom);
