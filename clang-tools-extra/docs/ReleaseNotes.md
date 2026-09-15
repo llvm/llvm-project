@@ -121,6 +121,11 @@ infrastructure are described first, followed by tool-specific sections.
 
 #### New checks
 
+- New {doc}`bugprone-custom-errno-declaration
+  <clang-tidy/checks/bugprone/custom-errno-declaration>` check.
+
+  Finds custom declarations of `extern int` variable named `errno`.
+
 - New {doc}`llvm-invalid-regex-pattern
   <clang-tidy/checks/llvm/invalid-regex-pattern>` check.
 
