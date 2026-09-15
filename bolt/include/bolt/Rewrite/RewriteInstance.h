@@ -87,7 +87,7 @@ public:
 private:
   /// Populate array of binary functions and other objects of interest
   /// from meta data in the file.
-  void discoverFileObjects();
+  Error discoverFileObjects();
 
   /// Check if the input binary has a space reserved for BOLT and use it for new
   /// section allocations if found.
@@ -174,6 +174,10 @@ private:
   /// BinaryFunction object, preparing all information necessary for binary
   /// optimization.
   void disassembleFunctions();
+
+  /// Discover AArch64 process-entry code and linker-generated veneers in a
+  /// stripped input.
+  Error discoverStrippedFunctions();
 
   void buildFunctionsCFG();
 
