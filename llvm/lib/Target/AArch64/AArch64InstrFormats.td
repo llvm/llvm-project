@@ -5980,6 +5980,20 @@ multiclass TwoOperandFPData<bits<4> opcode, string asm,
   }
 }
 
+multiclass TwoOperandFPDataFPv2<bits<4> opcode, string asm> {
+  def Hrr : BaseTwoOperandFPData<opcode, FPR16, asm, []> {
+    let Inst{23-22} = 0b11; // 16-bit size flag
+  }
+
+  def Srr : BaseTwoOperandFPData<opcode, FPR32, asm, []> {
+    let Inst{23-22} = 0b00; // 32-bit size flag
+  }
+
+  def Drr : BaseTwoOperandFPData<opcode, FPR64, asm, []> {
+    let Inst{23-22} = 0b01; // 64-bit size flag
+  }
+}
+
 multiclass TwoOperandFPDataNeg<bits<4> opcode, string asm,
                                SDPatternOperator node> {
   def Hrr : BaseTwoOperandFPData<opcode, FPR16, asm,
@@ -6127,9 +6141,9 @@ class BaseOneOperandFPComparison<bit signalAllNans,
   let PostEncoderMethod = "fixOneOperandFPComparison";
 }
 
-let mayLoad = 0, mayStore = 0, hasSideEffects = 0, mayRaiseFPException = 1, Uses = [FPCR] in
-class BaseTwoOperandFPComparison<bit signalAllNans, RegisterClass regtype,
-                                string asm, list<dag> pat>
+let mayLoad = 0, mayStore = 0, hasSideEffects = 0, Uses = [FPCR] in
+class BaseTwoOperandFPComparison<bit signalAllNans, bit totalOrder, bit magnitude,
+                                 RegisterClass regtype, string asm, list<dag> pat>
     : I<(outs), (ins regtype:$Rn, regtype:$Rm), asm, "\t$Rn, $Rm", "", pat>,
       Sched<[WriteFCmp]> {
   bits<5> Rm;
@@ -6137,16 +6151,20 @@ class BaseTwoOperandFPComparison<bit signalAllNans, RegisterClass regtype,
   let Inst{31-24} = 0b00011110;
   let Inst{21}    = 1;
   let Inst{20-16} = Rm;
-  let Inst{15-10} = 0b001000;
+  let Inst{15}    = totalOrder;
+  let Inst{14-10} = 0b01000;
   let Inst{9-5}   = Rn;
   let Inst{4}     = signalAllNans;
-  let Inst{3-0}   = 0b0000;
+  let Inst{3}     = magnitude;
+  let Inst{2-0}   = 0b000;
+
+  let mayRaiseFPException = !not(totalOrder);
 }
 
 multiclass FPComparison<bit signalAllNans, string asm,
                         SDPatternOperator OpNode = null_frag> {
   let Defs = [NZCV] in {
-  def Hrr : BaseTwoOperandFPComparison<signalAllNans, FPR16, asm,
+  def Hrr : BaseTwoOperandFPComparison<signalAllNans, 0b0, 0b0, FPR16, asm,
       [(set NZCV, (OpNode (f16 FPR16:$Rn), (f16 FPR16:$Rm)))]> {
     let Inst{23-22} = 0b11;
     let Predicates = [HasFullFP16];
@@ -6158,7 +6176,7 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Predicates = [HasFullFP16];
   }
 
-  def Srr : BaseTwoOperandFPComparison<signalAllNans, FPR32, asm,
+  def Srr : BaseTwoOperandFPComparison<signalAllNans, 0b0, 0b0, FPR32, asm,
       [(set NZCV, (OpNode FPR32:$Rn, (f32 FPR32:$Rm)))]> {
     let Inst{23-22} = 0b00;
   }
@@ -6168,7 +6186,7 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Inst{23-22} = 0b00;
   }
 
-  def Drr : BaseTwoOperandFPComparison<signalAllNans, FPR64, asm,
+  def Drr : BaseTwoOperandFPComparison<signalAllNans, 0b0, 0b0, FPR64, asm,
       [(set NZCV, (OpNode FPR64:$Rn, (f64 FPR64:$Rm)))]> {
     let Inst{23-22} = 0b01;
   }
@@ -6178,6 +6196,26 @@ multiclass FPComparison<bit signalAllNans, string asm,
     let Inst{23-22} = 0b01;
   }
   } // Defs = [NZCV]
+}
+
+multiclass FPTotalOrderComparison<bit magnitude, string asm> {
+  let Defs = [NZCV] in {
+  let Predicates = [HasFullFP16, HasFPv2] in {
+  def Hrr : BaseTwoOperandFPComparison<0b0, 0b1, magnitude, FPR16, asm, []> {
+    let Inst{23-22} = 0b11;
+  }
+  }
+
+  let Predicates = [HasFPv2] in {
+  def Srr : BaseTwoOperandFPComparison<0b0, 0b1, magnitude, FPR32, asm, []> {
+    let Inst{23-22} = 0b00;
+  }
+
+  def Drr : BaseTwoOperandFPComparison<0b0, 0b1, magnitude, FPR64, asm, []> {
+    let Inst{23-22} = 0b01;
+  }
+  }
+  }
 }
 
 //---
