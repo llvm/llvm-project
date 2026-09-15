@@ -228,8 +228,7 @@ public:
 
   void setThunkLinkage(cir::FuncOp thunk, bool forVTable, GlobalDecl gd,
                        bool returnAdjustment) override {
-    cgm.errorNYI(gd.getDecl()->getSourceRange(),
-                 "setThunkLinkage: MSVC ABI");
+    cgm.errorNYI(gd.getDecl()->getSourceRange(), "setThunkLinkage: MSVC ABI");
   }
 
   StringRef getPureVirtualCallName() override { return "_purecall"; }
