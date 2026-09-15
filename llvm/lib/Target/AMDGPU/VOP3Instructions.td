@@ -983,13 +983,13 @@ def : GCNPat<
 let SubtargetPredicate = HasLshlAddU64Inst in {
 def : GCNPat<
   (ThreeOpFrag<shl_0_to_4, add> i64:$src0, i32:$src1, i64:$src2),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)
+  (V_LSHL_ADD_U64_e64 VSrc_NoLit64_b64:$src0, VSrc_b32:$src1, VSrc_NoLit64_b64:$src2)
 >;
 
 def : GCNPat <
   // (ptradd z, (shl x, y)) or (ptradd (shl x, y), z) -> ((x << y) + z)
   (ThreeOpFrag<shl_0_to_4, ptradd_commutative> i64:$src0, i32:$src1, i64:$src2),
-  (V_LSHL_ADD_U64_e64 VSrc_b64:$src0, VSrc_b32:$src1, VSrc_b64:$src2)>;
+  (V_LSHL_ADD_U64_e64 VSrc_NoLit64_b64:$src0, VSrc_b32:$src1, VSrc_NoLit64_b64:$src2)>;
 } // End SubtargetPredicate = HasLshlAddU64Inst
 
 let SubtargetPredicate = HasAddMinMaxInsts in {
