@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DwarfStringPool.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCStreamer.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 
 using namespace llvm;
@@ -96,10 +97,16 @@ void DwarfStringPool::emit(AsmPrinter &Asm, MCSection *StrSection,
     if (ShouldCreateSymbols)
       Asm.OutStreamer->emitLabel(Entry->getValue().Symbol);
 
-    // Emit a comment with the string offset and the string itself.
-    Asm.OutStreamer->AddComment(
-        "string offset=" + Twine(Entry->getValue().Offset) + " ; " +
-        StringRef(Entry->getKeyData(), Entry->getKeyLength()));
+    // Emit a comment with the string offset and the string itself. The string
+    // is escaped: it can contain arbitrary bytes (e.g. non-ASCII identifiers),
+    // and some assemblers, like ptxas, reject those even inside comments.
+    SmallString<128> Comment;
+    raw_svector_ostream CommentOS(Comment);
+    CommentOS << "string offset=" << Entry->getValue().Offset << " ; ";
+    CommentOS.write_escaped(
+        StringRef(Entry->getKeyData(), Entry->getKeyLength()),
+        /*UseHexEscapes=*/true);
+    Asm.OutStreamer->AddComment(Comment);
 
     // Emit the string itself with a terminating null byte.
     Asm.OutStreamer->emitBytes(
