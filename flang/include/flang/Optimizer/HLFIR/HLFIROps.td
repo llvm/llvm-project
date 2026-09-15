@@ -831,6 +831,27 @@ def hlfir_EOShiftOp
   let hasVerifier = 1;
 }
 
+def hlfir_PackOp
+    : hlfir_Op<
+          "pack", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "PACK transformational intrinsic";
+  let description = [{
+    Selects elements from an array according to a mask.
+  }];
+
+  let arguments = (ins AnyFortranArrayObject:$array,
+      AnyFortranLogicalOrI1ArrayObject:$mask,
+      Optional<AnyFortranArrayObject>:$vector);
+
+  let results = (outs hlfir_ExprType);
+
+  let assemblyFormat = [{
+    $array $mask (`vector` $vector^)? attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
 def hlfir_ReshapeOp
     : hlfir_Op<
           "reshape", [AttrSizedOperandSegments,
