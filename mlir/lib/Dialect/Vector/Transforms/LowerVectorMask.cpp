@@ -270,7 +270,7 @@ public:
     rewriter.replaceOpWithNewOp<GatherOp>(
         maskingOp.getOperation(), gatherOp.getVectorType(), gatherOp.getBase(),
         gatherOp.getOffsets(), gatherOp.getIndices(), maskingOp.getMask(),
-        passthru);
+        passthru, gatherOp.getMaybeAlign());
     return success();
   }
 };
