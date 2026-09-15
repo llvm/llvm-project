@@ -2,6 +2,8 @@
 ; RUN:   | FileCheck -check-prefix=ALL %s
 ; RUN: llvm-pdbutil dump -summary -modules -files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
+; RUN: llvm-pdbutil dump -modules %p/Inputs/no-ec-names.pdb \
+; RUN:   | FileCheck -check-prefix=NO-EC-NAMES %s
 ; RUN: not llvm-pdbutil dump -summary %p/Inputs/bad-block-size.pdb 2>&1 \
 ; RUN:   | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
@@ -1169,5 +1171,10 @@ BIG-NEXT:   Mod 0044 | `api-ms-win-crt-locale-l1-1-0.dll`:
 BIG-NEXT:   Mod 0045 | `Import:api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:   Mod 0046 | `api-ms-win-crt-heap-l1-1-0.dll`:
 BIG-NEXT:   Mod 0047 | `* Linker *`:
+
+NO-EC-NAMES:                          Modules
+NO-EC-NAMES: Mod 0000
+NO-EC-NAMES: has ec info: false
+NO-EC-NAMES-NEXT: pdb file ni: 0 ``, src file ni: 0 ``
 
 BAD-BLOCK-SIZE: The PDB file is corrupt. MSF superblock is missing
