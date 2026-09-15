@@ -148,6 +148,13 @@ std::unique_ptr<CIRCXXABI> createItaniumCXXABI(LowerModule &lm) {
         /*useARMMethodPtrABI=*/true,
         /*use32BitVTableOffsetABI=*/true);
 
+  case clang::TargetCXXABI::GenericARM:
+    // ARM method-pointer encoding, but no 32-bit vtable offsets.
+    return std::make_unique<LowerItaniumCXXABI>(
+        lm,
+        /*useARMMethodPtrABI=*/true,
+        /*use32BitVTableOffsetABI=*/false);
+
   case clang::TargetCXXABI::GenericItanium:
     return std::make_unique<LowerItaniumCXXABI>(lm);
 
