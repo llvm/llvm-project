@@ -510,3 +510,63 @@ body: |
   bb.2:
     S_ENDPGM 0
 ...
+---
+# Predecessor exits used to overwrite rather than intersect, so the last
+# predecessor won and the RTN restore in bb.3 was dropped.
+# CHECK-LABEL: name: join_pred_intersect
+# CHECK-LABEL: bb.3:
+# CHECK: S_SETREG_IMM32_B32 0, 2177
+# CHECK-NEXT: V_ADD_F64_e64
+
+name: join_pred_intersect
+
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    S_CBRANCH_VCCZ %bb.2, implicit $vcc
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.3
+    S_SETREG_IMM32_B32 3, 2177, implicit-def $mode, implicit $mode
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    $vgpr4_vgpr5 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    $vgpr6_vgpr7 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+    S_ENDPGM 0
+...
+---
+# A self-looping block only folded in the exit of its other predecessor, so the
+# RTN restore for the V_ADD_F64 on the loop-carried edge was dropped.
+# CHECK-LABEL: name: self_loop_carried_mode
+# CHECK-LABEL: bb.1:
+# CHECK: S_SETREG_IMM32_B32 0, 2177
+# CHECK-NEXT: V_ADD_F64_e64
+# CHECK: S_SETREG_IMM32_B32 3, 2177
+# CHECK-NEXT: V_CVT_F32_F64_e32
+
+name: self_loop_carried_mode
+
+body: |
+  bb.0:
+    successors: %bb.1
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
+    $vgpr4_vgpr5 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr2_vgpr3, 0, 0, implicit $mode, implicit $exec
+    $vgpr6 = FPTRUNC_ROUND_F32_F64_PSEUDO $vgpr4_vgpr5, 3, implicit $mode, implicit $exec
+    S_CBRANCH_VCCZ %bb.1, implicit $vcc
+    S_BRANCH %bb.2
+
+  bb.2:
+    S_ENDPGM 0
+...
