@@ -508,13 +508,12 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
     auto Iter = vp_depth_first_deep(Plan.getEntry());
     // Remove recipes that are redundant after unrolling.
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
-      for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
-        auto *VPI = dyn_cast<VPInstruction>(&R);
-        if (VPI &&
-            VPI->getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
-            VPI->getOperand(1) == &Plan.getVF()) {
-          VPI->replaceAllUsesWith(VPI->getOperand(0));
-          VPI->eraseFromParent();
+      for (VPInstruction &VPI :
+           make_early_inc_range(vputils::recipesOnly<VPInstruction>(*VPBB))) {
+        if (VPI.getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
+            VPI.getOperand(1) == &Plan.getVF()) {
+          VPI.replaceAllUsesWith(VPI.getOperand(0));
+          VPI.eraseFromParent();
         }
       }
     }

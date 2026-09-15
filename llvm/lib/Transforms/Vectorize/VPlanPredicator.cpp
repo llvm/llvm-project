@@ -425,13 +425,10 @@ void VPPredicator::run() {
     // Mask all VPInstructions in the block and record the frequency with
     // which the masked recipes execute.
     std::optional<VPExecutionFrequency> Freq = Frequencies.lookup(VPBB);
-    for (VPRecipeBase &R : *VPBB) {
-      auto *VPI = dyn_cast<VPInstruction>(&R);
-      if (!VPI)
-        continue;
-      VPI->addMask(BlockMask);
-      if (VPI->isMasked())
-        VPI->setExecutionFrequency(Freq, Plan.getContext());
+    for (VPInstruction &VPI : vputils::recipesOnly<VPInstruction>(*VPBB)) {
+      VPI.addMask(BlockMask);
+      if (VPI.isMasked())
+        VPI.setExecutionFrequency(Freq, Plan.getContext());
     }
   }
 

@@ -1089,18 +1089,18 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
   VPSCEVExpander Expander(Builder, SE, DL);
 
   // Expand VPExpandSCEVRecipes to VPInstructions using VPSCEVExpander.
-  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV || ExpSCEV->user_empty())
+  for (VPExpandSCEVRecipe &ExpSCEV :
+       make_early_inc_range(vputils::recipesOnly<VPExpandSCEVRecipe>(*Entry))) {
+    if (ExpSCEV.user_empty())
       continue;
-    Builder.setInsertPoint(ExpSCEV);
-    VPValue *Expanded = Expander.expand(ExpSCEV->getSCEV());
-    ExpSCEV->replaceAllUsesWith(Expanded);
+    Builder.setInsertPoint(&ExpSCEV);
+    VPValue *Expanded = Expander.expand(ExpSCEV.getSCEV());
+    ExpSCEV.replaceAllUsesWith(Expanded);
     // TripCount should not be used after expansion to VPInstructions. Reset to
     // poison to avoid dangling references.
-    if (Plan.getTripCount() == ExpSCEV)
-      Plan.resetTripCount(Plan.getPoison(ExpSCEV->getScalarType()));
-    ExpSCEV->eraseFromParent();
+    if (Plan.getTripCount() == &ExpSCEV)
+      Plan.resetTripCount(Plan.getPoison(ExpSCEV.getScalarType()));
+    ExpSCEV.eraseFromParent();
   }
 }
 
@@ -1112,19 +1112,17 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   BasicBlock *EntryBB = Entry->getIRBasicBlock();
   DenseMap<const SCEV *, Value *> ExpandedSCEVs;
   // Expand remaining VPExpandSCEVRecipes to IR instructions using SCEVExpander.
-  for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
-    auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV)
-      continue;
-    const SCEV *Expr = ExpSCEV->getSCEV();
+  for (VPExpandSCEVRecipe &ExpSCEV :
+       make_early_inc_range(vputils::recipesOnly<VPExpandSCEVRecipe>(*Entry))) {
+    const SCEV *Expr = ExpSCEV.getSCEV();
     Value *Res =
         Expander.expandCodeFor(Expr, Expr->getType(), EntryBB->getTerminator());
     ExpandedSCEVs[Expr] = Res;
     VPValue *Exp = Plan.getOrAddLiveIn(Res);
-    ExpSCEV->replaceAllUsesWith(Exp);
-    if (Plan.getTripCount() == ExpSCEV)
+    ExpSCEV.replaceAllUsesWith(Exp);
+    if (Plan.getTripCount() == &ExpSCEV)
       Plan.resetTripCount(Exp);
-    ExpSCEV->eraseFromParent();
+    ExpSCEV.eraseFromParent();
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
          "all VPExpandSCEVRecipes must have been expanded");
