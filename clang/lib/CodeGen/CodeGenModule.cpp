@@ -1508,12 +1508,11 @@ void CodeGenModule::Release() {
   llvm::Triple T = Context.getTargetInfo().getTriple();
 
   // TODO: This should probably be just generally emitted for non-empty ABI
-  // names. LoongArch actively consumes the flag, but it is excluded here.
-  // Other targets have no apparent need for the ABI name, but set a non-empty
-  // value.
+  // names. Other targets have no apparent need for the ABI name, but set a
+  // non-empty value.
   if (StringRef ABIStr = Target.getABI();
-      !ABIStr.empty() &&
-      (T.isARM() || T.isThumb() || T.isRISCV() || T.isPPC())) {
+      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV() ||
+                          T.isPPC() || T.isLoongArch())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }
