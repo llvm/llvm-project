@@ -32,6 +32,8 @@
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Dialect/Affine/Analysis/LoopInvariantConditionOpInterfaceImpl.h"
+#include "mlir/Dialect/Affine/IR/ValueBoundsOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/TransformOps/AffineTransformOps.h"
 #include "mlir/Dialect/ArmNeon/TransformOps/ArmNeonVectorTransformOps.h"
 #include "mlir/Dialect/ArmSVE/TransformOps/ArmSVEVectorTransformOps.h"
@@ -44,6 +46,7 @@
 #include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
 #include "mlir/Dialect/MemRef/TransformOps/MemRefTransformOps.h"
 #include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
+#include "mlir/Dialect/SCF/IR/LoopInvariantConditionOpInterfaceImpl.h"
 #include "mlir/Dialect/SCF/TransformOps/SCFTransformOps.h"
 #include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
 #include "mlir/Dialect/Tensor/Extensions/AllExtensions.h"
@@ -96,6 +99,8 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   registerConvertX86ToLLVMInterface(registry);
 
   // Register all transform dialect extensions.
+  affine::registerLoopInvariantConditionOpInterfaceExternalModels(registry);
+  affine::registerValueBoundsOpInterfaceExternalModels(registry);
   affine::registerTransformDialectExtension(registry);
   bufferization::registerTransformDialectExtension(registry);
   dlti::registerTransformDialectExtension(registry);
@@ -104,6 +109,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   linalg::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
   nvgpu::registerTransformDialectExtension(registry);
+  scf::registerLoopInvariantConditionOpInterfaceExternalModels(registry);
   scf::registerTransformDialectExtension(registry);
   sparse_tensor::registerTransformDialectExtension(registry);
   tensor::registerTransformDialectExtension(registry);
