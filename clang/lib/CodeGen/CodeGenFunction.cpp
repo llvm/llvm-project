@@ -772,6 +772,17 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   if (FD && FD->usesSEHTry())
     CurSEHParent = GD;
   CurFuncDecl = (D ? D->getNonClosureContext() : nullptr);
+
+  // For -fsanitize=array-bounds: the body, plus a constructor's initializers,
+  // which are emitted before it and are each their own root.
+  if (D) {
+    computeBoundsCheckRequirements(D->getBody());
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+      for (const CXXCtorInitializer *Init : Ctor->inits())
+        if (const Expr *E = Init->getInit())
+          computeBoundsCheckRequirements(E, E->isGLValue());
+  }
+
   FnRetTy = RetTy;
   CurFn = Fn;
   CurFnInfo = &FnInfo;
