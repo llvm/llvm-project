@@ -668,6 +668,66 @@ TEST(STLExtrasTest, MakeIsaRangeEarlyIncrement) {
   EXPECT_THAT(Shapes, ElementsAre(&S));
 }
 
+/// A value-typed handle hierarchy that casts by value.
+struct HandleImpl {
+  unsigned Kind;
+};
+
+struct Handle {
+public:
+  Handle(const HandleImpl *Impl = nullptr) : Impl(Impl) {}
+  const HandleImpl *getImpl() const { return Impl; }
+  bool operator==(const Handle &Other) const { return Impl == Other.Impl; }
+
+protected:
+  const HandleImpl *Impl;
+};
+
+struct FooHandle : public Handle {
+  using Handle::Handle;
+  static bool classof(Handle H) { return H.getImpl()->Kind == 0; }
+};
+
+struct BarHandle : public Handle {
+  using Handle::Handle;
+  static bool classof(Handle H) { return H.getImpl()->Kind == 1; }
+};
+} // namespace
+
+namespace llvm {
+/// Casts take and return the handle by value.
+template <typename To, typename From>
+struct CastInfo<To, From,
+                std::enable_if_t<std::is_base_of_v<Handle, std::decay_t<From>>>>
+    : NullableValueCastFailed<To>,
+      DefaultDoCastIfPossible<To, From, CastInfo<To, From>> {
+  static bool isPossible(Handle H) { return To::classof(H); }
+  static To doCast(Handle H) { return To(H.getImpl()); }
+};
+} // namespace llvm
+
+namespace {
+TEST(STLExtrasTest, MakeIsaRangeValueTypes) {
+  HandleImpl FooImpl0 = {0}, BarImpl = {1}, FooImpl1 = {0};
+  std::vector<Handle> Handles = {Handle(&FooImpl0), Handle(&BarImpl),
+                                 Handle(&FooImpl1)};
+
+  // Casting a handle yields a handle by value, not a reference.
+  auto Foos = make_isa_range<FooHandle>(Handles);
+  static_assert(std::is_same_v<decltype(*Foos.begin()), FooHandle>);
+  EXPECT_THAT(Foos, ElementsAre(FooHandle(&FooImpl0), FooHandle(&FooImpl1)));
+  EXPECT_THAT(make_isa_range<BarHandle>(Handles),
+              ElementsAre(BarHandle(&BarImpl)));
+
+  // Ranges that only materialize the handles as temporaries work as well,
+  // because the cast does not refer back to the element.
+  auto ByValue = map_range(Handles, [](Handle H) { return H; });
+  auto ByValueFoos = make_isa_range<FooHandle>(ByValue);
+  static_assert(std::is_same_v<decltype(*ByValueFoos.begin()), FooHandle>);
+  EXPECT_THAT(ByValueFoos,
+              ElementsAre(FooHandle(&FooImpl0), FooHandle(&FooImpl1)));
+}
+
 template <typename T> struct Iterator {
   int i = 0;
   T operator*() const { return i; }

@@ -558,16 +558,17 @@ make_filter_range(RangeT &&Range, PredicateT Pred) {
 }
 
 /// Return a range over \p Range containing only elements for which isa<T>
-/// holds, casting each of them to T. Ranges of pointers yield T *.
+/// holds, casting each of them to T.
 ///
 /// Note: as for make_filter_range, the returned range only borrows the
 /// iterators of \p Range. Passing a temporary container is not supported, as
 /// its lifetime is not extended by the returned range; passing a temporary
 /// view, e.g. the result of drop_begin, is fine.
 template <typename T, typename RangeT> auto make_isa_range(RangeT &&Range) {
-  static_assert(std::is_reference_v<decltype(*adl_begin(Range))> ||
-                    std::is_pointer_v<detail::ValueOfRange<RangeT>>,
-                "make_isa_range requires a range of pointers or references");
+  static_assert(
+      std::is_reference_v<decltype(*adl_begin(Range))> ||
+          !std::is_reference_v<decltype(CastTo<T>(*adl_begin(Range)))>,
+      "make_isa_range would return references into temporary elements");
   return map_range(make_filter_range(Range, IsaPred<T>), CastTo<T>);
 }
 
