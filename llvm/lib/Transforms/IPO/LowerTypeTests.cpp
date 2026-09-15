@@ -295,26 +295,37 @@ bool lowertypetests::isJumpTableCanonical(Function *F) {
   return F->hasFnAttribute("cfi-canonical-jump-table");
 }
 
-bool lowertypetests::hasTypeMetadata(const GlobalObject *GO) {
-  if (MDNode *MD = GO->getMetadata(LLVMContext::MD_associated))
+bool lowertypetests::hasTypeMetadata(const GlobalObject &GO) {
+  if (MDNode *MD = GO.getMetadata(LLVMContext::MD_associated))
     if (auto *AssocVM = dyn_cast_or_null<ValueAsMetadata>(MD->getOperand(0)))
       if (auto *AssocGO = dyn_cast<GlobalObject>(AssocVM->getValue()))
         if (AssocGO->hasMetadata(LLVMContext::MD_type))
           return true;
-  return GO->hasMetadata(LLVMContext::MD_type);
+  return GO.hasMetadata(LLVMContext::MD_type);
 }
 
 SetVector<GlobalValue *> lowertypetests::findCfiFunctions(Module &M) {
   SetVector<GlobalValue *> CfiFunctions;
   for (auto &F : M)
-    if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && hasTypeMetadata(&F))
+    if ((!F.hasLocalLinkage() || F.hasAddressTaken()) && hasTypeMetadata(F))
       CfiFunctions.insert(&F);
   for (auto &A : M.aliases())
     if (auto *F = dyn_cast<Function>(A.getAliasee()))
-      if (hasTypeMetadata(F))
+      if (hasTypeMetadata(*F))
         CfiFunctions.insert(&A);
   return CfiFunctions;
 }
+
+namespace {
+
+/// The type of CFI jumptable needed for a function.
+enum class CfiFunctionLinkage : uint8_t {
+  Definition = 0,
+  Declaration = 1,
+  WeakDeclaration = 2,
+};
+
+} // namespace
 
 static void createCfiFunctionsMetadata(Module &DestM,
                                        ArrayRef<GlobalValue *> CfiFunctions) {
@@ -327,15 +338,13 @@ static void createCfiFunctionsMetadata(Module &DestM,
 
     SmallVector<Metadata *, 4> Elts;
     Elts.push_back(MDString::get(Ctx, V->getName()));
-    CfiFunctionLinkage Linkage;
+    CfiFunctionLinkage Linkage = CfiFunctionLinkage::Declaration;
     if (lowertypetests::isJumpTableCanonical(&F))
-      Linkage = CFL_Definition;
+      Linkage = CfiFunctionLinkage::Definition;
     else if (F.hasExternalWeakLinkage())
-      Linkage = CFL_WeakDeclaration;
-    else
-      Linkage = CFL_Declaration;
-    Elts.push_back(ConstantAsMetadata::get(
-        llvm::ConstantInt::get(Type::getInt8Ty(Ctx), Linkage)));
+      Linkage = CfiFunctionLinkage::WeakDeclaration;
+    Elts.push_back(ConstantAsMetadata::get(llvm::ConstantInt::get(
+        Type::getInt8Ty(Ctx), static_cast<uint8_t>(Linkage))));
     GlobalValue::GUID GUID = V->getGUID();
     Elts.push_back(ConstantAsMetadata::get(
         llvm::ConstantInt::get(Type::getInt64Ty(Ctx), GUID)));
@@ -2404,7 +2413,7 @@ bool LowerTypeTestsModule::lower() {
         if (!ExportSummary->isGUIDLive(GUID))
           continue;
         if (!IsAddressTaken(GUID)) {
-          if (!CrossDsoCfi || Linkage != CFL_Definition)
+          if (!CrossDsoCfi || Linkage != CfiFunctionLinkage::Definition)
             continue;
 
           bool Exported = false;
@@ -2417,7 +2426,8 @@ bool LowerTypeTestsModule::lower() {
             continue;
         }
         auto P = ExportedFunctions.insert({FunctionName, {Linkage, FuncMD}});
-        if (!P.second && P.first->second.Linkage != CFL_Definition)
+        if (!P.second &&
+            P.first->second.Linkage != CfiFunctionLinkage::Definition)
           P.first->second = {Linkage, FuncMD};
       }
 
@@ -2473,7 +2483,8 @@ bool LowerTypeTestsModule::lower() {
 
         // Update the linkage for extern_weak declarations when a definition
         // exists.
-        if (Linkage == CFL_Definition && F->hasExternalWeakLinkage())
+        if (Linkage == CfiFunctionLinkage::Definition &&
+            F->hasExternalWeakLinkage())
           F->setLinkage(GlobalValue::ExternalLinkage);
 
         // If the function in the full LTO module is a declaration, replace its
@@ -2481,7 +2492,7 @@ bool LowerTypeTestsModule::lower() {
         // metadata is presumed to be more accurate than the metadata attached
         // to the declaration.
         if (F->isDeclaration()) {
-          if (Linkage == CFL_WeakDeclaration)
+          if (Linkage == CfiFunctionLinkage::WeakDeclaration)
             F->setLinkage(GlobalValue::ExternalWeakLinkage);
 
           F->eraseMetadata(LLVMContext::MD_type);
@@ -2544,7 +2555,8 @@ bool LowerTypeTestsModule::lower() {
       IsJumpTableCanonical = isJumpTableCanonical(F);
       if (auto It = ExportedFunctions.find(F->getName());
           It != ExportedFunctions.end()) {
-        IsJumpTableCanonical |= It->second.Linkage == CFL_Definition;
+        IsJumpTableCanonical |=
+            It->second.Linkage == CfiFunctionLinkage::Definition;
         IsExported = true;
       // TODO: The logic here checks only that the function is address taken,
       // not that the address takers are live. This can be updated to check
