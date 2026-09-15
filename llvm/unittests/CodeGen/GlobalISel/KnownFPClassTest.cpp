@@ -31,6 +31,63 @@ TEST_F(AArch64GISelMITest, TestFPClassCstPosZero) {
   EXPECT_EQ(false, Known.getSignBit());
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassFreeze) {
+  StringRef MIRString = R"(
+    %pos0:_(s32) = G_FCONSTANT float 0.0
+    %fr_pos0:_(s32) = G_FREEZE %pos0
+    %copy_pos0:_(s32) = COPY %fr_pos0
+    %neg0:_(s32) = G_FCONSTANT float -0.0
+    %fr_neg0:_(s32) = G_FREEZE %neg0
+    %copy_neg0:_(s32) = COPY %fr_neg0
+    %pinf:_(s32) = G_FCONSTANT float f0x7F800000
+    %fr_pinf:_(s32) = G_FREEZE %pinf
+    %copy_pinf:_(s32) = COPY %fr_pinf
+    %fneg:_(s32) = G_FNEG %pos0
+    %fr_fneg:_(s32) = G_FREEZE %fneg
+    %copy_fneg:_(s32) = COPY %fr_fneg
+    %undef:_(s32) = G_IMPLICIT_DEF
+    %fr_undef:_(s32) = G_FREEZE %undef
+    %copy_undef:_(s32) = COPY %fr_undef
+    %fabs_undef:_(s32) = G_FABS %undef
+    %fr_fabs:_(s32) = G_FREEZE %fabs_undef
+    %copy_fabs:_(s32) = COPY %fr_fabs
+)";
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  GISelValueTracking Info(*MF);
+  auto classOf = [&](unsigned FromEnd) {
+    Register CopyReg = Copies[Copies.size() - FromEnd];
+    return Info.computeKnownFPClass(
+        MRI->getVRegDef(CopyReg)->getOperand(1).getReg());
+  };
+
+  KnownFPClass Pos0 = classOf(6);
+  EXPECT_EQ(fcPosZero, Pos0.getKnownFPClasses());
+  EXPECT_EQ(false, Pos0.getSignBit());
+
+  KnownFPClass Neg0 = classOf(5);
+  EXPECT_EQ(fcNegZero, Neg0.getKnownFPClasses());
+  EXPECT_EQ(true, Neg0.getSignBit());
+
+  KnownFPClass PInf = classOf(4);
+  EXPECT_EQ(fcPosInf, PInf.getKnownFPClasses());
+  EXPECT_EQ(false, PInf.getSignBit());
+
+  KnownFPClass FNeg = classOf(3);
+  EXPECT_EQ(fcNegZero, FNeg.getKnownFPClasses());
+  EXPECT_EQ(true, FNeg.getSignBit());
+
+  KnownFPClass Undef = classOf(2);
+  EXPECT_EQ(fcAllFlags, Undef.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Undef.getSignBit());
+
+  KnownFPClass FAbsUndef = classOf(1);
+  EXPECT_EQ(fcAllFlags, FAbsUndef.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, FAbsUndef.getSignBit());
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassCstNegZero) {
   StringRef MIRString = "  %3:_(s32) = G_FCONSTANT float -0.0\n"
                         "  %4:_(s32) = COPY %3\n";
