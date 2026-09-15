@@ -6,7 +6,7 @@
 ; elem_size=8, idx_size=4, rpf=1
 define <16 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_1(i32 %metadata, <2 x i8> %compdata) {
 ; FORMAT-LABEL: define <16 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_1(
-; FORMAT-NEXT: %res = call <16 x i8> @llvm.nvvm.spdecompress.v16i8.i32.v2i8(i32 %metadata, <2 x i8> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <16 x i8> @llvm.nvvm.spdecompress.v16i8.i32.v2i8(i32 %metadata, <2 x i8> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b16 %rs<3>;
@@ -30,7 +30,7 @@ define <16 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_1(i32 %metadat
 ; elem_size=8, idx_size=4, rpf=2
 define <32 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_2(i32 %metadata, <4 x i8> %compdata) {
 ; FORMAT-LABEL: define <32 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_2(
-; FORMAT-NEXT: %res = call <32 x i8> @llvm.nvvm.spdecompress.v32i8.i32.v4i8(i32 %metadata, <4 x i8> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <32 x i8> @llvm.nvvm.spdecompress.v32i8.i32.v4i8(i32 %metadata, <4 x i8> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
@@ -49,7 +49,7 @@ define <32 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_2(i32 %metadat
 ; elem_size=8, idx_size=4, rpf=4
 define <64 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_4(i32 %metadata, <8 x i8> %compdata) {
 ; FORMAT-LABEL: define <64 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_4(
-; FORMAT-NEXT: %res = call <64 x i8> @llvm.nvvm.spdecompress.v64i8.i32.v8i8(i32 %metadata, <8 x i8> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <64 x i8> @llvm.nvvm.spdecompress.v64i8.i32.v8i8(i32 %metadata, <8 x i8> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -70,7 +70,7 @@ define <64 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_4(i32 %metadat
 ; elem_size=8, idx_size=4, rpf=8
 define <128 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_8(<2 x i32> %metadata, <16 x i8> %compdata) {
 ; FORMAT-LABEL: define <128 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_8(
-; FORMAT-NEXT: %res = call <128 x i8> @llvm.nvvm.spdecompress.v128i8.v2i32.v16i8(<2 x i32> %metadata, <16 x i8> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <128 x i8> @llvm.nvvm.spdecompress.v128i8.v2i32.v16i8(<2 x i32> %metadata, <16 x i8> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<39>;
@@ -95,7 +95,7 @@ define <128 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_8(<2 x i32> %
 ; elem_size=8, idx_size=4, rpf=16
 define <256 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_16(<4 x i32> %metadata, <32 x i8> %compdata) {
 ; FORMAT-LABEL: define <256 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_16(
-; FORMAT-NEXT: %res = call <256 x i8> @llvm.nvvm.spdecompress.v256i8.v4i32.v32i8(<4 x i32> %metadata, <32 x i8> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <256 x i8> @llvm.nvvm.spdecompress.v256i8.v4i32.v32i8(<4 x i32> %metadata, <32 x i8> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<77>;
@@ -129,7 +129,7 @@ define <256 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_16(<4 x i32> 
 ; elem_size=8, idx_size=4, rpf=32
 define <512 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_32(<8 x i32> %metadata, <64 x i8> %compdata) {
 ; FORMAT-LABEL: define <512 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_32(
-; FORMAT-NEXT: %res = call <512 x i8> @llvm.nvvm.spdecompress.v512i8.v8i32.v64i8(<8 x i32> %metadata, <64 x i8> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <512 x i8> @llvm.nvvm.spdecompress.v512i8.v8i32.v64i8(<8 x i32> %metadata, <64 x i8> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_32(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<153>;
@@ -182,7 +182,7 @@ define <512 x i8> @test_spdecompress_sp2to16_elmsz_b8_idxsz_b4_rpf_32(<8 x i32> 
 ; elem_size=16, idx_size=4, rpf=1
 define <16 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_1(i32 %metadata, <2 x i16> %compdata) {
 ; FORMAT-LABEL: define <16 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_1(
-; FORMAT-NEXT: %res = call <16 x i16> @llvm.nvvm.spdecompress.v16i16.i32.v2i16(i32 %metadata, <2 x i16> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <16 x i16> @llvm.nvvm.spdecompress.v16i16.i32.v2i16(i32 %metadata, <2 x i16> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_1(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<11>;
@@ -201,7 +201,7 @@ define <16 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_1(i32 %metad
 ; elem_size=16, idx_size=4, rpf=2
 define <32 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_2(i32 %metadata, <4 x i16> %compdata) {
 ; FORMAT-LABEL: define <32 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_2(
-; FORMAT-NEXT: %res = call <32 x i16> @llvm.nvvm.spdecompress.v32i16.i32.v4i16(i32 %metadata, <4 x i16> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <32 x i16> @llvm.nvvm.spdecompress.v32i16.i32.v4i16(i32 %metadata, <4 x i16> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -222,7 +222,7 @@ define <32 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_2(i32 %metad
 ; elem_size=16, idx_size=4, rpf=4
 define <64 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_4(i32 %metadata, <8 x i16> %compdata) {
 ; FORMAT-LABEL: define <64 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_4(
-; FORMAT-NEXT: %res = call <64 x i16> @llvm.nvvm.spdecompress.v64i16.i32.v8i16(i32 %metadata, <8 x i16> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <64 x i16> @llvm.nvvm.spdecompress.v64i16.i32.v8i16(i32 %metadata, <8 x i16> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<38>;
@@ -247,7 +247,7 @@ define <64 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_4(i32 %metad
 ; elem_size=16, idx_size=4, rpf=8
 define <128 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_8(<2 x i32> %metadata, <16 x i16> %compdata) {
 ; FORMAT-LABEL: define <128 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_8(
-; FORMAT-NEXT: %res = call <128 x i16> @llvm.nvvm.spdecompress.v128i16.v2i32.v16i16(<2 x i32> %metadata, <16 x i16> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <128 x i16> @llvm.nvvm.spdecompress.v128i16.v2i32.v16i16(<2 x i32> %metadata, <16 x i16> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_8(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<75>;
@@ -281,7 +281,7 @@ define <128 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_8(<2 x i32>
 ; elem_size=16, idx_size=4, rpf=16
 define <256 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_16(<4 x i32> %metadata, <32 x i16> %compdata) {
 ; FORMAT-LABEL: define <256 x i16> @test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_16(
-; FORMAT-NEXT: %res = call <256 x i16> @llvm.nvvm.spdecompress.v256i16.v4i32.v32i16(<4 x i32> %metadata, <32 x i16> %compdata, /* idx_size=.b4 */ i32 4, /* num_tgt= */ i32 16)
+; FORMAT-NEXT: %res = call <256 x i16> @llvm.nvvm.spdecompress.v256i16.v4i32.v32i16(<4 x i32> %metadata, <32 x i16> %compdata, /* idx_size= */ i32 4, /* num_tgt= */ i32 16)
 ; CHECK-LABEL: test_spdecompress_sp2to16_elmsz_b16_idxsz_b4_rpf_16(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<149>;
