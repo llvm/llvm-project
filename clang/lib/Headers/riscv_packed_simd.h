@@ -30,29 +30,6 @@ typedef uint16_t uint16x4_t __attribute__((__vector_size__(8)));
 typedef int32_t int32x2_t __attribute__((__vector_size__(8)));
 typedef uint32_t uint32x2_t __attribute__((__vector_size__(8)));
 
-/* Unaligned views of the packed types, used by the load/store intrinsics to
- * express that the pointer may have arbitrary alignment. */
-typedef int8_t __packed_i8x4_unaligned
-    __attribute__((__vector_size__(4), __aligned__(1)));
-typedef uint8_t __packed_u8x4_unaligned
-    __attribute__((__vector_size__(4), __aligned__(1)));
-typedef int16_t __packed_i16x2_unaligned
-    __attribute__((__vector_size__(4), __aligned__(1)));
-typedef uint16_t __packed_u16x2_unaligned
-    __attribute__((__vector_size__(4), __aligned__(1)));
-typedef int8_t __packed_i8x8_unaligned
-    __attribute__((__vector_size__(8), __aligned__(1)));
-typedef uint8_t __packed_u8x8_unaligned
-    __attribute__((__vector_size__(8), __aligned__(1)));
-typedef int16_t __packed_i16x4_unaligned
-    __attribute__((__vector_size__(8), __aligned__(1)));
-typedef uint16_t __packed_u16x4_unaligned
-    __attribute__((__vector_size__(8), __aligned__(1)));
-typedef int32_t __packed_i32x2_unaligned
-    __attribute__((__vector_size__(8), __aligned__(1)));
-typedef uint32_t __packed_u32x2_unaligned
-    __attribute__((__vector_size__(8), __aligned__(1)));
-
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__))
 
 #define __packed_splat2(ty, x) ((ty){(x), (x)})
@@ -370,8 +347,9 @@ typedef uint32_t __packed_u32x2_unaligned
     return (ty){__e0, __e1, __e2, __e3};                                       \
   }
 
-#define __packed_load(name, ty, elt_ty, ua_ty)                                 \
+#define __packed_load(name, ty, elt_ty)                                        \
   static __inline__ ty __DEFAULT_FN_ATTRS __riscv_##name(elt_ty *__p) {        \
+    typedef ty __attribute__((__aligned__(1))) ua_ty;                          \
     return *(ua_ty *)__p;                                                      \
   }
 
@@ -1150,18 +1128,18 @@ __packed_extract(pget_i32x2_i32, int32_t, int32x2_t, 1)
 __packed_extract(pget_u32x2_u32, uint32_t, uint32x2_t, 1)
 
 /* Packed Load (32-bit) */
-__packed_load(pld_i8x4, int8x4_t, int8_t, __packed_i8x4_unaligned)
-__packed_load(pld_u8x4, uint8x4_t, uint8_t, __packed_u8x4_unaligned)
-__packed_load(pld_i16x2, int16x2_t, int16_t, __packed_i16x2_unaligned)
-__packed_load(pld_u16x2, uint16x2_t, uint16_t, __packed_u16x2_unaligned)
+__packed_load(pld_i8x4, int8x4_t, int8_t)
+__packed_load(pld_u8x4, uint8x4_t, uint8_t)
+__packed_load(pld_i16x2, int16x2_t, int16_t)
+__packed_load(pld_u16x2, uint16x2_t, uint16_t)
 
 /* Packed Load (64-bit) */
-__packed_load(pld_i8x8, int8x8_t, int8_t, __packed_i8x8_unaligned)
-__packed_load(pld_u8x8, uint8x8_t, uint8_t, __packed_u8x8_unaligned)
-__packed_load(pld_i16x4, int16x4_t, int16_t, __packed_i16x4_unaligned)
-__packed_load(pld_u16x4, uint16x4_t, uint16_t, __packed_u16x4_unaligned)
-__packed_load(pld_i32x2, int32x2_t, int32_t, __packed_i32x2_unaligned)
-__packed_load(pld_u32x2, uint32x2_t, uint32_t, __packed_u32x2_unaligned)
+__packed_load(pld_i8x8, int8x8_t, int8_t)
+__packed_load(pld_u8x8, uint8x8_t, uint8_t)
+__packed_load(pld_i16x4, int16x4_t, int16_t)
+__packed_load(pld_u16x4, uint16x4_t, uint16_t)
+__packed_load(pld_i32x2, int32x2_t, int32_t)
+__packed_load(pld_u32x2, uint32x2_t, uint32_t)
 
 /* Reinterpret Casts, Packed <-> Scalar (32-bit) */
 __packed_reinterpret(u8x4_u32, uint32_t, uint8x4_t)
