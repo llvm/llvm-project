@@ -12,10 +12,8 @@ func.func @test_simple(%a: !fir.ref<!t_simple>, %b: !fir.ref<!t_simple>) {
 }
 // CHECK-LABEL: func.func @test_simple(
 // CHECK-NOT: Destroy
-// CHECK:  %[[VAL_1:.*]] = fir.coordinate_of %{{.*}}, i : (!fir.ref<!fir.type<simple{i:i32}>>) -> !fir.ref<i32>
-// CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %{{.*}}, i : (!fir.ref<!fir.type<simple{i:i32}>>) -> !fir.ref<i32>
-// CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
-// CHECK:  fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i32>
+// CHECK-NOT: fir.coordinate_of
+// CHECK:  fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<simple{i:i32}>>, !fir.ref<!fir.type<simple{i:i32}>>
 
 
 !t_with_final = !fir.type<with_final{i:i32}>
@@ -27,3 +25,17 @@ func.func @test_with_final(%a: !fir.ref<!t_with_final>, %b: !fir.ref<!t_with_fin
 }
 // CHECK-LABEL: func.func @test_with_final(
 // CHECK:  fir.call @_FortranAAssign
+
+// Derived type with two fields of different sizes: the LLVM struct will have
+// tail padding.  The assignment must use fir.copy (full allocated size) rather
+// than field-by-field copy so that tail-padding bytes are preserved.
+!t_tail_pad = !fir.type<tail_pad,sequence{a:i32,b:i8}>
+fir.type_info @tail_pad noinit nodestroy nofinal : !t_tail_pad
+
+func.func @test_tail_pad(%a: !fir.ref<!t_tail_pad>, %b: !fir.ref<!t_tail_pad>) {
+  hlfir.assign %b to %a : !fir.ref<!t_tail_pad>, !fir.ref<!t_tail_pad>
+  return
+}
+// CHECK-LABEL: func.func @test_tail_pad(
+// CHECK-NOT: fir.coordinate_of
+// CHECK:  fir.copy %{{.*}} to %{{.*}} no_overlap : !fir.ref<!fir.type<tail_pad,sequence{a:i32,b:i8}>>, !fir.ref<!fir.type<tail_pad,sequence{a:i32,b:i8}>>
