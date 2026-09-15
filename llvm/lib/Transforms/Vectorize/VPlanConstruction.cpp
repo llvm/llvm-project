@@ -1226,6 +1226,12 @@ bool VPlanTransforms::areAllLoadsDereferenceable(VPBasicBlock *HeaderVPBB,
   const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   for (VPBasicBlock *VPBB : vp_rpo_plain_cfg_loop_body(HeaderVPBB)) {
     for (VPRecipeBase &R : *VPBB) {
+      // Pseudo-probes are profiling placeholders with side effects but no real
+      // memory access. They are modeled as reading inaccessible memory, so skip
+      // them here to stay consistent with isReadOnlyLoop(), which classifies
+      // such loops as read-only.
+      if (match(&R, m_Intrinsic<Intrinsic::pseudoprobe>()))
+        continue;
       auto *VPI = dyn_cast<VPInstruction>(&R);
       if (!VPI || VPI->getOpcode() != Instruction::Load) {
         assert(!R.mayReadFromMemory() && "unexpected recipe reading memory");
