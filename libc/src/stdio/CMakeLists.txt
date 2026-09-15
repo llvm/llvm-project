@@ -41,6 +41,38 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getline
+  SRCS
+    getline.cpp
+  HDRS
+    getline.h
+    inline_getline.h
+  DEPENDS
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
+    libc.hdr.types.FILE
+    libc.hdr.types.ssize_t
+    libc.src.__support.File.file
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
+  getdelim
+  SRCS
+    getdelim.cpp
+  HDRS
+    getdelim.h
+    inline_getline.h
+  DEPENDS
+    libc.hdr.func.malloc
+    libc.hdr.func.realloc
+    libc.hdr.types.FILE
+    libc.hdr.types.ssize_t
+    libc.src.__support.File.file
+    libc.src.__support.libc_errno
+)
+
+add_entrypoint_object(
   funlockfile
   SRCS
     funlockfile.cpp

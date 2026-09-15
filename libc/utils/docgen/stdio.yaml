@@ -207,9 +207,9 @@ functions:
   funlockfile:
     in-latest-posix: ''
   getdelim:
-    in-latest-posix: ''
+    in-latest-posix: 'YES'
   getline:
-    in-latest-posix: ''
+    in-latest-posix: 'YES'
   open_memstream:
     in-latest-posix: ''
   pclose:
