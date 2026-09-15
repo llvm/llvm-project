@@ -315,8 +315,8 @@ def ffast_real_mod : Flag<["-"], "ffast-real-mod">, Group<f_Group>,
 def fno_fast_real_mod : Flag<["-"], "fno-fast-real-mod">, Group<f_Group>,
   HelpText<"Disable optimization of MOD for REAL types in presence of -ffast-math">;
 
-def fcheck_integer_mod_zero
-    : Flag<["-"], "fcheck-integer-mod-zero">, Group<f_Group>,
+def fcheck_integer_mod_zero_divisor
+    : Flag<["-"], "fcheck-integer-mod-zero-divisor">, Group<f_Group>,
       HelpText<"Check for a zero divisor in integer MOD and MODULO">;
 
 defm fp_sum_reassociation

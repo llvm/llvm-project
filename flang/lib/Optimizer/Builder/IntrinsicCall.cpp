@@ -6923,8 +6923,8 @@ static void genIntegerZeroDivisorCheck(fir::FirOpBuilder &builder,
                                        mlir::Location loc, mlir::Value p,
                                        bool isModulo) {
   mlir::ModuleOp mod = builder.getModule();
-  auto checkEnabled =
-      mod->getAttrOfType<mlir::BoolAttr>("fir.check_integer_mod_zero");
+  auto checkEnabled = mod->getAttrOfType<mlir::BoolAttr>(
+      fir::getCheckIntegerModZeroDivisorAttrName());
   if (!checkEnabled || !checkEnabled.getValue())
     return;
   if (std::optional<llvm::APInt> constantP = fir::getIntIfConstant(p))

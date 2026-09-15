@@ -1,5 +1,5 @@
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s --check-prefixes=CHECK%if target=x86_64{{.*}} %{,CHECK-KIND10%}%if flang-supports-f128-math %{,CHECK-KIND16%}
-! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero %s -o - | FileCheck %s --check-prefix=CHECK-MOD-ZERO
+! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero-divisor %s -o - | FileCheck %s --check-prefix=CHECK-MOD-ZERO
 
 ! CHECK-LABEL: func @_QPmod_testr4(
 subroutine mod_testr4(r, a, p)
@@ -43,7 +43,7 @@ end subroutine
 ! CHECK-NOT: fir.call @_FortranAReportFatalUserError
 ! CHECK: arith.remsi %{{.*}}, %{{.*}} : i32
 
-! With -fcheck-integer-mod-zero, a divisor that is not a known nonzero
+! With -fcheck-integer-mod-zero-divisor, a divisor that is not a known nonzero
 ! constant is tested and a fatal error is reported.
 ! CHECK-MOD-ZERO-LABEL: func @_QPmod_testi4(
 subroutine mod_testi4(r, a, p)

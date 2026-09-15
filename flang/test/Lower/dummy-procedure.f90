@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fcheck-integer-mod-zero-divisor %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s --check-prefix=NO-MOD-ZERO
 
 ! Test dummy procedures
