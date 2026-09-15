@@ -4190,6 +4190,86 @@ Instruction *InstCombinerImpl::FoldOrOfLogicalAnds(Value *Op0, Value *Op1) {
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
+/// Fold the inlined `fract(x) == 0` integral test to `fcmp oeq trunc(x), x`.
+///
+/// The tree produced by inlining a `fract()`:
+///
+///   isinf    = fcmp oeq (fabs x), +inf
+///   isnan    = fcmp uno x, 0.0
+///   cond     = select isnan, x, minnum(fsub x, floor(x), C)
+///   fraczero = fcmp oeq cond, 0.0
+///   result   = or isinf, fraczero
+///
+/// The `isnan` select and the `or isinf` term are load-bearing: NaN must
+/// compare false, and infinities (where `x - floor(x)` is NaN) are covered
+/// separately. The `minnum` clamp keeps a real fract() in [0, 1) and is
+/// matched optionally, since it does not affect the `== 0` test. All
+/// intermediate nodes must be one-use so the whole tree is removed.
+static Instruction *foldFractIsZeroToTrunc(BinaryOperator &Or,
+                                           InstCombinerImpl &IC) {
+  if (!Or.getType()->isIntOrIntVectorTy(1))
+    return nullptr;
+
+  Value *X = nullptr;
+
+  // frac == 0 side:
+  //   fcmp oeq (select (fcmp uno x, 0), x, [minnum(]fsub x, floor(x)[, C)]), 0
+  auto MatchFracZero = [&](Value *V) -> bool {
+    Value *Sel;
+    if (!match(V, m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_OEQ, m_Value(Sel),
+                                          m_AnyZeroFP()))))
+      return false;
+    Value *Cond, *TrueV, *FalseV;
+    if (!match(Sel, m_OneUse(m_Select(m_Value(Cond), m_Value(TrueV),
+                                      m_Value(FalseV)))))
+      return false;
+    Value *Xc;
+    if (!match(Cond, m_OneUse(m_SpecificFCmp(FCmpInst::FCMP_UNO, m_Value(Xc),
+                                             m_AnyZeroFP()))) ||
+        TrueV != Xc)
+      return false;
+    // Optional minnum(frac, C) clamp with a positive constant. It only bounds
+    // the value away from 1.0, so it is irrelevant to `frac == 0`; accept the
+    // tree with or without it. (minnum(a, C) == 0 iff a == 0 when C > 0.)
+    Value *Frac = FalseV;
+    const APFloat *C;
+    Value *ClampIn;
+    if (match(Frac, m_OneUse(m_Intrinsic<Intrinsic::minnum>(m_Value(ClampIn),
+                                                            m_APFloat(C))))) {
+      if (C->isNaN() || C->isNegative() || C->isZero())
+        return false;
+      Frac = ClampIn;
+    }
+    // frac = x - floor(x)
+    Value *Floor;
+    if (!match(Frac, m_OneUse(m_FSub(m_Specific(Xc), m_Value(Floor)))) ||
+        !match(Floor, m_OneUse(m_Intrinsic<Intrinsic::floor>(m_Specific(Xc)))))
+      return false;
+    X = Xc;
+    return true;
+  };
+
+  // isinf side: fcmp oeq (fabs x), +inf
+  auto MatchIsInf = [&](Value *V) -> bool {
+    const APFloat *C;
+    Value *Fabs;
+    if (!match(V, m_OneUse(m_SpecificFCmp(
+                      FCmpInst::FCMP_OEQ,
+                      m_OneUse(m_Intrinsic<Intrinsic::fabs>(m_Value(Fabs))),
+                      m_APFloat(C)))))
+      return false;
+    return C->isInfinity() && !C->isNegative() && Fabs == X;
+  };
+
+  Value *Op0 = Or.getOperand(0), *Op1 = Or.getOperand(1);
+  if (!((MatchFracZero(Op0) && MatchIsInf(Op1)) ||
+        (MatchFracZero(Op1) && MatchIsInf(Op0))))
+    return nullptr;
+
+  Value *Trunc = IC.Builder.CreateUnaryIntrinsic(Intrinsic::trunc, X);
+  return new FCmpInst(FCmpInst::FCMP_OEQ, Trunc, X);
+}
+
 Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (Value *V = simplifyOrInst(I.getOperand(0), I.getOperand(1),
                                 SQ.getWithInstruction(&I)))
@@ -4320,6 +4400,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
       return V;
     }
   }
+
+  if (Instruction *R = foldFractIsZeroToTrunc(I, *this))
+    return R;
 
   // (A & C) | (B & D)
   Value *A, *B, *C, *D;
