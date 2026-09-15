@@ -93,6 +93,7 @@ module LLVM_BinaryFormat {
     textual header "llvm/BinaryFormat/ELFRelocs/M68k.def"
     textual header "llvm/BinaryFormat/ELFRelocs/Mips.def"
     textual header "llvm/BinaryFormat/ELFRelocs/MSP430.def"
+    textual header "llvm/BinaryFormat/ELFRelocs/NanoMips.def"
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC64.def"
     textual header "llvm/BinaryFormat/ELFRelocs/PowerPC.def"
     textual header "llvm/BinaryFormat/ELFRelocs/RISCV.def"

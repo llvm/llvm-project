@@ -122,7 +122,10 @@ void MipsAsmPrinter::emitPseudoIndirectBranch(MCStreamer &OutStreamer,
   } else if (Subtarget->inMicroMipsMode())
     // microMIPS should use (JR_MM $rs)
     TmpInst0.setOpcode(Mips::JR_MM);
-  else {
+  else if (Subtarget->hasNanoMips()) {
+    // nanoMIPS should use (JRC_NM $rs)
+    TmpInst0.setOpcode(Mips::JRC_NM);
+  } else {
     // Everything else should use (JR $rs)
     TmpInst0.setOpcode(Mips::JR);
   }
@@ -388,6 +391,8 @@ const char *MipsAsmPrinter::getCurrentABIString() const {
   case MipsABIInfo::ABI::O32:  return "abi32";
   case MipsABIInfo::ABI::N32:  return "abiN32";
   case MipsABIInfo::ABI::N64:  return "abi64";
+  case MipsABIInfo::ABI::P32:
+    return "abiP32";
   default: llvm_unreachable("Unknown Mips ABI");
   }
 }
@@ -1277,4 +1282,5 @@ LLVMInitializeMipsAsmPrinter() {
   RegisterAsmPrinter<MipsAsmPrinter> Y(getTheMipselTarget());
   RegisterAsmPrinter<MipsAsmPrinter> A(getTheMips64Target());
   RegisterAsmPrinter<MipsAsmPrinter> B(getTheMips64elTarget());
+  RegisterAsmPrinter<MipsAsmPrinter> C(getTheNanoMipsTarget());
 }

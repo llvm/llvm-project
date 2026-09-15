@@ -1,0 +1,447 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 32-bit nanoMIPS load, store and cache/prefetch/sync
+# instructions
+#
+# Since the memory address operands will be fully supported in the next
+# upstreaming batch, they are set to 0 to allow confirming the mnemonics and
+# encoding of the remaining instruction parts.
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- load / store (with placeholder operands for now) ---
+---
+# CHECK-LABEL: lb:
+# CHECK: lb $a0, 0 # encoding: [0x80,0x84,0x00,0x00]
+name: lb
+body: |
+  bb.0:
+    $a0_nm = LB_NM 0
+...
+---
+# CHECK-LABEL: lbgp:
+# CHECK: lb $a0, 0 # encoding: [0x80,0x44,0x00,0x00]
+name: lbgp
+body: |
+  bb.0:
+    $a0_nm = LBGP_NM 0
+...
+---
+# CHECK-LABEL: lbs9:
+# CHECK: lb $a0, 0 # encoding: [0x80,0xa4,0x00,0x00]
+name: lbs9
+body: |
+  bb.0:
+    $a0_nm = LBs9_NM 0
+...
+---
+# CHECK-LABEL: lbu:
+# CHECK: lbu $a0, 0 # encoding: [0x80,0x84,0x00,0x20]
+name: lbu
+body: |
+  bb.0:
+    $a0_nm = LBU_NM 0
+...
+---
+# CHECK-LABEL: lbugp:
+# CHECK: lbu $a0, 0 # encoding: [0x88,0x44,0x00,0x00]
+name: lbugp
+body: |
+  bb.0:
+    $a0_nm = LBUGP_NM 0
+...
+---
+# CHECK-LABEL: lbus9:
+# CHECK: lbu $a0, 0 # encoding: [0x80,0xa4,0x00,0x10]
+name: lbus9
+body: |
+  bb.0:
+    $a0_nm = LBUs9_NM 0
+...
+---
+# CHECK-LABEL: lbux:
+# CHECK: lbux $a0, 0 # encoding: [0x00,0x20,0x07,0x21]
+name: lbux
+body: |
+  bb.0:
+    $a0_nm = LBUX_NM 0
+...
+---
+# CHECK-LABEL: lbx:
+# CHECK: lbx $a0, 0 # encoding: [0x00,0x20,0x07,0x20]
+name: lbx
+body: |
+  bb.0:
+    $a0_nm = LBX_NM 0
+...
+---
+# CHECK-LABEL: lh:
+# CHECK: lh $a0, 0 # encoding: [0x80,0x84,0x00,0x40]
+name: lh
+body: |
+  bb.0:
+    $a0_nm = LH_NM 0
+...
+---
+# CHECK-LABEL: lhgp:
+# CHECK: lh $a0, 0 # encoding: [0x90,0x44,0x00,0x00]
+name: lhgp
+body: |
+  bb.0:
+    $a0_nm = LHGP_NM 0
+...
+---
+# CHECK-LABEL: lhs9:
+# CHECK: lh $a0, 0 # encoding: [0x80,0xa4,0x00,0x20]
+name: lhs9
+body: |
+  bb.0:
+    $a0_nm = LHs9_NM 0
+...
+---
+# CHECK-LABEL: lhu:
+# CHECK: lhu $a0, 0 # encoding: [0x80,0x84,0x00,0x60]
+name: lhu
+body: |
+  bb.0:
+    $a0_nm = LHU_NM 0
+...
+---
+# CHECK-LABEL: lhugp:
+# CHECK: lhu $a0, 0 # encoding: [0x90,0x44,0x01,0x00]
+name: lhugp
+body: |
+  bb.0:
+    $a0_nm = LHUGP_NM 0
+...
+---
+# CHECK-LABEL: lhus9:
+# CHECK: lhu $a0, 0 # encoding: [0x80,0xa4,0x00,0x30]
+name: lhus9
+body: |
+  bb.0:
+    $a0_nm = LHUs9_NM 0
+...
+---
+# CHECK-LABEL: lhux:
+# CHECK: lhux $a0, 0 # encoding: [0x00,0x20,0x07,0x23]
+name: lhux
+body: |
+  bb.0:
+    $a0_nm = LHUX_NM 0
+...
+---
+# CHECK-LABEL: lhuxs:
+# CHECK: lhuxs $a0, 0 # encoding: [0x00,0x20,0x47,0x23]
+name: lhuxs
+body: |
+  bb.0:
+    $a0_nm = LHUXS_NM 0
+...
+---
+# CHECK-LABEL: lhx:
+# CHECK: lhx $a0, 0 # encoding: [0x00,0x20,0x07,0x22]
+name: lhx
+body: |
+  bb.0:
+    $a0_nm = LHX_NM 0
+...
+---
+# CHECK-LABEL: lhxs:
+# CHECK: lhxs $a0, 0 # encoding: [0x00,0x20,0x47,0x22]
+name: lhxs
+body: |
+  bb.0:
+    $a0_nm = LHXS_NM 0
+...
+---
+# CHECK-LABEL: ll:
+# CHECK: ll $a0, 0 # encoding: [0x80,0xa4,0x00,0x51]
+name: ll
+body: |
+  bb.0:
+    $a0_nm = LL_NM 0
+...
+---
+# CHECK-LABEL: lw:
+# CHECK: lw $a0, 0 # encoding: [0x80,0x84,0x00,0x80]
+name: lw
+body: |
+  bb.0:
+    $a0_nm = LW_NM 0
+...
+---
+# CHECK-LABEL: lwgp:
+# CHECK: lw $a0, 0 # encoding: [0x80,0x40,0x02,0x00]
+name: lwgp
+body: |
+  bb.0:
+    $a0_nm = LWGP_NM 0
+...
+---
+# CHECK-LABEL: lwm:
+# CHECK: lwm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x14]
+name: lwm
+body: |
+  bb.0:
+    $a0_nm = LWM_NM 0, 1
+...
+---
+# CHECK-LABEL: lws9:
+# CHECK: lw $a0, 0 # encoding: [0x80,0xa4,0x00,0x40]
+name: lws9
+body: |
+  bb.0:
+    $a0_nm = LWs9_NM 0
+...
+---
+# CHECK-LABEL: lwx:
+# CHECK: lwx $a0, 0 # encoding: [0x00,0x20,0x07,0x24]
+name: lwx
+body: |
+  bb.0:
+    $a0_nm = LWX_NM 0
+...
+---
+# CHECK-LABEL: lwxs:
+# CHECK: lwxs $a0, 0 # encoding: [0x00,0x20,0x47,0x24]
+name: lwxs
+body: |
+  bb.0:
+    $a0_nm = LWXS_NM 0
+...
+---
+# CHECK-LABEL: sb:
+# CHECK: sb $a0, 0 # encoding: [0x80,0x84,0x00,0x10]
+name: sb
+body: |
+  bb.0:
+    SB_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sbgp:
+# CHECK: sb $a0, 0 # encoding: [0x84,0x44,0x00,0x00]
+name: sbgp
+body: |
+  bb.0:
+    SBGP_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sbs9:
+# CHECK: sb $a0, 0 # encoding: [0x80,0xa4,0x00,0x08]
+name: sbs9
+body: |
+  bb.0:
+    SBs9_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sbx:
+# CHECK: sbx $a0, 0 # encoding: [0x00,0x20,0x87,0x20]
+name: sbx
+body: |
+  bb.0:
+    SBX_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sc:
+# CHECK: sc $a0, 0 # encoding: [0x80,0xa4,0x00,0x59]
+name: sc
+body: |
+  bb.0:
+    $a0_nm = SC_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: scwp:
+# CHECK: scwp $a0, $a1, 0 # encoding: [0x80,0xa4,0x29,0x59]
+name: scwp
+body: |
+  bb.0:
+    $a0_nm = SCWP_NM $a0_nm, $a1_nm, 0
+...
+---
+# CHECK-LABEL: sh:
+# CHECK: sh $a0, 0 # encoding: [0x80,0x84,0x00,0x50]
+name: sh
+body: |
+  bb.0:
+    SH_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: shgp:
+# CHECK: sh $a0, 0 # encoding: [0x94,0x44,0x00,0x00]
+name: shgp
+body: |
+  bb.0:
+    SHGP_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: shs9:
+# CHECK: sh $a0, 0 # encoding: [0x80,0xa4,0x00,0x28]
+name: shs9
+body: |
+  bb.0:
+    SHs9_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: shx:
+# CHECK: shx $a0, 0 # encoding: [0x00,0x20,0x87,0x22]
+name: shx
+body: |
+  bb.0:
+    SHX_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: shxs:
+# CHECK: shxs $a0, 0 # encoding: [0x00,0x20,0xc7,0x22]
+name: shxs
+body: |
+  bb.0:
+    SHXS_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: sw:
+# CHECK: sw $a0, 0 # encoding: [0x80,0x84,0x00,0x90]
+name: sw
+body: |
+  bb.0:
+    SW_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: swgp:
+# CHECK: sw $a0, 0 # encoding: [0x80,0x40,0x03,0x00]
+name: swgp
+body: |
+  bb.0:
+    SWGP_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: swm:
+# CHECK: swm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x1c]
+name: swm
+body: |
+  bb.0:
+    SWM_NM $a0_nm, 0, 1
+...
+---
+# CHECK-LABEL: sws9:
+# CHECK: sw $a0, 0 # encoding: [0x80,0xa4,0x00,0x48]
+name: sws9
+body: |
+  bb.0:
+    SWs9_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: swx:
+# CHECK: swx $a0, 0 # encoding: [0x00,0x20,0x87,0x24]
+name: swx
+body: |
+  bb.0:
+    SWX_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: swxs:
+# CHECK: swxs $a0, 0 # encoding: [0x00,0x20,0xc7,0x24]
+name: swxs
+body: |
+  bb.0:
+    SWXS_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: ualh:
+# CHECK: ualh $a0, 0 # encoding: [0x80,0xa4,0x00,0x21]
+name: ualh
+body: |
+  bb.0:
+    $a0_nm = UALH_NM 0, $a0_nm
+...
+---
+# CHECK-LABEL: ualw:
+# CHECK: ualw $a0, 0 # encoding: [0x80,0xa4,0x00,0x15]
+name: ualw
+body: |
+  bb.0:
+    $a0_nm = UALW_NM 0, $a0_nm
+...
+---
+# CHECK-LABEL: ualwm:
+# CHECK: ualwm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x15]
+name: ualwm
+body: |
+  bb.0:
+    $a0_nm = UALWM_NM 0, 1
+...
+---
+# CHECK-LABEL: uash:
+# CHECK: uash $a0, 0 # encoding: [0x80,0xa4,0x00,0x29]
+name: uash
+body: |
+  bb.0:
+    UASH_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: uasw:
+# CHECK: uasw $a0, 0 # encoding: [0x80,0xa4,0x00,0x1d]
+name: uasw
+body: |
+  bb.0:
+    UASW_NM $a0_nm, 0
+...
+---
+# CHECK-LABEL: uaswm:
+# CHECK: uaswm $a0, 0, 1 # encoding: [0x80,0xa4,0x00,0x1d]
+name: uaswm
+body: |
+  bb.0:
+    UASWM_NM $a0_nm, 0, 1
+...
+
+# --- cache / prefetch / sync (with placeholder operands for now) ---
+---
+# CHECK-LABEL: cache:
+# CHECK: cache 0, 0 # encoding: [0x00,0xa4,0x00,0x39]
+name: cache
+body: |
+  bb.0:
+    CACHE_NM 0, 0
+...
+---
+# CHECK-LABEL: llwp:
+# CHECK: llwp $a0, $a1, 0 # encoding: [0x80,0xa4,0x29,0x51]
+name: llwp
+body: |
+  bb.0:
+    $a0_nm, $a1_nm = LLWP_NM 0
+...
+---
+# CHECK-LABEL: pref:
+# CHECK: pref 0, 0 # encoding: [0x00,0x84,0x00,0x30]
+name: pref
+body: |
+  bb.0:
+    PREF_NM 0, 0
+...
+---
+# CHECK-LABEL: prefs9:
+# CHECK: pref 0, 0 # encoding: [0x00,0xa4,0x00,0x18]
+name: prefs9
+body: |
+  bb.0:
+    PREFs9_NM 0, 0
+...
+---
+# CHECK-LABEL: synci:
+# CHECK: synci 0 # encoding: [0xe0,0x87,0x00,0x30]
+name: synci
+body: |
+  bb.0:
+    SYNCI_NM 0
+...
+---
+# CHECK-LABEL: syncis9:
+# CHECK: synci 0 # encoding: [0xe0,0xa7,0x00,0x18]
+name: syncis9
+body: |
+  bb.0:
+    SYNCIs9_NM 0
+...

@@ -149,7 +149,7 @@ static std::string computeM68kDataLayout(const Triple &TT) {
 }
 
 namespace {
-enum class MipsABI { Unknown, O32, N32, N64 };
+enum class MipsABI { Unknown, O32, N32, N64, P32 };
 }
 
 // FIXME: This duplicates MipsABIInfo::computeTargetABI, but duplicating this is
@@ -161,12 +161,16 @@ static MipsABI getMipsABI(const Triple &TT, StringRef ABIName) {
     return MipsABI::O32;
   if (ABIName.starts_with("n32"))
     return MipsABI::N32;
+  if (ABIName.starts_with("p32"))
+    return MipsABI::P32;
   if (ABIName.starts_with("n64"))
     return MipsABI::N64;
   if (TT.isABIN32())
     return MipsABI::N32;
   assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
+  if (TT.isNanoMips())
+    return MipsABI::P32;
   if (TT.isMIPS64())
     return MipsABI::N64;
   return MipsABI::O32;
@@ -200,6 +204,8 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   // 128 bit aligned.
   if (ABI == MipsABI::N64 || ABI == MipsABI::N32)
     Ret += "-i128:128-n32:64-S128";
+  else if (ABI == MipsABI::P32)
+    Ret += "-n32-S128";
   else
     Ret += "-n32-S64";
 
@@ -601,6 +607,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
+  case Triple::nanomips:
     return computeMipsDataLayout(*this, ABIName);
   case Triple::msp430:
     return "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16";

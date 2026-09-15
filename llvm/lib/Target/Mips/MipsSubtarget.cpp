@@ -115,9 +115,15 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
   if (MipsArchVersion == Mips5)
     report_fatal_error("Code generation for MIPS-V is not implemented", false);
 
-  // Check if Architecture and ABI are compatible.
-  assert(((!isGP64bit() && isABI_O32()) || isGP64bit()) &&
-         "Invalid  Arch & ABI pair.");
+  // nanoMIPS is 32-bit architecture and always uses the P32 ABI.
+  // Other MIPS 32-bit architectures supports only O32 ABI.
+  // 64-bit MIPS architectures supports all ABIs except P32.
+  const bool IsValidArchABI =
+      (hasNanoMips() && isABI_P32()) ||
+      (!hasNanoMips() && ((!isGP64bit() && isABI_O32()) || isGP64bit()));
+
+  if (!IsValidArchABI)
+    report_fatal_error("Invalid Arch & ABI pair.", false);
 
   if (hasMSA() && !isFP64bit())
     report_fatal_error("MSA requires a 64-bit FPU register file (FR=1 mode). "
@@ -129,17 +135,19 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
         "FPU with 64-bit registers is not available on MIPS32 pre revision 2. "
         "Use -mcpu=mips32r2 or greater.", false);
 
-  if (!isABI_O32() && !useOddSPReg())
-    report_fatal_error("-mattr=+nooddspreg requires the O32 ABI.", false);
-
   if (IsFPXX && (isABI_N32() || isABI_N64()))
     report_fatal_error("FPXX is not permitted for the N32/N64 ABI's.", false);
 
   if (hasMips64r6() && InMicroMipsMode)
     report_fatal_error("microMIPS64R6 is not supported", false);
 
-  if (!isABI_O32() && InMicroMipsMode)
-    report_fatal_error("microMIPS64 is not supported.", false);
+  if (!hasNanoMips()) {
+    if (!isABI_O32() && !useOddSPReg())
+      report_fatal_error("-mattr=+nooddspreg requires the O32 ABI.", false);
+
+    if (!isABI_O32() && InMicroMipsMode)
+      report_fatal_error("microMIPS64 is not supported.", false);
+  }
 
   if (UseIndirectJumpsHazard) {
     if (InMicroMipsMode)
@@ -164,6 +172,9 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
     if (hasDSP())
       report_fatal_error(ISA + " is not compatible with the DSP ASE", false);
   }
+
+  if (!NoABICalls && hasNanoMips())
+    report_fatal_error("nanoMIPS requires '-mno-abicalls'");
 
   if (NoABICalls && TM.isPositionIndependent())
     report_fatal_error("position-independent code requires '-mabicalls'");
@@ -203,25 +214,27 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
 
   StringRef ArchName = hasMips64() ? "MIPS64" : "MIPS32";
 
-  if (!hasMips32r5() && hasMSA() && !MSAWarningPrinted) {
-    errs() << "warning: the 'msa' ASE requires " << ArchName
-           << " revision 5 or greater\n";
-    MSAWarningPrinted = true;
-  }
-  if (!hasMips32r5() && hasVirt() && !VirtWarningPrinted) {
-    errs() << "warning: the 'virt' ASE requires " << ArchName
-           << " revision 5 or greater\n";
-    VirtWarningPrinted = true;
-  }
-  if (!hasMips32r6() && hasCRC() && !CRCWarningPrinted) {
-    errs() << "warning: the 'crc' ASE requires " << ArchName
-           << " revision 6 or greater\n";
-    CRCWarningPrinted = true;
-  }
-  if (!hasMips32r6() && hasGINV() && !GINVWarningPrinted) {
-    errs() << "warning: the 'ginv' ASE requires " << ArchName
-           << " revision 6 or greater\n";
-    GINVWarningPrinted = true;
+  if (!hasNanoMips()) {
+    if (!hasMips32r5() && hasMSA() && !MSAWarningPrinted) {
+      errs() << "warning: the 'msa' ASE requires " << ArchName
+             << " revision 5 or greater\n";
+      MSAWarningPrinted = true;
+    }
+    if (!hasMips32r5() && hasVirt() && !VirtWarningPrinted) {
+      errs() << "warning: the 'virt' ASE requires " << ArchName
+             << " revision 5 or greater\n";
+      VirtWarningPrinted = true;
+    }
+    if (!hasMips32r6() && hasCRC() && !CRCWarningPrinted) {
+      errs() << "warning: the 'crc' ASE requires " << ArchName
+             << " revision 6 or greater\n";
+      CRCWarningPrinted = true;
+    }
+    if (!hasMips32r6() && hasGINV() && !GINVWarningPrinted) {
+      errs() << "warning: the 'ginv' ASE requires " << ArchName
+             << " revision 6 or greater\n";
+      GINVWarningPrinted = true;
+    }
   }
 
   TSInfo = std::make_unique<MipsSelectionDAGInfo>();
@@ -265,7 +278,7 @@ MipsSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS,
 
   if (StackAlignOverride)
     stackAlignment = *StackAlignOverride;
-  else if (isABI_N32() || isABI_N64())
+  else if (isABI_N32() || isABI_N64() || isABI_P32())
     stackAlignment = Align(16);
   else {
     assert(isABI_O32() && "Unknown ABI for stack alignment!");
@@ -292,6 +305,7 @@ Reloc::Model MipsSubtarget::getRelocationModel() const {
 bool MipsSubtarget::isABI_N64() const { return getABI().IsN64(); }
 bool MipsSubtarget::isABI_N32() const { return getABI().IsN32(); }
 bool MipsSubtarget::isABI_O32() const { return getABI().IsO32(); }
+bool MipsSubtarget::isABI_P32() const { return getABI().IsP32(); }
 const MipsABIInfo &MipsSubtarget::getABI() const { return TM.getABI(); }
 
 const SelectionDAGTargetInfo *MipsSubtarget::getSelectionDAGInfo() const {

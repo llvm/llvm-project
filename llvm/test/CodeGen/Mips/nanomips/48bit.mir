@@ -1,0 +1,73 @@
+# RUN: llc %s -mtriple=nanomips-elf -start-after=mips-branch-expansion -show-mc-encoding -o - \
+# RUN:   | FileCheck %s
+
+# Encoding tests for 48-bit nanoMIPS instructions (wide immediates,
+# PC/GP-relative address computation, PC-relative load/store)
+#
+# Since the PC/GP-relative and PC-relative operands will be fully supported in
+# the next upstreaming batch, they are set to 0 to allow confirming the
+# mnemonics and encoding of the remaining instruction parts.
+# Encoding bytes are shown in on-disk order: each halfword is little-endian,
+# more significant halfword first.
+
+# --- arithmetic / immediate ---
+---
+# CHECK-LABEL: addiu48:
+# CHECK: addiu $a0, $a0, 305419896 # encoding: [0x81,0x60,0x78,0x56,0x34,0x12]
+name: addiu48
+body: |
+  bb.0:
+    $a0_nm = ADDIU48_NM $a0_nm, 305419896
+...
+---
+# CHECK-LABEL: li48:
+# CHECK: li $a0, 305419896 # encoding: [0x80,0x60,0x78,0x56,0x34,0x12]
+name: li48
+body: |
+  bb.0:
+    $a0_nm = LI48_NM 305419896
+...
+
+# --- PC/GP-relative address (with placeholder operands for now) ---
+---
+# CHECK-LABEL: addiugp48:
+# CHECK: addiu.b32 $a0, $gp, 0 # encoding: [0x82,0x60,0x00,0x00,0x00,0x00]
+name: addiugp48
+body: |
+  bb.0:
+    $a0_nm = ADDIUGP48_NM $gp_nm, 0
+...
+---
+# CHECK-LABEL: addiupc48:
+# CHECK: addiupc $a0, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
+name: addiupc48
+body: |
+  bb.0:
+    $a0_nm = ADDIUPC48_NM 0
+...
+---
+# CHECK-LABEL: lapc48:
+# CHECK: lapc.b $a0, 0 # encoding: [0x83,0x60,0x00,0x00,0x00,0x00]
+name: lapc48
+body: |
+  bb.0:
+    $a0_nm = LAPC48_NM 0
+...
+
+# --- PC-relative load / store (with placeholder operands for now) ---
+---
+# CHECK-LABEL: lwpc:
+# CHECK: lwpc $a0, 0 # encoding: [0x8b,0x60,0x00,0x00,0x00,0x00]
+name: lwpc
+body: |
+  bb.0:
+    $a0_nm = LWPC_NM 0
+...
+---
+# CHECK-LABEL: swpc:
+# CHECK: swpc $a0, 0 # encoding: [0x8f,0x60,0x00,0x00,0x00,0x00]
+name: swpc
+body: |
+  bb.0:
+    SWPC_NM $a0_nm, 0
+...
