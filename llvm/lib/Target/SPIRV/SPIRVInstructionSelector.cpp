@@ -6605,12 +6605,54 @@ bool SPIRVInstructionSelector::selectResourceGetPointer(Register &ResVReg,
 
   Register ZeroReg =
       buildZerosVal(GR.getOrCreateSPIRVIntegerType(32, I, TII), I);
-  auto MIB =
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpAccessChain))
-          .addDef(ResVReg)
-          .addUse(GR.getSPIRVTypeID(ResType))
-          .addUse(ResourcePtr)
-          .addUse(ZeroReg);
+  SPIRVTypeInst ResourceType = GR.getPointeeType(RegType);
+  auto getIndexedType = [&](SPIRVTypeInst Type, unsigned Index) {
+    if (!Type)
+      return SPIRVTypeInst();
+    unsigned OperandIndex = 1;
+    if (Type->getOpcode() == SPIRV::OpTypeStruct)
+      OperandIndex += Index;
+    else if (Type->getOpcode() != SPIRV::OpTypeArray &&
+             Type->getOpcode() != SPIRV::OpTypeRuntimeArray)
+      return SPIRVTypeInst();
+    return GR.getSPIRVTypeForVReg(Type->getOperand(OperandIndex).getReg());
+  };
+
+  SPIRVTypeInst ResourceElemType = getIndexedType(ResourceType, 0);
+  if (I.getNumExplicitOperands() > 3) {
+    assert(ResourceElemType && "Resource type is not indexable");
+    unsigned Index = ResourceElemType->getOpcode() == SPIRV::OpTypeStruct
+                         ? getIConstVal(I.getOperand(3).getReg(), MRI)
+                         : 0;
+    ResourceElemType = getIndexedType(ResourceElemType, Index);
+  }
+
+  SPIRVTypeInst ResultElemType = GR.getPointeeType(ResType);
+  const bool IsByteResource =
+      ResourceElemType && ResourceElemType->getOpcode() == SPIRV::OpTypeInt &&
+      ResourceElemType->getOperand(1).getImm() == 8;
+  const bool NeedsUntypedPointer =
+      IsByteResource && ResourceElemType != ResultElemType;
+  if (NeedsUntypedPointer &&
+      !STI.canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers))
+    return diagnoseUnsupported(
+        I, "typed byte-buffer access requires SPV_KHR_untyped_pointers");
+
+  SPIRVTypeInst ResultType = ResType;
+  unsigned Opcode = SPIRV::OpAccessChain;
+  if (NeedsUntypedPointer) {
+    ResultType = GR.getOrCreateSPIRVUntypedPointerType(
+        GR.getPointerStorageClass(ResType), MIRBuilder);
+    GR.assignSPIRVTypeToVReg(ResultType, ResVReg, *I.getMF());
+    Opcode = SPIRV::OpUntypedAccessChainKHR;
+  }
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResultType));
+  if (NeedsUntypedPointer)
+    MIB.addUse(GR.getSPIRVTypeID(ResourceType));
+  MIB.addUse(ResourcePtr).addUse(ZeroReg);
 
   if (I.getNumExplicitOperands() > 3) {
     Register IndexReg = I.getOperand(3).getReg();
