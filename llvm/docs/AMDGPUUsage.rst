@@ -21146,10 +21146,14 @@ indirectly accessible to a hardware shader.
 Trap Handler ABI
 ~~~~~~~~~~~~~~~~
 
-For code objects generated for the AMDPAL OS, the runtime installs a trap
-handler that supports the ``s_trap`` instruction only when the ``trap-handler``
-target feature is enabled. The handler must be resumable and must define trap
-ID 3 as the LLVM debug trap. For usage see
+For code objects generated for the AMDPAL OS, enabling the ``trap-handler``
+target feature allows ``llvm.debugtrap`` to lower to ``s_trap 3``. Executing
+this instruction requires a runtime-provided handler that defines trap ID 3
+as the LLVM debug trap and resumes execution after handling it.
+
+The PAL runtime manages the trap handler per device, independently of
+individual dispatches. The expected runtime model is to install the handler
+during device initialization. For usage see
 :ref:`amdgpu-trap-handler-for-amdpal-os-table`.
 
   .. table:: AMDGPU Trap Handler for AMDPAL OS
@@ -21180,8 +21184,7 @@ Trap Handler ABI
 ~~~~~~~~~~~~~~~~
 
 For code objects whose target OS has no recognized trap-handler ABI, the
-runtime does not install a trap handler. The ``llvm.trap`` and
-``llvm.debugtrap`` instructions are handled as follows:
+``llvm.trap`` and ``llvm.debugtrap`` instructions are handled as follows:
 
   .. table:: AMDGPU Trap Handler for Non-AMDHSA OS
      :name: amdgpu-trap-handler-for-non-amdhsa-os-table
