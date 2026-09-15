@@ -38,16 +38,18 @@ namespace bolt {
 class Relocation {
 public:
   Relocation(uint64_t Offset, MCSymbol *Symbol, uint32_t Type, uint64_t Addend,
-             uint64_t Value, bool IsRELR = false)
+             uint64_t Value, bool IsRELR = false, bool IsJmpRel = false)
       : Offset(Offset), Symbol(Symbol), Type(Type), Optional(false),
-        IsRELR(IsRELR), Addend(Addend), Value(Value) {
+        IsRELR(IsRELR), IsJmpRel(IsJmpRel), Addend(Addend), Value(Value) {
     assert((isRelative() || !isRELR()) &&
            "Only relative relocations can be relr.");
+    assert((!IsRELR || !IsJmpRel) &&
+           "RELR relocations cannot originate from DT_JMPREL");
   }
 
   Relocation()
-      : Offset(0), Symbol(0), Type(0), Optional(0), IsRELR(0), Addend(0),
-        Value(0) {}
+      : Offset(0), Symbol(0), Type(0), Optional(0), IsRELR(0), IsJmpRel(0),
+        Addend(0), Value(0) {}
 
   static Triple::ArchType Arch; /// set by BinaryContext ctor.
 
@@ -70,6 +72,9 @@ private:
   /// rela entries, because that would require growing the relr section.
   bool IsRELR = false;
 
+  /// Whether this dynamic relocation originated in the DT_JMPREL table.
+  bool IsJmpRel = false;
+
 public:
   /// The offset from the \p Symbol base used to compute the final
   /// value of this relocation.
@@ -87,6 +92,9 @@ public:
   bool isOptional() { return Optional; }
 
   bool isRELR() const { return IsRELR; }
+
+  /// Return whether this relocation originated in the DT_JMPREL table.
+  bool isJmpRel() const { return IsJmpRel; }
 
   /// Return size of this relocation.
   size_t getSize() const { return getSizeForType(Type); }
