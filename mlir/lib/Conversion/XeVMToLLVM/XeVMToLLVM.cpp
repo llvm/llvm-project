@@ -1846,6 +1846,11 @@ class HandleVectorExtractPattern
           return failure();
         }
         auto maskScale = srcResSize / srcInputSize;
+        // Storage for the rescaled mask. `mask` is an ArrayRef that gets
+        // rebound to this buffer below, so it has to outlive the `if` that
+        // fills it - otherwise the uses after the `if` read a destroyed
+        // SmallVector.
+        SmallVector<int32_t> newMask;
         if (maskScale != 1) {
           // The slice has to start at, and cover, whole source elements to be
           // expressible in terms of the bitcast source.
@@ -1853,7 +1858,6 @@ class HandleVectorExtractPattern
             return failure();
           }
           // Create a new mask that maps to the source vector
-          SmallVector<int32_t> newMask;
           int32_t newMaskSize = maskSize / maskScale;
           int32_t maskStart = mask[0] / maskScale;
           for (int32_t i = 0; i < newMaskSize; ++i) {
