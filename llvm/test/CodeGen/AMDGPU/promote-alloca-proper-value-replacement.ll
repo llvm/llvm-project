@@ -7,8 +7,8 @@ define void @alloca_value_cross_reference() {
 ; CHECK-NEXT:    [[HIT_ORDERED:%.*]] = freeze <4 x float> poison
 ; CHECK-NEXT:    [[HIT_INDEX:%.*]] = freeze <4 x i32> poison
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> [[HIT_INDEX]], i32 1, i32 0
-; CHECK-NEXT:    br [[DOTLR_PH5:label %.*]]
-; CHECK:       [[_LR_PH5:.*:]]
+; CHECK-NEXT:    br label %[[DOTLR_PH5:.*]]
+; CHECK:       [[DOTLR_PH5]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> [[HIT_ORDERED]], float 0.000000e+00, i32 [[TMP1]]
 ; CHECK-NEXT:    ret void
@@ -41,10 +41,9 @@ define half @forwarded_load_across_blocks() {
 ; CHECK-NEXT:    [[ARR:%.*]] = freeze <4 x half> poison
 ; CHECK-NEXT:    br label %[[BB2:.*]]
 ; CHECK:       [[BB2]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = freeze <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>
 ; CHECK-NEXT:    br label %[[BB3:.*]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>, i32 0
 ; CHECK-NEXT:    ret half [[TMP1]]
 ;
 entry:
