@@ -76,8 +76,5 @@ define <vscale x 8 x float> @interleave2_nxv8f32(float %a, float %b) #0 {
   ret <vscale x 8 x float> %res
 }
 
-declare <vscale x 2 x float> @llvm.vector.interleave2.nxv2f32(<vscale x 1 x float>, <vscale x 1 x float>)
-declare <vscale x 4 x float> @llvm.vector.interleave2.nxv4f32(<vscale x 2 x float>, <vscale x 2 x float>)
-declare <vscale x 8 x float> @llvm.vector.interleave2.nxv8f32(<vscale x 4 x float>, <vscale x 4 x float>)
 
 attributes #0 = { vscale_range(1,16) "target-features"="+sve" }
