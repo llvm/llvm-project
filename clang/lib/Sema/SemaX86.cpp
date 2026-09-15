@@ -344,17 +344,16 @@ bool SemaX86::CheckBuiltinRoundingOrSAE(unsigned BuiltinID, CallExpr *TheCall) {
 }
 
 // Check if the VUNPACKB immediate encoding is legal.
-bool SemaX86::CheckBuiltinVUnpackBImm(unsigned BuiltinID, CallExpr *TheCall) {
-  unsigned ArgNum = 0;
-  switch (BuiltinID) {
-  default:
-    return false;
-  case X86::BI__builtin_ia32_vunpackb128:
-  case X86::BI__builtin_ia32_vunpackb256:
-  case X86::BI__builtin_ia32_vunpackb512:
-    ArgNum = 1;
-    break;
-  }
+bool SemaX86::CheckBuiltinVUnpackBImm(CallExpr *TheCall) {
+  const unsigned ArgNum = 1;
+
+  // Note that we don't force a hard error on the range check here, allowing
+  // template-generated or macro-generated dead code to potentially have out-of-
+  // range values. These need to code generate, but don't need to necessarily
+  // make any sense. We use a warning that defaults to an error.
+  if (SemaRef.BuiltinConstantArgRange(TheCall, ArgNum, 0, 63,
+                                      /*RangeIsError*/ false))
+    return true;
 
   llvm::APSInt Result;
 
@@ -766,10 +765,7 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_vunpackb128:
   case X86::BI__builtin_ia32_vunpackb256:
   case X86::BI__builtin_ia32_vunpackb512:
-    i = 1;
-    l = 0;
-    u = 63;
-    break;
+    return CheckBuiltinVUnpackBImm(TheCall);
   case X86::BI__builtin_ia32_cmpps:
   case X86::BI__builtin_ia32_cmpss:
   case X86::BI__builtin_ia32_cmppd:
@@ -1005,12 +1001,8 @@ bool SemaX86::CheckBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   // template-generated or macro-generated dead code to potentially have out-of-
   // range values. These need to code generate, but don't need to necessarily
   // make any sense. We use a warning that defaults to an error.
-  if (SemaRef.BuiltinConstantArgRange(TheCall, i, l, u,
-                                      /*RangeIsError*/ false))
-    return true;
-
-  // If the intrinsic has a VUNPACKB immediate, make sure the encoding is valid.
-  return CheckBuiltinVUnpackBImm(BuiltinID, TheCall);
+  return SemaRef.BuiltinConstantArgRange(TheCall, i, l, u,
+                                         /*RangeIsError*/ false);
 }
 
 void SemaX86::handleAnyInterruptAttr(Decl *D, const ParsedAttr &AL) {

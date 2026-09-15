@@ -70,13 +70,13 @@ define <16 x i8> @test_int_x86_avx10_vcvtps2bf8256_mem(ptr %ptr_a) {
 define <16 x i8> @test_int_x86_avx10_vcvtps2bf8512_mem(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_vcvtps2bf8512_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtps2bf8 (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x39,0x07]
+; X64-NEXT:    vcvtps2bf8z (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x39,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vcvtps2bf8512_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vcvtps2bf8 (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x39,0x00]
+; X86-NEXT:    vcvtps2bf8z (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x39,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a = load <16 x float>, ptr %ptr_a
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8512(<16 x float> %a)
@@ -151,13 +151,13 @@ define <16 x i8> @test_int_x86_avx10_vcvtps2bf8s256_mem(ptr %ptr_a) {
 define <16 x i8> @test_int_x86_avx10_vcvtps2bf8s512_mem(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_vcvtps2bf8s512_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtps2bf8s (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3b,0x07]
+; X64-NEXT:    vcvtps2bf8sz (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3b,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vcvtps2bf8s512_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vcvtps2bf8s (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3b,0x00]
+; X86-NEXT:    vcvtps2bf8sz (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3b,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a = load <16 x float>, ptr %ptr_a
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtps2bf8s512(<16 x float> %a)
@@ -232,13 +232,13 @@ define <16 x i8> @test_int_x86_avx10_vcvtps2hf8256_mem(ptr %ptr_a) {
 define <16 x i8> @test_int_x86_avx10_vcvtps2hf8512_mem(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_vcvtps2hf8512_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtps2hf8 (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x38,0x07]
+; X64-NEXT:    vcvtps2hf8z (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x38,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vcvtps2hf8512_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vcvtps2hf8 (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x38,0x00]
+; X86-NEXT:    vcvtps2hf8z (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x38,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a = load <16 x float>, ptr %ptr_a
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8512(<16 x float> %a)
@@ -313,13 +313,13 @@ define <16 x i8> @test_int_x86_avx10_vcvtps2hf8s256_mem(ptr %ptr_a) {
 define <16 x i8> @test_int_x86_avx10_vcvtps2hf8s512_mem(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_vcvtps2hf8s512_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtps2hf8s (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3a,0x07]
+; X64-NEXT:    vcvtps2hf8sz (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vcvtps2hf8s512_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vcvtps2hf8s (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3a,0x00]
+; X86-NEXT:    vcvtps2hf8sz (%eax), %xmm0 # encoding: [0x62,0xf5,0x7e,0x48,0x3a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a = load <16 x float>, ptr %ptr_a
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtps2hf8s512(<16 x float> %a)
@@ -394,13 +394,13 @@ define <16 x i8> @test_int_x86_avx10_vcvtrops2hf8256_mem(ptr %ptr_a) {
 define <16 x i8> @test_int_x86_avx10_vcvtrops2hf8512_mem(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_vcvtrops2hf8512_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtrops2hf8 (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x38,0x07]
+; X64-NEXT:    vcvtrops2hf8z (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x38,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vcvtrops2hf8512_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vcvtrops2hf8 (%eax), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x38,0x00]
+; X86-NEXT:    vcvtrops2hf8z (%eax), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x38,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a = load <16 x float>, ptr %ptr_a
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8512(<16 x float> %a)
@@ -475,13 +475,13 @@ define <16 x i8> @test_int_x86_avx10_vcvtrops2hf8s256_mem(ptr %ptr_a) {
 define <16 x i8> @test_int_x86_avx10_vcvtrops2hf8s512_mem(ptr %ptr_a) {
 ; X64-LABEL: test_int_x86_avx10_vcvtrops2hf8s512_mem:
 ; X64:       # %bb.0:
-; X64-NEXT:    vcvtrops2hf8s (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x3a,0x07]
+; X64-NEXT:    vcvtrops2hf8sz (%rdi), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x3a,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vcvtrops2hf8s512_mem:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-NEXT:    vcvtrops2hf8s (%eax), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x3a,0x00]
+; X86-NEXT:    vcvtrops2hf8sz (%eax), %xmm0 # encoding: [0x62,0xf5,0x7d,0x48,0x3a,0x00]
 ; X86-NEXT:    retl # encoding: [0xc3]
   %a = load <16 x float>, ptr %ptr_a
   %ret = call <16 x i8> @llvm.x86.avx10.vcvtrops2hf8s512(<16 x float> %a)

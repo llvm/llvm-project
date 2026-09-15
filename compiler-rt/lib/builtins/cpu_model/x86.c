@@ -242,7 +242,7 @@ enum ProcessorFeatures {
   FEATURE_MOVRS,
   FEATURE_AMX_MOVRS,
   FEATURE_AVX512BMM,
-  FEATURE_AVX10_V2_AUX = 124,
+  FEATURE_AVX10_V2_AUX,
   CPU_FEATURE_MAX
 };
 
@@ -1133,7 +1133,7 @@ static void getAvailableFeatures(unsigned ECX, unsigned EDX, unsigned MaxLeaf,
     setFeature(FEATURE_USERMSR);
   if (HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave)
     setFeature(FEATURE_APXF);
-  bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1) && HasAVX512Save;
+  bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
 
   unsigned MaxLevel = 0;
   getX86CpuIDAndInfo(0, &MaxLevel, &EBX, &ECX, &EDX);

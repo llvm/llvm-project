@@ -23,7 +23,8 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
   let ExeDomain = SSEPackedSingle in {
     let Uses = []<Register>, mayRaiseFPException = 0 in {
       defm Z : avx512_vcvt_fp<opc, OpcodeStr, v16i8x_info, v16f32_info,
-                              OpNode, OpNode, WriteCvtPH2PSZ>, EVEX_V512;
+                              OpNode, OpNode, WriteCvtPH2PSZ,
+                              v16f32_info.BroadcastStr, "{z}">, EVEX_V512;
       // Z256/Z128: use null_frag because element count mismatch between
       // dest (v16i8) and source (v8f32/v4f32) prevents avx512_vcvt_fp from
       // generating correct masked patterns. Explicit Pat patterns below.
@@ -40,8 +41,8 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
     }
   }
 
-  // InstAliases for x/y suffixes. Priority 0 so they are accepted but not
-  // printed by default.
+  // InstAliases for x/y/z suffixes (dest is always xmm). Priority 0 so they
+  // are accepted but not printed by default. Same precedent as vcvtpd2ph.
   def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
                   (!cast<Instruction>(NAME # "Z128rr") VR128X:$dst,
                    VR128X:$src), 0, "att">;
@@ -52,9 +53,6 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
                   "$dst {${mask}} {z}, $src}",
                   (!cast<Instruction>(NAME # "Z128rrkz") VR128X:$dst,
                    VK4WM:$mask, VR128X:$src), 0, "att">;
-  def : InstAlias<OpcodeStr#"x\t{$src, $dst|$dst, $src}",
-                  (!cast<Instruction>(NAME # "Z128rm") VR128X:$dst,
-                   f128mem:$src), 0, "intel">;
   def : InstAlias<OpcodeStr#"x\t{${src}{1to4}, $dst|$dst, ${src}{1to4}}",
                   (!cast<Instruction>(NAME # "Z128rmb") VR128X:$dst,
                    f32mem:$src), 0, "att">;
@@ -77,9 +75,6 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
                   "$dst {${mask}} {z}, $src}",
                   (!cast<Instruction>(NAME # "Z256rrkz") VR128X:$dst,
                    VK8WM:$mask, VR256X:$src), 0, "att">;
-  def : InstAlias<OpcodeStr#"y\t{$src, $dst|$dst, $src}",
-                  (!cast<Instruction>(NAME # "Z256rm") VR128X:$dst,
-                   f256mem:$src), 0, "intel">;
   def : InstAlias<OpcodeStr#"y\t{${src}{1to8}, $dst|$dst, ${src}{1to8}}",
                   (!cast<Instruction>(NAME # "Z256rmb") VR128X:$dst,
                    f32mem:$src), 0, "att">;
@@ -91,6 +86,28 @@ multiclass avx10_v2aux_cvt_trunc_ps2i8<bits<8> opc, string OpcodeStr,
                   "$dst {${mask}} {z}, ${src}{1to8}}",
                   (!cast<Instruction>(NAME # "Z256rmbkz") VR128X:$dst,
                    VK8WM:$mask, f32mem:$src), 0, "att">;
+
+  def : InstAlias<OpcodeStr#"z\t{$src, $dst|$dst, $src}",
+                  (!cast<Instruction>(NAME # "Zrr") VR128X:$dst,
+                   VR512:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"z\t{$src, $dst {${mask}}|$dst {${mask}}, $src}",
+                  (!cast<Instruction>(NAME # "Zrrk") VR128X:$dst,
+                   VK16WM:$mask, VR512:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"z\t{$src, $dst {${mask}} {z}|"
+                  "$dst {${mask}} {z}, $src}",
+                  (!cast<Instruction>(NAME # "Zrrkz") VR128X:$dst,
+                   VK16WM:$mask, VR512:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"z\t{${src}{1to16}, $dst|$dst, ${src}{1to16}}",
+                  (!cast<Instruction>(NAME # "Zrmb") VR128X:$dst,
+                   f32mem:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"z\t{${src}{1to16}, $dst {${mask}}|"
+                  "$dst {${mask}}, ${src}{1to16}}",
+                  (!cast<Instruction>(NAME # "Zrmbk") VR128X:$dst,
+                   VK16WM:$mask, f32mem:$src), 0, "att">;
+  def : InstAlias<OpcodeStr#"z\t{${src}{1to16}, $dst {${mask}} {z}|"
+                  "$dst {${mask}} {z}, ${src}{1to16}}",
+                  (!cast<Instruction>(NAME # "Zrmbkz") VR128X:$dst,
+                   VK16WM:$mask, f32mem:$src), 0, "att">;
 
   // Explicit patterns for Z256 (8 source elements, VK8WM mask)
   // Unmasked
