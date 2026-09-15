@@ -474,7 +474,7 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
     }
 
     Instruction *BI = UncondBrInst::Create(OnlyFeasibleSuccessor, BB);
-    BI->setDebugLoc(TI->getDebugLoc());
+    BI->copyMetadata(*TI, {LLVMContext::MD_dbg, LLVMContext::MD_annotation});
     TI->eraseFromParent();
     DTU.applyUpdatesPermissive(Updates);
   } else if (FeasibleSuccessors.size() > 1) {
