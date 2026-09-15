@@ -526,6 +526,16 @@ MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI32(
   return Reg;
 }
 
+MCRegister SPIRVNonSemanticDebugHandler::emitOpConstantI32Checked(
+    uint64_t Value, const Twine &OperandName, MCRegister I32TypeReg,
+    SPIRV::ModuleAnalysisInfo &MAI) {
+  if (!isUInt<32>(Value))
+    report_fatal_error("SPIR-V debug info: " + OperandName +
+                           " does not fit in 32 bits: " + Twine(Value),
+                       /*GenCrashDiag=*/false);
+  return emitOpConstantI32(static_cast<uint32_t>(Value), I32TypeReg, MAI);
+}
+
 MCRegister SPIRVNonSemanticDebugHandler::emitExtInst(
     SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
     MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
@@ -1150,10 +1160,12 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeMember(
 
   // DIDerivedType members carry no column, so emit 0.
   MCRegister ColReg = emitOpConstantI32(0, I32TypeReg, MAI);
-  MCRegister OffsetReg = emitOpConstantI32(
-      static_cast<uint32_t>(M->getOffsetInBits()), I32TypeReg, MAI);
-  MCRegister SizeReg = emitOpConstantI32(
-      static_cast<uint32_t>(M->getSizeInBits()), I32TypeReg, MAI);
+  MCRegister OffsetReg = emitOpConstantI32Checked(
+      M->getOffsetInBits(), "offset of member '" + M->getName() + "'",
+      I32TypeReg, MAI);
+  MCRegister SizeReg = emitOpConstantI32Checked(
+      M->getSizeInBits(), "size of member '" + M->getName() + "'", I32TypeReg,
+      MAI);
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(M), I32TypeReg, MAI);
 
   // In NonSemantic.Shader.DebugInfo a DebugTypeMember has no Parent operand:
@@ -1196,8 +1208,9 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugTypeComposite(
   // A forward declaration has no known size or members: Size is DebugInfoNone.
   MCRegister SizeReg = CachedDebugInfoNoneReg;
   if (!CT->isForwardDecl())
-    SizeReg = emitOpConstantI32(static_cast<uint32_t>(CT->getSizeInBits()),
-                                I32TypeReg, MAI);
+    SizeReg = emitOpConstantI32Checked(
+        CT->getSizeInBits(), "size of composite type '" + CT->getName() + "'",
+        I32TypeReg, MAI);
 
   MCRegister FlagsReg = emitOpConstantI32(transDebugFlags(CT), I32TypeReg, MAI);
 
@@ -1785,8 +1798,9 @@ void SPIRVNonSemanticDebugHandler::emitNonSemanticGlobalDebugInfo(
 
   for (const DIBasicType *BT : BasicTypes) {
     MCRegister NameReg = getCachedOpStringReg(BT->getName());
-    MCRegister SizeReg = emitOpConstantI32(
-        static_cast<uint32_t>(BT->getSizeInBits()), I32TypeReg, MAI);
+    MCRegister SizeReg = emitOpConstantI32Checked(
+        BT->getSizeInBits(), "size of basic type '" + BT->getName() + "'",
+        I32TypeReg, MAI);
 
     // Map DWARF base type encodings to NSDI encoding codes per
     // NonSemantic.Shader.DebugInfo.100 specification, section 4.5.

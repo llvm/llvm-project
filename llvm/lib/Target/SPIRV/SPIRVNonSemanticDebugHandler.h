@@ -25,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCInst.h"
@@ -306,6 +307,11 @@ private:
                                 bool UseEmptyPathIfNullScope = false);
   MCRegister emitOpConstantI32(uint32_t Value, MCRegister I32TypeReg,
                                SPIRV::ModuleAnalysisInfo &MAI);
+
+  MCRegister emitOpConstantI32Checked(uint64_t Value, const Twine &OperandName,
+                                      MCRegister I32TypeReg,
+                                      SPIRV::ModuleAnalysisInfo &MAI);
+
   MCRegister emitExtInst(SPIRV::NonSemanticExtInst::NonSemanticExtInst Opcode,
                          MCRegister VoidTypeReg, MCRegister ExtInstSetReg,
                          ArrayRef<MCRegister> Operands,
