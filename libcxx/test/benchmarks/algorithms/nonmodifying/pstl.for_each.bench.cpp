@@ -40,26 +40,22 @@ int main(int argc, char** argv) {
           std::size_t size = st.range(0);
           std::vector<double> c(size);
           std::iota(c.begin(), c.end(), 1.);
-          auto first = c.begin();
-          auto last  = c.end();
           for ([[maybe_unused]] auto _ : st) {
-            benchmark::DoNotOptimize(c);
-            std::for_each(policy, first, last, func);
+            benchmark::ClobberMemory();
+            std::for_each(policy, c.begin(), c.end(), func);
             benchmark::DoNotOptimize(c);
           }
         })
-        ->Arg(128)
-        ->Arg(1'024)
-        ->Arg(8'192)
-        ->Arg(65'536)
-        ->Arg(524'288)
-        ->Arg(4'194'304)
-        ->Arg(33'554'432)
+        ->Arg(1 << 6)  // 64
+        ->Arg(1 << 16) // 65'536
+        ->Arg(1 << 26) // 67'108'864
         ->UseRealTime();
   };
+#if defined(TEST_PSTL_ENABLE_SEQ_BASELINES)
   bm("std::for_each(std::execution::seq, vector<double>) (minimal)", std::execution::seq, minimal);
   bm("std::for_each(std::execution::seq, vector<double>) (cheap)", std::execution::seq, cheap);
   bm("std::for_each(std::execution::seq, vector<double>) (expensive)", std::execution::seq, expensive);
+#endif
   bm("std::for_each(std::execution::par, vector<double>) (minimal)", std::execution::par, minimal);
   bm("std::for_each(std::execution::par, vector<double>) (cheap)", std::execution::par, cheap);
   bm("std::for_each(std::execution::par, vector<double>) (expensive)", std::execution::par, expensive);
