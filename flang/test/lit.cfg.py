@@ -265,11 +265,34 @@ if result:
 
 config.substitutions.append(("%openmp_flags", "-fopenmp"))
 
+
+def flang_frontend_supports_f128():
+    try:
+        testcode = b"real(16) :: x\nend"
+        flang_cmd = subprocess.run(
+            [
+                config.flang_exe,
+                "--target=" + config.target_triple,
+                "-fsyntax-only",
+                "-",
+            ],
+            input=testcode,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+    except OSError:
+        return False
+
+    return flang_cmd.returncode == 0
+
+
 # Add features and substitutions to test F128 math support.
 # %f128-lib substitution may be used to generate check prefixes
 # for LIT tests checking for F128 library support.
 if config.flang_runtime_f128_math_lib or config.have_ldbl_mant_dig_113:
     config.available_features.add("flang-supports-f128-math")
+if flang_frontend_supports_f128():
+    config.available_features.add("flang-frontend-supports-f128")
 if config.flang_runtime_f128_math_lib:
     config.available_features.add(
         "flang-f128-math-lib-" + config.flang_runtime_f128_math_lib

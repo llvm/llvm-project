@@ -532,6 +532,17 @@ function(runtime_register_target name)
   add_flang_mod_deps(runtimes-${name}-build ${${name}_extra_targets})
 endfunction()
 
+# Determine whether REAL(16) intrinsic modules should be built for the target.
+function(check_real16_support target result)
+  if(FLANG_RUNTIME_F128_MATH_LIB
+      OR HAVE_LDBL_MANT_DIG_113
+      OR target MATCHES "^(x86_64|aarch64)")
+    set(${result} TRUE PARENT_SCOPE)
+  else()
+    set(${result} FALSE PARENT_SCOPE)
+  endif()
+endfunction()
+
 # Check if we have any runtimes to build.
 if(runtimes)
   set(build_runtimes TRUE)
@@ -678,18 +689,29 @@ if(build_runtimes)
     if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES OR "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
       list(APPEND extra_args ENABLE_FORTRAN)
     endif()
-    # Ensure REAL(16) support in runtimes to be consistent with compiler
-    if(FLANG_RUNTIME_F128_MATH_LIB OR HAVE_LDBL_MANT_DIG_113)
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=1")
+    # Ensure REAL(16) support in runtimes to be consistent with compiler.
+    # Keep intrinsic module generation consistent with targets for which
+    # the Flang frontend currently enables REAL(16) through backend support.
+    if(LLVM_RUNTIME_TARGETS)
+      foreach(name ${LLVM_RUNTIME_TARGETS})
+        if(name STREQUAL "default")
+          check_real16_support("${LLVM_TARGET_TRIPLE}" supports_real16)
+          set(default_fortran_cmake_args "-DFORTRAN_SUPPORTS_REAL16=${supports_real16}")
+        else()
+          check_real16_support("${name}" supports_real16)
+          set(${name}_fortran_cmake_args "-DFORTRAN_SUPPORTS_REAL16=${supports_real16}")
+        endif()
+      endforeach()
     else()
-      list(APPEND extra_cmake_args "-DFORTRAN_SUPPORTS_REAL16=0")
+      check_real16_support("${LLVM_TARGET_TRIPLE}" supports_real16)
+      set(default_fortran_cmake_args "-DFORTRAN_SUPPORTS_REAL16=${supports_real16}")
     endif()
   endif()
 
   if(NOT LLVM_RUNTIME_TARGETS)
     runtime_default_target(
       DEPENDS ${builtins_dep} ${extra_deps}
-      CMAKE_ARGS ${extra_cmake_args}
+      CMAKE_ARGS ${extra_cmake_args} ${default_fortran_cmake_args}
       PREFIXES ${prefixes}
       EXTRA_ARGS ${extra_args})
     set(test_targets check-runtimes)
@@ -697,7 +719,7 @@ if(build_runtimes)
     if("default" IN_LIST LLVM_RUNTIME_TARGETS)
       runtime_default_target(
         DEPENDS ${builtins_dep} ${extra_deps}
-        CMAKE_ARGS ${extra_cmake_args}
+        CMAKE_ARGS ${extra_cmake_args} ${default_fortran_cmake_args}
         PREFIXES ${prefixes}
         EXTRA_ARGS ${extra_args})
       list(REMOVE_ITEM LLVM_RUNTIME_TARGETS "default")
@@ -756,7 +778,7 @@ if(build_runtimes)
 
       runtime_register_target(${name}
         DEPENDS ${builtins_dep_name} ${extra_deps}
-        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args}
+        CMAKE_ARGS -DLLVM_DEFAULT_TARGET_TRIPLE=${name} ${extra_cmake_args} ${${name}_fortran_cmake_args}
         EXTRA_ARGS TARGET_TRIPLE ${name} ${extra_args})
     endforeach()
 
