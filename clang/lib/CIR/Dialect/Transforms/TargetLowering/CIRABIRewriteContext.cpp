@@ -15,7 +15,6 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 #include <array>
@@ -1064,21 +1063,16 @@ void rewriteIndirectReturnCall(cir::CallOp call,
   call->erase();
 }
 
-/// Whether \p ty is an eightbyte that travels in a vector register.  An x87
-/// long double is floating-point but travels in neither register class, so it
-/// is excluded.  A caller reads a false result as the integer class.
+/// Whether \p ty, a type the classifier named for one register of a
+/// coercion, is carried in a vector register.
 bool isSSERegisterClass(mlir::Type ty) {
-  if (mlir::isa<cir::VectorType>(ty))
-    return true;
-  if (auto fp = mlir::dyn_cast<cir::FPTypeInterface>(ty))
-    return &fp.getFloatSemantics() != &llvm::APFloat::x87DoubleExtended();
-  return false;
+  return mlir::isa<cir::VectorType, cir::FPTypeInterface>(ty);
 }
 
-/// The boundary the caller aligned \p ty to in the argument area.  An
-/// alignment attribute can raise a record above what its members imply, and
-/// only the record-layout metadata carries that, so the member-derived value
-/// alone can be too small.
+/// The alignment in bytes the ABI gives \p ty as an argument.  An alignment
+/// attribute can raise a record above what its members imply, and only the
+/// record-layout metadata carries that, so the member-derived value alone can
+/// be too small.
 uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp,
                            const mlir::DataLayout &dl) {
   uint64_t align = dl.getTypeABIAlignment(ty);
@@ -1086,24 +1080,6 @@ uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp,
     if (auto layout = cir::tryGetRecordLayout(modOp, recTy.getName()))
       align = std::max<uint64_t>(align, layout.getRecordAlign());
   return align;
-}
-
-/// Whether an SSE-class type fits the single 16-byte vector-register slot a
-/// fetch can read from.  A wider vector travels in memory no matter how many
-/// vector registers the target has, because a fetch has no declared parameter
-/// to pin it to one.  The width has to be measured here rather than read off
-/// the classification, which spells a memory-class scalar the same way it
-/// spells one that really does travel in a register.
-bool fitsOneVectorSlot(mlir::Type ty, const mlir::DataLayout &dl) {
-  return dl.getTypeSize(ty).getFixedValue() <= 16;
-}
-
-/// Whether a scalar INTEGER-class type occupies two eightbytes rather than
-/// one, which is the case for any 128-bit container: `__int128`, or a
-/// narrower `_BitInt` widened to 128 bits.
-bool isWide128BitInt(mlir::Type ty) {
-  auto intTy = mlir::dyn_cast<cir::IntType>(ty);
-  return intTy && intTy.getWidth() == 128;
 }
 
 } // namespace
@@ -1589,65 +1565,40 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   if (ac.kind == ArgKind::Indirect && !ac.byVal)
     return reportNYI("a non-trivially-copyable type");
 
-  // How many eightbytes of each register class the fetched type occupies.
-  // Zero of both means the type travels in memory and is read straight from
-  // the overflow area.
-  unsigned neededInt = 0, neededSse = 0;
+  // neededInt counts 8-byte integer slots and neededSse counts 16-byte vector
+  // slots.  Zero of both means the type travels in memory and is read
+  // straight from the overflow area.
+  unsigned neededInt = ac.neededIntRegs;
+  unsigned neededSse = ac.neededSseRegs;
+
   // Which coerced-pair element (0 = low eightbyte, 1 = high) is SSE rather
   // than INTEGER class.  Only meaningful when isRegPair is set.
   std::array<bool, 2> pairIsSse = {false, false};
   bool isRegPair = false;
 
-  if (ac.kind == ArgKind::Extend) {
-    neededInt = 1;
-  } else if (ac.kind == ArgKind::Direct) {
-    if (mlir::Type coerced = ac.coercedType) {
-      if (auto pairTy = mlir::dyn_cast<cir::RecordType>(coerced)) {
-        assert(pairTy.getNumElements() == 2 &&
-               "a register-class coercion spans at most two eightbytes");
-        for (auto [i, memberTy] : llvm::enumerate(pairTy.getMembers())) {
-          if (isSSERegisterClass(memberTy)) {
-            pairIsSse[i] = true;
-            ++neededSse;
-          } else {
-            ++neededInt;
-          }
-        }
-        isRegPair = true;
-      } else if (isSSERegisterClass(coerced)) {
-        if (fitsOneVectorSlot(coerced, dl))
-          neededSse = 1;
-      } else {
-        neededInt = isWide128BitInt(coerced) ? 2 : 1;
-      }
-    } else if (auto fp = mlir::dyn_cast<cir::FPTypeInterface>(resultTy)) {
-      // An uncoerced scalar float is SSE, unless it is x87 long double,
-      // which the SysV ABI always classifies MEMORY.  That is recognized
-      // from the semantics here, because the classification spells a
-      // memory-class scalar the same way it spells a register one.
-      if (&fp.getFloatSemantics() != &llvm::APFloat::x87DoubleExtended())
-        neededSse = 1;
-    } else if (mlir::isa<cir::VectorType>(resultTy)) {
-      if (fitsOneVectorSlot(resultTy, dl))
-        neededSse = 1;
-    } else if (mlir::isa<cir::IntType, cir::PointerType, cir::BoolType>(
-                   resultTy)) {
-      neededInt = isWide128BitInt(resultTy) ? 2 : 1;
-    } else {
-      return reportNYI("this type");
+  // A value needing two registers is either a coerced pair, one register per
+  // member, or a single wide scalar read from one address.
+  if (ac.kind == ArgKind::Direct && neededInt + neededSse == 2 &&
+      ac.coercedType) {
+    if (auto pairTy = mlir::dyn_cast<cir::RecordType>(ac.coercedType)) {
+      if (pairTy.getNumElements() != 2)
+        return reportNYI("a register coercion that is not two eightbytes");
+      assert(!ac.directOffset &&
+             "a pair already spans both eightbytes, so it cannot also start "
+             "partway into the value");
+      for (auto [i, memberTy] : llvm::enumerate(pairTy.getMembers()))
+        pairIsSse[i] = isSSERegisterClass(memberTy);
+      isRegPair = true;
     }
-  } else if (ac.kind != ArgKind::Indirect) {
-    return reportNYI("a type with an argument classification this fetch does "
-                     "not model");
   }
-  // Indirect is the one remaining kind, and it takes no register.
 
-  auto vaListRecTy = mlir::cast<cir::RecordType>(
+  auto vaListRecTy = mlir::dyn_cast<cir::RecordType>(
       mlir::cast<cir::PointerType>(valist.getType()).getPointee());
+  if (!vaListRecTy || vaListRecTy.getNumElements() != 4) {
+    return reportNYI("a va_list that is not the four-field gp_offset / "
+                     "fp_offset / overflow_arg_area / reg_save_area cursor");
+  }
   llvm::ArrayRef<mlir::Type> vaFields = vaListRecTy.getMembers();
-  assert(vaFields.size() == 4 &&
-         "expected the four-field gp_offset / fp_offset / overflow_arg_area / "
-         "reg_save_area argument cursor");
   cir::IntType byteTy = builder.getUIntNTy(8);
   cir::PointerType bytePtrTy = builder.getPointerTo(byteTy);
 
@@ -1705,19 +1656,23 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
     }
 
     // A two-eightbyte pair that is purely INTEGER class is contiguous in the
-    // register-save area (GP slots are 8-byte packed), so one load of the
-    // coerced pair type at gp_offset reads both eightbytes.  A pure SSE pair
-    // or a mixed pair is not contiguous (SSE slots are 16-byte spaced, and a
-    // mixed pair's GP and SSE halves live in disjoint areas of the
-    // register-save area), so each half is copied into a temp laid out as the
-    // coerced pair before the whole value is reinterpreted as resultTy.
+    // register-save area, since GP slots are 8-byte packed, so the address of
+    // its low eightbyte is already the address of the whole value.  A pure
+    // SSE pair or a mixed pair is not contiguous, since SSE slots are 16-byte
+    // spaced and a mixed pair's halves live in disjoint areas, so each half is
+    // copied into a temp laid out as the coerced pair.
     bool pairNeedsReassembly = isRegPair && neededSse != 0;
     mlir::Value regPairTemp;
-    if (pairNeedsReassembly)
+    if (pairNeedsReassembly) {
+      // The temp is written one member at a time through the coerced pair, so
+      // it has to meet that type's alignment, and read back as the result, so
+      // it has to meet the result's declared one too.
       regPairTemp = builder.createAlloca(
           loc, builder.getPointerTo(ac.coercedType), "vaarg.reg",
           clang::CharUnits::fromQuantity(
-              dl.getTypeABIAlignment(ac.coercedType)));
+              std::max(dl.getTypeABIAlignment(ac.coercedType),
+                       argumentAreaAlign(resultTy, module, dl))));
+    }
 
     addr =
         cir::TernaryOp::create(
@@ -1743,10 +1698,11 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
                   unsigned regSize = isSse ? 16 : 8;
                   unsigned prior = seenOfClass[isSse]++;
                   mlir::Value off = base;
-                  if (prior)
+                  if (prior) {
                     off = b.createAdd(
                         l, base,
                         b.getConstantInt(l, base.getType(), prior * regSize));
+                  }
                   mlir::Value src = b.createPtrStride(l, regSaveArea, off);
                   mlir::Type elemTy = pairTy.getElementType(i);
                   mlir::Value val =
@@ -1759,17 +1715,38 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
               } else {
                 mlir::Value off = neededSse ? fpOffset : gpOffset;
                 regAddr = b.createPtrStride(l, regSaveArea, off);
-                // A GP register slot is only 8-byte aligned, so a
-                // wider-aligned GP-class fetch (e.g. __int128, align 16)
-                // is copied through a temp.  SSE slots are already
-                // 16-byte aligned and need no copy.
                 uint64_t resultAlign = argumentAreaAlign(resultTy, module, dl);
-                if (!neededSse && resultAlign > 8) {
+                uint64_t regSize = neededInt ? neededInt * 8 : 16;
+                uint64_t tySize = dl.getTypeSize(resultTy).getFixedValue();
+                if (ac.coercedType && (ac.directOffset || regSize < tySize)) {
+                  // The registers carry less than the whole result, either
+                  // because the eightbytes below directOffset hold no field or
+                  // because the result is wider than the registers carrying
+                  // it.  Copy what they do carry into a full-size temp, so the
+                  // load below reads a whole result rather than reading on
+                  // into the neighbouring slot.
                   mlir::Value temp = b.createAlloca(
                       l, b.getPointerTo(resultTy), "vaarg.reg",
                       clang::CharUnits::fromQuantity(resultAlign));
-                  // The slot this reads from is only 8-byte aligned, so the
-                  // load cannot claim the wider alignment the temp has.
+                  mlir::Value val = b.createAlignedLoad(
+                      l, b.createPtrBitcast(regAddr, ac.coercedType), 8);
+                  mlir::Value dst = temp;
+                  if (ac.directOffset) {
+                    dst = b.createPtrStride(
+                        l, b.createPtrBitcast(temp, byteTy),
+                        b.getSignedInt(l, ac.directOffset, 32));
+                  }
+                  b.createStore(l, val,
+                                b.createPtrBitcast(dst, ac.coercedType));
+                  regAddr = b.createPtrBitcast(temp, byteTy);
+                } else if (!neededSse && resultAlign > 8) {
+                  // A GP register slot is only 8-byte aligned, so a
+                  // wider-aligned GP-class fetch (e.g. __int128, align 16)
+                  // is copied through a temp.  SSE slots are already
+                  // 16-byte aligned and need no copy.
+                  mlir::Value temp = b.createAlloca(
+                      l, b.getPointerTo(resultTy), "vaarg.reg",
+                      clang::CharUnits::fromQuantity(resultAlign));
                   mlir::Value val = b.createAlignedLoad(
                       l, b.createPtrBitcast(regAddr, resultTy), 8);
                   b.createStore(l, val, temp);
@@ -1777,20 +1754,22 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
                 }
               }
 
-              if (neededInt)
+              if (neededInt) {
                 b.createStore(
                     l,
                     b.createAdd(
                         l, gpOffset,
                         b.getConstantInt(l, gpOffset.getType(), neededInt * 8)),
                     gpOffsetP);
-              if (neededSse)
+              }
+              if (neededSse) {
                 b.createStore(
                     l,
                     b.createAdd(l, fpOffset,
                                 b.getConstantInt(l, fpOffset.getType(),
                                                  neededSse * 16)),
                     fpOffsetP);
+              }
 
               cir::YieldOp::create(b, l, regAddr);
             },

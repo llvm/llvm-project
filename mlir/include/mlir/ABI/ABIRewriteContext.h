@@ -82,6 +82,12 @@ struct ArgClassification {
   /// NO_CLASS and the value is carried in a later eightbyte (x86-64 SysV).
   unsigned directOffset = 0;
 
+  /// How many integer and vector argument registers the value occupies.  Both
+  /// zero means it travels in memory, which is also what a target whose
+  /// classifier does not record the demand reports.
+  unsigned neededIntRegs = 0;
+  unsigned neededSseRegs = 0;
+
   /// Whether the value is passed as-is, so a rewriter can leave it alone.
   /// Only an uncoerced Direct qualifies.  Extend counts as needing a rewrite
   /// even though it only adds an attribute, because the attribute changes
@@ -94,7 +100,9 @@ struct ArgClassification {
     return kind == other.kind && coercedType == other.coercedType &&
            indirectAlign == other.indirectAlign &&
            signExtend == other.signExtend && canFlatten == other.canFlatten &&
-           byVal == other.byVal && directOffset == other.directOffset;
+           byVal == other.byVal && directOffset == other.directOffset &&
+           neededIntRegs == other.neededIntRegs &&
+           neededSseRegs == other.neededSseRegs;
   }
 
   static ArgClassification getDirect() {
@@ -206,24 +214,25 @@ public:
                                         const FunctionClassification &fc,
                                         OpBuilder &builder) = 0;
 
-  /// Rewrite a single "fetch the next vararg" operation (e.g. C `va_arg`) in
-  /// place to match how \p ac says the fetched type is passed at the ABI
-  /// level.
+  /// Rewrite a single "fetch the next vararg" operation (e.g. C `va_arg`) to
+  /// match how \p ac says the fetched type is passed at the ABI level.
   ///
-  /// This is deliberately separate from rewriteFunctionDefinition and
-  /// rewriteCallSite, which classify a whole signature ahead of time.  A
-  /// vararg fetch instead advances a runtime cursor (the platform va_list)
-  /// through registers and then memory, so whether a given fetch lands in a
-  /// register depends on how much of the register budget earlier variadic
-  /// arguments already consumed at run time, not on the fetch's static
-  /// position.  \p ac therefore classifies only the one type being fetched,
-  /// in isolation.
+  /// \p ac classifies only the one type being fetched, in isolation, with the
+  /// whole register budget available.  A vararg fetch advances a runtime
+  /// cursor (the platform va_list) through registers and then memory, so
+  /// whether a given fetch lands in a register depends on how much of the
+  /// budget earlier variadic arguments already consumed at run time, not on
+  /// the fetch's static position.
+  ///
+  /// An implementation may erase \p vaArgOp and replace its result, so a
+  /// caller walking the IR must collect the fetches before rewriting any of
+  /// them.
   ///
   /// The default implementation reports failure, so a dialect that has not
   /// implemented vararg fetches does not need to override this.  An overrider
   /// that fails is responsible for emitting its own diagnostic.
   ///
-  /// \param vaArgOp  The operation to rewrite in place.
+  /// \param vaArgOp  The fetch to rewrite.  May be erased.
   /// \param ac       The ABI classification of the fetched type.
   /// \param builder  The OpBuilder to use for modifications.
   /// \returns success() if the operation was rewritten.

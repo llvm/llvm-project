@@ -57,9 +57,15 @@ __int128 varargs_int128(int count, ...) {
 // LLVM:   store i32 %[[GP_NEXT]], ptr %[[GP_OFFSET_P]], align {{[0-9]+}}
 // LLVM:   br label %[[END_BB:.+]]
 // LLVM: [[MEM_BB]]:
+// The overflow arm rounds the cursor up to 16 as well, and both the advance
+// and the fetched value start from the rounded pointer.
+// LLVMCIR: %[[ALIGNED:.+]] = inttoptr i64 %{{.+}} to ptr
+// OGCG:    %[[ALIGNED:.+]] = call ptr @llvm.ptrmask.p0.i64(ptr %{{.+}}, i64 -16)
+// LLVM:   %[[MEM_NEXT:.+]] = getelementptr i8, ptr %[[ALIGNED]], i{{32|64}} 16
+// LLVM:   store ptr %[[MEM_NEXT]], ptr %{{.+}}, align 8
 // LLVM:   br label %[[END_BB]]
 // LLVM: [[END_BB]]:
-// LLVMCIR: %[[ADDR:.+]] = phi ptr [ %{{.*}}, %[[MEM_BB]] ], [ %[[REG_TMP]], %[[REG_BB]] ]
-// OGCG:    %[[ADDR:.+]] = phi ptr [ %[[REG_TMP]], %[[REG_BB]] ], [ %{{.*}}, %[[MEM_BB]] ]
+// LLVMCIR: %[[ADDR:.+]] = phi ptr [ %[[ALIGNED]], %[[MEM_BB]] ], [ %[[REG_TMP]], %[[REG_BB]] ]
+// OGCG:    %[[ADDR:.+]] = phi ptr [ %[[REG_TMP]], %[[REG_BB]] ], [ %[[ALIGNED]], %[[MEM_BB]] ]
 // LLVM:   %[[VA_ARG:.+]] = load i128, ptr %[[ADDR]], align 16
 // LLVM:   store i128 %[[VA_ARG]], ptr %{{.*}}, align 16

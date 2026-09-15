@@ -685,12 +685,15 @@ static std::optional<FunctionClassification> classifyX86_64Signature(
   fc.returnInfo = *retAc;
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = i < inputs.size() ? inputs[i] : mlir::Type();
+    const llvm::abi::ArgInfo &argInfo = fi->getArgInfo(i).Info;
     std::optional<ArgClassification> ac =
-        convertABIArgInfo(fi->getArgInfo(i).Info, ctx, origArg);
+        convertABIArgInfo(argInfo, ctx, origArg);
     if (!ac) {
       nyiCoercion(origArg);
       return std::nullopt;
     }
+    ac->neededIntRegs = argInfo.getNeededIntRegs();
+    ac->neededSseRegs = argInfo.getNeededSseRegs();
     fc.argInfos.push_back(*ac);
   }
   return fc;
@@ -1165,10 +1168,9 @@ void CallConvLoweringPass::runOnOperation() {
     }
   }
 
-  // Fetches on targets other than x86-64 are left in place here and still
-  // lower to a generic vararg instruction that cannot select an aggregate or
-  // an x87 long double result.
   if (isX86) {
+    // Collect the fetches before rewriting any, because rewriting one erases
+    // it, and a live walk holds the op it is about to visit next.
     SmallVector<cir::VAArgOp> vaArgs;
     moduleOp.walk([&](cir::VAArgOp v) { vaArgs.push_back(v); });
     for (cir::VAArgOp v : vaArgs) {

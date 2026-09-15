@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=LLVM --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 struct Empty {};
 
@@ -27,6 +27,10 @@ struct Empty only_empty(int count, ...) {
 // LLVM-LABEL: define dso_local void @only_empty(i32 noundef %{{.*}}, ...)
 // LLVM-NOT:     va_arg
 // LLVM-NOT:     getelementptr inbounds nuw %struct.__va_list_tag
+// The fetch produces a value with no bytes, which LLVMCIR initializes the
+// variable from with a zero-length copy.  OGCG emits nothing at all.
+// LLVMCIR:      call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 1 %{{.+}}, i64 0, i1 false)
+// OGCG-NOT:     memcpy
 // LLVM:       call void @llvm.va_end.p0(
 
 int empty_then_int(int count, ...) {
@@ -52,4 +56,5 @@ int empty_then_int(int count, ...) {
 // LLVM:         %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // LLVM:         %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]]
 // LLVM:         icmp ule i32 %[[GP_OFFSET]], 40
+// LLVM-NOT:     %struct.__va_list_tag, ptr %{{.*}}, i32 0, i32 0
 // LLVM:       call void @llvm.va_end.p0(

@@ -1442,9 +1442,11 @@ void X86_64TargetInfo::computeInfo(FunctionInfo &FI) const {
     if (FreeIntRegs >= NeededInt && FreeSSERegs >= NeededSSE) {
       FreeIntRegs -= NeededInt;
       FreeSSERegs -= NeededSSE;
+      AI.setNeededRegs(NeededInt, NeededSSE);
       IT->Info = AI;
     } else {
-      // Not enough registers, pass on stack
+      // Not enough registers, pass on stack. The demand the classification
+      // reports is what the argument ends up occupying, which is nothing.
       IT->Info = getIndirectResult(ArgTy, FreeIntRegs);
     }
   }
