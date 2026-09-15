@@ -1,9 +1,5 @@
 # HLSL Dynamic Resources
 
-```{contents}
-:local: true
-```
-
 ## Introduction
 
 [HLSL Dynamic Resources][dynamicresources] is a feature introduced in Shader
