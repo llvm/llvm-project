@@ -2081,197 +2081,33 @@ define zeroext i1 @PR44781(ptr %0) {
 }
 
 define i32 @mask_v3i1(<3 x i32> %a, <3 x i32> %b) nounwind {
-; X86-SSE2-LABEL: mask_v3i1:
-; X86-SSE2:       # %bb.0: # %bb
-; X86-SSE2-NEXT:    pushl %ebp
-; X86-SSE2-NEXT:    movl %esp, %ebp
-; X86-SSE2-NEXT:    andl $-16, %esp
-; X86-SSE2-NEXT:    subl $32, %esp
-; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; X86-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-SSE2-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE2-NEXT:    movdqa %xmm1, (%esp)
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-SSE2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE2-NEXT:    andb $1, %cl
-; X86-SSE2-NEXT:    shlb $2, %cl
-; X86-SSE2-NEXT:    andb $1, %al
-; X86-SSE2-NEXT:    addb %al, %al
-; X86-SSE2-NEXT:    subb (%esp), %al
-; X86-SSE2-NEXT:    orb %cl, %al
-; X86-SSE2-NEXT:    je .LBB30_3
-; X86-SSE2-NEXT:  # %bb.1: # %bb3
-; X86-SSE2-NEXT:    xorl %eax, %eax
-; X86-SSE2-NEXT:    jmp .LBB30_2
-; X86-SSE2-NEXT:  .LBB30_3: # %bb4
-; X86-SSE2-NEXT:    movl $1, %eax
-; X86-SSE2-NEXT:  .LBB30_2: # %bb3
-; X86-SSE2-NEXT:    movl %ebp, %esp
-; X86-SSE2-NEXT:    popl %ebp
-; X86-SSE2-NEXT:    retl
+; SSE-LABEL: mask_v3i1:
+; SSE:       # %bb.0: # %bb
+; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
+; SSE-NEXT:    movmskps %xmm0, %eax
+; SSE-NEXT:    notl %eax
+; SSE-NEXT:    testb $7, %al
+; SSE-NEXT:    je .LBB30_2
+; SSE-NEXT:  # %bb.1: # %bb3
+; SSE-NEXT:    xorl %eax, %eax
+; SSE-NEXT:    ret{{[l|q]}}
+; SSE-NEXT:  .LBB30_2: # %bb4
+; SSE-NEXT:    movl $1, %eax
+; SSE-NEXT:    ret{{[l|q]}}
 ;
-; X64-SSE2-LABEL: mask_v3i1:
-; X64-SSE2:       # %bb.0: # %bb
-; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; X64-SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-SSE2-NEXT:    pxor %xmm0, %xmm1
-; X64-SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
-; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; X64-SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
-; X64-SSE2-NEXT:    andb $1, %cl
-; X64-SSE2-NEXT:    shlb $2, %cl
-; X64-SSE2-NEXT:    andb $1, %al
-; X64-SSE2-NEXT:    addb %al, %al
-; X64-SSE2-NEXT:    subb -{{[0-9]+}}(%rsp), %al
-; X64-SSE2-NEXT:    orb %cl, %al
-; X64-SSE2-NEXT:    je .LBB30_2
-; X64-SSE2-NEXT:  # %bb.1: # %bb3
-; X64-SSE2-NEXT:    xorl %eax, %eax
-; X64-SSE2-NEXT:    retq
-; X64-SSE2-NEXT:  .LBB30_2: # %bb4
-; X64-SSE2-NEXT:    movl $1, %eax
-; X64-SSE2-NEXT:    retq
-;
-; X86-SSE4-LABEL: mask_v3i1:
-; X86-SSE4:       # %bb.0: # %bb
-; X86-SSE4-NEXT:    subl $1, %esp
-; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
-; X86-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
-; X86-SSE4-NEXT:    pxor %xmm0, %xmm1
-; X86-SSE4-NEXT:    movd %xmm1, %ecx
-; X86-SSE4-NEXT:    pextrb $4, %xmm1, %eax
-; X86-SSE4-NEXT:    andb $1, %al
-; X86-SSE4-NEXT:    addb %al, %al
-; X86-SSE4-NEXT:    subb %cl, %al
-; X86-SSE4-NEXT:    pextrb $8, %xmm1, %ecx
-; X86-SSE4-NEXT:    andb $1, %cl
-; X86-SSE4-NEXT:    shlb $2, %cl
-; X86-SSE4-NEXT:    orb %al, %cl
-; X86-SSE4-NEXT:    je .LBB30_2
-; X86-SSE4-NEXT:  # %bb.1: # %bb3
-; X86-SSE4-NEXT:    xorl %eax, %eax
-; X86-SSE4-NEXT:    addl $1, %esp
-; X86-SSE4-NEXT:    retl
-; X86-SSE4-NEXT:  .LBB30_2: # %bb4
-; X86-SSE4-NEXT:    movl $1, %eax
-; X86-SSE4-NEXT:    addl $1, %esp
-; X86-SSE4-NEXT:    retl
-;
-; X64-SSE4-LABEL: mask_v3i1:
-; X64-SSE4:       # %bb.0: # %bb
-; X64-SSE4-NEXT:    pcmpeqd %xmm1, %xmm0
-; X64-SSE4-NEXT:    pcmpeqd %xmm1, %xmm1
-; X64-SSE4-NEXT:    pxor %xmm0, %xmm1
-; X64-SSE4-NEXT:    movd %xmm1, %eax
-; X64-SSE4-NEXT:    pextrb $4, %xmm1, %ecx
-; X64-SSE4-NEXT:    andb $1, %cl
-; X64-SSE4-NEXT:    addb %cl, %cl
-; X64-SSE4-NEXT:    subb %al, %cl
-; X64-SSE4-NEXT:    pextrb $8, %xmm1, %eax
-; X64-SSE4-NEXT:    andb $1, %al
-; X64-SSE4-NEXT:    shlb $2, %al
-; X64-SSE4-NEXT:    orb %cl, %al
-; X64-SSE4-NEXT:    je .LBB30_2
-; X64-SSE4-NEXT:  # %bb.1: # %bb3
-; X64-SSE4-NEXT:    xorl %eax, %eax
-; X64-SSE4-NEXT:    retq
-; X64-SSE4-NEXT:  .LBB30_2: # %bb4
-; X64-SSE4-NEXT:    movl $1, %eax
-; X64-SSE4-NEXT:    retq
-;
-; X86-AVX1-LABEL: mask_v3i1:
-; X86-AVX1:       # %bb.0: # %bb
-; X86-AVX1-NEXT:    subl $1, %esp
-; X86-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X86-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X86-AVX1-NEXT:    vmovd %xmm0, %ecx
-; X86-AVX1-NEXT:    vpextrb $4, %xmm0, %eax
-; X86-AVX1-NEXT:    andb $1, %al
-; X86-AVX1-NEXT:    addb %al, %al
-; X86-AVX1-NEXT:    subb %cl, %al
-; X86-AVX1-NEXT:    vpextrb $8, %xmm0, %ecx
-; X86-AVX1-NEXT:    andb $1, %cl
-; X86-AVX1-NEXT:    shlb $2, %cl
-; X86-AVX1-NEXT:    orb %al, %cl
-; X86-AVX1-NEXT:    je .LBB30_2
-; X86-AVX1-NEXT:  # %bb.1: # %bb3
-; X86-AVX1-NEXT:    xorl %eax, %eax
-; X86-AVX1-NEXT:    addl $1, %esp
-; X86-AVX1-NEXT:    retl
-; X86-AVX1-NEXT:  .LBB30_2: # %bb4
-; X86-AVX1-NEXT:    movl $1, %eax
-; X86-AVX1-NEXT:    addl $1, %esp
-; X86-AVX1-NEXT:    retl
-;
-; X64-AVX1-LABEL: mask_v3i1:
-; X64-AVX1:       # %bb.0: # %bb
-; X64-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X64-AVX1-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X64-AVX1-NEXT:    vmovd %xmm0, %eax
-; X64-AVX1-NEXT:    vpextrb $4, %xmm0, %ecx
-; X64-AVX1-NEXT:    andb $1, %cl
-; X64-AVX1-NEXT:    addb %cl, %cl
-; X64-AVX1-NEXT:    subb %al, %cl
-; X64-AVX1-NEXT:    vpextrb $8, %xmm0, %eax
-; X64-AVX1-NEXT:    andb $1, %al
-; X64-AVX1-NEXT:    shlb $2, %al
-; X64-AVX1-NEXT:    orb %cl, %al
-; X64-AVX1-NEXT:    je .LBB30_2
-; X64-AVX1-NEXT:  # %bb.1: # %bb3
-; X64-AVX1-NEXT:    xorl %eax, %eax
-; X64-AVX1-NEXT:    retq
-; X64-AVX1-NEXT:  .LBB30_2: # %bb4
-; X64-AVX1-NEXT:    movl $1, %eax
-; X64-AVX1-NEXT:    retq
-;
-; X86-AVX2-LABEL: mask_v3i1:
-; X86-AVX2:       # %bb.0: # %bb
-; X86-AVX2-NEXT:    subl $1, %esp
-; X86-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X86-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X86-AVX2-NEXT:    vmovd %xmm0, %ecx
-; X86-AVX2-NEXT:    vpextrb $4, %xmm0, %eax
-; X86-AVX2-NEXT:    andb $1, %al
-; X86-AVX2-NEXT:    addb %al, %al
-; X86-AVX2-NEXT:    subb %cl, %al
-; X86-AVX2-NEXT:    vpextrb $8, %xmm0, %ecx
-; X86-AVX2-NEXT:    andb $1, %cl
-; X86-AVX2-NEXT:    shlb $2, %cl
-; X86-AVX2-NEXT:    orb %al, %cl
-; X86-AVX2-NEXT:    je .LBB30_2
-; X86-AVX2-NEXT:  # %bb.1: # %bb3
-; X86-AVX2-NEXT:    xorl %eax, %eax
-; X86-AVX2-NEXT:    addl $1, %esp
-; X86-AVX2-NEXT:    retl
-; X86-AVX2-NEXT:  .LBB30_2: # %bb4
-; X86-AVX2-NEXT:    movl $1, %eax
-; X86-AVX2-NEXT:    addl $1, %esp
-; X86-AVX2-NEXT:    retl
-;
-; X64-AVX2-LABEL: mask_v3i1:
-; X64-AVX2:       # %bb.0: # %bb
-; X64-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; X64-AVX2-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovd %xmm0, %eax
-; X64-AVX2-NEXT:    vpextrb $4, %xmm0, %ecx
-; X64-AVX2-NEXT:    andb $1, %cl
-; X64-AVX2-NEXT:    addb %cl, %cl
-; X64-AVX2-NEXT:    subb %al, %cl
-; X64-AVX2-NEXT:    vpextrb $8, %xmm0, %eax
-; X64-AVX2-NEXT:    andb $1, %al
-; X64-AVX2-NEXT:    shlb $2, %al
-; X64-AVX2-NEXT:    orb %cl, %al
-; X64-AVX2-NEXT:    je .LBB30_2
-; X64-AVX2-NEXT:  # %bb.1: # %bb3
-; X64-AVX2-NEXT:    xorl %eax, %eax
-; X64-AVX2-NEXT:    retq
-; X64-AVX2-NEXT:  .LBB30_2: # %bb4
-; X64-AVX2-NEXT:    movl $1, %eax
-; X64-AVX2-NEXT:    retq
+; AVX1OR2-LABEL: mask_v3i1:
+; AVX1OR2:       # %bb.0: # %bb
+; AVX1OR2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX1OR2-NEXT:    vmovmskps %xmm0, %eax
+; AVX1OR2-NEXT:    notl %eax
+; AVX1OR2-NEXT:    testb $7, %al
+; AVX1OR2-NEXT:    je .LBB30_2
+; AVX1OR2-NEXT:  # %bb.1: # %bb3
+; AVX1OR2-NEXT:    xorl %eax, %eax
+; AVX1OR2-NEXT:    ret{{[l|q]}}
+; AVX1OR2-NEXT:  .LBB30_2: # %bb4
+; AVX1OR2-NEXT:    movl $1, %eax
+; AVX1OR2-NEXT:    ret{{[l|q]}}
 ;
 ; AVX512F-LABEL: mask_v3i1:
 ; AVX512F:       # %bb.0: # %bb
@@ -2331,5 +2167,4 @@ bb4:
 }
 
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; AVX1OR2: {{.*}}
 ; X86-SSE: {{.*}}

@@ -275,12 +275,18 @@ define float @alt_fmul_fsub_preserved(ptr %a, ptr %b) {
 ; CHECK-LABEL: define float @alt_fmul_fsub_preserved(
 ; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[GB2:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 8
+; CHECK-NEXT:    [[GB3:%.*]] = getelementptr inbounds nuw i8, ptr [[B]], i64 12
+; CHECK-NEXT:    [[B2:%.*]] = load float, ptr [[GB2]], align 4
+; CHECK-NEXT:    [[B3:%.*]] = load float, ptr [[GB3]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 1.000000e+00>, float [[B2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> [[TMP3]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = fsub reassoc nsz <4 x float> [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP4]])
+; CHECK-NEXT:    [[TMP6:%.*]] = call reassoc nsz float @llvm.vector.reduce.fadd.v4f32(float 0.000000e+00, <4 x float> [[TMP2]])
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub reassoc nsz float [[TMP6]], [[B3]]
 ; CHECK-NEXT:    ret float [[TMP5]]
 ;
 entry:
@@ -585,11 +591,9 @@ define double @ordered_switch_restart(ptr %x, ptr %y, ptr %z, ptr %out) {
 ; CHECK-NEXT:    [[Z1:%.*]] = load double, ptr [[Z8]], align 8
 ; CHECK-NEXT:    [[ZSUM:%.*]] = fadd reassoc nsz contract double [[Z0]], [[Z1]]
 ; CHECK-NEXT:    store double [[ZSUM]], ptr [[OUT]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP2]])
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub reassoc nsz contract double [[TMP3]], [[ZSUM]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
-; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nsz contract double [[SUB]], [[TMP4]]
-; CHECK-NEXT:    ret double [[ADD]]
+; CHECK-NEXT:    ret double [[SUB]]
 ;
 entry:
   %x8 = getelementptr inbounds nuw i8, ptr %x, i64 8
@@ -1275,14 +1279,11 @@ define double @scaled_value_no_contract(ptr %x, ptr %y, ptr %z, ptr %w) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP0]], [[TMP1]]
 ; CHECK-NEXT:    [[W0:%.*]] = load double, ptr [[W]], align 8
-; CHECK-NEXT:    [[N:%.*]] = fneg reassoc nsz contract double [[W0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = fmul reassoc nsz double [[TMP3]], 2.000000e+00
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
-; CHECK-NEXT:    [[OP_RDX:%.*]] = fadd reassoc nsz contract double [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[OP_RDX1:%.*]] = fadd reassoc nsz contract double [[OP_RDX]], [[N]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul reassoc nsz contract <2 x double> [[TMP2]], <double 2.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = call reassoc nsz contract double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP3]])
 ; CHECK-NEXT:    [[OP_RDX2:%.*]] = fadd reassoc nsz contract double [[OP_RDX1]], [[Z0]]
-; CHECK-NEXT:    ret double [[OP_RDX2]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = fsub reassoc nsz contract double [[OP_RDX2]], [[W0]]
+; CHECK-NEXT:    ret double [[OP_RDX3]]
 ;
 entry:
   %x1 = getelementptr inbounds double, ptr %x, i64 1

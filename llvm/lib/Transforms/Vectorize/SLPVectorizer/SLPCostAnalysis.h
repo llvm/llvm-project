@@ -17,7 +17,9 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOSTANALYSIS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/FMF.h"
 #include "llvm/Support/InstructionCost.h"
 
 #include <tuple>
@@ -65,8 +67,9 @@ getBlendedLoadCost(const TargetTransformInfo &TTI, Type *VecTy, Align Alignment,
 
 /// For a non-power-of-2 \p NumElts-wide integer div/rem \p Opcode, checks if
 /// padding to a full register and using the masked div/rem intrinsic is
-/// cheaper than the direct vector op. Returns the cost of the masked
-/// alternative, or an invalid cost if it is not applicable or not cheaper.
+/// cheaper than the full register ops with the scalar tail. Returns the cost of
+/// the masked alternative, or an invalid cost if it is not applicable or not
+/// cheaper.
 InstructionCost
 getMaskedDivRemCost(const TargetTransformInfo &TTI, bool ReVec, unsigned Opcode,
                     Type *ScalarTy, unsigned NumElts,
@@ -119,6 +122,36 @@ getExtractWithExtendCost(const TargetTransformInfo &TTI, bool ReVec,
                          unsigned Opcode, Type *Dst, VectorType *VecTy,
                          unsigned Index,
                          const TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of materializing the identity element in the padding lanes
+/// of a \p NumElts-wide reduction padded to \p PaddedVecTy, 0 if \p PaddedVecTy
+/// is null. Targets reducing exactly the requested number of lanes need no
+/// padding.
+InstructionCost
+getReductionPaddingCost(const TargetTransformInfo &TTI, VectorType *PaddedVecTy,
+                        unsigned NumElts,
+                        TargetTransformInfo::TargetCostKind CostKind);
+
+/// Returns the cost of a \p NumElts-wide \p RdxKind reduction of \p ScalarTy,
+/// padded to \p PaddedVecTy, plus the scalar reduction operations for the
+/// \p NumTail values left out of the vector. Invalid for the reduction kinds
+/// without a vector counterpart, and for revectorization, where the lanes are
+/// combined with plain vector arithmetic, so the narrower width performs the
+/// same operations and only adds subvector extracts.
+InstructionCost getReductionWidthCost(const TargetTransformInfo &TTI,
+                                      RecurKind RdxKind, Type *ScalarTy,
+                                      unsigned NumElts, VectorType *PaddedVecTy,
+                                      unsigned NumTail, FastMathFlags FMF);
+
+/// Checks if a \p VecTy value, already padded to \p PaddedVecTy by a masked
+/// operation, is cheaper to store with a single masked store than to narrow
+/// back and store directly. Only worth it for an already padded value:
+/// assembling the padded vector out of narrower pieces costs more than the
+/// single store saves.
+bool isMaskedStoreExpandProfitable(const TargetTransformInfo &TTI,
+                                   FixedVectorType *VecTy,
+                                   FixedVectorType *PaddedVecTy, unsigned AS,
+                                   Align CommonAlignment);
 
 } // namespace llvm::slpvectorizer
 
