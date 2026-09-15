@@ -22629,88 +22629,88 @@ static SDValue lowerVectorFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
     Src = DAG.getNode(ISD::FP_EXTEND, dl, SrcVT, Src);
   }
 
-    if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f32 ||
-                           SrcVT.getScalarType() == MVT::f64)) {
-      if (IsSigned) {
-        // Use X86ISD::CVTTP2SI (CVTTPS2DQ/CVTTPD2DQ) which has defined
-        // out-of-range behavior: maps overflow and NaN to 0x80000000 (INT_MIN).
-        SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
-        APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
-        PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
-                                        /*IsSigned=*/true,
-                                        APFloat::rmTowardZero);
-        PosOvfBoundFlt.changeSign();
-        SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
-        EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
-                                          *DAG.getContext(), SrcVT);
-        EVT SelCCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
-                                             *DAG.getContext(), DstVT);
+  if (SatWidth == 32 && (SrcVT.getScalarType() == MVT::f32 ||
+                         SrcVT.getScalarType() == MVT::f64)) {
+    if (IsSigned) {
+      // Use X86ISD::CVTTP2SI (CVTTPS2DQ/CVTTPD2DQ) which has defined
+      // out-of-range behavior: maps overflow and NaN to 0x80000000 (INT_MIN).
+      SDValue Cvt = DAG.getNode(X86ISD::CVTTP2SI, dl, DstVT, Src);
+      APFloat PosOvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
+      PosOvfBoundFlt.convertFromAPInt(APInt::getSignedMinValue(32),
+                                      /*IsSigned=*/true,
+                                      APFloat::rmTowardZero);
+      PosOvfBoundFlt.changeSign();
+      SDValue PosOvfBound = DAG.getConstantFP(PosOvfBoundFlt, dl, SrcVT);
+      EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                        *DAG.getContext(), SrcVT);
+      EVT SelCCVT = TLI.getSetCCResultType(DAG.getDataLayout(),
+                                           *DAG.getContext(), DstVT);
 
-        SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
-        SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
-
-        if (CCVT != SelCCVT) {
-          PosOvf = DAG.getSExtOrTrunc(PosOvf, dl, SelCCVT);
-          IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
-        }
-
-        // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
-        // bitmask vector (SelCCVT == DstVT). XOR(Cvt, PosOvf) maps INT_MIN
-        // (0x80000000) to INT_MAX (0x7FFFFFFF) on positive overflow without
-        // needing INT_MAX in the constant pool or select emulation.
-        if (SelCCVT == DstVT) {
-          SDValue Fixed = DAG.getNode(ISD::XOR, dl, DstVT, Cvt, PosOvf);
-          SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
-          return DAG.getNode(ISD::AND, dl, DstVT, Fixed, NotNaN);
-        }
-
-        SDValue IntMax =
-            DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
-        SDValue Zero = DAG.getConstant(0, dl, DstVT);
-        SDValue Fixed = DAG.getSelect(dl, DstVT, PosOvf, IntMax, Cvt);
-        return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
-      }
-
-      SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
-      SDValue Clamped = DAG.getNode(X86ISD::FMAXC, dl, SrcVT, Src, ZeroFP);
-      APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
-      OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
-                                   /*IsSigned=*/false, APFloat::rmTowardZero);
-      SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
-      EVT CCVT =
-          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
-      SDValue IsOvf = DAG.getSetCC(dl, CCVT, Clamped, OvfBound, ISD::SETOGE);
-      EVT SelCCVT =
-          TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
-      if (CCVT != SelCCVT)
-        IsOvf = DAG.getSExtOrTrunc(IsOvf, dl, SelCCVT);
-      // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
-      // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
-      // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE
-      SDValue Cvt;
-      if (SrcVT.is512BitVector() || Subtarget.hasVLX())
-        Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
-      else
-        Cvt = expandFP_TO_UINT_SSE(DstVT, Clamped, dl, DAG, Subtarget);
-      // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
-      // bitmask vector (SelCCVT == DstVT). OR(Cvt, IsOvf) produces UINT_MAX
-      // (0xFFFFFFFF) on overflow without a constant pool load or select.
-      SDValue Result;
-      if (SelCCVT == DstVT) {
-        Result = DAG.getNode(ISD::OR, dl, DstVT, Cvt, IsOvf);
-      } else {
-        SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
-        Result = DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
-      }
-
+      SDValue PosOvf = DAG.getSetCC(dl, CCVT, Src, PosOvfBound, ISD::SETOGE);
       SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
-      if (CCVT != SelCCVT)
-        IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
 
-      if (SelCCVT == DstVT) {
-        SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
-        return DAG.getNode(ISD::AND, dl, DstVT, Result, NotNaN);
+      if (CCVT != SelCCVT) {
+        PosOvf = DAG.getSExtOrTrunc(PosOvf, dl, SelCCVT);
+        IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
       }
+
+      // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
+      // bitmask vector (SelCCVT == DstVT). XOR(Cvt, PosOvf) maps INT_MIN
+      // (0x80000000) to INT_MAX (0x7FFFFFFF) on positive overflow without
+      // needing INT_MAX in the constant pool or select emulation.
+      if (SelCCVT == DstVT) {
+        SDValue Fixed = DAG.getNode(ISD::XOR, dl, DstVT, Cvt, PosOvf);
+        SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
+        return DAG.getNode(ISD::AND, dl, DstVT, Fixed, NotNaN);
+      }
+
+      SDValue IntMax =
+          DAG.getConstant(APInt::getSignedMaxValue(32), dl, DstVT);
+      SDValue Zero = DAG.getConstant(0, dl, DstVT);
+      SDValue Fixed = DAG.getSelect(dl, DstVT, PosOvf, IntMax, Cvt);
+      return DAG.getSelect(dl, DstVT, IsNaN, Zero, Fixed);
+    }
+
+    SDValue ZeroFP = DAG.getConstantFP(0.0, dl, SrcVT);
+    SDValue Clamped = DAG.getNode(X86ISD::FMAXC, dl, SrcVT, Src, ZeroFP);
+    APFloat OvfBoundFlt(SrcVT.getScalarType().getFltSemantics());
+    OvfBoundFlt.convertFromAPInt(APInt::getOneBitSet(33, 32),
+                                 /*IsSigned=*/false, APFloat::rmTowardZero);
+    SDValue OvfBound = DAG.getConstantFP(OvfBoundFlt, dl, SrcVT);
+    EVT CCVT =
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), SrcVT);
+    SDValue IsOvf = DAG.getSetCC(dl, CCVT, Clamped, OvfBound, ISD::SETOGE);
+    EVT SelCCVT =
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), DstVT);
+    if (CCVT != SelCCVT)
+      IsOvf = DAG.getSExtOrTrunc(IsOvf, dl, SelCCVT);
+    // v16i32 (512-bit, AVX512): use X86ISD::CVTTP2UI (VCVTTPS2UDQZ).
+    // v4i32 (128-bit, SSE) and v8i32 (256-bit, AVX) are already covered
+    // by CVTTPS2DQ/VCVTTPS2DQ via expandFP_TO_UINT_SSE
+    SDValue Cvt;
+    if (SrcVT.is512BitVector() || Subtarget.hasVLX())
+      Cvt = DAG.getNode(X86ISD::CVTTP2UI, dl, DstVT, Clamped);
+    else
+      Cvt = expandFP_TO_UINT_SSE(DstVT, Clamped, dl, DAG, Subtarget);
+    // Optimize vector lowering on SSE2/AVX/AVX2 where mask is an all-ones
+    // bitmask vector (SelCCVT == DstVT). OR(Cvt, IsOvf) produces UINT_MAX
+    // (0xFFFFFFFF) on overflow without a constant pool load or select.
+    SDValue Result;
+    if (SelCCVT == DstVT) {
+      Result = DAG.getNode(ISD::OR, dl, DstVT, Cvt, IsOvf);
+    } else {
+      SDValue UintMax = DAG.getConstant(APInt::getMaxValue(32), dl, DstVT);
+      Result = DAG.getSelect(dl, DstVT, IsOvf, UintMax, Cvt);
+    }
+
+    SDValue IsNaN = DAG.getSetCC(dl, CCVT, Src, Src, ISD::SETUO);
+    if (CCVT != SelCCVT)
+      IsNaN = DAG.getSExtOrTrunc(IsNaN, dl, SelCCVT);
+
+    if (SelCCVT == DstVT) {
+      SDValue NotNaN = DAG.getNOT(dl, IsNaN, DstVT);
+      return DAG.getNode(ISD::AND, dl, DstVT, Result, NotNaN);
+    }
     SDValue Zero = DAG.getConstant(0, dl, DstVT);
     return DAG.getSelect(dl, DstVT, IsNaN, Zero, Result);
   }
