@@ -165,6 +165,16 @@ LLVM_ABI Value *
 FindAvailableLoadedValue(LoadInst *Load, BatchAAResults &AA, bool *IsLoadCSE,
                          unsigned MaxInstsToScan = DefMaxInstsToScan);
 
+/// Return true if \p SI, which may alias \p MemLoc, leaves the content of \p
+/// MemLoc unchanged. This is possible when \p SI does only MustAlias or NoAlias
+/// \p MemLoc (no partial overlap possible), and it stores the value \p MemLoc
+/// currently holds (loaded before the store and not modified in between).
+LLVM_ABI bool isStorePreservingMemoryLocation(const StoreInst *SI,
+                                              const MemoryLocation &MemLoc,
+                                              Align MemLocAlign,
+                                              BatchAAResults &AA,
+                                              unsigned ScanLimit);
+
 /// Scan backwards to see if we have the value of the given pointer available
 /// locally within a small number of instructions.
 ///
