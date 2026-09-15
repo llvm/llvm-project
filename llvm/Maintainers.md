@@ -289,6 +289,13 @@ luweining@loongson.cn (email), [SixWeining](https://github.com/SixWeining) (GitH
 Min-Yih Hsu \
 min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
 
+#### MIPS backend
+
+Lu Weining \
+[SixWeining](https://github.com/SixWeining) (GitHub) \
+Yingopq \
+[yingopq](https://github.com/yingopq) (GitHub)
+
 #### MSP430 backend
 
 Anton Korobeynikov \
