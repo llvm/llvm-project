@@ -264,6 +264,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the C API
 
+* `LLVMAlignOf()` and `LLVMSizeOf()` have been deprecated. Create a constant
+  based on the result of `LLVMABIAlignmentOfType()` or `LLVMABISizeOfType()`
+  instead.
+
 ### Changes to the CodeGen infrastructure
 
 * Fixed a crash
