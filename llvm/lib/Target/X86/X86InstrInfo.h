@@ -696,6 +696,9 @@ protected:
       SmallVectorImpl<MachineInstr *> &DelInstrs,
       DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
 
+  std::optional<FMAChainLinkInfo>
+  getFMAChainLinkInfo(const MachineInstr &MI) const override;
+
   /// When calculate the latency of the root instruction, accumulate the
   /// latency of the sequence to the root latency.
   /// \param Root - Instruction that could be combined with one of its operands

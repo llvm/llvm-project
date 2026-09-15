@@ -298,6 +298,9 @@ public:
                                   SmallVectorImpl<unsigned> &Patterns,
                                   bool DoRegPressureReduce) const override;
 
+  std::optional<FMAChainLinkInfo>
+  getFMAChainLinkInfo(const MachineInstr &MI) const override;
+
   void
   finalizeInsInstrs(MachineInstr &Root, unsigned &Pattern,
                     SmallVectorImpl<MachineInstr *> &InsInstrs) const override;

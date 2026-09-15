@@ -482,6 +482,9 @@ public:
   /// into a destination register.
   bool isAccumulationOpcode(unsigned Opcode) const override;
 
+  std::optional<FMAChainLinkInfo>
+  getFMAChainLinkInfo(const MachineInstr &MI) const override;
+
   /// Returns an opcode which defines the accumulator used by \P Opcode.
   unsigned getAccumulationStartOpcode(unsigned Opcode) const override;
 

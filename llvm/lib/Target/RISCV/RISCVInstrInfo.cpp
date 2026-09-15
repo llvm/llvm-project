@@ -2800,6 +2800,30 @@ CombinerObjective RISCVInstrInfo::getCombinerObjective(unsigned Pattern) const {
   }
 }
 
+std::optional<TargetInstrInfo::FMAChainLinkInfo>
+RISCVInstrInfo::getFMAChainLinkInfo(const MachineInstr &MI) const {
+  FMAChainLinkInfo Info;
+  switch (MI.getOpcode()) {
+  default:
+    return std::nullopt;
+  // Scalar fused multiply-add: rd = rs1 * rs2 + rs3; the accumulator is the
+  // last source operand and the trailing immediate is the rounding mode.
+  case RISCV::FMADD_S:
+    Info = {RISCV::FADD_S, RISCV::FMUL_S, 3};
+    break;
+  case RISCV::FMADD_D:
+    Info = {RISCV::FADD_D, RISCV::FMUL_D, 3};
+    break;
+  case RISCV::FMADD_H:
+    Info = {RISCV::FADD_H, RISCV::FMUL_H, 3};
+    break;
+  case RISCV::FMADD_Q:
+    Info = {RISCV::FADD_Q, RISCV::FMUL_Q, 3};
+    break;
+  }
+  return Info;
+}
+
 bool RISCVInstrInfo::getMachineCombinerPatterns(
     MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns,
     bool DoRegPressureReduce) const {
