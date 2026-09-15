@@ -14553,6 +14553,7 @@ static bool CheckForModifiableLvalue(Expr *E, SourceLocation Loc, Sema &S) {
       if (UnaryOp->getOpcode() == UO_Imag &&
           !Op->getType()->isAnyComplexType()) {
         DiagID = diag::err_typecheck_lvalue_imag_not_modifiable_lvalue;
+        NeedType = true;
         break;
       }
     }
