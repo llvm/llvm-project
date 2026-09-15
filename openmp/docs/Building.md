@@ -380,7 +380,10 @@ This option is `OFF` if this feature is not supported for the platform.
 
 **LIBOMP_OMPD_SUPPORT**:BOOL
 : Enable building the libompd library. The GDB plugin loads `libompd.so` with
-LLVM Support `DynamicLibrary` (not POSIX `dlopen`).
+LLVM Support `DynamicLibrary` (not POSIX `dlopen`). On Linux the plugin's
+RUNPATH includes `$ORIGIN` and the relative path to
+`lib${LLVM_LIBDIR_SUFFIX}` so GDB can load LLVM Support without extra
+`LD_LIBRARY_PATH` when LLVM and OpenMP share an install prefix.
 
 **LIBOMPD_LD_STD_FLAGS**:STRING
 : Use `-stdlibc++` instead of `-libc++` library for C++.
