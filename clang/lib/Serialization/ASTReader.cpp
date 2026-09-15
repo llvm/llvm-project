@@ -1895,6 +1895,14 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
+/// Read an SLocEntry record's first field, returning it together with a chain
+/// anchored at that entry.
+static std::pair<SourceLocation::UIntTy, SourceLocationEncoding::Chain>
+readEntryOffset(ArrayRef<uint64_t> Record) {
+  SourceLocation::UIntTy EntryOffset = Record[0];
+  return {EntryOffset, SourceLocationEncoding::Chain(EntryOffset + 2)};
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -2064,12 +2072,18 @@ bool ASTReader::ReadSLocEntry(int ID) {
   }
 
   case SM_SLOC_EXPANSION_ENTRY: {
-    SourceLocation SpellingLoc = ReadSourceLocation(*F, Record[1]);
-    SourceLocation ExpansionBegin = ReadSourceLocation(*F, Record[2]);
-    SourceLocation ExpansionEnd = ReadSourceLocation(*F, Record[3]);
+    auto [EntryOffset, Chain] = readEntryOffset(Record);
+    // The chain is stateful: decode in the same order the writer emitted, each
+    // in its own statement. See CreateSLocExpansionAbbrev for the field order.
+    SourceLocation ExpansionEnd =
+        ReadSourceLocation(*F, Chain.deltaDecode(Record[1]));
+    SourceLocation ExpansionBegin =
+        ReadSourceLocation(*F, Chain.deltaDecode(Record[2]));
+    SourceLocation SpellingLoc =
+        ReadSourceLocation(*F, Chain.deltaDecode(Record[3]));
     SourceMgr.createExpansionLoc(SpellingLoc, ExpansionBegin, ExpansionEnd,
                                  Record[5], Record[4], ID,
-                                 BaseOffset + Record[0]);
+                                 BaseOffset + EntryOffset);
     break;
   }
   }
