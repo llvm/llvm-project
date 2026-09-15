@@ -1,5 +1,6 @@
 ! RUN: split-file %s %t
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/duplicate.f90 2>&1 | FileCheck %s --check-prefix=DUPLICATE
+! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=52 -o - %t/duplicate-scope.f90 2>&1 | FileCheck %s --check-prefix=DUPLICATE-SCOPE
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/array.f90 2>&1 | FileCheck %s --check-prefix=ARRAY
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/derived.f90 2>&1 | FileCheck %s --check-prefix=DERIVED
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/pointer.f90 2>&1 | FileCheck %s --check-prefix=POINTER
@@ -8,6 +9,7 @@
 ! RUN: %not_todo_cmd %flang_fc1 -emit-hlfir %openmp_flags -fopenmp-version=51 -o - %t/non-parallel.f90 2>&1 | FileCheck %s --check-prefix=NON-PARALLEL
 
 ! DUPLICATE: not yet implemented: ALLOCATE clause item appears more than once
+! DUPLICATE-SCOPE: not yet implemented: ALLOCATE clause item appears more than once
 ! ARRAY: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
 ! DERIVED: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
 ! POINTER: not yet implemented: ALLOCATE clause currently supports only fixed-size intrinsic scalar PRIVATE or FIRSTPRIVATE items
@@ -21,6 +23,14 @@ subroutine duplicate(x)
   !$omp parallel private(x) allocate(x) allocate(x)
     x = 1
   !$omp end parallel
+end subroutine
+
+!--- duplicate-scope.f90
+subroutine duplicate_scope(x)
+  integer :: x
+  !$omp scope private(x) allocate(x) allocate(x)
+    x = 1
+  !$omp end scope
 end subroutine
 
 !--- pointer.f90
