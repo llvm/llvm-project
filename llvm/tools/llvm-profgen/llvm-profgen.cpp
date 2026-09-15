@@ -33,9 +33,13 @@ static cl::opt<std::string> PerfScriptFilename(
     "perfscript", cl::value_desc("perfscript"),
     cl::desc("Path of a trace created by the Linux `perf script` command. For "
              "LBR or BRBE input, the raw perf data must contain branch "
-             "stacks, for example from recording with -b. "
-             "Cannot be used with --perfdata, --unsymbolized-profile, or "
-             "--llvm-sample-profile."),
+             "stacks, for example from recording with -b. For "
+             "--spe-branch-profile input, the trace must contain only Arm SPE "
+             "branch samples, from recording with "
+             "arm_spe/branch_filter=1,event_filter=2/, and must be generated "
+             "with `--show-mmap-events --itrace=bl1 -F ip,brstack`. Cannot be "
+             "used with --perfdata, "
+             "--unsymbolized-profile, or --llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
                      cl::aliasopt(PerfScriptFilename));
@@ -44,8 +48,11 @@ static cl::opt<std::string> PerfDataFilename(
     "perfdata", cl::value_desc("perfdata"),
     cl::desc("Path of raw perf data created by the Linux perf tool. For LBR or "
              "BRBE input, it must contain branch stacks, for example from "
-             "recording with -b. Cannot be used with --perfscript, "
-             "--unsymbolized-profile, or --llvm-sample-profile."),
+             "recording with -b. For --spe-branch-profile input, it must "
+             "contain only Arm SPE branch samples, from recording with "
+             "arm_spe/branch_filter=1,event_filter=2/. Cannot be used with "
+             "--perfscript, --unsymbolized-profile, or "
+             "--llvm-sample-profile."),
     cl::cat(ProfGenCategory));
 static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
                      cl::aliasopt(PerfDataFilename));
@@ -104,11 +111,24 @@ static cl::opt<std::string>
 
 // Validate the command line input.
 static void validateCommandLine() {
+  bool HasPerfData = PerfDataFilename.getNumOccurrences() > 0;
+  bool HasPerfScript = PerfScriptFilename.getNumOccurrences() > 0;
+
+  // Arm SPE branch profiling only describes how a perf data or perfscript
+  // input is parsed. Reject the option for every other mode, where it would
+  // otherwise be silently meaningless.
+  if (ReadSPEBranchProfile) {
+    if (ShowDisassemblyOnly)
+      exitWithError("--spe-branch-profile cannot be used with "
+                    "--show-disassembly-only.");
+    if (!HasPerfData && !HasPerfScript)
+      exitWithError("--spe-branch-profile requires --perfscript or "
+                    "--perfdata input.");
+  }
+
   // Allow the missing perfscript if we only use to show binary disassembly.
   if (!ShowDisassemblyOnly) {
     // Validate input profile is provided only once
-    bool HasPerfData = PerfDataFilename.getNumOccurrences() > 0;
-    bool HasPerfScript = PerfScriptFilename.getNumOccurrences() > 0;
     bool HasUnsymbolizedProfile =
         UnsymbolizedProfFilename.getNumOccurrences() > 0;
     bool HasSampleProfile = SampleProfFilename.getNumOccurrences() > 0;
@@ -191,6 +211,15 @@ int main(int argc, const char *argv[]) {
   std::unique_ptr<ProfiledBinary> Binary =
       std::make_unique<ProfiledBinary>(BinaryPath, DebugBinPath);
   Binary->load(TargetTriple);
+
+  // Arm SPE samples describe AArch64 branch execution, so reject another
+  // target.
+  //
+  // TODO: --target-triple overrides the triple checked here, while the
+  // disassembler is looked up from the object file itself, so an override makes
+  // the two disagree.
+  if (ReadSPEBranchProfile && !Binary->getTriple().isAArch64())
+    exitWithError("--spe-branch-profile requires an AArch64 binary.");
 
   if (ShowDisassemblyOnly)
     return EXIT_SUCCESS;
