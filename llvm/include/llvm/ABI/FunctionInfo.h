@@ -71,10 +71,11 @@ private:
   bool ZeroExt : 1;
   bool IndirectByVal : 1;
   bool IndirectRealign : 1;
+  bool CanBeFlattened : 1;
 
   ArgInfo(Kind K = Direct)
       : TheKind(K), SignExt(false), ZeroExt(false), IndirectByVal(false),
-        IndirectRealign(false) {}
+        IndirectRealign(false), CanBeFlattened(false) {}
 
 public:
   /// \param T The type to coerce to. If null, the argument's original type is
@@ -85,12 +86,16 @@ public:
   ///               return value on x86-64).
   /// \param Align  Override for the argument's alignment. If absent, the
   ///               default alignment for \p T is used.
+  /// \param CanBeFlattened Whether a multi-field struct coerce type may be
+  ///               expanded into one argument per field. False keeps it intact.
   static ArgInfo getDirect(const Type *T = nullptr, unsigned Offset = 0,
-                           MaybeAlign Align = std::nullopt) {
+                           MaybeAlign Align = std::nullopt,
+                           bool CanBeFlattened = true) {
     ArgInfo AI(Direct);
     AI.CoercionType = T;
     AI.Alignment = Align;
     AI.DirectAttr.Offset = Offset;
+    AI.CanBeFlattened = CanBeFlattened;
     return AI;
   }
 
@@ -196,6 +201,11 @@ public:
   const Type *getCoerceToType() const {
     assert((isDirect() || isExtend()) && "Invalid Kind!");
     return CoercionType;
+  }
+
+  bool getCanBeFlattened() const {
+    assert(isDirect() && "Not a direct kind");
+    return CanBeFlattened;
   }
 };
 
