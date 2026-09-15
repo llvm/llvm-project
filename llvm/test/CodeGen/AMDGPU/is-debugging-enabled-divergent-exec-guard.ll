@@ -9,6 +9,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=amdgpu13.10-amd-amdhsa -mcpu=gfx1310 -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
 ; RUN: llc -verify-machineinstrs -mtriple=amdgpu11.50-amd-amdpal -mcpu=gfx1150 -mattr=+trap-handler -O2 < %s | FileCheck %s --check-prefix=GCN
 ; RUN: llc -verify-machineinstrs -mtriple=amdgpu11.50-amd-amdpal -mcpu=gfx1150 -mattr=+trap-handler -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgpu12.00-amd-amdpal -mcpu=gfx1200 -mattr=+trap-handler -O2 < %s | FileCheck %s --check-prefix=GCN
+; RUN: llc -verify-machineinstrs -mtriple=amdgpu12.00-amd-amdpal -mcpu=gfx1200 -mattr=+trap-handler -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
 ; RUN: llc -verify-machineinstrs -mtriple=amdgpu13.10-amd-amdpal -mcpu=gfx1310 -mattr=+trap-handler -O2 < %s | FileCheck %s --check-prefix=GCN
 ; RUN: llc -verify-machineinstrs -mtriple=amdgpu13.10-amd-amdpal -mcpu=gfx1310 -mattr=+trap-handler -O2 -global-isel -global-isel-abort=1 < %s | FileCheck %s --check-prefix=GCN
 ; RUN: llc -verify-machineinstrs -mtriple=amdgpu13.10-amd-amdhsa -mcpu=gfx1310 -O0 < %s | FileCheck %s --check-prefix=FUSED
