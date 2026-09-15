@@ -547,11 +547,30 @@ bool InstructionsState::isCopyableElement(Value *V) const {
   assert(valid() && "InstructionsState is invalid.");
   if (!HasCopyables)
     return false;
-  if (isAltShuffle() || getOpcode() == Instruction::GetElementPtr)
+  if (isAltShuffle())
     return false;
   auto *I = dyn_cast<Instruction>(V);
+  // Copyable lanes of a cast node are limited to constants representable as
+  // the cast of a source-type constant.
+  if (isa<CastInst>(MainOp)) {
+    if (I || isa<PoisonValue>(V))
+      return false;
+    if (isa<UndefValue>(V))
+      return true;
+    auto *C = dyn_cast<ConstantInt>(V);
+    return C && C->getValue().getActiveBits() <=
+                    cast<CastInst>(MainOp)->getSrcTy()->getIntegerBitWidth();
+  }
   if (!I)
     return !isa<PoisonValue>(V);
+  // For a GEP main op only single-index GEPs with the same source element
+  // type can be matching lanes; GEPs with a different shape are copyable.
+  if (MainOp->getOpcode() == Instruction::GetElementPtr)
+    if (auto *GEP = dyn_cast<GetElementPtrInst>(I);
+        GEP && (GEP->getNumOperands() != 2 ||
+                GEP->getSourceElementType() !=
+                    cast<GetElementPtrInst>(MainOp)->getSourceElementType()))
+      return true;
   if (I->getParent() != MainOp->getParent() &&
       (!isVectorLikeInstWithConstOps(I) ||
        !isVectorLikeInstWithConstOps(MainOp)))
