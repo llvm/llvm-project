@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.6-library -ast-dump %s | FileCheck %s
 
 // Global variables for ResourceDescriptorHeap and SamplerDescriptorHeap
-// CHECK: VarDecl {{.*}} used ResourceDescriptorHeap 'hlsl_private __hlsl_resource_descriptor_heap_struct' static internal-linkage
+// CHECK: VarDecl {{.*}} used ResourceDescriptorHeap 'hlsl_private __detail::__resource_descriptor_heap_struct' static internal-linkage
 // CHECK-NEXT: AvailabilityAttr {{.*}} shadermodel 6.6 0 0 "" "" 0
 
-// CHECK: VarDecl {{.*}} used SamplerDescriptorHeap 'hlsl_private __hlsl_sampler_descriptor_heap_struct' static internal-linkage
+// CHECK: VarDecl {{.*}} used SamplerDescriptorHeap 'hlsl_private __detail::__sampler_descriptor_heap_struct' static internal-linkage
 // CHECK-NEXT: AvailabilityAttr {{.*}} shadermodel 6.6 0 0 "" "" 0
 
 void useBuffer(RWBuffer<int> Buffer) {}
@@ -23,18 +23,18 @@ export void testInvocations(unsigned Index) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'RWBuffer<int>':'hlsl::RWBuffer<int>' <ConstructorConversion>
 
 // RWBuffer heap info constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} 'RWBuffer<int>':'hlsl::RWBuffer<int>' 'void (hlsl::__hlsl_heap_resource_info)'
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'RWBuffer<int>':'hlsl::RWBuffer<int>' 'void (hlsl::__detail::__heap_resource_info)'
 
-// __hlsl_heap_resource_info copy constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' 'void (__hlsl_heap_resource_info &&) noexcept' elidable
+// __heap_resource_info copy constructor
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::__detail::__heap_resource_info' 'void (__heap_resource_info &&) noexcept' elidable
 
 // Indexing into ResourceDescriptorHeap
-// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} '__hlsl_heap_resource_info' xvalue
-// CHECK-NEXT: CXXOperatorCallExpr {{.*}} '__hlsl_heap_resource_info' '[]'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} '__hlsl_heap_resource_info (*)(uint32_t)' <FunctionToPointerDecay>
-// CHECK-NEXT: DeclRefExpr {{.*}} '__hlsl_heap_resource_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__hlsl_heap_resource_info (uint32_t)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::__hlsl_resource_descriptor_heap_struct' lvalue <AddressSpaceConversion>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_private __hlsl_resource_descriptor_heap_struct' lvalue Var {{.*}} 'ResourceDescriptorHeap' 'hlsl_private __hlsl_resource_descriptor_heap_struct'
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} '__heap_resource_info' xvalue
+// CHECK-NEXT: CXXOperatorCallExpr {{.*}} '__heap_resource_info' '[]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '__heap_resource_info (*)(uint32_t)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} '__heap_resource_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__heap_resource_info (uint32_t)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::__detail::__resource_descriptor_heap_struct' lvalue <AddressSpaceConversion>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_private __detail::__resource_descriptor_heap_struct' lvalue Var {{.*}} 'ResourceDescriptorHeap' 'hlsl_private __detail::__resource_descriptor_heap_struct'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 
@@ -56,18 +56,18 @@ export void testInvocations(unsigned Index) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::RWBuffer<int>' <ConstructorConversion>
 
 // RWBuffer heap info constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::RWBuffer<int>' 'void (hlsl::__hlsl_heap_resource_info)'
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::RWBuffer<int>' 'void (hlsl::__detail::__heap_resource_info)'
 
-// __hlsl_heap_resource_info copy constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' 'void (__hlsl_heap_resource_info &&) noexcept' elidable
+// __heap_resource_info copy constructor
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::__detail::__heap_resource_info' 'void (__heap_resource_info &&) noexcept' elidable
 
 // Indexing into ResourceDescriptorHeap
-// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} '__hlsl_heap_resource_info' xvalue
-// CHECK-NEXT: CXXOperatorCallExpr {{.*}} '__hlsl_heap_resource_info' '[]'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} '__hlsl_heap_resource_info (*)(uint32_t)' <FunctionToPointerDecay>
-// CHECK-NEXT: DeclRefExpr {{.*}} '__hlsl_heap_resource_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__hlsl_heap_resource_info (uint32_t)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::__hlsl_resource_descriptor_heap_struct' lvalue <AddressSpaceConversion>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_private __hlsl_resource_descriptor_heap_struct' lvalue Var {{.*}} 'ResourceDescriptorHeap' 'hlsl_private __hlsl_resource_descriptor_heap_struct'
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} '__heap_resource_info' xvalue
+// CHECK-NEXT: CXXOperatorCallExpr {{.*}} '__heap_resource_info' '[]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '__heap_resource_info (*)(uint32_t)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} '__heap_resource_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__heap_resource_info (uint32_t)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::__detail::__resource_descriptor_heap_struct' lvalue <AddressSpaceConversion>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_private __detail::__resource_descriptor_heap_struct' lvalue Var {{.*}} 'ResourceDescriptorHeap' 'hlsl_private __detail::__resource_descriptor_heap_struct'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 
@@ -86,18 +86,18 @@ export void testInvocations(unsigned Index) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'RWBuffer<int>':'hlsl::RWBuffer<int>' <ConstructorConversion>
 
 // RWBuffer heap info constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} 'RWBuffer<int>':'hlsl::RWBuffer<int>' 'void (hlsl::__hlsl_heap_resource_info)'
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'RWBuffer<int>':'hlsl::RWBuffer<int>' 'void (hlsl::__detail::__heap_resource_info)'
 
-// __hlsl_heap_resource_info copy constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' 'void (__hlsl_heap_resource_info &&) noexcept' elidable
+// __heap_resource_info copy constructor
+// CHECK-NEXT: CXXConstructExpr {{.*}} 'hlsl::__detail::__heap_resource_info' 'void (__heap_resource_info &&) noexcept' elidable
 
 // Indexing into ResourceDescriptorHeap
-// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} '__hlsl_heap_resource_info' xvalue
-// CHECK-NEXT: CXXOperatorCallExpr {{.*}} '__hlsl_heap_resource_info' '[]'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} '__hlsl_heap_resource_info (*)(uint32_t)' <FunctionToPointerDecay>
-// CHECK-NEXT: DeclRefExpr {{.*}} '__hlsl_heap_resource_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__hlsl_heap_resource_info (uint32_t)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::__hlsl_resource_descriptor_heap_struct' lvalue <AddressSpaceConversion>
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_private __hlsl_resource_descriptor_heap_struct' lvalue Var {{.*}} 'ResourceDescriptorHeap' 'hlsl_private __hlsl_resource_descriptor_heap_struct'
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} '__heap_resource_info' xvalue
+// CHECK-NEXT: CXXOperatorCallExpr {{.*}} '__heap_resource_info' '[]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} '__heap_resource_info (*)(uint32_t)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} '__heap_resource_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__heap_resource_info (uint32_t)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'hlsl::__detail::__resource_descriptor_heap_struct' lvalue <AddressSpaceConversion>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl_private __detail::__resource_descriptor_heap_struct' lvalue Var {{.*}} 'ResourceDescriptorHeap' 'hlsl_private __detail::__resource_descriptor_heap_struct'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} 'unsigned int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 
@@ -113,18 +113,18 @@ export void testInvocations(unsigned Index) {
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:26, col:53> 'SamplerState' <ConstructorConversion>
 
 // SamplerState heap info constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} <col:26, col:53> 'SamplerState' 'void (hlsl::__hlsl_heap_sampler_info)'
+// CHECK-NEXT: CXXConstructExpr {{.*}} <col:26, col:53> 'SamplerState' 'void (hlsl::__detail::__heap_sampler_info)'
 
-// __hlsl_heap_resource_info copy constructor
-// CHECK-NEXT: CXXConstructExpr {{.*}} <col:26, col:53> 'hlsl::__hlsl_heap_sampler_info' 'void (__hlsl_heap_sampler_info &&) noexcept' elidable
+// __heap_resource_info copy constructor
+// CHECK-NEXT: CXXConstructExpr {{.*}} <col:26, col:53> 'hlsl::__detail::__heap_sampler_info' 'void (__heap_sampler_info &&) noexcept' elidable
 
 // Indexing into SamplerDescriptorHeap
-// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} <col:26, col:53> '__hlsl_heap_sampler_info' xvalue
-// CHECK-NEXT: CXXOperatorCallExpr {{.*}} <col:26, col:53> '__hlsl_heap_sampler_info' '[]'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <col:47, col:53> '__hlsl_heap_sampler_info (*)(uint32_t)' <FunctionToPointerDecay>
-// CHECK-NEXT: DeclRefExpr {{.*}} <col:47, col:53> '__hlsl_heap_sampler_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__hlsl_heap_sampler_info (uint32_t)'
-// CHECK-NEXT: ImplicitCastExpr {{.*}} <col:26> 'hlsl::__hlsl_sampler_descriptor_heap_struct' lvalue <AddressSpaceConversion>
-// CHECK-NEXT: DeclRefExpr {{.*}} <col:26> 'hlsl_private __hlsl_sampler_descriptor_heap_struct' lvalue Var {{.*}} 'SamplerDescriptorHeap' 'hlsl_private __hlsl_sampler_descriptor_heap_struct'
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} <col:26, col:53> '__heap_sampler_info' xvalue
+// CHECK-NEXT: CXXOperatorCallExpr {{.*}} <col:26, col:53> '__heap_sampler_info' '[]'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} <col:47, col:53> '__heap_sampler_info (*)(uint32_t)' <FunctionToPointerDecay>
+// CHECK-NEXT: DeclRefExpr {{.*}} <col:47, col:53> '__heap_sampler_info (uint32_t)' lvalue CXXMethod {{.*}} 'operator[]' '__heap_sampler_info (uint32_t)'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} <col:26> 'hlsl::__detail::__sampler_descriptor_heap_struct' lvalue <AddressSpaceConversion>
+// CHECK-NEXT: DeclRefExpr {{.*}} <col:26> 'hlsl_private __detail::__sampler_descriptor_heap_struct' lvalue Var {{.*}} 'SamplerDescriptorHeap' 'hlsl_private __detail::__sampler_descriptor_heap_struct'
 // CHECK-NEXT: ImplicitCastExpr {{.*}} <col:48> 'unsigned int' <LValueToRValue>
 // CHECK-NEXT: DeclRefExpr {{.*}} <col:48> 'unsigned int' lvalue ParmVar {{.*}} 'Index' 'unsigned int'
 

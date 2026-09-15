@@ -106,8 +106,8 @@ RESOURCE<float> Buffer;
 
 // Heap info constructor
 
-// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (hlsl::__hlsl_heap_resource_info)' inline
-// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__hlsl_heap_resource_info'
+// CHECK: CXXConstructorDecl {{.*}} [[RESOURCE]]<element_type> 'void (hlsl::__detail::__heap_resource_info)' inline
+// CHECK-NEXT: ParmVarDecl {{.*}} HeapResInfo 'hlsl::__detail::__heap_resource_info'
 // CHECK-NEXT: CompoundStmt
 // CHECK-NEXT: BinaryOperator {{.*}} '='
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
@@ -118,7 +118,7 @@ RESOURCE<float> Buffer;
 // CHECK-NEXT: MemberExpr {{.*}} lvalue .__handle
 // CHECK-NEXT: CXXThisExpr {{.*}} 'hlsl::[[RESOURCE]]<element_type>' lvalue implicit this
 // CHECK-NEXT: MemberExpr {{.*}} 'unsigned int' lvalue .Index
-// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__hlsl_heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__hlsl_heap_resource_info'
+// CHECK-NEXT: DeclRefExpr {{.*}} 'hlsl::__detail::__heap_resource_info' lvalue ParmVar {{.*}} 'HeapResInfo' 'hlsl::__detail::__heap_resource_info'
 // CHECK-NEXT: AlwaysInlineAttr
 
 // Static __createFromBinding method

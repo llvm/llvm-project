@@ -1068,8 +1068,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     Value *IndexOp = EmitScalarExpr(E->getArg(1));
     llvm::Intrinsic::ID IntrinsicID =
         CGM.getHLSLRuntime().getCreateHandleFromHeapIntrinsic();
-    SmallVector<Value *> Args{IndexOp};
-    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, Args);
+    return Builder.CreateIntrinsic(HandleTy, IntrinsicID, {IndexOp});
   }
   case Builtin::BI__builtin_hlsl_resource_counterhandlefromheap: {
     Value *MainHandle = EmitScalarExpr(E->getArg(0));
@@ -1079,9 +1078,8 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
     llvm::Intrinsic::ID IntrinsicID =
         llvm::Intrinsic::spv_resource_counterhandlefromheap;
-    SmallVector<Value *> Args{MainHandle};
     return EmitIntrinsicCall(IntrinsicID, {HandleTy, MainHandle->getType()},
-                             Args);
+                             {MainHandle});
   }
 
   case Builtin::BI__builtin_hlsl_resource_nonuniformindex: {
