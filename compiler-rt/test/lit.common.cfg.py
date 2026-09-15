@@ -1110,11 +1110,20 @@ for _triple in ("amdgpu-amd-amdhsa", "amdgcn-amd-amdhsa"):
         if _fname.startswith(_rt_prefix) and _fname.endswith(_rt_suffix):
             config.gpu_runtimes.append(_fname[len(_rt_prefix) : -len(_rt_suffix)])
 
-if getattr(config, "gpu_arch", ""):
+config.gpu_arch = lit_config.params.get("amdgpu_arch", config.gpu_arch)
+config.hip_lib_dir = lit_config.params.get("hip_lib_path", config.hip_lib_dir)
+can_run_hip = config.can_run_hip or (
+    "amdgpu_arch" in lit_config.params and "hip_lib_path" in lit_config.params
+)
+
+if config.gpu_arch:
     config.available_features.add("amdgpu")
     config.substitutions.append(("%gpu_arch", config.gpu_arch))
+    config.substitutions.append(
+        ("%amdgpu_arch", lit_config.params.get("amdgpu_arch", "native"))
+    )
 
-if getattr(config, "can_run_hip", False):
+if can_run_hip:
     config.available_features.add("hip")
     hip_flags = [
         config.clang,
@@ -1135,6 +1144,10 @@ if getattr(config, "can_run_hip", False):
             "-L%s -lamdhip64 -Wl,-rpath,%s" % (config.hip_lib_dir, config.hip_lib_dir),
         )
     )
+    config.substitutions.append(("%hip_lib_path", config.hip_lib_dir))
+
+if getattr(config, "gpu_device_count", 0) >= 2:
+    config.available_features.add("multi-device")
 
 if getattr(config, "can_run_openmp_offload", False):
     config.available_features.add("openmp-offload")
@@ -1147,7 +1160,5 @@ if getattr(config, "can_run_openmp_offload", False):
     ]
     config.substitutions.append(("%clang_omp_offload ", " ".join(omp_flags) + " "))
 
-if getattr(config, "can_run_hip", False) or getattr(
-    config, "can_run_openmp_offload", False
-):
+if can_run_hip or getattr(config, "can_run_openmp_offload", False):
     lit_config.parallelism_groups["gpu"] = 1

@@ -50,6 +50,7 @@ struct Rpc {
   bool RegisteredLiboffload{};
   atomic_uint8_t Halt{};
   Mutex Mtx{};
+  Mutex HandlerMtx{};
 };
 
 Rpc State;
@@ -57,6 +58,7 @@ Rpc State;
 Rpc& GetRpc() { return State; }
 
 u32 Dispatch(Rpc& R, void* PortPtr, u32 Lanes) {
+  Lock L(&R.HandlerMtx);
   for (uptr I = 0; I < R.Handlers.size(); ++I) {
     u32 Status = R.Handlers[I](PortPtr, Lanes);
     if (Status != rpc::RPC_UNHANDLED_OPCODE)
@@ -141,7 +143,7 @@ void* OffloadRpc::ServerLoop(void* Arg) {
 
 void OffloadRpc::RegisterHandler(Offload::Handler Fn) {
   Rpc& R = GetRpc();
-  Lock L(&R.Mtx);
+  Lock L(&R.HandlerMtx);
   for (uptr I = 0; I < R.Handlers.size(); ++I)
     if (R.Handlers[I] == Fn)
       return;

@@ -59,6 +59,7 @@ set_default("has_no_default_config_flag", @COMPILER_RT_HAS_NO_DEFAULT_CONFIG_FLA
 set_default("can_run_hip", @COMPILER_RT_CAN_RUN_HIP_PYBOOL@)
 set_default("can_run_openmp_offload", @COMPILER_RT_CAN_RUN_OPENMP_OFFLOAD_PYBOOL@)
 set_default("gpu_arch", "@COMPILER_RT_GPU_ARCH@")
+set_default("gpu_device_count", @COMPILER_RT_GPU_DEVICE_COUNT@)
 set_default("hip_lib_dir", "@COMPILER_RT_HIP_LIB_DIR@")
 # True iff the test suite supports ignoring the test compiler's runtime library path
 # and using `config.compiler_rt_libdir` instead. This only matters when the runtime
