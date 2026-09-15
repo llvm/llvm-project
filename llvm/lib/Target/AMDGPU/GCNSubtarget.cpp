@@ -674,8 +674,13 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
                                         /*OnlyFirstRequired=*/true);
 
     if (MinNumAGPRs == DefaultNumAGPR.first) {
-      // Default to splitting half the registers if AGPRs are required.
-      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+      if (getWavesPerEU(F).first >= 2) {
+        // At occupancy >= 2, do not use AGPRs.
+        MinNumAGPRs = MaxNumAGPRs = 0;
+      } else {
+        // Default to splitting half the registers if AGPRs are required.
+        MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+      }
     } else {
       // Align to accum_offset's allocation granularity.
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
