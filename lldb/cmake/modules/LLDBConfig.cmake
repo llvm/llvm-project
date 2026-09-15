@@ -59,11 +59,24 @@ mark_as_advanced(LLDB_LIBXML2_VERSION)
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit LibEdit_FOUND)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel CURSESANDPANEL_FOUND)
-add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION ${LLDB_LIBXML2_VERSION})
 add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter TREESITTER_FOUND)
+
+# liblzma comes from LLVM, and a standalone build cannot change how LLVM was
+# built, so LLDB_ENABLE_LZMA can only be reported here.
+if(LLDB_BUILT_STANDALONE AND DEFINED LLDB_ENABLE_LZMA)
+  string(TOUPPER "${LLDB_ENABLE_LZMA}" lldb_enable_lzma)
+  if(NOT lldb_enable_lzma STREQUAL "AUTO")
+    message(DEPRECATION
+      "LLDB_ENABLE_LZMA is deprecated and has no effect in a standalone build. "
+      "liblzma comes from LLVM, which was built with "
+      "LLVM_ENABLE_LZMA=${LLVM_ENABLE_LZMA}.")
+  endif()
+  unset(lldb_enable_lzma)
+endif()
+message(STATUS "Enable LZMA compression support in LLDB: ${LLVM_ENABLE_LZMA}")
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
 option(LLDB_BUILD_FRAMEWORK "Build LLDB.framework (Darwin only)" OFF)
@@ -346,10 +359,6 @@ if(NOT DEFINED LLDB_VERSION_SUFFIX)
 endif()
 set(LLDB_VERSION "${LLDB_VERSION_MAJOR}.${LLDB_VERSION_MINOR}.${LLDB_VERSION_PATCH}${LLDB_VERSION_SUFFIX}")
 message(STATUS "LLDB version: ${LLDB_VERSION}")
-
-if (LLDB_ENABLE_LZMA)
-  include_directories(${LIBLZMA_INCLUDE_DIRS})
-endif()
 
 include_directories(BEFORE
   ${CMAKE_CURRENT_BINARY_DIR}/include

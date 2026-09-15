@@ -393,6 +393,9 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_ZSTD=" ]
   }
 
+  # FIXME: no liblzma support in the GN build yet; xz decompression is off.
+  values += [ "LLVM_ENABLE_LZMA=" ]
+
   if (llvm_enable_libcurl) {
     values += [ "LLVM_ENABLE_CURL=1" ]
   } else {
