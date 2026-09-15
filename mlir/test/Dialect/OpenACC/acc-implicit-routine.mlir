@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-implicit-routine -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -acc-implicit-routine -split-input-file -verify-diagnostics | FileCheck %s
 
 // -----
 
@@ -255,3 +255,47 @@ module {
 // CHECK: test.call_and_store @undefined_callee
 // CHECK-NOT: acc.routine @acc_routine_
 // CHECK-NOT: acc.routine_info
+
+// -----
+
+// An external procedure called from a compute region cannot receive an
+// implicit routine; it must already have acc routine information.
+module {
+  func.func private @ext_callee()
+  func.func @test_external_in_serial() {
+    acc.serial {
+      // expected-error @below {{Procedures called in a compute region must have acc routine information - "ext_callee"}}
+      func.call @ext_callee() : () -> ()
+      acc.yield
+    }
+    return
+  }
+}
+
+// -----
+
+// Same requirement for an external procedure called from an existing routine.
+module {
+  acc.routine @r_caller func(@routine_caller_ext) seq
+  func.func private @ext_from_routine()
+  func.func @routine_caller_ext() attributes {acc.routine_info = #acc.routine_info<[@r_caller]>} {
+    // expected-error @below {{Procedures called in a compute region must have acc routine information - "ext_from_routine"}}
+    func.call @ext_from_routine() : () -> ()
+    return
+  }
+}
+
+// -----
+
+// External callee from acc.kernels.
+module {
+  func.func private @ext_kernels()
+  func.func @test_external_in_kernels() {
+    acc.kernels {
+      // expected-error @below {{Procedures called in a compute region must have acc routine information - "ext_kernels"}}
+      func.call @ext_kernels() : () -> ()
+      acc.terminator
+    }
+    return
+  }
+}
