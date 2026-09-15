@@ -35,6 +35,8 @@ public:
   void applySPIRVNormalize(MachineInstr &MI) const;
   bool matchSelectToFaceForward(MachineInstr &MI) const;
   void applySPIRVFaceForward(MachineInstr &MI) const;
+  bool matchDegrees(MachineInstr &MI, Register &MatchInfo) const;
+  void applyDegrees(MachineInstr &MI, Register &MatchInfo) const;
   void applyMatrixTranspose(MachineInstr &MI) const;
   void applyMatrixMultiply(MachineInstr &MI) const;
 
