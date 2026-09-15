@@ -2752,20 +2752,19 @@ namespace GH223064 {
   struct A { int n; };
   struct B : A {} b[2];
 
-  constexpr int *f() {
-    A *p = b;
+  constexpr int *f(A *p) {
     return &static_cast<B*>(p)[1].n;
   }
-  static_assert(f() == &b[1].n, "");
+  static_assert(f(b) == &b[1].n, "");
 
   struct Base1 { int x; };
   struct Base2 : Base1 { int y; };
   struct Derived : Base2 { int z; } arr[3];
 
-  constexpr int *g() {
-    Base1 *p = arr;
+  constexpr int *g(Base1 *p) {
     return &static_cast<Derived*>(p)[2].z;
   }
-  static_assert(g() == &arr[2].z, "");
+  static_assert(g(arr) == &arr[2].z, "");
 }
+
 
