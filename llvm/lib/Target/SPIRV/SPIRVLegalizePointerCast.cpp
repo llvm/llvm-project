@@ -426,8 +426,17 @@ class SPIRVLegalizePointerCastImpl {
     if (!ResultOpt) {
       if (tryReinterpretLoad(B, ElementType, Source, CastedPtr, IllegalLoad))
         return nullptr;
-      llvm_unreachable("Failed to load from aggregate: "
-                       "Could not find compatible memory layout.");
+
+      SmallVector<Value *, 4> Args = {B.getInt1(false), Source, B.getInt32(0),
+                                      B.getInt32(0)};
+      std::array<Type *, 2> Types = {Source->getType(), Source->getType()};
+      Value *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, ElementType, GEP);
+
+      LoadInst *LI = B.CreateLoad(ElementType, GEP);
+      LI->setAlignment(IllegalLoad->getAlign());
+      buildAssignType(B, ElementType, LI);
+      return LI;
     }
     auto [GEP, CurrentTy] = *ResultOpt;
 
@@ -729,8 +738,16 @@ class SPIRVLegalizePointerCastImpl {
       if (tryReinterpretStore(B, Src->getType(), Dst, CastedPtr, Src,
                               Alignment))
         return;
-      llvm_unreachable("Failed to store to aggregate: "
-                       "Could not find compatible memory layout.");
+
+      SmallVector<Value *, 4> Args = {B.getInt1(true), Dst, B.getInt32(0),
+                                      B.getInt32(0)};
+      std::array<Type *, 2> Types = {Dst->getType(), Dst->getType()};
+      Value *GEP = B.CreateIntrinsic(Intrinsic::spv_gep, {Types}, {Args});
+      GR->buildAssignPtr(B, Src->getType(), GEP);
+
+      StoreInst *SI = B.CreateStore(Src, GEP);
+      SI->setAlignment(Alignment);
+      return;
     }
     auto [GEP, CurrentTy] = *ResultOpt;
 
