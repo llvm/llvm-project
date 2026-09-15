@@ -538,8 +538,9 @@ static InstructionCost getVectorRegisterPieceCost(Type *Ty,
   return NumPieces;
 }
 
-static InstructionCost getNonNativeVectorOpPenalty(
-    Type *Ty, const DataLayout &DL, const TargetLoweringBase *TLI) {
+static InstructionCost
+getNonNativeVectorOpPenalty(Type *Ty, const DataLayout &DL,
+                            const TargetLoweringBase *TLI) {
   auto *VTy = dyn_cast<FixedVectorType>(Ty);
   if (!VTy || isCheapPTXVectorInsertExtract(Ty, DL, TLI))
     return 0;
@@ -549,9 +550,10 @@ static InstructionCost getNonNativeVectorOpPenalty(
   return VTy->getNumElements() + getVectorRegisterPieceCost(Ty, DL);
 }
 
-static InstructionCost getNonNativeVectorShufflePenalty(
-    VectorType *DstTy, VectorType *SrcTy, VectorType *SubTp,
-    const DataLayout &DL, const TargetLoweringBase *TLI) {
+static InstructionCost
+getNonNativeVectorShufflePenalty(VectorType *DstTy, VectorType *SrcTy,
+                                 VectorType *SubTp, const DataLayout &DL,
+                                 const TargetLoweringBase *TLI) {
   InstructionCost Cost = 0;
   for (VectorType *Ty : {DstTy, SrcTy, SubTp}) {
     if (!Ty)
@@ -561,14 +563,14 @@ static InstructionCost getNonNativeVectorShufflePenalty(
   return Cost;
 }
 
-InstructionCost NVPTXTTIImpl::getShuffleCost(
-    TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-    ArrayRef<int> Mask, TTI::TargetCostKind CostKind, int Index,
-    VectorType *SubTp, ArrayRef<const Value *> Args,
-    const Instruction *CxtI) const {
-  InstructionCost Cost =
-      BaseT::getShuffleCost(Kind, DstTy, SrcTy, Mask, CostKind, Index, SubTp,
-                            Args, CxtI);
+InstructionCost
+NVPTXTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
+                             VectorType *SrcTy, TTI::TargetCostKind CostKind,
+                             ArrayRef<int> Mask, int Index, VectorType *SubTp,
+                             ArrayRef<const Value *> Args,
+                             const Instruction *CxtI) const {
+  InstructionCost Cost = BaseT::getShuffleCost(Kind, DstTy, SrcTy, CostKind,
+                                               Mask, Index, SubTp, Args, CxtI);
 
   if (CostKind != TTI::TCK_RecipThroughput)
     return Cost;
@@ -695,9 +697,11 @@ InstructionCost NVPTXTTIImpl::getScalarizationOverhead(
   return Cost + BaseCost;
 }
 
-InstructionCost NVPTXTTIImpl::getCastInstrCost(
-    unsigned Opcode, Type *Dst, Type *Src, TTI::CastContextHint CCH,
-    TTI::TargetCostKind CostKind, const Instruction *I) const {
+InstructionCost NVPTXTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
+                                               Type *Src,
+                                               TTI::CastContextHint CCH,
+                                               TTI::TargetCostKind CostKind,
+                                               const Instruction *I) const {
   InstructionCost Cost =
       BaseT::getCastInstrCost(Opcode, Dst, Src, CCH, CostKind, I);
   if (CostKind != TTI::TCK_RecipThroughput)
@@ -713,9 +717,9 @@ InstructionCost NVPTXTTIImpl::getCastInstrCost(
         DstVTy->getNumElements() *
         BaseT::getCastInstrCost(Opcode, DstVTy->getElementType(),
                                 SrcVTy->getElementType(), CCH, CostKind, I);
-    InstructionCost LegalizedCost =
-        ScalarCost + getNonNativeVectorOpPenalty(Dst, DL, TLI) +
-        getNonNativeVectorOpPenalty(Src, DL, TLI);
+    InstructionCost LegalizedCost = ScalarCost +
+                                    getNonNativeVectorOpPenalty(Dst, DL, TLI) +
+                                    getNonNativeVectorOpPenalty(Src, DL, TLI);
     if (LegalizedCost > Cost)
       Cost = LegalizedCost;
   } else if (Opcode == Instruction::BitCast) {

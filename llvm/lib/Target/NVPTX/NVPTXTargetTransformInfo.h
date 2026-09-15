@@ -129,8 +129,7 @@ public:
 
   InstructionCost
   getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy, VectorType *SrcTy,
-                 ArrayRef<int> Mask = {},
-                 TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput,
+                 TTI::TargetCostKind CostKind, ArrayRef<int> Mask = {},
                  int Index = 0, VectorType *SubTp = nullptr,
                  ArrayRef<const Value *> Args = {},
                  const Instruction *CxtI = nullptr) const override;
