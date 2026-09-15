@@ -22,7 +22,7 @@
 // DISASM-NEXT: {{.*}} j {{.*}} <callee>
 // DISASM-NEXT: {{.*}} ret
 
-  .attribute arch, "rv64i2p1_zibi0p1"
+  .attribute arch, "rv64i2p1_zibi0p7"
   .text
 
   .globl conditional_tail_calls
