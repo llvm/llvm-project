@@ -1067,6 +1067,11 @@ operatorNameTokens(const Decl *D,
   else if (auto *DSDRE =
                llvm::dyn_cast_or_null<DependentScopeDeclRefExpr>(ASTNode.OrigE))
     NameInfo = DSDRE->getNameInfo();
+  else if (auto *OE = llvm::dyn_cast_or_null<OverloadExpr>(ASTNode.OrigE))
+    // An UnresolvedMemberExpr/UnresolvedLookupExpr: overload resolution for
+    // this call is dependent (e.g. on a template parameter), so it reports a
+    // reference to every candidate at the same (real, spelled) location.
+    NameInfo = OE->getNameInfo();
   else if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D))
     NameInfo = FD->getNameInfo();
   // Not every occurrence carries its own name info. Most ways of invoking an

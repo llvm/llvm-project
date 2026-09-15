@@ -186,6 +186,19 @@ TEST(HighlightsTest, All) {
         #define PLUS +
         struct S { void [[operator]] PLU^S(int); };
       )cpp",
+      R"cpp(// Regression: an overloaded operator called with dependent arguments
+        // (so overload resolution is deferred, producing an
+        // UnresolvedMemberExpr with several candidates at one location)
+        // should still have its whole name highlighted, not just `operator`.
+        struct S {
+          void operator+(int);
+          void [[operat^or]] [[+]](double);
+        };
+        template <typename T>
+        void foo(S s, T t) {
+          s.[[operator]] [[+]](t);
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
