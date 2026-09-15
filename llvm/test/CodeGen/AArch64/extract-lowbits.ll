@@ -130,8 +130,8 @@ define i64 @bzhi64_a1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_a1_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    lsl x8, x8, x9
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    and x0, x8, x0
 ; CHECK-NEXT:    ret
@@ -162,9 +162,9 @@ define i64 @bzhi64_a3_load_indexzext(ptr %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_a3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    lsl x8, x8, x9
 ; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    lsl x8, x8, x1
 ; CHECK-NEXT:    sub x8, x8, #1
 ; CHECK-NEXT:    and x0, x8, x9
 ; CHECK-NEXT:    ret
@@ -284,8 +284,8 @@ define i64 @bzhi64_b1_indexzext(i64 %val, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_b1_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x8, x8, x1
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    lsl x8, x8, x9
 ; CHECK-NEXT:    bic x0, x0, x8
 ; CHECK-NEXT:    ret
   %conv = zext i8 %numlowbits to i64
@@ -314,10 +314,10 @@ define i64 @bzhi64_b3_load_indexzext(ptr %w, i8 zeroext %numlowbits) nounwind {
 ; CHECK-LABEL: bzhi64_b3_load_indexzext:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov x8, #-1 // =0xffffffffffffffff
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    ldr x9, [x0]
-; CHECK-NEXT:    lsl x8, x8, x1
-; CHECK-NEXT:    bic x0, x9, x8
+; CHECK-NEXT:    mov w9, w1
+; CHECK-NEXT:    ldr x10, [x0]
+; CHECK-NEXT:    lsl x8, x8, x9
+; CHECK-NEXT:    bic x0, x10, x8
 ; CHECK-NEXT:    ret
   %val = load i64, ptr %w
   %conv = zext i8 %numlowbits to i64

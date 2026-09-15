@@ -40,8 +40,8 @@ define i64 @test3(i64 %x, i64 %y) {
 define i64 @test4(i64 %y, i32 %s) {
 ; CHECK-LABEL: test4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    asr x0, x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %sh_prom = zext i32 %s to i64
@@ -53,7 +53,8 @@ define i64 @test5(i64 %y, i32 %s) {
 ; CHECK-LABEL: test5:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    asr x0, x0, x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    asr x0, x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
@@ -65,7 +66,8 @@ define i64 @test6(i64 %y, i32 %s) {
 ; CHECK-LABEL: test6:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    lsl x0, x0, x1
+; CHECK-NEXT:    sxtw x8, w1
+; CHECK-NEXT:    lsl x0, x0, x8
 ; CHECK-NEXT:    ret
 entry:
   %sh_prom = sext i32 %s to i64
@@ -127,7 +129,7 @@ define i64 @ashr_add_shl_i36(i64 %r) {
 define i64 @ashr_add_shl_mismatch_shifts1(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_mismatch_shifts1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4294967296
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
 ; CHECK-NEXT:    add x8, x8, x0, lsl #8
 ; CHECK-NEXT:    asr x0, x8, #32
 ; CHECK-NEXT:    ret
@@ -140,7 +142,7 @@ define i64 @ashr_add_shl_mismatch_shifts1(i64 %r) {
 define i64 @ashr_add_shl_mismatch_shifts2(i64 %r) {
 ; CHECK-LABEL: ashr_add_shl_mismatch_shifts2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #4294967296
+; CHECK-NEXT:    mov x8, #4294967296 // =0x100000000
 ; CHECK-NEXT:    add x8, x8, x0, lsr #8
 ; CHECK-NEXT:    lsr x0, x8, #8
 ; CHECK-NEXT:    ret

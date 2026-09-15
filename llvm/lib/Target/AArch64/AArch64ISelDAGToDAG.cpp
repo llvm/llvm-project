@@ -89,6 +89,9 @@ public:
   bool SelectLogicalShiftedRegister(SDValue N, SDValue &Reg, SDValue &Shift) {
     return SelectShiftedRegister(N, true, Reg, Shift);
   }
+  template <unsigned ShiftWidth>
+  bool SelectShiftMask(SDValue N, SDValue &ShAmt);
+
   bool SelectAddrModeIndexed7S8(SDValue N, SDValue &Base, SDValue &OffImm) {
     return SelectAddrModeIndexed7S(N, 1, Base, OffImm);
   }
@@ -765,6 +768,25 @@ bool AArch64DAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// SelectArithImmed - Select an immediate value that can be represented as
 /// a 12-bit value shifted left by either 0 or 12.  If so, return true with
 /// Val set to the 12-bit value and Shift set to the shifter operand.
+template <unsigned ShiftWidth>
+bool AArch64DAGToDAGISel::SelectShiftMask(SDValue N, SDValue &ShAmt) {
+  // AArch64 shift instructions only use the low log2(ShiftWidth) bits of the
+  // shift amount. If the shift amount has a redundant AND mask that exactly
+  // covers a narrow type, we can remove it.
+  // Note: do not strip ZERO_EXTEND/ANY_EXTEND here as that can cause
+  // register class mismatches (e.g. returning a 32-bit value for an i64 shift).
+  if (N.getOpcode() == ISD::AND && isa<ConstantSDNode>(N.getOperand(1)) &&
+      N.getValueType() == (ShiftWidth == 32 ? MVT::i32 : MVT::i64)) {
+    uint64_t Mask = N.getConstantOperandVal(1);
+    // Only remove AND if it exactly masks a narrow type (byte, halfword, word).
+    if (Mask == 0xff || Mask == 0xffff || Mask == 0xffffffff)
+      N = N.getOperand(0);
+  }
+
+  ShAmt = N;
+  return true;
+}
+
 bool AArch64DAGToDAGISel::SelectArithImmed(SDValue N, SDValue &Val,
                                            SDValue &Shift) {
   // This function is called from the addsub_shifted_imm ComplexPattern,

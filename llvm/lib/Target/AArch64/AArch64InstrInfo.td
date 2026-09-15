@@ -2967,6 +2967,24 @@ def : ShiftAlias<"lsrv", LSRVXr, GPR64>;
 def : ShiftAlias<"rorv", RORVWr, GPR32>;
 def : ShiftAlias<"rorv", RORVXr, GPR64>;
 
+// ComplexPattern to match shift amounts with redundant AND masks.
+// AArch64 shift instructions only use the low 5 bits (i32) or 6 bits (i64),
+// so AND masks that cover those bits are redundant.
+def shiftMask32 : ComplexPattern<i32, 1, "SelectShiftMask<32>", [], [], 0>;
+def gi_shift_mask32 : GIComplexOperandMatcher<s32, "selectShiftMask32">,
+                      GIComplexPatternEquiv<shiftMask32>;
+
+def : Pat<(i32 (shl GPR32:$Rn, shiftMask32:$Rm)), (LSLVWr GPR32:$Rn, shiftMask32:$Rm)>;
+def : Pat<(i32 (srl GPR32:$Rn, shiftMask32:$Rm)), (LSRVWr GPR32:$Rn, shiftMask32:$Rm)>;
+def : Pat<(i32 (sra GPR32:$Rn, shiftMask32:$Rm)), (ASRVWr GPR32:$Rn, shiftMask32:$Rm)>;
+def shiftMask64 : ComplexPattern<i64, 1, "SelectShiftMask<64>", [], [], 0>;
+def gi_shift_mask64 : GIComplexOperandMatcher<s64, "selectShiftMask64">,
+                      GIComplexPatternEquiv<shiftMask64>;
+
+def : Pat<(i64 (shl GPR64:$Rn, shiftMask64:$Rm)), (LSLVXr GPR64:$Rn, shiftMask64:$Rm)>;
+def : Pat<(i64 (srl GPR64:$Rn, shiftMask64:$Rm)), (LSRVXr GPR64:$Rn, shiftMask64:$Rm)>;
+def : Pat<(i64 (sra GPR64:$Rn, shiftMask64:$Rm)), (ASRVXr GPR64:$Rn, shiftMask64:$Rm)>;
+
 // Multiply-add
 let AddedComplexity = 5 in {
 defm MADD : MulAccum<0, "madd">;

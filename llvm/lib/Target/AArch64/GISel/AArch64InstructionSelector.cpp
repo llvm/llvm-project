@@ -385,6 +385,8 @@ private:
   ComplexRendererFns selectShiftA_64(const MachineOperand &Root) const;
   ComplexRendererFns selectShiftB_64(const MachineOperand &Root) const;
 
+  ComplexRendererFns selectShiftMask32(MachineOperand &Root) const;
+  ComplexRendererFns selectShiftMask64(MachineOperand &Root) const;
   ComplexRendererFns select12BitValueWithLeftShift(uint64_t Immed) const;
   ComplexRendererFns selectArithImmed(MachineOperand &Root) const;
   ComplexRendererFns selectNegArithImmed(MachineOperand &Root) const;
@@ -7300,6 +7302,63 @@ AArch64InstructionSelector::selectShiftB_64(const MachineOperand &Root) const {
     return std::nullopt;
   uint64_t Enc = 63 - *MaybeImmed;
   return {{[=](MachineInstrBuilder &MIB) { MIB.addImm(Enc); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectShiftMask32(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register ShAmtReg = Root.getReg();
+
+  // Peek through zext.
+  Register ZExtSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GZExt(m_Reg(ZExtSrcReg))))
+    ShAmtReg = ZExtSrcReg;
+
+  // Remove redundant AND mask. AArch64 i32 shift instructions only use
+  // the low 5 bits of the shift amount, so an AND that covers those bits
+  // is redundant.
+  APInt AndMask;
+  Register AndSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask)))) {
+    APInt ShMask(AndMask.getBitWidth(), 31);
+    if (ShMask.isSubsetOf(AndMask))
+      ShAmtReg = AndSrcReg;
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
+}
+
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectShiftMask64(MachineOperand &Root) const {
+  if (!Root.isReg())
+    return std::nullopt;
+
+  MachineRegisterInfo &MRI =
+      Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register ShAmtReg = Root.getReg();
+
+  // Peek through zext.
+  Register ZExtSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GZExt(m_Reg(ZExtSrcReg))))
+    ShAmtReg = ZExtSrcReg;
+
+  // Remove redundant AND mask introduced by legalization of a narrow zext.
+  // Only remove if the mask exactly covers a byte, halfword, or word.
+  APInt AndMask;
+  Register AndSrcReg;
+  if (mi_match(ShAmtReg, MRI, m_GAnd(m_Reg(AndSrcReg), m_ICst(AndMask)))) {
+    uint64_t UMask = AndMask.getZExtValue();
+    if (UMask == 0xff || UMask == 0xffff || UMask == 0xffffffff)
+      ShAmtReg = AndSrcReg;
+  }
+
+  return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(ShAmtReg); }}};
 }
 
 /// Helper to select an immediate value that can be represented as a 12-bit
