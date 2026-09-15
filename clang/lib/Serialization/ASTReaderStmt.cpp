@@ -2582,6 +2582,7 @@ void ASTStmtReader::VisitOMPSplitDirective(OMPSplitDirective *D) {
 
 void ASTStmtReader::VisitOMPFuseDirective(OMPFuseDirective *D) {
   VisitOMPCanonicalLoopSequenceTransformationDirective(D);
+  D->setFusedLoopIdx(Record.readInt());
 }
 
 void ASTStmtReader::VisitOMPForDirective(OMPForDirective *D) {
