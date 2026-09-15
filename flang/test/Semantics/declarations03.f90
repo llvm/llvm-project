@@ -67,6 +67,19 @@ subroutine common2()
   bind(c, name='xcom') /com/ ! no error
 end subroutine
 
+subroutine common3()
+  real :: y
+  common /comA/ y
+  bind(c, name='xcom2') /comA/ ! no error
+end subroutine
+
+subroutine common4()
+  real :: y
+  common /comB/ y
+  bind(c, name='xcom2') /comB/ ! no error
+end subroutine
+
+
 module a
   integer, bind(c, name="int") :: i
 end module
