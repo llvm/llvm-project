@@ -343,7 +343,7 @@ The primary goal of experimental support is to assist in the process of ratifica
 
 `experimental-zibi`
 
-: LLVM implements the [0.1 release specification](https://github.com/riscv/zibi/releases/tag/v0.1.0).
+: LLVM implements the [0.1 draft specification](https://github.com/riscv/zibi/blob/c7a9b9b3083b3c79a9eb27e5daf4addfb1450122/src/zibi.adoc).
 
 `experimental-zicfilp`, `experimental-zicfiss`
 
