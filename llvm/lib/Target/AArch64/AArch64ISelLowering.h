@@ -141,6 +141,9 @@ public:
 
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
+  /// Expand the sentinel-aware find_last_active node after DAG combining.
+  SDValue expandFindLastActive(SDValue Op, SelectionDAG &DAG) const;
+
   /// This method returns a target specific FastISel object, or null if the
   /// target does not support "fast" ISel.
   FastISel *
@@ -669,6 +672,8 @@ private:
   SDValue LowerMLOAD(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerVECTOR_COMPRESS(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue LowerVECTOR_FIND_LAST_ACTIVE(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;

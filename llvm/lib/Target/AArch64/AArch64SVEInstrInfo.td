@@ -5090,6 +5090,18 @@ let Predicates = [HasSVE2p2_or_SME2p2] in {
   defm FIRSTP_XPP : sve_int_pcount_pred<0b001, "firstp", int_aarch64_sve_firstp>;
   defm LASTP_XPP  : sve_int_pcount_pred<0b010, "lastp", int_aarch64_sve_lastp>;
 
+  def : Pat<(i64 (AArch64LastP nxv16i1:$Pg, nxv16i1:$Op1)),
+            (LASTP_XPP_B PPR:$Pg, PPR:$Op1)>;
+
+  def : Pat<(i64 (AArch64LastP nxv8i1:$Pg, nxv8i1:$Op1)),
+            (LASTP_XPP_H PPR:$Pg, PPR:$Op1)>;
+
+  def : Pat<(i64 (AArch64LastP nxv4i1:$Pg, nxv4i1:$Op1)),
+            (LASTP_XPP_S PPR:$Pg, PPR:$Op1)>;
+
+  def : Pat<(i64 (AArch64LastP nxv2i1:$Pg, nxv2i1:$Op1)),
+            (LASTP_XPP_D PPR:$Pg, PPR:$Op1)>;
+
   def : Pat<(i64 (AArch64CttzEltsZeroPoison nxv16i1:$Pg, nxv16i1:$Op1)),
             (FIRSTP_XPP_B PPR:$Pg, PPR:$Op1)>;
 
