@@ -2160,3 +2160,37 @@ func.func @_QPeoshift1d(%arg0: !fir.ref<i32> {fir.bindc_name = "n"}, %arg1: !fir
 }
 // CHECK-LABEL:   func.func @_QPeoshift1d(
 // CHECK: hlfir.eoshift
+
+// ! Test CLASS(*) (unlimited polymorphic) array.
+// ! Since unlimited polymorphic arrays can dynamically hold derived types
+// ! and have runtime-determined types, EOSHIFT simplification must be skipped
+// ! (bail-out).
+// CHECK-LABEL:   func.func @_QQmain_eoshift_unlimited_poly(
+// CHECK:           hlfir.eoshift
+func.func @_QQmain_eoshift_unlimited_poly(
+    %arg0: !fir.class<!fir.ptr<!fir.array<?x?x?xnone>>> {fir.bindc_name = "b1"},
+    %arg1: !fir.class<!fir.ptr<none>> {fir.bindc_name = "boundval"}) {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QQmainEb1"} : (!fir.class<!fir.ptr<!fir.array<?x?x?xnone>>>, !fir.dscope) -> (!fir.class<!fir.array<?x?x?xnone>>, !fir.class<!fir.array<?x?x?xnone>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QQmainEboundval"} : (!fir.class<!fir.ptr<none>>, !fir.dscope) -> (!fir.class<none>, !fir.class<none>)
+  %4 = hlfir.eoshift %1#0 %c1_i32 boundary %2#0 dim %c1_i32 : (!fir.class<!fir.array<?x?x?xnone>>, i32, !fir.class<none>, i32) -> !hlfir.expr<?x?x?xnone?>
+  hlfir.destroy %4 : !hlfir.expr<?x?x?xnone?>
+  return
+}
+
+// ! Test CLASS(T) (bounded polymorphic) array.
+// ! Bounded polymorphic arrays also bail out.
+// CHECK-LABEL:   func.func @_QQmain_eoshift_bounded_poly(
+// CHECK:           hlfir.eoshift
+func.func @_QQmain_eoshift_bounded_poly(
+    %arg0: !fir.class<!fir.ptr<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>> {fir.bindc_name = "b1"},
+    %arg1: !fir.class<!fir.ptr<!fir.type<_QMmTbase{i:i32}>>> {fir.bindc_name = "boundval"}) {
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1:2 = hlfir.declare %arg0 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QQmainEb1_bounded"} : (!fir.class<!fir.ptr<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>>, !fir.dscope) -> (!fir.class<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>, !fir.class<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>)
+  %2:2 = hlfir.declare %arg1 dummy_scope %0 {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QQmainEboundval_bounded"} : (!fir.class<!fir.ptr<!fir.type<_QMmTbase{i:i32}>>>, !fir.dscope) -> (!fir.class<!fir.type<_QMmTbase{i:i32}>>, !fir.class<!fir.type<_QMmTbase{i:i32}>>)
+  %4 = hlfir.eoshift %1#0 %c1_i32 boundary %2#0 dim %c1_i32 : (!fir.class<!fir.array<?x?x?x!fir.type<_QMmTbase{i:i32}>>>, i32, !fir.class<!fir.type<_QMmTbase{i:i32}>>, i32) -> !hlfir.expr<?x?x?x!fir.type<_QMmTbase{i:i32}>?>
+  hlfir.destroy %4 : !hlfir.expr<?x?x?x!fir.type<_QMmTbase{i:i32}>?>
+  return
+}

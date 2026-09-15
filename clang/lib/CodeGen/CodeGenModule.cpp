@@ -1434,6 +1434,15 @@ void CodeGenModule::Release() {
                             llvm::FloatABI::getABITypeName(FloatABI)));
   }
 
+  // Record the thread model as a module flag when it differs from the target
+  // default.
+  llvm::ThreadModel ThreadModel =
+      LangOpts.getThreadModel() == LangOptions::ThreadModelKind::Single
+          ? llvm::ThreadModel::Single
+          : llvm::ThreadModel::POSIX;
+  if (ThreadModel != getTriple().getDefaultThreadModel())
+    getModule().setThreadModel(ThreadModel);
+
   if (getTypes().isLongDoubleReferenced()) {
     const llvm::fltSemantics *flt = &getTarget().getLongDoubleFormat();
 
@@ -1490,7 +1499,8 @@ void CodeGenModule::Release() {
   // Other targets have no apparent need for the ABI name, but set a non-empty
   // value.
   if (StringRef ABIStr = Target.getABI();
-      !ABIStr.empty() && (T.isARM() || T.isThumb() || T.isRISCV())) {
+      !ABIStr.empty() &&
+      (T.isARM() || T.isThumb() || T.isRISCV() || T.isPPC())) {
     getModule().addModuleFlag(llvm::Module::Error, "target-abi",
                               llvm::MDString::get(VMContext, ABIStr));
   }

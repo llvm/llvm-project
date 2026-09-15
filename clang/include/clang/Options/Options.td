@@ -2455,11 +2455,14 @@ def fseh_exceptions : Flag<["-"], "fseh-exceptions">, Group<f_Group>,
   HelpText<"Use SEH style exceptions">;
 def fwasm_exceptions : Flag<["-"], "fwasm-exceptions">, Group<f_Group>,
   HelpText<"Use WebAssembly style exceptions">;
+def femscripten_exceptions : Flag<["-"], "femscripten-exceptions">,
+  Group<f_Group>,
+  HelpText<"Use Emscripten JavaScript-based C++ exceptions">;
 def exception_model : Separate<["-"], "exception-model">,
   Visibility<[CC1Option]>, HelpText<"The exception model">,
-  Values<"dwarf,sjlj,seh,wasm,none">,
+  Values<"dwarf,sjlj,seh,wasm,emscripten,none">,
   NormalizedValuesScope<"CodeGenOptions::ExceptionHandlingKind">,
-  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "None"]>,
+  NormalizedValues<["DwarfCFI", "SjLj", "WinEH", "Wasm", "Emscripten", "None"]>,
   MarshallingInfoEnum<CodeGenOpts<"ExceptionHandling">, "None">;
 def exception_model_EQ : Joined<["-"], "exception-model=">,
   Visibility<[CC1Option]>, Alias<exception_model>;
