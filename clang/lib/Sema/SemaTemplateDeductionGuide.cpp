@@ -998,9 +998,6 @@ buildAssociatedConstraints(Sema &SemaRef, FunctionTemplateDecl *F,
           AliasTemplate->getInstantiatedFromMemberTemplate())
     AdjustDepth = PrimaryTemplate->getTemplateDepth();
 
-  // FIXME: We're rebuilding the synthesized template parameter list again
-  // Consider reuse the template parameter from its caller.
-
   // We rebuild all template parameters with the uninstantiated depth, and
   // build template arguments refer to them.
   SmallVector<TemplateArgument> AdjustedAliasTemplateArgs(
