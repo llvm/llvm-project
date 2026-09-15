@@ -3352,10 +3352,12 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
   B.Reg = FuncInfo.CreateReg(B.RegVT);
   SDValue CopyTo = DAG.getCopyToReg(getControlRoot(), dl, B.Reg, Sub);
 
-  MachineBasicBlock* MBB = B.Cases[0].ThisBB;
+  MachineBasicBlock *MBB = B.Cases[0].ThisBB;
+  MachineBasicBlock *RangeCheckDefault =
+      B.RangeCheckDefault ? B.RangeCheckDefault : B.Default;
 
   if (!B.FallthroughUnreachable)
-    addSuccessorWithProb(SwitchBB, B.Default, B.DefaultProb);
+    addSuccessorWithProb(SwitchBB, RangeCheckDefault, B.DefaultProb);
   addSuccessorWithProb(SwitchBB, MBB, B.Prob);
   SwitchBB->normalizeSuccProbs();
 
@@ -3369,7 +3371,7 @@ void SelectionDAGBuilder::visitBitTestHeader(BitTestBlock &B,
         ISD::SETUGT);
 
     Root = DAG.getNode(ISD::BRCOND, dl, MVT::Other, Root, RangeCmp,
-                       DAG.getBasicBlock(B.Default));
+                       DAG.getBasicBlock(RangeCheckDefault));
   }
 
   // Avoid emitting unnecessary branches to the next block.
@@ -12532,20 +12534,45 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
   for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I)
     UnhandledProbs += I->Prob;
 
-  MachineBasicBlock *CurMBB = W.MBB;
-  for (CaseClusterIt I = W.FirstCluster, E = W.LastCluster; I <= E; ++I) {
+  // Insert bit-test blocks before the linear work-item continuation blocks so
+  // that pre-creating the latter preserves the existing layout.
+  for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I) {
+    if (I->Kind != CC_BitTests)
+      continue;
+    BitTestBlock *BTB = &SL->BitTestCases[I->BTCasesIndex];
+    for (BitTestCase &BTC : BTB->Cases)
+      CurMF->insert(BBI, BTC.ThisBB);
+  }
+
+  // Give every cluster a stable entry block.  Besides making the normal
+  // fallthrough chain explicit, this lets a bit-test range failure jump over
+  // preceding clusters that cannot contain an out-of-range value.
+  SmallVector<MachineBasicBlock *, 8> ClusterMBBs;
+  ClusterMBBs.reserve(Size);
+  ClusterMBBs.push_back(W.MBB);
+  for (unsigned Index = 1; Index < Size; ++Index) {
+    MachineBasicBlock *EntryMBB =
+        CurMF->CreateMachineBasicBlock(W.MBB->getBasicBlock());
+    CurMF->insert(BBI, EntryMBB);
+    ClusterMBBs.push_back(EntryMBB);
+  }
+  if (Size > 1)
+    ExportFromCurrentBlock(Cond);
+
+  MachineBasicBlock *CurMBB = nullptr;
+  for (unsigned ClusterIndex = 0; ClusterIndex < Size; ++ClusterIndex) {
+    CaseClusterIt I = W.FirstCluster + ClusterIndex;
+    CurMBB = ClusterMBBs[ClusterIndex];
+
     bool FallthroughUnreachable = false;
     MachineBasicBlock *Fallthrough;
-    if (I == W.LastCluster) {
+    if (ClusterIndex + 1 == Size) {
       // For the last cluster, fall through to the default destination.
       Fallthrough = DefaultMBB;
       FallthroughUnreachable = isa<UnreachableInst>(
           DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
     } else {
-      Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
-      CurMF->insert(BBI, Fallthrough);
-      // Put Cond in a virtual register to make it available from the new blocks.
-      ExportFromCurrentBlock(Cond);
+      Fallthrough = ClusterMBBs[ClusterIndex + 1];
     }
     UnhandledProbs -= I->Prob;
 
@@ -12615,13 +12642,48 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         // FIXME: Optimize away range check based on pivot comparisons.
         BitTestBlock *BTB = &SL->BitTestCases[I->BTCasesIndex];
 
-        // The bit test blocks haven't been inserted yet; insert them here.
-        for (BitTestCase &BTC : BTB->Cases)
-          CurMF->insert(BBI, BTC.ThisBB);
+        // The bit-test blocks were inserted before the work-item entry
+        // blocks were created.
 
         // Fill in fields of the BitTestBlock.
         BTB->Parent = CurMBB;
         BTB->Default = Fallthrough;
+        BTB->RangeCheckDefault = nullptr;
+
+        // In the zero-based form, a range failure is either below First or
+        // above First + Range.  If the remaining clusters are laid out as an
+        // in-range prefix followed by an out-of-range suffix, the suffix has
+        // a stable entry block that can be used as the range-failure target.
+        // Otherwise retain the old combined continuation for now.
+        if (BTB->First.isZero()) {
+          APInt RangeEnd = BTB->First + BTB->Range;
+          unsigned FirstUpperOutOfRange = Size;
+          bool HasLowerOutOfRange = false;
+          bool HasInRangeAfterUpper = false;
+
+          for (unsigned JIndex = ClusterIndex + 1; JIndex < Size; ++JIndex) {
+            CaseClusterIt J = W.FirstCluster + JIndex;
+            bool IsBelowRange = J->High->getValue().slt(BTB->First);
+            bool IsAboveRange = J->Low->getValue().sgt(RangeEnd);
+            if (IsBelowRange) {
+              HasLowerOutOfRange = true;
+              break;
+            }
+            if (IsAboveRange) {
+              if (FirstUpperOutOfRange == Size)
+                FirstUpperOutOfRange = JIndex;
+            } else if (FirstUpperOutOfRange != Size) {
+              HasInRangeAfterUpper = true;
+              break;
+            }
+          }
+
+          if (!HasLowerOutOfRange && !HasInRangeAfterUpper) {
+            BTB->RangeCheckDefault = FirstUpperOutOfRange == Size
+                                         ? DefaultMBB
+                                         : ClusterMBBs[FirstUpperOutOfRange];
+          }
+        }
 
         BTB->DefaultProb = UnhandledProbs;
         // If the cases in bit test don't form a contiguous range, we evenly
@@ -12674,8 +12736,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
 
         break;
       }
-    }
-    CurMBB = Fallthrough;
+      }
   }
 }
 

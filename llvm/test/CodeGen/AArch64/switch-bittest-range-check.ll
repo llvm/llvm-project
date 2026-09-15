@@ -16,42 +16,43 @@ define i32 @switch1(i32 %x) "no-jump-tables"="true" {
 ; CHECK-NEXT:    .cfi_offset w30, -16
 ; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    cmp w0, #12
-; CHECK-NEXT:    b.hi .LBB0_6
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    b.hi .LBB0_8
 ; CHECK-NEXT:  // %bb.1: // %entry
-; CHECK-NEXT:    mov w8, #1152 // =0x480
-; CHECK-NEXT:    lsr w8, w8, w19
-; CHECK-NEXT:    tbnz w8, #0, .LBB0_8
+; CHECK-NEXT:    mov w9, #1152 // =0x480
+; CHECK-NEXT:    lsr w9, w9, w19
+; CHECK-NEXT:    tbnz w9, #0, .LBB0_6
 ; CHECK-NEXT:  // %bb.2: // %entry
-; CHECK-NEXT:    mov w8, #2304 // =0x900
-; CHECK-NEXT:    lsr w8, w8, w19
-; CHECK-NEXT:    tbnz w8, #0, .LBB0_5
+; CHECK-NEXT:    mov w9, #2304 // =0x900
+; CHECK-NEXT:    lsr w9, w9, w19
+; CHECK-NEXT:    tbnz w9, #0, .LBB0_5
 ; CHECK-NEXT:  // %bb.3: // %entry
-; CHECK-NEXT:    mov w8, #4608 // =0x1200
-; CHECK-NEXT:    lsr w8, w8, w19
-; CHECK-NEXT:    tbz w8, #0, .LBB0_6
+; CHECK-NEXT:    mov w9, #4608 // =0x1200
+; CHECK-NEXT:    lsr w9, w9, w19
+; CHECK-NEXT:    tbz w9, #0, .LBB0_9
 ; CHECK-NEXT:  // %bb.4: // %case9
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl foo3
-; CHECK-NEXT:    b .LBB0_10
+; CHECK-NEXT:    b .LBB0_7
 ; CHECK-NEXT:  .LBB0_5: // %case8
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl foo2
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_6: // %entry
-; CHECK-NEXT:    cmp w19, #4
-; CHECK-NEXT:    b.ne .LBB0_9
-; CHECK-NEXT:  // %bb.7: // %case4
-; CHECK-NEXT:    mov w0, #4 // =0x4
-; CHECK-NEXT:    bl foo4
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_8: // %case7
+; CHECK-NEXT:    b .LBB0_7
+; CHECK-NEXT:  .LBB0_6: // %case7
 ; CHECK-NEXT:    mov w0, w19
 ; CHECK-NEXT:    bl foo1
-; CHECK-NEXT:    b .LBB0_10
-; CHECK-NEXT:  .LBB0_9:
-; CHECK-NEXT:    mov w19, wzr
-; CHECK-NEXT:  .LBB0_10: // %return
+; CHECK-NEXT:  .LBB0_7: // %return
 ; CHECK-NEXT:    mov w0, w19
+; CHECK-NEXT:  .LBB0_8: // %return
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB0_9: // %entry
+; CHECK-NEXT:    cmp w19, #4
+; CHECK-NEXT:    b.ne .LBB0_8
+; CHECK-NEXT:  // %bb.10: // %case4
+; CHECK-NEXT:    mov w0, #4 // =0x4
+; CHECK-NEXT:    bl foo4
+; CHECK-NEXT:    mov w0, #4 // =0x4
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
@@ -88,51 +89,54 @@ define i32 @switch2(i32 %x) "no-jump-tables"="true" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w30, -16
-; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    cmp w0, #12
-; CHECK-NEXT:    b.hi .LBB1_5
+; CHECK-NEXT:    b.hi .LBB1_9
 ; CHECK-NEXT:  // %bb.1: // %entry
 ; CHECK-NEXT:    mov w8, #1152 // =0x480
-; CHECK-NEXT:    lsr w8, w8, w19
-; CHECK-NEXT:    tbnz w8, #0, .LBB1_9
+; CHECK-NEXT:    lsr w8, w8, w0
+; CHECK-NEXT:    tbnz w8, #0, .LBB1_6
 ; CHECK-NEXT:  // %bb.2: // %entry
 ; CHECK-NEXT:    mov w8, #2304 // =0x900
-; CHECK-NEXT:    lsr w8, w8, w19
-; CHECK-NEXT:    tbnz w8, #0, .LBB1_8
+; CHECK-NEXT:    lsr w8, w8, w0
+; CHECK-NEXT:    tbnz w8, #0, .LBB1_5
 ; CHECK-NEXT:  // %bb.3: // %entry
 ; CHECK-NEXT:    mov w8, #4608 // =0x1200
-; CHECK-NEXT:    lsr w8, w8, w19
-; CHECK-NEXT:    tbz w8, #0, .LBB1_5
+; CHECK-NEXT:    lsr w8, w8, w0
+; CHECK-NEXT:    tbz w8, #0, .LBB1_8
 ; CHECK-NEXT:  // %bb.4: // %case9
-; CHECK-NEXT:    mov w0, w19
+; CHECK-NEXT:    mov w19, w0
 ; CHECK-NEXT:    bl foo3
-; CHECK-NEXT:    b .LBB1_12
-; CHECK-NEXT:  .LBB1_5: // %entry
-; CHECK-NEXT:    cmp w19, #4
-; CHECK-NEXT:    b.eq .LBB1_10
-; CHECK-NEXT:  // %bb.6: // %entry
-; CHECK-NEXT:    cmp w19, #1897
+; CHECK-NEXT:    b .LBB1_7
+; CHECK-NEXT:  .LBB1_5: // %case8
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    bl foo2
+; CHECK-NEXT:    b .LBB1_7
+; CHECK-NEXT:  .LBB1_6: // %case7
+; CHECK-NEXT:    mov w19, w0
+; CHECK-NEXT:    bl foo1
+; CHECK-NEXT:  .LBB1_7: // %case7
+; CHECK-NEXT:    mov w0, w19
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_8: // %entry
+; CHECK-NEXT:    cmp w0, #4
+; CHECK-NEXT:    b.eq .LBB1_12
+; CHECK-NEXT:  .LBB1_9: // %entry
+; CHECK-NEXT:    cmp w0, #1897
 ; CHECK-NEXT:    b.ne .LBB1_11
-; CHECK-NEXT:  // %bb.7: // %case1897
+; CHECK-NEXT:  // %bb.10: // %case1897
 ; CHECK-NEXT:    mov w0, #4 // =0x4
 ; CHECK-NEXT:    bl foo5
-; CHECK-NEXT:    b .LBB1_12
-; CHECK-NEXT:  .LBB1_8: // %case8
-; CHECK-NEXT:    mov w0, w19
-; CHECK-NEXT:    bl foo2
-; CHECK-NEXT:    b .LBB1_12
-; CHECK-NEXT:  .LBB1_9: // %case7
-; CHECK-NEXT:    mov w0, w19
-; CHECK-NEXT:    bl foo1
-; CHECK-NEXT:    b .LBB1_12
-; CHECK-NEXT:  .LBB1_10: // %case4
-; CHECK-NEXT:    mov w0, #4 // =0x4
-; CHECK-NEXT:    bl foo4
-; CHECK-NEXT:    b .LBB1_12
+; CHECK-NEXT:    mov w0, #1897 // =0x769
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_11:
-; CHECK-NEXT:    mov w19, wzr
-; CHECK-NEXT:  .LBB1_12: // %return
-; CHECK-NEXT:    mov w0, w19
+; CHECK-NEXT:    mov w0, wzr
+; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+; CHECK-NEXT:  .LBB1_12: // %case4
+; CHECK-NEXT:    bl foo4
+; CHECK-NEXT:    mov w0, #4 // =0x4
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
