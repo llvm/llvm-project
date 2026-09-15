@@ -1164,7 +1164,7 @@ SwitchInst::CaseHandleImpl<LLVMCaseItT, BlockT, ConstT>::getCaseSuccessor()
   return cast<BlockT>(Ctx.getValue(LLVMBB));
 }
 
-template class SwitchInst::CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock,
+template class LLVM_ABI_FOR_TEST SwitchInst::CaseHandleImpl<llvm::SwitchInst::CaseIt, BasicBlock,
                                           ConstantInt>;
 template class SwitchInst::CaseItImpl<llvm::SwitchInst::CaseIt, BasicBlock,
                                       ConstantInt>;
