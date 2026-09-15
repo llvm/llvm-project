@@ -4499,6 +4499,7 @@ TEST_F(AArch64GISelMITest, NarrowFPTOIExtLLT) {
   if (!TM)
     GTEST_SKIP();
 
+  const bool SavedUseExtended = LLT::getUseExtended();
   LLT::setUseExtended(true);
 
   DefineLegalizerInfo(A, {});
@@ -4535,7 +4536,7 @@ TEST_F(AArch64GISelMITest, NarrowFPTOIExtLLT) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 
-  LLT::setUseExtended(false);
+  LLT::setUseExtended(SavedUseExtended);
 }
 
 } // namespace
