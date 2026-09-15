@@ -1,0 +1,28 @@
+# Test get_host_triple() from llvm/cmake/modules/GetHostTriple.cmake for host
+# systems where config.guess cannot be used, such as HarmonyOS: uname -s
+# reports "HarmonyOS", which config.guess does not recognize, and its probing
+# is rejected by the system sandbox. The CMake variables that CMake's platform
+# detection normally provides are simulated via the driver in Inputs.
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=HarmonyOS -DHOST_SYSTEM_PROCESSOR=aarch64 -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=HARMONYOS-AARCH64
+HARMONYOS-AARCH64: host_triple=aarch64-unknown-linux-ohos
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=HarmonyOS -DHOST_SYSTEM_PROCESSOR=armv7l -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=HARMONYOS-ARM
+HARMONYOS-ARM: host_triple=arm-unknown-linux-ohos
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=HarmonyOS -DHOST_SYSTEM_PROCESSOR=x86_64 -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=HARMONYOS-X86_64
+HARMONYOS-X86_64: host_triple=x86_64-unknown-linux-ohos
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=HarmonyOS -DHOST_SYSTEM_PROCESSOR=riscv64 -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=HARMONYOS-RISCV64
+HARMONYOS-RISCV64: host_triple=riscv64-unknown-linux-ohos
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=HarmonyOS -DHOST_SYSTEM_PROCESSOR=loongarch64 -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=HARMONYOS-LOONGARCH64
+HARMONYOS-LOONGARCH64: host_triple=loongarch64-unknown-linux-ohos
+
+# The OpenHarmony and OHOS spellings of the host system name are handled the
+# same way.
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=OpenHarmony -DHOST_SYSTEM_PROCESSOR=aarch64 -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=OPENHARMONY-AARCH64
+OPENHARMONY-AARCH64: host_triple=aarch64-unknown-linux-ohos
+
+RUN: %cmake -DSRC_ROOT=%S/../.. -DHOST_SYSTEM_NAME=OHOS -DHOST_SYSTEM_PROCESSOR=aarch64 -P %S/Inputs/get-host-triple.cmake 2>&1 | FileCheck %s --check-prefix=OHOS-AARCH64
+OHOS-AARCH64: host_triple=aarch64-unknown-linux-ohos
