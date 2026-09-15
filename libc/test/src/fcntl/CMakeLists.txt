@@ -76,3 +76,7 @@ add_libc_test(
     libc.src.__support.CPP.scope
     libc.test.UnitTest.ErrnoCheckingTest
 )
+
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${LIBC_TARGET_OS})
+endif()
