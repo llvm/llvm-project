@@ -11,6 +11,7 @@
 
 #include "flang/Common/Fortran-consts.h"
 #include "flang/Evaluate/common.h"
+#include "flang/Evaluate/complex-value.h"
 #include "flang/Evaluate/integer-value.h"
 #include "flang/Evaluate/logical-value.h"
 #include "flang/Evaluate/real-value.h"
@@ -83,7 +84,7 @@ template <int KIND> struct TypeKind<common::TypeCategory::Logical, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Logical};
   static constexpr int kind{KIND};
   static constexpr int bits{value::LogicalValue::bits(KIND)};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr int bytesStored{value::LogicalValue::bytesStored(kind)};
   using UnsignedT = common::HostUnsignedIntType<bits>;
   using SignedT = common::HostSignedIntType<bits>;
   using HostT = UnsignedT;
@@ -93,7 +94,8 @@ template <int KIND> struct TypeKind<common::TypeCategory::Logical, KIND> {
 };
 
 using LogicalKindTypes = std::tuple<TypeKind<TypeCategory::Logical, 1>,
-    TypeKind<TypeCategory::Logical, 2>, TypeKind<TypeCategory::Logical, 4>>;
+    TypeKind<TypeCategory::Logical, 2>, TypeKind<TypeCategory::Logical, 4>,
+    TypeKind<TypeCategory::Logical, 8>>;
 
 namespace detail {
 // Only REAL(4) and REAL(8) have a portable native host arithmetic type
@@ -113,7 +115,7 @@ template <int KIND> struct TypeKind<common::TypeCategory::Real, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Real};
   static constexpr int kind{KIND};
   static constexpr int bits{value::RealValue::bits(KIND)};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr int bytesStored{value::RealValue::bytesStored(kind)};
   using UnsignedT = common::HostUnsignedIntType<bits>;
   using SignedT = common::HostSignedIntType<bits>;
   using HostT = typename detail::RealHostType<bits>::type;
@@ -130,7 +132,7 @@ using RealKindTypes =
 template <int KIND> struct TypeKind<common::TypeCategory::Complex, KIND> {
   static constexpr common::TypeCategory category{common::TypeCategory::Complex};
   static constexpr int kind{KIND};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
+  static constexpr int bytesStored{value::ComplexValue::bytesStored(kind)};
   using FortranType = Fortran::evaluate::Type<common::TypeCategory::Complex>;
   using Scalar = value::ComplexValue;
   static constexpr DynamicType GetType() { return DynamicType{category, kind}; }
@@ -146,7 +148,6 @@ template <> struct TypeKind<common::TypeCategory::Character, 1> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Character};
   static constexpr int kind{1};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
   using CharT = char;
   using StringT = std::basic_string<CharT>;
   using HostT = void;
@@ -159,7 +160,6 @@ template <> struct TypeKind<common::TypeCategory::Character, 2> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Character};
   static constexpr int kind{2};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
   using CharT = char16_t;
   using StringT = std::basic_string<CharT>;
   using HostT = void;
@@ -172,7 +172,6 @@ template <> struct TypeKind<common::TypeCategory::Character, 4> {
   static constexpr common::TypeCategory category{
       common::TypeCategory::Character};
   static constexpr int kind{4};
-  static constexpr int bytesStored{value::IntegerValue::bytesStored(kind)};
   using CharT = char32_t;
   using StringT = std::basic_string<CharT>;
   using HostT = void;

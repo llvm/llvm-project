@@ -33,8 +33,11 @@ public:
   ComplexValue &operator=(const ComplexValue &) = default;
   ComplexValue &operator=(ComplexValue &&) = default;
 
-  ComplexValue(const RealValue &r, const RealValue &i)
-      : re_{r}, im_{r.IsNull() ? i : RealValue::Convert(r.kind(), i).value} {}
+  ComplexValue(const RealValue &r, const RealValue &i) : re_{r}, im_{i} {
+    CHECK_MSG(r.IsNull() == i.IsNull(), "real and imag must be the same kind");
+    CHECK_MSG(r.IsNull() || i.IsNull() || r.kind() == i.kind(),
+        "real and imag must be the same kind");
+  }
 
   explicit ComplexValue(const RealValue &r)
       : ComplexValue{r, RealValue::Zero(r.kind())} {}
