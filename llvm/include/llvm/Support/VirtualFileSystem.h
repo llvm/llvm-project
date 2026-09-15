@@ -315,6 +315,15 @@ public:
   virtual std::error_code getRealPath(const Twine &Path,
                                       SmallVectorImpl<char> &Output);
 
+  /// Collect the paths in the underlying file system that contribute to a
+  /// potentially virtual directory when iterated via \a dir_begin. This can be
+  /// used for directory watching.
+  ///
+  /// Only a file system backed by storage a caller can observe itself
+  /// contributes a path, so a purely virtual file system contributes nothing.
+  virtual void getDirectoryContentSources(const Twine &Dir,
+                                          SmallVectorImpl<std::string> &Out) {}
+
   /// Check whether \p Path exists. By default this uses \c status(), but
   /// filesystems may provide a more efficient implementation if available.
   virtual bool exists(const Twine &Path);
@@ -418,6 +427,8 @@ public:
   std::error_code isLocal(const Twine &Path, bool &Result) override;
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
+  void getDirectoryContentSources(const Twine &Dir,
+                                  SmallVectorImpl<std::string> &Out) override;
 
   using iterator = FileSystemList::reverse_iterator;
   using const_iterator = FileSystemList::const_reverse_iterator;
@@ -481,6 +492,10 @@ public:
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override {
     return FS->getRealPath(Path, Output);
+  }
+  void getDirectoryContentSources(const Twine &Dir,
+                                  SmallVectorImpl<std::string> &Out) override {
+    return FS->getDirectoryContentSources(Dir, Out);
   }
   std::error_code isLocal(const Twine &Path, bool &Result) override {
     return FS->isLocal(Path, Result);
@@ -1080,6 +1095,9 @@ public:
 
   std::error_code getRealPath(const Twine &Path,
                               SmallVectorImpl<char> &Output) override;
+
+  void getDirectoryContentSources(const Twine &Dir,
+                                  SmallVectorImpl<std::string> &Out) override;
 
   llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override;
 
