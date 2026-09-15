@@ -3763,9 +3763,8 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
     // (A + C2) != C --> A != (C - C2)
     // TODO: Remove the one-use limitation? See discussion in D58633.
     if (Constant *C2 = dyn_cast<Constant>(BOp1)) {
-      Constant *NewRHS = ConstantExpr::getSub(RHS, C2);
       if (BO->hasOneUse())
-        return new ICmpInst(Pred, BOp0, NewRHS);
+        return new ICmpInst(Pred, BOp0, ConstantExpr::getSub(RHS, C2));
 
       // If the add has other uses, the rewrite is still profitable if the
       // compare folds away.
