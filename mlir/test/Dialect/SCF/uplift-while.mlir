@@ -16,7 +16,8 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 
 // CHECK-LABEL: func @uplift_while
 //  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
 //       CHECK:     "test.test1"(%[[I]]) : (index) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : index
@@ -25,7 +26,7 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
 //       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
-//       CHECK:     %[[R5:.*]] = arith.subi %[[R4]], %[[C1]] : index
+//       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : index
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
 //       CHECK:     %[[R7:.*]] = arith.addi %[[BEGIN]], %[[R6]] : index
 //       CHECK:     return %[[R7]] : index
@@ -48,7 +49,8 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 
 // CHECK-LABEL: func @uplift_while
 //  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
 //       CHECK:     "test.test1"(%[[I]]) : (index) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : index
@@ -57,7 +59,7 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
 //       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
-//       CHECK:     %[[R5:.*]] = arith.subi %[[R4]], %[[C1]] : index
+//       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : index
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
 //       CHECK:     %[[R7:.*]] = arith.addi %[[BEGIN]], %[[R6]] : index
 //       CHECK:     return %[[R7]] : index
@@ -80,7 +82,8 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 
 // CHECK-LABEL: func @uplift_while
 //  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] {
 //       CHECK:     "test.test1"(%[[I]]) : (index) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[STEP]], %[[I]] : index
@@ -89,7 +92,7 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> index {
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
 //       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : index
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : index
-//       CHECK:     %[[R5:.*]] = arith.subi %[[R4]], %[[C1]] : index
+//       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : index
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : index
 //       CHECK:     %[[R7:.*]] = arith.addi %[[BEGIN]], %[[R6]] : index
 //       CHECK:     return %[[R7]] : index
@@ -142,7 +145,8 @@ func.func @uplift_while(%arg0: i64, %arg1: i64, %arg2: i64) -> i64 {
 
 // CHECK-LABEL: func @uplift_while
 //  CHECK-SAME:     (%[[BEGIN:.*]]: i64, %[[END:.*]]: i64, %[[STEP:.*]]: i64) -> i64
-//       CHECK:     %[[C1:.*]] = arith.constant 1 : i64
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : i64
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : i64
 //       CHECK:     scf.for %[[I:.*]] = %[[BEGIN]] to %[[END]] step %[[STEP]] : i64 {
 //       CHECK:     "test.test1"(%[[I]]) : (i64) -> ()
 //       CHECK:     %[[INC:.*]] = arith.addi %[[I]], %[[STEP]] : i64
@@ -151,7 +155,7 @@ func.func @uplift_while(%arg0: i64, %arg1: i64, %arg2: i64) -> i64 {
 //       CHECK:     %[[R2:.*]] = arith.subi %[[END]], %[[BEGIN]] : i64
 //       CHECK:     %[[R3:.*]] = arith.addi %[[R2]], %[[R1]] : i64
 //       CHECK:     %[[R4:.*]] = arith.divsi %[[R3]], %[[STEP]] : i64
-//       CHECK:     %[[R5:.*]] = arith.subi %[[R4]], %[[C1]] : i64
+//       CHECK:     %[[R5:.*]] = arith.maxsi %[[R4]], %[[C0]] : i64
 //       CHECK:     %[[R6:.*]] = arith.muli %[[R5]], %[[STEP]] : i64
 //       CHECK:     %[[R7:.*]] = arith.addi %[[BEGIN]], %[[R6]] : i64
 //       CHECK:     return %[[R7]] : i64
@@ -185,3 +189,34 @@ func.func @uplift_while(%arg0: index, %arg1: index, %arg2: index) -> (i32, f32) 
 //       CHECK:     %[[T2:.*]] = "test.test2"(%[[ARG2]]) : (f32) -> f32
 //       CHECK:     scf.yield %[[T1]], %[[T2]] : i32, f32
 //       CHECK:     return %[[RES]]#0, %[[RES]]#1 : i32, f32
+
+// -----
+
+// The `scf.while` result is the value `scf.condition` forwards when the
+// condition is false, i.e. `lb + tripCount * step`, and the trip count is
+// clamped at zero so a loop whose condition is false on entry yields `lb`.
+func.func @uplift_while_iv_result(%begin: index, %end: index, %step: index) -> index {
+  %0 = scf.while (%iv = %begin) : (index) -> index {
+    %cond = arith.cmpi slt, %iv, %end : index
+    scf.condition(%cond) %iv : index
+  } do {
+  ^bb0(%iv: index):
+    %next = arith.addi %iv, %step : index
+    scf.yield %next : index
+  }
+  return %0 : index
+}
+
+// CHECK-LABEL: func @uplift_while_iv_result
+//  CHECK-SAME:     (%[[BEGIN:.*]]: index, %[[END:.*]]: index, %[[STEP:.*]]: index) -> index
+//   CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+//   CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:     %[[SDEC:.*]] = arith.subi %[[STEP]], %[[C1]] : index
+//       CHECK:     %[[SPAN:.*]] = arith.subi %[[END]], %[[BEGIN]] : index
+//       CHECK:     %[[NUM:.*]] = arith.addi %[[SPAN]], %[[SDEC]] : index
+//       CHECK:     %[[DIV:.*]] = arith.divsi %[[NUM]], %[[STEP]] : index
+// Trip count is clamped at zero, and NOT decremented.
+//       CHECK:     %[[TC:.*]] = arith.maxsi %[[DIV]], %[[C0]] : index
+//       CHECK:     %[[OFF:.*]] = arith.muli %[[TC]], %[[STEP]] : index
+//       CHECK:     %[[RES:.*]] = arith.addi %[[BEGIN]], %[[OFF]] : index
+//       CHECK:     return %[[RES]] : index
