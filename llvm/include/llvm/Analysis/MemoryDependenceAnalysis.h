@@ -32,6 +32,7 @@ namespace llvm {
 class AssumptionCache;
 class DominatorTree;
 class PHITransAddr;
+class StoreInst;
 
 /// A memory dependence query can return one of three different answers.
 class MemDepResult {
@@ -495,6 +496,16 @@ public:
   /// with the same queried instruction.
   LLVM_ABI MemDepResult getInvariantGroupPointerDependency(LoadInst *LI,
                                                            BasicBlock *BB);
+
+  /// Check whether \p SI, which may alias \p MemLoc, can be safely skipped.
+  /// This is possible when \p SI does only MustAlias or NoAlias \p MemLoc (no
+  /// partial overlap possible), and it stores the value \p MemLoc currently
+  /// holds (loaded before the store and not modified in between).
+  LLVM_ABI static bool canSkipClobberingStore(const StoreInst *SI,
+                                              const MemoryLocation &MemLoc,
+                                              Align MemLocAlign,
+                                              BatchAAResults &AA,
+                                              unsigned ScanLimit);
 
   /// Return the clobber offset to dependent instruction.
   std::optional<int32_t> getClobberOffset(LoadInst *DepInst) const {

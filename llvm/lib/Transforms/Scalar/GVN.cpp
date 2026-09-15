@@ -2243,6 +2243,20 @@ static void patchAndReplaceAllUsesWith(Instruction *I, Value *Repl) {
   I->replaceAllUsesWith(Repl);
 }
 
+/// Return true if \p MA is a MemoryDef whose store writes back the value
+/// currently held at \p Loc, leaving such a memory location unchanged.
+static bool isValuePreservingStore(MemoryAccess *MA, const MemoryLocation &Loc,
+                                   Align LoadAlign, BatchAAResults &AA) {
+  auto *MD = dyn_cast<MemoryDef>(MA);
+  if (!MD)
+    return false;
+  auto *SI = dyn_cast_or_null<StoreInst>(MD->getMemoryInst());
+  if (!SI)
+    return false;
+  return MemoryDependenceResults::canSkipClobberingStore(SI, Loc, LoadAlign, AA,
+                                                         MaxNumInsnsPerBlock);
+}
+
 /// If a load has !invariant.group, try to find the most-dominating instruction
 /// with the same metadata and equivalent pointer (modulo bitcasts and zero
 /// GEPs). If one is found that dominates the load, its value can be reused.
@@ -2650,8 +2664,11 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
     // Check if the clobber actually aliases the load location.
     if (auto RMV = accessMayModifyLocation(ClobberMA, Loc, IsInvariantLoad,
                                            StartBlock, MSSA, AA)) {
-      Values.emplace_back(*RMV);
-      return true;
+      if (RMV->Kind != DepKind::Clobber ||
+          !isValuePreservingStore(ClobberMA, Loc, L->getAlign(), AA)) {
+        Values.emplace_back(*RMV);
+        return true;
+      }
     }
 
     // It may happen that the clobbering memory access does not actually
@@ -2696,11 +2713,14 @@ bool GVNPass::findReachingValuesForLoad(LoadInst *L,
     // predecessors of this block further, continue with the blocks in the
     // worklist.
     if (Info.ClobberMA->getBlock() == BB && !isa<MemoryPhi>(Info.ClobberMA)) {
-      if (auto RMV = accessMayModifyLocation(
-              Info.ClobberMA, Loc.getWithNewPtr(Info.Addr.getAddr()),
-              IsInvariantLoad, BB, MSSA, AA)) {
-        Info.MemVal = RMV;
-        continue;
+      const MemoryLocation BBLoc = Loc.getWithNewPtr(Info.Addr.getAddr());
+      if (auto RMV = accessMayModifyLocation(Info.ClobberMA, BBLoc,
+                                             IsInvariantLoad, BB, MSSA, AA)) {
+        if (RMV->Kind != DepKind::Clobber ||
+            !isValuePreservingStore(Info.ClobberMA, BBLoc, L->getAlign(), AA)) {
+          Info.MemVal = RMV;
+          continue;
+        }
       }
       assert(!MSSA.isLiveOnEntryDef(Info.ClobberMA) &&
              "LiveOnEntry aliases everything");
