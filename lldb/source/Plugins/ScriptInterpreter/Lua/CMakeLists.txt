@@ -6,20 +6,13 @@ set(lua_plugin_sources
 if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   # Shared library loaded at runtime by PluginManager. Private lldb symbols are
   # resolved via liblldb's re-exports, so lldb_private libs aren't linked here.
-  add_lldb_library(lldbPluginScriptInterpreterLua SHARED
+  lldb_add_scriptinterpreter_dynamic_library(
+    lldbPluginScriptInterpreterLua add_lua_wrapper
     ${lua_plugin_sources}
     LINK_LIBS
       liblldb
       ${LUA_LIBRARIES}
   )
-  add_lua_wrapper(lldbPluginScriptInterpreterLua)
-
-  if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")
-    lldb_record_dynamic_script_interpreter_exports(
-      lldbPluginScriptInterpreterLua)
-  endif()
-
-  lldb_add_scriptinterpreter_plugin_to_framework(lldbPluginScriptInterpreterLua)
 
   # Static variant linked directly by unit tests. Separate compilation is
   # required so llvm::Error RTTI (ErrorInfoBase::ID) has a single address
