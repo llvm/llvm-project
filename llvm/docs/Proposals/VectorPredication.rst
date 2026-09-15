@@ -79,7 +79,7 @@ References
 ==========
 
 .. [MaskedIR] `llvm.masked.*` intrinsics,
-   https://llvm.org/docs/LangRef.html#masked-vector-load-and-store-intrinsics
+   :ref:`masked vector load and store intrinsics <int_mload_mstore>`
 
 .. [VPRFC] RFC: Prototype & Roadmap for vector predication in LLVM,
    https://reviews.llvm.org/D57504

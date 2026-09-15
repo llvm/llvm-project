@@ -266,7 +266,7 @@ The following "string" options are available:
 +---------------------------------+----------------+-------------------------------------------------+
 
 Additional flags can be specified, for example if Scudo if compiled with
-`GWP-ASan <https://llvm.org/docs/GwpAsan.html>`_ support.
+:doc:`GWP-ASan <GwpAsan>` support.
 
 The following "mallopt" options are available (options are defined in
 ``include/scudo/interface.h``):
@@ -358,4 +358,3 @@ Here is a list of the current error messages and their potential cause:
 
 Several other error messages relate to parameter checking on the libc allocation
 APIs and are fairly straightforward to understand.
-

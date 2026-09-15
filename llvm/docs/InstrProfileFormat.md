@@ -12,7 +12,7 @@ of interpretation across use cases, the documentation is based on IRPGO.
 
 :::{note}
 Frontend-generated profiles are used together with coverage mapping for
-[source-based code coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html). The [coverage mapping format](https://llvm.org/docs/CoverageMappingFormat.html) is different from
+[source-based code coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html). The {doc}`coverage mapping format <CoverageMappingFormat>` is different from
 profile format.
 :::
 
@@ -457,7 +457,7 @@ human-readable way.
 ## Profile Data Usage
 
 `llvm-profdata` is the command line tool to display and process instrumentation-
-based profile data. For supported usages, check out [llvm-profdata documentation](https://llvm.org/docs/CommandGuide/llvm-profdata.html).
+based profile data. For supported usages, check out {doc}`llvm-profdata documentation <CommandGuide/llvm-profdata>`.
 
 [^1]: For usage, see https://clang.llvm.org/docs/UsersManual.html#profiling-with-instrumentation
 [^2]: For example, IR-based instrumentation supports [lightweight instrumentation]

@@ -37,7 +37,7 @@ In this example, we will be using `ninja` as the build tool.
 See <https://compiler-rt.llvm.org/> for information about the dependencies
 on clang and LLVM.
 
-See <https://llvm.org/docs/GettingStarted.html> for information about obtaining
+See {doc}`GettingStarted` for information about obtaining
 the source for LLVM and compiler-rt.
 
 `qemu-arm` should be available as a package for your Linux distribution.
