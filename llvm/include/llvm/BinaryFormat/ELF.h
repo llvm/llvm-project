@@ -733,6 +733,11 @@ enum {
   STO_RISCV_VARIANT_CC = 0x80
 };
 
+// ELF Relocation types for SuperH
+enum {
+#include "ELFRelocs/SuperH.def"
+};
+
 // ELF Relocation types for S390/zSeries
 enum {
 #include "ELFRelocs/SystemZ.def"
