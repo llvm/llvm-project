@@ -468,6 +468,9 @@ public:
     return MDNames;
   }
 
+  /// Print a reference to metadata node \p N to \p O.
+  void printMetadataAsOperand(raw_ostream &O, const MDNode *N);
+
   /// Returns the module the plan operates on, if any.
   const Module *getModule() const { return F ? F->getParent() : nullptr; }
 };
