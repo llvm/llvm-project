@@ -936,7 +936,8 @@ std::optional<MCRegister> SPIRVNonSemanticDebugHandler::emitDebugOperation(
     const DIExpression::ExprOperand &Op, MCRegister VoidTypeReg,
     MCRegister I32TypeReg, MCRegister ExtInstSetReg,
     SPIRV::ModuleAnalysisInfo &MAI) {
-  std::optional<uint32_t> NSOp = mapDwarfOpToDebugOpEncoding(Op.getOp(), NSSet);
+  std::optional<uint32_t> NSOp =
+      mapDwarfOpToDebugOpEncoding(Op.getOp(), NonSemanticDebugInfoVersion);
   if (!NSOp)
     return std::nullopt;
 
