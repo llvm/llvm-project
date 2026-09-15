@@ -488,6 +488,27 @@ define dso_local x86_regcallcc x86_fp80 @test_argRetf80(x86_fp80 %a0) nounwind {
   ret x86_fp80 %r0
 }
 
+; Test regcall when receiving two long double arguments in x87 registers.
+define dso_local x86_regcallcc x86_fp80 @test_arg2f80(x86_fp80 %a0, x86_fp80 %a1) nounwind {
+; X32-LABEL: test_arg2f80:
+; X32:       # %bb.0:
+; X32-NEXT:    faddp
+; X32-NEXT:    retl
+;
+; WIN64-LABEL: test_arg2f80:
+; WIN64:       # %bb.0:
+; WIN64-NEXT:    faddp
+; WIN64-NEXT:    retq
+;
+; LINUXOSX64-LABEL: test_arg2f80:
+; LINUXOSX64:       # %bb.0:
+; LINUXOSX64-NEXT:    faddp
+; LINUXOSX64-NOT:    fldt
+; LINUXOSX64-NEXT:    retq
+  %r0 = fadd x86_fp80 %a0, %a1
+  ret x86_fp80 %r0
+}
+
 ; Test regcall when receiving/returning long double
 define dso_local x86_regcallcc double @test_argParamf80(x86_fp80 %a0) nounwind {
 ; X32-LABEL: test_argParamf80:

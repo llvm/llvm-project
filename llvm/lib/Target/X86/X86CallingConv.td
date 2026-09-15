@@ -41,7 +41,7 @@ class RC_X86_RegCall {
   list<Register> GPR_16 = [];
   list<Register> GPR_32 = [];
   list<Register> GPR_64 = [];
-  list<Register> FP_CALL = [FP0];
+  list<Register> FP_CALL = [FP0, FP1, FP2, FP3, FP4, FP5, FP6];
   list<Register> FP_RET = [FP0, FP1];
   list<Register> XMM = [];
   list<Register> YMM = [];
