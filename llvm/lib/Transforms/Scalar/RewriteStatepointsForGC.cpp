@@ -1967,7 +1967,7 @@ makeStatepointExplicit(DominatorTree &DT, CallBase *Call,
 // visited values into the visitedLiveValues set, which we will later use them
 // for validation checking.
 static void
-insertRelocationStores(iterator_range<Value::user_iterator> GCRelocs,
+insertRelocationStores(iterator_range<Instruction::user_iterator> GCRelocs,
                        DenseMap<Value *, AllocaInst *> &AllocaMap,
                        DenseSet<Value *> &VisitedLiveValues) {
   for (User *U : GCRelocs) {
@@ -2069,7 +2069,7 @@ static void relocationViaAlloca(
   // gc_result).  This must happen before we update the statepoint with load of
   // alloca otherwise we lose the link between statepoint and old def.
   for (const auto &Info : Records) {
-    Value *Statepoint = Info.StatepointToken;
+    GCStatepointInst *Statepoint = Info.StatepointToken;
 
     // This will be used for consistency check
     DenseSet<Value *> VisitedLiveValues;

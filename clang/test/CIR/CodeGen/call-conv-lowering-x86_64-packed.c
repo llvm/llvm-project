@@ -29,16 +29,16 @@ typedef struct { char c; int i; } PragmaPacked;
 #pragma pack()
 
 // CIR-DAG: !rec_CharInt = !cir.struct<"CharInt" packed {data !s8i, data !s32i}>
-// CIR-DAG: !rec_CharIntBF = !cir.struct<"CharIntBF" packed {data !s8i, bitfield !u32i}>
-// CIR-DAG: !rec_CharWideBF = !cir.struct<"CharWideBF" packed {data !s8i, bitfield !u64i}>
-// CIR-DAG: !rec_CharMultipleBFInt = !cir.struct<"CharMultipleBFInt" {data !s8i, bitfield !cir.array<!u8i x 6>}>
-// CIR-DAG: !rec_CharUndersizedIntBF = !cir.struct<"CharUndersizedIntBF" {data !s8i, bitfield !cir.array<!u8i x 3>}>
-// CIR-DAG: !rec_BFDouble = !cir.struct<"BFDouble" packed {data !s8i, bitfield !u32i, data !cir.array<!s8i x 3>, data !cir.double}>
+// CIR-DAG: !rec_CharIntBF = !cir.struct<"CharIntBF" packed {data !s8i, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 32>]>}>
+// CIR-DAG: !rec_CharWideBF = !cir.struct<"CharWideBF" packed {data !s8i, bitfield !cir.bitfield<!u64i, [#cir.bitfield_decl<!u64i, 64>]>}>
+// CIR-DAG: !rec_CharMultipleBFInt = !cir.struct<"CharMultipleBFInt" {data !s8i, bitfield !cir.bitfield<!cir.array<!u8i x 6>, [#cir.bitfield_decl<!s32i, 25>, #cir.bitfield_decl<!s32i, 17>, #cir.bitfield_decl<!s32i, 4>]>}>
+// CIR-DAG: !rec_CharUndersizedIntBF = !cir.struct<"CharUndersizedIntBF" {data !s8i, bitfield !cir.bitfield<!cir.array<!u8i x 3>, [#cir.bitfield_decl<!s32i, 19>]>}>
+// CIR-DAG: !rec_BFDouble = !cir.struct<"BFDouble" packed {data !s8i, bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 32>]>, data !cir.array<!s8i x 3>, data !cir.double}>
 // CIR-DAG: !rec_Nine = !cir.struct<"Nine" packed {data !s32i, data !s32i, data !s8i}>
 // CIR-DAG: !rec_FiveShort = !cir.struct<"FiveShort" packed {data !s16i, data !s16i, data !s8i}>
 // CIR-DAG: !rec_DoubleChar = !cir.struct<"DoubleChar" packed {data !cir.double, data !s8i}>
 // CIR-DAG: !rec_TwoFloatChar = !cir.struct<"TwoFloatChar" packed {data !cir.float, data !cir.float, data !s8i}>
-// CIR-DAG: !rec_NineBF = !cir.struct<"NineBF" packed {data !s32i, data !s32i, bitfield !u8i}>
+// CIR-DAG: !rec_NineBF = !cir.struct<"NineBF" packed {data !s32i, data !s32i, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!s8i, 3>]>}>
 // CIR-DAG: !rec_PackedOv = !cir.struct<"PackedOv" packed {data !s8i, data !s32i, pad !cir.array<!u8i x 3>}>
 // CIR-DAG: !rec_Seventeen = !cir.struct<"Seventeen" packed {data !cir.array<!s32i x 4>, data !s8i}>
 // CIR-DAG: !rec_NestPacked = !cir.struct<"NestPacked" {data !rec_CharInt}>

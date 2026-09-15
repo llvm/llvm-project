@@ -48,9 +48,6 @@ public:
   /// The integer KINDs disabled for this target
   std::vector<int> disabledIntegerKinds;
 
-  /// Extended Altivec ABI on AIX
-  bool EnableAIXExtendedAltivecABI;
-
   /// Print verbose assembly
   bool asmVerbose = false;
 

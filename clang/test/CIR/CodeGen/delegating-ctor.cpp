@@ -50,8 +50,11 @@ DelegatingWithZeroing::DelegatingWithZeroing(int) : DelegatingWithZeroing() {}
 // CIR:   cir.store{{.*}} %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR:   cir.store{{.*}} %[[I_ARG]], %[[I_ADDR]]
 // CIR:   %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
-// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !rec_DelegatingWithZeroing
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[THIS]] : !rec_DelegatingWithZeroing, !cir.ptr<!rec_DelegatingWithZeroing>
+// CIR:   %[[THIS_PTR_i8:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_DelegatingWithZeroing> -> !cir.ptr<!u8i>
+// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR:   %[[CONST_4:.*]] = cir.const #cir.int<4> : !u64i
+// CIR:   %[[THIS_VOID_PTR:.*]] = cir.cast bitcast %[[THIS_PTR_i8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR:   cir.libc.memset %[[CONST_4]] bytes at %[[THIS_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 
 // LLVM: define {{.*}} void @_ZN21DelegatingWithZeroingC2Ei(ptr {{.*}} %[[THIS_ARG:.*]], i32 {{.*}} %[[I_ARG:.*]])
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr
@@ -59,7 +62,7 @@ DelegatingWithZeroing::DelegatingWithZeroing(int) : DelegatingWithZeroing() {}
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM:   store i32 %[[I_ARG]], ptr %[[I_ADDR]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
-// LLVM:   store %struct.DelegatingWithZeroing zeroinitializer, ptr %[[THIS]]
+// LLVM:   call void @llvm.memset.p0.i64(ptr align 4 %[[THIS]], i8 0, i64 4, i1 false)
 
 // Note: OGCG elides the call to the default constructor.
 

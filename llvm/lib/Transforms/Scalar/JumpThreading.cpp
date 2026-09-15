@@ -3056,22 +3056,27 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
       assert(Extracted);
       uint64_t Denominator =
           sum_of(llvm::map_range(BW, StaticCastTo<uint64_t>));
-      assert(Denominator > 0 &&
-             "At least one of the branch probabilities should be non-zero");
-      BranchProbability TrueProb =
-          BranchProbability::getBranchProbability(BW[0], Denominator);
-      BranchProbability FalseProb =
-          BranchProbability::getBranchProbability(BW[1], Denominator);
-      SmallVector<BranchProbability, 2> BP = {TrueProb, FalseProb};
+      // Zero branch_weights do not give a hint for getting branch
+      // probabilities, and their sum would be a division-by-zero denominator.
+      if (Denominator > 0) {
+        BranchProbability TrueProb =
+            BranchProbability::getBranchProbability(BW[0], Denominator);
+        BranchProbability FalseProb =
+            BranchProbability::getBranchProbability(BW[1], Denominator);
+        SmallVector<BranchProbability, 2> BP = {TrueProb, FalseProb};
 
-      if (BPI)
-        BPI->setEdgeProbability(BB, BP);
+        if (BPI)
+          BPI->setEdgeProbability(BB, BP);
 
-      if (BFI) {
-        auto BBOrigFreq = BFI->getBlockFreq(BB);
-        auto NewBBFreq = BBOrigFreq * TrueProb;
-        BFI->setBlockFreq(NewBB, NewBBFreq);
-        BFI->setBlockFreq(SplitBB, BBOrigFreq);
+        if (BFI) {
+          auto BBOrigFreq = BFI->getBlockFreq(BB);
+          auto NewBBFreq = BBOrigFreq * TrueProb;
+          BFI->setBlockFreq(NewBB, NewBBFreq);
+          BFI->setBlockFreq(SplitBB, BBOrigFreq);
+        }
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
+                                                    DEBUG_TYPE);
       }
     }
     SI->eraseFromParent();
