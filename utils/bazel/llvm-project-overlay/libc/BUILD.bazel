@@ -6126,8 +6126,8 @@ libc_support_library(
     hdrs = ["src/__support/math/canonicalizef128.h"],
     deps = [
         ":__support_fputil_basic_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -7547,8 +7547,8 @@ libc_support_library(
     hdrs = ["src/__support/math/modff128.h"],
     deps = [
         ":__support_fputil_manipulation_functions",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -7781,8 +7781,8 @@ libc_support_library(
     hdrs = ["src/__support/math/remquof128.h"],
     deps = [
         ":__support_fputil_division_and_remainder_operations",
+        ":__support_fputil_float128",
         ":__support_macros_config",
-        ":llvm_libc_types_float128",
     ],
 )
 
@@ -11830,6 +11830,8 @@ libc_math_function(
 libc_math_function(
     name = "canonicalizef128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_canonicalizef128",
     ],
 )
@@ -13909,6 +13911,8 @@ libc_math_function(
 libc_math_function(
     name = "modff128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_modff128",
     ],
 )
@@ -14256,6 +14260,8 @@ libc_math_function(
 libc_math_function(
     name = "remquof128",
     additional_deps = [
+        ":__support_cpp_bit",
+        ":__support_fputil_float128",
         ":__support_math_remquof128",
     ],
 )

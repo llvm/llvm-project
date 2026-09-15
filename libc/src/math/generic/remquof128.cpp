@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/remquof128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/remquof128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(float128, remquof128, (float128 x, float128 y, int *exp)) {
-  return math::remquof128(x, y, exp);
+  return cpp::bit_cast<float128>(math::remquof128(
+      cpp::bit_cast<Float128>(x), cpp::bit_cast<Float128>(y), exp));
 }
 
 } // namespace LIBC_NAMESPACE_DECL

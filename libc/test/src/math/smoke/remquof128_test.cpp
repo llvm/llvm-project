@@ -8,6 +8,11 @@
 
 #include "RemQuoTest.h"
 
+#include "src/__support/FPUtil/float128.h"
 #include "src/math/remquof128.h"
+
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 LIST_REMQUO_TESTS(float128, LIBC_NAMESPACE::remquof128)

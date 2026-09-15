@@ -7,12 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/canonicalizef128.h"
+#include "src/__support/CPP/bit.h"
 #include "src/__support/math/canonicalizef128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
+using LIBC_NAMESPACE::fputil::Float128;
+
 LLVM_LIBC_FUNCTION(int, canonicalizef128, (float128 * cx, const float128 *x)) {
-  return math::canonicalizef128(cx, x);
+  Float128 cx_val{};
+  const Float128 x_val = cpp::bit_cast<Float128>(*x);
+  int result = math::canonicalizef128(&cx_val, &x_val);
+  *cx = cpp::bit_cast<float128>(cx_val);
+  return result;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
