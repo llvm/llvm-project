@@ -596,7 +596,9 @@ AArch64Err843419Patcher::patchInputSectionDescription(
         isec, std::make_pair(nullptr, SmallVector<Defined *, 0>{}));
     auto &[sectionSym, mapSyms] = it->second;
     if (inserted || sectionSym == nullptr)
-      sectionSym = addSyntheticLocal(ctx, "", STT_SECTION, 0, 0, *isec);
+      // Use STT_NOTYPE rather than STT_SECTION as we are running after
+      // all non OutputSection STT_SECTION symbols have been removed.
+      sectionSym = addSyntheticLocal(ctx, "", STT_NOTYPE, 0, 0, *isec);
 
     auto codeSym = mapSyms.begin();
     while (codeSym != mapSyms.end()) {
