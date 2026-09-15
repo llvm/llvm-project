@@ -303,6 +303,12 @@ bool SPIRVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
           buildOpDecorate(VRegs[i][0], MIRBuilder,
                           SPIRV::Decoration::FuncParamAttr, {Attr});
         }
+        if (Arg.hasNoCaptureAttr()) {
+          auto Attr = static_cast<unsigned>(
+              SPIRV::FunctionParameterAttribute::NoCapture);
+          buildOpDecorate(VRegs[i][0], MIRBuilder,
+                          SPIRV::Decoration::FuncParamAttr, {Attr});
+        }
         // TODO: the AMDGPU BE only supports ByRef argument passing, thus for
         //       AMDGCN flavoured SPIRV we CodeGen for ByRef, but lower it to
         //       ByVal, handling the impedance mismatch during reverse
