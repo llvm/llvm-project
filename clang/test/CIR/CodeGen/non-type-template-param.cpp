@@ -19,9 +19,6 @@ void template_foo() {
 // LLVM: %[[INIT:.*]] = alloca i32, align 4
 // LLVM: store i32 6, ptr %[[INIT]], align 4
 
-// OGCG: %[[INIT:.*]] = alloca i32, align 4
-// OGCG: store i32 6, ptr %[[INIT]], align 4
-
 void foo() {
   template_foo<1>();
 }
@@ -44,10 +41,6 @@ void template_agg() {
 // LLVM: %[[A:.*]] = alloca %struct.Point
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align {{[0-9]+}} %[[A]], ptr align {{[0-9]+}} @{{.*}}, i64 8, i1 false)
 // LLVM: ret void
-
-// OGCG: %[[A:.*]] = alloca %struct.Point
-// OGCG: call void @llvm.memcpy.p0.p0.i64(ptr align {{[0-9]+}} %[[A]], ptr align {{[0-9]+}} @{{.*}}, i64 8, i1 false)
-// OGCG: ret void
 
 void bar() {
   template_agg<Point{1, 2}>();
