@@ -1,11 +1,13 @@
 ; RUN: split-file %s %t
 ; RUN: opt -S -passes=mergefunc %t/coff.ll | FileCheck %s --check-prefix=COFF
-; RUN: opt -S -passes=mergefunc %t/coff-noalias.ll | FileCheck %s --check-prefix=NOALIAS
-; RUN: opt -S -passes=mergefunc -mergefunc-use-aliases %t/coff-odr.ll | FileCheck %s --check-prefix=ODR
+; RUN: opt -S -passes=mergefunc %t/coff-noalias.ll | \
+; RUN:   FileCheck %s --check-prefix=NOALIAS
+; RUN: opt -S -passes=mergefunc -mergefunc-use-aliases %t/coff-odr.ll | \
+; RUN:   FileCheck %s --check-prefix=ODR
 ; RUN: opt -S -passes=mergefunc %t/elf.ll | FileCheck %s --check-prefix=ELF
 
-; On COFF the merged body is named after its structural hash and put in a COMDAT,
-; so every object defining the alias names the same fallback symbol.
+; On COFF the merged body is named after its structural hash and put in a
+; COMDAT, so every object defining the alias names the same fallback symbol.
 
 ;--- coff.ll
 target triple = "x86_64-pc-windows-msvc"

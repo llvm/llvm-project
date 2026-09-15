@@ -872,22 +872,25 @@ static bool needsStableSymbolForAlias(const Function *F) {
   return F->getParent()->getTargetTriple().isOSBinFormatCOFF();
 }
 
+/// Prefix of the name tryConvertToMergedFunction gives a shared body.
+static constexpr StringRef MergedFunctionPrefix = "__llvm_mergefunc$";
+
 /// Names \p F after its contents and puts it in a COMDAT, so every object
 /// merging this body agrees on it.
 static bool tryConvertToMergedFunction(Function *F) {
-  Module *M = F->getParent();
-  std::string Name =
-      ("__llvm_mergefunc$" +
-       Twine::utohexstr(StructuralHash(*F, /*DetailedHash=*/true)))
-          .str();
   // The ODR path aliases both halves of a merge to the same body.
-  if (F->getName() == Name)
+  if (F->getName().starts_with(MergedFunctionPrefix))
     return true;
 
   // An externally visible name is fixed; the ODR path passes a nameless body.
   if (F->hasName() && !F->hasLocalLinkage())
     return false;
 
+  Module *M = F->getParent();
+  std::string Name =
+      (MergedFunctionPrefix +
+       Twine::utohexstr(StructuralHash(*F, /*DetailedHash=*/true)))
+          .str();
   // A uniquing suffix would be numbered per object, so it cannot be used.
   if (M->getNamedValue(Name))
     return false;
