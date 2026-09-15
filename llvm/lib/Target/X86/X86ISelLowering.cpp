@@ -2651,6 +2651,49 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     }
   }
 
+  // Partial reductions that map onto the dot product instructions:
+  //   vpdpbusd / vpdpwssd (AVX512-VNNI, AVX-VNNI)
+  //   vpdpbssd / vpdpbuud (AVX-VNNI-INT8, AVX10.2)
+  //   vpdpwsud / vpdpwuud (AVX-VNNI-INT16, AVX10.2)
+  //   vdpbf16ps (AVX512-BF16)
+  //   vdpphps (AVX10.2)
+  // 512-bit shapes are split in two when only the VEX encoding is available.
+  if (!Subtarget.useSoftFloat()) {
+    bool HasVNNI = Subtarget.hasVNNI() || Subtarget.hasAVXVNNI();
+    bool HasVNNIINT8 = Subtarget.hasAVXVNNIINT8() || Subtarget.hasAVX10_2();
+    bool HasVNNIINT16 = Subtarget.hasAVXVNNIINT16() || Subtarget.hasAVX10_2();
+    for (MVT AccVT : {MVT::v4i32, MVT::v8i32, MVT::v16i32}) {
+      if (AccVT == MVT::v16i32 && !Subtarget.useAVX512Regs())
+        break;
+      unsigned NumElts = AccVT.getVectorNumElements();
+      MVT I8VT = MVT::getVectorVT(MVT::i8, NumElts * 4);
+      MVT I16VT = MVT::getVectorVT(MVT::i16, NumElts * 2);
+      MVT F32VT = MVT::getVectorVT(MVT::f32, NumElts);
+      if (HasVNNI) {
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, AccVT, I8VT,
+                                  Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
+                                  Custom);
+      }
+      if (HasVNNIINT8)
+        setPartialReduceMLAAction(
+            {ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA}, AccVT, I8VT,
+            Custom);
+      if (HasVNNIINT16)
+        setPartialReduceMLAAction(
+            {ISD::PARTIAL_REDUCE_SUMLA, ISD::PARTIAL_REDUCE_UMLA}, AccVT, I16VT,
+            Custom);
+      if (Subtarget.hasBF16())
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, F32VT,
+                                  MVT::getVectorVT(MVT::bf16, NumElts * 2),
+                                  Custom);
+      if (Subtarget.hasAVX10_2())
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_FMLA, F32VT,
+                                  MVT::getVectorVT(MVT::f16, NumElts * 2),
+                                  Custom);
+    }
+  }
+
   if (!Subtarget.useSoftFloat() && Subtarget.hasVLX()) {
     setTruncStoreAction(MVT::v4i64, MVT::v4i8,  Legal);
     setTruncStoreAction(MVT::v4i64, MVT::v4i16, Legal);
@@ -25795,7 +25838,8 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
   MVT VT = Op1.getSimpleValueType();
   SDValue CC;
 
-  if (isSoftF16(VT, Subtarget)) {
+  // Select bf16/fp16 vectors as integers; there are no bf16/fp16 CMOV pseudos.
+  if (isBF16orSoftF16(VT, Subtarget)) {
     MVT NVT = VT.changeTypeToInteger();
     return DAG.getBitcast(VT, DAG.getNode(ISD::SELECT, DL, NVT, Cond,
                                           DAG.getBitcast(NVT, Op1),
@@ -34627,6 +34671,98 @@ SDValue X86TargetLowering::visitMaskedStore(SelectionDAG &DAG, const SDLoc &DL,
   return DAG.getMemIntrinsicNode(X86ISD::CSTORE, DL, Tys, Ops, Ty, MMO);
 }
 
+/// Lower a bf16 x bf16 -> f32 or f16 x f16 -> f32 partial reduction to
+/// VDPBF16PS or VDPPHPS.
+static SDValue LowerPARTIAL_REDUCE_FMLA(SDValue Op,
+                                        const X86Subtarget &Subtarget,
+                                        SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue Acc = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  unsigned Opc = LHS.getSimpleValueType().getScalarType() == MVT::f16
+                     ? X86ISD::DPFP16PS
+                     : X86ISD::DPBF16PS;
+
+  // Only the 512-bit form exists without VLX, so widen to that and extract.
+  if (!VT.is512BitVector() && !Subtarget.hasVLX()) {
+    Acc = widenSubVector(Acc, false, Subtarget, DAG, DL, 512);
+    LHS = widenSubVector(LHS, false, Subtarget, DAG, DL, 512);
+    RHS = widenSubVector(RHS, false, Subtarget, DAG, DL, 512);
+    SDValue Res = DAG.getNode(Opc, DL, MVT::v16f32, Acc, LHS, RHS);
+    return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
+  }
+
+  return DAG.getNode(Opc, DL, VT, Acc, LHS, RHS);
+}
+
+/// Lower an i8 x i8 -> i32 or i16 x i16 -> i32 partial reduction to the
+/// matching VNNI dot product.
+static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
+                                       const X86Subtarget &Subtarget,
+                                       SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  MVT VT = Op.getSimpleValueType();
+  SDValue Acc = Op.getOperand(0);
+  SDValue LHS = Op.getOperand(1);
+  SDValue RHS = Op.getOperand(2);
+  bool IsI8 = LHS.getSimpleValueType().getScalarType() == MVT::i8;
+
+  // Pick the instruction, and whether the 512-bit EVEX and the VEX encodings
+  // exist for it.
+  unsigned Opc;
+  bool Has512, HasVEX;
+  switch (Op.getOpcode()) {
+  default:
+    llvm_unreachable("Unexpected partial reduction opcode");
+  case ISD::PARTIAL_REDUCE_SUMLA:
+    if (IsI8) {
+      // VPDPBUSD multiplies unsigned bytes with signed bytes.
+      std::swap(LHS, RHS);
+      Opc = X86ISD::VPDPBUSD;
+      Has512 = Subtarget.hasVNNI();
+      HasVEX = Subtarget.hasAVXVNNI();
+    } else {
+      Opc = X86ISD::VPDPWSUD;
+      Has512 = Subtarget.hasAVX10_2();
+      HasVEX = Subtarget.hasAVXVNNIINT16();
+    }
+    break;
+  case ISD::PARTIAL_REDUCE_SMLA:
+    if (IsI8) {
+      Opc = X86ISD::VPDPBSSD;
+      Has512 = Subtarget.hasAVX10_2();
+      HasVEX = Subtarget.hasAVXVNNIINT8();
+    } else {
+      Opc = X86ISD::VPDPWSSD;
+      Has512 = Subtarget.hasVNNI();
+      HasVEX = Subtarget.hasAVXVNNI();
+    }
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+    Opc = IsI8 ? X86ISD::VPDPBUUD : X86ISD::VPDPWUUD;
+    Has512 = Subtarget.hasAVX10_2();
+    HasVEX = IsI8 ? Subtarget.hasAVXVNNIINT8() : Subtarget.hasAVXVNNIINT16();
+    break;
+  }
+
+  // Split into two 256-bit dot products if there is no 512-bit encoding.
+  if (VT.is512BitVector() && !Has512)
+    return splitVectorOp(Op, DAG, DL);
+
+  // The dot products take their i8/i16 elements packed in i32 lanes.
+  LHS = DAG.getBitcast(VT, LHS);
+  RHS = DAG.getBitcast(VT, RHS);
+
+  // Without VLX only the 512-bit EVEX form exists, so use that unless the VEX
+  // encoding is available.
+  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX)
+    return getAVX512Node(Opc, DL, VT, {Acc, LHS, RHS}, DAG, Subtarget);
+
+  return DAG.getNode(Opc, DL, VT, Acc, LHS, RHS);
+}
+
 /// Provide custom lowering hooks for some operations.
 SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -34801,6 +34937,12 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case X86ISD::CVTPS2PH:        return LowerCVTPS2PH(Op, DAG);
   case ISD::PREFETCH:           return LowerPREFETCH(Op, Subtarget, DAG);
   case ISD::FLDEXP:             return LowerFLDEXP(Op, Subtarget, DAG);
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+                                return LowerPARTIAL_REDUCE_MLA(Op, Subtarget, DAG);
+  case ISD::PARTIAL_REDUCE_FMLA:
+                                return LowerPARTIAL_REDUCE_FMLA(Op, Subtarget, DAG);
     // clang-format on
   }
 }
@@ -56067,6 +56209,50 @@ static SDValue combineFMulcFCMulc(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
+// We try to match the following pattern from FMSUBADD(X, A, M) to lower it
+// into complex conjugate fmadd for fp16 (#216290).
+// for vector of the complex form v <v0r, v0i, v1r, v1i, ...>
+// and 2 complex vectors a, b,
+// X = duplicate real (b) : <b0r, b0r, b1r, b1r, ...>
+// A = a
+// M = FMUL (P, Q)
+//   P = adjacent pair swapped (a) : <a0i, a0r, a1i, a1r, ...>
+//   Q = duplicate imaginary (b) : <b0i, b0i, b1i, b1i, ...>
+static bool isCFMulFromFMSUBADD(SDValue N, SelectionDAG &DAG, SDValue &A,
+                                SDValue &B) {
+  SDValue Op0 = N.getOperand(0);
+  SDValue Op1 = N.getOperand(1);
+  SDValue Op2 = N.getOperand(2);
+
+  auto matchShufflePattern = [&DAG](SDValue V, ArrayRef<int> Pat) {
+    SmallVector<SDValue, 2> Inputs;
+    SmallVector<int, 32> Mask;
+    SmallVector<int, 8> RepeatedMask;
+    MVT VT = V.getSimpleValueType();
+    if (getTargetShuffleInputs(V, Inputs, Mask, DAG) &&
+        is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedMask) &&
+        isShuffleEquivalent(RepeatedMask, Pat, Inputs[0]))
+      return Inputs[0];
+    return SDValue();
+  };
+  auto matchFMSUBADDPattern = [&](SDValue X, SDValue OpA) {
+    B = matchShufflePattern(X, {0, 0, 2, 2, 4, 4, 6, 6});
+    if (!B)
+      return false;
+    A = OpA;
+    SDValue P = Op2.getOperand(0);
+    SDValue Q = Op2.getOperand(1);
+    auto matchFMulPattern = [&](SDValue P, SDValue Q) {
+      return matchShufflePattern(P, {1, 0, 3, 2, 5, 4, 7, 6}) == A &&
+             matchShufflePattern(Q, {1, 1, 3, 3, 5, 5, 7, 7}) == B;
+    };
+    return matchFMulPattern(P, Q) || matchFMulPattern(Q, P);
+  };
+  // First 2 operands of FMSUBADD are commutable.
+  return Op2.getOpcode() == ISD::FMUL &&
+         (matchFMSUBADDPattern(Op0, Op1) || matchFMSUBADDPattern(Op1, Op0));
+}
+
 //  Try to combine the following nodes:
 //  FADD(A, FMA(B, C, 0)) and FADD(A, FMUL(B, C)) to FMA(B, C, A)
 static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
@@ -56090,8 +56276,18 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   SDValue RHS = N->getOperand(1);
   bool IsConj;
   SDValue FAddOp1, MulOp0, MulOp1;
-  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj,
-                       &IsVectorAllNegativeZero](SDValue N) -> bool {
+  MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
+  auto GetCFmulFrom = [&MulOp0, &MulOp1, &IsConj, &DAG,
+                       &IsVectorAllNegativeZero, &CVT](SDValue N) -> bool {
+    if (N.getOpcode() == X86ISD::FMSUBADD && N.hasOneUse()) {
+      SDValue A, B;
+      if (!isCFMulFromFMSUBADD(N, DAG, A, B))
+        return false;
+      IsConj = true;
+      MulOp0 = DAG.getBitcast(CVT, A);
+      MulOp1 = DAG.getBitcast(CVT, B);
+      return true;
+    }
     if (!N.hasOneUse() || N.getOpcode() != ISD::BITCAST)
       return false;
     SDValue Op0 = N.getOperand(0);
@@ -56123,7 +56319,6 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   else
     return SDValue();
 
-  MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
   FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
   unsigned NewOp = IsConj ? X86ISD::VFCMADDC : X86ISD::VFMADDC;
   // FIXME: How do we handle when fast math flags of FADD are different from

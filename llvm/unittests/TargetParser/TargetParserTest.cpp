@@ -2867,7 +2867,11 @@ TEST(TargetParserTest, testAMDGPUHalfAddressableLDSFeature) {
         AMDGPU::FEAT_HALF_ADDRESSABLE_PHYSICAL_LOCAL_MEMORY);
   };
 
-  // Only gfx10/11/12 address half of the physical LDS block.
+  // Gfx6 and gfx10/11/12 address half of the physical LDS block.
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX600));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX601));
+  EXPECT_TRUE(Has(AMDGPU::GK_GFX602));
+  EXPECT_FALSE(Has(AMDGPU::GK_GFX700));
   EXPECT_FALSE(Has(AMDGPU::GK_GFX900));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1030));
   EXPECT_TRUE(Has(AMDGPU::GK_GFX1100));
@@ -3256,6 +3260,79 @@ TEST(TargetParserTest, testAMDGPUgetBufferResourceNumRecordsWidth) {
     EXPECT_EQ(AMDGPU::getBufferResourceNumRecordsWidth(SubArch), Width)
         << "overloads disagree for '" << Name << "'";
   }
+}
+
+TEST(TargetParserTest, testAMDGPUgetLocalMemorySize) {
+  // gfx6 addresses 32 KiB of a 64 KiB block.
+  for (Triple::SubArchType SubArch :
+       {Triple::AMDGPUSubArch600, Triple::AMDGPUSubArch601,
+        Triple::AMDGPUSubArch602}) {
+    SCOPED_TRACE(AMDGPU::getArchNameFromSubArch(SubArch));
+    EXPECT_EQ(AMDGPU::getLocalMemorySize(SubArch, true), 65536u);
+    EXPECT_EQ(AMDGPU::getLocalMemorySize(SubArch, false), 32768u);
+  }
+
+  // Without a half-addressable physical block the total matches the
+  // addressable cap, and running on two SIMDs halves it.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX700, true), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX700, false), 32768u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX900, true), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX950, true), 163840u);
+
+  // gfx10/11/12 address 64 KiB of a 128 KiB block.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1030, true), 131072u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1030, false), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1100, true), 131072u);
+
+  // gfx12.5 and gfx13 dropped the half-addressable block.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1250, true), 327680u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, true), 196608u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_GFX1310, false), 98304u);
+
+  // An unknown GPU falls back to the smallest block.
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(AMDGPU::GK_NONE, true), 32768u);
+
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(Triple::AMDGPUSubArch900, true), 65536u);
+  EXPECT_EQ(AMDGPU::getLocalMemorySize(Triple::AMDGPUSubArch1030, true),
+            131072u);
+}
+
+TEST(TargetParserTest, testAMDGPUgetAddressableLocalMemorySize) {
+  // A work-group never allocates past the hardware cap, so the doubled
+  // gfx6 and gfx10/11/12 blocks are capped back to the addressable size.
+  for (Triple::SubArchType SubArch :
+       {Triple::AMDGPUSubArch600, Triple::AMDGPUSubArch601,
+        Triple::AMDGPUSubArch602}) {
+    SCOPED_TRACE(AMDGPU::getArchNameFromSubArch(SubArch));
+    EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(SubArch, true), 32768u);
+    EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(SubArch, false), 32768u);
+  }
+
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1030, true),
+            65536u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1030, false),
+            65536u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1100, true),
+            65536u);
+
+  // Without a doubled block the cap is only reached in full-SIMD mode.
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX700, true),
+            65536u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX700, false),
+            32768u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX950, true),
+            163840u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1250, true),
+            327680u);
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_GFX1310, false),
+            98304u);
+
+  EXPECT_EQ(AMDGPU::getAddressableLocalMemorySize(AMDGPU::GK_NONE, true),
+            32768u);
+
+  EXPECT_EQ(
+      AMDGPU::getAddressableLocalMemorySize(Triple::AMDGPUSubArch1030, true),
+      65536u);
 }
 
 TEST(TargetParserTest, testAMDGPUgetNumWorkGroupSIMDs) {

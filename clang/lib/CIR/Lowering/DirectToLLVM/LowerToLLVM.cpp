@@ -2102,13 +2102,16 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
 
 /// The `llvm.byval`, `llvm.sret`, and `llvm.byref` argument attributes carry
 /// the pointee type as a TypeAttr.  After the CallConvLowering pass that type
-/// is still a CIR record; remap it to the lowered LLVM type so translation to
-/// LLVM IR does not encounter a CIR type in an attribute.  Returns the input
-/// unchanged when there is nothing to convert.
-static mlir::ArrayAttr
-convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
-                     const mlir::TypeConverter &converter,
-                     mlir::MLIRContext *ctx) {
+/// is still a CIR type; remap it to the lowered LLVM type so translation to
+/// LLVM IR does not encounter a CIR type in an attribute.  The pointee must
+/// name the in-memory storage type, not the value type, since it sizes the
+/// byval copy and the sret slot: a _BitInt narrower than its padded storage
+/// integer would otherwise understate both.  Returns std::nullopt when a
+/// pointee has no memory representation, leaving the caller to emit the NYI
+/// error, and the input unchanged when there is nothing to convert.
+static std::optional<mlir::ArrayAttr> convertTypedArgAttrs(
+    mlir::ArrayAttr argAttrs, const mlir::TypeConverter &converter,
+    const mlir::DataLayout &dataLayout, mlir::MLIRContext *ctx) {
   if (!argAttrs)
     return argAttrs;
   bool changed = false;
@@ -2126,8 +2129,11 @@ convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
       auto typeAttr = dyn_cast<mlir::TypeAttr>(entry.getValue());
       if (!typeAttr)
         continue;
-      mlir::Type lowered = converter.convertType(typeAttr.getValue());
-      if (lowered && lowered != typeAttr.getValue()) {
+      mlir::Type lowered =
+          convertTypeForMemory(converter, dataLayout, typeAttr.getValue());
+      if (!lowered)
+        return std::nullopt;
+      if (lowered != typeAttr.getValue()) {
         entry.setValue(mlir::TypeAttr::get(lowered));
         changed = true;
       }
@@ -2137,9 +2143,11 @@ convertTypedArgAttrs(mlir::ArrayAttr argAttrs,
   return changed ? mlir::ArrayAttr::get(ctx, loweredArgAttrs) : argAttrs;
 }
 
-static void lowerCallAttributes(cir::CIRCallOpInterface op,
-                                const mlir::TypeConverter &converter,
-                                SmallVectorImpl<mlir::NamedAttribute> &result) {
+static mlir::LogicalResult
+lowerCallAttributes(cir::CIRCallOpInterface op,
+                    const mlir::TypeConverter &converter,
+                    const mlir::DataLayout &dataLayout,
+                    SmallVectorImpl<mlir::NamedAttribute> &result) {
   for (mlir::NamedAttribute attr : op->getAttrs()) {
     if (attr.getName() == CIRDialect::getCalleeAttrName() ||
         attr.getName() == CIRDialect::getSideEffectAttrName() ||
@@ -2153,23 +2161,27 @@ static void lowerCallAttributes(cir::CIRCallOpInterface op,
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     if (attr.getName() == CIRDialect::getArgAttrsAttrName()) {
       auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
-      result.emplace_back(
-          attr.getName(),
-          convertTypedArgAttrs(argAttrs, converter, op->getContext()));
+      std::optional<mlir::ArrayAttr> lowered = convertTypedArgAttrs(
+          argAttrs, converter, dataLayout, op->getContext());
+      if (!lowered)
+        return op->emitError() << "NYI: lowering a byval/sret/byref call "
+                                  "argument whose pointee type has no "
+                                  "memory representation";
+      result.emplace_back(attr.getName(), *lowered);
       continue;
     }
     result.push_back(attr);
   }
+  return mlir::success();
 }
 
-static mlir::LogicalResult
-rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
-                    mlir::ConversionPatternRewriter &rewriter,
-                    const mlir::TypeConverter *converter,
-                    mlir::SymbolTableCollection &symbolTables,
-                    mlir::FlatSymbolRefAttr calleeAttr,
-                    mlir::Block *continueBlock = nullptr,
-                    mlir::Block *landingPadBlock = nullptr) {
+static mlir::LogicalResult rewriteCallOrInvoke(
+    mlir::Operation *op, mlir::ValueRange callOperands,
+    mlir::ConversionPatternRewriter &rewriter,
+    const mlir::TypeConverter *converter, const mlir::DataLayout &dataLayout,
+    mlir::SymbolTableCollection &symbolTables,
+    mlir::FlatSymbolRefAttr calleeAttr, mlir::Block *continueBlock = nullptr,
+    mlir::Block *landingPadBlock = nullptr) {
   llvm::SmallVector<mlir::Type, 8> llvmResults;
   mlir::ValueTypeRange<mlir::ResultRange> cirResults = op->getResultTypes();
   auto call = cast<cir::CIRCallOpInterface>(op);
@@ -2187,7 +2199,9 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                            memoryEffects, noUnwind, willReturn, noReturn);
 
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerCallAttributes(call, *converter, attributes);
+  if (mlir::failed(
+          lowerCallAttributes(call, *converter, dataLayout, attributes)))
+    return mlir::failure();
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
 
@@ -2273,7 +2287,7 @@ mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
     cir::CallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
-                             getTypeConverter(), symbolTables,
+                             getTypeConverter(), dataLayout, symbolTables,
                              op.getCalleeAttr());
 }
 
@@ -2281,9 +2295,10 @@ mlir::LogicalResult CIRToLLVMTryCallOpLowering::matchAndRewrite(
     cir::TryCallOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   assert(!cir::MissingFeatures::opCallCallConv());
-  return rewriteCallOrInvoke(
-      op.getOperation(), adaptor.getOperands(), rewriter, getTypeConverter(),
-      symbolTables, op.getCalleeAttr(), op.getNormalDest(), op.getUnwindDest());
+  return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
+                             getTypeConverter(), dataLayout, symbolTables,
+                             op.getCalleeAttr(), op.getNormalDest(),
+                             op.getUnwindDest());
 }
 
 mlir::LogicalResult CIRToLLVMReturnAddrOpLowering::matchAndRewrite(
@@ -2678,8 +2693,9 @@ static bool shouldDropFuncAttribute(cir::FuncOp func, mlir::NamedAttribute attr,
 /// Lower `cir.func` attributes for an `LLVMFuncOp` or `LLVM::AliasOp`.
 /// Drop attributes populated by the destination op builder. If
 /// `includeFunctionOnlyAttrs` is false, also omit attributes that are only
-/// valid on functions.
-void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
+/// valid on functions.  Fails when an argument attribute's pointee type has
+/// no memory representation.
+mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     cir::FuncOp func, bool includeFunctionOnlyAttrs,
     SmallVectorImpl<mlir::NamedAttribute> &result) const {
   OpenCLFunctionMetadataLowering openCLMetadataLowering(func.getContext());
@@ -2692,9 +2708,13 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
     if (attr.getName() == func.getArgAttrsAttrName()) {
       auto argAttrs = cast<mlir::ArrayAttr>(attr.getValue());
-      result.emplace_back(
-          attr.getName(),
-          convertTypedArgAttrs(argAttrs, *getTypeConverter(), getContext()));
+      std::optional<mlir::ArrayAttr> lowered = convertTypedArgAttrs(
+          argAttrs, *getTypeConverter(), dataLayout, getContext());
+      if (!lowered)
+        return func.emitError() << "NYI: lowering a byval/sret/byref "
+                                   "argument whose pointee type has no "
+                                   "memory representation";
+      result.emplace_back(attr.getName(), *lowered);
       continue;
     }
     result.push_back(attr);
@@ -2702,13 +2722,17 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
 
   if (includeFunctionOnlyAttrs)
     openCLMetadataLowering.appendAttrs(result);
+
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewriteAlias(
     cir::FuncOp op, llvm::StringRef aliasee, mlir::Type ty, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/false, attributes);
+  if (mlir::failed(lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/false,
+                                       attributes)))
+    return mlir::failure();
 
   mlir::Location loc = op.getLoc();
   auto aliasOp = rewriter.replaceOpWithNewOp<mlir::LLVM::AliasOp>(
@@ -2769,7 +2793,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   mlir::LLVM::Linkage linkage = convertLinkage(op.getLinkage());
   mlir::LLVM::CConv cconv = convertCallingConv(op.getCallingConv());
   SmallVector<mlir::NamedAttribute, 4> attributes;
-  lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/true, attributes);
+  if (mlir::failed(lowerFuncAttributes(op, /*includeFunctionOnlyAttrs=*/true,
+                                       attributes)))
+    return mlir::failure();
 
   mlir::LLVM::LLVMFuncOp fn = mlir::LLVM::LLVMFuncOp::create(
       rewriter, loc, op.getName(), llvmFnTy, linkage, isDsoLocal, cconv,
