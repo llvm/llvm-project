@@ -4,6 +4,7 @@
 ; CHECK-SPIRV-DAG: OpDecorate %[[#ZEXT:]] FuncParamAttr Zext
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SEXT:]] FuncParamAttr Sext
 ; CHECK-SPIRV-DAG: OpDecorate %[[#NOWRITE:]] FuncParamAttr NoWrite
+; CHECK-SPIRV-DAG: OpDecorate %[[#NOWRITE]] FuncParamAttr NoCapture
 ; CHECK-SPIRV-DAG: OpDecorate %[[#NOALIAS:]] FuncParamAttr NoAlias
 ; CHECK-SPIRV-DAG: OpDecorate %[[#BYVAL:]] FuncParamAttr ByVal
 ; CHECK-SPIRV-DAG: OpDecorate %[[#SRET:]] FuncParamAttr Sret
@@ -21,7 +22,7 @@ entry:
 }
 
 ; CHECK-SPIRV: %[[#NOWRITE]] = OpFunctionParameter %[[#]]
-define spir_func void @test_readonly(ptr readonly %arg) {
+define spir_func void @test_readonly(ptr readonly captures(none) %arg) {
 entry:
   ret void
 }
