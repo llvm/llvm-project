@@ -1716,6 +1716,10 @@ protected:
   // SethiUllmanNumbers - The SethiUllman number for each node.
   std::vector<unsigned> SethiUllmanNumbers;
 
+  // A queued node's successors are already scheduled. Their heights remain
+  // fixed until the node leaves the queue or its dependencies are updated.
+  DenseMap<const SUnit *, unsigned> ClosestSuccs;
+
   /// RegPressure - Tracking current reg pressure per register class.
   std::vector<unsigned> RegPressure;
 
@@ -1761,10 +1765,13 @@ public:
   void releaseState() override {
     SUnits = nullptr;
     SethiUllmanNumbers.clear();
+    ClosestSuccs.clear();
     llvm::fill(RegPressure, 0);
   }
 
   unsigned getNodePriority(const SUnit *SU) const;
+
+  unsigned getClosestSucc(const SUnit *SU);
 
   unsigned getNodeOrdering(const SUnit *SU) const {
     if (!SU->getNode()) return 0;
@@ -1787,6 +1794,7 @@ public:
     if (I != std::prev(Queue.end()))
       std::swap(*I, Queue.back());
     Queue.pop_back();
+    ClosestSuccs.erase(SU);
     SU->NodeQueueId = 0;
   }
 
@@ -1871,6 +1879,7 @@ public:
     if (Queue.empty()) return nullptr;
 
     SUnit *V = popFromQueue(Queue, Picker, scheduleDAG);
+    ClosestSuccs.erase(V);
     V->NodeQueueId = 0;
     return V;
   }
@@ -1940,11 +1949,10 @@ CalcNodeSethiUllmanNumber(const SUnit *SU, std::vector<unsigned> &SUNumbers) {
       if (Pred.isCtrl()) continue;  // ignore chain preds
       SUnit *PredSU = Pred.getSUnit();
       if (SUNumbers[PredSU->NodeNum] == 0) {
-#ifndef NDEBUG
-        // In debug mode, check that we don't have such element in the stack.
-        for (auto It : WorkList)
-          assert(It.SU != PredSU && "Trying to push an element twice?");
-#endif
+        // An acyclic path cannot contain more nodes than SUNumbers. Avoid
+        // scanning the worklist, which is quadratic for long paths.
+        assert(WorkList.size() < SUNumbers.size() &&
+               "Trying to push an element twice?");
         // Next time start processing this one starting from the next pred.
         Temp.PredsProcessed = P + 1;
         WorkList.push_back(PredSU);
@@ -1999,6 +2007,7 @@ void RegReductionPQBase::addNode(const SUnit *SU) {
 }
 
 void RegReductionPQBase::updateNode(const SUnit *SU) {
+  ClosestSuccs.erase(SU);
   SethiUllmanNumbers[SU->NodeNum] = 0;
   CalcNodeSethiUllmanNumber(SU, SethiUllmanNumbers);
 }
@@ -2327,6 +2336,13 @@ static unsigned closestSucc(const SUnit *SU) {
   return MaxHeight;
 }
 
+unsigned RegReductionPQBase::getClosestSucc(const SUnit *SU) {
+  auto [It, Inserted] = ClosestSuccs.try_emplace(SU);
+  if (Inserted)
+    It->second = closestSucc(SU);
+  return It->second;
+}
+
 /// calcMaxScratches - Returns an cost estimate of the worse case requirement
 /// for scratch registers, i.e. number of data dependencies.
 static unsigned calcMaxScratches(const SUnit *SU) {
@@ -2573,8 +2589,8 @@ static bool BURRSort(SUnit *left, SUnit *right, RegReductionPQBase *SPQ) {
   // t3 = op t4, c2
   //
   // This creates more short live intervals.
-  unsigned LDist = closestSucc(left);
-  unsigned RDist = closestSucc(right);
+  unsigned LDist = SPQ->getClosestSucc(left);
+  unsigned RDist = SPQ->getClosestSucc(right);
   if (LDist != RDist)
     return LDist < RDist;
 
