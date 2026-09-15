@@ -116,6 +116,7 @@
 ; O2-NEXT:   inline-asm-prepare
 ; O2-NEXT:   safe-stack
 ; O2-NEXT:   stack-protector
+; O2-NEXT:   merge-allocas
 ; O2-NEXT:   verify
 ; O2-NEXT: x86-asm-printer-begin
 ; O2-NEXT: function
@@ -320,6 +321,7 @@
 ; O3-WINDOWS-NEXT:   inline-asm-prepare
 ; O3-WINDOWS-NEXT:   safe-stack
 ; O3-WINDOWS-NEXT:   stack-protector
+; O3-WINDOWS-NEXT:   merge-allocas
 ; O3-WINDOWS-NEXT:   verify
 ; O3-WINDOWS-NEXT: x86-asm-printer-begin
 ; O3-WINDOWS-NEXT: function

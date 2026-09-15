@@ -108,13 +108,16 @@
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
 ; CHECK-NEXT:       Insert stack protectors
-; CHECK-NEXT:       Module Verifier
-; CHECK-NEXT:       Analysis containing CSE Info
 ; CHECK-NEXT:       Dominator Tree Construction
 ; CHECK-NEXT:       Cycle Info Analysis
 ; CHECK-NEXT:       Post-Dominator Tree Construction
 ; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Basic Alias Analysis (stateless AA impl)
+; CHECK-NEXT:       Function Alias Analysis Results
+; CHECK-NEXT:       Merge adjacent fixed-size allocas
+; CHECK-NEXT:       Module Verifier
+; CHECK-NEXT:       Analysis containing CSE Info
+; CHECK-NEXT:       Branch Probability Analysis
 ; CHECK-NEXT:       Function Alias Analysis Results
 ; CHECK-NEXT:       IRTranslator
 ; CHECK-NEXT:       AArch64O0PreLegalizerCombiner
