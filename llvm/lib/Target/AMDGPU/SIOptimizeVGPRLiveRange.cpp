@@ -579,15 +579,16 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
     LIS->createAndComputeVirtRegInterval(Reg);
     LIS->createAndComputeVirtRegInterval(NewReg);
     LIS->createAndComputeVirtRegInterval(UndefReg);
-    return;
   }
 
-  // The optimized Reg is not alive through Flow blocks anymore.
-  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
-  OldVarInfo.AliveBlocks.reset(Flow->getNumber());
+  if (LV) {
+    // The optimized Reg is not alive through Flow blocks anymore.
+    LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+    OldVarInfo.AliveBlocks.reset(Flow->getNumber());
 
-  updateLiveRangeInElseRegion(Reg, NewReg, Flow, Endif, ElseBlocks);
-  updateLiveRangeInThenRegion(Reg, If, Flow);
+    updateLiveRangeInElseRegion(Reg, NewReg, Flow, Endif, ElseBlocks);
+    updateLiveRangeInThenRegion(Reg, If, Flow);
+  }
 }
 
 void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
@@ -626,40 +627,41 @@ void SIOptimizeVGPRLiveRange::optimizeWaterfallLiveRange(
     LIS->createAndComputeVirtRegInterval(Reg);
     LIS->createAndComputeVirtRegInterval(NewReg);
     LIS->createAndComputeVirtRegInterval(UndefReg);
-    return;
   }
 
-  LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
-  LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
+  if (LV) {
+    LiveVariables::VarInfo &NewVarInfo = LV->getVarInfo(NewReg);
+    LiveVariables::VarInfo &OldVarInfo = LV->getVarInfo(Reg);
 
-  // Find last use and mark as kill
-  MachineInstr *Kill = nullptr;
-  for (auto *MI : reverse(Instructions)) {
-    if (MI->readsRegister(NewReg, TRI)) {
-      MI->addRegisterKilled(NewReg, TRI);
-      NewVarInfo.Kills.push_back(MI);
-      Kill = MI;
-      break;
+    // Find last use and mark as kill
+    MachineInstr *Kill = nullptr;
+    for (auto *MI : reverse(Instructions)) {
+      if (MI->readsRegister(NewReg, TRI)) {
+        MI->addRegisterKilled(NewReg, TRI);
+        NewVarInfo.Kills.push_back(MI);
+        Kill = MI;
+        break;
+      }
     }
-  }
-  assert(Kill && "Failed to find last usage of register in loop");
+    assert(Kill && "Failed to find last usage of register in loop");
 
-  MachineBasicBlock *KillBlock = Kill->getParent();
-  bool PostKillBlock = false;
-  for (auto *Block : Blocks) {
-    auto BBNum = Block->getNumber();
+    MachineBasicBlock *KillBlock = Kill->getParent();
+    bool PostKillBlock = false;
+    for (auto *Block : Blocks) {
+      auto BBNum = Block->getNumber();
 
-    // collectWaterfallCandidateRegisters only collects registers that are dead
-    // after the loop. So we know that the old reg is no longer live throughout
-    // the waterfall loop.
-    OldVarInfo.AliveBlocks.reset(BBNum);
+      // collectWaterfallCandidateRegisters only collects registers that are
+      // dead after the loop. So we know that the old reg is no longer live
+      // throughout the waterfall loop.
+      OldVarInfo.AliveBlocks.reset(BBNum);
 
-    // The new register is live up to (and including) the block that kills it.
-    PostKillBlock |= (Block == KillBlock);
-    if (PostKillBlock) {
-      NewVarInfo.AliveBlocks.reset(BBNum);
-    } else if (Block != LoopHeader) {
-      NewVarInfo.AliveBlocks.set(BBNum);
+      // The new register is live up to (and including) the block that kills it.
+      PostKillBlock |= (Block == KillBlock);
+      if (PostKillBlock) {
+        NewVarInfo.AliveBlocks.reset(BBNum);
+      } else if (Block != LoopHeader) {
+        NewVarInfo.AliveBlocks.set(BBNum);
+      }
     }
   }
 }
@@ -686,8 +688,7 @@ bool SIOptimizeVGPRLiveRangeLegacy::runOnMachineFunction(MachineFunction &MF) {
 
   auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
   LiveIntervals *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  LiveVariables *LV =
-      LIS ? nullptr : &getAnalysis<LiveVariablesWrapperPass>().getLV();
+  LiveVariables *LV = &getAnalysis<LiveVariablesWrapperPass>().getLV();
   MachineDominatorTree *MDT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachineLoopInfo *Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
@@ -699,8 +700,9 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   MFPropsModifier _(*this, MF);
   LiveIntervals *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
-  LiveVariables *LV =
-      LIS ? nullptr : &MFAM.getResult<LiveVariablesAnalysis>(MF);
+  LiveVariables *LV = MFAM.getCachedResult<LiveVariablesAnalysis>(MF);
+  if (!LIS && !LV)
+    LV = &MFAM.getResult<LiveVariablesAnalysis>(MF);
   MachineDominatorTree *MDT = &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo *Loops = &MFAM.getResult<MachineLoopAnalysis>(MF);
 
@@ -710,9 +712,7 @@ SIOptimizeVGPRLiveRangePass::run(MachineFunction &MF,
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserve<LiveIntervalsAnalysis>();
-  // LiveVariables is only used and maintained when LiveIntervals is absent.
-  if (!LIS)
-    PA.preserve<LiveVariablesAnalysis>();
+  PA.preserve<LiveVariablesAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
