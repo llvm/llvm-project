@@ -13431,11 +13431,22 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   ICmpInst::Predicate Cond = IsSigned ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_ULT;
 
   const SCEV *Stride = IV->getStepRecurrence(*this);
-
-  bool PositiveStride = isKnownPositive(Stride);
+  const SCEV *GuardedStride = Stride;
 
   // Whether the IV may reach the maximum value before the exit is taken.
   bool IVMayOverflow = true;
+
+  bool PositiveStride = isKnownPositive(Stride);
+  // A dominating guard may prove the stride positive.
+  if (!PositiveStride) {
+    const SCEV *LoopGuardedStride = applyLoopGuards(Stride, L);
+    if (isKnownPositive(LoopGuardedStride)) {
+      GuardedStride = LoopGuardedStride;
+      PositiveStride = true;
+      // Encode the context-sensitive stride > 0 fact into the expression
+      Stride = getUMaxExpr(Stride, getOne(Stride->getType()));
+    }
+  }
 
   // Avoid negative or zero stride values.
   if (!PositiveStride) {
@@ -13509,7 +13520,7 @@ ScalarEvolution::howManyLessThans(const SCEV *LHS, const SCEV *RHS,
   } else {
     // Avoid proven overflow cases: this will ensure that the backedge taken
     // count will not generate any unsigned overflow.
-    IVMayOverflow = canIVOverflowOnLT(RHS, Stride, IsSigned);
+    IVMayOverflow = canIVOverflowOnLT(RHS, GuardedStride, IsSigned);
     if (IVMayOverflow && !NoWrap)
       return getCouldNotCompute();
   }

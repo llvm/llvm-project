@@ -19,7 +19,7 @@
 
 ; RUN: not --crash opt -print-on-crash -passes=trigger-crash-function < %s 2>&1 | FileCheck %s --check-prefix=CHECK_FUNCTION
 
-; RUN: not --crash opt -print-on-crash -passes=cgscc(trigger-crash-cgscc) < %s 2>&1 | FileCheck %s --check-prefix=CHECK_CGSCC
+; RUN: not --crash opt -print-on-crash -passes="cgscc(trigger-crash-cgscc)" < %s 2>&1 | FileCheck %s --check-prefix=CHECK_CGSCC
 
 ; RUN: llc -stop-after=machine-cp %s -o %t.mir
 ; RUN: not --crash llc -print-on-crash -passes=trigger-crash-machine-function %t.mir 2>&1 | FileCheck %s --check-prefix=CHECK_MACHINE_FUNCTION

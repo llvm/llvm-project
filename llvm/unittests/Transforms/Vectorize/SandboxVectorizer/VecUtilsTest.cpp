@@ -1300,6 +1300,7 @@ entry:
           .empty());
 }
 
+#ifndef NDEBUG
 TEST_F(VecUtilsTest, BndlRef) {
   parseIR(R"IR(
 define void @vectorized_seed_user(i8 %v0, i8 %v1) {
@@ -1334,3 +1335,4 @@ entry:
   EXPECT_THAT(Str, testing::MatchesRegex("0. *%add0 = add i8 %v0, 0 .*\n"
                                          "1. *%add1 = add i8 %v1, 1 .*\n"));
 }
+#endif // NDEBUG
