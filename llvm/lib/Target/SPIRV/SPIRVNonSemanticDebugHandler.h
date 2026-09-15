@@ -54,8 +54,6 @@ class SPIRVSubtarget;
 ///   the synthesized entry OpLabel when there are no OpVariables.
 /// - endFunctionImpl() resets per-function state.
 class SPIRVNonSemanticDebugHandler : public DebugHandlerBase {
-  const unsigned NSSet;
-
   struct CompileUnitInfo {
     const DICompileUnit *TheCU = nullptr;
     SmallString<128> FilePath;
