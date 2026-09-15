@@ -190,8 +190,6 @@ define void @zero_k(<8 x i32> %arg, <8 x i1> %mask) #0 {
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vmovdqu32 %zmm0, 0 {%k1}
-; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpxor %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vzeroupper
@@ -343,22 +341,6 @@ define void @all_no_live_vec() #1 {
 ; AVX512F-NEXT:    xorl %r9d, %r9d
 ; AVX512F-NEXT:    xorl %r10d, %r10d
 ; AVX512F-NEXT:    xorl %r11d, %r11d
-; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512F-NEXT:    vxorps %xmm3, %xmm3, %xmm3
-; AVX512F-NEXT:    vxorps %xmm4, %xmm4, %xmm4
-; AVX512F-NEXT:    vxorps %xmm5, %xmm5, %xmm5
-; AVX512F-NEXT:    vxorps %xmm6, %xmm6, %xmm6
-; AVX512F-NEXT:    vxorps %xmm7, %xmm7, %xmm7
-; AVX512F-NEXT:    vxorps %xmm8, %xmm8, %xmm8
-; AVX512F-NEXT:    vxorps %xmm9, %xmm9, %xmm9
-; AVX512F-NEXT:    vxorps %xmm10, %xmm10, %xmm10
-; AVX512F-NEXT:    vxorps %xmm11, %xmm11, %xmm11
-; AVX512F-NEXT:    vxorps %xmm12, %xmm12, %xmm12
-; AVX512F-NEXT:    vxorps %xmm13, %xmm13, %xmm13
-; AVX512F-NEXT:    vxorps %xmm14, %xmm14, %xmm14
-; AVX512F-NEXT:    vxorps %xmm15, %xmm15, %xmm15
 ; AVX512F-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
 ; AVX512F-NEXT:    vxorps %xmm2, %xmm2, %xmm2
