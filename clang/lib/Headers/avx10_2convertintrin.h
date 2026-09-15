@@ -293,8 +293,7 @@ _mm256_maskz_cvtx2ps_ph(__mmask16 __U, __m256 __A, __m256 __B) {
 ///    elements are zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_128_mask(
-      (__v16qi)__A, (__v8hf)__B, (__v16qi)_mm_undefined_si128(), (__mmask8)-1);
+  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_128((__v16qi)__A, (__v8hf)__B);
 }
 
 /// Convert 128-bit vector \a __B containing packed FP16 floating-point elements
@@ -333,8 +332,10 @@ _mm_cvtbiasph_bf8(__m128i __A, __m128h __B) {
 ///    from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_mask_cvtbiasph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_128_mask(
-      (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)__W, (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask16)__U,
+      (__v16qi)__builtin_ia32_vcvtbiasph2bf8_128((__v16qi)__A, (__v8hf)__B),
+      (__v16qi)__W);
 }
 
 /// Convert 128-bit vector \a __B containing packed FP16 floating-point elements
@@ -371,9 +372,10 @@ _mm_mask_cvtbiasph_bf8(__m128i __W, __mmask8 __U, __m128i __A, __m128h __B) {
 ///    is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS128
 _mm_maskz_cvtbiasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_128_mask(
-      (__v16qi)__A, (__v8hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
-      (__mmask8)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask16)__U,
+      (__v16qi)__builtin_ia32_vcvtbiasph2bf8_128((__v16qi)__A, (__v8hf)__B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert 256-bit vector \a __B containing packed FP16 floating-point elements
@@ -401,9 +403,7 @@ _mm_maskz_cvtbiasph_bf8(__mmask8 __U, __m128i __A, __m128h __B) {
 ///    converted elements from \a __B using biases from \a __A.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_256_mask(
-      (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_undefined_si128(),
-      (__mmask16)-1);
+  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_256((__v32qi)__A, (__v16hf)__B);
 }
 
 /// Convert 256-bit vector \a __B containing packed FP16 floating-point elements
@@ -441,8 +441,10 @@ _mm256_cvtbiasph_bf8(__m256i __A, __m256h __B) {
 ///    is not set, then element from \a __W is taken instead.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_bf8(
     __m128i __W, __mmask16 __U, __m256i __A, __m256h __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_256_mask(
-      (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)__W, (__mmask16)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask16)__U,
+      (__v16qi)__builtin_ia32_vcvtbiasph2bf8_256((__v32qi)__A, (__v16hf)__B),
+      (__v16qi)__W);
 }
 
 /// Convert 256-bit vector \a __B containing packed FP16 floating-point elements
@@ -478,9 +480,10 @@ static __inline__ __m128i __DEFAULT_FN_ATTRS256 _mm256_mask_cvtbiasph_bf8(
 ///    is not set, then element is zeroed.
 static __inline__ __m128i __DEFAULT_FN_ATTRS256
 _mm256_maskz_cvtbiasph_bf8(__mmask16 __U, __m256i __A, __m256h __B) {
-  return (__m128i)__builtin_ia32_vcvtbiasph2bf8_256_mask(
-      (__v32qi)__A, (__v16hf)__B, (__v16qi)(__m128i)_mm_setzero_si128(),
-      (__mmask16)__U);
+  return (__m128i)__builtin_ia32_selectb_128(
+      (__mmask16)__U,
+      (__v16qi)__builtin_ia32_vcvtbiasph2bf8_256((__v32qi)__A, (__v16hf)__B),
+      (__v16qi)_mm_setzero_si128());
 }
 
 /// Convert 128-bit vector \a __B containing packed FP16 floating-point elements
