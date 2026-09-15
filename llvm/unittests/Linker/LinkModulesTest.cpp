@@ -203,6 +203,43 @@ TEST_F(LinkModuleTest, TypeMerge) {
             M1->getNamedGlobal("t2")->getType());
 }
 
+TEST_F(LinkModuleTest, TypeMergeSameType) {
+  IRBuilder<> Builder(EntryBB);
+
+  // Create a type in the context, shared between modules
+  Type *SharedTy = StructType::create(Ctx, {Builder.getInt32Ty()}, "SharedTy");
+
+  // Use it in the first module
+  Value *Load = Builder.CreateLoad(SharedTy, GV, "load");
+  Builder.CreateRet(Load);
+
+  std::unique_ptr<Module> NewMod =
+      std::make_unique<Module>("MySecondModule", Ctx);
+  Ctx.setDiagnosticHandlerCallBack(expectNoDiags);
+
+  // Create another type, only for the second module.
+  // When linking, this one will be merged with SharedTy from the first module.
+  Type *Ty2 = StructType::create(Ctx, {Builder.getInt32Ty()}, "Ty2");
+  // define ptr @func2(%Ty2 %0, %SharedTy %1)
+  FunctionType *FTy = FunctionType::get(Builder.getInt32Ty(), {Ty2, SharedTy},
+                                        false /*=isVarArg*/);
+  Function *F2 =
+      Function::Create(FTy, Function::ExternalLinkage, "func2", NewMod.get());
+  BasicBlock *EntryBB2 = BasicBlock::Create(Ctx, "entry", F2);
+  Builder.SetInsertPoint(EntryBB2);
+  Builder.CreateRet(Builder.getInt32(2));
+
+  // Linking the modules previously asserted when mapping types.
+  Linker::linkModules(*M, std::move(NewMod));
+
+  // Make sure the linked module looks somewhat like expected, having func2 with
+  // merged argument types.
+  EXPECT_EQ(M->getFunction("func2")->getFunctionType()->getParamType(0),
+            SharedTy);
+  EXPECT_EQ(M->getFunction("func2")->getFunctionType()->getParamType(1),
+            SharedTy);
+}
+
 TEST_F(LinkModuleTest, NewCAPISuccess) {
   std::unique_ptr<Module> DestM(getExternal(Ctx, "foo"));
   std::unique_ptr<Module> SourceM(getExternal(Ctx, "bar"));
