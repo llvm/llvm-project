@@ -1483,7 +1483,8 @@ static SignedNumericExpr<CAT, KIND> buildSignedAdd(
 }
 
 template <typename T>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(const T &) {
+[[maybe_unused]] static std::optional<Expr<SomeType>>
+tryBuildSplitSumExpressionTree(const T &) {
   return std::nullopt;
 }
 
@@ -1533,8 +1534,8 @@ static std::optional<NumericExpr<CAT, KIND>> tryBuildSplitSumExpressionTree(
 }
 
 template <common::TypeCategory CAT>
-static std::optional<Expr<SomeType>> tryBuildSplitSumExpressionTree(
-    const Expr<SomeKind<CAT>> &expr) {
+[[maybe_unused]] static std::optional<Expr<SomeType>>
+tryBuildSplitSumExpressionTree(const Expr<SomeKind<CAT>> &expr) {
   // Keep the supported categories explicit: integer reassociation requires a
   // separate intermediate-range policy.
   if constexpr (CAT == common::TypeCategory::Real ||
