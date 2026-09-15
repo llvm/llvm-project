@@ -168,6 +168,33 @@ TEST_F(AArch64GISelMITest, TestFPClassCstZeroFPTrunc) {
   EXPECT_EQ(std::nullopt, Known.getSignBit());
 }
 
+TEST_F(AArch64GISelMITest, TestFPClassCstPosNormalFPTruncRound) {
+  // f0x35800000 is 0x1p-20, which is normal in f32 and subnormal in f16.
+  // RoundingMode::NearestTiesToEven is encoded as 1 in MIR.
+  StringRef MIRString = R"(
+    %src:_(s32) = G_FCONSTANT float f0x35800000
+    %trunc:_(s16) = G_INTRINSIC_FPTRUNC_ROUND %src, 1
+    %copy:_(s16) = COPY %trunc
+)";
+
+  setUp(MIRString);
+  if (!TM)
+    GTEST_SKIP();
+
+  Register CopyReg = Copies[Copies.size() - 1];
+  MachineInstr *FinalCopy = MRI->getVRegDef(CopyReg);
+  Register SrcReg = FinalCopy->getOperand(1).getReg();
+
+  GISelValueTracking Info(*MF);
+  KnownFPClass Known = Info.computeKnownFPClass(SrcReg);
+
+  EXPECT_EQ(fcPositive | fcNegZero, Known.getKnownFPClasses());
+  EXPECT_EQ(std::nullopt, Known.getSignBit());
+
+  Known = Info.computeKnownFPClass(SrcReg, fcPosSubnormal);
+  EXPECT_FALSE(Known.isKnownNever(fcPosSubnormal));
+}
+
 TEST_F(AArch64GISelMITest, TestFPClassCstVecZeroFPTrunc) {
   StringRef MIRString = R"(
    %c0:_(s64) = G_FCONSTANT double 0.0
