@@ -65,6 +65,7 @@ LLVM_YAML_DECLARE_ENUM_TRAITS(JumpTableEntrySize)
 LLVM_YAML_DECLARE_ENUM_TRAITS(SourceLanguage)
 LLVM_YAML_DECLARE_ENUM_TRAITS(EncodedFramePtrReg)
 LLVM_YAML_DECLARE_ENUM_TRAITS(AssociationKind)
+LLVM_YAML_DECLARE_ENUM_TRAITS(CoroutineKind)
 
 LLVM_YAML_STRONG_TYPEDEF(StringRef, TypeName)
 
@@ -232,6 +233,14 @@ void ScalarEnumerationTraits<AssociationKind>::enumeration(
     IO.enumCase(Kind, E.name(), static_cast<AssociationKind>(E.value()));
 
   IO.enumFallback<Hex16>(Kind);
+}
+
+void ScalarEnumerationTraits<CoroutineKind>::enumeration(IO &IO,
+                                                         CoroutineKind &Kind) {
+  auto Names = getCoroutineKindNames();
+  for (const auto &E : Names) {
+    IO.enumCase(Kind, E.name(), static_cast<CoroutineKind>(E.value()));
+  }
 }
 
 namespace llvm {
@@ -545,13 +554,16 @@ template <> void SymbolRecordImpl<FrameProcSym>::map(IO &IO) {
   FrameProcedureOptions Flags = Symbol.getFlags();
   EncodedFramePtrReg LocalFP = Symbol.getEncodedLocalFramePtrReg();
   EncodedFramePtrReg ParamFP = Symbol.getEncodedParamFramePtrReg();
+  CoroutineKind CoroKind = Symbol.getCoroutineKind();
   IO.mapRequired("Flags", Flags);
   IO.mapOptional("LocalFramePtrReg", LocalFP, EncodedFramePtrReg::None);
   IO.mapOptional("ParamFramePtrReg", ParamFP, EncodedFramePtrReg::None);
+  IO.mapOptional("CoroutineKind", CoroKind, CoroutineKind::None);
   if (!IO.outputting()) {
     Symbol.setFlags(Flags);
     Symbol.setEncodedLocalFramePtrReg(LocalFP);
     Symbol.setEncodedParamFramePtrReg(ParamFP);
+    Symbol.setCoroutineKind(CoroKind);
   }
 }
 

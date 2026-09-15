@@ -902,6 +902,15 @@ public:
     return decodeFramePtrReg(getEncodedParamFramePtrReg(), CPU);
   }
 
+  CoroutineKind getCoroutineKind() const {
+    return CoroutineKind((uint32_t(Flags) >> 25U) & 7U);
+  }
+
+  void setCoroutineKind(CoroutineKind K) {
+    FrameProcedureOptions CoroFlags{(static_cast<uint32_t>(K) & 7U) << 25U};
+    Flags = (Flags & ~FrameProcedureOptions::CoroutineKindMask) | CoroFlags;
+  }
+
   uint32_t RecordOffset = 0;
 
 private:
