@@ -111,4 +111,17 @@ static inline std::string getNameFromMapping(const map_var_info_t Name) {
   return NameStr.substr(Begin + 1, End - Begin - 1);
 }
 
+/// Returns "<Prefix><filename>:<line>:<column>" when \p Loc carries a
+/// compiler-provided source location, or an empty string otherwise, so info
+/// output can be annotated without emitting "unknown:0:0".
+static inline std::string getSourceLocationSuffix(const ident_t *Loc,
+                                                  const char *Prefix) {
+  SourceInfo Info(Loc);
+  if (!Info.isAvailible())
+    return "";
+  return std::string(Prefix) + Info.getFilename() + ":" +
+         std::to_string(Info.getLine()) + ":" +
+         std::to_string(Info.getColumn());
+}
+
 #endif // OMPTARGET_SHARED_SOURCE_INFO_H
