@@ -454,11 +454,11 @@ void ReplaceableUses::resolveAllUses(bool ResolveUsers) {
   }
 }
 
-// A ConstantData outlives every use of it and Value::doRAUW rejects it, so
-// a use recorded for one could never fire.
+// A value without a use list (e.g. ConstantData) is never RAUW'd, so don't
+// create a ReplaceableUses instance for it.
 static bool isTrackedValue(const Metadata &MD) {
   auto *VAM = dyn_cast<ValueAsMetadata>(&MD);
-  return VAM && !isa<ConstantData>(VAM->getValue());
+  return VAM && VAM->getValue()->hasUseList();
 }
 
 // Special handing of DIArgList is required in the RemoveDIs project, see
@@ -557,7 +557,7 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
   assert(To && "Expected valid value");
   assert(From != To && "Expected changed value");
   assert(&From->getContext() == &To->getContext() && "Expected same context");
-  assert(!isa<ConstantData>(From) && "Cannot replace constant data");
+  assert(From->hasUseList() && "Must have use list");
 
   auto &Store = From->getContext().pImpl->ValuesAsMetadata;
   auto I = Store.find(From);
