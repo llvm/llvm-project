@@ -270,6 +270,12 @@ infrastructure are described first, followed by tool-specific sections.
   exclusively for overload resolution. Added the {option}`IgnoredTypes`
   option to allow customizing the set of ignored types.
 
+- Improved {doc}`readability-redundant-inline-specifier
+  <clang-tidy/checks/readability/redundant-inline-specifier>` check by flagging
+  `static inline` declarations outside of header files and suggesting `static`
+  alone. This is enabled by default and can be turned off with the new
+  {option}`DiagnoseStaticInline`.
+
 - Improved {doc}`readability-trailing-comma
   <clang-tidy/checks/readability/trailing-comma>` check:
 

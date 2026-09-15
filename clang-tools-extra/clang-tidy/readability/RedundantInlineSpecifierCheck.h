@@ -22,7 +22,9 @@ class RedundantInlineSpecifierCheck : public ClangTidyCheck {
 public:
   RedundantInlineSpecifierCheck(StringRef Name, ClangTidyContext *Context)
       : ClangTidyCheck(Name, Context),
-        StrictMode(Options.get("StrictMode", false)) {}
+        StrictMode(Options.get("StrictMode", false)),
+        DiagnoseStaticInline(Options.get("DiagnoseStaticInline", true)) {}
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   std::optional<TraversalKind> getCheckTraversalKind() const override {
@@ -34,7 +36,9 @@ private:
   void handleMatchedDecl(const T *MatchedDecl, const SourceManager &Sources,
                          const ast_matchers::MatchFinder::MatchResult &Result,
                          StringRef Message);
+
   const bool StrictMode;
+  const bool DiagnoseStaticInline;
 };
 
 } // namespace clang::tidy::readability
