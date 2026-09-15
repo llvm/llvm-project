@@ -15,6 +15,7 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -258,6 +259,13 @@ Error assembleToStream(const ExegesisTarget &ET,
   // registers.
   auto &Properties = MF.getProperties();
   Properties.setNoVRegs().resetIsSSA().setNoPHIs();
+
+  // Reserve stack space for memory operands whose base register is fixed to
+  // the stack pointer, so they address the snippet's own frame rather than the
+  // caller's.
+  if (unsigned ScratchBytes = ET.getStackScratchSpaceBytes())
+    MF.getFrameInfo().CreateStackObject(ScratchBytes, Align(16),
+                                        /*isSpillSlot=*/false);
 
   for (const MCRegister Reg : LiveIns)
     MF.getRegInfo().addLiveIn(Reg);
