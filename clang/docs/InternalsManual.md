@@ -114,6 +114,18 @@ severe that error recovery won't be able to recover sensibly from them (thus
 spewing a ton of bogus errors). One example of this class of error is failure
 to `#include` a file.
 
+##### Extension vs ExtWarn
+
+The `Extension` and `ExtWarn` are very closely related. Deciding when to use
+which one can be difficult. `ExtWarn` should be used in cases an extension is
+diagnosed and one of the following applies (or another good reason is stated):
+- the extension is likely to be used incorrectly (e.g. `-Wvla`)
+- the diagnosed code is likely wrong (e.g. `-Wmain`)
+- the extension is likely surprising in some cases (e.g. `SFINAEFailure`)
+- the extension is deprecated (e.g. `-Wauto-storage-class`)
+
+`Extension` should be used in all other circumstances.
+
 #### Diagnostic Wording
 
 The wording used for a diagnostic is critical because it is the only way for a
