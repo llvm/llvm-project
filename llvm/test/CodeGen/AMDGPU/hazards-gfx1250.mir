@@ -559,15 +559,15 @@ body: |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; GCN-NEXT: S_WAIT_TENSORCNT 10, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:sgpr_128 = IMPLICIT_DEF
     %3:sgpr_256 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...
 
 ---
@@ -581,15 +581,15 @@ body: |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; GCN-NEXT: TENSOR_STORE_FROM_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_STORE_FROM_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; GCN-NEXT: S_WAIT_TENSORCNT 10, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_STORE_FROM_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_STORE_FROM_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:sgpr_128 = IMPLICIT_DEF
     %3:sgpr_256 = IMPLICIT_DEF
-    TENSOR_STORE_FROM_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_STORE_FROM_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_STORE_FROM_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    TENSOR_STORE_FROM_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...
 
 ---
@@ -601,10 +601,10 @@ body: |
     ; GCN-LABEL: name: tensor_load_no_previous_tensor
     ; GCN: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...
 
 ---
@@ -618,16 +618,16 @@ body: |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; GCN-NEXT: S_WAIT_TENSORCNT 10, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:sgpr_128 = IMPLICIT_DEF
     %3:sgpr_256 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_WAIT_TENSORCNT 10, implicit-def $tensorcnt, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...
 
 ---
@@ -641,16 +641,16 @@ body: |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; GCN-NEXT: S_WAIT_TENSORCNT 9, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:sgpr_128 = IMPLICIT_DEF
     %3:sgpr_256 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_WAIT_TENSORCNT 9, implicit-def $tensorcnt, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...
 
 ---
@@ -664,17 +664,17 @@ body: |
     ; GCN-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; GCN-NEXT: S_WAIT_TENSORCNT 11, implicit-def $tensorcnt, implicit $tensorcnt
     ; GCN-NEXT: S_WAIT_TENSORCNT 10, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:sgpr_128 = IMPLICIT_DEF
     %3:sgpr_256 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_WAIT_TENSORCNT 11, implicit-def $tensorcnt, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...
 
 ---
@@ -689,14 +689,14 @@ body: |
     ; GCN-NEXT: [[DEF2:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; GCN-NEXT: [[DEF3:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; GCN-NEXT: S_WAIT_TENSORCNT 0, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; GCN-NEXT: S_WAIT_TENSORCNT 10, implicit-def $tensorcnt, implicit $tensorcnt
-    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; GCN-NEXT: TENSOR_LOAD_TO_LDS_d2_gfx1250 [[DEF2]], [[DEF3]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:sgpr_128 = IMPLICIT_DEF
     %3:sgpr_256 = IMPLICIT_DEF
     S_WAIT_TENSORCNT 0, implicit-def $tensorcnt, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %0, %1, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    TENSOR_LOAD_TO_LDS_d2_gfx1250 %2, %3, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
 ...

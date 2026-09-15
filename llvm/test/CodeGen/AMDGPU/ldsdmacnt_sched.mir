@@ -27,8 +27,8 @@ body: |
     ; DEFAULT-LABEL: name: tensor_load_tensor_load
     ; DEFAULT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -42,8 +42,8 @@ body: |
     ; MAXOCC-LABEL: name: tensor_load_tensor_load
     ; MAXOCC: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -57,8 +57,8 @@ body: |
     %1:sgpr_256 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %5:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -77,7 +77,7 @@ body: |
     ; DEFAULT: S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; DEFAULT-NEXT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -92,7 +92,7 @@ body: |
     ; MAXOCC: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; MAXOCC-NEXT: S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -107,7 +107,7 @@ body: |
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
     S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %5:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -175,7 +175,7 @@ body: |
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait
     ; DEFAULT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -198,14 +198,14 @@ body: |
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; MAXOCC-NEXT: S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; MAXOCC-NEXT: S_ENDPGM 0
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_WAIT_TENSORCNT 3, implicit-def dead $tensorcnt, implicit $tensorcnt
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -224,7 +224,7 @@ body: |
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait1
     ; DEFAULT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -239,7 +239,7 @@ body: |
     ; MAXOCC-LABEL: name: tensor_load_tensor_wait1
     ; MAXOCC: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -254,7 +254,7 @@ body: |
     %1:sgpr_256 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_WAIT_TENSORCNT 0, implicit-def dead $tensorcnt, implicit $tensorcnt
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -273,8 +273,8 @@ body: |
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait2
     ; DEFAULT: [[DEF:%[0-9]+]]:sgpr_128 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    ; DEFAULT-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; DEFAULT-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
@@ -291,22 +291,22 @@ body: |
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sgpr_256 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_1:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_2:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_3:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
-    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    ; MAXOCC-NEXT: TENSOR_LOAD_TO_LDS_d2 [[DEF]], [[DEF1]], 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     ; MAXOCC-NEXT: S_WAIT_TENSORCNT 1, implicit-def dead $tensorcnt, implicit $tensorcnt
     ; MAXOCC-NEXT: S_ENDPGM 0
     %0:sgpr_128 = IMPLICIT_DEF
     %1:sgpr_256 = IMPLICIT_DEF
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
-    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
+    TENSOR_LOAD_TO_LDS_d2 %0:sgpr_128, %1:sgpr_256, 0, 0, implicit-def dead $tensorcnt, implicit $exec, implicit $tensorcnt, implicit $asyncmarker
     S_WAIT_TENSORCNT 1, implicit-def dead $tensorcnt, implicit $tensorcnt
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -336,16 +336,16 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: async_load_async_load
     ; MAXOCC: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF4]], implicit $exec
@@ -362,8 +362,8 @@ body: |
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
     %4:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %5:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -393,7 +393,7 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_4:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
     ; MAXOCC-LABEL: name: async_wait_async_load
@@ -401,7 +401,7 @@ body: |
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF4]], implicit $exec
@@ -417,7 +417,7 @@ body: |
     %3:vgpr_32 = IMPLICIT_DEF
     %4:vgpr_32 = IMPLICIT_DEF
     S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %5:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -498,7 +498,7 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -506,7 +506,7 @@ body: |
     ; MAXOCC: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF4]], implicit $exec
@@ -524,7 +524,7 @@ body: |
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
     %4:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -556,7 +556,7 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 0, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -564,7 +564,7 @@ body: |
     ; MAXOCC: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF4]], implicit $exec
@@ -582,7 +582,7 @@ body: |
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
     %4:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     S_WAIT_ASYNCCNT 0, implicit-def dead $asynccnt, implicit $asynccnt
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
@@ -613,8 +613,8 @@ body: |
     ; DEFAULT-NEXT: dead [[V_ADD_U32_e32_5:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF2]], [[DEF3]], implicit $exec
     ; DEFAULT-NEXT: SCHED_GROUP_BARRIER 2, 6, 0
     ; DEFAULT-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    ; DEFAULT-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF4]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; DEFAULT-NEXT: S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     ; DEFAULT-NEXT: S_ENDPGM 0
     ;
@@ -622,8 +622,8 @@ body: |
     ; MAXOCC: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF1:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF2:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    ; MAXOCC-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR [[DEF]], [[DEF1]], [[DEF2]], 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; MAXOCC-NEXT: [[DEF3:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: [[DEF4:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; MAXOCC-NEXT: dead [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[DEF3]], [[DEF4]], implicit $exec
@@ -641,8 +641,8 @@ body: |
     %2:vgpr_32 = IMPLICIT_DEF
     %3:vgpr_32 = IMPLICIT_DEF
     %4:vgpr_32 = IMPLICIT_DEF
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
-    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    GLOBAL_LOAD_ASYNC_TO_LDS_B64_SADDR %0:vgpr_32, %1:sreg_64, %4:vgpr_32, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     S_WAIT_ASYNCCNT 2, implicit-def dead $asynccnt, implicit $asynccnt
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec
     %4:vgpr_32 = V_ADD_U32_e32 %2, %3, implicit $exec

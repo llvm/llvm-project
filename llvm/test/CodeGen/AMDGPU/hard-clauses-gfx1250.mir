@@ -687,13 +687,13 @@ body: |
     ; GFX12-LABEL: name: async_load_async_store
     ; GFX12: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: BUNDLE implicit-def $asynccnt, implicit $vgpr2, implicit $vgpr0_vgpr1, implicit $exec, implicit $asynccnt {
+    ; GFX12-NEXT: BUNDLE implicit-def $asynccnt, implicit $vgpr2, implicit $vgpr0_vgpr1, implicit $exec, implicit $asynccnt, implicit $asyncmarker {
     ; GFX12-NEXT:   S_CLAUSE 1
-    ; GFX12-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
-    ; GFX12-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit internal $asynccnt
+    ; GFX12-NEXT:   GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    ; GFX12-NEXT:   GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit internal $asynccnt, implicit $asyncmarker
     ; GFX12-NEXT: }
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
-    GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
+    GLOBAL_STORE_ASYNC_FROM_LDS_B32 $vgpr0_vgpr1, $vgpr2, 32, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
 ...
 
 ---
@@ -705,9 +705,9 @@ body: |
     ; GFX12-LABEL: name: async_load_ds_load_tr
     ; GFX12: liveins: $vgpr0, $vgpr1, $vgpr2
     ; GFX12-NEXT: {{  $}}
-    ; GFX12-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    ; GFX12-NEXT: GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     ; GFX12-NEXT: $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr2, 8, 0, implicit $exec
-    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt
+    GLOBAL_LOAD_ASYNC_TO_LDS_B32 $vgpr2, $vgpr0_vgpr1, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt, implicit $asyncmarker
     $vgpr0_vgpr1 = DS_LOAD_TR8_B64 $vgpr2, 8, 0, implicit $exec
 ...
 
