@@ -82,7 +82,11 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   // Compute insert points on the first call. The pair is independent of the
   // current live interval.
   if (!LIP.first.isValid()) {
-    MachineBasicBlock::const_iterator FirstTerm = MBB.getFirstTerminator();
+    MachineBasicBlock::const_iterator FirstTerm =
+        MBB.getInsertPtBeforeTerminators();
+    while (FirstTerm != MBB.end() &&
+           !LIS.getSlotIndexes()->hasIndex(*FirstTerm))
+      ++FirstTerm;
     if (FirstTerm == MBB.end())
       LIP.first = MBBEnd;
     else

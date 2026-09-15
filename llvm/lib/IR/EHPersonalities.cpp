@@ -12,6 +12,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -110,6 +111,85 @@ bool llvm::canSimplifyInvokeNoUnwind(const Function *F) {
   const llvm::Module *M = (const llvm::Module *)F->getParent();
   bool EHa = M->getModuleFlag("eh-asynch");
   return !EHa && !isAsynchronousEHPersonality(Personality);
+}
+
+static const InvokeInst *getSEHTryMarker(const BasicBlock *BB) {
+  const auto *Invoke = dyn_cast<InvokeInst>(BB->getTerminator());
+  if (!Invoke)
+    return nullptr;
+  Intrinsic::ID ID = Invoke->getIntrinsicID();
+  return ID == Intrinsic::seh_try_begin || ID == Intrinsic::seh_try_end
+             ? Invoke
+             : nullptr;
+}
+
+SEHTryRegionInfo::SEHTryRegionInfo(const Function &F) {
+  if (!F.getParent()->getModuleFlag("eh-asynch") || !F.hasPersonalityFn() ||
+      classifyEHPersonality(F.getPersonalityFn()) !=
+          EHPersonality::MSVC_TableSEH)
+    return;
+  if (none_of(F, [](const BasicBlock &BB) {
+        const InvokeInst *Marker = getSEHTryMarker(&BB);
+        return Marker && Marker->getIntrinsicID() == Intrinsic::seh_try_begin;
+      }))
+    return;
+
+  using Region = std::optional<const BasicBlock *>;
+  DenseMap<const BasicBlock *, Region> Parents;
+  SmallVector<const BasicBlock *, 32> Worklist;
+  auto Assign = [&](const BasicBlock *BB, Region NewRegion) {
+    auto [Position, Inserted] = RegionOf.try_emplace(BB, NewRegion);
+    if (Inserted) {
+      Worklist.push_back(BB);
+    } else if (Position->second && Position->second != NewRegion) {
+      Position->second = std::nullopt;
+      Worklist.push_back(BB);
+    }
+  };
+
+  Assign(&F.getEntryBlock(), nullptr);
+  while (!Worklist.empty()) {
+    const BasicBlock *BB = Worklist.pop_back_val();
+    Region Current = RegionOf[BB];
+    Region Normal = Current;
+    if (const InvokeInst *Marker = getSEHTryMarker(BB)) {
+      if (Marker->getIntrinsicID() == Intrinsic::seh_try_begin) {
+        const BasicBlock *Pad = Marker->getUnwindDest();
+        Normal = Pad;
+        auto [Parent, Inserted] = Parents.try_emplace(Pad, Current);
+        if (!Inserted && Parent->second != Current) {
+          for (auto &KnownRegion : RegionOf)
+            KnownRegion.second = std::nullopt;
+          return;
+        }
+        Assign(Pad, Parent->second);
+      } else if (Current && *Current) {
+        auto Parent = Parents.find(*Current);
+        Normal = Parent == Parents.end() ? Region() : Parent->second;
+      }
+    }
+
+    for (const BasicBlock *Successor : successors(BB)) {
+      if (const auto *Invoke = dyn_cast<InvokeInst>(BB->getTerminator()))
+        if (Successor == Invoke->getUnwindDest())
+          continue;
+      if (const auto *Switch = dyn_cast<CatchSwitchInst>(BB->getTerminator()))
+        if (Successor == Switch->getUnwindDest())
+          continue;
+      Assign(Successor, Normal);
+    }
+  }
+}
+
+bool SEHTryRegionInfo::isSameRegion(const BasicBlock *From,
+                                    const BasicBlock *To) const {
+  if (RegionOf.empty() || From == To)
+    return true;
+  auto Source = RegionOf.find(From);
+  auto Destination = RegionOf.find(To);
+  return Source != RegionOf.end() && Destination != RegionOf.end() &&
+         Source->second && Destination->second &&
+         Source->second == Destination->second;
 }
 
 DenseMap<BasicBlock *, ColorVector> llvm::colorEHFunclets(Function &F) {

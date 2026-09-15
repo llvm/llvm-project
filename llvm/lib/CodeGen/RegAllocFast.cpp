@@ -685,6 +685,14 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
     MachineBasicBlock &MBB, SmallSet<Register, 2> &PrologLiveIns) const {
   MachineBasicBlock::iterator I = MBB.begin();
   while (I != MBB.end()) {
+    if (I->isEHLabel() && std::next(I) != MBB.end() &&
+        std::next(I)->getOpcode() == TargetOpcode::SEH_REGION_BARRIER)
+      break;
+    if (I->getOpcode() == TargetOpcode::SEH_REGION_BARRIER &&
+        std::next(I) != MBB.end() && std::next(I)->isEHLabel()) {
+      ++I;
+      continue;
+    }
     if (I->isLabel()) {
       ++I;
       continue;

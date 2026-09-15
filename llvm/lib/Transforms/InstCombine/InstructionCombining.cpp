@@ -5565,6 +5565,10 @@ bool InstCombinerImpl::tryToSinkInstruction(Instruction *I,
   if (isa<CatchSwitchInst>(DestBlock->getTerminator()))
     return false;
 
+  if (F.getParent()->getModuleFlag("eh-asynch") &&
+      !SEHTryRegionInfo(F).isSameRegion(SrcBlock, DestBlock))
+    return false;
+
   // Do not sink convergent call instructions.
   if (auto *CI = dyn_cast<CallInst>(I)) {
     if (CI->isConvergent())

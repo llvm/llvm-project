@@ -500,6 +500,39 @@ to rethrow an exception or continue unwinding.  Therefore, LLVM must use the IR
 constructs described later in this document to implement compatible exception
 handling.
 
+### Preserving asynchronous SEH regions
+
+For table-based SEH with the `eh-asynch` module flag, invokes of
+`llvm.seh.try.begin` and `llvm.seh.try.end` describe protected regions.
+The handler selected for a fault depends on the instruction address in the
+emitted scope table, not just on the unwind destination of the nearest call.
+Consequently, describing only the calls is insufficient for this mode.
+
+`SEHTryRegionInfo` associates IR blocks with their protecting EH pad. Its
+region comparison is conservative for unreachable blocks or ambiguous
+nesting. The result is a snapshot: consumers must recompute it after changing
+the CFG or region markers. InstCombine and CodeGenPrepare use it when deciding
+whether to sink instructions between blocks. The query does not enable new
+behavior for other personalities or for modules without `eh-asynch`.
+
+Instruction selection represents machine region boundaries with EH labels
+and `SEH_REGION_BARRIER`. The barrier participates in memory dependencies and
+cannot be duplicated, but emits no code. Machine instruction motion must
+respect region membership as well as these boundaries. PHI copies, spills,
+and reloads belonging to a block must be inserted inside its protected range;
+critical-edge splitting must carry the region and create corresponding labels.
+
+Scope ranges are finalized in machine layout order. A range may extend over
+the block's trailing branches, but not its return or frame teardown. Separate
+runs must remain separate when an unguarded block lies between them, and an
+end label moved past such a boundary must be clamped. Empty ranges need no
+scope record. A handler executes in its enclosing region rather than the
+region it handles, including when its body spans multiple blocks.
+
+These mechanisms consume existing IR. They do not introduce new local-unwind
+intrinsics, change Clang's marker emission, or change the language rules for
+undefined behavior, volatile accesses, or `nounwind`.
+
 ### SEH filter expressions
 
 The SEH personality functions also use funclets to implement filter expressions,

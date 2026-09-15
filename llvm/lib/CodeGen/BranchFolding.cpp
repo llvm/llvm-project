@@ -234,6 +234,12 @@ void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   EHScopeMembership.erase(MBB);
 }
 
+static bool hasSEHRegionBoundary(const MachineBasicBlock &MBB) {
+  return any_of(MBB, [](const MachineInstr &MI) {
+    return MI.getOpcode() == TargetOpcode::SEH_REGION_BARRIER;
+  });
+}
+
 bool BranchFolder::OptimizeFunction(MachineFunction &MF,
                                     const TargetInstrInfo *tii,
                                     const TargetRegisterInfo *tri,
@@ -649,6 +655,10 @@ ProfitableToMerge(MachineBasicBlock *MBB1, MachineBasicBlock *MBB2,
       return false;
   }
 
+  if (hasSEHRegionBoundary(*MBB1) || hasSEHRegionBoundary(*MBB2) ||
+      !MBB1->hasSameSEHRegion(*MBB2))
+    return false;
+
   CommonTailLen = ComputeCommonTailLength(MBB1, MBB2, I1, I2);
   if (CommonTailLen == 0)
     return false;
@@ -778,8 +788,7 @@ unsigned BranchFolder::ComputeSameTails(unsigned CurHash,
 
 void BranchFolder::RemoveBlocksWithHash(unsigned CurHash,
                                         MachineBasicBlock *SuccBB,
-                                        MachineBasicBlock *PredBB,
-                                        const DebugLoc &BranchDL) {
+                                        MachineBasicBlock *PredBB) {
   MPIterator CurMPIter, B;
   for (CurMPIter = std::prev(MergePotentials.end()),
       B = MergePotentials.begin();
@@ -787,7 +796,7 @@ void BranchFolder::RemoveBlocksWithHash(unsigned CurHash,
     // Put the unconditional branch back, if we need one.
     MachineBasicBlock *CurMBB = CurMPIter->getBlock();
     if (SuccBB && CurMBB != PredBB)
-      FixTail(CurMBB, SuccBB, TII, BranchDL);
+      FixTail(CurMBB, SuccBB, TII, CurMPIter->getBranchDebugLoc());
     if (CurMPIter == B)
       break;
   }
@@ -1012,7 +1021,6 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
   // Walk through equivalence sets looking for actual exact matches.
   while (MergePotentials.size() > 1) {
     unsigned CurHash = MergePotentials.back().getHash();
-    const DebugLoc &BranchDL = MergePotentials.back().getBranchDebugLoc();
 
     // Build SameTails, identifying the set of blocks with this hash code
     // and with the maximum number of instructions in common.
@@ -1023,7 +1031,7 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
     // If we didn't find any pair that has at least MinCommonTailLength
     // instructions in common, remove all blocks with this hash code and retry.
     if (SameTails.empty()) {
-      RemoveBlocksWithHash(CurHash, SuccBB, PredBB, BranchDL);
+      RemoveBlocksWithHash(CurHash, SuccBB, PredBB);
       continue;
     }
 
@@ -1070,7 +1078,7 @@ bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
       // Split a block so that one does.
       if (!CreateCommonTailOnlyBlock(PredBB, SuccBB,
                                      maxCommonTailLength, commonTailIndex)) {
-        RemoveBlocksWithHash(CurHash, SuccBB, PredBB, BranchDL);
+        RemoveBlocksWithHash(CurHash, SuccBB, PredBB);
         continue;
       }
     }
@@ -2054,6 +2062,10 @@ bool BranchFolder::HoistCommonCodeInSuccs(MachineBasicBlock *MBB) {
   // Restrict the optimization to cases where MBB is the only predecessor,
   // it is an obvious win.
   if (TBB->pred_size() > 1 || FBB->pred_size() > 1)
+    return false;
+
+  if (hasSEHRegionBoundary(*TBB) || hasSEHRegionBoundary(*FBB) ||
+      !MBB->hasSameSEHRegion(*TBB) || !MBB->hasSameSEHRegion(*FBB))
     return false;
 
   // Find a suitable position to hoist the common instructions to. Also figure

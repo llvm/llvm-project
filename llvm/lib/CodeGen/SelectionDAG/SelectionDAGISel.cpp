@@ -1499,8 +1499,54 @@ void SelectionDAGISel::reportIPToStateForBlocks(MachineFunction *MF) {
   llvm::WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
   if (!EHInfo)
     return;
+  bool IsTableSEH =
+      MF->getFunction().hasPersonalityFn() &&
+      classifyEHPersonality(MF->getFunction().getPersonalityFn()) ==
+          EHPersonality::MSVC_TableSEH;
   for (MachineBasicBlock &MBB : *MF) {
     const BasicBlock *BB = MBB.getBasicBlock();
+    if (!BB)
+      continue;
+    if (IsTableSEH) {
+      auto StateIt = EHInfo->BlockToStateMap.find(BB);
+      if (StateIt == EHInfo->BlockToStateMap.end())
+        continue;
+      int State = StateIt->second;
+      auto Begin = MBB.getFirstNonPHI();
+      if (Begin == MBB.end())
+        continue;
+      auto End = MBB.getFirstTerminator();
+      if (Begin == End && !MBB.back().isBranch())
+        continue;
+
+      auto FirstEHLabel = llvm::find_if(
+          MBB, [](const MachineInstr &MI) { return MI.isEHLabel(); });
+      if (FirstEHLabel != MBB.end()) {
+        if (State < 0)
+          continue;
+        if (Begin == FirstEHLabel) {
+          BuildMI(MBB, Begin, DebugLoc(),
+                  TII->get(TargetOpcode::SEH_REGION_BARRIER));
+          continue;
+        }
+        End = FirstEHLabel;
+      }
+
+      MCSymbol *BeginLabel = MF->getContext().createTempSymbol();
+      MCSymbol *EndLabel = MF->getContext().createTempSymbol();
+      EHInfo->addIPToStateRange(State, BeginLabel, EndLabel);
+      if (State >= 0)
+        BuildMI(MBB, Begin, DebugLoc(),
+                TII->get(TargetOpcode::SEH_REGION_BARRIER));
+      BuildMI(MBB, Begin, DebugLoc(), TII->get(TargetOpcode::EH_LABEL))
+          .addSym(BeginLabel);
+      BuildMI(MBB, End, DebugLoc(), TII->get(TargetOpcode::EH_LABEL))
+          .addSym(EndLabel);
+      if (State >= 0 && FirstEHLabel == MBB.end())
+        BuildMI(MBB, End, DebugLoc(),
+                TII->get(TargetOpcode::SEH_REGION_BARRIER));
+      continue;
+    }
     int State = EHInfo->BlockToStateMap[BB];
     if (BB->getFirstMayFaultInst()) {
       // Report IP range only for blocks with Faulty inst

@@ -235,6 +235,8 @@ HANDLE_TARGET_OPCODE(FAKE_USE)
 // barrier, but does not correspond to any generated instruction.
 HANDLE_TARGET_OPCODE(MEMBARRIER)
 
+HANDLE_TARGET_OPCODE(SEH_REGION_BARRIER)
+
 // Provides information about what jump table the following indirect branch is
 // using.
 HANDLE_TARGET_OPCODE(JUMP_TABLE_DEBUG_INFO)

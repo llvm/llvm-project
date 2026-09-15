@@ -1678,6 +1678,17 @@ def MEMBARRIER : StandardPseudoInstruction {
   let Size = 0;
   let isMeta = true;
 }
+def SEH_REGION_BARRIER : StandardPseudoInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "";
+  let hasSideEffects = true;
+  let mayLoad = true;
+  let mayStore = true;
+  let hasCtrlDep = true;
+  let isNotDuplicable = true;
+  let Size = 0;
+}
 def JUMP_TABLE_DEBUG_INFO : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins i64imm:$jti);

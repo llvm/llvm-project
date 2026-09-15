@@ -925,6 +925,13 @@ public:
     return const_cast<MachineBasicBlock *>(this)->getFirstTerminator();
   }
 
+  LLVM_ABI iterator getInsertPtBeforeTerminators();
+  LLVM_ABI bool hasSameSEHRegion(const MachineBasicBlock &Other) const;
+  const_iterator getInsertPtBeforeTerminators() const {
+    return const_cast<MachineBasicBlock *>(this)
+        ->getInsertPtBeforeTerminators();
+  }
+
   /// Same getFirstTerminator but it ignores bundles and return an
   /// instr_iterator instead.
   LLVM_ABI instr_iterator getFirstInstrTerminator();

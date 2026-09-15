@@ -1,8 +1,8 @@
 ; REQUIRES: x86-registered-target || aarch64-registered-target
-; RUN: %if x86-registered-target %{ llc -mtriple=x86_64-pc-windows-msvc -x86-asm-syntax=intel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,X86 %}
-; RUN: %if x86-registered-target %{ llc -O0 -mtriple=x86_64-pc-windows-msvc -x86-asm-syntax=intel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,X86 %}
-; RUN: %if aarch64-registered-target %{ llc -mtriple=aarch64-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,AARCH64 %}
-; RUN: %if aarch64-registered-target %{ llc -O0 -mtriple=aarch64-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,AARCH64 %}
+; RUN: %if x86-registered-target %{ llc -mtriple=x86_64-pc-windows-msvc -x86-asm-syntax=intel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,X86,OPT %}
+; RUN: %if x86-registered-target %{ llc -O0 -mtriple=x86_64-pc-windows-msvc -x86-asm-syntax=intel -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,X86,O0 %}
+; RUN: %if aarch64-registered-target %{ llc -mtriple=aarch64-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,AARCH64,OPT %}
+; RUN: %if aarch64-registered-target %{ llc -O0 -mtriple=aarch64-pc-windows-msvc -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,AARCH64,O0 %}
 
 declare void @may_fault(ptr)
 declare i32 @filter(ptr, ptr)
@@ -43,19 +43,25 @@ exit:
 ; AARCH64: mov [[BEFORE:w[0-9]+]], #11
 ; AARCH64-NEXT: str [[BEFORE]], [{{[^]]+}}]
 ; CHECK: %guarded{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
 ; CHECK-NEXT: [[BEGIN:\.Ltmp[0-9]+]]:
 ; X86: mov dword ptr [{{[^]]+}}], 22
 ; AARCH64: mov [[GUARDED:w[0-9]+]], #22
 ; AARCH64-NEXT: str [[GUARDED]], [{{[^]]+}}]
 ; CHECK: {{(call|bl)}} may_fault
-; CHECK: [[END:\.Ltmp[0-9]+]]:
-; CHECK: [[HANDLER:\.LBB[0-9]+_[0-9]+]]: {{.*}}%handler{{$}}
-; X86: mov dword ptr [{{[^]]+}}], 44
-; AARCH64: mov [[CAUGHT:w[0-9]+]], #44
-; AARCH64-NEXT: str [[CAUGHT]], [{{[^]]+}}]
-; X86: mov dword ptr [{{[^]]+}}], 33
-; AARCH64: mov [[AFTER:w[0-9]+]], #33
-; AARCH64-NEXT: str [[AFTER]], [{{[^]]+}}]
+; CHECK: %guarded.end{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; CHECK-NEXT: {{\.Ltmp[0-9]+}}:
+; OPT-NEXT: [[END:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[END:\.LBB_END[0-9]+_[0-9]+]]:
+; CHECK-DAG: [[HANDLER:\.LBB[0-9]+_[0-9]+]]: {{.*}}%handler{{$}}
+; X86-DAG: mov dword ptr [{{[^]]+}}], 33
+; X86-DAG: mov dword ptr [{{[^]]+}}], 44
+; AARCH64-DAG: mov {{w[0-9]+}}, #33
+; AARCH64-DAG: mov {{w[0-9]+}}, #44
 ; CHECK: .Llsda_begin{{[0-9]+}}:
 ; CHECK-NEXT: {{\.(long|word)}} [[BEGIN]]@IMGREL
 ; CHECK-NEXT: {{\.(long|word)}} [[END]]@IMGREL
@@ -99,9 +105,17 @@ exit:
 
 ; CHECK-LABEL: branching_handler:
 ; CHECK: %guarded{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
 ; CHECK-NEXT: [[BRANCH_BEGIN:\.Ltmp[0-9]+]]:
 ; CHECK: {{(call|bl)}} may_fault
-; CHECK: [[BRANCH_END:\.Ltmp[0-9]+]]:
+; CHECK: %guarded.end{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; CHECK-NEXT: {{\.Ltmp[0-9]+}}:
+; OPT-NEXT: [[BRANCH_END:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[BRANCH_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: [[BRANCH_HANDLER:\.LBB[0-9]+_[0-9]+]]: {{.*}}%handler{{$}}
 ; X86: mov dword ptr [{{[^]]+}}], 44
 ; AARCH64: mov [[BRANCH_CAUGHT:w[0-9]+]], #44
@@ -188,22 +202,54 @@ exit:
 }
 
 ; CHECK-LABEL: nested_handler:
+; O0: %outer{{$}}
+; O0-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: [[OUTER_ENTRY_BEGIN:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; O0-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[OUTER_ENTRY_END:\.LBB_END[0-9]+_[0-9]+]]:
+; O0: %middle{{$}}
+; O0-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: [[MIDDLE_ENTRY_BEGIN:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; O0-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[MIDDLE_ENTRY_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: %inner{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
 ; CHECK-NEXT: [[INNER_BEGIN:\.Ltmp[0-9]+]]:
 ; CHECK: {{(call|bl)}} may_fault
-; CHECK: [[INNER_END:\.Ltmp[0-9]+]]:
+; CHECK: %inner.end{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; CHECK-NEXT: {{\.Ltmp[0-9]+}}:
+; OPT-NEXT: [[INNER_END:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[INNER_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: %middle.end{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
 ; CHECK-NEXT: [[MIDDLE_BEGIN:\.Ltmp[0-9]+]]:
 ; X86: mov dword ptr [{{[^]]+}}], 77
 ; AARCH64: mov [[MIDDLE_VALUE:w[0-9]+]], #77
 ; AARCH64-NEXT: str [[MIDDLE_VALUE]], [{{[^]]+}}]
-; CHECK-NEXT: [[MIDDLE_END:\.Ltmp[0-9]+]]:
+; OPT-NEXT: [[MIDDLE_END:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[MIDDLE_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: %outer.end{{$}}
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
 ; CHECK-NEXT: [[OUTER_BEGIN:\.Ltmp[0-9]+]]:
 ; X86: mov dword ptr [{{[^]]+}}], 88
 ; AARCH64: mov [[OUTER_VALUE:w[0-9]+]], #88
 ; AARCH64-NEXT: str [[OUTER_VALUE]], [{{[^]]+}}]
-; CHECK-NEXT: [[OUTER_END:\.Ltmp[0-9]+]]:
+; OPT-NEXT: [[OUTER_END:\.Ltmp[0-9]+]]:
+; O0-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; O0-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; O0-NEXT: [[OUTER_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: [[INNER_HANDLER:\.LBB[0-9]+_[0-9]+]]: {{.*}}%inner.handler{{$}}
 ; CHECK: [[INNER_HANDLER_BEGIN:\.Ltmp[0-9]+]]:
 ; X86: mov dword ptr [{{[^]]+}}], 44
@@ -215,18 +261,36 @@ exit:
 ; X86: mov dword ptr [{{[^]]+}}], 66
 ; AARCH64: mov [[INNER_RIGHT:w[0-9]+]], #66
 ; AARCH64-NEXT: str [[INNER_RIGHT]], [{{[^]]+}}]
-; CHECK-NEXT: [[INNER_HANDLER_END:\.Ltmp[0-9]+]]:
+; CHECK-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; CHECK-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; CHECK-NEXT: [[INNER_HANDLER_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: [[MIDDLE_HANDLER:\.LBB[0-9]+_[0-9]+]]: {{.*}}%middle.handler{{$}}
 ; CHECK: [[MIDDLE_HANDLER_BEGIN:\.Ltmp[0-9]+]]:
 ; X86: mov dword ptr [{{[^]]+}}], 99
 ; AARCH64: mov [[MIDDLE_CAUGHT:w[0-9]+]], #99
 ; AARCH64-NEXT: str [[MIDDLE_CAUGHT]], [{{[^]]+}}]
-; CHECK-NEXT: [[MIDDLE_HANDLER_END:\.Ltmp[0-9]+]]:
+; CHECK-NEXT: {{\.Ltmp[0-9]+}}:
+; CHECK-NEXT: {{(#|//)}}SEH_REGION_BARRIER
+; CHECK-NEXT: {{(jmp|b)}} {{\.LBB[0-9]+_[0-9]+}}
+; CHECK-NEXT: [[MIDDLE_HANDLER_END:\.LBB_END[0-9]+_[0-9]+]]:
 ; CHECK: [[OUTER_HANDLER:\.LBB[0-9]+_[0-9]+]]: {{.*}}%outer.handler{{$}}
 ; X86: mov dword ptr [{{[^]]+}}], 111
 ; AARCH64: mov [[OUTER_CAUGHT:w[0-9]+]], #111
 ; AARCH64-NEXT: str [[OUTER_CAUGHT]], [{{[^]]+}}]
 ; CHECK: .Llsda_begin{{[0-9]+}}:
+; O0-NEXT: {{\.(long|word)}} [[OUTER_ENTRY_BEGIN]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} [[OUTER_ENTRY_END]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} 1
+; O0-NEXT: {{\.(long|word)}} [[OUTER_HANDLER]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} [[MIDDLE_ENTRY_BEGIN]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} [[MIDDLE_ENTRY_END]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} 1
+; O0-NEXT: {{\.(long|word)}} [[MIDDLE_HANDLER]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} [[MIDDLE_ENTRY_BEGIN]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} [[MIDDLE_ENTRY_END]]@IMGREL
+; O0-NEXT: {{\.(long|word)}} 1
+; O0-NEXT: {{\.(long|word)}} [[OUTER_HANDLER]]@IMGREL
 ; CHECK-NEXT: {{\.(long|word)}} [[INNER_BEGIN]]@IMGREL
 ; CHECK-NEXT: {{\.(long|word)}} [[INNER_END]]@IMGREL
 ; CHECK-NEXT: {{\.(long|word)}} 1

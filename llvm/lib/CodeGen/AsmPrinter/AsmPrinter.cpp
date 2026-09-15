@@ -2193,6 +2193,7 @@ void AsmPrinter::emitFunctionBody() {
         {
           auto MI2 = std::next(MI.getIterator());
           if (NeedsEHaNops && MI2 != MBB.end() &&
+              MI2->getOpcode() != TargetOpcode::SEH_REGION_BARRIER &&
               (MI2->mayLoadOrStore() || MI2->mayRaiseFPException()))
             emitNops(1);
         }
@@ -2239,6 +2240,10 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::ARITH_FENCE:
         if (isVerbose())
           OutStreamer->emitRawComment("ARITH_FENCE");
+        break;
+      case TargetOpcode::SEH_REGION_BARRIER:
+        if (isVerbose())
+          OutStreamer->emitRawComment("SEH_REGION_BARRIER");
         break;
       case TargetOpcode::MEMBARRIER:
         OutStreamer->emitRawComment("MEMBARRIER");
@@ -2369,7 +2374,11 @@ void AsmPrinter::emitFunctionBody() {
     // we have BBLabels enabled or if this basic blocks marks the end of a
     // section.
     if (MF->getTarget().Options.BBAddrMap ||
-        (MAI.hasDotTypeDotSizeDirective() && MBB.isEndSection()))
+        (MAI.hasDotTypeDotSizeDirective() && MBB.isEndSection()) ||
+        (MF->getFunction().getParent()->getModuleFlag("eh-asynch") &&
+         MF->getFunction().hasPersonalityFn() &&
+         classifyEHPersonality(MF->getFunction().getPersonalityFn()) ==
+             EHPersonality::MSVC_TableSEH))
       OutStreamer->emitLabel(MBB.getEndSymbol());
 
     if (MBB.isEndSection()) {

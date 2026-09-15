@@ -49,7 +49,7 @@ llvm::findPHICopyInsertPoint(MachineBasicBlock* MBB, MachineBasicBlock* SuccMBB,
   // any INLINEASM_BR, we may not need any specialized handling.
   bool EHPadSuccessor = SuccMBB->isEHPad();
   if (!EHPadSuccessor && !hasInlineAsmBrToSuccessor(MBB, SuccMBB))
-    return MBB->getFirstTerminator();
+    return MBB->getInsertPtBeforeTerminators();
 
   // Discover any defs in this basic block.
   SmallPtrSet<MachineInstr *, 8> DefsInMBB;

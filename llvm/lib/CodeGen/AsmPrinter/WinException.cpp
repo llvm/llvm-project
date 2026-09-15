@@ -63,6 +63,8 @@ void WinException::endModule() {
 
 void WinException::beginFunction(const MachineFunction *MF) {
   shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
+  SEHScopeEndLabels.clear();
+  SEHLabelPositions.clear();
 
   // If any landing pads survive, we need an EH table.
   bool hasLandingPads = !MF->getLandingPads().empty();
@@ -80,6 +82,42 @@ void WinException::beginFunction(const MachineFunction *MF) {
   if (F.hasPersonalityFn()) {
     PerFn = dyn_cast<Function>(F.getPersonalityFn()->stripPointerCasts());
     Per = classifyEHPersonality(PerFn);
+  }
+
+  if (Per == EHPersonality::MSVC_TableSEH &&
+      F.getParent()->getModuleFlag("eh-asynch")) {
+    const WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo();
+    SmallPtrSet<const MCSymbol *, 16> RangeEnds;
+    for (const auto &Range : EHInfo->LabelToStateMap)
+      if (Range.second.first >= 0)
+        RangeEnds.insert(Range.second.second);
+    unsigned Position = 0;
+    for (const MachineBasicBlock &MBB : *MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.isEHLabel())
+          SEHLabelPositions[MI.getOperand(0).getMCSymbol()] = Position;
+        else if (!MI.isMetaInstruction() &&
+                 MI.getOpcode() != TargetOpcode::SEH_REGION_BARRIER)
+          ++Position;
+      }
+      SEHLabelPositions[MBB.getEndSymbol()] = Position;
+      bool HasBranch = false;
+      for (const MachineInstr &MI : reverse(MBB)) {
+        if (MI.isEHLabel()) {
+          const MCSymbol *Label = MI.getOperand(0).getMCSymbol();
+          if (HasBranch && RangeEnds.contains(Label))
+            SEHScopeEndLabels[Label] = MBB.getEndSymbol();
+          break;
+        }
+        if (MI.isMetaInstruction() ||
+            MI.getOpcode() == TargetOpcode::SEH_REGION_BARRIER)
+          continue;
+        if (!MI.isBranch() || MI.isCall() || MI.isReturn() ||
+            MI.getFlag(MachineInstr::FrameDestroy))
+          break;
+        HasBranch = true;
+      }
+    }
   }
 
   bool forceEmitPersonality = F.hasPersonalityFn() &&
@@ -395,12 +433,13 @@ struct InvokeStateChange {
 /// reported is the first change to something other than NullState, and a
 /// change back to NullState is always reported at the end of iteration).
 class InvokeStateChangeIterator {
-  InvokeStateChangeIterator(const WinEHFuncInfo &EHInfo,
-                            MachineFunction::const_iterator MFI,
-                            MachineFunction::const_iterator MFE,
-                            MachineBasicBlock::const_iterator MBBI,
-                            int BaseState)
-      : EHInfo(EHInfo), MFI(MFI), MFE(MFE), MBBI(MBBI), BaseState(BaseState) {
+  InvokeStateChangeIterator(
+      const WinEHFuncInfo &EHInfo, MachineFunction::const_iterator MFI,
+      MachineFunction::const_iterator MFE,
+      MachineBasicBlock::const_iterator MBBI, int BaseState,
+      const DenseMap<const MCSymbol *, unsigned> *Positions)
+      : EHInfo(EHInfo), MFI(MFI), MFE(MFE), MBBI(MBBI), BaseState(BaseState),
+        Positions(Positions) {
     LastStateChange.PreviousEndLabel = nullptr;
     LastStateChange.NewStartLabel = nullptr;
     LastStateChange.NewState = BaseState;
@@ -410,15 +449,17 @@ class InvokeStateChangeIterator {
 public:
   static iterator_range<InvokeStateChangeIterator>
   range(const WinEHFuncInfo &EHInfo, MachineFunction::const_iterator Begin,
-        MachineFunction::const_iterator End, int BaseState = NullState) {
+        MachineFunction::const_iterator End, int BaseState = NullState,
+        const DenseMap<const MCSymbol *, unsigned> *Positions = nullptr) {
     // Reject empty ranges to simplify bookkeeping by ensuring that we can get
     // the end of the last block.
     assert(Begin != End);
     auto BlockBegin = Begin->begin();
     auto BlockEnd = std::prev(End)->end();
-    return make_range(
-        InvokeStateChangeIterator(EHInfo, Begin, End, BlockBegin, BaseState),
-        InvokeStateChangeIterator(EHInfo, End, End, BlockEnd, BaseState));
+    return make_range(InvokeStateChangeIterator(EHInfo, Begin, End, BlockBegin,
+                                                BaseState, Positions),
+                      InvokeStateChangeIterator(EHInfo, End, End, BlockEnd,
+                                                BaseState, Positions));
   }
 
   // Iterator methods.
@@ -447,6 +488,35 @@ public:
 private:
   InvokeStateChangeIterator &scan();
 
+  const MCSymbol *clampEnd(const MCSymbol *End,
+                           const MCSymbol *Boundary) const {
+    if (!Positions || !End)
+      return End;
+    auto EndPosition = Positions->find(End);
+    auto BoundaryPosition = Positions->find(Boundary);
+    if (EndPosition != Positions->end() &&
+        BoundaryPosition != Positions->end() &&
+        EndPosition->second > BoundaryPosition->second)
+      return Boundary;
+    return End;
+  }
+
+  bool isUnlabelledSEHGap(const MachineBasicBlock &MBB) const {
+    if (!Positions)
+      return false;
+    auto State = EHInfo.BlockToStateMap.find(MBB.getBasicBlock());
+    if (State == EHInfo.BlockToStateMap.end() || State->second != BaseState)
+      return false;
+    for (const MachineInstr &MI : MBB)
+      if (MI.isEHLabel() &&
+          EHInfo.LabelToStateMap.contains(MI.getOperand(0).getMCSymbol()))
+        return false;
+    return any_of(MBB, [](const MachineInstr &MI) {
+      return !MI.isMetaInstruction() &&
+             MI.getOpcode() != TargetOpcode::SEH_REGION_BARRIER;
+    });
+  }
+
   const WinEHFuncInfo &EHInfo;
   const MCSymbol *CurrentEndLabel = nullptr;
   MachineFunction::const_iterator MFI;
@@ -455,6 +525,9 @@ private:
   InvokeStateChange LastStateChange;
   bool VisitingInvoke = false;
   int BaseState;
+  const DenseMap<const MCSymbol *, unsigned> *Positions;
+  const MachineBasicBlock *StateCheckedBlock = nullptr;
+  bool SawFrameDestroy = false;
 };
 
 } // end anonymous namespace
@@ -464,8 +537,23 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
   for (; MFI != MFE; ++MFI, IsNewBlock = true) {
     if (IsNewBlock)
       MBBI = MFI->begin();
+    if (StateCheckedBlock != &*MFI) {
+      StateCheckedBlock = &*MFI;
+      if (LastStateChange.NewState != BaseState && isUnlabelledSEHGap(*MFI)) {
+        LastStateChange.PreviousEndLabel =
+            clampEnd(CurrentEndLabel, std::prev(MFI)->getEndSymbol());
+        LastStateChange.NewStartLabel = nullptr;
+        LastStateChange.NewState = BaseState;
+        CurrentEndLabel = nullptr;
+        VisitingInvoke = false;
+        SawFrameDestroy = false;
+        return *this;
+      }
+    }
     for (auto MBBE = MFI->end(); MBBI != MBBE; ++MBBI) {
       const MachineInstr &MI = *MBBI;
+      if (Positions && MI.getFlag(MachineInstr::FrameDestroy))
+        SawFrameDestroy = true;
       if (!VisitingInvoke && LastStateChange.NewState != BaseState &&
           MI.isCall() && !EHStreamer::callToNoUnwindFunction(&MI)) {
         // Indicate a change of state to the null state.  We don't have
@@ -498,17 +586,28 @@ InvokeStateChangeIterator &InvokeStateChangeIterator::scan() {
       // we know not to treat the inoke we'll see as unwinding to caller.
       VisitingInvoke = true;
       if (NewState == LastStateChange.NewState) {
+        if (SawFrameDestroy && NewState != BaseState) {
+          LastStateChange.PreviousEndLabel = clampEnd(CurrentEndLabel, Label);
+          LastStateChange.NewStartLabel = nullptr;
+          LastStateChange.NewState = BaseState;
+          CurrentEndLabel = nullptr;
+          VisitingInvoke = false;
+          SawFrameDestroy = false;
+          return *this;
+        }
         // The state isn't actually changing here.  Record the new end and
         // keep going.
         CurrentEndLabel = StateAndEnd.second;
+        SawFrameDestroy = false;
         continue;
       }
       // Found a state change to report
-      LastStateChange.PreviousEndLabel = CurrentEndLabel;
+      LastStateChange.PreviousEndLabel = clampEnd(CurrentEndLabel, Label);
       LastStateChange.NewStartLabel = Label;
       LastStateChange.NewState = NewState;
       // Start keeping track of the new current end
       CurrentEndLabel = StateAndEnd.second;
+      SawFrameDestroy = false;
       // Don't re-visit this instr on the next scan
       ++MBBI;
       return *this;
@@ -609,13 +708,17 @@ void WinException::emitCSpecificHandlerTable(const MachineFunction *MF) {
   MachineFunction::const_iterator Stop = std::next(MF->begin());
   while (Stop != End && !Stop->isEHFuncletEntry())
     ++Stop;
-  for (const auto &StateChange :
-       InvokeStateChangeIterator::range(FuncInfo, MF->begin(), Stop)) {
+  for (const auto &StateChange : InvokeStateChangeIterator::range(
+           FuncInfo, MF->begin(), Stop, NullState,
+           SEHLabelPositions.empty() ? nullptr : &SEHLabelPositions)) {
     // Emit all the actions for the state we just transitioned out of
     // if it was not the null state
-    if (LastEHState != -1)
-      emitSEHActionsForRange(FuncInfo, LastStartLabel,
-                             StateChange.PreviousEndLabel, LastEHState);
+    if (LastEHState != -1) {
+      const MCSymbol *EndLabel = StateChange.PreviousEndLabel;
+      if (MCSymbol *ExtendedEnd = SEHScopeEndLabels.lookup(EndLabel))
+        EndLabel = ExtendedEnd;
+      emitSEHActionsForRange(FuncInfo, LastStartLabel, EndLabel, LastEHState);
+    }
     LastStartLabel = StateChange.NewStartLabel;
     LastEHState = StateChange.NewState;
   }
@@ -635,6 +738,12 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
   };
 
   assert(BeginLabel && EndLabel);
+  auto BeginPosition = SEHLabelPositions.find(BeginLabel);
+  auto EndPosition = SEHLabelPositions.find(EndLabel);
+  if (BeginPosition != SEHLabelPositions.end() &&
+      EndPosition != SEHLabelPositions.end() &&
+      BeginPosition->second >= EndPosition->second)
+    return;
   while (State != -1) {
     const SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
     const MCExpr *FilterOrFinally;

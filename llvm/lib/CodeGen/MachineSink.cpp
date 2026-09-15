@@ -1498,6 +1498,9 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (SuccToSinkTo && SuccToSinkTo->isEHPad())
     return nullptr;
 
+  if (SuccToSinkTo && !MBB->hasSameSEHRegion(*SuccToSinkTo))
+    return nullptr;
+
   // It ought to be okay to sink instructions into an INLINEASM_BR target, but
   // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
   // the source block (which this code does not yet do). So for now, forbid
@@ -1788,6 +1791,8 @@ bool MachineSinking::aggressivelySinkIntoCycle(
     }
 
     MachineBasicBlock *SinkBlock = MI->getParent();
+    if (!I.getParent()->hasSameSEHRegion(*SinkBlock))
+      continue;
     MachineInstr *NewMI = nullptr;
     SinkItem MapEntry(&I, SinkBlock);
 
@@ -2334,6 +2339,12 @@ bool PostRAMachineSinkingImpl::tryToSinkCopy(MachineBasicBlock &CurBB,
     }
     assert((SuccBB->pred_size() == 1 && *SuccBB->pred_begin() == &CurBB) &&
            "Unexpected predecessor");
+
+    if (!CurBB.hasSameSEHRegion(*SuccBB)) {
+      LiveRegUnits::accumulateUsedDefed(MI, ModifiedRegUnits, UsedRegUnits,
+                                        TRI);
+      continue;
+    }
 
     // Collect DBG_VALUEs that must sink with this copy. We've previously
     // recorded which reg units that DBG_VALUEs read, if this instruction

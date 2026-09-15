@@ -174,8 +174,7 @@ class TargetRegisterInfo;
     /// Remove all blocks with hash CurHash from MergePotentials, restoring
     /// branches at ends of blocks as appropriate.
     void RemoveBlocksWithHash(unsigned CurHash, MachineBasicBlock *SuccBB,
-                              MachineBasicBlock *PredBB,
-                              const DebugLoc &BranchDL);
+                              MachineBasicBlock *PredBB);
 
     /// None of the blocks to be tail-merged consist only of the common tail.
     /// Create a block that does by splitting one.

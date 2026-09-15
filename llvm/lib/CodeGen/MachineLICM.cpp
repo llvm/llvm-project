@@ -749,7 +749,9 @@ void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
 
   // Splice the instruction to the preheader.
   MachineBasicBlock *MBB = MI->getParent();
-  Preheader->splice(Preheader->getFirstTerminator(), MBB, MI);
+  if (!MBB->hasSameSEHRegion(*Preheader))
+    return;
+  Preheader->splice(Preheader->getInsertPtBeforeTerminators(), MBB, MI);
 
   // Since we are moving the instruction out of its basic block, we do not
   // retain its debug location. Doing so would degrade the debugging
@@ -1615,6 +1617,8 @@ bool MachineLICMImpl::MayCSE(MachineInstr *MI) {
 unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
                                 MachineLoop *CurLoop) {
   MachineBasicBlock *SrcBlock = MI->getParent();
+  if (!SrcBlock->hasSameSEHRegion(*Preheader))
+    return 0;
 
   // Disable the instruction hoisting due to block hotness
   if ((DisableHoistingToHotterBlocks == UseBFI::All ||
@@ -1676,7 +1680,8 @@ unsigned MachineLICMImpl::Hoist(MachineInstr *MI, MachineBasicBlock *Preheader,
 
   if (!HasCSEDone) {
     // Otherwise, splice the instruction to the preheader.
-    Preheader->splice(Preheader->getFirstTerminator(),MI->getParent(),MI);
+    Preheader->splice(Preheader->getInsertPtBeforeTerminators(),
+                      MI->getParent(), MI);
 
     // Since we are moving the instruction out of its basic block, we do not
     // retain its debug location. Doing so would degrade the debugging

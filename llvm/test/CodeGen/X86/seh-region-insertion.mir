@@ -1,0 +1,173 @@
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -run-pass=early-machinelicm -verify-machineinstrs -o - %s | FileCheck %s
+# RUN: llc -mtriple=x86_64-pc-windows-msvc -run-pass=branch-folder -verify-machineinstrs -o - %s | FileCheck %s --check-prefix=FOLD
+
+--- |
+  define void @nested_markers(ptr %address) {
+  entry:
+    br label %preheader
+  preheader:
+    br label %loop
+  loop:
+    br label %loop
+  }
+
+  define i32 @separate_tails(i32 %condition) !dbg !4 {
+  entry:
+    br label %exit
+  first:
+    br label %exit
+  middle:
+    br label %exit
+  second:
+    br label %exit
+  third:
+    br label %exit
+  exit:
+    ret i32 0
+  }
+
+  define i32 @fold_without_regions(i32 %condition) {
+  entry:
+    br label %exit
+  first:
+    br label %exit
+  second:
+    br label %exit
+  exit:
+    ret i32 0
+  }
+
+  !llvm.module.flags = !{!0}
+  !llvm.dbg.cu = !{!1}
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = distinct !DICompileUnit(language: DW_LANG_C99, file: !2, producer: "clang", emissionKind: FullDebug)
+  !2 = !DIFile(filename: "example.c", directory: "/")
+  !3 = !DISubroutineType(types: !6)
+  !4 = distinct !DISubprogram(name: "separate_tails", scope: !2, file: !2, line: 1, type: !3, unit: !1, spFlags: DISPFlagDefinition)
+  !6 = !{}
+  !7 = !DILocation(line: 11, scope: !4)
+  !8 = !DILocation(line: 22, scope: !4)
+  !9 = !DILocation(line: 33, scope: !4)
+...
+---
+name: nested_markers
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1
+    liveins: $rcx
+    %0:gr64 = COPY $rcx
+
+  bb.1.preheader:
+    successors: %bb.2
+    SEH_REGION_BARRIER
+    EH_LABEL <mcsymbol .Louter.begin>
+    SEH_REGION_BARRIER
+    EH_LABEL <mcsymbol .Linner.begin>
+    %1:gr64 = MOV64rm %0, 1, $noreg, 0, $noreg :: (load (s64))
+    EH_LABEL <mcsymbol .Linner.end>
+    SEH_REGION_BARRIER
+    EH_LABEL <mcsymbol .Louter.end>
+    SEH_REGION_BARRIER
+    JMP_1 %bb.2
+
+  bb.2.loop:
+    successors: %bb.2
+    %2:gr64 = LEA64r %0, 1, $noreg, 16, $noreg
+    %3:gr64 = ADD64rr %1, %2, implicit-def dead $eflags
+    JMP_1 %bb.2
+...
+
+# CHECK-LABEL: name: nested_markers
+# CHECK: bb.1.preheader:
+# CHECK: EH_LABEL <mcsymbol .Linner.begin>
+# CHECK: {{%[0-9]+}}:gr64 = LEA64r
+# CHECK-NEXT: {{%[0-9]+}}:gr64 = ADD64rr
+# CHECK-NEXT: EH_LABEL <mcsymbol .Linner.end>
+# CHECK-NEXT: SEH_REGION_BARRIER
+# CHECK-NEXT: EH_LABEL <mcsymbol .Louter.end>
+# CHECK-NEXT: SEH_REGION_BARRIER
+# CHECK-NEXT: JMP_1 %bb.2
+
+---
+name: separate_tails
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $ecx, $edx
+    TEST32rr $ecx, $ecx, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+
+  bb.1.first:
+    successors: %bb.5
+    SEH_REGION_BARRIER
+    $eax = MOV32ri -7
+    JMP_1 %bb.5, debug-location !7
+
+  bb.2.middle:
+    successors: %bb.3, %bb.4
+    liveins: $edx
+    TEST32rr $edx, $edx, implicit-def $eflags
+    JCC_1 %bb.4, 5, implicit $eflags
+
+  bb.3.second:
+    successors: %bb.5
+    SEH_REGION_BARRIER
+    $eax = MOV32ri -7
+    JMP_1 %bb.5, debug-location !8
+
+  bb.4.third:
+    successors: %bb.5
+    SEH_REGION_BARRIER
+    $eax = MOV32ri -7
+    JMP_1 %bb.5, debug-location !9
+
+  bb.5.exit:
+    liveins: $eax
+    RET 0, $eax
+...
+
+# FOLD-LABEL: name: separate_tails
+# FOLD: bb.1.first:
+# FOLD: SEH_REGION_BARRIER
+# FOLD-NEXT: $eax = MOV32ri -7
+# FOLD-NEXT: JMP_1 %bb.5, debug-location !DILocation(line: 11
+# FOLD: bb.3.second:
+# FOLD: SEH_REGION_BARRIER
+# FOLD-NEXT: $eax = MOV32ri -7
+# FOLD-NEXT: JMP_1 %bb.5, debug-location !DILocation(line: 22
+# FOLD: bb.4.third:
+# FOLD: SEH_REGION_BARRIER
+# FOLD-NEXT: $eax = MOV32ri -7
+
+---
+name: fold_without_regions
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $ecx
+    TEST32rr $ecx, $ecx, implicit-def $eflags
+    JCC_1 %bb.2, 5, implicit $eflags
+
+  bb.1.first:
+    successors: %bb.3
+    $ecx = MOV32ri 1
+    $eax = MOV32ri -7
+    JMP_1 %bb.3
+
+  bb.2.second:
+    successors: %bb.3
+    $ecx = MOV32ri 1
+    $eax = MOV32ri -7
+    JMP_1 %bb.3
+
+  bb.3.exit:
+    liveins: $eax
+    RET 0, $eax
+...
+
+# FOLD-LABEL: name: fold_without_regions
+# FOLD: $eax = MOV32ri -7
+# FOLD-NOT: $eax = MOV32ri -7

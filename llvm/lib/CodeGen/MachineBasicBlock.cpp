@@ -28,8 +28,10 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/WinEHFuncInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
@@ -250,6 +252,37 @@ MachineBasicBlock::iterator MachineBasicBlock::getFirstTerminator() {
   while (I != E && !I->isTerminator())
     ++I;
   return I;
+}
+
+bool MachineBasicBlock::hasSameSEHRegion(const MachineBasicBlock &Other) const {
+  const Function &Function = getParent()->getFunction();
+  if (!Function.getParent()->getModuleFlag("eh-asynch") ||
+      !Function.hasPersonalityFn() ||
+      classifyEHPersonality(Function.getPersonalityFn()) !=
+          EHPersonality::MSVC_TableSEH)
+    return true;
+  const WinEHFuncInfo *EHInfo = getParent()->getWinEHFuncInfo();
+  if (!EHInfo || EHInfo->BlockToStateMap.empty())
+    return true;
+  auto From = EHInfo->BlockToStateMap.find(getBasicBlock());
+  auto To = EHInfo->BlockToStateMap.find(Other.getBasicBlock());
+  return From != EHInfo->BlockToStateMap.end() &&
+         To != EHInfo->BlockToStateMap.end() && From->second == To->second;
+}
+
+MachineBasicBlock::iterator MachineBasicBlock::getInsertPtBeforeTerminators() {
+  iterator InsertPt = getFirstTerminator();
+  while (InsertPt != begin()) {
+    iterator Marker = std::prev(InsertPt);
+    while (Marker != begin() && Marker->isDebugInstr())
+      --Marker;
+    if (Marker->getOpcode() != TargetOpcode::SEH_REGION_BARRIER)
+      break;
+    InsertPt = Marker;
+    if (InsertPt != begin() && std::prev(InsertPt)->isEHLabel())
+      --InsertPt;
+  }
+  return InsertPt;
 }
 
 MachineBasicBlock::instr_iterator MachineBasicBlock::getFirstInstrTerminator() {
@@ -1202,7 +1235,14 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   MachineFunction *MF = getParent();
   MachineBasicBlock *PrevFallthrough = getNextNode();
 
-  MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
+  const BasicBlock *EdgeBB = nullptr;
+  const Function &Function = MF->getFunction();
+  if (Function.getParent()->getModuleFlag("eh-asynch") &&
+      Function.hasPersonalityFn() &&
+      classifyEHPersonality(Function.getPersonalityFn()) ==
+          EHPersonality::MSVC_TableSEH)
+    EdgeBB = getBasicBlock();
+  MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock(EdgeBB);
   NMBB->setCallFrameSize(Succ->getCallFrameSize());
 
   // Is there an indirect jump with jump table?
@@ -1288,6 +1328,28 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
     if (MergedDL && (MergedDL.getLine() || MergedDL.getCol()))
       DL = MergedDL;
     TII->insertBranch(*NMBB, Succ, nullptr, Cond, DL);
+  }
+
+  if (EdgeBB) {
+    if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo()) {
+      auto State = EHInfo->BlockToStateMap.find(EdgeBB);
+      if (State != EHInfo->BlockToStateMap.end() && State->second >= 0) {
+        SlotIndexUpdateDelegate SlotUpdater(*MF, Indexes);
+        const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
+        auto InsertPt = NMBB->getFirstTerminator();
+        MCSymbol *BeginLabel = MF->getContext().createTempSymbol();
+        MCSymbol *EndLabel = MF->getContext().createTempSymbol();
+        EHInfo->addIPToStateRange(State->second, BeginLabel, EndLabel);
+        BuildMI(*NMBB, InsertPt, DebugLoc(),
+                TII->get(TargetOpcode::SEH_REGION_BARRIER));
+        BuildMI(*NMBB, InsertPt, DebugLoc(), TII->get(TargetOpcode::EH_LABEL))
+            .addSym(BeginLabel);
+        BuildMI(*NMBB, InsertPt, DebugLoc(), TII->get(TargetOpcode::EH_LABEL))
+            .addSym(EndLabel);
+        BuildMI(*NMBB, InsertPt, DebugLoc(),
+                TII->get(TargetOpcode::SEH_REGION_BARRIER));
+      }
+    }
   }
 
   // Fix PHI nodes in Succ so they refer to NMBB instead of this.

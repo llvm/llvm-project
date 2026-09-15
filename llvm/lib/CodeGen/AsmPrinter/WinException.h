@@ -51,6 +51,9 @@ class LLVM_LIBRARY_VISIBILITY WinException : public EHStreamer {
   /// The list of symbols to add to the ehcont section
   std::vector<const MCSymbol *> EHContTargets;
 
+  DenseMap<const MCSymbol *, MCSymbol *> SEHScopeEndLabels;
+  DenseMap<const MCSymbol *, unsigned> SEHLabelPositions;
+
   void emitCSpecificHandlerTable(const MachineFunction *MF);
 
   void emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
