@@ -550,3 +550,43 @@ func.func @unroll_jam_iter_args_addi(%arg0: memref<21xi32, 1>, %init : i32) {
 // CHECK-NEXT: [[LOAD3:%[0-9]+]] = affine.load {{.*}}[%[[CONST0]]]
 // CHECK-NEXT: [[ADD4:%[0-9]+]] = arith.addi [[ADD3]], [[LOAD3]] : i32
 // CHECK-NEXT: return
+
+// Verify that affine-loop-unroll-jam refuses to transform a perfectly nested
+// band when its dependence components would be violated by the new iteration
+// order. Mirrors the gating already used by `affine-loop-tile`.
+
+// A flow dependence with distance vector (1, -1): unroll-and-jam at factor 2
+// would interchange the intra-stripe iv with the inner iv and turn the
+// (1, -1) dep into a backward distance. The pass must leave the nest
+// unchanged.
+
+// CHECK-LABEL: func @unroll_jam_illegal_flow_dep_1_neg1
+// CHECK:         affine.for %{{.*}} = 1 to 5 {
+// CHECK-NEXT:      affine.for %{{.*}} = 0 to 4 {
+// CHECK-NOT:     affine.for %{{.*}} = 1 to 5 step 2
+func.func @unroll_jam_illegal_flow_dep_1_neg1(%arr: memref<5x5xi32>) {
+  affine.for %i = 1 to 5 {
+    affine.for %j = 0 to 4 {
+      %v = affine.load %arr[%i - 1, %j + 1] : memref<5x5xi32>
+      affine.store %v, %arr[%i, %j] : memref<5x5xi32>
+    }
+  }
+  return
+}
+
+// Distance vector (2, -1) at factor 2: d_outer >= F, so the unroll-and-jam
+// stripe never spans the dep. The pass must still fire even though an
+// `isTilingValid`-style check (which ignores the factor) would refuse it.
+
+// CHECK-LABEL: func @unroll_jam_legal_outer_distance_geq_factor
+// CHECK:         affine.for %{{.*}} = 2 to 6 step 2
+// CHECK-NEXT:      affine.for %{{.*}} = 0 to 5 {
+func.func @unroll_jam_legal_outer_distance_geq_factor(%arr: memref<6x6xi32>) {
+  affine.for %i = 2 to 6 {
+    affine.for %j = 0 to 5 {
+      %v = affine.load %arr[%i - 2, %j + 1] : memref<6x6xi32>
+      affine.store %v, %arr[%i, %j] : memref<6x6xi32>
+    }
+  }
+  return
+}
