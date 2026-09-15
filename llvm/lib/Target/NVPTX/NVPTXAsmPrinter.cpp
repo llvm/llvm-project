@@ -67,6 +67,7 @@
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
 #include "llvm/IR/GlobalValue.h"
@@ -1045,18 +1046,50 @@ std::string NVPTXAsmPrinter::getVirtualRegisterName(Register Reg) const {
   return Name;
 }
 
+/// PTX's .alias directive states that "Both fAlias and fAliasee are non-entry
+/// function symbols", that the aliasee "must be defined in the same module",
+/// and that it "cannot have .weak linkage" (PTX ISA, Kernel and Function
+/// Directives: .alias). An alias outside those bounds therefore has no PTX
+/// lowering at all. Returns why the alias cannot be lowered, or nullptr if it
+/// can be.
+static const char *getAliasUnsupportedReason(const GlobalAlias &GA) {
+  const Function *F = dyn_cast_or_null<Function>(GA.getAliaseeObject());
+  if (!F)
+    return "PTX can only alias a function";
+  if (F->isDeclaration())
+    return "PTX requires the aliasee to be defined in the same module";
+  if (isKernelFunction(*F))
+    return "PTX .alias requires non-entry functions, so a kernel cannot be "
+           "aliased";
+  if (GA.hasLinkOnceLinkage() || GA.hasWeakLinkage() ||
+      GA.hasAvailableExternallyLinkage() || GA.hasCommonLinkage())
+    return "PTX forbids a .weak aliasee";
+  return nullptr;
+}
+
+/// Report an alias we cannot lower as a diagnostic rather than aborting. A
+/// frontend that emits an alias for every export (as the Zig compiler does)
+/// would otherwise lose the whole compilation to report_fatal_error, with no
+/// source location and no way to recover.
+static void reportUnsupportedAlias(const GlobalAlias &GA, const char *Reason) {
+  const std::string Msg =
+      ("unsupported alias '" + GA.getName() + "': " + Reason).str();
+  LLVMContext &Ctx = GA.getContext();
+  if (const auto *F = dyn_cast_or_null<Function>(GA.getAliaseeObject()))
+    Ctx.diagnose(DiagnosticInfoUnsupported(*F, Msg, F->getSubprogram()));
+  else
+    Ctx.emitError(Msg);
+}
+
 void NVPTXAsmPrinter::emitAliasDeclaration(const GlobalAlias *GA,
                                            raw_ostream &O) {
-  const Function *F = dyn_cast_or_null<Function>(GA->getAliaseeObject());
-  if (!F || isKernelFunction(*F) || F->isDeclaration())
-    report_fatal_error(
-        "NVPTX aliasee must be a non-kernel function definition");
+  if (const char *Reason = getAliasUnsupportedReason(*GA)) {
+    reportUnsupportedAlias(*GA, Reason);
+    return;
+  }
 
-  if (GA->hasLinkOnceLinkage() || GA->hasWeakLinkage() ||
-      GA->hasAvailableExternallyLinkage() || GA->hasCommonLinkage())
-    report_fatal_error("NVPTX aliasee must not be '.weak'");
-
-  emitDeclarationWithName(F, getSymbol(GA), O);
+  emitDeclarationWithName(cast<Function>(GA->getAliaseeObject()), getSymbol(GA),
+                          O);
 }
 
 void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
@@ -1311,6 +1344,11 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
 }
 
 void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+  // Already diagnosed by emitAliasDeclaration, which runs first. Emitting the
+  // directive anyway would name a declaration that was deliberately skipped.
+  if (getAliasUnsupportedReason(GA))
+    return;
+
   getTargetStreamer()->emitAliasDirective(getSymbol(&GA),
                                           getSymbol(GA.getAliaseeObject()));
 }
