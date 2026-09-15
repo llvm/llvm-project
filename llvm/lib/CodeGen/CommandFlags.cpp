@@ -98,7 +98,6 @@ CGOPT_EXP(bool, EnableTLSDESC)
 CGOPT(bool, UniqueSectionNames)
 CGOPT(bool, UniqueBasicBlockSectionNames)
 CGOPT(bool, SeparateNamedSections)
-CGOPT(EABI, EABIVersion)
 CGOPT(DebuggerKind, DebuggerTuningOpt)
 CGOPT(VectorLibrary, VectorLibrary)
 CGOPT(bool, EnableStackSizeSection)
@@ -372,16 +371,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
       cl::init(false));
   CGBINDOPT(SeparateNamedSections);
 
-  static cl::opt<EABI> EABIVersion(
-      "meabi", cl::desc("Set EABI type (default depends on triple):"),
-      cl::init(EABI::Default),
-      cl::values(
-          clEnumValN(EABI::Default, "default", "Triple default EABI version"),
-          clEnumValN(EABI::EABI4, "4", "EABI version 4"),
-          clEnumValN(EABI::EABI5, "5", "EABI version 5"),
-          clEnumValN(EABI::GNU, "gnu", "EABI GNU")));
-  CGBINDOPT(EABIVersion);
-
   static cl::opt<DebuggerKind> DebuggerTuningOpt(
       "debugger-tune", cl::desc("Tune debug info for a particular debugger"),
       cl::init(DebuggerKind::Default),
@@ -576,7 +565,6 @@ codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
 
   Options.MCOptions = mc::InitMCTargetOptionsFromFlags();
 
-  Options.EABIVersion = getEABIVersion();
   Options.DebuggerTuning = getDebuggerTuningOpt();
   Options.SwiftAsyncFramePointer = getSwiftAsyncFramePointer();
   return Options;

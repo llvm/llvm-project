@@ -23,6 +23,7 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVM.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 #include "mlir/Conversion/MPIToLLVM/MPIToLLVM.h"
+#include "mlir/Conversion/MathToEmitC/MathToEmitC.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -81,6 +82,7 @@ void mlir::registerAllExtensions(DialectRegistry &registry) {
   registerConvertFuncToEmitCInterface(registry);
   registerConvertFuncToLLVMInterface(registry);
   index::registerConvertIndexToLLVMInterface(registry);
+  registerConvertMathToEmitCInterface(registry);
   registerConvertMathToLLVMInterface(registry);
   mpi::registerConvertMPIToLLVMInterface(registry);
   registerConvertMemRefToEmitCInterface(registry);
