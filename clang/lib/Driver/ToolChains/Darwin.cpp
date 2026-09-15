@@ -3074,6 +3074,8 @@ void AppleMachO::AddClangCXXStdlibIncludeArgs(
   case ToolChain::CST_Libstdcxx:
     AddGnuCPlusPlusIncludePaths(DriverArgs, CC1Args);
     break;
+  case ToolChain::CST_MSVCSTL:
+    break;
   }
 }
 
@@ -3167,6 +3169,8 @@ void AppleMachO::AddCXXStdlibLibArgs(const ArgList &Args,
 
     // Otherwise, let the linker search.
     CmdArgs.push_back("-lstdc++");
+    break;
+  case ToolChain::CST_MSVCSTL:
     break;
   }
 }
