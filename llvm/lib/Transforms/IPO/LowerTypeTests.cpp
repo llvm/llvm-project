@@ -316,6 +316,46 @@ SetVector<GlobalValue *> lowertypetests::findCfiFunctions(Module &M) {
   return CfiFunctions;
 }
 
+/// Extracts a numeric type identifier from an MDNode containing type metadata.
+static ConstantInt *extractNumericTypeId(MDNode &MD) {
+  // This check excludes vtables for classes inside anonymous namespaces.
+  auto TM = dyn_cast<ValueAsMetadata>(MD.getOperand(1));
+  if (!TM)
+    return nullptr;
+  auto C = dyn_cast_or_null<ConstantInt>(TM->getValue());
+  if (!C)
+    return nullptr;
+  // We are looking for i64 constants.
+  if (C->getBitWidth() != 64)
+    return nullptr;
+
+  return C;
+}
+
+SetVector<uint64_t> lowertypetests::findCfiTypeIds(const Module &M) {
+  SetVector<uint64_t> TypeIds;
+  SmallVector<MDNode *, 2> Types;
+  for (const GlobalObject &GO : M.global_objects()) {
+    Types.clear();
+    GO.getMetadata(LLVMContext::MD_type, Types);
+    for (MDNode *Type : Types)
+      if (ConstantInt *TypeId = extractNumericTypeId(*Type))
+        TypeIds.insert(TypeId->getZExtValue());
+  }
+
+  if (NamedMDNode *CfiFunctionsMD = M.getNamedMetadata("cfi.functions")) {
+    for (auto *Func : CfiFunctionsMD->operands()) {
+      assert(Func->getNumOperands() >= 3);
+      assert(isa<ConstantAsMetadata>(Func->getOperand(2)));
+      for (unsigned I = 3; I < Func->getNumOperands(); ++I)
+        if (ConstantInt *TypeId =
+                extractNumericTypeId(*cast<MDNode>(Func->getOperand(I))))
+          TypeIds.insert(TypeId->getZExtValue());
+    }
+  }
+  return TypeIds;
+}
+
 namespace {
 
 /// The type of CFI jumptable needed for a function.
