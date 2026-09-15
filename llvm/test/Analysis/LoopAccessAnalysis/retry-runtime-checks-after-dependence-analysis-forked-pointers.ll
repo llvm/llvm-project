@@ -12,12 +12,12 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
+; CHECK-NEXT:        ptr %c
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
+; CHECK-NEXT:        ptr %b
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
@@ -25,12 +25,17 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 3:
 ; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
+; CHECK-NEXT:        ptr %c
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:        ptr %b
+; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:        ptr %c
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
-; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:      Check 5:
 ; CHECK-NEXT:        Comparing group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %b, ptr %c
+; CHECK-NEXT:        ptr %b
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
@@ -38,11 +43,11 @@ define void @dependency_check_and_runtime_checks_needed_select_of_invariant_ptrs
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %b High: (4 + %b))
-; CHECK-NEXT:            Member: %b
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %c High: (4 + %c))
 ; CHECK-NEXT:            Member: %c
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %b High: (4 + %b))
+; CHECK-NEXT:            Member: %b
 ; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
@@ -85,12 +90,12 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv
 ; CHECK-NEXT:      Check 1:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
 ; CHECK-NEXT:        Against group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
 ; CHECK-NEXT:      Check 2:
 ; CHECK-NEXT:        Comparing group GRP0:
 ; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
@@ -98,12 +103,17 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Check 3:
 ; CHECK-NEXT:        Comparing group GRP1:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
+; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
-; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:      Check 5:
 ; CHECK-NEXT:        Comparing group GRP2:
-; CHECK-NEXT:          %select = select i1 %cmp, ptr %gep.b, ptr %gep.c
+; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
 ; CHECK-NEXT:        Against group GRP3:
 ; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
@@ -111,11 +121,11 @@ define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs(p
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
-; CHECK-NEXT:            Member: {%b,+,4}<%loop>
-; CHECK-NEXT:        Group GRP2:
 ; CHECK-NEXT:          (Low: %c High: ((4 * %n) + %c))
 ; CHECK-NEXT:            Member: {%c,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<%loop>
 ; CHECK-NEXT:        Group GRP3:
 ; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
 ; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
@@ -153,21 +163,56 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_1(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_1'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
+; CHECK-NEXT:      Check 5:
+; CHECK-NEXT:        Comparing group GRP2:
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.b = getelementptr float, ptr %b, i64 %iv2
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
-; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:      Generated run-time checks are incomplete
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %c High: ((4 * %n) + %c))
+; CHECK-NEXT:            Member: {%c,+,4}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: %b High: (-4 + (8 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,8}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
+; CHECK-NEXT:      {%b,+,8}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ;
@@ -202,18 +247,52 @@ exit:
 define void @dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_2(ptr %a, ptr %b, ptr %c, i64 %offset, i64 %n) {
 ; CHECK-LABEL: 'dependency_check_and_runtime_checks_needed_select_of_ptr_add_recs_may_wrap_2'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Check 0:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv2
+; CHECK-NEXT:      Check 1:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
+; CHECK-NEXT:      Check 2:
+; CHECK-NEXT:        Comparing group GRP0:
+; CHECK-NEXT:          %gep.a.iv = getelementptr inbounds float, ptr %a, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 3:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv2
+; CHECK-NEXT:        Against group GRP2:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
+; CHECK-NEXT:      Check 4:
+; CHECK-NEXT:        Comparing group GRP1:
+; CHECK-NEXT:          %gep.c = getelementptr inbounds float, ptr %c, i64 %iv2
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
+; CHECK-NEXT:      Check 5:
+; CHECK-NEXT:        Comparing group GRP2:
+; CHECK-NEXT:          %gep.b = getelementptr inbounds float, ptr %b, i64 %iv
+; CHECK-NEXT:        Against group GRP3:
+; CHECK-NEXT:          %gep.a.iv.off = getelementptr inbounds float, ptr %a, i64 %iv.offset
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
-; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
-; CHECK-NEXT:        Group GRP1:
 ; CHECK-NEXT:          (Low: %a High: ((4 * %n) + %a))
 ; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:            Member: {%a,+,4}<nuw><%loop>
-; CHECK-NEXT:      Generated run-time checks are incomplete
+; CHECK-NEXT:        Group GRP1:
+; CHECK-NEXT:          (Low: %c High: (-4 + (8 * %n) + %c))
+; CHECK-NEXT:            Member: {%c,+,8}<%loop>
+; CHECK-NEXT:        Group GRP2:
+; CHECK-NEXT:          (Low: %b High: ((4 * %n) + %b))
+; CHECK-NEXT:            Member: {%b,+,4}<%loop>
+; CHECK-NEXT:        Group GRP3:
+; CHECK-NEXT:          (Low: ((4 * %offset) + %a) High: ((4 * %offset) + (4 * %n) + %a))
+; CHECK-NEXT:            Member: {((4 * %offset) + %a),+,4}<%loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
@@ -259,6 +338,7 @@ define void @forked_ptr_with_uncomputable_bounds(ptr %P, ptr %S, i32 %step.a, i3
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %S High: (4 + %S))
+; CHECK-NEXT:            Member: %S
 ; CHECK-NEXT:            Member: %S
 ; CHECK-NEXT:      Generated run-time checks are incomplete
 ; CHECK-EMPTY:
