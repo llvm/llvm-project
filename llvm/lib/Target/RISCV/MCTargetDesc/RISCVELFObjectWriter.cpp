@@ -29,7 +29,10 @@ public:
   // section plus offset.
   bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override {
     // TODO: this is very conservative, update once RISC-V psABI requirements
-    //       are clarified.
+    //       are clarified. Note that R_RISCV_RELAX and R_RISCV_VENDOR must keep
+    //       their referenced symbol (not be rewritten to a section symbol plus
+    //       offset): the symbol carries semantics (the ISA mapping symbol and
+    //       the vendor identity respectively), not just an address.
     return true;
   }
 
