@@ -100,6 +100,7 @@ fixing it and to unassign it when you're no longer actively working on it.  You
 unassign a bug by removing the person from the ``Assignees`` field.
 
 .. _Closing:
+.. _resolving-closing-bugs:
 
 Resolving/Closing bugs
 ======================

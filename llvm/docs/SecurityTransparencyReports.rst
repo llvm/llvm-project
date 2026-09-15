@@ -58,8 +58,8 @@ We believe that with the publishing of this first annual transparency report,
 the security group now has implemented all necessary processes for the group to
 operate as promised. The group's processes can be improved further, and we do
 expect further improvements to get implemented in 2022. Many of the potential
-improvements end up being discussed on the `monthly public call on LLVM's
-security group <https://llvm.org/docs/GettingInvolved.html#online-sync-ups>`_.
+improvements end up being discussed on the :doc:`monthly public call on LLVM's
+security group <GettingInvolved>`.
 
 
 2022
@@ -425,20 +425,20 @@ Issues deemed to not require coordinated action before disclosing publicly
    `GHSA-m967-6j3p-jrwc <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-m967-6j3p-jrwc>`_ |br|
    There has been an agreement that the proof of concept had undefined
    behavior which makes it out of scope according to
-   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   :ref:`the LLVM threat model <what-is-considered-a-security-issue>`.
 3. “\[clangd\] heap-use-after-free in clangd when generating diagnostics” |br|
    Details are available at
    `GHSA-5426-9r4h-7whf <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-5426-9r4h-7whf>`_ |br|
    It has been agreed this report fell out of scope because it was caused by
    untrusted inputs, as described in
-   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   :ref:`the LLVM threat model <what-is-considered-a-security-issue>`.
 4. “A compiler optimization bug may cause signed integer overflow detection
    be bypassed” |br|
    Details are available at
    `GHSA-w6jm-h8j9-q33r <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-w6jm-h8j9-q33r>`_ |br|
    There has been an agreement that the PoC had undefined behavior which makes
    it out of scope according to
-   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   :ref:`the LLVM threat model <what-is-considered-a-security-issue>`.
 5. “libomp: Crash (OOB Write / ASan BUS Error) involving omp\_init\_lock under
    high concurrency” |br|
    Details are available at
@@ -451,12 +451,12 @@ Issues deemed to not require coordinated action before disclosing publicly
    `GHSA-8j9r-qc4r-q9fh <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-8j9r-qc4r-q9fh>`_ |br|
    This report fell out of scope because it was caused by untrusted inputs,
    as described in
-   `the LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   :ref:`the LLVM threat model <what-is-considered-a-security-issue>`.
 7. “\[clangd/clang\] heap-buffer-overflow in clang/lib/Sema/SemaExprCXX.cpp:9144” |br|
    Details are available at
    `GHSA-qq8q-r524-8vw9 <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-qq8q-r524-8vw9>`_ |br|
    This issue and the following 3 were concluded to be outside of the
-   `LLVM threat model <https://llvm.org/docs/Security.html#what-is-considered-a-security-issue>`_.
+   :ref:`LLVM threat model <what-is-considered-a-security-issue>`.
 8. “\[clangd\] heap-buffer-overflow in clang/lib/Sema/SemaExprCXX.cpp:8876” |br|
    Details are available at
    `GHSA-3xm9-vccr-fxx5 <https://github.com/llvm/llvm-security-repo/security/advisories/GHSA-3xm9-vccr-fxx5>`_

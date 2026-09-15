@@ -7,7 +7,7 @@ LLVM Social.
 
 Before you start, it is essential to make sure that the meetup is as welcoming
 as any other event related to LLVM. Therefore you shall follow LLVM's
-`Code of Conduct <https://llvm.org/docs/CodeOfConduct.html>`_.
+:doc:`Code of Conduct <CodeOfConduct>`.
 
 Other than that - your mileage may vary. Please adapt your social to what works
 best for your specific situation.
@@ -79,4 +79,3 @@ How to pick the date?
   but the people who live in the city may not attend.
 * Make a poll, but beware that not every responder will join (we had ~20 votes
   on the poll, while only ~8 people attended).
-
