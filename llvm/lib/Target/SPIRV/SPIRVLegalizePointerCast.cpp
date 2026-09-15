@@ -813,6 +813,17 @@ class SPIRVLegalizePointerCastImpl {
         }
       }
 
+      if (AtomicRMWInst *AI = dyn_cast<AtomicRMWInst>(User)) {
+        B.SetInsertPoint(AI);
+        Type *ToTy = GR->findDeducedElementType(CastedOperand);
+        assert(ToTy &&
+               "AtomicRMWInst should always have a deduced element type");
+        GR->buildAssignPtr(B, ToTy, OriginalOperand);
+        AI->setOperand(AtomicRMWInst::getPointerOperandIndex(),
+                       OriginalOperand);
+        continue;
+      }
+
       llvm_unreachable("Unsupported ptrcast user. Please fix.");
     }
 
