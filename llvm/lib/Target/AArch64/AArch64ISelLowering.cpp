@@ -367,10 +367,15 @@ static bool isMergePassthruOpcode(unsigned Opc) {
   case AArch64ISD::STRICT_FCEIL_MERGE_PASSTHRU:
   case AArch64ISD::STRICT_FFLOOR_MERGE_PASSTHRU:
   case AArch64ISD::STRICT_FNEARBYINT_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FP_EXTEND_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FP_ROUND_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FRINT_MERGE_PASSTHRU:
   case AArch64ISD::STRICT_FROUND_MERGE_PASSTHRU:
   case AArch64ISD::STRICT_FROUNDEVEN_MERGE_PASSTHRU:
-  case AArch64ISD::STRICT_FTRUNC_MERGE_PASSTHRU:
   case AArch64ISD::STRICT_FSQRT_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_FTRUNC_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_SINT_TO_FP_MERGE_PASSTHRU:
+  case AArch64ISD::STRICT_UINT_TO_FP_MERGE_PASSTHRU:
     return true;
   }
 }
@@ -1691,10 +1696,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CTPOP, VT, Custom);
       setOperationAction(ISD::CTTZ, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
-      setOperationAction(ISD::UINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::SINT_TO_FP, VT, Custom);
-      setOperationAction(ISD::FP_TO_UINT, VT, Custom);
-      setOperationAction(ISD::FP_TO_SINT, VT, Custom);
+      setOperationAction({ISD::UINT_TO_FP, ISD::STRICT_UINT_TO_FP}, VT, Custom);
+      setOperationAction({ISD::SINT_TO_FP, ISD::STRICT_SINT_TO_FP}, VT, Custom);
+      setOperationAction({ISD::FP_TO_UINT, ISD::STRICT_FP_TO_UINT}, VT, Custom);
+      setOperationAction({ISD::FP_TO_SINT, ISD::STRICT_FP_TO_SINT}, VT, Custom);
       setOperationAction(ISD::FP_TO_UINT_SAT, VT, Custom);
       setOperationAction(ISD::FP_TO_SINT_SAT, VT, Custom);
       setOperationAction(ISD::MLOAD, VT, Custom);
@@ -1888,7 +1893,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FCEIL, ISD::STRICT_FCEIL}, VT, Custom);
       setOperationAction({ISD::FFLOOR, ISD::STRICT_FFLOOR}, VT, Custom);
       setOperationAction({ISD::FNEARBYINT, ISD::STRICT_FNEARBYINT}, VT, Custom);
-      setOperationAction(ISD::FRINT, VT, Custom);
+      setOperationAction({ISD::FRINT, ISD::STRICT_FRINT}, VT, Custom);
       setOperationAction(ISD::LRINT, VT, Custom);
       setOperationAction(ISD::LLRINT, VT, Custom);
       setOperationAction({ISD::FROUND, ISD::STRICT_FROUND}, VT, Custom);
@@ -1896,8 +1901,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction({ISD::FTRUNC, ISD::STRICT_FTRUNC}, VT, Custom);
       setOperationAction({ISD::FSQRT, ISD::STRICT_FSQRT}, VT, Custom);
       setOperationAction(ISD::FABS, VT, Custom);
-      setOperationAction(ISD::FP_EXTEND, VT, Custom);
-      setOperationAction(ISD::FP_ROUND, VT, Custom);
+      setOperationAction({ISD::FP_EXTEND, ISD::STRICT_FP_EXTEND}, VT, Custom);
+      setOperationAction({ISD::FP_ROUND, ISD::STRICT_FP_ROUND}, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FADD, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMAX, VT, Custom);
       setOperationAction(ISD::VECREDUCE_FMIN, VT, Custom);
@@ -1939,19 +1944,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
       // TODO: These require custom lowering.
       setOperationAction(ISD::STRICT_FLDEXP, VT, Expand);
-      setOperationAction(ISD::STRICT_FRINT, VT, Expand);
       setOperationAction(ISD::STRICT_PSEUDO_FMIN, VT, Expand);
       setOperationAction(ISD::STRICT_PSEUDO_FMAX, VT, Expand);
       setOperationAction(ISD::STRICT_LROUND, VT, Expand);
       setOperationAction(ISD::STRICT_LLROUND, VT, Expand);
       setOperationAction(ISD::STRICT_LRINT, VT, Expand);
       setOperationAction(ISD::STRICT_LLRINT, VT, Expand);
-      setOperationAction(ISD::STRICT_FP_TO_SINT, VT, Expand);
-      setOperationAction(ISD::STRICT_FP_TO_UINT, VT, Expand);
-      setOperationAction(ISD::STRICT_SINT_TO_FP, VT, Expand);
-      setOperationAction(ISD::STRICT_UINT_TO_FP, VT, Expand);
-      setOperationAction(ISD::STRICT_FP_ROUND, VT, Expand);
-      setOperationAction(ISD::STRICT_FP_EXTEND, VT, Expand);
       setOperationAction(ISD::STRICT_FSETCC, VT, Expand);
       setOperationAction(ISD::STRICT_FSETCCS, VT, Expand);
 
@@ -4961,10 +4959,16 @@ static void simplifySetCCIntoEq(ISD::CondCode &CC, SDValue &LHS, SDValue &RHS,
 SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                                               SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
+  bool IsStrict = Op->isStrictFPOpcode();
+
   if (VT.isScalableVector()) {
     SDValue SrcVal = Op.getOperand(0);
 
     if (VT == MVT::nxv2f64 && SrcVal.getValueType() == MVT::nxv2bf16) {
+      // TODO: Missing support for bfloat strict-fp operations.
+      if (IsStrict)
+        return SDValue();
+
       // Break conversion in two with the first part converting to f32 and the
       // second using native f32->VT instructions.
       SDLoc DL(Op);
@@ -4972,13 +4976,15 @@ SDValue AArch64TargetLowering::LowerFP_EXTEND(SDValue Op,
                          DAG.getNode(ISD::FP_EXTEND, DL, MVT::nxv2f32, SrcVal));
     }
 
-    return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
+    return LowerToPredicatedOp(Op, DAG,
+                               IsStrict
+                                   ? AArch64ISD::STRICT_FP_EXTEND_MERGE_PASSTHRU
+                                   : AArch64ISD::FP_EXTEND_MERGE_PASSTHRU);
   }
 
   if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
     return LowerFixedLengthFPExtendToSVE(Op, DAG);
 
-  bool IsStrict = Op->isStrictFPOpcode();
   SDValue Op0 = Op.getOperand(IsStrict ? 1 : 0);
   EVT Op0VT = Op0.getValueType();
   if (VT == MVT::f64) {
@@ -5018,7 +5024,14 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
       return Op;
 
     if (VT.getScalarType() != MVT::bf16)
-      return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+      return LowerToPredicatedOp(
+          Op, DAG,
+          IsStrict ? AArch64ISD::STRICT_FP_ROUND_MERGE_PASSTHRU
+                   : AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
+
+    // TODO: Missing support for bfloat strict-fp operations.
+    if (IsStrict)
+      return SDValue();
 
     SDLoc DL(Op);
     constexpr EVT I32 = MVT::nxv4i32;
@@ -5155,9 +5168,6 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   bool IsStrict = Op->isStrictFPOpcode();
   EVT InVT = Op.getOperand(IsStrict ? 1 : 0).getValueType();
   EVT VT = Op.getValueType();
-
-  assert(!(IsStrict && VT.isScalableVector()) &&
-         "Unimplemented SVE support for STRICT_FP_to_INT!");
 
   // f16 conversions are promoted to f32 when full fp16 is not supported.
   if ((InVT.getVectorElementType() == MVT::f16 && !Subtarget->hasFullFP16()) ||
@@ -5475,11 +5485,8 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   unsigned Opc = Op.getOpcode();
   bool IsSigned = Opc == ISD::SINT_TO_FP || Opc == ISD::STRICT_SINT_TO_FP;
 
-  assert(!(IsStrict && VT.isScalableVector()) &&
-         "Unimplemented SVE support for ISD:::STRICT_INT_TO_FP!");
-
   // NOTE: i1->bf16 does not require promotion to f32.
-  if (VT.isScalableVector() && InVT.getVectorElementType() == MVT::i1) {
+  if (InVT.isScalableVectorOf(MVT::i1) && !IsStrict) {
     SDValue FalseVal = DAG.getConstantFP(0.0, DL, VT);
     SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, DL, VT)
                                : DAG.getConstantFP(1.0, DL, VT);
@@ -5492,8 +5499,7 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (IsStrict) {
       SDValue Val = DAG.getNode(Op.getOpcode(), DL, {F32, MVT::Other},
                                 {Op.getOperand(0), In});
-      return DAG.getNode(ISD::STRICT_FP_ROUND, DL,
-                         {Op.getValueType(), MVT::Other},
+      return DAG.getNode(ISD::STRICT_FP_ROUND, DL, Op->getVTList(),
                          {Val.getValue(1), Val.getValue(0),
                           DAG.getIntPtrConstant(0, DL, /*isTarget=*/true)});
     }
@@ -5507,8 +5513,11 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
     if (VT == MVT::nxv8f32)
       return Op;
 
-    unsigned Opcode = IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
-                               : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU;
+    unsigned Opcode =
+        IsStrict ? (IsSigned ? AArch64ISD::STRICT_SINT_TO_FP_MERGE_PASSTHRU
+                             : AArch64ISD::STRICT_UINT_TO_FP_MERGE_PASSTHRU)
+                 : (IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
+                             : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU);
     return LowerToPredicatedOp(Op, DAG, Opcode);
   }
 
@@ -8831,6 +8840,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                AArch64ISD::STRICT_FNEARBYINT_MERGE_PASSTHRU);
   case ISD::FRINT:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FRINT_MERGE_PASSTHRU);
+  case ISD::STRICT_FRINT:
+    return LowerToPredicatedOp(Op, DAG,
+                               AArch64ISD::STRICT_FRINT_MERGE_PASSTHRU);
   case ISD::FROUND:
     return LowerToPredicatedOp(Op, DAG, AArch64ISD::FROUND_MERGE_PASSTHRU);
   case ISD::STRICT_FROUND:
@@ -9176,8 +9188,12 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
     }
 
     SDValue Pg = getPredicateForVector(DAG, DL, VT);
-    SDValue NewCttzElts =
-        DAG.getNode(AArch64ISD::CTTZ_ELTS, DL, MVT::i64, Pg, CttzOp);
+    // We preserve the poison semantics here to avoid the poison path from being
+    // affected by the checks emitted for the no-poison case.
+    unsigned Opcode = Op.getOpcode() == ISD::CTTZ_ELTS_ZERO_POISON
+                          ? AArch64ISD::CTTZ_ELTS_ZERO_POISON
+                          : AArch64ISD::CTTZ_ELTS;
+    SDValue NewCttzElts = DAG.getNode(Opcode, DL, MVT::i64, Pg, CttzOp);
     return DAG.getZExtOrTrunc(NewCttzElts, DL, Op.getValueType());
   }
   }
@@ -10624,18 +10640,24 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   // caller will deallocate the entire stack and the callee still expects its
   // arguments to begin at SP+0. Completely unused for non-tail calls.
   int FPDiff = 0;
+  const Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
 
   if (IsTailCall && !IsSibCall) {
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
-
-    // Since callee will pop argument stack as a tail call, we must keep the
-    // popped size 16-byte aligned.
-    NumBytes = alignTo(NumBytes, 16);
 
     // FPDiff will be negative if this tail call requires more space than we
     // would automatically have in our incoming argument space. Positive if we
     // can actually shrink the stack.
     FPDiff = NumReusableBytes - NumBytes;
+
+    // Since callee will pop the argument stack as a tail call, we must keep the
+    // popped size aligned to the stack alignment. Either or both of NumBytes
+    // and NumReusableBytes may not have been aligned, so we further increase by
+    // the amount needed to keep FPDiff aligned, and therefore preserve the
+    // required alignment going into the callee.
+    uint64_t Realign = offsetToAlignment(FPDiff, StackAlign);
+    FPDiff -= Realign;
+    NumBytes += Realign;
 
     // Update the required reserved area if this is the tail call requiring the
     // most argument stack space.
@@ -11796,26 +11818,17 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
 }
 
-SDValue
-AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
-                                                SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetELF() && "This function expects an ELF target");
+TLSModel::Model AArch64::getELFTLSModel(const GlobalValue *GV,
+                                        const TargetMachine &TM,
+                                        bool HasELFSignedGOT) {
+  TLSModel::Model Model =
+      HasELFSignedGOT ? TLSModel::GeneralDynamic : TM.getTLSModel(GV);
 
-  const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
-  AArch64FunctionInfo *MFI =
-      DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  if (!EnableAArch64ELFLocalDynamicTLSGeneration &&
+      Model == TLSModel::LocalDynamic)
+    Model = TLSModel::GeneralDynamic;
 
-  TLSModel::Model Model = MFI->hasELFSignedGOT()
-                              ? TLSModel::GeneralDynamic
-                              : getTargetMachine().getTLSModel(GA->getGlobal());
-
-  if (!EnableAArch64ELFLocalDynamicTLSGeneration) {
-    if (Model == TLSModel::LocalDynamic)
-      Model = TLSModel::GeneralDynamic;
-  }
-
-  if (getTargetMachine().getCodeModel() == CodeModel::Large &&
-      Model != TLSModel::LocalExec)
+  if (TM.getCodeModel() == CodeModel::Large && Model != TLSModel::LocalExec)
     report_fatal_error("ELF TLS only supported in small memory model or "
                        "in local exec TLS model");
   // Different choices can be made for the maximum size of the TLS area for a
@@ -11824,6 +11837,20 @@ AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
   // FIXME: add tiny and large code model support for TLS access models other
   // than local exec. We currently generate the same code as small for tiny,
   // which may be larger than needed.
+
+  return Model;
+}
+
+SDValue
+AArch64TargetLowering::LowerELFGlobalTLSAddress(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  assert(Subtarget->isTargetELF() && "This function expects an ELF target");
+
+  const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
+  AArch64FunctionInfo *MFI =
+      DAG.getMachineFunction().getInfo<AArch64FunctionInfo>();
+  TLSModel::Model Model = AArch64::getELFTLSModel(
+      GA->getGlobal(), getTargetMachine(), MFI->hasELFSignedGOT());
 
   SDValue TPOff;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -12767,7 +12794,8 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
   SmallVector<std::pair<SDValue, SDValue>, 16> WorkList;
 
   // Only handle integer compares.
-  if (N->getOpcode() != ISD::SETCC)
+  if (N->getOpcode() != ISD::SETCC || LHS.getValueType().isVector() ||
+      LHS.getValueType().getSizeInBits() > 64)
     return SDValue();
 
   ISD::CondCode Cond = cast<CondCodeSDNode>(N->getOperand(2))->get();
@@ -14027,8 +14055,8 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
       for (unsigned I = 0; I + 1 < Insn.size(); ++I) {
         const AArch64_IMM::ImmInsnModel &First = Insn[I];
         const AArch64_IMM::ImmInsnModel &Second = Insn[I + 1];
-        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2, Second.Opcode,
-                                       Second.Op2)) {
+        if (Subtarget->fusesMOVImmPair(First.Opcode, First.Op2.value_or(0),
+                                       Second.Opcode, Second.Op2.value_or(0))) {
           ++Limit;
           // An instruction can only be fused once, so the 2nd one of the pair
           // cannot start another pair and is skipped.
@@ -20369,8 +20397,8 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
   case MVT::f64:
     return Subtarget->hasFPARMv8();
   case MVT::bf16:
-    return VT.isScalableVector() && Subtarget->hasBF16() &&
-           Subtarget->isNonStreamingSVEorSME2Available();
+    return VT.isScalableVector() &&
+           (Subtarget->hasBF16() || Subtarget->hasSVEB16B16());
   default:
     break;
   }
@@ -23552,6 +23580,55 @@ static SDValue performNegCSelCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel.getOperand(3));
 }
 
+// Reassociate adds/subs of extended values when one of the operations can
+// become an add/sub long, matching [SU](ADD|SUB)L:
+//
+//   (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+//   (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+//   ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+//
+// We don't need to reassociate expressions that can use widening add/sub
+// instead, such as (ext(A) + X) + ext(B) or (X - ext(A)) - ext(B).
+static SDValue reassociateAddSubLong(SDNode *N, SelectionDAG &DAG) {
+  using namespace llvm::SDPatternMatch;
+
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v8i16 && VT != MVT::v4i32 && VT != MVT::v2i64)
+    return SDValue();
+  EVT HalfEltVT = MVT::getIntegerVT(VT.getScalarSizeInBits() / 2);
+
+  for (unsigned ExtOpc : {ISD::ZERO_EXTEND, ISD::SIGN_EXTEND}) {
+    SDValue A, B, X;
+    auto ExtOp = m_Node(ExtOpc, m_SpecificVectorElementVT(HalfEltVT));
+    auto MatchA = m_Value(A, ExtOp), MatchB = m_Value(B, ExtOp);
+    auto MatchX = m_Value(X, m_Unless(ExtOp));
+
+    auto TryReassociate = [&](unsigned Opc0, SDValue L, SDValue R,
+                              unsigned Opc1, SDValue X) {
+      // Long instructions read operands from lower/upper halves.
+      if (isEssentiallyExtractHighSubvector(L.getOperand(0)) !=
+          isEssentiallyExtractHighSubvector(R.getOperand(0)))
+        return SDValue();
+      SDLoc DL(N);
+      return DAG.getNode(Opc1, DL, VT, DAG.getNode(Opc0, DL, VT, L, R), X);
+    };
+
+    // (ext(A) - X) + ext(B) -> (ext(A) + ext(B)) - X
+    if (sd_match(N, m_Add(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::ADD, A, B, ISD::SUB, X);
+
+    // (ext(A) - X) - ext(B) -> (ext(A) - ext(B)) - X
+    if (sd_match(N, m_Sub(m_OneUse(m_Sub(MatchA, MatchX)), MatchB)))
+      return TryReassociate(ISD::SUB, A, B, ISD::SUB, X);
+
+    // ext(B) - (X + ext(A)) -> (ext(B) - ext(A)) - X
+    if (sd_match(N, m_Sub(MatchB, m_OneUse(m_Add(MatchX, MatchA)))))
+      return TryReassociate(ISD::SUB, B, A, ISD::SUB, X);
+  }
+
+  return SDValue();
+}
+
 // The basic add/sub long vector instructions have variants with "2" on the end
 // which act on the high-half of their inputs. They are normally matched by
 // patterns like:
@@ -23575,6 +23652,9 @@ static SDValue performAddSubLongCombine(SDNode *N,
       return performSetccAddFolding(N, DAG);
     return SDValue();
   }
+
+  if (SDValue R = reassociateAddSubLong(N, DAG))
+    return R;
 
   // Make sure both branches are extended in the same way.
   SDValue LHS = N->getOperand(0);
@@ -28290,14 +28370,52 @@ static SDValue performLegalizedInterleavedStoreCombine(
   return NewStore;
 }
 
+/// Expand a scalable compressing store to a VECTOR_COMPRESS + a masked store.
+static SDValue expandScalableCompressingStore(MaskedStoreSDNode *Store,
+                                              SelectionDAG &DAG) {
+  SDLoc DL(Store);
+  EVT VT = Store->getValue().getValueType();
+  assert(VT.isScalableVector() && Store->isCompressingStore() &&
+         "Expected a scalable compressing store");
+
+  EVT MaskVT = Store->getMask().getValueType();
+  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
+  SDValue CntActive = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
+      Store->getMask(), Store->getMask());
+
+  SDValue CompressedValue =
+      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
+                  Store->getMask(), DAG.getPOISON(VT));
+  SDValue CompressedMask =
+      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
+
+  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
+                            Store->getBasePtr(), Store->getOffset(),
+                            CompressedMask, Store->getMemoryVT(),
+                            Store->getMemOperand(), Store->getAddressingMode(),
+                            Store->isTruncatingStore(),
+                            /*isCompressing=*/false);
+}
+
 static SDValue performMSTORECombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
-                                    const AArch64Subtarget *Subtarget) {
+                                    const AArch64Subtarget *Subtarget,
+                                    const AArch64TargetLowering &TLI) {
   MaskedStoreSDNode *MST = cast<MaskedStoreSDNode>(N);
   SDValue Value = MST->getValue();
   SDValue Mask = MST->getMask();
   SDLoc DL(N);
+
+  // If MST is a compressing store and VECTOR_COMPRESS can be lowered for the VT
+  // expand the store early. This allows type promotion to apply to unpacked
+  // SVE float types.
+  EVT VT = MST->getValue().getValueType();
+  if (MST->isCompressingStore() && VT.isScalableVector() &&
+      TLI.isOperationLegalOrCustomOrPromote(ISD::VECTOR_COMPRESS, VT))
+    return expandScalableCompressingStore(MST, DAG);
 
   if (SDValue Res = performInterleavedStoreCombine(N, DCI, DAG))
     return Res;
@@ -31710,7 +31828,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STORE:
     return performSTORECombine(N, DCI, DAG, Subtarget);
   case ISD::MSTORE:
-    return performMSTORECombine(N, DCI, DAG, Subtarget);
+    return performMSTORECombine(N, DCI, DAG, Subtarget, *this);
   case ISD::MGATHER:
   case ISD::MSCATTER:
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
@@ -32919,8 +33037,9 @@ SDValue AArch64TargetLowering::emitStackGuardMixFP(SelectionDAG &DAG,
 
 unsigned AArch64TargetLowering::combineRepeatedFPDivisors() const {
   // Combine multiple FDIVs with the same divisor into multiple FMULs by the
-  // reciprocal if there are three or more FDIVs.
-  return 3;
+  // reciprocal if there are enough FDIVs. The threshold is determined by the
+  // subtarget feature.
+  return Subtarget->useReciprocalFDivCombineThreshold2() ? 2 : 3;
 }
 
 TargetLoweringBase::LegalizeTypeAction
@@ -33757,11 +33876,11 @@ bool AArch64TargetLowering::shouldLocalize(
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
   case TargetOpcode::G_GLOBAL_VALUE: {
-    // On Darwin, TLS global vars get selected into function calls, which
-    // we don't want localized, as they can get moved into the middle of a
-    // another call sequence.
+    // Don't localize TLS global vars on Mach-O and ELF, as doing so can move
+    // TLS-related instructions into a call sequence.
     const GlobalValue &GV = *MI.getOperand(1).getGlobal();
-    if (GV.isThreadLocal() && Subtarget->isTargetMachO())
+    if (GV.isThreadLocal() &&
+        (Subtarget->isTargetMachO() || Subtarget->isTargetELF()))
       return false;
     return true; // Always localize G_GLOBAL_VALUE to avoid high reg pressure.
   }
@@ -34152,25 +34271,7 @@ SDValue AArch64TargetLowering::LowerMSTORE(SDValue Op,
   if (!Store->isCompressingStore())
     return SDValue();
 
-  EVT MaskVT = Store->getMask().getValueType();
-  SDValue Zero = DAG.getConstant(0, DL, MVT::i64);
-  SDValue CntActive = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
-      DAG.getTargetConstant(Intrinsic::aarch64_sve_cntp, DL, MVT::i64),
-      Store->getMask(), Store->getMask());
-
-  SDValue CompressedValue =
-      DAG.getNode(ISD::VECTOR_COMPRESS, DL, VT, Store->getValue(),
-                  Store->getMask(), DAG.getPOISON(VT));
-  SDValue CompressedMask =
-      DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, MaskVT, Zero, CntActive);
-
-  return DAG.getMaskedStore(Store->getChain(), DL, CompressedValue,
-                            Store->getBasePtr(), Store->getOffset(),
-                            CompressedMask, Store->getMemoryVT(),
-                            Store->getMemOperand(), Store->getAddressingMode(),
-                            Store->isTruncatingStore(),
-                            /*isCompressing=*/false);
+  return expandScalableCompressingStore(Store, DAG);
 }
 
 SDValue AArch64TargetLowering::LowerFixedLengthVectorMStoreToSVE(
@@ -35406,6 +35507,10 @@ static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
   case ISD::FP_TO_SINT_SAT:
   case ISD::FP_TO_SINT:
     return AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+  case ISD::STRICT_FP_TO_SINT:
+    return AArch64ISD::STRICT_FCVTZS_MERGE_PASSTHRU;
+  case ISD::STRICT_FP_TO_UINT:
+    return AArch64ISD::STRICT_FCVTZU_MERGE_PASSTHRU;
   default:
     llvm_unreachable("Unexpected opcode");
   }
@@ -35413,13 +35518,10 @@ static unsigned getSVEOpcodeForFPToInt(unsigned Opc) {
 
 SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  // Strict FP_TO_INT is not yet implemented.
-  if (Op->isStrictFPOpcode())
-    return SDValue();
-
+  bool IsStrict = Op->isStrictFPOpcode();
   unsigned Opc = Op.getOpcode();
-  EVT InVT = Op.getOperand(0).getValueType();
   EVT VT = Op.getValueType();
+  EVT InVT = Op.getOperand(IsStrict ? 1 : 0).getValueType();
 
   // bf16 inputs need promotion before conversion.
   if (InVT.getVectorElementType() == MVT::bf16)
@@ -35445,11 +35547,13 @@ SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
       return Op;
 
     SmallVector<SDValue, 4> Operands;
+    if (IsStrict)
+      Operands.push_back(Op.getOperand(0));
     Operands.push_back(getPredicateForVector(DAG, DL, VT));
-    Operands.push_back(Op.getOperand(0));
+    Operands.push_back(Op.getOperand(IsStrict ? 1 : 0));
     Operands.push_back(DAG.getPOISON(VT));
-    return DAG.getNode(getSVEOpcodeForFPToInt(Opc), DL, VT, Operands,
-                       Op->getFlags());
+    return DAG.getNode(getSVEOpcodeForFPToInt(Opc), DL, Op->getVTList(),
+                       Operands, Op->getFlags());
   }
 
   bool OverrideNEON = !Subtarget->isNeonAvailable();
@@ -35463,10 +35567,13 @@ SDValue AArch64TargetLowering::LowerFPToIntToSVE(SDValue Op,
 SDValue
 AArch64TargetLowering::LowerFixedLengthFPToIntToSVE(SDValue Op,
                                                     SelectionDAG &DAG) const {
+  // Strict FP_TO_INT is not yet implemented.
+  if (Op->isStrictFPOpcode())
+    return SDValue();
+
   EVT VT = Op.getValueType();
   unsigned Opc = Op.getOpcode();
   assert(VT.isFixedLengthVector() && "Expected fixed length vector type!");
-  assert(!Op->isStrictFPOpcode() && "Strict FP_TO_INT not yet supported");
   unsigned Opcode = getSVEOpcodeForFPToInt(Op.getOpcode());
 
   bool IsSaturating = Opc == ISD::FP_TO_UINT_SAT || Opc == ISD::FP_TO_SINT_SAT;

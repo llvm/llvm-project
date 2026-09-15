@@ -196,8 +196,9 @@ defm FmaLegacy32Insts : AMDGPUSubtargetFeature<"fma-legacy32-insts",
 >;
 
 defm IEEEMinimumMaximumInsts : AMDGPUSubtargetFeature<"ieee-minimum-maximum-insts",
-  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32 and"
-  "v_pk_minimum/maximum_f16 instructions"
+  "Has v_minimum/maximum_f16/f32/f64, v_minimummaximum/maximumminimum_f16/f32,"
+  "v_pk_minmax/maxmin_num_f16, v_min/max_num_f16/f32/f64 and"
+  "v_pk_min/max_num_f16 instructions"
 >;
 
 defm SALUMinimumMaximumInsts : AMDGPUSubtargetFeature<"salu-minimum-maximum-insts",
@@ -269,9 +270,9 @@ defm LDSMisalignedBug : AMDGPUSubtargetFeature<"lds-misaligned-bug",
   /*GenPredicate=*/0
 >;
 
-// Set for gfx10/11/12 where a work-group can address only half of the physical
-// LDS block. So the physical block is twice the addressable size, for example
-// 128k physical and 64k addressable.
+// Set where a work-group can address only half of the physical LDS block:
+// gfx6 has 64 KiB physical and 32 KiB addressable, while gfx10/11/12 have
+// 128 KiB physical and 64 KiB addressable.
 defm HalfAddressablePhysicalLocalMemory : AMDGPUSubtargetFeature<"half-addressable-physical-local-memory",
   "A work-group can address only half of the physical LDS block",
   /*GenPredicate=*/0
@@ -521,6 +522,14 @@ defm F32ToFP6BF6ConversionScaleInsts : AMDGPUSubtargetFeature<"f32-to-fp6bf6-cvt
 
 defm F32ToF16BF16ConversionSRInsts : AMDGPUSubtargetFeature<"f32-to-f16bf16-cvt-sr-insts",
   "Has f32 to f16bf16 conversion scale instructions"
+>;
+
+defm FP6BF6ToF16BF16F32ConversionScaleInsts : AMDGPUSubtargetFeature<"fp6bf6-to-f16bf16f32-cvt-scale-insts",
+  "Has fp6bf6 to f16bf16f32 conversion scale instructions"
+>;
+
+defm Block16ConversionScaleInsts : AMDGPUSubtargetFeature<"block16-cvt-scale-insts",
+  "Has block16 conversion scale instructions"
 >;
 
 defm AshrPkInsts : AMDGPUSubtargetFeature<"ashr-pk-insts",
@@ -1610,7 +1619,8 @@ class GCNSubtargetFeatureGeneration <string Value,
 
 def FeatureSouthernIslands : GCNSubtargetFeatureGeneration<"SOUTHERN_ISLANDS",
     "southern-islands",
-  [FeatureFP64, FeatureAddressableLocalMemorySize32768, FeatureMIMG_R128,
+  [FeatureFP64, FeatureAddressableLocalMemorySize32768,
+  FeatureHalfAddressablePhysicalLocalMemory, FeatureMIMG_R128,
   FeatureWavefrontSize64, FeatureSupportsWave64, FeatureSMemTimeInst,
   FeatureMadMacF32Insts,
   FeatureDsSrc2Insts, FeatureLDSBankCount32, FeatureMovrel,
@@ -1787,7 +1797,6 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureMinimum3Maximum3F32, FeatureMinimum3Maximum3F16,
    FeatureAgentScopeFineGrainedRemoteMemoryAtomics, FeatureFlatOffsetBits24,
    FeatureFlatSignedOffset, FeatureInstCacheLineSize128,
-   Feature32BitNumRecordsBufferResource,
    FeatureMaxWavesPerEU16
   ]
 >;
@@ -2289,6 +2298,7 @@ def FeatureISAVersion11_7_Generic: FeatureSet<
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
+   Feature32BitNumRecordsBufferResource,
    FeatureSupportsWave64, FeatureSupportsWGP,
    FeatureBackOffBarrier,
    FeatureAddressableLocalMemorySize65536,
@@ -2434,7 +2444,6 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureSetPrioIncWgInst,
    FeatureSWakeupBarrier,
    Feature45BitNumRecordsBufferResource,
-   FeatureSupportsXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
    FeatureMcastLoadInsts,
@@ -2475,6 +2484,7 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2495,6 +2505,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureTransCoexecutionHazard,
@@ -2504,6 +2515,7 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureNeedsTDMDrain,
    FeatureNoSleepForever,
    FeatureSlowMaxMinMulI64Insts,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2529,6 +2541,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSWMMACGfx1200Insts,
    FeatureSWMMACGfx1250Insts,
    FeatureUseAddPC64Inst,
@@ -2537,6 +2550,7 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2547,6 +2561,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
    FeatureLDSBankCount64,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSetregVGPRMSBFixup,
    FeatureRequiresCOV6,
    FeatureGFX125xLowestRateWMMA,
@@ -2555,6 +2570,7 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureSupportsXNACK,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2596,7 +2612,6 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureBitOp3Insts,
    FeatureTanhInsts,
    FeatureTensorCvtLutInsts,
-   Feature1536VGPRs,
    FeatureBF16TransInsts,
    FeatureBF16ConversionInsts,
    FeatureBF16PackedInsts,
@@ -2612,6 +2627,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtSrPkBF16F32Inst,
    FeatureF16BF16ToFP6BF6ConversionScaleInsts,
    FeatureF32ToFP6BF6ConversionScaleInsts,
+   FeatureFP6BF6ToF16BF16F32ConversionScaleInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeatureSWakeupBarrier,
    FeatureClusters,
@@ -2625,6 +2641,7 @@ def FeatureISAVersion13 : FeatureSet<
    FeatureCvtNormInsts,
    FeatureCvtPkNormVOP2Insts,
    FeatureCvtPkNormVOP3Insts,
+   FeatureBlock16ConversionScaleInsts,
    FeatureSmemPrefetchInsts,
    FeatureAsyncLoadToLDSInsts,
    FeatureIndexedResources
@@ -3225,7 +3242,7 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureDot9Insts, FeatureExtendedImageInsts, FeatureF16BF16ToFP6BF6ConversionScaleInsts,
   FeatureF32ToF16BF16ConversionSRInsts, FeatureF32ToFP6BF6ConversionScaleInsts, FeatureFP4ConversionScaleInsts,
   FeatureFP6BF6ConversionScaleInsts, FeatureFP8ConversionInsts, FeatureFP8ConversionScaleInsts,
-  FeatureFP8E5M3Insts, FeatureFP8Insts,
+  FeatureBlock16ConversionScaleInsts, FeatureFP8E5M3Insts, FeatureFP8Insts,
   FeatureFlatBufferGlobalAtomicFaddF64Inst, FeatureFlatGlobalInsts,
   FeatureGFX10Insts, FeatureGFX10_3Insts, FeatureGFX11Insts,
   FeatureGFX1250Insts, FeatureGFX1251GEMMInsts, FeatureGFX12Insts,

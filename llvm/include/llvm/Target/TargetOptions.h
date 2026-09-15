@@ -27,14 +27,6 @@ struct fltSemantics;
 class MachineFunction;
 class MemoryBuffer;
 
-namespace FPOpFusion {
-enum FPOpFusionMode {
-  Fast,     // Enable fusion of FP ops wherever it's profitable.
-  Standard, // Only allow fusion of 'blessed' ops (currently just fmuladd).
-  Strict    // Never fuse FP-ops.
-};
-}
-
 namespace JumpTable {
 enum JumpTableType {
   Single,     // Use a single table for all indirect jumptable calls.
@@ -43,13 +35,6 @@ enum JumpTableType {
               // into 4 types: pointer to non-function, struct,
               // primitive, and function pointer.
   Full        // Use one table per unique function type
-};
-}
-
-namespace ThreadModel {
-enum Model {
-  POSIX, // POSIX Threads
-  Single // Single Threaded Environment
 };
 }
 
@@ -119,16 +104,16 @@ enum CodeObjectVersionKind {
 class TargetOptions {
 public:
   TargetOptions()
-      : EnableAIXExtendedAltivecABI(false), NoZerosInBSS(false),
-        GuaranteedTailCallOpt(false), StackSymbolOrdering(true),
-        EnableFastISel(false), EnableGlobalISel(false), UseInitArray(false),
-        FunctionSections(false), DataSections(false),
-        IgnoreXCOFFVisibility(false), XCOFFTracebackTable(true),
-        UniqueSectionNames(true), UniqueBasicBlockSectionNames(false),
-        SeparateNamedSections(false), TrapUnreachable(false),
-        NoTrapAfterNoreturn(false), TLSSize(0), EmulatedTLS(false),
-        EnableTLSDESC(false), EnableIPRA(false), EmitStackSizeSection(false),
-        EnableMachineOutliner(false), EnableMachineFunctionSplitter(false),
+      : NoZerosInBSS(false), GuaranteedTailCallOpt(false),
+        StackSymbolOrdering(true), EnableFastISel(false),
+        EnableGlobalISel(false), UseInitArray(false), FunctionSections(false),
+        DataSections(false), IgnoreXCOFFVisibility(false),
+        XCOFFTracebackTable(true), UniqueSectionNames(true),
+        UniqueBasicBlockSectionNames(false), SeparateNamedSections(false),
+        TrapUnreachable(false), NoTrapAfterNoreturn(false), TLSSize(0),
+        EmulatedTLS(false), EnableTLSDESC(false), EnableIPRA(false),
+        EmitStackSizeSection(false), EnableMachineOutliner(false),
+        EnableMachineFunctionSplitter(false),
         EnableStaticDataPartitioning(false), SupportsDefaultOutlining(false),
         EnableDefaultMachineVerifier(true), EmitAddrsig(false),
         BBAddrMap(false), EmitCallGraphSection(false), EmitCallSiteInfo(false),
@@ -137,12 +122,6 @@ public:
         XRayFunctionIndex(true), DebugStrictDwarf(false), Hotpatch(false),
         JMCInstrument(false), EnableCFIFixup(false), MisExpect(false),
         XCOFFReadOnlyPointers(false), VerifyArgABICompliance(true) {}
-
-  /// EnableAIXExtendedAltivecABI - This flag returns true when -vec-extabi is
-  /// specified. The code generator is then able to use both volatile and
-  /// nonvolitle vector registers. When false, the code generator only uses
-  /// volatile vector registers which is the default setting on AIX.
-  unsigned EnableAIXExtendedAltivecABI : 1;
 
   /// NoZerosInBSS - By default some codegens place zero-initialized data to
   /// .bss section. This flag disables such behaviour (necessary, e.g. for
@@ -321,28 +300,6 @@ public:
   /// If greater than 0, override TargetLoweringBase::PrefLoopAlignment.
   unsigned LoopAlignment = 0;
 
-  /// AllowFPOpFusion - This flag is set by the -fp-contract=xxx option.
-  /// This controls the creation of fused FP ops that store intermediate
-  /// results in higher precision than IEEE allows (E.g. FMAs).
-  ///
-  /// Fast mode - allows formation of fused FP ops whenever they're
-  /// profitable.
-  /// Standard mode - allow fusion only for 'blessed' FP ops. At present the
-  /// only blessed op is the fmuladd intrinsic. In the future more blessed ops
-  /// may be added.
-  /// Strict mode - allow fusion only if/when it can be proven that the excess
-  /// precision won't effect the result.
-  ///
-  /// Note: This option only controls formation of fused ops by the
-  /// optimizers.  Fused operations that are explicitly specified (e.g. FMA
-  /// via the llvm.fma.* intrinsic) will always be honored, regardless of
-  /// the value of this option.
-  FPOpFusion::FPOpFusionMode AllowFPOpFusion = FPOpFusion::Standard;
-
-  /// ThreadModel - This flag specifies the type of threading model to assume
-  /// for things like atomics
-  ThreadModel::Model ThreadModel = ThreadModel::POSIX;
-
   /// EABIVersion - This flag specifies the EABI version
   EABI EABIVersion = EABI::Default;
 
@@ -354,7 +311,7 @@ public:
 
 public:
   /// What exception model to use
-  ExceptionHandling ExceptionModel = ExceptionHandling::None;
+  ExceptionHandling ExceptionModel = ExceptionHandling::Default;
 
   /// Machine level options.
   MCTargetOptions MCOptions;

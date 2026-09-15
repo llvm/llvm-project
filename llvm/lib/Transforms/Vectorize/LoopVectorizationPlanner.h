@@ -51,10 +51,6 @@ class VPRecipeBuilder;
 struct VPRegisterUsage;
 struct VFRange;
 
-extern cl::opt<bool> EnableVPlanNativePath;
-extern cl::opt<unsigned> ForceTargetInstructionCost;
-extern cl::opt<bool> PreferInLoopReductions;
-
 /// \return An upper bound for vscale based on TTI or the vscale_range
 /// attribute.
 std::optional<unsigned> getMaxVScale(const Function &F);
@@ -475,6 +471,8 @@ public:
 
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
+    assert(Op->getScalarType() != ResultTy &&
+           "must not create a no-op cast recipe");
     return tryInsertInstruction(new VPWidenCastRecipe(
         Opcode, Op, ResultTy, nullptr, VPIRFlags::getDefaultFlags(Opcode)));
   }
