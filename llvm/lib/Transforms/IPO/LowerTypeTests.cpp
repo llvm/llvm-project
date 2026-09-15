@@ -317,9 +317,9 @@ SetVector<GlobalValue *> lowertypetests::findCfiFunctions(Module &M) {
 }
 
 /// Extracts a numeric type identifier from an MDNode containing type metadata.
-static ConstantInt *extractNumericTypeId(MDNode *MD) {
+static ConstantInt *extractNumericTypeId(MDNode &MD) {
   // This check excludes vtables for classes inside anonymous namespaces.
-  auto TM = dyn_cast<ValueAsMetadata>(MD->getOperand(1));
+  auto TM = dyn_cast<ValueAsMetadata>(MD.getOperand(1));
   if (!TM)
     return nullptr;
   auto C = dyn_cast_or_null<ConstantInt>(TM->getValue());
@@ -339,7 +339,7 @@ SetVector<uint64_t> lowertypetests::findCfiTypeIds(const Module &M) {
     Types.clear();
     GO.getMetadata(LLVMContext::MD_type, Types);
     for (MDNode *Type : Types)
-      if (ConstantInt *TypeId = extractNumericTypeId(Type))
+      if (ConstantInt *TypeId = extractNumericTypeId(*Type))
         TypeIds.insert(TypeId->getZExtValue());
   }
 
@@ -349,7 +349,7 @@ SetVector<uint64_t> lowertypetests::findCfiTypeIds(const Module &M) {
       assert(isa<ConstantAsMetadata>(Func->getOperand(2)));
       for (unsigned I = 3; I < Func->getNumOperands(); ++I)
         if (ConstantInt *TypeId =
-                extractNumericTypeId(cast<MDNode>(Func->getOperand(I).get())))
+                extractNumericTypeId(*cast<MDNode>(Func->getOperand(I))))
           TypeIds.insert(TypeId->getZExtValue());
     }
   }
